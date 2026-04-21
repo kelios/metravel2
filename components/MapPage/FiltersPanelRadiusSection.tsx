@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback } from 'react'
-import { ScrollView, Text, View, Pressable, TextInput } from 'react-native'
+import { ScrollView, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import MultiSelectField from '@/components/forms/MultiSelectField'
 import MapIcon from './MapIcon'
@@ -158,7 +158,9 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
     }).length
   }, [selectedCategoryNames, travelsData])
 
-  const hasSelectionSummary = selectedCategoryNames.length > 0
+  const radiusSummaryValue = filterValue.radius || DEFAULT_RADIUS_KM
+  const radiusSummaryText = `${radiusSummaryValue} км`
+  const hasSelectionSummary = selectedCategoryNames.length > 0 || Boolean(radiusSummaryValue)
   const categoryPreview = selectedCategoryNames.slice(0, 2).join(', ')
   const categorySummary =
     selectedCategoryNames.length > 2
@@ -168,30 +170,6 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
   return (
     <>
       <View style={styles.lightStepBlock}>
-        <View style={styles.lightStepHeader}>
-          <Text style={styles.lightStepNumber}>1</Text>
-          <Text style={styles.lightStepTitle}>Поиск + что посмотреть</Text>
-          <Text style={selectedCategoriesCount > 0 ? styles.lightStepBadge : styles.lightStepHint}>
-            {selectedCategoriesCount > 0 ? `${selectedCategoriesCount} выбрано` : 'Все типы'}
-          </Text>
-        </View>
-
-        <View>
-          {!isMobile ? (
-            <Text style={styles.sectionHint}>Ищите по названию точки, адресу или типу места</Text>
-          ) : null}
-          <TextInput
-            testID="filters-search-input"
-            value={String(filterValue.searchQuery || '')}
-            onChangeText={(text) => safeOnFilterChange('searchQuery', text)}
-            placeholder="Поиск по названию или адресу"
-            placeholderTextColor={colors.textMuted}
-            style={styles.input}
-            accessibilityLabel="Поиск по точкам"
-            returnKeyType="search"
-          />
-        </View>
-
         <CollapsibleSection
           title="Что посмотреть"
           badge={selectedCategoriesCount || undefined}
@@ -260,52 +238,6 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
           )}
         </CollapsibleSection>
 
-        {filters.radius.length > 0 && (
-          <CollapsibleSection
-            title="Радиус поиска"
-            badge={`${filterValue.radius || DEFAULT_RADIUS_KM} км`}
-            defaultOpen={true}
-            icon="radio"
-            tone="flat"
-          >
-            <View style={styles.radiusQuickOptions}>
-              {filters.radius.map((opt) => {
-                const selected = String(opt.id) === String(filterValue.radius)
-                return (
-                  <View key={opt.id}>
-                    <Pressable
-                      testID={`radius-option-${String(opt.id)}`}
-                      onPress={() => safeOnFilterChange('radius', opt.id)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${opt.name} км`}
-                      accessibilityState={{ selected }}
-                      style={({ pressed }) => [
-                        styles.radiusOptionButton,
-                        selected && styles.radiusOptionButtonSelected,
-                        pressed && { opacity: 0.8 },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.radiusOptionText,
-                          selected && styles.radiusOptionTextSelected,
-                        ]}
-                      >
-                        {opt.name}
-                      </Text>
-                    </Pressable>
-                  </View>
-                )
-              })}
-            </View>
-            <Text style={styles.radiusSelectionHint}>
-              {radiusResultCount > 0
-                ? `${getPlacesLabel(radiusResultCount)} попадает в выбранные условия.`
-                : 'Под выбранные условия пока ничего не попадает.'}
-            </Text>
-          </CollapsibleSection>
-        )}
-
         {hasSelectionSummary && (
           <View style={styles.filterSelectionSummary} testID="radius-selection-summary">
             <View style={styles.filterSelectionChips}>
@@ -317,7 +249,20 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
                   </Text>
                 </View>
               ) : null}
+              {radiusSummaryValue ? (
+                <View style={styles.filterSelectionChip}>
+                  <Feather name="radio" size={12} color={colors.primary} />
+                  <Text style={styles.filterSelectionChipText} numberOfLines={1}>
+                    {radiusSummaryText}
+                  </Text>
+                </View>
+              ) : null}
             </View>
+            <Text style={styles.radiusSelectionHint}>
+              {radiusResultCount > 0
+                ? `${getPlacesLabel(radiusResultCount)} попадает в выбранные условия.`
+                : 'Под выбранные условия пока ничего не попадает.'}
+            </Text>
           </View>
         )}
       </View>

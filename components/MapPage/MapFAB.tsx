@@ -121,8 +121,8 @@ export const MapFAB: React.FC<MapFABProps> = React.memo(({
                 >
                   <MapIcon
                     name={action.icon}
-                    size={24}
-                    color={colors.textOnPrimary}
+                    size={22}
+                    color={colors.text}
                   />
                 </CardActionPressable>
               </Animated.View>
@@ -157,7 +157,7 @@ export const MapFAB: React.FC<MapFABProps> = React.memo(({
         >
           <MapIcon
             name={isExpanded && actions.length > 0 ? 'close' : mainAction.icon}
-            size={28}
+            size={26}
             color={colors.textOnPrimary}
           />
         </Animated.View>
@@ -199,34 +199,47 @@ const getStyles = (
       right: 0,
     },
     fab: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
+      width: 52,
+      height: 52,
+      borderRadius: 18,
       justifyContent: 'center',
       alignItems: 'center',
-      ...colors.shadows.heavy,
+      ...colors.shadows.medium,
     },
     mainFab: {
       backgroundColor: colors.primary,
-      ...Platform.select({
-        ios: {
-          shadowColor: colors.primary,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
-        },
-        android: {
-          elevation: 8,
-        },
-      }),
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow:
+              '0 10px 28px rgba(15,23,42,0.22), 0 4px 10px rgba(15,23,42,0.14)',
+            transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+          } as any)
+        : Platform.select({
+            ios: {
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.28,
+              shadowRadius: 12,
+            },
+            android: { elevation: 10 },
+          })),
     },
     secondaryFab: {
-      backgroundColor: colors.surface,
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      borderWidth: 1,
-      borderColor: colors.border,
+      backgroundColor:
+        Platform.OS === 'web' ? colors.surfaceAlpha40 : colors.surface,
+      width: 46,
+      height: 46,
+      borderRadius: 16,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+      ...(Platform.OS === 'web'
+        ? ({
+            backdropFilter: 'blur(20px) saturate(1.4)',
+            WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
+            boxShadow:
+              '0 4px 14px rgba(15,23,42,0.12), 0 1px 2px rgba(15,23,42,0.06)',
+          } as any)
+        : null),
     },
   });
 };

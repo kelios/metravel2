@@ -182,13 +182,6 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
       : canBuildRoute
         ? 'Старт и финиш уже выбраны. Проверьте транспорт и запускайте построение маршрута.'
         : 'Выберите транспорт, затем поставьте старт и финиш кликом по карте или через адресные поля.';
-  const mobileContextTitle = mode === 'radius' ? 'Фильтры поиска' : 'Настройка маршрута';
-  const mobileContextSubtitle =
-    mode === 'radius'
-      ? `${getPlacesLabel(totalPoints)} · радиус ${radiusValue} км`
-      : canBuildRoute
-        ? 'Маршрут готов к расчёту'
-        : 'Сначала выберите старт и финиш';
   const mobileContextHint =
     mode === 'radius'
       ? activeSummaryChips.length > 0
@@ -210,23 +203,6 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
     >
       {isMobile && (
         <View style={styles.mobileFiltersContextCard} testID="filters-mobile-context">
-          <View style={styles.mobileFiltersContextHeader}>
-            <View style={styles.mobileFiltersContextCopy}>
-              <Text style={styles.mobileFiltersContextTitle}>{mobileContextTitle}</Text>
-              <Text style={styles.mobileFiltersContextSubtitle}>{mobileContextSubtitle}</Text>
-            </View>
-            {onOpenList ? (
-              <Button
-                label={openListButtonLabel}
-                onPress={onOpenList}
-                size="sm"
-                variant="outline"
-                style={styles.mobileFiltersContextButton}
-                testID="filters-mobile-open-results"
-              />
-            ) : null}
-          </View>
-          <Text style={styles.mobileFiltersContextHint}>{mobileContextHint}</Text>
           {activeSummaryChips.length > 0 ? (
             <View style={styles.mobileFiltersContextChips}>
               {activeSummaryChips.map((chip) => (
@@ -238,12 +214,18 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
               ))}
             </View>
           ) : (
-            <View style={styles.mobileFiltersContextEmpty}>
-              <Text style={styles.mobileFiltersContextEmptyText}>
-                Дополнительные фильтры пока не выбраны.
-              </Text>
-            </View>
+            <Text style={styles.mobileFiltersContextHint}>{mobileContextHint}</Text>
           )}
+          {onOpenList ? (
+            <Button
+              label={openListButtonLabel}
+              onPress={onOpenList}
+              size="sm"
+              variant="outline"
+              style={styles.mobileFiltersContextButton}
+              testID="filters-mobile-open-results"
+            />
+          ) : null}
         </View>
       )}
 

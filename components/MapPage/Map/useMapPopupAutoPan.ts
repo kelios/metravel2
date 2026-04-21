@@ -12,6 +12,12 @@ type PopupSafeArea = {
   bottomPadding: number
 }
 
+// Высота верхнего glass-бара над картой (MapQuickFilters):
+// top: 16 + minHeight: 40 (≤430: 38, ≤360: 36) + небольшой запас на тень/safe-area.
+// Используется как topPadding, чтобы popup не оказался под чипами «Радиус / Что
+// посмотреть / Оверлеи» после автоцентрирования Leaflet и кастомного re-pan.
+const TOP_QUICK_FILTERS_BAR_HEIGHT = 88
+
 const getPopupSafeArea = ({
   mapWidth,
   mapHeight,
@@ -24,13 +30,14 @@ const getPopupSafeArea = ({
   const isNarrowMap = mapWidth <= 640
   const isVeryNarrowMap = mapWidth <= 420
   const horizontalPadding = isVeryNarrowMap ? 12 : isNarrowMap ? 16 : 24
-  const verticalPadding = isVeryNarrowMap ? 22 : isNarrowMap ? 18 : 24
 
   if (!isNarrowMap) {
+    // Desktop / tablet: учитываем верхний бар быстрых фильтров, иначе popup
+    // может открыться под ним и перекрываться визуально.
     return {
       horizontalPadding,
-      topPadding: verticalPadding,
-      bottomPadding: verticalPadding,
+      topPadding: TOP_QUICK_FILTERS_BAR_HEIGHT,
+      bottomPadding: 24,
     }
   }
 
