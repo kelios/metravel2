@@ -18,8 +18,14 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       padding: isMobile ? 0 : 12,
       width: panelWidth,
       maxWidth: '100%',
-      height: '100%',
-      maxHeight: windowHeight,
+      height:
+        Platform.OS === 'web' && isMobile
+          ? ('auto' as const)
+          : ('100%' as const),
+      maxHeight:
+        Platform.OS === 'web' && isMobile
+          ? ('none' as const)
+          : windowHeight,
       display: 'flex',
       flexDirection: 'column',
       alignSelf: isMobile ? 'stretch' : 'flex-start',
@@ -130,14 +136,15 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       letterSpacing: -0.5,
     },
     content: {
-      flex: 1,
-      flexGrow: 1,
+      flex: Platform.OS === 'web' && isMobile ? 0 : 1,
+      flexGrow: Platform.OS === 'web' && isMobile ? 0 : 1,
+      minHeight: 0,
     },
     contentContainer: {
       paddingBottom: 64 + bottomDockReserve,
       paddingTop: isMobile ? 2 : 0,
       paddingHorizontal: isMobile ? 8 : 2,
-      flexGrow: 1,
+      flexGrow: Platform.OS === 'web' && isMobile ? 0 : 1,
     },
     filtersStatusCard: {
       padding: isMobile ? 14 : 14,
@@ -580,17 +587,25 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     stickyFooter: {
       ...(Platform.OS === 'web'
-        ? ({
-            position: 'sticky',
-            bottom: bottomDockReserve,
-            backgroundColor: colors.surfaceAlpha40,
-            backdropFilter: 'blur(18px)',
-            WebkitBackdropFilter: 'blur(18px)',
-            paddingTop: isMobile ? 8 : 4,
-            paddingBottom: isMobile ? 8 : 4,
-            borderTopWidth: isMobile ? StyleSheet.hairlineWidth : 0,
-            borderTopColor: isMobile ? colors.borderLight : 'transparent',
-          } as any)
+        ? isMobile
+          ? ({
+              backgroundColor: colors.surfaceAlpha40,
+              backdropFilter: 'blur(18px)',
+              WebkitBackdropFilter: 'blur(18px)',
+              paddingTop: 8,
+              paddingBottom: 8,
+              borderTopWidth: StyleSheet.hairlineWidth,
+              borderTopColor: colors.borderLight,
+            } as any)
+          : ({
+              position: 'sticky',
+              bottom: bottomDockReserve,
+              backgroundColor: colors.surfaceAlpha40,
+              backdropFilter: 'blur(18px)',
+              WebkitBackdropFilter: 'blur(18px)',
+              paddingTop: 4,
+              paddingBottom: 4,
+            } as any)
         : {
             paddingTop: isMobile ? 8 : 4,
             paddingBottom: isMobile ? 8 : 0,

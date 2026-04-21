@@ -17,6 +17,7 @@ import {
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
 const BOTTOM_SHEET_MAX_WIDTH = 430
+const WEB_MOBILE_BOTTOM_CHROME_INSET = 104
 
 interface AnchorRect {
   x: number
@@ -80,6 +81,26 @@ export const MapChipPopover: React.FC<MapChipPopoverProps> = ({
 
   if (!visible) return null
 
+  if (Platform.OS === 'web' && isNarrow) {
+    return (
+      <View style={styles.webOverlay} testID={testID}>
+        <Pressable
+          style={styles.sheetBackdrop}
+          onPress={onClose}
+          accessibilityLabel="Закрыть"
+        >
+          <Pressable
+            style={[styles.sheetContainer, styles.sheetContainerWeb]}
+            onPress={(e) => e.stopPropagation?.()}
+          >
+            <View style={styles.sheetHandle} />
+            {children}
+          </Pressable>
+        </Pressable>
+      </View>
+    )
+  }
+
   if (useBottomSheet) {
     return (
       <Modal
@@ -95,7 +116,10 @@ export const MapChipPopover: React.FC<MapChipPopoverProps> = ({
           accessibilityLabel="Закрыть"
         >
           <Pressable
-            style={styles.sheetContainer}
+            style={[
+              styles.sheetContainer,
+              Platform.OS === 'web' ? styles.sheetContainerWeb : null,
+            ]}
             onPress={(e) => e.stopPropagation?.()}
           >
             <View style={styles.sheetHandle} />
@@ -171,6 +195,11 @@ const getStyles = (colors: ThemedColors) =>
       flex: 1,
       backgroundColor: 'rgba(0,0,0,0.4)',
       justifyContent: 'flex-end',
+      ...(Platform.OS === 'web'
+        ? ({
+            zIndex: 6000,
+          } as any)
+        : null),
     },
     sheetContainer: {
       backgroundColor: colors.backgroundPrimary,
@@ -179,6 +208,15 @@ const getStyles = (colors: ThemedColors) =>
       paddingTop: 8,
       paddingBottom: 24,
       maxHeight: '85%',
+      ...(Platform.OS === 'web'
+        ? ({
+            zIndex: 6001,
+          } as any)
+        : null),
+    },
+    sheetContainerWeb: {
+      marginBottom: WEB_MOBILE_BOTTOM_CHROME_INSET,
+      maxHeight: `calc(100% - ${WEB_MOBILE_BOTTOM_CHROME_INSET + 24}px)`,
     },
     sheetHandle: {
       alignSelf: 'center',

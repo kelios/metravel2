@@ -275,6 +275,33 @@ const TravelListPanel: React.FC<Props> = ({
   }
 
   if (Platform.OS === 'web') {
+    if (isMobile) {
+      return (
+        <ScrollView
+          style={styles.webScrollView}
+          contentContainerStyle={styles.list}
+          refreshControl={
+            onRefresh ? (
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={onRefresh}
+                tintColor={themeColors.primary}
+                colors={[themeColors.primary]}
+              />
+            ) : undefined
+          }
+        >
+          {listHeader}
+          {visibleTravelsData.map((item: any, index: number) => (
+            <React.Fragment key={String(item.id ?? item._id ?? item.slug ?? index)}>
+              {renderItem({ item })}
+            </React.Fragment>
+          ))}
+          {footer}
+        </ScrollView>
+      )
+    }
+
     const viewportH = webViewportH || 600
     const startIndex = Math.max(0, Math.floor(webScrollY / WEB_ESTIMATED_ITEM_HEIGHT_PX) - WEB_LIST_OVERSCAN_ITEMS)
     const endIndex = Math.min(

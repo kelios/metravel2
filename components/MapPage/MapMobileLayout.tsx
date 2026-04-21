@@ -55,7 +55,8 @@ interface MapMobileLayoutProps {
 const PHONE_COMPACT_LAYOUT_MAX_WIDTH = 430
 const PHONE_VERY_NARROW_LAYOUT_MAX_WIDTH = 350
 const PHONE_COMPACT_ACTIONS_MAX_WIDTH = 420
-const WEB_MOBILE_BOTTOM_DOCK_INSET = 88
+const WEB_MOBILE_BOTTOM_DOCK_INSET = 104
+const WEB_MOBILE_CONSENT_BANNER_INSET = 112
 
 export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   mapComponent,
@@ -343,7 +344,10 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   const sheetPeekContent = peekContent
   const quickActionsBottomOffset = consentBannerVisible ? 208 : 128
-  const bottomSheetInset = Platform.OS === 'web' ? WEB_MOBILE_BOTTOM_DOCK_INSET : 0
+  const bottomSheetInset =
+    Platform.OS === 'web'
+      ? WEB_MOBILE_BOTTOM_DOCK_INSET + (consentBannerVisible ? WEB_MOBILE_CONSENT_BANNER_INSET : 0)
+      : 0
 
   const sheetContent = useMemo(() => {
     const isQuarterListPreview = uiTab === 'list' && sheetState === 'quarter'

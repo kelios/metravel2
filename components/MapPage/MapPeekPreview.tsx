@@ -3,7 +3,7 @@
  */
 
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Platform, useWindowDimensions } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
@@ -29,6 +29,8 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = React.memo(({
   onExpandPress,
 }) => {
   const colors = useThemedColors();
+  const { width } = useWindowDimensions();
+  const isVeryNarrow = width > 0 && width <= 360;
   const styles = useMemo(() => getStyles(colors), [colors]);
   const scrollRef = useRef<ScrollView | null>(null);
   const [scrollX, setScrollX] = useState(0);
@@ -78,8 +80,8 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = React.memo(({
       style={styles.container}
       {...(Platform.OS === 'web' ? ({ onWheelCapture: onWheel } as any) : ({} as any))}
     >
-      <View style={styles.header}>
-        <View style={styles.headerTextWrap}>
+      <View style={[styles.header, isVeryNarrow && styles.headerCompact]}>
+        <View style={[styles.headerTextWrap, isVeryNarrow && styles.headerTextWrapCompact]}>
           <Text style={styles.title}>Быстрый выбор</Text>
           <Text style={styles.subtitle}>
             Нажмите карточку, чтобы сфокусироваться на месте, или откройте список со всеми результатами.
@@ -91,7 +93,7 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = React.memo(({
           onPress={onExpandPress}
           variant="ghost"
           size="sm"
-          style={styles.headerAction}
+          style={[styles.headerAction, isVeryNarrow && styles.headerActionCompact]}
         />
       </View>
 
@@ -220,10 +222,17 @@ const getStyles = (colors: ThemedColors) =>
       gap: 10,
       marginBottom: 10,
     },
+    headerCompact: {
+      alignItems: 'flex-start',
+      flexWrap: 'wrap',
+    },
     headerTextWrap: {
       flex: 1,
       minWidth: 0,
       gap: 2,
+    },
+    headerTextWrapCompact: {
+      minWidth: '100%',
     },
     title: {
       fontSize: 13,
@@ -238,6 +247,9 @@ const getStyles = (colors: ThemedColors) =>
     },
     headerAction: {
       alignSelf: 'flex-start',
+    },
+    headerActionCompact: {
+      marginTop: 2,
     },
     emptyContainer: {
       paddingVertical: 2,

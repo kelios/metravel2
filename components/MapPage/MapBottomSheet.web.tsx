@@ -154,7 +154,13 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           </View>
         )}
 
-        <View style={[styles.contentContainer, { paddingBottom: contentBottomPadding }]}>
+        <View
+          style={[
+            styles.contentContainer,
+            isCollapsed ? styles.contentContainerPeek : null,
+            { paddingBottom: contentBottomPadding },
+          ]}
+        >
           {isCollapsed ? peekContent : children}
         </View>
       </View>
@@ -252,6 +258,15 @@ const getStyles = (colors: ThemedColors) =>
             overflowY: 'auto',
             WebkitOverflowScrolling: 'touch',
             overscrollBehavior: 'contain',
+          } as any)
+        : null),
+    },
+    contentContainerPeek: {
+      height: 'auto',
+      minHeight: 0,
+      ...(Platform.OS === 'web'
+        ? ({
+            overflow: 'visible',
           } as any)
         : null),
     },
