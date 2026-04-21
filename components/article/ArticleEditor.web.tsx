@@ -29,6 +29,7 @@ import {
     ARTICLE_EDITOR_CHANGE_DEBOUNCE_MS,
     ARTICLE_EDITOR_DEFAULT_AUTOSAVE_DELAY,
     getQuillModulesForVariant,
+    normalizeArticleEditorHtmlForOutput,
 } from './articleEditorConfig';
 import {
     handleSurfaceFileDrop as handleEditorSurfaceFileDrop,
@@ -533,19 +534,23 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         }
     }, [showHtml]);
 
-    const getCurrentHtml = useCallback(() => {
-        if (showHtml) {
-            return typeof htmlRef.current === 'string' ? htmlRef.current : '';
-        }
+    const getSafeEditorHtml = useCallback(() => {
         try {
             const editor = quillRef.current?.getEditor?.();
-            const fromEditor = String(editor?.root?.innerHTML ?? '');
-            if (fromEditor) return fromEditor;
+            return normalizeArticleEditorHtmlForOutput(String(editor?.root?.innerHTML ?? ''));
         } catch {
-            // noop
+            return '';
         }
-        return typeof htmlRef.current === 'string' ? htmlRef.current : '';
-    }, [showHtml]);
+    }, []);
+
+    const getCurrentHtml = useCallback(() => {
+        if (showHtml) {
+            return normalizeArticleEditorHtmlForOutput(typeof htmlRef.current === 'string' ? htmlRef.current : '');
+        }
+        const fromEditor = getSafeEditorHtml();
+        if (fromEditor) return fromEditor;
+        return normalizeArticleEditorHtmlForOutput(typeof htmlRef.current === 'string' ? htmlRef.current : '');
+    }, [getSafeEditorHtml, showHtml]);
 
     const readEditorImageDimensions = useCallback((file: File) => {
         return readImageDimensions({
@@ -878,13 +883,13 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         buildHtmlModeToggleHandler({
             rememberSelection: rememberSelectionFromEditor,
             showHtml,
-            getEditorHtml: () => String(quillRef.current?.getEditor?.()?.root?.innerHTML ?? ''),
+            getEditorHtml: getSafeEditorHtml,
             html,
             fireChange,
             requestQuillLoad,
             setShowHtml,
         });
-    }, [fireChange, html, rememberSelectionFromEditor, requestQuillLoad, showHtml]);
+    }, [fireChange, getSafeEditorHtml, html, rememberSelectionFromEditor, requestQuillLoad, showHtml]);
 
     const toggleFullscreen = useCallback(() => {
         rememberSelectionFromEditor();

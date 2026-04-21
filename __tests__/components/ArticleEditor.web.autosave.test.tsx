@@ -344,4 +344,45 @@ describe('ArticleEditor.web autosave', () => {
       expect(latest?.value).toBe('<p class="ql-align-center">Hi</p>')
     })
   })
+
+  it('sanitizes editor HTML before manual save and HTML mode sync', async () => {
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default
+
+    const onChange = jest.fn()
+    const onManualSave = jest.fn(async () => {})
+
+    const { getByTestId, getByLabelText } = render(
+      <ArticleEditor
+        content={'<p>start</p>'}
+        onChange={onChange}
+        onManualSave={onManualSave}
+        onAutosave={jest.fn(async () => {})}
+        autosaveDelay={20}
+      />
+    )
+
+    await waitFor(() => {
+      expect(getByTestId('quill-mock')).toBeTruthy()
+    })
+    await waitFor(() => {
+      expect((globalThis as any).__quillRefAssigned__).toBe(true)
+    })
+
+    const editor = (globalThis as any).__quillEditor__
+    expect(editor).toBeTruthy()
+    editor.root.innerHTML =
+      '<p onclick="alert(1)">Safe</p><script>alert(1)</script><img src="https://example.com/a.jpg" onerror="alert(1)" />'
+
+    fireEvent.press(getByLabelText('Показать HTML-код'))
+    await waitFor(() => {
+      expect(onChange).toHaveBeenCalledWith('<p>Safe</p><img src="https://example.com/a.jpg" />')
+    })
+
+    fireEvent.press(getByLabelText('Скрыть HTML-код'))
+    fireEvent.press(getByLabelText('Сохранить путешествие'))
+
+    await waitFor(() => {
+      expect(onManualSave).toHaveBeenCalledWith('<p>Safe</p><img src="https://example.com/a.jpg" />')
+    })
+  })
 })
