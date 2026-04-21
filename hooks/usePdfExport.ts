@@ -1,7 +1,7 @@
 // src/hooks/usePdfExport.ts
 // ✅ АРХИТЕКТУРА: Тонкий React hook, тяжелый export runtime грузится только по запросу
 
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 import type { Travel } from '@/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
