@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather'
 import MultiSelectField from '@/components/forms/MultiSelectField'
 import MapIcon from './MapIcon'
 import CollapsibleSection from '@/components/MapPage/CollapsibleSection'
+import MapSearchInput from '@/components/MapPage/MapSearchInput'
 import type { ThemedColors } from '@/hooks/useTheme'
 import IconButton from '@/components/ui/IconButton'
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig'
@@ -167,8 +168,20 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
       ? `${categoryPreview} +${selectedCategoryNames.length - 2}`
       : categoryPreview
 
+  const searchQueryValue = String(filterValue.searchQuery || '')
+  const handleSearchChange = useCallback(
+    (value: string) => safeOnFilterChange('searchQuery', value),
+    [safeOnFilterChange]
+  )
+
   return (
     <View style={styles.lightStepBlock}>
+      <MapSearchInput
+        value={searchQueryValue}
+        onChange={handleSearchChange}
+        placeholder="Найти место по названию..."
+        resultsCount={searchQueryValue ? travelsData.length : undefined}
+      />
       <CollapsibleSection
         title="Что посмотреть"
         badge={selectedCategoriesCount || undefined}

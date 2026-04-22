@@ -98,6 +98,13 @@ interface UseMapDataControllerResult {
   hasMore: boolean;
   onLoadMore: () => void;
   isFetchingNextPage: boolean;
+
+  /**
+   * True while coordinates or filters are debouncing before the next query.
+   * Lets UI surface a pending-state indicator immediately on filter change,
+   * before `isFetching` flips to true.
+   */
+  isDebouncingFilters: boolean;
 }
 
 /**
@@ -144,6 +151,8 @@ export function useMapDataController(
   const debounceTime = isMobile ? 300 : 500;
   const debouncedCoordinates = useDebouncedValue(coordinates, debounceTime);
   const debouncedFilterValues = useDebouncedValue(filterValues, 300);
+  const isDebouncingFilters =
+    debouncedCoordinates !== coordinates || debouncedFilterValues !== filterValues;
 
   // Travels data
   const {
@@ -187,6 +196,7 @@ export function useMapDataController(
     hasMore,
     onLoadMore: loadMore,
     isFetchingNextPage,
+    isDebouncingFilters,
   }), [
     allTravelsData,
     travelsData,
@@ -200,5 +210,6 @@ export function useMapDataController(
     hasMore,
     loadMore,
     isFetchingNextPage,
+    isDebouncingFilters,
   ]);
 }

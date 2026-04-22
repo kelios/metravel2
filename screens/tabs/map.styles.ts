@@ -382,6 +382,34 @@ export const getStyles = (
           ? ({ cursor: 'col-resize' } as any)
           : null),
       },
+      radiusPill: {
+        position: 'absolute',
+        top: 16,
+        right: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        backgroundColor: themedColors.surface,
+        borderRadius: 999,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: themedColors.borderLight,
+        zIndex: 1005,
+        ...(Platform.OS === 'web'
+          ? ({
+              backgroundColor: themedColors.surfaceAlpha40,
+              backdropFilter: 'blur(14px) saturate(1.08)',
+              WebkitBackdropFilter: 'blur(14px) saturate(1.08)',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
+            } as any)
+          : themedColors.shadows.light),
+      },
+      radiusPillText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: themedColors.text,
+      },
       geoBanner: {
         position: 'absolute',
         bottom: isMobile && Platform.OS === 'web' ? WEB_MOBILE_FOOTER_RESERVE_HEIGHT + 16 : 20,

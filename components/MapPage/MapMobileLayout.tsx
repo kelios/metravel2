@@ -9,10 +9,8 @@ import React, {
   useMemo,
   useRef,
   useState,
-  useTransition,
 } from 'react'
 import {
-  InteractionManager,
   Platform,
   Pressable,
   Text as RNText,
@@ -87,10 +85,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const [consentBannerVisible, setConsentBannerVisible] = useState(false)
 
   const [uiTab, setUiTab] = useState<'search' | 'route' | 'list'>('list')
-  const [contentTab, setContentTab] = useState<'search' | 'route' | 'list'>(
-    'list',
-  )
-  const [, startTransition] = useTransition()
   const sheetStateRef = useRef<'collapsed' | 'quarter' | 'half' | 'full'>(
     'collapsed',
   )
@@ -140,7 +134,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           ? 'route'
           : 'search'
     setUiTab(nextTab)
-    setContentTab(nextTab)
     if (nextTab === 'list') {
       bottomSheetRef.current?.snapToFull()
       return
@@ -152,7 +145,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     if (!toggleNonce) return
     if (sheetStateRef.current === 'collapsed') {
       setUiTab('list')
-      setContentTab('list')
       bottomSheetRef.current?.snapToFull()
       return
     }
@@ -192,19 +184,8 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const setTabDeferred = useCallback(
     (next: 'search' | 'route' | 'list') => {
       setUiTab(next)
-
-      if (Platform.OS === 'web') {
-        startTransition(() => {
-          setContentTab(next)
-        })
-        return
-      }
-
-      InteractionManager.runAfterInteractions(() => {
-        setContentTab(next)
-      })
     },
-    [startTransition],
+    [],
   )
 
   const handleOpenList = useCallback(() => {
@@ -346,7 +327,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   const sheetContent = useMemo(() => {
     const isQuarterListPreview = uiTab === 'list' && sheetState === 'quarter'
-    const isTabTransitioning = uiTab !== contentTab
     const showTopFilterActions = uiTab === 'search' && !stackSheetToolbar
     const showSheetCloseButton = !isQuarterListPreview
     const toolbarSummaryText = isQuarterListPreview
@@ -354,52 +334,8 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       : uiTab === 'search' || uiTab === 'route'
         ? filterToolbarSummary
         : null
-    const transitionMeta =
-      uiTab === 'search'
-        ? {
-            icon: 'search' as const,
-            color: colors.primary,
-            title: 'Открываем поиск',
-            text: 'Сейчас можно будет быстро сузить выдачу по категориям и радиусу.',
-          }
-        : uiTab === 'route'
-          ? {
-              icon: 'navigation' as const,
-              color: colors.primary,
-              title: 'Открываем маршрут',
-              text: 'Сейчас можно будет выбрать старт и финиш без вложенных переключателей.',
-            }
-          : {
-              icon: 'list' as const,
-              color: colors.textMuted,
-              title: 'Открываем список мест',
-              text: 'Сейчас покажем актуальные точки рядом, чтобы вы могли быстро выбрать место.',
-            }
 
-    const body = isTabTransitioning ? (
-      <View
-        style={styles.sheetTransitionState}
-        testID="map-mobile-tab-transition"
-      >
-        <View style={styles.sheetTransitionCard}>
-          <View style={styles.sheetTransitionIconWrap}>
-            <Feather
-              name={transitionMeta.icon}
-              size={18}
-              color={transitionMeta.color}
-            />
-          </View>
-          <View style={styles.sheetTransitionCopy}>
-            <RNText style={styles.sheetTransitionTitle}>
-              {transitionMeta.title}
-            </RNText>
-            <RNText style={styles.sheetTransitionText}>
-              {transitionMeta.text}
-            </RNText>
-          </View>
-        </View>
-      </View>
-    ) : contentTab === 'list' ? (
+    const body = uiTab === 'list' ? (
       <TravelListPanel
         travelsData={travelsData}
         buildRouteTo={buildRouteTo}
@@ -652,7 +588,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     )
   }, [
     uiTab,
-    contentTab,
     colors.borderLight,
     colors.primary,
     colors.primaryDark,
@@ -708,12 +643,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     styles.sheetToolbarStacked,
     styles.sheetToolbarSummary,
     styles.sheetToolbarSummaryPreview,
-    styles.sheetTransitionCard,
-    styles.sheetTransitionCopy,
-    styles.sheetTransitionIconWrap,
-    styles.sheetTransitionState,
-    styles.sheetTransitionText,
-    styles.sheetTransitionTitle,
     styles.sheetPrimaryActionText,
     transportMode,
     travelsData,

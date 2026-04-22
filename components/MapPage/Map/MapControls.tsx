@@ -19,8 +19,8 @@ const MOBILE_WEB_BOTTOM_CHROME_GAP = 28;
 const MOBILE_WEB_SIDE_GAP = 16;
 
 const getButtonStyle = (colors: ThemedColors): React.CSSProperties => ({
-  width: '40px',
-  height: '40px',
+  width: '44px',
+  height: '44px',
   borderRadius: '16px',
   backgroundColor: 'rgba(255,255,255,0.62)',
   border: `1px solid ${colors.borderLight}`,

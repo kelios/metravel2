@@ -66,6 +66,7 @@ export default function MapScreen() {
         travelsData,
         loading,
         isFetching,
+        isDebouncingFilters,
         isPlaceholderData,
         hasMore,
         onLoadMore,
@@ -221,9 +222,8 @@ export default function MapScreen() {
     const activeFilterItems = useMemo(() => {
         const items: { key: string; label: string }[] = [];
         quickFilterSelected.forEach((cat: string) => items.push({ key: `cat:${cat}`, label: cat }));
-        if (currentRadius && currentRadius !== String(DEFAULT_RADIUS_KM)) {
-            items.push({ key: 'radius', label: `${currentRadius} км` });
-        }
+        const radiusValue = currentRadius || String(DEFAULT_RADIUS_KM);
+        items.push({ key: 'radius', label: `${radiusValue} км` });
         if (currentTransport !== 'car') {
             const transportLabels: Record<string, string> = { bike: 'Велосипед', foot: 'Пешком' };
             items.push({ key: 'transport', label: transportLabels[currentTransport] ?? currentTransport });
@@ -286,7 +286,7 @@ export default function MapScreen() {
     const mapComponent = useMemo(
         () => (
             <View style={styles.mapArea}>
-                <MapLoadingBar visible={isFetching} />
+                <MapLoadingBar visible={isFetching || isDebouncingFilters} />
                 {Platform.OS === 'web' && !isMobile && (
                     <MapQuickFilters
                         radiusValue={quickRadiusValue}
@@ -310,6 +310,17 @@ export default function MapScreen() {
                 ) : (
                     mapPanelPlaceholder
                 )}
+                {currentRadius ? (
+                    <View
+                        style={[styles.radiusPill, { pointerEvents: 'none' } as any]}
+                        accessibilityRole="text"
+                        accessibilityLabel={`Видимый радиус ${currentRadius} километров`}
+                        testID="map-radius-pill"
+                    >
+                        <Feather name="radio" size={12} color={themedColors.primary} />
+                        <Text style={styles.radiusPillText}>{currentRadius} км</Text>
+                    </View>
+                ) : null}
                 {showGeoBanner && (
                     <View style={styles.geoBanner} testID="map-geo-banner">
                         <Feather name="map-pin" size={13} color={themedColors.warning} />
@@ -331,6 +342,7 @@ export default function MapScreen() {
         ),
         [
             isFetching,
+            isDebouncingFilters,
             isMobile,
             mapPanelPlaceholder,
             mapPanelProps,
@@ -354,6 +366,9 @@ export default function MapScreen() {
             styles.geoBanner,
             styles.geoBannerText,
             styles.geoBannerClose,
+            styles.radiusPill,
+            styles.radiusPillText,
+            themedColors.primary,
         ]
     );
 

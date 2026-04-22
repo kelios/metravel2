@@ -252,9 +252,9 @@ const TravelListPanel: React.FC<Props> = ({
           resizeMode="contain"
           accessibilityLabel="Нет данных"
         />
-        <Text style={styles.emptyText}>Рядом ничего не нашлось</Text>
+        <Text style={styles.emptyText}>Ничего не нашлось</Text>
         <Text style={styles.emptyHint}>
-          Попробуйте изменить фильтры или увеличить радиус поиска
+          Попробуйте увеличить радиус или сбросить фильтры
         </Text>
         <View style={styles.emptyActions}>
           {onOpenFilters && (

@@ -156,6 +156,7 @@ export function useMapScreenController() {
     hasMore,
     onLoadMore,
     isFetchingNextPage,
+    isDebouncingFilters,
   } = dataController;
 
   const overlayOptions = useMemo(
@@ -462,6 +463,7 @@ export function useMapScreenController() {
     loading,
     isFetching,
     isPlaceholderData,
+    isDebouncingFilters,
     mapError,
     mapErrorDetails,
     refetchMapData,
@@ -509,6 +511,7 @@ export function useMapScreenController() {
     loading,
     isFetching,
     isPlaceholderData,
+    isDebouncingFilters,
     mapError,
     mapErrorDetails,
     refetchMapData,

@@ -238,9 +238,9 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
 
       {mode === 'radius' && totalPoints === 0 && (
         <View style={styles.noPointsToast} testID="filters-empty-state">
-          <Text style={styles.noPointsTitle}>В этом радиусе пока ничего нет</Text>
+          <Text style={styles.noPointsTitle}>Ничего не нашлось</Text>
           <Text style={styles.noPointsSubtitle}>
-            Попробуйте расширить поиск или быстро сбросить фильтры, чтобы снова увидеть места на карте.
+            Попробуйте увеличить радиус или сбросить фильтры
           </Text>
           <View style={styles.noPointsActions}>
             {nextRadiusOption ? (
