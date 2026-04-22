@@ -3,7 +3,6 @@
  */
 
 import React, {
-  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -13,22 +12,21 @@ import React, {
 import {
   ActivityIndicator,
   Platform,
-  Pressable,
   Text as RNText,
   useWindowDimensions,
   View,
 } from 'react-native'
-import Feather from '@expo/vector-icons/Feather'
 import { usePathname } from 'expo-router'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
-import { MapQuickFilters } from '@/components/MapPage/MapQuickFilters'
-import SegmentedControl from '@/components/MapPage/SegmentedControl'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
+import { useMapMobileDerivations } from '@/hooks/map/useMapMobileDerivations'
 import MapBottomSheet, { type MapBottomSheetRef } from './MapBottomSheet'
-import TravelListPanel from './TravelListPanel'
 import { getMapMobileLayoutStyles } from './MapMobileLayout.styles'
+import { MapMobileSheetToolbar } from './MapMobile/MapMobileSheetToolbar'
+import { MapMobileSheetBody } from './MapMobile/MapMobileSheetBody'
+import { MapMobileCollapsedOverlay } from './MapMobile/MapMobileCollapsedOverlay'
 
 interface MapMobileLayoutProps {
   mapComponent: React.ReactNode
@@ -183,17 +181,10 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     }
   }, [])
 
-  const setTabDeferred = useCallback(
-    (next: 'search' | 'route' | 'list') => {
-      setUiTab(next)
-    },
-    [],
-  )
-
   const handleOpenList = useCallback(() => {
-    setTabDeferred('list')
+    setUiTab('list')
     bottomSheetRef.current?.snapToFull()
-  }, [setTabDeferred])
+  }, [])
 
   const handleToggleListPanel = useCallback(() => {
     if (sheetStateRef.current === 'collapsed') {
@@ -205,119 +196,57 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   const handleOpenSearch = useCallback(() => {
     setFiltersMode?.('radius')
-    setTabDeferred('search')
+    setUiTab('search')
     bottomSheetRef.current?.snapToFull()
     onOpenFilters()
-  }, [onOpenFilters, setFiltersMode, setTabDeferred])
+  }, [onOpenFilters, setFiltersMode])
 
   const handleBackToMap = useCallback(() => {
     bottomSheetRef.current?.snapToCollapsed()
   }, [])
 
-  const canBuildRoute = useMemo(() => {
-    if (filtersMode !== 'route') return false
-    const points = filtersContextProps?.routePoints
-    return Array.isArray(points) && points.length >= 2
-  }, [filtersMode, filtersContextProps?.routePoints])
+  const handleCloseSheet = useCallback(() => {
+    bottomSheetRef.current?.snapToCollapsed()
+  }, [])
 
-  const routingLoading = Boolean(filtersContextProps?.routingLoading)
-  const routeDistance = filtersContextProps?.routeDistance as
-    | number
-    | null
-    | undefined
-  const routePointsCount = Array.isArray(filtersContextProps?.routePoints)
-    ? filtersContextProps.routePoints.length
-    : 0
-  const activeRadius = filtersContextProps?.filterValue?.radius || '60'
-  const quickFilterSelected = useMemo(
-    () => filtersContextProps?.filterValue?.categoryTravelAddress ?? [],
-    [filtersContextProps?.filterValue?.categoryTravelAddress],
+  const handleTabChange = useCallback(
+    (next: 'search' | 'route' | 'list') => {
+      if (next === 'route') {
+        setFiltersMode?.('route')
+      } else if (next === 'search') {
+        setFiltersMode?.('radius')
+      }
+      setUiTab(next)
+      bottomSheetRef.current?.snapToFull()
+    },
+    [setFiltersMode],
   )
-  const quickRadiusOptions = useMemo(
-    () => filtersContextProps?.filters?.radius ?? [],
-    [filtersContextProps?.filters?.radius],
-  )
-  const quickCategoryOptions = useMemo(
-    () => filtersContextProps?.filters?.categoryTravelAddress ?? [],
-    [filtersContextProps?.filters?.categoryTravelAddress],
-  )
-  const quickOverlayOptions = useMemo(
-    () => filtersContextProps?.overlayOptions ?? [],
-    [filtersContextProps?.overlayOptions],
-  )
-  const quickEnabledOverlays = useMemo(
-    () => filtersContextProps?.enabledOverlays ?? {},
-    [filtersContextProps?.enabledOverlays],
-  )
-  const selectedCategories = useMemo(
-    () =>
-      Array.isArray(filtersContextProps?.filterValue?.categoryTravelAddress)
-        ? filtersContextProps.filterValue.categoryTravelAddress
-            .map((value: unknown) => String(value ?? '').trim())
-            .filter(Boolean)
-        : [],
-    [filtersContextProps?.filterValue?.categoryTravelAddress],
-  )
-  const quickRadiusValue = useMemo(() => {
-    if (!activeRadius) return 'Выбор'
-    return `${activeRadius} км`
-  }, [activeRadius])
-  const quickCategoriesValue = useMemo(() => {
-    if (quickFilterSelected.length === 0) return 'Все'
-    if (quickFilterSelected.length === 1) return quickFilterSelected[0]
-    return `${quickFilterSelected.length} выбрано`
-  }, [quickFilterSelected])
-  const quickOverlaysValue = useMemo(() => {
-    const enabledCount = quickOverlayOptions.filter((option: { id: string }) =>
-      Boolean(quickEnabledOverlays?.[option.id]),
-    ).length
-    if (enabledCount === 0) return 'Выкл'
-    if (enabledCount === 1) return '1 вкл'
-    return `${enabledCount} вкл`
-  }, [quickEnabledOverlays, quickOverlayOptions])
 
-  const filterToolbarSummary = useMemo(() => {
-    if (filtersMode === 'route') {
-      if (routingLoading) return 'Маршрут обновляется'
-      if (canBuildRoute && routeDistance != null)
-        return 'Маршрут готов, можно открыть список точек'
-      return routePointsCount > 0
-        ? `Выбрано ${routePointsCount} из 2 точек`
-        : 'Выберите старт и финиш кликом по карте'
-    }
+  const handleProviderOpenList = useCallback(() => {
+    setUiTab('list')
+    bottomSheetRef.current?.snapToFull()
+  }, [])
 
-    const categoriesLabel =
-      selectedCategories.length > 0
-        ? `категорий: ${selectedCategories.length}`
-        : 'все категории'
-    return `${travelsData.length > 999 ? '999+' : travelsData.length} мест · ${activeRadius} км · ${categoriesLabel}`
-  }, [
-    activeRadius,
-    canBuildRoute,
+  const derivations = useMapMobileDerivations(
+    filtersContextProps,
     filtersMode,
-    routeDistance,
-    routePointsCount,
-    routingLoading,
-    selectedCategories.length,
-    travelsData.length,
-  ])
-
-  const panelTabsOptions = useMemo(
-    () => [
-      {
-        key: 'search',
-        label: 'Поиск',
-        icon: isVeryNarrow ? undefined : 'search',
-      },
-      {
-        key: 'route',
-        label: 'Маршрут',
-        icon: isVeryNarrow ? undefined : 'alt-route',
-      },
-      { key: 'list', label: 'Точки', icon: isVeryNarrow ? undefined : 'list' },
-    ],
-    [isVeryNarrow],
+    travelsData,
+    isVeryNarrow,
   )
+
+  const {
+    quickRadiusValue,
+    quickCategoriesValue,
+    quickOverlaysValue,
+    activeRadius,
+    quickFilterSelected,
+    quickRadiusOptions,
+    quickCategoryOptions,
+    quickOverlayOptions,
+    quickEnabledOverlays,
+    filterToolbarSummary,
+    panelTabsOptions,
+  } = derivations
 
   const showCollapsedMapOverlay =
     sheetState === 'collapsed' && bottomSheetState === 'collapsed'
@@ -345,345 +274,66 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     ],
   )
 
-  const sheetContent = useMemo(() => {
-    const isQuarterListPreview = uiTab === 'list' && sheetState === 'quarter'
-    const showTopFilterActions = uiTab === 'search' && !stackSheetToolbar
-    const showSheetCloseButton = !isQuarterListPreview
-    const toolbarSummaryText = isQuarterListPreview
-      ? 'Быстрый просмотр результатов'
-      : uiTab === 'search' || uiTab === 'route'
-        ? filterToolbarSummary
-        : null
+  const isQuarterListPreview = uiTab === 'list' && sheetState === 'quarter'
 
-    const body = uiTab === 'list' ? (
-      <TravelListPanel
+  const sheetContent = (
+    <View
+      style={[
+        styles.sheetRoot,
+        isQuarterListPreview && styles.sheetRootPreview,
+      ]}
+    >
+      <MapMobileSheetToolbar
+        uiTab={uiTab}
+        sheetState={sheetState}
         travelsData={travelsData}
-        buildRouteTo={buildRouteTo}
-        isMobile={true}
-        hasMore={hasMore}
-        onLoadMore={onLoadMore}
-        onRefresh={onRefresh}
-        isRefreshing={isRefreshing}
-        userLocation={coordinates}
-        transportMode={transportMode}
-        onToggleFavorite={onToggleFavorite}
-        favorites={favorites}
-        compactPreview={sheetState === 'quarter'}
-        onExpandList={handleOpenList}
-        onClosePanel={handleBackToMap}
-        onOpenFilters={handleOpenSearch}
-        onResetFilters={onResetFilters}
-        onExpandRadius={onExpandRadius}
+        panelTabsOptions={panelTabsOptions}
+        filterToolbarSummary={filterToolbarSummary}
+        resetFilters={filtersContextProps?.resetFilters}
+        onTabChange={handleTabChange}
+        onOpenList={handleOpenList}
+        onToggleListPanel={handleToggleListPanel}
+        onCenterUser={onCenterOnUser}
+        onClose={handleCloseSheet}
+        isNarrow={isNarrow}
+        stackSheetToolbar={stackSheetToolbar}
+        compactSheetActions={compactSheetActions}
+        colors={colors}
+        styles={styles}
       />
-    ) : (
-      (() => {
-        const ProviderComponent = filtersPanelProps?.Component
-        const PanelComponent = filtersPanelProps?.Panel
-        const providerProps = filtersContextProps
 
-        if (!ProviderComponent || !PanelComponent || !providerProps) {
-          return filtersLoadingFallback
-        }
-
-        const mergedProviderProps = {
-          ...providerProps,
-          onOpenList: () => {
-            setTabDeferred('list')
-            bottomSheetRef.current?.snapToFull()
-          },
-        }
-
-        return (
-          <Suspense fallback={filtersLoadingFallback}>
-            <ProviderComponent {...mergedProviderProps}>
-              <PanelComponent hideTopControls={true} />
-            </ProviderComponent>
-          </Suspense>
-        )
-      })()
-    )
-
-    return (
       <View
         style={[
-          styles.sheetRoot,
-          isQuarterListPreview && styles.sheetRootPreview,
+          styles.sheetBody,
+          isQuarterListPreview && styles.sheetBodyPreview,
         ]}
       >
-        <View
-          style={[
-            styles.sheetToolbar,
-            isQuarterListPreview && styles.sheetToolbarPreview,
-            stackSheetToolbar
-              ? styles.sheetToolbarStacked
-              : styles.sheetToolbarInline,
-          ]}
-        >
-          <View
-            style={[
-              styles.sheetToolbarLeft,
-              stackSheetToolbar && styles.sheetToolbarFullWidth,
-            ]}
-          >
-            <SegmentedControl
-              options={panelTabsOptions}
-              value={uiTab}
-              onChange={(key) => {
-                const next =
-                  key === 'route' ? 'route' : key === 'list' ? 'list' : 'search'
-                if (next === 'route') {
-                  setFiltersMode?.('route')
-                } else if (next === 'search') {
-                  setFiltersMode?.('radius')
-                }
-                setTabDeferred(next)
-                if (next === 'search' || next === 'route') {
-                  bottomSheetRef.current?.snapToFull()
-                  return
-                }
-                bottomSheetRef.current?.snapToFull()
-              }}
-              compact={true}
-              dense={isNarrow}
-              noOuterMargins={true}
-              tone="subtle"
-              accessibilityLabel="Переключение между поиском, маршрутом и списком точек"
-            />
-            {toolbarSummaryText && (
-              <RNText
-                style={[
-                  styles.sheetToolbarSummary,
-                  isQuarterListPreview && styles.sheetToolbarSummaryPreview,
-                ]}
-                numberOfLines={2}
-                testID="map-mobile-toolbar-summary"
-              >
-                {toolbarSummaryText}
-              </RNText>
-            )}
-          </View>
-
-          <View
-            style={[
-              styles.sheetToolbarActions,
-              stackSheetToolbar && styles.sheetToolbarActionsStacked,
-              isQuarterListPreview && styles.sheetToolbarActionsPreview,
-            ]}
-          >
-            {isQuarterListPreview && (
-              <Pressable
-                testID="map-panel-expand-list"
-                onPress={handleOpenList}
-                accessibilityRole="button"
-                accessibilityLabel={`Показать все ${travelsData.length} мест`}
-                hitSlop={6}
-                style={({ pressed }) => [
-                  styles.sheetShowResultsButton,
-                  stackSheetToolbar && styles.sheetToolbarButtonStacked,
-                  compactSheetActions && styles.sheetShowResultsButtonCompact,
-                  {
-                    backgroundColor: pressed
-                      ? colors.primaryDark
-                      : colors.primary,
-                  },
-                ]}
-              >
-                <Feather
-                  name="maximize-2"
-                  size={15}
-                  color={colors.textOnPrimary}
-                />
-                {!compactSheetActions && (
-                  <RNText style={styles.sheetPrimaryActionText}>
-                    Все места
-                  </RNText>
-                )}
-              </Pressable>
-            )}
-            {showTopFilterActions && (
-              <>
-                {typeof filtersContextProps?.resetFilters === 'function' && (
-                  <Pressable
-                    testID="map-panel-reset"
-                    onPress={() => filtersContextProps?.resetFilters?.()}
-                    accessibilityRole="button"
-                    accessibilityLabel="Сбросить фильтры"
-                    hitSlop={6}
-                    style={({ pressed }) => [
-                      styles.sheetCloseButton,
-                      stackSheetToolbar && styles.sheetIconButtonStacked,
-                      compactSheetActions && styles.sheetIconButtonCompact,
-                      { borderColor: colors.borderLight },
-                      pressed && { opacity: 0.6 },
-                    ]}
-                  >
-                    <Feather
-                      name="rotate-cw"
-                      size={15}
-                      color={colors.textMuted}
-                    />
-                  </Pressable>
-                )}
-                <Pressable
-                  testID="map-panel-show-results"
-                  onPress={handleOpenList}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Показать ${travelsData.length} мест`}
-                  hitSlop={6}
-                  style={({ pressed }) => [
-                    styles.sheetShowResultsButton,
-                    stackSheetToolbar && styles.sheetToolbarButtonStacked,
-                    compactSheetActions && styles.sheetShowResultsButtonCompact,
-                    {
-                      backgroundColor: pressed
-                        ? colors.primaryDark
-                        : colors.primary,
-                    },
-                  ]}
-                >
-                  <Feather name="list" size={15} color={colors.textOnPrimary} />
-                  {travelsData.length > 0 && (
-                    <RNText
-                      style={[
-                        styles.sheetResultsBadge,
-                        { color: colors.primary },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {travelsData.length > 999
-                        ? '999+'
-                        : String(travelsData.length)}
-                    </RNText>
-                  )}
-                </Pressable>
-              </>
-            )}
-            <Pressable
-              testID="map-center-user"
-              onPress={onCenterOnUser}
-              accessibilityRole="button"
-              accessibilityLabel="Показать мое местоположение"
-              hitSlop={6}
-              style={({ pressed }) => [
-                styles.sheetCloseButton,
-                stackSheetToolbar && styles.sheetIconButtonStacked,
-                compactSheetActions && styles.sheetIconButtonCompact,
-                pressed && { opacity: 0.6 },
-              ]}
-            >
-              <Feather name="crosshair" size={15} color={colors.textMuted} />
-            </Pressable>
-            <Pressable
-              testID="map-panel-open"
-              onPress={handleToggleListPanel}
-              accessibilityRole="button"
-              accessibilityLabel="Вернуться к карте"
-              hitSlop={6}
-              style={({ pressed }) => [
-                styles.sheetBackToMapButton,
-                stackSheetToolbar && styles.sheetToolbarButtonStacked,
-                compactSheetActions && styles.sheetBackToMapButtonCompact,
-                pressed && { opacity: 0.72 },
-              ]}
-            >
-              <Feather name="map" size={15} color={colors.textMuted} />
-              {!compactSheetActions && (
-                <RNText style={styles.sheetBackToMapText}>Карта</RNText>
-              )}
-            </Pressable>
-            {showSheetCloseButton && (
-              <Pressable
-                testID="map-panel-close"
-                onPress={() => bottomSheetRef.current?.snapToCollapsed()}
-                accessibilityRole="button"
-                accessibilityLabel="Закрыть панель"
-                hitSlop={8}
-                style={({ pressed }) => [
-                  styles.sheetCloseButton,
-                  stackSheetToolbar && styles.sheetIconButtonStacked,
-                  compactSheetActions && styles.sheetIconButtonCompact,
-                  pressed && { opacity: 0.6 },
-                ]}
-              >
-                <Feather name="x" size={16} color={colors.textMuted} />
-              </Pressable>
-            )}
-          </View>
-        </View>
-
-        <View
-          style={[
-            styles.sheetBody,
-            isQuarterListPreview && styles.sheetBodyPreview,
-          ]}
-        >
-          {body}
-        </View>
+        <MapMobileSheetBody
+          uiTab={uiTab}
+          sheetState={sheetState}
+          travelsData={travelsData}
+          buildRouteTo={buildRouteTo}
+          hasMore={hasMore}
+          onLoadMore={onLoadMore}
+          onRefresh={onRefresh}
+          isRefreshing={isRefreshing}
+          coordinates={coordinates}
+          transportMode={transportMode}
+          onToggleFavorite={onToggleFavorite}
+          favorites={favorites}
+          onResetFilters={onResetFilters}
+          onExpandRadius={onExpandRadius}
+          onOpenList={handleOpenList}
+          onBackToMap={handleBackToMap}
+          onOpenSearch={handleOpenSearch}
+          filtersPanelProps={filtersPanelProps}
+          filtersContextProps={filtersContextProps}
+          filtersLoadingFallback={filtersLoadingFallback}
+          onProviderOpenList={handleProviderOpenList}
+        />
       </View>
-    )
-  }, [
-    uiTab,
-    colors.borderLight,
-    colors.primary,
-    colors.primaryDark,
-    colors.textMuted,
-    colors.textOnPrimary,
-    buildRouteTo,
-    coordinates,
-    favorites,
-    hasMore,
-    filtersContextProps,
-    filtersLoadingFallback,
-    filtersPanelProps?.Component,
-    filtersPanelProps?.Panel,
-    isRefreshing,
-    onExpandRadius,
-    onLoadMore,
-    onRefresh,
-    onResetFilters,
-    onToggleFavorite,
-    onCenterOnUser,
-    handleBackToMap,
-    handleOpenSearch,
-    handleOpenList,
-    handleToggleListPanel,
-    panelTabsOptions,
-    compactSheetActions,
-    filterToolbarSummary,
-    isNarrow,
-    setFiltersMode,
-    setTabDeferred,
-    sheetState,
-    stackSheetToolbar,
-    styles.sheetBackToMapButton,
-    styles.sheetBackToMapButtonCompact,
-    styles.sheetBackToMapText,
-    styles.sheetBody,
-    styles.sheetBodyPreview,
-    styles.sheetCloseButton,
-    styles.sheetIconButtonCompact,
-    styles.sheetIconButtonStacked,
-    styles.sheetResultsBadge,
-    styles.sheetRoot,
-    styles.sheetRootPreview,
-    styles.sheetShowResultsButton,
-    styles.sheetShowResultsButtonCompact,
-    styles.sheetToolbar,
-    styles.sheetToolbarActions,
-    styles.sheetToolbarActionsPreview,
-    styles.sheetToolbarActionsStacked,
-    styles.sheetToolbarButtonStacked,
-    styles.sheetToolbarFullWidth,
-    styles.sheetToolbarInline,
-    styles.sheetToolbarLeft,
-    styles.sheetToolbarPreview,
-    styles.sheetToolbarStacked,
-    styles.sheetToolbarSummary,
-    styles.sheetToolbarSummaryPreview,
-    styles.sheetPrimaryActionText,
-    transportMode,
-    travelsData,
-  ])
+    </View>
+  )
 
   return (
     <GestureHandlerRootView
@@ -694,47 +344,23 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       <View style={styles.mapContainer}>
         {mapComponent}
         {showCollapsedMapOverlay && (
-          <MapQuickFilters
-            iconOnly={true}
-            radiusValue={quickRadiusValue}
-            categoriesValue={quickCategoriesValue}
-            overlaysValue={quickOverlaysValue}
-            extraActions={[
-              {
-                key: 'locate',
-                label: 'Показать мое местоположение',
-                icon: 'crosshair',
-                onPress: onCenterOnUser,
-                testID: 'map-center-user-quick',
-              },
-              {
-                key: 'list',
-                label: 'Открыть панель со списком',
-                icon: 'list',
-                onPress: handleOpenList,
-                testID: 'map-open-list',
-              },
-            ]}
-            onPressRadius={handleOpenSearch}
-            onPressCategories={handleOpenSearch}
-            onPressOverlays={handleOpenSearch}
-            radiusOptions={quickRadiusOptions}
-            radiusSelected={activeRadius}
-            onChangeRadius={(next) =>
-              filtersContextProps?.onFilterChange?.('radius', next)
-            }
-            categoriesOptions={quickCategoryOptions}
-            categoriesSelected={quickFilterSelected}
-            onChangeCategories={(next) =>
-              filtersContextProps?.onFilterChange?.('categoryTravelAddress', next)
-            }
-            overlayOptions={quickOverlayOptions}
-            enabledOverlays={quickEnabledOverlays}
-            onChangeOverlay={(id, enabled) =>
-              filtersContextProps?.onOverlayToggle?.(id, enabled)
-            }
-            onResetOverlays={filtersContextProps?.onResetOverlays}
+          <MapMobileCollapsedOverlay
+            quickRadiusValue={quickRadiusValue}
+            quickCategoriesValue={quickCategoriesValue}
+            quickOverlaysValue={quickOverlaysValue}
+            quickRadiusOptions={quickRadiusOptions}
+            quickCategoryOptions={quickCategoryOptions as any}
+            quickOverlayOptions={quickOverlayOptions}
+            quickEnabledOverlays={quickEnabledOverlays}
+            activeRadius={activeRadius}
+            quickFilterSelected={quickFilterSelected}
             travelsData={travelsData}
+            onCenterUser={onCenterOnUser}
+            onOpenList={handleOpenList}
+            onOpenSearch={handleOpenSearch}
+            onFilterChange={filtersContextProps?.onFilterChange}
+            onOverlayToggle={filtersContextProps?.onOverlayToggle}
+            onResetOverlays={filtersContextProps?.onResetOverlays}
           />
         )}
       </View>
