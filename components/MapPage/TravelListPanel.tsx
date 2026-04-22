@@ -59,7 +59,7 @@ const TravelListPanel: React.FC<Props> = ({
   favorites = EMPTY_FAVORITES,
   onClosePanel,
   onOpenFilters,
-  onExpandList,
+  onExpandList: _onExpandList,
   onResetFilters,
   onExpandRadius,
   compactPreview = false,
@@ -189,52 +189,24 @@ const TravelListPanel: React.FC<Props> = ({
   }, [compactPreview, hasMore, isLoading, skeletonCards, styles.endText])
 
   const listHeader = useMemo(() => {
-    if (!isMobile || !travelsData.length || !compactPreview) {
+    if (!isMobile || !travelsData.length) {
       return null
     }
-    const hintText =
-      '\u0411\u044b\u0441\u0442\u0440\u044b\u0439 \u043f\u0440\u043e\u0441\u043c\u043e\u0442\u0440 \u0440\u044f\u0434\u043e\u043c. \u041e\u0442\u043a\u0440\u043e\u0439\u0442\u0435 \u0432\u0435\u0441\u044c \u0441\u043f\u0438\u0441\u043e\u043a, \u0435\u0441\u043b\u0438 \u0445\u043e\u0442\u0438\u0442\u0435 \u0441\u0440\u0430\u0432\u043d\u0438\u0442\u044c \u0431\u043e\u043b\u044c\u0448\u0435 \u0432\u0430\u0440\u0438\u0430\u043d\u0442\u043e\u0432.'
+    const placesCountLabel =
+      travelsData.length > 999 ? '999+' : String(travelsData.length)
+    const hintText = compactPreview
+      ? 'Быстрый просмотр рядом. Откройте весь список, если хотите сравнить больше вариантов.'
+      : `${placesCountLabel} мест рядом. Откройте место, чтобы сфокусироваться на карте и быстро перейти к маршруту без повторяющихся подсказок в каждой карточке.`
 
     return (
       <View style={styles.listHeaderCard} testID="travel-list-mobile-summary">
         <Text style={styles.listHeaderTitle}>Места рядом</Text>
         <Text style={styles.listHeaderHint}>{hintText}</Text>
-        <View style={styles.listHeaderActions}>
-          {compactPreview && onExpandList && (
-            <Button
-              label="Показать все"
-              onPress={onExpandList}
-              size="sm"
-              testID="travel-list-expand-all"
-            />
-          )}
-          {onOpenFilters && (
-            <Button
-              label="Фильтры"
-              onPress={onOpenFilters}
-              variant="outline"
-              size="sm"
-              testID="travel-list-open-filters"
-            />
-          )}
-          {onClosePanel && (
-            <Button
-              label="Карта"
-              onPress={onClosePanel}
-              variant="ghost"
-              size="sm"
-              testID="travel-list-back-to-map"
-            />
-          )}
-        </View>
       </View>
     )
   }, [
     compactPreview,
     isMobile,
-    onClosePanel,
-    onExpandList,
-    onOpenFilters,
     styles,
     travelsData.length,
   ])
@@ -445,9 +417,10 @@ const getStyles = (colors: ThemedColors) =>
       color: colors.textMuted,
     },
     listHeaderActions: {
-      flexDirection: 'column',
-      alignItems: 'stretch',
-      gap: 10,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      gap: 8,
       marginTop: 2,
     },
     webScrollView: {

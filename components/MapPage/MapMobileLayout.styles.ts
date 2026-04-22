@@ -39,10 +39,16 @@ export const getMapMobileLayoutStyles = (
         : null),
     },
     sheetRoot: {
-      flexGrow: 1,
-      flexShrink: 1,
-      flexBasis: 0,
+      flex: 1,
       minHeight: 0,
+      width: '100%',
+      ...Platform.select({
+        web: {
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+        } as any,
+      }),
     },
     sheetRootPreview: {
       backgroundColor: colors.surfaceAlpha40,
@@ -50,22 +56,22 @@ export const getMapMobileLayoutStyles = (
     sheetToolbar: {
       flexDirection: options.stackSheetToolbar ? 'column' : 'row',
       alignItems: options.stackSheetToolbar ? 'stretch' : 'center',
-      gap: options.stackSheetToolbar ? 6 : options.isNarrow ? 4 : 8,
+      gap: options.stackSheetToolbar ? 6 : options.isNarrow ? 4 : 6,
       minHeight: options.stackSheetToolbar
         ? undefined
         : options.isNarrow
-          ? 36
-          : 42,
-      paddingVertical: options.isNarrow ? 4 : 6,
-      paddingLeft: options.isNarrow ? 8 : 12,
-      paddingRight: options.isNarrow ? 8 : 12,
+          ? 34
+          : 40,
+      paddingVertical: options.isNarrow ? 3 : 5,
+      paddingLeft: options.isNarrow ? 6 : 10,
+      paddingRight: options.isNarrow ? 6 : 10,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.borderLight,
       backgroundColor: colors.surface,
       ...(Platform.OS === 'web'
         ? ({
             backgroundColor: colors.surfaceAlpha40,
-            boxShadow: '0 4px 14px rgba(15,23,42,0.08)',
+            boxShadow: '0 6px 18px rgba(15,23,42,0.08)',
             backdropFilter: 'blur(18px)',
             WebkitBackdropFilter: 'blur(18px)',
           } as any)
@@ -118,9 +124,9 @@ export const getMapMobileLayoutStyles = (
       gap: 8,
     },
     sheetCloseButton: {
-      width: options.isNarrow ? 34 : 38,
-      height: options.isNarrow ? 34 : 38,
-      borderRadius: options.isNarrow ? 11 : 12,
+      width: options.isNarrow ? 32 : 36,
+      height: options.isNarrow ? 32 : 36,
+      borderRadius: options.isNarrow ? 10 : 12,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
       borderWidth: StyleSheet.hairlineWidth,
@@ -146,8 +152,8 @@ export const getMapMobileLayoutStyles = (
     },
     sheetShowResultsButton: {
       flexDirection: 'row' as const,
-      height: options.isNarrow ? 36 : 40,
-      minWidth: options.isNarrow ? 36 : 40,
+      height: options.isNarrow ? 34 : 38,
+      minWidth: options.isNarrow ? 34 : 38,
       paddingHorizontal: options.isNarrow ? 8 : 10,
       gap: 4,
       borderRadius: 999,
@@ -160,9 +166,9 @@ export const getMapMobileLayoutStyles = (
         : null),
     },
     sheetShowResultsButtonCompact: {
-      height: 40,
-      minWidth: 40,
-      paddingHorizontal: 9,
+      height: 36,
+      minWidth: 36,
+      paddingHorizontal: 8,
     },
     sheetPrimaryActionText: {
       fontSize: options.isNarrow ? 12 : 13,
@@ -178,8 +184,8 @@ export const getMapMobileLayoutStyles = (
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
       gap: 4,
-      height: options.isNarrow ? 36 : 40,
-      minWidth: options.isNarrow ? 36 : 40,
+      height: options.isNarrow ? 34 : 38,
+      minWidth: options.isNarrow ? 34 : 38,
       paddingHorizontal: options.isNarrow ? 8 : 10,
       borderRadius: 999,
       borderWidth: StyleSheet.hairlineWidth,
@@ -194,10 +200,10 @@ export const getMapMobileLayoutStyles = (
         : null),
     },
     sheetBackToMapButtonCompact: {
-      width: 40,
-      height: 40,
+      width: 36,
+      height: 36,
       paddingHorizontal: 0,
-      borderRadius: 12,
+      borderRadius: 11,
     },
     sheetBackToMapText: {
       fontSize: 12,
@@ -205,9 +211,9 @@ export const getMapMobileLayoutStyles = (
       color: colors.textMuted,
     },
     sheetIconButtonCompact: {
-      width: 40,
-      height: 40,
-      borderRadius: 12,
+      width: 36,
+      height: 36,
+      borderRadius: 11,
     },
     sheetIconButtonStacked: {
       minWidth: 0,
@@ -229,7 +235,7 @@ export const getMapMobileLayoutStyles = (
       flexShrink: 1,
     },
     sheetToolbarSummary: {
-      marginTop: options.isNarrow ? 3 : 6,
+      marginTop: options.isNarrow ? 2 : 5,
       fontSize: 11,
       lineHeight: options.isNarrow ? 14 : 15,
       fontWeight: '600' as const,
@@ -257,9 +263,9 @@ export const getMapMobileLayoutStyles = (
       minHeight: 34,
     },
     sheetIconButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 12,
+      width: 36,
+      height: 36,
+      borderRadius: 11,
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: StyleSheet.hairlineWidth,
@@ -285,7 +291,7 @@ export const getMapMobileLayoutStyles = (
         : null),
     },
     sheetResetButton: {
-      paddingHorizontal: 10,
+      paddingHorizontal: 9,
       borderRadius: 999,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
@@ -304,15 +310,38 @@ export const getMapMobileLayoutStyles = (
       }),
     },
     sheetBody: {
-      flexGrow: 1,
-      flexShrink: 1,
-      flexBasis: 0,
+      flex: 1,
       minHeight: 0,
       ...Platform.select({
         web: {
-          paddingHorizontal: options.isNarrow ? 6 : 12,
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          paddingHorizontal: options.isNarrow ? 4 : 10,
         },
       }),
+    },
+    sheetFallback: {
+      flex: 1,
+      minHeight: 220,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 10,
+      paddingHorizontal: options.isNarrow ? 18 : 24,
+      paddingVertical: options.isNarrow ? 18 : 24,
+    },
+    sheetFallbackTitle: {
+      fontSize: 15,
+      fontWeight: '700' as const,
+      color: colors.text,
+      textAlign: 'center' as const,
+    },
+    sheetFallbackHint: {
+      fontSize: 12,
+      lineHeight: 18,
+      color: colors.textMuted,
+      textAlign: 'center' as const,
+      maxWidth: 280,
     },
     sheetBodyPreview: {
       ...Platform.select({

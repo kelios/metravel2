@@ -1,54 +1,51 @@
 // components/MapPage/map/ClusterLayer.tsx
-import React, { useMemo, useCallback } from 'react';
-import { View, Text, useWindowDimensions } from 'react-native';
-import { useThemedColors } from '@/hooks/useTheme';
-import { strToLatLng } from './utils';
-import type { Point, ClusterData } from './types';
+import React, { useMemo, useCallback } from 'react'
+import { View, Text } from 'react-native'
+import { useThemedColors } from '@/hooks/useTheme'
+import { strToLatLng } from './utils'
+import type { Point, ClusterData } from './types'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
+
+import { buildClusterIconHtml } from './mapMarkerStyles'
 
 interface ClusterLayerProps {
-  L?: any;
-  clusters: ClusterData[];
-  Marker: React.ComponentType<any>;
-  Popup: React.ComponentType<any>;
-  Tooltip?: React.ComponentType<any>;
-  PopupContent: React.ComponentType<{ point: Point; closePopup?: () => void }>;
-  popupProps?: Record<string, unknown>;
-  onMarkerClick?: (point: Point, coords: { lat: number; lng: number }) => void;
-  onMarkerInstance?: (coord: string, marker: any | null) => void;
+  L?: any
+  clusters: ClusterData[]
+  Marker: React.ComponentType<any>
+  Popup: React.ComponentType<any>
+  Tooltip?: React.ComponentType<any>
+  PopupContent: React.ComponentType<{ point: Point; closePopup?: () => void }>
+  popupProps?: Record<string, unknown>
+  onMarkerClick?: (point: Point, coords: { lat: number; lng: number }) => void
+  onMarkerInstance?: (coord: string, marker: any | null) => void
   onClusterZoom: (payload: {
-    center: [number, number];
-    bounds: [[number, number], [number, number]];
-    key: string;
-    items: Point[];
-  }) => void;
-  expandedClusterKey?: string | null;
-  expandedClusterItems?: Point[] | null;
-  markerIcon?: any;
-  markerOpacity?: number;
-  renderer?: any;
-  hintCenter?: { lat: number; lng: number } | null;
-  useMap?: () => any;
+    center: [number, number]
+    bounds: [[number, number], [number, number]]
+    key: string
+    items: Point[]
+  }) => void
+  expandedClusterKey?: string | null
+  expandedClusterItems?: Point[] | null
+  markerIcon?: any
+  markerOpacity?: number
+  renderer?: any
+  hintCenter?: { lat: number; lng: number } | null
+  useMap?: () => any
 }
 
-const TOOLTIP_MAX_LEN = 30;
+const TOOLTIP_MAX_LEN = 30
 
 const ClusterPopupContentWithClose: React.FC<{
-  point: Point;
-  PopupContent: React.ComponentType<{ point: Point; closePopup?: () => void }>;
-  useMap?: () => any;
+  point: Point
+  PopupContent: React.ComponentType<{ point: Point; closePopup?: () => void }>
+  useMap?: () => any
 }> = ({ point, PopupContent, useMap: useMapHook }) => {
-  const map = useMapHook?.();
+  const map = useMapHook?.()
   const closePopup = useCallback(() => {
-    map?.closePopup();
-  }, [map]);
-  return <PopupContent point={point} closePopup={closePopup} />;
-};
-
-
-const sanitizeCssValue = (val: string | undefined) => {
-  if (!val) return '';
-  return val.replace(/[^\w\s#(),.-]/g, '').slice(0, 100);
-};
+    map?.closePopup()
+  }, [map])
+  return <PopupContent point={point} closePopup={closePopup} />
+}
 
 const ClusterLayer: React.FC<ClusterLayerProps> = ({
   L,
@@ -69,253 +66,114 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
   hintCenter,
   useMap: useMapHook,
 }) => {
-  const colors = useThemedColors();
-  const { width: viewportWidth } = useWindowDimensions();
-  const isNarrowViewport = viewportWidth <= 420;
-  const clusterOuterSize = isNarrowViewport ? 48 : 56;
-  const clusterInnerSize = isNarrowViewport ? 40 : 48;
-  const clusterCoreSize = isNarrowViewport ? 34 : 40;
-  const clusterAnchor = Math.round(clusterOuterSize / 2);
-  const clusterInset = isNarrowViewport ? 4 : 4;
-  const clusterFontSize = isNarrowViewport ? 16 : 18;
+  const colors = useThemedColors()
 
   const safeClusters = useMemo(() => {
-    return Array.isArray(clusters) ? clusters : [];
-  }, [clusters]);
+    return Array.isArray(clusters) ? clusters : []
+  }, [clusters])
 
   const clusterIconsCache = useMemo(() => {
-    const leaflet = L ?? (window as any)?.L;
-    if (!leaflet?.divIcon) return new Map();
+    const leaflet = L ?? (window as any)?.L
+    if (!leaflet?.divIcon) return new Map()
 
-    const cache = new Map();
-    const root = typeof window !== 'undefined' ? getComputedStyle(document.documentElement) : null;
-    const accent = sanitizeCssValue(
-      root?.getPropertyValue('--color-primary')?.trim() || colors.primary
-    );
-    const surface = sanitizeCssValue(
-      root?.getPropertyValue('--color-surface')?.trim() || colors.surface
-    );
-    const textColor = sanitizeCssValue(
-      root?.getPropertyValue('--color-text')?.trim() || colors.text
-    );
-    const shadow = sanitizeCssValue(
-      root?.getPropertyValue('--shadow-medium')?.trim() || colors.boxShadows.medium
-    );
-    const border = sanitizeCssValue(
-      root?.getPropertyValue('--color-border')?.trim() || colors.border
-    );
-    const boxShadow = shadow || '0 4px 16px rgba(0,0,0,0.35)';
-    const borderColor = border || 'rgba(0,0,0,0.1)';
-    const badgeColor = accent || colors.primary;
-    const badgeTextColor = textColor || colors.text;
-    const surfaceColor = surface || colors.surface;
+    const cache = new Map()
+    ;[2, 5, 10, 20, 50, 100, 200].forEach((count) => {
+      const { metrics, html } = buildClusterIconHtml({
+        count,
+        accentColor: String(DESIGN_TOKENS.colors.primary),
+        textColor: String(DESIGN_TOKENS.colors.primaryDark),
+      })
+      cache.set(
+        count,
+        leaflet.divIcon({
+          className: 'metravel-cluster-icon',
+          html,
+          iconSize: [metrics.size, metrics.size],
+          iconAnchor: [metrics.size / 2, metrics.size / 2],
+        }),
+      )
+    })
 
-    [2, 5, 10, 20, 50, 100, 200].forEach(count => {
-      const icon = leaflet.divIcon({
-        className: 'metravel-cluster-icon',
-        html: `
-          <div style="
-            position: relative;
-            width: ${clusterOuterSize}px;
-            height: ${clusterOuterSize}px;
-            background: ${surfaceColor};
-            border-radius: 50%;
-            border: 1px solid ${borderColor};
-            box-shadow: ${boxShadow};
-          ">
-            <div style="
-              position: absolute;
-              top: ${clusterInset}px;
-              left: ${clusterInset}px;
-              width: ${clusterInnerSize}px;
-              height: ${clusterInnerSize}px;
-              background: ${badgeColor};
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-            ">
-              <div style="
-                position: absolute;
-                width: ${clusterCoreSize}px;
-                height: ${clusterCoreSize}px;
-                background: rgba(255,255,255,0.18);
-                border-radius: 50%;
-              "></div>
-              <span style="
-                position: relative;
-                color: ${badgeTextColor};
-                font-weight: 800;
-                font-size: ${clusterFontSize}px;
-                z-index: 1;
-              ">${count}</span>
-            </div>
-          </div>
-        `,
-        iconSize: [clusterOuterSize, clusterOuterSize],
-        iconAnchor: [clusterAnchor, clusterAnchor],
-      });
-      cache.set(count, icon);
-    });
-
-    return cache;
-  }, [L, clusterAnchor, clusterCoreSize, clusterFontSize, clusterInnerSize, clusterInset, clusterOuterSize, colors]);
+    return cache
+  }, [L])
 
   const clusterIcon = useCallback(
     (count: number, thumbUrl?: string) => {
-      const leaflet = L ?? (window as any)?.L;
-      if (!leaflet?.divIcon) return undefined;
+      const leaflet = L ?? (window as any)?.L
+      if (!leaflet?.divIcon) return undefined
 
       if (!Number.isFinite(count) || count < 0 || count > 10000) {
-        console.warn('[Map] Invalid cluster count:', count);
-        return undefined;
+        console.warn('[Map] Invalid cluster count:', count)
+        return undefined
       }
 
       if (!thumbUrl && clusterIconsCache.has(count)) {
-        return clusterIconsCache.get(count);
+        return clusterIconsCache.get(count)
       }
-
-      const root = typeof window !== 'undefined' ? getComputedStyle(document.documentElement) : null;
-
-      const accent = sanitizeCssValue(
-        root?.getPropertyValue('--color-primary')?.trim() || colors.primary
-      );
-      const surface = sanitizeCssValue(
-        root?.getPropertyValue('--color-surface')?.trim() || colors.surface
-      );
-      const textColor = sanitizeCssValue(
-        root?.getPropertyValue('--color-text')?.trim() || colors.text
-      );
-      const shadow = sanitizeCssValue(
-        root?.getPropertyValue('--shadow-medium')?.trim() || colors.boxShadows.medium
-      );
-      const border = sanitizeCssValue(
-        root?.getPropertyValue('--color-border')?.trim() || colors.border
-      );
-      const boxShadow = shadow || '0 4px 16px rgba(0,0,0,0.35)';
-      const borderColor = border || 'rgba(0,0,0,0.1)';
-      const badgeColor = accent || colors.primary;
-      const badgeTextColor = textColor || colors.text;
-      const surfaceColor = surface || colors.surface;
-
-      const safeCount = Math.floor(count);
-
-      const thumbHtml = thumbUrl
-        ? `<img src="${thumbUrl}" style="
-            position: absolute;
-            top: 0; left: 0;
-            width: ${clusterOuterSize}px; height: ${clusterOuterSize}px;
-            border-radius: 50%;
-            object-fit: cover;
-          " loading="lazy" alt="" />
-          <div style="
-            position: absolute;
-            top: 0; left: 0;
-            width: ${clusterOuterSize}px; height: ${clusterOuterSize}px;
-            border-radius: 50%;
-            background: rgba(0,0,0,0.22);
-          "></div>`
-        : '';
-
-      const bgStyle = thumbUrl
-        ? `background: transparent;`
-        : `background: ${surfaceColor};`;
-
-      const innerBg = thumbUrl
-        ? `background: rgba(0,0,0,0.55);`
-        : `background: ${badgeColor};`;
+      const { metrics, html } = buildClusterIconHtml({
+        count,
+        thumbUrl,
+        accentColor: String(DESIGN_TOKENS.colors.primary),
+        textColor: String(DESIGN_TOKENS.colors.primaryDark),
+      })
 
       return leaflet.divIcon({
         className: 'metravel-cluster-icon',
-        html: `
-          <div style="
-            position: relative;
-            width: ${clusterOuterSize}px;
-            height: ${clusterOuterSize}px;
-            ${bgStyle}
-            border-radius: 50%;
-            border: 1px solid ${borderColor};
-            box-shadow: ${boxShadow};
-            overflow: hidden;
-          ">
-            ${thumbHtml}
-            <div style="
-              position: absolute;
-              top: ${clusterInset}px;
-              left: ${clusterInset}px;
-              width: ${clusterInnerSize}px;
-              height: ${clusterInnerSize}px;
-              ${innerBg}
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-            ">
-              <div style="
-                position: absolute;
-                width: ${clusterCoreSize}px;
-                height: ${clusterCoreSize}px;
-                background: rgba(255,255,255,0.18);
-                border-radius: 50%;
-              "></div>
-              <span style="
-                position: relative;
-                color: ${badgeTextColor};
-                font-weight: 800;
-                font-size: ${clusterFontSize}px;
-                z-index: 1;
-              ">${safeCount}</span>
-            </div>
-          </div>
-        `,
-        iconSize: [clusterOuterSize, clusterOuterSize],
-        iconAnchor: [clusterAnchor, clusterAnchor],
-      });
+        html,
+        iconSize: [metrics.size, metrics.size],
+        iconAnchor: [metrics.size / 2, metrics.size / 2],
+      })
     },
-    [L, clusterAnchor, clusterCoreSize, clusterFontSize, clusterIconsCache, clusterInnerSize, clusterInset, clusterOuterSize, colors]
-  );
+    [L, clusterIconsCache],
+  )
 
   const handleMarkerClick = useCallback(
     (e: any, point: Point, coords: { lat: number; lng: number }) => {
       // Stop propagation to prevent map click handler (route mode).
       // IMPORTANT: Do NOT call preventDefault on originalEvent — it breaks touch-to-click on mobile.
       try {
-        e?.originalEvent?.stopPropagation?.();
+        e?.originalEvent?.stopPropagation?.()
       } catch {
         // noop
       }
 
       if (e?.target?.openPopup) {
         try {
-          e.target.openPopup();
+          e.target.openPopup()
         } catch {
           // noop
         }
       }
-      onMarkerClick?.(point, coords);
+      onMarkerClick?.(point, coords)
     },
-    [onMarkerClick]
-  );
+    [onMarkerClick],
+  )
 
   return (
     <>
       {safeClusters.map((cluster, idx) => {
-        if (!Number.isFinite(cluster.center[0]) || !Number.isFinite(cluster.center[1])) return null;
+        if (
+          !Number.isFinite(cluster.center[0]) ||
+          !Number.isFinite(cluster.center[1])
+        )
+          return null
 
         // Expanded cluster: render individual markers
         if (expandedClusterKey && cluster.key === expandedClusterKey) {
-          const items = expandedClusterItems ?? cluster.items;
+          const items = expandedClusterItems ?? cluster.items
           return (
             <React.Fragment key={`expanded-${cluster.key}-${idx}`}>
               {items.map((item, itemIdx) => {
-                const ll = strToLatLng(item.coord, hintCenter);
-                if (!ll) return null;
-                if (!Number.isFinite(ll[0]) || !Number.isFinite(ll[1])) return null;
+                const ll = strToLatLng(item.coord, hintCenter)
+                if (!ll) return null
+                if (!Number.isFinite(ll[0]) || !Number.isFinite(ll[1]))
+                  return null
                 const markerKey = item.id
                   ? `cluster-expanded-${cluster.key}-${item.id}`
-                  : `cluster-expanded-${cluster.key}-${item.coord.replace(/,/g, '-')}-${itemIdx}`;
+                  : `cluster-expanded-${cluster.key}-${item.coord.replace(/,/g, '-')}-${itemIdx}`
 
-                const accessibleName = item.address || item.categoryName || 'Точка на карте';
+                const accessibleName =
+                  item.address || item.categoryName || 'Точка на карте'
                 const markerProps: any = {
                   position: [ll[1], ll[0]],
                   icon: markerIcon,
@@ -324,48 +182,64 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
                   title: accessibleName,
                   ref: (marker: any) => {
                     try {
-                      onMarkerInstance?.(String(item.coord ?? ''), marker ?? null);
+                      onMarkerInstance?.(
+                        String(item.coord ?? ''),
+                        marker ?? null,
+                      )
                       // Add aria-label for a11y (Lighthouse aria-command-name audit)
-                      const el = marker?._icon || marker?.getElement?.();
+                      const el = marker?._icon || marker?.getElement?.()
                       if (el && !el.getAttribute('aria-label')) {
-                        el.setAttribute('aria-label', accessibleName);
+                        el.setAttribute('aria-label', accessibleName)
                       }
                     } catch {
                       // noop
                     }
                   },
                   eventHandlers: {
-                    click: (e: any) => handleMarkerClick(e, item, { lat: ll[1], lng: ll[0] }),
+                    click: (e: any) =>
+                      handleMarkerClick(e, item, { lat: ll[1], lng: ll[0] }),
                   },
-                };
-                if (renderer) markerProps.renderer = renderer;
+                }
+                if (renderer) markerProps.renderer = renderer
 
                 return (
                   <Marker key={markerKey} {...markerProps}>
                     {Tooltip && item.address && (
-                      <Tooltip direction="top" offset={[0, -10]} opacity={0.95} className="metravel-marker-tooltip">
-                        {item.address.length > TOOLTIP_MAX_LEN ? item.address.slice(0, TOOLTIP_MAX_LEN) + '…' : item.address}
+                      <Tooltip
+                        direction="top"
+                        offset={[0, -10]}
+                        opacity={0.95}
+                        className="metravel-marker-tooltip"
+                      >
+                        {item.address.length > TOOLTIP_MAX_LEN
+                          ? item.address.slice(0, TOOLTIP_MAX_LEN) + '…'
+                          : item.address}
                       </Tooltip>
                     )}
                     <Popup>
-                      <ClusterPopupContentWithClose point={item} PopupContent={PopupContent} useMap={useMapHook} />
+                      <ClusterPopupContentWithClose
+                        point={item}
+                        PopupContent={PopupContent}
+                        useMap={useMapHook}
+                      />
                     </Popup>
                   </Marker>
-                );
+                )
               })}
             </React.Fragment>
-          );
+          )
         }
 
-        const thumbItem = cluster.items.find(p => p.travelImageThumbUrl);
-        const icon = clusterIcon(cluster.count, thumbItem?.travelImageThumbUrl);
+        const thumbItem = cluster.items.find((p) => p.travelImageThumbUrl)
+        const icon = clusterIcon(cluster.count, thumbItem?.travelImageThumbUrl)
         if (cluster.count === 1 && cluster.items[0]) {
-          const item = cluster.items[0];
-          const ll = strToLatLng(item.coord, hintCenter);
-          if (!ll) return null;
-          if (!Number.isFinite(ll[0]) || !Number.isFinite(ll[1])) return null;
+          const item = cluster.items[0]
+          const ll = strToLatLng(item.coord, hintCenter)
+          if (!ll) return null
+          if (!Number.isFinite(ll[0]) || !Number.isFinite(ll[1])) return null
 
-          const accessibleName = item.address || item.categoryName || 'Точка на карте';
+          const accessibleName =
+            item.address || item.categoryName || 'Точка на карте'
           const singleMarkerProps: any = {
             position: [ll[1], ll[0]],
             icon: markerIcon,
@@ -374,37 +248,49 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
             title: accessibleName,
             ref: (marker: any) => {
               try {
-                onMarkerInstance?.(String(item.coord ?? ''), marker ?? null);
+                onMarkerInstance?.(String(item.coord ?? ''), marker ?? null)
                 // Add aria-label for a11y (Lighthouse aria-command-name audit)
-                const el = marker?._icon || marker?.getElement?.();
+                const el = marker?._icon || marker?.getElement?.()
                 if (el && !el.getAttribute('aria-label')) {
-                  el.setAttribute('aria-label', accessibleName);
+                  el.setAttribute('aria-label', accessibleName)
                 }
               } catch {
                 // noop
               }
             },
             eventHandlers: {
-              click: (e: any) => handleMarkerClick(e, item, { lat: ll[1], lng: ll[0] }),
+              click: (e: any) =>
+                handleMarkerClick(e, item, { lat: ll[1], lng: ll[0] }),
             },
-          };
-          if (renderer) singleMarkerProps.renderer = renderer;
+          }
+          if (renderer) singleMarkerProps.renderer = renderer
 
           return (
             <Marker key={`cluster-single-${idx}`} {...singleMarkerProps}>
               {Tooltip && item.address && (
-                <Tooltip direction="top" offset={[0, -10]} opacity={0.95} className="metravel-marker-tooltip">
-                  {item.address.length > TOOLTIP_MAX_LEN ? item.address.slice(0, TOOLTIP_MAX_LEN) + '…' : item.address}
+                <Tooltip
+                  direction="top"
+                  offset={[0, -10]}
+                  opacity={0.95}
+                  className="metravel-marker-tooltip"
+                >
+                  {item.address.length > TOOLTIP_MAX_LEN
+                    ? item.address.slice(0, TOOLTIP_MAX_LEN) + '…'
+                    : item.address}
                 </Tooltip>
               )}
               <Popup {...(popupProps || {})}>
-                <ClusterPopupContentWithClose point={item} PopupContent={PopupContent} useMap={useMapHook} />
+                <ClusterPopupContentWithClose
+                  point={item}
+                  PopupContent={PopupContent}
+                  useMap={useMapHook}
+                />
               </Popup>
             </Marker>
-          );
+          )
         }
 
-        const clusterAccessibleName = `Кластер: ${cluster.count} мест`;
+        const clusterAccessibleName = `Кластер: ${cluster.count} мест`
         return (
           <Marker
             key={`cluster-${idx}`}
@@ -415,9 +301,9 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
             ref={(marker: any) => {
               try {
                 // Add aria-label for a11y (Lighthouse aria-command-name audit)
-                const el = marker?._icon || marker?.getElement?.();
+                const el = marker?._icon || marker?.getElement?.()
                 if (el && !el.getAttribute('aria-label')) {
-                  el.setAttribute('aria-label', clusterAccessibleName);
+                  el.setAttribute('aria-label', clusterAccessibleName)
                 }
               } catch {
                 // noop
@@ -426,7 +312,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
             eventHandlers={{
               click: (e: any) => {
                 try {
-                  e?.originalEvent?.stopPropagation?.();
+                  e?.originalEvent?.stopPropagation?.()
                 } catch {
                   // noop
                 }
@@ -436,7 +322,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
                   !Number.isFinite(cluster.bounds?.[1]?.[0]) ||
                   !Number.isFinite(cluster.bounds?.[1]?.[1])
                 ) {
-                  return;
+                  return
                 }
                 onClusterZoom({
                   center: [cluster.center[0], cluster.center[1]],
@@ -446,19 +332,26 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
                   ],
                   key: cluster.key,
                   items: cluster.items,
-                });
+                })
               },
             }}
           >
             <Popup>
               <View style={{ gap: 6, maxWidth: 260 }}>
-                <Text style={{ fontWeight: '800' }}>{cluster.count} мест поблизости</Text>
+                <Text style={{ fontWeight: '800' }}>
+                  {cluster.count} мест поблизости
+                </Text>
                 <Text style={{ color: colors.textMuted, fontSize: 12 }}>
                   Нажмите, чтобы приблизить и раскрыть маркеры
                 </Text>
                 {cluster.items.slice(0, 6).map((p, i) => (
-                  <Text key={`${cluster.key}-item-${i}`} numberOfLines={1} style={{ fontSize: 12 }}>
-                    {p.categoryName ? `${p.categoryName}: ` : ''}{p.address || 'Без названия'}
+                  <Text
+                    key={`${cluster.key}-item-${i}`}
+                    numberOfLines={1}
+                    style={{ fontSize: 12 }}
+                  >
+                    {p.categoryName ? `${p.categoryName}: ` : ''}
+                    {p.address || 'Без названия'}
                   </Text>
                 ))}
                 {cluster.items.length > 6 && (
@@ -469,10 +362,10 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
               </View>
             </Popup>
           </Marker>
-        );
+        )
       })}
     </>
-  );
-};
+  )
+}
 
-export default ClusterLayer;
+export default ClusterLayer

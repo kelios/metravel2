@@ -7,20 +7,11 @@ import CollapsibleSection from '@/components/MapPage/CollapsibleSection'
 import MapSearchInput from '@/components/MapPage/MapSearchInput'
 import type { ThemedColors } from '@/hooks/useTheme'
 import IconButton from '@/components/ui/IconButton'
+import Chip from '@/components/ui/Chip'
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig'
 import { CATEGORY_ICONS } from './MapQuickFilters'
 
 type CategoryOption = string | { id?: string | number; name?: string; value?: string }
-
-const getPlacesLabel = (count: number) => {
-  const absCount = Math.abs(count)
-  const mod10 = absCount % 10
-  const mod100 = absCount % 100
-
-  if (mod10 === 1 && mod100 !== 11) return `${count} место`
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} места`
-  return `${count} мест`
-}
 
 const getCategoryName = (category: CategoryOption) => {
   if (typeof category === 'string') return category.trim()
@@ -31,6 +22,12 @@ const getCategoryName = (category: CategoryOption) => {
     return category.value.trim()
   }
   return ''
+}
+
+const getRadiusLabel = (rawValue: string | number | undefined) => {
+  const value = String(rawValue ?? '').trim()
+  if (!value) return ''
+  return /км$/i.test(value) ? value : `${value} км`
 }
 
 interface FiltersPanelRadiusSectionProps {
@@ -136,42 +133,17 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
     ? filterValue.categoryTravelAddress.length
     : 0
 
-  const selectedCategoryNames = useMemo(
-    () =>
-      (Array.isArray(filterValue.categoryTravelAddress) ? filterValue.categoryTravelAddress : [])
-        .map(getCategoryName)
-        .filter(Boolean),
-    [filterValue.categoryTravelAddress]
-  )
-
-  const radiusResultCount = useMemo(() => {
-    if (selectedCategoryNames.length === 0) return travelsData.length
-    const normalizedSelected = new Set(
-      selectedCategoryNames.map((name) => name.toLowerCase().trim())
-    )
-
-    return travelsData.filter((travel) => {
-      const categoryNames = String(travel.categoryName || '')
-        .split(',')
-        .map((entry) => entry.toLowerCase().trim())
-        .filter(Boolean)
-      return categoryNames.some((categoryName) => normalizedSelected.has(categoryName))
-    }).length
-  }, [selectedCategoryNames, travelsData])
-
   const radiusSummaryValue = filterValue.radius || DEFAULT_RADIUS_KM
-  const radiusSummaryText = `${radiusSummaryValue} км`
-  const hasSelectionSummary = selectedCategoryNames.length > 0 || Boolean(radiusSummaryValue)
-  const categoryPreview = selectedCategoryNames.slice(0, 2).join(', ')
-  const categorySummary =
-    selectedCategoryNames.length > 2
-      ? `${categoryPreview} +${selectedCategoryNames.length - 2}`
-      : categoryPreview
+  const radiusSummaryText = getRadiusLabel(radiusSummaryValue)
 
   const searchQueryValue = String(filterValue.searchQuery || '')
   const handleSearchChange = useCallback(
     (value: string) => safeOnFilterChange('searchQuery', value),
     [safeOnFilterChange]
+  )
+  const radiusOptions = useMemo(
+    () => (Array.isArray(filters.radius) ? filters.radius : []).filter((option) => option?.id),
+    [filters.radius]
   )
 
   return (
@@ -182,6 +154,37 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
         placeholder="Найти место по названию..."
         resultsCount={searchQueryValue ? travelsData.length : undefined}
       />
+      {radiusOptions.length > 0 ? (
+        <CollapsibleSection
+          title="Радиус поиска"
+          badge={radiusSummaryText}
+          defaultOpen={true}
+          icon="radio"
+          tone="flat"
+        >
+          {!isMobile ? (
+            <Text style={styles.sectionHint}>Выберите, как далеко искать места вокруг вас</Text>
+          ) : null}
+          <View style={styles.radiusOptionsWrap} testID="radius-presets">
+            {radiusOptions.map((option) => {
+              const selected = String(option.id) === String(radiusSummaryValue)
+              const label = getRadiusLabel(option.name || option.id)
+
+              return (
+                <Chip
+                  key={String(option.id)}
+                  label={label}
+                  selected={selected}
+                  onPress={() => safeOnFilterChange('radius', option.id)}
+                  testID={`radius-option-${option.id}`}
+                  icon={<Feather name="radio" size={12} color={colors.primary} />}
+                  style={styles.radiusOptionChip}
+                />
+              )
+            })}
+          </View>
+        </CollapsibleSection>
+      ) : null}
       <CollapsibleSection
         title="Что посмотреть"
         badge={selectedCategoriesCount || undefined}
@@ -249,34 +252,6 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
           </ScrollView>
         )}
       </CollapsibleSection>
-
-      {hasSelectionSummary && (
-        <View style={styles.filterSelectionSummary} testID="radius-selection-summary">
-          <View style={styles.filterSelectionChips}>
-            {selectedCategoryNames.length > 0 ? (
-              <View style={styles.filterSelectionChip}>
-                <Feather name="grid" size={12} color={colors.primary} />
-                <Text style={styles.filterSelectionChipText} numberOfLines={1}>
-                  {categorySummary}
-                </Text>
-              </View>
-            ) : null}
-            {radiusSummaryValue ? (
-              <View style={styles.filterSelectionChip}>
-                <Feather name="radio" size={12} color={colors.primary} />
-                <Text style={styles.filterSelectionChipText} numberOfLines={1}>
-                  {radiusSummaryText}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-          <Text style={styles.radiusSelectionHint}>
-            {radiusResultCount > 0
-              ? `${getPlacesLabel(radiusResultCount)} попадает в выбранные условия.`
-              : 'Под выбранные условия пока ничего не попадает.'}
-          </Text>
-        </View>
-      )}
     </View>
   )
 }

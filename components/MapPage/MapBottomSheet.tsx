@@ -154,6 +154,9 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         ref={bottomSheetRef}
         index={Platform.OS === 'web' ? sheetIndex : -1}
         snapPoints={snapPoints}
+        // Fixed snap points + self-managed scroll containers are more stable here
+        // than gorhom's dynamic content measurement on mobile/web.
+        enableDynamicSizing={false}
         bottomInset={bottomInset}
         onChange={handleSheetChanges}
         backdropComponent={renderBackdrop}

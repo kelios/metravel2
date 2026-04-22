@@ -182,6 +182,9 @@ const getStyles = (colors: ThemedColors) =>
       left: 0,
       right: 0,
       zIndex: 2000,
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: 0,
       backgroundColor: colors.surface,
       borderTopLeftRadius: 16,
       borderTopRightRadius: 16,
@@ -201,7 +204,12 @@ const getStyles = (colors: ThemedColors) =>
       overflow: 'visible' as any,
     },
     webRootHidden: {
-      ...(Platform.OS === 'web' ? ({ display: 'none' } as any) : null),
+      ...(Platform.OS === 'web'
+        ? ({
+            visibility: 'hidden',
+            opacity: 0,
+          } as any)
+        : null),
     },
     dragHandleArea: {
       alignItems: 'center',
@@ -254,11 +262,15 @@ const getStyles = (colors: ThemedColors) =>
       borderRadius: 12,
     },
     contentContainer: {
-      flexShrink: 1,
+      flex: 1,
       minHeight: 0,
       minWidth: 0,
+      width: '100%',
       ...(Platform.OS === 'web'
         ? ({
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%',
             overflowY: 'auto',
             WebkitOverflowScrolling: 'touch',
             overscrollBehavior: 'contain',

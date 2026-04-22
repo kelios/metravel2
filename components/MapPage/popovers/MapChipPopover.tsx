@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native'
+import Feather from '@expo/vector-icons/Feather'
 
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
@@ -93,8 +94,23 @@ export const MapChipPopover: React.FC<MapChipPopoverProps> = ({
             style={[styles.sheetContainer, styles.sheetContainerWeb]}
             onPress={(e) => e.stopPropagation?.()}
           >
-            <View style={styles.sheetHandle} />
-            {children}
+            <View style={styles.sheetChrome}>
+              <View style={styles.sheetHandle} />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Закрыть фильтр"
+                onPress={onClose}
+                style={({ pressed }) => [
+                  styles.closeButton,
+                  styles.closeButtonFloating,
+                  pressed && styles.closeButtonPressed,
+                ]}
+                testID="map-chip-popover-close"
+              >
+                <Feather name="x" size={18} color={colors.textMuted} />
+              </Pressable>
+            </View>
+            <View style={styles.sheetContent}>{children}</View>
           </Pressable>
         </Pressable>
       </View>
@@ -122,8 +138,23 @@ export const MapChipPopover: React.FC<MapChipPopoverProps> = ({
             ]}
             onPress={(e) => e.stopPropagation?.()}
           >
-            <View style={styles.sheetHandle} />
-            {children}
+            <View style={styles.sheetChrome}>
+              <View style={styles.sheetHandle} />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Закрыть фильтр"
+                onPress={onClose}
+                style={({ pressed }) => [
+                  styles.closeButton,
+                  styles.closeButtonFloating,
+                  pressed && styles.closeButtonPressed,
+                ]}
+                testID="map-chip-popover-close"
+              >
+                <Feather name="x" size={18} color={colors.textMuted} />
+              </Pressable>
+            </View>
+            <View style={styles.sheetContent}>{children}</View>
           </Pressable>
         </Pressable>
       </Modal>
@@ -159,7 +190,21 @@ export const MapChipPopover: React.FC<MapChipPopoverProps> = ({
           },
         ]}
       >
-        {children}
+        <View style={styles.popoverChrome}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Закрыть фильтр"
+            onPress={onClose}
+            style={({ pressed }) => [
+              styles.closeButton,
+              pressed && styles.closeButtonPressed,
+            ]}
+            testID="map-chip-popover-close"
+          >
+            <Feather name="x" size={18} color={colors.textMuted} />
+          </Pressable>
+        </View>
+        <View style={styles.popoverContent}>{children}</View>
       </View>
     </View>
   )
@@ -189,6 +234,17 @@ const getStyles = (colors: ThemedColors) =>
           } as any)
         : colors.shadows.medium),
     },
+    popoverChrome: {
+      paddingTop: 8,
+      paddingHorizontal: 10,
+      alignItems: 'flex-end',
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderLight,
+    },
+    popoverContent: {
+      minHeight: 0,
+      flexShrink: 1,
+    },
     sheetBackdrop: {
       flex: 1,
       backgroundColor: 'rgba(0,0,0,0.4)',
@@ -203,9 +259,10 @@ const getStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surface,
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
-      paddingTop: 8,
-      paddingBottom: 24,
+      paddingTop: 0,
+      paddingBottom: 12,
       maxHeight: '85%',
+      overflow: 'hidden',
       ...(Platform.OS === 'web'
         ? ({
             zIndex: 6001,
@@ -216,6 +273,15 @@ const getStyles = (colors: ThemedColors) =>
       marginBottom: WEB_MOBILE_BOTTOM_CHROME_INSET,
       maxHeight: `calc(100% - ${WEB_MOBILE_BOTTOM_CHROME_INSET + 24}px)`,
     },
+    sheetChrome: {
+      position: 'relative',
+      minHeight: 44,
+      justifyContent: 'center',
+      paddingTop: 8,
+      paddingHorizontal: 12,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderLight,
+    },
     sheetHandle: {
       alignSelf: 'center',
       width: 40,
@@ -223,6 +289,34 @@ const getStyles = (colors: ThemedColors) =>
       borderRadius: 2,
       backgroundColor: colors.borderLight,
       marginBottom: 8,
+    },
+    sheetContent: {
+      minHeight: 0,
+      flexShrink: 1,
+    },
+    closeButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surfaceSecondary ?? colors.backgroundSecondary ?? colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+      ...(Platform.OS === 'web'
+        ? ({
+            cursor: 'pointer',
+            transition: 'opacity 0.18s ease',
+          } as any)
+        : null),
+    },
+    closeButtonPressed: {
+      opacity: 0.7,
+    },
+    closeButtonFloating: {
+      position: 'absolute',
+      top: 4,
+      right: 12,
     },
   })
 

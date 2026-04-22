@@ -54,9 +54,16 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
     <View style={styles.stickyTop} testID="filters-panel-header">
       {isMobile && (
         <View style={styles.compactMetaRow}>
-          <Text style={styles.compactMetaText} numberOfLines={1}>
-            {compactSummary}
-          </Text>
+          <View style={styles.compactMetaBadge}>
+            <Feather
+              name={mode === 'radius' ? 'target' : 'navigation'}
+              size={12}
+              color={colors.primary}
+            />
+            <Text style={styles.compactMetaText} numberOfLines={1}>
+              {compactSummary}
+            </Text>
+          </View>
           <IconButton
             icon={<Feather name="x" size={16} color={colors.textMuted} />}
             label="Закрыть"

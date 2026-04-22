@@ -83,29 +83,32 @@ const MapSearchInput: React.FC<MapSearchInputProps> = ({
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     container: {
-      marginBottom: 8,
+      marginBottom: 6,
     },
     inputWrapper: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.backgroundSecondary,
-      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: colors.surfaceElevated,
+      borderRadius: DESIGN_TOKENS.radii.lg,
       borderWidth: 1,
       borderColor: colors.borderLight,
-      paddingHorizontal: 9,
-      minHeight: 40,
+      paddingHorizontal: 12,
+      minHeight: 44,
       ...(Platform.OS === 'web'
-        ? ({ transition: 'border-color 0.15s ease, box-shadow 0.15s ease' } as any)
+        ? ({
+            transition: 'border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.45)',
+          } as any)
         : null),
     },
     inputWrapperFocused: {
       borderColor: colors.primary,
       ...(Platform.OS === 'web'
-        ? ({ boxShadow: `0 0 0 2px ${colors.primaryLight}` } as any)
+        ? ({ boxShadow: `0 0 0 3px ${colors.primaryLight}` } as any)
         : null),
     },
     searchIcon: {
-      marginRight: 6,
+      marginRight: 8,
     },
     input: {
       flex: 1,
@@ -113,7 +116,8 @@ const getStyles = (colors: ThemedColors) =>
       // Safari's auto-zoom on input focus, which breaks the map viewport.
       fontSize: Platform.OS === 'web' ? 16 : 13,
       color: colors.text,
-      paddingVertical: 6,
+      fontWeight: '500',
+      paddingVertical: 7,
       ...(Platform.OS === 'web'
         ? ({
           outlineWidth: 0,
@@ -123,14 +127,14 @@ const getStyles = (colors: ThemedColors) =>
         : null),
     },
     clearButton: {
-      padding: 3,
-      marginLeft: 3,
+      padding: 4,
+      marginLeft: 4,
     },
     resultsHint: {
       fontSize: 11,
       color: colors.textMuted,
-      marginTop: 3,
-      marginLeft: 2,
+      marginTop: 4,
+      marginLeft: 4,
     },
   });
 

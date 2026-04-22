@@ -142,23 +142,19 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({ onComplete }) => {
 
     (async () => {
       try {
+        // Web users already interact with dense map controls immediately,
+        // so auto-opening the guided tour is too disruptive there.
         if (Platform.OS === 'web') {
-          if (!localStorage.getItem(ONBOARDING_STORAGE_KEY) && !cancelled) {
-            openTimerRef.current = setTimeout(() => {
-              if (!cancelled) {
-                setVisible(true);
-              }
-            }, 800);
-          }
-        } else {
-          const v = await AsyncStorage.getItem(ONBOARDING_STORAGE_KEY);
-          if (!v && !cancelled) {
-            openTimerRef.current = setTimeout(() => {
-              if (!cancelled) {
-                setVisible(true);
-              }
-            }, 800);
-          }
+          return;
+        }
+
+        const v = await AsyncStorage.getItem(ONBOARDING_STORAGE_KEY);
+        if (!v && !cancelled) {
+          openTimerRef.current = setTimeout(() => {
+            if (!cancelled) {
+              setVisible(true);
+            }
+          }, 800);
         }
       } catch {
         /* noop */

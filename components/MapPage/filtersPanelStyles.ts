@@ -20,11 +20,11 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       maxWidth: '100%',
       height:
         Platform.OS === 'web' && isMobile
-          ? ('auto' as const)
+          ? ('100%' as const)
           : ('100%' as const),
       maxHeight:
         Platform.OS === 'web' && isMobile
-          ? ('none' as const)
+          ? ('100%' as const)
           : windowHeight,
       display: 'flex',
       flexDirection: 'column',
@@ -49,11 +49,11 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       marginBottom: 12,
     },
     stickyTop: {
-      gap: isMobile ? 2 : 3,
+      gap: isMobile ? 4 : 3,
       backgroundColor: colors.surface,
-      paddingHorizontal: isMobile ? 8 : 0,
-      paddingTop: isMobile ? 3 : 0,
-      paddingBottom: isMobile ? 2 : 0,
+      paddingHorizontal: isMobile ? 4 : 0,
+      paddingTop: isMobile ? 4 : 0,
+      paddingBottom: isMobile ? 4 : 0,
       borderBottomWidth: isMobile ? StyleSheet.hairlineWidth : 0,
       borderBottomColor: isMobile ? colors.border : 'transparent',
       ...(Platform.OS === 'web'
@@ -64,7 +64,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
             backgroundColor: colors.surfaceAlpha40,
             backdropFilter: 'blur(18px)',
             WebkitBackdropFilter: 'blur(18px)',
-            paddingTop: isMobile ? 4 : 2,
+            paddingTop: isMobile ? 6 : 2,
           } as any)
         : null),
     },
@@ -73,20 +73,36 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       alignItems: 'center',
       justifyContent: 'space-between',
       gap: 6,
-      minHeight: 22,
+      minHeight: 28,
       paddingHorizontal: isMobile ? 2 : 0,
+      marginBottom: 2,
+    },
+    compactMetaBadge: {
+      flex: 1,
+      minWidth: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      minHeight: 28,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 999,
+      backgroundColor: colors.surfaceAlpha40,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
     },
     compactMetaText: {
       flex: 1,
       minWidth: 0,
       fontSize: 11,
-      fontWeight: '600',
-      color: colors.textMuted,
+      lineHeight: 14,
+      fontWeight: '700',
+      color: colors.text,
     },
     compactMetaCloseButton: {
-      width: 26,
-      height: 26,
-      borderRadius: 9,
+      width: 28,
+      height: 28,
+      borderRadius: 10,
       marginHorizontal: 0,
       backgroundColor: colors.surfaceAlpha40,
       borderWidth: StyleSheet.hairlineWidth,
@@ -136,15 +152,15 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       letterSpacing: -0.5,
     },
     content: {
-      flex: Platform.OS === 'web' && isMobile ? 0 : 1,
-      flexGrow: Platform.OS === 'web' && isMobile ? 0 : 1,
+      flex: 1,
+      flexGrow: 1,
       minHeight: 0,
     },
     contentContainer: {
       paddingBottom: 64 + bottomDockReserve,
-      paddingTop: isMobile ? 2 : 0,
-      paddingHorizontal: isMobile ? 8 : 2,
-      flexGrow: Platform.OS === 'web' && isMobile ? 0 : 1,
+      paddingTop: isMobile ? 4 : 0,
+      paddingHorizontal: isMobile ? 6 : 2,
+      flexGrow: 1,
     },
     filtersStatusCard: {
       padding: isMobile ? 14 : 14,
@@ -237,25 +253,29 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     sectionCard: {
       backgroundColor: colors.surface,
-      borderRadius: isMobile ? 14 : 16,
-      padding: isMobile ? 14 : 14,
-      marginBottom: isMobile ? 10 : 12,
-      gap: isMobile ? 10 : 12,
+      borderRadius: isMobile ? 18 : 16,
+      padding: isMobile ? 10 : 14,
+      marginBottom: isMobile ? 8 : 12,
+      gap: isMobile ? 6 : 12,
       borderWidth: 1,
       borderColor: colors.borderLight,
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
+            boxShadow: isMobile
+              ? '0 10px 28px rgba(15,23,42,0.06), 0 1px 3px rgba(15,23,42,0.04)'
+              : '0 1px 2px rgba(15,23,42,0.04)',
             transition: 'box-shadow 0.2s ease',
           } as any)
         : null),
     },
     blockHeader: {
-      gap: 2,
+      gap: 1,
       marginBottom: 0,
     },
     blockTitle: {
       ...TS.h3,
+      fontSize: isMobile ? 15 : TS.h3.fontSize,
+      lineHeight: isMobile ? 20 : TS.h3.lineHeight,
       color: colors.text,
     },
     blockHint: {
@@ -281,7 +301,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       lineHeight: 15,
     },
     chipsContainer: {
-      marginTop: 6,
+      marginTop: 4,
     },
     chipsContent: {
       alignItems: 'center',
@@ -290,13 +310,13 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     categoryChip: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.surface,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      minHeight: 36,
+      backgroundColor: colors.backgroundSecondary,
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      minHeight: 32,
       borderRadius: 999,
       maxWidth: 150,
-      marginRight: 8,
+      marginRight: 6,
       borderWidth: 1,
       borderColor: colors.borderLight,
       ...(Platform.OS === 'web'
@@ -316,11 +336,11 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
         : null),
     },
     categoryChipText: {
-      fontSize: 12,
-      fontWeight: '600',
+      fontSize: 11,
+      fontWeight: '700',
       color: colors.text,
       flexShrink: 1,
-      marginRight: 6,
+      marginRight: 4,
     },
     categoryChipTextSelected: {
       color: colors.primaryText,
@@ -349,6 +369,51 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       fontWeight: '700',
       color: colors.primaryText,
     },
+    mobileFiltersQuickRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+      marginBottom: isMobile ? 6 : 10,
+    },
+    mobileFiltersQuickChips: {
+      flex: 1,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      minWidth: 0,
+    },
+    mobileFiltersQuickChip: {
+      maxWidth: '100%',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 999,
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+    },
+    mobileFiltersQuickChipText: {
+      fontSize: 11,
+      lineHeight: 13,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    mobileFiltersQuickButton: {
+      minHeight: 34,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+      flexShrink: 0,
+    },
+    radiusOptionsWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      marginTop: 2,
+    },
+    radiusOptionChip: {
+      maxWidth: '100%',
+    },
     radiusSelectionHint: {
       marginTop: 10,
       fontSize: 12,
@@ -357,10 +422,10 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     filterSelectionSummary: {
       marginTop: 8,
-      padding: 9,
+      padding: isMobile ? 8 : 9,
       borderRadius: 12,
       backgroundColor: colors.surfaceAlpha40,
-      gap: 8,
+      gap: isMobile ? 6 : 8,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
     },
@@ -452,13 +517,13 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       color: colors.textMuted,
     },
     noPointsToast: {
-      marginTop: 12,
-      padding: 11,
+      marginTop: 8,
+      padding: 10,
       borderRadius: DESIGN_TOKENS.radii.md,
-      backgroundColor: colors.surfaceAlpha40,
+      backgroundColor: colors.backgroundSecondary,
       borderWidth: 1,
       borderColor: colors.border,
-      gap: 8,
+      gap: 6,
     },
     noPointsTitle: {
       fontSize: 14,
@@ -592,8 +657,8 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
               backgroundColor: colors.surfaceAlpha40,
               backdropFilter: 'blur(18px)',
               WebkitBackdropFilter: 'blur(18px)',
-              paddingTop: 8,
-              paddingBottom: 8,
+              paddingTop: 6,
+              paddingBottom: 6,
               borderTopWidth: StyleSheet.hairlineWidth,
               borderTopColor: colors.borderLight,
             } as any)
@@ -607,8 +672,8 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
               paddingBottom: 4,
             } as any)
         : {
-            paddingTop: isMobile ? 8 : 4,
-            paddingBottom: isMobile ? 8 : 0,
+            paddingTop: isMobile ? 6 : 4,
+            paddingBottom: isMobile ? 6 : 0,
             backgroundColor: colors.surface,
             borderTopWidth: isMobile ? StyleSheet.hairlineWidth : 0,
             borderTopColor: isMobile ? colors.borderLight : 'transparent',
@@ -619,7 +684,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       gap: 6,
       justifyContent: 'flex-end',
       alignItems: 'center',
-      paddingHorizontal: isMobile ? 10 : 0,
+      paddingHorizontal: isMobile ? 8 : 0,
       paddingBottom: isMobile ? 2 : 0,
       flexWrap: 'wrap',
     },
@@ -690,10 +755,10 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     // LIGHT ROUTE PANEL — современный светлый легкий дизайн
     // ═══════════════════════════════════════════════════════════════
     lightStepBlock: {
-      paddingVertical: 10,
+      paddingVertical: isMobile ? 4 : 10,
       paddingHorizontal: 0,
-      gap: 8,
-      borderBottomWidth: StyleSheet.hairlineWidth,
+      gap: isMobile ? 6 : 8,
+      borderBottomWidth: isMobile ? 0 : StyleSheet.hairlineWidth,
       borderBottomColor: colors.borderLight,
     },
     lightStepHeader: {

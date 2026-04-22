@@ -232,7 +232,7 @@ describe('FiltersPanel', () => {
 
   it('shows the compact mobile header summary and keeps the radius footer actions available', () => {
     const onOpenList = jest.fn()
-    const { getByTestId, getByText } = renderWithTheme(<FiltersPanel />, {
+    const { getByTestId, getAllByText, getByText } = renderWithTheme(<FiltersPanel />, {
       ...defaultProps,
       isMobile: true,
       travelsData: [{ categoryName: 'Музеи' }, { categoryName: 'Парки' }, { categoryName: 'Парки' }],
@@ -242,13 +242,37 @@ describe('FiltersPanel', () => {
 
     expect(getByTestId('filters-panel-header')).toBeTruthy()
     expect(getByText('3 места · 60 км')).toBeTruthy()
+    expect(getByTestId('filters-mobile-quick-row')).toBeTruthy()
+    expect(getByTestId('filters-mobile-context')).toBeTruthy()
     expect(getByTestId('filters-panel-footer')).toBeTruthy()
-    expect(getByText('Показать 3')).toBeTruthy()
+    expect(getAllByText('Показать 3').length).toBeGreaterThan(0)
+    expect(getByTestId('filters-open-list-button')).toBeTruthy()
     expect(onOpenList).not.toHaveBeenCalled()
   })
 
-  it('shows an inline radius selection summary after choosing categories', () => {
-    const { getByTestId, getByText, getAllByText } = renderWithTheme(<FiltersPanel />, {
+  it('renders radius presets in the panel and updates the selected radius', () => {
+    const onFilterChange = jest.fn()
+    const { getByTestId } = renderWithTheme(<FiltersPanel />, {
+      ...defaultProps,
+      onFilterChange,
+      filters: {
+        ...mockFilters,
+        radius: [
+          { id: '30', name: '30' },
+          { id: '60', name: '60' },
+          { id: '100', name: '100' },
+        ],
+      },
+    })
+
+    expect(getByTestId('radius-presets')).toBeTruthy()
+    fireEvent.press(getByTestId('radius-option-100'))
+
+    expect(onFilterChange).toHaveBeenCalledWith('radius', '100')
+  })
+
+  it('does not render the old radius summary block after choosing categories', () => {
+    const { queryByTestId, getAllByText } = renderWithTheme(<FiltersPanel />, {
       ...defaultProps,
       travelsData: [
         { categoryName: 'Музеи', name: 'Несвижский замок', address: 'Несвиж' },
@@ -261,8 +285,7 @@ describe('FiltersPanel', () => {
       } as any,
     })
 
-    expect(getByTestId('radius-selection-summary')).toBeTruthy()
-    expect(getByText('Музеи, Парки')).toBeTruthy()
+    expect(queryByTestId('radius-selection-summary')).toBeNull()
     expect(getAllByText('100 км').length).toBeGreaterThan(0)
   })
 

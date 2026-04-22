@@ -30,13 +30,14 @@ const SkeletonCard: React.FC<{ colors: ThemedColors }> = ({ colors }) => (
     borderWidth: 1,
     borderColor: colors.border,
   }}>
-    <View style={{ width: '100%', height: 100, backgroundColor: colors.backgroundSecondary }} />
+    <View style={{ width: '100%', height: 156, backgroundColor: colors.backgroundSecondary }} />
     <View style={{ padding: 14, gap: 10 }}>
-      <View style={{ width: '80%', height: 16, backgroundColor: colors.backgroundSecondary, borderRadius: 4 }} />
-      <View style={{ width: '50%', height: 12, backgroundColor: colors.backgroundSecondary, borderRadius: 4 }} />
+      <View style={{ width: '36%', height: 24, backgroundColor: colors.backgroundSecondary, borderRadius: 999 }} />
+      <View style={{ width: '82%', height: 18, backgroundColor: colors.backgroundSecondary, borderRadius: 6 }} />
+      <View style={{ width: '62%', height: 18, backgroundColor: colors.backgroundSecondary, borderRadius: 6 }} />
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <View style={{ width: 60, height: 24, backgroundColor: colors.backgroundSecondary, borderRadius: 8 }} />
-        <View style={{ width: 60, height: 24, backgroundColor: colors.backgroundSecondary, borderRadius: 8 }} />
+        <View style={{ width: 104, height: 24, backgroundColor: colors.backgroundSecondary, borderRadius: 8 }} />
       </View>
     </View>
   </View>
@@ -142,7 +143,9 @@ export const QuickRecommendations: React.FC<Props> = React.memo(({
         categoryLabel={categoryName || undefined}
         badges={badges}
         onCardPress={() => onPlaceSelect(place)}
-        imageHeight={100}
+        imageHeight={Platform.OS === 'web' ? 156 : 148}
+        titleLayout="content"
+        titleNumberOfLines={3}
         style={[
           styles.card,
           Platform.OS === 'web' && styles.cardWeb,

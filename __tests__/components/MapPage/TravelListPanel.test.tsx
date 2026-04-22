@@ -90,4 +90,24 @@ describe('TravelListPanel (right list on map page)', () => {
     expect(buildRouteTo).toHaveBeenCalledTimes(1);
     expect(buildRouteTo).toHaveBeenCalledWith(travelsData[0]);
   });
+
+  it('keeps the mobile list header free of legacy filter and map buttons', () => {
+    const { getByTestId, queryByTestId } = render(
+      <TravelListPanel
+        travelsData={travelsData}
+        buildRouteTo={jest.fn()}
+        isMobile={true}
+        isLoading={false}
+        onOpenFilters={jest.fn()}
+        onClosePanel={jest.fn()}
+        onExpandList={jest.fn()}
+        compactPreview={true}
+      />
+    );
+
+    expect(getByTestId('address-item-1')).toBeTruthy();
+    expect(queryByTestId('travel-list-expand-all')).toBeNull();
+    expect(queryByTestId('travel-list-open-filters')).toBeNull();
+    expect(queryByTestId('travel-list-back-to-map')).toBeNull();
+  });
 });

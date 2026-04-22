@@ -49,6 +49,8 @@ type Props = {
   showAddButton?: boolean;
   webTouchAction?: string;
   compact?: boolean;
+  titleLayout?: 'overlay' | 'content';
+  titleNumberOfLines?: number;
 };
 
 const PlaceListCard: React.FC<Props> = ({
@@ -75,9 +77,15 @@ const PlaceListCard: React.FC<Props> = ({
   showAddButton = true,
   webTouchAction,
   compact = false,
+  titleLayout = 'overlay',
+  titleNumberOfLines = 2,
 }) => {
   const colors = useThemedColors();
-  const styles = useMemo(() => createStyles(colors, compact), [colors, compact]);
+  const showTitleInContent = titleLayout === 'content';
+  const styles = useMemo(
+    () => createStyles(colors, compact, showTitleInContent),
+    [colors, compact, showTitleInContent],
+  );
   const [overflowVisible, setOverflowVisible] = useState(false);
 
   const hasCoord = !!coord;
@@ -108,30 +116,61 @@ const PlaceListCard: React.FC<Props> = ({
       width={width}
       testID={testID}
       style={style}
-      heroTitleOverlay={true}
+      heroTitleOverlay={!showTitleInContent}
       webHoverScale={false}
       webTouchAction={webTouchAction}
       contentSlot={
         <View style={styles.content}>
-          {(!!categoryLabel || showBadges) ? (
-            <View style={styles.metaRow}>
+          {showTitleInContent ? (
+            <View style={styles.titleBlock}>
               {!!categoryLabel && (
-                compact ? (
-                  <View style={styles.metaChip}>
-                    <Text style={styles.metaChipText} numberOfLines={1}>
-                      {categoryLabel}
-                    </Text>
-                  </View>
-                ) : (
-                  <Text style={styles.categoryText} numberOfLines={1}>
+                <View style={styles.categoryPill}>
+                  <Text style={styles.categoryPillText} numberOfLines={1}>
                     {categoryLabel}
                   </Text>
-                )
+                </View>
               )}
-              {showBadges && badges.map((badge) => (
-                <Text key={badge} style={styles.badgeText}>{badge}</Text>
-              ))}
+              <Text style={styles.titleText} numberOfLines={titleNumberOfLines}>
+                {title}
+              </Text>
             </View>
+          ) : null}
+
+          {(!!categoryLabel || showBadges) ? (
+            showTitleInContent ? (
+              showBadges ? (
+                <View style={styles.detailRow}>
+                  {badges.map((badge, index) => (
+                    <View key={`${badge}-${index}`} style={styles.detailChip}>
+                      <Text style={styles.detailChipText} numberOfLines={1}>
+                        {badge}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null
+            ) : (
+              <View style={styles.metaRow}>
+                {!!categoryLabel && (
+                  compact ? (
+                    <View style={styles.metaChip}>
+                      <Text style={styles.metaChipText} numberOfLines={1}>
+                        {categoryLabel}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.categoryText} numberOfLines={1}>
+                      {categoryLabel}
+                    </Text>
+                  )
+                )}
+                {showBadges && badges.map((badge, index) => (
+                  <Text key={`${badge}-${index}`} style={styles.badgeText}>
+                    {badge}
+                  </Text>
+                ))}
+              </View>
+            )
           ) : null}
 
           {hasActionRow ? (
@@ -257,21 +296,41 @@ const PlaceListCard: React.FC<Props> = ({
   );
 };
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>, compact: boolean) =>
+const createStyles = (
+  colors: ReturnType<typeof useThemedColors>,
+  compact: boolean,
+  showTitleInContent: boolean,
+) =>
   StyleSheet.create({
     contentContainer: {
-      paddingHorizontal: compact ? 10 : 12,
-      paddingTop: compact ? 8 : 10,
-      paddingBottom: compact ? 10 : 12,
+      paddingHorizontal: compact ? 10 : showTitleInContent ? 14 : 12,
+      paddingTop: compact ? 8 : showTitleInContent ? 12 : 10,
+      paddingBottom: compact ? 10 : showTitleInContent ? 14 : 12,
     },
     content: {
-      gap: compact ? 4 : 6,
+      gap: compact ? 4 : showTitleInContent ? 8 : 6,
+    },
+    titleBlock: {
+      gap: compact ? 4 : 8,
+    },
+    titleText: {
+      fontSize: compact ? 15 : 18,
+      lineHeight: compact ? 19 : 23,
+      fontWeight: '800',
+      letterSpacing: -0.35,
+      color: colors.text,
     },
     metaRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       alignItems: 'center',
       gap: compact ? 6 : 8,
+    },
+    detailRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      gap: 8,
     },
     categoryText: {
       fontSize: compact ? 11 : 12,
@@ -280,6 +339,38 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, compact: boole
     badgeText: {
       fontSize: compact ? 11 : 12,
       color: colors.textMuted,
+    },
+    categoryPill: {
+      alignSelf: 'flex-start',
+      maxWidth: '100%',
+      paddingHorizontal: compact ? 8 : 10,
+      paddingVertical: compact ? 4 : 5,
+      borderRadius: 999,
+      backgroundColor: colors.primarySoft ?? colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30 ?? colors.borderLight,
+    },
+    categoryPillText: {
+      fontSize: compact ? 10 : 11,
+      lineHeight: compact ? 12 : 14,
+      color: colors.primaryDark ?? colors.primary,
+      fontWeight: '700',
+      letterSpacing: 0.1,
+    },
+    detailChip: {
+      maxWidth: '100%',
+      paddingHorizontal: compact ? 8 : 10,
+      paddingVertical: compact ? 4 : 5,
+      borderRadius: 999,
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+    },
+    detailChipText: {
+      fontSize: compact ? 11 : 12,
+      lineHeight: compact ? 14 : 16,
+      color: colors.textMuted,
+      fontWeight: '600',
     },
     metaChip: {
       maxWidth: '100%',

@@ -1170,6 +1170,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
 
     const close = page.getByTestId('map-panel-close');
     await expect(close).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('travel-list-mobile-summary')).toBeVisible({ timeout: 20_000 });
 
     await expectFullyInViewport(close, page, { label: 'map panel close', margin: 2 });
     await expectTopmostAtCenter(page, close, 'map panel close');

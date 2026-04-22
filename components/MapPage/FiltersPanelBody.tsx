@@ -120,30 +120,6 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
         .filter(Boolean),
     [filterValue.categoryTravelAddress]
   );
-  const activeSummaryChips = useMemo(() => {
-    if (mode === 'route') {
-      const routeChips = [`Точек: ${routePoints.length}`];
-      if (transportMode === 'car') routeChips.push('На машине');
-      if (transportMode === 'bike') routeChips.push('На велосипеде');
-      if (transportMode === 'foot') routeChips.push('Пешком');
-      return routeChips;
-    }
-
-    const chips: string[] = [];
-    const searchQuery = String(filterValue.searchQuery || '').trim();
-    if (searchQuery) {
-      chips.push(`Поиск: ${searchQuery}`);
-    }
-    if (selectedCategoryNames.length > 0) {
-      const preview = selectedCategoryNames.slice(0, 2).join(', ');
-      chips.push(
-        selectedCategoryNames.length > 2
-          ? `Что посмотреть: ${preview} +${selectedCategoryNames.length - 2}`
-          : `Что посмотреть: ${preview}`
-      );
-    }
-    return chips;
-  }, [filterValue.searchQuery, mode, routePoints.length, selectedCategoryNames, transportMode]);
   const currentRadiusIndex = useMemo(
     () => radiusOptions.findIndex((option) => String(option.id) === String(filterValue.radius)),
     [filterValue.radius, radiusOptions]
@@ -153,15 +129,27 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
     return radiusOptions[currentRadiusIndex + 1] ?? null;
   }, [currentRadiusIndex, radiusOptions]);
   const showNearbyFallback = mode === 'radius' && totalPoints === 0;
-  const mobileContextHint =
-    mode === 'radius'
-      ? activeSummaryChips.length > 0
-        ? 'Активные фильтры уже применены. Можно сразу вернуться к результатам.'
-        : 'Сейчас показаны все места в выбранном радиусе. Уточняйте выдачу по категориям и радиусу.'
-      : routePoints.length > 0
-        ? 'Точки маршрута уже выбраны. После проверки можно вернуться к списку мест.'
-        : 'Соберите маршрут здесь, а затем вернитесь к выдаче и карте.';
-  const openListButtonLabel = 'Результаты';
+  const mobileQuickChips = useMemo(() => {
+    if (!isMobile || mode !== 'radius') return [];
+
+    const chips: string[] = [];
+    const searchQuery = String(filterValue.searchQuery || '').trim();
+
+    if (searchQuery) chips.push(`Поиск: ${searchQuery}`);
+    if (selectedCategoryNames.length > 0) {
+      chips.push(
+        selectedCategoryNames.length === 1
+          ? selectedCategoryNames[0]
+          : `Категорий: ${selectedCategoryNames.length}`
+      );
+    }
+    if (filterValue.radius) chips.push(`${filterValue.radius} км`);
+
+    return chips.slice(0, 2);
+  }, [filterValue.radius, filterValue.searchQuery, isMobile, mode, selectedCategoryNames]);
+  const showMobileQuickRow =
+    isMobile && mode === 'radius' && (mobileQuickChips.length > 0 || Boolean(onOpenList));
+  const openListButtonLabel = totalPoints > 0 ? `Показать ${totalPoints}` : 'Список';
 
   return (
     <ScrollView
@@ -172,31 +160,33 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
       keyboardShouldPersistTaps="handled"
       nestedScrollEnabled={true}
     >
-      {isMobile && (
-        <View style={styles.mobileFiltersContextCard} testID="filters-mobile-context">
-          {activeSummaryChips.length > 0 ? (
-            <View style={styles.mobileFiltersContextChips}>
-              {activeSummaryChips.map((chip) => (
-                <View key={chip} style={styles.mobileFiltersContextChip}>
-                  <Text style={styles.mobileFiltersContextChipText} numberOfLines={1}>
-                    {chip}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          ) : (
-            <Text style={styles.mobileFiltersContextHint}>{mobileContextHint}</Text>
-          )}
-          {onOpenList ? (
-            <Button
-              label={openListButtonLabel}
-              onPress={onOpenList}
-              size="sm"
-              variant="outline"
-              style={styles.mobileFiltersContextButton}
-              testID="filters-mobile-open-results"
-            />
-          ) : null}
+      {showMobileQuickRow && (
+        <View testID="filters-mobile-context">
+          <View style={styles.mobileFiltersQuickRow} testID="filters-mobile-quick-row">
+            {mobileQuickChips.length > 0 ? (
+              <View style={styles.mobileFiltersQuickChips}>
+                {mobileQuickChips.map((chip) => (
+                  <View key={chip} style={styles.mobileFiltersQuickChip}>
+                    <Text style={styles.mobileFiltersQuickChipText} numberOfLines={1}>
+                      {chip}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View />
+            )}
+            {onOpenList ? (
+              <Button
+                label={openListButtonLabel}
+                onPress={onOpenList}
+                size="sm"
+                variant="outline"
+                style={styles.mobileFiltersQuickButton}
+                testID="filters-mobile-open-results"
+              />
+            ) : null}
+          </View>
         </View>
       )}
 

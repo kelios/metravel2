@@ -11,6 +11,7 @@ import React, {
   useState,
 } from 'react'
 import {
+  ActivityIndicator,
   Platform,
   Pressable,
   Text as RNText,
@@ -64,6 +65,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   coordinates,
   transportMode,
   buildRouteTo,
+  onCenterOnUser,
   onOpenFilters,
   filtersPanelProps,
   onToggleFavorite,
@@ -325,6 +327,24 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         (consentBannerVisible ? WEB_MOBILE_CONSENT_BANNER_INSET : 0)
       : 0
 
+  const filtersLoadingFallback = useMemo(
+    () => (
+      <View style={styles.sheetFallback} testID="map-mobile-filters-loading">
+        <ActivityIndicator color={colors.primary} />
+        <RNText style={styles.sheetFallbackTitle}>Загружаем фильтры</RNText>
+        <RNText style={styles.sheetFallbackHint}>
+          Панель готовится. Контент появится автоматически через мгновение.
+        </RNText>
+      </View>
+    ),
+    [
+      colors.primary,
+      styles.sheetFallback,
+      styles.sheetFallbackHint,
+      styles.sheetFallbackTitle,
+    ],
+  )
+
   const sheetContent = useMemo(() => {
     const isQuarterListPreview = uiTab === 'list' && sheetState === 'quarter'
     const showTopFilterActions = uiTab === 'search' && !stackSheetToolbar
@@ -362,7 +382,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         const providerProps = filtersContextProps
 
         if (!ProviderComponent || !PanelComponent || !providerProps) {
-          return <View style={styles.sheetRoot} />
+          return filtersLoadingFallback
         }
 
         const mergedProviderProps = {
@@ -374,7 +394,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         }
 
         return (
-          <Suspense fallback={<View style={styles.sheetRoot} />}>
+          <Suspense fallback={filtersLoadingFallback}>
             <ProviderComponent {...mergedProviderProps}>
               <PanelComponent hideTopControls={true} />
             </ProviderComponent>
@@ -539,6 +559,21 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
               </>
             )}
             <Pressable
+              testID="map-center-user"
+              onPress={onCenterOnUser}
+              accessibilityRole="button"
+              accessibilityLabel="Показать мое местоположение"
+              hitSlop={6}
+              style={({ pressed }) => [
+                styles.sheetCloseButton,
+                stackSheetToolbar && styles.sheetIconButtonStacked,
+                compactSheetActions && styles.sheetIconButtonCompact,
+                pressed && { opacity: 0.6 },
+              ]}
+            >
+              <Feather name="crosshair" size={15} color={colors.textMuted} />
+            </Pressable>
+            <Pressable
               testID="map-panel-open"
               onPress={handleToggleListPanel}
               accessibilityRole="button"
@@ -598,6 +633,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     favorites,
     hasMore,
     filtersContextProps,
+    filtersLoadingFallback,
     filtersPanelProps?.Component,
     filtersPanelProps?.Panel,
     isRefreshing,
@@ -606,6 +642,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     onRefresh,
     onResetFilters,
     onToggleFavorite,
+    onCenterOnUser,
     handleBackToMap,
     handleOpenSearch,
     handleOpenList,
@@ -663,6 +700,13 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             categoriesValue={quickCategoriesValue}
             overlaysValue={quickOverlaysValue}
             extraActions={[
+              {
+                key: 'locate',
+                label: 'Показать мое местоположение',
+                icon: 'crosshair',
+                onPress: onCenterOnUser,
+                testID: 'map-center-user-quick',
+              },
               {
                 key: 'list',
                 label: 'Открыть панель со списком',

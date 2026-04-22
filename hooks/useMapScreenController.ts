@@ -14,10 +14,12 @@ import { useMapUIController } from '@/hooks/map/useMapUIController';
 import { useRouteController } from '@/hooks/map/useRouteController';
 
 // Lazy-load filters panel components — only needed when the user opens the filters drawer
-const LazyFiltersPanel = lazy(() => import('@/components/MapPage/FiltersPanel'));
-const LazyFiltersProvider = lazy(() =>
-  import('@/context/MapFiltersContext').then((m) => ({ default: m.FiltersProvider }))
-);
+const loadFiltersPanelModule = () => import('@/components/MapPage/FiltersPanel');
+const loadFiltersProviderModule = () =>
+  import('@/context/MapFiltersContext').then((m) => ({ default: m.FiltersProvider }));
+
+const LazyFiltersPanel = lazy(loadFiltersPanelModule);
+const LazyFiltersProvider = lazy(loadFiltersProviderModule);
 
 /**
  * Главный контроллер экрана карты (facade pattern).
@@ -85,6 +87,13 @@ export function useMapScreenController() {
     styles,
     canonical,
   } = uiController;
+
+  useEffect(() => {
+    if (!isMobile) return;
+
+    void loadFiltersPanelModule();
+    void loadFiltersProviderModule();
+  }, [isMobile]);
 
   // Route Controller
   const routeController = useRouteController({ mapUiApi });

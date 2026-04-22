@@ -82,6 +82,8 @@ const AddressListItem: React.FC<Props> = ({
 
     const showOverlays = isMobile || hovered;
     const showActionIcons = !isMobile && showOverlays;
+    // Mobile guidance now lives once in the list header instead of repeating inside every card.
+    const showMobileDecisionCard = false;
     const iconSize = isSmallScreen ? 20 : 22;
     const iconButtonSize = isSmallScreen ? 40 : 48;
     const titleFontSize = isSmallScreen ? 16 : isTablet ? 17 : 18;
@@ -185,7 +187,7 @@ const AddressListItem: React.FC<Props> = ({
                   <Text style={styles.distanceText}>{distanceInfo.distanceText} · {distanceInfo.travelTimeText}</Text>
                 </View></View></View>
               )}
-              {isMobile && (
+              {showMobileDecisionCard && isMobile && (
                 <View style={styles.mobileDecisionCard}>
                   <View style={styles.mobileDecisionRow}>
                     <Feather name="corner-down-right" size={13} color={colors.primary} />

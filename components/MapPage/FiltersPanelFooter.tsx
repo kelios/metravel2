@@ -4,16 +4,6 @@ import Feather from '@expo/vector-icons/Feather';
 import Button from '@/components/ui/Button';
 import { useThemedColors } from '@/hooks/useTheme';
 
-const getPlacesLabel = (count: number) => {
-  const absCount = Math.abs(count);
-  const mod10 = absCount % 10;
-  const mod100 = absCount % 100;
-
-  if (mod10 === 1 && mod100 !== 11) return `${count} место`;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} места`;
-  return `${count} мест`;
-};
-
 interface FiltersPanelFooterProps {
   styles: any;
   isMobile: boolean;
@@ -46,20 +36,11 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
   const colors = useThemedColors();
   const showMobileRadiusFooter = isMobile && mode === 'radius';
   const canOpenList = typeof onOpenList === 'function';
-  const mobileSummaryTitle =
-    totalPoints > 0 ? `Найдено ${getPlacesLabel(totalPoints)}` : 'Пока ничего не найдено';
-  const mobileSummaryHint =
-    totalPoints > 0
-      ? 'Откройте список или продолжайте двигать карту, чтобы уточнить выбор.'
-      : 'Измените фильтры или радиус, чтобы увидеть подходящие места.';
+  const mobileOpenListLabel = totalPoints > 0 ? `Показать ${totalPoints}` : 'Список';
 
   if (showMobileRadiusFooter) {
     return (
       <View style={styles.stickyFooter} testID="filters-panel-footer">
-        <View style={styles.mobileFooterSummary}>
-          <Text style={styles.mobileFooterSummaryTitle}>{mobileSummaryTitle}</Text>
-          <Text style={styles.mobileFooterSummaryHint}>{mobileSummaryHint}</Text>
-        </View>
         <View style={styles.footerButtons}>
           {!hideFooterReset && (
             <Button
@@ -73,7 +54,7 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
           )}
           {canOpenList && (
             <Button
-              label={totalPoints > 0 ? `Показать ${totalPoints}` : 'Открыть список'}
+              label={mobileOpenListLabel}
               testID="filters-open-list-button"
               icon={<Feather name="list" size={16} color={colors.textOnPrimary} />}
               onPress={onOpenList}
