@@ -14,6 +14,7 @@ import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { getUserFriendlyNetworkError } from '@/utils/networkErrorHandler';
 import ErrorDisplay from '@/components/ui/ErrorDisplay';
 import { useMapScreenController } from '@/hooks/useMapScreenController';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
 import MapPanel from '@/components/MapPage/MapPanel';
@@ -89,6 +90,23 @@ export default function MapScreen() {
     useEffect(() => {
         if (!geoError && geoBannerDismissed) setGeoBannerDismissed(false);
     }, [geoError, geoBannerDismissed]);
+
+    // Network status — drive offline UI + auto-retry on reconnect during error state
+    const { isConnected } = useNetworkStatus();
+    const wasDisconnectedRef = useRef(!isConnected);
+    useEffect(() => {
+        if (!mapError) {
+            wasDisconnectedRef.current = !isConnected;
+            return;
+        }
+        if (isConnected && wasDisconnectedRef.current) {
+            wasDisconnectedRef.current = false;
+            invalidateTravelsQuery();
+            refetchMapData();
+            return;
+        }
+        wasDisconnectedRef.current = !isConnected;
+    }, [isConnected, mapError, invalidateTravelsQuery, refetchMapData]);
 
     // --- SEO (single block, rendered once) ---
     const mapStructuredData = useMemo(
@@ -405,12 +423,17 @@ export default function MapScreen() {
     if (mapError) {
         const friendly = getUserFriendlyNetworkError(mapErrorDetails || mapError);
         const friendlyMessage = (friendly as any)?.message ?? String(friendly || '');
+        const offlineMessage = 'Нет подключения к интернету. Карта загрузится автоматически, как только соединение восстановится.';
+        const effectiveMessage = !isConnected
+            ? offlineMessage
+            : friendlyMessage || 'Проверьте соединение и попробуйте ещё раз';
         return (
             <View style={styles.container}>
                 {seoBlock}
                 <ErrorDisplay
-                    title="Не удалось загрузить карту"
-                    message={friendlyMessage || 'Проверьте соединение и попробуйте ещё раз'}
+                    title={!isConnected ? 'Нет подключения' : 'Не удалось загрузить карту'}
+                    message={effectiveMessage}
+                    isNetworkError={!isConnected}
                     onRetry={() => {
                         invalidateTravelsQuery();
                         refetchMapData();

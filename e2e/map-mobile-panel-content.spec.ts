@@ -260,8 +260,6 @@ test.describe('@smoke mobile map panel content', () => {
       await expect(page.getByTestId('segmented-search')).toBeVisible()
       await expect(page.getByTestId('segmented-route')).toBeVisible()
       await expect(page.getByTestId('segmented-list')).toBeVisible()
-      await expect(page.getByTestId('map-center-user')).toBeVisible()
-      await expect(page.getByTestId('map-panel-open')).toBeVisible()
       await expect(page.getByTestId('map-panel-close')).toBeVisible()
     })
 

@@ -56,24 +56,26 @@ export const getMapMobileLayoutStyles = (
     sheetToolbar: {
       flexDirection: options.stackSheetToolbar ? 'column' : 'row',
       alignItems: options.stackSheetToolbar ? 'stretch' : 'center',
-      gap: options.stackSheetToolbar ? 6 : options.isNarrow ? 4 : 6,
+      gap: options.stackSheetToolbar ? 4 : options.isNarrow ? 3 : 5,
       minHeight: options.stackSheetToolbar
         ? undefined
         : options.isNarrow
-          ? 34
-          : 40,
-      paddingVertical: options.isNarrow ? 3 : 5,
-      paddingLeft: options.isNarrow ? 6 : 10,
-      paddingRight: options.isNarrow ? 6 : 10,
+          ? 32
+          : 36,
+      paddingVertical: options.isNarrow ? 2 : 4,
+      paddingLeft: options.isNarrow ? 6 : 8,
+      paddingRight: options.isNarrow ? 6 : 8,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.borderLight,
       backgroundColor: colors.surface,
       ...(Platform.OS === 'web'
         ? ({
             backgroundColor: colors.surfaceAlpha40,
-            boxShadow: '0 6px 18px rgba(15,23,42,0.08)',
+            boxShadow: '0 4px 14px rgba(15,23,42,0.06)',
             backdropFilter: 'blur(18px)',
             WebkitBackdropFilter: 'blur(18px)',
+            position: 'relative',
+            zIndex: 1,
           } as any)
         : {
             shadowColor: DESIGN_TOKENS.colors.text,
@@ -82,13 +84,6 @@ export const getMapMobileLayoutStyles = (
             shadowRadius: 3,
             elevation: 2,
           }),
-      ...Platform.select({
-        web: {
-          position: 'sticky' as any,
-          top: 0,
-          zIndex: 10,
-        },
-      }),
     },
     sheetToolbarPreview: {
       minHeight: options.isNarrow ? 36 : 40,
@@ -109,7 +104,7 @@ export const getMapMobileLayoutStyles = (
     sheetToolbarActions: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
-      gap: 4,
+      gap: 3,
       flexShrink: 0,
     },
     sheetToolbarActionsPreview: {
@@ -122,6 +117,24 @@ export const getMapMobileLayoutStyles = (
       alignItems: 'center' as const,
       justifyContent: 'flex-end' as const,
       gap: 8,
+    },
+    sheetToolbarActionsFloatingClose: {
+      ...(Platform.OS === 'web'
+        ? ({
+            position: 'absolute',
+            top: 6,
+            right: 10,
+            width: 'auto',
+            gap: 0,
+          } as any)
+        : null),
+    },
+    sheetToolbarCloseOnly: {
+      ...(Platform.OS === 'web'
+        ? ({
+            paddingRight: 50,
+          } as any)
+        : null),
     },
     sheetCloseButton: {
       width: options.isNarrow ? 32 : 36,
@@ -149,6 +162,27 @@ export const getMapMobileLayoutStyles = (
             shadowRadius: 3,
             elevation: 1,
           }),
+    },
+    sheetToolbarCloseButton: {
+      backgroundColor: colors.surface,
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: '0 8px 20px rgba(15,23,42,0.10)',
+          } as any)
+        : {
+            shadowOpacity: 0.08,
+            shadowRadius: 4,
+            elevation: 2,
+          }),
+    },
+    sheetToolbarCloseButtonFloating: {
+      ...(Platform.OS === 'web'
+        ? ({
+            width: 34,
+            height: 34,
+            borderRadius: 11,
+          } as any)
+        : null),
     },
     sheetShowResultsButton: {
       flexDirection: 'row' as const,
@@ -179,37 +213,6 @@ export const getMapMobileLayoutStyles = (
     sheetToolbarButtonStacked: {
       minWidth: 0,
     },
-    sheetBackToMapButton: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-      gap: 4,
-      height: options.isNarrow ? 34 : 38,
-      minWidth: options.isNarrow ? 34 : 38,
-      paddingHorizontal: options.isNarrow ? 8 : 10,
-      borderRadius: 999,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.surfaceAlpha40,
-      flexShrink: 0,
-      ...(Platform.OS === 'web'
-        ? ({
-            boxShadow: 'none',
-            cursor: 'pointer',
-          } as any)
-        : null),
-    },
-    sheetBackToMapButtonCompact: {
-      width: 36,
-      height: 36,
-      paddingHorizontal: 0,
-      borderRadius: 11,
-    },
-    sheetBackToMapText: {
-      fontSize: 12,
-      fontWeight: '700' as const,
-      color: colors.textMuted,
-    },
     sheetIconButtonCompact: {
       width: 36,
       height: 36,
@@ -234,10 +237,17 @@ export const getMapMobileLayoutStyles = (
       minWidth: 0,
       flexShrink: 1,
     },
+    sheetToolbarLeftWithFloatingClose: {
+      ...(Platform.OS === 'web'
+        ? ({
+            paddingRight: 0,
+          } as any)
+        : null),
+    },
     sheetToolbarSummary: {
-      marginTop: options.isNarrow ? 2 : 5,
-      fontSize: 11,
-      lineHeight: options.isNarrow ? 14 : 15,
+      marginTop: options.isNarrow ? 1 : 3,
+      fontSize: 10,
+      lineHeight: options.isNarrow ? 12 : 14,
       fontWeight: '600' as const,
       color: colors.textMuted,
     },
@@ -260,7 +270,7 @@ export const getMapMobileLayoutStyles = (
     },
     sheetToolbarFullWidth: {
       width: '100%',
-      minHeight: 34,
+      minHeight: 32,
     },
     sheetIconButton: {
       width: 36,
@@ -317,7 +327,7 @@ export const getMapMobileLayoutStyles = (
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
-          paddingHorizontal: options.isNarrow ? 4 : 10,
+          paddingHorizontal: options.isNarrow ? 4 : 8,
         },
       }),
     },

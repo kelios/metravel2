@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
+
 import Button from '@/components/ui/Button';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -35,7 +36,7 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
 }) => {
   const colors = useThemedColors();
   const showMobileRadiusFooter = isMobile && mode === 'radius';
-  const canOpenList = typeof onOpenList === 'function';
+  const canOpenList = typeof onOpenList === 'function' && totalPoints > 0;
   const mobileOpenListLabel = totalPoints > 0 ? `Показать ${totalPoints}` : 'Список';
 
   if (showMobileRadiusFooter) {
@@ -70,9 +71,7 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
   return (
     <View style={styles.stickyFooter} testID="filters-panel-footer">
       {!canBuildRoute && mode === 'route' && (
-        <Text style={styles.helperText}>
-          Добавьте старт и финиш, и кнопка маршрута станет активной.
-        </Text>
+        <Text style={styles.helperText}>Добавьте старт и финиш.</Text>
       )}
       <View style={styles.footerButtons}>
         {!hideFooterReset && (
@@ -98,7 +97,11 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
               <Feather
                 name="navigation"
                 size={16}
-                color={canBuildRoute && !routingLoading ? colors.textOnPrimary : colors.textMuted}
+                color={
+                  canBuildRoute && !routingLoading
+                    ? colors.textOnPrimary
+                    : colors.textMuted
+                }
               />
             }
             onPress={() => {

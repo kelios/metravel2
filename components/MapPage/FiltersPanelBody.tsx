@@ -143,13 +143,9 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
           : `Категорий: ${selectedCategoryNames.length}`
       );
     }
-    if (filterValue.radius) chips.push(`${filterValue.radius} км`);
-
     return chips.slice(0, 2);
-  }, [filterValue.radius, filterValue.searchQuery, isMobile, mode, selectedCategoryNames]);
-  const showMobileQuickRow =
-    isMobile && mode === 'radius' && (mobileQuickChips.length > 0 || Boolean(onOpenList));
-  const openListButtonLabel = totalPoints > 0 ? `Показать ${totalPoints}` : 'Список';
+  }, [filterValue.searchQuery, isMobile, mode, selectedCategoryNames]);
+  const showMobileQuickRow = isMobile && mode === 'radius' && mobileQuickChips.length > 0;
 
   return (
     <ScrollView
@@ -163,29 +159,15 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
       {showMobileQuickRow && (
         <View testID="filters-mobile-context">
           <View style={styles.mobileFiltersQuickRow} testID="filters-mobile-quick-row">
-            {mobileQuickChips.length > 0 ? (
-              <View style={styles.mobileFiltersQuickChips}>
-                {mobileQuickChips.map((chip) => (
-                  <View key={chip} style={styles.mobileFiltersQuickChip}>
-                    <Text style={styles.mobileFiltersQuickChipText} numberOfLines={1}>
-                      {chip}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <View />
-            )}
-            {onOpenList ? (
-              <Button
-                label={openListButtonLabel}
-                onPress={onOpenList}
-                size="sm"
-                variant="outline"
-                style={styles.mobileFiltersQuickButton}
-                testID="filters-mobile-open-results"
-              />
-            ) : null}
+            <View style={styles.mobileFiltersQuickChips}>
+              {mobileQuickChips.map((chip) => (
+                <View key={chip} style={styles.mobileFiltersQuickChip}>
+                  <Text style={styles.mobileFiltersQuickChipText} numberOfLines={1}>
+                    {chip}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </View>
         </View>
       )}

@@ -1,16 +1,17 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import MapIcon from './MapIcon';
-import MapLegend from '@/components/MapPage/MapLegend';
-import CollapsibleSection from '@/components/MapPage/CollapsibleSection';
-import { globalFocusStyles } from '@/styles/globalFocus';
-import { WEB_MAP_BASE_LAYERS, WEB_MAP_OVERLAY_LAYERS } from '@/config/mapWebLayers';
-import type { MapUiApi } from '@/types/mapUi';
-import type { ThemedColors } from '@/hooks/useTheme';
-import Button from '@/components/ui/Button';
-import IconButton from '@/components/ui/IconButton';
-import Chip from '@/components/ui/Chip';
-import { Toggle } from '@/components/ui/Toggle';
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { Pressable, Text, View } from 'react-native'
+
+import Button from '@/components/ui/Button'
+import Chip from '@/components/ui/Chip'
+import IconButton from '@/components/ui/IconButton'
+import { Toggle } from '@/components/ui/Toggle'
+import CollapsibleSection from '@/components/MapPage/CollapsibleSection'
+import MapLegend from '@/components/MapPage/MapLegend'
+import MapIcon from './MapIcon'
+import { WEB_MAP_BASE_LAYERS, WEB_MAP_OVERLAY_LAYERS } from '@/config/mapWebLayers'
+import { globalFocusStyles } from '@/styles/globalFocus'
+import type { ThemedColors } from '@/hooks/useTheme'
+import type { MapUiApi } from '@/types/mapUi'
 
 const OSM_POI_CATEGORIES = [
   'Достопримечательности',
@@ -19,36 +20,35 @@ const OSM_POI_CATEGORIES = [
   'Развлечения',
   'Религия',
   'История',
-] as const;
+] as const
 
 const OSM_POI_DEFAULT_CATEGORIES = [
   'Достопримечательности',
   'Видовые места',
   'Культура',
-] as const;
+] as const
 
 interface FiltersPanelMapSettingsProps {
-  colors: ThemedColors;
-  styles: any;
-  isMobile: boolean;
-  mode: 'radius' | 'route';
-  mapUiApi?: MapUiApi | null;
-  overlayOptions?: Array<{ id: string; title: string }>;
-  enabledOverlays?: Record<string, boolean>;
-  onOverlayToggle?: (id: string, enabled: boolean) => void;
-  onResetOverlays?: () => void;
-  totalPoints: number;
-  hasFilters: boolean;
-  canBuildRoute: boolean;
-  onReset?: () => void;
-  hideReset?: boolean;
-  onOpenList?: () => void;
-  showLegend?: boolean;
-  /** Back-compat: controls both base layer + overlays if specific flags aren't provided */
-  showLayers?: boolean;
-  showBaseLayer?: boolean;
-  showOverlays?: boolean;
-  withContainer?: boolean;
+  colors: ThemedColors
+  styles: any
+  isMobile: boolean
+  mode: 'radius' | 'route'
+  mapUiApi?: MapUiApi | null
+  overlayOptions?: Array<{ id: string; title: string }>
+  enabledOverlays?: Record<string, boolean>
+  onOverlayToggle?: (id: string, enabled: boolean) => void
+  onResetOverlays?: () => void
+  totalPoints: number
+  hasFilters: boolean
+  canBuildRoute: boolean
+  onReset?: () => void
+  hideReset?: boolean
+  onOpenList?: () => void
+  showLegend?: boolean
+  showLayers?: boolean
+  showBaseLayer?: boolean
+  showOverlays?: boolean
+  withContainer?: boolean
 }
 
 const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
@@ -70,82 +70,99 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
   showOverlays,
   withContainer = true,
 }) => {
-  const [legendOpen, setLegendOpen] = useState(false);
+  const [legendOpen, setLegendOpen] = useState(false)
   const [selectedBaseLayerId, setSelectedBaseLayerId] = useState<string>(
-    WEB_MAP_BASE_LAYERS.find((l) => l.defaultEnabled)?.id || WEB_MAP_BASE_LAYERS[0]?.id || 'osm'
-  );
-  const [localEnabledOverlays, setLocalEnabledOverlays] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    for (const o of WEB_MAP_OVERLAY_LAYERS) {
-      initial[o.id] = Boolean(o.defaultEnabled);
+    WEB_MAP_BASE_LAYERS.find((layer) => layer.defaultEnabled)?.id ||
+      WEB_MAP_BASE_LAYERS[0]?.id ||
+      'osm',
+  )
+  const [localEnabledOverlays, setLocalEnabledOverlays] = useState<
+    Record<string, boolean>
+  >(() => {
+    const initial: Record<string, boolean> = {}
+    for (const overlay of WEB_MAP_OVERLAY_LAYERS) {
+      initial[overlay.id] = Boolean(overlay.defaultEnabled)
     }
-    return initial;
-  });
-  const [osmPoiCategories, setOsmPoiCategories] = useState<string[]>(() => [...OSM_POI_DEFAULT_CATEGORIES]);
+    return initial
+  })
+  const [osmPoiCategories, setOsmPoiCategories] = useState<string[]>(() => [
+    ...OSM_POI_DEFAULT_CATEGORIES,
+  ])
 
   const safeMapUiCall = useCallback((fn?: () => void) => {
-    if (typeof fn !== 'function') return;
+    if (typeof fn !== 'function') return
     try {
-      fn();
+      fn()
     } catch {
       // noop
     }
-  }, []);
+  }, [])
 
   const availableOverlays = useMemo(() => {
     if (Array.isArray(overlayOptions) && overlayOptions.length > 0) {
-      return overlayOptions;
+      return overlayOptions
     }
-    return WEB_MAP_OVERLAY_LAYERS.filter((o) => o.kind.startsWith('osm-overpass-') || Boolean(o.url));
-  }, [overlayOptions]);
 
-  const usesControlledOverlays = typeof onOverlayToggle === 'function' && Boolean(controlledEnabledOverlays);
-  const resolvedEnabledOverlays = controlledEnabledOverlays ?? localEnabledOverlays;
+    return WEB_MAP_OVERLAY_LAYERS.filter(
+      (overlay) =>
+        overlay.kind.startsWith('osm-overpass-') || Boolean(overlay.url),
+    )
+  }, [overlayOptions])
 
-  const updateOverlayEnabled = useCallback((id: string, enabled: boolean) => {
-    if (!usesControlledOverlays) {
-      setLocalEnabledOverlays((prev) => ({ ...prev, [id]: enabled }));
-      safeMapUiCall(() => mapUiApi?.setOverlayEnabled?.(id, enabled));
-    }
-    onOverlayToggle?.(id, enabled);
-  }, [mapUiApi, onOverlayToggle, safeMapUiCall, usesControlledOverlays]);
+  const usesControlledOverlays =
+    typeof onOverlayToggle === 'function' && Boolean(controlledEnabledOverlays)
+  const resolvedEnabledOverlays =
+    controlledEnabledOverlays ?? localEnabledOverlays
 
-  const canCenterOnUser = Boolean(mapUiApi?.capabilities?.canCenterOnUser);
-  const canFitToResults = Boolean(mapUiApi?.capabilities?.canFitToResults);
-  const canExportRoute = Boolean(mapUiApi?.capabilities?.canExportRoute);
-  const osmPoiEnabled = Boolean(resolvedEnabledOverlays['osm-poi']);
+  const updateOverlayEnabled = useCallback(
+    (id: string, enabled: boolean) => {
+      if (!usesControlledOverlays) {
+        setLocalEnabledOverlays((prev) => ({ ...prev, [id]: enabled }))
+        safeMapUiCall(() => mapUiApi?.setOverlayEnabled?.(id, enabled))
+      }
 
-  const resolvedShowBaseLayer = showBaseLayer ?? showLayers;
-  const resolvedShowOverlays = showOverlays ?? showLayers;
+      onOverlayToggle?.(id, enabled)
+    },
+    [mapUiApi, onOverlayToggle, safeMapUiCall, usesControlledOverlays],
+  )
 
-  const shouldShowBaseLayerSelector = resolvedShowBaseLayer && WEB_MAP_BASE_LAYERS.length > 1;
+  const canFitToResults = Boolean(mapUiApi?.capabilities?.canFitToResults)
+  const canExportRoute = Boolean(mapUiApi?.capabilities?.canExportRoute)
+  const osmPoiEnabled = Boolean(resolvedEnabledOverlays['osm-poi'])
+
+  const resolvedShowBaseLayer = showBaseLayer ?? showLayers
+  const resolvedShowOverlays = showOverlays ?? showLayers
+  const shouldShowBaseLayerSelector =
+    resolvedShowBaseLayer && WEB_MAP_BASE_LAYERS.length > 1
 
   useEffect(() => {
-    if (!mapUiApi) return;
+    if (!mapUiApi) return
     try {
-      mapUiApi.setBaseLayer(selectedBaseLayerId);
+      mapUiApi.setBaseLayer(selectedBaseLayerId)
     } catch {
       // noop
     }
-  }, [mapUiApi, selectedBaseLayerId]);
+  }, [mapUiApi, selectedBaseLayerId])
 
   useEffect(() => {
-    if (usesControlledOverlays) return;
-    if (!mapUiApi) return;
+    if (usesControlledOverlays || !mapUiApi) return
+
     try {
-      for (const o of WEB_MAP_OVERLAY_LAYERS) {
-        mapUiApi.setOverlayEnabled(o.id, Boolean(resolvedEnabledOverlays[o.id]));
+      for (const overlay of WEB_MAP_OVERLAY_LAYERS) {
+        mapUiApi.setOverlayEnabled(
+          overlay.id,
+          Boolean(resolvedEnabledOverlays[overlay.id]),
+        )
       }
     } catch {
       // noop
     }
-  }, [mapUiApi, resolvedEnabledOverlays, usesControlledOverlays]);
+  }, [mapUiApi, resolvedEnabledOverlays, usesControlledOverlays])
 
   useEffect(() => {
-    if (!mapUiApi?.setOsmPoiCategories) return;
-    if (!osmPoiEnabled) return;
-    mapUiApi.setOsmPoiCategories(osmPoiCategories);
-  }, [mapUiApi, osmPoiCategories, osmPoiEnabled]);
+    if (!mapUiApi?.setOsmPoiCategories || !osmPoiEnabled) return
+    mapUiApi.setOsmPoiCategories(osmPoiCategories)
+  }, [mapUiApi, osmPoiCategories, osmPoiEnabled])
 
   const body = (
     <>
@@ -153,43 +170,23 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
         <>
           <Pressable
             style={[styles.accordionHeader, globalFocusStyles.focusable]}
-            onPress={() => setLegendOpen((v) => !v)}
+            onPress={() => setLegendOpen((value) => !value)}
             accessibilityRole="button"
             accessibilityLabel="Легенда карты"
             accessibilityState={{ expanded: legendOpen }}
           >
             <Text style={styles.accordionTitle}>Легенда карты</Text>
-            <MapIcon name={legendOpen ? 'expand-less' : 'expand-more'} size={20} color={colors.textMuted} />
+            <MapIcon
+              name={legendOpen ? 'expand-less' : 'expand-more'}
+              size={20}
+              color={colors.textMuted}
+            />
           </Pressable>
           {legendOpen && <MapLegend showRouteMode={mode === 'route'} />}
         </>
       ) : null}
 
       <View style={styles.mapControlsRow}>
-        <IconButton
-          label="Увеличить масштаб"
-          icon={<MapIcon name="add" size={18} color={colors.text} />}
-          onPress={() => safeMapUiCall(mapUiApi?.zoomIn)}
-          disabled={!mapUiApi}
-          size="sm"
-        />
-        <IconButton
-          label="Уменьшить масштаб"
-          icon={<MapIcon name="remove" size={18} color={colors.text} />}
-          onPress={() => safeMapUiCall(mapUiApi?.zoomOut)}
-          disabled={!mapUiApi}
-          size="sm"
-        />
-        <IconButton
-          label="Моё местоположение"
-          icon={<MapIcon name="my-location" size={18} color={colors.text} />}
-          onPress={() => {
-            if (!mapUiApi || !canCenterOnUser) return;
-            safeMapUiCall(mapUiApi?.centerOnUser);
-          }}
-          disabled={!mapUiApi || !canCenterOnUser}
-          size="sm"
-        />
         <IconButton
           label="Показать все результаты на карте"
           icon={<MapIcon name="zoom-out-map" size={18} color={colors.text} />}
@@ -223,30 +220,32 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
       ) : null}
 
       {shouldShowBaseLayerSelector ? (
-        <>
-          <View style={styles.mapLayersSection}>
-            <Text style={styles.mapLayersLabel}>Слой карты</Text>
-            <View style={styles.mapLayersRow}>
-              {WEB_MAP_BASE_LAYERS.map((l) => {
-                const active = selectedBaseLayerId === l.id;
-                return (
-                  <Chip
-                    key={l.id}
-                    label={l.title}
-                    selected={active}
-                    style={[styles.mapLayerChip, active && styles.mapLayerChipSelected]}
-                    disabled={!mapUiApi}
-                    onPress={() => {
-                      setSelectedBaseLayerId(l.id);
-                      safeMapUiCall(() => mapUiApi?.setBaseLayer?.(l.id));
-                    }}
-                    testID={`map-layer-${l.id}`}
-                  />
-                );
-              })}
-            </View>
+        <View style={styles.mapLayersSection}>
+          <Text style={styles.mapLayersLabel}>Слой карты</Text>
+          <View style={styles.mapLayersRow}>
+            {WEB_MAP_BASE_LAYERS.map((layer) => {
+              const active = selectedBaseLayerId === layer.id
+
+              return (
+                <Chip
+                  key={layer.id}
+                  label={layer.title}
+                  selected={active}
+                  style={[
+                    styles.mapLayerChip,
+                    active && styles.mapLayerChipSelected,
+                  ]}
+                  disabled={!mapUiApi}
+                  onPress={() => {
+                    setSelectedBaseLayerId(layer.id)
+                    safeMapUiCall(() => mapUiApi?.setBaseLayer?.(layer.id))
+                  }}
+                  testID={`map-layer-${layer.id}`}
+                />
+              )
+            })}
           </View>
-        </>
+        </View>
       ) : null}
 
       {resolvedShowOverlays ? (
@@ -254,19 +253,19 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
           <View style={styles.mapLayersSection}>
             <Text style={styles.mapLayersLabel}>Оверлеи</Text>
             <View style={styles.mapToggleList}>
-              {availableOverlays.map((o) => {
-                const enabled = Boolean(resolvedEnabledOverlays[o.id]);
+              {availableOverlays.map((overlay) => {
+                const enabled = Boolean(resolvedEnabledOverlays[overlay.id])
+
                 return (
                   <Pressable
-                    key={o.id}
-                    testID={`map-overlay-${o.id}`}
+                    key={overlay.id}
+                    testID={`map-overlay-${overlay.id}`}
                     disabled={!mapUiApi}
                     onPress={() => {
-                      const next = !enabled;
-                      updateOverlayEnabled(o.id, next);
+                      updateOverlayEnabled(overlay.id, !enabled)
                     }}
                     accessibilityRole="switch"
-                    accessibilityLabel={o.title}
+                    accessibilityLabel={overlay.title}
                     accessibilityState={{ checked: enabled, disabled: !mapUiApi }}
                     style={({ pressed }) => [
                       styles.mapToggleRow,
@@ -275,45 +274,52 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
                     ]}
                   >
                     <Text style={styles.mapToggleText} numberOfLines={2}>
-                      {o.title}
+                      {overlay.title}
                     </Text>
                     <Toggle
                       value={enabled}
                       onValueChange={() => {
-                        if (!mapUiApi) return;
-                        const next = !enabled;
-                        updateOverlayEnabled(o.id, next);
+                        if (!mapUiApi) return
+                        updateOverlayEnabled(overlay.id, !enabled)
                       }}
                       disabled={!mapUiApi}
                     />
                   </Pressable>
-                );
+                )
               })}
             </View>
           </View>
 
-          {osmPoiEnabled && typeof mapUiApi?.setOsmPoiCategories === 'function' && (
+          {osmPoiEnabled && typeof mapUiApi?.setOsmPoiCategories === 'function' ? (
             <View style={styles.mapLayersSection}>
               <Text style={styles.mapLayersLabel}>OSM: категории</Text>
               <View style={styles.mapToggleList}>
-                {OSM_POI_CATEGORIES.map((cat) => {
-                  const enabled = osmPoiCategories.includes(cat);
+                {OSM_POI_CATEGORIES.map((category) => {
+                  const enabled = osmPoiCategories.includes(category)
+
                   return (
                     <Pressable
-                      key={cat}
-                      testID={`map-osm-category-${cat}`}
+                      key={category}
+                      testID={`map-osm-category-${category}`}
                       disabled={!mapUiApi}
                       onPress={() => {
-                        if (!mapUiApi) return;
+                        if (!mapUiApi) return
                         setOsmPoiCategories((prev) => {
-                          const next = prev.includes(cat) ? prev.filter((x) => x !== cat) : [...prev, cat];
-                          safeMapUiCall(() => mapUiApi?.setOsmPoiCategories?.(next));
-                          return next;
-                        });
+                          const next = prev.includes(category)
+                            ? prev.filter((item) => item !== category)
+                            : [...prev, category]
+                          safeMapUiCall(() =>
+                            mapUiApi?.setOsmPoiCategories?.(next),
+                          )
+                          return next
+                        })
                       }}
                       accessibilityRole="switch"
-                      accessibilityLabel={cat}
-                      accessibilityState={{ checked: enabled, disabled: !mapUiApi }}
+                      accessibilityLabel={category}
+                      accessibilityState={{
+                        checked: enabled,
+                        disabled: !mapUiApi,
+                      }}
                       style={({ pressed }) => [
                         styles.mapToggleRow,
                         pressed && mapUiApi && styles.mapToggleRowPressed,
@@ -321,34 +327,37 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
                       ]}
                     >
                       <Text style={styles.mapToggleText} numberOfLines={1}>
-                        {cat}
+                        {category}
                       </Text>
                       <Toggle
                         value={enabled}
                         onValueChange={() => {
-                          if (!mapUiApi) return;
+                          if (!mapUiApi) return
                           setOsmPoiCategories((prev) => {
-                            const next = prev.includes(cat) ? prev.filter((x) => x !== cat) : [...prev, cat];
-                            safeMapUiCall(() => mapUiApi?.setOsmPoiCategories?.(next));
-                            return next;
-                          });
+                            const next = prev.includes(category)
+                              ? prev.filter((item) => item !== category)
+                              : [...prev, category]
+                            safeMapUiCall(() =>
+                              mapUiApi?.setOsmPoiCategories?.(next),
+                            )
+                            return next
+                          })
                         }}
                         disabled={!mapUiApi}
                       />
                     </Pressable>
-                  );
+                  )
                 })}
               </View>
             </View>
-          )}
+          ) : null}
         </>
       ) : null}
-
     </>
-  );
+  )
 
   if (!withContainer) {
-    return <View>{body}</View>;
+    return <View>{body}</View>
   }
 
   return (
@@ -361,7 +370,7 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
     >
       {body}
     </CollapsibleSection>
-  );
-};
+  )
+}
 
-export default React.memo(FiltersPanelMapSettings);
+export default React.memo(FiltersPanelMapSettings)

@@ -111,20 +111,20 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
 const getStyles = (colors: ThemedColors, tone: 'default' | 'flat') =>
   StyleSheet.create({
     collapsibleSection: {
-      marginBottom: tone === 'flat' ? 6 : 16,
+      marginBottom: tone === 'flat' ? 4 : 16,
     },
     collapsibleHeader: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      minHeight: tone === 'flat' ? 42 : 44,
-      paddingVertical: tone === 'flat' ? 9 : 12,
-      paddingHorizontal: tone === 'flat' ? 10 : 12,
+      minHeight: tone === 'flat' ? 38 : 44,
+      paddingVertical: tone === 'flat' ? 7 : 12,
+      paddingHorizontal: tone === 'flat' ? 9 : 12,
       backgroundColor:
         tone === 'flat'
           ? (colors.surfaceElevated ?? colors.backgroundSecondary ?? colors.surface)
           : colors.surface,
-      borderRadius: tone === 'flat' ? 14 : 12,
+      borderRadius: tone === 'flat' ? 12 : 12,
       borderWidth: 1,
       borderColor: tone === 'flat' ? colors.borderLight : colors.borderLight,
       ...(tone === 'flat' && Platform.OS === 'web'
@@ -152,16 +152,16 @@ const getStyles = (colors: ThemedColors, tone: 'default' | 'flat') =>
     },
     sectionLabel: {
       ...DESIGN_TOKENS.typography.scale.h3,
-      fontSize: 13,
-      lineHeight: 18,
+      fontSize: 12,
+      lineHeight: 17,
       fontWeight: '700',
       color: colors.text,
       flexShrink: 1,
     },
     badge: {
       backgroundColor: colors.primarySoft,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
+      paddingHorizontal: 7,
+      paddingVertical: 2,
       borderRadius: 999,
       minWidth: 22,
       alignItems: 'center',
@@ -173,7 +173,7 @@ const getStyles = (colors: ThemedColors, tone: 'default' | 'flat') =>
       color: colors.primaryText,
     },
     collapsibleContent: {
-      marginTop: tone === 'flat' ? 6 : 12,
+      marginTop: tone === 'flat' ? 4 : 12,
       paddingHorizontal: tone === 'flat' ? 2 : 12,
     },
   })

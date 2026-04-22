@@ -1269,10 +1269,10 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(page.getByTestId('map-mobile-tab-transition')).toBeHidden({ timeout: 10_000 });
 
     // Verify the filters view is active in the mobile sheet.
-    // The current mobile contract shows the filters body/context card immediately,
-    // while field-level search UI can stay collapsed until the user opens a section.
+    // The current mobile contract shows the filters body immediately,
+    // while compact context chips appear only when there are real search/category refinements.
     await expect(page.getByTestId('filters-block-main')).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByTestId('filters-mobile-context')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('map-mobile-toolbar-summary')).toBeVisible({ timeout: 10_000 });
 
     await expect(listToggle).toBeVisible();
     await expect(filtersToggle).toHaveAttribute('aria-checked', 'true', { timeout: 5_000 });

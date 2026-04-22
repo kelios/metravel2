@@ -4,6 +4,15 @@ import { preacceptCookies } from './helpers/navigation';
 
 type ApiMatch = string | RegExp;
 
+const mapMobileEntrySelector = [
+  '[data-testid="map-open-list"]',
+  '[testID="map-open-list"]',
+  '[data-testid="map-peek-expand"]',
+  '[testID="map-peek-expand"]',
+  '[data-testid="map-panel-close"]',
+  '[testID="map-panel-close"]',
+].join(', ');
+
 const ensureApiProxy = async (page: any, _label: string) => {
   // Retry until proxy is reachable.
   // Some backends legitimately return 4xx/5xx for /api/travels/ while
@@ -164,7 +173,7 @@ test.describe('@smoke Integration: core data flows (web)', () => {
     // Wait for map UI to appear before interacting with tabs.
     const mapUi = await Promise.race([
       page.getByTestId('map-leaflet-wrapper').waitFor({ state: 'visible', timeout: 60_000 }).then(() => true).catch(() => false),
-      page.getByTestId('map-panel-open').waitFor({ state: 'visible', timeout: 60_000 }).then(() => true).catch(() => false),
+      page.locator(mapMobileEntrySelector).first().waitFor({ state: 'visible', timeout: 60_000 }).then(() => true).catch(() => false),
     ]);
     if (!mapUi) return; // Map page didn't load under parallel load
 

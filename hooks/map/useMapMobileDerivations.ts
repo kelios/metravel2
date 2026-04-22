@@ -128,11 +128,18 @@ export function useMapMobileDerivations(
         : 'Выберите старт и финиш кликом по карте'
     }
 
-    const categoriesLabel =
-      selectedCategories.length > 0
-        ? `категорий: ${selectedCategories.length}`
-        : 'все категории'
-    return `${travelsData.length > 999 ? '999+' : travelsData.length} мест · ${activeRadius} км · ${categoriesLabel}`
+    const parts = [
+      `${travelsData.length > 999 ? '999+' : travelsData.length} мест`,
+      `${activeRadius} км`,
+    ]
+
+    if (selectedCategories.length === 1) {
+      parts.push(selectedCategories[0]!)
+    } else if (selectedCategories.length > 1) {
+      parts.push(`${selectedCategories.length} кат.`)
+    }
+
+    return parts.join(' · ')
   }, [
     activeRadius,
     canBuildRoute,
@@ -140,7 +147,7 @@ export function useMapMobileDerivations(
     routeDistance,
     routePointsCount,
     routingLoading,
-    selectedCategories.length,
+    selectedCategories,
     travelsData.length,
   ])
 

@@ -17,12 +17,12 @@ jest.mock('react-native', () => {
 
 const mockFilters = {
   categories: [
-    { id: 1, name: 'Музеи' },
-    { id: 2, name: 'Парки' },
+    { id: 1, name: 'ÐœÑƒÐ·ÐµÐ¸' },
+    { id: 2, name: 'ÐŸÐ°Ñ€ÐºÐ¸' },
   ],
   categoryTravelAddress: [
-    { id: 1, name: 'Музеи' },
-    { id: 2, name: 'Парки' },
+    { id: 1, name: 'ÐœÑƒÐ·ÐµÐ¸' },
+    { id: 2, name: 'ÐŸÐ°Ñ€ÐºÐ¸' },
   ],
   radius: [
     { id: '60', name: '60' },
@@ -113,8 +113,8 @@ describe('FiltersPanel', () => {
   it('renders correctly', () => {
     const { getByTestId, getByText } = renderWithTheme(<FiltersPanel />)
     expect(getByTestId('filters-panel')).toBeTruthy()
-    expect(getByText('Радиус')).toBeTruthy()
-    expect(getByText('Маршрут')).toBeTruthy()
+    expect(getByText('Ð Ð°Ð´Ð¸ÑƒÑ')).toBeTruthy()
+    expect(getByText('ÐœÐ°Ñ€ÑˆÑ€ÑƒÑ‚')).toBeTruthy()
   })
 
   it('shows reset button when filters are active', () => {
@@ -122,11 +122,11 @@ describe('FiltersPanel', () => {
       ...defaultProps,
       filterValue: {
         ...mockFilterValue,
-        categoryTravelAddress: ['Музеи'],
+        categoryTravelAddress: ['ÐœÑƒÐ·ÐµÐ¸'],
       },
     }
     const { getByLabelText } = renderWithTheme(<FiltersPanel />, propsWithFilters)
-    expect(getByLabelText('Сбросить')).toBeTruthy()
+    expect(getByLabelText('Ð¡Ð±Ñ€Ð¾ÑÐ¸Ñ‚ÑŒ')).toBeTruthy()
   })
 
   it('calls resetFilters when reset button is pressed', () => {
@@ -134,18 +134,18 @@ describe('FiltersPanel', () => {
       ...defaultProps,
       filterValue: {
         ...mockFilterValue,
-        categoryTravelAddress: ['Музеи'],
+        categoryTravelAddress: ['ÐœÑƒÐ·ÐµÐ¸'],
       },
     }
     const { getByLabelText } = renderWithTheme(<FiltersPanel />, propsWithFilters)
-    const resetButton = getByLabelText('Сбросить')
+    const resetButton = getByLabelText('Ð¡Ð±Ñ€Ð¾ÑÐ¸Ñ‚ÑŒ')
     fireEvent.press(resetButton)
     expect(defaultProps.resetFilters).toHaveBeenCalled()
   })
 
   it('switches between radius and route modes', () => {
     const { getByText } = renderWithTheme(<FiltersPanel />)
-    const routeTab = getByText('Маршрут')
+    const routeTab = getByText('ÐœÐ°Ñ€ÑˆÑ€ÑƒÑ‚')
     fireEvent.press(routeTab)
     expect(defaultProps.setMode).toHaveBeenCalledWith('route')
   })
@@ -155,16 +155,16 @@ describe('FiltersPanel', () => {
       ...defaultProps,
       filterValue: {
         ...mockFilterValue,
-        categoryTravelAddress: ['Музеи'],
+        categoryTravelAddress: ['ÐœÑƒÐ·ÐµÐ¸'],
       },
       travelsData: [
-        { categoryName: 'Музеи' },
-        { categoryName: 'Музеи' },
-        { categoryName: 'Парки' },
+        { categoryName: 'ÐœÑƒÐ·ÐµÐ¸' },
+        { categoryName: 'ÐœÑƒÐ·ÐµÐ¸' },
+        { categoryName: 'ÐŸÐ°Ñ€ÐºÐ¸' },
       ],
     }
     const { getByText } = renderWithTheme(<FiltersPanel />, propsWithData)
-    expect(getByText('Что посмотреть')).toBeTruthy()
+    expect(getByText('Ð§Ñ‚Ð¾ Ð¿Ð¾ÑÐ¼Ð¾Ñ‚Ñ€ÐµÑ‚ÑŒ')).toBeTruthy()
   })
 
   it('keeps the sightseeing filter visible even when current results are empty', () => {
@@ -174,7 +174,7 @@ describe('FiltersPanel', () => {
       filteredTravelsData: [],
     })
 
-    expect(getByText('Что посмотреть')).toBeTruthy()
+    expect(getByText('Ð§Ñ‚Ð¾ Ð¿Ð¾ÑÐ¼Ð¾Ñ‚Ñ€ÐµÑ‚ÑŒ')).toBeTruthy()
   })
 
   it('shows available sightseeing options in the multi-select instead of an empty modal', async () => {
@@ -183,23 +183,23 @@ describe('FiltersPanel', () => {
       {
         ...defaultProps,
         travelsData: [
-          { categoryName: 'Музеи', name: 'Несвижский замок', address: 'Несвиж' },
-          { categoryName: 'Музеи, Парки', name: 'Лошицкий парк', address: 'Минск' },
+          { categoryName: 'ÐœÑƒÐ·ÐµÐ¸', name: 'ÐÐµÑÐ²Ð¸Ð¶ÑÐºÐ¸Ð¹ Ð·Ð°Ð¼Ð¾Ðº', address: 'ÐÐµÑÐ²Ð¸Ð¶' },
+          { categoryName: 'ÐœÑƒÐ·ÐµÐ¸, ÐŸÐ°Ñ€ÐºÐ¸', name: 'Ð›Ð¾ÑˆÐ¸Ñ†ÐºÐ¸Ð¹ Ð¿Ð°Ñ€Ðº', address: 'ÐœÐ¸Ð½ÑÐº' },
         ],
       },
     )
 
-    fireEvent.press(getByText('Что посмотреть'))
-    fireEvent.press(getByLabelText('Открыть выбор'))
+    fireEvent.press(getByText('Ð§Ñ‚Ð¾ Ð¿Ð¾ÑÐ¼Ð¾Ñ‚Ñ€ÐµÑ‚ÑŒ'))
+    fireEvent.press(getByLabelText('ÐžÑ‚ÐºÑ€Ñ‹Ñ‚ÑŒ Ð²Ñ‹Ð±Ð¾Ñ€'))
 
     await waitFor(() => {
-      expect(getByText('Выбрано: 0')).toBeTruthy()
-      expect(getByText('Музеи (2)')).toBeTruthy()
-      expect(getByText('Парки (1)')).toBeTruthy()
-      expect(getByTestId('simple-multiselect.item.Музеи')).toBeTruthy()
+      expect(getByText('Ð’Ñ‹Ð±Ñ€Ð°Ð½Ð¾: 0')).toBeTruthy()
+      expect(getByText('ÐœÑƒÐ·ÐµÐ¸ (2)')).toBeTruthy()
+      expect(getByText('ÐŸÐ°Ñ€ÐºÐ¸ (1)')).toBeTruthy()
+      expect(getByTestId('simple-multiselect.item.ÐœÑƒÐ·ÐµÐ¸')).toBeTruthy()
     })
 
-    expect(queryByText('Ничего не найдено')).toBeNull()
+    expect(queryByText('ÐÐ¸Ñ‡ÐµÐ³Ð¾ Ð½Ðµ Ð½Ð°Ð¹Ð´ÐµÐ½Ð¾')).toBeNull()
   })
 
   it('falls back to categories from visible map points when filterformap categories are empty', async () => {
@@ -212,40 +212,40 @@ describe('FiltersPanel', () => {
           categoryTravelAddress: [],
         },
         travelsData: [
-          { categoryName: 'Замок', name: 'Несвижский замок', address: 'Несвиж' },
-          { categoryName: 'Болото, Замок', name: 'Ельня', address: 'Миоры' },
+          { categoryName: 'Ð—Ð°Ð¼Ð¾Ðº', name: 'ÐÐµÑÐ²Ð¸Ð¶ÑÐºÐ¸Ð¹ Ð·Ð°Ð¼Ð¾Ðº', address: 'ÐÐµÑÐ²Ð¸Ð¶' },
+          { categoryName: 'Ð‘Ð¾Ð»Ð¾Ñ‚Ð¾, Ð—Ð°Ð¼Ð¾Ðº', name: 'Ð•Ð»ÑŒÐ½Ñ', address: 'ÐœÐ¸Ð¾Ñ€Ñ‹' },
         ],
       },
     )
 
-    fireEvent.press(getByText('Что посмотреть'))
-    fireEvent.press(getByLabelText('Открыть выбор'))
+    fireEvent.press(getByText('Ð§Ñ‚Ð¾ Ð¿Ð¾ÑÐ¼Ð¾Ñ‚Ñ€ÐµÑ‚ÑŒ'))
+    fireEvent.press(getByLabelText('ÐžÑ‚ÐºÑ€Ñ‹Ñ‚ÑŒ Ð²Ñ‹Ð±Ð¾Ñ€'))
 
     await waitFor(() => {
-      expect(getByText('Замок (2)')).toBeTruthy()
-      expect(getByText('Болото (1)')).toBeTruthy()
-      expect(getByTestId('simple-multiselect.item.Замок')).toBeTruthy()
+      expect(getByText('Ð—Ð°Ð¼Ð¾Ðº (2)')).toBeTruthy()
+      expect(getByText('Ð‘Ð¾Ð»Ð¾Ñ‚Ð¾ (1)')).toBeTruthy()
+      expect(getByTestId('simple-multiselect.item.Ð—Ð°Ð¼Ð¾Ðº')).toBeTruthy()
     })
 
-    expect(queryByText('Ничего не найдено')).toBeNull()
+    expect(queryByText('ÐÐ¸Ñ‡ÐµÐ³Ð¾ Ð½Ðµ Ð½Ð°Ð¹Ð´ÐµÐ½Ð¾')).toBeNull()
   })
 
   it('shows the compact mobile header summary and keeps the radius footer actions available', () => {
     const onOpenList = jest.fn()
-    const { getByTestId, getAllByText, getByText } = renderWithTheme(<FiltersPanel />, {
+    const { getByTestId, getAllByText, getByText, queryByTestId } = renderWithTheme(<FiltersPanel />, {
       ...defaultProps,
       isMobile: true,
-      travelsData: [{ categoryName: 'Музеи' }, { categoryName: 'Парки' }, { categoryName: 'Парки' }],
-      filteredTravelsData: [{ categoryName: 'Музеи' }, { categoryName: 'Парки' }, { categoryName: 'Парки' }],
+      travelsData: [{ categoryName: 'ÐœÑƒÐ·ÐµÐ¸' }, { categoryName: 'ÐŸÐ°Ñ€ÐºÐ¸' }, { categoryName: 'ÐŸÐ°Ñ€ÐºÐ¸' }],
+      filteredTravelsData: [{ categoryName: 'ÐœÑƒÐ·ÐµÐ¸' }, { categoryName: 'ÐŸÐ°Ñ€ÐºÐ¸' }, { categoryName: 'ÐŸÐ°Ñ€ÐºÐ¸' }],
       onOpenList,
     })
 
     expect(getByTestId('filters-panel-header')).toBeTruthy()
-    expect(getByText('3 места · 60 км')).toBeTruthy()
-    expect(getByTestId('filters-mobile-quick-row')).toBeTruthy()
-    expect(getByTestId('filters-mobile-context')).toBeTruthy()
+    expect(getByText('3 Ð¼ÐµÑÑ‚Ð° Â· 60 ÐºÐ¼')).toBeTruthy()
+    expect(queryByTestId('filters-mobile-quick-row')).toBeNull()
+    expect(queryByTestId('filters-mobile-context')).toBeNull()
     expect(getByTestId('filters-panel-footer')).toBeTruthy()
-    expect(getAllByText('Показать 3').length).toBeGreaterThan(0)
+    expect(getAllByText('ÐŸÐ¾ÐºÐ°Ð·Ð°Ñ‚ÑŒ 3')).toHaveLength(1)
     expect(getByTestId('filters-open-list-button')).toBeTruthy()
     expect(onOpenList).not.toHaveBeenCalled()
   })
@@ -275,18 +275,18 @@ describe('FiltersPanel', () => {
     const { queryByTestId, getAllByText } = renderWithTheme(<FiltersPanel />, {
       ...defaultProps,
       travelsData: [
-        { categoryName: 'Музеи', name: 'Несвижский замок', address: 'Несвиж' },
-        { categoryName: 'Парки', name: 'Лошицкий парк', address: 'Минск' },
+        { categoryName: 'ÐœÑƒÐ·ÐµÐ¸', name: 'ÐÐµÑÐ²Ð¸Ð¶ÑÐºÐ¸Ð¹ Ð·Ð°Ð¼Ð¾Ðº', address: 'ÐÐµÑÐ²Ð¸Ð¶' },
+        { categoryName: 'ÐŸÐ°Ñ€ÐºÐ¸', name: 'Ð›Ð¾ÑˆÐ¸Ñ†ÐºÐ¸Ð¹ Ð¿Ð°Ñ€Ðº', address: 'ÐœÐ¸Ð½ÑÐº' },
       ],
       filterValue: {
         ...mockFilterValue,
         radius: '100',
-        categoryTravelAddress: ['Музеи', 'Парки'],
+        categoryTravelAddress: ['ÐœÑƒÐ·ÐµÐ¸', 'ÐŸÐ°Ñ€ÐºÐ¸'],
       } as any,
     })
 
     expect(queryByTestId('radius-selection-summary')).toBeNull()
-    expect(getAllByText('100 км').length).toBeGreaterThan(0)
+    expect(getAllByText('100 ÐºÐ¼').length).toBeGreaterThan(0)
   })
 
   it('makes the empty-state CTA explicit about increasing radius', () => {
@@ -308,8 +308,8 @@ describe('FiltersPanel', () => {
       },
     })
 
-    expect(getByText('Увеличить до 200 км')).toBeTruthy()
-    expect(queryByText('Радиус 200 км')).toBeNull()
+    expect(getByText('Ð£Ð²ÐµÐ»Ð¸Ñ‡Ð¸Ñ‚ÑŒ Ð´Ð¾ 200 ÐºÐ¼')).toBeTruthy()
+    expect(queryByText('Ð Ð°Ð´Ð¸ÑƒÑ 200 ÐºÐ¼')).toBeNull()
   })
 
   it('keeps build button disabled until start and finish are set', () => {
@@ -318,7 +318,7 @@ describe('FiltersPanel', () => {
       mode: 'route' as const,
     }
     const { getByLabelText } = renderWithTheme(<FiltersPanel />, propsRouteMode)
-    const buildButton = getByLabelText('Построить маршрут')
+    const buildButton = getByLabelText('ÐŸÐ¾ÑÑ‚Ñ€Ð¾Ð¸Ñ‚ÑŒ Ð¼Ð°Ñ€ÑˆÑ€ÑƒÑ‚')
     expect(buildButton.props.accessibilityState?.disabled).toBe(true)
     expect(buildButton.props.children).toBeTruthy()
 
@@ -327,7 +327,7 @@ describe('FiltersPanel', () => {
       ...propsRouteMode,
       routePoints: startOnly,
     })
-    expect(getByLabelTextStartOnly('Построить маршрут').props.accessibilityState?.disabled).toBe(true)
+    expect(getByLabelTextStartOnly('ÐŸÐ¾ÑÑ‚Ñ€Ð¾Ð¸Ñ‚ÑŒ Ð¼Ð°Ñ€ÑˆÑ€ÑƒÑ‚').props.accessibilityState?.disabled).toBe(true)
 
     const startFinish: RoutePoint[] = [
       makePoint('s', 53.9, 27.5, 'start'),
@@ -337,7 +337,7 @@ describe('FiltersPanel', () => {
       ...propsRouteMode,
       routePoints: startFinish,
     })
-    const enabledButton = getByLabelTextStartFinish('Построить маршрут')
+    const enabledButton = getByLabelTextStartFinish('ÐŸÐ¾ÑÑ‚Ñ€Ð¾Ð¸Ñ‚ÑŒ Ð¼Ð°Ñ€ÑˆÑ€ÑƒÑ‚')
     expect(enabledButton.props.accessibilityState?.disabled).not.toBe(true)
     expect(enabledButton.props.children).toBeTruthy()
 
@@ -346,7 +346,7 @@ describe('FiltersPanel', () => {
       routePoints: startFinish,
       routeDistance: 12000,
     })
-    expect(getByLabelTextWithDistance('Построить маршрут').props.children).toBeTruthy()
+    expect(getByLabelTextWithDistance('ÐŸÐ¾ÑÑ‚Ñ€Ð¾Ð¸Ñ‚ÑŒ Ð¼Ð°Ñ€ÑˆÑ€ÑƒÑ‚').props.children).toBeTruthy()
   })
 
   it('shows inline step hints for start/end', () => {
@@ -356,13 +356,13 @@ describe('FiltersPanel', () => {
     }
     const { getAllByText } = renderWithTheme(<FiltersPanel />, propsRouteMode)
 
-    expect(getAllByText(/добавьте старт и финиш/i).length).toBeGreaterThan(0)
+    expect(getAllByText(/Ð´Ð¾Ð±Ð°Ð²ÑŒÑ‚Ðµ ÑÑ‚Ð°Ñ€Ñ‚ Ð¸ Ñ„Ð¸Ð½Ð¸Ñˆ/i).length).toBeGreaterThan(0)
 
     const { queryAllByText: queryAllByTextStartOnly } = renderWithTheme(<FiltersPanel />, {
       ...propsRouteMode,
       routePoints: [makePoint('s', 53.9, 27.5, 'start')],
     })
-    expect(queryAllByTextStartOnly(/добавьте старт и финиш/i).length).toBeGreaterThan(0)
+    expect(queryAllByTextStartOnly(/Ð´Ð¾Ð±Ð°Ð²ÑŒÑ‚Ðµ ÑÑ‚Ð°Ñ€Ñ‚ Ð¸ Ñ„Ð¸Ð½Ð¸Ñˆ/i).length).toBeGreaterThan(0)
 
     const { queryAllByText: queryAllByTextStartFinish } = renderWithTheme(<FiltersPanel />, {
       ...propsRouteMode,
@@ -371,7 +371,7 @@ describe('FiltersPanel', () => {
         makePoint('f', 53.95, 27.6, 'end'),
       ],
     })
-    expect(queryAllByTextStartFinish(/добавьте старт и финиш/i)).toHaveLength(0)
+    expect(queryAllByTextStartFinish(/Ð´Ð¾Ð±Ð°Ð²ÑŒÑ‚Ðµ ÑÑ‚Ð°Ñ€Ñ‚ Ð¸ Ñ„Ð¸Ð½Ð¸Ñˆ/i)).toHaveLength(0)
   })
 
   it('keeps transport selection enabled before and after choosing points', () => {
@@ -394,7 +394,7 @@ describe('FiltersPanel', () => {
     expect(carTabEnabledPressable?.props.accessibilityState?.disabled).toBe(false)
   })
 
-  it('calls mapUiApi.zoomIn when Zoom + pressed', async () => {
+  it('keeps only fit-to-results action in map settings to avoid duplicated map controls', async () => {
     const mapUiApi = {
       zoomIn: jest.fn(),
       zoomOut: jest.fn(),
@@ -407,7 +407,7 @@ describe('FiltersPanel', () => {
       capabilities: { canCenterOnUser: true, canFitToResults: true, canExportRoute: false },
     }
 
-    const { getByTestId, getByLabelText } = renderWithTheme(<FiltersPanel />, {
+    const { getByTestId, getByLabelText, queryByLabelText } = renderWithTheme(<FiltersPanel />, {
       ...defaultProps,
       mapUiApi: mapUiApi as any,
     })
@@ -418,75 +418,14 @@ describe('FiltersPanel', () => {
     }
 
     await waitFor(() => {
-      expect(getByLabelText('Увеличить масштаб')).toBeTruthy()
+      expect(getByLabelText('Показать все результаты на карте')).toBeTruthy()
     })
 
-    fireEvent.press(getByLabelText('Увеличить масштаб'))
-    expect(mapUiApi.zoomIn).toHaveBeenCalled()
-  })
+    expect(queryByLabelText('Увеличить масштаб')).toBeNull()
+    expect(queryByLabelText('Моё местоположение')).toBeNull()
 
-  it('disables center on user button when user location is unavailable', async () => {
-    const mapUiApi = {
-      zoomIn: jest.fn(),
-      zoomOut: jest.fn(),
-      centerOnUser: jest.fn(),
-      fitToResults: jest.fn(),
-      exportGpx: jest.fn(),
-      exportKml: jest.fn(),
-      setBaseLayer: jest.fn(),
-      setOverlayEnabled: jest.fn(),
-      capabilities: { canCenterOnUser: false, canFitToResults: true, canExportRoute: false },
-    }
-
-    const { getByTestId, getByLabelText } = renderWithTheme(<FiltersPanel />, {
-      ...defaultProps,
-      mapUiApi: mapUiApi as any,
-    })
-
-    const collapsible = getByTestId('collapsible-Управление картой')
-    if (collapsible.props.accessibilityState?.expanded === false) {
-      fireEvent.press(collapsible)
-    }
-
-    await waitFor(() => {
-      expect(getByLabelText('Моё местоположение')).toBeTruthy()
-    })
-
-    const btn = getByLabelText('Моё местоположение')
-    expect(btn.props.accessibilityState?.disabled).toBe(true)
-  })
-
-  it('calls centerOnUser when user location is available', async () => {
-    const mapUiApi = {
-      zoomIn: jest.fn(),
-      zoomOut: jest.fn(),
-      centerOnUser: jest.fn(),
-      fitToResults: jest.fn(),
-      exportGpx: jest.fn(),
-      exportKml: jest.fn(),
-      setBaseLayer: jest.fn(),
-      setOverlayEnabled: jest.fn(),
-      capabilities: { canCenterOnUser: true, canFitToResults: true, canExportRoute: false },
-    }
-
-    const { getByTestId, getByLabelText } = renderWithTheme(<FiltersPanel />, {
-      ...defaultProps,
-      mapUiApi: mapUiApi as any,
-    })
-
-    const collapsible = getByTestId('collapsible-Управление картой')
-    if (collapsible.props.accessibilityState?.expanded === false) {
-      fireEvent.press(collapsible)
-    }
-
-    await waitFor(() => {
-      expect(getByLabelText('Моё местоположение')).toBeTruthy()
-    })
-
-    const btn = getByLabelText('Моё местоположение')
-    expect(btn.props.accessibilityState?.disabled).not.toBe(true)
-    fireEvent.press(btn)
-    expect(mapUiApi.centerOnUser).toHaveBeenCalled()
+    fireEvent.press(getByLabelText('Показать все результаты на карте'))
+    expect(mapUiApi.fitToResults).toHaveBeenCalledTimes(1)
   })
 
   it('renders Waymarked Trails overlays and toggles them via mapUiApi', async () => {
@@ -507,7 +446,7 @@ describe('FiltersPanel', () => {
       mapUiApi: mapUiApi as any,
     })
 
-    const collapsible = getByTestId('collapsible-Управление картой')
+    const collapsible = getByTestId('collapsible-Ð£Ð¿Ñ€Ð°Ð²Ð»ÐµÐ½Ð¸Ðµ ÐºÐ°Ñ€Ñ‚Ð¾Ð¹')
     if (collapsible.props.accessibilityState?.expanded === false) {
       fireEvent.press(collapsible)
     }

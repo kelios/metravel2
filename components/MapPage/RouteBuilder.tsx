@@ -134,14 +134,14 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
 
 const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create({
   routeBuilder: {
-    gap: compact ? 6 : 12,
+    gap: compact ? 4 : 12,
   },
   iconButton: {
-    width: compact ? 28 : 32,
-    height: compact ? 28 : 32,
+    width: compact ? 26 : 32,
+    height: compact ? 26 : 32,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: compact ? 14 : 16,
+    borderRadius: compact ? 13 : 16,
     backgroundColor: colors.backgroundSecondary,
     borderWidth: 0,
     borderColor: 'transparent',
@@ -158,14 +158,14 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
   addressRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: compact ? 10 : 12,
+    gap: compact ? 8 : 12,
   },
   addressIcon: {
-    width: compact ? 24 : 28,
-    height: compact ? 24 : 28,
+    width: compact ? 22 : 28,
+    height: compact ? 22 : 28,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: compact ? 12 : 14,
+    borderRadius: compact ? 11 : 14,
     zIndex: 2,
   },
   startIcon: {
@@ -177,8 +177,8 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
   actionsRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: compact ? 6 : 8,
-    marginBottom: compact ? 4 : 8,
+    gap: compact ? 4 : 8,
+    marginBottom: compact ? 2 : 8,
   },
   addressInputWrapper: {
     flex: 1,
@@ -186,8 +186,8 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
   connectorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: compact ? 10 : 16,
-    marginLeft: compact ? 11 : 13,
+    height: compact ? 8 : 16,
+    marginLeft: compact ? 10 : 13,
     position: 'relative',
   },
   connectorLine: {
@@ -200,9 +200,9 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     top: 0,
   },
   swapActionButton: {
-    width: compact ? 28 : 32,
-    height: compact ? 28 : 32,
-    borderRadius: compact ? 14 : 16,
+    width: compact ? 26 : 32,
+    height: compact ? 26 : 32,
+    borderRadius: compact ? 13 : 16,
     marginHorizontal: 0,
     backgroundColor: colors.primarySoft,
     borderWidth: 0,
@@ -214,11 +214,11 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     ...(Platform.OS === 'web' ? ({ boxShadow: 'none' } as any) : null),
   },
   hint: {
-    fontSize: 11,
+    fontSize: compact ? 10 : 11,
     color: colors.textMuted,
     fontStyle: 'normal',
     paddingHorizontal: compact ? 0 : 8,
-    paddingTop: compact ? 4 : 0,
+    paddingTop: compact ? 2 : 0,
   },
 });
 

@@ -119,7 +119,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       const { metrics, html } = buildClusterIconHtml({
         count: Number(cluster?.getChildCount?.() ?? 0),
         accentColor: String(DESIGN_TOKENS.colors.primary),
-        textColor: String(DESIGN_TOKENS.colors.primaryDark),
+        textColor: String(DESIGN_TOKENS.colors.textOnPrimary),
       })
 
       return L.divIcon({

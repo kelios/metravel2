@@ -9,6 +9,7 @@ import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo
 import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useBottomSheetStore } from '@/stores/bottomSheetStore';
+import { LAYOUT } from '@/constants/layout';
 
 interface MapBottomSheetProps {
   children: React.ReactNode;
@@ -69,10 +70,13 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     const isCollapsed = sheetIndex < 0;
     const isFullScreen = sheetIndex === 2;
     const effectiveBottomInset = isFullScreen ? 0 : bottomInset;
+    const fullScreenTopInset = Platform.OS === 'web' ? LAYOUT.headerHeight : 0;
     // Pixel-based snap heights (vh units don't work reliably in RN Web View styles)
     const SNAP_RATIOS = windowHeight < 700 ? ([0.3, 0.62, 1] as const) : ([0.25, 0.55, 1] as const);
     const openHeight = !isCollapsed
-      ? Math.round(windowHeight * (SNAP_RATIOS[sheetIndex] ?? 0.55))
+      ? isFullScreen
+        ? Math.max(0, windowHeight - fullScreenTopInset)
+        : Math.round(windowHeight * (SNAP_RATIOS[sheetIndex] ?? 0.55))
       : 0;
 
     // Stable ref callback — only captures the DOM node, never changes.

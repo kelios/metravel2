@@ -1,18 +1,16 @@
 /**
  * MapMobileSheetToolbar - segmented tabs + action buttons row for the mobile bottom sheet.
- * Extracted from MapMobileLayout (no behavior change).
  */
 import React from 'react'
 import { Pressable, Text as RNText, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import SegmentedControl from '@/components/MapPage/SegmentedControl'
-import type { ThemedColors } from '@/hooks/useTheme'
 import type { getMapMobileLayoutStyles } from '@/components/MapPage/MapMobileLayout.styles'
+import type { ThemedColors } from '@/hooks/useTheme'
 
 type UiTab = 'search' | 'route' | 'list'
 type SheetState = 'collapsed' | 'quarter' | 'half' | 'full'
-
 type SheetStyles = ReturnType<typeof getMapMobileLayoutStyles>
 
 interface PanelTabOption {
@@ -30,8 +28,6 @@ export interface MapMobileSheetToolbarProps {
   resetFilters?: () => void
   onTabChange: (next: UiTab) => void
   onOpenList: () => void
-  onToggleListPanel: () => void
-  onCenterUser: () => void
   onClose: () => void
   isNarrow: boolean
   stackSheetToolbar: boolean
@@ -49,8 +45,6 @@ const MapMobileSheetToolbarInner: React.FC<MapMobileSheetToolbarProps> = ({
   resetFilters,
   onTabChange,
   onOpenList,
-  onToggleListPanel,
-  onCenterUser,
   onClose,
   isNarrow,
   stackSheetToolbar,
@@ -59,8 +53,9 @@ const MapMobileSheetToolbarInner: React.FC<MapMobileSheetToolbarProps> = ({
   styles,
 }) => {
   const isQuarterListPreview = uiTab === 'list' && sheetState === 'quarter'
-  const showTopFilterActions = uiTab === 'search' && !stackSheetToolbar
+  const showTopFilterActions = false
   const showSheetCloseButton = !isQuarterListPreview
+  const showOnlyCloseAction = showSheetCloseButton && !showTopFilterActions
   const toolbarSummaryText = isQuarterListPreview
     ? 'Быстрый просмотр результатов'
     : uiTab === 'search' || uiTab === 'route'
@@ -71,6 +66,9 @@ const MapMobileSheetToolbarInner: React.FC<MapMobileSheetToolbarProps> = ({
     <View
       style={[
         styles.sheetToolbar,
+        showOnlyCloseAction &&
+          stackSheetToolbar &&
+          styles.sheetToolbarCloseOnly,
         isQuarterListPreview && styles.sheetToolbarPreview,
         stackSheetToolbar
           ? styles.sheetToolbarStacked
@@ -81,6 +79,9 @@ const MapMobileSheetToolbarInner: React.FC<MapMobileSheetToolbarProps> = ({
         style={[
           styles.sheetToolbarLeft,
           stackSheetToolbar && styles.sheetToolbarFullWidth,
+          showOnlyCloseAction &&
+            stackSheetToolbar &&
+            styles.sheetToolbarLeftWithFloatingClose,
         ]}
       >
         <SegmentedControl
@@ -115,6 +116,9 @@ const MapMobileSheetToolbarInner: React.FC<MapMobileSheetToolbarProps> = ({
         style={[
           styles.sheetToolbarActions,
           stackSheetToolbar && styles.sheetToolbarActionsStacked,
+          showOnlyCloseAction &&
+            stackSheetToolbar &&
+            styles.sheetToolbarActionsFloatingClose,
           isQuarterListPreview && styles.sheetToolbarActionsPreview,
         ]}
       >
@@ -144,6 +148,7 @@ const MapMobileSheetToolbarInner: React.FC<MapMobileSheetToolbarProps> = ({
             )}
           </Pressable>
         )}
+
         {showTopFilterActions && (
           <>
             {typeof resetFilters === 'function' && (
@@ -202,39 +207,7 @@ const MapMobileSheetToolbarInner: React.FC<MapMobileSheetToolbarProps> = ({
             </Pressable>
           </>
         )}
-        <Pressable
-          testID="map-center-user"
-          onPress={onCenterUser}
-          accessibilityRole="button"
-          accessibilityLabel="Показать мое местоположение"
-          hitSlop={6}
-          style={({ pressed }) => [
-            styles.sheetCloseButton,
-            stackSheetToolbar && styles.sheetIconButtonStacked,
-            compactSheetActions && styles.sheetIconButtonCompact,
-            pressed && { opacity: 0.6 },
-          ]}
-        >
-          <Feather name="crosshair" size={15} color={colors.textMuted} />
-        </Pressable>
-        <Pressable
-          testID="map-panel-open"
-          onPress={onToggleListPanel}
-          accessibilityRole="button"
-          accessibilityLabel="Вернуться к карте"
-          hitSlop={6}
-          style={({ pressed }) => [
-            styles.sheetBackToMapButton,
-            stackSheetToolbar && styles.sheetToolbarButtonStacked,
-            compactSheetActions && styles.sheetBackToMapButtonCompact,
-            pressed && { opacity: 0.72 },
-          ]}
-        >
-          <Feather name="map" size={15} color={colors.textMuted} />
-          {!compactSheetActions && (
-            <RNText style={styles.sheetBackToMapText}>Карта</RNText>
-          )}
-        </Pressable>
+
         {showSheetCloseButton && (
           <Pressable
             testID="map-panel-close"
@@ -244,8 +217,12 @@ const MapMobileSheetToolbarInner: React.FC<MapMobileSheetToolbarProps> = ({
             hitSlop={8}
             style={({ pressed }) => [
               styles.sheetCloseButton,
+              styles.sheetToolbarCloseButton,
               stackSheetToolbar && styles.sheetIconButtonStacked,
               compactSheetActions && styles.sheetIconButtonCompact,
+              showOnlyCloseAction &&
+                stackSheetToolbar &&
+                styles.sheetToolbarCloseButtonFloating,
               pressed && { opacity: 0.6 },
             ]}
           >

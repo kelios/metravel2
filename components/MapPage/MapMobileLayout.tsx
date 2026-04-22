@@ -10,7 +10,6 @@ import React, {
   useState,
 } from 'react'
 import {
-  ActivityIndicator,
   Platform,
   Text as RNText,
   useWindowDimensions,
@@ -22,6 +21,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import { useMapMobileDerivations } from '@/hooks/map/useMapMobileDerivations'
+import { FiltersSkeleton } from '@/components/ui/SkeletonLoader'
 import MapBottomSheet, { type MapBottomSheetRef } from './MapBottomSheet'
 import { getMapMobileLayoutStyles } from './MapMobileLayout.styles'
 import { MapMobileSheetToolbar } from './MapMobile/MapMobileSheetToolbar'
@@ -49,7 +49,8 @@ interface MapMobileLayoutProps {
 
 const PHONE_COMPACT_LAYOUT_MAX_WIDTH = 430
 const PHONE_VERY_NARROW_LAYOUT_MAX_WIDTH = 350
-const PHONE_COMPACT_ACTIONS_MAX_WIDTH = 420
+const PHONE_COMPACT_ACTIONS_MAX_WIDTH = 520
+const PHONE_STACKED_TOOLBAR_MAX_WIDTH = 560
 const WEB_MOBILE_BOTTOM_DOCK_INSET = 104
 const WEB_MOBILE_CONSENT_BANNER_INSET = 112
 
@@ -76,7 +77,9 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const isNarrow = viewportWidth <= PHONE_COMPACT_LAYOUT_MAX_WIDTH
   const isVeryNarrow = viewportWidth <= PHONE_VERY_NARROW_LAYOUT_MAX_WIDTH
   const compactSheetActions = viewportWidth <= PHONE_COMPACT_ACTIONS_MAX_WIDTH
-  const stackSheetToolbar = viewportWidth <= PHONE_COMPACT_LAYOUT_MAX_WIDTH
+  // Keep tabs accessible on mid-width mobile web layouts where the action row
+  // would otherwise squeeze the segmented control out of view.
+  const stackSheetToolbar = viewportWidth <= PHONE_STACKED_TOOLBAR_MAX_WIDTH
   const bottomSheetRef = useRef<MapBottomSheetRef>(null)
   const pathname = usePathname()
   const isActiveWebRoute =
@@ -186,14 +189,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     bottomSheetRef.current?.snapToFull()
   }, [])
 
-  const handleToggleListPanel = useCallback(() => {
-    if (sheetStateRef.current === 'collapsed') {
-      handleOpenList()
-      return
-    }
-    bottomSheetRef.current?.snapToCollapsed()
-  }, [handleOpenList])
-
   const handleOpenSearch = useCallback(() => {
     setFiltersMode?.('radius')
     setUiTab('search')
@@ -258,20 +253,17 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   const filtersLoadingFallback = useMemo(
     () => (
-      <View style={styles.sheetFallback} testID="map-mobile-filters-loading">
-        <ActivityIndicator color={colors.primary} />
+      <View
+        style={styles.sheetFallback}
+        testID="map-mobile-filters-loading"
+        accessibilityRole="progressbar"
+        accessibilityLabel="Загружаем фильтры"
+      >
         <RNText style={styles.sheetFallbackTitle}>Загружаем фильтры</RNText>
-        <RNText style={styles.sheetFallbackHint}>
-          Панель готовится. Контент появится автоматически через мгновение.
-        </RNText>
+        <FiltersSkeleton />
       </View>
     ),
-    [
-      colors.primary,
-      styles.sheetFallback,
-      styles.sheetFallbackHint,
-      styles.sheetFallbackTitle,
-    ],
+    [styles.sheetFallback, styles.sheetFallbackTitle],
   )
 
   const isQuarterListPreview = uiTab === 'list' && sheetState === 'quarter'
@@ -292,8 +284,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         resetFilters={filtersContextProps?.resetFilters}
         onTabChange={handleTabChange}
         onOpenList={handleOpenList}
-        onToggleListPanel={handleToggleListPanel}
-        onCenterUser={onCenterOnUser}
         onClose={handleCloseSheet}
         isNarrow={isNarrow}
         stackSheetToolbar={stackSheetToolbar}

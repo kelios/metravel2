@@ -81,7 +81,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
       const { metrics, html } = buildClusterIconHtml({
         count,
         accentColor: String(DESIGN_TOKENS.colors.primary),
-        textColor: String(DESIGN_TOKENS.colors.primaryDark),
+        textColor: String(DESIGN_TOKENS.colors.textOnPrimary),
       })
       cache.set(
         count,
@@ -114,7 +114,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
         count,
         thumbUrl,
         accentColor: String(DESIGN_TOKENS.colors.primary),
-        textColor: String(DESIGN_TOKENS.colors.primaryDark),
+        textColor: String(DESIGN_TOKENS.colors.textOnPrimary),
       })
 
       return leaflet.divIcon({

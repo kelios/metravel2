@@ -40,12 +40,6 @@ const ORS_API_KEY = resolveRoutingApiKey();
 
 type Props = MapProps;
 
-/** Wrapper that subscribes to bottom sheet store so controls reposition reactively. */
-const MapControlsReactive: React.FC<Omit<React.ComponentProps<typeof MapControls>, 'bottomOffset'>> = (props) => {
-  const bottomOffset = useBottomSheetStore((s) => s.getControlsBottomOffset());
-  return <MapControls {...props} bottomOffset={bottomOffset} />;
-};
-
 export const getMarkerFocusPlan = ({
   currentZoom,
   maxZoom,
@@ -563,7 +557,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
       />
 
       {/* Map controls */}
-      <MapControlsReactive
+      <MapControls
         userLocation={userLocationLatLng}
         onCenterUserLocation={centerOnUserLocation}
         onZoomIn={handleZoomIn}

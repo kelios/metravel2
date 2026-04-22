@@ -1,6 +1,15 @@
 import { test, expect } from './fixtures';
 import { preacceptCookies } from './helpers/navigation';
 
+const mobilePanelEntrySelector = [
+  '[data-testid="map-open-list"]',
+  '[testID="map-open-list"]',
+  '[data-testid="map-peek-expand"]',
+  '[testID="map-peek-expand"]',
+  '[data-testid="map-panel-close"]',
+  '[testID="map-panel-close"]',
+].join(', ');
+
 const maybeRecoverFromWorkletError = async (page: any) => {
   const errorTitle = page.getByText('Что-то пошло не так', { exact: true });
   const workletError = page.getByText('_WORKLET is not defined', { exact: true });
@@ -28,7 +37,7 @@ const maybeRecoverFromWorkletError = async (page: any) => {
 
 const waitForMapUi = async (page: any, timeoutMs: number) => {
   const mapReady = page.getByTestId('map-leaflet-wrapper');
-  const mobileMenu = page.getByTestId('map-panel-open');
+  const mobileMenu = page.locator(mobilePanelEntrySelector).first();
 
   await Promise.race([
     mapReady.waitFor({ state: 'visible', timeout: timeoutMs }).catch(() => null),
@@ -46,7 +55,7 @@ const mapTravelCardSelector = '[data-testid="map-travel-card"], [testID="map-tra
 
 const gotoMapWithRecovery = async (page: any) => {
   const mapReady = page.getByTestId('map-leaflet-wrapper');
-  const mobileMenu = page.getByTestId('map-panel-open');
+  const mobileMenu = page.locator(mobilePanelEntrySelector).first();
   const workletError = page.getByText('_WORKLET is not defined', { exact: true });
 
   const startedAt = Date.now();
@@ -81,7 +90,7 @@ test.describe('Map Travel Card - UnifiedTravelCard', () => {
   });
 
   const waitForCardsOrEmpty = async (page: any) => {
-    const mobileMenu = page.getByTestId('map-panel-open');
+    const mobileMenu = page.locator(mobilePanelEntrySelector).first();
     if (await mobileMenu.isVisible().catch(() => false)) {
       await mobileMenu.click();
     }

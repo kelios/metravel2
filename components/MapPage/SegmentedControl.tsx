@@ -1,6 +1,7 @@
 // components/MapPage/SegmentedControl.tsx
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Platform, View, Text, StyleSheet } from 'react-native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import MapIcon from './MapIcon';
@@ -87,7 +88,7 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
           },
         ]}
       />
-      {options.map(({ key, label, icon, iconSource: _iconSource = 'map', badge }) => {
+      {options.map(({ key, label, icon, iconSource = 'map', badge }) => {
         const active = value === key;
         const isDisabled = disabled || disabledKeys.includes(key);
         const isHovered = hoveredKey === key && !active && !isDisabled;
@@ -123,13 +124,20 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
             title={label}
             accessibilityRole={role}
           >
-            {icon && (
-              <MapIcon
-                name={icon}
-                size={iconOnly ? (compact ? 20 : 18) : (compact && dense ? 14 : 16)}
-                color={iconColor}
-              />
-            )}
+            {icon &&
+              (iconSource === 'material' ? (
+                <MaterialIcons
+                  name={icon as React.ComponentProps<typeof MaterialIcons>['name']}
+                  size={iconOnly ? (compact ? 20 : 18) : (compact && dense ? 14 : 16)}
+                  color={iconColor}
+                />
+              ) : (
+                <MapIcon
+                  name={icon}
+                  size={iconOnly ? (compact ? 20 : 18) : (compact && dense ? 14 : 16)}
+                  color={iconColor}
+                />
+              ))}
             {!iconOnly && (
               <Text style={[
                 styles.segmentText,
