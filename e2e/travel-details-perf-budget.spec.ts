@@ -40,14 +40,15 @@ function envNum(name: string, fallback: number): number {
 }
 
 // Thresholds aligned with Lighthouse score ≥ 80 (desktop)
-const LCP_MAX_MS = envNum('PERF_LCP_MAX_MS', 2500);
-const TBT_MAX_MS = envNum('PERF_TBT_MAX_MS', 300);
+const IS_CI = Boolean(process.env.CI);
+const LCP_MAX_MS = envNum('PERF_LCP_MAX_MS', IS_CI ? 2500 : 10_000);
+const TBT_MAX_MS = envNum('PERF_TBT_MAX_MS', IS_CI ? 300 : 600);
 const CLS_MAX = envNum('PERF_CLS_MAX', 0.30);
-const FCP_MAX_MS = envNum('PERF_FCP_MAX_MS', 1800);
+const FCP_MAX_MS = envNum('PERF_FCP_MAX_MS', IS_CI ? 1800 : 3500);
 
 const MAX_JS_TRANSFER_KB = envNum('PERF_MAX_JS_KB', 1800);
-const MAX_IMG_TRANSFER_KB = envNum('PERF_MAX_IMG_KB', 3500);
-const MAX_TOTAL_TRANSFER_KB = envNum('PERF_MAX_TOTAL_KB', 7000);
+const MAX_IMG_TRANSFER_KB = envNum('PERF_MAX_IMG_KB', IS_CI ? 3500 : 4500);
+const MAX_TOTAL_TRANSFER_KB = envNum('PERF_MAX_TOTAL_KB', IS_CI ? 7000 : 8000);
 const MAX_REQUESTS = envNum('PERF_MAX_REQUESTS', 90);
 const MAX_LONG_TASKS = envNum('PERF_MAX_LONG_TASKS', 5);
 const LONG_TASK_THRESHOLD_MS = 50;

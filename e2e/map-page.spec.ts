@@ -60,7 +60,16 @@ const getCanonicalHref = async (page: any): Promise<string | null> => {
 
 const mapTravelsTabSelector = '[data-testid="map-travels-tab"], [testID="map-travels-tab"]';
 const mapTravelCardSelector = '[data-testid="map-travel-card"], [testID="map-travel-card"]';
-const mobilePanelEntrySelector = '[data-testid="map-peek-expand"], [data-testid="map-panel-open"]:visible';
+const mobilePanelEntrySelector =
+  [
+    '[data-testid="map-open-list"]',
+    '[testID="map-open-list"]',
+    '[data-testid="map-peek-expand"]',
+    '[testID="map-peek-expand"]',
+    '[data-testid="map-panel-open"]',
+    '[testID="map-panel-open"]',
+    'button[aria-label="Открыть панель со списком"]',
+  ].join(', ');
 
 const getMobilePanelEntry = (page: any) => page.locator(mobilePanelEntrySelector).first();
 
@@ -1184,7 +1193,8 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(close).toBeVisible({ timeout: 20_000 });
     await close.click();
 
-    await expect(page.getByTestId('map-peek-preview')).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('map-panel-close')).toBeHidden({ timeout: 20_000 });
+    await expect(page.getByTestId('segmented-list')).toBeHidden({ timeout: 20_000 });
     await expect(getMobilePanelEntry(page)).toBeVisible({ timeout: 20_000 });
   });
 
@@ -1233,9 +1243,29 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
 
     await expect(listToggle).toBeVisible({ timeout: 20_000 });
     await expect(filtersToggle).toBeVisible({ timeout: 10_000 });
+    await expect(listToggle).toHaveAttribute('aria-checked', 'true', { timeout: 10_000 });
 
-    // Click on filters toggle to switch to filters view
-    await filtersToggle.click();
+    // Opening the mobile sheet always settles into the list tab first.
+    // Wait for that state, then switch to search/filters and confirm the tab actually changed.
+    await filtersToggle.click({ force: true });
+
+    const filtersActivatedViaClick = await expect
+      .poll(
+        async () => filtersToggle.getAttribute('aria-checked'),
+        { timeout: 2_000 },
+      )
+      .toBe('true')
+      .then(() => true)
+      .catch(() => false);
+
+    if (!filtersActivatedViaClick) {
+      await filtersToggle.focus();
+      await page.keyboard.press('Enter');
+    }
+
+    await expect(filtersToggle).toHaveAttribute('aria-checked', 'true', { timeout: 10_000 });
+    await expect(listToggle).toHaveAttribute('aria-checked', 'false', { timeout: 10_000 });
+    await expect(page.getByTestId('map-mobile-tab-transition')).toBeHidden({ timeout: 10_000 });
 
     // Verify the filters view is active in the mobile sheet.
     // The current mobile contract shows the filters body/context card immediately,

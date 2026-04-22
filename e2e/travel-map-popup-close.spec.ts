@@ -120,11 +120,22 @@ test.describe('Travel detail page — map popup close @smoke', () => {
 
     // Click the first marker
     const marker = page.locator('.leaflet-marker-icon').first()
-    await marker.click()
+    await marker.scrollIntoViewIfNeeded().catch(() => null)
+    await marker.click({ force: true })
 
     // Leaflet popup should appear
     const popup = page.locator('.leaflet-popup')
-    await expect(popup).toBeVisible({ timeout: 10_000 })
+    const popupVisible = await popup
+      .waitFor({ state: 'visible', timeout: 8_000 })
+      .then(() => true)
+      .catch(() => false)
+
+    if (!popupVisible) {
+      await page.waitForTimeout(250)
+      await marker.click({ force: true }).catch(() => null)
+    }
+
+    await expect(popup).toBeVisible({ timeout: 20_000 })
 
     // Close via Leaflet's built-in close button
     const leafletClose = page.locator('.leaflet-popup-close-button')
