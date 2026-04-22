@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Platform, ScrollView, Text, View } from 'react-native';
 import { QuickRecommendations } from '@/components/MapPage/QuickRecommendations';
 import FiltersPanelMapSettings from '@/components/MapPage/FiltersPanelMapSettings';
 import FiltersPanelRadiusSection from '@/components/MapPage/FiltersPanelRadiusSection';
@@ -151,7 +151,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
     <ScrollView
       testID="filters-panel-scroll"
       style={styles.content}
-      showsVerticalScrollIndicator={true}
+      showsVerticalScrollIndicator={Platform.OS !== 'web'}
       contentContainerStyle={styles.contentContainer}
       keyboardShouldPersistTaps="handled"
       nestedScrollEnabled={true}

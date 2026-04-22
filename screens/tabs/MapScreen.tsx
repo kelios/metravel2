@@ -17,6 +17,7 @@ import { useMapScreenController } from '@/hooks/useMapScreenController';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
+import { useRouteStore } from '@/stores/routeStore';
 import MapPanel from '@/components/MapPage/MapPanel';
 
 const LazyMapOnboarding = lazy(() => import('@/components/MapPage/MapOnboarding'));
@@ -77,8 +78,11 @@ export default function MapScreen() {
         invalidateTravelsQuery,
         buildRouteTo,
         centerOnUser,
+        zoomIn,
+        zoomOut,
         panelRef,
         geoError,
+        hasUserLocation,
         coordinates,
         transportMode,
     } = useMapScreenController();
@@ -236,18 +240,62 @@ export default function MapScreen() {
         return `${enabledCount} вкл`;
     }, [quickEnabledOverlays, quickOverlayOptions]);
 
+    const mapQuickActionButtons = useMemo(
+        () => [
+            ...(hasUserLocation
+                ? [{
+                    key: 'locate',
+                    label: 'ÐœÐ¾Ðµ Ð¼ÐµÑÑ‚Ð¾Ð¿Ð¾Ð»Ð¾Ð¶ÐµÐ½Ð¸Ðµ',
+                    icon: 'crosshair' as const,
+                    onPress: centerOnUser,
+                    testID: 'map-center-user-inline',
+                }]
+                : []),
+            {
+                key: 'zoom-in',
+                label: 'ÐŸÑ€Ð¸Ð±Ð»Ð¸Ð·Ð¸Ñ‚ÑŒ',
+                icon: 'plus' as const,
+                onPress: zoomIn,
+                testID: 'map-zoom-in-inline',
+            },
+            {
+                key: 'zoom-out',
+                label: 'ÐžÑ‚Ð´Ð°Ð»Ð¸Ñ‚ÑŒ',
+                icon: 'minus' as const,
+                onPress: zoomOut,
+                testID: 'map-zoom-out-inline',
+            },
+        ],
+        [centerOnUser, hasUserLocation, zoomIn, zoomOut],
+    );
+    const localizedMapQuickActionButtons = useMemo(
+        () => mapQuickActionButtons.map((action) => ({
+            ...action,
+            label:
+                action.key === 'locate'
+                    ? '\u041c\u043e\u0435 \u043c\u0435\u0441\u0442\u043e\u043f\u043e\u043b\u043e\u0436\u0435\u043d\u0438\u0435'
+                    : action.key === 'zoom-in'
+                        ? '\u041f\u0440\u0438\u0431\u043b\u0438\u0437\u0438\u0442\u044c'
+                        : action.key === 'zoom-out'
+                            ? '\u041e\u0442\u0434\u0430\u043b\u0438\u0442\u044c'
+                            : action.label,
+        })),
+        [mapQuickActionButtons],
+    );
+
     const currentTransport = transportMode ?? 'car';
+    const currentMode = filtersPanelProps?.contextValue?.mode;
     const activeFilterItems = useMemo(() => {
         const items: { key: string; label: string }[] = [];
         quickFilterSelected.forEach((cat: string) => items.push({ key: `cat:${cat}`, label: cat }));
         const radiusValue = currentRadius || String(DEFAULT_RADIUS_KM);
         items.push({ key: 'radius', label: `${radiusValue} км` });
-        if (currentTransport !== 'car') {
+        if (currentMode === 'route' && currentTransport !== 'car') {
             const transportLabels: Record<string, string> = { bike: 'Велосипед', foot: 'Пешком' };
             items.push({ key: 'transport', label: transportLabels[currentTransport] ?? currentTransport });
         }
         return items;
-    }, [quickFilterSelected, currentRadius, currentTransport]);
+    }, [quickFilterSelected, currentRadius, currentMode, currentTransport]);
 
     const handleRemoveActiveFilter = useCallback((key: string) => {
         const onChange = filtersPanelProps?.contextValue?.onFilterChange;
@@ -287,9 +335,9 @@ export default function MapScreen() {
     const setPanelMode = filtersPanelProps?.contextValue?.setMode;
 
     const handleSelectSearchTab = useCallback(() => {
-        setPanelMode?.('radius');
+        useRouteStore.getState().clearRouteAndSetMode('radius');
         selectFiltersTab();
-    }, [setPanelMode, selectFiltersTab]);
+    }, [selectFiltersTab]);
 
     const handleSelectRouteTab = useCallback(() => {
         setPanelMode?.('route');
@@ -300,6 +348,9 @@ export default function MapScreen() {
         if (rightPanelTab === 'travels') return 'travels';
         return filtersPanelProps?.contextValue?.mode === 'route' ? 'route' : 'search';
     }, [filtersPanelProps?.contextValue?.mode, rightPanelTab]);
+    const shouldShowFloatingRadiusPill = Boolean(
+        currentRadius && (Platform.OS !== 'web' || isMobile),
+    );
 
     const mapComponent = useMemo(
         () => (
@@ -307,6 +358,8 @@ export default function MapScreen() {
                 <MapLoadingBar visible={isFetching || isDebouncingFilters} />
                 {Platform.OS === 'web' && !isMobile && (
                     <MapQuickFilters
+                        extraActions={localizedMapQuickActionButtons}
+                        extraActionsPosition="inside-radius"
                         radiusValue={quickRadiusValue}
                         categoriesValue={quickCategoriesValue}
                         overlaysValue={quickOverlaysValue}
@@ -324,11 +377,11 @@ export default function MapScreen() {
                     />
                 )}
                 {mapReady ? (
-                    <MapPanel {...mapPanelProps} />
+                    <MapPanel {...mapPanelProps} hideFloatingControls={isMobile} />
                 ) : (
                     mapPanelPlaceholder
                 )}
-                {currentRadius ? (
+                {shouldShowFloatingRadiusPill ? (
                     <View
                         style={[styles.radiusPill, { pointerEvents: 'none' } as any]}
                         accessibilityRole="text"
@@ -373,7 +426,9 @@ export default function MapScreen() {
             quickCategoryOptions,
             quickOverlayOptions,
             quickEnabledOverlays,
+            localizedMapQuickActionButtons,
             currentRadius,
+            shouldShowFloatingRadiusPill,
             quickFilterSelected,
             filtersPanelProps?.contextValue,
             styles.mapArea,
@@ -413,6 +468,7 @@ export default function MapScreen() {
                         filtersPanelProps={filtersPanelProps}
                         onResetFilters={handleClearAllFilters}
                         onExpandRadius={handleExpandRadius}
+                        quickActionButtons={localizedMapQuickActionButtons}
                     />
                 </Suspense>
             </View>

@@ -94,6 +94,8 @@ nginx/ssl/
 .claude/worktrees/
 .claude/sessions/
 .claude/tmp/
+.codex-temp/
+.tmp/
 
 # iOS signing & certificates (never commit)
 *.cer

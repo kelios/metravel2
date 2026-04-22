@@ -142,7 +142,7 @@ jest.mock('@/components/MapPage/Map/MapControls', () => {
     return (
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Вернуться к моему местоположению"
+        accessibilityLabel={'\u0412\u0435\u0440\u043D\u0443\u0442\u044C\u0441\u044F \u043A \u043C\u043E\u0435\u043C\u0443 \u043C\u0435\u0441\u0442\u043E\u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u044E'}
         onPress={props.onCenterUserLocation}
       />
     )
@@ -357,6 +357,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     ;(window as any).L = mockLeaflet
+    ;(window as any).innerWidth = 1024
     // Reset marker click handler
     delete (window as any).lastMarkerClickHandler
     // Ensure map container DOM element exists for map initialization
@@ -703,12 +704,14 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       const { useMap } = require('react-leaflet')
       const mockFitBounds = jest.fn()
       const mockSetView = jest.fn()
-      const mockInvalidateSize = jest.fn()
+      const layoutEffectsModule = require('@/components/MapPage/Map/useMapWebLayoutEffects')
+      jest
+        .spyOn(layoutEffectsModule, 'useMapWebLayoutEffects')
+        .mockReturnValue({ mapPaneWidth: 390 })
       useMap.mockReturnValue({
         fitBounds: mockFitBounds,
         setView: mockSetView,
         closePopup: jest.fn(),
-        invalidateSize: mockInvalidateSize,
         getCenter: jest.fn(() => ({ lat: 53.9, lng: 27.5667 })),
         getZoom: jest.fn(() => 11),
         on: jest.fn(),
@@ -735,10 +738,6 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       
       // В режиме route не должно быть автоматического зума
       expect(mockFitBounds).not.toHaveBeenCalled()
-      
-      await waitFor(() => {
-        expect(mockInvalidateSize).toHaveBeenCalled()
-      })
     })
 
     it('does not center on user location when in route mode', async () => {
@@ -1016,7 +1015,31 @@ describe('MapPageComponent (Map.web.tsx)', () => {
 
       const { Platform } = require('react-native')
       ;(Platform as any).OS = 'web'
+      const previousInnerWidth = (window as any).innerWidth
+      ;(window as any).innerWidth = 390
 
+      const props = {
+        ...defaultProps,
+        mode: 'radius' as const,
+      }
+
+      try {
+        const { getByLabelText } = renderWithProviders(<MapPageComponent {...props} />)
+        await act(async () => {})
+
+        // ????, ???? ????? ???????? ?????????? ? ???????? ?????? (aria-label ?? ??????)
+        const myLocationButton = await waitFor(() => getByLabelText('\u0412\u0435\u0440\u043D\u0443\u0442\u044C\u0441\u044F \u043A \u043C\u043E\u0435\u043C\u0443 \u043C\u0435\u0441\u0442\u043E\u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u044E'))
+        expect(myLocationButton).toBeTruthy()
+
+        // ??????? ?? ?????? ? ?????????, ??? setView ??? ??????
+        fireEvent.press(myLocationButton as any)
+        expect(mockSetView).toHaveBeenCalled()
+      } finally {
+        ;(window as any).innerWidth = previousInnerWidth
+      }
+    })
+
+    it('renders floating map controls on desktop web when user location is available', async () => {
       const props = {
         ...defaultProps,
         mode: 'radius' as const,
@@ -1025,13 +1048,9 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       const { getByLabelText } = renderWithProviders(<MapPageComponent {...props} />)
       await act(async () => {})
 
-      // Ждём, пока будет получена геолокация и появится кнопка (aria-label на кнопке)
-      const myLocationButton = await waitFor(() => getByLabelText('Вернуться к моему местоположению'))
-      expect(myLocationButton).toBeTruthy()
-
-      // Кликаем по кнопке и проверяем, что setView был вызван
-      fireEvent.press(myLocationButton as any)
-      expect(mockSetView).toHaveBeenCalled()
+      await waitFor(() => {
+        expect(getByLabelText('\u0412\u0435\u0440\u043D\u0443\u0442\u044C\u0441\u044F \u043A \u043C\u043E\u0435\u043C\u0443 \u043C\u0435\u0441\u0442\u043E\u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u044E')).toBeTruthy()
+      })
     })
 
     it('handles denied location permission without crashing', async () => {

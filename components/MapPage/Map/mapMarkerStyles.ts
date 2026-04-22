@@ -9,6 +9,8 @@ type ClusterIconHtmlOptions = {
   count: number
   thumbUrl?: string
   accentColor?: string
+  accentDarkColor?: string
+  softGlowColor?: string
   textColor?: string
 }
 
@@ -196,6 +198,8 @@ export const buildClusterIconHtml = ({
   count,
   thumbUrl: _thumbUrl,
   accentColor = DEFAULT_MARKER_PRIMARY,
+  accentDarkColor,
+  softGlowColor,
   textColor,
 }: ClusterIconHtmlOptions) => {
   const safeCount = Number.isFinite(count) && count > 0 ? Math.floor(count) : 1
@@ -204,7 +208,7 @@ export const buildClusterIconHtml = ({
 
   const accent = sanitizeCssValue(accentColor, DEFAULT_MARKER_PRIMARY)
   const accentDark = sanitizeCssValue(
-    DEFAULT_MARKER_PRIMARY_DARK,
+    accentDarkColor || DEFAULT_MARKER_PRIMARY_DARK,
     '#2f5a4a',
   )
   const text = sanitizeCssValue(
@@ -212,7 +216,7 @@ export const buildClusterIconHtml = ({
     DEFAULT_MARKER_TEXT,
   )
   const softGlow = sanitizeCssValue(
-    DEFAULT_MARKER_SOFT,
+    softGlowColor || DEFAULT_MARKER_SOFT,
     'rgba(122,157,143,0.35)',
   )
 

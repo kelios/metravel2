@@ -1,10 +1,19 @@
 /**
- * CategoriesPopover — multi-select facet filter with per-category counters.
+ * CategoriesPopover - multi-select facet filter with per-category counters.
  */
 import React, { useEffect, useMemo, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import {
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
+import Button from '@/components/ui/Button'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
 type CategoryOption = string | { id?: string | number; name?: string; value?: string }
@@ -17,12 +26,21 @@ interface CategoriesPopoverProps {
   onClose: () => void
 }
 
+const SEARCH_MIN_ITEMS = 10
+
 const normalizeCategoryName = (raw: CategoryOption): string => {
   if (typeof raw === 'string') return raw.trim()
   if (!raw || typeof raw !== 'object') return ''
   if (typeof raw.value === 'string') return raw.value.trim()
   if (typeof raw.name === 'string') return raw.name.trim()
   return ''
+}
+
+const sameStringSet = (a: string[], b: string[]) => {
+  if (a.length !== b.length) return false
+  const sortedA = [...a].sort()
+  const sortedB = [...b].sort()
+  return sortedA.every((v, i) => v === sortedB[i])
 }
 
 export const CategoriesPopover: React.FC<CategoriesPopoverProps> = ({
@@ -36,6 +54,7 @@ export const CategoriesPopover: React.FC<CategoriesPopoverProps> = ({
   const styles = useMemo(() => getStyles(colors), [colors])
 
   const [localSelected, setLocalSelected] = useState<string[]>(() => [...selected])
+  const [query, setQuery] = useState('')
 
   useEffect(() => {
     setLocalSelected([...selected])
@@ -44,73 +63,214 @@ export const CategoriesPopover: React.FC<CategoriesPopoverProps> = ({
   const counts = useMemo(() => {
     const acc: Record<string, number> = {}
     const dataset = Array.isArray(travelsData) ? travelsData : []
-    for (const t of dataset) {
-      if (!t?.categoryName) continue
-      String(t.categoryName)
+
+    for (const travel of dataset) {
+      if (!travel?.categoryName) continue
+
+      String(travel.categoryName)
         .split(',')
-        .map((s) => s.trim())
+        .map((name) => name.trim())
         .filter(Boolean)
-        .forEach((cat) => {
-          acc[cat] = (acc[cat] || 0) + 1
+        .forEach((name) => {
+          acc[name] = (acc[name] || 0) + 1
         })
     }
+
     return acc
   }, [travelsData])
 
-  const rows = useMemo(() => {
+  const allRows = useMemo(() => {
     return (Array.isArray(categories) ? categories : [])
-      .map((c) => {
-        const name = normalizeCategoryName(c)
+      .map((category) => {
+        const name = normalizeCategoryName(category)
         if (!name) return null
-        const count = counts[name] || 0
-        return { name, count }
+        return {
+          name,
+          count: counts[name] || 0,
+        }
       })
-      .filter((r): r is { name: string; count: number } => r !== null)
+      .filter((row): row is { name: string; count: number } => row !== null)
       .sort((a, b) => {
         if (b.count !== a.count) return b.count - a.count
         return a.name.localeCompare(b.name, 'ru')
       })
   }, [categories, counts])
 
+  const normalizedQuery = query.trim().toLowerCase()
+
+  const visibleRows = useMemo(() => {
+    if (!normalizedQuery) return allRows
+    return allRows.filter((row) => row.name.toLowerCase().includes(normalizedQuery))
+  }, [allRows, normalizedQuery])
+
+  const availableRowNames = useMemo(
+    () => allRows.filter((row) => row.count > 0).map((row) => row.name),
+    [allRows],
+  )
+
+  const visibleAvailableRowNames = useMemo(
+    () => visibleRows.filter((row) => row.count > 0).map((row) => row.name),
+    [visibleRows],
+  )
+
+  const bulkTargetNames =
+    normalizedQuery.length > 0 ? visibleAvailableRowNames : availableRowNames
+
   const toggle = (name: string) => {
     setLocalSelected((prev) =>
-      prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name],
+      prev.includes(name) ? prev.filter((value) => value !== name) : [...prev, name],
     )
   }
 
+  const handleSelectAll = () => {
+    setLocalSelected((prev) => Array.from(new Set([...prev, ...bulkTargetNames])))
+  }
+
+  const handleClearSelection = () => {
+    if (!normalizedQuery) {
+      setLocalSelected([])
+      return
+    }
+
+    setLocalSelected((prev) =>
+      prev.filter((name) => !visibleAvailableRowNames.includes(name)),
+    )
+  }
+
+  const hasChanges = useMemo(
+    () => !sameStringSet(localSelected, selected),
+    [localSelected, selected],
+  )
+
   const handleReset = () => {
-    setLocalSelected([])
-    onApply([])
+    if (localSelected.length > 0) {
+      handleClearSelection()
+      return
+    }
+
+    if (selected.length > 0) {
+      onApply([])
+    }
+
     onClose()
   }
 
-  const handleApply = () => {
-    onApply(localSelected)
+  const handlePrimary = () => {
+    if (hasChanges) onApply(localSelected)
     onClose()
   }
 
-  const hasChanges = useMemo(() => {
-    if (localSelected.length !== selected.length) return true
-    const a = [...localSelected].sort()
-    const b = [...selected].sort()
-    return a.some((v, i) => v !== b[i])
-  }, [localSelected, selected])
+  const allSelected =
+    bulkTargetNames.length > 0 &&
+    bulkTargetNames.every((name) => localSelected.includes(name))
+
+  const showSearch = allRows.length >= SEARCH_MIN_ITEMS
+  const showBulkAction = bulkTargetNames.length > 0
+
+  const selectionLabel =
+    allRows.length === 0
+      ? 'Нет категорий'
+      : localSelected.length > 0
+        ? `Выбрано ${localSelected.length} из ${allRows.length}`
+        : `Категорий: ${allRows.length}`
+
+  const resultsLabel =
+    normalizedQuery.length > 0
+      ? visibleRows.length > 0
+        ? `Найдено ${visibleRows.length}`
+        : 'Совпадений нет'
+      : null
+
+  const bulkActionLabel = allSelected
+    ? normalizedQuery
+      ? 'Снять найденные'
+      : 'Снять все'
+    : normalizedQuery
+      ? 'Выбрать найденные'
+      : 'Выбрать все'
+
+  const primaryLabel = hasChanges
+    ? localSelected.length > 0
+      ? `Применить (${localSelected.length})`
+      : 'Показать все'
+    : 'Готово'
 
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <Text style={styles.title}>Что посмотреть</Text>
-        <Text style={styles.hint}>
-          {localSelected.length > 0 ? `${localSelected.length} выбрано` : 'Все категории'}
-        </Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title} numberOfLines={1}>
+            Что посмотреть
+          </Text>
+          <Text style={styles.hint}>{selectionLabel}</Text>
+        </View>
+
+        {showBulkAction ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={bulkActionLabel}
+            onPress={allSelected ? handleClearSelection : handleSelectAll}
+            style={({ pressed }) => [styles.bulkAction, pressed && styles.bulkActionPressed]}
+            testID="categories-popover-bulk-action"
+          >
+            <Feather
+              name={allSelected ? 'square' : 'check-square'}
+              size={13}
+              color={colors.primary}
+            />
+            <Text style={styles.bulkActionText}>{bulkActionLabel}</Text>
+          </Pressable>
+        ) : null}
+
+        {resultsLabel ? <Text style={styles.resultsHint}>{resultsLabel}</Text> : null}
       </View>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.list}>
-        {rows.length === 0 ? (
-          <Text style={styles.empty}>Нет доступных категорий в радиусе</Text>
+
+      {showSearch ? (
+        <View style={styles.searchRow}>
+          <Feather
+            name="search"
+            size={14}
+            color={colors.textMuted}
+            style={styles.searchIcon}
+          />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Поиск по категориям"
+            placeholderTextColor={colors.textMuted}
+            style={styles.searchInput}
+            autoCorrect={false}
+            autoCapitalize="none"
+            testID="categories-popover-search-input"
+          />
+          {query ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Очистить поиск"
+              onPress={() => setQuery('')}
+              hitSlop={8}
+              style={({ pressed }) => [styles.searchClear, pressed && styles.searchClearPressed]}
+            >
+              <Feather name="x" size={14} color={colors.textMuted} />
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.list}
+        keyboardShouldPersistTaps="handled"
+      >
+        {visibleRows.length === 0 ? (
+          <Text style={styles.empty}>
+            {query ? 'Ничего не найдено' : 'Нет доступных категорий в радиусе'}
+          </Text>
         ) : (
-          rows.map((row) => {
+          visibleRows.map((row) => {
             const checked = localSelected.includes(row.name)
             const disabled = row.count === 0 && !checked
+
             return (
               <Pressable
                 key={row.name}
@@ -125,21 +285,29 @@ export const CategoriesPopover: React.FC<CategoriesPopoverProps> = ({
                   pressed && !disabled && styles.rowPressed,
                   disabled && styles.rowDisabled,
                 ]}
+                testID={`categories-popover-row-${row.name}`}
               >
                 <View
                   style={[
                     styles.checkbox,
-                    checked && { backgroundColor: colors.primary, borderColor: colors.primary },
+                    checked && {
+                      backgroundColor: colors.primary,
+                      borderColor: colors.primary,
+                    },
                   ]}
                 >
-                  {checked && <Feather name="check" size={12} color={colors.textOnPrimary} />}
+                  {checked ? (
+                    <Feather name="check" size={12} color={colors.textOnPrimary} />
+                  ) : null}
                 </View>
+
                 <Text
                   style={[styles.rowLabel, checked && styles.rowLabelSelected]}
                   numberOfLines={1}
                 >
                   {row.name}
                 </Text>
+
                 <View style={[styles.badge, checked && styles.badgeSelected]}>
                   <Text style={[styles.badgeText, checked && styles.badgeTextSelected]}>
                     {row.count}
@@ -150,29 +318,35 @@ export const CategoriesPopover: React.FC<CategoriesPopoverProps> = ({
           })
         )}
       </ScrollView>
+
       <View style={styles.footer}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Сбросить категории"
+        <Button
+          label={localSelected.length > 0 ? 'Сбросить' : 'Закрыть'}
+          accessibilityLabel={localSelected.length > 0 ? 'Сбросить выбор' : 'Закрыть фильтр'}
           onPress={handleReset}
-          style={({ pressed }) => [styles.footerBtnGhost, pressed && styles.footerBtnPressed]}
-        >
-          <Feather name="rotate-ccw" size={14} color={colors.textMuted} />
-          <Text style={styles.footerBtnGhostText}>Сбросить</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Применить выбор"
-          onPress={handleApply}
-          disabled={!hasChanges}
-          style={({ pressed }) => [
-            styles.footerBtnPrimary,
-            !hasChanges && styles.footerBtnPrimaryDisabled,
-            pressed && hasChanges && styles.footerBtnPressed,
-          ]}
-        >
-          <Text style={styles.footerBtnPrimaryText}>Применить</Text>
-        </Pressable>
+          variant="ghost"
+          icon={
+            <Feather
+              name={localSelected.length > 0 ? 'rotate-ccw' : 'x'}
+              size={14}
+              color={colors.textMuted}
+            />
+          }
+          style={styles.footerBtnGhost}
+          labelStyle={styles.footerBtnGhostText}
+          testID="categories-popover-reset-button"
+        />
+
+        <Button
+          label={primaryLabel}
+          accessibilityLabel={primaryLabel}
+          onPress={handlePrimary}
+          variant="primary"
+          fullWidth={true}
+          style={styles.footerBtnPrimary}
+          labelStyle={styles.footerBtnPrimaryText}
+          testID="categories-popover-apply-button"
+        />
       </View>
     </View>
   )
@@ -181,18 +355,24 @@ export const CategoriesPopover: React.FC<CategoriesPopoverProps> = ({
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     root: {
-      paddingBottom: 4,
+      flex: 1,
+      minHeight: 0,
     },
     header: {
       paddingHorizontal: 16,
       paddingTop: 14,
       paddingBottom: 10,
+      gap: 8,
+    },
+    titleRow: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       justifyContent: 'space-between',
+      gap: 10,
     },
     title: {
-      fontSize: 18,
+      flex: 1,
+      fontSize: 19,
       fontWeight: '800',
       color: colors.text,
     },
@@ -200,13 +380,75 @@ const getStyles = (colors: ThemedColors) =>
       fontSize: 12,
       fontWeight: '600',
       color: colors.textMuted,
+      paddingTop: 3,
+    },
+    bulkAction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      alignSelf: 'flex-start',
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: colors.primarySoft,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderAccent,
+    },
+    bulkActionPressed: {
+      opacity: 0.75,
+    },
+    bulkActionText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.primary,
+    },
+    resultsHint: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textSubtle ?? colors.textMuted,
+    },
+    searchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginHorizontal: 12,
+      marginBottom: 8,
+      paddingHorizontal: 14,
+      paddingVertical: Platform.OS === 'web' ? 9 : 8,
+      borderRadius: 14,
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+    },
+    searchIcon: {
+      flexShrink: 0,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 14,
+      color: colors.text,
+      paddingVertical: 2,
+      ...(Platform.OS === 'web'
+        ? ({ outlineStyle: 'none', outlineWidth: 0 } as any)
+        : null),
+    },
+    searchClear: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    searchClearPressed: {
+      opacity: 0.6,
     },
     scroll: {
-      maxHeight: 400,
+      flex: 1,
+      minHeight: 0,
     },
     list: {
       paddingHorizontal: 10,
-      paddingBottom: 10,
+      paddingBottom: 18,
     },
     empty: {
       padding: 24,
@@ -218,10 +460,11 @@ const getStyles = (colors: ThemedColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
+      minHeight: 54,
       paddingHorizontal: 12,
-      paddingVertical: 12,
-      borderRadius: 12,
-      marginBottom: 4,
+      paddingVertical: 13,
+      borderRadius: 14,
+      marginBottom: 8,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.borderLight,
@@ -240,7 +483,7 @@ const getStyles = (colors: ThemedColors) =>
       width: 20,
       height: 20,
       borderRadius: 6,
-      borderWidth: 2,
+      borderWidth: 1.5,
       borderColor: colors.borderLight,
       alignItems: 'center',
       justifyContent: 'center',
@@ -255,9 +498,9 @@ const getStyles = (colors: ThemedColors) =>
       color: colors.primaryText,
     },
     badge: {
-      minWidth: 30,
+      minWidth: 32,
       paddingHorizontal: 8,
-      paddingVertical: 3,
+      paddingVertical: 4,
       borderRadius: 999,
       backgroundColor: colors.backgroundSecondary,
       alignItems: 'center',
@@ -276,20 +519,21 @@ const getStyles = (colors: ThemedColors) =>
     },
     footer: {
       flexDirection: 'row',
-      gap: 8,
+      alignItems: 'center',
+      gap: 10,
       paddingHorizontal: 12,
-      paddingTop: 10,
-      paddingBottom: 6,
+      paddingTop: 12,
+      paddingBottom: Platform.OS === 'web' ? 10 : 8,
       borderTopWidth: 1,
       borderTopColor: colors.borderLight,
+      backgroundColor: colors.surface,
     },
     footerBtnGhost: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
+      minWidth: 118,
       paddingHorizontal: 12,
-      paddingVertical: 10,
-      borderRadius: 10,
+      backgroundColor: colors.backgroundSecondary,
+      borderColor: colors.borderLight,
+      borderWidth: 1,
     },
     footerBtnGhostText: {
       fontSize: 13,
@@ -298,21 +542,10 @@ const getStyles = (colors: ThemedColors) =>
     },
     footerBtnPrimary: {
       flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 10,
-      borderRadius: 10,
-      backgroundColor: colors.primary,
-    },
-    footerBtnPrimaryDisabled: {
-      opacity: 0.5,
     },
     footerBtnPrimaryText: {
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: '700',
       color: colors.textOnPrimary,
-    },
-    footerBtnPressed: {
-      opacity: 0.8,
     },
   })

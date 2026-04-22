@@ -217,7 +217,6 @@ export const PointsListGrid: React.FC<{
             canBuildRoute={false}
             onReset={onResetFilters}
             hideReset={!hasFilters}
-            showLegend={false}
             showBaseLayer={false}
             showOverlays={true}
             withContainer={false}

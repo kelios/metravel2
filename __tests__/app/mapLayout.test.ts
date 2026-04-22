@@ -53,7 +53,7 @@ describe('map layout header offset', () => {
     expect(styles.rightPanel.top).toBe(0);
     expect(styles.overlay.top).toBe(0);
     // tabsContainer only has base padding without header offset
-    expect(styles.tabsContainer.paddingTop).toBe(6);
+    expect(styles.tabsContainer.paddingTop).toBe(10);
 
     // right panel uses tokenized widths (min string on web)
     expect(styles.rightPanel.width).toBe(`min(${METRICS.baseUnit * 45}px, 34vw)`);

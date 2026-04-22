@@ -43,6 +43,7 @@ export interface MapMobileCollapsedOverlayProps {
   onFilterChange?: (key: string, value: unknown) => void
   onOverlayToggle?: (id: string, enabled: boolean) => void
   onResetOverlays?: () => void
+  quickActionButtons?: ReadonlyArray<QuickFilterAction>
 }
 
 const MapMobileCollapsedOverlayInner: React.FC<MapMobileCollapsedOverlayProps> = ({
@@ -62,6 +63,7 @@ const MapMobileCollapsedOverlayInner: React.FC<MapMobileCollapsedOverlayProps> =
   onFilterChange,
   onOverlayToggle,
   onResetOverlays,
+  quickActionButtons,
 }) => {
   const extraActions: QuickFilterAction[] = [
     {
@@ -71,6 +73,7 @@ const MapMobileCollapsedOverlayInner: React.FC<MapMobileCollapsedOverlayProps> =
       onPress: onCenterUser,
       testID: 'map-center-user-quick',
     },
+    ...(quickActionButtons ?? []).filter((action) => action.key !== 'locate'),
     {
       key: 'list',
       label: 'Открыть панель со списком',
@@ -103,6 +106,7 @@ const MapMobileCollapsedOverlayInner: React.FC<MapMobileCollapsedOverlayProps> =
       onChangeOverlay={(id, enabled) => onOverlayToggle?.(id, enabled)}
       onResetOverlays={onResetOverlays}
       travelsData={travelsData}
+      reserveLeftControlsSpace={false}
     />
   )
 }

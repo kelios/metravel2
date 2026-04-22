@@ -98,12 +98,13 @@ export const MapLayers: React.FC<MapLayersProps> = React.memo(({
 
   // Circle path options
   const circlePathOptions = useMemo(() => ({
-    color: colors.primary,
+    color: colors.primaryDark,
     fillColor: colors.primary,
-    fillOpacity: isTestEnv ? 0.08 : 0.14,
+    fillOpacity: isTestEnv ? 0.06 : 0.075,
+    opacity: isTestEnv ? 0.4 : 0.44,
     weight: isTestEnv ? 2 : 3,
     dashArray: '6 6',
-  }), [colors.primary]);
+  }), [colors.primary, colors.primaryDark]);
 
   // Validate user location
   const validUserLocation = useMemo(() => {

@@ -208,4 +208,58 @@ describe('useMapPopupAutoPan', () => {
 
     expect(panBy).toHaveBeenCalledWith([0, -228], { animate: true, duration: 0.35 })
   })
+
+  it('centers desktop popup horizontally inside the visible map area', () => {
+    const panBy = jest.fn()
+    const on = jest.fn()
+    const off = jest.fn()
+
+    const mapEl = {
+      getBoundingClientRect: () => ({
+        left: 0,
+        top: 0,
+        right: 1280,
+        bottom: 900,
+        width: 1280,
+        height: 900,
+      }),
+    } as HTMLElement
+
+    const popupEl = {
+      getBoundingClientRect: () => ({
+        left: 860,
+        top: 180,
+        right: 1220,
+        bottom: 560,
+        width: 360,
+        height: 380,
+      }),
+      querySelector: jest.fn(() => null),
+    } as unknown as HTMLElement
+
+    const mapRef = {
+      current: {
+        getContainer: () => mapEl,
+        panBy,
+        on,
+        off,
+      },
+    }
+
+    const { result } = renderHook(() =>
+      useMapPopupAutoPan({
+        mapRef,
+        mapPaneWidth: 1280,
+        popupBottomOffset: 0,
+      })
+    )
+
+    result.current.popupAutoPanPadding.eventHandlers.popupopen({
+      popup: {
+        getElement: () => popupEl,
+      },
+    })
+
+    expect(panBy).toHaveBeenCalledWith([400, 0], { animate: true, duration: 0.35 })
+  })
 })

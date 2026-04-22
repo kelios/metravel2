@@ -230,6 +230,35 @@ export const getStyles = (
       alignItems: 'center',
       gap: splitLayout ? 7 : compactLayout ? 6 : 8,
     },
+    hoverActionWrap: {
+      position: 'relative',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    hoverLabelBubble: {
+      position: 'absolute',
+      bottom: '100%',
+      marginBottom: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 5,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: 'rgba(18, 24, 38, 0.92)',
+      zIndex: 3,
+      ...(Platform.OS === 'web'
+        ? ({
+            pointerEvents: 'none',
+            boxShadow: '0 10px 18px rgba(15,23,42,0.18)',
+            whiteSpace: 'nowrap',
+          } as any)
+        : null),
+    },
+    hoverLabelText: {
+      fontSize: fs.small - 1,
+      lineHeight: (fs.small - 1) * 1.2,
+      fontWeight: '600',
+      color: colors.textOnDark,
+      textAlign: 'center',
+    },
     iconBtn: {
       alignItems: 'center',
       justifyContent: 'center',

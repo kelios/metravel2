@@ -46,16 +46,16 @@ function ensureMarkerClusterCss(): void {
 
 function getMarkerClusterOverridesCSS(): string {
   return [
-    '.marker-cluster-small,.marker-cluster-medium,.marker-cluster-large{background:rgba(255,138,0,0.2)!important;border-radius:50%!important}',
-    '.marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{background:var(--color-primary,#ff8a00)!important;color:#fff!important;border-radius:50%!important;font-weight:800!important;font-size:14px!important;font-family:Inter,system-ui,-apple-system,sans-serif!important;display:flex!important;align-items:center!important;justify-content:center!important}',
+    '.marker-cluster-small,.marker-cluster-medium,.marker-cluster-large{background:var(--color-primary-30,#7a9d8f30)!important;border-radius:50%!important}',
+    '.marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{background:linear-gradient(145deg,var(--color-primary,#7a9d8f) 0%,var(--color-primaryDark,#6a8d7f) 100%)!important;color:var(--color-textOnDark,#ffffff)!important;border:3px solid rgba(255,255,255,0.96)!important;border-radius:50%!important;font-weight:800!important;font-size:14px!important;font-family:Inter,system-ui,-apple-system,sans-serif!important;display:flex!important;align-items:center!important;justify-content:center!important;box-shadow:var(--shadow-medium)!important}',
     '.marker-cluster-small{width:36px!important;height:36px!important}',
     '.marker-cluster-small div{width:28px!important;height:28px!important;margin-left:4px!important;margin-top:4px!important;line-height:28px!important}',
     '.marker-cluster-medium{width:44px!important;height:44px!important}',
     '.marker-cluster-medium div{width:34px!important;height:34px!important;margin-left:5px!important;margin-top:5px!important;line-height:34px!important;font-size:15px!important}',
     '.marker-cluster-large{width:52px!important;height:52px!important}',
     '.marker-cluster-large div{width:40px!important;height:40px!important;margin-left:6px!important;margin-top:6px!important;line-height:40px!important;font-size:16px!important}',
-    '.marker-cluster{box-shadow:0 4px 16px rgba(0,0,0,0.2)!important;cursor:pointer!important;transition:box-shadow 0.15s ease,filter 0.15s ease!important}',
-    '.marker-cluster:hover{box-shadow:0 6px 18px rgba(0,0,0,0.24)!important;filter:brightness(1.02)!important}',
+    '.marker-cluster{box-shadow:var(--shadow-card)!important;cursor:pointer!important;transition:box-shadow 0.15s ease,filter 0.15s ease!important}',
+    '.marker-cluster:hover{box-shadow:var(--shadow-hover)!important;filter:brightness(1.03)!important}',
     '.leaflet-cluster-anim .leaflet-marker-icon,.leaflet-cluster-anim .leaflet-marker-shadow{transition:transform 0.3s ease-out,opacity 0.3s ease-out!important}',
   ].join('\n')
 }

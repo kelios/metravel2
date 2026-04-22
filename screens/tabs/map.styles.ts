@@ -7,6 +7,7 @@ import type { ThemedColors } from '@/hooks/useTheme';
 const PANEL_WIDTH_DESKTOP = METRICS.baseUnit * 45; // 360px
 const PANEL_WIDTH_TABLET = METRICS.baseUnit * 40; // 320px
 const PANEL_GAP = METRICS.spacing.m; // 16px
+const DESKTOP_SHELL_PADDING = METRICS.spacing.m;
 const TRANSITION_MS = 200;
 const WEB_MOBILE_FOOTER_RESERVE_HEIGHT = LAYOUT?.tabBarHeight ?? 56;
 
@@ -37,15 +38,16 @@ export const getStyles = (
             display: 'flex',
             flexDirection: isMobile ? 'column' : 'row',
             columnGap: isMobile ? 0 : PANEL_GAP,
-            paddingLeft: 0,
-            paddingRight: isMobile ? 0 : METRICS.spacing.l,
-            paddingTop: 0,
-            paddingBottom: 0,
+            paddingLeft: isMobile ? 0 : DESKTOP_SHELL_PADDING,
+            paddingRight: isMobile ? 0 : DESKTOP_SHELL_PADDING,
+            paddingTop: isMobile ? 0 : DESKTOP_SHELL_PADDING - 4,
+            paddingBottom: isMobile ? 0 : DESKTOP_SHELL_PADDING - 4,
             height: '100%',
             minHeight: 0,
             minWidth: 0,
             alignItems: 'stretch',
             isolation: 'isolate',
+            backgroundColor: isMobile ? themedColors.background : themedColors.backgroundSecondary,
           } as any)
         : null),
     },
@@ -61,6 +63,14 @@ export const getStyles = (
               height: '100%',
               minHeight: isMobile ? 220 : 0,
               minWidth: 0,
+              borderRadius: isMobile ? 0 : 24,
+              overflow: 'hidden',
+              backgroundColor: themedColors.surfaceAlpha40,
+              borderWidth: isMobile ? 0 : StyleSheet.hairlineWidth,
+              borderColor: themedColors.borderLight,
+              boxShadow: isMobile
+                ? 'none'
+                : '0 20px 44px rgba(15,23,42,0.08), 0 2px 8px rgba(15,23,42,0.04)',
             } as any)
           : null),
       },
@@ -73,25 +83,27 @@ export const getStyles = (
         width: isMobile ? '100%' : PANEL_WIDTH_DESKTOP,
         maxWidth: isMobile ? '100%' : PANEL_WIDTH_DESKTOP + 40,
         maxHeight: isMobile ? '75vh' : undefined,
+        height: isMobile ? undefined : '100%',
         backgroundColor: themedColors.surface,
         minHeight: 0,
         minWidth: 0,
         flexShrink: 0,
         ...(Platform.OS === 'web'
           ? ({
-              backgroundColor: themedColors.surfaceAlpha40,
+              alignSelf: isMobile ? 'auto' : 'stretch',
+              backgroundColor: themedColors.surface,
               boxShadow: isMobile
                 ? '0 16px 36px rgba(15,23,42,0.08), 0 4px 14px rgba(15,23,42,0.05)'
-                : '0 18px 44px rgba(15,23,42,0.10), 0 4px 14px rgba(15,23,42,0.05)',
-              backdropFilter: 'blur(24px) saturate(1.08)',
-              WebkitBackdropFilter: 'blur(24px) saturate(1.08)',
+                : '0 24px 56px rgba(15,23,42,0.10), 0 6px 18px rgba(15,23,42,0.05)',
+              backdropFilter: 'blur(20px) saturate(1.05)',
+              WebkitBackdropFilter: 'blur(20px) saturate(1.05)',
               borderTopLeftRadius: isMobile ? 18 : 22,
               borderTopRightRadius: isMobile ? 18 : 22,
-              borderBottomLeftRadius: isMobile ? 0 : 22,
-              borderWidth: StyleSheet.hairlineWidth,
+              borderBottomLeftRadius: isMobile ? 0 : 24,
+              borderBottomRightRadius: isMobile ? 0 : 24,
+              borderWidth: 1,
               borderColor: themedColors.borderLight,
               overflow: isMobile ? 'hidden' : 'visible',
-              borderRightWidth: 0,
             } as any)
           : Platform.OS === 'ios'
           ? shadowHeavy
@@ -126,17 +138,17 @@ export const getStyles = (
       tabsContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingTop: isMobile ? Math.max(8, insetTop + 1) : 6,
-        paddingBottom: 6,
-        paddingHorizontal: isMobile ? 8 : 8,
+        paddingTop: isMobile ? Math.max(8, insetTop + 1) : 10,
+        paddingBottom: isMobile ? 6 : 8,
+        paddingHorizontal: isMobile ? 8 : 10,
         backgroundColor: themedColors.surface,
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: themedColors.borderLight,
-        columnGap: 6,
+        columnGap: 8,
         minHeight: isMobile ? 42 : undefined,
         ...(Platform.OS === 'web'
           ? ({
-              backgroundColor: themedColors.surfaceAlpha40,
+              backgroundColor: isMobile ? themedColors.surfaceAlpha40 : themedColors.surface,
               backdropFilter: 'blur(18px)',
               WebkitBackdropFilter: 'blur(18px)',
               boxShadow: '0 1px 0 rgba(15,23,42,0.05)',
@@ -200,7 +212,9 @@ export const getStyles = (
         backgroundColor: themedColors.surface,
         ...(Platform.OS === 'web'
           ? ({
-              backgroundColor: 'transparent',
+              backgroundColor: themedColors.surface,
+              borderBottomLeftRadius: isMobile ? 0 : 24,
+              borderBottomRightRadius: isMobile ? 0 : 24,
             } as any)
           : null),
       },
@@ -291,20 +305,25 @@ export const getStyles = (
         color: themedColors.textOnPrimary,
       },
       collapsedPanel: {
-        width: 44,
+        width: 56,
         flexShrink: 0,
         alignItems: 'center',
-        paddingTop: 10,
-        gap: 8,
+        paddingTop: 12,
+        paddingBottom: 12,
+        paddingHorizontal: 8,
+        gap: 10,
+        marginTop: 6,
+        marginBottom: 6,
         backgroundColor: themedColors.surface,
-        borderRightWidth: StyleSheet.hairlineWidth,
-        borderRightColor: themedColors.borderLight,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: themedColors.borderLight,
         ...(Platform.OS === 'web'
           ? ({
-              backgroundColor: themedColors.surfaceAlpha40,
+              backgroundColor: themedColors.surface,
               backdropFilter: 'blur(18px)',
               WebkitBackdropFilter: 'blur(18px)',
-              boxShadow: '1px 0 0 rgba(0,0,0,0.05)',
+              boxShadow: '0 18px 34px rgba(15,23,42,0.08), 0 2px 8px rgba(15,23,42,0.04)',
             } as any)
           : null),
       },
@@ -323,8 +342,8 @@ export const getStyles = (
       },
       collapseToggleInPanel: {
         position: 'absolute',
-        top: 12,
-        right: -14,
+        top: 14,
+        right: -12,
         width: 28,
         height: 28,
         borderRadius: 9,
@@ -373,10 +392,10 @@ export const getStyles = (
       },
       resizeHandle: {
         position: 'absolute',
-        right: -4,
+        right: -5,
         top: 0,
         bottom: 0,
-        width: 8,
+        width: 10,
         zIndex: 1003,
         ...(Platform.OS === 'web'
           ? ({ cursor: 'col-resize' } as any)

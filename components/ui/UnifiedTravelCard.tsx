@@ -19,6 +19,8 @@ import Animated, {
 } from 'react-native-reanimated';
 
 const MAP_PIN_ICON_STYLE = { marginRight: 4 } as const;
+const REFINED_CARD_TITLE_FONT_FAMILY =
+  'Baskerville, "Palatino Linotype", Palatino, Georgia, serif';
 
 export type UnifiedTravelCardBadge = {
   icon: keyof typeof Feather.glyphMap;
@@ -287,14 +289,17 @@ function UnifiedTravelCard({
             : ({ backgroundColor: colors.overlay } as any)),
         },
         imageTitleOverlayText: {
-          fontSize: isWeb ? 16 : 14,
-          fontWeight: '800',
-          lineHeight: isWeb ? 20 : 18,
+          fontSize: isWeb ? 15 : 14,
+          fontWeight: '700',
+          lineHeight: isWeb ? 19 : 18,
           color: colors.textOnDark,
-          letterSpacing: -0.2,
+          letterSpacing: isWeb ? 0 : -0.2,
           textAlign: 'center',
           ...(isWeb
-            ? { textShadow: '0px 1px 6px rgba(0,0,0,0.32)' }
+            ? {
+                fontFamily: REFINED_CARD_TITLE_FONT_FAMILY,
+                textShadow: '0px 1px 5px rgba(0,0,0,0.28)',
+              }
             : {
                 textShadowColor: 'rgba(0,0,0,0.32)',
                 textShadowOffset: { width: 0, height: 1 },

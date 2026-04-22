@@ -26,7 +26,14 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = React.memo(({
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
 
-  if (!filters.length) return null;
+  // Radius is already represented in dedicated map UI, so omit it here
+  // to avoid duplicate active-filter chips.
+  const visibleFilters = useMemo(
+    () => filters.filter((filterItem) => filterItem.key !== 'radius'),
+    [filters],
+  );
+
+  if (!visibleFilters.length) return null;
 
   return (
     <View style={styles.container}>
@@ -36,7 +43,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = React.memo(({
         style={Platform.OS === 'web' ? (styles.scroll as any) : undefined}
         contentContainerStyle={styles.scrollContent}
       >
-        {filters.map((f) => (
+        {visibleFilters.map((f) => (
           <CardActionPressable
             key={f.key}
             accessibilityLabel={`Убрать фильтр: ${f.label}`}
@@ -48,7 +55,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = React.memo(({
             <Feather name="x" size={12} color={colors.brandText} />
           </CardActionPressable>
         ))}
-        {onClearAll && filters.length > 1 && (
+        {onClearAll && visibleFilters.length > 1 && (
           <CardActionPressable
             accessibilityLabel="Сбросить все фильтры"
             onPress={onClearAll}

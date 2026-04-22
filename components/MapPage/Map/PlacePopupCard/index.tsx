@@ -80,6 +80,7 @@ const PlacePopupCard: React.FC<Props> = ({
   colors,
 }) => {
   const [fullscreenVisible, setFullscreenVisible] = useState(false);
+  const [hoveredActionKey, setHoveredActionKey] = useState<string | null>(null);
   const revealPopupImageOnLoadOnly = useMemo(() => {
     if (Platform.OS !== 'web' || typeof navigator === 'undefined') return false;
     return isIOSSafariUserAgent(
@@ -210,6 +211,12 @@ const PlacePopupCard: React.FC<Props> = ({
     setFullscreenVisible(false);
   }, [imageUrl]);
 
+  useEffect(() => {
+    if (showLabeled) {
+      setHoveredActionKey(null);
+    }
+  }, [showLabeled]);
+
   const topInfoSlot = useMemo(() => (
     <View style={styles.infoSection}>
       <Text style={styles.titleText} numberOfLines={useCompactLayout ? 2 : bp === 'narrow' ? 2 : 2}>
@@ -280,6 +287,7 @@ const PlacePopupCard: React.FC<Props> = ({
   ]);
 
   const showLabeled = useFullscreenMobileOverlay;
+  const showHoverLabels = Platform.OS === 'web' && !showLabeled;
   const useCompactDecisionLayout = useCompactLayout || showLabeled;
   const actionSummaryText = useMemo(() => {
     if (onBuildRoute) return 'Сначала маршрут, потом можно сохранить точку.';
@@ -440,57 +448,76 @@ const PlacePopupCard: React.FC<Props> = ({
 
         <View style={styles.secondaryActionsRow}>
           {secondaryActions.map((action) => (
-            <CardActionPressable
-              key={action.key}
-              accessibilityLabel={action.accessibilityLabel}
-              onPress={action.onPress}
-              title={action.title}
-              style={showLabeled
-                ? ({ pressed }) => [
-                    styles.labeledActionBtn,
-                    pressed && styles.actionBtnPressed,
-                  ]
-                : ({ pressed }) => [
-                    styles.actionBtn,
-                    pressed && styles.actionBtnPressed,
-                  ]
-              }
-            >
-              <Feather
-                name={action.icon}
-                size={14}
-                color={colors.textMuted}
-              />
-              {showLabeled && (
-                <Text
-                  style={[
-                    styles.labeledActionText,
-                  ]}
-                >
-                  {action.label}
-                </Text>
-              )}
-            </CardActionPressable>
+            <View key={action.key} style={styles.hoverActionWrap}>
+              {showHoverLabels && hoveredActionKey === action.key ? (
+                <View pointerEvents="none" style={styles.hoverLabelBubble}>
+                  <Text style={styles.hoverLabelText}>{action.label}</Text>
+                </View>
+              ) : null}
+
+              <CardActionPressable
+                accessibilityLabel={action.accessibilityLabel}
+                onPress={action.onPress}
+                title={action.title}
+                onHoverIn={showHoverLabels ? () => setHoveredActionKey(action.key) : undefined}
+                onHoverOut={showHoverLabels ? () => setHoveredActionKey((current) => (current === action.key ? null : current)) : undefined}
+                style={showLabeled
+                  ? ({ pressed }) => [
+                      styles.labeledActionBtn,
+                      pressed && styles.actionBtnPressed,
+                    ]
+                  : ({ pressed }) => [
+                      styles.actionBtn,
+                      pressed && styles.actionBtnPressed,
+                    ]
+                }
+              >
+                <Feather
+                  name={action.icon}
+                  size={14}
+                  color={colors.textMuted}
+                />
+                {showLabeled && (
+                  <Text
+                    style={[
+                      styles.labeledActionText,
+                    ]}
+                  >
+                    {action.label}
+                  </Text>
+                )}
+              </CardActionPressable>
+            </View>
           ))}
 
           {onAddPoint && !showLabeled && (
-            <CardActionPressable
-              accessibilityLabel={compactLabel}
-              onPress={() => void onAddPoint()}
-              disabled={addDisabled || isAdding}
-              title={compactLabel}
-              style={({ pressed }) => [
-                styles.addBtn,
-                (addDisabled || isAdding) && styles.addBtnDisabled,
-                pressed && styles.addBtnPressed,
-              ]}
-            >
-              {isAdding ? (
-                <ActivityIndicator size="small" color={colors.primary} />
-              ) : (
-                <Feather name="plus" size={14} color={colors.primary} />
-              )}
-            </CardActionPressable>
+            <View style={styles.hoverActionWrap}>
+              {showHoverLabels && hoveredActionKey === 'add-point' ? (
+                <View pointerEvents="none" style={styles.hoverLabelBubble}>
+                  <Text style={styles.hoverLabelText}>{compactLabel}</Text>
+                </View>
+              ) : null}
+
+              <CardActionPressable
+                accessibilityLabel={compactLabel}
+                onPress={() => void onAddPoint()}
+                disabled={addDisabled || isAdding}
+                title={compactLabel}
+                onHoverIn={showHoverLabels ? () => setHoveredActionKey('add-point') : undefined}
+                onHoverOut={showHoverLabels ? () => setHoveredActionKey((current) => (current === 'add-point' ? null : current)) : undefined}
+                style={({ pressed }) => [
+                  styles.addBtn,
+                  (addDisabled || isAdding) && styles.addBtnDisabled,
+                  pressed && styles.addBtnPressed,
+                ]}
+              >
+                {isAdding ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Feather name="plus" size={14} color={colors.primary} />
+                )}
+              </CardActionPressable>
+            </View>
           )}
         </View>
       </View>
@@ -499,11 +526,13 @@ const PlacePopupCard: React.FC<Props> = ({
     actionSummaryText,
     secondaryActions,
     showLabeled,
+    showHoverLabels,
     addDisabled,
     colors.primary,
     colors.textMuted,
     compactLabel,
     coord,
+    hoveredActionKey,
     hasCoord,
     isAdding,
     onAddPoint,

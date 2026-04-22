@@ -6,10 +6,8 @@ import Chip from '@/components/ui/Chip'
 import IconButton from '@/components/ui/IconButton'
 import { Toggle } from '@/components/ui/Toggle'
 import CollapsibleSection from '@/components/MapPage/CollapsibleSection'
-import MapLegend from '@/components/MapPage/MapLegend'
 import MapIcon from './MapIcon'
 import { WEB_MAP_BASE_LAYERS, WEB_MAP_OVERLAY_LAYERS } from '@/config/mapWebLayers'
-import { globalFocusStyles } from '@/styles/globalFocus'
 import type { ThemedColors } from '@/hooks/useTheme'
 import type { MapUiApi } from '@/types/mapUi'
 
@@ -44,7 +42,6 @@ interface FiltersPanelMapSettingsProps {
   onReset?: () => void
   hideReset?: boolean
   onOpenList?: () => void
-  showLegend?: boolean
   showLayers?: boolean
   showBaseLayer?: boolean
   showOverlays?: boolean
@@ -64,13 +61,11 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
   totalPoints: _totalPoints,
   hasFilters: _hasFilters,
   canBuildRoute,
-  showLegend = true,
   showLayers = true,
   showBaseLayer,
   showOverlays,
   withContainer = true,
 }) => {
-  const [legendOpen, setLegendOpen] = useState(false)
   const [selectedBaseLayerId, setSelectedBaseLayerId] = useState<string>(
     WEB_MAP_BASE_LAYERS.find((layer) => layer.defaultEnabled)?.id ||
       WEB_MAP_BASE_LAYERS[0]?.id ||
@@ -151,13 +146,13 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
       for (const overlay of WEB_MAP_OVERLAY_LAYERS) {
         mapUiApi.setOverlayEnabled(
           overlay.id,
-          Boolean(resolvedEnabledOverlays[overlay.id]),
+          Boolean(localEnabledOverlays[overlay.id]),
         )
       }
     } catch {
       // noop
     }
-  }, [mapUiApi, resolvedEnabledOverlays, usesControlledOverlays])
+  }, [mapUiApi, localEnabledOverlays, usesControlledOverlays])
 
   useEffect(() => {
     if (!mapUiApi?.setOsmPoiCategories || !osmPoiEnabled) return
@@ -166,26 +161,6 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
 
   const body = (
     <>
-      {showLegend ? (
-        <>
-          <Pressable
-            style={[styles.accordionHeader, globalFocusStyles.focusable]}
-            onPress={() => setLegendOpen((value) => !value)}
-            accessibilityRole="button"
-            accessibilityLabel="Легенда карты"
-            accessibilityState={{ expanded: legendOpen }}
-          >
-            <Text style={styles.accordionTitle}>Легенда карты</Text>
-            <MapIcon
-              name={legendOpen ? 'expand-less' : 'expand-more'}
-              size={20}
-              color={colors.textMuted}
-            />
-          </Pressable>
-          {legendOpen && <MapLegend showRouteMode={mode === 'route'} />}
-        </>
-      ) : null}
-
       <View style={styles.mapControlsRow}>
         <IconButton
           label="Показать все результаты на карте"

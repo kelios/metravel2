@@ -48,6 +48,32 @@ interface MarkerClusterGroupProps {
   hintCenter?: { lat: number; lng: number } | null
 }
 
+type PopupEventHandlers = Record<string, (event: any) => void>
+
+const splitPopupProps = (popupProps?: Record<string, unknown>) => {
+  if (!popupProps) {
+    return {
+      popupOptions: {} as Record<string, unknown>,
+      popupEventHandlers: {} as PopupEventHandlers,
+    }
+  }
+
+  const {
+    eventHandlers,
+    ...popupOptions
+  } = popupProps as Record<string, unknown> & {
+    eventHandlers?: PopupEventHandlers
+  }
+
+  return {
+    popupOptions,
+    popupEventHandlers:
+      eventHandlers && typeof eventHandlers === 'object'
+        ? (eventHandlers as PopupEventHandlers)
+        : ({} as PopupEventHandlers),
+  }
+}
+
 const TOOLTIP_MAX_LEN = 30
 
 const scheduleRootUnmount = (
@@ -119,7 +145,9 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       const { metrics, html } = buildClusterIconHtml({
         count: Number(cluster?.getChildCount?.() ?? 0),
         accentColor: String(DESIGN_TOKENS.colors.primary),
-        textColor: String(DESIGN_TOKENS.colors.textOnPrimary),
+        accentDarkColor: String(DESIGN_TOKENS.colors.primaryDark),
+        softGlowColor: String(DESIGN_TOKENS.colors.primaryAlpha30),
+        textColor: String(DESIGN_TOKENS.colors.textOnDark),
       })
 
       return L.divIcon({
@@ -255,26 +283,35 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
 
       // Use React 19 createRoot for popup rendering
       let rootCreated = false
+      const { popupOptions: rawPopupOptions, popupEventHandlers } =
+        splitPopupProps(popupProps)
       const popupOptions: any = {
-        maxWidth: popupProps?.maxWidth ?? 320,
-        minWidth: popupProps?.minWidth ?? 200,
-        autoPan: true,
-        closeButton: true,
+        maxWidth: rawPopupOptions.maxWidth ?? 320,
+        minWidth: rawPopupOptions.minWidth ?? 200,
+        autoPan: rawPopupOptions.autoPan ?? true,
+        closeButton: rawPopupOptions.closeButton ?? true,
       }
-      if (popupProps?.autoPanPadding) {
-        popupOptions.autoPanPadding = popupProps.autoPanPadding
+      if (rawPopupOptions.keepInView !== undefined) {
+        popupOptions.keepInView = rawPopupOptions.keepInView
       }
-      if (popupProps?.autoPanPaddingTopLeft) {
-        popupOptions.autoPanPaddingTopLeft = popupProps.autoPanPaddingTopLeft
+      if (typeof rawPopupOptions.className === 'string' && rawPopupOptions.className.trim()) {
+        popupOptions.className = rawPopupOptions.className.trim()
       }
-      if (popupProps?.autoPanPaddingBottomRight) {
+      if (rawPopupOptions.autoPanPadding) {
+        popupOptions.autoPanPadding = rawPopupOptions.autoPanPadding
+      }
+      if (rawPopupOptions.autoPanPaddingTopLeft) {
+        popupOptions.autoPanPaddingTopLeft = rawPopupOptions.autoPanPaddingTopLeft
+      }
+      if (rawPopupOptions.autoPanPaddingBottomRight) {
         popupOptions.autoPanPaddingBottomRight =
-          popupProps.autoPanPaddingBottomRight
+          rawPopupOptions.autoPanPaddingBottomRight
       }
 
       marker.bindPopup(popupContainer, popupOptions)
 
-      marker.on('popupopen', () => {
+      marker.on('popupopen', (event: any) => {
+        popupEventHandlers.popupopen?.(event)
         if (!rootCreated) {
           rootCreated = true
           try {
@@ -301,7 +338,8 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
         }
       })
 
-      marker.on('popupclose', () => {
+      marker.on('popupclose', (event: any) => {
+        popupEventHandlers.popupclose?.(event)
         if (rootCreated) {
           rootCreated = false
           const root = renderRootMapRef.current.get(key)

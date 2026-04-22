@@ -45,6 +45,13 @@ interface MapMobileLayoutProps {
   favorites?: Set<string | number>
   onResetFilters?: () => void
   onExpandRadius?: () => void
+  quickActionButtons?: ReadonlyArray<{
+    key: string
+    label: string
+    icon: any
+    onPress: () => void
+    testID?: string
+  }>
 }
 
 const PHONE_COMPACT_LAYOUT_MAX_WIDTH = 430
@@ -71,6 +78,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   favorites,
   onResetFilters,
   onExpandRadius,
+  quickActionButtons,
 }) => {
   const colors = useThemedColors()
   const { width: viewportWidth } = useWindowDimensions()
@@ -127,6 +135,13 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     },
     [setBottomSheetState],
   )
+
+  useEffect(() => {
+    sheetStateRef.current = 'collapsed'
+    setSheetState('collapsed')
+    setBottomSheetState('collapsed')
+    bottomSheetRef.current?.snapToCollapsed()
+  }, [setBottomSheetState])
 
   useEffect(() => {
     if (!openNonce) return
@@ -351,6 +366,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             onFilterChange={filtersContextProps?.onFilterChange}
             onOverlayToggle={filtersContextProps?.onOverlayToggle}
             onResetOverlays={filtersContextProps?.onResetOverlays}
+            quickActionButtons={quickActionButtons}
           />
         )}
       </View>

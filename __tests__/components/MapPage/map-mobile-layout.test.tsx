@@ -99,15 +99,15 @@ describe('Map Mobile Layout Styles', () => {
     it('should have compact column gap on mobile', () => {
       const styles = getStyles(true, 0, mockThemedColors as any);
 
-      expect(styles.tabsContainer.columnGap).toBe(6);
+      expect(styles.tabsContainer.columnGap).toBe(8);
     });
 
     it('should have standard padding on desktop header', () => {
       const styles = getStyles(false, 0, mockThemedColors as any);
 
-      expect(styles.tabsContainer.paddingTop).toBe(6);
-      expect(styles.tabsContainer.paddingBottom).toBe(6);
-      expect(styles.tabsContainer.paddingHorizontal).toBe(8);
+      expect(styles.tabsContainer.paddingTop).toBe(10);
+      expect(styles.tabsContainer.paddingBottom).toBe(8);
+      expect(styles.tabsContainer.paddingHorizontal).toBe(10);
     });
 
     it('should not have min height on desktop header', () => {

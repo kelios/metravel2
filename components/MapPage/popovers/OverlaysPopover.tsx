@@ -5,6 +5,7 @@ import React, { useMemo } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
+import Button from '@/components/ui/Button'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
 interface OverlayOption {
@@ -20,6 +21,59 @@ interface OverlaysPopoverProps {
   onClose: () => void
 }
 
+const OVERLAY_COPY: Record<
+  string,
+  { title: string; subtitle?: string; badge?: string }
+> = {
+  'waymarked-hiking': {
+    title: 'Пешие маршруты',
+    subtitle: 'Waymarked Trails',
+    badge: 'Треки',
+  },
+  'waymarked-cycling': {
+    title: 'Веломаршруты',
+    subtitle: 'Waymarked Trails',
+    badge: 'Треки',
+  },
+  'osm-camping': {
+    title: 'Ночёвки и кемпинги',
+    subtitle: 'OSM: camp / shelter',
+    badge: 'OSM',
+  },
+  'osm-poi': {
+    title: 'Достопримечательности',
+    subtitle: 'Интересные места из OSM',
+    badge: 'OSM',
+  },
+  'osm-routes': {
+    title: 'Маршруты сообщества',
+    subtitle: 'OSM: hiking / bicycle',
+    badge: 'OSM',
+  },
+  'lasy-zanocuj-wfs': {
+    title: 'Польша: места для ночёвки',
+    subtitle: 'Программа Zanocuj w lesie',
+    badge: 'PL',
+  },
+}
+
+const normalizeOverlayCopy = (option: OverlayOption) => {
+  const predefined = OVERLAY_COPY[option.id]
+  if (predefined) return predefined
+
+  const compact = option.title
+    .replace(/\s*\((.*?)\)\s*/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+
+  const detailMatch = option.title.match(/\((.*?)\)/)
+
+  return {
+    title: compact || option.title,
+    subtitle: detailMatch?.[1]?.trim(),
+  }
+}
+
 export const OverlaysPopover: React.FC<OverlaysPopoverProps> = ({
   options,
   enabledOverlays,
@@ -30,30 +84,51 @@ export const OverlaysPopover: React.FC<OverlaysPopoverProps> = ({
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
 
-  const enabledCount = useMemo(
-    () => options.filter((option) => Boolean(enabledOverlays[option.id])).length,
-    [enabledOverlays, options],
+  const rows = useMemo(
+    () =>
+      options.map((option) => ({
+        ...option,
+        copy: normalizeOverlayCopy(option),
+      })),
+    [options],
   )
+
+  const enabledCount = useMemo(
+    () => rows.filter((option) => Boolean(enabledOverlays[option.id])).length,
+    [enabledOverlays, rows],
+  )
+
+  const statusLabel =
+    rows.length === 0
+      ? 'Нет слоёв'
+      : enabledCount > 0
+        ? `Включено ${enabledCount} из ${rows.length}`
+        : 'Все выключены'
+
+  const canReset = typeof onReset === 'function' && enabledCount > 0
 
   return (
     <View style={styles.root}>
       <View style={styles.header}>
         <Text style={styles.title}>Оверлеи</Text>
-        <Text style={styles.hint}>
-          {enabledCount > 0 ? `${enabledCount} включено` : 'Все выключены'}
-        </Text>
+        <Text style={styles.hint}>{statusLabel}</Text>
       </View>
+
       <ScrollView style={styles.scroll} contentContainerStyle={styles.list}>
-        {options.length === 0 ? (
-          <Text style={styles.empty}>Нет доступных оверлеев</Text>
+        {rows.length === 0 ? (
+          <Text style={styles.empty}>Нет доступных слоёв карты</Text>
         ) : (
-          options.map((option) => {
+          rows.map((option) => {
             const enabled = Boolean(enabledOverlays[option.id])
+
             return (
               <Pressable
                 key={option.id}
                 accessibilityRole="switch"
-                accessibilityLabel={option.title}
+                accessibilityLabel={option.copy.title}
+                accessibilityHint={
+                  option.copy.subtitle ? `${option.copy.subtitle}` : undefined
+                }
                 accessibilityState={{ checked: enabled }}
                 onPress={() => onToggle(option.id, !enabled)}
                 style={({ pressed }) => [
@@ -61,6 +136,7 @@ export const OverlaysPopover: React.FC<OverlaysPopoverProps> = ({
                   enabled && styles.rowSelected,
                   pressed && styles.rowPressed,
                 ]}
+                testID={`overlays-popover-row-${option.id}`}
               >
                 <View
                   style={[
@@ -71,34 +147,75 @@ export const OverlaysPopover: React.FC<OverlaysPopoverProps> = ({
                     },
                   ]}
                 >
-                  {enabled && <Feather name="check" size={12} color={colors.textOnPrimary} />}
+                  {enabled ? (
+                    <Feather name="check" size={12} color={colors.textOnPrimary} />
+                  ) : null}
                 </View>
-                <Text style={[styles.rowLabel, enabled && styles.rowLabelSelected]} numberOfLines={2}>
-                  {option.title}
-                </Text>
+
+                <View style={styles.rowContent}>
+                  <View style={styles.rowMain}>
+                    <Text
+                      style={[styles.rowLabel, enabled && styles.rowLabelSelected]}
+                      numberOfLines={2}
+                    >
+                      {option.copy.title}
+                    </Text>
+
+                    {option.copy.badge ? (
+                      <View style={[styles.badge, enabled && styles.badgeSelected]}>
+                        <Text
+                          style={[
+                            styles.badgeText,
+                            enabled && styles.badgeTextSelected,
+                          ]}
+                        >
+                          {option.copy.badge}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  {option.copy.subtitle ? (
+                    <Text
+                      style={[
+                        styles.rowSubtitle,
+                        enabled && styles.rowSubtitleSelected,
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {option.copy.subtitle}
+                    </Text>
+                  ) : null}
+                </View>
               </Pressable>
             )
           })
         )}
       </ScrollView>
+
       <View style={styles.footer}>
-        <Pressable
-          accessibilityRole="button"
+        <Button
+          label="Сбросить"
           accessibilityLabel="Сбросить оверлеи"
-          onPress={onReset}
-          style={({ pressed }) => [styles.footerBtnGhost, pressed && styles.footerBtnPressed]}
-        >
-          <Feather name="rotate-ccw" size={14} color={colors.textMuted} />
-          <Text style={styles.footerBtnGhostText}>Сбросить</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
+          onPress={canReset ? onReset : undefined}
+          variant="ghost"
+          disabled={!canReset}
+          icon={<Feather name="rotate-ccw" size={14} color={colors.textMuted} />}
+          style={styles.footerBtnGhost}
+          labelStyle={styles.footerBtnGhostText}
+          testID="overlays-popover-reset-button"
+        />
+
+        <Button
+          label="Готово"
           accessibilityLabel="Закрыть список оверлеев"
           onPress={onClose}
-          style={({ pressed }) => [styles.footerBtnPrimary, pressed && styles.footerBtnPressed]}
-        >
-          <Text style={styles.footerBtnPrimaryText}>Готово</Text>
-        </Pressable>
+          variant="primary"
+          fullWidth={true}
+          style={styles.footerBtnPrimary}
+          labelStyle={styles.footerBtnPrimaryText}
+          testID="overlays-popover-close-button"
+        />
       </View>
     </View>
   )
@@ -107,31 +224,36 @@ export const OverlaysPopover: React.FC<OverlaysPopoverProps> = ({
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     root: {
-      paddingBottom: 4,
+      flexShrink: 1,
+      minHeight: 0,
     },
     header: {
       paddingHorizontal: 16,
-      paddingTop: 12,
-      paddingBottom: 8,
+      paddingTop: 14,
+      paddingBottom: 10,
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       justifyContent: 'space-between',
+      gap: 10,
     },
     title: {
-      fontSize: 15,
-      fontWeight: '700',
+      flex: 1,
+      fontSize: 19,
+      fontWeight: '800',
       color: colors.text,
     },
     hint: {
-      fontSize: 11,
+      fontSize: 12,
+      fontWeight: '600',
       color: colors.textMuted,
+      paddingTop: 3,
     },
     scroll: {
-      maxHeight: 360,
+      maxHeight: 420,
     },
     list: {
-      paddingHorizontal: 8,
-      paddingBottom: 8,
+      paddingHorizontal: 10,
+      paddingBottom: 18,
     },
     empty: {
       padding: 24,
@@ -141,14 +263,20 @@ const getStyles = (colors: ThemedColors) =>
     },
     row: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       gap: 10,
+      minHeight: 58,
       paddingHorizontal: 12,
-      paddingVertical: 10,
-      borderRadius: 12,
+      paddingVertical: 13,
+      borderRadius: 14,
+      marginBottom: 8,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
     },
     rowSelected: {
       backgroundColor: colors.primarySoft,
+      borderColor: colors.borderAccent,
     },
     rowPressed: {
       opacity: 0.75,
@@ -156,38 +284,79 @@ const getStyles = (colors: ThemedColors) =>
     checkbox: {
       width: 20,
       height: 20,
+      marginTop: 2,
       borderRadius: 6,
-      borderWidth: 2,
+      borderWidth: 1.5,
       borderColor: colors.borderLight,
       alignItems: 'center',
       justifyContent: 'center',
       flexShrink: 0,
     },
+    rowContent: {
+      flex: 1,
+      minWidth: 0,
+      gap: 4,
+    },
+    rowMain: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 8,
+    },
     rowLabel: {
       flex: 1,
-      fontSize: 14,
-      fontWeight: '600',
+      fontSize: 15,
+      fontWeight: '700',
       color: colors.text,
     },
     rowLabelSelected: {
       color: colors.primaryText,
     },
+    rowSubtitle: {
+      fontSize: 12,
+      lineHeight: 17,
+      color: colors.textMuted,
+    },
+    rowSubtitleSelected: {
+      color: colors.primaryText,
+      opacity: 0.84,
+    },
+    badge: {
+      minWidth: 34,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 999,
+      backgroundColor: colors.backgroundSecondary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    badgeSelected: {
+      backgroundColor: colors.primary,
+    },
+    badgeText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: colors.textMuted,
+    },
+    badgeTextSelected: {
+      color: colors.textOnPrimary,
+    },
     footer: {
       flexDirection: 'row',
-      gap: 8,
+      alignItems: 'center',
+      gap: 10,
       paddingHorizontal: 12,
-      paddingTop: 8,
-      paddingBottom: 4,
+      paddingTop: 12,
+      paddingBottom: 8,
       borderTopWidth: 1,
       borderTopColor: colors.borderLight,
+      backgroundColor: colors.surface,
     },
     footerBtnGhost: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
+      minWidth: 118,
       paddingHorizontal: 12,
-      paddingVertical: 10,
-      borderRadius: 10,
+      backgroundColor: colors.backgroundSecondary,
+      borderColor: colors.borderLight,
+      borderWidth: 1,
     },
     footerBtnGhostText: {
       fontSize: 13,
@@ -196,18 +365,12 @@ const getStyles = (colors: ThemedColors) =>
     },
     footerBtnPrimary: {
       flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 10,
-      borderRadius: 10,
-      backgroundColor: colors.primary,
     },
     footerBtnPrimaryText: {
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: '700',
       color: colors.textOnPrimary,
     },
-    footerBtnPressed: {
-      opacity: 0.8,
-    },
   })
+
+export { normalizeOverlayCopy }

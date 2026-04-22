@@ -54,26 +54,22 @@ export const getMapMobileLayoutStyles = (
       backgroundColor: colors.surfaceAlpha40,
     },
     sheetToolbar: {
-      flexDirection: options.stackSheetToolbar ? 'column' : 'row',
-      alignItems: options.stackSheetToolbar ? 'stretch' : 'center',
-      gap: options.stackSheetToolbar ? 4 : options.isNarrow ? 3 : 5,
-      minHeight: options.stackSheetToolbar
-        ? undefined
-        : options.isNarrow
-          ? 32
-          : 36,
-      paddingVertical: options.isNarrow ? 2 : 4,
-      paddingLeft: options.isNarrow ? 6 : 8,
-      paddingRight: options.isNarrow ? 6 : 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: options.isNarrow ? 6 : 8,
+      minHeight: options.isNarrow ? 42 : 46,
+      paddingVertical: options.isNarrow ? 5 : 7,
+      paddingLeft: options.isNarrow ? 8 : 10,
+      paddingRight: options.isNarrow ? 8 : 10,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.borderLight,
       backgroundColor: colors.surface,
       ...(Platform.OS === 'web'
         ? ({
             backgroundColor: colors.surfaceAlpha40,
-            boxShadow: '0 4px 14px rgba(15,23,42,0.06)',
-            backdropFilter: 'blur(18px)',
-            WebkitBackdropFilter: 'blur(18px)',
+            boxShadow: '0 3px 10px rgba(15,23,42,0.05)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
             position: 'relative',
             zIndex: 1,
           } as any)
@@ -104,42 +100,19 @@ export const getMapMobileLayoutStyles = (
     sheetToolbarActions: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
-      gap: 3,
+      gap: 6,
       flexShrink: 0,
     },
     sheetToolbarActionsPreview: {
       gap: 6,
     },
-    sheetToolbarActionsStacked: {
-      width: '100%',
-      flexDirection: 'row' as const,
-      flexWrap: 'wrap' as const,
-      alignItems: 'center' as const,
-      justifyContent: 'flex-end' as const,
-      gap: 8,
-    },
-    sheetToolbarActionsFloatingClose: {
-      ...(Platform.OS === 'web'
-        ? ({
-            position: 'absolute',
-            top: 6,
-            right: 10,
-            width: 'auto',
-            gap: 0,
-          } as any)
-        : null),
-    },
-    sheetToolbarCloseOnly: {
-      ...(Platform.OS === 'web'
-        ? ({
-            paddingRight: 50,
-          } as any)
-        : null),
-    },
+    sheetToolbarActionsStacked: {},
+    sheetToolbarActionsFloatingClose: {},
+    sheetToolbarCloseOnly: {},
     sheetCloseButton: {
-      width: options.isNarrow ? 32 : 36,
-      height: options.isNarrow ? 32 : 36,
-      borderRadius: options.isNarrow ? 10 : 12,
+      width: 40,
+      height: 40,
+      borderRadius: 12,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
       borderWidth: StyleSheet.hairlineWidth,
@@ -175,15 +148,7 @@ export const getMapMobileLayoutStyles = (
             elevation: 2,
           }),
     },
-    sheetToolbarCloseButtonFloating: {
-      ...(Platform.OS === 'web'
-        ? ({
-            width: 34,
-            height: 34,
-            borderRadius: 11,
-          } as any)
-        : null),
-    },
+    sheetToolbarCloseButtonFloating: {},
     sheetShowResultsButton: {
       flexDirection: 'row' as const,
       height: options.isNarrow ? 34 : 38,
@@ -233,45 +198,35 @@ export const getMapMobileLayoutStyles = (
       overflow: 'hidden' as const,
     },
     sheetToolbarLeft: {
-      flex: options.stackSheetToolbar ? 0 : 1,
+      flex: 1,
       minWidth: 0,
       flexShrink: 1,
+      gap: 4,
     },
-    sheetToolbarLeftWithFloatingClose: {
-      ...(Platform.OS === 'web'
-        ? ({
-            paddingRight: 0,
-          } as any)
-        : null),
-    },
+    sheetToolbarLeftWithFloatingClose: {},
     sheetToolbarSummary: {
-      marginTop: options.isNarrow ? 1 : 3,
+      marginTop: 2,
+      paddingHorizontal: 2,
       fontSize: 10,
-      lineHeight: options.isNarrow ? 12 : 14,
+      lineHeight: 13,
       fontWeight: '600' as const,
       color: colors.textMuted,
+      letterSpacing: 0,
     },
     sheetToolbarSummaryPreview: {
       marginTop: 2,
-      fontSize: 10,
-      lineHeight: 13,
+      fontSize: 11,
+      lineHeight: 14,
     },
     sheetToolbarRight: {
-      flex: options.stackSheetToolbar ? 0 : 1,
-      minWidth: 0,
+      flexShrink: 0,
     },
     sheetToolbarInline: {
       flexDirection: 'row',
       alignItems: 'center',
     },
-    sheetToolbarStacked: {
-      flexDirection: 'column',
-      alignItems: 'stretch',
-    },
-    sheetToolbarFullWidth: {
-      width: '100%',
-      minHeight: 32,
-    },
+    sheetToolbarStacked: {},
+    sheetToolbarFullWidth: {},
     sheetIconButton: {
       width: 36,
       height: 36,
@@ -327,7 +282,7 @@ export const getMapMobileLayoutStyles = (
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
-          paddingHorizontal: options.isNarrow ? 4 : 8,
+          paddingHorizontal: options.isNarrow ? 2 : 6,
         },
       }),
     },

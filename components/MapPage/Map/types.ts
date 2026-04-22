@@ -23,6 +23,7 @@ export interface MapProps {
   radius?: string;
   onMapUiApiReady?: (api: MapUiApi | null) => void;
   onUserLocationChange?: (loc: Coordinates | null) => void;
+  hideFloatingControls?: boolean;
 }
 
 export interface ClusterData {

@@ -93,8 +93,6 @@ export function useMapPopupAutoPan({
         const safeBottom = mapRect.height - safeArea.bottomPadding
         const safeCenterX = (safeLeft + safeRight) / 2
         const safeCenterY = (safeTop + safeBottom) / 2
-        const overflowLeft = safeArea.horizontalPadding - popupRect.left
-        const overflowRight = popupRect.right - (mapRect.width - safeArea.horizontalPadding)
         const overflowTop = safeTop - popupRect.top
         const overflowBottom = popupRect.bottom - safeBottom
 
@@ -104,13 +102,9 @@ export function useMapPopupAutoPan({
           dx = popupCenterX - safeCenterX
           dy = popupCenterY - safeCenterY
         } else {
-          if (overflowLeft > 0 && overflowRight > 0) {
-            dx = popupCenterX - safeCenterX
-          } else if (overflowLeft > 0) {
-            dx = -overflowLeft
-          } else if (overflowRight > 0) {
-            dx = overflowRight
-          }
+          // Desktop/web: keep the popup centered inside the visible map area,
+          // not glued to the marker edge where it competes with map chrome.
+          dx = popupCenterX - safeCenterX
 
           if (overflowTop > 0 && overflowBottom > 0) {
             dy = popupCenterY - safeCenterY

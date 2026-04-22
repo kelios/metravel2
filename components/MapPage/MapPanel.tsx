@@ -38,6 +38,7 @@ interface MapPanelProps {
     radius?: string; // Радиус поиска в км
     onMapUiApiReady?: (api: MapUiApi | null) => void;
     onUserLocationChange?: ((loc: LatLng | null) => void) | undefined;
+    hideFloatingControls?: boolean;
 }
 
 /** Плейсхолдер для нативных платформ или во время загрузки карты */
@@ -79,6 +80,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                                                radius,
                                                onMapUiApiReady,
                                                onUserLocationChange,
+                                               hideFloatingControls = false,
 	                                           }) => {
 	    const isWeb = Platform.OS === 'web';
     const themeColors = useThemedColors();
@@ -129,6 +131,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                       radius={radius}
                       onMapUiApiReady={onMapUiApiReady}
                       onUserLocationChange={onUserLocationChange}
+                      hideFloatingControls={hideFloatingControls}
                   />
                 </Suspense>
             </MapErrorBoundary>

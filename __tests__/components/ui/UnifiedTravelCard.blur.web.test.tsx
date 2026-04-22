@@ -170,4 +170,27 @@ describe('UnifiedTravelCard blur background (web)', () => {
     const secondProps = mockImageCardMedia.mock.calls.at(-1)?.[0]
     expect(secondProps?.showImmediately).toBe(false)
   })
+
+  it('uses the refined serif font stack for hero title overlays on web', () => {
+    let tree: renderer.ReactTestRenderer
+
+    renderer.act(() => {
+      tree = renderer.create(
+        <UnifiedTravelCard
+          title="Beautiful title"
+          imageUrl="https://example.com/photo.jpg"
+          onPress={() => {}}
+          heroTitleOverlay
+        />
+      )
+    })
+
+    const titleNode = tree!.root.find(
+      (node: any) => node.props?.children === 'Beautiful title'
+    )
+
+    expect(titleNode.props.style.fontFamily).toBe(
+      'Baskerville, "Palatino Linotype", Palatino, Georgia, serif'
+    )
+  })
 })

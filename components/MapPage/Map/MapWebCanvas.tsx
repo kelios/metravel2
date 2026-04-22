@@ -331,16 +331,18 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
           />
         ) : null)}
 
-      <RouteMarkersLayer
-        Marker={Marker}
-        Popup={Popup}
-        Tooltip={Tooltip}
-        routePoints={routePoints}
-        icons={{
-          start: customIcons?.start,
-          end: customIcons?.end,
-        }}
-      />
+      {mode === 'route' ? (
+        <RouteMarkersLayer
+          Marker={Marker}
+          Popup={Popup}
+          Tooltip={Tooltip}
+          routePoints={routePoints}
+          icons={{
+            start: customIcons?.start,
+            end: customIcons?.end,
+          }}
+        />
+      ) : null}
 
       {mode === 'route' &&
       routePointsForRouting.length >= 2 &&

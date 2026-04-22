@@ -1,9 +1,7 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   Platform,
   Pressable,
-  View,
-  type PressableStateCallbackType,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -24,6 +22,25 @@ type CardActionPressableProps = {
   children: React.ReactNode;
 };
 
+export const applyWebTooltipAttributes = (
+  node: {
+    setAttribute?: (name: string, value: string) => void;
+    removeAttribute?: (name: string) => void;
+  } | null | undefined,
+  tooltipText?: string | null,
+) => {
+  if (!node?.setAttribute) return;
+
+  if (tooltipText) {
+    node.setAttribute('title', tooltipText);
+    node.setAttribute('data-tooltip', tooltipText);
+    return;
+  }
+
+  node.removeAttribute?.('title');
+  node.removeAttribute?.('data-tooltip');
+};
+
 const CardActionPressable = ({
   accessibilityLabel,
   accessibilityHint,
@@ -39,7 +56,9 @@ const CardActionPressable = ({
   testID,
   children,
 }: CardActionPressableProps) => {
+  const webRef = useRef<any>(null);
   const safeChildren = React.Children.toArray(children).filter((child) => typeof child !== 'string');
+  const tooltipText = title ?? accessibilityLabel;
 
   const activate = (e?: any) => {
     if (disabled) return;
@@ -52,55 +71,14 @@ const CardActionPressable = ({
     onPress?.();
   };
 
-  if (Platform.OS === 'web') {
-    const resolvedStyle = typeof style === 'function' ? style({ pressed: false } as any) : style;
-    const resolvedState = accessibilityState ?? (disabled ? { disabled: true } : undefined);
-    const ariaChecked = resolvedState?.checked;
-    const ariaSelected = resolvedState?.selected;
-    const ariaExpanded = resolvedState?.expanded;
-    const ariaBusy = resolvedState?.busy;
-    // aria-selected is only valid on tab, option, gridcell, row, treeitem roles.
-    // For button/radio roles, use aria-pressed/aria-checked instead.
-    const rolesAllowingSelected = new Set(['tab', 'option', 'gridcell', 'row', 'treeitem']);
-    const canUseAriaSelected = rolesAllowingSelected.has(accessibilityRole);
-    const ariaPressed = !canUseAriaSelected && accessibilityRole === 'button' && ariaSelected !== undefined ? ariaSelected : undefined;
-    return (
-      <View
-        testID={testID}
-        style={[
-          resolvedStyle as any,
-          { cursor: disabled ? 'not-allowed' : 'pointer' } as any,
-        ]}
-        {...({
-          role: accessibilityRole,
-          tabIndex: disabled ? -1 : 0,
-          title: title ?? accessibilityLabel,
-          'data-testid': testID,
-          'aria-label': accessibilityLabel,
-          'aria-description': accessibilityHint,
-          'aria-disabled': disabled || undefined,
-          'aria-checked': ariaChecked !== undefined ? ariaChecked : undefined,
-          'aria-selected': canUseAriaSelected && ariaSelected !== undefined ? ariaSelected : undefined,
-          'aria-pressed': ariaPressed,
-          'aria-expanded': ariaExpanded !== undefined ? ariaExpanded : undefined,
-          'aria-busy': ariaBusy !== undefined ? ariaBusy : undefined,
-          'data-card-action': 'true',
-        } as any)}
-        onClick={activate}
-        onKeyDown={(e: any) => {
-          if (e?.key !== 'Enter' && e?.key !== ' ') return;
-          activate(e);
-        }}
-        onMouseEnter={() => onHoverIn?.()}
-        onMouseLeave={() => onHoverOut?.()}
-      >
-        {safeChildren}
-      </View>
-    );
-  }
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    applyWebTooltipAttributes(webRef.current, tooltipText);
+  }, [tooltipText]);
 
   return (
     <Pressable
+      ref={webRef}
       style={style}
       accessibilityRole={accessibilityRole}
       {...(accessibilityLabel ? { accessibilityLabel } : {})}

@@ -94,12 +94,12 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
               size={13}
               color={colors.primary}
             />
-            <Text style={styles.modeSummaryText} numberOfLines={1}>
+            <Text style={styles.modeSummaryText} numberOfLines={2}>
               {summary}
             </Text>
           </View>
           {helper ? (
-            <Text style={styles.modeSummaryHint} numberOfLines={1}>
+            <Text style={styles.modeSummaryHint} numberOfLines={2}>
               {helper}
             </Text>
           ) : null}

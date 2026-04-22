@@ -18,12 +18,12 @@ const MOBILE_WEB_SIDE_GAP = 16
 const CONTROL_GROUP_GAP = 10
 
 const getButtonStyle = (colors: ThemedColors): React.CSSProperties => ({
-  width: '44px',
-  height: '44px',
+  width: '42px',
+  height: '42px',
   borderRadius: '16px',
   backgroundColor: 'rgba(255,255,255,0.62)',
   border: `1px solid ${colors.borderLight}`,
-  boxShadow: '0 8px 18px rgba(58,58,58,0.08), 0 1px 4px rgba(58,58,58,0.04)',
+  boxShadow: '0 6px 16px rgba(58,58,58,0.08), 0 1px 4px rgba(58,58,58,0.04)',
   backdropFilter: 'blur(14px) saturate(1.08)',
   WebkitBackdropFilter: 'blur(14px) saturate(1.08)',
   cursor: 'pointer',
@@ -52,7 +52,7 @@ const MapControlButton: React.FC<{
       e.currentTarget.style.borderColor = colors.borderLight
       e.currentTarget.style.transform = 'translateY(-1px)'
       e.currentTarget.style.boxShadow =
-        '0 10px 20px rgba(58,58,58,0.10), 0 2px 6px rgba(58,58,58,0.05)'
+        '0 8px 18px rgba(58,58,58,0.10), 0 2px 6px rgba(58,58,58,0.05)'
     },
     [colors.borderLight],
   )
@@ -63,7 +63,7 @@ const MapControlButton: React.FC<{
       e.currentTarget.style.borderColor = colors.borderLight
       e.currentTarget.style.transform = 'translateY(0)'
       e.currentTarget.style.boxShadow =
-        '0 8px 18px rgba(58,58,58,0.08), 0 1px 4px rgba(58,58,58,0.04)'
+        '0 6px 16px rgba(58,58,58,0.08), 0 1px 4px rgba(58,58,58,0.04)'
     },
     [colors.borderLight],
   )
@@ -134,8 +134,8 @@ const MapControls: React.FC<MapControlsProps> = ({
       {userLocation && (
         <MapControlButton
           onClick={onCenterUserLocation}
-          title="Мое местоположение"
-          ariaLabel="Вернуться к моему местоположению"
+          title={'\u041c\u043e\u0435 \u043c\u0435\u0441\u0442\u043e\u043f\u043e\u043b\u043e\u0436\u0435\u043d\u0438\u0435'}
+          ariaLabel={'\u0412\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f \u043a \u043c\u043e\u0435\u043c\u0443 \u043c\u0435\u0441\u0442\u043e\u043f\u043e\u043b\u043e\u0436\u0435\u043d\u0438\u044e'}
           icon="crosshair"
           colors={colors}
         />
@@ -145,8 +145,8 @@ const MapControls: React.FC<MapControlsProps> = ({
           {onZoomIn && (
             <MapControlButton
               onClick={onZoomIn}
-              title="Приблизить"
-              ariaLabel="Приблизить карту"
+              title={'\u041f\u0440\u0438\u0431\u043b\u0438\u0437\u0438\u0442\u044c'}
+              ariaLabel={'\u041f\u0440\u0438\u0431\u043b\u0438\u0437\u0438\u0442\u044c \u043a\u0430\u0440\u0442\u0443'}
               icon="plus"
               iconSize={20}
               colors={colors}
@@ -155,8 +155,8 @@ const MapControls: React.FC<MapControlsProps> = ({
           {onZoomOut && (
             <MapControlButton
               onClick={onZoomOut}
-              title="Отдалить"
-              ariaLabel="Отдалить карту"
+              title={'\u041e\u0442\u0434\u0430\u043b\u0438\u0442\u044c'}
+              ariaLabel={'\u041e\u0442\u0434\u0430\u043b\u0438\u0442\u044c \u043a\u0430\u0440\u0442\u0443'}
               icon="minus"
               iconSize={20}
               colors={colors}

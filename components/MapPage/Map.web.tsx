@@ -40,6 +40,11 @@ const ORS_API_KEY = resolveRoutingApiKey();
 
 type Props = MapProps;
 
+const MapControlsReactive: React.FC<Omit<React.ComponentProps<typeof MapControls>, 'bottomOffset'>> = (props) => {
+  const bottomOffset = useBottomSheetStore((state) => state.getControlsBottomOffset());
+  return <MapControls {...props} bottomOffset={bottomOffset} />;
+};
+
 export const getMarkerFocusPlan = ({
   currentZoom,
   maxZoom,
@@ -78,6 +83,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     setRoutingError,
     radius,
     onUserLocationChange,
+    hideFloatingControls = false,
   } = props;
 
   // Leaflet loader (replaces manual loading logic)
@@ -456,6 +462,19 @@ const MapPageComponent: React.FC<Props> = (props) => {
     if (typeof window !== 'undefined') return window.innerWidth <= 560;
     return false;
   }, [mapPaneWidth]);
+  const shouldShowFloatingMapControls = useMemo(() => {
+    if (hideFloatingControls) return false;
+    const viewportWidth =
+      typeof window !== 'undefined' && Number.isFinite(window.innerWidth)
+        ? window.innerWidth
+        : null;
+    if (mapPaneWidth > 0 && viewportWidth !== null) {
+      return Math.min(mapPaneWidth, viewportWidth) <= 767;
+    }
+    if (mapPaneWidth > 0) return mapPaneWidth <= 767;
+    if (viewportWidth !== null) return viewportWidth <= 767;
+    return true;
+  }, [hideFloatingControls, mapPaneWidth]);
   const { popupAutoPanPadding } = useMapPopupAutoPan({
     mapRef,
     mapPaneWidth,
@@ -556,14 +575,15 @@ const MapPageComponent: React.FC<Props> = (props) => {
         travelMarkerOpacity={travelMarkerOpacity}
       />
 
-      {/* Map controls */}
-      <MapControls
-        userLocation={userLocationLatLng}
-        onCenterUserLocation={centerOnUserLocation}
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        alignLeft={true}
-      />
+      {shouldShowFloatingMapControls ? (
+        <MapControlsReactive
+          userLocation={userLocationLatLng}
+          onCenterUserLocation={centerOnUserLocation}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          alignLeft
+        />
+      ) : null}
     </View>
   );
 };

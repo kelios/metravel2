@@ -267,6 +267,22 @@ export function useMapScreenController() {
     }
   }, [mapUiApi]);
 
+  const zoomIn = useCallback(() => {
+    try {
+      mapUiApi?.zoomIn?.();
+    } catch {
+      // noop
+    }
+  }, [mapUiApi]);
+
+  const zoomOut = useCallback(() => {
+    try {
+      mapUiApi?.zoomOut?.();
+    } catch {
+      // noop
+    }
+  }, [mapUiApi]);
+
   // Map panel coordinates (with safe defaults)
   const mapPanelCoordinates = useMemo(() => {
     const source = queryCoordinates ?? coordinates;
@@ -484,12 +500,15 @@ export function useMapScreenController() {
     // Route actions
     buildRouteTo: buildRouteToStable,
     centerOnUser,
+    zoomIn,
+    zoomOut,
 
     // Refs
     panelRef,
 
     // Geolocation
     geoError,
+    hasUserLocation: Boolean(userLocation),
 
     // Additional data for mobile layout
     coordinates,
@@ -530,8 +549,11 @@ export function useMapScreenController() {
     isFetchingNextPage,
     buildRouteToStable,
     centerOnUser,
+    zoomIn,
+    zoomOut,
     panelRef,
     geoError,
+    userLocation,
     coordinates,
     transportMode,
   ]);

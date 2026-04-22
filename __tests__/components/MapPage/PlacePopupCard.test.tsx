@@ -169,4 +169,41 @@ describe('PlacePopupCard', () => {
     expect(props).toBeTruthy();
     expect(props.revealOnLoadOnly).toBe(false);
   });
+
+  it('shows a hover label for icon-only web actions', () => {
+    let tree: any;
+
+    renderer.act(() => {
+      tree = renderer.create(
+        <PlacePopupCard
+          colors={mockColors as any}
+          title="Test point"
+          coord="53.9, 27.56"
+          onOpenArticle={jest.fn()}
+          onOpenGoogleMaps={jest.fn()}
+          onOpenOrganicMaps={jest.fn()}
+          onAddPoint={jest.fn()}
+        />
+      );
+    });
+
+    const findHoverLabel = (label: string) =>
+      tree.root.findAll((node: any) => node.props?.children === label);
+
+    expect(findHoverLabel('Google')).toHaveLength(0);
+
+    const googleAction = tree.root.findByProps({ accessibilityLabel: 'Google Maps' });
+
+    renderer.act(() => {
+      googleAction.props.onHoverIn?.();
+    });
+
+    expect(findHoverLabel('Google').length).toBeGreaterThan(0);
+
+    renderer.act(() => {
+      googleAction.props.onHoverOut?.();
+    });
+
+    expect(findHoverLabel('Google')).toHaveLength(0);
+  });
 });

@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Platform } from 'react-native'
 import MapScreen from '@/screens/tabs/MapScreen'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
+import { useRouteStore } from '@/stores/routeStore'
 
 let mockResponsiveState = { isPhone: true, isLargePhone: false, isMobile: true, width: 390 }
 
@@ -231,6 +232,14 @@ describe('MapScreen (map tab)', () => {
       categories: ['Категория 1', 'Категория 2'],
       categoryTravelAddress: ['Минск'],
     });
+    useRouteStore.setState({
+      mode: 'radius',
+      transportMode: 'car',
+      points: [],
+      route: null,
+      isBuilding: false,
+      error: null,
+    });
   });
 
   afterAll(() => {
@@ -323,6 +332,17 @@ describe('MapScreen (map tab)', () => {
     })
   })
 
+  it('does not render a separate floating radius pill on desktop web', async () => {
+    const { getByTestId, queryByTestId } = renderWithClient()
+
+    await waitFor(() => {
+      expect(mockFetchTravelsForMap).toHaveBeenCalled()
+    })
+
+    expect(getByTestId('map-quick-filters')).toBeTruthy()
+    expect(queryByTestId('map-radius-pill')).toBeNull()
+  })
+
   const openPanelAndGoToListTab = async (utils: ReturnType<typeof renderWithClient>) => {
     const { getByTestId } = utils
 
@@ -388,6 +408,51 @@ describe('MapScreen (map tab)', () => {
     });
 
     // Количество отображается в панели списка
+  });
+
+  it('clears route state when switching from route tab back to search', async () => {
+    useRouteStore.setState({
+      mode: 'route',
+      transportMode: 'foot',
+      points: [
+        {
+          id: 'start',
+          coordinates: { lat: 53.9, lng: 27.56 },
+          address: 'Start',
+          type: 'start',
+          timestamp: 1,
+        },
+        {
+          id: 'end',
+          coordinates: { lat: 53.91, lng: 27.57 },
+          address: 'End',
+          type: 'end',
+          timestamp: 2,
+        },
+      ],
+      route: null,
+      isBuilding: false,
+      error: null,
+    });
+
+    const { getByTestId, queryByText } = renderWithClient();
+
+    act(() => {
+      useMapPanelStore.getState().requestOpen();
+    });
+
+    await waitFor(() => {
+      expect(getByTestId('map-panel-tab-search')).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId('map-panel-tab-search'));
+
+    await waitFor(() => {
+      expect(useRouteStore.getState().mode).toBe('radius');
+      expect(useRouteStore.getState().points).toHaveLength(0);
+    });
+
+    expect(queryByText('Пешком')).toBeNull();
   });
 
   it('does not render floating list pill on mobile web', async () => {
