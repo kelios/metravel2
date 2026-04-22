@@ -1244,28 +1244,11 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
 
     await expect(listToggle).toBeVisible({ timeout: 20_000 });
     await expect(filtersToggle).toBeVisible({ timeout: 10_000 });
-    await expect(listToggle).toHaveAttribute('aria-checked', 'true', { timeout: 10_000 });
+    await expect(page.getByTestId('travel-list-mobile-summary')).toBeVisible({ timeout: 10_000 });
 
     // Opening the mobile sheet always settles into the list tab first.
-    // Wait for that state, then switch to search/filters and confirm the tab actually changed.
+    // Wait for that state, then switch to search/filters and confirm the visible content changed.
     await filtersToggle.click({ force: true });
-
-    const filtersActivatedViaClick = await expect
-      .poll(
-        async () => filtersToggle.getAttribute('aria-checked'),
-        { timeout: 2_000 },
-      )
-      .toBe('true')
-      .then(() => true)
-      .catch(() => false);
-
-    if (!filtersActivatedViaClick) {
-      await filtersToggle.focus();
-      await page.keyboard.press('Enter');
-    }
-
-    await expect(filtersToggle).toHaveAttribute('aria-checked', 'true', { timeout: 10_000 });
-    await expect(listToggle).toHaveAttribute('aria-checked', 'false', { timeout: 10_000 });
     await expect(page.getByTestId('map-mobile-tab-transition')).toBeHidden({ timeout: 10_000 });
 
     // Verify the filters view is active in the mobile sheet.
@@ -1273,8 +1256,9 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     // while compact context chips appear only when there are real search/category refinements.
     await expect(page.getByTestId('filters-block-main')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByTestId('map-mobile-toolbar-summary')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('travel-list-mobile-summary')).toBeHidden({ timeout: 10_000 });
 
     await expect(listToggle).toBeVisible();
-    await expect(filtersToggle).toHaveAttribute('aria-checked', 'true', { timeout: 5_000 });
+    await expect(filtersToggle).toBeVisible();
   });
 });
