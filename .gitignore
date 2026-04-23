@@ -1,5 +1,6 @@
 /node_modules/
 /dist/
+/.prod-build-tmp/
 /dist-web-analyze/
 /dist-web-analyze-sm/
 /web-build/

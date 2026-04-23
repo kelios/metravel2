@@ -18,6 +18,7 @@ const linkingOpenUrlGuard = [
 const baseIgnores = [
   "node_modules/",
   ".expo/",
+  ".prod-build-tmp/",
   "dist/",
   "dist-web-analyze/",
   "dist-web-analyze-sm/",

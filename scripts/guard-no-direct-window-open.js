@@ -8,6 +8,7 @@ const ALLOWED_FILES = new Set([
 const IGNORED_DIRS = new Set([
   '.git',
   '.expo',
+  '.prod-build-tmp',
   '.claude',
   'node_modules',
   'dist',

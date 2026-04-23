@@ -4,8 +4,7 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 
 ## Canonical docs
 
-- `docs/CODEX.md` - Codex workflow and project skills map
-
+- `docs/CODEX.md` - Codex workflow, AI task triage, validation matrix, and project skills map
 - `docs/RULES.md` — mandatory project rules and policies
 - `docs/README.md` — project docs quick start + API reference
 - `docs/DEVELOPMENT.md` — local setup and day-to-day workflow

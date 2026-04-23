@@ -5,7 +5,7 @@ description: Implement, refactor, or debug features in the metravel Expo/React N
 
 # Metravel Feature Builder
 
-Read `docs/RULES.md` and `docs/README.md` before changing code. Then load only the extra docs that match the task:
+Read `docs/RULES.md`, `docs/README.md`, and the task triage section in `docs/CODEX.md` before changing code. Then load only the extra docs that match the task:
 
 - Read `docs/DEVELOPMENT.md` for local workflow, selective checks, route-point-from-photo flow, and SEO utility usage.
 - Read `docs/TESTING.md` when choosing targeted validation.
@@ -14,6 +14,7 @@ Read `docs/RULES.md` and `docs/README.md` before changing code. Then load only t
 
 Implement the smallest change that solves the task.
 
+- Before editing, run `git status --short` and keep unrelated user changes separate.
 - Reuse existing components, hooks, helpers, and utilities before creating new ones.
 - Keep functions and components local, readable, and easy to remove or extend later.
 - Remove clearly dead code in the touched area when it is safe to do so.
@@ -31,6 +32,7 @@ Follow these repo-specific rules while building features:
 Choose validation by scope after each finished logical block and before wrapping up:
 
 - Small focused change: run targeted checks for the touched area. Prefer `npm run check:fast` for a finished local block, plus any narrow test command that directly covers the feature.
+- Need to inspect the scope before running checks: use `npm run check:fast:dry` or `npm run check:changed:dry`.
 - Medium change: run the relevant targeted tests plus lint/selective checks for the affected module set.
 - Large or cross-cutting change: run `npm run lint` and `npm run test:run`.
 - If the change affects visible web UI, verify it in a real browser flow, capture a screenshot, and confirm the browser console has no new errors.

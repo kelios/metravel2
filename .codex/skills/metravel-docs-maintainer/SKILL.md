@@ -7,6 +7,8 @@ description: Maintain metravel project documentation and Codex operating rules. 
 
 Read `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, and `docs/CODEX.md` before changing documentation or Codex skills.
 
+Use the AI task triage and self-check in `docs/CODEX.md` to keep docs changes scoped before editing.
+
 Keep documentation compact and authoritative:
 
 - Prefer updating existing canonical docs over creating new files.
@@ -30,6 +32,7 @@ Avoid documentation drift:
 - When changing rules, update both the canonical source and the short Codex map if the skill selection or agent workflow changes.
 - Preserve existing project constraints for external links, UI guardrails, server path safety, release checks, and e2e secrets.
 - Do not print secrets from `.env`, `.env.e2e`, or deployment configs.
+- Read Markdown as UTF-8; if PowerShell displays Cyrillic as mojibake, reread with `Get-Content -Encoding UTF8` before assuming the file is corrupt.
 
 Validation for docs-only changes:
 

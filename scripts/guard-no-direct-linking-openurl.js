@@ -6,6 +6,7 @@ const ALLOWED_FILES = new Set(['utils/externalLinks.ts'])
 const IGNORED_DIRS = new Set([
   '.git',
   '.expo',
+  '.prod-build-tmp',
   '.claude',
   'node_modules',
   'dist',

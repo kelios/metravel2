@@ -22,13 +22,13 @@ import MapPanel from '@/components/MapPage/MapPanel';
 
 const LazyMapOnboarding = lazy(() => import('@/components/MapPage/MapOnboarding'));
 import { MapLoadingBar } from '@/components/MapPage/MapLoadingBar';
-import { MapQuickFilters } from '@/components/MapPage/MapQuickFilters';
-import { ActiveFiltersBar } from '@/components/MapPage/ActiveFiltersBar';
 import MapPanelHeader from '@/components/MapPage/MapPanelHeader';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 import { MAP_SEO_TITLE, MAP_SEO_DESCRIPTION } from '@/constants/mapSeo';
 import { buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { createMapStructuredData } from '@/utils/discoverySeo';
+
+const MAP_STRUCTURED_DATA_ENTRY_LIMIT = 12;
 
 // Preload Leaflet runtime in parallel with lazy chunk downloads.
 // By the time Map.web.tsx's useLeafletLoader calls import('leaflet'),
@@ -40,6 +40,12 @@ if (Platform.OS === 'web') {
 const LazyTravelListPanel = lazy(() => import('@/components/MapPage/TravelListPanel'));
 const LazyMapMobileLayout = lazy(() =>
     import('@/components/MapPage/MapMobileLayout').then((mod) => ({ default: mod.MapMobileLayout }))
+);
+const LazyMapQuickFilters = lazy(() =>
+    import('@/components/MapPage/MapQuickFilters').then((mod) => ({ default: mod.MapQuickFilters }))
+);
+const LazyActiveFiltersBar = lazy(() =>
+    import('@/components/MapPage/ActiveFiltersBar').then((mod) => ({ default: mod.ActiveFiltersBar }))
 );
 
 
@@ -132,25 +138,24 @@ export default function MapScreen() {
     }, [isConnected, mapError, invalidateTravelsQuery, refetchMapData]);
 
     // --- SEO (single block, rendered once) ---
-    const mapStructuredData = useMemo(
-        () =>
-            createMapStructuredData({
-                canonical,
-                title: MAP_SEO_TITLE,
-                description: MAP_SEO_DESCRIPTION,
-                entries: travelsData.map((item: any) => ({
-                    name: item?.address || 'Маршрут на карте',
-                    url: item?.urlTravel,
-                    lat: item?.lat ?? String(item?.coord || '').split(',')[0],
-                    lng: item?.lng ?? String(item?.coord || '').split(',')[1],
-                    categoryName: item?.categoryName,
-                })),
-            }),
-        [canonical, travelsData]
-    );
+    const mapStructuredData = useMemo(() => {
+        if (Platform.OS !== 'web' || !isFocused) return null;
+        return createMapStructuredData({
+            canonical,
+            title: MAP_SEO_TITLE,
+            description: MAP_SEO_DESCRIPTION,
+            entries: travelsData.slice(0, MAP_STRUCTURED_DATA_ENTRY_LIMIT).map((item: any) => ({
+                name: item?.address || 'Маршрут на карте',
+                url: item?.urlTravel,
+                lat: item?.lat ?? String(item?.coord || '').split(',')[0],
+                lng: item?.lng ?? String(item?.coord || '').split(',')[1],
+                categoryName: item?.categoryName,
+            })),
+        });
+    }, [canonical, isFocused, travelsData]);
 
     const mapSeoTags = useMemo(() => {
-        if (Platform.OS !== 'web') return undefined;
+        if (Platform.OS !== 'web' || !mapStructuredData) return undefined;
         return (
             <script
                 key="map-structured-data"
@@ -376,24 +381,26 @@ export default function MapScreen() {
             <View style={styles.mapArea}>
                 <MapLoadingBar visible={isFetching || isDebouncingFilters} />
                 {Platform.OS === 'web' && !isMobile && (
-                    <MapQuickFilters
-                        extraActions={localizedMapQuickActionButtons}
-                        extraActionsPosition="inside-radius"
-                        radiusValue={quickRadiusValue}
-                        categoriesValue={quickCategoriesValue}
-                        overlaysValue={quickOverlaysValue}
-                        radiusOptions={quickRadiusOptions}
-                        radiusSelected={currentRadius}
-                        onChangeRadius={(next) => filtersPanelProps?.contextValue?.onFilterChange?.('radius', next)}
-                        categoriesOptions={quickCategoryOptions}
-                        categoriesSelected={quickFilterSelected}
-                        onChangeCategories={(next) => filtersPanelProps?.contextValue?.onFilterChange?.('categoryTravelAddress', next)}
-                        overlayOptions={quickOverlayOptions}
-                        enabledOverlays={quickEnabledOverlays}
-                        onChangeOverlay={(id, enabled) => filtersPanelProps?.contextValue?.onOverlayToggle?.(id, enabled)}
-                        onResetOverlays={filtersPanelProps?.contextValue?.onResetOverlays}
-                        travelsData={travelsData}
-                    />
+                    <Suspense fallback={null}>
+                        <LazyMapQuickFilters
+                            extraActions={localizedMapQuickActionButtons}
+                            extraActionsPosition="inside-radius"
+                            radiusValue={quickRadiusValue}
+                            categoriesValue={quickCategoriesValue}
+                            overlaysValue={quickOverlaysValue}
+                            radiusOptions={quickRadiusOptions}
+                            radiusSelected={currentRadius}
+                            onChangeRadius={(next) => filtersPanelProps?.contextValue?.onFilterChange?.('radius', next)}
+                            categoriesOptions={quickCategoryOptions}
+                            categoriesSelected={quickFilterSelected}
+                            onChangeCategories={(next) => filtersPanelProps?.contextValue?.onFilterChange?.('categoryTravelAddress', next)}
+                            overlayOptions={quickOverlayOptions}
+                            enabledOverlays={quickEnabledOverlays}
+                            onChangeOverlay={(id, enabled) => filtersPanelProps?.contextValue?.onOverlayToggle?.(id, enabled)}
+                            onResetOverlays={filtersPanelProps?.contextValue?.onResetOverlays}
+                            travelsData={travelsData}
+                        />
+                    </Suspense>
                 )}
                 {mapReady ? (
                     <MapPanel {...mapPanelProps} hideFloatingControls={isMobile} />
@@ -611,11 +618,13 @@ export default function MapScreen() {
                     resetFilters={resetFiltersForPanel}
                 />
                 {!isMobile && activePanelTab === 'search' && activeFilterItems.length > 0 && (
-                    <ActiveFiltersBar
-                        filters={activeFilterItems}
-                        onRemoveFilter={handleRemoveActiveFilter}
-                        onClearAll={handleClearAllFilters}
-                    />
+                    <Suspense fallback={null}>
+                        <LazyActiveFiltersBar
+                            filters={activeFilterItems}
+                            onRemoveFilter={handleRemoveActiveFilter}
+                            onClearAll={handleClearAllFilters}
+                        />
+                    </Suspense>
                 )}
                 <View style={styles.panelContent}>
                     {rightPanelTab === 'filters' ? (
