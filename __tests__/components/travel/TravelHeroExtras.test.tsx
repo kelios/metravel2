@@ -66,8 +66,8 @@ describe('TravelHeroExtras', () => {
       expect.objectContaining({
         isMobile: true,
         links: [
-          sectionLinks[3],
           sectionLinks[2],
+          sectionLinks[3],
           sectionLinks[5],
           sectionLinks[0],
           sectionLinks[4],
@@ -76,19 +76,28 @@ describe('TravelHeroExtras', () => {
     )
   })
 
-  it('does not render quick jumps on web', () => {
+  it('renders hero-priority quick jumps on web too', () => {
     Platform.OS = 'web' as any
+    const sectionLinks = [
+      { key: 'description', label: 'Описание', icon: 'file-text' },
+      { key: 'map', label: 'Карта', icon: 'map' },
+    ]
 
     render(
       <TravelHeroExtras
         travel={{ id: 2, slug: 'hero-web', name: 'Hero web' } as any}
         isMobile={false}
-        sectionLinks={[{ key: 'map', label: 'Карта', icon: 'map' }] as any}
+        sectionLinks={sectionLinks as any}
         onQuickJump={jest.fn()}
       />
     )
 
     expect(screen.getByTestId('travel-details-quick-facts')).toBeTruthy()
-    expect(mockTravelHeroQuickJumps).not.toHaveBeenCalled()
+    expect(mockTravelHeroQuickJumps).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isMobile: false,
+        links: [sectionLinks[1], sectionLinks[0]],
+      })
+    )
   })
 })

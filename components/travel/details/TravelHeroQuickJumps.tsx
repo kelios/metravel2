@@ -7,6 +7,14 @@ import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 
 import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
 
+const ACTION_LABELS: Record<string, string> = {
+  map: 'Открыть карту',
+  description: 'Описание',
+  points: 'Точки маршрута',
+  comments: 'Комментарии',
+  video: 'Видео',
+}
+
 export function TravelHeroQuickJumps({
   links,
   isMobile,
@@ -19,21 +27,33 @@ export function TravelHeroQuickJumps({
   const styles = useTravelDetailsHeroStyles()
   const colors = useThemedColors()
 
-  const chips = links.map((link) => (
-    <Pressable
-      key={link.key}
-      onPress={() => onQuickJump(link.key)}
-      style={({ pressed }) => [
-        styles.quickJumpChip,
-        pressed && styles.quickJumpChipPressed,
-      ]}
-      accessibilityRole="button"
-      accessibilityLabel={`Перейти к разделу ${link.label}`}
-    >
-      <Feather name={link.icon as any} size={16} color={colors.primary} />
-      <Text style={styles.quickJumpLabel}>{link.label}</Text>
-    </Pressable>
-  ))
+  const chips = links.map((link, index) => {
+    const isPrimary = link.key === 'map' || index === 0
+    const label = ACTION_LABELS[link.key] ?? link.label
+
+    return (
+      <Pressable
+        key={link.key}
+        onPress={() => onQuickJump(link.key)}
+        style={({ pressed }) => [
+          styles.quickJumpChip,
+          isPrimary && styles.quickJumpChipPrimary,
+          !isPrimary && pressed && styles.quickJumpChipPressed,
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={`Перейти к разделу ${link.label}`}
+      >
+        <Feather
+          name={link.icon as any}
+          size={16}
+          color={isPrimary ? colors.textOnPrimary : colors.primary}
+        />
+        <Text style={[styles.quickJumpLabel, isPrimary && styles.quickJumpLabelPrimary]}>
+          {label}
+        </Text>
+      </Pressable>
+    )
+  })
 
   if (!isMobile) return <>{chips}</>
 

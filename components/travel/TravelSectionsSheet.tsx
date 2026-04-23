@@ -166,6 +166,24 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
           fontWeight: "700",
           color: colors.text,
         },
+        triggerTextWrap: {
+          flex: 1,
+          minWidth: 0,
+        },
+        triggerEyebrow: {
+          fontSize: 11,
+          fontWeight: "700",
+          color: colors.textMuted,
+          textTransform: "uppercase",
+          letterSpacing: 0,
+          lineHeight: 14,
+        },
+        triggerActiveText: {
+          fontSize: 14,
+          fontWeight: "800",
+          color: colors.text,
+          lineHeight: 18,
+        },
         overlay: {
           flex: 1,
           backgroundColor: colors.overlay,
@@ -213,7 +231,18 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
         divider: {
           height: 1,
           backgroundColor: colors.border,
-          marginVertical: 8,
+          marginTop: 12,
+          marginBottom: 6,
+        },
+        groupLabel: {
+          fontSize: 11,
+          fontWeight: "800",
+          color: colors.textMuted,
+          textTransform: "uppercase",
+          letterSpacing: 0,
+          paddingHorizontal: 10,
+          paddingTop: 8,
+          paddingBottom: 4,
         },
         item: {
           flexDirection: "row",
@@ -222,9 +251,12 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
           paddingVertical: 12,
           paddingHorizontal: 10,
           borderRadius: 12,
+          borderWidth: 1,
+          borderColor: colors.transparent,
         },
         itemActive: {
-          backgroundColor: colors.surfaceMuted,
+          backgroundColor: colors.primarySoft,
+          borderColor: colors.primaryAlpha30,
         },
         itemPressed: {
           opacity: 0.92,
@@ -243,8 +275,8 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
           flex: 1,
         },
         itemTextActive: {
-          color: colors.text,
-          fontWeight: "700",
+          color: colors.primary,
+          fontWeight: "800",
         },
         metaPill: {
           paddingHorizontal: 10,
@@ -278,8 +310,12 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
           style={({ pressed }) => [styles.trigger, pressed && styles.triggerPressed]}
         >
           <Feather name="list" size={18} color={colors.text} />
-          <Text style={styles.triggerText}>Секции</Text>
-          <View style={{ flex: 1 }} />
+          <View style={styles.triggerTextWrap}>
+            <Text style={styles.triggerEyebrow}>Раздел</Text>
+            <Text style={styles.triggerActiveText} numberOfLines={1}>
+              {activeLink?.label ?? "Секции"}
+            </Text>
+          </View>
           <Feather name="chevron-down" size={20} color={colors.textMuted} />
         </Pressable>
       </View>
@@ -326,11 +362,12 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
               contentContainerStyle={styles.list}
               showsVerticalScrollIndicator={Platform.OS === "web"}
             >
-              {grouped.map(({ key, icon, label, meta, divider }) => {
+              {grouped.map(({ key, icon, label, meta, divider, groupLabel }) => {
                 const isActive = key === activeSection
                 return (
                   <React.Fragment key={key}>
                     {divider ? <View style={styles.divider} /> : null}
+                    {groupLabel ? <Text style={styles.groupLabel}>{groupLabel}</Text> : null}
                     <Pressable
                       testID={`travel-sections-item-${key}`}
                       onPress={(event) => handleNavigate(key, event as PressEvent)}

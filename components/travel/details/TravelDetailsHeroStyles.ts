@@ -72,12 +72,31 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
     quickJumpChipPressed: {
       backgroundColor: colors.primarySoft,
     },
+    quickJumpChipPrimary: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: '0 6px 16px rgba(255,107,0,0.22)',
+            ':hover': {
+              backgroundColor: colors.primary,
+              borderColor: colors.primary,
+              transform: 'translateY(-1px)',
+              boxShadow: '0 8px 20px rgba(255,107,0,0.28)',
+            } as any,
+          } as any)
+        : {}),
+    },
     quickJumpLabel: {
       fontSize: 13,
       fontWeight: '500' as any,
       color: colors.text,
-      letterSpacing: -0.1,
+      letterSpacing: 0,
       lineHeight: 18,
+    },
+    quickJumpLabelPrimary: {
+      color: colors.textOnPrimary,
+      fontWeight: '800' as any,
     },
     authorCardContainer: {
       marginBottom: DESIGN_TOKENS.spacing.md,
