@@ -207,6 +207,10 @@ const PlacePopupCard: React.FC<Props> = ({
     setFullscreenVisible(false);
   }, []);
 
+  const showLabeled = useFullscreenMobileOverlay;
+  const showHoverLabels = Platform.OS === 'web' && !showLabeled;
+  const useCompactDecisionLayout = useCompactLayout || showLabeled;
+
   useEffect(() => {
     setFullscreenVisible(false);
   }, [imageUrl]);
@@ -286,9 +290,6 @@ const PlacePopupCard: React.FC<Props> = ({
     useCompactLayout,
   ]);
 
-  const showLabeled = useFullscreenMobileOverlay;
-  const showHoverLabels = Platform.OS === 'web' && !showLabeled;
-  const useCompactDecisionLayout = useCompactLayout || showLabeled;
   const actionSummaryText = useMemo(() => {
     if (onBuildRoute) return 'Сначала маршрут, потом можно сохранить точку.';
     if (hasArticle) return 'Откройте карточку места или навигацию.';
