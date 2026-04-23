@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Alert, Platform } from 'react-native'
 
 import { METRICS } from '@/constants/layout'
@@ -54,6 +54,7 @@ export function useTravelDetailsMapSectionModel({
   const [mapResizeTrigger, setMapResizeTrigger] = useState(0)
   const [weatherVisible, setWeatherVisible] = useState(false)
   const [downloadingRouteId, setDownloadingRouteId] = useState<number | null>(null)
+  const lastForcedMapKeyRef = useRef<string | null>(null)
 
   const {
     hasEmbeddedCoords,
@@ -70,6 +71,7 @@ export function useTravelDetailsMapSectionModel({
 
   useEffect(() => {
     const nextState = getTravelDetailsMapSectionResetState()
+    lastForcedMapKeyRef.current = null
     setHighlightedPoint(nextState.highlightedPoint)
     setMapOpenTrigger(nextState.mapOpenTrigger)
     setMapOpened(nextState.mapOpened)
@@ -77,6 +79,18 @@ export function useTravelDetailsMapSectionModel({
     setWeatherVisible(nextState.weatherVisible)
     setDownloadingRouteId(nextState.downloadingRouteId)
   }, [travel.id, travel.slug])
+
+  useEffect(() => {
+    const shouldOpenMap = forceOpenKey === 'map' || forceOpenKey === 'points'
+    if (!shouldOpenMap) {
+      lastForcedMapKeyRef.current = forceOpenKey
+      return
+    }
+    if (lastForcedMapKeyRef.current === forceOpenKey) return
+
+    lastForcedMapKeyRef.current = forceOpenKey
+    setMapOpenTrigger((prev) => prev + 1)
+  }, [forceOpenKey])
 
   const notifyDownloadUnavailable = useCallback(() => {
     if (Platform.OS === 'web') {

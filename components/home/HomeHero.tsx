@@ -268,7 +268,6 @@ const HomeHero = memo(function HomeHero({
             isNarrowLayout={isNarrowLayout}
             isTabletLayout={isTabletLayout}
             showSideSlider={showSideSlider}
-            useInlineBookmarkRail={useInlineBookmarkRail}
             width={width}
             sliderHeight={sliderHeight}
             sliderMediaWidth={sliderMediaWidth}
@@ -293,7 +292,7 @@ const HomeHero = memo(function HomeHero({
             onNextSlide={handleNextSlide}
             onMarkSlideLoaded={markSlideAsLoaded}
           />
-          {!useInlineBookmarkRail ? (
+          {!showSideSlider && !useInlineBookmarkRail ? (
             <HomeHeroMoodRail
               colors={colors}
               styles={styles}

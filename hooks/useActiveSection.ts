@@ -201,6 +201,9 @@ export function useActiveSection(
       const nearTop = measured
         .filter((s) => s.top >= headerLine - NEAR_TOP_ABOVE_PX && s.top <= headerLine + NEAR_TOP_BELOW_PX)
         .sort((a, b) => Math.abs(a.top - headerLine) - Math.abs(b.top - headerLine));
+      const nextSectionNearTop = nearTop.find(
+        (s) => s.top >= headerLine + 48 && s.top <= headerLine + 180
+      );
       const spanning = measured.filter((s) => s.top <= headerLine && s.bottom > headerLine);
 
       const visibleCandidates = measured.filter((s) => s.bottom > 0);
@@ -212,10 +215,13 @@ export function useActiveSection(
       let nextActive: string | null = null;
 
       // Priority order:
-      // 1) Section that spans the header line (the section currently being read)
-      // 2) Section whose top is near the header line
-      // 3) First section that starts below the header line
-      if (spanning.length) {
+      // 1) Next section whose top is comfortably near the reading line
+      // 2) Section that spans the header line (the section currently being read)
+      // 3) Section whose top is near the header line
+      // 4) First section that starts below the header line
+      if (nextSectionNearTop) {
+        nextActive = nextSectionNearTop.key;
+      } else if (spanning.length) {
         // If multiple span (rare), prefer the one with the greatest top (closest to header).
         spanning.sort((a, b) => b.top - a.top);
         nextActive = spanning[0].key;

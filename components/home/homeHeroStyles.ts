@@ -351,21 +351,25 @@ export const createHomeHeroStyles = ({
               backgroundColor: 'transparent',
               borderRadius: 0,
               paddingTop: isUltraWideBook
-                ? '6.8%'
+                ? '8.4%'
                 : isLargeDesktopBook
-                  ? '7.1%'
-                  : '7.2%',
+                  ? '8.8%'
+                  : '9.3%',
               paddingBottom: isUltraWideBook
-                ? '16.2%'
+                ? '13.8%'
                 : isLargeDesktopBook
-                  ? '17.4%'
-                  : '17.8%',
+                  ? '14.4%'
+                  : '14.8%',
               paddingLeft: isUltraWideBook
-                ? '1.8%'
+                ? '2.8%'
                 : isNarrowDesktopBook
-                  ? '1.6%'
-                  : '2.4%',
-              paddingRight: isNarrowDesktopBook ? '12.2%' : '14.2%',
+                  ? '2.6%'
+                  : '3.2%',
+              paddingRight: isUltraWideBook
+                ? '15.2%'
+                : isNarrowDesktopBook
+                  ? '17.2%'
+                  : '16.2%',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'flex-start',
@@ -386,8 +390,8 @@ export const createHomeHeroStyles = ({
       ...Platform.select({
         web: {
           alignSelf: 'stretch',
-          height: isNarrowDesktopBook ? '90.5%' : '92.5%',
-          marginTop: 4,
+          height: isNarrowDesktopBook ? '90%' : '92%',
+          marginTop: 0,
           clipPath: `inset(0 round ${isNarrowDesktopBook ? 12 : 10}px)`,
           boxSizing: 'border-box',
         } as any,
@@ -433,7 +437,7 @@ export const createHomeHeroStyles = ({
     },
 
     // -- Slider / immersive photo --
-    // Cinematic photo effect: subtle rotation, clean shadow, no busy border
+    // Cinematic photo effect: clean shadow, no busy border
     sliderContainer: {
       width: '100%',
       flex: 1,
@@ -456,8 +460,8 @@ export const createHomeHeroStyles = ({
               flexShrink: 1,
               transform: 'none',
               transformOrigin: 'center center',
-              borderRadius: 8,
-              border: '1px solid rgba(247,241,232,0.42)',
+              borderRadius: 6,
+              border: '1px solid rgba(247,241,232,0.68)',
               isolation: 'isolate',
             } as any)
           : ({
@@ -703,6 +707,34 @@ export const createHomeHeroStyles = ({
       color: 'rgba(239,229,214,0.82)',
       letterSpacing: 0.12,
       ...Platform.select({ web: { fontFamily: editorialSerif } as any }),
+    },
+    slideActionPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      gap: 6,
+      marginTop: 12,
+      minHeight: 28,
+      paddingHorizontal: 11,
+      paddingVertical: 6,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: 'rgba(252,248,241,0.12)',
+      borderWidth: 1,
+      borderColor: 'rgba(244,235,221,0.24)',
+      ...Platform.select({
+        web: {
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+        } as any,
+      }),
+    },
+    slideActionText: {
+      fontSize: 11,
+      lineHeight: 14,
+      fontWeight: '600',
+      letterSpacing: 0.2,
+      color: DESIGN_TOKENS.colors.textOnDark,
+      ...Platform.select({ web: { fontFamily: sansSerif } as any }),
     },
 
     // -- Slider navigation --
@@ -990,6 +1022,74 @@ export const createHomeHeroStyles = ({
             } as any)
           : ({ fontFamily: sansSerif } as any),
       }),
+    },
+    pageNotesGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      maxWidth: '88%',
+      marginTop: isNarrowDesktopBook ? 18 : 24,
+      ...Platform.select({
+        web: showSideSlider
+          ? ({
+              transform: 'rotate(-0.18deg)',
+            } as any)
+          : {},
+      }),
+    },
+    pageNote: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      minHeight: 34,
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: DESIGN_TOKENS.colors.surfaceAlpha40,
+      borderWidth: 1,
+      borderColor: warmBorder,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+          transition:
+            'background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease',
+          boxShadow: '0 1px 0 rgba(128,96,58,0.04)',
+        } as any,
+      }),
+    },
+    pageNoteHover: {
+      backgroundColor: warmBgSoft,
+      borderColor: DESIGN_TOKENS.colors.brandAlpha40,
+      ...Platform.select({
+        web: {
+          transform: 'translateY(-1px)',
+        } as any,
+      }),
+    },
+    pageNoteIcon: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: DESIGN_TOKENS.colors.brandAlpha30,
+    },
+    pageNoteTextWrap: {
+      gap: 0,
+    },
+    pageNoteText: {
+      color: inkStrong,
+      fontSize: 12,
+      lineHeight: 15,
+      fontWeight: '600',
+      ...Platform.select({ web: { fontFamily: sansSerif } as any }),
+    },
+    pageNoteMeta: {
+      color: inkSubtle,
+      fontSize: 10,
+      lineHeight: 12,
+      fontWeight: '500',
+      ...Platform.select({ web: { fontFamily: sansSerif } as any }),
     },
     sectionLabelRow: {
       width: '100%',

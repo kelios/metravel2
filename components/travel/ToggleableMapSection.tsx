@@ -58,7 +58,8 @@ const ToggleableMapSection = ({
         if (forceOpenTrigger === undefined) return;
         setShowMap(true);
         setHasOpened(true);
-    }, [forceOpenTrigger]);
+        onOpenChange?.(true);
+    }, [forceOpenTrigger, onOpenChange]);
 
     // TD-04: IntersectionObserver — на desktop карта авто-монтируется когда доходит до viewport
     useEffect(() => {

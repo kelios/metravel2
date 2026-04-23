@@ -35,7 +35,6 @@ type HomeHeroBookLayoutProps = {
   isNarrowLayout: boolean
   isTabletLayout: boolean
   showSideSlider: boolean
-  useInlineBookmarkRail: boolean
   width: number
   sliderHeight: number
   sliderMediaWidth: number
@@ -88,7 +87,7 @@ function HeroWeekEyebrow({
   )
 }
 
-function InlineBookmarkRail({
+function HeroPageNotes({
   colors,
   moodCards,
   onQuickFilterPress,
@@ -104,22 +103,29 @@ function InlineBookmarkRail({
   styles: any
 }) {
   return (
-    <View testID="home-hero-bookmark-rail" style={styles.bookmarkRail}>
+    <View style={styles.pageNotesGrid}>
       {moodCards.map((card) => (
         <Pressable
-          key={`inline-${card.title}`}
+          key={`page-note-${card.title}`}
           onPress={() =>
             onQuickFilterPress(card.title, card.filters, card.route)
           }
           style={({ pressed, hovered }) => [
-            styles.bookmarkChip,
-            (pressed || hovered) && styles.bookmarkChipHover,
+            styles.pageNote,
+            (pressed || hovered) && styles.pageNoteHover,
           ]}
           accessibilityRole="button"
-          accessibilityLabel={`${card.title}. Идея поездки`}
+          accessibilityLabel={`${card.title}. Подобрать идею поездки`}
         >
-          <Feather name={card.icon as any} size={16} color={colors.textMuted} />
-          <Text style={styles.moodChipTitle}>{card.title}</Text>
+          <View style={styles.pageNoteIcon}>
+            <Feather name={card.icon as any} size={14} color={colors.brand} />
+          </View>
+          <View style={styles.pageNoteTextWrap}>
+            <Text style={styles.pageNoteText}>{card.title}</Text>
+            {card.meta ? (
+              <Text style={styles.pageNoteMeta}>{card.meta}</Text>
+            ) : null}
+          </View>
         </Pressable>
       ))}
     </View>
@@ -313,6 +319,14 @@ function HeroSlider({
                   <View style={styles.slideCaption}>
                     <Text style={styles.slideTitle}>{slide.title}</Text>
                     <Text style={styles.slideSubtitle}>{slide.subtitle}</Text>
+                    <View style={styles.slideActionPill}>
+                      <Text style={styles.slideActionText}>Открыть маршрут</Text>
+                      <Feather
+                        name="arrow-up-right"
+                        size={12}
+                        color={sliderIconColor}
+                      />
+                    </View>
                   </View>
                 </View>
               </View>
@@ -392,7 +406,6 @@ export default function HomeHeroBookLayout({
   isNarrowLayout,
   isTabletLayout,
   showSideSlider,
-  useInlineBookmarkRail,
   width,
   sliderHeight,
   sliderMediaWidth,
@@ -451,16 +464,16 @@ export default function HomeHeroBookLayout({
                 </View>
 
                 <Text style={styles.subtitle}>{heroSubtitle}</Text>
-              </View>
 
-              {useInlineBookmarkRail ? (
-                <InlineBookmarkRail
-                  colors={colors}
-                  moodCards={moodCards}
-                  onQuickFilterPress={onQuickFilterPress}
-                  styles={styles}
-                />
-              ) : null}
+                {showSideSlider && !isNarrowLayout ? (
+                  <HeroPageNotes
+                    colors={colors}
+                    moodCards={moodCards}
+                    onQuickFilterPress={onQuickFilterPress}
+                    styles={styles}
+                  />
+                ) : null}
+              </View>
 
               {isTabletLayout ? (
                 <TabletFeatureGrid

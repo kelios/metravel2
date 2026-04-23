@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
+import { DeviceEventEmitter, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import Feather from '@expo/vector-icons/Feather';
 import type { TravelSectionLink } from "@/components/travel/sectionLinks"
 import { useThemedColors } from "@/hooks/useTheme" // ✅ РЕДИЗАЙН: Темная тема
@@ -14,6 +14,13 @@ type Props = {
 }
 
 type GroupKey = "main" | "location" | "extra"
+type PressEvent = { stopPropagation?: () => void }
+
+const GROUP_LABELS: Record<GroupKey, string> = {
+  main: "Основное",
+  location: "Маршрут",
+  extra: "Ещё на странице",
+}
 
 const getGroupKey = (key: string): GroupKey => {
   if (
@@ -33,6 +40,15 @@ const getGroupKey = (key: string): GroupKey => {
   }
 
   return "extra"
+}
+
+const requestSectionOpen = (key: string) => {
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("open-section", { detail: { key } }))
+    return
+  }
+
+  DeviceEventEmitter.emit("open-section", key)
 }
 
 const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate, testID }) => {
@@ -59,18 +75,31 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
       const group = getGroupKey(l.key)
       const prev = idx > 0 ? getGroupKey(links[idx - 1]!.key) : null
       const divider = prev != null && prev !== group
-      return { ...l, divider }
+      const groupLabel = prev !== group ? GROUP_LABELS[group] : null
+      return { ...l, divider, groupLabel }
     })
     return items
   }, [links])
 
+  const activeLink = useMemo(
+    () => links.find((link) => link.key === activeSection) ?? links[0] ?? null,
+    [activeSection, links]
+  )
+
   const handleNavigate = useCallback(
-    (key: string) => {
+    (key: string, event?: PressEvent) => {
+      event?.stopPropagation?.()
       setOpen(false)
+      requestSectionOpen(key)
       onNavigate(key)
     },
     [onNavigate]
   )
+
+  const handleClose = useCallback((event?: PressEvent) => {
+    event?.stopPropagation?.()
+    setOpen(false)
+  }, [])
 
   useEffect(() => {
     if (Platform.OS !== "web") return
@@ -142,12 +171,18 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
           backgroundColor: colors.overlay,
           justifyContent: "flex-end",
         },
+        backdrop: {
+          ...StyleSheet.absoluteFillObject,
+          zIndex: 0,
+        },
         sheet: {
           backgroundColor: colors.surface,
           borderTopLeftRadius: 16,
           borderTopRightRadius: 16,
           padding: 12,
           maxHeight: "75%" as any,
+          zIndex: 1,
+          elevation: 2,
         },
         header: {
           flexDirection: "row",
@@ -255,15 +290,16 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
         animationType="fade"
         onRequestClose={() => setOpen(false)}
       >
-        <Pressable
-          testID="travel-sections-overlay"
-          style={styles.overlay}
-          onPress={() => {
-            const dt = Date.now() - openedAtRef.current
-            if (dt < 300) return
-            setOpen(false)
-          }}
-        >
+        <View style={styles.overlay}>
+          <Pressable
+            testID="travel-sections-overlay"
+            style={styles.backdrop}
+            onPress={() => {
+              const dt = Date.now() - openedAtRef.current
+              if (dt < 300) return
+              setOpen(false)
+            }}
+          />
           <View
             testID="travel-sections-sheet"
             style={styles.sheet}
@@ -275,7 +311,8 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
               <Text style={styles.title}>Разделы</Text>
               <Pressable
                 testID="travel-sections-close"
-                onPress={() => setOpen(false)}
+                onPress={handleClose}
+                {...(Platform.OS === 'web' ? { onClick: handleClose } : {})}
                 accessibilityRole="button"
                 accessibilityLabel="Закрыть"
                 ref={closeRef}
@@ -296,7 +333,8 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
                     {divider ? <View style={styles.divider} /> : null}
                     <Pressable
                       testID={`travel-sections-item-${key}`}
-                      onPress={() => handleNavigate(key)}
+                      onPress={(event) => handleNavigate(key, event as PressEvent)}
+                      {...(Platform.OS === 'web' ? { onClick: (event: PressEvent) => handleNavigate(key, event) } : {})}
                       accessibilityRole="button"
                       accessibilityLabel={label}
                       accessibilityState={{ selected: isActive }}
@@ -327,7 +365,7 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
               })}
             </ScrollView>
           </View>
-        </Pressable>
+        </View>
       </Modal>
     </>
   )
