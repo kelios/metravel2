@@ -317,31 +317,66 @@ export default function RouletteScreen() {
                     )}
                   </View>
                 ) : (
-                  <FlashList<Travel>
-                    data={result as Travel[]}
-                    keyExtractor={(item) => String(item.id)}
-                    key="cols-1"
-                    numColumns={1}
-                    contentContainerStyle={[styles.cardsGrid, isMobile && styles.cardsGridMobile]}
-                    {...({ estimatedItemSize: 420 } as any)}
-                    renderItem={({ item, index }) => (
-                      <View style={styles.cardWrapper}>
-                        <RenderTravelItem
-                          item={item}
-                          index={index}
-                          isMobile={isMobile}
-                          isSuperuser={false}
-                          isMetravel={false}
-                          onDeletePress={undefined}
-                          isFirst={index === 0}
-                          selectable={false}
-                          isSelected={false}
-                          onToggle={undefined}
-                          viewportWidth={width}
-                        />
+                  <>
+                    {isMobile && result.length === 0 ? (
+                      <View style={styles.mobileRoulettePrompt}>
+                        <View style={styles.rouletteCompassGroup}>
+                          <Animated.View
+                            style={[
+                              styles.mobileRouletteCompassWrap,
+                              spinning && { transform: [{ rotate: compassRotate }] },
+                            ]}
+                          >
+                            <Image
+                              source={compassBackground}
+                              style={styles.rouletteCompassImage}
+                              resizeMode="cover"
+                            />
+                          </Animated.View>
+
+                          <Pressable
+                            style={styles.mobileRouletteCompassButton}
+                            onPress={handleSpin}
+                            accessibilityLabel={spinning ? 'Подбираем маршруты' : 'Крутить рулетку'}
+                            accessibilityRole="button"
+                          >
+                            <Feather name="compass" size={20} color={colors.primary} style={{ marginBottom: 4 }} />
+                            <Text style={styles.rouletteCompassButtonTitle}>
+                              {spinning ? 'Крутим...' : 'Случайный маршрут'}
+                            </Text>
+                            {!spinning && (
+                              <Text style={styles.rouletteCompassButtonSubtitle}>Нажми</Text>
+                            )}
+                          </Pressable>
+                        </View>
                       </View>
-                    )}
-                  />
+                    ) : null}
+                    <FlashList<Travel>
+                      data={result as Travel[]}
+                      keyExtractor={(item) => String(item.id)}
+                      key="cols-1"
+                      numColumns={1}
+                      contentContainerStyle={[styles.cardsGrid, isMobile && styles.cardsGridMobile]}
+                      {...({ estimatedItemSize: 420 } as any)}
+                      renderItem={({ item, index }) => (
+                        <View style={styles.cardWrapper}>
+                          <RenderTravelItem
+                            item={item}
+                            index={index}
+                            isMobile={isMobile}
+                            isSuperuser={false}
+                            isMetravel={false}
+                            onDeletePress={undefined}
+                            isFirst={index === 0}
+                            selectable={false}
+                            isSelected={false}
+                            onToggle={undefined}
+                            viewportWidth={width}
+                          />
+                        </View>
+                      )}
+                    />
+                  </>
                 )}
               </View>
             )}

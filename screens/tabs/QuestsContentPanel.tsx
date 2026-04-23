@@ -73,8 +73,8 @@ export default function QuestsContentPanel({
             showsVerticalScrollIndicator={false}
         >
             <View style={styles.contentHeader}>
-                <View>
-                    <Text style={styles.contentTitle}>
+                <View style={styles.contentTitleBlock}>
+                    <Text style={styles.contentTitle} numberOfLines={2}>
                         {selectedCityId === nearbyId
                             ? (userLoc ? 'Квесты поблизости' : 'Все квесты')
                             : selectedCityName || 'Все квесты'}

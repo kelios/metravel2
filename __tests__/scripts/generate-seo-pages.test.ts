@@ -682,6 +682,8 @@ describe('static noindex route coverage', () => {
     );
 
     expect(source).toContain("route: '/accountconfirmation'");
+    expect(source).toContain("route: '/articles'");
+    expect(source).toMatch(/route: '\/articles'[\s\S]*?robots: 'noindex, nofollow'/);
     expect(source).toContain("route: '/set-password'");
     expect(source).toContain("route: '/messages'");
     expect(source).toContain("route: '/export'");

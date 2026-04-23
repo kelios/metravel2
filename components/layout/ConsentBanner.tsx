@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, usePathname } from 'expo-router';
 import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe';
 import { LAYOUT } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -12,6 +12,7 @@ const isWeb = Platform.OS === 'web';
 
 function ConsentBanner() {
   const colors = useThemedColors();
+  const pathname = usePathname();
   const [visible, setVisible] = useState(false);
   const [suspendForOverlay, setSuspendForOverlay] = useState(false);
   const { isMobile, width } = useResponsive();
@@ -22,6 +23,7 @@ function ConsentBanner() {
     // On mobile we keep it above the bottom tab bar and respect safe-area.
     return (insets?.bottom || 0) + (LAYOUT?.tabBarHeight ?? 56) + 8;
   }, [insets?.bottom, isMobile]);
+  const isConsentSettingsRoute = pathname === '/cookies' || pathname === '/privacy';
 
   useEffect(() => {
     if (!isWeb || typeof window === 'undefined') return;
@@ -118,7 +120,7 @@ function ConsentBanner() {
     setVisible(false);
   };
 
-  if (!visible || !isWeb) return null;
+  if (!visible || !isWeb || isConsentSettingsRoute) return null;
 
   return (
     <View
@@ -126,6 +128,7 @@ function ConsentBanner() {
         styles.wrapper,
         styles.pointerEventsNone,
         isMobile && styles.wrapperMobile,
+        !isMobile && styles.wrapperDesktop,
         { bottom: bottomOffset },
         suspendForOverlay && styles.wrapperHidden,
       ]}
@@ -136,6 +139,7 @@ function ConsentBanner() {
           styles.container,
           styles.pointerEventsAuto,
           { backgroundColor: colors.surface },
+          isMobile && styles.containerMobile,
           isNarrowMobile && styles.containerNarrow,
           !isMobile && styles.containerDesktop,
         ]}
@@ -191,6 +195,9 @@ const styles = StyleSheet.create({
   wrapperMobile: {
     alignItems: 'stretch',
   },
+  wrapperDesktop: {
+    alignItems: 'center',
+  },
   wrapperHidden: {
     opacity: 0,
     display: 'none',
@@ -229,9 +236,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     maxWidth: 560,
   },
+  containerMobile: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 6 as any,
+  },
   containerNarrow: {
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingVertical: 8,
   },
   textBlock: {
     flexShrink: 1,
@@ -242,7 +254,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 12,
-    lineHeight: 17,
+    lineHeight: 16,
   },
   buttonsRow: {
     flexDirection: 'row',
@@ -255,7 +267,7 @@ const styles = StyleSheet.create({
   },
   button: {
     borderRadius: 9999,
-    paddingVertical: 6,
+    paddingVertical: 5,
     paddingHorizontal: 12,
   },
   buttonNarrow: {

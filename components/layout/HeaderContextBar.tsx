@@ -229,7 +229,7 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     }),
   },
   containerMobile: {
-    minHeight: 52,
+    minHeight: 44,
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
   },
   crumbRow: {
@@ -272,11 +272,11 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
   mobileRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.sm,
+    gap: DESIGN_TOKENS.spacing.xs,
   },
   backButton: {
-    minWidth: 48,
-    minHeight: 48,
+    minWidth: 40,
+    minHeight: 40,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: DESIGN_TOKENS.radii.full,
@@ -301,12 +301,12 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     color: colors.text,
   },
   mobileRightSpacer: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
   },
   mobileSectionsButton: {
-    minWidth: 48,
-    minHeight: 48,
+    minWidth: 40,
+    minHeight: 40,
     alignItems: 'center',
     justifyContent: 'center',
     opacity: 0.88,

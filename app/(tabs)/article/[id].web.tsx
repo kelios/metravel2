@@ -116,7 +116,7 @@ export default function ArticleDetails() {
         url: 'https://metravel.by',
       },
     } : null
-    const robots = hasResolvedArticle ? undefined : 'noindex, nofollow'
+    const robots = 'noindex, nofollow'
     return { title, description, canonical, image, jsonLd, robots }
   }, [article, errorMessage, routeKey])
 

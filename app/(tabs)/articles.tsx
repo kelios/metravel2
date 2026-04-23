@@ -120,6 +120,7 @@ export default function TabOneScreen() {
             canonical={buildCanonicalUrl('/articles')}
             image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
             ogType="website"
+            robots="noindex, nofollow"
           />
         )}
         <View style={styles.container}>

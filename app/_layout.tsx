@@ -401,7 +401,7 @@ function ThemedContent({
                                   {bottomGutter}
                               </View>
 
-                              {Platform.OS === 'web' && __DEV__ && !isTravelRoute && ReactQueryDevtoolsLazy ? (
+                              {Platform.OS === 'web' && __DEV__ && !isMobile && !isTravelRoute && ReactQueryDevtoolsLazy ? (
                                 <React.Suspense fallback={null}>
                                   <ReactQueryDevtoolsLazy initialIsOpen={false} />
                                 </React.Suspense>

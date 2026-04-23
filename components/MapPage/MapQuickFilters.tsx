@@ -148,6 +148,18 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
       overlayOptions.length > 0 &&
       typeof onChangeOverlay === 'function'
 
+    const categoriesActiveCount = Array.isArray(categoriesSelected)
+      ? categoriesSelected.length
+      : 0
+    const overlaysActiveCount = enabledOverlays
+      ? Object.values(enabledOverlays).filter(Boolean).length
+      : 0
+    const activeIndicatorByKey: Record<ChipKey, number> = {
+      radius: 0,
+      categories: categoriesActiveCount,
+      overlays: overlaysActiveCount,
+    }
+
     const measureAndOpen = useCallback(
       (key: ChipKey, ref: React.MutableRefObject<View | null>) => {
         const node = ref.current
@@ -305,33 +317,54 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
             </View>
 
             <View style={[styles.iconOnlyGroup, styles.iconOnlyFiltersGroup]}>
-              {selectors.map((selector) => (
-                <Pressable
-                  key={selector.key}
-                  accessibilityLabel={`${selector.label}: ${selector.value}`}
-                  accessibilityRole="button"
-                  onPress={selector.onPress}
-                  style={({ pressed }) => [
-                    selector.key === 'radius'
-                      ? styles.iconTextButton
-                      : styles.iconButton,
-                    pressed && styles.fieldPressed,
-                  ]}
-                >
-                  {selector.key === 'radius' ? (
-                    <Text style={styles.iconTextButtonText} numberOfLines={1}>
-                      {selector.value}
-                    </Text>
-                  ) : (
-                    <Feather
-                      name={selector.icon}
-                      size={16}
-                      color={colors.primary}
-                      style={styles.iconButtonIcon}
-                    />
-                  )}
-                </Pressable>
-              ))}
+              {selectors.map((selector) => {
+                const activeCount = activeIndicatorByKey[selector.key] ?? 0
+                const isActive = activeCount > 0
+                return (
+                  <Pressable
+                    key={selector.key}
+                    accessibilityLabel={
+                      isActive
+                        ? `${selector.label}: ${selector.value} (активно: ${activeCount})`
+                        : `${selector.label}: ${selector.value}`
+                    }
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isActive }}
+                    onPress={selector.onPress}
+                    style={({ pressed }) => [
+                      selector.key === 'radius'
+                        ? styles.iconTextButton
+                        : styles.iconButton,
+                      isActive && styles.iconButtonActive,
+                      pressed && styles.fieldPressed,
+                    ]}
+                  >
+                    {selector.key === 'radius' ? (
+                      <Text style={styles.iconTextButtonText} numberOfLines={1}>
+                        {selector.value}
+                      </Text>
+                    ) : (
+                      <Feather
+                        name={selector.icon}
+                        size={16}
+                        color={isActive ? colors.primary : colors.primary}
+                        style={styles.iconButtonIcon}
+                      />
+                    )}
+                    {selector.key !== 'radius' && isActive ? (
+                      <View
+                        style={styles.iconBadge}
+                        pointerEvents="none"
+                        testID={`map-quick-filter-badge-${selector.key}`}
+                      >
+                        <Text style={styles.iconBadgeText} numberOfLines={1}>
+                          {activeCount > 9 ? '9+' : String(activeCount)}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </Pressable>
+                )
+              })}
               {trailingActions.map((action) => (
                 <Pressable
                   key={action.key}
@@ -875,6 +908,36 @@ const getStyles = (
     },
     iconButtonIcon: {
       flexShrink: 0,
+    },
+    iconButtonActive: {
+      borderColor: colors.primary,
+      backgroundColor:
+        Platform.OS === 'web' ? colors.surfaceAlpha40 : colors.surface,
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: `0 0 0 1px ${colors.primary}, ${colors.boxShadows.light}`,
+          } as any)
+        : null),
+    },
+    iconBadge: {
+      position: 'absolute',
+      top: -4,
+      right: -4,
+      minWidth: 16,
+      height: 16,
+      paddingHorizontal: 4,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primary,
+      borderWidth: 1.5,
+      borderColor: colors.surface,
+    },
+    iconBadgeText: {
+      color: colors.textOnPrimary,
+      fontSize: 10,
+      lineHeight: 12,
+      fontWeight: '800',
     },
     fieldIcon: {
       flexShrink: 0,

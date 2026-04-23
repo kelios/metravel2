@@ -169,3 +169,4 @@ export default function MyPage() {
 - Wrap у `isFocused` для уникнення конфліктів
 - Унікальний `headKey` для кожної сторінки
 - `robots="noindex,nofollow"` для auth/приватних сторінок
+- Production `sitemap.xml` генерируется backend-ом. Не добавляй генерацию sitemap во frontend build/deploy pipeline; фронт отвечает за page-level meta, canonical, OG/Twitter и JSON-LD.

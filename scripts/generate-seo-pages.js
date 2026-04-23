@@ -913,6 +913,7 @@ const STATIC_PAGES = [
     route: '/articles',
     title: 'Статьи о путешествиях, маршрутах и советах | Metravel',
     description: 'Читай статьи и заметки путешественников. Полезные советы, маршруты и лайфхаки.',
+    robots: 'noindex, nofollow',
   },
   {
     route: '/roulette',
@@ -1301,6 +1302,7 @@ async function main() {
         canonical,
         image,
         ogType: 'article',
+        robots: 'noindex, nofollow',
       });
 
       const idStr = String(id);

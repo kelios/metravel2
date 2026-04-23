@@ -406,6 +406,7 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'flex-start',
+            gap: spacing.sm,
             paddingHorizontal: headerPadding,
             paddingTop: isMobileW ? spacing.lg : spacing.xl,
             paddingBottom: isMobileW ? spacing.sm : spacing.md,
@@ -429,6 +430,10 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
             fontWeight: '800',
             letterSpacing: -0.6,
             lineHeight: isMobileW ? 26 : 34,
+        },
+        contentTitleBlock: {
+            flex: 1,
+            minWidth: 0,
         },
         contentCount: {
             color: colors.textMuted,
@@ -520,6 +525,7 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
             paddingVertical: spacing.sm,
             borderRadius: radii.full,
             borderWidth: 0,
+            flexShrink: 0,
             ...Platform.select({
                 web: { 
                     cursor: 'pointer',
@@ -613,8 +619,8 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
         },
         questCardMagicGlow: {
             position: 'absolute',
-            left: -50,
-            right: -50,
+            left: 0,
+            right: 0,
             bottom: -20,
             height: 120,
             ...Platform.select({
