@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel Docs Maintainer"
+  short_description: "Maintain metravel docs and Codex rules."
+  default_prompt: "Use $metravel-docs-maintainer to update metravel documentation, AGENTS.md, or project skills while keeping rules compact and consistent."

@@ -71,6 +71,8 @@ const MOBILE_WEB_CONTROLS_CLEARANCE = 80
 const DESKTOP_RADIUS_CLUSTER_MIN_WIDTH = 228
 const DESKTOP_FILTER_FIELD_MIN_WIDTH = 172
 const DESKTOP_TOOLBAR_MAX_WIDTH = 860
+const ICON_ONLY_LEADING_ACTION_KEYS = new Set(['locate', 'zoom-in', 'zoom-out'])
+const ICON_ONLY_TRAILING_ACTION_KEYS = new Set(['list'])
 
 export const CATEGORY_ICONS: Record<
   string,
@@ -211,7 +213,7 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
         key: 'radius' as const,
         label: 'Радиус',
         value: radiusValue || 'Выбор',
-        icon: 'radio' as const,
+        icon: 'circle' as const,
         onPress: handleRadiusPress,
         ref: radiusAnchorRef,
         hideLabel: isNarrow,
@@ -242,31 +244,118 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
     const rowActions = (extraActions ?? []).filter(
       (action) => typeof action?.onPress === 'function',
     )
+    const iconOnlyLeadingActions = iconOnly
+      ? rowActions.filter((action) => ICON_ONLY_LEADING_ACTION_KEYS.has(action.key))
+      : []
+    const iconOnlyTrailingActions = iconOnly
+      ? rowActions.filter((action) => ICON_ONLY_TRAILING_ACTION_KEYS.has(action.key))
+      : []
+    const iconOnlyOtherActions = iconOnly
+      ? rowActions.filter(
+          (action) =>
+            !ICON_ONLY_LEADING_ACTION_KEYS.has(action.key) &&
+            !ICON_ONLY_TRAILING_ACTION_KEYS.has(action.key),
+        )
+      : []
     const radiusInlineActions =
       extraActionsPosition === 'inside-radius' ? rowActions : []
     const leadingActions =
-      extraActionsPosition === 'start' ? rowActions : []
+      iconOnly
+        ? extraActionsPosition === 'start'
+          ? rowActions
+          : iconOnlyLeadingActions
+        : extraActionsPosition === 'start'
+          ? rowActions
+          : []
     const trailingActions =
-      extraActionsPosition === 'end' ? rowActions : []
-    const iconOnlyRowWidth =
-      (selectors.length + rowActions.length) * iconButtonSize +
-      Math.max(0, selectors.length + rowActions.length - 1) * iconButtonGap
-
+      iconOnly
+        ? extraActionsPosition === 'end'
+          ? [...iconOnlyOtherActions, ...iconOnlyTrailingActions]
+          : []
+        : extraActionsPosition === 'end'
+          ? rowActions
+          : []
     if (!selectors.length && !rowActions.length) return null
 
     return (
       <View testID="map-quick-filters" style={styles.container} pointerEvents="box-none">
-        <View
-          style={[
-            styles.row,
-            iconOnly && {
-              width: iconOnlyRowWidth,
-              height: iconButtonSize,
-              position: 'relative',
-            },
-          ]}
-          pointerEvents="box-none"
-        >
+        {iconOnly ? (
+          <View style={styles.iconOnlyBar} pointerEvents="box-none">
+            <View style={styles.iconOnlyGroup}>
+              {leadingActions.map((action) => (
+                <Pressable
+                  key={action.key}
+                  accessibilityLabel={action.label}
+                  accessibilityRole="button"
+                  onPress={action.onPress}
+                  testID={action.testID}
+                  style={({ pressed }) => [
+                    styles.iconButton,
+                    pressed && styles.fieldPressed,
+                  ]}
+                >
+                  <Feather
+                    name={action.icon}
+                    size={16}
+                    color={colors.primary}
+                    style={styles.iconButtonIcon}
+                  />
+                </Pressable>
+              ))}
+            </View>
+
+            <View style={[styles.iconOnlyGroup, styles.iconOnlyFiltersGroup]}>
+              {selectors.map((selector) => (
+                <Pressable
+                  key={selector.key}
+                  accessibilityLabel={`${selector.label}: ${selector.value}`}
+                  accessibilityRole="button"
+                  onPress={selector.onPress}
+                  style={({ pressed }) => [
+                    selector.key === 'radius'
+                      ? styles.iconTextButton
+                      : styles.iconButton,
+                    pressed && styles.fieldPressed,
+                  ]}
+                >
+                  {selector.key === 'radius' ? (
+                    <Text style={styles.iconTextButtonText} numberOfLines={1}>
+                      {selector.value}
+                    </Text>
+                  ) : (
+                    <Feather
+                      name={selector.icon}
+                      size={16}
+                      color={colors.primary}
+                      style={styles.iconButtonIcon}
+                    />
+                  )}
+                </Pressable>
+              ))}
+              {trailingActions.map((action) => (
+                <Pressable
+                  key={action.key}
+                  accessibilityLabel={action.label}
+                  accessibilityRole="button"
+                  onPress={action.onPress}
+                  testID={action.testID}
+                  style={({ pressed }) => [
+                    styles.iconButton,
+                    pressed && styles.fieldPressed,
+                  ]}
+                >
+                  <Feather
+                    name={action.icon}
+                    size={16}
+                    color={colors.primary}
+                    style={styles.iconButtonIcon}
+                  />
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ) : (
+        <View style={styles.row} pointerEvents="box-none">
           {leadingActions.map((action, actionIndex) =>
             iconOnly ? (
               <Pressable
@@ -499,6 +588,7 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
             ),
           )}
         </View>
+        )}
 
         {hasRadiusPopover && (
           <MapChipPopover
@@ -549,6 +639,7 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
               onToggle={(id, enabled) => onChangeOverlay!(id, enabled)}
               onReset={onResetOverlays}
               onClose={handleClose}
+              showHeaderClose={iconOnly}
             />
           </MapChipPopover>
         )}
@@ -604,6 +695,27 @@ const getStyles = (
             boxShadow: '0 18px 34px rgba(15,23,42,0.08), 0 2px 8px rgba(15,23,42,0.04)',
           } as any)
         : null),
+    },
+    iconOnlyBar: {
+      width: '100%',
+      minHeight: options.isVeryNarrow ? 36 : options.isNarrow ? 40 : 42,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: options.isVeryNarrow ? 8 : 10,
+      rowGap: 6,
+    },
+    iconOnlyGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: options.isVeryNarrow ? 6 : options.isNarrow ? 8 : 10,
+      flexShrink: 0,
+    },
+    iconOnlyFiltersGroup: {
+      flexShrink: 1,
+      minWidth: 0,
+      justifyContent: 'flex-end',
     },
     fieldWrap: {
       flexGrow: 1,
@@ -731,6 +843,35 @@ const getStyles = (
             cursor: 'pointer',
           } as any)
         : colors.shadows.light),
+    },
+    iconTextButton: {
+      minWidth: options.isVeryNarrow ? 54 : options.isNarrow ? 60 : 66,
+      maxWidth: options.isVeryNarrow ? 62 : options.isNarrow ? 70 : 78,
+      height: options.isVeryNarrow ? 36 : options.isNarrow ? 40 : 42,
+      paddingHorizontal: options.isVeryNarrow ? 8 : 10,
+      flexShrink: 0,
+      borderRadius: options.isVeryNarrow ? 12 : 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: Platform.OS === 'web' ? colors.surfaceAlpha40 : colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+      ...(Platform.OS === 'web'
+        ? ({
+            backdropFilter: 'blur(18px) saturate(1.08)',
+            WebkitBackdropFilter: 'blur(18px) saturate(1.08)',
+            boxShadow: '0 6px 16px rgba(15,23,42,0.06)',
+            cursor: 'pointer',
+          } as any)
+        : colors.shadows.light),
+    },
+    iconTextButtonText: {
+      maxWidth: '100%',
+      fontSize: options.isVeryNarrow ? 11 : 12,
+      lineHeight: options.isVeryNarrow ? 14 : 15,
+      fontWeight: '800',
+      color: colors.primary,
+      letterSpacing: 0,
     },
     iconButtonIcon: {
       flexShrink: 0,

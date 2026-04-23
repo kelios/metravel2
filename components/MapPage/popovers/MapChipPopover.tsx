@@ -90,9 +90,13 @@ export const MapChipPopover: React.FC<MapChipPopoverProps> = ({
           onPress={onClose}
           accessibilityLabel="Закрыть"
         >
-          <Pressable
+          <View
             style={[styles.sheetContainer, styles.sheetContainerWeb]}
-            onPress={(e) => e.stopPropagation?.()}
+            {...({
+              role: 'dialog',
+              'aria-modal': true,
+              onClick: (e: any) => e.stopPropagation?.(),
+            } as any)}
           >
             <View style={styles.sheetChrome}>
               <View style={styles.sheetHandle} />
@@ -111,7 +115,7 @@ export const MapChipPopover: React.FC<MapChipPopoverProps> = ({
               </Pressable>
             </View>
             <View style={styles.sheetContent}>{children}</View>
-          </Pressable>
+          </View>
         </Pressable>
       </View>
     )
@@ -189,6 +193,10 @@ export const MapChipPopover: React.FC<MapChipPopoverProps> = ({
             maxHeight: popoverPosition.maxHeight,
           },
         ]}
+        {...({
+          role: 'dialog',
+          onClick: (e: any) => e.stopPropagation?.(),
+        } as any)}
       >
         <View style={styles.popoverChrome}>
           <Pressable
@@ -242,16 +250,18 @@ const getStyles = (colors: ThemedColors) =>
       borderBottomColor: colors.borderLight,
     },
     popoverContent: {
+      flex: 1,
       minHeight: 0,
-      flexShrink: 1,
     },
     sheetBackdrop: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.4)',
+      backgroundColor: 'rgba(15,23,42,0.55)',
       justifyContent: 'flex-end',
       ...(Platform.OS === 'web'
         ? ({
             zIndex: 6000,
+            backdropFilter: 'blur(2px)',
+            WebkitBackdropFilter: 'blur(2px)',
           } as any)
         : null),
     },
@@ -261,16 +271,18 @@ const getStyles = (colors: ThemedColors) =>
       borderTopRightRadius: 20,
       paddingTop: 0,
       paddingBottom: 12,
-      maxHeight: '85%',
+      maxHeight: '90%',
       overflow: 'hidden',
       ...(Platform.OS === 'web'
         ? ({
             zIndex: 6001,
+            boxShadow: '0 -14px 40px rgba(15,23,42,0.18)',
           } as any)
         : null),
     },
     sheetContainerWeb: {
       marginBottom: WEB_MOBILE_BOTTOM_CHROME_INSET,
+      paddingBottom: 0,
       maxHeight: `calc(100% - ${WEB_MOBILE_BOTTOM_CHROME_INSET + 24}px)`,
     },
     sheetChrome: {
@@ -291,8 +303,8 @@ const getStyles = (colors: ThemedColors) =>
       marginBottom: 8,
     },
     sheetContent: {
+      flex: 1,
       minHeight: 0,
-      flexShrink: 1,
     },
     closeButton: {
       width: 36,

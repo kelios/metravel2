@@ -88,12 +88,31 @@ export default function MapScreen() {
     } = useMapScreenController();
 
     const [geoBannerDismissed, setGeoBannerDismissed] = useState(false);
+    const [shouldLoadOnboarding, setShouldLoadOnboarding] = useState(false);
     const dismissGeoBanner = useCallback(() => setGeoBannerDismissed(true), []);
     const showGeoBanner = Boolean(geoError && !geoBannerDismissed);
 
     useEffect(() => {
         if (!geoError && geoBannerDismissed) setGeoBannerDismissed(false);
     }, [geoError, geoBannerDismissed]);
+
+    useEffect(() => {
+        if (shouldLoadOnboarding) return;
+        if (Platform.OS !== 'web') {
+            setShouldLoadOnboarding(true);
+            return;
+        }
+
+        const win = typeof window !== 'undefined' ? window : undefined;
+        const requestIdle = win?.requestIdleCallback;
+        if (typeof requestIdle === 'function') {
+            const idleId = requestIdle(() => setShouldLoadOnboarding(true), { timeout: 1000 });
+            return () => win?.cancelIdleCallback?.(idleId);
+        }
+
+        const timer = setTimeout(() => setShouldLoadOnboarding(true), 600);
+        return () => clearTimeout(timer);
+    }, [shouldLoadOnboarding]);
 
     // Network status — drive offline UI + auto-retry on reconnect during error state
     const { isConnected } = useNetworkStatus();
@@ -349,7 +368,7 @@ export default function MapScreen() {
         return filtersPanelProps?.contextValue?.mode === 'route' ? 'route' : 'search';
     }, [filtersPanelProps?.contextValue?.mode, rightPanelTab]);
     const shouldShowFloatingRadiusPill = Boolean(
-        currentRadius && (Platform.OS !== 'web' || isMobile),
+        currentRadius && Platform.OS !== 'web',
     );
 
     const mapComponent = useMemo(
@@ -667,9 +686,11 @@ export default function MapScreen() {
             )}
 
             {/* Onboarding для новых пользователей */}
-            <Suspense fallback={null}>
-                <LazyMapOnboarding />
-            </Suspense>
+            {shouldLoadOnboarding ? (
+                <Suspense fallback={null}>
+                    <LazyMapOnboarding />
+                </Suspense>
+            ) : null}
         </View>
     );
 }

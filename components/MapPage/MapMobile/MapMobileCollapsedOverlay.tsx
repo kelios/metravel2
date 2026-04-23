@@ -2,7 +2,7 @@
  * MapMobileCollapsedOverlay - MapQuickFilters chips shown when bottom sheet is collapsed.
  * Extracted from MapMobileLayout (no behavior change).
  */
-import React from 'react'
+import React, { useCallback, useMemo } from 'react'
 
 import { MapQuickFilters } from '@/components/MapPage/MapQuickFilters'
 
@@ -65,23 +65,41 @@ const MapMobileCollapsedOverlayInner: React.FC<MapMobileCollapsedOverlayProps> =
   onResetOverlays,
   quickActionButtons,
 }) => {
-  const extraActions: QuickFilterAction[] = [
-    {
-      key: 'locate',
-      label: 'Показать мое местоположение',
-      icon: 'crosshair',
-      onPress: onCenterUser,
-      testID: 'map-center-user-quick',
-    },
-    ...(quickActionButtons ?? []).filter((action) => action.key !== 'locate'),
-    {
-      key: 'list',
-      label: 'Открыть панель со списком',
-      icon: 'list',
-      onPress: onOpenList,
-      testID: 'map-open-list',
-    },
-  ]
+  const extraActions = useMemo<QuickFilterAction[]>(
+    () => [
+      {
+        key: 'locate',
+        label: 'Показать мое местоположение',
+        icon: 'crosshair',
+        onPress: onCenterUser,
+        testID: 'map-center-user-quick',
+      },
+      ...(quickActionButtons ?? []).filter((action) => action.key !== 'locate'),
+      {
+        key: 'list',
+        label: 'Открыть панель со списком',
+        icon: 'list',
+        onPress: onOpenList,
+        testID: 'map-open-list',
+      },
+    ],
+    [onCenterUser, onOpenList, quickActionButtons],
+  )
+
+  const handleChangeRadius = useCallback(
+    (next: string) => onFilterChange?.('radius', next),
+    [onFilterChange],
+  )
+
+  const handleChangeCategories = useCallback(
+    (next: string[]) => onFilterChange?.('categoryTravelAddress', next),
+    [onFilterChange],
+  )
+
+  const handleChangeOverlay = useCallback(
+    (id: string, enabled: boolean) => onOverlayToggle?.(id, enabled),
+    [onOverlayToggle],
+  )
 
   return (
     <MapQuickFilters
@@ -95,15 +113,13 @@ const MapMobileCollapsedOverlayInner: React.FC<MapMobileCollapsedOverlayProps> =
       onPressOverlays={onOpenSearch}
       radiusOptions={quickRadiusOptions}
       radiusSelected={activeRadius}
-      onChangeRadius={(next) => onFilterChange?.('radius', next)}
+      onChangeRadius={handleChangeRadius}
       categoriesOptions={quickCategoryOptions}
       categoriesSelected={quickFilterSelected}
-      onChangeCategories={(next) =>
-        onFilterChange?.('categoryTravelAddress', next)
-      }
+      onChangeCategories={handleChangeCategories}
       overlayOptions={quickOverlayOptions}
       enabledOverlays={quickEnabledOverlays}
-      onChangeOverlay={(id, enabled) => onOverlayToggle?.(id, enabled)}
+      onChangeOverlay={handleChangeOverlay}
       onResetOverlays={onResetOverlays}
       travelsData={travelsData}
       reserveLeftControlsSpace={false}

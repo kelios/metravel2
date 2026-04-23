@@ -159,7 +159,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
     [radiusSummaryText, searchQueryValue, selectedCategoriesCount]
   )
   const visibleSummaryChips = useMemo(
-    () => (isMobile ? summaryChips.filter((chip) => chip.key !== 'search') : summaryChips),
+    () => (isMobile ? [] : summaryChips),
     [isMobile, summaryChips]
   )
 
@@ -207,6 +207,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
           placeholder="Найти место по названию..."
           resultsCount={searchQueryValue ? travelsData.length : undefined}
         />
+        {visibleSummaryChips.length > 0 ? (
         <View style={styles.desktopSummaryStrip} testID="radius-section-summary">
           {visibleSummaryChips.map((chip) => (
             <View
@@ -233,6 +234,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
             </View>
           ))}
         </View>
+        ) : null}
       </View>
 
       {radiusOptions.length > 0 ? (
@@ -240,14 +242,13 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
           <View style={styles.lightStepHeader}>
             <Feather name="radio" size={16} color={colors.textMuted} />
             <Text style={styles.lightStepTitle}>Радиус поиска</Text>
-            {radiusSummaryText ? <Text style={styles.lightStepBadge}>{radiusSummaryText}</Text> : null}
+            {!isMobile && radiusSummaryText ? <Text style={styles.lightStepBadge}>{radiusSummaryText}</Text> : null}
           </View>
           {!isMobile ? (
             <Text style={styles.sectionHint}>Выберите, как далеко искать места вокруг вас</Text>
           ) : null}
           <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
             style={styles.radiusOptionsScroll}
             contentContainerStyle={styles.radiusOptionsScrollContent}
             testID="radius-presets-scroll"

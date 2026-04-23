@@ -19,6 +19,7 @@ interface OverlaysPopoverProps {
   onToggle: (id: string, enabled: boolean) => void
   onReset?: () => void
   onClose: () => void
+  showHeaderClose?: boolean
 }
 
 const OVERLAY_COPY: Record<
@@ -80,6 +81,7 @@ export const OverlaysPopover: React.FC<OverlaysPopoverProps> = ({
   onToggle,
   onReset,
   onClose,
+  showHeaderClose = false,
 }) => {
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
@@ -110,8 +112,25 @@ export const OverlaysPopover: React.FC<OverlaysPopoverProps> = ({
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <Text style={styles.title}>Оверлеи</Text>
-        <Text style={styles.hint}>{statusLabel}</Text>
+        <View style={styles.headerLabels}>
+          <Text style={styles.title}>Оверлеи</Text>
+          <Text style={styles.hint}>{statusLabel}</Text>
+        </View>
+        {showHeaderClose ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Закрыть список оверлеев"
+            onPress={onClose}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.closeButton,
+              pressed && styles.closeButtonPressed,
+            ]}
+            testID="overlays-popover-header-close-button"
+          >
+            <Feather name="x" size={18} color={colors.textMuted} />
+          </Pressable>
+        ) : null}
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.list}>
@@ -232,21 +251,42 @@ const getStyles = (colors: ThemedColors) =>
       paddingTop: 14,
       paddingBottom: 10,
       flexDirection: 'row',
-      alignItems: 'flex-start',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10,
+    },
+    headerLabels: {
+      flex: 1,
+      minWidth: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
       justifyContent: 'space-between',
       gap: 10,
     },
     title: {
-      flex: 1,
+      flexShrink: 1,
       fontSize: 19,
       fontWeight: '800',
       color: colors.text,
     },
     hint: {
+      flexShrink: 0,
       fontSize: 12,
       fontWeight: '600',
       color: colors.textMuted,
-      paddingTop: 3,
+    },
+    closeButton: {
+      width: 34,
+      height: 34,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surfaceAlpha40,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+    },
+    closeButtonPressed: {
+      opacity: 0.68,
     },
     scroll: {
       maxHeight: 420,

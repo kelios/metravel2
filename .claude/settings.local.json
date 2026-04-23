@@ -23,7 +23,11 @@
       "Bash(findstr \":8081\")",
       "Bash(curl -sS -o /dev/null -w \"%{http_code}\" http://localhost:8082/)",
       "Bash(curl -sSf -o /dev/null http://localhost:8082/)",
-      "Bash(yarn typecheck *)"
+      "Bash(yarn typecheck *)",
+      "Bash(yarn jest *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8082/)",
+      "Bash(curl -s http://localhost:8082/map)",
+      "Bash(curl -s http://localhost:8082/)"
     ]
   }
 }

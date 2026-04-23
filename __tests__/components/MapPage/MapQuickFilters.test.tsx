@@ -125,6 +125,72 @@ describe('MapQuickFilters', () => {
     expect(queryByText('Что посмотреть')).toBeNull()
   })
 
+  it('orders compact icon-only controls by map actions, filters, then list', () => {
+    const { getAllByRole } = render(
+      <MapQuickFilters
+        iconOnly={true}
+        radiusValue="60 km"
+        categoriesValue="All"
+        overlaysValue="Off"
+        extraActions={[
+          { key: 'locate', label: 'Locate me', icon: 'crosshair', onPress: jest.fn() },
+          { key: 'zoom-in', label: 'Zoom in', icon: 'plus', onPress: jest.fn() },
+          { key: 'zoom-out', label: 'Zoom out', icon: 'minus', onPress: jest.fn() },
+          { key: 'list', label: 'Open list', icon: 'list', onPress: jest.fn() },
+        ]}
+        onPressRadius={jest.fn()}
+        onPressCategories={jest.fn()}
+        onPressOverlays={jest.fn()}
+      />,
+    )
+
+    const labels = getAllByRole('button').map(
+      (node) => node.props.accessibilityLabel,
+    )
+
+    expect(labels).toEqual([
+      'Locate me',
+      'Zoom in',
+      'Zoom out',
+      'Радиус: 60 km',
+      'Что посмотреть: All',
+      'Оверлеи: Off',
+      'Open list',
+    ])
+  })
+
+  it('keeps miscellaneous compact actions after filters', () => {
+    const { getAllByRole } = render(
+      <MapQuickFilters
+        iconOnly={true}
+        radiusValue="60 km"
+        categoriesValue="All"
+        overlaysValue="Off"
+        extraActions={[
+          { key: 'locate', label: 'Locate me', icon: 'crosshair', onPress: jest.fn() },
+          { key: 'share', label: 'Share map', icon: 'share-2', onPress: jest.fn() },
+          { key: 'list', label: 'Open list', icon: 'list', onPress: jest.fn() },
+        ]}
+        onPressRadius={jest.fn()}
+        onPressCategories={jest.fn()}
+        onPressOverlays={jest.fn()}
+      />,
+    )
+
+    const labels = getAllByRole('button').map(
+      (node) => node.props.accessibilityLabel,
+    )
+
+    expect(labels).toEqual([
+      'Locate me',
+      'Радиус: 60 km',
+      'Что посмотреть: All',
+      'Оверлеи: Off',
+      'Share map',
+      'Open list',
+    ])
+  })
+
   it('renders extra actions inside the radius group on inline layout', () => {
     const onLocate = jest.fn()
     const onZoomIn = jest.fn()

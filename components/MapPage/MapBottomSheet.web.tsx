@@ -36,8 +36,6 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     const lastProgrammaticOpenTsRef = useRef(0);
     const [sheetIndex, setSheetIndex] = useState(-1);
 
-    const contentBottomPadding = 12 + bottomInset;
-
     useImperativeHandle(ref, () => ({
       snapToCollapsed: () => {
         setSheetIndex(-1);
@@ -69,13 +67,14 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
 
     const isCollapsed = sheetIndex < 0;
     const isFullScreen = sheetIndex === 2;
-    const effectiveBottomInset = isFullScreen ? 0 : bottomInset;
+    const contentBottomPadding = isCollapsed ? 12 + bottomInset : 12;
+    const effectiveBottomInset = bottomInset;
     const fullScreenTopInset = Platform.OS === 'web' ? LAYOUT.headerHeight : 0;
     // Pixel-based snap heights (vh units don't work reliably in RN Web View styles)
     const SNAP_RATIOS = windowHeight < 700 ? ([0.3, 0.62, 1] as const) : ([0.25, 0.55, 1] as const);
     const openHeight = !isCollapsed
       ? isFullScreen
-        ? Math.max(0, windowHeight - fullScreenTopInset)
+        ? Math.max(0, windowHeight - fullScreenTopInset - effectiveBottomInset)
         : Math.round(windowHeight * (SNAP_RATIOS[sheetIndex] ?? 0.55))
       : 0;
 

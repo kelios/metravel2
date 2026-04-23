@@ -10,6 +10,8 @@
 
 See `INDEX.md` for full docs map.
 
+- `CODEX.md` - Codex workflow and project skills map
+
 - `RULES.md` — development and UI rules (incl. external-link policy)
 - `DEVELOPMENT.md` — local setup and dev workflow
 - `TESTING.md` — Jest + Playwright + CI quality gate

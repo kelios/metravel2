@@ -164,9 +164,9 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
         : null),
     },
     contentContainer: {
-      paddingBottom: 64 + bottomDockReserve,
-      paddingTop: isMobile ? 2 : 2,
-      paddingHorizontal: isMobile ? 6 : 4,
+      paddingBottom: isMobile ? 10 : 64 + bottomDockReserve,
+      paddingTop: isMobile ? 4 : 2,
+      paddingHorizontal: isMobile ? 8 : 4,
       flexGrow: 1,
     },
     filtersStatusCard: {
@@ -261,8 +261,8 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     sectionCard: {
       backgroundColor: colors.surface,
       borderRadius: isMobile ? 14 : 16,
-      padding: isMobile ? 10 : 13,
-      marginBottom: isMobile ? 6 : 12,
+      padding: isMobile ? 12 : 13,
+      marginBottom: isMobile ? 8 : 12,
       gap: isMobile ? 8 : 10,
       borderWidth: 1,
       borderColor: colors.borderLight,
@@ -448,18 +448,19 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     radiusOptionsScrollContent: {
       paddingHorizontal: isMobile ? 2 : 0,
-      paddingRight: 16,
+      paddingRight: isMobile ? 2 : 0,
     },
     radiusOptionsWrap: {
       flexDirection: 'row',
-      flexWrap: 'nowrap',
+      flexWrap: 'wrap',
       alignItems: 'center',
       gap: isMobile ? 6 : 6,
     },
     radiusOptionChip: {
-      maxWidth: 140,
+      maxWidth: '100%',
       minHeight: 34,
-      flexShrink: 0,
+      paddingHorizontal: isMobile ? 10 : 12,
+      paddingVertical: 6,
     },
     radiusSelectionHint: {
       marginTop: 10,
@@ -701,11 +702,14 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       ...(Platform.OS === 'web'
         ? isMobile
           ? ({
-              backgroundColor: colors.surfaceAlpha40,
+              position: 'sticky',
+              bottom: 0,
+              zIndex: 4,
+              backgroundColor: colors.surface,
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
-              paddingTop: 6,
-              paddingBottom: 6,
+              paddingTop: 8,
+              paddingBottom: 8,
               borderTopWidth: StyleSheet.hairlineWidth,
               borderTopColor: colors.borderLight,
             } as any)
@@ -728,10 +732,10 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     footerButtons: {
       flexDirection: 'row',
-      gap: 10,
+      gap: isMobile ? 8 : 10,
       justifyContent: 'flex-end',
       alignItems: 'stretch',
-      paddingHorizontal: isMobile ? 6 : 0,
+      paddingHorizontal: isMobile ? 10 : 0,
       paddingBottom: 0,
     },
     mobileFooterSummary: {
@@ -750,7 +754,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       color: colors.textMuted,
     },
     ctaButton: {
-      borderRadius: isMobile ? 14 : DESIGN_TOKENS.radii.md,
+      borderRadius: isMobile ? 12 : DESIGN_TOKENS.radii.md,
       paddingHorizontal: isMobile ? 14 : 12,
       paddingVertical: isMobile ? 9 : 8,
       minHeight: isMobile ? 42 : 40,
@@ -763,7 +767,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       minHeight: isMobile ? 42 : 48,
       paddingVertical: isMobile ? 9 : 12,
       paddingHorizontal: isMobile ? 14 : 18,
-      borderRadius: isMobile ? 14 : 15,
+      borderRadius: isMobile ? 12 : 15,
       flex: 1,
       gap: 6,
       ...(Platform.OS === 'web'
