@@ -54,17 +54,11 @@ test.describe('Travel detail page — map popup close @smoke', () => {
 
       // Navigate to a real travel detail page
       const navigated = await navigateToFirstTravel(page)
-      if (!navigated) {
-        test.skip(true, 'No travel cards available')
-        return
-      }
+      expect(navigated, 'No travel cards available').toBe(true)
 
       // Scroll down to the map section
       const hasMarkers = await scrollToMapAndWaitForMarkers(page)
-      if (!hasMarkers) {
-        test.skip(true, 'No map markers found on travel detail page')
-        return
-      }
+      expect(hasMarkers, 'No map markers found on travel detail page').toBe(true)
 
       // Click the first marker
       const marker = page.locator('.leaflet-marker-icon').first()
@@ -107,16 +101,10 @@ test.describe('Travel detail page — map popup close @smoke', () => {
     await installTileMock(page)
 
     const navigated = await navigateToFirstTravel(page)
-    if (!navigated) {
-      test.skip(true, 'No travel cards available')
-      return
-    }
+    expect(navigated, 'No travel cards available').toBe(true)
 
     const hasMarkers = await scrollToMapAndWaitForMarkers(page)
-    if (!hasMarkers) {
-      test.skip(true, 'No map markers found on travel detail page')
-      return
-    }
+    expect(hasMarkers, 'No map markers found on travel detail page').toBe(true)
 
     // Click the first marker
     const marker = page.locator('.leaflet-marker-icon').first()
@@ -168,16 +156,10 @@ test.describe('Travel detail page — map popup close @smoke', () => {
       await installTileMock(page)
 
       const navigated = await navigateToFirstTravel(page)
-      if (!navigated) {
-        test.skip(true, 'No travel cards available')
-        return
-      }
+      expect(navigated, 'No travel cards available').toBe(true)
 
       const hasMarkers = await scrollToMapAndWaitForMarkers(page)
-      if (!hasMarkers) {
-        test.skip(true, 'No map markers found on travel detail page')
-        return
-      }
+      expect(hasMarkers, 'No map markers found on travel detail page').toBe(true)
 
       // Open and close multiple markers to catch portal leaks
       const markerCount = await page.locator('.leaflet-marker-icon').count()
