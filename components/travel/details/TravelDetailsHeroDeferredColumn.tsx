@@ -1,5 +1,5 @@
 import React from 'react'
-import { Platform, View } from 'react-native'
+import { View } from 'react-native'
 
 import type { Travel } from '@/types/types'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
@@ -27,7 +27,7 @@ export default function TravelDetailsHeroDeferredColumn({
   deferHeroExtras,
   forceOpenKey,
   isMobile,
-  lcpLoaded,
+  lcpLoaded: _lcpLoaded,
   onFirstImageLoad,
   onQuickJump,
   sectionLinks,
@@ -40,7 +40,7 @@ export default function TravelDetailsHeroDeferredColumn({
           travel={travel}
           anchors={anchors}
           isMobile={isMobile}
-          renderSlider={Platform.OS !== 'web' ? true : lcpLoaded}
+          renderSlider
           onFirstImageLoad={onFirstImageLoad}
           sectionLinks={sectionLinks}
           onQuickJump={onQuickJump}

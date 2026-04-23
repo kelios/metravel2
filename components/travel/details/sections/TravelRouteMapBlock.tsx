@@ -28,7 +28,6 @@ export const TravelRouteMapBlock: React.FC<{
   hasMapData: boolean
   highlightedPoint: { coord: string; key: string } | null
   isLoading: boolean
-  isMobileWeb: boolean
   isRoutePreviewLoading: boolean
   keyPointLabels: any
   mapOpenTrigger: number
@@ -48,7 +47,6 @@ export const TravelRouteMapBlock: React.FC<{
   hasMapData,
   highlightedPoint,
   isLoading,
-  isMobileWeb,
   isRoutePreviewLoading,
   keyPointLabels,
   mapOpenTrigger,
@@ -99,7 +97,9 @@ export const TravelRouteMapBlock: React.FC<{
         {hasMapData ? (
           <>
             <ToggleableMap
-              initiallyOpen={!isMobileWeb}
+              // Keep the map open from the first render on web/mobile so marker interactions
+              // remain available without an extra reveal click on travel details pages.
+              initiallyOpen
               keepMounted={Platform.OS === 'web'}
               isLoading={isLoading && !shouldRender && !shouldForceRenderMap}
               loadingLabel="Подгружаем карту маршрута..."

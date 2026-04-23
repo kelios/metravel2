@@ -27,7 +27,7 @@ import { useListTravelData } from './hooks/useListTravelData'
 import { useListTravelExport } from './hooks/useListTravelExport'
 import { buildFacetCounts, buildTravelFilterGroups } from './utils/filterGroups'
 import { fetchTravelFacets } from '@/api/travelListQueries'
-import type { FilterOptions } from './utils/listTravelTypes'
+import type { FilterOptions, FilterState } from './utils/listTravelTypes'
 import {
   normalizeCountryOptions,
   normalizeNamedOptions,
@@ -45,6 +45,55 @@ const MemoizedTravelItem = memo(RenderTravelItem);
 const ListTravelExportControlsLazy = lazy(() => import('./ListTravelExportControls'));
 
 let nativeAsyncStorageModulePromise: Promise<typeof import('@react-native-async-storage/async-storage')> | null = null;
+
+type ActiveConditionChip = {
+  key: string
+  label: string
+  onRemove: () => void
+}
+
+const SORT_LABEL_FALLBACKS: Record<string, string> = {
+  newest: 'Новые',
+  oldest: 'Старые',
+  popular_desc: 'Популярные ↓',
+  popular_asc: 'Популярные ↑',
+  rating_desc: 'Рейтинг ↓',
+  added_desc: 'Добавлены ↓',
+  added_asc: 'Добавлены ↑',
+  title_asc: 'Название А→Я',
+  title_desc: 'Название Я→А',
+  year_desc: 'Год ↓',
+  year_asc: 'Год ↑',
+}
+
+const getOptionName = (
+  options: Array<{ id?: string | number; country_id?: string | number; name?: string; title_ru?: string }> | undefined,
+  value: string | number,
+) => {
+  const normalizedValue = String(value)
+  const match = options?.find((option) => {
+    const optionId = option.country_id ?? option.id
+    return optionId != null && String(optionId) === normalizedValue
+  })
+
+  return match?.title_ru || match?.name || String(value)
+}
+
+const summarizeFilterValues = (
+  title: string,
+  values: Array<string | number> | undefined,
+  options?: Array<{ id?: string | number; country_id?: string | number; name?: string; title_ru?: string }>,
+) => {
+  if (!values?.length) return null
+
+  const labels = values.map((value) => getOptionName(options, value)).filter(Boolean)
+  if (!labels.length) return null
+
+  const shownLabels = labels.slice(0, 2).join(', ')
+  const extraCount = labels.length - 2
+
+  return `${title}: ${shownLabels}${extraCount > 0 ? ` +${extraCount}` : ''}`
+}
 
 const getNativeAsyncStorageModule = async () => {
   if (!nativeAsyncStorageModulePromise) {
@@ -336,19 +385,36 @@ function ListTravelBase() {
 
       const url = new URL(window.location.href);
       const sortValue = typeof filter.sort === 'string' ? filter.sort.trim() : '';
+      const searchValue = debSearch.trim();
       const currentSort = (url.searchParams.get('sort') || '').trim();
+      const currentSearch = (url.searchParams.get('search') || '').trim();
+      let changed = false;
 
       if (sortValue) {
-        if (currentSort === sortValue) return;
-        url.searchParams.set('sort', sortValue);
-      } else {
-        if (!currentSort) return;
+        if (currentSort !== sortValue) {
+          url.searchParams.set('sort', sortValue);
+          changed = true;
+        }
+      } else if (currentSort) {
         url.searchParams.delete('sort');
+        changed = true;
       }
+
+      if (searchValue) {
+        if (currentSearch !== searchValue) {
+          url.searchParams.set('search', searchValue);
+          changed = true;
+        }
+      } else if (currentSearch) {
+        url.searchParams.delete('search');
+        changed = true;
+      }
+
+      if (!changed) return;
 
       const nextPath = `${url.pathname}${url.search}${url.hash}`;
       window.history.replaceState(window.history.state, '', nextPath);
-    }, [filter.sort, pathname]);
+    }, [debSearch, filter.sort, pathname]);
 
     const {
       data: facetsData,
@@ -582,6 +648,86 @@ function ListTravelBase() {
     const handleCloseFilters = useCallback(() => setShowFilters(false), []);
     const handleOpenFilters = useCallback(() => setShowFilters(true), []);
 
+    const activeConditionChips = useMemo<ActiveConditionChip[]>(() => {
+      const chips: ActiveConditionChip[] = []
+      const addArrayChip = (
+        key: keyof FilterState,
+        title: string,
+        values: Array<string | number> | undefined,
+        optionList?: Array<{ id?: string | number; country_id?: string | number; name?: string; title_ru?: string }>,
+      ) => {
+        const label = summarizeFilterValues(title, values, optionList)
+        if (!label) return
+        chips.push({
+          key: String(key),
+          label,
+          onRemove: () => onSelect(String(key), undefined),
+        })
+      }
+
+      if (debSearch.trim()) {
+        chips.push({
+          key: 'search',
+          label: `Поиск: ${debSearch.trim()}`,
+          onRemove: () => setSearch(''),
+        })
+      }
+
+      const sortValue = typeof filter.sort === 'string' ? filter.sort.trim() : ''
+      if (sortValue) {
+        const sortLabel =
+          options?.sortings?.find((item) => item.id === sortValue)?.name ||
+          SORT_LABEL_FALLBACKS[sortValue] ||
+          sortValue
+        chips.push({
+          key: 'sort',
+          label: `Сортировка: ${sortLabel}`,
+          onRemove: () => onSelect('sort', undefined),
+        })
+      }
+
+      addArrayChip('countries', 'Страны', filter.countries, options?.countries)
+      addArrayChip('categories', 'Категории', filter.categories, options?.categories)
+      addArrayChip('categoryTravelAddress', 'Что посмотреть', filter.categoryTravelAddress, options?.categoryTravelAddress)
+      addArrayChip('transports', 'Транспорт', filter.transports, options?.transports)
+      addArrayChip('companions', 'Спутники', filter.companions, options?.companions)
+      addArrayChip('complexity', 'Сложность', filter.complexity, options?.complexity)
+      addArrayChip('month', 'Месяц', filter.month, options?.month)
+      addArrayChip('over_nights_stay', 'Ночлег', filter.over_nights_stay, options?.over_nights_stay)
+
+      if (filter.year) {
+        chips.push({
+          key: 'year',
+          label: `Год: ${filter.year}`,
+          onRemove: () => onSelect('year', undefined),
+        })
+      }
+
+      return chips
+    }, [
+      debSearch,
+      filter.categories,
+      filter.categoryTravelAddress,
+      filter.companions,
+      filter.complexity,
+      filter.countries,
+      filter.month,
+      filter.over_nights_stay,
+      filter.sort,
+      filter.transports,
+      filter.year,
+      onSelect,
+      options?.categories,
+      options?.categoryTravelAddress,
+      options?.companions,
+      options?.complexity,
+      options?.countries,
+      options?.month,
+      options?.over_nights_stay,
+      options?.sortings,
+      options?.transports,
+    ]);
+
     const sidebarContainerStyle = useMemo(
       () => usesOverlaySidebar ? [styles.sidebar, styles.sidebarMobile] : styles.sidebar,
       [usesOverlaySidebar, styles.sidebar, styles.sidebarMobile]
@@ -774,6 +920,7 @@ function ListTravelBase() {
         search={search}
         setSearch={setSearch}
         onClearAll={handleClearAll}
+        activeConditionChips={activeConditionChips}
         topContent={
           isExport ? (
             <Suspense fallback={null}>

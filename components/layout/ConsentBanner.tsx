@@ -145,7 +145,10 @@ function ConsentBanner() {
         ]}
       >
         <View style={[styles.textBlock, !isMobile && styles.textBlockDesktop]}>
-          <Text style={[styles.text, { color: colors.textMuted }]}>
+          <Text
+            numberOfLines={isMobile ? 2 : undefined}
+            style={[styles.text, isMobile && styles.textMobile, { color: colors.textMuted }]}
+          >
             Используем аналитику для улучшения сервиса.{' '}
             <Link href="/cookies" style={{ color: colors.primaryText, textDecorationLine: 'underline', fontSize: 12 }}>
               Подробнее
@@ -237,11 +240,15 @@ const styles = StyleSheet.create({
     maxWidth: 560,
   },
   containerMobile: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    gap: 6 as any,
+    gap: 8 as any,
   },
   containerNarrow: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
@@ -255,6 +262,10 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 12,
     lineHeight: 16,
+  },
+  textMobile: {
+    fontSize: 11,
+    lineHeight: 15,
   },
   buttonsRow: {
     flexDirection: 'row',

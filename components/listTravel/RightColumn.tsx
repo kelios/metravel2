@@ -2,6 +2,7 @@ import React, { memo, Suspense, lazy, useCallback, useEffect, useMemo, useRef } 
 import {
   ActivityIndicator,
   Platform,
+  Pressable,
   ScrollView,
   View,
   ViewStyle,
@@ -13,10 +14,12 @@ import {
   Dimensions,
 } from 'react-native'
 import { FlashList } from '@shopify/flash-list'
+import Feather from '@expo/vector-icons/Feather'
 
 import StickySearchBar from '@/components/mainPage/StickySearchBar'
 import EmptyState from '@/components/ui/EmptyState'
 import { SkeletonLoader, TravelCardSkeleton } from '@/components/ui/SkeletonLoader'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { Travel } from '@/types/types'
 import {
@@ -70,6 +73,11 @@ interface RightColumnProps {
   search: string
   setSearch: (value: string) => void
   onClearAll?: () => void
+  activeConditionChips?: Array<{
+    key: string
+    label: string
+    onRemove: () => void
+  }>
   topContent?: React.ReactNode
   isRecommendationsVisible: boolean
   handleRecommendationsVisibilityChange: (visible: boolean) => void
@@ -112,6 +120,7 @@ const RightColumn: React.FC<RightColumnProps> = (
      search,
      setSearch,
      onClearAll,
+     activeConditionChips = [],
      topContent,
      isRecommendationsVisible,
      handleRecommendationsVisibilityChange,
@@ -299,6 +308,44 @@ const RightColumn: React.FC<RightColumnProps> = (
       })
       return nodes.length ? nodes : null
     }, [topContent])
+
+    const activeConditionChipStyles = useMemo(
+      () => ({
+        wrapper: {
+          flexDirection: 'row' as const,
+          flexWrap: 'wrap' as const,
+          gap: 8,
+          paddingTop: 10,
+          paddingBottom: 2,
+        },
+        chip: {
+          minHeight: 34,
+          maxWidth: isMobile ? '100%' : 280,
+          flexDirection: 'row' as const,
+          alignItems: 'center' as const,
+          gap: 6,
+          paddingHorizontal: 12,
+          paddingVertical: 7,
+          borderRadius: DESIGN_TOKENS.radii.pill,
+          borderWidth: 1,
+          borderColor: colors.border,
+          backgroundColor: colors.surface,
+          ...(Platform.OS === 'web'
+            ? ({
+                cursor: 'pointer',
+                transition: 'border-color 0.18s ease, background-color 0.18s ease',
+              } as any)
+            : null),
+        },
+        chipText: {
+          flexShrink: 1,
+          color: colors.text,
+          fontSize: 13,
+          fontWeight: '600' as const,
+        },
+      }),
+      [colors.border, colors.surface, colors.text, isMobile],
+    )
 
     const renderRow = useCallback((item: { item: Travel[]; index: number }) => {
         const { item: rowItems, index: rowIndex } = item;
@@ -601,6 +648,26 @@ const RightColumn: React.FC<RightColumnProps> = (
           <View style={paddingHorizontalStyle}>{topContentNodes}</View>
         ) : null}
 
+        {activeConditionChips.length > 0 ? (
+          <View style={[paddingHorizontalStyle, activeConditionChipStyles.wrapper]}>
+            {activeConditionChips.map((chip) => (
+              <Pressable
+                key={chip.key}
+                accessibilityRole="button"
+                accessibilityLabel={`Убрать условие: ${chip.label}`}
+                onPress={chip.onRemove}
+                style={activeConditionChipStyles.chip as any}
+                testID={`active-condition-chip-${chip.key}`}
+              >
+                <Text numberOfLines={1} style={activeConditionChipStyles.chipText}>
+                  {chip.label}
+                </Text>
+                <Feather name="x" size={14} color={colors.textMuted} />
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+
         {/* Cards + Recommendations */}
         <View testID="cards-scroll-container" style={cardsWrapperStyle}>
           {shouldShowSkeleton && isRecommendationsVisible && (
@@ -650,7 +717,7 @@ const RightColumn: React.FC<RightColumnProps> = (
                   description={getEmptyStateMessage.description}
                   variant={getEmptyStateMessage.variant}
                   action={activeFiltersCount > 0 || search ? {
-                    label: 'Сбросить фильтры',
+                    label: 'Сбросить условия',
                     onPress: () => {
                       onClearAll?.();
                       setSearch?.('');

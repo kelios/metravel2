@@ -31,7 +31,6 @@ export const TravelDetailsMapSection: React.FC<{
     hasEmbeddedCoords,
     hasTravelAddressPoints,
     highlightedPoint,
-    isMobileWeb,
     mapOpenTrigger,
     mapOpened,
     mapResizeTrigger,
@@ -88,7 +87,6 @@ export const TravelDetailsMapSection: React.FC<{
           hasMapData={hasMapData}
           highlightedPoint={highlightedPoint}
           isLoading={isLoading}
-          isMobileWeb={isMobileWeb}
           isRoutePreviewLoading={isRoutePreviewLoading}
           keyPointLabels={keyPointLabels}
           mapOpenTrigger={mapOpenTrigger}

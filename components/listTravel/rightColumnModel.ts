@@ -35,6 +35,7 @@ export function getWebRowIntrinsicSize(isMobile: boolean) {
 }
 
 type RightColumnComparableProps = {
+  activeConditionChips?: unknown
   activeFiltersCount: number
   cardSpacing?: number
   contentPadding: number
@@ -64,6 +65,7 @@ export function areRightColumnPropsEqual(
     prev.total === next.total &&
     prev.travels === next.travels &&
     prev.topContent === next.topContent &&
+    prev.activeConditionChips === next.activeConditionChips &&
     prev.renderItem === next.renderItem &&
     prev.gridColumns === next.gridColumns &&
     prev.isMobile === next.isMobile &&

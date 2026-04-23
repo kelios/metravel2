@@ -172,7 +172,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
     const scrollViewRef = useRef<ScrollView>(null);
     const segmentOptions = useMemo(
       () => [
-        { key: 'list', label: 'Список', icon: 'view_list', iconSource: 'material' as const },
+        { key: 'list', label: 'Список', icon: 'view-list', iconSource: 'material' as const },
         { key: 'map', label: 'Карта', icon: 'map', iconSource: 'material' as const },
       ],
       []

@@ -197,10 +197,10 @@ describe('TravelDetailsContainer skeleton gating (web)', () => {
     expect(overlayAfter.props.inert).toBeUndefined()
   })
 
-  it('renders the hero slider on web as soon as LCP is ready even if sliderReady is false', () => {
+  it('mounts the hero slider on web before LCP so media can preload under the LCP overlay', () => {
     const { rerender } = render(<TravelDetailsContainer />)
 
-    expect(getLastHeroSectionProps()?.renderSlider).toBe(false)
+    expect(getLastHeroSectionProps()?.renderSlider).toBe(true)
 
     mockPerformanceState.lcpLoaded = true
     mockPerformanceState.sliderReady = false
