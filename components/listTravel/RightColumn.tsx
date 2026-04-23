@@ -638,7 +638,7 @@ const RightColumn: React.FC<RightColumnProps> = (
             isRecommendationsVisible={showRecommendations}
             hasActiveFilters={activeFiltersCount > 0}
             isSearchPending={isSearchPending}
-            resultsCount={total}
+            resultsCount={isError ? undefined : total}
             activeFiltersCount={activeFiltersCount}
             onClearAll={onClearAll ?? (() => setSearch(''))}
           />

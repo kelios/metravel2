@@ -231,6 +231,24 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     borderWidth: 1,
     borderColor: colors.borderLight,
   },
+  mobileSummaryRow: {
+    minHeight: 20,
+    paddingHorizontal: spacing.xs,
+    paddingTop: spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flexWrap: 'wrap',
+  },
+  mobileSummaryText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '700',
+  },
+  mobileSummaryMuted: {
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
   pendingStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -436,6 +454,9 @@ function StickySearchBar({
     resultsCount,
     search,
   });
+  const showMobileSummary =
+    isMobile &&
+    (showPendingState || resultsCount !== undefined || activeFiltersCount !== undefined);
 
   // Keyboard shortcut для фокуса (Ctrl+K / Cmd+K)
   useEffect(() => {
@@ -483,6 +504,11 @@ function StickySearchBar({
     <Pressable
       testID={testID}
       onPress={onPress}
+      {...Platform.select({
+        web: {
+          title: accessibilityLabel,
+        } as any,
+      })}
       style={({ hovered }: any) => [
         styles.actionButton,
         isMobile && Platform.OS === 'web' ? styles.actionButtonMobileWeb : null,
@@ -557,6 +583,11 @@ function StickySearchBar({
             <Pressable
               onPress={clearSearch}
               accessibilityLabel="Очистить поиск"
+              {...Platform.select({
+                web: {
+                  title: 'Очистить поиск',
+                } as any,
+              })}
               style={[styles.clearButton, { pointerEvents: 'box-only' }, globalFocusStyles.focusable]}
             >
               <View style={styles.clearButtonIconWrap}>
@@ -639,6 +670,11 @@ function StickySearchBar({
               testID="clear-all-button"
               onPress={showClearAll ? onClearAll : undefined}
               disabled={!showClearAll}
+              {...Platform.select({
+                web: {
+                  title: 'Сбросить условия',
+                } as any,
+              })}
               style={[
                 styles.clearAllButton,
                 !showClearAll ? ({ opacity: 0 } as any) : null,
@@ -655,6 +691,22 @@ function StickySearchBar({
           )}
         </View>
       </View>
+      {showMobileSummary ? (
+        <View style={styles.mobileSummaryRow}>
+          {showPendingState ? (
+            <Text style={styles.mobileSummaryText}>Ищем...</Text>
+          ) : resultsCount !== undefined ? (
+            <Text style={styles.mobileSummaryText}>
+              {resultsCount} {getTravelLabel(resultsCount)}
+            </Text>
+          ) : null}
+          {activeFiltersCount != null && activeFiltersCount > 0 ? (
+            <Text style={[styles.mobileSummaryText, styles.mobileSummaryMuted]}>
+              {activeFiltersCount} {activeFiltersCount === 1 ? 'условие' : activeFiltersCount < 5 ? 'условия' : 'условий'}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
       </View>
       {/* SRCH-06: Quick-filter chips */}
       {quickFilters && quickFilters.length > 0 && (

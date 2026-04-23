@@ -125,7 +125,7 @@ export default defineConfig({
     storageState: 'e2e/.auth/storageState.json',
     navigationTimeout: 60_000,
     actionTimeout: 30_000,
-    trace: 'retain-on-failure',
+    trace: process.env.CI ? 'retain-on-failure' : 'off',
     video: process.env.CI ? 'retain-on-failure' : 'off',
   },
   projects: [

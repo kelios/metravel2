@@ -1,6 +1,5 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
-import { createPortal } from 'react-dom';
 import Feather from '@expo/vector-icons/Feather';
 import type { ThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
@@ -16,10 +15,24 @@ const FullscreenPopupOverlay: React.FC<{
   onOpenFullscreenImage?: () => void;
 }> = ({ visible, onClose, colors, imageUrl, imageAlt, topInfoSlot, footerSlot, onOpenFullscreenImage }) => {
   const [localHidden, setLocalHidden] = useState(false);
+  const portalCreate = useMemo(() => {
+    if (Platform.OS !== 'web') return null;
+    try {
+      return (require('react-dom') as any)?.createPortal ?? null;
+    } catch {
+      return null;
+    }
+  }, []);
 
-  // Reset local hidden state when parent re-shows the overlay
-  // (e.g. a new popup opens)
+  // Keep the overlay visible on first open, then hide it instantly on close
+  // so Leaflet does not leave a stale fullscreen layer behind.
   const effectiveVisible = visible && !localHidden;
+
+  useEffect(() => {
+    if (visible) {
+      setLocalHidden(false);
+    }
+  }, [visible]);
 
   const handleClose = useCallback(() => {
     // Immediately hide the portal, then notify parent (which calls map.closePopup)
@@ -29,16 +42,6 @@ const FullscreenPopupOverlay: React.FC<{
       onClose();
     });
   }, [onClose]);
-
-  // Reset localHidden when `visible` transitions from false to true
-  // We track this via a simple ref-like pattern using useState
-  const [prevVisible, setPrevVisible] = useState(visible);
-  if (visible && !prevVisible) {
-    setLocalHidden(false);
-  }
-  if (visible !== prevVisible) {
-    setPrevVisible(visible);
-  }
 
   if (Platform.OS !== 'web' || !effectiveVisible) return null;
 
@@ -184,8 +187,8 @@ const FullscreenPopupOverlay: React.FC<{
     </div>
   );
 
-  if (typeof document !== 'undefined') {
-    return createPortal(overlay, document.body);
+  if (typeof document !== 'undefined' && portalCreate) {
+    return portalCreate(overlay, document.body);
   }
 
   return overlay;
