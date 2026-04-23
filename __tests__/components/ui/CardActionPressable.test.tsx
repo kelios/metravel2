@@ -1,4 +1,7 @@
-import { applyWebTooltipAttributes } from '@/components/ui/CardActionPressable'
+import {
+  applyWebTooltipAttributes,
+  buildWebAccessibilityAttributes,
+} from '@/components/ui/CardActionPressable'
 
 describe('applyWebTooltipAttributes', () => {
   it('writes tooltip attributes to the web node', () => {
@@ -24,5 +27,30 @@ describe('applyWebTooltipAttributes', () => {
 
     expect(node.removeAttribute).toHaveBeenCalledWith('title')
     expect(node.removeAttribute).toHaveBeenCalledWith('data-tooltip')
+  })
+})
+
+describe('buildWebAccessibilityAttributes', () => {
+  it('maps checked and disabled state to explicit ARIA attributes', () => {
+    expect(
+      buildWebAccessibilityAttributes({ checked: true, disabled: false }),
+    ).toEqual({
+      'aria-checked': 'true',
+      'aria-disabled': 'false',
+    })
+  })
+
+  it('maps selected, expanded and busy state to explicit ARIA attributes', () => {
+    expect(
+      buildWebAccessibilityAttributes({
+        selected: true,
+        expanded: false,
+        busy: true,
+      }),
+    ).toEqual({
+      'aria-selected': 'true',
+      'aria-expanded': 'false',
+      'aria-busy': 'true',
+    })
   })
 })

@@ -22,6 +22,30 @@ type CardActionPressableProps = {
   children: React.ReactNode;
 };
 
+export const buildWebAccessibilityAttributes = (
+  accessibilityState?: CardActionPressableProps['accessibilityState'],
+) => {
+  if (!accessibilityState) return {};
+
+  return {
+    ...(typeof accessibilityState.checked === 'boolean'
+      ? { 'aria-checked': String(accessibilityState.checked) }
+      : null),
+    ...(typeof accessibilityState.selected === 'boolean'
+      ? { 'aria-selected': String(accessibilityState.selected) }
+      : null),
+    ...(typeof accessibilityState.disabled === 'boolean'
+      ? { 'aria-disabled': String(accessibilityState.disabled) }
+      : null),
+    ...(typeof accessibilityState.expanded === 'boolean'
+      ? { 'aria-expanded': String(accessibilityState.expanded) }
+      : null),
+    ...(typeof accessibilityState.busy === 'boolean'
+      ? { 'aria-busy': String(accessibilityState.busy) }
+      : null),
+  };
+};
+
 export const applyWebTooltipAttributes = (
   node: {
     setAttribute?: (name: string, value: string) => void;
@@ -59,6 +83,11 @@ const CardActionPressable = ({
   const webRef = useRef<any>(null);
   const safeChildren = React.Children.toArray(children).filter((child) => typeof child !== 'string');
   const tooltipText = title ?? accessibilityLabel;
+  const effectiveAccessibilityState = accessibilityState ?? { disabled };
+  const webAccessibilityAttributes =
+    Platform.OS === 'web'
+      ? buildWebAccessibilityAttributes(effectiveAccessibilityState)
+      : {};
 
   const activate = (e?: any) => {
     if (disabled) return;
@@ -83,7 +112,7 @@ const CardActionPressable = ({
       accessibilityRole={accessibilityRole}
       {...(accessibilityLabel ? { accessibilityLabel } : {})}
       accessibilityHint={accessibilityHint}
-      accessibilityState={accessibilityState ?? { disabled }}
+      accessibilityState={effectiveAccessibilityState}
       disabled={disabled}
       onPress={activate}
       onLongPress={onLongPress}
@@ -91,6 +120,7 @@ const CardActionPressable = ({
       onHoverOut={onHoverOut}
       testID={testID}
       {...({ 'data-card-action': 'true' } as any)}
+      {...(webAccessibilityAttributes as any)}
     >
       {safeChildren}
     </Pressable>

@@ -202,11 +202,23 @@ const TravelListPanel: React.FC<Props> = ({
       <View style={styles.listHeaderCard} testID="travel-list-mobile-summary">
         <Text style={styles.listHeaderTitle}>Места рядом</Text>
         <Text style={styles.listHeaderHint}>{hintText}</Text>
+        {onOpenFilters && (
+          <View style={styles.listHeaderActions}>
+            <Button
+              label="Ð¤Ð¸Ð»ÑŒÑ‚Ñ€Ñ‹"
+              onPress={onOpenFilters}
+              variant="outline"
+              size="sm"
+              testID="travel-list-open-filters"
+            />
+          </View>
+        )}
       </View>
     )
   }, [
     compactPreview,
     isMobile,
+    onOpenFilters,
     styles,
     travelsData.length,
   ])
