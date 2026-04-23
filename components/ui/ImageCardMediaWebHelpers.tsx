@@ -163,8 +163,8 @@ export const WebBlurBackdrop = memo(function WebBlurBackdrop({
   const backdropFilter = hasPreBlurredSource
     ? 'saturate(1.08)'
     : fit === 'contain'
-      ? 'blur(20px) saturate(1.04)'
-      : 'blur(24px) saturate(1.15)';
+      ? 'blur(20px) saturate(1.08) brightness(0.86)'
+      : 'blur(24px) saturate(1.15) brightness(0.9)';
   const backdropSegments = useMemo(
     () =>
       useCssBackdrop && fit === 'contain'
@@ -181,6 +181,30 @@ export const WebBlurBackdrop = memo(function WebBlurBackdrop({
   if (shouldSplitBackdrop) {
     return (
       <>
+        <div
+          aria-hidden="true"
+          data-blur-backdrop="true"
+          data-blur-backdrop-base="true"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 0,
+            borderRadius,
+            backgroundImage: `url("${src.replace(/"/g, '\\"')}")`,
+            backgroundSize: backdropFit,
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            filter: backdropFilter,
+            transform: `scale(${backdropScale})`,
+            transformOrigin: 'center',
+            opacity: visible ? 1 : 0,
+            contain: 'paint',
+            willChange: 'transform, opacity',
+            backfaceVisibility: 'hidden',
+            pointerEvents: 'none',
+            transition: 'opacity 0.15s ease-in',
+          }}
+        />
         {backdropSegments.map((segment, index) => (
           <div
             key={`${index}-${segment.left}-${segment.top}-${segment.width}-${segment.height}`}
@@ -212,6 +236,18 @@ export const WebBlurBackdrop = memo(function WebBlurBackdrop({
             }}
           />
         ))}
+        <div
+          aria-hidden="true"
+          data-blur-backdrop-overlay="true"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 0,
+            borderRadius,
+            backgroundColor: 'rgba(7,12,19,0.22)',
+            pointerEvents: 'none',
+          }}
+        />
       </>
     );
   }

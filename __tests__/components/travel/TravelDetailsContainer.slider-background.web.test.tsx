@@ -174,6 +174,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
     const lastProps = (lastArgs as any)?.[0]
     expect(lastProps).toBeTruthy()
     expect(lastProps.blurBackground).toBe(true)
+    expect(lastProps.fit).toBe('contain')
     expect(lastProps.preloadCount).toBe(1)
     expect(lastProps.controlsVisible).toBe(true)
   })

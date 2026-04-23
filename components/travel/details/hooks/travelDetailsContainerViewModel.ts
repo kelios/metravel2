@@ -11,11 +11,15 @@ export function getTravelDetailsHeadKey(slug: string, travelId?: number | string
 }
 
 export function getTravelDetailsSeoViewModel(travel: any, slug: string) {
-  const title = travel?.name
-    ? buildTravelSeoTitle(travel.name)
-    : slug
-      ? buildTravelSeoTitle(slug.replace(/-/g, ' '))
-      : 'Путешествие | Metravel'
+  const displayTitle =
+    typeof travel?.name === 'string' && travel.name.trim()
+      ? travel.name
+      : typeof travel?.title === 'string' && travel.title.trim()
+        ? travel.title
+        : null
+  const title = displayTitle
+    ? buildTravelSeoTitle(displayTitle)
+    : 'Путешествие | Metravel'
   const desc = getTravelSeoDescription(travel?.description)
   const canonical =
     typeof travel?.slug === 'string' && travel.slug

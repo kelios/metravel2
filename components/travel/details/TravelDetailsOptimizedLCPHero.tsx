@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, View } from 'react-native';
 
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useThemedColors } from '@/hooks/useTheme';
 import { createSafeImageUrl } from '@/utils/travelMedia';
 import {
@@ -230,43 +229,7 @@ function OptimizedLCPHeroInner({
 
   if (!srcWithRetry) return <NeutralHeroPlaceholder height={height} />;
 
-  if (Platform.OS !== 'web') {
-    return (
-      <View style={{ width: '100%', height: '100%' }}>
-        {loadError ? (
-          <NeutralHeroPlaceholder height={height} />
-        ) : (
-          <View
-            style={{
-              width: '100%',
-              height: '100%',
-              borderRadius: 12,
-              overflow: 'hidden',
-            }}
-          >
-            <ImageCardMedia
-              src={srcWithRetry}
-              fit="contain"
-              blurBackground
-              allowCriticalWebBlur
-              blurRadius={12}
-              cachePolicy="memory-disk"
-              priority="high"
-              borderRadius={12}
-              overlayColor={colors.surfaceMuted}
-              imageProps={{ contentPosition: 'center' }}
-              onLoad={() => {
-                setLoadError(false);
-                onLoad?.();
-              }}
-              onError={() => setLoadError(true)}
-              style={{ width: '100%', height: '100%' }}
-            />
-          </View>
-        )}
-      </View>
-    );
-  }
+  if (Platform.OS !== 'web') return <NeutralHeroPlaceholder height={height} />;
 
   return (
     <div
@@ -294,6 +257,24 @@ function OptimizedLCPHeroInner({
               to { opacity: 0.9; }
             }
           `}} />
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 0,
+              backgroundImage: `url("${srcWithRetry.replace(/"/g, '\\"')}")`,
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              backgroundSize: 'cover',
+              filter: 'blur(18px) saturate(1.08) brightness(0.82)',
+              transform: 'scale(1.08)',
+              opacity: 1,
+              pointerEvents: 'none',
+            }}
+            data-hero-backdrop="true"
+            data-hero-backdrop-base="true"
+          />
           {backdropSegments.length > 0 ? (
             <>
               {backdropSegments.map((segment, index) => (
@@ -314,7 +295,7 @@ function OptimizedLCPHeroInner({
                     backgroundPosition: 'center',
                     backgroundRepeat: 'no-repeat',
                     backgroundSize: 'cover',
-                    filter: 'blur(18px)',
+                    filter: 'blur(18px) saturate(1.08) brightness(0.82)',
                     transform: 'scale(1.08)',
                     transformOrigin: 'center',
                     opacity: 0,
@@ -335,7 +316,7 @@ function OptimizedLCPHeroInner({
                 backgroundPosition: 'center',
                 backgroundRepeat: 'no-repeat',
                 backgroundSize: 'cover',
-                filter: 'blur(18px)',
+                filter: 'blur(18px) saturate(1.08) brightness(0.82)',
                 transform: 'scale(1.08)',
                 opacity: 0,
                 transition: 'opacity 0.25s ease-in',
@@ -344,6 +325,17 @@ function OptimizedLCPHeroInner({
               data-hero-backdrop="true"
             />
           )}
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 0,
+              backgroundColor: 'rgba(7,12,19,0.24)',
+              pointerEvents: 'none',
+            }}
+            data-hero-backdrop-overlay="true"
+          />
           <img
             src={srcWithRetry}
             srcSet={responsive.srcSet}

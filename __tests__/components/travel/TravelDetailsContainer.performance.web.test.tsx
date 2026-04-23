@@ -45,6 +45,7 @@ describe('TravelDetailsContainer performance (web)', () => {
     expect(lcpImg?.getAttribute('loading')).toBe('eager')
     expect(lcpImg?.getAttribute('fetchpriority')).toBe('high')
     expect(lcpImg?.getAttribute('alt')).toBe('Hero image')
+    expect(lcpImg?.style.objectFit).toBe('contain')
   })
 
   it('renders the blur backdrop immediately so contain hero has stable blurred surround before slider activation', () => {

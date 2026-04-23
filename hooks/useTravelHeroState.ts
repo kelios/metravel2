@@ -25,6 +25,8 @@ const HERO_HEIGHT = {
   mobileMin: 280,
   mobileViewportRatio: 0.7,
   mobileMaxViewportRatio: 0.85,
+  webMobileViewportRatio: 0.56,
+  webMobileMaxHeight: 520,
   webViewportCapRatio: 0.7,
 } as const
 
@@ -73,6 +75,15 @@ function useHeroMediaModel(
   const resolvedWidth = heroContainerWidth ?? winW
   const heroHeight = useMemo(() => {
     if (Platform.OS === 'web') {
+      if (isMobile) {
+        return Math.max(
+          HERO_HEIGHT.mobileMin,
+          Math.min(
+            Math.round(winH * HERO_HEIGHT.webMobileViewportRatio),
+            HERO_HEIGHT.webMobileMaxHeight,
+          ),
+        )
+      }
       return Math.round(winH * HERO_HEIGHT.webViewportCapRatio)
     }
     const minViewportHeight = Math.round(winH * HERO_HEIGHT.mobileViewportRatio)
@@ -84,7 +95,7 @@ function useHeroMediaModel(
       Math.min(arHeight, Math.round(winH * HERO_HEIGHT.mobileMaxViewportRatio)),
     )
     return Math.max(minViewportHeight, boundedAspectHeight)
-  }, [winH, resolvedWidth, aspectRatio])
+  }, [winH, resolvedWidth, aspectRatio, isMobile])
 
   const heroAlt = travel?.name
     ? `Фотография маршрута «${travel.name}»`

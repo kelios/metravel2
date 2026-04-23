@@ -83,6 +83,17 @@ describe('src/api/travelsApi.ts', () => {
       expect(travel.user).toEqual(expect.objectContaining({ id: 55, name: 'Alice' }));
     });
 
+    it('uses title as the display name when backend omits name', () => {
+      const { normalizeTravelItem } = loadTravelsApi();
+      const travel = normalizeTravelItem({
+        id: '386',
+        slug: 'trek-v-khokholovskoi-doline',
+        title: 'Трек в Хохоловской долине',
+      } as any);
+
+      expect(travel.name).toBe('Трек в Хохоловской долине');
+    });
+
     it('normalizes gallery urls and keeps existing user id unchanged', () => {
       const { normalizeTravelItem } = loadTravelsApi();
       const travel = normalizeTravelItem({

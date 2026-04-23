@@ -4,7 +4,6 @@ import { Platform } from 'react-native'
 
 import type { Travel } from '@/types/types'
 import { rIC } from '@/utils/rIC'
-import { initPerformanceMonitoring } from '@/utils/performance'
 
 const NON_TRAVEL_PERFORMANCE_INIT_DELAY_MS = 1000
 const preloadTravelHeroSliderRuntime = () => import('@/components/travel/Slider.web')
@@ -186,6 +185,7 @@ export function useTravelDetailsPerformance({
         rIC(async () => {
           if (cancelled) return
           try {
+            const { initPerformanceMonitoring } = await import('@/utils/performance')
             if (!cancelled && typeof initPerformanceMonitoring === 'function') {
               initPerformanceMonitoring()
             }

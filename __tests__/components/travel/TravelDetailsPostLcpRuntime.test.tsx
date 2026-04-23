@@ -74,7 +74,7 @@ describe('TravelDetailsPostLcpRuntime', () => {
     expect(screen.getByTestId('reading-progress-bar')).toBeTruthy()
     expect(screen.getByTestId('travel-sections-sheet-wrapper')).toBeTruthy()
     expect(screen.getByTestId('scroll-to-top-button')).toBeTruthy()
-    expect(screen.getByTestId('travel-sticky-actions')).toBeTruthy()
+    expect(await screen.findByTestId('travel-sticky-actions')).toBeTruthy()
   })
 
   it('hides progress and sheet when chrome is not ready or there is no overflow', async () => {

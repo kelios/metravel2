@@ -130,13 +130,13 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       right: 0,
       bottom: 0,
       zIndex: 2,
-      paddingHorizontal: Platform.select({ default: 16, web: 32 }),
-      paddingBottom: Platform.select({ default: 24, web: 32 }),
+      paddingHorizontal: Platform.select({ default: 16, web: 40 }),
+      paddingBottom: Platform.select({ default: 24, web: 40 }),
       paddingTop: Platform.select({ default: 56, web: 80 }),
       ...(Platform.OS === 'web'
         ? ({
             backgroundImage:
-              'linear-gradient(to top, rgba(7,12,19,0.88) 0%, rgba(7,12,19,0.55) 35%, rgba(7,12,19,0.18) 60%, transparent 80%)',
+              'linear-gradient(to top, rgba(7,12,19,0.92) 0%, rgba(7,12,19,0.62) 36%, rgba(7,12,19,0.22) 64%, transparent 84%)',
           } as any)
         : {}),
     },
@@ -148,7 +148,7 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       fontSize: Platform.select({ default: 28, web: 36 }),
       fontWeight: '700' as any,
       color: colors.textOnDark,
-      letterSpacing: Platform.select({ default: -0.5, web: -0.8 }),
+      letterSpacing: 0,
       lineHeight: Platform.select({ default: 34, web: 44 }),
       ...(Platform.OS === 'web'
         ? ({

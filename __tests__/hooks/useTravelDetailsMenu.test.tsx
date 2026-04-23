@@ -21,7 +21,7 @@ describe('useTravelDetailsMenu', () => {
     const { result } = renderHook(() => useTravelDetailsMenu(false, true, 1200))
 
     expect(result.current.isMenuOpen).toBe(true)
-    expect(result.current.menuWidthNum).toBe(336)
+    expect(result.current.menuWidthNum).toBe(288)
   })
 
   it('does not open menu on mobile', () => {

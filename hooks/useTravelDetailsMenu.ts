@@ -27,8 +27,8 @@ export function useTravelDetailsMenu(
 
   const menuWidth = useMemo(() => {
     if (isMobile) return '100%'
-    const desired = Math.round(stableWidth * 0.28)
-    return clamp(desired, 320, 480)
+    const desired = Math.round(stableWidth * 0.24)
+    return clamp(desired, 288, 412)
   }, [isMobile, stableWidth])
 
   const menuWidthNum = typeof menuWidth === 'number' ? menuWidth : 0

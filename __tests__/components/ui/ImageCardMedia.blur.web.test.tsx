@@ -445,11 +445,15 @@ describe('ImageCardMedia blur background (web)', () => {
     const blurBackdropLayers = tree!.root.findAll((node: any) => {
       return node?.props?.['data-blur-backdrop-layer'] === 'true'
     })
+    const baseBlurLayers = tree!.root.findAll((node: any) => {
+      return node?.props?.['data-blur-backdrop-base'] === 'true'
+    })
     const mainLayers = tree!.root.findAll((node: any) => node?.type === 'img')
 
     expect(blurLayers.length).toBeGreaterThan(0)
-    expect(blurLayers.every((node: any) => node?.props?.['data-blur-backdrop-segment'] === 'true')).toBe(true)
-    expect(blurBackdropLayers.length).toBe(blurLayers.length)
+    expect(baseBlurLayers.length).toBe(1)
+    expect(blurBackdropLayers.every((node: any) => node?.props?.['data-blur-backdrop-segment'] === 'true')).toBe(true)
+    expect(blurBackdropLayers.length).toBe(blurLayers.length - baseBlurLayers.length)
     expect(mainLayers.length).toBeGreaterThan(0)
     expect(String(blurBackdropLayers[0].props.style?.filter || '')).toContain('saturate')
     expect(blurLayers[0].type).toBe('div')

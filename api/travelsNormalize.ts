@@ -66,9 +66,18 @@ export const normalizeTravelItem = (input: unknown): Travel => {
         out.slug = String(t.slug);
     }
 
-    // Normalize name: collapse multiple spaces into one to prevent rendering issues
-    if (typeof t.name === 'string') {
-        out.name = t.name.replace(/\s{2,}/g, ' ').trim();
+    // Normalize display title: backend variants may provide either `name` or `title`.
+    const normalizedName = typeof t.name === 'string'
+        ? t.name.replace(/\s{2,}/g, ' ').trim()
+        : undefined;
+    const normalizedTitle = typeof t.title === 'string'
+        ? t.title.replace(/\s{2,}/g, ' ').trim()
+        : undefined;
+
+    if (typeof normalizedName === 'string') {
+        out.name = normalizedName || normalizedTitle || '';
+    } else if (typeof normalizedTitle === 'string') {
+        out.name = normalizedTitle;
     }
 
     // Normalize url field:

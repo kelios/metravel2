@@ -14,7 +14,6 @@ import type { AnchorsMap } from './TravelDetailsTypes'
 import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
 import { useTravelHeroState } from '@/hooks/useTravelHeroState'
 import { useTravelDetailsHeroCompositionModel } from './hooks/useTravelDetailsHeroCompositionModel'
-import TravelHeroInteractiveSlider from './TravelHeroInteractiveSlider'
 import {
   OptimizedLCPHero,
   OVERLAY_TRANSITION_MS,
@@ -30,6 +29,9 @@ const TravelHeroExtrasLazy = React.lazy(() =>
   import('./TravelHeroExtras').then((m) => ({
     default: m.TravelHeroExtras ?? m.default,
   })),
+)
+const TravelHeroInteractiveSliderLazy = React.lazy(() =>
+  import('./TravelHeroInteractiveSlider'),
 )
 
 /* ---- TravelHeroSectionInner ---- */
@@ -131,7 +133,7 @@ function TravelHeroSectionInner({
                   collapsable={false}
                 >
                   <Suspense fallback={null}>
-                    <TravelHeroInteractiveSlider
+                    <TravelHeroInteractiveSliderLazy
                       visible
                       galleryImages={heroSliderImages}
                       isMobile={isMobile}
@@ -178,7 +180,7 @@ function TravelHeroSectionInner({
             </>
             ) : (
               <Suspense fallback={null}>
-                <TravelHeroInteractiveSlider
+                <TravelHeroInteractiveSliderLazy
                   visible
                   galleryImages={heroSliderImages}
                   isMobile={isMobile}

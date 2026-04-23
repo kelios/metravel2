@@ -3,7 +3,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { METRICS } from '@/constants/layout'
 
 export function shouldShowTravelDetailsDesktopSidebar(isMobile: boolean, screenWidth: number) {
-  return !isMobile && screenWidth >= METRICS.breakpoints.largeTablet
+  return !isMobile && screenWidth >= METRICS.breakpoints.desktop
 }
 
 export function shouldShowTravelDetailsSkeletonOverlay(travel: unknown) {
@@ -15,7 +15,7 @@ export function getTravelDetailsDesktopLayoutStyle() {
     width: '100%' as const,
     flexDirection: 'row' as const,
     alignItems: 'flex-start' as const,
-    gap: DESIGN_TOKENS.spacing.lg,
+    gap: DESIGN_TOKENS.spacing.md,
   }
 }
 

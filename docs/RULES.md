@@ -9,6 +9,10 @@
 ## Development workflow
 
 - Before starting any change, review relevant files in `docs/`.
+- Work only on the `main` branch by default:
+  - check the current branch before editing;
+  - do not create or switch to another branch unless the user gives a new explicit instruction;
+  - if the current branch is not `main`, stop before making changes and ask how to proceed.
 - Before deploying to production, validate the local code in production-like conditions:
   - build a production web export (`dist/prod`)
   - run checks against that build (not against a dev server)

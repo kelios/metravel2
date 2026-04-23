@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { Suspense } from 'react'
 import { Platform, Pressable, Text, View } from 'react-native'
 
 import type { Travel } from '@/types/types'
@@ -6,11 +6,14 @@ import type { Travel } from '@/types/types'
 import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { CollapsibleSection } from './CollapsibleSection'
-import { LazyYouTube } from './LazyYouTubeSection'
 import { getDayLabel } from '@/services/pdf-export/utils/pluralize'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import TravelDescription from '@/components/travel/TravelDescription'
 import { useTravelDetailsContentSectionModel } from '../hooks/useTravelDetailsContentSectionModel'
+
+const LazyYouTubeSection = React.lazy(() =>
+  import('./LazyYouTubeSection').then((module) => ({ default: module.LazyYouTube })),
+)
 
 const SECTION_CONTENT_MARGIN_STYLE = { marginTop: 12 } as const
 const WEB_SR_ONLY_HEADING_STYLE = {
@@ -117,7 +120,9 @@ export const TravelDetailsContentSection: React.FC<{
           <Text style={styles.sectionSubtitle}>Одно нажатие — и ролик начнёт проигрываться</Text>
           <View style={SECTION_CONTENT_MARGIN_STYLE}>
             {shouldLoadVideo ? (
-              <LazyYouTube url={travel.youtube_link} />
+              <Suspense fallback={<View style={VIDEO_PLACEHOLDER_STYLE} />}>
+                <LazyYouTubeSection url={travel.youtube_link} />
+              </Suspense>
             ) : (
               <View style={VIDEO_PLACEHOLDER_STYLE} />
             )}

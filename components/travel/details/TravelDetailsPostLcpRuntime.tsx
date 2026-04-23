@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { useThemedColors } from '@/hooks/useTheme';
@@ -11,7 +11,6 @@ import TravelSectionsSheet from '@/components/travel/TravelSectionsSheet';
 
 import type { AnchorsMap } from './TravelDetailsTypes';
 import { getTravelDetailsShellStyles } from './TravelDetailsShellStyles';
-import TravelStickyActions from './TravelStickyActions';
 import {
   getInitialDeferredSectionsComponent,
   loadDeferredSectionsComponent,
@@ -43,6 +42,7 @@ type TravelDetailsPostLcpRuntimeProps = {
 };
 
 const PLACEHOLDER_STYLE = { flex: 1 } as const;
+const TravelStickyActionsLazy = React.lazy(() => import('./TravelStickyActions'));
 
 export default function TravelDetailsPostLcpRuntime({
   travel,
@@ -141,11 +141,13 @@ export default function TravelDetailsPostLcpRuntime({
       )}
 
       {showStickyActions && (
-        <TravelStickyActions
-          travel={travel}
-          scrollY={scrollY}
-          scrollToComments={scrollToComments}
-        />
+        <Suspense fallback={null}>
+          <TravelStickyActionsLazy
+            travel={travel}
+            scrollY={scrollY}
+            scrollToComments={scrollToComments}
+          />
+        </Suspense>
       )}
     </>
   );

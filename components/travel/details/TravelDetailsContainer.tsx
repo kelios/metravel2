@@ -1,5 +1,6 @@
 // app/travels/[param].tsx
 import React, {
+  Suspense,
   useEffect,
   useMemo,
   useState,
@@ -19,7 +20,6 @@ import { useTravelDetails } from '@/hooks/travel-details';
 import TravelDetailsCriticalShell from "@/components/travel/details/TravelDetailsCriticalShell";
 import { getTravelDetailsShellStyles } from "@/components/travel/details/TravelDetailsShellStyles";
 import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
-import { MissingParamError, LoadError } from '@/components/travel/details/TravelDetailsErrorStates'
 import TravelDetailsSeoBlock from '@/components/travel/details/TravelDetailsSeoBlock'
 import TravelDetailsAccessibilityChrome from '@/components/travel/details/TravelDetailsAccessibilityChrome'
 import TravelDetailsDeferredRuntimeSlot from '@/components/travel/details/TravelDetailsDeferredRuntimeSlot'
@@ -35,6 +35,16 @@ const TravelDetailPageSkeleton = withLazy(() =>
   import('@/components/travel/TravelDetailPageSkeleton').then((m) => ({
     default: m.TravelDetailPageSkeleton,
   }))
+);
+const MissingParamErrorLazy = React.lazy(() =>
+  import('@/components/travel/details/TravelDetailsErrorStates').then((m) => ({
+    default: m.MissingParamError,
+  })),
+);
+const LoadErrorLazy = React.lazy(() =>
+  import('@/components/travel/details/TravelDetailsErrorStates').then((m) => ({
+    default: m.LoadError,
+  })),
 );
 const SKELETON_OVERLAY_FALLBACK_STYLE = { flex: 1 } as const
 
@@ -210,22 +220,26 @@ export default function TravelDetailsContainer() {
   // ✅ REFACTORED: Error states extracted to TravelDetailsErrorStates
   if (isMissingParam) {
     return (
-      <MissingParamError
-        styles={styles}
-        seoBlock={seoBlock}
-        onGoHome={() => router.replace('/')}
-      />
+      <Suspense fallback={seoBlock}>
+        <MissingParamErrorLazy
+          styles={styles}
+          seoBlock={seoBlock}
+          onGoHome={() => router.replace('/')}
+        />
+      </Suspense>
     );
   }
 
   if (isError) {
     return (
-      <LoadError
-        styles={styles}
-        seoBlock={seoBlock}
-        errorMessage={error?.message}
-        onRetry={() => refetch()}
-      />
+      <Suspense fallback={seoBlock}>
+        <LoadErrorLazy
+          styles={styles}
+          seoBlock={seoBlock}
+          errorMessage={error?.message}
+          onRetry={() => refetch()}
+        />
+      </Suspense>
     );
   }
 

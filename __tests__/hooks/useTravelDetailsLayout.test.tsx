@@ -38,7 +38,7 @@ describe('useTravelDetailsLayout', () => {
     )
 
     expect(result.current.headerOffset).toBe(HEADER_OFFSET_DESKTOP)
-    expect(result.current.contentHorizontalPadding).toBe(80)
+    expect(result.current.contentHorizontalPadding).toBe(48)
   })
 
   it('uses web and native side menu styles', () => {
