@@ -41,7 +41,11 @@ interface MarkerClusterGroupProps {
   /** Popup auto-pan settings */
   popupProps?: Record<string, unknown>
   /** Callback on marker click */
-  onMarkerClick?: (point: Point, coords: { lat: number; lng: number }) => void
+  onMarkerClick?: (
+    point: Point,
+    coords: { lat: number; lng: number },
+    marker?: any,
+  ) => void
   /** Register marker ref by coord string */
   onMarkerInstance?: (coord: string, marker: any | null) => void
   /** Hint for coordinate parsing (lng/lat swap) */
@@ -371,6 +375,10 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
         } catch {
           // noop
         }
+        if (typeof onMarkerClick === 'function') {
+          onMarkerClick(point, coords, e?.target)
+          return
+        }
         if (e?.target?.openPopup) {
           try {
             e.target.openPopup()
@@ -378,7 +386,6 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
             // noop
           }
         }
-        onMarkerClick?.(point, coords)
       })
 
       // Register marker instance

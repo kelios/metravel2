@@ -720,12 +720,12 @@ const getStyles = (
         ? ({
             padding: 6,
             borderRadius: 20,
-            backgroundColor: colors.surfaceAlpha40,
+            backgroundColor: colors.surfaceElevated,
             borderWidth: StyleSheet.hairlineWidth,
-            borderColor: colors.borderLight,
+            borderColor: colors.border,
             backdropFilter: 'blur(18px) saturate(1.05)',
             WebkitBackdropFilter: 'blur(18px) saturate(1.05)',
-            boxShadow: '0 18px 34px rgba(15,23,42,0.08), 0 2px 8px rgba(15,23,42,0.04)',
+            boxShadow: '0 18px 34px rgba(15,23,42,0.14), 0 2px 8px rgba(15,23,42,0.08)',
           } as any)
         : null),
     },
@@ -765,16 +765,17 @@ const getStyles = (
       minHeight: options.isVeryNarrow ? 36 : options.isNarrow ? 38 : 40,
       minWidth: options.isNarrow ? 0 : DESKTOP_RADIUS_CLUSTER_MIN_WIDTH,
       borderRadius: 14,
-      backgroundColor: Platform.OS === 'web' ? colors.surfaceAlpha40 : colors.surface,
+      backgroundColor:
+        Platform.OS === 'web' ? colors.surfaceElevated : colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
+      borderColor: colors.border,
       paddingLeft: options.isVeryNarrow ? 6 : 8,
       paddingRight: 4,
       ...(Platform.OS === 'web'
         ? ({
             backdropFilter: 'blur(20px) saturate(1.12)',
             WebkitBackdropFilter: 'blur(20px) saturate(1.12)',
-            boxShadow: '0 6px 16px rgba(15,23,42,0.06), 0 1px 3px rgba(15,23,42,0.04)',
+            boxShadow: '0 8px 18px rgba(15,23,42,0.15), 0 1px 4px rgba(15,23,42,0.08)',
           } as any)
         : colors.shadows.light),
     },
@@ -836,14 +837,15 @@ const getStyles = (
       paddingHorizontal: options.isVeryNarrow ? 10 : 12,
       paddingVertical: 4,
       borderRadius: 14,
-      backgroundColor: Platform.OS === 'web' ? colors.surfaceAlpha40 : colors.surface,
+      backgroundColor:
+        Platform.OS === 'web' ? colors.surfaceElevated : colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
+      borderColor: colors.border,
       ...(Platform.OS === 'web'
         ? ({
             backdropFilter: 'blur(20px) saturate(1.12)',
             WebkitBackdropFilter: 'blur(20px) saturate(1.12)',
-            boxShadow: '0 6px 16px rgba(15,23,42,0.06), 0 1px 3px rgba(15,23,42,0.04)',
+            boxShadow: '0 8px 18px rgba(15,23,42,0.15), 0 1px 4px rgba(15,23,42,0.08)',
             cursor: 'pointer',
             transition: 'transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease',
           } as any)
@@ -865,14 +867,15 @@ const getStyles = (
       borderRadius: options.isVeryNarrow ? 12 : 14,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: Platform.OS === 'web' ? colors.surfaceAlpha40 : colors.surface,
+      backgroundColor:
+        Platform.OS === 'web' ? colors.surfaceElevated : colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
+      borderColor: colors.border,
       ...(Platform.OS === 'web'
         ? ({
             backdropFilter: 'blur(18px) saturate(1.08)',
             WebkitBackdropFilter: 'blur(18px) saturate(1.08)',
-            boxShadow: '0 6px 16px rgba(15,23,42,0.06)',
+            boxShadow: '0 8px 18px rgba(15,23,42,0.15), 0 1px 4px rgba(15,23,42,0.08)',
             cursor: 'pointer',
           } as any)
         : colors.shadows.light),
@@ -886,14 +889,15 @@ const getStyles = (
       borderRadius: options.isVeryNarrow ? 12 : 14,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: Platform.OS === 'web' ? colors.surfaceAlpha40 : colors.surface,
+      backgroundColor:
+        Platform.OS === 'web' ? colors.surfaceElevated : colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
+      borderColor: colors.border,
       ...(Platform.OS === 'web'
         ? ({
             backdropFilter: 'blur(18px) saturate(1.08)',
             WebkitBackdropFilter: 'blur(18px) saturate(1.08)',
-            boxShadow: '0 6px 16px rgba(15,23,42,0.06)',
+            boxShadow: '0 8px 18px rgba(15,23,42,0.15), 0 1px 4px rgba(15,23,42,0.08)',
             cursor: 'pointer',
           } as any)
         : colors.shadows.light),
@@ -903,7 +907,7 @@ const getStyles = (
       fontSize: options.isVeryNarrow ? 11 : 12,
       lineHeight: options.isVeryNarrow ? 14 : 15,
       fontWeight: '800',
-      color: colors.primary,
+      color: colors.primaryDark,
       letterSpacing: 0,
     },
     iconButtonIcon: {

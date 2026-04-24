@@ -53,7 +53,7 @@ describe('map layout header offset', () => {
     expect(styles.rightPanel.top).toBe(0);
     expect(styles.overlay.top).toBe(0);
     // tabsContainer only has base padding without header offset
-    expect(styles.tabsContainer.paddingTop).toBe(10);
+    expect(styles.tabsContainer.paddingTop).toBe(14);
 
     // right panel uses tokenized widths (min string on web)
     expect(styles.rightPanel.width).toBe(`min(${METRICS.baseUnit * 45}px, 34vw)`);
@@ -69,8 +69,8 @@ describe('map layout header offset', () => {
     const styles = getStyles(true, insetTop, themedColors);
 
     // For mobile web: header offset handled by DOM, only inset applies
-    // Math.max(8, insetTop + 1) = Math.max(8, 13) = 13
-    expect(styles.tabsContainer.paddingTop).toBe(Math.max(8, insetTop + 1));
+    // Math.max(10, insetTop + 2) = Math.max(10, 14) = 14
+    expect(styles.tabsContainer.paddingTop).toBe(Math.max(10, insetTop + 2));
     expect(styles.container.paddingTop ?? 0).toBe(0);
   });
 });

@@ -297,6 +297,13 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     renderedSlideWidth: containerW,
     setContainerWidth,
   });
+  const slideWidthStyle =
+    imagesLen === 1
+      ? '100%'
+      : layoutMeasured
+        ? renderedSlideWidth
+        : `${100 / imagesLen}%`;
+  const slideMediaWidth = layoutMeasured ? renderedSlideWidth : '100%';
 
   // --- Pointer drag + keyboard ---
   useSliderPointerDrag({
@@ -420,7 +427,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                     style={[
                       styles.slide,
                       {
-                        width: imagesLen === 1 ? '100%' : (layoutMeasured ? renderedSlideWidth : '100%'),
+                        width: slideWidthStyle,
                         height: containerH,
                         zIndex: 1,
                       },
@@ -430,7 +437,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       item={item}
                       index={index}
                       uri={getUri(index)}
-                      containerW={renderedSlideWidth}
+                      containerW={slideMediaWidth}
                       slideHeight={slideHeight}
                       slideHeightPx={computedH}
                       imagesLength={imagesLen}

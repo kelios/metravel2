@@ -15,7 +15,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       flex: 1,
       backgroundColor: colors.surface,
       borderRadius: isMobile ? 0 : 24,
-      padding: isMobile ? 0 : 14,
+      padding: isMobile ? 0 : 16,
       width: panelWidth,
       maxWidth: '100%',
       minHeight: 0,
@@ -36,7 +36,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
           ? ({
               borderWidth: 1,
               borderColor: colors.borderLight,
-              boxShadow: '0 18px 42px rgba(15,23,42,0.08), 0 3px 10px rgba(15,23,42,0.05)',
+              boxShadow: '0 20px 50px rgba(15,23,42,0.10), 0 4px 12px rgba(15,23,42,0.06)',
             } as any)
           : {
               shadowColor: (colors.shadows as any)?.shadowColor ?? DESIGN_TOKENS.shadowsNative.light.shadowColor,
@@ -260,17 +260,17 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     sectionCard: {
       backgroundColor: colors.surface,
-      borderRadius: isMobile ? 14 : 16,
-      padding: isMobile ? 12 : 13,
-      marginBottom: isMobile ? 8 : 12,
-      gap: isMobile ? 8 : 10,
+      borderRadius: isMobile ? 16 : 18,
+      padding: isMobile ? 14 : 15,
+      marginBottom: isMobile ? 10 : 12,
+      gap: isMobile ? 10 : 12,
       borderWidth: 1,
       borderColor: colors.borderLight,
       ...(Platform.OS === 'web'
         ? ({
             boxShadow: isMobile
-              ? '0 4px 14px rgba(15,23,42,0.04), 0 1px 2px rgba(15,23,42,0.02)'
-              : '0 6px 18px rgba(15,23,42,0.04), 0 1px 2px rgba(15,23,42,0.03)',
+              ? '0 4px 16px rgba(15,23,42,0.05), 0 1px 3px rgba(15,23,42,0.03)'
+              : '0 6px 20px rgba(15,23,42,0.06), 0 1px 4px rgba(15,23,42,0.03)',
             transition: 'box-shadow 0.2s ease',
           } as any)
         : null),
@@ -332,10 +332,11 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       textTransform: 'uppercase' as const,
     },
     sectionHint: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textMuted,
-      marginBottom: 4,
-      lineHeight: 15,
+      marginBottom: 2,
+      marginTop: -2,
+      lineHeight: 16,
     },
     chipsContainer: {
       marginTop: 2,
@@ -348,17 +349,17 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: colors.backgroundSecondary,
-      paddingHorizontal: 9,
-      paddingVertical: 6,
-      minHeight: 30,
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      minHeight: 32,
       borderRadius: 999,
-      maxWidth: 150,
+      maxWidth: 160,
       marginRight: 6,
       borderWidth: 1,
       borderColor: colors.borderLight,
       ...(Platform.OS === 'web'
         ? ({
-            transition: 'background-color 0.2s ease, border-color 0.2s ease',
+            transition: 'background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
             cursor: 'pointer',
           } as any)
         : null),
@@ -368,13 +369,13 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       borderColor: colors.primary,
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: `0 6px 14px ${colors.primaryAlpha30}`,
+            boxShadow: `0 4px 12px ${colors.primaryAlpha30}`,
           } as any)
         : null),
     },
     categoryChipText: {
-      fontSize: 11,
-      fontWeight: '700',
+      fontSize: 12,
+      fontWeight: '600',
       color: colors.text,
       flexShrink: 1,
       marginRight: 4,
@@ -444,23 +445,26 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     radiusOptionsScroll: {
       marginTop: 2,
-      marginHorizontal: isMobile ? -2 : 0,
+      marginHorizontal: 0,
     },
     radiusOptionsScrollContent: {
-      paddingHorizontal: isMobile ? 2 : 0,
-      paddingRight: isMobile ? 2 : 0,
+      paddingHorizontal: 0,
     },
     radiusOptionsWrap: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      alignItems: 'center',
-      gap: isMobile ? 6 : 6,
+      alignItems: 'stretch',
+      gap: 6,
     },
     radiusOptionChip: {
-      maxWidth: '100%',
-      minHeight: 34,
-      paddingHorizontal: isMobile ? 10 : 12,
-      paddingVertical: 6,
+      flexGrow: 1,
+      flexShrink: 1,
+      flexBasis: '47%',
+      minWidth: 0,
+      minHeight: 42,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      justifyContent: 'center',
     },
     radiusSelectionHint: {
       marginTop: 10,
@@ -480,7 +484,8 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     filterSelectionChips: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: isMobile ? 6 : 8,
+      gap: 8,
+      marginTop: 2,
     },
     filterSelectionChip: {
       flexDirection: 'row',
@@ -805,50 +810,53 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     // LIGHT ROUTE PANEL — современный светлый легкий дизайн
     // ═══════════════════════════════════════════════════════════════
     lightStepBlock: {
-      paddingVertical: isMobile ? 6 : 10,
+      paddingVertical: isMobile ? 12 : 14,
       paddingHorizontal: 0,
-      gap: isMobile ? 6 : 9,
-      borderBottomWidth: isMobile ? 0 : StyleSheet.hairlineWidth,
+      gap: isMobile ? 8 : 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.borderLight,
     },
     lightStepHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
-      marginBottom: 0,
+      gap: 10,
+      marginBottom: 2,
     },
     lightStepNumber: {
-      width: 20,
-      height: 20,
-      borderRadius: 10,
+      width: 22,
+      height: 22,
+      borderRadius: 11,
       backgroundColor: colors.primary,
       color: colors.textOnPrimary,
       fontSize: 11,
       fontWeight: '700',
       textAlign: 'center',
-      lineHeight: 20,
+      lineHeight: 22,
       overflow: 'hidden',
     },
     lightStepTitle: {
       flex: 1,
-      fontSize: isMobile ? 14 : 13,
-      fontWeight: '600',
+      fontSize: 14,
+      fontWeight: '700',
       color: colors.text,
+      letterSpacing: -0.1,
     },
     lightStepBadge: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: '700',
       color: colors.primary,
       backgroundColor: colors.primarySoft,
-      paddingHorizontal: 7,
-      paddingVertical: 2,
-      borderRadius: 10,
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+      borderRadius: 999,
       overflow: 'hidden',
+      letterSpacing: -0.1,
     },
     lightStepHint: {
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: '500',
       color: colors.textMuted,
+      lineHeight: 17,
     },
     lightCheckBadge: {
       flexDirection: 'row',

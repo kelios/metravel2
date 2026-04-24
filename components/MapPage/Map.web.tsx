@@ -245,7 +245,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   // OSM tile preconnect is handled in app/+html.tsx (injected as <link> before JS loads).
   // No runtime preconnect needed here.
 
-  const handleMarkerZoom = useCallback((point: Point, coords: { lat: number; lng: number }) => {
+  const handleMarkerZoom = useCallback((point: Point, coords: { lat: number; lng: number }, clickedMarker?: any) => {
     if (!mapRef.current) return;
     if (!isValidCoordinate(coords.lat, coords.lng)) return;
     const map = mapRef.current;
@@ -259,30 +259,53 @@ const MapPageComponent: React.FC<Props> = (props) => {
     if (focusPlan.shouldCollapseSheet) {
       requestBottomSheetCollapse();
     }
-    if (focusPlan.shouldSkipZoom) return;
+
+    if (clickedMarker) {
+      try {
+        clickedMarker.openPopup?.();
+      } catch {
+        // noop
+      }
+      return;
+    }
 
     const markerKey = String(point?.coord ?? '').trim();
-    const marker =
+    const resolveMarker = () =>
       markerByCoordRef.current.get(markerKey) ??
-      markerByCoordRef.current.get(CoordinateConverter.toString(coords));
+      markerByCoordRef.current.get(CoordinateConverter.toString(coords)) ??
+      clickedMarker
+
+    if (focusPlan.shouldSkipZoom) {
+      try {
+        resolveMarker()?.openPopup?.();
+      } catch {
+        // noop
+      }
+      return;
+    }
 
     let reopened = false;
     let reopenTimer: ReturnType<typeof setTimeout> | null = null;
     const reopenPopup = () => {
       if (reopened) return;
       reopened = true;
+      try {
+        map?.off?.('moveend', reopenPopup);
+      } catch {
+        // noop
+      }
       if (reopenTimer) {
         clearTimeout(reopenTimer);
         reopenTimer = null;
       }
       try {
-        marker?.openPopup?.();
+        resolveMarker()?.openPopup?.();
       } catch {
         // noop
       }
     };
 
-    if (marker && typeof map.once === 'function') {
+    if (typeof map.once === 'function') {
       try {
         map.once('moveend', reopenPopup);
       } catch {

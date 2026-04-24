@@ -272,6 +272,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
     const lastArgs = mockSliderSpy.mock.calls[mockSliderSpy.mock.calls.length - 1]
     const lastProps = (lastArgs as any)?.[0]
     expect(lastProps.controlsVisible).toBe(true)
+    expect(lastProps.skipFirstSlideImage).not.toBe(true)
   })
 
   it('updates hero container width from web layout events', async () => {
@@ -361,6 +362,17 @@ describe('TravelHeroSection slider background regression (web)', () => {
     })
 
     expect(typeof heroSliderContainer.props?.onLayout).toBe('function')
+    const lcpHeroImage = (tree as any).root.findAll(
+      (node: any) => node.type === 'img' && node.props?.['data-lcp'],
+    )[0]
+    expect(lcpHeroImage.props.style).toEqual(
+      expect.objectContaining({
+        width: '100%',
+        height: '100%',
+        maxWidth: 'none',
+        maxHeight: 'none',
+      }),
+    )
 
     await act(async () => {
       heroSliderContainer.props.onLayout({

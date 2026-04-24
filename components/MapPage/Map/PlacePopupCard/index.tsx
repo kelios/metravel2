@@ -72,7 +72,7 @@ const PlacePopupCard: React.FC<Props> = ({
   addDisabled = false,
   isAdding = false,
   addLabel = 'Сохранить',
-  width = 332,
+  width = 352,
   imageHeight: _imageHeight = 56,
   compactLayout = false,
   fullscreenOnMobile = false,
@@ -402,7 +402,7 @@ const PlacePopupCard: React.FC<Props> = ({
       )}
 
       <View style={styles.actionsStack}>
-        {useCompactDecisionLayout && (
+        {showLabeled && (
           <Text style={styles.actionSummaryText}>
             {actionSummaryText}
           </Text>
@@ -540,7 +540,6 @@ const PlacePopupCard: React.FC<Props> = ({
     onCopyCoord,
     primaryAction,
     styles,
-    useCompactDecisionLayout,
     colors.textOnDark,
     colors.textOnPrimary,
   ]);

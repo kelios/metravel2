@@ -22,18 +22,18 @@ export const getStyles = (
   const horizontalPadding = compactLayout
     ? compactSp.horizontalPadding
     : bp === 'narrow'
-      ? 10
-      : 12;
+      ? 12
+      : 14;
   const topPadding = compactLayout
     ? compactSp.topPadding
     : bp === 'narrow'
-      ? 10
-      : 10;
+      ? 12
+      : 14;
   const bottomPadding = compactLayout
     ? compactSp.bottomPadding
     : bp === 'narrow'
-      ? 10
-      : 10;
+      ? 12
+      : 14;
 
   return StyleSheet.create({
     container: {
@@ -44,11 +44,11 @@ export const getStyles = (
     popupCard: {
       width: '100%',
       backgroundColor: colors.surface,
-      borderRadius: (compactLayout ? compactSp.radius : sp.radius) + 4,
+      borderRadius: compactLayout ? compactSp.radius + 4 : sp.radius + 4,
       overflow: 'hidden',
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: '0 8px 28px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)',
+            boxShadow: '0 22px 52px rgba(15,23,42,0.22), 0 8px 18px rgba(15,23,42,0.12)',
           } as any)
         : {
             shadowColor: DESIGN_TOKENS.colors.text,
@@ -60,6 +60,8 @@ export const getStyles = (
     },
     topSection: {
       width: '100%',
+      paddingTop: splitLayout ? 0 : topPadding,
+      paddingHorizontal: splitLayout ? 0 : horizontalPadding,
     },
     topSectionSplit: {
       flexDirection: 'row',
@@ -71,6 +73,8 @@ export const getStyles = (
       minHeight: heroHeight > 0 ? heroHeight : 0,
       position: 'relative',
       backgroundColor: colors.backgroundSecondary,
+      borderRadius: 0,
+      overflow: 'hidden',
     },
     imageContainerSplit: {
       width: heroWidth,
@@ -83,19 +87,19 @@ export const getStyles = (
     },
     imageExpandButton: {
       position: 'absolute',
-      top: compactLayout ? 8 : 10,
-      right: compactLayout ? 8 : 10,
+      bottom: compactLayout ? 8 : 10,
+      left: compactLayout ? 8 : 10,
       width: compactLayout ? 30 : 34,
       height: compactLayout ? 30 : 34,
-      borderRadius: compactLayout ? 15 : 17,
-      backgroundColor: 'rgba(0,0,0,0.35)',
+      borderRadius: DESIGN_TOKENS.radii.full,
+      backgroundColor: 'rgba(15,23,42,0.52)',
       alignItems: 'center',
       justifyContent: 'center',
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' } as any) : null),
     },
     contentContainer: {
-      paddingHorizontal: horizontalPadding + 2,
-      paddingTop: topPadding + 2,
+      paddingHorizontal: splitLayout ? horizontalPadding + 2 : 2,
+      paddingTop: splitLayout ? topPadding + 2 : 14,
       paddingBottom: 0,
     },
     contentContainerSplit: {
@@ -108,15 +112,15 @@ export const getStyles = (
       justifyContent: 'flex-start',
     },
     footerContainer: {
-      paddingHorizontal: horizontalPadding + 2,
-      paddingTop: splitLayout ? 10 : 12,
-      paddingBottom: bottomPadding + 2,
+      paddingHorizontal: horizontalPadding,
+      paddingTop: splitLayout ? 10 : 14,
+      paddingBottom: bottomPadding,
     },
     footerStack: {
       gap: splitLayout ? 10 : compactLayout ? compactSp.sectionGap : sp.sectionGap,
     },
     infoSection: {
-      gap: compactLayout ? 4 : splitLayout ? 5 : bp === 'narrow' ? 6 : 8,
+      gap: compactLayout ? 6 : splitLayout ? 6 : bp === 'narrow' ? 8 : 10,
     },
     metaRow: {
       flexDirection: 'row',
@@ -129,19 +133,19 @@ export const getStyles = (
       alignItems: 'center',
       gap: compactLayout ? 5 : 6,
       minHeight: compactLayout ? compactSp.metaMinHeight : splitLayout ? 24 : 26,
-      paddingHorizontal: compactLayout ? 8 : splitLayout ? 9 : 10,
+      paddingHorizontal: compactLayout ? 8 : splitLayout ? 9 : 11,
       paddingVertical: compactLayout ? 4 : splitLayout ? 4 : 5,
-      borderRadius: DESIGN_TOKENS.radii.md,
+      borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
-      borderWidth: 0,
-      borderColor: 'transparent',
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight ?? colors.border,
     },
     titleText: {
       fontSize: splitLayout ? fs.title + 1 : fs.title,
-      fontWeight: '700',
+      fontWeight: '800',
       color: colors.text,
-      lineHeight: (splitLayout ? fs.title + 1 : fs.title) * 1.28,
-      letterSpacing: Platform.OS === 'web' ? -0.35 : undefined,
+      lineHeight: (splitLayout ? fs.title + 1 : fs.title) * 1.24,
+      letterSpacing: 0,
       ...(Platform.OS === 'web'
         ? ({
             display: '-webkit-box',
@@ -196,12 +200,12 @@ export const getStyles = (
       flexDirection: 'row',
       alignItems: 'center',
       gap: compactLayout ? 5 : 6,
-      minHeight: compactLayout ? compactSp.coordMinHeight : splitLayout ? 30 : 32,
-      paddingHorizontal: compactLayout ? 8 : splitLayout ? 10 : 9,
-      paddingVertical: compactLayout ? 4 : 5,
-      borderRadius: DESIGN_TOKENS.radii.md,
+      minHeight: compactLayout ? compactSp.coordMinHeight : splitLayout ? 32 : 36,
+      paddingHorizontal: compactLayout ? 10 : splitLayout ? 10 : 12,
+      paddingVertical: compactLayout ? 5 : 6,
+      borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
-      borderWidth: 1,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight ?? colors.border,
     },
     coordText: {
@@ -228,7 +232,7 @@ export const getStyles = (
       flexDirection: 'row',
       flexWrap: 'wrap',
       alignItems: 'center',
-      gap: splitLayout ? 7 : compactLayout ? 6 : 8,
+      gap: splitLayout ? 8 : compactLayout ? 8 : 10,
     },
     hoverActionWrap: {
       position: 'relative',
@@ -275,9 +279,9 @@ export const getStyles = (
       justifyContent: 'center',
       width: compactLayout ? compactSp.iconButtonSize : splitLayout ? sp.iconButtonSize - 2 : sp.iconButtonSize,
       height: compactLayout ? compactSp.iconButtonSize : splitLayout ? sp.iconButtonSize - 2 : sp.iconButtonSize,
-      borderRadius: DESIGN_TOKENS.radii.md,
+      borderRadius: DESIGN_TOKENS.radii.full,
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
-      borderWidth: 1,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight ?? colors.border,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer', transition: 'background-color 0.15s ease' } as any) : null),
     },
@@ -291,23 +295,23 @@ export const getStyles = (
       justifyContent: 'center',
       gap: 6,
       width: '100%',
-      minHeight: compactLayout ? compactSp.addBtnMinHeight : splitLayout ? 38 : 40,
-      paddingVertical: compactLayout ? 4 : 6,
+      minHeight: compactLayout ? compactSp.addBtnMinHeight : splitLayout ? 40 : 46,
+      paddingVertical: compactLayout ? 6 : 9,
       paddingHorizontal: compactLayout ? sp.btnPadH : splitLayout ? 14 : sp.btnPadH,
-      borderRadius: DESIGN_TOKENS.radii.lg,
+      borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.primary,
       borderWidth: 0,
       borderColor: 'transparent',
-      ...(Platform.OS === 'web' ? ({ cursor: 'pointer', transition: 'opacity 0.15s ease' } as any) : null),
+      ...(Platform.OS === 'web' ? ({ cursor: 'pointer', transition: 'opacity 0.15s ease, transform 0.15s ease' } as any) : null),
     },
     primaryActionBtnPressed: {
       opacity: 0.72,
     },
     primaryActionText: {
       fontSize: compactLayout ? fs.small : fs.small + 1,
-      fontWeight: '600',
+      fontWeight: '700',
       color: colors.textOnPrimary ?? colors.textOnDark,
-      letterSpacing: Platform.OS === 'web' ? 0 : undefined,
+      letterSpacing: 0,
     },
     routeBtn: {
       backgroundColor: colors.primarySoft ?? colors.backgroundSecondary,
@@ -318,8 +322,8 @@ export const getStyles = (
       justifyContent: 'center',
       width: compactLayout ? compactSp.iconButtonSize : splitLayout ? sp.iconButtonSize - 2 : sp.iconButtonSize,
       height: compactLayout ? compactSp.iconButtonSize : splitLayout ? sp.iconButtonSize - 2 : sp.iconButtonSize,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      borderWidth: 1,
+      borderRadius: DESIGN_TOKENS.radii.full,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.primarySoft ?? colors.borderLight ?? colors.border,
       backgroundColor: colors.primarySoft ?? colors.backgroundSecondary,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer', transition: 'opacity 0.15s ease' } as any) : null),

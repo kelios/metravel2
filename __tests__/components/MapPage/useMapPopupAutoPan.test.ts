@@ -67,6 +67,8 @@ describe('useMapPopupAutoPan', () => {
 
     expect(result.current.popupAutoPanPadding).toEqual(
       expect.objectContaining({
+        autoPan: false,
+        keepInView: false,
         autoPanPaddingTopLeft: [12, 152],
         autoPanPaddingBottomRight: [12, 72],
       })
@@ -129,14 +131,14 @@ describe('useMapPopupAutoPan', () => {
       },
     })
 
-    expect(panBy).toHaveBeenCalledWith([0, -226], { animate: true, duration: 0.35 })
+    expect(panBy).toHaveBeenCalledWith([0, -226], { animate: false })
     expect(on).toHaveBeenCalledWith('popupclose', expect.any(Function))
     expect(on).toHaveBeenCalledWith('moveend', expect.any(Function))
 
     panBy.mockClear()
     listeners.get('moveend')?.()
 
-    expect(panBy).toHaveBeenCalledWith([0, -226], { animate: true, duration: 0.35 })
+    expect(panBy).toHaveBeenCalledWith([0, -226], { animate: false })
   })
 
   it('keeps observing popup size changes after the first second so late image growth can re-pan', () => {
@@ -192,7 +194,7 @@ describe('useMapPopupAutoPan', () => {
     })
 
     expect(resizeObserverInstances).toHaveLength(1)
-    expect(panBy).toHaveBeenCalledWith([0, -47], { animate: true, duration: 0.35 })
+    expect(panBy).toHaveBeenCalledWith([0, -47], { animate: false })
 
     panBy.mockClear()
 
@@ -206,7 +208,7 @@ describe('useMapPopupAutoPan', () => {
       resizeObserverInstances[0]?.trigger()
     })
 
-    expect(panBy).toHaveBeenCalledWith([0, -228], { animate: true, duration: 0.35 })
+    expect(panBy).toHaveBeenCalledWith([0, -228], { animate: false })
   })
 
   it('centers desktop popup horizontally inside the visible map area', () => {
@@ -260,6 +262,6 @@ describe('useMapPopupAutoPan', () => {
       },
     })
 
-    expect(panBy).toHaveBeenCalledWith([400, 0], { animate: true, duration: 0.35 })
+    expect(panBy).toHaveBeenCalledWith([400, 0], { animate: false })
   })
 })

@@ -98,4 +98,61 @@ describe('MarkerClusterGroup', () => {
 
     expect(popupOpen).toHaveBeenCalledWith(popupEvent)
   })
+
+  it('defers popup opening to marker click follow-up when a handler is present', () => {
+    const markerHandlers = new Map<string, (event: any) => void>()
+    const marker = {
+      bindPopup: jest.fn(),
+      bindTooltip: jest.fn(),
+      openPopup: jest.fn(),
+      on: jest.fn((eventName: string, handler: (event: any) => void) => {
+        markerHandlers.set(eventName, handler)
+        return marker
+      }),
+    }
+    const group = {
+      addLayers: jest.fn(),
+      addLayer: jest.fn(),
+      clearLayers: jest.fn(),
+      on: jest.fn(),
+      off: jest.fn(),
+    }
+    const map = {
+      addLayer: jest.fn(),
+      removeLayer: jest.fn(),
+    }
+    const L = {
+      markerClusterGroup: jest.fn(() => group),
+      marker: jest.fn(() => marker),
+      divIcon: jest.fn(),
+    }
+    const onMarkerClick = jest.fn()
+
+    render(
+      <MarkerClusterGroup
+        L={L}
+        useMap={() => map}
+        points={[
+          {
+            id: 1,
+            coord: '53.9,27.56',
+            address: 'Минск',
+          } as any,
+        ]}
+        markerIcon={{}}
+        PopupContent={() => null}
+        Popup={() => null}
+        onMarkerClick={onMarkerClick}
+      />,
+    )
+
+    markerHandlers.get('click')?.({
+      originalEvent: { stopPropagation: jest.fn() },
+      target: marker,
+    })
+
+    expect(marker.openPopup).not.toHaveBeenCalled()
+    expect(onMarkerClick).toHaveBeenCalledTimes(1)
+    expect(onMarkerClick.mock.calls[0][2]).toBe(marker)
+  })
 })

@@ -154,7 +154,11 @@ type MapWebLeafletCanvasProps = {
   markers: Point[]
   PopupComponent: any
   popupAutoPanPadding: any
-  handleMarkerZoom: (_point: Point, coords: { lat: number; lng: number }) => void
+  handleMarkerZoom: (
+    _point: Point,
+    coords: { lat: number; lng: number },
+    marker?: any,
+  ) => void
   markerByCoordRef: React.MutableRefObject<Map<string, any>>
   travelMarkerOpacity: number
 }

@@ -119,7 +119,7 @@ export function useMapPopupAutoPan({
         if (Math.abs(dy) < 8) dy = 0
         if (!dx && !dy) return
 
-        map?.panBy?.([dx, dy], { animate: true, duration: 0.35 } as any)
+        map?.panBy?.([dx, dy], { animate: false } as any)
       } catch {
         // noop
       }
@@ -201,8 +201,8 @@ export function useMapPopupAutoPan({
     const bottomPadding = isNarrowViewport ? safeArea.bottomPadding : 140
 
     return {
-      autoPan: true,
-      keepInView: true,
+      autoPan: false,
+      keepInView: false,
       maxWidth,
       minWidth,
       className: useFullscreenMobilePopup

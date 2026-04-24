@@ -18,41 +18,43 @@ interface PopupColors {
 export const getPopupCss = (cssScope: string, colors: PopupColors): string => `
 ${cssScope} .leaflet-popup-content-wrapper,
 ${cssScope} .leaflet-popup-tip {
-  background: ${colors.surface} !important;
+  background: transparent !important;
   opacity: 1 !important;
 }
 ${cssScope} .leaflet-popup-content-wrapper {
   color: ${colors.text} !important;
-  border-radius: ${DESIGN_TOKENS.radii.lg}px !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.10), 0 2px 6px rgba(0, 0, 0, 0.06) !important;
-  border: 1px solid ${colors.border} !important;
-  max-height: 400px !important;
+  border-radius: ${DESIGN_TOKENS.radii.xl}px !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  max-height: 460px !important;
   overflow: hidden !important;
 }
 ${cssScope} .leaflet-popup-content {
-  margin: ${DESIGN_TOKENS.spacing.sm}px !important;
+  margin: 0 !important;
   color: ${colors.text} !important;
-  max-height: 380px !important;
+  max-height: 440px !important;
   overflow-y: auto !important;
-  width: min(var(--metravel-popup-content-max-width, 300px), calc(100vw - 48px)) !important;
-  max-width: min(var(--metravel-popup-content-max-width, 300px), calc(100vw - 48px)) !important;
+  width: min(var(--metravel-popup-content-max-width, 352px), calc(100vw - 48px)) !important;
+  max-width: min(var(--metravel-popup-content-max-width, 352px), calc(100vw - 48px)) !important;
+  border-radius: ${DESIGN_TOKENS.radii.xl}px !important;
 }
 ${cssScope} .leaflet-popup-close-button {
   display: block !important;
-  width: 26px !important;
-  height: 26px !important;
-  line-height: 24px !important;
+  width: 34px !important;
+  height: 34px !important;
+  line-height: 32px !important;
   text-align: center !important;
   border-radius: 999px !important;
   border: 1px solid ${colors.border} !important;
   background: ${colors.surface} !important;
-  top: 6px !important;
-  right: 6px !important;
-  z-index: 2 !important;
-  color: ${colors.textMuted} !important;
+  top: 10px !important;
+  right: 10px !important;
+  z-index: 4 !important;
+  color: ${colors.text} !important;
   cursor: pointer !important;
   font-size: 16px !important;
   transition: all 0.2s !important;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16) !important;
 }
 ${cssScope} .leaflet-popup-close-button:hover {
   color: ${colors.text} !important;
@@ -64,13 +66,13 @@ ${cssScope} .leaflet-popup-close-button:hover {
     max-width: 92vw !important;
   }
   ${cssScope} .leaflet-popup-content-wrapper {
-    max-height: 60vh !important;
+    max-height: 66vh !important;
   }
   ${cssScope} .leaflet-popup-content {
-    width: min(var(--metravel-popup-content-max-width, 280px), calc(100vw - 32px)) !important;
-    max-width: min(var(--metravel-popup-content-max-width, 280px), calc(100vw - 32px)) !important;
-    max-height: calc(60vh - 12px) !important;
-    margin: ${DESIGN_TOKENS.spacing.xs}px !important;
+    width: min(var(--metravel-popup-content-max-width, 320px), calc(100vw - 32px)) !important;
+    max-width: min(var(--metravel-popup-content-max-width, 320px), calc(100vw - 32px)) !important;
+    max-height: 66vh !important;
+    margin: 0 !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
   }
@@ -80,13 +82,13 @@ ${cssScope} .leaflet-popup-close-button:hover {
     max-width: calc(100vw - 12px) !important;
   }
   ${cssScope} .leaflet-popup-content-wrapper {
-    max-height: 55vh !important;
+    max-height: 62vh !important;
   }
   ${cssScope} .leaflet-popup-content {
-    width: min(var(--metravel-popup-content-max-width, 240px), calc(100vw - 20px)) !important;
-    max-width: min(var(--metravel-popup-content-max-width, 240px), calc(100vw - 20px)) !important;
-    max-height: calc(55vh - 8px) !important;
-    margin: 4px !important;
+    width: min(var(--metravel-popup-content-max-width, 286px), calc(100vw - 20px)) !important;
+    max-width: min(var(--metravel-popup-content-max-width, 286px), calc(100vw - 20px)) !important;
+    max-height: 62vh !important;
+    margin: 0 !important;
   }
 }
 @media (max-width: 560px) {

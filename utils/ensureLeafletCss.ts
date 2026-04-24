@@ -3,7 +3,12 @@ export function ensureLeafletCss(): boolean {
 
   try {
     const id = 'metravel-leaflet-css'
-    if (document.getElementById(id)) return true
+    if (document.getElementById(id)) {
+      ensureMarkerClusterCss()
+      ensureLeafletOverrides()
+      ensureTilePreconnect()
+      return true
+    }
 
     const link = document.createElement('link')
     link.id = id
@@ -29,13 +34,15 @@ export function ensureLeafletCss(): boolean {
 
 function ensureMarkerClusterCss(): void {
   const id = 'metravel-markercluster-css'
-  if (document.getElementById(id)) return
+  if (!document.getElementById(id)) {
+    const link = document.createElement('link')
+    link.id = id
+    link.rel = 'stylesheet'
+    link.href = '/vendor/MarkerCluster.css'
+    document.head.appendChild(link)
+  }
 
-  const link = document.createElement('link')
-  link.id = id
-  link.rel = 'stylesheet'
-  link.href = '/vendor/MarkerCluster.css'
-  document.head.appendChild(link)
+  if (document.getElementById('metravel-markercluster-overrides')) return
 
   // Custom cluster styles instead of the default blue/green/yellow circles
   const style = document.createElement('style')
@@ -57,6 +64,7 @@ function getMarkerClusterOverridesCSS(): string {
     '.marker-cluster{box-shadow:var(--shadow-card)!important;cursor:pointer!important;transition:box-shadow 0.15s ease,filter 0.15s ease!important}',
     '.marker-cluster:hover{box-shadow:var(--shadow-hover)!important;filter:brightness(1.03)!important}',
     '.leaflet-cluster-anim .leaflet-marker-icon,.leaflet-cluster-anim .leaflet-marker-shadow{transition:transform 0.3s ease-out,opacity 0.3s ease-out!important}',
+    '@keyframes metravelClusterPulse{0%,100%{transform:scale(0.92);opacity:0.46}50%{transform:scale(1.04);opacity:0.74}}',
   ].join('\n')
 }
 
@@ -93,6 +101,10 @@ function getLeafletOverridesCSS(): string {
     '.leaflet-popup-content-wrapper{border-radius:16px!important;background:var(--color-surface)!important;border:1px solid var(--color-border)!important;box-shadow:var(--shadow-modal)!important}',
     ".leaflet-popup-content{margin:0!important;padding:14px!important;color:var(--color-text)!important;font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif!important;font-size:14px!important;line-height:20px!important;max-width:min(420px,calc(100vw - 32px))!important}",
     '.leaflet-popup{max-width:calc(100vw - 24px)!important}',
+    '.leaflet-popup.metravel-place-popup .leaflet-popup-content-wrapper{border-radius:28px!important;background:transparent!important;border:0!important;box-shadow:none!important;overflow:hidden!important}',
+    '.leaflet-popup.metravel-place-popup .leaflet-popup-content{padding:0!important;max-width:min(var(--metravel-popup-content-max-width,352px),calc(100vw - 32px))!important;border-radius:28px!important;overflow:hidden!important}',
+    '.leaflet-popup.metravel-place-popup .leaflet-popup-tip{background:transparent!important;border:0!important;box-shadow:none!important}',
+    '.leaflet-popup.metravel-place-popup .leaflet-popup-close-button{top:10px!important;right:10px!important;margin:0!important;width:34px!important;height:34px!important;line-height:32px!important;background:var(--color-surface)!important;color:var(--color-text)!important;border:1px solid var(--color-borderLight)!important;box-shadow:0 8px 18px rgba(15,23,42,0.16)!important;z-index:4!important}',
     ".leaflet-tooltip.metravel-route-marker-tooltip{background:var(--color-surface)!important;border:1px solid var(--color-border)!important;border-radius:6px!important;box-shadow:var(--shadow-medium)!important;padding:4px 8px!important;font-size:11px!important;line-height:16px!important;font-weight:500!important;color:var(--color-text)!important;white-space:nowrap!important;font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif!important}",
     '.leaflet-tooltip.metravel-route-marker-tooltip::before{border-top-color:var(--color-border)!important}',
     ".leaflet-tooltip.metravel-marker-tooltip{background:var(--color-surface)!important;border:1px solid var(--color-border)!important;border-radius:8px!important;box-shadow:var(--shadow-medium)!important;padding:4px 10px!important;font-size:12px!important;line-height:18px!important;font-weight:600!important;color:var(--color-text)!important;white-space:nowrap!important;max-width:220px!important;overflow:hidden!important;text-overflow:ellipsis!important;font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif!important}",

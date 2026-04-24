@@ -11,6 +11,7 @@ interface MapControlsProps {
   onZoomIn?: () => void
   onZoomOut?: () => void
   alignLeft?: boolean
+  bottomOffset?: number
 }
 
 const MOBILE_WEB_TOP_GAP = 16
@@ -18,14 +19,14 @@ const MOBILE_WEB_SIDE_GAP = 16
 const CONTROL_GROUP_GAP = 10
 
 const getButtonStyle = (colors: ThemedColors): React.CSSProperties => ({
-  width: '42px',
-  height: '42px',
-  borderRadius: '16px',
-  backgroundColor: 'rgba(255,255,255,0.62)',
-  border: `1px solid ${colors.borderLight}`,
-  boxShadow: '0 6px 16px rgba(58,58,58,0.08), 0 1px 4px rgba(58,58,58,0.04)',
-  backdropFilter: 'blur(14px) saturate(1.08)',
-  WebkitBackdropFilter: 'blur(14px) saturate(1.08)',
+  width: '44px',
+  height: '44px',
+  borderRadius: '18px',
+  backgroundColor: colors.surfaceElevated,
+  border: `1px solid ${colors.border}`,
+  boxShadow: '0 8px 22px rgba(15,23,42,0.14), 0 2px 6px rgba(15,23,42,0.07)',
+  backdropFilter: 'blur(18px) saturate(1.2)',
+  WebkitBackdropFilter: 'blur(18px) saturate(1.2)',
   cursor: 'pointer',
   display: 'flex',
   alignItems: 'center',
@@ -33,7 +34,7 @@ const getButtonStyle = (colors: ThemedColors): React.CSSProperties => ({
   padding: 0,
   transition:
     'background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
-  color: colors.primaryText,
+  color: colors.primaryDark,
 })
 
 const MapControlButton: React.FC<{
@@ -48,24 +49,24 @@ const MapControlButton: React.FC<{
 
   const handleMouseEnter = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
-      e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.78)'
-      e.currentTarget.style.borderColor = colors.borderLight
+      e.currentTarget.style.backgroundColor = colors.surface
+      e.currentTarget.style.borderColor = colors.primary
       e.currentTarget.style.transform = 'translateY(-1px)'
       e.currentTarget.style.boxShadow =
-        '0 8px 18px rgba(58,58,58,0.10), 0 2px 6px rgba(58,58,58,0.05)'
+        '0 10px 22px rgba(15,23,42,0.18), 0 2px 8px rgba(15,23,42,0.08)'
     },
-    [colors.borderLight],
+    [colors.primary, colors.surface],
   )
 
   const handleMouseLeave = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
-      e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.62)'
-      e.currentTarget.style.borderColor = colors.borderLight
+      e.currentTarget.style.backgroundColor = colors.surfaceElevated
+      e.currentTarget.style.borderColor = colors.border
       e.currentTarget.style.transform = 'translateY(0)'
       e.currentTarget.style.boxShadow =
-        '0 6px 16px rgba(58,58,58,0.08), 0 1px 4px rgba(58,58,58,0.04)'
+        '0 8px 18px rgba(15,23,42,0.16), 0 1px 4px rgba(15,23,42,0.08)'
     },
-    [colors.borderLight],
+    [colors.border, colors.surfaceElevated],
   )
 
   return (
@@ -77,7 +78,7 @@ const MapControlButton: React.FC<{
       title={title}
       aria-label={ariaLabel}
     >
-      <Feather name={icon} size={iconSize} color={colors.text} />
+      <Feather name={icon} size={iconSize} color={colors.primaryDark} />
     </button>
   )
 }
@@ -88,6 +89,7 @@ const MapControls: React.FC<MapControlsProps> = ({
   onZoomIn,
   onZoomOut,
   alignLeft = false,
+  bottomOffset: _bottomOffset,
 }) => {
   const colors = useThemedColors()
   const shouldAlignLeft = alignLeft

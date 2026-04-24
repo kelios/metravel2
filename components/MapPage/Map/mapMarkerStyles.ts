@@ -40,77 +40,94 @@ export const getClusterMetrics = (count: number): ClusterMetrics => {
 export const buildBirdMarkerHtml = () => {
   const brand = sanitizeCssValue(DEFAULT_MARKER_BRAND, '#ff922b')
   const brandDark = sanitizeCssValue(DEFAULT_MARKER_BRAND_DARK, '#e07a16')
-
-  const birdSvg = encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-      <ellipse cx="11.2" cy="14" rx="5.6" ry="4.8" fill="#ffffff"/>
-      <circle cx="16.4" cy="10.5" r="2.8" fill="#ffffff"/>
-      <path d="M8.2 14.1c1.2-2.5 4.2-3.5 6.7-2.2-1 2.8-4 4-6.7 2.2Z" fill="#f0f0f0"/>
-      <path d="M5.8 13.5 2.8 11.8 3.4 15.2Z" fill="#ffffff"/>
-      <path d="M18.9 10.3 21.8 11.3 19 12.2Z" fill="#f0f0f0"/>
-      <circle cx="17.2" cy="9.8" r="0.65" fill="#2b1e0f"/>
-    </svg>
-  `)
+  const brandSoft = sanitizeCssValue(
+    String(DESIGN_TOKENS.colors.brandAlpha40),
+    'rgba(255,146,43,0.25)',
+  )
+  const surface = sanitizeCssValue(
+    String(DESIGN_TOKENS.colors.surface),
+    '#ffffff',
+  )
 
   return `
     <div style="
       position: relative;
-      width: 38px;
-      height: 46px;
+      width: 46px;
+      height: 58px;
       box-sizing: border-box;
       pointer-events: none;
       user-select: none;
-      filter: drop-shadow(0 10px 14px rgba(30, 20, 10, 0.28));
+      transform: translateZ(0);
     ">
       <div style="
         position: absolute;
         left: 50%;
-        top: 0;
-        width: 34px;
-        height: 34px;
-        margin-left: -17px;
-        border-radius: 50% 50% 50% 50% / 55% 55% 45% 45%;
-        background: linear-gradient(145deg, ${brand} 0%, ${brandDark} 100%);
-        border: 2px solid rgba(255,255,255,0.95);
-        box-sizing: border-box;
-      "></div>
-      <div style="
-        position: absolute;
-        left: 50%;
-        top: 28px;
-        width: 14px;
-        height: 14px;
-        margin-left: -7px;
-        background: linear-gradient(145deg, ${brand} 0%, ${brandDark} 100%);
-        clip-path: polygon(50% 100%, 0 0, 100% 0);
-        box-sizing: border-box;
-      "></div>
-      <div style="
-        position: absolute;
-        left: 50%;
-        top: 3px;
+        bottom: 1px;
         width: 22px;
-        height: 10px;
+        height: 8px;
         margin-left: -11px;
+        border-radius: 999px;
+        background: rgba(40, 30, 18, 0.24);
+        filter: blur(4px);
+        box-sizing: border-box;
+      "></div>
+      <div style="
+        position: absolute;
+        left: 50%;
+        top: 5px;
+        width: 40px;
+        height: 46px;
+        margin-left: -20px;
+        border-radius: 22px 22px 22px 6px;
+        background: linear-gradient(145deg, ${brand} 0%, ${brandDark} 100%);
+        border: 3px solid ${surface};
+        box-shadow:
+          0 14px 22px rgba(30, 20, 10, 0.28),
+          0 0 0 7px ${brandSoft},
+          inset 0 1px 2px rgba(255,255,255,0.38);
+        transform: rotate(-45deg);
+        box-sizing: border-box;
+      "></div>
+      <div style="
+        position: absolute;
+        left: 50%;
+        top: 9px;
+        width: 27px;
+        height: 14px;
+        margin-left: -13.5px;
         background: linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 100%);
         border-radius: 999px;
         filter: blur(0.5px);
         box-sizing: border-box;
       "></div>
+      <div style="
+        position: absolute;
+        left: 50%;
+        top: 13px;
+        width: 28px;
+        height: 28px;
+        margin-left: -14px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.96);
+        box-shadow:
+          inset 0 1px 2px rgba(255,255,255,0.7),
+          0 2px 4px rgba(40, 30, 18, 0.12);
+        box-sizing: border-box;
+      "></div>
       <img
-        src="data:image/svg+xml;charset=UTF-8,${birdSvg}"
+        src="/assets/icons/logo_yellow_60x60.png"
         alt=""
         draggable="false"
         style="
           position: absolute;
           left: 50%;
-          top: 7px;
-          width: 20px;
-          height: 20px;
-          margin-left: -10px;
+          top: 12px;
+          width: 30px;
+          height: 30px;
+          margin-left: -15px;
           display: block;
           object-fit: contain;
-          filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+          filter: drop-shadow(0 1px 1px rgba(0,0,0,0.18));
         "
       />
     </div>
@@ -122,44 +139,52 @@ export const buildMapPinHtml = (accentColor: string) => {
     accentColor,
     String(DESIGN_TOKENS.colors.mapPin),
   )
+  const surface = sanitizeCssValue(
+    String(DESIGN_TOKENS.colors.surface),
+    '#ffffff',
+  )
 
   return `
     <div style="
       position: relative;
-      width: 30px;
-      height: 40px;
+      width: 34px;
+      height: 44px;
       box-sizing: border-box;
       pointer-events: none;
       user-select: none;
-      filter: drop-shadow(0 8px 12px rgba(30, 20, 10, 0.26));
     ">
       <div style="
         position: absolute;
         left: 50%;
-        top: 0;
-        width: 28px;
-        height: 28px;
-        margin-left: -14px;
-        border-radius: 50%;
+        bottom: 1px;
+        width: 18px;
+        height: 6px;
+        margin-left: -9px;
+        border-radius: 999px;
+        background: rgba(30, 20, 10, 0.22);
+        filter: blur(3px);
+        box-sizing: border-box;
+      "></div>
+      <div style="
+        position: absolute;
+        left: 50%;
+        top: 4px;
+        width: 30px;
+        height: 34px;
+        margin-left: -15px;
+        border-radius: 17px 17px 17px 5px;
         background: linear-gradient(145deg, ${accent} 0%, rgba(0,0,0,0.18) 140%), ${accent};
-        border: 2px solid rgba(255,255,255,0.95);
+        border: 3px solid ${surface};
+        box-shadow:
+          0 10px 16px rgba(30, 20, 10, 0.25),
+          inset 0 1px 2px rgba(255,255,255,0.32);
+        transform: rotate(-45deg);
         box-sizing: border-box;
       "></div>
       <div style="
         position: absolute;
         left: 50%;
-        top: 22px;
-        width: 12px;
-        height: 14px;
-        margin-left: -6px;
-        background: ${accent};
-        clip-path: polygon(50% 100%, 0 0, 100% 0);
-        box-sizing: border-box;
-      "></div>
-      <div style="
-        position: absolute;
-        left: 50%;
-        top: 3px;
+        top: 8px;
         width: 18px;
         height: 8px;
         margin-left: -9px;
@@ -171,10 +196,10 @@ export const buildMapPinHtml = (accentColor: string) => {
       <div style="
         position: absolute;
         left: 50%;
-        top: 10px;
-        width: 10px;
-        height: 10px;
-        margin-left: -5px;
+        top: 13px;
+        width: 12px;
+        height: 12px;
+        margin-left: -6px;
         background: rgba(255,255,255,0.98);
         border-radius: 999px;
         box-sizing: border-box;
@@ -182,7 +207,7 @@ export const buildMapPinHtml = (accentColor: string) => {
       <div style="
         position: absolute;
         left: 50%;
-        top: 12px;
+        top: 16px;
         width: 6px;
         height: 6px;
         margin-left: -3px;
@@ -220,8 +245,9 @@ export const buildClusterIconHtml = ({
     'rgba(122,157,143,0.35)',
   )
 
-  const haloSize = metrics.size + 14
-  const innerSize = metrics.size - 10
+  const haloSize = metrics.size + 18
+  const innerSize = metrics.size - 14
+  const orbitSize = metrics.size + 8
 
   return {
     metrics,
@@ -241,10 +267,49 @@ export const buildClusterIconHtml = ({
           position: absolute;
           inset: 0;
           border-radius: 999px;
-          background: ${softGlow};
-          opacity: 0.55;
+          background:
+            radial-gradient(circle at 50% 50%, ${softGlow} 0%, ${softGlow} 54%, transparent 58%);
+          opacity: 0.72;
           box-sizing: border-box;
           animation: metravelClusterPulse 2.4s ease-in-out infinite;
+        "></div>
+        <div style="
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          width: ${orbitSize}px;
+          height: ${orbitSize}px;
+          margin-left: -${orbitSize / 2}px;
+          margin-top: -${orbitSize / 2}px;
+          border-radius: 999px;
+          border: 2px solid rgba(255,255,255,0.88);
+          background: rgba(255,255,255,0.32);
+          box-shadow: 0 8px 18px rgba(30, 50, 40, 0.18);
+          box-sizing: border-box;
+        "></div>
+        <div style="
+          position: absolute;
+          left: 10px;
+          top: 13px;
+          width: 10px;
+          height: 10px;
+          border-radius: 999px;
+          background: ${accent};
+          border: 2px solid rgba(255,255,255,0.92);
+          box-shadow: 0 3px 8px rgba(30, 50, 40, 0.16);
+          box-sizing: border-box;
+        "></div>
+        <div style="
+          position: absolute;
+          right: 9px;
+          bottom: 14px;
+          width: 12px;
+          height: 12px;
+          border-radius: 999px;
+          background: ${accentDark};
+          border: 2px solid rgba(255,255,255,0.92);
+          box-shadow: 0 3px 8px rgba(30, 50, 40, 0.16);
+          box-sizing: border-box;
         "></div>
         <div style="
           position: absolute;
@@ -255,9 +320,13 @@ export const buildClusterIconHtml = ({
           margin-left: -${metrics.size / 2}px;
           margin-top: -${metrics.size / 2}px;
           border-radius: 999px;
-          background: linear-gradient(145deg, ${accent} 0%, ${accentDark} 100%);
+          background:
+            radial-gradient(circle at 32% 24%, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0) 38%),
+            linear-gradient(145deg, ${accent} 0%, ${accentDark} 100%);
           border: 3px solid rgba(255,255,255,0.96);
-          box-shadow: 0 10px 22px rgba(30, 50, 40, 0.28), inset 0 1px 2px rgba(255,255,255,0.4);
+          box-shadow:
+            0 12px 24px rgba(30, 50, 40, 0.3),
+            inset 0 1px 2px rgba(255,255,255,0.4);
           box-sizing: border-box;
         "></div>
         <div style="
@@ -282,7 +351,7 @@ export const buildClusterIconHtml = ({
           line-height: 1;
           font-weight: 800;
           font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-          letter-spacing: -0.02em;
+          letter-spacing: 0;
           text-shadow: 0 1px 2px rgba(0,0,0,0.18);
           display: flex;
           align-items: center;

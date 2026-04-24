@@ -13,7 +13,13 @@ const getSliderComponent = (): React.ComponentType<any> =>
     ? (require('@/components/travel/Slider.web').default as React.ComponentType<any>)
     : require('@/components/travel/Slider').default;
 
-const ABSOLUTE_FILL_STYLE = { position: 'absolute', inset: 0 } as any;
+const ABSOLUTE_FILL_STYLE = {
+  position: 'absolute',
+  top: 0,
+  right: 0,
+  bottom: 0,
+  left: 0,
+} as any;
 
 const shouldShowHeroSliderArrows = (isMobile: boolean) =>
   Platform.OS === 'web' || !isMobile;

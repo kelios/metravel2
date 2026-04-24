@@ -20,7 +20,11 @@ interface MapMarkersProps {
   Tooltip?: React.ComponentType<any>;
   PopupContent: React.ComponentType<{ point: Point; closePopup?: () => void }>;
   popupProps?: Record<string, unknown>;
-  onMarkerClick?: (point: Point, coords: { lat: number; lng: number }) => void;
+  onMarkerClick?: (
+    point: Point,
+    coords: { lat: number; lng: number },
+    marker?: any,
+  ) => void;
   onMarkerInstance?: (coord: string, marker: any | null) => void;
   hintCenter?: { lat: number; lng: number } | null;
   useMap?: () => any;
@@ -87,6 +91,11 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
         // noop
       }
 
+      if (typeof onMarkerClick === 'function') {
+        onMarkerClick(point, coords, e?.target);
+        return;
+      }
+
       if (e?.target?.openPopup) {
         try {
           e.target.openPopup();
@@ -94,8 +103,6 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
           // noop
         }
       }
-
-      onMarkerClick?.(point, coords);
     },
     [onMarkerClick]
   );

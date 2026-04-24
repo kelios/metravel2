@@ -128,40 +128,6 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
   const radiusSummaryValue = filterValue.radius || DEFAULT_RADIUS_KM
   const radiusSummaryText = getRadiusLabel(radiusSummaryValue)
   const searchQueryValue = String(filterValue.searchQuery || '')
-  const summaryChips = useMemo(
-    () => [
-      {
-        key: 'radius',
-        icon: 'radio' as const,
-        label: `Радиус ${radiusSummaryText || `${DEFAULT_RADIUS_KM} км`}`,
-        accent: true,
-      },
-      {
-        key: 'categories',
-        icon: 'grid' as const,
-        label:
-          selectedCategoriesCount > 0
-            ? `Категорий: ${selectedCategoriesCount}`
-            : 'Все категории',
-        accent: false,
-      },
-      ...(searchQueryValue
-        ? [
-            {
-              key: 'search',
-              icon: 'search' as const,
-              label: `Запрос: ${searchQueryValue}`,
-              accent: false,
-            },
-          ]
-        : []),
-    ],
-    [radiusSummaryText, searchQueryValue, selectedCategoriesCount]
-  )
-  const visibleSummaryChips = useMemo(
-    () => (isMobile ? [] : summaryChips),
-    [isMobile, summaryChips]
-  )
 
   const handleSearchChange = useCallback(
     (value: string) => safeOnFilterChange('searchQuery', value),
@@ -207,45 +173,17 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
           placeholder="Найти место по названию..."
           resultsCount={searchQueryValue ? travelsData.length : undefined}
         />
-        {visibleSummaryChips.length > 0 ? (
-        <View style={styles.desktopSummaryStrip} testID="radius-section-summary">
-          {visibleSummaryChips.map((chip) => (
-            <View
-              key={chip.key}
-              style={[
-                styles.desktopSummaryChip,
-                chip.accent && styles.desktopSummaryChipAccent,
-              ]}
-            >
-              <Feather
-                name={chip.icon}
-                size={12}
-                color={chip.accent ? colors.primary : colors.textMuted}
-              />
-              <Text
-                style={[
-                  styles.desktopSummaryChipText,
-                  chip.accent && styles.desktopSummaryChipTextAccent,
-                ]}
-                numberOfLines={1}
-              >
-                {chip.label}
-              </Text>
-            </View>
-          ))}
-        </View>
-        ) : null}
       </View>
 
       {radiusOptions.length > 0 ? (
         <View style={styles.lightStepBlock}>
           <View style={styles.lightStepHeader}>
-            <Feather name="radio" size={16} color={colors.textMuted} />
+            <Feather name="radio" size={16} color={colors.primary} />
             <Text style={styles.lightStepTitle}>Радиус поиска</Text>
-            {!isMobile && radiusSummaryText ? <Text style={styles.lightStepBadge}>{radiusSummaryText}</Text> : null}
+            {radiusSummaryText ? <Text style={styles.lightStepBadge}>{radiusSummaryText}</Text> : null}
           </View>
           {!isMobile ? (
-            <Text style={styles.sectionHint}>Выберите, как далеко искать места вокруг вас</Text>
+            <Text style={styles.sectionHint}>Как далеко искать места вокруг</Text>
           ) : null}
           <ScrollView
             showsVerticalScrollIndicator={false}
@@ -283,13 +221,13 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
 
       <View style={styles.lightStepBlock}>
         <View style={styles.lightStepHeader}>
-          <Feather name="map-pin" size={16} color={colors.textMuted} />
+          <Feather name="map-pin" size={16} color={colors.primary} />
           <Text style={styles.lightStepTitle}>Что посмотреть</Text>
           {selectedCategoriesCount > 0 ? (
             <Text style={styles.lightStepBadge}>{selectedCategoriesCount}</Text>
           ) : null}
         </View>
-        {!isMobile ? <Text style={styles.sectionHint}>Уточните поиск по типу мест</Text> : null}
+        {!isMobile ? <Text style={styles.sectionHint}>Уточните тип мест</Text> : null}
 
         {categoryOptions.length > 0 ? (
           <View style={styles.filterSelectionChips} testID="category-options">

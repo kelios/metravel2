@@ -33,6 +33,13 @@ const TravelHeroExtrasLazy = React.lazy(() =>
 const TravelHeroInteractiveSliderLazy = React.lazy(() =>
   import('./TravelHeroInteractiveSlider'),
 )
+const ABSOLUTE_FILL_STYLE = {
+  position: 'absolute',
+  top: 0,
+  right: 0,
+  bottom: 0,
+  left: 0,
+} as any
 
 /* ---- TravelHeroSectionInner ---- */
 function TravelHeroSectionInner({
@@ -123,7 +130,7 @@ function TravelHeroSectionInner({
               {shouldRenderWebSlider ? (
                 <View
                   style={[
-                    { position: 'absolute', inset: 0 } as any,
+                    ABSOLUTE_FILL_STYLE,
                     {
                       opacity: overlayUnmounted ? 1 : 0,
                       pointerEvents: overlayUnmounted ? 'auto' : 'none',
@@ -143,7 +150,6 @@ function TravelHeroSectionInner({
                       onFirstImageLoad={handleSliderImageLoad}
                       firstImagePreloaded={webHeroLoaded}
                       onImagePress={handleImagePress}
-                      skipFirstSlideImage={!overlayUnmounted}
                     />
                   </Suspense>
                 </View>
@@ -151,7 +157,7 @@ function TravelHeroSectionInner({
               {!overlayUnmounted && (
                 <View
                   style={[
-                    { position: 'absolute', inset: 0 } as any,
+                    ABSOLUTE_FILL_STYLE,
                     {
                       zIndex: 5,
                       opacity: isOverlayFading ? 0 : 1,

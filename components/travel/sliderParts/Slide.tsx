@@ -70,7 +70,7 @@ interface SlideProps {
   item: SliderImage;
   index: number;
   uri: string;
-  containerW: number;
+  containerW: number | string;
   slideHeight: number | string;
   slideHeightPx?: number;
   imagesLength: number;

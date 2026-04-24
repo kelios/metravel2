@@ -34,14 +34,14 @@ describe('MapMarkers', () => {
     expect(queryAllByTestId('marker').length).toBe(2);
   });
 
-  it('opens popup immediately on marker click before running follow-up map behavior', () => {
+  it('lets follow-up map behavior open the popup when marker click is handled', () => {
     const RN = require('react-native');
     const View = RN.View;
 
     let markerProps: any = null;
     const markerOpenPopup = jest.fn();
     const onMarkerClick = jest.fn(() => {
-      expect(markerOpenPopup).toHaveBeenCalledTimes(1);
+      expect(markerOpenPopup).not.toHaveBeenCalled();
     });
 
     const Marker = (props: any) => {
@@ -73,7 +73,10 @@ describe('MapMarkers', () => {
       },
     });
 
-    expect(markerOpenPopup).toHaveBeenCalledTimes(1);
+    expect(markerOpenPopup).not.toHaveBeenCalled();
     expect(onMarkerClick).toHaveBeenCalledTimes(1);
+    expect(onMarkerClick.mock.calls[0][2]).toEqual({
+      openPopup: markerOpenPopup,
+    });
   });
 });

@@ -164,6 +164,32 @@ describe('Slider (web) blur background', () => {
     expect(tree.root.findByProps({ testID: 'slider-image-5' })).toBeTruthy()
   })
 
+  it('keeps initial unmeasured slides inside the track instead of stretching each slide to full track width', async () => {
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <SliderWeb
+          images={images as any}
+          showArrows={false}
+          showDots={false}
+          autoPlay={false}
+          preloadCount={0}
+          blurBackground
+        />,
+      )
+    })
+
+    const firstSlide = tree.root.findByProps({ testID: 'slider-slide-0' })
+    const firstImage = tree.root.findByProps({ testID: 'slider-image-0' })
+
+    expect(firstSlide.props.style).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ width: `${100 / images.length}%` }),
+      ]),
+    )
+    expect(firstImage.props.width).toBe('100%')
+  })
+
   it('keeps non-first slides lazy before web prefetch is enabled', async () => {
     let tree: renderer.ReactTestRenderer
     await act(async () => {
