@@ -141,6 +141,8 @@ export const getMapMobileLayoutStyles = (
       ...(Platform.OS === 'web'
         ? ({
             boxShadow: '0 8px 20px rgba(15,23,42,0.10)',
+            position: 'relative',
+            zIndex: 2,
           } as any)
         : {
             shadowOpacity: 0.08,

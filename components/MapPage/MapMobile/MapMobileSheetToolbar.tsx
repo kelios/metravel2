@@ -140,7 +140,9 @@ const MapMobileSheetToolbarInner: React.FC<MapMobileSheetToolbarProps> = ({
               pressed && { opacity: 0.6 },
             ]}
           >
-            <Feather name="x" size={18} color={colors.textMuted} />
+            <View pointerEvents="none">
+              <Feather name="x" size={18} color={colors.textMuted} />
+            </View>
           </Pressable>
         )}
       </View>
