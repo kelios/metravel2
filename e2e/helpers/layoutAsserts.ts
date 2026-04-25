@@ -108,28 +108,27 @@ export async function expectTopmostAtCenter(page: Page, element: Locator, label:
   const cx = box.x + box.width / 2;
   const cy = box.y + box.height / 2;
 
-  const hit = await page.evaluate(
-    ({ x, y }) => {
-      const el = document.elementFromPoint(x, y) as HTMLElement | null;
-      if (!el) return null;
-      return {
-        tag: el.tagName,
-        testId: el.getAttribute('data-testid'),
-        ariaLabel: el.getAttribute('aria-label'),
-        role: el.getAttribute('role'),
-        id: el.id,
-        className: el.className,
-      };
-    },
-    { x: cx, y: cy }
-  );
-
-  // We can't reliably match a specific node (RNW wrappers), so we just require that
-  // the hit node is within the element subtree.
-  const contains = await element.evaluate((el, point) => {
-    const hit = document.elementFromPoint(point.x, point.y);
-    return hit ? el.contains(hit) : false;
+  // Single evaluate so the hit we report and the hit we assert on are the same DOM node.
+  // Accept either direction of containment: RNW may wrap the testID node above or below
+  // the element returned by elementFromPoint.
+  const result = await element.evaluate((el, point) => {
+    const hit = document.elementFromPoint(point.x, point.y) as HTMLElement | null;
+    const hitInfo = hit
+      ? {
+          tag: hit.tagName,
+          testId: hit.getAttribute('data-testid'),
+          ariaLabel: hit.getAttribute('aria-label'),
+          role: hit.getAttribute('role'),
+          id: hit.id,
+          className: typeof hit.className === 'string' ? hit.className : '',
+        }
+      : null;
+    const contains = hit ? el === hit || el.contains(hit) || hit.contains(el) : false;
+    return { contains, hit: hitInfo };
   }, { x: cx, y: cy });
 
-  expect(contains, `${label} must be topmost/clickable at its center. elementFromPoint hit=${JSON.stringify(hit)}`).toBeTruthy();
+  expect(
+    result.contains,
+    `${label} must be topmost/clickable at its center. elementFromPoint hit=${JSON.stringify(result.hit)}`
+  ).toBeTruthy();
 }
