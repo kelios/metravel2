@@ -35,13 +35,16 @@ export default function TravelHeroInteractiveSlider({
   onImagePress: (index: number) => void;
   visible?: boolean;
   skipFirstSlideImage?: boolean;
+  fullscreenVisible?: boolean;
+  fullscreenIndex?: number;
+  onCloseFullscreen?: () => void;
 }) {
   if (!visible) return null;
 
   return (
     <View style={ABSOLUTE_FILL_STYLE} collapsable={false}>
       <Slider
-        images={galleryImages}
+        images={galleryImages as any}
         showArrows
         controlsVisible={controlsVisible}
         hideArrowsOnMobile={false}

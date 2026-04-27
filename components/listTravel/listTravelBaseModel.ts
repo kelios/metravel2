@@ -104,12 +104,12 @@ export function getListTravelViewportState(params: ResponsiveParams): ViewportSt
   const width = effectiveResponsiveWidth
   const isCardsSingleColumn = width < BREAKPOINTS.MOBILE
 
-  // Sidebar narrower on tablet range (1024–1280px) to give cards more room
+  // Adaptive sidebar width: smoothly scales with viewport so the panel fits
+  // narrow desktops (~1440px) without crowding the cards grid, and gets a bit
+  // more breathing room on wide monitors.
   const sidebarWidth = usesOverlaySidebar
     ? 0
-    : width < 1280
-      ? 280
-      : 320
+    : Math.round(Math.min(340, Math.max(260, width * 0.2)))
 
   // Compact web widths use overlay filters; the docked sidebar appears from desktop widths.
   const effectiveWidth = !usesOverlaySidebar ? width - sidebarWidth : width

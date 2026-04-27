@@ -171,7 +171,7 @@ describe('UnifiedTravelCard blur background (web)', () => {
     expect(secondProps?.showImmediately).toBe(false)
   })
 
-  it('uses the refined serif font stack for hero title overlays on web', () => {
+  it('uses the modern sans-serif font stack for hero title overlays on web', () => {
     let tree: renderer.ReactTestRenderer
 
     renderer.act(() => {
@@ -190,7 +190,7 @@ describe('UnifiedTravelCard blur background (web)', () => {
     )
 
     expect(titleNode.props.style.fontFamily).toBe(
-      'Baskerville, "Palatino Linotype", Palatino, Georgia, serif'
+      '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     )
   })
 })

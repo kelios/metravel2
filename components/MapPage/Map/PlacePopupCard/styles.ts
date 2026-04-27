@@ -75,6 +75,10 @@ export const getStyles = (
       backgroundColor: colors.backgroundSecondary,
       borderRadius: 0,
       overflow: 'hidden',
+      // Always-on cursor affordance on web so users immediately see that the
+      // hero image is clickable to open the fullscreen viewer (do not gate it
+      // behind hover state — touch users never hover).
+      ...(Platform.OS === 'web' ? ({ cursor: 'zoom-in' } as any) : null),
     },
     imageContainerSplit: {
       width: heroWidth,
@@ -85,17 +89,38 @@ export const getStyles = (
       flexShrink: 0,
       alignSelf: 'flex-start',
     },
+    imageContainerHovered: {
+      ...(Platform.OS === 'web' ? ({ cursor: 'zoom-in' } as any) : null),
+    },
+    imageContainerPressed: {
+      opacity: 0.92,
+    },
     imageExpandButton: {
       position: 'absolute',
       bottom: compactLayout ? 8 : 10,
-      left: compactLayout ? 8 : 10,
+      right: compactLayout ? 8 : 10,
       width: compactLayout ? 30 : 34,
       height: compactLayout ? 30 : 34,
       borderRadius: DESIGN_TOKENS.radii.full,
-      backgroundColor: 'rgba(15,23,42,0.52)',
+      backgroundColor: 'rgba(15,23,42,0.58)',
       alignItems: 'center',
       justifyContent: 'center',
-      ...(Platform.OS === 'web' ? ({ cursor: 'pointer', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' } as any) : null),
+      ...(Platform.OS === 'web'
+        ? ({
+            cursor: 'pointer',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            transition: 'background-color 0.15s ease, transform 0.15s ease',
+          } as any)
+        : null),
+    },
+    imageExpandButtonHovered: {
+      backgroundColor: 'rgba(15,23,42,0.78)',
+      transform: [{ scale: 1.06 }],
+    },
+    imageExpandButtonPressed: {
+      backgroundColor: 'rgba(15,23,42,0.85)',
+      transform: [{ scale: 0.94 }],
     },
     contentContainer: {
       paddingHorizontal: splitLayout ? horizontalPadding + 2 : 2,
@@ -231,8 +256,40 @@ export const getStyles = (
     secondaryActionsRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
+      alignItems: 'flex-start',
+      justifyContent: 'flex-start',
+      gap: splitLayout ? 6 : compactLayout ? 6 : 8,
+    },
+    chipActionBtn: {
+      flexDirection: 'column',
       alignItems: 'center',
-      gap: splitLayout ? 8 : compactLayout ? 8 : 10,
+      justifyContent: 'flex-start',
+      gap: 4,
+      width: compactLayout ? 56 : 60,
+      paddingVertical: 4,
+      paddingHorizontal: 2,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      ...(Platform.OS === 'web'
+        ? ({ cursor: 'pointer', transition: 'background-color 0.15s ease, transform 0.15s ease' } as any)
+        : null),
+    },
+    chipActionBtnPressed: {
+      opacity: 0.7,
+      transform: [{ scale: 0.95 }],
+    },
+    chipIconBubble: {
+      width: compactLayout ? 34 : 38,
+      height: compactLayout ? 34 : 38,
+      borderRadius: DESIGN_TOKENS.radii.full,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    chipActionText: {
+      fontSize: compactLayout ? 10 : 11,
+      lineHeight: (compactLayout ? 10 : 11) * 1.25,
+      fontWeight: '600',
+      color: colors.text,
+      textAlign: 'center',
     },
     hoverActionWrap: {
       position: 'relative',

@@ -48,10 +48,10 @@ const SortDropdown = memo(({
       >
         <View style={styles.sortDropdownTriggerLeft}>
           <View style={styles.sortDropdownIcon}>
-            <Feather name="sliders" size={16} color={colors.primary} />
+            <Feather name="sliders" size={14} color={colors.textMuted} />
           </View>
           <View style={styles.sortDropdownTextContainer}>
-            <Text style={styles.sortDropdownLabel}>Сортировка</Text>
+            <Text style={styles.sortDropdownLabel}>Сортировка:</Text>
             <Text style={styles.sortDropdownValue} numberOfLines={1}>
               {selectedOption?.name || 'Новые'}
             </Text>
@@ -60,8 +60,8 @@ const SortDropdown = memo(({
         <View style={styles.sortDropdownChevron}>
           <Feather
             name={isExpanded ? 'chevron-up' : 'chevron-down'}
-            size={18}
-            color={colors.textSecondary}
+            size={16}
+            color={colors.textMuted}
           />
         </View>
       </Pressable>

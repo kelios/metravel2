@@ -252,7 +252,7 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
           paddingHorizontal: 10,
           borderRadius: 12,
           borderWidth: 1,
-          borderColor: colors.transparent,
+          borderColor: 'transparent',
         },
         itemActive: {
           backgroundColor: colors.primarySoft,

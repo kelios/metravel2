@@ -12,6 +12,7 @@ type MoodCard = {
   icon: string
   filters: QuickFilterParams
   route: string
+  meta?: string
 }
 
 type HeroHighlight = {

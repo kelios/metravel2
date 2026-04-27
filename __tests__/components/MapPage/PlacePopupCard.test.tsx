@@ -170,7 +170,40 @@ describe('PlacePopupCard', () => {
     expect(props.revealOnLoadOnly).toBe(false);
   });
 
-  it('shows a hover label for icon-only web actions', () => {
+  it('opens FullscreenImageViewer when hero image is pressed', () => {
+    const FullscreenImageViewerModule = require('@/components/MapPage/Map/PlacePopupCard/FullscreenImageViewer');
+    const fullscreenSpy = jest.spyOn(FullscreenImageViewerModule, 'default');
+
+    let tree: any;
+    renderer.act(() => {
+      tree = renderer.create(
+        <PlacePopupCard
+          colors={mockColors as any}
+          title="Test point"
+          imageUrl="https://example.com/photo.jpg"
+          width={560}
+        />
+      );
+    });
+
+    // Initially fullscreen viewer is rendered with visible=false
+    const initialCalls = fullscreenSpy.mock.calls.map((args: any[]) => args[0]?.visible);
+    expect(initialCalls.some((v: any) => v === false)).toBe(true);
+
+    // Find the hero Pressable by accessibilityLabel and fire onPress
+    const heroPressable = tree.root.findByProps({ accessibilityLabel: 'Открыть фото на весь экран' });
+    expect(heroPressable).toBeTruthy();
+    renderer.act(() => {
+      heroPressable.props.onPress();
+    });
+
+    // After press, viewer should have been called with visible=true
+    const lastCall = fullscreenSpy.mock.calls[fullscreenSpy.mock.calls.length - 1]?.[0];
+    expect(lastCall?.visible).toBe(true);
+    fullscreenSpy.mockRestore();
+  });
+
+  it('renders permanent text labels alongside icons for web action chips', () => {
     let tree: any;
 
     renderer.act(() => {
@@ -187,23 +220,13 @@ describe('PlacePopupCard', () => {
       );
     });
 
-    const findHoverLabel = (label: string) =>
+    const findLabel = (label: string) =>
       tree.root.findAll((node: any) => node.props?.children === label);
 
-    expect(findHoverLabel('Google')).toHaveLength(0);
+    expect(findLabel('Google').length).toBeGreaterThan(0);
+    expect(findLabel('Organic').length).toBeGreaterThan(0);
 
     const googleAction = tree.root.findByProps({ accessibilityLabel: 'Google Maps' });
-
-    renderer.act(() => {
-      googleAction.props.onHoverIn?.();
-    });
-
-    expect(findHoverLabel('Google').length).toBeGreaterThan(0);
-
-    renderer.act(() => {
-      googleAction.props.onHoverOut?.();
-    });
-
-    expect(findHoverLabel('Google')).toHaveLength(0);
+    expect(googleAction).toBeTruthy();
   });
 });

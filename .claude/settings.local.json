@@ -31,7 +31,11 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8082/)",
       "Bash(cat C:\\\\\\\\Users\\\\\\\\ignat\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\claude\\\\\\\\D--metravel-metravel2\\\\\\\\9e0e8af3-e7f2-4d8b-b944-b7b35c9596eb\\\\\\\\tasks\\\\\\\\bdlr886ky.output)",
       "Bash(npx playwright *)",
-      "Bash(wc -l D:\\\\\\\\metravel\\\\\\\\metravel2\\\\\\\\app\\\\\\\\global.css)"
+      "Bash(wc -l D:\\\\\\\\metravel\\\\\\\\metravel2\\\\\\\\app\\\\\\\\global.css)",
+      "Bash(curl -sf -o /dev/null -w \"%{http_code}\" http://localhost:8082/map)",
+      "Bash(git grep *)",
+      "Bash(jobs -l)",
+      "Bash(tasklist)"
     ]
   }
 }

@@ -20,26 +20,21 @@ async function loadExpoLocation() {
 }
 
 type UseMapUserLocationArgs = {
-  L: any
-  rl: any
   coordinates: any
-  mapContainerId: string
   mapRef: React.MutableRefObject<any>
   onUserLocationChange?: (coords: Coordinates | null) => void
   isFallbackMinskCenter: (lat: number, lng: number) => boolean
 }
 
 export function useMapUserLocation({
-  L,
-  rl,
   coordinates,
-  mapContainerId,
   mapRef,
   onUserLocationChange,
   isFallbackMinskCenter,
 }: UseMapUserLocationArgs) {
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null)
   const geoRequestedRef = useRef(false)
+  const pendingFocusRef = useRef(false)
 
   useEffect(() => {
     try {
@@ -67,46 +62,36 @@ export function useMapUserLocation({
     })
   }, [coordinates, isFallbackMinskCenter])
 
+  const requestUserLocation = useCallback(async () => {
+    if (geoRequestedRef.current) return
+    geoRequestedRef.current = true
+    try {
+      const Location = await loadExpoLocation()
+      const { status } = await Location.requestForegroundPermissionsAsync()
+      if (status !== 'granted') {
+        geoRequestedRef.current = false
+        return
+      }
+      const location = await Location.getCurrentPositionAsync({})
+      const lat = location.coords.latitude
+      const lng = location.coords.longitude
+      if (isValidCoordinate(lat, lng)) {
+        setUserLocation({ latitude: lat, longitude: lng })
+      }
+    } catch {
+      geoRequestedRef.current = false
+    }
+  }, [])
+
+  // Автозапрос геолокации при монтировании, если нет валидной пользовательской локации
   useEffect(() => {
-    if (Platform.OS !== 'web') return
-    if (!L || !rl) return
-
-    let cancelled = false
-
-    const loadLocation = () => {
-      if (geoRequestedRef.current || cancelled) return
-      geoRequestedRef.current = true
-      ;(async () => {
-        try {
-          const Location = await loadExpoLocation()
-          const { status } = await Location.requestForegroundPermissionsAsync()
-          if (status !== 'granted' || cancelled) {
-            console.warn('[Map] Location permission not granted')
-            return
-          }
-
-          const location = await Location.getCurrentPositionAsync({})
-          if (cancelled) return
-
-          const lat = location.coords.latitude
-          const lng = location.coords.longitude
-          if (isValidCoordinate(lat, lng)) {
-            setUserLocation({ latitude: lat, longitude: lng })
-          } else {
-            console.warn('[Map] Invalid location coordinates:', { lat, lng })
-          }
-        } catch (error) {
-          console.error('[Map] Location error:', error)
-        }
-      })()
+    const lat = Number((coordinates as any)?.latitude)
+    const lng = Number((coordinates as any)?.longitude)
+    // Запрашиваем геолокацию только если координаты не являются валидной пользовательской локацией
+    if (!isValidCoordinate(lat, lng) || isFallbackMinskCenter(lat, lng)) {
+      void requestUserLocation()
     }
-
-    loadLocation()
-
-    return () => {
-      cancelled = true
-    }
-  }, [L, mapContainerId, rl])
+  }, [coordinates, isFallbackMinskCenter, requestUserLocation])
 
   const userLocationLatLng = useMemo(() => {
     if (!userLocation) return null
@@ -114,11 +99,11 @@ export function useMapUserLocation({
     return { lat: userLocation.latitude, lng: userLocation.longitude }
   }, [userLocation])
 
-  const centerOnUserLocation = useCallback(() => {
-    if (!mapRef.current || !userLocationLatLng) return
+  const focusOnUserLocation = useCallback((target: { lat: number; lng: number }) => {
+    if (!mapRef.current) return
     try {
       mapRef.current.setView(
-        CoordinateConverter.toLeaflet(userLocationLatLng),
+        CoordinateConverter.toLeaflet(target),
         USER_LOCATION_FOCUS_ZOOM,
         { animate: true },
       )
@@ -136,7 +121,24 @@ export function useMapUserLocation({
     } catch {
       // noop
     }
-  }, [mapRef, userLocationLatLng])
+  }, [mapRef])
+
+  const centerOnUserLocation = useCallback(async () => {
+    if (userLocationLatLng) {
+      focusOnUserLocation(userLocationLatLng)
+      return
+    }
+
+    pendingFocusRef.current = true
+    await requestUserLocation()
+  }, [focusOnUserLocation, requestUserLocation, userLocationLatLng])
+
+  useEffect(() => {
+    if (!pendingFocusRef.current) return
+    if (!userLocationLatLng) return
+    pendingFocusRef.current = false
+    focusOnUserLocation(userLocationLatLng)
+  }, [focusOnUserLocation, userLocationLatLng])
 
   return {
     centerOnUserLocation,

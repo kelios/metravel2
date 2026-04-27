@@ -102,9 +102,17 @@ export function useMapPopupAutoPan({
           dx = popupCenterX - safeCenterX
           dy = popupCenterY - safeCenterY
         } else {
-          // Desktop/web: keep the popup centered inside the visible map area,
-          // not glued to the marker edge where it competes with map chrome.
-          dx = popupCenterX - safeCenterX
+          // Desktop/web: pan only when popup overflows the safe area, so opening
+          // a popup near the center doesn't visibly jump the map.
+          const overflowLeft = safeLeft - popupRect.left
+          const overflowRight = popupRect.right - safeRight
+          if (overflowLeft > 0 && overflowRight > 0) {
+            dx = popupCenterX - safeCenterX
+          } else if (overflowLeft > 0) {
+            dx = -overflowLeft
+          } else if (overflowRight > 0) {
+            dx = overflowRight
+          }
 
           if (overflowTop > 0 && overflowBottom > 0) {
             dy = popupCenterY - safeCenterY
@@ -119,7 +127,7 @@ export function useMapPopupAutoPan({
         if (Math.abs(dy) < 8) dy = 0
         if (!dx && !dy) return
 
-        map?.panBy?.([dx, dy], { animate: false } as any)
+        map?.panBy?.([dx, dy], { animate: true, duration: 0.2 } as any)
       } catch {
         // noop
       }
@@ -138,28 +146,37 @@ export function useMapPopupAutoPan({
     scheduleRun()
 
     let resizeObserver: ResizeObserver | null = null
-    let recenterTimer: ReturnType<typeof setTimeout> | null = null
-    const handleMoveEnd = () => {
-      scheduleRun()
-    }
+    let resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null
+    // Игнорируем первый синхронный вызов ResizeObserver, который происходит
+    // сразу после observe() и дублирует начальный pan.
+    let resizeObserverInitialized = false
     const cleanup = () => {
       if (rafId) {
         cancelAnimationFrame(rafId)
         rafId = 0
       }
-      if (recenterTimer) {
-        clearTimeout(recenterTimer)
-        recenterTimer = null
+      if (resizeDebounceTimer) {
+        clearTimeout(resizeDebounceTimer)
+        resizeDebounceTimer = null
       }
       resizeObserver?.disconnect()
       resizeObserver = null
       map?.off?.('popupclose', cleanup)
-      map?.off?.('moveend', handleMoveEnd)
     }
 
     if (typeof ResizeObserver !== 'undefined') {
       resizeObserver = new ResizeObserver(() => {
-        scheduleRun()
+        if (!resizeObserverInitialized) {
+          resizeObserverInitialized = true
+          return
+        }
+        if (resizeDebounceTimer) {
+          clearTimeout(resizeDebounceTimer)
+        }
+        resizeDebounceTimer = setTimeout(() => {
+          resizeDebounceTimer = null
+          scheduleRun()
+        }, 80)
       })
       resizeObserver.observe(popupEl)
       const popupContentEl = popupEl.querySelector('.leaflet-popup-content')
@@ -168,11 +185,6 @@ export function useMapPopupAutoPan({
       }
     }
 
-    recenterTimer = setTimeout(() => {
-      scheduleRun()
-    }, 220)
-
-    map?.on?.('moveend', handleMoveEnd)
     map?.on?.('popupclose', cleanup)
   }, [mapRef, popupBottomOffset])
 

@@ -165,7 +165,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   const colors = useThemedColors();
   const styles = useMemo(() => createModernFiltersStyles(colors), [colors]);
 
-  const { isNarrowWeb, shouldReserveResultsBadge, showsStickyFooter } = getModernFiltersViewportState();
+  const { isNarrowWeb, showsStickyFooter } = getModernFiltersViewportState();
   const { reserveMinHeight, shouldReserveSpace } = getModernFiltersReserveState({
     filterGroups,
     isLoading,
@@ -224,8 +224,6 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   );
 
   const resultsText = useMemo(() => getModernFiltersResultsText(resultsCount), [resultsCount]);
-  const showResultsBadge =
-    typeof resultsCount === 'number' && shouldReserveResultsBadge;
 
   return (
     <View
@@ -246,13 +244,11 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Feather name="filter" size={20} color={colors.primary} />
-            <View>
-              <Text style={styles.headerTitle}>Фильтры</Text>
-              {!!resultsText && (Platform.OS === 'web' && !isNarrowWeb) && (
-                <Text style={styles.selectedSummaryLabel}>{resultsText}</Text>
-              )}
-            </View>
+            <Feather name="filter" size={16} color={colors.primary} />
+            <Text style={styles.headerTitle}>Фильтры</Text>
+            {!!resultsText && (
+              <Text style={styles.headerCount} numberOfLines={1}>{resultsText}</Text>
+            )}
           </View>
           <View style={styles.headerRight}>
             {activeFiltersCount > 0 && (
@@ -373,21 +369,6 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
           )}
         </View>
 
-        {/* Results Count Badge */}
-        {(showResultsBadge || shouldReserveResultsBadge) && (
-          <View style={styles.resultsBadge}>
-            <Feather
-              name="search"
-              size={14}
-              color={colors.textMuted}
-              style={!showResultsBadge ? ({ opacity: 0 } as any) : null}
-            />
-            <Text style={styles.resultsBadgeText}>
-              {showResultsBadge ? resultsText : 'Найдено 000 путешествий'}
-            </Text>
-          </View>
-        )}
-
         {/* Sort (collapsible dropdown) */}
         {sortGroup && (
           <SortDropdown
@@ -397,6 +378,34 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
             styles={styles}
             colors={colors}
           />
+        )}
+
+        {/* Year (always visible, not inside the scrollable list) */}
+        {onYearChange && (
+          <View style={[styles.filterGroup, styles.filterGroupLast, styles.yearGroup]}>
+            <View style={styles.yearInlineRow}>
+              <View style={styles.yearLabelContainer}>
+                <Feather
+                  name="calendar"
+                  size={16}
+                  color={colors.textSecondary}
+                />
+                <Text style={styles.yearLabel}>Год</Text>
+              </View>
+              <TextInput
+                value={year ? String(year) : ''}
+                onChangeText={(text) => {
+                  const cleaned = text.replace(/[^0-9]/g, '').slice(0, 4);
+                  onYearChange(cleaned.length === 4 ? cleaned : cleaned || undefined);
+                }}
+                placeholder="2023"
+                keyboardType="numeric"
+                maxLength={4}
+                style={styles.yearInput}
+                accessibilityLabel="Фильтр по году"
+              />
+            </View>
+          </View>
         )}
       </View>
 
@@ -509,34 +518,6 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
             </View>
           );
         })}
-
-        {/* Year */}
-        {onYearChange && (
-          <View style={[styles.filterGroup, styles.filterGroupLast, styles.yearGroup]}>
-            <View style={styles.yearInlineRow}>
-              <View style={styles.yearLabelContainer}>
-                <Feather
-                  name="calendar"
-                  size={16}
-                  color={colors.textSecondary}
-                />
-                <Text style={styles.yearLabel}>Год</Text>
-              </View>
-              <TextInput
-                value={year ? String(year) : ''}
-                onChangeText={(text) => {
-                  const cleaned = text.replace(/[^0-9]/g, '').slice(0, 4);
-                  onYearChange(cleaned.length === 4 ? cleaned : cleaned || undefined);
-                }}
-                placeholder="2023"
-                keyboardType="numeric"
-                maxLength={4}
-                style={styles.yearInput}
-                accessibilityLabel="Фильтр по году"
-              />
-            </View>
-          </View>
-        )}
       </ScrollView>
 
       {/* Apply / Reset Buttons (Mobile: native + web-narrow) — sticky footer вне ScrollView */}

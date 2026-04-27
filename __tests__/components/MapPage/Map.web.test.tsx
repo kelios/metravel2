@@ -1021,13 +1021,15 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       const props = {
         ...defaultProps,
         mode: 'radius' as const,
+        // Используем координаты, которые не распознаются как fallback Минска (отличие > 0.02)
+        coordinates: { latitude: 54.5, longitude: 30.0 },
       }
 
       try {
         const { getByLabelText } = renderWithProviders(<MapPageComponent {...props} />)
         await act(async () => {})
 
-        // ????, ???? ????? ???????? ?????????? ? ???????? ?????? (aria-label ?? ??????)
+        // Кнопка показывает "Вернуться к моему местоположению" когда userLocation доступна
         const myLocationButton = await waitFor(() => getByLabelText('\u0412\u0435\u0440\u043D\u0443\u0442\u044C\u0441\u044F \u043A \u043C\u043E\u0435\u043C\u0443 \u043C\u0435\u0441\u0442\u043E\u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u044E'))
         expect(myLocationButton).toBeTruthy()
 
@@ -1043,6 +1045,8 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       const props = {
         ...defaultProps,
         mode: 'radius' as const,
+        // Используем координаты, которые не распознаются как fallback Минска (отличие > 0.02)
+        coordinates: { latitude: 54.5, longitude: 30.0 },
       }
 
       const { getByLabelText } = renderWithProviders(<MapPageComponent {...props} />)

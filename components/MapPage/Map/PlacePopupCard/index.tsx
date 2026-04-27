@@ -42,6 +42,7 @@ type Props = {
   addDisabled?: boolean;
   isAdding?: boolean;
   addLabel?: string;
+  addTooltip?: string;
   width?: number;
   imageHeight?: number;
   compactLayout?: boolean;
@@ -72,6 +73,7 @@ const PlacePopupCard: React.FC<Props> = ({
   addDisabled = false,
   isAdding = false,
   addLabel = 'Сохранить',
+  addTooltip,
   width = 352,
   imageHeight: _imageHeight = 56,
   compactLayout = false,
@@ -80,7 +82,6 @@ const PlacePopupCard: React.FC<Props> = ({
   colors,
 }) => {
   const [fullscreenVisible, setFullscreenVisible] = useState(false);
-  const [hoveredActionKey, setHoveredActionKey] = useState<string | null>(null);
   const revealPopupImageOnLoadOnly = useMemo(() => {
     if (Platform.OS !== 'web' || typeof navigator === 'undefined') return false;
     return isIOSSafariUserAgent(
@@ -207,19 +208,9 @@ const PlacePopupCard: React.FC<Props> = ({
     setFullscreenVisible(false);
   }, []);
 
-  const showLabeled = useFullscreenMobileOverlay;
-  const showHoverLabels = Platform.OS === 'web' && !showLabeled;
-  const useCompactDecisionLayout = useCompactLayout || showLabeled;
-
   useEffect(() => {
     setFullscreenVisible(false);
   }, [imageUrl]);
-
-  useEffect(() => {
-    if (showLabeled) {
-      setHoveredActionKey(null);
-    }
-  }, [showLabeled]);
 
   const topInfoSlot = useMemo(() => (
     <View style={styles.infoSection}>
@@ -290,18 +281,14 @@ const PlacePopupCard: React.FC<Props> = ({
     useCompactLayout,
   ]);
 
-  const actionSummaryText = useMemo(() => {
-    if (onBuildRoute) return 'Сначала маршрут, потом можно сохранить точку.';
-    if (hasArticle) return 'Откройте карточку места или навигацию.';
-    return 'Откройте навигацию или сохраните точку.';
-  }, [hasArticle, onBuildRoute]);
-
   const secondaryActions = useMemo(() => {
     const items: Array<{
       key: string;
       accessibilityLabel: string;
       label: string;
       icon: React.ComponentProps<typeof Feather>['name'];
+      iconColor: string;
+      tintBg: string;
       onPress: () => void;
       title: string;
     }> = [];
@@ -311,7 +298,9 @@ const PlacePopupCard: React.FC<Props> = ({
         key: 'google',
         accessibilityLabel: 'Google Maps',
         label: 'Google',
-        icon: 'map',
+        icon: 'map-pin',
+        iconColor: '#1A73E8',
+        tintBg: 'rgba(26,115,232,0.12)',
         onPress: onOpenGoogleMaps,
         title: POPUP_TOOLTIPS.openGoogleMaps,
       });
@@ -323,59 +312,80 @@ const PlacePopupCard: React.FC<Props> = ({
         accessibilityLabel: 'Organic Maps',
         label: 'Organic',
         icon: 'compass',
+        iconColor: '#2E7D32',
+        tintBg: 'rgba(46,125,50,0.12)',
         onPress: onOpenOrganicMaps,
         title: POPUP_TOOLTIPS.openOrganicMaps,
       });
     }
 
-    if (hasArticle && primaryAction?.onPress !== onOpenArticle && onOpenArticle) {
+    // Skip the "Статья" chip on web when the inline "Открыть страницу" link is rendered
+    // (avoids duplicating the same destination right above the action grid).
+    const inlineArticleLinkVisible = Platform.OS === 'web' && !!normalizedArticleHref && primaryAction?.onPress !== onOpenArticle;
+    if (
+      hasArticle &&
+      primaryAction?.onPress !== onOpenArticle &&
+      onOpenArticle &&
+      !inlineArticleLinkVisible
+    ) {
       items.push({
         key: 'article',
         accessibilityLabel: 'Открыть статью',
         label: 'Статья',
         icon: 'book-open',
+        iconColor: colors.primary,
+        tintBg: colors.primarySoft ?? 'rgba(15,23,42,0.06)',
         onPress: onOpenArticle,
         title: POPUP_TOOLTIPS.openArticle,
       });
     }
 
-    if (!useCompactDecisionLayout && hasCoord && onOpenWaze) {
+    if (hasCoord && onOpenWaze) {
       items.push({
         key: 'waze',
         accessibilityLabel: 'Waze',
         label: 'Waze',
         icon: 'navigation',
+        iconColor: '#00B5F0',
+        tintBg: 'rgba(0,181,240,0.14)',
         onPress: onOpenWaze,
         title: POPUP_TOOLTIPS.openWaze,
       });
     }
 
-    if (!useCompactDecisionLayout && hasCoord && onOpenYandexNavi) {
+    if (hasCoord && onOpenYandexNavi) {
       items.push({
         key: 'yandex',
         accessibilityLabel: 'Яндекс Навигатор',
-        label: 'Навигатор',
+        label: 'Яндекс',
         icon: 'navigation-2',
+        iconColor: '#FC3F1D',
+        tintBg: 'rgba(252,63,29,0.12)',
         onPress: onOpenYandexNavi,
         title: POPUP_TOOLTIPS.openYandexNavi,
       });
     }
 
-    if (!useCompactDecisionLayout && hasCoord && onShareTelegram) {
+    if (hasCoord && onShareTelegram) {
       items.push({
         key: 'telegram',
         accessibilityLabel: 'Поделиться',
         label: 'Telegram',
         icon: 'send',
+        iconColor: '#229ED9',
+        tintBg: 'rgba(34,158,217,0.14)',
         onPress: onShareTelegram,
         title: POPUP_TOOLTIPS.shareTelegram,
       });
     }
 
-    return useCompactDecisionLayout ? items.slice(0, 2) : items;
+    return items;
   }, [
+    colors.primary,
+    colors.primarySoft,
     hasArticle,
     hasCoord,
+    normalizedArticleHref,
     onOpenGoogleMaps,
     onOpenOrganicMaps,
     onOpenArticle,
@@ -383,7 +393,6 @@ const PlacePopupCard: React.FC<Props> = ({
     onOpenYandexNavi,
     onShareTelegram,
     primaryAction,
-    useCompactDecisionLayout,
   ]);
 
   const footerSlot = useMemo(() => (
@@ -402,12 +411,6 @@ const PlacePopupCard: React.FC<Props> = ({
       )}
 
       <View style={styles.actionsStack}>
-        {showLabeled && (
-          <Text style={styles.actionSummaryText}>
-            {actionSummaryText}
-          </Text>
-        )}
-
         {primaryAction && (
           <CardActionPressable
             accessibilityLabel={primaryAction.accessibilityLabel}
@@ -424,116 +427,63 @@ const PlacePopupCard: React.FC<Props> = ({
           </CardActionPressable>
         )}
 
-        {onAddPoint && showLabeled && (
-          <CardActionPressable
-            accessibilityLabel={compactLabel}
-            onPress={() => void onAddPoint()}
-            disabled={addDisabled || isAdding}
-            title={compactLabel}
-            style={({ pressed }) => [
-              styles.saveFullBtn,
-              (addDisabled || isAdding) && styles.addBtnDisabled,
-              pressed && styles.addBtnPressed,
-            ]}
-          >
-            {isAdding ? (
-              <ActivityIndicator size="small" color={colors.primary} />
-            ) : (
-              <>
-                <Feather name="bookmark" size={15} color={colors.primary} />
-                <Text style={styles.saveFullBtnText}>{compactLabel}</Text>
-              </>
-            )}
-          </CardActionPressable>
-        )}
-
         <View style={styles.secondaryActionsRow}>
           {secondaryActions.map((action) => (
-            <View key={action.key} style={styles.hoverActionWrap}>
-              {showHoverLabels && hoveredActionKey === action.key ? (
-                <View pointerEvents="none" style={styles.hoverLabelBubble}>
-                  <Text style={styles.hoverLabelText}>{action.label}</Text>
-                </View>
-              ) : null}
-
-              <CardActionPressable
-                accessibilityLabel={action.accessibilityLabel}
-                onPress={action.onPress}
-                title={action.title}
-                onHoverIn={showHoverLabels ? () => setHoveredActionKey(action.key) : undefined}
-                onHoverOut={showHoverLabels ? () => setHoveredActionKey((current) => (current === action.key ? null : current)) : undefined}
-                style={showLabeled
-                  ? ({ pressed }) => [
-                      styles.labeledActionBtn,
-                      pressed && styles.actionBtnPressed,
-                    ]
-                  : ({ pressed }) => [
-                      styles.actionBtn,
-                      pressed && styles.actionBtnPressed,
-                    ]
-                }
-              >
-                <Feather
-                  name={action.icon}
-                  size={14}
-                  color={colors.textMuted}
-                />
-                {showLabeled && (
-                  <Text
-                    style={[
-                      styles.labeledActionText,
-                    ]}
-                  >
-                    {action.label}
-                  </Text>
-                )}
-              </CardActionPressable>
-            </View>
+            <CardActionPressable
+              key={action.key}
+              accessibilityLabel={action.accessibilityLabel}
+              onPress={action.onPress}
+              title={action.title}
+              style={({ pressed }) => [
+                styles.chipActionBtn,
+                pressed && styles.chipActionBtnPressed,
+              ]}
+            >
+              <View style={[styles.chipIconBubble, { backgroundColor: action.tintBg }]}>
+                <Feather name={action.icon} size={16} color={action.iconColor} />
+              </View>
+              <Text style={styles.chipActionText} numberOfLines={1}>
+                {action.label}
+              </Text>
+            </CardActionPressable>
           ))}
 
-          {onAddPoint && !showLabeled && (
-            <View style={styles.hoverActionWrap}>
-              {showHoverLabels && hoveredActionKey === 'add-point' ? (
-                <View pointerEvents="none" style={styles.hoverLabelBubble}>
-                  <Text style={styles.hoverLabelText}>{compactLabel}</Text>
-                </View>
-              ) : null}
-
-              <CardActionPressable
-                accessibilityLabel={compactLabel}
-                onPress={() => void onAddPoint()}
-                disabled={addDisabled || isAdding}
-                title={compactLabel}
-                onHoverIn={showHoverLabels ? () => setHoveredActionKey('add-point') : undefined}
-                onHoverOut={showHoverLabels ? () => setHoveredActionKey((current) => (current === 'add-point' ? null : current)) : undefined}
-                style={({ pressed }) => [
-                  styles.addBtn,
-                  (addDisabled || isAdding) && styles.addBtnDisabled,
-                  pressed && styles.addBtnPressed,
-                ]}
-              >
+          {onAddPoint && (
+            <CardActionPressable
+              accessibilityLabel={compactLabel}
+              onPress={() => void onAddPoint()}
+              disabled={addDisabled || isAdding}
+              title={addTooltip ?? compactLabel}
+              style={({ pressed }) => [
+                styles.chipActionBtn,
+                (addDisabled || isAdding) && styles.addBtnDisabled,
+                pressed && styles.chipActionBtnPressed,
+              ]}
+            >
+              <View style={[styles.chipIconBubble, { backgroundColor: colors.primarySoft ?? 'rgba(15,23,42,0.06)' }]}>
                 {isAdding ? (
                   <ActivityIndicator size="small" color={colors.primary} />
                 ) : (
-                  <Feather name="plus" size={14} color={colors.primary} />
+                  <Feather name="bookmark" size={16} color={colors.primary} />
                 )}
-              </CardActionPressable>
-            </View>
+              </View>
+              <Text style={styles.chipActionText} numberOfLines={1}>
+                {compactLabel}
+              </Text>
+            </CardActionPressable>
           )}
         </View>
       </View>
     </View>
   ), [
-    actionSummaryText,
     secondaryActions,
-    showLabeled,
-    showHoverLabels,
     addDisabled,
+    addTooltip,
     colors.primary,
+    colors.primarySoft,
     colors.textMuted,
     compactLabel,
     coord,
-    hoveredActionKey,
     hasCoord,
     isAdding,
     onAddPoint,
@@ -551,26 +501,42 @@ const PlacePopupCard: React.FC<Props> = ({
           {imageUrl && (
             <Pressable
               onPress={handleOpenFullscreen}
-              style={[styles.imageContainer, useSplitLayout && styles.imageContainerSplit]}
               accessibilityRole="button"
               accessibilityLabel="Открыть фото на весь экран"
+              style={({ pressed, hovered }: any) => [
+                styles.imageContainer,
+                useSplitLayout && styles.imageContainerSplit,
+                hovered && styles.imageContainerHovered,
+                pressed && styles.imageContainerPressed,
+              ]}
             >
-              <ImageCardMedia
-                src={imageUrl}
-                alt={title}
-                fit="contain"
-                blurBackground
-                allowCriticalWebBlur
-                revealOnLoadOnly={revealPopupImageOnLoadOnly}
-                priority="high"
-                loading="eager"
-                width={heroWidth}
-                height={heroHeight}
-                style={StyleSheet.absoluteFill}
-              />
-              <View style={styles.imageExpandButton}>
-                <Feather name="maximize-2" size={18} color={colors.textOnDark} />
-              </View>
+              {({ pressed, hovered }: any) => (
+                <>
+                  <ImageCardMedia
+                    src={imageUrl}
+                    alt={title}
+                    fit="contain"
+                    blurBackground
+                    allowCriticalWebBlur
+                    revealOnLoadOnly={revealPopupImageOnLoadOnly}
+                    priority="high"
+                    loading="eager"
+                    width={heroWidth}
+                    height={heroHeight}
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <View
+                    pointerEvents="none"
+                    style={[
+                      styles.imageExpandButton,
+                      hovered && styles.imageExpandButtonHovered,
+                      pressed && styles.imageExpandButtonPressed,
+                    ]}
+                  >
+                    <Feather name="maximize-2" size={16} color={colors.textOnDark} />
+                  </View>
+                </>
+              )}
             </Pressable>
           )}
 

@@ -183,10 +183,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   }, [mode, radius]);
 
   const { centerOnUserLocation, userLocation, userLocationLatLng } = useMapUserLocation({
-    L,
-    rl,
     coordinates,
-    mapContainerId: mapContainerIdRef.current,
     mapRef,
     onUserLocationChange,
     isFallbackMinskCenter: useCallback((lat: number, lng: number) => {
@@ -202,22 +199,27 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   const filteredTravelData = useMemo(() => {
     if (mode !== 'radius') return travelData;
+    if (!Array.isArray(travelData) || travelData.length === 0) return travelData;
 
     const center = userLocationLatLng ?? coordinatesLatLng;
-    if (!CoordinateConverter.isValid(center)) return travelData;
-    if (!Number.isFinite(radiusInMeters as any) || !radiusInMeters || radiusInMeters <= 0) return travelData;
+    const hasValidCenter = CoordinateConverter.isValid(center);
+    const hasValidRadius = Number.isFinite(radiusInMeters as any) && !!radiusInMeters && (radiusInMeters as number) > 0;
 
-    const r = Number(radiusInMeters);
+    // Server is the source of truth for radius filtering.
+    // Client-side, only drop points whose `coord` cannot be parsed at all.
+    // Apply a generous distance guard (×2) to discard outliers without rejecting
+    // borderline points when the filter center diverges from the server query center.
+    const guardRadius = hasValidCenter && hasValidRadius ? (radiusInMeters as number) * 2 : null;
 
     return (travelData || []).filter((p) => {
       try {
-        const ll = strToLatLng(String((p as any)?.coord ?? ''), center);
+        const ll = strToLatLng(String((p as any)?.coord ?? ''), hasValidCenter ? center : null);
         if (!ll) return false;
         const coords = { lat: ll[1], lng: ll[0] };
         if (!CoordinateConverter.isValid(coords)) return false;
+        if (guardRadius == null) return true;
         const d = CoordinateConverter.distance(center, coords);
-        // small tolerance for rounding / parsing differences
-        return Number.isFinite(d) && d <= r * 1.03;
+        return Number.isFinite(d) && d <= guardRadius;
       } catch {
         return false;
       }
@@ -386,6 +388,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     leafletBaseLayerRef,
     leafletOverlayLayersRef,
     leafletControlRef,
+    onRequestUserLocationFocus: centerOnUserLocation,
   });
 
   // Handle map click
@@ -504,7 +507,14 @@ const MapPageComponent: React.FC<Props> = (props) => {
     popupBottomOffset,
   });
 
-  // Popup component
+  // Popup component — keep identity stable across GPS updates by reading
+  // userLocation through a ref instead of including it in deps. Re-creating
+  // the factory on every GPS tick would unmount/remount the popup and wipe
+  // its internal state (e.g. fullscreen image viewer visibility).
+  const userLocationLatLngRef = useRef(userLocationLatLng);
+  useEffect(() => {
+    userLocationLatLngRef.current = userLocationLatLng;
+  }, [userLocationLatLng]);
   const PopupComponent = useMemo(() => {
     if (!rl) return null;
     return createMapPopupComponent({
@@ -512,12 +522,12 @@ const MapPageComponent: React.FC<Props> = (props) => {
       themeContextValue,
       compactLayout: useCompactPopupLayout,
       fullscreenOnMobile: useCompactPopupLayout,
-      userLocation: userLocationLatLng,
+      userLocationRef: userLocationLatLngRef,
       invalidateUserPoints: () => {
         void queryClient.invalidateQueries({ queryKey: ['userPointsAll'] });
       },
     });
-  }, [colors, queryClient, rl, themeContextValue, useCompactPopupLayout, userLocationLatLng]);
+  }, [colors, queryClient, rl, themeContextValue, useCompactPopupLayout]);
 
   const shouldShowLoadingOverlay = Platform.OS === 'web'
     ? !!leafletError || !canRenderMap

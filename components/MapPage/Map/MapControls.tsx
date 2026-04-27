@@ -133,15 +133,17 @@ const MapControls: React.FC<MapControlsProps> = ({
 
   return (
     <div style={controlsStyle}>
-      {userLocation && (
-        <MapControlButton
-          onClick={onCenterUserLocation}
-          title={'\u041c\u043e\u0435 \u043c\u0435\u0441\u0442\u043e\u043f\u043e\u043b\u043e\u0436\u0435\u043d\u0438\u0435'}
-          ariaLabel={'\u0412\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f \u043a \u043c\u043e\u0435\u043c\u0443 \u043c\u0435\u0441\u0442\u043e\u043f\u043e\u043b\u043e\u0436\u0435\u043d\u0438\u044e'}
-          icon="crosshair"
-          colors={colors}
-        />
-      )}
+      <MapControlButton
+        onClick={onCenterUserLocation}
+        title={'\u041c\u043e\u0435 \u043c\u0435\u0441\u0442\u043e\u043f\u043e\u043b\u043e\u0436\u0435\u043d\u0438\u0435'}
+        ariaLabel={
+          userLocation
+            ? '\u0412\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f \u043a \u043c\u043e\u0435\u043c\u0443 \u043c\u0435\u0441\u0442\u043e\u043f\u043e\u043b\u043e\u0436\u0435\u043d\u0438\u044e'
+            : '\u041e\u043f\u0440\u0435\u0434\u0435\u043b\u0438\u0442\u044c \u043c\u043e\u0451 \u043c\u0435\u0441\u0442\u043e\u043f\u043e\u043b\u043e\u0436\u0435\u043d\u0438\u0435'
+        }
+        icon="crosshair"
+        colors={colors}
+      />
       {(onZoomIn || onZoomOut) && (
         <div style={zoomGroupStyle}>
           {onZoomIn && (

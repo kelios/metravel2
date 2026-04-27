@@ -88,7 +88,6 @@ export default function MapScreen() {
         zoomOut,
         panelRef,
         geoError,
-        hasUserLocation,
         coordinates,
         transportMode,
     } = useMapScreenController();
@@ -266,15 +265,13 @@ export default function MapScreen() {
 
     const mapQuickActionButtons = useMemo(
         () => [
-            ...(hasUserLocation
-                ? [{
+            ...([{
                     key: 'locate',
                     label: 'ÐœÐ¾Ðµ Ð¼ÐµÑÑ‚Ð¾Ð¿Ð¾Ð»Ð¾Ð¶ÐµÐ½Ð¸Ðµ',
                     icon: 'crosshair' as const,
                     onPress: centerOnUser,
                     testID: 'map-center-user-inline',
-                }]
-                : []),
+                }]),
             {
                 key: 'zoom-in',
                 label: 'ÐŸÑ€Ð¸Ð±Ð»Ð¸Ð·Ð¸Ñ‚ÑŒ',
@@ -290,7 +287,7 @@ export default function MapScreen() {
                 testID: 'map-zoom-out-inline',
             },
         ],
-        [centerOnUser, hasUserLocation, zoomIn, zoomOut],
+        [centerOnUser, zoomIn, zoomOut],
     );
     const localizedMapQuickActionButtons = useMemo(
         () => mapQuickActionButtons.map((action) => ({

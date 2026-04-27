@@ -180,13 +180,7 @@ export function useMapCoordinates() {
 
   useEffect(() => {
     const abortController = new AbortController();
-    if (Platform.OS === 'web') {
-      // Do not request geolocation automatically on first paint (Lighthouse best-practices).
-      // The map can start from cached/default coordinates; explicit user action can call refreshLocation().
-      setIsLoading(false);
-    } else {
-      requestLocation(abortController.signal);
-    }
+    requestLocation(abortController.signal);
 
     return () => {
       abortController.abort();

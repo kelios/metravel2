@@ -15,12 +15,12 @@ const CommentsSectionLazy = withLazy(() =>
 )
 const TravelDetailsSidebarSectionLazy = withLazy(() =>
   import('./sections/TravelDetailsSidebarSection').then((module) => ({
-    default: module.TravelDetailsSidebarSection ?? module.default,
+    default: module.TravelDetailsSidebarSection,
   })),
 )
 const TravelDetailsFooterSectionLazy = withLazy(() =>
   import('./sections/TravelDetailsFooterSection').then((module) => ({
-    default: module.TravelDetailsFooterSection ?? module.default,
+    default: module.TravelDetailsFooterSection,
   })),
 )
 const TravelDetailsMapSectionLazy = withLazy(() =>

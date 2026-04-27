@@ -12,6 +12,7 @@ import {
   StyleSheet,
   useWindowDimensions,
   View,
+  type ViewStyle,
 } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -218,8 +219,24 @@ export const MapChipPopover: React.FC<MapChipPopoverProps> = ({
   )
 }
 
-const getStyles = (colors: ThemedColors) =>
-  StyleSheet.create({
+type Styles = {
+  webOverlay: ViewStyle
+  popover: ViewStyle
+  popoverChrome: ViewStyle
+  popoverContent: ViewStyle
+  sheetBackdrop: ViewStyle
+  sheetContainer: ViewStyle
+  sheetContainerWeb: ViewStyle
+  sheetChrome: ViewStyle
+  sheetHandle: ViewStyle
+  sheetContent: ViewStyle
+  closeButton: ViewStyle
+  closeButtonPressed: ViewStyle
+  closeButtonFloating: ViewStyle
+}
+
+const getStyles = (colors: ThemedColors): Styles =>
+  StyleSheet.create<Styles>({
     webOverlay: {
       position: 'absolute' as const,
       top: 0,
@@ -283,7 +300,7 @@ const getStyles = (colors: ThemedColors) =>
     sheetContainerWeb: {
       marginBottom: WEB_MOBILE_BOTTOM_CHROME_INSET,
       paddingBottom: 0,
-      maxHeight: `calc(100% - ${WEB_MOBILE_BOTTOM_CHROME_INSET + 24}px)`,
+      maxHeight: `calc(100% - ${WEB_MOBILE_BOTTOM_CHROME_INSET + 24}px)` as any,
     },
     sheetChrome: {
       position: 'relative',
@@ -312,7 +329,7 @@ const getStyles = (colors: ThemedColors) =>
       borderRadius: 18,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: colors.surfaceSecondary ?? colors.backgroundSecondary ?? colors.surface,
+      backgroundColor: colors.backgroundSecondary ?? colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
       ...(Platform.OS === 'web'

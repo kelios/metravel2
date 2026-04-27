@@ -131,14 +131,12 @@ describe('useMapPopupAutoPan', () => {
       },
     })
 
-    expect(panBy).toHaveBeenCalledWith([0, -226], { animate: false })
+    expect(panBy).toHaveBeenCalledWith([0, -226], { animate: true, duration: 0.2 })
     expect(on).toHaveBeenCalledWith('popupclose', expect.any(Function))
-    expect(on).toHaveBeenCalledWith('moveend', expect.any(Function))
-
-    panBy.mockClear()
-    listeners.get('moveend')?.()
-
-    expect(panBy).toHaveBeenCalledWith([0, -226], { animate: false })
+    // moveend listener should NOT be registered: it caused screen jitter via
+    // panBy -> moveend -> scheduleRun -> panBy feedback loops and yanked the
+    // map back on user-initiated panning while the popup was open.
+    expect(on).not.toHaveBeenCalledWith('moveend', expect.any(Function))
   })
 
   it('keeps observing popup size changes after the first second so late image growth can re-pan', () => {
@@ -194,9 +192,17 @@ describe('useMapPopupAutoPan', () => {
     })
 
     expect(resizeObserverInstances).toHaveLength(1)
-    expect(panBy).toHaveBeenCalledWith([0, -47], { animate: false })
+    expect(panBy).toHaveBeenCalledWith([0, -47], { animate: true, duration: 0.2 })
 
     panBy.mockClear()
+
+    // First synchronous ResizeObserver invocation right after observe() must
+    // be ignored to avoid duplicating the initial pan.
+    act(() => {
+      resizeObserverInstances[0]?.trigger()
+      jest.advanceTimersByTime(120)
+    })
+    expect(panBy).not.toHaveBeenCalled()
 
     act(() => {
       jest.advanceTimersByTime(1500)
@@ -206,12 +212,69 @@ describe('useMapPopupAutoPan', () => {
 
     act(() => {
       resizeObserverInstances[0]?.trigger()
+      jest.advanceTimersByTime(120)
     })
 
-    expect(panBy).toHaveBeenCalledWith([0, -228], { animate: false })
+    expect(panBy).toHaveBeenCalledWith([0, -228], { animate: true, duration: 0.2 })
   })
 
-  it('centers desktop popup horizontally inside the visible map area', () => {
+  it('pans desktop popup horizontally only when it overflows the safe area', () => {
+    const panBy = jest.fn()
+    const on = jest.fn()
+    const off = jest.fn()
+
+    const mapEl = {
+      getBoundingClientRect: () => ({
+        left: 0,
+        top: 0,
+        right: 1280,
+        bottom: 900,
+        width: 1280,
+        height: 900,
+      }),
+    } as HTMLElement
+
+    // Popup overflows the safe right edge: safeRight = 1280 - 24 = 1256, popup.right = 1300.
+    const popupEl = {
+      getBoundingClientRect: () => ({
+        left: 940,
+        top: 180,
+        right: 1300,
+        bottom: 560,
+        width: 360,
+        height: 380,
+      }),
+      querySelector: jest.fn(() => null),
+    } as unknown as HTMLElement
+
+    const mapRef = {
+      current: {
+        getContainer: () => mapEl,
+        panBy,
+        on,
+        off,
+      },
+    }
+
+    const { result } = renderHook(() =>
+      useMapPopupAutoPan({
+        mapRef,
+        mapPaneWidth: 1280,
+        popupBottomOffset: 0,
+      })
+    )
+
+    result.current.popupAutoPanPadding.eventHandlers.popupopen({
+      popup: {
+        getElement: () => popupEl,
+      },
+    })
+
+    // safeRight = 1280 - 24 = 1256, popup.right = 1300 → overflowRight = 44.
+    expect(panBy).toHaveBeenCalledWith([44, 0], { animate: true, duration: 0.2 })
+  })
+
+  it('does not pan desktop popup when it fits inside the safe area', () => {
     const panBy = jest.fn()
     const on = jest.fn()
     const off = jest.fn()
@@ -262,6 +325,6 @@ describe('useMapPopupAutoPan', () => {
       },
     })
 
-    expect(panBy).toHaveBeenCalledWith([400, 0], { animate: false })
+    expect(panBy).not.toHaveBeenCalled()
   })
 })

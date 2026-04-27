@@ -29,6 +29,7 @@ interface UseMapApiProps {
   leafletBaseLayerRef: React.MutableRefObject<any>;
   leafletOverlayLayersRef: React.MutableRefObject<Map<string, any>>;
   leafletControlRef: React.MutableRefObject<any>;
+  onRequestUserLocationFocus?: () => void | Promise<void>;
 }
 
 export function useMapApi({
@@ -41,6 +42,7 @@ export function useMapApi({
   leafletBaseLayerRef,
   leafletOverlayLayersRef,
   leafletControlRef,
+  onRequestUserLocationFocus,
 }: UseMapApiProps) {
   const pendingOverlayTogglesRef = useRef<Map<string, boolean>>(new Map());
   const pendingOverlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -70,9 +72,19 @@ export function useMapApi({
   const canExportRoute = useMemo(() => (routePoints?.length ?? 0) >= 2, [routePoints?.length]);
 
   const centerOnUserLocation = useCallback(() => {
-    if (!map || !userLocation) return;
-    centerMapOnUser(userLocation, 13);
-  }, [centerMapOnUser, map, userLocation]);
+    if (!map) return;
+    if (userLocation) {
+      centerMapOnUser(userLocation, 13);
+      return;
+    }
+    if (onRequestUserLocationFocus) {
+      try {
+        void onRequestUserLocationFocus();
+      } catch {
+        // noop
+      }
+    }
+  }, [centerMapOnUser, map, onRequestUserLocationFocus, userLocation]);
 
   const handleDownloadGpx = useCallback(() => {
     if (!routePoints || routePoints.length < 2) return;

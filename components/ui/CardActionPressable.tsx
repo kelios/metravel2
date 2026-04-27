@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import {
   Platform,
   Pressable,
+  type PressableStateCallbackType,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';

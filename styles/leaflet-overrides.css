@@ -76,6 +76,9 @@
   font-size: 14px !important;
   line-height: 20px !important;
   max-width: min(420px, calc(100vw - 28px)) !important;
+  max-height: min(640px, calc(100vh - 160px)) !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
 }
 
 /* MAP-03: На мобайле popup компактнее и скроллируется, чтобы не перекрывать карту */

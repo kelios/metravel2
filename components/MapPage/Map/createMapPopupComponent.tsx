@@ -14,6 +14,14 @@ import { CoordinateConverter } from '@/utils/coordinateConverter';
 
 interface CreatePopupComponentArgs {
   userLocation?: { lat: number; lng: number } | null;
+  /**
+   * Optional ref-based userLocation source. When provided, PopupComponent reads
+   * the live value from the ref on each render so that the parent can update
+   * GPS coordinates without recreating the component factory. This keeps the
+   * PopupComponent identity stable across GPS updates and avoids unmount/remount
+   * which would reset internal state (e.g. fullscreen image viewer visibility).
+   */
+  userLocationRef?: React.MutableRefObject<{ lat: number; lng: number } | null | undefined>;
   compactLayout?: boolean;
   fullscreenOnMobile?: boolean;
   invalidateUserPoints?: () => void;
@@ -72,6 +80,7 @@ const buildPopupTitleParts = (point: Point): { title: string; subtitle?: string 
 
 export const createMapPopupComponent = ({
   userLocation,
+  userLocationRef,
   compactLayout = false,
   fullscreenOnMobile = false,
   invalidateUserPoints,
@@ -87,8 +96,11 @@ export const createMapPopupComponent = ({
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
     const authReady = useAuthStore((s) => s.authReady);
 
-    const userLat = userLocation?.lat;
-    const userLng = userLocation?.lng;
+    // Prefer the live ref value when provided (ref keeps the factory identity
+    // stable across GPS updates); fall back to the static closure value.
+    const liveUserLocation = userLocationRef?.current ?? userLocation;
+    const userLat = liveUserLocation?.lat;
+    const userLng = liveUserLocation?.lng;
 
     const lastDriveKeyRef = useRef<string | null>(null);
     const abortDriveRef = useRef<AbortController | null>(null);
@@ -327,7 +339,16 @@ export const createMapPopupComponent = ({
           onOpenYandexNavi={handleOpenYandexNavi}
           onAddPoint={handleAddPoint}
           onBuildRoute={canBuildRoute ? handleBuildRoute : undefined}
-          addDisabled={!authReady || !isAuthenticated || !normalizedCoord || isAdding}
+          addDisabled={!authReady || !normalizedCoord || isAdding}
+          addTooltip={
+            !authReady
+              ? 'Загрузка…'
+              : !isAuthenticated
+                ? 'Войдите, чтобы сохранить точку'
+                : !normalizedCoord
+                  ? 'Координаты точки недоступны'
+                  : 'Сохранить в мои точки'
+          }
           isAdding={isAdding}
           compactLayout={compactLayout}
           fullscreenOnMobile={fullscreenOnMobile}

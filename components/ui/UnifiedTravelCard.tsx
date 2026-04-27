@@ -19,9 +19,11 @@ import Animated, {
 } from 'react-native-reanimated';
 
 const MAP_PIN_ICON_STYLE = { marginRight: 4 } as const;
+// Modern, легко читаемый sans-serif стек для подписей на изображении карточки.
 const REFINED_CARD_TITLE_FONT_FAMILY =
-  'Baskerville, "Palatino Linotype", Palatino, Georgia, serif';
-
+  '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+const HERO_TITLE_OVERLAY_GRADIENT =
+  'linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.18) 80%, rgba(0,0,0,0) 100%)';
 export type UnifiedTravelCardBadge = {
   icon: keyof typeof Feather.glyphMap;
   backgroundColor: string;
@@ -275,33 +277,35 @@ function UnifiedTravelCard({
           left: 0,
           right: 0,
           bottom: 0,
-          paddingHorizontal: 12,
-          paddingTop: 16,
-          paddingBottom: 10,
-          alignItems: 'center',
+          paddingHorizontal: 14,
+          paddingTop: 32,
+          paddingBottom: 14,
+          alignItems: 'stretch',
         },
         imageTitleOverlayBg: {
           ...StyleSheet.absoluteFillObject,
           ...(isWeb
             ? ({
-                backgroundImage: `linear-gradient(to top, ${colors.overlay} 0%, rgba(0, 0, 0, 0) 100%)`,
+                backgroundImage: HERO_TITLE_OVERLAY_GRADIENT,
               } as any)
-            : ({ backgroundColor: colors.overlay } as any)),
+            : ({ backgroundColor: 'rgba(0,0,0,0.55)' } as any)),
         },
         imageTitleOverlayText: {
-          fontSize: isWeb ? 15 : 14,
-          fontWeight: '700',
-          lineHeight: isWeb ? 19 : 18,
+          fontSize: isWeb ? 16 : 15,
+          fontWeight: '600',
+          lineHeight: isWeb ? 21 : 20,
           color: colors.textOnDark,
-          letterSpacing: isWeb ? 0 : -0.2,
-          textAlign: 'center',
+          letterSpacing: -0.3,
+          textAlign: 'left',
           ...(isWeb
             ? {
                 fontFamily: REFINED_CARD_TITLE_FONT_FAMILY,
-                textShadow: '0px 1px 5px rgba(0,0,0,0.28)',
-              }
+                textShadow: '0 1px 8px rgba(0,0,0,0.45)',
+                WebkitFontSmoothing: 'antialiased',
+                MozOsxFontSmoothing: 'grayscale',
+              } as any
             : {
-                textShadowColor: 'rgba(0,0,0,0.32)',
+                textShadowColor: 'rgba(0,0,0,0.5)',
                 textShadowOffset: { width: 0, height: 1 },
                 textShadowRadius: 6,
               }),

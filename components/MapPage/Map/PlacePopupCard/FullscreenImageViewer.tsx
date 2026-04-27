@@ -5,6 +5,17 @@ import type { ThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 
+const webCreatePortal: ((node: React.ReactNode, container: Element) => any) | null =
+  Platform.OS === 'web'
+    ? (() => {
+        try {
+          return (require('react-dom') as any)?.createPortal ?? null;
+        } catch {
+          return null;
+        }
+      })()
+    : null;
+
 export const fullscreenStyles = StyleSheet.create({
   container: {
     flex: 1,
@@ -38,15 +49,6 @@ const FullscreenImageViewer: React.FC<{
   colors: ThemedColors;
 }> = ({ imageUrl, alt, visible, onClose, colors }) => {
   const { width, height } = useWindowDimensions();
-
-  const portalCreate = useMemo(() => {
-    if (Platform.OS !== 'web') return null;
-    try {
-      return (require('react-dom') as any)?.createPortal ?? null;
-    } catch {
-      return null;
-    }
-  }, []);
 
   const maxW = Math.round(width * 0.92);
   const maxH = Math.round(height * 0.92);
@@ -149,8 +151,8 @@ const FullscreenImageViewer: React.FC<{
       </div>
     );
 
-    if (typeof document !== 'undefined' && portalCreate) {
-      return portalCreate(overlay, document.body);
+    if (typeof document !== 'undefined' && webCreatePortal) {
+      return webCreatePortal(overlay, document.body);
     }
 
     return overlay;

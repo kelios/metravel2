@@ -1,8 +1,19 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import type { ThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+
+const webCreatePortal: ((node: React.ReactNode, container: Element) => any) | null =
+  Platform.OS === 'web'
+    ? (() => {
+        try {
+          return (require('react-dom') as any)?.createPortal ?? null;
+        } catch {
+          return null;
+        }
+      })()
+    : null;
 
 const FullscreenPopupOverlay: React.FC<{
   visible: boolean;
@@ -15,14 +26,6 @@ const FullscreenPopupOverlay: React.FC<{
   onOpenFullscreenImage?: () => void;
 }> = ({ visible, onClose, colors, imageUrl, imageAlt, topInfoSlot, footerSlot, onOpenFullscreenImage }) => {
   const [localHidden, setLocalHidden] = useState(false);
-  const portalCreate = useMemo(() => {
-    if (Platform.OS !== 'web') return null;
-    try {
-      return (require('react-dom') as any)?.createPortal ?? null;
-    } catch {
-      return null;
-    }
-  }, []);
 
   // Keep the overlay visible on first open, then hide it instantly on close
   // so Leaflet does not leave a stale fullscreen layer behind.
@@ -84,7 +87,7 @@ const FullscreenPopupOverlay: React.FC<{
             <ImageCardMedia
               src={imageUrl}
               alt={imageAlt || ''}
-              fit="cover"
+              fit="contain"
               height={undefined}
               width="100%"
               style={{ width: '100%', height: '100%' }}
@@ -139,17 +142,25 @@ const FullscreenPopupOverlay: React.FC<{
         {/* Expand image button */}
         {hasImage && onOpenFullscreenImage && (
           <button
-            onClick={onOpenFullscreenImage}
+            onClick={(e) => {
+              e.stopPropagation()
+              onOpenFullscreenImage()
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onOpenFullscreenImage()
+            }}
             aria-label="Открыть фото на весь экран"
             style={{
               position: 'absolute',
               bottom: 12,
               right: 12,
-              width: 36,
-              height: 36,
-              borderRadius: 18,
+              width: 40,
+              height: 40,
+              borderRadius: 20,
               border: 'none',
-              backgroundColor: 'rgba(0,0,0,0.35)',
+              backgroundColor: 'rgba(15,23,42,0.55)',
               backdropFilter: 'blur(8px)',
               WebkitBackdropFilter: 'blur(8px)',
               color: '#fff',
@@ -157,9 +168,12 @@ const FullscreenPopupOverlay: React.FC<{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              zIndex: 2,
+              touchAction: 'manipulation',
+              transition: 'background-color 0.15s ease, transform 0.15s ease',
             }}
           >
-            <Feather name="maximize-2" size={16} color="#fff" />
+            <Feather name="maximize-2" size={18} color="#fff" />
           </button>
         )}
       </div>
@@ -187,8 +201,8 @@ const FullscreenPopupOverlay: React.FC<{
     </div>
   );
 
-  if (typeof document !== 'undefined' && portalCreate) {
-    return portalCreate(overlay, document.body);
+  if (typeof document !== 'undefined' && webCreatePortal) {
+    return webCreatePortal(overlay, document.body);
   }
 
   return overlay;
