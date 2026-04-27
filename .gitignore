@@ -34,6 +34,7 @@ coverage-*/
 junit.xml
 /coverage/
 jest-results.json
+test-output.txt
 *.log
 .eslintcache
 .tsbuildinfo
@@ -95,6 +96,7 @@ nginx/ssl/
 .claude/worktrees/
 .claude/sessions/
 .claude/tmp/
+.claude/scheduled_tasks.lock
 .codex-temp/
 .tmp/
 
