@@ -5,6 +5,7 @@
 
 import type { FilterState } from "./listTravelTypes";
 import { METRICS } from "@/constants/layout";
+import { DESIGN_TOKENS } from "@/constants/designSystem";
 
 export const INITIAL_FILTER: FilterState = {};
 
@@ -37,7 +38,7 @@ export const GRID_COLUMNS = {
   DESKTOP_LARGE: 4,      // 1440px+: 4 колонки
 } as const;
 
-export const TRAVEL_CARD_IMAGE_HEIGHT = 220;
+export const TRAVEL_CARD_IMAGE_HEIGHT = DESIGN_TOKENS.cardImageHeights.medium;
 export const TRAVEL_CARD_WEB_MOBILE_HEIGHT = 360;
 export const TRAVEL_CARD_WEB_HEIGHT = 400;
 

@@ -35,7 +35,8 @@
       "Bash(curl -sf -o /dev/null -w \"%{http_code}\" http://localhost:8082/map)",
       "Bash(git grep *)",
       "Bash(jobs -l)",
-      "Bash(tasklist)"
+      "Bash(tasklist)",
+      "Bash(curl -sf http://localhost:8082/)"
     ]
   }
 }

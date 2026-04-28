@@ -167,9 +167,8 @@ export const enhancedTravelCardStyles = StyleSheet.create({
   imageContainer: {
     position: "relative",
     width: "100%",
-    // ✅ Фиксированная высота 220px для всех платформ для предсказуемости
-    // В браузере Platform всегда = 'web', поэтому aspectRatio делал изображения большими
-    height: 220,
+    // CARD-01: Единый токен высоты для основного списка маршрутов
+    height: DESIGN_TOKENS.cardImageHeights.medium,
     backgroundColor: designTokens.colors.surfaceMuted, // Используем design token
     overflow: "hidden",
     flexShrink: 0,

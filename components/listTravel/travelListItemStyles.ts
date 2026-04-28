@@ -2,6 +2,16 @@ import { Platform, StyleSheet } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
+// Inline meta-text scale: bodySmall on web, caption on native.
+const META_TEXT_FONT_SIZE =
+  Platform.OS === 'web'
+    ? DESIGN_TOKENS.typography.scale.bodySmall.fontSize
+    : DESIGN_TOKENS.typography.scale.caption.fontSize;
+const META_TEXT_LINE_HEIGHT =
+  Platform.OS === 'web'
+    ? DESIGN_TOKENS.typography.scale.bodySmall.lineHeight
+    : DESIGN_TOKENS.typography.scale.caption.lineHeight;
+
 export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
     wrap: {
@@ -13,7 +23,7 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
     card: {
       width: '100%',
       backgroundColor: colors.surface,
-      borderRadius: DESIGN_TOKENS.radii.xl,
+      borderRadius: DESIGN_TOKENS.radii.lg,
       borderWidth: 1,
       borderColor: colors.borderLight,
       overflow: 'hidden',
@@ -269,7 +279,7 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       borderColor: Platform.OS === 'web'
         ? 'rgba(232, 168, 56, 0.2)'
         : colors.borderLight,
-      borderRadius: 999,
+      borderRadius: DESIGN_TOKENS.radii.pill,
       paddingVertical: 4,
       paddingHorizontal: 10,
       ...(Platform.OS === 'web'
@@ -280,19 +290,19 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
     },
 
     metaTxt: {
-      fontSize: Platform.OS === 'web' ? 13 : 12,
+      fontSize: META_TEXT_FONT_SIZE,
       color: colors.textSecondary,
       fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-      lineHeight: Platform.OS === 'web' ? 18 : 16,
+      lineHeight: META_TEXT_LINE_HEIGHT,
       minWidth: 0,
     },
 
     // Текст просмотров
     metaTxtViews: {
-      fontSize: Platform.OS === 'web' ? 13 : 12,
+      fontSize: META_TEXT_FONT_SIZE,
       color: colors.textSecondary,
       fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-      lineHeight: Platform.OS === 'web' ? 18 : 16,
+      lineHeight: META_TEXT_LINE_HEIGHT,
     },
 
     // Компактные статус-бейджи (иконки)
@@ -342,10 +352,10 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
     },
 
     tagTxt: {
-      fontSize: Platform.OS === 'web' ? 13 : 12,
+      fontSize: META_TEXT_FONT_SIZE,
       color: colors.textSecondary,
       fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-      lineHeight: Platform.OS === 'web' ? 18 : 16,
+      lineHeight: META_TEXT_LINE_HEIGHT,
     },
 
     // Чекбоксы выбора
@@ -364,7 +374,7 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
     checkbox: {
       width: 28,
       height: 28,
-      borderRadius: 14,
+      borderRadius: DESIGN_TOKENS.radii.full,
       borderWidth: 2,
       borderColor: 'rgba(255,255,255,0.85)',
       backgroundColor: 'rgba(0,0,0,0.28)',
