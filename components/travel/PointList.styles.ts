@@ -391,6 +391,9 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     marginTop: DESIGN_TOKENS.spacing.xxs,
   },
   mapChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     paddingVertical: 6,
     borderRadius: 999,
@@ -413,6 +416,9 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     fontSize: DESIGN_TOKENS.typography.sizes.xs,
     fontWeight: '600',
     letterSpacing: -0.2,
+  },
+  mapChipIcon: {
+    flexShrink: 0,
   },
   overlayCategoryRow: {
     flexDirection: 'row',

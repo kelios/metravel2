@@ -11,6 +11,10 @@ import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import { showToast } from '@/utils/toast';
 import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { buildGoogleMapsUrl, buildOrganicMapsUrl, buildWazeUrl, buildYandexNaviUrl } from '@/components/MapPage/Map/mapLinks';
+import {
+  getNavigationActionVisual,
+  NAVIGATION_ACTION_LABELS,
+} from '@/components/navigation/navigationActionMeta';
 
 interface PointCardProps {
   point: ImportedPoint;
@@ -318,65 +322,47 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
           {
             key: 'google',
             accessibilityLabel: 'Открыть в Google Maps',
-            label: 'Google',
-            icon: 'map-pin' as const,
-            iconColor: colors.info,
-            tintBg: colors.infoSoft,
+            label: NAVIGATION_ACTION_LABELS.google,
+            ...getNavigationActionVisual('google', colors),
             onActivate: () => void openExternalLink(mapUrls.google),
             title: 'Открыть в Google Maps',
           },
           {
             key: 'organic',
             accessibilityLabel: 'Открыть в Organic Maps',
-            label: 'Organic',
-            icon: 'compass' as const,
-            iconColor: colors.successDark,
-            tintBg: colors.successSoft,
+            label: NAVIGATION_ACTION_LABELS.organic,
+            ...getNavigationActionVisual('organic', colors),
             onActivate: () => void openExternalLink(mapUrls.organic),
             title: 'Открыть в Organic Maps',
           },
           {
             key: 'waze',
             accessibilityLabel: 'Проложить маршрут в Waze',
-            label: 'Waze',
-            icon: 'navigation' as const,
-            iconColor: colors.infoDark,
-            tintBg: colors.infoSoft,
+            label: NAVIGATION_ACTION_LABELS.waze,
+            ...getNavigationActionVisual('waze', colors),
             onActivate: () => void openExternalLink(mapUrls.waze),
             title: 'Проложить маршрут в Waze',
           },
           {
             key: 'yandex',
             accessibilityLabel: 'Проложить маршрут в Яндекс Навигаторе',
-            label: 'Яндекс',
-            icon: 'navigation-2' as const,
-            iconColor: colors.danger,
-            tintBg: colors.dangerSoft,
+            label: NAVIGATION_ACTION_LABELS.yandex,
+            ...getNavigationActionVisual('yandex', colors),
             onActivate: () => void openExternalLink(mapUrls.yandexNavi),
             title: 'Проложить маршрут в Яндекс Навигаторе',
           },
           {
             key: 'telegram',
             accessibilityLabel: 'Поделиться в Telegram',
-            label: 'Telegram',
-            icon: 'send' as const,
-            iconColor: colors.primary,
-            tintBg: colors.primarySoft,
+            label: NAVIGATION_ACTION_LABELS.telegram,
+            ...getNavigationActionVisual('telegram', colors),
             onActivate: () => void shareToTelegram(),
             title: 'Поделиться в Telegram',
           },
         ]
       : []),
     [
-      colors.danger,
-      colors.dangerSoft,
-      colors.info,
-      colors.infoDark,
-      colors.infoSoft,
-      colors.primary,
-      colors.primarySoft,
-      colors.successDark,
-      colors.successSoft,
+      colors,
       mapUrls,
       openExternalLink,
       shareToTelegram,

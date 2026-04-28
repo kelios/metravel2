@@ -81,12 +81,14 @@ const PointActionIcon = React.memo(function PointActionIcon({
 
 const PointActionChip = React.memo(function PointActionChip({
   chipStyle,
+  icon,
   label,
   onPress,
   textStyle,
   title,
 }: {
   chipStyle: any;
+  icon?: React.ComponentProps<typeof Feather>['name'];
   label: string;
   onPress: () => void;
   textStyle: any;
@@ -99,6 +101,14 @@ const PointActionChip = React.memo(function PointActionChip({
       accessibilityLabel={label}
       title={title ?? label}
     >
+      {icon ? (
+        <Feather
+          name={icon}
+          size={13}
+          color={textStyle?.color ?? undefined}
+          style={styles.mapChipIcon}
+        />
+      ) : null}
       <Text style={textStyle}>{label}</Text>
     </CardActionPressable>
   );
@@ -262,6 +272,7 @@ const PointCard = React.memo(function PointCard({
             <View style={styles.overlayMapChipsRow}>
               <PointActionChip
                 label="Google"
+                icon="map-pin"
                 title="Открыть в Google Maps"
                 onPress={onOpenGoogleMap}
                 chipStyle={styles.mapChip}
@@ -269,6 +280,7 @@ const PointCard = React.memo(function PointCard({
               />
               <PointActionChip
                 label="Apple"
+                icon="map"
                 title="Открыть в Apple Maps"
                 onPress={onOpenAppleMap}
                 chipStyle={styles.mapChip}
@@ -276,6 +288,7 @@ const PointCard = React.memo(function PointCard({
               />
               <PointActionChip
                 label="Яндекс"
+                icon="navigation-2"
                 title="Открыть в Яндекс Картах"
                 onPress={onOpenYandexMap}
                 chipStyle={styles.mapChip}
@@ -283,6 +296,7 @@ const PointCard = React.memo(function PointCard({
               />
               <PointActionChip
                 label="OSM"
+                icon="map"
                 title="Открыть в OpenStreetMap"
                 onPress={onOpenOsmMap}
                 chipStyle={styles.mapChip}

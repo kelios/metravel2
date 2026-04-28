@@ -19,6 +19,10 @@ import {
 import FullscreenImageViewer from './FullscreenImageViewer';
 import FullscreenPopupOverlay from './FullscreenPopupOverlay';
 import { getStyles } from './styles';
+import {
+  getNavigationActionVisual,
+  NAVIGATION_ACTION_LABELS,
+} from '@/components/navigation/navigationActionMeta';
 
 type Props = {
   title: string;
@@ -167,6 +171,11 @@ const PlacePopupCard: React.FC<Props> = ({
     return null;
   }, [hasArticle, hasCoord, onBuildRoute, onOpenArticle, onOpenGoogleMaps]);
 
+  const saveActionVisual = useMemo(
+    () => getNavigationActionVisual('save', colors),
+    [colors],
+  );
+
   const { width: viewportWidth } = useWindowDimensions();
   const bp = getBreakpoint(viewportWidth);
   const isNarrow = bp === 'narrow';
@@ -308,10 +317,8 @@ const PlacePopupCard: React.FC<Props> = ({
       items.push({
         key: 'google',
         accessibilityLabel: 'Google Maps',
-        label: 'Google',
-        icon: 'map-pin',
-        iconColor: '#1A73E8',
-        tintBg: 'rgba(26,115,232,0.12)',
+        label: NAVIGATION_ACTION_LABELS.google,
+        ...getNavigationActionVisual('google', colors),
         onPress: onOpenGoogleMaps,
         title: POPUP_TOOLTIPS.openGoogleMaps,
       });
@@ -321,10 +328,8 @@ const PlacePopupCard: React.FC<Props> = ({
       items.push({
         key: 'organic',
         accessibilityLabel: 'Organic Maps',
-        label: 'Organic',
-        icon: 'compass',
-        iconColor: '#2E7D32',
-        tintBg: 'rgba(46,125,50,0.12)',
+        label: NAVIGATION_ACTION_LABELS.organic,
+        ...getNavigationActionVisual('organic', colors),
         onPress: onOpenOrganicMaps,
         title: POPUP_TOOLTIPS.openOrganicMaps,
       });
@@ -345,7 +350,7 @@ const PlacePopupCard: React.FC<Props> = ({
         label: 'Статья',
         icon: 'book-open',
         iconColor: colors.primary,
-        tintBg: colors.primarySoft ?? 'rgba(15,23,42,0.06)',
+        tintBg: colors.primarySoft,
         onPress: onOpenArticle,
         title: POPUP_TOOLTIPS.openArticle,
       });
@@ -355,10 +360,8 @@ const PlacePopupCard: React.FC<Props> = ({
       items.push({
         key: 'waze',
         accessibilityLabel: 'Waze',
-        label: 'Waze',
-        icon: 'navigation',
-        iconColor: '#00B5F0',
-        tintBg: 'rgba(0,181,240,0.14)',
+        label: NAVIGATION_ACTION_LABELS.waze,
+        ...getNavigationActionVisual('waze', colors),
         onPress: onOpenWaze,
         title: POPUP_TOOLTIPS.openWaze,
       });
@@ -368,10 +371,8 @@ const PlacePopupCard: React.FC<Props> = ({
       items.push({
         key: 'yandex',
         accessibilityLabel: 'Яндекс Навигатор',
-        label: 'Яндекс',
-        icon: 'navigation-2',
-        iconColor: '#FC3F1D',
-        tintBg: 'rgba(252,63,29,0.12)',
+        label: NAVIGATION_ACTION_LABELS.yandex,
+        ...getNavigationActionVisual('yandex', colors),
         onPress: onOpenYandexNavi,
         title: POPUP_TOOLTIPS.openYandexNavi,
       });
@@ -381,10 +382,8 @@ const PlacePopupCard: React.FC<Props> = ({
       items.push({
         key: 'telegram',
         accessibilityLabel: 'Поделиться',
-        label: 'Telegram',
-        icon: 'send',
-        iconColor: '#229ED9',
-        tintBg: 'rgba(34,158,217,0.14)',
+        label: NAVIGATION_ACTION_LABELS.telegram,
+        ...getNavigationActionVisual('telegram', colors),
         onPress: onShareTelegram,
         title: POPUP_TOOLTIPS.shareTelegram,
       });
@@ -392,8 +391,7 @@ const PlacePopupCard: React.FC<Props> = ({
 
     return items;
   }, [
-    colors.primary,
-    colors.primarySoft,
+    colors,
     hasArticle,
     hasCoord,
     normalizedArticleHref,
@@ -471,11 +469,11 @@ const PlacePopupCard: React.FC<Props> = ({
                 pressed && styles.chipActionBtnPressed,
               ]}
             >
-              <View style={[styles.chipIconBubble, { backgroundColor: colors.primarySoft ?? 'rgba(15,23,42,0.06)' }]}>
+              <View style={[styles.chipIconBubble, { backgroundColor: saveActionVisual.tintBg }]}>
                 {isAdding ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
+                  <ActivityIndicator size="small" color={saveActionVisual.iconColor} />
                 ) : (
-                  <Feather name="bookmark" size={16} color={colors.primary} />
+                  <Feather name={saveActionVisual.icon} size={16} color={saveActionVisual.iconColor} />
                 )}
               </View>
               <Text style={styles.chipActionText} numberOfLines={1}>
@@ -490,8 +488,6 @@ const PlacePopupCard: React.FC<Props> = ({
     secondaryActions,
     addDisabled,
     addTooltip,
-    colors.primary,
-    colors.primarySoft,
     colors.textMuted,
     compactLabel,
     coord,
@@ -500,6 +496,7 @@ const PlacePopupCard: React.FC<Props> = ({
     onAddPoint,
     onCopyCoord,
     primaryAction,
+    saveActionVisual,
     styles,
     colors.textOnDark,
     colors.textOnPrimary,

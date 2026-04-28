@@ -6,6 +6,10 @@ import CardActionPressable from '@/components/ui/CardActionPressable';
 import { Menu } from '@/ui/paper';
 
 import { useThemedColors } from '@/hooks/useTheme';
+import {
+  getNavigationActionVisual,
+  resolveNavigationActionKind,
+} from '@/components/navigation/navigationActionMeta';
 
 type ActionChip = {
   key: string;
@@ -53,6 +57,39 @@ type Props = {
   titleLayout?: 'overlay' | 'content';
   titleNumberOfLines?: number;
 };
+
+const MapActionChip = React.memo(function MapActionChip({
+  action,
+  colors,
+  styles,
+}: {
+  action: ActionChip;
+  colors: ReturnType<typeof useThemedColors>;
+  styles: Record<string, any>;
+}) {
+  const kind = resolveNavigationActionKind(action.key, action.label);
+  const visual = kind ? getNavigationActionVisual(kind, colors) : null;
+
+  return (
+    <CardActionPressable
+      accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
+      onPress={action.onPress}
+      title={action.title ?? action.label}
+      style={styles.mapActionChip}
+    >
+      <View style={[styles.mapActionIconBubble, visual ? { backgroundColor: visual.tintBg } : null]}>
+        <Feather
+          name={visual?.icon ?? action.icon}
+          size={16}
+          color={visual?.iconColor ?? colors.textMuted}
+        />
+      </View>
+      <Text style={styles.mapActionLabel} numberOfLines={1}>
+        {action.label}
+      </Text>
+    </CardActionPressable>
+  );
+});
 
 const PlaceListCard: React.FC<Props> = ({
   title,
@@ -201,15 +238,12 @@ const PlaceListCard: React.FC<Props> = ({
               )}
 
               {visibleMapActions.map((action) => (
-                <CardActionPressable
+                <MapActionChip
                   key={action.key}
-                  accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
-                  onPress={action.onPress}
-                  title={action.title ?? action.label}
-                  style={styles.iconBtn}
-                >
-                  <Feather name={action.icon} size={14} color={colors.textMuted} />
-                </CardActionPressable>
+                  action={action}
+                  colors={colors}
+                  styles={styles}
+                />
               ))}
 
               {visibleInlineActions.map((action) => (
@@ -434,6 +468,38 @@ const createStyles = (
     },
     iconBtnDisabled: {
       opacity: 0.5,
+    },
+    mapActionChip: {
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      width: compact ? 54 : 60,
+      minHeight: compact ? 52 : 58,
+      paddingHorizontal: 2,
+      paddingVertical: compact ? 3 : 4,
+      borderRadius: 12,
+      gap: 4,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer' as any,
+          transition: 'background-color 0.15s ease, transform 0.15s ease',
+        },
+      }),
+    },
+    mapActionIconBubble: {
+      width: compact ? 32 : 36,
+      height: compact ? 32 : 36,
+      borderRadius: 999,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.backgroundSecondary,
+    },
+    mapActionLabel: {
+      fontSize: compact ? 10 : 11,
+      lineHeight: compact ? 12 : 14,
+      fontWeight: '600',
+      color: colors.text,
+      textAlign: 'center',
+      maxWidth: compact ? 54 : 60,
     },
     addButton: {
       flexDirection: 'row',

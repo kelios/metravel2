@@ -191,7 +191,7 @@ const PointListRow = React.memo(function PointListRow({
                 {/* Карты */}
                 <PointActionChip
                   label="Google"
-                  icon="map"
+                  icon="map-pin"
                   title="Открыть в Google Maps"
                   onPress={onOpenGoogleMap}
                   chipStyle={styles.listRowMapChip}
@@ -199,7 +199,7 @@ const PointListRow = React.memo(function PointListRow({
                 />
                 <PointActionChip
                   label="Яндекс"
-                  icon="map"
+                  icon="navigation-2"
                   title="Открыть в Яндекс Картах"
                   onPress={onOpenYandexMap}
                   chipStyle={styles.listRowMapChip}

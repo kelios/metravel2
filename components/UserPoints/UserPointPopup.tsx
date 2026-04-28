@@ -13,6 +13,11 @@ import { showToast } from '@/utils/toast';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import Feather from '@expo/vector-icons/Feather';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
+import {
+  getNavigationActionVisual,
+  NAVIGATION_ACTION_LABELS,
+  resolveNavigationActionKind,
+} from '@/components/navigation/navigationActionMeta';
 
 interface UserPointPopupProps {
   /**
@@ -233,17 +238,30 @@ export const UserPointPopup: React.FC<UserPointPopupProps> = ({
       <View style={styles.mapLinks}>
         <Text style={styles.mapLinksTitle}>Открыть в:</Text>
         <View style={styles.mapLinksRow}>
-          {mapLinks.map(link => (
+          {mapLinks.map(link => {
+            const actionKind = resolveNavigationActionKind(link.key);
+            const visual = actionKind ? getNavigationActionVisual(actionKind, colors) : null;
+            const label = actionKind ? NAVIGATION_ACTION_LABELS[actionKind] : link.key;
+
+            return (
             <Pressable
               key={link.key}
               onPress={() => openExternalMap(link.url)}
               style={styles.mapLink}
               accessibilityRole="link"
-              accessibilityLabel={`Открыть в ${link.key}`}
+              accessibilityLabel={`Открыть в ${label}`}
             >
-              <Text style={styles.mapLinkText}>{link.key}</Text>
+              <View style={[styles.mapLinkIconBubble, visual ? { backgroundColor: visual.tintBg } : null]}>
+                <Feather
+                  name={visual?.icon ?? 'map'}
+                  size={16}
+                  color={visual?.iconColor ?? colors.textMuted}
+                />
+              </View>
+              <Text style={styles.mapLinkText}>{label}</Text>
             </Pressable>
-          ))}
+            );
+          })}
         </View>
       </View>
 
@@ -361,17 +379,28 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     gap: 6,
   },
   mapLink: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: colors.surface,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    width: 60,
+    paddingHorizontal: 2,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  mapLinkIconBubble: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.backgroundSecondary,
   },
   mapLinkText: {
     fontSize: 11,
-    color: colors.primaryText,
-    fontWeight: '500' as any,
+    lineHeight: 14,
+    color: colors.text,
+    fontWeight: '600' as any,
+    textAlign: 'center',
   },
   shareButton: {
     flexDirection: 'row',

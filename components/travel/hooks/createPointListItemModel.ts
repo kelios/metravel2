@@ -75,7 +75,7 @@ export function createPointListItemModel({
         {
           key: 'google',
           label: 'Google',
-          icon: 'map',
+          icon: 'map-pin',
           onPress: () => void openExternal(buildMapUrl(item.coord)),
           title: 'Открыть в Google Maps',
         },
@@ -89,7 +89,7 @@ export function createPointListItemModel({
         {
           key: 'yandex',
           label: 'Яндекс',
-          icon: 'map',
+          icon: 'navigation-2',
           onPress: () => void openExternal(buildYandexMapsUrl(item.coord)),
           title: 'Открыть в Яндекс Картах',
         },
