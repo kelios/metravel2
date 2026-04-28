@@ -16,7 +16,7 @@ type PopupSafeArea = {
 // top: 16 + minHeight: 40 (≤430: 38, ≤360: 36) + небольшой запас на тень/safe-area.
 // Используется как topPadding, чтобы popup не оказался под чипами «Радиус / Что
 // посмотреть / Оверлеи» после автоцентрирования Leaflet и кастомного re-pan.
-const TOP_QUICK_FILTERS_BAR_HEIGHT = 88
+const TOP_QUICK_FILTERS_BAR_HEIGHT = 116
 
 const getPopupSafeArea = ({
   mapWidth,
@@ -209,8 +209,8 @@ export function useMapPopupAutoPan({
       : isNarrowViewport
         ? Math.min(260, Math.max(228, maxWidth - 44))
         : Math.min(308, Math.max(256, maxWidth - 72))
-    const topPadding = isNarrowViewport ? safeArea.topPadding : 140
-    const bottomPadding = isNarrowViewport ? safeArea.bottomPadding : 140
+    const topPadding = isNarrowViewport ? safeArea.topPadding : TOP_QUICK_FILTERS_BAR_HEIGHT
+    const bottomPadding = isNarrowViewport ? safeArea.bottomPadding : 112
 
     return {
       autoPan: false,
@@ -220,8 +220,8 @@ export function useMapPopupAutoPan({
       className: useFullscreenMobilePopup
         ? 'metravel-place-popup metravel-place-popup--fullscreen-mobile'
         : 'metravel-place-popup',
-      autoPanPaddingTopLeft: isNarrowViewport ? [12, topPadding] : [24, 140],
-      autoPanPaddingBottomRight: isNarrowViewport ? [12, bottomPadding] : [24, 140],
+      autoPanPaddingTopLeft: isNarrowViewport ? [12, topPadding] : [24, topPadding],
+      autoPanPaddingBottomRight: isNarrowViewport ? [12, bottomPadding] : [24, bottomPadding],
       eventHandlers: {
         popupopen: handlePopupOpen,
       },

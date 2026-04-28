@@ -347,6 +347,7 @@ const PlaceListCard: React.FC<Props> = ({
         blurRadius: 16,
         loading: 'lazy',
         priority: 'low',
+        optimizeWeb: false,
       }}
       contentContainerStyle={styles.contentContainer}
     />

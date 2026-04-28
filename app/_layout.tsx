@@ -192,6 +192,7 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
       () => {
         const p = effectivePathname || "";
         if (p === "/login") return false;
+        if (p === "/map" || p.startsWith("/map/")) return false;
         // On travel create/edit wizard we render our own bottom actions footer.
         // The global mobile dock would overlap it.
         // if (p.startsWith('/travel')) return false;

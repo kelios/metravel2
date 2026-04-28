@@ -148,6 +148,9 @@ const AddressListItem: React.FC<Props> = ({
             isAdding={isAddingPoint} imageHeight={webCardImageHeight} width={webCardWidth}
             addLabel={pointAdded ? 'Добавлено' : 'Сохранить'}
             addButtonPlacement="row"
+            compact
+            titleLayout="content"
+            titleNumberOfLines={2}
             style={PLACE_CARD_STYLE} testID="map-travel-card"
           />
         );

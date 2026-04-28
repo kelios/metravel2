@@ -98,6 +98,18 @@ export default function MapScreen() {
     const showGeoBanner = Boolean(geoError && !geoBannerDismissed);
 
     useEffect(() => {
+        if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+        const previousOverflowY = document.body.style.overflowY;
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        document.body.style.overflowY = 'hidden';
+        return () => {
+            document.body.style.overflow = previousOverflow;
+            document.body.style.overflowY = previousOverflowY;
+        };
+    }, []);
+
+    useEffect(() => {
         if (!geoError && geoBannerDismissed) setGeoBannerDismissed(false);
     }, [geoError, geoBannerDismissed]);
 
@@ -372,6 +384,9 @@ export default function MapScreen() {
     const shouldShowFloatingRadiusPill = Boolean(
         currentRadius && Platform.OS !== 'web',
     );
+    const rootMapProps = Platform.OS === 'web'
+        ? ({ testID: 'map-screen-root', 'data-testid': 'map-screen-root', 'data-active': 'true' } as any)
+        : ({ testID: 'map-screen-root' } as any);
 
     const mapComponent = useMemo(
         () => (
@@ -470,7 +485,7 @@ export default function MapScreen() {
 
     if (isMobile) {
         return (
-            <View style={styles.container}>
+            <View style={styles.container} {...rootMapProps}>
                 {seoBlock}
                 <Suspense fallback={mapPanelPlaceholder}>
                     <LazyMapMobileLayout
@@ -507,7 +522,7 @@ export default function MapScreen() {
             ? offlineMessage
             : friendlyMessage || 'Проверьте соединение и попробуйте ещё раз';
         return (
-            <View style={styles.container}>
+            <View style={styles.container} {...rootMapProps}>
                 {seoBlock}
                 <ErrorDisplay
                     title={!isConnected ? 'Нет подключения' : 'Не удалось загрузить карту'}
@@ -523,7 +538,7 @@ export default function MapScreen() {
     }
 
     return (
-        <View style={styles.container}>
+        <View style={styles.container} {...rootMapProps}>
             {seoBlock}
 
             <View style={styles.mapContainer}>

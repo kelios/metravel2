@@ -118,6 +118,43 @@ test.describe('@perf Footer layout invariants (web)', () => {
     await expect(page.getByTestId('footer-dock-wrapper')).toHaveCount(0);
   });
 
+  test('desktop: consent banner does not push footer over page content', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.addInitScript(() => {
+      window.localStorage.removeItem('metravel_consent_v1');
+    });
+
+    const guard = installNoConsoleErrorsGuard(page);
+
+    await gotoWithRetry(page, '/');
+
+    const desktopBar = page.getByTestId('footer-desktop-bar');
+    const consentBanner = page.getByTestId('consent-banner');
+    await expect(desktopBar).toBeVisible({ timeout: 30_000 });
+    await expect(consentBanner).toBeVisible({ timeout: 30_000 });
+
+    const [footerBox, consentBox] = await Promise.all([
+      desktopBar.boundingBox(),
+      consentBanner.boundingBox(),
+    ]);
+    expect(footerBox, 'desktop footer must have a bounding box').not.toBeNull();
+    expect(consentBox, 'consent banner must have a bounding box').not.toBeNull();
+
+    if (footerBox && consentBox) {
+      const viewportH = page.viewportSize()!.height;
+      expect(
+        footerBox.y + footerBox.height,
+        `desktop footer should remain pinned to viewport bottom instead of being pushed into content`
+      ).toBeGreaterThanOrEqual(viewportH - 1);
+      expect(
+        consentBox.y + consentBox.height,
+        `consent banner must sit above the desktop footer`
+      ).toBeLessThanOrEqual(footerBox.y - 8);
+    }
+
+    guard.assertNoErrorsContaining('6000ms timeout exceeded');
+  });
+
   test('mobile: dock renders within viewport, has bottom-gutter, and does not create horizontal overflow', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await preacceptCookiesAndStabilize(page);

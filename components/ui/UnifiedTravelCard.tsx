@@ -62,6 +62,7 @@ type Props = {
     loading?: 'lazy' | 'eager';
     prefetch?: boolean;
     showImmediately?: boolean;
+    optimizeWeb?: boolean;
   };
   width?: number;
   imageHeight?: number;
@@ -150,6 +151,7 @@ function UnifiedTravelCard({
   }, [isWeb, pressScale]);
   const optimizedImageUrl = useMemo(() => {
     if (!imageUrl || !isWeb) return imageUrl ?? null;
+    if (mediaProps?.optimizeWeb === false) return imageUrl;
 
     const targetHeight = typeof imageHeight === 'number' ? imageHeight : 200;
     const targetWidth =
@@ -168,7 +170,7 @@ function UnifiedTravelCard({
         fit: mediaFit === 'contain' ? 'contain' : 'cover',
       }) ?? imageUrl
     );
-  }, [imageUrl, imageHeight, isFeatured, isWeb, mediaFit, width]);
+  }, [imageUrl, imageHeight, isFeatured, isWeb, mediaFit, mediaProps?.optimizeWeb, width]);
   const [imageFailed, setImageFailed] = useState(false);
   const handleImageLoad = useCallback(() => {
     setImageFailed(false);
@@ -491,6 +493,7 @@ function UnifiedTravelCard({
             priority={mediaProps?.priority ?? (isWeb ? 'low' : 'normal')}
             prefetch={mediaProps?.prefetch ?? false}
             showImmediately={mediaProps?.showImmediately ?? false}
+            optimizeWeb={mediaProps?.optimizeWeb ?? true}
             onLoad={handleImageLoad}
             onError={handleImageError}
           />

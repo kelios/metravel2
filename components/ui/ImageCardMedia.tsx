@@ -59,6 +59,8 @@ type Props = {
   contentAspectRatio?: number;
   /** Preserve the exact pre-optimized URL for critical web media that must match preload. */
   preserveOptimizedWebSrc?: boolean;
+  /** Skip web URL resizing when the upstream optimizer returns padded contain canvases. */
+  optimizeWeb?: boolean;
 };
 
 function ImageCardMedia({
@@ -91,6 +93,7 @@ function ImageCardMedia({
   revealOnLoadOnly = false,
   contentAspectRatio,
   preserveOptimizedWebSrc = false,
+  optimizeWeb = true,
 }: Props) {
   const isJest =
     typeof process !== 'undefined' && !!(process as any)?.env?.JEST_WORKER_ID;
@@ -184,6 +187,7 @@ function ImageCardMedia({
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
     if (!uri) return null;
     if (isRootRelativeUrl(uri)) return uri;
+    if (!optimizeWeb) return uri;
     if (shouldPreserveProvidedOptimizedUrl(uri)) return uri;
     if (!stableWidth && !stableHeight) return null;
     return (
@@ -195,7 +199,7 @@ function ImageCardMedia({
         format: 'auto',
       }) ?? uri
     );
-  }, [resolvedSource, shouldPreserveProvidedOptimizedUrl, stableWidth, stableHeight, contentFit, quality]);
+  }, [resolvedSource, optimizeWeb, shouldPreserveProvidedOptimizedUrl, stableWidth, stableHeight, contentFit, quality]);
   const webMainSrc = useMemo(() => {
     if (Platform.OS !== 'web') return null;
     // For require() sources (numbers), return null to use OptimizedImage/ExpoImage
@@ -245,6 +249,7 @@ function ImageCardMedia({
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
     if (!uri) return undefined;
     if (isRootRelativeUrl(uri)) return undefined;
+    if (!optimizeWeb) return undefined;
     if (shouldPreserveProvidedOptimizedUrl(uri)) return undefined;
     // Use stable width to prevent srcset changes on scroll
     const baseWidth = stableWidth ?? (isSafariWeb ? 400 : 320);
@@ -265,7 +270,7 @@ function ImageCardMedia({
         fit: contentFit === 'contain' ? 'contain' : 'cover',
       }) || undefined
     );
-  }, [resolvedSource, shouldPreserveProvidedOptimizedUrl, contentFit, quality, stableWidth, isSafariWeb]);
+  }, [resolvedSource, optimizeWeb, shouldPreserveProvidedOptimizedUrl, contentFit, quality, stableWidth, isSafariWeb]);
 
   const webSizes = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;

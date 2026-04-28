@@ -10,6 +10,7 @@ const PANEL_GAP = METRICS.spacing.m; // 16px
 const DESKTOP_SHELL_PADDING = METRICS.spacing.m;
 const TRANSITION_MS = 200;
 const WEB_MOBILE_FOOTER_RESERVE_HEIGHT = LAYOUT?.tabBarHeight ?? 56;
+const WEB_HEADER_RESERVED_HEIGHT = 88;
 
 export const getStyles = (
   isMobile: boolean,
@@ -24,6 +25,8 @@ export const getStyles = (
       flex: 1,
       ...(Platform.OS === 'web'
         ? ({
+            height: `calc(100dvh - ${WEB_HEADER_RESERVED_HEIGHT}px)`,
+            maxHeight: `calc(100dvh - ${WEB_HEADER_RESERVED_HEIGHT}px)`,
             minHeight: 0,
             overflow: 'hidden',
           } as any)
@@ -345,24 +348,24 @@ export const getStyles = (
       },
       collapseToggleInPanel: {
         position: 'absolute',
-        top: 14,
-        right: -12,
-        width: 28,
-        height: 28,
-        borderRadius: 9,
+        top: 16,
+        right: -16,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: themedColors.surfaceAlpha40,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: themedColors.borderLight,
+        backgroundColor: themedColors.surface,
+        borderWidth: 1,
+        borderColor: themedColors.border,
         zIndex: 1002,
         ...(Platform.OS === 'web'
           ? ({
               cursor: 'pointer',
               backdropFilter: 'blur(16px)',
               WebkitBackdropFilter: 'blur(16px)',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.10)',
-              transition: 'background-color 0.15s ease',
+              boxShadow: '0 8px 20px rgba(15,23,42,0.14), 0 1px 4px rgba(15,23,42,0.08)',
+              transition: 'background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease',
             } as any)
           : null),
       },

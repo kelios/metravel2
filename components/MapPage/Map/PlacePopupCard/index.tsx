@@ -538,8 +538,7 @@ const PlacePopupCard: React.FC<Props> = ({
                     revealOnLoadOnly={revealPopupImageOnLoadOnly}
                     priority="high"
                     loading="eager"
-                    width={heroWidth}
-                    height={heroHeight}
+                    optimizeWeb={false}
                     style={StyleSheet.absoluteFill}
                   />
                   <View

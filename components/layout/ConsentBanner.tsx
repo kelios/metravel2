@@ -19,7 +19,7 @@ function ConsentBanner() {
   const isNarrowMobile = isMobile && width > 0 && width < 360;
   const insets = useSafeAreaInsets();
   const bottomOffset = useMemo(() => {
-    if (!isMobile) return 12;
+    if (!isMobile) return 56;
     // On mobile we keep it above the bottom tab bar and respect safe-area.
     return (insets?.bottom || 0) + (LAYOUT?.tabBarHeight ?? 56) + 8;
   }, [insets?.bottom, isMobile]);

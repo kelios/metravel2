@@ -262,7 +262,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     sheetState === 'collapsed' && bottomSheetState === 'collapsed'
   const bottomSheetInset =
     Platform.OS === 'web'
-      ? WEB_MOBILE_BOTTOM_DOCK_INSET +
+      ? (isActiveWebRoute ? 0 : WEB_MOBILE_BOTTOM_DOCK_INSET) +
         (consentBannerVisible ? WEB_MOBILE_CONSENT_BANNER_INSET : 0)
       : 0
 

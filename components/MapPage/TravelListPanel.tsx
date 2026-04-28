@@ -439,6 +439,12 @@ const getStyles = (colors: ThemedColors) =>
       flex: 1,
       minHeight: 0,
       width: '100%',
+      ...(Platform.OS === 'web'
+        ? ({
+            scrollbarWidth: 'thin',
+            scrollbarColor: `${colors.border} transparent`,
+          } as any)
+        : null),
     },
     loader: { paddingVertical: 16, alignItems: 'center' },
     endText: {
