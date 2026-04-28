@@ -82,6 +82,7 @@ const PointActionIcon = React.memo(function PointActionIcon({
 const PointActionChip = React.memo(function PointActionChip({
   chipStyle,
   icon,
+  iconStyle,
   label,
   onPress,
   textStyle,
@@ -89,6 +90,7 @@ const PointActionChip = React.memo(function PointActionChip({
 }: {
   chipStyle: any;
   icon?: React.ComponentProps<typeof Feather>['name'];
+  iconStyle?: any;
   label: string;
   onPress: () => void;
   textStyle: any;
@@ -106,7 +108,7 @@ const PointActionChip = React.memo(function PointActionChip({
           name={icon}
           size={13}
           color={textStyle?.color ?? undefined}
-          style={styles.mapChipIcon}
+          style={iconStyle}
         />
       ) : null}
       <Text style={textStyle}>{label}</Text>
@@ -273,6 +275,7 @@ const PointCard = React.memo(function PointCard({
               <PointActionChip
                 label="Google"
                 icon="map-pin"
+                iconStyle={styles.mapChipIcon}
                 title="Открыть в Google Maps"
                 onPress={onOpenGoogleMap}
                 chipStyle={styles.mapChip}
@@ -281,6 +284,7 @@ const PointCard = React.memo(function PointCard({
               <PointActionChip
                 label="Apple"
                 icon="map"
+                iconStyle={styles.mapChipIcon}
                 title="Открыть в Apple Maps"
                 onPress={onOpenAppleMap}
                 chipStyle={styles.mapChip}
@@ -289,6 +293,7 @@ const PointCard = React.memo(function PointCard({
               <PointActionChip
                 label="Яндекс"
                 icon="navigation-2"
+                iconStyle={styles.mapChipIcon}
                 title="Открыть в Яндекс Картах"
                 onPress={onOpenYandexMap}
                 chipStyle={styles.mapChip}
@@ -297,6 +302,7 @@ const PointCard = React.memo(function PointCard({
               <PointActionChip
                 label="OSM"
                 icon="map"
+                iconStyle={styles.mapChipIcon}
                 title="Открыть в OpenStreetMap"
                 onPress={onOpenOsmMap}
                 chipStyle={styles.mapChip}
