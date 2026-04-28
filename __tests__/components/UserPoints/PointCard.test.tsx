@@ -117,6 +117,21 @@ describe('PointCard', () => {
     (require('react-native').Platform as any).OS = originalPlatform;
   });
 
+  it('should render popup-like quick action chips on web', () => {
+    const originalPlatform = require('react-native').Platform.OS;
+    (require('react-native').Platform as any).OS = 'web';
+
+    render(<PointCard point={mockPoint} />);
+
+    expect(screen.getByText('Google')).toBeTruthy();
+    expect(screen.getByText('Organic')).toBeTruthy();
+    expect(screen.getByText('Waze')).toBeTruthy();
+    expect(screen.getByText('Яндекс')).toBeTruthy();
+    expect(screen.getByText('Telegram')).toBeTruthy();
+
+    (require('react-native').Platform as any).OS = originalPlatform;
+  });
+
   it('should render rating when provided', () => {
     render(<PointCard point={mockPoint} />);
     expect(screen.getByText('4.5')).toBeTruthy();

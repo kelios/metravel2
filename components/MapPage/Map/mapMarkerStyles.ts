@@ -40,6 +40,10 @@ export const getClusterMetrics = (count: number): ClusterMetrics => {
 export const buildBirdMarkerHtml = () => {
   const brand = sanitizeCssValue(DEFAULT_MARKER_BRAND, '#ff922b')
   const brandDark = sanitizeCssValue(DEFAULT_MARKER_BRAND_DARK, '#e07a16')
+  const brandLight = sanitizeCssValue(
+    String(DESIGN_TOKENS.colors.brandLight),
+    '#fff8f3',
+  )
   const brandSoft = sanitizeCssValue(
     String(DESIGN_TOKENS.colors.brandAlpha40),
     'rgba(255,146,43,0.25)',
@@ -52,7 +56,7 @@ export const buildBirdMarkerHtml = () => {
   return `
     <div style="
       position: relative;
-      width: 46px;
+      width: 48px;
       height: 58px;
       box-sizing: border-box;
       pointer-events: none;
@@ -62,40 +66,54 @@ export const buildBirdMarkerHtml = () => {
       <div style="
         position: absolute;
         left: 50%;
-        bottom: 1px;
-        width: 22px;
-        height: 8px;
-        margin-left: -11px;
+        bottom: 2px;
+        width: 26px;
+        height: 9px;
+        margin-left: -13px;
         border-radius: 999px;
-        background: rgba(40, 30, 18, 0.24);
-        filter: blur(4px);
+        background: rgba(40, 30, 18, 0.20);
+        filter: blur(5px);
         box-sizing: border-box;
       "></div>
       <div style="
         position: absolute;
         left: 50%;
-        top: 5px;
+        top: 2px;
+        width: 44px;
+        height: 44px;
+        margin-left: -22px;
+        border-radius: 999px;
+        background: radial-gradient(circle at 50% 50%, ${brandSoft} 0%, transparent 70%);
+        filter: blur(0.2px);
+        box-sizing: border-box;
+      "></div>
+      <div style="
+        position: absolute;
+        left: 50%;
+        top: 4px;
         width: 40px;
         height: 46px;
         margin-left: -20px;
-        border-radius: 22px 22px 22px 6px;
-        background: linear-gradient(145deg, ${brand} 0%, ${brandDark} 100%);
-        border: 3px solid ${surface};
+        border-radius: 24px 24px 24px 7px;
+        background:
+          radial-gradient(circle at 30% 24%, rgba(255,255,255,0.44) 0%, rgba(255,255,255,0) 30%),
+          linear-gradient(150deg, ${brand} 0%, ${brandDark} 100%);
+        border: 2px solid ${surface};
         box-shadow:
-          0 14px 22px rgba(30, 20, 10, 0.28),
-          0 0 0 7px ${brandSoft},
-          inset 0 1px 2px rgba(255,255,255,0.38);
+          0 14px 26px rgba(30, 20, 10, 0.24),
+          0 0 0 6px ${brandSoft},
+          inset 0 1px 3px rgba(255,255,255,0.36);
         transform: rotate(-45deg);
         box-sizing: border-box;
       "></div>
       <div style="
         position: absolute;
         left: 50%;
-        top: 9px;
-        width: 27px;
-        height: 14px;
-        margin-left: -13.5px;
-        background: linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 100%);
+        top: 8px;
+        width: 28px;
+        height: 12px;
+        margin-left: -14px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.58) 0%, rgba(255,255,255,0) 100%);
         border-radius: 999px;
         filter: blur(0.5px);
         box-sizing: border-box;
@@ -103,15 +121,17 @@ export const buildBirdMarkerHtml = () => {
       <div style="
         position: absolute;
         left: 50%;
-        top: 13px;
-        width: 28px;
-        height: 28px;
-        margin-left: -14px;
+        top: 12px;
+        width: 30px;
+        height: 30px;
+        margin-left: -15px;
         border-radius: 999px;
-        background: rgba(255,255,255,0.96);
+        background:
+          linear-gradient(180deg, ${surface} 0%, ${brandLight} 100%);
+        border: 1px solid rgba(255,255,255,0.78);
         box-shadow:
-          inset 0 1px 2px rgba(255,255,255,0.7),
-          0 2px 4px rgba(40, 30, 18, 0.12);
+          0 4px 10px rgba(40, 30, 18, 0.16),
+          inset 0 1px 1px rgba(255,255,255,0.82);
         box-sizing: border-box;
       "></div>
       <img
@@ -121,13 +141,13 @@ export const buildBirdMarkerHtml = () => {
         style="
           position: absolute;
           left: 50%;
-          top: 12px;
-          width: 30px;
-          height: 30px;
-          margin-left: -15px;
+          top: 14px;
+          width: 26px;
+          height: 26px;
+          margin-left: -13px;
           display: block;
           object-fit: contain;
-          filter: drop-shadow(0 1px 1px rgba(0,0,0,0.18));
+          filter: drop-shadow(0 1px 1px rgba(0,0,0,0.16));
         "
       />
     </div>

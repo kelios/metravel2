@@ -14,8 +14,8 @@ export const useLeafletIcons = (L: any) => {
       return L.divIcon({
         className: 'metravel-pin-marker metravel-pin-marker-bird',
         html,
-        iconSize: [46, 58],
-        iconAnchor: [23, 54],
+        iconSize: [48, 58],
+        iconAnchor: [24, 54],
         popupAnchor: [0, -46],
       })
     }

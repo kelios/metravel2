@@ -14,8 +14,9 @@ import { getDistanceInfo } from '@/utils/distanceCalculator';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import {
   useAddressListItemActions,
-  buildMapUrl, buildAppleMapsUrl, buildYandexMapsUrl, buildOsmUrl, openExternal,
+  buildMapUrl, openExternal,
 } from '@/hooks/useAddressListItemActions';
+import { buildOrganicMapsUrl, buildWazeUrl, buildYandexNaviUrl } from '@/components/MapPage/Map/mapLinks';
 
 type Props = {
     travel: TravelCoords;
@@ -135,16 +136,18 @@ const AddressListItem: React.FC<Props> = ({
             title={address ?? ''} imageUrl={imgUri} categoryLabel={categoryLabel || undefined}
             coord={coord} badges={badges} onCardPress={handleMainPress}
             onMediaPress={!onPress && (articleUrl || urlTravel) ? () => openArticle() : undefined}
-            onCopyCoord={coord ? copyCoords : undefined} onShare={coord ? openTelegram : undefined}
+            onCopyCoord={undefined} onShare={coord ? openTelegram : undefined}
             mapActions={coord ? [
               { key: 'google', label: 'Google', icon: 'map-pin', onPress: () => openExternal(buildMapUrl(coord)), title: 'Открыть в Google Maps' },
-              { key: 'apple', label: 'Apple', icon: 'map', onPress: () => openExternal(buildAppleMapsUrl(coord)), title: 'Открыть в Apple Maps' },
-              { key: 'yandex', label: 'Яндекс', icon: 'navigation', onPress: () => openExternal(buildYandexMapsUrl(coord)), title: 'Открыть в Яндекс Картах' },
-              { key: 'osm', label: 'OSM', icon: 'map', onPress: () => openExternal(buildOsmUrl(coord)), title: 'Открыть в OpenStreetMap' },
+              { key: 'organic', label: 'Organic', icon: 'compass', onPress: () => openExternal(buildOrganicMapsUrl(coord)), title: 'Открыть в Organic Maps' },
+              { key: 'waze', label: 'Waze', icon: 'navigation', onPress: () => openExternal(buildWazeUrl(coord)), title: 'Проложить маршрут в Waze' },
+              { key: 'yandex', label: 'Яндекс', icon: 'navigation-2', onPress: () => openExternal(buildYandexNaviUrl(coord)), title: 'Проложить маршрут в Яндекс Навигаторе' },
             ] : []}
-            inlineActions={articleUrl || urlTravel ? [{ key: 'article', label: 'Статья', icon: 'book-open', onPress: () => openArticle(), title: 'Открыть статью' }] : []}
+            inlineActions={[]}
             onAddPoint={handleAddPoint} addDisabled={!authReady || !isAuthenticated || isAddingPoint}
             isAdding={isAddingPoint} imageHeight={webCardImageHeight} width={webCardWidth}
+            addLabel={pointAdded ? 'Добавлено' : 'Сохранить'}
+            addButtonPlacement="row"
             style={PLACE_CARD_STYLE} testID="map-travel-card"
           />
         );

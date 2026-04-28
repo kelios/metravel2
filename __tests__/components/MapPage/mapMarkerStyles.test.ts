@@ -24,13 +24,14 @@ describe('buildClusterIconHtml', () => {
 })
 
 describe('buildBirdMarkerHtml', () => {
-  it('renders the larger branded marker shell', () => {
+  it('renders the polished branded marker shell', () => {
     const html = buildBirdMarkerHtml()
 
-    expect(html).toContain('width: 46px;')
+    expect(html).toContain('width: 48px;')
     expect(html).toContain('height: 58px;')
     expect(html).toContain('transform: rotate(-45deg);')
     expect(html).toContain(String(DESIGN_TOKENS.colors.brand))
+    expect(html).toContain(String(DESIGN_TOKENS.colors.brandLight))
     expect(html).toContain('/assets/icons/logo_yellow_60x60.png')
     expect(html).toContain('object-fit: contain;')
   })

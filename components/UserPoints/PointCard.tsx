@@ -10,6 +10,7 @@ import CardActionPressable from '@/components/ui/CardActionPressable';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import { showToast } from '@/utils/toast';
 import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks';
+import { buildGoogleMapsUrl, buildOrganicMapsUrl, buildWazeUrl, buildYandexNaviUrl } from '@/components/MapPage/Map/mapLinks';
 
 interface PointCardProps {
   point: ImportedPoint;
@@ -135,7 +136,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     onActivate,
   }: {
     label: string;
-    icon: 'edit-2' | 'trash-2' | 'copy' | 'map' | 'map-pin' | 'navigation' | 'send';
+    icon: React.ComponentProps<typeof Feather>['name'];
     onActivate?: () => void;
   }) => {
     return (
@@ -146,6 +147,43 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         title={label}
       >
         <Feather name={icon} size={14} color={colors.text} />
+      </CardActionPressable>
+    );
+  };
+
+  const ActionChip = ({
+    accessibilityLabel,
+    icon,
+    iconColor,
+    label,
+    onActivate,
+    tintBg,
+    title,
+  }: {
+    accessibilityLabel: string;
+    icon: React.ComponentProps<typeof Feather>['name'];
+    iconColor: string;
+    label: string;
+    onActivate: () => void;
+    tintBg: string;
+    title: string;
+  }) => {
+    return (
+      <CardActionPressable
+        accessibilityLabel={accessibilityLabel}
+        onPress={onActivate}
+        title={title}
+        style={({ pressed }) => [
+          styles.quickActionChip,
+          pressed ? styles.quickActionChipPressed : null,
+        ]}
+      >
+        <View style={[styles.quickActionIconBubble, { backgroundColor: tintBg }]}>
+          <Feather name={icon} size={16} color={iconColor} />
+        </View>
+        <Text style={styles.quickActionLabel} numberOfLines={1}>
+          {label}
+        </Text>
       </CardActionPressable>
     );
   };
@@ -178,13 +216,21 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     const lng = Number(point.longitude);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
 
+    const google = buildGoogleMapsUrl(coordsText);
+    const organic = buildOrganicMapsUrl(coordsText);
+    const waze = buildWazeUrl(coordsText);
+    const yandexNavi = buildYandexNaviUrl(coordsText);
+
     return {
-      google: `https://www.google.com/maps?q=${encodeURIComponent(`${lat},${lng}`)}`,
-      yandex: `https://yandex.ru/maps/?pt=${encodeURIComponent(`${lng},${lat}`)}&z=16&l=map`,
+      google,
+      organic,
+      waze,
+      yandexMaps: `https://yandex.ru/maps/?pt=${encodeURIComponent(`${lng},${lat}`)}&z=16&l=map`,
+      yandexNavi,
       osm: `https://www.openstreetmap.org/?mlat=${encodeURIComponent(String(lat))}&mlon=${encodeURIComponent(String(lng))}#map=16/${encodeURIComponent(String(lat))}/${encodeURIComponent(String(lng))}`,
       apple: `https://maps.apple.com/?q=${encodeURIComponent(`${lat},${lng}`)}`,
     };
-  }, [hasCoords, point.latitude, point.longitude]);
+  }, [coordsText, hasCoords, point.latitude, point.longitude]);
 
   const openExternalLink = React.useCallback(async (url: string) => {
     try {
@@ -215,7 +261,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         },
         (buttonIndex) => {
           if (buttonIndex === 0) void openExternalLink(mapUrls.google);
-          if (buttonIndex === 1) void openExternalLink(mapUrls.yandex);
+          if (buttonIndex === 1) void openExternalLink(mapUrls.yandexMaps);
           if (buttonIndex === 2) void openExternalLink(mapUrls.osm);
         }
       );
@@ -224,7 +270,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
 
     Alert.alert('Открыть в картах', undefined, [
       { text: 'Google Maps', onPress: () => void openExternalLink(mapUrls.google) },
-      { text: 'Яндекс.Карты', onPress: () => void openExternalLink(mapUrls.yandex) },
+      { text: 'Яндекс.Карты', onPress: () => void openExternalLink(mapUrls.yandexMaps) },
       { text: 'OpenStreetMap', onPress: () => void openExternalLink(mapUrls.osm) },
       { text: 'Отмена', style: 'cancel' },
     ]);
@@ -256,6 +302,86 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
       // ignore
     }
   }, [coordsText, hasCoords, point?.name]);
+
+  const webQuickActions = React.useMemo<Array<{
+    key: string;
+    accessibilityLabel: string;
+    label: string;
+    icon: React.ComponentProps<typeof Feather>['name'];
+    iconColor: string;
+    tintBg: string;
+    onActivate: () => void;
+    title: string;
+  }>>(
+    () => (mapUrls
+      ? [
+          {
+            key: 'google',
+            accessibilityLabel: 'Открыть в Google Maps',
+            label: 'Google',
+            icon: 'map-pin' as const,
+            iconColor: colors.info,
+            tintBg: colors.infoSoft,
+            onActivate: () => void openExternalLink(mapUrls.google),
+            title: 'Открыть в Google Maps',
+          },
+          {
+            key: 'organic',
+            accessibilityLabel: 'Открыть в Organic Maps',
+            label: 'Organic',
+            icon: 'compass' as const,
+            iconColor: colors.successDark,
+            tintBg: colors.successSoft,
+            onActivate: () => void openExternalLink(mapUrls.organic),
+            title: 'Открыть в Organic Maps',
+          },
+          {
+            key: 'waze',
+            accessibilityLabel: 'Проложить маршрут в Waze',
+            label: 'Waze',
+            icon: 'navigation' as const,
+            iconColor: colors.infoDark,
+            tintBg: colors.infoSoft,
+            onActivate: () => void openExternalLink(mapUrls.waze),
+            title: 'Проложить маршрут в Waze',
+          },
+          {
+            key: 'yandex',
+            accessibilityLabel: 'Проложить маршрут в Яндекс Навигаторе',
+            label: 'Яндекс',
+            icon: 'navigation-2' as const,
+            iconColor: colors.danger,
+            tintBg: colors.dangerSoft,
+            onActivate: () => void openExternalLink(mapUrls.yandexNavi),
+            title: 'Проложить маршрут в Яндекс Навигаторе',
+          },
+          {
+            key: 'telegram',
+            accessibilityLabel: 'Поделиться в Telegram',
+            label: 'Telegram',
+            icon: 'send' as const,
+            iconColor: colors.primary,
+            tintBg: colors.primarySoft,
+            onActivate: () => void shareToTelegram(),
+            title: 'Поделиться в Telegram',
+          },
+        ]
+      : []),
+    [
+      colors.danger,
+      colors.dangerSoft,
+      colors.info,
+      colors.infoDark,
+      colors.infoSoft,
+      colors.primary,
+      colors.primarySoft,
+      colors.successDark,
+      colors.successSoft,
+      mapUrls,
+      openExternalLink,
+      shareToTelegram,
+    ]
+  );
 
   const actionsHoverStyle = Platform.OS === 'web' ? {
     opacity: 1,
@@ -356,15 +482,26 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
       {hasCoords ? (
         Platform.OS === 'web' ? (
           <View style={styles.coordsBlock}>
-            <Text style={styles.coordsText} numberOfLines={isNarrowLayout ? 2 : 1}>
-              {coordsText}
-            </Text>
-            <View style={[styles.coordsActionsRow as any, isNarrowLayout ? styles.coordsActionsRowNarrow : null]}>
+            <View style={[styles.coordsSurface, isNarrowLayout ? styles.coordsSurfaceNarrow : null]}>
+              <Feather name="map-pin" size={14} color={colors.textMuted} />
+              <Text style={styles.coordsText} numberOfLines={isNarrowLayout ? 2 : 1}>
+                {coordsText}
+              </Text>
               <ActionButton label="Копировать координаты" icon="copy" onActivate={copyCoords} />
-              <ActionButton label="Поделиться в Telegram" icon="send" onActivate={() => void shareToTelegram()} />
-              {mapUrls ? (
-                <ActionButton label="Открыть в картах" icon="map-pin" onActivate={() => void openExternalLink(mapUrls.google)} />
-              ) : null}
+            </View>
+            <View style={styles.quickActionsGrid}>
+              {webQuickActions.map((action) => (
+                <ActionChip
+                  key={action.key}
+                  accessibilityLabel={action.accessibilityLabel}
+                  icon={action.icon}
+                  iconColor={action.iconColor}
+                  label={action.label}
+                  onActivate={action.onActivate}
+                  tintBg={action.tintBg}
+                  title={action.title}
+                />
+              ))}
             </View>
           </View>
         ) : (
@@ -625,6 +762,20 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderTopColor: colors.borderLight,
     gap: 6,
   },
+  coordsSurface: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    backgroundColor: colors.backgroundSecondary,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  coordsSurfaceNarrow: {
+    alignItems: 'flex-start',
+  },
   coordsActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -643,6 +794,49 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flex: 1,
     minWidth: 0,
     opacity: 0.8,
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  quickActionChip: {
+    minWidth: 78,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    ...(Platform.OS === 'web' ? ({
+      cursor: 'pointer',
+      transition: 'transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease',
+      boxShadow: '0 1px 2px rgba(15,23,42,0.06)',
+    } as any) : null),
+  },
+  quickActionChipPressed: {
+    backgroundColor: colors.backgroundSecondary,
+    ...(Platform.OS === 'web' ? ({
+      transform: 'translateY(1px)',
+      boxShadow: '0 1px 1px rgba(15,23,42,0.04)',
+    } as any) : null),
+  },
+  quickActionIconBubble: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickActionLabel: {
+    fontSize: 12,
+    lineHeight: 14,
+    color: colors.text,
+    fontWeight: '600' as any,
+    textAlign: 'center',
   },
   rating: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,

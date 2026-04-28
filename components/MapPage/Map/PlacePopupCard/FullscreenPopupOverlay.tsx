@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import type { ThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 const webCreatePortal: ((node: React.ReactNode, container: Element) => any) | null =
   Platform.OS === 'web'
@@ -23,7 +24,7 @@ const FullscreenPopupOverlay: React.FC<{
   imageAlt?: string;
   topInfoSlot: React.ReactNode;
   footerSlot: React.ReactNode;
-  onOpenFullscreenImage?: () => void;
+  onOpenFullscreenImage?: (event?: any) => void;
 }> = ({ visible, onClose, colors, imageUrl, imageAlt, topInfoSlot, footerSlot, onOpenFullscreenImage }) => {
   const [localHidden, setLocalHidden] = useState(false);
 
@@ -46,6 +47,12 @@ const FullscreenPopupOverlay: React.FC<{
     });
   }, [onClose]);
 
+  const handleOpenFullscreenImage = useCallback((event?: any) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    onOpenFullscreenImage?.(event);
+  }, [onOpenFullscreenImage]);
+
   if (Platform.OS !== 'web' || !effectiveVisible) return null;
 
   const hasImage = !!imageUrl;
@@ -55,7 +62,7 @@ const FullscreenPopupOverlay: React.FC<{
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 10000,
+        zIndex: 99990,
         backgroundColor: colors.surface,
         display: 'flex',
         flexDirection: 'column',
@@ -71,13 +78,23 @@ const FullscreenPopupOverlay: React.FC<{
           flex: '0 0 50%',
           maxHeight: '50vh',
           minHeight: '40vh',
-          backgroundColor: String(colors.backgroundSecondary ?? '#eee'),
+          backgroundColor: String(colors.backgroundSecondary ?? DESIGN_TOKENS.colors.backgroundSecondary),
           overflow: 'hidden',
         }}
       >
         {hasImage ? (
           <div
-            onClick={onOpenFullscreenImage}
+            role={onOpenFullscreenImage ? 'button' : undefined}
+            tabIndex={onOpenFullscreenImage ? 0 : undefined}
+            title={onOpenFullscreenImage ? 'Открыть фото на весь экран' : undefined}
+            aria-label={onOpenFullscreenImage ? 'Открыть фото на весь экран' : undefined}
+            data-card-action="true"
+            onClick={handleOpenFullscreenImage}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                handleOpenFullscreenImage(event);
+              }
+            }}
             style={{
               width: '100%',
               height: '100%',
@@ -102,7 +119,7 @@ const FullscreenPopupOverlay: React.FC<{
             style={{
               width: '100%',
               height: '100%',
-              backgroundColor: String(colors.backgroundSecondary ?? '#eee'),
+              backgroundColor: String(colors.backgroundSecondary ?? DESIGN_TOKENS.colors.backgroundSecondary),
             }}
           />
         )}
@@ -116,18 +133,19 @@ const FullscreenPopupOverlay: React.FC<{
             handleClose()
           }}
           aria-label="Закрыть"
+          title="Закрыть"
           style={{
             position: 'absolute',
             top: 'max(12px, env(safe-area-inset-top, 12px))',
             right: 12,
             width: 44,
             height: 44,
-            borderRadius: 22,
+            borderRadius: DESIGN_TOKENS.radii.full,
             border: 'none',
             backgroundColor: 'rgba(0,0,0,0.4)',
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
-            color: '#fff',
+            color: colors.textOnDark,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -136,34 +154,32 @@ const FullscreenPopupOverlay: React.FC<{
             touchAction: 'manipulation',
           }}
         >
-          <Feather name="x" size={22} color="#fff" />
+          <Feather name="x" size={22} color={colors.textOnDark} />
         </button>
 
         {/* Expand image button */}
         {hasImage && onOpenFullscreenImage && (
           <button
             onClick={(e) => {
-              e.stopPropagation()
-              onOpenFullscreenImage()
+              handleOpenFullscreenImage(e)
             }}
             onTouchEnd={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              onOpenFullscreenImage()
+              handleOpenFullscreenImage(e)
             }}
             aria-label="Открыть фото на весь экран"
+            title="Открыть фото на весь экран"
             style={{
               position: 'absolute',
               bottom: 12,
               right: 12,
               width: 40,
               height: 40,
-              borderRadius: 20,
+              borderRadius: DESIGN_TOKENS.radii.full,
               border: 'none',
               backgroundColor: 'rgba(15,23,42,0.55)',
               backdropFilter: 'blur(8px)',
               WebkitBackdropFilter: 'blur(8px)',
-              color: '#fff',
+              color: colors.textOnDark,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -173,7 +189,7 @@ const FullscreenPopupOverlay: React.FC<{
               transition: 'background-color 0.15s ease, transform 0.15s ease',
             }}
           >
-            <Feather name="maximize-2" size={18} color="#fff" />
+            <Feather name="maximize-2" size={18} color={colors.textOnDark} />
           </button>
         )}
       </div>

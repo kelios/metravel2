@@ -74,7 +74,7 @@ describe('AddressListItem (web right panel)', () => {
     (Platform as any).OS = prevOs;
   });
 
-  it('shows coordinates and supports copy/share actions on web', async () => {
+  it('shows the same popup-like navigation action set on web', async () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'web';
 
@@ -82,26 +82,22 @@ describe('AddressListItem (web right panel)', () => {
     (globalThis as any).window = (globalThis as any).window || {};
     (globalThis as any).window.open = openSpy;
 
-    const writeText = jest.fn(() => Promise.resolve());
-    Object.defineProperty(global, 'navigator', {
-      value: { clipboard: { writeText } },
-      writable: true,
-    });
-
     const RN = require('react-native');
     jest.spyOn(RN.Linking, 'canOpenURL').mockResolvedValue(false);
     jest.spyOn(RN.Linking, 'openURL').mockResolvedValue(undefined);
 
-    const { getAllByLabelText } = renderWithProviders(
+    const { getAllByLabelText, queryByLabelText } = renderWithProviders(
       <AddressListItem travel={baseTravel} isMobile={false} />
     );
 
-    expect(getAllByLabelText('Скопировать координаты').length).toBeGreaterThan(0);
-
-    fireEvent.press(getAllByLabelText('Скопировать координаты')[0]);
-    await waitFor(() => {
-      expect(writeText).toHaveBeenCalledWith(baseTravel.coord);
-    });
+    expect(queryByLabelText('Скопировать координаты')).toBeNull();
+    expect(queryByLabelText('Открыть статью')).toBeNull();
+    expect(getAllByLabelText('Открыть в Google Maps').length).toBeGreaterThan(0);
+    expect(getAllByLabelText('Открыть в Organic Maps').length).toBeGreaterThan(0);
+    expect(getAllByLabelText('Проложить маршрут в Waze').length).toBeGreaterThan(0);
+    expect(getAllByLabelText('Проложить маршрут в Яндекс Навигаторе').length).toBeGreaterThan(0);
+    expect(getAllByLabelText('Поделиться в Telegram').length).toBeGreaterThan(0);
+    expect(getAllByLabelText('Сохранить').length).toBeGreaterThan(0);
 
     fireEvent.press(getAllByLabelText('Открыть в Google Maps')[0]);
     await waitFor(() => {
@@ -109,34 +105,28 @@ describe('AddressListItem (web right panel)', () => {
       expect(calls.some((v) => v.includes('google.com/maps/search'))).toBe(true);
     });
 
-    fireEvent.press(getAllByLabelText('Открыть в Apple Maps')[0]);
+    fireEvent.press(getAllByLabelText('Открыть в Organic Maps')[0]);
     await waitFor(() => {
       const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
-      expect(calls.some((v) => v.includes('maps.apple.com'))).toBe(true);
+      expect(calls.some((v) => v.includes('omaps.app'))).toBe(true);
     });
 
-    fireEvent.press(getAllByLabelText('Открыть в Яндекс Картах')[0]);
+    fireEvent.press(getAllByLabelText('Проложить маршрут в Waze')[0]);
     await waitFor(() => {
       const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
-      expect(calls.some((v) => v.includes('yandex.ru/maps'))).toBe(true);
+      expect(calls.some((v) => v.includes('waze.com/ul'))).toBe(true);
     });
 
-    fireEvent.press(getAllByLabelText('Открыть в OpenStreetMap')[0]);
+    fireEvent.press(getAllByLabelText('Проложить маршрут в Яндекс Навигаторе')[0]);
     await waitFor(() => {
       const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
-      expect(calls.some((v) => v.includes('openstreetmap.org'))).toBe(true);
+      expect(calls.some((v) => v.includes('yandex.ru/navi'))).toBe(true);
     });
 
     fireEvent.press(getAllByLabelText('Поделиться в Telegram')[0]);
     await waitFor(() => {
       const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
       expect(calls.some((v) => /^(tg:\/\/|https:\/\/t\.me\/share\/url)/.test(v))).toBe(true);
-    });
-
-    fireEvent.press(getAllByLabelText('Открыть статью')[0]);
-    await waitFor(() => {
-      const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
-      expect(calls.some((v) => v === baseTravel.articleUrl || v === baseTravel.urlTravel)).toBe(true);
     });
 
     (Platform as any).OS = prevOs;

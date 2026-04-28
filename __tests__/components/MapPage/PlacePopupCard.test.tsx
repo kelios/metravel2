@@ -203,6 +203,32 @@ describe('PlacePopupCard', () => {
     fullscreenSpy.mockRestore();
   });
 
+  it('stops web map events when opening the fullscreen image viewer', () => {
+    let tree: any;
+    renderer.act(() => {
+      tree = renderer.create(
+        <PlacePopupCard
+          colors={mockColors as any}
+          title="Test point"
+          imageUrl="https://example.com/photo.jpg"
+          width={560}
+        />
+      );
+    });
+
+    const heroPressable = tree.root.findByProps({ accessibilityLabel: 'Открыть фото на весь экран' });
+    expect(heroPressable.props['data-card-action']).toBe('true');
+    expect(heroPressable.props.title).toBeTruthy();
+
+    const stopPropagation = jest.fn();
+    renderer.act(() => {
+      heroPressable.props.onMouseDown({ stopPropagation });
+      heroPressable.props.onPress({ stopPropagation });
+    });
+
+    expect(stopPropagation).toHaveBeenCalledTimes(2);
+  });
+
   it('renders permanent text labels alongside icons for web action chips', () => {
     let tree: any;
 

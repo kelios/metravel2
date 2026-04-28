@@ -47,6 +47,7 @@ type Props = {
   style?: any;
   showActionRow?: boolean;
   showAddButton?: boolean;
+  addButtonPlacement?: 'button' | 'row';
   webTouchAction?: string;
   compact?: boolean;
   titleLayout?: 'overlay' | 'content';
@@ -75,6 +76,7 @@ const PlaceListCard: React.FC<Props> = ({
   style,
   showActionRow = true,
   showAddButton = true,
+  addButtonPlacement = 'button',
   webTouchAction,
   compact = false,
   titleLayout = 'overlay',
@@ -99,7 +101,8 @@ const PlaceListCard: React.FC<Props> = ({
     (hasCoord && !!onShare) ||
     visibleMapActions.length > 0 ||
     visibleInlineActions.length > 0 ||
-    overflowActions.length > 0
+    overflowActions.length > 0 ||
+    (showAddButton && addButtonPlacement === 'row' && !!onAddPoint)
   );
   const openOverflowMenu = useCallback(() => setOverflowVisible(true), []);
   const closeOverflowMenu = useCallback(() => setOverflowVisible(false), []);
@@ -255,10 +258,30 @@ const PlaceListCard: React.FC<Props> = ({
                   ))}
                 </Menu>
               ) : null}
+
+              {showAddButton && addButtonPlacement === 'row' && onAddPoint ? (
+                <CardActionPressable
+                  accessibilityLabel={addLabel}
+                  onPress={() => void onAddPoint()}
+                  disabled={addDisabled || isAdding}
+                  title={addLabel}
+                  style={({ pressed }) => [
+                    styles.iconBtn,
+                    pressed && !addDisabled && !isAdding && styles.iconBtnPressed,
+                    (addDisabled || isAdding) && styles.iconBtnDisabled,
+                  ]}
+                >
+                  {isAdding ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <Feather name="bookmark" size={14} color={colors.textMuted} />
+                  )}
+                </CardActionPressable>
+              ) : null}
             </View>
           ) : null}
 
-          {showAddButton && onAddPoint && (
+          {showAddButton && addButtonPlacement === 'button' && onAddPoint && (
             <CardActionPressable
               onPress={() => void onAddPoint()}
               disabled={addDisabled || isAdding}
@@ -405,6 +428,12 @@ const createStyles = (
           transition: 'background-color 0.15s ease',
         },
       }),
+    },
+    iconBtnPressed: {
+      opacity: 0.7,
+    },
+    iconBtnDisabled: {
+      opacity: 0.5,
     },
     addButton: {
       flexDirection: 'row',

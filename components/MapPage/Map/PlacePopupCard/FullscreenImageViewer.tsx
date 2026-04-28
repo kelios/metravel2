@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import type { ThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 const webCreatePortal: ((node: React.ReactNode, container: Element) => any) | null =
   Platform.OS === 'web'
@@ -128,13 +129,14 @@ const FullscreenImageViewer: React.FC<{
         <button
           onClick={onClose}
           aria-label="Закрыть фото"
+          title="Закрыть фото"
           style={{
             position: 'absolute',
             top: 16,
             right: 16,
             width: 44,
             height: 44,
-            borderRadius: 22,
+            borderRadius: DESIGN_TOKENS.radii.full,
             backgroundColor: 'rgba(0,0,0,0.5)',
             border: 'none',
             cursor: 'pointer',
@@ -142,11 +144,9 @@ const FullscreenImageViewer: React.FC<{
             alignItems: 'center',
             justifyContent: 'center',
             color: colors.textOnDark,
-            fontSize: 20,
-            lineHeight: 1,
           }}
         >
-          ✕
+          <Feather name="x" size={24} color={colors.textOnDark} />
         </button>
       </div>
     );

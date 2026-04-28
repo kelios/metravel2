@@ -51,6 +51,16 @@ type Props = {
   colors: ThemedColors;
 };
 
+const stopWebPopupEvent = (event?: any) => {
+  if (Platform.OS !== 'web') return;
+  try {
+    event?.stopPropagation?.();
+    event?.nativeEvent?.stopPropagation?.();
+  } catch {
+    // noop
+  }
+};
+
 const PlacePopupCard: React.FC<Props> = ({
   title,
   subtitle: _subtitle,
@@ -200,7 +210,8 @@ const PlacePopupCard: React.FC<Props> = ({
     [colors, bp, heroWidth, heroHeight, useCompactLayout, useSplitLayout],
   );
 
-  const handleOpenFullscreen = useCallback(() => {
+  const handleOpenFullscreen = useCallback((event?: any) => {
+    stopWebPopupEvent(event);
     if (imageUrl) setFullscreenVisible(true);
   }, [imageUrl]);
 
@@ -501,8 +512,17 @@ const PlacePopupCard: React.FC<Props> = ({
           {imageUrl && (
             <Pressable
               onPress={handleOpenFullscreen}
+              onMouseDown={stopWebPopupEvent as any}
+              onPointerDown={stopWebPopupEvent as any}
+              onTouchStart={stopWebPopupEvent as any}
               accessibilityRole="button"
               accessibilityLabel="Открыть фото на весь экран"
+              {...(Platform.OS === 'web'
+                ? ({
+                    'data-card-action': 'true',
+                    title: POPUP_TOOLTIPS.openPhoto,
+                  } as any)
+                : null)}
               style={({ pressed, hovered }: any) => [
                 styles.imageContainer,
                 useSplitLayout && styles.imageContainerSplit,
