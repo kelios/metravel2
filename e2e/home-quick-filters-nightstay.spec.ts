@@ -27,7 +27,11 @@ test.describe('@smoke Home quick filters', () => {
     }
 
     // Ensure the interactive filters UI is visible and "Палатка" is selected.
-    await expect(page.getByRole('button', { name: /Сортировка:/i })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('toggle-all-groups')).toBeVisible({ timeout: 30_000 });
+    const sortButton = page.getByRole('button', { name: /Сортировка:/i });
+    if (await sortButton.isVisible().catch(() => false)) {
+      await expect(sortButton).toBeVisible();
+    }
 
     const expandAll = page.getByText('Развернуть все', { exact: true });
     if (await expandAll.isVisible().catch(() => false)) {

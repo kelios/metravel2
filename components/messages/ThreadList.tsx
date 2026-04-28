@@ -340,6 +340,7 @@ function ThreadList({
     return (
         <FlatList
             data={filteredThreads}
+            extraData={search}
             keyExtractor={(item) => String(item.id)}
             renderItem={renderItem}
             contentContainerStyle={styles.list}

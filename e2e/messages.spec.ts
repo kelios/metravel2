@@ -281,15 +281,11 @@ test.describe('Messages — Thread List', () => {
 
     // Maria's thread should still be visible
     const mariaThread = page.getByLabel(/Диалог с Мария Иванова/);
-    const mariaVisible = await mariaThread.first().waitFor({ state: 'visible', timeout: 5_000 }).then(() => true).catch(() => false);
+    await expect(mariaThread.first()).toBeVisible({ timeout: 5_000 });
 
     // Alexey's thread should be filtered out
     const alexThread = page.getByLabel(/Диалог с Алексей Петров/);
-    const alexVisible = await alexThread.first().waitFor({ state: 'visible', timeout: 2_000 }).then(() => true).catch(() => false);
-
-    if (mariaVisible) {
-      expect(alexVisible).toBeFalsy();
-    }
+    await expect(alexThread.first()).toBeHidden({ timeout: 5_000 });
   });
 
   test('empty state shows when no threads exist', async ({ page }) => {
