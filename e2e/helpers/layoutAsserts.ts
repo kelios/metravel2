@@ -105,13 +105,17 @@ export async function expectTopmostAtCenter(page: Page, element: Locator, label:
   expect(box, `${label} must have a bounding box`).not.toBeNull();
   if (!box) return;
 
-  const cx = box.x + box.width / 2;
-  const cy = box.y + box.height / 2;
-
   // Single evaluate so the hit we report and the hit we assert on are the same DOM node.
+  // Compute the point in the browser as well; animated layouts can shift between
+  // Playwright's boundingBox() call and elementFromPoint().
   // Accept either direction of containment: RNW may wrap the testID node above or below
   // the element returned by elementFromPoint.
-  const result = await element.evaluate((el, point) => {
+  const result = await element.evaluate((el) => {
+    const rect = el.getBoundingClientRect();
+    const point = {
+      x: rect.x + rect.width / 2,
+      y: rect.y + rect.height / 2,
+    };
     const hit = document.elementFromPoint(point.x, point.y) as HTMLElement | null;
     const hitInfo = hit
       ? {
@@ -125,7 +129,7 @@ export async function expectTopmostAtCenter(page: Page, element: Locator, label:
       : null;
     const contains = hit ? el === hit || el.contains(hit) || hit.contains(el) : false;
     return { contains, hit: hitInfo };
-  }, { x: cx, y: cy });
+  });
 
   expect(
     result.contains,

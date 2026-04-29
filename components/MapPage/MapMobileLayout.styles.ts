@@ -60,7 +60,7 @@ export const getMapMobileLayoutStyles = (
       minHeight: options.isNarrow ? 38 : 42,
       paddingVertical: options.isNarrow ? 4 : 6,
       paddingLeft: options.isNarrow ? 10 : 12,
-      paddingRight: options.isNarrow ? 8 : 10,
+      paddingRight: options.isNarrow ? 52 : 56,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.borderLight,
       backgroundColor: colors.surface,
@@ -113,7 +113,16 @@ export const getMapMobileLayoutStyles = (
       gap: 6,
     },
     sheetToolbarActionsStacked: {},
-    sheetToolbarActionsFloatingClose: {},
+    sheetToolbarActionsFloatingClose: {
+      ...(Platform.OS === 'web'
+        ? ({
+            position: 'absolute',
+            top: options.isNarrow ? 4 : 6,
+            right: options.isNarrow ? 8 : 10,
+            zIndex: 100,
+          } as any)
+        : null),
+    },
     sheetToolbarCloseOnly: {},
     sheetCloseButton: {
       width: options.isNarrow ? 36 : 38,
@@ -157,6 +166,13 @@ export const getMapMobileLayoutStyles = (
           }),
     },
     sheetToolbarCloseButtonFloating: {},
+    sheetCloseIcon: {
+      ...(Platform.OS === 'web'
+        ? ({
+            pointerEvents: 'none',
+          } as any)
+        : null),
+    },
     sheetShowResultsButton: {
       flexDirection: 'row' as const,
       height: options.isNarrow ? 34 : 38,

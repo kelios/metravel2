@@ -99,6 +99,7 @@ const MapMobileSheetToolbarInner: React.FC<MapMobileSheetToolbarProps> = ({
         style={[
           styles.sheetToolbarActions,
           isQuarterListPreview && styles.sheetToolbarActionsPreview,
+          showSheetCloseButton && styles.sheetToolbarActionsFloatingClose,
         ]}
       >
         {isQuarterListPreview && (
@@ -140,9 +141,12 @@ const MapMobileSheetToolbarInner: React.FC<MapMobileSheetToolbarProps> = ({
               pressed && { opacity: 0.6 },
             ]}
           >
-            <View pointerEvents="none">
-              <Feather name="x" size={18} color={colors.textMuted} />
-            </View>
+            <Feather
+              name="x"
+              size={18}
+              color={colors.textMuted}
+              style={styles.sheetCloseIcon}
+            />
           </Pressable>
         )}
       </View>

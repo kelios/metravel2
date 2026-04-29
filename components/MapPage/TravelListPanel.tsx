@@ -199,9 +199,17 @@ const TravelListPanel: React.FC<Props> = ({
       : `${placesCountLabel} мест рядом. Откройте место, чтобы сфокусироваться на карте и быстро перейти к маршруту без повторяющихся подсказок в каждой карточке.`
 
     return (
-      <View style={styles.listHeaderCard} testID="travel-list-mobile-summary">
-        <Text style={styles.listHeaderTitle}>Места рядом</Text>
-        <Text style={styles.listHeaderHint}>{hintText}</Text>
+      <View
+        pointerEvents={Platform.OS === 'web' ? 'box-none' : 'auto'}
+        style={styles.listHeaderCard}
+        testID="travel-list-mobile-summary"
+      >
+        <Text pointerEvents="none" style={styles.listHeaderTitle}>
+          Места рядом
+        </Text>
+        <Text pointerEvents="none" style={styles.listHeaderHint}>
+          {hintText}
+        </Text>
         {onOpenFilters && (
           <View style={styles.listHeaderActions}>
             <Button
