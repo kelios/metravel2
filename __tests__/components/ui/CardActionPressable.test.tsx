@@ -1,7 +1,9 @@
 import {
   applyWebTooltipAttributes,
   buildWebAccessibilityAttributes,
+  stopWebPointerEvent,
 } from '@/components/ui/CardActionPressable'
+import { Platform } from 'react-native'
 
 describe('applyWebTooltipAttributes', () => {
   it('writes tooltip attributes to the web node', () => {
@@ -52,5 +54,32 @@ describe('buildWebAccessibilityAttributes', () => {
       'aria-expanded': 'false',
       'aria-busy': 'true',
     })
+  })
+})
+
+describe('CardActionPressable', () => {
+  const originalPlatform = Platform.OS
+
+  afterEach(() => {
+    ;(Platform as any).OS = originalPlatform
+  })
+
+  it('stops early web pointer events before activating the action', () => {
+    ;(Platform as any).OS = 'web'
+    const stopPropagation = jest.fn()
+    const nativeStopPropagation = jest.fn()
+    const nativeStopImmediatePropagation = jest.fn()
+
+    stopWebPointerEvent({
+      stopPropagation,
+      nativeEvent: {
+        stopPropagation: nativeStopPropagation,
+        stopImmediatePropagation: nativeStopImmediatePropagation,
+      },
+    })
+
+    expect(stopPropagation).toHaveBeenCalledTimes(1)
+    expect(nativeStopPropagation).toHaveBeenCalledTimes(1)
+    expect(nativeStopImmediatePropagation).toHaveBeenCalledTimes(1)
   })
 })

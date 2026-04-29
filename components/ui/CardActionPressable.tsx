@@ -66,6 +66,17 @@ export const applyWebTooltipAttributes = (
   node.removeAttribute?.('data-tooltip');
 };
 
+export const stopWebPointerEvent = (e?: any) => {
+  if (Platform.OS !== 'web') return;
+  try {
+    e?.stopPropagation?.();
+    e?.nativeEvent?.stopPropagation?.();
+    e?.nativeEvent?.stopImmediatePropagation?.();
+  } catch {
+    // noop
+  }
+};
+
 const CardActionPressable = ({
   accessibilityLabel,
   accessibilityHint,
@@ -101,16 +112,6 @@ const CardActionPressable = ({
     onPress?.();
   };
 
-  const stopWebPointerEvent = (e?: any) => {
-    if (Platform.OS !== 'web') return;
-    try {
-      e?.stopPropagation?.();
-      e?.nativeEvent?.stopPropagation?.();
-    } catch {
-      // noop
-    }
-  };
-
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     applyWebTooltipAttributes(webRef.current, tooltipText);
@@ -134,7 +135,9 @@ const CardActionPressable = ({
       {...(Platform.OS === 'web'
         ? ({
             onMouseDown: stopWebPointerEvent,
+            onMouseUp: stopWebPointerEvent,
             onPointerDown: stopWebPointerEvent,
+            onPointerUp: stopWebPointerEvent,
             onTouchStart: stopWebPointerEvent,
             onTouchEnd: stopWebPointerEvent,
           } as any)

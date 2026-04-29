@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import type { ThemedColors } from '@/hooks/useTheme';
@@ -60,9 +60,31 @@ const stopWebPopupEvent = (event?: any) => {
   try {
     event?.stopPropagation?.();
     event?.nativeEvent?.stopPropagation?.();
+    event?.nativeEvent?.stopImmediatePropagation?.();
   } catch {
     // noop
   }
+};
+
+const POPUP_DOM_EVENTS = [
+  'click',
+  'dblclick',
+  'contextmenu',
+  'mousedown',
+  'mouseup',
+  'pointerdown',
+  'pointerup',
+  'touchstart',
+  'touchmove',
+  'touchend',
+  'wheel',
+] as const;
+
+const getPopupEventNodes = (node: any): EventTarget[] => {
+  if (Platform.OS !== 'web' || !node?.addEventListener) return [];
+
+  const popupNode = node.closest?.('.leaflet-popup');
+  return popupNode && popupNode !== node ? [node, popupNode] : [node];
 };
 
 const PlacePopupCard: React.FC<Props> = ({
@@ -95,6 +117,7 @@ const PlacePopupCard: React.FC<Props> = ({
   onClose,
   colors,
 }) => {
+  const cardRootRef = useRef<any>(null);
   const [fullscreenVisible, setFullscreenVisible] = useState(false);
   const revealPopupImageOnLoadOnly = useMemo(() => {
     if (Platform.OS !== 'web' || typeof navigator === 'undefined') return false;
@@ -231,6 +254,31 @@ const PlacePopupCard: React.FC<Props> = ({
   useEffect(() => {
     setFullscreenVisible(false);
   }, [imageUrl]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const nodes = getPopupEventNodes(cardRootRef.current);
+    if (!nodes.length) return;
+
+    const stopEvent = (event: Event) => {
+      event.stopPropagation();
+      (event as any).stopImmediatePropagation?.();
+    };
+
+    nodes.forEach((node) => {
+      POPUP_DOM_EVENTS.forEach((eventName) => {
+        node.addEventListener(eventName, stopEvent);
+      });
+    });
+
+    return () => {
+      nodes.forEach((node) => {
+        POPUP_DOM_EVENTS.forEach((eventName) => {
+          node.removeEventListener(eventName, stopEvent);
+        });
+      });
+    };
+  }, []);
 
   const topInfoSlot = useMemo(() => (
     <View style={styles.infoSection}>
@@ -509,12 +557,15 @@ const PlacePopupCard: React.FC<Props> = ({
 
   const cardBody = (
     <View
+      ref={cardRootRef}
       style={[styles.container, { maxWidth: maxPopupWidth }]}
       {...(Platform.OS === 'web'
         ? ({
             onClick: stopWebPopupEvent,
             onMouseDown: stopWebPopupEvent,
+            onMouseUp: stopWebPopupEvent,
             onPointerDown: stopWebPopupEvent,
+            onPointerUp: stopWebPopupEvent,
             onTouchStart: stopWebPopupEvent,
             onTouchEnd: stopWebPopupEvent,
           } as any)
