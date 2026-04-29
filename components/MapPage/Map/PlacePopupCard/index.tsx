@@ -508,7 +508,18 @@ const PlacePopupCard: React.FC<Props> = ({
   ]);
 
   const cardBody = (
-    <View style={[styles.container, { maxWidth: maxPopupWidth }]}>
+    <View
+      style={[styles.container, { maxWidth: maxPopupWidth }]}
+      {...(Platform.OS === 'web'
+        ? ({
+            onClick: stopWebPopupEvent,
+            onMouseDown: stopWebPopupEvent,
+            onPointerDown: stopWebPopupEvent,
+            onTouchStart: stopWebPopupEvent,
+            onTouchEnd: stopWebPopupEvent,
+          } as any)
+        : null)}
+    >
       <View style={styles.popupCard}>
         <View style={[styles.topSection, useSplitLayout && styles.topSectionSplit]}>
           {imageUrl && (

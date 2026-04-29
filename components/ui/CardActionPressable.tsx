@@ -101,6 +101,16 @@ const CardActionPressable = ({
     onPress?.();
   };
 
+  const stopWebPointerEvent = (e?: any) => {
+    if (Platform.OS !== 'web') return;
+    try {
+      e?.stopPropagation?.();
+      e?.nativeEvent?.stopPropagation?.();
+    } catch {
+      // noop
+    }
+  };
+
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     applyWebTooltipAttributes(webRef.current, tooltipText);
@@ -121,6 +131,14 @@ const CardActionPressable = ({
       onHoverOut={onHoverOut}
       testID={testID}
       {...({ 'data-card-action': 'true' } as any)}
+      {...(Platform.OS === 'web'
+        ? ({
+            onMouseDown: stopWebPointerEvent,
+            onPointerDown: stopWebPointerEvent,
+            onTouchStart: stopWebPointerEvent,
+            onTouchEnd: stopWebPointerEvent,
+          } as any)
+        : null)}
       {...(webAccessibilityAttributes as any)}
     >
       {safeChildren}

@@ -53,6 +53,10 @@ const FullscreenPopupOverlay: React.FC<{
     onOpenFullscreenImage?.(event);
   }, [onOpenFullscreenImage]);
 
+  const stopOverlayEvent = useCallback((event?: any) => {
+    event?.stopPropagation?.();
+  }, []);
+
   if (Platform.OS !== 'web' || !effectiveVisible) return null;
 
   const hasImage = !!imageUrl;
@@ -68,8 +72,11 @@ const FullscreenPopupOverlay: React.FC<{
         flexDirection: 'column',
         overflow: 'hidden',
       }}
-      onClick={(e) => e.stopPropagation()}
-      onTouchStart={(e) => e.stopPropagation()}
+      onClick={stopOverlayEvent}
+      onMouseDown={stopOverlayEvent}
+      onPointerDown={stopOverlayEvent}
+      onTouchStart={stopOverlayEvent}
+      onTouchEnd={stopOverlayEvent}
     >
       {/* Hero image — 50% of screen */}
       <div
