@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 const renderer = require('react-test-renderer');
 
@@ -79,8 +79,7 @@ describe('PlacePopupCard', () => {
     const props = mockImageCardMedia.mock.calls[0]?.[0];
     expect(props).toBeTruthy();
     expect(props.fit).toBe('contain');
-    expect(props.width).toBe(352);
-    expect(props.height).toBe(196);
+    expect(props.style).toEqual(StyleSheet.absoluteFill);
     expect(props.blurBackground).toBe(true);
     expect(props.allowCriticalWebBlur).toBe(true);
   });
@@ -102,8 +101,7 @@ describe('PlacePopupCard', () => {
     expect(mockImageCardMedia).toHaveBeenCalled();
     const props = mockImageCardMedia.mock.calls[0]?.[0];
     expect(props).toBeTruthy();
-    expect(props.width).toBe(216);
-    expect(props.height).toBe(96);
+    expect(props.style).toEqual(StyleSheet.absoluteFill);
   });
 
   it('uses a compact hero on travel details popup layout', () => {
@@ -122,8 +120,7 @@ describe('PlacePopupCard', () => {
     expect(mockImageCardMedia).toHaveBeenCalled();
     const props = mockImageCardMedia.mock.calls[0]?.[0];
     expect(props).toBeTruthy();
-    expect(props.width).toBe(252);
-    expect(props.height).toBe(120);
+    expect(props.style).toEqual(StyleSheet.absoluteFill);
   });
 
   it('reveals popup hero only after onLoad on iPhone Safari', () => {
@@ -254,5 +251,36 @@ describe('PlacePopupCard', () => {
 
     const googleAction = tree.root.findByProps({ accessibilityLabel: 'Google Maps' });
     expect(googleAction).toBeTruthy();
+  });
+
+  it('opens the page through the popup handler when the inline page link is clicked', () => {
+    const onOpenArticle = jest.fn();
+    const stopPropagation = jest.fn();
+    const preventDefault = jest.fn();
+    let tree: any;
+
+    renderer.act(() => {
+      tree = renderer.create(
+        <PlacePopupCard
+          colors={mockColors as any}
+          title="Test point"
+          articleHref="/travels/test-route"
+          coord="53.9, 27.56"
+          onBuildRoute={jest.fn()}
+          onOpenArticle={onOpenArticle}
+        />
+      );
+    });
+
+    const link = tree.root.findByType('a');
+    expect(link.props.href).toBe('/travels/test-route');
+
+    renderer.act(() => {
+      link.props.onClick({ preventDefault, stopPropagation });
+    });
+
+    expect(stopPropagation).toHaveBeenCalled();
+    expect(preventDefault).toHaveBeenCalled();
+    expect(onOpenArticle).toHaveBeenCalledTimes(1);
   });
 });

@@ -71,21 +71,62 @@ const MapActionChip = React.memo(function MapActionChip({
   const visual = kind ? getNavigationActionVisual(kind, colors) : null;
 
   return (
-    <CardActionPressable
+    <LabeledActionChip
       accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
+      icon={visual?.icon ?? action.icon}
+      iconBubbleStyle={visual ? { backgroundColor: visual.tintBg } : null}
+      iconColor={visual?.iconColor ?? colors.textMuted}
+      label={action.label}
       onPress={action.onPress}
+      styles={styles}
       title={action.title ?? action.label}
-      style={styles.mapActionChip}
+    />
+  );
+});
+
+const LabeledActionChip = React.memo(function LabeledActionChip({
+  accessibilityLabel,
+  accessibilityState,
+  children,
+  disabled,
+  icon,
+  iconBubbleStyle,
+  iconColor,
+  label,
+  onPress,
+  styles,
+  title,
+}: {
+  accessibilityLabel?: string;
+  accessibilityState?: { checked?: boolean; selected?: boolean; disabled?: boolean; expanded?: boolean; busy?: boolean };
+  children?: React.ReactNode;
+  disabled?: boolean;
+  icon?: keyof typeof Feather.glyphMap;
+  iconBubbleStyle?: any;
+  iconColor?: string;
+  label: string;
+  onPress?: () => void;
+  styles: Record<string, any>;
+  title?: string;
+}) {
+  return (
+    <CardActionPressable
+      accessibilityLabel={accessibilityLabel ?? title ?? label}
+      accessibilityState={accessibilityState ?? (disabled ? { disabled: true } : undefined)}
+      disabled={disabled}
+      onPress={onPress}
+      title={title ?? label}
+      style={({ pressed }) => [
+        styles.mapActionChip,
+        pressed && !disabled && styles.iconBtnPressed,
+        disabled && styles.iconBtnDisabled,
+      ]}
     >
-      <View style={[styles.mapActionIconBubble, visual ? { backgroundColor: visual.tintBg } : null]}>
-        <Feather
-          name={visual?.icon ?? action.icon}
-          size={16}
-          color={visual?.iconColor ?? colors.textMuted}
-        />
+      <View style={[styles.mapActionIconBubble, iconBubbleStyle]}>
+        {children ?? (icon ? <Feather name={icon} size={16} color={iconColor} /> : null)}
       </View>
       <Text style={styles.mapActionLabel} numberOfLines={1}>
-        {action.label}
+        {label}
       </Text>
     </CardActionPressable>
   );
@@ -216,25 +257,27 @@ const PlaceListCard: React.FC<Props> = ({
           {hasActionRow ? (
             <View style={styles.actionsRow}>
               {hasCoord && onCopyCoord && (
-                <CardActionPressable
+                <LabeledActionChip
                   accessibilityLabel="Скопировать координаты"
+                  icon="copy"
+                  iconColor={colors.textMuted}
+                  label="Коорд."
                   onPress={() => void onCopyCoord()}
+                  styles={styles}
                   title={coord || 'Скопировать координаты'}
-                  style={styles.iconBtn}
-                >
-                  <Feather name="copy" size={14} color={colors.textMuted} />
-                </CardActionPressable>
+                />
               )}
 
               {hasCoord && onShare && (
-                <CardActionPressable
+                <LabeledActionChip
                   accessibilityLabel="Поделиться в Telegram"
+                  icon="send"
+                  iconColor={colors.textMuted}
+                  label="Telegram"
                   onPress={() => void onShare()}
+                  styles={styles}
                   title="Телеграм"
-                  style={styles.iconBtn}
-                >
-                  <Feather name="send" size={14} color={colors.textMuted} />
-                </CardActionPressable>
+                />
               )}
 
               {visibleMapActions.map((action) => (
@@ -247,15 +290,16 @@ const PlaceListCard: React.FC<Props> = ({
               ))}
 
               {visibleInlineActions.map((action) => (
-                <CardActionPressable
+                <LabeledActionChip
                   key={action.key}
                   accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
+                  icon={action.icon}
+                  iconColor={colors.textMuted}
+                  label={action.label}
                   onPress={action.onPress}
+                  styles={styles}
                   title={action.title ?? action.label}
-                  style={styles.iconBtn}
-                >
-                  <Feather name={action.icon} size={14} color={colors.textMuted} />
-                </CardActionPressable>
+                />
               ))}
 
               {overflowActions.length > 0 ? (
@@ -264,15 +308,16 @@ const PlaceListCard: React.FC<Props> = ({
                   onDismiss={closeOverflowMenu}
                   contentStyle={styles.overflowMenuContent}
                   anchor={
-                    <CardActionPressable
+                    <LabeledActionChip
                       accessibilityLabel="Ещё действия"
                       accessibilityState={{ expanded: overflowVisible }}
+                      icon="more-horizontal"
+                      iconColor={colors.textMuted}
+                      label="Ещё"
                       onPress={openOverflowMenu}
+                      styles={styles}
                       title="Ещё действия"
-                      style={styles.iconBtn}
-                    >
-                      <Feather name="more-horizontal" size={14} color={colors.textMuted} />
-                    </CardActionPressable>
+                    />
                   }
                 >
                   {overflowActions.map((action) => (
@@ -294,23 +339,20 @@ const PlaceListCard: React.FC<Props> = ({
               ) : null}
 
               {showAddButton && addButtonPlacement === 'row' && onAddPoint ? (
-                <CardActionPressable
+                <LabeledActionChip
                   accessibilityLabel={addLabel}
-                  onPress={() => void onAddPoint()}
                   disabled={addDisabled || isAdding}
+                  icon={isAdding ? undefined : 'bookmark'}
+                  iconColor={colors.textMuted}
+                  label={addLabel}
+                  onPress={() => void onAddPoint()}
+                  styles={styles}
                   title={addLabel}
-                  style={({ pressed }) => [
-                    styles.iconBtn,
-                    pressed && !addDisabled && !isAdding && styles.iconBtnPressed,
-                    (addDisabled || isAdding) && styles.iconBtnDisabled,
-                  ]}
                 >
                   {isAdding ? (
                     <ActivityIndicator size="small" color={colors.primary} />
-                  ) : (
-                    <Feather name="bookmark" size={14} color={colors.textMuted} />
-                  )}
-                </CardActionPressable>
+                  ) : null}
+                </LabeledActionChip>
               ) : null}
             </View>
           ) : null}
@@ -449,20 +491,6 @@ const createStyles = (
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: compact ? 4 : 6,
-    },
-    iconBtn: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: compact ? 30 : 34,
-      height: compact ? 30 : 34,
-      borderRadius: compact ? 9 : 10,
-      backgroundColor: colors.backgroundSecondary ?? colors.surface,
-      ...Platform.select({
-        web: {
-          cursor: 'pointer' as any,
-          transition: 'background-color 0.15s ease',
-        },
-      }),
     },
     iconBtnPressed: {
       opacity: 0.7,

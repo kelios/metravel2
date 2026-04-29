@@ -7,6 +7,7 @@ import { userPointsApi } from '@/api/userPoints';
 import { PointStatus } from '@/types/userPoints';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
+import { getSiteBaseUrl } from '@/utils/seo';
 import { useAuthStore } from '@/stores/authStore';
 import { useRouteStore } from '@/stores/routeStore';
 import { ThemeContext, type ThemeContextType, type ThemedColors } from '@/hooks/useTheme';
@@ -112,7 +113,10 @@ export const createMapPopupComponent = ({
     const handleOpenArticle = useCallback(() => {
       const url = String(point.articleUrl || point.urlTravel || '').trim();
       if (!url) return;
-      void openExternalUrlInNewTab(url);
+      void openExternalUrlInNewTab(url, {
+        allowRelative: true,
+        baseUrl: getSiteBaseUrl(),
+      });
     }, [point.articleUrl, point.urlTravel]);
 
     const articleHref = useMemo(() => {

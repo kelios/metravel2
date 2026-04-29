@@ -10,6 +10,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { PointStatus } from '@/types/userPoints';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
+import { getSiteBaseUrl } from '@/utils/seo';
 import type { LegacyMapPoint } from './types';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -185,7 +186,10 @@ const MapPopup: React.FC<MapPopupConfig> = ({
   const handleOpenArticle = useCallback(() => {
     const url = String(point.articleUrl || point.urlTravel || '').trim();
     if (!url) return;
-    void openExternalUrlInNewTab(url);
+    void openExternalUrlInNewTab(url, {
+      allowRelative: true,
+      baseUrl: getSiteBaseUrl(),
+    });
   }, [point.articleUrl, point.urlTravel]);
 
   const handleCopyCoord = useCallback(async () => {

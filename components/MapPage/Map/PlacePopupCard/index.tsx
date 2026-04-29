@@ -253,6 +253,11 @@ const PlacePopupCard: React.FC<Props> = ({
         >
           <a
             href={normalizedArticleHref}
+            onClick={(event) => {
+              stopWebPopupEvent(event);
+              event.preventDefault();
+              onOpenArticle?.();
+            }}
             style={styles.inlineLink as any}
             aria-label="Открыть страницу точки"
           >
