@@ -71,7 +71,7 @@ export const getMapMobileLayoutStyles = (
             backdropFilter: 'blur(12px)',
             WebkitBackdropFilter: 'blur(12px)',
             position: 'relative',
-            zIndex: 1,
+            zIndex: 20,
           } as any)
         : {
             shadowColor: DESIGN_TOKENS.colors.text,
@@ -102,6 +102,12 @@ export const getMapMobileLayoutStyles = (
       alignItems: 'center' as const,
       gap: 6,
       flexShrink: 0,
+      ...(Platform.OS === 'web'
+        ? ({
+            position: 'relative',
+            zIndex: 21,
+          } as any)
+        : null),
     },
     sheetToolbarActionsPreview: {
       gap: 6,
@@ -142,7 +148,7 @@ export const getMapMobileLayoutStyles = (
         ? ({
             boxShadow: '0 8px 20px rgba(15,23,42,0.10)',
             position: 'relative',
-            zIndex: 2,
+            zIndex: 22,
           } as any)
         : {
             shadowOpacity: 0.08,
@@ -285,6 +291,8 @@ export const getMapMobileLayoutStyles = (
           flexDirection: 'column',
           height: '100%',
           paddingHorizontal: options.isNarrow ? 2 : 6,
+          position: 'relative',
+          zIndex: 0,
         },
       }),
     },
