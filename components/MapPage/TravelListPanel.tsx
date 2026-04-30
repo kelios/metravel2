@@ -195,8 +195,8 @@ const TravelListPanel: React.FC<Props> = ({
     const placesCountLabel =
       travelsData.length > 999 ? '999+' : String(travelsData.length)
     const hintText = compactPreview
-      ? 'Быстрый просмотр рядом. Откройте весь список, если хотите сравнить больше вариантов.'
-      : `${placesCountLabel} мест рядом. Откройте место, чтобы сфокусироваться на карте и быстро перейти к маршруту без повторяющихся подсказок в каждой карточке.`
+      ? 'Ближайшие места одним взглядом. Полный список откроет больше вариантов.'
+      : `${placesCountLabel} мест рядом. Выберите карточку, чтобы сфокусировать карту и построить маршрут.`
 
     return (
       <View
@@ -418,13 +418,13 @@ const getStyles = (colors: ThemedColors) =>
     list: { paddingBottom: 8, alignItems: 'center' },
     listHeaderCard: {
       width: '100%',
-      padding: 14,
+      padding: 12,
       marginBottom: 10,
-      borderRadius: 16,
+      borderRadius: 14,
       backgroundColor: colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
-      gap: 8,
+      gap: 6,
     },
     listHeaderTitle: {
       fontSize: 16,
@@ -484,8 +484,10 @@ const getStyles = (colors: ThemedColors) =>
       marginBottom: 8,
     },
     emptyActions: {
-      flexDirection: 'column',
-      alignItems: 'stretch',
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      alignItems: 'center',
       gap: 12,
       marginTop: 4,
     },

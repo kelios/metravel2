@@ -390,7 +390,7 @@ export default function RouletteScreen() {
           animationType="slide"
           onRequestClose={() => setShowFilters(false)}
         >
-          <View style={{ flex: 1, backgroundColor: colors.background }}>
+          <View style={styles.filtersModalShell}>
             <ModernFilters
               filterGroups={filterGroups}
               selectedFilters={filter as any}

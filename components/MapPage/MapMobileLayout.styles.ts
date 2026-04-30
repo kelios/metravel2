@@ -4,6 +4,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
 
 const MOBILE_WEB_BOTTOM_CHROME_GAP = 28
+const CONTROL_RADIUS = 12
 
 type MapMobileLayoutStyleOptions = {
   isNarrow: boolean
@@ -58,9 +59,9 @@ export const getMapMobileLayoutStyles = (
       alignItems: 'center',
       gap: options.isNarrow ? 6 : 8,
       minHeight: options.isNarrow ? 38 : 42,
-      paddingVertical: options.isNarrow ? 4 : 6,
+      paddingVertical: options.isNarrow ? 8 : 10,
       paddingLeft: options.isNarrow ? 10 : 12,
-      paddingRight: options.isNarrow ? 52 : 56,
+      paddingRight: options.isNarrow ? 10 : 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.borderLight,
       backgroundColor: colors.surface,
@@ -100,8 +101,9 @@ export const getMapMobileLayoutStyles = (
     sheetToolbarActions: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
-      gap: 6,
+      gap: 8,
       flexShrink: 0,
+      justifyContent: 'flex-end' as const,
       ...(Platform.OS === 'web'
         ? ({
             position: 'relative',
@@ -112,22 +114,18 @@ export const getMapMobileLayoutStyles = (
     sheetToolbarActionsPreview: {
       gap: 6,
     },
-    sheetToolbarActionsStacked: {},
+    sheetToolbarActionsStacked: {
+      alignSelf: 'stretch',
+      justifyContent: 'flex-end' as const,
+    },
     sheetToolbarActionsFloatingClose: {
-      ...(Platform.OS === 'web'
-        ? ({
-            position: 'absolute',
-            top: options.isNarrow ? 4 : 6,
-            right: options.isNarrow ? 8 : 10,
-            zIndex: 100,
-          } as any)
-        : null),
+      position: 'relative',
     },
     sheetToolbarCloseOnly: {},
     sheetCloseButton: {
       width: options.isNarrow ? 36 : 38,
       height: options.isNarrow ? 36 : 38,
-      borderRadius: 11,
+      borderRadius: CONTROL_RADIUS,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
       borderWidth: StyleSheet.hairlineWidth,
@@ -179,7 +177,7 @@ export const getMapMobileLayoutStyles = (
       minWidth: options.isNarrow ? 34 : 38,
       paddingHorizontal: options.isNarrow ? 8 : 10,
       gap: 4,
-      borderRadius: 999,
+      borderRadius: CONTROL_RADIUS,
       borderWidth: 0,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
@@ -227,6 +225,9 @@ export const getMapMobileLayoutStyles = (
       flexShrink: 1,
       gap: 4,
     },
+    sheetToolbarLeftStacked: {
+      alignSelf: 'stretch',
+    },
     sheetToolbarLeftWithFloatingClose: {},
     sheetToolbarSummary: {
       marginTop: 2,
@@ -249,12 +250,16 @@ export const getMapMobileLayoutStyles = (
       flexDirection: 'row',
       alignItems: 'center',
     },
-    sheetToolbarStacked: {},
+    sheetToolbarStacked: {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      gap: 8,
+    },
     sheetToolbarFullWidth: {},
     sheetIconButton: {
       width: 36,
       height: 36,
-      borderRadius: 11,
+      borderRadius: CONTROL_RADIUS,
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: StyleSheet.hairlineWidth,

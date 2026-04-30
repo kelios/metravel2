@@ -48,6 +48,8 @@ async function loadExpoLocation() {
 }
 
 const { spacing, radii, typography } = DESIGN_TOKENS;
+const PANEL_RADIUS = radii.lg;
+const CONTROL_RADIUS = radii.sm;
 
 const LazyQuestMap = React.lazy(() => import('@/components/MapPage/Map.web'));
 
@@ -94,7 +96,8 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
             width: isMobileW ? '100%' : SIDEBAR_WIDTH,
             flexShrink: 0,
             flexDirection: 'column',
-            borderRightWidth: 0,
+            borderRightWidth: isMobileW ? 0 : StyleSheet.hairlineWidth,
+            borderRightColor: colors.borderLight,
             backgroundColor: colors.surface,
             ...Platform.select({
                 web: {
@@ -102,7 +105,7 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
                     maxHeight: isMobileW ? 'auto' : '100vh',
                     position: isMobileW ? 'relative' : 'sticky',
                     top: 0,
-                    boxShadow: '1px 0 0 0 rgba(0,0,0,0.04)',
+                    boxShadow: ((colors.boxShadows as any)?.card ?? DESIGN_TOKENS.shadows.card) as any,
                     scrollbarWidth: 'thin',
                     scrollbarColor: `${colors.borderLight} transparent`,
                     transition: 'width 0.3s ease',
@@ -117,11 +120,11 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
             padding: headerPadding,
             paddingTop: headerTopPadding,
             paddingBottom: isMobileW ? spacing.md : spacing.lg,
-            borderBottomWidth: 0,
+            borderBottomWidth: StyleSheet.hairlineWidth,
             borderBottomColor: colors.borderLight,
             ...Platform.select({
                 web: {
-                    backgroundImage: `linear-gradient(180deg, ${colors.surface} 0%, rgba(255,255,255,0.98) 100%)`,
+                    backgroundColor: colors.surface,
                 } as any,
             }),
         },
@@ -152,7 +155,7 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
             backgroundColor: colors.brand,
             paddingHorizontal: spacing.md,
             paddingVertical: spacing.sm,
-            borderRadius: radii.full,
+            borderRadius: CONTROL_RADIUS,
             alignItems: 'center',
             justifyContent: 'center',
             flex: 1,
@@ -160,13 +163,14 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
                 web: { 
                     cursor: 'pointer', 
                     transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                    boxShadow: '0 4px 16px rgba(255, 146, 43, 0.3)',
+                    boxShadow: ((colors.boxShadows as any)?.light ?? DESIGN_TOKENS.shadows.light) as any,
                 } as any,
             }),
         },
         actionBtnSecondary: {
             backgroundColor: colors.backgroundSecondary,
-            borderWidth: 0,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
             ...Platform.select({
                 web: { boxShadow: 'none' } as any,
             }),
@@ -209,11 +213,13 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
             marginBottom: spacing.xxs,
             paddingHorizontal: spacing.xs,
             paddingVertical: spacing.xxs,
-            borderRadius: radii.md,
+            borderRadius: CONTROL_RADIUS,
+            borderWidth: 1,
+            borderColor: 'transparent',
             ...Platform.select({
                 web: {
                     cursor: 'pointer',
-                    transition: 'background-color 0.2s ease',
+                    transition: 'background-color 0.2s ease, border-color 0.2s ease',
                 } as any,
             }),
         },
@@ -240,7 +246,9 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
             backgroundColor: colors.backgroundSecondary,
             paddingHorizontal: spacing.sm,
             paddingVertical: spacing.xs,
-            borderRadius: radii.full,
+            borderRadius: CONTROL_RADIUS,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
             minHeight: isMobileW ? DESIGN_TOKENS.touchTarget.minHeight : undefined,
             ...Platform.select({
                 web: {
@@ -261,24 +269,21 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
             justifyContent: 'space-between',
             paddingVertical: cityItemVertical,
             paddingHorizontal: isMobileW ? spacing.xs : spacing.sm,
-            borderRadius: radii.md,
+            borderRadius: CONTROL_RADIUS,
+            borderWidth: 1,
+            borderColor: 'transparent',
             minHeight: isMobileW ? DESIGN_TOKENS.touchTarget.minHeight : undefined,
-            marginBottom: 2,
+            marginBottom: spacing.xxs,
             ...Platform.select({
                 web: { 
                     cursor: 'pointer', 
-                    transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    transition: 'background-color 0.2s ease, border-color 0.2s ease',
                 } as any,
             }),
         },
         cityItemActive: {
             backgroundColor: colors.brandSoft,
-            ...Platform.select({
-                web: {
-                    boxShadow: `0 4px 16px ${colors.brandAlpha30}`,
-                    transform: 'translateX(4px)',
-                } as any,
-            }),
+            borderColor: colors.brandAlpha30,
         },
         cityItemLeft: {
             flexDirection: 'row',
@@ -289,21 +294,19 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
         cityItemIcon: {
             width: cityIconSize,
             height: cityIconSize,
-            borderRadius: radii.md,
+            borderRadius: CONTROL_RADIUS,
             backgroundColor: colors.backgroundSecondary,
             alignItems: 'center',
             justifyContent: 'center',
+            borderWidth: 1,
+            borderColor: colors.borderLight,
             ...Platform.select({
                 web: { transition: 'all 0.2s ease' } as any,
             }),
         },
         cityItemIconActive: {
             backgroundColor: colors.brand,
-            ...Platform.select({
-                web: {
-                    boxShadow: '0 2px 8px rgba(255, 146, 43, 0.3)',
-                } as any,
-            }),
+            borderColor: colors.brandAlpha30,
         },
         cityItemText: {
             color: colors.text,
@@ -320,16 +323,14 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
             paddingHorizontal: spacing.xs,
             paddingVertical: 2,
             borderRadius: radii.full,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
             minWidth: 24,
             alignItems: 'center',
         },
         cityItemCountActive: {
             backgroundColor: colors.brand,
-            ...Platform.select({
-                web: {
-                    boxShadow: '0 1px 4px rgba(255, 146, 43, 0.3)',
-                } as any,
-            }),
+            borderColor: colors.brandAlpha30,
         },
         cityItemCountText: {
             color: colors.textMuted,
@@ -359,9 +360,10 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
         radiusChip: {
             paddingHorizontal: spacing.sm,
             paddingVertical: spacing.xs,
-            borderRadius: radii.full,
+            borderRadius: CONTROL_RADIUS,
             backgroundColor: colors.backgroundSecondary,
-            borderWidth: 0,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
             minWidth: 48,
             minHeight: isMobileW ? DESIGN_TOKENS.touchTarget.minHeight : 30,
             alignItems: 'center',
@@ -375,9 +377,10 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
         },
         radiusChipActive: {
             backgroundColor: colors.brand,
+            borderColor: colors.brandAlpha30,
             ...Platform.select({
                 web: {
-                    boxShadow: '0 2px 8px rgba(255, 146, 43, 0.3)',
+                    boxShadow: ((colors.boxShadows as any)?.light ?? DESIGN_TOKENS.shadows.light) as any,
                     transform: 'scale(1.02)',
                 } as any,
             }),
@@ -420,7 +423,7 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
                     zIndex: 10,
                     backdropFilter: 'blur(16px)',
                     WebkitBackdropFilter: 'blur(16px)',
-                    backgroundColor: 'rgba(253, 252, 251, 0.92)',
+                    backgroundColor: colors.surface,
                 } as any,
             }),
         },
@@ -523,9 +526,11 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
             backgroundColor: colors.backgroundSecondary,
             paddingHorizontal: spacing.md,
             paddingVertical: spacing.sm,
-            borderRadius: radii.full,
-            borderWidth: 0,
+            borderRadius: CONTROL_RADIUS,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
             flexShrink: 0,
+            minHeight: DESIGN_TOKENS.touchTarget.minHeight,
             ...Platform.select({
                 web: { 
                     cursor: 'pointer',
@@ -548,7 +553,7 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.4)',
+                    backgroundColor: colors.overlay,
                     backdropFilter: 'blur(4px)',
                     WebkitBackdropFilter: 'blur(4px)',
                     zIndex: 999,
@@ -568,7 +573,10 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
                     width: 340,
                     maxWidth: '88vw',
                     zIndex: 1000,
-                    boxShadow: '4px 0 24px rgba(0,0,0,0.12)',
+                    borderTopRightRadius: PANEL_RADIUS,
+                    borderBottomRightRadius: PANEL_RADIUS,
+                    overflow: 'hidden',
+                    boxShadow: ((colors.boxShadows as any)?.modal ?? DESIGN_TOKENS.shadows.modal) as any,
                     animationKeyframes: 'slideInLeft',
                     animationDuration: '0.25s',
                     animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',

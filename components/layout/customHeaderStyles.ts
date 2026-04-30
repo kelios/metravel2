@@ -2,6 +2,10 @@ import { Platform, StatusBar, StyleSheet } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import type { ThemedColors } from '@/hooks/useTheme';
 
+const PANEL_RADIUS = DESIGN_TOKENS.radii.lg;
+const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm;
+const CONTROL_SIZE = 40;
+
 /**
  * Creates styles for CustomHeader component.
  * Extracted to reduce component file size and improve maintainability.
@@ -254,66 +258,91 @@ export const createCustomHeaderStyles = (colors: ThemedColors, isMobile: boolean
       flex: 1,
       backgroundColor: colors.overlay,
       justifyContent: 'flex-end',
+      ...(Platform.OS === 'web'
+        ? ({
+            position: 'fixed',
+            inset: 0,
+            zIndex: 6000,
+          } as any)
+        : null),
     },
     modalContent: {
       backgroundColor: colors.surface,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-      maxHeight: '80%',
-      paddingBottom: 20,
+      borderTopLeftRadius: PANEL_RADIUS,
+      borderTopRightRadius: PANEL_RADIUS,
+      maxHeight: '86%',
+      paddingBottom: 12,
+      overflow: 'hidden',
+      borderWidth: Platform.OS === 'web' ? StyleSheet.hairlineWidth : 0,
+      borderColor: colors.borderLight,
+      zIndex: 6001,
+      ...Platform.select({
+        web: {
+          position: 'relative',
+          boxShadow: ((colors.boxShadows as any)?.modal ?? DESIGN_TOKENS.shadows.modal) as any,
+          backdropFilter: 'blur(18px) saturate(1.05)' as any,
+          WebkitBackdropFilter: 'blur(18px) saturate(1.05)' as any,
+        } as any,
+      }),
     },
     modalHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingHorizontal: 20,
-      paddingVertical: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.border,
+      borderBottomColor: colors.borderLight,
     },
     modalTitle: {
       fontSize: 18,
-      fontWeight: '600',
+      fontWeight: '800',
       color: colors.text,
     },
     modalCloseButton: {
-      padding: 4,
-      minWidth: 44,
-      minHeight: 44,
+      width: CONTROL_SIZE,
+      height: CONTROL_SIZE,
+      borderRadius: CONTROL_RADIUS,
       alignItems: 'center',
       justifyContent: 'center',
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
     },
     modalNavContainer: {
-      paddingVertical: 8,
+      paddingVertical: 10,
     },
     modalSectionTitle: {
-      paddingHorizontal: 20,
-      paddingVertical: 10,
-      fontSize: 13,
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      paddingBottom: 6,
+      fontSize: 11,
       color: colors.textMuted,
       fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
-      textTransform: 'capitalize',
+      textTransform: 'uppercase',
       letterSpacing: 0.6,
     },
     modalNavItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 20,
-      paddingVertical: 16,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
       gap: 12,
-      minHeight: 48,
+      minHeight: 46,
+      marginHorizontal: 10,
+      borderRadius: CONTROL_RADIUS,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: 'transparent',
     },
     modalNavItemHover: {
-      backgroundColor: colors.primarySoft,
+      backgroundColor: colors.surfaceMuted,
     },
     modalNavItemActive: {
       backgroundColor: colors.primaryLight,
-      borderLeftWidth: 3,
-      borderLeftColor: colors.primary,
-      paddingLeft: 17,
+      borderColor: colors.primaryAlpha30,
     },
     modalNavLabel: {
-      fontSize: 16,
+      fontSize: 15,
       color: colors.textMuted,
       fontWeight: '500',
       flex: 1,
@@ -324,8 +353,9 @@ export const createCustomHeaderStyles = (colors: ThemedColors, isMobile: boolean
     },
     modalDivider: {
       height: 1,
-      backgroundColor: colors.border,
+      backgroundColor: colors.borderLight,
       marginVertical: 8,
+      marginHorizontal: 16,
     },
   });
 

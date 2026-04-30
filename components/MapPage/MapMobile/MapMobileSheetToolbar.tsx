@@ -46,6 +46,7 @@ const MapMobileSheetToolbarInner: React.FC<MapMobileSheetToolbarProps> = ({
   onOpenList,
   onClose,
   isNarrow,
+  stackSheetToolbar,
   compactSheetActions,
   colors,
   styles,
@@ -64,9 +65,15 @@ const MapMobileSheetToolbarInner: React.FC<MapMobileSheetToolbarProps> = ({
         styles.sheetToolbar,
         isQuarterListPreview && styles.sheetToolbarPreview,
         styles.sheetToolbarInline,
+        stackSheetToolbar && styles.sheetToolbarStacked,
       ]}
     >
-      <View style={styles.sheetToolbarLeft}>
+      <View
+        style={[
+          styles.sheetToolbarLeft,
+          stackSheetToolbar && styles.sheetToolbarLeftStacked,
+        ]}
+      >
         <SegmentedControl
           options={panelTabsOptions}
           value={uiTab}
@@ -100,6 +107,7 @@ const MapMobileSheetToolbarInner: React.FC<MapMobileSheetToolbarProps> = ({
           styles.sheetToolbarActions,
           isQuarterListPreview && styles.sheetToolbarActionsPreview,
           showSheetCloseButton && styles.sheetToolbarActionsFloatingClose,
+          stackSheetToolbar && styles.sheetToolbarActionsStacked,
         ]}
       >
         {isQuarterListPreview && (

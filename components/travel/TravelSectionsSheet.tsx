@@ -22,6 +22,10 @@ const GROUP_LABELS: Record<GroupKey, string> = {
   extra: "Ещё на странице",
 }
 
+const PANEL_RADIUS = DESIGN_TOKENS.radii.lg
+const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm
+const CONTROL_SIZE = 40
+
 const getGroupKey = (key: string): GroupKey => {
   if (
     key === "gallery" ||
@@ -195,12 +199,22 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
         },
         sheet: {
           backgroundColor: colors.surface,
-          borderTopLeftRadius: 16,
-          borderTopRightRadius: 16,
+          borderTopLeftRadius: PANEL_RADIUS,
+          borderTopRightRadius: PANEL_RADIUS,
           padding: 12,
-          maxHeight: "75%" as any,
+          maxHeight: "80%" as any,
           zIndex: 1,
           elevation: 2,
+          borderWidth: Platform.OS === "web" ? StyleSheet.hairlineWidth : 0,
+          borderColor: colors.borderLight,
+          ...(Platform.OS === "web"
+            ? ({
+                boxShadow:
+                  (colors.boxShadows as any)?.modal ?? DESIGN_TOKENS.shadows.modal,
+                backdropFilter: "blur(18px) saturate(1.05)",
+                WebkitBackdropFilter: "blur(18px) saturate(1.05)",
+              } as any)
+            : null),
         },
         header: {
           flexDirection: "row",
@@ -215,10 +229,12 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
           color: colors.text,
         },
         closeBtn: {
-          padding: 12,
-          borderRadius: 999,
-          minWidth: 44,
-          minHeight: 44,
+          width: CONTROL_SIZE,
+          height: CONTROL_SIZE,
+          borderRadius: CONTROL_RADIUS,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: colors.borderLight,
+          backgroundColor: colors.backgroundSecondary,
           alignItems: 'center' as const,
           justifyContent: 'center' as const,
         },
@@ -250,9 +266,10 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
           justifyContent: "space-between",
           paddingVertical: 12,
           paddingHorizontal: 10,
-          borderRadius: 12,
+          borderRadius: CONTROL_RADIUS,
           borderWidth: 1,
           borderColor: 'transparent',
+          minHeight: 46,
         },
         itemActive: {
           backgroundColor: colors.primarySoft,

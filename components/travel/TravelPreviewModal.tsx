@@ -164,10 +164,12 @@ const TravelPreviewModal: React.FC<TravelPreviewModalProps> = ({
     );
 };
 
+const CONTROL_SIZE = 40;
+
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: colors.overlay,
         justifyContent: 'center',
         alignItems: 'center',
         padding: DESIGN_TOKENS.spacing.md,
@@ -183,17 +185,24 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         maxHeight: '80%',
         backgroundColor: colors.surface,
         borderRadius: DESIGN_TOKENS.radii.lg,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+        overflow: 'hidden',
         ...(Platform.OS === 'web'
-            ? ({ boxShadow: DESIGN_TOKENS.shadows.modal } as any)
+            ? ({
+                boxShadow:
+                    (colors.boxShadows as any)?.modal ?? DESIGN_TOKENS.shadows.modal,
+            } as any)
             : {}),
     },
     modalHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: DESIGN_TOKENS.spacing.lg,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
+        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+        paddingVertical: DESIGN_TOKENS.spacing.md,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: colors.borderLight,
     },
     modalTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.lg,
@@ -201,7 +210,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         color: colors.text,
     },
     closeButton: {
-        padding: DESIGN_TOKENS.spacing.xs,
+        width: CONTROL_SIZE,
+        height: CONTROL_SIZE,
+        borderRadius: DESIGN_TOKENS.radii.sm,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.backgroundSecondary,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: colors.borderLight,
     },
     scrollView: {
         flex: 1,
@@ -213,10 +229,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.surface,
         borderRadius: DESIGN_TOKENS.radii.md,
         borderWidth: 1,
-        borderColor: colors.border,
+        borderColor: colors.borderLight,
         overflow: 'hidden',
         ...(Platform.OS === 'web'
-            ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any)
+            ? ({
+                boxShadow:
+                    (colors.boxShadows as any)?.card ?? DESIGN_TOKENS.shadows.card,
+            } as any)
             : {}),
     },
     cardImage: {

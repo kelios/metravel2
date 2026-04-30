@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import { Platform, View } from 'react-native'
 
 import { useAuth } from '@/context/AuthContext'
@@ -6,8 +6,8 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { useAvatarUri } from '@/hooks/useAvatarUri'
 import { buildLoginHref } from '@/utils/authNavigation'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
+import AccountMenu from './AccountMenu'
 import CustomHeaderDesktopAccountShell from './CustomHeaderDesktopAccountShell'
-import { AccountMenuLazy } from './customHeaderDesktopLazy'
 import { createAnchorStyles, createAvatarStyles, createCtaLoginStyles } from './headerStyles'
 
 type CustomHeaderDesktopAccountSectionProps = {
@@ -29,7 +29,7 @@ export default function CustomHeaderDesktopAccountSection({
   const ctaStyles = useMemo(() => createCtaLoginStyles(colors), [colors])
 
   const preloadMenu = useCallback(() => {
-    setMenuRequested(true)
+    // Account menu is rendered on demand; keep this as a stable no-op for shell hover/focus.
   }, [])
 
   const requestMenuOpen = useCallback(() => {
@@ -48,29 +48,10 @@ export default function CustomHeaderDesktopAccountSection({
     }
   }, [])
 
-  // Shell fallback for Suspense — prevents flash of empty space during lazy load
-  const shellFallback = (
-    <CustomHeaderDesktopAccountShell
-      anchorStyles={anchorStyles}
-      avatarStyles={avatarStyles}
-      colors={colors}
-      ctaStyles={ctaStyles}
-      displayName={displayName}
-      isAuthenticated={isAuthenticated}
-      onAvatarError={() => setAvatarLoadError(true)}
-      onLoginPress={handleLoginPress}
-      onPreloadMenu={preloadMenu}
-      testIdSuffix="fallback"
-      userAvatarUri={avatarUri}
-    />
-  )
-
   if (menuRequested) {
     return (
       <View style={styles.rightSection}>
-        <Suspense fallback={shellFallback}>
-          <AccountMenuLazy initialOpenKey={openOnLoadKey} />
-        </Suspense>
+        <AccountMenu initialOpenKey={openOnLoadKey} />
       </View>
     )
   }

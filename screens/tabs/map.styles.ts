@@ -11,6 +11,9 @@ const DESKTOP_SHELL_PADDING = METRICS.spacing.m;
 const TRANSITION_MS = 200;
 const WEB_MOBILE_FOOTER_RESERVE_HEIGHT = LAYOUT?.tabBarHeight ?? 56;
 const WEB_HEADER_RESERVED_HEIGHT = 88;
+const PANEL_RADIUS = 20;
+const CONTROL_RADIUS = 12;
+const CONTROL_SIZE = 40;
 
 export const getStyles = (
   isMobile: boolean,
@@ -66,14 +69,12 @@ export const getStyles = (
               height: '100%',
               minHeight: isMobile ? 220 : 0,
               minWidth: 0,
-              borderRadius: isMobile ? 0 : 24,
+              borderRadius: isMobile ? 0 : PANEL_RADIUS,
               overflow: 'hidden',
               backgroundColor: themedColors.surfaceAlpha40,
               borderWidth: isMobile ? 0 : StyleSheet.hairlineWidth,
               borderColor: themedColors.borderLight,
-              boxShadow: isMobile
-                ? 'none'
-                : '0 20px 44px rgba(15,23,42,0.08), 0 2px 8px rgba(15,23,42,0.04)',
+              boxShadow: isMobile ? 'none' : themedColors.boxShadows.card,
             } as any)
           : null),
       },
@@ -96,14 +97,14 @@ export const getStyles = (
               alignSelf: isMobile ? 'auto' : 'stretch',
               backgroundColor: themedColors.surface,
               boxShadow: isMobile
-                ? '0 16px 36px rgba(15,23,42,0.08), 0 4px 14px rgba(15,23,42,0.05)'
-                : '0 24px 56px rgba(15,23,42,0.10), 0 6px 18px rgba(15,23,42,0.05)',
+                ? themedColors.boxShadows.medium
+                : themedColors.boxShadows.card,
               backdropFilter: 'blur(20px) saturate(1.05)',
               WebkitBackdropFilter: 'blur(20px) saturate(1.05)',
-              borderTopLeftRadius: isMobile ? 18 : 22,
-              borderTopRightRadius: isMobile ? 18 : 22,
-              borderBottomLeftRadius: isMobile ? 0 : 24,
-              borderBottomRightRadius: isMobile ? 0 : 24,
+              borderTopLeftRadius: isMobile ? 18 : PANEL_RADIUS,
+              borderTopRightRadius: isMobile ? 18 : PANEL_RADIUS,
+              borderBottomLeftRadius: isMobile ? 0 : PANEL_RADIUS,
+              borderBottomRightRadius: isMobile ? 0 : PANEL_RADIUS,
               borderWidth: 1,
               borderColor: themedColors.borderLight,
               overflow: isMobile ? 'hidden' : 'visible',
@@ -142,8 +143,8 @@ export const getStyles = (
         flexDirection: 'row',
         alignItems: 'center',
         paddingTop: isMobile ? Math.max(10, insetTop + 2) : 14,
-        paddingBottom: isMobile ? 8 : 12,
-        paddingHorizontal: isMobile ? 10 : 14,
+        paddingBottom: isMobile ? 8 : 10,
+        paddingHorizontal: isMobile ? 10 : 12,
         backgroundColor: themedColors.surface,
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: themedColors.borderLight,
@@ -154,14 +155,14 @@ export const getStyles = (
               backgroundColor: isMobile ? themedColors.surfaceAlpha40 : themedColors.surface,
               backdropFilter: 'blur(20px) saturate(1.05)',
               WebkitBackdropFilter: 'blur(20px) saturate(1.05)',
-              boxShadow: '0 1px 0 rgba(15,23,42,0.06), 0 2px 10px rgba(15,23,42,0.03)',
+              boxShadow: '0 1px 0 rgba(15,23,42,0.06)',
             } as any)
           : null),
       },
       tabsSegment: {
         flexDirection: 'row',
         backgroundColor: themedColors.backgroundSecondary,
-        borderRadius: 18,
+        borderRadius: 14,
         padding: 3,
         columnGap: 2,
         alignSelf: isMobile ? 'flex-start' : 'stretch',
@@ -176,7 +177,7 @@ export const getStyles = (
         justifyContent: 'center',
         paddingVertical: isMobile ? 7 : 9,
         paddingHorizontal: isMobile ? 12 : 10,
-        borderRadius: 14,
+        borderRadius: 11,
         gap: 6,
         minWidth: isMobile ? 48 : undefined,
         minHeight: isMobile ? 34 : 36,
@@ -225,9 +226,9 @@ export const getStyles = (
           : null),
       },
       resetButton: {
-        width: 32,
-        height: 32,
-        borderRadius: 9,
+        width: CONTROL_SIZE,
+        height: CONTROL_SIZE,
+        borderRadius: CONTROL_RADIUS,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: themedColors.surfaceAlpha40,
@@ -239,9 +240,9 @@ export const getStyles = (
         } as any) : null),
       },
       closePanelButton: {
-        width: 32,
-        height: 32,
-        borderRadius: 9,
+        width: CONTROL_SIZE,
+        height: CONTROL_SIZE,
+        borderRadius: CONTROL_RADIUS,
         backgroundColor: themedColors.surfaceAlpha40,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: themedColors.borderLight,
@@ -321,7 +322,7 @@ export const getStyles = (
         marginTop: 6,
         marginBottom: 6,
         backgroundColor: themedColors.surface,
-        borderRadius: 20,
+        borderRadius: PANEL_RADIUS,
         borderWidth: 1,
         borderColor: themedColors.borderLight,
         ...(Platform.OS === 'web'
@@ -329,14 +330,14 @@ export const getStyles = (
               backgroundColor: themedColors.surface,
               backdropFilter: 'blur(18px)',
               WebkitBackdropFilter: 'blur(18px)',
-              boxShadow: '0 18px 34px rgba(15,23,42,0.08), 0 2px 8px rgba(15,23,42,0.04)',
+              boxShadow: themedColors.boxShadows.card,
             } as any)
           : null),
       },
       collapseToggle: {
-        width: 32,
-        height: 32,
-        borderRadius: 9,
+        width: CONTROL_SIZE,
+        height: CONTROL_SIZE,
+        borderRadius: CONTROL_RADIUS,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: themedColors.surfaceAlpha40,
@@ -350,9 +351,9 @@ export const getStyles = (
         position: 'absolute',
         top: 16,
         right: -16,
-        width: 32,
-        height: 32,
-        borderRadius: 16,
+        width: CONTROL_SIZE,
+        height: CONTROL_SIZE,
+        borderRadius: CONTROL_RADIUS,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: themedColors.surface,
@@ -364,15 +365,15 @@ export const getStyles = (
               cursor: 'pointer',
               backdropFilter: 'blur(16px)',
               WebkitBackdropFilter: 'blur(16px)',
-              boxShadow: '0 8px 20px rgba(15,23,42,0.14), 0 1px 4px rgba(15,23,42,0.08)',
+              boxShadow: themedColors.boxShadows.medium,
               transition: 'background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease',
             } as any)
           : null),
       },
       collapsedIconBtn: {
-        width: 36,
-        height: 36,
-        borderRadius: 9,
+        width: CONTROL_SIZE,
+        height: CONTROL_SIZE,
+        borderRadius: CONTROL_RADIUS,
         alignItems: 'center',
         justifyContent: 'center',
         ...(Platform.OS === 'web'

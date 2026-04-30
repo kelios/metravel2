@@ -138,6 +138,19 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
     marginLeft: 8,
     flexShrink: 1,
   },
+  filtersModalShell: {
+    flex: 1,
+    backgroundColor: colors.background,
+    ...Platform.select({
+      web: {
+        position: 'fixed',
+        inset: 0,
+        zIndex: 6000,
+        minHeight: '100dvh',
+        overflow: 'hidden',
+      } as any,
+    }),
+  },
   resultsContainer: {
     flexGrow: 1,
     flexShrink: 0,

@@ -20,6 +20,8 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
 const BOTTOM_SHEET_MAX_WIDTH = 430
 const WEB_MOBILE_BOTTOM_CHROME_INSET = 104
+const PANEL_RADIUS = 20
+const CONTROL_RADIUS = 12
 
 interface AnchorRect {
   x: number
@@ -249,13 +251,13 @@ const getStyles = (colors: ThemedColors): Styles =>
     popover: {
       position: 'absolute',
       backgroundColor: colors.surface,
-      borderRadius: 16,
+      borderRadius: PANEL_RADIUS,
       borderWidth: 1,
       borderColor: colors.border,
       overflow: 'hidden',
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: '0 20px 44px rgba(17,24,39,0.18), 0 6px 18px rgba(17,24,39,0.10)',
+            boxShadow: colors.boxShadows.modal,
           } as any)
         : colors.shadows.medium),
     },
@@ -284,8 +286,8 @@ const getStyles = (colors: ThemedColors): Styles =>
     },
     sheetContainer: {
       backgroundColor: colors.surface,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
+      borderTopLeftRadius: PANEL_RADIUS,
+      borderTopRightRadius: PANEL_RADIUS,
       paddingTop: 0,
       paddingBottom: 12,
       maxHeight: '90%',
@@ -293,7 +295,7 @@ const getStyles = (colors: ThemedColors): Styles =>
       ...(Platform.OS === 'web'
         ? ({
             zIndex: 6001,
-            boxShadow: '0 -14px 40px rgba(15,23,42,0.18)',
+            boxShadow: colors.boxShadows.modal,
           } as any)
         : null),
     },
@@ -326,7 +328,7 @@ const getStyles = (colors: ThemedColors): Styles =>
     closeButton: {
       width: 36,
       height: 36,
-      borderRadius: 18,
+      borderRadius: CONTROL_RADIUS,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.backgroundSecondary ?? colors.surface,

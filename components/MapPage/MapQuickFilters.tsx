@@ -71,6 +71,8 @@ const MOBILE_WEB_CONTROLS_CLEARANCE = 80
 const DESKTOP_RADIUS_CLUSTER_MIN_WIDTH = 228
 const DESKTOP_FILTER_FIELD_MIN_WIDTH = 172
 const DESKTOP_TOOLBAR_MAX_WIDTH = 860
+const CONTROL_RADIUS = 12
+const TOOLBAR_RADIUS = 18
 const ICON_ONLY_LEADING_ACTION_KEYS = new Set(['locate', 'zoom-in', 'zoom-out'])
 const ICON_ONLY_TRAILING_ACTION_KEYS = new Set(['list'])
 
@@ -718,14 +720,14 @@ const getStyles = (
       alignSelf: 'flex-start',
       ...(Platform.OS === 'web' && !options.isNarrow
         ? ({
-            padding: 6,
-            borderRadius: 20,
+            padding: 5,
+            borderRadius: TOOLBAR_RADIUS,
             backgroundColor: colors.surfaceElevated,
             borderWidth: StyleSheet.hairlineWidth,
             borderColor: colors.border,
             backdropFilter: 'blur(18px) saturate(1.05)',
             WebkitBackdropFilter: 'blur(18px) saturate(1.05)',
-            boxShadow: '0 18px 34px rgba(15,23,42,0.14), 0 2px 8px rgba(15,23,42,0.08)',
+            boxShadow: colors.boxShadows.card,
           } as any)
         : null),
     },
@@ -764,7 +766,7 @@ const getStyles = (
       alignItems: 'center',
       minHeight: options.isVeryNarrow ? 36 : options.isNarrow ? 38 : 40,
       minWidth: options.isNarrow ? 0 : DESKTOP_RADIUS_CLUSTER_MIN_WIDTH,
-      borderRadius: 14,
+      borderRadius: CONTROL_RADIUS,
       backgroundColor:
         Platform.OS === 'web' ? colors.surfaceElevated : colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
@@ -775,7 +777,7 @@ const getStyles = (
         ? ({
             backdropFilter: 'blur(20px) saturate(1.12)',
             WebkitBackdropFilter: 'blur(20px) saturate(1.12)',
-            boxShadow: '0 8px 18px rgba(15,23,42,0.15), 0 1px 4px rgba(15,23,42,0.08)',
+            boxShadow: colors.boxShadows.medium,
           } as any)
         : colors.shadows.light),
     },
@@ -788,7 +790,7 @@ const getStyles = (
     radiusActionButton: {
       width: options.isVeryNarrow ? 28 : options.isNarrow ? 30 : 32,
       height: options.isVeryNarrow ? 28 : options.isNarrow ? 30 : 32,
-      borderRadius: options.isVeryNarrow ? 9 : 10,
+      borderRadius: options.isVeryNarrow ? 10 : CONTROL_RADIUS,
       alignItems: 'center',
       justifyContent: 'center',
       ...(Platform.OS === 'web'
@@ -819,7 +821,7 @@ const getStyles = (
       paddingHorizontal: options.isVeryNarrow ? 8 : 10,
       paddingVertical: 4,
       backgroundColor: 'transparent',
-      borderRadius: 14,
+      borderRadius: CONTROL_RADIUS,
       ...(Platform.OS === 'web'
         ? ({
             cursor: 'pointer',
@@ -836,7 +838,7 @@ const getStyles = (
       minHeight: options.isVeryNarrow ? 36 : options.isNarrow ? 38 : 40,
       paddingHorizontal: options.isVeryNarrow ? 10 : 12,
       paddingVertical: 4,
-      borderRadius: 14,
+      borderRadius: CONTROL_RADIUS,
       backgroundColor:
         Platform.OS === 'web' ? colors.surfaceElevated : colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
@@ -845,7 +847,7 @@ const getStyles = (
         ? ({
             backdropFilter: 'blur(20px) saturate(1.12)',
             WebkitBackdropFilter: 'blur(20px) saturate(1.12)',
-            boxShadow: '0 8px 18px rgba(15,23,42,0.15), 0 1px 4px rgba(15,23,42,0.08)',
+            boxShadow: colors.boxShadows.medium,
             cursor: 'pointer',
             transition: 'transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease',
           } as any)
@@ -864,7 +866,7 @@ const getStyles = (
       height: options.isVeryNarrow ? 36 : options.isNarrow ? 40 : 42,
       flexBasis: options.isVeryNarrow ? 36 : options.isNarrow ? 40 : 42,
       flexShrink: 0,
-      borderRadius: options.isVeryNarrow ? 12 : 14,
+      borderRadius: CONTROL_RADIUS,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor:
@@ -875,7 +877,7 @@ const getStyles = (
         ? ({
             backdropFilter: 'blur(18px) saturate(1.08)',
             WebkitBackdropFilter: 'blur(18px) saturate(1.08)',
-            boxShadow: '0 8px 18px rgba(15,23,42,0.15), 0 1px 4px rgba(15,23,42,0.08)',
+            boxShadow: colors.boxShadows.medium,
             cursor: 'pointer',
           } as any)
         : colors.shadows.light),
@@ -886,7 +888,7 @@ const getStyles = (
       height: options.isVeryNarrow ? 36 : options.isNarrow ? 40 : 42,
       paddingHorizontal: options.isVeryNarrow ? 8 : 10,
       flexShrink: 0,
-      borderRadius: options.isVeryNarrow ? 12 : 14,
+      borderRadius: CONTROL_RADIUS,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor:
@@ -897,7 +899,7 @@ const getStyles = (
         ? ({
             backdropFilter: 'blur(18px) saturate(1.08)',
             WebkitBackdropFilter: 'blur(18px) saturate(1.08)',
-            boxShadow: '0 8px 18px rgba(15,23,42,0.15), 0 1px 4px rgba(15,23,42,0.08)',
+            boxShadow: colors.boxShadows.medium,
             cursor: 'pointer',
           } as any)
         : colors.shadows.light),

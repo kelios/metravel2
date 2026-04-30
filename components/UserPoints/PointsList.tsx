@@ -482,6 +482,8 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 
 export type PointsListStyles = Record<string, any>;
 
+const PANEL_RADIUS = DESIGN_TOKENS.radii.lg;
+const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm;
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
@@ -680,7 +682,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: DESIGN_TOKENS.spacing.lg,
+    padding: DESIGN_TOKENS.spacing.md,
   },
   actionsBackdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -690,10 +692,19 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     width: '100%',
     maxWidth: 420,
     backgroundColor: colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.lg,
-    padding: DESIGN_TOKENS.spacing.lg,
+    borderRadius: PANEL_RADIUS,
+    padding: DESIGN_TOKENS.spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderLight,
+    overflow: 'hidden',
+    ...Platform.select({
+      web: {
+        boxShadow: ((colors.boxShadows as any)?.modal ?? DESIGN_TOKENS.shadows.modal) as any,
+      } as any,
+      default: {
+        ...DESIGN_TOKENS.shadowsNative.medium,
+      },
+    }),
   },
   actionsTitle: {
     fontSize: DESIGN_TOKENS.typography.sizes.lg,
@@ -708,7 +719,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: DESIGN_TOKENS.spacing.lg,
+    padding: DESIGN_TOKENS.spacing.md,
   },
   manualBackdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -717,17 +728,25 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   manualModal: {
     width: '100%',
     maxWidth: 680,
-    maxHeight: '85%',
+    maxHeight: '88%',
     backgroundColor: colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.lg,
+    borderRadius: PANEL_RADIUS,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderLight,
+    ...Platform.select({
+      web: {
+        boxShadow: ((colors.boxShadows as any)?.modal ?? DESIGN_TOKENS.shadows.modal) as any,
+      } as any,
+      default: {
+        ...DESIGN_TOKENS.shadowsNative.medium,
+      },
+    }),
   },
   manualHeader: {
-    padding: DESIGN_TOKENS.spacing.lg,
+    padding: DESIGN_TOKENS.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderLight,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -743,7 +762,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flex: 1,
   },
   manualScrollContent: {
-    padding: DESIGN_TOKENS.spacing.lg,
+    padding: DESIGN_TOKENS.spacing.md,
   },
   manualColorRow: {
     flexDirection: 'row',
@@ -751,16 +770,23 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     gap: 8,
   },
   manualInput: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.backgroundSecondary,
     padding: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md,
+    borderRadius: CONTROL_RADIUS,
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     color: colors.text,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderLight,
+    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+    ...Platform.select({
+      web: {
+        outlineWidth: 0,
+      } as any,
+    }),
   },
   coordsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: DESIGN_TOKENS.spacing.sm,
   },
   coordsCol: {
@@ -768,9 +794,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     minWidth: 120,
   },
   manualFooter: {
-    padding: DESIGN_TOKENS.spacing.lg,
+    padding: DESIGN_TOKENS.spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: colors.borderLight,
+    backgroundColor: colors.surface,
   },
   modalSpacing: {
     marginTop: DESIGN_TOKENS.spacing.sm,
@@ -785,13 +812,19 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   searchInput: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.backgroundSecondary,
     padding: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md,
+    borderRadius: CONTROL_RADIUS,
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     color: colors.text,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderLight,
+    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+    ...Platform.select({
+      web: {
+        outlineWidth: 0,
+      } as any,
+    }),
   },
   headerDivider: {
     height: 1,
@@ -802,9 +835,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   filterButton: {
     backgroundColor: colors.backgroundSecondary,
     padding: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md,
+    borderRadius: CONTROL_RADIUS,
     alignItems: 'center',
     marginBottom: DESIGN_TOKENS.spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   filterButtonText: {
     color: colors.text,

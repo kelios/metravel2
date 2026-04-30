@@ -60,7 +60,7 @@ export function ProfileMenu({ onLogout, onSettings }: ProfileMenuProps) {
       borderRadius: DESIGN_TOKENS.radii.sm,
     },
     triggerPressed: {
-      backgroundColor: colors.backgroundSecondary,
+      backgroundColor: colors.surfaceMuted,
     },
     overlay: {
       flex: 1,
@@ -70,13 +70,19 @@ export function ProfileMenu({ onLogout, onSettings }: ProfileMenuProps) {
       position: 'absolute',
       right: DESIGN_TOKENS.spacing.md,
       backgroundColor: colors.surface,
-      borderRadius: DESIGN_TOKENS.radii.md,
+      borderRadius: DESIGN_TOKENS.radii.lg,
       borderWidth: 1,
-      borderColor: colors.border,
-      minWidth: 180,
+      borderColor: colors.borderLight,
+      minWidth: 220,
+      paddingVertical: DESIGN_TOKENS.spacing.xs,
       overflow: 'hidden',
       ...Platform.select({
-        web: { boxShadow: colors.boxShadows.medium } as any,
+        web: {
+          boxShadow:
+            (colors.boxShadows as any)?.modal ??
+            (colors.boxShadows as any)?.medium ??
+            DESIGN_TOKENS.shadows.modal,
+        } as any,
         default: { elevation: 4 },
       }),
     },
@@ -84,12 +90,14 @@ export function ProfileMenu({ onLogout, onSettings }: ProfileMenuProps) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: DESIGN_TOKENS.spacing.sm,
-      paddingHorizontal: DESIGN_TOKENS.spacing.md,
+      marginHorizontal: DESIGN_TOKENS.spacing.xs,
+      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
       paddingVertical: DESIGN_TOKENS.spacing.sm,
       minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+      borderRadius: DESIGN_TOKENS.radii.sm,
     },
     menuItemPressed: {
-      backgroundColor: colors.backgroundSecondary,
+      backgroundColor: colors.surfaceMuted,
     },
     menuItemText: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
@@ -98,7 +106,10 @@ export function ProfileMenu({ onLogout, onSettings }: ProfileMenuProps) {
     },
     menuItemDanger: {
       borderTopWidth: 1,
-      borderTopColor: colors.border,
+      borderTopColor: colors.borderLight,
+      borderRadius: 0,
+      marginTop: DESIGN_TOKENS.spacing.xs,
+      paddingTop: DESIGN_TOKENS.spacing.md,
     },
     menuItemTextDanger: {
       color: colors.danger,

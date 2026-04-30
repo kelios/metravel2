@@ -62,11 +62,14 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
   const { isAuthenticated, username, logout, userId, userAvatar, profileRefreshToken } = useAuth();
   const { favorites } = useFavorites();
   const colors = useThemedColors();
-  const [visible, setVisible] = useState(false);
+  const shouldOpenInitially = initialOpenKey > 0;
+  const [visible, setVisible] = useState(shouldOpenInitially);
   const [hovered, setHovered] = useState(false);
   const { avatarUri, setAvatarLoadError } = useAvatarUri({ userAvatar, profileRefreshToken });
   const { count: unreadCount } = useDeferredUnreadCount(isAuthenticated && visible, visible);
-  const lastHandledInitialOpenKeyRef = useRef(0);
+  const lastHandledInitialOpenKeyRef = useRef(
+    shouldOpenInitially ? initialOpenKey : 0,
+  );
   const [expandedSections, setExpandedSections] = useState({
     navigation: true,
     travels: true,

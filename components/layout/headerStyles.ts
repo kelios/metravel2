@@ -2,6 +2,9 @@ import { Platform, StyleSheet } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import type { ThemedColors } from '@/hooks/useTheme';
 
+const PANEL_RADIUS = DESIGN_TOKENS.radii.lg;
+const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm;
+
 /**
  * Shared styles for header components.
  * Eliminates duplication across AccountMenu, DesktopAccountSection, MobileAccountSection.
@@ -15,7 +18,7 @@ export const createAnchorStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surface,
       paddingVertical: 7,
       paddingHorizontal: 12,
-      borderRadius: 20,
+      borderRadius: DESIGN_TOKENS.radii.md,
       maxWidth: 220,
       minHeight: 44,
       minWidth: 44,
@@ -80,7 +83,7 @@ export const createCtaLoginStyles = (colors: ThemedColors) =>
       gap: 6,
       paddingVertical: 8,
       paddingHorizontal: 16,
-      borderRadius: 20,
+      borderRadius: DESIGN_TOKENS.radii.md,
       backgroundColor: colors.primary,
       minHeight: 36,
       ...(Platform.OS === 'web'
@@ -112,17 +115,17 @@ export const createMenuStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     menuContent: {
       backgroundColor: colors.surface,
-      borderRadius: 12,
-      paddingVertical: 6,
-      minWidth: 260,
-      maxWidth: 320,
+      borderRadius: PANEL_RADIUS,
+      paddingVertical: 8,
+      minWidth: 288,
+      maxWidth: 340,
       borderColor: colors.borderLight,
       borderWidth: 1,
       ...(Platform.OS === 'web'
         ? ({
-            marginTop: 4,
+            marginTop: 6,
             boxShadow:
-              (colors.boxShadows as any)?.medium ??
+              (colors.boxShadows as any)?.modal ??
               '0 18px 40px rgba(17, 24, 39, 0.16), 0 6px 14px rgba(17, 24, 39, 0.10)',
           } as any)
         : DESIGN_TOKENS.shadowsNative.light),
@@ -132,8 +135,8 @@ export const createMenuStyles = (colors: ThemedColors) =>
       paddingTop: 8,
       paddingBottom: 4,
       fontSize: 11,
-      letterSpacing: 0.5,
-      textTransform: 'capitalize',
+      letterSpacing: 0.6,
+      textTransform: 'uppercase',
       color: colors.textMuted,
       fontWeight: '600',
     },
@@ -143,6 +146,8 @@ export const createMenuStyles = (colors: ThemedColors) =>
       justifyContent: 'space-between',
       paddingHorizontal: 12,
       paddingVertical: 8,
+      marginHorizontal: 8,
+      borderRadius: CONTROL_RADIUS,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     sectionHeaderText: {
@@ -156,18 +161,18 @@ export const createMenuStyles = (colors: ThemedColors) =>
     },
     sectionDivider: {
       height: 1,
-      backgroundColor: colors.border,
+      backgroundColor: colors.borderLight,
       marginVertical: 4,
-      marginHorizontal: 8,
+      marginHorizontal: 12,
     },
     themeSection: {
       paddingHorizontal: 8,
       paddingVertical: 2,
     },
     menuItem: {
-      borderRadius: 8,
-      marginHorizontal: 6,
-      minHeight: 40,
+      borderRadius: CONTROL_RADIUS,
+      marginHorizontal: 8,
+      minHeight: 44,
       justifyContent: 'center',
     },
     menuItemTitle: {
