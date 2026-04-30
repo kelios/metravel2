@@ -126,6 +126,26 @@ function getRootTitle(pathname: string) {
   return 'Путешествия';
 }
 
+function isBelarusCountryName(value: unknown) {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  return normalized.includes('беларус') || normalized.includes('belarus');
+}
+
+function getTravelReturnContext(normalizedReturnTo: string, travelData: Travel | null | undefined) {
+  if (normalizedReturnTo === '/travelsby' && travelData?.countryName && !isBelarusCountryName(travelData.countryName)) {
+    return {
+      label: truncateLabel(travelData.countryName),
+      path: '/search',
+    };
+  }
+
+  const rootContext = HEADER_NAV_ITEMS.find((i) => i.path === normalizedReturnTo);
+  return {
+    label: rootContext?.label || toTitleFromSegment(normalizedReturnTo.replace(/^\//, '')),
+    path: normalizedReturnTo,
+  };
+}
+
 export function useBreadcrumbModel(): BreadcrumbModel {
   const pathname = usePathname();
   const resolvedPathname = getResolvedPathname(pathname);
@@ -289,23 +309,22 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       const normalizedReturnTo = normalizedReturnToParam.startsWith('/')
         ? normalizedReturnToParam
         : `/${normalizedReturnToParam}`;
-      const rootContext = HEADER_NAV_ITEMS.find((i) => i.path === normalizedReturnTo);
-      const returnLabel = rootContext?.label || toTitleFromSegment(normalizedReturnTo.replace(/^\//, ''));
+      const returnContext = getTravelReturnContext(normalizedReturnTo, travelData);
 
       if (travelSlug && !travelData?.name) {
         return {
           items: [],
           depth: 1,
-          currentTitle: returnLabel,
-          pageContextTitle: returnLabel,
-          backToPath: normalizedReturnTo,
+          currentTitle: returnContext.label,
+          pageContextTitle: returnContext.label,
+          backToPath: returnContext.path,
           showBreadcrumbs: false,
         };
       }
       const travelTitle = truncateLabel(String(travelData?.name || toTitleFromSegment(parts[parts.length - 1] || '')));
 
       const items: BreadcrumbModelItem[] = [
-        { label: returnLabel, path: normalizedReturnTo },
+        { label: returnContext.label, path: returnContext.path },
         { label: travelTitle, path: p },
       ];
 
@@ -313,8 +332,8 @@ export function useBreadcrumbModel(): BreadcrumbModel {
         items,
         depth: items.length + 1,
         currentTitle: travelTitle,
-        pageContextTitle: returnLabel,
-        backToPath: normalizedReturnTo,
+        pageContextTitle: returnContext.label,
+        backToPath: returnContext.path,
         showBreadcrumbs: true,
       };
     }
@@ -405,7 +424,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       backToPath,
       showBreadcrumbs: computed.length >= 1,
     };
-  }, [resolvedPathname, normalizedReturnToParam, travelData?.name, travelSlug, questApiTitle, userProfileName]);
+  }, [resolvedPathname, normalizedReturnToParam, travelData, travelSlug, questApiTitle, userProfileName]);
 }
 
 export default useBreadcrumbModel;

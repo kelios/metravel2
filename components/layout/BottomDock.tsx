@@ -17,6 +17,7 @@ import { globalFocusStyles } from "@/styles/globalFocus";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useAndroidBackHandler } from "@/hooks/useAndroidBackHandler";
 import { hapticSelection } from "@/utils/haptics";
+import BelarusOutlineIcon from './BelarusOutlineIcon';
 import {
   BOTTOM_DOCK_ITEM_DEFS,
   BOTTOM_DOCK_MORE_MENU_SECTIONS,
@@ -51,6 +52,9 @@ type DockItem = {
 };
 
 const MOBILE_DOCK_HEIGHT_WEB = 56;
+const PANEL_RADIUS = DESIGN_TOKENS.radii.lg;
+const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm;
+const COMPACT_CONTROL_RADIUS = 8;
 
 const DockButton = memo(function DockButton({
   label,
@@ -217,7 +221,12 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
           label: def.label,
           accessibilityLabel: def.accessibilityLabel,
           route: def.route,
-          icon: <Feather name={def.iconName} size={22} color={iconColor} />,
+          icon:
+            def.iconName === 'belarus-outline' ? (
+              <BelarusOutlineIcon size={22} color={iconColor} />
+            ) : (
+              <Feather name={def.iconName} size={22} color={iconColor} />
+            ),
           isMore: def.isMore,
         };
       }),
@@ -232,7 +241,11 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
           closeMenu();
           router.push(item.route as any);
         }}
-        style={[styles.moreItem, globalFocusStyles.focusable]}
+        style={({ hovered, pressed }) => [
+          styles.moreItem,
+          (hovered || pressed) && styles.moreItemPressed,
+          globalFocusStyles.focusable,
+        ]}
         android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
         accessibilityRole="link"
         accessibilityLabel={item.accessibilityLabel}
@@ -414,6 +427,8 @@ const createStyles = (
     backgroundColor: colors.surfaceElevated,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderLight,
     overflow: "hidden",
     shadowColor: colors.text,
     shadowOpacity: 0.12,
@@ -450,11 +465,11 @@ const createStyles = (
     paddingHorizontal: isCompactMobileWidth ? 1 : 2,
     paddingVertical: 4,
     minHeight: 44,
-    borderRadius: 8,
+    borderRadius: COMPACT_CONTROL_RADIUS,
   },
   itemActive: {
     backgroundColor: colors.primarySoft,
-    borderRadius: 12,
+    borderRadius: CONTROL_RADIUS,
   },
   itemSlot: {
     flex: 1,
@@ -516,8 +531,8 @@ const createStyles = (
     right: 0,
     bottom: 0,
     backgroundColor: colors.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: PANEL_RADIUS,
+    borderTopRightRadius: PANEL_RADIUS,
     padding: 16,
     zIndex: 11000,
     boxShadow: DESIGN_TOKENS.shadows.modal,
@@ -530,7 +545,7 @@ const createStyles = (
   sheetHandle: {
     width: 40,
     height: 4,
-    borderRadius: 2,
+    borderRadius: DESIGN_TOKENS.radii.pill,
     backgroundColor: colors.borderStrong,
     alignSelf: 'center',
     marginBottom: 12,
@@ -550,7 +565,7 @@ const createStyles = (
     fontSize: 11,
     fontWeight: '700',
     color: colors.textMuted,
-    letterSpacing: 0.7,
+    letterSpacing: 0,
     textTransform: 'uppercase',
   },
   sheetTitle: {
@@ -561,7 +576,7 @@ const createStyles = (
   sheetCloseBtn: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: CONTROL_RADIUS,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.backgroundSecondary,
@@ -575,7 +590,13 @@ const createStyles = (
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: 48,
-    borderRadius: 8,
+    borderRadius: CONTROL_RADIUS,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'transparent',
+  },
+  moreItemPressed: {
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.borderLight,
   },
   moreItemIcon: {
     marginRight: 12,

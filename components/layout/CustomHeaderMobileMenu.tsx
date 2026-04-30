@@ -6,6 +6,7 @@ import { DOCUMENT_NAV_ITEMS, PRIMARY_HEADER_NAV_ITEMS } from '@/constants/header
 import { buildLoginHref } from '@/utils/authNavigation'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
 import UnreadBadge from './UnreadBadge'
+import BelarusOutlineIcon from './BelarusOutlineIcon'
 
 type Props = {
   visible: boolean
@@ -56,11 +57,18 @@ const renderMenuItem = (
     accessibilityState={item.active ? { selected: true } : undefined}
   >
     <View style={[styles.iconSlot20, item.iconSlotStyle]}>
-      <Feather
-        name={item.icon as any}
-        size={20}
-        color={item.iconColor ?? (item.active ? colors.primary : colors.textMuted)}
-      />
+      {item.icon === 'belarus-outline' ? (
+        <BelarusOutlineIcon
+          size={20}
+          color={item.iconColor ?? (item.active ? colors.primary : colors.textMuted)}
+        />
+      ) : (
+        <Feather
+          name={item.icon as any}
+          size={20}
+          color={item.iconColor ?? (item.active ? colors.primary : colors.textMuted)}
+        />
+      )}
       {item.trailingNode}
     </View>
     <Text style={[styles.modalNavLabel, item.active && styles.modalNavLabelActive, item.labelStyle]}>

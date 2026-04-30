@@ -14,7 +14,8 @@ import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/uti
 import ListTravel from '@/components/listTravel/ListTravelBase'
 
 /** SEO metadata */
-const SEO_TITLE = 'Поиск маршрутов и идей путешествий по Беларуси | Metravel'
+const PAGE_HEADING = 'Поиск маршрутов и идей путешествий по Беларуси'
+const SEO_TITLE = `${PAGE_HEADING} | Metravel`
 const SEO_DESCRIPTION = 'Ищите путешествия по странам, категориям и сложности. Фильтруйте маршруты и сохраняйте лучшие идеи в свою книгу путешествий.'
 
 function SearchScreen() {
@@ -46,6 +47,7 @@ function SearchScreen() {
             margin: -1,
             overflow: 'hidden' as const,
             clip: 'rect(0,0,0,0)',
+            clipPath: 'inset(50%)',
             whiteSpace: 'nowrap',
             borderWidth: 0,
           },
@@ -68,7 +70,7 @@ function SearchScreen() {
         />
       )}
       <View style={styles.container} testID="search-container">
-        {Platform.OS === 'web' && <h1 style={styles.srOnly as any}>{SEO_TITLE}</h1>}
+        {Platform.OS === 'web' && <h1 style={styles.srOnly as any}>{PAGE_HEADING}</h1>}
         <ErrorBoundary
           fallback={
             <View style={styles.errorContainer}>

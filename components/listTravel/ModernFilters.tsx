@@ -254,7 +254,10 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
             {activeFiltersCount > 0 && (
               <Pressable
                 onPress={onClearAll}
-                style={styles.clearButton}
+                style={({ hovered, pressed }) => [
+                  styles.clearButton,
+                  (hovered || pressed) && styles.clearButtonPressed,
+                ]}
                 accessibilityRole="button"
                 accessibilityLabel={`Очистить все фильтры (${activeFiltersCount})`}
               >
@@ -266,7 +269,10 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
             {onClose && (
               <Pressable
                 onPress={onClose}
-                style={styles.closeButton}
+                style={({ hovered, pressed }) => [
+                  styles.closeButton,
+                  (hovered || pressed) && styles.closeButtonPressed,
+                ]}
                 accessibilityRole="button"
                 accessibilityLabel="Закрыть фильтры"
               >
@@ -280,7 +286,10 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
         {activeFiltersCount > 0 && (Platform.OS !== 'web' || isNarrowWeb) && (
           <Pressable
             onPress={onClearAll}
-            style={styles.clearAllMobileButton}
+            style={({ hovered, pressed }) => [
+              styles.clearAllMobileButton,
+              (hovered || pressed) && styles.clearAllMobileButtonPressed,
+            ]}
             accessibilityRole="button"
             accessibilityLabel="Очистить все фильтры"
             hitSlop={8}
@@ -320,7 +329,10 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
               setExpandedGroups(next);
             }
           }}
-          style={styles.toggleAllButton}
+          style={({ hovered, pressed }) => [
+            styles.toggleAllButton,
+            (hovered || pressed) && styles.toggleAllButtonPressed,
+          ]}
           accessibilityRole="button"
           accessibilityLabel={areAllGroupsExpanded ? 'Свернуть все группы фильтров' : 'Развернуть все группы фильтров'}
         >
@@ -343,9 +355,10 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
           {showModeration && onToggleModeration && (
             <Pressable
               onPress={onToggleModeration}
-              style={[
+              style={({ hovered, pressed }) => [
                 styles.moderationRow,
                 moderationValue === 0 && styles.moderationRowSelected,
+                (hovered || pressed) && styles.moderationRowPressed,
               ]}
               accessibilityRole="checkbox"
               accessibilityLabel="Только на модерации"
@@ -438,7 +451,12 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
               <View style={styles.groupHeader}>
                 <Pressable
                   onPress={() => toggleGroup(group.key)}
-                  style={[styles.groupHeaderLeft, { paddingVertical: 4 }]}
+                  style={({ hovered, pressed }) => [
+                    styles.groupHeaderLeft,
+                    styles.groupHeaderButton,
+                    isExpanded && styles.groupHeaderButtonExpanded,
+                    (hovered || pressed) && styles.groupHeaderButtonPressed,
+                  ]}
                   accessibilityRole="button"
                   accessibilityLabel={`${isExpanded ? 'Свернуть' : 'Развернуть'} ${group.title}`}
                   accessibilityState={{ expanded: isExpanded }}
@@ -525,7 +543,10 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
         <View style={styles.applyButtonContainer}>
           {activeFiltersCount > 0 && (
             <Pressable
-              style={styles.resetMobileButton}
+              style={({ hovered, pressed }) => [
+                styles.resetMobileButton,
+                (hovered || pressed) && styles.resetMobileButtonPressed,
+              ]}
               onPress={onClearAll}
               accessibilityRole="button"
               accessibilityLabel={`Сбросить все фильтры (${activeFiltersCount})`}
@@ -534,7 +555,10 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
             </Pressable>
           )}
           <Pressable
-            style={styles.applyButton}
+            style={({ hovered, pressed }) => [
+              styles.applyButton,
+              (hovered || pressed) && styles.applyButtonPressed,
+            ]}
             onPress={onClose ?? onApply}
             accessibilityRole="button"
             accessibilityLabel={activeFiltersCount > 0 ? `Показать результаты (фильтров: ${activeFiltersCount})` : 'Показать результаты'}

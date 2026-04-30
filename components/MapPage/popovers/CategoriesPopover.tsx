@@ -14,6 +14,7 @@ import {
 import Feather from '@expo/vector-icons/Feather'
 
 import Button from '@/components/ui/Button'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
 type CategoryOption = string | { id?: string | number; name?: string; value?: string }
@@ -27,6 +28,8 @@ interface CategoriesPopoverProps {
 }
 
 const SEARCH_MIN_ITEMS = 10
+const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm
+const PILL_RADIUS = DESIGN_TOKENS.radii.pill
 
 const normalizeCategoryName = (raw: CategoryOption): string => {
   if (typeof raw === 'string') return raw.trim()
@@ -389,7 +392,7 @@ const getStyles = (colors: ThemedColors) =>
       alignSelf: 'flex-start',
       paddingHorizontal: 10,
       paddingVertical: 6,
-      borderRadius: 999,
+      borderRadius: PILL_RADIUS,
       backgroundColor: colors.primarySoft,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderAccent,
@@ -415,7 +418,7 @@ const getStyles = (colors: ThemedColors) =>
       marginBottom: 8,
       paddingHorizontal: 14,
       paddingVertical: Platform.OS === 'web' ? 9 : 8,
-      borderRadius: 14,
+      borderRadius: CONTROL_RADIUS,
       backgroundColor: colors.backgroundSecondary,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
@@ -435,7 +438,7 @@ const getStyles = (colors: ThemedColors) =>
     searchClear: {
       width: 22,
       height: 22,
-      borderRadius: 11,
+      borderRadius: PILL_RADIUS,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -463,7 +466,7 @@ const getStyles = (colors: ThemedColors) =>
       minHeight: 54,
       paddingHorizontal: 12,
       paddingVertical: 13,
-      borderRadius: 14,
+      borderRadius: CONTROL_RADIUS,
       marginBottom: 8,
       backgroundColor: colors.surface,
       borderWidth: 1,
@@ -501,7 +504,7 @@ const getStyles = (colors: ThemedColors) =>
       minWidth: 32,
       paddingHorizontal: 8,
       paddingVertical: 4,
-      borderRadius: 999,
+      borderRadius: PILL_RADIUS,
       backgroundColor: colors.backgroundSecondary,
       alignItems: 'center',
       justifyContent: 'center',

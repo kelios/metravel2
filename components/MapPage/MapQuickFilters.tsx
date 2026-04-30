@@ -15,6 +15,7 @@ import {
 import Feather from '@expo/vector-icons/Feather'
 
 import CardActionPressable from '@/components/ui/CardActionPressable'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { MapChipPopover, type AnchorRect } from './popovers/MapChipPopover'
 import { RadiusPopover } from './popovers/RadiusPopover'
@@ -71,8 +72,9 @@ const MOBILE_WEB_CONTROLS_CLEARANCE = 80
 const DESKTOP_RADIUS_CLUSTER_MIN_WIDTH = 228
 const DESKTOP_FILTER_FIELD_MIN_WIDTH = 172
 const DESKTOP_TOOLBAR_MAX_WIDTH = 860
-const CONTROL_RADIUS = 12
-const TOOLBAR_RADIUS = 18
+const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm
+const TOOLBAR_RADIUS = DESIGN_TOKENS.radii.lg
+const PILL_RADIUS = DESIGN_TOKENS.radii.pill
 const ICON_ONLY_LEADING_ACTION_KEYS = new Set(['locate', 'zoom-in', 'zoom-out'])
 const ICON_ONLY_TRAILING_ACTION_KEYS = new Set(['list'])
 
@@ -790,7 +792,7 @@ const getStyles = (
     radiusActionButton: {
       width: options.isVeryNarrow ? 28 : options.isNarrow ? 30 : 32,
       height: options.isVeryNarrow ? 28 : options.isNarrow ? 30 : 32,
-      borderRadius: options.isVeryNarrow ? 10 : CONTROL_RADIUS,
+      borderRadius: CONTROL_RADIUS,
       alignItems: 'center',
       justifyContent: 'center',
       ...(Platform.OS === 'web'
@@ -932,7 +934,7 @@ const getStyles = (
       minWidth: 16,
       height: 16,
       paddingHorizontal: 4,
-      borderRadius: 8,
+      borderRadius: PILL_RADIUS,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.primary,
@@ -952,7 +954,7 @@ const getStyles = (
       fontSize: options.isVeryNarrow ? 12 : 13,
       fontWeight: '600',
       color: colors.textMuted,
-      letterSpacing: 0.1,
+      letterSpacing: 0,
       flexShrink: 1,
       minWidth: 0,
     },

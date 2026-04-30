@@ -4,7 +4,11 @@ import { LAYOUT } from '@/constants/layout';
 import type { ThemedColors } from '@/hooks/useTheme';
 
 const TS = DESIGN_TOKENS.typography.scale;
-const TOUCH = 44;
+const TOUCH = DESIGN_TOKENS.touchTarget.minHeight;
+const PANEL_RADIUS = DESIGN_TOKENS.radii.lg;
+const CARD_RADIUS = DESIGN_TOKENS.radii.md;
+const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm;
+const PILL_RADIUS = DESIGN_TOKENS.radii.pill;
 
 export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number) => {
   const panelWidth = isMobile ? '100%' : Math.max(Math.min(windowWidth - 40, 404), 292);
@@ -14,7 +18,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     card: {
       flex: 1,
       backgroundColor: colors.surface,
-      borderRadius: isMobile ? 0 : 24,
+      borderRadius: isMobile ? 0 : PANEL_RADIUS,
       padding: isMobile ? 0 : 16,
       width: panelWidth,
       maxWidth: '100%',
@@ -36,7 +40,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
           ? ({
               borderWidth: 1,
               borderColor: colors.borderLight,
-              boxShadow: '0 20px 50px rgba(15,23,42,0.10), 0 4px 12px rgba(15,23,42,0.06)',
+              boxShadow: colors.boxShadows.modal,
             } as any)
           : {
               shadowColor: (colors.shadows as any)?.shadowColor ?? DESIGN_TOKENS.shadowsNative.light.shadowColor,
@@ -87,7 +91,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       minHeight: 24,
       paddingHorizontal: 8,
       paddingVertical: 4,
-      borderRadius: 999,
+      borderRadius: PILL_RADIUS,
       backgroundColor: colors.surfaceAlpha40,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
@@ -103,7 +107,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     compactMetaCloseButton: {
       width: 26,
       height: 26,
-      borderRadius: 9,
+      borderRadius: CONTROL_RADIUS,
       marginHorizontal: 0,
       backgroundColor: colors.surfaceAlpha40,
       borderWidth: StyleSheet.hairlineWidth,
@@ -150,7 +154,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       fontSize: 20,
       fontWeight: '800',
       color: colors.text,
-      letterSpacing: -0.5,
+      letterSpacing: 0,
     },
     content: {
       flex: 1,
@@ -171,7 +175,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     filtersStatusCard: {
       padding: isMobile ? 14 : 14,
-      borderRadius: 16,
+      borderRadius: CARD_RADIUS,
       marginBottom: isMobile ? 10 : 12,
       backgroundColor: colors.primarySoft,
       borderWidth: 1,
@@ -193,7 +197,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     filtersStatusBadge: {
       paddingHorizontal: 10,
       paddingVertical: 4,
-      borderRadius: 999,
+      borderRadius: PILL_RADIUS,
       backgroundColor: colors.surfaceAlpha40,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
@@ -208,7 +212,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     mobileFiltersContextCard: {
       padding: isMobile ? 14 : 14,
-      borderRadius: 16,
+      borderRadius: CARD_RADIUS,
       marginBottom: isMobile ? 10 : 12,
       backgroundColor: colors.surface,
       borderWidth: 1,
@@ -216,7 +220,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       gap: 10,
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: '0 1px 3px rgba(15,23,42,0.04)',
+            boxShadow: colors.boxShadows.light,
           } as any)
         : null),
     },
@@ -228,7 +232,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       minHeight: TOUCH,
       paddingHorizontal: 14,
       paddingVertical: 10,
-      borderRadius: 999,
+      borderRadius: PILL_RADIUS,
       flex: 0,
     },
     mobileFiltersContextChips: {
@@ -240,7 +244,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       maxWidth: '100%',
       paddingHorizontal: 9,
       paddingVertical: 6,
-      borderRadius: 999,
+      borderRadius: PILL_RADIUS,
       backgroundColor: colors.surfaceAlpha40,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
@@ -260,7 +264,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     sectionCard: {
       backgroundColor: colors.surface,
-      borderRadius: isMobile ? 16 : 18,
+      borderRadius: CARD_RADIUS,
       padding: isMobile ? 14 : 15,
       marginBottom: isMobile ? 10 : 12,
       gap: isMobile ? 10 : 12,
@@ -268,9 +272,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       borderColor: colors.borderLight,
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: isMobile
-              ? '0 4px 16px rgba(15,23,42,0.05), 0 1px 3px rgba(15,23,42,0.03)'
-              : '0 6px 20px rgba(15,23,42,0.06), 0 1px 4px rgba(15,23,42,0.03)',
+            boxShadow: isMobile ? colors.boxShadows.light : colors.boxShadows.card,
             transition: 'box-shadow 0.2s ease',
           } as any)
         : null),
@@ -287,7 +289,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       gap: 6,
       paddingHorizontal: isMobile ? 9 : 10,
       paddingVertical: isMobile ? 6 : 7,
-      borderRadius: 999,
+      borderRadius: PILL_RADIUS,
       backgroundColor: colors.surfaceAlpha40,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
@@ -328,7 +330,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       fontWeight: '700',
       color: colors.textMuted,
       marginBottom: 8,
-      letterSpacing: 1.2,
+      letterSpacing: 0,
       textTransform: 'uppercase' as const,
     },
     sectionHint: {
@@ -352,7 +354,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       paddingHorizontal: 10,
       paddingVertical: 7,
       minHeight: 32,
-      borderRadius: 999,
+      borderRadius: PILL_RADIUS,
       maxWidth: 160,
       marginRight: 6,
       borderWidth: 1,
@@ -369,7 +371,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       borderColor: colors.primary,
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: `0 4px 12px ${colors.primaryAlpha30}`,
+            boxShadow: colors.boxShadows.light,
           } as any)
         : null),
     },
@@ -387,7 +389,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     categoryChipIconButton: {
       width: 24,
       height: 24,
-      borderRadius: 12,
+      borderRadius: CONTROL_RADIUS,
       marginHorizontal: 0,
       backgroundColor: 'transparent',
       shadowColor: 'transparent',
@@ -400,7 +402,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       backgroundColor: colors.primarySoft,
       paddingHorizontal: 9,
       paddingVertical: 5,
-      borderRadius: 14,
+      borderRadius: PILL_RADIUS,
     },
     moreChipText: {
       fontSize: 12,
@@ -425,7 +427,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       maxWidth: '100%',
       paddingHorizontal: 7,
       paddingVertical: 3,
-      borderRadius: 999,
+      borderRadius: PILL_RADIUS,
       backgroundColor: colors.backgroundSecondary,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
@@ -440,7 +442,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       minHeight: 34,
       paddingHorizontal: 10,
       paddingVertical: 6,
-      borderRadius: 999,
+      borderRadius: PILL_RADIUS,
       flexShrink: 0,
     },
     radiusOptionsScroll: {
@@ -475,7 +477,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     filterSelectionSummary: {
       marginTop: 8,
       padding: isMobile ? 8 : 9,
-      borderRadius: 12,
+      borderRadius: CONTROL_RADIUS,
       backgroundColor: colors.surfaceAlpha40,
       gap: isMobile ? 6 : 8,
       borderWidth: StyleSheet.hairlineWidth,
@@ -494,7 +496,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       maxWidth: '100%',
       paddingHorizontal: 9,
       paddingVertical: 6,
-      borderRadius: 999,
+      borderRadius: PILL_RADIUS,
       backgroundColor: colors.surfaceAlpha40,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
@@ -507,7 +509,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     routeInfo: {
       backgroundColor: colors.surfaceAlpha40,
-      borderRadius: 11,
+      borderRadius: CONTROL_RADIUS,
       padding: 9,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
@@ -547,7 +549,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     stepBadge: {
       width: 28,
       height: 28,
-      borderRadius: 14,
+      borderRadius: PILL_RADIUS,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -595,7 +597,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     statusCard: {
       backgroundColor: colors.surfaceAlpha40,
-      borderRadius: 10,
+      borderRadius: CONTROL_RADIUS,
       padding: 9,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
@@ -654,7 +656,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       gap: 10,
       paddingHorizontal: 9,
       paddingVertical: 6,
-      borderRadius: 11,
+      borderRadius: CONTROL_RADIUS,
       backgroundColor: colors.surfaceAlpha40,
       borderWidth: 1,
       borderColor: colors.borderLight,
@@ -759,7 +761,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       color: colors.textMuted,
     },
     ctaButton: {
-      borderRadius: isMobile ? 12 : DESIGN_TOKENS.radii.md,
+      borderRadius: CONTROL_RADIUS,
       paddingHorizontal: isMobile ? 14 : 12,
       paddingVertical: isMobile ? 9 : 8,
       minHeight: isMobile ? 42 : 40,
@@ -772,13 +774,13 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       minHeight: isMobile ? 42 : 48,
       paddingVertical: isMobile ? 9 : 12,
       paddingHorizontal: isMobile ? 14 : 18,
-      borderRadius: isMobile ? 12 : 15,
+      borderRadius: CONTROL_RADIUS,
       flex: 1,
       gap: 6,
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: `0 8px 18px ${colors.primaryAlpha30}`,
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            boxShadow: colors.boxShadows.hover,
+            transition: 'background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease',
           } as any)
         : {
             shadowColor: colors.primary,
@@ -825,7 +827,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     lightStepNumber: {
       width: 22,
       height: 22,
-      borderRadius: 11,
+      borderRadius: PILL_RADIUS,
       backgroundColor: colors.primary,
       color: colors.textOnPrimary,
       fontSize: 11,
@@ -839,7 +841,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       fontSize: 14,
       fontWeight: '700',
       color: colors.text,
-      letterSpacing: -0.1,
+      letterSpacing: 0,
     },
     lightStepBadge: {
       fontSize: 11,
@@ -848,9 +850,9 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       backgroundColor: colors.primarySoft,
       paddingHorizontal: 10,
       paddingVertical: 3,
-      borderRadius: 999,
+      borderRadius: PILL_RADIUS,
       overflow: 'hidden',
-      letterSpacing: -0.1,
+      letterSpacing: 0,
     },
     lightStepHint: {
       fontSize: 12,
@@ -865,7 +867,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       backgroundColor: colors.successLight,
       paddingHorizontal: 7,
       paddingVertical: 2,
-      borderRadius: 9,
+      borderRadius: CONTROL_RADIUS,
     },
     lightCheckText: {
       fontSize: 10,
@@ -887,13 +889,13 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       gap: 10,
       paddingVertical: 6,
       paddingHorizontal: 4,
-      borderRadius: 8,
+      borderRadius: CONTROL_RADIUS,
       backgroundColor: colors.backgroundSecondary,
     },
     lightPointDot: {
       width: 22,
       height: 22,
-      borderRadius: 11,
+      borderRadius: PILL_RADIUS,
       backgroundColor: colors.primary,
       alignItems: 'center',
       justifyContent: 'center',
@@ -912,7 +914,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     lightPointRemove: {
       width: 32,
       height: 32,
-      borderRadius: 16,
+      borderRadius: PILL_RADIUS,
       backgroundColor: 'transparent',
       alignItems: 'center',
       justifyContent: 'center',

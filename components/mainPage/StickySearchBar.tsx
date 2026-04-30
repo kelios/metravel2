@@ -363,7 +363,7 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     color: colors.textMuted,
     fontWeight: '600',
     textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    letterSpacing: 0,
     marginBottom: 2,
   },
   searchBoxFocused: {

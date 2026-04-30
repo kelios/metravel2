@@ -16,12 +16,15 @@ import {
 } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
 const BOTTOM_SHEET_MAX_WIDTH = 430
 const WEB_MOBILE_BOTTOM_CHROME_INSET = 104
-const PANEL_RADIUS = 20
-const CONTROL_RADIUS = 12
+const WEB_DESKTOP_BOTTOM_CHROME_INSET = 128
+const PANEL_RADIUS = DESIGN_TOKENS.radii.lg
+const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm
+const PILL_RADIUS = DESIGN_TOKENS.radii.pill
 
 interface AnchorRect {
   x: number
@@ -79,7 +82,8 @@ export const MapChipPopover: React.FC<MapChipPopoverProps> = ({
     if (left + desiredWidth > width - 12) left = Math.max(12, width - desiredWidth - 12)
     if (left < 12) left = 12
     const top = anchor.y + anchor.height + 8
-    const maxHeight = Math.max(180, height - top - 24)
+    const bottomReserve = Platform.OS === 'web' ? WEB_DESKTOP_BOTTOM_CHROME_INSET : 24
+    const maxHeight = Math.max(180, height - top - bottomReserve)
     return { left, top, width: desiredWidth, maxHeight }
   }, [anchor, height, maxWidth, useBottomSheet, width])
 
@@ -274,7 +278,7 @@ const getStyles = (colors: ThemedColors): Styles =>
     },
     sheetBackdrop: {
       flex: 1,
-      backgroundColor: 'rgba(15,23,42,0.55)',
+      backgroundColor: colors.overlay,
       justifyContent: 'flex-end',
       ...(Platform.OS === 'web'
         ? ({
@@ -317,7 +321,7 @@ const getStyles = (colors: ThemedColors): Styles =>
       alignSelf: 'center',
       width: 40,
       height: 4,
-      borderRadius: 2,
+      borderRadius: PILL_RADIUS,
       backgroundColor: colors.borderLight,
       marginBottom: 8,
     },

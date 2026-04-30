@@ -10,6 +10,7 @@ type AccountMenuSectionProps = {
   colors: ThemedColors;
   styles: {
     sectionHeader: any;
+    sectionHeaderActive: any;
     sectionHeaderText: any;
     sectionDivider: any;
   };
@@ -33,7 +34,10 @@ function AccountMenuSection({
       <View style={styles.sectionDivider} />
       <Pressable
         onPress={onToggle}
-        style={styles.sectionHeader}
+        style={({ hovered, pressed }) => [
+          styles.sectionHeader,
+          (hovered || pressed) && styles.sectionHeaderActive,
+        ]}
         accessibilityRole="button"
         accessibilityLabel={title}
         accessibilityState={{ expanded }}

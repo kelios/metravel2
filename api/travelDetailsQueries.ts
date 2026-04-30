@@ -27,6 +27,7 @@ const getErrorStatus = (error: unknown): number | null => {
 
 const shouldUseSlugFallback = (status: number | null): boolean =>
     status === 404 || (status !== null && status >= 500 && status < 600);
+const SLUG_FALLBACK_TIMEOUT_MS = 4_000;
 
 const slugTokenize = (value: string): string[] =>
     String(value || '')
@@ -183,6 +184,24 @@ const findTravelBySlugFallback = async (
     return bestMatch;
 };
 
+const findTravelBySlugFallbackWithDeadline = async (
+    slug: string,
+    options?: { signal?: AbortSignal }
+): Promise<Travel | null> => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    try {
+        return await Promise.race([
+            findTravelBySlugFallback(slug, options),
+            new Promise<null>((resolve) => {
+                timeoutId = setTimeout(() => resolve(null), SLUG_FALLBACK_TIMEOUT_MS);
+            }),
+        ]);
+    } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+    }
+};
+
 export const fetchTravel = async (
     id: number,
     options?: { signal?: AbortSignal }
@@ -221,7 +240,7 @@ export const fetchTravelBySlug = async (
 
         const status = getErrorStatus(e);
         if (shouldUseSlugFallback(status)) {
-            const fallbackTravel = await findTravelBySlugFallback(slug, options);
+            const fallbackTravel = await findTravelBySlugFallbackWithDeadline(slug, options);
             if (fallbackTravel) {
                 const fallbackTravelId = Number(fallbackTravel.id);
                 if (Number.isFinite(fallbackTravelId) && fallbackTravelId > 0) {

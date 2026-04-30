@@ -10,6 +10,7 @@ import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useBottomSheetStore } from '@/stores/bottomSheetStore';
 import { LAYOUT } from '@/constants/layout';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface MapBottomSheetProps {
   children: React.ReactNode;
@@ -178,6 +179,10 @@ MapBottomSheet.displayName = 'MapBottomSheet';
 
 export default MapBottomSheet;
 
+const PANEL_RADIUS = DESIGN_TOKENS.radii.lg;
+const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm;
+const PILL_RADIUS = DESIGN_TOKENS.radii.pill;
+
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     webRoot: {
@@ -189,8 +194,8 @@ const getStyles = (colors: ThemedColors) =>
       flexDirection: 'column',
       minHeight: 0,
       backgroundColor: colors.surface,
-      borderTopLeftRadius: 16,
-      borderTopRightRadius: 16,
+      borderTopLeftRadius: PANEL_RADIUS,
+      borderTopRightRadius: PANEL_RADIUS,
       overflow: 'hidden',
       ...(Platform.OS === 'web'
         ? ({
@@ -224,7 +229,7 @@ const getStyles = (colors: ThemedColors) =>
     dragHandle: {
       width: 40,
       height: 4,
-      borderRadius: 2,
+      borderRadius: PILL_RADIUS,
       backgroundColor: colors.borderStrong,
     },
     header: {
@@ -262,7 +267,7 @@ const getStyles = (colors: ThemedColors) =>
     headerButton: {
       width: 40,
       height: 40,
-      borderRadius: 12,
+      borderRadius: CONTROL_RADIUS,
     },
     contentContainer: {
       flex: 1,

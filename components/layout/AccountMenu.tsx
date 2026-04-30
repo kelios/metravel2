@@ -13,6 +13,7 @@ import {
   createCtaLoginStyles,
   createMenuStyles,
 } from './headerStyles';
+import BelarusOutlineIcon from './BelarusOutlineIcon';
 
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
@@ -50,7 +51,11 @@ const renderMenuItem = (
     title={item.title}
     leadingIcon={({ size }) =>
       item.leadingNode ?? (
-        <Feather name={item.icon as any} size={size} color={item.iconColor ?? defaultIconColor} />
+        item.icon === 'belarus-outline' ? (
+          <BelarusOutlineIcon size={size} color={item.iconColor ?? defaultIconColor} />
+        ) : (
+          <Feather name={item.icon as any} size={size} color={item.iconColor ?? defaultIconColor} />
+        )
       )
     }
     style={menuStyles.menuItem}

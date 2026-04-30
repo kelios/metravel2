@@ -23,6 +23,8 @@ import {
   resolveHeaderContextBarIsMobile,
 } from './headerContextBarModel';
 
+const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm;
+
 const useBreadcrumbModelSafe: () => BreadcrumbModel =
   typeof useBreadcrumbModelNamed === 'function'
     ? useBreadcrumbModelNamed
@@ -214,22 +216,24 @@ export default React.memo(HeaderContextBar);
 
 const createStyles = (colors: ThemedColors) => StyleSheet.create({
   container: {
-    minHeight: 36,
+    minHeight: 40,
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
     justifyContent: 'center',
-    backgroundColor: Platform.OS === 'web' ? colors.backgroundSecondary : colors.surfaceMuted,
+    backgroundColor: colors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.borderLight,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderLight,
     ...Platform.select({
       web: {
-        boxShadow: '0 1px 0 rgba(0,0,0,0.03)',
-      },
+        boxShadow: ((colors.boxShadows as any)?.light ?? DESIGN_TOKENS.shadows.light) as any,
+        backdropFilter: 'blur(12px) saturate(1.05)' as any,
+        WebkitBackdropFilter: 'blur(12px) saturate(1.05)' as any,
+      } as any,
     }),
   },
   containerMobile: {
-    minHeight: 44,
+    minHeight: 52,
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
   },
   crumbRow: {
@@ -244,13 +248,19 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     gap: 6,
     paddingVertical: DESIGN_TOKENS.spacing.xs,
     paddingHorizontal: DESIGN_TOKENS.spacing.xs,
-    borderRadius: DESIGN_TOKENS.radii.pill,
+    borderRadius: CONTROL_RADIUS,
+    minHeight: 32,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'transparent',
   },
   crumbItemLast: {
     opacity: 1,
+    backgroundColor: colors.backgroundSecondary,
+    borderColor: colors.borderLight,
   },
   crumbItemPressed: {
     opacity: 0.7,
+    backgroundColor: colors.surfaceMuted,
   },
   separator: {
     marginHorizontal: DESIGN_TOKENS.spacing.xs,
@@ -275,12 +285,12 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     gap: DESIGN_TOKENS.spacing.xs,
   },
   backButton: {
-    minWidth: 40,
-    minHeight: 40,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: DESIGN_TOKENS.radii.full,
-    backgroundColor: colors.surface,
+    borderRadius: CONTROL_RADIUS,
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
     borderColor: colors.borderLight,
   },
@@ -292,7 +302,7 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: colors.textMuted,
-    letterSpacing: 0.6,
+    letterSpacing: 0,
     textTransform: 'uppercase',
   },
   mobileTitle: {
@@ -305,13 +315,13 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     height: 40,
   },
   mobileSectionsButton: {
-    minWidth: 40,
-    minHeight: 40,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
     opacity: 0.88,
-    borderRadius: DESIGN_TOKENS.radii.full,
-    backgroundColor: colors.surface,
+    borderRadius: CONTROL_RADIUS,
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
     borderColor: colors.borderLight,
   },

@@ -59,6 +59,26 @@ describe('useBreadcrumbModel', () => {
     ]);
   });
 
+  it('should not show Belarus return context for non-Belarus travel from travelsby', async () => {
+    usePathname.mockReturnValue('/travels/croatia-slug');
+    useLocalSearchParams.mockReturnValue({ returnTo: '/travelsby' });
+
+    fetchTravelBySlug.mockResolvedValue({ name: 'Маршрут по Велебиту', countryName: 'Хорватия' });
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.items.length).toBeGreaterThan(0);
+    });
+
+    expect(result.current.backToPath).toBe('/search');
+    expect(result.current.pageContextTitle).toBe('Хорватия');
+    expect(result.current.items).toEqual([
+      { label: 'Хорватия', path: '/search' },
+      { label: 'Маршрут по Велебиту', path: '/travels/croatia-slug' },
+    ]);
+  });
+
   it('should build breadcrumbs for single-level profile page', async () => {
     usePathname.mockReturnValue('/profile');
     useLocalSearchParams.mockReturnValue({});

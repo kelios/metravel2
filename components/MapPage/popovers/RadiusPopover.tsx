@@ -5,6 +5,7 @@ import React, { useMemo } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
 interface RadiusOption {
@@ -18,6 +19,9 @@ interface RadiusPopoverProps {
   onChange: (next: string) => void
   onClose: () => void
 }
+
+const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm
+const PILL_RADIUS = DESIGN_TOKENS.radii.pill
 
 export const RadiusPopover: React.FC<RadiusPopoverProps> = ({
   options,
@@ -112,7 +116,7 @@ const getStyles = (colors: ThemedColors) =>
       gap: 12,
       paddingHorizontal: 12,
       paddingVertical: 12,
-      borderRadius: 12,
+      borderRadius: CONTROL_RADIUS,
     },
     rowSelected: {
       backgroundColor: colors.primarySoft,
@@ -123,7 +127,7 @@ const getStyles = (colors: ThemedColors) =>
     radioOuter: {
       width: 20,
       height: 20,
-      borderRadius: 10,
+      borderRadius: PILL_RADIUS,
       borderWidth: 2,
       borderColor: colors.borderLight,
       alignItems: 'center',
@@ -132,7 +136,7 @@ const getStyles = (colors: ThemedColors) =>
     radioInner: {
       width: 10,
       height: 10,
-      borderRadius: 5,
+      borderRadius: PILL_RADIUS,
       backgroundColor: colors.primary,
     },
     rowLabel: {

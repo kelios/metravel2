@@ -152,11 +152,11 @@ const styles = StyleSheet.create({
                   position: 'relative',
               } as any)
             : null),
-        borderRadius: 20,
+        borderRadius: DESIGN_TOKENS.radii.lg,
         overflow: 'hidden',
         ...(Platform.OS === 'web'
             ? ({
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)',
+                  boxShadow: DESIGN_TOKENS.shadows.card,
               } as any)
             : {
                   shadowColor: DESIGN_TOKENS.colors.text,
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         gap: 16,
         padding: 32,
-        borderRadius: 20,
+        borderRadius: DESIGN_TOKENS.radii.lg,
     },
     placeholderText: {
         fontSize: 15,

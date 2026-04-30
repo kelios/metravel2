@@ -1,6 +1,6 @@
 import type { Href } from 'expo-router'
 
-export type BottomDockIconName =
+type BottomDockFeatherIconName =
   | 'book-open'
   | 'compass'
   | 'flag'
@@ -14,6 +14,8 @@ export type BottomDockIconName =
   | 'shuffle'
   | 'user'
 
+export type BottomDockIconName = BottomDockFeatherIconName | 'belarus-outline'
+
 export type BottomDockItemDef = {
   accessibilityLabel: string
   iconName: BottomDockIconName
@@ -25,7 +27,7 @@ export type BottomDockItemDef = {
 
 export type BottomDockMoreMenuItem = {
   accessibilityLabel: string
-  iconName: BottomDockIconName
+  iconName: BottomDockFeatherIconName
   key: string
   label: string
   muted?: boolean
@@ -39,7 +41,7 @@ export type BottomDockMoreMenuSection = {
 
 export const BOTTOM_DOCK_ITEM_DEFS: BottomDockItemDef[] = [
   { key: 'home', label: 'Идеи', accessibilityLabel: 'Идеи поездок', route: '/search', iconName: 'compass' },
-  { key: 'search', label: 'Бел', accessibilityLabel: 'Беларусь', route: '/travelsby', iconName: 'map' },
+  { key: 'search', label: 'Бел', accessibilityLabel: 'Беларусь', route: '/travelsby', iconName: 'belarus-outline' },
   { key: 'map', label: 'Карта', accessibilityLabel: 'Карта', route: '/map', iconName: 'map-pin' },
   { key: 'quests', label: 'Квесты', accessibilityLabel: 'Квесты', route: '/quests', iconName: 'flag' },
   { key: 'favorites', label: 'Я', accessibilityLabel: 'Профиль', route: '/profile', iconName: 'user' },

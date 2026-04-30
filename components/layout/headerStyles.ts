@@ -18,7 +18,7 @@ export const createAnchorStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surface,
       paddingVertical: 7,
       paddingHorizontal: 12,
-      borderRadius: DESIGN_TOKENS.radii.md,
+      borderRadius: CONTROL_RADIUS,
       maxWidth: 220,
       minHeight: 44,
       minWidth: 44,
@@ -39,7 +39,7 @@ export const createAnchorStyles = (colors: ThemedColors) =>
       ...(Platform.OS === 'web'
         ? ({
             boxShadow:
-              (colors.boxShadows as any)?.hover ?? '0 8px 16px rgba(17, 24, 39, 0.12)',
+              (colors.boxShadows as any)?.hover ?? DESIGN_TOKENS.shadows.hover,
           } as any)
         : null),
     },
@@ -62,8 +62,9 @@ export const createAvatarStyles = (colors: ThemedColors) =>
       borderColor: colors.borderLight,
     },
     anchorText: {
-      fontSize: 16,
+      fontSize: 14,
       color: colors.text,
+      fontWeight: '600',
       flexShrink: 1,
     },
     chevronSlot: {
@@ -83,7 +84,7 @@ export const createCtaLoginStyles = (colors: ThemedColors) =>
       gap: 6,
       paddingVertical: 8,
       paddingHorizontal: 16,
-      borderRadius: DESIGN_TOKENS.radii.md,
+      borderRadius: CONTROL_RADIUS,
       backgroundColor: colors.primary,
       minHeight: 36,
       ...(Platform.OS === 'web'
@@ -135,7 +136,7 @@ export const createMenuStyles = (colors: ThemedColors) =>
       paddingTop: 8,
       paddingBottom: 4,
       fontSize: 11,
-      letterSpacing: 0.6,
+      letterSpacing: 0,
       textTransform: 'uppercase',
       color: colors.textMuted,
       fontWeight: '600',
@@ -150,12 +151,15 @@ export const createMenuStyles = (colors: ThemedColors) =>
       borderRadius: CONTROL_RADIUS,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
+    sectionHeaderActive: {
+      backgroundColor: colors.surfaceMuted,
+    },
     sectionHeaderText: {
       fontSize: 11,
-      letterSpacing: 0.5,
-      textTransform: 'capitalize',
+      letterSpacing: 0,
+      textTransform: 'uppercase',
       color: colors.textMuted,
-      fontWeight: '600',
+      fontWeight: '700',
       flex: 1,
       textAlign: 'left',
     },

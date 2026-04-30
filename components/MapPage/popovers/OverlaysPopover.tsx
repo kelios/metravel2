@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import Button from '@/components/ui/Button'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
 interface OverlayOption {
@@ -21,6 +22,9 @@ interface OverlaysPopoverProps {
   onClose: () => void
   showHeaderClose?: boolean
 }
+
+const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm
+const PILL_RADIUS = DESIGN_TOKENS.radii.pill
 
 const OVERLAY_COPY: Record<
   string,
@@ -278,7 +282,7 @@ const getStyles = (colors: ThemedColors) =>
     closeButton: {
       width: 34,
       height: 34,
-      borderRadius: 12,
+      borderRadius: CONTROL_RADIUS,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.surfaceAlpha40,
@@ -308,7 +312,7 @@ const getStyles = (colors: ThemedColors) =>
       minHeight: 58,
       paddingHorizontal: 12,
       paddingVertical: 13,
-      borderRadius: 14,
+      borderRadius: CONTROL_RADIUS,
       marginBottom: 8,
       backgroundColor: colors.surface,
       borderWidth: 1,
@@ -364,7 +368,7 @@ const getStyles = (colors: ThemedColors) =>
       minWidth: 34,
       paddingHorizontal: 8,
       paddingVertical: 4,
-      borderRadius: 999,
+      borderRadius: PILL_RADIUS,
       backgroundColor: colors.backgroundSecondary,
       alignItems: 'center',
       justifyContent: 'center',
