@@ -532,6 +532,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 
     return {
       autoPan: true,
+      closeOnClick: false,
       keepInView: true,
       className: 'metravel-place-popup',
       maxWidth,

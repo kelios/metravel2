@@ -5,9 +5,11 @@ Disallow: /_expo/
 Disallow: /metro/
 Disallow: /chat
 Disallow: /password/
-Disallow: /articles/
 Disallow: /map.optimized.example
 Disallow: /assets/icons/
 Disallow: /*?debug=*
+Disallow: /*?utm_*
+Disallow: /*?fbclid=*
+Disallow: /*?gclid=*
 
 Sitemap: https://metravel.by/sitemap.xml

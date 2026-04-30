@@ -213,7 +213,7 @@ const TravelListPanel: React.FC<Props> = ({
         {onOpenFilters && (
           <View style={styles.listHeaderActions}>
             <Button
-              label="Ð¤Ð¸Ð»ÑŒÑ‚Ñ€Ñ‹"
+              label="Фильтры"
               onPress={onOpenFilters}
               variant="outline"
               size="sm"

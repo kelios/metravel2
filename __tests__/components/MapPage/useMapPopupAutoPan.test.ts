@@ -68,6 +68,7 @@ describe('useMapPopupAutoPan', () => {
     expect(result.current.popupAutoPanPadding).toEqual(
       expect.objectContaining({
         autoPan: false,
+        closeOnClick: false,
         keepInView: false,
         autoPanPaddingTopLeft: [12, 152],
         autoPanPaddingBottomRight: [12, 72],

@@ -198,6 +198,7 @@ describe('TravelMap (web)', () => {
     expect(props.popupProps).toEqual(
       expect.objectContaining({
         autoPan: true,
+        closeOnClick: false,
         keepInView: true,
         className: 'metravel-place-popup',
         maxWidth: 300,

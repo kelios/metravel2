@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
   Platform,
   Pressable,
@@ -20,6 +20,7 @@ type CardActionPressableProps = {
   accessibilityState?: { checked?: boolean; selected?: boolean; disabled?: boolean; expanded?: boolean; busy?: boolean };
   style?: StyleProp<ViewStyle> | ((state: PressableStateCallbackType) => StyleProp<ViewStyle>);
   testID?: string;
+  enableWebClickFallback?: boolean;
   children: React.ReactNode;
 };
 
@@ -90,9 +91,11 @@ const CardActionPressable = ({
   accessibilityState,
   style,
   testID,
+  enableWebClickFallback = false,
   children,
 }: CardActionPressableProps) => {
   const webRef = useRef<any>(null);
+  const lastActivationEventTimeRef = useRef<number | null>(null);
   const safeChildren = React.Children.toArray(children).filter((child) => typeof child !== 'string');
   const tooltipText = title ?? accessibilityLabel;
   const effectiveAccessibilityState = accessibilityState ?? { disabled };
@@ -101,8 +104,18 @@ const CardActionPressable = ({
       ? buildWebAccessibilityAttributes(effectiveAccessibilityState)
       : {};
 
-  const activate = (e?: any) => {
+  const activate = useCallback((e?: any) => {
     if (disabled) return;
+    const eventTime =
+      typeof e?.timeStamp === 'number'
+        ? e.timeStamp
+        : typeof e?.nativeEvent?.timeStamp === 'number'
+          ? e.nativeEvent.timeStamp
+          : null;
+    if (eventTime !== null && lastActivationEventTimeRef.current === eventTime) {
+      return;
+    }
+    lastActivationEventTimeRef.current = eventTime;
     try {
       e?.preventDefault?.();
       e?.stopPropagation?.();
@@ -110,12 +123,23 @@ const CardActionPressable = ({
       // noop
     }
     onPress?.();
-  };
+  }, [disabled, onPress]);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     applyWebTooltipAttributes(webRef.current, tooltipText);
   }, [tooltipText]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !enableWebClickFallback) return;
+    const node = webRef.current;
+    if (!node?.addEventListener) return;
+
+    node.addEventListener('click', activate);
+    return () => {
+      node.removeEventListener('click', activate);
+    };
+  }, [activate, enableWebClickFallback]);
 
   return (
     <Pressable

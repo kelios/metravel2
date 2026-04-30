@@ -36,7 +36,9 @@
       "Bash(git grep *)",
       "Bash(jobs -l)",
       "Bash(tasklist)",
-      "Bash(curl -sf http://localhost:8082/)"
+      "Bash(curl -sf http://localhost:8082/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8082/map --max-time 60)",
+      "Bash(python -c ' *)"
     ]
   }
 }

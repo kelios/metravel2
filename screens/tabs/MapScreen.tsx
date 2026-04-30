@@ -277,43 +277,29 @@ export default function MapScreen() {
 
     const mapQuickActionButtons = useMemo(
         () => [
-            ...([{
-                    key: 'locate',
-                    label: 'ÐœÐ¾Ðµ Ð¼ÐµÑÑ‚Ð¾Ð¿Ð¾Ð»Ð¾Ð¶ÐµÐ½Ð¸Ðµ',
-                    icon: 'crosshair' as const,
-                    onPress: centerOnUser,
-                    testID: 'map-center-user-inline',
-                }]),
+            {
+                key: 'locate',
+                label: 'Мое местоположение',
+                icon: 'crosshair' as const,
+                onPress: centerOnUser,
+                testID: 'map-center-user-inline',
+            },
             {
                 key: 'zoom-in',
-                label: 'ÐŸÑ€Ð¸Ð±Ð»Ð¸Ð·Ð¸Ñ‚ÑŒ',
+                label: 'Приблизить',
                 icon: 'plus' as const,
                 onPress: zoomIn,
                 testID: 'map-zoom-in-inline',
             },
             {
                 key: 'zoom-out',
-                label: 'ÐžÑ‚Ð´Ð°Ð»Ð¸Ñ‚ÑŒ',
+                label: 'Отдалить',
                 icon: 'minus' as const,
                 onPress: zoomOut,
                 testID: 'map-zoom-out-inline',
             },
         ],
         [centerOnUser, zoomIn, zoomOut],
-    );
-    const localizedMapQuickActionButtons = useMemo(
-        () => mapQuickActionButtons.map((action) => ({
-            ...action,
-            label:
-                action.key === 'locate'
-                    ? '\u041c\u043e\u0435 \u043c\u0435\u0441\u0442\u043e\u043f\u043e\u043b\u043e\u0436\u0435\u043d\u0438\u0435'
-                    : action.key === 'zoom-in'
-                        ? '\u041f\u0440\u0438\u0431\u043b\u0438\u0437\u0438\u0442\u044c'
-                        : action.key === 'zoom-out'
-                            ? '\u041e\u0442\u0434\u0430\u043b\u0438\u0442\u044c'
-                            : action.label,
-        })),
-        [mapQuickActionButtons],
     );
 
     const currentTransport = transportMode ?? 'car';
@@ -395,7 +381,7 @@ export default function MapScreen() {
                 {Platform.OS === 'web' && !isMobile && (
                     <Suspense fallback={null}>
                         <LazyMapQuickFilters
-                            extraActions={localizedMapQuickActionButtons}
+                            extraActions={mapQuickActionButtons}
                             extraActionsPosition="inside-radius"
                             radiusValue={quickRadiusValue}
                             categoriesValue={quickCategoriesValue}
@@ -464,7 +450,7 @@ export default function MapScreen() {
             quickCategoryOptions,
             quickOverlayOptions,
             quickEnabledOverlays,
-            localizedMapQuickActionButtons,
+            mapQuickActionButtons,
             currentRadius,
             shouldShowFloatingRadiusPill,
             quickFilterSelected,
@@ -506,7 +492,7 @@ export default function MapScreen() {
                         filtersPanelProps={filtersPanelProps}
                         onResetFilters={handleClearAllFilters}
                         onExpandRadius={handleExpandRadius}
-                        quickActionButtons={localizedMapQuickActionButtons}
+                        quickActionButtons={mapQuickActionButtons}
                     />
                 </Suspense>
             </View>

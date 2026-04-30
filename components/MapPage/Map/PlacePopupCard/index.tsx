@@ -464,6 +464,7 @@ const PlacePopupCard: React.FC<Props> = ({
           accessibilityLabel="Скопировать координаты"
           onPress={onCopyCoord ? () => void onCopyCoord() : undefined}
           title={POPUP_TOOLTIPS.copyCoords}
+          enableWebClickFallback
           style={styles.coordRow}
         >
           <Feather name="map-pin" size={13} color={colors.textMuted} style={{ flexShrink: 0 } as any} />
@@ -479,6 +480,7 @@ const PlacePopupCard: React.FC<Props> = ({
             onPress={primaryAction.onPress}
             title={primaryAction.tooltip}
             testID="popup-primary-action"
+            enableWebClickFallback
             style={({ pressed }) => [
               styles.primaryActionBtn,
               pressed && styles.primaryActionBtnPressed,
@@ -496,6 +498,7 @@ const PlacePopupCard: React.FC<Props> = ({
               accessibilityLabel={action.accessibilityLabel}
               onPress={action.onPress}
               title={action.title}
+              enableWebClickFallback
               style={({ pressed }) => [
                 styles.chipActionBtn,
                 pressed && styles.chipActionBtnPressed,
@@ -516,6 +519,7 @@ const PlacePopupCard: React.FC<Props> = ({
               onPress={() => void onAddPoint()}
               disabled={addDisabled || isAdding}
               title={addTooltip ?? compactLabel}
+              enableWebClickFallback
               style={({ pressed }) => [
                 styles.chipActionBtn,
                 (addDisabled || isAdding) && styles.addBtnDisabled,

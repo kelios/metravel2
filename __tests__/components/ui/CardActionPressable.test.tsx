@@ -1,8 +1,12 @@
 import {
   applyWebTooltipAttributes,
   buildWebAccessibilityAttributes,
+  default as CardActionPressable,
   stopWebPointerEvent,
 } from '@/components/ui/CardActionPressable'
+import { fireEvent, render } from '@testing-library/react-native'
+import React from 'react'
+import { Text } from 'react-native'
 import { Platform } from 'react-native'
 
 describe('applyWebTooltipAttributes', () => {
@@ -81,5 +85,28 @@ describe('CardActionPressable', () => {
     expect(stopPropagation).toHaveBeenCalledTimes(1)
     expect(nativeStopPropagation).toHaveBeenCalledTimes(1)
     expect(nativeStopImmediatePropagation).toHaveBeenCalledTimes(1)
+  })
+
+  it('supports an explicit web click fallback for Leaflet popup actions', () => {
+    ;(Platform as any).OS = 'web'
+    const onPress = jest.fn()
+
+    const { getByLabelText } = render(
+      <CardActionPressable
+        accessibilityLabel="Google Maps"
+        enableWebClickFallback
+        onPress={onPress}
+      >
+        <Text>Google</Text>
+      </CardActionPressable>
+    )
+
+    fireEvent(getByLabelText('Google Maps'), 'click', {
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+      timeStamp: 42,
+    })
+
+    expect(onPress).toHaveBeenCalledTimes(1)
   })
 })

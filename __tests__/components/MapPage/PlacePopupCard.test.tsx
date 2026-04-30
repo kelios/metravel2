@@ -253,6 +253,31 @@ describe('PlacePopupCard', () => {
     expect(googleAction).toBeTruthy();
   });
 
+  it('runs the Google navigation handler when the popup action is pressed', () => {
+    const onOpenGoogleMaps = jest.fn();
+    let tree: any;
+
+    renderer.act(() => {
+      tree = renderer.create(
+        <PlacePopupCard
+          colors={mockColors as any}
+          title="Test point"
+          coord="53.9, 27.56"
+          onOpenArticle={jest.fn()}
+          onOpenGoogleMaps={onOpenGoogleMaps}
+        />
+      );
+    });
+
+    const googleAction = tree.root.findByProps({ accessibilityLabel: 'Google Maps' });
+
+    renderer.act(() => {
+      googleAction.props.onPress();
+    });
+
+    expect(onOpenGoogleMaps).toHaveBeenCalledTimes(1);
+  });
+
   it('opens the page through the popup handler when the inline page link is clicked', () => {
     const onOpenArticle = jest.fn();
     const stopPropagation = jest.fn();

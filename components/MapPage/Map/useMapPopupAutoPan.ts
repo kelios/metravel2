@@ -214,6 +214,7 @@ export function useMapPopupAutoPan({
 
     return {
       autoPan: false,
+      closeOnClick: false,
       keepInView: false,
       maxWidth,
       minWidth,

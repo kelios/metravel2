@@ -198,12 +198,12 @@ describe('MapQuickFilters', () => {
     const { getAllByRole } = render(
       <MapQuickFilters
         extraActions={[
-          { key: 'locate', label: 'ÐœÐ¾Ðµ Ð¼ÐµÑÑ‚Ð¾Ð¿Ð¾Ð»Ð¾Ð¶ÐµÐ½Ð¸Ðµ', icon: 'crosshair', onPress: onLocate },
-          { key: 'zoom-in', label: 'ÐŸÑ€Ð¸Ð±Ð»Ð¸Ð·Ð¸Ñ‚ÑŒ', icon: 'plus', onPress: onZoomIn },
+          { key: 'locate', label: 'Мое местоположение', icon: 'crosshair', onPress: onLocate },
+          { key: 'zoom-in', label: 'Приблизить', icon: 'plus', onPress: onZoomIn },
         ]}
         extraActionsPosition="inside-radius"
-        radiusValue="60 ÐºÐ¼"
-        categoriesValue="Ð’ÑÐµ"
+        radiusValue="60 км"
+        categoriesValue="Все"
         onPressRadius={jest.fn()}
         onPressCategories={jest.fn()}
       />,
@@ -212,10 +212,10 @@ describe('MapQuickFilters', () => {
     const buttons = getAllByRole('button')
     const labels = buttons.map((node) => node.props.accessibilityLabel)
 
-    expect(labels[0]).toBe('ÐœÐ¾Ðµ Ð¼ÐµÑÑ‚Ð¾Ð¿Ð¾Ð»Ð¾Ð¶ÐµÐ½Ð¸Ðµ')
-    expect(labels[1]).toBe('ÐŸÑ€Ð¸Ð±Ð»Ð¸Ð·Ð¸Ñ‚ÑŒ')
+    expect(labels[0]).toBe('Мое местоположение')
+    expect(labels[1]).toBe('Приблизить')
     expect(labels[2]).toContain('60')
-    expect(labels[3]).toContain('Ð’ÑÐµ')
+    expect(labels[3]).toContain('Все')
 
     fireEvent.press(buttons[0])
     fireEvent.press(buttons[1])
@@ -231,8 +231,8 @@ describe('MapQuickFilters', () => {
     try {
       const { getByTestId } = render(
         <MapQuickFilters
-          radiusValue="60 ÐºÐ¼"
-          categoriesValue="Ð’ÑÐµ"
+          radiusValue="60 км"
+          categoriesValue="Все"
           onPressRadius={jest.fn()}
           onPressCategories={jest.fn()}
         />,
@@ -259,7 +259,7 @@ describe('MapQuickFilters', () => {
       const { getByTestId } = render(
         <MapQuickFilters
           radiusValue="60 ÃÂºÃÂ¼"
-          categoriesValue="Ãâ€™Ã‘ÂÃÂµ"
+          categoriesValue="Все"
           onPressRadius={jest.fn()}
           onPressCategories={jest.fn()}
           reserveLeftControlsSpace={false}
