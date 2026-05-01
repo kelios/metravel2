@@ -5,6 +5,10 @@ const renderer = require('react-test-renderer');
 
 const mockImageCardMedia = jest.fn((props: any) => React.createElement('mock-image-card-media', props));
 
+jest.mock('react-dom', () => ({
+  createPortal: (node: any) => node,
+}));
+
 jest.mock('@/components/ui/ImageCardMedia', () => ({
   __esModule: true,
   isIOSSafariUserAgent: (userAgent: string, maxTouchPoints = 0) => {
@@ -37,6 +41,17 @@ const mockColors = {
   surface: '#fff',
   borderLight: '#ddd',
 };
+
+const findHeroPressable = (tree: any) => tree.root.findAll((node: any) => (
+  node.props?.accessibilityLabel === 'Открыть фото на весь экран' &&
+  typeof node.props?.onPress === 'function'
+))[0];
+
+const findHeroExpandButton = (tree: any) => tree.root.findAll((node: any) => (
+  node.type === 'button' &&
+  node.props?.['data-card-action'] === 'true' &&
+  node.props?.['aria-label'] === 'Открыть фото на весь экран'
+))[0];
 
 describe('PlacePopupCard', () => {
   const originalPlatform = Platform.OS;
@@ -188,7 +203,7 @@ describe('PlacePopupCard', () => {
     expect(initialCalls.some((v: any) => v === false)).toBe(true);
 
     // Find the hero Pressable by accessibilityLabel and fire onPress
-    const heroPressable = tree.root.findByProps({ accessibilityLabel: 'Открыть фото на весь экран' });
+    const heroPressable = findHeroPressable(tree);
     expect(heroPressable).toBeTruthy();
     renderer.act(() => {
       heroPressable.props.onPress();
@@ -213,7 +228,8 @@ describe('PlacePopupCard', () => {
       );
     });
 
-    const heroPressable = tree.root.findByProps({ accessibilityLabel: 'Открыть фото на весь экран' });
+    const heroPressable = findHeroPressable(tree);
+    expect(heroPressable).toBeTruthy();
     expect(heroPressable.props['data-card-action']).toBe('true');
     expect(heroPressable.props.title).toBeTruthy();
 
@@ -224,6 +240,38 @@ describe('PlacePopupCard', () => {
     });
 
     expect(stopPropagation).toHaveBeenCalledTimes(2);
+  });
+
+  it('opens the fullscreen image viewer from the visible expand button', () => {
+    const FullscreenImageViewerModule = require('@/components/MapPage/Map/PlacePopupCard/FullscreenImageViewer');
+    const fullscreenSpy = jest.spyOn(FullscreenImageViewerModule, 'default');
+
+    let tree: any;
+    renderer.act(() => {
+      tree = renderer.create(
+        <PlacePopupCard
+          colors={mockColors as any}
+          title="Test point"
+          imageUrl="https://example.com/photo.jpg"
+          width={560}
+        />
+      );
+    });
+
+    const expandButton = findHeroExpandButton(tree);
+    expect(expandButton).toBeTruthy();
+
+    const stopPropagation = jest.fn();
+    const preventDefault = jest.fn();
+    renderer.act(() => {
+      expandButton.props.onClick({ stopPropagation, preventDefault });
+    });
+
+    const lastCall = fullscreenSpy.mock.calls[fullscreenSpy.mock.calls.length - 1]?.[0];
+    expect(stopPropagation).toHaveBeenCalled();
+    expect(preventDefault).toHaveBeenCalled();
+    expect(lastCall?.visible).toBe(true);
+    fullscreenSpy.mockRestore();
   });
 
   it('opens the fullscreen image viewer from capture handlers before Leaflet popup event guards', () => {

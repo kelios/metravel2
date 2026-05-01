@@ -128,6 +128,12 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
                 } as any,
             }),
         },
+        sidebarTitleRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: spacing.sm,
+        },
         sidebarTitle: {
             color: colors.text,
             fontSize: isMobileW ? 20 : 26,
@@ -135,6 +141,20 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
             marginBottom: spacing.xxs,
             letterSpacing: -0.6,
             lineHeight: isMobileW ? 26 : 32,
+            flexShrink: 1,
+        },
+        sidebarCloseBtn: {
+            width: 36,
+            height: 36,
+            borderRadius: CONTROL_RADIUS,
+            backgroundColor: colors.backgroundSecondary,
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            ...Platform.select({
+                web: { cursor: 'pointer', transition: 'background-color 0.2s ease' } as any,
+            }),
         },
         sidebarSubtitle: {
             color: colors.textMuted,
@@ -1209,7 +1229,7 @@ export default function QuestsScreen() {
                 <h1 style={{
                     position: 'absolute' as const, width: 1, height: 1, padding: 0, margin: -1,
                     overflow: 'hidden' as const, clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', borderWidth: 0,
-                } as any}>{titleText}</h1>
+                } as any}>{titleText.replace(/\s*\|\s*MeTravel\s*$/, '')}</h1>
             )}
 
             {/* Mobile: Filter drawer overlay */}
@@ -1239,6 +1259,7 @@ export default function QuestsScreen() {
                             onToggleCountryGroup={handleToggleCountryGroup}
                             onToggleAllCountryGroups={handleToggleAllCountryGroups}
                             onSetRadius={handleSetRadius}
+                            onCloseDrawer={() => setFilterDrawerOpen(false)}
                         />
                     </View>
                 </>

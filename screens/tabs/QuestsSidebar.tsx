@@ -31,6 +31,7 @@ type QuestsSidebarProps = {
     onToggleCountryGroup: (code: string) => void;
     onToggleAllCountryGroups: () => void;
     onSetRadius: (km: number) => void;
+    onCloseDrawer?: () => void;
 };
 
 export default function QuestsSidebar({
@@ -50,6 +51,7 @@ export default function QuestsSidebar({
     onToggleCountryGroup,
     onToggleAllCountryGroups,
     onSetRadius,
+    onCloseDrawer,
 }: QuestsSidebarProps) {
     const { isMobile } = useResponsive();
     const iconSize = isMobile ? 16 : 18;
@@ -57,7 +59,20 @@ export default function QuestsSidebar({
     return (
         <View style={styles.sidebar}>
             <View style={styles.sidebarHeader}>
-                <Text style={styles.sidebarTitle}>Приключения</Text>
+                <View style={styles.sidebarTitleRow}>
+                    <Text style={styles.sidebarTitle}>Приключения</Text>
+                    {onCloseDrawer && (
+                        <Pressable
+                            onPress={onCloseDrawer}
+                            style={styles.sidebarCloseBtn}
+                            accessibilityRole="button"
+                            accessibilityLabel="Закрыть меню"
+                            hitSlop={8}
+                        >
+                            <Feather name="x" size={20} color={colors.text} />
+                        </Pressable>
+                    )}
+                </View>
                 <Text style={styles.sidebarSubtitle}>
                     Раскрой тайны городов через загадки и легенды
                 </Text>

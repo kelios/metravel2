@@ -22,6 +22,14 @@ import {
   resolveHeaderContextBarAction,
   resolveHeaderContextBarIsMobile,
 } from './headerContextBarModel';
+import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
+
+// Top-level tab routes that already show their identity in the bottom dock — for those we
+// suppress the mobile context bar to avoid stealing 52px of vertical space for a redundant
+// "back to /" affordance.
+const TOP_LEVEL_TAB_PATHS = new Set<string>(
+  ['/'].concat(HEADER_NAV_ITEMS.filter((item) => !item.external).map((item) => item.path)),
+);
 
 const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm;
 
@@ -99,6 +107,12 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
 
   if (isMobile) {
     const mobileAction = resolveHeaderContextBarAction(pathname);
+    const isTopLevelTab = !!pathname && TOP_LEVEL_TAB_PATHS.has(pathname);
+    // On top-level tabs the bottom dock already names the active section and there's nowhere
+    // meaningful to go "back" to — hide the bar but keep emitting BreadcrumbsJsonLd for SEO.
+    if (isTopLevelTab && mobileAction === 'none') {
+      return <BreadcrumbsJsonLd model={model} pathname={pathname} />;
+    }
     return (
       <>
         <BreadcrumbsJsonLd model={model} pathname={pathname} />

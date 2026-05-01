@@ -185,7 +185,9 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
   },
   shortcutText: {
     fontSize: 11,
-    color: colors.textMuted,
+    // The shortcut chip is a secondary affordance, not muted decoration; textSecondary keeps
+    // the role explicit (palettes give both tokens the same value, so contrast is unchanged).
+    color: colors.textSecondary,
     fontFamily: Platform.select({
       web: 'monospace',
       default: 'monospace',
@@ -265,8 +267,10 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     justifyContent: 'flex-start',
   },
   actionButton: {
-    width: Platform.select({ default: 42, web: 46 }),
-    height: Platform.select({ default: 42, web: 46 }),
+    // Web desktop matches the results-pill / clear-all height (52) so the action row reads
+    // as a single visual band; native stays compact at 42 to keep the touch row dense.
+    width: Platform.select({ default: 42, web: 52 }),
+    height: Platform.select({ default: 42, web: 52 }),
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radii.pill,

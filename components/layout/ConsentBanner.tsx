@@ -73,6 +73,25 @@ function ConsentBanner() {
     };
   }, [suspendForOverlay, visible]);
 
+  useEffect(() => {
+    if (!isWeb || typeof document === 'undefined') return;
+    const root = document.documentElement;
+    const shouldExpose = visible && !suspendForOverlay && !isConsentSettingsRoute;
+    if (!shouldExpose) {
+      root.style.removeProperty('--mt-consent-h');
+      return;
+    }
+    // Reserve enough vertical space so scroll containers (RightColumn etc.) don't hide
+    // the last row of cards behind the floating cookie banner. bottomOffset already
+    // accounts for the bottom dock + safe-area; the banner itself is ~96px on mobile,
+    // ~64px on desktop. The +8 keeps an additional breathing gap below the last card.
+    const bannerH = isMobile ? 96 : 64;
+    root.style.setProperty('--mt-consent-h', `${bottomOffset + bannerH + 8}px`);
+    return () => {
+      root.style.removeProperty('--mt-consent-h');
+    };
+  }, [bottomOffset, isConsentSettingsRoute, isMobile, suspendForOverlay, visible]);
+
   const handleAcceptAll = () => {
     const consent: ConsentState = {
       necessary: true,

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import type { ThemedColors } from '@/hooks/useTheme';
@@ -6,16 +6,15 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
-const webCreatePortal: ((node: React.ReactNode, container: Element) => any) | null =
-  Platform.OS === 'web'
-    ? (() => {
-        try {
-          return (require('react-dom') as any)?.createPortal ?? null;
-        } catch {
-          return null;
-        }
-      })()
-    : null;
+const getWebCreatePortal = (): ((node: React.ReactNode, container: Element) => any) | null => {
+  if (Platform.OS !== 'web') return null;
+
+  try {
+    return (require('react-dom') as any)?.createPortal ?? null;
+  } catch {
+    return null;
+  }
+};
 
 export const fullscreenStyles = StyleSheet.create({
   container: {
@@ -50,6 +49,7 @@ const FullscreenImageViewer: React.FC<{
   colors: ThemedColors;
 }> = ({ imageUrl, alt, visible, onClose, colors }) => {
   const { width, height } = useWindowDimensions();
+  const openedAtRef = useRef(0);
 
   const maxW = Math.round(width * 0.92);
   const maxH = Math.round(height * 0.92);
@@ -66,6 +66,12 @@ const FullscreenImageViewer: React.FC<{
     }) ?? imageUrl;
   }, [imageUrl, maxW, maxH]);
 
+
+  useEffect(() => {
+    if (visible) {
+      openedAtRef.current = Date.now();
+    }
+  }, [visible]);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -89,7 +95,11 @@ const FullscreenImageViewer: React.FC<{
 
     const overlay = (
       <div
-        onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+        onClick={(e) => {
+          if (e.target !== e.currentTarget) return;
+          if (Date.now() - openedAtRef.current < 450) return;
+          onClose();
+        }}
         style={{
           position: 'fixed',
           inset: 0,
@@ -151,6 +161,7 @@ const FullscreenImageViewer: React.FC<{
       </div>
     );
 
+    const webCreatePortal = getWebCreatePortal();
     if (typeof document !== 'undefined' && webCreatePortal) {
       return webCreatePortal(overlay, document.body);
     }

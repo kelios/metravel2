@@ -267,9 +267,10 @@ const RightColumn: React.FC<RightColumnProps> = (
       // Keep a small gap below the search chrome on web so the first card
       // doesn't visually tuck under the header shadow or clip its top actions.
       paddingTop: 8,
-      // Reserve the fixed bottom dock exactly once on mobile web.
+      // Reserve whichever bottom overlay is taller: the bottom dock or the consent banner
+      // (set by ConsentBanner via --mt-consent-h). max() avoids cards hiding under the banner.
       paddingBottom: isMobile
-        ? (`calc(var(--mt-dock-h, 0px) + 8px)` as any)
+        ? (`calc(max(var(--mt-dock-h, 0px), var(--mt-consent-h, 0px)) + 8px)` as any)
         : 28,
     }), [isMobile, contentPadding])
 
@@ -314,16 +315,16 @@ const RightColumn: React.FC<RightColumnProps> = (
         wrapper: {
           flexDirection: 'row' as const,
           flexWrap: 'wrap' as const,
-          gap: 8,
-          paddingTop: 10,
-          paddingBottom: 2,
+          gap: DESIGN_TOKENS.spacing.xs,
+          paddingTop: DESIGN_TOKENS.spacing.sm,
+          paddingBottom: DESIGN_TOKENS.spacing.xxs,
         },
         chip: {
           minHeight: 34,
           maxWidth: isMobile ? '100%' : 280,
           flexDirection: 'row' as const,
           alignItems: 'center' as const,
-          gap: 6,
+          gap: DESIGN_TOKENS.spacing.xs,
           paddingHorizontal: 12,
           paddingVertical: 7,
           borderRadius: DESIGN_TOKENS.radii.pill,

@@ -518,7 +518,7 @@ const card = (
     imageUrl={imgUrl && !isLikelyWatermarked(imgUrl) ? imgUrl : null}
     onPress={handlePress}
     width={isWeb ? undefined : (typeof cardWidth === 'number' ? cardWidth : undefined)}
-    mediaFit="contain"
+    mediaFit="cover"
     visualVariant={visualVariant === 'home-featured' ? 'featured' : 'default'}
     heroTitleOverlay={true}
     testID={cardTestId}

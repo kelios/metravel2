@@ -101,7 +101,7 @@ export default function QuestsContentPanel({
                             <View style={styles.geoBanner} testID="quests-geo-banner">
                                 <Feather name="map-pin" size={13} color={colors.warning} />
                                 <Text style={styles.geoBannerText}>
-                                    Геолокация отключена. Карта центрирована на Минске и показывает все квесты.
+                                    Геолокация отключена. Показываем все квесты на карте.
                                 </Text>
                             </View>
                         )}
@@ -140,8 +140,8 @@ export default function QuestsContentPanel({
                                         coordinates={mapCenter}
                                         mode="radius"
                                         radius={selectedCityId === nearbyId
-                                            ? (userLoc ? String(Math.max(nearbyRadiusKm, 5)) : '50000')
-                                            : '50000'}
+                                            ? (userLoc ? String(Math.max(nearbyRadiusKm, 5)) : '50')
+                                            : '30'}
                                         routePoints={[]}
                                         transportMode="foot"
                                         onMapClick={() => {}}

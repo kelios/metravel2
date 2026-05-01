@@ -38,7 +38,9 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       // Мягкие тени для глубины
       ...Platform.select({
         web: {
-          boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
+          // Hard-coded 50% white inset created a bright bar across the top edge in dark mode.
+          // Lower alpha keeps a subtle highlight in light mode without blowing out on dark surfaces.
+          boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
         } as any,
         ios: {
           shadowColor: DESIGN_TOKENS.colors.text,
