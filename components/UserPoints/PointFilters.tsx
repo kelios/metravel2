@@ -8,6 +8,7 @@ import Chip from '@/components/ui/Chip';
 import ColorChip from '@/components/ui/ColorChip';
 
 const RADIUS_OPTIONS: Array<number | null> = [100, 150, 200, 300, 500, null]; // null = all points
+const PILL_RADIUS = DESIGN_TOKENS.radii.pill;
 
 const getRadiusLabel = (km: number | null) => {
   if (km === null) return 'Все точки';
@@ -183,7 +184,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   colorChip: {
     borderWidth: 2,
-    borderRadius: 10,
+    borderRadius: PILL_RADIUS,
     width: 28,
     height: 28,
     ...(Platform.OS === 'web' ? ({
@@ -193,7 +194,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   colorChipSelected: {
     ...(Platform.OS === 'web' ? ({
-      boxShadow: `0 0 0 3px ${colors.primary}30`,
+      boxShadow: `0 0 0 3px ${colors.primaryAlpha30}, ${colors.boxShadows.light}`,
       transform: [{ scale: 1.1 }],
     } as any) : {
       borderColor: colors.primary,

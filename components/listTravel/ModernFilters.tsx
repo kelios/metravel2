@@ -470,7 +470,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                       />
                     </View>
                   )}
-                  <Text style={styles.groupTitle}>{group.title}</Text>
+                  <Text style={styles.groupTitle} numberOfLines={1}>{group.title}</Text>
                   {selectedCount > 0 && (
                     <View style={styles.selectedBadge}>
                       <Text style={styles.selectedBadgeText}>{selectedCount}</Text>

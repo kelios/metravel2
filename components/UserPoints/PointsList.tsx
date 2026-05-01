@@ -666,7 +666,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     bottom: DESIGN_TOKENS.spacing.lg,
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: DESIGN_TOKENS.radii.pill,
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',

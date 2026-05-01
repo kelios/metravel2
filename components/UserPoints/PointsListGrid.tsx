@@ -9,6 +9,7 @@ import { useMapPanelStore } from '@/stores/mapPanelStore'
 import FiltersPanelMapSettings from '@/components/MapPage/FiltersPanelMapSettings'
 import SegmentedControl from '@/components/MapPage/SegmentedControl'
 import IconButton from '@/components/ui/IconButton'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { MapUiApi } from '@/types/mapUi'
 import { resolveExportedFunction } from '@/utils/moduleInterop'
 
@@ -654,7 +655,7 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     backgroundColor: colors.background,
     ...(Platform.OS === 'web'
       ? ({
-          boxShadow: '-8px 0 32px rgba(0,0,0,0.08), -2px 0 8px rgba(0,0,0,0.04)',
+          boxShadow: colors.boxShadows.card,
           zIndex: 2,
         } as any)
       : null),
@@ -707,7 +708,7 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     height: 44,
     borderWidth: 1,
     borderColor: colors.borderLight,
-    borderRadius: 14,
+    borderRadius: DESIGN_TOKENS.radii.sm,
     paddingHorizontal: 16,
     backgroundColor: colors.surface,
     color: colors.text,
@@ -729,7 +730,7 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     paddingVertical: 14,
     paddingHorizontal: 16,
     backgroundColor: colors.primarySoft,
-    borderRadius: 16,
+    borderRadius: DESIGN_TOKENS.radii.md,
     marginBottom: 16,
     marginHorizontal: 4,
     gap: 12,
@@ -753,7 +754,7 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     paddingVertical: 8,
     paddingHorizontal: 12,
     backgroundColor: colors.primarySoft,
-    borderRadius: 10,
+    borderRadius: DESIGN_TOKENS.radii.sm,
     borderLeftWidth: 3,
     borderLeftColor: colors.primary,
   },

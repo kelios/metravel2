@@ -745,6 +745,11 @@ export default function SettingsScreen() {
     );
 }
 
+const CARD_RADIUS = DESIGN_TOKENS.radii.lg;
+const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm;
+const MEDIA_RADIUS = DESIGN_TOKENS.radii.md;
+const PILL_RADIUS = DESIGN_TOKENS.radii.pill;
+
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     container: {
         flex: 1,
@@ -794,11 +799,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontWeight: '600',
         color: colors.textMuted,
         textTransform: 'uppercase',
-        letterSpacing: 0.5,
+        letterSpacing: 0,
     },
     card: {
         backgroundColor: colors.surface,
-        borderRadius: DESIGN_TOKENS.radii.lg,
+        borderRadius: CARD_RADIUS,
         borderWidth: 1,
         borderColor: colors.border,
         padding: 14,
@@ -837,7 +842,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     profileAvatar: {
         width: 36,
         height: 36,
-        borderRadius: 18,
+        borderRadius: PILL_RADIUS,
         backgroundColor: colors.primarySoft,
         alignItems: 'center',
         justifyContent: 'center',
@@ -851,7 +856,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     refreshButton: {
         width: 36,
         height: 36,
-        borderRadius: 18,
+        borderRadius: PILL_RADIUS,
         borderWidth: 1,
         borderColor: colors.border,
         backgroundColor: colors.surface,
@@ -866,7 +871,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     cardIcon: {
         width: 36,
         height: 36,
-        borderRadius: 18,
+        borderRadius: PILL_RADIUS,
         backgroundColor: colors.primarySoft,
         alignItems: 'center',
         justifyContent: 'center',
@@ -892,7 +897,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         alignItems: 'center',
         gap: 12,
         padding: 12,
-        borderRadius: 12,
+        borderRadius: CONTROL_RADIUS,
         borderWidth: 1,
         borderColor: colors.border,
         backgroundColor: colors.surface,
@@ -907,7 +912,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     themeOptionIcon: {
         width: 32,
         height: 32,
-        borderRadius: 16,
+        borderRadius: PILL_RADIUS,
         backgroundColor: colors.surfaceMuted,
         alignItems: 'center',
         justifyContent: 'center',
@@ -982,7 +987,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderWidth: 1,
         borderColor: colors.border,
         backgroundColor: colors.surface,
-        borderRadius: 12,
+        borderRadius: CONTROL_RADIUS,
         paddingHorizontal: 12,
         paddingVertical: 10,
         fontSize: 14,
@@ -1016,7 +1021,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     avatarPreview: {
         width: 64,
         height: 64,
-        borderRadius: 16,
+        borderRadius: MEDIA_RADIUS,
         borderWidth: 1,
         borderColor: colors.border,
         backgroundColor: colors.surface,
@@ -1055,7 +1060,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         justifyContent: 'center',
         gap: 10,
         paddingVertical: 12,
-        borderRadius: 12,
+        borderRadius: CONTROL_RADIUS,
         borderWidth: 1,
         borderColor: colors.danger,
         backgroundColor: colors.surface,
@@ -1089,7 +1094,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         gap: 8,
         paddingHorizontal: 12,
         paddingVertical: 10,
-        borderRadius: DESIGN_TOKENS.radii.md,
+        borderRadius: CONTROL_RADIUS,
         borderWidth: 1,
         borderColor: colors.borderLight,
         backgroundColor: colors.surface,

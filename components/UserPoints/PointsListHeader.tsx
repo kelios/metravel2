@@ -325,7 +325,7 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     gap: DESIGN_TOKENS.spacing.sm,
     ...(Platform.OS === 'web'
       ? ({
-          boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
+          boxShadow: colors.boxShadows.light,
         } as any)
       : null),
   },
@@ -335,7 +335,7 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
   recommendationEyebrow: {
     fontSize: 12,
     fontWeight: '700' as any,
-    letterSpacing: 0.4,
+    letterSpacing: 0,
     textTransform: 'uppercase',
     color: colors.primaryDark,
   },
@@ -355,7 +355,7 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
   recommendationButtonActive: {
     ...(Platform.OS === 'web'
       ? ({
-          boxShadow: '0 10px 28px rgba(0,0,0,0.12)',
+          boxShadow: colors.boxShadows.hover,
         } as any)
       : null),
   },
@@ -393,7 +393,7 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     backgroundColor: colors.surface,
     ...(Platform.OS === 'web'
       ? ({
-          boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+          boxShadow: colors.boxShadows.light,
         } as any)
       : null),
   },

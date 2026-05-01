@@ -226,6 +226,42 @@ describe('PlacePopupCard', () => {
     expect(stopPropagation).toHaveBeenCalledTimes(2);
   });
 
+  it('opens the fullscreen image viewer from capture handlers before Leaflet popup event guards', () => {
+    const FullscreenImageViewerModule = require('@/components/MapPage/Map/PlacePopupCard/FullscreenImageViewer');
+    const fullscreenSpy = jest.spyOn(FullscreenImageViewerModule, 'default');
+
+    let tree: any;
+    renderer.act(() => {
+      tree = renderer.create(
+        <PlacePopupCard
+          colors={mockColors as any}
+          title="Test point"
+          imageUrl="https://example.com/photo.jpg"
+          width={560}
+        />
+      );
+    });
+
+    const heroPressable = tree.root.findAll((node: any) => (
+      node.props?.['data-card-action'] === 'true' &&
+      typeof node.props?.onClickCapture === 'function' &&
+      typeof node.props?.onTouchEndCapture === 'function'
+    ))[0];
+    expect(heroPressable).toBeTruthy();
+    expect(typeof heroPressable.props.onClickCapture).toBe('function');
+    expect(typeof heroPressable.props.onTouchEndCapture).toBe('function');
+
+    const stopPropagation = jest.fn();
+    renderer.act(() => {
+      heroPressable.props.onClickCapture({ stopPropagation });
+    });
+
+    const lastCall = fullscreenSpy.mock.calls[fullscreenSpy.mock.calls.length - 1]?.[0];
+    expect(stopPropagation).toHaveBeenCalled();
+    expect(lastCall?.visible).toBe(true);
+    fullscreenSpy.mockRestore();
+  });
+
   it('renders permanent text labels alongside icons for web action chips', () => {
     let tree: any;
 

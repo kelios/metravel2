@@ -9,10 +9,10 @@ export interface HeaderNavItem {
 }
 
 export const HEADER_NAV_ITEMS: HeaderNavItem[] = [
-  { path: '/search', label: 'Идеи поездок', icon: 'compass', priority: 'primary' },
+  { path: '/search', label: 'Идеи поездок', icon: 'book-open', priority: 'primary' },
   { path: '/travelsby', label: 'Беларусь', icon: 'belarus-outline', priority: 'primary' },
-  { path: '/map', label: 'Карта', icon: 'map-pin', priority: 'primary' },
-  { path: '/roulette', label: 'Рулетка маршрутов', icon: 'shuffle', priority: 'primary' },
+  { path: '/map', label: 'Карта', icon: 'map', priority: 'primary' },
+  { path: '/roulette', label: 'Рулетка маршрутов', icon: 'disc', priority: 'primary' },
   { path: '/quests', label: 'Квесты', icon: 'flag', priority: 'primary' },
   { path: 'https://metravel.by/travels/akkaunty-v-instagram-o-puteshestviyah-po-belarusi', label: 'Instagram', icon: 'instagram', priority: 'primary', external: true },
 ];

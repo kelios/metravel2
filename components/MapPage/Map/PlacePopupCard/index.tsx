@@ -80,6 +80,12 @@ const POPUP_DOM_EVENTS = [
   'wheel',
 ] as const;
 
+const isCardActionEvent = (event: Event): boolean => {
+  if (Platform.OS !== 'web') return false;
+  const target = event.target as Element | null;
+  return Boolean(target?.closest?.('[data-card-action="true"]'));
+};
+
 const getPopupEventNodes = (node: any): EventTarget[] => {
   if (Platform.OS !== 'web' || !node?.addEventListener) return [];
 
@@ -244,6 +250,7 @@ const PlacePopupCard: React.FC<Props> = ({
 
   const handleOpenFullscreen = useCallback((event?: any) => {
     stopWebPopupEvent(event);
+    event?.preventDefault?.();
     if (imageUrl) setFullscreenVisible(true);
   }, [imageUrl]);
 
@@ -262,6 +269,7 @@ const PlacePopupCard: React.FC<Props> = ({
 
     const stopEvent = (event: Event) => {
       event.stopPropagation();
+      if (isCardActionEvent(event)) return;
       (event as any).stopImmediatePropagation?.();
     };
 
@@ -589,6 +597,8 @@ const PlacePopupCard: React.FC<Props> = ({
                 ? ({
                     'data-card-action': 'true',
                     title: POPUP_TOOLTIPS.openPhoto,
+                    onClickCapture: handleOpenFullscreen,
+                    onTouchEndCapture: handleOpenFullscreen,
                   } as any)
                 : null)}
               style={({ pressed, hovered }: any) => [
@@ -612,16 +622,56 @@ const PlacePopupCard: React.FC<Props> = ({
                     optimizeWeb={false}
                     style={StyleSheet.absoluteFill}
                   />
-                  <View
-                    pointerEvents="none"
-                    style={[
-                      styles.imageExpandButton,
-                      hovered && styles.imageExpandButtonHovered,
-                      pressed && styles.imageExpandButtonPressed,
-                    ]}
-                  >
-                    <Feather name="maximize-2" size={16} color={colors.textOnDark} />
-                  </View>
+                  {Platform.OS === 'web' ? (
+                    <button
+                      type="button"
+                      data-card-action="true"
+                      aria-label="Открыть фото на весь экран"
+                      title={POPUP_TOOLTIPS.openPhoto}
+                      onClick={handleOpenFullscreen}
+                      onMouseDown={stopWebPopupEvent as any}
+                      onPointerDown={stopWebPopupEvent as any}
+                      onTouchStart={stopWebPopupEvent as any}
+                      onTouchEnd={handleOpenFullscreen}
+                      style={{
+                        position: 'absolute',
+                        bottom: useCompactLayout ? 8 : 10,
+                        right: useCompactLayout ? 8 : 10,
+                        width: useCompactLayout ? 30 : 34,
+                        height: useCompactLayout ? 30 : 34,
+                        borderRadius: 9999,
+                        border: 'none',
+                        padding: 0,
+                        backgroundColor: pressed
+                          ? 'rgba(15,23,42,0.85)'
+                          : hovered
+                            ? 'rgba(15,23,42,0.78)'
+                            : 'rgba(15,23,42,0.58)',
+                        color: colors.textOnDark,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backdropFilter: 'blur(8px)',
+                        WebkitBackdropFilter: 'blur(8px)',
+                        transform: pressed ? 'scale(0.94)' : hovered ? 'scale(1.06)' : 'scale(1)',
+                        transition: 'background-color 0.15s ease, transform 0.15s ease',
+                      }}
+                    >
+                      <Feather name="maximize-2" size={16} color={colors.textOnDark} />
+                    </button>
+                  ) : (
+                    <View
+                      pointerEvents="none"
+                      style={[
+                        styles.imageExpandButton,
+                        hovered && styles.imageExpandButtonHovered,
+                        pressed && styles.imageExpandButtonPressed,
+                      ]}
+                    >
+                      <Feather name="maximize-2" size={16} color={colors.textOnDark} />
+                    </View>
+                  )}
                 </>
               )}
             </Pressable>
