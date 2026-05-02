@@ -41,9 +41,20 @@ function copyDistToProd({
   return destDir
 }
 
+function getArgValue(name, fallback) {
+  const index = process.argv.indexOf(name)
+  if (index >= 0 && index + 1 < process.argv.length) {
+    return process.argv[index + 1]
+  }
+  return fallback
+}
+
 if (require.main === module) {
   try {
-    const preparedDir = copyDistToProd()
+    const preparedDir = copyDistToProd({
+      srcDir: path.resolve(getArgValue('--src', 'dist')),
+      destDir: path.resolve(getArgValue('--dest', 'dist/prod')),
+    })
     console.log(`[prepare-dist-prod] Prepared ${preparedDir}`)
   } catch (error) {
     console.error(`[prepare-dist-prod] ${error.message}`)
