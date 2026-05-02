@@ -17,13 +17,16 @@ function getArgValue(flag, fallback = '') {
 const outputDirArg = getArgValue('--output-dir', 'dist');
 const outputDir = path.resolve(rootDir, outputDirArg);
 const outputIndex = path.join(outputDir, 'index.html');
-const fallbackOutputDir = path.join(rootDir, 'dist');
 function getPassthroughArgs(argv = process.argv.slice(2)) {
   return argv.filter((arg, index, args) => {
     if (arg === '--output-dir') return false;
     if (index > 0 && args[index - 1] === '--output-dir') return false;
     return true;
   });
+}
+
+function getExpoExportArgs(argv = process.argv.slice(2), resolvedOutputDir = outputDir) {
+  return [...getPassthroughArgs(argv), '--output-dir', resolvedOutputDir];
 }
 
 function hasClearFlag(args) {
@@ -58,9 +61,6 @@ function fileExists(filePath) {
 
 function resolveReadyDir() {
   const candidates = [outputDir];
-  if (fallbackOutputDir !== outputDir) {
-    candidates.push(fallbackOutputDir);
-  }
 
   return (
     candidates.find((candidateDir) => {
@@ -72,6 +72,7 @@ function resolveReadyDir() {
 
 function main() {
   const passthroughArgs = getPassthroughArgs();
+  const expoExportArgs = getExpoExportArgs(process.argv.slice(2), outputDir);
 
   // Prevent stale dist artifacts from making the readiness check pass immediately.
   try {
@@ -95,7 +96,7 @@ function main() {
 
   const child = spawn(
     process.execPath,
-    ['./node_modules/expo/bin/cli', 'export', ...passthroughArgs],
+    ['./node_modules/expo/bin/cli', 'export', ...expoExportArgs],
     {
       cwd: rootDir,
       stdio: 'inherit',
@@ -169,6 +170,7 @@ function main() {
 
 module.exports = {
   createIsolatedExpoTempDir,
+  getExpoExportArgs,
   getPassthroughArgs,
   hasClearFlag,
   main,

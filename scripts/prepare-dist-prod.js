@@ -34,7 +34,15 @@ function copyDistToProd({
   }
 
   fs.rmSync(destDir, { recursive: true, force: true })
-  fs.renameSync(tempDir, destDir)
+  try {
+    fs.renameSync(tempDir, destDir)
+  } catch (error) {
+    if (process.platform !== 'win32') {
+      throw error
+    }
+
+    fs.cpSync(tempDir, destDir, { recursive: true, force: true })
+  }
   fs.rmSync(path.join(destDir, 'prod'), { recursive: true, force: true })
   fs.rmSync(tempDir, { recursive: true, force: true })
 

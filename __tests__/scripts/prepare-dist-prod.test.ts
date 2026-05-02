@@ -32,4 +32,25 @@ describe('prepare-dist-prod', () => {
     expect(fs.existsSync(path.join(destDir, 'prod'))).toBe(false)
     expect(fs.existsSync(path.join(destDir, 'stale.txt'))).toBe(false)
   })
+
+  it('falls back to copying when Windows cannot rename the prepared snapshot', () => {
+    const srcDir = path.join(tempRoot, 'dist')
+    const destDir = path.join(srcDir, 'prod')
+    const originalRenameSync = fs.renameSync
+
+    fs.mkdirSync(srcDir, { recursive: true })
+    fs.writeFileSync(path.join(srcDir, 'index.html'), 'root', 'utf8')
+
+    try {
+      fs.renameSync = jest.fn(() => {
+        throw Object.assign(new Error('locked'), { code: 'EPERM' })
+      })
+
+      copyDistToProd({ srcDir, destDir })
+
+      expect(fs.readFileSync(path.join(destDir, 'index.html'), 'utf8')).toBe('root')
+    } finally {
+      fs.renameSync = originalRenameSync
+    }
+  })
 })
