@@ -8,7 +8,7 @@ import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 
-import type { QuestMeta } from './questsShared';
+import { pluralizePoints, type QuestMeta } from './questsShared';
 
 const loadedQuestImageCache = new Set<string>();
 
@@ -48,7 +48,7 @@ export default function QuestCard({
     const [isHovered, setIsHovered] = useState(false);
 
     const durationText = quest.durationMin ? `${Math.round((quest.durationMin ?? 60) / 5) * 5} мин` : '1–2 ч';
-    const pointsText = quest.points === 1 ? '1 точка' : quest.points < 5 ? `${quest.points} точки` : `${quest.points} точек`;
+    const pointsText = pluralizePoints(quest.points ?? 0);
     const categoryIndex = quest.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % QUEST_CATEGORIES.length;
     const categoryLabel = QUEST_CATEGORIES[categoryIndex];
     const difficultyInfo = getDifficultyInfo(quest.difficulty);

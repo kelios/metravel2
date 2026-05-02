@@ -170,7 +170,7 @@ export default function QuestsMapScreen() {
                     travel={travel}
                     coordinates={questsCenter}
                     mode="radius"
-                    radius="50000"
+                    radius="2000"
                     routePoints={[]}
                     transportMode="foot"
                     onMapClick={() => {}}

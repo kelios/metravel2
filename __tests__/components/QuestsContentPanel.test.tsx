@@ -70,11 +70,11 @@ describe('QuestsContentPanel', () => {
         );
 
         expect(getByTestId('quests-geo-banner')).toBeTruthy();
-        expect(queryByText('Геолокация отключена. Карта центрирована на Минске и показывает все квесты.')).toBeTruthy();
+        expect(queryByText('Геолокация отключена. Показываем все квесты на карте.')).toBeTruthy();
         expect(LazyQuestMap).toHaveBeenCalledWith(
             expect.objectContaining({
                 coordinates: { latitude: 53.9, longitude: 27.56 },
-                radius: '50000',
+                radius: '50',
             }),
             undefined,
         );

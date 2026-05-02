@@ -31,3 +31,12 @@ export const pluralizeQuest = (n: number): string => {
     if (lastDigit >= 2 && lastDigit <= 4) return `${n} квеста`;
     return `${n} квестов`;
 };
+
+export const pluralizePoints = (n: number): string => {
+    const abs = Math.abs(n) % 100;
+    const lastDigit = abs % 10;
+    if (abs > 10 && abs < 20) return `${n} точек`;
+    if (lastDigit === 1) return `${n} точка`;
+    if (lastDigit >= 2 && lastDigit <= 4) return `${n} точки`;
+    return `${n} точек`;
+};
