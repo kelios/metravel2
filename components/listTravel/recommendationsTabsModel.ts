@@ -18,17 +18,19 @@ export function getRecommendationsTabsConfig(params: {
   isAuthenticated: boolean
 }) {
   return [
-    { id: 'highlights' as const, label: 'Подборка месяца', icon: 'zap' },
-    { id: 'recommendations' as const, label: 'Рекомендации', icon: 'star' },
+    { id: 'highlights' as const, label: 'Подборка месяца', shortLabel: 'Подборка', icon: 'zap' },
+    { id: 'recommendations' as const, label: 'Рекомендации', shortLabel: 'Для вас', icon: 'star' },
     {
       id: 'favorites' as const,
       label: 'Избранное',
+      shortLabel: 'Избранное',
       icon: 'heart',
       count: params.isAuthenticated ? params.favoritesCount : 0,
     },
     {
       id: 'history' as const,
       label: 'История',
+      shortLabel: 'История',
       icon: 'clock',
       count: params.isAuthenticated ? params.historyCount : 0,
     },

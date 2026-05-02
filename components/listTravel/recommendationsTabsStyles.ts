@@ -45,8 +45,12 @@ export const createRecommendationsTabsStyles = (
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 7,
     borderRadius: 999, marginRight: 8, minHeight: 34, borderWidth: 1, borderColor: 'transparent',
   },
+  // Compact paddings/label so all 4 tabs fit on narrow phones (≤420px) instead of overflowing
+  // into a hidden horizontal scroll where the user only sees the first two.
+  tabCompact: { paddingHorizontal: 8, paddingVertical: 6, marginRight: 4, minHeight: 32 },
   activeTab: { backgroundColor: colors.primarySoft, borderColor: colors.border },
   tabLabel: { marginLeft: 6, fontSize: 13, color: colors.textMuted, fontWeight: '600' },
+  tabLabelCompact: { marginLeft: 4, fontSize: 12 },
   activeTabLabel: { color: colors.primaryText, fontWeight: '600' },
   badge: {
     backgroundColor: colors.backgroundSecondary, borderRadius: 999, minWidth: 20, height: 20,
@@ -54,7 +58,9 @@ export const createRecommendationsTabsStyles = (
   },
   badgeText: { color: colors.text, fontSize: 11, fontWeight: '700' },
   tabUnderline: { position: 'absolute', bottom: 4, height: 3, backgroundColor: colors.primary, borderRadius: 2, opacity: 0 },
-  collapseButton: { paddingLeft: 10, paddingVertical: 12 },
+  // Larger left padding gives the chevron breathing room from the rightmost tab when
+  // tabs occupy the full width on narrow phones.
+  collapseButton: { paddingLeft: 12, paddingRight: 4, paddingVertical: 12, marginLeft: 4 },
   content: { height: TAB_CONTENT_HEIGHT, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: colors.surface },
   collapsedHeader: {
     height: TAB_HEADER_HEIGHT, justifyContent: 'center', paddingHorizontal: 12,

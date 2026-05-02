@@ -204,8 +204,11 @@ const RecommendationsTabs = memo(
     const styles = useMemo(() => createRecommendationsTabsStyles(colors, tabCardTemplate), [colors, tabCardTemplate]);
     const [activeTab, setActiveTab] = useState<TabType>('highlights');
     const [collapsed, setCollapsed] = useState(false);
-    const { isMobile } = useResponsive();
+    const { isMobile, width } = useResponsive();
     const isMobileWeb = Platform.OS === 'web' && isMobile;
+    // На узких экранах все 4 таба не помещаются и пользователь видит только два — остальные
+    // прячутся в горизонтальный скролл без подсказки. Используем компактные подписи.
+    const isNarrowViewport = isMobile && width > 0 && width < 420;
 
     const router = useRouter();
     const { favorites = [], viewHistory = [], clearFavorites, clearHistory, ensureServerData } = useFavorites() as any;
@@ -503,36 +506,50 @@ const RecommendationsTabs = memo(
             contentContainerStyle={styles.tabsContainer}
             {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
           >
-            {tabs.map((tab) => (
+            {tabs.map((tab) => {
+              const isActiveTab = activeTab === tab.id;
+              // На узких экранах все 4 таба не помещаются. Показываем подпись только для
+              // активного таба — иконки остальных служат и индикатором, и точкой нажатия.
+              const showLabel = !isNarrowViewport || isActiveTab;
+              return (
               <Pressable
                 key={tab.id}
                 onPress={() => setActiveTab(tab.id)}
                 onLayout={(e) => handleTabLayout(tab.id, e)}
-                style={[styles.tab, activeTab === tab.id && styles.activeTab]}
+                style={[
+                  styles.tab,
+                  isNarrowViewport && styles.tabCompact,
+                  isActiveTab && styles.activeTab,
+                ]}
                 accessibilityRole="tab"
                 accessibilityLabel={tab.label}
-                accessibilityState={{ selected: activeTab === tab.id }}
+                accessibilityState={{ selected: isActiveTab }}
               >
                 <Feather
                   name={tab.icon as any}
-                  size={18}
-                  color={activeTab === tab.id ? colors.primary : colors.textMuted}
+                  size={isNarrowViewport ? 16 : 18}
+                  color={isActiveTab ? colors.primary : colors.textMuted}
                 />
+                {showLabel && (
                 <Text
                   style={[
                     styles.tabLabel,
-                    activeTab === tab.id && styles.activeTabLabel,
+                    isNarrowViewport && styles.tabLabelCompact,
+                    isActiveTab && styles.activeTabLabel,
                   ]}
+                  numberOfLines={1}
                 >
-                  {tab.label}
+                  {isNarrowViewport ? (tab.shortLabel ?? tab.label) : tab.label}
                 </Text>
+                )}
                 {tab.count !== undefined && tab.count > 0 && (
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>{tab.count > 99 ? '99+' : tab.count}</Text>
                   </View>
                 )}
               </Pressable>
-            ))}
+              );
+            })}
 
             <Animated.View
               style={[
