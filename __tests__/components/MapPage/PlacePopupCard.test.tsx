@@ -242,7 +242,7 @@ describe('PlacePopupCard', () => {
     expect(stopPropagation).toHaveBeenCalledTimes(2);
   });
 
-  it('opens the fullscreen image viewer from the visible expand button', () => {
+  it('opens the fullscreen image viewer from the visible expand button capture handler', () => {
     const FullscreenImageViewerModule = require('@/components/MapPage/Map/PlacePopupCard/FullscreenImageViewer');
     const fullscreenSpy = jest.spyOn(FullscreenImageViewerModule, 'default');
 
@@ -264,7 +264,7 @@ describe('PlacePopupCard', () => {
     const stopPropagation = jest.fn();
     const preventDefault = jest.fn();
     renderer.act(() => {
-      expandButton.props.onClick({ stopPropagation, preventDefault });
+      expandButton.props.onPointerDownCapture({ stopPropagation, preventDefault });
     });
 
     const lastCall = fullscreenSpy.mock.calls[fullscreenSpy.mock.calls.length - 1]?.[0];

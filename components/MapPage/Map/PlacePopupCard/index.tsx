@@ -597,7 +597,10 @@ const PlacePopupCard: React.FC<Props> = ({
                 ? ({
                     'data-card-action': 'true',
                     title: POPUP_TOOLTIPS.openPhoto,
+                    onMouseDownCapture: handleOpenFullscreen,
+                    onPointerDownCapture: handleOpenFullscreen,
                     onClickCapture: handleOpenFullscreen,
+                    onTouchStartCapture: stopWebPopupEvent,
                     onTouchEndCapture: handleOpenFullscreen,
                   } as any)
                 : null)}
@@ -628,6 +631,11 @@ const PlacePopupCard: React.FC<Props> = ({
                       data-card-action="true"
                       aria-label="Открыть фото на весь экран"
                       title={POPUP_TOOLTIPS.openPhoto}
+                      onMouseDownCapture={handleOpenFullscreen}
+                      onPointerDownCapture={handleOpenFullscreen}
+                      onClickCapture={handleOpenFullscreen}
+                      onTouchStartCapture={stopWebPopupEvent as any}
+                      onTouchEndCapture={handleOpenFullscreen}
                       onClick={handleOpenFullscreen}
                       onMouseDown={stopWebPopupEvent as any}
                       onPointerDown={stopWebPopupEvent as any}
