@@ -1179,7 +1179,9 @@ export default function QuestsScreen() {
                 : ' — геолокация отключена';
             return `Квесты: Рядом${suffix} | MeTravel`;
         }
-        return `Квесты: ${selectedCityName || 'Город'} | MeTravel`;
+        return selectedCityName
+            ? `Квесты: ${selectedCityName} | MeTravel`
+            : 'Все квесты | MeTravel';
     }, [selectedCityId, selectedCityName, nearbyCount, nearbyRadiusKm, userLoc]);
 
     const descText = useMemo(() => {
