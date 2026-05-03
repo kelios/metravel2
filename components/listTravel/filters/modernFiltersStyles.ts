@@ -279,7 +279,7 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
     },
     sortDropdownTriggerHover: Platform.select({
       web: {
-        backgroundColor: colors.surfaceMuted,
+        backgroundColor: colors.surface,
         borderColor: colors.border,
       } as any,
     }),

@@ -66,8 +66,8 @@ describe('Map Mobile Layout Styles', () => {
     it('should have left border-radius on desktop for visual integration', () => {
       const styles = getStyles(false, 0, mockThemedColors as any);
 
-      expect(styles.rightPanel.borderTopLeftRadius).toBe(22);
-      expect(styles.rightPanel.borderTopRightRadius).toBe(22);
+      expect(styles.rightPanel.borderTopLeftRadius).toBe(20);
+      expect(styles.rightPanel.borderTopRightRadius).toBe(20);
     });
 
     it('should position panel on right side on desktop', () => {
@@ -106,8 +106,8 @@ describe('Map Mobile Layout Styles', () => {
       const styles = getStyles(false, 0, mockThemedColors as any);
 
       expect(styles.tabsContainer.paddingTop).toBe(14);
-      expect(styles.tabsContainer.paddingBottom).toBe(12);
-      expect(styles.tabsContainer.paddingHorizontal).toBe(14);
+      expect(styles.tabsContainer.paddingBottom).toBe(10);
+      expect(styles.tabsContainer.paddingHorizontal).toBe(12);
     });
 
     it('should not have min height on desktop header', () => {
@@ -140,14 +140,13 @@ describe('Map Mobile Layout Styles', () => {
     it('should use light shadow on panel for elevation on mobile', () => {
       const styles = getStyles(true, 0, mockThemedColors as any);
 
-      // rightPanel has heavy shadow on mobile
-      expect(styles.rightPanel.boxShadow).toBe('0 16px 36px rgba(15,23,42,0.08), 0 4px 14px rgba(15,23,42,0.05)');
+      expect(styles.rightPanel.boxShadow).toBe(mockThemedColors.boxShadows.medium);
     });
 
     it('should have heavy shadow on panel for elevation', () => {
       const styles = getStyles(true, 0, mockThemedColors as any);
 
-      expect(styles.rightPanel.boxShadow).toBe('0 16px 36px rgba(15,23,42,0.08), 0 4px 14px rgba(15,23,42,0.05)');
+      expect(styles.rightPanel.boxShadow).toBe(mockThemedColors.boxShadows.medium);
     });
 
     it('should have proper z-index stacking', () => {

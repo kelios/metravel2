@@ -24,6 +24,33 @@ jest.mock('@/components/ui/UnifiedTravelCard', () => {
   };
 });
 
+jest.mock('@/ui/paper', () => {
+  const actual = jest.requireActual('@/ui/paper');
+  const { Pressable, Text, View } = require('react-native');
+
+  const Menu = ({ visible, anchor, children }: any) => (
+    <View>
+      {anchor}
+      {visible ? (
+        <View accessibilityRole="menu">
+          {children}
+        </View>
+      ) : null}
+    </View>
+  );
+
+  Menu.Item = ({ title, onPress }: any) => (
+    <Pressable accessibilityLabel={title} accessibilityRole="button" onPress={onPress}>
+      <Text>{title}</Text>
+    </Pressable>
+  );
+
+  return {
+    ...actual,
+    Menu,
+  };
+});
+
 import AddressListItem from '@/components/MapPage/AddressListItem';
 
 const renderWithProviders = (ui: React.ReactElement) => {
@@ -93,16 +120,24 @@ describe('AddressListItem (web right panel)', () => {
     expect(queryByLabelText('Скопировать координаты')).toBeNull();
     expect(queryByLabelText('Открыть статью')).toBeNull();
     expect(getAllByLabelText('Открыть в Google Maps').length).toBeGreaterThan(0);
-    expect(getAllByLabelText('Открыть в Organic Maps').length).toBeGreaterThan(0);
-    expect(getAllByLabelText('Проложить маршрут в Waze').length).toBeGreaterThan(0);
-    expect(getAllByLabelText('Проложить маршрут в Яндекс Навигаторе').length).toBeGreaterThan(0);
     expect(getAllByLabelText('Поделиться в Telegram').length).toBeGreaterThan(0);
     expect(getAllByLabelText('Сохранить').length).toBeGreaterThan(0);
+    expect(queryByLabelText('Открыть в Organic Maps')).toBeNull();
+    expect(queryByLabelText('Проложить маршрут в Waze')).toBeNull();
+    expect(queryByLabelText('Проложить маршрут в Яндекс Навигаторе')).toBeNull();
 
     fireEvent.press(getAllByLabelText('Открыть в Google Maps')[0]);
     await waitFor(() => {
       const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
       expect(calls.some((v) => v.includes('google.com/maps/search'))).toBe(true);
+    });
+
+    fireEvent.press(getAllByLabelText('Ещё действия')[0]);
+
+    await waitFor(() => {
+      expect(getAllByLabelText('Открыть в Organic Maps').length).toBeGreaterThan(0);
+      expect(getAllByLabelText('Проложить маршрут в Waze').length).toBeGreaterThan(0);
+      expect(getAllByLabelText('Проложить маршрут в Яндекс Навигаторе').length).toBeGreaterThan(0);
     });
 
     fireEvent.press(getAllByLabelText('Открыть в Organic Maps')[0]);
@@ -111,11 +146,15 @@ describe('AddressListItem (web right panel)', () => {
       expect(calls.some((v) => v.includes('omaps.app'))).toBe(true);
     });
 
+    fireEvent.press(getAllByLabelText('Ещё действия')[0]);
+
     fireEvent.press(getAllByLabelText('Проложить маршрут в Waze')[0]);
     await waitFor(() => {
       const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
       expect(calls.some((v) => v.includes('waze.com/ul'))).toBe(true);
     });
+
+    fireEvent.press(getAllByLabelText('Ещё действия')[0]);
 
     fireEvent.press(getAllByLabelText('Проложить маршрут в Яндекс Навигаторе')[0]);
     await waitFor(() => {
