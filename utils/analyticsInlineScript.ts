@@ -70,7 +70,8 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
     window.gtag('js', new Date());
     // We send page_view manually in trackPage() for SPA navigation,
     // so disable GA automatic page_view to avoid duplicates.
-    window.gtag('config', GA_ID, { transport_type: 'beacon', send_page_view: false });
+    // (transport_type:'beacon' is the GA4 default; do not pass it explicitly.)
+    window.gtag('config', GA_ID, { send_page_view: false });
     try { window.dispatchEvent(new CustomEvent('metravel:analytics-ready')); } catch(_e) {}
 
     var ga = document.createElement('script');
@@ -132,6 +133,9 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
     metrikaScript.onload = function(){
       window.__metravelMetrikaLoading = false;
       initMetrika();
+      // Re-emit a hit for the current URL: Metrika may have been initialised
+      // after the first trackPage() call and missed the queued hit.
+      window.__metravelLastTrackedUrl = null;
       trackPage();
     };
 
@@ -156,17 +160,24 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
     try {
       var url = window.location.href;
       if (window.__metravelLastTrackedUrl === url) return;
+      // For SPA navigations report the previous in-app URL as referer,
+      // so Metrika/GA4 reports show the real funnel between pages.
+      // For the very first hit fall back to document.referrer (external entry).
+      var prev = window.__metravelLastTrackedUrl || document.referrer || '';
       window.__metravelLastTrackedUrl = url;
       if (HAS_METRIKA && window.__metravelMetrikaReady && window.ym) {
         window.ym(${metrikaId || 0}, 'hit', url, {
           title: document.title,
-          referer: document.referrer
+          referer: prev
         });
       }
       if (HAS_GA && GA_ID && window.gtag && isAnalyticsAllowed() && !window['ga-disable-' + GA_ID]) {
+        var loc = window.location;
         window.gtag('event', 'page_view', {
           page_title: document.title,
-          page_location: url
+          page_location: url,
+          page_path: (loc && loc.pathname ? loc.pathname : '') + (loc && loc.search ? loc.search : ''),
+          page_referrer: prev
         });
       }
     } catch(_){}

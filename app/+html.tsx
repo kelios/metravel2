@@ -331,6 +331,20 @@ export default function Root({ children }: { children: React.ReactNode }) {
         __html: getAnalyticsInlineScript(METRIKA_ID, GA_ID),
       }}
     />
+
+    {/* Yandex Metrika fallback pixel for clients without JS (improves
+        counter accuracy and reduces antifraud false-positives). */}
+    {METRIKA_ID > 0 && isProduction && (
+      <noscript>
+        <div>
+          <img
+            src={`https://mc.yandex.ru/watch/${METRIKA_ID}`}
+            style={{ position: 'absolute', left: '-9999px' }}
+            alt=""
+          />
+        </div>
+      </noscript>
+    )}
     </body>
     </html>
   );
