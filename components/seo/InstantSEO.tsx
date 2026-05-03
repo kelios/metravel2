@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import Head from 'expo-router/head';
+import { normalizeOgImageUrl } from '@/utils/seo';
 
 type Props = {
     headKey?: string | null;
@@ -7,6 +8,7 @@ type Props = {
     description?: string;
     canonical?: string;
     image?: string;
+    imageAlt?: string;
     imageWidth?: number;
     imageHeight?: number;
     ogType?: 'website' | 'article';
@@ -21,6 +23,7 @@ const InstantSEO: React.FC<Props> = ({
     description,
     canonical,
     image,
+    imageAlt,
     imageWidth,
     imageHeight,
     ogType = 'website',
@@ -28,6 +31,8 @@ const InstantSEO: React.FC<Props> = ({
     additionalTags,
     children,
 }) => {
+    const normalizedImage = normalizeOgImageUrl(image);
+    const twitterCard = normalizedImage ? 'summary_large_image' : 'summary';
     useEffect(() => {
         if (typeof document === 'undefined' || !robots) return;
         const upsertMeta = (name: string, content: string) => {
@@ -54,18 +59,22 @@ const InstantSEO: React.FC<Props> = ({
             <meta key="og:title" property="og:title" content={title} />
             {description && <meta key="og:description" property="og:description" content={description} />}
             {canonical && <meta key="og:url" property="og:url" content={canonical} />}
-            {image && <meta key="og:image" property="og:image" content={image} />}
-            {image && imageWidth && <meta key="og:image:width" property="og:image:width" content={String(imageWidth)} />}
-            {image && imageHeight && <meta key="og:image:height" property="og:image:height" content={String(imageHeight)} />}
+            {normalizedImage && <meta key="og:image" property="og:image" content={normalizedImage} />}
+            {normalizedImage && <meta key="og:image:secure_url" property="og:image:secure_url" content={normalizedImage} />}
+            {normalizedImage && imageWidth && <meta key="og:image:width" property="og:image:width" content={String(imageWidth)} />}
+            {normalizedImage && imageHeight && <meta key="og:image:height" property="og:image:height" content={String(imageHeight)} />}
+            {normalizedImage && imageAlt && <meta key="og:image:alt" property="og:image:alt" content={imageAlt} />}
             <meta key="og:site_name" property="og:site_name" content="MeTravel" />
+            <meta key="og:locale" property="og:locale" content="ru_RU" />
 
             {/* Twitter */}
-            <meta key="twitter:card" name="twitter:card" content="summary_large_image" />
+            <meta key="twitter:card" name="twitter:card" content={twitterCard} />
             <meta key="twitter:title" name="twitter:title" content={title} />
             {description && (
                 <meta key="twitter:description" name="twitter:description" content={description} />
             )}
-            {image && <meta key="twitter:image" name="twitter:image" content={image} />}
+            {normalizedImage && <meta key="twitter:image" name="twitter:image" content={normalizedImage} />}
+            {normalizedImage && imageAlt && <meta key="twitter:image:alt" name="twitter:image:alt" content={imageAlt} />}
             {additionalTags}
             {children}
         </Head>

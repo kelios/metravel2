@@ -66,16 +66,30 @@ export function getYoutubeId(url?: string | null): string | null {
 
 // ✅ ОПТИМИЗАЦИЯ: Очистка HTML для описания
 export function stripToDescription(html?: string, maxLength: number = 160): string {
-  if (!html) return 'Найди место для путешествия и поделись своим опытом.';
-  
+  const FALLBACK = 'Найди место для путешествия и поделись своим опытом.';
+  if (!html) return FALLBACK;
+
   const plain = html
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&#39;/g, "'")
     .replace(/\s+/g, ' ')
     .trim();
-  
-  return plain.slice(0, maxLength) || 'Найди место для путешествия и поделись своим опытом.';
+
+  if (!plain) return FALLBACK;
+  if (plain.length <= maxLength) return plain;
+
+  const cut = plain.slice(0, maxLength - 1);
+  const lastSpace = cut.lastIndexOf(' ');
+  const wordSafe = lastSpace > maxLength * 0.6 ? cut.slice(0, lastSpace) : cut;
+  return `${wordSafe.replace(/[\s,.;:!?-]+$/, '').trimEnd()}…`;
 }
 
 // ✅ ОПТИМИЗАЦИЯ: Получение origin из URL

@@ -60,16 +60,27 @@ export function buildTravelSeoTitle(base?: string | null): string {
   if (!normalized) return 'Metravel';
 
   const maxBaseLength = Math.max(10, SEO_TITLE_MAX_LENGTH - SEO_TITLE_SUFFIX.length);
-  const clippedBase =
-    normalized.length > maxBaseLength
-      ? `${normalized.slice(0, maxBaseLength - 1).trimEnd()}...`
-      : normalized;
+  let clippedBase = normalized;
+  if (normalized.length > maxBaseLength) {
+    const sliceLen = Math.max(1, maxBaseLength - 1); // -1 for the ellipsis char "…"
+    const cut = normalized.slice(0, sliceLen);
+    const lastSpace = cut.lastIndexOf(' ');
+    const wordSafe = lastSpace > sliceLen * 0.6 ? cut.slice(0, lastSpace) : cut;
+    clippedBase = `${wordSafe.trimEnd()}…`;
+  }
 
   return `${clippedBase}${SEO_TITLE_SUFFIX}`;
 }
 
 export function getTravelSeoDescription(html?: string | null, maxLen = 160): string {
-  return stripHtmlForSeo(html).slice(0, maxLen) || TRAVEL_FALLBACK_DESCRIPTION;
+  const stripped = stripHtmlForSeo(html);
+  if (!stripped) return TRAVEL_FALLBACK_DESCRIPTION;
+  if (stripped.length <= maxLen) return stripped;
+
+  const cut = stripped.slice(0, maxLen - 1);
+  const lastSpace = cut.lastIndexOf(' ');
+  const wordSafe = lastSpace > maxLen * 0.6 ? cut.slice(0, lastSpace) : cut;
+  return `${wordSafe.replace(/[\s,.;:!?-]+$/, '').trimEnd()}…`;
 }
 
 export function getTravelSeoImage(travel: Travel | null | undefined): string | null {

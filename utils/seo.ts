@@ -49,3 +49,19 @@ export function buildOgImageUrl(imagePath: string): string {
   const normalized = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
   return `${base}${normalized}`;
 }
+
+/**
+ * Ensures any image URL is absolute and HTTPS for use in og:image / twitter:image.
+ * Returns null for empty/invalid input.
+ */
+export function normalizeOgImageUrl(image?: string | null): string | null {
+  if (!image) return null;
+  const trimmed = String(image).trim();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith('//')) return `https:${trimmed}`;
+  if (trimmed.startsWith('http://')) return trimmed.replace(/^http:\/\//i, 'https://');
+  if (trimmed.startsWith('https://')) return trimmed;
+  if (trimmed.startsWith('/')) return buildOgImageUrl(trimmed);
+  return buildOgImageUrl(`/${trimmed}`);
+}
