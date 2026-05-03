@@ -37,7 +37,8 @@ function copyDistToProd({
   try {
     fs.renameSync(tempDir, destDir)
   } catch (error) {
-    if (process.platform !== 'win32') {
+    const recoverableCodes = new Set(['EPERM', 'EBUSY', 'EXDEV', 'ENOTEMPTY', 'EACCES'])
+    if (process.platform !== 'win32' && !recoverableCodes.has(error && error.code)) {
       throw error
     }
 

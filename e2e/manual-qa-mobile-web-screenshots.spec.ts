@@ -58,7 +58,7 @@ const PUBLIC_SCENARIOS: Scenario[] = [
   },
   { id: 'search', route: '/search', expectedAny: ['#search-input', 'text=Поиск', '[data-testid="toggle-filters"]'] },
   { id: 'map', route: '/map', expectedAny: ['text=Карта', 'button:has-text("Показать")', '[data-testid="map-panel-open"]'] },
-  { id: 'roulette', route: '/roulette', expectedAny: ['text=Рулетка', 'button:has-text("Подобрать маршруты")'] },
+  { id: 'roulette', route: '/roulette', expectedAny: ['text=Не знаешь, куда поехать?', 'button:has-text("Подобрать")', '[data-testid="mobile-filters-button"]'] },
   {
     id: 'quests',
     route: '/quests',

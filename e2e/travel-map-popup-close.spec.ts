@@ -84,7 +84,7 @@ test.describe('Travel detail page — map popup close @smoke', () => {
 
       // Verify the fullscreen overlay is actually covering the screen
       const overlay = page.locator(
-        'body > div[style*="position: fixed"][style*="z-index: 10000"][style*="inset"]',
+        'body > div[style*="position: fixed"][style*="z-index: 99990"][style*="inset"]',
       )
       await expect(overlay).toBeVisible({ timeout: 5_000 })
 

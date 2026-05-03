@@ -360,6 +360,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     scrollViewContent: {
         flexGrow: 1,
         justifyContent: 'center',
+        ...Platform.select({
+            web: {
+                paddingBottom: 'var(--mt-consent-h, 0px)' as any,
+            },
+        }),
     },
     bg: {
         flex: 1,

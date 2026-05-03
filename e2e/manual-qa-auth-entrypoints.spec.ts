@@ -61,6 +61,7 @@ test.describe('@smoke Manual QA automation: auth entrypoints', () => {
 
     const registerLink = page.getByText('Зарегистрируйтесь', { exact: true });
     await expect(registerLink).toBeVisible();
+    await registerLink.scrollIntoViewIfNeeded();
     await registerLink.click();
 
     await expect(page).toHaveURL(/\/registration/);
