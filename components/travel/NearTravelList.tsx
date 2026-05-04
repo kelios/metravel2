@@ -582,7 +582,10 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                   showsVerticalScrollIndicator={true}
                   nestedScrollEnabled={true}
                 >
-                  <View style={width <= 640 ? styles.webScrollContainer : undefined}>
+                  <View
+                    testID={Platform.OS === 'web' && width <= 640 ? 'near-travel-web-rail' : undefined}
+                    style={width <= 640 ? styles.webScrollContainer : undefined}
+                  >
                     <View style={[styles.travelsGrid, webGridStyle]}>
                       {displayedTravels.map((item, index) => renderWebSearchLikeTravelItem(item, index))}
                     </View>

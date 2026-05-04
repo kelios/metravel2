@@ -79,10 +79,12 @@ describe('WeeklyHighlights', () => {
       data: mockData,
     })
 
-    const { getByText, getByLabelText } = render(<WeeklyHighlights />)
+    const { getByText, getByLabelText, getByTestId } = render(<WeeklyHighlights />)
 
     expect(getByText('Подборка месяца')).toBeTruthy()
     expect(getByText('Самые популярные маршруты этого месяца')).toBeTruthy()
+    expect(getByTestId('weekly-highlights-section')).toBeTruthy()
+    expect(getByTestId('weekly-highlights-grid')).toBeTruthy()
     // Travel names are in accessibility labels, not as text content
     expect(getByLabelText(/Test Travel 1/)).toBeTruthy()
     expect(getByLabelText(/Test Travel 2/)).toBeTruthy()

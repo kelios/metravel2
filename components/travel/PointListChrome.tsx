@@ -324,6 +324,7 @@ export const PointListExpandedContent = React.memo(function PointListExpandedCon
         </View>
       ) : (
         <ScrollView
+          testID="travel-points-rail"
           horizontal
           showsHorizontalScrollIndicator
           contentContainerStyle={styles.horizontalListContent}

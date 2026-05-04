@@ -313,49 +313,42 @@ const RecommendationsTabs = memo(
       }
     };
 
-    const renderCardCollection = useCallback(
-      (
-        items: CollectionItem[],
-        keyFactory: (item: CollectionItem) => string,
-        cardFactory: (item: CollectionItem) => React.ReactNode,
-      ) => {
-        if (isMobile && !isMobileWeb) {
-          return (
-            <View style={styles.mobileGrid}>
-              {items.map((item) => (
-                <View key={keyFactory(item)} style={styles.mobileGridItem}>
-                  {cardFactory(item)}
-                </View>
-              ))}
-            </View>
-          );
-        }
-
-        return (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={Platform.OS === 'web'}
-            style={[styles.horizontalList, Platform.OS === 'web' ? styles.webHorizontalScroll : null]}
-            contentContainerStyle={Platform.OS === 'web' ? styles.webHorizontalScrollContent : styles.horizontalListContent}
-            bounces={false}
-            {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
-          >
-            {items.map(cardFactory)}
-          </ScrollView>
-        );
-      },
-      [
-        handleHorizontalWheel,
-        isMobile,
-        isMobileWeb,
-        styles.horizontalList,
-        styles.horizontalListContent,
-        styles.mobileGrid,
-        styles.mobileGridItem,
-        styles.webHorizontalScroll,
-        styles.webHorizontalScrollContent,
-      ]
+    const activeRailTestID = useMemo(
+      () => (activeTab === 'favorites' || activeTab === 'history' ? `recommendations-${activeTab}-rail` : undefined),
+      [activeTab]
     );
+
+    const renderCardCollection = (
+      items: CollectionItem[],
+      keyFactory: (item: CollectionItem) => string,
+      cardFactory: (item: CollectionItem) => React.ReactNode,
+    ) => {
+      if (isMobile && !isMobileWeb) {
+        return (
+          <View style={styles.mobileGrid}>
+            {items.map((item) => (
+              <View key={keyFactory(item)} style={styles.mobileGridItem}>
+                {cardFactory(item)}
+              </View>
+            ))}
+          </View>
+        );
+      }
+
+      return (
+        <ScrollView
+          testID={activeRailTestID}
+          horizontal
+          showsHorizontalScrollIndicator={Platform.OS === 'web'}
+          style={[styles.horizontalList, Platform.OS === 'web' ? styles.webHorizontalScroll : null]}
+          contentContainerStyle={Platform.OS === 'web' ? styles.webHorizontalScrollContent : styles.horizontalListContent}
+          bounces={false}
+          {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
+        >
+          {items.map(cardFactory)}
+        </ScrollView>
+      );
+    };
 
     const cardLayout = getRecommendationsCardLayout(isMobile, isMobileWeb);
 
@@ -382,7 +375,7 @@ const RecommendationsTabs = memo(
     }
 
     const renderTabPane = (children: React.ReactNode) => (
-      <View style={styles.tabPane}>
+      <View style={styles.tabPane} testID={`recommendations-tabpanel-${activeTab}`}>
         <View style={[styles.tabPaneScroll, styles.tabPaneContent]}>{children}</View>
       </View>
     )

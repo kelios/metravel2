@@ -87,9 +87,11 @@ describe('PersonalizedRecommendations', () => {
     mockFavorites.push(testFavorite)
     mockGetRecommendations.mockReturnValue([testFavorite])
     
-    const { findByText, findByLabelText } = render(<PersonalizedRecommendations />)
-    
+    const { findByText, findByLabelText, findByTestId } = render(<PersonalizedRecommendations />)
+
     expect(await findByText('Избранное')).toBeTruthy()
+    expect(await findByTestId('personalized-favorites-section')).toBeTruthy()
+    expect(await findByTestId('personalized-favorites-rail')).toBeTruthy()
     // Travel names are in accessibility labels, not as text content
     expect(await findByLabelText(/Test Travel/)).toBeTruthy()
   })
@@ -104,9 +106,11 @@ describe('PersonalizedRecommendations', () => {
       viewedAt: Date.now(),
     })
     
-    const { findByText } = render(<PersonalizedRecommendations />)
-    
+    const { findByText, findByTestId } = render(<PersonalizedRecommendations />)
+
     expect(await findByText('Недавно просмотрено')).toBeTruthy()
+    expect(await findByTestId('personalized-history-section')).toBeTruthy()
+    expect(await findByTestId('personalized-history-rail')).toBeTruthy()
   })
 
   it('handles item press by navigating via router', async () => {
@@ -121,7 +125,7 @@ describe('PersonalizedRecommendations', () => {
     mockFavorites.push(testFavorite)
     mockGetRecommendations.mockReturnValue([testFavorite])
     
-    const { findByText: _findByText, findByLabelText } = render(<PersonalizedRecommendations />)
+    const { findByLabelText } = render(<PersonalizedRecommendations />)
     const item = await findByLabelText(/Test Travel/)
     
     fireEvent.press(item)

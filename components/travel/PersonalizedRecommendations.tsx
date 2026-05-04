@@ -245,7 +245,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
     }
 
     return (
-        <View style={containerStyles}>
+        <View style={containerStyles} testID="personalized-recommendations-section">
             {showHeader && (
                 <>
                     <View style={styles.header}>
@@ -265,9 +265,10 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
             )}
 
             {hasFavorites && (
-                <View style={styles.section}>
+                <View style={styles.section} testID="personalized-favorites-section">
                     <Text style={styles.sectionTitle}>Избранное</Text>
                     <ScrollView
+                        testID="personalized-favorites-rail"
                         horizontal
                         showsHorizontalScrollIndicator={false}
                         nestedScrollEnabled
@@ -284,9 +285,10 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
             )}
 
             {hasHistory && (
-                <View style={styles.section}>
+                <View style={styles.section} testID="personalized-history-section">
                     <Text style={styles.sectionTitle}>Недавно просмотрено</Text>
                     <ScrollView
+                        testID="personalized-history-rail"
                         horizontal
                         showsHorizontalScrollIndicator={false}
                         nestedScrollEnabled
@@ -303,9 +305,10 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
             )}
 
             {recommendations.length > 0 && (
-                <View style={styles.section}>
+                <View style={styles.section} testID="personalized-recommendations-list-section">
                     <Text style={styles.sectionTitle}>Рекомендации</Text>
                     <ScrollView
+                        testID="personalized-recommendations-rail"
                         horizontal
                         showsHorizontalScrollIndicator={false}
                         nestedScrollEnabled

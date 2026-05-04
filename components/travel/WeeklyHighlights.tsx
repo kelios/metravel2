@@ -167,7 +167,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
     }
 
     return (
-        <View style={styles.container}>
+        <View style={styles.container} testID="weekly-highlights-section">
             {showHeader && (
                 <>
                     <View style={styles.header}>
@@ -185,7 +185,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                 </>
             )}
             {isMobile && !isMobileWeb ? (
-                <View style={styles.mobileGrid}>
+                <View style={styles.mobileGrid} testID="weekly-highlights-grid">
                     {highlights.map((item) => (
                         <View key={item.id} style={styles.mobileGridItem}>
                             <TabTravelCard
@@ -209,6 +209,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                 </View>
             ) : (
                 <ScrollView
+                    testID="weekly-highlights-rail"
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.scrollContent}

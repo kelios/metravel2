@@ -96,9 +96,10 @@ describe('RecommendationsTabs', () => {
   });
 
   it('renders default tab (highlights) content', async () => {
-    render(<RecommendationsTabs forceVisible={true} />);
+    const { getByTestId } = render(<RecommendationsTabs forceVisible={true} />);
 
     expect(await screen.findByText('WeeklyHighlights')).toBeTruthy();
+    expect(getByTestId('recommendations-tabpanel-highlights')).toBeTruthy();
   });
 
   it('shows auth gate for favorites when user is not authenticated and navigates to login', async () => {
@@ -160,6 +161,8 @@ describe('RecommendationsTabs', () => {
     fireEvent.press(screen.getByText('Избранное'));
 
     expect(await screen.findByText('Fav 1')).toBeTruthy();
+    expect(screen.getByTestId('recommendations-tabpanel-favorites')).toBeTruthy();
+    expect(screen.getByTestId('recommendations-favorites-rail')).toBeTruthy();
     expect(screen.getByText('Смотреть все')).toBeTruthy();
     expect(screen.getByText('Очистить')).toBeTruthy();
 

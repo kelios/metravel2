@@ -86,4 +86,13 @@ describe('TabTravelCard content height rules', () => {
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0];
     expect(props?.webTouchAction).toBe('pan-x pan-y');
   });
+
+  it('generates a stable fallback testID when one is not provided', () => {
+    render(
+      <TabTravelCard item={baseItem as any} onPress={() => undefined} />
+    );
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0];
+    expect(props?.testID).toBe('tab-travel-card-1');
+  });
 });

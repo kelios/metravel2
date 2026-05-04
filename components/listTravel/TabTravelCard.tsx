@@ -57,6 +57,10 @@ function TabTravelCard({
     () => webTouchAction ?? (Platform.OS === 'web' && layout === 'horizontal' ? 'pan-x pan-y' : undefined),
     [layout, webTouchAction]
   );
+  const resolvedTestID = useMemo(
+    () => testID ?? `tab-travel-card-${String(item?.id ?? 'unknown')}`,
+    [item?.id, testID]
+  );
 
   const title = item?.title || 'Без названия';
 
@@ -67,7 +71,7 @@ function TabTravelCard({
   const contentSlot = useMemo(() => {
     return (
       <View
-        testID={testID ? `${testID}-content` : `tab-travel-card-content-${String(item?.id ?? 'unknown')}`}
+        testID={`${resolvedTestID}-content`}
         style={[
           styles.content,
           { backgroundColor: colors.surface },
@@ -86,7 +90,7 @@ function TabTravelCard({
         </View>
       </View>
     );
-  }, [colors, contentMinHeight, item?.id, location, styles.content, styles.locationRow, styles.locationText, styles.title, testID, title]);
+  }, [colors, contentMinHeight, location, resolvedTestID, styles.content, styles.locationRow, styles.locationText, styles.title, title]);
 
   return (
     <UnifiedTravelCard
@@ -100,7 +104,7 @@ function TabTravelCard({
       contentSlot={contentSlot}
       width={layout === 'grid' ? undefined : (isMobile ? MOBILE_CARD_WIDTH : (tabCardTemplate.container as any)?.width)}
       imageHeight={Platform.OS === 'web' ? 168 : 150}
-      testID={testID}
+      testID={resolvedTestID}
       style={[layout === 'grid' ? styles.containerGrid : styles.container, style]}
       webTouchAction={resolvedWebTouchAction}
       mediaProps={{
