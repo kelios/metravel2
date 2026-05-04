@@ -7,7 +7,8 @@ type RailState = {
   railScrollWidth: number
   railScrollLeft: number
   railTouchAction: string
-  cardTouchAction: string
+  cardComputedTouchAction: string
+  cardDeclaredTouchAction: string
 }
 
 const travelsOfMonthFixture = Array.from({ length: 5 }, (_, index) => ({
@@ -59,7 +60,8 @@ async function getWeeklyHighlightsRailState(
       railScrollWidth: rail.scrollWidth,
       railScrollLeft: rail.scrollLeft,
       railTouchAction: getComputedStyle(rail).touchAction,
-      cardTouchAction: getComputedStyle(firstCard).touchAction,
+      cardComputedTouchAction: getComputedStyle(firstCard).touchAction,
+      cardDeclaredTouchAction: firstCard.style.touchAction,
     }
   })
 }
@@ -117,7 +119,7 @@ test.describe('Mobile web horizontal card rails', () => {
         .toBeGreaterThan(1)
 
       await expect
-        .poll(async () => (await getWeeklyHighlightsRailState(page))?.cardTouchAction ?? '', {
+        .poll(async () => (await getWeeklyHighlightsRailState(page))?.cardDeclaredTouchAction ?? '', {
           timeout: 30_000,
         })
         .toBe('pan-x pan-y')
@@ -126,8 +128,8 @@ test.describe('Mobile web horizontal card rails', () => {
       expect(railState).not.toBeNull()
       expect(railState?.cardCount ?? 0).toBeGreaterThan(1)
       expect(railState?.railScrollWidth ?? 0).toBeGreaterThan(railState?.railClientWidth ?? 0)
-      expect(railState?.cardTouchAction).toContain('pan-x')
-      expect(railState?.cardTouchAction).toContain('pan-y')
+      expect(railState?.cardDeclaredTouchAction).toContain('pan-x')
+      expect(railState?.cardDeclaredTouchAction).toContain('pan-y')
 
       const scrollResult = await scrollWeeklyHighlightsRail(page)
       expect(scrollResult).not.toBeNull()
