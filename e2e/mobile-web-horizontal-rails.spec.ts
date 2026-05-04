@@ -98,6 +98,7 @@ test.describe('Mobile web horizontal card rails', () => {
       await installTravelsOfMonthMock(page)
       await page.addInitScript(() => {
         try {
+          sessionStorage.setItem('recommendations_visible', 'true')
           sessionStorage.removeItem('weekly_highlights_collapsed')
         } catch {
           // noop

@@ -194,7 +194,6 @@ function UnifiedTravelCard({
               transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
               display: 'flex',
               flexDirection: 'column',
-              touchAction: webTouchAction ?? 'pan-y',
               contain: 'layout style',
             } as any,
             default: DESIGN_TOKENS.shadowsNative.light,
@@ -388,7 +387,7 @@ function UnifiedTravelCard({
           flex: 1,
         },
       }),
-    [colors, isWeb, webHoverScale, webTouchAction],
+    [colors, isWeb, webHoverScale],
   );
 
   // On web we avoid rendering <button> because cards often contain interactive children
@@ -628,6 +627,7 @@ function UnifiedTravelCard({
         isFeatured && enableWebHoverEffects && isHovered && styles.containerFeaturedHovered,
         isWeb && isFocused && styles.containerFocused,
         typeof width === 'number' ? { width } : null,
+        isWeb ? ({ touchAction: webTouchAction ?? 'pan-y' } as any) : null,
         style,
       ]}
       accessibilityRole={isWeb ? undefined : 'button'}
