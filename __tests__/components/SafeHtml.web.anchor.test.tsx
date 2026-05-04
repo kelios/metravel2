@@ -38,4 +38,19 @@ describe('SafeHtml (web) anchor links', () => {
       Element.prototype.scrollIntoView = originalScrollIntoView;
     }
   });
+
+  it('renders instagram stories as fallback cards on web', async () => {
+    const { container } = render(
+      <SafeHtml html={'<p>https://www.instagram.com/stories/metravelby/1234567890123456789/</p>'} />
+    );
+
+    await waitFor(() => {
+      const card = container.querySelector('.safe-html-rich-text .rich-social-card--instagram');
+      const link = container.querySelector('.safe-html-rich-text .rich-social-card__title') as HTMLAnchorElement | null;
+      expect(card).toBeTruthy();
+      expect(container.querySelector('iframe[src*="instagram.com"]')).toBeNull();
+      expect(link?.getAttribute('href')).toBe('https://www.instagram.com/stories/metravelby/1234567890123456789/');
+      expect(link?.textContent).toContain('История');
+    });
+  });
 });

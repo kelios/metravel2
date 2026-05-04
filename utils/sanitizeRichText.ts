@@ -57,7 +57,7 @@ const allowedAttributes: sanitizeHtml.IOptions['allowedAttributes'] = {
       'data-align',
     ]),
   ),
-  a: ['href', 'name', 'target', 'rel', 'title'],
+  a: ['href', 'name', 'target', 'rel', 'title', 'class'],
   img: [
     'src',
     'srcset',
@@ -359,6 +359,7 @@ function sanitizeRichTextInternal(
         const href = isHashLink ? rawHref : normalizeUrl(rawHref)
         const result: Record<string, string> = {}
         if (attribs.id) result.id = attribs.id
+        if (attribs.class) result.class = attribs.class
         if (href) {
           result.href = href
           result.rel = attribs.rel || 'noopener noreferrer'

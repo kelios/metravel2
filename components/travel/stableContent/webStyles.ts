@@ -1,5 +1,6 @@
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
+import { getInstagramCardStyles } from '@/utils/instagramRichText'
 
 export const WEB_RICH_TEXT_CLASS = 'travel-rich-text'
 export const WEB_RICH_TEXT_FULL_WIDTH_CLASS = 'travel-rich-text--full-width'
@@ -1103,4 +1104,6 @@ export const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>)
 .${WEB_RICH_TEXT_CLASS} .instagram-caption-text {
   display: inline;
 }
+
+${getInstagramCardStyles(`.${WEB_RICH_TEXT_CLASS}`, colors)}
 `

@@ -146,7 +146,7 @@ describe('StableContent (web) link styles', () => {
     expect(richText?.innerHTML).toContain('>Example<');
   });
 
-  it('converts standalone instagram post links into embeds in travel content', async () => {
+  it('converts standalone instagram post links into fallback cards in travel content on web', async () => {
     const html =
       '<p><a href="https://www.instagram.com/p/CScU4bJI2Ud/">https://www.instagram.com/p/CScU4bJI2Ud/</a></p>';
 
@@ -155,10 +155,29 @@ describe('StableContent (web) link styles', () => {
     );
 
     await waitFor(() => {
-      const iframe = container.querySelector('.travel-rich-text iframe') as HTMLIFrameElement | null;
-      expect(iframe).toBeTruthy();
-      expect(iframe?.getAttribute('src')).toBe('https://www.instagram.com/p/CScU4bJI2Ud/embed/captioned/');
-      expect(container.querySelector('.travel-rich-text a[href*="instagram.com/p/CScU4bJI2Ud"]')).toBeNull();
+      const card = container.querySelector('.travel-rich-text .rich-social-card--instagram') as HTMLDivElement | null;
+      const link = container.querySelector('.travel-rich-text .rich-social-card__title') as HTMLAnchorElement | null;
+      expect(card).toBeTruthy();
+      expect(container.querySelector('.travel-rich-text iframe[src*="instagram.com"]')).toBeNull();
+      expect(link?.getAttribute('href')).toBe('https://www.instagram.com/p/CScU4bJI2Ud/');
+      expect(link?.textContent).toContain('Публикация');
+    });
+  });
+
+  it('renders instagram stories as visible fallback cards instead of blank embeds', async () => {
+    const html = '<p>https://www.instagram.com/stories/metravelby/1234567890123456789/</p>';
+
+    const { container } = render(
+      <StableContent html={html} contentWidth={700} />
+    );
+
+    await waitFor(() => {
+      const card = container.querySelector('.travel-rich-text .rich-social-card--instagram') as HTMLDivElement | null;
+      const link = container.querySelector('.travel-rich-text .rich-social-card__title') as HTMLAnchorElement | null;
+      expect(card).toBeTruthy();
+      expect(container.querySelector('.travel-rich-text iframe[src*="instagram.com"]')).toBeNull();
+      expect(link?.getAttribute('href')).toBe('https://www.instagram.com/stories/metravelby/1234567890123456789/');
+      expect(link?.textContent).toContain('История');
     });
   });
 

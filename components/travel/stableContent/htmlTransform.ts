@@ -1,6 +1,7 @@
 import { Platform } from 'react-native'
 
 import { normalizeArticleEditorHtmlForInput } from '@/components/article/articleEditorConfig'
+import { replaceInstagramEmbedsWithCards } from '@/utils/instagramRichText'
 import { sanitizeRichText } from '@/utils/sanitizeRichText'
 import { applySmartImageLayout } from '@/utils/richTextImageLayout'
 
@@ -342,10 +343,14 @@ const decorateRichImageFrames = (html: string) => {
 
 export const prepareStableContentHtml = (html: string) => {
   const normalizedEmbeds = normalizeArticleEditorHtmlForInput(html)
-  const safe = sanitizeRichText(normalizedEmbeds)
-  const normalized = replaceStandaloneInstagramLinks(
-    replaceYouTubeIframes(normalizeImgTags(stripDangerousTags(safe)))
-  )
+  const instagramSafeHtml = Platform.OS === 'web'
+    ? replaceInstagramEmbedsWithCards(normalizedEmbeds)
+    : normalizedEmbeds
+  const safe = sanitizeRichText(instagramSafeHtml)
+  const normalizedBase = replaceYouTubeIframes(normalizeImgTags(stripDangerousTags(safe)))
+  const normalized = Platform.OS === 'web'
+    ? normalizedBase
+    : replaceStandaloneInstagramLinks(normalizedBase)
   const demoted = normalized
     .replace(/<\s*h1(\b[^>]*)>/gi, '<h2$1>')
     .replace(/<\s*\/\s*h1\s*>/gi, '</h2>')

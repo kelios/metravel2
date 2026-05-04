@@ -1,8 +1,11 @@
 // components/SafeHtml.tsx
 // ✅ БЕЗОПАСНОСТЬ: Компонент для безопасного рендеринга HTML контента
 
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useInsertionEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
+import { normalizeArticleEditorHtmlForInput } from '@/components/article/articleEditorConfig';
+import { useThemedColors } from '@/hooks/useTheme';
+import { getInstagramCardStyles, replaceInstagramEmbedsWithCards } from '@/utils/instagramRichText';
 import { sanitizeRichText } from '@/utils/sanitizeRichText';
 
 interface SafeHtmlProps {
@@ -12,19 +15,43 @@ interface SafeHtmlProps {
     testID?: string;
 }
 
+const SAFE_HTML_RICH_TEXT_CLASS = 'safe-html-rich-text';
+const SAFE_HTML_RICH_TEXT_STYLES_ID = 'safe-html-rich-text-styles';
+
 /**
  * Компонент для безопасного рендеринга HTML контента
  * Автоматически санитизирует HTML для защиты от XSS
  */
 export function SafeHtml({ html, style, className, testID }: SafeHtmlProps) {
+    const colors = useThemedColors();
     const trimmed = String(html ?? '').trim();
 
     // Санитизируем HTML
     const sanitized = useMemo(() => {
         if (!trimmed) return '';
-        return sanitizeRichText(html);
+        return sanitizeRichText(replaceInstagramEmbedsWithCards(normalizeArticleEditorHtmlForInput(html)));
     }, [html, trimmed]);
+    const richTextStyles = useMemo(
+        () => getInstagramCardStyles(`.${SAFE_HTML_RICH_TEXT_CLASS}`, colors),
+        [colors]
+    );
     const webRootRef = useRef<HTMLElement | null>(null);
+
+    useInsertionEffect(() => {
+        if (Platform.OS !== 'web') return;
+        if (typeof document === 'undefined') return;
+
+        const existing = document.getElementById(SAFE_HTML_RICH_TEXT_STYLES_ID) as HTMLStyleElement | null;
+        if (existing) {
+            existing.textContent = richTextStyles;
+            return;
+        }
+
+        const styleEl = document.createElement('style');
+        styleEl.id = SAFE_HTML_RICH_TEXT_STYLES_ID;
+        styleEl.textContent = richTextStyles;
+        document.head.appendChild(styleEl);
+    }, [richTextStyles]);
 
     useEffect(() => {
         if (Platform.OS !== 'web') return;
@@ -107,9 +134,13 @@ export function SafeHtml({ html, style, className, testID }: SafeHtmlProps) {
     }
 
     if (Platform.OS === 'web') {
+        const combinedClassName = className
+            ? `${SAFE_HTML_RICH_TEXT_CLASS} ${className}`
+            : SAFE_HTML_RICH_TEXT_CLASS;
+
         return (
             <div
-                className={className}
+                className={combinedClassName}
                 style={style}
                 ref={(node) => {
                     webRootRef.current = node;
