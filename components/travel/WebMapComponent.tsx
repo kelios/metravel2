@@ -3,7 +3,6 @@ import MarkersListComponent from '@/components/map/MarkersListComponent';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { ensureLeafletCss } from '@/utils/ensureLeafletCss';
-import { loadLeafletRuntime } from '@/utils/loadLeafletRuntime';
 import { extractGpsFromImageFile } from '@/utils/exifGps';
 import { showToastMessage } from '@/utils/toast';
 import { registerPendingImageFile, removePendingImageFile, getPendingImageFile } from '@/utils/pendingImageFiles';
@@ -96,6 +95,7 @@ const WebMapComponent = ({
         ;(async () => {
             try {
                 ensureLeafletCss();
+                const { loadLeafletRuntime } = await import('@/utils/loadLeafletRuntime');
                 const { L: leafletModule, RL: reactLeafletModule } = await loadLeafletRuntime();
                 if (!cancelled) {
                     setL(leafletModule as any);

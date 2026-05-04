@@ -58,15 +58,18 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 }));
 
 // Mock UnifiedTravelCard
-jest.mock('@/components/ui/UnifiedTravelCard', () => {
+const mockUnifiedTravelCard = jest.fn((props: any) => {
   const React = require('react');
   const { View, Text } = require('react-native');
+  return React.createElement(View, { testID: props.testID || `travel-card-${props.title}` },
+    React.createElement(Text, null, props.title)
+  );
+});
+
+jest.mock('@/components/ui/UnifiedTravelCard', () => {
   return {
     __esModule: true,
-    default: ({ title, onPress: _onPress, testID, ..._props }: any) =>
-      React.createElement(View, { testID: testID || `travel-card-${title}` },
-        React.createElement(Text, null, title)
-      ),
+    default: (props: any) => mockUnifiedTravelCard(props),
   };
 });
 
@@ -245,5 +248,17 @@ describe('RecentViews', () => {
     const { ScrollView } = require('react-native');
     const scrollView = await waitFor(() => utils.UNSAFE_getByType(ScrollView));
     expect(scrollView.props.horizontal).toBe(true);
+  });
+
+  it('uses pan-x pan-y on web cards inside the horizontal recent views rail', async () => {
+    (Platform.OS as any) = 'web';
+
+    const mockTravels = [createTravel({ id: 1 }), createTravel({ id: 2, title: 'Travel 2' })];
+    render(<RecentViews initialTravels={mockTravels} />);
+
+    await waitFor(() => {
+      const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0];
+      expect(props?.webTouchAction).toBe('pan-x pan-y');
+    });
   });
 });

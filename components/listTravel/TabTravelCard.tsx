@@ -33,6 +33,7 @@ type Props = {
   layout?: 'horizontal' | 'grid';
   contentMinHeight?: number;
   mediaFit?: 'contain' | 'cover';
+  webTouchAction?: string;
 };
 
 function TabTravelCard({
@@ -44,6 +45,7 @@ function TabTravelCard({
   layout = 'horizontal',
   contentMinHeight,
   mediaFit = 'contain',
+  webTouchAction,
 }: Props) {
   // ✅ УЛУЧШЕНИЕ: поддержка тем через useThemedColors
   const colors = useThemedColors();
@@ -51,6 +53,10 @@ function TabTravelCard({
   const isMobile = isPhone || isLargePhone;
   const tabCardTemplate = useMemo(() => createTabCardTemplate(colors), [colors]);
   const styles = useMemo(() => createStyles(tabCardTemplate), [tabCardTemplate]);
+  const resolvedWebTouchAction = useMemo(
+    () => webTouchAction ?? (Platform.OS === 'web' && layout === 'horizontal' ? 'pan-x pan-y' : undefined),
+    [layout, webTouchAction]
+  );
 
   const title = item?.title || 'Без названия';
 
@@ -96,6 +102,7 @@ function TabTravelCard({
       imageHeight={Platform.OS === 'web' ? 168 : 150}
       testID={testID}
       style={[layout === 'grid' ? styles.containerGrid : styles.container, style]}
+      webTouchAction={resolvedWebTouchAction}
       mediaProps={{
         blurBackground: true,
         allowCriticalWebBlur: true,

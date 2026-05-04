@@ -1,4 +1,5 @@
 import { render } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 
 jest.mock('@/hooks/useResponsive', () => ({
@@ -25,6 +26,7 @@ jest.mock('@/components/ui/UnifiedTravelCard', () => ({
 }));
 
 describe('TabTravelCard content height rules', () => {
+  const originalPlatform = Platform.OS;
   const baseItem = {
     id: '1',
     title: 'Test title',
@@ -32,6 +34,10 @@ describe('TabTravelCard content height rules', () => {
     city: null,
     country: 'Poland',
   };
+
+  afterEach(() => {
+    Object.defineProperty(Platform, 'OS', { value: originalPlatform, configurable: true });
+  });
 
   it('uses a stable default content minHeight', () => {
     const { getByTestId } = render(
@@ -68,5 +74,16 @@ describe('TabTravelCard content height rules', () => {
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0];
     expect(props?.mediaProps?.allowCriticalWebBlur).toBe(true);
     expect(props?.mediaProps?.blurBackground).toBe(true);
+  });
+
+  it('uses horizontal-friendly web touch action for the default rail layout', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });
+
+    render(
+      <TabTravelCard item={baseItem as any} onPress={() => undefined} testID="tab-card" />
+    );
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0];
+    expect(props?.webTouchAction).toBe('pan-x pan-y');
   });
 });

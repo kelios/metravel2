@@ -143,6 +143,7 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
                   onPress={() => onOpenTravel(travelUrl)}
                   layout="grid"
                   style={styles.travelCard}
+                  webTouchAction="pan-x pan-y"
                 />
               </View>
             );

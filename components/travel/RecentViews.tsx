@@ -268,6 +268,7 @@ function RecentViews({
                   }
                   imageHeight={200}
                   style={cardStyle}
+                  webTouchAction="pan-x pan-y"
                 />
               </View>
             );

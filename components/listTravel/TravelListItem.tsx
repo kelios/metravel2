@@ -47,6 +47,7 @@ type Props = {
     viewportWidth?: number; // ✅ Ширина viewport для width-based адаптивности на web
     hideAuthor?: boolean;
     visualVariant?: 'default' | 'home-featured';
+    webTouchAction?: string;
 };
 
 function TravelListItem({
@@ -66,6 +67,7 @@ function TravelListItem({
                             viewportWidth,
                             hideAuthor = false,
                             visualVariant = 'default',
+                             webTouchAction,
                         }: Props) {
     // ✅ ДИЗАЙН: Используем динамические цвета темы
     const colors = useThemedColors();
@@ -548,7 +550,7 @@ const card = (
           : {}
         : undefined
     }
-    webTouchAction={selectable ? 'manipulation' : undefined}
+    webTouchAction={webTouchAction ?? (selectable ? 'manipulation' : undefined)}
     mediaProps={{
       placeholderBlurhash: PLACEHOLDER_BLURHASH,
       blurBackground: true,

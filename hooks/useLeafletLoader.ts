@@ -8,7 +8,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { ensureLeafletCss as ensureLeafletCssOverrides } from '@/utils/ensureLeafletCss';
-import { loadLeafletRuntime } from '@/utils/loadLeafletRuntime';
 
 type LeafletRuntime = typeof import('leaflet');
 type ReactLeafletRuntime = typeof import('react-leaflet');
@@ -350,6 +349,7 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
       try {
         // ensureLeafletCss is already triggered in the earlier useEffect;
         // avoid awaiting it here to not serialise CSS polling with JS loading.
+        const { loadLeafletRuntime } = await import('@/utils/loadLeafletRuntime');
         const { L: LeafletResolved, RL: ReactLeafletResolved } = await loadLeafletRuntime();
         if (cancelled) return;
 

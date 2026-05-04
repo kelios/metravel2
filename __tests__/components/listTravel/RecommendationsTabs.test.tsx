@@ -1,11 +1,11 @@
 import React from 'react';
-import { Animated } from 'react-native';
+import { Animated, Platform } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import RecommendationsTabs from '@/components/listTravel/RecommendationsTabs';
 
 const mockPush = jest.fn();
-const mockUseResponsive = jest.fn(() => ({ isMobile: false }));
+const mockUseResponsive: jest.Mock<any, any> = jest.fn(() => ({ isMobile: false }));
 
 const mockUseAuth: jest.Mock<any, any> = jest.fn(() => ({ isAuthenticated: false }));
 const mockUseFavorites: jest.Mock<any, any> = jest.fn(() => ({
@@ -65,6 +65,8 @@ jest.mock('@/components/listTravel/TabTravelCard', () => ({
 }));
 
 describe('RecommendationsTabs', () => {
+  const originalPlatform = Platform.OS;
+
   beforeEach(() => {
     jest.clearAllMocks();
 
@@ -89,6 +91,7 @@ describe('RecommendationsTabs', () => {
   });
 
   afterEach(() => {
+    Object.defineProperty(Platform, 'OS', { value: originalPlatform, configurable: true });
     jest.restoreAllMocks();
   });
 
@@ -103,7 +106,7 @@ describe('RecommendationsTabs', () => {
 
     render(<RecommendationsTabs forceVisible={true} />);
 
-    fireEvent.press(screen.getByText('Избранное'));
+    fireEvent.press(screen.getByLabelText('Избранное'));
 
     expect(
       await screen.findByText(/Избранное будет доступно после регистрации или авторизации/i)
@@ -125,7 +128,7 @@ describe('RecommendationsTabs', () => {
 
     render(<RecommendationsTabs forceVisible={true} />);
 
-    fireEvent.press(screen.getByText('Избранное'));
+    fireEvent.press(screen.getByLabelText('Избранное'));
 
     expect(await screen.findByText('Избранное пусто')).toBeTruthy();
   });
@@ -188,7 +191,7 @@ describe('RecommendationsTabs', () => {
 
     render(<RecommendationsTabs forceVisible={true} />);
 
-    fireEvent.press(screen.getByText('Избранное'));
+    fireEvent.press(screen.getByLabelText('Избранное'));
     expect(await screen.findByText('Fav 1')).toBeTruthy();
 
     const props = mockTabTravelCard.mock.calls.at(-1)?.[0];
