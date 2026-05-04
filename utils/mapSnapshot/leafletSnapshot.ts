@@ -64,8 +64,9 @@ async function ensureLeaflet(): Promise<any> {
       }
 
       try {
-        const leafletMod = await import('leaflet')
-        w.L = leafletMod?.default ?? leafletMod
+        const { loadLeafletRuntime } = await import('@/utils/loadLeafletRuntime')
+        const { L } = await loadLeafletRuntime()
+        w.L = L
         if (w.L) {
           ensureLeafletSnapshotStyles()
           return
