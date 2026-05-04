@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useMemo, useState } from "react";
+import React, { memo, Suspense, useEffect, useMemo, useState } from "react";
 import {
     ScrollView,
     StyleSheet,
@@ -8,10 +8,15 @@ import {
     InteractionManager,
     useWindowDimensions,
 } from "react-native";
-import StableContent from "@/components/travel/StableContent";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
+
+const StableContentLazy = React.lazy(() =>
+  import('@/components/travel/StableContent').then((m) => ({
+    default: m.default,
+  }))
+)
 
 interface TravelDescriptionProps {
     htmlContent: string;
@@ -130,6 +135,13 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
             paddingBottom: DESIGN_TOKENS.spacing.lg,
         },
 
+        webLazyContentFallback: {
+            width: '100%',
+            minHeight: 320,
+            justifyContent: 'center',
+            paddingBottom: DESIGN_TOKENS.spacing.lg,
+        },
+
         stamp: {
             position: "absolute",
             top: 8,
@@ -154,7 +166,19 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
           {isEmptyHtml ? (
             <Text style={styles.placeholder}>Автор ещё не добавил описание</Text>
           ) : canParseHtml ? (
-            <StableContent html={htmlContent} contentWidth={contentWidth} fullWidth={noBox} />
+            <Suspense
+              fallback={
+                Platform.OS === 'web' ? (
+                  <View style={styles.webLazyContentFallback}>
+                    <Text style={styles.placeholder}>Загружаем описание…</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.placeholder}>Загружаем описание…</Text>
+                )
+              }
+            >
+              <StableContentLazy html={htmlContent} contentWidth={contentWidth} fullWidth={noBox} />
+            </Suspense>
           ) : (
             <Text style={styles.placeholder}>Загружаем описание…</Text>
           )}
