@@ -73,6 +73,7 @@ const mapIconName = (name: string): keyof typeof Feather.glyphMap => {
       return 'radio';
     case 'list':
       return 'list';
+    case 'view-list':
     case 'view_list':
       return 'list';
     case 'filter-list':

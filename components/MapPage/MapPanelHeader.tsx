@@ -1,6 +1,6 @@
 import React, { memo, useCallback } from 'react'
 import { View, Text, Pressable, Platform } from 'react-native'
-import { Feather } from '@expo/vector-icons'
+import Feather from '@expo/vector-icons/Feather'
 import type { ThemedColors } from '@/hooks/useTheme'
 
 interface MapPanelHeaderProps {

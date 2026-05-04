@@ -23,16 +23,18 @@ export function generateSrcSet(
   // a format. This avoids generating `f=webp`/`f=avif` URLs for media
   // conversions that may only exist in the original format.
   const resolvedFormat = options.format ?? 'auto';
-  const resolvedDpr = options.dpr ?? 1;
   const srcset = sizes
     .map((size) => {
-      const optimizedUrl = optimizeImageUrl(baseUrl, {
+      const optimizedOptions: ImageOptimizationOptions = {
         width: size,
         format: resolvedFormat,
         quality: options.quality ?? 75,
         fit: options.fit,
-        dpr: resolvedDpr,
-      });
+      };
+      if (options.dpr !== undefined) {
+        optimizedOptions.dpr = options.dpr;
+      }
+      const optimizedUrl = optimizeImageUrl(baseUrl, optimizedOptions);
       return `${optimizedUrl} ${size}w`;
     })
     .join(', ');

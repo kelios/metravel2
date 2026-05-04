@@ -247,6 +247,10 @@ describe('TravelHeroSection slider background regression (web)', () => {
       ]),
     )
 
+    const initialArgs = mockSliderSpy.mock.calls[mockSliderSpy.mock.calls.length - 1]
+    const initialProps = (initialArgs as any)?.[0]
+    expect(initialProps.skipFirstSlideImage).toBe(true)
+
     mockUseTravelHeroState.mockReturnValue({
       ...(mockUseTravelHeroState.mock.results[0]?.value || {}),
       overlayUnmounted: true,

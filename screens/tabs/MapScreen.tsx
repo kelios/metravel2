@@ -8,7 +8,7 @@ import {
     Pressable,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { getUserFriendlyNetworkError } from '@/utils/networkErrorHandler';

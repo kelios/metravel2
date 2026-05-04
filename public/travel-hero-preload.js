@@ -377,8 +377,8 @@
           var isMobile = (window.innerWidth || 0) < 768;
           var quality = isMobile ? 35 : 45;
 
-          // Match TravelDetailsHero.tsx: lcpWidths = isMobile ? [320, 400] : [480, 720]
-          var widths = isMobile ? [320, 400] : [480, 720];
+          // Must match TravelDetailsOptimizedLCPHero.tsx exactly.
+          var widths = isMobile ? [320, 480, 640, 720] : [480, 720];
 
           // Build srcSet entries to match buildResponsiveImageProps()
           var srcSetParts = [];

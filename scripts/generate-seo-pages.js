@@ -313,7 +313,7 @@ function buildTravelHeroPreloadData(travel, detail) {
   if (!source?.url) return null;
 
   const mobileHref = buildOptimizedTravelImageUrl(source.url, {
-    width: 400,
+    width: 720,
     quality: 35,
     updatedAt: source.updatedAt,
     id: source.id,
@@ -331,7 +331,7 @@ function buildTravelHeroPreloadData(travel, detail) {
     mobile: mobileHref
       ? {
           href: mobileHref,
-          srcSet: buildTravelHeroSrcSet(source.url, [320, 400], {
+          srcSet: buildTravelHeroSrcSet(source.url, [320, 480, 640, 720], {
             quality: 35,
             updatedAt: source.updatedAt,
             id: source.id,

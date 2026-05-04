@@ -83,7 +83,7 @@ describe('TravelDetailsContainer performance (web)', () => {
     expect(container.querySelector('[data-hero-backdrop="true"]')).toBeTruthy()
   })
 
-  it('requests a higher-resolution mobile hero source on high-DPR web devices', () => {
+  it('keeps mobile hero URL preload-friendly on high-DPR web devices', () => {
     ;(window as any).innerWidth = 390
     ;(window as any).devicePixelRatio = 3
 
@@ -106,10 +106,10 @@ describe('TravelDetailsContainer performance (web)', () => {
     const lcpImg = container.querySelector('img[data-lcp]') as HTMLImageElement | null
     expect(lcpImg).toBeTruthy()
     expect(lcpImg?.getAttribute('src')).toContain('w=720')
-    expect(lcpImg?.getAttribute('src')).toContain('dpr=2')
+    expect(lcpImg?.getAttribute('src')).not.toContain('dpr=')
     expect(lcpImg?.getAttribute('srcset')).toContain('w=640')
     expect(lcpImg?.getAttribute('srcset')).toContain('w=720')
-    expect(lcpImg?.getAttribute('srcset')).toContain('dpr=2')
+    expect(lcpImg?.getAttribute('srcset')).not.toContain('dpr=')
   })
 
   // useLCPPreload was removed — preloading is handled by the inline script in +html.tsx

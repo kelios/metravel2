@@ -104,14 +104,9 @@ function OptimizedLCPHeroInner({
     img.id,
   );
   const ratio = img.width && img.height ? img.width / img.height : 16 / 9;
-  const effectiveDevicePixelRatio =
-    typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1;
-  const lcpMaxWidth = isMobile ? 720 : 720;
+  const lcpMaxWidth = 720;
   const lcpWidths = isMobile ? [320, 480, 640, 720] : [480, 720];
-  const targetWidth =
-    typeof window !== 'undefined'
-      ? Math.min(Math.round((window.innerWidth || lcpMaxWidth) * effectiveDevicePixelRatio), lcpMaxWidth)
-      : lcpMaxWidth;
+  const targetWidth = lcpMaxWidth;
 
   const responsive = buildResponsiveImageProps(baseSrc, {
     maxWidth: targetWidth,
@@ -119,7 +114,6 @@ function OptimizedLCPHeroInner({
     quality: isMobile ? 35 : 45,
     format: 'auto',
     fit: 'contain',
-    dpr: isMobile ? effectiveDevicePixelRatio : 1.5,
     sizes: isMobile ? '100vw' : '(max-width: 1024px) 92vw, 720px',
   });
 
@@ -358,7 +352,7 @@ function OptimizedLCPHeroInner({
               objectPosition: 'center',
             }}
             loading="eager"
-            decoding="auto"
+            decoding="async"
             fetchPriority="high"
             ref={imgRef as any}
             referrerPolicy="no-referrer-when-downgrade"

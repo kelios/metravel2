@@ -533,11 +533,13 @@ describe('travel hero preload helpers', () => {
 
     expect(preload).toBeTruthy();
     expect(preload.mobile.href).toContain('https://metravel.by/gallery/77/gallery/photo.JPG');
-    expect(preload.mobile.href).toContain('w=400');
+    expect(preload.mobile.href).toContain('w=720');
     expect(preload.mobile.href).toContain('q=35');
     expect(preload.mobile.href).toContain('v=991');
     expect(preload.mobile.href).not.toContain('dpr=');
     expect(preload.mobile.srcSet).toContain('w=320');
+    expect(preload.mobile.srcSet).toContain('w=640');
+    expect(preload.mobile.srcSet).toContain('w=720');
     expect(preload.mobile.sizes).toBe('100vw');
     expect(preload.desktop.href).toContain('w=720');
     expect(preload.desktop.href).toContain('q=45');
@@ -549,8 +551,8 @@ describe('travel hero preload helpers', () => {
   it('injectTravelHeroPreload inserts and replaces viewport-specific travel preload tags', () => {
     const preload = {
       mobile: {
-        href: 'https://metravel.by/travel-image/77/conversions/photo-thumb_200.jpg?w=400&q=35&fit=contain',
-        srcSet: 'https://metravel.by/travel-image/77/conversions/photo-thumb_200.jpg?w=320&q=35&fit=contain 320w, https://metravel.by/travel-image/77/conversions/photo-thumb_200.jpg?w=400&q=35&fit=contain 400w',
+        href: 'https://metravel.by/travel-image/77/conversions/photo-thumb_200.jpg?w=720&q=35&fit=contain',
+        srcSet: 'https://metravel.by/travel-image/77/conversions/photo-thumb_200.jpg?w=320&q=35&fit=contain 320w, https://metravel.by/travel-image/77/conversions/photo-thumb_200.jpg?w=480&q=35&fit=contain 480w, https://metravel.by/travel-image/77/conversions/photo-thumb_200.jpg?w=640&q=35&fit=contain 640w, https://metravel.by/travel-image/77/conversions/photo-thumb_200.jpg?w=720&q=35&fit=contain 720w',
         sizes: '100vw',
       },
       desktop: {
