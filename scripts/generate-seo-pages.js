@@ -1225,7 +1225,12 @@ async function main() {
         bootstrapTravel,
         routeKey
       );
-      const finalTravelHtml = injectHiddenH1(htmlWithTravelBootstrap, name || routeKey);
+      const htmlWithSkeleton = injectSkeletonShell(
+        htmlWithTravelBootstrap,
+        `/travels/${routeKey}`,
+        { heroPreload: travelHeroPreload, name }
+      );
+      const finalTravelHtml = injectHiddenH1(htmlWithSkeleton, name || routeKey);
 
       // Write both explicit-file and directory-index variants.
       // NOTE: we intentionally avoid writing an extensionless file because

@@ -8,7 +8,6 @@ import React, {
 import {
   Platform,
   useWindowDimensions,
-  View,
 } from "react-native";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { useRouter } from 'expo-router';
@@ -19,6 +18,8 @@ import { useTravelDetails } from '@/hooks/travel-details';
 import TravelDetailsCriticalShell from "@/components/travel/details/TravelDetailsCriticalShell";
 import { getTravelDetailsShellStyles } from "@/components/travel/details/TravelDetailsShellStyles";
 import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
+import { isTravelDetailsFirstScreenReady } from '@/components/travel/details/travelDetailsCriticalShellModel'
+import TravelDetailsLoadingFallback from '@/components/travel/details/TravelDetailsLoadingFallback'
 import TravelDetailsSeoBlock from '@/components/travel/details/TravelDetailsSeoBlock'
 import TravelDetailsAccessibilityChrome from '@/components/travel/details/TravelDetailsAccessibilityChrome'
 import TravelDetailsDeferredRuntimeSlot from '@/components/travel/details/TravelDetailsDeferredRuntimeSlot'
@@ -39,8 +40,6 @@ const TravelDetailPageSkeleton = withLazy(() =>
     default: m.TravelDetailPageSkeleton,
   }))
 );
-const SKELETON_OVERLAY_FALLBACK_STYLE = { flex: 1 } as const
-
 /* =================================================================== */
 
 export default function TravelDetailsContainer() {
@@ -106,7 +105,11 @@ export default function TravelDetailsContainer() {
     };
   }, [travel, isLoading, isError]);
 
-  const skeletonPhase = useSkeletonPhase({ isDataReady: Boolean(travel) });
+  const isFirstScreenReady = isTravelDetailsFirstScreenReady(travel, lcpLoaded)
+  const skeletonPhase = useSkeletonPhase({
+    isDataReady: Boolean(travel),
+    isVisualReady: isFirstScreenReady,
+  })
 
   // ✅ REFACTORED: Trace logic extracted to useTravelDetailsTrace hook
   useTravelDetailsTrace({
@@ -203,8 +206,8 @@ export default function TravelDetailsContainer() {
     />
   );
 
-  // NOTE: Skeleton gate is purely data-driven: show skeleton until `travel` is available.
-  // Avoid delaying first paint with RAF, as it can increase CLS in perf audits.
+  // NOTE: Hide skeleton only after the first screen is visually ready.
+  // On web this prevents exposing intermediate hero/overlay states that look like page jitter.
 
   /* -------------------- READY -------------------- */
 
@@ -249,7 +252,7 @@ export default function TravelDetailsContainer() {
         wrapperStyle={wrapperStyle}
         styles={styles}
         skeletonPhase={skeletonPhase}
-        skeletonFallback={<View style={SKELETON_OVERLAY_FALLBACK_STYLE} />}
+        skeletonFallback={<TravelDetailsLoadingFallback />}
         travelDetailSkeleton={<TravelDetailPageSkeleton />}
         scrollRef={scrollRef as any}
         scrollViewStyle={scrollViewStyle}

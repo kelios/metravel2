@@ -36,6 +36,61 @@ export const DescriptionSkeleton: React.FC = () => {
   );
 };
 
+export const QuickFactsSkeleton: React.FC = () => {
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      width: '100%',
+      gap: DESIGN_TOKENS.spacing.sm,
+      paddingVertical: DESIGN_TOKENS.spacing.sm,
+    },
+    chipsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    categoriesRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: DESIGN_TOKENS.spacing.xs,
+      alignItems: 'center',
+    },
+  }), [])
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.chipsRow}>
+        <SkeletonLoader width={140} height={40} borderRadius={DESIGN_TOKENS.radii.sm} />
+        <SkeletonLoader width={120} height={40} borderRadius={DESIGN_TOKENS.radii.sm} />
+        <SkeletonLoader width={132} height={40} borderRadius={DESIGN_TOKENS.radii.sm} />
+      </View>
+      <View style={styles.categoriesRow}>
+        <SkeletonLoader width={84} height={18} borderRadius={6} />
+        <SkeletonLoader width={92} height={32} borderRadius={DESIGN_TOKENS.radii.sm} />
+        <SkeletonLoader width={108} height={32} borderRadius={DESIGN_TOKENS.radii.sm} />
+      </View>
+    </View>
+  )
+}
+
+export const QuickJumpSkeleton: React.FC = () => {
+  const styles = useMemo(() => StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: DESIGN_TOKENS.spacing.xs,
+      width: '100%',
+    },
+  }), [])
+
+  return (
+    <View style={styles.row}>
+      <SkeletonLoader width={148} height={38} borderRadius={DESIGN_TOKENS.radii.sm} />
+      <SkeletonLoader width={116} height={38} borderRadius={DESIGN_TOKENS.radii.sm} />
+      <SkeletonLoader width={138} height={38} borderRadius={DESIGN_TOKENS.radii.sm} />
+    </View>
+  )
+}
+
 /**
  * Skeleton для карты
  */
@@ -46,6 +101,23 @@ export const MapSkeleton: React.FC = () => {
     </View>
   );
 };
+
+export const MapSectionSkeleton: React.FC = () => {
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      width: '100%',
+      gap: DESIGN_TOKENS.spacing.md,
+    },
+  }), [])
+
+  return (
+    <View style={styles.container}>
+      <SkeletonLoader width={190} height={28} borderRadius={8} />
+      <MapSkeleton />
+      <PointListSkeleton />
+    </View>
+  )
+}
 
 /**
  * Skeleton для списка точек маршрута
@@ -175,6 +247,171 @@ export const CommentsSkeleton: React.FC = () => {
     </View>
   );
 };
+
+export const AuthorSectionSkeleton: React.FC = () => {
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      width: '100%',
+      gap: DESIGN_TOKENS.spacing.md,
+    },
+    card: {
+      width: '100%',
+      padding: DESIGN_TOKENS.spacing.lg,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      gap: DESIGN_TOKENS.spacing.md,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.md,
+    },
+    meta: {
+      flex: 1,
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    buttons: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: DESIGN_TOKENS.spacing.sm,
+    },
+  }), [])
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.card}>
+        <SkeletonLoader width={120} height={24} borderRadius={8} />
+        <SkeletonLoader width="72%" height={18} borderRadius={6} />
+        <View style={styles.row}>
+          <SkeletonLoader width={72} height={72} borderRadius={36} />
+          <View style={styles.meta}>
+            <SkeletonLoader width="56%" height={18} borderRadius={6} />
+            <SkeletonLoader width="42%" height={16} borderRadius={6} />
+            <SkeletonLoader width="78%" height={16} borderRadius={6} />
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.buttons}>
+        <SkeletonLoader width={156} height={44} borderRadius={DESIGN_TOKENS.radii.pill} />
+        <SkeletonLoader width={188} height={44} borderRadius={DESIGN_TOKENS.radii.pill} />
+      </View>
+    </View>
+  )
+}
+
+export const RatingSectionSkeleton: React.FC = () => {
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      width: '100%',
+      padding: DESIGN_TOKENS.spacing.lg,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      gap: DESIGN_TOKENS.spacing.md,
+    },
+    row: {
+      flexDirection: 'row',
+      gap: DESIGN_TOKENS.spacing.md,
+      flexWrap: 'wrap',
+    },
+    box: {
+      flex: 1,
+      minWidth: 220,
+      gap: DESIGN_TOKENS.spacing.sm,
+    },
+  }), [])
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.row}>
+        <SkeletonLoader width={120} height={24} borderRadius={8} />
+        <SkeletonLoader width={92} height={18} borderRadius={6} />
+      </View>
+      <View style={styles.row}>
+        <View style={styles.box}>
+          <SkeletonLoader width="48%" height={18} borderRadius={6} />
+          <SkeletonLoader width={180} height={28} borderRadius={8} />
+          <SkeletonLoader width="32%" height={16} borderRadius={6} />
+        </View>
+        <View style={styles.box}>
+          <SkeletonLoader width="56%" height={18} borderRadius={6} />
+          <SkeletonLoader width={180} height={28} borderRadius={8} />
+          <SkeletonLoader width="44%" height={16} borderRadius={6} />
+        </View>
+      </View>
+    </View>
+  )
+}
+
+export const SidebarSectionSkeleton: React.FC = () => {
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      width: '100%',
+      gap: DESIGN_TOKENS.spacing.xl,
+    },
+    section: {
+      width: '100%',
+      gap: DESIGN_TOKENS.spacing.sm,
+    },
+  }), [])
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.section}>
+        <SkeletonLoader width={220} height={26} borderRadius={8} />
+        <SkeletonLoader width="52%" height={18} borderRadius={6} />
+        <TravelListSkeleton count={2} />
+      </View>
+      <View style={styles.section}>
+        <SkeletonLoader width={210} height={26} borderRadius={8} />
+        <SkeletonLoader width="58%" height={18} borderRadius={6} />
+        <TravelListSkeleton count={2} />
+      </View>
+    </View>
+  )
+}
+
+export const FooterSectionSkeleton: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      width: '100%',
+      gap: DESIGN_TOKENS.spacing.lg,
+    },
+    section: {
+      width: '100%',
+      gap: DESIGN_TOKENS.spacing.sm,
+    },
+    buttonRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: DESIGN_TOKENS.spacing.sm,
+    },
+  }), [])
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.section}>
+        <SkeletonLoader width={220} height={24} borderRadius={8} />
+        <SkeletonLoader width="70%" height={18} borderRadius={6} />
+        <SkeletonLoader width={260} height={44} borderRadius={DESIGN_TOKENS.radii.pill} />
+      </View>
+
+      {!isMobile && (
+        <View style={styles.section}>
+          <SkeletonLoader width={180} height={24} borderRadius={8} />
+          <View style={styles.buttonRow}>
+            <SkeletonLoader width={160} height={44} borderRadius={DESIGN_TOKENS.radii.pill} />
+            <SkeletonLoader width={140} height={44} borderRadius={DESIGN_TOKENS.radii.pill} />
+          </View>
+        </View>
+      )}
+
+      <View style={styles.section}>
+        <SkeletonLoader width={210} height={24} borderRadius={8} />
+        <SkeletonLoader width="76%" height={18} borderRadius={6} />
+        <SkeletonLoader width={220} height={44} borderRadius={DESIGN_TOKENS.radii.pill} />
+      </View>
+    </View>
+  )
+}
 
 /**
  * Универсальный skeleton для секций

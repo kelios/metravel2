@@ -62,19 +62,14 @@ test.describe('@perf Travel details skeleton transition (no layout shift)', () =
 
     await page.goto('/travels/e2e-details-skeleton', { waitUntil: 'domcontentloaded' });
 
-    // Loading skeleton can be skipped if the page resolves very quickly.
     const loading = page.locator(tid('travel-details-loading'));
     const pageRoot = page.locator(tid('travel-details-page'));
 
-    await Promise.race([
-      loading.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null),
-      pageRoot.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null),
-    ]);
-
-    const skeletonBox = (await loading.isVisible().catch(() => false)) ? await loading.boundingBox() : null;
+    await expect(loading).toBeVisible({ timeout: 30_000 });
+    const skeletonBox = await loading.boundingBox();
 
     // Wait for the real page to render.
-    await expect(page.locator(tid('travel-details-page'))).toBeVisible({ timeout: 45_000 });
+    await expect(pageRoot).toBeVisible({ timeout: 45_000 });
     await expect(page.locator(tid('travel-details-hero'))).toHaveCount(1);
     await expect(page.locator(tid('travel-details-quick-facts'))).toHaveCount(1);
 

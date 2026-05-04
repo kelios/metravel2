@@ -2,12 +2,27 @@ import { Platform } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { METRICS } from '@/constants/layout'
 
+type TravelSkeletonReadyCandidate = {
+  gallery?: unknown[] | null
+} | null | undefined
+
 export function shouldShowTravelDetailsDesktopSidebar(isMobile: boolean, screenWidth: number) {
   return !isMobile && screenWidth >= METRICS.breakpoints.desktop
 }
 
 export function shouldShowTravelDetailsSkeletonOverlay(travel: unknown) {
   return Platform.OS === 'web' && Boolean(travel)
+}
+
+export function isTravelDetailsFirstScreenReady(
+  travel: TravelSkeletonReadyCandidate,
+  lcpLoaded: boolean,
+) {
+  if (!travel) return false
+
+  const hasHeroMedia = Array.isArray(travel.gallery) && travel.gallery.length > 0
+
+  return !hasHeroMedia || lcpLoaded
 }
 
 export function getTravelDetailsDesktopLayoutStyle() {

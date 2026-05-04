@@ -132,7 +132,13 @@ export const TravelDetailPageSkeleton: React.FC = () => {
 
   if (isDesktop) {
     return (
-      <View style={styles.container}>
+      <View
+        testID="travel-details-loading"
+        {...(typeof document !== 'undefined' ? ({ 'data-testid': 'travel-details-loading' } as any) : null)}
+        accessibilityRole="progressbar"
+        accessibilityLabel="Загрузка путешествия"
+        style={styles.container}
+      >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -215,8 +221,14 @@ export const TravelDetailPageSkeleton: React.FC = () => {
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView 
+    <View
+      testID="travel-details-loading"
+      {...(typeof document !== 'undefined' ? ({ 'data-testid': 'travel-details-loading' } as any) : null)}
+      accessibilityRole="progressbar"
+      accessibilityLabel="Загрузка путешествия"
+      style={styles.container}
+    >
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >

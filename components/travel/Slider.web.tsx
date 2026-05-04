@@ -231,7 +231,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     () => getSliderViewportFlags(viewportWidth),
     [viewportWidth],
   );
-  const effectivePreloadCount = isMobileDevice ? Math.max(preloadCountProp, 2) : preloadCountProp;
+  const effectivePreloadCount = isMobileDevice ? Math.max(preloadCountProp, 1) : preloadCountProp;
 
   const buildUri = useCallback(
     (img: any, w: number, h: number, isFirst: boolean) => buildUriWeb(img, w, h, fit, isFirst),
@@ -416,7 +416,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
               {images.map((item, index) => {
                 const distanceToCurrent = Math.abs(index - currentIndex);
                 const preloadPriority =
-                  prefetchEnabled && distanceToCurrent <= (isMobile ? 2 : 1);
+                  prefetchEnabled && distanceToCurrent <= 1;
                 const prepareBlur = blurBackground && distanceToCurrent <= 1;
 
                 return (

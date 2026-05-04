@@ -1,6 +1,14 @@
 import React, { Suspense, memo } from 'react'
 import { Animated, Platform, View } from 'react-native'
 import type { Travel } from '@/types/types'
+import {
+  AuthorSectionSkeleton,
+  CommentsSkeleton,
+  FooterSectionSkeleton,
+  MapSectionSkeleton,
+  RatingSectionSkeleton,
+  SidebarSectionSkeleton,
+} from '@/components/travel/TravelDetailSkeletons'
 
 import type { AnchorsMap } from './TravelDetailsTypes'
 import { withLazy } from './TravelDetailsLazy'
@@ -29,16 +37,11 @@ const TravelDetailsMapSectionLazy = withLazy(() =>
   })),
 )
 
-const PLACEHOLDER_MIN_H_160 = { minHeight: 160 } as const
-const PLACEHOLDER_MIN_H_56 = { minHeight: 56 } as const
-const PLACEHOLDER_MIN_H_240 = { minHeight: 240 } as const
-const PLACEHOLDER_MIN_H_320 = { minHeight: 320 } as const
-const AUTHOR_PLACEHOLDER = (
-  <>
-    <View style={PLACEHOLDER_MIN_H_160} />
-    <View style={PLACEHOLDER_MIN_H_56} />
-  </>
-)
+const AUTHOR_PLACEHOLDER = <AuthorSectionSkeleton />
+const RATING_PLACEHOLDER = <RatingSectionSkeleton />
+const MAP_PLACEHOLDER = <MapSectionSkeleton />
+const SIDEBAR_PLACEHOLDER = <SidebarSectionSkeleton />
+const COMMENTS_PLACEHOLDER = <CommentsSkeleton />
 
 const MAP_FORCE_OPEN_KEYS = new Set(['map', 'points', 'excursions'])
 const SIDEBAR_FORCE_OPEN_KEYS = new Set(['near', 'popular'])
@@ -123,7 +126,7 @@ export const TravelDeferredSections: React.FC<{
         {shouldLoadRatingSection ? (
           <TravelDeferredRatingSection travel={travel} />
         ) : (
-          <View style={PLACEHOLDER_MIN_H_56} />
+          RATING_PLACEHOLDER
         )}
       </View>
 
@@ -132,7 +135,7 @@ export const TravelDeferredSections: React.FC<{
         collapsable={false}
       >
         {shouldLoadMapSection ? (
-          <Suspense fallback={<View style={PLACEHOLDER_MIN_H_320} />}>
+          <Suspense fallback={MAP_PLACEHOLDER}>
             <TravelDetailsMapSectionLazy
               travel={travel}
               anchors={anchors}
@@ -142,7 +145,7 @@ export const TravelDeferredSections: React.FC<{
             />
           </Suspense>
         ) : (
-          <View style={PLACEHOLDER_MIN_H_320} />
+          MAP_PLACEHOLDER
         )}
       </View>
 
@@ -151,7 +154,7 @@ export const TravelDeferredSections: React.FC<{
         collapsable={false}
       >
         {shouldLoadSidebarSection ? (
-          <Suspense fallback={<View style={PLACEHOLDER_MIN_H_240} />}>
+          <Suspense fallback={SIDEBAR_PLACEHOLDER}>
             <TravelDetailsSidebarSectionLazy
               travel={travel}
               anchors={anchors}
@@ -162,7 +165,7 @@ export const TravelDeferredSections: React.FC<{
             />
           </Suspense>
         ) : (
-          <View style={PLACEHOLDER_MIN_H_240} />
+          SIDEBAR_PLACEHOLDER
         )}
       </View>
 
@@ -172,7 +175,7 @@ export const TravelDeferredSections: React.FC<{
         {...(Platform.OS === 'web' ? { 'data-section-key': 'comments' } : {})}
       >
         {shouldLoadCommentsSection && travel?.id ? (
-          <Suspense fallback={<View style={PLACEHOLDER_MIN_H_240} />}>
+          <Suspense fallback={COMMENTS_PLACEHOLDER}>
             <CommentsSectionLazy
               travelId={travel.id}
               lazyLoad
@@ -181,7 +184,7 @@ export const TravelDeferredSections: React.FC<{
             />
           </Suspense>
         ) : (
-          <View style={PLACEHOLDER_MIN_H_240} />
+          COMMENTS_PLACEHOLDER
         )}
       </View>
 
@@ -190,11 +193,11 @@ export const TravelDeferredSections: React.FC<{
         collapsable={false}
       >
         {shouldLoadFooterSection ? (
-          <Suspense fallback={<View style={PLACEHOLDER_MIN_H_240} />}>
+          <Suspense fallback={<FooterSectionSkeleton isMobile={isMobile} />}>
             <TravelDetailsFooterSectionLazy travel={travel} isMobile={isMobile} />
           </Suspense>
         ) : (
-          <View style={PLACEHOLDER_MIN_H_240} />
+          <FooterSectionSkeleton isMobile={isMobile} />
         )}
       </View>
     </>

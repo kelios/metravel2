@@ -10,6 +10,10 @@ import {
 
 import type { Travel } from '@/types/types'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
+import {
+  QuickFactsSkeleton,
+  QuickJumpSkeleton,
+} from '@/components/travel/TravelDetailSkeletons'
 import type { AnchorsMap } from './TravelDetailsTypes'
 import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
 import { useTravelHeroState } from '@/hooks/useTravelHeroState'
@@ -19,7 +23,6 @@ import {
   OVERLAY_TRANSITION_MS,
 } from './TravelDetailsOptimizedLCPHero'
 
-const QUICK_FACTS_PLACEHOLDER_STYLE = { minHeight: 72 } as const
 const TravelHeroFavoriteToggleLazy = React.lazy(() =>
   import('./TravelHeroFavoriteToggle').then((m) => ({
     default: m.TravelHeroFavoriteToggle ?? m.default,
@@ -150,7 +153,6 @@ function TravelHeroSectionInner({
                       onFirstImageLoad={handleSliderImageLoad}
                       firstImagePreloaded={webHeroLoaded}
                       onImagePress={handleImagePress}
-                      skipFirstSlideImage={!overlayUnmounted}
                     />
                   </Suspense>
                 </View>
@@ -250,17 +252,18 @@ function TravelHeroSectionInner({
               styles.quickFactsContainer,
             ]}
           >
-            <View style={QUICK_FACTS_PLACEHOLDER_STYLE} />
+            <QuickFactsSkeleton />
           </View>
-          {Platform.OS !== 'web' && sectionLinks.length > 0 && (
+          {sectionLinks.length > 0 && (
             <View
               style={[
                 styles.sectionContainer,
                 styles.contentStable,
                 styles.quickJumpWrapper,
-                { minHeight: 48 },
               ]}
-            />
+            >
+              <QuickJumpSkeleton />
+            </View>
           )}
         </>
       )}
