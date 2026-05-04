@@ -246,29 +246,6 @@ function OptimizedLCPHeroInner({
             backgroundColor: colors.backgroundSecondary,
           }}
         >
-          <style dangerouslySetInnerHTML={{ __html: `
-            @keyframes fadeInBackdrop {
-              to { opacity: 0.9; }
-            }
-          `}} />
-          <div
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              zIndex: 0,
-              backgroundImage: `url("${srcWithRetry.replace(/"/g, '\\"')}")`,
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-              backgroundSize: 'cover',
-              filter: 'blur(18px) saturate(1.08) brightness(0.82)',
-              transform: 'scale(1.08)',
-              opacity: 1,
-              pointerEvents: 'none',
-            }}
-            data-hero-backdrop="true"
-            data-hero-backdrop-base="true"
-          />
           {backdropSegments.length > 0 ? (
             <>
               {backdropSegments.map((segment, index) => (
@@ -292,33 +269,13 @@ function OptimizedLCPHeroInner({
                     filter: 'blur(18px) saturate(1.08) brightness(0.82)',
                     transform: 'scale(1.08)',
                     transformOrigin: 'center',
-                    opacity: 0,
-                    transition: 'opacity 0.25s ease-in',
-                    animation: 'fadeInBackdrop 0.3s ease-in 0.05s forwards',
+                    opacity: 1,
                     pointerEvents: 'none',
                   }}
                 />
               ))}
             </>
-          ) : (
-            <div
-              aria-hidden="true"
-              style={{
-                position: 'absolute',
-                inset: 0,
-                backgroundImage: `url("${srcWithRetry.replace(/"/g, '\\"')}")`,
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                backgroundSize: 'cover',
-                filter: 'blur(18px) saturate(1.08) brightness(0.82)',
-                transform: 'scale(1.08)',
-                opacity: 0,
-                transition: 'opacity 0.25s ease-in',
-                animation: 'fadeInBackdrop 0.3s ease-in 0.05s forwards',
-              }}
-              data-hero-backdrop="true"
-            />
-          )}
+          ) : null}
           <div
             aria-hidden="true"
             style={{

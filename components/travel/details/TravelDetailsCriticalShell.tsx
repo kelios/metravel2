@@ -2,7 +2,6 @@ import React, { Suspense, useMemo } from 'react';
 import { Animated, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
 import type { Travel } from '@/types/types';
 import type { TravelSectionLink } from '@/components/travel/sectionLinks';
 import {
@@ -12,10 +11,21 @@ import {
   shouldShowTravelDetailsDesktopSidebar,
   shouldShowTravelDetailsSkeletonOverlay,
 } from '@/components/travel/details/travelDetailsCriticalShellModel';
+import { withLazy } from '@/components/travel/details/TravelDetailsLazy';
 
 import type { AnchorsMap } from './TravelDetailsTypes';
 import TravelDetailsSkeletonOverlay from './TravelDetailsSkeletonOverlay';
 import TravelDetailsHeroDeferredColumn from './TravelDetailsHeroDeferredColumn';
+
+const CompactSideBarTravelLazy = withLazy(() =>
+  import('@/components/travel/CompactSideBarTravel').then((m) => ({
+    default: m.default,
+  }))
+)
+const SIDEBAR_SHELL_FALLBACK_STYLE = {
+  width: '100%',
+  minHeight: 320,
+} as const
 
 type TravelDetailsCriticalShellProps = {
   travel?: Travel;
@@ -163,15 +173,17 @@ export default function TravelDetailsCriticalShell({
                           {...(Platform.OS === 'web' ? ({ 'data-testid': 'travel-details-side-menu' } as any) : null)}
                           style={desktopSidebarAnimatedStyle}
                         >
-                          <CompactSideBarTravel
-                            travel={travel}
-                            isMobile={isMobile}
-                            refs={anchors}
-                            links={sectionLinks}
-                            closeMenu={closeMenu}
-                            onNavigate={onNavigate}
-                            activeSection={activeSection ?? undefined}
-                          />
+                          <Suspense fallback={<View style={SIDEBAR_SHELL_FALLBACK_STYLE} />}>
+                            <CompactSideBarTravelLazy
+                              travel={travel}
+                              isMobile={isMobile}
+                              refs={anchors}
+                              links={sectionLinks}
+                              closeMenu={closeMenu}
+                              onNavigate={onNavigate}
+                              activeSection={activeSection ?? undefined}
+                            />
+                          </Suspense>
                         </Animated.View>
                       </View>
 

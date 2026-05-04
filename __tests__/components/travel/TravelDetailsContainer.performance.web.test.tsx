@@ -48,7 +48,7 @@ describe('TravelDetailsContainer performance (web)', () => {
     expect(lcpImg?.style.objectFit).toBe('contain')
   })
 
-  it('renders the blur backdrop immediately so contain hero has stable blurred surround before slider activation', () => {
+  it('renders only segmented blur surround immediately so the LCP shell keeps the same-source backdrop without a full-frame blur candidate', () => {
     const { container } = render(
       <__testables.OptimizedLCPHero
         img={{
@@ -67,14 +67,18 @@ describe('TravelDetailsContainer performance (web)', () => {
 
     const lcpImg = container.querySelector('img[data-lcp]') as HTMLImageElement | null
     const heroBackdrop = container.querySelector('[data-hero-backdrop="true"]') as HTMLDivElement | null
+    const heroBackdropBase = container.querySelector('[data-hero-backdrop-base="true"]') as HTMLDivElement | null
     const heroBackdropSegments = container.querySelectorAll('[data-hero-backdrop-segment="true"]')
     const heroBackdropLayer = container.querySelector('[data-hero-backdrop-layer="true"]') as HTMLDivElement | null
 
     expect(heroBackdrop).toBeTruthy()
     expect(lcpImg).toBeTruthy()
+    expect(heroBackdropBase).toBeNull()
     expect(heroBackdrop?.tagName).toBe('DIV')
     expect(heroBackdropSegments.length).toBeGreaterThan(1)
     expect(heroBackdropLayer?.style.backgroundImage).toContain(lcpImg?.getAttribute('src') || '')
+    expect(heroBackdropLayer?.style.opacity).toBe('1')
+    expect(heroBackdropLayer?.style.animation).toBe('')
 
     if (lcpImg) {
       fireEvent.load(lcpImg)
