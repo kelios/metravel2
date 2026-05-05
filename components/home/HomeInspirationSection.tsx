@@ -9,6 +9,7 @@ import { sendAnalyticsEvent } from '@/utils/analytics'
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import Button from '@/components/ui/Button'
+import ErrorDisplay from '@/components/ui/ErrorDisplay'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { queryConfigs } from '@/utils/reactQueryConfig'
 import { createSectionStyles } from './homeInspirationStyles'
@@ -66,7 +67,13 @@ export function HomeInspirationSection({
 
   const isWeekendShowcase = queryKey === 'home-travels-of-month'
 
-  const { data: travelData = {}, isLoading } = useQuery({
+  const {
+    data: travelData = {},
+    error,
+    isError,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: [queryKey],
     queryFn: ({ signal } = {} as any) => fetchFn({ signal }),
     ...queryConfigs.dynamic,
@@ -275,6 +282,33 @@ export function HomeInspirationSection({
               })
             )}
           </View>
+        </View>
+      </View>
+    )
+  }
+
+  if (isError) {
+    return (
+      <View style={[styles.section, isMobile && styles.sectionMobile]}>
+        <View
+          style={[
+            styles.sectionFrame,
+            isWeekendShowcase && styles.showcaseSectionFrame,
+          ]}
+        >
+          <ErrorDisplay
+            title="Не удалось загрузить подборку"
+            message={
+              error instanceof Error
+                ? error.message
+                : 'Попробуйте обновить подборку ещё раз.'
+            }
+            onRetry={() => {
+              void refetch()
+            }}
+            variant="warning"
+            showContact={false}
+          />
         </View>
       </View>
     )

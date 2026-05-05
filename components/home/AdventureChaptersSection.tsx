@@ -11,6 +11,7 @@ import { fetchTravelsPopular } from '@/api/map'
 import OptimizedFavoriteButton from '@/components/travel/OptimizedFavoriteButton'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import Button from '@/components/ui/Button'
+import ErrorDisplay from '@/components/ui/ErrorDisplay'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { queryConfigs } from '@/utils/reactQueryConfig'
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers'
@@ -299,7 +300,13 @@ function AdventureChaptersSection() {
     default: 1,
   })
 
-  const { data: travelData = {}, isLoading } = useQuery({
+  const {
+    data: travelData = {},
+    error,
+    isError,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ['home-popular-travels'],
     queryFn: ({ signal } = {} as any) => fetchTravelsPopular({ signal }),
     ...queryConfigs.dynamic,
@@ -365,6 +372,28 @@ function AdventureChaptersSection() {
               <View key={i} style={styles.skeletonCard} />
             ))}
           </View>
+        </View>
+      </View>
+    )
+  }
+
+  if (isError) {
+    return (
+      <View style={styles.section}>
+        <View style={styles.sectionFrame}>
+          <ErrorDisplay
+            title="Не удалось загрузить популярные главы"
+            message={
+              error instanceof Error
+                ? error.message
+                : 'Попробуйте обновить подборку ещё раз.'
+            }
+            onRetry={() => {
+              void refetch()
+            }}
+            variant="warning"
+            showContact={false}
+          />
         </View>
       </View>
     )

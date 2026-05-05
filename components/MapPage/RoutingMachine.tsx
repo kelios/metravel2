@@ -210,8 +210,10 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         routingState.loading,
         routingState.error,
         routingState.distance,
+        routingState.duration,
         coordsKeyForSync,
         hasTwoPoints,
+        setRouteDuration,
         // Не включаем setters в зависимости - они стабильны
     ])
 
