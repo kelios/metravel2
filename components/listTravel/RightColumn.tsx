@@ -271,7 +271,7 @@ const RightColumn: React.FC<RightColumnProps> = (
       // (set by ConsentBanner via --mt-consent-h). max() avoids cards hiding under the banner.
       paddingBottom: isMobile
         ? (`calc(max(var(--mt-dock-h, 0px), var(--mt-consent-h, 0px)) + 8px)` as any)
-        : 28,
+        : (`calc(max(var(--mt-consent-h, 0px), 28px) + 8px)` as any),
     }), [isMobile, contentPadding])
 
     const nativeContentContainerStyle = useMemo(() => ({

@@ -28,6 +28,8 @@ import {
 } from './useHomeHeroSlider'
 import type { QuickFilterParams } from './homeHeroShared'
 
+const DESKTOP_BOOK_VIEWPORT_RESERVE = 180
+
 interface HomeHeroProps {
   travelsCount?: number
   /** HERO-06: legacy prop, retained for compatibility */
@@ -139,7 +141,7 @@ const HomeHero = memo(function HomeHero({
           ? window.innerHeight
           : Dimensions.get('window').height
         : Dimensions.get('window').height
-    return Math.min(aspectH, vh - 130)
+    return Math.min(aspectH, vh - DESKTOP_BOOK_VIEWPORT_RESERVE)
   }, [bookWrapperWidth])
   const isCompactBookLayout =
     showSideSlider && bookHeight > 0 && bookHeight <= 760

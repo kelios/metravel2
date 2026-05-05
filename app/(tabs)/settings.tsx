@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, ScrollView, TextInput, ActivityIndicator, Image } from 'react-native';
+import { View, Text, Pressable, Platform, ScrollView, TextInput, ActivityIndicator, Image } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,11 +10,11 @@ import { useFavorites } from '@/context/FavoritesContext';
 import EmptyState from '@/components/ui/EmptyState';
 import Button from '@/components/ui/Button';
 import { Toggle } from '@/components/ui/Toggle';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { confirmAction } from '@/utils/confirmAction';
-import { deleteCurrentUserAccount, normalizeAvatar, updateUserProfile, type UpdateUserProfilePayload } from '@/api/user';
+import { deleteCurrentUserAccount } from '@/api/user';
 import { ApiError } from '@/api/client';
+import { useSettingsProfileForm } from '@/hooks/useSettingsProfileForm';
 import { Theme, useTheme, useThemedColors } from '@/hooks/useTheme';
 import { showToast } from '@/utils/toast';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
@@ -25,6 +25,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAvatarUpload } from '@/hooks/useAvatarUpload';
 import { useBiometricAuth } from '@/hooks/useBiometricAuth';
 import { webTouchScrollStyle } from '@/utils';
+import { createSettingsStyles } from './settings.styles';
 
 export default function SettingsScreen() {
     const router = useRouter();
@@ -34,7 +35,7 @@ export default function SettingsScreen() {
     const favoritesContext = useFavorites();
     const { theme, setTheme } = useTheme();
     const colors = useThemedColors();
-    const styles = useMemo(() => createStyles(colors), [colors]);
+    const styles = useMemo(() => createSettingsStyles(colors), [colors]);
     const {
         clearHistory = async () => {},
         clearFavorites = async () => {},
@@ -54,28 +55,40 @@ export default function SettingsScreen() {
         webFileInputRef,
     } = useAvatarUpload({ onSuccess: (updated) => setProfile(updated) });
 
-    const [profileSaving, setProfileSaving] = useState(false);
-
     // AND-17: Biometric auth toggle (native only)
     const biometric = useBiometricAuth();
     const showBiometricToggle = !isWeb && biometric.isAvailable && biometric.isEnrolled && isAuthenticated;
 
-    const [firstName, setFirstName] = useState('');
-    const [lastName, setLastName] = useState('');
-    const [youtube, setYoutube] = useState('');
-    const [instagram, setInstagram] = useState('');
-    const [twitter, setTwitter] = useState('');
-    const [vk, setVk] = useState('');
-    const [emailNotifyComments, setEmailNotifyComments] = useState(false);
-    const [emailNotifyMessages, setEmailNotifyMessages] = useState(false);
     const [settingsAvatarError, setSettingsAvatarError] = useState(false);
 
-    const derivedDisplayName = useMemo(() => {
-        const first = normalizeAvatar(firstName) ?? '';
-        const last = normalizeAvatar(lastName) ?? '';
-        const full = `${first} ${last}`.trim();
-        return full || username || 'Пользователь';
-    }, [firstName, lastName, username]);
+    const {
+        firstName,
+        setFirstName,
+        lastName,
+        setLastName,
+        youtube,
+        setYoutube,
+        instagram,
+        setInstagram,
+        twitter,
+        setTwitter,
+        vk,
+        setVk,
+        emailNotifyComments,
+        emailNotifyMessages,
+        profileSaving,
+        derivedDisplayName,
+        hasUnsavedChanges,
+        saveProfile: handleSaveProfile,
+        handleEmailNotifyCommentsChange,
+        handleEmailNotifyMessagesChange,
+    } = useSettingsProfileForm({
+        userId,
+        username,
+        profile,
+        setProfile,
+        setAvatarPreviewUrl,
+    });
 
     const themeOptions = useMemo(
         () => [
@@ -100,111 +113,6 @@ export default function SettingsScreen() {
         ],
         []
     );
-
-    const hasUnsavedChanges = useMemo(() => {
-        if (!profile) return false;
-        const norm = (v: unknown) => String(v ?? '').trim();
-        return (
-            norm(firstName) !== norm(profile.first_name) ||
-            norm(lastName) !== norm(profile.last_name) ||
-            norm(youtube) !== norm(profile.youtube) ||
-            norm(instagram) !== norm(profile.instagram) ||
-            norm(twitter) !== norm(profile.twitter) ||
-            norm(vk) !== norm(profile.vk) ||
-            emailNotifyComments !== Boolean(profile.email_notify_comments) ||
-            emailNotifyMessages !== Boolean(profile.email_notify_messages)
-        );
-    }, [
-        emailNotifyComments,
-        emailNotifyMessages,
-        firstName,
-        instagram,
-        lastName,
-        profile,
-        twitter,
-        vk,
-        youtube,
-    ]);
-
-    const saveEmailNotifications = useCallback(async (nextComments: boolean, nextMessages: boolean) => {
-        if (!userId) return;
-        setEmailNotifyComments(nextComments);
-        setEmailNotifyMessages(nextMessages);
-        setProfileSaving(true);
-        try {
-            const saved = await updateUserProfile(userId, {
-                email_notify_comments: nextComments,
-                email_notify_messages: nextMessages,
-            });
-            setProfile(saved);
-            showToast({ type: 'success', text1: 'Настройки уведомлений сохранены', visibilityTime: 2000 });
-        } catch (error) {
-            setEmailNotifyComments(Boolean(profile?.email_notify_comments));
-            setEmailNotifyMessages(Boolean(profile?.email_notify_messages));
-            const message = error instanceof ApiError ? error.message : 'Не удалось обновить настройки уведомлений';
-            showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
-        } finally {
-            setProfileSaving(false);
-        }
-    }, [profile?.email_notify_comments, profile?.email_notify_messages, setProfile, userId]);
-
-    const handleEmailNotifyCommentsChange = useCallback((nextValue: boolean) => {
-        void saveEmailNotifications(nextValue, emailNotifyMessages);
-    }, [emailNotifyMessages, saveEmailNotifications]);
-
-    const handleEmailNotifyMessagesChange = useCallback((nextValue: boolean) => {
-        void saveEmailNotifications(emailNotifyComments, nextValue);
-    }, [emailNotifyComments, saveEmailNotifications]);
-
-    // Sync form fields when profile loads
-    React.useEffect(() => {
-        if (!profile) return;
-        setFirstName(normalizeAvatar(profile.first_name) ?? '');
-        setLastName(normalizeAvatar(profile.last_name) ?? '');
-        setYoutube(profile.youtube || '');
-        setInstagram(profile.instagram || '');
-        setTwitter(profile.twitter || '');
-        setVk(profile.vk || '');
-        setEmailNotifyComments(Boolean(profile.email_notify_comments));
-        setEmailNotifyMessages(Boolean(profile.email_notify_messages));
-        setAvatarPreviewUrl(profile.avatar || '');
-    }, [profile, setAvatarPreviewUrl]);
-
-    const handleSaveProfile = useCallback(async () => {
-        if (!userId) return;
-        setProfileSaving(true);
-        try {
-            const payload: UpdateUserProfilePayload = {
-                first_name: firstName,
-                last_name: lastName,
-                youtube,
-                instagram,
-                twitter,
-                vk,
-                email_notify_comments: emailNotifyComments,
-                email_notify_messages: emailNotifyMessages,
-            };
-            const saved = await updateUserProfile(userId, payload);
-            setProfile(saved);
-            showToast({ type: 'success', text1: 'Профиль обновлён', visibilityTime: 3000 });
-        } catch (error) {
-            const message = error instanceof ApiError ? error.message : 'Не удалось обновить профиль';
-            showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
-        } finally {
-            setProfileSaving(false);
-        }
-    }, [
-        emailNotifyComments,
-        emailNotifyMessages,
-        firstName,
-        instagram,
-        lastName,
-        setProfile,
-        twitter,
-        userId,
-        vk,
-        youtube,
-    ]);
 
     const handleDeleteAccount = useCallback(async () => {
         try {
@@ -744,365 +652,3 @@ export default function SettingsScreen() {
         </SafeAreaView>
     );
 }
-
-const CARD_RADIUS = DESIGN_TOKENS.radii.lg;
-const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm;
-const MEDIA_RADIUS = DESIGN_TOKENS.radii.md;
-const PILL_RADIUS = DESIGN_TOKENS.radii.pill;
-
-const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: colors.mutedBackground,
-    },
-    scrollContent: {
-        paddingBottom: 24,
-    },
-    pageContainer: {
-        width: '100%',
-        paddingHorizontal: 16,
-        ...Platform.select({
-            web: {
-                maxWidth: 760,
-                marginLeft: 'auto',
-                marginRight: 'auto',
-                paddingHorizontal: 20,
-            },
-        }),
-    },
-    header: {
-        paddingTop: 16,
-        paddingBottom: 10,
-    },
-    title: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: colors.text,
-    },
-    subtitle: {
-        marginTop: 4,
-        fontSize: 13,
-        color: colors.textMuted,
-    },
-    section: {
-        paddingTop: 6,
-        paddingBottom: 24,
-        gap: 14,
-    },
-    sectionTitle: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: colors.text,
-    },
-    subsectionTitle: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: colors.textMuted,
-        textTransform: 'uppercase',
-        letterSpacing: 0,
-    },
-    card: {
-        backgroundColor: colors.surface,
-        borderRadius: CARD_RADIUS,
-        borderWidth: 1,
-        borderColor: colors.border,
-        padding: 14,
-        gap: 12,
-        ...Platform.select({
-            web: {
-                boxShadow: colors.boxShadows.light,
-            },
-            ios: {
-                shadowColor: colors.shadows.light.shadowColor,
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.08,
-                shadowRadius: 4,
-            },
-            android: {
-                elevation: 2,
-            },
-        }),
-    },
-    cardRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    profileHeaderRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    profileActions: {
-        marginLeft: 'auto',
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    profileAvatar: {
-        width: 36,
-        height: 36,
-        borderRadius: PILL_RADIUS,
-        backgroundColor: colors.primarySoft,
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-    },
-    profileAvatarImage: {
-        width: '100%',
-        height: '100%',
-        resizeMode: 'cover',
-    },
-    refreshButton: {
-        width: 36,
-        height: 36,
-        borderRadius: PILL_RADIUS,
-        borderWidth: 1,
-        borderColor: colors.border,
-        backgroundColor: colors.surface,
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...Platform.select({
-            web: {
-                cursor: 'pointer',
-            } as any,
-        }),
-    },
-    cardIcon: {
-        width: 36,
-        height: 36,
-        borderRadius: PILL_RADIUS,
-        backgroundColor: colors.primarySoft,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    cardText: {
-        flex: 1,
-    },
-    cardTitle: {
-        fontSize: 15,
-        fontWeight: '700',
-        color: colors.text,
-    },
-    cardMeta: {
-        marginTop: 2,
-        fontSize: 12,
-        color: colors.textMuted,
-    },
-    themeOptions: {
-        gap: 10,
-    },
-    themeOption: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        padding: 12,
-        borderRadius: CONTROL_RADIUS,
-        borderWidth: 1,
-        borderColor: colors.border,
-        backgroundColor: colors.surface,
-    },
-    themeOptionActive: {
-        borderColor: colors.primary,
-        backgroundColor: colors.primarySoft,
-    },
-    themeOptionPressed: {
-        opacity: 0.9,
-    },
-    themeOptionIcon: {
-        width: 32,
-        height: 32,
-        borderRadius: PILL_RADIUS,
-        backgroundColor: colors.surfaceMuted,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    themeOptionIconActive: {
-        backgroundColor: colors.surface,
-    },
-    themeOptionText: {
-        flex: 1,
-    },
-    themeOptionTitle: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: colors.text,
-    },
-    themeOptionDescription: {
-        marginTop: 2,
-        fontSize: 12,
-        color: colors.textMuted,
-    },
-    settingsList: {
-        gap: 10,
-    },
-    settingRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 12,
-    },
-    settingTextBlock: {
-        flex: 1,
-        gap: 2,
-    },
-    settingTitle: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: colors.text,
-    },
-    settingMeta: {
-        fontSize: 12,
-        color: colors.textMuted,
-    },
-    formGrid: {
-        gap: 12,
-        ...Platform.select({
-            web: {
-                flexDirection: 'row',
-                flexWrap: 'wrap',
-                columnGap: 12,
-                rowGap: 12,
-            } as any,
-        }),
-    },
-    field: {
-        gap: 6,
-    },
-    fieldHalf: {
-        ...Platform.select({
-            web: {
-                flexBasis: 'calc(50% - 6px)' as any,
-                flexGrow: 1,
-                minWidth: 240,
-            } as any,
-        }),
-    },
-    fieldLabel: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: colors.text,
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: colors.border,
-        backgroundColor: colors.surface,
-        borderRadius: CONTROL_RADIUS,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        fontSize: 14,
-        color: colors.text,
-    },
-    divider: {
-        height: 1,
-        backgroundColor: colors.border,
-        marginVertical: 8,
-    },
-    avatarRow: {
-        gap: 12,
-        ...Platform.select({
-            web: {
-                flexDirection: 'row',
-                alignItems: 'flex-end',
-            } as any,
-        }),
-    },
-    avatarField: {
-        flex: 1,
-        minWidth: 240,
-        gap: 6,
-    },
-    avatarPickerRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        flexWrap: 'wrap',
-    },
-    avatarPreview: {
-        width: 64,
-        height: 64,
-        borderRadius: MEDIA_RADIUS,
-        borderWidth: 1,
-        borderColor: colors.border,
-        backgroundColor: colors.surface,
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-    },
-    avatarPreviewImage: {
-        width: '100%',
-        height: '100%',
-        resizeMode: 'cover',
-    },
-    avatarPickerButtons: {
-        gap: 10,
-        ...Platform.select({
-            web: {
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'flex-start',
-            } as any,
-        }),
-    },
-    avatarButtonWeb: {
-        minWidth: 160,
-    },
-    avatarAction: {
-        ...Platform.select({
-            web: {
-                width: 180,
-            },
-        }),
-    },
-    dangerButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 10,
-        paddingVertical: 12,
-        borderRadius: CONTROL_RADIUS,
-        borderWidth: 1,
-        borderColor: colors.danger,
-        backgroundColor: colors.surface,
-    },
-    dangerButtonText: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: colors.danger,
-    },
-    deleteAccountButton: {
-        borderColor: colors.danger,
-        backgroundColor: colors.danger,
-    },
-    deleteAccountButtonText: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: colors.textOnPrimary,
-    },
-    headerRow: {
-        flexDirection: 'row',
-        alignItems: 'flex-end',
-        justifyContent: 'space-between',
-        gap: 12,
-    },
-    headerTitleBlock: {
-        flex: 1,
-    },
-    backToProfileButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        borderRadius: CONTROL_RADIUS,
-        borderWidth: 1,
-        borderColor: colors.borderLight,
-        backgroundColor: colors.surface,
-        minHeight: 40,
-    },
-    backToProfileButtonText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: colors.primary,
-    },
-});

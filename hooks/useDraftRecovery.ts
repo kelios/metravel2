@@ -68,12 +68,8 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const checkedDraftKeyRef = useRef<string | null>(null);
-  const currentDataRef = useRef<TravelFormData | null | undefined>(currentData);
+  const pendingDraftDataRef = useRef<TravelFormData | null>(null);
   const draftKey = `${DRAFT_STORAGE_KEY}_${isNew ? 'new' : travelId}`;
-
-  useEffect(() => {
-    currentDataRef.current = currentData;
-  }, [currentData]);
 
   // Check for existing draft on mount
   useEffect(() => {
@@ -127,6 +123,7 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
   // Save draft with debouncing
   const saveDraft = useCallback((data: TravelFormData) => {
     if (!enabled) return;
+    pendingDraftDataRef.current = data;
 
     // Clear previous timer
     if (debounceTimerRef.current) {
@@ -149,11 +146,11 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
   const flushDraft = useCallback(async () => {
     if (!enabled) return;
     if (Platform.OS !== 'web') return;
-    if (!currentDataRef.current) return;
+    if (!pendingDraftDataRef.current) return;
 
     try {
       const draftData = {
-        data: stripUndefinedDeep(currentDataRef.current),
+        data: stripUndefinedDeep(pendingDraftDataRef.current),
         timestamp: Date.now(),
       };
       await setStorageItem(draftKey, JSON.stringify(draftData));
@@ -225,6 +222,7 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
+    pendingDraftDataRef.current = null;
     try {
       await removeStorageItem(draftKey);
       setState({

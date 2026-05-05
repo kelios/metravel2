@@ -9,8 +9,6 @@ jest.mock('@/api/map', () => ({
   fetchTravelsNear: jest.fn().mockResolvedValue([]),
 }));
 
-jest.mock('@/components/map/Map', () => () => null);
-
 const mockTravelMap = jest.fn(() => null);
 jest.mock('@/components/MapPage/TravelMap', () => ({
   TravelMap: (props: any) => {

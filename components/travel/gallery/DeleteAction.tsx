@@ -5,8 +5,9 @@ export const DeleteAction: React.FC<{
   onActivate: () => void
   style?: any
   testID?: string
+  accessibilityLabel?: string
   children: React.ReactNode
-}> = ({ onActivate, style, testID, children }) => {
+}> = ({ onActivate, style, testID, accessibilityLabel = 'Удалить фото', children }) => {
   const lastActivateTsRef = useRef<number | null>(null)
 
   const makeActivate = useCallback(
@@ -46,7 +47,7 @@ export const DeleteAction: React.FC<{
           textDecorationLine: 'none',
         }}
         accessibilityRole="button"
-        accessibilityLabel="Удалить фото"
+        accessibilityLabel={accessibilityLabel}
         testID={testID}
       >
         {children}

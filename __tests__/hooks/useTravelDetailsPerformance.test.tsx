@@ -34,10 +34,6 @@ jest.mock('@/components/travel/ToggleableMapSection', () => ({
   __esModule: true,
   default: () => null,
 }))
-jest.mock('@/components/map/Map', () => ({
-  __esModule: true,
-  default: () => null,
-}))
 jest.mock('@expo/vector-icons/MaterialIcons', () => ({
   __esModule: true,
   default: {},

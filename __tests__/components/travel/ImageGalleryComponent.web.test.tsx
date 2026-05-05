@@ -327,6 +327,32 @@ describe('ImageGalleryComponent.web', () => {
     });
   });
 
+  it('reports reordered gallery items in display order', async () => {
+    const onChange = jest.fn();
+    const { getAllByTestId } = renderSafe(
+      <ImageGalleryComponent
+        collection="gallery"
+        idTravel="42"
+        initialImages={[
+          { id: '1', url: 'https://example.com/first.jpg' },
+          { id: '2', url: 'https://example.com/second.jpg' },
+          { id: '3', url: 'https://example.com/third.jpg' },
+        ]}
+        maxImages={10}
+        onChange={onChange}
+      />,
+    );
+
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+
+    fireEvent.press(getAllByTestId('gallery-move-left-button')[1]);
+
+    await waitFor(() => {
+      const last = onChange.mock.calls[onChange.mock.calls.length - 1][0] as Array<{ id?: string; url: string }>;
+      expect(last.map((item) => item.id)).toEqual(['2', '1', '3']);
+    });
+  });
+
   it('dedupes absolute and relative URLs that point to the same image path', async () => {
     uploadImageMock.mockResolvedValueOnce({ id: '999', url: 'http://localhost:8081/same.jpg' });
 

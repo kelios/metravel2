@@ -279,7 +279,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
           )
         }
 
-        setBatchUploadProgress({ current: i + 1, total: files.length })
+        setBatchUploadProgress({ current: i + 1, total: validFiles.length })
       }
 
       setBatchUploadProgress(null)
@@ -382,6 +382,21 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
     setDialogVisible(true)
   }
 
+  const handleMoveImage = useCallback((stableKey: string, direction: -1 | 1) => {
+    setImages((prev) => {
+      const fromIndex = prev.findIndex((img) => (img.stableKey ?? img.id) === stableKey)
+      if (fromIndex < 0) return prev
+
+      const toIndex = fromIndex + direction
+      if (toIndex < 0 || toIndex >= prev.length) return prev
+
+      const next = [...prev]
+      const [moved] = next.splice(fromIndex, 1)
+      next.splice(toIndex, 0, moved)
+      return next
+    })
+  }, [])
+
   const DeleteActionComponent = useMemo(() => DeleteAction, [])
 
   const handleImageError = useCallback((stableKey: string, currentUrl: string) => {
@@ -475,6 +490,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
         isInitialLoading={isInitialLoading}
         images={images}
         onDelete={handleDeleteImage}
+        onMove={handleMoveImage}
         onImageError={handleImageError}
         onImageLoad={handleImageLoad}
         DeleteAction={DeleteActionComponent as any}

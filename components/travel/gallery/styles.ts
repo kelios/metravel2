@@ -120,6 +120,51 @@ export const createGalleryStyles = (colors: ReturnType<typeof useThemedColors>) 
         },
       }),
     },
+    moveControls: {
+      position: 'absolute',
+      left: 8,
+      bottom: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      zIndex: 9998,
+      elevation: 9998,
+    },
+    moveButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.overlay,
+      borderWidth: 1,
+      borderColor: colors.textOnDark,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          transition: 'all 0.2s ease',
+          ':hover': {
+            transform: 'scale(1.05)',
+          },
+          ':active': {
+            transform: 'scale(0.95)',
+          },
+        },
+      }),
+    },
+    moveButtonDisabled: {
+      opacity: 0.45,
+      ...Platform.select({
+        web: {
+          cursor: 'default',
+          ':hover': {
+            transform: 'none',
+          },
+        },
+      }),
+    },
     dropzone: {
       width: '100%',
       padding: DESIGN_TOKENS.spacing.xl,
@@ -279,7 +324,6 @@ export const createGalleryStyles = (colors: ReturnType<typeof useThemedColors>) 
           transition: 'width 0.3s ease',
           backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent)',
           backgroundSize: '30px 30px',
-          animation: 'progress-animation 1s linear infinite',
         },
       }),
     },

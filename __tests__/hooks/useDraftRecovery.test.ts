@@ -188,7 +188,7 @@ describe('useDraftRecovery', () => {
     // timers restored in afterEach
   });
 
-  it('flushes the latest draft on web pagehide', async () => {
+  it('does not flush loaded server data on web pagehide before user edits', async () => {
     setPlatformOs('web');
 
     renderHook(() =>
@@ -199,6 +199,29 @@ describe('useDraftRecovery', () => {
         currentData: { name: 'draft-on-hide', optional: undefined } as any,
       })
     );
+
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+
+    expect(localStorage.getItem(draftKey)).toBeNull();
+  });
+
+  it('flushes the latest pending draft on web pagehide', async () => {
+    setPlatformOs('web');
+
+    const { result } = renderHook(() =>
+      useDraftRecovery({
+        travelId,
+        isNew: false,
+        enabled: true,
+        currentData: { name: 'server-data', optional: undefined } as any,
+      })
+    );
+
+    act(() => {
+      result.current.saveDraft({ name: 'draft-on-hide', optional: undefined } as any);
+    });
 
     act(() => {
       window.dispatchEvent(new Event('pagehide'));

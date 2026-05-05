@@ -67,20 +67,6 @@ describe('Platform-Specific Components', () => {
     });
   });
 
-  describe('MapUploadComponent', () => {
-    it('should have iOS version', () => {
-      expect(() => require('../../../components/map/MapUploadComponent.ios')).not.toThrow();
-    });
-
-    it('should have Android version', () => {
-      expect(() => require('../../../components/map/MapUploadComponent.android')).not.toThrow();
-    });
-
-    it('should have Web version', () => {
-      expect(() => require('../../../components/map/MapUploadComponent.web')).not.toThrow();
-    });
-  });
-
   describe('Platform.select usage', () => {
     it('should have Platform.select function', () => {
       expect(Platform.select).toBeDefined();
@@ -124,8 +110,8 @@ describe('Platform-Specific Components', () => {
 
   describe('Component Consistency', () => {
     it('all platforms should have Map component', () => {
-      expect(() => require('../../../components/map/Map.ios')).not.toThrow();
-      expect(() => require('../../../components/map/Map.android')).not.toThrow();
+      expect(() => require('../../../components/MapPage/Map.ios')).not.toThrow();
+      expect(() => require('../../../components/MapPage/Map.android')).not.toThrow();
       expect(() => require('../../../components/MapPage/Map.web')).not.toThrow();
     });
 
@@ -140,8 +126,8 @@ describe('Platform-Specific Components', () => {
     it('Android should reuse iOS implementation where appropriate', () => {
       // Проверяем, что Android компоненты экспортируют iOS версии
       const ArticleEditorAndroid = require('../../../components/article/ArticleEditor.android');
-      const MapAndroid = require('../../../components/map/Map.android');
-      
+      const MapAndroid = require('../../../components/MapPage/Map.android');
+
       expect(ArticleEditorAndroid.default).toBeDefined();
       expect(MapAndroid.default).toBeDefined();
     });

@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
+import { View, Text, StyleSheet, Modal } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import Button from '@/components/ui/Button';
 
 interface DraftRecoveryDialogProps {
   visible: boolean;
@@ -54,50 +55,50 @@ export function DraftRecoveryDialog({
       onRequestClose={onDiscard}
     >
       <View style={styles.overlay}>
-        <View style={styles.dialog}>
+        <View
+          style={styles.dialog}
+          accessibilityRole="alert"
+          accessibilityLabel="Найден локальный черновик"
+        >
           <View style={styles.iconContainer}>
-            <Feather name="file-text" size={32} color={colors.primary} />
+            <Feather name="edit-3" size={30} color={colors.primary} />
           </View>
 
-          <Text style={styles.title}>Найден черновик</Text>
+          <Text style={styles.title}>Есть несохранённые изменения</Text>
           <Text style={styles.message}>
-            У вас есть несохранённый черновик ({formattedTime}).
-            Хотите продолжить редактирование?
+            Мы нашли локальный черновик этой статьи от {formattedTime}. Вы можете продолжить с ним
+            или открыть сохранённую версию.
           </Text>
 
-          <View style={styles.actions}>
-            <Pressable
-              onPress={onDiscard}
-              style={({ pressed }) => [
-                styles.button,
-                styles.discardButton,
-                pressed && styles.buttonPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Начать заново"
-              disabled={isRecovering}
-            >
-              <Feather name="trash-2" size={16} color={colors.textMuted} />
-              <Text style={styles.discardButtonText}>Начать заново</Text>
-            </Pressable>
+          <View style={styles.note}>
+            <Feather name="info" size={16} color={colors.primary} />
+            <Text style={styles.noteText}>
+              Если статью уже сохранили, выбирайте сохранённую версию.
+            </Text>
+          </View>
 
-            <Pressable
-              onPress={onRecover}
-              style={({ pressed }) => [
-                styles.button,
-                styles.recoverButton,
-                pressed && styles.buttonPressed,
-                isRecovering && styles.buttonDisabled,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Восстановить черновик"
+          <View style={styles.actions}>
+            <Button
+              label="Открыть сохранённую"
+              variant="outline"
+              size="md"
+              fullWidth
+              icon={<Feather name="file" size={16} color={colors.text} />}
+              onPress={onDiscard}
+              accessibilityLabel="Открыть сохранённую версию"
               disabled={isRecovering}
-            >
-              <Feather name="refresh-cw" size={16} color={colors.textOnPrimary} />
-              <Text style={styles.recoverButtonText}>
-                {isRecovering ? 'Загрузка...' : 'Восстановить'}
-              </Text>
-            </Pressable>
+            />
+
+            <Button
+              label={isRecovering ? 'Восстановление...' : 'Продолжить с черновика'}
+              variant="primary"
+              size="md"
+              fullWidth
+              icon={<Feather name="refresh-cw" size={16} color={colors.textOnPrimary} />}
+              onPress={onRecover}
+              accessibilityLabel="Продолжить с локального черновика"
+              loading={isRecovering}
+            />
           </View>
         </View>
       </View>
@@ -118,7 +119,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       backgroundColor: colors.surface,
       borderRadius: DESIGN_TOKENS.radii.lg,
       padding: DESIGN_TOKENS.spacing.xl,
-      maxWidth: 400,
+      maxWidth: 460,
       width: '100%',
       alignItems: 'center',
       shadowColor: colors.text,
@@ -148,47 +149,28 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       color: colors.textMuted,
       textAlign: 'center',
       lineHeight: 22,
+      marginBottom: DESIGN_TOKENS.spacing.md,
+    },
+    note: {
+      width: '100%',
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: DESIGN_TOKENS.spacing.xs,
+      padding: DESIGN_TOKENS.spacing.sm,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: colors.primarySoft,
       marginBottom: DESIGN_TOKENS.spacing.lg,
     },
+    noteText: {
+      flex: 1,
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      color: colors.text,
+      lineHeight: 20,
+    },
     actions: {
-      flexDirection: 'row',
+      flexDirection: 'column',
       gap: DESIGN_TOKENS.spacing.sm,
       width: '100%',
-    },
-    button: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: DESIGN_TOKENS.spacing.xs,
-      paddingVertical: DESIGN_TOKENS.spacing.sm,
-      paddingHorizontal: DESIGN_TOKENS.spacing.md,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      minHeight: DESIGN_TOKENS.touchTarget.minHeight,
-    },
-    discardButton: {
-      backgroundColor: colors.surfaceMuted,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    recoverButton: {
-      backgroundColor: colors.primary,
-    },
-    buttonPressed: {
-      opacity: 0.8,
-    },
-    buttonDisabled: {
-      opacity: 0.6,
-    },
-    discardButtonText: {
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      fontWeight: '600',
-      color: colors.textMuted,
-    },
-    recoverButtonText: {
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      fontWeight: '600',
-      color: colors.textOnPrimary,
     },
   });
 

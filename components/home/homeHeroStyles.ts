@@ -43,6 +43,7 @@ export const createHomeHeroStyles = ({
   isTabletLayout = false,
 }: HeroStyleParams) => {
   const hasBookLayout = showSideSlider && bookHeight > 0
+  const desktopBookViewportReserve = 180
   const isUltraWideBook = showSideSlider && viewportWidth >= 2560
   const isLargeDesktopBook = showSideSlider && viewportWidth >= 1920
   const isNarrowDesktopBook =
@@ -102,6 +103,7 @@ export const createHomeHeroStyles = ({
     : 320
   const isCompactBookLayout = hasBookLayout && bookHeight <= 760
   const isVeryCompactBookLayout = hasBookLayout && bookHeight <= 640
+  const useDenseBookNotes = showSideSlider && viewportWidth < 2200
 
   const leftPagePaddingBottom = hasBookLayout
     ? isUltraWideBook
@@ -184,7 +186,7 @@ export const createHomeHeroStyles = ({
               backgroundSize: '100% 100%',
               backgroundRepeat: 'no-repeat',
               aspectRatio: '1040 / 765',
-              maxHeight: 'calc(100vh - 130px)',
+              maxHeight: `calc(100vh - ${desktopBookViewportReserve}px)`,
               maxWidth: isUltraWideBook
                 ? 1780
                 : isLargeDesktopBook
@@ -1027,8 +1029,9 @@ export const createHomeHeroStyles = ({
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 8,
-      maxWidth: '88%',
+      maxWidth: showSideSlider ? '100%' : '88%',
       marginTop: isNarrowDesktopBook ? 18 : 24,
+      marginBottom: showSideSlider ? 20 : 0,
       ...Platform.select({
         web: showSideSlider
           ? ({
@@ -1040,10 +1043,10 @@ export const createHomeHeroStyles = ({
     pageNote: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
-      minHeight: 34,
-      paddingHorizontal: 10,
-      paddingVertical: 7,
+      gap: useDenseBookNotes ? 5 : 8,
+      minHeight: useDenseBookNotes ? 28 : 34,
+      paddingHorizontal: useDenseBookNotes ? 7 : 10,
+      paddingVertical: useDenseBookNotes ? 5 : 7,
       borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: DESIGN_TOKENS.colors.surfaceAlpha40,
       borderWidth: 1,
@@ -1067,9 +1070,9 @@ export const createHomeHeroStyles = ({
       }),
     },
     pageNoteIcon: {
-      width: 22,
-      height: 22,
-      borderRadius: 11,
+      width: useDenseBookNotes ? 18 : 22,
+      height: useDenseBookNotes ? 18 : 22,
+      borderRadius: useDenseBookNotes ? 9 : 11,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: DESIGN_TOKENS.colors.brandAlpha30,
@@ -1079,15 +1082,15 @@ export const createHomeHeroStyles = ({
     },
     pageNoteText: {
       color: inkStrong,
-      fontSize: 12,
-      lineHeight: 15,
+      fontSize: useDenseBookNotes ? 10 : 12,
+      lineHeight: useDenseBookNotes ? 12 : 15,
       fontWeight: '600',
       ...Platform.select({ web: { fontFamily: sansSerif } as any }),
     },
     pageNoteMeta: {
       color: inkSubtle,
-      fontSize: 10,
-      lineHeight: 12,
+      fontSize: useDenseBookNotes ? 8 : 10,
+      lineHeight: useDenseBookNotes ? 9 : 12,
       fontWeight: '500',
       ...Platform.select({ web: { fontFamily: sansSerif } as any }),
     },
@@ -1488,8 +1491,6 @@ export const createHomeHeroStyles = ({
     bookPageNumberRight: { right: isMobile ? 14 : 20 },
 
     // -- CTA Buttons --
-    // In CSS grid: alignSelf:'end' pins it to the bottom of whichever row it occupies.
-    // With chips: sits in row 3 (auto). Without chips: sits in row 3 but 1fr gap pushes it down.
     buttonsContainer: {
       flexDirection: stackHeroButtons ? 'column' : 'row',
       justifyContent: 'flex-start',
@@ -1498,11 +1499,11 @@ export const createHomeHeroStyles = ({
       width: '100%',
       flexWrap: 'nowrap',
       flexShrink: 0,
-      marginTop: isMobile ? 8 : showSideSlider ? 0 : 12,
+      marginTop: isMobile ? 8 : showSideSlider ? 12 : 12,
       ...Platform.select({
         web: showSideSlider
           ? ({
-              alignSelf: 'end',
+              alignSelf: 'start',
             } as any)
           : {},
       }),

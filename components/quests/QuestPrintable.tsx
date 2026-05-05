@@ -1,5 +1,26 @@
 import { Platform } from 'react-native';
 import type { QuestStep } from './types';
+import {
+    QR_NAV,
+    QR_SITE,
+    PRINT_COLORS,
+} from './printable/constants';
+import {
+    buildPrintableMapPoints,
+    escHtml,
+    escInline,
+    extractCoverLead,
+    googleMapsUrl,
+    organicMapsUrl,
+    qrUrl,
+    resolveStepImageUri,
+    yandexMapsUrl,
+} from './printable/utils';
+import {
+    buildPrintableCanvasMapDataUrl,
+    buildPrintableLeafletMapDataUrl,
+    buildPrintableMapSvg,
+} from './printable/map';
 
 type PrintableProps = {
     title: string;
@@ -9,130 +30,9 @@ type PrintableProps = {
     questUrl?: string; // полный URL квеста на сайте
 };
 
-const QR_NAV = 80;
-const QR_SITE = 120;
-const MAP_VIEWBOX_WIDTH = 960;
-const MAP_VIEWBOX_HEIGHT = 380;
-const MAP_IMAGE_WIDTH = 1200;
-const MAP_IMAGE_HEIGHT = 520;
-const MAP_IMAGE_ZOOM = 13;
-
-type PrintableMapPoint = {
-    lat: number;
-    lng: number;
-    num: number;
-    location: string;
-};
-
-type MapImageGeneratorModule = typeof import('@/utils/mapImageGenerator');
 type BookPreviewWindowModule = typeof import('@/utils/openBookPreviewWindow');
 
-const PRINT_COLORS = {
-    brand: '#1a6b8a',
-    brandDark: '#0f4c62',
-    brandMid: '#2480a4',
-    brandLight: '#3a9bbf',
-    success: '#2d6a4f',
-    white: '#ffffff',
-    whiteSoft: 'rgba(255,255,255,0.72)',
-    whiteGlass: 'rgba(255,255,255,0.88)',
-    ink: '#1a2030',
-    inkSoft: '#2c3548',
-    muted: '#5e6a7a',
-    soft: '#f0f4f8',
-    line: '#dde4ed',
-    brandSoft: '#ebf5fa',
-    accent: '#e8a020',
-    accentDark: '#c4841a',
-    accentSoft: '#fef8ec',
-    paperBg: '#f5f7fa',
-    panelBorder: '#cdd8e8',
-    panelBgStart: '#f4f9fd',
-    panelBgEnd: '#fdf8f0',
-    brandLine: '#b3d4e6',
-    title: '#0f3650',
-    titleDark: '#091e2e',
-    lineMuted: '#a8b4c4',
-    introBorder: '#bcd8e8',
-    introText: '#34445a',
-    mapBorder: '#c8d9ea',
-    mapBg: '#f8fbfe',
-    mapGridBg: '#deeef8',
-    mapGridBgEnd: '#eaf4fc',
-    mapGridStroke: '#c0d4e4',
-    chipBorder: '#c8d8ea',
-    chipText: '#3a5068',
-    tableBorder: '#8aafcc',
-    tableText: '#3a4f64',
-    tableRow: '#eff3f8',
-    tableRowAlt: '#f8fafc',
-    tableMuted: '#6b7c90',
-    stepBorder: '#d0dcea',
-    stepBgEnd: '#fafcff',
-    location: '#3a5c78',
-    story: '#3a4b5c',
-    taskBg: '#fffbf0',
-    taskBorder: '#e8d4a0',
-    taskInset: '#fef3dc',
-    taskText: '#1e3045',
-    hint: '#6a7888',
-    qrBorder: '#c8d6e4',
-    qrImgBorder: '#d0dcea',
-    qrText: '#5a6c80',
-    answerBorder: '#bfccda',
-    answerText: '#6a7888',
-    answerLine: '#8aa0b8',
-    footerBorder: '#d0d9e4',
-    footerText: '#8090a4',
-    coverDark: '#071a28',
-    coverMid: '#0d2e46',
-    coverAccentLine: '#e8a020',
-    badgeBg: 'rgba(255,255,255,0.14)',
-    badgeBorder: 'rgba(255,255,255,0.28)',
-    sectionDivider: '#e2eaf4',
-    stepPhotoBg: '#e8eef5',
-    pageNumColor: '#7a90a8',
-    introBorderLeft: '#1a6b8a',
-    hintIcon: '#8aafcc',
-    stepHeaderBg: '#0f4c62',
-    stepNumBg: 'rgba(255,255,255,0.15)',
-} as const;
-
-function qrUrl(data: string, size = QR_NAV): string {
-    return `https://quickchart.io/qr?text=${encodeURIComponent(data)}&size=${size * 2}&margin=1&format=png`;
-}
-
-function googleMapsUrl(lat: number, lng: number): string {
-    return `https://maps.google.com/maps?q=${lat},${lng}`;
-}
-function yandexMapsUrl(lat: number, lng: number): string {
-    return `https://yandex.ru/maps/?pt=${lng},${lat}&z=16&l=map`;
-}
-function organicMapsUrl(lat: number, lng: number): string {
-    return `https://omaps.app/?ll=${lat},${lng}&z=16`;
-}
-
-function buildPrintableMapPoints(steps: QuestStep[]): PrintableMapPoint[] {
-    return steps
-        .filter((step) => Number.isFinite(step.lat) && Number.isFinite(step.lng) && (step.lat !== 0 || step.lng !== 0))
-        .map((step, index) => ({
-            lat: step.lat,
-            lng: step.lng,
-            num: index + 1,
-            location: step.location || `Точка ${index + 1}`,
-        }));
-}
-
-let mapImageGeneratorModulePromise: Promise<MapImageGeneratorModule> | null = null;
 let bookPreviewWindowModulePromise: Promise<BookPreviewWindowModule> | null = null;
-
-function loadMapImageGenerator(): Promise<MapImageGeneratorModule> {
-    if (!mapImageGeneratorModulePromise) {
-        mapImageGeneratorModulePromise = import('@/utils/mapImageGenerator');
-    }
-
-    return mapImageGeneratorModulePromise;
-}
 
 function loadBookPreviewWindowModule(): Promise<BookPreviewWindowModule> {
     if (!bookPreviewWindowModulePromise) {
@@ -140,121 +40,6 @@ function loadBookPreviewWindowModule(): Promise<BookPreviewWindowModule> {
     }
 
     return bookPreviewWindowModulePromise;
-}
-
-async function buildPrintableCanvasMapDataUrl(points: PrintableMapPoint[]): Promise<string> {
-    if (!points.length) return '';
-
-    try {
-        const { generateCanvasMapSnapshot } = await loadMapImageGenerator();
-        const snapshot = await generateCanvasMapSnapshot(
-            points.map((point) => ({
-                lat: point.lat,
-                lng: point.lng,
-                label: `${point.num}. ${point.location}`,
-            })),
-            {
-                width: MAP_IMAGE_WIDTH,
-                height: MAP_IMAGE_HEIGHT,
-                routeLine: points.map((point) => [point.lat, point.lng] as [number, number]),
-            },
-        );
-        return snapshot || '';
-    } catch {
-        return '';
-    }
-}
-
-async function buildPrintableLeafletMapDataUrl(points: PrintableMapPoint[]): Promise<string> {
-    if (!points.length) return '';
-
-    try {
-        const { generateLeafletRouteSnapshot } = await loadMapImageGenerator();
-        const snapshot = await generateLeafletRouteSnapshot(
-            points.map((point) => ({
-                lat: point.lat,
-                lng: point.lng,
-                label: `${point.num}. ${point.location}`,
-            })),
-            {
-                width: MAP_IMAGE_WIDTH,
-                height: MAP_IMAGE_HEIGHT,
-                zoom: MAP_IMAGE_ZOOM,
-                routeLine: points.map((point) => [point.lat, point.lng] as [number, number]),
-            },
-        );
-        return snapshot || '';
-    } catch {
-        return '';
-    }
-}
-
-function buildPrintableMapSvg(points: PrintableMapPoint[]): string {
-
-    if (!points.length) return '';
-
-    const allLats = points.map((point) => point.lat);
-    const allLngs = points.map((point) => point.lng);
-
-    const minLat = Math.min(...allLats);
-    const maxLat = Math.max(...allLats);
-    const minLng = Math.min(...allLngs);
-    const maxLng = Math.max(...allLngs);
-
-    const latSpan = Math.max(maxLat - minLat, 0.004);
-    const lngSpan = Math.max(maxLng - minLng, 0.004);
-    const latPad = latSpan * 0.16;
-    const lngPad = lngSpan * 0.16;
-
-    const safeMinLat = minLat - latPad;
-    const safeMaxLat = maxLat + latPad;
-    const safeMinLng = minLng - lngPad;
-    const safeMaxLng = maxLng + lngPad;
-
-    const frame = 34;
-    const drawableWidth = MAP_VIEWBOX_WIDTH - frame * 2;
-    const drawableHeight = MAP_VIEWBOX_HEIGHT - frame * 2;
-
-    const project = (lat: number, lng: number) => {
-        const x = frame + ((lng - safeMinLng) / Math.max(safeMaxLng - safeMinLng, 0.001)) * drawableWidth;
-        const y = frame + (1 - (lat - safeMinLat) / Math.max(safeMaxLat - safeMinLat, 0.001)) * drawableHeight;
-        return { x, y };
-    };
-
-    const projectedPoints = points.map((point) => ({ ...point, ...project(point.lat, point.lng) }));
-    const routePath = projectedPoints.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ');
-
-    const markers = projectedPoints.map((point, index) => {
-        const isFirst = index === 0;
-        const isLast = index === projectedPoints.length - 1;
-        const markerFill = isFirst ? PRINT_COLORS.brand : isLast ? PRINT_COLORS.brandDark : PRINT_COLORS.success;
-
-        return `
-            <g>
-                <circle cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="12.8" fill="${markerFill}" stroke="${PRINT_COLORS.white}" stroke-width="2.5"></circle>
-                <text x="${point.x.toFixed(2)}" y="${(point.y + 4.1).toFixed(2)}" text-anchor="middle" font-size="10" font-family="'Avenir Next','Segoe UI',sans-serif" font-weight="700" fill="${PRINT_COLORS.white}">${point.num}</text>
-            </g>
-        `;
-    }).join('');
-
-    return `
-        <svg class="map-svg" viewBox="0 0 ${MAP_VIEWBOX_WIDTH} ${MAP_VIEWBOX_HEIGHT}" role="img" aria-label="Схема маршрута квеста">
-            <defs>
-                <linearGradient id="mapBgGradient" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stop-color="${PRINT_COLORS.mapGridBg}"></stop>
-                    <stop offset="100%" stop-color="${PRINT_COLORS.mapGridBgEnd}"></stop>
-                </linearGradient>
-                <pattern id="mapGrid" width="42" height="42" patternUnits="userSpaceOnUse">
-                    <path d="M 42 0 L 0 0 0 42" fill="none" stroke="${PRINT_COLORS.mapGridStroke}" stroke-width="1"></path>
-                </pattern>
-            </defs>
-            <rect x="0" y="0" width="${MAP_VIEWBOX_WIDTH}" height="${MAP_VIEWBOX_HEIGHT}" fill="url(#mapBgGradient)"></rect>
-            <rect x="0" y="0" width="${MAP_VIEWBOX_WIDTH}" height="${MAP_VIEWBOX_HEIGHT}" fill="url(#mapGrid)" opacity="0.9"></rect>
-            <polyline points="${routePath}" fill="none" stroke="${PRINT_COLORS.brand}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"></polyline>
-            <polyline points="${routePath}" fill="none" stroke="${PRINT_COLORS.white}" stroke-width="1.2" stroke-dasharray="3 6" opacity="0.72"></polyline>
-            ${markers}
-        </svg>
-    `;
 }
 
 /**
@@ -1204,46 +989,4 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
 </html>`;
 
     bookPreviewWindow.openBookPreviewWindow(html, previewWindow);
-}
-
-function resolveStepImageUri(image: unknown): string {
-    if (!image) return '';
-    if (typeof image === 'string') return image;
-    if (typeof image === 'object' && image !== null) {
-        const obj = image as Record<string, unknown>;
-        if (typeof obj['uri'] === 'string') return obj['uri'];
-        if (typeof obj['default'] === 'object' && obj['default'] !== null) {
-            const def = obj['default'] as Record<string, unknown>;
-            if (typeof def['uri'] === 'string') return def['uri'];
-        }
-    }
-    return '';
-}
-
-function extractCoverLead(story?: string): string {
-    const raw = String(story || '')
-        .replace(/\*\*/g, '')
-        .replace(/\*/g, '')
-        .replace(/[_`>#-]+/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-    if (!raw) return '';
-
-    const firstSentence = raw.match(/.+?[.!?](?:\s|$)/)?.[0]?.trim() || raw;
-    return firstSentence.slice(0, 180).trim();
-}
-
-function escInline(str: string): string {
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
-
-function escHtml(str: string): string {
-    return escInline(str)
-        .replace(/\n/g, '<br>');
 }

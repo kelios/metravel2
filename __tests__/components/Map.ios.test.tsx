@@ -1,28 +1,13 @@
 // __tests__/components/Map.ios.test.tsx
 import React from 'react';
 import { render } from '@testing-library/react-native';
-
-// Mock react-native-maps
-jest.mock('react-native-maps', () => {
-  const React = require('react');
-  return {
-    __esModule: true,
-    default: ({ children, ...props }: any) => 
-      React.createElement('MapView', props, children),
-    Marker: ({ children, ...props }: any) => 
-      React.createElement('Marker', props, children),
-    Callout: ({ children, ...props }: any) => 
-      React.createElement('Callout', props, children),
-  };
-});
+import { View } from 'react-native';
 
 describe('Map.ios Component', () => {
-  // Динамический импорт только для iOS тестов
   let Map: any;
 
   beforeAll(async () => {
-    // Импортируем iOS версию напрямую
-    Map = (await import('@/components/map/Map.ios')).default;
+    Map = (await import('@/components/MapPage/Map.ios')).default;
   });
 
   const mockTravel = {
@@ -55,29 +40,37 @@ describe('Map.ios Component', () => {
     longitude: 27.5,
   };
 
+  const getWebViewHtml = (rendered: ReturnType<typeof render>) => {
+    const webView = rendered.UNSAFE_getAllByType(View).find(
+      (node) => typeof node.props?.source?.html === 'string'
+    );
+    expect(webView).toBeTruthy();
+    return webView?.props.source.html as string;
+  };
+
   it('should render without crashing', () => {
-    const { UNSAFE_getByType } = render(
+    const rendered = render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
-    expect(UNSAFE_getByType('MapView' as any)).toBeTruthy();
+    expect(getWebViewHtml(rendered)).toContain('<div id="map"></div>');
   });
 
-  it('should render MapView component', () => {
-    const { UNSAFE_getByType } = render(
+  it('should render WebView map markup', () => {
+    const rendered = render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     
-    const mapView = UNSAFE_getByType('MapView' as any);
-    expect(mapView).toBeTruthy();
+    expect(getWebViewHtml(rendered)).toContain("L.map('map')");
   });
 
-  it('should render correct number of markers', () => {
-    const { UNSAFE_getAllByType } = render(
+  it('should include all travel points in the map payload', () => {
+    const rendered = render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     
-    const markers = UNSAFE_getAllByType('Marker' as any);
-    expect(markers.length).toBe(mockTravel.travelAddress.data.length);
+    const html = getWebViewHtml(rendered);
+    expect(html).toContain('"id":1');
+    expect(html).toContain('"id":2');
   });
 
   it('should handle empty travel data', () => {
@@ -87,62 +80,54 @@ describe('Map.ios Component', () => {
       } 
     };
     
-    const { UNSAFE_getByType } = render(
+    const rendered = render(
       <Map travel={emptyTravel} coordinates={mockCoordinates} />
     );
     
-    const mapView = UNSAFE_getByType('MapView' as any);
-    expect(mapView).toBeTruthy();
+    expect(getWebViewHtml(rendered)).toContain('const points = []');
   });
 
   it('should use default coordinates when not provided', () => {
-    const { UNSAFE_getByType } = render(
+    const rendered = render(
       <Map travel={mockTravel} coordinates={null} />
     );
     
-    const mapView = UNSAFE_getByType('MapView' as any);
-    expect(mapView).toBeTruthy();
-    expect(mapView.props.initialRegion).toBeDefined();
+    expect(getWebViewHtml(rendered)).toContain('setView([53.8828449, 27.7273595], 10)');
   });
 
   it('should parse coordinates correctly', () => {
-    const { UNSAFE_getAllByType } = render(
+    const rendered = render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     
-    const markers = UNSAFE_getAllByType('Marker' as any);
-    const firstMarker = markers[0];
-    
-    expect(firstMarker.props.coordinate).toEqual({
-      latitude: 53.9,
-      longitude: 27.5,
-    });
+    expect(getWebViewHtml(rendered)).toContain("point.coord.split(',').map(Number)");
   });
 
   it('should render callout with point information', () => {
-    const { getAllByText } = render(
+    const rendered = render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     
-    expect(getAllByText('Адрес места:')[0]).toBeTruthy();
-    expect(getAllByText('Координаты:')[0]).toBeTruthy();
-    expect(getAllByText('Категория объекта:')[0]).toBeTruthy();
+    const html = getWebViewHtml(rendered);
+    expect(html).toContain('Адрес:');
+    expect(html).toContain('Координаты:');
+    expect(html).toContain('Категория:');
   });
 
   it('should display point address in callout', () => {
-    const { getByText } = render(
+    const rendered = render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     
-    expect(getByText('Test Address, Minsk')).toBeTruthy();
+    expect(getWebViewHtml(rendered)).toContain('Test Address, Minsk');
   });
 
   it('should display point category in callout', () => {
-    const { getByText } = render(
+    const rendered = render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     
-    expect(getByText('Attraction')).toBeTruthy();
+    expect(getWebViewHtml(rendered)).toContain('Attraction');
   });
 
   it('should handle missing image gracefully', () => {
@@ -155,10 +140,10 @@ describe('Map.ios Component', () => {
       },
     };
 
-    const { UNSAFE_getByType } = render(
+    const rendered = render(
       <Map travel={travelWithoutImage} coordinates={mockCoordinates} />
     );
     
-    expect(UNSAFE_getByType('MapView' as any)).toBeTruthy();
+    expect(getWebViewHtml(rendered)).toContain('"travelImageThumbUrl":""');
   });
 });

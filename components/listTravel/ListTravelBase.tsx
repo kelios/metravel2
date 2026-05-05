@@ -19,7 +19,6 @@ import { useResponsive } from '@/hooks/useResponsive'
 import type { Travel } from '@/types/types'
 import {
   BREAKPOINTS,
-  RECOMMENDATIONS_VISIBLE_KEY,
   SEARCH_DEBOUNCE,
 } from './utils/listTravelConstants'
 import { useListTravelFilters } from './hooks/useListTravelFilters'
@@ -29,10 +28,13 @@ import { buildFacetCounts, buildTravelFilterGroups } from './utils/filterGroups'
 import { fetchTravelFacets } from '@/api/travelListQueries'
 import type { FilterOptions, FilterState } from './utils/listTravelTypes'
 import {
+  SORT_LABEL_FALLBACKS,
   normalizeCountryOptions,
   normalizeNamedOptions,
   removeTravelFromInfiniteTravelsCache,
+  summarizeFilterValues,
 } from './ListTravelBase.helpers'
+import { useRecommendationsVisibility } from './hooks/useRecommendationsVisibility'
 import { createListTravelBaseStyles } from './ListTravelBase.styles'
 import {
   buildListTravelInitialFilter,
@@ -44,75 +46,11 @@ import {
 const MemoizedTravelItem = memo(RenderTravelItem);
 const ListTravelExportControlsLazy = lazy(() => import('./ListTravelExportControls'));
 
-let nativeAsyncStorageModulePromise: Promise<typeof import('@react-native-async-storage/async-storage')> | null = null;
-
 type ActiveConditionChip = {
   key: string
   label: string
   onRemove: () => void
 }
-
-const SORT_LABEL_FALLBACKS: Record<string, string> = {
-  newest: 'Новые',
-  oldest: 'Старые',
-  popular_desc: 'Популярные ↓',
-  popular_asc: 'Популярные ↑',
-  rating_desc: 'Рейтинг ↓',
-  added_desc: 'Добавлены ↓',
-  added_asc: 'Добавлены ↑',
-  title_asc: 'Название А→Я',
-  title_desc: 'Название Я→А',
-  year_desc: 'Год ↓',
-  year_asc: 'Год ↑',
-}
-
-const getOptionName = (
-  options: Array<{ id?: string | number; country_id?: string | number; name?: string; title_ru?: string }> | undefined,
-  value: string | number,
-) => {
-  const normalizedValue = String(value)
-  const match = options?.find((option) => {
-    const optionId = option.country_id ?? option.id
-    return optionId != null && String(optionId) === normalizedValue
-  })
-
-  return match?.title_ru || match?.name || String(value)
-}
-
-const summarizeFilterValues = (
-  title: string,
-  values: Array<string | number> | undefined,
-  options?: Array<{ id?: string | number; country_id?: string | number; name?: string; title_ru?: string }>,
-) => {
-  if (!values?.length) return null
-
-  const labels = values.map((value) => getOptionName(options, value)).filter(Boolean)
-  if (!labels.length) return null
-
-  const shownLabels = labels.slice(0, 2).join(', ')
-  const extraCount = labels.length - 2
-
-  return `${title}: ${shownLabels}${extraCount > 0 ? ` +${extraCount}` : ''}`
-}
-
-const getNativeAsyncStorageModule = async () => {
-  if (!nativeAsyncStorageModulePromise) {
-    nativeAsyncStorageModulePromise = import('@react-native-async-storage/async-storage');
-  }
-
-  return nativeAsyncStorageModulePromise;
-};
-
-const loadNativeRecommendationsVisibility = async (): Promise<boolean> => {
-  const storageModule = await getNativeAsyncStorageModule();
-  const stored = await storageModule.default.getItem(RECOMMENDATIONS_VISIBLE_KEY);
-  return stored === 'true';
-};
-
-const saveNativeRecommendationsVisibility = async (visible: boolean) => {
-  const storageModule = await getNativeAsyncStorageModule();
-  await storageModule.default.setItem(RECOMMENDATIONS_VISIBLE_KEY, visible ? 'true' : 'false');
-};
 
 function ListTravelBase() {
     const colors = useThemedColors();
@@ -246,71 +184,10 @@ function ListTravelBase() {
     const contentPadding = viewportState.contentPadding;
     const gridColumns = viewportState.gridColumns;
 
-    const [isRecommendationsVisible, setIsRecommendationsVisible] = useState<boolean>(() => {
-        if (Platform.OS !== 'web') return false;
-        try {
-            const stored = sessionStorage.getItem(RECOMMENDATIONS_VISIBLE_KEY);
-            return stored === 'true';
-        } catch {
-            return false;
-        }
-    });
-    const [recommendationsVisibilityInitialized, setRecommendationsVisibilityInitialized] = useState(
-        Platform.OS === 'web'
-    );
-
-    useEffect(() => {
-        // to avoid a post-paint setState that shifts the list.
-        if (Platform.OS === 'web') {
-            return;
-        }
-
-        let isMounted = true;
-
-        const loadRecommendationsVisibility = async () => {
-            try {
-                const stored = await loadNativeRecommendationsVisibility();
-                if (!isMounted) return;
-                setIsRecommendationsVisible(stored);
-            } catch (error) {
-                console.error('Error loading recommendations visibility:', error);
-            } finally {
-                if (isMounted) {
-                    setRecommendationsVisibilityInitialized(true);
-                }
-            }
-        };
-
-        loadRecommendationsVisibility();
-
-        return () => {
-            isMounted = false;
-        };
-    }, []);
-
-    const handleRecommendationsVisibilityChange = useCallback((visible: boolean) => {
-        if (!recommendationsVisibilityInitialized) {
-            return;
-        }
-
-        setIsRecommendationsVisible(visible);
-
-        // Сохраняем в storage
-        const saveVisibility = async () => {
-            try {
-                if (Platform.OS === 'web') {
-                    // На web явно сохраняем "true" / "false", чтобы различать включенный и выключенный блок.
-                    sessionStorage.setItem(RECOMMENDATIONS_VISIBLE_KEY, visible ? 'true' : 'false');
-                } else {
-                    await saveNativeRecommendationsVisibility(visible);
-                }
-            } catch (error) {
-                console.error('Error saving recommendations visibility:', error);
-            }
-        };
-        
-        saveVisibility();
-    }, [recommendationsVisibilityInitialized]);
+    const {
+        isRecommendationsVisible,
+        setIsRecommendationsVisible: handleRecommendationsVisibilityChange,
+    } = useRecommendationsVisibility();
 
     const queryClient = useQueryClient();
 

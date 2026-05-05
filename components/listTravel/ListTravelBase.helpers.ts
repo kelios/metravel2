@@ -116,3 +116,48 @@ export const removeTravelFromInfiniteTravelsCache = (
     }
   })
 }
+
+export const SORT_LABEL_FALLBACKS: Record<string, string> = {
+  newest: 'Новые',
+  oldest: 'Старые',
+  popular_desc: 'Популярные ↓',
+  popular_asc: 'Популярные ↑',
+  rating_desc: 'Рейтинг ↓',
+  added_desc: 'Добавлены ↓',
+  added_asc: 'Добавлены ↑',
+  title_asc: 'Название А→Я',
+  title_desc: 'Название Я→А',
+  year_desc: 'Год ↓',
+  year_asc: 'Год ↑',
+}
+
+export const getOptionName = (
+  options:
+    | Array<{ id?: string | number; country_id?: string | number; name?: string; title_ru?: string }>
+    | undefined,
+  value: string | number,
+) => {
+  const normalizedValue = String(value)
+  const match = options?.find((option) => {
+    const optionId = option.country_id ?? option.id
+    return optionId != null && String(optionId) === normalizedValue
+  })
+
+  return match?.title_ru || match?.name || String(value)
+}
+
+export const summarizeFilterValues = (
+  title: string,
+  values: Array<string | number> | undefined,
+  options?: Array<{ id?: string | number; country_id?: string | number; name?: string; title_ru?: string }>,
+) => {
+  if (!values?.length) return null
+
+  const labels = values.map((value) => getOptionName(options, value)).filter(Boolean)
+  if (!labels.length) return null
+
+  const shownLabels = labels.slice(0, 2).join(', ')
+  const extraCount = labels.length - 2
+
+  return `${title}: ${shownLabels}${extraCount > 0 ? ` +${extraCount}` : ''}`
+}

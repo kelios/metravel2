@@ -13,12 +13,14 @@ export const GalleryGrid: React.FC<{
   isInitialLoading: boolean
   images: GalleryItem[]
   onDelete: (stableKey: string) => void
+  onMove: (stableKey: string, direction: -1 | 1) => void
   onImageError: (stableKey: string, url: string) => void
   onImageLoad: (stableKey: string) => void
   DeleteAction: React.ComponentType<{
     onActivate: () => void
     style?: any
     testID?: string
+    accessibilityLabel?: string
     children: React.ReactNode
   }>
 }> = ({
@@ -27,6 +29,7 @@ export const GalleryGrid: React.FC<{
   isInitialLoading,
   images,
   onDelete,
+  onMove,
   onImageError,
   onImageLoad,
   DeleteAction,
@@ -61,6 +64,30 @@ export const GalleryGrid: React.FC<{
     <View style={styles.galleryGrid}>
       {images.map((image, index) => {
         const stableKey = image.stableKey ?? image.id
+        const canMoveLeft = index > 0 && !image.isUploading
+        const canMoveRight = index < images.length - 1 && !image.isUploading
+        const moveButtonColor = colors.textInverse
+        const disabledMoveButtonColor = colors.textMuted
+        const renderMoveControls = () => (
+          <View style={styles.moveControls}>
+            <DeleteAction
+              onActivate={() => canMoveLeft && onMove(stableKey, -1)}
+              style={[styles.moveButton, !canMoveLeft && styles.moveButtonDisabled]}
+              testID="gallery-move-left-button"
+              accessibilityLabel="Переместить фото левее"
+            >
+              <Feather name="arrow-left" size={16} color={canMoveLeft ? moveButtonColor : disabledMoveButtonColor} />
+            </DeleteAction>
+            <DeleteAction
+              onActivate={() => canMoveRight && onMove(stableKey, 1)}
+              style={[styles.moveButton, !canMoveRight && styles.moveButtonDisabled]}
+              testID="gallery-move-right-button"
+              accessibilityLabel="Переместить фото правее"
+            >
+              <Feather name="arrow-right" size={16} color={canMoveRight ? moveButtonColor : disabledMoveButtonColor} />
+            </DeleteAction>
+          </View>
+        )
 
         return (
           <View key={stableKey} style={styles.imageWrapper} testID="gallery-image">
@@ -77,6 +104,7 @@ export const GalleryGrid: React.FC<{
                 >
                   <Feather name="x" size={18} color={colors.textInverse} />
                 </DeleteAction>
+                {renderMoveControls()}
               </View>
             ) : image.error ? (
               <View style={styles.errorImageContainer}>
@@ -109,6 +137,7 @@ export const GalleryGrid: React.FC<{
                 >
                   <Feather name="x" size={18} color={colors.textInverse} />
                 </DeleteAction>
+                {renderMoveControls()}
               </View>
             ) : !image.url ? (
               <View style={styles.uploadingImageContainer}>
@@ -120,6 +149,7 @@ export const GalleryGrid: React.FC<{
                 >
                   <Feather name="x" size={18} color={colors.text} />
                 </DeleteAction>
+                {renderMoveControls()}
               </View>
             ) : (
               <>
@@ -144,6 +174,7 @@ export const GalleryGrid: React.FC<{
                 >
                   <Feather name="x" size={18} color={colors.textInverse} />
                 </DeleteAction>
+                {renderMoveControls()}
               </>
             )}
           </View>

@@ -88,10 +88,11 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
   }, []);
 
   useEffect(() => {
-    if (initialImages?.length) {
-      setImages(initialImages.map((img) => ({ ...img, url: ensureAbsoluteUrl(img.url) })));
-      setLoading(initialImages.map(() => false));
-    }
+    const normalizedInitialImages = Array.isArray(initialImages)
+      ? initialImages.map((img) => ({ ...img, url: ensureAbsoluteUrl(img.url) }))
+      : [];
+    setImages(normalizedInitialImages);
+    setLoading(normalizedInitialImages.map(() => false));
     setIsInitialLoading(false);
   }, [initialImages]);
 
@@ -121,7 +122,9 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
       const newLoading = [...loading];
 
       let completedCount = 0;
-      const uploads = assets.map(async (asset, index) => {
+      for (let index = 0; index < assets.length; index += 1) {
+        const asset = assets[index];
+        if (!asset) continue;
         const currentIndex = images.length + index;
         newLoading[currentIndex] = true;
         setLoading([...newLoading]);
@@ -176,9 +179,8 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
           setUploadCurrent(completedCount);
           setUploadProgress(completedCount / assets.length);
         }
-      });
+      }
 
-      await Promise.all(uploads);
       setIsUploading(false);
     },
     [images, loading, collection, idTravel, maxImages]
@@ -246,6 +248,21 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
     setDialogVisible(true);
   };
 
+  const handleMoveImage = useCallback((imageId: string, direction: -1 | 1) => {
+    setImages((prev) => {
+      const fromIndex = prev.findIndex((img) => img.id === imageId);
+      if (fromIndex < 0) return prev;
+
+      const toIndex = fromIndex + direction;
+      if (toIndex < 0 || toIndex >= prev.length) return prev;
+
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  }, []);
+
   const confirmDeleteImage = async () => {
     if (!selectedImageId) return;
     const imageToDelete = images.find((img) => img.id === selectedImageId);
@@ -306,7 +323,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
       ) : images.length > 0 ? (
         <View style={styles.galleryGrid}>
           {images.map((image, index) => (
-            <View key={image.id} style={[styles.imageWrapper, { backgroundColor: colors.surfaceMuted }]}>
+            <View key={`${image.id}:${image.url}:${index}`} style={[styles.imageWrapper, { backgroundColor: colors.surfaceMuted }]}>
               {loading[index] ? (
                 <ShimmerOverlay />
               ) : (
@@ -326,6 +343,30 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
                   >
                     <Feather name="x" size={18} color={colors.textOnPrimary} />
                   </TouchableOpacity>
+                  <View style={styles.moveControls}>
+                    <TouchableOpacity
+                      onPress={() => handleMoveImage(image.id, -1)}
+                      style={[styles.moveButton, { backgroundColor: colors.overlay }, index === 0 && styles.moveButtonDisabled]}
+                      disabled={index === 0}
+                      testID={`gallery-ios.move-left:${image.id}`}
+                      accessibilityLabel="Переместить фото левее"
+                    >
+                      <Feather name="arrow-left" size={15} color={index === 0 ? colors.textMuted : colors.textInverse} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleMoveImage(image.id, 1)}
+                      style={[
+                        styles.moveButton,
+                        { backgroundColor: colors.overlay },
+                        index === images.length - 1 && styles.moveButtonDisabled,
+                      ]}
+                      disabled={index === images.length - 1}
+                      testID={`gallery-ios.move-right:${image.id}`}
+                      accessibilityLabel="Переместить фото правее"
+                    >
+                      <Feather name="arrow-right" size={15} color={index === images.length - 1 ? colors.textMuted : colors.textInverse} />
+                    </TouchableOpacity>
+                  </View>
                 </>
               )}
             </View>
@@ -438,6 +479,23 @@ const styles = StyleSheet.create({
     height: 30,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  moveControls: {
+    position: 'absolute',
+    left: 5,
+    bottom: 5,
+    flexDirection: 'row',
+    gap: 6,
+  },
+  moveButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moveButtonDisabled: {
+    opacity: 0.45,
   },
   noImagesText: {
     textAlign: 'center',

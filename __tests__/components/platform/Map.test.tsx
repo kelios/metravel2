@@ -108,13 +108,12 @@ describe('Map Component - Platform Specific', () => {
     });
 
     it('should render Map component on iOS', () => {
-      const Map = require('../../../components/map/Map.ios').default;
-      // iOS использует react-native-maps, который мы замокали как View
+      const Map = require('../../../components/MapPage/Map.ios').default;
       expect(() => render(<Map travel={mockTravel} coordinates={mockCoordinates} />)).not.toThrow();
     });
 
     it('should handle null coordinates on iOS', () => {
-      const Map = require('../../../components/map/Map.ios').default;
+      const Map = require('../../../components/MapPage/Map.ios').default;
       expect(() => render(<Map travel={mockTravel} coordinates={null} />)).not.toThrow();
     });
   });
@@ -125,18 +124,17 @@ describe('Map Component - Platform Specific', () => {
     });
 
     it('should render Map component on Android', () => {
-      const Map = require('../../../components/map/Map.android').default;
+      const Map = require('../../../components/MapPage/Map.android').default;
       expect(() => render(<Map travel={mockTravel} coordinates={mockCoordinates} />)).not.toThrow();
     });
 
     it('should handle null coordinates on Android', () => {
-      const Map = require('../../../components/map/Map.android').default;
+      const Map = require('../../../components/MapPage/Map.android').default;
       expect(() => render(<Map travel={mockTravel} coordinates={null} />)).not.toThrow();
     });
 
     it('should use same implementation as iOS', () => {
-      const MapAndroid = require('../../../components/map/Map.android').default;
-      // Android экспортирует iOS версию
+      const MapAndroid = require('../../../components/MapPage/Map.android').default;
       expect(MapAndroid).toBeDefined();
     });
   });
@@ -171,12 +169,12 @@ describe('Map Component - Platform Specific', () => {
 
   describe('Component Exports', () => {
     it('should export Map component for iOS', () => {
-      const MapIOS = require('../../../components/map/Map.ios');
+      const MapIOS = require('../../../components/MapPage/Map.ios');
       expect(MapIOS.default).toBeDefined();
     });
 
     it('should export Map component for Android', () => {
-      const MapAndroid = require('../../../components/map/Map.android');
+      const MapAndroid = require('../../../components/MapPage/Map.android');
       expect(MapAndroid.default).toBeDefined();
     });
 
