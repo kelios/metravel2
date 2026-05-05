@@ -2,7 +2,7 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import Button from '@/components/ui/Button';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { PointsListStyles } from './PointsList';
+import { PointsListStyles } from './types';
 
 type BulkProgress = {
   current: number;

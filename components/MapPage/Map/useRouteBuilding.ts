@@ -4,6 +4,9 @@ import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { RouteValidator } from '@/utils/routeValidator';
 import type { LatLng } from '@/types/coordinates';
 import type { RouteData, TransportMode } from '@/types/route';
+import { orsDirections } from '@/api/external/ors';
+import { osrmRoute } from '@/api/external/osrm';
+import { valhallaRoute } from '@/api/external/valhalla';
 
 interface RouteResult {
   coords: LatLng[];
@@ -78,22 +81,16 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
       let res: Response | null = null;
       let lastErrorText = '';
       for (const radius of radiusesToTry) {
-        res = await fetch(
-          `https://api.openrouteservice.org/v2/directions/${getORSProfile(mode)}/geojson`,
+        res = await orsDirections(
+          getORSProfile(mode) as any,
           {
-            method: 'POST',
-            headers: {
-              Authorization: String(ORS_API_KEY),
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              coordinates,
-              ...(typeof radius === 'number'
-                ? { radiuses: new Array(coordinates.length).fill(radius) }
-                : {}),
-            }),
-            signal,
-          }
+            coordinates: coordinates as Array<[number, number]>,
+            ...(typeof radius === 'number'
+              ? { radiuses: new Array(coordinates.length).fill(radius) }
+              : {}),
+          },
+          String(ORS_API_KEY),
+          { signal },
         );
 
         if (res.ok) break;
@@ -151,11 +148,15 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
       signal: AbortSignal
     ): Promise<RouteResult> => {
       const profile = getOSRMProfile(mode);
-      // OSRM expects lng,lat format
-      const coordsStr = points.map(p => `${p.lng},${p.lat}`).join(';');
-      const url = `https://router.project-osrm.org/route/v1/${profile}/${coordsStr}?overview=full&geometries=geojson`;
-
-      const res = await fetch(url, { signal });
+      const res = await osrmRoute(
+        {
+          coords: points.map(p => [p.lng, p.lat]),
+          profile: profile as any,
+          overview: 'full',
+          geometries: 'geojson',
+        },
+        { signal },
+      );
 
       if (!res.ok) {
         const errorText = await res.text().catch(() => '');
@@ -206,9 +207,7 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
         directions_options: { units: 'kilometers' }
       };
 
-      const url = `https://valhalla1.openstreetmap.de/route?json=${encodeURIComponent(JSON.stringify(requestBody))}`;
-
-      const res = await fetch(url, { signal });
+      const res = await valhallaRoute(requestBody, { signal });
 
       if (!res.ok) {
         const errorText = await res.text().catch(() => '');

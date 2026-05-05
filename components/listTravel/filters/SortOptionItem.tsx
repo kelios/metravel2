@@ -2,7 +2,7 @@ import React, { memo, useState } from 'react';
 import { View, Text, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
-import { FilterOption } from '../ModernFilters';
+import { FilterOption } from './types';
 
 const SORT_ICONS: Record<string, string> = {
   'new': 'clock',

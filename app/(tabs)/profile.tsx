@@ -21,8 +21,9 @@ import { ProfileStats } from '@/components/profile/ProfileStats';
 import { ProfileCompleteness } from '@/components/profile/ProfileCompleteness';
 import { ProfileTabs, type ProfileTabKey } from '@/components/profile/ProfileTabs';
 import { ProfileQuickActions } from '@/components/profile/ProfileQuickActions';
-import { deleteTravel, fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelsApi';
 import EmptyState from '@/components/ui/EmptyState';
+import { isTravelListItem, normalizeToTravel } from '@/components/profile/travelNormalize';
+import { useMyTravels } from '@/hooks/useMyTravels';
 import Button from '@/components/ui/Button';
 import type { Travel } from '@/types/types';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
@@ -48,79 +49,6 @@ interface UserStats {
   favoritesCount: number;
   viewsCount: number;
 }
-
-type ProfileListItem = {
-  type?: string;
-  id?: unknown;
-  title?: unknown;
-  url?: unknown;
-  imageUrl?: unknown;
-  country?: unknown;
-  city?: unknown;
-};
-
-const isTravelListItem = (value: unknown): value is ProfileListItem =>
-  !!value && typeof value === 'object' && (value as ProfileListItem).type === 'travel';
-
-const getSlugFromUrl = (url: string | undefined | null, fallback: string) => {
-  const raw = String(url ?? '').trim();
-  if (!raw) return fallback;
-  const noQuery = raw.split('?')[0]?.replace(/\/+$/, '') ?? raw;
-  const match = noQuery.match(/\/travels\/([^/]+)$/);
-  return match?.[1] ? String(match[1]) : fallback;
-};
-
-const normalizeToTravel = (item: Record<string, unknown>): Travel => {
-  const idRaw = item?.id ?? item?._id ?? 0;
-  const id = typeof idRaw === 'number' ? idRaw : Number(idRaw) || 0;
-  const url = String(item?.url ?? item?.urlTravel ?? item?.href ?? '').trim();
-  const slug = String(item?.slug ?? getSlugFromUrl(url, String(id || item?.id || ''))).trim();
-  const name = String(item?.name ?? item?.title ?? '').trim() || 'Без названия';
-
-  const travel_image_thumb_url =
-    String(
-      item?.travel_image_thumb_url ??
-        item?.travel_image_thumb_small_url ??
-        item?.travelImageThumbUrl ??
-        item?.travelImageThumbSmallUrl ??
-        item?.imageUrl ??
-        ''
-    ).trim();
-
-  const countryName = String(item?.countryName ?? item?.country ?? '').trim();
-  const cityName = String(item?.cityName ?? item?.city ?? '').trim();
-  const countUnicIpView = String(item?.countUnicIpView ?? item?.views ?? '0');
-
-  return {
-    id,
-    slug,
-    name,
-    travel_image_thumb_url,
-    travel_image_thumb_small_url: travel_image_thumb_url,
-    url: url || `/travels/${slug || id}`,
-    youtube_link: '',
-    userName: String(item?.userName ?? item?.authorName ?? ''),
-    description: String(item?.description ?? ''),
-    recommendation: String(item?.recommendation ?? ''),
-    plus: String(item?.plus ?? ''),
-    minus: String(item?.minus ?? ''),
-    cityName,
-    countryName,
-    countUnicIpView,
-    gallery: Array.isArray(item?.gallery) ? item.gallery : [],
-    travelAddress: Array.isArray(item?.travelAddress) ? item.travelAddress : [],
-    userIds: String(item?.userIds ?? item?.userId ?? (item?.user as Record<string, unknown> | undefined)?.id ?? ''),
-    year: String(item?.year ?? ''),
-    monthName: String(item?.monthName ?? ''),
-    number_days: Number(item?.number_days ?? 0) || 0,
-    companions: Array.isArray(item?.companions) ? item.companions : [],
-    coordsMeTravel: Array.isArray(item?.coordsMeTravel) ? item.coordsMeTravel : undefined,
-    countryCode: String(item?.countryCode ?? ''),
-    user: item?.user as Travel['user'],
-    created_at: item?.created_at as string | undefined,
-    updated_at: item?.updated_at as string | undefined,
-  };
-};
 
 const keyExtractor = (item: Travel, index: number) => `${item.id}-${index}`;
 const PROFILE_TRAVELS_PER_PAGE = PER_PAGE;
@@ -198,91 +126,27 @@ export default function ProfileScreen() {
     favoritesCount: 0,
     viewsCount: 0,
   });
-  const [travelsLoading, setTravelsLoading] = useState(true);
-  const [travelsLoadingMore, setTravelsLoadingMore] = useState(false);
-  const [travelsPage, setTravelsPage] = useState(1);
-  const [travelsHasMore, setTravelsHasMore] = useState(false);
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('travels');
-  const [myTravels, setMyTravels] = useState<Travel[]>([]);
   const lastEndReachedAtRef = useRef(0);
 
-  const loadTravels = useCallback(async () => {
-    const uid = userId;
-    if (!uid) {
-      setTravelsLoading(false);
-      setTravelsLoadingMore(false);
-      setTravelsPage(1);
-      setTravelsHasMore(false);
-      setMyTravels([]);
-      return;
-    }
-    setTravelsLoading(true);
-    setTravelsLoadingMore(false);
-    lastEndReachedAtRef.current = 0;
-    try {
-      const payload = await fetchMyTravels({
-        user_id: uid,
-        page: 1,
-        perPage: PROFILE_TRAVELS_PER_PAGE,
-      });
-      const { items, total } = unwrapMyTravelsPayload(payload);
-      const normalized = items.map(normalizeToTravel);
-      const effectiveTotal = total || normalized.length;
+  const handleTotalChange = useCallback((total: number) => {
+    setStats((prev) => ({ ...prev, travelsCount: total }));
+  }, []);
 
-      setMyTravels(normalized);
-      setTravelsPage(1);
-      setTravelsHasMore(normalized.length < effectiveTotal && items.length > 0);
-      setStats((prev) => ({
-        ...prev,
-        travelsCount: effectiveTotal,
-      }));
-    } catch {
-      setMyTravels([]);
-      setTravelsPage(1);
-      setTravelsHasMore(false);
-      setStats((prev) => ({ ...prev, travelsCount: 0 }));
-    } finally {
-      setTravelsLoading(false);
-    }
-  }, [userId]);
+  const {
+    myTravels,
+    isLoading: travelsLoading,
+    isLoadingMore: travelsLoadingMore,
+    hasMore: travelsHasMore,
+    load: loadTravels,
+    loadMore: loadMoreTravelsHook,
+    remove: removeMyTravel,
+  } = useMyTravels({ userId, perPage: PROFILE_TRAVELS_PER_PAGE, onTotalChange: handleTotalChange });
 
   const loadMoreTravels = useCallback(async () => {
-    const uid = userId;
-    if (!uid) return;
     if (activeTab !== 'travels') return;
-    if (travelsLoading || travelsLoadingMore || !travelsHasMore) return;
-    if (myTravels.length === 0) return;
-
-    const nextPage = travelsPage + 1;
-    setTravelsLoadingMore(true);
-
-    try {
-      const payload = await fetchMyTravels({
-        user_id: uid,
-        page: nextPage,
-        perPage: PROFILE_TRAVELS_PER_PAGE,
-      });
-      const { items, total } = unwrapMyTravelsPayload(payload);
-      const normalized = items.map(normalizeToTravel);
-
-      const existingIds = new Set(myTravels.map((travel) => String(travel.id)));
-      const uniqueNext = normalized.filter((travel) => !existingIds.has(String(travel.id)));
-      const mergedTravels = uniqueNext.length > 0 ? [...myTravels, ...uniqueNext] : myTravels;
-      const effectiveTotal = total || mergedTravels.length;
-
-      setMyTravels(mergedTravels);
-      setTravelsPage(nextPage);
-      setTravelsHasMore(mergedTravels.length < effectiveTotal && items.length > 0);
-      setStats((prev) => ({
-        ...prev,
-        travelsCount: effectiveTotal,
-      }));
-    } catch {
-      setTravelsHasMore(false);
-    } finally {
-      setTravelsLoadingMore(false);
-    }
-  }, [activeTab, myTravels, travelsHasMore, travelsLoading, travelsLoadingMore, travelsPage, userId]);
+    await loadMoreTravelsHook();
+  }, [activeTab, loadMoreTravelsHook]);
 
   const handleListEndReached = useCallback(() => {
     if (activeTab !== 'travels') return;
@@ -329,22 +193,7 @@ export default function ProfileScreen() {
     }
   }, [loadTravels, loadUserInfo]);
 
-  const handleDeleteMyTravel = useCallback(async (travelId: number) => {
-    try {
-      const ok = await confirmAction({
-        title: 'Удалить путешествие',
-        message: 'Удалить это путешествие?',
-        confirmText: 'Удалить',
-        cancelText: 'Отмена',
-      });
-      if (!ok) return;
-
-      await deleteTravel(travelId);
-      await loadTravels();
-    } catch (error) {
-      console.error('Error deleting travel:', error);
-    }
-  }, [loadTravels]);
+  const handleDeleteMyTravel = removeMyTravel;
 
   useEffect(() => {
     setStats((prev) => ({

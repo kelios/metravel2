@@ -25,21 +25,8 @@ import {
   createModernFiltersStyles,
 } from './filters';
 
-export interface FilterOption {
-  id: string;
-  name: string;
-  count?: number;
-}
-
-export interface FilterGroup {
-  key: string;
-  title: string;
-  options: FilterOption[];
-  multiSelect?: boolean;
-  icon?: string;
-}
-
-export type FilterState = Record<string, string[]> & { year?: string | number; moderation?: number };
+export type { FilterOption, FilterGroup, FilterState } from './filters/types';
+import type { FilterOption, FilterGroup, FilterState } from './filters/types';
 
 function getModernFiltersReserveState(params: {
   filterGroups: FilterGroup[];

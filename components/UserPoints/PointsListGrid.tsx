@@ -12,8 +12,9 @@ import IconButton from '@/components/ui/IconButton'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { MapUiApi } from '@/types/mapUi'
 import { resolveExportedFunction } from '@/utils/moduleInterop'
+import { nominatimSearch } from '@/api/external/nominatim'
 
-import type { PointsListStyles } from './PointsList'
+import type { PointsListStyles } from './types'
 
 let getFiltersPanelStylesSafe: ((...args: any[]) => any) | null = null
 try {
@@ -484,14 +485,10 @@ export const PointsListGrid: React.FC<{
       const controller = new AbortController()
       geocodeAbortRef.current = controller
 
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1&addressdetails=1&accept-language=ru`
-
-      fetch(url, {
-        signal: controller.signal,
-        headers: {
-          Accept: 'application/json',
-        },
-      })
+      nominatimSearch(
+        { q, limit: 1, addressdetails: 1, acceptLanguage: 'ru' },
+        { signal: controller.signal },
+      )
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
           if (controller.signal.aborted) return

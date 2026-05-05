@@ -43,6 +43,22 @@ const EMPTY_FAVORITES = new Set<string | number>()
 const WEB_LIST_OVERSCAN_ITEMS = 5
 const WEB_ESTIMATED_ITEM_HEIGHT_PX = 340
 
+const getTravelItemId = (item: any): string | number | undefined =>
+  item?.id ?? item?._id ?? item?.slug ?? item?.uid
+
+const getTravelItemKey = (item: any): string =>
+  String(
+    getTravelItemId(item) ??
+      item?.url ??
+      item?.urlTravel ??
+      item?.articleUrl ??
+      item?.coord ??
+      item?.address ??
+      item?.name ??
+      item?.title ??
+      JSON.stringify(item ?? {}),
+  )
+
 const TravelListPanel: React.FC<Props> = ({
   travelsData,
   buildRouteTo,
@@ -73,15 +89,18 @@ const TravelListPanel: React.FC<Props> = ({
 
   const renderItem = useCallback(
     ({ item }: any) => {
-      const itemId = item.id ?? item._id ?? item.slug ?? item.uid
-      const isFavorite = favorites.has(itemId)
+      const itemId = getTravelItemId(item)
+      const canUseItemId = itemId !== undefined && itemId !== null
+      const isFavorite = canUseItemId ? favorites.has(itemId) : false
 
       const content = (
         <AddressListItem
           travel={item}
           isMobile={isMobile}
           onPress={() => buildRouteTo(item)}
-          onHidePress={onHideTravel ? () => onHideTravel(itemId) : undefined}
+          onHidePress={
+            onHideTravel && canUseItemId ? () => onHideTravel(itemId) : undefined
+          }
           userLocation={userLocation}
           transportMode={transportMode}
         />
@@ -91,7 +110,7 @@ const TravelListPanel: React.FC<Props> = ({
         return (
           <SwipeableListItem
             onFavorite={
-              onToggleFavorite ? () => onToggleFavorite(itemId) : undefined
+              onToggleFavorite && canUseItemId ? () => onToggleFavorite(itemId) : undefined
             }
             onBuildRoute={() => buildRouteTo(item)}
             showFavorite={!!onToggleFavorite}
@@ -117,8 +136,7 @@ const TravelListPanel: React.FC<Props> = ({
   )
 
   const keyExtractor = useCallback(
-    (item: any, index: number) =>
-      String(item.id ?? item._id ?? item.slug ?? index),
+    (item: any) => getTravelItemKey(item),
     [],
   )
 
@@ -308,9 +326,9 @@ const TravelListPanel: React.FC<Props> = ({
           }
         >
           {listHeader}
-          {visibleTravelsData.map((item: any, index: number) => (
+          {visibleTravelsData.map((item: any) => (
             <React.Fragment
-              key={String(item.id ?? item._id ?? item.slug ?? index)}
+              key={getTravelItemKey(item)}
             >
               {renderItem({ item })}
             </React.Fragment>
@@ -363,11 +381,9 @@ const TravelListPanel: React.FC<Props> = ({
         {listHeader}
         {visibleTravelsData
           .slice(startIndex, endIndex)
-          .map((item: any, index: number) => (
+          .map((item: any) => (
             <React.Fragment
-              key={String(
-                item.id ?? item._id ?? item.slug ?? startIndex + index,
-              )}
+              key={getTravelItemKey(item)}
             >
               {renderItem({ item })}
             </React.Fragment>

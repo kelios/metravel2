@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import type { QuestStep } from './QuestWizard';
+import type { QuestStep } from './types';
 
 type PrintableProps = {
     title: string;

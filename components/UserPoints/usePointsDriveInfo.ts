@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { osrmRoute } from '@/api/external/osrm';
 
 type DriveInfo =
   | null
@@ -47,9 +48,7 @@ export const usePointsDriveInfo = ({
     const controller = new AbortController();
     setActiveDriveInfo({ status: 'loading' });
 
-    const url = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${toLng},${toLat}?overview=false`;
-
-    fetch(url, { signal: controller.signal })
+    osrmRoute({ coords: [[userLng, userLat], [toLng, toLat]] }, { signal: controller.signal })
       .then((r) => r.json())
       .then((data) => {
         if (controller.signal.aborted) return;

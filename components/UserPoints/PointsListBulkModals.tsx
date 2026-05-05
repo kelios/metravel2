@@ -4,7 +4,7 @@ import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation'
 import SimpleMultiSelect from '@/components/forms/SimpleMultiSelect';
 import Button from '@/components/ui/Button';
 import { PointStatus, STATUS_LABELS } from '@/types/userPoints';
-import { PointsListStyles } from './PointsList';
+import { PointsListStyles } from './types';
 
 type PointsListBulkModalsProps = {
   styles: PointsListStyles;

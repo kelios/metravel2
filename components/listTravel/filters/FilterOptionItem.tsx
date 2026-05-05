@@ -1,7 +1,7 @@
 import React, { memo, useState } from 'react';
 import { Text, Pressable, Platform } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
-import { FilterOption } from '../ModernFilters';
+import { FilterOption } from './types';
 import FilterCheckbox from './FilterCheckbox';
 import FilterRadio from './FilterRadio';
 

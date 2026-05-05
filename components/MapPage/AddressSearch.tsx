@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { queryKeys } from '@/queryKeys';
+import { nominatimSearch } from '@/api/external/nominatim';
 import type { LatLng } from '@/types/coordinates';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import MapIcon from './MapIcon';
@@ -58,16 +59,9 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
     staleTime: 10_000,
     gcTime: 60_000,
     queryFn: async ({ signal } = {} as any) => {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?` +
-          `format=json&q=${encodeURIComponent(debouncedQuery)}&` +
-          `limit=5&addressdetails=1`,
-        {
-          signal,
-          headers: {
-            'User-Agent': 'MeTravel/1.0',
-          },
-        }
+      const response = await nominatimSearch(
+        { q: debouncedQuery, limit: 5, addressdetails: 1 },
+        { signal, headers: { 'User-Agent': 'MeTravel/1.0' } },
       );
 
       if (!response.ok) {

@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { POINTS_PRESETS } from './pointsListLogic';
 import { PointsListHeader } from './PointsListHeader';
-import type { PointsListStyles } from './PointsList';
+import type { PointsListStyles } from './types';
 
 type Params = {
   styles: PointsListStyles;

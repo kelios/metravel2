@@ -1,4 +1,5 @@
 import React from 'react'
+import { osrmRoute } from '@/api/external/osrm'
 
 type DriveInfoState =
   | { status: 'loading' }
@@ -32,8 +33,6 @@ export function useUserPointsDriveInfo(centerOverride?: { lat: number; lng: numb
 
         setDriveInfoById((prev) => ({ ...prev, [pointId]: { status: 'loading' } }))
 
-        const url = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${pointLng},${pointLat}?overview=false`
-
         try {
           driveAbortByIdRef.current.get(pointId)?.abort()
         } catch {
@@ -42,7 +41,7 @@ export function useUserPointsDriveInfo(centerOverride?: { lat: number; lng: numb
         const controller = new AbortController()
         driveAbortByIdRef.current.set(pointId, controller)
 
-        fetch(url, { signal: controller.signal })
+        osrmRoute({ coords: [[userLng, userLat], [pointLng, pointLat]] }, { signal: controller.signal })
           .then((r) => r.json())
           .then((data) => {
             const route = Array.isArray(data?.routes) ? data.routes[0] : null

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Platform } from 'react-native'
 import type { ParsedRoutePreview } from '@/types/travelRoutes'
+import { nominatimReverse } from '@/api/external/nominatim'
+import { bigDataCloudReverse } from '@/api/external/bigdatacloud'
+import { overpassQuery } from '@/api/external/overpass'
 
 interface KeyPointLabels {
   startName?: string | null
@@ -18,9 +21,7 @@ const parseCoord = (coord: string): { lat: number; lng: number } | null => {
 
 const fetchReverseName = async (lat: number, lng: number): Promise<string | null> => {
   try {
-    const nominatim = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=ru`
-    )
+    const nominatim = await nominatimReverse({ lat, lng, addressdetails: 1, acceptLanguage: 'ru' })
     if (nominatim.ok) {
       const data = await nominatim.json()
       const addr = data?.address ?? {}
@@ -44,9 +45,7 @@ const fetchReverseName = async (lat: number, lng: number): Promise<string | null
   if (Platform.OS === 'web') return null
 
   try {
-    const primary = await fetch(
-      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=ru`
-    )
+    const primary = await bigDataCloudReverse(lat, lng, 'ru')
     if (!primary.ok) return null
     const data = await primary.json()
     return (
@@ -68,14 +67,9 @@ const fetchNearestPeakName = async (lat: number, lng: number): Promise<string | 
   // Overpass intermittently returns 504 on web and logs console errors.
   // Keep UX stable by using reverse-geocoding fallback there.
   if (Platform.OS === 'web') return null
-  const endpoint = process.env.EXPO_PUBLIC_OVERPASS_ENDPOINT || 'https://overpass-api.de/api/interpreter'
   const query = `[out:json][timeout:20];node(around:5000,${lat},${lng})["natural"="peak"]["name"];out body 1;`
   try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'content-type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-      body: `data=${encodeURIComponent(query)}`,
-    })
+    const response = await overpassQuery(query)
     if (!response.ok) return null
     const data = await response.json()
     const first = Array.isArray(data?.elements) ? data.elements[0] : null

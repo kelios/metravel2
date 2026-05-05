@@ -7,12 +7,7 @@ export type {
   ImageOptimizationOptions,
 } from './imageProxy';
 
-export interface ResponsiveImageSource {
-  src: string;
-  srcSet?: string;
-  sizes?: string;
-  format: string;
-}
+export type { ResponsiveImageSource } from './imageSrcSet';
 
 // Proxy / URL building / format detection
 export {

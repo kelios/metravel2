@@ -5,7 +5,7 @@ import SimpleMultiSelect from '@/components/forms/SimpleMultiSelect';
 import Button from '@/components/ui/Button';
 import ColorChip from '@/components/ui/ColorChip';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { PointsListStyles } from './PointsList';
+import { PointsListStyles } from './types';
 
 type CategoryOption = {
   id: string;

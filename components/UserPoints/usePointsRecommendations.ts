@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
 import { pickRandomDistinct } from './pointsListLogic';
+import { osrmRoute } from '@/api/external/osrm';
 
 type PointLike = {
   id?: unknown;
@@ -123,8 +124,14 @@ export const usePointsRecommendations = ({ setActivePointId }: Params): Result =
         const pointId = Number(point?.id);
         if (!Number.isFinite(toLng) || !Number.isFinite(toLat) || !Number.isFinite(pointId)) continue;
 
-        const url = `https://router.project-osrm.org/route/v1/driving/${loc.lng},${loc.lat};${toLng},${toLat}?overview=full&geometries=geojson`;
-        const response = await fetch(url, { signal: controller.signal });
+        const response = await osrmRoute(
+          {
+            coords: [[loc.lng, loc.lat], [toLng, toLat]],
+            overview: 'full',
+            geometries: 'geojson',
+          },
+          { signal: controller.signal },
+        );
         const data = await response.json();
 
         if (data?.code === 'Ok' && Array.isArray(data?.routes) && data.routes[0]) {

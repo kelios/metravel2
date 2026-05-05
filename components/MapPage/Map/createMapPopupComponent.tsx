@@ -13,6 +13,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useRouteStore } from '@/stores/routeStore';
 import { ThemeContext, type ThemeContextType, type ThemedColors } from '@/hooks/useTheme';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
+import { osrmRoute } from '@/api/external/osrm';
 
 interface CreatePopupComponentArgs {
   userLocation?: { lat: number; lng: number } | null;
@@ -202,10 +203,15 @@ export const createMapPopupComponent = ({
 
       const fetchDrive = async () => {
         try {
-          const coordsStr = `${uLng.toFixed(6)},${uLat.toFixed(6)};${normalizedCoord.lng.toFixed(6)},${normalizedCoord.lat.toFixed(6)}`;
-          const url = `https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=false`;
-
-          const res = await fetch(url, { signal: abortController.signal });
+          const res = await osrmRoute(
+            {
+              coords: [
+                [Number(uLng.toFixed(6)), Number(uLat.toFixed(6))],
+                [Number(normalizedCoord.lng.toFixed(6)), Number(normalizedCoord.lat.toFixed(6))],
+              ],
+            },
+            { signal: abortController.signal },
+          );
           if (!res.ok) throw new Error(`OSRM error: ${res.status}`);
           const data = await res.json();
           const route = data?.routes?.[0];

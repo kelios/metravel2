@@ -2,8 +2,15 @@
 // J4: Responsive image srcSet/sizes utilities (extracted from imageOptimization.ts)
 
 import { Platform } from 'react-native';
-import type { ImageOptimizationOptions, ResponsiveImageSource } from './imageOptimization';
+import type { ImageOptimizationOptions } from './imageProxy';
 import { optimizeImageUrl, getPreferredImageFormat } from './imageProxy';
+
+export interface ResponsiveImageSource {
+  src: string;
+  srcSet?: string;
+  sizes?: string;
+  format: string;
+}
 
 function resolveImageFormat(format: ImageOptimizationOptions['format']): string {
   if (format === 'auto') return getPreferredImageFormat();

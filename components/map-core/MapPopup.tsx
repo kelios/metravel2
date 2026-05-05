@@ -13,6 +13,7 @@ import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { getSiteBaseUrl } from '@/utils/seo';
 import type { LegacyMapPoint } from './types';
 import { useThemedColors } from '@/hooks/useTheme';
+import { osrmRoute } from '@/api/external/osrm';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -148,9 +149,15 @@ const MapPopup: React.FC<MapPopupConfig> = ({
 
     const fetchDrive = async () => {
       try {
-        const coordsStr = `${uLng.toFixed(6)},${uLat.toFixed(6)};${normalizedCoord.lng.toFixed(6)},${normalizedCoord.lat.toFixed(6)}`;
-        const url = `https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=false`;
-        const res = await fetch(url, { signal: abortController.signal });
+        const res = await osrmRoute(
+          {
+            coords: [
+              [Number(uLng.toFixed(6)), Number(uLat.toFixed(6))],
+              [Number(normalizedCoord.lng.toFixed(6)), Number(normalizedCoord.lat.toFixed(6))],
+            ],
+          },
+          { signal: abortController.signal },
+        );
         if (!res.ok) throw new Error(`OSRM error: ${res.status}`);
         const data = await res.json();
         const route = data?.routes?.[0];

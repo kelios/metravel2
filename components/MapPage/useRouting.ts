@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { routeCache } from '@/utils/routeCache'
+import { orsDirections } from '@/api/external/ors'
+import { osrmRoute } from '@/api/external/osrm'
+import { valhallaRoute } from '@/api/external/valhalla'
 import {
     type RouteResult,
     getORSProfile,
@@ -113,18 +116,7 @@ export const useRouting = (
                         body.radiuses = buildRadiuses(radius, coordinates.length, failingIndex)
                     }
 
-                    const res = await fetch(
-                        `https://api.openrouteservice.org/v2/directions/${getORSProfile(mode)}/geojson`,
-                        {
-                            method: 'POST',
-                            headers: {
-                                Authorization: apiKey,
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify(body),
-                            signal,
-                        }
-                    )
+                    const res = await orsDirections(getORSProfile(mode) as any, body, apiKey, { signal })
 
                     if (!res.ok) {
                         const errorText = await res.text().catch(() => '')
@@ -232,23 +224,23 @@ export const useRouting = (
             }
         }
 
-        // ✅ БЕЗОПАСНОСТЬ: Санитизация координат для URL (защита от инъекций)
-        const coordsStr = points
-            .map(([lng, lat]) => `${Number(lng).toFixed(6)},${Number(lat).toFixed(6)}`)
-            .join(';')
-
         // ✅ БЕЗОПАСНОСТЬ: Валидация профиля (только разрешенные значения)
-        // getOSRMProfile returns OSRM service profile names.
         const allowedProfiles = ['driving', 'walking', 'cycling'];
         if (!allowedProfiles.includes(profile)) {
             throw new Error('Некорректный профиль транспорта');
         }
 
-        const url = `https://router.project-osrm.org/route/v1/${profile}/${coordsStr}?overview=full&geometries=geojson`
-        
         let res: Response
         try {
-            res = await fetch(url, { signal })
+            res = await osrmRoute(
+                {
+                    coords: points.map(([lng, lat]) => [Number(Number(lng).toFixed(6)), Number(Number(lat).toFixed(6))]),
+                    profile: profile as any,
+                    overview: 'full',
+                    geometries: 'geojson',
+                },
+                { signal },
+            )
         } catch (e: any) {
             throw new Error(e?.message || 'OSRM недоступен (network)')
         }
@@ -291,11 +283,9 @@ export const useRouting = (
             directions_options: { units: 'kilometers' }
         };
 
-        const url = `https://valhalla1.openstreetmap.de/route?json=${encodeURIComponent(JSON.stringify(requestBody))}`;
-
         let res: Response;
         try {
-            res = await fetch(url, { signal });
+            res = await valhallaRoute(requestBody, { signal });
         } catch (e: any) {
             throw new Error(e?.message || 'Valhalla недоступен (network)');
         }

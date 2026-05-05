@@ -43,6 +43,19 @@ const SkeletonCard: React.FC<{ colors: ThemedColors }> = ({ colors }) => (
   </View>
 );
 
+const getPlaceCardKey = (place: any): string =>
+  String(
+    place?.id ??
+      place?._id ??
+      place?.slug ??
+      place?.url ??
+      place?.urlTravel ??
+      place?.coord ??
+      place?.address ??
+      place?.name ??
+      JSON.stringify(place ?? {}),
+  );
+
 export const QuickRecommendations: React.FC<Props> = React.memo(({
   places,
   userLocation,
@@ -123,7 +136,7 @@ export const QuickRecommendations: React.FC<Props> = React.memo(({
     return null;
   }
 
-  const cards = topPlaces.map((place, index) => {
+  const cards = topPlaces.map((place) => {
     const thumbUrl = place.travelImageThumbUrl || place.travel_image_thumb_url || null;
     const categoryName = typeof place.categoryName === 'string'
       ? place.categoryName.split(',')[0].trim()
@@ -137,7 +150,7 @@ export const QuickRecommendations: React.FC<Props> = React.memo(({
 
     return (
       <PlaceListCard
-        key={place.id ?? `place-${index}`}
+        key={getPlaceCardKey(place)}
         title={place.address || 'Место'}
         imageUrl={thumbUrl}
         categoryLabel={categoryName || undefined}

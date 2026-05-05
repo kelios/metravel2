@@ -37,13 +37,8 @@ import { useQuestWizardResponsiveModel } from './hooks/useQuestWizardResponsiveM
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 // ===================== ТИПЫ =====================
-export type QuestStep = {
-    id: string; title: string; location: string; story: string; task: string;
-    hint?: string; answer: (input: string) => boolean;
-    lat: number; lng: number; mapsUrl: string; image?: any; inputType?: 'number' | 'text';
-};
-export type QuestCity = { name?: string; lat: number; lng: number; countryCode?: string; };
-export type QuestFinale = { text: string; video?: any; poster?: any; };
+export type { QuestStep, QuestCity, QuestFinale } from './types';
+import type { QuestStep, QuestCity, QuestFinale } from './types';
 export type QuestWizardProps = {
     title: string; steps: QuestStep[]; finale: QuestFinale; intro?: QuestStep;
     storageKey?: string; city?: QuestCity;

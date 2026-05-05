@@ -480,7 +480,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   );
 };
 
-export type PointsListStyles = Record<string, any>;
+export type { PointsListStyles } from './types';
 
 const PANEL_RADIUS = DESIGN_TOKENS.radii.lg;
 const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm;

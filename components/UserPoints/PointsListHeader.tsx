@@ -10,7 +10,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { PointFilters as PointFiltersType } from '@/types/userPoints'
 
-import type { PointsListStyles } from './PointsList'
+import type { PointsListStyles } from './types'
 
 type ViewMode = 'list' | 'map'
 

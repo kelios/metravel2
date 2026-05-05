@@ -6,6 +6,8 @@ import { userPointsApi } from '@/api/userPoints';
 import { buildAddressFromGeocode } from '@/utils/geocodeHelpers';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { PointStatus } from '@/types/userPoints';
+import { bigDataCloudReverse } from '@/api/external/bigdatacloud';
+import { nominatimReverse } from '@/api/external/nominatim';
 
 type PointLike = Record<string, unknown>;
 
@@ -49,9 +51,7 @@ const getPrimaryPlaceName = (geocodeData: unknown, lat: number, lng: number): st
 
 const reverseGeocode = async (lat: number, lng: number): Promise<unknown | null> => {
   try {
-    const primary = await fetch(
-      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=ru`
-    );
+    const primary = await bigDataCloudReverse(lat, lng, 'ru');
     if (primary.ok) {
       return await primary.json();
     }
@@ -60,8 +60,8 @@ const reverseGeocode = async (lat: number, lng: number): Promise<unknown | null>
   }
 
   try {
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=ru&extratags=1&namedetails=1&zoom=18`
+    const response = await nominatimReverse(
+      { lat, lng, zoom: 18, addressdetails: 1, extratags: 1, namedetails: 1, acceptLanguage: 'ru' },
     );
     if (!response.ok) return null;
     return await response.json();
