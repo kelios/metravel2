@@ -20,6 +20,10 @@ export const createRecommendationsTabsStyles = (
     ...Platform.select({ web: { boxShadow: colors.boxShadows.card } as any, default: colors.shadows.light }),
   },
   containerFixedHeight: { height: TAB_TOTAL_HEIGHT },
+  containerMobileWebExpanded: Platform.select({
+    web: { height: 'auto', overflow: 'visible' } as any,
+    default: {},
+  }),
   header: {
     flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.borderLight,
     minHeight: TAB_HEADER_HEIGHT, paddingHorizontal: 12, backgroundColor: colors.surface,
@@ -62,12 +66,20 @@ export const createRecommendationsTabsStyles = (
   // tabs occupy the full width on narrow phones.
   collapseButton: { paddingLeft: 12, paddingRight: 4, paddingVertical: 12, marginLeft: 4 },
   content: { height: TAB_CONTENT_HEIGHT, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: colors.surface },
+  contentMobileWebExpanded: Platform.select({
+    web: { height: 'auto', overflow: 'visible' } as any,
+    default: {},
+  }),
   collapsedHeader: {
     height: TAB_HEADER_HEIGHT, justifyContent: 'center', paddingHorizontal: 12,
     borderBottomWidth: 1, borderBottomColor: colors.borderLight, backgroundColor: colors.surface,
   },
   collapsedSpacer: { height: TAB_CONTENT_HEIGHT },
   tabPane: { height: TAB_CONTENT_HEIGHT, flex: 1 },
+  tabPaneMobileWebExpanded: Platform.select({
+    web: { height: 'auto', flex: 0, overflow: 'visible' } as any,
+    default: {},
+  }),
   tabPaneScroll: {
     flex: 1,
     ...(Platform.select({ web: { width: '100%', overflowX: 'visible', overflowY: 'visible' } as any, default: {} }) as any),
@@ -76,6 +88,10 @@ export const createRecommendationsTabsStyles = (
     flexGrow: 1, paddingVertical: 4, alignItems: 'stretch',
     ...(Platform.select({ web: { width: '100%', overflowX: 'visible', overflowY: 'visible' } as any, default: {} }) as any),
   },
+  tabPaneScrollMobileWebExpanded: Platform.select({
+    web: { flex: 0, flexGrow: 0, overflow: 'visible' } as any,
+    default: {},
+  }),
   gateContainer: { paddingHorizontal: 0, paddingVertical: 12 },
   gateCard: {
     flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 16,
@@ -135,6 +151,15 @@ export const createRecommendationsTabsStyles = (
   },
   mobileGridItem: {
     width: '48%',
+    minWidth: 0,
+  },
+  mobileWebStack: {
+    paddingHorizontal: 4,
+    paddingBottom: 8,
+    gap: 12,
+  },
+  mobileWebStackItem: {
+    width: '100%',
     minWidth: 0,
   },
   favoritesHeaderRow: {

@@ -184,7 +184,30 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                     <Text style={[styles.subtitle, { color: colors.textMuted }]}>Самые популярные маршруты этого месяца</Text>
                 </>
             )}
-            {isMobile && !isMobileWeb ? (
+            {isMobileWeb ? (
+                <View style={styles.mobileWebStack} testID="weekly-highlights-stack">
+                    {highlights.map((item) => (
+                        <View key={item.id} style={styles.mobileWebStackItem}>
+                            <TabTravelCard
+                                item={{
+                                    id: item.id,
+                                    title: item.title,
+                                    imageUrl: item.imageUrl,
+                                    city: null,
+                                    country: item.country ?? null,
+                                }}
+                                badge={{
+                                    icon: 'trending-up',
+                                    backgroundColor: colors.surface,
+                                    iconColor: colors.primary,
+                                }}
+                                onPress={() => handleItemPress(item.url)}
+                                layout="grid"
+                            />
+                        </View>
+                    ))}
+                </View>
+            ) : isMobile ? (
                 <View style={styles.mobileGrid} testID="weekly-highlights-grid">
                     {highlights.map((item) => (
                         <View key={item.id} style={styles.mobileGridItem}>
@@ -369,6 +392,15 @@ const styles = StyleSheet.create({
     },
     mobileGridItem: {
         width: '48%',
+        minWidth: 0,
+    },
+    mobileWebStack: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        gap: 12,
+    },
+    mobileWebStackItem: {
+        width: '100%',
         minWidth: 0,
     },
 });

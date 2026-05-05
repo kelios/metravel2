@@ -94,7 +94,7 @@ const HomeHero = memo(function HomeHero({
     const horizontalPadding = isMobile ? 32 : 48
     return Math.max(280, Math.min(width - horizontalPadding, 800))
   }, [isMobile, isWeb, width])
-  const useMobileGridForPopular = isMobile && width <= 430
+  const useMobileGridForPopular = isMobile
   const popularCardWidth = useMemo(() => {
     if (!isMobile) return 215
     if (useMobileGridForPopular) {

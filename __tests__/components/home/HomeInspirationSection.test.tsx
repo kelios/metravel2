@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { useQuery } from '@tanstack/react-query';
-import HomeInspirationSections from '@/components/home/HomeInspirationSection';
+import HomeInspirationSections from '@/components/home/HomeInspirationSections';
 
 const mockPush = jest.fn();
 
@@ -120,9 +120,9 @@ describe('HomeInspirationSections', () => {
       expect(lastPath).not.toContain('categories=');
     });
 
-    it('"Смотреть маршруты →" button navigates to /search without filters', () => {
+    it('"Смотреть маршруты" button navigates to /search without filters', () => {
       const { getByLabelText } = render(<HomeInspirationSections />);
-      fireEvent.press(getByLabelText('Смотреть маршруты →'));
+      fireEvent.press(getByLabelText('Смотреть маршруты'));
       expect(mockPush).toHaveBeenCalledWith('/search');
     });
   });

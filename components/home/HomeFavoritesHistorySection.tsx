@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useFavorites } from '@/context/FavoritesContext'
 import TabTravelCard from '@/components/listTravel/TabTravelCard'
 import { ResponsiveContainer } from '@/components/layout'
+import { useResponsive } from '@/hooks/useResponsive'
 import { useTheme, useThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import Button from '@/components/ui/Button'
@@ -121,6 +122,7 @@ function HorizontalCards({
   onPressItem,
   testID,
   colors,
+  isMobile,
   styles,
 }: {
   data: TravelLikeItem[]
@@ -128,6 +130,7 @@ function HorizontalCards({
   onPressItem: (url: string) => void
   testID: string
   colors: ReturnType<typeof useThemedColors>
+  isMobile: boolean
   styles: ReturnType<typeof createStyles>
 }) {
   const { isDark } = useTheme()
@@ -172,7 +175,7 @@ function HorizontalCards({
   )
 
   useEffect(() => {
-    if (Platform.OS !== 'web') return
+    if (Platform.OS !== 'web' || isMobile) return
 
     const el = resolveScrollElement()
     if (!el || typeof el.addEventListener !== 'function') return
@@ -221,7 +224,30 @@ function HorizontalCards({
         // noop
       }
     }
-  }, [resolveScrollElement])
+  }, [isMobile, resolveScrollElement])
+
+  if (isMobile) {
+    return (
+      <View testID={testID} style={styles.mobileCardStack}>
+        {data.map((item) => (
+          <View key={`${String(item.id)}-${item.url}`} style={styles.mobileCardStackItem}>
+            <TabTravelCard
+              item={{
+                id: item.id,
+                title: item.title,
+                imageUrl: item.imageUrl,
+                city: item.city ?? null,
+                country: item.country ?? (item as any).countryName ?? null,
+              }}
+              badge={historyBadge}
+              onPress={() => onPressItem(item.url)}
+              layout="grid"
+            />
+          </View>
+        ))}
+      </View>
+    )
+  }
 
   if (Platform.OS === 'web') {
     return (
@@ -283,7 +309,9 @@ function HomeFavoritesHistorySection() {
   const { isAuthenticated } = useAuth()
   const { favorites, viewHistory, ensureServerData } = useFavorites() as any
   const colors = useThemedColors()
-  const styles = useMemo(() => createStyles(colors, DESIGN_TOKENS), [colors])
+  const { isPhone, isLargePhone } = useResponsive()
+  const isMobile = isPhone || isLargePhone
+  const styles = useMemo(() => createStyles(colors, DESIGN_TOKENS, isMobile), [colors, isMobile])
 
   useEffect(() => {
     if (!isAuthenticated) return
@@ -395,6 +423,7 @@ function HomeFavoritesHistorySection() {
                 onPressItem={openUrl}
                 testID={section.listTestID}
                 colors={colors}
+                isMobile={isMobile}
                 styles={styles}
               />
             </View>
@@ -408,6 +437,7 @@ function HomeFavoritesHistorySection() {
 const createStyles = (
   colors: ReturnType<typeof useThemedColors>,
   tokens: typeof DESIGN_TOKENS,
+  isMobile: boolean,
 ) =>
   StyleSheet.create({
     band: {
@@ -424,8 +454,8 @@ const createStyles = (
       gap: 18,
     },
     sectionHeaderRow: {
-      flexDirection: Platform.OS === 'web' ? 'row' : 'column',
-      alignItems: Platform.OS === 'web' ? 'flex-end' : 'stretch',
+      flexDirection: Platform.OS === 'web' && !isMobile ? 'row' : 'column',
+      alignItems: Platform.OS === 'web' && !isMobile ? 'flex-end' : 'stretch',
       justifyContent: 'space-between',
       gap: 12,
     },
@@ -550,6 +580,16 @@ const createStyles = (
         } as any,
         default: {},
       }),
+    },
+    mobileCardStack: {
+      width: '100%',
+      gap: 14,
+      paddingTop: 8,
+      paddingBottom: 4,
+    },
+    mobileCardStackItem: {
+      width: '100%',
+      minWidth: 0,
     },
   })
 

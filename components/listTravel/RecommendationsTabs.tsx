@@ -128,19 +128,29 @@ const CardSkeleton = ({
 };
 
 const RecommendationsPlaceholder = ({
+  isMobileWeb,
   styles,
   template,
 }: {
+  isMobileWeb: boolean;
   styles: TabStyles;
   template: ReturnType<typeof createTabCardTemplate>;
 }) => (
   <View style={styles.placeholderContainer}>
     <SkeletonLoader width={160} height={20} borderRadius={8} style={{ marginBottom: 12 }} />
-    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-      {[1, 2, 3, 4].map((i) => (
-        <CardSkeleton key={i} styles={styles} template={template} />
-      ))}
-    </ScrollView>
+    {isMobileWeb ? (
+      <View style={styles.mobileWebStack}>
+        {[1, 2, 3, 4].map((i) => (
+          <CardSkeleton key={i} styles={styles} template={template} />
+        ))}
+      </View>
+    ) : (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        {[1, 2, 3, 4].map((i) => (
+          <CardSkeleton key={i} styles={styles} template={template} />
+        ))}
+      </ScrollView>
+    )}
   </View>
 );
 
@@ -323,7 +333,19 @@ const RecommendationsTabs = memo(
       keyFactory: (item: CollectionItem) => string,
       cardFactory: (item: CollectionItem) => React.ReactNode,
     ) => {
-      if (isMobile && !isMobileWeb) {
+      if (isMobileWeb) {
+        return (
+          <View style={styles.mobileWebStack}>
+            {items.map((item) => (
+              <View key={keyFactory(item)} style={styles.mobileWebStackItem}>
+                {cardFactory(item)}
+              </View>
+            ))}
+          </View>
+        );
+      }
+
+      if (isMobile) {
         return (
           <View style={styles.mobileGrid}>
             {items.map((item) => (
@@ -375,8 +397,19 @@ const RecommendationsTabs = memo(
     }
 
     const renderTabPane = (children: React.ReactNode) => (
-      <View style={styles.tabPane} testID={`recommendations-tabpanel-${activeTab}`}>
-        <View style={[styles.tabPaneScroll, styles.tabPaneContent]}>{children}</View>
+      <View
+        style={[styles.tabPane, isMobileWeb && styles.tabPaneMobileWebExpanded]}
+        testID={`recommendations-tabpanel-${activeTab}`}
+      >
+        <View
+          style={[
+            styles.tabPaneScroll,
+            styles.tabPaneContent,
+            isMobileWeb && styles.tabPaneScrollMobileWebExpanded,
+          ]}
+        >
+          {children}
+        </View>
       </View>
     )
 
@@ -384,13 +417,13 @@ const RecommendationsTabs = memo(
       switch (activeTab) {
         case 'highlights':
           return renderTabPane(
-            <Suspense fallback={<RecommendationsPlaceholder styles={styles} template={tabCardTemplate} />}>
+            <Suspense fallback={<RecommendationsPlaceholder isMobileWeb={isMobileWeb} styles={styles} template={tabCardTemplate} />}>
               <WeeklyHighlights showHeader={false} enabled={isTabsVisible && activeTab === 'highlights'} />
             </Suspense>
           );
         case 'recommendations':
           return renderTabPane(
-            <Suspense fallback={<RecommendationsPlaceholder styles={styles} template={tabCardTemplate} />}>
+            <Suspense fallback={<RecommendationsPlaceholder isMobileWeb={isMobileWeb} styles={styles} template={tabCardTemplate} />}>
               <PersonalizedRecommendations showHeader={!isAuthenticated} onlyRecommendations={true} />
             </Suspense>
           );
@@ -489,7 +522,7 @@ const RecommendationsTabs = memo(
     };
 
     return (
-      <View style={[styles.container, styles.containerFixedHeight]}>
+      <View style={[styles.container, isMobileWeb ? styles.containerMobileWebExpanded : styles.containerFixedHeight]}>
         <View style={styles.header}>
           <ScrollView
             ref={scrollRef}
@@ -568,7 +601,7 @@ const RecommendationsTabs = memo(
           </Pressable>
         </View>
 
-        <View style={styles.content}>{renderContent()}</View>
+        <View style={[styles.content, isMobileWeb && styles.contentMobileWebExpanded]}>{renderContent()}</View>
       </View>
     );
   }

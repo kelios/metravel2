@@ -23,7 +23,6 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { ResponsiveContainer, ResponsiveStack } from '@/components/layout'
 import HomeHero from './HomeHero'
 import HomeFinalCTA from './HomeFinalCTA'
-import HomeFavoritesHistorySection from './HomeFavoritesHistorySection'
 import FadeInSection from '@/components/ui/FadeInSection'
 import { queueAnalyticsEvent } from '@/utils/analytics'
 import { hapticImpact } from '@/utils/haptics'
@@ -37,7 +36,8 @@ const FAQ_PLACEHOLDER_STYLE = { minHeight: 360 } as const
 
 const HomeHowItWorks = lazy(() => import('./HomeHowItWorks'))
 const HomeFAQSection = lazy(() => import('./HomeFAQSection'))
-const HomeInspirationSections = lazy(() => import('./HomeInspirationSection'))
+const HomeInspirationSections = lazy(() => import('./HomeInspirationSections'))
+const HomeFavoritesHistorySection = lazy(() => import('./HomeFavoritesHistorySection'))
 
 type PageSectionProps = {
   children: React.ReactNode
@@ -369,7 +369,9 @@ function Home() {
 
       <FadeInSection delay={0}>
         <View style={{ marginTop: isMobile ? 24 : 40 }}>
-          <HomeFavoritesHistorySection />
+          <Suspense fallback={<SectionSkeleton hydrated={false} />}>
+            <HomeFavoritesHistorySection />
+          </Suspense>
         </View>
       </FadeInSection>
 

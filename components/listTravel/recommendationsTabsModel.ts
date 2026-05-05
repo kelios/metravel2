@@ -45,7 +45,7 @@ export function getRecommendationsEnsureServerDataKey(activeTab: TabType) {
 }
 
 export function getRecommendationsCardLayout(isMobile: boolean, isMobileWeb: boolean) {
-  return isMobile && !isMobileWeb ? 'grid' : 'horizontal'
+  return isMobile && !isMobileWeb ? 'grid' : isMobileWeb ? 'grid' : 'horizontal'
 }
 
 export function mapRecommendationsCardItem(item: CollectionItem) {

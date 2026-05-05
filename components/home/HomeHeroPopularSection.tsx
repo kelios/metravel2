@@ -29,7 +29,7 @@ type HomeHeroPopularSectionProps = {
 type PopularCardProps = {
   image: BookImage
   styles: any
-  width: number
+  width?: number | string
   height: number
   onOpenArticle: (href?: string | null) => void
   useGridLayout?: boolean
@@ -115,7 +115,7 @@ function PopularRouteCard({
       style={({ pressed, hovered }) => [
         styles.imageCard,
         useGridLayout && styles.imageCardGrid,
-        useGridLayout && { width },
+        useGridLayout && width ? { width } : null,
         (pressed || hovered) && styles.imageCardHover,
       ]}
       accessibilityRole="button"
@@ -183,7 +183,7 @@ export default function HomeHeroPopularSection({
               key={image.title}
               image={image}
               styles={styles}
-              width={popularCardWidth}
+              width="100%"
               height={popularCardHeight}
               onOpenArticle={onOpenArticle}
               useGridLayout

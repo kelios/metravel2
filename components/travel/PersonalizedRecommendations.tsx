@@ -126,10 +126,10 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                     country: (item as any).country ?? null,
                 }}
                 onPress={() => handleItemPress(item.url)}
-                layout={isMobile && !isMobileWeb ? 'grid' : 'horizontal'}
+                layout={isMobile ? 'grid' : 'horizontal'}
             />
         );
-    }, [handleItemPress, isMobile, isMobileWeb]);
+    }, [handleItemPress, isMobile]);
 
     const hasFavorites = !onlyRecommendations && favorites && favorites.length > 0;
     const hasHistory = !onlyRecommendations && viewHistory && viewHistory.length > 0;
@@ -267,60 +267,90 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
             {hasFavorites && (
                 <View style={styles.section} testID="personalized-favorites-section">
                     <Text style={styles.sectionTitle}>Избранное</Text>
-                    <ScrollView
-                        testID="personalized-favorites-rail"
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        nestedScrollEnabled
-                        scrollEnabled={true}
-                        style={styles.webHorizontalScroll}
-                        contentContainerStyle={styles.scrollContent}
-                        removeClippedSubviews={Platform.OS !== "web"}
-                        decelerationRate="fast"
-                        {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
-                    >
-                        {favorites.map(item => renderItem(item as any))}
-                    </ScrollView>
+                    {isMobileWeb ? (
+                        <View style={styles.mobileWebStack} testID="personalized-favorites-stack">
+                            {favorites.map(item => (
+                                <View key={`${(item as any).type}-${item.id}`} style={styles.mobileWebStackItem}>
+                                    {renderItem(item as any)}
+                                </View>
+                            ))}
+                        </View>
+                    ) : (
+                        <ScrollView
+                            testID="personalized-favorites-rail"
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            nestedScrollEnabled
+                            scrollEnabled={true}
+                            style={styles.webHorizontalScroll}
+                            contentContainerStyle={styles.scrollContent}
+                            removeClippedSubviews={Platform.OS !== "web"}
+                            decelerationRate="fast"
+                            {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
+                        >
+                            {favorites.map(item => renderItem(item as any))}
+                        </ScrollView>
+                    )}
                 </View>
             )}
 
             {hasHistory && (
                 <View style={styles.section} testID="personalized-history-section">
                     <Text style={styles.sectionTitle}>Недавно просмотрено</Text>
-                    <ScrollView
-                        testID="personalized-history-rail"
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        nestedScrollEnabled
-                        scrollEnabled={true}
-                        style={styles.webHorizontalScroll}
-                        contentContainerStyle={styles.scrollContent}
-                        removeClippedSubviews={Platform.OS !== "web"}
-                        decelerationRate="fast"
-                        {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
-                    >
-                        {viewHistory.map(item => renderItem(item as any))}
-                    </ScrollView>
+                    {isMobileWeb ? (
+                        <View style={styles.mobileWebStack} testID="personalized-history-stack">
+                            {viewHistory.map(item => (
+                                <View key={`${(item as any).type}-${item.id}-${(item as any).viewedAt ?? ''}`} style={styles.mobileWebStackItem}>
+                                    {renderItem(item as any)}
+                                </View>
+                            ))}
+                        </View>
+                    ) : (
+                        <ScrollView
+                            testID="personalized-history-rail"
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            nestedScrollEnabled
+                            scrollEnabled={true}
+                            style={styles.webHorizontalScroll}
+                            contentContainerStyle={styles.scrollContent}
+                            removeClippedSubviews={Platform.OS !== "web"}
+                            decelerationRate="fast"
+                            {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
+                        >
+                            {viewHistory.map(item => renderItem(item as any))}
+                        </ScrollView>
+                    )}
                 </View>
             )}
 
             {recommendations.length > 0 && (
                 <View style={styles.section} testID="personalized-recommendations-list-section">
                     <Text style={styles.sectionTitle}>Рекомендации</Text>
-                    <ScrollView
-                        testID="personalized-recommendations-rail"
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        nestedScrollEnabled
-                        scrollEnabled={true}
-                        style={styles.webHorizontalScroll}
-                        contentContainerStyle={styles.scrollContent}
-                        removeClippedSubviews={Platform.OS !== "web"}
-                        decelerationRate="fast"
-                        {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
-                    >
-                        {recommendations.map(item => renderItem(item))}
-                    </ScrollView>
+                    {isMobileWeb ? (
+                        <View style={styles.mobileWebStack} testID="personalized-recommendations-stack">
+                            {recommendations.map(item => (
+                                <View key={`${item.type}-${item.id}`} style={styles.mobileWebStackItem}>
+                                    {renderItem(item)}
+                                </View>
+                            ))}
+                        </View>
+                    ) : (
+                        <ScrollView
+                            testID="personalized-recommendations-rail"
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            nestedScrollEnabled
+                            scrollEnabled={true}
+                            style={styles.webHorizontalScroll}
+                            contentContainerStyle={styles.scrollContent}
+                            removeClippedSubviews={Platform.OS !== "web"}
+                            decelerationRate="fast"
+                            {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
+                        >
+                            {recommendations.map(item => renderItem(item))}
+                        </ScrollView>
+                    )}
                 </View>
             )}
         </View>
@@ -432,6 +462,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
             } as any,
             default: {},
         }),
+    },
+    mobileWebStack: {
+        gap: 12,
+        paddingHorizontal: 4,
+        paddingVertical: 4,
+    },
+    mobileWebStackItem: {
+        width: '100%',
+        minWidth: 0,
     },
     item: {
         width: 168,
