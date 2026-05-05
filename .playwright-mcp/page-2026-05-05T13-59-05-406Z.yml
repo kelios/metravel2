@@ -1,0 +1,9 @@
+- generic [ref=e2]:
+  - generic [ref=e6]:
+    - progressbar [ref=e7]:
+      - img [ref=e9]
+    - generic [ref=e12]:
+      - generic [ref=e13]: Bundling...
+      - generic [ref=e14]: app/_layout.web.tsx
+  - generic:
+    - img
