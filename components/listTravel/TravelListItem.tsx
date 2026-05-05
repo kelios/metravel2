@@ -19,6 +19,7 @@ import TravelListItemCountriesList from './TravelListItemCountriesList';
 import { createTravelListItemStyles } from './travelListItemStyles';
 import TravelListItemSelectableOverlay from './TravelListItemSelectableOverlay';
 import {
+  hasPetCompanion,
   isLikelyWatermarked,
   normalizeOwnerIds,
   resolveTravelAuthorDisplayName,
@@ -149,6 +150,8 @@ function TravelListItem({
     const countries = useMemo(() => {
         return (countryName ?? '').split(",").map((c) => c.trim()).filter(Boolean);
     }, [countryName]);
+
+    const petFriendly = useMemo(() => hasPetCompanion(travel.companions), [travel.companions]);
 
     // ✅ Width-based адаптивные значения для карточки: используем фактическую ширину, если она есть
     const effectiveWidth = typeof cardWidth === 'number' ? cardWidth : viewportWidth;
@@ -387,9 +390,10 @@ const hasContentInfo = useMemo(() => {
     views > 0 ||
     hasRating ||
     popularityFlags.isPopular ||
-    popularityFlags.isNew
+    popularityFlags.isNew ||
+    petFriendly
   );
-}, [countries.length, hasAuthorMeta, popularityFlags.isPopular, popularityFlags.isNew, views, travel.rating]);
+}, [countries.length, hasAuthorMeta, popularityFlags.isPopular, popularityFlags.isNew, views, travel.rating, petFriendly]);
 
 const metaInfoTopRowChildren = useMemo(() => {
   const children: React.ReactNode[] = [];
@@ -508,6 +512,15 @@ const contentSlotWithoutTitle = hasContentInfo ? (
             size={Platform.select({ default: 9, web: 10 })}
             color={colors.success}
           />
+        </View>
+      )}
+      {petFriendly && (
+        <View
+          style={[styles.statusBadge, styles.statusBadgePetFriendly]}
+          accessibilityLabel="Путешествие с питомцем"
+          {...(Platform.OS === 'web' ? ({ title: 'Путешествие с питомцем' } as any) : null)}
+        >
+          <Text style={styles.petFriendlyEmoji}>🐾</Text>
         </View>
       )}
     </View>

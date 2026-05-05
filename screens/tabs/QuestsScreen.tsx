@@ -1140,6 +1140,8 @@ export default function QuestsScreen() {
                         points: q.points,
                         durationMin: q.durationMin,
                         difficulty: q.difficulty,
+                        tags: q.tags,
+                        petFriendly: q.petFriendly,
                         cover: coverUri || undefined,
                     },
                 };

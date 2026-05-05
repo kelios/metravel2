@@ -15,6 +15,39 @@ export const isLikelyWatermarked = (url: string | null | undefined): boolean => 
   return WATERMARK_DOMAINS.some((domain) => lower.includes(domain))
 }
 
+const PET_COMPANION_PATTERNS = [
+  /собак/i,
+  /\bпёс\b/i,
+  /\bпес\b/i,
+  /\bпсом\b/i,
+  /\bкот\b/i,
+  /\bкошк/i,
+  /\bкот[а-я]+/i,
+  /\bпитом[еоц][цв]/i,
+  /\bжив[оы]тн/i,
+  /\bdog\b/i,
+  /\bcat\b/i,
+  /\bpet\b/i,
+]
+
+export const hasPetCompanion = (companions: unknown): boolean => {
+  if (!companions) return false
+  const items = Array.isArray(companions) ? companions : [companions]
+  for (const item of items) {
+    if (!item) continue
+    const value =
+      typeof item === 'string'
+        ? item
+        : typeof item === 'object' && item !== null
+          ? String((item as any).name ?? '')
+          : ''
+    const trimmed = value.trim()
+    if (!trimmed) continue
+    if (PET_COMPANION_PATTERNS.some((re) => re.test(trimmed))) return true
+  }
+  return false
+}
+
 export const normalizeOwnerIds = (raw: unknown): string[] => {
   if (raw == null) return []
 

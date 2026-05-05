@@ -8,20 +8,7 @@ export type City = {
 
 export type NearbyCity = City & { isNearby: true };
 
-export type QuestMeta = {
-    id: string;
-    title: string;
-    points: number;
-    durationMin?: number;
-    difficulty?: 'easy' | 'medium' | 'hard';
-    cover?: any;
-    lat: number;
-    lng: number;
-    cityId?: string;
-    cityName?: string;
-    countryName?: string;
-    countryCode?: string;
-};
+export type { QuestMeta } from '@/utils/questAdapters';
 
 export const pluralizeQuest = (n: number): string => {
     const abs = Math.abs(n) % 100;

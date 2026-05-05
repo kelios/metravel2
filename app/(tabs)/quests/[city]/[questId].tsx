@@ -27,8 +27,8 @@ export default function QuestByIdScreen() {
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     // Загружаем бандл квеста из бэкенда по quest_id
-    const { bundle, loading: loaded_loading, error: _error, refetch } = useQuestBundle(questId ? String(questId) : undefined);
-    const loaded = !loaded_loading;
+    const { bundle, loading, error: bundleError, refetch } = useQuestBundle(questId ? String(questId) : undefined);
+    const loaded = !loading;
 
     // Синхронизация прогресса с бэкендом для авторизованных пользователей
     const { isAuthenticated } = useAuth();
@@ -240,15 +240,24 @@ export default function QuestByIdScreen() {
                         {/* @ts-ignore -- Ionicons name prop types are incomplete for all valid icon names */}
                         <Ion name="alert-circle" size={28} color={colors.textMuted} />
                     </Suspense>
-                    <Text style={styles.notFoundTitle}>Квест не найден</Text>
-                    <Text style={styles.notFoundText}>Проверь адрес или выбери квест из списка.</Text>
-                    <Link href="/quests" asChild>
-                        <Pressable style={styles.backBtn}>
+                    <Text style={styles.notFoundTitle}>{bundleError ? 'Не удалось загрузить квест' : 'Квест не найден'}</Text>
+                    <Text style={styles.notFoundText}>{bundleError || 'Проверь адрес или выбери квест из списка.'}</Text>
+                    {bundleError && (
+                        <Pressable onPress={refetch} style={styles.backBtn}>
                             <Suspense fallback={null}>
                                 {/* @ts-ignore -- Ionicons name prop types are incomplete for all valid icon names */}
-                                <Ion name="arrow-back" size={16} color={colors.textOnPrimary} />
+                                <Ion name="refresh" size={16} color={colors.textOnPrimary} />
                             </Suspense>
-                            <Text style={styles.backBtnTxt}>К списку квестов</Text>
+                            <Text style={styles.backBtnTxt}>Повторить</Text>
+                        </Pressable>
+                    )}
+                    <Link href="/quests" asChild>
+                        <Pressable style={bundleError ? styles.secondaryBtn : styles.backBtn}>
+                            <Suspense fallback={null}>
+                                {/* @ts-ignore -- Ionicons name prop types are incomplete for all valid icon names */}
+                                <Ion name="arrow-back" size={16} color={bundleError ? colors.text : colors.textOnPrimary} />
+                            </Suspense>
+                            <Text style={bundleError ? styles.secondaryBtnTxt : styles.backBtnTxt}>К списку квестов</Text>
                         </Pressable>
                     </Link>
                 </View>

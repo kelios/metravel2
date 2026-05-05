@@ -320,6 +320,15 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
     statusBadgeNew: {
     },
 
+    statusBadgePetFriendly: {
+      paddingHorizontal: 4,
+    },
+
+    petFriendlyEmoji: {
+      fontSize: Platform.OS === 'web' ? 12 : 11,
+      lineHeight: Platform.OS === 'web' ? 14 : 13,
+    },
+
     statusBadgeText: {
       fontSize: Platform.OS === 'web' ? 10.5 : 10,
       fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
