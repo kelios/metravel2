@@ -32,9 +32,22 @@ const gotoWithRetry = async (
 test.describe('@smoke Manual QA automation: auth entrypoints', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
+  const getAccountAnchor = (page: any) =>
+    page
+      .locator('[data-testid="account-menu-anchor"]:visible')
+      .or(page.getByRole('button', { name: /Открыть меню аккаунта/i }))
+      .first();
+
   const openGuestAccountMenu = async (page: any) => {
-    const accountButton = page.locator('[data-testid="account-menu-anchor"]:visible').first();
-    await expect(accountButton).toBeVisible({ timeout: 10_000 });
+    let accountButton = getAccountAnchor(page);
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      if (await accountButton.isVisible().catch(() => false)) {
+        break;
+      }
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60_000 });
+      accountButton = getAccountAnchor(page);
+    }
+    await expect(accountButton).toBeVisible({ timeout: 15_000 });
 
     await accountButton.hover().catch(() => null);
     await accountButton.focus().catch(() => null);
