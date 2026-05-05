@@ -149,7 +149,7 @@ test.describe('Gallery: delete broken image (404)', () => {
         (await page.getByText('Главное изображение', { exact: true }).first().isVisible().catch(() => false));
       if (isOnMedia) break;
 
-      const milestone3 = page.locator('[aria-label="Перейти к шагу 3"]').first();
+      const milestone3 = page.getByRole('button', { name: /перейти к шагу 3:?\s*медиа/i }).first();
       if (await milestone3.isVisible().catch(() => false)) {
         await milestone3.click({ force: true }).catch(() => null);
         await page.waitForLoadState('domcontentloaded').catch(() => null);

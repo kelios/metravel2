@@ -5,6 +5,15 @@ import { normalizeMediaUrl } from '@/utils/mediaUrl';
 
 const QUEST_DETAIL_URL_RE = /\/quests\/[^/]+\/[^/?#]+/;
 const QUEST_FALLBACK_RE = /ошибка|Internal Server Error|Failed to load quests|не удалось загрузить|квесты не найдены|нет квестов/i;
+const SENSITIVE_URL_QUERY_RE = /([?&](?:X-Amz-[^=]+|AWSAccessKeyId|Signature|Expires|token|access_token|auth|key|credential|signature)=)[^&#\s)]+/gi;
+
+const redactMediaUrl = (value: unknown) => {
+    if (typeof value !== 'string') return value;
+
+    return value
+        .replace(SENSITIVE_URL_QUERY_RE, '$1[redacted]')
+        .replace(/([?&])[^?#\s)]+/g, (_match, prefix: string) => `${prefix}[query-redacted]`);
+};
 
 const waitForQuestListState = async (page: any, timeout = 30_000) =>
     Promise.any([
@@ -101,7 +110,7 @@ test.describe('Quest Video Loading', () => {
                 if (tagName === 'video') {
                     // Проверяем HTML5 video
                     const videoSrc = await firstVideo.getAttribute('src');
-                    console.log(`Video src: ${videoSrc}`);
+                    console.log(`Video src: ${redactMediaUrl(videoSrc)}`);
 
                     // Проверяем, что src не пустой
                     expect(videoSrc).toBeTruthy();
@@ -133,7 +142,7 @@ test.describe('Quest Video Loading', () => {
                 } else if (tagName === 'iframe') {
                     // Проверяем YouTube iframe
                     const iframeSrc = await firstVideo.getAttribute('src');
-                    console.log(`YouTube iframe src: ${iframeSrc}`);
+                    console.log(`YouTube iframe src: ${redactMediaUrl(iframeSrc)}`);
 
                     expect(iframeSrc).toBeTruthy();
                     expect(iframeSrc).toContain('youtube.com/embed/');
@@ -212,12 +221,12 @@ test.describe('Quest Video Loading', () => {
 
         // Проверяем video_url - применяем ту же нормализацию, что и фронтенд
         if (bundle.finale.video_url) {
-            console.log(`Video URL from backend: ${bundle.finale.video_url}`);
+            console.log(`Video URL from backend: ${redactMediaUrl(bundle.finale.video_url)}`);
 
             // Применяем нормализацию как в api/quests.ts
             const normalizedUrl = normalizeMediaUrl(bundle.finale.video_url);
 
-            console.log(`Normalized video URL: ${normalizedUrl}`);
+            console.log(`Normalized video URL: ${redactMediaUrl(normalizedUrl)}`);
 
             // Проверяем формат нормализованного URL
             expect(normalizedUrl).toMatch(/^https?:\/\//);
@@ -230,7 +239,7 @@ test.describe('Quest Video Loading', () => {
         }
 
         if (bundle.finale.poster_url) {
-            console.log(`Poster URL from API: ${bundle.finale.poster_url}`);
+            console.log(`Poster URL from API: ${redactMediaUrl(bundle.finale.poster_url)}`);
         }
     });
 
@@ -270,7 +279,7 @@ test.describe('Quest Video Loading', () => {
                 // Проверяем наличие ошибок
                 if (videoErrors.length > 0) {
                     console.log('❌ Video errors detected:');
-                    videoErrors.forEach(err => console.log(`  - ${err}`));
+                    videoErrors.forEach(err => console.log(`  - ${redactMediaUrl(err)}`));
                 } else {
                     console.log('✅ No video errors detected');
                 }
@@ -278,7 +287,7 @@ test.describe('Quest Video Loading', () => {
                 // Выводим все ошибки консоли
                 if (consoleErrors.length > 0) {
                     console.log('Console errors:');
-                    consoleErrors.forEach(err => console.log(`  - ${err}`));
+                    consoleErrors.forEach(err => console.log(`  - ${redactMediaUrl(err)}`));
                 }
             }
         }
