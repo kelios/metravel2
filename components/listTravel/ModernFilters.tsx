@@ -26,7 +26,7 @@ import {
 } from './filters';
 
 export type { FilterOption, FilterGroup, FilterState } from './filters/types';
-import type { FilterOption, FilterGroup, FilterState } from './filters/types';
+import type { FilterGroup, FilterState } from './filters/types';
 
 function getModernFiltersReserveState(params: {
   filterGroups: FilterGroup[];
