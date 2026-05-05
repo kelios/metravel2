@@ -116,8 +116,12 @@ test.describe('Gallery: delete broken image (404)', () => {
     await page.goto('/travel/new', { waitUntil: 'domcontentloaded', timeout: 120_000 });
 
     // Recover draft if dialog appears (it can mount async after initial render).
-    const draftDialogTitle = page.getByText('Найден черновик', { exact: true }).first();
-    const recoverBtn = page.getByRole('button', { name: /восстановить/i }).first();
+    const draftDialogTitle = page
+      .getByText(/^(Найден черновик|Есть несохранённые изменения)$/)
+      .first();
+    const recoverBtn = page
+      .getByRole('button', { name: /(восстановить|продолжить.*черновик)/i })
+      .first();
 
     await Promise.race([
       draftDialogTitle.waitFor({ state: 'visible', timeout: 8000 }).catch(() => null),
