@@ -165,6 +165,19 @@ const emitTextSummary = ({ source, changedFiles, lintTargets }) => {
   }
 }
 
+const emitSelectiveCheckOutputs = (checks) => {
+  for (const check of checks || []) {
+    if (check.result.stdout.trim()) {
+      process.stdout.write(check.result.stdout)
+      if (!check.result.stdout.endsWith('\n')) process.stdout.write('\n')
+    }
+    if (check.result.stderr.trim()) {
+      process.stderr.write(check.result.stderr)
+      if (!check.result.stderr.endsWith('\n')) process.stderr.write('\n')
+    }
+  }
+}
+
 const emitJsonSummary = ({ source, changedFiles, lintTargets, selectiveChecks }) => {
   const payload = {
     contractVersion: 1,
@@ -192,12 +205,12 @@ const main = () => {
       output: args.output,
     })
 
-    const failedSelective = result.selectiveChecks.find((check) => check.result.status !== 0)
-    if (failedSelective) {
-      process.exit(failedSelective.result.status)
-    }
-
     if (args.output === 'json') {
+      const failedSelective = result.selectiveChecks.find((check) => check.result.status !== 0)
+      if (failedSelective) {
+        process.exit(failedSelective.result.status)
+      }
+
       emitJsonSummary({
         source: input.source,
         changedFiles: input.files,
@@ -212,6 +225,12 @@ const main = () => {
       changedFiles: input.files,
       lintTargets: result.lintTargets,
     })
+    emitSelectiveCheckOutputs(result.selectiveChecks)
+
+    const failedSelective = result.selectiveChecks.find((check) => check.result.status !== 0)
+    if (failedSelective) {
+      process.exit(failedSelective.result.status)
+    }
 
     if (args.dryRun) {
       console.log('fast-scope-checks: dry-run, skipping guard:external-links and eslint.')

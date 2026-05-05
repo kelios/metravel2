@@ -90,12 +90,25 @@ async function ensureFiltersPanelVisible(page: any) {
     return;
   }
 
+  const toggleAllButton = page.getByTestId('toggle-all-groups').first();
+  const sortTrigger = page.getByRole('button', { name: /Сортировка:/i }).first();
+  if (
+    (await toggleAllButton.isVisible().catch(() => false)) ||
+    (await sortTrigger.isVisible().catch(() => false))
+  ) {
+    return;
+  }
+
   const openFiltersButton = page.getByLabel('Открыть фильтры').first();
   if (await openFiltersButton.isVisible().catch(() => false)) {
     await openFiltersButton.click();
   }
 
-  await expect(filtersTitle).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
+  await Promise.any([
+    filtersTitle.waitFor({ state: 'visible', timeout: FILTER_TIMEOUT_MS }),
+    toggleAllButton.waitFor({ state: 'visible', timeout: FILTER_TIMEOUT_MS }),
+    sortTrigger.waitFor({ state: 'visible', timeout: FILTER_TIMEOUT_MS }),
+  ]);
 }
 
 async function hasEmptyResultsShell(page: any) {
@@ -412,21 +425,24 @@ test.describe('@smoke Filters and Sorting UX', () => {
   test('toggle all groups button works', async ({ page }) => {
     const toggleAllButton = page.getByTestId('toggle-all-groups');
     await expect(toggleAllButton).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
+
+    const initialLabel = await toggleAllButton.getAttribute('aria-label');
+    expect(initialLabel).toMatch(/Свернуть все группы фильтров|Развернуть все группы фильтров/);
     
-    // Click to expand all
+    // Click to toggle all groups.
     await toggleAllButton.click();
-    await page.waitForTimeout(600); // Wait for all animations
+    await expect
+      .poll(async () => toggleAllButton.getAttribute('aria-label'), { timeout: 5_000 })
+      .not.toBe(initialLabel);
     
-    // Check if button text changed
-    const buttonText = await toggleAllButton.textContent();
-    expect(buttonText).toMatch(/Свернуть все|Развернуть все/);
-    
-    // Click again to collapse all
+    const toggledLabel = await toggleAllButton.getAttribute('aria-label');
+    expect(toggledLabel).toMatch(/Свернуть все группы фильтров|Развернуть все группы фильтров/);
+
+    // Click again to return to the previous state.
     await toggleAllButton.click();
-    await page.waitForTimeout(600);
-    
-    const newButtonText = await toggleAllButton.textContent();
-    expect(newButtonText).not.toBe(buttonText);
+    await expect
+      .poll(async () => toggleAllButton.getAttribute('aria-label'), { timeout: 5_000 })
+      .toBe(initialLabel);
   });
 
   test('selected filters show count badge', async ({ page }) => {

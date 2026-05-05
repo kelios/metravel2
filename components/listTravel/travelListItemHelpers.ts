@@ -15,19 +15,20 @@ export const isLikelyWatermarked = (url: string | null | undefined): boolean => 
   return WATERMARK_DOMAINS.some((domain) => lower.includes(domain))
 }
 
-const PET_COMPANION_PATTERNS = [
-  /собак/i,
-  /\bпёс\b/i,
-  /\bпес\b/i,
-  /\bпсом\b/i,
-  /\bкот\b/i,
-  /\bкошк/i,
-  /\bкот[а-я]+/i,
-  /\bпитом[еоц][цв]/i,
-  /\bжив[оы]тн/i,
-  /\bdog\b/i,
-  /\bcat\b/i,
-  /\bpet\b/i,
+const PET_COMPANION_TOKENS = [
+  'собак',
+  'пёс',
+  'пес',
+  'псом',
+  'кот',
+  'кош',
+  'котом',
+  'кота',
+  'питом',
+  'животн',
+  'dog',
+  'cat',
+  'pet',
 ]
 
 export const hasPetCompanion = (companions: unknown): boolean => {
@@ -41,9 +42,9 @@ export const hasPetCompanion = (companions: unknown): boolean => {
         : typeof item === 'object' && item !== null
           ? String((item as any).name ?? '')
           : ''
-    const trimmed = value.trim()
+    const trimmed = value.trim().toLowerCase()
     if (!trimmed) continue
-    if (PET_COMPANION_PATTERNS.some((re) => re.test(trimmed))) return true
+    if (PET_COMPANION_TOKENS.some((token) => trimmed.includes(token))) return true
   }
   return false
 }

@@ -95,7 +95,7 @@ function splitModernFilterGroups(filterGroups: FilterGroup[]) {
 
 function getModernFiltersResultsText(resultsCount?: number) {
   if (typeof resultsCount !== 'number') return '';
-  return `Найдено ${resultsCount} ${getTravelLabel(resultsCount)}`;
+  return `${resultsCount} ${getTravelLabel(resultsCount)}`;
 }
 
 function getOrderedModernFilterOptions(group: FilterGroup, selectedFilters: FilterState) {
@@ -241,13 +241,19 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
           (Platform.OS !== 'web' || isNarrowWeb) && styles.topChromeCompact,
         ]}
       >
-        {/* Header */}
+        {/* Header — single compact row */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Feather name="filter" size={16} color={colors.primary} />
-            <Text style={styles.headerTitle}>Фильтры</Text>
+            {Platform.OS !== 'web' && (
+              <>
+                <Feather name="filter" size={16} color={colors.primary} />
+                <Text style={styles.headerTitle}>Фильтры</Text>
+              </>
+            )}
             {!!resultsText && (
-              <Text style={styles.headerCount} numberOfLines={1}>{resultsText}</Text>
+              <View style={styles.headerCountChip}>
+                <Text style={styles.headerCountChipText} numberOfLines={1}>{resultsText}</Text>
+              </View>
             )}
           </View>
           <View style={styles.headerRight}>
@@ -266,6 +272,58 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                 </Text>
               </Pressable>
             )}
+            <Pressable
+              testID="toggle-all-groups"
+              onPress={() => {
+                const allKeys = groupsWithoutSort.map((g) => g.key);
+                const allExpanded = allKeys.every((key) => expandedGroups.has(key));
+                const next = new Set<string>();
+
+                allKeys.forEach((key) => {
+                  if (!animatedValues[key]) {
+                    animatedValues[key] = new Animated.Value(allExpanded ? 1 : 0);
+                  }
+                  const animated = animatedValues[key];
+                  Animated.timing(animated, {
+                    toValue: allExpanded ? 0 : 1,
+                    duration: DESIGN_TOKENS.animations.duration.normal,
+                    useNativeDriver: false,
+                  }).start();
+
+                  if (!allExpanded) {
+                    next.add(key);
+                  }
+                });
+
+                if (allExpanded) {
+                  setExpandedGroups(new Set());
+                } else {
+                  setExpandedGroups(next);
+                }
+              }}
+              style={({ hovered, pressed }) => [
+                styles.toggleAllButton,
+                (hovered || pressed) && styles.toggleAllButtonPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={areAllGroupsExpanded ? 'Свернуть все группы фильтров' : 'Развернуть все группы фильтров'}
+              {...(Platform.OS === 'web'
+                ? ({ title: areAllGroupsExpanded ? 'Свернуть все' : 'Развернуть все' } as any)
+                : null)}
+            >
+              <View style={styles.toggleAllButtonInner}>
+                <Feather
+                  name={areAllGroupsExpanded ? 'chevrons-up' : 'chevrons-down'}
+                  size={16}
+                  color={colors.primary}
+                />
+                {Platform.OS !== 'web' && (
+                  <Text style={styles.toggleAllButtonText} numberOfLines={1}>
+                    {areAllGroupsExpanded ? 'Свернуть' : 'Развернуть'}
+                  </Text>
+                )}
+              </View>
+            </Pressable>
             {onClose && (
               <Pressable
                 onPress={onClose}
@@ -298,57 +356,6 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
             <Text style={styles.clearAllMobileButtonText}>Очистить все фильтры</Text>
           </Pressable>
         )}
-
-        {/* Toggle all groups */}
-        <Pressable
-          testID="toggle-all-groups"
-          onPress={() => {
-            const allKeys = groupsWithoutSort.map((g) => g.key);
-            const allExpanded = allKeys.every((key) => expandedGroups.has(key));
-            const next = new Set<string>();
-
-            allKeys.forEach((key) => {
-              if (!animatedValues[key]) {
-                animatedValues[key] = new Animated.Value(allExpanded ? 1 : 0);
-              }
-              const animated = animatedValues[key];
-              Animated.timing(animated, {
-                toValue: allExpanded ? 0 : 1,
-                duration: DESIGN_TOKENS.animations.duration.normal,
-                useNativeDriver: false,
-              }).start();
-
-              if (!allExpanded) {
-                next.add(key);
-              }
-            });
-
-            if (allExpanded) {
-              setExpandedGroups(new Set());
-            } else {
-              setExpandedGroups(next);
-            }
-          }}
-          style={({ hovered, pressed }) => [
-            styles.toggleAllButton,
-            (hovered || pressed) && styles.toggleAllButtonPressed,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={areAllGroupsExpanded ? 'Свернуть все группы фильтров' : 'Развернуть все группы фильтров'}
-        >
-          <View style={styles.toggleAllButtonInner}>
-            <View style={styles.iconSlot16}>
-              <Feather
-                name={areAllGroupsExpanded ? 'chevrons-up' : 'chevrons-down'}
-                size={16}
-                color={colors.textSecondary}
-              />
-            </View>
-            <Text style={styles.toggleAllButtonText}>
-              {areAllGroupsExpanded ? 'Свернуть все' : 'Развернуть все'}
-            </Text>
-          </View>
-        </Pressable>
 
         {/* Moderation (admin) */}
         <View style={styles.extraFilters}>

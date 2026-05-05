@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react-native';
 import { ThemeProvider } from '@/hooks/useTheme';
 import ListTravel from '@/components/listTravel/ListTravelBase';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -420,7 +420,7 @@ describe('ListTravel Integration Tests', () => {
 
     // Check that main components are rendered
     await waitFor(() => {
-      expect(screen.getByText('Найдено 2 путешествия')).toBeTruthy();
+      expect(within(screen.getByTestId('results-count-wrapper')).getByText('2 путешествия')).toBeTruthy();
     });
 
     expect(screen.getByText('Mountain Trip')).toBeTruthy();
@@ -502,7 +502,7 @@ describe('ListTravel Integration Tests', () => {
     renderWithProviders(<ListTravel />);
 
     await waitFor(() => {
-      expect(screen.getByText('Найдено 1 путешествие')).toBeTruthy();
+      expect(within(screen.getByTestId('results-count-wrapper')).getByText('1 путешествие')).toBeTruthy();
     });
 
     expect(screen.getByText('Mountain Trip')).toBeTruthy();

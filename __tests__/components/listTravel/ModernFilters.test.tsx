@@ -79,7 +79,7 @@ describe('ModernFilters Component', () => {
 
     expect(screen.getByText('Категории')).toBeTruthy();
     expect(screen.getByText('Транспорт')).toBeTruthy();
-    expect(screen.getByText('Найдено 10 путешествий')).toBeTruthy();
+    expect(screen.getByText('10 путешествий')).toBeTruthy();
   });
 
   it('calls onFilterChange when filter option is selected', async () => {
@@ -113,7 +113,7 @@ describe('ModernFilters Component', () => {
       />
     );
 
-    expect(screen.getByText('Найдено 1 путешествие')).toBeTruthy();
+    expect(screen.getByText('1 путешествие')).toBeTruthy();
 
     rerender(
       <QueryClientProvider client={new QueryClient()}>
@@ -129,7 +129,7 @@ describe('ModernFilters Component', () => {
       </QueryClientProvider>
     );
 
-    expect(screen.getByText('Найдено 5 путешествий')).toBeTruthy();
+    expect(screen.getByText('5 путешествий')).toBeTruthy();
   });
 
   it('calls onClearAll when clear button is pressed', () => {

@@ -93,17 +93,24 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       color: colors.text,
       letterSpacing: 0,
     },
-    headerCount: {
+    headerCountChip: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 999,
+      backgroundColor: colors.brandSoft,
+      flexShrink: 1,
+    },
+    headerCountChipText: {
       fontSize: typography.sizes.xs,
-      color: colors.textMuted,
-      fontWeight: typography.weights.medium as any,
+      color: colors.primary,
+      fontWeight: typography.weights.semibold as any,
     },
     headerLeft: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.xs,
       flex: 1,
-      flexWrap: 'wrap',
+      minWidth: 0,
     },
     iconSlot16: {
       width: 16,
@@ -156,9 +163,7 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       }),
     },
     toggleAllButton: {
-      alignSelf: 'flex-end',
-      marginBottom: spacing.xs,
-      paddingVertical: 4,
+      paddingVertical: 6,
       paddingHorizontal: spacing.xs,
       backgroundColor: 'transparent',
       borderRadius: CONTROL_RADIUS,
@@ -169,6 +174,9 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
         },
       }),
     },
+    toggleAllButtonPressed: {
+      backgroundColor: colors.brandSoft,
+    },
     toggleAllButtonInner: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -177,7 +185,7 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
     toggleAllButtonText: {
       fontSize: typography.sizes.xs,
       color: colors.primary,
-      fontWeight: typography.weights.medium as any,
+      fontWeight: typography.weights.semibold as any,
     },
     clearButton: {
       minHeight: 36,
@@ -273,9 +281,6 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
     clearButtonPressed: {
       backgroundColor: colors.brandAlpha30,
       borderColor: colors.borderAccent,
-    },
-    toggleAllButtonPressed: {
-      backgroundColor: colors.surfaceMuted,
     },
     sortDropdownTriggerHover: Platform.select({
       web: {
