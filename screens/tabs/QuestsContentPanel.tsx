@@ -187,9 +187,9 @@ export default function QuestsContentPanel({
 
                         {dataLoaded && questsAll.length > 0 && (
                             <View style={styles.questsGrid}>
-                                {questsAll.map((quest, index) => (
+                                {questsAll.map((quest) => (
                                     <QuestCard
-                                        key={`${quest.id}-${index}`}
+                                        key={quest.id}
                                         styles={styles}
                                         cityId={selectedCityId === nearbyId ? (quest.cityId || '') : (selectedCityId || '')}
                                         quest={quest}

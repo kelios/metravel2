@@ -326,8 +326,9 @@ const TravelListPanel: React.FC<Props> = ({
       Math.floor(webScrollY / WEB_ESTIMATED_ITEM_HEIGHT_PX) -
         WEB_LIST_OVERSCAN_ITEMS,
     )
+    const visibleItemCount = visibleTravelsData.length
     const endIndex = Math.min(
-      travelsData.length,
+      visibleItemCount,
       Math.ceil((webScrollY + viewportH) / WEB_ESTIMATED_ITEM_HEIGHT_PX) +
         WEB_LIST_OVERSCAN_ITEMS,
     )
@@ -335,7 +336,7 @@ const TravelListPanel: React.FC<Props> = ({
     const topSpacerHeight = startIndex * WEB_ESTIMATED_ITEM_HEIGHT_PX
     const bottomSpacerHeight = Math.max(
       0,
-      (travelsData.length - endIndex) * WEB_ESTIMATED_ITEM_HEIGHT_PX,
+      (visibleItemCount - endIndex) * WEB_ESTIMATED_ITEM_HEIGHT_PX,
     )
 
     return (
