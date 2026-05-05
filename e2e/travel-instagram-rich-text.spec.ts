@@ -12,10 +12,50 @@ test.describe('Travel rich-text Instagram embeds', () => {
       }
     })
 
+    await page.route('**/api/travels/by-slug/**', async (route: any, request: any) => {
+      if (request.method() !== 'GET') {
+        await route.continue()
+        return
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 999998,
+          name: 'E2E Instagram Rich Text Travel',
+          slug: 'e2e-instagram-rich-text',
+          url: '/travels/e2e-instagram-rich-text',
+          userName: 'E2E',
+          cityName: 'E2E',
+          countryName: 'E2E',
+          countryCode: 'EE',
+          countUnicIpView: '0',
+          travel_image_thumb_url:
+            'https://metravelprod.s3.eu-north-1.amazonaws.com/6880/conversions/p9edKtQrl2wM0xC1yRrkzVJEi4B4qxkxWqSADDLM-webpTravelMainImage_400.webp',
+          travel_image_thumb_small_url:
+            'https://metravelprod.s3.eu-north-1.amazonaws.com/6880/conversions/p9edKtQrl2wM0xC1yRrkzVJEi4B4qxkxWqSADDLM-webpTravelMainImage_400.webp',
+          gallery: [],
+          travelAddress: [],
+          year: '2025',
+          monthName: 'Январь',
+          number_days: 1,
+          companions: [],
+          youtube_link: '',
+          description:
+            '<p><a href="https://www.instagram.com/p/CScU4bJI2Ud/">https://www.instagram.com/p/CScU4bJI2Ud/</a></p>',
+          recommendation: '',
+          plus: '',
+          minus: '',
+          userIds: '',
+        }),
+      })
+    })
+
     await preacceptCookies(page)
     await gotoWithRetry(
       page,
-      '/travels/tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele',
+      '/travels/e2e-instagram-rich-text',
       { timeout: 90_000 },
     )
     await page.waitForLoadState('networkidle').catch(() => null)

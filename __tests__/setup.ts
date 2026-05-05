@@ -81,6 +81,9 @@ console.info = (message, ...args) => {
   originalInfo(message, ...args)
 }
 
+jest.mock('expo/src/winter/runtime.native', () => ({}))
+jest.mock('expo/src/winter/runtime', () => ({}))
+
 require('@testing-library/jest-native/extend-expect')
 
 // react-leaflet ships ESM and expects a real browser environment.
@@ -253,6 +256,9 @@ const originalError = console.error;
 console.error = (message, ...args) => {
   const text = String(message)
   const joined = [message, ...args].map((v) => String(v)).join(' ')
+  if (text.startsWith('Failed to set polyfill.')) {
+    return
+  }
   // Suppress specific error messages from tests
   if (/(Ошибка при создании формы|Ошибка при отправке обратной связи|Error: AI request failed)/.test(text)) {
     return;
@@ -933,6 +939,18 @@ jest.mock('react-native', () => {
     return React.createElement('Image', { ...props, ref })
   })
 
+  const MockModal = ({ children, visible = true, ...props }: any) => {
+    if (!visible) {
+      return null
+    }
+
+    return React.createElement(RN.View, props, children)
+  }
+
+  const MockSwitch = React.forwardRef((props: any, ref: any) =>
+    React.createElement(RN.View, { ...props, ref }, props.children)
+  )
+
   const getA11yProps = (props: any) => {
     if (typeof globalThis.document === 'undefined') {
       return {}
@@ -971,20 +989,32 @@ jest.mock('react-native', () => {
     }, resolvedChildren)
   })
 
-  return {
-    ...RN,
-    // Desktop-like default; individual tests can override via jest.fn mock
-    useWindowDimensions: jest.fn(() => ({ width: 1024, height: 768 })),
-    Image: MockImage,
-    Pressable,
-    Linking,
-    Settings: {
-      get: jest.fn(),
-      set: jest.fn(),
-      watchKeys: jest.fn(),
-      clearWatch: jest.fn(),
-    },
+  const mockReactNative = {}
+  Object.defineProperties(mockReactNative, Object.getOwnPropertyDescriptors(RN))
+  const defineOverride = (key: string, value: unknown) => {
+    Object.defineProperty(mockReactNative, key, {
+      value,
+      configurable: true,
+      enumerable: true,
+      writable: true,
+    })
   }
+
+  // Desktop-like default; individual tests can override via jest.fn mock
+  defineOverride('useWindowDimensions', jest.fn(() => ({ width: 1024, height: 768 })))
+  defineOverride('Image', MockImage)
+  defineOverride('Modal', MockModal)
+  defineOverride('Pressable', Pressable)
+  defineOverride('Switch', MockSwitch)
+  defineOverride('Linking', Linking)
+  defineOverride('Settings', {
+    get: jest.fn(),
+    set: jest.fn(),
+    watchKeys: jest.fn(),
+    clearWatch: jest.fn(),
+  })
+
+  return mockReactNative
 })
 
 jest.mock('react-native-worklets', () => {

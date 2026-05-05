@@ -32,20 +32,39 @@ jest.mock('@react-navigation/native', () => {
 
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native');
-  return {
-    ...RN,
-    Dimensions: {
+  const mockReactNative = {}
+  Object.defineProperties(mockReactNative, Object.getOwnPropertyDescriptors(RN))
+
+  Object.defineProperty(mockReactNative, 'Dimensions', {
+    value: {
       get: jest.fn(() => ({ width: 375, height: 667 })),
     },
-    ImageBackground: ({ children, ...props }: any) => {
+    configurable: true,
+    enumerable: true,
+    writable: true,
+  })
+
+  Object.defineProperty(mockReactNative, 'ImageBackground', {
+    value: ({ children, ...props }: any) => {
       const { View } = require('react-native');
       return <View {...props}>{children}</View>;
     },
-    KeyboardAvoidingView: ({ children, ...props }: any) => {
+    configurable: true,
+    enumerable: true,
+    writable: true,
+  })
+
+  Object.defineProperty(mockReactNative, 'KeyboardAvoidingView', {
+    value: ({ children, ...props }: any) => {
       const { View } = require('react-native');
       return <View {...props}>{children}</View>;
     },
-  };
+    configurable: true,
+    enumerable: true,
+    writable: true,
+  })
+
+  return mockReactNative;
 });
 
 jest.mock('react-native-paper', () => {

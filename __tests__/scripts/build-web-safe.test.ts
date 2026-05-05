@@ -5,6 +5,7 @@ const {
   createIsolatedExpoTempDir,
   getExpoExportArgs,
   getPassthroughArgs,
+  hasPlatformFlag,
   hasClearFlag,
 } = require('@/scripts/build-web-safe')
 
@@ -22,6 +23,13 @@ describe('build-web-safe helpers', () => {
     expect(hasClearFlag(['-p', 'web', '--clear'])).toBe(true)
   })
 
+  it('detects explicit platform flags', () => {
+    expect(hasPlatformFlag(['-p', 'web'])).toBe(true)
+    expect(hasPlatformFlag(['--platform', 'ios'])).toBe(true)
+    expect(hasPlatformFlag(['--platform=android'])).toBe(true)
+    expect(hasPlatformFlag(['--clear'])).toBe(false)
+  })
+
   it('uses output-dir for readiness checks and passes it to Expo export', () => {
     const args = ['-p', 'web', '--output-dir', 'custom-dist', '-c']
 
@@ -30,6 +38,15 @@ describe('build-web-safe helpers', () => {
       '-p',
       'web',
       '-c',
+      '--output-dir',
+      'custom-dist',
+    ])
+  })
+
+  it('defaults Expo export to web when platform is omitted', () => {
+    expect(getExpoExportArgs(['--output-dir', 'custom-dist'], 'custom-dist')).toEqual([
+      '-p',
+      'web',
       '--output-dir',
       'custom-dist',
     ])

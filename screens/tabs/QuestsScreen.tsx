@@ -61,6 +61,19 @@ type MapPoint = {
     categoryName: string;
     articleUrl?: string;
     urlTravel?: string;
+    questMeta?: {
+        id: string;
+        title: string;
+        cityId: string;
+        cityName?: string;
+        countryName?: string;
+        points?: number;
+        durationMin?: number;
+        difficulty?: 'easy' | 'medium' | 'hard';
+        tags?: string[];
+        petFriendly?: boolean;
+        cover?: string;
+    };
 };
 
 // ───────────── Styles (Two-column layout) ─────────────
@@ -1102,21 +1115,33 @@ export default function QuestsScreen() {
             : questsAll;
 
         return source
-            .filter((q) => Number.isFinite(q.lat) && Number.isFinite(q.lng))
+            .filter((q) => Number.isFinite(q.lat) && Number.isFinite(q.lng) && !!q.id)
             .map((q) => {
                 const citySegmentRaw = selectedCityId === NEARBY_ID ? (q.cityId || '') : selectedCityId;
                 const citySegment = encodeURIComponent(String(citySegmentRaw || 'city'));
                 const questSegment = encodeURIComponent(String(q.id));
                 const questUrl = buildCanonicalUrl(`/quests/${citySegment}/${questSegment}`);
 
+                const coverUri = typeof q.cover === 'string' ? q.cover : '';
                 return {
                     id: q.id,
                     coord: `${q.lat},${q.lng}`,
                     address: q.title,
-                    travelImageThumbUrl: typeof q.cover === 'string' ? q.cover : '',
+                    travelImageThumbUrl: coverUri,
                     categoryName: 'Квест',
                     articleUrl: questUrl,
                     urlTravel: questUrl,
+                    questMeta: {
+                        id: q.id,
+                        title: q.title,
+                        cityId: q.cityId ?? String(citySegmentRaw || ''),
+                        cityName: q.cityName,
+                        countryName: q.countryName,
+                        points: q.points,
+                        durationMin: q.durationMin,
+                        difficulty: q.difficulty,
+                        cover: coverUri || undefined,
+                    },
                 };
             });
     }, [dataLoaded, selectedCityId, userLoc, questsAll, ALL_QUESTS]);

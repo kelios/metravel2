@@ -15,14 +15,7 @@ export async function getStorageBatch(keys: string[]): Promise<Record<string, st
   }
 
   try {
-    const values = await AsyncStorage.multiGet(keys);
-    const result: Record<string, string | null> = {};
-    
-    values.forEach(([key, value]) => {
-      result[key] = value;
-    });
-    
-    return result;
+    return await AsyncStorage.getMany(keys);
   } catch (error) {
     if (__DEV__) {
       console.error('Error in getStorageBatch:', error);
@@ -46,7 +39,7 @@ export async function setStorageBatch(items: Array<[string, string]>): Promise<v
   }
 
   try {
-    await AsyncStorage.multiSet(items);
+    await AsyncStorage.setMany(Object.fromEntries(items));
   } catch (error) {
     if (__DEV__) {
       console.error('Error in setStorageBatch:', error);
@@ -65,7 +58,7 @@ export async function removeStorageBatch(keys: string[]): Promise<void> {
   }
 
   try {
-    await AsyncStorage.multiRemove(keys);
+    await AsyncStorage.removeMany(keys);
   } catch (error) {
     if (__DEV__) {
       console.error('Error in removeStorageBatch:', error);

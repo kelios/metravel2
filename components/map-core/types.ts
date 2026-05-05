@@ -51,6 +51,20 @@ export interface LegacyMapPoint {
   articleUrl?: string;
   urlTravel?: string;
   updated_at?: string;
+  /** Optional quest-specific metadata. When present, the popup renders QuestPopupCard. */
+  questMeta?: {
+    id: string;
+    title: string;
+    cityId: string;
+    cityName?: string;
+    countryName?: string;
+    points?: number;
+    durationMin?: number;
+    difficulty?: 'easy' | 'medium' | 'hard';
+    tags?: string[];
+    petFriendly?: boolean;
+    cover?: string;
+  };
 }
 
 // ---------------------------------------------------------------------------

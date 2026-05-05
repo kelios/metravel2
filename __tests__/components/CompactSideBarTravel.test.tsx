@@ -71,16 +71,25 @@ jest.mock('@/utils/imageOptimization', () => ({
 // Mock useWindowDimensions
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native');
-  return {
-    ...RN,
-    useWindowDimensions: () => ({ width: 375, height: 667 }),
-  };
+  const mockReactNative = {}
+  Object.defineProperties(mockReactNative, Object.getOwnPropertyDescriptors(RN))
+  Object.defineProperty(mockReactNative, 'useWindowDimensions', {
+    value: () => ({ width: 375, height: 667 }),
+    configurable: true,
+    enumerable: true,
+    writable: true,
+  })
+  return mockReactNative;
 });
 
 // Mock DeviceEventEmitter
 jest.mock('react-native/Libraries/EventEmitter/NativeEventEmitter', () => ({
   __esModule: true,
-  default: jest.fn(),
+  default: jest.fn(() => ({
+    addListener: jest.fn(() => ({ remove: jest.fn() })),
+    removeAllListeners: jest.fn(),
+    removeSubscription: jest.fn(),
+  })),
 }));
 
 const createMockTravel = (overrides: Partial<Travel> = {}): Travel => ({

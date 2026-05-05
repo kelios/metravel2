@@ -28,6 +28,19 @@ type Point = {
     categoryName: string;
     articleUrl?: string;
     urlTravel?: string;
+    questMeta?: {
+        id: string;
+        title: string;
+        cityId: string;
+        cityName?: string;
+        countryName?: string;
+        points?: number;
+        durationMin?: number;
+        difficulty?: 'easy' | 'medium' | 'hard';
+        tags?: string[];
+        petFriendly?: boolean;
+        cover?: string;
+    };
 };
 
 export default function QuestsMapScreen() {
@@ -43,7 +56,13 @@ export default function QuestsMapScreen() {
 
     const travel = useMemo(() => {
         const data: Point[] = quests
-            .filter(m => Number.isFinite(m.lat) && Number.isFinite(m.lng) && (m.lat !== 0 || m.lng !== 0))
+            .filter(m =>
+                Number.isFinite(m.lat) &&
+                Number.isFinite(m.lng) &&
+                (m.lat !== 0 || m.lng !== 0) &&
+                !!m.cityId &&
+                !!m.id,
+            )
             .map((m) => {
                 const coverUri = typeof m.cover === 'string' ? m.cover : '';
 
@@ -55,6 +74,19 @@ export default function QuestsMapScreen() {
                     categoryName: 'Квест',
                     urlTravel: `/quests/${m.cityId}/${m.id}`,
                     articleUrl: undefined,
+                    questMeta: {
+                        id: m.id,
+                        title: m.title,
+                        cityId: m.cityId,
+                        cityName: m.cityName,
+                        countryName: m.countryName,
+                        points: m.points,
+                        durationMin: m.durationMin,
+                        difficulty: m.difficulty,
+                        tags: m.tags,
+                        petFriendly: m.petFriendly,
+                        cover: coverUri || undefined,
+                    },
                 };
             });
         return { data };

@@ -59,11 +59,16 @@ jest.mock('react-native', () => {
     scale: 1,
     fontScale: 1,
   }));
+  const mockReactNative = {}
+  Object.defineProperties(mockReactNative, Object.getOwnPropertyDescriptors(RN))
+  Object.defineProperty(mockReactNative, 'useWindowDimensions', {
+    value: useWindowDimensions,
+    configurable: true,
+    enumerable: true,
+    writable: true,
+  })
 
-  return {
-    ...RN,
-    useWindowDimensions,
-  };
+  return mockReactNative;
 });
 
 jest.mock('@/components/listTravel/ModernFilters', () => {

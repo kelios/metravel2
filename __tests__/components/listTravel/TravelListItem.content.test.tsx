@@ -25,6 +25,11 @@ jest.mock('expo-image', () => ({
 
 // Mock Platform.OS to be 'web' for web-specific styling tests
 jest.mock('react-native/Libraries/Utilities/Platform', () => ({
+  __esModule: true,
+  default: {
+    OS: 'web',
+    select: jest.fn((obj) => obj.web || obj.default),
+  },
   OS: 'web',
   select: jest.fn((obj) => obj.web || obj.default),
 }));
@@ -254,9 +259,7 @@ describe('TravelListItem content & metadata', () => {
       const noContentCard = cardWithoutContent.getByTestId('travel-card-test-travel');
       
       // Высота должна быть одинаковой (изображение + опциональный контент)
-      expect(contentCard.props.style).toEqual(
-        expect.objectContaining(noContentCard.props.style)
-      );
+      expect(contentCard.props.style).toEqual(noContentCard.props.style)
     });
   });
 });

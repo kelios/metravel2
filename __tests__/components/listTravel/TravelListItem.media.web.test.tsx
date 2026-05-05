@@ -27,6 +27,11 @@ jest.mock('@/components/travel/FavoriteButton', () => ({
 }));
 
 jest.mock('react-native/Libraries/Utilities/Platform', () => ({
+  __esModule: true,
+  default: {
+    OS: 'web',
+    select: jest.fn((obj) => obj.web || obj.default),
+  },
   OS: 'web',
   select: jest.fn((obj) => obj.web || obj.default),
 }));

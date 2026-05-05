@@ -12,7 +12,7 @@ const mockUseProgressiveLoad = jest.fn(() => ({
 }))
 
 jest.mock('@/hooks/useProgressiveLoading', () => ({
-  useProgressiveLoad: (...args: any[]) => mockUseProgressiveLoad(...args),
+  useProgressiveLoad: (...args: any[]) => mockUseProgressiveLoad.apply(null, args),
 }))
 
 jest.mock('@/components/travel/AuthorCard', () => ({
@@ -41,10 +41,12 @@ jest.mock('@/components/travel/TravelDescription', () => ({
 }))
 
 jest.mock('@/components/travel/TravelDetailSkeletons', () => ({
+  AuthorSectionSkeleton: () => null,
   CommentsSkeleton: () => null,
-  MapSkeleton: () => null,
-  TravelListSkeleton: () => null,
-  DescriptionSkeleton: () => null,
+  FooterSectionSkeleton: () => null,
+  MapSectionSkeleton: () => null,
+  RatingSectionSkeleton: () => null,
+  SidebarSectionSkeleton: () => null,
 }))
 
 jest.mock('@/components/travel/details/sections/TravelDetailsMapSection', () => ({

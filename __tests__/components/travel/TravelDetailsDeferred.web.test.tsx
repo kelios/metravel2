@@ -44,10 +44,12 @@ jest.mock('@/components/travel/TravelDescription', () => ({
 }))
 
 jest.mock('@/components/travel/TravelDetailSkeletons', () => ({
+  AuthorSectionSkeleton: () => null,
   CommentsSkeleton: () => null,
-  MapSkeleton: () => null,
-  TravelListSkeleton: () => null,
-  DescriptionSkeleton: () => null,
+  FooterSectionSkeleton: () => null,
+  MapSectionSkeleton: () => null,
+  RatingSectionSkeleton: () => null,
+  SidebarSectionSkeleton: () => null,
 }))
 
 jest.mock('@/components/travel/details/sections/TravelDetailsMapSection', () => ({

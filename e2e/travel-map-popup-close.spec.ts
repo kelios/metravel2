@@ -50,6 +50,35 @@ async function tapMobileMarker(
   await page.waitForTimeout(250)
 }
 
+async function openDesktopPopup(page: import('@playwright/test').Page) {
+  const popup = page.locator('.leaflet-popup')
+  const markers = page.locator('.leaflet-marker-icon')
+  const attempts = Math.min(await markers.count(), 4)
+
+  for (let index = 0; index < attempts; index += 1) {
+    const marker = markers.nth(index)
+    await marker.scrollIntoViewIfNeeded().catch(() => null)
+
+    await marker.click({ force: true }).catch(() => null)
+    const clickedOpen = await popup
+      .waitFor({ state: 'visible', timeout: 1_500 })
+      .then(() => true)
+      .catch(() => false)
+
+    if (clickedOpen) return popup
+
+    await marker.dispatchEvent('click').catch(() => null)
+    const dispatchedOpen = await popup
+      .waitFor({ state: 'visible', timeout: 1_500 })
+      .then(() => true)
+      .catch(() => false)
+
+    if (dispatchedOpen) return popup
+  }
+
+  return popup
+}
+
 test.describe('Travel detail page — map popup close @smoke', () => {
   test('mobile: fullscreen popup overlay opens and closes on marker tap', async ({
     browser,
@@ -127,23 +156,7 @@ test.describe('Travel detail page — map popup close @smoke', () => {
     const hasMarkers = await scrollToMapAndWaitForMarkers(page)
     expect(hasMarkers, 'No map markers found on travel detail page').toBe(true)
 
-    // Click the first marker
-    const marker = page.locator('.leaflet-marker-icon').first()
-    await marker.scrollIntoViewIfNeeded().catch(() => null)
-    await marker.click({ force: true })
-
-    // Leaflet popup should appear
-    const popup = page.locator('.leaflet-popup')
-    const popupVisible = await popup
-      .waitFor({ state: 'visible', timeout: 8_000 })
-      .then(() => true)
-      .catch(() => false)
-
-    if (!popupVisible) {
-      await page.waitForTimeout(250)
-      await marker.click({ force: true }).catch(() => null)
-    }
-
+    const popup = await openDesktopPopup(page)
     await expect(popup).toBeVisible({ timeout: 20_000 })
 
     // Close via Leaflet's built-in close button

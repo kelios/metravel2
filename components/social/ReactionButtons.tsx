@@ -35,15 +35,15 @@ const ReactionButtons = ({ travelId, compact = false, showViews = true }: Reacti
 
   const loadData = useCallback(async () => {
     try {
-      // Batch all reads into a single multiGet call
-      const pairs = await AsyncStorage.multiGet([
+      // Batch all reads into a single storage call
+      const values = await AsyncStorage.getMany([
         STORAGE_KEY_REACTIONS,
         STORAGE_KEY_USER_REACTIONS,
         STORAGE_KEY_VIEWS,
       ]);
-      const reactionsData = pairs[0]?.[1];
-      const userReactionsData = pairs[1]?.[1];
-      const viewsData = pairs[2]?.[1];
+      const reactionsData = values[STORAGE_KEY_REACTIONS];
+      const userReactionsData = values[STORAGE_KEY_USER_REACTIONS];
+      const viewsData = values[STORAGE_KEY_VIEWS];
 
       if (reactionsData) {
         const allReactions = JSON.parse(reactionsData);

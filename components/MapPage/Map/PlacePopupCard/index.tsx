@@ -53,6 +53,18 @@ type Props = {
   fullscreenOnMobile?: boolean;
   onClose?: () => void;
   colors: ThemedColors;
+  /**
+   * Optional override for the primary action button. When provided, it wins over
+   * the default selection (route → article → google maps). Used by feature-specific
+   * popups (e.g. quest map) to surface a custom CTA without forking the card.
+   */
+  primaryActionOverride?: {
+    label: string;
+    icon: React.ComponentProps<typeof Feather>['name'];
+    onPress: () => void;
+    accessibilityLabel?: string;
+    tooltip?: string;
+  };
 };
 
 const stopWebPopupEvent = (event?: any) => {
@@ -122,6 +134,7 @@ const PlacePopupCard: React.FC<Props> = ({
   fullscreenOnMobile = false,
   onClose,
   colors,
+  primaryActionOverride,
 }) => {
   const cardRootRef = useRef<any>(null);
   const [fullscreenVisible, setFullscreenVisible] = useState(false);
@@ -167,6 +180,15 @@ const PlacePopupCard: React.FC<Props> = ({
   }, [drivingDistanceMeters, drivingDurationSeconds, hasDrivingInfo]);
 
   const primaryAction = useMemo(() => {
+    if (primaryActionOverride) {
+      return {
+        label: primaryActionOverride.label,
+        icon: primaryActionOverride.icon,
+        onPress: primaryActionOverride.onPress,
+        tooltip: primaryActionOverride.tooltip ?? primaryActionOverride.label,
+        accessibilityLabel: primaryActionOverride.accessibilityLabel ?? primaryActionOverride.label,
+      };
+    }
     if (onBuildRoute) {
       return {
         label: 'Маршрут сюда',
@@ -198,7 +220,7 @@ const PlacePopupCard: React.FC<Props> = ({
     }
 
     return null;
-  }, [hasArticle, hasCoord, onBuildRoute, onOpenArticle, onOpenGoogleMaps]);
+  }, [hasArticle, hasCoord, onBuildRoute, onOpenArticle, onOpenGoogleMaps, primaryActionOverride]);
 
   const saveActionVisual = useMemo(
     () => getNavigationActionVisual('save', colors),

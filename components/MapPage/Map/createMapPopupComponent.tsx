@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { router } from 'expo-router';
 import PlacePopupCard from './PlacePopupCard';
 import type { Point } from './types';
 import { buildGoogleMapsUrl, buildOrganicMapsUrl, buildTelegramShareUrl, buildWazeUrl, buildYandexNaviUrl } from './mapLinks';
@@ -321,28 +322,77 @@ export const createMapPopupComponent = ({
       handlePress,
     ]);
 
+    const questMeta = point.questMeta;
+    const isQuest = !!questMeta;
+
+    const questSubtitle = useMemo(() => {
+      if (!questMeta) return undefined;
+      const stepCount = typeof questMeta.points === 'number' ? questMeta.points : 0;
+      const stepWord = stepCount === 1 ? 'шаг' : stepCount >= 2 && stepCount <= 4 ? 'шага' : 'шагов';
+      const difficultyLabel =
+        questMeta.difficulty === 'easy'
+          ? 'лёгкий'
+          : questMeta.difficulty === 'medium'
+            ? 'средний'
+            : questMeta.difficulty === 'hard'
+              ? 'сложный'
+              : null;
+      const parts = [
+        [questMeta.cityName, questMeta.countryName].filter(Boolean).join(', ') || null,
+        questMeta.durationMin ? `${questMeta.durationMin} мин` : null,
+        stepCount > 0 ? `${stepCount} ${stepWord}` : null,
+        difficultyLabel,
+      ].filter(Boolean);
+      return parts.length ? parts.join(' · ') : undefined;
+    }, [questMeta]);
+
+    const handleStartQuest = useCallback(() => {
+      if (!questMeta) return;
+      const cityId = String(questMeta.cityId ?? '').trim();
+      const id = String(questMeta.id ?? '').trim();
+      if (!cityId || !id) {
+        void showToast({ type: 'error', text1: 'Не удалось открыть квест', position: 'bottom' });
+        return;
+      }
+      handlePress();
+      router.push(
+        `/quests/${encodeURIComponent(cityId)}/${encodeURIComponent(id)}` as any,
+      );
+    }, [handlePress, questMeta]);
+
     return (
       <ThemeContext.Provider value={themeContextValue}>
         <PlacePopupCard
           colors={colors}
-          title={popupTitle.title}
-          subtitle={popupTitle.subtitle}
-          imageUrl={point.imageUrl || point.travelImageThumbUrl}
-          articleHref={articleHref}
-          categoryLabel={categoryLabel}
-          coord={coord}
-          drivingDistanceMeters={drivingDistanceMeters}
-          drivingDurationSeconds={drivingDurationSeconds}
-          isDrivingLoading={isDrivingLoading}
-          onOpenArticle={handleOpenArticle}
-          onCopyCoord={handleCopyCoord}
-          onShareTelegram={handleShareTelegram}
-          onOpenGoogleMaps={handleOpenGoogleMaps}
-          onOpenOrganicMaps={handleOpenOrganicMaps}
-          onOpenWaze={handleOpenWaze}
-          onOpenYandexNavi={handleOpenYandexNavi}
-          onAddPoint={handleAddPoint}
-          onBuildRoute={canBuildRoute ? handleBuildRoute : undefined}
+          title={isQuest ? questMeta!.title : popupTitle.title}
+          subtitle={isQuest ? questSubtitle : popupTitle.subtitle}
+          imageUrl={isQuest ? questMeta!.cover : point.imageUrl || point.travelImageThumbUrl}
+          articleHref={isQuest ? null : articleHref}
+          categoryLabel={isQuest ? null : categoryLabel}
+          coord={isQuest ? null : coord}
+          drivingDistanceMeters={isQuest ? null : drivingDistanceMeters}
+          drivingDurationSeconds={isQuest ? null : drivingDurationSeconds}
+          isDrivingLoading={isQuest ? false : isDrivingLoading}
+          onOpenArticle={isQuest ? undefined : handleOpenArticle}
+          onCopyCoord={isQuest ? undefined : handleCopyCoord}
+          onShareTelegram={isQuest ? undefined : handleShareTelegram}
+          onOpenGoogleMaps={isQuest ? undefined : handleOpenGoogleMaps}
+          onOpenOrganicMaps={isQuest ? undefined : handleOpenOrganicMaps}
+          onOpenWaze={isQuest ? undefined : handleOpenWaze}
+          onOpenYandexNavi={isQuest ? undefined : handleOpenYandexNavi}
+          onAddPoint={isQuest ? undefined : handleAddPoint}
+          onBuildRoute={isQuest || !canBuildRoute ? undefined : handleBuildRoute}
+          primaryActionOverride={
+            isQuest
+              ? {
+                  label: 'Начать квест',
+                  icon: 'play',
+                  onPress: handleStartQuest,
+                  accessibilityLabel: 'Начать квест',
+                  tooltip: 'Перейти к прохождению квеста',
+                }
+              : undefined
+          }
           addDisabled={!authReady || !normalizedCoord || isAdding}
           addTooltip={
             !authReady

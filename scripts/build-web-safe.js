@@ -25,8 +25,19 @@ function getPassthroughArgs(argv = process.argv.slice(2)) {
   });
 }
 
+function hasPlatformFlag(args = []) {
+  return args.some((arg, index) => {
+    if (arg === '-p' || arg === '--platform') return true
+    if (typeof arg === 'string' && arg.startsWith('--platform=')) return true
+    if (typeof arg === 'string' && arg.startsWith('-p=')) return true
+    return index > 0 && (args[index - 1] === '-p' || args[index - 1] === '--platform')
+  })
+}
+
 function getExpoExportArgs(argv = process.argv.slice(2), resolvedOutputDir = outputDir) {
-  return [...getPassthroughArgs(argv), '--output-dir', resolvedOutputDir];
+  const passthroughArgs = getPassthroughArgs(argv)
+  const platformArgs = hasPlatformFlag(passthroughArgs) ? [] : ['-p', 'web']
+  return [...platformArgs, ...passthroughArgs, '--output-dir', resolvedOutputDir]
 }
 
 function hasClearFlag(args) {
@@ -172,6 +183,7 @@ module.exports = {
   createIsolatedExpoTempDir,
   getExpoExportArgs,
   getPassthroughArgs,
+  hasPlatformFlag,
   hasClearFlag,
   main,
 };
