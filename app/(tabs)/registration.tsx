@@ -255,6 +255,7 @@ export default function RegisterForm() {
                                             <FormFieldWithValidation
                                                 label="Пароль"
                                                 error={touched.password && errors.password ? errors.password : null}
+                                                hint="Минимум 8 символов. Лучше использовать буквы, цифры и специальный символ."
                                                 required
                                             >
                                                 <View style={[
@@ -296,6 +297,9 @@ export default function RegisterForm() {
                                                         />
                                                     </Pressable>
                                                 </View>
+                                                <Text style={styles.passwordHint}>
+                                                    Минимум 8 символов. Лучше добавить цифру и специальный символ.
+                                                </Text>
                                                 {passwordStrengthMeta && (
                                                     <View
                                                         style={styles.strengthContainer}
@@ -491,6 +495,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         minHeight: 44,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    passwordHint: {
+        marginTop: 6,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        lineHeight: 16,
+        color: colors.textMuted,
     },
     // ✅ ИСПРАВЛЕНИЕ: Стили больше не используются (ошибки показываются через FormFieldWithValidation)
     err: { color: colors.danger, marginBottom: 6, textAlign: 'left' },

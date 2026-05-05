@@ -1,6 +1,6 @@
 ---
 name: metravel-feature-builder
-description: Implement, refactor, or debug features in the metravel Expo/React Native Web codebase. Use when Codex needs project-specific guidance for app, components, hooks, services, API flows, SEO wiring, or feature logic and must follow docs-first workflow, reuse-first coding, and scope-based validation in this repository.
+description: Implement, refactor, or debug features in the metravel Expo/React Native Web codebase. Use when Codex needs project-specific guidance for app, components, hooks, services, API flows, SEO wiring, or feature logic and must follow docs-first workflow, reuse-first coding, fix-all-found-real-issues discipline, and scope-based validation in this repository.
 ---
 
 # Metravel Feature Builder
@@ -18,6 +18,8 @@ Implement the smallest change that solves the task.
 - Reuse existing components, hooks, helpers, and utilities before creating new ones.
 - Keep functions and components local, readable, and easy to remove or extend later.
 - Remove clearly dead code in the touched area when it is safe to do so.
+- Fix every real issue found in the touched area or validation output before handoff: failing tests, runtime errors, broken UI states, invalid external-link usage, dead imports, and obvious regressions.
+- If a found issue is outside scope, requires unavailable server/secret access, or needs a risky migration, record it as a blocker with the concrete risk and next verification instead of ignoring it.
 - Do not change server paths, SSL paths, or deployment targets unless they were explicitly verified on the server.
 
 Follow these repo-specific rules while building features:

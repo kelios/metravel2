@@ -1,6 +1,6 @@
 ---
 name: metravel-ui-guardrails
-description: Apply metravel UI guardrails for screens, cards, interactions, images, icons, and styling across web and native. Use when Codex changes visible UI, layout, placeholders, media rendering, design tokens, external links, or interaction behavior and must preserve the repository's web/mobile contracts.
+description: Apply metravel UI guardrails for screens, cards, interactions, images, icons, and styling across web and native. Use when Codex changes visible UI, layout, placeholders, media rendering, design tokens, external links, or interaction behavior and must preserve the repository's web/mobile contracts while fixing all real UI issues found in scope.
 ---
 
 # Metravel UI Guardrails
@@ -16,6 +16,8 @@ Build UI by extending existing primitives first:
 - Reuse `components/ui` and existing feature components before inventing new one-off building blocks.
 - Prefer the existing `Button`, `IconButton`, and `Chip` primitives for small controls.
 - Keep layout stable across loading, success, and error states.
+- Fix all real UI problems found while working in the touched flow: overlap, broken mobile/desktop layout, invalid icons, non-neutral placeholders, console errors, broken interactions, and direct external-link violations.
+- If a UI problem cannot be fixed safely in the current scope, document the blocker and exact scenario instead of leaving it implicit.
 
 Enforce the repository's UI contracts:
 

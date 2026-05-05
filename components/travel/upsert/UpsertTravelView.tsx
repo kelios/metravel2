@@ -20,6 +20,7 @@ import { useTravelPreview } from '@/hooks/useTravelPreview';
 import type { UpsertTravelController } from '@/components/travel/upsert/useUpsertTravelController';
 import type { TravelFormData } from '@/types/types';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
+import { buildLoginHref } from '@/utils/authNavigation';
 
 interface UpsertTravelViewProps {
   controller: UpsertTravelController;
@@ -301,6 +302,9 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
   }
 
   if (!controller.isAuthenticated && controller.isNew) {
+    const loginHref = buildLoginHref({ redirect: '/travel/new', intent: 'create-travel' });
+    const registrationHref = '/registration?redirect=%2Ftravel%2Fnew&intent=create-travel';
+
     return (
       <SafeAreaView
         style={styles.container}
@@ -311,6 +315,24 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
           <Feather name="user" size={48} color={colors.primary} style={{ marginBottom: DESIGN_TOKENS.spacing.md }} />
           <Text style={styles.errorTitle}>Войдите в аккаунт</Text>
           <Text style={styles.errorText}>Чтобы создать путешествие, необходимо авторизоваться</Text>
+          <View style={styles.authActions}>
+            <Pressable
+              onPress={() => router.push(loginHref as any)}
+              style={styles.authPrimaryButton}
+              accessibilityRole="button"
+              accessibilityLabel="Войти и вернуться к созданию путешествия"
+            >
+              <Text style={styles.authPrimaryButtonText}>Войти</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => router.push(registrationHref as any)}
+              style={styles.authSecondaryButton}
+              accessibilityRole="button"
+              accessibilityLabel="Зарегистрироваться и вернуться к созданию путешествия"
+            >
+              <Text style={styles.authSecondaryButtonText}>Зарегистрироваться</Text>
+            </Pressable>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -556,5 +578,42 @@ const createStyles = (
       color: colors.textMuted,
       textAlign: 'center',
       lineHeight: 24,
+    },
+    authActions: {
+      flexDirection: responsive?.isMobile ? 'column' : 'row',
+      gap: DESIGN_TOKENS.spacing.sm,
+      marginTop: DESIGN_TOKENS.spacing.lg,
+      width: '100%',
+      justifyContent: 'center',
+    },
+    authPrimaryButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: DESIGN_TOKENS.spacing.sm,
+      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    authPrimaryButtonText: {
+      color: colors.textOnPrimary,
+      fontWeight: '600',
+      fontSize: DESIGN_TOKENS.typography.sizes.md,
+    },
+    authSecondaryButton: {
+      backgroundColor: colors.surface,
+      paddingVertical: DESIGN_TOKENS.spacing.sm,
+      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    authSecondaryButtonText: {
+      color: colors.text,
+      fontWeight: '600',
+      fontSize: DESIGN_TOKENS.typography.sizes.md,
     },
   });

@@ -1,6 +1,6 @@
 ---
 name: metravel-release-checks
-description: Choose and run the correct metravel verification flow for local changes, PR-ready validation, governance-sensitive updates, release preparation, and production web checks. Use when Codex must decide which commands to run after code changes or before deploy in this repository.
+description: Choose and run the correct metravel verification flow for local changes, PR-ready validation, governance-sensitive updates, release preparation, and production web checks. Use when Codex must decide which commands to run after code changes or before deploy, and must not leave known real failures unresolved in this repository.
 ---
 
 # Metravel Release Checks
@@ -13,6 +13,8 @@ Select checks by change scope instead of defaulting to the heaviest run every ti
 - Need to inspect the selective plan first: use `npm run check:fast:dry`, `npm run check:changed:dry`, or `npm run check:e2e:changed:dry`.
 - Medium change touching a bounded area: run the relevant targeted tests plus the matching selective checks.
 - Large, cross-cutting, or infrastructure-heavy change: run `npm run lint` and `npm run test:run`.
+- Any failed check that points to the touched scope must be fixed before handoff and then rerun.
+- If a failed check exposes an unrelated existing issue, record the failing command, concrete failure, risk, and reason it was not fixed in this task.
 
 Use the project-specific command map:
 

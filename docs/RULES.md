@@ -43,6 +43,10 @@ npm run test:run
 - Always verify the changed scope before finishing the task.
   - For small, isolated changes, this can be a targeted lint/test check instead of the full suite.
   - For larger changes, use the full `npm run lint` and `npm run test:run` pass.
+- Always fix known real problems before handoff.
+  - Treat failures, runtime errors, broken UI states, invalid external-link usage, dead imports, and regressions discovered in the touched area as part of the current task.
+  - Do not leave known failing checks or broken behavior in the changed scope.
+  - If a discovered issue is outside the task boundary, requires unavailable server/secret access, or would need a risky migration, document it as a blocker with the concrete risk and required next verification instead of silently ignoring it.
 - For performance checks (Lighthouse), run against a production web export:
 
 ```bash
@@ -74,7 +78,7 @@ npm run lighthouse:travel:desktop
 - Reuse existing components, hooks, helpers, and utilities before creating new ones.
 - If you see clear duplication or overgrown logic, refactor to a simpler structure as part of the task.
 - If you find unused code (dead imports, unused functions/components/files), remove it.
-- If you find real errors or broken behavior during the task, fix them (or explicitly document blockers if fix is impossible in current scope).
+- If you find real errors or broken behavior during the task, fix them before handoff; only document a blocker when the fix is impossible in current scope or cannot be verified safely.
 - Write and refactor code using current 2026 practices by default:
   - prefer up-to-date, actively supported framework and language patterns;
   - avoid legacy or deprecated approaches when a modern project-approved alternative exists;

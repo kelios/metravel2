@@ -25,6 +25,17 @@ interface TravelWizardFooterProps {
     onStepSelect?: (step: number) => void;
 }
 
+const WIZARD_STEP_LABELS = [
+    'основная информация',
+    'маршрут',
+    'медиа',
+    'детали',
+    'дополнительные параметры',
+    'публикация',
+];
+
+const getStepLabel = (step: number) => WIZARD_STEP_LABELS[step - 1] ?? `шаг ${step}`;
+
 // ✅ УЛУЧШЕНИЕ: Функция создания стилей с динамическими цветами для поддержки тем
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     footer: {
@@ -242,6 +253,7 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                                 onPress={onQuickDraft}
                                 style={styles.quickDraftButtonMobile}
                                 compact
+                                accessibilityLabel={quickDraftLabel}
                             >
                                 <Feather name="save" size={16} color={colors.text} />
                             </PaperButton>
@@ -279,6 +291,9 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                                     ]}
                                     onPress={() => onStepSelect?.(step)}
                                     disabled={!onStepSelect}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`Перейти к шагу ${step}: ${getStepLabel(step)}`}
+                                    accessibilityState={{ selected: step === currentStep, disabled: !onStepSelect }}
                                     {...Platform.select({ web: { cursor: onStepSelect ? 'pointer' : 'default' } })}
                                 >
                                     <Text
@@ -323,6 +338,9 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                                         ]}
                                         onPress={() => onStepSelect?.(step)}
                                         disabled={!onStepSelect}
+                                        accessibilityRole="button"
+                                        accessibilityLabel={`Перейти к шагу ${step}: ${getStepLabel(step)}`}
+                                        accessibilityState={{ selected: step === currentStep, disabled: !onStepSelect }}
                                         {...Platform.select({ web: { cursor: onStepSelect ? 'pointer' : 'default' } })}
                                     >
                                         <Text

@@ -33,6 +33,17 @@ type TravelWizardHeaderProps = {
     onOpenPublic?: () => void;
 };
 
+const WIZARD_STEP_LABELS = [
+    'основная информация',
+    'маршрут',
+    'медиа',
+    'детали',
+    'дополнительные параметры',
+    'публикация',
+];
+
+const getStepLabel = (step: number) => WIZARD_STEP_LABELS[step - 1] ?? `шаг ${step}`;
+
 const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
     canGoBack = false,
     onBack,
@@ -345,7 +356,8 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                                     ]}
                                     disabled={!onStepSelect}
                                     accessibilityRole="button"
-                                    accessibilityLabel={`Перейти к шагу ${step}`}
+                                    accessibilityLabel={`Перейти к шагу ${step}: ${getStepLabel(step)}`}
+                                    accessibilityState={{ selected: step === currentStep, disabled: !onStepSelect }}
                                 >
                                     {step < currentStep ? (
                                         <Feather name="check" size={12} color={colors.primary} />

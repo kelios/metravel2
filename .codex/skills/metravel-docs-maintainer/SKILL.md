@@ -1,6 +1,6 @@
 ---
 name: metravel-docs-maintainer
-description: Maintain metravel project documentation and Codex operating rules. Use when Codex needs to update docs/, AGENTS.md, .codex/skills, project instructions, workflow rules, skill metadata, or documentation structure in this repository.
+description: Maintain metravel project documentation and Codex operating rules. Use when Codex needs to update docs/, AGENTS.md, .codex/skills, project instructions, workflow rules, prompts, skill metadata, or documentation structure in this repository.
 ---
 
 # Metravel Docs Maintainer
@@ -30,6 +30,7 @@ Avoid documentation drift:
 
 - Do not duplicate the same rule in many places unless one location is a short pointer to the canonical source.
 - When changing rules, update both the canonical source and the short Codex map if the skill selection or agent workflow changes.
+- When changing Codex behavior rules, update the matching skill prompts/metadata so agents see the rule before starting work.
 - Preserve existing project constraints for external links, UI guardrails, server path safety, release checks, and e2e secrets.
 - Do not print secrets from `.env`, `.env.e2e`, or deployment configs.
 - Read Markdown as UTF-8; if PowerShell displays Cyrillic as mojibake, reread with `Get-Content -Encoding UTF8` before assuming the file is corrupt.
