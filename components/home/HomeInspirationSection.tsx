@@ -96,10 +96,15 @@ export function HomeInspirationSection({
       )
     }
 
-    const maxItems =
-      fixedCount ?? (isWeekendShowcase ? (isMobile ? 2 : 4) : isMobile ? 4 : 6)
+    if (fixedCount != null) {
+      return arr.slice(0, fixedCount)
+    }
 
-    return arr.slice(0, maxItems)
+    if (isWeekendShowcase) {
+      return isMobile ? arr : arr.slice(0, 4)
+    }
+
+    return arr.slice(0, isMobile ? 4 : 6)
   }, [travelData, isMobile, isWeekendShowcase, fixedCount])
 
   const handleViewMore = useCallback(() => {

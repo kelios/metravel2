@@ -448,7 +448,7 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       borderWidth: 1,
       borderColor: colors.borderLight,
       backgroundColor: colors.backgroundSecondary,
-      fontSize: typography.sizes.sm,
+      fontSize: Math.max(Number(typography.sizes.sm) || 0, 16),
       textAlign: 'center',
       alignSelf: 'flex-start',
       minHeight: 32,

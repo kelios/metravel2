@@ -85,6 +85,12 @@ function getModernFiltersResultsText(resultsCount?: number) {
   return `${resultsCount} ${getTravelLabel(resultsCount)}`;
 }
 
+function blurActiveWebElement() {
+  if (typeof document === 'undefined') return;
+  const activeElement = document.activeElement as { blur?: () => void } | null;
+  activeElement?.blur?.();
+}
+
 function getOrderedModernFilterOptions(group: FilterGroup, selectedFilters: FilterState) {
   const rawSelected = selectedFilters[group.key];
   const isMultiSelect = group.multiSelect !== false;
@@ -212,6 +218,10 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   );
 
   const resultsText = useMemo(() => getModernFiltersResultsText(resultsCount), [resultsCount]);
+  const handleDismissFilters = useCallback(() => {
+    blurActiveWebElement();
+    onClose?.();
+  }, [onClose]);
 
   return (
     <View
@@ -314,7 +324,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
             </Pressable>
             {onClose && (
               <Pressable
-                onPress={onClose}
+                onPress={handleDismissFilters}
                 style={({ hovered, pressed }) => [
                   styles.closeButton,
                   (hovered || pressed) && styles.closeButtonPressed,
@@ -540,7 +550,14 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
               styles.applyButton,
               (hovered || pressed) && styles.applyButtonPressed,
             ]}
-            onPress={onClose ?? onApply}
+            onPress={() => {
+              blurActiveWebElement();
+              if (onClose) {
+                onClose();
+                return;
+              }
+              onApply?.();
+            }}
             accessibilityRole="button"
             accessibilityLabel={activeFiltersCount > 0 ? `Показать результаты (фильтров: ${activeFiltersCount})` : 'Показать результаты'}
           >

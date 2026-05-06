@@ -165,6 +165,26 @@ describe('ModernFilters Component', () => {
     expect(screen.getByDisplayValue('2023')).toBeTruthy();
   });
 
+  it('uses a mobile-safe font size for the year input', () => {
+    renderWithProviders(
+      <ModernFilters
+        filterGroups={mockFilterGroups}
+        selectedFilters={{}}
+        onFilterChange={mockOnFilterChange}
+        onClearAll={mockOnClearAll}
+        resultsCount={10}
+        year={2023}
+        onYearChange={mockOnYearChange}
+      />
+    );
+
+    const yearInput = screen.getByDisplayValue('2023');
+    const styles = Array.isArray(yearInput.props.style) ? yearInput.props.style : [yearInput.props.style];
+    const flattened = Object.assign({}, ...styles.filter(Boolean));
+
+    expect(flattened.fontSize).toBeGreaterThanOrEqual(16);
+  });
+
   it('shows moderation toggle for superuser', () => {
     // Mock superuser
     jest.spyOn(require('@/context/AuthContext'), 'useAuth').mockReturnValue({
