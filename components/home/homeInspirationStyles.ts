@@ -405,74 +405,101 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
 
   quickFiltersTitle: {
     color: colors.text,
-    fontSize: isMobile ? 26 : 40,
-    lineHeight: isMobile ? 32 : 48,
+    fontSize: isMobile ? 28 : 44,
+    lineHeight: isMobile ? 34 : 52,
     fontWeight: '800',
-    letterSpacing: isMobile ? -0.7 : -1.1,
+    letterSpacing: isMobile ? -0.8 : -1.4,
   },
-  quickFiltersSubtitle: { color: colors.textMuted, fontSize: isMobile ? 15 : 16, lineHeight: isMobile ? 23 : 26, maxWidth: 600, letterSpacing: 0.1 },
+  quickFiltersTitleAccent: {
+    color: colors.primary,
+    ...Platform.select({
+      web: {
+        backgroundImage: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.brand ?? colors.primary} 100%)`,
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
+      } as any,
+    }),
+  },
+  quickFiltersSubtitle: { color: colors.textMuted, fontSize: isMobile ? 15 : 17, lineHeight: isMobile ? 23 : 26, maxWidth: 560, letterSpacing: 0.1 },
 
   quickFiltersArticlesButton: {
-    flexDirection: 'row', alignItems: 'center', gap: 7,
-    borderRadius: DESIGN_TOKENS.radii.pill, borderWidth: 1.5, borderColor: colors.primaryAlpha40,
-    backgroundColor: colors.primarySoft,
-    paddingHorizontal: isMobile ? 18 : 22, paddingVertical: isMobile ? 11 : 13,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderRadius: DESIGN_TOKENS.radii.pill, borderWidth: 0,
+    backgroundColor: colors.primary,
+    paddingHorizontal: isMobile ? 22 : 28, paddingVertical: isMobile ? 13 : 15,
     flexShrink: 0, alignSelf: isMobile ? 'flex-start' : 'auto',
     ...Platform.select({ web: {
-      transition: 'background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease',
+      transition: 'transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease',
       whiteSpace: 'nowrap',
+      boxShadow: `0 8px 24px ${colors.primary}33, 0 2px 6px ${colors.primary}1A`,
     } as any }),
   },
   quickFiltersArticlesButtonHover: {
-    backgroundColor: colors.primaryLight, borderColor: colors.primary,
-    ...Platform.select({ web: { transform: 'translateY(-2px)', boxShadow: `0 7px 18px ${colors.primary}1E` } }),
+    backgroundColor: colors.primary,
+    ...Platform.select({ web: { transform: 'translateY(-2px) scale(1.02)', boxShadow: `0 14px 36px ${colors.primary}4D` } }),
   },
-  quickFiltersArticlesText: { color: colors.primaryText, fontSize: 14, lineHeight: 20, fontWeight: '700' },
+  quickFiltersArticlesText: { color: '#ffffff', fontSize: 15, lineHeight: 20, fontWeight: '700', letterSpacing: 0.2 },
 
   // ── Filter cards grid ─────────────────────────────────────────────────────
   quickFiltersGrid: {
     flexDirection: isMobile ? 'column' : 'row',
     flexWrap: isMobile ? 'nowrap' : 'wrap',
-    gap: isMobile ? 12 : 14,
+    gap: isMobile ? 12 : 16,
+    ...Platform.select({
+      web: !isMobile
+        ? ({
+            display: 'grid',
+            gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+            alignItems: 'stretch',
+          } as any)
+        : null,
+    }),
   },
 
   // Each filter group is now a card
   filterGroupCard: {
-    borderRadius: DESIGN_TOKENS.radii.lg, borderWidth: 1, borderColor: colors.borderLight,
+    borderRadius: 20, borderWidth: 1, borderColor: colors.borderLight,
     backgroundColor: colors.surface,
-    paddingHorizontal: isMobile ? 18 : 24, paddingVertical: isMobile ? 16 : 20,
-    gap: isMobile ? 12 : 14,
+    paddingHorizontal: isMobile ? 18 : 22, paddingVertical: isMobile ? 18 : 22,
+    gap: isMobile ? 14 : 16,
     flexBasis: isMobile ? 'auto' : '47%',
     flexGrow: 1,
     ...Platform.select({ web: {
-      boxShadow: '0 3px 14px rgba(0,0,0,0.045), 0 1px 4px rgba(0,0,0,0.03)',
-      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+      boxShadow: '0 4px 18px rgba(15, 23, 42, 0.05), 0 1px 4px rgba(15, 23, 42, 0.03)',
+      transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, border-color 0.25s ease',
+      gridColumn: 'span 2',
     } as any }),
   },
+  // Last row: items 4 & 5 span 3 cols each → centered look
+  filterGroupCardLastRowFirst: Platform.select({
+    web: !isMobile ? ({ gridColumn: '1 / span 3' } as any) : {},
+  }) as any,
+  filterGroupCardLastRowSecond: Platform.select({
+    web: !isMobile ? ({ gridColumn: '4 / span 3' } as any) : {},
+  }) as any,
   filterGroupCardHover: {
     borderColor: colors.primary,
     ...Platform.select({ web: { boxShadow: `0 8px 28px rgba(0,0,0,0.09), 0 3px 8px ${colors.primary}16`, transform: 'translateY(-2px)' } }),
   },
 
-  filterGroupCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  filterGroupCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   filterGroupIconWrap: {
-    width: 32, height: 32, borderRadius: DESIGN_TOKENS.radii.sm, backgroundColor: colors.primarySoft,
-    borderWidth: 1, borderColor: colors.primaryAlpha30, alignItems: 'center', justifyContent: 'center',
-    ...Platform.select({ web: { boxShadow: `0 1px 5px ${colors.primary}12` } }),
+    width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
+    ...Platform.select({ web: { boxShadow: '0 4px 12px rgba(0,0,0,0.12)' } }),
   },
-  filterGroupTitleText: { color: colors.text, fontSize: isMobile ? 14 : 14, fontWeight: '700', letterSpacing: -0.1 },
+  filterGroupTitleText: { color: colors.text, fontSize: isMobile ? 15 : 16, fontWeight: '800', letterSpacing: -0.2, flexShrink: 1 },
 
-  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: isMobile ? 7 : 8 },
+  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: isMobile ? 8 : 8 },
   chipsWrapMobile: { width: '100%' },
 
   chip: {
     borderRadius: DESIGN_TOKENS.radii.pill, borderWidth: 1, borderColor: colors.borderLight,
-    backgroundColor: colors.backgroundSecondary,
-    paddingHorizontal: isMobile ? 14 : 16, paddingVertical: isMobile ? 8 : 9,
+    backgroundColor: colors.surface,
+    paddingHorizontal: isMobile ? 14 : 14, paddingVertical: isMobile ? 8 : 9,
     ...Platform.select({ web: {
       cursor: 'pointer',
-      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+      transition: 'transform 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease',
     } }),
   },
   chipMobile: {
@@ -480,14 +507,6 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
     flexShrink: 1,
     maxWidth: '100%',
   },
-  chipHover: {
-    borderColor: colors.primary, backgroundColor: colors.primarySoft,
-    ...Platform.select({ web: { transform: 'translateY(-2px) scale(1.02)', boxShadow: `0 4px 12px ${colors.primary}20` } }),
-  },
-  chipSelected: {
-    borderColor: colors.primary, backgroundColor: colors.primarySoft,
-    ...Platform.select({ web: { boxShadow: `0 3px 10px ${colors.primary}28`, transform: 'scale(1.02)' } }),
-  },
-  chipText: { color: colors.text, fontSize: isMobile ? 13 : 14, lineHeight: isMobile ? 18 : 20, fontWeight: '500' },
-  chipTextSelected: { color: colors.primaryText, fontWeight: '700' },
+  chipText: { color: colors.text, fontSize: isMobile ? 13 : 14, lineHeight: isMobile ? 18 : 20, fontWeight: '600' },
+  chipTextSelected: { color: '#ffffff', fontWeight: '700' },
 });

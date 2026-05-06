@@ -847,9 +847,11 @@ function ListTravelBase() {
       fallbackStepSearchless,
     ]);
 
+    const activeFallbackMatch = isEmpty ? fallbackMatch : null;
+
     const isFallbackLoading =
       isEmpty &&
-      !fallbackMatch &&
+      !activeFallbackMatch &&
       (
         fallbackQueryLight.isInitialLoading ||
         fallbackQueryMedium.isInitialLoading ||
@@ -857,13 +859,13 @@ function ListTravelBase() {
         fallbackQuerySearchless.isInitialLoading
       );
 
-    const displayedTravels = fallbackMatch?.query.data ?? travels;
-    const displayedTotal = fallbackMatch?.query.total ?? total;
-    const displayedRefetch = fallbackMatch?.query.refetch ?? refetch;
-    const displayedHandleEndReached = fallbackMatch?.query.handleEndReached ?? handleEndReached;
-    const displayedShowNextPageLoading = fallbackMatch?.query.isNextPageLoading ?? isNextPageLoading;
+    const displayedTravels = activeFallbackMatch?.query.data ?? travels;
+    const displayedTotal = activeFallbackMatch?.query.total ?? total;
+    const displayedRefetch = activeFallbackMatch?.query.refetch ?? refetch;
+    const displayedHandleEndReached = activeFallbackMatch?.query.handleEndReached ?? handleEndReached;
+    const displayedShowNextPageLoading = activeFallbackMatch?.query.isNextPageLoading ?? isNextPageLoading;
     const hasDisplayedItems = displayedTravels.length > 0;
-    const displayedShowEmptyState = !fallbackMatch && !isFallbackLoading && showEmptyState;
+    const displayedShowEmptyState = !activeFallbackMatch && !isFallbackLoading && showEmptyState;
     const displayedShowInitialLoading = isInitialLoading || isFallbackLoading;
 
     const handleListEndReached = useCallback(() => {
@@ -901,11 +903,11 @@ function ListTravelBase() {
         </Suspense>
       ) : null;
 
-      const fallbackNotice = fallbackMatch?.step ? (
+      const fallbackNotice = activeFallbackMatch?.step ? (
         <View style={styles.fallbackNotice} testID="travel-results-fallback-notice">
-          <Text style={styles.fallbackNoticeTitle}>Точных совпадений не нашли</Text>
+          <Text style={styles.fallbackNoticeTitle}>Похожие маршруты</Text>
           <Text style={styles.fallbackNoticeText}>
-            {fallbackMatch.step.label}. Показываем похожие маршруты, чтобы на странице всегда оставалась полезная выдача.
+            По вашему запросу точных совпадений не нашлось. Подобрали похожие маршруты — возможно, что-то из них вам подойдёт.
           </Text>
         </View>
       ) : null;
@@ -923,7 +925,7 @@ function ListTravelBase() {
       clearSelection,
       displayedTravels,
       exportState.selected,
-      fallbackMatch?.step,
+      activeFallbackMatch?.step,
       hasSelection,
       isExport,
       isMobileDevice,

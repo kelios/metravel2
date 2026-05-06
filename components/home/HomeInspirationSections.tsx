@@ -1,5 +1,6 @@
 import React, { memo, useCallback, useMemo, useState } from 'react'
 import { Platform, Pressable, Text, View } from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
 import Feather from '@expo/vector-icons/Feather'
 import { useRouter } from 'expo-router'
 
@@ -127,7 +128,7 @@ const FILTER_GROUPS: Array<{
       { label: 'Озеро', filters: { categoryTravelAddress: [84] }, route: '/search' },
       { label: 'Гора', filters: { categoryTravelAddress: [26] }, route: '/search' },
       { label: 'Водопад', filters: { categoryTravelAddress: [20] }, route: '/search' },
-      { label: 'Бухта', filters: { categoryTravelAddress: [18] }, route: '/search' },
+      { label: 'Замок', filters: { categoryTravelAddress: [43] }, route: '/search' },
     ],
   },
   {
@@ -153,8 +154,8 @@ function FilterGroupCard({
   selectedChip,
   onChipPress,
   styles,
-  colors,
   isMobile,
+  extraStyle,
 }: {
   group: (typeof FILTER_GROUPS)[number]
   selectedChip: string | null
@@ -164,15 +165,44 @@ function FilterGroupCard({
     route?: string,
   ) => void
   styles: ReturnType<typeof createSectionsStyles>
-  colors: ReturnType<typeof useThemedColors>
   isMobile: boolean
+  extraStyle?: any
 }) {
   const [hovered, setHovered] = useState(false)
   const isWeb = Platform.OS === 'web'
 
+  const accent = group.accent
+  const accentSelectedStyle = {
+    backgroundColor: accent.base,
+    borderColor: accent.base,
+    ...Platform.select({
+      web: {
+        boxShadow: `0 6px 18px ${accent.base}40`,
+        transform: 'translateY(-1px)',
+      } as any,
+    }),
+  }
+  const accentHoverStyle = {
+    borderColor: accent.base,
+    backgroundColor: accent.soft,
+  }
+
   return (
     <View
-      style={[styles.filterGroupCard, hovered && styles.filterGroupCardHover]}
+      style={[
+        styles.filterGroupCard,
+        extraStyle,
+        hovered &&
+          ({
+            borderColor: accent.base,
+            ...Platform.select({
+              web: {
+                boxShadow: `0 14px 32px ${accent.base}1F, 0 4px 10px rgba(0,0,0,0.05)`,
+                transform: 'translateY(-3px)',
+              } as any,
+            }),
+          } as any),
+      ]}
       {...(isWeb
         ? ({
             onMouseEnter: () => setHovered(true),
@@ -181,83 +211,51 @@ function FilterGroupCard({
         : {})}
     >
       <View style={styles.filterGroupCardHeader}>
-        <View style={styles.filterGroupIconWrap}>
-          <Feather name={group.icon as any} size={14} color={colors.primary} />
-        </View>
+        <LinearGradient
+          colors={accent.gradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.filterGroupIconWrap}
+        >
+          <Feather name={group.icon as any} size={18} color="#ffffff" />
+        </LinearGradient>
         <Text style={styles.filterGroupTitleText}>{group.title}</Text>
       </View>
-      {isMobile ? (
-        <View style={[styles.chipsWrap, styles.chipsWrapMobile]}>
-          {group.chips.map((chip) => {
-            const isSelected = selectedChip === chip.label
-            return (
-              <Pressable
-                key={chip.label}
-                onPress={() =>
-                  onChipPress(
-                    chip.label,
-                    (chip as any).filters,
-                    (chip as any).route,
-                  )
-                }
-                style={({ pressed }) => [
-                  styles.chip,
-                  styles.chipMobile,
-                  isSelected && styles.chipSelected,
-                  !isSelected && pressed && styles.chipHover,
+      <View style={[styles.chipsWrap, isMobile && styles.chipsWrapMobile]}>
+        {group.chips.map((chip) => {
+          const isSelected = selectedChip === chip.label
+          return (
+            <Pressable
+              key={chip.label}
+              onPress={() =>
+                onChipPress(
+                  chip.label,
+                  (chip as any).filters,
+                  (chip as any).route,
+                )
+              }
+              style={({ pressed, hovered: chipHovered }) => [
+                styles.chip,
+                isMobile && styles.chipMobile,
+                !isSelected && (pressed || chipHovered) && accentHoverStyle,
+                isSelected && accentSelectedStyle,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={`Фильтр ${chip.label}`}
+              accessibilityState={{ selected: isSelected }}
+            >
+              <Text
+                style={[
+                  styles.chipText,
+                  isSelected && styles.chipTextSelected,
                 ]}
-                accessibilityRole="button"
-                accessibilityLabel={`Фильтр ${chip.label}`}
-                accessibilityState={{ selected: isSelected }}
               >
-                <Text
-                  style={[
-                    styles.chipText,
-                    isSelected && styles.chipTextSelected,
-                  ]}
-                >
-                  {chip.label}
-                </Text>
-              </Pressable>
-            )
-          })}
-        </View>
-      ) : (
-        <View style={styles.chipsWrap}>
-          {group.chips.map((chip) => {
-            const isSelected = selectedChip === chip.label
-            return (
-              <Pressable
-                key={chip.label}
-                onPress={() =>
-                  onChipPress(
-                    chip.label,
-                    (chip as any).filters,
-                    (chip as any).route,
-                  )
-                }
-                style={({ pressed, hovered: chipHovered }) => [
-                  styles.chip,
-                  isSelected && styles.chipSelected,
-                  !isSelected && (pressed || chipHovered) && styles.chipHover,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={`Фильтр ${chip.label}`}
-                accessibilityState={{ selected: isSelected }}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    isSelected && styles.chipTextSelected,
-                  ]}
-                >
-                  {chip.label}
-                </Text>
-              </Pressable>
-            )
-          })}
-        </View>
-      )}
+                {chip.label}
+              </Text>
+            </Pressable>
+          )
+        })}
+      </View>
     </View>
   )
 }
@@ -313,23 +311,26 @@ function HomeInspirationSections() {
             <View style={styles.quickFiltersHeader}>
               <View style={styles.quickFiltersHeaderLeft}>
                 <View style={styles.quickFiltersBadge}>
-                  <Feather name="sliders" size={12} color={colors.primary} />
+                  <Feather name="sliders" size={13} color={colors.primary} />
                   <Text style={styles.quickFiltersBadgeText}>Умный подбор</Text>
                 </View>
                 <Text style={styles.quickFiltersTitle}>
-                  Подберите поездку под свой ритм
+                  Подберите поездку{' '}
+                  <Text style={styles.quickFiltersTitleAccent}>
+                    под свой ритм
+                  </Text>
                 </Text>
                 <Text style={styles.quickFiltersSubtitle}>
-                  Комбинируйте формат, сезон и расстояние, чтобы найти идеальный
+                  Комбинируйте формат, сезон и расстояние — мы соберём идеальный
                   маршрут
                 </Text>
               </View>
               <Button
-                label="Смотреть маршруты"
+                label="Смотреть все маршруты"
                 onPress={handleOpenArticles}
-                icon={<Feather name="arrow-right" size={16} color={colors.text} />}
+                icon={<Feather name="arrow-right" size={16} color="#ffffff" />}
                 iconPosition="right"
-                variant="secondary"
+                variant="primary"
                 style={[
                   styles.quickFiltersArticlesButton,
                   btnHovered && styles.quickFiltersArticlesButtonHover,
@@ -347,15 +348,21 @@ function HomeInspirationSections() {
             </View>
 
             <View style={styles.quickFiltersGrid}>
-              {FILTER_GROUPS.map((group) => (
+              {FILTER_GROUPS.map((group, idx) => (
                 <FilterGroupCard
                   key={group.title}
                   group={group}
                   selectedChip={selectedChip}
                   onChipPress={handleFilterPress}
                   styles={styles}
-                  colors={colors}
                   isMobile={isMobile}
+                  extraStyle={
+                    idx === 3
+                      ? styles.filterGroupCardLastRowFirst
+                      : idx === 4
+                        ? styles.filterGroupCardLastRowSecond
+                        : undefined
+                  }
                 />
               ))}
             </View>

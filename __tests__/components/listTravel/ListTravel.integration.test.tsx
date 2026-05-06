@@ -509,6 +509,92 @@ describe('ListTravel Integration Tests', () => {
     expect(screen.queryByText('Beach Vacation')).toBeNull();
   });
 
+  it('prefers exact results over fallback matches when both are available', async () => {
+    const exactTravel = {
+      ...mockTravels[0],
+      id: 20,
+      slug: 'waterfall-trip',
+      name: 'Waterfall Trip',
+    };
+    const fallbackTravel = {
+      ...mockTravels[1],
+      id: 379,
+      slug: 'fallback-trip',
+      name: 'Fallback Trip',
+    };
+
+    let callIndex = 0;
+    mockUseListTravelData.mockImplementation(() => {
+      const currentCall = callIndex % 5;
+      callIndex += 1;
+
+      if (currentCall === 0) {
+        return {
+          data: [exactTravel],
+          total: 20,
+          hasMore: true,
+          isLoading: false,
+          isFetching: false,
+          isError: false,
+          status: 'success',
+          isInitialLoading: false,
+          isNextPageLoading: false,
+          isEmpty: false,
+          refetch: jest.fn(),
+          handleEndReached: jest.fn(),
+          handleRefresh: jest.fn(),
+          isRefreshing: false,
+        };
+      }
+
+      if (currentCall === 1) {
+        return {
+          data: [fallbackTravel],
+          total: 379,
+          hasMore: true,
+          isLoading: false,
+          isFetching: false,
+          isError: false,
+          status: 'success',
+          isInitialLoading: false,
+          isNextPageLoading: false,
+          isEmpty: false,
+          refetch: jest.fn(),
+          handleEndReached: jest.fn(),
+          handleRefresh: jest.fn(),
+          isRefreshing: false,
+        };
+      }
+
+      return {
+        data: [],
+        total: 0,
+        hasMore: false,
+        isLoading: false,
+        isFetching: false,
+        isError: false,
+        status: 'success',
+        isInitialLoading: false,
+        isNextPageLoading: false,
+        isEmpty: false,
+        refetch: jest.fn(),
+        handleEndReached: jest.fn(),
+        handleRefresh: jest.fn(),
+        isRefreshing: false,
+      };
+    });
+
+    renderWithProviders(<ListTravel />);
+
+    await waitFor(() => {
+      expect(within(screen.getByTestId('results-count-wrapper')).getByText('20 путешествий')).toBeTruthy();
+    });
+
+    expect(screen.getByText('Waterfall Trip')).toBeTruthy();
+    expect(screen.queryByText('Fallback Trip')).toBeNull();
+    expect(screen.queryByTestId('travel-results-fallback-notice')).toBeNull();
+  });
+
   it('passes categoryTravelAddress from URL params into initialFilter', async () => {
     (global as any).__mockLocalSearchParams = {
       categories: '2,21',

@@ -98,7 +98,7 @@ describe('HomeInspirationSections', () => {
       ['Озеро', '/search?categoryTravelAddress=84'],
       ['Гора', '/search?categoryTravelAddress=26'],
       ['Водопад', '/search?categoryTravelAddress=20'],
-      ['Бухта', '/search?categoryTravelAddress=18'],
+      ['Замок', '/search?categoryTravelAddress=43'],
       ['До 30 км', '/map?radius=30'],
       ['До 60 км', '/map?radius=60'],
       ['До 100 км', '/map?radius=100'],
@@ -120,9 +120,9 @@ describe('HomeInspirationSections', () => {
       expect(lastPath).not.toContain('categories=');
     });
 
-    it('"Смотреть маршруты" button navigates to /search without filters', () => {
+    it('"Смотреть все маршруты" button navigates to /search without filters', () => {
       const { getByLabelText } = render(<HomeInspirationSections />);
-      fireEvent.press(getByLabelText('Смотреть маршруты'));
+      fireEvent.press(getByLabelText('Смотреть все маршруты'));
       expect(mockPush).toHaveBeenCalledWith('/search');
     });
   });
