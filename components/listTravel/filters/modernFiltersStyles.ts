@@ -413,7 +413,6 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       alignItems: 'center',
       justifyContent: 'space-between',
       gap: spacing.sm,
-      marginTop: spacing.sm,
     },
     yearGroupContent: {
       marginTop: spacing.sm,
@@ -496,12 +495,9 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
     },
     scrollContent: {
       flexGrow: 1,
-      // Reserve enough space so the last filter option isn't hidden
-      // behind the sticky "Показать результаты" footer on mobile/narrow web.
-      // Footer = paddingTop(md) + apply button (~50) + optional reset (~50)
-      //        + paddingBottom(md + safe-area + mobileWebBottomReserve).
-      // Using a generous reserve to cover both states (with/without reset button).
-      paddingBottom: spacing.xxxl * 3 + mobileWebBottomReserve,
+      // Reserve space so the last option isn't hidden behind the sticky footer.
+      // Footer height ≈ paddingTop(md) + apply(~50) + reset(~50) + paddingBottom(md) ≈ 130px.
+      paddingBottom: spacing.xxl + mobileWebBottomReserve,
     },
     filterGroup: {
       marginBottom: spacing.xs,
