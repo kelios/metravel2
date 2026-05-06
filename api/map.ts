@@ -5,6 +5,7 @@ import { safeJsonParse } from '@/utils/safeJsonParse';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { Platform } from 'react-native';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
+import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
 
 const normalizeCoordString = (value: unknown): string | undefined => {
   if (typeof value !== 'string') return undefined;
@@ -229,31 +230,19 @@ const normalizeTravelsForMapPayload = (payload: unknown): TravelsForMap => {
 
 const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
 const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
-
-const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
-const webOriginApi =
-  Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin
-    ? `${window.location.origin}/api`
-    : '';
-const isWebLocalHost =
-  Platform.OS === 'web' &&
-  typeof window !== 'undefined' &&
-  typeof window.location?.hostname === 'string' &&
-  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-const rawApiUrl: string =
-  (Platform.OS === 'web' && isWebLocalHost && webOriginApi ? webOriginApi : '') ||
-  envApiUrl ||
-  (Platform.OS === 'web' && (isE2E || isLocalApi) && webOriginApi ? webOriginApi : '') ||
-  (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
+const rawApiUrl = resolveApiBaseUrl({
+  platformOS: Platform.OS,
+  envApiUrl: process.env.EXPO_PUBLIC_API_URL,
+  nodeEnv: process.env.NODE_ENV,
+  isE2E,
+  isLocalApi,
+  windowOrigin: Platform.OS === 'web' && typeof window !== 'undefined' ? window.location?.origin : null,
+  windowHostname: Platform.OS === 'web' && typeof window !== 'undefined' ? window.location?.hostname : null,
+});
 if (!rawApiUrl) {
   throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');
 }
-
-// Нормализуем базу API: гарантируем суффикс /api и убираем лишние слэши
-const URLAPI = (() => {
-  const trimmed = rawApiUrl.replace(/\/+$/, '');
-  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
-})();
+const URLAPI = rawApiUrl;
 
 const DEFAULT_TIMEOUT = 10000; // 10 секунд
 const LONG_TIMEOUT = 30000; // 30 секунд для тяжелых запросов
