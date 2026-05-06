@@ -79,7 +79,6 @@ const stopWebPopupEvent = (event?: any) => {
 };
 
 const POPUP_DOM_EVENTS = [
-  'click',
   'dblclick',
   'contextmenu',
   'mousedown',
@@ -100,9 +99,7 @@ const isCardActionEvent = (event: Event): boolean => {
 
 const getPopupEventNodes = (node: any): EventTarget[] => {
   if (Platform.OS !== 'web' || !node?.addEventListener) return [];
-
-  const popupNode = node.closest?.('.leaflet-popup');
-  return popupNode && popupNode !== node ? [node, popupNode] : [node];
+  return [node];
 };
 
 const PlacePopupCard: React.FC<Props> = ({
