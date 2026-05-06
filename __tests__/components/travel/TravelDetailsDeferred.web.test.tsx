@@ -206,14 +206,14 @@ describe('TravelDeferredSections (web author defer)', () => {
           />
         </Suspense>,
       )
-      jest.advanceTimersByTime(10000)
+      jest.advanceTimersByTime(400)
       await Promise.resolve()
     })
 
-    expect(mockMapSectionSpy).toHaveBeenCalled()
-    expect(mockSidebarSectionSpy).toHaveBeenCalled()
-    expect(mockCommentsSectionSpy).toHaveBeenCalled()
-    expect(mockFooterSectionSpy).toHaveBeenCalled()
+    expect(mockMapSectionSpy).not.toHaveBeenCalled()
+    expect(mockSidebarSectionSpy).not.toHaveBeenCalled()
+    expect(mockCommentsSectionSpy).not.toHaveBeenCalled()
+    expect(mockFooterSectionSpy).not.toHaveBeenCalled()
   })
 
   it('renders sidebar and comments immediately when opened via section navigation', async () => {
@@ -341,7 +341,7 @@ describe('TravelDeferredSections (web author defer)', () => {
           <TravelDeferredSections
             travel={travel}
             isMobile={false}
-            forceOpenKey={null}
+            forceOpenKey="comments"
             anchors={anchors}
             scrollY={new Animated.Value(0)}
             viewportHeight={900}

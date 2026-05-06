@@ -73,6 +73,42 @@ const mobilePanelEntrySelector =
 
 const getMobilePanelEntry = (page: any) => page.locator(mobilePanelEntrySelector).first();
 
+const activateMobileTab = async (
+  page: any,
+  key: 'search' | 'route' | 'list',
+) => {
+  const tab = page.getByTestId(`segmented-${key}`);
+  await expect(tab).toBeVisible({ timeout: 15_000 });
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await tab.click({ force: true }).catch(() => undefined);
+    await page.waitForTimeout(150);
+
+    const activatedAfterClick =
+      (await tab.getAttribute('aria-checked').catch(() => null)) === 'true';
+    if (activatedAfterClick) return;
+
+    await tab.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
+    await page.waitForTimeout(150);
+
+    const activatedAfterDomClick =
+      (await tab.getAttribute('aria-checked').catch(() => null)) === 'true';
+    if (activatedAfterDomClick) return;
+
+    await tab.focus().catch(() => undefined);
+    await page.keyboard.press('Enter').catch(() => undefined);
+    await page.waitForTimeout(150);
+
+    const activatedAfterKeyboard =
+      (await tab.getAttribute('aria-checked').catch(() => null)) === 'true';
+    if (activatedAfterKeyboard) return;
+  }
+
+  await expect(tab).toHaveAttribute('aria-checked', 'true', {
+    timeout: 15_000,
+  });
+};
+
 const maybeRecoverFromMapErrorScreen = async (page: any) => {
   const errorTitle = page.getByText('Что-то пошло не так', { exact: true });
   const hasError = await errorTitle.isVisible().catch(() => false);
@@ -1248,7 +1284,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     const listSummary = page.getByTestId('travel-list-mobile-summary');
     const listOpenedFirst = await listSummary.isVisible({ timeout: 2_000 }).catch(() => false);
 
-    await filtersToggle.click({ force: true });
+    await activateMobileTab(page, 'search');
 
     await expect(page.getByTestId('map-mobile-tab-transition')).toBeHidden({ timeout: 10_000 });
     await page.getByTestId('map-mobile-filters-loading').waitFor({ state: 'hidden', timeout: 10_000 }).catch(() => null);
