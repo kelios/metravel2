@@ -13,7 +13,9 @@ test.describe('Filters', () => {
     await page.goto('/search', { waitUntil: 'domcontentloaded' });
 
     // Year input exists inside ModernFilters (sidebar) on desktop.
-    const yearInput = page.getByPlaceholder('2023');
+    // Use the accessibility label instead of placeholder text so the test
+    // stays stable when the UI hint changes.
+    const yearInput = page.getByLabel('Фильтр по году');
     await expect(yearInput).toBeVisible({ timeout: 30_000 });
 
     await yearInput.fill('2024');

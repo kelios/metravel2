@@ -17,6 +17,8 @@ const linkingOpenUrlGuard = [
 
 const baseIgnores = [
   "node_modules/",
+  ".tmp/",
+  ".tmp/**",
   ".expo/",
   ".prod-build-tmp/",
   "dist/",

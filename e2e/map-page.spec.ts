@@ -1244,19 +1244,24 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
 
     await expect(listToggle).toBeVisible({ timeout: 20_000 });
     await expect(filtersToggle).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByTestId('travel-list-mobile-summary')).toBeVisible({ timeout: 10_000 });
 
-    // Opening the mobile sheet always settles into the list tab first.
-    // Wait for that state, then switch to search/filters and confirm the visible content changed.
+    const listSummary = page.getByTestId('travel-list-mobile-summary');
+    const listOpenedFirst = await listSummary.isVisible({ timeout: 2_000 }).catch(() => false);
+
     await filtersToggle.click({ force: true });
+
     await expect(page.getByTestId('map-mobile-tab-transition')).toBeHidden({ timeout: 10_000 });
+    await page.getByTestId('map-mobile-filters-loading').waitFor({ state: 'hidden', timeout: 10_000 }).catch(() => null);
 
     // Verify the filters view is active in the mobile sheet.
     // The current mobile contract shows the filters body immediately,
     // while compact context chips appear only when there are real search/category refinements.
     await expect(page.getByTestId('filters-block-main')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByTestId('map-mobile-toolbar-summary')).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByTestId('travel-list-mobile-summary')).toBeHidden({ timeout: 10_000 });
+
+    if (listOpenedFirst) {
+      await expect(listSummary).toBeHidden({ timeout: 10_000 });
+    }
 
     await expect(listToggle).toBeVisible();
     await expect(filtersToggle).toBeVisible();

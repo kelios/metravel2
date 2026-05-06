@@ -4,10 +4,12 @@ import { KeyboardAvoidingView, Platform, ScrollView, StatusBar, TextInput, View 
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
-import { AboutHeader } from '@/components/about/AboutHeader';
 import { AboutIntroCard } from '@/components/about/AboutIntroCard';
 import { VideoCard } from '@/components/about/VideoCard';
 import { FeaturesSection } from '@/components/about/FeaturesSection';
+import { HeroBanner } from '@/components/about/HeroBanner';
+import { CategoriesShowcase } from '@/components/about/CategoriesShowcase';
+import { StatsBanner } from '@/components/about/StatsBanner';
 import { ContactForm } from '@/components/about/ContactForm';
 import { SocialSection } from '@/components/about/SocialSection';
 import { sendFeedback } from '@/api/misc';
@@ -194,9 +196,13 @@ function AboutAndContactScreen() {
                 )}
                 <StatusBar barStyle="dark-content" />
                 <View style={styles.content}>
-                  <AboutHeader />
+                  <HeroBanner isWide={isWide} />
 
-                  <View style={isWide ? styles.twoColumns : styles.oneColumn}>
+                  <StatsBanner isWide={isWide} />
+
+                  <CategoriesShowcase isWide={isWide} />
+
+                  <View style={[isWide ? styles.twoColumns : styles.oneColumn, { marginTop: 40 }]}>
                     <AboutIntroCard
                       email={EMAIL}
                       onSendMail={sendMail}

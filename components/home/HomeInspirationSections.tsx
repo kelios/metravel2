@@ -48,10 +48,32 @@ const buildFilterPath = (base: string, params?: QuickFilterParams) => {
   return query.length > 0 ? `${base}?${query}` : base
 }
 
-const FILTER_GROUPS = [
+type GroupAccent = {
+  base: string
+  soft: string
+  text: string
+  gradient: [string, string]
+}
+
+const FILTER_GROUPS: Array<{
+  title: string
+  icon: string
+  accent: GroupAccent
+  chips: Array<{
+    label: string
+    filters?: QuickFilterParams
+    route?: string
+  }>
+}> = [
   {
     title: 'Тип маршрута',
-    icon: 'layers',
+    icon: 'compass',
+    accent: {
+      base: '#2F6B4E',
+      soft: 'rgba(47, 107, 78, 0.10)',
+      text: '#1F4E37',
+      gradient: ['#7BB07A', '#2F6B4E'],
+    },
     chips: [
       { label: 'Поход / хайкинг', filters: { categories: [2, 21] } },
       { label: 'Город', filters: { categories: [19, 20] } },
@@ -63,32 +85,28 @@ const FILTER_GROUPS = [
   {
     title: 'Ночлег',
     icon: 'moon',
+    accent: {
+      base: '#5B3F8C',
+      soft: 'rgba(91, 63, 140, 0.10)',
+      text: '#3F2C66',
+      gradient: ['#B59CD9', '#5B3F8C'],
+    },
     chips: [
-      {
-        label: 'Без ночлега',
-        filters: { over_nights_stay: [8] },
-        route: '/search',
-      },
-      {
-        label: 'Палатка',
-        filters: { over_nights_stay: [1] },
-        route: '/search',
-      },
-      {
-        label: 'Гостиница',
-        filters: { over_nights_stay: [2] },
-        route: '/search',
-      },
-      {
-        label: 'Квартира / дом',
-        filters: { over_nights_stay: [3, 4] },
-        route: '/search',
-      },
+      { label: 'Без ночлега', filters: { over_nights_stay: [8] }, route: '/search' },
+      { label: 'Палатка', filters: { over_nights_stay: [1] }, route: '/search' },
+      { label: 'Гостиница', filters: { over_nights_stay: [2] }, route: '/search' },
+      { label: 'Квартира / дом', filters: { over_nights_stay: [3, 4] }, route: '/search' },
     ],
   },
   {
     title: 'Сезон',
-    icon: 'calendar',
+    icon: 'sun',
+    accent: {
+      base: '#A86A1F',
+      soft: 'rgba(168, 106, 31, 0.10)',
+      text: '#7A4D14',
+      gradient: ['#F4B860', '#A86A1F'],
+    },
     chips: [
       { label: 'Весна', filters: { month: [3, 4, 5] }, route: '/search' },
       { label: 'Лето', filters: { month: [6, 7, 8] }, route: '/search' },
@@ -98,33 +116,29 @@ const FILTER_GROUPS = [
   },
   {
     title: 'Что посмотреть',
-    icon: 'map',
+    icon: 'eye',
+    accent: {
+      base: '#1F5C8A',
+      soft: 'rgba(31, 92, 138, 0.10)',
+      text: '#154566',
+      gradient: ['#5BA8D6', '#1F5C8A'],
+    },
     chips: [
-      {
-        label: 'Озеро',
-        filters: { categoryTravelAddress: [84] },
-        route: '/search',
-      },
-      {
-        label: 'Гора',
-        filters: { categoryTravelAddress: [26] },
-        route: '/search',
-      },
-      {
-        label: 'Водопад',
-        filters: { categoryTravelAddress: [20] },
-        route: '/search',
-      },
-      {
-        label: 'Бухта',
-        filters: { categoryTravelAddress: [18] },
-        route: '/search',
-      },
+      { label: 'Озеро', filters: { categoryTravelAddress: [84] }, route: '/search' },
+      { label: 'Гора', filters: { categoryTravelAddress: [26] }, route: '/search' },
+      { label: 'Водопад', filters: { categoryTravelAddress: [20] }, route: '/search' },
+      { label: 'Бухта', filters: { categoryTravelAddress: [18] }, route: '/search' },
     ],
   },
   {
     title: 'Расстояние на карте',
     icon: 'map-pin',
+    accent: {
+      base: '#C03A4A',
+      soft: 'rgba(192, 58, 74, 0.10)',
+      text: '#8E2A36',
+      gradient: ['#FF7E7E', '#C03A4A'],
+    },
     chips: [
       { label: 'До 30 км', filters: { radius: 30 }, route: '/map' },
       { label: 'До 60 км', filters: { radius: 60 }, route: '/map' },
