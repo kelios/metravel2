@@ -143,7 +143,7 @@ describe('ModernFilters Component', () => {
       />
     );
 
-    const clearButton = screen.getByText('Очистить (1)');
+    const clearButton = screen.getByRole('button', { name: 'Очистить все фильтры (1)' });
     fireEvent.press(clearButton);
 
     expect(mockOnClearAll).toHaveBeenCalled();

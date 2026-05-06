@@ -86,7 +86,12 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: spacing.sm,
+      marginBottom: spacing.md,
+      gap: spacing.sm,
+    },
+    headerStacked: {
+      flexDirection: 'column',
+      alignItems: 'stretch',
     },
     headerTitle: {
       fontSize: typography.sizes.md,
@@ -102,6 +107,8 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       borderWidth: 1,
       borderColor: colors.brandAlpha30,
       flexShrink: 1,
+      maxWidth: '100%',
+      alignSelf: 'flex-start',
       ...Platform.select({
         web: {
           boxShadow: `0 1px 0 ${colors.brandAlpha30} inset` as any,
@@ -121,6 +128,9 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       flex: 1,
       minWidth: 0,
     },
+    headerLeftStacked: {
+      flex: 0,
+    },
     iconSlot16: {
       width: 16,
       height: 16,
@@ -139,6 +149,11 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.xs,
+      flexShrink: 0,
+    },
+    headerRightStacked: {
+      width: '100%',
+      justifyContent: 'space-between',
     },
     closeButton: {
       width: DESIGN_TOKENS.touchTarget.minWidth,
@@ -193,6 +208,11 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
         },
       }),
     },
+    toggleAllButtonWide: {
+      width: 'auto',
+      minWidth: DESIGN_TOKENS.touchTarget.minWidth,
+      paddingHorizontal: spacing.md,
+    },
     toggleAllButtonPressed: {
       backgroundColor: colors.brandSoft,
       borderColor: colors.brandAlpha30,
@@ -208,12 +228,15 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       fontWeight: typography.weights.semibold as any,
     },
     clearButton: {
-      minHeight: 36,
+      minHeight: 40,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
       justifyContent: 'center',
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.xs,
       borderRadius: PILL_RADIUS,
-      backgroundColor: colors.brandSoft,
+      backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.brandAlpha30,
       ...Platform.select({
@@ -226,6 +249,23 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       fontSize: typography.sizes.sm,
       fontWeight: typography.weights.semibold as any,
       color: colors.brandText,
+    },
+    clearButtonCountBadge: {
+      minWidth: 22,
+      height: 22,
+      paddingHorizontal: 6,
+      borderRadius: PILL_RADIUS,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.brandSoft,
+      borderWidth: 1,
+      borderColor: colors.brandAlpha30,
+    },
+    clearButtonCountText: {
+      fontSize: typography.sizes.xs,
+      fontWeight: typography.weights.bold as any,
+      color: colors.brandText,
+      lineHeight: 14,
     },
     clearAllMobileButton: {
       flexDirection: 'row',
@@ -269,7 +309,7 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       color: colors.textSecondary,
     },
     sortSection: {
-      marginBottom: spacing.xs,
+      marginBottom: spacing.sm,
       borderRadius: MENU_RADIUS,
       borderWidth: 0,
       borderColor: 'transparent',
@@ -280,18 +320,18 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      minHeight: 52,
-      paddingVertical: 10,
+      minHeight: 48,
+      paddingVertical: 9,
       paddingHorizontal: spacing.md,
-      backgroundColor: colors.backgroundSecondary,
-      borderRadius: PILL_RADIUS,
+      backgroundColor: colors.surface,
+      borderRadius: CONTROL_RADIUS,
       borderWidth: 1,
       borderColor: colors.borderLight,
       ...Platform.select({
         web: {
           cursor: 'pointer',
           transition: 'all 0.2s ease',
-          boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)' as any,
+          boxShadow: '0 1px 2px rgba(15, 23, 42, 0.03)' as any,
         } as any,
       }),
     },
@@ -300,17 +340,17 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       borderColor: colors.border,
     },
     clearButtonPressed: {
-      backgroundColor: colors.brandAlpha30,
-      borderColor: colors.borderAccent,
+      backgroundColor: colors.brandSoft,
+      borderColor: colors.brandAlpha40,
     },
     sortDropdownTriggerHover: Platform.select({
       web: {
-        backgroundColor: colors.surface,
+        backgroundColor: colors.backgroundSecondary,
         borderColor: colors.border,
       } as any,
     }),
     sortDropdownTriggerActive: {
-      backgroundColor: colors.primarySoft,
+      backgroundColor: colors.surface,
       borderColor: colors.primaryAlpha30,
     },
     sortDropdownTriggerLeft: {
@@ -320,19 +360,12 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       flex: 1,
     },
     sortDropdownIcon: {
-      width: 32,
-      height: 32,
-      borderRadius: PILL_RADIUS,
+      width: 28,
+      height: 28,
+      borderRadius: CONTROL_RADIUS,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      ...Platform.select({
-        web: {
-          boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)' as any,
-        } as any,
-      }),
+      backgroundColor: colors.backgroundSecondary,
     },
     sortDropdownTextContainer: {
       flex: 1,
@@ -342,8 +375,8 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       flexWrap: 'wrap',
     },
     sortDropdownLabel: {
-      fontSize: typography.sizes.xs,
-      color: colors.textMuted,
+      fontSize: typography.sizes.sm,
+      color: colors.textSecondary,
       fontWeight: typography.weights.medium as any,
     },
     sortDropdownValue: {
@@ -426,7 +459,7 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
     },
     yearGroup: {
       borderRadius: CONTROL_RADIUS,
-      backgroundColor: colors.backgroundSecondary,
+      backgroundColor: colors.surface,
       marginTop: spacing.xs,
       marginBottom: spacing.sm,
       paddingTop: spacing.sm,
@@ -455,32 +488,33 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.xs,
+      flex: 1,
     },
     yearLabel: {
       fontSize: typography.sizes.sm,
-      color: colors.textSecondary,
+      color: colors.text,
       fontWeight: typography.weights.semibold as any,
     },
     yearInput: {
-      flexBasis: 110,
-      maxWidth: 110,
-      paddingHorizontal: spacing.sm,
+      flexBasis: 128,
+      maxWidth: 128,
+      paddingHorizontal: spacing.md,
       paddingVertical: 8,
-      borderRadius: PILL_RADIUS,
+      borderRadius: CONTROL_RADIUS,
       borderWidth: 1,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      backgroundColor: colors.backgroundSecondary,
       fontSize: Math.max(Number(typography.sizes.sm) || 0, 16),
       fontWeight: typography.weights.semibold as any,
       textAlign: 'center',
       alignSelf: 'flex-start',
-      minHeight: 38,
-      letterSpacing: 1,
+      minHeight: 42,
+      letterSpacing: 0.6,
       ...Platform.select({
         web: {
           outlineWidth: 0,
           transition: 'all 0.2s ease',
-          boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)' as any,
+          boxShadow: '0 1px 2px rgba(15, 23, 42, 0.03)' as any,
         } as any,
       }),
     },

@@ -209,6 +209,8 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
 
   const activeFiltersCount = useMemo(() => getModernFiltersActiveCount(selectedFilters), [selectedFilters]);
   const { groupsWithoutSort, sortGroup } = useMemo(() => splitModernFilterGroups(filterGroups), [filterGroups]);
+  const useStackedHeader = Platform.OS === 'web' && isNarrowWeb;
+  const showToggleAllLabel = Platform.OS !== 'web' || isNarrowWeb;
 
   const allGroupKeys = useMemo(() => groupsWithoutSort.map((g) => g.key), [groupsWithoutSort]);
 
@@ -240,8 +242,8 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
         ]}
       >
         {/* Header — single compact row */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
+        <View style={[styles.header, useStackedHeader && styles.headerStacked]}>
+          <View style={[styles.headerLeft, useStackedHeader && styles.headerLeftStacked]}>
             {Platform.OS !== 'web' && (
               <>
                 <Feather name="filter" size={16} color={colors.primary} />
@@ -254,7 +256,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
               </View>
             )}
           </View>
-          <View style={styles.headerRight}>
+          <View style={[styles.headerRight, useStackedHeader && styles.headerRightStacked]}>
             {activeFiltersCount > 0 && (
               <Pressable
                 onPress={onClearAll}
@@ -265,9 +267,10 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                 accessibilityRole="button"
                 accessibilityLabel={`Очистить все фильтры (${activeFiltersCount})`}
               >
-                <Text style={styles.clearButtonText}>
-                  Очистить ({activeFiltersCount})
-                </Text>
+                <Text style={styles.clearButtonText}>Сбросить</Text>
+                <View style={styles.clearButtonCountBadge}>
+                  <Text style={styles.clearButtonCountText}>{activeFiltersCount}</Text>
+                </View>
               </Pressable>
             )}
             <Pressable
@@ -301,6 +304,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
               }}
               style={({ hovered, pressed }) => [
                 styles.toggleAllButton,
+                showToggleAllLabel && styles.toggleAllButtonWide,
                 (hovered || pressed) && styles.toggleAllButtonPressed,
               ]}
               accessibilityRole="button"
@@ -315,7 +319,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                   size={16}
                   color={colors.primary}
                 />
-                {Platform.OS !== 'web' && (
+                {showToggleAllLabel && (
                   <Text style={styles.toggleAllButtonText} numberOfLines={1}>
                     {areAllGroupsExpanded ? 'Свернуть' : 'Развернуть'}
                   </Text>
@@ -402,6 +406,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                 onFocus={() => setYearFocused(true)}
                 onBlur={() => setYearFocused(false)}
                 placeholder="ГГГГ"
+                placeholderTextColor={colors.textMuted}
                 keyboardType="numeric"
                 maxLength={4}
                 style={[styles.yearInput, yearFocused && styles.yearInputFocused]}

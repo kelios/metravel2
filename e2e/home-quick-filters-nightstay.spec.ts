@@ -44,6 +44,6 @@ test.describe('@smoke Home quick filters', () => {
     }
 
     // Label can vary by locale/content; URL state and clear-counter are the stable contracts.
-    await expect(page.getByText(/Очистить\s+\(1\)/)).toBeVisible();
+    await expect(page.getByRole('button', { name: /Очистить все фильтры \(1\)/i })).toBeVisible();
   });
 });
