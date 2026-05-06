@@ -9,6 +9,7 @@ const IGNORED_DIRS = new Set([
   '.git',
   '.expo',
   '.prod-build-tmp',
+  '.tmp',
   '.claude',
   'node_modules',
   'dist',

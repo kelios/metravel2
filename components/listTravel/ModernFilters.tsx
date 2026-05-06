@@ -327,23 +327,6 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
           </View>
         </View>
 
-        {/* Mobile/Narrow web: explicit clear-all button */}
-        {activeFiltersCount > 0 && (Platform.OS !== 'web' || isNarrowWeb) && (
-          <Pressable
-            onPress={onClearAll}
-            style={({ hovered, pressed }) => [
-              styles.clearAllMobileButton,
-              (hovered || pressed) && styles.clearAllMobileButtonPressed,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Очистить все фильтры"
-            hitSlop={8}
-          >
-            <Feather name="x-circle" size={16} color={colors.primary} />
-            <Text style={styles.clearAllMobileButtonText}>Очистить все фильтры</Text>
-          </Pressable>
-        )}
-
         {/* Moderation (admin) */}
         <View style={styles.extraFilters}>
           {showModeration && onToggleModeration && (

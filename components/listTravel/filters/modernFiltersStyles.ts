@@ -395,7 +395,7 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       fontWeight: typography.weights.semibold as any,
     },
     extraFilters: {
-      marginBottom: spacing.xs,
+      marginBottom: spacing.xxs,
       gap: spacing.xs,
     },
     yearGroup: {
@@ -403,10 +403,10 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       borderTopColor: colors.borderLight,
       borderBottomWidth: 1,
       borderBottomColor: colors.borderLight,
-      marginTop: spacing.md,
-      marginBottom: spacing.sm,
-      paddingTop: spacing.sm,
-      paddingBottom: spacing.sm,
+      marginTop: spacing.xxs,
+      marginBottom: spacing.xxs,
+      paddingTop: spacing.xs,
+      paddingBottom: spacing.xs,
     },
     yearInlineRow: {
       flexDirection: 'row',
@@ -495,13 +495,11 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
     },
     scrollContent: {
       flexGrow: 1,
-      // Reserve space so the last option isn't hidden behind the sticky footer.
-      // Footer height ≈ paddingTop(md) + apply(~50) + reset(~50) + paddingBottom(md) ≈ 130px.
-      paddingBottom: spacing.xxl + mobileWebBottomReserve,
+      paddingBottom: spacing.xl,
     },
     filterGroup: {
-      marginBottom: spacing.xs,
-      paddingBottom: spacing.xs,
+      marginBottom: 2,
+      paddingBottom: spacing.xxs,
       borderBottomWidth: 1,
       borderBottomColor: colors.borderLight,
     },
@@ -514,8 +512,8 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingVertical: spacing.xs,
-      minHeight: 36,
+      paddingVertical: spacing.xxs,
+      minHeight: 48,
       ...Platform.select({
         web: {
           cursor: 'pointer',
