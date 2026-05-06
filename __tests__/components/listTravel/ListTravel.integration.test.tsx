@@ -566,7 +566,7 @@ describe('ListTravel Integration Tests', () => {
     });
 
     expect(screen.getByPlaceholderText('Найти путешествия...').props.value).toBe('mountain');
-    expect(mockUseListTravelData).toHaveBeenLastCalledWith(
+    expect(mockUseListTravelData).toHaveBeenCalledWith(
       expect.objectContaining({
         search: 'mountain',
       })
@@ -591,7 +591,7 @@ describe('ListTravel Integration Tests', () => {
       expect(screen.getByPlaceholderText('Найти путешествия...').props.value).toBe('beach');
     });
 
-    expect(mockUseListTravelData).toHaveBeenLastCalledWith(
+    expect(mockUseListTravelData).toHaveBeenCalledWith(
       expect.objectContaining({
         search: 'beach',
       })

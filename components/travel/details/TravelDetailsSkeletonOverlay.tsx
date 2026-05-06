@@ -1,16 +1,14 @@
-import React, { Suspense } from 'react'
+import React from 'react'
 import { View } from 'react-native'
 
 type TravelDetailsSkeletonOverlayProps = {
   skeletonFallback: React.ReactNode
   skeletonPhase: 'loading' | 'fading' | 'hidden'
-  travelDetailSkeleton: React.ReactNode
 }
 
 export default function TravelDetailsSkeletonOverlay({
   skeletonFallback,
   skeletonPhase,
-  travelDetailSkeleton,
 }: TravelDetailsSkeletonOverlayProps) {
   return (
     <View
@@ -29,9 +27,7 @@ export default function TravelDetailsSkeletonOverlay({
       // @ts-ignore - web-only inert attribute
       inert={skeletonPhase === 'loading' ? true : undefined}
     >
-      {skeletonPhase !== 'hidden' && (
-        <Suspense fallback={skeletonFallback}>{travelDetailSkeleton}</Suspense>
-      )}
+      {skeletonPhase !== 'hidden' ? skeletonFallback : null}
     </View>
   )
 }

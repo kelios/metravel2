@@ -41,9 +41,146 @@ type SearchParams = {
   sort?: string | string[]
 }
 
+export type TravelFallbackStep = {
+  id: 'light' | 'medium' | 'broad' | 'searchless'
+  label: string
+  params: Record<string, any>
+  removedKeys: string[]
+  search: string
+}
+
+const FALLBACK_RELAXATION_PRESETS: Array<{
+  id: TravelFallbackStep['id']
+  label: string
+  removedKeys: string[]
+  resetSearch?: boolean
+}> = [
+  {
+    id: 'light',
+    label: 'Ослабили часть уточняющих фильтров',
+    removedKeys: ['year', 'month', 'over_nights_stay', 'companions', 'complexity'],
+  },
+  {
+    id: 'medium',
+    label: 'Убрали самые узкие уточнения и объекты',
+    removedKeys: ['year', 'month', 'over_nights_stay', 'companions', 'complexity', 'transports', 'categoryTravelAddress'],
+  },
+  {
+    id: 'broad',
+    label: 'Оставили только самые общие условия',
+    removedKeys: [
+      'year',
+      'month',
+      'over_nights_stay',
+      'companions',
+      'complexity',
+      'transports',
+      'categoryTravelAddress',
+      'categories',
+      'countries',
+    ],
+  },
+  {
+    id: 'searchless',
+    label: 'Убрали текстовый запрос и оставили похожие маршруты',
+    removedKeys: [
+      'year',
+      'month',
+      'over_nights_stay',
+      'companions',
+      'complexity',
+      'transports',
+      'categoryTravelAddress',
+      'categories',
+      'countries',
+    ],
+    resetSearch: true,
+  },
+]
+
+const sortObjectKeys = (obj: Record<string, any>) => {
+  return Object.keys(obj)
+    .sort()
+    .reduce<Record<string, any>>((acc, key) => {
+      acc[key] = obj[key]
+      return acc
+    }, {})
+}
+
+const removeKeysFromParams = (params: Record<string, any>, keysToRemove: string[]) => {
+  const blockedKeys = new Set(keysToRemove)
+  return sortObjectKeys(
+    Object.entries(params).reduce<Record<string, any>>((acc, [key, value]) => {
+      if (blockedKeys.has(key)) return acc
+      acc[key] = value
+      return acc
+    }, {}),
+  )
+}
+
+const areFallbackInputsEqual = ({
+  baseParams,
+  nextParams,
+  baseSearch,
+  nextSearch,
+}: {
+  baseParams: Record<string, any>
+  nextParams: Record<string, any>
+  baseSearch: string
+  nextSearch: string
+}) => JSON.stringify(baseParams) === JSON.stringify(nextParams) && baseSearch === nextSearch
+
 export function normalizeListTravelParam(value?: string | string[]) {
   if (Array.isArray(value)) return value.filter(Boolean).join(',')
   return value
+}
+
+export function buildListTravelFallbackSteps({
+  queryParams,
+  search,
+}: {
+  queryParams: Record<string, any>
+  search: string
+}): TravelFallbackStep[] {
+  const normalizedParams = sortObjectKeys(queryParams || {})
+  const normalizedSearch = String(search || '').trim()
+  const steps: TravelFallbackStep[] = []
+
+  FALLBACK_RELAXATION_PRESETS.forEach((preset) => {
+    const params = removeKeysFromParams(normalizedParams, preset.removedKeys)
+    const nextSearch = preset.resetSearch ? '' : normalizedSearch
+
+    if (
+      areFallbackInputsEqual({
+        baseParams: normalizedParams,
+        nextParams: params,
+        baseSearch: normalizedSearch,
+        nextSearch,
+      })
+    ) {
+      return
+    }
+
+    const duplicate = steps.some((step) =>
+      areFallbackInputsEqual({
+        baseParams: step.params,
+        nextParams: params,
+        baseSearch: step.search,
+        nextSearch,
+      }),
+    )
+    if (duplicate) return
+
+    steps.push({
+      id: preset.id,
+      label: preset.label,
+      params,
+      removedKeys: preset.removedKeys,
+      search: nextSearch,
+    })
+  })
+
+  return steps
 }
 
 export function buildListTravelInitialFilter(params: SearchParams) {

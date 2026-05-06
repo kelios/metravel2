@@ -37,7 +37,6 @@ type TravelDetailsCriticalShellProps = {
   styles: any;
   skeletonPhase: 'loading' | 'fading' | 'hidden';
   skeletonFallback: React.ReactNode;
-  travelDetailSkeleton: React.ReactNode;
   scrollRef: React.RefObject<any>;
   scrollViewStyle: any;
   scrollEventHandler: any;
@@ -70,7 +69,6 @@ export default function TravelDetailsCriticalShell({
   styles,
   skeletonPhase,
   skeletonFallback,
-  travelDetailSkeleton,
   scrollRef,
   scrollViewStyle,
   scrollEventHandler,
@@ -160,7 +158,6 @@ export default function TravelDetailsCriticalShell({
             <TravelDetailsSkeletonOverlay
               skeletonFallback={skeletonFallback}
               skeletonPhase={skeletonPhase}
-              travelDetailSkeleton={travelDetailSkeleton}
             />
           )}
 
@@ -235,7 +232,7 @@ export default function TravelDetailsCriticalShell({
                     />
                   )
                 ) : (
-                  <Suspense fallback={skeletonFallback}>{travelDetailSkeleton}</Suspense>
+                  null
                 )}
               </View>
             </View>

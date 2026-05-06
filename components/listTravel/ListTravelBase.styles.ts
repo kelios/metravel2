@@ -126,4 +126,24 @@ export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedCo
       paddingVertical: DESIGN_TOKENS.spacing.lg,
       alignItems: 'center',
     },
+    fallbackNotice: {
+      marginBottom: DESIGN_TOKENS.spacing.sm,
+      paddingHorizontal: DESIGN_TOKENS.spacing.md,
+      paddingVertical: DESIGN_TOKENS.spacing.md,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.surface,
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    fallbackNoticeTitle: {
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    fallbackNoticeText: {
+      color: colors.textMuted,
+      fontSize: 14,
+      lineHeight: 20,
+    },
   })

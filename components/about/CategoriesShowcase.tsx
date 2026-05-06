@@ -49,11 +49,11 @@ const CATEGORIES: Category[] = [
   },
   {
     icon: 'smile',
-    title: 'Парки развлечений',
-    desc: 'Аквапарки, верёвочные парки, аттракционы',
+    title: 'Парки и развлечения',
+    desc: 'Парки развлечений, зоопарки, арены и семейный отдых',
     colors: ['#FF7E7E', '#C03A4A'],
     route: '/search',
-    filters: { search: 'парк развлечений' },
+    filters: { categoryTravelAddress: [92, 35, 46, 185, 204] },
   },
   {
     icon: 'layers',
@@ -66,18 +66,18 @@ const CATEGORIES: Category[] = [
   {
     icon: 'image',
     title: 'Музеи и арт',
-    desc: 'Галереи, усадьбы, художественные маршруты',
+    desc: 'Музеи, скансены и усадьбы для культурных прогулок',
     colors: ['#F4B860', '#A86A1F'],
     route: '/search',
-    filters: { search: 'музей' },
+    filters: { categoryTravelAddress: [76, 77, 136] },
   },
   {
     icon: 'coffee',
     title: 'Гастрономия',
-    desc: 'Драники, агроусадьбы, винные подвалы',
+    desc: 'Кафе, рестораны, бары, пивоварни и винодельни',
     colors: ['#E6A972', '#8E5728'],
     route: '/search',
-    filters: { search: 'агроусадьба' },
+    filters: { categoryTravelAddress: [50, 109, 10, 98, 172, 198] },
   },
   {
     icon: 'map',

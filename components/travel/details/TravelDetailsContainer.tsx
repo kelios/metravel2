@@ -17,7 +17,6 @@ import { useTravelDetails } from '@/hooks/travel-details';
 /* ✅ АРХИТЕКТУРА: Импорт кастомных хуков */
 import TravelDetailsCriticalShell from "@/components/travel/details/TravelDetailsCriticalShell";
 import { getTravelDetailsShellStyles } from "@/components/travel/details/TravelDetailsShellStyles";
-import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
 import { isTravelDetailsFirstScreenReady } from '@/components/travel/details/travelDetailsCriticalShellModel'
 import TravelDetailsLoadingFallback from '@/components/travel/details/TravelDetailsLoadingFallback'
 import TravelDetailsSeoBlock from '@/components/travel/details/TravelDetailsSeoBlock'
@@ -35,11 +34,6 @@ import { useTravelDetailsTrace } from '@/hooks/useTravelDetailsTrace';
 import { useSkeletonPhase } from '@/hooks/useSkeletonPhase';
 import { useTravelDetailsContainerViewModel } from '@/components/travel/details/hooks/useTravelDetailsContainerViewModel';
 import { useTravelDetailsHeadSync } from '@/components/travel/details/hooks/useTravelDetailsHeadSync';
-const TravelDetailPageSkeleton = withLazy(() =>
-  import('@/components/travel/TravelDetailPageSkeleton').then((m) => ({
-    default: m.TravelDetailPageSkeleton,
-  }))
-);
 /* =================================================================== */
 
 export default function TravelDetailsContainer() {
@@ -253,7 +247,6 @@ export default function TravelDetailsContainer() {
         styles={styles}
         skeletonPhase={skeletonPhase}
         skeletonFallback={<TravelDetailsLoadingFallback />}
-        travelDetailSkeleton={<TravelDetailPageSkeleton />}
         scrollRef={scrollRef as any}
         scrollViewStyle={scrollViewStyle}
         scrollEventHandler={scrollEventHandler}

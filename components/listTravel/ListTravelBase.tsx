@@ -2,6 +2,7 @@ import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState
 import {
   Alert,
   Platform,
+  Text,
   View,
   ViewStyle,
 } from 'react-native'
@@ -38,6 +39,7 @@ import { useRecommendationsVisibility } from './hooks/useRecommendationsVisibili
 import { createListTravelBaseStyles } from './ListTravelBase.styles'
 import {
   buildListTravelInitialFilter,
+  buildListTravelFallbackSteps,
   getListTravelActiveFiltersCount,
   getListTravelViewportState,
   normalizeListTravelParam,
@@ -331,6 +333,68 @@ function ListTravelBase() {
         search: debSearch,
         isQueryEnabled,
     });
+
+    const fallbackSteps = useMemo(
+      () =>
+        buildListTravelFallbackSteps({
+          queryParams,
+          search: debSearch,
+        }),
+      [debSearch, queryParams],
+    );
+
+    const fallbackStepLight = fallbackSteps[0];
+    const fallbackStepMedium = fallbackSteps[1];
+    const fallbackStepBroad = fallbackSteps[2];
+    const fallbackStepSearchless = fallbackSteps[3];
+
+    const fallbackQueryLight = useListTravelData({
+      queryParams: fallbackStepLight?.params ?? {},
+      search: fallbackStepLight?.search ?? '',
+      isQueryEnabled: isQueryEnabled && isEmpty && !!fallbackStepLight,
+    });
+    const fallbackQueryMedium = useListTravelData({
+      queryParams: fallbackStepMedium?.params ?? {},
+      search: fallbackStepMedium?.search ?? '',
+      isQueryEnabled:
+        isQueryEnabled &&
+        isEmpty &&
+        !fallbackQueryLight.isInitialLoading &&
+        !fallbackQueryLight.isFetching &&
+        !fallbackQueryLight.data.length &&
+        !!fallbackStepMedium,
+    });
+    const fallbackQueryBroad = useListTravelData({
+      queryParams: fallbackStepBroad?.params ?? {},
+      search: fallbackStepBroad?.search ?? '',
+      isQueryEnabled:
+        isQueryEnabled &&
+        isEmpty &&
+        !fallbackQueryLight.isInitialLoading &&
+        !fallbackQueryLight.isFetching &&
+        !fallbackQueryLight.data.length &&
+        !fallbackQueryMedium.isInitialLoading &&
+        !fallbackQueryMedium.isFetching &&
+        !fallbackQueryMedium.data.length &&
+        !!fallbackStepBroad,
+    });
+    const fallbackQuerySearchless = useListTravelData({
+      queryParams: fallbackStepSearchless?.params ?? {},
+      search: fallbackStepSearchless?.search ?? '',
+      isQueryEnabled:
+        isQueryEnabled &&
+        isEmpty &&
+        !fallbackQueryLight.isInitialLoading &&
+        !fallbackQueryLight.isFetching &&
+        !fallbackQueryLight.data.length &&
+        !fallbackQueryMedium.isInitialLoading &&
+        !fallbackQueryMedium.isFetching &&
+        !fallbackQueryMedium.data.length &&
+        !fallbackQueryBroad.isInitialLoading &&
+        !fallbackQueryBroad.isFetching &&
+        !fallbackQueryBroad.data.length &&
+        !!fallbackStepSearchless,
+    });
     /* Delete */
     const handleDelete = useCallback(
       async (explicitId?: number) => {
@@ -515,8 +579,6 @@ function ListTravelBase() {
     );
 
     /* Loading helpers */
-    const hasAnyItems = travels.length > 0;
-
     const handleClearAll = useCallback(() => {
       setSearch('');
       resetFilters();
@@ -641,19 +703,6 @@ function ListTravelBase() {
     const isSearchPending = !isUserIdLoading && (isSearchInputPending || isSearchFetchPending);
     const showEmptyState = !isUserIdLoading && !isSearchPending && isEmpty;
 
-    const handleListEndReached = useCallback(() => {
-        if (!hasAnyItems) return;
-
-        const now = Date.now();
-        // Простая защита от слишком частых вызовов onEndReached на web/мобильных
-        if (now - lastEndReachedAtRef.current < 800) {
-            return;
-        }
-        lastEndReachedAtRef.current = now;
-
-        handleEndReached();
-    }, [handleEndReached, hasAnyItems]);
-
     useEffect(() => {
         if (Platform.OS !== 'web') return;
         if (!flatListRef.current) return;
@@ -775,6 +824,121 @@ function ListTravelBase() {
       }),
       [options, filter, isTravelBy, facetCounts]
     );
+
+    const fallbackMatch = useMemo(() => {
+      const candidates = [
+        { step: fallbackStepLight, query: fallbackQueryLight },
+        { step: fallbackStepMedium, query: fallbackQueryMedium },
+        { step: fallbackStepBroad, query: fallbackQueryBroad },
+        { step: fallbackStepSearchless, query: fallbackQuerySearchless },
+      ];
+
+      return (
+        candidates.find((candidate) => candidate.step && candidate.query.data.length > 0) ?? null
+      );
+    }, [
+      fallbackQueryBroad,
+      fallbackQueryLight,
+      fallbackQueryMedium,
+      fallbackQuerySearchless,
+      fallbackStepBroad,
+      fallbackStepLight,
+      fallbackStepMedium,
+      fallbackStepSearchless,
+    ]);
+
+    const isFallbackLoading =
+      isEmpty &&
+      !fallbackMatch &&
+      (
+        fallbackQueryLight.isInitialLoading ||
+        fallbackQueryMedium.isInitialLoading ||
+        fallbackQueryBroad.isInitialLoading ||
+        fallbackQuerySearchless.isInitialLoading
+      );
+
+    const displayedTravels = fallbackMatch?.query.data ?? travels;
+    const displayedTotal = fallbackMatch?.query.total ?? total;
+    const displayedRefetch = fallbackMatch?.query.refetch ?? refetch;
+    const displayedHandleEndReached = fallbackMatch?.query.handleEndReached ?? handleEndReached;
+    const displayedShowNextPageLoading = fallbackMatch?.query.isNextPageLoading ?? isNextPageLoading;
+    const hasDisplayedItems = displayedTravels.length > 0;
+    const displayedShowEmptyState = !fallbackMatch && !isFallbackLoading && showEmptyState;
+    const displayedShowInitialLoading = isInitialLoading || isFallbackLoading;
+
+    const handleListEndReached = useCallback(() => {
+        if (!hasDisplayedItems) return;
+
+        const now = Date.now();
+        // Простая защита от слишком частых вызовов onEndReached на web/мобильных
+        if (now - lastEndReachedAtRef.current < 800) {
+            return;
+        }
+        lastEndReachedAtRef.current = now;
+
+        displayedHandleEndReached();
+    }, [displayedHandleEndReached, hasDisplayedItems]);
+
+    const topContent = useMemo(() => {
+      const exportControls = isExport ? (
+        <Suspense fallback={null}>
+          <ListTravelExportControlsLazy
+            isMobile={isMobileDevice}
+            travels={displayedTravels}
+            selected={exportState.selected}
+            ownerName={userId}
+            toggleSelectAll={toggleSelectAll}
+            clearSelection={clearSelection}
+            moveSelected={moveSelected}
+            moveSelectedTo={moveSelectedTo}
+            hasSelection={hasSelection}
+            selectionCount={selectionCount}
+            baseSettings={baseSettings}
+            lastSettings={lastSettings}
+            settingsSummary={settingsSummary}
+            setLastSettings={setLastSettings}
+          />
+        </Suspense>
+      ) : null;
+
+      const fallbackNotice = fallbackMatch?.step ? (
+        <View style={styles.fallbackNotice} testID="travel-results-fallback-notice">
+          <Text style={styles.fallbackNoticeTitle}>Точных совпадений не нашли</Text>
+          <Text style={styles.fallbackNoticeText}>
+            {fallbackMatch.step.label}. Показываем похожие маршруты, чтобы на странице всегда оставалась полезная выдача.
+          </Text>
+        </View>
+      ) : null;
+
+      if (!fallbackNotice && !exportControls) return null;
+
+      return (
+        <>
+          {fallbackNotice}
+          {exportControls}
+        </>
+      );
+    }, [
+      baseSettings,
+      clearSelection,
+      displayedTravels,
+      exportState.selected,
+      fallbackMatch?.step,
+      hasSelection,
+      isExport,
+      isMobileDevice,
+      lastSettings,
+      moveSelected,
+      moveSelectedTo,
+      selectionCount,
+      settingsSummary,
+      setLastSettings,
+      styles.fallbackNotice,
+      styles.fallbackNoticeText,
+      styles.fallbackNoticeTitle,
+      toggleSelectAll,
+      userId,
+    ]);
     
   return (
     <View style={[styles.root, usesOverlaySidebar ? styles.rootMobile : undefined]}>
@@ -783,7 +947,7 @@ function ListTravelBase() {
         filterGroups={filterGroups}
         filter={filter}
         onSelect={onSelect}
-        total={total}
+        total={displayedTotal}
         isSuper={isSuper}
         setSearch={setSearch}
         resetFilters={resetFilters}
@@ -798,43 +962,22 @@ function ListTravelBase() {
         setSearch={setSearch}
         onClearAll={handleClearAll}
         activeConditionChips={activeConditionChips}
-        topContent={
-          isExport ? (
-            <Suspense fallback={null}>
-              <ListTravelExportControlsLazy
-                isMobile={isMobileDevice}
-                travels={travels}
-                selected={exportState.selected}
-                ownerName={userId}
-                toggleSelectAll={toggleSelectAll}
-                clearSelection={clearSelection}
-                moveSelected={moveSelected}
-                moveSelectedTo={moveSelectedTo}
-                hasSelection={hasSelection}
-                selectionCount={selectionCount}
-                baseSettings={baseSettings}
-                lastSettings={lastSettings}
-                settingsSummary={settingsSummary}
-                setLastSettings={setLastSettings}
-              />
-            </Suspense>
-          ) : null
-        }
+        topContent={topContent}
         isRecommendationsVisible={isRecommendationsVisible}
         handleRecommendationsVisibilityChange={handleRecommendationsVisibilityChange}
         activeFiltersCount={activeFiltersCount}
-        total={total}
+        total={displayedTotal}
         contentPadding={contentPadding}
-        showInitialLoading={showInitialLoading}
+        showInitialLoading={displayedShowInitialLoading}
         isSearchPending={isSearchPending}
         isError={isError}
-        showEmptyState={showEmptyState}
+        showEmptyState={displayedShowEmptyState}
         getEmptyStateMessage={getEmptyStateMessage}
-        travels={travels}
+        travels={displayedTravels}
         gridColumns={gridColumns}
         isMobile={isCardsSingleColumn}
-        showNextPageLoading={showNextPageLoading}
-        refetch={refetch}
+        showNextPageLoading={displayedShowNextPageLoading}
+        refetch={displayedRefetch}
         onEndReached={handleListEndReached}
         onEndReachedThreshold={0.5}
         onFiltersPress={usesOverlaySidebar ? handleOpenFilters : undefined}

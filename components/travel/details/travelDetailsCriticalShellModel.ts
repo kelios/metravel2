@@ -11,7 +11,8 @@ export function shouldShowTravelDetailsDesktopSidebar(isMobile: boolean, screenW
 }
 
 export function shouldShowTravelDetailsSkeletonOverlay(travel: unknown) {
-  return Platform.OS === 'web' && Boolean(travel)
+  void travel
+  return Platform.OS === 'web'
 }
 
 export function isTravelDetailsFirstScreenReady(
