@@ -850,7 +850,7 @@ function buildTravelArticleJsonLd({ title, description, canonical, image, travel
       url: SITE_URL,
       logo: {
         '@type': 'ImageObject',
-        url: `${SITE_URL}/assets/icons/logo_yellow.png`,
+        url: `${SITE_URL}/assets/icons/logo_yellow_60x60.png`,
       },
     },
     author: {

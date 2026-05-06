@@ -22,9 +22,9 @@ type GalleryImage = ImgLike & Record<string, unknown>
 const HERO_HEIGHT = {
   desktopMin: 360,
   desktopMax: 750,
-  mobileMin: 280,
-  mobileViewportRatio: 0.7,
-  mobileMaxViewportRatio: 0.85,
+  mobileMin: 260,
+  mobileViewportRatio: 0.56,
+  mobileMaxHeight: 420,
   webMobileViewportRatio: 0.56,
   webMobileMaxHeight: 520,
   webViewportCapRatio: 0.7,
@@ -86,15 +86,22 @@ function useHeroMediaModel(
       }
       return Math.round(winH * HERO_HEIGHT.webViewportCapRatio)
     }
-    const minViewportHeight = Math.round(winH * HERO_HEIGHT.mobileViewportRatio)
+    if (!isMobile) {
+      return Math.round(winH * HERO_HEIGHT.webViewportCapRatio)
+    }
+
     const arHeight = resolvedWidth
       ? Math.round(resolvedWidth / aspectRatio)
-      : winH * 0.6
-    const boundedAspectHeight = Math.max(
+      : Math.round(winH * HERO_HEIGHT.mobileViewportRatio)
+    const viewportPreferredHeight = Math.round(winH * HERO_HEIGHT.mobileViewportRatio)
+
+    return Math.max(
       HERO_HEIGHT.mobileMin,
-      Math.min(arHeight, Math.round(winH * HERO_HEIGHT.mobileMaxViewportRatio)),
+      Math.min(
+        Math.max(arHeight, viewportPreferredHeight),
+        HERO_HEIGHT.mobileMaxHeight,
+      ),
     )
-    return Math.max(minViewportHeight, boundedAspectHeight)
   }, [winH, resolvedWidth, aspectRatio, isMobile])
 
   const heroAlt = travel?.name

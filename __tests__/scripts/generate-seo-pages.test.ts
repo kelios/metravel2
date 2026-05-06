@@ -327,7 +327,7 @@ describe('injectMeta edge cases', () => {
       '<!DOCTYPE html><html lang="ru"><head>',
       '<title data-rh="true">MeTravel</title>',
       '<meta data-rh="true" name="description" content="default desc"/>',
-      '<meta property="og:image" content="https://metravel.by/assets/icons/logo_yellow.png"/>',
+      '<meta property="og:image" content="https://metravel.by/assets/icons/logo_yellow_60x60.png"/>',
       '<meta property="og:image" content="https://metravel.by/old-duplicate.jpg"/>',
       '</head><body><div id="root"></div></body></html>',
     ].join('');

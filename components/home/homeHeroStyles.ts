@@ -1762,7 +1762,9 @@ export const createHomeHeroStyles = ({
     },
     popularGrid: {
       width: '100%',
-      flexDirection: 'column',
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
       gap: 14,
       alignItems: 'stretch',
     },
@@ -1848,11 +1850,11 @@ export const createHomeHeroStyles = ({
       }),
     },
     imageCardGrid: {
-      width: '100%',
       flexGrow: 0,
       flexShrink: 0,
       flexBasis: 'auto',
       minWidth: 0,
+      maxWidth: '100%',
     },
     imageCardHover: {
       ...Platform.select({

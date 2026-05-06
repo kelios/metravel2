@@ -107,6 +107,29 @@ interface UseMapDataControllerResult {
   isDebouncingFilters: boolean;
 }
 
+function areValuesEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a == null || b == null) return false;
+  if (typeof a !== typeof b) return false;
+
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    return a.every((item, index) => areValuesEqual(item, b[index]));
+  }
+
+  if (typeof a === 'object' && typeof b === 'object') {
+    const keysA = Object.keys(a as Record<string, unknown>);
+    const keysB = Object.keys(b as Record<string, unknown>);
+    if (keysA.length !== keysB.length) return false;
+    return keysA.every((key) => areValuesEqual(
+      (a as Record<string, unknown>)[key],
+      (b as Record<string, unknown>)[key],
+    ));
+  }
+
+  return false;
+}
+
 /**
  * Manages travel data fetching, debouncing, and filtering
  *
@@ -152,7 +175,7 @@ export function useMapDataController(
   const debouncedCoordinates = useDebouncedValue(coordinates, debounceTime);
   const debouncedFilterValues = useDebouncedValue(filterValues, 300);
   const isDebouncingFilters =
-    debouncedCoordinates !== coordinates || debouncedFilterValues !== filterValues;
+    !areValuesEqual(debouncedCoordinates, coordinates) || !areValuesEqual(debouncedFilterValues, filterValues);
 
   // Travels data
   const {

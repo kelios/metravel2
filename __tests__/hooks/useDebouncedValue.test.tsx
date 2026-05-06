@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react-native'
-import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { deepEqual, useDebouncedValue } from '@/hooks/useDebouncedValue'
 
 describe('useDebouncedValue', () => {
   afterEach(() => {
@@ -48,5 +48,10 @@ describe('useDebouncedValue', () => {
       jest.advanceTimersByTime(60)
     })
     expect(result.current).toEqual({ term: 'minsk' })
+  })
+
+  it('treats deep-equal objects as equal even with different references', () => {
+    expect(deepEqual({ radius: '60', categories: ['lake'] }, { radius: '60', categories: ['lake'] })).toBe(true)
+    expect(deepEqual({ radius: '60', categories: ['lake'] }, { radius: '120', categories: ['lake'] })).toBe(false)
   })
 })

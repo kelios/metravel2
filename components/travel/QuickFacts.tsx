@@ -216,6 +216,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    maxWidth: '100%',
     paddingVertical: Platform.select({
       default: 8,
       web: 10,
@@ -240,6 +241,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       : {}),
   },
   factText: {
+    flexShrink: 1,
     fontSize: Platform.select({
       default: 14,
       web: 14,
@@ -247,6 +249,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontWeight: '500',
     color: colors.text,
     letterSpacing: -0.1,
+    lineHeight: 20,
   },
   categoriesContainer: {
     flexDirection: 'row',

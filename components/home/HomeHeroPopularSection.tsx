@@ -183,7 +183,7 @@ export default function HomeHeroPopularSection({
               key={image.title}
               image={image}
               styles={styles}
-              width="100%"
+              width={popularCardWidth}
               height={popularCardHeight}
               onOpenArticle={onOpenArticle}
               useGridLayout

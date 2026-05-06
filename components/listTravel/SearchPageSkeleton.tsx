@@ -1,354 +1,223 @@
- /**
- * SearchPageSkeleton - YouTube-style instant skeleton for search page
- * 
- * Key features:
- * - Renders instantly on first paint (no delays)
- * - Web sidebar navigation sections remain accessible
- * - Shimmer animation for visual feedback
- * - Responsive layout matching actual content
- * - No layout shifts during transition
- */
-import React, { memo, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, Platform, Text, Pressable } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
-import { SkeletonLoader, TravelCardSkeleton } from '@/components/ui/SkeletonLoader';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useThemedColors } from '@/hooks/useTheme';
-import { useResponsive } from '@/hooks/useResponsive';
-import { BREAKPOINTS } from './utils/listTravelConstants';
+import React, { memo, useMemo } from 'react'
+import { Platform, ScrollView, StyleSheet, View } from 'react-native'
 
-/** Filter section navigation items for web sidebar */
-const FILTER_SECTIONS = [
-  { key: 'sort', title: 'Сортировка', icon: 'sliders' },
-  { key: 'categories', title: 'Категории', icon: 'grid' },
-  { key: 'categoryTravelAddress', title: 'Что посмотреть', icon: 'map-pin' },
-  { key: 'transports', title: 'Транспорт', icon: 'truck' },
-  { key: 'companions', title: 'Спутники', icon: 'users' },
-  { key: 'complexity', title: 'Сложность', icon: 'activity' },
-  { key: 'month', title: 'Месяц', icon: 'calendar' },
-  { key: 'over_nights_stay', title: 'Ночлег', icon: 'moon' },
-] as const;
+import { SkeletonLoader, TravelCardSkeleton } from '@/components/ui/SkeletonLoader'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { useResponsive } from '@/hooks/useResponsive'
+import { useThemedColors } from '@/hooks/useTheme'
+import { BREAKPOINTS } from './utils/listTravelConstants'
 
-interface SidebarSkeletonProps {
-  colors: ReturnType<typeof useThemedColors>;
-  /** If true, render interactive navigation sections instead of pure skeleton */
-  showNavigation?: boolean;
-  /** Callback when section is clicked (for scroll-to-section) */
-  onSectionPress?: (sectionKey: string) => void;
-}
+const FILTER_BLOCKS = [
+  { titleWidth: '56%', rowCount: 1 },
+  { titleWidth: '42%', rowCount: 1 },
+  { titleWidth: '58%', rowCount: 2 },
+  { titleWidth: '52%', rowCount: 2 },
+  { titleWidth: '48%', rowCount: 1 },
+  { titleWidth: '44%', rowCount: 1 },
+] as const
 
-/** Sidebar skeleton with optional interactive navigation */
-const SidebarSkeleton = memo<SidebarSkeletonProps>(({ colors, showNavigation = true, onSectionPress }) => {
-  const styles = useMemo(() => StyleSheet.create({
-    container: {
-      width: 320,
-      backgroundColor: colors.surface,
-      borderRightWidth: 1,
-      borderRightColor: colors.border,
-      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-      paddingTop: DESIGN_TOKENS.spacing.lg,
-      paddingBottom: DESIGN_TOKENS.spacing.lg,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: DESIGN_TOKENS.spacing.md,
-    },
-    headerTitle: {
-      fontSize: DESIGN_TOKENS.typography.sizes.lg,
-      fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-      color: colors.text,
-    },
-    sectionItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: DESIGN_TOKENS.spacing.sm,
-      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      marginBottom: DESIGN_TOKENS.spacing.xs,
-      gap: DESIGN_TOKENS.spacing.sm,
-    },
-    sectionItemHover: Platform.select({
-      web: {
-        cursor: 'pointer',
-        transition: 'background-color 0.15s ease',
-      } as any,
-      default: {},
-    }),
-    sectionIcon: {
-      width: 20,
-      height: 20,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    sectionTitle: {
-      flex: 1,
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      color: colors.textSecondary,
-    },
-    sectionChevron: {
-      opacity: 0.5,
-    },
-    skeletonRow: {
-      marginBottom: DESIGN_TOKENS.spacing.md,
-    },
-    divider: {
-      height: 1,
-      backgroundColor: colors.borderLight,
-      marginVertical: DESIGN_TOKENS.spacing.md,
-    },
-  }), [colors]);
+const SearchSidebarSkeleton = memo(({ isDesktop }: { isDesktop: boolean }) => {
+  const colors = useThemedColors()
 
-  if (!showNavigation) {
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          width: isDesktop ? 292 : '100%',
+          backgroundColor: colors.surface,
+          borderRightWidth: isDesktop ? 1 : 0,
+          borderRightColor: colors.borderLight,
+          paddingHorizontal: 16,
+          paddingTop: 16,
+          paddingBottom: 24,
+          gap: 14,
+        },
+        summaryRow: {
+          flexDirection: 'row',
+          gap: 10,
+          alignItems: 'center',
+        },
+        filterCard: {
+          borderRadius: DESIGN_TOKENS.radii.lg,
+          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderColor: colors.borderLight,
+          padding: 14,
+          gap: 12,
+        },
+        chipRow: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 10,
+        },
+      }),
+    [colors, isDesktop],
+  )
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.summaryRow}>
+        <SkeletonLoader width={92} height={28} borderRadius={14} />
+        <SkeletonLoader width={44} height={36} borderRadius={12} />
+      </View>
+
+      <View style={styles.filterCard}>
+        <SkeletonLoader width="100%" height={44} borderRadius={DESIGN_TOKENS.radii.pill} />
+        <SkeletonLoader width="76%" height={16} borderRadius={6} />
+      </View>
+
+      {FILTER_BLOCKS.map((block, index) => (
+        <View key={`search-filter-block-${index}`} style={styles.filterCard}>
+          <View style={styles.summaryRow}>
+            <SkeletonLoader width={block.titleWidth as any} height={18} borderRadius={6} />
+            <SkeletonLoader width={56} height={22} borderRadius={11} />
+          </View>
+          <View style={styles.chipRow}>
+            {Array.from({ length: block.rowCount * 3 }).map((_, chipIndex) => (
+              <SkeletonLoader
+                key={`search-chip-${index}-${chipIndex}`}
+                width={chipIndex % 3 === 0 ? 84 : chipIndex % 3 === 1 ? 98 : 76}
+                height={34}
+                borderRadius={17}
+              />
+            ))}
+          </View>
+        </View>
+      ))}
+    </View>
+  )
+})
+
+SearchSidebarSkeleton.displayName = 'SearchSidebarSkeleton'
+
+const SearchHeaderSkeleton = memo(({ isMobile }: { isMobile: boolean }) => {
+  const colors = useThemedColors()
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          paddingHorizontal: isMobile ? 12 : 16,
+          paddingTop: isMobile ? 12 : 16,
+          paddingBottom: 12,
+        },
+        row: {
+          minHeight: isMobile ? 48 : 52,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 12,
+          borderRadius: DESIGN_TOKENS.radii.xl,
+          borderWidth: 1,
+          borderColor: colors.borderLight,
+          backgroundColor: colors.surface,
+          padding: 8,
+        },
+      }),
+    [colors, isMobile],
+  )
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.row}>
+        <SkeletonLoader width="100%" height={36} borderRadius={DESIGN_TOKENS.radii.pill} style={{ flex: 1 }} />
+        {!isMobile && (
+          <>
+            <SkeletonLoader width={138} height={36} borderRadius={18} />
+            <SkeletonLoader width={190} height={36} borderRadius={18} />
+            <SkeletonLoader width={36} height={36} borderRadius={18} />
+          </>
+        )}
+        {isMobile && <SkeletonLoader width={36} height={36} borderRadius={12} />}
+      </View>
+    </View>
+  )
+})
+
+SearchHeaderSkeleton.displayName = 'SearchHeaderSkeleton'
+
+const SearchCardsSkeleton = memo(
+  ({ columns, count, isMobile }: { columns: number; count: number; isMobile: boolean }) => {
+    const styles = useMemo(
+      () =>
+        StyleSheet.create({
+          grid: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 16,
+            paddingHorizontal: isMobile ? 12 : 16,
+            paddingBottom: isMobile ? 88 : 120,
+            alignItems: 'flex-start',
+          },
+          item: {
+            width: columns === 1 ? '100%' : `${Math.floor(100 / columns) - 2}%`,
+            ...(Platform.OS === 'web' && columns > 1
+              ? ({
+                  flexBasis: `calc((100% - ${(columns - 1) * 16}px) / ${columns})`,
+                  flexGrow: 0,
+                  flexShrink: 0,
+                } as any)
+              : null),
+          },
+        }),
+      [columns, isMobile],
+    )
+
     return (
-      <View style={styles.container}>
-        <SkeletonLoader width="40%" height={24} borderRadius={8} />
-        {Array.from({ length: 9 }).map((_, index) => (
-          <View key={`filter-skeleton-${index}`} style={styles.skeletonRow}>
-            <SkeletonLoader width="100%" height={44} borderRadius={DESIGN_TOKENS.radii.md} />
+      <View style={styles.grid}>
+        {Array.from({ length: count }).map((_, index) => (
+          <View key={`search-card-skeleton-${index}`} style={styles.item}>
+            <TravelCardSkeleton />
           </View>
         ))}
       </View>
-    );
-  }
+    )
+  },
+)
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Фильтры</Text>
-        <SkeletonLoader width={80} height={20} borderRadius={4} />
-      </View>
+SearchCardsSkeleton.displayName = 'SearchCardsSkeleton'
 
-      <View style={styles.divider} />
-
-      {FILTER_SECTIONS.map((section) => (
-        <Pressable
-          key={section.key}
-          style={({ pressed }) => [
-            styles.sectionItem,
-            styles.sectionItemHover,
-            pressed && { backgroundColor: colors.surfaceLight },
-          ]}
-          onPress={() => onSectionPress?.(section.key)}
-          accessibilityRole="button"
-          accessibilityLabel={`Перейти к фильтру: ${section.title}`}
-        >
-          <View style={styles.sectionIcon}>
-            <Feather name={section.icon as any} size={16} color={colors.textMuted} />
-          </View>
-          <Text style={styles.sectionTitle}>{section.title}</Text>
-          <Feather
-            name="chevron-down"
-            size={14}
-            color={colors.textMuted}
-            style={styles.sectionChevron}
-          />
-        </Pressable>
-      ))}
-
-      <View style={styles.divider} />
-
-      {/* Year filter skeleton */}
-      <View style={styles.skeletonRow}>
-        <SkeletonLoader width="100%" height={40} borderRadius={DESIGN_TOKENS.radii.md} />
-      </View>
-    </View>
-  );
-});
-
-SidebarSkeleton.displayName = 'SidebarSkeleton';
-
-/** Search header skeleton */
-const SearchHeaderSkeleton = memo<{ colors: ReturnType<typeof useThemedColors>; isMobile: boolean }>(({ colors, isMobile }) => {
-  const styles = useMemo(() => StyleSheet.create({
-    container: {
-      minHeight: isMobile ? 56 : 76,
-      marginBottom: DESIGN_TOKENS.spacing.md,
-      paddingHorizontal: isMobile ? DESIGN_TOKENS.spacing.sm : DESIGN_TOKENS.spacing.lg,
-    },
-    card: {
-      minHeight: isMobile ? 48 : 60,
-      borderRadius: DESIGN_TOKENS.radii.lg,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.surfaceElevated,
-      paddingHorizontal: DESIGN_TOKENS.spacing.md,
-      paddingVertical: DESIGN_TOKENS.spacing.sm,
-      justifyContent: 'center',
-    },
-    row: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: DESIGN_TOKENS.spacing.sm,
-    },
-    searchInput: {
-      flex: 1,
-      minWidth: 0,
-    },
-  }), [colors, isMobile]);
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.card}>
-        <View style={styles.row}>
-          <SkeletonLoader
-            width="100%"
-            height={isMobile ? 44 : 48}
-            borderRadius={DESIGN_TOKENS.radii.pill}
-            style={styles.searchInput}
-          />
-          {!isMobile && (
-            <>
-              <SkeletonLoader width={180} height={48} borderRadius={DESIGN_TOKENS.radii.pill} />
-              <SkeletonLoader width={48} height={48} borderRadius={DESIGN_TOKENS.radii.pill} />
-            </>
-          )}
-          {isMobile && (
-            <SkeletonLoader width={44} height={44} borderRadius={DESIGN_TOKENS.radii.md} />
-          )}
-        </View>
-      </View>
-    </View>
-  );
-});
-
-SearchHeaderSkeleton.displayName = 'SearchHeaderSkeleton';
-
-/** Cards grid skeleton */
-const CardsGridSkeleton = memo<{ 
-  count: number;
-  columns: number;
-  isMobile: boolean;
-}>(({ count, columns, isMobile }) => {
-  const styles = useMemo(() => StyleSheet.create({
-    container: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: DESIGN_TOKENS.spacing.md,
-      alignItems: 'flex-start',
-      paddingHorizontal: isMobile ? DESIGN_TOKENS.spacing.sm : DESIGN_TOKENS.spacing.lg,
-      paddingTop: DESIGN_TOKENS.spacing.sm,
-      paddingBottom: DESIGN_TOKENS.spacing.xl,
-    },
-    cardWrapper: {
-      width: columns === 1 ? '100%' : `${Math.floor(100 / columns) - 2}%`,
-      ...(Platform.OS === 'web' && columns > 1 ? {
-        flexBasis: `calc((100% - ${(columns - 1) * DESIGN_TOKENS.spacing.md}px) / ${columns})`,
-        flexGrow: 0,
-        flexShrink: 0,
-      } as any : {}),
-    },
-  }), [columns, isMobile]);
-
-  return (
-    <View style={styles.container}>
-      {Array.from({ length: count }).map((_, index) => (
-        <View key={`card-skeleton-${index}`} style={styles.cardWrapper}>
-          <TravelCardSkeleton />
-        </View>
-      ))}
-    </View>
-  );
-});
-
-CardsGridSkeleton.displayName = 'CardsGridSkeleton';
-
-export interface SearchPageSkeletonProps {
-  /** Show interactive navigation in sidebar (default: true on web) */
-  showSidebarNavigation?: boolean;
-  /** Callback when sidebar section is clicked */
-  onSectionPress?: (sectionKey: string) => void;
-}
-
-/**
- * Main search page skeleton - renders instantly on mount
- * Shows accessible sidebar navigation on web while content loads
- */
-export const SearchPageSkeleton = memo<SearchPageSkeletonProps>(({ 
-  showSidebarNavigation = Platform.OS === 'web',
-  onSectionPress,
-}) => {
-  const colors = useThemedColors();
-  const { width: responsiveWidth } = useResponsive();
-  // Use the same breakpoints as listTravelBaseModel to avoid layout shift
+export const SearchPageSkeleton = memo(() => {
+  const colors = useThemedColors()
+  const { width: responsiveWidth } = useResponsive()
   const viewportWidth =
-    Platform.OS === 'web' && typeof window !== 'undefined' ? window.innerWidth : responsiveWidth;
-  const isMobile = viewportWidth < BREAKPOINTS.TABLET;
-  const isTablet = viewportWidth >= BREAKPOINTS.TABLET && viewportWidth < BREAKPOINTS.DESKTOP;
-  const usesOverlaySidebar = viewportWidth < BREAKPOINTS.DESKTOP;
+    Platform.OS === 'web' && typeof window !== 'undefined' ? window.innerWidth : responsiveWidth
 
-  const cardCount = useMemo(() => {
-    if (isMobile) return 4;
-    if (isTablet) return 6;
-    return 9;
-  }, [isMobile, isTablet]);
+  const isMobile = viewportWidth < BREAKPOINTS.TABLET
+  const isTablet = viewportWidth >= BREAKPOINTS.TABLET && viewportWidth < BREAKPOINTS.DESKTOP
+  const isDesktop = viewportWidth >= BREAKPOINTS.DESKTOP
+  const columns = isMobile ? 1 : isTablet ? 2 : 3
+  const cardCount = isMobile ? 4 : isTablet ? 6 : 9
 
-  const columns = useMemo(() => {
-    if (isMobile) return 1;
-    if (isTablet) return 2;
-    return 3;
-  }, [isMobile, isTablet]);
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: colors.background,
+          flexDirection: isDesktop ? 'row' : 'column',
+        },
+        main: {
+          flex: 1,
+          minWidth: 0,
+        },
+      }),
+    [colors, isDesktop],
+  )
 
-  const styles = useMemo(() => StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-      flexDirection: usesOverlaySidebar ? 'column' : 'row',
-    },
-    mainContent: {
-      flex: 1,
-      minWidth: 0,
-    },
-    scrollArea: {
-      flex: 1,
-    },
-  }), [colors, usesOverlaySidebar]);
-
-  // Wide desktop layout with docked sidebar
-  if (!usesOverlaySidebar) {
-    return (
-      <View style={styles.container} testID="search-skeleton">
-        <SidebarSkeleton 
-          colors={colors} 
-          showNavigation={showSidebarNavigation}
-          onSectionPress={onSectionPress}
-        />
-        <View style={styles.mainContent}>
-          <SearchHeaderSkeleton colors={colors} isMobile={false} />
-          <ScrollView 
-            style={styles.scrollArea} 
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 40 }}
-          >
-            <CardsGridSkeleton 
-              count={cardCount}
-              columns={columns}
-              isMobile={false}
-            />
-          </ScrollView>
-        </View>
-      </View>
-    );
-  }
-
-  // Compact layout without docked sidebar
   return (
-    <View style={styles.container} testID="search-skeleton-mobile">
-      <SearchHeaderSkeleton colors={colors} isMobile={isMobile} />
-      <ScrollView 
-        style={styles.scrollArea}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 80 }}
-      >
-        <CardsGridSkeleton 
-          count={cardCount}
-          columns={isMobile ? 1 : columns}
-          isMobile={isMobile}
-        />
-      </ScrollView>
+    <View style={styles.container} testID={isDesktop ? 'search-skeleton' : 'search-skeleton-mobile'}>
+      {isDesktop ? <SearchSidebarSkeleton isDesktop /> : null}
+      <View style={styles.main}>
+        {!isDesktop && <SearchSidebarSkeleton isDesktop={false} />}
+        <SearchHeaderSkeleton isMobile={isMobile} />
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <SearchCardsSkeleton columns={columns} count={cardCount} isMobile={isMobile} />
+        </ScrollView>
+      </View>
     </View>
-  );
-});
+  )
+})
 
-SearchPageSkeleton.displayName = 'SearchPageSkeleton';
+SearchPageSkeleton.displayName = 'SearchPageSkeleton'
+
+export default SearchPageSkeleton

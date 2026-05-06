@@ -20,6 +20,14 @@ const mockUseTravelRouteFiles: jest.Mock = jest.fn(() => ({
   error: null,
   refetch: jest.fn(),
 }));
+const mockUseUserProfileCached: jest.Mock = jest.fn(() => ({
+  profile: { avatar: 'https://example.com/profile-avatar.jpg' },
+  isLoading: false,
+  isFetching: false,
+  error: null,
+  fullName: '',
+  refetch: jest.fn(),
+}));
 
 const mockAuthState = {
   isSuperuser: false,
@@ -33,14 +41,8 @@ jest.mock('@/stores/authStore', () => ({
 
 jest.mock('@/hooks/useUserProfileCached', () => ({
   __esModule: true,
-  useUserProfileCached: () => ({
-    profile: { avatar: 'https://example.com/profile-avatar.jpg' },
-    isLoading: false,
-    isFetching: false,
-    error: null,
-    fullName: '',
-    refetch: jest.fn(),
-  }),
+  useUserProfileCached: (userId: unknown, options?: unknown) =>
+    mockUseUserProfileCached(userId, options),
 }));
 
 jest.mock('@/hooks/useTravelRouteFiles', () => ({
@@ -164,6 +166,14 @@ describe('CompactSideBarTravel - Web', () => {
     mockDownloadBlobOnWeb.mockReturnValue(true);
     mockAuthState.isSuperuser = false;
     mockAuthState.userId = null;
+    mockUseUserProfileCached.mockReturnValue({
+      profile: { avatar: 'https://example.com/profile-avatar.jpg' },
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      fullName: '',
+      refetch: jest.fn(),
+    });
     mockUseTravelRouteFiles.mockReturnValue({
       data: [] as any[],
       isLoading: false,
@@ -174,6 +184,15 @@ describe('CompactSideBarTravel - Web', () => {
   });
 
   describe('Рендеринг компонентов', () => {
+    it('сразу запрашивает профиль автора на десктопном web без hover', () => {
+      render(<CompactSideBarTravel {...defaultProps} />);
+
+      expect(mockUseUserProfileCached).toHaveBeenCalledWith(
+        'user-1',
+        expect.objectContaining({ enabled: true })
+      );
+    });
+
     it('должен отрендерить карточку автора', () => {
       render(<CompactSideBarTravel {...defaultProps} />);
 

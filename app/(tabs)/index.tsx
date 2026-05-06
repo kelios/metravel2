@@ -1,10 +1,9 @@
 /**
  * HomeScreen - Optimized for instant perceived performance
  * 
- * Pattern: YouTube-style skeleton → content transition
+ * Pattern: critical skeleton → content transition
  * - Skeleton renders instantly on first paint (no delays)
  * - Data loads in background while skeleton is visible
- * - Web navigation sections remain accessible during loading
  * - Smooth fade transition when content is ready
  * - No empty screens or heavy first render
  */
@@ -77,14 +76,6 @@ function HomeScreen() {
     const [contentReady, setContentReady] = useState(false);
     const [errorBoundaryRetryKey, setErrorBoundaryRetryKey] = useState(0);
     const fadeAnim = useRef(new Animated.Value(0)).current;
-
-    // Handle sidebar section navigation (scroll to section when clicked in skeleton)
-    const handleSectionPress = useCallback((sectionKey: string) => {
-        if (Platform.OS === 'web' && typeof document !== 'undefined') {
-            const element = document.querySelector(`[data-section="${sectionKey}"]`);
-            element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    }, []);
 
     const handleHomeRetry = useCallback(() => {
         setContentReady(false);
@@ -169,10 +160,7 @@ function HomeScreen() {
                                 style={[styles.skeletonLayer, webSkeletonStyle as any]}
                                 testID="home-skeleton-layer"
                             >
-                                <HomePageSkeleton 
-                                    showSidebarNavigation={Platform.OS === 'web'}
-                                    onSectionPress={handleSectionPress}
-                                />
+                                <HomePageSkeleton />
                             </View>
                         )}
 
@@ -180,7 +168,7 @@ function HomeScreen() {
                         {canMountContent && (
                             Platform.OS === 'web' ? (
                                 <View style={[styles.contentLayer, webContentStyle as any]}>
-                                    <Suspense fallback={<HomePageSkeleton showSidebarNavigation={false} />}>
+                                    <Suspense fallback={<HomePageSkeleton />}>
                                         <HomeWithReadyCallback onReady={() => setContentReady(true)} />
                                     </Suspense>
                                 </View>

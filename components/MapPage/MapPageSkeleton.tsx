@@ -92,40 +92,37 @@ export const MapPageSkeleton: React.FC<{ inline?: boolean }> = ({ inline = false
     },
   }), [colors, isMobile]);
 
+  const mapOnlySkeleton = (
+    <View style={styles.mapArea}>
+      <View style={[styles.chipsRow, { pointerEvents: 'none' }]}>
+        {[52, 68, 58].map((w, i) => (
+          <SkeletonLoader key={i} width={w} height={28} borderRadius={14} />
+        ))}
+      </View>
+
+      {MARKER_POSITIONS.map((pos, i) => (
+        <View key={i} style={[styles.markerDot, { top: pos.top, left: pos.left }]}>
+          <SkeletonLoader width={18} height={18} borderRadius={9} />
+        </View>
+      ))}
+
+      <View style={styles.mapControls}>
+        {[0, 1, 2].map((i) => (
+          <View key={i} style={styles.controlButton}>
+            <SkeletonLoader width={36} height={36} borderRadius={DESIGN_TOKENS.radii.md} />
+          </View>
+        ))}
+      </View>
+    </View>
+  )
+
   if (inline) {
-    return (
-      <View style={styles.mapArea} />
-    );
+    return mapOnlySkeleton
   }
 
   return (
     <View style={styles.container}>
-      {/* Map area — static background, no shimmer animation to avoid inflating LCP */}
-      <View style={styles.mapArea}>
-
-        {/* Quick filter chips skeleton */}
-        <View style={[styles.chipsRow, { pointerEvents: 'none' }]}>
-          {[52, 68, 58].map((w, i) => (
-            <SkeletonLoader key={i} width={w} height={28} borderRadius={14} />
-          ))}
-        </View>
-
-        {/* Marker placeholders */}
-        {MARKER_POSITIONS.map((pos, i) => (
-          <View key={i} style={[styles.markerDot, { top: pos.top, left: pos.left }]}>
-            <SkeletonLoader width={18} height={18} borderRadius={9} />
-          </View>
-        ))}
-
-        {/* Map controls */}
-        <View style={styles.mapControls}>
-          {[0, 1, 2].map((i) => (
-            <View key={i} style={styles.controlButton}>
-              <SkeletonLoader width={36} height={36} borderRadius={DESIGN_TOKENS.radii.md} />
-            </View>
-          ))}
-        </View>
-      </View>
+      {mapOnlySkeleton}
 
       {/* Side panel skeleton (desktop only) */}
       {Platform.OS === 'web' && !isMobile && (

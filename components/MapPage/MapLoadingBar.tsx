@@ -15,12 +15,16 @@ export const MapLoadingBar: React.FC<MapLoadingBarProps> = React.memo(({ visible
   const colors = useThemedColors();
   const progress = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+  const loopRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
+    loopRef.current?.stop();
+    loopRef.current = null;
+
     if (visible) {
       opacity.setValue(1);
       progress.setValue(0);
-      Animated.loop(
+      loopRef.current = Animated.loop(
         Animated.sequence([
           Animated.timing(progress, {
             toValue: 1,
@@ -33,7 +37,8 @@ export const MapLoadingBar: React.FC<MapLoadingBarProps> = React.memo(({ visible
             useNativeDriver: false,
           }),
         ]),
-      ).start();
+      );
+      loopRef.current.start();
     } else {
       Animated.timing(opacity, {
         toValue: 0,
@@ -44,6 +49,11 @@ export const MapLoadingBar: React.FC<MapLoadingBarProps> = React.memo(({ visible
         progress.setValue(0);
       });
     }
+
+    return () => {
+      loopRef.current?.stop();
+      loopRef.current = null;
+    };
   }, [visible, progress, opacity]);
 
   const width = progress.interpolate({

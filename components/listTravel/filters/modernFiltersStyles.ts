@@ -10,7 +10,6 @@ const MENU_RADIUS = DESIGN_TOKENS.radii.md;
 export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedColors>) => {
   const { spacing, typography, radii } = DESIGN_TOKENS;
   const mobileWebTopReserve = (LAYOUT?.headerHeight ?? 56) * 2;
-  const mobileWebBottomReserve = (LAYOUT?.tabBarHeight ?? 56) + spacing.lg;
 
   return StyleSheet.create({
     container: {
@@ -163,19 +162,25 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       }),
     },
     toggleAllButton: {
-      paddingVertical: 6,
-      paddingHorizontal: spacing.xs,
-      backgroundColor: 'transparent',
+      width: DESIGN_TOKENS.touchTarget.minWidth,
+      height: DESIGN_TOKENS.touchTarget.minHeight,
+      padding: 0,
       borderRadius: CONTROL_RADIUS,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
       ...Platform.select({
         web: {
           cursor: 'pointer',
-          transition: 'background-color 0.2s ease',
+          transition: 'background-color 0.2s ease, border-color 0.2s ease',
         },
       }),
     },
     toggleAllButtonPressed: {
       backgroundColor: colors.brandSoft,
+      borderColor: colors.brandAlpha30,
     },
     toggleAllButtonInner: {
       flexDirection: 'row',
@@ -450,8 +455,13 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       ...Platform.select({
         web: {
           outlineWidth: 0,
+          transition: 'border-color 0.15s ease',
         },
       }),
+    },
+    yearInputFocused: {
+      borderColor: colors.primary,
+      backgroundColor: colors.surface,
     },
     moderationRow: {
       flexDirection: 'row',
@@ -490,12 +500,13 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
         web: {
           overflowY: 'auto',
           WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none' as any,
+          msOverflowStyle: 'none' as any,
         } as any,
       }),
     },
     scrollContent: {
-      flexGrow: 1,
-      paddingBottom: spacing.xl,
+      paddingBottom: spacing.sm,
     },
     filterGroup: {
       marginBottom: 2,
@@ -720,7 +731,7 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
           gap: spacing.xs,
           position: 'sticky' as any,
           bottom: 0,
-          paddingBottom: `calc(${spacing.md}px + env(safe-area-inset-bottom) + ${mobileWebBottomReserve}px)` as any,
+          paddingBottom: `calc(${spacing.md}px + env(safe-area-inset-bottom))` as any,
           boxShadow: ((colors.boxShadows as any)?.light ?? DESIGN_TOKENS.shadows.light) as any,
         } as any,
       }),

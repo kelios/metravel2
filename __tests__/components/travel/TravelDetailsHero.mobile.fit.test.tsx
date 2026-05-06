@@ -108,7 +108,7 @@ describe('TravelHeroSection mobile image fit', () => {
     expect(lastProps.fit).toBe('contain')
   })
 
-  it('keeps hero slider height at least 70 percent of the viewport on mobile', async () => {
+  it('keeps hero slider height aligned with the mobile loading shell on native', async () => {
     const travel: any = {
       id: 2,
       name: 'Tall mobile hero',
@@ -162,8 +162,8 @@ describe('TravelHeroSection mobile image fit', () => {
     expect(sliderContainer).toBeTruthy()
     const flattenedStyle = StyleSheet.flatten(sliderContainer.props.style)
     const viewport = useWindowDimensions()
-    expect(flattenedStyle.height).toBeGreaterThanOrEqual(
-      Math.round(viewport.height * 0.7),
+    expect(flattenedStyle.height).toBe(
+      Math.min(420, Math.max(260, Math.round(viewport.height * 0.56))),
     )
   })
 })

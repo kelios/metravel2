@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react'
+import { lazy, memo, Suspense, useMemo } from 'react'
 import { StyleSheet, View, Platform } from 'react-native'
 import { usePathname, useRouter } from 'expo-router'
 import { useIsFocused } from '@react-navigation/native'
@@ -11,7 +11,9 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useAuth } from '@/context/AuthContext'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
-import ListTravel from '@/components/listTravel/ListTravelBase'
+import SearchPageSkeleton from '@/components/listTravel/SearchPageSkeleton'
+
+const ListTravel = lazy(() => import('@/components/listTravel/ListTravelBase'))
 
 /** SEO metadata */
 const PAGE_HEADING = 'Поиск маршрутов и идей путешествий по Беларуси'
@@ -82,7 +84,9 @@ function SearchScreen() {
             </View>
           }
         >
-          <ListTravel />
+          <Suspense fallback={<SearchPageSkeleton />}>
+            <ListTravel />
+          </Suspense>
         </ErrorBoundary>
 
         {isAuthenticated && Platform.OS !== 'web' && (

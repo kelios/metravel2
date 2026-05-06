@@ -23,7 +23,6 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { ResponsiveContainer, ResponsiveStack } from '@/components/layout'
 import HomeHero from './HomeHero'
 import HomeFinalCTA from './HomeFinalCTA'
-import FadeInSection from '@/components/ui/FadeInSection'
 import { queueAnalyticsEvent } from '@/utils/analytics'
 import { hapticImpact } from '@/utils/haptics'
 import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries'
@@ -319,69 +318,59 @@ function Home() {
         travelsCountLoading={isAuthenticated && travelsCountLoading}
       />
 
-      <FadeInSection delay={0}>
-        <PageSection marginTop={isMobile ? 28 : 48}>
-          <HomeInspirationSection
-            title="Не хотите"
-            titleAccent="выбирать долго?"
-            subtitle="Откройте случайный маршрут для спонтанного выезда"
-            queryKey="home-random-travels"
-            fetchFn={fetchTravelsRandom}
-            fixedCount={3}
-            hideAuthor
-          />
-        </PageSection>
-      </FadeInSection>
+      <PageSection marginTop={isMobile ? 28 : 48}>
+        <HomeInspirationSection
+          title="Не хотите"
+          titleAccent="выбирать долго?"
+          subtitle="Откройте случайный маршрут для спонтанного выезда"
+          queryKey="home-random-travels"
+          fetchFn={fetchTravelsRandom}
+          fixedCount={3}
+          hideAuthor
+        />
+      </PageSection>
 
-      <FadeInSection delay={0}>
-        <View
-          style={[
-            HOW_IT_WORKS_PLACEHOLDER_STYLE,
-            { marginTop: isMobile ? 32 : 56 },
-          ]}
+      <View
+        style={[
+          HOW_IT_WORKS_PLACEHOLDER_STYLE,
+          { marginTop: isMobile ? 32 : 56 },
+        ]}
+      >
+        <Suspense
+          fallback={
+            <HowItWorksFallback
+              colors={colors}
+              isMobile={isMobile}
+              skeletonPadH={skeletonPadH}
+              skeletonPadVLarge={skeletonPadVLarge}
+            />
+          }
         >
-          <Suspense
-            fallback={
-              <HowItWorksFallback
-                colors={colors}
-                isMobile={isMobile}
-                skeletonPadH={skeletonPadH}
-                skeletonPadVLarge={skeletonPadVLarge}
-              />
-            }
-          >
-            <HomeHowItWorks />
-          </Suspense>
-        </View>
-      </FadeInSection>
+          <HomeHowItWorks />
+        </Suspense>
+      </View>
 
-      <FadeInSection delay={0}>
-        <PageSection marginTop={isMobile ? 36 : 64}>
-          <HomeInspirationSection
-            title="Маршруты на"
-            titleAccent="ближайшие выходные"
-            subtitle="Реальные поездки, которые можно успеть за 1-2 дня"
-            queryKey="home-travels-of-month"
-            fetchFn={fetchTravelsOfMonth}
-          />
-        </PageSection>
-      </FadeInSection>
+      <PageSection marginTop={isMobile ? 36 : 64}>
+        <HomeInspirationSection
+          title="Маршруты на"
+          titleAccent="ближайшие выходные"
+          subtitle="Реальные поездки, которые можно успеть за 1-2 дня"
+          queryKey="home-travels-of-month"
+          fetchFn={fetchTravelsOfMonth}
+        />
+      </PageSection>
 
-      <FadeInSection delay={0}>
-        <View style={{ marginTop: isMobile ? 24 : 40 }}>
-          <Suspense fallback={<SectionSkeleton hydrated={false} />}>
-            <HomeFavoritesHistorySection />
-          </Suspense>
-        </View>
-      </FadeInSection>
+      <View style={{ marginTop: isMobile ? 24 : 40 }}>
+        <Suspense fallback={<SectionSkeleton hydrated={false} />}>
+          <HomeFavoritesHistorySection />
+        </Suspense>
+      </View>
 
-      <FadeInSection delay={0}>
-        <View style={{ marginTop: isMobile ? 40 : 72 }}>
-          <Suspense fallback={<SectionSkeleton hydrated={false} />}>
-            <HomeInspirationSections />
-          </Suspense>
-        </View>
-      </FadeInSection>
+      <View style={{ marginTop: isMobile ? 40 : 72 }}>
+        <Suspense fallback={<SectionSkeleton hydrated={false} />}>
+          <HomeInspirationSections />
+        </Suspense>
+      </View>
 
       <View style={{ marginTop: isMobile ? 48 : 80 }}>
         <Suspense

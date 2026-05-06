@@ -158,6 +158,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
     isLoading,
     isNarrowWeb,
   });
+  const [yearFocused, setYearFocused] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
     () => new Set()
   );
@@ -388,10 +389,12 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                   const cleaned = text.replace(/[^0-9]/g, '').slice(0, 4);
                   onYearChange(cleaned.length === 4 ? cleaned : cleaned || undefined);
                 }}
-                placeholder="2023"
+                onFocus={() => setYearFocused(true)}
+                onBlur={() => setYearFocused(false)}
+                placeholder="ГГГГ"
                 keyboardType="numeric"
                 maxLength={4}
-                style={styles.yearInput}
+                style={[styles.yearInput, yearFocused && styles.yearInputFocused]}
                 accessibilityLabel="Фильтр по году"
               />
             </View>
@@ -401,8 +404,9 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
 
       {/* Filter Groups */}
       <ScrollView
+        testID="filter-scrollview"
         style={styles.scrollView}
-        showsVerticalScrollIndicator={true}
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         {groupsWithoutSort.map((group, index) => {

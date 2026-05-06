@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 /**
  * Глубокая проверка равенства для объектов и массивов
  */
-function deepEqual(a: unknown, b: unknown): boolean {
+export function deepEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (a == null || b == null) return false;
   if (typeof a !== typeof b) return false;
@@ -64,4 +64,3 @@ export function useDebouncedValue<T>(value: T, delay: number): T {
 
   return debouncedValue;
 }
-

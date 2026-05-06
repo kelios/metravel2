@@ -2,6 +2,8 @@ import React, { Suspense, useMemo } from 'react';
 import { Animated, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe';
 import type { Travel } from '@/types/types';
 import type { TravelSectionLink } from '@/components/travel/sectionLinks';
 import {
@@ -92,6 +94,7 @@ export default function TravelDetailsCriticalShell({
   deferredContent,
   mainAriaLabel,
 }: TravelDetailsCriticalShellProps) {
+  const insets = useSafeAreaInsetsSafe();
   const showDesktopSidebar = shouldShowTravelDetailsDesktopSidebar(isMobile, screenWidth);
   const showSkeletonOverlay = shouldShowTravelDetailsSkeletonOverlay(travel);
 
@@ -127,6 +130,21 @@ export default function TravelDetailsCriticalShell({
     []
   );
 
+  const scrollContentStyle = useMemo(
+    () => [
+      styles.scrollContent,
+      isMobile
+        ? {
+            paddingBottom: Math.max(
+              DESIGN_TOKENS.spacing.xxl,
+              (insets.bottom || 0) + 112,
+            ),
+          }
+        : null,
+    ],
+    [styles.scrollContent, isMobile, insets.bottom]
+  );
+
   return (
     <View
       testID="travel-details-page"
@@ -150,7 +168,7 @@ export default function TravelDetailsCriticalShell({
             testID="travel-details-scroll"
             {...(Platform.OS === 'web' ? ({ 'data-testid': 'travel-details-scroll' } as any) : null)}
             ref={scrollRef as any}
-            contentContainerStyle={[styles.scrollContent]}
+            contentContainerStyle={scrollContentStyle}
             keyboardShouldPersistTaps="handled"
             onScroll={scrollEventHandler}
             scrollEventThrottle={Platform.OS === 'web' ? 64 : 48}

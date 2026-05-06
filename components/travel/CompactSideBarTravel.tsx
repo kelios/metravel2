@@ -154,8 +154,11 @@ function CompactSideBarTravel({
   const enableSidebarDeferredData = useCallback(() => {
     setSidebarDeferredDataEnabled(true);
   }, []);
+  const shouldLoadAuthorProfileImmediately = Platform.OS === 'web' && !isMobile;
   const { profile: authorProfile } = useUserProfileCached(travelOwnerId, {
-    enabled: !!travelOwnerId && sidebarDeferredDataEnabled,
+    // On desktop web the author card is visible from the first screen,
+    // so the profile avatar must not wait for hover/focus to start loading.
+    enabled: !!travelOwnerId && (sidebarDeferredDataEnabled || shouldLoadAuthorProfileImmediately),
   });
   const { data: routeFiles = [] } = useTravelRouteFiles((travel as any)?.id, {
     enabled: sidebarDeferredDataEnabled && !!(travel as any)?.id,
