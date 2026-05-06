@@ -167,7 +167,9 @@ npm run release:check  # Полная проверка (lint + tests + build + a
 
 - Работать только в ветке `main`
 - Не создавать новые ветки
-- Все изменения вносить напрямую в `main`
+- Не использовать git worktrees
+- Все изменения вносить напрямую в `main` из `/Users/juliasavran/Sites/metravel2/metravel2`
+- Коммитить всегда из директории основного репозитория (не из worktree-пути)
 
 ---
 
