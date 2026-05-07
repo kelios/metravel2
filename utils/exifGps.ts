@@ -1,6 +1,8 @@
 type GpsCoords = { lat: number; lng: number };
 type ExifGpsOverride = GpsCoords | ((file: File) => GpsCoords | null | Promise<GpsCoords | null>) | null;
 
+export const EXIF_IMAGE_INPUT_ACCEPT = 'image/*,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif';
+
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);
 

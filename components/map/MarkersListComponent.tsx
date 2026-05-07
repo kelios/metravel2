@@ -4,6 +4,7 @@ import { MarkerData } from "@/types/types";
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useThemedColors } from '@/hooks/useTheme';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
+import { EXIF_IMAGE_INPUT_ACCEPT } from '@/utils/exifGps';
 import { useStyles } from './markersListStyles';
 import EditMarkerModal from './EditMarkerModal';
 
@@ -114,7 +115,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                             <input
                                 ref={fileInputRef}
                                 type="file"
-                                accept="image/*"
+                                accept={EXIF_IMAGE_INPUT_ACCEPT}
                                 onChange={handlePhotoSelected}
                                 style={styles.fileInputHidden as React.CSSProperties}
                             />

@@ -1,6 +1,10 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import TravelWizardStepRoute from '@/components/travel/TravelWizardStepRoute';
+import { EXIF_IMAGE_INPUT_ACCEPT } from '@/utils/exifGps';
+import { Platform } from 'react-native';
+
+const ORIGINAL_PLATFORM_OS = Platform.OS;
 
 // Mock dependencies
 jest.mock('@/hooks/useTheme', () => ({
@@ -128,6 +132,11 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockMultiSelectField.mockClear();
+        Object.defineProperty(Platform, 'OS', { value: ORIGINAL_PLATFORM_OS });
+    });
+
+    afterEach(() => {
+        Object.defineProperty(Platform, 'OS', { value: ORIGINAL_PLATFORM_OS });
     });
 
     describe('✅ Отображение компонентов', () => {
@@ -269,6 +278,22 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
             fireEvent.press(button);
 
             expect(getByPlaceholderText('49.609645, 18.845693')).toBeTruthy();
+        });
+
+        it('на web разрешает выбирать HEIC и HEIF для точки из фото', () => {
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
+
+            const screen = render(<TravelWizardStepRoute {...defaultProps} />);
+
+            fireEvent.press(screen.getByText('Добавить точку вручную'));
+
+            const fileInputs = screen.UNSAFE_queryAllByType?.('input' as any) ?? [];
+            const fileInput = fileInputs.find((node: any) => node?.props?.type === 'file');
+
+            expect(fileInput).toBeTruthy();
+            expect(fileInput.props.accept).toBe(EXIF_IMAGE_INPUT_ACCEPT);
+            expect(fileInput.props.accept).toContain('.heic');
+            expect(fileInput.props.accept).toContain('.heif');
         });
 
         it('должен добавить точку с валидными координатами', async () => {

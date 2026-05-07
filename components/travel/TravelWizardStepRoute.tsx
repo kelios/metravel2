@@ -17,7 +17,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import type { TravelFilters } from '@/hooks/useTravelFilters';
 import { showToastMessage } from '@/utils/toast';
 import { hasToastBeenShown } from '@/utils/errorHelpers';
-import { extractGpsFromImageFile } from '@/utils/exifGps';
+import { EXIF_IMAGE_INPUT_ACCEPT, extractGpsFromImageFile } from '@/utils/exifGps';
 import { registerPendingImageFile, removePendingImageFile } from '@/utils/pendingImageFiles';
 import TravelRouteFilesPanel from '@/components/travel/TravelRouteFilesPanel';
 
@@ -665,7 +665,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                                             <input
                                                 ref={manualPhotoInputRef}
                                                 type="file"
-                                                accept="image/*"
+                                                accept={EXIF_IMAGE_INPUT_ACCEPT}
                                                 onChange={handleManualPhotoSelected}
                                                 style={styles.manualHiddenInput as any}
                                             />

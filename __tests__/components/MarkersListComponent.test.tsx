@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 import MarkersListComponent from '@/components/map/MarkersListComponent';
+import { EXIF_IMAGE_INPUT_ACCEPT } from '@/utils/exifGps';
 
 jest.mock('@/components/forms/MultiSelectField', () => {
     return jest.fn((props: any) => (
@@ -163,5 +164,26 @@ describe('MarkersListComponent - Edit modal categories', () => {
                 }),
             );
         });
+    });
+
+    it('allows selecting HEIC and HEIF files for EXIF import on web', () => {
+        const { container } = render(
+            <MarkersListComponent
+                markers={[baseMarker]}
+                categoryTravelAddress={[{ id: 1, name: 'Кафе' }]}
+                handleMarkerChange={jest.fn()}
+                handleImageUpload={jest.fn()}
+                handleMarkerRemove={jest.fn()}
+                editingIndex={0}
+                setEditingIndex={jest.fn()}
+                onAddMarkerFromPhoto={jest.fn()}
+            />,
+        );
+
+        const fileInput = container.querySelector('input[type="file"]');
+        expect(fileInput).toBeTruthy();
+        expect(fileInput?.getAttribute('accept')).toBe(EXIF_IMAGE_INPUT_ACCEPT);
+        expect(fileInput?.getAttribute('accept')).toContain('.heic');
+        expect(fileInput?.getAttribute('accept')).toContain('.heif');
     });
 });
