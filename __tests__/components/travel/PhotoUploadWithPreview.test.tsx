@@ -283,6 +283,43 @@ describe('PhotoUploadWithPreview', () => {
             }
         });
 
+        it('web: allows HEIC upload for saved point images', async () => {
+            const originalOs = Platform.OS;
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
+
+            const blobUrl = 'blob:http://localhost:8081/test-blob-heic';
+            const originalCreateObjectURL = (global as any).URL?.createObjectURL;
+            (global as any).URL = (global as any).URL || {};
+            (global as any).URL.createObjectURL = jest.fn(() => blobUrl);
+
+            const serverUrl = 'http://192.168.50.36/travel-image/17992/conversions/test-heic.webp';
+            mockUploadImage.mockResolvedValueOnce({ url: serverUrl } as any);
+
+            try {
+                render(
+                    <PhotoUploadWithPreview
+                        {...defaultProps}
+                        idTravel={'819'}
+                        collection="travelImageAddress"
+                    />
+                );
+
+                expect(typeof lastOnDrop).toBe('function');
+
+                const file = new File([new Uint8Array([1, 2, 3])], 'iphone.heic', { type: 'image/heic' });
+                await act(async () => {
+                    await lastOnDrop([file], []);
+                });
+
+                await waitFor(() => {
+                    expect(mockUploadImage).toHaveBeenCalledTimes(1);
+                });
+            } finally {
+                Object.defineProperty(Platform, 'OS', { value: originalOs });
+                (global as any).URL.createObjectURL = originalCreateObjectURL;
+            }
+        });
+
         it('web: does not call uploadImage when idTravel is missing (preview-only mode), but still emits blob preview', async () => {
             const originalOs = Platform.OS;
             Object.defineProperty(Platform, 'OS', { value: 'web' });

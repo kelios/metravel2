@@ -6,7 +6,7 @@ import { Platform } from 'react-native';
 import { uploadImage } from '@/api/misc';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'];
 
 const normalizeImageUrl = (url?: string | null) => normalizeMediaUrl(url);
 
@@ -204,7 +204,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
     const maxSize = maxSizeMB * 1024 * 1024;
     if (Platform.OS === 'web' && file instanceof File) {
       if (file.size > maxSize) return `Файл слишком большой. Максимальный размер: ${maxSizeMB}MB`;
-      if (!ALLOWED_TYPES.includes(file.type)) return `Неподдерживаемый формат. Разрешены: JPG, PNG, GIF, WEBP`;
+      if (!ALLOWED_TYPES.includes(file.type)) return `Неподдерживаемый формат. Разрешены: JPG, PNG, GIF, WEBP, HEIC, HEIF`;
     }
     return null;
   }, [maxSizeMB]);
