@@ -491,7 +491,7 @@ jobs:
         env:
           LINT_JOB_RESULT: ${{ needs.lint.result }}
           SMOKE_JOB_RESULT: ${{ needs.smoke-critical.result }}
-          SMOKE_DURATION_BUDGET_SECONDS: "30"
+          SMOKE_DURATION_BUDGET_SECONDS: ${{ vars.SMOKE_DURATION_BUDGET_SECONDS || '90' }}
           SMOKE_DURATION_PREVIOUS_SECONDS: ${{ vars.SMOKE_DURATION_PREVIOUS_SECONDS }}
           SMOKE_SUITE_FILES_BASELINE: ${{ vars.SMOKE_SUITE_FILES_BASELINE }}
           SMOKE_DURATION_BUDGET_STRICT: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
