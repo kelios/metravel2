@@ -19,6 +19,7 @@ import { showToastMessage } from '@/utils/toast';
 import { hasToastBeenShown } from '@/utils/errorHelpers';
 import { EXIF_IMAGE_INPUT_ACCEPT, extractGpsFromImageFile } from '@/utils/exifGps';
 import { registerPendingImageFile, removePendingImageFile } from '@/utils/pendingImageFiles';
+import { prepareWebImageFileForUpload } from '@/utils/webImageUpload';
 import TravelRouteFilesPanel from '@/components/travel/TravelRouteFilesPanel';
 
 const WebMapComponent = Platform.OS === 'web'
@@ -482,11 +483,17 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
         setManualCoords(`${coords.lat}, ${coords.lng}`);
 
         try {
-            const previewUrl = URL.createObjectURL(file);
-            registerPendingImageFile(previewUrl, file);
+            const uploadableFile = await prepareWebImageFileForUpload(file);
+            const previewUrl = URL.createObjectURL(uploadableFile);
+            registerPendingImageFile(previewUrl, uploadableFile);
             setManualPhotoPreviewUrl(previewUrl);
         } catch {
-            // ignore preview
+            void showToastMessage({
+                type: 'error',
+                text1: 'Не удалось обработать фото',
+                text2: 'Попробуйте JPG или PNG, если HEIC не удалось преобразовать в браузере.',
+            });
+            return;
         }
 
         void showToastMessage({

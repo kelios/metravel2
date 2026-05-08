@@ -6,6 +6,7 @@ import { ensureLeafletCss } from '@/utils/ensureLeafletCss';
 import { extractGpsFromImageFile } from '@/utils/exifGps';
 import { showToastMessage } from '@/utils/toast';
 import { registerPendingImageFile, removePendingImageFile, getPendingImageFile } from '@/utils/pendingImageFiles';
+import { prepareWebImageFileForUpload } from '@/utils/webImageUpload';
 import { matchCountryId, buildAddressFromGeocode } from '@/utils/geocodeHelpers';
 import { buildLeafletPopupCss, createWebMapStyles } from '@/components/travel/WebMapComponent.styles';
 import WebMapMarkerPopup from '@/components/travel/WebMapMarkerPopup';
@@ -393,10 +394,16 @@ const WebMapComponent = ({
 
         let previewUrl: string | null = null;
         try {
-            previewUrl = URL.createObjectURL(file);
-            registerPendingImageFile(previewUrl, file);
+            const uploadableFile = await prepareWebImageFileForUpload(file);
+            previewUrl = URL.createObjectURL(uploadableFile);
+            registerPendingImageFile(previewUrl, uploadableFile);
         } catch {
-            previewUrl = null;
+            void showToastMessage({
+                type: 'error',
+                text1: 'Не удалось обработать фото',
+                text2: 'Попробуйте JPG или PNG, если HEIC не удалось преобразовать в браузере.',
+            });
+            return;
         }
 
         const markerResult = await addMarker({ lat: coords.lat, lng: coords.lng }, { image: previewUrl });

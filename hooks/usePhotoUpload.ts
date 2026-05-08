@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { uploadImage } from '@/api/misc';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
+import { prepareWebImageFileForUpload } from '@/utils/webImageUpload';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'];
 
@@ -212,32 +213,37 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
   const handleUploadImage = useCallback(async (file: File | { uri: string; name: string; type: string }) => {
     try {
       setError(null); setUploadMessage(null); setUploadProgress(0); setHasTriedFallback(false);
-      const validationError = validateFile(file);
+      const uploadableFile =
+        Platform.OS === 'web' && typeof File !== 'undefined' && file instanceof File
+          ? await prepareWebImageFileForUpload(file)
+          : file;
+
+      const validationError = validateFile(uploadableFile);
       if (validationError) { setError(validationError); setPreviewUrl(null); return; }
 
       let previewCandidate: string;
-      if (Platform.OS === 'web' && file instanceof File) {
-        previewCandidate = URL.createObjectURL(file);
+      if (Platform.OS === 'web' && uploadableFile instanceof File) {
+        previewCandidate = URL.createObjectURL(uploadableFile);
         blobUrlsRef.current.add(previewCandidate);
       } else {
-        previewCandidate = (file as { uri: string }).uri;
+        previewCandidate = (uploadableFile as { uri: string }).uri;
       }
       setPreviewUrl(previewCandidate); setIsManuallySelected(true); setLastPreviewUrl(previewCandidate);
 
       const normalizedId = (idTravel ?? '').toString();
       if (!normalizedId || normalizedId === 'null' || normalizedId === 'undefined') {
         setUploadMessage('Превью готово. Сохраните точку для загрузки фото.');
-        pendingUploadRef.current = file;
+        pendingUploadRef.current = uploadableFile;
         onUpload?.(previewCandidate);
         return;
       }
 
       setLoading(true);
       const formData = new FormData();
-      if (Platform.OS === 'web' && file instanceof File) {
-        formData.append('file', file);
+      if (Platform.OS === 'web' && uploadableFile instanceof File) {
+        formData.append('file', uploadableFile);
       } else {
-        const rnFile = file as { uri: string; name: string; type: string };
+        const rnFile = uploadableFile as { uri: string; name: string; type: string };
         formData.append('file', { uri: rnFile.uri, name: rnFile.name, type: rnFile.type } as unknown as Blob);
       }
       formData.append('collection', collection);

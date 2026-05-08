@@ -11,6 +11,10 @@ jest.mock('@/api/misc');
 jest.mock('react-native-image-picker', () => ({
     launchImageLibrary: jest.fn(),
 }));
+jest.mock('heic2any', () => ({
+    __esModule: true,
+    default: jest.fn(async () => new Blob([new Uint8Array([9, 8, 7])], { type: 'image/jpeg' })),
+}));
 let lastOnDrop: any = null;
 jest.mock('react-dropzone', () => ({
     useDropzone: jest.fn((opts: any) => {
@@ -314,6 +318,12 @@ describe('PhotoUploadWithPreview', () => {
                 await waitFor(() => {
                     expect(mockUploadImage).toHaveBeenCalledTimes(1);
                 });
+
+                const uploadFormData = mockUploadImage.mock.calls[0][0] as FormData;
+                const uploadedFile = uploadFormData.get('file') as File;
+                expect(uploadedFile).toBeInstanceOf(File);
+                expect(uploadedFile.type).toBe('image/jpeg');
+                expect(uploadedFile.name).toBe('iphone.jpg');
             } finally {
                 Object.defineProperty(Platform, 'OS', { value: originalOs });
                 (global as any).URL.createObjectURL = originalCreateObjectURL;
