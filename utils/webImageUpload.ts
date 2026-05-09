@@ -37,19 +37,21 @@ export async function prepareWebImageFileForUpload(file: File): Promise<File> {
     throw new Error('HEIC conversion is unavailable');
   }
 
-  const converted = await heic2any({
-    blob: file,
-    toType: 'image/jpeg',
-    quality: 0.92,
-  });
+  try {
+    const converted = await heic2any({
+      blob: file,
+      toType: 'image/jpeg',
+      quality: 0.92,
+    });
 
-  const convertedBlob = Array.isArray(converted) ? converted[0] : converted;
-  if (!(convertedBlob instanceof Blob)) {
-    throw new Error('HEIC conversion failed');
+    const convertedBlob = Array.isArray(converted) ? converted[0] : converted;
+    if (!(convertedBlob instanceof Blob)) return file;
+
+    return new File([convertedBlob], replaceImageExtension(file.name, '.jpg'), {
+      type: 'image/jpeg',
+      lastModified: file.lastModified || Date.now(),
+    });
+  } catch {
+    return file;
   }
-
-  return new File([convertedBlob], replaceImageExtension(file.name, '.jpg'), {
-    type: 'image/jpeg',
-    lastModified: file.lastModified || Date.now(),
-  });
 }
