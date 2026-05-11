@@ -206,48 +206,57 @@ const TravelListPanel: React.FC<Props> = ({
     return null
   }, [compactPreview, hasMore, isLoading, skeletonCards, styles.endText])
 
-  const listHeader = useMemo(() => {
-    if (!isMobile || !travelsData.length) {
-      return null
-    }
-    const placesCountLabel =
-      travelsData.length > 999 ? '999+' : String(travelsData.length)
-    const hintText = compactPreview
-      ? 'Ближайшие места одним взглядом. Полный список откроет больше вариантов.'
-      : `${placesCountLabel} мест рядом. Выберите карточку, чтобы сфокусировать карту и построить маршрут.`
+    const listHeader = useMemo(() => {
+      if (!isMobile || !travelsData.length) {
+        return null
+      }
+      const placesCountLabel =
+        travelsData.length > 999 ? '999+' : String(travelsData.length)
+      const hintText = compactPreview
+        ? 'Ближайшие места одним взглядом. Полный список откроет больше вариантов.'
+        : `${placesCountLabel} мест рядом. Нажмите на карточку, чтобы сфокусировать карту.`
+      const swipeHint =
+        !compactPreview && Platform.OS !== 'web'
+          ? 'Свайп вправо — в избранное, влево — построить маршрут.'
+          : null
 
-    return (
-      <View
-        pointerEvents={Platform.OS === 'web' ? 'box-none' : 'auto'}
-        style={styles.listHeaderCard}
-        testID="travel-list-mobile-summary"
-      >
-        <Text pointerEvents="none" style={styles.listHeaderTitle}>
-          Места рядом
-        </Text>
-        <Text pointerEvents="none" style={styles.listHeaderHint}>
-          {hintText}
-        </Text>
-        {onOpenFilters && (
-          <View style={styles.listHeaderActions}>
-            <Button
-              label="Фильтры"
-              onPress={onOpenFilters}
-              variant="outline"
-              size="sm"
-              testID="travel-list-open-filters"
-            />
-          </View>
-        )}
-      </View>
-    )
-  }, [
-    compactPreview,
-    isMobile,
-    onOpenFilters,
-    styles,
-    travelsData.length,
-  ])
+      return (
+        <View
+          pointerEvents={Platform.OS === 'web' ? 'box-none' : 'auto'}
+          style={styles.listHeaderCard}
+          testID="travel-list-mobile-summary"
+        >
+          <Text pointerEvents="none" style={styles.listHeaderTitle}>
+            Места рядом
+          </Text>
+          <Text pointerEvents="none" style={styles.listHeaderHint}>
+            {hintText}
+          </Text>
+          {swipeHint ? (
+            <Text pointerEvents="none" style={styles.listHeaderSwipeHint}>
+              {swipeHint}
+            </Text>
+          ) : null}
+          {onOpenFilters && (
+            <View style={styles.listHeaderActions}>
+              <Button
+                label="Фильтры"
+                onPress={onOpenFilters}
+                variant="outline"
+                size="sm"
+                testID="travel-list-open-filters"
+              />
+            </View>
+          )}
+        </View>
+      )
+    }, [
+      compactPreview,
+      isMobile,
+      onOpenFilters,
+      styles,
+      travelsData.length,
+    ])
 
   if (!travelsData || travelsData.length === 0) {
     if (isLoading) {
@@ -267,13 +276,13 @@ const TravelListPanel: React.FC<Props> = ({
           Попробуйте увеличить радиус или сбросить фильтры
         </Text>
         <View style={styles.emptyActions}>
-          {onOpenFilters && (
+          {onExpandRadius && (
             <Button
-              label="Фильтры"
-              onPress={onOpenFilters}
-              variant="outline"
+              label="Увеличить радиус поиска"
+              onPress={onExpandRadius}
+              variant="primary"
               size="sm"
-              testID="empty-open-filters"
+              testID="empty-expand-radius"
             />
           )}
           {onResetFilters && (
@@ -285,18 +294,18 @@ const TravelListPanel: React.FC<Props> = ({
               testID="empty-reset-filters"
             />
           )}
-          {onExpandRadius && (
+          {onOpenFilters && (
             <Button
-              label="Увеличить радиус"
-              onPress={onExpandRadius}
+              label="Изменить фильтры"
+              onPress={onOpenFilters}
               variant="ghost"
               size="sm"
-              testID="empty-expand-radius"
+              testID="empty-open-filters"
             />
           )}
           {onClosePanel && (
             <Button
-              label="Карта"
+              label="Вернуться на карту"
               onPress={onClosePanel}
               variant="ghost"
               size="sm"
@@ -452,6 +461,12 @@ const getStyles = (colors: ThemedColors) =>
       fontSize: 13,
       lineHeight: 18,
       color: colors.textMuted,
+    },
+    listHeaderSwipeHint: {
+      fontSize: 12,
+      lineHeight: 16,
+      color: colors.textMuted,
+      fontStyle: 'italic',
     },
     listHeaderActions: {
       flexDirection: 'row',

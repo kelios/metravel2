@@ -221,6 +221,18 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
           />
         </View>
       )}
+
+      {!loading && searchEnabled && debouncedQuery.length >= 3 && results.length === 0 && !showResults && (
+        <View style={styles.emptyResults}>
+          <Text style={styles.emptyResultsText}>
+            Ничего не найдено по запросу «{debouncedQuery}»
+          </Text>
+        </View>
+      )}
+
+      {!loading && searchEnabled && query.length > 0 && query.length < 3 && (
+        <Text style={styles.minCharsHint}>Введите минимум 3 символа для поиска</Text>
+      )}
     </View>
   );
 };
@@ -306,6 +318,21 @@ const getStyles = (colors: ThemedColors, dense: boolean) => StyleSheet.create({
     flex: 1,
     fontSize: 13,
     color: colors.text,
+  },
+  emptyResults: {
+    marginTop: 6,
+    paddingHorizontal: 4,
+  },
+  emptyResultsText: {
+    fontSize: 12,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+  },
+  minCharsHint: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 4,
+    paddingHorizontal: 4,
   },
 });
 

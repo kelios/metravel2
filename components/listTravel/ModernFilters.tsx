@@ -165,9 +165,14 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
     isNarrowWeb,
   });
   const [yearFocused, setYearFocused] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    () => new Set()
-  );
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
+    // На десктопе раскрываем первые 2 группы фильтров по умолчанию для улучшения обнаруживаемости.
+    // На мобильном и в overlay-режиме все свёрнуты — экономим место.
+    const { isNarrowWeb: narrow } = getModernFiltersViewportState();
+    if (Platform.OS !== 'web' || narrow) return new Set<string>();
+    const nonSortGroups = filterGroups.filter(g => g.key !== 'sort');
+    return new Set(nonSortGroups.slice(0, 2).map(g => g.key));
+  });
   const [animatedValues] = useState(() =>
     filterGroups.reduce((acc, group) => {
       acc[group.key] = new Animated.Value(1);
@@ -405,7 +410,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                 }}
                 onFocus={() => setYearFocused(true)}
                 onBlur={() => setYearFocused(false)}
-                placeholder="ГГГГ"
+                placeholder="2024"
                 placeholderTextColor={colors.textMuted}
                 keyboardType="numeric"
                 maxLength={4}

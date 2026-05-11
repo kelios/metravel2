@@ -322,8 +322,7 @@ describe('ListTravel Integration Tests', () => {
       expect(screen.getByTestId('toggle-recommendations-button')).toBeTruthy();
     });
 
-    // Default is hidden, so the toggle should say "Показать рекомендации".
-    expect(screen.getByLabelText(/Показать рекомендации/i)).toBeTruthy();
+    expect(screen.getByLabelText(/Показать идеи путешествий/i)).toBeTruthy();
   });
 
   it('keeps recommendations hidden on web when stored preference is false', async () => {
@@ -335,7 +334,7 @@ describe('ListTravel Integration Tests', () => {
       expect(screen.getByTestId('toggle-recommendations-button')).toBeTruthy();
     });
 
-    expect(screen.getByLabelText(/Показать рекомендации/i)).toBeTruthy();
+    expect(screen.getByLabelText(/Показать идеи путешествий/i)).toBeTruthy();
   });
 
   it('renders export mode UI and allows selecting all items', async () => {
@@ -371,11 +370,6 @@ describe('ListTravel Integration Tests', () => {
   });
 
   it('handles web delete confirm flow (confirm true calls DELETE, confirm false cancels)', async () => {
-    const confirmSpy = jest
-      .spyOn(globalThis as any, 'confirm')
-      .mockImplementationOnce(() => true)
-      .mockImplementationOnce(() => false);
-
     if (!(globalThis as any).fetch) {
       (globalThis as any).fetch = jest.fn();
     }
@@ -389,20 +383,28 @@ describe('ListTravel Integration Tests', () => {
       expect(screen.getByText('Mountain Trip')).toBeTruthy();
     });
 
-    // First: confirm true -> should call delete
+    // First: open dialog and confirm -> should call delete
     fireEvent.press(screen.getByTestId('mock-delete-1'));
 
     await waitFor(() => {
-      expect(confirmSpy).toHaveBeenCalled();
+      expect(screen.getByTestId('confirm-delete-button')).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByTestId('confirm-delete-button'));
+
+    await waitFor(() => {
       expect(fetchMock).toHaveBeenCalled();
     });
 
-    // Second: confirm false -> should not call fetch again
+    // Second: open dialog and cancel -> should not call delete again
     fireEvent.press(screen.getByTestId('mock-delete-2'));
 
     await waitFor(() => {
-      expect(confirmSpy).toHaveBeenCalledTimes(2);
+      expect(screen.getByTestId('cancel-delete-button')).toBeTruthy();
     });
+
+    fireEvent.press(screen.getByTestId('cancel-delete-button'));
+
     // Depending on environment, other hooks may trigger additional fetches.
     // We only require that a DELETE request for travel was issued once.
     const deleteCalls = (fetchMock as jest.Mock).mock.calls.filter((call) => {
@@ -411,8 +413,6 @@ describe('ListTravel Integration Tests', () => {
       return url.includes('/api/travels/') && opts?.method === 'DELETE';
     });
     expect(deleteCalls).toHaveLength(1);
-
-    confirmSpy.mockRestore();
   });
 
   it('displays search bar, filters, and travel cards correctly', async () => {

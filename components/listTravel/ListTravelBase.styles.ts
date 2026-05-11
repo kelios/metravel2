@@ -146,4 +146,18 @@ export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedCo
       fontSize: 14,
       lineHeight: 20,
     },
+    fallbackNoticeAction: {
+      alignSelf: 'flex-start',
+      marginTop: DESIGN_TOKENS.spacing.xs,
+      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+      paddingVertical: DESIGN_TOKENS.spacing.xs,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.primarySoft,
+      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+    },
+    fallbackNoticeActionText: {
+      color: colors.primary,
+      fontSize: 13,
+      fontWeight: '600',
+    },
   })

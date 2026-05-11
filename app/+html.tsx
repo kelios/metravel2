@@ -274,8 +274,9 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
 
       {/* Home hero image preload — first slide of the book carousel.
-          Only injected for home page; the inline script checks pathname. */}
-      <script dangerouslySetInnerHTML={{ __html: `(function(){try{var p=window.location&&window.location.pathname;if(p!=='/'&&p!=='/index')return;var u='https://metravel.by/travel-image/544/conversions/26d572d144174803a61fe96f2d7aa142.webp?w=500&q=75&fit=contain';if(document.querySelector('link[rel="preload"][href="'+u+'"]'))return;var l=document.createElement('link');l.rel='preload';l.as='image';l.href=u;try{l.fetchPriority='high'}catch(_){}document.head.appendChild(l)}catch(_){}})();` }} />
+          Only injected for home page on desktop viewports (>=1280px) where the slider is shown.
+          URL params match buildHomeHeroSlidePreloadUrl: w=480&h=360 for <1480px, w=500&h=420 for >=1480px. */}
+      <script dangerouslySetInnerHTML={{ __html: `(function(){try{var p=window.location&&window.location.pathname;if(p!=='/'&&p!=='/index')return;var vw=window.innerWidth||0;if(vw<1280)return;var imgW=vw>=1480?500:480;var imgH=vw>=1480?420:360;var u='https://metravel.by/travel-image/544/conversions/26d572d144174803a61fe96f2d7aa142.webp?w='+imgW+'&h='+imgH+'&q=75&fit=contain';if(document.querySelector('link[rel="preload"][href="'+u+'"]'))return;var l=document.createElement('link');l.rel='preload';l.as='image';l.href=u;try{l.fetchPriority='high'}catch(_){}document.head.appendChild(l)}catch(_){}})();` }} />
 
       {/* Leaflet CSS early-load for map page — self-hosted, no CDN roundtrip.
           Applies stylesheet immediately (not just preload) so it is ready before JS hydration.

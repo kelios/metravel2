@@ -208,7 +208,8 @@ export const SearchPageSkeleton = memo(() => {
     <View style={styles.container} testID={isDesktop ? 'search-skeleton' : 'search-skeleton-mobile'}>
       {isDesktop ? <SearchSidebarSkeleton isDesktop /> : null}
       <View style={styles.main}>
-        {!isDesktop && <SearchSidebarSkeleton isDesktop={false} />}
+        {/* На планшете показываем скелетон сайдбара только если он реально будет виден (не на мобильных) */}
+        {isTablet && <SearchSidebarSkeleton isDesktop={false} />}
         <SearchHeaderSkeleton isMobile={isMobile} />
         <ScrollView showsVerticalScrollIndicator={false}>
           <SearchCardsSkeleton columns={columns} count={cardCount} isMobile={isMobile} />

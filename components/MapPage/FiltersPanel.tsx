@@ -153,6 +153,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         onRemoveRoutePoint={safeRemoveRoutePoint}
         onClearRoute={onClearRoute}
         swapStartEnd={swapStartEnd}
+        onRetryRoute={onBuildRoute ?? undefined}
         onAddressSelect={onAddressSelect}
         onAddressClear={onAddressClear}
         userLocation={userLocation}
@@ -174,6 +175,8 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           onBuildRoute={onBuildRoute}
           totalPoints={totalPoints}
           onOpenList={onOpenList}
+          startAddress={startAddress}
+          endAddress={endAddress}
         />
       )}
     </View>

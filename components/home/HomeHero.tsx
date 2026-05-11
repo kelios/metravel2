@@ -1,10 +1,7 @@
-import { useMemo, memo, useCallback, useState, useEffect, useRef } from 'react'
-import {
-  View,
-  Platform,
-  Dimensions,
-} from 'react-native'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Dimensions, Platform, View } from 'react-native'
 import { useRouter } from 'expo-router'
+
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -28,7 +25,19 @@ import {
 } from './useHomeHeroSlider'
 import type { QuickFilterParams } from './homeHeroShared'
 
+const IS_WEB = Platform.OS === 'web'
 const DESKTOP_BOOK_VIEWPORT_RESERVE = 180
+const WIDTH_STABILIZE_THRESHOLD = 50
+const BOOK_WIDTH_STABILIZE_THRESHOLD = 20
+const TABLET_LAYOUT_MIN_WIDTH = 770
+const INLINE_BOOKMARK_MIN_WIDTH = 1280
+const STACKED_CTA_MAX_WIDTH = 1180
+const COMPACT_BOOK_MAX_HEIGHT = 760
+const SLIDER_HEIGHT_NARROW = 360
+const SLIDER_HEIGHT_WIDE = 420
+const SLIDER_MEDIA_WIDTH_NARROW = 480
+const SLIDER_MEDIA_WIDTH_WIDE = 500
+const SLIDER_DESKTOP_BREAKPOINT = 1480
 
 interface HomeHeroProps {
   travelsCount?: number
@@ -42,10 +51,25 @@ export {
   shouldDisableHomeHeroSliderBlur,
 } from './useHomeHeroSlider'
 
+function getWebViewportHeight() {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') return window.innerHeight
+  return Dimensions.get('window').height
+}
+
+function detectDisableHeroSliderBlur() {
+  if (!IS_WEB || typeof navigator === 'undefined') return false
+  const touch = typeof navigator.maxTouchPoints === 'number' ? navigator.maxTouchPoints : 0
+  return shouldDisableHomeHeroSliderBlur(String(navigator.userAgent || ''), touch)
+}
+
 const HomeHero = memo(function HomeHero({
-  travelsCount: _travelsCount = 0,
-  travelsCountLoading: _travelsCountLoading = false,
+  travelsCount = 0,
+  travelsCountLoading = false,
 }: HomeHeroProps) {
+  // Props are retained for the parent's contract; not consumed in this layout.
+  void travelsCount
+  void travelsCountLoading
+
   const router = useRouter()
   const colors = useThemedColors()
   const {
@@ -58,112 +82,90 @@ const HomeHero = memo(function HomeHero({
     isPortrait,
   } = useResponsive()
 
-  // Stabilize width to prevent re-renders on minor viewport changes (e.g., mobile address bar)
+  // Stabilize width — ignore <50px jitters (e.g. mobile address bar collapse).
   const stableWidthRef = useRef(rawWidth)
-  const width = useMemo(() => {
-    // Only update if change is significant (>50px) to avoid scroll-triggered re-renders
-    if (Math.abs(rawWidth - stableWidthRef.current) > 50) {
-      stableWidthRef.current = rawWidth
-    }
-    return stableWidthRef.current
-  }, [rawWidth])
+  if (Math.abs(rawWidth - stableWidthRef.current) > WIDTH_STABILIZE_THRESHOLD) {
+    stableWidthRef.current = rawWidth
+  }
+  const width = stableWidthRef.current
 
   const isMobile = isSmallPhone || isPhone || isLargePhone
-  const isLandscape = !isPortrait && isMobile // RESP-05
-  const isWeb = Platform.OS === 'web'
-  const disableHeroSliderBlur = useMemo(() => {
-    if (Platform.OS !== 'web' || typeof navigator === 'undefined') return false
-    const maxTouchPoints =
-      typeof navigator.maxTouchPoints === 'number'
-        ? navigator.maxTouchPoints
-        : 0
-    return shouldDisableHomeHeroSliderBlur(
-      String(navigator.userAgent || ''),
-      maxTouchPoints,
-    )
-  }, [])
-  const isNarrowLayout =
-    isMobile || (isWeb && width < HOME_HERO_BOOK_LAYOUT_MIN_WIDTH)
-  const showSideSlider =
-    isWeb && width >= HOME_HERO_BOOK_LAYOUT_MIN_WIDTH && isDesktop
-  // Tablet layout: 770-1279px — side-by-side hero with featured image
-  const isTabletLayout = isWeb && width >= 770 && width < HOME_HERO_BOOK_LAYOUT_MIN_WIDTH && !isMobile
+  const isLandscape = !isPortrait && isMobile
+  const disableHeroSliderBlur = useMemo(detectDisableHeroSliderBlur, [])
+
+  const isNarrowLayout = isMobile || (IS_WEB && width < HOME_HERO_BOOK_LAYOUT_MIN_WIDTH)
+  const showSideSlider = IS_WEB && width >= HOME_HERO_BOOK_LAYOUT_MIN_WIDTH && isDesktop
+  const isTabletLayout =
+    IS_WEB && width >= TABLET_LAYOUT_MIN_WIDTH && width < HOME_HERO_BOOK_LAYOUT_MIN_WIDTH && !isMobile
+
   const sliderIconColor = colors.textOnDark ?? DESIGN_TOKENS.colors.textOnDark
-  const sliderHeight = isDesktop ? (width < 1480 ? 360 : 420) : 360
-  const sliderMediaWidth = isDesktop ? (width < 1480 ? 480 : 500) : 380
+  const sliderHeight = isDesktop
+    ? width < SLIDER_DESKTOP_BREAKPOINT
+      ? SLIDER_HEIGHT_NARROW
+      : SLIDER_HEIGHT_WIDE
+    : SLIDER_HEIGHT_NARROW
+  const sliderMediaWidth = isDesktop
+    ? width < SLIDER_DESKTOP_BREAKPOINT
+      ? SLIDER_MEDIA_WIDTH_NARROW
+      : SLIDER_MEDIA_WIDTH_WIDE
+    : 380
+
   const featuredCardWidth = useMemo(() => {
-    if (!isWeb) return undefined
+    if (!IS_WEB) return undefined
     const horizontalPadding = isMobile ? 32 : 48
     return Math.max(280, Math.min(width - horizontalPadding, 800))
-  }, [isMobile, isWeb, width])
-  const useMobileGridForPopular = isMobile
+  }, [isMobile, width])
+
   const popularCardWidth = useMemo(() => {
     if (!isMobile) return 215
-    if (useMobileGridForPopular) {
-      const available = Math.max(width - 32, 288)
-      return Math.max(136, Math.floor((available - 14) / 2))
-    }
-    return 195
-  }, [isMobile, useMobileGridForPopular, width])
+    const available = Math.max(width - 32, 288)
+    return Math.max(136, Math.floor((available - 14) / 2))
+  }, [isMobile, width])
+
   const popularCardHeight = useMemo(() => {
-    if (useMobileGridForPopular) {
-      return Math.max(112, Math.round(popularCardWidth * 0.68))
-    }
-    return isMobile ? 130 : 148
-  }, [isMobile, popularCardWidth, useMobileGridForPopular])
+    if (isMobile) return Math.max(112, Math.round(popularCardWidth * 0.68))
+    return 148
+  }, [isMobile, popularCardWidth])
+
   const featuredCardHeight = useMemo(() => {
     if (isMobile) return 220
     if (isTablet) return 280
     return 300
   }, [isMobile, isTablet])
 
-  // Book wrapper measured height for adaptive aspect-ratio
-  // Use ref to track and stabilize to prevent layout thrashing
   const bookWrapperWidthRef = useRef(0)
   const [bookWrapperWidth, setBookWrapperWidth] = useState(0)
   const handleBookWrapperLayout = useCallback(
     (e: { nativeEvent: { layout: { width: number } } }) => {
-      const newWidth = e.nativeEvent.layout.width
-      // Only update if change is significant (>20px)
-      if (Math.abs(newWidth - bookWrapperWidthRef.current) > 20) {
-        bookWrapperWidthRef.current = newWidth
-        setBookWrapperWidth(newWidth)
+      const nextWidth = e.nativeEvent.layout.width
+      if (Math.abs(nextWidth - bookWrapperWidthRef.current) > BOOK_WIDTH_STABILIZE_THRESHOLD) {
+        bookWrapperWidthRef.current = nextWidth
+        setBookWrapperWidth(nextWidth)
       }
     },
     [],
   )
+
   const bookHeight = useMemo(() => {
     if (bookWrapperWidth <= 0) return 0
     const aspectH = Math.round((bookWrapperWidth * 765) / 1040)
-    const vh =
-      Platform.OS === 'web'
-        ? typeof window !== 'undefined'
-          ? window.innerHeight
-          : Dimensions.get('window').height
-        : Dimensions.get('window').height
-    return Math.min(aspectH, vh - DESKTOP_BOOK_VIEWPORT_RESERVE)
+    return Math.min(aspectH, getWebViewportHeight() - DESKTOP_BOOK_VIEWPORT_RESERVE)
   }, [bookWrapperWidth])
-  const isCompactBookLayout =
-    showSideSlider && bookHeight > 0 && bookHeight <= 760
+
+  const isCompactBookLayout = showSideSlider && bookHeight > 0 && bookHeight <= COMPACT_BOOK_MAX_HEIGHT
   const useInlineBookmarkRail =
-    showSideSlider && !isNarrowLayout && !isCompactBookLayout && width >= 1280
+    showSideSlider && !isNarrowLayout && !isCompactBookLayout && width >= INLINE_BOOKMARK_MIN_WIDTH
   const useStackedCtas =
-    isMobile || isCompactBookLayout || (showSideSlider && width < 1180)
+    isMobile || isCompactBookLayout || (showSideSlider && width < STACKED_CTA_MAX_WIDTH)
+
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
-
   useEffect(() => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return
-
+    if (!IS_WEB || typeof window === 'undefined') return
     const mediaQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)')
-    const syncReducedMotion = () =>
-      setPrefersReducedMotion(Boolean(mediaQuery?.matches))
-
-    syncReducedMotion()
-    mediaQuery?.addEventListener?.('change', syncReducedMotion)
-
-    return () => {
-      mediaQuery?.removeEventListener?.('change', syncReducedMotion)
-    }
+    const sync = () => setPrefersReducedMotion(Boolean(mediaQuery?.matches))
+    sync()
+    mediaQuery?.addEventListener?.('change', sync)
+    return () => mediaQuery?.removeEventListener?.('change', sync)
   }, [])
 
   const {
@@ -192,29 +194,22 @@ const HomeHero = memo(function HomeHero({
 
   const handleQuickFilterPress = useCallback(
     (label: string, filters?: QuickFilterParams, route: string = '/search') => {
-      queueAnalyticsEvent('HomeClick_QuickFilter', {
-        label,
-        source: 'home-hero',
-      })
-      const path = buildFilterPath(route, filters)
-      router.push(path as any)
+      queueAnalyticsEvent('HomeClick_QuickFilter', { label, source: 'home-hero' })
+      router.push(buildFilterPath(route, filters) as any)
     },
     [router],
   )
 
-  const handleOpenArticles = useCallback(
+  const handleOpenArticle = useCallback(
     (href?: string | null) => {
-      if (href) {
-        queueAnalyticsEvent('HomeClick_BookCover', { href })
-        if (Platform.OS === 'web') {
-          openExternalUrlInNewTab(href)
-        } else {
-          openExternalUrl(href)
-        }
-      } else {
+      if (!href) {
         queueAnalyticsEvent('HomeClick_OpenSearch')
         router.push('/search' as any)
+        return
       }
+      queueAnalyticsEvent('HomeClick_BookCover', { href })
+      if (IS_WEB) openExternalUrlInNewTab(href)
+      else openExternalUrl(href)
     },
     [router],
   )
@@ -255,7 +250,7 @@ const HomeHero = memo(function HomeHero({
 
   const heroSubtitle = isMobile
     ? 'Готовые маршруты с фото и GPS-треками.'
-    : showSideSlider && bookHeight > 0 && bookHeight < 760
+    : showSideSlider && bookHeight > 0 && bookHeight < COMPACT_BOOK_MAX_HEIGHT
       ? 'Готовые маршруты, заметки и GPS-треки.'
       : 'Готовые маршруты, заметки и личная книга путешествий.'
 
@@ -266,7 +261,7 @@ const HomeHero = memo(function HomeHero({
           <HomeHeroBookLayout
             colors={colors}
             styles={styles}
-            isWeb={isWeb}
+            isWeb={IS_WEB}
             isNarrowLayout={isNarrowLayout}
             isTabletLayout={isTabletLayout}
             showSideSlider={showSideSlider}
@@ -288,37 +283,36 @@ const HomeHero = memo(function HomeHero({
             bottomWaveAnimatedStyle={bottomWaveAnimatedStyle}
             onBookWrapperLayout={handleBookWrapperLayout}
             onQuickFilterPress={handleQuickFilterPress}
-            onOpenArticle={handleOpenArticles}
+            onOpenArticle={handleOpenArticle}
             onOpenSearch={handleOpenSearch}
             onPrevSlide={handlePrevSlide}
             onNextSlide={handleNextSlide}
             onMarkSlideLoaded={markSlideAsLoaded}
           />
-          {!showSideSlider && !useInlineBookmarkRail ? (
+          {!showSideSlider && !useInlineBookmarkRail && (
             <HomeHeroMoodRail
               colors={colors}
               styles={styles}
               isMobile={isMobile}
-              isWeb={isWeb}
+              isWeb={IS_WEB}
               moodCards={MOOD_CARDS}
               onQuickFilterPress={handleQuickFilterPress}
             />
-          ) : null}
+          )}
         </View>
 
-        {/* Popular Routes Section - only on mobile (not tablet) */}
         {!showSideSlider && !isTabletLayout && (
           <HomeHeroPopularSection
             colors={colors}
             styles={styles}
-            isWeb={isWeb}
-            useMobileGrid={useMobileGridForPopular}
+            isWeb={IS_WEB}
+            useMobileGrid={isMobile}
             featuredCardWidth={featuredCardWidth}
             featuredCardHeight={featuredCardHeight}
             popularCardWidth={popularCardWidth}
             popularCardHeight={popularCardHeight}
             bookImages={BOOK_IMAGES}
-            onOpenArticle={handleOpenArticles}
+            onOpenArticle={handleOpenArticle}
           />
         )}
       </ResponsiveContainer>

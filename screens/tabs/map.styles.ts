@@ -226,7 +226,9 @@ export const getStyles = (
           : null),
       },
       resetButton: {
-        width: CONTROL_SIZE,
+        flexDirection: 'row',
+        gap: 4,
+        paddingHorizontal: 10,
         height: CONTROL_SIZE,
         borderRadius: CONTROL_RADIUS,
         alignItems: 'center',
@@ -238,6 +240,11 @@ export const getStyles = (
           cursor: 'pointer',
           transition: 'background-color 0.15s ease',
         } as any) : null),
+      },
+      resetButtonLabel: {
+        fontSize: 12,
+        color: themedColors.textMuted,
+        fontWeight: '500',
       },
       closePanelButton: {
         width: CONTROL_SIZE,
@@ -428,6 +435,8 @@ export const getStyles = (
               backdropFilter: 'blur(14px) saturate(1.08)',
               WebkitBackdropFilter: 'blur(14px) saturate(1.08)',
               boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
+              cursor: 'pointer',
+              transition: 'opacity 0.15s ease',
             } as any)
           : themedColors.shadows.light),
       },

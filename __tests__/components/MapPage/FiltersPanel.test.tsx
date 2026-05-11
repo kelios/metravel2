@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, fireEvent, waitFor } from '@testing-library/react-native'
+import { render, fireEvent, waitFor, within } from '@testing-library/react-native'
 import FiltersPanel from '@/components/MapPage/FiltersPanel'
 import { ThemeProvider } from '@/hooks/useTheme'
 import { FiltersProvider } from '@/context/MapFiltersContext'
@@ -225,7 +225,7 @@ describe('FiltersPanel', () => {
 
   it('shows the compact mobile header summary and keeps the radius footer actions available', () => {
     const onOpenList = jest.fn()
-    const { getByTestId, getAllByText, getByText, queryByTestId } = renderWithTheme(<FiltersPanel />, {
+    const { getByTestId, getByLabelText, queryByTestId } = renderWithTheme(<FiltersPanel />, {
       ...defaultProps,
       isMobile: true,
       travelsData: [{ categoryName: 'Музеи' }, { categoryName: 'Парки' }, { categoryName: 'Парки' }],
@@ -234,12 +234,12 @@ describe('FiltersPanel', () => {
     })
 
     expect(getByTestId('filters-panel-header')).toBeTruthy()
-    expect(getByText('3 места · 60 км')).toBeTruthy()
+    expect(within(getByTestId('filters-panel-header')).getByText(/3 места/i)).toBeTruthy()
     expect(queryByTestId('filters-mobile-quick-row')).toBeNull()
     expect(queryByTestId('filters-mobile-context')).toBeNull()
     expect(getByTestId('filters-panel-footer')).toBeTruthy()
-    expect(getAllByText('Показать 3')).toHaveLength(1)
     expect(getByTestId('filters-open-list-button')).toBeTruthy()
+    expect(getByLabelText('Открыть список мест')).toBeTruthy()
     expect(onOpenList).not.toHaveBeenCalled()
   })
 

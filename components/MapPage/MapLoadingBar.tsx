@@ -64,6 +64,11 @@ export const MapLoadingBar: React.FC<MapLoadingBarProps> = React.memo(({ visible
   return (
     <Animated.View
       style={[styles.container, { opacity, pointerEvents: 'none' }]}
+      accessibilityRole="progressbar"
+      accessibilityLabel="Загрузка данных карты"
+      {...(Platform.OS === 'web'
+        ? ({ 'aria-busy': visible, 'aria-label': 'Загрузка данных карты' } as any)
+        : null)}
     >
       <Animated.View
         style={[

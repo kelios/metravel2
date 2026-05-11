@@ -1,29 +1,31 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Menu } from '@/ui/paper';
-import { router } from 'expo-router';
-import Feather from '@expo/vector-icons/Feather';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import Feather from '@expo/vector-icons/Feather'
+import { router } from 'expo-router'
 
-import ThemeToggle from '@/components/layout/ThemeToggle';
-import AccountMenuSection from './AccountMenuSection';
-import UserAvatar from './UserAvatar';
+import { Menu } from '@/ui/paper'
+import ThemeToggle from '@/components/layout/ThemeToggle'
+import AccountMenuSection from './AccountMenuSection'
+import UserAvatar from './UserAvatar'
 import {
   createAnchorStyles,
   createAvatarStyles,
   createCtaLoginStyles,
   createMenuStyles,
-} from './headerStyles';
-import BelarusOutlineIcon from './BelarusOutlineIcon';
+} from './headerStyles'
+import BelarusOutlineIcon from './BelarusOutlineIcon'
 
-import { useAuth } from '@/context/AuthContext';
-import { useFavorites } from '@/context/FavoritesContext';
-import { useDeferredUnreadCount } from '@/hooks/useDeferredUnreadCount';
-import { useAvatarUri } from '@/hooks/useAvatarUri';
-import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
-import { routes } from '@/utils/routes';
-import { useThemedColors } from '@/hooks/useTheme';
-import { buildLoginHref } from '@/utils/authNavigation';
-import { openExternalUrlInNewTab } from '@/utils/externalLinks';
+import { useAuth } from '@/context/AuthContext'
+import { useFavorites } from '@/context/FavoritesContext'
+import { useDeferredUnreadCount } from '@/hooks/useDeferredUnreadCount'
+import { useAvatarUri } from '@/hooks/useAvatarUri'
+import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation'
+import { routes } from '@/utils/routes'
+import { useThemedColors } from '@/hooks/useTheme'
+import { buildLoginHref } from '@/utils/authNavigation'
+import { openExternalUrlInNewTab } from '@/utils/externalLinks'
+
+const IS_WEB = Platform.OS === 'web'
 
 type AccountMenuProps = {
   initialOpenKey?: number
@@ -40,77 +42,141 @@ type MenuLinkItem = {
   leadingNode?: React.ReactNode
 }
 
-const renderMenuItem = (
-  item: MenuLinkItem,
-  menuStyles: ReturnType<typeof createMenuStyles>,
-  defaultIconColor: string,
-  onNavigate?: (path: string) => void,
-) => (
-  <Menu.Item
-    key={item.key}
-    onPress={item.onPress ?? (item.path && onNavigate ? () => onNavigate(item.path!) : undefined)}
-    title={item.title}
-    leadingIcon={({ size }) =>
-      item.leadingNode ?? (
-        item.icon === 'belarus-outline' ? (
+type MenuStyles = ReturnType<typeof createMenuStyles>
+type ThemedColors = ReturnType<typeof useThemedColors>
+
+const STATIC_NAV_LINKS: MenuLinkItem[] = [
+  ...PRIMARY_HEADER_NAV_ITEMS.map((item) => ({
+    key: `nav-${item.path}`,
+    title: item.label,
+    path: item.path,
+    icon: item.icon,
+  })),
+  { key: 'nav-favorites', title: 'Избранное', path: '/favorites', icon: 'heart' },
+  { key: 'nav-about', title: 'О сайте', path: '/about', icon: 'info' },
+]
+
+const TRAVEL_ITEMS: MenuLinkItem[] = [
+  { key: 'travel-new', title: 'Добавить путешествие', icon: 'plus-circle', path: '/travel/new' },
+  { key: 'my-travels', title: 'Мои путешествия', icon: 'map', path: '/metravel' },
+  { key: 'user-points', title: 'Мои точки', icon: 'map-pin', path: '/userpoints' },
+]
+
+const DOCUMENT_ITEMS: MenuLinkItem[] = [
+  { key: 'privacy', title: 'Политика конфиденциальности', icon: 'shield', path: '/privacy' },
+  { key: 'cookies', title: 'Настройки cookies', icon: 'settings', path: '/cookies' },
+]
+
+const wrapperStyles = StyleSheet.create({
+  ctaWrapper: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  badgeAnchor: { position: 'relative' },
+})
+
+const badgeStyles = StyleSheet.create({
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -6,
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: { fontSize: 10, fontWeight: '700' },
+})
+
+function UnreadBadge({ count, colors }: { count: number; colors: ThemedColors }) {
+  if (count <= 0) return null
+  return (
+    <View style={[badgeStyles.badge, { backgroundColor: colors.primary }]}>
+      <Text style={[badgeStyles.badgeText, { color: colors.textOnPrimary }]}>
+        {count > 99 ? '99+' : count}
+      </Text>
+    </View>
+  )
+}
+
+function MessageMenuIcon({
+  count,
+  colors,
+  defaultColor,
+}: {
+  count: number
+  colors: ThemedColors
+  defaultColor: string
+}) {
+  return (
+    <View style={wrapperStyles.badgeAnchor}>
+      <Feather name="mail" size={20} color={count > 0 ? colors.primary : defaultColor} />
+      <UnreadBadge count={count} colors={colors} />
+    </View>
+  )
+}
+
+function MenuLink({
+  item,
+  styles,
+  defaultIconColor,
+  onNavigate,
+}: {
+  item: MenuLinkItem
+  styles: MenuStyles
+  defaultIconColor: string
+  onNavigate: (path: string) => void
+}) {
+  const onPress =
+    item.onPress ?? (item.path ? () => onNavigate(item.path!) : undefined)
+  return (
+    <Menu.Item
+      onPress={onPress}
+      title={item.title}
+      leadingIcon={({ size }) =>
+        item.leadingNode ??
+        (item.icon === 'belarus-outline' ? (
           <BelarusOutlineIcon size={size} color={item.iconColor ?? defaultIconColor} />
         ) : (
-          <Feather name={item.icon as any} size={size} color={item.iconColor ?? defaultIconColor} />
-        )
-      )
-    }
-    style={menuStyles.menuItem}
-    titleStyle={item.strong ? menuStyles.menuItemTitleStrong : menuStyles.menuItemTitle}
-  />
-)
+          <Feather
+            name={item.icon as any}
+            size={size}
+            color={item.iconColor ?? defaultIconColor}
+          />
+        ))
+      }
+      style={styles.menuItem}
+      titleStyle={item.strong ? styles.menuItemTitleStrong : styles.menuItemTitle}
+    />
+  )
+}
 
 function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
-  const { isAuthenticated, username, logout, userId, userAvatar, profileRefreshToken } = useAuth();
-  const { favorites } = useFavorites();
-  const colors = useThemedColors();
-  const shouldOpenInitially = initialOpenKey > 0;
-  const [visible, setVisible] = useState(shouldOpenInitially);
-  const [hovered, setHovered] = useState(false);
-  const { avatarUri, setAvatarLoadError } = useAvatarUri({ userAvatar, profileRefreshToken });
-  const { count: unreadCount } = useDeferredUnreadCount(isAuthenticated && visible, visible);
-  const lastHandledInitialOpenKeyRef = useRef(
-    shouldOpenInitially ? initialOpenKey : 0,
-  );
+  const { isAuthenticated, username, logout, userId, userAvatar, profileRefreshToken } = useAuth()
+  const { favorites } = useFavorites()
+  const colors = useThemedColors()
+
+  const shouldOpenInitially = initialOpenKey > 0
+  const [visible, setVisible] = useState(shouldOpenInitially)
+  const [hovered, setHovered] = useState(false)
+  const { avatarUri, setAvatarLoadError } = useAvatarUri({ userAvatar, profileRefreshToken })
+  const { count: unreadCount } = useDeferredUnreadCount(isAuthenticated && visible, visible)
+  const lastHandledInitialOpenKeyRef = useRef(shouldOpenInitially ? initialOpenKey : 0)
+
   const [expandedSections, setExpandedSections] = useState({
     navigation: true,
     travels: true,
     account: true,
     theme: false,
     documents: false,
-  });
+  })
 
-  // Use shared styles from headerStyles.ts
-  const anchorStyles = useMemo(() => createAnchorStyles(colors), [colors]);
-  const avatarStyles = useMemo(() => createAvatarStyles(colors), [colors]);
-  const ctaStyles = useMemo(() => createCtaLoginStyles(colors), [colors]);
-  const menuStyles = useMemo(() => createMenuStyles(colors), [colors]);
+  const anchorStyles = useMemo(() => createAnchorStyles(colors), [colors])
+  const avatarStyles = useMemo(() => createAvatarStyles(colors), [colors])
+  const ctaStyles = useMemo(() => createCtaLoginStyles(colors), [colors])
+  const menuStyles = useMemo(() => createMenuStyles(colors), [colors])
 
-  // Local styles for wrapper and icon colors
-  const localStyles = useMemo(
-    () =>
-      StyleSheet.create({
-        ctaWrapper: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 8,
-        },
-        iconMuted: {
-          color: colors.textMuted,
-        },
-        iconPrimary: {
-          color: colors.primaryText,
-        },
-      }),
-    [colors]
-  );
-
-  const openMenu = useCallback(() => setVisible(true), []);
-  const closeMenu = useCallback(() => setVisible(false), []);
+  const openMenu = useCallback(() => setVisible(true), [])
+  const closeMenu = useCallback(() => setVisible(false), [])
 
   useEffect(() => {
     if (initialOpenKey <= 0) return
@@ -120,97 +186,46 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
   }, [initialOpenKey])
 
   const toggleSection = useCallback((section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
-  }, []);
+    setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }))
+  }, [])
 
-  const handleNavigate = useCallback(
-    (path: string, extraAction?: () => void) => {
-      extraAction?.();
-      closeMenu();
-      
-      // На вебе открываем все ссылки в новой вкладке
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+  const navigate = useCallback(
+    (path: string) => {
+      closeMenu()
+      if (IS_WEB && typeof window !== 'undefined') {
         void openExternalUrlInNewTab(path, {
           allowRelative: true,
           baseUrl: window.location.origin,
           windowFeatures: 'noopener',
-        });
+        })
       } else {
-        // На мобильных используем роутер
-        router.push(path as any);
+        router.push(path as any)
       }
     },
-    [closeMenu]
-  );
+    [closeMenu],
+  )
 
   const handleLogout = useCallback(async () => {
-    await logout();
-    closeMenu();
-    router.push('/' as any);
-  }, [logout, closeMenu]);
+    await logout()
+    closeMenu()
+    router.push('/' as any)
+  }, [logout, closeMenu])
 
   const handleOpenPublicProfile = useCallback(() => {
-    if (!userId) return;
-    router.push(routes.user(userId));
-  }, [userId]);
+    if (userId) router.push(routes.user(userId))
+  }, [userId])
 
-  const displayName = isAuthenticated && username ? username : 'Гость';
-  const anchorLabel = `Открыть меню аккаунта ${displayName}`;
-
-  const navLinks = useMemo(
-    () => [
-      ...(PRIMARY_HEADER_NAV_ITEMS ?? []).map((item) => ({
-        key: `nav-${item.path}`,
-        title: item.label,
-        path: item.path,
-        icon: item.icon,
-      })),
-      { key: 'nav-favorites', title: 'Избранное', path: '/favorites', icon: 'heart' },
-      { key: 'nav-about', title: 'О сайте', path: '/about', icon: 'info' },
-    ],
-    []
-  );
+  const handleLogin = useCallback(
+    () => navigate(buildLoginHref({ intent: 'menu' })),
+    [navigate],
+  )
 
   const guestItems = useMemo<MenuLinkItem[]>(
     () => [
-      {
-        key: 'login',
-        title: 'Войти',
-        icon: 'log-in',
-        onPress: () => handleNavigate(buildLoginHref({ intent: 'menu' })),
-      },
-      {
-        key: 'registration',
-        title: 'Зарегистрироваться',
-        icon: 'user-plus',
-        path: '/registration',
-      },
+      { key: 'login', title: 'Войти', icon: 'log-in', onPress: handleLogin },
+      { key: 'registration', title: 'Зарегистрироваться', icon: 'user-plus', path: '/registration' },
     ],
-    [handleNavigate]
-  )
-
-  const travelItems = useMemo<MenuLinkItem[]>(
-    () => [
-      {
-        key: 'travel-new',
-        title: 'Добавить путешествие',
-        icon: 'plus-circle',
-        path: '/travel/new',
-      },
-      {
-        key: 'my-travels',
-        title: 'Мои путешествия',
-        icon: 'map',
-        path: '/metravel',
-      },
-      {
-        key: 'user-points',
-        title: 'Мои точки',
-        icon: 'map-pin',
-        path: '/userpoints',
-      },
-    ],
-    []
+    [handleLogin],
   )
 
   const accountItems = useMemo<MenuLinkItem[]>(
@@ -222,89 +237,49 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
         path: '/messages',
         strong: unreadCount > 0,
         leadingNode: (
-          <View style={{ position: 'relative' }}>
-            <Feather
-              name="mail"
-              size={20}
-              color={unreadCount > 0 ? colors.primary : localStyles.iconMuted.color}
-            />
-            {unreadCount > 0 && (
-              <View
-                style={{
-                  position: 'absolute',
-                  top: -4,
-                  right: -6,
-                  backgroundColor: colors.primary,
-                  borderRadius: 8,
-                  minWidth: 16,
-                  height: 16,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingHorizontal: 4,
-                }}
-              >
-                <Text style={{ color: colors.textOnPrimary, fontSize: 10, fontWeight: '700' }}>
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </Text>
-              </View>
-            )}
-          </View>
+          <MessageMenuIcon count={unreadCount} colors={colors} defaultColor={colors.textMuted} />
         ),
       },
-      {
-        key: 'subscriptions',
-        title: 'Подписки',
-        icon: 'users',
-        path: '/subscriptions',
-      },
-      {
-        key: 'export',
-        title: 'Экспорт в PDF',
-        icon: 'file-text',
-        path: '/export',
-      },
-      {
-        key: 'public-profile',
-        title: 'Публичный профиль',
-        icon: 'users',
-        onPress: handleOpenPublicProfile,
-      },
-      {
-        key: 'logout',
-        title: 'Выход',
-        icon: 'log-out',
-        onPress: handleLogout,
-      },
+      { key: 'subscriptions', title: 'Подписки', icon: 'users', path: '/subscriptions' },
+      { key: 'export', title: 'Экспорт в PDF', icon: 'file-text', path: '/export' },
+      { key: 'public-profile', title: 'Публичный профиль', icon: 'users', onPress: handleOpenPublicProfile },
+      { key: 'logout', title: 'Выход', icon: 'log-out', onPress: handleLogout },
     ],
-    [colors.primary, colors.textOnPrimary, handleLogout, handleOpenPublicProfile, localStyles.iconMuted.color, unreadCount]
+    [colors, handleLogout, handleOpenPublicProfile, unreadCount],
   )
 
-  const documentItems = useMemo<MenuLinkItem[]>(
-    () => [
-      {
-        key: 'privacy',
-        title: 'Политика конфиденциальности',
-        icon: 'shield',
-        path: '/privacy',
-      },
-      {
-        key: 'cookies',
-        title: 'Настройки cookies',
-        icon: 'settings',
-        path: '/cookies',
-      },
-    ],
-    []
+  const profileItem = useMemo<MenuLinkItem>(
+    () => ({
+      key: 'profile',
+      title: `Личный кабинет${favorites.length > 0 ? ` (${favorites.length})` : ''}`,
+      icon: 'user',
+      path: '/profile',
+      strong: true,
+      iconColor: colors.primaryText,
+    }),
+    [favorites.length, colors.primaryText],
   )
 
-  const navigateTo = useCallback((path: string) => handleNavigate(path), [handleNavigate])
+  const displayName = isAuthenticated && username ? username : 'Гость'
+  const anchorLabel = `Открыть меню аккаунта ${displayName}`
+  const defaultIconColor = colors.textMuted
+
+  const renderLinks = (items: MenuLinkItem[]) =>
+    items.map((item) => (
+      <MenuLink
+        key={item.key}
+        item={item}
+        styles={menuStyles}
+        defaultIconColor={defaultIconColor}
+        onNavigate={navigate}
+      />
+    ))
 
   return (
-    <View style={localStyles.ctaWrapper}>
-      {/* NAV-12: Отдельная CTA кнопка «Войти» для гостей — видна сразу, без открытия меню */}
+    <View style={wrapperStyles.ctaWrapper}>
       {!isAuthenticated && (
         <Pressable
-          onPress={() => handleNavigate(buildLoginHref({ intent: 'menu' }))}
+          onPress={handleLogin}
           accessibilityRole="link"
           accessibilityLabel="Войти в аккаунт"
           style={({ pressed }) => [
@@ -317,164 +292,130 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
           <Text style={ctaStyles.ctaLoginText}>Войти</Text>
         </Pressable>
       )}
-    <Menu
-      visible={visible}
-      onDismiss={closeMenu}
-      contentStyle={[
-        menuStyles.menuContent,
-        {
-          backgroundColor: colors.surface,
-          borderColor: colors.borderLight,
-        },
-      ]}
-      anchor={
-        <Pressable
-          onPress={openMenu}
-          onHoverIn={Platform.OS === 'web' ? () => setHovered(true) : undefined}
-          onHoverOut={Platform.OS === 'web' ? () => setHovered(false) : undefined}
-          accessibilityRole="button"
-          accessibilityLabel={anchorLabel}
-          accessibilityHint="Открыть меню аккаунта"
-          accessibilityState={{ expanded: visible }}
-          style={({ pressed }) => [
-            anchorStyles.anchor,
-            (hovered || pressed || visible) && anchorStyles.anchorHover,
-          ]}
-          testID="account-menu-anchor"
-          {...(Platform.OS === 'web'
-            ? ({
-                'aria-haspopup': 'menu',
-                'aria-expanded': visible,
-              } as any)
-            : {})}
-        >
-          <UserAvatar
-            uri={isAuthenticated ? avatarUri : null}
-            size="md"
-            onError={() => setAvatarLoadError(true)}
-          />
 
-          <Text style={avatarStyles.anchorText} numberOfLines={1}>
-            {displayName}
-          </Text>
-
-          <View style={avatarStyles.chevronSlot}>
-            <Feather
-              name={visible ? 'chevron-up' : 'chevron-down'}
-              size={18}
-              color={visible || hovered ? colors.primary : colors.textMuted}
+      <Menu
+        visible={visible}
+        onDismiss={closeMenu}
+        contentStyle={[
+          menuStyles.menuContent,
+          { backgroundColor: colors.surface, borderColor: colors.borderLight },
+        ]}
+        anchor={
+          <Pressable
+            onPress={openMenu}
+            onHoverIn={IS_WEB ? () => setHovered(true) : undefined}
+            onHoverOut={IS_WEB ? () => setHovered(false) : undefined}
+            accessibilityRole="button"
+            accessibilityLabel={anchorLabel}
+            accessibilityHint="Открыть меню аккаунта"
+            accessibilityState={{ expanded: visible }}
+            style={({ pressed }) => [
+              anchorStyles.anchor,
+              (hovered || pressed || visible) && anchorStyles.anchorHover,
+            ]}
+            testID="account-menu-anchor"
+            {...(IS_WEB
+              ? ({ 'aria-haspopup': 'menu', 'aria-expanded': visible } as any)
+              : {})}
+          >
+            <UserAvatar
+              uri={isAuthenticated ? avatarUri : null}
+              size="md"
+              onError={() => setAvatarLoadError(true)}
             />
-          </View>
-        </Pressable>
-      }
-    >
-      {!isAuthenticated ? (
-        <>
-          {guestItems.map((item) =>
-            renderMenuItem(item, menuStyles, localStyles.iconMuted.color, navigateTo)
-          )}
-
-          <View style={menuStyles.sectionDivider} />
-          <Text style={menuStyles.sectionTitle}>Навигация</Text>
-
-          {navLinks.map((item) =>
-            renderMenuItem(item, menuStyles, localStyles.iconMuted.color, navigateTo)
-          )}
-
-          <View style={menuStyles.sectionDivider} />
-          <Text style={menuStyles.sectionTitle}>Тема оформления</Text>
-
-          <View style={menuStyles.themeSection}>
-            <ThemeToggle compact />
-          </View>
-
-          <View style={menuStyles.sectionDivider} />
-          <Text style={menuStyles.sectionTitle}>Документы</Text>
-
-          {documentItems.map((item) =>
-            renderMenuItem(item, menuStyles, localStyles.iconMuted.color, navigateTo)
-          )}
-        </>
-      ) : (
-        <>
-          {renderMenuItem(
-            {
-              key: 'profile',
-              title: `Личный кабинет${favorites.length > 0 ? ` (${favorites.length})` : ''}`,
-              icon: 'user',
-              path: '/profile',
-              strong: true,
-              iconColor: localStyles.iconPrimary.color,
-            },
-            menuStyles,
-            localStyles.iconMuted.color,
-            navigateTo
-          )}
-
-          <AccountMenuSection
-            title="Путешествия"
-            expanded={expandedSections.travels}
-            onToggle={() => toggleSection('travels')}
-            colors={colors}
-            styles={menuStyles}
-          >
-            {travelItems.map((item) =>
-              renderMenuItem(item, menuStyles, localStyles.iconMuted.color, navigateTo)
-            )}
-          </AccountMenuSection>
-
-          <AccountMenuSection
-            title="Аккаунт"
-            expanded={expandedSections.account}
-            onToggle={() => toggleSection('account')}
-            colors={colors}
-            styles={menuStyles}
-          >
-            {accountItems.map((item) =>
-              renderMenuItem(item, menuStyles, localStyles.iconMuted.color, navigateTo)
-            )}
-          </AccountMenuSection>
-
-          <AccountMenuSection
-            title="Навигация"
-            expanded={expandedSections.navigation}
-            onToggle={() => toggleSection('navigation')}
-            colors={colors}
-            styles={menuStyles}
-          >
-            {navLinks.map((item) =>
-              renderMenuItem(item, menuStyles, localStyles.iconMuted.color, navigateTo)
-            )}
-          </AccountMenuSection>
-
-          <AccountMenuSection
-            title="Тема оформления"
-            expanded={expandedSections.theme}
-            onToggle={() => toggleSection('theme')}
-            colors={colors}
-            styles={menuStyles}
-          >
+            <Text style={avatarStyles.anchorText} numberOfLines={1}>
+              {displayName}
+            </Text>
+            <View style={avatarStyles.chevronSlot}>
+              <Feather
+                name={visible ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={visible || hovered ? colors.primary : colors.textMuted}
+              />
+            </View>
+          </Pressable>
+        }
+      >
+        {!isAuthenticated ? (
+          <>
+            {renderLinks(guestItems)}
+            <View style={menuStyles.sectionDivider} />
+            <Text style={menuStyles.sectionTitle}>Навигация</Text>
+            {renderLinks(STATIC_NAV_LINKS)}
+            <View style={menuStyles.sectionDivider} />
+            <Text style={menuStyles.sectionTitle}>Тема оформления</Text>
             <View style={menuStyles.themeSection}>
               <ThemeToggle compact />
             </View>
-          </AccountMenuSection>
+            <View style={menuStyles.sectionDivider} />
+            <Text style={menuStyles.sectionTitle}>Документы</Text>
+            {renderLinks(DOCUMENT_ITEMS)}
+          </>
+        ) : (
+          <>
+            <MenuLink
+              item={profileItem}
+              styles={menuStyles}
+              defaultIconColor={defaultIconColor}
+              onNavigate={navigate}
+            />
 
-          <AccountMenuSection
-            title="Документы"
-            expanded={expandedSections.documents}
-            onToggle={() => toggleSection('documents')}
-            colors={colors}
-            styles={menuStyles}
-          >
-            {documentItems.map((item) =>
-              renderMenuItem(item, menuStyles, localStyles.iconMuted.color, navigateTo)
-            )}
-          </AccountMenuSection>
-        </>
-      )}
-    </Menu>
+            <AccountMenuSection
+              title="Путешествия"
+              expanded={expandedSections.travels}
+              onToggle={() => toggleSection('travels')}
+              colors={colors}
+              styles={menuStyles}
+            >
+              {renderLinks(TRAVEL_ITEMS)}
+            </AccountMenuSection>
+
+            <AccountMenuSection
+              title="Аккаунт"
+              expanded={expandedSections.account}
+              onToggle={() => toggleSection('account')}
+              colors={colors}
+              styles={menuStyles}
+            >
+              {renderLinks(accountItems)}
+            </AccountMenuSection>
+
+            <AccountMenuSection
+              title="Навигация"
+              expanded={expandedSections.navigation}
+              onToggle={() => toggleSection('navigation')}
+              colors={colors}
+              styles={menuStyles}
+            >
+              {renderLinks(STATIC_NAV_LINKS)}
+            </AccountMenuSection>
+
+            <AccountMenuSection
+              title="Тема оформления"
+              expanded={expandedSections.theme}
+              onToggle={() => toggleSection('theme')}
+              colors={colors}
+              styles={menuStyles}
+            >
+              <View style={menuStyles.themeSection}>
+                <ThemeToggle compact />
+              </View>
+            </AccountMenuSection>
+
+            <AccountMenuSection
+              title="Документы"
+              expanded={expandedSections.documents}
+              onToggle={() => toggleSection('documents')}
+              colors={colors}
+              styles={menuStyles}
+            >
+              {renderLinks(DOCUMENT_ITEMS)}
+            </AccountMenuSection>
+          </>
+        )}
+      </Menu>
     </View>
-  );
+  )
 }
 
-export default React.memo(AccountMenu);
+export default React.memo(AccountMenu)

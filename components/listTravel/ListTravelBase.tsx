@@ -2,10 +2,12 @@ import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState
 import {
   Alert,
   Platform,
+  Pressable,
   Text,
   View,
   ViewStyle,
 } from 'react-native'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { useLocalSearchParams, usePathname } from 'expo-router'
 import { useRoute } from '@react-navigation/native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -212,6 +214,7 @@ function ListTravelBase() {
 
     /* UI / dialogs */
     const [deleteId, setDelete] = useState<number | null>(null);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
     const [showFilters, setShowFilters] = useState(false);
     const flatListRef = useRef<any>(null);
 
@@ -455,7 +458,8 @@ function ListTravelBase() {
           }
           
           if (Platform.OS === 'web') {
-            alert(`${errorMessage}\n\n${errorDetails}`);
+            // Показываем ошибку в диалоге; он остаётся открытым чтобы пользователь мог попробовать снова
+            setDeleteError(`${errorMessage}. ${errorDetails}`);
           } else {
             // Для мобильных используем Alert из react-native
             Alert.alert(errorMessage, errorDetails);
@@ -467,30 +471,15 @@ function ListTravelBase() {
     );
 
     const handleDeletePress = useCallback((id: number) => {
-      // Всегда сохраняем id, подтверждение выполняем в useEffect для единообразия
+      setDeleteError(null);
       setDelete(id);
     }, []);
 
+    // Подтверждение удаления — на native через Alert, на web — через ConfirmDialog (см. JSX ниже)
     useEffect(() => {
-        if (!deleteId) return;
-        const title = 'Удалить путешествие?';
-        const message = 'Это действие нельзя отменить.';
+        if (!deleteId || Platform.OS === 'web') return;
 
-        if (Platform.OS === 'web') {
-            const ok =
-                typeof (globalThis as any).confirm === 'function'
-                    ? (globalThis as any).confirm(`${title}\n\n${message}`)
-                    : true;
-
-            if (ok) {
-                handleDelete(deleteId);
-            } else {
-                setDelete(null);
-            }
-            return;
-        }
-
-        Alert.alert(title, message, [
+        Alert.alert('Удалить путешествие?', 'Это действие нельзя отменить.', [
             {
                 text: 'Отмена',
                 style: 'cancel',
@@ -678,10 +667,8 @@ function ListTravelBase() {
     );
 
     const searchHeaderStyle = useMemo(
-      () => isMobileDevice
-        ? [styles.searchHeader, { paddingHorizontal: contentPadding }]
-        : [styles.searchHeader, { paddingHorizontal: contentPadding }],
-      [isMobileDevice, contentPadding, styles.searchHeader]
+      () => [styles.searchHeader, { paddingHorizontal: contentPadding }],
+      [contentPadding, styles.searchHeader]
     );
 
     const cardsContainerStyle = useMemo(
@@ -909,6 +896,14 @@ function ListTravelBase() {
           <Text style={styles.fallbackNoticeText}>
             По вашему запросу точных совпадений не нашлось. Подобрали похожие маршруты — возможно, что-то из них вам подойдёт.
           </Text>
+          <Pressable
+            onPress={handleClearAll}
+            style={styles.fallbackNoticeAction}
+            accessibilityRole="button"
+            accessibilityLabel="Сбросить условия и показать все маршруты"
+          >
+            <Text style={styles.fallbackNoticeActionText}>Сбросить условия</Text>
+          </Pressable>
         </View>
       ) : null;
 
@@ -926,6 +921,7 @@ function ListTravelBase() {
       displayedTravels,
       exportState.selected,
       activeFallbackMatch?.step,
+      handleClearAll,
       hasSelection,
       isExport,
       isMobileDevice,
@@ -936,6 +932,8 @@ function ListTravelBase() {
       settingsSummary,
       setLastSettings,
       styles.fallbackNotice,
+      styles.fallbackNoticeAction,
+      styles.fallbackNoticeActionText,
       styles.fallbackNoticeText,
       styles.fallbackNoticeTitle,
       toggleSelectAll,
@@ -944,6 +942,20 @@ function ListTravelBase() {
     
   return (
     <View style={[styles.root, usesOverlaySidebar ? styles.rootMobile : undefined]}>
+      {/* Диалог подтверждения удаления (web) */}
+      {Platform.OS === 'web' && (
+        <ConfirmDialog
+          visible={!!deleteId}
+          title="Удалить путешествие?"
+          message={deleteError ?? 'Это действие нельзя отменить.'}
+          confirmText="Удалить"
+          cancelText="Отмена"
+          onConfirm={() => handleDelete(deleteId ?? undefined)}
+          onClose={() => { setDelete(null); setDeleteError(null); }}
+          confirmTestID="confirm-delete-button"
+          cancelTestID="cancel-delete-button"
+        />
+      )}
       <SidebarFilters
         isMobile={usesOverlaySidebar}
         filterGroups={filterGroups}

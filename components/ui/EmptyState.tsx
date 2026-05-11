@@ -70,7 +70,6 @@ function EmptyState({
               <Chip
                 key={index}
                 label={suggestion}
-                onPress={action?.onPress}
                 style={[styles.suggestionChip, globalFocusStyles.focusable]}
                 testID={`empty-state-suggestion-${index}`}
               />

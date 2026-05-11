@@ -631,7 +631,9 @@ function StickySearchBar({
                 <>
                   <Text style={styles.resultsLabel}>Результаты</Text>
                   <Text style={styles.resultsText} testID="results-count-text">
-                    {resultsCount ?? 0} {getTravelLabel(resultsCount ?? 0)}
+                    {resultsCount !== undefined
+                      ? `${resultsCount} ${getTravelLabel(resultsCount)}`
+                      : '—'}
                   </Text>
                 </>
               )}
@@ -641,10 +643,11 @@ function StickySearchBar({
           {/* Рекомендации */}
           {onToggleRecommendations && (
             renderActionButton({
-              accessibilityLabel: isRecommendationsVisible ? 'Скрыть рекомендации' : 'Показать рекомендации',
+              accessibilityLabel: isRecommendationsVisible ? 'Скрыть идеи путешествий' : 'Показать идеи путешествий',
+              accessibilityHint: 'Персональные рекомендации маршрутов',
               active: !!isRecommendationsVisible,
               iconColor: isRecommendationsVisible ? colors.primary : colors.textMuted,
-              iconName: 'zap',
+              iconName: 'compass',
               iconSize: actionIconSize,
               onPress: onToggleRecommendations,
               selected: !!isRecommendationsVisible,

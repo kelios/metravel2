@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Animated } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Animated, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
@@ -13,6 +13,7 @@ interface RoutingStatusProps {
   elevationGain?: number | null;
   elevationLoss?: number | null;
   compact?: boolean;
+  onRetry?: () => void;
 }
 
 const formatDuration = (seconds: number) => {
@@ -70,6 +71,7 @@ function RoutingStatus({
   elevationGain,
   elevationLoss,
   compact = false,
+  onRetry,
 }: RoutingStatusProps) {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors, compact), [colors, compact]);
@@ -127,6 +129,17 @@ function RoutingStatus({
             <Text style={styles.errorMessage}>{error}</Text>
           </View>
         </View>
+        {onRetry && (
+          <Pressable
+            style={({ pressed }) => [styles.retryButton, pressed && { opacity: 0.7 }]}
+            onPress={onRetry}
+            accessibilityRole="button"
+            accessibilityLabel="Повторить построение маршрута"
+          >
+            <Feather name="refresh-cw" size={13} color={colors.danger} />
+            <Text style={styles.retryButtonText}>Повторить</Text>
+          </Pressable>
+        )}
       </View>
     );
   }
@@ -269,6 +282,24 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     fontSize: 12,
     color: colors.dangerDark,
     lineHeight: 16,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+  },
+  retryButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.danger,
   },
   warningContainer: {
     borderColor: colors.warning,

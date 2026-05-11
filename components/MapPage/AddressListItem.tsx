@@ -89,7 +89,6 @@ const AddressListItem: React.FC<Props> = ({
     const iconButtonSize = isSmallScreen ? 40 : 48;
     const titleFontSize = isSmallScreen ? 16 : isTablet ? 17 : 18;
     const coordFontSize = isSmallScreen ? 12 : 13;
-    const mobileSaveLabel = pointAdded ? 'Сохранено' : 'Сохранить';
 
     const handleMainPress = useCallback(() => {
         if (onPress) onPress();
@@ -138,10 +137,10 @@ const AddressListItem: React.FC<Props> = ({
             onMediaPress={!onPress && (articleUrl || urlTravel) ? () => openArticle() : undefined}
             onCopyCoord={undefined} onShare={coord ? openTelegram : undefined}
             mapActions={coord ? [
-              { key: 'google', label: 'Google', icon: 'map-pin', onPress: () => openExternal(buildMapUrl(coord)), title: 'Открыть в Google Maps' },
-              { key: 'organic', label: 'Organic', icon: 'compass', onPress: () => openExternal(buildOrganicMapsUrl(coord)), title: 'Открыть в Organic Maps' },
+              { key: 'google', label: 'Google Maps', icon: 'map-pin', onPress: () => openExternal(buildMapUrl(coord)), title: 'Открыть в Google Maps' },
+              { key: 'organic', label: 'Organic Maps', icon: 'compass', onPress: () => openExternal(buildOrganicMapsUrl(coord)), title: 'Открыть в Organic Maps' },
               { key: 'waze', label: 'Waze', icon: 'navigation', onPress: () => openExternal(buildWazeUrl(coord)), title: 'Проложить маршрут в Waze' },
-              { key: 'yandex', label: 'Яндекс', icon: 'navigation-2', onPress: () => openExternal(buildYandexNaviUrl(coord)), title: 'Проложить маршрут в Яндекс Навигаторе' },
+              { key: 'yandex', label: 'Яндекс.Навигатор', icon: 'navigation-2', onPress: () => openExternal(buildYandexNaviUrl(coord)), title: 'Проложить маршрут в Яндекс.Навигаторе' },
             ] : []}
             inlineActions={[]}
             onAddPoint={handleAddPoint} addDisabled={!authReady || !isAuthenticated || isAddingPoint}
@@ -215,14 +214,14 @@ const AddressListItem: React.FC<Props> = ({
                 ))}</View>
               )}
               <View style={styles.addButtonRow}>
-                <CardActionPressable accessibilityLabel={pointAdded ? 'Добавлено' : 'Мои точки'}
+                <CardActionPressable accessibilityLabel={pointAdded ? 'Сохранено' : 'Сохранить место'}
                   onPress={() => void handleAddPoint()} disabled={!authReady || !isAuthenticated || isAddingPoint}
                   style={({ pressed }) => [styles.addButton, isMobile && styles.addButtonMobile, pointAdded && styles.addButtonSuccess, (pressed || isAddingPoint) && styles.addButtonPressed, (!authReady || !isAuthenticated || isAddingPoint) && styles.addButtonDisabled]}
-                  title={isMobile ? mobileSaveLabel : pointAdded ? 'Добавлено' : 'Мои точки'}>
+                  title={pointAdded ? 'Сохранено' : 'Сохранить место'}>
                   {isAddingPoint ? <ActivityIndicator size="small" color={colors.textOnPrimary} /> : pointAdded ? (
-                    <><Feather name="check" size={14} color={colors.textOnPrimary} /><Text style={[styles.addButtonText, isMobile && styles.addButtonTextMobile, { color: colors.textOnPrimary }]}>{isMobile ? 'Сохранено' : 'Добавлено'}</Text></>
+                    <><Feather name="check" size={14} color={colors.textOnPrimary} /><Text style={[styles.addButtonText, isMobile && styles.addButtonTextMobile, { color: colors.textOnPrimary }]}>Сохранено</Text></>
                   ) : (
-                    <><Feather name="map-pin" size={14} color={colors.textOnPrimary} /><Text style={[styles.addButtonText, isMobile && styles.addButtonTextMobile, { color: colors.textOnPrimary }]}>{isMobile ? 'Сохранить' : 'Мои точки'}</Text></>
+                    <><Feather name="bookmark" size={14} color={colors.textOnPrimary} /><Text style={[styles.addButtonText, isMobile && styles.addButtonTextMobile, { color: colors.textOnPrimary }]}>Сохранить</Text></>
                   )}
                 </CardActionPressable>
               </View>

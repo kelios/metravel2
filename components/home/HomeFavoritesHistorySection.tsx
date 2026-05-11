@@ -391,9 +391,34 @@ function HomeFavoritesHistorySection() {
     return null
   }
 
-  // If both are empty we don't show the block (keeps home clean)
+  // If both are empty — show a gentle nudge to explore routes
   if (sections.length === 0) {
-    return null
+    return (
+      <View style={styles.band} testID="home-favorites-history-empty">
+        <ResponsiveContainer maxWidth="xl" padding>
+          <View style={styles.emptyContainer}>
+            <View style={styles.emptyIconWrap}>
+              <Feather name="bookmark" size={22} color={colors.primary} />
+            </View>
+            <Text style={styles.emptyTitle}>Здесь появятся ваши маршруты</Text>
+            <Text style={styles.emptySubtitle}>
+              Добавьте маршруты в избранное или откройте их — они сохранятся в истории.
+            </Text>
+            <Button
+              label="Смотреть маршруты"
+              onPress={() => router.push('/search' as any)}
+              variant="secondary"
+              icon={<Feather name="compass" size={16} color={colors.text} />}
+              style={styles.emptyButton}
+              labelStyle={styles.emptyButtonText}
+              hoverStyle={styles.emptyButtonHover}
+              pressedStyle={styles.emptyButtonHover}
+              accessibilityLabel="Смотреть маршруты"
+            />
+          </View>
+        </ResponsiveContainer>
+      </View>
+    )
   }
 
   const openUrl = (url: string) => {
@@ -452,6 +477,56 @@ const createStyles = (
     },
     section: {
       gap: 18,
+    },
+    emptyContainer: {
+      alignItems: 'center',
+      paddingVertical: isMobile ? 32 : 48,
+      gap: 12,
+    },
+    emptyIconWrap: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: colors.primarySoft,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    emptyTitle: {
+      fontSize: isMobile ? 17 : 20,
+      fontWeight: '700',
+      color: colors.text,
+      textAlign: 'center',
+      letterSpacing: -0.3,
+    },
+    emptySubtitle: {
+      fontSize: isMobile ? 13 : 15,
+      color: colors.textMuted,
+      textAlign: 'center',
+      lineHeight: isMobile ? 20 : 23,
+      maxWidth: 360,
+    },
+    emptyButton: {
+      marginTop: 8,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: tokens.radii.pill,
+      backgroundColor: colors.surface,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      ...Platform.select({
+        web: { transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)' },
+      }),
+    },
+    emptyButtonHover: {
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.primaryAlpha30,
+    },
+    emptyButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
     },
     sectionHeaderRow: {
       flexDirection: Platform.OS === 'web' && !isMobile ? 'row' : 'column',

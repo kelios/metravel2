@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
 import Button from '@/components/ui/Button';
@@ -18,6 +18,8 @@ interface FiltersPanelFooterProps {
   onBuildRoute?: () => void;
   totalPoints?: number;
   onOpenList?: () => void;
+  startAddress?: string;
+  endAddress?: string;
 }
 
 const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
@@ -33,11 +35,23 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
   onBuildRoute,
   totalPoints = 0,
   onOpenList,
+  startAddress,
+  endAddress,
 }) => {
   const colors = useThemedColors();
   const showMobileRadiusFooter = isMobile && mode === 'radius';
   const canOpenList = typeof onOpenList === 'function' && totalPoints > 0;
-  const mobileOpenListLabel = totalPoints > 0 ? `Показать ${totalPoints}` : 'Список';
+  const mobileOpenListLabel = totalPoints > 0
+    ? `Список мест · ${totalPoints}`
+    : 'Список мест'
+
+  const routeHelperText = React.useMemo(() => {
+    if (mode !== 'route' || canBuildRoute) return null;
+    if (!startAddress && !endAddress) return 'Укажите точку старта и финиша';
+    if (!startAddress) return 'Укажите точку старта';
+    if (!endAddress) return 'Укажите точку финиша';
+    return 'Добавьте старт и финиш';
+  }, [canBuildRoute, endAddress, mode, startAddress]);
 
   if (showMobileRadiusFooter) {
     return (
@@ -70,9 +84,9 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
 
   return (
     <View style={styles.stickyFooter} testID="filters-panel-footer">
-      {!canBuildRoute && mode === 'route' && (
-        <Text style={styles.helperText}>Добавьте старт и финиш.</Text>
-      )}
+      {routeHelperText ? (
+        <Text style={styles.helperText}>{routeHelperText}</Text>
+      ) : null}
       <View style={styles.footerButtons}>
         {!hideFooterReset && (
           <Button
@@ -91,25 +105,29 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
 
         {onBuildRoute && mode === 'route' && (
           <Button
-            label={ctaLabel}
+            label={routingLoading ? 'Строим маршрут…' : ctaLabel}
             testID="filters-build-route-button"
             icon={
-              <Feather
-                name="navigation"
-                size={16}
-                color={
-                  canBuildRoute && !routingLoading
-                    ? colors.textOnPrimary
-                    : colors.textMuted
-                }
-              />
+              routingLoading
+                ? <ActivityIndicator size="small" color={colors.textMuted} />
+                : (
+                  <Feather
+                    name="navigation"
+                    size={16}
+                    color={
+                      canBuildRoute && !routingLoading
+                        ? colors.textOnPrimary
+                        : colors.textMuted
+                    }
+                  />
+                )
             }
             onPress={() => {
               if (!canBuildRoute || routingLoading) return;
               onBuildRoute();
             }}
             disabled={!canBuildRoute || routingLoading}
-            accessibilityLabel="Построить маршрут"
+            accessibilityLabel={routingLoading ? 'Строим маршрут, подождите' : 'Построить маршрут'}
             style={[
               styles.ctaButton,
               styles.ctaPrimary,

@@ -2,6 +2,7 @@ import React, { memo, useCallback } from 'react'
 import { View, Text, Pressable, Platform } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import type { ThemedColors } from '@/hooks/useTheme'
+import { restartMapOnboarding } from '@/components/MapPage/MapOnboarding'
 
 interface MapPanelHeaderProps {
   isMobile: boolean
@@ -64,16 +65,14 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
                 : themedColors.textMuted
             }
           />
-          {!isMobile && (
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === 'search' && styles.tabTextActive,
-              ]}
-            >
-              Поиск
-            </Text>
-          )}
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'search' && styles.tabTextActive,
+            ]}
+          >
+            Поиск
+          </Text>
         </Pressable>
 
         <Pressable
@@ -99,16 +98,14 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
                 : themedColors.textMuted
             }
           />
-          {!isMobile && (
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === 'route' && styles.tabTextActive,
-              ]}
-            >
-              Маршрут
-            </Text>
-          )}
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'route' && styles.tabTextActive,
+            ]}
+          >
+            Маршрут
+          </Text>
         </Pressable>
 
         <Pressable
@@ -137,16 +134,14 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
                 : themedColors.textMuted
             }
           />
-          {!isMobile && (
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === 'travels' && styles.tabTextActive,
-              ]}
-            >
-              Точки
-            </Text>
-          )}
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'travels' && styles.tabTextActive,
+            ]}
+          >
+            Точки
+          </Text>
           {travelsCount > 0 && (
             <View
               style={[
@@ -168,23 +163,42 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
       </View>
 
       {Platform.OS === 'web' && !isMobile ? (
-        <Pressable
-          testID="map-reset-filters-button"
-          style={({ pressed }) => [
-            styles.resetButton,
-            pressed && { opacity: 0.7 },
-          ]}
-          onPress={handleReset}
-          hitSlop={10}
-          accessibilityRole="button"
-          accessibilityLabel="Сбросить фильтры"
-        >
-          <Feather
-            name="rotate-cw"
-            size={13}
-            color={themedColors.textMuted}
-          />
-        </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Pressable
+            testID="map-help-button"
+            style={({ pressed }) => [
+              styles.resetButton,
+              { paddingHorizontal: 8, minWidth: 32 },
+              pressed && { opacity: 0.7 },
+            ]}
+            onPress={restartMapOnboarding}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Показать подсказки по карте"
+            {...({ title: 'Показать подсказки по карте' } as any)}
+          >
+            <Feather name="help-circle" size={13} color={themedColors.textMuted} />
+          </Pressable>
+          <Pressable
+            testID="map-reset-filters-button"
+            style={({ pressed }) => [
+              styles.resetButton,
+              pressed && { opacity: 0.7 },
+            ]}
+            onPress={handleReset}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Сбросить фильтры"
+            {...({ title: 'Сбросить фильтры' } as any)}
+          >
+            <Feather
+              name="rotate-cw"
+              size={13}
+              color={themedColors.textMuted}
+            />
+            <Text style={styles.resetButtonLabel}>Сброс</Text>
+          </Pressable>
+        </View>
       ) : (
         <Pressable
           testID="map-close-panel-button"
@@ -195,9 +209,9 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
           onPress={closeRightPanel}
           hitSlop={10}
           accessibilityRole="button"
-          accessibilityLabel="Закрыть панель"
+          accessibilityLabel="Скрыть панель"
         >
-          <Feather name="x" size={16} color={themedColors.textMuted} />
+          <Feather name="chevron-down" size={16} color={themedColors.textMuted} />
         </Pressable>
       )}
     </View>

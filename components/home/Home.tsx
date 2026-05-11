@@ -1,21 +1,8 @@
-import React, {
-  useEffect,
-  Suspense,
-  lazy,
-  useState,
-  memo,
-  useMemo,
-  useCallback,
-} from 'react'
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  Platform,
-  RefreshControl,
-} from 'react-native'
+import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { Platform, RefreshControl, ScrollView, StyleSheet, View } from 'react-native'
 import { useIsFocused } from '@react-navigation/native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+
 import { useAuth } from '@/context/AuthContext'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { useResponsive } from '@/hooks/useResponsive'
@@ -29,9 +16,18 @@ import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries'
 import { HomeInspirationSection } from './HomeInspirationSection'
 import { fetchTravelsRandom, fetchTravelsOfMonth } from '@/api/map'
 
-const isWeb = Platform.OS === 'web'
+const IS_WEB = Platform.OS === 'web'
+
 const HOW_IT_WORKS_PLACEHOLDER_STYLE = { minHeight: 420 } as const
 const FAQ_PLACEHOLDER_STYLE = { minHeight: 360 } as const
+
+const WEB_SCROLL_STYLE = IS_WEB
+  ? ({
+      WebkitOverflowScrolling: 'touch',
+      touchAction: 'pan-y',
+      overscrollBehaviorY: 'contain',
+    } as any)
+  : undefined
 
 const HomeHowItWorks = lazy(() => import('./HomeHowItWorks'))
 const HomeFAQSection = lazy(() => import('./HomeFAQSection'))
@@ -58,26 +54,14 @@ function PageSection({
   )
 }
 
-const SectionSkeleton = memo(({ hydrated }: { hydrated: boolean }) => {
-  const { isSmallPhone, isPhone } = useResponsive()
-  const isMobile = hydrated ? isSmallPhone || isPhone : false
-
+const SectionSkeleton = memo(function SectionSkeleton() {
   return (
     <ResponsiveContainer padding>
       <ResponsiveStack direction="vertical" gap={24}>
-        <SkeletonLoader
-          width={isMobile ? 200 : 300}
-          height={isMobile ? 28 : 40}
-          borderRadius={8}
-        />
+        <SkeletonLoader width={300} height={40} borderRadius={8} />
         <ResponsiveStack direction="responsive" gap={20} wrap>
-          {Array.from({ length: 3 }).map((_, i) => (
-            <SkeletonLoader
-              key={i}
-              width={isMobile ? '100%' : '30%'}
-              height={280}
-              borderRadius={12}
-            />
+          {[0, 1, 2].map((i) => (
+            <SkeletonLoader key={i} width="30%" height={280} borderRadius={12} />
           ))}
         </ResponsiveStack>
       </ResponsiveStack>
@@ -85,29 +69,30 @@ const SectionSkeleton = memo(({ hydrated }: { hydrated: boolean }) => {
   )
 })
 
-SectionSkeleton.displayName = 'SectionSkeleton'
+type FallbackProps = {
+  colors: ReturnType<typeof useThemedColors>
+  isMobile: boolean
+  padH: number
+  padV: number
+}
 
-const HowItWorksFallback = memo(
+const skeletonShellStyle = (padH: number, padV: number) =>
   ({
-    colors,
-    isMobile,
-    skeletonPadH,
-    skeletonPadVLarge,
-  }: {
-    colors: ReturnType<typeof useThemedColors>
-    isMobile: boolean
-    skeletonPadH: number
-    skeletonPadVLarge: number
-  }) => (
-    <View
-      style={{
-        paddingHorizontal: skeletonPadH,
-        paddingVertical: skeletonPadVLarge,
-        maxWidth: 1200,
-        alignSelf: 'center',
-        width: '100%',
-      }}
-    >
+    paddingHorizontal: padH,
+    paddingVertical: padV,
+    maxWidth: 1200,
+    alignSelf: 'center' as const,
+    width: '100%' as const,
+  })
+
+const HowItWorksFallback = memo(function HowItWorksFallback({
+  colors,
+  isMobile,
+  padH,
+  padV,
+}: FallbackProps) {
+  return (
+    <View style={skeletonShellStyle(padH, padV)}>
       <SkeletonLoader
         width={isMobile ? 180 : 260}
         height={isMobile ? 28 : 36}
@@ -134,13 +119,7 @@ const HowItWorksFallback = memo(
               gap: 16,
             }}
           >
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 16,
-              }}
-            >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
               <SkeletonLoader width={56} height={56} borderRadius={8} />
               <SkeletonLoader width={36} height={36} borderRadius={18} />
             </View>
@@ -150,33 +129,18 @@ const HowItWorksFallback = memo(
         ))}
       </View>
     </View>
-  ),
-)
+  )
+})
 
-HowItWorksFallback.displayName = 'HowItWorksFallback'
-
-const FaqFallback = memo(
-  ({
-    colors,
-    isMobile,
-    skeletonPadH,
-    skeletonPadVLarge,
-  }: {
-    colors: ReturnType<typeof useThemedColors>
-    isMobile: boolean
-    skeletonPadH: number
-    skeletonPadVLarge: number
-  }) => (
+const FaqFallback = memo(function FaqFallback({
+  colors,
+  isMobile,
+  padH,
+  padV,
+}: FallbackProps) {
+  return (
     <View style={FAQ_PLACEHOLDER_STYLE}>
-      <View
-        style={{
-          paddingHorizontal: skeletonPadH,
-          paddingVertical: skeletonPadVLarge,
-          maxWidth: 1200,
-          alignSelf: 'center',
-          width: '100%',
-        }}
-      >
+      <View style={skeletonShellStyle(padH, padV)}>
         <SkeletonLoader
           width={100}
           height={28}
@@ -205,10 +169,8 @@ const FaqFallback = memo(
         </View>
       </View>
     </View>
-  ),
-)
-
-FaqFallback.displayName = 'FaqFallback'
+  )
+})
 
 function Home() {
   const isFocused = useIsFocused()
@@ -218,7 +180,6 @@ function Home() {
   const { isSmallPhone, isPhone } = useResponsive()
   const isMobile = isSmallPhone || isPhone
 
-  // AND-14: Pull-to-Refresh state
   const [refreshing, setRefreshing] = useState(false)
   const onRefresh = useCallback(async () => {
     hapticImpact('light')
@@ -230,15 +191,9 @@ function Home() {
     }
   }, [queryClient])
 
-  // HERO-06: Загружаем количество путешествий для авторизованного пользователя
-  // Только для авторизованных, чтобы кнопка сразу показывала нужный текст
   const { data: myTravelsData, isLoading: travelsCountLoading } = useQuery({
     queryKey: ['my-travels-count', userId],
-    queryFn: async (): Promise<{
-      items: Record<string, unknown>[]
-      total: number
-    }> => {
-      // Никогда не возвращаем undefined — TanStack Query требует валидные данные
+    queryFn: async (): Promise<{ items: Record<string, unknown>[]; total: number }> => {
       if (!userId) return { items: [], total: 0 }
       try {
         const payload = await fetchMyTravels({ user_id: userId, perPage: 1 })
@@ -263,54 +218,41 @@ function Home() {
     })
   }, [isFocused, isAuthenticated])
 
-  const styles = useMemo(
+  const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile])
+
+  const gaps = useMemo(
     () =>
-      StyleSheet.create({
-        container: {
-          flex: 1,
-          backgroundColor: colors.background,
-        },
-        contentContainer: {
-          flexGrow: 1,
-          paddingBottom: Platform.select({
-            web: isMobile ? 96 : 120,
-            ios: 96,
-            android: 88,
-            default: 120,
-          }),
-        },
-      }),
-    [colors, isMobile],
+      isMobile
+        ? { hero: 28, howItWorks: 32, weekends: 36, history: 24, sections: 40, faq: 48, finalCta: 24 }
+        : { hero: 48, howItWorks: 56, weekends: 64, history: 40, sections: 72, faq: 80, finalCta: 40 },
+    [isMobile],
   )
 
-  const webScrollStyle = isWeb
-    ? ({
-        WebkitOverflowScrolling: 'touch',
-        touchAction: 'pan-y',
-        overscrollBehaviorY: 'contain',
-      } as any)
-    : undefined
+  const padH = isMobile ? 8 : 24
+  const padV = isMobile ? 36 : 64
 
-  // Responsive skeleton padding — reduce on mobile to match tighter layout
-  const skeletonPadH = isMobile ? 8 : 24
-  const skeletonPadVLarge = isMobile ? 36 : 64
+  const howItWorksWrapStyle = useMemo(
+    () => [HOW_IT_WORKS_PLACEHOLDER_STYLE, { marginTop: gaps.howItWorks }],
+    [gaps.howItWorks],
+  )
+  const marginTopStyle = useCallback((mt: number) => ({ marginTop: mt }), [])
 
   return (
     <ScrollView
-      style={[styles.container, webScrollStyle]}
+      style={[styles.container, WEB_SCROLL_STYLE]}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
-      scrollEventThrottle={isWeb ? 32 : 16}
+      scrollEventThrottle={IS_WEB ? 32 : 16}
       nestedScrollEnabled={Platform.OS === 'android'}
       refreshControl={
-        Platform.OS !== 'web' ? (
+        IS_WEB ? undefined : (
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
             tintColor={colors.primary}
             colors={[colors.primary]}
           />
-        ) : undefined
+        )
       }
     >
       <HomeHero
@@ -318,7 +260,7 @@ function Home() {
         travelsCountLoading={isAuthenticated && travelsCountLoading}
       />
 
-      <PageSection marginTop={isMobile ? 28 : 48}>
+      <PageSection marginTop={gaps.hero}>
         <HomeInspirationSection
           title="Не хотите"
           titleAccent="выбирать долго?"
@@ -330,27 +272,17 @@ function Home() {
         />
       </PageSection>
 
-      <View
-        style={[
-          HOW_IT_WORKS_PLACEHOLDER_STYLE,
-          { marginTop: isMobile ? 32 : 56 },
-        ]}
-      >
+      <View style={howItWorksWrapStyle}>
         <Suspense
           fallback={
-            <HowItWorksFallback
-              colors={colors}
-              isMobile={isMobile}
-              skeletonPadH={skeletonPadH}
-              skeletonPadVLarge={skeletonPadVLarge}
-            />
+            <HowItWorksFallback colors={colors} isMobile={isMobile} padH={padH} padV={padV} />
           }
         >
           <HomeHowItWorks />
         </Suspense>
       </View>
 
-      <PageSection marginTop={isMobile ? 36 : 64}>
+      <PageSection marginTop={gaps.weekends}>
         <HomeInspirationSection
           title="Маршруты на"
           titleAccent="ближайшие выходные"
@@ -360,38 +292,45 @@ function Home() {
         />
       </PageSection>
 
-      <View style={{ marginTop: isMobile ? 24 : 40 }}>
-        <Suspense fallback={<SectionSkeleton hydrated={false} />}>
+      <View style={marginTopStyle(gaps.history)}>
+        <Suspense fallback={<SectionSkeleton />}>
           <HomeFavoritesHistorySection />
         </Suspense>
       </View>
 
-      <View style={{ marginTop: isMobile ? 40 : 72 }}>
-        <Suspense fallback={<SectionSkeleton hydrated={false} />}>
+      <View style={marginTopStyle(gaps.sections)}>
+        <Suspense fallback={<SectionSkeleton />}>
           <HomeInspirationSections />
         </Suspense>
       </View>
 
-      <View style={{ marginTop: isMobile ? 48 : 80 }}>
+      <View style={marginTopStyle(gaps.faq)}>
         <Suspense
-          fallback={
-            <FaqFallback
-              colors={colors}
-              isMobile={isMobile}
-              skeletonPadH={skeletonPadH}
-              skeletonPadVLarge={skeletonPadVLarge}
-            />
-          }
+          fallback={<FaqFallback colors={colors} isMobile={isMobile} padH={padH} padV={padV} />}
         >
           <HomeFAQSection />
         </Suspense>
       </View>
 
-      <View style={{ marginTop: isMobile ? 24 : 40 }}>
+      <View style={marginTopStyle(gaps.finalCta)}>
         <HomeFinalCTA travelsCount={travelsCount} />
       </View>
     </ScrollView>
   )
 }
+
+const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: boolean) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    contentContainer: {
+      flexGrow: 1,
+      paddingBottom: Platform.select({
+        web: isMobile ? 96 : 120,
+        ios: 96,
+        android: 88,
+        default: 120,
+      }),
+    },
+  })
 
 export default memo(Home)

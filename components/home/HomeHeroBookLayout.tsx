@@ -29,9 +29,11 @@ type BookImage = {
   href?: string
 }
 
+type Styles = any
+
 type HomeHeroBookLayoutProps = {
   colors: ThemedColors
-  styles: any
+  styles: Styles
   isWeb: boolean
   isNarrowLayout: boolean
   isTabletLayout: boolean
@@ -52,14 +54,8 @@ type HomeHeroBookLayoutProps = {
   useStackedCtas: boolean
   topWaveAnimatedStyle: any
   bottomWaveAnimatedStyle: any
-  onBookWrapperLayout?: (e: {
-    nativeEvent: { layout: { width: number } }
-  }) => void
-  onQuickFilterPress: (
-    label: string,
-    filters?: QuickFilterParams,
-    route?: string,
-  ) => void
+  onBookWrapperLayout?: (e: { nativeEvent: { layout: { width: number } } }) => void
+  onQuickFilterPress: (label: string, filters?: QuickFilterParams, route?: string) => void
   onOpenArticle: (href?: string | null) => void
   onOpenSearch: () => void
   onPrevSlide: () => void
@@ -67,22 +63,26 @@ type HomeHeroBookLayoutProps = {
   onMarkSlideLoaded: (slideIndex: number) => void
 }
 
+const SLIDE_WRAPPER_POINTER_NONE = { pointerEvents: 'none' as const }
+
+const SLIDER_NAV_INDICATOR_FALLBACK = {
+  fontSize: 11,
+  fontWeight: '600' as const,
+  opacity: 0.7,
+  minWidth: 28,
+  textAlign: 'center' as const,
+}
+
 function HeroWeekEyebrow({
-  colors,
   styles,
   iconColor,
 }: {
-  colors: ThemedColors
-  styles: any
-  iconColor?: string
+  styles: Styles
+  iconColor: string
 }) {
   return (
     <View style={styles.slideEyebrow}>
-      <Feather
-        name="map-pin"
-        size={11}
-        color={iconColor ?? colors.textOnDark}
-      />
+      <Feather name="map-pin" size={11} color={iconColor} />
       <Text style={styles.slideEyebrowText}>Маршрут недели</Text>
     </View>
   )
@@ -96,21 +96,15 @@ function HeroPageNotes({
 }: {
   colors: ThemedColors
   moodCards: readonly MoodCard[]
-  onQuickFilterPress: (
-    label: string,
-    filters?: QuickFilterParams,
-    route?: string,
-  ) => void
-  styles: any
+  onQuickFilterPress: (label: string, filters?: QuickFilterParams, route?: string) => void
+  styles: Styles
 }) {
   return (
     <View style={styles.pageNotesGrid}>
       {moodCards.map((card) => (
         <Pressable
           key={`page-note-${card.title}`}
-          onPress={() =>
-            onQuickFilterPress(card.title, card.filters, card.route)
-          }
+          onPress={() => onQuickFilterPress(card.title, card.filters, card.route)}
           style={({ pressed, hovered }) => [
             styles.pageNote,
             (pressed || hovered) && styles.pageNoteHover,
@@ -123,9 +117,7 @@ function HeroPageNotes({
           </View>
           <View style={styles.pageNoteTextWrap}>
             <Text style={styles.pageNoteText}>{card.title}</Text>
-            {card.meta ? (
-              <Text style={styles.pageNoteMeta}>{card.meta}</Text>
-            ) : null}
+            {card.meta && <Text style={styles.pageNoteMeta}>{card.meta}</Text>}
           </View>
         </Pressable>
       ))}
@@ -140,30 +132,20 @@ function TabletFeatureGrid({
 }: {
   colors: ThemedColors
   heroHighlights: readonly HeroHighlight[]
-  styles: any
+  styles: Styles
 }) {
   return (
     <View style={styles.tabletFeatureGrid}>
       {heroHighlights.map((item) => (
-        <Pressable
-          key={item.title}
-          style={({ hovered }) => [
-            styles.tabletFeatureCard,
-            hovered && styles.tabletFeatureCardHover,
-          ]}
-        >
+        <View key={item.title} style={styles.tabletFeatureCard} accessibilityRole="text">
           <View style={styles.tabletFeatureIconWrap}>
-            <Feather
-              name={item.icon as any}
-              size={16}
-              color={colors.textOnPrimary}
-            />
+            <Feather name={item.icon as any} size={16} color={colors.textOnPrimary} />
           </View>
           <View style={styles.tabletFeatureTextWrap}>
             <Text style={styles.tabletFeatureTitle}>{item.title}</Text>
             <Text style={styles.tabletFeatureSubtitle}>{item.subtitle}</Text>
           </View>
-        </Pressable>
+        </View>
       ))}
     </View>
   )
@@ -171,15 +153,15 @@ function TabletFeatureGrid({
 
 function TabletFeaturedRoute({
   bookImage,
-  colors,
+  iconColor,
   onOpenArticle,
   styles,
   width,
 }: {
   bookImage: BookImage
-  colors: ThemedColors
+  iconColor: string
   onOpenArticle: (href?: string | null) => void
-  styles: any
+  styles: Styles
   width: number
 }) {
   return (
@@ -204,12 +186,33 @@ function TabletFeaturedRoute({
         style={styles.tabletFeaturedImage}
       />
       <View style={styles.tabletFeaturedOverlay}>
-        <HeroWeekEyebrow colors={colors} styles={styles} />
+        <HeroWeekEyebrow styles={styles} iconColor={iconColor} />
         <Text style={styles.tabletFeaturedTitle}>{bookImage.title}</Text>
         <Text style={styles.tabletFeaturedSubtitle}>{bookImage.subtitle}</Text>
       </View>
     </Pressable>
   )
+}
+
+type HeroSliderProps = {
+  bookImages: readonly BookImage[]
+  currentSlide: BookImage
+  disableHeroSliderBlur: boolean
+  isWeb: boolean
+  loadedSlides: Set<number>
+  onMarkSlideLoaded: (slideIndex: number) => void
+  onNextSlide: () => void
+  onOpenArticle: (href?: string | null) => void
+  onPrevSlide: () => void
+  renderedSlideIndices: number[]
+  showSideSlider: boolean
+  sliderHeight: number
+  sliderIconColor: string
+  sliderMediaWidth: number
+  styles: Styles
+  topWaveAnimatedStyle: any
+  bottomWaveAnimatedStyle: any
+  visibleSlide: number
 }
 
 function HeroSlider({
@@ -231,31 +234,13 @@ function HeroSlider({
   topWaveAnimatedStyle,
   bottomWaveAnimatedStyle,
   visibleSlide,
-}: {
-  bookImages: readonly BookImage[]
-  currentSlide: BookImage
-  disableHeroSliderBlur: boolean
-  isWeb: boolean
-  loadedSlides: Set<number>
-  onMarkSlideLoaded: (slideIndex: number) => void
-  onNextSlide: () => void
-  onOpenArticle: (href?: string | null) => void
-  onPrevSlide: () => void
-  renderedSlideIndices: number[]
-  showSideSlider: boolean
-  sliderHeight: number
-  sliderIconColor: string
-  sliderMediaWidth: number
-  styles: any
-  topWaveAnimatedStyle: any
-  bottomWaveAnimatedStyle: any
-  visibleSlide: number
-}) {
+}: HeroSliderProps) {
   return (
     <View style={styles.sliderSection}>
       {isWeb && <View style={styles.sliderPageGoldLine} />}
       {isWeb && <View style={styles.heroPageCurlRight} />}
       <Text style={styles.sliderPageNumber}>2</Text>
+
       <View testID="home-hero-slider-frame" style={styles.sliderFrame}>
         <Pressable
           onPress={() => onOpenArticle(currentSlide.href)}
@@ -268,21 +253,17 @@ function HeroSlider({
         >
           {renderedSlideIndices.map((slideIndex) => {
             const slide = bookImages[slideIndex]
-            const isCurrentVisibleSlide = slideIndex === visibleSlide
-            const isSlideLoaded = loadedSlides.has(slideIndex)
+            const isCurrent = slideIndex === visibleSlide
+            const isLoaded = loadedSlides.has(slideIndex)
+            const isFirst = slideIndex === 0
 
             return (
               <View
                 key={`hero-slide-${slideIndex}`}
                 style={[
                   styles.slideWrapper,
-                  { pointerEvents: 'none' },
-                  isWeb
-                    ? ({
-                        opacity: isCurrentVisibleSlide ? 1 : 0,
-                        zIndex: isCurrentVisibleSlide ? 2 : 1,
-                      } as any)
-                    : null,
+                  SLIDE_WRAPPER_POINTER_NONE,
+                  isWeb && ({ opacity: isCurrent ? 1 : 0, zIndex: isCurrent ? 2 : 1 } as any),
                 ]}
               >
                 <ImageCardMedia
@@ -296,98 +277,69 @@ function HeroSlider({
                   allowCriticalWebBlur={!disableHeroSliderBlur}
                   quality={75}
                   alt={slide.alt}
-                  loading={
-                    slideIndex === 0
-                      ? 'eager'
-                      : isSlideLoaded
-                        ? 'eager'
-                        : 'lazy'
-                  }
-                  priority={slideIndex === 0 ? 'high' : 'normal'}
-                  showImmediately={isSlideLoaded}
+                  loading={isFirst || isLoaded ? 'eager' : 'lazy'}
+                  priority={isFirst ? 'high' : 'normal'}
+                  showImmediately={isLoaded}
                   style={styles.slideImage}
                   onLoad={() => onMarkSlideLoaded(slideIndex)}
                 />
                 <View style={styles.slideOverlay}>
-                  <HeroWeekEyebrow
-                    colors={{
-                      ...({} as ThemedColors),
-                      textOnDark: sliderIconColor,
-                    }}
-                    styles={styles}
-                    iconColor={sliderIconColor}
-                  />
+                  <HeroWeekEyebrow styles={styles} iconColor={sliderIconColor} />
                   <View style={styles.slideCaption}>
                     <Text style={styles.slideTitle}>{slide.title}</Text>
                     <Text style={styles.slideSubtitle}>{slide.subtitle}</Text>
                     <View style={styles.slideActionPill}>
                       <Text style={styles.slideActionText}>Открыть маршрут</Text>
-                      <Feather
-                        name="arrow-up-right"
-                        size={12}
-                        color={sliderIconColor}
-                      />
+                      <Feather name="arrow-up-right" size={12} color={sliderIconColor} />
                     </View>
                   </View>
                 </View>
               </View>
             )
           })}
+
           {isWeb && (
             <>
               <View style={styles.sliderPaperInset} />
               <View style={styles.sliderPaperFrame} />
-            </>
-          )}
-          {isWeb && (
-            <>
               <View style={styles.sliderTopBlur} />
-              <View
-                style={[styles.sliderEdgeBlur, styles.sliderEdgeBlurLeft]}
-              />
-              <View
-                style={[styles.sliderEdgeBlur, styles.sliderEdgeBlurRight]}
-              />
-              {showSideSlider ? (
+              <View style={[styles.sliderEdgeBlur, styles.sliderEdgeBlurLeft]} />
+              <View style={[styles.sliderEdgeBlur, styles.sliderEdgeBlurRight]} />
+              {showSideSlider && (
                 <>
                   <Animated.View
                     testID="home-hero-slider-wave-top"
-                    style={[
-                      styles.sliderPageWave,
-                      styles.sliderPageWaveTop,
-                      topWaveAnimatedStyle,
-                    ]}
+                    style={[styles.sliderPageWave, styles.sliderPageWaveTop, topWaveAnimatedStyle]}
                   />
                   <Animated.View
                     testID="home-hero-slider-wave-bottom"
-                    style={[
-                      styles.sliderPageWave,
-                      styles.sliderPageWaveBottom,
-                      bottomWaveAnimatedStyle,
-                    ]}
+                    style={[styles.sliderPageWave, styles.sliderPageWaveBottom, bottomWaveAnimatedStyle]}
                   />
                 </>
-              ) : null}
+              )}
             </>
           )}
+
           <View style={styles.sliderNav}>
             <Pressable
               onPress={onPrevSlide}
-              style={({ hovered }) => [
-                styles.sliderNavBtn,
-                hovered && styles.sliderNavBtnHover,
-              ]}
+              style={({ hovered }) => [styles.sliderNavBtn, hovered && styles.sliderNavBtnHover]}
               accessibilityRole="button"
               accessibilityLabel="Предыдущий слайд"
             >
               <Feather name="chevron-left" size={14} color={sliderIconColor} />
             </Pressable>
+            <Text
+              style={[
+                styles.sliderNavIndicator ?? { ...SLIDER_NAV_INDICATOR_FALLBACK, color: sliderIconColor },
+              ]}
+              accessibilityLabel={`Слайд ${visibleSlide + 1} из ${bookImages.length}`}
+            >
+              {visibleSlide + 1}/{bookImages.length}
+            </Text>
             <Pressable
               onPress={onNextSlide}
-              style={({ hovered }) => [
-                styles.sliderNavBtn,
-                hovered && styles.sliderNavBtnHover,
-              ]}
+              style={({ hovered }) => [styles.sliderNavBtn, hovered && styles.sliderNavBtnHover]}
               accessibilityRole="button"
               accessibilityLabel="Следующий слайд"
             >
@@ -431,27 +383,28 @@ export default function HomeHeroBookLayout({
   onNextSlide,
   onMarkSlideLoaded,
 }: HomeHeroBookLayoutProps) {
+  const withBookFrame = isWeb && showSideSlider
+  const showChapterHeader = showSideSlider && !isNarrowLayout
+  const showPageNotes = showSideSlider && !isNarrowLayout
+
   return (
     <View style={styles.heroShell}>
       <View
         style={styles.bookWrapper}
         onLayout={showSideSlider ? onBookWrapperLayout : undefined}
       >
-        {isWeb && showSideSlider && <View style={styles.bookCoverOuter} />}
+        {withBookFrame && <View style={styles.bookCoverOuter} />}
 
         <View style={styles.heroRow}>
-          {isWeb && showSideSlider && <View style={styles.heroBookSpine} />}
+          {withBookFrame && <View style={styles.heroBookSpine} />}
 
           <View testID="home-hero-left-page" style={styles.heroSection}>
-            {isWeb && showSideSlider && (
-              <View style={styles.heroPageGoldLine} />
-            )}
-            {isWeb && showSideSlider && (
-              <View style={styles.heroPageCurlLeft} />
-            )}
+            {withBookFrame && <View style={styles.heroPageGoldLine} />}
+            {withBookFrame && <View style={styles.heroPageCurlLeft} />}
+
             <View testID="home-hero-left-frame" style={styles.leftPageFrame}>
               <View>
-                {showSideSlider && !isNarrowLayout && (
+                {showChapterHeader && (
                   <View style={styles.chapterHeader}>
                     <Text style={styles.chapterLabel}>Глава 01</Text>
                     <View style={styles.chapterDivider} />
@@ -466,23 +419,23 @@ export default function HomeHeroBookLayout({
 
                 <Text style={styles.subtitle}>{heroSubtitle}</Text>
 
-                {showSideSlider && !isNarrowLayout ? (
+                {showPageNotes && (
                   <HeroPageNotes
                     colors={colors}
                     moodCards={moodCards}
                     onQuickFilterPress={onQuickFilterPress}
                     styles={styles}
                   />
-                ) : null}
+                )}
               </View>
 
-              {isTabletLayout ? (
+              {isTabletLayout && (
                 <TabletFeatureGrid
                   colors={colors}
                   heroHighlights={heroHighlights}
                   styles={styles}
                 />
-              ) : null}
+              )}
 
               <View testID="home-hero-cta-row" style={styles.buttonsContainer}>
                 <Button
@@ -491,9 +444,7 @@ export default function HomeHeroBookLayout({
                   variant="secondary"
                   size="md"
                   fullWidth={useStackedCtas}
-                  icon={
-                    <Feather name="compass" size={16} color={colors.text} />
-                  }
+                  icon={<Feather name="compass" size={16} color={colors.text} />}
                   style={[styles.secondaryButton, styles.singleCtaButton]}
                   labelStyle={styles.secondaryButtonText}
                   hoverStyle={styles.secondaryButtonHover}
@@ -504,23 +455,21 @@ export default function HomeHeroBookLayout({
             </View>
 
             {showSideSlider && (
-              <Text style={[styles.bookPageNumber, styles.bookPageNumberLeft]}>
-                1
-              </Text>
+              <Text style={[styles.bookPageNumber, styles.bookPageNumberLeft]}>1</Text>
             )}
           </View>
 
-          {isTabletLayout ? (
+          {isTabletLayout && (
             <TabletFeaturedRoute
               bookImage={bookImages[0]}
-              colors={colors}
+              iconColor={colors.textOnDark}
               onOpenArticle={onOpenArticle}
               styles={styles}
               width={width}
             />
-          ) : null}
+          )}
 
-          {showSideSlider ? (
+          {showSideSlider && (
             <HeroSlider
               bookImages={bookImages}
               currentSlide={currentSlide}
@@ -541,7 +490,7 @@ export default function HomeHeroBookLayout({
               bottomWaveAnimatedStyle={bottomWaveAnimatedStyle}
               visibleSlide={visibleSlide}
             />
-          ) : null}
+          )}
         </View>
       </View>
     </View>

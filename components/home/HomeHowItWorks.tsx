@@ -23,7 +23,7 @@ const STEPS = [
     title: 'Сохрани поездку',
     description: 'Добавь фото, заметки и точки маршрута',
     icon: 'bookmark',
-    path: '/search',
+    path: '/travel/new',
     actionLabel: 'Добавить поездку',
   },
   {

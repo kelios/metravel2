@@ -1,9 +1,3 @@
-/**
- * SwipeableListItem - обертка для AddressListItem с жестами свайпа
- * Свайп влево → Избранное
- * Свайп вправо → Построить маршрут
- */
-
 import React, { useRef } from 'react';
 import { StyleSheet, Animated, Text, Platform } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';

@@ -1,4 +1,4 @@
-import React, { memo, Suspense, useEffect, useMemo, useState } from "react";
+import React, { memo, useEffect, useMemo, useState } from "react";
 import {
     ScrollView,
     StyleSheet,
@@ -11,12 +11,7 @@ import {
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
-
-const StableContentLazy = React.lazy(() =>
-  import('@/components/travel/StableContent').then((m) => ({
-    default: m.default,
-  }))
-)
+import StableContent from '@/components/travel/StableContent';
 
 interface TravelDescriptionProps {
     htmlContent: string;
@@ -166,19 +161,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
           {isEmptyHtml ? (
             <Text style={styles.placeholder}>Автор ещё не добавил описание</Text>
           ) : canParseHtml ? (
-            <Suspense
-              fallback={
-                Platform.OS === 'web' ? (
-                  <View style={styles.webLazyContentFallback}>
-                    <Text style={styles.placeholder}>Загружаем описание…</Text>
-                  </View>
-                ) : (
-                  <Text style={styles.placeholder}>Загружаем описание…</Text>
-                )
-              }
-            >
-              <StableContentLazy html={htmlContent} contentWidth={contentWidth} fullWidth={noBox} />
-            </Suspense>
+            <StableContent html={htmlContent} contentWidth={contentWidth} fullWidth={noBox} />
           ) : (
             <Text style={styles.placeholder}>Загружаем описание…</Text>
           )}

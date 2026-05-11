@@ -264,7 +264,7 @@ export default function MapScreen() {
         return `${quickFilterSelected.length} выбрано`;
     }, [quickFilterSelected]);
     const quickRadiusValue = useMemo(() => {
-        if (!currentRadius) return 'Выбор';
+        if (!currentRadius) return `${DEFAULT_RADIUS_KM} км`;
         return `${currentRadius} км`;
     }, [currentRadius]);
 
@@ -406,21 +406,24 @@ export default function MapScreen() {
                     mapPanelPlaceholder
                 )}
                 {shouldShowFloatingRadiusPill ? (
-                    <View
-                        style={[styles.radiusPill, { pointerEvents: 'none' } as any]}
-                        accessibilityRole="text"
-                        accessibilityLabel={`Видимый радиус ${currentRadius} километров`}
+                    <Pressable
+                        style={[styles.radiusPill]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Радиус поиска: ${currentRadius} км. Нажмите, чтобы изменить`}
                         testID="map-radius-pill"
+                        onPress={() => { handleSelectSearchTab(); openRightPanel(); }}
+                        hitSlop={8}
                     >
                         <Feather name="radio" size={12} color={themedColors.primary} />
                         <Text style={styles.radiusPillText}>{currentRadius} км</Text>
-                    </View>
+                        <Feather name="chevron-down" size={11} color={themedColors.textMuted} />
+                    </Pressable>
                 ) : null}
                 {showGeoBanner && (
                     <View style={styles.geoBanner} testID="map-geo-banner">
                         <Feather name="map-pin" size={13} color={themedColors.warning} />
                         <Text style={styles.geoBannerText}>
-                            Геолокация недоступна
+                            Геолокация недоступна — разрешите доступ в настройках браузера
                         </Text>
                         <Pressable
                             onPress={dismissGeoBanner}
@@ -466,6 +469,8 @@ export default function MapScreen() {
             styles.radiusPill,
             styles.radiusPillText,
             themedColors.primary,
+            handleSelectSearchTab,
+            openRightPanel,
         ]
     );
 
@@ -541,6 +546,7 @@ export default function MapScreen() {
                             onPress={toggleDesktopCollapse}
                             accessibilityRole="button"
                             accessibilityLabel="Развернуть панель"
+                            {...({ title: 'Развернуть панель' } as any)}
                         >
                             <Feather name="chevron-right" size={18} color={themedColors.text} />
                         </Pressable>
@@ -549,6 +555,7 @@ export default function MapScreen() {
                             onPress={() => { toggleDesktopCollapse(); handleSelectSearchTab(); }}
                             accessibilityRole="button"
                             accessibilityLabel="Поиск"
+                            {...({ title: 'Поиск мест' } as any)}
                         >
                             <Feather name="search" size={18} color={themedColors.textMuted} />
                         </Pressable>
@@ -557,6 +564,7 @@ export default function MapScreen() {
                             onPress={() => { toggleDesktopCollapse(); handleSelectRouteTab(); }}
                             accessibilityRole="button"
                             accessibilityLabel="Построение маршрута"
+                            {...({ title: 'Построить маршрут' } as any)}
                         >
                             <Feather name="navigation" size={18} color={themedColors.textMuted} />
                         </Pressable>
@@ -565,6 +573,7 @@ export default function MapScreen() {
                             onPress={() => { toggleDesktopCollapse(); selectTravelsTab(); }}
                             accessibilityRole="button"
                             accessibilityLabel={`Список точек (${travelsData.length})`}
+                            {...({ title: `Список мест (${travelsData.length})` } as any)}
                         >
                             <Feather name="list" size={18} color={themedColors.textMuted} />
                             {travelsData.length > 0 && (
@@ -680,9 +689,9 @@ export default function MapScreen() {
                     style={({ pressed }) => [styles.fab, pressed && { opacity: 0.85 }]}
                     onPress={openRightPanel}
                     accessibilityRole="button"
-                    accessibilityLabel="Открыть панель"
+                    accessibilityLabel="Фильтры и список мест"
                 >
-                    <Feather name="sliders" size={24} color={themedColors.textOnPrimary} />
+                    <Feather name="sliders" size={22} color={themedColors.textOnPrimary} />
                 </Pressable>
             )}
 

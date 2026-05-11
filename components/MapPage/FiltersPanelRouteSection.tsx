@@ -83,6 +83,7 @@ interface FiltersPanelRouteSectionProps {
   onRemoveRoutePoint?: (id: string) => void;
   onClearRoute?: () => void;
   swapStartEnd?: () => void;
+  onRetryRoute?: () => void;
   onAddressSelect?: (
     address: string,
     coords: LatLng,
@@ -109,6 +110,7 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
   onRemoveRoutePoint,
   onClearRoute,
   swapStartEnd,
+  onRetryRoute,
   onAddressSelect,
   onAddressClear,
 }) => {
@@ -277,6 +279,7 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
               isEstimated={isEstimated}
               elevationGain={routeElevationGain ?? null}
               elevationLoss={routeElevationLoss ?? null}
+              onRetry={onRetryRoute}
               compact
             />
           </View>

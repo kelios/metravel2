@@ -1,245 +1,225 @@
-/**
- * HomeScreen - Optimized for instant perceived performance
- * 
- * Pattern: critical skeleton → content transition
- * - Skeleton renders instantly on first paint (no delays)
- * - Data loads in background while skeleton is visible
- * - Smooth fade transition when content is ready
- * - No empty screens or heavy first render
- */
-import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, StyleSheet, View, Animated } from 'react-native';
-import { usePathname } from 'expo-router';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Animated, Platform, StyleSheet, View } from 'react-native'
+import { usePathname } from 'expo-router'
 
-import InstantSEO from '@/components/seo/LazyInstantSEO';
-import ErrorBoundary from '@/components/ui/ErrorBoundary';
-import ErrorDisplay from '@/components/ui/ErrorDisplay';
-import { useThemedColors } from '@/hooks/useTheme';
-import { useResponsive } from '@/hooks/useResponsive';
-import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
-import { HomePageSkeleton } from '@/components/home/HomePageSkeleton';
+import InstantSEO from '@/components/seo/LazyInstantSEO'
+import ErrorBoundary from '@/components/ui/ErrorBoundary'
+import ErrorDisplay from '@/components/ui/ErrorDisplay'
+import { useThemedColors } from '@/hooks/useTheme'
+import { useResponsive } from '@/hooks/useResponsive'
+import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
+import { HomePageSkeleton } from '@/components/home/HomePageSkeleton'
 
-/** Lazy load main content - data fetching starts immediately inside Home */
-const Home = lazy(() => import('@/components/home/Home'));
+const Home = lazy(() => import('@/components/home/Home'))
 
-/** SEO metadata */
-const SEO_TITLE = 'Идеи поездок на выходные и книга путешествий | Metravel';
-const SEO_DESCRIPTION = 'Подбирайте маршруты по расстоянию и формату отдыха, сохраняйте поездки с фото и заметками и собирайте личную книгу путешествий в PDF.';
+const SEO_TITLE = 'Идеи поездок на выходные и книга путешествий | Metravel'
+const SEO_DESCRIPTION =
+  'Подбирайте маршруты по расстоянию и формату отдыха, сохраняйте поездки с фото и заметками и собирайте личную книгу путешествий в PDF.'
+const TRANSITION_MS = 200
+const IS_WEB = Platform.OS === 'web'
 
-/** Transition duration for skeleton → content fade */
-const TRANSITION_MS = 200;
-
-function HomeScreen() {
-    const pathname = usePathname();
-    const colors = useThemedColors();
-    const { isHydrated: isResponsiveHydrated = true } = useResponsive();
-    const styles = useMemo(() => createStyles(colors), [colors]);
-
-    // On web, start as false so SSR and first client render both produce the
-    // same neutral output (empty container). This prevents hydration mismatch
-    // when the URL is /travels/* but the index tab renders during SSR with
-    // pathname='/'. After useEffect fires we know window.location is available.
-    const [hydrated, setHydrated] = useState(Platform.OS !== 'web');
-    useEffect(() => { if (Platform.OS === 'web') setHydrated(true); }, []);
-
-    // On web, only check the real browser URL after hydration.
-    // Do not fallback to router focus/pathname: it can briefly report "/" while
-    // navigating to /travels/* and cause Home to flash over travel details.
-    const isHomePath = useMemo(() => {
-        if (Platform.OS !== 'web') return true;
-        if (!hydrated) return false; // SSR & first client render: unknown → false
-
-        if (typeof window !== 'undefined') {
-            const loc = String(window.location?.pathname ?? '').trim();
-            if (loc === '' || loc === '/' || loc === '/index') return true;
-        }
-        return false;
-    }, [hydrated]);
-
-    const canMountContent = hydrated && isResponsiveHydrated;
-
-    const canonical = useMemo(() => {
-        const raw = String(pathname ?? '').trim();
-        const normalized = raw === '' || raw === '/' ? '/' : raw.startsWith('/') ? raw : `/${raw}`;
-        return buildCanonicalUrl(normalized);
-    }, [pathname]);
-
-    const shouldRenderSeo = useMemo(() => {
-        if (Platform.OS !== 'web') return false;
-        if (isHomePath) return true;
-        // SSR/first render fallback for home route: keep meta tags available
-        // even before window.location-based URL verification is possible.
-        return !hydrated && (pathname === '/' || pathname === '/index' || pathname === '');
-    }, [hydrated, isHomePath, pathname]);
-
-    // Track content ready state for smooth transition
-    const [contentReady, setContentReady] = useState(false);
-    const [errorBoundaryRetryKey, setErrorBoundaryRetryKey] = useState(0);
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-
-    const handleHomeRetry = useCallback(() => {
-        setContentReady(false);
-        setErrorBoundaryRetryKey((value) => value + 1);
-        fadeAnim.setValue(0);
-    }, [fadeAnim]);
-
-    // Animate content fade-in when ready
-    useEffect(() => {
-        if (contentReady) {
-            if (Platform.OS === 'web') {
-                // CSS handles transition on web
-                return;
-            }
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: TRANSITION_MS,
-                useNativeDriver: true,
-            }).start();
-        }
-    }, [contentReady, fadeAnim]);
-
-    // Web-specific styles for CSS transitions
-    const webSkeletonStyle = Platform.OS === 'web' ? {
-        opacity: contentReady ? 0 : 1,
-        pointerEvents: contentReady ? 'none' as const : 'auto' as const,
-        transition: `opacity ${TRANSITION_MS}ms ease-out`,
-    } : {};
-
-    const webContentStyle = Platform.OS === 'web' ? {
-        opacity: contentReady ? 1 : 0,
-        transition: `opacity ${TRANSITION_MS}ms ease-out`,
-    } : {};
-
-    // Before hydration or when URL is not home: avoid rendering home content.
-    // Keep SEO tags when shouldRenderSeo=true so crawlers still see meta tags.
-    if (!isHomePath) {
-        return shouldRenderSeo ? (
-            <InstantSEO
-                headKey="home"
-                title={SEO_TITLE}
-                description={SEO_DESCRIPTION}
-                canonical={canonical}
-                image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
-                ogType="website"
-            />
-        ) : null;
-    }
-
-    return (
-        <>
-            {shouldRenderSeo && (
-                <InstantSEO
-                    headKey="home"
-                    title={SEO_TITLE}
-                    description={SEO_DESCRIPTION}
-                    canonical={canonical}
-                    image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
-                    ogType="website"
-                />
-            )}
-            <View style={styles.container}>
-                {Platform.OS === 'web' && (
-                    React.createElement('h1', { style: styles.srOnly as any }, SEO_TITLE)
-                )}
-                <ErrorBoundary
-                    key={errorBoundaryRetryKey}
-                    fallback={
-                        <View style={styles.errorContainer}>
-                            <ErrorDisplay
-                                message="Не удалось загрузить главную страницу"
-                                onRetry={handleHomeRetry}
-                                variant="error"
-                            />
-                        </View>
-                    }
-                >
-                    <View style={styles.contentWrapper}>
-                        {/* Skeleton layer - visible instantly, fades out when content ready */}
-                        {!contentReady && (
-                            <View 
-                                style={[styles.skeletonLayer, webSkeletonStyle as any]}
-                                testID="home-skeleton-layer"
-                            >
-                                <HomePageSkeleton />
-                            </View>
-                        )}
-
-                        {/* Content layer - renders behind skeleton, fades in when ready */}
-                        {canMountContent && (
-                            Platform.OS === 'web' ? (
-                                <View style={[styles.contentLayer, webContentStyle as any]}>
-                                    <Suspense fallback={<HomePageSkeleton />}>
-                                        <HomeWithReadyCallback onReady={() => setContentReady(true)} />
-                                    </Suspense>
-                                </View>
-                            ) : (
-                                <Animated.View style={[styles.contentLayer, { opacity: fadeAnim }]}>
-                                    <Suspense fallback={<HomePageSkeleton />}>
-                                        <HomeWithReadyCallback onReady={() => setContentReady(true)} />
-                                    </Suspense>
-                                </Animated.View>
-                            )
-                        )}
-                    </View>
-                </ErrorBoundary>
-            </View>
-        </>
-    );
+function renderHomeSeo(canonical: string) {
+  return (
+    <InstantSEO
+      headKey="home"
+      title={SEO_TITLE}
+      description={SEO_DESCRIPTION}
+      canonical={canonical}
+      image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
+      ogType="website"
+    />
+  )
 }
 
-/** Wrapper that signals when Home has mounted and is ready */
+function normalizePath(raw: string | null | undefined) {
+  const v = String(raw ?? '').trim()
+  if (v === '' || v === '/') return '/'
+  return v.startsWith('/') ? v : `/${v}`
+}
+
+function HomeScreen() {
+  const pathname = usePathname()
+  const colors = useThemedColors()
+  const { isHydrated: isResponsiveHydrated = true } = useResponsive()
+  const styles = useMemo(() => createStyles(colors), [colors])
+
+  // On web, start as false so SSR and first client render produce the same
+  // neutral output. Prevents hydration mismatch when URL is /travels/* but
+  // index tab renders during SSR with pathname='/'.
+  const [hydrated, setHydrated] = useState(!IS_WEB)
+  useEffect(() => {
+    if (IS_WEB) setHydrated(true)
+  }, [])
+
+  // After hydration, check the real browser URL. Avoid relying on router
+  // pathname: it can briefly report '/' while navigating to /travels/*.
+  const isHomePath = useMemo(() => {
+    if (!IS_WEB) return true
+    if (!hydrated) return false
+    if (typeof window !== 'undefined') {
+      const loc = String(window.location?.pathname ?? '').trim()
+      if (loc === '' || loc === '/' || loc === '/index') return true
+    }
+    return false
+  }, [hydrated])
+
+  const canonical = useMemo(() => buildCanonicalUrl(normalizePath(pathname)), [pathname])
+
+  const shouldRenderSeo = useMemo(() => {
+    if (!IS_WEB) return false
+    if (isHomePath) return true
+    // SSR/first render fallback: keep meta tags on home route before
+    // window.location-based verification is possible.
+    return !hydrated && (pathname === '/' || pathname === '/index' || pathname === '')
+  }, [hydrated, isHomePath, pathname])
+
+  const [contentReady, setContentReady] = useState(false)
+  const [errorBoundaryRetryKey, setErrorBoundaryRetryKey] = useState(0)
+  const fadeAnim = useRef<Animated.Value | null>(null)
+  if (!IS_WEB && fadeAnim.current == null) {
+    fadeAnim.current = new Animated.Value(0)
+  }
+
+  const handleHomeRetry = useCallback(() => {
+    setContentReady(false)
+    setErrorBoundaryRetryKey((v) => v + 1)
+    fadeAnim.current?.setValue(0)
+  }, [])
+
+  useEffect(() => {
+    if (IS_WEB || !contentReady || !fadeAnim.current) return
+    Animated.timing(fadeAnim.current, {
+      toValue: 1,
+      duration: TRANSITION_MS,
+      useNativeDriver: true,
+    }).start()
+  }, [contentReady])
+
+  const webSkeletonStyle = useMemo(
+    () =>
+      IS_WEB
+        ? {
+            opacity: contentReady ? 0 : 1,
+            pointerEvents: (contentReady ? 'none' : 'auto') as 'none' | 'auto',
+            transition: `opacity ${TRANSITION_MS}ms ease-out`,
+          }
+        : null,
+    [contentReady],
+  )
+
+  const webContentStyle = useMemo(
+    () =>
+      IS_WEB
+        ? {
+            opacity: contentReady ? 1 : 0,
+            transition: `opacity ${TRANSITION_MS}ms ease-out`,
+          }
+        : null,
+    [contentReady],
+  )
+
+  const handleContentReady = useCallback(() => setContentReady(true), [])
+  const canMountContent = hydrated && isResponsiveHydrated
+
+  if (!isHomePath) {
+    return shouldRenderSeo ? renderHomeSeo(canonical) : null
+  }
+
+  return (
+    <>
+      {shouldRenderSeo && renderHomeSeo(canonical)}
+      <View style={styles.container}>
+        {IS_WEB && React.createElement('h1', { style: styles.srOnly as any }, SEO_TITLE)}
+
+        <ErrorBoundary
+          key={errorBoundaryRetryKey}
+          fallback={
+            <View style={styles.errorContainer}>
+              <ErrorDisplay
+                message="Не удалось загрузить главную страницу"
+                onRetry={handleHomeRetry}
+                variant="error"
+              />
+            </View>
+          }
+        >
+          <View style={styles.contentWrapper}>
+            {!contentReady && (
+              <View
+                style={[styles.skeletonLayer, webSkeletonStyle as any]}
+                testID="home-skeleton-layer"
+              >
+                <HomePageSkeleton />
+              </View>
+            )}
+
+            {canMountContent && (
+              <ContentLayer
+                style={styles.contentLayer}
+                webStyle={webContentStyle}
+                fadeAnim={fadeAnim.current}
+              >
+                <Suspense fallback={<HomePageSkeleton />}>
+                  <HomeWithReadyCallback onReady={handleContentReady} />
+                </Suspense>
+              </ContentLayer>
+            )}
+          </View>
+        </ErrorBoundary>
+      </View>
+    </>
+  )
+}
+
+function ContentLayer({
+  style,
+  webStyle,
+  fadeAnim,
+  children,
+}: {
+  style: any
+  webStyle: any
+  fadeAnim: Animated.Value | null
+  children: React.ReactNode
+}) {
+  if (IS_WEB) {
+    return <View style={[style, webStyle]}>{children}</View>
+  }
+  return <Animated.View style={[style, { opacity: fadeAnim ?? 1 }]}>{children}</Animated.View>
+}
+
 const HomeWithReadyCallback = React.memo<{ onReady: () => void }>(({ onReady }) => {
-    const hasSignaled = useRef(false);
-    
-    useEffect(() => {
-        if (!hasSignaled.current) {
-            hasSignaled.current = true;
-            // Signal ready on next frame to ensure render is complete
-            requestAnimationFrame(() => onReady());
-        }
-    }, [onReady]);
+  const hasSignaled = useRef(false)
+  useEffect(() => {
+    if (hasSignaled.current) return
+    hasSignaled.current = true
+    requestAnimationFrame(() => onReady())
+  }, [onReady])
+  return <Home />
+})
+HomeWithReadyCallback.displayName = 'HomeWithReadyCallback'
 
-    return <Home />;
-});
-
-HomeWithReadyCallback.displayName = 'HomeWithReadyCallback';
-
-const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: colors.background,
-    },
+const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
     srOnly: Platform.select({
-        web: {
-            position: 'absolute' as const,
-            width: 1,
-            height: 1,
-            padding: 0,
-            margin: -1,
-            overflow: 'hidden' as const,
-            clip: 'rect(0,0,0,0)',
-            whiteSpace: 'nowrap',
-            borderWidth: 0,
-        },
-        default: { display: 'none' as const },
+      web: {
+        position: 'absolute' as const,
+        width: 1,
+        height: 1,
+        padding: 0,
+        margin: -1,
+        overflow: 'hidden' as const,
+        clip: 'rect(0,0,0,0)',
+        whiteSpace: 'nowrap',
+        borderWidth: 0,
+      },
+      default: { display: 'none' as const },
     }) as any,
-    errorContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-    },
-    contentWrapper: {
-        flex: 1,
-        position: 'relative' as const,
-    },
-    skeletonLayer: {
-        ...StyleSheet.absoluteFillObject,
-        zIndex: 1,
-    },
-    contentLayer: {
-        flex: 1,
-    },
-});
+    errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+    contentWrapper: { flex: 1, position: 'relative' as const },
+    skeletonLayer: { ...StyleSheet.absoluteFillObject, zIndex: 1 },
+    contentLayer: { flex: 1 },
+  })
 
-export default React.memo(HomeScreen);
+export default React.memo(HomeScreen)

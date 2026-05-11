@@ -105,25 +105,25 @@ export const BOOK_IMAGES: readonly BookImage[] = [
 export const MOOD_CARDS: readonly MoodCard[] = [
   {
     title: 'У воды',
-    icon: 'wind',
+    icon: 'droplet',
     filters: { categoryTravelAddress: [84, 110, 113, 193] },
     route: '/search',
   },
   {
     title: 'Замки',
-    icon: 'bookmark',
+    icon: 'flag',
     filters: { categoryTravelAddress: [33, 43] },
     route: '/search',
   },
   {
     title: 'Руины',
-    icon: 'file-text',
+    icon: 'layers',
     filters: { categoryTravelAddress: [114, 115, 116, 117, 118, 119, 120] },
     route: '/search',
   },
   {
     title: 'Хайкинг',
-    icon: 'feather',
+    icon: 'trending-up',
     filters: { categories: [21, 22, 2] },
     route: '/search',
   },
