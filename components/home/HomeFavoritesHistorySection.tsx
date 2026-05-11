@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react'
-import { View, Text, StyleSheet, Platform, ScrollView } from 'react-native'
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useRouter } from 'expo-router'
 import { FlashList } from '@shopify/flash-list'
@@ -9,9 +9,12 @@ import { useFavorites } from '@/context/FavoritesContext'
 import TabTravelCard from '@/components/listTravel/TabTravelCard'
 import { ResponsiveContainer } from '@/components/layout'
 import { useResponsive } from '@/hooks/useResponsive'
-import { useTheme, useThemedColors } from '@/hooks/useTheme'
+import { useTheme, useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import Button from '@/components/ui/Button'
+
+const IS_WEB = Platform.OS === 'web'
+const MAX_ITEMS_PER_SHELF = 10
 
 type TravelLikeItem = {
   id: string | number
@@ -35,31 +38,57 @@ type ShelfSection = {
   titleTestID: string
 }
 
+type Styles = ReturnType<typeof createStyles>
+
+function mapToTravelLikeList(source: unknown): TravelLikeItem[] {
+  const arr = Array.isArray(source) ? source : []
+  return arr
+    .filter((item: any) => item && item.url)
+    .slice(0, MAX_ITEMS_PER_SHELF)
+    .map(
+      (item: any): TravelLikeItem => ({
+        id: item.id,
+        title: item.title,
+        imageUrl: item.imageUrl,
+        url: item.url,
+        country: item.country ?? null,
+        city: item.city ?? null,
+      }),
+    )
+}
+
+function toCardItem(item: TravelLikeItem) {
+  return {
+    id: item.id,
+    title: item.title,
+    imageUrl: item.imageUrl,
+    city: item.city ?? null,
+    country: item.country ?? (item as any).countryName ?? null,
+  }
+}
+
 function shouldHandleHorizontalWheelForElement(e: any, el: any) {
-  if (Platform.OS !== 'web') return
-  if (!el || typeof (el as any).scrollLeft !== 'number') return
+  if (!IS_WEB) return false
+  if (!el || typeof el.scrollLeft !== 'number') return false
 
   const deltaY = Number(e?.deltaY ?? 0)
   const deltaX = Number(e?.deltaX ?? 0)
-  if (!deltaY || Math.abs(deltaY) <= Math.abs(deltaX)) return
+  if (!deltaY || Math.abs(deltaY) <= Math.abs(deltaX)) return false
 
   const maxScrollLeft = (el.scrollWidth ?? 0) - (el.clientWidth ?? 0)
-  if (maxScrollLeft <= 0) return
+  if (maxScrollLeft <= 0) return false
 
   const isAtLeft = (el.scrollLeft ?? 0) <= 0
   const isAtRight = (el.scrollLeft ?? 0) >= maxScrollLeft
-  if ((isAtLeft && deltaY < 0) || (isAtRight && deltaY > 0)) return
-
+  if ((isAtLeft && deltaY < 0) || (isAtRight && deltaY > 0)) return false
   return true
 }
 
 function handleHorizontalWheelForElement(e: any, el: any, prevent: boolean) {
   if (!shouldHandleHorizontalWheelForElement(e, el)) return
-
   const deltaY = Number(e?.deltaY ?? 0)
-
   if (prevent && e?.cancelable) e.preventDefault?.()
-  ;(el as any).scrollLeft += deltaY
+  el.scrollLeft += deltaY
 }
 
 function SectionHeader({
@@ -80,8 +109,8 @@ function SectionHeader({
   countValue: number
   onSeeAll: () => void
   testID: string
-  styles: ReturnType<typeof createStyles>
-  colors: ReturnType<typeof useThemedColors>
+  styles: Styles
+  colors: ThemedColors
 }) {
   return (
     <View style={styles.sectionHeaderRow} testID={testID}>
@@ -116,6 +145,41 @@ function SectionHeader({
   )
 }
 
+function useHorizontalWheelBridge(
+  scrollRef: React.MutableRefObject<any>,
+  isMobile: boolean,
+) {
+  useEffect(() => {
+    if (!IS_WEB || isMobile) return
+    const target = scrollRef.current as any
+    const el = target?._nativeNode || target?._domNode || target
+    if (!el || typeof el.addEventListener !== 'function') return
+
+    let usingActive = false
+
+    const onWheelActive = (e: any) => handleHorizontalWheelForElement(e, el, true)
+
+    const onWheelPassive = (e: any) => {
+      handleHorizontalWheelForElement(e, el, false)
+      if (
+        !usingActive &&
+        e?.cancelable &&
+        shouldHandleHorizontalWheelForElement(e, el)
+      ) {
+        usingActive = true
+        el.removeEventListener('wheel', onWheelPassive)
+        el.addEventListener('wheel', onWheelActive, { passive: false } as any)
+      }
+    }
+
+    el.addEventListener('wheel', onWheelPassive, { passive: true } as any)
+    return () => {
+      el.removeEventListener('wheel', onWheelPassive)
+      el.removeEventListener('wheel', onWheelActive)
+    }
+  }, [isMobile, scrollRef])
+}
+
 function HorizontalCards({
   data,
   badge,
@@ -129,12 +193,13 @@ function HorizontalCards({
   badge?: { icon: 'clock' | 'favorite' }
   onPressItem: (url: string) => void
   testID: string
-  colors: ReturnType<typeof useThemedColors>
+  colors: ThemedColors
   isMobile: boolean
-  styles: ReturnType<typeof createStyles>
+  styles: Styles
 }) {
   const { isDark } = useTheme()
   const scrollRef = useRef<any>(null)
+
   const historyBadge = useMemo(
     () =>
       badge?.icon === 'clock'
@@ -147,21 +212,10 @@ function HorizontalCards({
     [badge?.icon, colors.overlay, colors.text, colors.textOnDark, isDark],
   )
 
-  const resolveScrollElement = useCallback(() => {
-    const target = scrollRef.current as any
-    return target?._nativeNode || target?._domNode || target
-  }, [])
-
-  const renderItem = useCallback(
+  const renderFlashItem = useCallback(
     ({ item }: { item: TravelLikeItem }) => (
       <TabTravelCard
-        item={{
-          id: item.id,
-          title: item.title,
-          imageUrl: item.imageUrl,
-          city: item.city ?? null,
-          country: item.country ?? (item as any).countryName ?? null,
-        }}
+        item={toCardItem(item)}
         badge={historyBadge}
         onPress={() => onPressItem(item.url)}
       />
@@ -174,71 +228,15 @@ function HorizontalCards({
     [],
   )
 
-  useEffect(() => {
-    if (Platform.OS !== 'web' || isMobile) return
-
-    const el = resolveScrollElement()
-    if (!el || typeof el.addEventListener !== 'function') return
-
-    let usingActive = false
-
-    const onWheelActive = (e: any) => {
-      handleHorizontalWheelForElement(e, el, true)
-    }
-
-    const onWheelPassive = (e: any) => {
-      handleHorizontalWheelForElement(e, el, false)
-      if (
-        !usingActive &&
-        e?.cancelable &&
-        shouldHandleHorizontalWheelForElement(e, el)
-      ) {
-        usingActive = true
-        try {
-          el.removeEventListener('wheel', onWheelPassive as any)
-        } catch {
-          // noop
-        }
-        try {
-          el.addEventListener(
-            'wheel',
-            onWheelActive as any,
-            { passive: false } as any,
-          )
-        } catch {
-          // noop
-        }
-      }
-    }
-
-    el.addEventListener(
-      'wheel',
-      onWheelPassive as any,
-      { passive: true } as any,
-    )
-    return () => {
-      try {
-        el.removeEventListener('wheel', onWheelPassive as any)
-        el.removeEventListener('wheel', onWheelActive as any)
-      } catch {
-        // noop
-      }
-    }
-  }, [isMobile, resolveScrollElement])
+  useHorizontalWheelBridge(scrollRef, isMobile)
 
   if (isMobile) {
     return (
       <View testID={testID} style={styles.mobileCardStack}>
         {data.map((item) => (
-          <View key={`${String(item.id)}-${item.url}`} style={styles.mobileCardStackItem}>
+          <View key={keyExtractor(item)} style={styles.mobileCardStackItem}>
             <TabTravelCard
-              item={{
-                id: item.id,
-                title: item.title,
-                imageUrl: item.imageUrl,
-                city: item.city ?? null,
-                country: item.country ?? (item as any).countryName ?? null,
-              }}
+              item={toCardItem(item)}
               badge={historyBadge}
               onPress={() => onPressItem(item.url)}
               layout="grid"
@@ -249,7 +247,7 @@ function HorizontalCards({
     )
   }
 
-  if (Platform.OS === 'web') {
+  if (IS_WEB) {
     return (
       <ScrollView
         testID={testID}
@@ -262,13 +260,7 @@ function HorizontalCards({
         {data.map((item) => (
           <TabTravelCard
             key={String(item.id)}
-            item={{
-              id: item.id,
-              title: item.title,
-              imageUrl: item.imageUrl,
-              city: item.city ?? null,
-              country: item.country ?? (item as any).countryName ?? null,
-            }}
+            item={toCardItem(item)}
             badge={historyBadge}
             onPress={() => onPressItem(item.url)}
           />
@@ -282,23 +274,18 @@ function HorizontalCards({
       testID={testID}
       horizontal
       data={data}
-      renderItem={renderItem}
+      renderItem={renderFlashItem}
       keyExtractor={keyExtractor}
       {...({ estimatedItemSize: 220 } as any)}
       showsHorizontalScrollIndicator={false}
       style={styles.horizontalList}
       contentContainerStyle={styles.horizontalListContent}
-      scrollEventThrottle={Platform.select({ web: 32, default: 16 })}
+      scrollEventThrottle={16}
       nestedScrollEnabled={Platform.OS === 'android'}
       directionalLockEnabled={Platform.OS === 'ios'}
       keyboardShouldPersistTaps="handled"
       bounces={Platform.OS === 'ios'}
       decelerationRate={Platform.OS === 'ios' ? 'fast' : 0.98}
-      {...Platform.select({
-        web: {
-          style: [styles.horizontalList, { touchAction: 'pan-x pan-y' } as any],
-        },
-      })}
       drawDistance={800}
     />
   )
@@ -311,52 +298,22 @@ function HomeFavoritesHistorySection() {
   const colors = useThemedColors()
   const { isPhone, isLargePhone } = useResponsive()
   const isMobile = isPhone || isLargePhone
-  const styles = useMemo(() => createStyles(colors, DESIGN_TOKENS, isMobile), [colors, isMobile])
+  const styles = useMemo(
+    () => createStyles(colors, DESIGN_TOKENS, isMobile),
+    [colors, isMobile],
+  )
 
   useEffect(() => {
-    if (!isAuthenticated) return
-    if (typeof ensureServerData !== 'function') return
-
+    if (!isAuthenticated || typeof ensureServerData !== 'function') return
     ensureServerData('favorites')
     ensureServerData('history')
   }, [ensureServerData, isAuthenticated])
 
-  const favoritesData = useMemo(() => {
-    const arr = Array.isArray(favorites) ? favorites : []
-    return arr
-      .filter((item: any) => item && item.url)
-      .slice(0, 10)
-      .map(
-        (item: any): TravelLikeItem => ({
-          id: item.id,
-          title: item.title,
-          imageUrl: item.imageUrl,
-          url: item.url,
-          country: item.country ?? null,
-          city: item.city ?? null,
-        }),
-      )
-  }, [favorites])
+  const favoritesData = useMemo(() => mapToTravelLikeList(favorites), [favorites])
+  const historyData = useMemo(() => mapToTravelLikeList(viewHistory), [viewHistory])
 
-  const historyData = useMemo(() => {
-    const arr = Array.isArray(viewHistory) ? viewHistory : []
-    return arr
-      .filter((item: any) => item && item.url)
-      .slice(0, 10)
-      .map(
-        (item: any): TravelLikeItem => ({
-          id: item.id,
-          title: item.title,
-          imageUrl: item.imageUrl,
-          url: item.url,
-          country: item.country ?? null,
-          city: item.city ?? null,
-        }),
-      )
-  }, [viewHistory])
-
-  const sections = useMemo(
-    (): ShelfSection[] =>
+  const sections = useMemo<ShelfSection[]>(
+    () =>
       (
         [
           {
@@ -387,11 +344,13 @@ function HomeFavoritesHistorySection() {
     [favoritesData, historyData],
   )
 
-  if (!isAuthenticated) {
-    return null
-  }
+  const openUrl = useCallback(
+    (url: string) => router.push(url as any),
+    [router],
+  )
 
-  // If both are empty — show a gentle nudge to explore routes
+  if (!isAuthenticated) return null
+
   if (sections.length === 0) {
     return (
       <View style={styles.band} testID="home-favorites-history-empty">
@@ -419,10 +378,6 @@ function HomeFavoritesHistorySection() {
         </ResponsiveContainer>
       </View>
     )
-  }
-
-  const openUrl = (url: string) => {
-    router.push(url as any)
   }
 
   return (
@@ -460,7 +415,7 @@ function HomeFavoritesHistorySection() {
 }
 
 const createStyles = (
-  colors: ReturnType<typeof useThemedColors>,
+  colors: ThemedColors,
   tokens: typeof DESIGN_TOKENS,
   isMobile: boolean,
 ) =>
@@ -471,13 +426,8 @@ const createStyles = (
       width: '100%',
       alignSelf: 'stretch',
     },
-    container: {
-      gap: 44,
-      width: '100%',
-    },
-    section: {
-      gap: 18,
-    },
+    container: { gap: 44, width: '100%' },
+    section: { gap: 18 },
     emptyContainer: {
       alignItems: 'center',
       paddingVertical: isMobile ? 32 : 48,
@@ -515,30 +465,20 @@ const createStyles = (
       backgroundColor: colors.surface,
       borderWidth: 1.5,
       borderColor: colors.border,
-      ...Platform.select({
-        web: { transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)' },
-      }),
+      ...Platform.select({ web: { transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)' } }),
     },
     emptyButtonHover: {
       backgroundColor: colors.primarySoft,
       borderColor: colors.primaryAlpha30,
     },
-    emptyButtonText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.text,
-    },
+    emptyButtonText: { fontSize: 14, fontWeight: '600', color: colors.text },
     sectionHeaderRow: {
-      flexDirection: Platform.OS === 'web' && !isMobile ? 'row' : 'column',
-      alignItems: Platform.OS === 'web' && !isMobile ? 'flex-end' : 'stretch',
+      flexDirection: IS_WEB && !isMobile ? 'row' : 'column',
+      alignItems: IS_WEB && !isMobile ? 'flex-end' : 'stretch',
       justifyContent: 'space-between',
       gap: 12,
     },
-    headerTitleBlock: {
-      flex: 1,
-      minWidth: 0,
-      gap: 8,
-    },
+    headerTitleBlock: { flex: 1, minWidth: 0, gap: 8 },
     headerEyebrow: {
       alignSelf: 'flex-start',
       flexDirection: 'row',
@@ -571,11 +511,7 @@ const createStyles = (
       color: colors.textMuted,
       lineHeight: 22,
     },
-    headerMetaRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-    },
+    headerMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     headerStatPill: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -586,22 +522,10 @@ const createStyles = (
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.borderLight,
-      ...Platform.select({
-        web: {
-          boxShadow: tokens.shadows.medium,
-        },
-      }),
+      ...Platform.select({ web: { boxShadow: tokens.shadows.medium } }),
     },
-    headerStatValue: {
-      fontSize: 13,
-      fontWeight: '800',
-      color: colors.text,
-    },
-    headerStatLabel: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: colors.textMuted,
-    },
+    headerStatValue: { fontSize: 13, fontWeight: '800', color: colors.text },
+    headerStatLabel: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
     seeAllButton: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -612,27 +536,16 @@ const createStyles = (
       backgroundColor: colors.surface,
       borderWidth: 1.5,
       borderColor: colors.borderLight,
-      ...Platform.select({
-        web: {
-          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-        },
-      }),
+      ...Platform.select({ web: { transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)' } }),
     },
     seeAllButtonHover: {
       backgroundColor: colors.primarySoft,
       borderColor: colors.primaryAlpha30,
       ...Platform.select({
-        web: {
-          transform: 'translateY(-2px)',
-          boxShadow: tokens.shadows.medium,
-        },
+        web: { transform: 'translateY(-2px)', boxShadow: tokens.shadows.medium },
       }),
     },
-    seeAllButtonText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: colors.text,
-    },
+    seeAllButtonText: { fontSize: 14, fontWeight: '700', color: colors.text },
     horizontalList: {
       width: '100%',
       ...Platform.select({
@@ -642,30 +555,16 @@ const createStyles = (
           overscrollBehaviorX: 'contain',
           WebkitOverflowScrolling: 'touch',
         } as any,
-        default: {},
       }),
     },
     horizontalListContent: {
       paddingTop: 8,
       paddingBottom: 4,
       flexDirection: 'row',
-      ...Platform.select({
-        web: {
-          minWidth: 'max-content',
-        } as any,
-        default: {},
-      }),
+      ...Platform.select({ web: { minWidth: 'max-content' } as any }),
     },
-    mobileCardStack: {
-      width: '100%',
-      gap: 14,
-      paddingTop: 8,
-      paddingBottom: 4,
-    },
-    mobileCardStackItem: {
-      width: '100%',
-      minWidth: 0,
-    },
+    mobileCardStack: { width: '100%', gap: 14, paddingTop: 8, paddingBottom: 4 },
+    mobileCardStackItem: { width: '100%', minWidth: 0 },
   })
 
 export default memo(HomeFavoritesHistorySection)

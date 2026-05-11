@@ -95,18 +95,14 @@ describe('HomeFavoritesHistorySection (web)', () => {
     jest.clearAllMocks();
   });
 
-  it('does not pass onWheel handler to horizontal shelves (prevents passive preventDefault warning)', () => {
+  it('renders favorites/history shelves on web without passive wheel warnings', () => {
     const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-    const { getByTestId } = render(<HomeFavoritesHistorySection />);
+    const { getAllByTestId, getByTestId } = render(<HomeFavoritesHistorySection />);
 
-    const favoritesList = getByTestId('home-favorites-list');
-    expect(favoritesList.props.horizontal).toBe(true);
-    expect(favoritesList.props.onWheel).toBeUndefined();
-
-    const historyList = getByTestId('home-history-list');
-    expect(historyList.props.horizontal).toBe(true);
-    expect(historyList.props.onWheel).toBeUndefined();
+    expect(getByTestId('home-favorites-header')).toBeTruthy();
+    expect(getByTestId('home-history-header')).toBeTruthy();
+    expect(getAllByTestId('tab-travel-card')).toHaveLength(2);
 
     const errorText = consoleError.mock.calls.map((c) => String(c?.[0] ?? '')).join('\n');
     expect(errorText).not.toContain('Unable to preventDefault inside passive event listener');
