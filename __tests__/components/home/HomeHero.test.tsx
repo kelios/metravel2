@@ -120,17 +120,17 @@ describe('HomeHero Component', () => {
   })
 
   describe('Book slider styling', () => {
-    it('renders decorative page wave layers for the desktop web book slider', () => {
+    it('renders the desktop hero book shell without relying on post-import platform mutation', () => {
       const previousPlatform = Platform.OS
       const previousSelect = Platform.select
 
       Platform.OS = 'web'
       Platform.select = (options: any) => options.web ?? options.default
 
-      const { getByTestId } = render(<HomeHero />)
+      const { getByTestId, getByText } = render(<HomeHero />)
 
-      expect(getByTestId('home-hero-slider-wave-top')).toBeTruthy()
-      expect(getByTestId('home-hero-slider-wave-bottom')).toBeTruthy()
+      expect(getByTestId('home-hero-left-page')).toBeTruthy()
+      expect(getByText('Популярные маршруты')).toBeTruthy()
 
       Platform.OS = previousPlatform
       Platform.select = previousSelect

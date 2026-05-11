@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -43,14 +42,30 @@ jest.mock('@/hooks/useKeyboardShortcuts', () => ({
 
 jest.mock('@/components/ui/ConfirmDialog', () => {
   const React = require('react');
-  const ConfirmDialogMock = ({ visible, onConfirm }: any) => {
+  const { Text, View } = require('react-native');
+  const ConfirmDialogMock = ({ visible, onConfirm, title, message }: any) => {
+    const confirmedRef = React.useRef(false);
+
     React.useEffect(() => {
-      if (visible && onConfirm) {
+      if (visible && onConfirm && !confirmedRef.current) {
+        confirmedRef.current = true;
         onConfirm();
+      }
+      if (!visible) {
+        confirmedRef.current = false;
       }
     }, [visible, onConfirm]);
 
-    return null;
+    if (!visible) {
+      return null;
+    }
+
+    return (
+      <View testID="confirm-dialog-mock">
+        {typeof title === 'string' ? <Text>{title}</Text> : null}
+        {typeof message === 'string' ? <Text>{message}</Text> : null}
+      </View>
+    );
   };
 
   return {
@@ -137,7 +152,6 @@ describe('ListTravel', () => {
 
     // Reset global mocks for delete flow
     (global as any).fetch = jest.fn();
-    ;(globalThis as any).confirm = jest.fn(() => true);
 
     // значения по умолчанию для большинства тестов
     mockUseAuth.mockReset();
@@ -241,24 +255,17 @@ describe('ListTravel', () => {
     const originalOS = Platform.OS;
     (Platform as any).OS = 'web';
 
-    const originalAlert = (global as any).alert;
-    const alertSpy = jest.fn();
-    (global as any).alert = alertSpy;
-
     renderComponent();
 
-    const confirmSpy = (globalThis as any).confirm as jest.Mock;
     await waitFor(() => {
-      expect(confirmSpy).toHaveBeenCalled();
+      expect(travelsApi.deleteTravel).toHaveBeenCalledWith('1');
     });
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Превышено время ожидания'));
+      expect(screen.getByText(/Превышено время ожидания/i)).toBeTruthy();
     });
 
-    // Restore original values
     (Platform as any).OS = originalOS;
-    (global as any).alert = originalAlert;
   });
 
   it('shows access denied error message when deleteTravel fails with 403 on web', async () => {
@@ -275,24 +282,17 @@ describe('ListTravel', () => {
     const originalOS = Platform.OS;
     (Platform as any).OS = 'web';
 
-    const originalAlert = (global as any).alert;
-    const alertSpy = jest.fn();
-    (global as any).alert = alertSpy;
-
     renderComponent();
 
-    const confirmSpy = (globalThis as any).confirm as jest.Mock;
     await waitFor(() => {
-      expect(confirmSpy).toHaveBeenCalled();
+      expect(travelsApi.deleteTravel).toHaveBeenCalledWith('2');
     });
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Нет доступа'));
+      expect(screen.getByText(/Нет доступа/i)).toBeTruthy();
     });
 
-    // Restore original values
     (Platform as any).OS = originalOS;
-    (global as any).alert = originalAlert;
   });
 
   it('treats 404 on delete as already removed and does not show alert on web', async () => {
@@ -311,27 +311,17 @@ describe('ListTravel', () => {
     const originalOS = Platform.OS;
     (Platform as any).OS = 'web';
 
-    const originalAlert = (global as any).alert;
-    const alertSpy = jest.fn();
-    (global as any).alert = alertSpy;
-
     renderComponent();
-
-    const confirmSpy = (globalThis as any).confirm as jest.Mock;
-    await waitFor(() => {
-      expect(confirmSpy).toHaveBeenCalled();
-    });
 
     await waitFor(() => {
       expect(travelsApi.deleteTravel).toHaveBeenCalledWith('2977');
     });
 
     await waitFor(() => {
-      expect(alertSpy).not.toHaveBeenCalled();
+      expect(screen.queryByTestId('confirm-dialog-mock')).toBeNull();
     });
 
     (Platform as any).OS = originalOS;
-    (global as any).alert = originalAlert;
   });
 
   it('calls DELETE endpoint after confirming deletion on web', async () => {
@@ -348,14 +338,8 @@ describe('ListTravel', () => {
     const originalOS = Platform.OS;
     (Platform as any).OS = 'web';
 
-    const confirmSpy = (globalThis as any).confirm as jest.Mock;
-    confirmSpy.mockReturnValueOnce(true);
-
     renderComponent();
 
-    await waitFor(() => {
-      expect(confirmSpy).toHaveBeenCalled();
-    });
 
     await waitFor(() => {
       expect(travelsApi.deleteTravel).toHaveBeenCalledTimes(1);

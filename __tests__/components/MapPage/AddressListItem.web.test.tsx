@@ -124,7 +124,7 @@ describe('AddressListItem (web right panel)', () => {
     expect(getAllByLabelText('Сохранить').length).toBeGreaterThan(0);
     expect(queryByLabelText('Открыть в Organic Maps')).toBeNull();
     expect(queryByLabelText('Проложить маршрут в Waze')).toBeNull();
-    expect(queryByLabelText('Проложить маршрут в Яндекс Навигаторе')).toBeNull();
+    expect(queryByLabelText('Проложить маршрут в Яндекс.Навигаторе')).toBeNull();
 
     fireEvent.press(getAllByLabelText('Открыть в Google Maps')[0]);
     await waitFor(() => {
@@ -137,7 +137,7 @@ describe('AddressListItem (web right panel)', () => {
     await waitFor(() => {
       expect(getAllByLabelText('Открыть в Organic Maps').length).toBeGreaterThan(0);
       expect(getAllByLabelText('Проложить маршрут в Waze').length).toBeGreaterThan(0);
-      expect(getAllByLabelText('Проложить маршрут в Яндекс Навигаторе').length).toBeGreaterThan(0);
+      expect(getAllByLabelText('Проложить маршрут в Яндекс.Навигаторе').length).toBeGreaterThan(0);
     });
 
     fireEvent.press(getAllByLabelText('Открыть в Organic Maps')[0]);
@@ -156,7 +156,7 @@ describe('AddressListItem (web right panel)', () => {
 
     fireEvent.press(getAllByLabelText('Ещё действия')[0]);
 
-    fireEvent.press(getAllByLabelText('Проложить маршрут в Яндекс Навигаторе')[0]);
+    fireEvent.press(getAllByLabelText('Проложить маршрут в Яндекс.Навигаторе')[0]);
     await waitFor(() => {
       const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
       expect(calls.some((v) => v.includes('yandex.ru/navi'))).toBe(true);
