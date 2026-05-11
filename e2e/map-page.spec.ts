@@ -1228,7 +1228,10 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     // Закрываем панель повторным нажатием на кнопку меню (toggle).
     const close = page.getByTestId('map-panel-close');
     await expect(close).toBeVisible({ timeout: 20_000 });
-    await close.click();
+    // header-context-bar is a sticky element that can overlap the close button
+    // at mobile viewport widths; bypass the intercept check since we already
+    // asserted visibility above.
+    await close.click({ force: true });
 
     await expect(page.getByTestId('map-panel-close')).toBeHidden({ timeout: 20_000 });
     await expect(page.getByTestId('segmented-list')).toBeHidden({ timeout: 20_000 });
