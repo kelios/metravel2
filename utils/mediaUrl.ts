@@ -108,3 +108,11 @@ export const normalizeMediaUrl = (url?: string | null): string => {
 
   return safeUrl;
 };
+
+export const normalizeAvatarUrl = (url?: string | null): string => {
+  const value = String(url ?? '').trim();
+  if (!value) return '';
+  const lower = value.toLowerCase();
+  if (lower === 'null' || lower === 'undefined') return '';
+  return normalizeMediaUrl(value);
+};

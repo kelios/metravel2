@@ -7,6 +7,7 @@ import { rateArticle, getArticleRating, ArticleRatingResponse } from '@/api/arti
 import { useAuth } from '@/context/AuthContext';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { showToast } from '@/utils/toast';
+import { calculateNewRating } from '@/utils/ratingHelpers';
 
 type UseArticleRatingOptions = {
     articleId: number | undefined;
@@ -126,27 +127,6 @@ export function useArticleRating({
         handleRate,
         error: ratingQuery.error || rateMutation.error,
     };
-}
-
-function calculateNewRating(
-    currentRating: number,
-    count: number,
-    newValue: number,
-    previousUserRating: number | null
-): number {
-    if (count === 0) return newValue;
-
-    if (previousUserRating !== null && previousUserRating !== 0) {
-        // Пользователь меняет свою оценку
-        const totalSum = currentRating * count;
-        const newSum = totalSum - previousUserRating + newValue;
-        return Number((newSum / count).toFixed(1));
-    } else {
-        // Пользователь ставит оценку впервые
-        const totalSum = currentRating * count;
-        const newSum = totalSum + newValue;
-        return Number((newSum / (count + 1)).toFixed(1));
-    }
 }
 
 export default useArticleRating;

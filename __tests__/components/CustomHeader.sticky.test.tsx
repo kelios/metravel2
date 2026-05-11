@@ -1,6 +1,7 @@
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
 import { Platform, StyleSheet } from 'react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import CustomHeader from '@/components/layout/CustomHeader';
 
@@ -60,9 +61,14 @@ describe('CustomHeader sticky behavior on web', () => {
   it('applies sticky positioning with high z-index on web', async () => {
     Object.defineProperty(Platform, 'OS', { value: 'web' });
 
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     let tree: renderer.ReactTestRenderer;
     await act(async () => {
-      tree = renderer.create(<CustomHeader />);
+      tree = renderer.create(
+        <QueryClientProvider client={queryClient}>
+          <CustomHeader />
+        </QueryClientProvider>,
+      );
     });
     const header = tree.root.findByProps({ testID: 'main-header' });
     const style = StyleSheet.flatten(header.props.style);

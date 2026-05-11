@@ -1,12 +1,5 @@
-// E11: Refactored — state/logic extracted to useTravelHeroState hook
-import React, {
-  Suspense,
-} from 'react'
-import {
-  Platform,
-  Text,
-  View,
-} from 'react-native'
+import React, { Suspense, useMemo } from 'react'
+import { Platform, Text, View } from 'react-native'
 
 import type { Travel } from '@/types/types'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
@@ -18,33 +11,48 @@ import type { AnchorsMap } from './TravelDetailsTypes'
 import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
 import { useTravelHeroState } from '@/hooks/useTravelHeroState'
 import { useTravelDetailsHeroCompositionModel } from './hooks/useTravelDetailsHeroCompositionModel'
+import { useTravelHeroExtrasModel } from './hooks/useTravelHeroExtrasModel'
 import {
   OptimizedLCPHero,
   OVERLAY_TRANSITION_MS,
 } from './TravelDetailsOptimizedLCPHero'
 
-const TravelHeroFavoriteToggleLazy = React.lazy(() =>
+const FavoriteToggleLazy = React.lazy(() =>
   import('./TravelHeroFavoriteToggle').then((m) => ({
     default: m.TravelHeroFavoriteToggle ?? m.default,
   })),
 )
-const TravelHeroExtrasLazy = React.lazy(() =>
+const ExtrasLazy = React.lazy(() =>
   import('./TravelHeroExtras').then((m) => ({
     default: m.TravelHeroExtras ?? m.default,
   })),
 )
-const TravelHeroInteractiveSliderLazy = React.lazy(() =>
+const InteractiveSliderLazy = React.lazy(() =>
   import('./TravelHeroInteractiveSlider'),
 )
-const ABSOLUTE_FILL_STYLE = {
+
+const ABSOLUTE_FILL = {
   position: 'absolute',
   top: 0,
   right: 0,
   bottom: 0,
   left: 0,
-} as any
+} as const
 
-/* ---- TravelHeroSectionInner ---- */
+const HERO_OVERLAY_NO_POINTER = { pointerEvents: 'none' } as const
+const HERO_TITLE_POINTER_AUTO = { pointerEvents: 'auto' } as const
+
+type Props = {
+  travel: Travel
+  anchors: AnchorsMap
+  isMobile: boolean
+  renderSlider?: boolean
+  onFirstImageLoad: () => void
+  sectionLinks: TravelSectionLink[]
+  onQuickJump: (key: string) => void
+  deferExtras?: boolean
+}
+
 function TravelHeroSectionInner({
   travel,
   anchors,
@@ -54,16 +62,7 @@ function TravelHeroSectionInner({
   sectionLinks,
   onQuickJump,
   deferExtras = false,
-}: {
-  travel: Travel
-  anchors: AnchorsMap
-  isMobile: boolean
-  renderSlider?: boolean
-  onFirstImageLoad: () => void
-  sectionLinks: TravelSectionLink[]
-  onQuickJump: (key: string) => void
-  deferExtras?: boolean
-}) {
+}: Props) {
   const styles = useTravelDetailsHeroStyles()
 
   const {
@@ -89,8 +88,8 @@ function TravelHeroSectionInner({
     handleCloseFullscreen,
     handleHeroContainerLayout,
     handleImagePress,
-    shouldRenderWebOptimizedHero,
-    shouldRenderWebSlider,
+    shouldRenderWebOptimizedHero: useLcpOverlayFlow,
+    shouldRenderWebSlider: mountSliderUnderOverlay,
     sliderPreloadCount,
   } = useTravelDetailsHeroCompositionModel({
     firstImg,
@@ -103,47 +102,93 @@ function TravelHeroSectionInner({
     webHeroLoaded,
   })
 
+  const { quickJumpLinks, showQuickJumps } = useTravelHeroExtrasModel(sectionLinks)
+  const willRenderQuickJumps = showQuickJumps && quickJumpLinks.length > 0
+  const showFavoriteToggle = !deferExtras && (!(Platform.OS === 'web') || extrasReady)
+
+  const heroContainerStyle = useMemo(
+    () => [
+      styles.sliderContainer,
+      { height: heroHeight },
+      Platform.OS === 'web' ? ({ overflow: 'hidden' } as const) : null,
+    ],
+    [styles.sliderContainer, heroHeight],
+  )
+
+  const sliderUnderOverlayStyle = useMemo(
+    () => [
+      ABSOLUTE_FILL,
+      {
+        opacity: overlayUnmounted ? 1 : 0,
+        pointerEvents: (overlayUnmounted ? 'auto' : 'none') as 'auto' | 'none',
+        transition: `opacity ${OVERLAY_TRANSITION_MS}ms ease`,
+      },
+    ],
+    [overlayUnmounted],
+  )
+
+  const lcpOverlayStyle = useMemo(
+    () => [
+      ABSOLUTE_FILL,
+      {
+        zIndex: 5,
+        opacity: isOverlayFading ? 0 : 1,
+        pointerEvents: 'none' as const,
+        transition: `opacity ${OVERLAY_TRANSITION_MS}ms ease`,
+      },
+    ],
+    [isOverlayFading],
+  )
+
+  const sectionAndStable = useMemo(
+    () => [styles.sectionContainer, styles.contentStable, { marginBottom: 0 }],
+    [styles.sectionContainer, styles.contentStable],
+  )
+
+  const heroOverlayStyle = useMemo(
+    () => [styles.heroOverlay, HERO_OVERLAY_NO_POINTER],
+    [styles.heroOverlay],
+  )
+  const heroTitleWrapStyle = useMemo(
+    () => [styles.heroTitleWrap, HERO_TITLE_POINTER_AUTO],
+    [styles.heroTitleWrap],
+  )
+
+  if (!firstImg) {
+    return <ExtrasSlot
+      styles={styles}
+      extrasReady={extrasReady}
+      willRenderQuickJumps={willRenderQuickJumps}
+      quickJumpChipCount={quickJumpLinks.length}
+      travel={travel}
+      isMobile={isMobile}
+      sectionLinks={sectionLinks}
+      onQuickJump={onQuickJump}
+    />
+  }
+
   return (
     <>
-      {firstImg ? (
+      <View
+        testID="travel-details-hero"
+        ref={anchors.gallery}
+        accessibilityRole="none"
+        accessibilityLabel="Геройский блок с изображением, заголовком и кнопкой избранного"
+        {...(Platform.OS === 'web' ? { 'data-section-key': 'gallery' } : null)}
+        style={sectionAndStable}
+      >
         <View
-          testID="travel-details-hero"
-          ref={anchors.gallery}
-          accessibilityRole="none"
-          accessibilityLabel="Геройский блок с изображением, заголовком и кнопкой избранного"
-          {...(Platform.OS === 'web' ? { 'data-section-key': 'gallery' } : {})}
-          style={[
-            styles.sectionContainer,
-            styles.contentStable,
-            { marginBottom: 0 },
-          ]}
+          testID="travel-details-hero-slider-container"
+          style={heroContainerStyle}
+          collapsable={false}
+          onLayout={handleHeroContainerLayout}
         >
-          <View
-            testID="travel-details-hero-slider-container"
-            style={[
-              styles.sliderContainer,
-              { height: heroHeight },
-              Platform.OS === 'web' && ({ overflow: 'hidden' } as any),
-            ]}
-            collapsable={false}
-            onLayout={handleHeroContainerLayout}
-          >
-            {shouldRenderWebOptimizedHero ? (
+          {useLcpOverlayFlow ? (
             <>
-              {shouldRenderWebSlider ? (
-                <View
-                  style={[
-                    ABSOLUTE_FILL_STYLE,
-                    {
-                      opacity: overlayUnmounted ? 1 : 0,
-                      pointerEvents: overlayUnmounted ? 'auto' : 'none',
-                      transition: `opacity ${OVERLAY_TRANSITION_MS}ms ease`,
-                    },
-                  ]}
-                  collapsable={false}
-                >
+              {mountSliderUnderOverlay && (
+                <View style={sliderUnderOverlayStyle} collapsable={false}>
                   <Suspense fallback={null}>
-                    <TravelHeroInteractiveSliderLazy
+                    <InteractiveSliderLazy
                       visible
                       galleryImages={heroSliderImages}
                       isMobile={isMobile}
@@ -156,28 +201,11 @@ function TravelHeroSectionInner({
                     />
                   </Suspense>
                 </View>
-              ) : null}
+              )}
               {!overlayUnmounted && (
-                <View
-                  style={[
-                    ABSOLUTE_FILL_STYLE,
-                    {
-                      zIndex: 5,
-                      opacity: isOverlayFading ? 0 : 1,
-                      transition: `opacity ${OVERLAY_TRANSITION_MS}ms ease`,
-                      pointerEvents: 'none',
-                    },
-                  ]}
-                  collapsable={false}
-                >
+                <View style={lcpOverlayStyle} collapsable={false}>
                   <OptimizedLCPHero
-                    img={{
-                      url: firstImg.url,
-                      width: firstImg.width,
-                      height: firstImg.height,
-                      updated_at: firstImg.updated_at,
-                      id: firstImg.id,
-                    }}
+                    img={firstImg}
                     alt={heroAlt}
                     height={heroHeight}
                     isMobile={isMobile}
@@ -187,92 +215,123 @@ function TravelHeroSectionInner({
                 </View>
               )}
             </>
-            ) : (
-              <Suspense fallback={null}>
-                <TravelHeroInteractiveSliderLazy
-                  visible
-                  galleryImages={heroSliderImages}
-                  isMobile={isMobile}
-                  aspectRatio={aspectRatio as number}
-                  preloadCount={sliderPreloadCount}
-                  onFirstImageLoad={onFirstImageLoad}
-                  firstImagePreloaded={renderSlider && Platform.OS === 'web'}
-                  onImagePress={handleImagePress}
-                  fullscreenVisible={fullscreenVisible}
-                  fullscreenIndex={fullscreenIndex}
-                  onCloseFullscreen={handleCloseFullscreen}
-                />
-              </Suspense>
-            )}
-
-            {travel?.name ? (
-              <View style={[styles.heroOverlay, { pointerEvents: 'none' }]}>
-                <View style={[styles.heroTitleWrap, { pointerEvents: 'auto' } as any]}>
-                  <Text
-                    style={styles.heroTitle}
-                    numberOfLines={2}
-                    accessibilityRole="header"
-                  >
-                    {travel.name}
-                  </Text>
-                </View>
-              </View>
-            ) : null}
-
-            {(Platform.OS !== 'web' || extrasReady) && (
-              <Suspense fallback={null}>
-                <TravelHeroFavoriteToggleLazy
-                  travel={travel}
-                  isMobile={isMobile}
-                />
-              </Suspense>
-            )}
-          </View>
-        </View>
-      ) : null}
-
-      {extrasReady ? (
-        <Suspense fallback={null}>
-          <TravelHeroExtrasLazy
-            travel={travel}
-            isMobile={isMobile}
-            sectionLinks={sectionLinks}
-            onQuickJump={onQuickJump}
-          />
-        </Suspense>
-      ) : (
-        <>
-          <View
-            testID="travel-details-quick-facts"
-            accessibilityRole="none"
-            accessibilityLabel="Краткие факты"
-            style={[
-              styles.sectionContainer,
-              styles.contentStable,
-              styles.quickFactsContainer,
-            ]}
-          >
-            <QuickFactsSkeleton />
-          </View>
-          {sectionLinks.length > 0 && (
-            <View
-              style={[
-                styles.sectionContainer,
-                styles.contentStable,
-                styles.quickJumpWrapper,
-              ]}
-            >
-              <QuickJumpSkeleton />
-            </View>
+          ) : (
+            <Suspense fallback={null}>
+              <InteractiveSliderLazy
+                visible
+                galleryImages={heroSliderImages}
+                isMobile={isMobile}
+                aspectRatio={aspectRatio as number}
+                preloadCount={sliderPreloadCount}
+                onFirstImageLoad={onFirstImageLoad}
+                firstImagePreloaded={renderSlider && (Platform.OS === 'web')}
+                onImagePress={handleImagePress}
+                fullscreenVisible={fullscreenVisible}
+                fullscreenIndex={fullscreenIndex}
+                onCloseFullscreen={handleCloseFullscreen}
+              />
+            </Suspense>
           )}
-        </>
-      )}
+
+          {travel?.name ? (
+            <View style={heroOverlayStyle}>
+              <View style={heroTitleWrapStyle}>
+                <Text
+                  style={styles.heroTitle}
+                  numberOfLines={2}
+                  accessibilityRole="header"
+                >
+                  {travel.name}
+                </Text>
+              </View>
+            </View>
+          ) : null}
+
+          {showFavoriteToggle && (
+            <Suspense fallback={null}>
+              <FavoriteToggleLazy travel={travel} isMobile={isMobile} />
+            </Suspense>
+          )}
+        </View>
+      </View>
+
+      <ExtrasSlot
+        styles={styles}
+        extrasReady={extrasReady}
+        willRenderQuickJumps={willRenderQuickJumps}
+        quickJumpChipCount={quickJumpLinks.length}
+        travel={travel}
+        isMobile={isMobile}
+        sectionLinks={sectionLinks}
+        onQuickJump={onQuickJump}
+      />
     </>
   )
 }
 
-export const TravelHeroSection = React.memo(
-  TravelHeroSectionInner as React.FC<any>,
-)
+type ExtrasSlotProps = {
+  styles: ReturnType<typeof useTravelDetailsHeroStyles>
+  extrasReady: boolean
+  willRenderQuickJumps: boolean
+  quickJumpChipCount: number
+  travel: Travel
+  isMobile: boolean
+  sectionLinks: TravelSectionLink[]
+  onQuickJump: (key: string) => void
+}
+
+function ExtrasSlot({
+  styles,
+  extrasReady,
+  willRenderQuickJumps,
+  quickJumpChipCount,
+  travel,
+  isMobile,
+  sectionLinks,
+  onQuickJump,
+}: ExtrasSlotProps) {
+  const skeleton = (
+    <>
+      <View
+        testID="travel-details-quick-facts"
+        accessibilityRole="none"
+        accessibilityLabel="Краткие факты"
+        style={[
+          styles.sectionContainer,
+          styles.contentStable,
+          styles.quickFactsContainer,
+        ]}
+      >
+        <QuickFactsSkeleton />
+      </View>
+      {willRenderQuickJumps && (
+        <View
+          style={[
+            styles.sectionContainer,
+            styles.contentStable,
+            styles.quickJumpWrapper,
+          ]}
+        >
+          <QuickJumpSkeleton chipCount={quickJumpChipCount} />
+        </View>
+      )}
+    </>
+  )
+
+  if (!extrasReady) return skeleton
+
+  return (
+    <Suspense fallback={skeleton}>
+      <ExtrasLazy
+        travel={travel}
+        isMobile={isMobile}
+        sectionLinks={sectionLinks}
+        onQuickJump={onQuickJump}
+      />
+    </Suspense>
+  )
+}
+
+export const TravelHeroSection = React.memo(TravelHeroSectionInner)
 export { OptimizedLCPHero }
 export const __testables = { OptimizedLCPHero, TravelHeroSection }

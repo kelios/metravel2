@@ -20,6 +20,7 @@ import { useFavorites } from '@/context/FavoritesContext';
 import { useDeferredUnreadCount } from '@/hooks/useDeferredUnreadCount';
 import { useAvatarUri } from '@/hooks/useAvatarUri';
 import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
+import { routes } from '@/utils/routes';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
@@ -150,7 +151,7 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
 
   const handleOpenPublicProfile = useCallback(() => {
     if (!userId) return;
-    router.push(`/user/${userId}` as any);
+    router.push(routes.user(userId));
   }, [userId]);
 
   const displayName = isAuthenticated && username ? username : 'Гость';

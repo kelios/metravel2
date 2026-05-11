@@ -148,6 +148,8 @@ jest.mock('@/components/travel/TravelDetailSkeletons', () => ({
   MapSkeleton: () => null,
   PointListSkeleton: () => null,
   TravelListSkeleton: () => null,
+  QuickFactsSkeleton: () => null,
+  QuickJumpSkeleton: () => null,
 }));
 
 jest.mock('@/components/travel/NearTravelList', () => ({

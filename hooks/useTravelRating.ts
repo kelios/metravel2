@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { showToast } from '@/utils/toast';
 import { queryKeys } from '@/queryKeys';
+import { calculateNewRating } from '@/utils/ratingHelpers';
 
 type UseTravelRatingOptions = {
     travelId: number | undefined;
@@ -186,30 +187,6 @@ export function useTravelRating({
         handleRate,
         error: userRatingQuery.error || rateMutation.error,
     };
-}
-
-/**
- * Вычисляет приблизительный новый рейтинг при добавлении/изменении оценки
- */
-function calculateNewRating(
-    currentRating: number,
-    count: number,
-    newValue: number,
-    previousUserRating: number | null
-): number {
-    if (count === 0) return newValue;
-
-    if (previousUserRating !== null && previousUserRating !== 0) {
-        // Пользователь меняет свою оценку
-        const totalSum = currentRating * count;
-        const newSum = totalSum - previousUserRating + newValue;
-        return Number((newSum / count).toFixed(1));
-    } else {
-        // Пользователь ставит оценку впервые
-        const totalSum = currentRating * count;
-        const newSum = totalSum + newValue;
-        return Number((newSum / (count + 1)).toFixed(1));
-    }
 }
 
 export default useTravelRating;

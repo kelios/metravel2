@@ -3,6 +3,14 @@
  * Веб-версия
  */
 
+// Hoisted by jest. Forces Platform.OS = 'web' before SUT loads (module-level IS_WEB cache).
+jest.mock('react-native', () => {
+  const RN = jest.requireActual('react-native');
+  Object.defineProperty(RN.Platform, 'OS', { value: 'web', configurable: true, writable: true });
+  RN.Platform.select = (obj: any) => obj.web ?? obj.default;
+  return RN;
+});
+
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { Platform, StyleSheet } from 'react-native';

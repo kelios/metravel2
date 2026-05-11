@@ -72,7 +72,9 @@ export const QuickFactsSkeleton: React.FC = () => {
   )
 }
 
-export const QuickJumpSkeleton: React.FC = () => {
+const QUICK_JUMP_CHIP_WIDTHS = [148, 116, 138, 132, 124]
+
+export const QuickJumpSkeleton: React.FC<{ chipCount?: number }> = ({ chipCount = 3 }) => {
   const styles = useMemo(() => StyleSheet.create({
     row: {
       flexDirection: 'row',
@@ -82,11 +84,18 @@ export const QuickJumpSkeleton: React.FC = () => {
     },
   }), [])
 
+  const widths = useMemo(
+    () => Array.from({ length: Math.max(0, chipCount) }, (_, i) =>
+      QUICK_JUMP_CHIP_WIDTHS[i % QUICK_JUMP_CHIP_WIDTHS.length],
+    ),
+    [chipCount],
+  )
+
   return (
     <View style={styles.row}>
-      <SkeletonLoader width={148} height={38} borderRadius={DESIGN_TOKENS.radii.sm} />
-      <SkeletonLoader width={116} height={38} borderRadius={DESIGN_TOKENS.radii.sm} />
-      <SkeletonLoader width={138} height={38} borderRadius={DESIGN_TOKENS.radii.sm} />
+      {widths.map((w, i) => (
+        <SkeletonLoader key={i} width={w} height={38} borderRadius={DESIGN_TOKENS.radii.sm} />
+      ))}
     </View>
   )
 }

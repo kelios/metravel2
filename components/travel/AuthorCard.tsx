@@ -1,224 +1,164 @@
-/**
- * Компонент карточки автора для основного контента
- * Показывает информацию об авторе путешествия для установления доверия
- * ✅ РЕДИЗАЙН: Поддержка темной темы + компактный дизайн
- */
+import React, { useCallback, useMemo } from 'react'
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { useRouter } from 'expo-router'
+import Feather from '@expo/vector-icons/Feather'
 
-import React, { useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, type ViewProps } from 'react-native';
-import { useRouter } from 'expo-router';
-import Feather from '@expo/vector-icons/Feather';
-import type { Travel } from '@/types/types';
-import { openExternalUrl } from '@/utils/externalLinks';
-import { useAuth } from '@/context/AuthContext';
-import { useUserProfileCached } from '@/hooks/useUserProfileCached';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useResponsive } from '@/hooks/useResponsive';
-import { useThemedColors } from '@/hooks/useTheme';
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
-import SubscribeButton from '@/components/ui/SubscribeButton';
-import { getTravelLabel } from '@/services/pdf-export/utils/pluralize';
+import type { Travel } from '@/types/types'
+import { openExternalUrl } from '@/utils/externalLinks'
+import { useAuth } from '@/context/AuthContext'
+import { useUserProfileCached } from '@/hooks/useUserProfileCached'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { useResponsive } from '@/hooks/useResponsive'
+import { useThemedColors } from '@/hooks/useTheme'
+import ImageCardMedia from '@/components/ui/ImageCardMedia'
+import { normalizeAvatarUrl } from '@/utils/mediaUrl'
+import { routes } from '@/utils/routes'
+import SubscribeButton from '@/components/ui/SubscribeButton'
+import { getTravelLabel } from '@/services/pdf-export/utils/pluralize'
 
-interface AuthorCardProps {
-  travel: Travel;
-  onViewAuthorTravels?: () => void;
+const STRICT_PLACEHOLDER = /^[.\s·•]+$|^Автор|^Пользователь|^User/i
+const LOOSE_PLACEHOLDER = /^[.\s·•]{4,}$|^Автор|^Пользователь|^User|^Anonymous/i
+
+function cleanName(value: unknown, placeholder: RegExp): string {
+  if (typeof value !== 'string') return ''
+  const trimmed = value.trim()
+  if (!trimmed || placeholder.test(trimmed)) return ''
+  return trimmed
 }
 
-function SafeView({ children, ...rest }: ViewProps) {
-  const safeChildren = React.Children.toArray(children).filter((child) => typeof child !== 'string');
-  return <View {...rest}>{safeChildren}</View>;
+function resolveAuthorName(travel: any): string {
+  const user = travel?.user
+  if (user) {
+    const firstName = (user.first_name || user.name || '').toString().trim()
+    if (firstName) {
+      const lastName = (user.last_name || '').toString().trim()
+      return lastName ? `${firstName} ${lastName}` : firstName
+    }
+  }
+  const direct =
+    travel?.author_name || travel?.authorName || travel?.owner_name || travel?.ownerName
+  const directClean = cleanName(direct, STRICT_PLACEHOLDER)
+  if (directClean) return directClean
+  return cleanName(travel?.userName, LOOSE_PLACEHOLDER)
+}
+
+function resolveAuthorId(travel: any): number | string | null {
+  const direct = travel?.user?.id ?? travel?.userId ?? travel?.user_id
+  if (direct != null) return direct
+
+  const raw = travel?.userIds
+  if (Array.isArray(raw) && raw.length > 0) return raw[0]
+  if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) return raw
+  if (typeof raw === 'string' && raw.trim()) {
+    const n = Number(raw.split(',')[0].trim())
+    if (Number.isFinite(n) && n > 0) return n
+  }
+  return null
+}
+
+function resolveAuthorCountry(profile: any, travel: any): string {
+  const raw =
+    profile?.countryName ||
+    profile?.country_name ||
+    profile?.country ||
+    travel?.user?.countryName ||
+    travel?.user?.country_name ||
+    travel?.user?.country ||
+    ''
+  const value = String(raw).trim().toLowerCase()
+  if (!value || value === 'null' || value === 'undefined') return ''
+  return String(raw).trim()
+}
+
+function resolveSocials(profile: any) {
+  if (!profile) return []
+  const items = [
+    { key: 'youtube', label: 'YouTube', url: profile.youtube },
+    { key: 'instagram', label: 'Instagram', url: profile.instagram },
+    { key: 'twitter', label: 'Twitter', url: profile.twitter },
+    { key: 'vk', label: 'VK', url: profile.vk },
+  ]
+  return items.filter((s) => String(s.url ?? '').trim())
+}
+
+function getAvatarSize(isMobile: boolean, isTablet: boolean): number {
+  if (isMobile) return 64
+  if (isTablet) return 72
+  return Platform.OS === 'web' ? 96 : 80
+}
+
+interface AuthorCardProps {
+  travel: Travel
+  onViewAuthorTravels?: () => void
 }
 
 function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
-  const router = useRouter();
-  const { isPhone, isLargePhone, isTablet } = useResponsive();
-  const isMobile = isPhone || isLargePhone;
-  const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
+  const router = useRouter()
+  const { isPhone, isLargePhone, isTablet } = useResponsive()
+  const isMobile = isPhone || isLargePhone
+  const colors = useThemedColors()
+  const styles = useMemo(() => createStyles(colors), [colors])
 
-  // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const userName = useMemo(() => resolveAuthorName(travel), [travel])
+  const userId = useMemo(() => resolveAuthorId(travel), [travel])
+  const travelsCount =
+    typeof (travel as any).userTravelsCount === 'number'
+      ? (travel as any).userTravelsCount
+      : null
 
-  const normalizeMediaUrl = useCallback((raw: string) => {
-    const value = String(raw ?? '').trim();
-    if (!value) return '';
-    const lower = value.toLowerCase();
-    if (lower === 'null' || lower === 'undefined') return '';
-    if (value.startsWith('http://') || value.startsWith('https://')) return value;
+  const { profile: authorProfile } = useUserProfileCached(userId, { enabled: !!userId })
+  const authorCountryName = useMemo(
+    () => resolveAuthorCountry(authorProfile, travel),
+    [authorProfile, travel],
+  )
+  const socials = useMemo(() => resolveSocials(authorProfile), [authorProfile])
 
-    if (value.startsWith('/')) {
-      const base = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/?api\/?$/, '');
-      if (base) return `${base}${value}`;
-    }
+  const { userId: currentUserId } = useAuth()
+  const isOwnTravel =
+    currentUserId != null && userId != null && String(currentUserId) === String(userId)
 
-    return value;
-  }, []);
-
-  // Извлекаем и очищаем данные об авторе
-  const userName = useMemo(() => {
-    // 1. Пробуем user объект (самый надежный источник)
-    const userObj = travel.user;
-    if (userObj) {
-      const firstName = userObj.first_name || userObj.name;
-      const lastName = userObj.last_name;
-      
-      if (firstName && typeof firstName === 'string' && firstName.trim()) {
-        const cleanFirstName = firstName.trim();
-        if (lastName && typeof lastName === 'string' && lastName.trim()) {
-          return `${cleanFirstName} ${lastName.trim()}`.trim();
-        }
-        return cleanFirstName;
-      }
-    }
-    
-    // 2. Пробуем прямые поля в travel объекте
-    const directName = (travel as any).author_name || (travel as any).authorName || (travel as any).owner_name || (travel as any).ownerName;
-    if (directName && typeof directName === 'string' && directName.trim()) {
-      const clean = directName.trim();
-      // Проверяем на очевидные плейсхолдеры
-      if (!/^[.\s\u00B7\u2022]+$|^Автор|^Пользователь|^User/i.test(clean)) {
-        return clean;
-      }
-    }
-    
-    // 3. Используем поле userName как основной fallback
-    const base = (travel as any).userName || '';
-    if (typeof base === 'string' && base.trim()) {
-      const clean = base.trim();
-      // Проверяем на плейсхолдеры, но менее строго
-      if (!/^[.\s\u00B7\u2022]{4,}$|^Автор|^Пользователь|^User|^Anonymous/i.test(clean)) {
-        return clean;
-      }
-    }
-    
-    // 4. Ничего не найдено
-    return '';
-  }, [travel]);
-
-  const userId = useMemo(() => {
-    const direct =
-      (travel as any)?.user?.id ??
-      (travel as any)?.userId ??
-      (travel as any)?.user_id ??
-      null;
-
-    if (direct != null) return direct;
-
-    const raw = (travel as any)?.userIds;
-    if (Array.isArray(raw) && raw.length > 0) {
-      return raw[0];
-    }
-    if (typeof raw === 'string' && raw.trim()) {
-      const first = raw.split(',')[0].trim();
-      const n = Number(first);
-      if (Number.isFinite(n) && n > 0) return n;
-    }
-    if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) {
-      return raw;
-    }
-    return null;
-  }, [travel]);
-
-  // Подсчет количества путешествий автора (если доступно)
-  const travelsCount = (travel as any).userTravelsCount || null;
-
-  const { profile: authorProfile } = useUserProfileCached(userId, {
-    enabled: !!userId,
-  });
-
-  const authorCountryName = useMemo(() => {
-    const fromProfile =
-      (authorProfile as any)?.countryName ||
-      (authorProfile as any)?.country_name ||
-      (authorProfile as any)?.country ||
-      '';
-    const fromUserObj =
-      ((travel as any)?.user as any)?.countryName ||
-      ((travel as any)?.user as any)?.country_name ||
-      ((travel as any)?.user as any)?.country ||
-      '';
-
-    // Показываем только страну автора (профиль / user), не страны путешествия
-    const raw = String(fromProfile || fromUserObj || '').trim();
-    if (!raw) return '';
-    if (raw.toLowerCase() === 'null' || raw.toLowerCase() === 'undefined') return '';
-    return raw;
-  }, [authorProfile, travel]);
-
-  const socials = useMemo(() => {
-    if (!authorProfile) return [];
-    const raw = [
-      { key: 'youtube', label: 'YouTube', value: authorProfile.youtube },
-      { key: 'instagram', label: 'Instagram', value: authorProfile.instagram },
-      { key: 'twitter', label: 'Twitter', value: authorProfile.twitter },
-      { key: 'vk', label: 'VK', value: authorProfile.vk },
-    ];
-    return raw.filter((s) => Boolean(String(s.value ?? '').trim()));
-  }, [authorProfile]);
+  const avatarSize = getAvatarSize(isMobile, isTablet)
+  const avatarBorderRadius = Math.round(avatarSize / 2)
+  const avatarUri = useMemo(() => {
+    const raw = authorProfile?.avatar || (travel as any)?.user?.avatar
+    return raw ? normalizeAvatarUrl(raw) || '' : ''
+  }, [authorProfile?.avatar, travel])
 
   const handleOpenAuthorProfile = useCallback(() => {
-    if (!userId) return;
-    router.push(`/user/${userId}` as any);
-  }, [router, userId]);
+    if (!userId) return
+    router.push(routes.user(userId))
+  }, [router, userId])
 
   const handleViewAuthorTravels = useCallback(() => {
     if (onViewAuthorTravels) {
-      onViewAuthorTravels();
-    } else if (userId) {
-      const url = `/search?user_id=${encodeURIComponent(userId)}`;
-      router.push(url as any);
+      onViewAuthorTravels()
+      return
     }
-  }, [userId, onViewAuthorTravels, router]);
-
-  const { userId: currentUserId } = useAuth();
-  const isOwnTravel = currentUserId != null && userId != null && String(currentUserId) === String(userId);
+    if (userId) router.push(`/search?user_id=${encodeURIComponent(userId)}` as any)
+  }, [userId, onViewAuthorTravels, router])
 
   const handleWriteToAuthor = useCallback(() => {
-    if (!userId) return;
-    router.push(`/messages?userId=${encodeURIComponent(userId)}` as any);
-  }, [userId, router]);
+    if (!userId) return
+    router.push(routes.messages(userId))
+  }, [userId, router])
 
-  // Оптимизация аватара
-  const travelUserAvatar = (travel as any)?.user?.avatar;
+  if (!userName && !authorCountryName && !userId) return null
 
-  const avatarUri = useMemo(() => {
-    const rawUri = authorProfile?.avatar || travelUserAvatar;
-    if (!rawUri) return '';
-
-    const normalizedUri = normalizeMediaUrl(rawUri);
-    if (!normalizedUri) return '';
-
-    // Для надёжности отдаём нормализованный URL без доп. опций, чтобы не ломать S3/прокси
-    return normalizedUri;
-  }, [authorProfile?.avatar, travelUserAvatar, normalizeMediaUrl]);
-
-  const avatarSize = useMemo(
-    () => (isMobile ? 64 : isTablet ? 72 : Platform.select({ default: 80, web: 96 })!),
-    [isMobile, isTablet]
-  );
-  const avatarBorderRadius = useMemo(() => Math.round(avatarSize / 2), [avatarSize]);
-
-  // Не показываем если нет данных об авторе
-  if (!userName && !authorCountryName && !userId) {
-    return null;
-  }
+  const showActions = !!userId && !isOwnTravel
+  const showInlineCta = !isMobile && !!userId
+  const showBottomCta = isMobile && !!userId
 
   return (
-    <SafeView style={[
-      styles.container,
-      isMobile && styles.containerMobile,
-      {
-        backgroundColor: colors.surface,
-        borderColor: colors.borderLight,
-      }
-    ]}>
-      <SafeView style={[styles.content, isMobile && styles.contentMobile]}>
-        <SafeView style={styles.mainRow}>
-          {/* Аватар */}
+    <View style={[styles.container, isMobile && styles.containerMobile]}>
+      <View style={[styles.content, isMobile && styles.contentMobile]}>
+        <View style={styles.mainRow}>
           <Pressable
             style={styles.avatarSection}
             onPress={handleOpenAuthorProfile}
             accessibilityRole={userId ? 'button' : undefined}
-            accessibilityLabel={userId ? `Открыть профиль автора${userName ? ` ${userName}` : ''}` : undefined}
+            accessibilityLabel={
+              userId ? `Открыть профиль автора${userName ? ` ${userName}` : ''}` : undefined
+            }
             disabled={!userId}
           >
             {avatarUri ? (
@@ -236,115 +176,103 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
                 style={[styles.avatar, isMobile && styles.avatarMobile]}
               />
             ) : (
-              <SafeView style={[
-                styles.avatarPlaceholder,
-                isMobile && styles.avatarMobile,
-                { backgroundColor: colors.backgroundSecondary }
-              ]} />
+              <View style={[styles.avatarPlaceholder, isMobile && styles.avatarMobile]} />
             )}
           </Pressable>
 
-          {/* Информация об авторе */}
-          <SafeView style={styles.infoSection}>
+          <View style={styles.infoSection}>
             {!!userName && (
               <Pressable
                 onPress={handleOpenAuthorProfile}
                 disabled={!userId}
                 accessibilityRole={userId ? 'button' : undefined}
                 accessibilityLabel={userId ? `Открыть профиль автора ${userName}` : undefined}
-                style={({ pressed }) => [pressed && userId ? { opacity: 0.85 } : null]}
+                style={({ pressed }) => (pressed && userId ? styles.pressedDim : null)}
               >
-                <Text style={[styles.authorName, isMobile && styles.authorNameMobile, { color: colors.text }]}>
+                <Text style={[styles.authorName, isMobile && styles.authorNameMobile]}>
                   {userName}
                 </Text>
               </Pressable>
             )}
+
             {!!authorCountryName && (
-              <SafeView style={styles.locationRow}>
+              <View style={styles.locationRow}>
                 <Feather name="map-pin" size={14} color={colors.textMuted} />
-                <Text style={[styles.locationText, { color: colors.textSecondary }]}>{authorCountryName}</Text>
-              </SafeView>
+                <Text style={styles.locationText}>{authorCountryName}</Text>
+              </View>
             )}
 
             {socials.length > 0 && (
-              <SafeView style={styles.socialsRow}>
+              <View style={styles.socialsRow}>
                 {socials.map((s) => (
                   <Pressable
                     key={s.key}
-                    onPress={() => openExternalUrl(String(s.value))}
+                    onPress={() => openExternalUrl(String(s.url))}
                     accessibilityRole="link"
                     accessibilityLabel={`Открыть ${s.label}`}
                     style={({ pressed }) => [
                       styles.socialChip,
                       pressed && styles.socialChipPressed,
-                      {
-                        backgroundColor: colors.primarySoft,
-                        borderColor: colors.borderLight,
-                      }
                     ]}
                   >
-                    <Text style={[styles.socialChipText, { color: colors.primaryText }]}>{s.label}</Text>
+                    <Text style={styles.socialChipText}>{s.label}</Text>
                   </Pressable>
                 ))}
-              </SafeView>
+              </View>
             )}
 
             {travelsCount !== null && (
-              <SafeView style={styles.statsRow}>
+              <View style={styles.statsRow}>
                 <Feather name="map" size={16} color={colors.textMuted} />
-                <Text style={[styles.statsText, { color: colors.textSecondary }]}>
+                <Text style={styles.statsText}>
                   {travelsCount} {getTravelLabel(travelsCount)}
                 </Text>
-              </SafeView>
+              </View>
             )}
 
-            {userId && !isOwnTravel && (
-              <SafeView style={styles.authorActionsRow}>
-                <SubscribeButton targetUserId={userId} size="sm" />
+            {showActions && (
+              <View style={styles.authorActionsRow}>
+                <SubscribeButton targetUserId={userId!} size="sm" />
                 <Pressable
                   onPress={handleWriteToAuthor}
                   accessibilityRole="button"
                   accessibilityLabel={`Написать автору${userName ? ` ${userName}` : ''}`}
                   style={({ pressed }) => [
                     styles.messageButton,
-                    { backgroundColor: colors.primarySoft, borderColor: colors.borderLight },
-                    pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+                    pressed && styles.messageButtonPressed,
                   ]}
                 >
                   <Feather name="mail" size={14} color={colors.primary} />
-                  <Text style={[styles.messageButtonText, { color: colors.primary }]}>Написать</Text>
+                  <Text style={styles.messageButtonText}>Написать</Text>
                 </Pressable>
-              </SafeView>
+              </View>
             )}
-          </SafeView>
-        </SafeView>
+          </View>
+        </View>
 
-        {/* CTA: desktop/web in one line, mobile stays bottom */}
-        {!isMobile && userId && (
-          <SafeView style={styles.ctaInlineRow}>
+        {showInlineCta && (
+          <View style={styles.ctaInlineRow}>
             <Pressable
-              style={({ pressed }) => [styles.viewButtonInline, pressed && styles.viewButtonPressed]}
+              style={({ pressed }) => [
+                styles.viewButtonInline,
+                pressed && styles.viewButtonPressed,
+              ]}
               onPress={handleViewAuthorTravels}
               accessibilityRole="button"
               accessibilityLabel="Все путешествия автора"
             >
-              <Text
-                style={[styles.viewButtonInlineText, { color: colors.textSecondary }]}
-                numberOfLines={1}
-              >
+              <Text style={styles.viewButtonInlineText} numberOfLines={1}>
                 Все путешествия автора
               </Text>
             </Pressable>
-          </SafeView>
+          </View>
         )}
-      </SafeView>
+      </View>
 
-      {isMobile && (
-        <SafeView style={[styles.divider, { backgroundColor: colors.borderLight }]} />
-      )}
+      {showBottomCta && <View style={styles.divider} />}
 
-      {isMobile && userId && (
-        <SafeView style={styles.ctaBottomRow}>
+      {showBottomCta && (
+        <View style={styles.ctaBottomRow}>
           <Pressable
             style={({ pressed }) => [
               styles.viewButtonBottom,
@@ -355,11 +283,14 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
             accessibilityRole="button"
             accessibilityLabel="Все путешествия автора"
           >
-            <SafeView style={styles.ctaBottomButtonContent}>
+            <View style={styles.ctaBottomButtonContent}>
               <Feather name="map" size={14} color={colors.primary} />
-              <Text style={[styles.viewButtonBottomText, { color: colors.primary, fontWeight: '700' }]}>Все путешествия</Text>
-            </SafeView>
+              <Text style={[styles.viewButtonBottomText, styles.viewButtonBottomTextPrimary]}>
+                Все путешествия
+              </Text>
+            </View>
           </Pressable>
+
           {!isOwnTravel && (
             <Pressable
               onPress={handleWriteToAuthor}
@@ -367,339 +298,235 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
               accessibilityLabel={`Написать автору${userName ? ` ${userName}` : ''}`}
               style={({ pressed }) => [
                 styles.viewButtonBottom,
+                styles.viewButtonBottomSecondary,
                 pressed && styles.viewButtonPressed,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.surface,
-                }
               ]}
             >
-              <SafeView style={styles.ctaBottomButtonContent}>
+              <View style={styles.ctaBottomButtonContent}>
                 <Feather name="mail" size={14} color={colors.textSecondary} />
-                <Text style={[styles.viewButtonBottomText, { color: colors.textSecondary }]}>Написать</Text>
-              </SafeView>
+                <Text style={styles.viewButtonBottomText}>Написать</Text>
+              </View>
             </Pressable>
           )}
-        </SafeView>
+        </View>
       )}
-  </SafeView>
-  );
+    </View>
+  )
 }
 
-// ✅ УЛУЧШЕНИЕ: Функция создания стилей с динамическими цветами для поддержки тем
-const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
-  // ✅ РЕДИЗАЙН: Компактная карточка (-25% padding)
-  container: {
-    width: '100%',
-    backgroundColor: colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    padding: Platform.select({
-      default: 20,
-      web: 28,
-    }),
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    ...(Platform.OS === 'web'
-      ? ({
-          boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-        } as any)
-      : {}),
-  },
-  viewButtonInline: {
-    marginLeft: 'auto',
-    flexShrink: 0,
-    paddingVertical: Platform.select({ default: 10, web: 12 }),
-    paddingHorizontal: Platform.select({ default: 14, web: 16 }),
-    borderRadius: 999,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer' as any,
-        transition: 'background-color 0.2s ease, border-color 0.2s ease' as any,
-        ':hover': {
-          backgroundColor: colors.backgroundSecondary,
-          borderColor: colors.border,
-        } as any,
-      },
-    }),
-  },
-  ctaInlineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.sm,
-    marginLeft: 'auto',
-    flexShrink: 0,
-  },
-  ctaBottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: DESIGN_TOKENS.spacing.md,
-  },
-  ctaBottomButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: DESIGN_TOKENS.spacing.xs,
-  },
-  viewButtonInlineText: {
-    fontSize: Platform.select({ default: 14, web: 14 }),
-    fontWeight: '600',
-    letterSpacing: -0.2,
-  },
-  containerMobile: {
-    padding: 16,
-  },
-  content: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 18, // было 24px (-25%)
-  },
-  contentMobile: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    gap: 14, // было 16px (-12.5%)
-    width: '100%',
-  },
-  avatarSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mainRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    minWidth: 0,
-    width: '100%',
-    gap: 18,
-  },
-  avatar: {
-    width: Platform.select({
-      default: 56,
-      web: 76,
-    }),
-    height: Platform.select({
-      default: 56,
-      web: 76,
-    }),
-    borderRadius: Platform.select({
-      default: 28,
-      web: 38,
-    }),
-    borderWidth: 3,
-    borderColor: colors.borderLight,
-    ...(Platform.OS === 'web'
-      ? ({
-          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-        } as any)
-      : {}),
-  },
-  avatarMobile: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 2.5,
-  },
-  avatarPlaceholder: {
-    width: Platform.select({
-      default: 56, // было 64px
-      web: 72, // было 80px
-    }),
-    height: Platform.select({
-      default: 56,
-      web: 72,
-    }),
-    borderRadius: Platform.select({
-      default: 28,
-      web: 36,
-    }),
-    backgroundColor: colors.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  infoSection: {
-    flex: 1,
-    gap: DESIGN_TOKENS.spacing.sm,
-  },
-  socialsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: DESIGN_TOKENS.spacing.xs,
-  },
-  socialChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: DESIGN_TOKENS.radii.sm,
-    backgroundColor: colors.primarySoft,
-    borderWidth: 1,
-    borderColor: colors.primaryAlpha30,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer' as any,
-        transition: 'all 0.15s ease' as any,
-        ':hover': {
-          backgroundColor: colors.primaryLight,
-          transform: 'translateY(-1px)',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        } as any,
-      },
-    }),
-  },
-  socialChipPressed: {
-    backgroundColor: colors.backgroundTertiary,
-    transform: [{ scale: 0.98 }],
-  },
-  socialChipText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.textMuted,
-  },
-  authorName: {
-    fontSize: Platform.select({ default: 17, web: 20 }),
-    fontWeight: '700',
-    color: colors.text,
-    letterSpacing: -0.3,
-    lineHeight: Platform.select({ default: 22, web: 26 }),
-  },
-  authorNameMobile: {
-    fontSize: 17,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.xs,
-  },
-  locationText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    color: colors.textMuted,
-    fontWeight: '500',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.xs,
-    marginTop: 4,
-  },
-  statsText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: colors.textTertiary,
-    fontWeight: '600',
-  },
-  divider: {
-    width: '100%',
-    height: 1,
-    marginTop: DESIGN_TOKENS.spacing.md,
-    marginBottom: DESIGN_TOKENS.spacing.sm,
-    opacity: 0.6,
-  },
-  viewButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.sm,
-    paddingVertical: Platform.select({
-      default: 10,
-      web: 12,
-    }),
-    paddingHorizontal: Platform.select({
-      default: 16,
-      web: 20,
-    }),
-    borderRadius: 999,
-    backgroundColor: colors.backgroundSecondary,
-    borderWidth: 0,
-    borderColor: 'transparent',
-    ...Platform.select({
-      web: {
-        cursor: 'pointer' as any,
-        transition: 'background-color 0.2s ease, box-shadow 0.2s ease' as any,
-        ':hover': {
-          backgroundColor: colors.backgroundTertiary,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
-        } as any,
-      },
-    }),
-  },
-  viewButtonBottom: {
-    flex: 1,
-    minWidth: 0,
-    paddingVertical: DESIGN_TOKENS.spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: DESIGN_TOKENS.radii.md,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer' as any,
-        transition: 'background-color 0.15s ease' as any,
-        ':hover': {
-          backgroundColor: colors.backgroundSecondary,
-        } as any,
-      },
-    }),
-  },
-  viewButtonBottomPrimary: {
-    backgroundColor: colors.primarySoft,
-    borderRadius: DESIGN_TOKENS.radii.md,
-  },
-  viewButtonMobile: {
-    paddingVertical: DESIGN_TOKENS.spacing.sm,
-    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-    alignSelf: 'flex-start',
-    marginTop: DESIGN_TOKENS.spacing.sm,
-  },
-  viewButtonPressed: {
-    backgroundColor: colors.backgroundSecondary, // ✅ УЛУЧШЕНИЕ: Нейтральный фон
-    transform: [{ scale: 0.98 }],
-  },
-  viewButtonText: {
-    fontSize: Platform.select({
-      default: 14,
-      web: 15,
-    }),
-    fontWeight: '600',
-    color: colors.primaryText,
-  },
-  viewButtonBottomText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    fontWeight: '600',
-    letterSpacing: -0.2,
-  },
-  viewButtonTextMobile: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-  },
-  authorActionsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.xs,
-  },
-  messageButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 999,
-    borderWidth: 1,
-    alignSelf: 'flex-start',
-    ...Platform.select({
-      web: {
-        cursor: 'pointer' as any,
-        transition: 'all 0.15s ease' as any,
-        ':hover': {
-          backgroundColor: colors.primarySoft,
-          borderColor: colors.primary,
-        } as any,
-      },
-    }),
-  },
-  messageButtonText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    fontWeight: '600',
-  },
-});
+const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
+  StyleSheet.create({
+    container: {
+      width: '100%',
+      backgroundColor: colors.surface,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      padding: Platform.OS === 'web' ? 28 : 20,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      ...(Platform.OS === 'web' ? ({ boxShadow: '0 1px 4px rgba(0,0,0,0.04)' } as any) : null),
+    },
+    containerMobile: { padding: 16 },
+    content: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 18,
+    },
+    contentMobile: {
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+      gap: 14,
+      width: '100%',
+    },
+    mainRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+      minWidth: 0,
+      width: '100%',
+      gap: 18,
+    },
+    avatarSection: { alignItems: 'center', justifyContent: 'center' },
+    avatar: {
+      width: Platform.OS === 'web' ? 76 : 56,
+      height: Platform.OS === 'web' ? 76 : 56,
+      borderRadius: Platform.OS === 'web' ? 38 : 28,
+      borderWidth: 3,
+      borderColor: colors.borderLight,
+      ...(Platform.OS === 'web' ? ({ boxShadow: '0 2px 8px rgba(0,0,0,0.08)' } as any) : null),
+    },
+    avatarMobile: { width: 52, height: 52, borderRadius: 26, borderWidth: 2.5 },
+    avatarPlaceholder: {
+      width: Platform.OS === 'web' ? 72 : 56,
+      height: Platform.OS === 'web' ? 72 : 56,
+      borderRadius: Platform.OS === 'web' ? 36 : 28,
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    infoSection: { flex: 1, gap: DESIGN_TOKENS.spacing.sm },
+    pressedDim: { opacity: 0.85 },
+    authorName: {
+      fontSize: Platform.OS === 'web' ? 20 : 17,
+      fontWeight: '700',
+      color: colors.text,
+      letterSpacing: -0.3,
+      lineHeight: Platform.OS === 'web' ? 26 : 22,
+    },
+    authorNameMobile: { fontSize: 17 },
+    locationRow: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.xs },
+    locationText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.md,
+      color: colors.textSecondary,
+      fontWeight: '500',
+    },
+    socialsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    socialChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 5,
+      borderRadius: DESIGN_TOKENS.radii.sm,
+      backgroundColor: colors.primarySoft,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer' as any,
+          transition: 'all 0.15s ease' as any,
+          ':hover': {
+            backgroundColor: colors.primaryLight,
+            transform: 'translateY(-1px)',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          } as any,
+        },
+      }),
+    },
+    socialChipPressed: { backgroundColor: colors.backgroundTertiary, transform: [{ scale: 0.98 }] },
+    socialChipText: { fontSize: 12, fontWeight: '500', color: colors.primaryText },
+    statsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+      marginTop: 4,
+    },
+    statsText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      color: colors.textSecondary,
+      fontWeight: '600',
+    },
+    authorActionsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    messageButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.primarySoft,
+      alignSelf: 'flex-start',
+      ...Platform.select({
+        web: {
+          cursor: 'pointer' as any,
+          transition: 'all 0.15s ease' as any,
+          ':hover': { backgroundColor: colors.primarySoft, borderColor: colors.primary } as any,
+        },
+      }),
+    },
+    messageButtonPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
+    messageButtonText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      fontWeight: '600',
+      color: colors.primary,
+    },
+    ctaInlineRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.sm,
+      marginLeft: 'auto',
+      flexShrink: 0,
+    },
+    viewButtonInline: {
+      marginLeft: 'auto',
+      flexShrink: 0,
+      paddingVertical: Platform.OS === 'web' ? 12 : 10,
+      paddingHorizontal: Platform.OS === 'web' ? 16 : 14,
+      borderRadius: 999,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer' as any,
+          transition: 'background-color 0.2s ease, border-color 0.2s ease' as any,
+          ':hover': {
+            backgroundColor: colors.backgroundSecondary,
+            borderColor: colors.border,
+          } as any,
+        },
+      }),
+    },
+    viewButtonInlineText: {
+      fontSize: 14,
+      fontWeight: '600',
+      letterSpacing: -0.2,
+      color: colors.textSecondary,
+    },
+    viewButtonPressed: { backgroundColor: colors.backgroundSecondary, transform: [{ scale: 0.98 }] },
+    divider: {
+      width: '100%',
+      height: 1,
+      marginTop: DESIGN_TOKENS.spacing.md,
+      marginBottom: DESIGN_TOKENS.spacing.sm,
+      opacity: 0.6,
+      backgroundColor: colors.borderLight,
+    },
+    ctaBottomRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: DESIGN_TOKENS.spacing.md,
+    },
+    ctaBottomButtonContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    viewButtonBottom: {
+      flex: 1,
+      minWidth: 0,
+      paddingVertical: DESIGN_TOKENS.spacing.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: DESIGN_TOKENS.radii.md,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer' as any,
+          transition: 'background-color 0.15s ease' as any,
+          ':hover': { backgroundColor: colors.backgroundSecondary } as any,
+        },
+      }),
+    },
+    viewButtonBottomPrimary: { backgroundColor: colors.primarySoft },
+    viewButtonBottomSecondary: { backgroundColor: colors.surface, borderColor: colors.surface },
+    viewButtonBottomText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.md,
+      fontWeight: '600',
+      letterSpacing: -0.2,
+      color: colors.textSecondary,
+    },
+    viewButtonBottomTextPrimary: { color: colors.primary, fontWeight: '700' },
+  })
 
-export default React.memo(AuthorCard);
+export default React.memo(AuthorCard)

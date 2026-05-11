@@ -18,6 +18,7 @@ import { ApiError } from '@/api/client';
 import { queryKeys } from '@/queryKeys';
 import SubscribeButton from '@/components/ui/SubscribeButton';
 import { webTouchScrollStyle } from '@/utils';
+import { routes } from '@/utils/routes';
 
 export default function PublicUserProfileScreen() {
   const router = useRouter();
@@ -80,7 +81,7 @@ export default function PublicUserProfileScreen() {
 
   const handleWriteMessage = useCallback(() => {
     if (!userId) return;
-    router.push(`/messages?userId=${encodeURIComponent(userId)}` as any);
+    router.push(routes.messages(userId));
   }, [router, userId]);
 
   if (isLoading) {

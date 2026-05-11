@@ -18,6 +18,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import MessageBubble from '@/components/messages/MessageBubble';
 import IconButton from '@/components/ui/IconButton';
 import type { Message } from '@/api/messages';
+import { routes } from '@/utils/routes';
 
 type ChatListItem =
     | { type: 'message'; data: Message }
@@ -197,7 +198,7 @@ function ChatView({
                     </Pressable>
                 )}
                 <Pressable
-                    onPress={otherUserId ? () => router.push(`/user/${otherUserId}` as any) : undefined}
+                    onPress={otherUserId ? () => router.push(routes.user(otherUserId)) : undefined}
                     disabled={!otherUserId}
                     style={styles.headerProfileLink}
                     accessibilityRole="link"

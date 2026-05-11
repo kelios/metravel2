@@ -3,6 +3,7 @@ import { View, useWindowDimensions } from 'react-native';
 import { usePathname } from 'expo-router';
 
 import { useThemedColors } from '@/hooks/useTheme';
+import useBreadcrumbModel from '@/hooks/useBreadcrumbModel';
 
 import {
   CustomHeaderAccountSectionComp,
@@ -15,8 +16,14 @@ import {
   getIsHeaderMobile,
   shouldShowHeaderContextBar,
 } from './customHeaderModel';
+import { resolveHeaderContextBarAction } from './headerContextBarModel';
+import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { createCustomHeaderStyles, webStickyStyle } from './customHeaderStyles';
 import Logo from './Logo';
+
+const TOP_LEVEL_TAB_PATHS = new Set<string>(
+  ['/'].concat(HEADER_NAV_ITEMS.filter((item) => !item.external).map((item) => item.path)),
+);
 
 type CustomHeaderProps = {
     onHeightChange?: (height: number) => void;
@@ -36,6 +43,20 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
       () => shouldShowHeaderContextBar(pathname, isMobile),
       [isMobile, pathname]
     );
+    const breadcrumbModel = useBreadcrumbModel();
+    // Predict whether the lazy HeaderContextBar will actually render visible UI
+    // (mirrors the conditions inside HeaderContextBar). When false on desktop,
+    // the bar collapses to a hidden JSON-LD only — Suspense must reserve 0px to
+    // avoid a 40px layout-shift on routes without breadcrumbs (e.g. home).
+    const willRenderVisibleContextBar = useMemo(() => {
+      if (!showHeaderContextBar) return false;
+      if (isMobile) {
+        const action = resolveHeaderContextBarAction(pathname);
+        const isTopLevelTab = !!pathname && TOP_LEVEL_TAB_PATHS.has(pathname);
+        return !(isTopLevelTab && action === 'none');
+      }
+      return breadcrumbModel.showBreadcrumbs;
+    }, [breadcrumbModel.showBreadcrumbs, isMobile, pathname, showHeaderContextBar]);
     const activePath = useMemo(() => getHeaderActivePath(pathname), [pathname]);
 
     const styles = useMemo(
@@ -78,7 +99,17 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
               </View>
           
           {showHeaderContextBar ? (
-            <Suspense fallback={null}>
+            <Suspense
+              fallback={
+                <View
+                  style={{
+                    minHeight: willRenderVisibleContextBar ? (isMobile ? 52 : 40) : 0,
+                    width: '100%',
+                  }}
+                  aria-hidden
+                />
+              }
+            >
               <HeaderContextBarLazy />
             </Suspense>
           ) : null}

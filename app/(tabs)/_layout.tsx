@@ -3,6 +3,7 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import { Platform, View, Animated } from 'react-native';
 import { Tabs, usePathname } from 'expo-router';
 import CustomHeader from '@/components/layout/CustomHeader';
+import { shouldShowHeaderContextBar } from '@/components/layout/customHeaderModel';
 
 // Defensive lazy imports: fallback to empty component if module resolution fails
 const EmptyFallback = () => null;
@@ -46,27 +47,91 @@ const GlobalScrollToTop = React.memo(function GlobalScrollToTop() {
     );
 });
 
+const HEADER_MOBILE_BREAKPOINT = 768;
+type HeaderVariant = 'mobile-bar' | 'mobile-nobar' | 'desktop-bar' | 'desktop-nobar';
+
+const HEADER_HEIGHT_FALLBACK: Record<HeaderVariant, number> = {
+    'mobile-bar': 116,
+    'mobile-nobar': 64,
+    'desktop-bar': 118,
+    'desktop-nobar': 78,
+};
+
+const HEADER_HEIGHT_CACHE_KEY: Record<HeaderVariant, string> = {
+    'mobile-bar': 'mt:header-height:mobile-bar',
+    'mobile-nobar': 'mt:header-height:mobile-nobar',
+    'desktop-bar': 'mt:header-height:desktop-bar',
+    'desktop-nobar': 'mt:header-height:desktop-nobar',
+};
+
+const getHeaderVariant = (pathname: string): HeaderVariant => {
+    const isMobile =
+        Platform.OS === 'web' && typeof window !== 'undefined'
+            ? window.innerWidth < HEADER_MOBILE_BREAKPOINT
+            : false;
+    const hasBar = shouldShowHeaderContextBar(pathname || '/', isMobile);
+    if (isMobile) return hasBar ? 'mobile-bar' : 'mobile-nobar';
+    return hasBar ? 'desktop-bar' : 'desktop-nobar';
+};
+
+const readCachedHeaderHeight = (variant: HeaderVariant): number => {
+    const fallback = HEADER_HEIGHT_FALLBACK[variant];
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return fallback;
+    try {
+        const raw = window.sessionStorage?.getItem(HEADER_HEIGHT_CACHE_KEY[variant]);
+        const parsed = raw ? Number(raw) : NaN;
+        if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    } catch {
+        /* noop */
+    }
+    return fallback;
+};
+
 const Header = React.memo(function Header() {
-    const [mounted, setMounted] = useState(Platform.OS !== 'web');
-    const [measuredHeight, setMeasuredHeight] = useState<number>(0);
+    const pathname = usePathname() || '/';
+    const [, setVariant] = useState<HeaderVariant>(() => getHeaderVariant(pathname));
+    const [measuredHeight, setMeasuredHeight] = useState<number>(() => readCachedHeaderHeight(getHeaderVariant(pathname)));
 
     useEffect(() => {
-        if (Platform.OS !== 'web') return;
-        setMounted(true);
-    }, []);
+        const next = getHeaderVariant(pathname);
+        setVariant((prev) => {
+            if (prev === next) return prev;
+            setMeasuredHeight(readCachedHeaderHeight(next));
+            return next;
+        });
+    }, [pathname]);
+
+    useEffect(() => {
+        if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+        const onResize = () => {
+            const next = getHeaderVariant(pathname);
+            setVariant((prev) => {
+                if (prev === next) return prev;
+                setMeasuredHeight(readCachedHeaderHeight(next));
+                return next;
+            });
+        };
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, [pathname]);
 
     const handleHeaderHeight = useCallback((h: number) => {
-        if (h > 0) setMeasuredHeight(h);
-    }, []);
+        if (h <= 0) return;
+        setMeasuredHeight((prev) => (prev === h ? prev : h));
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            try {
+                const v = getHeaderVariant(pathname);
+                window.sessionStorage?.setItem(HEADER_HEIGHT_CACHE_KEY[v], String(Math.round(h)));
+            } catch {
+                /* noop */
+            }
+        }
+    }, [pathname]);
 
-    // Reserve stable header space on web to avoid CLS during hydration / icon font swap.
-    const reservedHeight = 88;
     if (Platform.OS === 'web') {
         return (
-            <View style={{ height: measuredHeight > 0 ? measuredHeight : reservedHeight }}>
-                {mounted ? (
-                  <CustomHeader onHeightChange={handleHeaderHeight} />
-                ) : null}
+            <View style={{ height: measuredHeight }}>
+                <CustomHeader onHeightChange={handleHeaderHeight} />
             </View>
         );
     }
