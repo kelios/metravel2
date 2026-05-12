@@ -140,6 +140,7 @@ function buildQuickFiltersData(filtersPanelProps: any, currentRadius: string | n
 }
 
 export default function MapScreen() {
+  const isWeb = Platform.OS === 'web'
   const {
     canonical,
     isFocused,
@@ -188,7 +189,7 @@ export default function MapScreen() {
   const showGeoBanner = Boolean(geoError && !geoBannerDismissed)
 
   useEffect(() => {
-    if (!IS_WEB || typeof document === 'undefined') return
+    if (!isWeb || typeof document === 'undefined') return
     const previousOverflowY = document.body.style.overflowY
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -197,7 +198,7 @@ export default function MapScreen() {
       document.body.style.overflow = previousOverflow
       document.body.style.overflowY = previousOverflowY
     }
-  }, [])
+  }, [isWeb])
 
   useEffect(() => {
     if (!geoError && geoBannerDismissed) setGeoBannerDismissed(false)
@@ -205,7 +206,7 @@ export default function MapScreen() {
 
   useEffect(() => {
     if (shouldLoadOnboarding) return
-    if (!IS_WEB) {
+    if (!isWeb) {
       setShouldLoadOnboarding(true)
       return
     }
@@ -217,7 +218,7 @@ export default function MapScreen() {
     }
     const timer = setTimeout(() => setShouldLoadOnboarding(true), ONBOARDING_DEFER_MS)
     return () => clearTimeout(timer)
-  }, [shouldLoadOnboarding])
+  }, [isWeb, shouldLoadOnboarding])
 
   const { isConnected } = useNetworkStatus()
   const wasDisconnectedRef = useRef(!isConnected)
@@ -236,7 +237,7 @@ export default function MapScreen() {
   }, [isConnected, mapError, invalidateTravelsQuery, refetchMapData])
 
   const mapStructuredData = useMemo(() => {
-    if (!IS_WEB || !isFocused) return null
+    if (!isWeb || !isFocused) return null
     return createMapStructuredData({
       canonical,
       title: MAP_SEO_TITLE,
@@ -249,10 +250,10 @@ export default function MapScreen() {
         categoryName: item?.categoryName,
       })),
     })
-  }, [canonical, isFocused, travelsData])
+  }, [canonical, isFocused, isWeb, travelsData])
 
   const mapSeoTags = useMemo(() => {
-    if (!IS_WEB || !mapStructuredData) return undefined
+    if (!isWeb || !mapStructuredData) return undefined
     return (
       <script
         key="map-structured-data"
@@ -260,10 +261,10 @@ export default function MapScreen() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(mapStructuredData) }}
       />
     )
-  }, [mapStructuredData])
+  }, [isWeb, mapStructuredData])
 
   const seoBlock = useMemo(() => {
-    if (!IS_WEB || !isFocused) return null
+    if (!isWeb || !isFocused) return null
     return (
       <InstantSEO
         headKey={mapError ? 'map-error' : 'map'}
@@ -274,11 +275,11 @@ export default function MapScreen() {
         additionalTags={mapSeoTags}
       />
     )
-  }, [isFocused, mapError, canonical, mapSeoTags])
+  }, [canonical, isFocused, isWeb, mapError, mapSeoTags])
 
   const handleResizeMouseDown = useCallback(
     (e: any) => {
-      if (!IS_WEB || isMobile) return
+      if (!isWeb || isMobile) return
       e.preventDefault()
       const startX = e.clientX
       const startW = desktopPanelWidth
@@ -294,7 +295,7 @@ export default function MapScreen() {
       document.addEventListener('mousemove', onMove)
       document.addEventListener('mouseup', onUp)
     },
-    [isMobile, desktopPanelWidth, onResizePanelWidth],
+    [desktopPanelWidth, isMobile, isWeb, onResizePanelWidth],
   )
 
   const openNonce = useMapPanelStore((s) => s.openNonce)
@@ -387,7 +388,7 @@ export default function MapScreen() {
   const activePanelTab: 'search' | 'route' | 'travels' =
     rightPanelTab === 'travels' ? 'travels' : currentMode === 'route' ? 'route' : 'search'
 
-  const shouldShowFloatingRadiusPill = Boolean(currentRadius && !IS_WEB)
+  const shouldShowFloatingRadiusPill = Boolean(currentRadius && !isWeb)
 
   const onFilterChange = filtersPanelProps?.contextValue?.onFilterChange
   const onOverlayToggle = filtersPanelProps?.contextValue?.onOverlayToggle
@@ -397,7 +398,7 @@ export default function MapScreen() {
     () => (
       <View style={styles.mapArea}>
         <MapLoadingBar visible={isFetching || isDebouncingFilters} />
-        {IS_WEB && !isMobile && (
+        {isWeb && !isMobile && (
           <Suspense fallback={null}>
             <LazyMapQuickFilters
               extraActions={mapQuickActionButtons}
@@ -464,6 +465,7 @@ export default function MapScreen() {
       isFetching,
       isDebouncingFilters,
       isMobile,
+      isWeb,
       mapPanelProps,
       mapReady,
       travelsData,
@@ -537,7 +539,7 @@ export default function MapScreen() {
     )
   }
 
-  const showDesktopCollapsedStrip = !isMobile && isDesktopCollapsed && IS_WEB
+  const showDesktopCollapsedStrip = !isMobile && isDesktopCollapsed && isWeb
   const showDesktopExpandedPanel = !showDesktopCollapsedStrip
 
   return (
@@ -602,10 +604,10 @@ export default function MapScreen() {
             style={[
               styles.rightPanel,
               panelStyle,
-              !isMobile && IS_WEB ? { width: desktopPanelWidth } : null,
+              !isMobile && isWeb ? { width: desktopPanelWidth } : null,
             ]}
           >
-            {!isMobile && IS_WEB && (
+            {!isMobile && isWeb && (
               <View
                 testID="map-panel-resize-handle"
                 style={styles.resizeHandle}
@@ -613,7 +615,7 @@ export default function MapScreen() {
                 {...({ onMouseDown: handleResizeMouseDown } as any)}
               />
             )}
-            {!isMobile && IS_WEB && (
+            {!isMobile && isWeb && (
               <Pressable
                 testID="map-panel-collapse-button"
                 hitSlop={8}
@@ -668,7 +670,7 @@ export default function MapScreen() {
               ) : (
                 <View
                   testID="map-travels-tab"
-                  {...(IS_WEB ? ({ 'data-testid': 'map-travels-tab' } as any) : null)}
+                  {...(isWeb ? ({ 'data-testid': 'map-travels-tab' } as any) : null)}
                   style={{ flex: 1 }}
                 >
                   <Suspense fallback={<ActivityIndicator style={{ paddingVertical: 32 }} color={themedColors.primary} />}>
@@ -700,7 +702,7 @@ export default function MapScreen() {
         )}
       </View>
 
-      {!IS_WEB && (
+      {!isWeb && (
         <Pressable
           style={({ pressed }) => [styles.fab, pressed && PRESSED_OPACITY_085]}
           onPress={openRightPanel}
@@ -719,7 +721,7 @@ export default function MapScreen() {
 
       {shouldLoadOnboarding && (
         <Suspense fallback={null}>
-          <LazyMapOnboarding mobileWebCoachmark={IS_WEB && isMobile} />
+          <LazyMapOnboarding mobileWebCoachmark={isWeb && isMobile} />
         </Suspense>
       )}
     </View>

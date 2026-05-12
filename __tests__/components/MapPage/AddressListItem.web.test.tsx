@@ -44,7 +44,10 @@ const mockPlaceListCard = jest.fn((props: any) => {
               <Pressable
                 key={action.key}
                 accessibilityLabel={action.title ?? action.label}
-                onPress={action.onPress}
+                onPress={() => {
+                  setOverflowVisible(false);
+                  action.onPress();
+                }}
               >
                 <Text>{action.label}</Text>
               </Pressable>
@@ -141,7 +144,6 @@ describe('AddressListItem (web right panel)', () => {
         title: baseTravel.address,
         categoryLabel: baseTravel.categoryName,
       }),
-      undefined,
     );
 
     (Platform as any).OS = prevOs;

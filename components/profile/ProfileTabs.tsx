@@ -61,6 +61,9 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
         },
         activeTab: {
           backgroundColor: colors.surface,
+          // Orange bottom accent inside active tab
+          borderBottomWidth: 2,
+          borderBottomColor: colors.brand,
           ...Platform.select({
             ios: {
               shadowColor: '#000',
@@ -78,19 +81,19 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
           color: colors.textMuted,
         },
         activeTabText: {
-          color: colors.text,
+          color: colors.brandText,
           fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
         },
         badge: {
           paddingHorizontal: 6,
           paddingVertical: 2,
           borderRadius: DESIGN_TOKENS.radii.pill,
-          backgroundColor: colors.backgroundSecondary,
+          backgroundColor: colors.borderLight,
           minWidth: 20,
           alignItems: 'center',
         },
         activeBadge: {
-          backgroundColor: colors.primaryLight,
+          backgroundColor: colors.brand,
         },
         badgeText: {
           fontSize: 11,
@@ -98,7 +101,7 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
           color: colors.textMuted,
         },
         activeBadgeText: {
-          color: colors.primary,
+          color: colors.surface,
           fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
         },
       }),

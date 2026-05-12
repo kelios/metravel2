@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
@@ -17,120 +16,127 @@ interface ProfileStatsProps {
 export function ProfileStats({ stats, onPressStat }: ProfileStatsProps) {
   const colors = useThemedColors();
 
-  const styles = useMemo(() => StyleSheet.create({
-    container: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-      marginBottom: DESIGN_TOKENS.spacing.lg,
-    },
-    statItem: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: DESIGN_TOKENS.spacing.sm,
-      marginHorizontal: DESIGN_TOKENS.spacing.xxs,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      minHeight: 80,
-      ...Platform.select({
-        web: {
-          cursor: onPressStat ? 'pointer' : 'default',
-        } as any,
-        default: {},
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flexDirection: 'row',
+          marginHorizontal: DESIGN_TOKENS.spacing.md,
+          marginBottom: DESIGN_TOKENS.spacing.md,
+          borderRadius: DESIGN_TOKENS.radii.md,
+          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderColor: colors.borderLight,
+          // Orange top accent stripe
+          borderTopWidth: 3,
+          borderTopColor: colors.brand,
+          overflow: 'hidden',
+          ...Platform.select({
+            ios: {
+              shadowColor: '#000',
+              shadowOpacity: 0.05,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 3 },
+            },
+            android: { elevation: 2 },
+            default: {},
+          }),
+        },
+        statItem: {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingVertical: DESIGN_TOKENS.spacing.md,
+          paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+          ...Platform.select({
+            web: {
+              cursor: onPressStat ? 'pointer' : 'default',
+            } as any,
+            default: {},
+          }),
+        },
+        statItemPressed: {
+          backgroundColor: colors.brandSoft,
+        },
+        verticalDivider: {
+          width: 1,
+          backgroundColor: colors.borderLight,
+          alignSelf: 'stretch',
+          marginVertical: DESIGN_TOKENS.spacing.sm,
+        },
+        statValue: {
+          ...DESIGN_TOKENS.typography.scale.h1,
+          color: colors.brandText,
+          textAlign: 'center',
+        },
+        statLabel: {
+          fontSize: DESIGN_TOKENS.typography.sizes.xs,
+          color: colors.textMuted,
+          fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+          textAlign: 'center',
+          marginTop: 2,
+        },
       }),
-    },
-    statItemPressed: {
-      opacity: 0.9,
-    },
-    iconWrap: {
-      width: 28,
-      height: 28,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.primarySoft,
-      marginBottom: DESIGN_TOKENS.spacing.xs,
-    },
-    statValue: {
-      fontSize: DESIGN_TOKENS.typography.sizes.lg,
-      fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
-      color: colors.text,
-      marginBottom: DESIGN_TOKENS.spacing.xxs,
-    },
-    statLabel: {
-      fontSize: DESIGN_TOKENS.typography.sizes.xs,
-      color: colors.textMuted,
-      fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-    },
-  }), [colors, onPressStat]);
+    [colors, onPressStat]
+  );
 
   const items: Array<{
     key: 'travels' | 'favorites' | 'views';
     label: string;
     value: number;
-    icon: React.ComponentProps<typeof Feather>['name'];
     hint: string;
   }> = [
     {
       key: 'travels',
-      label: 'Путешествия',
+      label: 'Маршруты',
       value: stats.travelsCount,
-      icon: 'map-pin',
       hint: 'Показать ваши путешествия',
     },
     {
       key: 'favorites',
       label: 'Избранное',
       value: stats.favoritesCount,
-      icon: 'heart',
       hint: 'Показать избранные путешествия',
     },
     {
       key: 'views',
       label: 'Просмотры',
       value: stats.viewsCount,
-      icon: 'eye',
       hint: 'Показать историю просмотров',
     },
   ];
 
   return (
     <View style={styles.container}>
-      {items.map((item) => {
-        if (!onPressStat) {
-          return (
-            <View key={item.key} style={styles.statItem}>
-              <View style={styles.iconWrap}>
-                <Feather name={item.icon} size={14} color={colors.primary} />
-              </View>
-              <Text style={styles.statValue}>{item.value}</Text>
-              <Text style={styles.statLabel}>{item.label}</Text>
-            </View>
-          );
-        }
-
-        return (
-          <Pressable
-            key={item.key}
-            style={({ pressed }) => [
-              styles.statItem,
-              globalFocusStyles.focusable,
-              pressed && styles.statItemPressed,
-            ]}
-            onPress={() => onPressStat(item.key)}
-            accessibilityRole="button"
-            accessibilityLabel={`${item.label}: ${item.value}`}
-            accessibilityHint={item.hint}
-          >
-            <View style={styles.iconWrap}>
-              <Feather name={item.icon} size={14} color={colors.primary} />
-            </View>
+      {items.map((item, idx) => {
+        const content = (
+          <>
             <Text style={styles.statValue}>{item.value}</Text>
             <Text style={styles.statLabel}>{item.label}</Text>
-          </Pressable>
+          </>
+        );
+
+        return (
+          <React.Fragment key={item.key}>
+            {idx > 0 && <View style={styles.verticalDivider} />}
+            {onPressStat ? (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.statItem,
+                  globalFocusStyles.focusable,
+                  pressed && styles.statItemPressed,
+                ]}
+                onPress={() => onPressStat(item.key)}
+                accessibilityRole="button"
+                accessibilityLabel={`${item.label}: ${item.value}`}
+                accessibilityHint={item.hint}
+              >
+                {content}
+              </Pressable>
+            ) : (
+              <View style={styles.statItem}>{content}</View>
+            )}
+          </React.Fragment>
         );
       })}
     </View>

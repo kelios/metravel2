@@ -30,7 +30,7 @@ import {
   buildYandexNaviUrl,
 } from '@/components/MapPage/Map/mapLinks'
 
-const IS_WEB = Platform.OS === 'web'
+const isWebPlatform = () => Platform.OS === 'web'
 
 const PRESSED_OPACITY = { opacity: 0.85 }
 const PLACE_CARD_STYLE = { margin: 8 }
@@ -69,7 +69,7 @@ function getCardHeight(width: number) {
 }
 
 function getWebCardWidth(width: number) {
-  if (!IS_WEB) return 300
+  if (!isWebPlatform()) return 300
   const horizontalInsets = width <= 360 ? 20 : width <= 480 ? 36 : width <= 768 ? 56 : 72
   return Math.max(236, Math.min(360, width - horizontalInsets))
 }
@@ -212,7 +212,7 @@ const AddressListItem: React.FC<Props> = ({
     ]
   }, [coord])
 
-  if (IS_WEB) {
+  if (isWebPlatform()) {
     const categoryLabel = categories.join(', ')
     const badges = distanceInfo
       ? [distanceInfo.distanceText, `${TRANSPORT_LABELS[transportMode]} ${distanceInfo.travelTimeText}`]
@@ -445,12 +445,12 @@ const getStyles = (colors: ThemedColors) =>
       ...colors.shadows.medium,
       overflow: 'hidden',
       position: 'relative',
-      ...(IS_WEB
+      ...(isWebPlatform()
         ? ({ transition: 'transform 150ms ease, box-shadow 150ms ease' } as any)
         : null),
     },
     cardHovered: {
-      ...(IS_WEB
+      ...(isWebPlatform()
         ? ({
             transform: [{ translateY: -2 }],
             boxShadow: colors.boxShadows.heavy,
@@ -535,7 +535,7 @@ const getStyles = (colors: ThemedColors) =>
       marginBottom: 10,
       lineHeight: 24,
       letterSpacing: -0.4,
-      ...(IS_WEB
+      ...(isWebPlatform()
         ? ({ textShadow: `0px 2px 8px ${colors.overlay}` } as any)
         : {
             textShadowColor: colors.overlay,
@@ -544,7 +544,7 @@ const getStyles = (colors: ThemedColors) =>
           }),
     },
     titleOnLight: {
-      ...(IS_WEB
+      ...(isWebPlatform()
         ? ({ textShadow: 'none' } as any)
         : {
             textShadowColor: 'transparent',
@@ -579,8 +579,8 @@ const getStyles = (colors: ThemedColors) =>
       textDecorationLine: 'underline',
       fontWeight: '700',
       letterSpacing: 0.3,
-      fontFamily: IS_WEB ? 'Monaco, Menlo, "Ubuntu Mono", monospace' : 'monospace',
-      ...(IS_WEB
+      fontFamily: isWebPlatform() ? 'Monaco, Menlo, "Ubuntu Mono", monospace' : 'monospace',
+      ...(isWebPlatform()
         ? ({ textShadow: `0px 1px 4px ${colors.overlay}` } as any)
         : {
             textShadowColor: colors.overlay,
@@ -589,7 +589,7 @@ const getStyles = (colors: ThemedColors) =>
           }),
     },
     coordOnLight: {
-      ...(IS_WEB
+      ...(isWebPlatform()
         ? ({ textShadow: 'none' } as any)
         : {
             textShadowColor: 'transparent',

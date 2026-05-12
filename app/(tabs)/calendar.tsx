@@ -450,7 +450,9 @@ export default function CalendarScreen() {
     modalOverlay: {
       flex: 1,
       backgroundColor: 'rgba(0,0,0,0.45)',
-      justifyContent: 'flex-end',
+      justifyContent: Platform.OS === 'web' ? 'center' : 'flex-end',
+      alignItems: Platform.OS === 'web' ? 'center' : 'stretch',
+      padding: Platform.OS === 'web' ? 16 : 0,
     },
     modalSheet: {
       backgroundColor: colors.surface,
@@ -459,6 +461,14 @@ export default function CalendarScreen() {
       paddingTop: 8,
       paddingHorizontal: 20,
       paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+      ...(Platform.OS === 'web'
+        ? {
+            width: 'min(520px, calc(100vw - 32px))',
+            borderBottomLeftRadius: DESIGN_TOKENS.radii.xl,
+            borderBottomRightRadius: DESIGN_TOKENS.radii.xl,
+            boxShadow: DESIGN_TOKENS.shadows.heavy,
+          } as any
+        : null),
     },
     modalHandle: {
       width: 36,
@@ -699,6 +709,7 @@ export default function CalendarScreen() {
                         onPress={(event) => handleOpenDateEditor(item, event)}
                         accessibilityRole="button"
                         accessibilityLabel={hasCalendarDate ? `Изменить дату ${calendarDate}` : 'Добавить дату'}
+                        {...(Platform.OS === 'web' ? ({ 'data-card-action': 'true' } as any) : null)}
                       >
                         <Feather
                           name={hasCalendarDate ? 'calendar' : 'plus'}

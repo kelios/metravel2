@@ -313,7 +313,7 @@ export function ProfileHeader({
               <Feather
                 name={SOCIAL_ICONS[link.key] || 'link'}
                 size={14}
-                color={colors.textSecondary}
+                color={colors.brand}
               />
               <Text style={styles.socialChipText}>
                 {SOCIAL_LABELS[link.key] ?? link.label}

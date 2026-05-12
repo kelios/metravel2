@@ -48,9 +48,9 @@ export function ProfileCompleteness({ user, profile, travelsCount }: ProfileComp
           marginBottom: DESIGN_TOKENS.spacing.md,
           padding: DESIGN_TOKENS.spacing.sm,
           borderRadius: DESIGN_TOKENS.radii.md,
-          backgroundColor: colors.surface,
+          backgroundColor: colors.brandLight,
           borderWidth: 1,
-          borderColor: colors.borderLight,
+          borderColor: colors.brandAlpha40,
         },
         header: {
           flexDirection: 'row',
@@ -67,24 +67,30 @@ export function ProfileCompleteness({ user, profile, travelsCount }: ProfileComp
         title: {
           fontSize: DESIGN_TOKENS.typography.sizes.xs,
           fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-          color: colors.textMuted,
+          color: colors.brandText,
           flex: 1,
+        },
+        percentBadge: {
+          backgroundColor: colors.brand,
+          paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+          paddingVertical: 3,
+          borderRadius: DESIGN_TOKENS.radii.pill,
         },
         percentText: {
           fontSize: DESIGN_TOKENS.typography.sizes.xs,
           fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
-          color: colors.primary,
+          color: colors.surface,
         },
         track: {
           height: 6,
           borderRadius: 3,
-          backgroundColor: colors.backgroundSecondary,
+          backgroundColor: colors.brandAlpha40,
           overflow: 'hidden',
         },
         fill: {
           height: 6,
           borderRadius: 3,
-          backgroundColor: colors.primary,
+          backgroundColor: colors.brand,
           ...Platform.select({
             web: { transition: 'width 0.4s ease' } as any,
             default: {},
@@ -103,7 +109,7 @@ export function ProfileCompleteness({ user, profile, travelsCount }: ProfileComp
         },
         stepLabel: {
           fontSize: 11,
-          color: colors.textMuted,
+          color: colors.brandText,
         },
         stepLabelDone: {
           color: colors.success,
@@ -125,12 +131,14 @@ export function ProfileCompleteness({ user, profile, travelsCount }: ProfileComp
     >
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Feather name="trending-up" size={12} color={colors.primary} />
+          <Feather name="trending-up" size={12} color={colors.brand} />
           <Text style={styles.title}>
-            Профиль заполнен{nextStep ? ` · добавьте ${nextStep.label.toLowerCase()}` : ''}
+            Заполните профиль{nextStep ? ` · добавьте ${nextStep.label.toLowerCase()}` : ''}
           </Text>
         </View>
-        <Text style={styles.percentText}>{percent}%</Text>
+        <View style={styles.percentBadge}>
+          <Text style={styles.percentText}>{percent}%</Text>
+        </View>
       </View>
       <View style={styles.track}>
         <View style={[styles.fill, { width: `${percent}%` as any }]} />
@@ -141,7 +149,7 @@ export function ProfileCompleteness({ user, profile, travelsCount }: ProfileComp
             <Feather
               name={s.done ? 'check-circle' : 'circle'}
               size={11}
-              color={s.done ? colors.success : colors.textMuted}
+              color={s.done ? colors.success : colors.brand}
             />
             <Text style={[styles.stepLabel, s.done && styles.stepLabelDone]}>{s.label}</Text>
           </View>

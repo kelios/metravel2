@@ -61,13 +61,13 @@ export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: Profil
         },
         scrollContent: {
           paddingHorizontal: DESIGN_TOKENS.spacing.md,
-          gap: DESIGN_TOKENS.spacing.xs,
+          gap: DESIGN_TOKENS.spacing.sm,
           flexDirection: 'row',
           alignItems: 'flex-start',
         },
         actionItem: {
           alignItems: 'center',
-          minWidth: 64,
+          minWidth: 60,
           paddingVertical: DESIGN_TOKENS.spacing.xs,
           paddingHorizontal: DESIGN_TOKENS.spacing.xxs,
           borderRadius: DESIGN_TOKENS.radii.md,
@@ -77,19 +77,29 @@ export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: Profil
           }),
         },
         actionItemPressed: {
-          backgroundColor: colors.primarySoft,
+          backgroundColor: colors.brandSoft,
         },
         iconWrap: {
           position: 'relative',
-          width: 48,
-          height: 48,
+          width: 52,
+          height: 52,
           borderRadius: DESIGN_TOKENS.radii.md,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: colors.surface,
+          backgroundColor: colors.brandLight,
           borderWidth: 1,
-          borderColor: colors.borderLight,
+          borderColor: colors.brandAlpha40,
           marginBottom: DESIGN_TOKENS.spacing.xxs,
+          ...Platform.select({
+            ios: {
+              shadowColor: colors.brand,
+              shadowOpacity: 0.1,
+              shadowRadius: 6,
+              shadowOffset: { width: 0, height: 2 },
+            },
+            android: { elevation: 1 },
+            default: {},
+          }),
         },
         badge: {
           position: 'absolute',
@@ -103,7 +113,7 @@ export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: Profil
           justifyContent: 'center',
           paddingHorizontal: 4,
           borderWidth: 2,
-          borderColor: colors.background,
+          borderColor: colors.surface,
         },
         badgeText: {
           fontSize: 10,
@@ -113,7 +123,7 @@ export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: Profil
         label: {
           fontSize: 11,
           fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-          color: colors.textMuted,
+          color: colors.brandText,
           textAlign: 'center',
         },
       }),
@@ -149,7 +159,7 @@ export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: Profil
               ]}
             >
               <View style={styles.iconWrap}>
-                <Feather name={item.icon} size={20} color={colors.primary} />
+                <Feather name={item.icon} size={22} color={colors.brand} />
                 {showBadge && (
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>

@@ -82,7 +82,7 @@ const normalizeEntry = (item: unknown): TravelStatusEntry | null => {
   ) return null
   return normalizeStatusDates({
     id,
-    type: 'travel',
+    type: 'travel' as const,
     title,
     url,
     status: status as TravelStatus,
