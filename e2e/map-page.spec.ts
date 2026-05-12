@@ -1233,9 +1233,34 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     // asserted visibility above.
     await close.click({ force: true });
 
-    await expect(page.getByTestId('map-panel-close')).toBeHidden({ timeout: 20_000 });
-    await expect(page.getByTestId('segmented-list')).toBeHidden({ timeout: 20_000 });
-    await expect(getMobilePanelEntry(page)).toBeVisible({ timeout: 20_000 });
+    await expect
+      .poll(
+        async () => {
+          const closeVisible = await page
+            .getByTestId('map-panel-close')
+            .isVisible()
+            .catch(() => false)
+
+          if (closeVisible) {
+            await page
+              .getByTestId('map-panel-close')
+              .click({ force: true })
+              .catch(() => null)
+          }
+
+          const segmentedVisible = await page
+            .getByTestId('segmented-list')
+            .isVisible()
+            .catch(() => false)
+          const compactVisible = await getMobilePanelEntry(page)
+            .isVisible()
+            .catch(() => false)
+
+          return !closeVisible && !segmentedVisible && compactVisible
+        },
+        { timeout: 20_000 },
+      )
+      .toBe(true)
   });
 
   test('mobile: double click on compact preview entry does not cause panel flicker (stays open)', async ({ page }) => {

@@ -825,6 +825,28 @@ test.describe('Создание путешествия - Полный flow', () 
   });
 
   test('должен создать быстрый черновик (Quick Mode)', async ({ page }) => {
+    await maybeMockNominatimSearch(page)
+    const mockDraftId = 999_101
+    const fulfillDraftSave = async (route: any) => {
+      const method = route.request().method()
+      if (!['POST', 'PUT', 'PATCH'].includes(method)) {
+        return route.continue()
+      }
+
+      return route.fulfill({
+        status: method === 'POST' ? 201 : 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: mockDraftId,
+          slug: String(mockDraftId),
+          url: `/travels/${mockDraftId}`,
+        }),
+      })
+    }
+
+    await page.route('**/api/travels/', fulfillDraftSave)
+    await page.route('**/api/travels/**', fulfillDraftSave)
+
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
 
