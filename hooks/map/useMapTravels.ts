@@ -20,6 +20,62 @@ interface UseMapTravelsParams {
   isFocused: boolean;
 }
 
+type MapTravelIdentityCandidate = Partial<TravelCoords> & {
+  id?: string | number;
+  _id?: string | number;
+  uid?: string | number;
+  slug?: string;
+  url?: string;
+  articleUrl?: string;
+};
+
+function normalizeIdentityValue(value: unknown): string | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim();
+    return normalized ? normalized : null;
+  }
+  return null;
+}
+
+export function getMapTravelIdentity(travel: MapTravelIdentityCandidate): string | null {
+  const candidates: Array<[string, unknown]> = [
+    ['id', travel?.id],
+    ['_id', travel?._id],
+    ['uid', travel?.uid],
+    ['slug', travel?.slug],
+    ['urlTravel', travel?.urlTravel],
+    ['url', travel?.url],
+    ['articleUrl', travel?.articleUrl],
+  ];
+
+  for (const [source, value] of candidates) {
+    const normalized = normalizeIdentityValue(value);
+    if (normalized) {
+      return `${source}:${normalized}`;
+    }
+  }
+
+  return null;
+}
+
+export function dedupeMapTravels(travels: TravelCoords[]): TravelCoords[] {
+  if (!Array.isArray(travels) || travels.length <= 1) {
+    return Array.isArray(travels) ? travels : [];
+  }
+
+  const seen = new Set<string>();
+  return travels.filter((travel) => {
+    const identity = getMapTravelIdentity(travel);
+    if (!identity) return true;
+    if (seen.has(identity)) return false;
+    seen.add(identity);
+    return true;
+  });
+}
+
 function filterTravelsByCategories(
   all: TravelCoords[],
   selectedCategories: string[]
@@ -333,7 +389,7 @@ export function useMapTravels({
   // Нормализуем данные
   const allTravelsData = useMemo(() => {
     if (!Array.isArray(rawTravelsData)) return [];
-    return rawTravelsData;
+    return dedupeMapTravels(rawTravelsData);
   }, [rawTravelsData]);
 
   // Фильтруем только по категориям на клиенте (радиус уже применен на бэкенде)

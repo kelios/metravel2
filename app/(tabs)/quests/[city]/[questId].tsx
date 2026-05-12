@@ -1,344 +1,484 @@
-// app/quests/[city]/[questId].tsx
 import React, { Suspense, useCallback, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform } from 'react-native';
-import { useLocalSearchParams, Link } from 'expo-router';
-// ⚡️ иконки лениво, чтобы не тянуть весь @expo/vector-icons в entry
-const Ion = React.lazy(() =>
-    import('@expo/vector-icons/Ionicons').then((m: any) => ({ default: m.Ionicons || m.default }))
-);
-// ⚡️ мастер-компонент тоже лениво (часто тяжёлый)
-const QuestWizardLazy = React.lazy<React.ComponentType<any>>(() =>
-    import('@/components/quests/QuestWizard').then((m: any) => ({ default: m.QuestWizard || m.default }))
-);
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Link, useLocalSearchParams } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
-import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
-import { useQuestBundle, useQuestProgressSync } from '@/hooks/useQuestsApi';
 import { useAuth } from '@/context/AuthContext';
-
-import { useIsFocused } from '@react-navigation/native';
+import { useQuestBundle, useQuestProgressSync } from '@/hooks/useQuestsApi';
 import { useThemedColors } from '@/hooks/useTheme';
 import { createQuestDetailStructuredData } from '@/utils/discoverySeo';
+import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
+
+import type { QuestWizardProps } from '@/components/quests/QuestWizard';
+import type { FrontendQuestBundle } from '@/utils/questAdapters';
+
+const FeatherIcon = React.lazy(() =>
+  import('@expo/vector-icons/Feather').then((module: any) => ({ default: module.Feather || module.default })),
+);
+
+const QuestWizard = React.lazy<React.ComponentType<QuestWizardProps>>(() =>
+  import('@/components/quests/QuestWizard').then((module: any) => ({ default: module.QuestWizard || module.default })),
+);
+
+type Colors = ReturnType<typeof useThemedColors>;
+type IconName = 'alert-circle' | 'arrow-left' | 'lock' | 'log-in' | 'refresh-cw';
+type QuestSeoModel = {
+  title: string;
+  description: string;
+  headKey: string;
+  ogType: 'article' | 'website';
+  robots?: string;
+};
+
+const HEAD_PATCH_DELAYS_MS = [0, 120, 400] as const;
+const QUEST_LIST_ROUTE = '/quests';
+
+const hiddenWebHeadingStyle = {
+  position: 'absolute' as const,
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: 'hidden' as const,
+  clip: 'rect(0,0,0,0)',
+  whiteSpace: 'nowrap' as const,
+  borderWidth: 0,
+};
+
+const getRouteParam = (value: string | string[] | undefined): string => {
+  if (Array.isArray(value)) return value[0] ?? '';
+  return value ?? '';
+};
+
+const getQuestSeo = (bundle: FrontendQuestBundle | null, questId: string, isLoading: boolean): QuestSeoModel => {
+  if (isLoading) {
+    return {
+      title: 'Загружаем квест…',
+      description: 'Пожалуйста, подождите — готовим маршрут и задания.',
+      headKey: `quest-loading-${questId}`,
+      ogType: 'website',
+    };
+  }
+
+  if (!bundle) {
+    return {
+      title: 'Квест не найден',
+      description: 'Проверьте адрес страницы или выберите квест из общего списка.',
+      headKey: 'quest-not-found',
+      ogType: 'website',
+      robots: 'noindex, nofollow',
+    };
+  }
+
+  return {
+    title: bundle.title,
+    description: `${bundle.title} — офлайн-квест: маршрут, задания и финал.`,
+    headKey: `quest-${bundle.storageKey ?? questId}`,
+    ogType: 'article',
+  };
+};
+
+const getQuestImage = (coverUrl: string | undefined): string => {
+  const cleanCoverUrl = String(coverUrl || '').trim();
+  if (!cleanCoverUrl) return buildOgImageUrl(DEFAULT_OG_IMAGE_PATH);
+  return /^https?:\/\//i.test(cleanCoverUrl)
+    ? cleanCoverUrl.replace(/^http:\/\//i, 'https://')
+    : buildOgImageUrl(cleanCoverUrl);
+};
+
+const upsertMetaContent = (selector: string, value: string) => {
+  const nodes = document.querySelectorAll(selector);
+  for (let index = 1; index < nodes.length; index += 1) nodes[index].remove();
+
+  let element = nodes[0] ?? null;
+  if (!element) {
+    element = document.createElement('meta');
+    const selectorAttribute = selector.match(/\[(\w+)="([^"]+)"]/);
+    if (selectorAttribute) element.setAttribute(selectorAttribute[1], selectorAttribute[2]);
+    element.setAttribute('data-rh', 'true');
+    document.head.appendChild(element);
+  }
+
+  if (element.getAttribute('content') !== value) element.setAttribute('content', value);
+};
+
+const upsertCanonical = (href: string) => {
+  const nodes = document.querySelectorAll('link[rel="canonical"]');
+  for (let index = 1; index < nodes.length; index += 1) nodes[index].remove();
+
+  let element = nodes[0] as HTMLLinkElement | undefined;
+  if (!element) {
+    element = document.createElement('link');
+    element.setAttribute('rel', 'canonical');
+    element.setAttribute('data-rh', 'true');
+    document.head.appendChild(element);
+  }
+
+  if (element.getAttribute('href') !== href) element.setAttribute('href', href);
+};
+
+const patchQuestHead = (seo: QuestSeoModel, canonical: string) => {
+  document.title = seo.title;
+  upsertMetaContent('meta[name="description"]', seo.description);
+  upsertMetaContent('meta[property="og:title"]', seo.title);
+  upsertMetaContent('meta[property="og:description"]', seo.description);
+  upsertMetaContent('meta[property="og:url"]', canonical);
+  upsertMetaContent('meta[property="og:type"]', seo.ogType);
+  upsertMetaContent('meta[name="twitter:title"]', seo.title);
+  upsertMetaContent('meta[name="twitter:description"]', seo.description);
+  upsertCanonical(canonical);
+};
+
+const useQuestHeadSync = (isFocused: boolean, seo: QuestSeoModel, canonical: string) => {
+  useEffect(() => {
+    if (!isFocused || Platform.OS !== 'web' || typeof document === 'undefined') return undefined;
+
+    const timers = HEAD_PATCH_DELAYS_MS.map((delay) => setTimeout(() => patchQuestHead(seo, canonical), delay));
+    return () => timers.forEach(clearTimeout);
+  }, [canonical, isFocused, seo]);
+};
+
+const Icon = ({ name, color, size = 18 }: { name: IconName; color: string; size?: number }) => (
+  <Suspense fallback={null}>
+    <FeatherIcon name={name as any} size={size} color={color} />
+  </Suspense>
+);
+
+const CenteredPage = ({ children, styles }: { children: React.ReactNode; styles: ReturnType<typeof createStyles> }) => (
+  <View style={[styles.page, styles.centeredPage]}>{children}</View>
+);
+
+const PrimaryAction = ({
+  children,
+  icon,
+  onPress,
+  styles,
+  colors,
+}: {
+  children: React.ReactNode;
+  icon?: IconName;
+  onPress?: () => void;
+  styles: ReturnType<typeof createStyles>;
+  colors: Colors;
+}) => (
+  <Pressable onPress={onPress} style={styles.primaryButton}>
+    {icon ? <Icon name={icon} color={colors.textOnPrimary} size={16} /> : null}
+    <Text style={styles.primaryButtonText}>{children}</Text>
+  </Pressable>
+);
+
+const PrimaryQuestLink = ({
+  children,
+  icon,
+  styles,
+  colors,
+}: {
+  children: React.ReactNode;
+  icon?: IconName;
+  styles: ReturnType<typeof createStyles>;
+  colors: Colors;
+}) => (
+  <Link href={QUEST_LIST_ROUTE} asChild>
+    <Pressable style={styles.primaryButton}>
+      {icon ? <Icon name={icon} color={colors.textOnPrimary} size={16} /> : null}
+      <Text style={styles.primaryButtonText}>{children}</Text>
+    </Pressable>
+  </Link>
+);
+
+const SecondaryQuestLink = ({ styles }: { styles: ReturnType<typeof createStyles> }) => (
+  <Link href={QUEST_LIST_ROUTE} asChild>
+    <Pressable style={styles.secondaryButton}>
+      <Text style={styles.secondaryButtonText}>К списку квестов</Text>
+    </Pressable>
+  </Link>
+);
+
+const LoadingState = ({
+  canonical,
+  colors,
+  isFocused,
+  styles,
+}: {
+  canonical: string;
+  colors: Colors;
+  isFocused: boolean;
+  styles: ReturnType<typeof createStyles>;
+}) => (
+  <CenteredPage styles={styles}>
+    {isFocused ? (
+      <InstantSEO
+        headKey="quest-loading"
+        title="Загружаем квест…"
+        description="Готовим маршрут и задания."
+        canonical={canonical}
+        ogType="website"
+      />
+    ) : null}
+    <ActivityIndicator color={colors.primary} />
+  </CenteredPage>
+);
+
+const AuthGateState = ({
+  canonical,
+  colors,
+  isFocused,
+  questId,
+  styles,
+}: {
+  canonical: string;
+  colors: Colors;
+  isFocused: boolean;
+  questId: string;
+  styles: ReturnType<typeof createStyles>;
+}) => (
+  <CenteredPage styles={styles}>
+    {isFocused ? (
+      <InstantSEO
+        headKey={`quest-auth-${questId}`}
+        title="Войдите, чтобы пройти квест"
+        description="Для прохождения квестов необходима регистрация."
+        canonical={canonical}
+        ogType="website"
+        robots="noindex, nofollow"
+      />
+    ) : null}
+    <View style={styles.stateCard}>
+      <Icon name="lock" size={36} color={colors.primary} />
+      <Text style={styles.stateTitle}>Войдите, чтобы начать квест</Text>
+      <Text style={styles.stateText}>Для прохождения квестов нужна учётная запись — так мы сохраним ваш прогресс и результаты.</Text>
+      <Link href="/login" asChild>
+        <Pressable style={styles.primaryButton}>
+          <Icon name="log-in" color={colors.textOnPrimary} size={16} />
+          <Text style={styles.primaryButtonText}>Войти или зарегистрироваться</Text>
+        </Pressable>
+      </Link>
+      <SecondaryQuestLink styles={styles} />
+    </View>
+  </CenteredPage>
+);
+
+const ErrorState = ({
+  bundleError,
+  colors,
+  isFocused,
+  onRetry,
+  styles,
+}: {
+  bundleError: string | null;
+  colors: Colors;
+  isFocused: boolean;
+  onRetry: () => void;
+  styles: ReturnType<typeof createStyles>;
+}) => {
+  const isLoadError = Boolean(bundleError);
+
+  return (
+    <CenteredPage styles={styles}>
+      {isFocused ? (
+        <InstantSEO
+          headKey="quest-not-found"
+          title={isLoadError ? 'Не удалось загрузить квест' : 'Квест не найден'}
+          description={bundleError || 'Проверь адрес или выбери квест из списка.'}
+          canonical={buildCanonicalUrl(QUEST_LIST_ROUTE)}
+          ogType="website"
+          robots="noindex, nofollow"
+        />
+      ) : null}
+      <View style={styles.stateCard}>
+        <Icon name="alert-circle" size={28} color={colors.textMuted} />
+        <Text style={styles.stateTitle}>{isLoadError ? 'Не удалось загрузить квест' : 'Квест не найден'}</Text>
+        <Text style={styles.stateText}>{bundleError || 'Проверь адрес или выбери квест из списка.'}</Text>
+        {isLoadError ? (
+          <PrimaryAction icon="refresh-cw" onPress={onRetry} styles={styles} colors={colors}>
+            Повторить
+          </PrimaryAction>
+        ) : null}
+        {isLoadError ? (
+          <Link href={QUEST_LIST_ROUTE} asChild>
+            <Pressable style={styles.secondaryButton}>
+              <Icon name="arrow-left" color={colors.text} size={16} />
+              <Text style={styles.secondaryButtonText}>К списку квестов</Text>
+            </Pressable>
+          </Link>
+        ) : (
+          <PrimaryQuestLink icon="arrow-left" styles={styles} colors={colors}>
+            К списку квестов
+          </PrimaryQuestLink>
+        )}
+      </View>
+    </CenteredPage>
+  );
+};
 
 export default function QuestByIdScreen() {
-    const { questId, city } = useLocalSearchParams<{ questId: string; city: string }>();
-    const isFocused = useIsFocused();
-    const colors = useThemedColors();
-    const styles = useMemo(() => createStyles(colors), [colors]);
+  const params = useLocalSearchParams<{ city?: string | string[]; questId?: string | string[] }>();
+  const cityId = getRouteParam(params.city);
+  const questId = getRouteParam(params.questId);
+  const isFocused = useIsFocused();
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const canonical = useMemo(() => buildCanonicalUrl(`/quests/${cityId}/${questId}`), [cityId, questId]);
 
-    // Загружаем бандл квеста из бэкенда по quest_id
-    const { bundle, loading, error: bundleError, refetch } = useQuestBundle(questId ? String(questId) : undefined);
-    const loaded = !loading;
+  const { isAuthenticated } = useAuth();
+  const { bundle, loading: isQuestLoading, error: bundleError, refetch } = useQuestBundle(questId || undefined);
+  const { progress: backendProgress, progressLoading, saveProgress, resetProgress } = useQuestProgressSync(
+    questId || undefined,
+    isAuthenticated,
+  );
 
-    // Синхронизация прогресса с бэкендом для авторизованных пользователей
-    const { isAuthenticated } = useAuth();
-    const { progress: backendProgress, progressLoading, saveProgress, resetProgress } = useQuestProgressSync(
-        questId ? String(questId) : undefined,
-        isAuthenticated,
-    );
-    const initialProgress = useMemo(() => {
-        if (!backendProgress) return undefined;
-        return {
-            currentIndex: backendProgress.current_index,
-            unlockedIndex: backendProgress.unlocked_index,
-            answers: backendProgress.answers ?? {},
-            attempts: backendProgress.attempts ?? {},
-            hints: backendProgress.hints ?? {},
-            showMap: backendProgress.show_map ?? true,
-        };
-    }, [backendProgress]);
-    const handleProgressChange = useCallback((data: any) => {
-        saveProgress(data);
-    }, [saveProgress]);
-    const handleProgressReset = useCallback(() => {
-        resetProgress();
-    }, [resetProgress]);
+  const isLoading = isQuestLoading || (isAuthenticated && progressLoading);
+  const seo = useMemo(() => getQuestSeo(bundle, questId, isLoading), [bundle, isLoading, questId]);
+  const seoImage = useMemo(() => getQuestImage(bundle?.coverUrl), [bundle?.coverUrl]);
+  const initialProgress = useMemo(() => {
+    if (!backendProgress) return undefined;
+    return {
+      currentIndex: backendProgress.current_index,
+      unlockedIndex: backendProgress.unlocked_index,
+      answers: backendProgress.answers ?? {},
+      attempts: backendProgress.attempts ?? {},
+      hints: backendProgress.hints ?? {},
+      showMap: backendProgress.show_map ?? true,
+    };
+  }, [backendProgress]);
+  const structuredDataTags = useMemo(() => {
+    if (!bundle || !questId) return null;
 
-    // SEO тексты
-    const { title, description, headKey, ogType } = useMemo(() => {
-        if (!loaded) {
-            return {
-                title: 'Загружаем квест…',
-                description: 'Пожалуйста, подождите — готовим маршрут и задания.',
-                headKey: `quest-loading-${questId}`,
-                ogType: 'website' as const,
-            };
-        }
-        if (!bundle) {
-            return {
-                title: 'Квест не найден',
-                description: 'Проверьте адрес страницы или выберите квест из общего списка.',
-                headKey: 'quest-not-found',
-                ogType: 'website' as const,
-            };
-        }
-        return {
-            title: bundle.title,
-            description: `${bundle.title} — офлайн-квест: маршрут, задания и финал.`,
-            headKey: `quest-${bundle.storageKey ?? questId}`,
-            ogType: 'article' as const,
-        };
-    }, [loaded, bundle, questId]);
-    const canonical = useMemo(
-        () => buildCanonicalUrl(`/quests/${city}/${questId}`),
-        [city, questId]
-    );
-    const seoImage = useMemo(() => {
-        const coverUrl = String(bundle?.coverUrl || '').trim();
-        if (!coverUrl) return buildOgImageUrl(DEFAULT_OG_IMAGE_PATH);
-        return /^https?:\/\//i.test(coverUrl)
-            ? coverUrl.replace(/^http:\/\//i, 'https://')
-            : buildOgImageUrl(coverUrl);
-    }, [bundle?.coverUrl]);
-    const questStructuredData = useMemo(() => {
-        if (!bundle || !questId) return null;
-        return createQuestDetailStructuredData({
-            canonical,
-            title,
-            description,
-            questId: String(questId),
-            cityId: city ? String(city) : undefined,
-            cityName: bundle.city?.name,
-            countryCode: bundle.city?.countryCode,
-            coverUrl: bundle.coverUrl,
-            stepsCount: Array.isArray(bundle.steps) ? bundle.steps.length : undefined,
-            lat: bundle.city?.lat,
-            lng: bundle.city?.lng,
-        });
-    }, [bundle, canonical, city, description, questId, title]);
-    const questSeoTags = useMemo(() => {
-        if (!questStructuredData) return null;
-        return (
-            <script
-                key="quest-structured-data"
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(questStructuredData) }}
-            />
-        );
-    }, [questStructuredData]);
+    const structuredData = createQuestDetailStructuredData({
+      canonical,
+      title: seo.title,
+      description: seo.description,
+      questId,
+      cityId: cityId || undefined,
+      cityName: bundle.city?.name,
+      countryCode: bundle.city?.countryCode,
+      coverUrl: bundle.coverUrl,
+      stepsCount: bundle.steps.length,
+      lat: bundle.city?.lat,
+      lng: bundle.city?.lng,
+    });
 
-    useEffect(() => {
-        if (!isFocused) return undefined;
-        if (Platform.OS !== 'web' || typeof document === 'undefined') return undefined;
-        if (!title) return undefined;
-
-        const patchMeta = (selector: string, attr: string, value: string) => {
-            const nodes = document.querySelectorAll(selector);
-            for (let i = 1; i < nodes.length; i++) nodes[i].remove();
-
-            let el = nodes[0] ?? null;
-            if (!el) {
-                el = document.createElement('meta');
-                const match = selector.match(/\[(\w+)="([^"]+)"]/);
-                if (match) el.setAttribute(match[1], match[2]);
-                el.setAttribute('data-rh', 'true');
-                document.head.appendChild(el);
-            }
-
-            if (el.getAttribute(attr) !== value) {
-                el.setAttribute(attr, value);
-            }
-        };
-
-        const patchCanonical = (href: string) => {
-            const selector = 'link[rel="canonical"]';
-            const nodes = document.querySelectorAll(selector);
-            for (let i = 1; i < nodes.length; i++) nodes[i].remove();
-
-            let el = nodes[0] as HTMLLinkElement | undefined;
-            if (!el) {
-                el = document.createElement('link');
-                el.setAttribute('rel', 'canonical');
-                el.setAttribute('data-rh', 'true');
-                document.head.appendChild(el);
-            }
-
-            if (el.getAttribute('href') !== href) {
-                el.setAttribute('href', href);
-            }
-        };
-
-        const applyHead = () => {
-            document.title = title;
-            patchMeta('meta[name="description"]', 'content', description);
-            patchMeta('meta[property="og:title"]', 'content', title);
-            patchMeta('meta[property="og:description"]', 'content', description);
-            patchMeta('meta[property="og:url"]', 'content', canonical);
-            patchMeta('meta[property="og:type"]', 'content', ogType);
-            patchMeta('meta[name="twitter:title"]', 'content', title);
-            patchMeta('meta[name="twitter:description"]', 'content', description);
-            patchCanonical(canonical);
-        };
-
-        const t1 = setTimeout(applyHead, 0);
-        const t2 = setTimeout(applyHead, 120);
-        const t3 = setTimeout(applyHead, 400);
-
-        return () => {
-            clearTimeout(t1);
-            clearTimeout(t2);
-            clearTimeout(t3);
-        };
-    }, [canonical, description, isFocused, ogType, title]);
-
-    // AUTH GATE — квесты только для зарегистрированных
-    if (!isAuthenticated) {
-        return (
-            <View style={[styles.page, { alignItems: 'center', justifyContent: 'center' }]}>
-                {isFocused && (
-                    <InstantSEO headKey={`quest-auth-${questId}`} title="Войдите, чтобы пройти квест" description="Для прохождения квестов необходима регистрация." canonical={canonical} ogType="website" robots="noindex, nofollow" />
-                )}
-                <View style={styles.authGate}>
-                    <Suspense fallback={null}>
-                        {/* @ts-ignore -- Ionicons name prop types are incomplete for all valid icon names */}
-                        <Ion name="lock-closed" size={36} color={colors.primary} />
-                    </Suspense>
-                    <Text style={styles.authGateTitle}>Войдите, чтобы начать квест</Text>
-                    <Text style={styles.authGateText}>
-                        Для прохождения квестов нужна учётная запись — так мы сохраним ваш прогресс и результаты.
-                    </Text>
-                    <Link href="/login" asChild>
-                        <Pressable style={styles.backBtn}>
-                            <Suspense fallback={null}>
-                                {/* @ts-ignore -- Ionicons name prop types are incomplete for all valid icon names */}
-                                <Ion name="log-in-outline" size={18} color={colors.textOnPrimary} />
-                            </Suspense>
-                            <Text style={styles.backBtnTxt}>Войти или зарегистрироваться</Text>
-                        </Pressable>
-                    </Link>
-                    <Link href="/quests" asChild>
-                        <Pressable style={styles.secondaryBtn}>
-                            <Text style={styles.secondaryBtnTxt}>К списку квестов</Text>
-                        </Pressable>
-                    </Link>
-                </View>
-            </View>
-        );
-    }
-
-    // LOADING (bundle or backend progress)
-    if (!loaded || progressLoading) {
-        return (
-            <View style={[styles.page, { alignItems: 'center', justifyContent: 'center' }]}>
-                {isFocused && (
-                    <InstantSEO headKey={`quest-loading-${questId}`} title="Загружаем квест…" description="Готовим маршрут и задания." canonical={canonical} ogType="website" />
-                )}
-                <ActivityIndicator color={colors.primary} />
-            </View>
-        );
-    }
-
-    // NOT FOUND
-    if (!bundle) {
-        return (
-            <View style={[styles.page, { alignItems: 'center', justifyContent: 'center' }]}>
-                {isFocused && (
-                    <InstantSEO headKey="quest-not-found" title="Квест не найден" description="Проверь адрес или выбери квест из списка." canonical={buildCanonicalUrl('/quests')} ogType="website" robots="noindex, nofollow" />
-                )}
-                <View style={styles.notFound}>
-                    <Suspense fallback={null}>
-                        {/* @ts-ignore -- Ionicons name prop types are incomplete for all valid icon names */}
-                        <Ion name="alert-circle" size={28} color={colors.textMuted} />
-                    </Suspense>
-                    <Text style={styles.notFoundTitle}>{bundleError ? 'Не удалось загрузить квест' : 'Квест не найден'}</Text>
-                    <Text style={styles.notFoundText}>{bundleError || 'Проверь адрес или выбери квест из списка.'}</Text>
-                    {bundleError && (
-                        <Pressable onPress={refetch} style={styles.backBtn}>
-                            <Suspense fallback={null}>
-                                {/* @ts-ignore -- Ionicons name prop types are incomplete for all valid icon names */}
-                                <Ion name="refresh" size={16} color={colors.textOnPrimary} />
-                            </Suspense>
-                            <Text style={styles.backBtnTxt}>Повторить</Text>
-                        </Pressable>
-                    )}
-                    <Link href="/quests" asChild>
-                        <Pressable style={bundleError ? styles.secondaryBtn : styles.backBtn}>
-                            <Suspense fallback={null}>
-                                {/* @ts-ignore -- Ionicons name prop types are incomplete for all valid icon names */}
-                                <Ion name="arrow-back" size={16} color={bundleError ? colors.text : colors.textOnPrimary} />
-                            </Suspense>
-                            <Text style={bundleError ? styles.secondaryBtnTxt : styles.backBtnTxt}>К списку квестов</Text>
-                        </Pressable>
-                    </Link>
-                </View>
-            </View>
-        );
-    }
-
-    // READY (пользователь авторизован)
     return (
-        <View style={styles.page}>
-            {isFocused && (
-                <InstantSEO
-                    headKey={headKey}
-                    title={title}
-                    description={description}
-                    canonical={canonical}
-                    ogType={ogType}
-                    image={seoImage}
-                    additionalTags={questSeoTags}
-                />
-            )}
-            {Platform.OS === 'web' && (
-                <h1 style={{
-                    position: 'absolute' as const,
-                    width: 1,
-                    height: 1,
-                    padding: 0,
-                    margin: -1,
-                    overflow: 'hidden' as const,
-                    clip: 'rect(0,0,0,0)',
-                    whiteSpace: 'nowrap',
-                    borderWidth: 0,
-                } as any}>{title}</h1>
-            )}
-
-            <Suspense fallback={<View style={{ padding: 16 }}><ActivityIndicator color={colors.primary} /></View>}>
-                <QuestWizardLazy
-                    title={bundle.title}
-                    steps={bundle.steps}
-                    finale={bundle.finale}
-                    intro={bundle.intro}
-                    storageKey={bundle.storageKey}
-                    city={bundle.city}
-                    coverUrl={bundle.coverUrl}
-                    onProgressChange={handleProgressChange}
-                    onProgressReset={handleProgressReset}
-                    initialProgress={initialProgress}
-                    onFinaleVideoRetry={refetch}
-                    mapPreviewOpenByDefault={false}
-                />
-            </Suspense>
-        </View>
+      <script
+        key="quest-structured-data"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
     );
+  }, [bundle, canonical, cityId, questId, seo.description, seo.title]);
+
+  const handleProgressReset = useCallback(() => {
+    void resetProgress();
+  }, [resetProgress]);
+
+  useQuestHeadSync(isFocused, seo, canonical);
+
+  if (!isAuthenticated) {
+    return <AuthGateState canonical={canonical} colors={colors} isFocused={isFocused} questId={questId} styles={styles} />;
+  }
+
+  if (isLoading) {
+    return <LoadingState canonical={canonical} colors={colors} isFocused={isFocused} styles={styles} />;
+  }
+
+  if (!bundle) {
+    return <ErrorState bundleError={bundleError} colors={colors} isFocused={isFocused} onRetry={refetch} styles={styles} />;
+  }
+
+  return (
+    <View style={styles.page}>
+      {isFocused ? (
+        <InstantSEO
+          headKey={seo.headKey}
+          title={seo.title}
+          description={seo.description}
+          canonical={canonical}
+          ogType={seo.ogType}
+          image={seoImage}
+          additionalTags={structuredDataTags}
+        />
+      ) : null}
+      {Platform.OS === 'web' ? <h1 style={hiddenWebHeadingStyle as any}>{seo.title}</h1> : null}
+      <Suspense fallback={<View style={styles.wizardFallback}><ActivityIndicator color={colors.primary} /></View>}>
+        <QuestWizard
+          title={bundle.title}
+          steps={bundle.steps}
+          finale={bundle.finale}
+          intro={bundle.intro}
+          storageKey={bundle.storageKey}
+          city={bundle.city}
+          coverUrl={bundle.coverUrl}
+          onProgressChange={saveProgress}
+          onProgressReset={handleProgressReset}
+          initialProgress={initialProgress}
+          onFinaleVideoRetry={refetch}
+        />
+      </Suspense>
+    </View>
+  );
 }
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
-    page: { flex: 1, backgroundColor: colors.background },
-    authGate: {
-        backgroundColor: colors.surface,
-        borderWidth: 1, borderColor: colors.border,
-        padding: 24, borderRadius: 16, gap: 12, width: '90%', maxWidth: 400,
-        alignItems: 'center',
-    },
-    authGateTitle: { color: colors.text, fontWeight: '900', fontSize: 18, textAlign: 'center' },
-    authGateText: { color: colors.textMuted, textAlign: 'center', lineHeight: 22 },
-    notFound: {
-        backgroundColor: colors.surface,
-        borderWidth: 1, borderColor: colors.border,
-        padding: 16, borderRadius: 16, gap: 8, width: '90%', maxWidth: 480,
-        alignItems: 'center',
-    },
-    notFoundTitle: { color: colors.text, fontWeight: '900', fontSize: 16 },
-    notFoundText: { color: colors.textMuted, textAlign: 'center' },
-    backBtn: {
-        marginTop: 8, flexDirection: 'row', gap: 6, alignItems: 'center',
-        backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12,
-    },
-    backBtnTxt: { color: colors.textOnPrimary, fontWeight: '800' },
-    secondaryBtn: {
-        paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12,
-        borderWidth: 1, borderColor: colors.border,
-    },
-    secondaryBtnTxt: { color: colors.text, fontWeight: '600' },
+const createStyles = (colors: Colors) => StyleSheet.create({
+  page: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  centeredPage: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stateCard: {
+    width: '90%',
+    maxWidth: 440,
+    alignItems: 'center',
+    gap: 12,
+    padding: 24,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  stateTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  stateText: {
+    color: colors.textMuted,
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+  primaryButton: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+  },
+  primaryButtonText: {
+    color: colors.textOnPrimary,
+    fontWeight: '800',
+  },
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  secondaryButtonText: {
+    color: colors.text,
+    fontWeight: '600',
+  },
+  wizardFallback: {
+    padding: 16,
+  },
 });

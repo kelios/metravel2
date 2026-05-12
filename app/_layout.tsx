@@ -335,6 +335,10 @@ function ThemedContent({
     Platform.OS === 'web' &&
     typeof pathname === 'string' &&
     /^\/travels\/[^/]+$/.test(pathname);
+  const isMapRoute =
+    Platform.OS === 'web' &&
+    typeof pathname === 'string' &&
+    (pathname === '/map' || pathname.startsWith('/map/'));
   // Travel details defer several below-the-fold/runtime widgets already.
   // Deferring the root auth/favorites providers swaps fallback contexts for
   // real providers after first interaction, which remounts the entire route
@@ -401,7 +405,7 @@ function ThemedContent({
                                   {bottomGutter}
                               </View>
 
-                              {Platform.OS === 'web' && __DEV__ && !isMobile && !isTravelRoute && ReactQueryDevtoolsLazy ? (
+                              {Platform.OS === 'web' && __DEV__ && !isMobile && !isTravelRoute && !isMapRoute && ReactQueryDevtoolsLazy ? (
                                 <React.Suspense fallback={null}>
                                   <ReactQueryDevtoolsLazy initialIsOpen={false} />
                                 </React.Suspense>

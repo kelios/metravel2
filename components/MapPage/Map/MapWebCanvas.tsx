@@ -266,7 +266,7 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
       {typeof Pane === 'function' && mapInstance ? (
         <>
           <Pane name="metravelRoutePane" style={{ zIndex: 590, pointerEvents: 'none' } as any} />
-          <Pane name="metravelUserLocationPane" style={{ zIndex: 640, pointerEvents: 'none' } as any} />
+          <Pane name="metravelUserLocationPane" style={{ zIndex: 520, pointerEvents: 'none' } as any} />
         </>
       ) : null}
 

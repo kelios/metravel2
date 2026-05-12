@@ -514,7 +514,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     ;(process.env as any).NODE_ENV = prevNodeEnv
   })
 
-  it('renders the web user location marker as non-interactive so clusters beneath remain tappable', async () => {
+  it('renders the web user location marker below clusters and non-interactive so clusters remain tappable', async () => {
     const prevNodeEnv = process.env.NODE_ENV
     ;(process.env as any).NODE_ENV = 'test'
 
@@ -528,7 +528,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     const userMarker = getUserLocationMarkers(queryAllByTestId)[0]
     expect(userMarker.props.interactive).toBe(false)
     expect(userMarker.props.pane).toBeUndefined()
-    expect(userMarker.props.zIndexOffset).toBe(700)
+    expect(userMarker.props.zIndexOffset).toBe(0)
     expect(userMarker.props.eventHandlers).toBeUndefined()
 
     ;(process.env as any).NODE_ENV = prevNodeEnv

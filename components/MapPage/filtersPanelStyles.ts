@@ -355,7 +355,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       paddingVertical: 7,
       minHeight: 32,
       borderRadius: PILL_RADIUS,
-      maxWidth: 160,
+      maxWidth: isMobile ? 180 : '100%',
       marginRight: 6,
       borderWidth: 1,
       borderColor: colors.borderLight,
@@ -380,6 +380,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       fontWeight: '600',
       color: colors.text,
       flexShrink: 1,
+      minWidth: 0,
       marginRight: 4,
     },
     categoryChipTextSelected: {

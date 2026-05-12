@@ -56,7 +56,8 @@ export const shouldShowHeaderContextBar = (pathname: string, isMobile: boolean) 
   const isUserPointsRoute = pathname === '/userpoints'
 
   if (isMobile) {
-    if (isMapRoute || isUserPointsRoute || isTravelDetailRoute) return true
+    if (isUserPointsRoute || isTravelDetailRoute) return true
+    if (isMapRoute) return false
     if (TOP_LEVEL_PATHS_NO_CONTEXT_BAR.has(pathname)) return false
     return true
   }

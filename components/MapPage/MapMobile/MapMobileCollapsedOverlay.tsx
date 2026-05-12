@@ -51,8 +51,6 @@ const MapMobileCollapsedOverlayInner: React.FC<MapMobileCollapsedOverlayProps> =
   quickCategoriesValue,
   quickOverlaysValue,
   quickRadiusOptions,
-  quickCategoryOptions,
-  quickOverlayOptions,
   quickEnabledOverlays,
   activeRadius,
   quickFilterSelected,
@@ -112,15 +110,15 @@ const MapMobileCollapsedOverlayInner: React.FC<MapMobileCollapsedOverlayProps> =
       overlaysValue={quickOverlaysValue}
       extraActions={extraActions}
       onPressRadius={onOpenSearch}
-      onPressCategories={onOpenSearch}
-      onPressOverlays={onOpenSearch}
+      onPressCategories={undefined}
+      onPressOverlays={undefined}
       radiusOptions={quickRadiusOptions}
       radiusSelected={activeRadius}
       onChangeRadius={handleChangeRadius}
-      categoriesOptions={quickCategoryOptions}
+      categoriesOptions={[]}
       categoriesSelected={quickFilterSelected}
       onChangeCategories={handleChangeCategories}
-      overlayOptions={quickOverlayOptions}
+      overlayOptions={[]}
       enabledOverlays={quickEnabledOverlays}
       onChangeOverlay={handleChangeOverlay}
       onResetOverlays={onResetOverlays}

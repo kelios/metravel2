@@ -432,6 +432,18 @@ select:focus-visible {
   :root {
     --mt-dock-h: calc(56px + env(safe-area-inset-bottom, 0px));
   }
+
+  body:has([data-testid="map-screen-root"]) .leaflet-bottom.leaflet-right {
+    bottom: calc(var(--mt-dock-h) + 8px) !important;
+  }
+
+  body:has([data-testid="map-screen-root"]) .leaflet-control-attribution {
+    max-width: calc(100vw - 32px);
+    border-radius: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 /* Extra SSR/hydration safety: if RN-web styles aren't attached yet, enforce dock layout by wrapper */
