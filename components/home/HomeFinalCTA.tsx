@@ -1,97 +1,212 @@
-import React, { memo, useMemo } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
-import Feather from '@expo/vector-icons/Feather';
-import { useAuth } from '@/context/AuthContext';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useResponsive } from '@/hooks/useResponsive';
-import { sendAnalyticsEvent } from '@/utils/analytics';
-import { ResponsiveContainer } from '@/components/layout';
-import { useThemedColors } from '@/hooks/useTheme';
-import Button from '@/components/ui/Button';
-import { buildLoginHref } from '@/utils/authNavigation';
+import React, { memo, useMemo } from 'react'
+import { Platform, StyleSheet, Text, View } from 'react-native'
+import { useRouter } from 'expo-router'
+import Feather from '@expo/vector-icons/Feather'
+
+import { useAuth } from '@/context/AuthContext'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { useResponsive } from '@/hooks/useResponsive'
+import { sendAnalyticsEvent } from '@/utils/analytics'
+import { ResponsiveContainer } from '@/components/layout'
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import Button from '@/components/ui/Button'
+import { buildLoginHref } from '@/utils/authNavigation'
 
 interface HomeFinalCTAProps {
-  travelsCount?: number;
+  travelsCount?: number
 }
+
+type CtaState = 'guest' | 'empty' | 'started'
 
 const TRUST_BADGES = [
   { icon: 'check-circle', label: 'Бесплатно' },
   { icon: 'shield', label: 'Без карты' },
   { icon: 'zap', label: 'Мгновенно' },
-] as const;
+] as const
 
 const CTA_FEATURES = [
   { icon: 'bookmark', label: 'Сохраняйте идеи в один список' },
   { icon: 'file-text', label: 'Собирайте PDF без ручной вёрстки' },
   { icon: 'send', label: 'Делитесь книгой одной ссылкой' },
-] as const;
+] as const
+
+function getCtaState(isAuthenticated: boolean, travelsCount: number): CtaState {
+  if (!isAuthenticated) return 'guest'
+  if (travelsCount === 0) return 'empty'
+  return 'started'
+}
+
+function pluralizeTravels(count: number) {
+  if (count === 1) return 'поездка в книге'
+  if (count < 5) return 'поездки в книге'
+  return 'поездок в книге'
+}
+
+const CTA_COPY: Record<CtaState, { eyebrow: string; button: string; subtitle: string }> = {
+  guest: {
+    eyebrow: 'Ваш travel-дневник',
+    button: 'Начать бесплатно',
+    subtitle:
+      'Сохраняйте маршруты с фото и заметками, экспортируйте в красивый PDF и возвращайтесь к идеям поездок без лишней подготовки.',
+  },
+  empty: {
+    eyebrow: 'Старт вашей коллекции',
+    button: 'Добавить первую поездку',
+    subtitle:
+      'Добавьте первую поездку, чтобы начать личную книгу маршрутов и собрать её в аккуратный PDF, когда захотите.',
+  },
+  started: {
+    eyebrow: 'Книга уже собирается',
+    button: 'Открыть мою книгу',
+    subtitle:
+      'У вас уже есть база для книги. Откройте подборку, добавьте новые поездки и соберите финальный PDF в пару кликов.',
+  },
+}
+
+function getStatusPills(state: CtaState, travelsCount: number): string[] {
+  switch (state) {
+    case 'guest':
+      return ['Без оплаты', 'Регистрация за минуту', 'PDF после первых поездок']
+    case 'empty':
+      return ['Начните с одной поездки', 'Фото и заметки внутри', 'Экспорт готов позже']
+    case 'started':
+      return [
+        `${travelsCount} ${pluralizeTravels(travelsCount)}`,
+        'Добавляйте новые главы',
+        'Экспорт в PDF готов',
+      ]
+  }
+}
+
+function getNextPath(state: CtaState) {
+  if (state === 'guest') return buildLoginHref({ redirect: '/', intent: 'create-book' })
+  if (state === 'empty') return '/travel/new'
+  return '/export'
+}
 
 function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
-  const router = useRouter();
-  const { isAuthenticated } = useAuth();
-  const { isSmallPhone, isPhone, isLargePhone } = useResponsive();
-  const isMobile = isSmallPhone || isPhone || isLargePhone;
-  const colors = useThemedColors();
+  const router = useRouter()
+  const { isAuthenticated } = useAuth()
+  const { isSmallPhone, isPhone, isLargePhone } = useResponsive()
+  const isMobile = isSmallPhone || isPhone || isLargePhone
+  const colors = useThemedColors()
+
+  const ctaState = getCtaState(isAuthenticated, travelsCount)
+  const copy = CTA_COPY[ctaState]
+  const statusPills = useMemo(
+    () => getStatusPills(ctaState, travelsCount),
+    [ctaState, travelsCount],
+  )
 
   const handleAction = () => {
-    sendAnalyticsEvent('HomeClick_FinalCTA');
-    if (!isAuthenticated) {
-      router.push(buildLoginHref({ redirect: '/', intent: 'create-book' }) as any);
-    } else if (travelsCount === 0) {
-      router.push('/travel/new' as any);
-    } else {
-      router.push('/export' as any);
-    }
-  };
+    sendAnalyticsEvent('HomeClick_FinalCTA')
+    router.push(getNextPath(ctaState) as any)
+  }
 
   const handleOpenSearch = () => {
-    sendAnalyticsEvent('HomeClick_FinalCTA_Search');
-    router.push('/search' as any);
-  };
+    sendAnalyticsEvent('HomeClick_FinalCTA_Search')
+    router.push('/search' as any)
+  }
 
-  const buttonLabel = useMemo(() => {
-    if (!isAuthenticated) return 'Начать бесплатно';
-    if (travelsCount === 0) return 'Добавить первую поездку';
-    return 'Открыть мою книгу';
-  }, [isAuthenticated, travelsCount]);
+  const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile])
 
-  const eyebrowLabel = useMemo(() => {
-    if (!isAuthenticated) return 'Ваш travel-дневник';
-    if (travelsCount === 0) return 'Старт вашей коллекции';
-    return 'Книга уже собирается';
-  }, [isAuthenticated, travelsCount]);
+  return (
+    <View style={styles.container}>
+      <ResponsiveContainer maxWidth="lg" padding>
+        <View style={styles.content}>
+          <View style={styles.eyebrow}>
+            <Feather name="star" size={12} color={colors.primaryText} />
+            <Text style={styles.eyebrowText}>{copy.eyebrow}</Text>
+          </View>
 
-  const subtitle = useMemo(() => {
-    if (!isAuthenticated) {
-      return 'Сохраняйте маршруты с фото и заметками, экспортируйте в красивый PDF и возвращайтесь к идеям поездок без лишней подготовки.';
-    }
-    if (travelsCount === 0) {
-      return 'Добавьте первую поездку, чтобы начать личную книгу маршрутов и собрать её в аккуратный PDF, когда захотите.';
-    }
-    return 'У вас уже есть база для книги. Откройте подборку, добавьте новые поездки и соберите финальный PDF в пару кликов.';
-  }, [isAuthenticated, travelsCount]);
+          <View style={styles.iconWrap}>
+            <Feather
+              name="book-open"
+              size={isMobile ? 28 : 32}
+              color={colors.textOnPrimary}
+            />
+          </View>
 
-  const statusPills = useMemo(() => {
-    if (!isAuthenticated) {
-      return ['Без оплаты', 'Регистрация за минуту', 'PDF после первых поездок'];
-    }
-    if (travelsCount === 0) {
-      return ['Начните с одной поездки', 'Фото и заметки внутри', 'Экспорт готов позже'];
-    }
-    return [
-      `${travelsCount} ${travelsCount === 1 ? 'поездка в книге' : travelsCount < 5 ? 'поездки в книге' : 'поездок в книге'}`,
-      'Добавляйте новые главы',
-      'Экспорт в PDF готов',
-    ];
-  }, [isAuthenticated, travelsCount]);
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>Начните собирать</Text>
+            <Text style={styles.titleAccent}>книгу путешествий</Text>
+          </View>
 
-  const styles = useMemo(() => StyleSheet.create({
+          <Text style={styles.subtitle}>{copy.subtitle}</Text>
+
+          <View style={styles.statusPills}>
+            {statusPills.map((item) => (
+              <View key={item} style={styles.statusPill}>
+                <Text style={styles.statusPillText}>{item}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.featuresGrid}>
+            {CTA_FEATURES.map((feature) => (
+              <View key={feature.label} style={styles.featureCard}>
+                <View style={styles.featureIcon}>
+                  <Feather name={feature.icon as any} size={16} color={colors.primary} />
+                </View>
+                <Text style={styles.featureText}>{feature.label}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.buttonsContainer}>
+            <Button
+              onPress={handleAction}
+              label={copy.button}
+              variant="primary"
+              size="lg"
+              fullWidth={isMobile}
+              icon={<Feather name="arrow-right" size={18} color={colors.textOnPrimary} />}
+              iconPosition="right"
+              style={styles.primaryButton}
+              labelStyle={styles.primaryButtonText}
+              hoverStyle={styles.primaryButtonHover}
+              pressedStyle={styles.primaryButtonHover}
+              accessibilityLabel={copy.button}
+            />
+            <Button
+              onPress={handleOpenSearch}
+              label="Смотреть маршруты"
+              variant="secondary"
+              size="lg"
+              fullWidth={isMobile}
+              icon={<Feather name="compass" size={18} color={colors.text} />}
+              style={styles.secondaryButton}
+              labelStyle={styles.secondaryButtonText}
+              hoverStyle={styles.secondaryButtonHover}
+              pressedStyle={styles.secondaryButtonHover}
+              accessibilityLabel="Смотреть маршруты"
+            />
+          </View>
+
+          <View style={styles.trustBadgesRow}>
+            {TRUST_BADGES.map((badge) => (
+              <View key={badge.label} style={styles.trustBadge}>
+                <Feather
+                  name={badge.icon as any}
+                  size={13}
+                  color={colors.success ?? colors.primary}
+                />
+                <Text style={styles.trustBadgeText}>{badge.label}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </ResponsiveContainer>
+    </View>
+  )
+}
+
+const createStyles = (colors: ThemedColors, isMobile: boolean) =>
+  StyleSheet.create({
     container: {
       width: '100%',
       paddingTop: isMobile ? 24 : 56,
       paddingBottom: isMobile ? 44 : 88,
-      // SEC-04: fallback backgroundColor для браузеров без поддержки radial-gradient
       backgroundColor: colors.backgroundSecondary,
       alignItems: 'center',
       ...Platform.select({
@@ -134,9 +249,7 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       paddingHorizontal: 16,
       paddingVertical: 7,
       alignSelf: 'center',
-      ...Platform.select({
-        web: { boxShadow: `0 1px 8px ${colors.primary}14` },
-      }),
+      ...Platform.select({ web: { boxShadow: `0 1px 8px ${colors.primary}14` } }),
     },
     eyebrowText: {
       fontSize: 11,
@@ -159,11 +272,7 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.borderLight,
-      ...Platform.select({
-        web: {
-          boxShadow: DESIGN_TOKENS.shadows.light as any,
-        },
-      }),
+      ...Platform.select({ web: { boxShadow: DESIGN_TOKENS.shadows.light as any } }),
     },
     statusPillText: {
       fontSize: 13,
@@ -185,10 +294,7 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
         },
       }),
     },
-    titleRow: {
-      alignItems: 'center',
-      gap: 2,
-    },
+    titleRow: { alignItems: 'center', gap: 2 },
     title: {
       fontSize: isMobile ? 28 : 48,
       fontWeight: '800',
@@ -264,7 +370,6 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       marginTop: 4,
     },
     primaryButton: {
-      // HERO-03: primary CTA шире secondary для визуальной иерархии
       paddingHorizontal: isMobile ? 28 : 56,
       paddingVertical: isMobile ? 16 : 20,
       minHeight: isMobile ? 52 : 62,
@@ -302,29 +407,17 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       borderWidth: 1.5,
       borderColor: colors.border,
       width: isMobile ? '100%' : undefined,
-      // HERO-03: secondary CTA уже primary
       flex: isMobile ? undefined : 1,
-      ...Platform.select({
-        web: {
-          transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
-        },
-      }),
+      ...Platform.select({ web: { transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)' } }),
     },
     secondaryButtonHover: {
       backgroundColor: colors.primarySoft,
       borderColor: colors.primaryAlpha30,
       ...Platform.select({
-        web: {
-          transform: 'translateY(-2px)',
-          boxShadow: '0 6px 20px rgba(0,0,0,0.07)',
-        },
+        web: { transform: 'translateY(-2px)', boxShadow: '0 6px 20px rgba(0,0,0,0.07)' },
       }),
     },
-    secondaryButtonText: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: colors.text,
-    },
+    secondaryButtonText: { fontSize: 15, fontWeight: '600', color: colors.text },
     trustBadgesRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -333,100 +426,13 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       marginTop: 4,
       flexWrap: 'wrap',
     },
-    trustBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-    },
+    trustBadge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     trustBadgeText: {
       fontSize: 12,
       fontWeight: '500',
       color: colors.textMuted,
       letterSpacing: 0.1,
     },
-  }), [colors, isMobile]);
+  })
 
-  return (
-    <View style={styles.container}>
-      <ResponsiveContainer maxWidth="lg" padding>
-        <View style={styles.content}>
-        <View style={styles.eyebrow}>
-            <Feather name="star" size={12} color={colors.primaryText} />
-            <Text style={styles.eyebrowText}>{eyebrowLabel}</Text>
-          </View>
-
-          <View style={styles.iconWrap}>
-            <Feather name="book-open" size={isMobile ? 28 : 32} color={colors.textOnPrimary} />
-          </View>
-
-          <View style={styles.titleRow}>
-            <Text style={styles.title}>Начните собирать</Text>
-            <Text style={styles.titleAccent}>книгу путешествий</Text>
-          </View>
-
-          <Text style={styles.subtitle}>{subtitle}</Text>
-
-          <View style={styles.statusPills}>
-            {statusPills.map((item) => (
-              <View key={item} style={styles.statusPill}>
-                <Text style={styles.statusPillText}>{item}</Text>
-              </View>
-            ))}
-          </View>
-
-          <View style={styles.featuresGrid}>
-            {CTA_FEATURES.map((feature) => (
-              <View key={feature.label} style={styles.featureCard}>
-                <View style={styles.featureIcon}>
-                  <Feather name={feature.icon as any} size={16} color={colors.primary} />
-                </View>
-                <Text style={styles.featureText}>{feature.label}</Text>
-              </View>
-            ))}
-          </View>
-
-          <View style={styles.buttonsContainer}>
-            <Button
-              onPress={handleAction}
-              label={buttonLabel}
-              variant="primary"
-              size="lg"
-              fullWidth={isMobile}
-              icon={<Feather name="arrow-right" size={18} color={colors.textOnPrimary} />}
-              iconPosition="right"
-              style={styles.primaryButton}
-              labelStyle={styles.primaryButtonText}
-              hoverStyle={styles.primaryButtonHover}
-              pressedStyle={styles.primaryButtonHover}
-              accessibilityLabel={buttonLabel}
-            />
-            <Button
-              onPress={handleOpenSearch}
-              label="Смотреть маршруты"
-              variant="secondary"
-              size="lg"
-              fullWidth={isMobile}
-              icon={<Feather name="compass" size={18} color={colors.text} />}
-              style={styles.secondaryButton}
-              labelStyle={styles.secondaryButtonText}
-              hoverStyle={styles.secondaryButtonHover}
-              pressedStyle={styles.secondaryButtonHover}
-              accessibilityLabel="Смотреть маршруты"
-            />
-          </View>
-
-          <View style={styles.trustBadgesRow}>
-            {TRUST_BADGES.map((badge) => (
-              <View key={badge.label} style={styles.trustBadge}>
-                <Feather name={badge.icon as any} size={13} color={colors.success ?? colors.primary} />
-                <Text style={styles.trustBadgeText}>{badge.label}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      </ResponsiveContainer>
-    </View>
-  );
-}
-
-export default memo(HomeFinalCTA);
+export default memo(HomeFinalCTA)

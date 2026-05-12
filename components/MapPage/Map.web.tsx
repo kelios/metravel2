@@ -1,70 +1,116 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
-import { useQueryClient } from '@tanstack/react-query';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Platform, StyleSheet, View } from 'react-native'
+import { useQueryClient } from '@tanstack/react-query'
 
-import { CoordinateConverter } from '@/utils/coordinateConverter';
-import { useTheme, useThemedColors, type ThemedColors } from '@/hooks/useTheme';
-import { isValidCoordinate } from '@/utils/coordinateValidator';
-import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
-import { createMapPopupComponent } from './Map/createMapPopupComponent';
-import { useBottomSheetStore } from '@/stores/bottomSheetStore';
-import { resolveRoutingApiKey } from '@/utils/routingApiKey';
-import type { MapMode, MapProps, Point } from './Map/types';
-import { strToLatLng } from './Map/utils';
+import { CoordinateConverter } from '@/utils/coordinateConverter'
+import { useTheme, useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { isValidCoordinate } from '@/utils/coordinateValidator'
+import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig'
+import { createMapPopupComponent } from './Map/createMapPopupComponent'
+import { useBottomSheetStore } from '@/stores/bottomSheetStore'
+import { resolveRoutingApiKey } from '@/utils/routingApiKey'
+import type { MapMode, MapProps, Point } from './Map/types'
+import { strToLatLng } from './Map/utils'
 
-// Import modular components and hooks
-import { useMapCleanup } from '@/components/MapPage/Map/useMapCleanup';
-import { useLeafletIcons } from './Map/useLeafletIcons';
-import { useMapInstance } from './Map/useMapInstance';
-import { useMapApi } from './Map/useMapApi';
-import MapControls from './Map/MapControls';
-import { MapLoadingOverlay, MapWebBackground, MapWebLeafletCanvas, NoPointsMessage } from './Map/MapWebCanvas';
+import { useMapCleanup } from '@/components/MapPage/Map/useMapCleanup'
+import { useLeafletIcons } from './Map/useLeafletIcons'
+import { useMapInstance } from './Map/useMapInstance'
+import { useMapApi } from './Map/useMapApi'
+import MapControls from './Map/MapControls'
+import {
+  MapLoadingOverlay,
+  MapWebBackground,
+  MapWebLeafletCanvas,
+  NoPointsMessage,
+} from './Map/MapWebCanvas'
 
-// New optimized hooks
-import { useLeafletLoader } from '@/hooks/useLeafletLoader';
-import { useMapMarkers } from '@/hooks/useMapMarkers';
-import { useMapPopupAutoPan } from './Map/useMapPopupAutoPan';
-import { useMapUserLocation } from './Map/useMapUserLocation';
-import { useMapWebLayoutEffects } from './Map/useMapWebLayoutEffects';
+import { useLeafletLoader } from '@/hooks/useLeafletLoader'
+import { useMapMarkers } from '@/hooks/useMapMarkers'
+import { useMapPopupAutoPan } from './Map/useMapPopupAutoPan'
+import { useMapUserLocation } from './Map/useMapUserLocation'
+import { useMapWebLayoutEffects } from './Map/useMapWebLayoutEffects'
 import {
   buildRouteLineLatLngObjects,
   getCircleCenter,
   getHintCenterLatLng,
   getSafeCenter,
   normalizeLngLatWithHint as normalizeLngLatWithHintHelper,
-} from './Map/mapWebGeometry';
+} from './Map/mapWebGeometry'
 
-type ReactLeafletNS = typeof import('react-leaflet');
+type ReactLeafletNS = typeof import('react-leaflet')
 
-const ORS_API_KEY = resolveRoutingApiKey();
+const ORS_API_KEY = resolveRoutingApiKey()
+const IS_WEB = Platform.OS === 'web'
+const COMPACT_POPUP_MAX_WIDTH = 560
+const FLOATING_CONTROLS_MAX_WIDTH = 767
+const DEFAULT_ZOOM = 11
+const DEFAULT_MAX_ZOOM = 18
+const MARKER_ZOOM_TARGET = 14
+const MARKER_REOPEN_TIMEOUT_MS = 500
+const FALLBACK_COORDINATES = { latitude: 53.8828449, longitude: 27.7273595 }
+const MINSK_FALLBACK_POINTS: Array<[number, number]> = [
+  [53.9006, 27.559],
+  [53.8828449, 27.7273595],
+]
+const MINSK_TOLERANCE = 0.02
 
-type Props = MapProps;
+type Props = MapProps
 
-const MapControlsReactive: React.FC<Omit<React.ComponentProps<typeof MapControls>, 'bottomOffset'>> = (props) => {
-  const bottomOffset = useBottomSheetStore((state) => state.getControlsBottomOffset());
-  return <MapControls {...props} bottomOffset={bottomOffset} />;
-};
+function isFallbackMinskCenter(lat: number, lng: number) {
+  return MINSK_FALLBACK_POINTS.some(
+    ([fLat, fLng]) => Math.abs(lat - fLat) < MINSK_TOLERANCE && Math.abs(lng - fLng) < MINSK_TOLERANCE,
+  )
+}
+
+function safeInvoke(fn: (() => void) | undefined) {
+  if (!fn) return
+  try {
+    fn()
+  } catch {
+    ignoreOptionalMapRuntimeError()
+  }
+}
+
+function ignoreOptionalMapRuntimeError() {
+  return
+}
+
+function getViewportWidth(): number | null {
+  if (typeof window === 'undefined' || !Number.isFinite(window.innerWidth)) return null
+  return window.innerWidth
+}
+
+function getEffectiveWidth(mapPaneWidth: number): number | null {
+  const viewport = getViewportWidth()
+  if (mapPaneWidth > 0 && viewport !== null) return Math.min(mapPaneWidth, viewport)
+  if (mapPaneWidth > 0) return mapPaneWidth
+  return viewport
+}
+
+const MapControlsReactive: React.FC<
+  Omit<React.ComponentProps<typeof MapControls>, 'bottomOffset'>
+> = (props) => {
+  const bottomOffset = useBottomSheetStore((state) => state.getControlsBottomOffset())
+  return <MapControls {...props} bottomOffset={bottomOffset} />
+}
 
 export const getMarkerFocusPlan = ({
   currentZoom,
   maxZoom,
   bottomSheetState,
 }: {
-  currentZoom: number;
-  maxZoom: number;
-  bottomSheetState: 'collapsed' | 'quarter' | 'half' | 'full';
+  currentZoom: number
+  maxZoom: number
+  bottomSheetState: 'collapsed' | 'quarter' | 'half' | 'full'
 }) => {
-  const safeCurrentZoom = Number.isFinite(currentZoom) ? currentZoom : 11;
-  const safeMaxZoom = Number.isFinite(maxZoom) ? maxZoom : 18;
-  const shouldCollapseSheet = bottomSheetState !== 'collapsed';
-  const targetZoom = Math.min(Math.max(safeCurrentZoom + 2, 14), safeMaxZoom || 18);
-
+  const safeCurrentZoom = Number.isFinite(currentZoom) ? currentZoom : DEFAULT_ZOOM
+  const safeMaxZoom = Number.isFinite(maxZoom) ? maxZoom : DEFAULT_MAX_ZOOM
   return {
-    shouldCollapseSheet,
-    targetZoom,
-    shouldSkipZoom: safeCurrentZoom >= 14,
-  };
-};
+    shouldCollapseSheet: bottomSheetState !== 'collapsed',
+    targetZoom: Math.min(Math.max(safeCurrentZoom + 2, MARKER_ZOOM_TARGET), safeMaxZoom || DEFAULT_MAX_ZOOM),
+    shouldSkipZoom: safeCurrentZoom >= MARKER_ZOOM_TARGET,
+  }
+}
 
 const MapPageComponent: React.FC<Props> = (props) => {
   const {
@@ -84,299 +130,233 @@ const MapPageComponent: React.FC<Props> = (props) => {
     radius,
     onUserLocationChange,
     hideFloatingControls = false,
-  } = props;
+  } = props
 
-  // Leaflet loader (replaces manual loading logic)
-  const { L, RL: rl, loading: leafletLoading, error: leafletError, ready: leafletReady } = useLeafletLoader({
-    enabled: Platform.OS === 'web',
-    // Map page is a primary surface: load Leaflet immediately for snappier UX.
-    useIdleCallback: false,
-    fallbackDelay: 0,
-  });
+  const { L, RL: rl, loading: leafletLoading, error: leafletError, ready: leafletReady } =
+    useLeafletLoader({
+      enabled: IS_WEB,
+      useIdleCallback: false,
+      fallbackDelay: 0,
+    })
 
-  // State
-  const [showInitialLoader, setShowInitialLoader] = useState(Platform.OS !== 'web');
-  const [errors, setErrors] = useState<any>({ routing: false });
-  const [disableFitBounds, _setDisableFitBounds] = useState(false);
-  const [mapZoom, setMapZoom] = useState<number>(11);
-  const [mapInstance, setMapInstance] = useState<any>(null);
+  const [showInitialLoader, setShowInitialLoader] = useState(!IS_WEB)
+  const [errors, setErrors] = useState<any>({ routing: false })
+  const [disableFitBounds] = useState(false)
+  const [mapZoom, setMapZoom] = useState<number>(DEFAULT_ZOOM)
+  const [mapInstance, setMapInstance] = useState<any>(null)
 
-  const markerByCoordRef = useRef<Map<string, any>>(new Map());
-  const wrapperRef = useRef<View | null>(null);
+  const markerByCoordRef = useRef<Map<string, any>>(new Map())
+  const wrapperRef = useRef<View | null>(null)
 
-  const colors = useThemedColors();
-  const themeContextValue = useTheme();
-  const queryClient = useQueryClient();
-  const styles = useMemo(() => getStyles(colors), [colors]);
-  const popupBottomOffset = useBottomSheetStore((s) => s.getControlsBottomOffset());
-  const bottomSheetState = useBottomSheetStore((s) => s.state);
-  const requestBottomSheetCollapse = useBottomSheetStore((s) => s.requestCollapse);
+  const colors = useThemedColors()
+  const themeContextValue = useTheme()
+  const queryClient = useQueryClient()
+  const styles = useMemo(() => getStyles(colors), [colors])
+  const popupBottomOffset = useBottomSheetStore((s) => s.getControlsBottomOffset())
+  const bottomSheetState = useBottomSheetStore((s) => s.state)
+  const requestBottomSheetCollapse = useBottomSheetStore((s) => s.requestCollapse)
 
   useEffect(() => {
-    if (Platform.OS === 'web') return;
-    const timeout = setTimeout(() => {
-      setShowInitialLoader(false);
-    }, 0);
-    return () => {
-      clearTimeout(timeout);
-    };
-  }, []);
+    if (IS_WEB) return
+    const timeout = setTimeout(() => setShowInitialLoader(false), 0)
+    return () => clearTimeout(timeout)
+  }, [])
+
   const mapContainerStyle = useMemo(() => {
-    const base = StyleSheet.flatten(styles.map as any) as any;
-    if (Platform.OS !== 'web') return base;
-    return { ...(base || {}), position: 'relative', zIndex: 1 };
-  }, [styles.map]);
+    const base = StyleSheet.flatten(styles.map as any) as any
+    if (!IS_WEB) return base
+    return { ...(base || {}), position: 'relative', zIndex: 1 }
+  }, [styles.map])
 
   const safeCoordinates = useMemo(() => {
-    const fallback = { latitude: 53.8828449, longitude: 27.7273595 };
-    const source = coordinates && typeof coordinates === 'object' ? coordinates : fallback;
-    const zoomValue = (source as any)?.zoom;
-    const latCandidate = Number((source as any)?.latitude);
-    const lngCandidate = Number((source as any)?.longitude);
-    const hasValidLatLng = isValidCoordinate(latCandidate, lngCandidate);
-
+    const source = coordinates && typeof coordinates === 'object' ? coordinates : FALLBACK_COORDINATES
+    const zoomValue = (source as any)?.zoom
+    const latCandidate = Number((source as any)?.latitude)
+    const lngCandidate = Number((source as any)?.longitude)
+    const hasValidLatLng = isValidCoordinate(latCandidate, lngCandidate)
     return {
-      latitude: hasValidLatLng ? latCandidate : fallback.latitude,
-      longitude: hasValidLatLng ? lngCandidate : fallback.longitude,
-      zoom: Number.isFinite(zoomValue) ? zoomValue : 11,
-    };
-  }, [coordinates]);
+      latitude: hasValidLatLng ? latCandidate : FALLBACK_COORDINATES.latitude,
+      longitude: hasValidLatLng ? lngCandidate : FALLBACK_COORDINATES.longitude,
+      zoom: Number.isFinite(zoomValue) ? zoomValue : DEFAULT_ZOOM,
+    }
+  }, [coordinates])
 
+  const mapRef = useRef<any>(null)
+  const hasInitializedRef = useRef(false)
+  const lastModeRef = useRef<MapMode | null>(null)
+  const savedMapViewRef = useRef<{ center: [number, number]; zoom: number } | null>(null)
+  const lastAutoFitKeyRef = useRef<string | null>(null)
 
-  // Refs
-  const mapRef = useRef<any>(null);
-  const hasInitializedRef = useRef(false);
-  const lastModeRef = useRef<MapMode | null>(null);
-  const savedMapViewRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
-  const lastAutoFitKeyRef = useRef<string | null>(null);
+  const { mapInstanceKeyRef, mapContainerIdRef } = useMapCleanup()
 
-  const { mapInstanceKeyRef, mapContainerIdRef } = useMapCleanup();
-
-  // Defensive cleanup: if the component unmounts (route change / error boundary),
-  // clear the ref. Do NOT call map.remove() — react-leaflet's MapContainer handles
-  // its own cleanup via its unmount effect, and our leafletFix.ts patch makes that safe.
   useEffect(() => {
     return () => {
-      mapRef.current = null;
-    };
-  }, []);
+      mapRef.current = null
+    }
+  }, [])
 
-  // Travel data
   const travelData = useMemo(
     () => (Array.isArray(travel?.data) ? travel.data : []),
-    [travel?.data]
-  );
+    [travel?.data],
+  )
 
-  // Convert coordinates to LatLng format for hooks (with safety checks)
-  const coordinatesLatLng = useMemo(() => ({
-    lat: safeCoordinates.latitude,
-    lng: safeCoordinates.longitude,
-  }), [safeCoordinates.latitude, safeCoordinates.longitude]);
+  const coordinatesLatLng = useMemo(
+    () => ({ lat: safeCoordinates.latitude, lng: safeCoordinates.longitude }),
+    [safeCoordinates.latitude, safeCoordinates.longitude],
+  )
 
-  // Radius calculation
   const radiusInMeters = useMemo(() => {
-    if (mode !== 'radius') return null;
-    const radiusValue = radius || String(DEFAULT_RADIUS_KM);
-    const radiusKm = parseInt(radiusValue, 10);
-    if (isNaN(radiusKm) || radiusKm <= 0) return DEFAULT_RADIUS_KM * 1000;
-    return radiusKm * 1000;
-  }, [mode, radius]);
+    if (mode !== 'radius') return null
+    const radiusKm = parseInt(radius || String(DEFAULT_RADIUS_KM), 10)
+    if (isNaN(radiusKm) || radiusKm <= 0) return DEFAULT_RADIUS_KM * 1000
+    return radiusKm * 1000
+  }, [mode, radius])
 
   const { centerOnUserLocation, userLocation, userLocationLatLng } = useMapUserLocation({
     coordinates,
     mapRef,
     onUserLocationChange,
-    isFallbackMinskCenter: useCallback((lat: number, lng: number) => {
-      const fallbackCandidates: Array<[number, number]> = [
-        [53.9006, 27.559],
-        [53.8828449, 27.7273595],
-      ];
-      return fallbackCandidates.some(([fLat, fLng]) => (
-        Math.abs(lat - fLat) < 0.02 && Math.abs(lng - fLng) < 0.02
-      ));
-    }, []),
-  });
+    isFallbackMinskCenter,
+  })
 
   const filteredTravelData = useMemo(() => {
-    if (mode !== 'radius') return travelData;
-    if (!Array.isArray(travelData) || travelData.length === 0) return travelData;
+    if (mode !== 'radius') return travelData
+    if (!Array.isArray(travelData) || travelData.length === 0) return travelData
 
-    const center = userLocationLatLng ?? coordinatesLatLng;
-    const hasValidCenter = CoordinateConverter.isValid(center);
-    const hasValidRadius = Number.isFinite(radiusInMeters as any) && !!radiusInMeters && (radiusInMeters as number) > 0;
+    const center = userLocationLatLng ?? coordinatesLatLng
+    const hasValidCenter = CoordinateConverter.isValid(center)
+    const hasValidRadius =
+      Number.isFinite(radiusInMeters as any) && !!radiusInMeters && (radiusInMeters as number) > 0
+    const guardRadius = hasValidCenter && hasValidRadius ? (radiusInMeters as number) * 2 : null
 
-    // Server is the source of truth for radius filtering.
-    // Client-side, only drop points whose `coord` cannot be parsed at all.
-    // Apply a generous distance guard (×2) to discard outliers without rejecting
-    // borderline points when the filter center diverges from the server query center.
-    const guardRadius = hasValidCenter && hasValidRadius ? (radiusInMeters as number) * 2 : null;
-
-    return (travelData || []).filter((p) => {
+    return travelData.filter((p) => {
       try {
-        const ll = strToLatLng(String((p as any)?.coord ?? ''), hasValidCenter ? center : null);
-        if (!ll) return false;
-        const coords = { lat: ll[1], lng: ll[0] };
-        if (!CoordinateConverter.isValid(coords)) return false;
-        if (guardRadius == null) return true;
-        const d = CoordinateConverter.distance(center, coords);
-        return Number.isFinite(d) && d <= guardRadius;
+        const ll = strToLatLng(String((p as any)?.coord ?? ''), hasValidCenter ? center : null)
+        if (!ll) return false
+        const coords = { lat: ll[1], lng: ll[0] }
+        if (!CoordinateConverter.isValid(coords)) return false
+        if (guardRadius == null) return true
+        const d = CoordinateConverter.distance(center, coords)
+        return Number.isFinite(d) && d <= guardRadius
       } catch {
-        return false;
+        return false
       }
-    });
-  }, [coordinatesLatLng, mode, radiusInMeters, travelData, userLocationLatLng]);
+    })
+  }, [coordinatesLatLng, mode, radiusInMeters, travelData, userLocationLatLng])
 
   const hintCenterForMarkers = useMemo(() => {
-    if (mode === 'radius' && userLocation && isValidCoordinate(userLocation.latitude, userLocation.longitude)) {
-      return { lat: userLocation.latitude, lng: userLocation.longitude };
+    if (
+      mode === 'radius' &&
+      userLocation &&
+      isValidCoordinate(userLocation.latitude, userLocation.longitude)
+    ) {
+      return { lat: userLocation.latitude, lng: userLocation.longitude }
     }
-    return coordinatesLatLng;
-  }, [coordinatesLatLng, mode, userLocation]);
+    return coordinatesLatLng
+  }, [coordinatesLatLng, mode, userLocation])
 
-  // Use new markers hook
-  const {
-    markers,
-    markerOpacity: travelMarkerOpacity,
-  } = useMapMarkers({
+  const { markers, markerOpacity: travelMarkerOpacity } = useMapMarkers({
     travelData: filteredTravelData,
     mapZoom,
     mode,
     hintCenter: hintCenterForMarkers,
-  });
+  })
 
-  // OSM tile preconnect is handled in app/+html.tsx (injected as <link> before JS loads).
-  // No runtime preconnect needed here.
+  const handleMarkerZoom = useCallback(
+    (point: Point, coords: { lat: number; lng: number }, clickedMarker?: any) => {
+      const map = mapRef.current
+      if (!map) return
+      if (!isValidCoordinate(coords.lat, coords.lng)) return
 
-  const handleMarkerZoom = useCallback((point: Point, coords: { lat: number; lng: number }, clickedMarker?: any) => {
-    if (!mapRef.current) return;
-    if (!isValidCoordinate(coords.lat, coords.lng)) return;
-    const map = mapRef.current;
-    const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : mapZoom;
-    const maxZoom = typeof map.getMaxZoom === 'function' ? map.getMaxZoom() : 18;
-    const focusPlan = getMarkerFocusPlan({
-      currentZoom,
-      maxZoom,
-      bottomSheetState,
-    });
-    if (focusPlan.shouldCollapseSheet) {
-      requestBottomSheetCollapse();
-    }
+      const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : mapZoom
+      const maxZoom = typeof map.getMaxZoom === 'function' ? map.getMaxZoom() : DEFAULT_MAX_ZOOM
+      const focusPlan = getMarkerFocusPlan({ currentZoom, maxZoom, bottomSheetState })
 
-    if (clickedMarker) {
+      if (focusPlan.shouldCollapseSheet) requestBottomSheetCollapse()
+
+      if (clickedMarker) {
+        safeInvoke(() => clickedMarker.openPopup?.())
+        return
+      }
+
+      const markerKey = String(point?.coord ?? '').trim()
+      const resolveMarker = () =>
+        markerByCoordRef.current.get(markerKey) ??
+        markerByCoordRef.current.get(CoordinateConverter.toString(coords)) ??
+        clickedMarker
+
+      if (focusPlan.shouldSkipZoom) {
+        safeInvoke(() => resolveMarker()?.openPopup?.())
+        return
+      }
+
+      let reopened = false
+      let reopenTimer: ReturnType<typeof setTimeout> | null = null
+      const reopenPopup = () => {
+        if (reopened) return
+        reopened = true
+        safeInvoke(() => map?.off?.('moveend', reopenPopup))
+        if (reopenTimer) {
+          clearTimeout(reopenTimer)
+          reopenTimer = null
+        }
+        safeInvoke(() => resolveMarker()?.openPopup?.())
+      }
+
+      if (typeof map.once === 'function') {
+        safeInvoke(() => map.once('moveend', reopenPopup))
+        reopenTimer = setTimeout(reopenPopup, MARKER_REOPEN_TIMEOUT_MS)
+      }
+
       try {
-        clickedMarker.openPopup?.();
+        if (typeof map.flyTo === 'function') {
+          map.flyTo([coords.lat, coords.lng], focusPlan.targetZoom, {
+            animate: true,
+            duration: 0.35,
+          } as any)
+        } else if (typeof map.setView === 'function') {
+          map.setView([coords.lat, coords.lng], focusPlan.targetZoom, { animate: true } as any)
+        }
       } catch {
-        // noop
+        ignoreOptionalMapRuntimeError()
       }
-      return;
-    }
+    },
+    [bottomSheetState, mapZoom, requestBottomSheetCollapse],
+  )
 
-    const markerKey = String(point?.coord ?? '').trim();
-    const resolveMarker = () =>
-      markerByCoordRef.current.get(markerKey) ??
-      markerByCoordRef.current.get(CoordinateConverter.toString(coords)) ??
-      clickedMarker
-
-    if (focusPlan.shouldSkipZoom) {
-      try {
-        resolveMarker()?.openPopup?.();
-      } catch {
-        // noop
-      }
-      return;
-    }
-
-    let reopened = false;
-    let reopenTimer: ReturnType<typeof setTimeout> | null = null;
-    const reopenPopup = () => {
-      if (reopened) return;
-      reopened = true;
-      try {
-        map?.off?.('moveend', reopenPopup);
-      } catch {
-        // noop
-      }
-      if (reopenTimer) {
-        clearTimeout(reopenTimer);
-        reopenTimer = null;
-      }
-      try {
-        resolveMarker()?.openPopup?.();
-      } catch {
-        // noop
-      }
-    };
-
-    if (typeof map.once === 'function') {
-      try {
-        map.once('moveend', reopenPopup);
-      } catch {
-        // noop
-      }
-      reopenTimer = setTimeout(reopenPopup, 500);
-    }
-
-    try {
-      if (typeof map.flyTo === 'function') {
-        map.flyTo([coords.lat, coords.lng], focusPlan.targetZoom, { animate: true, duration: 0.35 } as any);
-      } else if (typeof map.setView === 'function') {
-        map.setView([coords.lat, coords.lng], focusPlan.targetZoom, { animate: true } as any);
-      }
-    } catch {
-      // noop
-    }
-  }, [bottomSheetState, mapZoom, requestBottomSheetCollapse]);
-
-  const handleZoomIn = useCallback(() => {
-    const map = mapRef.current
-    if (!map) return
-    try {
-      map.zoomIn?.()
-    } catch {
-      // noop
-    }
-  }, [])
-
-  const handleZoomOut = useCallback(() => {
-    const map = mapRef.current
-    if (!map) return
-    try {
-      map.zoomOut?.()
-    } catch {
-      // noop
-    }
-  }, [])
+  const handleZoomIn = useCallback(() => safeInvoke(() => mapRef.current?.zoomIn?.()), [])
+  const handleZoomOut = useCallback(() => safeInvoke(() => mapRef.current?.zoomOut?.()), [])
 
   useEffect(() => {
-    if (!errors?.routing) return;
-    // Avoid spamming the console for expected/temporary states (rate-limit, aborts).
-    const msg = typeof errors.routing === 'string' ? errors.routing : String(errors.routing);
-    const normalized = msg.trim();
-    if (!normalized) return;
-    if (normalized.toLowerCase().includes('signal is aborted')) return;
+    if (!errors?.routing) return
+    const msg = typeof errors.routing === 'string' ? errors.routing : String(errors.routing)
+    const normalized = msg.trim()
+    if (!normalized) return
+    if (normalized.toLowerCase().includes('signal is aborted')) return
 
-    const shouldWarn = normalized.includes('Слишком много запросов');
+    const shouldWarn = normalized.includes('Слишком много запросов')
     try {
-      if (shouldWarn) console.warn('[Map] Routing:', normalized);
-      else console.error('[Map] Routing error:', normalized);
+      if (shouldWarn) console.warn('[Map] Routing:', normalized)
+      else console.error('[Map] Routing error:', normalized)
     } catch {
-      // noop
+      // ignore console invocation failures in restricted runtimes
     }
-  }, [errors?.routing]);
+  }, [errors?.routing])
 
-  // Custom hooks
-  const customIcons = useLeafletIcons(L);
+  const customIcons = useLeafletIcons(L)
   const { leafletBaseLayerRef, leafletOverlayLayersRef, leafletControlRef } = useMapInstance({
     map: mapInstance,
     L,
-  });
+  })
 
   // Expose marker index for MapUiApi.openPopupForCoord
-  try {
-    (leafletControlRef as any).markerByCoord = markerByCoordRef.current;
-  } catch {
-    // noop
-  }
+  useEffect(() => {
+    try {
+      ;(leafletControlRef as any).markerByCoord = markerByCoordRef.current
+    } catch {
+      ignoreOptionalMapRuntimeError()
+    }
+  }, [leafletControlRef])
 
   useMapApi({
     map: mapInstance,
@@ -389,89 +369,79 @@ const MapPageComponent: React.FC<Props> = (props) => {
     leafletOverlayLayersRef,
     leafletControlRef,
     onRequestUserLocationFocus: centerOnUserLocation,
-  });
+  })
 
-  // Handle map click
   const handleMapClick = useCallback(
     (e: any) => {
-      if (mode !== 'route') return;
+      if (mode !== 'route') return
       try {
-        const { lat, lng } = e.latlng;
-        onMapClick(lng, lat);
+        const { lat, lng } = e.latlng
+        onMapClick(lng, lat)
       } catch {
-        // noop
+        ignoreOptionalMapRuntimeError()
       }
     },
-    [mode, onMapClick]
-  );
+    [mode, onMapClick],
+  )
 
-  // Safe center calculation with strict validation
-  const safeCenter = useMemo<[number, number]>(() => getSafeCenter(coordinates), [coordinates]);
+  const safeCenter = useMemo<[number, number]>(() => getSafeCenter(coordinates), [coordinates])
 
   const circleCenter = useMemo<[number, number] | null>(
     () => getCircleCenter(mode, userLocationLatLng, safeCenter),
-    [mode, safeCenter, userLocationLatLng]
-  );
+    [mode, safeCenter, userLocationLatLng],
+  )
 
   const circleCenterLatLng = useMemo(
     () => (circleCenter ? { lat: circleCenter[0], lng: circleCenter[1] } : null),
-    [circleCenter]
-  );
+    [circleCenter],
+  )
 
   const hintCenterLatLng = useMemo(
     () => getHintCenterLatLng(mode, circleCenterLatLng, coordinatesLatLng),
-    [mode, circleCenterLatLng, coordinatesLatLng]
-  );
+    [mode, circleCenterLatLng, coordinatesLatLng],
+  )
 
   const normalizeLngLatWithHint = useCallback(
-    (tuple: [number, number]): [number, number] => {
-      return normalizeLngLatWithHintHelper(tuple, hintCenterLatLng);
-    },
-    [hintCenterLatLng]
-  );
+    (tuple: [number, number]): [number, number] =>
+      normalizeLngLatWithHintHelper(tuple, hintCenterLatLng),
+    [hintCenterLatLng],
+  )
 
-  const routePointsForRouting = useMemo(() => {
-    if (!Array.isArray(routePoints) || routePoints.length === 0) return [] as [number, number][];
+  const routePointsForRouting = useMemo<[number, number][]>(() => {
+    if (!Array.isArray(routePoints) || routePoints.length === 0) return []
+    return routePoints.map((p) => normalizeLngLatWithHint(p))
+  }, [normalizeLngLatWithHint, routePoints])
 
-    return routePoints.map((p) => normalizeLngLatWithHint(p));
-  }, [normalizeLngLatWithHint, routePoints]);
-
-  const hasWarnedInvalidCircleRef = useRef(false);
+  const hasWarnedInvalidCircleRef = useRef(false)
   useEffect(() => {
-    if (hasWarnedInvalidCircleRef.current) return;
-    if (mode !== 'radius') return;
-    if (circleCenter) return;
-
-    hasWarnedInvalidCircleRef.current = true;
+    if (hasWarnedInvalidCircleRef.current) return
+    if (mode !== 'radius' || circleCenter) return
+    hasWarnedInvalidCircleRef.current = true
     console.warn('[Map] Skipping radius circle due to invalid center:', {
       rawCoordinates: coordinates,
       safeCenter,
       radius,
-    });
-  }, [circleCenter, coordinates, mode, radius, safeCenter]);
+    })
+  }, [circleCenter, coordinates, mode, radius, safeCenter])
 
-  const fitBoundsPadding = useMemo(() => {
-    // Route mode: keep room for the right-side panel so fitBounds doesn't place markers behind it.
-    // Radius mode: the panel is outside the map container, so large right padding over-zooms out.
-    if (mode === 'radius') {
-      return {
-        paddingTopLeft: [16, 80] as [number, number],
-        paddingBottomRight: [16, 80] as [number, number],
-      };
-    }
-    return {
-      paddingTopLeft: [24, 140] as [number, number],
-      paddingBottomRight: [360, 220] as [number, number],
-    };
-  }, [mode]);
+  const fitBoundsPadding = useMemo(
+    () =>
+      mode === 'radius'
+        ? {
+            paddingTopLeft: [16, 80] as [number, number],
+            paddingBottomRight: [16, 80] as [number, number],
+          }
+        : {
+            paddingTopLeft: [24, 140] as [number, number],
+            paddingBottomRight: [360, 220] as [number, number],
+          },
+    [mode],
+  )
 
-  const noPointsAlongRoute = useMemo(() => {
-    if (mode !== 'route') return false;
-    if (!Array.isArray(routePoints) || routePoints.length < 2) return false;
-    return travelData.length === 0;
-  }, [mode, routePoints, travelData.length]);
+  const noPointsAlongRoute =
+    mode === 'route' && Array.isArray(routePoints) && routePoints.length >= 2 && travelData.length === 0
 
-  const canRenderMap = leafletReady && !!(L && rl);
+  const canRenderMap = leafletReady && !!(L && rl)
   const { mapPaneWidth } = useMapWebLayoutEffects({
     wrapperRef,
     mapRef,
@@ -482,41 +452,35 @@ const MapPageComponent: React.FC<Props> = (props) => {
     leafletBaseLayerRef,
     canRenderMap,
     setShowInitialLoader,
-  });
+  })
+
   const useCompactPopupLayout = useMemo(() => {
-    if (mapPaneWidth > 0) return mapPaneWidth <= 560;
-    if (typeof window !== 'undefined') return window.innerWidth <= 560;
-    return false;
-  }, [mapPaneWidth]);
+    if (mapPaneWidth > 0) return mapPaneWidth <= COMPACT_POPUP_MAX_WIDTH
+    const viewport = getViewportWidth()
+    return viewport !== null && viewport <= COMPACT_POPUP_MAX_WIDTH
+  }, [mapPaneWidth])
+
   const shouldShowFloatingMapControls = useMemo(() => {
-    if (hideFloatingControls) return false;
-    const viewportWidth =
-      typeof window !== 'undefined' && Number.isFinite(window.innerWidth)
-        ? window.innerWidth
-        : null;
-    if (mapPaneWidth > 0 && viewportWidth !== null) {
-      return Math.min(mapPaneWidth, viewportWidth) <= 767;
-    }
-    if (mapPaneWidth > 0) return mapPaneWidth <= 767;
-    if (viewportWidth !== null) return viewportWidth <= 767;
-    return true;
-  }, [hideFloatingControls, mapPaneWidth]);
+    if (hideFloatingControls) return false
+    const effective = getEffectiveWidth(mapPaneWidth)
+    return effective === null ? true : effective <= FLOATING_CONTROLS_MAX_WIDTH
+  }, [hideFloatingControls, mapPaneWidth])
+
   const { popupAutoPanPadding } = useMapPopupAutoPan({
     mapRef,
     mapPaneWidth,
     popupBottomOffset,
-  });
+  })
 
-  // Popup component — keep identity stable across GPS updates by reading
-  // userLocation through a ref instead of including it in deps. Re-creating
-  // the factory on every GPS tick would unmount/remount the popup and wipe
-  // its internal state (e.g. fullscreen image viewer visibility).
-  const userLocationLatLngRef = useRef(userLocationLatLng);
+  // Keep PopupComponent identity stable across GPS updates: read userLocation via ref
+  // to avoid unmount/remount that would wipe internal popup state (fullscreen viewer, etc).
+  const userLocationLatLngRef = useRef(userLocationLatLng)
   useEffect(() => {
-    userLocationLatLngRef.current = userLocationLatLng;
-  }, [userLocationLatLng]);
+    userLocationLatLngRef.current = userLocationLatLng
+  }, [userLocationLatLng])
+
   const PopupComponent = useMemo(() => {
-    if (!rl) return null;
+    if (!rl) return null
     return createMapPopupComponent({
       colors,
       themeContextValue,
@@ -524,36 +488,32 @@ const MapPageComponent: React.FC<Props> = (props) => {
       fullscreenOnMobile: useCompactPopupLayout,
       userLocationRef: userLocationLatLngRef,
       invalidateUserPoints: () => {
-        void queryClient.invalidateQueries({ queryKey: ['userPointsAll'] });
+        void queryClient.invalidateQueries({ queryKey: ['userPointsAll'] })
       },
-    });
-  }, [colors, queryClient, rl, themeContextValue, useCompactPopupLayout]);
+    })
+  }, [colors, queryClient, rl, themeContextValue, useCompactPopupLayout])
 
-  const shouldShowLoadingOverlay = Platform.OS === 'web'
+  const shouldShowLoadingOverlay = IS_WEB
     ? !!leafletError || !canRenderMap
-    : showInitialLoader || leafletLoading || !!leafletError || !canRenderMap;
+    : showInitialLoader || leafletLoading || !!leafletError || !canRenderMap
 
-  const rlSafe = (rl ?? {}) as ReactLeafletNS;
-  const { useMap, useMapEvents } = rlSafe;
-
-  const hasValidReactLeafletHooks = !!(
-    useMap && 
-    typeof useMap === 'function' && 
-    useMapEvents && 
-    typeof useMapEvents === 'function'
-  );
+  const rlSafe = (rl ?? {}) as ReactLeafletNS
+  const { useMap, useMapEvents } = rlSafe
+  const hasValidReactLeafletHooks =
+    !!useMap && typeof useMap === 'function' && !!useMapEvents && typeof useMapEvents === 'function'
 
   const routeLineLatLngObjects = useMemo(
-    () => buildRouteLineLatLngObjects(mode, fullRouteCoords, routePointsForRouting, hintCenterLatLng),
-    [fullRouteCoords, hintCenterLatLng, mode, routePointsForRouting]
-  );
+    () =>
+      buildRouteLineLatLngObjects(mode, fullRouteCoords, routePointsForRouting, hintCenterLatLng),
+    [fullRouteCoords, hintCenterLatLng, mode, routePointsForRouting],
+  )
 
   return (
     <View ref={wrapperRef} style={styles.wrapper} testID="map-leaflet-wrapper">
       <MapWebBackground opacity={0.18} />
 
-      {shouldShowLoadingOverlay ? <MapLoadingOverlay colors={colors} styles={styles} /> : null}
-      {noPointsAlongRoute ? <NoPointsMessage /> : null}
+      {shouldShowLoadingOverlay && <MapLoadingOverlay colors={colors} styles={styles} />}
+      {noPointsAlongRoute && <NoPointsMessage />}
 
       <MapWebLeafletCanvas
         rl={rlSafe}
@@ -565,7 +525,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
         mapContainerStyle={mapContainerStyle}
         mapContainerId={mapContainerIdRef.current}
         safeCenter={safeCenter}
-        safeZoom={Number.isFinite(safeCoordinates.zoom) ? Number(safeCoordinates.zoom) : 11}
+        safeZoom={Number.isFinite(safeCoordinates.zoom) ? Number(safeCoordinates.zoom) : DEFAULT_ZOOM}
         mapInstanceKey={mapInstanceKeyRef.current}
         circleCenterLatLng={circleCenterLatLng}
         radiusInMeters={radiusInMeters}
@@ -608,7 +568,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
         travelMarkerOpacity={travelMarkerOpacity}
       />
 
-      {shouldShowFloatingMapControls ? (
+      {shouldShowFloatingMapControls && (
         <MapControlsReactive
           userLocation={userLocationLatLng}
           onCenterUserLocation={centerOnUserLocation}
@@ -616,10 +576,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
           onZoomOut={handleZoomOut}
           alignLeft
         />
-      ) : null}
+      )}
     </View>
-  );
-};
+  )
+}
 
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
@@ -634,46 +594,49 @@ const getStyles = (colors: ThemedColors) =>
     },
     map: { flex: 1, width: '100%', height: '100%', minHeight: 300 },
     loader: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  });
+  })
 
-// Custom memo comparator — avoids re-renders for micro-changes in coordinates
-const COORD_EPSILON = 0.0001;
+const COORD_EPSILON = 0.0001
+
+function coordsApproxEqual(a: [number, number], b: [number, number] | undefined) {
+  return !!b && Math.abs(a[0] - b[0]) < COORD_EPSILON && Math.abs(a[1] - b[1]) < COORD_EPSILON
+}
 
 export const arePropsEqual = (prevProps: Props, nextProps: Props): boolean => {
   if (
     Math.abs(prevProps.coordinates.latitude - nextProps.coordinates.latitude) > COORD_EPSILON ||
     Math.abs(prevProps.coordinates.longitude - nextProps.coordinates.longitude) > COORD_EPSILON
-  ) return false;
+  ) {
+    return false
+  }
+  if (prevProps.mode !== nextProps.mode || prevProps.transportMode !== nextProps.transportMode) {
+    return false
+  }
 
-  if (prevProps.mode !== nextProps.mode || prevProps.transportMode !== nextProps.transportMode) return false;
+  const prevRP = prevProps.routePoints ?? []
+  const nextRP = nextProps.routePoints ?? []
+  if (prevRP.length !== nextRP.length) return false
+  if (!prevRP.every((p, i) => coordsApproxEqual(p, nextRP[i]))) return false
 
-  const prevRP = prevProps.routePoints ?? [];
-  const nextRP = nextProps.routePoints ?? [];
-  if (prevRP.length !== nextRP.length) return false;
-  if (!prevRP.every((p, i) => {
-    const n = nextRP[i];
-    return n && Math.abs(p[0] - n[0]) < COORD_EPSILON && Math.abs(p[1] - n[1]) < COORD_EPSILON;
-  })) return false;
+  const prevFull = prevProps.fullRouteCoords ?? []
+  const nextFull = nextProps.fullRouteCoords ?? []
+  if (prevFull.length !== nextFull.length) return false
+  if (prevFull.length > 0 && !prevFull.every((p, i) => coordsApproxEqual(p, nextFull[i]))) return false
 
-  const prevFull = prevProps.fullRouteCoords ?? [];
-  const nextFull = nextProps.fullRouteCoords ?? [];
-  if (prevFull.length !== nextFull.length) return false;
-  if (prevFull.length > 0 && !prevFull.every((p, i) => {
-    const n = nextFull[i];
-    return n && Math.abs(p[0] - n[0]) < COORD_EPSILON && Math.abs(p[1] - n[1]) < COORD_EPSILON;
-  })) return false;
+  if (prevProps.radius !== nextProps.radius) return false
 
-  if (prevProps.radius !== nextProps.radius) return false;
+  const prevData = prevProps.travel?.data ?? []
+  const nextData = nextProps.travel?.data ?? []
+  if (prevData.length !== nextData.length) return false
+  if (
+    !prevData.every((p, i) => {
+      const n = nextData[i]
+      return n && p.id === n.id && p.coord === n.coord && p.address === n.address
+    })
+  ) {
+    return false
+  }
+  return true
+}
 
-  const prevData = prevProps.travel?.data ?? [];
-  const nextData = nextProps.travel?.data ?? [];
-  if (prevData.length !== nextData.length) return false;
-  if (!prevData.every((p, i) => {
-    const n = nextData[i];
-    return n && p.id === n.id && p.coord === n.coord && p.address === n.address;
-  })) return false;
-
-  return true;
-};
-
-export default React.memo(MapPageComponent, arePropsEqual);
+export default React.memo(MapPageComponent, arePropsEqual)

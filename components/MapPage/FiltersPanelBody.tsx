@@ -1,78 +1,80 @@
-import React, { useMemo } from 'react';
-import { Platform, ScrollView, Text, View } from 'react-native';
-import { QuickRecommendations } from '@/components/MapPage/QuickRecommendations';
-import FiltersPanelMapSettings from '@/components/MapPage/FiltersPanelMapSettings';
-import FiltersPanelRadiusSection from '@/components/MapPage/FiltersPanelRadiusSection';
-import FiltersPanelRouteSection from '@/components/MapPage/FiltersPanelRouteSection';
-import CollapsibleSection from '@/components/MapPage/CollapsibleSection';
-import Button from '@/components/ui/Button';
-import type { RoutePoint } from '@/types/route';
-import type { LatLng } from '@/types/coordinates';
-import type { ThemedColors } from '@/hooks/useTheme';
-import type { MapUiApi } from '@/types/mapUi';
+import React, { useMemo } from 'react'
+import { Platform, ScrollView, Text, View } from 'react-native'
 
-type CategoryOption = string | { id?: string | number; name?: string; value?: string };
+import { QuickRecommendations } from '@/components/MapPage/QuickRecommendations'
+import FiltersPanelMapSettings from '@/components/MapPage/FiltersPanelMapSettings'
+import FiltersPanelRadiusSection from '@/components/MapPage/FiltersPanelRadiusSection'
+import FiltersPanelRouteSection from '@/components/MapPage/FiltersPanelRouteSection'
+import CollapsibleSection from '@/components/MapPage/CollapsibleSection'
+import Button from '@/components/ui/Button'
+import type { RoutePoint } from '@/types/route'
+import type { LatLng } from '@/types/coordinates'
+import type { ThemedColors } from '@/hooks/useTheme'
+import type { MapUiApi } from '@/types/mapUi'
 
-const getCategoryName = (category: CategoryOption) => {
-  if (typeof category === 'string') return category.trim();
-  if (category && typeof category === 'object' && typeof category.value === 'string') {
-    return category.value.trim();
+const MOBILE_QUICK_CHIPS_LIMIT = 2
+const RECOMMENDATIONS_MAX_ITEMS = 3
+
+type CategoryOption = string | { id?: string | number; name?: string; value?: string }
+
+function getCategoryName(category: CategoryOption): string {
+  if (typeof category === 'string') return category.trim()
+  if (category && typeof category === 'object') {
+    if (typeof category.value === 'string') return category.value.trim()
+    if (typeof category.name === 'string') return category.name.trim()
   }
-  if (category && typeof category === 'object' && typeof category.name === 'string') {
-    return category.name.trim();
-  }
-  return '';
-};
+  return ''
+}
 
 interface FiltersPanelBodyProps {
-  colors: ThemedColors;
-  styles: any;
-  mode: 'radius' | 'route';
+  colors: ThemedColors
+  styles: any
+  mode: 'radius' | 'route'
   filters: {
-    categories: CategoryOption[];
-    categoryTravelAddress: CategoryOption[];
-    radius: { id: string; name: string }[];
-    address: string;
-  };
+    categories: CategoryOption[]
+    categoryTravelAddress: CategoryOption[]
+    radius: { id: string; name: string }[]
+    address: string
+  }
   filterValue: {
-    categories: CategoryOption[];
-    categoryTravelAddress: CategoryOption[];
-    radius: string;
-    address: string;
-    searchQuery?: string;
-  };
-  travelsData: { categoryName?: string; name?: string; address?: string }[];
-  overlayOptions?: { id: string; title: string }[];
-  enabledOverlays?: Record<string, boolean>;
-  onOverlayToggle?: (id: string, enabled: boolean) => void;
-  onResetOverlays?: () => void;
-  mapUiApi?: MapUiApi | null;
-  isMobile: boolean;
-  totalPoints: number;
-  hasFilters: boolean;
-  canBuildRoute: boolean;
-  onFilterChange: (field: string, value: any) => void;
-  onReset: () => void;
-  onOpenList?: () => void;
-  transportMode: 'car' | 'bike' | 'foot';
-  setTransportMode: (mode: 'car' | 'bike' | 'foot') => void;
-  startAddress: string;
-  endAddress: string;
-  routingLoading?: boolean;
-  routingError?: string | boolean | null;
-  routeDistance?: number | null;
-  routeDuration?: number | null;
-  routeElevationGain?: number | null;
-  routeElevationLoss?: number | null;
-  routePoints: RoutePoint[];
-  onRemoveRoutePoint: (id: string) => void;
-  onClearRoute?: () => void;
-  swapStartEnd?: () => void;
-  onRetryRoute?: () => void;
-  onAddressSelect?: (address: string, coords: LatLng, isStart: boolean) => void;
-  onAddressClear?: (isStart: boolean) => void;
-  userLocation?: { latitude: number; longitude: number } | null;
-  onPlaceSelect?: (place: any) => void;
+    categories: CategoryOption[]
+    categoryTravelAddress: CategoryOption[]
+    radius: string
+    address: string
+    searchQuery?: string
+  }
+  travelsData: { categoryName?: string; name?: string; address?: string }[]
+  overlayOptions?: { id: string; title: string }[]
+  enabledOverlays?: Record<string, boolean>
+  onOverlayToggle?: (id: string, enabled: boolean) => void
+  onResetOverlays?: () => void
+  mapUiApi?: MapUiApi | null
+  isMobile: boolean
+  totalPoints: number
+  hasFilters: boolean
+  canBuildRoute: boolean
+  onFilterChange: (field: string, value: any) => void
+  onReset: () => void
+  onOpenList?: () => void
+  transportMode: 'car' | 'bike' | 'foot'
+  setTransportMode: (mode: 'car' | 'bike' | 'foot') => void
+  startAddress: string
+  endAddress: string
+  routingLoading?: boolean
+  routingError?: string | boolean | null
+  routeDistance?: number | null
+  routeDuration?: number | null
+  routeElevationGain?: number | null
+  routeElevationLoss?: number | null
+  routePoints: RoutePoint[]
+  onRemoveRoutePoint: (id: string) => void
+  onClearRoute?: () => void
+  swapStartEnd?: () => void
+  onRetryRoute?: () => void
+  onAddressSelect?: (address: string, coords: LatLng, isStart: boolean) => void
+  onAddressClear?: (isStart: boolean) => void
+  userLocation?: { latitude: number; longitude: number } | null
+  onPlaceSelect?: (place: any) => void
 }
 
 const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
@@ -114,40 +116,42 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
   userLocation,
   onPlaceSelect,
 }) => {
-  const radiusOptions = useMemo(() => (Array.isArray(filters.radius) ? filters.radius : []), [filters.radius]);
   const selectedCategoryNames = useMemo(
     () =>
       (Array.isArray(filterValue.categoryTravelAddress) ? filterValue.categoryTravelAddress : [])
         .map(getCategoryName)
         .filter(Boolean),
-    [filterValue.categoryTravelAddress]
-  );
-  const currentRadiusIndex = useMemo(
-    () => radiusOptions.findIndex((option) => String(option.id) === String(filterValue.radius)),
-    [filterValue.radius, radiusOptions]
-  );
+    [filterValue.categoryTravelAddress],
+  )
+
   const nextRadiusOption = useMemo(() => {
-    if (currentRadiusIndex < 0) return radiusOptions[0] ?? null;
-    return radiusOptions[currentRadiusIndex + 1] ?? null;
-  }, [currentRadiusIndex, radiusOptions]);
-  const showNearbyFallback = mode === 'radius' && totalPoints === 0;
+    const radiusOptions = Array.isArray(filters.radius) ? filters.radius : []
+    const idx = radiusOptions.findIndex(
+      (option) => String(option.id) === String(filterValue.radius),
+    )
+    if (idx < 0) return radiusOptions[0] ?? null
+    return radiusOptions[idx + 1] ?? null
+  }, [filterValue.radius, filters.radius])
+
+  const noPointsInRadius = mode === 'radius' && totalPoints === 0
+
   const mobileQuickChips = useMemo(() => {
-    if (!isMobile || mode !== 'radius') return [];
-
-    const chips: string[] = [];
-    const searchQuery = String(filterValue.searchQuery || '').trim();
-
-    if (searchQuery) chips.push(`Поиск: ${searchQuery}`);
+    if (!isMobile || mode !== 'radius') return []
+    const chips: string[] = []
+    const searchQuery = String(filterValue.searchQuery || '').trim()
+    if (searchQuery) chips.push(`Поиск: ${searchQuery}`)
     if (selectedCategoryNames.length > 0) {
       chips.push(
         selectedCategoryNames.length === 1
           ? selectedCategoryNames[0]
-          : `Категорий: ${selectedCategoryNames.length}`
-      );
+          : `Категорий: ${selectedCategoryNames.length}`,
+      )
     }
-    return chips.slice(0, 2);
-  }, [filterValue.searchQuery, isMobile, mode, selectedCategoryNames]);
-  const showMobileQuickRow = isMobile && mode === 'radius' && mobileQuickChips.length > 0;
+    return chips.slice(0, MOBILE_QUICK_CHIPS_LIMIT)
+  }, [filterValue.searchQuery, isMobile, mode, selectedCategoryNames])
+
+  const showMobileQuickRow = isMobile && mode === 'radius' && mobileQuickChips.length > 0
+  const showRecommendations = mode === 'radius' && userLocation && onPlaceSelect
 
   return (
     <ScrollView
@@ -156,7 +160,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
       showsVerticalScrollIndicator={Platform.OS !== 'web'}
       contentContainerStyle={styles.contentContainer}
       keyboardShouldPersistTaps="handled"
-      nestedScrollEnabled={true}
+      nestedScrollEnabled
     >
       {showMobileQuickRow && (
         <View testID="filters-mobile-context">
@@ -211,14 +215,14 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
         )}
       </View>
 
-      {mode === 'radius' && totalPoints === 0 && (
+      {noPointsInRadius && (
         <View style={styles.noPointsToast} testID="filters-empty-state">
           <Text style={styles.noPointsTitle}>Ничего не нашлось</Text>
           <Text style={styles.noPointsSubtitle}>
             Попробуйте увеличить радиус или сбросить фильтры
           </Text>
           <View style={styles.noPointsActions}>
-            {nextRadiusOption ? (
+            {nextRadiusOption && (
               <Button
                 label={`Увеличить до ${nextRadiusOption.name} км`}
                 onPress={() => onFilterChange('radius', nextRadiusOption.id)}
@@ -226,7 +230,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
                 size="sm"
                 style={styles.ctaButton}
               />
-            ) : null}
+            )}
             {hasFilters && (
               <Button
                 label="Сбросить всё"
@@ -242,12 +246,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
       )}
 
       <View style={styles.sectionCard} testID="filters-block-map-tools">
-        <CollapsibleSection
-          title="Управление картой"
-          icon="sliders"
-          defaultOpen={false}
-          tone="flat"
-        >
+        <CollapsibleSection title="Управление картой" icon="sliders" defaultOpen={false} tone="flat">
           <FiltersPanelMapSettings
             colors={colors}
             styles={styles}
@@ -269,14 +268,14 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
         </CollapsibleSection>
       </View>
 
-      {mode === 'radius' && userLocation && onPlaceSelect && (
+      {showRecommendations && (
         <View style={styles.sectionCard} testID="filters-block-recommendations">
           <View style={styles.blockHeader}>
             <Text style={styles.blockTitle}>
-              {showNearbyFallback ? 'Попробуйте рядом с вами' : 'Рядом с вами'}
+              {noPointsInRadius ? 'Попробуйте рядом с вами' : 'Рядом с вами'}
             </Text>
             <Text style={styles.blockHint}>
-              {showNearbyFallback
+              {noPointsInRadius
                 ? 'Если в текущих фильтрах пусто, покажем ближайшие удачные варианты без жёсткого ограничения по радиусу.'
                 : 'Ближайшие точки в текущем радиусе.'}
             </Text>
@@ -286,13 +285,19 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
             userLocation={userLocation}
             transportMode={transportMode}
             onPlaceSelect={onPlaceSelect}
-            maxItems={3}
-            radiusKm={showNearbyFallback ? undefined : filterValue.radius ? Number(filterValue.radius) : undefined}
+            maxItems={RECOMMENDATIONS_MAX_ITEMS}
+            radiusKm={
+              noPointsInRadius
+                ? undefined
+                : filterValue.radius
+                  ? Number(filterValue.radius)
+                  : undefined
+            }
           />
         </View>
       )}
     </ScrollView>
-  );
-};
+  )
+}
 
-export default React.memo(FiltersPanelBody);
+export default React.memo(FiltersPanelBody)

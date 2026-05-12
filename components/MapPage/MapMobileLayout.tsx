@@ -1,22 +1,8 @@
-/**
- * MapMobileLayout - mobile map layout with bottom sheet flows.
- */
-
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
-import {
-  Platform,
-  Text as RNText,
-  useWindowDimensions,
-  View,
-} from 'react-native'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Platform, Text as RNText, useWindowDimensions, View } from 'react-native'
 import { usePathname } from 'expo-router'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
+
 import { useThemedColors } from '@/hooks/useTheme'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
@@ -27,6 +13,10 @@ import { getMapMobileLayoutStyles } from './MapMobileLayout.styles'
 import { MapMobileSheetToolbar } from './MapMobile/MapMobileSheetToolbar'
 import { MapMobileSheetBody } from './MapMobile/MapMobileSheetBody'
 import { MapMobileCollapsedOverlay } from './MapMobile/MapMobileCollapsedOverlay'
+
+type SheetState = 'collapsed' | 'quarter' | 'half' | 'full'
+type UiTab = 'search' | 'route' | 'list'
+type FiltersMode = 'radius' | 'route'
 
 interface MapMobileLayoutProps {
   mapComponent: React.ReactNode
@@ -54,6 +44,7 @@ interface MapMobileLayoutProps {
   }>
 }
 
+const IS_WEB = Platform.OS === 'web'
 const PHONE_COMPACT_LAYOUT_MAX_WIDTH = 430
 const PHONE_VERY_NARROW_LAYOUT_MAX_WIDTH = 350
 const PHONE_COMPACT_ACTIONS_MAX_WIDTH = 520
@@ -85,33 +76,27 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const isNarrow = viewportWidth <= PHONE_COMPACT_LAYOUT_MAX_WIDTH
   const isVeryNarrow = viewportWidth <= PHONE_VERY_NARROW_LAYOUT_MAX_WIDTH
   const compactSheetActions = viewportWidth <= PHONE_COMPACT_ACTIONS_MAX_WIDTH
-  // Keep tabs accessible on mid-width mobile web layouts where the action row
-  // would otherwise squeeze the segmented control out of view.
   const stackSheetToolbar = viewportWidth <= PHONE_STACKED_TOOLBAR_MAX_WIDTH
+
   const bottomSheetRef = useRef<MapBottomSheetRef>(null)
   const pathname = usePathname()
   const isActiveWebRoute =
-    Platform.OS === 'web' &&
-    (pathname === '/map' || String(pathname).startsWith('/map/'))
+    IS_WEB && (pathname === '/map' || String(pathname).startsWith('/map/'))
   const [consentBannerVisible, setConsentBannerVisible] = useState(false)
 
-  const [uiTab, setUiTab] = useState<'search' | 'route' | 'list'>('list')
-  const sheetStateRef = useRef<'collapsed' | 'quarter' | 'half' | 'full'>(
-    'collapsed',
-  )
-  const [sheetState, setSheetState] = useState<
-    'collapsed' | 'quarter' | 'half' | 'full'
-  >('collapsed')
-  const isSheetPreview = false
+  const [uiTab, setUiTab] = useState<UiTab>('list')
+  const sheetStateRef = useRef<SheetState>('collapsed')
+  const [sheetState, setSheetState] = useState<SheetState>('collapsed')
+
   const styles = useMemo(
     () =>
       getMapMobileLayoutStyles(colors, {
         isNarrow,
         compactSheetActions,
         stackSheetToolbar,
-        isSheetPreview,
+        isSheetPreview: false,
       }),
-    [colors, isNarrow, compactSheetActions, stackSheetToolbar, isSheetPreview],
+    [colors, isNarrow, compactSheetActions, stackSheetToolbar],
   )
 
   const openNonce = useMapPanelStore((s) => s.openNonce)
@@ -121,14 +106,15 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const setBottomSheetState = useBottomSheetStore((s) => s.setState)
   const bottomSheetState = useBottomSheetStore((s) => s.state)
   const collapseNonce = useBottomSheetStore((s) => s.collapseNonce)
+
   const filtersContextProps =
     filtersPanelProps?.props ?? filtersPanelProps?.contextValue
-  const filtersMode: 'radius' | 'route' | undefined = filtersContextProps?.mode
-  const setFiltersMode: ((m: 'radius' | 'route') => void) | undefined =
+  const filtersMode: FiltersMode | undefined = filtersContextProps?.mode
+  const setFiltersMode: ((m: FiltersMode) => void) | undefined =
     filtersContextProps?.setMode
 
   const handleSheetStateChange = useCallback(
-    (state: 'collapsed' | 'quarter' | 'half' | 'full') => {
+    (state: SheetState) => {
       sheetStateRef.current = state
       setSheetState(state)
       setBottomSheetState(state)
@@ -136,6 +122,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     [setBottomSheetState],
   )
 
+  // Initial collapse on mount
   useEffect(() => {
     sheetStateRef.current = 'collapsed'
     setSheetState('collapsed')
@@ -145,17 +132,9 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   useEffect(() => {
     if (!openNonce) return
-    const nextTab =
-      requestedOpenTab === 'list'
-        ? 'list'
-        : filtersMode === 'route'
-          ? 'route'
-          : 'search'
+    const nextTab: UiTab =
+      requestedOpenTab === 'list' ? 'list' : filtersMode === 'route' ? 'route' : 'search'
     setUiTab(nextTab)
-    if (nextTab === 'list') {
-      bottomSheetRef.current?.snapToFull()
-      return
-    }
     bottomSheetRef.current?.snapToFull()
   }, [filtersMode, openNonce, requestedOpenTab])
 
@@ -176,7 +155,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   }, [collapseNonce])
 
   useEffect(() => {
-    if (Platform.OS !== 'web' || typeof document === 'undefined') return
+    if (!IS_WEB || typeof document === 'undefined') return
     const body = document.body
     if (!body) return
 
@@ -185,7 +164,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         body.getAttribute('data-consent-banner-open') === 'true',
       )
     }
-
     update()
 
     const observer = new MutationObserver(update)
@@ -194,14 +172,16 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       attributeFilter: ['data-consent-banner-open'],
     })
 
-    return () => {
-      observer.disconnect()
-    }
+    return () => observer.disconnect()
   }, [])
 
   const handleOpenList = useCallback(() => {
     setUiTab('list')
     bottomSheetRef.current?.snapToFull()
+  }, [])
+
+  const handleCloseSheet = useCallback(() => {
+    bottomSheetRef.current?.snapToCollapsed()
   }, [])
 
   const handleOpenSearch = useCallback(() => {
@@ -211,31 +191,15 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     onOpenFilters()
   }, [onOpenFilters, setFiltersMode])
 
-  const handleBackToMap = useCallback(() => {
-    bottomSheetRef.current?.snapToCollapsed()
-  }, [])
-
-  const handleCloseSheet = useCallback(() => {
-    bottomSheetRef.current?.snapToCollapsed()
-  }, [])
-
   const handleTabChange = useCallback(
-    (next: 'search' | 'route' | 'list') => {
-      if (next === 'route') {
-        setFiltersMode?.('route')
-      } else if (next === 'search') {
-        setFiltersMode?.('radius')
-      }
+    (next: UiTab) => {
+      if (next === 'route') setFiltersMode?.('route')
+      else if (next === 'search') setFiltersMode?.('radius')
       setUiTab(next)
       bottomSheetRef.current?.snapToFull()
     },
     [setFiltersMode],
   )
-
-  const handleProviderOpenList = useCallback(() => {
-    setUiTab('list')
-    bottomSheetRef.current?.snapToFull()
-  }, [])
 
   const derivations = useMapMobileDerivations(
     filtersContextProps,
@@ -260,11 +224,11 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   const showCollapsedMapOverlay =
     sheetState === 'collapsed' && bottomSheetState === 'collapsed'
-  const bottomSheetInset =
-    Platform.OS === 'web'
-      ? WEB_MOBILE_BOTTOM_DOCK_INSET +
-        (consentBannerVisible ? WEB_MOBILE_CONSENT_BANNER_INSET : 0)
-      : 0
+
+  const bottomSheetInset = IS_WEB
+    ? WEB_MOBILE_BOTTOM_DOCK_INSET +
+      (consentBannerVisible ? WEB_MOBILE_CONSENT_BANNER_INSET : 0)
+    : 0
 
   const filtersLoadingFallback = useMemo(
     () => (
@@ -284,12 +248,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const isQuarterListPreview = uiTab === 'list' && sheetState === 'quarter'
 
   const sheetContent = (
-    <View
-      style={[
-        styles.sheetRoot,
-        isQuarterListPreview && styles.sheetRootPreview,
-      ]}
-    >
+    <View style={[styles.sheetRoot, isQuarterListPreview && styles.sheetRootPreview]}>
       <MapMobileSheetToolbar
         uiTab={uiTab}
         sheetState={sheetState}
@@ -307,12 +266,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         styles={styles}
       />
 
-      <View
-        style={[
-          styles.sheetBody,
-          isQuarterListPreview && styles.sheetBodyPreview,
-        ]}
-      >
+      <View style={[styles.sheetBody, isQuarterListPreview && styles.sheetBodyPreview]}>
         <MapMobileSheetBody
           uiTab={uiTab}
           sheetState={sheetState}
@@ -329,12 +283,12 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           onResetFilters={onResetFilters}
           onExpandRadius={onExpandRadius}
           onOpenList={handleOpenList}
-          onBackToMap={handleBackToMap}
+          onBackToMap={handleCloseSheet}
           onOpenSearch={handleOpenSearch}
           filtersPanelProps={filtersPanelProps}
           filtersContextProps={filtersContextProps}
           filtersLoadingFallback={filtersLoadingFallback}
-          onProviderOpenList={handleProviderOpenList}
+          onProviderOpenList={handleOpenList}
         />
       </View>
     </View>

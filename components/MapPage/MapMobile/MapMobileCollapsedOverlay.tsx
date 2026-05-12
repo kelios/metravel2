@@ -104,6 +104,9 @@ const MapMobileCollapsedOverlayInner: React.FC<MapMobileCollapsedOverlayProps> =
   return (
     <MapQuickFilters
       iconOnly={true}
+      primaryCtaLabel="Найти места рядом"
+      primaryCtaTestID="map-mobile-find-nearby"
+      onPressPrimaryCta={onOpenSearch}
       radiusValue={quickRadiusValue}
       categoriesValue={quickCategoriesValue}
       overlaysValue={quickOverlaysValue}
@@ -130,4 +133,3 @@ const MapMobileCollapsedOverlayInner: React.FC<MapMobileCollapsedOverlayProps> =
 export const MapMobileCollapsedOverlay = React.memo(
   MapMobileCollapsedOverlayInner,
 )
-export default MapMobileCollapsedOverlay

@@ -86,7 +86,7 @@ const MapMobileSheetToolbarInner: React.FC<MapMobileSheetToolbarProps> = ({
           dense={isNarrow}
           noOuterMargins={true}
           tone="subtle"
-          accessibilityLabel="Переключение между поиском, маршрутом и списком точек"
+          accessibilityLabel="Переключение между поиском, маршрутом и списком мест"
         />
         {toolbarSummaryText && (
           <RNText
@@ -163,4 +163,3 @@ const MapMobileSheetToolbarInner: React.FC<MapMobileSheetToolbarProps> = ({
 }
 
 export const MapMobileSheetToolbar = React.memo(MapMobileSheetToolbarInner)
-export default MapMobileSheetToolbar

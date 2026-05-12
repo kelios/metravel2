@@ -52,8 +52,32 @@ jest.mock('@/components/ui/Button', () => {
 import { MapOnboarding, restartMapOnboarding } from '@/components/MapPage/MapOnboarding';
 
 describe('MapOnboarding', () => {
+  const setViewportWidth = (width: number) => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: width,
+    });
+    Object.defineProperty(document.documentElement, 'clientWidth', {
+      configurable: true,
+      writable: true,
+      value: width,
+    });
+    window.matchMedia = jest.fn().mockImplementation((query: string) => ({
+      matches: /max-width:\s*767px/.test(query) ? width <= 767 : false,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    }));
+  };
+
   beforeEach(() => {
     jest.useFakeTimers();
+    setViewportWidth(1280);
     localStorage.clear();
   });
 
@@ -63,8 +87,8 @@ describe('MapOnboarding', () => {
     jest.useRealTimers();
   });
 
-  it('does not auto-open on web', async () => {
-    const { queryByText, queryByTestId } = render(<MapOnboarding />);
+  it('does not auto-open on desktop web', async () => {
+    const { queryByText, queryByTestId } = render(<MapOnboarding mobileWebCoachmark={false} />);
 
     await act(async () => {
       jest.advanceTimersByTime(1200);
@@ -74,8 +98,30 @@ describe('MapOnboarding', () => {
     expect(queryByTestId('onboarding-next')).toBeNull();
   });
 
+  it('auto-opens a lightweight coachmark on mobile web', async () => {
+    setViewportWidth(390);
+
+    const { getByText, getByTestId } = render(<MapOnboarding mobileWebCoachmark />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(1200);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(getByText('С чего начать')).toBeTruthy();
+    expect(getByText(/Нажмите «Найти места рядом»/)).toBeTruthy();
+    expect(getByTestId('onboarding-next')).toBeTruthy();
+  });
+
   it('still opens when restarted manually', async () => {
-    const { getByText, getByTestId } = render(<MapOnboarding />);
+    const { getByText, getByTestId } = render(<MapOnboarding mobileWebCoachmark={false} />);
 
     await act(async () => {
       restartMapOnboarding();

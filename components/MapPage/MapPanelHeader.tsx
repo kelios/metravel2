@@ -123,7 +123,7 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
           android_ripple={{ color: themedColors.overlayLight }}
           accessibilityRole="tab"
           accessibilityState={{ selected: activeTab === 'travels' }}
-          accessibilityLabel={`Список точек (${travelsCount} мест)`}
+          accessibilityLabel={`Список мест (${travelsCount})`}
         >
           <Feather
             name="list"
@@ -140,7 +140,7 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
               activeTab === 'travels' && styles.tabTextActive,
             ]}
           >
-            Точки
+            Места
           </Text>
           {travelsCount > 0 && (
             <View

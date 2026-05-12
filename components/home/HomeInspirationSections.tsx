@@ -12,41 +12,32 @@ import { sendAnalyticsEvent } from '@/utils/analytics'
 import AdventureChaptersSection from './AdventureChaptersSection'
 import { createSectionsStyles } from './homeInspirationStyles'
 
+const IS_WEB = Platform.OS === 'web'
+const POINTER_EVENTS_NONE = { pointerEvents: 'none' } as const
+
 type QuickFilterValue = string | number | Array<string | number>
 type QuickFilterParams = Record<string, QuickFilterValue | undefined>
 
-const normalizeQuickFilterValue = (
-  value: QuickFilterValue | undefined,
-): string | null => {
-  if (value === undefined || value === null) return null
-
+function normalizeQuickFilterValue(value: QuickFilterValue | undefined): string | null {
+  if (value == null) return null
   if (Array.isArray(value)) {
-    const cleaned = value
-      .map((item) => String(item ?? '').trim())
-      .filter((item) => item.length > 0)
-    if (!cleaned.length) return null
-    return cleaned.join(',')
+    const cleaned = value.map((x) => String(x ?? '').trim()).filter((x) => x.length > 0)
+    return cleaned.length ? cleaned.join(',') : null
   }
-
   const scalar = String(value).trim()
-  return scalar.length > 0 ? scalar : null
+  return scalar.length ? scalar : null
 }
 
-const buildFilterPath = (base: string, params?: QuickFilterParams) => {
+function buildFilterPath(base: string, params?: QuickFilterParams) {
   if (!params) return base
-
   const query = Object.entries(params)
     .map(([key, value]) => {
       const normalized = normalizeQuickFilterValue(value)
-      if (!normalized) return null
-      return `${key}=${normalized}`
+      return normalized ? `${key}=${normalized}` : null
     })
-    .filter(
-      (item): item is string => typeof item === 'string' && item.length > 0,
-    )
+    .filter((x): x is string => !!x)
     .join('&')
-
-  return query.length > 0 ? `${base}?${query}` : base
+  return query.length ? `${base}?${query}` : base
 }
 
 type GroupAccent = {
@@ -56,16 +47,20 @@ type GroupAccent = {
   gradient: [string, string]
 }
 
-const FILTER_GROUPS: Array<{
+type FilterChip = {
+  label: string
+  filters?: QuickFilterParams
+  route?: string
+}
+
+type FilterGroup = {
   title: string
   icon: string
   accent: GroupAccent
-  chips: Array<{
-    label: string
-    filters?: QuickFilterParams
-    route?: string
-  }>
-}> = [
+  chips: FilterChip[]
+}
+
+const FILTER_GROUPS: FilterGroup[] = [
   {
     title: 'Тип маршрута',
     icon: 'compass',
@@ -149,30 +144,10 @@ const FILTER_GROUPS: Array<{
   },
 ]
 
-function FilterGroupCard({
-  group,
-  selectedChip,
-  onChipPress,
-  styles,
-  isMobile,
-  extraStyle,
-}: {
-  group: (typeof FILTER_GROUPS)[number]
-  selectedChip: string | null
-  onChipPress: (
-    label: string,
-    filters?: QuickFilterParams,
-    route?: string,
-  ) => void
-  styles: ReturnType<typeof createSectionsStyles>
-  isMobile: boolean
-  extraStyle?: any
-}) {
-  const [hovered, setHovered] = useState(false)
-  const isWeb = Platform.OS === 'web'
+type Styles = ReturnType<typeof createSectionsStyles>
 
-  const accent = group.accent
-  const accentSelectedStyle = {
+function buildAccentSelectedStyle(accent: GroupAccent) {
+  return {
     backgroundColor: accent.base,
     borderColor: accent.base,
     ...Platform.select({
@@ -182,28 +157,56 @@ function FilterGroupCard({
       } as any,
     }),
   }
-  const accentHoverStyle = {
+}
+
+function buildAccentHoverStyle(accent: GroupAccent) {
+  return { borderColor: accent.base, backgroundColor: accent.soft }
+}
+
+function buildAccentCardHoverStyle(accent: GroupAccent) {
+  return {
     borderColor: accent.base,
-    backgroundColor: accent.soft,
-  }
+    ...Platform.select({
+      web: {
+        boxShadow: `0 14px 32px ${accent.base}1F, 0 4px 10px rgba(0,0,0,0.05)`,
+        transform: 'translateY(-3px)',
+      } as any,
+    }),
+  } as any
+}
+
+function getCardPositionStyle(styles: Styles, idx: number) {
+  if (idx === 3) return styles.filterGroupCardLastRowFirst
+  if (idx === 4) return styles.filterGroupCardLastRowSecond
+  return undefined
+}
+
+function FilterGroupCard({
+  group,
+  selectedChip,
+  onChipPress,
+  styles,
+  isMobile,
+  extraStyle,
+}: {
+  group: FilterGroup
+  selectedChip: string | null
+  onChipPress: (label: string, filters?: QuickFilterParams, route?: string) => void
+  styles: Styles
+  isMobile: boolean
+  extraStyle?: any
+}) {
+  const [hovered, setHovered] = useState(false)
+  const accent = group.accent
+
+  const accentSelectedStyle = useMemo(() => buildAccentSelectedStyle(accent), [accent])
+  const accentHoverStyle = useMemo(() => buildAccentHoverStyle(accent), [accent])
+  const cardHoverStyle = useMemo(() => buildAccentCardHoverStyle(accent), [accent])
 
   return (
     <View
-      style={[
-        styles.filterGroupCard,
-        extraStyle,
-        hovered &&
-          ({
-            borderColor: accent.base,
-            ...Platform.select({
-              web: {
-                boxShadow: `0 14px 32px ${accent.base}1F, 0 4px 10px rgba(0,0,0,0.05)`,
-                transform: 'translateY(-3px)',
-              } as any,
-            }),
-          } as any),
-      ]}
-      {...(isWeb
+      style={[styles.filterGroupCard, extraStyle, hovered && cardHoverStyle]}
+      {...(IS_WEB
         ? ({
             onMouseEnter: () => setHovered(true),
             onMouseLeave: () => setHovered(false),
@@ -227,13 +230,7 @@ function FilterGroupCard({
           return (
             <Pressable
               key={chip.label}
-              onPress={() =>
-                onChipPress(
-                  chip.label,
-                  (chip as any).filters,
-                  (chip as any).route,
-                )
-              }
+              onPress={() => onChipPress(chip.label, chip.filters, chip.route)}
               style={({ pressed, hovered: chipHovered }) => [
                 styles.chip,
                 isMobile && styles.chipMobile,
@@ -244,12 +241,7 @@ function FilterGroupCard({
               accessibilityLabel={`Фильтр ${chip.label}`}
               accessibilityState={{ selected: isSelected }}
             >
-              <Text
-                style={[
-                  styles.chipText,
-                  isSelected && styles.chipTextSelected,
-                ]}
-              >
+              <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
                 {chip.label}
               </Text>
             </Pressable>
@@ -266,16 +258,12 @@ function HomeInspirationSections() {
   const colors = useThemedColors()
   const isMobile = isPhone || isLargePhone
   const [selectedChip, setSelectedChip] = useState<string | null>(null)
-  const [btnHovered, setBtnHovered] = useState(false)
-  const isWeb = Platform.OS === 'web'
 
   const handleFilterPress = useCallback(
     (label: string, filters?: QuickFilterParams, route?: string) => {
       sendAnalyticsEvent('HomeClick_QuickFilter', { label })
       setSelectedChip(label)
-      const base = route ?? '/search'
-      const path = buildFilterPath(base, filters)
-      router.push(path as any)
+      router.push(buildFilterPath(route ?? '/search', filters) as any)
     },
     [router],
   )
@@ -285,28 +273,15 @@ function HomeInspirationSections() {
     router.push('/search' as any)
   }, [router])
 
-  const styles = useMemo(
-    () => createSectionsStyles(colors, isMobile),
-    [colors, isMobile],
-  )
+  const styles = useMemo(() => createSectionsStyles(colors, isMobile), [colors, isMobile])
 
   return (
     <View style={[styles.band, isMobile && styles.bandMobile]}>
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={[styles.container, isMobile && styles.containerMobile]}>
           <View style={styles.quickFiltersSection}>
-            <View
-              style={[
-                styles.quickFiltersAccentBlob1,
-                { pointerEvents: 'none' },
-              ]}
-            />
-            <View
-              style={[
-                styles.quickFiltersAccentBlob2,
-                { pointerEvents: 'none' },
-              ]}
-            />
+            <View style={[styles.quickFiltersAccentBlob1, POINTER_EVENTS_NONE]} />
+            <View style={[styles.quickFiltersAccentBlob2, POINTER_EVENTS_NONE]} />
 
             <View style={styles.quickFiltersHeader}>
               <View style={styles.quickFiltersHeaderLeft}>
@@ -316,13 +291,10 @@ function HomeInspirationSections() {
                 </View>
                 <Text style={styles.quickFiltersTitle}>
                   Подберите поездку{' '}
-                  <Text style={styles.quickFiltersTitleAccent}>
-                    под свой ритм
-                  </Text>
+                  <Text style={styles.quickFiltersTitleAccent}>под свой ритм</Text>
                 </Text>
                 <Text style={styles.quickFiltersSubtitle}>
-                  Комбинируйте формат, сезон и расстояние — мы соберём идеальный
-                  маршрут
+                  Комбинируйте формат, сезон и расстояние — мы соберём идеальный маршрут
                 </Text>
               </View>
               <Button
@@ -331,19 +303,10 @@ function HomeInspirationSections() {
                 icon={<Feather name="arrow-right" size={16} color="#ffffff" />}
                 iconPosition="right"
                 variant="primary"
-                style={[
-                  styles.quickFiltersArticlesButton,
-                  btnHovered && styles.quickFiltersArticlesButtonHover,
-                ]}
+                style={styles.quickFiltersArticlesButton}
                 labelStyle={styles.quickFiltersArticlesText}
                 hoverStyle={styles.quickFiltersArticlesButtonHover}
                 pressedStyle={styles.quickFiltersArticlesButtonHover}
-                {...(isWeb
-                  ? ({
-                      onMouseEnter: () => setBtnHovered(true),
-                      onMouseLeave: () => setBtnHovered(false),
-                    } as any)
-                  : {})}
               />
             </View>
 
@@ -356,13 +319,7 @@ function HomeInspirationSections() {
                   onChipPress={handleFilterPress}
                   styles={styles}
                   isMobile={isMobile}
-                  extraStyle={
-                    idx === 3
-                      ? styles.filterGroupCardLastRowFirst
-                      : idx === 4
-                        ? styles.filterGroupCardLastRowSecond
-                        : undefined
-                  }
+                  extraStyle={getCardPositionStyle(styles, idx)}
                 />
               ))}
             </View>

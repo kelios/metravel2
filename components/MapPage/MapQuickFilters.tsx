@@ -1,8 +1,3 @@
-/**
- * MapQuickFilters - compact selector chips over the map.
- * Each chip can open an inline popover (radius / categories / overlays).
- * Falls back to external onPress handlers when popover props are absent.
- */
 import React, { useCallback, useMemo, useRef, useState } from 'react'
 import {
   Platform,
@@ -22,6 +17,7 @@ import { RadiusPopover } from './popovers/RadiusPopover'
 import { CategoriesPopover } from './popovers/CategoriesPopover'
 import { OverlaysPopover } from './popovers/OverlaysPopover'
 
+type FeatherIconName = React.ComponentProps<typeof Feather>['name']
 type CategoryOption = string | { id?: string | number; name?: string; value?: string }
 
 interface RadiusOption {
@@ -37,7 +33,7 @@ interface OverlayOption {
 interface QuickFilterAction {
   key: string
   label: string
-  icon: React.ComponentProps<typeof Feather>['name']
+  icon: FeatherIconName
   onPress: () => void
   testID?: string
 }
@@ -47,6 +43,9 @@ interface MapQuickFiltersProps {
   categoriesValue?: string
   overlaysValue?: string
   iconOnly?: boolean
+  primaryCtaLabel?: string
+  primaryCtaTestID?: string
+  onPressPrimaryCta?: () => void
   extraActions?: ReadonlyArray<QuickFilterAction>
   extraActionsPosition?: 'start' | 'end' | 'inside-radius'
   onPressRadius?: () => void
@@ -66,6 +65,7 @@ interface MapQuickFiltersProps {
   reserveLeftControlsSpace?: boolean
 }
 
+const IS_WEB = Platform.OS === 'web'
 const PHONE_COMPACT_LAYOUT_MAX_WIDTH = 767
 const PHONE_VERY_NARROW_LAYOUT_MAX_WIDTH = 430
 const MOBILE_WEB_CONTROLS_CLEARANCE = 80
@@ -78,10 +78,7 @@ const PILL_RADIUS = DESIGN_TOKENS.radii.pill
 const ICON_ONLY_LEADING_ACTION_KEYS = new Set(['locate', 'zoom-in', 'zoom-out'])
 const ICON_ONLY_TRAILING_ACTION_KEYS = new Set(['list'])
 
-export const CATEGORY_ICONS: Record<
-  string,
-  React.ComponentProps<typeof Feather>['name']
-> = {
+export const CATEGORY_ICONS: Record<string, FeatherIconName> = {
   Горы: 'triangle',
   Пляжи: 'sun',
   Города: 'map-pin',
@@ -95,6 +92,209 @@ export const CATEGORY_ICONS: Record<
 }
 
 type ChipKey = 'radius' | 'categories' | 'overlays'
+type Styles = ReturnType<typeof getStyles>
+
+interface Selector {
+  key: ChipKey
+  label: string
+  value: string
+  icon: FeatherIconName
+  onPress: () => void
+  ref: React.MutableRefObject<View | null>
+  hideLabel: boolean
+}
+
+function partitionActions(rowActions: QuickFilterAction[]) {
+  const leading: QuickFilterAction[] = []
+  const trailing: QuickFilterAction[] = []
+  const other: QuickFilterAction[] = []
+  for (const action of rowActions) {
+    if (ICON_ONLY_LEADING_ACTION_KEYS.has(action.key)) leading.push(action)
+    else if (ICON_ONLY_TRAILING_ACTION_KEYS.has(action.key)) trailing.push(action)
+    else other.push(action)
+  }
+  return { leading, trailing, other }
+}
+
+function IconActionButton({
+  action,
+  styles,
+  colors,
+}: {
+  action: QuickFilterAction
+  styles: Styles
+  colors: ThemedColors
+}) {
+  return (
+    <Pressable
+      accessibilityLabel={action.label}
+      accessibilityRole="button"
+      onPress={action.onPress}
+      testID={action.testID}
+      style={({ pressed }) => [styles.iconButton, pressed && styles.fieldPressed]}
+    >
+      <Feather name={action.icon} size={16} color={colors.primary} style={styles.iconButtonIcon} />
+    </Pressable>
+  )
+}
+
+function SelectorField({
+  selector,
+  styles,
+  colors,
+}: {
+  selector: Selector
+  styles: Styles
+  colors: ThemedColors
+}) {
+  return (
+    <View ref={selector.ref} collapsable={false} style={styles.fieldWrap}>
+      <CardActionPressable
+        accessibilityLabel={`${selector.label}: ${selector.value}`}
+        onPress={selector.onPress}
+        title={selector.label}
+        style={({ pressed }: any) => [styles.field, pressed && styles.fieldPressed]}
+      >
+        <Feather name={selector.icon} size={15} color={colors.primary} style={styles.fieldIcon} />
+        <Text
+          style={[styles.fieldLabel, selector.hideLabel && styles.fieldLabelHidden]}
+          numberOfLines={1}
+        >
+          {selector.label}
+        </Text>
+        <Text style={styles.fieldValue} numberOfLines={1}>
+          {selector.value}
+        </Text>
+        <Feather name="chevron-down" size={13} color={colors.textMuted} style={styles.fieldCaret} />
+      </CardActionPressable>
+    </View>
+  )
+}
+
+function RadiusClusterField({
+  selector,
+  inlineActions,
+  styles,
+  colors,
+}: {
+  selector: Selector
+  inlineActions: QuickFilterAction[]
+  styles: Styles
+  colors: ThemedColors
+}) {
+  return (
+    <View ref={selector.ref} collapsable={false} style={styles.fieldWrap}>
+      <View style={styles.radiusCluster}>
+        <View style={styles.radiusActionsGroup}>
+          {inlineActions.map((action) => (
+            <CardActionPressable
+              key={action.key}
+              testID={action.testID}
+              accessibilityLabel={action.label}
+              onPress={action.onPress}
+              title={action.label}
+              style={({ pressed }: any) => [
+                styles.radiusActionButton,
+                pressed && styles.fieldPressed,
+              ]}
+            >
+              <Feather
+                name={action.icon}
+                size={15}
+                color={colors.primary}
+                style={styles.iconButtonIcon}
+              />
+            </CardActionPressable>
+          ))}
+        </View>
+        <View style={styles.radiusDivider} />
+        <View style={styles.radiusFieldWrap}>
+          <CardActionPressable
+            accessibilityLabel={`${selector.label}: ${selector.value}`}
+            onPress={selector.onPress}
+            title={selector.label}
+            style={({ pressed }: any) => [styles.radiusField, pressed && styles.fieldPressed]}
+          >
+            <Feather
+              name={selector.icon}
+              size={15}
+              color={colors.primary}
+              style={styles.fieldIcon}
+            />
+            <Text
+              style={[styles.fieldLabel, selector.hideLabel && styles.fieldLabelHidden]}
+              numberOfLines={1}
+            >
+              {selector.label}
+            </Text>
+            <Text style={styles.fieldValue} numberOfLines={1}>
+              {selector.value}
+            </Text>
+            <Feather
+              name="chevron-down"
+              size={13}
+              color={colors.textMuted}
+              style={styles.fieldCaret}
+            />
+          </CardActionPressable>
+        </View>
+      </View>
+    </View>
+  )
+}
+
+function ActionAsField({
+  action,
+  styles,
+  colors,
+}: {
+  action: QuickFilterAction
+  styles: Styles
+  colors: ThemedColors
+}) {
+  return (
+    <View style={styles.actionWrap}>
+      <CardActionPressable
+        testID={action.testID}
+        accessibilityLabel={action.label}
+        onPress={action.onPress}
+        title={action.label}
+        style={({ pressed }: any) => [styles.field, pressed && styles.fieldPressed]}
+      >
+        <Feather
+          name={action.icon}
+          size={15}
+          color={colors.primary}
+          style={styles.fieldIcon}
+        />
+      </CardActionPressable>
+    </View>
+  )
+}
+
+function ActionAsIconButton({
+  action,
+  styles,
+  colors,
+}: {
+  action: QuickFilterAction
+  styles: Styles
+  colors: ThemedColors
+}) {
+  return (
+    <View style={styles.actionWrap}>
+      <CardActionPressable
+        testID={action.testID}
+        accessibilityLabel={action.label}
+        onPress={action.onPress}
+        title={action.label}
+        style={({ pressed }: any) => [styles.iconButton, pressed && styles.fieldPressed]}
+      >
+        <Feather name={action.icon} size={15} color={colors.primary} style={styles.iconButtonIcon} />
+      </CardActionPressable>
+    </View>
+  )
+}
 
 export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
   ({
@@ -102,6 +302,9 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
     categoriesValue,
     overlaysValue,
     iconOnly = false,
+    primaryCtaLabel,
+    primaryCtaTestID,
+    onPressPrimaryCta,
     extraActions,
     extraActionsPosition = 'end',
     onPressRadius,
@@ -128,8 +331,6 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
       () => getStyles(colors, { isNarrow, isVeryNarrow, reserveLeftControlsSpace }),
       [colors, isNarrow, isVeryNarrow, reserveLeftControlsSpace],
     )
-    const iconButtonSize = isVeryNarrow ? 36 : isNarrow ? 40 : 42
-    const iconButtonGap = isVeryNarrow ? 6 : isNarrow ? 8 : 10
 
     const radiusAnchorRef = useRef<View | null>(null)
     const categoriesAnchorRef = useRef<View | null>(null)
@@ -141,20 +342,16 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
       Array.isArray(radiusOptions) &&
       radiusOptions.length > 0 &&
       typeof onChangeRadius === 'function'
-
     const hasCategoriesPopover =
       Array.isArray(categoriesOptions) &&
       categoriesOptions.length > 0 &&
       typeof onChangeCategories === 'function'
-
     const hasOverlaysPopover =
       Array.isArray(overlayOptions) &&
       overlayOptions.length > 0 &&
       typeof onChangeOverlay === 'function'
 
-    const categoriesActiveCount = Array.isArray(categoriesSelected)
-      ? categoriesSelected.length
-      : 0
+    const categoriesActiveCount = Array.isArray(categoriesSelected) ? categoriesSelected.length : 0
     const overlaysActiveCount = enabledOverlays
       ? Object.values(enabledOverlays).filter(Boolean).length
       : 0
@@ -185,112 +382,97 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
       setAnchor(null)
     }, [])
 
-    const handleRadiusPress = useCallback(() => {
-      if (hasRadiusPopover) {
-        if (iconOnly) {
-          setAnchor(null)
-          setOpenChip('radius')
-          return
-        }
-        measureAndOpen('radius', radiusAnchorRef)
-        return
-      }
-      onPressRadius?.()
-    }, [hasRadiusPopover, iconOnly, measureAndOpen, onPressRadius])
+    const makeChipPress = useCallback(
+      (
+        key: ChipKey,
+        ref: React.MutableRefObject<View | null>,
+        hasPopover: boolean,
+        externalHandler: (() => void) | undefined,
+      ) =>
+        () => {
+          if (hasPopover) {
+            if (iconOnly) {
+              setAnchor(null)
+              setOpenChip(key)
+              return
+            }
+            measureAndOpen(key, ref)
+            return
+          }
+          externalHandler?.()
+        },
+      [iconOnly, measureAndOpen],
+    )
 
-    const handleCategoriesPress = useCallback(() => {
-      if (hasCategoriesPopover) {
-        if (iconOnly) {
-          setAnchor(null)
-          setOpenChip('categories')
-          return
-        }
-        measureAndOpen('categories', categoriesAnchorRef)
-        return
-      }
-      onPressCategories?.()
-    }, [hasCategoriesPopover, iconOnly, measureAndOpen, onPressCategories])
+    const handleRadiusPress = useMemo(
+      () => makeChipPress('radius', radiusAnchorRef, hasRadiusPopover, onPressRadius),
+      [hasRadiusPopover, makeChipPress, onPressRadius],
+    )
+    const handleCategoriesPress = useMemo(
+      () => makeChipPress('categories', categoriesAnchorRef, hasCategoriesPopover, onPressCategories),
+      [hasCategoriesPopover, makeChipPress, onPressCategories],
+    )
+    const handleOverlaysPress = useMemo(
+      () => makeChipPress('overlays', overlaysAnchorRef, hasOverlaysPopover, onPressOverlays),
+      [hasOverlaysPopover, makeChipPress, onPressOverlays],
+    )
 
-    const handleOverlaysPress = useCallback(() => {
-      if (hasOverlaysPopover) {
-        if (iconOnly) {
-          setAnchor(null)
-          setOpenChip('overlays')
-          return
-        }
-        measureAndOpen('overlays', overlaysAnchorRef)
-        return
-      }
-      onPressOverlays?.()
-    }, [hasOverlaysPopover, iconOnly, measureAndOpen, onPressOverlays])
-
-    const selectors = [
+    const selectors: Selector[] = ([
       {
         key: 'radius' as const,
         label: 'Радиус',
         value: radiusValue || 'Выбор',
-        icon: 'circle' as const,
+        icon: 'circle' as FeatherIconName,
         onPress: handleRadiusPress,
         ref: radiusAnchorRef,
         hideLabel: isNarrow,
-        hasHandler: hasRadiusPopover || typeof onPressRadius === 'function',
       },
       {
         key: 'categories' as const,
         label: 'Что посмотреть',
         value: categoriesValue || 'Выбор',
-        icon: 'grid' as const,
+        icon: 'grid' as FeatherIconName,
         onPress: handleCategoriesPress,
         ref: categoriesAnchorRef,
         hideLabel: isNarrow,
-        hasHandler: hasCategoriesPopover || typeof onPressCategories === 'function',
       },
       {
         key: 'overlays' as const,
         label: 'Оверлеи',
         value: overlaysValue || 'Выкл',
-        icon: 'layers' as const,
+        icon: 'layers' as FeatherIconName,
         onPress: handleOverlaysPress,
         ref: overlaysAnchorRef,
         hideLabel: isNarrow,
-        hasHandler: hasOverlaysPopover || typeof onPressOverlays === 'function',
       },
-    ].filter((item) => item.hasHandler)
+    ] satisfies Selector[]).filter((item) => {
+      if (item.key === 'radius') return hasRadiusPopover || typeof onPressRadius === 'function'
+      if (item.key === 'categories')
+        return hasCategoriesPopover || typeof onPressCategories === 'function'
+      return hasOverlaysPopover || typeof onPressOverlays === 'function'
+    })
 
     const rowActions = (extraActions ?? []).filter(
       (action) => typeof action?.onPress === 'function',
-    )
-    const iconOnlyLeadingActions = iconOnly
-      ? rowActions.filter((action) => ICON_ONLY_LEADING_ACTION_KEYS.has(action.key))
-      : []
-    const iconOnlyTrailingActions = iconOnly
-      ? rowActions.filter((action) => ICON_ONLY_TRAILING_ACTION_KEYS.has(action.key))
-      : []
-    const iconOnlyOtherActions = iconOnly
-      ? rowActions.filter(
-          (action) =>
-            !ICON_ONLY_LEADING_ACTION_KEYS.has(action.key) &&
-            !ICON_ONLY_TRAILING_ACTION_KEYS.has(action.key),
-        )
-      : []
-    const radiusInlineActions =
-      extraActionsPosition === 'inside-radius' ? rowActions : []
-    const leadingActions =
-      iconOnly
-        ? extraActionsPosition === 'start'
-          ? rowActions
-          : iconOnlyLeadingActions
-        : extraActionsPosition === 'start'
-          ? rowActions
-          : []
-    const trailingActions =
-      iconOnly
-        ? extraActionsPosition === 'end'
-          ? [...iconOnlyOtherActions, ...iconOnlyTrailingActions]
-          : []
-        : extraActionsPosition === 'end'
-          ? rowActions
-          : []
+    ) as QuickFilterAction[]
+
+    const partitioned = useMemo(() => partitionActions(rowActions), [rowActions])
+
+    let leadingActions: QuickFilterAction[]
+    let trailingActions: QuickFilterAction[]
+    let radiusInlineActions: QuickFilterAction[] = []
+
+    if (iconOnly) {
+      leadingActions =
+        extraActionsPosition === 'start' ? rowActions : partitioned.leading
+      trailingActions =
+        extraActionsPosition === 'end' ? [...partitioned.other, ...partitioned.trailing] : []
+    } else {
+      leadingActions = extraActionsPosition === 'start' ? rowActions : []
+      trailingActions = extraActionsPosition === 'end' ? rowActions : []
+      radiusInlineActions = extraActionsPosition === 'inside-radius' ? rowActions : []
+    }
+
     if (!selectors.length && !rowActions.length) return null
 
     return (
@@ -299,31 +481,33 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
           <View style={styles.iconOnlyBar} pointerEvents="box-none">
             <View style={styles.iconOnlyGroup}>
               {leadingActions.map((action) => (
-                <Pressable
-                  key={action.key}
-                  accessibilityLabel={action.label}
-                  accessibilityRole="button"
-                  onPress={action.onPress}
-                  testID={action.testID}
-                  style={({ pressed }) => [
-                    styles.iconButton,
-                    pressed && styles.fieldPressed,
-                  ]}
-                >
-                  <Feather
-                    name={action.icon}
-                    size={16}
-                    color={colors.primary}
-                    style={styles.iconButtonIcon}
-                  />
-                </Pressable>
+                <IconActionButton key={action.key} action={action} styles={styles} colors={colors} />
               ))}
             </View>
+
+            {primaryCtaLabel && typeof onPressPrimaryCta === 'function' && (
+              <Pressable
+                accessibilityLabel={primaryCtaLabel}
+                accessibilityRole="button"
+                onPress={onPressPrimaryCta}
+                testID={primaryCtaTestID}
+                style={({ pressed }) => [
+                  styles.primaryCtaButton,
+                  pressed && styles.fieldPressed,
+                ]}
+              >
+                <Feather name="search" size={14} color={colors.textOnPrimary} />
+                <Text style={styles.primaryCtaText} numberOfLines={1}>
+                  {primaryCtaLabel}
+                </Text>
+              </Pressable>
+            )}
 
             <View style={[styles.iconOnlyGroup, styles.iconOnlyFiltersGroup]}>
               {selectors.map((selector) => {
                 const activeCount = activeIndicatorByKey[selector.key] ?? 0
                 const isActive = activeCount > 0
+                const isRadius = selector.key === 'radius'
                 return (
                   <Pressable
                     key={selector.key}
@@ -336,14 +520,12 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
                     accessibilityState={{ selected: isActive }}
                     onPress={selector.onPress}
                     style={({ pressed }) => [
-                      selector.key === 'radius'
-                        ? styles.iconTextButton
-                        : styles.iconButton,
+                      isRadius ? styles.iconTextButton : styles.iconButton,
                       isActive && styles.iconButtonActive,
                       pressed && styles.fieldPressed,
                     ]}
                   >
-                    {selector.key === 'radius' ? (
+                    {isRadius ? (
                       <Text style={styles.iconTextButtonText} numberOfLines={1}>
                         {selector.value}
                       </Text>
@@ -351,11 +533,11 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
                       <Feather
                         name={selector.icon}
                         size={16}
-                        color={isActive ? colors.primary : colors.primary}
+                        color={colors.primary}
                         style={styles.iconButtonIcon}
                       />
                     )}
-                    {selector.key !== 'radius' && isActive ? (
+                    {!isRadius && isActive && (
                       <View
                         style={styles.iconBadge}
                         pointerEvents="none"
@@ -365,266 +547,42 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
                           {activeCount > 9 ? '9+' : String(activeCount)}
                         </Text>
                       </View>
-                    ) : null}
+                    )}
                   </Pressable>
                 )
               })}
               {trailingActions.map((action) => (
-                <Pressable
-                  key={action.key}
-                  accessibilityLabel={action.label}
-                  accessibilityRole="button"
-                  onPress={action.onPress}
-                  testID={action.testID}
-                  style={({ pressed }) => [
-                    styles.iconButton,
-                    pressed && styles.fieldPressed,
-                  ]}
-                >
-                  <Feather
-                    name={action.icon}
-                    size={16}
-                    color={colors.primary}
-                    style={styles.iconButtonIcon}
-                  />
-                </Pressable>
+                <IconActionButton key={action.key} action={action} styles={styles} colors={colors} />
               ))}
             </View>
           </View>
         ) : (
-        <View style={styles.row} pointerEvents="box-none">
-          {leadingActions.map((action, actionIndex) =>
-            iconOnly ? (
-              <Pressable
-                key={action.key}
-                accessibilityLabel={action.label}
-                accessibilityRole="button"
-                onPress={action.onPress}
-                testID={action.testID}
-                style={({ pressed }) => [
-                  styles.iconButton,
-                  {
-                    position: 'absolute',
-                    left: actionIndex * (iconButtonSize + iconButtonGap),
-                    top: 0,
-                  },
-                  pressed && styles.fieldPressed,
-                ]}
-              >
-                <Feather
-                  name={action.icon}
-                  size={16}
-                  color={colors.primary}
-                  style={styles.iconButtonIcon}
-                />
-              </Pressable>
-            ) : (
-              <View key={action.key} style={styles.actionWrap}>
-                <CardActionPressable
-                  testID={action.testID}
-                  accessibilityLabel={action.label}
-                  onPress={action.onPress}
-                  title={action.label}
-                  style={({ pressed }) => [
-                    styles.iconButton,
-                    pressed && styles.fieldPressed,
-                  ]}
-                >
-                  <Feather
-                    name={action.icon}
-                    size={15}
-                    color={colors.primary}
-                    style={styles.iconButtonIcon}
-                  />
-                </CardActionPressable>
-              </View>
-            ),
-          )}
-          {selectors.map((selector, selectorIndex) =>
-            iconOnly ? (
-              <Pressable
-                key={selector.key}
-                accessibilityLabel={`${selector.label}: ${selector.value}`}
-                accessibilityRole="button"
-                onPress={selector.onPress}
-                style={({ pressed }) => [
-                  styles.iconButton,
-                  {
-                    position: 'absolute',
-                    left:
-                      (leadingActions.length + selectorIndex) *
-                      (iconButtonSize + iconButtonGap),
-                    top: 0,
-                  },
-                  pressed && styles.fieldPressed,
-                ]}
-              >
-                <Feather
-                  name={selector.icon}
-                  size={16}
-                  color={colors.primary}
-                  style={styles.iconButtonIcon}
-                />
-              </Pressable>
-            ) : (
+          <View style={styles.row} pointerEvents="box-none">
+            {leadingActions.map((action) => (
+              <ActionAsIconButton key={action.key} action={action} styles={styles} colors={colors} />
+            ))}
+            {selectors.map((selector) =>
               selector.key === 'radius' && radiusInlineActions.length > 0 ? (
-                <View
+                <RadiusClusterField
                   key={selector.key}
-                  ref={selector.ref}
-                  collapsable={false}
-                  style={styles.fieldWrap}
-                >
-                  <View style={styles.radiusCluster}>
-                    <View style={styles.radiusActionsGroup}>
-                      {radiusInlineActions.map((action) => (
-                        <CardActionPressable
-                          key={action.key}
-                          testID={action.testID}
-                          accessibilityLabel={action.label}
-                          onPress={action.onPress}
-                          title={action.label}
-                          style={({ pressed }) => [
-                            styles.radiusActionButton,
-                            pressed && styles.fieldPressed,
-                          ]}
-                        >
-                          <Feather
-                            name={action.icon}
-                            size={15}
-                            color={colors.primary}
-                            style={styles.iconButtonIcon}
-                          />
-                        </CardActionPressable>
-                      ))}
-                    </View>
-                    <View style={styles.radiusDivider} />
-                    <View style={styles.radiusFieldWrap}>
-                      <CardActionPressable
-                        accessibilityLabel={`${selector.label}: ${selector.value}`}
-                        onPress={selector.onPress}
-                        title={selector.label}
-                        style={({ pressed }) => [
-                          styles.radiusField,
-                          pressed && styles.fieldPressed,
-                        ]}
-                      >
-                        <Feather
-                          name={selector.icon}
-                          size={15}
-                          color={colors.primary}
-                          style={styles.fieldIcon}
-                        />
-                        <Text
-                          style={[styles.fieldLabel, selector.hideLabel && styles.fieldLabelHidden]}
-                          numberOfLines={1}
-                        >
-                          {selector.label}
-                        </Text>
-                        <Text style={styles.fieldValue} numberOfLines={1}>
-                          {selector.value}
-                        </Text>
-                        <Feather
-                          name="chevron-down"
-                          size={13}
-                          color={colors.textMuted}
-                          style={styles.fieldCaret}
-                        />
-                      </CardActionPressable>
-                    </View>
-                  </View>
-                </View>
-              ) : (
-                <View
-                  key={selector.key}
-                  ref={selector.ref}
-                  collapsable={false}
-                  style={styles.fieldWrap}
-                >
-                  <CardActionPressable
-                    accessibilityLabel={`${selector.label}: ${selector.value}`}
-                    onPress={selector.onPress}
-                    title={selector.label}
-                    style={({ pressed }) => [
-                      styles.field,
-                      pressed && styles.fieldPressed,
-                    ]}
-                  >
-                    <Feather
-                      name={selector.icon}
-                      size={15}
-                      color={colors.primary}
-                      style={styles.fieldIcon}
-                    />
-                    <Text
-                      style={[styles.fieldLabel, selector.hideLabel && styles.fieldLabelHidden]}
-                      numberOfLines={1}
-                    >
-                      {selector.label}
-                    </Text>
-                    <Text style={styles.fieldValue} numberOfLines={1}>
-                      {selector.value}
-                    </Text>
-                    <Feather
-                      name="chevron-down"
-                      size={13}
-                      color={colors.textMuted}
-                      style={styles.fieldCaret}
-                    />
-                  </CardActionPressable>
-                </View>
-              )
-            ),
-          )}
-          {trailingActions.map((action, actionIndex) =>
-            iconOnly ? (
-              <Pressable
-                key={action.key}
-                accessibilityLabel={action.label}
-                accessibilityRole="button"
-                onPress={action.onPress}
-                testID={action.testID}
-                style={({ pressed }) => [
-                  styles.iconButton,
-                  {
-                    position: 'absolute',
-                    left:
-                      (leadingActions.length + selectors.length + actionIndex) *
-                      (iconButtonSize + iconButtonGap),
-                    top: 0,
-                  },
-                  pressed && styles.fieldPressed,
-                ]}
-              >
-                <Feather
-                  name={action.icon}
-                  size={16}
-                  color={colors.primary}
-                  style={styles.iconButtonIcon}
+                  selector={selector}
+                  inlineActions={radiusInlineActions}
+                  styles={styles}
+                  colors={colors}
                 />
-              </Pressable>
-            ) : (
-              <View key={action.key} style={styles.actionWrap}>
-                <CardActionPressable
-                  testID={action.testID}
-                  accessibilityLabel={action.label}
-                  onPress={action.onPress}
-                  title={action.label}
-                  style={({ pressed }) => [
-                    styles.field,
-                    pressed && styles.fieldPressed,
-                  ]}
-                >
-                  <Feather
-                    name={action.icon}
-                    size={15}
-                    color={colors.primary}
-                    style={styles.fieldIcon}
-                  />
-                </CardActionPressable>
-              </View>
-            ),
-          )}
-        </View>
+              ) : (
+                <SelectorField
+                  key={selector.key}
+                  selector={selector}
+                  styles={styles}
+                  colors={colors}
+                />
+              ),
+            )}
+            {trailingActions.map((action) => (
+              <ActionAsField key={action.key} action={action} styles={styles} colors={colors} />
+            ))}
+          </View>
         )}
 
         {hasRadiusPopover && (
@@ -698,7 +656,7 @@ const getStyles = (
       position: 'absolute',
       top: options.isNarrow ? 8 : 16,
       left:
-        Platform.OS === 'web' && options.isNarrow
+        IS_WEB && options.isNarrow
           ? options.reserveLeftControlsSpace
             ? MOBILE_WEB_CONTROLS_CLEARANCE
             : 12
@@ -707,11 +665,7 @@ const getStyles = (
             : 16,
       right: options.isNarrow ? 12 : 16,
       zIndex: 5,
-      ...(Platform.OS === 'web' && !options.isNarrow
-        ? ({
-            maxWidth: DESKTOP_TOOLBAR_MAX_WIDTH,
-          } as any)
-        : null),
+      ...(IS_WEB && !options.isNarrow ? ({ maxWidth: DESKTOP_TOOLBAR_MAX_WIDTH } as any) : null),
     },
     row: {
       flexDirection: 'row',
@@ -720,7 +674,7 @@ const getStyles = (
       gap: options.isVeryNarrow ? 6 : options.isNarrow ? 8 : 10,
       alignItems: 'stretch',
       alignSelf: 'flex-start',
-      ...(Platform.OS === 'web' && !options.isNarrow
+      ...(IS_WEB && !options.isNarrow
         ? ({
             padding: 5,
             borderRadius: TOOLBAR_RADIUS,
@@ -749,33 +703,53 @@ const getStyles = (
       gap: options.isVeryNarrow ? 6 : options.isNarrow ? 8 : 10,
       flexShrink: 0,
     },
-    iconOnlyFiltersGroup: {
+    primaryCtaButton: {
+      minHeight: options.isVeryNarrow ? 36 : options.isNarrow ? 40 : 42,
+      maxWidth: options.isVeryNarrow ? 164 : options.isNarrow ? 188 : 212,
+      paddingHorizontal: options.isVeryNarrow ? 10 : 12,
+      borderRadius: CONTROL_RADIUS,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      backgroundColor: colors.primary,
       flexShrink: 1,
-      minWidth: 0,
-      justifyContent: 'flex-end',
+      ...(IS_WEB
+        ? ({
+            boxShadow: colors.boxShadows.medium,
+            cursor: 'pointer',
+            transition: 'transform 0.18s ease, opacity 0.18s ease',
+          } as any)
+        : colors.shadows.light),
     },
+    primaryCtaText: {
+      color: colors.textOnPrimary,
+      fontSize: options.isVeryNarrow ? 11 : 12,
+      lineHeight: options.isVeryNarrow ? 14 : 15,
+      fontWeight: '800',
+      letterSpacing: 0,
+      flexShrink: 1,
+    },
+    iconOnlyFiltersGroup: { flexShrink: 1, minWidth: 0, justifyContent: 'flex-end' },
     fieldWrap: {
       flexGrow: 1,
       flexShrink: 1,
       flexBasis: 'auto',
       minWidth: options.isVeryNarrow ? 150 : options.isNarrow ? 160 : 180,
     },
-    actionWrap: {
-      flexShrink: 0,
-    },
+    actionWrap: { flexShrink: 0 },
     radiusCluster: {
       flexDirection: 'row',
       alignItems: 'center',
       minHeight: options.isVeryNarrow ? 36 : options.isNarrow ? 38 : 40,
       minWidth: options.isNarrow ? 0 : DESKTOP_RADIUS_CLUSTER_MIN_WIDTH,
       borderRadius: CONTROL_RADIUS,
-      backgroundColor:
-        Platform.OS === 'web' ? colors.surfaceElevated : colors.surface,
+      backgroundColor: IS_WEB ? colors.surfaceElevated : colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
       paddingLeft: options.isVeryNarrow ? 6 : 8,
       paddingRight: 4,
-      ...(Platform.OS === 'web'
+      ...(IS_WEB
         ? ({
             backdropFilter: 'blur(20px) saturate(1.12)',
             WebkitBackdropFilter: 'blur(20px) saturate(1.12)',
@@ -795,11 +769,8 @@ const getStyles = (
       borderRadius: CONTROL_RADIUS,
       alignItems: 'center',
       justifyContent: 'center',
-      ...(Platform.OS === 'web'
-        ? ({
-            cursor: 'pointer',
-            transition: 'transform 0.18s ease, opacity 0.18s ease',
-          } as any)
+      ...(IS_WEB
+        ? ({ cursor: 'pointer', transition: 'transform 0.18s ease, opacity 0.18s ease' } as any)
         : null),
     },
     radiusDivider: {
@@ -809,10 +780,7 @@ const getStyles = (
       opacity: 0.9,
       marginRight: 2,
     },
-    radiusFieldWrap: {
-      flex: 1,
-      minWidth: 0,
-    },
+    radiusFieldWrap: { flex: 1, minWidth: 0 },
     radiusField: {
       flex: 1,
       minWidth: options.isNarrow ? 0 : 136,
@@ -824,11 +792,8 @@ const getStyles = (
       paddingVertical: 4,
       backgroundColor: 'transparent',
       borderRadius: CONTROL_RADIUS,
-      ...(Platform.OS === 'web'
-        ? ({
-            cursor: 'pointer',
-            transition: 'transform 0.18s ease, opacity 0.18s ease',
-          } as any)
+      ...(IS_WEB
+        ? ({ cursor: 'pointer', transition: 'transform 0.18s ease, opacity 0.18s ease' } as any)
         : null),
     },
     field: {
@@ -841,11 +806,10 @@ const getStyles = (
       paddingHorizontal: options.isVeryNarrow ? 10 : 12,
       paddingVertical: 4,
       borderRadius: CONTROL_RADIUS,
-      backgroundColor:
-        Platform.OS === 'web' ? colors.surfaceElevated : colors.surface,
+      backgroundColor: IS_WEB ? colors.surfaceElevated : colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
-      ...(Platform.OS === 'web'
+      ...(IS_WEB
         ? ({
             backdropFilter: 'blur(20px) saturate(1.12)',
             WebkitBackdropFilter: 'blur(20px) saturate(1.12)',
@@ -857,11 +821,7 @@ const getStyles = (
     },
     fieldPressed: {
       opacity: 0.85,
-      ...(Platform.OS === 'web'
-        ? ({
-            transform: 'translateY(0px) scale(0.985)',
-          } as any)
-        : null),
+      ...(IS_WEB ? ({ transform: 'translateY(0px) scale(0.985)' } as any) : null),
     },
     iconButton: {
       width: options.isVeryNarrow ? 36 : options.isNarrow ? 40 : 42,
@@ -871,11 +831,10 @@ const getStyles = (
       borderRadius: CONTROL_RADIUS,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor:
-        Platform.OS === 'web' ? colors.surfaceElevated : colors.surface,
+      backgroundColor: IS_WEB ? colors.surfaceElevated : colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
-      ...(Platform.OS === 'web'
+      ...(IS_WEB
         ? ({
             backdropFilter: 'blur(18px) saturate(1.08)',
             WebkitBackdropFilter: 'blur(18px) saturate(1.08)',
@@ -893,11 +852,10 @@ const getStyles = (
       borderRadius: CONTROL_RADIUS,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor:
-        Platform.OS === 'web' ? colors.surfaceElevated : colors.surface,
+      backgroundColor: IS_WEB ? colors.surfaceElevated : colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
-      ...(Platform.OS === 'web'
+      ...(IS_WEB
         ? ({
             backdropFilter: 'blur(18px) saturate(1.08)',
             WebkitBackdropFilter: 'blur(18px) saturate(1.08)',
@@ -914,17 +872,12 @@ const getStyles = (
       color: colors.primaryDark,
       letterSpacing: 0,
     },
-    iconButtonIcon: {
-      flexShrink: 0,
-    },
+    iconButtonIcon: { flexShrink: 0 },
     iconButtonActive: {
       borderColor: colors.primary,
-      backgroundColor:
-        Platform.OS === 'web' ? colors.surfaceAlpha40 : colors.surface,
-      ...(Platform.OS === 'web'
-        ? ({
-            boxShadow: `0 0 0 1px ${colors.primary}, ${colors.boxShadows.light}`,
-          } as any)
+      backgroundColor: IS_WEB ? colors.surfaceAlpha40 : colors.surface,
+      ...(IS_WEB
+        ? ({ boxShadow: `0 0 0 1px ${colors.primary}, ${colors.boxShadows.light}` } as any)
         : null),
     },
     iconBadge: {
@@ -947,9 +900,7 @@ const getStyles = (
       lineHeight: 12,
       fontWeight: '800',
     },
-    fieldIcon: {
-      flexShrink: 0,
-    },
+    fieldIcon: { flexShrink: 0 },
     fieldLabel: {
       fontSize: options.isVeryNarrow ? 12 : 13,
       fontWeight: '600',
@@ -959,7 +910,7 @@ const getStyles = (
       minWidth: 0,
     },
     fieldLabelHidden: {
-      ...(Platform.OS === 'web' ? ({ display: 'none' } as any) : { width: 0, height: 0, opacity: 0 }),
+      ...(IS_WEB ? ({ display: 'none' } as any) : { width: 0, height: 0, opacity: 0 }),
     },
     fieldValue: {
       marginLeft: 'auto',
@@ -969,8 +920,5 @@ const getStyles = (
       flexShrink: 0,
       maxWidth: options.isVeryNarrow ? 90 : options.isNarrow ? 116 : 142,
     },
-    fieldCaret: {
-      flexShrink: 0,
-      opacity: 0.5,
-    },
+    fieldCaret: { flexShrink: 0, opacity: 0.5 },
   })

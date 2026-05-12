@@ -122,7 +122,7 @@ export function useMapMobileDerivations(
     if (filtersMode === 'route') {
       if (routingLoading) return 'Маршрут обновляется'
       if (canBuildRoute && routeDistance != null)
-        return 'Маршрут готов, можно открыть список точек'
+        return 'Маршрут готов, можно открыть список мест'
       return routePointsCount > 0
         ? `Выбрано ${routePointsCount} из 2 точек`
         : 'Выберите старт и финиш кликом по карте'
@@ -163,7 +163,7 @@ export function useMapMobileDerivations(
         label: 'Маршрут',
         icon: isVeryNarrow ? undefined : 'alt-route',
       },
-      { key: 'list', label: 'Точки', icon: isVeryNarrow ? undefined : 'list' },
+      { key: 'list', label: 'Места', icon: isVeryNarrow ? undefined : 'list' },
     ],
     [isVeryNarrow],
   )

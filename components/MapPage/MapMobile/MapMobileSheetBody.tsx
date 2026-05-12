@@ -66,6 +66,7 @@ const MapMobileSheetBodyInner: React.FC<MapMobileSheetBodyProps> = ({
         onLoadMore={onLoadMore}
         onRefresh={onRefresh}
         isRefreshing={isRefreshing}
+        currentRadiusKm={filtersContextProps?.filterValue?.radius ?? null}
         userLocation={coordinates}
         transportMode={transportMode}
         onToggleFavorite={onToggleFavorite}
@@ -103,4 +104,3 @@ const MapMobileSheetBodyInner: React.FC<MapMobileSheetBodyProps> = ({
 }
 
 export const MapMobileSheetBody = React.memo(MapMobileSheetBodyInner)
-export default MapMobileSheetBody

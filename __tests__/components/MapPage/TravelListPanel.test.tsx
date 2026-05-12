@@ -32,7 +32,9 @@ jest.mock('@/components/MapPage/AddressListItem', () => {
   };
 });
 
-import TravelListPanel from '@/components/MapPage/TravelListPanel';
+import TravelListPanel, {
+  buildTravelListSummaryHint,
+} from '@/components/MapPage/TravelListPanel';
 
 const travelsData = [
   {
@@ -109,5 +111,18 @@ describe('TravelListPanel (right list on map page)', () => {
     expect(queryByTestId('travel-list-expand-all')).toBeNull();
     expect(queryByTestId('travel-list-open-filters')).toBeNull();
     expect(queryByTestId('travel-list-back-to-map')).toBeNull();
+  });
+
+  it('builds explicit mobile results context with radius and user location', () => {
+    expect(
+      buildTravelListSummaryHint({
+        travelsCount: 2,
+        compactPreview: false,
+        currentRadiusKm: 60,
+        userLocation: { latitude: 53.9, longitude: 27.56 },
+      })
+    ).toBe(
+      '2 места в радиусе 60 км рядом с вами. Нажмите на карточку, чтобы сфокусировать карту.'
+    );
   });
 });

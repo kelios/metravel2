@@ -10,12 +10,62 @@ import {
   View,
 } from 'react-native'
 import { FlashList } from '@shopify/flash-list'
+
 import { Text } from '@/ui/paper'
 import AddressListItem from './AddressListItem'
 import { SwipeableListItem } from './SwipeableListItem'
 import Button from '@/components/ui/Button'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+
+const IS_WEB = Platform.OS === 'web'
+const WEB_LIST_OVERSCAN_ITEMS = 5
+const WEB_ESTIMATED_ITEM_HEIGHT_PX = 340
+const WEB_DEFAULT_VIEWPORT_HEIGHT = 600
+const LOAD_MORE_THRESHOLD_RATIO = 0.5
+const PLACE_COUNT_BADGE_CAP = 999
+
+const EMPTY_FAVORITES = new Set<string | number>()
+
+function getPlacesLabel(count: number) {
+  const absCount = Math.abs(count) % 100
+  const lastDigit = absCount % 10
+  if (absCount > 10 && absCount < 20) return 'мест'
+  if (lastDigit === 1) return 'место'
+  if (lastDigit >= 2 && lastDigit <= 4) return 'места'
+  return 'мест'
+}
+
+export function buildTravelListSummaryHint({
+  travelsCount,
+  compactPreview,
+  currentRadiusKm,
+  userLocation,
+}: {
+  travelsCount: number
+  compactPreview: boolean
+  currentRadiusKm?: string | number | null
+  userLocation?: { latitude: number; longitude: number } | null
+}) {
+  if (compactPreview) {
+    return 'Ближайшие места одним взглядом. Полный список откроет больше вариантов.'
+  }
+
+  const placesCountLabel =
+    travelsCount > PLACE_COUNT_BADGE_CAP ? `${PLACE_COUNT_BADGE_CAP}+` : String(travelsCount)
+  const placesWord = getPlacesLabel(travelsCount)
+  const hasRadiusContext = currentRadiusKm != null && String(currentRadiusKm).trim() !== ''
+
+  if (hasRadiusContext) {
+    return `${placesCountLabel} ${placesWord} в радиусе ${currentRadiusKm} км${userLocation ? ' рядом с вами' : ''}. Нажмите на карточку, чтобы сфокусировать карту.`
+  }
+
+  if (userLocation) {
+    return `${placesCountLabel} ${placesWord} рядом с вами. Нажмите на карточку, чтобы сфокусировать карту.`
+  }
+
+  return `${placesCountLabel} ${placesWord} рядом. Нажмите на карточку, чтобы сфокусировать карту.`
+}
 
 type Props = {
   travelsData: any[]
@@ -33,15 +83,12 @@ type Props = {
   onResetFilters?: () => void
   onExpandRadius?: () => void
   compactPreview?: boolean
+  currentRadiusKm?: string | number | null
   userLocation?: { latitude: number; longitude: number } | null
   transportMode?: 'car' | 'bike' | 'foot'
   onToggleFavorite?: (id: string | number) => void
   favorites?: Set<string | number>
 }
-
-const EMPTY_FAVORITES = new Set<string | number>()
-const WEB_LIST_OVERSCAN_ITEMS = 5
-const WEB_ESTIMATED_ITEM_HEIGHT_PX = 340
 
 const getTravelItemId = (item: any): string | number | undefined =>
   item?.id ?? item?._id ?? item?.slug ?? item?.uid
@@ -59,6 +106,23 @@ const getTravelItemKey = (item: any): string =>
       JSON.stringify(item ?? {}),
   )
 
+function computeVirtualWindow(
+  scrollY: number,
+  viewportH: number,
+  itemCount: number,
+  itemHeight: number,
+  overscan: number,
+) {
+  const startIndex = Math.max(0, Math.floor(scrollY / itemHeight) - overscan)
+  const endIndex = Math.min(
+    itemCount,
+    Math.ceil((scrollY + viewportH) / itemHeight) + overscan,
+  )
+  const topSpacerHeight = startIndex * itemHeight
+  const bottomSpacerHeight = Math.max(0, (itemCount - endIndex) * itemHeight)
+  return { startIndex, endIndex, topSpacerHeight, bottomSpacerHeight }
+}
+
 const TravelListPanel: React.FC<Props> = ({
   travelsData,
   buildRouteTo,
@@ -75,10 +139,10 @@ const TravelListPanel: React.FC<Props> = ({
   favorites = EMPTY_FAVORITES,
   onClosePanel,
   onOpenFilters,
-  onExpandList: _onExpandList,
   onResetFilters,
   onExpandRadius,
   compactPreview = false,
+  currentRadiusKm,
 }) => {
   const themeColors = useThemedColors()
   const styles = useMemo(() => getStyles(themeColors), [themeColors])
@@ -106,7 +170,7 @@ const TravelListPanel: React.FC<Props> = ({
         />
       )
 
-      if (Platform.OS !== 'web' && isMobile) {
+      if (!IS_WEB && isMobile) {
         return (
           <SwipeableListItem
             onFavorite={
@@ -114,30 +178,16 @@ const TravelListPanel: React.FC<Props> = ({
             }
             onBuildRoute={() => buildRouteTo(item)}
             showFavorite={!!onToggleFavorite}
-            showRoute={true}
+            showRoute
             isFavorite={isFavorite}
           >
             {content}
           </SwipeableListItem>
         )
       }
-
       return content
     },
-    [
-      isMobile,
-      buildRouteTo,
-      onHideTravel,
-      userLocation,
-      transportMode,
-      onToggleFavorite,
-      favorites,
-    ],
-  )
-
-  const keyExtractor = useCallback(
-    (item: any) => getTravelItemKey(item),
-    [],
+    [isMobile, buildRouteTo, onHideTravel, userLocation, transportMode, onToggleFavorite, favorites],
   )
 
   const skeletonCards = useMemo(
@@ -160,7 +210,6 @@ const TravelListPanel: React.FC<Props> = ({
   const webScrollHandler = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent
-
       const raf = (globalThis as any)?.requestAnimationFrame as
         | undefined
         | ((cb: () => void) => number)
@@ -168,24 +217,24 @@ const TravelListPanel: React.FC<Props> = ({
         | undefined
         | ((id: number) => void)
 
+      const apply = () => {
+        setWebScrollY(contentOffset.y)
+        setWebViewportH(layoutMeasurement.height)
+      }
+
       if (typeof raf === 'function') {
         if (webScrollRafRef.current != null && typeof caf === 'function') {
           caf(webScrollRafRef.current)
         }
-
-        webScrollRafRef.current = raf(() => {
-          setWebScrollY(contentOffset.y)
-          setWebViewportH(layoutMeasurement.height)
-        })
+        webScrollRafRef.current = raf(apply)
       } else {
-        setWebScrollY(contentOffset.y)
-        setWebViewportH(layoutMeasurement.height)
+        apply()
       }
 
       if (!hasMore || !onLoadMore) return
       const distanceFromEnd =
         contentSize.height - layoutMeasurement.height - contentOffset.y
-      if (distanceFromEnd < layoutMeasurement.height * 0.5) {
+      if (distanceFromEnd < layoutMeasurement.height * LOAD_MORE_THRESHOLD_RATIO) {
         onLoadMore()
       }
     },
@@ -200,206 +249,123 @@ const TravelListPanel: React.FC<Props> = ({
   const footer = useMemo(() => {
     if (compactPreview) return null
     if (isLoading) return skeletonCards
-    if (!hasMore) {
-      return <Text style={styles.endText}>Это все места поблизости</Text>
-    }
+    if (!hasMore) return <Text style={styles.endText}>Это все места поблизости</Text>
     return null
   }, [compactPreview, hasMore, isLoading, skeletonCards, styles.endText])
 
-    const listHeader = useMemo(() => {
-      if (!isMobile || !travelsData.length) {
-        return null
-      }
-      const placesCountLabel =
-        travelsData.length > 999 ? '999+' : String(travelsData.length)
-      const hintText = compactPreview
-        ? 'Ближайшие места одним взглядом. Полный список откроет больше вариантов.'
-        : `${placesCountLabel} мест рядом. Нажмите на карточку, чтобы сфокусировать карту.`
-      const swipeHint =
-        !compactPreview && Platform.OS !== 'web'
-          ? 'Свайп вправо — в избранное, влево — построить маршрут.'
-          : null
+  const listHeader = useMemo(() => {
+    if (!isMobile || !travelsData.length) return null
 
-      return (
-        <View
-          pointerEvents={Platform.OS === 'web' ? 'box-none' : 'auto'}
-          style={styles.listHeaderCard}
-          testID="travel-list-mobile-summary"
-        >
-          <Text pointerEvents="none" style={styles.listHeaderTitle}>
-            Места рядом
-          </Text>
-          <Text pointerEvents="none" style={styles.listHeaderHint}>
-            {hintText}
-          </Text>
-          {swipeHint ? (
-            <Text pointerEvents="none" style={styles.listHeaderSwipeHint}>
-              {swipeHint}
-            </Text>
-          ) : null}
-          {onOpenFilters && (
-            <View style={styles.listHeaderActions}>
-              <Button
-                label="Фильтры"
-                onPress={onOpenFilters}
-                variant="outline"
-                size="sm"
-                testID="travel-list-open-filters"
-              />
-            </View>
-          )}
-        </View>
-      )
-    }, [
+    const hintText = buildTravelListSummaryHint({
+      travelsCount: travelsData.length,
       compactPreview,
-      isMobile,
-      onOpenFilters,
-      styles,
-      travelsData.length,
-    ])
-
-  if (!travelsData || travelsData.length === 0) {
-    if (isLoading) {
-      return skeletonCards
-    }
+      currentRadiusKm,
+      userLocation,
+    })
+    const swipeHint =
+      !compactPreview && !IS_WEB
+        ? 'Свайп вправо — в избранное, влево — построить маршрут.'
+        : null
 
     return (
-      <View style={styles.emptyContainer}>
-        <Image
-          source={require('@/assets/no-data.webp')}
-          style={styles.emptyImage}
-          resizeMode="contain"
-          accessibilityLabel="Нет данных"
-        />
-        <Text style={styles.emptyText}>Ничего не нашлось</Text>
-        <Text style={styles.emptyHint}>
-          Попробуйте увеличить радиус или сбросить фильтры
+      <View
+        pointerEvents={IS_WEB ? 'box-none' : 'auto'}
+        style={styles.listHeaderCard}
+        testID="travel-list-mobile-summary"
+      >
+        <Text pointerEvents="none" style={styles.listHeaderTitle}>
+          Места рядом
         </Text>
-        <View style={styles.emptyActions}>
-          {onExpandRadius && (
+        <Text pointerEvents="none" style={styles.listHeaderHint}>
+          {hintText}
+        </Text>
+        {swipeHint && (
+          <Text pointerEvents="none" style={styles.listHeaderSwipeHint}>
+            {swipeHint}
+          </Text>
+        )}
+        {onOpenFilters && (
+          <View style={styles.listHeaderActions}>
             <Button
-              label="Увеличить радиус поиска"
-              onPress={onExpandRadius}
-              variant="primary"
-              size="sm"
-              testID="empty-expand-radius"
-            />
-          )}
-          {onResetFilters && (
-            <Button
-              label="Сбросить фильтры"
-              onPress={onResetFilters}
+              label="Фильтры"
+              onPress={onOpenFilters}
               variant="outline"
               size="sm"
-              testID="empty-reset-filters"
+              testID="travel-list-open-filters"
             />
-          )}
-          {onOpenFilters && (
-            <Button
-              label="Изменить фильтры"
-              onPress={onOpenFilters}
-              variant="ghost"
-              size="sm"
-              testID="empty-open-filters"
-            />
-          )}
-          {onClosePanel && (
-            <Button
-              label="Вернуться на карту"
-              onPress={onClosePanel}
-              variant="ghost"
-              size="sm"
-              testID="empty-back-to-map"
-            />
-          )}
-        </View>
+          </View>
+        )}
       </View>
+    )
+  }, [compactPreview, currentRadiusKm, isMobile, onOpenFilters, styles, travelsData.length, userLocation])
+
+  const refreshControl = useMemo(
+    () =>
+      onRefresh ? (
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={onRefresh}
+          tintColor={themeColors.primary}
+          colors={[themeColors.primary]}
+        />
+      ) : undefined,
+    [onRefresh, isRefreshing, themeColors.primary],
+  )
+
+  if (!travelsData || travelsData.length === 0) {
+    if (isLoading) return skeletonCards
+    return (
+      <EmptyState
+        styles={styles}
+        onExpandRadius={onExpandRadius}
+        onResetFilters={onResetFilters}
+        onOpenFilters={onOpenFilters}
+        onClosePanel={onClosePanel}
+      />
     )
   }
 
-  if (Platform.OS === 'web') {
-    if (isMobile) {
-      return (
-        <ScrollView
-          style={styles.webScrollView}
-          contentContainerStyle={styles.list}
-          refreshControl={
-            onRefresh ? (
-              <RefreshControl
-                refreshing={isRefreshing}
-                onRefresh={onRefresh}
-                tintColor={themeColors.primary}
-                colors={[themeColors.primary]}
-              />
-            ) : undefined
-          }
-        >
-          {listHeader}
-          {visibleTravelsData.map((item: any) => (
-            <React.Fragment
-              key={getTravelItemKey(item)}
-            >
-              {renderItem({ item })}
-            </React.Fragment>
-          ))}
-          {footer}
-        </ScrollView>
-      )
-    }
-
-    const viewportH = webViewportH || 600
-    const startIndex = Math.max(
-      0,
-      Math.floor(webScrollY / WEB_ESTIMATED_ITEM_HEIGHT_PX) -
-        WEB_LIST_OVERSCAN_ITEMS,
-    )
-    const visibleItemCount = visibleTravelsData.length
-    const endIndex = Math.min(
-      visibleItemCount,
-      Math.ceil((webScrollY + viewportH) / WEB_ESTIMATED_ITEM_HEIGHT_PX) +
-        WEB_LIST_OVERSCAN_ITEMS,
-    )
-
-    const topSpacerHeight = startIndex * WEB_ESTIMATED_ITEM_HEIGHT_PX
-    const bottomSpacerHeight = Math.max(
-      0,
-      (visibleItemCount - endIndex) * WEB_ESTIMATED_ITEM_HEIGHT_PX,
-    )
-
+  if (IS_WEB && isMobile) {
     return (
       <ScrollView
         style={styles.webScrollView}
         contentContainerStyle={styles.list}
-        onLayout={(e) => {
-          setWebViewportH(e.nativeEvent.layout.height)
-        }}
+        refreshControl={refreshControl}
+      >
+        {listHeader}
+        {visibleTravelsData.map((item: any) => (
+          <React.Fragment key={getTravelItemKey(item)}>
+            {renderItem({ item })}
+          </React.Fragment>
+        ))}
+        {footer}
+      </ScrollView>
+    )
+  }
+
+  if (IS_WEB) {
+    const { startIndex, endIndex, topSpacerHeight, bottomSpacerHeight } = computeVirtualWindow(
+      webScrollY,
+      webViewportH || WEB_DEFAULT_VIEWPORT_HEIGHT,
+      visibleTravelsData.length,
+      WEB_ESTIMATED_ITEM_HEIGHT_PX,
+      WEB_LIST_OVERSCAN_ITEMS,
+    )
+    return (
+      <ScrollView
+        style={styles.webScrollView}
+        contentContainerStyle={styles.list}
+        onLayout={(e) => setWebViewportH(e.nativeEvent.layout.height)}
         onScroll={webScrollHandler}
         scrollEventThrottle={32}
-        refreshControl={
-          onRefresh ? (
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={onRefresh}
-              tintColor={themeColors.primary}
-              colors={[themeColors.primary]}
-            />
-          ) : undefined
-        }
+        refreshControl={refreshControl}
       >
         {topSpacerHeight > 0 && <View style={{ height: topSpacerHeight }} />}
         {listHeader}
-        {visibleTravelsData
-          .slice(startIndex, endIndex)
-          .map((item: any) => (
-            <React.Fragment
-              key={getTravelItemKey(item)}
-            >
-              {renderItem({ item })}
-            </React.Fragment>
-          ))}
-        {bottomSpacerHeight > 0 && (
-          <View style={{ height: bottomSpacerHeight }} />
-        )}
+        {visibleTravelsData.slice(startIndex, endIndex).map((item: any) => (
+          <React.Fragment key={getTravelItemKey(item)}>{renderItem({ item })}</React.Fragment>
+        ))}
+        {bottomSpacerHeight > 0 && <View style={{ height: bottomSpacerHeight }} />}
         {footer}
       </ScrollView>
     )
@@ -408,32 +374,97 @@ const TravelListPanel: React.FC<Props> = ({
   return (
     <FlashList
       data={visibleTravelsData}
-      keyExtractor={keyExtractor}
+      keyExtractor={getTravelItemKey}
       renderItem={renderItem}
       contentContainerStyle={styles.list}
       {...({ estimatedItemSize: isMobile ? 100 : 120 } as any)}
       onEndReachedThreshold={compactPreview ? undefined : 0.5}
-      onEndReached={
-        compactPreview
-          ? undefined
-          : onLoadMore && hasMore
-            ? onLoadMore
-            : undefined
-      }
+      onEndReached={compactPreview ? undefined : onLoadMore && hasMore ? onLoadMore : undefined}
       ListHeaderComponent={listHeader}
       ListFooterComponent={footer}
       drawDistance={isMobile ? 500 : 800}
-      refreshControl={
-        !compactPreview && onRefresh ? (
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={onRefresh}
-            tintColor={themeColors.primary}
-            colors={[themeColors.primary]}
-          />
-        ) : undefined
-      }
+      refreshControl={!compactPreview ? refreshControl : undefined}
     />
+  )
+}
+
+function EmptyState({
+  styles,
+  onExpandRadius,
+  onResetFilters,
+  onOpenFilters,
+  onClosePanel,
+}: {
+  styles: ReturnType<typeof getStyles>
+  onExpandRadius?: () => void
+  onResetFilters?: () => void
+  onOpenFilters?: () => void
+  onClosePanel?: () => void
+}) {
+  const actions: Array<{
+    label: string
+    onPress: () => void
+    variant: 'primary' | 'outline' | 'ghost'
+    testID: string
+  }> = []
+  if (onExpandRadius) {
+    actions.push({
+      label: 'Увеличить радиус поиска',
+      onPress: onExpandRadius,
+      variant: 'primary',
+      testID: 'empty-expand-radius',
+    })
+  }
+  if (onResetFilters) {
+    actions.push({
+      label: 'Сбросить фильтры',
+      onPress: onResetFilters,
+      variant: 'outline',
+      testID: 'empty-reset-filters',
+    })
+  }
+  if (onOpenFilters) {
+    actions.push({
+      label: 'Изменить фильтры',
+      onPress: onOpenFilters,
+      variant: 'ghost',
+      testID: 'empty-open-filters',
+    })
+  }
+  if (onClosePanel) {
+    actions.push({
+      label: 'Вернуться на карту',
+      onPress: onClosePanel,
+      variant: 'ghost',
+      testID: 'empty-back-to-map',
+    })
+  }
+
+  return (
+    <View style={styles.emptyContainer}>
+      <Image
+        source={require('@/assets/no-data.webp')}
+        style={styles.emptyImage}
+        resizeMode="contain"
+        accessibilityLabel="Нет данных"
+      />
+      <Text style={styles.emptyText}>Ничего не нашлось</Text>
+      <Text style={styles.emptyHint}>
+        Попробуйте увеличить радиус или сбросить фильтры
+      </Text>
+      <View style={styles.emptyActions}>
+        {actions.map((action) => (
+          <Button
+            key={action.testID}
+            label={action.label}
+            onPress={action.onPress}
+            variant={action.variant}
+            size="sm"
+            testID={action.testID}
+          />
+        ))}
+      </View>
+    </View>
   )
 }
 
@@ -452,16 +483,8 @@ const getStyles = (colors: ThemedColors) =>
       borderColor: colors.borderLight,
       gap: 6,
     },
-    listHeaderTitle: {
-      fontSize: 16,
-      fontWeight: '800',
-      color: colors.text,
-    },
-    listHeaderHint: {
-      fontSize: 13,
-      lineHeight: 18,
-      color: colors.textMuted,
-    },
+    listHeaderTitle: { fontSize: 16, fontWeight: '800', color: colors.text },
+    listHeaderHint: { fontSize: 13, lineHeight: 18, color: colors.textMuted },
     listHeaderSwipeHint: {
       fontSize: 12,
       lineHeight: 16,
@@ -479,11 +502,8 @@ const getStyles = (colors: ThemedColors) =>
       flex: 1,
       minHeight: 0,
       width: '100%',
-      ...(Platform.OS === 'web'
-        ? ({
-            scrollbarWidth: 'thin',
-            scrollbarColor: `${colors.border} transparent`,
-          } as any)
+      ...(IS_WEB
+        ? ({ scrollbarWidth: 'thin', scrollbarColor: `${colors.border} transparent` } as any)
         : null),
     },
     loader: { paddingVertical: 16, alignItems: 'center' },
@@ -493,22 +513,9 @@ const getStyles = (colors: ThemedColors) =>
       paddingVertical: 16,
       fontSize: 12,
     },
-    emptyContainer: {
-      padding: 32,
-      alignItems: 'center',
-      gap: 8,
-    },
-    emptyImage: {
-      width: 120,
-      height: 120,
-      marginBottom: 8,
-      opacity: 0.85,
-    },
-    emptyText: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.text,
-    },
+    emptyContainer: { padding: 32, alignItems: 'center', gap: 8 },
+    emptyImage: { width: 120, height: 120, marginBottom: 8, opacity: 0.85 },
+    emptyText: { fontSize: 16, fontWeight: '600', color: colors.text },
     emptyHint: {
       fontSize: 14,
       color: colors.textMuted,
@@ -523,10 +530,7 @@ const getStyles = (colors: ThemedColors) =>
       gap: 12,
       marginTop: 4,
     },
-    skeletonContainer: {
-      padding: 12,
-      gap: 12,
-    },
+    skeletonContainer: { padding: 12, gap: 12 },
     skeletonCard: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -537,8 +541,5 @@ const getStyles = (colors: ThemedColors) =>
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
     },
-    skeletonLines: {
-      flex: 1,
-      gap: 8,
-    },
+    skeletonLines: { flex: 1, gap: 8 },
   })

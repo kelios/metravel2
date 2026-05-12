@@ -1,166 +1,129 @@
 /**
- * MapBottomSheet - мобильная панель снизу с 3 состояниями
- * Заменяет боковую панель на мобильных устройствах
+ * MapBottomSheet — native bottom sheet with three snap points.
+ * Web has its own implementation in MapBottomSheet.web.tsx; this file is
+ * resolved only for iOS/Android.
  */
 
-import React, { useCallback, useMemo, useRef, forwardRef, useImperativeHandle, useState } from 'react';
-import { Platform, View, Text, StyleSheet, Pressable } from 'react-native';
-import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
-import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import React, {
+  forwardRef,
+  useCallback,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+} from 'react'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
+import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet'
+
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+
+type SheetState = 'collapsed' | 'quarter' | 'half' | 'full'
+
+const OPEN_DEBOUNCE_MS = 250
+const NATIVE_SNAP_POINTS = ['30%', '58%', '86%']
+const SNAP_INDEX_QUARTER = 0
+const SNAP_INDEX_HALF = 1
+const SNAP_INDEX_FULL = 2
+const CONTENT_BOTTOM_PADDING = 40
 
 interface MapBottomSheetProps {
-  children: React.ReactNode;
-  /** Заголовок панели */
-  title?: string;
-  /** Подзаголовок (например, количество мест) */
-  subtitle?: string;
-  /** Контент для peek preview (collapsed состояние) */
-  peekContent?: React.ReactNode;
-  /** Нижний отступ (например, высота нижнего dock на web) */
-  bottomInset?: number;
-  /** Callback при изменении состояния */
-  onStateChange?: (state: 'collapsed' | 'quarter' | 'half' | 'full') => void;
+  children: React.ReactNode
+  title?: string
+  subtitle?: string
+  peekContent?: React.ReactNode
+  bottomInset?: number
+  onStateChange?: (state: SheetState) => void
 }
 
 export interface MapBottomSheetRef {
-  snapToCollapsed: () => void;
-  snapToQuarter: () => void;
-  snapToHalf: () => void;
-  snapToFull: () => void;
-  close: () => void;
+  snapToCollapsed: () => void
+  snapToQuarter: () => void
+  snapToHalf: () => void
+  snapToFull: () => void
+  close: () => void
 }
 
 const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
-  ({ children, title, subtitle, peekContent, bottomInset = 0, onStateChange }, ref) => {
-    const colors = useThemedColors();
-    const styles = useMemo(() => getStyles(colors), [colors]);
-    const bottomSheetRef = useRef<BottomSheet>(null);
-    const lastProgrammaticOpenTsRef = useRef(0);
-    const [sheetIndex, setSheetIndex] = useState(-1);
+  ({ children, title, subtitle, peekContent: _peekContent, bottomInset = 0, onStateChange }, ref) => {
+    const colors = useThemedColors()
+    const styles = useMemo(() => getStyles(colors), [colors])
+    const bottomSheetRef = useRef<BottomSheet>(null)
+    const lastProgrammaticOpenTsRef = useRef(0)
 
-    const hasHeaderText = Boolean(title || subtitle);
+    const snapToIndex = useCallback((index: number) => {
+      lastProgrammaticOpenTsRef.current = Date.now()
+      bottomSheetRef.current?.snapToIndex(index)
+    }, [])
 
-    const contentBottomPadding = Platform.OS === 'web' ? 12 + bottomInset : 40 + bottomInset;
-    const isNative = Platform.OS !== 'web';
+    const closeSheet = useCallback(() => {
+      bottomSheetRef.current?.close()
+    }, [])
 
-    const snapPoints = useMemo(
-      () => (Platform.OS === 'web' ? ['70%', '80%'] : ['30%', '58%', '86%']),
-      []
-    );
+    useImperativeHandle(
+      ref,
+      () => ({
+        snapToCollapsed: closeSheet,
+        snapToQuarter: () => snapToIndex(SNAP_INDEX_QUARTER),
+        snapToHalf: () => snapToIndex(SNAP_INDEX_HALF),
+        snapToFull: () => snapToIndex(SNAP_INDEX_FULL),
+        close: closeSheet,
+      }),
+      [closeSheet, snapToIndex],
+    )
 
-    // Expose methods to parent
-    useImperativeHandle(ref, () => ({
-      snapToCollapsed: () => {
-        if (Platform.OS === 'web') {
-          setSheetIndex(-1);
-          onStateChange?.('collapsed');
-          return;
-        }
-        bottomSheetRef.current?.close();
-      },
-      snapToQuarter: () => {
-        lastProgrammaticOpenTsRef.current = Date.now();
-        if (Platform.OS === 'web') {
-          setSheetIndex(0);
-          onStateChange?.('half');
-          return;
-        }
-        bottomSheetRef.current?.snapToIndex(0);
-      },
-      snapToHalf: () => {
-        lastProgrammaticOpenTsRef.current = Date.now();
-        if (Platform.OS === 'web') {
-          setSheetIndex(0);
-          onStateChange?.('half');
-          return;
-        }
-        bottomSheetRef.current?.snapToIndex(1);
-      },
-      snapToFull: () => {
-        lastProgrammaticOpenTsRef.current = Date.now();
-        if (Platform.OS === 'web') {
-          setSheetIndex(1);
-          onStateChange?.('full');
-          return;
-        }
-        bottomSheetRef.current?.snapToIndex(2);
-      },
-      close: () => {
-        if (Platform.OS === 'web') {
-          setSheetIndex(-1);
-          onStateChange?.('collapsed');
-          return;
-        }
-        bottomSheetRef.current?.close();
-      },
-    }));
-
-    // Handle snap point changes
     const handleSheetChanges = useCallback(
       (index: number) => {
-        setSheetIndex(index);
-        if (!onStateChange) return;
-
+        if (!onStateChange) return
         if (index < 0) {
-          onStateChange('collapsed');
-          return;
+          onStateChange('collapsed')
+          return
         }
-
-        const states: ('quarter' | 'half' | 'full')[] = isNative
-          ? ['quarter', 'half', 'full']
-          : ['half', 'full', 'full'];
-        onStateChange(states[index] || 'collapsed');
+        const states: SheetState[] = ['quarter', 'half', 'full']
+        onStateChange(states[index] ?? 'collapsed')
       },
-      [isNative, onStateChange]
-    );
+      [onStateChange],
+    )
 
-    // Render backdrop for half/full states
     const renderBackdrop = useCallback(
-      (props: any) => {
-        if (Platform.OS === 'web') {
-          return null;
-        }
+      (props: any) => (
+        <View
+          testID="map-panel-overlay"
+          style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}
+        >
+          <BottomSheetBackdrop
+            {...props}
+            disappearsOnIndex={SNAP_INDEX_HALF}
+            appearsOnIndex={SNAP_INDEX_FULL}
+            opacity={0.5}
+            pressBehavior="none"
+          />
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => {
+              const dt = Date.now() - lastProgrammaticOpenTsRef.current
+              if (dt < OPEN_DEBOUNCE_MS) return
+              bottomSheetRef.current?.snapToIndex(SNAP_INDEX_QUARTER)
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Закрыть панель карты"
+          />
+        </View>
+      ),
+      [],
+    )
 
-        return (
-          <View
-            testID="map-panel-overlay"
-            style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}
-          >
-            <BottomSheetBackdrop
-              {...props}
-              disappearsOnIndex={isNative ? 1 : 0}
-              appearsOnIndex={isNative ? 2 : 1}
-              opacity={0.5}
-              pressBehavior="none"
-            />
-            <Pressable
-              style={StyleSheet.absoluteFill}
-              onPress={() => {
-                const dt = Date.now() - lastProgrammaticOpenTsRef.current;
-                if (dt < 250) return;
-                bottomSheetRef.current?.snapToIndex(0);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Закрыть панель карты"
-            />
-          </View>
-        );
-      },
-      [isNative]
-    );
+    const hasHeaderText = !!(title || subtitle)
+    const contentBottomPadding = CONTENT_BOTTOM_PADDING + bottomInset
 
     return (
       <BottomSheet
         ref={bottomSheetRef}
-        index={Platform.OS === 'web' ? sheetIndex : -1}
-        snapPoints={snapPoints}
-        // Fixed snap points + self-managed scroll containers are more stable here
-        // than gorhom's dynamic content measurement on mobile/web.
+        index={-1}
+        snapPoints={NATIVE_SNAP_POINTS}
         enableDynamicSizing={false}
         bottomInset={bottomInset}
         onChange={handleSheetChanges}
         backdropComponent={renderBackdrop}
-        enablePanDownToClose={true}
+        enablePanDownToClose
         handleIndicatorStyle={styles.indicator}
         backgroundStyle={styles.background}
         style={styles.sheet}
@@ -178,48 +141,23 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           </View>
         )}
 
-        {/* Peek content - shown in collapsed state */}
-        {peekContent && sheetIndex < 0 && (
-          <View style={styles.peekContent}>
-            {peekContent}
-          </View>
-        )}
-
-        {/* Main content - let children control their own scrolling (avoids nested scroll + keeps sticky footers working) */}
         <BottomSheetView
-          style={[
-            styles.contentContainer,
-            { paddingBottom: contentBottomPadding },
-          ]}
+          style={[styles.contentContainer, { paddingBottom: contentBottomPadding }]}
         >
           {children}
         </BottomSheetView>
       </BottomSheet>
-    );
-  }
-);
+    )
+  },
+)
 
-MapBottomSheet.displayName = 'MapBottomSheet';
+MapBottomSheet.displayName = 'MapBottomSheet'
 
-export default MapBottomSheet;
+export default MapBottomSheet
 
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
-    sheet: {
-      ...Platform.select({
-        web: {
-          zIndex: 5000,
-          boxShadow: 'none',
-          left: 0,
-          right: 0,
-          width: '100%',
-          maxWidth: '100vw',
-        } as any,
-        default: {
-          ...(colors.shadows?.light ?? {}),
-        },
-      }),
-    },
+    sheet: { ...(colors.shadows?.light ?? {}) },
     background: {
       backgroundColor: colors.surface,
       borderTopLeftRadius: 18,
@@ -243,12 +181,8 @@ const getStyles = (colors: ThemedColors) =>
       borderBottomWidth: 1,
       borderBottomColor: colors.borderLight,
     },
-    headerContent: {
-      flex: 1,
-    },
-    titleContainer: {
-      flexDirection: 'column',
-    },
+    headerContent: { flex: 1 },
+    titleContainer: { flexDirection: 'column' },
     title: {
       fontSize: 16,
       fontWeight: '600',
@@ -261,26 +195,9 @@ const getStyles = (colors: ThemedColors) =>
       color: colors.textMuted,
       marginTop: 2,
     },
-    peekContent: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-    },
     contentContainer: {
       paddingHorizontal: 16,
       paddingBottom: 40,
-      ...Platform.select({
-        web: {
-          flex: 1,
-          minHeight: 0,
-          paddingHorizontal: 0,
-          // @ts-ignore: web-only style
-          overflowY: 'auto',
-          // @ts-ignore: web-only style
-          WebkitOverflowScrolling: 'touch',
-        },
-        default: {
-          flex: 1,
-        },
-      }),
+      flex: 1,
     },
-  });
+  })
