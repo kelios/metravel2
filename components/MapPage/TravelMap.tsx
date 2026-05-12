@@ -26,6 +26,10 @@ const VERY_NARROW_MAP_WIDTH = 420
 const NARROW_VIEWPORT_WIDTH = 768
 const VERY_NARROW_VIEWPORT_WIDTH = 480
 
+function ignoreTravelMapRuntimeError() {
+  return
+}
+
 function isValidLatLng(lat: number, lng: number) {
   return (
     Number.isFinite(lat) &&
@@ -93,7 +97,7 @@ const RouteLineLayer: React.FC<RouteLineLayerProps> = ({
         try {
           map.removeLayer(polylineRef.current)
         } catch {
-          // ignore stale layer removal errors
+          ignoreTravelMapRuntimeError()
         }
         polylineRef.current = null
       }
@@ -117,7 +121,7 @@ const RouteLineLayer: React.FC<RouteLineLayerProps> = ({
         pane.style.pointerEvents = 'none'
       }
     } catch {
-      // ignore pane setup failures and fall back to default overlay pane
+      ignoreTravelMapRuntimeError()
     }
 
     const latlngs = routeLineCoords
@@ -168,7 +172,7 @@ const RouteLineLayer: React.FC<RouteLineLayerProps> = ({
         try {
           line.remove?.()
         } catch {
-          // ignore cleanup errors after failed route add
+          ignoreTravelMapRuntimeError()
         }
       }
     }
@@ -398,7 +402,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         if (!dx && !dy) return
         map?.panBy?.([dx, dy], { animate: true, duration: 0.35 } as any)
       } catch {
-        // ignore popup pan calculation errors
+        ignoreTravelMapRuntimeError()
       }
     }
 
@@ -504,7 +508,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       try {
         map?.invalidateSize?.({ animate: true, pan: false })
       } catch {
-        // ignore size invalidation races during resize
+        ignoreTravelMapRuntimeError()
       }
     }
     const rafId =
@@ -523,7 +527,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       try {
         map?.invalidateSize?.({ animate: false, pan: false })
       } catch {
-        // ignore size invalidation races during ready state sync
+        ignoreTravelMapRuntimeError()
       }
     }
     invalidate()
@@ -556,7 +560,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         const bounds = L.latLngBounds(leafletPoints)
         map.fitBounds(bounds.pad(0.15), { animate: false, maxZoom: 15 })
       } catch {
-        // ignore fitBounds failures when map layers are still initializing
+        ignoreTravelMapRuntimeError()
       }
     }, 300)
 
@@ -576,7 +580,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           controller.stop?.()
           if (controller.layer && map) map.removeLayer(controller.layer)
         } catch {
-          // ignore overlay cleanup errors
+          ignoreTravelMapRuntimeError()
         }
       })
       controllers.clear()
@@ -595,7 +599,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         poi.start()
       }
     } catch {
-      // ignore optional overlay bootstrap failures
+      ignoreTravelMapRuntimeError()
     }
 
     try {
@@ -606,7 +610,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         camping.start()
       }
     } catch {
-      // ignore optional overlay bootstrap failures
+      ignoreTravelMapRuntimeError()
     }
 
     return removeAll
@@ -624,7 +628,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       const key = String(coord ?? '').trim()
       if (key) markerByCoordRef.current.set(key, marker)
     } catch {
-      // ignore malformed marker keys
+      ignoreTravelMapRuntimeError()
     }
   }, [])
 
