@@ -4,6 +4,7 @@ import { View } from 'react-native'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 import type { Travel } from '@/types/types'
 import QuickFacts from '@/components/travel/QuickFacts'
+import TravelStatusButton from '@/components/travel/TravelStatusButton'
 
 import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
 import TravelHeroQuickJumps from './TravelHeroQuickJumps'
@@ -31,6 +32,13 @@ export const TravelHeroExtras: React.FC<{
         ]}
       >
         <QuickFacts travel={travel} />
+        <TravelStatusButton
+          travelId={travel.id}
+          travelTitle={travel.name}
+          travelUrl={`/travels/${(travel as any).slug || travel.id}`}
+          travelImageUrl={(travel as any).travel_image_thumb_url}
+          travelCountry={(travel as any).countryName}
+        />
       </View>
 
       {showQuickJumps && quickJumpLinks.length > 0 && (

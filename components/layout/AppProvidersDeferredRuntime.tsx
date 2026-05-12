@@ -172,11 +172,13 @@ export default function AppProvidersDeferredRuntime({
           favoritesStore,
           viewHistoryStore,
           recommendationsStore,
+          travelStatusStore,
         ] = await Promise.all([
           import('@/stores/authStore'),
           import('@/stores/favoritesStore'),
           import('@/stores/viewHistoryStore'),
           import('@/stores/recommendationsStore'),
+          import('@/stores/travelStatusStore'),
         ]);
 
         if (cancelled) return;
@@ -189,6 +191,7 @@ export default function AppProvidersDeferredRuntime({
         const fav = favoritesStore.useFavoritesStore.getState();
         const hist = viewHistoryStore.useViewHistoryStore.getState();
         const rec = recommendationsStore.useRecommendationsStore.getState();
+        const travelStatus = travelStatusStore.useTravelStatusStore.getState();
 
         if (authState.isAuthenticated && authState.userId) {
           fav.resetFetchState(authState.userId);
@@ -202,6 +205,7 @@ export default function AppProvidersDeferredRuntime({
 
         void fav.loadLocal(authState.userId);
         void hist.loadLocal(authState.userId);
+        void travelStatus.loadLocal(authState.userId);
       } catch {
         favoritesBootstrapKeyRef.current = null;
       }

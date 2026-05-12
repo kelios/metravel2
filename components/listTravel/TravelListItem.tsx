@@ -5,6 +5,7 @@ import { router } from 'expo-router'
 
 import type { Travel } from '@/types/types'
 import OptimizedFavoriteButton from '@/components/travel/OptimizedFavoriteButton'
+import TravelStatusButton from '@/components/travel/TravelStatusButton'
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers'
 import { routes } from '@/utils/routes'
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard'
@@ -347,7 +348,7 @@ function TravelListItem({
 
   const rightTopSlot = (
     <View
-      style={[styles.favoriteButtonContainer, POINTER_EVENTS_BOX_NONE]}
+      style={[styles.favoriteButtonContainer, POINTER_EVENTS_BOX_NONE, { flexDirection: 'column', gap: 6 }]}
       {...(IS_WEB && {
         onClick: stopEvent,
         onMouseDown: (e: any) => e.stopPropagation(),
@@ -361,6 +362,14 @@ function TravelListItem({
         url={travelUrl}
         country={countries[0]}
         size={FAVORITE_ICON_SIZE}
+      />
+      <TravelStatusButton
+        travelId={id}
+        travelTitle={title}
+        travelUrl={travelUrl}
+        travelImageUrl={thumbUrl}
+        travelCountry={countries[0]}
+        compact
       />
     </View>
   )

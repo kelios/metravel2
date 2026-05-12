@@ -6,7 +6,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { ResponsiveContainer } from '@/components/layout';
 
-export type ProfileQuickActionKey = 'messages' | 'subscriptions' | 'settings' | 'userpoints';
+export type ProfileQuickActionKey = 'messages' | 'subscriptions' | 'settings' | 'userpoints' | 'calendar';
 
 export interface ProfileQuickActionsProps {
   onPress: (key: ProfileQuickActionKey) => void;
@@ -33,6 +33,7 @@ export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: Profil
         row: {
           flexDirection: 'row',
           gap: DESIGN_TOKENS.spacing.sm,
+          flexWrap: 'wrap',
         },
         card: {
           flex: 1,
@@ -139,6 +140,13 @@ export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: Profil
       hint: 'Сохранённые места',
       icon: 'map-pin',
       accessibilityHint: 'Перейти к сохранённым точкам на карте',
+    },
+    {
+      key: 'calendar',
+      title: 'Календарь',
+      hint: 'Мои планы поездок',
+      icon: 'calendar',
+      accessibilityHint: 'Перейти к календарю путешествий',
     },
   ];
 

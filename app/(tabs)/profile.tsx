@@ -303,6 +303,7 @@ export default function ProfileScreen() {
     if (key === 'messages') router.push('/messages');
     else if (key === 'subscriptions') router.push('/subscriptions');
     else if (key === 'userpoints') router.push('/userpoints');
+    else if (key === 'calendar') router.push('/calendar' as any);
     else router.push('/settings');
   }, [router]);
 

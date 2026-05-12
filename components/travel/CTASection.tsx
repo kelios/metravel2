@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import type { Travel } from '@/types/types';
 import { useFavorites } from '@/context/FavoritesContext';
+import TravelStatusButton from '@/components/travel/TravelStatusButton';
 import { useAuth } from '@/context/AuthContext';
 import { METRICS } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -231,6 +232,15 @@ function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
             isFavorite && styles.actionButtonTextActive,
           ]}
           accessibilityLabel={isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'}
+        />
+
+        {/* Кнопка "Добавить в план / Мой календарь" */}
+        <TravelStatusButton
+          travelId={travel.id}
+          travelTitle={travel.name}
+          travelUrl={`/travels/${travel.slug || travel.id}`}
+          travelImageUrl={travel.travel_image_thumb_url}
+          travelCountry={(travel as any).countryName}
         />
 
         {/* P1-5: «Все путешествия автора» убрана — уже есть в AuthorCard */}
