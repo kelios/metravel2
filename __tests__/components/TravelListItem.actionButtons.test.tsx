@@ -30,6 +30,15 @@ jest.mock('@/components/travel/OptimizedFavoriteButton', () => {
   };
 });
 
+const mockTravelStatusButtonCompact = jest.fn()
+jest.mock('@/components/travel/TravelStatusButton', () => {
+  return function MockTravelStatusButton(props: any) {
+    mockTravelStatusButtonCompact(props)
+    const { View } = require('react-native')
+    return <View testID="travel-status-button-compact" />
+  }
+});
+
 describe('TravelListItem - Action Buttons', () => {
   const mockTravel = {
     id: 1,
@@ -72,6 +81,7 @@ describe('TravelListItem - Action Buttons', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTravelStatusButtonCompact.mockClear()
     // Mock web platform
     Platform.OS = 'web';
   });
@@ -182,4 +192,25 @@ describe('TravelListItem - Action Buttons', () => {
     // Just verify the component renders without crashing
     expect(screen.getByText('Test Travel')).toBeTruthy();
   });
+
+  it('рендерит TravelStatusButton в compact-режиме рядом с кнопкой избранного', () => {
+    render(<TravelListItem {...mockProps} />)
+    expect(screen.getByTestId('travel-status-button-compact')).toBeTruthy()
+    expect(mockTravelStatusButtonCompact).toHaveBeenCalledWith(
+      expect.objectContaining({ compact: true, travelId: 1 })
+    )
+  })
+
+  it('передаёт корректный travelUrl в TravelStatusButton compact', () => {
+    render(<TravelListItem {...mockProps} />)
+    expect(mockTravelStatusButtonCompact).toHaveBeenCalledWith(
+      expect.objectContaining({ travelUrl: expect.stringContaining('test-travel') })
+    )
+  })
+
+  it('TravelStatusButton compact скрыт в selectable-режиме (rightTopSlot=null)', () => {
+    render(<TravelListItem {...mockProps} selectable isSelected={false} />)
+    // В selectable-режиме rightTopSlot не рендерится → TravelStatusButton не показывается
+    expect(screen.queryByTestId('travel-status-button-compact')).toBeNull()
+  })
 });

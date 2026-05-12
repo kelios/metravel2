@@ -5,6 +5,7 @@ import { TravelHeroExtras } from '@/components/travel/details/TravelHeroExtras'
 
 const mockQuickFacts = jest.fn((_props: any) => null)
 const mockTravelHeroQuickJumps = jest.fn((_props: any) => null)
+const mockTravelStatusButton = jest.fn((_props: any) => null)
 
 jest.mock('@/components/travel/details/TravelDetailsHeroStyles', () => ({
   useTravelDetailsHeroStyles: () => ({
@@ -25,6 +26,11 @@ jest.mock('@/components/travel/details/TravelHeroQuickJumps', () => ({
   default: (props: any) => mockTravelHeroQuickJumps(props),
 }))
 
+jest.mock('@/components/travel/TravelStatusButton', () => ({
+  __esModule: true,
+  default: (props: any) => mockTravelStatusButton(props),
+}))
+
 describe('TravelHeroExtras', () => {
   const originalPlatformOS = Platform.OS
 
@@ -32,6 +38,7 @@ describe('TravelHeroExtras', () => {
     Platform.OS = originalPlatformOS as any
     mockQuickFacts.mockClear()
     mockTravelHeroQuickJumps.mockClear()
+    mockTravelStatusButton.mockClear()
   })
 
   afterAll(() => {
@@ -98,6 +105,50 @@ describe('TravelHeroExtras', () => {
         isMobile: false,
         links: [sectionLinks[1], sectionLinks[0]],
       })
+    )
+  })
+
+  it('рендерит TravelStatusButton с корректными пропсами для travel с slug', () => {
+    Platform.OS = 'ios' as any
+    const travel: any = {
+      id: 5,
+      slug: 'my-trip',
+      name: 'My Trip',
+      travel_image_thumb_url: 'https://example.com/img.jpg',
+      countryName: 'Italy',
+    }
+    render(
+      <TravelHeroExtras
+        travel={travel}
+        isMobile
+        sectionLinks={[]}
+        onQuickJump={jest.fn()}
+      />
+    )
+
+    expect(mockTravelStatusButton).toHaveBeenCalledWith(
+      expect.objectContaining({
+        travelId: 5,
+        travelTitle: 'My Trip',
+        travelUrl: '/travels/my-trip',
+        travelImageUrl: 'https://example.com/img.jpg',
+        travelCountry: 'Italy',
+      })
+    )
+  })
+
+  it('использует id как fallback в URL при отсутствии slug', () => {
+    const travel: any = { id: 99, name: 'No Slug' }
+    render(
+      <TravelHeroExtras
+        travel={travel}
+        isMobile={false}
+        sectionLinks={[]}
+        onQuickJump={jest.fn()}
+      />
+    )
+    expect(mockTravelStatusButton).toHaveBeenCalledWith(
+      expect.objectContaining({ travelUrl: '/travels/99' })
     )
   })
 })
