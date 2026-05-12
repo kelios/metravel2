@@ -77,6 +77,11 @@ export default function MiniCalendar({ entries, onDayPress, selectedDate }: Prop
       overflow: 'hidden',
       marginHorizontal: 16,
       marginBottom: 12,
+      ...(Platform.OS === 'web'
+        ? {
+            alignSelf: 'stretch',
+          } as any
+        : null),
     },
     header: {
       flexDirection: 'row',
@@ -118,7 +123,7 @@ export default function MiniCalendar({ entries, onDayPress, selectedDate }: Prop
     },
     cell: {
       width: `${100 / 7}%` as any,
-      aspectRatio: 1,
+      height: 42,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -247,4 +252,3 @@ export default function MiniCalendar({ entries, onDayPress, selectedDate }: Prop
     </View>
   )
 }
-
