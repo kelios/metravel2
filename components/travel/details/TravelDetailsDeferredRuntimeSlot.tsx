@@ -1,26 +1,7 @@
-import React, { Suspense, useEffect, useState } from 'react'
+import React, { Suspense } from 'react'
 const TravelDetailsPostLcpRuntimeLazy = React.lazy(() =>
   import('@/components/travel/details/TravelDetailsPostLcpRuntime'),
 )
-
-type DeferProps = {
-  when: boolean
-  children: React.ReactNode
-}
-
-const Defer: React.FC<DeferProps> = ({ when, children }) => {
-  const [ready, setReady] = useState(when)
-
-  useEffect(() => {
-    if (when) {
-      setReady(true)
-      return
-    }
-    setReady(false)
-  }, [when])
-
-  return ready ? <>{children}</> : null
-}
 
 type TravelDetailsDeferredRuntimeSlotProps = {
   activeSection: string | null
@@ -59,27 +40,27 @@ export default function TravelDetailsDeferredRuntimeSlot({
   travel,
   viewportHeight,
 }: TravelDetailsDeferredRuntimeSlotProps) {
+  if (!deferredChromeReady) return null
+
   return (
-    <Defer when={deferredChromeReady}>
-      <Suspense fallback={null}>
-        <TravelDetailsPostLcpRuntimeLazy
-          travel={travel}
-          isMobile={isMobile}
-          screenWidth={screenWidth}
-          anchors={anchors}
-          sectionLinks={sectionLinks}
-          onNavigate={onNavigate}
-          activeSection={activeSection}
-          forceOpenKey={forceOpenKey}
-          scrollY={scrollY}
-          contentHeight={contentHeight}
-          viewportHeight={viewportHeight}
-          scrollViewRef={scrollViewRef}
-          criticalChromeReady={criticalChromeReady}
-          scrollToMapSection={scrollToMapSection}
-          scrollToComments={scrollToComments}
-        />
-      </Suspense>
-    </Defer>
+    <Suspense fallback={null}>
+      <TravelDetailsPostLcpRuntimeLazy
+        travel={travel}
+        isMobile={isMobile}
+        screenWidth={screenWidth}
+        anchors={anchors}
+        sectionLinks={sectionLinks}
+        onNavigate={onNavigate}
+        activeSection={activeSection}
+        forceOpenKey={forceOpenKey}
+        scrollY={scrollY}
+        contentHeight={contentHeight}
+        viewportHeight={viewportHeight}
+        scrollViewRef={scrollViewRef}
+        criticalChromeReady={criticalChromeReady}
+        scrollToMapSection={scrollToMapSection}
+        scrollToComments={scrollToComments}
+      />
+    </Suspense>
   )
 }

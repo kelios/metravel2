@@ -141,6 +141,7 @@ export const getStyles = (
       },
       tabsContainer: {
         flexDirection: 'row',
+        flexWrap: isMobile ? 'nowrap' : 'wrap',
         alignItems: 'center',
         paddingTop: isMobile ? Math.max(10, insetTop + 2) : 14,
         paddingBottom: isMobile ? 8 : 10,
@@ -149,6 +150,7 @@ export const getStyles = (
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: themedColors.borderLight,
         columnGap: 10,
+        rowGap: isMobile ? 0 : 8,
         minHeight: isMobile ? 48 : undefined,
         ...(Platform.OS === 'web'
           ? ({
@@ -166,7 +168,9 @@ export const getStyles = (
         padding: 3,
         columnGap: 2,
         alignSelf: isMobile ? 'flex-start' : 'stretch',
-        flex: isMobile ? 0 : 1,
+        flex: isMobile ? 0 : undefined,
+        flexBasis: isMobile ? undefined : '100%',
+        width: isMobile ? undefined : '100%',
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: themedColors.borderLight,
       },
@@ -245,6 +249,13 @@ export const getStyles = (
         fontSize: 12,
         color: themedColors.textMuted,
         fontWeight: '500',
+      },
+      panelHeaderActions: {
+        width: '100%',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        gap: 4,
       },
       closePanelButton: {
         width: CONTROL_SIZE,
@@ -357,7 +368,7 @@ export const getStyles = (
       collapseToggleInPanel: {
         position: 'absolute',
         top: 16,
-        right: -16,
+        right: -48,
         width: CONTROL_SIZE,
         height: CONTROL_SIZE,
         borderRadius: CONTROL_RADIUS,

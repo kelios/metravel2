@@ -1,103 +1,181 @@
-// app/travels/[param].tsx
-import React, {
-  useEffect,
-  useMemo,
-  useState,
-  useTransition,
-} from "react";
-import {
-  Platform,
-  useWindowDimensions,
-} from "react-native";
-import { useIsFocused, useNavigation } from "@react-navigation/native";
-import { useRouter } from 'expo-router';
-import { METRICS } from '@/constants/layout';
-import { useTravelDetails } from '@/hooks/travel-details';
+import React, { useEffect, useMemo, useState, useTransition } from 'react'
+import { Animated, Platform, useWindowDimensions } from 'react-native'
+import { useIsFocused, useNavigation } from '@react-navigation/native'
+import { useRouter } from 'expo-router'
 
-/* ✅ АРХИТЕКТУРА: Импорт кастомных хуков */
-import TravelDetailsCriticalShell from "@/components/travel/details/TravelDetailsCriticalShell";
-import { getTravelDetailsShellStyles } from "@/components/travel/details/TravelDetailsShellStyles";
+import { METRICS } from '@/constants/layout'
+import { useAccessibilityAnnounce } from '@/hooks/useAccessibilityAnnounce'
+import { useSkeletonPhase } from '@/hooks/useSkeletonPhase'
+import { useThemedColors } from '@/hooks/useTheme'
+import { useTravelDetails } from '@/hooks/travel-details'
+import { useTravelDetailsTrace } from '@/hooks/useTravelDetailsTrace'
+import { getTravelDetailsShellStyles } from '@/components/travel/details/TravelDetailsShellStyles'
 import { isTravelDetailsFirstScreenReady } from '@/components/travel/details/travelDetailsCriticalShellModel'
+import TravelDetailsAccessibilityChrome from '@/components/travel/details/TravelDetailsAccessibilityChrome'
+import TravelDetailsCriticalShell from '@/components/travel/details/TravelDetailsCriticalShell'
+import TravelDetailsDeferredRuntimeSlot from '@/components/travel/details/TravelDetailsDeferredRuntimeSlot'
+import { LoadError, MissingParamError } from '@/components/travel/details/TravelDetailsErrorStates'
 import TravelDetailsLoadingFallback from '@/components/travel/details/TravelDetailsLoadingFallback'
 import TravelDetailsSeoBlock from '@/components/travel/details/TravelDetailsSeoBlock'
-import TravelDetailsAccessibilityChrome from '@/components/travel/details/TravelDetailsAccessibilityChrome'
-import TravelDetailsDeferredRuntimeSlot from '@/components/travel/details/TravelDetailsDeferredRuntimeSlot'
-import {
-  LoadError,
-  MissingParamError,
-} from '@/components/travel/details/TravelDetailsErrorStates'
+import { useTravelDetailsContainerViewModel } from '@/components/travel/details/hooks/useTravelDetailsContainerViewModel'
+import { useTravelDetailsHeadSync } from '@/components/travel/details/hooks/useTravelDetailsHeadSync'
+import type { Travel } from '@/types/types'
 
-/* ✅ PHASE 2: Accessibility (WCAG AAA) */
-import { useAccessibilityAnnounce } from "@/hooks/useAccessibilityAnnounce";
-import { useThemedColors } from "@/hooks/useTheme";
-import { useTravelDetailsTrace } from '@/hooks/useTravelDetailsTrace';
-import { useSkeletonPhase } from '@/hooks/useSkeletonPhase';
-import { useTravelDetailsContainerViewModel } from '@/components/travel/details/hooks/useTravelDetailsContainerViewModel';
-import { useTravelDetailsHeadSync } from '@/components/travel/details/hooks/useTravelDetailsHeadSync';
-/* =================================================================== */
-
-export default function TravelDetailsContainer() {
-  const { width: screenWidth } = useWindowDimensions();
-  const isMobile = screenWidth < METRICS.breakpoints.tablet;
-  const navigation = useNavigation();
-  const isFocused = useIsFocused();
-  const router = useRouter();
-  const [, startTransition] = useTransition();
-
-  const isWebAutomation =
+function isWebAutomation() {
+  return (
     Platform.OS === 'web' &&
     typeof navigator !== 'undefined' &&
-    Boolean((navigator as any).webdriver);
+    Boolean((navigator as { webdriver?: boolean }).webdriver)
+  )
+}
 
-  /* ✅ PHASE 2: Accessibility Hooks */
-  const { announcement, priority: announcementPriority } = useAccessibilityAnnounce();
-  const themedColors = useThemedColors();
-  const styles = useMemo(() => getTravelDetailsShellStyles(themedColors), [themedColors]);
-  const [showSkipToContentLink, setShowSkipToContentLink] = useState(Platform.OS !== 'web');
-
-  // ✅ REFACTORED: Skeleton phase extracted to useSkeletonPhase hook
-
-  // ✅ АРХИТЕКТУРА: Использование кастомных хуков
-  const travelDetails = useTravelDetails({
-    isMobile,
-    screenWidth,
-    startTransition,
-  })
-
-  const { travel, isLoading, isError, error, refetch, slug, isMissingParam } = travelDetails.data
-  const { contentHorizontalPadding, sideMenuPlatformStyles } = travelDetails.layout
-  const { anchors, scrollTo, scrollRef, activeSection, setActiveSection, forceOpenKey } =
-    travelDetails.navigation
-  const {
-    lcpLoaded,
-    setLcpLoaded,
-    sliderReady,
-    deferAllowed,
-    postLcpRuntimeReady,
-    heroEnhancersReady = postLcpRuntimeReady,
-  } =
-    travelDetails.performance
-  const { closeMenu, animatedX, menuWidthNum } = travelDetails.menu
-  const { scrollY, contentHeight, viewportHeight, handleContentSizeChange, handleLayout } =
-    travelDetails.scroll
+function useShowSkipToContentLink() {
+  const [isVisible, setIsVisible] = useState(Platform.OS !== 'web')
 
   useEffect(() => {
-    if (Platform.OS === 'web') return;
-    if (!travel || !travel.id || isLoading || isError) return;
+    if (Platform.OS !== 'web') return undefined
 
-    let cancelled = false;
+    const revealOnFirstForwardTab = (event: KeyboardEvent) => {
+      if (event.key === 'Tab' && !event.shiftKey) setIsVisible(true)
+    }
+
+    window.addEventListener('keydown', revealOnFirstForwardTab, { passive: true, once: true })
+    return () => window.removeEventListener('keydown', revealOnFirstForwardTab)
+  }, [])
+
+  return isVisible
+}
+
+function useOfflineTravelCache(travel: Travel | undefined, isLoading: boolean, isError: boolean) {
+  useEffect(() => {
+    if (Platform.OS === 'web' || !travel?.id || isLoading || isError) return undefined
+
+    let cancelled = false
 
     void import('@/hooks/useOfflineTravelCache')
-      .then((mod) => {
-        if (cancelled) return;
-        return mod.cacheTravelOffline(travel.id, travel, true);
+      .then((module) => {
+        if (!cancelled) return module.cacheTravelOffline(travel.id, travel, true)
+        return undefined
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
 
     return () => {
-      cancelled = true;
-    };
-  }, [travel, isLoading, isError]);
+      cancelled = true
+    }
+  }, [travel, isLoading, isError])
+}
+
+type DeferredRuntimeArgs = {
+  activeSection: string | null
+  anchors: any
+  contentHeight: number
+  criticalChromeReady: boolean
+  deferredChromeReady: boolean
+  forceOpenKey: string | null
+  isMobile: boolean
+  onNavigate: (key: string) => void
+  screenWidth: number
+  scrollToComments: () => void
+  scrollToMapSection: () => void
+  scrollViewRef: React.RefObject<any>
+  scrollY: Animated.Value
+  sectionLinks: any[]
+  travel: Travel | undefined
+  viewportHeight: number
+}
+
+function useDeferredRuntimeContent({
+  activeSection,
+  anchors,
+  contentHeight,
+  criticalChromeReady,
+  deferredChromeReady,
+  forceOpenKey,
+  isMobile,
+  onNavigate,
+  screenWidth,
+  scrollToComments,
+  scrollToMapSection,
+  scrollViewRef,
+  scrollY,
+  sectionLinks,
+  travel,
+  viewportHeight,
+}: DeferredRuntimeArgs) {
+  return useMemo(() => {
+    if (!travel) return null
+
+    return (
+      <TravelDetailsDeferredRuntimeSlot
+        travel={travel}
+        isMobile={isMobile}
+        screenWidth={screenWidth}
+        anchors={anchors}
+        sectionLinks={sectionLinks}
+        onNavigate={onNavigate}
+        activeSection={activeSection}
+        forceOpenKey={forceOpenKey}
+        scrollY={scrollY}
+        contentHeight={contentHeight}
+        viewportHeight={viewportHeight}
+        scrollViewRef={scrollViewRef}
+        criticalChromeReady={criticalChromeReady}
+        deferredChromeReady={deferredChromeReady}
+        scrollToMapSection={scrollToMapSection}
+        scrollToComments={scrollToComments}
+      />
+    )
+  }, [
+    activeSection,
+    anchors,
+    contentHeight,
+    criticalChromeReady,
+    deferredChromeReady,
+    forceOpenKey,
+    isMobile,
+    onNavigate,
+    screenWidth,
+    scrollToComments,
+    scrollToMapSection,
+    scrollViewRef,
+    scrollY,
+    sectionLinks,
+    travel,
+    viewportHeight,
+  ])
+}
+
+export default function TravelDetailsContainer() {
+  const { width: screenWidth } = useWindowDimensions()
+  const isMobile = screenWidth < METRICS.breakpoints.tablet
+  const isFocused = useIsFocused()
+  const navigation = useNavigation()
+  const router = useRouter()
+  const [, startTransition] = useTransition()
+
+  const { announcement, priority: announcementPriority } = useAccessibilityAnnounce()
+  const colors = useThemedColors()
+  const styles = useMemo(() => getTravelDetailsShellStyles(colors), [colors])
+  const showSkipToContentLink = useShowSkipToContentLink()
+
+  const details = useTravelDetails({ isMobile, screenWidth, startTransition })
+  const { error, isError, isLoading, isMissingParam, refetch, slug, travel } = details.data
+  const { contentHorizontalPadding, sideMenuPlatformStyles } = details.layout
+  const { activeSection, anchors, forceOpenKey, scrollRef, scrollTo, setActiveSection } =
+    details.navigation
+  const {
+    deferAllowed,
+    lcpLoaded,
+    postLcpRuntimeReady,
+    setLcpLoaded,
+    sliderReady,
+    heroEnhancersReady = postLcpRuntimeReady,
+  } = details.performance
+  const { animatedX, closeMenu, menuWidthNum } = details.menu
+  const { contentHeight, handleContentSizeChange, handleLayout, scrollY, viewportHeight } =
+    details.scroll
+
+  useOfflineTravelCache(travel, isLoading, isError)
 
   const isFirstScreenReady = isTravelDetailsFirstScreenReady(travel, lcpLoaded)
   const skeletonPhase = useSkeletonPhase({
@@ -105,7 +183,6 @@ export default function TravelDetailsContainer() {
     isVisualReady: isFirstScreenReady,
   })
 
-  // ✅ REFACTORED: Trace logic extracted to useTravelDetailsTrace hook
   useTravelDetailsTrace({
     travel,
     isLoading,
@@ -119,20 +196,6 @@ export default function TravelDetailsContainer() {
     postLcpRuntimeReady,
   })
 
-  useEffect(() => {
-    if (Platform.OS !== 'web') return undefined;
-
-    const revealSkipLink = (event: KeyboardEvent) => {
-      if (event.key !== 'Tab' || event.shiftKey) return;
-      setShowSkipToContentLink(true);
-    };
-
-    window.addEventListener('keydown', revealSkipLink, { passive: true, once: true });
-    return () => {
-      window.removeEventListener('keydown', revealSkipLink);
-    };
-  }, []);
-
   const {
     criticalChromeReady,
     deferredChromeReady,
@@ -144,14 +207,14 @@ export default function TravelDetailsContainer() {
     scrollToWithMenuClose,
     scrollViewStyle,
     sectionLinks,
-    seo: { readyTitle, readyDesc, canonicalUrl, readyImage, jsonLd },
+    seo,
     syncNavigationTitle,
     wrapperStyle,
   } = useTravelDetailsContainerViewModel({
     closeMenu,
     forceOpenKey,
     isMobile,
-    isWebAutomation,
+    isWebAutomation: isWebAutomation(),
     lcpLoaded,
     navigationSetOptions: navigation.setOptions,
     postLcpRuntimeReady,
@@ -161,10 +224,13 @@ export default function TravelDetailsContainer() {
     setLcpLoaded,
     slug,
     styles,
-    themedBackground: themedColors.background,
-    themedBackgroundSecondary: themedColors.backgroundSecondary,
+    themedBackground: colors.background,
+    themedBackgroundSecondary: colors.backgroundSecondary,
     travel,
   })
+
+  const { canonicalUrl, jsonLd, readyDesc, readyImage, readyTitle } = seo
+
   useTravelDetailsHeadSync({
     canonicalUrl,
     isFocused,
@@ -174,40 +240,46 @@ export default function TravelDetailsContainer() {
     syncNavigationTitle,
   })
 
-  /* ---- prefetch near travels ---- */
-  // ✅ ИСПРАВЛЕНИЕ: Убираем prefetch, чтобы избежать дублирующихся запросов
-  // Компонент NearTravelList сам загружает данные при монтировании
-  // useEffect(() => {
-  //   if (travel?.id) {
-  //     rIC(() => {
-  //       queryClient.prefetchQuery({
-  //         queryKey: ["nearTravels", travel.id],
-  //         queryFn: () => fetchNearTravels(travel.id as number),
-  //       });
-  //     }, 1100);
-  //   }
-  // }, [travel?.id, queryClient]);
+  const seoBlock = useMemo(
+    () => (
+      <TravelDetailsSeoBlock
+        backgroundColor={colors.background}
+        canonicalUrl={canonicalUrl}
+        headKey={headKey}
+        jsonLd={jsonLd}
+        readyDesc={readyDesc}
+        readyImage={readyImage}
+        readyTitle={readyTitle}
+      />
+    ),
+    [canonicalUrl, colors.background, headKey, jsonLd, readyDesc, readyImage, readyTitle],
+  )
 
-  const seoBlock = (
-    <TravelDetailsSeoBlock
-      backgroundColor={themedColors.background}
-      canonicalUrl={canonicalUrl}
-      headKey={headKey}
-      jsonLd={jsonLd}
-      readyDesc={readyDesc}
-      readyImage={readyImage}
-      readyTitle={readyTitle}
-    />
-  );
+  const deferredRuntimeContent = useDeferredRuntimeContent({
+    activeSection,
+    anchors,
+    contentHeight,
+    criticalChromeReady,
+    deferredChromeReady,
+    forceOpenKey,
+    isMobile,
+    onNavigate: scrollToWithMenuClose,
+    screenWidth,
+    scrollToComments,
+    scrollToMapSection,
+    scrollViewRef: scrollRef as React.RefObject<any>,
+    scrollY,
+    sectionLinks,
+    travel,
+    viewportHeight,
+  })
 
-  // NOTE: Hide skeleton only after the first screen is visually ready.
-  // On web this prevents exposing intermediate hero/overlay states that look like page jitter.
+  const loadingFallback = useMemo(() => <TravelDetailsLoadingFallback />, [])
+  const mainAriaLabel = useMemo(
+    () => `Детали путешествия: ${travel?.name || 'путешествие'}`,
+    [travel?.name],
+  )
 
-  /* -------------------- READY -------------------- */
-
-  // Пока данные путешествия не загружены — показываем простой лоадер,
-  // но делаем это после инициализации всех хуков, чтобы не нарушать порядок.
-  // ✅ REFACTORED: Error states extracted to TravelDetailsErrorStates
   if (isMissingParam) {
     return (
       <MissingParamError
@@ -215,7 +287,7 @@ export default function TravelDetailsContainer() {
         seoBlock={seoBlock}
         onGoHome={() => router.replace('/')}
       />
-    );
+    )
   }
 
   if (isError) {
@@ -226,7 +298,7 @@ export default function TravelDetailsContainer() {
         errorMessage={error?.message}
         onRetry={() => refetch()}
       />
-    );
+    )
   }
 
   return (
@@ -246,15 +318,14 @@ export default function TravelDetailsContainer() {
         wrapperStyle={wrapperStyle}
         styles={styles}
         skeletonPhase={skeletonPhase}
-        skeletonFallback={<TravelDetailsLoadingFallback />}
-        scrollRef={scrollRef as any}
+        skeletonFallback={loadingFallback}
+        scrollRef={scrollRef as React.RefObject<any>}
         scrollViewStyle={scrollViewStyle}
         scrollEventHandler={scrollEventHandler}
         handleContentSizeChange={handleContentSizeChange}
         handleLayout={handleLayout}
         contentHorizontalPadding={contentHorizontalPadding}
         anchors={anchors}
-        sliderReady={sliderReady}
         lcpLoaded={lcpLoaded}
         onFirstImageLoad={handleFirstImageLoad}
         sectionLinks={sectionLinks}
@@ -267,30 +338,9 @@ export default function TravelDetailsContainer() {
         menuWidthNum={menuWidthNum}
         animatedX={animatedX}
         sideMenuPlatformStyles={sideMenuPlatformStyles}
-        mainAriaLabel={`Детали путешествия: ${travel?.name || 'путешествие'}`}
-        deferredContent={
-          <TravelDetailsDeferredRuntimeSlot
-            travel={travel!}
-            isMobile={isMobile}
-            screenWidth={screenWidth}
-            anchors={anchors}
-            sectionLinks={sectionLinks}
-            onNavigate={scrollToWithMenuClose}
-            activeSection={activeSection}
-            forceOpenKey={forceOpenKey}
-            scrollY={scrollY}
-            contentHeight={contentHeight}
-            viewportHeight={viewportHeight}
-            scrollViewRef={scrollRef as any}
-            criticalChromeReady={criticalChromeReady}
-            deferredChromeReady={deferredChromeReady}
-            scrollToMapSection={scrollToMapSection}
-            scrollToComments={scrollToComments}
-          />
-        }
+        mainAriaLabel={mainAriaLabel}
+        deferredContent={deferredRuntimeContent}
       />
-     </>
-   );
+    </>
+  )
 }
-
-// (no test-only exports)

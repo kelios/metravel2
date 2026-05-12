@@ -44,7 +44,6 @@ type TravelDetailsCriticalShellProps = {
   handleLayout: (...args: any[]) => void;
   contentHorizontalPadding: number;
   anchors: AnchorsMap;
-  sliderReady: boolean;
   lcpLoaded: boolean;
   onFirstImageLoad: () => void;
   sectionLinks: TravelSectionLink[];
@@ -76,7 +75,6 @@ export default function TravelDetailsCriticalShell({
   handleLayout,
   contentHorizontalPadding,
   anchors,
-  sliderReady: _sliderReady,
   lcpLoaded,
   onFirstImageLoad,
   sectionLinks,
@@ -179,61 +177,57 @@ export default function TravelDetailsCriticalShell({
                 style={[styles.contentWrapper, { paddingHorizontal: contentHorizontalPadding }]}
                 collapsable={false}
               >
-                {travel ? (
-                  showDesktopSidebar ? (
-                    <View style={desktopLayoutStyle} collapsable={false}>
-                      <View style={desktopSidebarContainerStyle}>
-                        <Animated.View
-                          testID="travel-details-side-menu"
-                          {...(Platform.OS === 'web' ? ({ 'data-testid': 'travel-details-side-menu' } as any) : null)}
-                          style={desktopSidebarAnimatedStyle}
-                        >
-                          <Suspense fallback={<View style={SIDEBAR_SHELL_FALLBACK_STYLE} />}>
-                            <CompactSideBarTravelLazy
-                              travel={travel}
-                              isMobile={isMobile}
-                              refs={anchors}
-                              links={sectionLinks}
-                              closeMenu={closeMenu}
-                              onNavigate={onNavigate}
-                              activeSection={activeSection ?? undefined}
-                            />
-                          </Suspense>
-                        </Animated.View>
-                      </View>
-
-                      <View style={desktopContentColumnStyle} collapsable={false}>
-                        <TravelDetailsHeroDeferredColumn
-                          travel={travel}
-                          anchors={anchors}
-                          isMobile={isMobile}
-                          lcpLoaded={lcpLoaded}
-                          onFirstImageLoad={onFirstImageLoad}
-                          sectionLinks={sectionLinks}
-                          onQuickJump={onQuickJump}
-                          deferHeroExtras={deferHeroExtras}
-                          forceOpenKey={forceOpenKey}
-                          deferredContent={deferredContent}
-                        />
-                      </View>
+                {travel && showDesktopSidebar ? (
+                  <View style={desktopLayoutStyle} collapsable={false}>
+                    <View style={desktopSidebarContainerStyle}>
+                      <Animated.View
+                        testID="travel-details-side-menu"
+                        {...(Platform.OS === 'web' ? ({ 'data-testid': 'travel-details-side-menu' } as any) : null)}
+                        style={desktopSidebarAnimatedStyle}
+                      >
+                        <Suspense fallback={<View style={SIDEBAR_SHELL_FALLBACK_STYLE} />}>
+                          <CompactSideBarTravelLazy
+                            travel={travel}
+                            isMobile={isMobile}
+                            refs={anchors}
+                            links={sectionLinks}
+                            closeMenu={closeMenu}
+                            onNavigate={onNavigate}
+                            activeSection={activeSection ?? undefined}
+                          />
+                        </Suspense>
+                      </Animated.View>
                     </View>
-                  ) : (
-                    <TravelDetailsHeroDeferredColumn
-                      travel={travel}
-                      anchors={anchors}
-                      isMobile={isMobile}
-                      lcpLoaded={lcpLoaded}
-                      onFirstImageLoad={onFirstImageLoad}
-                      sectionLinks={sectionLinks}
-                      onQuickJump={onQuickJump}
-                      deferHeroExtras={deferHeroExtras}
-                      forceOpenKey={forceOpenKey}
-                      deferredContent={deferredContent}
-                    />
-                  )
-                ) : (
-                  null
-                )}
+
+                    <View style={desktopContentColumnStyle} collapsable={false}>
+                      <TravelDetailsHeroDeferredColumn
+                        travel={travel}
+                        anchors={anchors}
+                        isMobile={isMobile}
+                        lcpLoaded={lcpLoaded}
+                        onFirstImageLoad={onFirstImageLoad}
+                        sectionLinks={sectionLinks}
+                        onQuickJump={onQuickJump}
+                        deferHeroExtras={deferHeroExtras}
+                        forceOpenKey={forceOpenKey}
+                        deferredContent={deferredContent}
+                      />
+                    </View>
+                  </View>
+                ) : travel ? (
+                  <TravelDetailsHeroDeferredColumn
+                    travel={travel}
+                    anchors={anchors}
+                    isMobile={isMobile}
+                    lcpLoaded={lcpLoaded}
+                    onFirstImageLoad={onFirstImageLoad}
+                    sectionLinks={sectionLinks}
+                    onQuickJump={onQuickJump}
+                    deferHeroExtras={deferHeroExtras}
+                    forceOpenKey={forceOpenKey}
+                    deferredContent={deferredContent}
+                  />
+                ) : null}
               </View>
             </View>
           </ScrollView>

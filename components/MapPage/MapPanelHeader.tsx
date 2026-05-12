@@ -163,7 +163,7 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
       </View>
 
       {Platform.OS === 'web' && !isMobile ? (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        <View style={styles.panelHeaderActions}>
           <Pressable
             testID="map-help-button"
             style={({ pressed }) => [

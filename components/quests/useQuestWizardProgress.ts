@@ -137,7 +137,7 @@ export function useQuestWizardProgress({
 
   const completedSteps = useMemo(() => steps.filter((step) => answers[step.id]), [answers, steps])
   const progress = steps.length > 0 ? completedSteps.length / steps.length : 0
-  const allCompleted = completedSteps.length === steps.length
+  const allCompleted = steps.length > 0 && completedSteps.length === steps.length
 
   const maxAnsweredIndex = useMemo(() => {
     let maxIdx = -1

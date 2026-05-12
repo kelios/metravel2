@@ -243,6 +243,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
                   selected={selected}
                   onPress={() => handleCategoryToggle(category.value)}
                   testID={`category-option-${index}`}
+                  style={styles.filterSelectionChip}
                   icon={
                     iconName ? (
                       <Feather

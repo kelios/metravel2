@@ -1,4 +1,4 @@
-import React, { lazy, memo, useEffect } from 'react'
+import React, { lazy, memo } from 'react'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 
@@ -41,12 +41,6 @@ export const QuestWebVideo = memo(function QuestWebVideo({
   poster?: string
   onError: () => void
 }) {
-  useEffect(() => {
-    if (src) {
-      console.info('[WebVideo] Rendering video with src:', src)
-    }
-  }, [src])
-
   // @ts-ignore -- React Native Web allows direct DOM element creation via React.createElement
   return React.createElement('video', {
     src,
@@ -63,12 +57,8 @@ export const QuestWebVideo = memo(function QuestWebVideo({
       objectFit: 'contain',
       backgroundColor: DESIGN_TOKENS.colors.text,
     },
-    onError: (event: any) => {
-      console.error('[WebVideo] Video error:', event?.target?.error)
+    onError: () => {
       onError()
     },
-    onLoadStart: () => console.info('[WebVideo] Video load started'),
-    onLoadedMetadata: () => console.info('[WebVideo] Video metadata loaded'),
-    onCanPlay: () => console.info('[WebVideo] Video can play'),
   })
 })

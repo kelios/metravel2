@@ -25,6 +25,7 @@ function Chip({ label, selected = false, count, icon, onPress, testID, disabled 
     base: {
       flexDirection: 'row',
       alignItems: 'center',
+      maxWidth: '100%',
       paddingHorizontal: DESIGN_TOKENS.spacing.md, // ✅ УЛУЧШЕНИЕ: Увеличен padding
       paddingVertical: DESIGN_TOKENS.spacing.sm, // ✅ УЛУЧШЕНИЕ: Увеличен padding для высоты 40px
       borderRadius: radii.lg,
@@ -64,6 +65,8 @@ function Chip({ label, selected = false, count, icon, onPress, testID, disabled 
       color: colors.text,
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       fontWeight: '600',
+      flexShrink: 1,
+      minWidth: 0,
     },
     labelSelected: {
       color: colors.primaryText,

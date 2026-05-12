@@ -11,6 +11,16 @@ const PANEL_MAX_WIDTH_RATIO = 0.5; // 50vw
 const PANEL_DEFAULT_WIDTH = 384;
 const MAP_LAYOUT_INVALIDATE_EVENT = 'metravel:map-layout-invalidate';
 
+function getPanelMaxWidth(viewportWidth?: number): number {
+  if (Platform.OS !== 'web' || !viewportWidth || viewportWidth <= 0) return 600;
+  return Math.max(PANEL_MIN_WIDTH, viewportWidth * PANEL_MAX_WIDTH_RATIO);
+}
+
+function clampPanelWidth(width: number, viewportWidth?: number): number {
+  const maxW = getPanelMaxWidth(viewportWidth);
+  return Math.max(PANEL_MIN_WIDTH, Math.min(width, maxW));
+}
+
 function readPanelCollapsed(): boolean {
   if (Platform.OS !== 'web' || typeof localStorage === 'undefined') return false;
   try {
@@ -58,6 +68,7 @@ interface UseMapPanelStateOptions {
  * Управляет боковой панелью, вкладками и фокусом.
  */
 export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
+  const { width: viewportWidth } = useWindowDimensions();
   const isFocused = useIsFocused();
   const { isPanelVisible, openPanel, closePanel, panelStyle, overlayStyle } = usePanelController(isMobile);
 
@@ -70,6 +81,10 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
 
   // Desktop panel width (persisted)
   const [desktopPanelWidth, setDesktopPanelWidth] = useState(() => readPanelWidth());
+  const effectiveDesktopPanelWidth = useMemo(
+    () => clampPanelWidth(desktopPanelWidth, viewportWidth),
+    [desktopPanelWidth, viewportWidth]
+  );
   const resizeRafRef = useRef<number | null>(null);
   const widthPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -93,10 +108,7 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
   }, []);
 
   const onResizePanelWidth = useCallback((newWidth: number) => {
-    const maxW = Platform.OS === 'web' && typeof window !== 'undefined'
-      ? window.innerWidth * PANEL_MAX_WIDTH_RATIO
-      : 600;
-    const clamped = Math.max(PANEL_MIN_WIDTH, Math.min(newWidth, maxW));
+    const clamped = clampPanelWidth(newWidth, viewportWidth);
     setDesktopPanelWidth((prev) => {
       if (Math.abs(prev - clamped) < 1) return prev;
       return clamped;
@@ -105,7 +117,7 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
     if (!isMobile) {
       dispatchMapResize();
     }
-  }, [dispatchMapResize, isMobile, schedulePersistPanelWidth]);
+  }, [dispatchMapResize, isMobile, schedulePersistPanelWidth, viewportWidth]);
 
   const toggleDesktopCollapse = useCallback(() => {
     setDesktopCollapsed((prev) => {
@@ -147,6 +159,20 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
     if (isMobile) return;
     dispatchMapResize();
   }, [dispatchMapResize, isPanelVisible, isMobile]);
+
+  useEffect(() => {
+    if (isMobile) return;
+    if (Math.abs(desktopPanelWidth - effectiveDesktopPanelWidth) < 1) return;
+    setDesktopPanelWidth(effectiveDesktopPanelWidth);
+    schedulePersistPanelWidth(effectiveDesktopPanelWidth);
+    dispatchMapResize();
+  }, [
+    desktopPanelWidth,
+    dispatchMapResize,
+    effectiveDesktopPanelWidth,
+    isMobile,
+    schedulePersistPanelWidth,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -223,7 +249,7 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
     rightPanelTab,
     rightPanelVisible: isPanelVisible,
     isDesktopCollapsed,
-    desktopPanelWidth,
+    desktopPanelWidth: effectiveDesktopPanelWidth,
 
     // Actions
     selectFiltersTab,
@@ -246,7 +272,7 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
     rightPanelTab,
     isPanelVisible,
     isDesktopCollapsed,
-    desktopPanelWidth,
+    effectiveDesktopPanelWidth,
     selectFiltersTab,
     selectTravelsTab,
     openPanel,

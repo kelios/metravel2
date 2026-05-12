@@ -30,6 +30,7 @@ import {
     detectQuestMapApps,
     notifyQuest,
     openQuestMap,
+    type QuestMapApp,
 } from './questWizardHelpers';
 
 import { useThemedColors } from '@/hooks/useTheme';
@@ -137,33 +138,62 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         };
     }, [currentStep, useWideInlineLayout]);
 
-    const openCurrentStepInMap = useCallback(async (app: 'google' | 'apple' | 'yandex' | 'organic' | 'mapsme') => {
+    const openCurrentStepInMap = useCallback((app: QuestMapApp) => {
         if (!currentStep) return;
-        return openQuestMap(currentStep, app);
+        void openQuestMap(currentStep, app);
     }, [currentStep]);
 
-    const copyCurrentStepCoords = useCallback(async () => {
+    const copyCurrentStepCoords = useCallback(() => {
         if (!currentStep) return;
-        await copyQuestCoords(currentStep);
+        void copyQuestCoords(currentStep);
     }, [currentStep]);
 
-    // === уведомление + переход
-    const handleAnswer = async (step: QuestStep, answer: string) => {
-        setAnswers(prev => ({ ...prev, [step.id]: answer }));
-        setAttempts(prev => ({ ...prev, [step.id]: 0 }));
-        setHints(prev => ({ ...prev, [step.id]: false }));
+    const advanceToNextStep = useCallback(() => {
         const nextIndex = Math.min(currentIndex + 1, allSteps.length - 1);
         setCurrentIndex(nextIndex);
         setUnlockedIndex(prev => Math.max(prev, nextIndex));
-    };
+    }, [allSteps.length, currentIndex, setCurrentIndex, setUnlockedIndex]);
 
-    const handleWrongAttempt = (step: QuestStep) => setAttempts(prev => ({ ...prev, [step.id]: (prev[step.id] || 0) + 1 }));
-    const toggleHint = (step: QuestStep) => setHints(prev => ({ ...prev, [step.id]: !prev[step.id] }));
-    const toggleMap = () => setShowMap(prev => !prev);
-    const skipStep = () => { const nextIndex = Math.min(currentIndex + 1, allSteps.length - 1); setCurrentIndex(nextIndex); setUnlockedIndex(prev => Math.max(prev, nextIndex)); };
-    const goToStep = (index: number) => { const s = allSteps[index]; const isAnswered = !!(s && answers[s.id]); if (index <= unlockedIndex || isAnswered || allCompleted) { setShowFinaleOnly(false); setCurrentIndex(index); } };
+    const handleCurrentStepAnswer = useCallback((answer: string) => {
+        if (!currentStep) return;
+        setAnswers(prev => ({ ...prev, [currentStep.id]: answer }));
+        setAttempts(prev => ({ ...prev, [currentStep.id]: 0 }));
+        setHints(prev => ({ ...prev, [currentStep.id]: false }));
+        advanceToNextStep();
+    }, [advanceToNextStep, currentStep, setAnswers, setAttempts, setHints]);
 
-    const resetQuest = async () => {
+    const handleCurrentStepWrongAttempt = useCallback(() => {
+        if (!currentStep) return;
+        setAttempts(prev => ({ ...prev, [currentStep.id]: (prev[currentStep.id] || 0) + 1 }));
+    }, [currentStep, setAttempts]);
+
+    const toggleCurrentStepHint = useCallback(() => {
+        if (!currentStep) return;
+        setHints(prev => ({ ...prev, [currentStep.id]: !prev[currentStep.id] }));
+    }, [currentStep, setHints]);
+
+    const toggleMap = useCallback(() => {
+        setShowMap(prev => !prev);
+    }, [setShowMap]);
+
+    const skipStep = useCallback(() => {
+        advanceToNextStep();
+    }, [advanceToNextStep]);
+
+    const goToStep = useCallback((index: number) => {
+        const step = allSteps[index];
+        const isAnswered = !!(step && answers[step.id]);
+        if (index <= unlockedIndex || isAnswered || allCompleted) {
+            setShowFinaleOnly(false);
+            setCurrentIndex(index);
+        }
+    }, [allCompleted, allSteps, answers, setCurrentIndex, unlockedIndex]);
+
+    const showFinale = useCallback(() => {
+        setShowFinaleOnly(true);
+    }, []);
+
+    const resetQuest = useCallback(async () => {
         const ok = await confirmQuestAsync('Сбросить прогресс?', 'Все ваши ответы будут удалены.');
         if (!ok) return;
         try {
@@ -173,9 +203,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         } catch (e) {
             console.error('Error resetting progress:', e);
         }
-    };
+    }, [resetProgress]);
 
-    // Когда всё пройдено
     useEffect(() => {
         if (allCompleted) { setShowFinaleOnly(true); setUnlockedIndex(allSteps.length - 1); }
     }, [allCompleted, allSteps.length, setUnlockedIndex]);
@@ -186,7 +215,6 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         setVideoOk,
         videoUri,
         posterUri,
-        coverUri: _coverUri,
         youtubeEmbedUri,
         handleVideoError,
         handleVideoRetry,
@@ -222,9 +250,9 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 attempts={attempts[currentStep.id] || 0}
                                 hintVisible={hints[currentStep.id] || false}
                                 savedAnswer={answers[currentStep.id]}
-                                onSubmit={(a) => handleAnswer(currentStep, a)}
-                                onWrongAttempt={() => handleWrongAttempt(currentStep)}
-                                onToggleHint={() => toggleHint(currentStep)}
+                                onSubmit={handleCurrentStepAnswer}
+                                onWrongAttempt={handleCurrentStepWrongAttempt}
+                                onToggleHint={toggleCurrentStepHint}
                                 onSkip={skipStep}
                                 showMap={showMap}
                                 onToggleMap={toggleMap}
@@ -246,7 +274,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 desktopHasMapsme={desktopHasMapsme}
                                 showMap={showMap}
                                 toggleMap={toggleMap}
-                                openCurrentStepInMap={openCurrentStepInMap as any}
+                                openCurrentStepInMap={openCurrentStepInMap}
                                 copyCurrentStepCoords={copyCurrentStepCoords}
                                 activeStepIndex={currentIndex > 0 ? currentIndex - 1 : undefined}
                             />
@@ -318,7 +346,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 allCompleted={allCompleted}
                                 showFinaleOnly={showFinaleOnly}
                                 goToStep={goToStep}
-                                onShowFinale={() => setShowFinaleOnly(true)}
+                                onShowFinale={showFinale}
                                 city={city}
                                 onReset={resetQuest}
                                 onPrintDownload={handlePrintDownload}
@@ -351,7 +379,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 allCompleted={allCompleted}
                                 showFinaleOnly={showFinaleOnly}
                                 goToStep={goToStep}
-                                onShowFinale={() => setShowFinaleOnly(true)}
+                                onShowFinale={showFinale}
                                 isMobile={isMobile}
                                 screenW={screenW}
                                 compactNav={compactNav}

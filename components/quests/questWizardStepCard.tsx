@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useRef, useState } from 'react'
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Animated,
   Keyboard,
@@ -16,6 +16,8 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { globalFocusStyles } from '@/styles/globalFocus'
 
 import { copyQuestCoords, detectQuestMapApps, openQuestMap } from './questWizardHelpers'
+
+const SHOULD_USE_NATIVE_DRIVER = false
 
 type QuestStepLike = {
   id: string
@@ -117,14 +119,17 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
   const [hasMapsme, setHasMapsme] = useState(false)
   const [navExpanded, setNavExpanded] = useState(false)
   const shakeAnim = useRef(new Animated.Value(0)).current
-  const shouldUseNativeDriver = false
 
   const flip = useRef(new Animated.Value(0)).current
-  const triggerFlip = () => {
+  const rotation = useMemo(
+    () => flip.interpolate({ inputRange: [0, 0.5, 1], outputRange: ['0deg', '180deg', '360deg'] }),
+    [flip],
+  )
+
+  const triggerFlip = useCallback(() => {
     flip.setValue(0)
-    Animated.timing(flip, { toValue: 1, duration: 600, useNativeDriver: shouldUseNativeDriver }).start(() => flip.setValue(0))
-  }
-  const rot = flip.interpolate({ inputRange: [0, 0.5, 1], outputRange: ['0deg', '180deg', '360deg'] })
+    Animated.timing(flip, { toValue: 1, duration: 600, useNativeDriver: SHOULD_USE_NATIVE_DRIVER }).start(() => flip.setValue(0))
+  }, [flip])
 
   useEffect(() => {
     setValue('')
@@ -132,26 +137,68 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
   }, [step.id])
 
   useEffect(() => {
+    if (!showLocationControls) return undefined
+
+    let cancelled = false
     ;(async () => {
       const detected = await detectQuestMapApps()
-      setHasOrganic(detected.hasOrganic)
-      setHasMapsme(detected.hasMapsme)
+      if (!cancelled) {
+        setHasOrganic(detected.hasOrganic)
+        setHasMapsme(detected.hasMapsme)
+      }
     })()
-  }, [step.id])
+    return () => {
+      cancelled = true
+    }
+  }, [showLocationControls, step.id])
 
-  const openInMap = async (app: 'google' | 'apple' | 'yandex' | 'organic' | 'mapsme') => openQuestMap(step, app)
-  const copyCoords = async () => copyQuestCoords(step)
+  const openInMap = useCallback(
+    (app: 'google' | 'apple' | 'yandex' | 'organic' | 'mapsme') => openQuestMap(step, app),
+    [step],
+  )
+  const openDefaultMap = useCallback(() => {
+    void openInMap(Platform.OS === 'ios' ? 'apple' : 'google')
+  }, [openInMap])
+  const copyCoords = useCallback(() => {
+    void copyQuestCoords(step)
+  }, [step])
+  const toggleNavigationOptions = useCallback(() => {
+    setNavExpanded((expanded) => !expanded)
+  }, [])
+  const closeImageModal = useCallback(() => {
+    setImageModalVisible(false)
+  }, [])
+  const openImageModal = useCallback(() => {
+    setImageModalVisible(true)
+  }, [])
+  const openNavigationOption = useCallback((app: 'google' | 'apple' | 'yandex' | 'organic' | 'mapsme') => {
+    void openInMap(app)
+    setNavExpanded(false)
+  }, [openInMap])
 
-  const shake = () => {
+  const shake = useCallback(() => {
     shakeAnim.setValue(0)
     Animated.sequence([
-      Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: shouldUseNativeDriver }),
-      Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: shouldUseNativeDriver }),
-      Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: shouldUseNativeDriver }),
+      Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: SHOULD_USE_NATIVE_DRIVER }),
+      Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: SHOULD_USE_NATIVE_DRIVER }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: SHOULD_USE_NATIVE_DRIVER }),
     ]).start()
-  }
+  }, [shakeAnim])
 
-  const handleCheck = () => {
+  const isAutoPassStep = useMemo(
+    () => (step.answer as any)._isAny === true || /\(\)\s*=>\s*true/.test(step.answer.toString()),
+    [step.answer],
+  )
+  const isPassed = !!savedAnswer && step.id !== 'intro'
+  const showHintAfter = 2
+  const hasMapPaneContent = showLocationControls || (showMap && !!step.image)
+  const hasLocationContent = isPassed || hasMapPaneContent
+  const imageSource = useMemo(
+    () => (typeof step.image === 'string' ? { uri: step.image } : step.image),
+    [step.image],
+  )
+
+  const handleCheck = useCallback(() => {
     const trimmed = value.trim()
     if (step.id === 'intro') {
       onSubmit('start')
@@ -181,15 +228,10 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
       shake()
       Vibration.vibrate(200)
     }
-  }
-
-  const isPassed = !!savedAnswer && step.id !== 'intro'
-  const showHintAfter = 2
-  const hasMapPaneContent = showLocationControls || (showMap && !!step.image)
-  const hasLocationContent = isPassed || hasMapPaneContent
+  }, [onSubmit, onWrongAttempt, shake, step, triggerFlip, value])
 
   return (
-    <Animated.View style={[styles.card, { transform: [{ perspective: 800 }, { rotateY: rot }] }]}>
+    <Animated.View style={[styles.card, { transform: [{ perspective: 800 }, { rotateY: rotation }] }]}>
       <View style={styles.cardHeader}>
         {step.id !== 'intro' && (
           <View style={[styles.stepNumber, isPassed && styles.stepNumberCompleted]}>
@@ -198,7 +240,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
         )}
         <View style={styles.headerContent}>
           <Text style={styles.stepTitle}>{step.title}</Text>
-          <Pressable onPress={() => openInMap(Platform.OS === 'ios' ? 'apple' : 'google')} accessibilityRole="button" accessibilityLabel={`Открыть в картах: ${step.location}`}>
+          <Pressable onPress={openDefaultMap} accessibilityRole="button" accessibilityLabel={`Открыть в картах: ${step.location}`}>
             <Text style={styles.location} numberOfLines={2}>{step.location}</Text>
           </Pressable>
         </View>
@@ -211,7 +253,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
         <Text style={styles.taskText}>{step.task}</Text>
 
         {step.id !== 'intro' && !isPassed && (
-          ((step.answer as any)._isAny === true || /\(\)\s*=>\s*true/.test(step.answer.toString()))
+          isAutoPassStep
             ? (
               <Pressable style={styles.primaryButton} onPress={() => onSubmit('ok')} hitSlop={6} accessibilityRole="button" accessibilityLabel="Далее">
                 <Text style={styles.buttonText}>Далее</Text>
@@ -284,10 +326,10 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
                 {showLocationControls && (
                   <>
                     <View style={styles.navRow}>
-                      <Pressable style={styles.navButton} onPress={() => openInMap(Platform.OS === 'ios' ? 'apple' : 'google')} hitSlop={6} accessibilityRole="button" accessibilityLabel="Открыть навигацию">
+                      <Pressable style={styles.navButton} onPress={openDefaultMap} hitSlop={6} accessibilityRole="button" accessibilityLabel="Открыть навигацию">
                         <Text style={styles.navButtonText}>Навигация</Text>
                       </Pressable>
-                      <Pressable style={styles.navToggle} onPress={() => setNavExpanded((value) => !value)} hitSlop={6} accessibilityRole="button" accessibilityLabel={navExpanded ? 'Скрыть варианты навигации' : 'Показать варианты навигации'}>
+                      <Pressable style={styles.navToggle} onPress={toggleNavigationOptions} hitSlop={6} accessibilityRole="button" accessibilityLabel={navExpanded ? 'Скрыть варианты навигации' : 'Показать варианты навигации'}>
                         <Text style={styles.navToggleText}>{navExpanded ? '▲' : '▼'}</Text>
                       </Pressable>
                       <Pressable style={styles.coordsButton} onPress={copyCoords} hitSlop={6} accessibilityRole="button" accessibilityLabel={`Копировать координаты ${step.lat.toFixed(4)}, ${step.lng.toFixed(4)}`}>
@@ -301,11 +343,11 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
                     </View>
                     {navExpanded && (
                       <View style={styles.navDropdown}>
-                        <Pressable style={styles.navOption} onPress={() => { openInMap('google'); setNavExpanded(false) }}><Text style={styles.navOptionText}>Google Maps</Text></Pressable>
-                        {Platform.OS === 'ios' && (<Pressable style={styles.navOption} onPress={() => { openInMap('apple'); setNavExpanded(false) }}><Text style={styles.navOptionText}>Apple Maps</Text></Pressable>)}
-                        <Pressable style={styles.navOption} onPress={() => { openInMap('yandex'); setNavExpanded(false) }}><Text style={styles.navOptionText}>Yandex Maps</Text></Pressable>
-                        {hasOrganic && (<Pressable style={styles.navOption} onPress={() => { openInMap('organic'); setNavExpanded(false) }}><Text style={styles.navOptionText}>Organic Maps</Text></Pressable>)}
-                        {hasMapsme && (<Pressable style={styles.navOption} onPress={() => { openInMap('mapsme'); setNavExpanded(false) }}><Text style={styles.navOptionText}>MAPS.ME</Text></Pressable>)}
+                        <Pressable style={styles.navOption} onPress={() => openNavigationOption('google')}><Text style={styles.navOptionText}>Google Maps</Text></Pressable>
+                        {Platform.OS === 'ios' && (<Pressable style={styles.navOption} onPress={() => openNavigationOption('apple')}><Text style={styles.navOptionText}>Apple Maps</Text></Pressable>)}
+                        <Pressable style={styles.navOption} onPress={() => openNavigationOption('yandex')}><Text style={styles.navOptionText}>Yandex Maps</Text></Pressable>
+                        {hasOrganic && (<Pressable style={styles.navOption} onPress={() => openNavigationOption('organic')}><Text style={styles.navOptionText}>Organic Maps</Text></Pressable>)}
+                        {hasMapsme && (<Pressable style={styles.navOption} onPress={() => openNavigationOption('mapsme')}><Text style={styles.navOptionText}>MAPS.ME</Text></Pressable>)}
                       </View>
                     )}
                   </>
@@ -314,9 +356,9 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
                 {showMap && step.image && (
                   <>
                     <Text style={styles.photoHint}>Это статичное фото-подсказка, не интерактивная карта.</Text>
-                    <Pressable style={styles.imagePreview} onPress={() => setImageModalVisible(true)}>
+                    <Pressable style={styles.imagePreview} onPress={openImageModal}>
                       <ImageCardMedia
-                        source={typeof step.image === 'string' ? { uri: step.image } : step.image}
+                        source={imageSource}
                         fit="contain"
                         blurBackground
                         allowCriticalWebBlur
@@ -334,9 +376,9 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
 
           <ImageZoomModal
             styles={styles}
-            image={typeof step.image === 'string' ? { uri: step.image } : step.image}
+            image={imageSource}
             visible={imageModalVisible}
-            onClose={() => setImageModalVisible(false)}
+            onClose={closeImageModal}
           />
         </View>
       )}
