@@ -14,6 +14,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { useAuth } from '@/context/AuthContext'
 import { useFavorites } from '@/context/FavoritesContext'
 import { useTravelStatusStore, type TravelStatus, type TravelStatusEntry } from '@/stores/travelStatusStore'
+import { useMyTravels } from '@/hooks/useMyTravels'
 import EmptyState from '@/components/ui/EmptyState'
 import TabTravelCard from '@/components/listTravel/TabTravelCard'
 import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader'
@@ -62,7 +63,7 @@ const BADGE_COLORS: Record<TravelStatus, string> = {
 }
 
 // Универсальный тип для карточек в списке
-type DisplayEntry = TravelStatusEntry & { _isFavorite?: boolean }
+type DisplayEntry = TravelStatusEntry & { _isFavorite?: boolean; _isAuthored?: boolean }
 
 export default function CalendarScreen() {
   const router = useRouter()
@@ -72,6 +73,11 @@ export default function CalendarScreen() {
   const { favorites } = useFavorites()
 
   const { loadLocal, getByStatus, entries } = useTravelStatusStore()
+
+  const { myTravels, load: loadMyTravels } = useMyTravels({
+    userId: userId ?? null,
+    perPage: 9999,
+  })
 
   const [activeTab, setActiveTab] = useState<TravelStatus>('planned')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
@@ -87,6 +93,12 @@ export default function CalendarScreen() {
     if (authReady && !isAuthenticated) setIsLoading(false)
   }, [authReady, isAuthenticated])
 
+  useEffect(() => {
+    if (authReady && isAuthenticated) {
+      loadMyTravels()
+    }
+  }, [authReady, isAuthenticated, loadMyTravels])
+
   const handleBackToProfile = useCallback(() => {
     router.push('/profile' as any)
   }, [router])
@@ -94,6 +106,25 @@ export default function CalendarScreen() {
   const handleDayPress = useCallback((dateStr: string) => {
     setSelectedDate((prev) => (prev === dateStr ? null : dateStr))
   }, [])
+
+  // Авторские путешествия пользователя → в таб "Был"
+  const authoredAsVisited = useMemo((): DisplayEntry[] => {
+    const statusIds = new Set(entries.map((e) => String(e.id)))
+    return myTravels
+      .filter((t) => !statusIds.has(String(t.id)))
+      .map((t) => ({
+        id: t.id,
+        type: 'travel' as const,
+        title: t.name,
+        imageUrl: t.travel_image_thumb_url || t.travel_image_thumb_small_url || undefined,
+        url: t.url || `/travels/${t.slug || t.id}`,
+        country: t.countryName || undefined,
+        city: t.cityName || undefined,
+        status: 'visited' as TravelStatus,
+        addedAt: t.created_at ? new Date(t.created_at).getTime() : 0,
+        _isAuthored: true,
+      }))
+  }, [myTravels, entries])
 
   // Избранные без явного статуса — они попадают в "Хочу" автоматически
   const favoritesAsWishlist = useMemo((): DisplayEntry[] => {
@@ -122,6 +153,12 @@ export default function CalendarScreen() {
       const merged = [...explicit, ...favoritesAsWishlist]
       return merged.sort((a, b) => b.addedAt - a.addedAt)
     }
+    if (activeTab === 'visited') {
+      // Явно отмеченные как "Был" + авторские путешествия пользователя
+      const explicit = getByStatus('visited').map((e): DisplayEntry => ({ ...e, _isFavorite: false }))
+      const merged = [...explicit, ...authoredAsVisited]
+      return merged.sort((a, b) => b.addedAt - a.addedAt)
+    }
     const all = getByStatus(activeTab).map((e): DisplayEntry => ({ ...e, _isFavorite: false }))
     if (activeTab === 'planned' && selectedDate) {
       return all.filter((e) => e.plannedDate === selectedDate)
@@ -133,14 +170,14 @@ export default function CalendarScreen() {
       })
     }
     return [...all].sort((a, b) => b.addedAt - a.addedAt)
-  }, [activeTab, selectedDate, getByStatus, entries, favoritesAsWishlist]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeTab, selectedDate, getByStatus, entries, favoritesAsWishlist, authoredAsVisited]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Счётчики для табов
   const tabCounts = useMemo(() => ({
-    visited: getByStatus('visited').length,
+    visited: getByStatus('visited').length + authoredAsVisited.length,
     planned: getByStatus('planned').length,
     wishlist: getByStatus('wishlist').length + favoritesAsWishlist.length,
-  }), [getByStatus, entries, favoritesAsWishlist]) // eslint-disable-line react-hooks/exhaustive-deps
+  }), [getByStatus, entries, favoritesAsWishlist, authoredAsVisited]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Поездки для MiniCalendar (только planned)
   const plannedEntries = useMemo(() => getByStatus('planned'), [getByStatus, entries]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -368,7 +405,7 @@ export default function CalendarScreen() {
           <View style={styles.hint}>
             <Feather name="info" size={13} color={colors.textMuted} />
             <Text style={styles.hintText}>
-              Открой путешествие → нажми «Добавить в план» → «Был здесь».
+              Здесь путешествия, которые ты добавил на сайт, а также отмеченные как «Был здесь».
             </Text>
           </View>
         )}
@@ -422,7 +459,7 @@ export default function CalendarScreen() {
                     country: item.country ?? null,
                   }}
                   badge={{
-                    icon: item._isFavorite ? 'heart' : (TABS.find((t) => t.key === item.status)?.icon ?? 'bookmark'),
+                    icon: item._isFavorite ? 'heart' : item._isAuthored ? 'edit-2' : (TABS.find((t) => t.key === item.status)?.icon ?? 'bookmark'),
                     backgroundColor: item._isFavorite ? colors.danger : BADGE_COLORS[item.status],
                     iconColor: '#ffffff',
                   }}

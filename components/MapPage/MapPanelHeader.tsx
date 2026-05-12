@@ -183,6 +183,7 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
             testID="map-reset-filters-button"
             style={({ pressed }) => [
               styles.resetButton,
+              styles.resetButtonCompact,
               pressed && { opacity: 0.7 },
             ]}
             onPress={handleReset}
@@ -196,7 +197,6 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
               size={13}
               color={themedColors.textMuted}
             />
-            <Text style={styles.resetButtonLabel}>Сброс</Text>
           </Pressable>
         </View>
       ) : (

@@ -47,6 +47,14 @@ const isValidDate = (val: string) => {
   return !isNaN(d.getTime())
 }
 
+const stopWebCardEvent = (e?: any) => {
+  if (Platform.OS !== 'web') return
+  e?.preventDefault?.()
+  e?.stopPropagation?.()
+  e?.nativeEvent?.stopPropagation?.()
+  e?.nativeEvent?.stopImmediatePropagation?.()
+}
+
 /** Нативный HTML date-input для web */
 function WebDateInput({
   value,
@@ -103,7 +111,8 @@ export default function TravelStatusButton({
 
   const inFlightRef = useRef(false)
 
-  const handleMainPress = useCallback(() => {
+  const handleMainPress = useCallback((e?: any) => {
+    stopWebCardEvent(e)
     if (!isAuthenticated) {
       requireAuth()
       return
@@ -480,21 +489,57 @@ export default function TravelStatusButton({
 
   // Compact mode — icon-only circle button, same visual as OptimizedFavoriteButton
   if (compact) {
+    const compactAccessibilityLabel = currentOption ? currentOption.label : 'Добавить в план'
+    const compactIcon = (
+      <Feather
+        name={currentOption?.icon ?? 'plus-circle'}
+        size={18}
+        color={current ? colors.primary : 'rgba(255, 255, 255, 0.85)'}
+      />
+    )
+
+    if (Platform.OS === 'web') {
+      return (
+        <>
+          <View
+            style={[compactStyles.btn, globalFocusStyles.focusable]}
+            {...({
+              tabIndex: 0,
+              'aria-label': compactAccessibilityLabel,
+              'aria-pressed': Boolean(current),
+              'data-card-action': 'true',
+              onClick: handleMainPress,
+              onMouseDown: stopWebCardEvent,
+              onMouseUp: stopWebCardEvent,
+              onPointerDown: stopWebCardEvent,
+              onPointerUp: stopWebCardEvent,
+              onTouchStart: stopWebCardEvent,
+              onTouchEnd: stopWebCardEvent,
+              onKeyDown: (e: any) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  handleMainPress(e)
+                }
+              },
+            } as any)}
+          >
+            {compactIcon}
+          </View>
+          {modalJsx}
+        </>
+      )
+    }
+
     return (
       <>
         <Pressable
           style={[compactStyles.btn, globalFocusStyles.focusable]}
           onPress={handleMainPress}
           accessibilityRole="button"
-          accessibilityLabel={currentOption ? currentOption.label : 'Добавить в план'}
+          accessibilityLabel={compactAccessibilityLabel}
           accessibilityHint="Управление статусом путешествия"
           hitSlop={6}
         >
-          <Feather
-            name={currentOption?.icon ?? 'plus-circle'}
-            size={18}
-            color={current ? colors.primary : 'rgba(255, 255, 255, 0.85)'}
-          />
+          {compactIcon}
         </Pressable>
         {modalJsx}
       </>
@@ -529,4 +574,3 @@ export default function TravelStatusButton({
     </>
   )
 }
-

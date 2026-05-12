@@ -1,5 +1,6 @@
 import React from 'react'
 import { act, fireEvent, render, screen } from '@testing-library/react-native'
+import { Platform } from 'react-native'
 
 // --- mocks ---
 
@@ -56,6 +57,7 @@ const makeRequireAuthMock = (requireAuth = jest.fn()) => ({
 
 beforeEach(() => {
   jest.clearAllMocks()
+  Platform.OS = 'ios'
   useAuth.mockReturnValue(makeAuthMock())
   useRequireAuth.mockReturnValue(makeRequireAuthMock())
   useTravelStatusStore.mockReturnValue(makeStoreMock())
@@ -214,6 +216,30 @@ describe('TravelStatusButton — compact режим', () => {
     expect(requireAuth).toHaveBeenCalledTimes(1)
   })
 
+  it('на web останавливает click-событие, чтобы карточка не открывалась', () => {
+    Platform.OS = 'web'
+    const requireAuth = jest.fn()
+    const event = {
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+      nativeEvent: {
+        stopPropagation: jest.fn(),
+        stopImmediatePropagation: jest.fn(),
+      },
+    }
+    useRequireAuth.mockReturnValue(makeRequireAuthMock(requireAuth))
+    useAuth.mockReturnValue(makeAuthMock(false))
+
+    render(<TravelStatusButton {...baseProps} compact />)
+    fireEvent(screen.getByLabelText('Добавить в план'), 'click', event)
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1)
+    expect(event.stopPropagation).toHaveBeenCalledTimes(1)
+    expect(event.nativeEvent.stopPropagation).toHaveBeenCalledTimes(1)
+    expect(event.nativeEvent.stopImmediatePropagation).toHaveBeenCalledTimes(1)
+    expect(requireAuth).toHaveBeenCalledTimes(1)
+  })
+
   it('открывает тот же модал у авторизованного пользователя', () => {
     useAuth.mockReturnValue(makeAuthMock(true, '5'))
     render(<TravelStatusButton {...baseProps} compact />)
@@ -239,6 +265,4 @@ describe('TravelStatusButton — compact режим', () => {
     )
   })
 })
-
-
 
