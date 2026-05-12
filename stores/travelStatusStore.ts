@@ -16,13 +16,58 @@ export type TravelStatusEntry = {
   country?: string
   city?: string
   status: TravelStatus
-  plannedDate?: string  // ISO "YYYY-MM-DD", только для status === 'planned'
+  plannedDate?: string  // ISO "YYYY-MM-DD", опционально для status === 'planned'
   visitedDate?: string  // ISO "YYYY-MM-DD", опционально для status === 'visited'
+  wishlistDate?: string // ISO "YYYY-MM-DD", опционально для status === 'wishlist'
   addedAt: number       // timestamp
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
+
+export const parseTravelStatusDateParts = (value: unknown): { year: number; month: number; day: number } | null => {
+  if (typeof value !== 'string') return null
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!match) return null
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return null
+  if (month < 1 || month > 12) return null
+  const maxDay = new Date(year, month, 0).getDate()
+  if (day < 1 || day > maxDay) return null
+  return { year, month, day }
+}
+
+export const getTravelStatusCalendarDate = (entry: Pick<TravelStatusEntry, 'status' | 'plannedDate' | 'visitedDate' | 'wishlistDate'>): string | undefined => {
+  const value =
+    entry.status === 'planned'
+      ? entry.plannedDate
+      : entry.status === 'visited'
+        ? entry.visitedDate
+        : entry.wishlistDate
+
+  return parseTravelStatusDateParts(value) ? value : undefined
+}
+
+const normalizeStatusDates = <T extends { status: TravelStatus; plannedDate?: string; visitedDate?: string; wishlistDate?: string }>(entry: T): T => {
+  const plannedDate = entry.status === 'planned' && parseTravelStatusDateParts(entry.plannedDate)
+    ? entry.plannedDate
+    : undefined
+  const visitedDate = entry.status === 'visited' && parseTravelStatusDateParts(entry.visitedDate)
+    ? entry.visitedDate
+    : undefined
+  const wishlistDate = entry.status === 'wishlist' && parseTravelStatusDateParts(entry.wishlistDate)
+    ? entry.wishlistDate
+    : undefined
+
+  return {
+    ...entry,
+    plannedDate,
+    visitedDate,
+    wishlistDate,
+  }
+}
 
 const normalizeEntry = (item: unknown): TravelStatusEntry | null => {
   if (!isRecord(item)) return null
@@ -35,7 +80,7 @@ const normalizeEntry = (item: unknown): TravelStatusEntry | null => {
     (status !== 'visited' && status !== 'planned' && status !== 'wishlist') ||
     !Number.isFinite(Number(addedAt))
   ) return null
-  return {
+  return normalizeStatusDates({
     id,
     type: 'travel',
     title,
@@ -47,7 +92,8 @@ const normalizeEntry = (item: unknown): TravelStatusEntry | null => {
     city: typeof item.city === 'string' ? item.city : undefined,
     plannedDate: typeof item.plannedDate === 'string' ? item.plannedDate : undefined,
     visitedDate: typeof item.visitedDate === 'string' ? item.visitedDate : undefined,
-  }
+    wishlistDate: typeof item.wishlistDate === 'string' ? item.wishlistDate : undefined,
+  })
 }
 
 interface TravelStatusState {
@@ -71,10 +117,10 @@ export const useTravelStatusStore = create<TravelStatusState>((set, get) => ({
 
   setStatus: async (entry, userId) => {
     const existing = get().entries.find((e) => String(e.id) === String(entry.id))
-    const newEntry: TravelStatusEntry = {
+    const newEntry: TravelStatusEntry = normalizeStatusDates({
       ...entry,
       addedAt: existing?.addedAt ?? Date.now(),
-    }
+    })
     const newEntries = [
       ...get().entries.filter((e) => String(e.id) !== String(entry.id)),
       newEntry,
@@ -104,9 +150,8 @@ export const useTravelStatusStore = create<TravelStatusState>((set, get) => ({
 
   getByMonth: (year, month) =>
     get().entries.filter((e) => {
-      if (e.status !== 'planned' || !e.plannedDate) return false
-      const d = new Date(e.plannedDate)
-      return d.getFullYear() === year && d.getMonth() + 1 === month
+      const dateParts = parseTravelStatusDateParts(getTravelStatusCalendarDate(e))
+      return dateParts?.year === year && dateParts.month === month
     }),
 
   loadLocal: async (userId) => {
@@ -120,11 +165,10 @@ export const useTravelStatusStore = create<TravelStatusState>((set, get) => ({
           .filter((item): item is TravelStatusEntry => item !== null)
         set({ entries: normalized, _userId: userId })
       } else {
-        set({ _userId: userId })
+        set({ entries: [], _userId: userId })
       }
     } catch (error) {
       devError('Ошибка загрузки статусов путешествий:', error)
     }
   },
 }))
-

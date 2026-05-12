@@ -51,10 +51,11 @@ export const normalizeWaypoints = (waypoints: unknown, opts?: { precision?: numb
       if (!ll) return null;
       return {
         name: typeof w?.name === 'string' ? w.name : undefined,
+        description: typeof w?.description === 'string' ? w.description : undefined,
         coordinates: [roundCoord(ll[0], precision), roundCoord(ll[1], precision)] as LngLat,
       };
     })
-    .filter(Boolean) as { name?: string; coordinates: LngLat }[];
+    .filter(Boolean) as { name?: string; description?: string; coordinates: LngLat }[];
 };
 
 export const safeFileBaseName = (name: string) => {
@@ -82,4 +83,3 @@ export const clampOpacity = (opacity: number | undefined) => {
   if (!Number.isFinite(opacity)) return 1;
   return clamp(opacity, 0, 1);
 };
-

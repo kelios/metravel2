@@ -359,6 +359,48 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
       alignItems: 'center',
       gap: DESIGN_TOKENS.spacing.sm,
     },
+    pointsHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: DESIGN_TOKENS.spacing.md,
+      flexWrap: 'wrap',
+    },
+    pointsExportWrap: {
+      alignItems: 'flex-end',
+      gap: DESIGN_TOKENS.spacing.xxs,
+      flexShrink: 1,
+    },
+    pointsExportActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+      flexWrap: 'wrap',
+      justifyContent: 'flex-end',
+      flexShrink: 0,
+    },
+    pointsExportButton: {
+      minHeight: 36,
+      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+      paddingVertical: DESIGN_TOKENS.spacing.xs,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.surface,
+      ...Platform.select({
+        web: {
+          boxShadow: 'none',
+        },
+      }),
+    },
+    pointsExportButtonText: {
+      fontSize: 12,
+      color: colors.text,
+    },
+    pointsExportHint: {
+      fontSize: 11,
+      color: colors.textMuted,
+      lineHeight: 16,
+      textAlign: 'right',
+    },
     sectionSubtitle: {
       fontSize: Platform.select({ default: 13, web: 14 }),
       color: colors.textMuted,

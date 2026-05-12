@@ -11,7 +11,7 @@ import {
 } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useAuth } from '@/context/AuthContext'
-import { useTravelStatusStore, type TravelStatus } from '@/stores/travelStatusStore'
+import { parseTravelStatusDateParts, useTravelStatusStore, type TravelStatus } from '@/stores/travelStatusStore'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
 import { useThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -42,9 +42,7 @@ type Props = {
 
 /** Валидация ISO-даты YYYY-MM-DD */
 const isValidDate = (val: string) => {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) return false
-  const d = new Date(val)
-  return !isNaN(d.getTime())
+  return parseTravelStatusDateParts(val) !== null
 }
 
 const stopWebCardEvent = (e?: any) => {
@@ -76,9 +74,9 @@ function WebDateInput({
         padding: '10px 12px',
         fontSize: 15,
         borderRadius: 8,
-        border: '1px solid #e2e8f0',
-        backgroundColor: '#fff',
-        color: '#1a202c',
+        border: '1px solid var(--color-border)',
+        backgroundColor: 'var(--color-background)',
+        color: 'var(--color-text)',
         outline: 'none',
         boxSizing: 'border-box',
         ...style,
@@ -107,8 +105,6 @@ export default function TravelStatusButton({
   const [datePicking, setDatePicking] = useState(false)
   const [dateInput, setDateInput] = useState('')
   const [dateError, setDateError] = useState('')
-  const pendingStatusRef = useRef<TravelStatus | null>(null)
-
   const inFlightRef = useRef(false)
 
   const handleMainPress = useCallback((e?: any) => {
@@ -125,7 +121,6 @@ export default function TravelStatusButton({
 
   const handleSelectStatus = useCallback(async (status: TravelStatus) => {
     if (status === 'planned') {
-      pendingStatusRef.current = 'planned'
       setDateInput(current?.plannedDate ?? '')
       setDateError('')
       setDatePicking(true)

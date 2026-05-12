@@ -386,8 +386,18 @@ export default function ProfileScreen() {
       paddingTop: 16,
     },
     skeletonWrap: {
-      padding: 16,
-      gap: 16,
+      gap: 0,
+      overflow: 'hidden',
+    },
+    skeletonAvatarRow: {
+      alignItems: 'center',
+      marginTop: -50,
+      paddingBottom: 12,
+    },
+    skeletonCenterText: {
+      alignItems: 'center',
+      gap: 8,
+      paddingBottom: 12,
     },
     skeletonHeaderRow: {
       flexDirection: 'row',
@@ -399,9 +409,8 @@ export default function ProfileScreen() {
       gap: 8,
     },
     skeletonStatsRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      gap: 8,
+      paddingHorizontal: 16,
+      marginBottom: 16,
     },
     skeletonListWrap: {
       marginTop: 16,
@@ -442,17 +451,20 @@ export default function ProfileScreen() {
       <View style={[styles.headerComponent, styles.fullRow]}>
         {profileLoading ? (
           <View style={styles.skeletonWrap}>
-            <View style={styles.skeletonHeaderRow}>
-              <SkeletonLoader width={80} height={80} borderRadius={40} />
-              <View style={styles.skeletonHeaderText}>
-                <SkeletonLoader width={150} height={24} borderRadius={4} />
-                <SkeletonLoader width={200} height={16} borderRadius={4} />
-              </View>
+            {/* Cover skeleton */}
+            <SkeletonLoader width="100%" height={88} borderRadius={0} />
+            {/* Avatar skeleton centered below cover */}
+            <View style={styles.skeletonAvatarRow}>
+              <SkeletonLoader width={100} height={100} borderRadius={50} />
             </View>
+            {/* Name + email centered */}
+            <View style={styles.skeletonCenterText}>
+              <SkeletonLoader width={160} height={22} borderRadius={4} />
+              <SkeletonLoader width={200} height={14} borderRadius={4} />
+            </View>
+            {/* Stats row */}
             <View style={styles.skeletonStatsRow}>
-              <SkeletonLoader width="30%" height={60} borderRadius={12} />
-              <SkeletonLoader width="30%" height={60} borderRadius={12} />
-              <SkeletonLoader width="30%" height={60} borderRadius={12} />
+              <SkeletonLoader width="100%" height={68} borderRadius={12} />
             </View>
           </View>
         ) : (
@@ -465,7 +477,6 @@ export default function ProfileScreen() {
               onAvatarUpload={pickAndUpload}
               avatarUploading={avatarUploading}
             />
-            {/* PROF-01: ProfileStats — visual hierarchy */}
             <ProfileStats
               stats={stats}
               onPressStat={(key) => {
@@ -474,7 +485,6 @@ export default function ProfileScreen() {
                 else if (key === 'views') setActiveTab('history');
               }}
             />
-            {/* PROF-02: Прогресс-бар заполненности профиля */}
             <ProfileCompleteness
               user={userProp}
               profile={profile}

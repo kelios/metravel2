@@ -16,9 +16,10 @@ export const buildKml = (input: RouteExportInput): RouteExportResult => {
     .map((w) => {
       const [lng, lat] = w.coordinates;
       const wName = w.name?.trim() || 'Waypoint';
+      const wDesc = w.description ? `        <description>${escapeXml(w.description)}</description>\n` : '';
       return `      <Placemark>
         <name>${escapeXml(wName)}</name>
-        <Point>
+${wDesc}        <Point>
           <coordinates>${lng},${lat},0</coordinates>
         </Point>
       </Placemark>`;
@@ -26,6 +27,16 @@ export const buildKml = (input: RouteExportInput): RouteExportResult => {
     .join('\n');
 
   const lineCoords = track.map(([lng, lat]) => `${lng},${lat},0`).join(' ');
+  const linePlacemark = track.length >= 2
+    ? `    <Placemark>
+      <name>${escapeXml(name)}</name>
+      <styleUrl>#routeLine</styleUrl>
+      <LineString>
+        <tessellate>1</tessellate>
+        <coordinates>${lineCoords}</coordinates>
+      </LineString>
+    </Placemark>`
+    : '';
 
   const desc = input.description ? escapeXml(input.description) : '';
 
@@ -45,14 +56,7 @@ export const buildKml = (input: RouteExportInput): RouteExportResult => {
       </LineStyle>
     </Style>
 
-${wpPlacemarks ? wpPlacemarks + '\n\n' : ''}    <Placemark>
-      <name>${escapeXml(name)}</name>
-      <styleUrl>#routeLine</styleUrl>
-      <LineString>
-        <tessellate>1</tessellate>
-        <coordinates>${lineCoords}</coordinates>
-      </LineString>
-    </Placemark>
+${wpPlacemarks ? wpPlacemarks + '\n\n' : ''}${linePlacemark ? linePlacemark + '\n' : ''}
   </Document>
 </kml>
 `;
@@ -63,4 +67,3 @@ ${wpPlacemarks ? wpPlacemarks + '\n\n' : ''}    <Placemark>
     content,
   };
 };
-

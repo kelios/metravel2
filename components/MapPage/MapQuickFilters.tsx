@@ -656,7 +656,7 @@ const getStyles = (
       position: 'absolute',
       top: options.isNarrow ? 8 : 16,
       left:
-        IS_WEB && options.isNarrow
+        Platform.OS === 'web' && options.isNarrow
           ? options.reserveLeftControlsSpace
             ? MOBILE_WEB_CONTROLS_CLEARANCE
             : 12
@@ -665,7 +665,9 @@ const getStyles = (
             : 16,
       right: options.isNarrow ? 12 : 16,
       zIndex: 5,
-      ...(IS_WEB && !options.isNarrow ? ({ maxWidth: DESKTOP_TOOLBAR_MAX_WIDTH } as any) : null),
+      ...(Platform.OS === 'web' && !options.isNarrow
+        ? ({ maxWidth: DESKTOP_TOOLBAR_MAX_WIDTH } as any)
+        : null),
     },
     row: {
       flexDirection: 'row',

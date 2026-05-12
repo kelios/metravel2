@@ -126,7 +126,16 @@ jest.mock('@gorhom/bottom-sheet', () => {
   const React = require('react')
   const { View } = require('react-native')
 
-  const BottomSheet = ({ children, ...props }: any) => React.createElement(View, props, children)
+  const BottomSheet = React.forwardRef(({ children, onChange, ...props }: any, ref: any) => {
+    React.useImperativeHandle(ref, () => ({
+      close: jest.fn(() => onChange?.(-1)),
+      snapToIndex: jest.fn((index: number) => onChange?.(index)),
+      expand: jest.fn(() => onChange?.(0)),
+      collapse: jest.fn(() => onChange?.(-1)),
+    }), [onChange])
+
+    return React.createElement(View, props, children)
+  })
   const BottomSheetScrollView = ({ children, ...props }: any) => React.createElement(View, props, children)
   const BottomSheetBackdrop = (_props: any) => null
   const BottomSheetView = ({ children, ...props }: any) => React.createElement(View, props, children)

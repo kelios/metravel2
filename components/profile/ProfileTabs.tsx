@@ -19,65 +19,91 @@ interface ProfileTabsProps {
 export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps) {
   const colors = useThemedColors();
 
-  const styles = useMemo(() => StyleSheet.create({
-    container: {
-      flexDirection: 'row',
-      borderBottomWidth: 1,
-      borderBottomColor: colors.borderLight,
-      backgroundColor: colors.background,
-      ...Platform.select({
-        web: {
-          position: 'sticky',
-          top: 88,
-          zIndex: DESIGN_TOKENS.zIndex.sticky,
-        } as any,
-        default: {},
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        wrapper: {
+          paddingHorizontal: DESIGN_TOKENS.spacing.md,
+          paddingBottom: DESIGN_TOKENS.spacing.xs,
+          backgroundColor: colors.background,
+          ...Platform.select({
+            web: {
+              position: 'sticky',
+              top: 88,
+              zIndex: DESIGN_TOKENS.zIndex.sticky,
+              paddingTop: DESIGN_TOKENS.spacing.xs,
+            } as any,
+            default: {},
+          }),
+        },
+        segmentTrack: {
+          flexDirection: 'row',
+          backgroundColor: colors.backgroundSecondary,
+          borderRadius: DESIGN_TOKENS.radii.md,
+          padding: 3,
+          borderWidth: 1,
+          borderColor: colors.borderLight,
+        },
+        tab: {
+          flex: 1,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: DESIGN_TOKENS.spacing.xxs,
+          paddingVertical: 8,
+          paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+          borderRadius: DESIGN_TOKENS.radii.sm,
+          minHeight: DESIGN_TOKENS.touchTarget.minHeight - 8,
+          ...Platform.select({
+            web: { cursor: 'pointer' } as any,
+            default: {},
+          }),
+        },
+        activeTab: {
+          backgroundColor: colors.surface,
+          ...Platform.select({
+            ios: {
+              shadowColor: '#000',
+              shadowOpacity: 0.06,
+              shadowRadius: 4,
+              shadowOffset: { width: 0, height: 1 },
+            },
+            android: { elevation: 2 },
+            default: {},
+          }),
+        },
+        tabText: {
+          fontSize: DESIGN_TOKENS.typography.sizes.sm,
+          fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+          color: colors.textMuted,
+        },
+        activeTabText: {
+          color: colors.text,
+          fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
+        },
+        badge: {
+          paddingHorizontal: 6,
+          paddingVertical: 2,
+          borderRadius: DESIGN_TOKENS.radii.pill,
+          backgroundColor: colors.backgroundSecondary,
+          minWidth: 20,
+          alignItems: 'center',
+        },
+        activeBadge: {
+          backgroundColor: colors.primaryLight,
+        },
+        badgeText: {
+          fontSize: 11,
+          fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+          color: colors.textMuted,
+        },
+        activeBadgeText: {
+          color: colors.primary,
+          fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
+        },
       }),
-    },
-    tab: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: DESIGN_TOKENS.spacing.xxs,
-      paddingVertical: DESIGN_TOKENS.spacing.sm + 2,
-      borderBottomWidth: 2,
-      borderBottomColor: 'transparent',
-      minHeight: DESIGN_TOKENS.touchTarget.minHeight,
-    },
-    activeTab: {
-      borderBottomColor: colors.primary,
-    },
-    tabText: {
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-      color: colors.textMuted,
-    },
-    activeTabText: {
-      color: colors.text,
-      fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
-    },
-    badge: {
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: colors.backgroundSecondary,
-      minWidth: 24,
-      alignItems: 'center',
-    },
-    activeBadge: {
-      backgroundColor: colors.primary,
-    },
-    badgeText: {
-      fontSize: 12,
-      fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-      color: colors.textMuted,
-    },
-    activeBadgeText: {
-      color: colors.textOnPrimary,
-      fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
-    },
-  }), [colors]);
+    [colors]
+  );
 
   const tabs: Array<{ key: ProfileTabKey; label: string; hint: string }> = [
     { key: 'travels', label: 'Мои', hint: 'Показать ваши путешествия' },
@@ -86,40 +112,41 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
   ];
 
   return (
-    <View style={styles.container} accessibilityRole="tablist">
-      {tabs.map((tab) => {
-        const isActive = activeTab === tab.key;
-        const count = counts?.[tab.key];
-        const showBadge = typeof count === 'number' && count >= 0;
+    <View style={styles.wrapper} accessibilityRole="tablist">
+      <View style={styles.segmentTrack}>
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.key;
+          const count = counts?.[tab.key];
+          const showBadge = typeof count === 'number' && count >= 0;
 
-        return (
-          <Pressable
-            key={tab.key}
-            style={[
-              styles.tab,
-              isActive && styles.activeTab,
-              globalFocusStyles.focusable,
-            ]}
-            onPress={() => onChangeTab(tab.key)}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: isActive }}
-            accessibilityLabel={`${tab.label}${showBadge ? `: ${count}` : ''}`}
-            accessibilityHint={tab.hint}
-          >
-            <Text style={[styles.tabText, isActive && styles.activeTabText]}>
-              {tab.label}
-            </Text>
-            {showBadge && (
-              <View style={[styles.badge, isActive && styles.activeBadge]}>
-                <Text style={[styles.badgeText, isActive && styles.activeBadgeText]}>
-                  {count}
-                </Text>
-              </View>
-            )}
-          </Pressable>
-        );
-      })}
+          return (
+            <Pressable
+              key={tab.key}
+              style={[
+                styles.tab,
+                isActive && styles.activeTab,
+                globalFocusStyles.focusable,
+              ]}
+              onPress={() => onChangeTab(tab.key)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isActive }}
+              accessibilityLabel={`${tab.label}${showBadge ? `: ${count}` : ''}`}
+              accessibilityHint={tab.hint}
+            >
+              <Text style={[styles.tabText, isActive && styles.activeTabText]}>
+                {tab.label}
+              </Text>
+              {showBadge && (
+                <View style={[styles.badge, isActive && styles.activeBadge]}>
+                  <Text style={[styles.badgeText, isActive && styles.activeBadgeText]}>
+                    {count}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
-

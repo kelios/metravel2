@@ -31,6 +31,14 @@ jest.mock('@/styles/globalFocus', () => ({
   globalFocusStyles: { focusable: {} },
 }))
 
+jest.mock('@/stores/travelStatusStore', () => {
+  const actual = jest.requireActual('@/stores/travelStatusStore')
+  return {
+    ...actual,
+    useTravelStatusStore: jest.fn(),
+  }
+})
+
 // Feather icon stub
 jest.mock('@expo/vector-icons/Feather', () => {
   const { View } = require('react-native')
@@ -203,6 +211,26 @@ describe('MiniCalendar', () => {
       ).toBeNull()
     })
 
+    it('не отмечает невозможную дату после Date-нормализации', () => {
+      const today = new Date()
+      const MONTHS = [
+        'Январь', 'Февраль', 'Март', 'Апрель',
+        'Май', 'Июнь', 'Июль', 'Август',
+        'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
+      ]
+      const invalidEntry: TravelStatusEntry = {
+        id: 4,
+        type: 'travel',
+        title: 'Invalid date',
+        url: '/travels/4',
+        status: 'planned',
+        plannedDate: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-32`,
+        addedAt: Date.now(),
+      }
+      const { queryByLabelText } = render(<MiniCalendar entries={[invalidEntry]} />)
+      expect(queryByLabelText(`1 ${MONTHS[today.getMonth()]}, есть поездки`)).toBeNull()
+    })
+
     it('не отмечает дни для visited/wishlist записей (без plannedDate)', () => {
       const today = new Date()
       const visitedEntry: TravelStatusEntry = {
@@ -228,6 +256,40 @@ describe('MiniCalendar', () => {
           queryByLabelText(`${d} ${MONTHS[today.getMonth()]}, есть поездки`)
         ).toBeNull()
       }
+    })
+
+    it('отмечает visitedDate и wishlistDate как календарные даты', () => {
+      const today = new Date()
+      const year = today.getFullYear()
+      const month = String(today.getMonth() + 1).padStart(2, '0')
+      const MONTHS = [
+        'Январь', 'Февраль', 'Март', 'Апрель',
+        'Май', 'Июнь', 'Июль', 'Август',
+        'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
+      ]
+      const entries: TravelStatusEntry[] = [
+        {
+          id: 5,
+          type: 'travel',
+          title: 'Visited trip',
+          url: '/travels/5',
+          status: 'visited',
+          visitedDate: `${year}-${month}-08`,
+          addedAt: Date.now(),
+        },
+        {
+          id: 6,
+          type: 'travel',
+          title: 'Wishlist trip',
+          url: '/travels/6',
+          status: 'wishlist',
+          wishlistDate: `${year}-${month}-18`,
+          addedAt: Date.now(),
+        },
+      ]
+      const { getByLabelText } = render(<MiniCalendar entries={entries} />)
+      expect(getByLabelText(`8 ${MONTHS[today.getMonth()]}, есть поездки`)).toBeTruthy()
+      expect(getByLabelText(`18 ${MONTHS[today.getMonth()]}, есть поездки`)).toBeTruthy()
     })
   })
 

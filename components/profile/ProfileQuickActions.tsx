@@ -1,10 +1,9 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
-import { ResponsiveContainer } from '@/components/layout';
 
 export type ProfileQuickActionKey = 'messages' | 'subscriptions' | 'settings' | 'userpoints' | 'calendar';
 
@@ -13,68 +12,89 @@ export interface ProfileQuickActionsProps {
   unreadMessagesCount?: number;
 }
 
+const ITEMS: Array<{
+  key: ProfileQuickActionKey;
+  title: string;
+  icon: React.ComponentProps<typeof Feather>['name'];
+  accessibilityHint: string;
+}> = [
+  {
+    key: 'messages',
+    title: 'Чаты',
+    icon: 'message-circle',
+    accessibilityHint: 'Перейти к сообщениям и диалогам',
+  },
+  {
+    key: 'subscriptions',
+    title: 'Подписки',
+    icon: 'users',
+    accessibilityHint: 'Перейти к подпискам и авторам',
+  },
+  {
+    key: 'userpoints',
+    title: 'Мои точки',
+    icon: 'map-pin',
+    accessibilityHint: 'Перейти к сохранённым точкам на карте',
+  },
+  {
+    key: 'calendar',
+    title: 'Календарь',
+    icon: 'calendar',
+    accessibilityHint: 'Перейти к календарю путешествий',
+  },
+  {
+    key: 'settings',
+    title: 'Настройки',
+    icon: 'settings',
+    accessibilityHint: 'Перейти к настройкам профиля',
+  },
+];
+
 export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: ProfileQuickActionsProps) {
   const colors = useThemedColors();
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        container: {
+        wrapper: {
+          paddingBottom: DESIGN_TOKENS.spacing.sm,
+        },
+        scrollContent: {
           paddingHorizontal: DESIGN_TOKENS.spacing.md,
-          paddingBottom: DESIGN_TOKENS.spacing.md,
-          backgroundColor: colors.background,
-        },
-        title: {
-          fontSize: 13,
-          fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-          color: colors.textMuted,
-          marginBottom: DESIGN_TOKENS.spacing.sm,
-        },
-        row: {
+          gap: DESIGN_TOKENS.spacing.xs,
           flexDirection: 'row',
-          gap: DESIGN_TOKENS.spacing.sm,
-          flexWrap: 'wrap',
+          alignItems: 'flex-start',
         },
-        card: {
-          flex: 1,
-          borderWidth: 1,
-          borderColor: colors.borderLight,
-          backgroundColor: colors.surface,
+        actionItem: {
+          alignItems: 'center',
+          minWidth: 64,
+          paddingVertical: DESIGN_TOKENS.spacing.xs,
+          paddingHorizontal: DESIGN_TOKENS.spacing.xxs,
           borderRadius: DESIGN_TOKENS.radii.md,
-          paddingVertical: DESIGN_TOKENS.spacing.sm,
-          paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-          minHeight: 88,
           ...Platform.select({
-            web: {
-              cursor: 'pointer',
-            } as any,
+            web: { cursor: 'pointer' } as any,
             default: {},
           }),
         },
-        cardPressed: {
-          opacity: 0.9,
-        },
-        cardHeader: {
-          flexDirection: 'row',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          marginBottom: DESIGN_TOKENS.spacing.xs,
+        actionItemPressed: {
+          backgroundColor: colors.primarySoft,
         },
         iconWrap: {
           position: 'relative',
-          width: 32,
-          height: 32,
-          borderRadius: DESIGN_TOKENS.radii.sm,
+          width: 48,
+          height: 48,
+          borderRadius: DESIGN_TOKENS.radii.md,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: colors.backgroundSecondary,
+          backgroundColor: colors.surface,
           borderWidth: 1,
           borderColor: colors.borderLight,
+          marginBottom: DESIGN_TOKENS.spacing.xxs,
         },
         badge: {
           position: 'absolute',
-          top: -4,
-          right: -4,
+          top: -5,
+          right: -5,
           minWidth: 18,
           height: 18,
           borderRadius: DESIGN_TOKENS.radii.pill,
@@ -82,87 +102,40 @@ export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: Profil
           alignItems: 'center',
           justifyContent: 'center',
           paddingHorizontal: 4,
+          borderWidth: 2,
+          borderColor: colors.background,
         },
         badgeText: {
           fontSize: 10,
           fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
           color: colors.textOnDark,
         },
-        chevron: {
-          marginTop: 2,
-        },
         label: {
-          fontSize: DESIGN_TOKENS.typography.sizes.sm,
-          fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
-          color: colors.text,
-          marginBottom: 2,
-        },
-        hint: {
-          fontSize: DESIGN_TOKENS.typography.sizes.xs,
+          fontSize: 11,
           fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
           color: colors.textMuted,
+          textAlign: 'center',
         },
       }),
     [colors]
   );
 
-  const items: Array<{
-    key: ProfileQuickActionKey;
-    title: string;
-    hint: string;
-    icon: React.ComponentProps<typeof Feather>['name'];
-    accessibilityHint: string;
-  }> = [
-    {
-      key: 'messages',
-      title: 'Чаты',
-      hint: 'Сообщения и диалоги',
-      icon: 'message-circle',
-      accessibilityHint: 'Перейти к сообщениям и диалогам',
-    },
-    {
-      key: 'subscriptions',
-      title: 'Подписки',
-      hint: 'Авторы и обновления',
-      icon: 'users',
-      accessibilityHint: 'Перейти к подпискам и авторам',
-    },
-    {
-      key: 'settings',
-      title: 'Настройки',
-      hint: 'Редактировать данные',
-      icon: 'settings',
-      accessibilityHint: 'Перейти к настройкам профиля',
-    },
-    {
-      key: 'userpoints',
-      title: 'Мои точки',
-      hint: 'Сохранённые места',
-      icon: 'map-pin',
-      accessibilityHint: 'Перейти к сохранённым точкам на карте',
-    },
-    {
-      key: 'calendar',
-      title: 'Календарь',
-      hint: 'Мои планы поездок',
-      icon: 'calendar',
-      accessibilityHint: 'Перейти к календарю путешествий',
-    },
-  ];
-
   return (
-    <ResponsiveContainer maxWidth="lg" padding>
-    <View style={styles.container}>
-      <Text style={styles.title}>Быстрые действия</Text>
-      <View style={styles.row}>
-        {items.map((item) => {
+    <View style={styles.wrapper}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        accessibilityRole="menu"
+      >
+        {ITEMS.map((item) => {
           const showBadge = item.key === 'messages' && unreadMessagesCount > 0;
 
           return (
             <Pressable
               key={item.key}
               onPress={() => onPress(item.key)}
-              accessibilityRole="button"
+              accessibilityRole="menuitem"
               accessibilityLabel={
                 showBadge
                   ? `${item.title}, ${unreadMessagesCount} непрочитанных`
@@ -170,36 +143,28 @@ export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: Profil
               }
               accessibilityHint={item.accessibilityHint}
               style={({ pressed }) => [
-                styles.card,
+                styles.actionItem,
                 globalFocusStyles.focusable,
-                pressed && styles.cardPressed,
+                pressed && styles.actionItemPressed,
               ]}
             >
-              <View style={styles.cardHeader}>
-                <View style={styles.iconWrap}>
-                  <Feather name={item.icon} size={18} color={colors.text} />
-                  {showBadge && (
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText}>
-                        {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-                <View style={styles.chevron}>
-                  <Feather name="chevron-right" size={16} color={colors.textMuted} />
-                </View>
+              <View style={styles.iconWrap}>
+                <Feather name={item.icon} size={20} color={colors.primary} />
+                {showBadge && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>
+                      {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
+                    </Text>
+                  </View>
+                )}
               </View>
-              <Text style={styles.label}>{item.title}</Text>
-              <Text style={styles.hint} numberOfLines={1}>
-                {item.hint}
+              <Text style={styles.label} numberOfLines={1}>
+                {item.title}
               </Text>
             </Pressable>
           );
         })}
-      </View>
+      </ScrollView>
     </View>
-    </ResponsiveContainer>
   );
 }
-

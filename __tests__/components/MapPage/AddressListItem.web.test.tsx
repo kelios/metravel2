@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { Platform, View, Text } from 'react-native';
+import { Platform, Pressable, View, Text } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 jest.mock('@/context/AuthContext', () => ({
@@ -8,19 +8,64 @@ jest.mock('@/context/AuthContext', () => ({
   useAuth: () => ({ isAuthenticated: true, authReady: true }),
 }));
 
-const mockUnifiedCard = jest.fn((props: any) => (
-  <View testID="unified-card-mock">
-    <Text testID="card-title">{props.title}</Text>
-    <Text testID="card-meta">{props.metaText}</Text>
-    <View testID="card-content">{props.contentSlot}</View>
-  </View>
-));
+const mockPlaceListCard = jest.fn((props: any) => {
+  const [overflowVisible, setOverflowVisible] = React.useState(false);
+  const visibleMapActions = props.compact ? props.mapActions.slice(0, 1) : props.mapActions;
+  const overflowActions = props.compact ? props.mapActions.slice(1) : [];
 
-// Мокаем UnifiedTravelCard, чтобы проверить, что он используется AddressListItem
-jest.mock('@/components/ui/UnifiedTravelCard', () => {
+  return (
+  <View testID="place-list-card-mock">
+    <Text testID="card-title">{props.title}</Text>
+    <Text testID="card-meta">{props.categoryLabel}</Text>
+    {props.onShare ? (
+      <Pressable accessibilityLabel="Поделиться в Telegram" onPress={props.onShare}>
+        <Text>Telegram</Text>
+      </Pressable>
+    ) : null}
+    {visibleMapActions.map((action: any) => (
+      <Pressable
+        key={action.key}
+        accessibilityLabel={action.title ?? action.label}
+        onPress={action.onPress}
+      >
+        <Text>{action.label}</Text>
+      </Pressable>
+    ))}
+    {overflowActions.length > 0 ? (
+      <>
+        <Pressable
+          accessibilityLabel="Ещё действия"
+          onPress={() => setOverflowVisible((value) => !value)}
+        >
+          <Text>Ещё</Text>
+        </Pressable>
+        {overflowVisible
+          ? overflowActions.map((action: any) => (
+              <Pressable
+                key={action.key}
+                accessibilityLabel={action.title ?? action.label}
+                onPress={action.onPress}
+              >
+                <Text>{action.label}</Text>
+              </Pressable>
+            ))
+          : null}
+      </>
+    ) : null}
+    {props.onAddPoint ? (
+      <Pressable accessibilityLabel={props.addLabel} onPress={props.onAddPoint}>
+        <Text>{props.addLabel}</Text>
+      </Pressable>
+    ) : null}
+  </View>
+  );
+});
+
+// Mock the web card boundary used by AddressListItem, without coupling to card internals.
+jest.mock('@/components/places/PlaceListCard', () => {
   return {
     __esModule: true,
-    default: (props: any) => mockUnifiedCard(props),
+    default: (props: any) => mockPlaceListCard(props),
   };
 });
 
@@ -81,7 +126,7 @@ describe('AddressListItem (web right panel)', () => {
 
     const { getByTestId } = renderWithProviders(<AddressListItem travel={baseTravel} isMobile={false} />);
 
-    const card = getByTestId('unified-card-mock');
+    const card = getByTestId('place-list-card-mock');
     expect(card).toBeTruthy();
 
     const title = getByTestId('card-title');
@@ -90,12 +135,13 @@ describe('AddressListItem (web right panel)', () => {
     const meta = getByTestId('card-meta');
     expect((meta as any).props.children).toContain('Category 1');
 
-    expect(mockUnifiedCard).toHaveBeenCalled();
-    expect(mockUnifiedCard).toHaveBeenCalledWith(
+    expect(mockPlaceListCard).toHaveBeenCalled();
+    expect(mockPlaceListCard).toHaveBeenCalledWith(
       expect.objectContaining({
         title: baseTravel.address,
-        metaText: baseTravel.categoryName,
+        categoryLabel: baseTravel.categoryName,
       }),
+      undefined,
     );
 
     (Platform as any).OS = prevOs;

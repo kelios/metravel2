@@ -6,6 +6,9 @@ import {
   Pressable,
   Platform,
   ScrollView,
+  Modal,
+  TextInput,
+  useWindowDimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
@@ -13,7 +16,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { useAuth } from '@/context/AuthContext'
 import { useFavorites } from '@/context/FavoritesContext'
-import { useTravelStatusStore, type TravelStatus, type TravelStatusEntry } from '@/stores/travelStatusStore'
+import { getTravelStatusCalendarDate, parseTravelStatusDateParts, useTravelStatusStore, type TravelStatus, type TravelStatusEntry } from '@/stores/travelStatusStore'
 import { useMyTravels } from '@/hooks/useMyTravels'
 import EmptyState from '@/components/ui/EmptyState'
 import TabTravelCard from '@/components/listTravel/TabTravelCard'
@@ -45,21 +48,55 @@ const EMPTY_STATE: Record<TravelStatus, { icon: string; title: string; descripti
   planned: {
     icon: 'calendar',
     title: 'Нет запланированных поездок',
-    description: 'Открой любое путешествие, нажми «Добавить в план» → «Планирую» и ��ыбери дату.',
+    description: 'Открой любое путешествие, нажми «Добавить в план», затем «Планирую» и выбери дату.',
     actionLabel: 'Найти маршрут',
   },
   wishlist: {
     icon: 'bookmark',
     title: 'Список желаний пуст',
-    description: 'Добавляй путешествия в избранное ❤️ или открой путешествие и нажми «Добавить в план» → «Хочу поехать».',
+    description: 'Добавляй путешествия в избранное или открой путешествие и выбери «Хочу поехать».',
     actionLabel: 'Найти маршруты',
   },
 }
 
-const BADGE_COLORS: Record<TravelStatus, string> = {
-  visited: '#22c55e',
-  planned: '#3b82f6',
-  wishlist: '#f59e0b',
+const TAB_HINTS: Record<TravelStatus, string> = {
+  visited: 'Выбери дату, чтобы увидеть посещённые поездки за этот день. Если точной даты нет, добавь её прямо в карточке.',
+  planned: 'Выбери дату, чтобы отфильтровать запланированные поездки.',
+  wishlist: 'Выбери дату, чтобы увидеть поездки из списка желаний на этот день. Избранные автоматически попадают сюда.',
+}
+
+const getDateFieldForStatus = (status: TravelStatus) => {
+  if (status === 'visited') return 'visitedDate'
+  if (status === 'wishlist') return 'wishlistDate'
+  return 'plannedDate'
+}
+
+function WebDateInput({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (value: string) => void
+}) {
+  if (Platform.OS !== 'web') return null
+  return (
+    <input
+      type="date"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      style={{
+        width: '100%',
+        padding: '10px 12px',
+        fontSize: 15,
+        borderRadius: 8,
+        border: '1px solid var(--color-border)',
+        backgroundColor: 'var(--color-background)',
+        color: 'var(--color-text)',
+        outline: 'none',
+        boxSizing: 'border-box',
+      } as any}
+    />
+  )
 }
 
 // Универсальный тип для карточек в списке
@@ -70,9 +107,11 @@ export default function CalendarScreen() {
   const canonical = buildCanonicalUrl('/calendar')
   const { isAuthenticated, authReady, userId } = useAuth()
   const colors = useThemedColors()
+  const { width } = useWindowDimensions()
+  const isWideLayout = Platform.OS === 'web' && width >= 900
   const { favorites } = useFavorites()
 
-  const { loadLocal, getByStatus, entries } = useTravelStatusStore()
+  const { loadLocal, getByStatus, entries, setStatus } = useTravelStatusStore()
 
   const { myTravels, load: loadMyTravels } = useMyTravels({
     userId: userId ?? null,
@@ -82,6 +121,9 @@ export default function CalendarScreen() {
   const [activeTab, setActiveTab] = useState<TravelStatus>('planned')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [dateEditingItem, setDateEditingItem] = useState<DisplayEntry | null>(null)
+  const [dateInput, setDateInput] = useState('')
+  const [dateError, setDateError] = useState('')
 
   // Загружаем локальное хранилище
   useEffect(() => {
@@ -145,32 +187,94 @@ export default function CalendarScreen() {
       }))
   }, [favorites, entries])
 
-  // Данные для текущего таба
-  const tabData = useMemo((): DisplayEntry[] => {
+  const activeTabEntries = useMemo((): DisplayEntry[] => {
     if (activeTab === 'wishlist') {
       // Явно добавленные + избранные без статуса, без дублей
       const explicit = getByStatus('wishlist').map((e): DisplayEntry => ({ ...e, _isFavorite: false }))
       const merged = [...explicit, ...favoritesAsWishlist]
-      return merged.sort((a, b) => b.addedAt - a.addedAt)
+      return merged
     }
     if (activeTab === 'visited') {
       // Явно отмеченные как "Был" + авторские путешествия пользователя
       const explicit = getByStatus('visited').map((e): DisplayEntry => ({ ...e, _isFavorite: false }))
       const merged = [...explicit, ...authoredAsVisited]
-      return merged.sort((a, b) => b.addedAt - a.addedAt)
+      return merged
     }
-    const all = getByStatus(activeTab).map((e): DisplayEntry => ({ ...e, _isFavorite: false }))
-    if (activeTab === 'planned' && selectedDate) {
-      return all.filter((e) => e.plannedDate === selectedDate)
+    return getByStatus(activeTab).map((e): DisplayEntry => ({ ...e, _isFavorite: false }))
+  }, [activeTab, getByStatus, entries, favoritesAsWishlist, authoredAsVisited]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Данные для текущего таба
+  const tabData = useMemo((): DisplayEntry[] => {
+    const all = selectedDate
+      ? activeTabEntries.filter((e) => getTravelStatusCalendarDate(e) === selectedDate)
+      : activeTabEntries
+    return [...all].sort((a, b) => {
+      const dateA = getTravelStatusCalendarDate(a)
+      const dateB = getTravelStatusCalendarDate(b)
+      if (dateA && dateB) {
+        return activeTab === 'planned' ? dateA.localeCompare(dateB) : dateB.localeCompare(dateA)
+      }
+      if (!dateA && !dateB) return b.addedAt - a.addedAt
+      return dateA ? -1 : 1
+    })
+  }, [activeTab, activeTabEntries, selectedDate])
+
+  const calendarEntries = useMemo(() => activeTabEntries, [activeTabEntries])
+
+  const handleOpenDateEditor = useCallback((item: DisplayEntry, e?: any) => {
+    if (Platform.OS === 'web') {
+      e?.preventDefault?.()
+      e?.stopPropagation?.()
+      e?.nativeEvent?.stopPropagation?.()
     }
-    if (activeTab === 'planned') {
-      return [...all].sort((a, b) => {
-        if (a.plannedDate && b.plannedDate) return a.plannedDate.localeCompare(b.plannedDate)
-        return a.plannedDate ? -1 : 1
-      })
+    setDateEditingItem(item)
+    setDateInput(getTravelStatusCalendarDate(item) ?? '')
+    setDateError('')
+  }, [])
+
+  const handleCloseDateEditor = useCallback(() => {
+    setDateEditingItem(null)
+    setDateInput('')
+    setDateError('')
+  }, [])
+
+  const saveItemDate = useCallback(async (item: DisplayEntry, value: string | null) => {
+    const dateField = getDateFieldForStatus(item.status)
+    await setStatus(
+      {
+        id: item.id,
+        type: 'travel',
+        title: item.title,
+        url: item.url,
+        imageUrl: item.imageUrl,
+        country: item.country,
+        city: item.city,
+        status: item.status,
+        ...(value ? { [dateField]: value } : {}),
+      },
+      userId
+    )
+  }, [setStatus, userId])
+
+  const handleSaveDate = useCallback(async () => {
+    if (!dateEditingItem) return
+    if (!dateInput) {
+      setDateError('Укажите дату')
+      return
     }
-    return [...all].sort((a, b) => b.addedAt - a.addedAt)
-  }, [activeTab, selectedDate, getByStatus, entries, favoritesAsWishlist, authoredAsVisited]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (!parseTravelStatusDateParts(dateInput)) {
+      setDateError('Введите дату в формате ГГГГ-ММ-ДД')
+      return
+    }
+    await saveItemDate(dateEditingItem, dateInput)
+    handleCloseDateEditor()
+  }, [dateEditingItem, dateInput, handleCloseDateEditor, saveItemDate])
+
+  const handleClearDate = useCallback(async () => {
+    if (!dateEditingItem) return
+    await saveItemDate(dateEditingItem, null)
+    handleCloseDateEditor()
+  }, [dateEditingItem, handleCloseDateEditor, saveItemDate])
 
   // Счётчики для табов
   const tabCounts = useMemo(() => ({
@@ -179,8 +283,11 @@ export default function CalendarScreen() {
     wishlist: getByStatus('wishlist').length + favoritesAsWishlist.length,
   }), [getByStatus, entries, favoritesAsWishlist, authoredAsVisited]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Поездки для MiniCalendar (только planned)
-  const plannedEntries = useMemo(() => getByStatus('planned'), [getByStatus, entries]) // eslint-disable-line react-hooks/exhaustive-deps
+  const badgeColors = useMemo<Record<TravelStatus, string>>(() => ({
+    visited: colors.success,
+    planned: colors.primary,
+    wishlist: colors.warning,
+  }), [colors])
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -193,6 +300,7 @@ export default function CalendarScreen() {
       paddingTop: 8,
       paddingBottom: 4,
       gap: 8,
+      flexWrap: 'wrap',
     },
     tabBtn: {
       flexDirection: 'row',
@@ -246,14 +354,41 @@ export default function CalendarScreen() {
       paddingBottom: 32,
       paddingTop: 4,
     },
+    plannedLayout: {
+      ...(isWideLayout
+        ? {
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+            gap: 16,
+            paddingHorizontal: 16,
+            paddingTop: 4,
+          } as any
+        : null),
+    },
+    calendarPane: {
+      ...(isWideLayout
+        ? {
+            width: 360,
+            flexShrink: 0,
+          } as any
+        : null),
+    },
+    plannedListPane: {
+      flex: 1,
+      minWidth: 0,
+      ...(isWideLayout ? { paddingTop: 0 } as any : null),
+    },
     cardsGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 12,
     },
     cardWrap: {
-      width: '100%',
+      width: isWideLayout ? 'calc(33.333% - 8px)' as any : '100%',
+      minWidth: isWideLayout ? 260 : undefined,
       marginBottom: 12,
+      position: 'relative',
+      ...(Platform.OS === 'web' ? { flexGrow: 0 } as any : null),
     },
     skeletonWrap: {
       padding: 16,
@@ -280,13 +415,121 @@ export default function CalendarScreen() {
       lineHeight: 16,
     },
     plannedDateLabel: {
-      fontSize: 12,
-      fontWeight: '500',
-      color: colors.textMuted,
-      marginTop: 4,
-      paddingHorizontal: 12,
+      position: 'absolute',
+      top: 10,
+      right: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.primary,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      zIndex: 3,
+      ...(Platform.OS === 'web'
+        ? {
+            boxShadow: DESIGN_TOKENS.shadows.light,
+            cursor: 'pointer',
+          } as any
+        : null),
     },
-  }), [colors])
+    plannedDateLabelEmpty: {
+      backgroundColor: colors.surface,
+      borderColor: colors.borderLight,
+    },
+    plannedDateText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.surface,
+    },
+    plannedDateTextEmpty: {
+      color: colors.primary,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.45)',
+      justifyContent: 'flex-end',
+    },
+    modalSheet: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: DESIGN_TOKENS.radii.xl,
+      borderTopRightRadius: DESIGN_TOKENS.radii.xl,
+      paddingTop: 8,
+      paddingHorizontal: 20,
+      paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+    },
+    modalHandle: {
+      width: 36,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: colors.borderLight,
+      alignSelf: 'center',
+      marginBottom: 16,
+    },
+    modalTitle: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 6,
+    },
+    modalSubtitle: {
+      fontSize: 13,
+      color: colors.textMuted,
+      lineHeight: 18,
+      marginBottom: 14,
+    },
+    dateInput: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 15,
+      color: colors.text,
+      backgroundColor: colors.background,
+    },
+    dateError: {
+      fontSize: 12,
+      color: colors.danger,
+      marginTop: 6,
+    },
+    dateActions: {
+      flexDirection: 'row',
+      gap: 10,
+      marginTop: 14,
+      flexWrap: 'wrap',
+    },
+    dateSecondaryBtn: {
+      flexGrow: 1,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      alignItems: 'center',
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+    },
+    datePrimaryBtn: {
+      flexGrow: 1,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      alignItems: 'center',
+      backgroundColor: colors.primary,
+    },
+    dateSecondaryText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    datePrimaryText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.surface,
+    },
+  }), [colors, isWideLayout])
 
   const seoBlock = (
     <InstantSEO
@@ -384,99 +627,160 @@ export default function CalendarScreen() {
         style={webTouchScrollStyle}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hint — how to add items */}
-        {activeTab === 'wishlist' && (
-          <View style={styles.hint}>
-            <Feather name="info" size={13} color={colors.textMuted} />
-            <Text style={styles.hintText}>
-              Избранные ❤️ автоматически попада��т сюда. Или открой путешествие → «Добавить в план» → «Хочу поехать».
-            </Text>
-          </View>
-        )}
-        {activeTab === 'planned' && (
-          <View style={styles.hint}>
-            <Feather name="info" size={13} color={colors.textMuted} />
-            <Text style={styles.hintText}>
-              Открой путешествие → на��ми «Добавить в план» → «Планирую» → выбери дату.
-            </Text>
-          </View>
-        )}
-        {activeTab === 'visited' && (
-          <View style={styles.hint}>
-            <Feather name="info" size={13} color={colors.textMuted} />
-            <Text style={styles.hintText}>
-              Здесь путешествия, которые ты добавил на сайт, а также отмеченные как «Был здесь».
-            </Text>
-          </View>
-        )}
-        {/* Mini calendar — only for planned tab */}
-        {activeTab === 'planned' && (
-          <MiniCalendar
-            entries={plannedEntries}
-            onDayPress={handleDayPress}
-            selectedDate={selectedDate}
-          />
-        )}
-
-        {/* Active date filter chip */}
-        {activeTab === 'planned' && selectedDate && (
-          <View style={styles.filterRow}>
-            <Pressable
-              style={[styles.filterChip, globalFocusStyles.focusable]}
-              onPress={() => setSelectedDate(null)}
-              accessibilityRole="button"
-              accessibilityLabel={`Сбросить фильтр: ${selectedDate}`}
-            >
-              <Feather name="calendar" size={13} color={colors.primary} />
-              <Text style={styles.filterChipText}>{selectedDate}</Text>
-              <Feather name="x" size={13} color={colors.primary} />
-            </Pressable>
-          </View>
-        )}
-
-        {/* Content */}
-        {tabData.length === 0 ? (
-          <EmptyState
-            icon={emptyConfig.icon}
-            title={emptyConfig.title}
-            description={emptyConfig.description}
-            variant="empty"
-            action={{
-              label: emptyConfig.actionLabel,
-              onPress: () => router.push('/search'),
-            }}
-          />
-        ) : (
-          <View style={styles.listContent}>
-            {tabData.map((item: DisplayEntry) => (
-              <View key={`${item._isFavorite ? 'fav' : item.status}-${item.id}`} style={styles.cardWrap}>
-                <TabTravelCard
-                  item={{
-                    id: item.id,
-                    title: cleanTravelTitle(item.title, item.country),
-                    imageUrl: item.imageUrl,
-                    city: item.city ?? null,
-                    country: item.country ?? null,
-                  }}
-                  badge={{
-                    icon: item._isFavorite ? 'heart' : item._isAuthored ? 'edit-2' : (TABS.find((t) => t.key === item.status)?.icon ?? 'bookmark'),
-                    backgroundColor: item._isFavorite ? colors.danger : BADGE_COLORS[item.status],
-                    iconColor: '#ffffff',
-                  }}
-                  onPress={() => router.push(item.url as any)}
-                  layout="grid"
-                />
-                {item.status === 'planned' && item.plannedDate && (
-                  <Text style={styles.plannedDateLabel}>
-                    📅 {item.plannedDate}
-                  </Text>
-                )}
+        <View style={styles.plannedLayout}>
+          <View style={styles.calendarPane}>
+            <View style={styles.hint}>
+              <Feather name="info" size={13} color={colors.textMuted} />
+              <Text style={styles.hintText}>{TAB_HINTS[activeTab]}</Text>
+            </View>
+            <MiniCalendar
+              entries={calendarEntries}
+              onDayPress={handleDayPress}
+              selectedDate={selectedDate}
+            />
+            {selectedDate && (
+              <View style={styles.filterRow}>
+                <Pressable
+                  style={[styles.filterChip, globalFocusStyles.focusable]}
+                  onPress={() => setSelectedDate(null)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Сбросить фильтр: ${selectedDate}`}
+                >
+                  <Feather name="calendar" size={13} color={colors.primary} />
+                  <Text style={styles.filterChipText}>{selectedDate}</Text>
+                  <Feather name="x" size={13} color={colors.primary} />
+                </Pressable>
               </View>
-            ))}
+            )}
           </View>
-        )}
+
+          <View style={[styles.listContent, styles.plannedListPane]}>
+            {tabData.length === 0 ? (
+              <EmptyState
+                icon={emptyConfig.icon}
+                title={emptyConfig.title}
+                description={emptyConfig.description}
+                variant="empty"
+                action={{
+                  label: emptyConfig.actionLabel,
+                  onPress: () => router.push('/search'),
+                }}
+              />
+            ) : (
+              <View style={styles.cardsGrid}>
+                {tabData.map((item: DisplayEntry) => {
+                  const calendarDate = getTravelStatusCalendarDate(item)
+                  const hasCalendarDate = Boolean(calendarDate)
+                  return (
+                    <View key={`${item._isFavorite ? 'fav' : item.status}-${item.id}`} style={styles.cardWrap}>
+                      <TabTravelCard
+                        item={{
+                          id: item.id,
+                          title: cleanTravelTitle(item.title, item.country),
+                          imageUrl: item.imageUrl,
+                          city: item.city ?? null,
+                          country: item.country ?? null,
+                        }}
+                        badge={{
+                          icon: item._isFavorite ? 'heart' : item._isAuthored ? 'edit-2' : (TABS.find((t) => t.key === item.status)?.icon ?? 'bookmark'),
+                          backgroundColor: item._isFavorite ? colors.danger : badgeColors[item.status],
+                          iconColor: colors.surface,
+                        }}
+                        onPress={() => router.push(item.url as any)}
+                        layout="grid"
+                        mediaFit="cover"
+                      />
+                      <Pressable
+                        style={[
+                          styles.plannedDateLabel,
+                          !hasCalendarDate && styles.plannedDateLabelEmpty,
+                          globalFocusStyles.focusable,
+                        ]}
+                        onPress={(event) => handleOpenDateEditor(item, event)}
+                        accessibilityRole="button"
+                        accessibilityLabel={hasCalendarDate ? `Изменить дату ${calendarDate}` : 'Добавить дату'}
+                      >
+                        <Feather
+                          name={hasCalendarDate ? 'calendar' : 'plus'}
+                          size={12}
+                          color={hasCalendarDate ? colors.surface : colors.primary}
+                        />
+                        <Text style={[styles.plannedDateText, !hasCalendarDate && styles.plannedDateTextEmpty]}>
+                          {calendarDate ?? 'Дата'}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  )
+                })}
+              </View>
+            )}
+          </View>
+        </View>
       </ScrollView>
+
+      <Modal
+        visible={Boolean(dateEditingItem)}
+        transparent
+        animationType="slide"
+        onRequestClose={handleCloseDateEditor}
+      >
+        <Pressable style={styles.modalOverlay} onPress={handleCloseDateEditor}>
+          <Pressable style={styles.modalSheet} onPress={(event) => event.stopPropagation()}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Дата путешествия</Text>
+            <Text style={styles.modalSubtitle}>
+              {dateEditingItem?.status === 'visited'
+                ? 'Укажи дату, когда ты был в этом путешествии.'
+                : dateEditingItem?.status === 'wishlist'
+                  ? 'Укажи ориентировочную дату для списка желаний.'
+                  : 'Укажи дату запланированной поездки.'}
+            </Text>
+            {Platform.OS === 'web' ? (
+              <WebDateInput value={dateInput} onChange={(value) => { setDateInput(value); setDateError('') }} />
+            ) : (
+              <TextInput
+                style={styles.dateInput}
+                value={dateInput}
+                onChangeText={(value) => { setDateInput(value); setDateError('') }}
+                placeholder="ГГГГ-ММ-ДД"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="numbers-and-punctuation"
+                maxLength={10}
+                accessibilityLabel="Дата путешествия"
+              />
+            )}
+            {!!dateError && <Text style={styles.dateError}>{dateError}</Text>}
+            <View style={styles.dateActions}>
+              {dateEditingItem && getTravelStatusCalendarDate(dateEditingItem) && (
+                <Pressable
+                  style={[styles.dateSecondaryBtn, globalFocusStyles.focusable]}
+                  onPress={handleClearDate}
+                  accessibilityRole="button"
+                  accessibilityLabel="Убрать дату"
+                >
+                  <Text style={styles.dateSecondaryText}>Убрать дату</Text>
+                </Pressable>
+              )}
+              <Pressable
+                style={[styles.dateSecondaryBtn, globalFocusStyles.focusable]}
+                onPress={handleCloseDateEditor}
+                accessibilityRole="button"
+                accessibilityLabel="Отмена"
+              >
+                <Text style={styles.dateSecondaryText}>Отмена</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.datePrimaryBtn, globalFocusStyles.focusable]}
+                onPress={handleSaveDate}
+                accessibilityRole="button"
+                accessibilityLabel="Сохранить дату"
+              >
+                <Text style={styles.datePrimaryText}>Сохранить</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   )
 }
-

@@ -4,7 +4,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { useThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { globalFocusStyles } from '@/styles/globalFocus'
-import type { TravelStatusEntry } from '@/stores/travelStatusStore'
+import { getTravelStatusCalendarDate, parseTravelStatusDateParts, type TravelStatusEntry } from '@/stores/travelStatusStore'
 
 const MONTH_NAMES = [
   'Январь', 'Февраль', 'Март', 'Апрель',
@@ -30,11 +30,10 @@ export default function MiniCalendar({ entries, onDayPress, selectedDate }: Prop
   const markedDates = useMemo(() => {
     const set = new Set<string>()
     entries.forEach((e) => {
-      if (e.plannedDate) {
-        const d = new Date(e.plannedDate)
-        if (d.getFullYear() === year && d.getMonth() + 1 === month) {
-          set.add(e.plannedDate)
-        }
+      const calendarDate = getTravelStatusCalendarDate(e)
+      const dateParts = parseTravelStatusDateParts(calendarDate)
+      if (dateParts?.year === year && dateParts.month === month && calendarDate) {
+        set.add(calendarDate)
       }
     })
     return set

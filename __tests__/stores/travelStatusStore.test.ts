@@ -15,7 +15,7 @@ jest.mock('@/utils/safeJsonParse', () => ({
   }),
 }))
 
-import { useTravelStatusStore } from '@/stores/travelStatusStore'
+import { parseTravelStatusDateParts, useTravelStatusStore } from '@/stores/travelStatusStore'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
 
 const makeEntry = (
@@ -77,6 +77,26 @@ describe('travelStatusStore', () => {
       )
       const entry = useTravelStatusStore.getState().entries[0]
       expect(entry.plannedDate).toBe('2026-07-15')
+    })
+
+    it('сохраняет visitedDate для статуса visited', async () => {
+      await act(() =>
+        useTravelStatusStore.getState().setStatus(
+          makeEntry(3, 'visited', { visitedDate: '2026-05-12' }),
+          null
+        )
+      )
+      expect(useTravelStatusStore.getState().entries[0].visitedDate).toBe('2026-05-12')
+    })
+
+    it('сохраняет wishlistDate для статуса wishlist', async () => {
+      await act(() =>
+        useTravelStatusStore.getState().setStatus(
+          makeEntry(4, 'wishlist', { wishlistDate: '2026-09-01' }),
+          null
+        )
+      )
+      expect(useTravelStatusStore.getState().entries[0].wishlistDate).toBe('2026-09-01')
     })
 
     it('персистирует в AsyncStorage без userId', async () => {
@@ -161,7 +181,7 @@ describe('travelStatusStore', () => {
   })
 
   describe('getByMonth', () => {
-    it('возвращает только planned записи в указанном месяце', async () => {
+    it('возвращает записи всех статусов с календарной датой в указанном месяце', async () => {
       await act(() =>
         useTravelStatusStore.getState().setStatus(
           makeEntry(1, 'planned', { plannedDate: '2026-07-15' }),
@@ -170,21 +190,23 @@ describe('travelStatusStore', () => {
       )
       await act(() =>
         useTravelStatusStore.getState().setStatus(
-          makeEntry(2, 'planned', { plannedDate: '2026-08-01' }),
+          makeEntry(2, 'visited', { visitedDate: '2026-07-20' }),
           null
         )
       )
       await act(() =>
-        useTravelStatusStore.getState().setStatus(makeEntry(3, 'visited'), null)
+        useTravelStatusStore.getState().setStatus(
+          makeEntry(3, 'wishlist', { wishlistDate: '2026-08-01' }),
+          null
+        )
       )
 
       const july = useTravelStatusStore.getState().getByMonth(2026, 7)
-      expect(july).toHaveLength(1)
-      expect(july[0].id).toBe(1)
+      expect(july.map((entry) => entry.id).sort()).toEqual([1, 2])
 
       const aug = useTravelStatusStore.getState().getByMonth(2026, 8)
       expect(aug).toHaveLength(1)
-      expect(aug[0].id).toBe(2)
+      expect(aug[0].id).toBe(3)
 
       const june = useTravelStatusStore.getState().getByMonth(2026, 6)
       expect(june).toHaveLength(0)
@@ -202,6 +224,22 @@ describe('travelStatusStore', () => {
         }],
       })
       expect(useTravelStatusStore.getState().getByMonth(2026, 7)).toHaveLength(0)
+    })
+
+    it('игнорирует некорректные даты без Date-нормализации', async () => {
+      useTravelStatusStore.setState({
+        entries: [{
+          id: 100,
+          type: 'travel',
+          title: 'Invalid date',
+          url: '/travels/100',
+          status: 'planned',
+          plannedDate: '2026-02-31',
+          addedAt: Date.now(),
+        }],
+      })
+      expect(useTravelStatusStore.getState().getByMonth(2026, 3)).toHaveLength(0)
+      expect(useTravelStatusStore.getState().getByMonth(2026, 2)).toHaveLength(0)
     })
   })
 
@@ -234,7 +272,11 @@ describe('travelStatusStore', () => {
       expect(useTravelStatusStore.getState().entries).toHaveLength(1)
     })
 
-    it('ничего не делает при пустом хранилище', async () => {
+    it('очищает записи при пустом хранилище', async () => {
+      useTravelStatusStore.setState({
+        entries: [{ id: 1, type: 'travel', title: 'Stale', url: '/travels/1', status: 'planned', plannedDate: '2026-07-15', addedAt: 100 }],
+        _userId: 'old',
+      })
       ;(AsyncStorage.getItem as jest.Mock).mockResolvedValue(null)
       await act(() => useTravelStatusStore.getState().loadLocal(null))
       expect(useTravelStatusStore.getState().entries).toHaveLength(0)
@@ -246,5 +288,16 @@ describe('travelStatusStore', () => {
       expect(useTravelStatusStore.getState()._userId).toBe('55')
     })
   })
-})
 
+  describe('parseTravelStatusDateParts', () => {
+    it('валидирует реальную ISO-дату', () => {
+      expect(parseTravelStatusDateParts('2026-05-12')).toEqual({ year: 2026, month: 5, day: 12 })
+    })
+
+    it('отклоняет невозможные календарные даты', () => {
+      expect(parseTravelStatusDateParts('2026-02-31')).toBeNull()
+      expect(parseTravelStatusDateParts('2026-13-01')).toBeNull()
+      expect(parseTravelStatusDateParts('2026-00-01')).toBeNull()
+    })
+  })
+})
