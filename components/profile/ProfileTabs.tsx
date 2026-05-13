@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
@@ -16,6 +17,12 @@ interface ProfileTabsProps {
   };
 }
 
+const TAB_ICONS: Record<ProfileTabKey, React.ComponentProps<typeof Feather>['name']> = {
+  travels: 'map',
+  favorites: 'heart',
+  history: 'clock',
+};
+
 export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps) {
   const colors = useThemedColors();
 
@@ -23,57 +30,41 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
     () =>
       StyleSheet.create({
         wrapper: {
-          paddingHorizontal: DESIGN_TOKENS.spacing.md,
-          paddingBottom: DESIGN_TOKENS.spacing.xs,
           backgroundColor: colors.background,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.borderLight,
           ...Platform.select({
             web: {
               position: 'sticky',
-              top: 88,
+              top: 0,
               zIndex: DESIGN_TOKENS.zIndex.sticky,
-              paddingTop: DESIGN_TOKENS.spacing.xs,
             } as any,
             default: {},
           }),
         },
-        segmentTrack: {
+        tabRow: {
           flexDirection: 'row',
-          backgroundColor: colors.backgroundSecondary,
-          borderRadius: DESIGN_TOKENS.radii.md,
-          padding: 3,
-          borderWidth: 1,
-          borderColor: colors.borderLight,
+          paddingHorizontal: DESIGN_TOKENS.spacing.md,
         },
         tab: {
           flex: 1,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: DESIGN_TOKENS.spacing.xxs,
-          paddingVertical: 8,
+          gap: 6,
+          paddingVertical: DESIGN_TOKENS.spacing.sm,
           paddingHorizontal: DESIGN_TOKENS.spacing.xs,
-          borderRadius: DESIGN_TOKENS.radii.sm,
-          minHeight: DESIGN_TOKENS.touchTarget.minHeight - 8,
+          minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+          borderBottomWidth: 2,
+          borderBottomColor: 'transparent',
+          marginBottom: -1,
           ...Platform.select({
             web: { cursor: 'pointer' } as any,
             default: {},
           }),
         },
         activeTab: {
-          backgroundColor: colors.surface,
-          // Orange bottom accent inside active tab
-          borderBottomWidth: 2,
-          borderBottomColor: colors.brand,
-          ...Platform.select({
-            ios: {
-              shadowColor: '#000',
-              shadowOpacity: 0.06,
-              shadowRadius: 4,
-              shadowOffset: { width: 0, height: 1 },
-            },
-            android: { elevation: 2 },
-            default: {},
-          }),
+          borderBottomColor: colors.primary,
         },
         tabText: {
           fontSize: DESIGN_TOKENS.typography.sizes.sm,
@@ -81,19 +72,19 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
           color: colors.textMuted,
         },
         activeTabText: {
-          color: colors.brandText,
-          fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
+          color: colors.primary,
+          fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
         },
         badge: {
           paddingHorizontal: 6,
-          paddingVertical: 2,
+          paddingVertical: 1,
           borderRadius: DESIGN_TOKENS.radii.pill,
-          backgroundColor: colors.borderLight,
+          backgroundColor: colors.backgroundSecondary,
           minWidth: 20,
           alignItems: 'center',
         },
         activeBadge: {
-          backgroundColor: colors.brand,
+          backgroundColor: colors.primarySoft,
         },
         badgeText: {
           fontSize: 11,
@@ -101,7 +92,7 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
           color: colors.textMuted,
         },
         activeBadgeText: {
-          color: colors.surface,
+          color: colors.primary,
           fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
         },
       }),
@@ -116,7 +107,7 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
 
   return (
     <View style={styles.wrapper} accessibilityRole="tablist">
-      <View style={styles.segmentTrack}>
+      <View style={styles.tabRow}>
         {tabs.map((tab) => {
           const isActive = activeTab === tab.key;
           const count = counts?.[tab.key];
@@ -136,6 +127,11 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
               accessibilityLabel={`${tab.label}${showBadge ? `: ${count}` : ''}`}
               accessibilityHint={tab.hint}
             >
+              <Feather
+                name={TAB_ICONS[tab.key]}
+                size={15}
+                color={isActive ? colors.primary : colors.textMuted}
+              />
               <Text style={[styles.tabText, isActive && styles.activeTabText]}>
                 {tab.label}
               </Text>

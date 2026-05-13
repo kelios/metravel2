@@ -389,11 +389,11 @@ export default function ProfileScreen() {
       gap: 0,
       overflow: 'hidden',
     },
-    skeletonAvatarRow: {
-      alignItems: 'center',
-      marginTop: -50,
-      paddingBottom: 12,
-    },
+        skeletonAvatarRow: {
+          alignItems: 'center',
+          marginTop: -62,
+          paddingBottom: 12,
+        },
     skeletonCenterText: {
       alignItems: 'center',
       gap: 8,
@@ -452,19 +452,27 @@ export default function ProfileScreen() {
         {profileLoading ? (
           <View style={styles.skeletonWrap}>
             {/* Cover skeleton */}
-            <SkeletonLoader width="100%" height={88} borderRadius={0} />
+            <SkeletonLoader width="100%" height={130} borderRadius={0} />
             {/* Avatar skeleton centered below cover */}
             <View style={styles.skeletonAvatarRow}>
-              <SkeletonLoader width={100} height={100} borderRadius={50} />
+              <SkeletonLoader width={124} height={124} borderRadius={62} />
             </View>
             {/* Name + email centered */}
             <View style={styles.skeletonCenterText}>
-              <SkeletonLoader width={160} height={22} borderRadius={4} />
-              <SkeletonLoader width={200} height={14} borderRadius={4} />
+              <SkeletonLoader width={170} height={22} borderRadius={4} />
+              <SkeletonLoader width={210} height={14} borderRadius={4} />
             </View>
-            {/* Stats row */}
+            {/* Edit button */}
+            <View style={styles.skeletonCenterText}>
+              <SkeletonLoader width={140} height={40} borderRadius={20} />
+            </View>
+            {/* Stats row — 3 separate cards */}
             <View style={styles.skeletonStatsRow}>
-              <SkeletonLoader width="100%" height={68} borderRadius={12} />
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <SkeletonLoader width="31%" height={88} borderRadius={12} />
+                <SkeletonLoader width="31%" height={88} borderRadius={12} />
+                <SkeletonLoader width="31%" height={88} borderRadius={12} />
+              </View>
             </View>
           </View>
         ) : (

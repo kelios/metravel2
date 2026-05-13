@@ -19,6 +19,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 import { useResponsive } from '@/hooks/useResponsive';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
+import { useAuth } from '@/context/AuthContext';
+import { parseTravelStatusDateParts, useTravelStatusStore } from '@/stores/travelStatusStore';
 
 const MultiSelectFieldAny: any = MultiSelectField;
 
@@ -113,6 +115,8 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                                                                      showAdditionalFields = true,
                                                                  }) => {
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
+    const { userId } = useAuth();
+    const { getStatus, setStatus } = useTravelStatusStore();
     const { isPhone, isLargePhone } = useResponsive();
     const isMobile = isPhone || isLargePhone;
     const isLoading = !formData || !filters;
@@ -187,6 +191,17 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
     }, [formData, handleFieldChange]);
 
     const form: any = formData;
+    const currentCalendarStatus = form?.id ? getStatus(form.id) : undefined;
+
+    useEffect(() => {
+        if (!formData?.id) return;
+        if (formData.visitedDate) return;
+        const currentVisitedDate = currentCalendarStatus?.status === 'visited'
+            ? currentCalendarStatus.visitedDate
+            : undefined;
+        if (!currentVisitedDate) return;
+        handleFieldChange('visitedDate', currentVisitedDate);
+    }, [currentCalendarStatus?.status, currentCalendarStatus?.visitedDate, formData?.id, formData?.visitedDate, handleFieldChange]);
 
     const openPreview = useCallback(() => {
         const slug = form?.slug;
@@ -221,6 +236,33 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
     );
     const handleMonthChange = useCallback((v: any) => handleFieldChange('month', v), [handleFieldChange]);
     const handleVisaChange = useCallback((v: any) => handleFieldChange('visa', v), [handleFieldChange]);
+    const handleVisitedDateChange = useCallback((value: string) => {
+        const normalized = value.trim();
+        handleFieldChange('visitedDate', normalized);
+        if (!form?.id || !parseTravelStatusDateParts(normalized)) return;
+        void setStatus(
+            {
+                id: form.id,
+                type: 'travel',
+                title: form.name || travelDataOld?.name || 'Без названия',
+                url: form.slug ? `/travels/${form.slug}` : `/travels/${form.id}`,
+                imageUrl:
+                    form.travel_image_thumb_url ||
+                    form.travel_image_thumb_small_url ||
+                    travelDataOld?.travel_image_thumb_url ||
+                    travelDataOld?.travel_image_thumb_small_url ||
+                    undefined,
+                country: travelDataOld?.countryName || undefined,
+                city: travelDataOld?.cityName || undefined,
+                status: 'visited',
+                visitedDate: normalized,
+                travelYear: form.year,
+                travelMonth: form.month,
+                travelMonthName: travelDataOld?.monthName,
+            },
+            userId
+        );
+    }, [form?.id, form?.name, form?.slug, form?.travel_image_thumb_url, form?.travel_image_thumb_small_url, form?.year, form?.month, handleFieldChange, setStatus, travelDataOld, userId]);
 
     if (isLoading) {
         return (
@@ -385,6 +427,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                     />
 
                     {renderNumericInput('Год путешествия', 'year')}
+                    {renderVisitedDateInput()}
                     <CheckboxComponent
                         label="Требуется виза"
                         value={form.visa ?? false}
@@ -419,6 +462,30 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                     keyboardType={Platform.select({ ios: 'number-pad', android: 'numeric', default: 'numeric' })}
                     inputMode="numeric"
                 />
+            </View>
+        );
+    }
+
+    function renderVisitedDateInput() {
+        const value = String(form.visitedDate ?? '');
+        const isInvalid = value.length > 0 && !parseTravelStatusDateParts(value);
+
+        return (
+            <View style={styles.inputGroup}>
+                <Text style={styles.label}>Дата, когда был(а)</Text>
+                <TextInput
+                    style={[styles.input, isInvalid && styles.inputInvalid]}
+                    value={value}
+                    onChangeText={handleVisitedDateChange}
+                    placeholder="ГГГГ-ММ-ДД"
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="numbers-and-punctuation"
+                    maxLength={10}
+                    accessibilityLabel="Дата, когда был в путешествии"
+                />
+                <Text style={styles.fieldHint}>
+                    Если точная дата не указана, календарь отнесёт поездку к месяцу и году путешествия.
+                </Text>
             </View>
         );
     }
@@ -462,10 +529,19 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.surface, // ✅ ДИЗАЙН: Динамический цвет фона
         color: colors.text, // ✅ ДИЗАЙН: Динамический цвет текста
     },
+    inputInvalid: {
+        borderColor: colors.danger,
+    },
     label: {
         fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
         marginBottom: 4,
         color: colors.text, // ✅ ДИЗАЙН: Динамический цвет текста
+    },
+    fieldHint: {
+        marginTop: 4,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        color: colors.textMuted,
+        lineHeight: 16,
     },
 
     resetButton: {

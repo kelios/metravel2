@@ -291,6 +291,7 @@ export function transformTravelToFormData(travel: Travel): TravelFormData {
     ...mergedTravel,
     id: String(travel.id),
     year: yearStr,
+    visitedDate: String(travelRecord.visitedDate ?? travelRecord.visited_date ?? ''),
     number_days: daysStr,
     number_peoples: peoplesStr,
     description,

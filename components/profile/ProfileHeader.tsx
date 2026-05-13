@@ -39,8 +39,9 @@ const SOCIAL_ICONS: Record<string, React.ComponentProps<typeof Feather>['name']>
   vk: 'link',
 };
 
-const AVATAR_SIZE = 100;
-const COVER_HEIGHT = 88;
+const AVATAR_SIZE = 116;
+const COVER_HEIGHT = 130;
+const AVATAR_BORDER = 4;
 
 const getInitials = (name: string) =>
   name
@@ -80,24 +81,52 @@ export function ProfileHeader({
           backgroundColor: colors.background,
           paddingBottom: DESIGN_TOKENS.spacing.md,
         },
-        // Cover band at top
         cover: {
           height: COVER_HEIGHT,
           backgroundColor: colors.primaryLight,
           position: 'relative',
+          overflow: 'hidden',
+        },
+        coverGradient: {
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 60,
+          ...Platform.select({
+            web: {
+              background: `linear-gradient(to bottom, transparent, ${colors.background}22)`,
+            } as any,
+            default: {},
+          }),
         },
         menuWrap: {
           position: 'absolute',
           top: DESIGN_TOKENS.spacing.xs,
           right: DESIGN_TOKENS.spacing.xs,
         },
-        // Avatar section — overlapping cover
+        // Avatar overlapping cover
         avatarSection: {
           alignItems: 'center',
-          marginTop: -(AVATAR_SIZE / 2),
+          marginTop: -(AVATAR_SIZE / 2 + AVATAR_BORDER),
         },
-        avatarContainer: {
-          position: 'relative',
+        avatarRing: {
+          width: AVATAR_SIZE + AVATAR_BORDER * 2,
+          height: AVATAR_SIZE + AVATAR_BORDER * 2,
+          borderRadius: (AVATAR_SIZE + AVATAR_BORDER * 2) / 2,
+          backgroundColor: colors.background,
+          alignItems: 'center',
+          justifyContent: 'center',
+          ...Platform.select({
+            ios: {
+              shadowColor: '#000',
+              shadowOpacity: 0.12,
+              shadowRadius: 16,
+              shadowOffset: { width: 0, height: 6 },
+            },
+            android: { elevation: 6 },
+            default: {},
+          }),
         },
         avatar: {
           width: AVATAR_SIZE,
@@ -106,50 +135,39 @@ export function ProfileHeader({
           backgroundColor: colors.primaryLight,
           alignItems: 'center',
           justifyContent: 'center',
-          borderWidth: 3,
-          borderColor: colors.background,
+          overflow: 'hidden',
           ...Platform.select({
             web: { cursor: 'pointer' } as any,
             default: {},
           }),
-          // Subtle shadow for avatar pop
-          ...Platform.select({
-            ios: {
-              shadowColor: '#000',
-              shadowOpacity: 0.1,
-              shadowRadius: 12,
-              shadowOffset: { width: 0, height: 4 },
-            },
-            android: { elevation: 4 },
-            default: {},
-          }),
         },
         avatarImage: {
-          width: AVATAR_SIZE - 6,
-          height: AVATAR_SIZE - 6,
-          borderRadius: (AVATAR_SIZE - 6) / 2,
+          width: AVATAR_SIZE,
+          height: AVATAR_SIZE,
+          borderRadius: AVATAR_SIZE / 2,
         },
         avatarPlaceholder: {
-          fontSize: 36,
+          fontSize: 38,
           fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
           color: colors.primary,
+          letterSpacing: -1,
         },
-        editBadge: {
+        cameraOverlay: {
           position: 'absolute',
-          bottom: 2,
-          right: 2,
-          backgroundColor: colors.surface,
-          borderRadius: DESIGN_TOKENS.radii.sm,
-          padding: 5,
-          borderWidth: 1,
-          borderColor: colors.border,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: AVATAR_SIZE * 0.32,
+          backgroundColor: colors.overlay,
+          alignItems: 'center',
+          justifyContent: 'center',
         },
-        // Centered user info
+        // User info section
         userInfo: {
           alignItems: 'center',
           paddingTop: DESIGN_TOKENS.spacing.sm,
-          paddingHorizontal: DESIGN_TOKENS.spacing.md,
-          gap: DESIGN_TOKENS.spacing.xxs,
+          paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+          gap: 4,
         },
         userName: {
           ...DESIGN_TOKENS.typography.scale.h2,
@@ -161,54 +179,65 @@ export function ProfileHeader({
           color: colors.textMuted,
           textAlign: 'center',
         },
-        // Edit button row centered
+
+        // Actions row
         actionsRow: {
           flexDirection: 'row',
           justifyContent: 'center',
-          marginTop: DESIGN_TOKENS.spacing.sm,
+          alignItems: 'center',
+          marginTop: DESIGN_TOKENS.spacing.md,
           gap: DESIGN_TOKENS.spacing.xs,
+          paddingHorizontal: DESIGN_TOKENS.spacing.md,
         },
         editButton: {
           flexDirection: 'row',
           alignItems: 'center',
           gap: 6,
-          paddingHorizontal: DESIGN_TOKENS.spacing.md,
-          paddingVertical: DESIGN_TOKENS.spacing.xs,
+          paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+          paddingVertical: 10,
           borderRadius: DESIGN_TOKENS.radii.pill,
-          backgroundColor: colors.surface,
-          borderWidth: 1,
-          borderColor: colors.border,
+          backgroundColor: colors.primary,
           minHeight: DESIGN_TOKENS.touchTarget.minHeight,
           ...Platform.select({
             web: { cursor: 'pointer' } as any,
+            default: {},
+          }),
+          ...Platform.select({
+            ios: {
+              shadowColor: colors.primary,
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              shadowOffset: { width: 0, height: 3 },
+            },
+            android: { elevation: 3 },
             default: {},
           }),
         },
         editButtonText: {
           fontSize: DESIGN_TOKENS.typography.sizes.sm,
           fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-          color: colors.text,
+          color: colors.textOnPrimary,
         },
-        // Social links centered
+        // Social links
         socialsRow: {
           flexDirection: 'row',
           flexWrap: 'wrap',
           justifyContent: 'center',
           gap: DESIGN_TOKENS.spacing.xs,
-          marginTop: DESIGN_TOKENS.spacing.sm,
+          marginTop: DESIGN_TOKENS.spacing.md,
           paddingHorizontal: DESIGN_TOKENS.spacing.md,
         },
         socialChip: {
           flexDirection: 'row',
           alignItems: 'center',
-          gap: DESIGN_TOKENS.spacing.xxs,
+          gap: 5,
           paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-          paddingVertical: 6,
+          paddingVertical: 7,
           borderRadius: DESIGN_TOKENS.radii.pill,
-          backgroundColor: colors.backgroundSecondary,
+          backgroundColor: colors.surface,
           borderWidth: 1,
-          borderColor: colors.borderLight,
-          minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+          borderColor: colors.border,
+          minHeight: DESIGN_TOKENS.touchTarget.minHeight - 4,
           ...Platform.select({
             web: { cursor: 'pointer' } as any,
             default: {},
@@ -223,6 +252,7 @@ export function ProfileHeader({
           height: 1,
           backgroundColor: colors.borderLight,
           marginTop: DESIGN_TOKENS.spacing.md,
+          marginHorizontal: DESIGN_TOKENS.spacing.md,
         },
       }),
     [colors]
@@ -230,8 +260,9 @@ export function ProfileHeader({
 
   return (
     <View style={styles.container}>
-      {/* Cover band */}
+      {/* Cover band with subtle gradient overlay */}
       <View style={styles.cover}>
+        <View style={styles.coverGradient} />
         <View style={styles.menuWrap}>
           <ProfileMenu onLogout={onLogout} onSettings={onEdit} />
         </View>
@@ -242,31 +273,32 @@ export function ProfileHeader({
         <Pressable
           onPress={onAvatarUpload}
           disabled={avatarUploading}
-          style={styles.avatarContainer}
           accessibilityRole="button"
           accessibilityLabel={avatarUploading ? 'Загрузка аватара' : 'Изменить аватар'}
           accessibilityHint="Нажмите, чтобы загрузить новое фото профиля"
         >
-          <View style={styles.avatar}>
-            {user.avatar ? (
-              <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
-            ) : (
-              <Text style={styles.avatarPlaceholder}>{getInitials(user.name || '?')}</Text>
-            )}
-          </View>
-          <View style={styles.editBadge}>
-            {avatarUploading ? (
-              <ActivityIndicator size="small" color={colors.text} />
-            ) : (
-              <Feather name="camera" size={12} color={colors.text} />
-            )}
+          <View style={styles.avatarRing}>
+            <View style={styles.avatar}>
+              {user.avatar ? (
+                <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarPlaceholder}>{getInitials(user.name || '?')}</Text>
+              )}
+              <View style={styles.cameraOverlay}>
+                {avatarUploading ? (
+                  <ActivityIndicator size="small" color={colors.textInverse} />
+                ) : (
+                  <Feather name="camera" size={14} color={colors.textInverse} />
+                )}
+              </View>
+            </View>
           </View>
         </Pressable>
       </View>
 
       {/* Name + Email */}
       <View style={styles.userInfo}>
-        <Text style={styles.userName} numberOfLines={1}>
+        <Text style={styles.userName} numberOfLines={2}>
           {user.name || 'Пользователь'}
         </Text>
         {!!user.email && (
@@ -283,13 +315,13 @@ export function ProfileHeader({
           style={({ pressed }) => [
             styles.editButton,
             globalFocusStyles.focusable,
-            { opacity: pressed ? 0.8 : 1 },
+            { opacity: pressed ? 0.85 : 1 },
           ]}
           accessibilityRole="button"
           accessibilityLabel="Редактировать профиль"
           accessibilityHint="Перейти к настройкам профиля"
         >
-          <Feather name="edit-2" size={14} color={colors.text} />
+          <Feather name="edit-2" size={14} color={colors.textOnPrimary} />
           <Text style={styles.editButtonText}>Редактировать</Text>
         </Pressable>
       </View>
@@ -303,7 +335,7 @@ export function ProfileHeader({
               style={({ pressed }) => [
                 styles.socialChip,
                 globalFocusStyles.focusable,
-                { opacity: pressed ? 0.8 : 1 },
+                { opacity: pressed ? 0.75 : 1 },
               ]}
               onPress={() => openExternalUrl(String(link.url))}
               accessibilityRole="link"
@@ -312,8 +344,8 @@ export function ProfileHeader({
             >
               <Feather
                 name={SOCIAL_ICONS[link.key] || 'link'}
-                size={14}
-                color={colors.brand}
+                size={13}
+                color={colors.primary}
               />
               <Text style={styles.socialChipText}>
                 {SOCIAL_LABELS[link.key] ?? link.label}

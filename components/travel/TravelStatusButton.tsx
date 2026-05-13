@@ -36,6 +36,9 @@ type Props = {
   travelImageUrl?: string
   travelCountry?: string
   travelCity?: string
+  travelYear?: string
+  travelMonth?: string | string[]
+  travelMonthName?: string
   /** Компактный режим: только иконка, стиль как у OptimizedFavoriteButton */
   compact?: boolean
 }
@@ -92,6 +95,9 @@ export default function TravelStatusButton({
   travelImageUrl,
   travelCountry,
   travelCity,
+  travelYear,
+  travelMonth,
+  travelMonthName,
   compact = false,
 }: Props) {
   const colors = useThemedColors()
@@ -140,6 +146,9 @@ export default function TravelStatusButton({
           imageUrl: travelImageUrl,
           country: travelCountry,
           city: travelCity,
+          travelYear,
+          travelMonth,
+          travelMonthName,
           status,
         },
         userId
@@ -151,7 +160,7 @@ export default function TravelStatusButton({
     } finally {
       inFlightRef.current = false
     }
-  }, [travelId, travelTitle, travelUrl, travelImageUrl, travelCountry, travelCity, userId, setStatus, current?.plannedDate])
+  }, [travelId, travelTitle, travelUrl, travelImageUrl, travelCountry, travelCity, travelYear, travelMonth, travelMonthName, userId, setStatus, current?.plannedDate])
 
   const handleConfirmDate = useCallback(async () => {
     if (!dateInput) {
@@ -176,6 +185,9 @@ export default function TravelStatusButton({
           imageUrl: travelImageUrl,
           country: travelCountry,
           city: travelCity,
+          travelYear,
+          travelMonth,
+          travelMonthName,
           status: 'planned',
           plannedDate: dateInput,
         },
@@ -187,7 +199,7 @@ export default function TravelStatusButton({
     } finally {
       inFlightRef.current = false
     }
-  }, [travelId, travelTitle, travelUrl, travelImageUrl, travelCountry, travelCity, userId, setStatus, dateInput])
+  }, [travelId, travelTitle, travelUrl, travelImageUrl, travelCountry, travelCity, travelYear, travelMonth, travelMonthName, userId, setStatus, dateInput])
 
   const handleRemove = useCallback(async () => {
     setModalOpen(false)

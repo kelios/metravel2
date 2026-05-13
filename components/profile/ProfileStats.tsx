@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
@@ -13,6 +14,12 @@ interface ProfileStatsProps {
   onPressStat?: (key: 'travels' | 'favorites' | 'views') => void;
 }
 
+const STAT_ICONS: Record<string, React.ComponentProps<typeof Feather>['name']> = {
+  travels: 'map',
+  favorites: 'heart',
+  views: 'eye',
+};
+
 export function ProfileStats({ stats, onPressStat }: ProfileStatsProps) {
   const colors = useThemedColors();
 
@@ -23,31 +30,29 @@ export function ProfileStats({ stats, onPressStat }: ProfileStatsProps) {
           flexDirection: 'row',
           marginHorizontal: DESIGN_TOKENS.spacing.md,
           marginBottom: DESIGN_TOKENS.spacing.md,
+          gap: DESIGN_TOKENS.spacing.xs,
+        },
+        statCard: {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingVertical: DESIGN_TOKENS.spacing.sm,
+          paddingHorizontal: DESIGN_TOKENS.spacing.xs,
           borderRadius: DESIGN_TOKENS.radii.md,
           backgroundColor: colors.surface,
           borderWidth: 1,
           borderColor: colors.borderLight,
-          // Orange top accent stripe
-          borderTopWidth: 3,
-          borderTopColor: colors.brand,
-          overflow: 'hidden',
+          gap: 4,
           ...Platform.select({
             ios: {
               shadowColor: '#000',
-              shadowOpacity: 0.05,
-              shadowRadius: 10,
-              shadowOffset: { width: 0, height: 3 },
+              shadowOpacity: 0.04,
+              shadowRadius: 8,
+              shadowOffset: { width: 0, height: 2 },
             },
-            android: { elevation: 2 },
+            android: { elevation: 1 },
             default: {},
           }),
-        },
-        statItem: {
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingVertical: DESIGN_TOKENS.spacing.md,
-          paddingHorizontal: DESIGN_TOKENS.spacing.xs,
           ...Platform.select({
             web: {
               cursor: onPressStat ? 'pointer' : 'default',
@@ -55,18 +60,22 @@ export function ProfileStats({ stats, onPressStat }: ProfileStatsProps) {
             default: {},
           }),
         },
-        statItemPressed: {
-          backgroundColor: colors.brandSoft,
+        statCardPressed: {
+          backgroundColor: colors.backgroundSecondary,
+          borderColor: colors.border,
         },
-        verticalDivider: {
-          width: 1,
-          backgroundColor: colors.borderLight,
-          alignSelf: 'stretch',
-          marginVertical: DESIGN_TOKENS.spacing.sm,
+        iconWrap: {
+          width: 36,
+          height: 36,
+          borderRadius: DESIGN_TOKENS.radii.sm,
+          backgroundColor: colors.primarySoft,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: 2,
         },
         statValue: {
-          ...DESIGN_TOKENS.typography.scale.h1,
-          color: colors.brandText,
+          ...DESIGN_TOKENS.typography.scale.h2,
+          color: colors.text,
           textAlign: 'center',
         },
         statLabel: {
@@ -74,7 +83,6 @@ export function ProfileStats({ stats, onPressStat }: ProfileStatsProps) {
           color: colors.textMuted,
           fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
           textAlign: 'center',
-          marginTop: 2,
         },
       }),
     [colors, onPressStat]
@@ -100,7 +108,7 @@ export function ProfileStats({ stats, onPressStat }: ProfileStatsProps) {
     },
     {
       key: 'views',
-      label: 'Просмотры',
+      label: 'История',
       value: stats.viewsCount,
       hint: 'Показать историю просмотров',
     },
@@ -108,35 +116,36 @@ export function ProfileStats({ stats, onPressStat }: ProfileStatsProps) {
 
   return (
     <View style={styles.container}>
-      {items.map((item, idx) => {
+      {items.map((item) => {
         const content = (
           <>
+            <View style={styles.iconWrap}>
+              <Feather name={STAT_ICONS[item.key]} size={16} color={colors.primary} />
+            </View>
             <Text style={styles.statValue}>{item.value}</Text>
             <Text style={styles.statLabel}>{item.label}</Text>
           </>
         );
 
-        return (
-          <React.Fragment key={item.key}>
-            {idx > 0 && <View style={styles.verticalDivider} />}
-            {onPressStat ? (
-              <Pressable
-                style={({ pressed }) => [
-                  styles.statItem,
-                  globalFocusStyles.focusable,
-                  pressed && styles.statItemPressed,
-                ]}
-                onPress={() => onPressStat(item.key)}
-                accessibilityRole="button"
-                accessibilityLabel={`${item.label}: ${item.value}`}
-                accessibilityHint={item.hint}
-              >
-                {content}
-              </Pressable>
-            ) : (
-              <View style={styles.statItem}>{content}</View>
-            )}
-          </React.Fragment>
+        return onPressStat ? (
+          <Pressable
+            key={item.key}
+            style={({ pressed }) => [
+              styles.statCard,
+              globalFocusStyles.focusable,
+              pressed && styles.statCardPressed,
+            ]}
+            onPress={() => onPressStat(item.key)}
+            accessibilityRole="button"
+            accessibilityLabel={`${item.label}: ${item.value}`}
+            accessibilityHint={item.hint}
+          >
+            {content}
+          </Pressable>
+        ) : (
+          <View key={item.key} style={styles.statCard}>
+            {content}
+          </View>
         );
       })}
     </View>

@@ -19,10 +19,10 @@ import { useFavorites } from '@/context/FavoritesContext'
 import { getTravelStatusCalendarDate, parseTravelStatusDateParts, useTravelStatusStore, type TravelStatus, type TravelStatusEntry } from '@/stores/travelStatusStore'
 import { useMyTravels } from '@/hooks/useMyTravels'
 import EmptyState from '@/components/ui/EmptyState'
-import TabTravelCard from '@/components/listTravel/TabTravelCard'
 import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader'
 import MiniCalendar from '@/components/calendar/MiniCalendar'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
+import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard'
 import { useThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { globalFocusStyles } from '@/styles/globalFocus'
@@ -31,6 +31,7 @@ import { webTouchScrollStyle } from '@/utils'
 import { buildCanonicalUrl } from '@/utils/seo'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { cleanTravelTitle } from '@/utils/cleanTravelTitle'
+import { buildTravelMonthFallbackDate } from '@/utils/travelCalendarDate'
 
 const TABS: Array<{ key: TravelStatus; label: string; icon: React.ComponentProps<typeof Feather>['name'] }> = [
   { key: 'visited', label: 'Был', icon: 'check-circle' },
@@ -100,7 +101,16 @@ function WebDateInput({
 }
 
 // Универсальный тип для карточек в списке
-type DisplayEntry = TravelStatusEntry & { _isFavorite?: boolean; _isAuthored?: boolean }
+type DisplayEntry = TravelStatusEntry & {
+  _isFavorite?: boolean
+  _isAuthored?: boolean
+  _fallbackCalendarDate?: string
+}
+
+const getDisplayCalendarDate = (entry: DisplayEntry): string | undefined =>
+  getTravelStatusCalendarDate(entry) ?? entry._fallbackCalendarDate
+
+const CARD_META_ICON_STYLE = { marginRight: 4 } as const
 
 export default function CalendarScreen() {
   const router = useRouter()
@@ -152,20 +162,36 @@ export default function CalendarScreen() {
   // Авторские путешествия пользователя → в таб "Был"
   const authoredAsVisited = useMemo((): DisplayEntry[] => {
     const statusIds = new Set(entries.map((e) => String(e.id)))
+    const occupiedDates = new Set(
+      entries
+        .map(getTravelStatusCalendarDate)
+        .filter((date): date is string => Boolean(date))
+    )
     return myTravels
       .filter((t) => !statusIds.has(String(t.id)))
-      .map((t) => ({
-        id: t.id,
-        type: 'travel' as const,
-        title: t.name,
-        imageUrl: t.travel_image_thumb_url || t.travel_image_thumb_small_url || undefined,
-        url: t.url || `/travels/${t.slug || t.id}`,
-        country: t.countryName || undefined,
-        city: t.cityName || undefined,
-        status: 'visited' as TravelStatus,
-        addedAt: t.created_at ? new Date(t.created_at).getTime() : 0,
-        _isAuthored: true,
-      }))
+      .map((t) => {
+        const fallbackDate = buildTravelMonthFallbackDate({
+          year: t.year,
+          monthName: t.monthName,
+          seed: t.id,
+          occupiedDates,
+        })
+        if (fallbackDate) occupiedDates.add(fallbackDate)
+
+        return {
+          id: t.id,
+          type: 'travel' as const,
+          title: t.name,
+          imageUrl: t.travel_image_thumb_url || t.travel_image_thumb_small_url || undefined,
+          url: t.url || `/travels/${t.slug || t.id}`,
+          country: t.countryName || undefined,
+          city: t.cityName || undefined,
+          status: 'visited' as TravelStatus,
+          _fallbackCalendarDate: fallbackDate,
+          addedAt: t.created_at ? new Date(t.created_at).getTime() : 0,
+          _isAuthored: true,
+        }
+      })
   }, [myTravels, entries])
 
   // Избранные без явного статуса — они попадают в "Хочу" автоматически
@@ -206,11 +232,11 @@ export default function CalendarScreen() {
   // Данные для текущего таба
   const tabData = useMemo((): DisplayEntry[] => {
     const all = selectedDate
-      ? activeTabEntries.filter((e) => getTravelStatusCalendarDate(e) === selectedDate)
+      ? activeTabEntries.filter((e) => getDisplayCalendarDate(e) === selectedDate)
       : activeTabEntries
     return [...all].sort((a, b) => {
-      const dateA = getTravelStatusCalendarDate(a)
-      const dateB = getTravelStatusCalendarDate(b)
+      const dateA = getDisplayCalendarDate(a)
+      const dateB = getDisplayCalendarDate(b)
       if (dateA && dateB) {
         return activeTab === 'planned' ? dateA.localeCompare(dateB) : dateB.localeCompare(dateA)
       }
@@ -219,7 +245,11 @@ export default function CalendarScreen() {
     })
   }, [activeTab, activeTabEntries, selectedDate])
 
-  const calendarEntries = useMemo(() => activeTabEntries, [activeTabEntries])
+  const calendarEntries = useMemo(() => activeTabEntries.map((entry) => {
+    if (getTravelStatusCalendarDate(entry) || !entry._fallbackCalendarDate) return entry
+    const dateField = getDateFieldForStatus(entry.status)
+    return { ...entry, [dateField]: entry._fallbackCalendarDate }
+  }), [activeTabEntries])
 
   const handleOpenDateEditor = useCallback((item: DisplayEntry, e?: any) => {
     if (Platform.OS === 'web') {
@@ -228,7 +258,7 @@ export default function CalendarScreen() {
       e?.nativeEvent?.stopPropagation?.()
     }
     setDateEditingItem(item)
-    setDateInput(getTravelStatusCalendarDate(item) ?? '')
+    setDateInput(getDisplayCalendarDate(item) ?? '')
     setDateError('')
   }, [])
 
@@ -285,9 +315,12 @@ export default function CalendarScreen() {
 
   const badgeColors = useMemo<Record<TravelStatus, string>>(() => ({
     visited: colors.success,
-    planned: colors.primary,
+    planned: colors.warning,
     wishlist: colors.warning,
   }), [colors])
+
+  const activeAccentColor = badgeColors[activeTab]
+  const activeAccentSoftColor = activeTab === 'planned' ? colors.warningLight : colors.primaryLight
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -446,6 +479,17 @@ export default function CalendarScreen() {
     },
     plannedDateTextEmpty: {
       color: colors.primary,
+    },
+    cardMetaContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      minHeight: 18,
+    },
+    cardMetaText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      flex: 1,
     },
     modalOverlay: {
       flex: 1,
@@ -610,7 +654,12 @@ export default function CalendarScreen() {
           return (
             <Pressable
               key={tab.key}
-              style={[styles.tabBtn, isActive && styles.tabBtnActive, globalFocusStyles.focusable]}
+              style={[
+                styles.tabBtn,
+                isActive && styles.tabBtnActive,
+                isActive && { backgroundColor: badgeColors[tab.key], borderColor: badgeColors[tab.key] },
+                globalFocusStyles.focusable,
+              ]}
               onPress={() => {
                 setActiveTab(tab.key)
                 setSelectedDate(null)
@@ -647,18 +696,24 @@ export default function CalendarScreen() {
               entries={calendarEntries}
               onDayPress={handleDayPress}
               selectedDate={selectedDate}
+              accentColor={activeAccentColor}
+              accentSoftColor={activeAccentSoftColor}
             />
             {selectedDate && (
               <View style={styles.filterRow}>
                 <Pressable
-                  style={[styles.filterChip, globalFocusStyles.focusable]}
+                  style={[
+                    styles.filterChip,
+                    { backgroundColor: activeAccentSoftColor, borderColor: activeAccentColor },
+                    globalFocusStyles.focusable,
+                  ]}
                   onPress={() => setSelectedDate(null)}
                   accessibilityRole="button"
                   accessibilityLabel={`Сбросить фильтр: ${selectedDate}`}
                 >
-                  <Feather name="calendar" size={13} color={colors.primary} />
-                  <Text style={styles.filterChipText}>{selectedDate}</Text>
-                  <Feather name="x" size={13} color={colors.primary} />
+                  <Feather name="calendar" size={13} color={activeAccentColor} />
+                  <Text style={[styles.filterChipText, { color: activeAccentColor }]}>{selectedDate}</Text>
+                  <Feather name="x" size={13} color={activeAccentColor} />
                 </Pressable>
               </View>
             )}
@@ -679,31 +734,42 @@ export default function CalendarScreen() {
             ) : (
               <View style={styles.cardsGrid}>
                 {tabData.map((item: DisplayEntry) => {
-                  const calendarDate = getTravelStatusCalendarDate(item)
+                  const calendarDate = getDisplayCalendarDate(item)
                   const hasCalendarDate = Boolean(calendarDate)
+                  const itemAccentColor = badgeColors[item.status]
+                  const location = [item.city, item.country].filter(Boolean).join(', ')
                   return (
                     <View key={`${item._isFavorite ? 'fav' : item.status}-${item.id}`} style={styles.cardWrap}>
-                      <TabTravelCard
-                        item={{
-                          id: item.id,
-                          title: cleanTravelTitle(item.title, item.country),
-                          imageUrl: item.imageUrl,
-                          city: item.city ?? null,
-                          country: item.country ?? null,
-                        }}
-                        badge={{
-                          icon: item._isFavorite ? 'heart' : item._isAuthored ? 'edit-2' : (TABS.find((t) => t.key === item.status)?.icon ?? 'bookmark'),
-                          backgroundColor: item._isFavorite ? colors.danger : badgeColors[item.status],
-                          iconColor: colors.surface,
-                        }}
+                      <UnifiedTravelCard
+                        title={cleanTravelTitle(item.title, item.country)}
+                        imageUrl={item.imageUrl ?? null}
+                        metaText={location || ' '}
                         onPress={() => router.push(item.url as any)}
-                        layout="grid"
-                        mediaFit="cover"
+                        mediaFit="contain"
+                        heroTitleOverlay
+                        imageHeight={Platform.OS === 'web' ? 168 : 150}
+                        style={[globalFocusStyles.focusable, Platform.OS === 'web' ? ({ height: '100%' } as any) : null]}
+                        testID={`calendar-travel-card-${String(item.id)}`}
+                        contentSlot={
+                          <View style={styles.cardMetaContent}>
+                            <Feather name="map-pin" size={12} color={colors.textMuted} style={CARD_META_ICON_STYLE} />
+                            <Text style={styles.cardMetaText} numberOfLines={1}>
+                              {location || ' '}
+                            </Text>
+                          </View>
+                        }
+                        mediaProps={{
+                          blurBackground: true,
+                          allowCriticalWebBlur: true,
+                          recyclingKey: String(item.id),
+                        }}
                       />
                       <Pressable
                         style={[
                           styles.plannedDateLabel,
+                          hasCalendarDate && { backgroundColor: itemAccentColor, borderColor: itemAccentColor },
                           !hasCalendarDate && styles.plannedDateLabelEmpty,
+                          !hasCalendarDate && { borderColor: itemAccentColor },
                           globalFocusStyles.focusable,
                         ]}
                         onPress={(event) => handleOpenDateEditor(item, event)}
@@ -714,9 +780,13 @@ export default function CalendarScreen() {
                         <Feather
                           name={hasCalendarDate ? 'calendar' : 'plus'}
                           size={12}
-                          color={hasCalendarDate ? colors.surface : colors.primary}
+                          color={hasCalendarDate ? colors.surface : itemAccentColor}
                         />
-                        <Text style={[styles.plannedDateText, !hasCalendarDate && styles.plannedDateTextEmpty]}>
+                        <Text style={[
+                          styles.plannedDateText,
+                          !hasCalendarDate && styles.plannedDateTextEmpty,
+                          !hasCalendarDate && { color: itemAccentColor },
+                        ]}>
                           {calendarDate ?? 'Дата'}
                         </Text>
                       </Pressable>

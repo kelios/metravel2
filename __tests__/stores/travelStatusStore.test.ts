@@ -15,8 +15,14 @@ jest.mock('@/utils/safeJsonParse', () => ({
   }),
 }))
 
-import { parseTravelStatusDateParts, useTravelStatusStore } from '@/stores/travelStatusStore'
+import { getTravelStatusCalendarDate, parseTravelStatusDateParts, useTravelStatusStore } from '@/stores/travelStatusStore'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
+
+const getIsoDayOfWeek = (date: string | undefined) => {
+  if (!date) return null
+  const [year, month, day] = date.split('-').map(Number)
+  return new Date(year, month - 1, day).getDay()
+}
 
 const makeEntry = (
   id: number | string,
@@ -97,6 +103,19 @@ describe('travelStatusStore', () => {
         )
       )
       expect(useTravelStatusStore.getState().entries[0].wishlistDate).toBe('2026-09-01')
+    })
+
+    it('сохраняет год и месяц путешествия для календарного fallback', async () => {
+      await act(() =>
+        useTravelStatusStore.getState().setStatus(
+          makeEntry(6, 'visited', { travelYear: '2024', travelMonthName: 'Май' }),
+          null
+        )
+      )
+      const entry = useTravelStatusStore.getState().entries[0]
+      const date = getTravelStatusCalendarDate(entry)
+      expect(date).toMatch(/^2024-05-/)
+      expect([0, 6]).toContain(getIsoDayOfWeek(date))
     })
 
     it('персистирует в AsyncStorage без userId', async () => {

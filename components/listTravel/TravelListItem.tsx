@@ -369,6 +369,8 @@ function TravelListItem({
         travelUrl={travelUrl}
         travelImageUrl={thumbUrl}
         travelCountry={countries[0]}
+        travelYear={travel.year}
+        travelMonthName={travel.monthName}
         compact
       />
     </View>

@@ -61,39 +61,30 @@ export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: Profil
         },
         scrollContent: {
           paddingHorizontal: DESIGN_TOKENS.spacing.md,
-          gap: DESIGN_TOKENS.spacing.sm,
+          gap: DESIGN_TOKENS.spacing.xs,
           flexDirection: 'row',
-          alignItems: 'flex-start',
-        },
-        actionItem: {
           alignItems: 'center',
-          minWidth: 60,
-          paddingVertical: DESIGN_TOKENS.spacing.xs,
-          paddingHorizontal: DESIGN_TOKENS.spacing.xxs,
-          borderRadius: DESIGN_TOKENS.radii.md,
+        },
+        actionChip: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: DESIGN_TOKENS.spacing.xxs,
+          paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+          paddingVertical: 10,
+          borderRadius: DESIGN_TOKENS.radii.pill,
+          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderColor: colors.border,
+          minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+          position: 'relative',
           ...Platform.select({
             web: { cursor: 'pointer' } as any,
             default: {},
           }),
-        },
-        actionItemPressed: {
-          backgroundColor: colors.brandSoft,
-        },
-        iconWrap: {
-          position: 'relative',
-          width: 52,
-          height: 52,
-          borderRadius: DESIGN_TOKENS.radii.md,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: colors.brandLight,
-          borderWidth: 1,
-          borderColor: colors.brandAlpha40,
-          marginBottom: DESIGN_TOKENS.spacing.xxs,
           ...Platform.select({
             ios: {
-              shadowColor: colors.brand,
-              shadowOpacity: 0.1,
+              shadowColor: '#000',
+              shadowOpacity: 0.04,
               shadowRadius: 6,
               shadowOffset: { width: 0, height: 2 },
             },
@@ -101,30 +92,33 @@ export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: Profil
             default: {},
           }),
         },
+        actionChipPressed: {
+          backgroundColor: colors.backgroundSecondary,
+          borderColor: colors.primary,
+        },
+        chipLabel: {
+          fontSize: DESIGN_TOKENS.typography.sizes.sm,
+          fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+          color: colors.text,
+        },
         badge: {
           position: 'absolute',
-          top: -5,
-          right: -5,
-          minWidth: 18,
-          height: 18,
+          top: -4,
+          right: -4,
+          minWidth: 17,
+          height: 17,
           borderRadius: DESIGN_TOKENS.radii.pill,
           backgroundColor: colors.danger,
           alignItems: 'center',
           justifyContent: 'center',
-          paddingHorizontal: 4,
+          paddingHorizontal: 3,
           borderWidth: 2,
-          borderColor: colors.surface,
+          borderColor: colors.background,
         },
         badgeText: {
-          fontSize: 10,
+          fontSize: 9,
           fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
           color: colors.textOnDark,
-        },
-        label: {
-          fontSize: 11,
-          fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-          color: colors.brandText,
-          textAlign: 'center',
         },
       }),
     [colors]
@@ -153,24 +147,20 @@ export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: Profil
               }
               accessibilityHint={item.accessibilityHint}
               style={({ pressed }) => [
-                styles.actionItem,
+                styles.actionChip,
                 globalFocusStyles.focusable,
-                pressed && styles.actionItemPressed,
+                pressed && styles.actionChipPressed,
               ]}
             >
-              <View style={styles.iconWrap}>
-                <Feather name={item.icon} size={22} color={colors.brand} />
-                {showBadge && (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>
-                      {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              <Text style={styles.label} numberOfLines={1}>
-                {item.title}
-              </Text>
+              <Feather name={item.icon} size={16} color={colors.primary} />
+              <Text style={styles.chipLabel}>{item.title}</Text>
+              {showBadge && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
+                  </Text>
+                </View>
+              )}
             </Pressable>
           );
         })}

@@ -14,6 +14,7 @@ interface ProfileCompletenessProps {
 interface CompletenessStep {
   key: string;
   label: string;
+  icon: React.ComponentProps<typeof Feather>['name'];
   done: boolean;
 }
 
@@ -22,16 +23,32 @@ export function ProfileCompleteness({ user, profile, travelsCount }: ProfileComp
 
   const steps = useMemo<CompletenessStep[]>(
     () => [
-      { key: 'name', label: 'Имя', done: Boolean(user.name && user.name !== 'Пользователь') },
-      { key: 'avatar', label: 'Аватар', done: Boolean(user.avatar) },
+      {
+        key: 'name',
+        label: 'Имя',
+        icon: 'user',
+        done: Boolean(user.name && user.name !== 'Пользователь'),
+      },
+      {
+        key: 'avatar',
+        label: 'Фото',
+        icon: 'camera',
+        done: Boolean(user.avatar),
+      },
       {
         key: 'social',
         label: 'Соцсеть',
+        icon: 'link',
         done: Boolean(
           profile?.youtube || profile?.instagram || profile?.twitter || profile?.vk
         ),
       },
-      { key: 'travel', label: 'Путешествие', done: travelsCount > 0 },
+      {
+        key: 'travel',
+        label: 'Маршрут',
+        icon: 'map',
+        done: travelsCount > 0,
+      },
     ],
     [user.name, user.avatar, profile, travelsCount]
   );
@@ -46,51 +63,74 @@ export function ProfileCompleteness({ user, profile, travelsCount }: ProfileComp
         container: {
           marginHorizontal: DESIGN_TOKENS.spacing.md,
           marginBottom: DESIGN_TOKENS.spacing.md,
-          padding: DESIGN_TOKENS.spacing.sm,
+          padding: DESIGN_TOKENS.spacing.md,
           borderRadius: DESIGN_TOKENS.radii.md,
-          backgroundColor: colors.brandLight,
+          backgroundColor: colors.surface,
           borderWidth: 1,
-          borderColor: colors.brandAlpha40,
+          borderColor: colors.borderLight,
+          ...Platform.select({
+            ios: {
+              shadowColor: '#000',
+              shadowOpacity: 0.04,
+              shadowRadius: 8,
+              shadowOffset: { width: 0, height: 2 },
+            },
+            android: { elevation: 1 },
+            default: {},
+          }),
         },
         header: {
           flexDirection: 'row',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: DESIGN_TOKENS.spacing.xs,
+          marginBottom: DESIGN_TOKENS.spacing.sm,
         },
         titleRow: {
           flexDirection: 'row',
           alignItems: 'center',
-          gap: DESIGN_TOKENS.spacing.xxs,
+          gap: 6,
           flex: 1,
         },
+        iconDot: {
+          width: 28,
+          height: 28,
+          borderRadius: DESIGN_TOKENS.radii.sm,
+          backgroundColor: colors.primarySoft,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
         title: {
-          fontSize: DESIGN_TOKENS.typography.sizes.xs,
+          fontSize: DESIGN_TOKENS.typography.sizes.sm,
           fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-          color: colors.brandText,
+          color: colors.text,
           flex: 1,
         },
         percentBadge: {
-          backgroundColor: colors.brand,
+          backgroundColor: colors.primary,
           paddingHorizontal: DESIGN_TOKENS.spacing.xs,
           paddingVertical: 3,
           borderRadius: DESIGN_TOKENS.radii.pill,
+          minWidth: 42,
+          alignItems: 'center',
         },
         percentText: {
           fontSize: DESIGN_TOKENS.typography.sizes.xs,
           fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
-          color: colors.surface,
+          color: colors.textOnPrimary,
+        },
+        trackWrap: {
+          marginBottom: DESIGN_TOKENS.spacing.sm,
         },
         track: {
-          height: 6,
+          height: 5,
           borderRadius: 3,
-          backgroundColor: colors.brandAlpha40,
+          backgroundColor: colors.borderLight,
           overflow: 'hidden',
         },
         fill: {
-          height: 6,
+          height: 5,
           borderRadius: 3,
-          backgroundColor: colors.brand,
+          backgroundColor: colors.primary,
           ...Platform.select({
             web: { transition: 'width 0.4s ease' } as any,
             default: {},
@@ -100,19 +140,29 @@ export function ProfileCompleteness({ user, profile, travelsCount }: ProfileComp
           flexDirection: 'row',
           flexWrap: 'wrap',
           gap: DESIGN_TOKENS.spacing.xs,
-          marginTop: DESIGN_TOKENS.spacing.xs,
         },
         stepChip: {
           flexDirection: 'row',
           alignItems: 'center',
           gap: 4,
+          paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+          paddingVertical: 5,
+          borderRadius: DESIGN_TOKENS.radii.pill,
+          backgroundColor: colors.backgroundSecondary,
+          borderWidth: 1,
+          borderColor: colors.borderLight,
+        },
+        stepChipDone: {
+          backgroundColor: colors.successSoft,
+          borderColor: colors.success,
         },
         stepLabel: {
           fontSize: 11,
-          color: colors.brandText,
+          fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+          color: colors.textMuted,
         },
         stepLabelDone: {
-          color: colors.success,
+          color: colors.successDark,
         },
       }),
     [colors]
@@ -131,25 +181,29 @@ export function ProfileCompleteness({ user, profile, travelsCount }: ProfileComp
     >
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Feather name="trending-up" size={12} color={colors.brand} />
+          <View style={styles.iconDot}>
+            <Feather name="trending-up" size={14} color={colors.primary} />
+          </View>
           <Text style={styles.title}>
-            Заполните профиль{nextStep ? ` · добавьте ${nextStep.label.toLowerCase()}` : ''}
+            {nextStep ? `Добавьте ${nextStep.label.toLowerCase()}` : 'Заполните профиль'}
           </Text>
         </View>
         <View style={styles.percentBadge}>
           <Text style={styles.percentText}>{percent}%</Text>
         </View>
       </View>
-      <View style={styles.track}>
-        <View style={[styles.fill, { width: `${percent}%` as any }]} />
+      <View style={styles.trackWrap}>
+        <View style={styles.track}>
+          <View style={[styles.fill, { width: `${percent}%` as any }]} />
+        </View>
       </View>
       <View style={styles.stepsRow}>
         {steps.map((s) => (
-          <View key={s.key} style={styles.stepChip}>
+          <View key={s.key} style={[styles.stepChip, s.done && styles.stepChipDone]}>
             <Feather
-              name={s.done ? 'check-circle' : 'circle'}
+              name={s.done ? 'check' : s.icon}
               size={11}
-              color={s.done ? colors.success : colors.brand}
+              color={s.done ? colors.successDark : colors.textMuted}
             />
             <Text style={[styles.stepLabel, s.done && styles.stepLabelDone]}>{s.label}</Text>
           </View>

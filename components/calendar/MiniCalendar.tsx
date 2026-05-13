@@ -17,10 +17,20 @@ type Props = {
   entries: TravelStatusEntry[]
   onDayPress?: (dateStr: string) => void
   selectedDate?: string | null
+  accentColor?: string
+  accentSoftColor?: string
 }
 
-export default function MiniCalendar({ entries, onDayPress, selectedDate }: Props) {
+export default function MiniCalendar({
+  entries,
+  onDayPress,
+  selectedDate,
+  accentColor,
+  accentSoftColor,
+}: Props) {
   const colors = useThemedColors()
+  const markColor = accentColor ?? colors.primary
+  const markSoftColor = accentSoftColor ?? colors.primaryLight
   const today = new Date()
 
   const [year, setYear] = useState(today.getFullYear())
@@ -136,13 +146,13 @@ export default function MiniCalendar({ entries, onDayPress, selectedDate }: Prop
     },
     dayBtnToday: {
       borderWidth: 1.5,
-      borderColor: colors.primary,
+      borderColor: markColor,
     },
     dayBtnSelected: {
-      backgroundColor: colors.primary,
+      backgroundColor: markColor,
     },
     dayBtnMarked: {
-      backgroundColor: colors.primaryLight,
+      backgroundColor: markSoftColor,
     },
     dayText: {
       fontSize: 13,
@@ -162,9 +172,9 @@ export default function MiniCalendar({ entries, onDayPress, selectedDate }: Prop
       width: 4,
       height: 4,
       borderRadius: 2,
-      backgroundColor: colors.primary,
+      backgroundColor: markColor,
     },
-  }), [colors])
+  }), [colors, markColor, markSoftColor])
 
   // Build grid cells
   const cells: Array<{ day: number | null }> = useMemo(() => {

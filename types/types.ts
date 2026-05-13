@@ -230,6 +230,7 @@ export interface TravelFormData {
     transports: string[];
     month: string[];
     year?: string;
+    visitedDate?: string;
     budget?: string;
     number_peoples?: string;
     number_days?: string;

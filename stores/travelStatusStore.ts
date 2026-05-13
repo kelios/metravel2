@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { devError } from '@/utils/logger'
 import { safeJsonParseString } from '@/utils/safeJsonParse'
+import { buildTravelMonthFallbackDate } from '@/utils/travelCalendarDate'
 
 const TRAVEL_STATUS_KEY = 'metravel_travel_status'
 
@@ -19,6 +20,9 @@ export type TravelStatusEntry = {
   plannedDate?: string  // ISO "YYYY-MM-DD", опционально для status === 'planned'
   visitedDate?: string  // ISO "YYYY-MM-DD", опционально для status === 'visited'
   wishlistDate?: string // ISO "YYYY-MM-DD", опционально для status === 'wishlist'
+  travelYear?: string
+  travelMonth?: string | string[]
+  travelMonthName?: string
   addedAt: number       // timestamp
 }
 
@@ -39,7 +43,12 @@ export const parseTravelStatusDateParts = (value: unknown): { year: number; mont
   return { year, month, day }
 }
 
-export const getTravelStatusCalendarDate = (entry: Pick<TravelStatusEntry, 'status' | 'plannedDate' | 'visitedDate' | 'wishlistDate'>): string | undefined => {
+export const getTravelStatusCalendarDate = (
+  entry: Pick<
+    TravelStatusEntry,
+    'id' | 'status' | 'plannedDate' | 'visitedDate' | 'wishlistDate' | 'travelYear' | 'travelMonth' | 'travelMonthName'
+  >
+): string | undefined => {
   const value =
     entry.status === 'planned'
       ? entry.plannedDate
@@ -47,7 +56,13 @@ export const getTravelStatusCalendarDate = (entry: Pick<TravelStatusEntry, 'stat
         ? entry.visitedDate
         : entry.wishlistDate
 
-  return parseTravelStatusDateParts(value) ? value : undefined
+  if (parseTravelStatusDateParts(value)) return value
+  return buildTravelMonthFallbackDate({
+    year: entry.travelYear,
+    month: entry.travelMonth,
+    monthName: entry.travelMonthName,
+    seed: entry.id,
+  })
 }
 
 const normalizeStatusDates = <T extends { status: TravelStatus; plannedDate?: string; visitedDate?: string; wishlistDate?: string }>(entry: T): T => {
@@ -93,6 +108,13 @@ const normalizeEntry = (item: unknown): TravelStatusEntry | null => {
     plannedDate: typeof item.plannedDate === 'string' ? item.plannedDate : undefined,
     visitedDate: typeof item.visitedDate === 'string' ? item.visitedDate : undefined,
     wishlistDate: typeof item.wishlistDate === 'string' ? item.wishlistDate : undefined,
+    travelYear: typeof item.travelYear === 'string' ? item.travelYear : undefined,
+    travelMonth: Array.isArray(item.travelMonth)
+      ? item.travelMonth.map(String)
+      : typeof item.travelMonth === 'string'
+        ? item.travelMonth
+        : undefined,
+    travelMonthName: typeof item.travelMonthName === 'string' ? item.travelMonthName : undefined,
   })
 }
 

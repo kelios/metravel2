@@ -241,6 +241,8 @@ function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
           travelUrl={`/travels/${travel.slug || travel.id}`}
           travelImageUrl={travel.travel_image_thumb_url}
           travelCountry={(travel as any).countryName}
+          travelYear={travel.year}
+          travelMonthName={travel.monthName}
         />
 
         {/* P1-5: «Все путешествия автора» убрана — уже есть в AuthorCard */}
