@@ -24,7 +24,7 @@ test.describe('Map page — popup open / close', () => {
     await installTileMock(page)
 
     // Mock the filters API so category dictionary loads instantly
-    await page.route('**/api/v1/filter/**', (route: any) =>
+    await page.route('**/api/filterformap/**', (route: any) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -44,14 +44,7 @@ test.describe('Map page — popup open / close', () => {
       articleUrl: '',
     }
 
-    await page.route('**/api/v1/travelsMap/**', (route: any) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([mockPoint]),
-      }),
-    )
-    await page.route('**/api/v1/travel_map/**', (route: any) =>
+    await page.route('**/api/travels/search_travels_for_map/**', (route: any) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -66,11 +59,11 @@ test.describe('Map page — popup open / close', () => {
     await mapWrapper.waitFor({ state: 'visible', timeout: 30_000 })
 
     // Wait for Leaflet to initialize and marker to appear
-    await page.waitForSelector('.leaflet-marker-icon', { state: 'visible', timeout: 30_000 })
+    await page.waitForSelector('.metravel-pin-marker', { state: 'visible', timeout: 30_000 })
 
     // Click the first marker to open popup
-    const marker = page.locator('.leaflet-marker-icon').first()
-    await marker.click()
+    const marker = page.locator('.metravel-pin-marker').first()
+    await marker.click({ force: true })
 
     // The popup should appear (Leaflet popup wrapper becomes visible)
     const popup = page.locator('.leaflet-popup')
@@ -101,4 +94,3 @@ test.describe('Map page — popup open / close', () => {
     await expect(stuckOverlay).toHaveCount(0, { timeout: 3_000 })
   })
 })
-
