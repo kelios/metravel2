@@ -94,10 +94,16 @@ function hasSufficientPreloadedTravelData(travel: Travel | undefined): travel is
 
 /**
  * Consume preloaded travel data from the inline script in +html.tsx.
- * Returns normalized Travel if the preload matches the current slug/id, otherwise undefined.
- * The preload is consumed (deleted) on first access to avoid stale data.
+ * Returns normalized Travel if the preload matches the current slug/id.
+ * Render-time initialData uses a non-consuming read so concurrent render retries
+ * cannot delete the bootstrap payload before React Query commits it.
  */
-function consumePreloadedTravel(slug: string, isId: boolean, idNum: number): Travel | undefined {
+export function consumePreloadedTravel(
+  slug: string,
+  isId: boolean,
+  idNum: number,
+  options: { consume?: boolean } = {},
+): Travel | undefined {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return undefined;
   const win = window as TravelPreloadWindow;
   const preload = win.__metravelTravelPreload;
@@ -106,11 +112,16 @@ function consumePreloadedTravel(slug: string, isId: boolean, idNum: number): Tra
     ? preload.isId && String(preload.slug) === String(idNum)
     : !preload.isId && preload.slug === slug;
   if (!matches) return undefined;
-  delete win.__metravelTravelPreload;
   try {
     const normalized = normalizeTravelItem(preload.data);
-    return hasSufficientPreloadedTravelData(normalized) ? normalized : undefined;
+    if (!hasSufficientPreloadedTravelData(normalized)) {
+      if (options.consume !== false) delete win.__metravelTravelPreload;
+      return undefined;
+    }
+    if (options.consume !== false) delete win.__metravelTravelPreload;
+    return normalized;
   } catch {
+    if (options.consume !== false) delete win.__metravelTravelPreload;
     return undefined;
   }
 }
@@ -190,7 +201,7 @@ export function useTravelDetails(): UseTravelDetailsReturn {
   const isMissingParam = normalizedSlug.length === 0;
   const cacheKey = isId ? idNum : normalizedSlug;
   const initialPreloadedTravel = useMemo(
-    () => consumePreloadedTravel(normalizedSlug, isId, idNum),
+    () => consumePreloadedTravel(normalizedSlug, isId, idNum, { consume: false }),
     [normalizedSlug, isId, idNum]
   );
   const shouldRefetchInAutomation = isWebAutomation && !initialPreloadedTravel;

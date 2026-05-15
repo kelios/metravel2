@@ -752,6 +752,9 @@ function injectTravelBootstrapData(baseHtml, travel, routeKey) {
   const bootstrapScript =
     `<script data-travel-preload-bootstrap="true">` +
     `window.__metravelTravelPreload=${serialized};` +
+    `window.__metravelTravelPreloadScriptLoaded=true;` +
+    `window.__metravelTravelPreloadPending=false;` +
+    `window.__metravelTravelPreloadPromise=Promise.resolve(window.__metravelTravelPreload.data);` +
     `</script>`;
 
   if (/<script[^>]*data-travel-preload-bootstrap="true"[^>]*>[\s\S]*?<\/script>/i.test(baseHtml)) {

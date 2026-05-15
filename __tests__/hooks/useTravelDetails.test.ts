@@ -141,8 +141,9 @@ describe('useTravelDetails', () => {
       coordsMeTravel: [],
     });
 
-    // Preload is consumed on first access to avoid stale data.
-    expect((global as any).window.__metravelTravelPreload).toBeUndefined();
+    // Initial data peeks without deleting so concurrent render retries cannot lose
+    // the static bootstrap payload before React Query commits it.
+    expect((global as any).window.__metravelTravelPreload?.data?.id).toBe(498);
   });
 
   it('ignores sparse preloaded travel payloads and falls back to fetchTravelBySlug', async () => {

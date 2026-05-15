@@ -32,6 +32,11 @@ import { buildCanonicalUrl } from '@/utils/seo'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { cleanTravelTitle } from '@/utils/cleanTravelTitle'
 import { buildTravelMonthFallbackDate } from '@/utils/travelCalendarDate'
+import {
+  getDateFieldForTravelStatus,
+  getTravelStatusDisplayCalendarDate,
+  travelStatusEntryMatchesSelectedDate,
+} from '@/utils/travelStatusCalendarDisplay'
 
 const TABS: Array<{ key: TravelStatus; label: string; icon: React.ComponentProps<typeof Feather>['name'] }> = [
   { key: 'visited', label: 'Был', icon: 'check-circle' },
@@ -64,12 +69,6 @@ const TAB_HINTS: Record<TravelStatus, string> = {
   visited: 'Выбери дату, чтобы увидеть посещённые поездки за этот день. Если точной даты нет, добавь её прямо в карточке.',
   planned: 'Выбери дату, чтобы отфильтровать запланированные поездки.',
   wishlist: 'Выбери дату, чтобы увидеть поездки из списка желаний на этот день. Избранные автоматически попадают сюда.',
-}
-
-const getDateFieldForStatus = (status: TravelStatus) => {
-  if (status === 'visited') return 'visitedDate'
-  if (status === 'wishlist') return 'wishlistDate'
-  return 'plannedDate'
 }
 
 function WebDateInput({
@@ -108,7 +107,7 @@ type DisplayEntry = TravelStatusEntry & {
 }
 
 const getDisplayCalendarDate = (entry: DisplayEntry): string | undefined =>
-  getTravelStatusCalendarDate(entry) ?? entry._fallbackCalendarDate
+  getTravelStatusDisplayCalendarDate(entry)
 
 const CARD_META_ICON_STYLE = { marginRight: 4 } as const
 
@@ -186,6 +185,8 @@ export default function CalendarScreen() {
           url: t.url || `/travels/${t.slug || t.id}`,
           country: t.countryName || undefined,
           city: t.cityName || undefined,
+          travelYear: t.year,
+          travelMonthName: t.monthName,
           status: 'visited' as TravelStatus,
           _fallbackCalendarDate: fallbackDate,
           addedAt: t.created_at ? new Date(t.created_at).getTime() : 0,
@@ -232,7 +233,7 @@ export default function CalendarScreen() {
   // Данные для текущего таба
   const tabData = useMemo((): DisplayEntry[] => {
     const all = selectedDate
-      ? activeTabEntries.filter((e) => getDisplayCalendarDate(e) === selectedDate)
+      ? activeTabEntries.filter((e) => travelStatusEntryMatchesSelectedDate(e, selectedDate))
       : activeTabEntries
     return [...all].sort((a, b) => {
       const dateA = getDisplayCalendarDate(a)
@@ -247,7 +248,7 @@ export default function CalendarScreen() {
 
   const calendarEntries = useMemo(() => activeTabEntries.map((entry) => {
     if (getTravelStatusCalendarDate(entry) || !entry._fallbackCalendarDate) return entry
-    const dateField = getDateFieldForStatus(entry.status)
+    const dateField = getDateFieldForTravelStatus(entry.status)
     return { ...entry, [dateField]: entry._fallbackCalendarDate }
   }), [activeTabEntries])
 
@@ -269,7 +270,7 @@ export default function CalendarScreen() {
   }, [])
 
   const saveItemDate = useCallback(async (item: DisplayEntry, value: string | null) => {
-    const dateField = getDateFieldForStatus(item.status)
+    const dateField = getDateFieldForTravelStatus(item.status)
     await setStatus(
       {
         id: item.id,
@@ -279,6 +280,9 @@ export default function CalendarScreen() {
         imageUrl: item.imageUrl,
         country: item.country,
         city: item.city,
+        travelYear: item.travelYear,
+        travelMonth: item.travelMonth,
+        travelMonthName: item.travelMonthName,
         status: item.status,
         ...(value ? { [dateField]: value } : {}),
       },

@@ -1,6 +1,7 @@
 import { renderHook, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
+import { Platform } from 'react-native';
 
 import { useBreadcrumbModel } from '@/hooks/useBreadcrumbModel';
 
@@ -37,6 +38,8 @@ describe('useBreadcrumbModel', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (global as any).window = undefined;
+    (Platform.OS as any) = 'ios';
   });
 
   it('should build breadcrumbs and backToPath from returnTo on travel details', async () => {
@@ -57,6 +60,36 @@ describe('useBreadcrumbModel', () => {
       { label: 'Мои путешествия', path: '/metravel' },
       { label: 'Длинное описание', path: '/travels/test-slug' },
     ]);
+  });
+
+  it('uses static travel preload for travel breadcrumbs without fetching by slug', async () => {
+    (Platform.OS as any) = 'web';
+    (global as any).window = {
+      __metravelTravelPreload: {
+        data: {
+          id: 566,
+          slug: 'test-slug',
+          name: 'Статический маршрут',
+          description: '<p>Описание маршрута</p>',
+          gallery: [],
+          travelAddress: [{ id: 1, name: 'Точка' }],
+          coordsMeTravel: [],
+        },
+        slug: 'test-slug',
+        isId: false,
+      },
+    };
+    usePathname.mockReturnValue('/travels/test-slug');
+    useLocalSearchParams.mockReturnValue({ returnTo: '/travelsby' });
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.currentTitle).toBe('Статический маршрут');
+    });
+
+    expect(fetchTravelBySlug).not.toHaveBeenCalled();
+    expect((global as any).window.__metravelTravelPreload?.data?.id).toBe(566);
   });
 
   it('should not show Belarus return context for non-Belarus travel from travelsby', async () => {

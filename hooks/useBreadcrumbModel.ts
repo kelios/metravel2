@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { Travel } from '@/types/types';
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
+import { consumePreloadedTravel } from '@/hooks/useTravelDetails';
 import { fetchQuestByQuestId, type ApiQuestBundle } from '@/api/quests';
 import { fetchUserProfile, type UserProfileDto } from '@/api/user';
 import { queryKeys } from '@/queryKeys';
@@ -177,6 +178,13 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     return isId ? idNum : travelSlug;
   }, [travelSlug]);
 
+  const initialTravelData = useMemo(() => {
+    if (!travelSlug) return undefined;
+    const idNum = Number(travelSlug);
+    const isId = Number.isFinite(idNum) && idNum > 0;
+    return consumePreloadedTravel(travelSlug, isId, idNum, { consume: false });
+  }, [travelSlug]);
+
   const { data: travelData } = useQuery<Travel | null>({
     queryKey: travelCacheKey != null ? queryKeys.travel(travelCacheKey) : ['travel', 'missing'],
     queryFn: ({ signal }) => {
@@ -186,6 +194,8 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       return isId ? fetchTravel(idNum, { signal }) : fetchTravelBySlug(travelSlug, { signal });
     },
     enabled: travelCacheKey != null,
+    initialData: initialTravelData,
+    initialDataUpdatedAt: initialTravelData ? Date.now() : undefined,
     staleTime: 600_000,
     gcTime: 10 * 60 * 1000,
   });

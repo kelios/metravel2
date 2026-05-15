@@ -105,6 +105,9 @@ describe('injectTravelBootstrapData', () => {
     expect(html).toContain('data-travel-preload-bootstrap="true"');
     expect(html).toContain('"slug":"hexenstieg"');
     expect(html).toContain('"id":42');
+    expect(html).toContain('window.__metravelTravelPreloadScriptLoaded=true');
+    expect(html).toContain('window.__metravelTravelPreloadPending=false');
+    expect(html).toContain('window.__metravelTravelPreloadPromise=Promise.resolve(window.__metravelTravelPreload.data)');
     expect(html.indexOf('data-travel-preload-bootstrap="true"')).toBeLessThan(html.indexOf('<div id="root">'));
   });
 
