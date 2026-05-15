@@ -726,6 +726,18 @@ const createStyles = (colors: ThemedColors, isCompact: boolean) => StyleSheet.cr
     overflow: 'hidden',
     ...(Platform.OS === 'web' ? ({ boxShadow: DESIGN_TOKENS.shadows.light } as any) : null),
   },
+  loadMoreFooter: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: DESIGN_TOKENS.spacing.lg,
+  },
+  loadMoreText: {
+    color: colors.textMuted,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '600',
+  },
   media: {
     height: 190,
     backgroundColor: colors.surfaceMuted,
