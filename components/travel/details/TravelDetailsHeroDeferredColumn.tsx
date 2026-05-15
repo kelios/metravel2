@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { memo } from 'react'
 import { View } from 'react-native'
 
 import type { Travel } from '@/types/types'
@@ -14,7 +14,6 @@ type TravelDetailsHeroDeferredColumnProps = {
   deferHeroExtras: boolean
   forceOpenKey: string | null
   isMobile: boolean
-  lcpLoaded: boolean
   onFirstImageLoad: () => void
   onQuickJump: (key: string) => void
   sectionLinks: TravelSectionLink[]
@@ -27,12 +26,39 @@ export default function TravelDetailsHeroDeferredColumn({
   deferHeroExtras,
   forceOpenKey,
   isMobile,
-  lcpLoaded: _lcpLoaded,
   onFirstImageLoad,
   onQuickJump,
   sectionLinks,
   travel,
 }: TravelDetailsHeroDeferredColumnProps) {
+  return (
+    <>
+      <TravelDetailsPrimaryColumn
+        travel={travel}
+        anchors={anchors}
+        deferHeroExtras={deferHeroExtras}
+        forceOpenKey={forceOpenKey}
+        isMobile={isMobile}
+        onFirstImageLoad={onFirstImageLoad}
+        onQuickJump={onQuickJump}
+        sectionLinks={sectionLinks}
+      />
+
+      {deferredContent}
+    </>
+  )
+}
+
+const TravelDetailsPrimaryColumn = memo(function TravelDetailsPrimaryColumn({
+  anchors,
+  deferHeroExtras,
+  forceOpenKey,
+  isMobile,
+  onFirstImageLoad,
+  onQuickJump,
+  sectionLinks,
+  travel,
+}: Omit<TravelDetailsHeroDeferredColumnProps, 'deferredContent'>) {
   return (
     <>
       <View collapsable={false}>
@@ -54,8 +80,6 @@ export default function TravelDetailsHeroDeferredColumn({
         anchors={anchors}
         forceOpenKey={forceOpenKey}
       />
-
-      {deferredContent}
     </>
   )
-}
+})

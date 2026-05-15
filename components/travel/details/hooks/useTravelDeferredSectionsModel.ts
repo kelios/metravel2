@@ -53,41 +53,52 @@ type UseTravelDeferredSectionsModelArgs = {
   travelId?: number
 }
 
+function useDeferredProgressiveSection(
+  config: (typeof TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS)[keyof typeof TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS],
+  enabled: boolean,
+) {
+  const tdTrace = useTdTrace()
+  const section = useProgressiveLoad({
+    ...config,
+    enabled,
+  })
+
+  useEffect(() => {
+    if (section.shouldLoad) tdTrace(config.traceKey)
+  }, [config.traceKey, section.shouldLoad, tdTrace])
+
+  return section
+}
+
 export function useTravelDeferredSectionsModel({
   travelId,
 }: UseTravelDeferredSectionsModelArgs) {
   const [canRenderHeavy, setCanRenderHeavy] = useState(Platform.OS === 'web')
   const tdTrace = useTdTrace()
-  const useDeferredProgressiveSection = (config: (typeof TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS)[keyof typeof TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS]) => {
-    const section = useProgressiveLoad({
-      ...config,
-      enabled: canRenderHeavy,
-    })
-
-    useEffect(() => {
-      if (section.shouldLoad) tdTrace(config.traceKey)
-    }, [config.traceKey, section.shouldLoad])
-
-    return section
-  }
 
   const { shouldLoad: shouldLoadMap, setElementRef: setMapRef } = useDeferredProgressiveSection(
     TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.map,
+    canRenderHeavy,
   )
   const { shouldLoad: shouldLoadSidebar, setElementRef: setSidebarRef } = useDeferredProgressiveSection(
     TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.sidebar,
+    canRenderHeavy,
   )
   const { shouldLoad: shouldLoadComments, setElementRef: setCommentsRef } = useDeferredProgressiveSection(
     TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.comments,
+    canRenderHeavy,
   )
   const { shouldLoad: shouldLoadFooter, setElementRef: setFooterRef } = useDeferredProgressiveSection(
     TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.footer,
+    canRenderHeavy,
   )
   const { shouldLoad: shouldLoadAuthorSection, setElementRef: setAuthorSectionRef } = useDeferredProgressiveSection(
     TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.author,
+    canRenderHeavy,
   )
   const { shouldLoad: shouldLoadRating, setElementRef: setRatingRef } = useDeferredProgressiveSection(
     TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.rating,
+    canRenderHeavy,
   )
 
   useEffect(() => {

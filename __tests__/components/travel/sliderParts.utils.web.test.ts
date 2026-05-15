@@ -34,8 +34,9 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
     )
 
     expect(src).toContain('w=720')
-    expect(src).toContain('q=68')
+    expect(src).toContain('q=45')
     expect(src).toContain('fit=contain')
+    expect(src).not.toContain('dpr=')
     expect(src).not.toContain('f=')
   })
 
@@ -52,8 +53,9 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
     )
 
     expect(src).toContain('w=720')
-    expect(src).toContain('q=70')
+    expect(src).toContain('q=35')
     expect(src).toContain('fit=contain')
+    expect(src).not.toContain('dpr=')
     expect(src).not.toContain('f=')
   })
 

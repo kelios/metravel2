@@ -31,6 +31,15 @@ const mockPlaceListCard = jest.fn((props: any) => {
         <Text>{action.label}</Text>
       </Pressable>
     ))}
+    {props.inlineActions?.map((action: any) => (
+      <Pressable
+        key={action.key}
+        accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
+        onPress={action.onPress}
+      >
+        <Text>{action.label}</Text>
+      </Pressable>
+    ))}
     {overflowActions.length > 0 ? (
       <>
         <Pressable
@@ -166,7 +175,7 @@ describe('AddressListItem (web right panel)', () => {
     );
 
     expect(queryByLabelText('Скопировать координаты')).toBeNull();
-    expect(queryByLabelText('Открыть статью')).toBeNull();
+    expect(getAllByLabelText('Открыть страницу').length).toBeGreaterThan(0);
     expect(getAllByLabelText('Открыть в Google Maps').length).toBeGreaterThan(0);
     expect(getAllByLabelText('Поделиться в Telegram').length).toBeGreaterThan(0);
     expect(getAllByLabelText('Сохранить').length).toBeGreaterThan(0);
@@ -178,6 +187,12 @@ describe('AddressListItem (web right panel)', () => {
     await waitFor(() => {
       const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
       expect(calls.some((v) => v.includes('google.com/maps/search'))).toBe(true);
+    });
+
+    fireEvent.press(getAllByLabelText('Открыть страницу')[0]);
+    await waitFor(() => {
+      const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
+      expect(calls.some((v) => v.includes('example.com/article'))).toBe(true);
     });
 
     fireEvent.press(getAllByLabelText('Ещё действия')[0]);

@@ -357,14 +357,13 @@ function CompactSideBarTravel({
       onFocus={(Platform.OS === 'web') ? enableDeferred : undefined}
       {...webOnly({ 'data-sidebar-deferred-ready': deferredEnabled } as any)}
     >
-      <View
-        style={{ flex: 1, minHeight: 0 }}
-        {...webOnly({ 'data-sidebar-menu': true } as any)}
-      >
+      <View style={styles.menuFrame}>
         <ScrollView
+          testID="travel-details-sidebar-menu"
           style={[styles.menu, { width: '100%' }]}
           contentContainerStyle={menuContentStyle}
-          showsVerticalScrollIndicator={!(Platform.OS === 'web')}
+          showsVerticalScrollIndicator
+          nestedScrollEnabled
         >
           {isMobile && (
             <View style={styles.closeTopBar}>
@@ -526,6 +525,7 @@ const NavRow = memo(function NavRow({
 }: NavRowProps) {
   const { key, icon, label, meta } = link
   const iconSize = (Platform.OS === 'web') && isTablet ? 20 : 18
+  const handlePress = useCallback(() => onPress(key), [key, onPress])
 
   return (
     <>
@@ -541,7 +541,7 @@ const NavRow = memo(function NavRow({
           active && styles.linkActive,
           pressed && styles.linkPressed,
         ]}
-        onPress={() => onPress(key)}
+        onPress={handlePress}
         android_ripple={{ color: colors.primarySoft }}
         accessibilityRole="button"
         accessibilityLabel={label}
@@ -604,7 +604,7 @@ type AuthorBlockProps = {
   onUserTravels: () => void
 }
 
-function AuthorBlock({
+const AuthorBlock = memo(function AuthorBlock({
   styles,
   colors,
   textColor,
@@ -624,6 +624,8 @@ function AuthorBlock({
 }: AuthorBlockProps) {
   const showSubscribeAndWrite = !isOwn && !!authorUserId
   const displayName = userName || 'Пользователь'
+  const editTitleRef = useMemo(() => attachWebTitle('Редактировать'), [])
+  const writeTitleRef = useMemo(() => attachWebTitle('Написать автору'), [])
 
   return (
     <View
@@ -695,7 +697,7 @@ function AuthorBlock({
                     globalFocusStyles.focusable,
                     pressed && styles.actionBtnPressed,
                   ]}
-                  ref={attachWebTitle('Редактировать')}
+                  ref={editTitleRef}
                   {...webOnly({
                     'data-action-btn': true,
                     role: 'button',
@@ -732,7 +734,7 @@ function AuthorBlock({
                       globalFocusStyles.focusable,
                       pressed && styles.actionBtnPressed,
                     ]}
-                    ref={attachWebTitle('Написать автору')}
+                    ref={writeTitleRef}
                     {...webOnly({
                       'data-action-btn': true,
                       role: 'button',
@@ -800,7 +802,7 @@ function AuthorBlock({
       </View>
     </View>
   )
-}
+})
 
 export default memo(CompactSideBarTravel)
 
@@ -818,6 +820,17 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
           }
         : {}),
     },
+    menuFrame: {
+      flex: 1,
+      minHeight: 0,
+      ...((Platform.OS === 'web')
+        ? {
+            height: '100%' as any,
+            maxHeight: '100%' as any,
+            overflow: 'hidden' as any,
+          }
+        : {}),
+    },
     menu: {
       paddingTop: 16,
       alignSelf: 'flex-start',
@@ -825,9 +838,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
         ? {
             maxWidth: 350,
             flex: 1,
+            height: '100%' as any,
+            maxHeight: '100%' as any,
             minHeight: 0 as any,
             overflowY: 'auto' as any,
             overflowX: 'hidden' as any,
+            overscrollBehavior: 'contain' as any,
             width: '100%',
             alignSelf: 'stretch' as any,
           }

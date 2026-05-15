@@ -172,8 +172,8 @@ const PlaceListCard: React.FC<Props> = ({
   const showBadges = badges.length > 0;
   const isCompactWebCard = compact && Platform.OS === 'web';
   const visibleMapActions = isCompactWebCard ? mapActions.slice(0, 1) : mapActions;
-  const visibleInlineActions = isCompactWebCard ? [] : inlineActions;
-  const overflowActions = isCompactWebCard ? [...mapActions.slice(1), ...inlineActions] : [];
+  const visibleInlineActions = isCompactWebCard ? inlineActions.slice(0, 1) : inlineActions;
+  const overflowActions = isCompactWebCard ? [...mapActions.slice(1), ...inlineActions.slice(1)] : [];
   const hasActionRow = showActionRow && (
     (hasCoord && !!onCopyCoord) ||
     (hasCoord && !!onShare) ||

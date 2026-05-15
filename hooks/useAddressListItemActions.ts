@@ -10,6 +10,7 @@ import { userPointsApi } from '@/api/userPoints';
 import { PointStatus } from '@/types/userPoints';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { openExternalUrlInNewTab, openExternalUrl } from '@/utils/externalLinks';
+import { getSiteBaseUrl } from '@/utils/seo';
 import { showToast } from '@/utils/toast';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import type { TravelCoords } from '@/types/types';
@@ -48,7 +49,10 @@ export const buildOsmUrl = (coord?: string) => {
 
 export const openExternal = async (url?: string) => {
   try {
-    const opened = await openExternalUrlInNewTab(url ?? '');
+    const opened = await openExternalUrlInNewTab(url ?? '', {
+      allowRelative: true,
+      baseUrl: getSiteBaseUrl(),
+    });
     if (!opened) await showToast({ type: 'info', text1: 'Не удалось открыть ссылку', position: 'bottom' });
   } catch {
     await showToast({ type: 'info', text1: 'Не удалось открыть ссылку', position: 'bottom' });

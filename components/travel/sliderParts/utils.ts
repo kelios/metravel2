@@ -114,16 +114,17 @@ export const buildUriWeb = (
     const targetWidth = isFirst ? maxWidth : Math.min(containerWidth, maxWidth);
     const quality = isFirst
       ? isMobileWidth
-        ? 70
-        : 68
+        ? 35
+        : 45
       : isMobileWidth
         ? 78
         : 78;
     const format = isFirst ? undefined : PREFERRED_FORMAT;
+    const dpr = isFirst ? undefined : effectiveDevicePixelRatio;
     return (
       optimizeImageUrl(versionedUrl, {
         width: targetWidth,
-        dpr: effectiveDevicePixelRatio,
+        dpr,
         format,
         quality,
         fit: fitForUrl,

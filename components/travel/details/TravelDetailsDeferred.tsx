@@ -1,4 +1,4 @@
-import React, { Suspense, memo } from 'react'
+import React, { Suspense, memo, useCallback } from 'react'
 import { Animated, Platform, View } from 'react-native'
 import type { Travel } from '@/types/types'
 import {
@@ -95,10 +95,13 @@ export const TravelDeferredSections: React.FC<{
   const shouldLoadSidebarSection = shouldLoadSidebar || shouldForceLoadSidebarSection(forceOpenKey)
   const shouldLoadCommentsSection = shouldLoadComments || forceOpenKey === 'comments'
   const shouldLoadFooterSection = shouldLoadFooter
-  const handleCommentsRef = (el: unknown) => {
-    ;(anchors.comments as any).current = el
-    setCommentsRef(el)
-  }
+  const setCommentsSectionRef = useCallback(
+    (node: unknown) => {
+      ;(anchors.comments as any).current = node
+      setCommentsRef(node)
+    },
+    [anchors.comments, setCommentsRef],
+  )
 
   return (
     <>
@@ -170,7 +173,7 @@ export const TravelDeferredSections: React.FC<{
       </View>
 
       <View 
-        ref={handleCommentsRef}
+        ref={setCommentsSectionRef}
         collapsable={false}
         {...(Platform.OS === 'web' ? { 'data-section-key': 'comments' } : {})}
       >

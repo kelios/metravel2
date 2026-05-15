@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState, useTransition } from 'react'
-import { Animated, Platform, useWindowDimensions } from 'react-native'
+import React, { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
+import { Platform, useWindowDimensions } from 'react-native'
 import { useIsFocused, useNavigation } from '@react-navigation/native'
 import { useRouter } from 'expo-router'
 
@@ -21,7 +21,9 @@ import { useTravelDetailsContainerViewModel } from '@/components/travel/details/
 import { useTravelDetailsHeadSync } from '@/components/travel/details/hooks/useTravelDetailsHeadSync'
 import type { Travel } from '@/types/types'
 
-function isWebAutomation() {
+const SKELETON_FALLBACK = <TravelDetailsLoadingFallback />
+
+function isWebAutomationRuntime() {
   return (
     Platform.OS === 'web' &&
     typeof navigator !== 'undefined' &&
@@ -29,120 +31,77 @@ function isWebAutomation() {
   )
 }
 
-function useShowSkipToContentLink() {
-  const [isVisible, setIsVisible] = useState(Platform.OS !== 'web')
+function useSkipToContentLinkVisibility() {
+  const [isSkipLinkVisible, setSkipLinkVisible] = useState(Platform.OS !== 'web')
 
   useEffect(() => {
     if (Platform.OS !== 'web') return undefined
 
-    const revealOnFirstForwardTab = (event: KeyboardEvent) => {
-      if (event.key === 'Tab' && !event.shiftKey) setIsVisible(true)
+    const showOnForwardTab = (event: KeyboardEvent) => {
+      if (event.key === 'Tab' && !event.shiftKey) setSkipLinkVisible(true)
     }
 
-    window.addEventListener('keydown', revealOnFirstForwardTab, { passive: true, once: true })
-    return () => window.removeEventListener('keydown', revealOnFirstForwardTab)
+    window.addEventListener('keydown', showOnForwardTab, { passive: true, once: true })
+    return () => window.removeEventListener('keydown', showOnForwardTab)
   }, [])
 
-  return isVisible
+  return isSkipLinkVisible
 }
 
-function useOfflineTravelCache(travel: Travel | undefined, isLoading: boolean, isError: boolean) {
+function useNativeOfflineTravelCache(
+  travel: Travel | undefined,
+  isLoading: boolean,
+  isError: boolean,
+) {
   useEffect(() => {
     if (Platform.OS === 'web' || !travel?.id || isLoading || isError) return undefined
 
-    let cancelled = false
+    let isCancelled = false
 
     void import('@/hooks/useOfflineTravelCache')
       .then((module) => {
-        if (!cancelled) return module.cacheTravelOffline(travel.id, travel, true)
+        if (!isCancelled) return module.cacheTravelOffline(travel.id, travel, true)
         return undefined
       })
       .catch(() => undefined)
 
     return () => {
-      cancelled = true
+      isCancelled = true
     }
-  }, [travel, isLoading, isError])
+  }, [isError, isLoading, travel])
 }
 
-type DeferredRuntimeArgs = {
-  activeSection: string | null
-  anchors: any
-  contentHeight: number
-  criticalChromeReady: boolean
-  deferredChromeReady: boolean
-  forceOpenKey: string | null
-  isMobile: boolean
-  onNavigate: (key: string) => void
-  screenWidth: number
-  scrollToComments: () => void
-  scrollToMapSection: () => void
-  scrollViewRef: React.RefObject<any>
-  scrollY: Animated.Value
-  sectionLinks: any[]
-  travel: Travel | undefined
-  viewportHeight: number
-}
-
-function useDeferredRuntimeContent({
-  activeSection,
-  anchors,
-  contentHeight,
-  criticalChromeReady,
-  deferredChromeReady,
-  forceOpenKey,
-  isMobile,
-  onNavigate,
-  screenWidth,
-  scrollToComments,
-  scrollToMapSection,
-  scrollViewRef,
-  scrollY,
-  sectionLinks,
-  travel,
-  viewportHeight,
-}: DeferredRuntimeArgs) {
-  return useMemo(() => {
-    if (!travel) return null
-
-    return (
-      <TravelDetailsDeferredRuntimeSlot
-        travel={travel}
-        isMobile={isMobile}
-        screenWidth={screenWidth}
-        anchors={anchors}
-        sectionLinks={sectionLinks}
-        onNavigate={onNavigate}
-        activeSection={activeSection}
-        forceOpenKey={forceOpenKey}
-        scrollY={scrollY}
-        contentHeight={contentHeight}
-        viewportHeight={viewportHeight}
-        scrollViewRef={scrollViewRef}
-        criticalChromeReady={criticalChromeReady}
-        deferredChromeReady={deferredChromeReady}
-        scrollToMapSection={scrollToMapSection}
-        scrollToComments={scrollToComments}
+function useTravelSeoElement({
+  backgroundColor,
+  canonicalUrl,
+  headKey,
+  jsonLd,
+  readyDesc,
+  readyImage,
+  readyTitle,
+}: {
+  backgroundColor: string
+  canonicalUrl: string
+  headKey: string
+  jsonLd: unknown
+  readyDesc: string
+  readyImage?: string
+  readyTitle: string
+}) {
+  return useMemo(
+    () => (
+      <TravelDetailsSeoBlock
+        backgroundColor={backgroundColor}
+        canonicalUrl={canonicalUrl}
+        headKey={headKey}
+        jsonLd={jsonLd}
+        readyDesc={readyDesc}
+        readyImage={readyImage}
+        readyTitle={readyTitle}
       />
-    )
-  }, [
-    activeSection,
-    anchors,
-    contentHeight,
-    criticalChromeReady,
-    deferredChromeReady,
-    forceOpenKey,
-    isMobile,
-    onNavigate,
-    screenWidth,
-    scrollToComments,
-    scrollToMapSection,
-    scrollViewRef,
-    scrollY,
-    sectionLinks,
-    travel,
-    viewportHeight,
-  ])
+    ),
+    [backgroundColor, canonicalUrl, headKey, jsonLd, readyDesc, readyImage, readyTitle],
+  )
 }
 
 export default function TravelDetailsContainer() {
@@ -156,13 +115,14 @@ export default function TravelDetailsContainer() {
   const { announcement, priority: announcementPriority } = useAccessibilityAnnounce()
   const colors = useThemedColors()
   const styles = useMemo(() => getTravelDetailsShellStyles(colors), [colors])
-  const showSkipToContentLink = useShowSkipToContentLink()
+  const showSkipToContentLink = useSkipToContentLinkVisibility()
 
   const details = useTravelDetails({ isMobile, screenWidth, startTransition })
-  const { error, isError, isLoading, isMissingParam, refetch, slug, travel } = details.data
-  const { contentHorizontalPadding, sideMenuPlatformStyles } = details.layout
+  const { data, layout, menu, navigation: travelNavigation, performance, scroll } = details
+  const { error, isError, isLoading, isMissingParam, refetch, slug, travel } = data
+  const { contentHorizontalPadding, sideMenuPlatformStyles } = layout
   const { activeSection, anchors, forceOpenKey, scrollRef, scrollTo, setActiveSection } =
-    details.navigation
+    travelNavigation
   const {
     deferAllowed,
     lcpLoaded,
@@ -170,12 +130,12 @@ export default function TravelDetailsContainer() {
     setLcpLoaded,
     sliderReady,
     heroEnhancersReady = postLcpRuntimeReady,
-  } = details.performance
-  const { animatedX, closeMenu, menuWidthNum } = details.menu
+  } = performance
+  const { animatedX, closeMenu, menuWidthNum } = menu
   const { contentHeight, handleContentSizeChange, handleLayout, scrollY, viewportHeight } =
-    details.scroll
+    scroll
 
-  useOfflineTravelCache(travel, isLoading, isError)
+  useNativeOfflineTravelCache(travel, isLoading, isError)
 
   const isFirstScreenReady = isTravelDetailsFirstScreenReady(travel, lcpLoaded)
   const skeletonPhase = useSkeletonPhase({
@@ -214,7 +174,7 @@ export default function TravelDetailsContainer() {
     closeMenu,
     forceOpenKey,
     isMobile,
-    isWebAutomation: isWebAutomation(),
+    isWebAutomation: isWebAutomationRuntime(),
     lcpLoaded,
     navigationSetOptions: navigation.setOptions,
     postLcpRuntimeReady,
@@ -230,6 +190,15 @@ export default function TravelDetailsContainer() {
   })
 
   const { canonicalUrl, jsonLd, readyDesc, readyImage, readyTitle } = seo
+  const seoElement = useTravelSeoElement({
+    backgroundColor: colors.background,
+    canonicalUrl,
+    headKey,
+    jsonLd,
+    readyDesc,
+    readyImage,
+    readyTitle,
+  })
 
   useTravelDetailsHeadSync({
     canonicalUrl,
@@ -240,22 +209,38 @@ export default function TravelDetailsContainer() {
     syncNavigationTitle,
   })
 
-  const seoBlock = useMemo(
-    () => (
-      <TravelDetailsSeoBlock
-        backgroundColor={colors.background}
-        canonicalUrl={canonicalUrl}
-        headKey={headKey}
-        jsonLd={jsonLd}
-        readyDesc={readyDesc}
-        readyImage={readyImage}
-        readyTitle={readyTitle}
-      />
-    ),
-    [canonicalUrl, colors.background, headKey, jsonLd, readyDesc, readyImage, readyTitle],
-  )
+  const retryLoad = useCallback(() => {
+    void refetch()
+  }, [refetch])
 
-  const deferredRuntimeContent = useDeferredRuntimeContent({
+  const goHome = useCallback(() => {
+    router.replace('/')
+  }, [router])
+
+  const deferredRuntime = useMemo(() => {
+    if (!travel) return null
+
+    return (
+      <TravelDetailsDeferredRuntimeSlot
+        travel={travel}
+        isMobile={isMobile}
+        screenWidth={screenWidth}
+        anchors={anchors}
+        sectionLinks={sectionLinks}
+        onNavigate={scrollToWithMenuClose}
+        activeSection={activeSection}
+        forceOpenKey={forceOpenKey}
+        scrollY={scrollY}
+        contentHeight={contentHeight}
+        viewportHeight={viewportHeight}
+        scrollViewRef={scrollRef as React.RefObject<any>}
+        criticalChromeReady={criticalChromeReady}
+        deferredChromeReady={deferredChromeReady}
+        scrollToMapSection={scrollToMapSection}
+        scrollToComments={scrollToComments}
+      />
+    )
+  }, [
     activeSection,
     anchors,
     contentHeight,
@@ -263,47 +248,37 @@ export default function TravelDetailsContainer() {
     deferredChromeReady,
     forceOpenKey,
     isMobile,
-    onNavigate: scrollToWithMenuClose,
     screenWidth,
+    scrollRef,
     scrollToComments,
     scrollToMapSection,
-    scrollViewRef: scrollRef as React.RefObject<any>,
+    scrollToWithMenuClose,
     scrollY,
     sectionLinks,
     travel,
     viewportHeight,
-  })
+  ])
 
-  const loadingFallback = useMemo(() => <TravelDetailsLoadingFallback />, [])
-  const mainAriaLabel = useMemo(
-    () => `Детали путешествия: ${travel?.name || 'путешествие'}`,
-    [travel?.name],
-  )
+  const mainAriaLabel = `Детали путешествия: ${travel?.name || 'путешествие'}`
 
   if (isMissingParam) {
-    return (
-      <MissingParamError
-        styles={styles}
-        seoBlock={seoBlock}
-        onGoHome={() => router.replace('/')}
-      />
-    )
+    return <MissingParamError styles={styles} seoBlock={seoElement} onGoHome={goHome} />
   }
 
   if (isError) {
     return (
       <LoadError
         styles={styles}
-        seoBlock={seoBlock}
+        seoBlock={seoElement}
         errorMessage={error?.message}
-        onRetry={() => refetch()}
+        onRetry={retryLoad}
       />
     )
   }
 
   return (
     <>
-      {seoBlock}
+      {seoElement}
 
       <TravelDetailsAccessibilityChrome
         announcement={announcement}
@@ -318,7 +293,7 @@ export default function TravelDetailsContainer() {
         wrapperStyle={wrapperStyle}
         styles={styles}
         skeletonPhase={skeletonPhase}
-        skeletonFallback={loadingFallback}
+        skeletonFallback={SKELETON_FALLBACK}
         scrollRef={scrollRef as React.RefObject<any>}
         scrollViewStyle={scrollViewStyle}
         scrollEventHandler={scrollEventHandler}
@@ -326,7 +301,6 @@ export default function TravelDetailsContainer() {
         handleLayout={handleLayout}
         contentHorizontalPadding={contentHorizontalPadding}
         anchors={anchors}
-        lcpLoaded={lcpLoaded}
         onFirstImageLoad={handleFirstImageLoad}
         sectionLinks={sectionLinks}
         onQuickJump={scrollToWithMenuClose}
@@ -339,7 +313,7 @@ export default function TravelDetailsContainer() {
         animatedX={animatedX}
         sideMenuPlatformStyles={sideMenuPlatformStyles}
         mainAriaLabel={mainAriaLabel}
-        deferredContent={deferredRuntimeContent}
+        deferredContent={deferredRuntime}
       />
     </>
   )

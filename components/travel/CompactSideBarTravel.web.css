@@ -170,25 +170,30 @@
 }
 
 /* Плавная прокрутка */
-[data-sidebar-menu] {
+[data-sidebar-menu],
+[data-testid="travel-details-sidebar-menu"] {
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
 }
 
-[data-sidebar-menu]::-webkit-scrollbar {
+[data-sidebar-menu]::-webkit-scrollbar,
+[data-testid="travel-details-sidebar-menu"]::-webkit-scrollbar {
   width: 6px;
 }
 
-[data-sidebar-menu]::-webkit-scrollbar-track {
+[data-sidebar-menu]::-webkit-scrollbar-track,
+[data-testid="travel-details-sidebar-menu"]::-webkit-scrollbar-track {
   background: transparent;
 }
 
-[data-sidebar-menu]::-webkit-scrollbar-thumb {
+[data-sidebar-menu]::-webkit-scrollbar-thumb,
+[data-testid="travel-details-sidebar-menu"]::-webkit-scrollbar-thumb {
   background: var(--color-border);
   border-radius: 999px;
 }
 
-[data-sidebar-menu]::-webkit-scrollbar-thumb:hover {
+[data-sidebar-menu]::-webkit-scrollbar-thumb:hover,
+[data-testid="travel-details-sidebar-menu"]::-webkit-scrollbar-thumb:hover {
   background: var(--color-borderStrong);
 }
 

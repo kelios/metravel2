@@ -82,22 +82,33 @@ export default function TravelDetailsPostLcpRuntime({
     };
   }, [DeferredSectionsComponent]);
 
-  const deferredSectionsContent = (
-    DeferredSectionsComponent ? (
-      <DeferredSectionsComponent
-        travel={travel}
-        isMobile={isMobile}
-        forceOpenKey={forceOpenKey}
-        anchors={anchors}
-        scrollY={scrollY}
-        viewportHeight={viewportHeight}
-        scrollToMapSection={scrollToMapSection}
-      />
-    ) : (
-      <View style={PLACEHOLDER_STYLE}>
-        <SectionSkeleton />
-      </View>
-    )
+  const deferredSectionsContent = useMemo(
+    () =>
+      DeferredSectionsComponent ? (
+        <DeferredSectionsComponent
+          travel={travel}
+          isMobile={isMobile}
+          forceOpenKey={forceOpenKey}
+          anchors={anchors}
+          scrollY={scrollY}
+          viewportHeight={viewportHeight}
+          scrollToMapSection={scrollToMapSection}
+        />
+      ) : (
+        <View style={PLACEHOLDER_STYLE}>
+          <SectionSkeleton />
+        </View>
+      ),
+    [
+      DeferredSectionsComponent,
+      anchors,
+      forceOpenKey,
+      isMobile,
+      scrollToMapSection,
+      scrollY,
+      travel,
+      viewportHeight,
+    ],
   );
 
   const showReadingProgress = shouldShowTravelReadingProgress({

@@ -102,6 +102,13 @@ const getPopupEventNodes = (node: any): EventTarget[] => {
   return [node];
 };
 
+const isInternalArticleHref = (pathname: string) => (
+  pathname.startsWith('/travel/') ||
+  pathname.startsWith('/travels/') ||
+  pathname.startsWith('/article/') ||
+  pathname.startsWith('/articles/')
+);
+
 const PlacePopupCard: React.FC<Props> = ({
   title,
   subtitle: _subtitle,
@@ -147,12 +154,12 @@ const PlacePopupCard: React.FC<Props> = ({
   const normalizedArticleHref = useMemo(() => {
     const rawHref = String(articleHref ?? '').trim();
     if (!rawHref) return null;
-    if (rawHref.startsWith('/travel/') || rawHref.startsWith('/travels/')) return rawHref;
+    if (isInternalArticleHref(rawHref)) return rawHref;
 
     if (/^https?:\/\//i.test(rawHref)) {
       try {
         const parsed = new URL(rawHref);
-        if (parsed.pathname.startsWith('/travel/') || parsed.pathname.startsWith('/travels/')) {
+        if (isInternalArticleHref(parsed.pathname)) {
           return `${parsed.pathname}${parsed.search}${parsed.hash}`;
         }
       } catch {
@@ -198,7 +205,7 @@ const PlacePopupCard: React.FC<Props> = ({
 
     if (hasArticle) {
       return {
-        label: 'Подробнее',
+        label: 'Открыть страницу',
         icon: 'arrow-right' as const,
         onPress: onOpenArticle!,
         tooltip: POPUP_TOOLTIPS.openArticle,
@@ -645,10 +652,9 @@ const PlacePopupCard: React.FC<Props> = ({
                     style={StyleSheet.absoluteFill}
                   />
                   {Platform.OS === 'web' ? (
-                    <button
-                      type="button"
+                    <span
                       data-card-action="true"
-                      aria-label="Открыть фото на весь экран"
+                      aria-hidden="true"
                       title={POPUP_TOOLTIPS.openPhoto}
                       onMouseDownCapture={handleOpenFullscreen}
                       onPointerDownCapture={handleOpenFullscreen}
@@ -686,7 +692,7 @@ const PlacePopupCard: React.FC<Props> = ({
                       }}
                     >
                       <Feather name="maximize-2" size={16} color={colors.textOnDark} />
-                    </button>
+                    </span>
                   ) : (
                     <View
                       pointerEvents="none"

@@ -452,12 +452,13 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
               {images.map((item, index) => {
                 const distanceToCurrent = Math.abs(index - currentIndex)
                 const allowNeighbourPreload =
-                  firstImageLoaded || currentIndex > 0 || isMobileDevice
+                  layoutMeasured && (firstImageLoaded || currentIndex > 0 || isMobileDevice)
                 const preloadPriority =
                   prefetchEnabled &&
                   (distanceToCurrent === 0 ||
                     (distanceToCurrent <= effectivePreloadCount && allowNeighbourPreload))
-                const prepareBlur = blurBackground && distanceToCurrent <= 1
+                const prepareBlur = layoutMeasured && blurBackground && distanceToCurrent <= 1
+                const slideUri = index === currentIndex || layoutMeasured ? getUri(index) : ''
 
                 return (
                   <View
@@ -472,7 +473,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                     <Slide
                       item={item}
                       index={index}
-                      uri={getUri(index)}
+                      uri={slideUri}
                       containerW={slideMediaWidth}
                       slideHeight={containerHeight}
                       slideHeightPx={containerHeightPx}

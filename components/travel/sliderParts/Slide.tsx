@@ -261,6 +261,7 @@ const Slide = memo(function Slide({
   const handlePress = useCallback(() => {
     onImagePress?.(index);
   }, [onImagePress, index]);
+  const hasRenderableUri = resolvedUri.length > 0;
 
   const slideContent = (
     <View
@@ -271,8 +272,8 @@ const Slide = memo(function Slide({
       ]}
     >
       {/* Main image with integrated blur background */}
-      {skipImage ? (
-        // Empty placeholder when LCP Hero overlay covers this slide
+      {skipImage || !hasRenderableUri ? (
+        // Empty placeholder while another layer owns the visible image or layout is not measured yet.
         <View style={{ width: '100%', height: '100%' }} />
       ) : hasError ? (
         <View

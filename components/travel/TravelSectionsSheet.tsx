@@ -105,6 +105,16 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
     setOpen(false)
   }, [])
 
+  const handleOpen = useCallback(() => {
+    openedAtRef.current = Date.now()
+    setOpen(true)
+  }, [])
+
+  const handleBackdropPress = useCallback(() => {
+    const elapsedMs = Date.now() - openedAtRef.current
+    if (elapsedMs >= 300) setOpen(false)
+  }, [])
+
   useEffect(() => {
     if (Platform.OS !== "web") return
     if (!open) return
@@ -317,10 +327,7 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
       <View testID={testID} style={styles.wrapper}>
         <Pressable
           testID="travel-sections-trigger"
-          onPress={() => {
-            openedAtRef.current = Date.now()
-            setOpen(true)
-          }}
+          onPress={handleOpen}
           accessibilityRole="button"
           accessibilityLabel="Секции, открыть список секций"
           ref={triggerRef}
@@ -347,11 +354,7 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
           <Pressable
             testID="travel-sections-overlay"
             style={styles.backdrop}
-            onPress={() => {
-              const dt = Date.now() - openedAtRef.current
-              if (dt < 300) return
-              setOpen(false)
-            }}
+            onPress={handleBackdropPress}
           />
           <View
             testID="travel-sections-sheet"

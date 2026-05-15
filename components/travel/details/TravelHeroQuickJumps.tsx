@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useCallback } from 'react'
 import { Pressable, ScrollView, Text } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -25,35 +25,15 @@ export function TravelHeroQuickJumps({
   onQuickJump: (key: string) => void
 }) {
   const styles = useTravelDetailsHeroStyles()
-  const colors = useThemedColors()
 
-  const chips = links.map((link, index) => {
-    const isPrimary = link.key === 'map' || index === 0
-    const label = ACTION_LABELS[link.key] ?? link.label
-
-    return (
-      <Pressable
-        key={link.key}
-        onPress={() => onQuickJump(link.key)}
-        style={({ pressed }) => [
-          styles.quickJumpChip,
-          isPrimary && styles.quickJumpChipPrimary,
-          !isPrimary && pressed && styles.quickJumpChipPressed,
-        ]}
-        accessibilityRole="button"
-        accessibilityLabel={`Перейти к разделу ${link.label}`}
-      >
-        <Feather
-          name={link.icon as any}
-          size={16}
-          color={isPrimary ? colors.textOnPrimary : colors.primary}
-        />
-        <Text style={[styles.quickJumpLabel, isPrimary && styles.quickJumpLabelPrimary]}>
-          {label}
-        </Text>
-      </Pressable>
-    )
-  })
+  const chips = links.map((link, index) => (
+    <QuickJumpChip
+      key={link.key}
+      link={link}
+      isPrimary={link.key === 'map' || index === 0}
+      onQuickJump={onQuickJump}
+    />
+  ))
 
   if (!isMobile) return <>{chips}</>
 
@@ -68,5 +48,42 @@ export function TravelHeroQuickJumps({
     </ScrollView>
   )
 }
+
+const QuickJumpChip = React.memo(function QuickJumpChip({
+  link,
+  isPrimary,
+  onQuickJump,
+}: {
+  link: TravelSectionLink
+  isPrimary: boolean
+  onQuickJump: (key: string) => void
+}) {
+  const styles = useTravelDetailsHeroStyles()
+  const colors = useThemedColors()
+  const label = ACTION_LABELS[link.key] ?? link.label
+  const handlePress = useCallback(() => onQuickJump(link.key), [link.key, onQuickJump])
+
+  return (
+    <Pressable
+      onPress={handlePress}
+      style={({ pressed }) => [
+        styles.quickJumpChip,
+        isPrimary && styles.quickJumpChipPrimary,
+        !isPrimary && pressed && styles.quickJumpChipPressed,
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={`Перейти к разделу ${link.label}`}
+    >
+      <Feather
+        name={link.icon as any}
+        size={16}
+        color={isPrimary ? colors.textOnPrimary : colors.primary}
+      />
+      <Text style={[styles.quickJumpLabel, isPrimary && styles.quickJumpLabelPrimary]}>
+        {label}
+      </Text>
+    </Pressable>
+  )
+})
 
 export default React.memo(TravelHeroQuickJumps)

@@ -232,7 +232,18 @@ const AddressListItem: React.FC<Props> = ({
         onCopyCoord={undefined}
         onShare={coord ? openTelegram : undefined}
         mapActions={webMapActions}
-        inlineActions={[]}
+        inlineActions={
+          articleUrl || urlTravel
+            ? [{
+                key: 'article',
+                label: 'Открыть',
+                icon: 'book-open',
+                onPress: openArticle,
+                accessibilityLabel: 'Открыть страницу',
+                title: 'Открыть страницу',
+              }]
+            : []
+        }
         onAddPoint={handleAddPoint}
         addDisabled={!authReady || !isAuthenticated || isAddingPoint}
         isAdding={isAddingPoint}

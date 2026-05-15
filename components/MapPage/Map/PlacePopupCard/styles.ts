@@ -197,14 +197,25 @@ export const getStyles = (
       alignItems: 'flex-start',
     },
     inlineLink: {
-      color: colors.primary,
+      color: colors.primaryDark ?? colors.primary,
       fontSize: compactLayout ? fs.small : fs.small + 1,
-      fontWeight: '600',
+      fontWeight: '800',
       textDecorationLine: 'none',
+      paddingHorizontal: compactLayout ? 10 : 12,
+      paddingVertical: compactLayout ? 6 : 7,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.primarySoft ?? colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30 ?? colors.borderLight,
       ...(Platform.OS === 'web'
         ? ({
-            cursor: 'pointer',
-          } as any)
+          cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          minHeight: compactLayout ? 30 : 34,
+          lineHeight: 1.2,
+          transition: 'background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease',
+        } as any)
         : null),
     },
     categoryText: {

@@ -171,6 +171,7 @@ export default function TabLayout() {
                 {/* адресуемые, но скрытые в таббаре */}
                 <Tabs.Screen name="travelsby" options={HIDDEN} />
                 <Tabs.Screen name="map" options={HIDDEN} />
+                <Tabs.Screen name="places" options={HIDDEN} />
                 <Tabs.Screen name="roulette" options={HIDDEN} />
                 <Tabs.Screen name="favorites" options={HIDDEN} />
                 <Tabs.Screen name="history" options={HIDDEN} />

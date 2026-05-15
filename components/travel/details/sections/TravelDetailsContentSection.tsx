@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react'
+import React, { Suspense, memo, useCallback } from 'react'
 import { Platform, Pressable, Text, View } from 'react-native'
 
 import type { Travel } from '@/types/types'
@@ -40,7 +40,12 @@ export const TravelDetailsContentSection: React.FC<{
   isMobile: boolean
   forceOpenKey: string | null
   anchors: AnchorsMap
-}> = ({ travel, isMobile, anchors, forceOpenKey }) => {
+}> = memo(function TravelDetailsContentSection({
+  travel,
+  isMobile,
+  anchors,
+  forceOpenKey,
+}) {
   const styles = useTravelDetailsStyles()
   const publish = (travel as any).publish
   const moderation = (travel as any).moderation
@@ -63,6 +68,16 @@ export const TravelDetailsContentSection: React.FC<{
     publish,
     travel,
   })
+
+  const setVideoSectionRef = useCallback(
+    (node: unknown) => {
+      if (anchors.video && typeof anchors.video === 'object') {
+        ;(anchors.video as any).current = node
+      }
+      setVideoRef(node)
+    },
+    [anchors.video, setVideoRef],
+  )
 
   return (
     <>
@@ -105,12 +120,7 @@ export const TravelDetailsContentSection: React.FC<{
 
       {travel.youtube_link && (
         <View
-          ref={(node) => {
-            if (anchors.video && typeof anchors.video === 'object') {
-              ;(anchors.video as any).current = node
-            }
-            setVideoRef(node)
-          }}
+          ref={setVideoSectionRef}
           style={[styles.sectionContainer, styles.contentStable]}
           collapsable={false}
           accessibilityLabel="Видео маршрута"
@@ -249,4 +259,4 @@ export const TravelDetailsContentSection: React.FC<{
       )}
     </>
   )
-}
+})

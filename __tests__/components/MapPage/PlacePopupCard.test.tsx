@@ -48,9 +48,9 @@ const findHeroPressable = (tree: any) => tree.root.findAll((node: any) => (
 ))[0];
 
 const findHeroExpandButton = (tree: any) => tree.root.findAll((node: any) => (
-  node.type === 'button' &&
+  node.type === 'span' &&
   node.props?.['data-card-action'] === 'true' &&
-  node.props?.['aria-label'] === 'Открыть фото на весь экран'
+  node.props?.['aria-hidden'] === 'true'
 ))[0];
 
 describe('PlacePopupCard', () => {
@@ -391,5 +391,26 @@ describe('PlacePopupCard', () => {
     expect(stopPropagation).toHaveBeenCalled();
     expect(preventDefault).toHaveBeenCalled();
     expect(onOpenArticle).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders an inline page link for article routes', () => {
+    let tree: any;
+
+    renderer.act(() => {
+      tree = renderer.create(
+        <PlacePopupCard
+          colors={mockColors as any}
+          title="Test point"
+          articleHref="/article/test-post"
+          coord="53.9, 27.56"
+          onBuildRoute={jest.fn()}
+          onOpenArticle={jest.fn()}
+        />
+      );
+    });
+
+    const link = tree.root.findByType('a');
+    expect(link.props.href).toBe('/article/test-post');
+    expect(link.props.children).toBe('Открыть страницу');
   });
 });

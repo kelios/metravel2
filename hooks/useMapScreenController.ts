@@ -25,6 +25,12 @@ const LazyFiltersProvider = lazy(loadFiltersProviderModule);
  * Главный контроллер экрана карты (facade pattern).
  * Объединяет специализированные контроллеры и предоставляет единый API для компонента.
  */
+const parseUrlCoordinate = (value: unknown): number | null => {
+  if (typeof value !== 'string') return null;
+  const parsed = Number(value.replace(',', '.').trim());
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
 export function useMapScreenController() {
   // Map API reference
   const [mapUiApi, setMapUiApi] = useState<MapUiApi | null>(null);
@@ -48,13 +54,21 @@ export function useMapScreenController() {
   );
 
   // URL params → initial filter values
-  const params = useLocalSearchParams<{ categories?: string; radius?: string }>();
+  const params = useLocalSearchParams<{ categories?: string; radius?: string; lat?: string; lng?: string }>();
   const initialCategories = useMemo(
     () => (params.categories ? params.categories.split(',').map((s) => s.trim()).filter(Boolean) : undefined),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
   const initialRadius = useMemo(() => params.radius ?? undefined, []);  // eslint-disable-line react-hooks/exhaustive-deps
+  const urlCoordinates = useMemo(() => {
+    const lat = parseUrlCoordinate(params.lat);
+    const lng = parseUrlCoordinate(params.lng);
+    if (lat == null || lng == null) return null;
+    if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+    return { latitude: lat, longitude: lng };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Filters
   const {
@@ -140,8 +154,8 @@ export function useMapScreenController() {
 
   // Data Controller
   const queryCoordinates = useMemo(() => {
-    return userLocation ?? coordinates;
-  }, [userLocation, coordinates]);
+    return urlCoordinates ?? userLocation ?? coordinates;
+  }, [urlCoordinates, userLocation, coordinates]);
 
   const dataController = useMapDataController({
     coordinates: queryCoordinates,

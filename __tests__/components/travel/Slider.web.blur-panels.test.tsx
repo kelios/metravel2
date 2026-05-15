@@ -12,6 +12,13 @@ const images = Array.from({ length: 6 }, (_, index) => ({
   url: `https://example.com/img-${index + 1}.jpg`,
 }))
 
+async function measureSliderLayout(tree: renderer.ReactTestRenderer, width = 981) {
+  const wrapper = tree.root.findByProps({ testID: 'slider-wrapper' })
+  await act(async () => {
+    wrapper.props.onLayout({ nativeEvent: { layout: { width } } })
+  })
+}
+
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ left: 0, right: 0, top: 0, bottom: 0 }),
 }))
@@ -129,6 +136,7 @@ describe('Slider (web) blur background', () => {
         />,
       )
     })
+    await measureSliderLayout(tree!)
 
     const nextButton = tree.root.findByProps({ accessibilityLabel: 'Next slide' })
 
@@ -158,6 +166,7 @@ describe('Slider (web) blur background', () => {
         />,
       )
     })
+    await measureSliderLayout(tree!)
 
     expect(tree.root.findByProps({ testID: 'slider-image-0' })).toBeTruthy()
     expect(tree.root.findByProps({ testID: 'slider-image-3' })).toBeTruthy()
@@ -204,6 +213,7 @@ describe('Slider (web) blur background', () => {
         />,
       )
     })
+    await measureSliderLayout(tree!)
 
     const firstImage = tree.root.findByProps({ testID: 'slider-image-0' })
     const secondImage = tree.root.findByProps({ testID: 'slider-image-1' })
@@ -230,6 +240,7 @@ describe('Slider (web) blur background', () => {
         />,
       )
     })
+    await measureSliderLayout(tree!, 390)
 
     const secondImage = tree.root.findByProps({ testID: 'slider-image-1' })
     expect(secondImage.props.loading).toBe('eager')
@@ -272,6 +283,7 @@ describe('Slider (web) blur background', () => {
         />,
       )
     })
+    await measureSliderLayout(tree!)
 
     const firstImage = tree.root.findByProps({ testID: 'slider-image-0' })
     expect(firstImage.props.recyclingKey).toContain('slider-slide-0-')
@@ -312,6 +324,7 @@ describe('Slider (web) blur background', () => {
         />,
       )
     })
+    await measureSliderLayout(tree!)
 
     const firstImage = tree.root.findByProps({ testID: 'slider-image-0' })
     expect(firstImage.props.blurBackground).toBe(true)
@@ -335,6 +348,7 @@ describe('Slider (web) blur background', () => {
         />,
       )
     })
+    await measureSliderLayout(tree!)
 
     const nextButton = tree.root.findByProps({ accessibilityLabel: 'Next slide' })
 
@@ -367,6 +381,7 @@ describe('Slider (web) blur background', () => {
         />,
       )
     })
+    await measureSliderLayout(tree!)
 
     const nextButton = tree.root.findByProps({ accessibilityLabel: 'Next slide' })
 
