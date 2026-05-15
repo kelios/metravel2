@@ -1,4 +1,3 @@
-// components/MapPage/RouteBuilder.tsx
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import AddressSearch from '@/components/MapPage/AddressSearch';
@@ -6,19 +5,6 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import type { LatLng } from '@/types/coordinates';
 import MapIcon from './MapIcon';
 import IconButton from '@/components/ui/IconButton';
-
-const SafeView: React.FC<React.ComponentProps<typeof View>> = ({ children, ...props }) => {
-  return (
-    <View {...props}>
-      {React.Children.map(children, (child, index) => {
-        if (typeof child === 'string' || typeof child === 'number') {
-          return <Text key={index}>{child}</Text>;
-        }
-        return child;
-      })}
-    </View>
-  );
-};
 
 interface RouteBuilderProps {
   startAddress: string;
@@ -46,10 +32,9 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
   const hasAnyAddress = Boolean(startAddress || endAddress);
 
   return (
-    <SafeView style={styles.routeBuilder} testID="route-builder">
-      {/* Action buttons - только когда есть адреса */}
+    <View style={styles.routeBuilder} testID="route-builder">
       {hasAnyAddress && (
-        <SafeView style={styles.actionsRow}>
+        <View style={styles.actionsRow}>
           {onSwap && hasRoute && (
             <IconButton
               testID="route-swap"
@@ -72,17 +57,15 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
               style={styles.iconButton}
             />
           )}
-        </SafeView>
+        </View>
       )}
 
-      {/* Address inputs */}
-      <SafeView style={styles.addressContainer}>
-        {/* Start address */}
-        <SafeView style={styles.addressRow}>
-          <SafeView style={[styles.addressIcon, styles.startIcon]}>
+      <View style={styles.addressContainer}>
+        <View style={styles.addressRow}>
+          <View style={[styles.addressIcon, styles.startIcon]}>
             <MapIcon name="trip-origin" size={compact ? 14 : 16} color={colors.textOnDark} />
-          </SafeView>
-          <SafeView style={styles.addressInputWrapper}>
+          </View>
+          <View style={styles.addressInputWrapper}>
             <AddressSearch
               placeholder="Старт"
               value={startAddress}
@@ -91,20 +74,18 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
               onClear={() => onAddressClear?.(true)}
               dense={compact}
             />
-          </SafeView>
-        </SafeView>
+          </View>
+        </View>
 
-        {/* Visual connector line between start and end */}
-        <SafeView style={styles.connectorContainer}>
-          <SafeView style={styles.connectorLine} />
-        </SafeView>
+        <View style={styles.connectorContainer}>
+          <View style={styles.connectorLine} />
+        </View>
 
-        {/* End address */}
-        <SafeView style={styles.addressRow}>
-          <SafeView style={[styles.addressIcon, styles.endIcon]}>
+        <View style={styles.addressRow}>
+          <View style={[styles.addressIcon, styles.endIcon]}>
             <MapIcon name="location-on" size={compact ? 14 : 16} color={colors.textOnDark} />
-          </SafeView>
-          <SafeView style={styles.addressInputWrapper}>
+          </View>
+          <View style={styles.addressInputWrapper}>
             <AddressSearch
               placeholder="Финиш"
               value={endAddress}
@@ -113,11 +94,10 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
               onClear={() => onAddressClear?.(false)}
               dense={compact}
             />
-          </SafeView>
-        </SafeView>
-      </SafeView>
+          </View>
+        </View>
+      </View>
 
-      {/* Hints */}
       {!startAddress && (
         <Text style={styles.hint} testID="route-hint-start">
           Кликните на карте или введите адрес старта
@@ -128,7 +108,7 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
           Теперь выберите точку финиша
         </Text>
       )}
-    </SafeView>
+    </View>
   );
 };
 

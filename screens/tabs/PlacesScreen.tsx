@@ -256,38 +256,6 @@ export default function PlacesScreen() {
         onScroll={handleScroll}
         scrollEventThrottle={180}
       >
-        {/* ─── Hero ─── */}
-        <View style={styles.hero}>
-          <View style={styles.heroInner}>
-            <View style={styles.eyebrowRow}>
-              <View style={styles.eyebrowDot} />
-              <Text style={styles.eyebrow}>Каталог точек</Text>
-            </View>
-            <Text style={styles.heroTitle}>Места</Text>
-            <Text style={styles.heroSubtitle}>
-              Все точки из путешествий — отдельно от радиуса карты. Выберите категорию,
-              откройте место на карте или перейдите к связанному маршруту.
-            </Text>
-            {showLoadedCounts ? (
-              <View style={styles.heroStats}>
-                <View style={styles.heroStatItem}>
-                  <Text style={styles.heroStatValue}>{allPlaces.length}</Text>
-                  <Text style={styles.heroStatLabel}>мест в каталоге</Text>
-                </View>
-                <View style={styles.heroStatDivider} />
-                <View style={styles.heroStatItem}>
-                  <Text style={styles.heroStatValue}>{countryGroups.length}</Text>
-                  <Text style={styles.heroStatLabel}>{countryGroups.length === 1 ? 'страна' : countryGroups.length < 5 ? 'страны' : 'стран'}</Text>
-                </View>
-                <View style={styles.heroStatDivider} />
-                <View style={styles.heroStatItem}>
-                  <Text style={styles.heroStatValue}>{categoryGroups.length}</Text>
-                  <Text style={styles.heroStatLabel}>{categoryGroups.length === 1 ? 'категория' : categoryGroups.length < 5 ? 'категории' : 'категорий'}</Text>
-                </View>
-              </View>
-            ) : null}
-          </View>
-        </View>
 
         {/* ─── Search ─── */}
         <View style={styles.searchSection}>
@@ -654,74 +622,6 @@ const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean)
     paddingBottom: DESIGN_TOKENS.spacing.xxl,
   },
 
-  // ─── Hero ───
-  hero: {
-    paddingHorizontal: isCompact ? DESIGN_TOKENS.spacing.lg : DESIGN_TOKENS.spacing.xl,
-    paddingTop: isCompact ? DESIGN_TOKENS.spacing.xl : DESIGN_TOKENS.spacing.xxl,
-    paddingBottom: DESIGN_TOKENS.spacing.xl,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  heroInner: {
-    gap: DESIGN_TOKENS.spacing.md,
-    maxWidth: 680,
-  },
-  eyebrowRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.xs,
-  },
-  eyebrowDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.primary,
-  },
-  eyebrow: {
-    color: colors.primary,
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  heroTitle: {
-    color: colors.text,
-    fontSize: isCompact ? 40 : 56,
-    fontWeight: '800',
-    letterSpacing: -1.5,
-    lineHeight: isCompact ? 46 : 62,
-  },
-  heroSubtitle: {
-    display: 'none' as any,
-  },
-  heroStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.md,
-    marginTop: DESIGN_TOKENS.spacing.xs,
-    paddingTop: DESIGN_TOKENS.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-  },
-  heroStatItem: {
-    gap: 2,
-  },
-  heroStatValue: {
-    color: colors.text,
-    fontSize: isCompact ? 22 : 28,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
-  heroStatLabel: {
-    color: colors.textMuted,
-    fontSize: DESIGN_TOKENS.typography.sizes.xs,
-    fontWeight: '600',
-  },
-  heroStatDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: colors.borderLight,
-    marginHorizontal: DESIGN_TOKENS.spacing.xs,
-  },
 
   // ─── Search ───
   searchSection: {

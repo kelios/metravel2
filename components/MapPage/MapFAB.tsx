@@ -1,180 +1,163 @@
-/**
- * MapFAB - Floating Action Button для быстрых действий на карте
- */
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  Animated,
+  Platform,
+  StyleSheet,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native'
 
-import React, { useState, useCallback, useMemo } from 'react';
-import { View, StyleSheet, Animated, Platform, type StyleProp, type ViewStyle } from 'react-native';
-import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
-import MapIcon from './MapIcon';
-import CardActionPressable from '@/components/ui/CardActionPressable';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import MapIcon from './MapIcon'
+import CardActionPressable from '@/components/ui/CardActionPressable'
+
+type FABPosition = 'bottom-right' | 'bottom-left' | 'bottom-center'
+
+const ACTION_OFFSET_STEP = 70
 
 interface FABAction {
-  icon: string;
-  label: string;
-  onPress: () => void;
-  color?: string;
+  icon: string
+  label: string
+  onPress: () => void
+  color?: string
 }
 
 interface MapFABProps {
-  /** Основное действие (главная кнопка) */
-  mainAction: FABAction;
-  /** Дополнительные действия (раскрываются при клике) */
-  actions?: FABAction[];
-  /** Позиция на экране */
-  position?: 'bottom-right' | 'bottom-left' | 'bottom-center';
-  /** Открывать меню по нажатию на главную кнопку */
-  expandOnMainPress?: boolean;
-  /** testID для главной кнопки */
-  mainActionTestID?: string;
-  /** Доп. стили для контейнера (например, поднять над BottomDock на web) */
-  containerStyle?: StyleProp<ViewStyle>;
+  mainAction: FABAction
+  actions?: FABAction[]
+  position?: FABPosition
+  expandOnMainPress?: boolean
+  mainActionTestID?: string
+  containerStyle?: StyleProp<ViewStyle>
 }
 
-export const MapFAB: React.FC<MapFABProps> = React.memo(({
-  mainAction,
-  actions = [],
-  position = 'bottom-right',
-  expandOnMainPress = true,
-  mainActionTestID,
-  containerStyle,
-}) => {
-  const colors = useThemedColors();
-  const styles = useMemo(() => getStyles(colors, position), [colors, position]);
+export const MapFAB: React.FC<MapFABProps> = React.memo(
+  ({
+    mainAction,
+    actions = [],
+    position = 'bottom-right',
+    expandOnMainPress = true,
+    mainActionTestID,
+    containerStyle,
+  }) => {
+    const colors = useThemedColors()
+    const styles = useMemo(() => getStyles(colors, position), [colors, position])
 
-  const [isExpanded, setIsExpanded] = useState(false);
-  const animation = useState(new Animated.Value(0))[0];
+    const [isExpanded, setIsExpanded] = useState(false)
+    const animation = useRef(new Animated.Value(0)).current
 
-  const toggleExpand = useCallback(() => {
-    setIsExpanded(prev => {
-      const toValue = prev ? 0 : 1;
+    useEffect(() => {
       Animated.spring(animation, {
-        toValue,
+        toValue: isExpanded ? 1 : 0,
         useNativeDriver: false,
         friction: 5,
         tension: 40,
-      }).start();
-      return !prev;
-    });
-  }, [animation]);
+      }).start()
+    }, [isExpanded, animation])
 
-  const handleMainPress = useCallback(() => {
-    if (actions.length > 0 && expandOnMainPress) {
-      toggleExpand();
-    } else {
-      mainAction.onPress();
-    }
-  }, [actions.length, expandOnMainPress, toggleExpand, mainAction]);
+    const toggleExpand = useCallback(() => setIsExpanded((prev) => !prev), [])
 
-  const handleActionPress = useCallback((action: FABAction) => {
-    action.onPress();
-    toggleExpand();
-  }, [toggleExpand]);
+    const handleMainPress = useCallback(() => {
+      if (actions.length > 0 && expandOnMainPress) {
+        toggleExpand()
+      } else {
+        mainAction.onPress()
+      }
+    }, [actions.length, expandOnMainPress, toggleExpand, mainAction])
 
-  return (
-    <View style={[styles.container, containerStyle]}>
-      {/* Backdrop overlay */}
-      {isExpanded && (
-        <CardActionPressable
-          style={styles.backdrop}
-          onPress={toggleExpand}
-          accessibilityLabel="Закрыть меню"
-        >
-          {null}
-        </CardActionPressable>
-      )}
+    const handleActionPress = useCallback(
+      (action: FABAction) => {
+        action.onPress()
+        toggleExpand()
+      },
+      [toggleExpand],
+    )
 
-      {/* Secondary actions */}
-      {actions.length > 0 && (
-        <View style={styles.actionsContainer}>
-          {actions.map((action, index) => {
-            const translateY = animation.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, -(70 * (index + 1))],
-            });
+    const rotate = animation.interpolate({
+      inputRange: [0, 1],
+      outputRange: ['0deg', '45deg'],
+    })
 
-            const scale = animation.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, 1],
-            });
+    return (
+      <View style={[styles.container, containerStyle]}>
+        {isExpanded && (
+          <CardActionPressable
+            style={styles.backdrop}
+            onPress={toggleExpand}
+            accessibilityLabel="Закрыть меню"
+          >
+            {null}
+          </CardActionPressable>
+        )}
 
-            const opacity = animation;
+        {actions.length > 0 && (
+          <View style={styles.actionsContainer}>
+            {actions.map((action, index) => {
+              const translateY = animation.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, -(ACTION_OFFSET_STEP * (index + 1))],
+              })
+              const scale = animation.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 1],
+              })
 
-            return (
-              <Animated.View
-                key={action.label}
-                style={[
-                  styles.actionButton,
-                  {
-                    transform: [{ translateY }, { scale }],
-                    opacity,
-                  },
-                ]}
-              >
-                <CardActionPressable
+              return (
+                <Animated.View
+                  key={action.label}
                   style={[
-                    styles.fab,
-                    styles.secondaryFab,
-                    action.color && { backgroundColor: action.color },
+                    styles.actionButton,
+                    { transform: [{ translateY }, { scale }], opacity: animation },
                   ]}
-                  onPress={() => handleActionPress(action)}
-                  accessibilityLabel={action.label}
                 >
-                  <MapIcon
-                    name={action.icon}
-                    size={22}
-                    color={colors.text}
-                  />
-                </CardActionPressable>
-              </Animated.View>
-            );
-          })}
-        </View>
-      )}
+                  <CardActionPressable
+                    style={[
+                      styles.fab,
+                      styles.secondaryFab,
+                      action.color && { backgroundColor: action.color },
+                    ]}
+                    onPress={() => handleActionPress(action)}
+                    accessibilityLabel={action.label}
+                  >
+                    <MapIcon name={action.icon} size={22} color={colors.text} />
+                  </CardActionPressable>
+                </Animated.View>
+              )
+            })}
+          </View>
+        )}
 
-      {/* Main FAB */}
-      <CardActionPressable
-        style={[
-          styles.fab,
-          styles.mainFab,
-          mainAction.color && { backgroundColor: mainAction.color },
-        ]}
-        onPress={handleMainPress}
-        onLongPress={actions.length > 0 && !expandOnMainPress ? toggleExpand : undefined}
-        accessibilityLabel={mainAction.label}
-        testID={mainActionTestID}
-      >
-        <Animated.View
-          style={{
-            transform: [
-              {
-                rotate: animation.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ['0deg', '45deg'],
-                }),
-              },
-            ],
-          }}
+        <CardActionPressable
+          style={[
+            styles.fab,
+            styles.mainFab,
+            mainAction.color && { backgroundColor: mainAction.color },
+          ]}
+          onPress={handleMainPress}
+          onLongPress={actions.length > 0 && !expandOnMainPress ? toggleExpand : undefined}
+          accessibilityLabel={mainAction.label}
+          testID={mainActionTestID}
         >
-          <MapIcon
-            name={isExpanded && actions.length > 0 ? 'close' : mainAction.icon}
-            size={26}
-            color={colors.textOnPrimary}
-          />
-        </Animated.View>
-      </CardActionPressable>
-    </View>
-  );
-});
+          <Animated.View style={{ transform: [{ rotate }] }}>
+            <MapIcon
+              name={isExpanded && actions.length > 0 ? 'close' : mainAction.icon}
+              size={26}
+              color={colors.textOnPrimary}
+            />
+          </Animated.View>
+        </CardActionPressable>
+      </View>
+    )
+  },
+)
 
-const getStyles = (
-  colors: ThemedColors,
-  position: 'bottom-right' | 'bottom-left' | 'bottom-center'
-) => {
-  const positionStyles = {
+const getStyles = (colors: ThemedColors, position: FABPosition) => {
+  const positionStyles: Record<FABPosition, ViewStyle> = {
     'bottom-right': { right: 20, bottom: 20 },
     'bottom-left': { left: 20, bottom: 20 },
-    'bottom-center': { bottom: 20, alignSelf: 'center' as const },
-  };
+    'bottom-center': { bottom: 20, alignSelf: 'center' },
+  }
 
   return StyleSheet.create({
     container: {
@@ -193,11 +176,7 @@ const getStyles = (
       right: 0,
       alignItems: 'center',
     },
-    actionButton: {
-      position: 'absolute',
-      bottom: 0,
-      right: 0,
-    },
+    actionButton: { position: 'absolute', bottom: 0, right: 0 },
     fab: {
       width: 52,
       height: 52,
@@ -225,8 +204,7 @@ const getStyles = (
           })),
     },
     secondaryFab: {
-      backgroundColor:
-        Platform.OS === 'web' ? colors.surfaceAlpha40 : colors.surface,
+      backgroundColor: Platform.OS === 'web' ? colors.surfaceAlpha40 : colors.surface,
       width: 46,
       height: 46,
       borderRadius: 16,
@@ -241,5 +219,5 @@ const getStyles = (
           } as any)
         : null),
     },
-  });
-};
+  })
+}

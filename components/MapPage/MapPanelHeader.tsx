@@ -1,12 +1,19 @@
 import React, { memo, useCallback } from 'react'
-import { View, Text, Pressable, Platform } from 'react-native'
+import { Platform, Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
+
 import type { ThemedColors } from '@/hooks/useTheme'
 import { restartMapOnboarding } from '@/components/MapPage/MapOnboarding'
 
+type PanelTab = 'search' | 'route' | 'travels'
+
+const IS_WEB = Platform.OS === 'web'
+const BADGE_COUNT_CAP = 999
+const PRESSED_OPACITY_07 = { opacity: 0.7 }
+
 interface MapPanelHeaderProps {
   isMobile: boolean
-  activeTab: 'search' | 'route' | 'travels'
+  activeTab: PanelTab
   travelsCount: number
   themedColors: ThemedColors
   styles: any
@@ -15,6 +22,63 @@ interface MapPanelHeaderProps {
   selectTravelsTab: () => void
   closeRightPanel: () => void
   resetFilters?: () => void
+}
+
+function TabButton({
+  tab,
+  activeTab,
+  icon,
+  label,
+  accessibilityLabel,
+  onPress,
+  themedColors,
+  styles,
+  badge,
+}: {
+  tab: PanelTab
+  activeTab: PanelTab
+  icon: React.ComponentProps<typeof Feather>['name']
+  label: string
+  accessibilityLabel: string
+  onPress: () => void
+  themedColors: ThemedColors
+  styles: any
+  badge?: number
+}) {
+  const active = activeTab === tab
+  return (
+    <Pressable
+      testID={`map-panel-tab-${tab}`}
+      {...(IS_WEB && tab === 'travels'
+        ? ({ 'data-testid': 'map-panel-tab-travels' } as any)
+        : null)}
+      style={({ pressed }) => [
+        styles.tab,
+        active && styles.tabActive,
+        pressed && styles.tabPressed,
+      ]}
+      onPress={onPress}
+      hitSlop={8}
+      android_ripple={{ color: themedColors.overlayLight }}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={accessibilityLabel}
+    >
+      <Feather
+        name={icon}
+        size={15}
+        color={active ? themedColors.textInverse : themedColors.textMuted}
+      />
+      <Text style={[styles.tabText, active && styles.tabTextActive]}>{label}</Text>
+      {badge != null && badge > 0 && (
+        <View style={[styles.badge, active && styles.badgeActive]}>
+          <Text style={[styles.badgeText, active && styles.badgeTextActive]}>
+            {badge > BADGE_COUNT_CAP ? `${BADGE_COUNT_CAP}+` : badge}
+          </Text>
+        </View>
+      )}
+    </Pressable>
+  )
 }
 
 const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
@@ -31,145 +95,57 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
 }) => {
   const handleReset = useCallback(() => {
     selectSearchTab()
-    if (typeof resetFilters === 'function') resetFilters()
+    resetFilters?.()
   }, [selectSearchTab, resetFilters])
+
+  const showDesktopActions = IS_WEB && !isMobile
 
   return (
     <View style={styles.tabsContainer}>
       {isMobile && <View style={styles.dragHandle} />}
-      <View
-        style={styles.tabsSegment}
-        accessibilityRole="tablist"
-        aria-label="Панель карты"
-      >
-        <Pressable
-          testID="map-panel-tab-search"
-          style={({ pressed }) => [
-            styles.tab,
-            activeTab === 'search' && styles.tabActive,
-            pressed && styles.tabPressed,
-          ]}
-          onPress={selectSearchTab}
-          hitSlop={8}
-          android_ripple={{ color: themedColors.overlayLight }}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: activeTab === 'search' }}
+
+      <View style={styles.tabsSegment} accessibilityRole="tablist" aria-label="Панель карты">
+        <TabButton
+          tab="search"
+          activeTab={activeTab}
+          icon="search"
+          label="Поиск"
           accessibilityLabel="Поиск"
-        >
-          <Feather
-            name="search"
-            size={15}
-            color={
-              activeTab === 'search'
-                ? themedColors.textInverse
-                : themedColors.textMuted
-            }
-          />
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'search' && styles.tabTextActive,
-            ]}
-          >
-            Поиск
-          </Text>
-        </Pressable>
-
-        <Pressable
-          testID="map-panel-tab-route"
-          style={({ pressed }) => [
-            styles.tab,
-            activeTab === 'route' && styles.tabActive,
-            pressed && styles.tabPressed,
-          ]}
-          onPress={selectRouteTab}
-          hitSlop={8}
-          android_ripple={{ color: themedColors.overlayLight }}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: activeTab === 'route' }}
+          onPress={selectSearchTab}
+          themedColors={themedColors}
+          styles={styles}
+        />
+        <TabButton
+          tab="route"
+          activeTab={activeTab}
+          icon="navigation"
+          label="Маршрут"
           accessibilityLabel="Построение маршрута"
-        >
-          <Feather
-            name="navigation"
-            size={15}
-            color={
-              activeTab === 'route'
-                ? themedColors.textInverse
-                : themedColors.textMuted
-            }
-          />
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'route' && styles.tabTextActive,
-            ]}
-          >
-            Маршрут
-          </Text>
-        </Pressable>
-
-        <Pressable
-          testID="map-panel-tab-travels"
-          {...(Platform.OS === 'web'
-            ? ({ 'data-testid': 'map-panel-tab-travels' } as any)
-            : null)}
-          style={({ pressed }) => [
-            styles.tab,
-            activeTab === 'travels' && styles.tabActive,
-            pressed && styles.tabPressed,
-          ]}
-          onPress={selectTravelsTab}
-          hitSlop={8}
-          android_ripple={{ color: themedColors.overlayLight }}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: activeTab === 'travels' }}
+          onPress={selectRouteTab}
+          themedColors={themedColors}
+          styles={styles}
+        />
+        <TabButton
+          tab="travels"
+          activeTab={activeTab}
+          icon="list"
+          label="Места"
           accessibilityLabel={`Список мест (${travelsCount})`}
-        >
-          <Feather
-            name="list"
-            size={15}
-            color={
-              activeTab === 'travels'
-                ? themedColors.textInverse
-                : themedColors.textMuted
-            }
-          />
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'travels' && styles.tabTextActive,
-            ]}
-          >
-            Места
-          </Text>
-          {travelsCount > 0 && (
-            <View
-              style={[
-                styles.badge,
-                activeTab === 'travels' && styles.badgeActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.badgeText,
-                  activeTab === 'travels' && styles.badgeTextActive,
-                ]}
-              >
-                {travelsCount > 999 ? '999+' : travelsCount}
-              </Text>
-            </View>
-          )}
-        </Pressable>
+          onPress={selectTravelsTab}
+          themedColors={themedColors}
+          styles={styles}
+          badge={travelsCount}
+        />
       </View>
 
-      {Platform.OS === 'web' && !isMobile ? (
+      {showDesktopActions ? (
         <View style={styles.panelHeaderActions}>
           <Pressable
             testID="map-help-button"
             style={({ pressed }) => [
               styles.resetButton,
               { paddingHorizontal: 8, minWidth: 32 },
-              pressed && { opacity: 0.7 },
+              pressed && PRESSED_OPACITY_07,
             ]}
             onPress={restartMapOnboarding}
             hitSlop={10}
@@ -184,7 +160,7 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
             style={({ pressed }) => [
               styles.resetButton,
               styles.resetButtonCompact,
-              pressed && { opacity: 0.7 },
+              pressed && PRESSED_OPACITY_07,
             ]}
             onPress={handleReset}
             hitSlop={10}
@@ -192,20 +168,13 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
             accessibilityLabel="Сбросить фильтры"
             {...({ title: 'Сбросить фильтры' } as any)}
           >
-            <Feather
-              name="rotate-cw"
-              size={13}
-              color={themedColors.textMuted}
-            />
+            <Feather name="rotate-cw" size={13} color={themedColors.textMuted} />
           </Pressable>
         </View>
       ) : (
         <Pressable
           testID="map-close-panel-button"
-          style={({ pressed }) => [
-            styles.closePanelButton,
-            pressed && { opacity: 0.7 },
-          ]}
+          style={({ pressed }) => [styles.closePanelButton, pressed && PRESSED_OPACITY_07]}
           onPress={closeRightPanel}
           hitSlop={10}
           accessibilityRole="button"

@@ -25,6 +25,25 @@ import {
 // Глобальный кеш успешно/аварийно обработанных routeKey, чтобы избегать повторных запросов в сессию
 const resolvedRouteKeys = new Set<string>()
 
+const ROUTE_DEBOUNCE_MS = 80
+const ORS_RETRY_ATTEMPTS = 3
+const ORS_RETRY_BASE_DELAY_MS = 1000
+
+/** Maps a non-OK routing response to a localized Error. Throws on 429/400/(403). */
+async function throwForRoutingStatus(
+  res: Response,
+  provider: string,
+  options: { include403?: boolean } = {},
+): Promise<void> {
+  const errorText = await res.text().catch(() => '')
+  if (res.status === 429) throw new Error('Превышен лимит запросов. Подождите немного.')
+  if (res.status === 400) throw new Error('Некорректные координаты маршрута.')
+  if (options.include403 && res.status === 403) {
+    throw new Error('Неверный API ключ или доступ запрещен.')
+  }
+  throw new Error(`Ошибка ${provider}: ${res.status}${errorText ? ` - ${errorText}` : ''}`)
+}
+
 // Helper for tests to reset memoized route keys
 export const clearResolvedRouteKeys = () => resolvedRouteKeys.clear()
 
@@ -56,7 +75,6 @@ export const useRouting = (
     const isProcessingRef = useRef(false)
     const rateLimitKeyRef = useRef<string | null>(null)
     const rateLimitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-    const resetDoneRef = useRef(false)
     const activeRequestIdRef = useRef(0)
     // ✅ ИСПРАВЛЕНИЕ: Храним routePoints в ref чтобы избежать бесконечных ререндеров
     const routePointsRef = useRef<[number, number][]>(routePoints)
@@ -173,7 +191,7 @@ export const useRouting = (
                         duration: summary?.duration || 0,
                         isOptimal: true,
                     }
-                }, 3, 1000) // 3 попытки с начальной задержкой 1с
+                }, ORS_RETRY_ATTEMPTS, ORS_RETRY_BASE_DELAY_MS)
             } catch (e: any) {
                 lastError = e
                 const orsCode = e?.orsCode
@@ -246,12 +264,9 @@ export const useRouting = (
         }
         
         if (!res.ok) {
-            const errorText = await res.text().catch(() => '')
-            if (res.status === 429) throw new Error('Превышен лимит запросов. Подождите немного.')
-            if (res.status === 400) throw new Error('Некорректные координаты маршрута.')
-            throw new Error(`Ошибка OSRM: ${res.status}${errorText ? ` - ${errorText}` : ''}`)
+            await throwForRoutingStatus(res, 'OSRM')
         }
-        
+
         const data = await res.json()
         const route = data.routes?.[0]
         
@@ -291,10 +306,7 @@ export const useRouting = (
         }
 
         if (!res.ok) {
-            const errorText = await res.text().catch(() => '');
-            if (res.status === 429) throw new Error('Превышен лимит запросов. Подождите немного.');
-            if (res.status === 400) throw new Error('Некорректные координаты маршрута.');
-            throw new Error(`Ошибка Valhalla: ${res.status}${errorText ? ` - ${errorText}` : ''}`);
+            await throwForRoutingStatus(res, 'Valhalla')
         }
 
         const data = await res.json();
@@ -337,11 +349,6 @@ export const useRouting = (
         return totalDistance
     }, [])
 
-    const supportsPublicOsrmProfile = useMemo(() => {
-        // Теперь поддерживаем все режимы: OSRM для car, Valhalla для bike/foot
-        return true
-    }, [])
-
     useEffect(() => {
         // Если точек меньше двух — не строим маршрут
         if (!hasTwoPoints) {
@@ -364,23 +371,8 @@ export const useRouting = (
     useEffect(() => {
         if (!hasTwoPoints || !routeKey) return
 
-        if (!supportsPublicOsrmProfile) {
-            const directDistance = calculateDirectDistance(routePointsRef.current)
-            setState({
-                loading: false,
-                error:
-                    'Для пешего/веломаршрута нужен ключ OpenRouteService (EXPO_PUBLIC_ORS_API_KEY или EXPO_PUBLIC_ROUTE_SERVICE_KEY)',
-                distance: directDistance,
-                duration: estimateDurationSeconds(directDistance, transportMode),
-                coords: routePointsRef.current,
-            })
-            return
-        }
-
-        // Сбрасываем флаг только при новом routeKey
+        // При смене routeKey (включая смену транспорта) сбрасываем isProcessing
         if (lastRouteKeyRef.current !== routeKey) {
-            resetDoneRef.current = false
-            // При смене routeKey (включая смену транспорта) сбрасываем isProcessing
             isProcessingRef.current = false
         }
 
@@ -569,7 +561,7 @@ export const useRouting = (
         }
 
         // Slight debounce to coalesce quick successive changes (clicks, swap, etc.)
-        rateLimitTimerRef.current = setTimeout(fetchRoute, isTestEnv ? 0 : 80)
+        rateLimitTimerRef.current = setTimeout(fetchRoute, isTestEnv ? 0 : ROUTE_DEBOUNCE_MS)
 
         return () => {
             if (rateLimitTimerRef.current) {
@@ -582,7 +574,7 @@ export const useRouting = (
                 // noop
             }
         }
-    }, [hasTwoPoints, routePointsKey, routeKey, transportMode, ORS_API_KEY, calculateDirectDistance, fetchORS, fetchOSRM, fetchValhalla, forceOsrm, isTestEnv, supportsPublicOsrmProfile])
+    }, [hasTwoPoints, routePointsKey, routeKey, transportMode, ORS_API_KEY, calculateDirectDistance, fetchORS, fetchOSRM, fetchValhalla, forceOsrm, isTestEnv])
 
     useEffect(() => {
         return () => {
