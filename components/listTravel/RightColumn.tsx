@@ -18,6 +18,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import StickySearchBar from '@/components/mainPage/StickySearchBar'
 import EmptyState from '@/components/ui/EmptyState'
+import ContributionBanner from '@/components/common/ContributionBanner'
 import { SkeletonLoader, TravelCardSkeleton } from '@/components/ui/SkeletonLoader'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -567,6 +568,7 @@ const RightColumn: React.FC<RightColumnProps> = (
                 <Text style={{ fontSize: 13, color: colors.textMuted }}>Загружаем ещё...</Text>
               </View>
             )}
+            <ContributionBanner variant="search" />
           </ScrollView>
         )
       }
@@ -580,11 +582,16 @@ const RightColumn: React.FC<RightColumnProps> = (
           keyExtractor={(_, index) => `row-${(isMobile ? 1 : gridColumns) || 1}-${index}`}
           {...({ estimatedItemSize: 320 } as any)}
           ListHeaderComponent={ListHeader}
-          ListFooterComponent={showNextPageLoading ? (
-            <View style={footerLoaderStyle}>
-              <ActivityIndicator size="small" accessibilityLabel="Загружаем ещё маршруты" />
-            </View>
-          ) : null}
+          ListFooterComponent={
+            <>
+              {showNextPageLoading ? (
+                <View style={footerLoaderStyle}>
+                  <ActivityIndicator size="small" accessibilityLabel="Загружаем ещё маршруты" />
+                </View>
+              ) : null}
+              <ContributionBanner variant="search" />
+            </>
+          }
           onEndReached={onEndReached}
           onEndReachedThreshold={onEndReachedThreshold}
           drawDistance={800}

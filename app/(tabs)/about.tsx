@@ -20,6 +20,7 @@ import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/uti
 import { showToast } from '@/utils/toast';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { webTouchScrollStyle } from '@/utils';
+import ContributionBanner from '@/components/common/ContributionBanner';
 
 const EMAIL = 'metraveldev@gmail.com';
 const MAIL_SUBJECT = 'Info metravel.by';
@@ -266,6 +267,7 @@ function AboutAndContactScreen() {
                     onSubmitEditingMessage={() => messageRef.current?.focus()}
                   />
                   <SocialSection onOpenInstagram={() => openUrl('https://instagram.com/metravelby')} />
+                  <ContributionBanner variant="about" />
                 </View>
               </View>
             </View>

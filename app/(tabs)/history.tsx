@@ -19,6 +19,7 @@ import { buildCanonicalUrl } from '@/utils/seo';
 import { useIsFocused } from '@react-navigation/native';
 import { cleanTravelTitle } from '@/utils/cleanTravelTitle';
 import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader';
+import ContributionBanner from '@/components/common/ContributionBanner';
 
 export default function HistoryScreen() {
     const router = useRouter();
@@ -230,6 +231,7 @@ export default function HistoryScreen() {
                         </View>
                         );
                     })}
+                    <ContributionBanner variant="history" />
                 </ScrollView>
             ) : (
                 <FlashList
@@ -277,6 +279,7 @@ export default function HistoryScreen() {
                         </View>
                         );
                     }}
+                    ListFooterComponent={<ContributionBanner variant="history" />}
                 />
             )}
         </SafeAreaView>

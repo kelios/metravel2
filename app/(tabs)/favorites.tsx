@@ -21,7 +21,8 @@ import { webTouchScrollStyle } from '@/utils';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { cleanTravelTitle } from '@/utils/cleanTravelTitle';
-import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader';
+import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader'
+import ContributionBanner from '@/components/common/ContributionBanner';
 
 export default function FavoritesScreen() {
     const router = useRouter();
@@ -281,6 +282,7 @@ export default function FavoritesScreen() {
                             );
                         })}
                     </View>
+                    <ContributionBanner variant="favorites" />
                 </ScrollView>
             ) : (
                 <FlashList
@@ -332,6 +334,7 @@ export default function FavoritesScreen() {
                         </View>
                         );
                     }}
+                    ListFooterComponent={<ContributionBanner variant="favorites" />}
                 />
             )}
         </SafeAreaView>

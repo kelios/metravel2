@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   Platform,
@@ -20,32 +20,66 @@ import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
-import { useAuth } from '@/context/AuthContext'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import {
   filterCatalogPlaces,
   groupCatalogPlaces,
+  groupCatalogCountries,
   type CatalogPlace,
 } from '@/utils/placesCatalog'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
+import ContributionBanner from '@/components/common/ContributionBanner'
 
 const MAP_FOCUS_RADIUS_KM = '5'
+const PLACES_PAGE_SIZE = 20
+const LOAD_MORE_SCROLL_THRESHOLD = 420
 const PRESSED_OPACITY = { opacity: 0.72 } as const
+const DEFAULT_CATEGORY_SELECTION = [
+  'Замок',
+  'Руины замка',
+  'Дворец',
+  'Руины дворца',
+  'Экологическая тропа',
+  'Колесо обозрения',
+  'Водохранилище',
+  'Озеро',
+  'Река',
+  'Ручей',
+] as const
+const FEATURED_CATEGORY_LABEL = 'Замки, дворцы, экотропы и вода'
+
+const parseCategoryParam = (value: unknown): string[] => {
+  if (typeof value !== 'string') return [...DEFAULT_CATEGORY_SELECTION]
+  const parsed = value
+    .split(',')
+    .map((item) => decodeURIComponent(item).trim())
+    .filter(Boolean)
+  return parsed.length > 0 ? parsed : []
+}
+
+const arraysEqualSet = (left: string[], right: string[]): boolean => {
+  if (left.length !== right.length) return false
+  const rightSet = new Set(right)
+  return left.every((item) => rightSet.has(item))
+}
 
 export default function PlacesScreen() {
   const router = useRouter()
-  const params = useLocalSearchParams<{ category?: string }>()
+  const params = useLocalSearchParams<{ category?: string; country?: string }>()
   const isFocused = useIsFocused()
-  const { isAuthenticated } = useAuth()
   const colors = useThemedColors()
   const { width } = useWindowDimensions()
   const isCompact = width < 760
   const styles = useMemo(() => createStyles(colors, isCompact), [colors, isCompact])
   const [query, setQuery] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(() =>
-    typeof params.category === 'string' && params.category.trim() ? params.category.trim() : null,
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(() =>
+    parseCategoryParam(params.category),
   )
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(() =>
+    typeof params.country === 'string' && params.country.trim() ? params.country.trim() : null,
+  )
+  const [visibleCount, setVisibleCount] = useState(PLACES_PAGE_SIZE)
 
   const placesQuery = useQuery({
     queryKey: ['places-catalog'],
@@ -57,20 +91,105 @@ export default function PlacesScreen() {
   })
 
   const allPlaces = useMemo(() => placesQuery.data ?? [], [placesQuery.data])
-  const categoryGroups = useMemo(() => groupCatalogPlaces(allPlaces), [allPlaces])
-  const filteredPlaces = useMemo(
-    () => filterCatalogPlaces(allPlaces, query, selectedCategory),
-    [allPlaces, query, selectedCategory],
+  const placesForCategoryCounts = useMemo(
+    () => filterCatalogPlaces(allPlaces, '', null, selectedCountry),
+    [allPlaces, selectedCountry],
   )
+  const placesForCountryCounts = useMemo(
+    () => filterCatalogPlaces(allPlaces, '', selectedCategories, null),
+    [allPlaces, selectedCategories],
+  )
+  const categoryGroups = useMemo(
+    () => {
+      const selectedSet = new Set(selectedCategories)
+      return groupCatalogPlaces(placesForCategoryCounts).sort((a, b) => {
+        const aSelected = selectedSet.has(a.category)
+        const bSelected = selectedSet.has(b.category)
+        if (aSelected !== bSelected) return aSelected ? -1 : 1
+        return 0
+      })
+    },
+    [placesForCategoryCounts, selectedCategories],
+  )
+  const defaultSelectionCount = useMemo(
+    () => filterCatalogPlaces(allPlaces, '', [...DEFAULT_CATEGORY_SELECTION], selectedCountry).length,
+    [allPlaces, selectedCountry],
+  )
+  const countryGroups = useMemo(
+    () => groupCatalogCountries(placesForCountryCounts),
+    [placesForCountryCounts],
+  )
+  const filteredPlaces = useMemo(
+    () => filterCatalogPlaces(allPlaces, query, selectedCategories, selectedCountry),
+    [allPlaces, query, selectedCategories, selectedCountry],
+  )
+  const visiblePlaces = useMemo(
+    () => filteredPlaces.slice(0, visibleCount),
+    [filteredPlaces, visibleCount],
+  )
+  const hasMorePlaces = visibleCount < filteredPlaces.length
+  const showLoadedCounts = !placesQuery.isLoading && !placesQuery.isError
 
-  const activeCategoryTitle = selectedCategory ?? 'Все места'
-  const pageDescription = selectedCategory
-    ? `Все места категории ${selectedCategory}: карточки точек, переход на карту и ссылка на путешествие.`
+  const activeCategoryTitle =
+    selectedCategories.length === 0
+      ? 'Все места'
+      : selectedCategories.length === 1
+        ? selectedCategories[0]
+        : FEATURED_CATEGORY_LABEL
+  const pageDescription = selectedCategories.length > 0
+    ? `Места выбранных категорий: ${selectedCategories.join(', ')}. Карточки точек, переход на карту и ссылка на путешествие.`
     : 'Каталог мест MeTravel: замки, музеи, парки, природные точки и другие места из путешествий.'
 
-  const handleSelectCategory = useCallback((category: string | null) => {
-    setSelectedCategory(category)
-    router.setParams(category ? { category } : { category: undefined })
+  const syncCategoryParams = useCallback((categories: string[]) => {
+    router.setParams(categories.length > 0 ? { category: categories.join(',') } : { category: '' })
+  }, [router])
+
+  useEffect(() => {
+    setVisibleCount(PLACES_PAGE_SIZE)
+  }, [query, selectedCategories, selectedCountry])
+
+  const loadMorePlaces = useCallback(() => {
+    setVisibleCount((current) => Math.min(current + PLACES_PAGE_SIZE, filteredPlaces.length))
+  }, [filteredPlaces.length])
+
+  const handleScroll = useCallback((event: any) => {
+    if (!hasMorePlaces || placesQuery.isLoading) return
+    const nativeEvent = event?.nativeEvent
+    const layoutHeight = Number(nativeEvent?.layoutMeasurement?.height ?? 0)
+    const offsetY = Number(nativeEvent?.contentOffset?.y ?? 0)
+    const contentHeight = Number(nativeEvent?.contentSize?.height ?? 0)
+    if (!layoutHeight || !contentHeight) return
+
+    const distanceToBottom = contentHeight - (layoutHeight + offsetY)
+    if (distanceToBottom <= LOAD_MORE_SCROLL_THRESHOLD) {
+      loadMorePlaces()
+    }
+  }, [hasMorePlaces, loadMorePlaces, placesQuery.isLoading])
+
+  const handleToggleCategory = useCallback((category: string) => {
+    setSelectedCategories((current) => {
+      const next = current.includes(category)
+        ? current.filter((item) => item !== category)
+        : [...current, category]
+      syncCategoryParams(next)
+      return next
+    })
+  }, [syncCategoryParams])
+
+  const handleClearCategories = useCallback(() => {
+    setSelectedCategories([])
+    syncCategoryParams([])
+  }, [syncCategoryParams])
+
+  const handleDefaultCategories = useCallback(() => {
+    const next = [...DEFAULT_CATEGORY_SELECTION]
+    setSelectedCategories(next)
+    syncCategoryParams(next)
+  }, [syncCategoryParams])
+
+  const handleSelectCountry = useCallback((country: string | null) => {
+    setSelectedCountry(country)
+    router.setParams(country ? { country } : { country: undefined })
   }, [router])
 
   const openOnMap = useCallback((place: CatalogPlace) => {
@@ -90,14 +209,6 @@ export default function PlacesScreen() {
     router.push(place.urlTravel as any)
   }, [router])
 
-  const openAddPlace = useCallback(() => {
-    router.push('/travel/new' as any)
-  }, [router])
-
-  const openRegistration = useCallback(() => {
-    router.push('/registration?redirect=%2Ftravel%2Fnew&intent=create-travel' as any)
-  }, [router])
-
   return (
     <View style={styles.screen}>
       {Platform.OS === 'web' && isFocused ? (
@@ -114,6 +225,8 @@ export default function PlacesScreen() {
         style={styles.scroll}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        onScroll={handleScroll}
+        scrollEventThrottle={180}
       >
         <View style={styles.header}>
           <View style={styles.eyebrowRow}>
@@ -125,37 +238,6 @@ export default function PlacesScreen() {
             Все точки сайта отдельно от радиуса карты. Выберите категорию, откройте место на карте
             или перейдите к путешествию, где оно используется.
           </Text>
-        </View>
-
-        <View style={styles.contributionBanner}>
-          <View style={styles.contributionIcon}>
-            <Feather name="plus-circle" size={22} color={colors.primary} />
-          </View>
-          <View style={styles.contributionTextBlock}>
-            <Text style={styles.contributionTitle}>Помогите расширить карту</Text>
-            <Text style={styles.contributionText}>
-              Если здесь нашлось что-то полезное для вашего планирования, внесите вклад:
-              зарегистрируйтесь и добавьте свое место, маршрут или точку, о которой стоит рассказать другим.
-            </Text>
-          </View>
-          <View style={styles.contributionActions}>
-            {!isAuthenticated ? (
-              <Button
-                label="Зарегистрироваться"
-                variant="outline"
-                size="sm"
-                onPress={openRegistration}
-                icon={<Feather name="user-plus" size={16} color={colors.text} />}
-              />
-            ) : null}
-            <Button
-              label="Добавить место"
-              variant="primary"
-              size="sm"
-              onPress={openAddPlace}
-              icon={<Feather name="map-pin" size={16} color={colors.textOnPrimary} />}
-            />
-          </View>
         </View>
 
         <View style={styles.searchRow}>
@@ -182,23 +264,69 @@ export default function PlacesScreen() {
           ) : null}
         </View>
 
+        <View style={styles.topFilters}>
+          <View style={styles.topFiltersHeader}>
+            <Text style={styles.sectionTitle}>Страны</Text>
+            {selectedCountry ? (
+              <Button
+                label="Все страны"
+                variant="ghost"
+                size="sm"
+                onPress={() => handleSelectCountry(null)}
+              />
+            ) : null}
+          </View>
+          <View style={styles.countryList}>
+            {placesQuery.isLoading ? (
+              <Text style={styles.loadingHint}>Страны загрузятся вместе с местами</Text>
+            ) : (
+              <>
+                <Chip
+                  label="Все"
+                  count={showLoadedCounts ? placesForCountryCounts.length : undefined}
+                  selected={!selectedCountry}
+                  onPress={() => handleSelectCountry(null)}
+                />
+                {countryGroups.map((group) => (
+                  <Chip
+                    key={group.country}
+                    label={group.country}
+                    count={showLoadedCounts ? group.count : undefined}
+                    selected={selectedCountry === group.country}
+                    onPress={() => handleSelectCountry(group.country)}
+                  />
+                ))}
+              </>
+            )}
+          </View>
+        </View>
+
         <View style={styles.layout}>
           <View style={styles.sidebar}>
             <Text style={styles.sectionTitle}>Категории</Text>
+            <Text style={styles.sectionHint}>
+              По умолчанию выбрана готовая подборка. Нажмите на категорию, чтобы добавить или убрать ее.
+            </Text>
             <View style={styles.categoryList}>
               <Chip
+                label="Подборка"
+                count={showLoadedCounts ? defaultSelectionCount : undefined}
+                selected={arraysEqualSet(selectedCategories, [...DEFAULT_CATEGORY_SELECTION])}
+                onPress={handleDefaultCategories}
+              />
+              <Chip
                 label="Все"
-                count={allPlaces.length}
-                selected={!selectedCategory}
-                onPress={() => handleSelectCategory(null)}
+                count={showLoadedCounts ? placesForCategoryCounts.length : undefined}
+                selected={selectedCategories.length === 0}
+                onPress={handleClearCategories}
               />
               {categoryGroups.map((group) => (
                 <Chip
                   key={group.category}
                   label={group.category}
-                  count={group.count}
-                  selected={selectedCategory === group.category}
-                  onPress={() => handleSelectCategory(group.category)}
+                  count={showLoadedCounts ? group.count : undefined}
+                  selected={selectedCategories.includes(group.category)}
+                  onPress={() => handleToggleCategory(group.category)}
                 />
               ))}
             </View>
@@ -210,19 +338,38 @@ export default function PlacesScreen() {
                 <Text style={styles.resultsTitle}>{activeCategoryTitle}</Text>
                 <Text style={styles.resultsMeta}>
                   {placesQuery.isLoading
-                    ? 'Загружаем места'
+                    ? 'Загружаем подборку'
                     : `${filteredPlaces.length} ${getPlacesCountLabel(filteredPlaces.length)}`}
                 </Text>
               </View>
-              {selectedCategory ? (
+              {selectedCategories.length > 0 ? (
                 <Button
                   label="Все места"
                   variant="outline"
                   size="sm"
-                  onPress={() => handleSelectCategory(null)}
+                  onPress={handleClearCategories}
                 />
               ) : null}
             </View>
+            {selectedCategories.length > 1 ? (
+              <View style={styles.activeSelection}>
+                <Text style={styles.activeSelectionLabel}>Выбрано</Text>
+                <View style={styles.activeSelectionChips}>
+                  {selectedCategories.map((category) => (
+                    <Pressable
+                      key={category}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Убрать категорию ${category}`}
+                      onPress={() => handleToggleCategory(category)}
+                      style={({ pressed }) => [styles.activeSelectionChip, pressed && PRESSED_OPACITY]}
+                    >
+                      <Text style={styles.activeSelectionText}>{category}</Text>
+                      <Feather name="x" size={13} color={colors.primaryText} />
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            ) : null}
 
             {placesQuery.isLoading ? (
               <LoadingBlock styles={styles} colors={colors} />
@@ -244,12 +391,13 @@ export default function PlacesScreen() {
                 actionLabel="Сбросить фильтры"
                 onAction={() => {
                   setQuery('')
-                  handleSelectCategory(null)
+                  handleClearCategories()
+                  handleSelectCountry(null)
                 }}
               />
             ) : (
               <View style={styles.cardsGrid}>
-                {filteredPlaces.map((place) => (
+                {visiblePlaces.map((place) => (
                   <PlaceCard
                     key={place.id}
                     place={place}
@@ -259,10 +407,24 @@ export default function PlacesScreen() {
                     onOpenTravel={openTravel}
                   />
                 ))}
+                {hasMorePlaces ? (
+                  <View style={styles.loadMoreFooter}>
+                    <Text style={styles.loadMoreText}>
+                      Показано {visiblePlaces.length} из {filteredPlaces.length}
+                    </Text>
+                    <Button
+                      label="Показать еще"
+                      variant="secondary"
+                      size="sm"
+                      onPress={loadMorePlaces}
+                    />
+                  </View>
+                ) : null}
               </View>
             )}
           </View>
         </View>
+        <ContributionBanner variant="places" />
       </ScrollView>
     </View>
   )
@@ -306,6 +468,10 @@ function PlaceCard({
         {place.address ? (
           <Text style={styles.cardAddress} numberOfLines={2}>{place.address}</Text>
         ) : null}
+        <View style={styles.countryMetaRow}>
+          <Feather name="globe" size={14} color={colors.textMuted} />
+          <Text style={styles.countryMetaText} numberOfLines={1}>{place.country}</Text>
+        </View>
         <View style={styles.cardActions}>
           <Button
             label="На карте"
@@ -423,48 +589,6 @@ const createStyles = (colors: ThemedColors, isCompact: boolean) => StyleSheet.cr
     lineHeight: 26,
     maxWidth: 780,
   },
-  contributionBanner: {
-    borderRadius: DESIGN_TOKENS.radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: DESIGN_TOKENS.spacing.lg,
-    flexDirection: isCompact ? 'column' : 'row',
-    alignItems: isCompact ? 'flex-start' : 'center',
-    gap: DESIGN_TOKENS.spacing.md,
-    ...(Platform.OS === 'web' ? ({ boxShadow: DESIGN_TOKENS.shadows.light } as any) : null),
-  },
-  contributionIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: DESIGN_TOKENS.radii.full,
-    backgroundColor: colors.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  contributionTextBlock: {
-    flex: 1,
-    minWidth: 0,
-    gap: 4,
-  },
-  contributionTitle: {
-    color: colors.text,
-    fontSize: DESIGN_TOKENS.typography.sizes.lg,
-    fontWeight: '800',
-  },
-  contributionText: {
-    color: colors.textMuted,
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    lineHeight: 22,
-  },
-  contributionActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: DESIGN_TOKENS.spacing.sm,
-    justifyContent: isCompact ? 'flex-start' : 'flex-end',
-    flexShrink: 0,
-  },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -488,6 +612,25 @@ const createStyles = (colors: ThemedColors, isCompact: boolean) => StyleSheet.cr
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     outlineStyle: 'none' as any,
   },
+  topFilters: {
+    gap: DESIGN_TOKENS.spacing.md,
+  },
+  topFiltersHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: DESIGN_TOKENS.spacing.md,
+  },
+  countryList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
+  loadingHint: {
+    color: colors.textMuted,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    lineHeight: 20,
+  },
   layout: {
     flexDirection: isCompact ? 'column' : 'row',
     alignItems: 'flex-start',
@@ -501,6 +644,11 @@ const createStyles = (colors: ThemedColors, isCompact: boolean) => StyleSheet.cr
     color: colors.text,
     fontSize: DESIGN_TOKENS.typography.sizes.lg,
     fontWeight: '800',
+  },
+  sectionHint: {
+    color: colors.textMuted,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    lineHeight: 20,
   },
   categoryList: {
     flexDirection: 'row',
@@ -528,6 +676,40 @@ const createStyles = (colors: ThemedColors, isCompact: boolean) => StyleSheet.cr
     color: colors.textMuted,
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     marginTop: 4,
+  },
+  activeSelection: {
+    borderRadius: DESIGN_TOKENS.radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    padding: DESIGN_TOKENS.spacing.md,
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
+  activeSelectionLabel: {
+    color: colors.textMuted,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '700',
+  },
+  activeSelectionChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
+  activeSelectionChip: {
+    minHeight: 34,
+    borderRadius: DESIGN_TOKENS.radii.full,
+    backgroundColor: colors.primarySoft,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: 6,
+    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+  },
+  activeSelectionText: {
+    color: colors.primaryText,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '700',
   },
   cardsGrid: {
     flexDirection: 'row',
@@ -578,6 +760,17 @@ const createStyles = (colors: ThemedColors, isCompact: boolean) => StyleSheet.cr
     color: colors.textMuted,
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     lineHeight: 20,
+  },
+  countryMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
+  },
+  countryMetaText: {
+    color: colors.textMuted,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '600',
+    flexShrink: 1,
   },
   cardActions: {
     flexDirection: 'row',

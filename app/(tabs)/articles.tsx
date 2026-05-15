@@ -8,6 +8,7 @@ import PaginationComponent from '@/components/ui/PaginationComponent'
 import {useLocalSearchParams} from 'expo-router'
 import ErrorDisplay from '@/components/ui/ErrorDisplay'
 import EmptyState from '@/components/ui/EmptyState'
+import ContributionBanner from '@/components/common/ContributionBanner'
 import { useThemedColors } from '@/hooks/useTheme'
 import { FlashList } from '@shopify/flash-list'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
@@ -160,6 +161,7 @@ export default function TabOneScreen() {
                 {articles?.data?.map((item: any, index: number) => (
                   <ArticleListItem key={item?.id ? String(item.id) : String(index)} article={item} />
                 ))}
+                <ContributionBanner variant="articles" />
               </ScrollView>
             ) : (
               <FlashList
@@ -167,6 +169,7 @@ export default function TabOneScreen() {
                 renderItem={({ item }: any) => <ArticleListItem article={item} />}
                 keyExtractor={(item: any, index: number) => (item?.id ? String(item.id) : String(index))}
                 {...({ estimatedItemSize: 120 } as any)}
+                ListFooterComponent={<ContributionBanner variant="articles" />}
                 refreshing={isFetching}
                 onRefresh={() => refetch()}
                 drawDistance={600}

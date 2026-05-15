@@ -10,6 +10,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { ResponsiveContainer, ResponsiveStack } from '@/components/layout'
 import HomeHero from './HomeHero'
 import HomeFinalCTA from './HomeFinalCTA'
+import ContributionBanner from '@/components/common/ContributionBanner'
 import { queueAnalyticsEvent } from '@/utils/analytics'
 import { hapticImpact } from '@/utils/haptics'
 import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries'
@@ -313,6 +314,10 @@ function Home() {
       </View>
 
       <View style={marginTopStyle(gaps.finalCta)}>
+        <ContributionBanner variant="home" />
+      </View>
+
+      <View style={marginTopStyle(16)}>
         <HomeFinalCTA travelsCount={travelsCount} />
       </View>
     </ScrollView>
