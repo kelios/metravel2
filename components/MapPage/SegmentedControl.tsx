@@ -1,17 +1,31 @@
-// components/MapPage/SegmentedControl.tsx
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Platform, View, Text, StyleSheet } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import MapIcon from './MapIcon';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 
+type Tone = 'default' | 'subtle';
+
 interface SegmentedControlOption {
   key: string;
   label: string;
   icon?: string;
   iconSource?: 'map' | 'material';
-  badge?: number; // Количество для отображения в badge
+  badge?: number;
+}
+
+function getSegmentIconColor(
+  colors: ThemedColors,
+  tone: Tone,
+  active: boolean,
+  isHovered: boolean,
+): string {
+  if (tone === 'subtle') {
+    return active || isHovered ? colors.primaryText : colors.textMuted;
+  }
+  if (active) return colors.textOnPrimary;
+  return isHovered ? colors.primary : colors.text;
 }
 
 interface SegmentedControlProps {
@@ -25,7 +39,7 @@ interface SegmentedControlProps {
   disabled?: boolean;
   disabledKeys?: string[];
   role?: 'radio' | 'button';
-  tone?: 'default' | 'subtle';
+  tone?: Tone;
   iconOnly?: boolean;
 }
 
@@ -43,7 +57,7 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
   tone = 'default',
   iconOnly = false,
 }) => {
-  const [hoveredKey, setHoveredKey] = React.useState<string | null>(null);
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const colors = useThemedColors();
   const styles = useMemo(
     () => getStyles(colors, compact, tone, dense, noOuterMargins),
@@ -54,15 +68,14 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
   const pillAnim = useRef(new Animated.Value(activeIndex >= 0 ? activeIndex : 0)).current;
 
   useEffect(() => {
-    const idx = options.findIndex((o) => o.key === value);
-    if (idx < 0) return;
+    if (activeIndex < 0) return;
     Animated.spring(pillAnim, {
-      toValue: idx,
+      toValue: activeIndex,
       friction: 8,
       tension: 60,
       useNativeDriver: false,
     }).start();
-  }, [value, options, pillAnim]);
+  }, [activeIndex, pillAnim]);
 
   const count = options.length || 1;
   const pillLeft = pillAnim.interpolate({
@@ -92,9 +105,7 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
         const isDisabled = disabled || disabledKeys.includes(key);
         const isHovered = hoveredKey === key && !active && !isDisabled;
 
-        const iconColor = tone === 'subtle'
-          ? (active ? colors.primaryText : isHovered ? colors.primaryText : colors.textMuted)
-          : (active ? colors.textOnPrimary : isHovered ? colors.primary : colors.text);
+        const iconColor = getSegmentIconColor(colors, tone, active, isHovered);
 
         return (
           <CardActionPressable
@@ -123,14 +134,13 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
             title={label}
             accessibilityRole={role}
           >
-            {icon &&
-              (
-                <MapIcon
-                  name={icon}
-                  size={iconOnly ? (compact ? 20 : 18) : (compact && dense ? 14 : 16)}
-                  color={iconColor}
-                />
-              )}
+            {icon && (
+              <MapIcon
+                name={icon}
+                size={iconOnly ? (compact ? 20 : 18) : compact && dense ? 14 : 16}
+                color={iconColor}
+              />
+            )}
             {!iconOnly && (
               <Text style={[
                 styles.segmentText,
@@ -163,7 +173,7 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
 const getStyles = (
   colors: ThemedColors,
   compact: boolean,
-  tone: 'default' | 'subtle',
+  tone: Tone,
   dense: boolean,
   noOuterMargins: boolean,
 ) => StyleSheet.create({

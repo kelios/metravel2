@@ -1,47 +1,31 @@
-/**
- * QuickRecommendations - быстрые рекомендации популярных мест рядом
- */
+import React, { useMemo, useRef } from 'react'
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
 
-import React, { useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
-import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
-import { getDistanceInfo } from '@/utils/distanceCalculator';
-import { parseCoordinateString } from '@/utils/coordinates';
-import MapIcon from './MapIcon';
-import PlaceListCard from '@/components/places/PlaceListCard';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { getDistanceInfo } from '@/utils/distanceCalculator'
+import { parseCoordinateString } from '@/utils/coordinates'
+import MapIcon from './MapIcon'
+import PlaceListCard from '@/components/places/PlaceListCard'
 
+const IS_WEB = Platform.OS === 'web'
+const DEFAULT_MAX_ITEMS = 3
+const DISTANCE_TIE_THRESHOLD_KM = 1
 
-interface Props {
-  places: any[];
-  userLocation: { latitude: number; longitude: number } | null;
-  transportMode?: 'car' | 'bike' | 'foot';
-  onPlaceSelect: (place: any) => void;
-  maxItems?: number;
-  radiusKm?: number;
-  isLoading?: boolean;
+const TRANSPORT_LABEL: Record<'car' | 'bike' | 'foot', string> = {
+  car: 'Авто',
+  bike: 'Велосипед',
+  foot: 'Пешком',
 }
 
-const SkeletonCard: React.FC<{ colors: ThemedColors }> = ({ colors }) => (
-  <View style={{
-    width: '100%',
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.border,
-  }}>
-    <View style={{ width: '100%', height: 156, backgroundColor: colors.backgroundSecondary }} />
-    <View style={{ padding: 14, gap: 10 }}>
-      <View style={{ width: '36%', height: 24, backgroundColor: colors.backgroundSecondary, borderRadius: 999 }} />
-      <View style={{ width: '82%', height: 18, backgroundColor: colors.backgroundSecondary, borderRadius: 6 }} />
-      <View style={{ width: '62%', height: 18, backgroundColor: colors.backgroundSecondary, borderRadius: 6 }} />
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        <View style={{ width: 60, height: 24, backgroundColor: colors.backgroundSecondary, borderRadius: 8 }} />
-        <View style={{ width: 104, height: 24, backgroundColor: colors.backgroundSecondary, borderRadius: 8 }} />
-      </View>
-    </View>
-  </View>
-);
+interface Props {
+  places: any[]
+  userLocation: { latitude: number; longitude: number } | null
+  transportMode?: 'car' | 'bike' | 'foot'
+  onPlaceSelect: (place: any) => void
+  maxItems?: number
+  radiusKm?: number
+  isLoading?: boolean
+}
 
 const getPlaceCardKey = (place: any): string =>
   String(
@@ -54,152 +38,143 @@ const getPlaceCardKey = (place: any): string =>
       place?.address ??
       place?.name ??
       JSON.stringify(place ?? {}),
-  );
+  )
 
-export const QuickRecommendations: React.FC<Props> = React.memo(({
-  places,
-  userLocation,
-  transportMode = 'car',
-  onPlaceSelect,
-  maxItems = 3,
-  radiusKm,
-  isLoading = false,
-}) => {
-  const colors = useThemedColors();
-  const styles = useMemo(() => getStyles(colors), [colors]);
-  const scrollRef = useRef<ScrollView | null>(null);
+const SkeletonCard: React.FC<{ styles: ReturnType<typeof getStyles> }> = ({ styles }) => (
+  <View style={styles.skeletonCard}>
+    <View style={styles.skeletonImage} />
+    <View style={styles.skeletonBody}>
+      <View style={styles.skeletonChip} />
+      <View style={styles.skeletonLineWide} />
+      <View style={styles.skeletonLineMid} />
+      <View style={styles.skeletonRow}>
+        <View style={styles.skeletonBadgeSm} />
+        <View style={styles.skeletonBadgeLg} />
+      </View>
+    </View>
+  </View>
+)
 
-  // Фильтруем и сортируем места
-  const topPlaces = useMemo(() => {
-    if (!userLocation || !places.length) return [];
+export const QuickRecommendations: React.FC<Props> = React.memo(
+  ({
+    places,
+    userLocation,
+    transportMode = 'car',
+    onPlaceSelect,
+    maxItems = DEFAULT_MAX_ITEMS,
+    radiusKm,
+    isLoading = false,
+  }) => {
+    const colors = useThemedColors()
+    const styles = useMemo(() => getStyles(colors), [colors])
+    const scrollRef = useRef<ScrollView | null>(null)
 
-    // Добавляем расстояние к каждому месту
-    const placesWithDistance = places
-      .map(place => {
-        const coords = parseCoordinateString(place.coord ?? '');
-        if (!coords) return null;
+    const topPlaces = useMemo(() => {
+      if (!userLocation || !places.length) return []
 
-        const distanceInfo = getDistanceInfo(
-          { lat: userLocation.latitude, lng: userLocation.longitude },
-          coords,
-          transportMode
-        );
+      const withDistance = places
+        .map((place) => {
+          const coords = parseCoordinateString(place.coord ?? '')
+          if (!coords) return null
+          const distanceInfo = getDistanceInfo(
+            { lat: userLocation.latitude, lng: userLocation.longitude },
+            coords,
+            transportMode,
+          )
+          if (!distanceInfo) return null
+          return {
+            ...place,
+            distance: distanceInfo.distance,
+            distanceText: distanceInfo.distanceText,
+            travelTimeText: distanceInfo.travelTimeText,
+            rating: place.rating ?? 0,
+          }
+        })
+        .filter((item): item is NonNullable<typeof item> => {
+          if (item === null) return false
+          if (radiusKm != null && item.distance > radiusKm) return false
+          return true
+        })
 
-        if (!distanceInfo) return null;
+      return withDistance
+        .sort((a, b) => {
+          const distDiff = a.distance - b.distance
+          if (Math.abs(distDiff) > DISTANCE_TIE_THRESHOLD_KM) return distDiff
+          return b.rating - a.rating
+        })
+        .slice(0, maxItems)
+    }, [places, userLocation, transportMode, maxItems, radiusKm])
 
-        // Рейтинг по умолчанию 0 если не указан
-        const rating = place.rating ?? 0;
+    if (isLoading) {
+      return (
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <MapIcon name="star" size={20} color={colors.primary} />
+            <Text style={styles.title}>Популярное рядом</Text>
+          </View>
+          <View style={styles.webCards}>
+            <SkeletonCard styles={styles} />
+            <SkeletonCard styles={styles} />
+          </View>
+        </View>
+      )
+    }
 
-        return {
-          ...place,
-          distance: distanceInfo.distance,
-          distanceText: distanceInfo.distanceText,
-          travelTimeText: distanceInfo.travelTimeText,
-          rating,
-        };
-      })
-      .filter((item): item is NonNullable<typeof item> => {
-        if (item === null) return false;
-        // Фильтруем по радиусу поиска — показываем только места в пределах радиуса
-        if (radiusKm != null && item.distance > radiusKm) return false;
-        return true;
-      });
+    if (!topPlaces.length) return null
 
-    // Сортируем по расстоянию (ближайшие первыми), затем по рейтингу при равном расстоянии
-    return placesWithDistance
-      .sort((a, b) => {
-        const distDiff = a.distance - b.distance;
-        if (Math.abs(distDiff) > 1) return distDiff;
-        // При примерно равном расстоянии — по рейтингу
-        return b.rating - a.rating;
-      })
-      .slice(0, maxItems);
-  }, [places, userLocation, transportMode, maxItems, radiusKm]);
+    const cards = topPlaces.map((place) => {
+      const thumbUrl = place.travelImageThumbUrl || place.travel_image_thumb_url || null
+      const categoryName =
+        typeof place.categoryName === 'string' ? place.categoryName.split(',')[0].trim() : ''
+      const badges = [
+        place.distanceText,
+        `${TRANSPORT_LABEL[transportMode]} ${place.travelTimeText}`,
+      ]
+      return (
+        <PlaceListCard
+          key={getPlaceCardKey(place)}
+          title={place.address || 'Место'}
+          imageUrl={thumbUrl}
+          categoryLabel={categoryName || undefined}
+          badges={badges}
+          onCardPress={() => onPlaceSelect(place)}
+          imageHeight={IS_WEB ? 156 : 148}
+          titleLayout="content"
+          titleNumberOfLines={3}
+          style={[styles.card, IS_WEB && styles.cardWeb]}
+        />
+      )
+    })
 
-  // Show skeleton while loading
-  if (isLoading) {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
           <MapIcon name="star" size={20} color={colors.primary} />
           <Text style={styles.title}>Популярное рядом</Text>
         </View>
-        <View style={styles.webCards}>
-          <SkeletonCard colors={colors} />
-          <SkeletonCard colors={colors} />
-        </View>
+        {IS_WEB ? (
+          <View style={styles.webCards}>{cards}</View>
+        ) : (
+          <ScrollView
+            ref={scrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            nestedScrollEnabled
+            scrollEnabled
+            style={styles.scroll}
+            contentContainerStyle={styles.scrollContent}
+          >
+            {cards}
+          </ScrollView>
+        )}
       </View>
-    );
-  }
-
-  if (!topPlaces.length) {
-    return null;
-  }
-
-  const cards = topPlaces.map((place) => {
-    const thumbUrl = place.travelImageThumbUrl || place.travel_image_thumb_url || null;
-    const categoryName = typeof place.categoryName === 'string'
-      ? place.categoryName.split(',')[0].trim()
-      : '';
-    const travelModeLabel = transportMode === 'car'
-      ? 'Авто'
-      : transportMode === 'bike'
-      ? 'Велосипед'
-      : 'Пешком';
-    const badges = [place.distanceText, `${travelModeLabel} ${place.travelTimeText}`];
-
-    return (
-      <PlaceListCard
-        key={getPlaceCardKey(place)}
-        title={place.address || 'Место'}
-        imageUrl={thumbUrl}
-        categoryLabel={categoryName || undefined}
-        badges={badges}
-        onCardPress={() => onPlaceSelect(place)}
-        imageHeight={Platform.OS === 'web' ? 156 : 148}
-        titleLayout="content"
-        titleNumberOfLines={3}
-        style={[
-          styles.card,
-          Platform.OS === 'web' && styles.cardWeb,
-        ]}
-      />
-    );
-  });
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <MapIcon name="star" size={20} color={colors.primary} />
-        <Text style={styles.title}>Популярное рядом</Text>
-      </View>
-      {Platform.OS === 'web' ? (
-        <View style={styles.webCards}>
-          {cards}
-        </View>
-      ) : (
-        <ScrollView
-          ref={scrollRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          nestedScrollEnabled={true}
-          scrollEnabled={true}
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-        >
-          {cards}
-        </ScrollView>
-      )}
-    </View>
-  );
-});
+    )
+  },
+)
 
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
-    container: {
-      marginVertical: 12,
-      marginHorizontal: 8,
-    },
+    container: { marginVertical: 12, marginHorizontal: 8 },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -213,14 +188,8 @@ const getStyles = (colors: ThemedColors) =>
       color: colors.text,
       letterSpacing: -0.3,
     },
-    webCards: {
-      paddingHorizontal: 8,
-      gap: 12,
-    },
-    scrollContent: {
-      paddingHorizontal: 8,
-      gap: 12,
-    },
+    webCards: { paddingHorizontal: 8, gap: 12 },
+    scrollContent: { paddingHorizontal: 8, gap: 12 },
     scroll: {
       ...Platform.select({
         web: {
@@ -232,7 +201,6 @@ const getStyles = (colors: ThemedColors) =>
           msOverflowStyle: 'none',
           touchAction: 'pan-x pan-y',
         } as any,
-        default: {},
       }),
     },
     card: {
@@ -244,7 +212,50 @@ const getStyles = (colors: ThemedColors) =>
       borderWidth: 1,
       borderColor: colors.border,
     },
-    cardWeb: {
+    cardWeb: { width: '100%' },
+    skeletonCard: {
       width: '100%',
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: colors.border,
     },
-  });
+    skeletonImage: {
+      width: '100%',
+      height: 156,
+      backgroundColor: colors.backgroundSecondary,
+    },
+    skeletonBody: { padding: 14, gap: 10 },
+    skeletonChip: {
+      width: '36%',
+      height: 24,
+      backgroundColor: colors.backgroundSecondary,
+      borderRadius: 999,
+    },
+    skeletonLineWide: {
+      width: '82%',
+      height: 18,
+      backgroundColor: colors.backgroundSecondary,
+      borderRadius: 6,
+    },
+    skeletonLineMid: {
+      width: '62%',
+      height: 18,
+      backgroundColor: colors.backgroundSecondary,
+      borderRadius: 6,
+    },
+    skeletonRow: { flexDirection: 'row', gap: 8 },
+    skeletonBadgeSm: {
+      width: 60,
+      height: 24,
+      backgroundColor: colors.backgroundSecondary,
+      borderRadius: 8,
+    },
+    skeletonBadgeLg: {
+      width: 104,
+      height: 24,
+      backgroundColor: colors.backgroundSecondary,
+      borderRadius: 8,
+    },
+  })

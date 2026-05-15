@@ -11,18 +11,16 @@ import { CATEGORY_ICONS } from './MapQuickFilters'
 
 type CategoryOption = string | { id?: string | number; name?: string; value?: string }
 
-const getCategoryName = (category: CategoryOption) => {
+function getCategoryName(category: CategoryOption): string {
   if (typeof category === 'string') return category.trim()
-  if (category && typeof category === 'object' && typeof category.name === 'string') {
-    return category.name.trim()
-  }
-  if (category && typeof category === 'object' && typeof category.value === 'string') {
-    return category.value.trim()
+  if (category && typeof category === 'object') {
+    if (typeof category.name === 'string') return category.name.trim()
+    if (typeof category.value === 'string') return category.value.trim()
   }
   return ''
 }
 
-const getRadiusLabel = (rawValue: string | number | undefined) => {
+function getRadiusLabel(rawValue: string | number | undefined): string {
   const value = String(rawValue ?? '').trim()
   if (!value) return ''
   return /км$/i.test(value) ? value : `${value} км`
@@ -60,10 +58,9 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
 }) => {
   const safeOnFilterChange = useCallback(
     (field: string, value: any) => {
-      if (typeof onFilterChange !== 'function') return
-      onFilterChange(field, value)
+      if (typeof onFilterChange === 'function') onFilterChange(field, value)
     },
-    [onFilterChange]
+    [onFilterChange],
   )
 
   const travelCategoriesCount = useMemo(() => {
@@ -82,46 +79,38 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
     return count
   }, [travelsData])
 
-  const resolvedCategoryOptions = useMemo(() => {
-    if (Array.isArray(filters.categoryTravelAddress) && filters.categoryTravelAddress.length > 0) {
-      return filters.categoryTravelAddress
-    }
+  const categoryOptions = useMemo(() => {
+    const resolved =
+      Array.isArray(filters.categoryTravelAddress) && filters.categoryTravelAddress.length > 0
+        ? filters.categoryTravelAddress
+        : Object.keys(travelCategoriesCount)
+            .sort((left, right) => left.localeCompare(right, 'ru'))
+            .map((name) => ({ id: name, name }))
 
-    return Object.keys(travelCategoriesCount)
-      .sort((left, right) => left.localeCompare(right, 'ru'))
-      .map((name) => ({ id: name, name }))
+    return resolved
+      .map((category) => {
+        const name = getCategoryName(category)
+        if (!name) return null
+        const id =
+          typeof category === 'object' && category !== null && 'id' in category
+            ? (category as { id?: string | number }).id || name
+            : name
+        return { id, value: name, count: travelCategoriesCount[name] || 0 }
+      })
+      .filter(
+        (category): category is { id: string | number; value: string; count: number } =>
+          category !== null,
+      )
   }, [filters.categoryTravelAddress, travelCategoriesCount])
-
-  const categoryOptions = useMemo(
-    () =>
-      resolvedCategoryOptions
-        .map((category) => {
-          const name = getCategoryName(category)
-          if (!name) return null
-
-          return {
-            id:
-              typeof category === 'object' && category !== null && 'id' in category
-                ? (category as { id?: string | number }).id || name
-                : name,
-            value: name,
-            count: travelCategoriesCount[name] || 0,
-          }
-        })
-        .filter((category): category is { id: string | number; value: string; count: number } => {
-          return category !== null
-        }),
-    [resolvedCategoryOptions, travelCategoriesCount]
-  )
 
   const selectedCategoryValues = useMemo(
     () =>
-      (Array.isArray(filterValue.categoryTravelAddress)
+      Array.isArray(filterValue.categoryTravelAddress)
         ? filterValue.categoryTravelAddress
-            .map((category) => getCategoryName(category))
+            .map(getCategoryName)
             .filter((value): value is string => Boolean(value))
-        : []) as string[],
-    [filterValue.categoryTravelAddress]
+        : [],
+    [filterValue.categoryTravelAddress],
   )
 
   const selectedCategoriesCount = selectedCategoryValues.length
@@ -131,29 +120,26 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
 
   const handleSearchChange = useCallback(
     (value: string) => safeOnFilterChange('searchQuery', value),
-    [safeOnFilterChange]
+    [safeOnFilterChange],
   )
 
   const handleCategoryToggle = useCallback(
     (categoryName: string) => {
       const nextValues = selectedCategoryValues.includes(categoryName)
-        ? selectedCategoryValues.filter((currentCategory) => currentCategory !== categoryName)
+        ? selectedCategoryValues.filter((c) => c !== categoryName)
         : [...selectedCategoryValues, categoryName]
-
       safeOnFilterChange('categoryTravelAddress', nextValues)
     },
-    [safeOnFilterChange, selectedCategoryValues]
+    [safeOnFilterChange, selectedCategoryValues],
   )
 
   const radiusOptions = useMemo(() => {
     const base = (Array.isArray(filters.radius) ? filters.radius : []).filter(
-      (option) => option?.id
+      (option) => option?.id,
     )
     const current = String(radiusSummaryValue || '').trim()
     if (!current) return base
-
-    const exists = base.some((option) => String(option.id) === current)
-    if (exists) return base
+    if (base.some((option) => String(option.id) === current)) return base
 
     const next = [...base, { id: current, name: getRadiusLabel(current) }]
     next.sort((a, b) => {
@@ -175,16 +161,18 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
         />
       </View>
 
-      {radiusOptions.length > 0 ? (
+      {radiusOptions.length > 0 && (
         <View style={styles.lightStepBlock}>
           <View style={styles.lightStepHeader}>
             <Feather name="radio" size={16} color={colors.primary} />
             <Text style={styles.lightStepTitle}>Радиус поиска</Text>
-            {radiusSummaryText ? <Text style={styles.lightStepBadge}>{radiusSummaryText}</Text> : null}
+            {!!radiusSummaryText && (
+              <Text style={styles.lightStepBadge}>{radiusSummaryText}</Text>
+            )}
           </View>
-          {!isMobile ? (
+          {!isMobile && (
             <Text style={styles.sectionHint}>Как далеко искать места вокруг</Text>
-          ) : null}
+          )}
           <ScrollView
             showsVerticalScrollIndicator={false}
             style={styles.radiusOptionsScroll}
@@ -194,12 +182,10 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
             <View style={styles.radiusOptionsWrap} testID="radius-presets">
               {radiusOptions.map((option) => {
                 const selected = String(option.id) === String(radiusSummaryValue)
-                const label = getRadiusLabel(option.name || option.id)
-
                 return (
                   <Chip
                     key={String(option.id)}
-                    label={label}
+                    label={getRadiusLabel(option.name || option.id)}
                     selected={selected}
                     onPress={() => safeOnFilterChange('radius', option.id)}
                     testID={`radius-option-${option.id}`}
@@ -217,24 +203,23 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
             </View>
           </ScrollView>
         </View>
-      ) : null}
+      )}
 
       <View style={styles.lightStepBlock}>
         <View style={styles.lightStepHeader}>
           <Feather name="map-pin" size={16} color={colors.primary} />
           <Text style={styles.lightStepTitle}>Что посмотреть</Text>
-          {selectedCategoriesCount > 0 ? (
+          {selectedCategoriesCount > 0 && (
             <Text style={styles.lightStepBadge}>{selectedCategoriesCount}</Text>
-          ) : null}
+          )}
         </View>
-        {!isMobile ? <Text style={styles.sectionHint}>Уточните тип мест</Text> : null}
+        {!isMobile && <Text style={styles.sectionHint}>Уточните тип мест</Text>}
 
         {categoryOptions.length > 0 ? (
           <View style={styles.filterSelectionChips} testID="category-options">
             {categoryOptions.map((category, index) => {
               const selected = selectedCategoryValues.includes(category.value)
               const iconName = CATEGORY_ICONS[category.value]
-
               return (
                 <Chip
                   key={String(category.id)}

@@ -3,7 +3,7 @@
  * Изолирует логику загрузки данных от UI-компонентов
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { normalizeTravelItem } from '@/api/travelsNormalize';
@@ -204,6 +204,13 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     () => consumePreloadedTravel(normalizedSlug, isId, idNum, { consume: false }),
     [normalizedSlug, isId, idNum]
   );
+  useEffect(() => {
+    if (!initialPreloadedTravel) return;
+    const timeoutId = setTimeout(() => {
+      consumePreloadedTravel(normalizedSlug, isId, idNum);
+    }, 0);
+    return () => clearTimeout(timeoutId);
+  }, [initialPreloadedTravel, normalizedSlug, isId, idNum]);
   const shouldRefetchInAutomation = isWebAutomation && !initialPreloadedTravel;
 
   const { data: travel, isLoading, isError, error, refetch } = useQuery<Travel>({

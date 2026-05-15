@@ -355,7 +355,10 @@ function CompactSideBarTravel({
       onPointerEnter={(Platform.OS === 'web') ? enableDeferred : undefined}
       onTouchStart={enableDeferred}
       onFocus={(Platform.OS === 'web') ? enableDeferred : undefined}
-      {...webOnly({ 'data-sidebar-deferred-ready': deferredEnabled } as any)}
+      {...webOnly({
+        'data-sidebar-menu': true,
+        'data-sidebar-deferred-ready': deferredEnabled,
+      } as any)}
     >
       <View style={styles.menuFrame}>
         <ScrollView

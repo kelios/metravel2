@@ -458,7 +458,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                   (distanceToCurrent === 0 ||
                     (distanceToCurrent <= effectivePreloadCount && allowNeighbourPreload))
                 const prepareBlur = layoutMeasured && blurBackground && distanceToCurrent <= 1
-                const slideUri = index === currentIndex || layoutMeasured ? getUri(index) : ''
+                const slideUri = getUri(index)
 
                 return (
                   <View

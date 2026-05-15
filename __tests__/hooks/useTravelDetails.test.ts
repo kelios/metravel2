@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useTravelDetails } from '@/hooks/useTravelDetails';
 import { Platform } from 'react-native';
 
@@ -95,7 +95,7 @@ describe('useTravelDetails', () => {
     expect(data).toEqual({ slug: 'awesome-trip' });
   });
 
-  it('uses meaningful preloaded travel as initialData on web (no extra await needed)', () => {
+  it('uses meaningful preloaded travel as initialData on web (no extra await needed)', async () => {
     (Platform.OS as any) = 'web';
     (global as any).window = {
       __metravelTravelPreload: {
@@ -141,9 +141,11 @@ describe('useTravelDetails', () => {
       coordsMeTravel: [],
     });
 
-    // Initial data peeks without deleting so concurrent render retries cannot lose
-    // the static bootstrap payload before React Query commits it.
-    expect((global as any).window.__metravelTravelPreload?.data?.id).toBe(498);
+    // Initial data is consumed after React Query receives it, so stale preload
+    // cannot leak into the next travel page.
+    await waitFor(() => {
+      expect((global as any).window.__metravelTravelPreload).toBeUndefined();
+    });
   });
 
   it('ignores sparse preloaded travel payloads and falls back to fetchTravelBySlug', async () => {

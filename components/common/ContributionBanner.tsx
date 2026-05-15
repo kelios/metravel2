@@ -3,10 +3,10 @@ import { Platform, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
-import { useAuth } from '@/context/AuthContext'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { useAuthStore } from '@/stores/authStore'
 import { ResponsiveContainer } from '@/components/layout'
 import Button from '@/components/ui/Button'
 import { buildLoginHref } from '@/utils/authNavigation'
@@ -83,7 +83,7 @@ const ADD_PLACE_PATH = '/travel/new'
 
 function ContributionBanner({ variant = 'default' }: ContributionBannerProps) {
   const router = useRouter()
-  const { isAuthenticated } = useAuth()
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const { isMobile } = useResponsive()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile])
@@ -233,4 +233,3 @@ const createStyles = (colors: ThemedColors, isMobile: boolean) =>
   })
 
 export default memo(ContributionBanner)
-

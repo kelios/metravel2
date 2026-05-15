@@ -19,8 +19,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 import { useResponsive } from '@/hooks/useResponsive';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
-import { useAuth } from '@/context/AuthContext';
 import { parseTravelStatusDateParts, useTravelStatusStore } from '@/stores/travelStatusStore';
+import { useAuthStore } from '@/stores/authStore';
 
 const MultiSelectFieldAny: any = MultiSelectField;
 
@@ -115,7 +115,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                                                                      showAdditionalFields = true,
                                                                  }) => {
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
-    const { userId } = useAuth();
+    const userId = useAuthStore((state) => state.userId);
     const { getStatus, setStatus } = useTravelStatusStore();
     const { isPhone, isLargePhone } = useResponsive();
     const isMobile = isPhone || isLargePhone;

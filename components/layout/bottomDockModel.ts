@@ -12,6 +12,8 @@ type BottomDockFeatherIconName =
   | 'plus-circle'
   | 'settings'
   | 'shield'
+  | 'shuffle'
+  | 'target'
   | 'user'
 
 export type BottomDockIconName = BottomDockFeatherIconName | 'belarus-outline'
@@ -40,11 +42,11 @@ export type BottomDockMoreMenuSection = {
 }
 
 export const BOTTOM_DOCK_ITEM_DEFS: BottomDockItemDef[] = [
-  { key: 'home', label: 'Идеи', accessibilityLabel: 'Идеи поездок', route: '/search', iconName: 'book-open' },
-  { key: 'search', label: 'BY', accessibilityLabel: 'Беларусь', route: '/travelsby', iconName: 'belarus-outline' },
+  { key: 'home', label: 'Маршруты', accessibilityLabel: 'Идеи поездок', route: '/search', iconName: 'compass' },
+  { key: 'search', label: 'Беларусь', accessibilityLabel: 'Беларусь', route: '/travelsby', iconName: 'belarus-outline' },
   { key: 'map', label: 'Карта', accessibilityLabel: 'Карта', route: '/map', iconName: 'map' },
-  { key: 'quests', label: 'Квесты', accessibilityLabel: 'Квесты', route: '/quests', iconName: 'flag' },
-  { key: 'favorites', label: 'Я', accessibilityLabel: 'Профиль', route: '/profile', iconName: 'user' },
+  { key: 'places', label: 'Места', accessibilityLabel: 'Места', route: '/places', iconName: 'map-pin' },
+  { key: 'favorites', label: 'Профиль', accessibilityLabel: 'Профиль', route: '/profile', iconName: 'user' },
   { key: 'more', label: 'Ещё', accessibilityLabel: 'Ещё', route: '/more', iconName: 'more-horizontal', isMore: true },
 ]
 
@@ -52,7 +54,8 @@ export const BOTTOM_DOCK_MORE_MENU_SECTIONS: BottomDockMoreMenuSection[] = [
   {
     key: 'primary',
     items: [
-      { key: 'roulette', label: 'Случайная поездка', accessibilityLabel: 'Случайная поездка', route: '/roulette', iconName: 'disc' },
+      { key: 'quests', label: 'Квесты', accessibilityLabel: 'Квесты', route: '/quests', iconName: 'target' },
+      { key: 'roulette', label: 'Случайный маршрут', accessibilityLabel: 'Случайный маршрут', route: '/roulette', iconName: 'shuffle' },
       { key: 'travel-new', label: 'Создать маршрут', accessibilityLabel: 'Создать маршрут', route: '/travel/new', iconName: 'plus-circle' },
       { key: 'export', label: 'Книга путешествий', accessibilityLabel: 'Книга путешествий', route: '/export', iconName: 'book-open' },
       { key: 'profile', label: 'Профиль', accessibilityLabel: 'Профиль', route: '/profile', iconName: 'user' },
@@ -78,6 +81,7 @@ export function normalizeBottomDockActivePath(pathname: string): string {
   if (normalized.startsWith('/travelsby')) return '/travelsby'
   if (normalized.startsWith('/export')) return '/export'
   if (normalized.startsWith('/map')) return '/map'
+  if (normalized.startsWith('/places')) return '/places'
   if (normalized.startsWith('/profile')) return '/profile'
   if (normalized.startsWith('/quests')) return '/quests'
   if (normalized.startsWith('/roulette')) return '/search'

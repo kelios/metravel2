@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   Platform,
   Pressable,
   ScrollView,
@@ -18,17 +20,18 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchPlacesCatalog } from '@/api/places'
 import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
-import ImageCardMedia from '@/components/ui/ImageCardMedia'
+import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import {
   filterCatalogPlaces,
   groupCatalogPlaces,
   groupCatalogCountries,
   type CatalogPlace,
 } from '@/utils/placesCatalog'
-import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
+import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH, getSiteBaseUrl } from '@/utils/seo'
 import ContributionBanner from '@/components/common/ContributionBanner'
 
 const MAP_FOCUS_RADIUS_KM = '5'
@@ -64,6 +67,28 @@ const arraysEqualSet = (left: string[], right: string[]): boolean => {
   return left.every((item) => rightSet.has(item))
 }
 
+const getActiveCategoryTitle = (categories: string[]): string => {
+  if (categories.length === 0) return 'Все места'
+  if (arraysEqualSet(categories, [...DEFAULT_CATEGORY_SELECTION])) return FEATURED_CATEGORY_LABEL
+  if (categories.length <= 2) return categories.join(', ')
+  return `${categories.length} категорий`
+}
+
+const normalizeInternalTravelRoute = (rawUrl: string): string | null => {
+  const trimmed = rawUrl.trim()
+  if (!trimmed) return null
+  if (trimmed.startsWith('/')) return trimmed
+
+  try {
+    const siteBase = new URL(getSiteBaseUrl())
+    const parsed = new URL(trimmed, siteBase)
+    if (parsed.host !== siteBase.host) return null
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`
+  } catch {
+    return null
+  }
+}
+
 export default function PlacesScreen() {
   const router = useRouter()
   const params = useLocalSearchParams<{ category?: string; country?: string }>()
@@ -71,7 +96,8 @@ export default function PlacesScreen() {
   const colors = useThemedColors()
   const { width } = useWindowDimensions()
   const isCompact = width < 760
-  const styles = useMemo(() => createStyles(colors, isCompact), [colors, isCompact])
+  const isWide = width >= 1100
+  const styles = useMemo(() => createStyles(colors, isCompact, isWide), [colors, isCompact, isWide])
   const [query, setQuery] = useState('')
   const [selectedCategories, setSelectedCategories] = useState<string[]>(() =>
     parseCategoryParam(params.category),
@@ -130,12 +156,7 @@ export default function PlacesScreen() {
   const hasMorePlaces = visibleCount < filteredPlaces.length
   const showLoadedCounts = !placesQuery.isLoading && !placesQuery.isError
 
-  const activeCategoryTitle =
-    selectedCategories.length === 0
-      ? 'Все места'
-      : selectedCategories.length === 1
-        ? selectedCategories[0]
-        : FEATURED_CATEGORY_LABEL
+  const activeCategoryTitle = getActiveCategoryTitle(selectedCategories)
   const pageDescription = selectedCategories.length > 0
     ? `Места выбранных категорий: ${selectedCategories.join(', ')}. Карточки точек, переход на карту и ссылка на путешествие.`
     : 'Каталог мест MeTravel: замки, музеи, парки, природные точки и другие места из путешествий.'
@@ -152,7 +173,7 @@ export default function PlacesScreen() {
     setVisibleCount((current) => Math.min(current + PLACES_PAGE_SIZE, filteredPlaces.length))
   }, [filteredPlaces.length])
 
-  const handleScroll = useCallback((event: any) => {
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     if (!hasMorePlaces || placesQuery.isLoading) return
     const nativeEvent = event?.nativeEvent
     const layoutHeight = Number(nativeEvent?.layoutMeasurement?.height ?? 0)
@@ -189,7 +210,7 @@ export default function PlacesScreen() {
 
   const handleSelectCountry = useCallback((country: string | null) => {
     setSelectedCountry(country)
-    router.setParams(country ? { country } : { country: undefined })
+    router.setParams(country ? { country } : { country: '' })
   }, [router])
 
   const openOnMap = useCallback((place: CatalogPlace) => {
@@ -206,8 +227,15 @@ export default function PlacesScreen() {
 
   const openTravel = useCallback((place: CatalogPlace) => {
     if (!place.urlTravel) return
-    router.push(place.urlTravel as any)
+    const internalRoute = normalizeInternalTravelRoute(place.urlTravel)
+    if (internalRoute) {
+      router.push(internalRoute as any)
+      return
+    }
+    void openExternalUrlInNewTab(place.urlTravel)
   }, [router])
+
+  const hasActiveFilters = selectedCategories.length > 0 || !!selectedCountry || !!query
 
   return (
     <View style={styles.screen}>
@@ -228,57 +256,96 @@ export default function PlacesScreen() {
         onScroll={handleScroll}
         scrollEventThrottle={180}
       >
-        <View style={styles.header}>
-          <View style={styles.eyebrowRow}>
-            <Feather name="map-pin" size={18} color={colors.primary} />
-            <Text style={styles.eyebrow}>Каталог точек</Text>
+        {/* ─── Hero ─── */}
+        <View style={styles.hero}>
+          <View style={styles.heroInner}>
+            <View style={styles.eyebrowRow}>
+              <View style={styles.eyebrowDot} />
+              <Text style={styles.eyebrow}>Каталог точек</Text>
+            </View>
+            <Text style={styles.heroTitle}>Места</Text>
+            <Text style={styles.heroSubtitle}>
+              Все точки из путешествий — отдельно от радиуса карты. Выберите категорию,
+              откройте место на карте или перейдите к связанному маршруту.
+            </Text>
+            {showLoadedCounts ? (
+              <View style={styles.heroStats}>
+                <View style={styles.heroStatItem}>
+                  <Text style={styles.heroStatValue}>{allPlaces.length}</Text>
+                  <Text style={styles.heroStatLabel}>мест в каталоге</Text>
+                </View>
+                <View style={styles.heroStatDivider} />
+                <View style={styles.heroStatItem}>
+                  <Text style={styles.heroStatValue}>{countryGroups.length}</Text>
+                  <Text style={styles.heroStatLabel}>{countryGroups.length === 1 ? 'страна' : countryGroups.length < 5 ? 'страны' : 'стран'}</Text>
+                </View>
+                <View style={styles.heroStatDivider} />
+                <View style={styles.heroStatItem}>
+                  <Text style={styles.heroStatValue}>{categoryGroups.length}</Text>
+                  <Text style={styles.heroStatLabel}>{categoryGroups.length === 1 ? 'категория' : categoryGroups.length < 5 ? 'категории' : 'категорий'}</Text>
+                </View>
+              </View>
+            ) : null}
           </View>
-          <Text style={styles.title}>Места</Text>
-          <Text style={styles.subtitle}>
-            Все точки сайта отдельно от радиуса карты. Выберите категорию, откройте место на карте
-            или перейдите к путешествию, где оно используется.
-          </Text>
         </View>
 
-        <View style={styles.searchRow}>
-          <View style={styles.searchBox}>
-            <Feather name="search" size={18} color={colors.textMuted} />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Найти место"
-              placeholderTextColor={colors.textSubtle}
-              style={styles.searchInput}
-              returnKeyType="search"
-              accessibilityLabel="Найти место"
-            />
-          </View>
-          {query ? (
-            <Button
-              label="Сбросить"
-              variant="ghost"
-              size="sm"
-              onPress={() => setQuery('')}
-              icon={<Feather name="x" size={16} color={colors.text} />}
-            />
-          ) : null}
-        </View>
-
-        <View style={styles.topFilters}>
-          <View style={styles.topFiltersHeader}>
-            <Text style={styles.sectionTitle}>Страны</Text>
-            {selectedCountry ? (
+        {/* ─── Search ─── */}
+        <View style={styles.searchSection}>
+          <View style={styles.searchRow}>
+            <View style={styles.searchBox}>
+              <Feather name="search" size={18} color={colors.primary} />
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Поиск по названию или адресу"
+                placeholderTextColor={colors.textSubtle}
+                style={styles.searchInput}
+                returnKeyType="search"
+                accessibilityLabel="Найти место"
+              />
+              {query ? (
+                <Pressable
+                  onPress={() => setQuery('')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Очистить поиск"
+                  style={({ pressed }) => [styles.searchClear, pressed && PRESSED_OPACITY]}
+                >
+                  <Feather name="x" size={16} color={colors.textMuted} />
+                </Pressable>
+              ) : null}
+            </View>
+            {hasActiveFilters ? (
               <Button
-                label="Все страны"
+                label="Сбросить всё"
                 variant="ghost"
                 size="sm"
-                onPress={() => handleSelectCountry(null)}
+                onPress={() => {
+                  setQuery('')
+                  handleClearCategories()
+                  handleSelectCountry(null)
+                }}
               />
             ) : null}
           </View>
-          <View style={styles.countryList}>
+        </View>
+
+        {/* ─── Countries ─── */}
+        <View style={styles.countrySection}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Страны</Text>
+            {selectedCountry ? (
+              <Pressable
+                onPress={() => handleSelectCountry(null)}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.clearLink, pressed && PRESSED_OPACITY]}
+              >
+                <Text style={styles.clearLinkText}>Все страны</Text>
+              </Pressable>
+            ) : null}
+          </View>
+          <View style={styles.chipRow}>
             {placesQuery.isLoading ? (
-              <Text style={styles.loadingHint}>Страны загрузятся вместе с местами</Text>
+              <Text style={styles.hintText}>Загрузка стран...</Text>
             ) : (
               <>
                 <Chip
@@ -301,13 +368,22 @@ export default function PlacesScreen() {
           </View>
         </View>
 
+        {/* ─── Main layout ─── */}
         <View style={styles.layout}>
+          {/* Sidebar */}
           <View style={styles.sidebar}>
-            <Text style={styles.sectionTitle}>Категории</Text>
-            <Text style={styles.sectionHint}>
-              По умолчанию выбрана готовая подборка. Нажмите на категорию, чтобы добавить или убрать ее.
+            <View style={styles.sidebarHeader}>
+              <Text style={styles.sectionTitle}>Категории</Text>
+              {selectedCategories.length > 0 ? (
+                <View style={styles.selectedBadge}>
+                  <Text style={styles.selectedBadgeText}>{selectedCategories.length}</Text>
+                </View>
+              ) : null}
+            </View>
+            <Text style={styles.hintText}>
+              По умолчанию выбрана подборка. Нажмите на категорию, чтобы изменить фильтр.
             </Text>
-            <View style={styles.categoryList}>
+            <View style={styles.chipRow}>
               <Chip
                 label="Подборка"
                 count={showLoadedCounts ? defaultSelectionCount : undefined}
@@ -332,13 +408,14 @@ export default function PlacesScreen() {
             </View>
           </View>
 
+          {/* Results */}
           <View style={styles.main}>
             <View style={styles.resultsHeader}>
-              <View>
-                <Text style={styles.resultsTitle}>{activeCategoryTitle}</Text>
+              <View style={styles.resultsTitleBlock}>
+                <Text style={styles.resultsTitle} numberOfLines={2}>{activeCategoryTitle}</Text>
                 <Text style={styles.resultsMeta}>
                   {placesQuery.isLoading
-                    ? 'Загружаем подборку'
+                    ? 'Загружаем подборку...'
                     : `${filteredPlaces.length} ${getPlacesCountLabel(filteredPlaces.length)}`}
                 </Text>
               </View>
@@ -351,20 +428,21 @@ export default function PlacesScreen() {
                 />
               ) : null}
             </View>
+
             {selectedCategories.length > 1 ? (
               <View style={styles.activeSelection}>
                 <Text style={styles.activeSelectionLabel}>Выбрано</Text>
-                <View style={styles.activeSelectionChips}>
+                <View style={styles.chipRow}>
                   {selectedCategories.map((category) => (
                     <Pressable
                       key={category}
                       accessibilityRole="button"
                       accessibilityLabel={`Убрать категорию ${category}`}
                       onPress={() => handleToggleCategory(category)}
-                      style={({ pressed }) => [styles.activeSelectionChip, pressed && PRESSED_OPACITY]}
+                      style={({ pressed }) => [styles.activeChip, pressed && PRESSED_OPACITY]}
                     >
-                      <Text style={styles.activeSelectionText}>{category}</Text>
-                      <Feather name="x" size={13} color={colors.primaryText} />
+                      <Text style={styles.activeChipText}>{category}</Text>
+                      <Feather name="x" size={12} color={colors.primaryText} />
                     </Pressable>
                   ))}
                 </View>
@@ -387,7 +465,7 @@ export default function PlacesScreen() {
                 styles={styles}
                 icon="map-pin"
                 title="Места не найдены"
-                description="Измените категорию или поисковый запрос."
+                description="Измените категорию, страну или поисковый запрос."
                 actionLabel="Сбросить фильтры"
                 onAction={() => {
                   setQuery('')
@@ -413,7 +491,7 @@ export default function PlacesScreen() {
                       Показано {visiblePlaces.length} из {filteredPlaces.length}
                     </Text>
                     <Button
-                      label="Показать еще"
+                      label="Показать ещё"
                       variant="secondary"
                       size="sm"
                       onPress={loadMorePlaces}
@@ -444,54 +522,61 @@ function PlaceCard({
   onOpenTravel: (place: CatalogPlace) => void
 }) {
   return (
-    <View style={styles.card}>
-      <View style={styles.media}>
-        {place.imageUrl || place.travelImageThumbUrl ? (
-          <ImageCardMedia
-            src={place.imageUrl || place.travelImageThumbUrl}
-            alt={place.title}
-            height={190}
-            borderRadius={0}
-            fit="contain"
-            blurBackground
-            loading="lazy"
-          />
-        ) : (
-          <View style={styles.mediaPlaceholder} />
-        )}
-      </View>
-      <View style={styles.cardBody}>
-        <View style={styles.categoryBadge}>
-          <Text style={styles.categoryBadgeText}>{place.category}</Text>
-        </View>
-        <Text style={styles.cardTitle} numberOfLines={2}>{place.title}</Text>
-        {place.address ? (
-          <Text style={styles.cardAddress} numberOfLines={2}>{place.address}</Text>
-        ) : null}
-        <View style={styles.countryMetaRow}>
-          <Feather name="globe" size={14} color={colors.textMuted} />
-          <Text style={styles.countryMetaText} numberOfLines={1}>{place.country}</Text>
-        </View>
-        <View style={styles.cardActions}>
-          <Button
-            label="На карте"
-            variant="secondary"
-            size="sm"
-            onPress={() => onOpenMap(place)}
-            icon={<Feather name="map-pin" size={16} color={colors.text} />}
-          />
-          {place.urlTravel ? (
-            <Button
-              label="Прочитать"
-              variant="primary"
-              size="sm"
-              onPress={() => onOpenTravel(place)}
-              icon={<Feather name="book-open" size={16} color={colors.textOnPrimary} />}
-            />
+    <UnifiedTravelCard
+      title={place.title}
+      imageUrl={place.imageUrl || place.travelImageThumbUrl || null}
+      onPress={() => onOpenMap(place)}
+      mediaFit="contain"
+      heroTitleOverlay
+      imageHeight={220}
+      style={styles.card}
+      mediaProps={{
+        blurBackground: true,
+        allowCriticalWebBlur: Platform.OS === 'web',
+        loading: 'lazy',
+        priority: 'low',
+      }}
+      contentSlot={
+        <View style={styles.cardContent}>
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryBadgeText}>{place.category}</Text>
+          </View>
+          {place.address ? (
+            <View style={styles.cardMeta}>
+              <Feather name="map-pin" size={12} color={colors.textMuted} />
+              <Text style={styles.cardAddress} numberOfLines={1}>{place.address}</Text>
+            </View>
           ) : null}
+          <View style={styles.cardMeta}>
+            <Feather name="globe" size={12} color={colors.textMuted} />
+            <Text style={styles.cardCountry} numberOfLines={1}>{place.country}</Text>
+          </View>
+          <View style={styles.cardDivider} />
+          <View style={styles.cardActions}>
+            <Pressable
+              onPress={() => onOpenMap(place)}
+              accessibilityRole="button"
+              accessibilityLabel={`Открыть ${place.title} на карте`}
+              style={({ pressed }) => [styles.cardActionBtn, styles.cardActionBtnSecondary, pressed && PRESSED_OPACITY]}
+            >
+              <Feather name="map" size={14} color={colors.text} />
+              <Text style={styles.cardActionBtnText}>На карте</Text>
+            </Pressable>
+            {place.urlTravel ? (
+              <Pressable
+                onPress={() => onOpenTravel(place)}
+                accessibilityRole="button"
+                accessibilityLabel={`Читать маршрут для ${place.title}`}
+                style={({ pressed }) => [styles.cardActionBtn, styles.cardActionBtnPrimary, pressed && PRESSED_OPACITY]}
+              >
+                <Feather name="book-open" size={14} color={colors.textOnPrimary} />
+                <Text style={[styles.cardActionBtnText, styles.cardActionBtnTextPrimary]}>Маршрут</Text>
+              </Pressable>
+            ) : null}
+          </View>
         </View>
-      </View>
-    </View>
+      }
+    />
   )
 }
 
@@ -504,8 +589,11 @@ function LoadingBlock({
 }) {
   return (
     <View style={styles.stateBlock}>
-      <ActivityIndicator size="large" color={colors.primary} />
+      <View style={styles.stateIconWrap}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
       <Text style={styles.stateTitle}>Загружаем места</Text>
+      <Text style={styles.stateText}>Подготавливаем каталог точек...</Text>
     </View>
   )
 }
@@ -527,7 +615,9 @@ function StateBlock({
 }) {
   return (
     <View style={styles.stateBlock}>
-      <Feather name={icon} size={36} style={styles.stateIcon} />
+      <View style={styles.stateIconWrap}>
+        <Feather name={icon} size={28} color={styles.stateIconColor.color} />
+      </View>
       <Text style={styles.stateTitle}>{title}</Text>
       <Text style={styles.stateText}>{description}</Text>
       <Pressable
@@ -549,7 +639,7 @@ function getPlacesCountLabel(count: number): string {
   return 'мест'
 }
 
-const createStyles = (colors: ThemedColors, isCompact: boolean) => StyleSheet.create({
+const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean) => StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -559,35 +649,86 @@ const createStyles = (colors: ThemedColors, isCompact: boolean) => StyleSheet.cr
   },
   content: {
     width: '100%',
-    maxWidth: 1240,
+    maxWidth: 1280,
     alignSelf: 'center',
-    paddingHorizontal: isCompact ? DESIGN_TOKENS.spacing.lg : DESIGN_TOKENS.spacing.xl,
-    paddingVertical: DESIGN_TOKENS.spacing.xl,
-    gap: DESIGN_TOKENS.spacing.xl,
+    paddingBottom: DESIGN_TOKENS.spacing.xxl,
   },
-  header: {
-    gap: DESIGN_TOKENS.spacing.sm,
+
+  // ─── Hero ───
+  hero: {
+    paddingHorizontal: isCompact ? DESIGN_TOKENS.spacing.lg : DESIGN_TOKENS.spacing.xl,
+    paddingTop: isCompact ? DESIGN_TOKENS.spacing.xl : DESIGN_TOKENS.spacing.xxl,
+    paddingBottom: DESIGN_TOKENS.spacing.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  heroInner: {
+    gap: DESIGN_TOKENS.spacing.md,
+    maxWidth: 680,
   },
   eyebrowRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.sm,
+    gap: DESIGN_TOKENS.spacing.xs,
+  },
+  eyebrowDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
   },
   eyebrow: {
     color: colors.primary,
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: '700',
+    letterSpacing: 0.5,
   },
-  title: {
+  heroTitle: {
     color: colors.text,
-    fontSize: isCompact ? 36 : 42,
+    fontSize: isCompact ? 40 : 56,
     fontWeight: '800',
+    letterSpacing: -1.5,
+    lineHeight: isCompact ? 46 : 62,
   },
-  subtitle: {
+  heroSubtitle: {
+    display: 'none' as any,
+  },
+  heroStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.md,
+    marginTop: DESIGN_TOKENS.spacing.xs,
+    paddingTop: DESIGN_TOKENS.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  heroStatItem: {
+    gap: 2,
+  },
+  heroStatValue: {
+    color: colors.text,
+    fontSize: isCompact ? 22 : 28,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  heroStatLabel: {
     color: colors.textMuted,
-    fontSize: DESIGN_TOKENS.typography.sizes.lg,
-    lineHeight: 26,
-    maxWidth: 780,
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    fontWeight: '600',
+  },
+  heroStatDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: colors.borderLight,
+    marginHorizontal: DESIGN_TOKENS.spacing.xs,
+  },
+
+  // ─── Search ───
+  searchSection: {
+    paddingHorizontal: isCompact ? DESIGN_TOKENS.spacing.lg : DESIGN_TOKENS.spacing.xl,
+    paddingVertical: DESIGN_TOKENS.spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
   },
   searchRow: {
     flexDirection: 'row',
@@ -596,15 +737,18 @@ const createStyles = (colors: ThemedColors, isCompact: boolean) => StyleSheet.cr
   },
   searchBox: {
     flex: 1,
-    minHeight: 48,
+    minHeight: 52,
     borderRadius: DESIGN_TOKENS.radii.md,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border,
     backgroundColor: colors.surface,
     flexDirection: 'row',
     alignItems: 'center',
     gap: DESIGN_TOKENS.spacing.sm,
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    ...(Platform.OS === 'web' ? ({
+      boxShadow: DESIGN_TOKENS.shadows.light,
+    } as any) : null),
   },
   searchInput: {
     flex: 1,
@@ -612,143 +756,181 @@ const createStyles = (colors: ThemedColors, isCompact: boolean) => StyleSheet.cr
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     outlineStyle: 'none' as any,
   },
-  topFilters: {
-    gap: DESIGN_TOKENS.spacing.md,
+  searchClear: {
+    padding: 4,
+    borderRadius: DESIGN_TOKENS.radii.full,
   },
-  topFiltersHeader: {
+
+  // ─── Countries ───
+  countrySection: {
+    paddingHorizontal: isCompact ? DESIGN_TOKENS.spacing.lg : DESIGN_TOKENS.spacing.xl,
+    paddingVertical: DESIGN_TOKENS.spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
+  sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: DESIGN_TOKENS.spacing.md,
-  },
-  countryList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: DESIGN_TOKENS.spacing.sm,
-  },
-  loadingHint: {
-    color: colors.textMuted,
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    lineHeight: 20,
-  },
-  layout: {
-    flexDirection: isCompact ? 'column' : 'row',
-    alignItems: 'flex-start',
-    gap: DESIGN_TOKENS.spacing.xl,
-  },
-  sidebar: {
-    width: isCompact ? '100%' : 280,
-    gap: DESIGN_TOKENS.spacing.md,
   },
   sectionTitle: {
     color: colors.text,
-    fontSize: DESIGN_TOKENS.typography.sizes.lg,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '800',
+    letterSpacing: -0.2,
   },
-  sectionHint: {
+  clearLink: {
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+  },
+  clearLinkText: {
+    color: colors.primary,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '600',
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: DESIGN_TOKENS.spacing.xs,
+  },
+  hintText: {
     color: colors.textMuted,
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     lineHeight: 20,
   },
-  categoryList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: DESIGN_TOKENS.spacing.sm,
+
+  // ─── Layout ───
+  layout: {
+    flexDirection: isCompact ? 'column' : 'row',
+    alignItems: 'flex-start',
+    gap: 0,
   },
+
+  // ─── Sidebar ───
+  sidebar: {
+    width: isCompact ? '100%' : 260,
+    gap: DESIGN_TOKENS.spacing.md,
+    paddingHorizontal: isCompact ? DESIGN_TOKENS.spacing.lg : DESIGN_TOKENS.spacing.xl,
+    paddingVertical: DESIGN_TOKENS.spacing.xl,
+    borderRightWidth: isCompact ? 0 : 1,
+    borderRightColor: colors.borderLight,
+    borderBottomWidth: isCompact ? 1 : 0,
+    borderBottomColor: colors.borderLight,
+    ...(Platform.OS === 'web' && !isCompact ? ({
+      position: 'sticky' as any,
+      top: 0,
+      maxHeight: '100vh',
+      overflowY: 'auto',
+    } as any) : null),
+  },
+  sidebarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
+  },
+  selectedBadge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: DESIGN_TOKENS.radii.full,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  selectedBadgeText: {
+    color: colors.textOnPrimary,
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    fontWeight: '800',
+  },
+
+  // ─── Main / Results ───
   main: {
     flex: 1,
     minWidth: 0,
     width: isCompact ? '100%' : undefined,
     gap: DESIGN_TOKENS.spacing.lg,
+    paddingHorizontal: isCompact ? DESIGN_TOKENS.spacing.lg : DESIGN_TOKENS.spacing.xl,
+    paddingVertical: DESIGN_TOKENS.spacing.xl,
   },
   resultsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: DESIGN_TOKENS.spacing.md,
+  },
+  resultsTitleBlock: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
   },
   resultsTitle: {
     color: colors.text,
     fontSize: DESIGN_TOKENS.typography.sizes.xl,
     fontWeight: '800',
+    letterSpacing: -0.4,
   },
   resultsMeta: {
     color: colors.textMuted,
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    marginTop: 4,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '500',
   },
+
+  // ─── Active selection chips ───
   activeSelection: {
     borderRadius: DESIGN_TOKENS.radii.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderColor: colors.primaryAlpha30,
+    backgroundColor: colors.primarySoft,
     padding: DESIGN_TOKENS.spacing.md,
     gap: DESIGN_TOKENS.spacing.sm,
   },
   activeSelectionLabel: {
-    color: colors.textMuted,
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: colors.primaryText,
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
     fontWeight: '700',
+    letterSpacing: 0.5,
   },
-  activeSelectionChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: DESIGN_TOKENS.spacing.sm,
-  },
-  activeSelectionChip: {
-    minHeight: 34,
-    borderRadius: DESIGN_TOKENS.radii.full,
-    backgroundColor: colors.primarySoft,
+  activeChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.xs,
+    gap: 5,
+    borderRadius: DESIGN_TOKENS.radii.full,
+    backgroundColor: colors.primary,
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     paddingVertical: 6,
     ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
   },
-  activeSelectionText: {
-    color: colors.primaryText,
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+  activeChipText: {
+    color: colors.textOnPrimary,
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
     fontWeight: '700',
   },
+
+  // ─── Cards grid ───
   cardsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: DESIGN_TOKENS.spacing.lg,
+    gap: DESIGN_TOKENS.spacing.md,
   },
+
+  // ─── Card ───
   card: {
-    width: isCompact ? '100%' : 'calc(50% - 12px)' as any,
-    minWidth: isCompact ? undefined : 300,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    width: isCompact
+      ? '100%'
+      : isWide
+        ? ('calc(33.333% - 11px)' as any)
+        : ('calc(50% - 8px)' as any),
+    minWidth: isCompact ? undefined : 260,
+    borderRadius: DESIGN_TOKENS.radii.lg,
     overflow: 'hidden',
-    ...(Platform.OS === 'web' ? ({ boxShadow: DESIGN_TOKENS.shadows.light } as any) : null),
+    ...(Platform.OS === 'web' ? ({
+      boxShadow: DESIGN_TOKENS.shadows.light,
+      transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+    } as any) : null),
   },
-  loadMoreFooter: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: DESIGN_TOKENS.spacing.sm,
-    paddingVertical: DESIGN_TOKENS.spacing.lg,
-  },
-  loadMoreText: {
-    color: colors.textMuted,
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    fontWeight: '600',
-  },
-  media: {
-    height: 190,
-    backgroundColor: colors.surfaceMuted,
-  },
-  mediaPlaceholder: {
-    flex: 1,
-    backgroundColor: colors.surfaceMuted,
-  },
-  cardBody: {
-    padding: DESIGN_TOKENS.spacing.md,
-    gap: DESIGN_TOKENS.spacing.sm,
+  cardContent: {
+    gap: DESIGN_TOKENS.spacing.xs,
   },
   categoryBadge: {
     alignSelf: 'flex-start',
@@ -761,70 +943,126 @@ const createStyles = (colors: ThemedColors, isCompact: boolean) => StyleSheet.cr
     color: colors.primaryText,
     fontSize: DESIGN_TOKENS.typography.sizes.xs,
     fontWeight: '800',
+    letterSpacing: 0.2,
   },
-  cardTitle: {
-    color: colors.text,
-    fontSize: DESIGN_TOKENS.typography.sizes.lg,
-    fontWeight: '800',
-    lineHeight: 24,
-  },
-  cardAddress: {
-    color: colors.textMuted,
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    lineHeight: 20,
-  },
-  countryMetaRow: {
+  cardMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.xs,
+    gap: 5,
   },
-  countryMetaText: {
+  cardAddress: {
+    flex: 1,
+    color: colors.textMuted,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    lineHeight: 18,
+    flexShrink: 1,
+  },
+  cardCountry: {
+    flex: 1,
     color: colors.textMuted,
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: '600',
     flexShrink: 1,
   },
+  cardDivider: {
+    height: 1,
+    backgroundColor: colors.borderLight,
+    marginVertical: 4,
+  },
   cardActions: {
     flexDirection: 'row',
+    gap: DESIGN_TOKENS.spacing.xs,
     flexWrap: 'wrap',
-    gap: DESIGN_TOKENS.spacing.sm,
-    paddingTop: DESIGN_TOKENS.spacing.xs,
   },
-  stateBlock: {
-    minHeight: 280,
-    borderRadius: DESIGN_TOKENS.radii.md,
+  cardActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    borderRadius: DESIGN_TOKENS.radii.sm,
+    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+  },
+  cardActionBtnSecondary: {
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderLight,
+  },
+  cardActionBtnPrimary: {
+    backgroundColor: colors.primary,
+  },
+  cardActionBtnText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  cardActionBtnTextPrimary: {
+    color: colors.textOnPrimary,
+  },
+
+  // ─── Load more ───
+  loadMoreFooter: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: DESIGN_TOKENS.spacing.lg,
+  },
+  loadMoreText: {
+    color: colors.textMuted,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '600',
+  },
+
+  // ─── State blocks ───
+  stateBlock: {
+    minHeight: 300,
+    borderRadius: DESIGN_TOKENS.radii.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     gap: DESIGN_TOKENS.spacing.sm,
-    padding: DESIGN_TOKENS.spacing.xl,
+    padding: DESIGN_TOKENS.spacing.xxl,
   },
-  stateIcon: {
+  stateIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: DESIGN_TOKENS.radii.full,
+    backgroundColor: colors.backgroundSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: DESIGN_TOKENS.spacing.xs,
+  },
+  stateIconColor: {
     color: colors.textMuted,
   },
   stateTitle: {
     color: colors.text,
     fontSize: DESIGN_TOKENS.typography.sizes.lg,
     fontWeight: '800',
+    letterSpacing: -0.3,
   },
   stateText: {
     color: colors.textMuted,
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     textAlign: 'center',
+    maxWidth: 320,
+    lineHeight: 22,
   },
   stateAction: {
     marginTop: DESIGN_TOKENS.spacing.sm,
-    minHeight: 40,
+    minHeight: 44,
     borderRadius: DESIGN_TOKENS.radii.md,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xl,
   },
   stateActionText: {
     color: colors.textOnPrimary,
     fontWeight: '700',
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
   },
 })
