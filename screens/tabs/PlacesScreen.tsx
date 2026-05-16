@@ -994,11 +994,6 @@ const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean)
     gap: DESIGN_TOKENS.spacing.sm,
   },
 
-  // ─── Search ───
-  searchSection: {
-    paddingHorizontal: isCompact ? DESIGN_TOKENS.spacing.lg : DESIGN_TOKENS.spacing.xl,
-    paddingBottom: DESIGN_TOKENS.spacing.md,
-  },
   searchBox: {
     flex: 1,
     minWidth: isCompact ? undefined : 320,
@@ -1092,41 +1087,15 @@ const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean)
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: '800',
   },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: isCompact ? DESIGN_TOKENS.spacing.lg : DESIGN_TOKENS.spacing.xl,
-  },
   sectionTitle: {
     color: colors.text,
     ...DESIGN_TOKENS.typography.scale.h3,
-  },
-  clearLink: {
-    paddingVertical: 2,
-    paddingHorizontal: 4,
-  },
-  clearLinkText: {
-    color: colors.primary,
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    fontWeight: '600',
-  },
-  countryWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    paddingHorizontal: isCompact ? DESIGN_TOKENS.spacing.lg : DESIGN_TOKENS.spacing.xl,
   },
   filterChipCompact: {
     paddingVertical: 5,
     paddingHorizontal: 11,
     minHeight: 30,
     borderRadius: DESIGN_TOKENS.radii.full,
-  },
-  skeletonChip: {
-    height: 30,
-    borderRadius: DESIGN_TOKENS.radii.full,
-    backgroundColor: colors.backgroundSecondary,
   },
   chipRow: {
     flexDirection: 'row',
