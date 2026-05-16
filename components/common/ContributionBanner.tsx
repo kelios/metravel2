@@ -23,6 +23,7 @@ export type ContributionBannerVariant =
 
 interface ContributionBannerProps {
   variant?: ContributionBannerVariant
+  density?: 'regular' | 'compact'
 }
 
 const COPY: Record<
@@ -55,9 +56,9 @@ const COPY: Record<
   },
   places: {
     icon: 'globe',
-    title: 'Знаете интересное место — расскажите о нём!',
+    title: 'Знаете место, которого здесь нет?',
     subtitle:
-      'Все точки на этой карте добавлены пользователями вручную. Спасибо каждому, кто уже внёс свой вклад. Ваше место тоже ждёт здесь.',
+      'Добавьте точку или маршрут — это поможет другим путешественникам.',
   },
   history: {
     icon: 'clock',
@@ -81,12 +82,16 @@ const COPY: Record<
 
 const ADD_PLACE_PATH = '/travel/new'
 
-function ContributionBanner({ variant = 'default' }: ContributionBannerProps) {
+function ContributionBanner({ variant = 'default', density = 'regular' }: ContributionBannerProps) {
   const router = useRouter()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const { isMobile } = useResponsive()
+  const isCompact = density === 'compact'
   const colors = useThemedColors()
-  const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile])
+  const styles = useMemo(
+    () => createStyles(colors, isMobile, isCompact),
+    [colors, isCompact, isMobile],
+  )
 
   const copy = COPY[variant]
 
@@ -112,15 +117,19 @@ function ContributionBanner({ variant = 'default' }: ContributionBannerProps) {
             <View style={styles.iconWrap}>
               <Feather
                 name={copy.icon as any}
-                size={isMobile ? 20 : 22}
+                size={isCompact ? 18 : isMobile ? 20 : 22}
                 color={colors.primary}
               />
             </View>
           </View>
 
           <View style={[styles.textBlock, isMobile ? styles.textBlockMobile : styles.textBlockDesktop]}>
-            <Text style={styles.title}>{copy.title}</Text>
-            <Text style={styles.subtitle}>{copy.subtitle}</Text>
+            <Text style={styles.title} numberOfLines={isCompact ? 2 : undefined}>
+              {copy.title}
+            </Text>
+            <Text style={styles.subtitle} numberOfLines={isCompact ? 2 : undefined}>
+              {copy.subtitle}
+            </Text>
           </View>
 
           <View style={[styles.buttons, isMobile ? styles.buttonsMobile : styles.buttonsDesktop]}>
@@ -129,7 +138,7 @@ function ContributionBanner({ variant = 'default' }: ContributionBannerProps) {
                 label="Зарегистрироваться"
                 onPress={handleRegister}
                 variant="primary"
-                size={isMobile ? 'md' : 'md'}
+                size={isCompact ? 'sm' : 'md'}
                 fullWidth={isMobile}
                 icon={<Feather name="user-plus" size={16} color={colors.textOnPrimary} />}
                 iconPosition="left"
@@ -141,7 +150,7 @@ function ContributionBanner({ variant = 'default' }: ContributionBannerProps) {
               label="Добавить место"
               onPress={handleAddPlace}
               variant={isAuthenticated ? 'primary' : 'outline'}
-              size={isMobile ? 'md' : 'md'}
+              size={isCompact ? 'sm' : 'md'}
               fullWidth={isMobile}
               icon={<Feather name="plus" size={16} color={isAuthenticated ? colors.textOnPrimary : colors.primary} />}
               iconPosition="left"
@@ -155,22 +164,22 @@ function ContributionBanner({ variant = 'default' }: ContributionBannerProps) {
   )
 }
 
-const createStyles = (colors: ThemedColors, isMobile: boolean) =>
+const createStyles = (colors: ThemedColors, isMobile: boolean, isCompact: boolean) =>
   StyleSheet.create({
     wrapper: {
       width: '100%',
-      paddingVertical: isMobile ? 12 : 20,
+      paddingVertical: isCompact ? (isMobile ? 8 : 10) : isMobile ? 12 : 20,
     },
     card: {
-      borderRadius: DESIGN_TOKENS.radii.xl,
+      borderRadius: isCompact ? DESIGN_TOKENS.radii.lg : DESIGN_TOKENS.radii.xl,
       borderWidth: 1,
       borderColor: colors.primaryAlpha30,
       backgroundColor: colors.surface,
-      paddingHorizontal: isMobile ? 16 : 28,
-      paddingVertical: isMobile ? 18 : 24,
+      paddingHorizontal: isCompact ? (isMobile ? 14 : 18) : isMobile ? 16 : 28,
+      paddingVertical: isCompact ? (isMobile ? 14 : 16) : isMobile ? 18 : 24,
       flexDirection: isMobile ? 'column' : 'row',
       alignItems: isMobile ? 'flex-start' : 'center',
-      gap: isMobile ? 14 : 20,
+      gap: isCompact ? (isMobile ? 12 : 14) : isMobile ? 14 : 20,
       ...Platform.select({
         web: {
           boxShadow: `0 2px 16px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04)`,
@@ -182,8 +191,8 @@ const createStyles = (colors: ThemedColors, isMobile: boolean) =>
       flexShrink: 0,
     },
     iconWrap: {
-      width: 44,
-      height: 44,
+      width: isCompact ? 36 : 44,
+      height: isCompact ? 36 : 44,
       borderRadius: DESIGN_TOKENS.radii.full,
       backgroundColor: colors.primarySoft,
       borderWidth: 1,
@@ -192,7 +201,7 @@ const createStyles = (colors: ThemedColors, isMobile: boolean) =>
       justifyContent: 'center',
     },
     textBlock: {
-      gap: 4,
+      gap: isCompact ? 2 : 4,
     },
     textBlockMobile: {
       width: '100%',
@@ -201,15 +210,16 @@ const createStyles = (colors: ThemedColors, isMobile: boolean) =>
       flex: 1,
     },
     title: {
-      fontSize: isMobile ? 15 : 17,
+      fontSize: isCompact ? (isMobile ? 14 : 16) : isMobile ? 15 : 17,
+      lineHeight: isCompact ? (isMobile ? 18 : 20) : undefined,
       fontWeight: '700',
       color: colors.text,
       letterSpacing: -0.2,
     },
     subtitle: {
-      fontSize: isMobile ? 13 : 14,
+      fontSize: isCompact ? 13 : isMobile ? 13 : 14,
       color: colors.textMuted,
-      lineHeight: isMobile ? 19 : 21,
+      lineHeight: isCompact ? 18 : isMobile ? 19 : 21,
       fontWeight: '400',
     },
     buttons: {

@@ -2,6 +2,7 @@ import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
 import MiniCalendar from '@/components/calendar/MiniCalendar'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
+import { buildTravelMonthFallbackDate } from '@/utils/travelCalendarDate'
 
 // --- mocks ---
 jest.mock('@/hooks/useTheme', () => ({
@@ -290,6 +291,38 @@ describe('MiniCalendar', () => {
       const { getByLabelText } = render(<MiniCalendar entries={entries} />)
       expect(getByLabelText(`8 ${MONTHS[today.getMonth()]}, есть поездки`)).toBeTruthy()
       expect(getByLabelText(`18 ${MONTHS[today.getMonth()]}, есть поездки`)).toBeTruthy()
+    })
+
+    it('отмечает посещённое путешествие по fallback-дате, если указаны только год и месяц', () => {
+      const today = new Date()
+      const year = today.getFullYear()
+      const MONTHS = [
+        'Январь', 'Февраль', 'Март', 'Апрель',
+        'Май', 'Июнь', 'Июль', 'Август',
+        'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
+      ]
+      const travelId = 7
+      const fallbackDate = buildTravelMonthFallbackDate({
+        year: String(year),
+        monthName: MONTHS[today.getMonth()],
+        seed: travelId,
+      })
+      const fallbackDay = fallbackDate ? Number(fallbackDate.slice(-2)) : null
+      const entry: TravelStatusEntry = {
+        id: travelId,
+        type: 'travel',
+        title: 'Visited trip by month',
+        url: `/travels/${travelId}`,
+        status: 'visited',
+        travelYear: String(year),
+        travelMonthName: MONTHS[today.getMonth()],
+        addedAt: Date.now(),
+      }
+
+      const { getByLabelText } = render(<MiniCalendar entries={[entry]} />)
+
+      expect(fallbackDay).not.toBeNull()
+      expect(getByLabelText(`${fallbackDay} ${MONTHS[today.getMonth()]}, есть поездки`)).toBeTruthy()
     })
   })
 

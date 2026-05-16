@@ -566,6 +566,8 @@ export default function PlacesScreen() {
           </View>
         </View>
 
+        <ContributionBanner variant="places" density="compact" />
+
         {/* ─── Main layout ─── */}
         <View style={styles.layout}>
           {/* Sidebar / collapsible filter */}

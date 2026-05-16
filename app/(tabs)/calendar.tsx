@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState, type ComponentProps } from 'react'
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Modal,
   TextInput,
   useWindowDimensions,
+  type GestureResponderEvent,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
@@ -16,7 +17,13 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { useAuth } from '@/context/AuthContext'
 import { useFavorites } from '@/context/FavoritesContext'
-import { getTravelStatusCalendarDate, parseTravelStatusDateParts, useTravelStatusStore, type TravelStatus, type TravelStatusEntry } from '@/stores/travelStatusStore'
+import {
+  getTravelStatusCalendarDate,
+  parseTravelStatusDateParts,
+  useTravelStatusStore,
+  type TravelStatus,
+  type TravelStatusEntry,
+} from '@/stores/travelStatusStore'
 import { useMyTravels } from '@/hooks/useMyTravels'
 import EmptyState from '@/components/ui/EmptyState'
 import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader'
@@ -34,17 +41,46 @@ import { cleanTravelTitle } from '@/utils/cleanTravelTitle'
 import { buildTravelMonthFallbackDate } from '@/utils/travelCalendarDate'
 import {
   getDateFieldForTravelStatus,
-  getTravelStatusDisplayCalendarDate,
-  travelStatusEntryMatchesSelectedDate,
+  getExplicitTravelStatusDate,
 } from '@/utils/travelStatusCalendarDisplay'
 
-const TABS: Array<{ key: TravelStatus; label: string; icon: React.ComponentProps<typeof Feather>['name'] }> = [
+type IconName = ComponentProps<typeof Feather>['name']
+
+type CalendarTab = {
+  key: TravelStatus
+  label: string
+  icon: IconName
+}
+
+type EmptyStateConfig = {
+  icon: string
+  title: string
+  description: string
+  actionLabel: string
+}
+
+type CalendarEntry = TravelStatusEntry & {
+  _isFavorite?: boolean
+  _isAuthored?: boolean
+  _fallbackCalendarDate?: string
+}
+
+type DateEditorState = {
+  item: CalendarEntry
+  value: string
+  error: string
+} | null
+
+type StatusBuckets = Record<TravelStatus, CalendarEntry[]>
+type CalendarStyles = ReturnType<typeof createCalendarStyles>
+
+const TABS: CalendarTab[] = [
   { key: 'visited', label: 'Был', icon: 'check-circle' },
   { key: 'planned', label: 'Планирую', icon: 'calendar' },
   { key: 'wishlist', label: 'Хочу', icon: 'bookmark' },
 ]
 
-const EMPTY_STATE: Record<TravelStatus, { icon: string; title: string; description: string; actionLabel: string }> = {
+const EMPTY_STATE: Record<TravelStatus, EmptyStateConfig> = {
   visited: {
     icon: 'check-circle',
     title: 'Нет посещённых мест',
@@ -71,6 +107,69 @@ const TAB_HINTS: Record<TravelStatus, string> = {
   wishlist: 'Выбери дату, чтобы увидеть поездки из списка желаний на этот день. Избранные автоматически попадают сюда.',
 }
 
+const CARD_META_ICON_STYLE = { marginRight: 4 } as const
+const DEFAULT_BUCKETS: StatusBuckets = {
+  visited: [],
+  planned: [],
+  wishlist: [],
+}
+
+const getCalendarDate = (entry: CalendarEntry): string | undefined =>
+  getExplicitTravelStatusDate(entry) ?? entry._fallbackCalendarDate ?? getTravelStatusCalendarDate(entry)
+
+const getLocationLabel = (entry: CalendarEntry) =>
+  [entry.city, entry.country].filter(Boolean).join(', ')
+
+const getTravelPeriodLabel = (entry: CalendarEntry) => {
+  const parts = [entry.travelMonthName, entry.travelYear].filter(Boolean)
+  if (parts.length > 0) return parts.join(' ')
+  return entry.travelYear
+}
+
+const getEntryKey = (entry: CalendarEntry) =>
+  `${entry._isFavorite ? 'favorite' : entry._isAuthored ? 'authored' : entry.status}-${String(entry.id)}`
+
+const isSelectedCalendarDate = (entry: CalendarEntry, selectedDate: string | null) => {
+  if (!selectedDate) return true
+
+  const explicitDate = getExplicitTravelStatusDate(entry)
+  if (explicitDate) return explicitDate === selectedDate
+
+  const selectedParts = parseTravelStatusDateParts(selectedDate)
+  const displayParts = parseTravelStatusDateParts(getCalendarDate(entry))
+  if (!selectedParts || !displayParts) return false
+
+  return selectedParts.year === displayParts.year && selectedParts.month === displayParts.month
+}
+
+const groupEntriesByStatus = (entries: TravelStatusEntry[]): StatusBuckets =>
+  entries.reduce<StatusBuckets>(
+    (buckets, entry) => {
+      buckets[entry.status].push({ ...entry, _isFavorite: false })
+      return buckets
+    },
+    { visited: [], planned: [], wishlist: [] }
+  )
+
+const sortCalendarEntries = (entries: CalendarEntry[], status: TravelStatus) =>
+  [...entries].sort((a, b) => {
+    const dateA = getCalendarDate(a)
+    const dateB = getCalendarDate(b)
+
+    if (dateA && dateB) {
+      return status === 'planned' ? dateA.localeCompare(dateB) : dateB.localeCompare(dateA)
+    }
+
+    if (!dateA && !dateB) return b.addedAt - a.addedAt
+    return dateA ? -1 : 1
+  })
+
+const getDateEditorSubtitle = (status?: TravelStatus) => {
+  if (status === 'visited') return 'Укажи дату, когда ты был в этом путешествии.'
+  if (status === 'wishlist') return 'Укажи ориентировочную дату для списка желаний.'
+  return 'Укажи дату запланированной поездки.'
+}
+
 function WebDateInput({
   value,
   onChange,
@@ -79,6 +178,7 @@ function WebDateInput({
   onChange: (value: string) => void
 }) {
   if (Platform.OS !== 'web') return null
+
   return (
     <input
       type="date"
@@ -99,50 +199,332 @@ function WebDateInput({
   )
 }
 
-// Универсальный тип для карточек в списке
-type DisplayEntry = TravelStatusEntry & {
-  _isFavorite?: boolean
-  _isAuthored?: boolean
-  _fallbackCalendarDate?: string
+const CalendarTabs = memo(function CalendarTabs({
+  activeTab,
+  counts,
+  colors,
+  badgeColors,
+  styles,
+  onChange,
+}: {
+  activeTab: TravelStatus
+  counts: Record<TravelStatus, number>
+  colors: ReturnType<typeof useThemedColors>
+  badgeColors: Record<TravelStatus, string>
+  styles: CalendarStyles
+  onChange: (tab: TravelStatus) => void
+}) {
+  return (
+    <View style={styles.tabBar}>
+      {TABS.map((tab) => {
+        const count = counts[tab.key]
+        const isActive = activeTab === tab.key
+        const activeStyle = isActive
+          ? { backgroundColor: badgeColors[tab.key], borderColor: badgeColors[tab.key] }
+          : null
+
+        return (
+          <Pressable
+            key={tab.key}
+            style={[
+              styles.tabButton,
+              isActive && styles.tabButtonActive,
+              activeStyle,
+              globalFocusStyles.focusable,
+            ]}
+            onPress={() => onChange(tab.key)}
+            accessibilityRole="button"
+            accessibilityLabel={`${tab.label}${count ? `, ${count}` : ''}`}
+            accessibilityState={{ selected: isActive }}
+          >
+            <Feather name={tab.icon} size={15} color={isActive ? colors.surface : colors.textMuted} />
+            <Text style={[styles.tabButtonText, isActive && styles.tabButtonTextActive]}>
+              {tab.label}
+              {count > 0 ? ` (${count})` : ''}
+            </Text>
+          </Pressable>
+        )
+      })}
+    </View>
+  )
+})
+
+const SelectedDateFilter = memo(function SelectedDateFilter({
+  selectedDate,
+  accentColor,
+  accentSoftColor,
+  styles,
+  onClear,
+}: {
+  selectedDate: string | null
+  accentColor: string
+  accentSoftColor: string
+  styles: CalendarStyles
+  onClear: () => void
+}) {
+  if (!selectedDate) return null
+
+  return (
+    <View style={styles.filterRow}>
+      <Pressable
+        style={[
+          styles.filterChip,
+          { backgroundColor: accentSoftColor, borderColor: accentColor },
+          globalFocusStyles.focusable,
+        ]}
+        onPress={onClear}
+        accessibilityRole="button"
+        accessibilityLabel={`Сбросить фильтр: ${selectedDate}`}
+      >
+        <Feather name="calendar" size={13} color={accentColor} />
+        <Text style={[styles.filterChipText, { color: accentColor }]}>{selectedDate}</Text>
+        <Feather name="x" size={13} color={accentColor} />
+      </Pressable>
+    </View>
+  )
+})
+
+const CalendarTravelCard = memo(function CalendarTravelCard({
+  entry,
+  colors,
+  badgeColors,
+  styles,
+  onOpen,
+  onEditDate,
+}: {
+  entry: CalendarEntry
+  colors: ReturnType<typeof useThemedColors>
+  badgeColors: Record<TravelStatus, string>
+  styles: CalendarStyles
+  onOpen: (url: string) => void
+  onEditDate: (entry: CalendarEntry, event: GestureResponderEvent) => void
+}) {
+  const calendarDate = getCalendarDate(entry)
+  const hasCalendarDate = Boolean(calendarDate)
+  const accentColor = badgeColors[entry.status]
+  const location = getLocationLabel(entry)
+  const travelPeriod = getTravelPeriodLabel(entry)
+  const explicitDate = getExplicitTravelStatusDate(entry)
+  const dateMetaLabel = calendarDate
+    ? `${explicitDate ? 'Дата' : 'Календарь'}: ${calendarDate}`
+    : 'Дата не указана'
+
+  return (
+    <View style={styles.cardWrap}>
+      <UnifiedTravelCard
+        title={cleanTravelTitle(entry.title, entry.country)}
+        imageUrl={entry.imageUrl ?? null}
+        metaText={location || ' '}
+        onPress={() => onOpen(entry.url)}
+        mediaFit="contain"
+        heroTitleOverlay
+        imageHeight={Platform.OS === 'web' ? 168 : 150}
+        style={[globalFocusStyles.focusable, Platform.OS === 'web' ? ({ height: '100%' } as any) : null]}
+        testID={`calendar-travel-card-${String(entry.id)}`}
+        contentSlot={
+          <View style={styles.cardMetaStack}>
+            <View style={styles.cardMetaContent}>
+              <Feather name="map-pin" size={12} color={colors.textMuted} style={CARD_META_ICON_STYLE} />
+              <Text style={styles.cardMetaText} numberOfLines={1}>
+                {location || ' '}
+              </Text>
+            </View>
+            {travelPeriod && (
+              <View style={styles.cardMetaContent}>
+                <Feather name="clock" size={12} color={colors.textMuted} style={CARD_META_ICON_STYLE} />
+                <Text style={styles.cardMetaText} numberOfLines={1}>
+                  Год/месяц: {travelPeriod}
+                </Text>
+              </View>
+            )}
+            <View style={styles.cardMetaContent}>
+              <Feather name="calendar" size={12} color={colors.textMuted} style={CARD_META_ICON_STYLE} />
+              <Text style={styles.cardMetaText} numberOfLines={1}>
+                {dateMetaLabel}
+              </Text>
+            </View>
+          </View>
+        }
+        mediaProps={{
+          blurBackground: true,
+          allowCriticalWebBlur: true,
+          recyclingKey: String(entry.id),
+        }}
+      />
+
+      <Pressable
+        style={[
+          styles.dateBadge,
+          hasCalendarDate && { backgroundColor: accentColor, borderColor: accentColor },
+          !hasCalendarDate && styles.emptyDateBadge,
+          !hasCalendarDate && { borderColor: accentColor },
+          globalFocusStyles.focusable,
+        ]}
+        onPress={(event) => onEditDate(entry, event)}
+        accessibilityRole="button"
+        accessibilityLabel={hasCalendarDate ? `Изменить дату ${calendarDate}` : 'Добавить дату'}
+        {...(Platform.OS === 'web' ? ({ 'data-card-action': 'true' } as any) : null)}
+      >
+        <Feather name={hasCalendarDate ? 'calendar' : 'plus'} size={12} color={hasCalendarDate ? colors.surface : accentColor} />
+        <Text
+          style={[
+            styles.dateBadgeText,
+            !hasCalendarDate && styles.emptyDateBadgeText,
+            !hasCalendarDate && { color: accentColor },
+          ]}
+        >
+          {calendarDate ?? 'Дата'}
+        </Text>
+      </Pressable>
+    </View>
+  )
+})
+
+function DateEditorModal({
+  editor,
+  colors,
+  styles,
+  onChange,
+  onClose,
+  onClear,
+  onSave,
+}: {
+  editor: DateEditorState
+  colors: ReturnType<typeof useThemedColors>
+  styles: CalendarStyles
+  onChange: (value: string) => void
+  onClose: () => void
+  onClear: () => void
+  onSave: () => void
+}) {
+  const item = editor?.item
+  const canClearDate = item ? Boolean(getExplicitTravelStatusDate(item)) : false
+  const subtitle = getDateEditorSubtitle(item?.status)
+
+  return (
+    <Modal visible={Boolean(editor)} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={styles.modalSheet} onPress={(event) => event.stopPropagation()}>
+          <View style={styles.modalHandle} />
+          <Text style={styles.modalTitle}>Дата путешествия</Text>
+          <Text style={styles.modalSubtitle}>{subtitle}</Text>
+
+          {Platform.OS === 'web' ? (
+            <WebDateInput value={editor?.value ?? ''} onChange={onChange} />
+          ) : (
+            <TextInput
+              style={styles.dateInput}
+              value={editor?.value ?? ''}
+              onChangeText={onChange}
+              placeholder="ГГГГ-ММ-ДД"
+              placeholderTextColor={colors.textMuted}
+              keyboardType="numbers-and-punctuation"
+              maxLength={10}
+              accessibilityLabel="Дата путешествия"
+            />
+          )}
+
+          {!!editor?.error && <Text style={styles.dateError}>{editor.error}</Text>}
+
+          <View style={styles.dateActions}>
+            {canClearDate && (
+              <Pressable
+                style={[styles.dateSecondaryButton, globalFocusStyles.focusable]}
+                onPress={onClear}
+                accessibilityRole="button"
+                accessibilityLabel="Убрать дату"
+              >
+                <Text style={styles.dateSecondaryText}>Убрать дату</Text>
+              </Pressable>
+            )}
+            <Pressable
+              style={[styles.dateSecondaryButton, globalFocusStyles.focusable]}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Отмена"
+            >
+              <Text style={styles.dateSecondaryText}>Отмена</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.datePrimaryButton, globalFocusStyles.focusable]}
+              onPress={onSave}
+              accessibilityRole="button"
+              accessibilityLabel="Сохранить дату"
+            >
+              <Text style={styles.datePrimaryText}>Сохранить</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  )
 }
 
-const getDisplayCalendarDate = (entry: DisplayEntry): string | undefined =>
-  getTravelStatusDisplayCalendarDate(entry)
-
-const CARD_META_ICON_STYLE = { marginRight: 4 } as const
+function CalendarSkeleton({ styles, showHeader, seoBlock, onBackPress }: {
+  styles: CalendarStyles
+  showHeader?: boolean
+  seoBlock: React.ReactNode
+  onBackPress: () => void
+}) {
+  return (
+    <SafeAreaView style={styles.container}>
+      {seoBlock}
+      {showHeader && <ProfileCollectionHeader title="Мой календарь" onBackPress={onBackPress} />}
+      <View style={styles.skeletonWrap}>
+        {Array.from({ length: 3 }).map((_, index) => (
+          <SkeletonLoader key={index} width="100%" height={200} borderRadius={12} />
+        ))}
+      </View>
+    </SafeAreaView>
+  )
+}
 
 export default function CalendarScreen() {
   const router = useRouter()
-  const canonical = buildCanonicalUrl('/calendar')
-  const { isAuthenticated, authReady, userId } = useAuth()
   const colors = useThemedColors()
   const { width } = useWindowDimensions()
-  const isWideLayout = Platform.OS === 'web' && width >= 900
+  const { isAuthenticated, authReady, userId } = useAuth()
   const { favorites } = useFavorites()
-
-  const { loadLocal, getByStatus, entries, setStatus } = useTravelStatusStore()
-
-  const { myTravels, load: loadMyTravels } = useMyTravels({
-    userId: userId ?? null,
-    perPage: 9999,
-  })
+  const entries = useTravelStatusStore((state) => state.entries)
+  const loadLocal = useTravelStatusStore((state) => state.loadLocal)
+  const setStatus = useTravelStatusStore((state) => state.setStatus)
+  const { myTravels, load: loadMyTravels } = useMyTravels({ userId: userId ?? null, perPage: 9999 })
 
   const [activeTab, setActiveTab] = useState<TravelStatus>('planned')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [dateEditingItem, setDateEditingItem] = useState<DisplayEntry | null>(null)
-  const [dateInput, setDateInput] = useState('')
-  const [dateError, setDateError] = useState('')
+  const [hasLoadedLocalStatus, setHasLoadedLocalStatus] = useState(false)
+  const [dateEditor, setDateEditor] = useState<DateEditorState>(null)
 
-  // Загружаем локальное хранилище
-  useEffect(() => {
-    if (!authReady || !isAuthenticated) return
-    loadLocal(userId).finally(() => setIsLoading(false))
-  }, [authReady, isAuthenticated, userId, loadLocal])
+  const isWideLayout = Platform.OS === 'web' && width >= 900
+  const styles = useMemo(() => createCalendarStyles(colors, isWideLayout), [colors, isWideLayout])
+  const canonical = useMemo(() => buildCanonicalUrl('/calendar'), [])
+  const seoBlock = useMemo(() => (
+    <InstantSEO
+      headKey="calendar"
+      title="Мой календарь | Metravel"
+      description="Мои планы и путешествия"
+      canonical={canonical}
+      robots="noindex, nofollow"
+    />
+  ), [canonical])
 
   useEffect(() => {
-    if (authReady && !isAuthenticated) setIsLoading(false)
-  }, [authReady, isAuthenticated])
+    if (!authReady) return
+    if (!isAuthenticated) {
+      setHasLoadedLocalStatus(true)
+      return
+    }
+
+    let isMounted = true
+    setHasLoadedLocalStatus(false)
+    loadLocal(userId).finally(() => {
+      if (isMounted) setHasLoadedLocalStatus(true)
+    })
+
+    return () => {
+      isMounted = false
+    }
+  }, [authReady, isAuthenticated, loadLocal, userId])
 
   useEffect(() => {
     if (authReady && isAuthenticated) {
@@ -150,127 +532,147 @@ export default function CalendarScreen() {
     }
   }, [authReady, isAuthenticated, loadMyTravels])
 
-  const handleBackToProfile = useCallback(() => {
-    router.push('/profile' as any)
-  }, [router])
+  const explicitEntries = useMemo(() => groupEntriesByStatus(entries), [entries])
 
-  const handleDayPress = useCallback((dateStr: string) => {
-    setSelectedDate((prev) => (prev === dateStr ? null : dateStr))
-  }, [])
-
-  // Авторские путешествия пользователя → в таб "Был"
-  const authoredAsVisited = useMemo((): DisplayEntry[] => {
-    const statusIds = new Set(entries.map((e) => String(e.id)))
+  const statusIds = useMemo(() => new Set(entries.map((entry) => String(entry.id))), [entries])
+  const authoredEntries = useMemo<CalendarEntry[]>(() => {
     const occupiedDates = new Set(
       entries
         .map(getTravelStatusCalendarDate)
         .filter((date): date is string => Boolean(date))
     )
+
     return myTravels
-      .filter((t) => !statusIds.has(String(t.id)))
-      .map((t) => {
+      .filter((travel) => !statusIds.has(String(travel.id)))
+      .map((travel) => {
         const fallbackDate = buildTravelMonthFallbackDate({
-          year: t.year,
-          monthName: t.monthName,
-          seed: t.id,
+          year: travel.year,
+          monthName: travel.monthName,
+          seed: travel.id,
           occupiedDates,
         })
+
         if (fallbackDate) occupiedDates.add(fallbackDate)
 
         return {
-          id: t.id,
+          id: travel.id,
           type: 'travel' as const,
-          title: t.name,
-          imageUrl: t.travel_image_thumb_url || t.travel_image_thumb_small_url || undefined,
-          url: t.url || `/travels/${t.slug || t.id}`,
-          country: t.countryName || undefined,
-          city: t.cityName || undefined,
-          travelYear: t.year,
-          travelMonthName: t.monthName,
-          status: 'visited' as TravelStatus,
+          title: travel.name,
+          imageUrl: travel.travel_image_thumb_url || travel.travel_image_thumb_small_url || undefined,
+          url: travel.url || `/travels/${travel.slug || travel.id}`,
+          country: travel.countryName || undefined,
+          city: travel.cityName || undefined,
+          travelYear: travel.year,
+          travelMonthName: travel.monthName,
+          status: 'visited' as const,
+          addedAt: travel.created_at ? new Date(travel.created_at).getTime() : 0,
           _fallbackCalendarDate: fallbackDate,
-          addedAt: t.created_at ? new Date(t.created_at).getTime() : 0,
           _isAuthored: true,
         }
       })
-  }, [myTravels, entries])
+  }, [entries, myTravels, statusIds])
 
-  // Избранные без явного статуса — они попадают в "Хочу" автоматически
-  const favoritesAsWishlist = useMemo((): DisplayEntry[] => {
-    const statusIds = new Set(entries.map((e) => String(e.id)))
-    return (Array.isArray(favorites) ? favorites : [])
-      .filter((f) => f.type === 'travel' && !statusIds.has(String(f.id)))
-      .map((f) => ({
-        id: f.id,
+  const favoriteEntries = useMemo<CalendarEntry[]>(() =>
+    (Array.isArray(favorites) ? favorites : [])
+      .filter((favorite) => favorite.type === 'travel' && !statusIds.has(String(favorite.id)))
+      .map((favorite) => ({
+        id: favorite.id,
         type: 'travel' as const,
-        title: f.title,
-        imageUrl: f.imageUrl,
-        url: f.url,
-        country: f.country,
-        city: f.city,
-        status: 'wishlist' as TravelStatus,
-        addedAt: f.addedAt,
+        title: favorite.title,
+        imageUrl: favorite.imageUrl,
+        url: favorite.url,
+        country: favorite.country,
+        city: favorite.city,
+        status: 'wishlist' as const,
+        addedAt: favorite.addedAt,
         _isFavorite: true,
-      }))
-  }, [favorites, entries])
+      })),
+  [favorites, statusIds])
 
-  const activeTabEntries = useMemo((): DisplayEntry[] => {
-    if (activeTab === 'wishlist') {
-      // Явно добавленные + избранные без статуса, без дублей
-      const explicit = getByStatus('wishlist').map((e): DisplayEntry => ({ ...e, _isFavorite: false }))
-      const merged = [...explicit, ...favoritesAsWishlist]
-      return merged
-    }
-    if (activeTab === 'visited') {
-      // Явно отмеченные как "Был" + авторские путешествия пользователя
-      const explicit = getByStatus('visited').map((e): DisplayEntry => ({ ...e, _isFavorite: false }))
-      const merged = [...explicit, ...authoredAsVisited]
-      return merged
-    }
-    return getByStatus(activeTab).map((e): DisplayEntry => ({ ...e, _isFavorite: false }))
-  }, [activeTab, getByStatus, entries, favoritesAsWishlist, authoredAsVisited]) // eslint-disable-line react-hooks/exhaustive-deps
+  const statusEntries = useMemo<StatusBuckets>(() => ({
+    visited: [...explicitEntries.visited, ...authoredEntries],
+    planned: explicitEntries.planned,
+    wishlist: [...explicitEntries.wishlist, ...favoriteEntries],
+  }), [authoredEntries, explicitEntries, favoriteEntries])
 
-  // Данные для текущего таба
-  const tabData = useMemo((): DisplayEntry[] => {
-    const all = selectedDate
-      ? activeTabEntries.filter((e) => travelStatusEntryMatchesSelectedDate(e, selectedDate))
-      : activeTabEntries
-    return [...all].sort((a, b) => {
-      const dateA = getDisplayCalendarDate(a)
-      const dateB = getDisplayCalendarDate(b)
-      if (dateA && dateB) {
-        return activeTab === 'planned' ? dateA.localeCompare(dateB) : dateB.localeCompare(dateA)
-      }
-      if (!dateA && !dateB) return b.addedAt - a.addedAt
-      return dateA ? -1 : 1
-    })
-  }, [activeTab, activeTabEntries, selectedDate])
+  const activeEntries = statusEntries[activeTab] ?? DEFAULT_BUCKETS[activeTab]
+  const visibleEntries = useMemo(
+    () => sortCalendarEntries(
+      activeEntries.filter((entry) => isSelectedCalendarDate(entry, selectedDate)),
+      activeTab
+    ),
+    [activeEntries, activeTab, selectedDate]
+  )
+  const calendarEntries = useMemo(() => activeEntries.map((entry) => {
+    const calendarDate = getCalendarDate(entry)
+    if (!calendarDate) return entry
 
-  const calendarEntries = useMemo(() => activeTabEntries.map((entry) => {
-    if (getTravelStatusCalendarDate(entry) || !entry._fallbackCalendarDate) return entry
     const dateField = getDateFieldForTravelStatus(entry.status)
-    return { ...entry, [dateField]: entry._fallbackCalendarDate }
-  }), [activeTabEntries])
+    return entry[dateField] ? entry : { ...entry, [dateField]: calendarDate }
+  }), [activeEntries])
 
-  const handleOpenDateEditor = useCallback((item: DisplayEntry, e?: any) => {
+  const tabCounts = useMemo<Record<TravelStatus, number>>(() => ({
+    visited: statusEntries.visited.length,
+    planned: statusEntries.planned.length,
+    wishlist: statusEntries.wishlist.length,
+  }), [statusEntries])
+
+  const badgeColors = useMemo<Record<TravelStatus, string>>(() => ({
+    visited: colors.success,
+    planned: colors.warning,
+    wishlist: colors.warning,
+  }), [colors.success, colors.warning])
+
+  const activeAccentColor = badgeColors[activeTab]
+  const activeAccentSoftColor = activeTab === 'planned' ? colors.warningLight : colors.primaryLight
+
+  const handleBackToProfile = useCallback(() => {
+    router.push('/profile' as any)
+  }, [router])
+
+  const handleChangeTab = useCallback((tab: TravelStatus) => {
+    setActiveTab(tab)
+    setSelectedDate(null)
+  }, [])
+
+  const handleDayPress = useCallback((date: string) => {
+    setSelectedDate((currentDate) => (currentDate === date ? null : date))
+  }, [])
+
+  const handleClearSelectedDate = useCallback(() => {
+    setSelectedDate(null)
+  }, [])
+
+  const handleOpenTravel = useCallback((url: string) => {
+    router.push(url as any)
+  }, [router])
+
+  const handleOpenDateEditor = useCallback((item: CalendarEntry, event?: GestureResponderEvent) => {
     if (Platform.OS === 'web') {
-      e?.preventDefault?.()
-      e?.stopPropagation?.()
-      e?.nativeEvent?.stopPropagation?.()
+      event?.preventDefault?.()
+      event?.stopPropagation?.()
+      const nativeEvent = event?.nativeEvent as { stopPropagation?: () => void } | undefined
+      nativeEvent?.stopPropagation?.()
     }
-    setDateEditingItem(item)
-    setDateInput(getDisplayCalendarDate(item) ?? '')
-    setDateError('')
+
+    setDateEditor({
+      item,
+      value: getCalendarDate(item) ?? '',
+      error: '',
+    })
   }, [])
 
   const handleCloseDateEditor = useCallback(() => {
-    setDateEditingItem(null)
-    setDateInput('')
-    setDateError('')
+    setDateEditor(null)
   }, [])
 
-  const saveItemDate = useCallback(async (item: DisplayEntry, value: string | null) => {
+  const handleDateInputChange = useCallback((value: string) => {
+    setDateEditor((current) => current ? { ...current, value, error: '' } : current)
+  }, [])
+
+  const saveItemDate = useCallback(async (item: CalendarEntry, value: string | null) => {
     const dateField = getDateFieldForTravelStatus(item.status)
+
     await setStatus(
       {
         id: item.id,
@@ -291,42 +693,140 @@ export default function CalendarScreen() {
   }, [setStatus, userId])
 
   const handleSaveDate = useCallback(async () => {
-    if (!dateEditingItem) return
-    if (!dateInput) {
-      setDateError('Укажите дату')
+    if (!dateEditor) return
+
+    if (!dateEditor.value) {
+      setDateEditor({ ...dateEditor, error: 'Укажите дату' })
       return
     }
-    if (!parseTravelStatusDateParts(dateInput)) {
-      setDateError('Введите дату в формате ГГГГ-ММ-ДД')
+
+    if (!parseTravelStatusDateParts(dateEditor.value)) {
+      setDateEditor({ ...dateEditor, error: 'Введите дату в формате ГГГГ-ММ-ДД' })
       return
     }
-    await saveItemDate(dateEditingItem, dateInput)
+
+    await saveItemDate(dateEditor.item, dateEditor.value)
     handleCloseDateEditor()
-  }, [dateEditingItem, dateInput, handleCloseDateEditor, saveItemDate])
+  }, [dateEditor, handleCloseDateEditor, saveItemDate])
 
   const handleClearDate = useCallback(async () => {
-    if (!dateEditingItem) return
-    await saveItemDate(dateEditingItem, null)
+    if (!dateEditor) return
+    await saveItemDate(dateEditor.item, null)
     handleCloseDateEditor()
-  }, [dateEditingItem, handleCloseDateEditor, saveItemDate])
+  }, [dateEditor, handleCloseDateEditor, saveItemDate])
 
-  // Счётчики для табов
-  const tabCounts = useMemo(() => ({
-    visited: getByStatus('visited').length + authoredAsVisited.length,
-    planned: getByStatus('planned').length,
-    wishlist: getByStatus('wishlist').length + favoritesAsWishlist.length,
-  }), [getByStatus, entries, favoritesAsWishlist, authoredAsVisited]) // eslint-disable-line react-hooks/exhaustive-deps
+  const handleLogin = useCallback(() => {
+    router.push(buildLoginHref({ redirect: '/calendar', intent: 'calendar' }) as any)
+  }, [router])
 
-  const badgeColors = useMemo<Record<TravelStatus, string>>(() => ({
-    visited: colors.success,
-    planned: colors.warning,
-    wishlist: colors.warning,
-  }), [colors])
+  const handleSearch = useCallback(() => {
+    router.push('/search')
+  }, [router])
 
-  const activeAccentColor = badgeColors[activeTab]
-  const activeAccentSoftColor = activeTab === 'planned' ? colors.warningLight : colors.primaryLight
+  if (!authReady) {
+    return <CalendarSkeleton styles={styles} seoBlock={seoBlock} onBackPress={handleBackToProfile} />
+  }
 
-  const styles = useMemo(() => StyleSheet.create({
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView style={styles.container}>
+        {seoBlock}
+        <EmptyState
+          icon="calendar"
+          title="Войдите в аккаунт"
+          description="Войдите, чтобы планировать путешествия и вести свой календарь."
+          action={{ label: 'Войти', onPress: handleLogin }}
+        />
+      </SafeAreaView>
+    )
+  }
+
+  if (!hasLoadedLocalStatus) {
+    return <CalendarSkeleton styles={styles} showHeader seoBlock={seoBlock} onBackPress={handleBackToProfile} />
+  }
+
+  const emptyConfig = EMPTY_STATE[activeTab]
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {seoBlock}
+      <ProfileCollectionHeader title="Мой календарь" onBackPress={handleBackToProfile} />
+
+      <CalendarTabs
+        activeTab={activeTab}
+        counts={tabCounts}
+        colors={colors}
+        badgeColors={badgeColors}
+        styles={styles}
+        onChange={handleChangeTab}
+      />
+
+      <ScrollView style={webTouchScrollStyle} showsVerticalScrollIndicator={false}>
+        <View style={styles.contentLayout}>
+          <View style={styles.calendarPane}>
+            <View style={styles.hint}>
+              <Feather name="info" size={13} color={colors.textMuted} />
+              <Text style={styles.hintText}>{TAB_HINTS[activeTab]}</Text>
+            </View>
+            <MiniCalendar
+              entries={calendarEntries}
+              onDayPress={handleDayPress}
+              selectedDate={selectedDate}
+              accentColor={activeAccentColor}
+              accentSoftColor={activeAccentSoftColor}
+            />
+            <SelectedDateFilter
+              selectedDate={selectedDate}
+              accentColor={activeAccentColor}
+              accentSoftColor={activeAccentSoftColor}
+              styles={styles}
+              onClear={handleClearSelectedDate}
+            />
+          </View>
+
+          <View style={[styles.listContent, styles.listPane]}>
+            {visibleEntries.length === 0 ? (
+              <EmptyState
+                icon={emptyConfig.icon}
+                title={emptyConfig.title}
+                description={emptyConfig.description}
+                variant="empty"
+                action={{ label: emptyConfig.actionLabel, onPress: handleSearch }}
+              />
+            ) : (
+              <View style={styles.cardsGrid}>
+                {visibleEntries.map((entry) => (
+                  <CalendarTravelCard
+                    key={getEntryKey(entry)}
+                    entry={entry}
+                    colors={colors}
+                    badgeColors={badgeColors}
+                    styles={styles}
+                    onOpen={handleOpenTravel}
+                    onEditDate={handleOpenDateEditor}
+                  />
+                ))}
+              </View>
+            )}
+          </View>
+        </View>
+      </ScrollView>
+
+      <DateEditorModal
+        editor={dateEditor}
+        colors={colors}
+        styles={styles}
+        onChange={handleDateInputChange}
+        onClose={handleCloseDateEditor}
+        onClear={handleClearDate}
+        onSave={handleSaveDate}
+      />
+    </SafeAreaView>
+  )
+}
+
+function createCalendarStyles(colors: ReturnType<typeof useThemedColors>, isWideLayout: boolean) {
+  return StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.background,
@@ -339,7 +839,7 @@ export default function CalendarScreen() {
       gap: 8,
       flexWrap: 'wrap',
     },
-    tabBtn: {
+    tabButton: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
@@ -351,17 +851,36 @@ export default function CalendarScreen() {
       backgroundColor: colors.surface,
       ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
     },
-    tabBtnActive: {
+    tabButtonActive: {
       backgroundColor: colors.primary,
       borderColor: colors.primary,
     },
-    tabBtnText: {
+    tabButtonText: {
       fontSize: 14,
       fontWeight: '600',
       color: colors.textSecondary,
     },
-    tabBtnTextActive: {
+    tabButtonTextActive: {
       color: colors.surface,
+    },
+    contentLayout: {
+      ...(isWideLayout
+        ? {
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+            gap: 16,
+            paddingHorizontal: 16,
+            paddingTop: 4,
+          } as any
+        : null),
+    },
+    calendarPane: {
+      ...(isWideLayout ? { width: 360, flexShrink: 0 } as any : null),
+    },
+    listPane: {
+      flex: 1,
+      minWidth: 0,
+      ...(isWideLayout ? { paddingTop: 0 } as any : null),
     },
     filterRow: {
       flexDirection: 'row',
@@ -390,30 +909,6 @@ export default function CalendarScreen() {
       paddingHorizontal: 16,
       paddingBottom: 32,
       paddingTop: 4,
-    },
-    plannedLayout: {
-      ...(isWideLayout
-        ? {
-            flexDirection: 'row',
-            alignItems: 'flex-start',
-            gap: 16,
-            paddingHorizontal: 16,
-            paddingTop: 4,
-          } as any
-        : null),
-    },
-    calendarPane: {
-      ...(isWideLayout
-        ? {
-            width: 360,
-            flexShrink: 0,
-          } as any
-        : null),
-    },
-    plannedListPane: {
-      flex: 1,
-      minWidth: 0,
-      ...(isWideLayout ? { paddingTop: 0 } as any : null),
     },
     cardsGrid: {
       flexDirection: 'row',
@@ -451,7 +946,7 @@ export default function CalendarScreen() {
       color: colors.textMuted,
       lineHeight: 16,
     },
-    plannedDateLabel: {
+    dateBadge: {
       position: 'absolute',
       top: 10,
       right: 10,
@@ -472,17 +967,20 @@ export default function CalendarScreen() {
           } as any
         : null),
     },
-    plannedDateLabelEmpty: {
+    emptyDateBadge: {
       backgroundColor: colors.surface,
       borderColor: colors.borderLight,
     },
-    plannedDateText: {
+    dateBadgeText: {
       fontSize: 12,
       fontWeight: '700',
       color: colors.surface,
     },
-    plannedDateTextEmpty: {
+    emptyDateBadgeText: {
       color: colors.primary,
+    },
+    cardMetaStack: {
+      gap: 3,
     },
     cardMetaContent: {
       flexDirection: 'row',
@@ -559,7 +1057,7 @@ export default function CalendarScreen() {
       marginTop: 14,
       flexWrap: 'wrap',
     },
-    dateSecondaryBtn: {
+    dateSecondaryButton: {
       flexGrow: 1,
       paddingVertical: 12,
       paddingHorizontal: 16,
@@ -569,7 +1067,7 @@ export default function CalendarScreen() {
       borderWidth: 1,
       borderColor: colors.borderLight,
     },
-    datePrimaryBtn: {
+    datePrimaryButton: {
       flexGrow: 1,
       paddingVertical: 12,
       paddingHorizontal: 16,
@@ -587,285 +1085,5 @@ export default function CalendarScreen() {
       fontWeight: '700',
       color: colors.surface,
     },
-  }), [colors, isWideLayout])
-
-  const seoBlock = (
-    <InstantSEO
-      headKey="calendar"
-      title="Мой календарь | Metravel"
-      description="Мои планы и путешествия"
-      canonical={canonical}
-      robots="noindex, nofollow"
-    />
-  )
-
-  if (!authReady) {
-    return (
-      <SafeAreaView style={styles.container}>
-        {seoBlock}
-        <View style={styles.skeletonWrap}>
-          {Array.from({ length: 3 }).map((_, i) => (
-            <SkeletonLoader key={i} width="100%" height={200} borderRadius={12} />
-          ))}
-        </View>
-      </SafeAreaView>
-    )
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <SafeAreaView style={styles.container}>
-        {seoBlock}
-        <EmptyState
-          icon="calendar"
-          title="Войдите в аккаунт"
-          description="Войдите, чтобы планировать путешествия и вести свой календарь."
-          action={{
-            label: 'Войти',
-            onPress: () => router.push(buildLoginHref({ redirect: '/calendar', intent: 'calendar' }) as any),
-          }}
-        />
-      </SafeAreaView>
-    )
-  }
-
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        {seoBlock}
-        <ProfileCollectionHeader title="Мой календарь" onBackPress={handleBackToProfile} />
-        <View style={styles.skeletonWrap}>
-          {Array.from({ length: 3 }).map((_, i) => (
-            <SkeletonLoader key={i} width="100%" height={200} borderRadius={12} />
-          ))}
-        </View>
-      </SafeAreaView>
-    )
-  }
-
-  const emptyConfig = EMPTY_STATE[activeTab]
-
-  return (
-    <SafeAreaView style={styles.container}>
-      {seoBlock}
-      <ProfileCollectionHeader title="Мой календарь" onBackPress={handleBackToProfile} />
-
-      {/* Tab bar */}
-      <View style={styles.tabBar}>
-        {TABS.map((tab) => {
-          const count = tabCounts[tab.key]
-          const isActive = activeTab === tab.key
-          return (
-            <Pressable
-              key={tab.key}
-              style={[
-                styles.tabBtn,
-                isActive && styles.tabBtnActive,
-                isActive && { backgroundColor: badgeColors[tab.key], borderColor: badgeColors[tab.key] },
-                globalFocusStyles.focusable,
-              ]}
-              onPress={() => {
-                setActiveTab(tab.key)
-                setSelectedDate(null)
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={`${tab.label}${count ? `, ${count}` : ''}`}
-              accessibilityState={{ selected: isActive }}
-            >
-              <Feather
-                name={tab.icon}
-                size={15}
-                color={isActive ? colors.surface : colors.textMuted}
-              />
-              <Text style={[styles.tabBtnText, isActive && styles.tabBtnTextActive]}>
-                {tab.label}
-                {count > 0 ? ` (${count})` : ''}
-              </Text>
-            </Pressable>
-          )
-        })}
-      </View>
-
-      <ScrollView
-        style={webTouchScrollStyle}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.plannedLayout}>
-          <View style={styles.calendarPane}>
-            <View style={styles.hint}>
-              <Feather name="info" size={13} color={colors.textMuted} />
-              <Text style={styles.hintText}>{TAB_HINTS[activeTab]}</Text>
-            </View>
-            <MiniCalendar
-              entries={calendarEntries}
-              onDayPress={handleDayPress}
-              selectedDate={selectedDate}
-              accentColor={activeAccentColor}
-              accentSoftColor={activeAccentSoftColor}
-            />
-            {selectedDate && (
-              <View style={styles.filterRow}>
-                <Pressable
-                  style={[
-                    styles.filterChip,
-                    { backgroundColor: activeAccentSoftColor, borderColor: activeAccentColor },
-                    globalFocusStyles.focusable,
-                  ]}
-                  onPress={() => setSelectedDate(null)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Сбросить фильтр: ${selectedDate}`}
-                >
-                  <Feather name="calendar" size={13} color={activeAccentColor} />
-                  <Text style={[styles.filterChipText, { color: activeAccentColor }]}>{selectedDate}</Text>
-                  <Feather name="x" size={13} color={activeAccentColor} />
-                </Pressable>
-              </View>
-            )}
-          </View>
-
-          <View style={[styles.listContent, styles.plannedListPane]}>
-            {tabData.length === 0 ? (
-              <EmptyState
-                icon={emptyConfig.icon}
-                title={emptyConfig.title}
-                description={emptyConfig.description}
-                variant="empty"
-                action={{
-                  label: emptyConfig.actionLabel,
-                  onPress: () => router.push('/search'),
-                }}
-              />
-            ) : (
-              <View style={styles.cardsGrid}>
-                {tabData.map((item: DisplayEntry) => {
-                  const calendarDate = getDisplayCalendarDate(item)
-                  const hasCalendarDate = Boolean(calendarDate)
-                  const itemAccentColor = badgeColors[item.status]
-                  const location = [item.city, item.country].filter(Boolean).join(', ')
-                  return (
-                    <View key={`${item._isFavorite ? 'fav' : item.status}-${item.id}`} style={styles.cardWrap}>
-                      <UnifiedTravelCard
-                        title={cleanTravelTitle(item.title, item.country)}
-                        imageUrl={item.imageUrl ?? null}
-                        metaText={location || ' '}
-                        onPress={() => router.push(item.url as any)}
-                        mediaFit="contain"
-                        heroTitleOverlay
-                        imageHeight={Platform.OS === 'web' ? 168 : 150}
-                        style={[globalFocusStyles.focusable, Platform.OS === 'web' ? ({ height: '100%' } as any) : null]}
-                        testID={`calendar-travel-card-${String(item.id)}`}
-                        contentSlot={
-                          <View style={styles.cardMetaContent}>
-                            <Feather name="map-pin" size={12} color={colors.textMuted} style={CARD_META_ICON_STYLE} />
-                            <Text style={styles.cardMetaText} numberOfLines={1}>
-                              {location || ' '}
-                            </Text>
-                          </View>
-                        }
-                        mediaProps={{
-                          blurBackground: true,
-                          allowCriticalWebBlur: true,
-                          recyclingKey: String(item.id),
-                        }}
-                      />
-                      <Pressable
-                        style={[
-                          styles.plannedDateLabel,
-                          hasCalendarDate && { backgroundColor: itemAccentColor, borderColor: itemAccentColor },
-                          !hasCalendarDate && styles.plannedDateLabelEmpty,
-                          !hasCalendarDate && { borderColor: itemAccentColor },
-                          globalFocusStyles.focusable,
-                        ]}
-                        onPress={(event) => handleOpenDateEditor(item, event)}
-                        accessibilityRole="button"
-                        accessibilityLabel={hasCalendarDate ? `Изменить дату ${calendarDate}` : 'Добавить дату'}
-                        {...(Platform.OS === 'web' ? ({ 'data-card-action': 'true' } as any) : null)}
-                      >
-                        <Feather
-                          name={hasCalendarDate ? 'calendar' : 'plus'}
-                          size={12}
-                          color={hasCalendarDate ? colors.surface : itemAccentColor}
-                        />
-                        <Text style={[
-                          styles.plannedDateText,
-                          !hasCalendarDate && styles.plannedDateTextEmpty,
-                          !hasCalendarDate && { color: itemAccentColor },
-                        ]}>
-                          {calendarDate ?? 'Дата'}
-                        </Text>
-                      </Pressable>
-                    </View>
-                  )
-                })}
-              </View>
-            )}
-          </View>
-        </View>
-      </ScrollView>
-
-      <Modal
-        visible={Boolean(dateEditingItem)}
-        transparent
-        animationType="slide"
-        onRequestClose={handleCloseDateEditor}
-      >
-        <Pressable style={styles.modalOverlay} onPress={handleCloseDateEditor}>
-          <Pressable style={styles.modalSheet} onPress={(event) => event.stopPropagation()}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Дата путешествия</Text>
-            <Text style={styles.modalSubtitle}>
-              {dateEditingItem?.status === 'visited'
-                ? 'Укажи дату, когда ты был в этом путешествии.'
-                : dateEditingItem?.status === 'wishlist'
-                  ? 'Укажи ориентировочную дату для списка желаний.'
-                  : 'Укажи дату запланированной поездки.'}
-            </Text>
-            {Platform.OS === 'web' ? (
-              <WebDateInput value={dateInput} onChange={(value) => { setDateInput(value); setDateError('') }} />
-            ) : (
-              <TextInput
-                style={styles.dateInput}
-                value={dateInput}
-                onChangeText={(value) => { setDateInput(value); setDateError('') }}
-                placeholder="ГГГГ-ММ-ДД"
-                placeholderTextColor={colors.textMuted}
-                keyboardType="numbers-and-punctuation"
-                maxLength={10}
-                accessibilityLabel="Дата путешествия"
-              />
-            )}
-            {!!dateError && <Text style={styles.dateError}>{dateError}</Text>}
-            <View style={styles.dateActions}>
-              {dateEditingItem && getTravelStatusCalendarDate(dateEditingItem) && (
-                <Pressable
-                  style={[styles.dateSecondaryBtn, globalFocusStyles.focusable]}
-                  onPress={handleClearDate}
-                  accessibilityRole="button"
-                  accessibilityLabel="Убрать дату"
-                >
-                  <Text style={styles.dateSecondaryText}>Убрать дату</Text>
-                </Pressable>
-              )}
-              <Pressable
-                style={[styles.dateSecondaryBtn, globalFocusStyles.focusable]}
-                onPress={handleCloseDateEditor}
-                accessibilityRole="button"
-                accessibilityLabel="Отмена"
-              >
-                <Text style={styles.dateSecondaryText}>Отмена</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.datePrimaryBtn, globalFocusStyles.focusable]}
-                onPress={handleSaveDate}
-                accessibilityRole="button"
-                accessibilityLabel="Сохранить дату"
-              >
-                <Text style={styles.datePrimaryText}>Сохранить</Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
-    </SafeAreaView>
-  )
+  })
 }
