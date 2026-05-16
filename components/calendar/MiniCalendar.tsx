@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -17,6 +17,7 @@ type Props = {
   entries: TravelStatusEntry[]
   onDayPress?: (dateStr: string) => void
   selectedDate?: string | null
+  focusDate?: string | null
   accentColor?: string
   accentSoftColor?: string
 }
@@ -25,6 +26,7 @@ export default function MiniCalendar({
   entries,
   onDayPress,
   selectedDate,
+  focusDate,
   accentColor,
   accentSoftColor,
 }: Props) {
@@ -35,6 +37,14 @@ export default function MiniCalendar({
 
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth() + 1) // 1-based
+
+  useEffect(() => {
+    const focusedParts = parseTravelStatusDateParts(focusDate)
+    if (!focusedParts) return
+
+    setYear(focusedParts.year)
+    setMonth(focusedParts.month)
+  }, [focusDate])
 
   // ISO-даты с поездками текущего месяца
   const markedDates = useMemo(() => {

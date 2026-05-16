@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, fireEvent } from '@testing-library/react-native'
+import { render, fireEvent, waitFor } from '@testing-library/react-native'
 import MiniCalendar from '@/components/calendar/MiniCalendar'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
 import { buildTravelMonthFallbackDate } from '@/utils/travelCalendarDate'
@@ -323,6 +323,33 @@ describe('MiniCalendar', () => {
 
       expect(fallbackDay).not.toBeNull()
       expect(getByLabelText(`${fallbackDay} ${MONTHS[today.getMonth()]}, есть поездки`)).toBeTruthy()
+    })
+
+    it('открывает месяц с поездкой по focusDate, чтобы были видны точки старых лет', async () => {
+      const entry: TravelStatusEntry = {
+        id: 202001,
+        type: 'travel',
+        title: 'Visited trip in 2020',
+        url: '/travels/202001',
+        status: 'visited',
+        travelYear: '2020',
+        travelMonthName: 'Январь',
+        addedAt: Date.now(),
+      }
+      const fallbackDate = buildTravelMonthFallbackDate({
+        year: '2020',
+        monthName: 'Январь',
+        seed: entry.id,
+      })
+      const fallbackDay = fallbackDate ? Number(fallbackDate.slice(-2)) : null
+
+      const { getByText, getByLabelText } = render(
+        <MiniCalendar entries={[entry]} focusDate={fallbackDate} />
+      )
+
+      await waitFor(() => expect(getByText('Январь 2020')).toBeTruthy())
+      expect(fallbackDay).not.toBeNull()
+      expect(getByLabelText(`${fallbackDay} Январь, есть поездки`)).toBeTruthy()
     })
   })
 

@@ -25,6 +25,10 @@
 - `$metravel-ui-guardrails` - видимый UI, layout, media, placeholders, icons, design tokens, external links.
 - `$metravel-release-checks` - выбор и запуск проверок, preflight, release/deploy, production web checks.
 - `$metravel-docs-maintainer` - обновление `docs/`, `AGENTS.md`, `.codex/skills` и правил для Codex.
+- `$metravel-agent-workflow` - координация ролей business analyst, system architect, designer, programmer, QA и reviewer.
+- `$metravel-business-analyst` - продуктовые требования, user stories, acceptance criteria, non-goals, metrics и risks.
+- `$metravel-system-architect` - technical design, разбиение работ, validation plan и review diff на соответствие правилам.
+- `$metravel-qa-agent` - read-only исследование приложения, воспроизведение багов, bug reports и re-test фиксов.
 
 Если задача попадает сразу в несколько областей, используй skills вместе, но не загружай лишние справки.
 

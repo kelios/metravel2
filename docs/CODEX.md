@@ -15,6 +15,10 @@
 - `$metravel-ui-guardrails`: добавляй при любых видимых UI-изменениях, работе с media, icons, placeholders, tokens или external links.
 - `$metravel-release-checks`: используй при выборе проверок, подготовке PR, release/deploy и production web validation.
 - `$metravel-docs-maintainer`: используй при изменении `docs/`, `AGENTS.md`, `.codex/skills` или правил работы Codex.
+- `$metravel-agent-workflow`: используй для координации ролей business analyst, system architect, designer, programmer, QA и reviewer.
+- `$metravel-business-analyst`: используй для превращения продуктовой идеи в feature brief, user stories, acceptance criteria, non-goals, metrics и risks.
+- `$metravel-system-architect`: используй для technical design, review diff, risk mapping, validation plan и безопасного разбиения работ.
+- `$metravel-qa-agent`: используй для read-only тестирования, browser/e2e exploration, bug reports и re-test фиксов.
 
 Подключай только те skills, которые реально нужны задаче. Если skill требует дополнительные docs, читай только релевантные файлы.
 
@@ -30,8 +34,37 @@
 | SEO / route pages | `docs/DEVELOPMENT.md` SEO-раздел | `buildCanonicalUrl`, `buildOgImageUrl`, `LazyInstantSEO` |
 | Release / deploy / performance | `docs/RELEASE.md`, `docs/PRODUCTION_CHECKLIST.md`, `$metravel-release-checks` | production build/export, реальные URL для post-deploy проверок |
 | Docs / skills | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, этот файл | обновляй существующие canonical docs, не создавай одноразовые отчеты |
+| Multi-agent workflow | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, этот файл, нужные role skills | роли работают по контрактам; QA и BA не меняют код; programmer чинит подтвержденные баги; reviewer проверяет diff и validation |
 
 Если задача затрагивает несколько строк таблицы, бери объединение контекста, но не загружай справки, которые не помогают текущему решению.
+
+## Multi-agent workflow
+
+Используй `$metravel-agent-workflow`, когда задача требует систему ролей, баг-цикл или разделение discovery/design/implementation/validation/review.
+
+Стандартный feature flow:
+
+1. `$metravel-business-analyst` формирует `Feature Brief`: problem, audience, user stories, acceptance criteria, non-goals, metrics, risks, open questions.
+2. `$metravel-system-architect` формирует `Technical Design`: reuse points, affected modules, API/data/UI/external-link impact, implementation steps, validation plan.
+3. `$metravel-ui-guardrails` формирует UI contract для видимых web/mobile состояний, если задача затрагивает интерфейс.
+4. `$metravel-feature-builder` реализует минимальный diff по утвержденному design/brief.
+5. `$metravel-qa-agent` тестирует сценарий read-only и создает `Bug Report` или `QA Pass`.
+6. `$metravel-system-architect` в review mode проверяет findings, diff, проверки, known risks и соответствие правилам.
+
+Стандартный bug loop:
+
+1. `$metravel-qa-agent` ходит по приложению, воспроизводит проблему и создает структурированный `Bug Report`.
+2. `$metravel-feature-builder` чинит один подтвержденный bug report за раз.
+3. `$metravel-qa-agent` re-test'ит фикс.
+4. `$metravel-system-architect` review'ит итоговый diff и validation.
+
+Ролевые ограничения:
+
+- BA, QA и reviewer по умолчанию не меняют код.
+- Programmer не начинает реализацию без bug report, feature brief или явного user request.
+- Designer не создает отдельную дизайн-систему: использует `components/ui`, `DESIGN_TOKENS`, Feather icons и существующие feature-компоненты.
+- Orchestrator держит unrelated user changes отдельно и не завершает задачу с известными реальными проблемами в затронутом scope.
+- Для visible web UI обязательны browser preview, screenshot и console check.
 
 ## Рабочий цикл AI-инженера
 

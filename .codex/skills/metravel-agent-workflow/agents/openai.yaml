@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel Agent Workflow"
+  short_description: "Coordinate BA, architecture, design, implementation, QA, and review."
+  default_prompt: "Use $metravel-agent-workflow to coordinate a metravel role-based workflow. Keep QA and analysis read-only, route confirmed bugs to $metravel-feature-builder, use $metravel-ui-guardrails for visible UI, and finish with scope-based validation and review."

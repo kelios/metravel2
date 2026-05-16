@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel QA Agent"
+  short_description: "Explore metravel, reproduce bugs, and verify fixes."
+  default_prompt: "Use $metravel-qa-agent to test the requested metravel scope, create structured bug reports with reproduction steps and evidence, and keep exploration read-only unless explicitly asked to update tests."

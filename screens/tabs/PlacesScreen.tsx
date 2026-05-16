@@ -21,6 +21,7 @@ import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
+import { Menu } from '@/ui/paper'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
@@ -36,7 +37,6 @@ import ContributionBanner from '@/components/common/ContributionBanner'
 const MAP_FOCUS_RADIUS_KM = '5'
 const PLACES_PAGE_SIZE = 20
 const LOAD_MORE_SCROLL_THRESHOLD = 420
-const MOBILE_COUNTRIES_COLLAPSED_LIMIT = 6
 const PRESSED_OPACITY = { opacity: 0.72 } as const
 const DEFAULT_CATEGORY_SELECTION = [
   'Замок',
@@ -185,7 +185,7 @@ export default function PlacesScreen() {
   )
   const [visibleCount, setVisibleCount] = useState(PLACES_PAGE_SIZE)
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const [countriesExpanded, setCountriesExpanded] = useState(false)
+  const [countryMenuVisible, setCountryMenuVisible] = useState(false)
 
   const placesQuery = useQuery({
     queryKey: ['places-catalog'],
@@ -234,15 +234,6 @@ export default function PlacesScreen() {
     () => groupCatalogCountries(placesForCountryCounts),
     [placesForCountryCounts],
   )
-  const visibleCountryGroups = useMemo(() => {
-    if (!isCompact || countriesExpanded) return countryGroups
-    const visible = countryGroups.slice(0, MOBILE_COUNTRIES_COLLAPSED_LIMIT)
-    if (selectedCountry && !visible.some((group) => group.country === selectedCountry)) {
-      const selected = countryGroups.find((group) => group.country === selectedCountry)
-      if (selected) return [...visible.slice(0, MOBILE_COUNTRIES_COLLAPSED_LIMIT - 1), selected]
-    }
-    return visible
-  }, [countryGroups, countriesExpanded, isCompact, selectedCountry])
   const filteredPlaces = useMemo(
     () => filterCatalogPlaces(allPlaces, deferredQuery, selectedCategories, selectedCountry),
     [allPlaces, deferredQuery, selectedCategories, selectedCountry],
@@ -345,6 +336,7 @@ export default function PlacesScreen() {
 
   const handleSelectCountry = useCallback((country: string | null) => {
     setSelectedCountry(country)
+    setCountryMenuVisible(false)
     router.setParams(country ? { country } : { country: '' })
   }, [router])
 
@@ -475,98 +467,106 @@ export default function PlacesScreen() {
         scrollEventThrottle={180}
       >
 
-        {/* ─── Hero ─── */}
-        <View style={styles.hero}>
-          <View style={styles.heroTitleRow}>
-            <Feather name="map-pin" size={18} color={colors.primary} />
-            <Text style={styles.heroTitle}>Места</Text>
-            {showLoadedCounts ? (
-              <Text style={styles.heroCount}>· {allPlaces.length} в каталоге</Text>
-            ) : null}
+        <View style={styles.topBar}>
+          <View style={styles.topBarMeta}>
+            <View style={styles.heroTitleRow}>
+              <Feather name="map-pin" size={18} color={colors.primary} />
+              <Text style={styles.heroTitle}>Места</Text>
+              {showLoadedCounts ? (
+                <Text style={styles.heroCount}>· {allPlaces.length} в каталоге</Text>
+              ) : null}
+            </View>
+            <Text style={styles.topBarHint} numberOfLines={1}>
+              {activeCategoryTitle}
+              {selectedCountry ? ` · ${selectedCountry}` : ''}
+            </Text>
           </View>
-        </View>
 
-        {/* ─── Search bar ─── */}
-        <View style={styles.searchSection}>
-          <View style={styles.searchBox}>
-            <Feather name="search" size={18} color={colors.textMuted} style={styles.searchIcon} />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Поиск по названию или адресу..."
-              placeholderTextColor={colors.textMuted}
-              style={styles.searchInput}
-              returnKeyType="search"
-              accessibilityLabel="Найти место"
-            />
-            {query ? (
-              <Pressable
-                onPress={() => setQuery('')}
-                accessibilityRole="button"
-                accessibilityLabel="Очистить поиск"
-                hitSlop={10}
-                style={({ pressed }) => [styles.searchClear, pressed && PRESSED_OPACITY]}
-              >
-                <Feather name="x" size={16} color={colors.textMuted} />
-              </Pressable>
-            ) : null}
-          </View>
-        </View>
+          <View style={styles.topBarControls}>
+            <View style={styles.searchBox}>
+              <Feather name="search" size={18} color={colors.textMuted} style={styles.searchIcon} />
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Поиск по названию или адресу..."
+                placeholderTextColor={colors.textMuted}
+                style={styles.searchInput}
+                returnKeyType="search"
+                accessibilityLabel="Найти место"
+              />
+              {query ? (
+                <Pressable
+                  onPress={() => setQuery('')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Очистить поиск"
+                  hitSlop={10}
+                  style={({ pressed }) => [styles.searchClear, pressed && PRESSED_OPACITY]}
+                >
+                  <Feather name="x" size={16} color={colors.textMuted} />
+                </Pressable>
+              ) : null}
+            </View>
 
-        {/* ─── Countries ─── */}
-        <View style={styles.countrySection}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Страны</Text>
-            {selectedCountry ? (
-              <Pressable
+            <Menu
+              visible={countryMenuVisible}
+              onDismiss={() => setCountryMenuVisible(false)}
+              contentStyle={styles.countryMenuContent}
+              anchor={
+                <Pressable
+                  onPress={() => setCountryMenuVisible(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Выбрать страну"
+                  accessibilityState={{ expanded: countryMenuVisible, disabled: placesQuery.isLoading }}
+                  disabled={placesQuery.isLoading}
+                  style={({ pressed }) => [
+                    styles.countrySelect,
+                    !!selectedCountry && styles.countrySelectActive,
+                    pressed && !placesQuery.isLoading && PRESSED_OPACITY,
+                    placesQuery.isLoading && styles.countrySelectDisabled,
+                  ]}
+                >
+                  <Feather name="globe" size={16} color={selectedCountry ? colors.primary : colors.textMuted} />
+                  <View style={styles.countrySelectTextBlock}>
+                    <Text style={styles.countrySelectLabel}>Страна</Text>
+                    <Text style={styles.countrySelectValue} numberOfLines={1}>
+                      {selectedCountry ?? 'Все страны'}
+                      {showLoadedCounts && !selectedCountry ? ` (${placesForCountryCounts.length})` : ''}
+                    </Text>
+                  </View>
+                  <Feather name="chevron-down" size={16} color={colors.textMuted} />
+                </Pressable>
+              }
+            >
+              <Menu.Item
+                title={showLoadedCounts ? `Все страны (${placesForCountryCounts.length})` : 'Все страны'}
                 onPress={() => handleSelectCountry(null)}
-                accessibilityRole="button"
-                style={({ pressed }) => [styles.clearLink, pressed && PRESSED_OPACITY]}
-              >
-                <Text style={styles.clearLinkText}>Все страны</Text>
-              </Pressable>
-            ) : null}
-          </View>
-          <View style={styles.countryWrap}>
-            {placesQuery.isLoading ? (
-              [80, 100, 70, 90, 110].map((w, i) => (
-                <View key={i} style={[styles.skeletonChip, { width: w }]} />
-              ))
-            ) : (
-              <>
-                <Chip
-                  label="Все страны"
-                  count={showLoadedCounts ? placesForCountryCounts.length : undefined}
-                  selected={!selectedCountry}
-                  onPress={() => handleSelectCountry(null)}
-                  style={styles.filterChipCompact}
+                leadingIcon={({ size }) => (
+                  <Feather
+                    name={selectedCountry ? 'circle' : 'check-circle'}
+                    size={size}
+                    color={selectedCountry ? colors.textMuted : colors.primary}
+                  />
+                )}
+                titleStyle={selectedCountry ? styles.countryMenuItemText : styles.countryMenuItemTextActive}
+              />
+              {countryGroups.map((group) => (
+                <Menu.Item
+                  key={group.country}
+                  title={`${group.country} (${group.count})`}
+                  onPress={() => handleSelectCountry(group.country)}
+                  leadingIcon={({ size }) => (
+                    <Feather
+                      name={selectedCountry === group.country ? 'check-circle' : 'circle'}
+                      size={size}
+                      color={selectedCountry === group.country ? colors.primary : colors.textMuted}
+                    />
+                  )}
+                  titleStyle={selectedCountry === group.country ? styles.countryMenuItemTextActive : styles.countryMenuItemText}
                 />
-                {visibleCountryGroups.map((group) => (
-                  <Chip
-                    key={group.country}
-                    label={group.country}
-                    count={showLoadedCounts ? group.count : undefined}
-                    selected={selectedCountry === group.country}
-                    onPress={() => handleSelectCountry(group.country)}
-                    style={styles.filterChipCompact}
-                  />
-                ))}
-                {isCompact && countryGroups.length > MOBILE_COUNTRIES_COLLAPSED_LIMIT ? (
-                  <Chip
-                    label={countriesExpanded
-                      ? 'Свернуть'
-                      : `Ещё ${countryGroups.length - visibleCountryGroups.length}`}
-                    selected={false}
-                    onPress={() => setCountriesExpanded((value) => !value)}
-                    style={styles.filterChipCompact}
-                  />
-                ) : null}
-              </>
-            )}
+              ))}
+            </Menu>
           </View>
         </View>
-
-        <ContributionBanner variant="places" density="compact" />
 
         {/* ─── Main layout ─── */}
         <View style={styles.layout}>
@@ -947,11 +947,22 @@ const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean)
     paddingBottom: DESIGN_TOKENS.spacing.xxl,
   },
 
-  // ─── Hero (slim bar) ───
-  hero: {
-    marginHorizontal: isCompact ? DESIGN_TOKENS.spacing.lg : DESIGN_TOKENS.spacing.xl,
-    marginTop: DESIGN_TOKENS.spacing.md,
-    marginBottom: DESIGN_TOKENS.spacing.sm,
+  // ─── Compact top controls ───
+  topBar: {
+    flexDirection: isCompact ? 'column' : 'row',
+    alignItems: isCompact ? 'stretch' : 'center',
+    justifyContent: 'space-between',
+    gap: isCompact ? DESIGN_TOKENS.spacing.sm : DESIGN_TOKENS.spacing.lg,
+    paddingHorizontal: isCompact ? DESIGN_TOKENS.spacing.lg : DESIGN_TOKENS.spacing.xl,
+    paddingTop: isCompact ? DESIGN_TOKENS.spacing.md : DESIGN_TOKENS.spacing.md,
+    paddingBottom: isCompact ? DESIGN_TOKENS.spacing.md : DESIGN_TOKENS.spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderLight,
+  },
+  topBarMeta: {
+    minWidth: 0,
+    flexShrink: 0,
+    gap: 2,
   },
   heroTitleRow: {
     flexDirection: 'row',
@@ -968,6 +979,20 @@ const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean)
     ...DESIGN_TOKENS.typography.scale.bodySmall,
     fontWeight: '600',
   },
+  topBarHint: {
+    color: colors.textMuted,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+  topBarControls: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: isCompact ? 'column' : 'row',
+    alignItems: isCompact ? 'stretch' : 'center',
+    justifyContent: 'flex-end',
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
 
   // ─── Search ───
   searchSection: {
@@ -975,6 +1000,8 @@ const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean)
     paddingBottom: DESIGN_TOKENS.spacing.md,
   },
   searchBox: {
+    flex: 1,
+    minWidth: isCompact ? undefined : 320,
     height: 46,
     borderRadius: DESIGN_TOKENS.radii.pill,
     borderWidth: 1.5,
@@ -1003,13 +1030,67 @@ const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean)
     backgroundColor: colors.backgroundSecondary,
     marginLeft: DESIGN_TOKENS.spacing.xs,
   },
-
-  // ─── Countries ───
-  countrySection: {
-    paddingBottom: DESIGN_TOKENS.spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderLight,
-    gap: DESIGN_TOKENS.spacing.xs,
+  countrySelect: {
+    minHeight: 46,
+    width: isCompact ? '100%' : 220,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.sm,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    ...(Platform.OS === 'web' ? ({
+      cursor: 'pointer',
+      boxShadow: DESIGN_TOKENS.shadows.light,
+      transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+    } as any) : null),
+  },
+  countrySelectActive: {
+    borderColor: colors.primaryAlpha30,
+    backgroundColor: colors.primarySoft,
+  },
+  countrySelectDisabled: {
+    opacity: 0.58,
+  },
+  countrySelectTextBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  countrySelectLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+    lineHeight: 13,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.2,
+  },
+  countrySelectValue: {
+    color: colors.text,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    lineHeight: 18,
+    fontWeight: '700',
+  },
+  countryMenuContent: {
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderLight,
+    borderRadius: DESIGN_TOKENS.radii.lg,
+    ...(Platform.OS === 'web' ? ({
+      boxShadow: '0 12px 32px rgba(15,23,42,0.16)' as any,
+    } as any) : null),
+  },
+  countryMenuItemText: {
+    color: colors.text,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '600',
+  },
+  countryMenuItemTextActive: {
+    color: colors.primaryText,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '800',
   },
   sectionHeaderRow: {
     flexDirection: 'row',

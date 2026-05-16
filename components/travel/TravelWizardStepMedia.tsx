@@ -1,28 +1,31 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { KeyboardAvoidingView, Platform, View, StyleSheet, Text, ScrollView, findNodeHandle, UIManager } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
+import {
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    UIManager,
+    View,
+    findNodeHandle,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { deleteTravelMainImage } from '@/api/misc';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import YoutubeLinkComponent from '@/components/ui/YoutubeLinkComponent';
+import type { GalleryValueItem } from '@/components/travel/gallery/types';
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
-import { validateStep } from '@/utils/travelWizardValidation';
-import { TravelFormData, Travel } from '@/types/types';
-import type { GalleryValueItem } from '@/components/travel/gallery/types';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import ConfirmDialog from '@/components/ui/ConfirmDialog';
-import { deleteTravelMainImage } from '@/api/misc';
-import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useThemedColors } from '@/hooks/useTheme';
+import type { Travel, TravelFormData } from '@/types/types';
+import { validateStep } from '@/utils/travelWizardValidation';
 
-const GallerySectionLazy = Platform.OS === 'web'
-    ? React.lazy(() => import('@/components/travel/GallerySection'))
-    : null;
-
-// Native (and other platforms) should keep direct rendering for stability.
- 
-const GallerySectionNative = Platform.OS !== 'web' ? require('@/components/travel/GallerySection').default : null;
+const MEDIA_COVER_ANCHOR_ID = 'travelwizard-media-cover';
 
 interface TravelWizardStepMediaProps {
     currentStep: number;
@@ -49,43 +52,78 @@ interface TravelWizardStepMediaProps {
     onOpenPublic?: () => void;
 }
 
-const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
-    currentStep,
-    totalSteps,
-    formData,
-    setFormData,
-    travelDataOld,
-    onManualSave,
-    onBack,
-    onNext,
-    stepMeta,
-    progress = currentStep / totalSteps,
-    autosaveBadge,
-    focusAnchorId,
-    onAnchorHandled,
-    onStepSelect,
-    onPreview,
-    onOpenPublic,
-}) => {
-    const colors = useThemedColors();
-    const { isPhone, isLargePhone } = useResponsive();
-    const isMobile = isPhone || isLargePhone;
-    const progressValue = Math.min(Math.max(progress, 0), 1);
-    const progressPercent = Math.round(progressValue * 100);
-    const [isDeleteCoverDialogVisible, setIsDeleteCoverDialogVisible] = useState(false);
-    const [coverDeleted, setCoverDeleted] = useState(false);
+type GalleryValueForForm = Array<{ url: string; id?: string | number }>;
+type MediaStyles = ReturnType<typeof createStyles>;
+type GallerySectionComponent = React.ComponentType<{
+    images: TravelFormData['gallery'];
+    travelId?: string | number | null;
+    onChange?: (items: GalleryValueItem[]) => void;
+    isLoading?: boolean;
+}>;
 
-    // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
-    const styles = useMemo(() => createStyles(colors), [colors]);
+const GallerySectionLazy: React.LazyExoticComponent<GallerySectionComponent> | null =
+    Platform.OS === 'web' ? React.lazy(() => import('@/components/travel/GallerySection')) : null;
+const GallerySectionNative: GallerySectionComponent | null =
+    Platform.OS !== 'web' ? require('@/components/travel/GallerySection').default : null;
 
-    const contentPaddingBottom = useMemo(() => DESIGN_TOKENS.spacing.xl, []);
+const hasUrl = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0;
 
+const normalizeUrl = (value: unknown) => (hasUrl(value) ? value.trim() : null);
+
+const getFirstUrl = (...values: unknown[]) => {
+    for (const value of values) {
+        const url = normalizeUrl(value);
+        if (url) return url;
+    }
+    return null;
+};
+
+const getProgressPercent = (progress: number) => {
+    const safeProgress = Number.isFinite(progress) ? progress : 0;
+    const boundedProgress = Math.min(Math.max(safeProgress, 0), 1);
+    return Math.round(boundedProgress * 100);
+};
+
+const getCoverResetKey = (coverUrl: string | null) => (coverUrl ? `cover:${coverUrl}` : 'cover:none');
+
+const getGallerySignature = (items: unknown) => {
+    if (!Array.isArray(items)) return '';
+
+    return items
+        .map((item) => {
+            if (typeof item === 'string') return `:${item}`;
+            if (item && typeof item === 'object') {
+                const galleryItem = item as { id?: unknown; url?: unknown };
+                const id = galleryItem.id != null ? String(galleryItem.id) : '';
+                const url = typeof galleryItem.url === 'string' ? galleryItem.url : '';
+                return `${id}:${url}`;
+            }
+            return '';
+        })
+        .join('|');
+};
+
+const normalizeGalleryItems = (items: GalleryValueItem[]): GalleryValueForForm => {
+    return (Array.isArray(items) ? items : [])
+        .map((item) => {
+            const url = normalizeUrl(item?.url);
+            if (!url) return null;
+
+            const normalizedItem: { url: string; id?: string | number } = { url };
+            if (item.id != null && String(item.id).trim().length > 0) {
+                normalizedItem.id = item.id;
+            }
+            return normalizedItem;
+        })
+        .filter(Boolean) as GalleryValueForForm;
+};
+
+function useMediaAnchorScroll(focusAnchorId?: string | null, onAnchorHandled?: () => void) {
     const scrollRef = useRef<ScrollView | null>(null);
     const coverAnchorRef = useRef<View | null>(null);
 
     useEffect(() => {
-        if (!focusAnchorId) return;
-        if (focusAnchorId !== 'travelwizard-media-cover') return;
+        if (focusAnchorId !== MEDIA_COVER_ANCHOR_ID) return;
 
         if (Platform.OS === 'web') {
             onAnchorHandled?.();
@@ -106,7 +144,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
             return;
         }
 
-        setTimeout(() => {
+        const timerId = setTimeout(() => {
             UIManager.measureLayout(
                 anchorHandle,
                 scrollHandle,
@@ -117,118 +155,330 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                 },
             );
         }, 50);
+
+        return () => clearTimeout(timerId);
     }, [focusAnchorId, onAnchorHandled]);
 
-    const handleYoutubeChange = useCallback((value: string) => {
-        setFormData(prev => ({ ...(prev as any), youtube_link: value }));
+    return { scrollRef, coverAnchorRef };
+}
+
+function useCoverDeletion(travelId: string | null | undefined, setFormData: TravelWizardStepMediaProps['setFormData']) {
+    const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [isCoverDeleted, setCoverDeleted] = useState(false);
+
+    const clearCoverUrls = useCallback(() => {
+        setFormData((prev) => ({
+            ...prev,
+            travel_image_thumb_small_url: null,
+            travel_image_thumb_url: null,
+        }));
     }, [setFormData]);
 
-    const handleRequestDeleteCover = useCallback(() => {
-        if (!formData.id) return;
-        setIsDeleteCoverDialogVisible(true);
-    }, [formData.id]);
-
-    const handleConfirmDeleteCover = useCallback(async () => {
-        if (!formData.id) return;
-        try {
-            await deleteTravelMainImage(formData.id);
-
-            // Clear cover urls to update preview immediately.
-            setCoverDeleted(true);
-            setFormData(prev => ({
-                ...(prev as any),
-                travel_image_thumb_small_url: null,
-                travel_image_thumb_url: null,
-            }));
-        } finally {
-            setIsDeleteCoverDialogVisible(false);
+    const requestDeleteCover = useCallback(() => {
+        if (!travelId) {
+            clearCoverUrls();
+            return;
         }
-    }, [formData.id, setFormData]);
+        setDeleteDialogOpen(true);
+    }, [clearCoverUrls, travelId]);
 
-    const coverResetKey = useMemo(() => {
-        const url = (formData as any).travel_image_thumb_small_url;
-        return url && typeof url === 'string' && url.trim().length > 0 ? `cover:${url}` : 'cover:none';
-    }, [formData]);
+    const closeDeleteDialog = useCallback(() => {
+        setDeleteDialogOpen(false);
+    }, []);
 
-    const coverSmallUrl = (formData as any).travel_image_thumb_small_url;
-    const coverFullUrl = (formData as any).travel_image_thumb_url;
+    const markCoverAvailable = useCallback(() => {
+        setCoverDeleted(false);
+    }, []);
 
-    const handleCoverUpload = useCallback(
+    const confirmDeleteCover = useCallback(async () => {
+        if (!travelId) {
+            closeDeleteDialog();
+            return;
+        }
+
+        try {
+            await deleteTravelMainImage(travelId);
+            setCoverDeleted(true);
+            clearCoverUrls();
+        } finally {
+            closeDeleteDialog();
+        }
+    }, [clearCoverUrls, closeDeleteDialog, travelId]);
+
+    return {
+        isCoverDeleted,
+        isDeleteDialogOpen,
+        requestDeleteCover,
+        closeDeleteDialog,
+        confirmDeleteCover,
+        markCoverAvailable,
+    };
+}
+
+interface MediaValidationSummaryProps {
+    isMobile: boolean;
+    styles: MediaStyles;
+    errorMessages: string[];
+    warningMessages: string[];
+}
+
+const MediaValidationSummary = React.memo(function MediaValidationSummary({
+    isMobile,
+    styles,
+    errorMessages,
+    warningMessages,
+}: MediaValidationSummaryProps) {
+    if (isMobile || warningMessages.length === 0) return null;
+
+    return (
+        <View style={styles.validationSummaryWrapper}>
+            <ValidationSummary
+                errorCount={errorMessages.length}
+                warningCount={warningMessages.length}
+                errorMessages={errorMessages}
+                warningMessages={warningMessages}
+            />
+        </View>
+    );
+});
+
+interface CoverAdviceCardProps {
+    styles: MediaStyles;
+    primaryColor: string;
+}
+
+const CoverAdviceCard = React.memo(function CoverAdviceCard({ styles, primaryColor }: CoverAdviceCardProps) {
+    return (
+        <View style={styles.tipsCard}>
+            <View style={styles.tipIconWrapper}>
+                <Feather name="info" size={18} color={primaryColor} />
+            </View>
+            <View style={styles.tipContent}>
+                <Text style={styles.tipTitle}>Совет по обложке</Text>
+                <Text style={styles.tipBody}>
+                    • Лучший формат: горизонтальный 16:9 (минимум 1200×675px){'\n'}
+                    • Избегайте коллажей и текста на изображении{'\n'}
+                    • Используйте качественные фотографии с хорошим освещением
+                </Text>
+                <Text style={styles.tipStats}>Путешествия с обложкой получают в 3 раза больше просмотров</Text>
+            </View>
+        </View>
+    );
+});
+
+interface CoverSectionProps {
+    styles: MediaStyles;
+    anchorRef: React.RefObject<View | null>;
+    coverResetKey: string;
+    coverUrl: string | null;
+    onCoverChange: (url: string | null) => void;
+    onRequestDeleteCover?: () => void;
+    primaryColor: string;
+    showDraftHint: boolean;
+    travelId: string | null;
+}
+
+const CoverSection = React.memo(function CoverSection({
+    styles,
+    anchorRef,
+    coverResetKey,
+    coverUrl,
+    onCoverChange,
+    onRequestDeleteCover,
+    primaryColor,
+    showDraftHint,
+    travelId,
+}: CoverSectionProps) {
+    return (
+        <View ref={anchorRef} style={styles.section} nativeID={MEDIA_COVER_ANCHOR_ID}>
+            <Text style={styles.sectionTitle}>Главное изображение</Text>
+            <Text style={styles.sectionHint}>
+                Обложка маршрута, которая будет показываться в списках и на странице путешествия.
+            </Text>
+
+            <CoverAdviceCard styles={styles} primaryColor={primaryColor} />
+
+            <View style={styles.coverWrapper}>
+                <PhotoUploadWithPreview
+                    key={coverResetKey}
+                    collection="travelMainImage"
+                    idTravel={travelId}
+                    oldImage={coverUrl}
+                    onUpload={onCoverChange}
+                    onPreviewChange={onCoverChange}
+                    onRequestRemove={onRequestDeleteCover}
+                    placeholder="Перетащите обложку путешествия"
+                    maxSizeMB={10}
+                />
+                {showDraftHint && (
+                    <Text style={styles.infoText}>
+                        Превью будет сохранено. После сохранения черновика фото загрузится на сервер.
+                    </Text>
+                )}
+            </View>
+        </View>
+    );
+});
+
+interface GalleryMediaSectionProps {
+    styles: MediaStyles;
+    gallery: TravelFormData['gallery'];
+    travelId: string | null;
+    onGalleryChange: (items: GalleryValueItem[]) => void;
+}
+
+const GalleryMediaSection = React.memo(function GalleryMediaSection({
+    styles,
+    gallery,
+    travelId,
+    onGalleryChange,
+}: GalleryMediaSectionProps) {
+    return (
+        <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Галерея путешествия</Text>
+            <Text style={styles.sectionHint}>
+                Фотографии повышают доверие и помогают читателям лучше понять маршрут. Рекомендуем добавить 3–10 снимков.
+            </Text>
+            {Platform.OS === 'web' && GallerySectionLazy ? (
+                <Suspense
+                    fallback={
+                        <View style={styles.lazyFallback}>
+                            <Text style={styles.lazyFallbackText}>Загрузка галереи…</Text>
+                        </View>
+                    }
+                >
+                    <GallerySectionLazy images={gallery} travelId={travelId} onChange={onGalleryChange} isLoading={false} />
+                </Suspense>
+            ) : GallerySectionNative ? (
+                <GallerySectionNative images={gallery} travelId={travelId} onChange={onGalleryChange} isLoading={false} />
+            ) : null}
+        </View>
+    );
+});
+
+interface VideoSectionProps {
+    styles: MediaStyles;
+    value: string;
+    onChange: (value: string) => void;
+}
+
+const VideoSection = React.memo(function VideoSection({ styles, value, onChange }: VideoSectionProps) {
+    return (
+        <View style={styles.section}>
+            <YoutubeLinkComponent
+                label="Видео о путешествии (YouTube-ссылка)"
+                value={value}
+                onChange={onChange}
+                hint="Вставьте ссылку на ролик на YouTube, например: https://www.youtube.com/watch?v=..."
+            />
+        </View>
+    );
+});
+
+const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
+    currentStep,
+    totalSteps,
+    formData,
+    setFormData,
+    travelDataOld,
+    onManualSave,
+    onBack,
+    onNext,
+    stepMeta,
+    progress = currentStep / totalSteps,
+    autosaveBadge,
+    focusAnchorId,
+    onAnchorHandled,
+    onStepSelect,
+    onPreview,
+    onOpenPublic,
+}) => {
+    const colors = useThemedColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
+    const { isPhone, isLargePhone } = useResponsive();
+    const { scrollRef, coverAnchorRef } = useMediaAnchorScroll(focusAnchorId, onAnchorHandled);
+
+    const travelId = formData.id ?? null;
+    const coverSmallUrl = formData.travel_image_thumb_small_url ?? null;
+    const coverFullUrl = formData.travel_image_thumb_url ?? null;
+    const oldCoverSmallUrl = travelDataOld?.travel_image_thumb_small_url ?? null;
+    const oldCoverFullUrl = travelDataOld?.travel_image_thumb_url ?? null;
+    const gallery = formData.gallery ?? [];
+    const youtubeLink = formData.youtube_link ?? '';
+    const isMobile = isPhone || isLargePhone;
+
+    const {
+        isCoverDeleted,
+        isDeleteDialogOpen,
+        requestDeleteCover,
+        closeDeleteDialog,
+        confirmDeleteCover,
+        markCoverAvailable,
+    } = useCoverDeletion(travelId, setFormData);
+
+    useEffect(() => {
+        if (hasUrl(coverSmallUrl) || hasUrl(coverFullUrl)) {
+            markCoverAvailable();
+        }
+    }, [coverFullUrl, coverSmallUrl, markCoverAvailable]);
+
+    const coverUrl = useMemo(
+        () => (isCoverDeleted ? null : getFirstUrl(coverSmallUrl, coverFullUrl, oldCoverSmallUrl, oldCoverFullUrl)),
+        [coverFullUrl, coverSmallUrl, isCoverDeleted, oldCoverFullUrl, oldCoverSmallUrl],
+    );
+
+    const coverResetKey = useMemo(() => getCoverResetKey(coverUrl), [coverUrl]);
+
+    const handleCoverChange = useCallback(
         (url: string | null) => {
-            // При успешной загрузке или локальном превью обновляем форму,
-            // чтобы шаг 6 сразу видел обложку без перезагрузки.
-            if (url && typeof url === 'string' && url.trim().length > 0) {
-                setCoverDeleted(false);
+            const nextUrl = normalizeUrl(url);
+            if (nextUrl) {
+                markCoverAvailable();
             }
-            setFormData(prev => ({
-                ...(prev as any),
-                travel_image_thumb_small_url: url || null,
-                travel_image_thumb_url: url || null,
+
+            setFormData((prev) => ({
+                ...prev,
+                travel_image_thumb_small_url: nextUrl,
+                travel_image_thumb_url: nextUrl,
             }));
+        },
+        [markCoverAvailable, setFormData],
+    );
+
+    const handleYoutubeChange = useCallback(
+        (value: string) => {
+            setFormData((prev) => ({ ...prev, youtube_link: value }));
         },
         [setFormData],
     );
 
-    useEffect(() => {
-        const hasCover =
-            (typeof coverSmallUrl === 'string' && coverSmallUrl.trim().length > 0) ||
-            (typeof coverFullUrl === 'string' && coverFullUrl.trim().length > 0);
-        if (hasCover) {
-            setCoverDeleted(false);
-        }
-    }, [coverSmallUrl, coverFullUrl]);
-
     const handleGalleryChange = useCallback(
         (items: GalleryValueItem[]) => {
-            // Синхронизируем галерею с формой, чтобы шаг 6 сразу видел фото.
-            // Guard: avoid endless update loops when the gallery URLs haven't changed.
-            setFormData(prev => {
-                const prevGalleryRaw = (prev as any)?.gallery;
-                const prevGallery = Array.isArray(prevGalleryRaw) ? prevGalleryRaw : [];
-                const nextGallery = (Array.isArray(items) ? items : [])
-                    .map((item) => {
-                        if (!item || typeof item !== 'object') return null;
-                        const url = typeof item.url === 'string' ? item.url.trim() : '';
-                        if (!url) return null;
-                        const normalized: { url: string; id?: string | number } = { url };
-                        if (item.id != null && String(item.id).trim().length > 0) {
-                            normalized.id = item.id;
-                        }
-                        return normalized;
-                    })
-                    .filter(Boolean) as Array<{ url: string; id?: string | number }>;
+            const nextGallery = normalizeGalleryItems(items);
+            const nextSignature = getGallerySignature(nextGallery);
 
-                const prevSignature = prevGallery
-                    .map((item: any) => {
-                        if (typeof item === 'string') return `:${item}`;
-                        if (item && typeof item === 'object') {
-                            const id = item.id != null ? String(item.id) : '';
-                            const url = typeof item.url === 'string' ? item.url : '';
-                            return `${id}:${url}`;
-                        }
-                        return '';
-                    })
-                    .join('|');
-                const nextSignature = nextGallery
-                    .map((item) => `${String(item.id ?? '')}:${item.url}`)
-                    .join('|');
-
-                if (prevSignature === nextSignature) {
+            setFormData((prev) => {
+                if (getGallerySignature(prev.gallery) === nextSignature) {
                     return prev;
                 }
+
                 return {
-                    ...(prev as any),
-                    gallery: nextGallery,
+                    ...prev,
+                    gallery: nextGallery as TravelFormData['gallery'],
                 };
             });
         },
         [setFormData],
     );
 
-    // Валидация шага 3
-    const validation = useMemo(() => {
-        return validateStep(3, formData);
-    }, [formData]);
+    const validation = useMemo(() => validateStep(3, formData), [formData]);
+    const validationMessages = useMemo(
+        () => ({
+            errors: validation.errors.map((error) => error.message),
+            warnings: validation.warnings.map((warning) => warning.message),
+        }),
+        [validation.errors, validation.warnings],
+    );
 
     return (
         <SafeAreaView style={styles.safeContainer}>
@@ -238,11 +488,11 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                 keyboardVerticalOffset={0}
             >
                 <TravelWizardHeader
-                    canGoBack={true}
+                    canGoBack
                     onBack={onBack}
                     title={stepMeta?.title ?? 'Медиа путешествия'}
                     subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
-                    progressPercent={progressPercent}
+                    progressPercent={getProgressPercent(progress)}
                     warningCount={validation.warnings.length}
                     autosaveBadge={autosaveBadge}
                     onPrimary={onNext}
@@ -257,126 +507,47 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                     onOpenPublic={onOpenPublic}
                 />
 
-                {!isMobile && validation.warnings.length > 0 && (
-                    <View style={styles.validationSummaryWrapper}>
-                        <ValidationSummary
-                            errorCount={validation.errors.length}
-                            warningCount={validation.warnings.length}
-                            errorMessages={validation.errors.map(e => e.message)}
-                            warningMessages={validation.warnings.map(w => w.message)}
-                        />
-                    </View>
-                )}
+                <MediaValidationSummary
+                    isMobile={isMobile}
+                    styles={styles}
+                    errorMessages={validationMessages.errors}
+                    warningMessages={validationMessages.warnings}
+                />
 
                 <ScrollView
                     ref={scrollRef}
                     style={styles.content}
-                    contentContainerStyle={[styles.contentContainer, { paddingBottom: contentPaddingBottom }]}
+                    contentContainerStyle={styles.contentContainer}
                     keyboardShouldPersistTaps="handled"
                 >
                     <View style={styles.contentInner}>
-                        <View ref={coverAnchorRef} style={styles.section} nativeID="travelwizard-media-cover">
-                            <Text style={styles.sectionTitle}>Главное изображение</Text>
-                            <Text style={styles.sectionHint}>
-                                Обложка маршрута, которая будет показываться в списках и на странице путешествия.
-                            </Text>
+                        <CoverSection
+                            styles={styles}
+                            anchorRef={coverAnchorRef}
+                            coverResetKey={coverResetKey}
+                            coverUrl={coverUrl}
+                            onCoverChange={handleCoverChange}
+                            onRequestDeleteCover={travelId ? requestDeleteCover : undefined}
+                            primaryColor={colors.primary}
+                            showDraftHint={!travelId}
+                            travelId={travelId}
+                        />
 
-                            {/* ✅ УЛУЧШЕНИЕ: Рекомендации по загрузке обложки */}
-                            <View style={styles.tipsCard}>
-                                <View style={styles.tipIconWrapper}>
-                                    <Feather name="info" size={18} color={colors.primary} />
-                                </View>
-                                <View style={styles.tipContent}>
-                                    <Text style={styles.tipTitle}>Совет по обложке</Text>
-                                    <Text style={styles.tipBody}>
-                                        • Лучший формат: горизонтальный 16:9 (минимум 1200×675px){'\n'}
-                                        • Избегайте коллажей и текста на изображении{'\n'}
-                                        • Используйте качественные фотографии с хорошим освещением
-                                    </Text>
-                                    <Text style={styles.tipStats}>
-                                        Путешествия с обложкой получают в 3 раза больше просмотров
-                                    </Text>
-                                </View>
-                            </View>
+                        <GalleryMediaSection
+                            styles={styles}
+                            gallery={gallery}
+                            travelId={travelId}
+                            onGalleryChange={handleGalleryChange}
+                        />
 
-                            <View style={styles.coverWrapper}>
-                                <PhotoUploadWithPreview
-                                    key={coverResetKey}
-                                    collection="travelMainImage"
-                                    idTravel={formData.id ?? null}
-                                    oldImage={
-                                        coverDeleted
-                                            ? null
-                                            :
-                                        // ✅ FIX: Приоритет: formData URL > travelDataOld URL
-                                        // Проверяем оба поля (thumb_small и thumb) для надежности
-                                        ((formData as any).travel_image_thumb_small_url && (formData as any).travel_image_thumb_small_url.trim().length > 0)
-                                            ? (formData as any).travel_image_thumb_small_url
-                                            : ((formData as any).travel_image_thumb_url && (formData as any).travel_image_thumb_url.trim().length > 0)
-                                                ? (formData as any).travel_image_thumb_url
-                                                : ((travelDataOld as any)?.travel_image_thumb_small_url && (travelDataOld as any)?.travel_image_thumb_small_url.trim().length > 0)
-                                                    ? (travelDataOld as any)?.travel_image_thumb_small_url
-                                                    : (travelDataOld as any)?.travel_image_thumb_url ?? null
-                                    }
-                                    onUpload={handleCoverUpload}
-                                    onPreviewChange={handleCoverUpload}
-                                    onRequestRemove={handleRequestDeleteCover}
-                                    placeholder="Перетащите обложку путешествия"
-                                    maxSizeMB={10}
-                                />
-                                {!formData.id && (
-                                    <Text style={styles.infoText}>
-                                        Превью будет сохранено. После сохранения черновика фото загрузится на сервер.
-                                    </Text>
-                                )}
-                            </View>
-                        </View>
-
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Галерея путешествия</Text>
-                            <Text style={styles.sectionHint}>
-                                Фотографии повышают доверие и помогают читателям лучше понять маршрут. Рекомендуем добавить 3–10 снимков.
-                            </Text>
-                            {Platform.OS === 'web' && GallerySectionLazy ? (
-                                <Suspense
-                                    fallback={
-                                        <View style={styles.lazyFallback}>
-                                            <Text style={styles.lazyFallbackText}>Загрузка галереи…</Text>
-                                        </View>
-                                    }
-                                >
-                                    <GallerySectionLazy
-                                        images={formData.gallery}
-                                        travelId={formData.id}
-                                        onChange={handleGalleryChange}
-                                        isLoading={false}
-                                    />
-                                </Suspense>
-                            ) : GallerySectionNative ? (
-                                <GallerySectionNative
-                                    images={formData.gallery}
-                                    travelId={formData.id}
-                                    onChange={handleGalleryChange}
-                                    isLoading={false}
-                                />
-                            ) : null}
-                        </View>
-
-                        <View style={styles.section}>
-                            <YoutubeLinkComponent
-                                label="Видео о путешествии (YouTube-ссылка)"
-                                value={formData.youtube_link ?? ''}
-                                onChange={handleYoutubeChange}
-                                hint="Вставьте ссылку на ролик на YouTube, например: https://www.youtube.com/watch?v=..."
-                            />
-                        </View>
+                        <VideoSection styles={styles} value={youtubeLink} onChange={handleYoutubeChange} />
                     </View>
                 </ScrollView>
 
                 <ConfirmDialog
-                    visible={isDeleteCoverDialogVisible}
-                    onClose={() => setIsDeleteCoverDialogVisible(false)}
-                    onConfirm={handleConfirmDeleteCover}
+                    visible={isDeleteDialogOpen}
+                    onClose={closeDeleteDialog}
+                    onConfirm={confirmDeleteCover}
                     title="Удалить обложку"
                     message="Вы уверены, что хотите удалить главное изображение путешествия?"
                     confirmText="Удалить"
@@ -387,14 +558,13 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
     );
 };
 
-// ✅ УЛУЧШЕНИЕ: Функция создания стилей с динамическими цветами для поддержки тем
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     safeContainer: {
         flex: 1,
-        backgroundColor: colors.background
+        backgroundColor: colors.background,
     },
     keyboardAvoid: {
-        flex: 1
+        flex: 1,
     },
     validationSummaryWrapper: {
         paddingHorizontal: DESIGN_TOKENS.spacing.md,
@@ -405,7 +575,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     contentContainer: {
         paddingHorizontal: 8,
-        paddingBottom: 0,
+        paddingBottom: DESIGN_TOKENS.spacing.xl,
         paddingTop: DESIGN_TOKENS.spacing.sm,
         alignItems: 'center',
     },
@@ -454,33 +624,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         marginTop: 8,
         alignItems: 'center',
     },
-    deleteCoverButton: {
-        marginTop: 10,
-        alignSelf: 'center',
-        paddingVertical: 10,
-        paddingHorizontal: 14,
-        borderRadius: DESIGN_TOKENS.radii.md,
-        borderWidth: 1,
-        borderColor: colors.border,
-        backgroundColor: colors.surface,
-    },
-    deleteCoverButtonPressed: {
-        opacity: 0.85,
-    },
-    deleteCoverButtonDisabled: {
-        opacity: 0.6,
-    },
-    deleteCoverButtonText: {
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: colors.danger,
-        fontWeight: '600',
-    },
     infoText: {
         marginTop: 8,
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: colors.textMuted,
     },
-    // ✅ УЛУЧШЕНИЕ: Стили для карточки с советами
     tipsCard: {
         flexDirection: 'row',
         marginBottom: DESIGN_TOKENS.spacing.md,

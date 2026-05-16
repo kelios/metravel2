@@ -603,6 +603,12 @@ export default function CalendarScreen() {
     ),
     [activeEntries, activeTab, selectedDate]
   )
+  const calendarFocusDate = useMemo(
+    () => sortCalendarEntries(activeEntries, activeTab)
+      .map(getCalendarDate)
+      .find((date): date is string => Boolean(date)) ?? null,
+    [activeEntries, activeTab]
+  )
   const calendarEntries = useMemo(() => activeEntries.map((entry) => {
     const calendarDate = getCalendarDate(entry)
     if (!calendarDate) return entry
@@ -772,6 +778,7 @@ export default function CalendarScreen() {
               entries={calendarEntries}
               onDayPress={handleDayPress}
               selectedDate={selectedDate}
+              focusDate={calendarFocusDate}
               accentColor={activeAccentColor}
               accentSoftColor={activeAccentSoftColor}
             />
