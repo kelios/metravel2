@@ -111,15 +111,33 @@ const getPrimaryCategory = (value: unknown): string => {
   return category || FALLBACK_CATEGORY
 }
 
+// "12", "№7", "136км", "12 km", "170м", "3." — user-entered marker numbers,
+// not real place names. Such tokens make terrible card titles / sort keys.
+const isJunkPlaceLabel = (value: string): boolean => {
+  const v = value.trim()
+  if (!v) return true
+  return /^№?\s*\d+([.,]\d+)?\s*(км|km|м|m)?\.?$/i.test(v)
+}
+
 const getPlaceTitle = (place: TravelCoords): string => {
   const maybeName = normalizeText((place as TravelCoords & { name?: unknown }).name)
-  if (maybeName) return maybeName
+  if (maybeName && !isJunkPlaceLabel(maybeName)) return maybeName
 
   const address = normalizeText(place.address)
-  if (!address) return 'Место без названия'
+  if (!address) return maybeName || 'Место без названия'
 
-  const firstPart = address.split(',').map((part) => part.trim()).filter(Boolean)[0]
-  return firstPart || address
+  const parts = address
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+  // Skip leading house-number / distance segments, keep the first 2 meaningful
+  // parts (e.g. street + locality) for a readable, sortable title.
+  const meaningful = parts.filter((part) => !isJunkPlaceLabel(part))
+  const picked = meaningful.slice(0, 2).join(', ')
+  if (picked) return picked
+
+  const category = getPrimaryCategory(place.categoryName)
+  return category !== FALLBACK_CATEGORY ? `${category} без названия` : 'Место без названия'
 }
 
 const getPlaceCountry = (place: TravelCoords): string => {

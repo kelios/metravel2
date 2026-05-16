@@ -41,6 +41,7 @@ Respect web interaction constraints:
 
 - Avoid nested button semantics on web.
 - Inside clickable cards, render secondary actions in a non-button wrapper with `role="button"`, keyboard handlers, and `data-card-action="true"` when needed.
+- On `/places`, keep filters scan-friendly: country filters above categories, stable card grid geometry, no nested cards, and no rendering of the full catalog at once.
 
 Verify visual changes before finishing:
 

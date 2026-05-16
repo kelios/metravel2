@@ -11,6 +11,8 @@ import {
   resolveNavigationActionKind,
 } from '@/components/navigation/navigationActionMeta';
 
+const IS_WEB = Platform.OS === 'web';
+
 type ActionChip = {
   key: string;
   label: string;
@@ -20,14 +22,7 @@ type ActionChip = {
   title?: string;
 };
 
-type InlineAction = {
-  key: string;
-  label: string;
-  icon: keyof typeof Feather.glyphMap;
-  onPress: () => void;
-  accessibilityLabel?: string;
-  title?: string;
-};
+type InlineAction = ActionChip;
 
 type Props = {
   title: string;
@@ -132,6 +127,64 @@ const LabeledActionChip = React.memo(function LabeledActionChip({
   );
 });
 
+const CardMeta = React.memo(function CardMeta({
+  showTitleInContent,
+  categoryLabel,
+  badges,
+  compact,
+  styles,
+}: {
+  showTitleInContent: boolean;
+  categoryLabel?: string | null;
+  badges: string[];
+  compact: boolean;
+  styles: Record<string, any>;
+}) {
+  const showBadges = badges.length > 0;
+  if (!categoryLabel && !showBadges) return null;
+
+  // Content layout: category is rendered as a pill in the title block above —
+  // here we only render the badges row.
+  if (showTitleInContent) {
+    if (!showBadges) return null;
+    return (
+      <View style={styles.detailRow}>
+        {badges.map((badge, index) => (
+          <View key={`${badge}-${index}`} style={styles.detailChip}>
+            <Text style={styles.detailChipText} numberOfLines={1}>
+              {badge}
+            </Text>
+          </View>
+        ))}
+      </View>
+    );
+  }
+
+  // Overlay layout: inline category + badges.
+  return (
+    <View style={styles.metaRow}>
+      {!!categoryLabel &&
+        (compact ? (
+          <View style={styles.metaChip}>
+            <Text style={styles.metaChipText} numberOfLines={1}>
+              {categoryLabel}
+            </Text>
+          </View>
+        ) : (
+          <Text style={styles.categoryText} numberOfLines={1}>
+            {categoryLabel}
+          </Text>
+        ))}
+      {showBadges &&
+        badges.map((badge, index) => (
+          <Text key={`${badge}-${index}`} style={styles.badgeText}>
+            {badge}
+          </Text>
+        ))}
+    </View>
+  );
+});
+
 const PlaceListCard: React.FC<Props> = ({
   title,
   imageUrl,
@@ -169,8 +222,7 @@ const PlaceListCard: React.FC<Props> = ({
   const [overflowVisible, setOverflowVisible] = useState(false);
 
   const hasCoord = !!coord;
-  const showBadges = badges.length > 0;
-  const isCompactWebCard = compact && Platform.OS === 'web';
+  const isCompactWebCard = compact && IS_WEB;
   const visibleMapActions = isCompactWebCard ? mapActions.slice(0, 1) : mapActions;
   const visibleInlineActions = isCompactWebCard ? inlineActions.slice(0, 1) : inlineActions;
   const overflowActions = isCompactWebCard ? [...mapActions.slice(1), ...inlineActions.slice(1)] : [];
@@ -202,7 +254,7 @@ const PlaceListCard: React.FC<Props> = ({
       webTouchAction={webTouchAction}
       contentSlot={
         <View style={styles.content}>
-          {showTitleInContent ? (
+          {showTitleInContent && (
             <View style={styles.titleBlock}>
               {!!categoryLabel && (
                 <View style={styles.categoryPill}>
@@ -215,46 +267,17 @@ const PlaceListCard: React.FC<Props> = ({
                 {title}
               </Text>
             </View>
-          ) : null}
+          )}
 
-          {(!!categoryLabel || showBadges) ? (
-            showTitleInContent ? (
-              showBadges ? (
-                <View style={styles.detailRow}>
-                  {badges.map((badge, index) => (
-                    <View key={`${badge}-${index}`} style={styles.detailChip}>
-                      <Text style={styles.detailChipText} numberOfLines={1}>
-                        {badge}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              ) : null
-            ) : (
-              <View style={styles.metaRow}>
-                {!!categoryLabel && (
-                  compact ? (
-                    <View style={styles.metaChip}>
-                      <Text style={styles.metaChipText} numberOfLines={1}>
-                        {categoryLabel}
-                      </Text>
-                    </View>
-                  ) : (
-                    <Text style={styles.categoryText} numberOfLines={1}>
-                      {categoryLabel}
-                    </Text>
-                  )
-                )}
-                {showBadges && badges.map((badge, index) => (
-                  <Text key={`${badge}-${index}`} style={styles.badgeText}>
-                    {badge}
-                  </Text>
-                ))}
-              </View>
-            )
-          ) : null}
+          <CardMeta
+            showTitleInContent={showTitleInContent}
+            categoryLabel={categoryLabel}
+            badges={badges}
+            compact={compact}
+            styles={styles}
+          />
 
-          {hasActionRow ? (
+          {hasActionRow && (
             <View style={styles.actionsRow}>
               {hasCoord && onCopyCoord && (
                 <LabeledActionChip
@@ -302,7 +325,7 @@ const PlaceListCard: React.FC<Props> = ({
                 />
               ))}
 
-              {overflowActions.length > 0 ? (
+              {overflowActions.length > 0 && (
                 <Menu
                   visible={overflowVisible}
                   onDismiss={closeOverflowMenu}
@@ -336,9 +359,9 @@ const PlaceListCard: React.FC<Props> = ({
                     />
                   ))}
                 </Menu>
-              ) : null}
+              )}
 
-              {showAddButton && addButtonPlacement === 'row' && onAddPoint ? (
+              {showAddButton && addButtonPlacement === 'row' && onAddPoint && (
                 <LabeledActionChip
                   accessibilityLabel={addLabel}
                   disabled={addDisabled || isAdding}
@@ -353,9 +376,9 @@ const PlaceListCard: React.FC<Props> = ({
                     <ActivityIndicator size="small" color={colors.primary} />
                   ) : null}
                 </LabeledActionChip>
-              ) : null}
+              )}
             </View>
-          ) : null}
+          )}
 
           {showAddButton && addButtonPlacement === 'button' && onAddPoint && (
             <CardActionPressable
@@ -373,7 +396,11 @@ const PlaceListCard: React.FC<Props> = ({
                 <ActivityIndicator size="small" color={colors.primary} />
               ) : (
                 <>
-                  <Feather name="map-pin" size={13} color={colors.primary} />
+                  <Feather
+                    name="bookmark"
+                    size={14}
+                    color={colors.primaryDark ?? colors.primary}
+                  />
                   <Text style={styles.addButtonText} numberOfLines={1}>
                     {addLabel}
                   </Text>
@@ -385,7 +412,7 @@ const PlaceListCard: React.FC<Props> = ({
       }
       mediaProps={{
         blurBackground: !!imageUrl,
-        allowCriticalWebBlur: Platform.OS === 'web',
+        allowCriticalWebBlur: IS_WEB,
         blurRadius: 16,
         loading: 'lazy',
         priority: 'low',
@@ -400,24 +427,33 @@ const createStyles = (
   colors: ReturnType<typeof useThemedColors>,
   compact: boolean,
   showTitleInContent: boolean,
-) =>
-  StyleSheet.create({
+) => {
+  // Modern compact spacing scale (4pt grid).
+  const padX = compact ? 12 : showTitleInContent ? 16 : 14
+  const padY = compact ? 10 : showTitleInContent ? 14 : 12
+  const stackGap = compact ? 6 : showTitleInContent ? 10 : 8
+  const chipPadX = compact ? 9 : 11
+  const chipPadY = compact ? 4 : 5
+  const webTransition = (props: string) =>
+    Platform.select({ web: { transition: props } as any })
+
+  return StyleSheet.create({
     contentContainer: {
-      paddingHorizontal: compact ? 10 : showTitleInContent ? 14 : 12,
-      paddingTop: compact ? 8 : showTitleInContent ? 12 : 10,
-      paddingBottom: compact ? 10 : showTitleInContent ? 14 : 12,
+      paddingHorizontal: padX,
+      paddingTop: padY,
+      paddingBottom: padY,
     },
     content: {
-      gap: compact ? 4 : showTitleInContent ? 8 : 6,
+      gap: stackGap,
     },
     titleBlock: {
-      gap: compact ? 4 : 8,
+      gap: compact ? 6 : 8,
     },
     titleText: {
       fontSize: compact ? 15 : 18,
-      lineHeight: compact ? 19 : 23,
+      lineHeight: compact ? 20 : 24,
       fontWeight: '800',
-      letterSpacing: -0.35,
+      letterSpacing: compact ? -0.3 : -0.45,
       color: colors.text,
     },
     metaRow: {
@@ -430,40 +466,47 @@ const createStyles = (
       flexDirection: 'row',
       flexWrap: 'wrap',
       alignItems: 'center',
-      gap: 8,
+      gap: compact ? 6 : 8,
     },
+    // Plain inline category text (overlay layout, non-compact).
     categoryText: {
-      fontSize: compact ? 11 : 12,
+      fontSize: compact ? 11 : 12.5,
+      fontWeight: '600',
+      letterSpacing: 0.1,
       color: colors.textMuted,
     },
     badgeText: {
       fontSize: compact ? 11 : 12,
+      fontWeight: '600',
       color: colors.textMuted,
     },
+    // Accent category pill (content layout title block).
     categoryPill: {
       alignSelf: 'flex-start',
       maxWidth: '100%',
-      paddingHorizontal: compact ? 8 : 10,
-      paddingVertical: compact ? 4 : 5,
+      paddingHorizontal: chipPadX,
+      paddingVertical: chipPadY,
       borderRadius: 999,
       backgroundColor: colors.primarySoft ?? colors.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: colors.primaryAlpha30 ?? colors.borderLight,
     },
     categoryPillText: {
-      fontSize: compact ? 10 : 11,
-      lineHeight: compact ? 12 : 14,
+      fontSize: compact ? 10.5 : 11.5,
+      lineHeight: compact ? 13 : 15,
       color: colors.primaryDark ?? colors.primary,
       fontWeight: '700',
-      letterSpacing: 0.1,
+      letterSpacing: 0.4,
+      textTransform: 'uppercase',
     },
+    // Neutral info pill (badges in content layout).
     detailChip: {
       maxWidth: '100%',
-      paddingHorizontal: compact ? 8 : 10,
-      paddingVertical: compact ? 4 : 5,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: chipPadX,
+      paddingVertical: chipPadY,
       borderRadius: 999,
       backgroundColor: colors.backgroundSecondary,
-      borderWidth: 1,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
     },
     detailChipText: {
@@ -471,109 +514,111 @@ const createStyles = (
       lineHeight: compact ? 14 : 16,
       color: colors.textMuted,
       fontWeight: '600',
+      letterSpacing: 0.1,
     },
+    // Subtle ghost pill (category in overlay/compact layout).
     metaChip: {
       maxWidth: '100%',
-      paddingHorizontal: compact ? 7 : 8,
+      paddingHorizontal: compact ? 8 : 9,
       paddingVertical: compact ? 3 : 4,
       borderRadius: 999,
       backgroundColor: colors.backgroundSecondary,
-      borderWidth: 0,
-      borderColor: 'transparent',
     },
     metaChipText: {
-      fontSize: 10,
-      lineHeight: 12,
+      fontSize: 10.5,
+      lineHeight: 13,
       color: colors.textMuted,
-      fontWeight: '600',
+      fontWeight: '700',
+      letterSpacing: 0.2,
     },
     actionsRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: compact ? 4 : 6,
+      alignItems: 'flex-start',
+      gap: compact ? 6 : 8,
+      marginTop: 2,
     },
     iconBtnPressed: {
-      opacity: 0.7,
+      opacity: 0.65,
+      ...Platform.select({ web: { transform: 'scale(0.97)' as any } }),
     },
     iconBtnDisabled: {
-      opacity: 0.5,
+      opacity: 0.45,
     },
+    // Vertical icon+label action tile.
     mapActionChip: {
       alignItems: 'center',
       justifyContent: 'flex-start',
-      width: compact ? 54 : 60,
-      minHeight: compact ? 52 : 58,
+      width: compact ? 56 : 62,
+      minHeight: compact ? 54 : 60,
       paddingHorizontal: 2,
-      paddingVertical: compact ? 3 : 4,
-      borderRadius: 12,
-      gap: 4,
-      ...Platform.select({
-        web: {
-          cursor: 'pointer' as any,
-          transition: 'background-color 0.15s ease, transform 0.15s ease',
-        },
-      }),
+      paddingVertical: compact ? 4 : 5,
+      borderRadius: 14,
+      gap: 5,
+      ...webTransition('background-color 0.16s ease, transform 0.16s ease'),
     },
     mapActionIconBubble: {
-      width: compact ? 32 : 36,
-      height: compact ? 32 : 36,
+      width: compact ? 34 : 38,
+      height: compact ? 34 : 38,
       borderRadius: 999,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.backgroundSecondary,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
     },
     mapActionLabel: {
       fontSize: compact ? 10 : 11,
       lineHeight: compact ? 12 : 14,
       fontWeight: '600',
-      color: colors.text,
+      color: colors.textMuted,
       textAlign: 'center',
-      maxWidth: compact ? 54 : 60,
+      maxWidth: compact ? 56 : 62,
     },
+    // Primary-soft filled "add" button (modern).
     addButton: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: compact ? 5 : 6,
-      paddingVertical: compact ? 5 : 6,
-      paddingHorizontal: compact ? 10 : 12,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: colors.borderLight ?? colors.border,
-      backgroundColor: 'transparent',
-      ...Platform.select({
-        web: {
-          cursor: 'pointer' as any,
-          transition: 'opacity 0.15s ease',
-        },
-      }),
+      gap: compact ? 6 : 7,
+      paddingVertical: compact ? 8 : 9,
+      paddingHorizontal: compact ? 14 : 16,
+      borderRadius: 999,
+      backgroundColor: colors.primarySoft ?? colors.backgroundSecondary,
+      ...webTransition('background-color 0.16s ease, opacity 0.16s ease, transform 0.16s ease'),
     },
     addButtonPressed: {
-      opacity: 0.7,
+      opacity: 0.85,
+      ...Platform.select({ web: { transform: 'scale(0.985)' as any } }),
     },
     addButtonDisabled: {
-      borderColor: colors.borderLight ?? colors.border,
-      opacity: 0.5,
+      opacity: 0.45,
     },
     addButtonText: {
-      fontSize: compact ? 11 : 12,
-      fontWeight: '600',
-      color: colors.primary,
+      fontSize: compact ? 12 : 13,
+      fontWeight: '700',
+      letterSpacing: 0.1,
+      color: colors.primaryDark ?? colors.primary,
     },
     overflowMenuContent: {
       backgroundColor: colors.surface,
-      borderWidth: 1,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
-      borderRadius: 12,
-      minWidth: compact ? 180 : 200,
+      borderRadius: 14,
+      minWidth: compact ? 184 : 208,
+      ...Platform.select({
+        web: { boxShadow: '0 8px 28px rgba(15,23,42,0.16)' as any },
+      }),
     },
     overflowMenuItem: {
-      minHeight: compact ? 40 : 44,
+      minHeight: compact ? 42 : 46,
     },
     overflowMenuItemTitle: {
       fontSize: compact ? 13 : 14,
+      fontWeight: '600',
       color: colors.text,
     },
-  });
+  })
+}
 
 export default React.memo(PlaceListCard);

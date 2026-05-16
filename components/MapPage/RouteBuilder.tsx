@@ -103,7 +103,7 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
           Кликните на карте или введите адрес старта
         </Text>
       )}
-      {startAddress && !endAddress && (
+      {Boolean(startAddress) && !endAddress && (
         <Text style={styles.hint} testID="route-hint-end">
           Теперь выберите точку финиша
         </Text>

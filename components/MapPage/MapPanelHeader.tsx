@@ -7,7 +7,6 @@ import { restartMapOnboarding } from '@/components/MapPage/MapOnboarding'
 
 type PanelTab = 'search' | 'route' | 'travels'
 
-const IS_WEB = Platform.OS === 'web'
 const BADGE_COUNT_CAP = 999
 const PRESSED_OPACITY_07 = { opacity: 0.7 }
 
@@ -46,10 +45,11 @@ function TabButton({
   badge?: number
 }) {
   const active = activeTab === tab
+  const isWeb = Platform.OS === 'web'
   return (
     <Pressable
       testID={`map-panel-tab-${tab}`}
-      {...(IS_WEB && tab === 'travels'
+      {...(isWeb && tab === 'travels'
         ? ({ 'data-testid': 'map-panel-tab-travels' } as any)
         : null)}
       style={({ pressed }) => [
@@ -98,7 +98,7 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
     resetFilters?.()
   }, [selectSearchTab, resetFilters])
 
-  const showDesktopActions = IS_WEB && !isMobile
+  const showDesktopActions = Platform.OS === 'web' && !isMobile
 
   return (
     <View style={styles.tabsContainer}>

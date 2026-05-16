@@ -82,6 +82,7 @@ Skills:
 - Routes/pages: `app/`, `screens/`.
 - Reusable UI: `components/ui`, затем feature-компоненты в `components/`.
 - Business logic: `hooks/`, `services/`, `api/`, `utils/`.
+- Places catalog: `docs/features/places.md`, `screens/tabs/PlacesScreen.tsx`, `api/places.ts`, `utils/placesCatalog.ts`, `components/places/`.
 - Design tokens: `constants/designSystem.ts`, web CSS variables in `app/global.css`.
 - External navigation chokepoint: `utils/externalLinks.ts`.
 - Tests: `__tests__/` for Jest, `e2e/` for Playwright.
