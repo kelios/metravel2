@@ -62,8 +62,6 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const contentPaddingBottom = useMemo(() => DESIGN_TOKENS.spacing.xl, []);
-
     const scrollRef = useRef<ScrollView | null>(null);
     const plusAnchorRef = useRef<View | null>(null);
 
@@ -111,6 +109,14 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
     const handleChange = React.useCallback((name: keyof TravelFormData, value: any) => {
         setFormData(prev => ({ ...prev, [name]: value }));
     }, [setFormData]);
+
+    // Стабильные обработчики, чтобы тяжёлый lazy ArticleEditor не пере-рендерился из-за новой ссылки onChange.
+    const handlePlusChange = React.useCallback((value: string) => handleChange('plus', value), [handleChange]);
+    const handleMinusChange = React.useCallback((value: string) => handleChange('minus', value), [handleChange]);
+    const handleRecommendationChange = React.useCallback(
+        (value: string) => handleChange('recommendation', value),
+        [handleChange],
+    );
 
     const recommendationFieldsFilled = useMemo(() => {
         const keys: (keyof TravelFormData)[] = ['plus', 'minus', 'recommendation'];
@@ -170,7 +176,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                 <ScrollView
                     ref={scrollRef}
                     style={styles.content}
-                    contentContainerStyle={[styles.contentContainer, { paddingBottom: contentPaddingBottom }]}
+                    contentContainerStyle={[styles.contentContainer, { paddingBottom: DESIGN_TOKENS.spacing.xl }]}
                     keyboardShouldPersistTaps="handled"
                 >
                     <View style={styles.contentInner}>
@@ -197,7 +203,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                                     key={`plus-${idTravelStr ?? 'new'}`}
                                     label="Плюсы"
                                     content={formData.plus ?? ''}
-                                    onChange={(val: string) => handleChange('plus', val as any)}
+                                    onChange={handlePlusChange}
                                     idTravel={idTravelStr}
                                     variant="compact"
                                 />
@@ -211,7 +217,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                                     key={`minus-${idTravelStr ?? 'new'}`}
                                     label="Минусы"
                                     content={formData.minus ?? ''}
-                                    onChange={(val: string) => handleChange('minus', val as any)}
+                                    onChange={handleMinusChange}
                                     idTravel={idTravelStr}
                                     variant="compact"
                                 />
@@ -225,7 +231,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                                     key={`rec-${idTravelStr ?? 'new'}`}
                                     label="Рекомендации"
                                     content={formData.recommendation ?? ''}
-                                    onChange={(val: string) => handleChange('recommendation', val as any)}
+                                    onChange={handleRecommendationChange}
                                     idTravel={idTravelStr}
                                     variant="compact"
                                 />

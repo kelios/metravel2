@@ -84,7 +84,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
 
     const [isTipOpen, setIsTipOpen] = useState(false);
     const hasTip = !!tipBody && tipBody.trim().length > 0;
-    const resolvedTipTitle = useMemo(() => tipTitle ?? 'Совет', [tipTitle]);
+    const resolvedTipTitle = tipTitle ?? 'Совет';
 
     const [hoveredAction, setHoveredAction] = useState<string | null>(null);
     const showHover = useCallback((id: string) => {

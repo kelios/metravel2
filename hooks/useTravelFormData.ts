@@ -91,7 +91,6 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
   const [loadError, setLoadError] = useState<{ status: number; message: string } | null>(null);
-  const [_dataVersion, setDataVersion] = useState(0);
   const [isManualSaveInFlight, setIsManualSaveInFlight] = useState(false);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const manualSaveInFlightRef = useRef(false);
@@ -339,11 +338,6 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         await uploadPendingMarkerImages(markersForUpload);
       })();
 
-      // ✅ FIX: Обновляем версию данных при получении с сервера только когда реально меняем форму
-      if (!shouldSkipFormReset) {
-        setDataVersion(prev => prev + 1);
-      }
-
       // When a new travel is created and receives an id, invalidate "travels" lists
       // so "Мои путешествия" can show the new draft without a hard refresh.
       if (!hadId && hasId && !didInvalidateAfterCreateRef.current) {
@@ -381,16 +375,19 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         return;
       }
 
-      // ✅ FIX: Подробное логирование для мониторинга
+      // ✅ FIX: Подробное логирование для мониторинга.
+      // Снапшот только для лога — читаем из ref, чтобы не пересоздавать колбэк
+      // (и onError автосейва) на каждое изменение формы.
+      const snapshot = formDataRef.current;
       const errorDetails = {
         message: error.message,
         stack: error.stack,
         travelId: stableTravelId,
         timestamp: new Date().toISOString(),
         formDataSnapshot: {
-          id: formState.data.id,
-          name: formState.data.name,
-          hasMarkers: Array.isArray(formState.data.coordsMeTravel) && formState.data.coordsMeTravel.length > 0,
+          id: snapshot.id,
+          name: snapshot.name,
+          hasMarkers: Array.isArray(snapshot.coordsMeTravel) && snapshot.coordsMeTravel.length > 0,
         }
       };
 
@@ -407,7 +404,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
       showToast('Ошибка автосохранения', 'error');
     },
-    [showToast, stableTravelId, formState.data]
+    [showToast, stableTravelId]
   );
 
   const autosave = useImprovedAutoSave(formState.data, initialFormData, {

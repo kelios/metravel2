@@ -69,8 +69,6 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const contentPaddingBottom = useMemo(() => DESIGN_TOKENS.spacing.xl, []);
-
     const scrollRef = useRef<ScrollView | null>(null);
     const categoriesAnchorRef = useRef<View | null>(null);
 
@@ -201,7 +199,7 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                 <ScrollView
                     ref={scrollRef}
                     style={styles.content}
-                    contentContainerStyle={[styles.contentContainer, { paddingBottom: contentPaddingBottom }]}
+                    contentContainerStyle={[styles.contentContainer, { paddingBottom: DESIGN_TOKENS.spacing.xl }]}
                     keyboardShouldPersistTaps="handled"
                 >
                     <View style={styles.contentInner}>
@@ -268,12 +266,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     contentInner: {
         width: '100%',
         maxWidth: 980,
-    },
-    groupHint: {
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: colors.textMuted,
-        marginBottom: DESIGN_TOKENS.spacing.md,
-        lineHeight: 20,
     },
 });
 

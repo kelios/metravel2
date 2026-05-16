@@ -89,6 +89,57 @@ interface UseTravelWizardOptions {
   stepStorageTtlMs?: number;
 }
 
+// Платформенный драйвер хранилища шага (web → localStorage, native → AsyncStorage).
+const stepStorage = {
+  async read(key: string): Promise<string | null> {
+    if (Platform.OS === 'web') return localStorage.getItem(key);
+    return AsyncStorage.getItem(key);
+  },
+  async write(key: string, value: string): Promise<void> {
+    if (Platform.OS === 'web') {
+      localStorage.setItem(key, value);
+      return;
+    }
+    await AsyncStorage.setItem(key, value);
+  },
+  async remove(key: string): Promise<void> {
+    if (Platform.OS === 'web') {
+      localStorage.removeItem(key);
+      return;
+    }
+    await AsyncStorage.removeItem(key);
+  },
+};
+
+type ParsedStep = { step: number | null; expired: boolean };
+
+// Чистый разбор сохранённого значения шага.
+// Поддерживает JSON {step,timestamp} с TTL и legacy-формат (числовая строка).
+function parseStoredStep(
+  raw: string,
+  normalize: (value: unknown) => number,
+  ttlMs: number,
+): ParsedStep {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { step: normalize(raw), expired: false };
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return { step: normalize(raw), expired: false };
+  }
+
+  const obj = parsed as { step?: unknown; timestamp?: unknown };
+  const ts = typeof obj.timestamp === 'number' ? obj.timestamp : Number(obj.timestamp);
+  if (!Number.isFinite(ts) || Date.now() - ts > ttlMs) {
+    return { step: null, expired: true };
+  }
+
+  return { step: obj.step != null ? normalize(obj.step) : null, expired: false };
+}
+
 export function useTravelWizard(options: UseTravelWizardOptions) {
   const {
     totalSteps = 6,
@@ -125,46 +176,15 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
   const getStoredStep = useCallback(async (): Promise<number | null> => {
     if (!stepStorageKey) return null;
     try {
-      if (Platform.OS === 'web') {
-        const raw = localStorage.getItem(stepStorageKey);
-        if (!raw) return null;
-        try {
-          const parsed: unknown = JSON.parse(raw);
-          if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-            // Backward compatible: raw numeric string.
-            return normalizeStep(raw);
-          }
-          const parsedObj = parsed as { step?: unknown; timestamp?: unknown };
-          const ts = typeof parsedObj?.timestamp === 'number' ? parsedObj.timestamp : Number(parsedObj?.timestamp);
-          if (!Number.isFinite(ts) || Date.now() - ts > stepStorageTtlMs) {
-            localStorage.removeItem(stepStorageKey);
-            return null;
-          }
-          return parsedObj?.step != null ? normalizeStep(parsedObj.step) : null;
-        } catch {
-          // Backward compatible: raw numeric string.
-          return normalizeStep(raw);
-        }
-      }
-      const raw = await AsyncStorage.getItem(stepStorageKey);
+      const raw = await stepStorage.read(stepStorageKey);
       if (!raw) return null;
-      try {
-        const parsed: unknown = JSON.parse(raw);
-        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-          // Backward compatible: raw numeric string.
-          return normalizeStep(raw);
-        }
-        const parsedObj = parsed as { step?: unknown; timestamp?: unknown };
-        const ts = typeof parsedObj?.timestamp === 'number' ? parsedObj.timestamp : Number(parsedObj?.timestamp);
-        if (!Number.isFinite(ts) || Date.now() - ts > stepStorageTtlMs) {
-          await AsyncStorage.removeItem(stepStorageKey);
-          return null;
-        }
-        return parsedObj?.step != null ? normalizeStep(parsedObj.step) : null;
-      } catch {
-        // Backward compatible: raw numeric string.
-        return normalizeStep(raw);
+
+      const { step, expired } = parseStoredStep(raw, normalizeStep, stepStorageTtlMs);
+      if (expired) {
+        await stepStorage.remove(stepStorageKey);
+        return null;
       }
+      return step;
     } catch {
       return null;
     }
@@ -177,11 +197,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
       timestamp: Date.now(),
     });
     try {
-      if (Platform.OS === 'web') {
-        localStorage.setItem(stepStorageKey, payload);
-        return;
-      }
-      await AsyncStorage.setItem(stepStorageKey, payload);
+      await stepStorage.write(stepStorageKey, payload);
     } catch {
       // storage might be unavailable
     }
@@ -190,11 +206,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
   const clearPersistedStep = useCallback(async () => {
     if (!stepStorageKey) return;
     try {
-      if (Platform.OS === 'web') {
-        localStorage.removeItem(stepStorageKey);
-        return;
-      }
-      await AsyncStorage.removeItem(stepStorageKey);
+      await stepStorage.remove(stepStorageKey);
     } catch {
       // ignore
     }

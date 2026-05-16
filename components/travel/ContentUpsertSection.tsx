@@ -43,8 +43,6 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                                                    }) => {
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
 
-    // ✅ УЛУЧШЕНИЕ: Валидация в реальном времени
-    const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
     const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
     const [fieldPositions, setFieldPositions] = useState<Record<string, number>>({});
     const scrollRef = useRef<ScrollView>(null);
@@ -63,38 +61,30 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
     const { width: viewportWidth } = useWindowDimensions();
     const isCompactFullscreenHeader = viewportWidth < 390;
 
-    useEffect(() => {
-        const result = validateTravelForm({
-            name: formData.name,
-            description: formData.description,
-            countries: formData.countries,
-            categories: formData.categories,
-            year: formData.year,
-            number_days: formData.number_days,
-            number_peoples: formData.number_peoples,
-            youtube_link: formData.youtube_link,
-        } as any);
-        setValidationErrors(result.errors);
-    }, [
-        formData.name,
-        formData.description,
-        formData.countries,
-        formData.categories,
-        formData.year,
-        formData.number_days,
-        formData.number_peoples,
-        formData.youtube_link,
-    ]);
-
-    const descriptionPlainLength = useMemo(() => {
-        const raw = formData.description ?? '';
-        const withoutTags = String(raw)
-            .replace(/<[^>]*>/g, ' ')
-            .replace(/&nbsp;/gi, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-        return withoutTags.length;
-    }, [formData.description]);
+    // Производное значение — считаем через useMemo, без лишнего state + effect.
+    const validationErrors = useMemo<ValidationError[]>(
+        () =>
+            validateTravelForm({
+                name: formData.name,
+                description: formData.description,
+                countries: formData.countries,
+                categories: formData.categories,
+                year: formData.year,
+                number_days: formData.number_days,
+                number_peoples: formData.number_peoples,
+                youtube_link: formData.youtube_link,
+            } as any).errors,
+        [
+            formData.name,
+            formData.description,
+            formData.countries,
+            formData.categories,
+            formData.year,
+            formData.number_days,
+            formData.number_peoples,
+            formData.youtube_link,
+        ],
+    );
 
     const descriptionPlainText = useMemo(() => {
         const raw = formData.description ?? '';
@@ -104,6 +94,8 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             .replace(/\s+/g, ' ')
             .trim();
     }, [formData.description]);
+
+    const descriptionPlainLength = descriptionPlainText.length;
 
     const descriptionStatusText = useMemo(() => {
         if (descriptionPlainLength === 0) {

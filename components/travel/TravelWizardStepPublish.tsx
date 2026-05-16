@@ -144,7 +144,6 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const [primaryOverrideLabel, setPrimaryOverrideLabel] = useState<string | null>(null);
     const instagramOAuthResolution = useMemo(() => getInstagramOAuthResolution(), []);
 
-    const contentPaddingBottom = useMemo(() => DESIGN_TOKENS.spacing.xl, []);
     const {
         editableInstagramCaption,
         editableInstagramHashtags,
@@ -550,7 +549,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 <ScrollView
                     ref={scrollRef}
                     style={styles.content}
-                    contentContainerStyle={[styles.contentContainer, { paddingBottom: contentPaddingBottom }]}
+                    contentContainerStyle={[styles.contentContainer, { paddingBottom: DESIGN_TOKENS.spacing.xl }]}
                     keyboardShouldPersistTaps="handled"
                 >
                     <View style={styles.contentInner}>
