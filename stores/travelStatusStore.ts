@@ -62,6 +62,7 @@ export const getTravelStatusCalendarDate = (
     month: entry.travelMonth,
     monthName: entry.travelMonthName,
     seed: entry.id,
+    allowYearOnly: true,
   })
 }
 

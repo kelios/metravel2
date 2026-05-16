@@ -49,6 +49,28 @@ function normalizeGalleryUrls(raw: unknown): string[] {
     .filter((url) => url.length > 0);
 }
 
+function normalizeGalleryIds(raw: unknown): number[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => {
+      if (item && typeof item === 'object') {
+        const rawId = (item as AnyRecord).id ?? (item as AnyRecord).pk ?? null;
+        const parsed = Number(rawId);
+        if (Number.isFinite(parsed)) return parsed;
+      }
+
+      const url = typeof item === 'string'
+        ? item
+        : item && typeof item === 'object' && typeof (item as AnyRecord).url === 'string'
+          ? String((item as AnyRecord).url)
+          : '';
+      const match = url.match(/(?:^|\/)gallery\/(\d+)(?:\/|$)/i);
+      const parsed = match?.[1] ? Number(match[1]) : NaN;
+      return Number.isFinite(parsed) ? parsed : null;
+    })
+    .filter((id): id is number => Number.isFinite(id));
+}
+
 function parseUploadResponse(rawBody: string): { id: number | null; url: string | null } {
   if (!rawBody.trim()) return { id: null, url: null };
 
@@ -238,6 +260,7 @@ test.describe('Travel persistence', () => {
       thumbs200ForCollectionArr: galleryIds,
       travelImageThumbUrlArr: galleryIds,
       travelImageThumbUrArr: galleryIds,
+      travelImageAddress: galleryIds,
       coordsMeTravel: [
         {
           id: null,
@@ -264,6 +287,34 @@ test.describe('Travel persistence', () => {
     if (galleryReady) {
       const galleryFromRead = normalizeGalleryUrls(readback?.gallery);
       expect(galleryFromRead.length).toBeGreaterThanOrEqual(2);
+
+      const reversedImages = [...uploadedImages].reverse();
+      const reversedIds = reversedImages.map((img) => img.id);
+      await createOrUpdateTravel(ctx, {
+        ...payload,
+        id: travelId,
+        gallery: reversedImages.map((img) => ({ id: img.id, url: img.url })),
+        thumbs200ForCollectionArr: reversedIds,
+        travelImageThumbUrlArr: reversedIds,
+        travelImageThumbUrArr: reversedIds,
+        travelImageAddress: reversedIds,
+        coordsMeTravel: [
+          {
+            id: null,
+            lat: 53.90454,
+            lng: 27.56152,
+            country: countryId ? Number(countryId) : null,
+            address: 'Minsk center',
+            categories: categoryId ? [Number(categoryId)] : [],
+            image: coverUrl,
+          },
+        ],
+        travel_image_thumb_url: coverUrl,
+        travel_image_thumb_small_url: coverUrl,
+      });
+
+      const reorderedReadback = await readTravel(ctx, travelId);
+      expect(normalizeGalleryIds(reorderedReadback?.gallery).slice(0, 2)).toEqual(reversedIds);
     }
 
     const routeFromRead = Array.isArray(readback?.coordsMeTravel) ? readback.coordsMeTravel : [];

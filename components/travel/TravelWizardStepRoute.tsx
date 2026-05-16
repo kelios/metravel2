@@ -316,9 +316,11 @@ function useManualPointForm() {
     });
   }, []);
 
-  const reset = useCallback(() => {
+  const reset = useCallback((options?: { preservePendingPhoto?: boolean }) => {
     setState((current) => {
-      revokeManualPreview(current.photoPreviewUrl);
+      if (!options?.preservePendingPhoto) {
+        revokeManualPreview(current.photoPreviewUrl);
+      }
       return EMPTY_MANUAL_POINT;
     });
   }, []);
@@ -872,7 +874,7 @@ function TravelWizardStepRoute({
     }
 
     updateMarkers(updatedMarkers);
-    resetManualPoint();
+    resetManualPoint({ preservePendingPhoto: Boolean(manualPointState.photoPreviewUrl) });
     setManualPointVisible(false);
   }, [
     countries,

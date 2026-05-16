@@ -2,6 +2,7 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import TravelWizardStepRoute from '@/components/travel/TravelWizardStepRoute';
 import { EXIF_IMAGE_INPUT_ACCEPT } from '@/utils/exifGps';
+import { getPendingImageFile, removePendingImageFile } from '@/utils/pendingImageFiles';
 import { Platform } from 'react-native';
 
 const ORIGINAL_PLATFORM_OS = Platform.OS;
@@ -41,6 +42,18 @@ jest.mock('@/components/forms/MultiSelectField', () => {
         },
     };
 });
+
+jest.mock('@/utils/exifGps', () => {
+    const actual = jest.requireActual('@/utils/exifGps');
+    return {
+        ...actual,
+        extractGpsFromImageFile: jest.fn(async () => ({ lat: 53.9, lng: 27.56 })),
+    };
+});
+
+jest.mock('@/utils/webImageUpload', () => ({
+    prepareWebImageFileForUpload: jest.fn(async (file: File) => file),
+}));
 
 // Mock WebMapComponent
 jest.mock('@/components/travel/WebMapComponent', () => ({
@@ -133,6 +146,15 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
         jest.clearAllMocks();
         mockMultiSelectField.mockClear();
         Object.defineProperty(Platform, 'OS', { value: ORIGINAL_PLATFORM_OS });
+        removePendingImageFile('blob:https://example.com/manual-point');
+        Object.defineProperty(global.URL, 'createObjectURL', {
+            configurable: true,
+            value: jest.fn(() => 'blob:https://example.com/manual-point'),
+        });
+        Object.defineProperty(global.URL, 'revokeObjectURL', {
+            configurable: true,
+            value: jest.fn(),
+        });
     });
 
     afterEach(() => {
@@ -329,6 +351,46 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
             await waitFor(() => {
                 expect(mockSetMarkers).toHaveBeenCalled();
             });
+        });
+
+        it('сохраняет pending-файл фото после переноса preview в маркер', async () => {
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
+            const mockSetMarkers = jest.fn();
+            const file = new File(['image'], 'gps-photo.jpg', { type: 'image/jpeg' });
+
+            const screen = render(
+                <TravelWizardStepRoute
+                    {...defaultProps}
+                    setMarkers={mockSetMarkers}
+                />
+            );
+
+            fireEvent.press(screen.getByText('Добавить точку вручную'));
+            const fileInputs = screen.UNSAFE_queryAllByType?.('input' as any) ?? [];
+            const fileInput = fileInputs.find((node: any) => node?.props?.type === 'file');
+            expect(fileInput).toBeTruthy();
+
+            await waitFor(() => {
+                fireEvent(fileInput, 'change', { target: { files: [file], value: 'gps-photo.jpg' } });
+            });
+
+            await waitFor(() => {
+                expect(getPendingImageFile('blob:https://example.com/manual-point')).toBe(file);
+            });
+
+            fireEvent.press(screen.getByTestId('travel-wizard.step-route.manual.add'));
+
+            await waitFor(() => {
+                expect(mockSetMarkers).toHaveBeenCalledWith(
+                    expect.arrayContaining([
+                        expect.objectContaining({
+                            image: 'blob:https://example.com/manual-point',
+                        }),
+                    ])
+                );
+            });
+            expect(getPendingImageFile('blob:https://example.com/manual-point')).toBe(file);
+            expect(global.URL.revokeObjectURL).not.toHaveBeenCalledWith('blob:https://example.com/manual-point');
         });
 
         it('НЕ должен добавить точку с невалидными координатами', () => {

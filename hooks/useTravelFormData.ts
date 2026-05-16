@@ -183,6 +183,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         travelImageThumbUrlArr: [...normalizedGalleryIds],
         // Backend compatibility: some deployments still validate the legacy typo field.
         travelImageThumbUrArr: [...normalizedGalleryIds],
+        travelImageAddress: [...normalizedGalleryIds],
         travel_image_thumb_url: sanitizeCoverUrl(mergedData.travel_image_thumb_url),
         travel_image_thumb_small_url: sanitizeCoverUrl(mergedData.travel_image_thumb_small_url),
       });

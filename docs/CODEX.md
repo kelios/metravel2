@@ -14,8 +14,9 @@
 - `$metravel-feature-builder`: используй для фич, багфиксов, рефакторинга, API-логики, hooks, services и SEO.
 - `$metravel-ui-guardrails`: добавляй при любых видимых UI-изменениях, работе с media, icons, placeholders, tokens или external links.
 - `$metravel-release-checks`: используй при выборе проверок, подготовке PR, release/deploy и production web validation.
+- `$metravel-devops-agent`: используй для подготовки, запуска и проверки deploy на `dev`, `preprod` или `prod`, включая preflight, secret hygiene, server-path safety и post-deploy validation.
 - `$metravel-docs-maintainer`: используй при изменении `docs/`, `AGENTS.md`, `.codex/skills` или правил работы Codex.
-- `$metravel-agent-workflow`: используй для координации ролей business analyst, system architect, designer, programmer, QA и reviewer.
+- `$metravel-agent-workflow`: используй для координации ролей business analyst, system architect, designer, programmer, QA, reviewer и DevOps.
 - `$metravel-business-analyst`: используй для превращения продуктовой идеи в feature brief, user stories, acceptance criteria, non-goals, metrics и risks.
 - `$metravel-system-architect`: используй для technical design, review diff, risk mapping, validation plan и безопасного разбиения работ.
 - `$metravel-qa-agent`: используй для read-only тестирования, browser/e2e exploration, bug reports и re-test фиксов.
@@ -32,9 +33,9 @@
 | Видимый UI, media, icons, tokens | всё из feature-контекста + `$metravel-ui-guardrails` | проверка в браузере на web, screenshot, отсутствие новых console errors |
 | External links | `docs/RULES.md`, `docs/TESTING.md`, `utils/externalLinks.ts` | никаких direct `window.open(...)` и `Linking.openURL(...)` вне chokepoint |
 | SEO / route pages | `docs/DEVELOPMENT.md` SEO-раздел | `buildCanonicalUrl`, `buildOgImageUrl`, `LazyInstantSEO` |
-| Release / deploy / performance | `docs/RELEASE.md`, `docs/PRODUCTION_CHECKLIST.md`, `$metravel-release-checks` | production build/export, реальные URL для post-deploy проверок |
+| Release / deploy / performance | `docs/RELEASE.md`, `docs/PRODUCTION_CHECKLIST.md`, `$metravel-release-checks`, `$metravel-devops-agent` | production build/export, explicit deploy target, secret hygiene, реальные URL для post-deploy проверок |
 | Docs / skills | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, этот файл | обновляй существующие canonical docs, не создавай одноразовые отчеты |
-| Multi-agent workflow | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, этот файл, нужные role skills | роли работают по контрактам; QA и BA не меняют код; programmer чинит подтвержденные баги; reviewer проверяет diff и validation |
+| Multi-agent workflow | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, этот файл, нужные role skills | роли работают по контрактам; QA и BA не меняют код; programmer чинит подтвержденные баги; reviewer проверяет diff и validation; DevOps деплоит только при явном target env |
 
 Если задача затрагивает несколько строк таблицы, бери объединение контекста, но не загружай справки, которые не помогают текущему решению.
 
@@ -50,6 +51,7 @@
 4. `$metravel-feature-builder` реализует минимальный diff по утвержденному design/brief.
 5. `$metravel-qa-agent` тестирует сценарий read-only и создает `Bug Report` или `QA Pass`.
 6. `$metravel-system-architect` в review mode проверяет findings, diff, проверки, known risks и соответствие правилам.
+7. `$metravel-devops-agent` готовит и выполняет deploy только при явном запросе на deploy, с environment gate, preflight и post-deploy validation.
 
 Стандартный bug loop:
 
@@ -62,6 +64,7 @@
 
 - BA, QA и reviewer по умолчанию не меняют код.
 - Programmer не начинает реализацию без bug report, feature brief или явного user request.
+- DevOps agent не деплоит `prod` без явного production deploy запроса и не меняет серверные/SSL пути без проверки на целевом host.
 - Designer не создает отдельную дизайн-систему: использует `components/ui`, `DESIGN_TOKENS`, Feather icons и существующие feature-компоненты.
 - Orchestrator держит unrelated user changes отдельно и не завершает задачу с известными реальными проблемами в затронутом scope.
 - Для visible web UI обязательны browser preview, screenshot и console check.

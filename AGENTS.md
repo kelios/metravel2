@@ -24,8 +24,9 @@
 - `$metravel-feature-builder` - фичи, рефакторинг, баги, API, hooks, services, SEO и обычная разработка.
 - `$metravel-ui-guardrails` - видимый UI, layout, media, placeholders, icons, design tokens, external links.
 - `$metravel-release-checks` - выбор и запуск проверок, preflight, release/deploy, production web checks.
+- `$metravel-devops-agent` - подготовка, запуск и проверка deploy на dev/preprod/prod с preflight, secret hygiene и post-deploy validation.
 - `$metravel-docs-maintainer` - обновление `docs/`, `AGENTS.md`, `.codex/skills` и правил для Codex.
-- `$metravel-agent-workflow` - координация ролей business analyst, system architect, designer, programmer, QA и reviewer.
+- `$metravel-agent-workflow` - координация ролей business analyst, system architect, designer, programmer, QA, reviewer и DevOps.
 - `$metravel-business-analyst` - продуктовые требования, user stories, acceptance criteria, non-goals, metrics и risks.
 - `$metravel-system-architect` - technical design, разбиение работ, validation plan и review diff на соответствие правилам.
 - `$metravel-qa-agent` - read-only исследование приложения, воспроизведение багов, bug reports и re-test фиксов.

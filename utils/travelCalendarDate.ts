@@ -122,16 +122,24 @@ export const buildTravelMonthFallbackDate = ({
   monthName,
   seed,
   occupiedDates,
+  allowYearOnly = false,
 }: {
   year?: unknown
   month?: unknown
   monthName?: unknown
   seed?: unknown
   occupiedDates?: Set<string> | string[]
+  allowYearOnly?: boolean
 }): string | undefined => {
   const normalizedYear = normalizeYear(year)
-  const normalizedMonth = resolveTravelMonthNumber(month ?? monthName)
-  if (!normalizedYear || !normalizedMonth) return undefined
+  if (!normalizedYear) return undefined
+
+  const resolvedMonth = resolveTravelMonthNumber(month ?? monthName)
+  if (!resolvedMonth && !allowYearOnly) return undefined
+
+  // Год есть, но месяц не указан/не распознан — раскладываем по году детерминированно,
+  // чтобы путешествие всё равно появилось в календаре.
+  const normalizedMonth = resolvedMonth ?? getSeedIndex(seed, 12) + 1
 
   const candidates = getCandidateDays(normalizedYear, normalizedMonth, seed)
   const occupied = occupiedDates instanceof Set

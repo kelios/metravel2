@@ -51,6 +51,26 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
 
   const hasErrors = useMemo(() => images.some((img) => img.error), [images])
 
+  const reportGalleryItems = useCallback(
+    (nextImages: GalleryItem[]) => {
+      if (!onChange) return
+
+      const items = nextImages
+        .filter((img) => !img.isUploading)
+        .map((img) => ({
+          id: img.id,
+          url: img.url,
+        }))
+        .filter((img) => typeof img.url === 'string' && img.url.trim().length > 0)
+
+      const signature = items.map((img) => `${String(img.id ?? '')}:${img.url}`).join('|')
+      if (signature === lastReportedUrlsRef.current) return
+      lastReportedUrlsRef.current = signature
+      onChange(items)
+    },
+    [onChange],
+  )
+
   const validateUploadFile = useCallback((file: File): string | null => {
     const validation = validateImageFile(file)
     if (!validation.valid) {
@@ -151,20 +171,8 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   }, [])
 
   useEffect(() => {
-    if (!onChange) return
-    const items = images
-      .filter((img) => !img.isUploading)
-      .map((img) => ({
-        id: img.id,
-        url: img.url,
-      }))
-      .filter((img) => typeof img.url === 'string' && img.url.trim().length > 0)
-
-    const signature = items.map((img) => `${String(img.id ?? '')}:${img.url}`).join('|')
-    if (signature === lastReportedUrlsRef.current) return
-    lastReportedUrlsRef.current = signature
-    onChange(items)
-  }, [images, onChange])
+    reportGalleryItems(images)
+  }, [images, reportGalleryItems])
 
   const handleUploadImages = useCallback(
     async (files: File[]) => {
@@ -383,19 +391,21 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   }
 
   const handleMoveImage = useCallback((stableKey: string, direction: -1 | 1) => {
-    setImages((prev) => {
-      const fromIndex = prev.findIndex((img) => (img.stableKey ?? img.id) === stableKey)
-      if (fromIndex < 0) return prev
+    const current = imagesRef.current
+    const fromIndex = current.findIndex((img) => (img.stableKey ?? img.id) === stableKey)
+    if (fromIndex < 0) return
 
-      const toIndex = fromIndex + direction
-      if (toIndex < 0 || toIndex >= prev.length) return prev
+    const toIndex = fromIndex + direction
+    if (toIndex < 0 || toIndex >= current.length) return
 
-      const next = [...prev]
-      const [moved] = next.splice(fromIndex, 1)
-      next.splice(toIndex, 0, moved)
-      return next
-    })
-  }, [])
+    const next = [...current]
+    const [moved] = next.splice(fromIndex, 1)
+    next.splice(toIndex, 0, moved)
+
+    imagesRef.current = next
+    reportGalleryItems(next)
+    setImages(next)
+  }, [reportGalleryItems])
 
   const DeleteActionComponent = useMemo(() => DeleteAction, [])
 

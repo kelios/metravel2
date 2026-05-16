@@ -30,6 +30,17 @@ describe('travelCalendarDate', () => {
     expect(buildTravelMonthFallbackDate({ year: '2024', month: '13' })).toBeUndefined()
   })
 
+  it('returns undefined for year-only input by default', () => {
+    expect(buildTravelMonthFallbackDate({ year: '2024' })).toBeUndefined()
+  })
+
+  it('places travel deterministically by year when month is missing and allowYearOnly', () => {
+    const first = buildTravelMonthFallbackDate({ year: '2024', seed: 'abc', allowYearOnly: true })
+    const second = buildTravelMonthFallbackDate({ year: '2024', seed: 'abc', allowYearOnly: true })
+    expect(first).toMatch(/^2024-\d{2}-\d{2}$/)
+    expect(first).toBe(second)
+  })
+
   it('resolves month from option-shaped values', () => {
     expect(resolveTravelMonthNumber([{ id: '7', name: 'Июль' }])).toBe(7)
   })

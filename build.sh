@@ -31,15 +31,20 @@ function clean_all() {
   fi
 }
 
+function create_export_log() {
+  local ENV="$1"
+  mktemp -t "expo-export-${ENV}" 2>/dev/null || mktemp "/tmp/expo-export-${ENV}.XXXXXX"
+}
+
 function build_env() {
   local ENV="$1"
   local DIR="dist/$ENV"
   local ARCHIVE="dist/$ENV.tar.gz"
   local EXPORT_LOG
-  EXPORT_LOG="$(mktemp "/tmp/expo-export-${ENV}.XXXX.log")"
+  EXPORT_LOG="$(create_export_log "$ENV")"
 
   # Очистка временного файла лога при выходе
-  trap 'rm -f "${EXPORT_LOG}"' EXIT
+  trap 'rm -f "${EXPORT_LOG:-}"' EXIT
 
   echo "🚀 Сборка для $ENV → $DIR"
   apply_env "$ENV"
@@ -73,6 +78,9 @@ function build_env() {
     echo "❌ Сборка не завершилась: не найден $DIR/index.html"
     exit 1
   fi
+
+  rm -f "$EXPORT_LOG"
+  EXPORT_LOG=''
 
   echo "📦 Архивирую $DIR → $ARCHIVE"
   mkdir -p "dist"

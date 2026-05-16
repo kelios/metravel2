@@ -156,6 +156,26 @@ describe('ArticleEditor.web selection + paste', () => {
     });
   });
 
+  it('emits compact editor changes synchronously for wizard save buttons', async () => {
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
+    const onChange = jest.fn();
+
+    const { getByTestId } = render(
+      <ArticleEditor content="" onChange={onChange} variant="compact" />
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('quill-mock')).toBeTruthy();
+    });
+
+    const quillProps = (globalThis as any).__quillProps__;
+    quillProps.onChange('<p>Плюс с https://www.etsy.com/pl/listing/4401728478/test</p>', null, 'user');
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.stringContaining('https://www.etsy.com/pl/listing/4401728478/test')
+    );
+  });
+
   it('pastes html without wiping existing content and preserves caret', async () => {
     const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
     const onChange = jest.fn();

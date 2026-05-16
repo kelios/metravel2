@@ -320,9 +320,13 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 const iter = sentToParentSetRef.current.values();
                 sentToParentSetRef.current.delete(iter.next().value as string);
             }
+            if (variant === 'compact') {
+                onChange(val);
+                return;
+            }
             debouncedParentChangeRaw(val);
         },
-        [debouncedParentChangeRaw]
+        [debouncedParentChangeRaw, onChange, variant]
     );
 
     useEffect(() => {

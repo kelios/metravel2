@@ -473,16 +473,36 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
         return (
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>Дата, когда был(а)</Text>
-                <TextInput
-                    style={[styles.input, isInvalid && styles.inputInvalid]}
-                    value={value}
-                    onChangeText={handleVisitedDateChange}
-                    placeholder="ГГГГ-ММ-ДД"
-                    placeholderTextColor={colors.textMuted}
-                    keyboardType="numbers-and-punctuation"
-                    maxLength={10}
-                    accessibilityLabel="Дата, когда был в путешествии"
-                />
+                {Platform.OS === 'web' ? (
+                    <input
+                        type="date"
+                        value={parseTravelStatusDateParts(value) ? value : ''}
+                        onChange={(event) => handleVisitedDateChange(event.target.value)}
+                        aria-label="Дата, когда был в путешествии"
+                        style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            fontSize: 15,
+                            borderRadius: 8,
+                            border: `1px solid ${isInvalid ? colors.danger : 'var(--color-border)'}`,
+                            backgroundColor: 'var(--color-background)',
+                            color: 'var(--color-text)',
+                            outline: 'none',
+                            boxSizing: 'border-box',
+                        } as React.CSSProperties}
+                    />
+                ) : (
+                    <TextInput
+                        style={[styles.input, isInvalid && styles.inputInvalid]}
+                        value={value}
+                        onChangeText={handleVisitedDateChange}
+                        placeholder="ГГГГ-ММ-ДД"
+                        placeholderTextColor={colors.textMuted}
+                        keyboardType="numbers-and-punctuation"
+                        maxLength={10}
+                        accessibilityLabel="Дата, когда был в путешествии"
+                    />
+                )}
                 <Text style={styles.fieldHint}>
                     Если точная дата не указана, календарь отнесёт поездку к месяцу и году путешествия.
                 </Text>

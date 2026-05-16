@@ -151,6 +151,7 @@ describe('api/misc', () => {
       thumbs200ForCollectionArr: shared,
       travelImageThumbUrlArr: shared,
       travelImageThumbUrArr: shared,
+      travelImageAddress: shared,
     } as any
 
     await saveFormData(payload)
@@ -160,6 +161,7 @@ describe('api/misc', () => {
     expect(body.thumbs200ForCollectionArr).toEqual([3796])
     expect(body.travelImageThumbUrlArr).toEqual([3796])
     expect(body.travelImageThumbUrArr).toEqual([3796])
+    expect(body.travelImageAddress).toEqual([3796])
   })
 
   it('saveFormData allows draft autosave payload without a user-entered name', async () => {

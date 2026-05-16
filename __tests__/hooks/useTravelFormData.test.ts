@@ -171,6 +171,47 @@ describe('useTravelFormData', () => {
     expect(sentPayload.description).not.toBe('__draft_placeholder__');
   });
 
+  it('manual save sends current plus and minus HTML including pasted links', async () => {
+    const plusHtml = '<p>Плюс: понятная инструкция и ссылка https://www.etsy.com/pl/listing/4401728478/zestaw-silver-clay-premium-10g-z</p>';
+    const minusHtml = '<p>Минус: доставка зависит от региона, проверьте параметры перед заказом</p>';
+    (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload }));
+
+    const { result } = renderHook(
+      () =>
+      useTravelFormData({
+        travelId: null,
+        isNew: true,
+        userId: '42',
+        isSuperAdmin: false,
+        isAuthenticated: true,
+        authReady: true,
+      })
+      ,
+      { concurrentRoot: false }
+    );
+
+    await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
+
+    act(() => {
+      result.current.setFormData({
+        ...(result.current.formData as any),
+        name: 'Test',
+        description: 'Long enough description to keep save deterministic.',
+        plus: plusHtml,
+        minus: minusHtml,
+      });
+    });
+
+    await act(async () => {
+      await result.current.handleManualSave();
+    });
+
+    expect(saveFormData).toHaveBeenCalledTimes(1);
+    const sentPayload = (saveFormData as jest.Mock).mock.calls[0][0];
+    expect(sentPayload.plus).toBe(plusHtml);
+    expect(sentPayload.minus).toBe(minusHtml);
+  });
+
   it('manual save keeps moderation override flags for backend notification trigger', async () => {
     (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload, id: 817 }));
 
@@ -573,6 +614,51 @@ describe('useTravelFormData', () => {
     expect(sentPayload.travelImageThumbUrlArr).toEqual([3796]);
     expect(sentPayload.travelImageThumbUrArr).toEqual([3796]);
     expect(sentPayload.thumbs200ForCollectionArr).toEqual([3796]);
+    expect(sentPayload.travelImageAddress).toEqual([3796]);
+  });
+
+  it('preserves reordered gallery image ids in all upsert contract fields', async () => {
+    (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload, id: 999 }));
+
+    const { result } = renderHook(
+      () =>
+      useTravelFormData({
+        travelId: '999',
+        isNew: false,
+        userId: '42',
+        isSuperAdmin: true,
+        isAuthenticated: true,
+        authReady: true,
+      }),
+      { concurrentRoot: false }
+    );
+
+    await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
+
+    act(() => {
+      result.current.setFormData({
+        ...(result.current.formData as any),
+        id: '999',
+        name: 'Gallery reorder test',
+        description: 'A'.repeat(60),
+        gallery: [
+          { id: 2, url: 'https://metravel.by/gallery/2/conversions/second.webp' },
+          { id: 1, url: 'https://metravel.by/gallery/1/conversions/first.webp' },
+          { id: 3, url: 'https://metravel.by/gallery/3/conversions/third.webp' },
+        ],
+      } as any);
+    });
+
+    await act(async () => {
+      await result.current.handleManualSave();
+    });
+
+    const sentPayload = (saveFormData as jest.Mock).mock.calls[0][0];
+    expect(sentPayload.gallery.map((item: any) => item.id)).toEqual([2, 1, 3]);
+    expect(sentPayload.travelImageThumbUrlArr).toEqual([2, 1, 3]);
+    expect(sentPayload.travelImageThumbUrArr).toEqual([2, 1, 3]);
+    expect(sentPayload.thumbs200ForCollectionArr).toEqual([2, 1, 3]);
+    expect(sentPayload.travelImageAddress).toEqual([2, 1, 3]);
   });
 
   it('preserves marker images across save when backend reorders markers (merge by id/latlng, not by index)', async () => {

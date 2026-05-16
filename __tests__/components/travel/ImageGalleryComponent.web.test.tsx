@@ -345,7 +345,11 @@ describe('ImageGalleryComponent.web', () => {
 
     await waitFor(() => expect(onChange).toHaveBeenCalled());
 
+    const callsBeforeMove = onChange.mock.calls.length;
     fireEvent.press(getAllByTestId('gallery-move-left-button')[1]);
+    const immediate = onChange.mock.calls[onChange.mock.calls.length - 1][0] as Array<{ id?: string; url: string }>;
+    expect(onChange.mock.calls.length).toBeGreaterThan(callsBeforeMove);
+    expect(immediate.map((item) => item.id)).toEqual(['2', '1', '3']);
 
     await waitFor(() => {
       const last = onChange.mock.calls[onChange.mock.calls.length - 1][0] as Array<{ id?: string; url: string }>;

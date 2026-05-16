@@ -28,11 +28,16 @@ install_deps() {
   yarn install --frozen-lockfile || yarn install
 }
 
+create_export_log() {
+  local ENV="$1"
+  mktemp -t "expo-export-${ENV}" 2>/dev/null || mktemp "/tmp/expo-export-${ENV}.XXXXXX"
+}
+
 build_env() {
   local ENV="$1"
   local DIR="dist/$ENV"
   local EXPORT_LOG
-  EXPORT_LOG="$(mktemp "/tmp/expo-export-${ENV}.XXXXXX")"
+  EXPORT_LOG="$(create_export_log "$ENV")"
   trap 'rm -f "${EXPORT_LOG:-}"' EXIT
 
   echo "🚀 Сборка для $ENV → $DIR"
@@ -56,6 +61,9 @@ build_env() {
     echo "❌ Сборка не завершилась: не найден dist/index.html"
     exit 1
   fi
+
+  rm -f "$EXPORT_LOG"
+  EXPORT_LOG=''
 
   # Переносим артефакты dist/* (кроме самой папки $ENV) в dist/$ENV
   mkdir -p "$DIR"

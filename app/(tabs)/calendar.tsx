@@ -550,6 +550,7 @@ export default function CalendarScreen() {
           monthName: travel.monthName,
           seed: travel.id,
           occupiedDates,
+          allowYearOnly: true,
         })
 
         if (fallbackDate) occupiedDates.add(fallbackDate)
