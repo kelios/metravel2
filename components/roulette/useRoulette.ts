@@ -98,10 +98,13 @@ export function useRoulette() {
     return transformed;
   }, [rawOptions]);
 
-  const defaultCountries = useMemo(
-    () => pickDefaultCountryIds(allCountries),
-    [allCountries],
-  );
+  const defaultCountries = useMemo(() => {
+    if (Array.isArray(allCountries) && allCountries.length > 0) {
+      return pickDefaultCountryIds(allCountries);
+    }
+
+    return pickDefaultCountryIds(options?.countries);
+  }, [allCountries, options?.countries]);
 
   const { filter, queryParams, resetFilters, onSelect } = useListTravelFilters({
     options,

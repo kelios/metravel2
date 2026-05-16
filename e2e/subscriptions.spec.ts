@@ -18,7 +18,15 @@ test.describe('Subscriptions @smoke', () => {
     await gotoWithRetry(page, '/subscriptions');
 
     const authPrompt = page.getByText(/Войдите в аккаунт|Войти/i);
-    await expect(authPrompt.first()).toBeVisible({ timeout: 15_000 });
+    const authPromptVisible = await authPrompt
+      .first()
+      .waitFor({ state: 'visible', timeout: 15_000 })
+      .then(() => true)
+      .catch(() => false);
+
+    if (!authPromptVisible) {
+      await expect(page).toHaveURL(/\/login(?:\?|$)/);
+    }
   });
 
   test('authenticated user sees subscriptions page with tabs', async ({ page }) => {

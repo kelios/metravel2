@@ -2,9 +2,9 @@ import { test } from '@playwright/test';
 import { rmSync } from 'node:fs';
 import { join } from 'node:path';
 
-const URL = process.env.AUDIT_URL || 'http://localhost:8081/travels/kostel-svyatogo-antoniya-paduanskogo';
 const SHOTS_DIR = join(__dirname, '_flicker-shots');
 const KEEP_SHOTS = process.env.AUDIT_KEEP_SHOTS === '1';
+const DEFAULT_AUDIT_PATH = '/travels/kostel-svyatogo-antoniya-paduanskogo';
 
 test.afterAll(() => {
   if (!KEEP_SHOTS) {
@@ -12,8 +12,10 @@ test.afterAll(() => {
   }
 });
 
-test('flicker audit: production travel detail', async ({ page }) => {
+test('flicker audit: production travel detail', async ({ page, baseURL }) => {
   test.setTimeout(120_000);
+
+  const auditUrl = process.env.AUDIT_URL || `${(baseURL || `http://127.0.0.1:${process.env.E2E_WEB_PORT || '8085'}`).replace(/\/+$/, '')}${DEFAULT_AUDIT_PATH}`;
 
   // Slow 4G-ish to magnify jank
   const cdp = await page.context().newCDPSession(page);
@@ -21,7 +23,7 @@ test('flicker audit: production travel detail', async ({ page }) => {
     offline: false,
     latency: 60,
     downloadThroughput: (4 * 1024 * 1024) / 8,
-    uploadThroughput: (1 * 1024 * 1024) / 8,
+    uploadThroughput: (1024 * 1024) / 8,
   });
 
   await page.addInitScript(() => {
@@ -89,15 +91,13 @@ test('flicker audit: production travel detail', async ({ page }) => {
   }
 
   const t0 = Date.now();
-  await page.goto(URL, { waitUntil: 'domcontentloaded' });
+  await page.goto(auditUrl, { waitUntil: 'domcontentloaded' });
 
   // Capture sequential screenshots to see flicker
-  const shots: { ms: number }[] = [];
   for (const ms of [200, 500, 800, 1200, 1800, 2500, 3500, 5000, 7000, 9000]) {
     const wait = ms - (Date.now() - t0);
     if (wait > 0) await page.waitForTimeout(wait);
     await page.screenshot({ path: `e2e/_flicker-shots/${String(ms).padStart(5, '0')}.png`, fullPage: false });
-    shots.push({ ms });
   }
 
   await page.waitForLoadState('networkidle', { timeout: 20_000 }).catch(() => {});

@@ -61,7 +61,7 @@ test.describe('Travel points -> map popup', () => {
         return;
       }
       const url = request.url();
-      let pathname = '';
+      let pathname: string;
       try {
         pathname = new URL(url).pathname;
       } catch {
@@ -131,7 +131,7 @@ test.describe('Travel points -> map popup', () => {
     const currentUrl = page.url();
     const popupPromise = page.waitForEvent('popup', { timeout: 1500 }).catch(() => null);
 
-    await pointCards.first().click();
+    await pointCards.first().getByText('Гомель', { exact: true }).click();
 
     const openedPopup = await popupPromise;
     expect(openedPopup).toBeNull();
