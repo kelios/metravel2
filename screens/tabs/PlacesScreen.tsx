@@ -260,6 +260,43 @@ export default function PlacesScreen() {
     ? `Места выбранных категорий: ${selectedCategories.join(', ')}. Карточки точек, переход на карту и ссылка на путешествие.`
     : 'Каталог мест MeTravel: замки, музеи, парки, природные точки и другие места из путешествий.'
 
+  // ─── SEO ───
+  const seoHeading = useMemo(() => {
+    const parts = ['Места']
+    if (selectedCategories.length > 0) parts.push(activeCategoryTitle)
+    if (selectedCountry) parts.push(selectedCountry)
+    return parts.join(' — ')
+  }, [activeCategoryTitle, selectedCategories.length, selectedCountry])
+  const seoTitle = `${seoHeading} | MeTravel`
+  const placesJsonLd = useMemo(() => {
+    if (Platform.OS !== 'web' || !isFocused || visiblePlaces.length === 0) return undefined
+    const base = getSiteBaseUrl().replace(/\/$/, '')
+    const data = {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      name: seoHeading,
+      numberOfItems: filteredPlaces.length,
+      itemListElement: visiblePlaces.slice(0, 12).map((place, index) => {
+        const internal = place.urlTravel
+          ? normalizeInternalTravelRoute(place.urlTravel)
+          : null
+        return {
+          '@type': 'ListItem',
+          position: index + 1,
+          name: place.title,
+          url: internal ? `${base}${internal}` : `${base}/places`,
+        }
+      }),
+    }
+    return (
+      <script
+        key="places-itemlist"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      />
+    )
+  }, [filteredPlaces.length, isFocused, seoHeading, visiblePlaces])
+
   const syncCategoryParams = useCallback((categories: string[]) => {
     router.setParams(categories.length > 0 ? { category: categories.join(',') } : { category: '' })
   }, [router])
@@ -420,13 +457,17 @@ export default function PlacesScreen() {
       {Platform.OS === 'web' && isFocused ? (
         <InstantSEO
           headKey="places"
-          title="Места | MeTravel"
+          title={seoTitle}
           description={pageDescription}
           canonical={buildCanonicalUrl('/places')}
           image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
           ogType="website"
+          additionalTags={placesJsonLd}
         />
       ) : null}
+      {Platform.OS === 'web'
+        ? React.createElement('h1', { style: styles.srOnly as any }, seoHeading)
+        : null}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -923,6 +964,20 @@ const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean)
     flex: 1,
     backgroundColor: colors.background,
   },
+  srOnly: Platform.select({
+    web: {
+      position: 'absolute' as const,
+      width: 1,
+      height: 1,
+      padding: 0,
+      margin: -1,
+      overflow: 'hidden' as const,
+      clip: 'rect(0,0,0,0)',
+      whiteSpace: 'nowrap',
+      borderWidth: 0,
+    },
+    default: { display: 'none' as const },
+  }) as any,
   scroll: {
     flex: 1,
   },
@@ -1045,6 +1100,12 @@ const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean)
   },
 
   // ─── Featured «Подборка» ───
+  collectionSection: {
+    gap: DESIGN_TOKENS.spacing.xs,
+  },
+  collectionList: {
+    gap: 6,
+  },
   featuredCard: {
     flexDirection: 'row',
     alignItems: 'center',

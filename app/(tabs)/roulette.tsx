@@ -1,5 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Platform, Text, View, Pressable, Image, Animated, Easing } from 'react-native';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Animated,
+  Easing,
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  Text,
+  View,
+  type ImageSourcePropType,
+} from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import Feather from '@expo/vector-icons/Feather';
 import { usePathname } from 'expo-router';
@@ -14,26 +24,126 @@ import type { Travel } from '@/types/types';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useRouletteLogic } from '@/components/roulette/useRoulette';
 import { createStyles } from '@/components/roulette/styles';
-import { useThemedColors } from '@/hooks/useTheme';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
+
+const SEO_TITLE = 'Случайный маршрут | Metravel';
+const SEO_DESCRIPTION =
+  'Не знаешь, куда поехать? Подбери фильтры — и мы случайно предложим три маршрута под твои пожелания.';
+
+const MAP_BACKGROUND = require('../../assets/travel/roulette-map-bg.jpg') as ImageSourcePropType;
+const COMPASS_BACKGROUND = require('../../assets/travel/roulette-compass-bg.jpg') as ImageSourcePropType;
+
+const MAX_RESULTS = 3;
+
+type Styles = ReturnType<typeof createStyles>;
+
+// ---------------------------------------------------------------------------
+// Компас + центральная кнопка (одинаков для desktop и mobile, разнятся стили)
+// ---------------------------------------------------------------------------
+type CompassDialProps = {
+  styles: Styles;
+  colors: ThemedColors;
+  spinning: boolean;
+  rotate: Animated.AnimatedInterpolation<string>;
+  subtitle: string;
+  onPress: () => void;
+  wrapStyle: object;
+  buttonStyle: object;
+  iconSize: number;
+};
+
+const CompassDial = memo(function CompassDial({
+  styles,
+  colors,
+  spinning,
+  rotate,
+  subtitle,
+  onPress,
+  wrapStyle,
+  buttonStyle,
+  iconSize,
+}: CompassDialProps) {
+  return (
+    <View style={styles.rouletteCompassGroup}>
+      <Animated.View style={[wrapStyle, spinning && { transform: [{ rotate }] }]}>
+        <Image source={COMPASS_BACKGROUND} style={styles.rouletteCompassImage} resizeMode="cover" />
+      </Animated.View>
+
+      <Pressable
+        style={buttonStyle}
+        onPress={onPress}
+        accessibilityLabel={spinning ? 'Подбираем маршруты' : 'Крутить рулетку'}
+        accessibilityRole="button"
+      >
+        <Feather name="compass" size={iconSize} color={colors.primary} style={{ marginBottom: 4 }} />
+        <Text style={styles.rouletteCompassButtonTitle}>
+          {spinning ? 'Крутим…' : 'Случайный маршрут'}
+        </Text>
+        {!spinning && <Text style={styles.rouletteCompassButtonSubtitle}>{subtitle}</Text>}
+      </Pressable>
+    </View>
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Панель фильтров (сайдбар и модалка используют один и тот же блок)
+// ---------------------------------------------------------------------------
+type FiltersPanelProps = Pick<
+  ReturnType<typeof useRouletteLogic>,
+  'filter' | 'filterGroups' | 'handleFilterChange' | 'handleClearAll' | 'filtersLoading'
+> & {
+  resultsCount: number;
+  onYearChange: (value: unknown) => void;
+  onClose?: () => void;
+  onApply?: () => void;
+};
+
+const FiltersPanel = memo(function FiltersPanel({
+  filter,
+  filterGroups,
+  handleFilterChange,
+  handleClearAll,
+  filtersLoading,
+  resultsCount,
+  onYearChange,
+  onClose,
+  onApply,
+}: FiltersPanelProps) {
+  return (
+    <ModernFilters
+      filterGroups={filterGroups}
+      selectedFilters={filter as never}
+      onFilterChange={handleFilterChange}
+      onClearAll={handleClearAll}
+      resultsCount={resultsCount}
+      isLoading={filtersLoading}
+      year={filter.year}
+      onYearChange={onYearChange}
+      onClose={onClose}
+      onApply={onApply}
+    />
+  );
+});
 
 export default function RouletteScreen() {
   const pathname = usePathname();
   const isFocused = useIsFocused();
   const { isPhone, isLargePhone, width } = useResponsive();
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const [isMounted, setIsMounted] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // On web with SSR we must avoid changing layout branches (mobile vs desktop)
-  // between server render and the first client render.
-  const isMobile =
-    Platform.OS === 'web'
-      ? (isMounted ? isPhone || isLargePhone : false)
-      : isPhone || isLargePhone;
-  const colors = useThemedColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  // На web (SSR) до гидрации всегда desktop-ветка, чтобы серверный и первый
+  // клиентский рендер совпали. После маунта — обычная адаптивная логика.
+  const layoutIsMobile = isPhone || isLargePhone;
+  const isMobile = Platform.OS === 'web' && !isMounted ? false : layoutIsMobile;
 
   const {
     filter,
@@ -52,26 +162,18 @@ export default function RouletteScreen() {
     filtersLoading,
   } = useRouletteLogic();
 
-  const { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } = require('@/utils/seo');
+  const onYearChange = useCallback((value: unknown) => onSelect('year', value), [onSelect]);
+  const toggleFilters = useCallback(() => setShowFilters((prev) => !prev), []);
+  const closeFilters = useCallback(() => setShowFilters(false), []);
 
-  const title = 'Случайный маршрут | Metravel';
-  const description = 'Не знаешь, куда поехать? Подбери фильтры — и мы случайно предложим три маршрута под твои пожелания.';
-
-  // Фоновые изображения (карта и компас) из корневого assets/travel
-  // Относительный путь: from app/(tabs)/roulette.tsx -> ../../assets/travel/
-  const mapBackground = require('../../assets/travel/roulette-map-bg.jpg');
-  const compassBackground = require('../../assets/travel/roulette-compass-bg.jpg');
-
-  const [showFilters, setShowFilters] = useState(false);
-
-  // Compass spin animation
+  // --- Анимация вращения компаса -------------------------------------------
   const compassSpin = useRef(new Animated.Value(0)).current;
-  const compassSpinRef = useRef<Animated.CompositeAnimation | null>(null);
+  const compassLoopRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
     if (spinning) {
       compassSpin.setValue(0);
-      compassSpinRef.current = Animated.loop(
+      compassLoopRef.current = Animated.loop(
         Animated.timing(compassSpin, {
           toValue: 1,
           duration: 1200,
@@ -79,68 +181,72 @@ export default function RouletteScreen() {
           useNativeDriver: false,
         }),
       );
-      compassSpinRef.current.start();
+      compassLoopRef.current.start();
     } else {
-      compassSpinRef.current?.stop();
+      compassLoopRef.current?.stop();
       compassSpin.setValue(0);
     }
-    return () => { compassSpinRef.current?.stop(); };
+    return () => compassLoopRef.current?.stop();
   }, [spinning, compassSpin]);
 
-  const compassRotate = compassSpin.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
+  const compassRotate = useMemo(
+    () => compassSpin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }),
+    [compassSpin],
+  );
 
-  // Stagger animation for result cards
-  const cardAnims = useRef([new Animated.Value(0), new Animated.Value(0), new Animated.Value(0)]).current;
-  const prevResultLen = useRef(0);
+  // --- Поочерёдное появление карточек результата ---------------------------
+  // Перезапускается на каждый новый набор результатов (включая «ещё варианты»),
+  // т.к. result — новая ссылка после каждого spin'а.
+  const cardAnims = useRef(
+    Array.from({ length: MAX_RESULTS }, () => new Animated.Value(0)),
+  ).current;
 
   useEffect(() => {
-    if (result.length > 0 && prevResultLen.current === 0) {
-      cardAnims.forEach(a => a.setValue(0));
-      Animated.stagger(120, cardAnims.map(a =>
-        Animated.timing(a, {
-          toValue: 1,
-          duration: 350,
-          useNativeDriver: false,
-        }),
-      )).start();
-    }
-    prevResultLen.current = result.length;
-  }, [result.length, cardAnims]);
+    if (result.length === 0) return;
+    cardAnims.forEach((a) => a.setValue(0));
+    Animated.stagger(
+      120,
+      cardAnims.map((a) =>
+        Animated.timing(a, { toValue: 1, duration: 350, useNativeDriver: false }),
+      ),
+    ).start();
+  }, [result, cardAnims]);
+
+  const spinLabel = spinning
+    ? 'Подбираем маршруты…'
+    : result.length > 0
+      ? 'Подобрать ещё варианты'
+      : 'Подобрать маршруты';
+
+  const compassSubtitle = result.length > 0 ? 'Ещё раз' : 'Нажми';
 
   return (
     <View style={styles.root}>
       {Platform.OS === 'web' && (
-        <Image
-          source={mapBackground}
-          style={styles.rootBackgroundImage}
-          resizeMode="cover"
-        />
+        <Image source={MAP_BACKGROUND} style={styles.rootBackgroundImage} resizeMode="cover" />
       )}
       {Platform.OS === 'web' && isMounted && isFocused && (
         <InstantSEO
           headKey="roulette"
-          title={title}
-          description={description}
+          title={SEO_TITLE}
+          description={SEO_DESCRIPTION}
           canonical={buildCanonicalUrl(pathname || '/roulette')}
           image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
           ogType="website"
         />
       )}
+
       <View style={[styles.container, isMobile && styles.containerMobile]}>
         {!isMobile && (
           <View style={styles.sidebar}>
-            <ModernFilters
+            <FiltersPanel
+              filter={filter}
               filterGroups={filterGroups}
-              selectedFilters={filter as any}
-              onFilterChange={handleFilterChange}
-              onClearAll={handleClearAll}
+              handleFilterChange={handleFilterChange}
+              handleClearAll={handleClearAll}
+              filtersLoading={filtersLoading}
               resultsCount={travels.length}
-              isLoading={filtersLoading}
-              year={filter.year}
-              onYearChange={(value) => onSelect('year', value)}
+              onYearChange={onYearChange}
             />
           </View>
         )}
@@ -157,23 +263,19 @@ export default function RouletteScreen() {
             </View>
             {!isMobile && (
               <View style={styles.heroButtonBlock}>
-                <UIButton
-                  label={spinning ? 'Подбираем маршруты…' : (result.length > 0 ? 'Подобрать ещё варианты' : 'Подобрать маршруты')}
-                  onPress={handleSpin}
-                  disabled={showLoading}
-                />
+                <UIButton label={spinLabel} onPress={handleSpin} disabled={showLoading} />
               </View>
             )}
           </View>
 
-          <View style={[styles.topBar, isMobile && styles.topBarMobile]}>
-            {isMobile && (
+          {isMobile && (
+            <View style={[styles.topBar, styles.topBarMobile]}>
               <View style={styles.mobileTopRow}>
                 <View style={styles.mobileFiltersBar}>
                   <Pressable
                     testID="mobile-filters-button"
                     style={styles.mobileFiltersButton}
-                    onPress={() => setShowFilters((prev) => !prev)}
+                    onPress={toggleFilters}
                   >
                     <View style={styles.mobileFiltersHeaderRow}>
                       <Feather name="filter" size={14} color={colors.primary} />
@@ -195,16 +297,14 @@ export default function RouletteScreen() {
 
                 <View style={styles.mobileSpinButton}>
                   <UIButton
-                    label={spinning
-                      ? 'Подбираем…'
-                      : (result.length > 0 ? 'Ещё' : 'Подобрать')}
+                    label={spinning ? 'Подбираем…' : result.length > 0 ? 'Ещё' : 'Подобрать'}
                     onPress={handleSpin}
                     disabled={showLoading}
                   />
                 </View>
               </View>
-            )}
-          </View>
+            </View>
+          )}
 
           <View style={[styles.resultsContainer, isMobile && styles.resultsContainerMobile]}>
             {showLoading && (
@@ -243,114 +343,80 @@ export default function RouletteScreen() {
                     </View>
                   </View>
                 )}
+
                 {Platform.OS === 'web' && !isMobile ? (
                   <View style={styles.rouletteWrapper}>
-                    {/* Компас + кнопка */}
-                    <View style={styles.rouletteCompassGroup}>
-                      <Animated.View
-                        style={[
-                          styles.rouletteCompassWrap,
-                          spinning && { transform: [{ rotate: compassRotate }] },
-                        ]}
-                      >
-                        <Image
-                          source={compassBackground}
-                          style={styles.rouletteCompassImage}
-                          resizeMode="cover"
-                        />
-                      </Animated.View>
+                    <CompassDial
+                      styles={styles}
+                      colors={colors}
+                      spinning={spinning}
+                      rotate={compassRotate}
+                      subtitle={compassSubtitle}
+                      onPress={handleSpin}
+                      wrapStyle={styles.rouletteCompassWrap}
+                      buttonStyle={styles.rouletteCompassButton}
+                      iconSize={22}
+                    />
 
-                      <Pressable
-                        style={styles.rouletteCompassButton}
-                        onPress={handleSpin}
-                        accessibilityLabel={spinning ? 'Подбираем маршруты' : 'Крутить рулетку'}
-                        accessibilityRole="button"
-                      >
-                        <Feather name="compass" size={22} color={colors.primary} style={{ marginBottom: 4 }} />
-                        <Text style={styles.rouletteCompassButtonTitle}>
-                          {spinning ? 'Крутим…' : 'Случайный маршрут'}
-                        </Text>
-                        {!spinning && (
-                          <Text style={styles.rouletteCompassButtonSubtitle}>
-                            {result.length > 0 ? 'Ещё раз' : 'Нажми'}
-                          </Text>
-                        )}
-                      </Pressable>
-                    </View>
-
-                    {/* Три карточки в ряд */}
                     {result.length > 0 && (
                       <View style={styles.rouletteCardsRow}>
-                        {result.slice(0, 3).map((item, index) => (
-                          <Animated.View
-                            key={String(item.id)}
-                            style={[
-                              styles.rouletteCard,
-                              {
-                                opacity: cardAnims[index] ?? 1,
-                                transform: [{
-                                  translateY: (cardAnims[index] ?? new Animated.Value(1)).interpolate({
-                                    inputRange: [0, 1],
-                                    outputRange: [20, 0],
-                                  }),
-                                }],
-                              },
-                            ]}
-                          >
-                            <RenderTravelItem
-                              item={item}
-                              index={index}
-                              isMobile={false}
-                              isSuperuser={false}
-                              isMetravel={false}
-                              onDeletePress={undefined}
-                              isFirst={index === 0}
-                              selectable={false}
-                              isSelected={false}
-                              onToggle={undefined}
-                              cardWidth={280}
-                              viewportWidth={width}
-                            />
-                          </Animated.View>
-                        ))}
+                        {result.slice(0, MAX_RESULTS).map((item, index) => {
+                          const anim = cardAnims[index];
+                          return (
+                            <Animated.View
+                              key={String(item.id)}
+                              style={[
+                                styles.rouletteCard,
+                                {
+                                  opacity: anim,
+                                  transform: [
+                                    {
+                                      translateY: anim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [20, 0],
+                                      }),
+                                    },
+                                  ],
+                                },
+                              ]}
+                            >
+                              <RenderTravelItem
+                                item={item}
+                                index={index}
+                                isMobile={false}
+                                isSuperuser={false}
+                                isMetravel={false}
+                                onDeletePress={undefined}
+                                isFirst={index === 0}
+                                selectable={false}
+                                isSelected={false}
+                                onToggle={undefined}
+                                cardWidth={280}
+                                viewportWidth={width}
+                              />
+                            </Animated.View>
+                          );
+                        })}
                       </View>
                     )}
                   </View>
                 ) : (
                   <>
-                    {isMobile && result.length === 0 ? (
+                    {isMobile && result.length === 0 && (
                       <View style={styles.mobileRoulettePrompt}>
-                        <View style={styles.rouletteCompassGroup}>
-                          <Animated.View
-                            style={[
-                              styles.mobileRouletteCompassWrap,
-                              spinning && { transform: [{ rotate: compassRotate }] },
-                            ]}
-                          >
-                            <Image
-                              source={compassBackground}
-                              style={styles.rouletteCompassImage}
-                              resizeMode="cover"
-                            />
-                          </Animated.View>
-
-                          <Pressable
-                            style={styles.mobileRouletteCompassButton}
-                            onPress={handleSpin}
-                            accessibilityLabel={spinning ? 'Подбираем маршруты' : 'Крутить рулетку'}
-                            accessibilityRole="button"
-                          >
-                            <Feather name="compass" size={20} color={colors.primary} style={{ marginBottom: 4 }} />
-                            <Text style={styles.rouletteCompassButtonTitle}>
-                              {spinning ? 'Крутим...' : 'Случайный маршрут'}
-                            </Text>
-                            {!spinning && (
-                              <Text style={styles.rouletteCompassButtonSubtitle}>Нажми</Text>
-                            )}
-                          </Pressable>
-                        </View>
+                        <CompassDial
+                          styles={styles}
+                          colors={colors}
+                          spinning={spinning}
+                          rotate={compassRotate}
+                          subtitle="Нажми"
+                          onPress={handleSpin}
+                          wrapStyle={styles.mobileRouletteCompassWrap}
+                          buttonStyle={styles.mobileRouletteCompassButton}
+                          iconSize={20}
+                        />
                       </View>
-                    ) : null}
+                    )}
                     <FlashList<Travel>
                       data={result as Travel[]}
                       keyExtractor={(item) => String(item.id)}
@@ -385,23 +451,18 @@ export default function RouletteScreen() {
       </View>
 
       {isMobile && (
-        <Modal
-          visible={showFilters}
-          animationType="slide"
-          onRequestClose={() => setShowFilters(false)}
-        >
+        <Modal visible={showFilters} animationType="slide" onRequestClose={closeFilters}>
           <View style={styles.filtersModalShell}>
-            <ModernFilters
+            <FiltersPanel
+              filter={filter}
               filterGroups={filterGroups}
-              selectedFilters={filter as any}
-              onFilterChange={handleFilterChange}
-              onClearAll={handleClearAll}
+              handleFilterChange={handleFilterChange}
+              handleClearAll={handleClearAll}
+              filtersLoading={filtersLoading}
               resultsCount={travels.length}
-              isLoading={filtersLoading}
-              year={filter.year}
-              onYearChange={(value) => onSelect('year', value)}
-              onClose={() => setShowFilters(false)}
-              onApply={() => setShowFilters(false)}
+              onYearChange={onYearChange}
+              onClose={closeFilters}
+              onApply={closeFilters}
             />
           </View>
         </Modal>
