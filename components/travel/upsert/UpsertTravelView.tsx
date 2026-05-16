@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useEffect, useState } from 'react';
+import React, { useCallback, useMemo, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View, Animated, Pressable, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
@@ -18,50 +18,36 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useTravelPreview } from '@/hooks/useTravelPreview';
 import type { UpsertTravelController } from '@/components/travel/upsert/useUpsertTravelController';
-import type { TravelFormData } from '@/types/types';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { buildLoginHref } from '@/utils/authNavigation';
+
+type Colors = UpsertTravelController['colors'];
+type Styles = ReturnType<typeof createStyles>;
 
 interface UpsertTravelViewProps {
   controller: UpsertTravelController;
 }
 
-// Skeleton component for loading state
-const WizardSkeleton = ({ colors }: { colors: UpsertTravelController['colors'] }) => {
-  const pulseAnim = useMemo(() => new Animated.Value(0.3), []);
-  const shouldUseNativeDriver = false;
+const WizardSkeleton = ({ colors }: { colors: Colors }) => {
+  const pulseAnim = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: shouldUseNativeDriver,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 0.3,
-          duration: 800,
-          useNativeDriver: shouldUseNativeDriver,
-        }),
-      ])
+        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: false }),
+        Animated.timing(pulseAnim, { toValue: 0.3, duration: 800, useNativeDriver: false }),
+      ]),
     );
     animation.start();
     return () => animation.stop();
-  }, [pulseAnim, shouldUseNativeDriver]);
+  }, [pulseAnim]);
 
-  const skeletonStyle = {
-    opacity: pulseAnim,
-    backgroundColor: colors.surfaceMuted,
-  };
+  const skeletonStyle = { opacity: pulseAnim, backgroundColor: colors.surfaceMuted };
 
   return (
     <View style={{ flex: 1, padding: DESIGN_TOKENS.spacing.lg }}>
-      {/* Header skeleton */}
       <Animated.View style={[{ height: 60, borderRadius: DESIGN_TOKENS.radii.md, marginBottom: DESIGN_TOKENS.spacing.lg }, skeletonStyle]} />
-      {/* Progress bar skeleton */}
       <Animated.View style={[{ height: 8, borderRadius: 4, marginBottom: DESIGN_TOKENS.spacing.xl }, skeletonStyle]} />
-      {/* Content skeleton */}
       <Animated.View style={[{ height: 56, borderRadius: DESIGN_TOKENS.radii.md, marginBottom: DESIGN_TOKENS.spacing.md }, skeletonStyle]} />
       <Animated.View style={[{ height: 120, borderRadius: DESIGN_TOKENS.radii.md, marginBottom: DESIGN_TOKENS.spacing.md }, skeletonStyle]} />
       <Animated.View style={[{ height: 56, borderRadius: DESIGN_TOKENS.radii.md }, skeletonStyle]} />
@@ -69,18 +55,16 @@ const WizardSkeleton = ({ colors }: { colors: UpsertTravelController['colors'] }
   );
 };
 
-// Offline indicator banner
-const OfflineBanner = ({ colors, isVisible }: { colors: UpsertTravelController['colors']; isVisible: boolean }) => {
-  const [opacity] = useState(new Animated.Value(0));
-  const shouldUseNativeDriver = false;
+const OfflineBanner = ({ colors, isVisible }: { colors: Colors; isVisible: boolean }) => {
+  const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(opacity, {
       toValue: isVisible ? 1 : 0,
       duration: 300,
-      useNativeDriver: shouldUseNativeDriver,
+      useNativeDriver: false,
     }).start();
-  }, [isVisible, opacity, shouldUseNativeDriver]);
+  }, [isVisible, opacity]);
 
   if (!isVisible) return null;
 
@@ -107,81 +91,77 @@ const OfflineBanner = ({ colors, isVisible }: { colors: UpsertTravelController['
   );
 };
 
-// Step error fallback component
 const StepErrorFallback = ({
   stepNumber,
   onGoBack,
-  colors
+  colors,
+  styles,
 }: {
   stepNumber: number;
   onGoBack?: () => void;
-  colors: UpsertTravelController['colors'];
+  colors: Colors;
+  styles: Styles;
 }) => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: DESIGN_TOKENS.spacing.xl }}>
-    <Feather name="alert-triangle" size={48} color={colors.warning} style={{ marginBottom: DESIGN_TOKENS.spacing.md }} />
-    <Text style={{ fontSize: DESIGN_TOKENS.typography.sizes.lg, fontWeight: '600', color: colors.text, marginBottom: DESIGN_TOKENS.spacing.sm, textAlign: 'center' }}>
-      Ошибка на шаге {stepNumber}
-    </Text>
-    <Text style={{ fontSize: DESIGN_TOKENS.typography.sizes.md, color: colors.textMuted, textAlign: 'center', marginBottom: DESIGN_TOKENS.spacing.lg }}>
-      Произошла ошибка при отображении этого шага.
-    </Text>
+  <View style={styles.centeredScreen}>
+    <Feather name="alert-triangle" size={48} color={colors.warning} style={styles.iconSpacing} />
+    <Text style={styles.errorTitle}>Ошибка на шаге {stepNumber}</Text>
+    <Text style={styles.errorText}>Произошла ошибка при отображении этого шага.</Text>
     {onGoBack && (
       <Pressable
         onPress={onGoBack}
-        style={{
-          backgroundColor: colors.primary,
-          paddingVertical: DESIGN_TOKENS.spacing.sm,
-          paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-          borderRadius: DESIGN_TOKENS.radii.md,
-          minHeight: DESIGN_TOKENS.touchTarget.minHeight,
-          justifyContent: 'center',
-        }}
+        style={[styles.actionPrimary, { marginTop: DESIGN_TOKENS.spacing.lg }]}
         accessibilityRole="button"
         accessibilityLabel="Вернуться к предыдущему шагу"
       >
-        <Text style={{ color: colors.textOnPrimary, fontWeight: '600' }}>
-          Вернуться назад
-        </Text>
+        <Text style={styles.actionPrimaryText}>Вернуться назад</Text>
       </Pressable>
     )}
   </View>
 );
 
+// Презентация ошибки загрузки по HTTP-статусу.
+function getLoadErrorPresentation(status: number, message: string) {
+  const icon: React.ComponentProps<typeof Feather>['name'] =
+    status === 0 ? 'wifi-off' : status === 404 ? 'search' : 'alert-triangle';
+  const title =
+    status === 401 ? 'Требуется вход'
+      : status === 403 ? 'Нет доступа'
+        : status === 404 ? 'Путешествие не найдено'
+          : status === 0 ? 'Нет соединения'
+            : 'Ошибка загрузки';
+  const text = status === 0 ? message : 'Не удалось загрузить путешествие. Попробуйте ещё раз.';
+  return { icon, title, text };
+}
+
 export default function UpsertTravelView({ controller }: UpsertTravelViewProps) {
-  const { colors } = controller;
-  const { setFormData } = controller;
+  const { colors, setFormData } = controller;
   const { isDesktop, isTablet, isMobile } = useResponsive();
   const previewState = useTravelPreview();
   const router = useRouter();
 
-  // Offline detection
   const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
-      // `isConnected` / `isInternetReachable` can be null on first emission.
-      // Treat "unknown" as online to avoid a flashing offline banner on mount.
-      const connected = state.isConnected;
-      const reachable = state.isInternetReachable;
-      const offline = connected === false || reachable === false;
+      // `isConnected` / `isInternetReachable` могут быть null при первом событии.
+      // Считаем "неизвестно" онлайном, чтобы баннер не мигал на маунте.
+      const offline = state.isConnected === false || state.isInternetReachable === false;
       setIsOffline(offline);
     });
     return () => unsubscribe();
   }, []);
 
-  const styles = useMemo(() => createStyles(colors, { isDesktop, isTablet, isMobile }), [colors, isDesktop, isTablet, isMobile]);
-
-  const setFormDataDirect = useCallback(
-    (next: TravelFormData) => {
-      setFormData(next);
-    },
-    [setFormData]
+  const styles = useMemo(
+    () => createStyles(colors, { isDesktop, isTablet, isMobile }),
+    [colors, isDesktop, isTablet, isMobile],
   );
 
-  // Handle step error - go to previous step
-  const handleStepError = useCallback((error: Error, errorInfo: React.ErrorInfo) => {
-    console.error(`Step ${controller.wizard.currentStep} error:`, error, errorInfo);
-  }, [controller.wizard.currentStep]);
+  const handleStepError = useCallback(
+    (error: Error, errorInfo: React.ErrorInfo) => {
+      console.error(`Step ${controller.wizard.currentStep} error:`, error, errorInfo);
+    },
+    [controller.wizard.currentStep],
+  );
 
   const handleOpenPublic = useCallback(() => {
     const id = controller.formData?.id;
@@ -189,13 +169,9 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
     const path = `/travels/${encodeURIComponent(String(id))}`;
 
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      void openExternalUrlInNewTab(path, {
-        allowRelative: true,
-        baseUrl: window.location.origin,
-      });
+      void openExternalUrlInNewTab(path, { allowRelative: true, baseUrl: window.location.origin });
       return;
     }
-
     router.push(path as any);
   }, [controller.formData?.id, router]);
 
@@ -213,8 +189,8 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
   }
 
   if (controller.loadError && !controller.isNew) {
-    const status = controller.loadError.status;
-    const message = controller.loadError.message;
+    const { status, message } = controller.loadError;
+    const { icon, title, text } = getLoadErrorPresentation(status, message);
 
     return (
       <SafeAreaView
@@ -222,62 +198,34 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
         testID="travel-upsert.load-error"
         accessibilityLabel="Ошибка загрузки путешествия"
       >
-        <View style={styles.errorContainer}>
+        <View style={styles.centeredScreen}>
           <Feather
-            name={status === 0 ? 'wifi-off' : status === 404 ? 'search' : 'alert-triangle'}
+            name={icon}
             size={48}
             color={status === 0 ? colors.warning : colors.danger}
-            style={{ marginBottom: DESIGN_TOKENS.spacing.md }}
+            style={styles.iconSpacing}
           />
-          <Text style={styles.errorTitle}>
-            {status === 401
-              ? 'Требуется вход'
-              : status === 403
-                ? 'Нет доступа'
-                : status === 404
-                  ? 'Путешествие не найдено'
-                  : status === 0
-                    ? 'Нет соединения'
-                    : 'Ошибка загрузки'}
-          </Text>
-          <Text style={styles.errorText}>
-            {status === 0 ? message : 'Не удалось загрузить путешествие. Попробуйте ещё раз.'}
-          </Text>
+          <Text style={styles.errorTitle}>{title}</Text>
+          <Text style={styles.errorText}>{text}</Text>
 
-          <View style={{ flexDirection: 'row', gap: DESIGN_TOKENS.spacing.sm, marginTop: DESIGN_TOKENS.spacing.lg }}>
+          <View style={styles.actionRow}>
             {status !== 401 && (
               <Pressable
                 onPress={() => controller.retryLoad()}
-                style={{
-                  backgroundColor: colors.primary,
-                  paddingVertical: DESIGN_TOKENS.spacing.sm,
-                  paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-                  borderRadius: DESIGN_TOKENS.radii.md,
-                  minHeight: DESIGN_TOKENS.touchTarget.minHeight,
-                  justifyContent: 'center',
-                }}
+                style={styles.actionPrimary}
                 accessibilityRole="button"
                 accessibilityLabel="Повторить загрузку"
               >
-                <Text style={{ color: colors.textOnPrimary, fontWeight: '600' }}>Повторить</Text>
+                <Text style={styles.actionPrimaryText}>Повторить</Text>
               </Pressable>
             )}
             <Pressable
               onPress={() => router.replace('/')}
-              style={{
-                backgroundColor: colors.surface,
-                paddingVertical: DESIGN_TOKENS.spacing.sm,
-                paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-                borderRadius: DESIGN_TOKENS.radii.md,
-                borderWidth: 1,
-                borderColor: colors.border,
-                minHeight: DESIGN_TOKENS.touchTarget.minHeight,
-                justifyContent: 'center',
-              }}
+              style={styles.actionSecondary}
               accessibilityRole="button"
               accessibilityLabel="На главную"
             >
-              <Text style={{ color: colors.text, fontWeight: '600' }}>На главную</Text>
+              <Text style={styles.actionSecondaryText}>На главную</Text>
             </Pressable>
           </View>
         </View>
@@ -292,8 +240,8 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
         testID="travel-upsert.no-access"
         accessibilityLabel="Нет доступа к редактированию"
       >
-        <View style={styles.errorContainer}>
-          <Feather name="lock" size={48} color={colors.danger} style={{ marginBottom: DESIGN_TOKENS.spacing.md }} />
+        <View style={styles.centeredScreen}>
+          <Feather name="lock" size={48} color={colors.danger} style={styles.iconSpacing} />
           <Text style={styles.errorTitle}>Нет доступа</Text>
           <Text style={styles.errorText}>У вас нет прав для редактирования этого путешествия</Text>
         </View>
@@ -311,8 +259,8 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
         testID="travel-upsert.auth-required"
         accessibilityLabel="Требуется авторизация"
       >
-        <View style={styles.errorContainer}>
-          <Feather name="user" size={48} color={colors.primary} style={{ marginBottom: DESIGN_TOKENS.spacing.md }} />
+        <View style={styles.centeredScreen}>
+          <Feather name="user" size={48} color={colors.primary} style={styles.iconSpacing} />
           <Text style={styles.errorTitle}>Войдите в аккаунт</Text>
           <Text style={styles.errorText}>Чтобы создать путешествие, необходимо авторизоваться</Text>
           <View style={styles.authActions}>
@@ -338,19 +286,54 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
     );
   }
 
-  return (
-    <View
-      style={styles.container}
-      testID="travel-upsert.root"
-      accessibilityLabel="Форма создания путешествия"
+  const { wizard } = controller;
+
+  // Пропсы, общие для всех шагов.
+  const commonStepProps = {
+    currentStep: wizard.currentStep,
+    totalSteps: wizard.totalSteps,
+    formData: controller.formData,
+    onManualSave: controller.handleManualSave,
+    onPreview: previewState.showPreview,
+    onOpenPublic: handleOpenPublic,
+    onStepSelect: wizard.handleStepSelect,
+    stepMeta: controller.currentStepMeta,
+    progress: controller.progress,
+    autosaveBadge: controller.autosaveBadge,
+  };
+
+  // Навигация назад/вперёд + якорь фокуса (шаги 2–5).
+  const stepNavProps = {
+    onBack: wizard.handleBack,
+    onNext: wizard.handleNext,
+    focusAnchorId: wizard.focusAnchorId,
+    onAnchorHandled: wizard.handleAnchorHandled,
+  };
+
+  const renderStep = (stepNumber: number, node: React.ReactNode, canGoBack: boolean) => (
+    <TravelFormErrorBoundary
+      onError={handleStepError}
+      fallback={
+        <StepErrorFallback
+          stepNumber={stepNumber}
+          onGoBack={canGoBack ? wizard.handleBack : undefined}
+          colors={colors}
+          styles={styles}
+        />
+      }
     >
+      {node}
+    </TravelFormErrorBoundary>
+  );
+
+  return (
+    <View style={styles.container} testID="travel-upsert.root" accessibilityLabel="Форма создания путешествия">
       <TravelPreviewModal
         visible={previewState.isPreviewVisible}
         onClose={previewState.hidePreview}
         formData={controller.formData}
       />
 
-      {/* Draft recovery dialog */}
       <DraftRecoveryDialog
         visible={controller.draftRecovery.hasPendingDraft}
         draftTimestamp={controller.draftRecovery.draftTimestamp}
@@ -359,48 +342,31 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
         isRecovering={controller.draftRecovery.isRecovering}
       />
 
-      {/* Offline indicator */}
       <OfflineBanner colors={colors} isVisible={isOffline} />
 
-      {/* Step 1: Basic Info */}
-      {controller.wizard.currentStep === 1 && (
-        <TravelFormErrorBoundary
-          onError={handleStepError}
-          fallback={<StepErrorFallback stepNumber={1} colors={colors} />}
-        >
+      {wizard.currentStep === 1 &&
+        renderStep(
+          1,
           <TravelWizardStepBasic
-            currentStep={controller.wizard.currentStep}
-            totalSteps={controller.wizard.totalSteps}
-            formData={controller.formData}
-            setFormData={controller.setFormData}
-            onManualSave={controller.handleManualSave}
-            onGoNext={controller.wizard.handleNext}
-            onPreview={previewState.showPreview}
-            onOpenPublic={handleOpenPublic}
+            {...commonStepProps}
+            setFormData={setFormData}
+            onGoNext={wizard.handleNext}
             snackbarVisible={controller.autosave.status === 'error'}
             snackbarMessage={controller.autosave.error?.message || ''}
             onDismissSnackbar={controller.autosave.clearError}
-            stepMeta={controller.currentStepMeta}
-            progress={controller.progress}
-            autosaveBadge={controller.autosaveBadge}
-            stepErrors={controller.wizard.step1SubmitErrors.map(e => e.message)}
-            focusAnchorId={controller.wizard.focusAnchorId}
-            onAnchorHandled={controller.wizard.handleAnchorHandled}
-            onStepSelect={controller.wizard.handleStepSelect}
-          />
-        </TravelFormErrorBoundary>
-      )}
+            stepErrors={wizard.step1SubmitErrors.map((e) => e.message)}
+            focusAnchorId={wizard.focusAnchorId}
+            onAnchorHandled={wizard.handleAnchorHandled}
+          />,
+          false,
+        )}
 
-      {/* Step 2: Route */}
-      {controller.wizard.currentStep === 2 && (
-        <TravelFormErrorBoundary
-          onError={handleStepError}
-          fallback={<StepErrorFallback stepNumber={2} onGoBack={controller.wizard.handleBack} colors={colors} />}
-        >
+      {wizard.currentStep === 2 &&
+        renderStep(
+          2,
           <TravelWizardStepRoute
-            currentStep={controller.wizard.currentStep}
-            totalSteps={controller.wizard.totalSteps}
-            formData={controller.formData}
+            {...commonStepProps}
+            {...stepNavProps}
             markers={controller.markers}
             setMarkers={controller.setMarkers}
             categoryTravelAddress={controller.filters.categoryTravelAddress}
@@ -409,155 +375,76 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
             selectedCountryIds={controller.formData.countries || []}
             onCountrySelect={controller.handleCountrySelect}
             onCountryDeselect={controller.handleCountryDeselect}
-            onBack={controller.wizard.handleBack}
-            onNext={controller.wizard.handleNext}
-            onManualSave={controller.handleManualSave}
-            onPreview={previewState.showPreview}
-            onOpenPublic={handleOpenPublic}
             isFiltersLoading={controller.isFiltersLoading}
-            stepMeta={controller.currentStepMeta}
-            progress={controller.progress}
-            autosaveBadge={controller.autosaveBadge}
-            focusAnchorId={controller.wizard.focusAnchorId}
-            onAnchorHandled={controller.wizard.handleAnchorHandled}
-            onStepSelect={controller.wizard.handleStepSelect}
-          />
-        </TravelFormErrorBoundary>
-      )}
+          />,
+          true,
+        )}
 
-      {/* Step 3: Media */}
-      {controller.wizard.currentStep === 3 && (
-        <TravelFormErrorBoundary
-          onError={handleStepError}
-          fallback={<StepErrorFallback stepNumber={3} onGoBack={controller.wizard.handleBack} colors={colors} />}
-        >
+      {wizard.currentStep === 3 &&
+        renderStep(
+          3,
           <TravelWizardStepMedia
-            currentStep={controller.wizard.currentStep}
-            totalSteps={controller.wizard.totalSteps}
-            formData={controller.formData}
-            setFormData={controller.setFormData}
+            {...commonStepProps}
+            {...stepNavProps}
+            setFormData={setFormData}
             travelDataOld={controller.travelDataOld}
-            onManualSave={controller.handleManualSave}
-            onBack={controller.wizard.handleBack}
-            onNext={controller.wizard.handleNext}
-            onPreview={previewState.showPreview}
-            onOpenPublic={handleOpenPublic}
-            stepMeta={controller.currentStepMeta}
-            progress={controller.progress}
-            autosaveBadge={controller.autosaveBadge}
-            focusAnchorId={controller.wizard.focusAnchorId}
-            onAnchorHandled={controller.wizard.handleAnchorHandled}
-            onStepSelect={controller.wizard.handleStepSelect}
-          />
-        </TravelFormErrorBoundary>
-      )}
+          />,
+          true,
+        )}
 
-      {/* Step 4: Details */}
-      {controller.wizard.currentStep === 4 && (
-        <TravelFormErrorBoundary
-          onError={handleStepError}
-          fallback={<StepErrorFallback stepNumber={4} onGoBack={controller.wizard.handleBack} colors={colors} />}
-        >
+      {wizard.currentStep === 4 &&
+        renderStep(
+          4,
           <TravelWizardStepDetails
-            currentStep={controller.wizard.currentStep}
-            totalSteps={controller.wizard.totalSteps}
-            formData={controller.formData}
-            setFormData={controller.setFormData}
-            onManualSave={controller.handleManualSave}
-            onBack={controller.wizard.handleBack}
-            onNext={controller.wizard.handleNext}
-            onPreview={previewState.showPreview}
-            onOpenPublic={handleOpenPublic}
-            stepMeta={controller.currentStepMeta}
-            progress={controller.progress}
-            autosaveBadge={controller.autosaveBadge}
-            focusAnchorId={controller.wizard.focusAnchorId}
-            onAnchorHandled={controller.wizard.handleAnchorHandled}
-            onStepSelect={controller.wizard.handleStepSelect}
-          />
-        </TravelFormErrorBoundary>
-      )}
+            {...commonStepProps}
+            {...stepNavProps}
+            setFormData={setFormData}
+          />,
+          true,
+        )}
 
-      {/* Step 5: Extras */}
-      {controller.wizard.currentStep === 5 && (
-        <TravelFormErrorBoundary
-          onError={handleStepError}
-          fallback={<StepErrorFallback stepNumber={5} onGoBack={controller.wizard.handleBack} colors={colors} />}
-        >
+      {wizard.currentStep === 5 &&
+        renderStep(
+          5,
           <TravelWizardStepExtras
-            currentStep={controller.wizard.currentStep}
-            totalSteps={controller.wizard.totalSteps}
-            formData={controller.formData}
-            setFormData={setFormDataDirect}
+            {...commonStepProps}
+            {...stepNavProps}
+            setFormData={setFormData}
             filters={controller.filters}
             travelDataOld={controller.travelDataOld}
             isSuperAdmin={controller.isSuperAdmin}
-            onManualSave={controller.handleManualSave}
-            onBack={controller.wizard.handleBack}
-            onNext={controller.wizard.handleNext}
-            onPreview={previewState.showPreview}
-            onOpenPublic={handleOpenPublic}
-            stepMeta={controller.currentStepMeta}
-            progress={controller.progress}
-            autosaveBadge={controller.autosaveBadge}
-            focusAnchorId={controller.wizard.focusAnchorId}
-            onAnchorHandled={controller.wizard.handleAnchorHandled}
-            onStepSelect={controller.wizard.handleStepSelect}
-          />
-        </TravelFormErrorBoundary>
-      )}
+          />,
+          true,
+        )}
 
-      {/* Step 6: Publish */}
-      {controller.wizard.currentStep === 6 && (
-        <TravelFormErrorBoundary
-          onError={handleStepError}
-          fallback={<StepErrorFallback stepNumber={6} onGoBack={controller.wizard.handleBack} colors={colors} />}
-        >
+      {wizard.currentStep === 6 &&
+        renderStep(
+          6,
           <TravelWizardStepPublish
-            currentStep={controller.wizard.currentStep}
-            totalSteps={controller.wizard.totalSteps}
-            formData={controller.formData}
+            {...commonStepProps}
+            setFormData={setFormData}
             countries={controller.filters.countries}
-            setFormData={setFormDataDirect}
             isSuperAdmin={controller.isSuperAdmin}
-            onManualSave={controller.handleManualSave}
-            onGoBack={controller.wizard.handleBack}
-            onFinish={controller.wizard.handleFinishWizard}
-            onNavigateToIssue={controller.wizard.handleNavigateToIssue}
-            onStepSelect={controller.wizard.handleStepSelect}
-            onPreview={previewState.showPreview}
-            onOpenPublic={handleOpenPublic}
-            stepMeta={controller.currentStepMeta}
-            progress={controller.progress}
-            autosaveBadge={controller.autosaveBadge}
-          />
-        </TravelFormErrorBoundary>
-      )}
+            onGoBack={wizard.handleBack}
+            onFinish={wizard.handleFinishWizard}
+            onNavigateToIssue={wizard.handleNavigateToIssue}
+          />,
+          true,
+        )}
     </View>
   );
 }
 
 const createStyles = (
-  colors: UpsertTravelController['colors'],
-  responsive?: { isDesktop: boolean; isTablet: boolean; isMobile: boolean }
+  colors: Colors,
+  responsive?: { isDesktop: boolean; isTablet: boolean; isMobile: boolean },
 ) =>
   StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.background,
     },
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: DESIGN_TOKENS.spacing.xl,
-    },
-    loadingText: {
-      marginTop: DESIGN_TOKENS.spacing.md,
-      fontSize: DESIGN_TOKENS.typography.sizes.md,
-      color: colors.textMuted,
-    },
-    errorContainer: {
+    centeredScreen: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
@@ -565,6 +452,9 @@ const createStyles = (
       maxWidth: responsive?.isDesktop ? 480 : '100%',
       alignSelf: 'center',
       width: '100%',
+    },
+    iconSpacing: {
+      marginBottom: DESIGN_TOKENS.spacing.md,
     },
     errorTitle: {
       fontSize: DESIGN_TOKENS.typography.sizes.xl,
@@ -578,6 +468,37 @@ const createStyles = (
       color: colors.textMuted,
       textAlign: 'center',
       lineHeight: 24,
+    },
+    actionRow: {
+      flexDirection: 'row',
+      gap: DESIGN_TOKENS.spacing.sm,
+      marginTop: DESIGN_TOKENS.spacing.lg,
+    },
+    actionPrimary: {
+      backgroundColor: colors.primary,
+      paddingVertical: DESIGN_TOKENS.spacing.sm,
+      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+      justifyContent: 'center',
+    },
+    actionPrimaryText: {
+      color: colors.textOnPrimary,
+      fontWeight: '600',
+    },
+    actionSecondary: {
+      backgroundColor: colors.surface,
+      paddingVertical: DESIGN_TOKENS.spacing.sm,
+      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+      justifyContent: 'center',
+    },
+    actionSecondaryText: {
+      color: colors.text,
+      fontWeight: '600',
     },
     authActions: {
       flexDirection: responsive?.isMobile ? 'column' : 'row',

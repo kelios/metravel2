@@ -185,7 +185,6 @@ export default function PlacesScreen() {
   )
   const [visibleCount, setVisibleCount] = useState(PLACES_PAGE_SIZE)
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const [selectionExpanded, setSelectionExpanded] = useState(false)
   const [countriesExpanded, setCountriesExpanded] = useState(false)
 
   const placesQuery = useQuery({
@@ -495,7 +494,7 @@ export default function PlacesScreen() {
               value={query}
               onChangeText={setQuery}
               placeholder="Поиск по названию или адресу..."
-              placeholderTextColor={colors.textSubtle}
+              placeholderTextColor={colors.textMuted}
               style={styles.searchInput}
               returnKeyType="search"
               accessibilityLabel="Найти место"
@@ -505,6 +504,7 @@ export default function PlacesScreen() {
                 onPress={() => setQuery('')}
                 accessibilityRole="button"
                 accessibilityLabel="Очистить поиск"
+                hitSlop={10}
                 style={({ pressed }) => [styles.searchClear, pressed && PRESSED_OPACITY]}
               >
                 <Feather name="x" size={16} color={colors.textMuted} />
@@ -535,7 +535,7 @@ export default function PlacesScreen() {
             ) : (
               <>
                 <Chip
-                  label="Все"
+                  label="Все страны"
                   count={showLoadedCounts ? placesForCountryCounts.length : undefined}
                   selected={!selectedCountry}
                   onPress={() => handleSelectCountry(null)}
@@ -656,7 +656,7 @@ export default function PlacesScreen() {
                             onPress={handleClearCategories}
                             accessibilityRole="button"
                             accessibilityLabel={`Очистить подборку ${collection.title}`}
-                            hitSlop={8}
+                            hitSlop={10}
                             style={({ pressed }) => [styles.featuredClear, pressed && PRESSED_OPACITY]}
                           >
                             <Feather name="x" size={14} color={colors.primaryText} />
@@ -671,7 +671,7 @@ export default function PlacesScreen() {
               <Text style={styles.hintText}>Или выберите категории вручную</Text>
               <View style={styles.chipRow}>
                 <Chip
-                  label="Все"
+                  label="Все категории"
                   count={showLoadedCounts ? placesForCategoryCounts.length : undefined}
                   selected={selectedCategories.length === 0}
                   onPress={handleClearCategories}
@@ -721,49 +721,6 @@ export default function PlacesScreen() {
                 />
               ) : null}
             </View>
-
-            {selectedCategories.length > 1 ? (
-              <View style={styles.activeSelection}>
-                <Pressable
-                  onPress={() => setSelectionExpanded((v) => !v)}
-                  accessibilityRole="button"
-                  accessibilityState={{ expanded: selectionExpanded }}
-                  accessibilityLabel={`Выбранные категории: ${selectedCategories.length}`}
-                  style={({ pressed }) => [styles.activeSelectionHeader, pressed && PRESSED_OPACITY]}
-                >
-                  <Text style={styles.activeSelectionLabel}>
-                    Выбранные категории
-                  </Text>
-                  <View style={styles.activeSelectionCount}>
-                    <Text style={styles.activeSelectionCountText}>
-                      {selectedCategories.length}
-                    </Text>
-                  </View>
-                  <View style={styles.activeSelectionSpacer} />
-                  <Feather
-                    name={selectionExpanded ? 'chevron-up' : 'chevron-down'}
-                    size={16}
-                    color={colors.primaryText}
-                  />
-                </Pressable>
-                {selectionExpanded ? (
-                  <View style={styles.chipRow}>
-                    {selectedCategories.map((category) => (
-                      <Pressable
-                        key={category}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Убрать категорию ${category}`}
-                        onPress={() => handleToggleCategory(category)}
-                        style={({ pressed }) => [styles.activeChip, pressed && PRESSED_OPACITY]}
-                      >
-                        <Text style={styles.activeChipText}>{category}</Text>
-                        <Feather name="x" size={12} color={colors.textOnPrimary} />
-                      </Pressable>
-                    ))}
-                  </View>
-                ) : null}
-              </View>
-            ) : null}
 
             {resultsContent}
           </View>
@@ -1013,10 +970,10 @@ const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean)
   // ─── Search ───
   searchSection: {
     paddingHorizontal: isCompact ? DESIGN_TOKENS.spacing.lg : DESIGN_TOKENS.spacing.xl,
-    paddingBottom: DESIGN_TOKENS.spacing.lg,
+    paddingBottom: DESIGN_TOKENS.spacing.md,
   },
   searchBox: {
-    height: 52,
+    height: 46,
     borderRadius: DESIGN_TOKENS.radii.pill,
     borderWidth: 1.5,
     borderColor: colors.border,
@@ -1162,8 +1119,8 @@ const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean)
     flexShrink: 0,
   },
   featuredClear: {
-    width: 24,
-    height: 24,
+    width: 28,
+    height: 28,
     borderRadius: DESIGN_TOKENS.radii.full,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1311,62 +1268,6 @@ const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean)
     color: colors.textMuted,
     ...DESIGN_TOKENS.typography.scale.bodySmall,
     fontWeight: '500',
-  },
-
-  // ─── Active selection chips ───
-  activeSelection: {
-    borderRadius: DESIGN_TOKENS.radii.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.primaryAlpha30,
-    backgroundColor: colors.primarySoft,
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    paddingVertical: DESIGN_TOKENS.spacing.sm,
-    gap: DESIGN_TOKENS.spacing.sm,
-  },
-  activeSelectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.xs,
-    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
-  },
-  activeSelectionLabel: {
-    color: colors.primaryText,
-    fontSize: DESIGN_TOKENS.typography.sizes.xs,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  activeSelectionCount: {
-    minWidth: 20,
-    height: 20,
-    borderRadius: DESIGN_TOKENS.radii.full,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  activeSelectionCountText: {
-    color: colors.textOnPrimary,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  activeSelectionSpacer: {
-    flex: 1,
-  },
-  activeChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    borderRadius: DESIGN_TOKENS.radii.full,
-    backgroundColor: colors.primary,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
-  },
-  activeChipText: {
-    color: colors.textOnPrimary,
-    fontSize: DESIGN_TOKENS.typography.sizes.xs,
-    fontWeight: '700',
   },
 
   // ─── Cards grid ───

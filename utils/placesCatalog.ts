@@ -119,9 +119,13 @@ const isJunkPlaceLabel = (value: string): boolean => {
   return /^№?\s*\d+([.,]\d+)?\s*(км|km|м|m)?\.?$/i.test(v)
 }
 
+// "52.9654099, 29.7841898" — raw lat/lng pair, never a real place name.
+const isCoordinatePair = (value: string): boolean =>
+  /^[-+]?\d{1,3}([.,]\d+)?\s*[,;]\s*[-+]?\d{1,3}([.,]\d+)?$/.test(value.trim())
+
 const getPlaceTitle = (place: TravelCoords): string => {
   const maybeName = normalizeText((place as TravelCoords & { name?: unknown }).name)
-  if (maybeName && !isJunkPlaceLabel(maybeName)) return maybeName
+  if (maybeName && !isJunkPlaceLabel(maybeName) && !isCoordinatePair(maybeName)) return maybeName
 
   const address = normalizeText(place.address)
   if (!address) return maybeName || 'Место без названия'

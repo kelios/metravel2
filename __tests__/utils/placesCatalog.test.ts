@@ -26,6 +26,20 @@ describe('placesCatalog', () => {
     expect(place.title).toBe('Дворец без названия')
   })
 
+  it('does not use coordinate-pair names as place titles', () => {
+    const [place] = normalizeCatalogPlaces([
+      makePlace({
+        name: '52.9654099, 29.7841898',
+        address: '52.9654099, 29.7841898',
+        categoryName: 'Дворец',
+        lat: '52.9654099',
+        lng: '29.7841898',
+      } as Partial<TravelCoords>),
+    ])
+
+    expect(place.title).toBe('Дворец без названия')
+  })
+
   it('uses readable address parts after junk marker labels', () => {
     const [place] = normalizeCatalogPlaces([
       makePlace({
