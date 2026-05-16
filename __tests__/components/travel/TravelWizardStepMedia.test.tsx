@@ -36,17 +36,6 @@ jest.mock('@/components/travel/TravelWizardHeader', () => {
   return () => <View testID="wizard-header-stub" />;
 });
 
-jest.mock('@/components/travel/TravelWizardFooter', () => {
-  const { View, Pressable, Text } = require('react-native');
-  return ({ onPrimary }: any) => (
-    <View testID="wizard-footer-stub">
-      <Pressable onPress={onPrimary}>
-        <Text>next</Text>
-      </Pressable>
-    </View>
-  );
-});
-
 // Stub gallery to avoid heavy dropzone and allow props inspection
 jest.mock('@/components/travel/ImageGalleryComponent', () => {
   const { Text } = require('react-native');

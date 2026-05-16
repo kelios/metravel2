@@ -45,13 +45,6 @@ jest.mock('@/components/travel/TravelWizardHeader', () => {
   };
 });
 
-jest.mock('@/components/travel/TravelWizardFooter', () => {
-  return {
-    __esModule: true,
-    default: () => null,
-  };
-});
-
 jest.mock('@/components/travel/ValidationFeedback', () => {
   return {
     __esModule: true,

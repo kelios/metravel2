@@ -48,23 +48,6 @@ jest.mock('@/components/travel/TravelWizardHeader', () => (props: any) => {
     );
 });
 
-jest.mock('@/components/travel/TravelWizardFooter', () => (props: any) => {
-    const { View, Text, Pressable } = require('react-native');
-    return (
-        <View>
-            <Pressable onPress={props.onPrimary}>
-                <Text>Далее</Text>
-            </Pressable>
-            <Pressable onPress={props.onQuickDraft}>
-                <Text>Быстрый черновик</Text>
-            </Pressable>
-            <Pressable onPress={props.onSave}>
-                <Text>Сохранить</Text>
-            </Pressable>
-        </View>
-    );
-});
-
 jest.mock('@/components/travel/ContentUpsertSection', () => (_props: any) => {
     const { View, Text } = require('react-native');
     return (
