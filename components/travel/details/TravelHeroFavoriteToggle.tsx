@@ -20,6 +20,7 @@ export const TravelHeroFavoriteToggle: React.FC<{
     favoriteButtonLabel,
     handleFavoriteToggle,
     isFavorite,
+    isPending,
   } = useTravelHeroFavoriteToggleModel({
     isMobile,
     travel,
@@ -28,18 +29,21 @@ export const TravelHeroFavoriteToggle: React.FC<{
   return (
     <Pressable
       onPress={handleFavoriteToggle}
+      disabled={isPending}
       style={[
         styles.heroFavoriteBtn,
         isFavorite && styles.heroFavoriteBtnActive,
         isMobile && styles.heroFavoriteBtnMobile,
+        isPending && { opacity: 0.6 },
       ]}
       accessibilityRole="button"
+      accessibilityState={{ disabled: isPending, selected: isFavorite }}
       accessibilityLabel={favoriteButtonA11yLabel}
     >
       <Feather
         name="heart"
         size={20}
-        color={isFavorite ? colors.textOnDark : colors.textOnDark}
+        color={isFavorite ? colors.textOnPrimary : colors.textOnDark}
       />
       {isMobile || Platform.OS !== 'web' ? (
         <Text

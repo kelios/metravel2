@@ -83,8 +83,14 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
                 throw new Error('Ошибка поиска');
             }
 
-            const data: SearchResult[] = await response.json();
-            setResults(data);
+            const data: unknown = await response.json();
+            const items = Array.isArray(data)
+                ? (data as SearchResult[]).filter(
+                      (item): item is SearchResult =>
+                          !!item && typeof item.display_name === 'string',
+                  )
+                : [];
+            setResults(items);
             setShowResults(true);
         } catch (err: any) {
             if (err.name !== 'AbortError') {

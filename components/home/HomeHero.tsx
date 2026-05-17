@@ -38,6 +38,7 @@ const SLIDER_HEIGHT_WIDE = 420
 const SLIDER_MEDIA_WIDTH_NARROW = 480
 const SLIDER_MEDIA_WIDTH_WIDE = 500
 const SLIDER_DESKTOP_BREAKPOINT = 1480
+const NAV_FEEDBACK_MS = 700
 
 interface HomeHeroProps {
   travelsCount?: number
@@ -159,6 +160,8 @@ const HomeHero = memo(function HomeHero({
     isMobile || isCompactBookLayout || (showSideSlider && width < STACKED_CTA_MAX_WIDTH)
 
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+  const [pendingAction, setPendingAction] = useState<string | null>(null)
+  const pendingActionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
     if (!IS_WEB || typeof window === 'undefined') return
     const mediaQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)')
@@ -166,6 +169,12 @@ const HomeHero = memo(function HomeHero({
     sync()
     mediaQuery?.addEventListener?.('change', sync)
     return () => mediaQuery?.removeEventListener?.('change', sync)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (pendingActionTimerRef.current) clearTimeout(pendingActionTimerRef.current)
+    }
   }, [])
 
   const {
@@ -187,17 +196,28 @@ const HomeHero = memo(function HomeHero({
     getSlideSource: (slide) => slide.source,
   })
 
+  const showNavigationFeedback = useCallback((key: string) => {
+    setPendingAction(key)
+    if (pendingActionTimerRef.current) clearTimeout(pendingActionTimerRef.current)
+    pendingActionTimerRef.current = setTimeout(
+      () => setPendingAction((current) => (current === key ? null : current)),
+      NAV_FEEDBACK_MS,
+    )
+  }, [])
+
   const handleOpenSearch = useCallback(() => {
+    showNavigationFeedback('search')
     queueAnalyticsEvent('HomeClick_OpenSearch')
     router.push('/search' as any)
-  }, [router])
+  }, [router, showNavigationFeedback])
 
   const handleQuickFilterPress = useCallback(
     (label: string, filters?: QuickFilterParams, route: string = '/search') => {
+      showNavigationFeedback(`filter:${label}`)
       queueAnalyticsEvent('HomeClick_QuickFilter', { label, source: 'home-hero' })
       router.push(buildFilterPath(route, filters) as any)
     },
-    [router],
+    [router, showNavigationFeedback],
   )
 
   const handleOpenArticle = useCallback(
@@ -285,6 +305,7 @@ const HomeHero = memo(function HomeHero({
             onQuickFilterPress={handleQuickFilterPress}
             onOpenArticle={handleOpenArticle}
             onOpenSearch={handleOpenSearch}
+            pendingAction={pendingAction}
             onPrevSlide={handlePrevSlide}
             onNextSlide={handleNextSlide}
             onMarkSlideLoaded={markSlideAsLoaded}

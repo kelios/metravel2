@@ -208,6 +208,22 @@ export async function readTravel(ctx: E2EApiContext, travelId: string | number):
   return json;
 }
 
+export async function reorderGalleryApi(
+  ctx: E2EApiContext,
+  travelId: string | number,
+  imageIds: number[],
+): Promise<{ gallery: Array<{ id: number; url: string; order: number }> }> {
+  const api = await apiRequestContext(ctx);
+  const resp = await api.patch('/api/gallery/reorder/', {
+    data: { travel_id: Number(travelId), image_ids: imageIds },
+  });
+  expect(resp.ok(), `Gallery reorder failed: ${resp.status()} ${resp.statusText()}`).toBeTruthy();
+  const json = await resp.json().catch(() => null);
+  await api.dispose();
+  expect(json, 'Gallery reorder returned no JSON').toBeTruthy();
+  return json;
+}
+
 export async function deleteTravel(ctx: E2EApiContext, travelId: string | number): Promise<void> {
   const api = await apiRequestContext(ctx);
   const resp = await api.delete(`/api/travels/${travelId}/`);
@@ -379,6 +395,22 @@ async function ensureLoginFormReady(page: any): Promise<void> {
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
     await page.goto('/login', { waitUntil: 'domcontentloaded' });
+
+    const existingUserId = await getUserIdFromPage(page);
+    const alreadyAuthenticated = await page.evaluate(() => {
+      try {
+        const token =
+          window.localStorage.getItem('secure_userToken') ||
+          window.localStorage.getItem('userToken') ||
+          '';
+        return String(token || '').trim().length > 0;
+      } catch {
+        return false;
+      }
+    }).catch(() => false);
+    if (existingUserId && alreadyAuthenticated) {
+      return;
+    }
 
     try {
       await Promise.race([

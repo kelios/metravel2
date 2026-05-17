@@ -3,9 +3,10 @@
 // 🎨 УЛУЧШЕНО: Анимация изменения рейтинга, улучшенная визуальная иерархия, success feedback
 
 import React, { memo, useMemo, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
+import { View, Text, StyleSheet, Animated, Platform, Pressable } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 import StarRating from '@/components/ui/StarRating';
 import { useTravelRating } from '@/hooks/useTravelRating';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -29,6 +30,7 @@ function TravelRatingSection({
 }: Props) {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
+    const { requireAuth } = useRequireAuth({ intent: 'rate' });
     const shouldUseNativeDriver = false;
 
     // 🎨 Анимация для изменения рейтинга
@@ -252,7 +254,16 @@ function TravelRatingSection({
                             )}
                         </>
                     ) : (
-                        <Text style={styles.loginHint}>Войдите, чтобы оценить</Text>
+                        <Pressable
+                            onPress={requireAuth}
+                            accessibilityRole="button"
+                            accessibilityLabel="Войдите, чтобы оценить маршрут"
+                            hitSlop={8}
+                        >
+                            <Text style={[styles.loginHint, { textDecorationLine: 'underline' }]}>
+                                Войдите, чтобы оценить
+                            </Text>
+                        </Pressable>
                     )}
                 </View>
             </View>

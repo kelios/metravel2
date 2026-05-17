@@ -301,6 +301,49 @@ export const uploadImage = async (
     : { ok: true };
 };
 
+export interface GalleryReorderImage {
+  id: number;
+  url: string;
+  order: number;
+}
+
+export const reorderGallery = async (
+  travelId: string | number,
+  imageIds: Array<string | number>,
+  signal?: AbortSignal,
+): Promise<{ gallery: GalleryReorderImage[] }> => {
+  const token = await getSecureItem('userToken');
+  if (!token) {
+    throw new Error('Пользователь не авторизован');
+  }
+
+  const numericTravelId = Number(travelId);
+  if (!Number.isInteger(numericTravelId) || numericTravelId <= 0) {
+    throw new Error('Некорректный id путешествия');
+  }
+
+  const numericImageIds = Array.from(
+    new Set(
+      imageIds
+        .map((id) => Number(id))
+        .filter((id) => Number.isInteger(id) && id > 0),
+    ),
+  );
+  if (numericImageIds.length === 0) {
+    return { gallery: [] };
+  }
+
+  return await apiClient.request<{ gallery: GalleryReorderImage[] }>(
+    '/gallery/reorder/',
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ travel_id: numericTravelId, image_ids: numericImageIds }),
+      signal,
+    },
+    DEFAULT_TIMEOUT,
+  );
+};
+
 export const deleteImage = async (imageId: string) => {
   const token = await getSecureItem('userToken');
   if (!token) {

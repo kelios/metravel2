@@ -345,6 +345,52 @@ describe('ArticleEditor.web autosave', () => {
     })
   })
 
+  it('emits an empty string when Quill only keeps the empty paragraph scaffold after deleting content', async () => {
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default
+
+    const onChange = jest.fn()
+
+    const { getByTestId } = render(
+      <ArticleEditor content={'<p>start</p>'} onChange={onChange} variant="compact" />
+    )
+
+    await waitFor(() => {
+      expect(getByTestId('quill-mock')).toBeTruthy()
+    })
+
+    const quillProps = (globalThis as any).__quillProps__
+    expect(quillProps).toBeTruthy()
+
+    act(() => {
+      quillProps.onChange('<p><br></p>', null, 'user')
+    })
+
+    expect(onChange).toHaveBeenLastCalledWith('')
+  })
+
+  it('keeps embed-only HTML when there is no plain text left in the editor', async () => {
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default
+
+    const onChange = jest.fn()
+
+    const { getByTestId } = render(
+      <ArticleEditor content={''} onChange={onChange} variant="compact" />
+    )
+
+    await waitFor(() => {
+      expect(getByTestId('quill-mock')).toBeTruthy()
+    })
+
+    const quillProps = (globalThis as any).__quillProps__
+    expect(quillProps).toBeTruthy()
+
+    act(() => {
+      quillProps.onChange('<p><img src="https://example.com/a.jpg" alt="img"></p>', null, 'user')
+    })
+
+    expect(onChange).toHaveBeenLastCalledWith('<p><img src="https://example.com/a.jpg" alt="img" /></p>')
+  })
+
   it('sanitizes editor HTML before manual save and HTML mode sync', async () => {
     const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default
 

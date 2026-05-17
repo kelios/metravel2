@@ -5,6 +5,7 @@
  * P4.2: Используем гранулярные Zustand селекторы для предотвращения лишних re-renders
  */
 import { useRouteStore } from '@/stores/routeStore';
+import { showRouteClearedToast } from '@/utils/mapToasts';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import type { LatLng } from '@/types/coordinates';
 import { useMemo, useCallback } from 'react';
@@ -239,7 +240,9 @@ export function useRouteStoreAdapter() {
   }, []);
 
   const handleClearRoute = useCallback(() => {
+    const hadPoints = useRouteStore.getState().points.length > 0;
     useRouteStore.getState().clearRoute();
+    if (hadPoints) showRouteClearedToast();
   }, []);
 
   const handleAddressSelect = useCallback((address: string, coords: LatLng, isStart: boolean) => {

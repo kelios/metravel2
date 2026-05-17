@@ -1069,6 +1069,15 @@ export const createHomeHeroStyles = ({
         } as any,
       }),
     },
+    pageNoteActive: {
+      backgroundColor: DESIGN_TOKENS.colors.brand,
+      borderColor: DESIGN_TOKENS.colors.brand,
+      ...Platform.select({
+        web: {
+          boxShadow: `0 6px 16px ${DESIGN_TOKENS.colors.brandAlpha30}`,
+        } as any,
+      }),
+    },
     pageNoteIcon: {
       width: useDenseBookNotes ? 18 : 22,
       height: useDenseBookNotes ? 18 : 22,
@@ -1076,6 +1085,9 @@ export const createHomeHeroStyles = ({
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: DESIGN_TOKENS.colors.brandAlpha30,
+    },
+    pageNoteIconActive: {
+      backgroundColor: DESIGN_TOKENS.colors.overlayLight,
     },
     pageNoteTextWrap: {
       gap: 0,
@@ -1087,12 +1099,19 @@ export const createHomeHeroStyles = ({
       fontWeight: '600',
       ...Platform.select({ web: { fontFamily: sansSerif } as any }),
     },
+    pageNoteTextActive: {
+      color: DESIGN_TOKENS.colors.textOnPrimary,
+    },
     pageNoteMeta: {
       color: inkSubtle,
       fontSize: useDenseBookNotes ? 8 : 10,
       lineHeight: useDenseBookNotes ? 9 : 12,
       fontWeight: '500',
       ...Platform.select({ web: { fontFamily: sansSerif } as any }),
+    },
+    pageNoteMetaActive: {
+      color: DESIGN_TOKENS.colors.textOnPrimary,
+      opacity: 0.86,
     },
     sectionLabelRow: {
       width: '100%',

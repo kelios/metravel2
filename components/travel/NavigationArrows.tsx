@@ -173,6 +173,13 @@ function NavigationArrows({
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
     },
+    navImageWrapMobile: {
+      width: 52,
+      height: 52,
+    },
+    navCardPressed: {
+      opacity: 0.85,
+    },
   }), [colors]);
 
   // Если нет соседних путешествий, не показываем компонент
@@ -186,7 +193,7 @@ function NavigationArrows({
       {prevTravel ? (
         <Pressable
           onPress={() => handleNavigate(prevTravel)}
-          style={[styles.navCard, styles.prevCard, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+          style={({ pressed }) => [styles.navCard, styles.prevCard, globalFocusStyles.focusable, pressed && styles.navCardPressed]}
           accessibilityRole="button"
           accessibilityLabel={`${isFallback ? 'Похожий маршрут' : 'Предыдущее путешествие'}: ${prevTravel.name || ''}`}
           android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
@@ -197,12 +204,12 @@ function NavigationArrows({
               <Text style={styles.navLabel} numberOfLines={1}>
                 {isFallback ? 'Похожий маршрут' : 'Предыдущее'}
               </Text>
-              <Text style={styles.navTitle} numberOfLines={2}>
+              <Text style={styles.navTitle} numberOfLines={2} ellipsizeMode="tail">
                 {prevTravel.name || 'Без названия'}
               </Text>
             </View>
             {buildImageUrl(prevTravel) && (
-              <View style={styles.navImageWrap}>
+              <View style={[styles.navImageWrap, isMobile && styles.navImageWrapMobile]}>
                 <ImageCardMedia
                   src={buildImageUrl(prevTravel)!}
                   fit="contain"
@@ -218,7 +225,7 @@ function NavigationArrows({
             )}
           </View>
         </Pressable>
-      ) : (
+      ) : isMobile ? null : (
         <View style={[styles.navCard, { opacity: 0, pointerEvents: 'none' } as any]} />
       )}
 
@@ -226,14 +233,14 @@ function NavigationArrows({
       {nextTravel ? (
         <Pressable
           onPress={() => handleNavigate(nextTravel)}
-          style={[styles.navCard, styles.nextCard, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+          style={({ pressed }) => [styles.navCard, styles.nextCard, globalFocusStyles.focusable, pressed && styles.navCardPressed]}
           accessibilityRole="button"
           accessibilityLabel={`${isFallback ? 'Похожий маршрут' : 'Следующее путешествие'}: ${nextTravel.name || ''}`}
           android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
         >
           <View style={styles.navContent}>
             {buildImageUrl(nextTravel) && (
-              <View style={styles.navImageWrap}>
+              <View style={[styles.navImageWrap, isMobile && styles.navImageWrapMobile]}>
                 <ImageCardMedia
                   src={buildImageUrl(nextTravel)!}
                   fit="contain"
@@ -251,15 +258,14 @@ function NavigationArrows({
               <Text style={styles.navLabel} numberOfLines={1}>
                 {isFallback ? 'Похожий маршрут' : 'Следующее'}
               </Text>
-              <Text style={styles.navTitle} numberOfLines={2}>
+              <Text style={styles.navTitle} numberOfLines={2} ellipsizeMode="tail">
                 {nextTravel.name || 'Без названия'}
               </Text>
             </View>
-            {/* ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет */}
             <Feather name="chevron-right" size={24} color={colors.primary} />
           </View>
         </Pressable>
-      ) : (
+      ) : isMobile ? null : (
         <View style={[styles.navCard, { opacity: 0, pointerEvents: 'none' } as any]} />
       )}
     </View>

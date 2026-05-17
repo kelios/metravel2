@@ -136,7 +136,9 @@ export const MapFAB: React.FC<MapFABProps> = React.memo(
           ]}
           onPress={handleMainPress}
           onLongPress={actions.length > 0 && !expandOnMainPress ? toggleExpand : undefined}
-          accessibilityLabel={mainAction.label}
+          accessibilityLabel={
+            isExpanded && actions.length > 0 ? 'Закрыть меню' : mainAction.label
+          }
           testID={mainActionTestID}
         >
           <Animated.View style={{ transform: [{ rotate }] }}>

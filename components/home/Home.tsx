@@ -55,6 +55,18 @@ function PageSection({
   )
 }
 
+function Section({
+  children,
+  marginTop,
+  minHeight,
+}: {
+  children: React.ReactNode
+  marginTop: number
+  minHeight?: number
+}) {
+  return <View style={minHeight ? { marginTop, minHeight } : { marginTop }}>{children}</View>
+}
+
 const SectionSkeleton = memo(function SectionSkeleton() {
   return (
     <ResponsiveContainer padding>
@@ -221,22 +233,22 @@ function Home() {
 
   const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile])
 
-  const gaps = useMemo(
+  const layout = useMemo(
     () =>
       isMobile
-        ? { hero: 28, howItWorks: 32, weekends: 36, history: 24, sections: 40, faq: 48, finalCta: 24 }
-        : { hero: 48, howItWorks: 56, weekends: 64, history: 40, sections: 72, faq: 80, finalCta: 40 },
+        ? {
+            gap: { hero: 28, howItWorks: 32, weekends: 36, history: 24, sections: 40, faq: 48, finalCta: 24 },
+            padH: 8,
+            padV: 36,
+          }
+        : {
+            gap: { hero: 48, howItWorks: 56, weekends: 64, history: 40, sections: 72, faq: 80, finalCta: 40 },
+            padH: 24,
+            padV: 64,
+          },
     [isMobile],
   )
-
-  const padH = isMobile ? 8 : 24
-  const padV = isMobile ? 36 : 64
-
-  const howItWorksWrapStyle = useMemo(
-    () => [HOW_IT_WORKS_PLACEHOLDER_STYLE, { marginTop: gaps.howItWorks }],
-    [gaps.howItWorks],
-  )
-  const marginTopStyle = useCallback((mt: number) => ({ marginTop: mt }), [])
+  const { gap, padH, padV } = layout
 
   return (
     <ScrollView
@@ -261,7 +273,7 @@ function Home() {
         travelsCountLoading={isAuthenticated && travelsCountLoading}
       />
 
-      <PageSection marginTop={gaps.hero}>
+      <PageSection marginTop={gap.hero}>
         <HomeInspirationSection
           title="Не хотите"
           titleAccent="выбирать долго?"
@@ -273,7 +285,7 @@ function Home() {
         />
       </PageSection>
 
-      <View style={howItWorksWrapStyle}>
+      <Section marginTop={gap.howItWorks} minHeight={HOW_IT_WORKS_PLACEHOLDER_STYLE.minHeight}>
         <Suspense
           fallback={
             <HowItWorksFallback colors={colors} isMobile={isMobile} padH={padH} padV={padV} />
@@ -281,9 +293,9 @@ function Home() {
         >
           <HomeHowItWorks />
         </Suspense>
-      </View>
+      </Section>
 
-      <PageSection marginTop={gaps.weekends}>
+      <PageSection marginTop={gap.weekends}>
         <HomeInspirationSection
           title="Маршруты на"
           titleAccent="ближайшие выходные"
@@ -293,33 +305,33 @@ function Home() {
         />
       </PageSection>
 
-      <View style={marginTopStyle(gaps.history)}>
+      <Section marginTop={gap.history}>
         <Suspense fallback={<SectionSkeleton />}>
           <HomeFavoritesHistorySection />
         </Suspense>
-      </View>
+      </Section>
 
-      <View style={marginTopStyle(gaps.sections)}>
+      <Section marginTop={gap.sections}>
         <Suspense fallback={<SectionSkeleton />}>
           <HomeInspirationSections />
         </Suspense>
-      </View>
+      </Section>
 
-      <View style={marginTopStyle(gaps.faq)}>
+      <Section marginTop={gap.faq}>
         <Suspense
           fallback={<FaqFallback colors={colors} isMobile={isMobile} padH={padH} padV={padV} />}
         >
           <HomeFAQSection />
         </Suspense>
-      </View>
+      </Section>
 
-      <View style={marginTopStyle(gaps.finalCta)}>
+      <Section marginTop={gap.finalCta}>
         <ContributionBanner variant="home" />
-      </View>
+      </Section>
 
-      <View style={marginTopStyle(16)}>
+      <Section marginTop={16}>
         <HomeFinalCTA travelsCount={travelsCount} />
-      </View>
+      </Section>
     </ScrollView>
   )
 }

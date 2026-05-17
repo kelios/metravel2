@@ -74,8 +74,9 @@ async function clickSliderNavButton(
   page: import('@playwright/test').Page,
   label: 'Next slide' | 'Previous slide',
 ) {
-  await getSliderWrapper(page).hover();
-  await getSliderNavButton(page, label).evaluate((el: any) => {
+  const button = getSliderNavButton(page, label);
+  await expect(button).toBeVisible({ timeout: 5_000 });
+  await button.evaluate((el: any) => {
     if (typeof el?.click === 'function') el.click();
   });
 }

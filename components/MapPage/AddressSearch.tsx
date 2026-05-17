@@ -105,7 +105,12 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors, dense), [colors, dense])
 
-  const { data: results = [], isFetching: loading } = useQuery<SearchResult[]>({
+  const {
+    data: results = [],
+    isFetching: loading,
+    isError,
+    refetch,
+  } = useQuery<SearchResult[]>({
     queryKey: queryKeys.addressSearch(debouncedQuery),
     enabled: searchEnabled && debouncedQuery.length >= MIN_QUERY_LENGTH,
     retry: false,
@@ -170,8 +175,14 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
     if (results.length > 0) setShowResults(true)
   }, [results.length])
 
+  const showErrorState =
+    !loading &&
+    isError &&
+    searchEnabled &&
+    debouncedQuery.length >= MIN_QUERY_LENGTH
   const showEmptyState =
     !loading &&
+    !isError &&
     searchEnabled &&
     debouncedQuery.length >= MIN_QUERY_LENGTH &&
     results.length === 0 &&
@@ -238,6 +249,23 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
             style={styles.resultsList}
             keyboardShouldPersistTaps="handled"
           />
+        </View>
+      )}
+
+      {showErrorState && (
+        <View style={styles.errorResults}>
+          <Text style={styles.errorResultsText}>
+            Не удалось выполнить поиск. Проверьте соединение.
+          </Text>
+          <Pressable
+            onPress={() => refetch()}
+            style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Повторить поиск"
+          >
+            <MapIcon name="refresh" size={14} color={colors.primary} />
+            <Text style={styles.retryText}>Повторить</Text>
+          </Pressable>
         </View>
       )}
 
@@ -322,6 +350,26 @@ const getStyles = (colors: ThemedColors, dense: boolean) =>
     resultText: { flex: 1, fontSize: 13, color: colors.text },
     emptyResults: { marginTop: 6, paddingHorizontal: 4 },
     emptyResultsText: { fontSize: 12, color: colors.textMuted, fontStyle: 'italic' },
+    errorResults: {
+      marginTop: 6,
+      paddingHorizontal: 4,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
+    errorResultsText: { flex: 1, fontSize: 12, color: colors.danger },
+    retryButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+      borderRadius: 8,
+      backgroundColor: colors.primarySoft,
+    },
+    retryButtonPressed: { opacity: 0.7 },
+    retryText: { fontSize: 12, fontWeight: '600', color: colors.primary },
     minCharsHint: {
       fontSize: 11,
       color: colors.textMuted,

@@ -32,6 +32,32 @@ export function showRouteErrorToast(errorMessage?: string): void {
 }
 
 /**
+ * Показать уведомление об очистке маршрута
+ */
+export function showRouteClearedToast(): void {
+  showToast({
+    type: 'info',
+    text1: 'Маршрут очищен',
+    text2: 'Точки старта и финиша сброшены',
+    position: 'bottom',
+    visibilityTime: 2000,
+  });
+}
+
+/**
+ * Показать уведомление об отказе/недоступности геолокации
+ */
+export function showGeolocationErrorToast(): void {
+  showToast({
+    type: 'error',
+    text1: 'Не удалось определить местоположение',
+    text2: 'Разрешите доступ к геолокации в настройках браузера',
+    position: 'bottom',
+    visibilityTime: 4000,
+  });
+}
+
+/**
  * Показать уведомление о сбросе фильтров
  */
 export function showFiltersResetToast(): void {

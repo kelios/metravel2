@@ -305,9 +305,11 @@ const CalendarTravelCard = memo(function CalendarTravelCard({
   const location = getLocationLabel(entry)
   const travelPeriod = getTravelPeriodLabel(entry)
   const explicitDate = getExplicitTravelStatusDate(entry)
-  const dateMetaLabel = calendarDate
-    ? `${explicitDate ? 'Дата' : 'Календарь'}: ${calendarDate}`
-    : 'Дата не указана'
+  const dateMetaLabel = explicitDate
+    ? `Дата: ${explicitDate}`
+    : travelPeriod
+      ? 'Точная дата не указана'
+      : 'Дата не указана'
 
   return (
     <View style={styles.cardWrap}>

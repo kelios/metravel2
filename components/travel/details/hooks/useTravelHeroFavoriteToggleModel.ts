@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 
 import { useAuth } from '@/context/AuthContext'
 import { useFavorites } from '@/context/FavoritesContext'
@@ -16,6 +16,7 @@ export function useTravelHeroFavoriteToggleModel({
   const { isAuthenticated } = useAuth()
   const { requireAuth } = useRequireAuth({ intent: 'favorite' })
   const { addFavorite, removeFavorite, isFavorite: checkIsFavorite } = useFavorites()
+  const [isPending, setIsPending] = useState(false)
 
   const isFavorite = checkIsFavorite(travel.id, 'travel')
   const favoriteButtonLabel = isFavorite ? 'В избранном' : 'В избранное'
@@ -30,6 +31,9 @@ export function useTravelHeroFavoriteToggleModel({
       requireAuth()
       return
     }
+
+    if (isPending) return
+    setIsPending(true)
 
     try {
       if (isFavorite) {
@@ -63,13 +67,16 @@ export function useTravelHeroFavoriteToggleModel({
         text1: 'Не удалось обновить избранное',
         visibilityTime: 3000,
       })
+    } finally {
+      setIsPending(false)
     }
-  }, [addFavorite, isAuthenticated, isFavorite, removeFavorite, requireAuth, travel])
+  }, [addFavorite, isAuthenticated, isFavorite, isPending, removeFavorite, requireAuth, travel])
 
   return {
     favoriteButtonA11yLabel,
     favoriteButtonLabel,
     handleFavoriteToggle,
     isFavorite,
+    isPending,
   }
 }

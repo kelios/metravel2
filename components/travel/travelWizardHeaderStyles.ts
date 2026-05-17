@@ -295,6 +295,12 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
         marginTop: DESIGN_TOKENS.spacing.xs,
         minHeight: 18,
     },
+    progressMetaRowInline: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: DESIGN_TOKENS.spacing.sm,
+    },
     progressMetaText: {
         fontSize: 12,
         color: colors.textMuted,

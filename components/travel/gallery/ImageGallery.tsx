@@ -6,7 +6,7 @@ import {
 import { useDropzone } from 'react-dropzone'
 
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
-import { uploadImage, deleteImage } from '@/api/misc'
+import { uploadImage, deleteImage, reorderGallery } from '@/api/misc'
 import { ApiError } from '@/api/client'
 import { useThemedColors } from '@/hooks/useTheme'
 import { validateImageFile } from '@/utils/aiValidation'
@@ -48,6 +48,8 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   const deletedUrlsRef = useRef<Set<string>>(new Set())
   const selectedImageIdRef = useRef<string | null>(null)
   const imagesRef = useRef<GalleryItem[]>([])
+  const reorderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const reorderAbortRef = useRef<AbortController | null>(null)
 
   const hasErrors = useMemo(() => images.some((img) => img.error), [images])
 
@@ -70,6 +72,49 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
     },
     [onChange],
   )
+
+  const persistGalleryOrder = useCallback(() => {
+    if (collection !== 'gallery') return
+
+    const numericTravelId = Number(idTravel)
+    if (!Number.isInteger(numericTravelId) || numericTravelId <= 0) return
+
+    const orderedIds = imagesRef.current
+      .filter((img) => !img.isUploading && !img.error)
+      .map((img) =>
+        isBackendImageId(img.id) ? String(img.id) : extractBackendImageIdFromUrl(img.url),
+      )
+      .filter((id): id is string => Boolean(id))
+
+    if (orderedIds.length < 2) return
+
+    reorderAbortRef.current?.abort()
+    const controller = new AbortController()
+    reorderAbortRef.current = controller
+
+    void reorderGallery(numericTravelId, orderedIds, controller.signal).catch(() => {
+      // Порядок также сохраняется при сохранении путешествия — игнорируем сбой запроса.
+      void 0
+    })
+  }, [collection, idTravel])
+
+  const scheduleGalleryReorder = useCallback(() => {
+    if (reorderTimerRef.current) clearTimeout(reorderTimerRef.current)
+    reorderTimerRef.current = setTimeout(() => {
+      reorderTimerRef.current = null
+      persistGalleryOrder()
+    }, 700)
+  }, [persistGalleryOrder])
+
+  useEffect(() => {
+    return () => {
+      if (reorderTimerRef.current) {
+        clearTimeout(reorderTimerRef.current)
+        reorderTimerRef.current = null
+        persistGalleryOrder()
+      }
+    }
+  }, [persistGalleryOrder])
 
   const validateUploadFile = useCallback((file: File): string | null => {
     const validation = validateImageFile(file)
@@ -405,7 +450,8 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
     imagesRef.current = next
     reportGalleryItems(next)
     setImages(next)
-  }, [reportGalleryItems])
+    scheduleGalleryReorder()
+  }, [reportGalleryItems, scheduleGalleryReorder])
 
   const DeleteActionComponent = useMemo(() => DeleteAction, [])
 

@@ -81,11 +81,13 @@ jest.mock('@/components/ui/ConfirmDialog', () => {
 jest.mock('@/api/misc', () => {
   const uploadImageMock = jest.fn(async () => ({ id: 'uploaded-1', url: '/uploaded.jpg' }));
   const deleteImageMock = jest.fn(async () => undefined);
+  const reorderGalleryMock = jest.fn(async () => ({ gallery: [] }));
   return {
     __esModule: true,
     uploadImage: uploadImageMock,
     deleteImage: deleteImageMock,
-    __mocks: { uploadImageMock, deleteImageMock },
+    reorderGallery: reorderGalleryMock,
+    __mocks: { uploadImageMock, deleteImageMock, reorderGalleryMock },
   };
 });
 

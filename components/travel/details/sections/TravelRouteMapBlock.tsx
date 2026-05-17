@@ -1,5 +1,8 @@
 import React, { Suspense } from 'react'
 import { Platform, Text, View } from 'react-native'
+import Feather from '@expo/vector-icons/Feather'
+
+import { useThemedColors } from '@/hooks/useTheme'
 
 import { MapSkeleton } from '@/components/travel/TravelDetailSkeletons'
 import ToggleableMap from '@/components/travel/ToggleableMapSection'
@@ -73,6 +76,7 @@ export const TravelRouteMapBlock: React.FC<{
     keyPointLabels,
     routePreviewItems,
   })
+  const colors = useThemedColors()
 
   return (
     <View
@@ -141,7 +145,21 @@ export const TravelRouteMapBlock: React.FC<{
           <MapFallback />
         ) : (
           <View style={styles.mapEmptyState}>
-            <Text style={styles.mapEmptyText}>Маршрут ещё не добавлен</Text>
+            <Feather name="map" size={32} color={colors.textMuted} />
+            <Text style={[styles.mapEmptyText, { marginTop: 12 }]}>
+              Маршрут на карте не задан
+            </Text>
+            <Text
+              style={{
+                fontSize: 13,
+                color: colors.textMuted,
+                textAlign: 'center',
+                marginTop: 4,
+                opacity: 0.8,
+              }}
+            >
+              Автор не добавил линию маршрута для этого путешествия
+            </Text>
           </View>
         )}
       </View>

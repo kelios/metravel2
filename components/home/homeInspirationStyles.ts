@@ -344,6 +344,10 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
   },
   emptyStateTitle: { color: colors.text, fontSize: isMobile ? 16 : 18, lineHeight: isMobile ? 22 : 25, fontWeight: '700', letterSpacing: -0.2 },
   emptyStateSubtitle: { color: colors.textMuted, fontSize: isMobile ? 13 : 14, lineHeight: isMobile ? 18 : 21 },
+  errorFallbackActions: {
+    alignItems: 'center',
+    marginTop: isMobile ? 10 : 14,
+  },
 });
 
 export const createSectionsStyles = (colors: Colors, isMobile: boolean) => StyleSheet.create({

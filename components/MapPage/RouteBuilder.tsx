@@ -39,21 +39,19 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
             <IconButton
               testID="route-swap"
               icon={<MapIcon name="swap-vert" size={compact ? 16 : 18} color={colors.primary} />}
-              label="Поменять местами"
+              label="Поменять старт и финиш местами"
               size={compact ? 'sm' : 'md'}
               onPress={onSwap}
-              showTooltip={false}
               style={styles.swapActionButton}
             />
           )}
           {onClear && (
             <IconButton
               testID="route-clear"
-              icon={<MapIcon name="refresh" size={compact ? 16 : 18} color={colors.textMuted} />}
-              label="Очистить"
+              icon={<MapIcon name="close" size={compact ? 16 : 18} color={colors.textMuted} />}
+              label="Очистить маршрут"
               size={compact ? 'sm' : 'md'}
               onPress={onClear}
-              showTooltip={false}
               style={styles.iconButton}
             />
           )}

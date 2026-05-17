@@ -43,6 +43,22 @@ const ARTICLE_ALLOWED_IFRAME_HOSTS = [
   'www.instagram.com',
 ] as const;
 
+const MEANINGFUL_EMBED_TAG_RE = /<(img|iframe)\b/i;
+const EMPTY_RICH_TEXT_TOKEN_RE = /(?:&nbsp;|&#160;|&#xA0;|\u00a0|\u200b|\u200c|\u200d|\ufeff|\s)+/gi;
+
+function collapseSemanticallyEmptyEditorHtml(html: string): string {
+  const normalized = String(html ?? '').trim();
+  if (!normalized) return '';
+  if (MEANINGFUL_EMBED_TAG_RE.test(normalized)) return normalized;
+
+  const plainText = normalized
+    .replace(/<br\s*\/?>/gi, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(EMPTY_RICH_TEXT_TOKEN_RE, '');
+
+  return plainText.length === 0 ? '' : normalized;
+}
+
 /**
  * Sanitizes article-editor HTML with a strict allowlist so Quill output
  * cannot round-trip unsafe markup back into the app.
@@ -51,7 +67,7 @@ export function sanitizeArticleEditorHtml(html: string): string {
   const raw = String(html ?? '');
   if (!raw.trim()) return '';
 
-  return sanitizeHtmlLib(raw, {
+  return collapseSemanticallyEmptyEditorHtml(sanitizeHtmlLib(raw, {
     allowedTags: [...ARTICLE_ALLOWED_TAGS],
     allowedAttributes: ARTICLE_ALLOWED_ATTRIBUTES,
     allowedSchemes: ['http', 'https', 'mailto'],
@@ -85,5 +101,5 @@ export function sanitizeArticleEditorHtml(html: string): string {
       if (frame.tag === 'iframe' && !frame.attribs?.src) return true;
       return false;
     },
-  }).trim();
+  }).trim());
 }

@@ -8,6 +8,8 @@ import { useTravelWizard } from '@/hooks/useTravelWizard';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useDraftRecovery } from '@/hooks/useDraftRecovery';
 
+type ManualSave = ReturnType<typeof useTravelFormData>['handleManualSave'];
+
 export interface UpsertTravelController {
   isNew: boolean;
   isInitialLoading: boolean;
@@ -35,11 +37,10 @@ export interface UpsertTravelController {
   filters: ReturnType<typeof useTravelFilters>['filters'];
   isFiltersLoading: boolean;
 
-  handleManualSave: ReturnType<typeof useTravelFormData>['handleManualSave'];
+  handleManualSave: ManualSave;
   handleCountrySelect: ReturnType<typeof useTravelFormData>['handleCountrySelect'];
   handleCountryDeselect: ReturnType<typeof useTravelFormData>['handleCountryDeselect'];
 
-  // Draft recovery for unsaved changes
   draftRecovery: {
     hasPendingDraft: boolean;
     draftTimestamp: number | null;
@@ -49,11 +50,19 @@ export interface UpsertTravelController {
   };
 }
 
+const AUTOSAVE_BADGES: Record<string, string | undefined> = {
+  saving: 'Сохранение...',
+  saved: 'Сохранено',
+  error: 'Ошибка сохранения',
+  debouncing: 'Ожидание...',
+};
+
 export function useUpsertTravelController(): UpsertTravelController {
   const { id } = useLocalSearchParams();
   const { userId, isAuthenticated, isSuperuser, authReady, logout } = useAuth();
   const colors = useThemedColors();
 
+  const travelId = (id as string | null) ?? null;
   const isNew = !id;
   const stepStorageKey = useMemo(
     () => `metravel_travel_wizard_step_${isNew ? 'new' : String(id)}`,
@@ -61,7 +70,7 @@ export function useUpsertTravelController(): UpsertTravelController {
   );
 
   const form = useTravelFormData({
-    travelId: id as string | null,
+    travelId,
     isNew,
     userId,
     isSuperAdmin: isSuperuser,
@@ -73,33 +82,40 @@ export function useUpsertTravelController(): UpsertTravelController {
     },
   });
 
-  // Draft recovery for unsaved changes
-  const draftRecoveryHook = useDraftRecovery({
-    travelId: id as string | null,
+  const draft = useDraftRecovery({
+    travelId,
     isNew,
     currentData: form.formData,
     enabled: isAuthenticated && !form.isInitialLoading,
   });
 
-  const saveDraft = draftRecoveryHook.saveDraft;
-  const clearDraft = draftRecoveryHook.clearDraft;
+  const { saveDraft, clearDraft, recoverDraft } = draft;
+  const { setFormData, handleManualSave } = form;
 
-  const handleManualSaveWithDraftClear = useCallback(
-    async (...args: any[]) => {
-      const result = await (form.handleManualSave as any)(...args);
-      if (clearDraft) {
-        await clearDraft();
-      }
+  const saveAndClearDraft = useCallback<ManualSave>(
+    async (dataOverride) => {
+      const result = await handleManualSave(dataOverride);
+      await clearDraft();
       return result;
     },
-    [form.handleManualSave, clearDraft]
+    [handleManualSave, clearDraft]
   );
+
+  // The wizard only reads `publish`/`moderation` from the save result and
+  // never passes arguments, so adapt the richer save signature to its shape.
+  const handleWizardSave = useCallback(async (): Promise<{
+    publish?: boolean;
+    moderation?: boolean;
+  } | null> => {
+    const result = await saveAndClearDraft();
+    return result && typeof result === 'object' ? result : null;
+  }, [saveAndClearDraft]);
 
   const wizard = useTravelWizard({
     totalSteps: 6,
     hasUnsavedChanges: form.autosave.hasUnsavedChanges,
     canSave: form.autosave.canSave,
-    onSave: handleManualSaveWithDraftClear,
+    onSave: handleWizardSave,
     stepStorageKey,
   });
 
@@ -108,92 +124,112 @@ export function useUpsertTravelController(): UpsertTravelController {
     currentStep: wizard.currentStep,
   });
 
-  // Auto-save draft on form changes
+  // Persist a draft while the user edits an unsaved form.
   useEffect(() => {
     if (!form.formData) return;
-    if (!saveDraft) return;
     if (!form.formState?.isDirty) return;
     if (!form.hasUserInteracted) return;
     saveDraft(form.formData);
   }, [form.formData, form.formState?.isDirty, form.hasUserInteracted, saveDraft]);
 
-  // Clear draft after successful save
+  // Drop the draft once an autosave succeeds.
   useEffect(() => {
     if (form.autosave.status !== 'saved') return;
-    if (!clearDraft) return;
     clearDraft();
   }, [form.autosave.status, clearDraft]);
 
-  // Handle draft recovery
-  const handleRecoverDraft = useCallback(async () => {
-    const recoveredData = await draftRecoveryHook.recoverDraft();
+  const recoverAndApplyDraft = useCallback(async () => {
+    const recoveredData = await recoverDraft();
     if (recoveredData) {
-      form.setFormData(recoveredData);
+      setFormData(recoveredData);
     }
-  }, [draftRecoveryHook, form]);
+  }, [recoverDraft, setFormData]);
 
-  const draftRecovery = useMemo(() => ({
-    hasPendingDraft: draftRecoveryHook.hasPendingDraft,
-    draftTimestamp: draftRecoveryHook.draftTimestamp,
-    isRecovering: draftRecoveryHook.isRecovering,
-    recoverDraft: handleRecoverDraft,
-    dismissDraft: draftRecoveryHook.dismissDraft,
-  }), [draftRecoveryHook, handleRecoverDraft]);
+  const draftRecovery = useMemo(
+    () => ({
+      hasPendingDraft: draft.hasPendingDraft,
+      draftTimestamp: draft.draftTimestamp,
+      isRecovering: draft.isRecovering,
+      recoverDraft: recoverAndApplyDraft,
+      dismissDraft: draft.dismissDraft,
+    }),
+    [
+      draft.hasPendingDraft,
+      draft.draftTimestamp,
+      draft.isRecovering,
+      draft.dismissDraft,
+      recoverAndApplyDraft,
+    ]
+  );
 
-  const autosaveBadge = useMemo(() => {
-    switch (form.autosave.status) {
-      case 'saving':
-        return 'Сохранение...';
-      case 'saved':
-        return 'Сохранено';
-      case 'error':
-        return 'Ошибка сохранения';
-      case 'debouncing':
-        return 'Ожидание...';
-      default:
-        return undefined;
-    }
-  }, [form.autosave.status]);
+  const autosaveBadge = AUTOSAVE_BADGES[form.autosave.status];
 
-  const progress = useMemo(() => {
-    return wizard.currentStep / wizard.totalSteps;
-  }, [wizard.currentStep, wizard.totalSteps]);
+  const progress = wizard.currentStep / wizard.totalSteps;
 
-  const currentStepMeta = useMemo(() => {
-    return wizard.stepConfig.find(s => s.id === wizard.currentStep);
-  }, [wizard.currentStep, wizard.stepConfig]);
+  const currentStepMeta = useMemo(
+    () => wizard.stepConfig.find((s) => s.id === wizard.currentStep),
+    [wizard.currentStep, wizard.stepConfig]
+  );
 
-  return {
-    isNew,
-    isInitialLoading: form.isInitialLoading,
-    hasAccess: form.hasAccess,
-    loadError: form.loadError,
-    retryLoad: form.retryLoad,
-    isAuthenticated,
-    isSuperAdmin: isSuperuser,
+  return useMemo(
+    () => ({
+      isNew,
+      isInitialLoading: form.isInitialLoading,
+      hasAccess: form.hasAccess,
+      loadError: form.loadError,
+      retryLoad: form.retryLoad,
+      isAuthenticated,
+      isSuperAdmin: isSuperuser,
 
-    colors,
+      colors,
 
-    formData: form.formData,
-    setFormData: form.setFormData,
-    markers: form.markers,
-    setMarkers: form.setMarkers,
-    travelDataOld: form.travelDataOld,
+      formData: form.formData,
+      setFormData,
+      markers: form.markers,
+      setMarkers: form.setMarkers,
+      travelDataOld: form.travelDataOld,
 
-    autosave: form.autosave,
-    autosaveBadge,
+      autosave: form.autosave,
+      autosaveBadge,
 
-    wizard,
-    progress,
-    currentStepMeta,
+      wizard,
+      progress,
+      currentStepMeta,
 
-    filters,
-    isFiltersLoading,
+      filters,
+      isFiltersLoading,
 
-    handleManualSave: handleManualSaveWithDraftClear,
-    handleCountrySelect: form.handleCountrySelect,
-    handleCountryDeselect: form.handleCountryDeselect,
+      handleManualSave: saveAndClearDraft,
+      handleCountrySelect: form.handleCountrySelect,
+      handleCountryDeselect: form.handleCountryDeselect,
 
-    draftRecovery,
-  };
+      draftRecovery,
+    }),
+    [
+      isNew,
+      form.isInitialLoading,
+      form.hasAccess,
+      form.loadError,
+      form.retryLoad,
+      isAuthenticated,
+      isSuperuser,
+      colors,
+      form.formData,
+      setFormData,
+      form.markers,
+      form.setMarkers,
+      form.travelDataOld,
+      form.autosave,
+      autosaveBadge,
+      wizard,
+      progress,
+      currentStepMeta,
+      filters,
+      isFiltersLoading,
+      saveAndClearDraft,
+      form.handleCountrySelect,
+      form.handleCountryDeselect,
+      draftRecovery,
+    ]
+  );
 }

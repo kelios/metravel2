@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useMemo, useState } from 'react'
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Platform, Pressable, Text, View } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import Feather from '@expo/vector-icons/Feather'
@@ -14,6 +14,7 @@ import { createSectionsStyles } from './homeInspirationStyles'
 
 const IS_WEB = Platform.OS === 'web'
 const POINTER_EVENTS_NONE = { pointerEvents: 'none' } as const
+const NAV_FEEDBACK_MS = 700
 
 type QuickFilterValue = string | number | Array<string | number>
 type QuickFilterParams = Record<string, QuickFilterValue | undefined>
@@ -184,6 +185,7 @@ function getCardPositionStyle(styles: Styles, idx: number) {
 function FilterGroupCard({
   group,
   selectedChip,
+  pendingChip,
   onChipPress,
   styles,
   isMobile,
@@ -191,6 +193,7 @@ function FilterGroupCard({
 }: {
   group: FilterGroup
   selectedChip: string | null
+  pendingChip: string | null
   onChipPress: (label: string, filters?: QuickFilterParams, route?: string) => void
   styles: Styles
   isMobile: boolean
@@ -227,22 +230,25 @@ function FilterGroupCard({
       <View style={[styles.chipsWrap, isMobile && styles.chipsWrapMobile]}>
         {group.chips.map((chip) => {
           const isSelected = selectedChip === chip.label
+          const isPending = pendingChip === chip.label
           return (
             <Pressable
               key={chip.label}
               onPress={() => onChipPress(chip.label, chip.filters, chip.route)}
+              disabled={isPending}
               style={({ pressed, hovered: chipHovered }) => [
                 styles.chip,
                 isMobile && styles.chipMobile,
-                !isSelected && (pressed || chipHovered) && accentHoverStyle,
+                !isSelected && !isPending && (pressed || chipHovered) && accentHoverStyle,
                 isSelected && accentSelectedStyle,
+                isPending && accentSelectedStyle,
               ]}
               accessibilityRole="button"
               accessibilityLabel={`Фильтр ${chip.label}`}
-              accessibilityState={{ selected: isSelected }}
+              accessibilityState={{ selected: isSelected, busy: isPending, disabled: isPending }}
             >
-              <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                {chip.label}
+              <Text style={[styles.chipText, (isSelected || isPending) && styles.chipTextSelected]}>
+                {isPending ? 'Открываем...' : chip.label}
               </Text>
             </Pressable>
           )
@@ -258,20 +264,41 @@ function HomeInspirationSections() {
   const colors = useThemedColors()
   const isMobile = isPhone || isLargePhone
   const [selectedChip, setSelectedChip] = useState<string | null>(null)
+  const [pendingChip, setPendingChip] = useState<string | null>(null)
+  const [openingAllRoutes, setOpeningAllRoutes] = useState(false)
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current)
+    }
+  }, [])
+
+  const clearNavigationFeedbackLater = useCallback(() => {
+    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current)
+    feedbackTimerRef.current = setTimeout(() => {
+      setPendingChip(null)
+      setOpeningAllRoutes(false)
+    }, NAV_FEEDBACK_MS)
+  }, [])
 
   const handleFilterPress = useCallback(
     (label: string, filters?: QuickFilterParams, route?: string) => {
       sendAnalyticsEvent('HomeClick_QuickFilter', { label })
       setSelectedChip(label)
+      setPendingChip(label)
+      clearNavigationFeedbackLater()
       router.push(buildFilterPath(route ?? '/search', filters) as any)
     },
-    [router],
+    [clearNavigationFeedbackLater, router],
   )
 
   const handleOpenArticles = useCallback(() => {
     sendAnalyticsEvent('HomeClick_OpenSearch', { source: 'home-filter-block' })
+    setOpeningAllRoutes(true)
+    clearNavigationFeedbackLater()
     router.push('/search' as any)
-  }, [router])
+  }, [clearNavigationFeedbackLater, router])
 
   const styles = useMemo(() => createSectionsStyles(colors, isMobile), [colors, isMobile])
 
@@ -300,6 +327,7 @@ function HomeInspirationSections() {
               <Button
                 label="Смотреть все маршруты"
                 onPress={handleOpenArticles}
+                loading={openingAllRoutes}
                 icon={<Feather name="arrow-right" size={16} color="#ffffff" />}
                 iconPosition="right"
                 variant="primary"
@@ -316,6 +344,7 @@ function HomeInspirationSections() {
                   key={group.title}
                   group={group}
                   selectedChip={selectedChip}
+                  pendingChip={pendingChip}
                   onChipPress={handleFilterPress}
                   styles={styles}
                   isMobile={isMobile}

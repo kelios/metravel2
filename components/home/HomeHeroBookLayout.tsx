@@ -58,6 +58,7 @@ type HomeHeroBookLayoutProps = {
   onQuickFilterPress: (label: string, filters?: QuickFilterParams, route?: string) => void
   onOpenArticle: (href?: string | null) => void
   onOpenSearch: () => void
+  pendingAction: string | null
   onPrevSlide: () => void
   onNextSlide: () => void
   onMarkSlideLoaded: (slideIndex: number) => void
@@ -89,11 +90,13 @@ function HeroWeekEyebrow({
 }
 
 function HeroPageNotes({
+  activeKey,
   colors,
   moodCards,
   onQuickFilterPress,
   styles,
 }: {
+  activeKey: string | null
   colors: ThemedColors
   moodCards: readonly MoodCard[]
   onQuickFilterPress: (label: string, filters?: QuickFilterParams, route?: string) => void
@@ -102,26 +105,62 @@ function HeroPageNotes({
   return (
     <View style={styles.pageNotesGrid}>
       {moodCards.map((card) => (
-        <Pressable
+        <HeroPageNote
           key={`page-note-${card.title}`}
-          onPress={() => onQuickFilterPress(card.title, card.filters, card.route)}
-          style={({ pressed, hovered }) => [
-            styles.pageNote,
-            (pressed || hovered) && styles.pageNoteHover,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={`${card.title}. Подобрать идею поездки`}
-        >
-          <View style={styles.pageNoteIcon}>
-            <Feather name={card.icon as any} size={14} color={colors.brand} />
-          </View>
-          <View style={styles.pageNoteTextWrap}>
-            <Text style={styles.pageNoteText}>{card.title}</Text>
-            {card.meta && <Text style={styles.pageNoteMeta}>{card.meta}</Text>}
-          </View>
-        </Pressable>
+          active={activeKey === `filter:${card.title}`}
+          card={card}
+          colors={colors}
+          onQuickFilterPress={onQuickFilterPress}
+          styles={styles}
+        />
       ))}
     </View>
+  )
+}
+
+function HeroPageNote({
+  active,
+  card,
+  colors,
+  onQuickFilterPress,
+  styles,
+}: {
+  active: boolean
+  card: MoodCard
+  colors: ThemedColors
+  onQuickFilterPress: (label: string, filters?: QuickFilterParams, route?: string) => void
+  styles: Styles
+}) {
+  return (
+    <Pressable
+      onPress={() => onQuickFilterPress(card.title, card.filters, card.route)}
+      style={({ pressed, hovered }) => [
+        styles.pageNote,
+        (pressed || hovered) && styles.pageNoteHover,
+        active && styles.pageNoteActive,
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={`${card.title}. Подобрать идею поездки`}
+      accessibilityState={{ busy: active }}
+    >
+      <View style={[styles.pageNoteIcon, active && styles.pageNoteIconActive]}>
+        <Feather
+          name={active ? 'loader' : (card.icon as any)}
+          size={14}
+          color={active ? colors.textOnPrimary : colors.brand}
+        />
+      </View>
+      <View style={styles.pageNoteTextWrap}>
+        <Text style={[styles.pageNoteText, active && styles.pageNoteTextActive]}>
+          {card.title}
+        </Text>
+        {(active || card.meta) && (
+          <Text style={[styles.pageNoteMeta, active && styles.pageNoteMetaActive]}>
+            {active ? 'Открываем...' : card.meta}
+          </Text>
+        )}
+      </View>
+    </Pressable>
   )
 }
 
@@ -379,6 +418,7 @@ export default function HomeHeroBookLayout({
   onQuickFilterPress,
   onOpenArticle,
   onOpenSearch,
+  pendingAction,
   onPrevSlide,
   onNextSlide,
   onMarkSlideLoaded,
@@ -421,6 +461,7 @@ export default function HomeHeroBookLayout({
 
                 {showPageNotes && (
                   <HeroPageNotes
+                    activeKey={pendingAction}
                     colors={colors}
                     moodCards={moodCards}
                     onQuickFilterPress={onQuickFilterPress}
@@ -441,6 +482,7 @@ export default function HomeHeroBookLayout({
                 <Button
                   onPress={onOpenSearch}
                   label="Смотреть маршруты"
+                  loading={pendingAction === 'search'}
                   variant="secondary"
                   size="md"
                   fullWidth={useStackedCtas}

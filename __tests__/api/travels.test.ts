@@ -173,6 +173,38 @@ describe('src/api/travelsApi.ts', () => {
       );
     });
 
+    it('sorts gallery by saved image order arrays when backend gallery order drifts', () => {
+      const { normalizeTravelItem } = loadTravelsApi();
+      const travel = normalizeTravelItem({
+        gallery: [
+          { id: 3, url: '/gallery/3/conversions/third.webp' },
+          { id: 1, url: '/gallery/1/conversions/first.webp' },
+          { id: 2, url: '/gallery/2/conversions/second.webp' },
+        ],
+        travelImageThumbUrlArr: [2, 1, 3],
+      } as any);
+
+      expect((travel.gallery as any[]).map((item) => item?.id)).toEqual([2, 1, 3]);
+    });
+
+    it('sorts string gallery items by saved order arrays using ids extracted from urls', () => {
+      const { normalizeTravelItem } = loadTravelsApi();
+      const travel = normalizeTravelItem({
+        gallery: [
+          '/gallery/30/conversions/third.webp',
+          '/gallery/10/conversions/first.webp',
+          '/gallery/20/conversions/second.webp',
+        ],
+        thumbs200ForCollectionArr: ['20', '10', '30'],
+      } as any);
+
+      expect(travel.gallery).toEqual([
+        expect.stringMatching(/\/gallery\/20\/conversions\/second\.webp$/),
+        expect.stringMatching(/\/gallery\/10\/conversions\/first\.webp$/),
+        expect.stringMatching(/\/gallery\/30\/conversions\/third\.webp$/),
+      ]);
+    });
+
   });
 
   describe('fetchTravelsForMap normalization', () => {

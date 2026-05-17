@@ -272,6 +272,7 @@ export default function TravelDetailsContainer() {
         seoBlock={seoElement}
         errorMessage={error?.message}
         onRetry={retryLoad}
+        onGoHome={goHome}
       />
     )
   }

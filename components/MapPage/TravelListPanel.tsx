@@ -450,7 +450,9 @@ function EmptyState({
       />
       <Text style={styles.emptyText}>Ничего не нашлось</Text>
       <Text style={styles.emptyHint}>
-        Попробуйте увеличить радиус или сбросить фильтры
+        {actions.length > 0
+          ? 'В этой области нет мест по текущим фильтрам. Выберите действие ниже:'
+          : 'В этой области нет мест по текущим фильтрам. Измените радиус или фильтры поиска.'}
       </Text>
       <View style={styles.emptyActions}>
         {actions.map((action) => (

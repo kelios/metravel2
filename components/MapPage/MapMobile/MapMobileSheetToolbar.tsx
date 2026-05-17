@@ -6,6 +6,7 @@ import { Pressable, Text as RNText, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import SegmentedControl from '@/components/MapPage/SegmentedControl'
+import { restartMapOnboarding } from '@/components/MapPage/MapOnboarding'
 import type { getMapMobileLayoutStyles } from '@/components/MapPage/MapMobileLayout.styles'
 import type { ThemedColors } from '@/hooks/useTheme'
 
@@ -133,6 +134,28 @@ const MapMobileSheetToolbarInner: React.FC<MapMobileSheetToolbarProps> = ({
             {!compactSheetActions && (
               <RNText style={styles.sheetPrimaryActionText}>Все места</RNText>
             )}
+          </Pressable>
+        )}
+
+        {showSheetCloseButton && (
+          <Pressable
+            testID="map-onboarding-help"
+            onPress={restartMapOnboarding}
+            accessibilityRole="button"
+            accessibilityLabel="Показать подсказки по карте"
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.sheetCloseButton,
+              styles.sheetToolbarCloseButton,
+              pressed && { opacity: 0.6 },
+            ]}
+          >
+            <Feather
+              name="help-circle"
+              size={18}
+              color={colors.textMuted}
+              style={styles.sheetCloseIcon}
+            />
           </Pressable>
         )}
 

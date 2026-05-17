@@ -6,6 +6,7 @@ import {
   createOrUpdateTravel,
   E2EApiContext,
   readTravel,
+  reorderGalleryApi,
 } from './helpers/e2eApi';
 
 type AnyRecord = Record<string, unknown>;
@@ -364,5 +365,55 @@ test.describe('Travel persistence', () => {
     if (galleryReady) {
       await expect(page.getByTestId('gallery-image')).toHaveCount(2, { timeout: 30_000 });
     }
+  });
+
+  test('persists gallery order via the dedicated reorder endpoint', async ({ createdTravels }) => {
+    const ctx = await apiContextFromEnv().catch(() => null);
+    expect(ctx, 'No authorized API context (set E2E_API_TOKEN or E2E_EMAIL/E2E_PASSWORD)').not.toBeNull();
+    if (!ctx) {
+      return;
+    }
+
+    const unique = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const created = await createOrUpdateTravel(ctx, {
+      id: null,
+      name: `E2E reorder ${unique}`,
+      description: 'Gallery reorder endpoint check',
+      gallery: [],
+      coordsMeTravel: [],
+      year: '2026',
+      publish: false,
+      moderation: false,
+    });
+    const travelId = created?.id;
+    expect(travelId, 'Upsert did not return travel id').toBeTruthy();
+    createdTravels.add(travelId);
+
+    const uploaded = (
+      await Promise.all([
+        uploadTravelImage(ctx, travelId, `reorder-1-${unique}.png`),
+        uploadTravelImage(ctx, travelId, `reorder-2-${unique}.png`),
+      ])
+    ).filter((img): img is UploadedImage => Boolean(img && img.id && img.url));
+
+    if (uploaded.length < 2) {
+      test.info().annotations.push({
+        type: 'note',
+        description: 'Image upload unavailable in current env; reorder endpoint not exercised.',
+      });
+      return;
+    }
+
+    const reversedIds = [...uploaded].reverse().map((img) => img.id);
+
+    const reorderResponse = await reorderGalleryApi(ctx, travelId, reversedIds);
+    const responseIds = (reorderResponse?.gallery ?? []).map((item) => item.id);
+    expect(responseIds.slice(0, 2)).toEqual(reversedIds);
+    for (const item of reorderResponse.gallery) {
+      expect(Number.isFinite(item.order)).toBe(true);
+    }
+
+    const readback = await readTravel(ctx, travelId);
+    expect(normalizeGalleryIds(readback?.gallery).slice(0, 2)).toEqual(reversedIds);
   });
 });

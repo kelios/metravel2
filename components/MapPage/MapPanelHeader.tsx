@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import type { ThemedColors } from '@/hooks/useTheme'
 import { restartMapOnboarding } from '@/components/MapPage/MapOnboarding'
+import { showFiltersResetToast } from '@/utils/mapToasts'
 
 type PanelTab = 'search' | 'route' | 'travels'
 
@@ -96,6 +97,7 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
   const handleReset = useCallback(() => {
     selectSearchTab()
     resetFilters?.()
+    showFiltersResetToast()
   }, [selectSearchTab, resetFilters])
 
   const showDesktopActions = Platform.OS === 'web' && !isMobile

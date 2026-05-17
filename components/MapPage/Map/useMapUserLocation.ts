@@ -3,6 +3,7 @@ import { Platform } from 'react-native'
 
 import { CoordinateConverter } from '@/utils/coordinateConverter'
 import { isValidCoordinate } from '@/utils/coordinateValidator'
+import { showGeolocationErrorToast } from '@/utils/mapToasts'
 
 import type { Coordinates } from './types'
 
@@ -62,7 +63,7 @@ export function useMapUserLocation({
     })
   }, [coordinates, isFallbackMinskCenter])
 
-  const requestUserLocation = useCallback(async () => {
+  const requestUserLocation = useCallback(async (notifyOnFailure = false) => {
     if (geoRequestedRef.current) return
     geoRequestedRef.current = true
     try {
@@ -70,6 +71,7 @@ export function useMapUserLocation({
       const { status } = await Location.requestForegroundPermissionsAsync()
       if (status !== 'granted') {
         geoRequestedRef.current = false
+        if (notifyOnFailure) showGeolocationErrorToast()
         return
       }
       const location = await Location.getCurrentPositionAsync({})
@@ -80,6 +82,7 @@ export function useMapUserLocation({
       }
     } catch {
       geoRequestedRef.current = false
+      if (notifyOnFailure) showGeolocationErrorToast()
     }
   }, [])
 
@@ -130,7 +133,7 @@ export function useMapUserLocation({
     }
 
     pendingFocusRef.current = true
-    await requestUserLocation()
+    await requestUserLocation(true)
   }, [focusOnUserLocation, requestUserLocation, userLocationLatLng])
 
   useEffect(() => {

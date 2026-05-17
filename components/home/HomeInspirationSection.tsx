@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Platform, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
@@ -28,6 +28,7 @@ interface HomeSectionProps {
 }
 
 const IS_WEB = Platform.OS === 'web'
+const NAV_FEEDBACK_MS = 700
 
 const EMPTY_STATE_TEXT: Record<string, { title: string; subtitle: string }> = {
   'home-travels-of-month': {
@@ -158,6 +159,8 @@ export function HomeInspirationSection({
   const colors = useThemedColors()
   const { isPhone, isLargePhone, width: viewportWidth } = useResponsive()
   const isMobile = isPhone || isLargePhone
+  const [openingCatalog, setOpeningCatalog] = useState(false)
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const isWeekendShowcase = queryKey === 'home-travels-of-month'
 
@@ -165,6 +168,7 @@ export function HomeInspirationSection({
     data: travelData = {},
     error,
     isError,
+    isFetching,
     isLoading,
     refetch,
   } = useQuery({
@@ -180,8 +184,17 @@ export function HomeInspirationSection({
     return arr.slice(0, isMobile ? 4 : 6)
   }, [travelData, isMobile, isWeekendShowcase, fixedCount])
 
+  useEffect(() => {
+    return () => {
+      if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current)
+    }
+  }, [])
+
   const handleViewMore = useCallback(() => {
     sendAnalyticsEvent('HomeClick_ViewMore', { section: title })
+    setOpeningCatalog(true)
+    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current)
+    feedbackTimerRef.current = setTimeout(() => setOpeningCatalog(false), NAV_FEEDBACK_MS)
     router.push('/search' as any)
   }, [title, router])
 
@@ -203,6 +216,7 @@ export function HomeInspirationSection({
       label={viewMoreLabel}
       onPress={handleViewMore}
       accessibilityLabel={`Открыть каталог маршрутов для секции «${title}»`}
+      loading={openingCatalog}
       icon={<Feather name="arrow-right" size={16} color={colors.text} />}
       iconPosition="right"
       variant="secondary"
@@ -246,6 +260,20 @@ export function HomeInspirationSection({
             variant="warning"
             showContact={false}
           />
+          <View style={styles.errorFallbackActions}>
+            <Button
+              label={isFetching ? 'Обновляем...' : 'Открыть каталог'}
+              onPress={handleViewMore}
+              accessibilityLabel="Открыть каталог маршрутов без этой подборки"
+              icon={<Feather name="compass" size={16} color={colors.text} />}
+              variant="secondary"
+              loading={openingCatalog}
+              style={[styles.viewMoreButton, isMobile && styles.viewMoreButtonMobile]}
+              labelStyle={styles.viewMoreText}
+              hoverStyle={styles.viewMoreButtonHover}
+              pressedStyle={styles.viewMoreButtonHover}
+            />
+          </View>
         </View>
       </View>
     )

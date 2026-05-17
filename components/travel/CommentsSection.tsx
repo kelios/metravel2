@@ -70,7 +70,7 @@ export function CommentsSection({
         <View style={styles.loadPrompt}>
           <Text style={styles.loadPromptText}>
             {canLoadComments
-              ? 'Комментарии загружаются по запросу, чтобы не тянуть лишние сетевые вызовы на странице маршрута.'
+              ? 'Посмотрите, что пишут другие путешественники, или оставьте свой комментарий.'
               : 'Комментарии сейчас недоступны для этого маршрута.'}
           </Text>
           {canLoadComments ? (

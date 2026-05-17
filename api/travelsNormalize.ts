@@ -33,6 +33,111 @@ const getPositiveNumericId = (value: unknown): number | null => {
     return n;
 };
 
+const extractGalleryImageId = (value: unknown): number | null => {
+    if (value == null) return null;
+
+    if (typeof value === 'number' || typeof value === 'string') {
+        const directId = getPositiveNumericId(value);
+        if (directId !== null) return directId;
+
+        const raw = String(value).trim();
+        if (!raw) return null;
+
+        const match = raw.match(/(?:^|\/)(?:gallery|travel-image|travel-description-image|address-image)\/(\d+)(?:\/|$)/i);
+        return match?.[1] ? getPositiveNumericId(match[1]) : null;
+    }
+
+    if (typeof value === 'object') {
+        const record = asRecord(value);
+        return extractGalleryImageId(record.id ?? record.image_id ?? record.url ?? null);
+    }
+
+    return null;
+};
+
+const getGalleryDeclaredOrder = (source: Record<string, unknown>): number[] => {
+    const candidates = [
+        source.travelImageThumbUrlArr,
+        source.travelImageThumbUrArr,
+        source.thumbs200ForCollectionArr,
+        source.travelImageAddress,
+    ];
+
+    for (const candidate of candidates) {
+        if (!Array.isArray(candidate)) continue;
+
+        const ids = candidate
+            .map((item) => extractGalleryImageId(item))
+            .filter((id): id is number => id !== null);
+
+        if (ids.length > 0) {
+            return ids;
+        }
+    }
+
+    return [];
+};
+
+const sortGalleryByDeclaredOrder = (gallery: unknown[], declaredOrder: number[]): unknown[] => {
+    if (!Array.isArray(gallery) || gallery.length <= 1 || declaredOrder.length === 0) {
+        return gallery;
+    }
+
+    const orderIndexById = new Map<number, number>();
+    declaredOrder.forEach((id, index) => {
+        if (!orderIndexById.has(id)) {
+            orderIndexById.set(id, index);
+        }
+    });
+
+    return [...gallery].sort((left, right) => {
+        const leftId = extractGalleryImageId(left);
+        const rightId = extractGalleryImageId(right);
+        const leftOrder = leftId !== null ? orderIndexById.get(leftId) : undefined;
+        const rightOrder = rightId !== null ? orderIndexById.get(rightId) : undefined;
+
+        if (leftOrder != null && rightOrder != null) {
+            return leftOrder - rightOrder;
+        }
+
+        if (leftOrder != null) return -1;
+        if (rightOrder != null) return 1;
+        return 0;
+    });
+};
+
+const getExplicitGalleryOrder = (value: unknown): number | null => {
+    if (value && typeof value === 'object') {
+        const raw = (value as Record<string, unknown>).order;
+        const parsed = typeof raw === 'number' ? raw : Number(raw);
+        if (Number.isFinite(parsed)) return parsed;
+    }
+    return null;
+};
+
+const sortGalleryByExplicitOrder = (gallery: unknown[]): unknown[] => {
+    if (!Array.isArray(gallery) || gallery.length <= 1) {
+        return gallery;
+    }
+
+    const hasExplicitOrder = gallery.some((item) => getExplicitGalleryOrder(item) !== null);
+    if (!hasExplicitOrder) {
+        return gallery;
+    }
+
+    return gallery
+        .map((item, index) => ({ item, index, order: getExplicitGalleryOrder(item) }))
+        .sort((left, right) => {
+            if (left.order != null && right.order != null) {
+                return left.order - right.order || left.index - right.index;
+            }
+            if (left.order != null) return -1;
+            if (right.order != null) return 1;
+            return left.index - right.index;
+        })
+        .map((entry) => entry.item);
+};
+
 const extractFirstUserId = (raw: unknown): number | null => {
     if (typeof raw === 'string') {
         return getPositiveNumericId(raw.split(',')[0]?.trim() ?? '');
@@ -241,7 +346,7 @@ export const normalizeTravelItem = (input: unknown): Travel => {
     }
 
     if (Array.isArray(out.gallery)) {
-        out.gallery = out.gallery
+        const normalizedGallery = out.gallery
             .map((item: unknown) => {
                 if (typeof item === 'string') {
                     const normalized = normalizeImageUrl(item);
@@ -259,6 +364,10 @@ export const normalizeTravelItem = (input: unknown): Travel => {
                 return item;
             })
             .filter(Boolean);
+
+        const declaredGalleryOrder = getGalleryDeclaredOrder(t);
+        const byDeclaredOrder = sortGalleryByDeclaredOrder(normalizedGallery, declaredGalleryOrder);
+        out.gallery = sortGalleryByExplicitOrder(byDeclaredOrder);
     }
 
     return out as Travel;

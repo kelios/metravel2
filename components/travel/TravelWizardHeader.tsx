@@ -328,16 +328,19 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                 <View style={[styles.progressBarFill, { width: `${clamped}%`, backgroundColor: progressColor }]} />
             </View>
 
-            <View style={styles.progressMetaRow}>
+            <View style={[styles.progressMetaRow, styles.progressMetaRowInline]}>
+                <Text style={styles.progressMetaText} numberOfLines={1}>
+                    Шаг {currentStep ?? 1}/{totalSteps ?? 1} • {clamped}%
+                </Text>
                 {autosaveBadge ? (
-                    <Text style={styles.autosaveBadgeText} numberOfLines={1}>
+                    <Text
+                        style={styles.autosaveBadgeText}
+                        numberOfLines={1}
+                        accessibilityLiveRegion="polite"
+                    >
                         {autosaveBadge}
                     </Text>
-                ) : (
-                    <Text style={styles.progressMetaText} numberOfLines={1}>
-                        Шаг {currentStep ?? 1}/{totalSteps ?? 1} • {clamped}%
-                    </Text>
-                )}
+                ) : null}
             </View>
 
             <View style={[styles.belowProgressRow, isMobile && styles.belowProgressRowMobile]}>

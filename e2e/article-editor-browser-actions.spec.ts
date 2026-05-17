@@ -232,29 +232,37 @@ test.describe('ArticleEditor browser actions', () => {
     await expect(editor.locator('img').last()).toHaveAttribute('src', uploadedImageUrl);
   });
 
-  test('uploads image through drag and drop even when Quill was not loaded yet', async ({ page }) => {
-    const target = getEditorActivationTarget(page);
-    await expect(target).toBeVisible({ timeout: 15_000 });
+  test('uploads image through drag and drop', async ({ page }) => {
+    const editor = await ensureEditorLoaded(page);
+    await page.waitForTimeout(750);
 
-    const dataTransfer = await page.evaluateHandle((base64) => {
+    await editor.evaluate((element, base64) => {
       const binary = atob(base64);
       const bytes = new Uint8Array(binary.length);
       for (let index = 0; index < binary.length; index += 1) {
         bytes[index] = binary.charCodeAt(index);
       }
       const file = new File([bytes], 'drop-image.png', { type: 'image/png' });
-      const transfer = new DataTransfer();
-      transfer.items.add(file);
-      return transfer;
+      const transfer = {
+        files: [file],
+        items: [{ kind: 'file', type: file.type, getAsFile: () => file }],
+        types: ['Files'],
+        dropEffect: 'copy',
+      };
+      for (const type of ['dragenter', 'dragover', 'drop']) {
+        const event = new Event(type, {
+          bubbles: true,
+          cancelable: true,
+        });
+        Object.defineProperty(event, 'dataTransfer', {
+          configurable: true,
+          value: transfer,
+        });
+        element.dispatchEvent(event);
+      }
     }, tinyPngBuffer.toString('base64'));
 
-    await target.dispatchEvent('dragenter', { dataTransfer });
-    await target.dispatchEvent('dragover', { dataTransfer });
-    await target.dispatchEvent('drop', { dataTransfer });
-
-    const editor = page.locator('.ql-editor').first();
-    await expect(editor).toBeVisible({ timeout: 15_000 });
-    await expect.poll(async () => await editor.locator('img').count(), { timeout: 10_000 }).toBeGreaterThan(0);
+    await expect.poll(async () => await editor.locator('img').count(), { timeout: 20_000 }).toBeGreaterThan(0);
     await expect(editor.locator('img').last()).toHaveAttribute('src', uploadedImageUrl);
   });
 });

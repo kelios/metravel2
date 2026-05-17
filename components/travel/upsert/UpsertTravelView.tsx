@@ -204,22 +204,47 @@ const LoadingState = ({ colors, styles }: Pick<WizardStateProps, 'colors' | 'sty
 
 function getLoadErrorPresentation(status: number, message: string) {
   if (status === 0) {
-    return { icon: 'wifi-off' as const, title: 'Нет соединения', text: message, iconTone: 'warning' as const };
+    return {
+      icon: 'wifi-off' as const,
+      title: 'Нет соединения',
+      text: message || 'Проверьте интернет-соединение и попробуйте ещё раз.',
+      iconTone: 'warning' as const,
+    };
   }
 
   if (status === 401) {
-    return { icon: 'alert-triangle' as const, title: 'Требуется вход', text: 'Не удалось загрузить путешествие. Попробуйте ещё раз.', iconTone: 'danger' as const };
+    return {
+      icon: 'user' as const,
+      title: 'Требуется вход',
+      text: 'Сессия истекла. Войдите в аккаунт, чтобы продолжить редактирование.',
+      iconTone: 'danger' as const,
+    };
   }
 
   if (status === 403) {
-    return { icon: 'alert-triangle' as const, title: 'Нет доступа', text: 'Не удалось загрузить путешествие. Попробуйте ещё раз.', iconTone: 'danger' as const };
+    return {
+      icon: 'lock' as const,
+      title: 'Нет доступа',
+      text: 'У вас нет прав для просмотра или редактирования этого путешествия.',
+      iconTone: 'danger' as const,
+    };
   }
 
   if (status === 404) {
-    return { icon: 'search' as const, title: 'Путешествие не найдено', text: 'Не удалось загрузить путешествие. Попробуйте ещё раз.', iconTone: 'danger' as const };
+    return {
+      icon: 'search' as const,
+      title: 'Путешествие не найдено',
+      text: 'Возможно, оно было удалено или ссылка указана неверно.',
+      iconTone: 'danger' as const,
+    };
   }
 
-  return { icon: 'alert-triangle' as const, title: 'Ошибка загрузки', text: 'Не удалось загрузить путешествие. Попробуйте ещё раз.', iconTone: 'danger' as const };
+  return {
+    icon: 'alert-triangle' as const,
+    title: 'Ошибка загрузки',
+    text: 'Не удалось загрузить путешествие. Попробуйте ещё раз.',
+    iconTone: 'danger' as const,
+  };
 }
 
 const LoadErrorState = ({
@@ -232,26 +257,58 @@ const LoadErrorState = ({
   const presentation = getLoadErrorPresentation(status, message);
   const iconColor = presentation.iconTone === 'warning' ? colors.warning : colors.danger;
 
-  const actions = useMemo<EmptyStateAction[]>(
-    () => [
-      ...(status === 401
-        ? []
-        : [{
-            label: 'Повторить',
-            accessibilityLabel: 'Повторить загрузку',
-            onPress: () => {
-              void controller.retryLoad();
-            },
-          }]),
+  const actions = useMemo<EmptyStateAction[]>(() => {
+    const homeAction: EmptyStateAction = {
+      label: 'На главную',
+      accessibilityLabel: 'Перейти на главную',
+      onPress: () => router.replace('/'),
+      variant: 'secondary',
+    };
+
+    if (status === 401) {
+      return [
+        {
+          label: 'Войти',
+          accessibilityLabel: 'Войти в аккаунт',
+          onPress: () => router.push(buildLoginHref({ redirect: '/metravel' }) as any),
+        },
+        homeAction,
+      ];
+    }
+
+    if (status === 403) {
+      return [
+        {
+          label: 'Мои путешествия',
+          accessibilityLabel: 'Перейти к моим путешествиям',
+          onPress: () => router.replace('/metravel'),
+        },
+        homeAction,
+      ];
+    }
+
+    if (status === 404) {
+      return [
+        {
+          label: 'Мои путешествия',
+          accessibilityLabel: 'Перейти к моим путешествиям',
+          onPress: () => router.replace('/metravel'),
+        },
+        homeAction,
+      ];
+    }
+
+    return [
       {
-        label: 'На главную',
-        accessibilityLabel: 'На главную',
-        onPress: () => router.replace('/'),
-        variant: 'secondary',
+        label: 'Повторить',
+        accessibilityLabel: 'Повторить загрузку',
+        onPress: () => {
+          void controller.retryLoad();
+        },
       },
-    ],
-    [controller, router, status],
-  );
+      homeAction,
+    ];
+  }, [controller, router, status]);
 
   return (
     <EmptyStateScreen
@@ -267,17 +324,37 @@ const LoadErrorState = ({
   );
 };
 
-const AccessDeniedState = ({ colors, styles }: Pick<WizardStateProps, 'colors' | 'styles'>) => (
-  <EmptyStateScreen
-    styles={styles}
-    icon="lock"
-    iconColor={colors.danger}
-    title="Нет доступа"
-    text="У вас нет прав для редактирования этого путешествия"
-    testID="travel-upsert.no-access"
-    accessibilityLabel="Нет доступа к редактированию"
-  />
-);
+const AccessDeniedState = ({ colors, styles, router }: WizardStateProps) => {
+  const actions = useMemo<EmptyStateAction[]>(
+    () => [
+      {
+        label: 'Мои путешествия',
+        accessibilityLabel: 'Перейти к моим путешествиям',
+        onPress: () => router.replace('/metravel'),
+      },
+      {
+        label: 'На главную',
+        accessibilityLabel: 'Перейти на главную',
+        onPress: () => router.replace('/'),
+        variant: 'secondary',
+      },
+    ],
+    [router],
+  );
+
+  return (
+    <EmptyStateScreen
+      styles={styles}
+      icon="lock"
+      iconColor={colors.danger}
+      title="Нет доступа"
+      text="У вас нет прав для редактирования этого путешествия"
+      actions={actions}
+      testID="travel-upsert.no-access"
+      accessibilityLabel="Нет доступа к редактированию"
+    />
+  );
+};
 
 const AuthRequiredState = ({ colors, styles, router }: WizardStateProps) => {
   const actions = useMemo<EmptyStateAction[]>(
@@ -560,7 +637,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
   }
 
   if (!controller.hasAccess && !controller.isNew) {
-    return <AccessDeniedState colors={colors} styles={styles} />;
+    return <AccessDeniedState colors={colors} styles={styles} router={router} />;
   }
 
   if (!controller.isAuthenticated && controller.isNew) {
