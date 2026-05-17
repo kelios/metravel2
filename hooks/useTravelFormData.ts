@@ -102,7 +102,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
   const initialFormData = useMemo(() => {
     return getEmptyFormData(stableTravelId != null ? String(stableTravelId) : null);
-  }, [queryClient, stableTravelId]);
+  }, [stableTravelId]);
 
   const formDataRef = useRef<TravelFormData>(initialFormData);
   const saveAbortControllerRef = useRef<AbortController | null>(null);
@@ -246,7 +246,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         saveAbortControllerRef.current = null;
       }
     }
-  }, [stableTravelId]);
+  }, [queryClient, stableTravelId]);
 
   const applySavedData = useCallback(
     (
