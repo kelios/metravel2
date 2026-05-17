@@ -144,7 +144,7 @@ describe('TravelRouteMapBlock', () => {
       />
     )
 
-    expect(screen.queryByText('Маршрут ещё не добавлен')).toBeNull()
+    expect(screen.queryByText('Маршрут на карте не задан')).toBeNull()
     expect(mockTravelMap).not.toHaveBeenCalled()
   })
 
@@ -163,7 +163,7 @@ describe('TravelRouteMapBlock', () => {
       />
     )
 
-    expect(screen.getByText('Маршрут ещё не добавлен')).toBeTruthy()
+    expect(screen.getByText('Маршрут на карте не задан')).toBeTruthy()
     expect(mockTravelMap).not.toHaveBeenCalled()
   })
 })

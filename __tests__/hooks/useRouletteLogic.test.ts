@@ -44,6 +44,10 @@ const { fetchTravelFacets } = jest.requireMock('@/api/travelListQueries') as {
 };
 
 describe('useRouletteLogic', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
 
@@ -150,13 +154,18 @@ describe('useRouletteLogic', () => {
   });
 
   it('spins and returns up to 3 shuffled travels', async () => {
+    jest.useFakeTimers();
     const { result } = renderHook(() => useRouletteLogic());
 
     await act(async () => {
       await result.current.handleSpin();
     });
 
-    await waitFor(() => expect(result.current.result.length).toBe(3));
+    act(() => {
+      jest.advanceTimersByTime(900);
+    });
+
+    expect(result.current.result.length).toBe(3);
     expect(result.current.spinning).toBe(false);
   });
 
