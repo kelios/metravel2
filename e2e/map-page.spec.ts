@@ -167,12 +167,15 @@ const gotoMapWithRecovery = async (page: any) => {
   const mapReady = page.getByTestId('map-leaflet-wrapper');
   const mobileEntry = getMobilePanelEntry(page);
   const errorTitle = page.getByText('Что-то пошло не так', { exact: true });
+  const notFoundTitle = page.getByText('Страница не найдена', { exact: true });
+  const plainNotFound = page.getByText('Not found', { exact: true });
   const homeHeadline = page.getByText('Пиши о своих путешествиях', { exact: true });
   const mapTabLink = page.getByRole('link', { name: 'Карта' });
   const mapDockItem = page.getByTestId('footer-item-map');
 
   const startedAt = Date.now();
-  const maxTotalMs = 120_000;
+  const maxTotalMs = 100_000;
+  let notFoundRecoveries = 0;
 
   await safeGoto(page, '/map', { waitUntil: 'domcontentloaded', timeout: 120_000 });
 
@@ -203,6 +206,19 @@ const gotoMapWithRecovery = async (page: any) => {
       await maybeRecoverFromMapErrorScreen(page);
       // Give the app a chance to reload after clicking.
       await page.waitForTimeout(800).catch(() => null);
+      continue;
+    }
+
+    const hasNotFound =
+      (await notFoundTitle.isVisible().catch(() => false)) ||
+      (await plainNotFound.isVisible().catch(() => false));
+    if (hasNotFound) {
+      if (notFoundRecoveries >= 2) {
+        throw new Error(`Map route resolved to Not found after retry (url=${page.url()})`);
+      }
+      notFoundRecoveries += 1;
+      await safeGoto(page, '/map', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+      await page.waitForTimeout(500).catch(() => null);
       continue;
     }
 
