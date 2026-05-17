@@ -11,11 +11,22 @@
  */
 
 import { test, expect } from './fixtures';
-import { preacceptCookies, navigateToFirstTravel } from './helpers/navigation';
+import { preacceptCookies, gotoWithRetry, hasTravelDetailsLoadError } from './helpers/navigation';
 
 async function goToDetails(page: import('@playwright/test').Page): Promise<boolean> {
   await preacceptCookies(page);
-  return navigateToFirstTravel(page);
+  await gotoWithRetry(page, '/travels/kostel-svyatogo-antoniya-paduanskogo', {
+    maxAttempts: 2,
+    timeout: 60_000,
+  });
+
+  const detailsRoot = page.locator('[data-testid="travel-details-page"], [testID="travel-details-page"]');
+  await Promise.race([
+    detailsRoot.first().waitFor({ state: 'visible', timeout: 30_000 }),
+    page.waitForSelector('text=Не удалось загрузить путешествие', { timeout: 30_000 }),
+  ]).catch(() => null);
+
+  return !(await hasTravelDetailsLoadError(page, 1000));
 }
 
 /**
@@ -175,7 +186,7 @@ test.describe('Travel Details - Navigation Between Travels', () => {
 
     // Прокручиваем вниз для поиска навигационных кнопок
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForLoadState('networkidle').catch(() => null);
+    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => null);
 
     // Ищем кнопки "Следующее" / "Предыдущее"
     const nextButton = page.locator(
