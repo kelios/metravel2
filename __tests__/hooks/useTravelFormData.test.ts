@@ -294,6 +294,47 @@ describe('useTravelFormData', () => {
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['export-my-travels-count', '42'], refetchType: 'all' });
   });
 
+  it('invalidates travel detail cache after successful save', async () => {
+    (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({
+      ...payload,
+      id: 817,
+      slug: 'created-travel',
+    }));
+
+    const { result } = renderHook(
+      () =>
+        useTravelFormData({
+          travelId: null,
+          isNew: true,
+          userId: '42',
+          isSuperAdmin: false,
+          isAuthenticated: true,
+          authReady: true,
+        }),
+      { concurrentRoot: false, wrapper: createWrapper() }
+    );
+
+    await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
+
+    act(() => {
+      result.current.setFormData({
+        ...(result.current.formData as any),
+        id: null,
+        name: 'Created travel',
+        description: 'Long enough description to keep save flow deterministic in tests.',
+      });
+    });
+
+    await act(async () => {
+      await result.current.handleManualSave();
+    });
+
+    await waitFor(() => {
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['travel', 817] });
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['travel', 'created-travel'] });
+    });
+  });
+
   it('manual save keeps local description if backend responds with description=null (no placeholder on next save)', async () => {
     const html = '<p>еуые</p>';
     (saveFormData as jest.Mock)

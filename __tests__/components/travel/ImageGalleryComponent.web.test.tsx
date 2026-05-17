@@ -1,6 +1,7 @@
 import React from 'react';
 import { Platform, Image } from 'react-native';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { QueryClientContext } from '@tanstack/react-query';
 
 import ImageGalleryComponent from '@/components/travel/ImageGalleryComponent.web';
 
@@ -94,6 +95,7 @@ jest.mock('@/api/misc', () => {
 const { __mocks } = jest.requireMock('@/api/misc') as any;
 const uploadImageMock = __mocks.uploadImageMock as jest.Mock;
 const deleteImageMock = __mocks.deleteImageMock as jest.Mock;
+const reorderGalleryMock = __mocks.reorderGalleryMock as jest.Mock;
 
 const renderSafe = (ui: React.ReactElement) => {
   try {
@@ -161,8 +163,10 @@ describe('ImageGalleryComponent.web', () => {
   });
 
   beforeEach(() => {
+    jest.useRealTimers();
     uploadImageMock.mockClear();
     deleteImageMock.mockClear();
+    reorderGalleryMock.mockClear();
   });
 
   it('renders initial images with absolute URLs and count', () => {
@@ -357,6 +361,30 @@ describe('ImageGalleryComponent.web', () => {
       const last = onChange.mock.calls[onChange.mock.calls.length - 1][0] as Array<{ id?: string; url: string }>;
       expect(last.map((item) => item.id)).toEqual(['2', '1', '3']);
     });
+  });
+
+  it('invalidates the travel detail cache after persisted reorder', async () => {
+    const invalidateQueries = jest.fn(async () => undefined);
+    const { getAllByTestId } = renderSafe(
+      <QueryClientContext.Provider value={{ invalidateQueries } as any}>
+        <ImageGalleryComponent
+          collection="gallery"
+          idTravel="42"
+          initialImages={[
+            { id: '1', url: 'https://example.com/first.jpg' },
+            { id: '2', url: 'https://example.com/second.jpg' },
+          ]}
+          maxImages={10}
+        />
+      </QueryClientContext.Provider>,
+    );
+
+    fireEvent.press(getAllByTestId('gallery-move-left-button')[1]);
+
+    await waitFor(() => {
+      expect(reorderGalleryMock).toHaveBeenCalledWith(42, ['2', '1'], expect.any(AbortSignal));
+      expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['travel', 42] });
+    }, { timeout: 2000 });
   });
 
   it('dedupes absolute and relative URLs that point to the same image path', async () => {

@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo, useContext } from 'react'
 import {
   View,
   Platform,
 } from 'react-native'
 import { useDropzone } from 'react-dropzone'
+import { QueryClientContext } from '@tanstack/react-query'
 
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { uploadImage, deleteImage, reorderGallery } from '@/api/misc'
 import { ApiError } from '@/api/client'
+import { queryKeys } from '@/queryKeys'
 import { useThemedColors } from '@/hooks/useTheme'
 import { validateImageFile } from '@/utils/aiValidation'
 
@@ -33,6 +35,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   onChange,
 }) => {
   const colors = useThemedColors()
+  const queryClient = useContext(QueryClientContext)
   const styles = useMemo(() => createGalleryStyles(colors), [colors])
 
   const [images, setImages] = useState<GalleryItem[]>([])
@@ -92,11 +95,15 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
     const controller = new AbortController()
     reorderAbortRef.current = controller
 
-    void reorderGallery(numericTravelId, orderedIds, controller.signal).catch(() => {
-      // Порядок также сохраняется при сохранении путешествия — игнорируем сбой запроса.
-      void 0
-    })
-  }, [collection, idTravel])
+    void reorderGallery(numericTravelId, orderedIds, controller.signal)
+      .then(() => {
+        void queryClient?.invalidateQueries?.({ queryKey: queryKeys.travel(numericTravelId) })
+      })
+      .catch(() => {
+        // Порядок также сохраняется при сохранении путешествия — игнорируем сбой запроса.
+        void 0
+      })
+  }, [collection, idTravel, queryClient])
 
   const scheduleGalleryReorder = useCallback(() => {
     if (reorderTimerRef.current) clearTimeout(reorderTimerRef.current)

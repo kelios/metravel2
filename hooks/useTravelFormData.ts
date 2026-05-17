@@ -70,6 +70,27 @@ async function invalidateTravelCollections(
   await queryClient.invalidateQueries({ queryKey: ['export-my-travels-count', userId], refetchType: 'all' });
 }
 
+async function invalidateTravelDetails(
+  queryClient: QueryClient | null | undefined,
+  ...travelKeys: Array<string | number | null | undefined>
+) {
+  if (!queryClient?.invalidateQueries) return;
+
+  const uniqueKeys = Array.from(
+    new Set(
+      travelKeys
+        .map((key) => (key == null ? '' : String(key).trim()))
+        .filter(Boolean),
+    ),
+  );
+
+  await Promise.all(
+    uniqueKeys.map((key) =>
+      queryClient.invalidateQueries({ queryKey: ['travel', Number.isFinite(Number(key)) ? Number(key) : key] }),
+    ),
+  );
+}
+
 export function useTravelFormData(options: UseTravelFormDataOptions) {
   const { travelId, isNew, userId, isSuperAdmin, isAuthenticated, authReady, onAuthRequired } = options;
   const router = useRouter();
@@ -81,7 +102,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
   const initialFormData = useMemo(() => {
     return getEmptyFormData(stableTravelId != null ? String(stableTravelId) : null);
-  }, [stableTravelId]);
+  }, [queryClient, stableTravelId]);
 
   const formDataRef = useRef<TravelFormData>(initialFormData);
   const saveAbortControllerRef = useRef<AbortController | null>(null);
@@ -202,6 +223,14 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       if (abortController.signal.aborted) {
         throw new Error('Request aborted');
       }
+
+      void invalidateTravelDetails(
+        queryClient,
+        resolvedId,
+        result?.id,
+        result?.slug,
+        mergedData.slug,
+      );
 
       return result;
     } catch (error) {
