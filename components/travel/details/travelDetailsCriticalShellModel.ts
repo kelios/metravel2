@@ -44,7 +44,7 @@ export function getTravelDetailsDesktopSidebarContainerStyle(menuWidthNum: numbe
     alignSelf: 'flex-start' as const,
     maxHeight:
       Platform.OS === 'web'
-        ? 'calc(100dvh - var(--mt-dock-h, 0px) - 240px)'
+        ? 'calc(100dvh - var(--mt-dock-h, 0px) - 96px)'
         : '100%',
     overflowY: 'hidden' as const,
     overflowX: 'hidden' as const,

@@ -137,6 +137,20 @@ describe('TravelListItem content & metadata', () => {
     expect(getByTestId('views-meta')).toBeTruthy();
   });
 
+  it('renders engagement metrics on the travel card when stats exist', () => {
+    const { getByLabelText } = renderItem({
+      engagementStats: {
+        favoritesCount: 1,
+        wishlistCount: 2,
+        plannedCount: 3,
+      },
+    } as any);
+
+    expect(getByLabelText('Сохранили: 1')).toBeTruthy();
+    expect(getByLabelText('Хочу: 2')).toBeTruthy();
+    expect(getByLabelText('Планируют: 3')).toBeTruthy();
+  });
+
   it('renders countries list with up to 2 countries joined inline', () => {
     const { getByText, queryByText } = renderItem({ countryName: 'USA, France, Germany' } as any);
     expect(getByText('USA, France')).toBeTruthy();

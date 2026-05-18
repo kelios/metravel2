@@ -165,7 +165,7 @@ describe('ProfileScreen', () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(2, 5);
 
-    const { findByText, getByLabelText, getAllByLabelText } = renderProfile();
+    const { findByText, getByLabelText, getAllByLabelText, queryByText } = renderProfile();
 
     expect(await findByText('Test User')).toBeTruthy();
     expect(await findByText('user@example.com')).toBeTruthy();
@@ -177,7 +177,7 @@ describe('ProfileScreen', () => {
     // Header actions
     expect(await findByText('Редактировать')).toBeTruthy();
     expect(await findByText('Социальная статистика путешествий')).toBeTruthy();
-    expect(await findByText('По каждому путешествию')).toBeTruthy();
+    expect(queryByText('По каждому путешествию')).toBeNull();
 
     await waitFor(() => {
       expect(getByLabelText('Мои: 3')).toBeTruthy();

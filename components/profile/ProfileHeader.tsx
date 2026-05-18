@@ -95,7 +95,7 @@ export function ProfileHeader({
           height: 60,
           ...Platform.select({
             web: {
-              background: `linear-gradient(to bottom, transparent, ${colors.background}22)`,
+              backgroundImage: `linear-gradient(to bottom, transparent, ${colors.background}22)`,
             } as any,
             default: {},
           }),
@@ -150,7 +150,7 @@ export function ProfileHeader({
           fontSize: 38,
           fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
           color: colors.primary,
-          letterSpacing: -1,
+          letterSpacing: 0,
         },
         cameraOverlay: {
           position: 'absolute',

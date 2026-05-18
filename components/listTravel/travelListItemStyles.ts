@@ -220,6 +220,54 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       paddingTop: Platform.OS === 'web' ? 1 : 0,
     },
 
+    engagementMetricsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Platform.OS === 'web' ? 10 : 8,
+      flexShrink: 0,
+    },
+
+    engagementMetric: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      flexShrink: 0,
+      position: 'relative',
+    },
+
+    engagementMetricText: {
+      fontSize: META_TEXT_FONT_SIZE,
+      lineHeight: META_TEXT_LINE_HEIGHT,
+      color: colors.textSecondary,
+      fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+    },
+
+    engagementTooltip: {
+      position: 'absolute',
+      bottom: 22,
+      left: '50%',
+      paddingHorizontal: 8,
+      paddingVertical: 5,
+      borderRadius: DESIGN_TOKENS.radii.sm,
+      backgroundColor: colors.text,
+      zIndex: 30,
+      ...(Platform.OS === 'web'
+        ? {
+            transform: 'translateX(-50%)',
+            boxShadow: '0 8px 20px rgba(0,0,0,0.16)',
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap',
+          } as any
+        : {}),
+    },
+
+    engagementTooltipText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      lineHeight: 16,
+      color: colors.background,
+      fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+    },
+
     // Inline рейтинг (без чипа)
     metaRating: {
       flexDirection: 'row',

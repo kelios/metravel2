@@ -35,6 +35,9 @@ const hasSameRenderedTravelSnapshot = (prev: Travel, next: Travel) => {
         p.countryName === n.countryName &&
         p.userName === n.userName &&
         p.countUnicIpView === n.countUnicIpView &&
+        p.engagementStats?.favoritesCount === n.engagementStats?.favoritesCount &&
+        p.engagementStats?.wishlistCount === n.engagementStats?.wishlistCount &&
+        p.engagementStats?.plannedCount === n.engagementStats?.plannedCount &&
         p.url === n.url &&
         p.rating === n.rating &&
         p.rating_count === n.rating_count &&

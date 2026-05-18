@@ -22,7 +22,6 @@ import { ProfileCompleteness } from '@/components/profile/ProfileCompleteness';
 import { ProfileTabs, type ProfileTabKey } from '@/components/profile/ProfileTabs';
 import { ProfileQuickActions } from '@/components/profile/ProfileQuickActions';
 import {
-  ProfileTravelEngagementDetails,
   ProfileTravelEngagementSummary,
 } from '@/components/profile/ProfileTravelEngagementSection'
 import EmptyState from '@/components/ui/EmptyState';
@@ -547,13 +546,6 @@ export default function ProfileScreen() {
             </View>
           </View>
         ) : null}
-        {activeTab === 'travels' ? (
-          <ProfileTravelEngagementDetails
-            travels={myTravels}
-            totalTravels={stats.travelsCount}
-            isLoading={travelsLoading}
-          />
-        ) : null}
       </View>
     ),
     [
@@ -572,7 +564,6 @@ export default function ProfileScreen() {
       activeTab,
       showClearButton,
       handleClearActiveTab,
-      myTravels,
       travelsLoading,
     ]
   );

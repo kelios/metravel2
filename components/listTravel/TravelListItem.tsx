@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useMemo, useRef } from 'react'
+import React, { memo, useCallback, useMemo, useRef, useState } from 'react'
 import { Platform, Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { router } from 'expo-router'
@@ -14,6 +14,7 @@ import CardActionPressable from '@/components/ui/CardActionPressable'
 import { useThemedColors } from '@/hooks/useTheme'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import { formatViewCount } from '@/components/travel/utils/travelHelpers'
+import { hasAnyTravelEngagementStats, type TravelEngagementStats } from '@/utils/travelEngagementStats'
 
 import { getResponsiveCardValues } from './enhancedTravelCardStyles'
 import { TRAVEL_CARD_IMAGE_HEIGHT } from './utils/listTravelConstants'
@@ -36,6 +37,7 @@ const POPULAR_VIEWS_THRESHOLD = 1000
 const TOUCH_GHOST_CLICK_GUARD_MS = 500
 const VIEW_ICON_SIZE = Platform.OS === 'web' ? 11 : 10
 const BADGE_ICON_SIZE = Platform.OS === 'web' ? 10 : 9
+const ENGAGEMENT_ICON_SIZE = Platform.OS === 'web' ? 14 : 13
 const FAVORITE_ICON_SIZE = Platform.OS === 'web' ? 18 : 16
 const IS_WEB = Platform.OS === 'web' || typeof document !== 'undefined'
 const ANDROID_RIPPLE =
@@ -47,6 +49,16 @@ const ANCHOR_FILL_STYLE = {
   width: '100%',
   height: '100%',
 } as any
+
+const ENGAGEMENT_METRICS: Array<{
+  key: keyof TravelEngagementStats
+  label: string
+  icon: React.ComponentProps<typeof Feather>['name']
+}> = [
+  { key: 'favoritesCount', label: 'Сохранили', icon: 'heart' },
+  { key: 'wishlistCount', label: 'Хочу', icon: 'bookmark' },
+  { key: 'plannedCount', label: 'Планируют', icon: 'calendar' },
+]
 
 function stopEvent(e: any) {
   e?.stopPropagation?.()
@@ -119,6 +131,7 @@ function TravelListItem({
 }: Props) {
   const colors = useThemedColors()
   const styles = useMemo(() => createTravelListItemStyles(colors), [colors])
+  const [hoveredEngagementMetric, setHoveredEngagementMetric] = useState<keyof TravelEngagementStats | null>(null)
 
   const {
     id,
@@ -204,6 +217,9 @@ function TravelListItem({
     () => hasPetCompanion(travel.companions),
     [travel.companions],
   )
+
+  const engagementStats = travel.engagementStats
+  const hasEngagementStats = hasAnyTravelEngagementStats(engagementStats)
 
   const effectiveWidth =
     typeof cardWidth === 'number'
@@ -301,6 +317,7 @@ function TravelListItem({
     countries.length > 0 ||
     views > 0 ||
     hasRating ||
+    hasEngagementStats ||
     popularityFlags.isPopular ||
     popularityFlags.isNew ||
     petFriendly
@@ -468,6 +485,38 @@ function TravelListItem({
     <View style={styles.metaRow}>
       <View style={styles.metaInfoTopRow}>{topRowItems}</View>
       <View style={styles.metaBadgesRow}>
+        {hasEngagementStats && (
+          <View style={styles.engagementMetricsRow}>
+            {ENGAGEMENT_METRICS.map((metric) => {
+              const value = engagementStats?.[metric.key] ?? 0
+              const tooltip = `${metric.label}: ${value}`
+
+              return (
+                <View
+                  key={metric.key}
+                  style={styles.engagementMetric}
+                  accessibilityLabel={tooltip}
+                  {...(IS_WEB
+                    ? ({
+                        onMouseEnter: () => setHoveredEngagementMetric(metric.key),
+                        onMouseLeave: () => setHoveredEngagementMetric(null),
+                        onFocus: () => setHoveredEngagementMetric(metric.key),
+                        onBlur: () => setHoveredEngagementMetric(null),
+                      } as any)
+                    : null)}
+                >
+                  <Feather name={metric.icon} size={ENGAGEMENT_ICON_SIZE} color={colors.textMuted} />
+                  <Text style={styles.engagementMetricText}>{value}</Text>
+                  {IS_WEB && hoveredEngagementMetric === metric.key ? (
+                    <View style={styles.engagementTooltip}>
+                      <Text style={styles.engagementTooltipText}>{tooltip}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              )
+            })}
+          </View>
+        )}
         {hasRating && (
           <View style={styles.metaRating} testID="rating-meta">
             <Text style={styles.metaRatingStar}>★</Text>
@@ -587,6 +636,9 @@ function areEqual(prev: Props, next: Props) {
       a.countryName !== b.countryName ||
       a.userName !== b.userName ||
       a.countUnicIpView !== b.countUnicIpView ||
+      a.engagementStats?.favoritesCount !== b.engagementStats?.favoritesCount ||
+      a.engagementStats?.wishlistCount !== b.engagementStats?.wishlistCount ||
+      a.engagementStats?.plannedCount !== b.engagementStats?.plannedCount ||
       a.rating !== b.rating ||
       a.rating_count !== b.rating_count
     ) {
