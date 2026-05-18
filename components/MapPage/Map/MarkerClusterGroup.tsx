@@ -4,8 +4,8 @@
  * Uses `leaflet.markercluster` under the hood. Adds/removes markers imperatively
  * via the map instance (react-leaflet v4+ does not ship a built-in cluster wrapper).
  */
-import React, { useEffect, useRef, useMemo } from 'react'
-import { QueryClientProvider, useQueryClient } from '@tanstack/react-query'
+import React, { useEffect, useRef, useMemo, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import type { Point } from './types'
 import { strToLatLng } from './utils'
 import { CoordinateConverter } from '@/utils/coordinateConverter'
@@ -81,28 +81,9 @@ const splitPopupProps = (popupProps?: Record<string, unknown>) => {
 
 const TOOLTIP_MAX_LEN = 30
 
-const scheduleRootUnmount = (
-  root: { unmount: () => void } | null | undefined,
-) => {
-  if (!root) return
-  if (typeof queueMicrotask === 'function') {
-    queueMicrotask(() => {
-      try {
-        root.unmount()
-      } catch {
-        // noop
-      }
-    })
-    return
-  }
-
-  setTimeout(() => {
-    try {
-      root.unmount()
-    } catch {
-      // noop
-    }
-  }, 0)
+interface OpenPopupEntry {
+  point: Point
+  container: HTMLElement
 }
 
 const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
@@ -120,10 +101,19 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
   hintCenter,
 }) => {
   const map = useMap()
-  const queryClient = useQueryClient()
   const clusterGroupRef = useRef<any>(null)
   const markerMapRef = useRef<Map<string, any>>(new Map())
-  const renderRootMapRef = useRef<Map<string, any>>(new Map())
+  const [openPopups, setOpenPopups] = useState<Map<string, OpenPopupEntry>>(
+    () => new Map(),
+  )
+
+  const closeOpenPopup = useCallback(() => {
+    try {
+      map?.closePopup?.()
+    } catch {
+      // noop
+    }
+  }, [map])
 
   // Parsed + validated points
   const validPoints = useMemo(() => {
@@ -230,7 +220,6 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
     map.addLayer(group)
     group.on('clusterclick', handleClusterClick)
 
-    const currentRenderRootMap = renderRootMapRef.current
     const currentMarkerMap = markerMapRef.current
 
     return () => {
@@ -242,12 +231,8 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
         // noop
       }
       clusterGroupRef.current = null
-      // Cleanup render roots
-      for (const [, root] of currentRenderRootMap) {
-        scheduleRootUnmount(root)
-      }
-      currentRenderRootMap.clear()
       currentMarkerMap.clear()
+      setOpenPopups((prev) => (prev.size ? new Map() : prev))
     }
   }, [L, map, clusterIconFactory])
 
@@ -263,12 +248,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       // noop
     }
     markerMapRef.current.clear()
-
-    // Cleanup old render roots
-    for (const [, root] of renderRootMapRef.current) {
-      scheduleRootUnmount(root)
-    }
-    renderRootMapRef.current.clear()
+    setOpenPopups((prev) => (prev.size ? new Map() : prev))
 
     if (!validPoints.length) return
 
@@ -287,8 +267,6 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       popupContainer.className = 'metravel-cluster-popup-root'
       popupContainer.setAttribute('data-point-id', String(point.id ?? ''))
 
-      // Use React 19 createRoot for popup rendering
-      let rootCreated = false
       const { popupOptions: rawPopupOptions, popupEventHandlers } =
         splitPopupProps(popupProps)
       const popupOptions: any = {
@@ -318,46 +296,22 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
 
       marker.on('popupopen', (event: any) => {
         popupEventHandlers.popupopen?.(event)
-        if (!rootCreated) {
-          rootCreated = true
-          try {
-            const { createRoot } = require('react-dom/client')
-            const root = createRoot(popupContainer)
-            renderRootMapRef.current.set(key, root)
-            const React = require('react')
-            root.render(
-              React.createElement(
-                QueryClientProvider,
-                { client: queryClient },
-                React.createElement(PopupContent, {
-                  point,
-                  closePopup: () => {
-                    try {
-                      map?.closePopup?.()
-                    } catch {
-                      // noop
-                    }
-                  },
-                }),
-              ),
-            )
-          } catch {
-            // Fallback: simple HTML
-            popupContainer.innerHTML = `<div style="padding:8px"><strong>${point.address || 'Место'}</strong></div>`
-          }
-        }
+        setOpenPopups((prev) => {
+          if (prev.get(key)?.container === popupContainer) return prev
+          const next = new Map(prev)
+          next.set(key, { point, container: popupContainer })
+          return next
+        })
       })
 
       marker.on('popupclose', (event: any) => {
         popupEventHandlers.popupclose?.(event)
-        if (rootCreated) {
-          rootCreated = false
-          const root = renderRootMapRef.current.get(key)
-          if (root) {
-            renderRootMapRef.current.delete(key)
-            scheduleRootUnmount(root)
-          }
-        }
+        setOpenPopups((prev) => {
+          if (!prev.has(key)) return prev
+          const next = new Map(prev)
+          next.delete(key)
+          return next
+        })
       })
 
       // Tooltip
@@ -432,12 +386,21 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
     markerOpacity,
     PopupContent,
     popupProps,
-    queryClient,
     onMarkerClick,
     onMarkerInstance,
   ])
 
-  return null
+  return (
+    <>
+      {Array.from(openPopups.entries()).map(([key, { point, container }]) =>
+        createPortal(
+          <PopupContent point={point} closePopup={closeOpenPopup} />,
+          container,
+          key,
+        ),
+      )}
+    </>
+  )
 }
 
 export default React.memo(MarkerClusterGroup)

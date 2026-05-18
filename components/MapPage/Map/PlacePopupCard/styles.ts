@@ -67,7 +67,7 @@ export const getStyles = (
     relatedTravelActions: {
       position: 'absolute',
       top: compactLayout ? 10 : 12,
-      right: compactLayout ? 10 : 12,
+      left: compactLayout ? 10 : 12,
       zIndex: 6,
     },
     topSectionSplit: {
