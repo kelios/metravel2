@@ -28,7 +28,7 @@ jest.mock('@/utils/externalLinks', () => ({
 // Mock showToast
 const mockShowToast = jest.fn(() => Promise.resolve());
 jest.mock('@/utils/toast', () => ({
-  showToast: (...args: any[]) => mockShowToast(...args),
+  showToast: (arg: unknown) => mockShowToast(arg),
 }));
 
 // Mock window for web platform
@@ -133,7 +133,7 @@ describe('ShareButtons', () => {
     (Platform.OS as any) = 'ios';
     const { getByLabelText } = render(<ShareButtons travel={mockTravel} />);
 
-    const nativeShareButton = getByLabelText('Поделиться');
+    const nativeShareButton = getByLabelText('Открыть системное меню Поделиться');
     fireEvent.press(nativeShareButton);
 
     await waitFor(() => {
@@ -149,12 +149,19 @@ describe('ShareButtons', () => {
   it('should open Telegram share on button press', async () => {
     const { getByLabelText } = render(<ShareButtons travel={mockTravel} />);
 
-    const telegramButton = getByLabelText('Telegram');
+    const telegramButton = getByLabelText('Поделиться в Telegram');
     fireEvent.press(telegramButton);
 
     await waitFor(() => {
       expect(openExternalUrlInNewTab).toHaveBeenCalledWith(expect.stringContaining('t.me/share/url'));
     });
+  });
+
+  it('should render grouped share sections on default variant', () => {
+    const { getByText } = render(<ShareButtons travel={mockTravel} />);
+
+    expect(getByText('Быстрые действия')).toBeTruthy();
+    expect(getByText('Соцсети')).toBeTruthy();
   });
 
   it('should use custom URL when provided', () => {

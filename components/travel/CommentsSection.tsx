@@ -144,7 +144,24 @@ export function CommentsSection({
                   <Feather name="message-circle" size={28} color={colors.primary} />
                 </View>
                 <Text style={styles.emptyText}>Пока нет комментариев</Text>
-                <Text style={styles.emptySubtext}>Будьте первым, кто оставит комментарий!</Text>
+                <Text style={styles.emptySubtext}>
+                  {isAuthenticated
+                    ? 'Оставьте первый комментарий — форма уже открыта выше.'
+                    : 'Начните обсуждение первым: войдите и оставьте комментарий.'}
+                </Text>
+                {isAuthenticated ? (
+                  <Text style={styles.emptyHint}>Комментарий можно написать сразу в форме выше.</Text>
+                ) : (
+                  <Pressable
+                    onPress={handleLoginPress}
+                    style={styles.emptyActionButton}
+                    accessibilityRole="button"
+                    accessibilityLabel="Войти, чтобы оставить первый комментарий"
+                  >
+                    <Feather name="log-in" size={16} color={colors.primaryText} />
+                    <Text style={styles.emptyActionButtonText}>Войти и написать комментарий</Text>
+                  </Pressable>
+                )}
               </View>
             ) : (
               topLevel.map((comment) => {

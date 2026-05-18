@@ -323,6 +323,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const containerHeight = fillContainer ? ('100%' as const) : containerHeightPx
   const maxIndex = Math.max(0, images.length - 1)
   const imagesLen = images.length
+  const windowRadius = Math.max(2, effectivePreloadCount + 1)
   const navOffset = getNavOffset(isMobile, isTablet, insets)
 
   const {
@@ -467,8 +468,12 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                   prefetchEnabled &&
                   (distanceToCurrent === 0 ||
                     (distanceToCurrent <= effectivePreloadCount && allowNeighbourPreload))
-                const prepareBlur = layoutMeasured && blurBackground && distanceToCurrent <= 1
-                const slideUri = getUri(index)
+                const prepareBlur =
+                  layoutMeasured &&
+                  blurBackground &&
+                  (isMobileDevice ? distanceToCurrent === 0 : distanceToCurrent <= 1)
+                const withinWindow = distanceToCurrent <= windowRadius
+                const slideUri = withinWindow ? getUri(index) : ''
 
                 return (
                   <View
@@ -480,6 +485,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       { width: slideWidthStyle, height: containerHeight, zIndex: 1 },
                     ]}
                   >
+                    {withinWindow && (
                     <Slide
                       item={item}
                       index={index}
@@ -501,6 +507,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       prepareBlur={prepareBlur}
                       skipImage={skipFirstSlideImage && index === 0}
                     />
+                    )}
                   </View>
                 )
               })}

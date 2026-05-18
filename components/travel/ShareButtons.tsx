@@ -17,6 +17,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { showToast } from '@/utils/toast';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import type { ShareButtonsPdfExportState } from '@/components/travel/ShareButtonsPdfExportBridge';
+import { devWarn } from '@/utils/logger';
 
 const ShareButtonsPdfExportBridgeLazy = lazy(() => import('@/components/travel/ShareButtonsPdfExportBridge'));
 
@@ -42,12 +43,14 @@ interface ShareButtonsProps {
   travel: Travel;
   url?: string;
   variant?: 'default' | 'sticky';
+  surface?: 'card' | 'plain';
 }
 
-function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
+function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: ShareButtonsProps) {
   const { width } = useWindowDimensions();
   const isMobile = width < METRICS.breakpoints.tablet;
   const isSticky = variant === 'sticky';
+  const isPlain = surface === 'plain';
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
 
   const [copied, setCopied] = useState(false);
@@ -76,6 +79,16 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
     typeof navigator !== 'undefined' &&
     typeof navigator.share === 'function';
 
+  const handleShareError = useCallback((label: string, error: unknown) => {
+    devWarn(`[ShareButtons] Не удалось выполнить действие «${label}»:`, error);
+    void showToast({
+      type: 'error',
+      text1: 'Не удалось открыть окно шаринга',
+      text2: 'Попробуйте ещё раз',
+      visibilityTime: 2500,
+    });
+  }, []);
+
   // Базовая функция копирования в буфер обмена
   const copyToClipboard = useCallback(async (text: string, showSuccessAlert: boolean) => {
     try {
@@ -89,7 +102,7 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
         showToast({ type: 'success', text1: 'Ссылка скопирована', visibilityTime: 2000 });
       }
     } catch (error) {
-      console.error('Error copying link:', error);
+      devWarn('[ShareButtons] Не удалось скопировать ссылку:', error);
       showToast({ type: 'error', text1: 'Не удалось скопировать', text2: 'Попробуйте ещё раз', visibilityTime: 3000 });
     }
   }, []);
@@ -115,9 +128,9 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
     try {
       await openExternalUrlInNewTab(telegramUrl);
     } catch (error) {
-      console.error('Error sharing to Telegram:', error);
+      handleShareError('Telegram', error);
     }
-  }, [shareUrl, shareText]);
+  }, [handleShareError, shareUrl, shareText]);
 
   // Поделиться в VK
   const handleShareVK = useCallback(() => {
@@ -140,9 +153,9 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
     try {
       await openExternalUrlInNewTab(whatsappUrl);
     } catch (error) {
-      console.error('Error sharing to WhatsApp:', error);
+      handleShareError('WhatsApp', error);
     }
-  }, [shareUrl, shareText]);
+  }, [handleShareError, shareUrl, shareText]);
 
   // Нативный Share API (для мобильных)
   const handleNativeShare = useCallback(async () => {
@@ -157,7 +170,7 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
         });
       } catch (error: any) {
         if (error?.name !== 'AbortError') {
-          console.error('Error sharing:', error);
+          handleShareError('системный шаринг', error);
         }
       }
       return;
@@ -170,10 +183,10 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
       });
     } catch (error: any) {
       if (error?.name !== 'AbortError') {
-        console.error('Error sharing:', error);
+        handleShareError('системный шаринг', error);
       }
     }
-  }, [canUseWebShareApi, shareUrl, shareTitle, shareText]);
+  }, [canUseWebShareApi, handleShareError, shareUrl, shareTitle, shareText]);
 
   // Переключение видимости панели
   const toggleCollapse = useCallback(() => {
@@ -199,49 +212,61 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
   const shareButtons = [
     {
       key: 'copy',
-      label: 'Копировать ссылку',
+      label: 'Ссылка',
+      accessibilityLabel: 'Копировать ссылку',
       icon: 'copy',
       onPress: handleCopyLink,
       color: palette.neutral,
+      group: 'quick',
     },
     {
       key: 'copyPost',
-      label: 'Текст для поста',
+      label: 'Текст',
+      accessibilityLabel: 'Скопировать текст для поста',
       icon: 'type',
       onPress: handleCopyPostText,
       color: palette.neutral,
+      group: 'quick',
     },
     // Экспорт в PDF доступен только в веб-версии
     ...(Platform.OS === 'web'
       ? [{
           key: 'export' as const,
-          label: isGenerating ? `Создание книги... ${progress}%` : 'Книга / PDF',
+          label: isGenerating ? `PDF ${progress}%` : 'PDF / книга',
+          accessibilityLabel: isGenerating ? `Создание книги PDF, ${progress}%` : 'Открыть экспорт в PDF',
           icon: 'file-text' as const,
           onPress: handleOpenExport,
           color: palette.export,
           disabled: isGenerating,
+          group: 'export',
         }]
       : []),
     {
       key: 'telegram',
       label: 'Telegram',
+      accessibilityLabel: 'Поделиться в Telegram',
       icon: 'send',
       onPress: handleShareTelegram,
       color: palette.telegram,
+      group: 'social',
     },
     {
       key: 'vk',
       label: 'VK',
+      accessibilityLabel: 'Поделиться во ВКонтакте',
       icon: 'users',
       onPress: handleShareVK,
       color: palette.vk,
+      group: 'social',
     },
     {
       key: 'whatsapp',
       label: 'WhatsApp',
+      accessibilityLabel: 'Поделиться в WhatsApp',
       icon: 'message-circle',
       onPress: handleShareWhatsApp,
       color: palette.whatsapp,
+      group: 'social',
     },
   ];
 
@@ -250,11 +275,33 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
     shareButtons.unshift({
       key: 'native',
       label: 'Поделиться',
+      accessibilityLabel: 'Открыть системное меню Поделиться',
       icon: 'share',
       onPress: handleNativeShare,
       color: palette.export,
+      group: 'social',
     });
   }
+
+  const shareGroups = isSticky
+    ? []
+    : [
+        {
+          key: 'quick',
+          title: 'Быстрые действия',
+          items: shareButtons.filter((button) => button.group === 'quick'),
+        },
+        {
+          key: 'social',
+          title: 'Соцсети',
+          items: shareButtons.filter((button) => button.group === 'social'),
+        },
+        {
+          key: 'export',
+          title: 'Экспорт',
+          items: shareButtons.filter((button) => button.group === 'export'),
+        },
+      ].filter((group) => group.items.length > 0);
 
   // Если панель свернута на мобильном, показываем только компактную кнопку
   if (isMobile && isCollapsed) {
@@ -289,6 +336,7 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
       <View
         style={[
           styles.container,
+          isPlain && styles.containerPlain,
           isMobile && styles.containerMobile,
           isSticky && styles.containerSticky,
         ]}
@@ -317,54 +365,82 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
         )}
         {!isCollapsed && (
           <>
-            <View
-              style={[
-                styles.buttonsContainer,
-                isMobile && styles.buttonsContainerMobile,
-                isSticky && styles.buttonsContainerSticky,
-              ]}
-            >
-              {isMobile && isSticky && (
-                <Pressable
-                  onPress={toggleCollapse}
-                  style={({ pressed }) => [
-                    styles.button,
-                    styles.buttonSticky,
-                    styles.closeButton,
-                    pressed && styles.buttonPressed,
-                    { backgroundColor: colors.backgroundSecondary }
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Скрыть панель действий"
-                >
-                  <Feather name="x" size={20} color={colors.textMuted} />
-                </Pressable>
-              )}
-              {shareButtons.map((button) => (
-                <Pressable
-                  key={button.key}
-                  onPress={button.onPress}
-                  disabled={button.disabled}
-                  style={({ pressed }) => [
-                    styles.button,
-                    isSticky && styles.buttonSticky,
-                    pressed && styles.buttonPressed,
-                    button.key === 'copy' && copied && styles.buttonCopied,
-                    button.disabled && styles.buttonDisabled,
-                    globalFocusStyles.focusable,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={button.label}
-                  android_ripple={{ color: colors.overlayLight }}
-                >
-                  <Feather name={button.icon as any} size={20} color={button.color} />
-                  {!isSticky && <Text style={[styles.buttonText, { color: colors.text }]}>{button.label}</Text>}
-                  {button.key === 'copy' && copied && (
-                    <Feather name="check" size={16} color={colors.success} style={{ marginLeft: 2 }} />
-                  )}
-                </Pressable>
-              ))}
-            </View>
+            {isSticky ? (
+              <View style={[styles.buttonsContainer, styles.buttonsContainerSticky]}>
+                {isMobile && (
+                  <Pressable
+                    onPress={toggleCollapse}
+                    style={({ pressed }) => [
+                      styles.button,
+                      styles.buttonSticky,
+                      styles.closeButton,
+                      pressed && styles.buttonPressed,
+                      { backgroundColor: colors.backgroundSecondary }
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Скрыть панель действий"
+                  >
+                    <Feather name="x" size={20} color={colors.textMuted} />
+                  </Pressable>
+                )}
+                {shareButtons.map((button) => (
+                  <Pressable
+                    key={button.key}
+                    onPress={button.onPress}
+                    disabled={button.disabled}
+                    style={({ pressed }) => [
+                      styles.button,
+                      styles.buttonSticky,
+                      pressed && styles.buttonPressed,
+                      button.key === 'copy' && copied && styles.buttonCopied,
+                      button.disabled && styles.buttonDisabled,
+                      globalFocusStyles.focusable,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={button.accessibilityLabel}
+                    android_ripple={{ color: colors.overlayLight }}
+                  >
+                    <Feather name={button.icon as any} size={20} color={button.color} />
+                    {button.key === 'copy' && copied && (
+                      <Feather name="check" size={16} color={colors.success} style={{ marginLeft: 2 }} />
+                    )}
+                  </Pressable>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.groupsList}>
+                {shareGroups.map((group) => (
+                  <View key={group.key} style={styles.groupSection}>
+                    <Text style={styles.groupTitle}>{group.title}</Text>
+                    <View style={[styles.buttonsContainer, isMobile && styles.buttonsContainerMobile]}>
+                      {group.items.map((button) => (
+                        <Pressable
+                          key={button.key}
+                          onPress={button.onPress}
+                          disabled={button.disabled}
+                          style={({ pressed }) => [
+                            styles.button,
+                            pressed && styles.buttonPressed,
+                            button.key === 'copy' && copied && styles.buttonCopied,
+                            button.disabled && styles.buttonDisabled,
+                            globalFocusStyles.focusable,
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityLabel={button.accessibilityLabel}
+                          android_ripple={{ color: colors.overlayLight }}
+                        >
+                          <Feather name={button.icon as any} size={18} color={button.color} />
+                          <Text style={[styles.buttonText, { color: colors.text }]}>{button.label}</Text>
+                          {button.key === 'copy' && copied && (
+                            <Feather name="check" size={16} color={colors.success} style={{ marginLeft: 2 }} />
+                          )}
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
             {isGenerating && Platform.OS === 'web' && (
               <View style={styles.progressContainer}>
                 <View style={[styles.progressBar, { width: `${progress}%` }]} />
@@ -401,9 +477,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     paddingHorizontal: 24,
     backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.md,
-    marginBottom: 20,
     borderWidth: 1,
     borderColor: colors.borderLight,
+  },
+  containerPlain: {
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   containerMobile: {
     paddingVertical: 16,
@@ -426,14 +508,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    marginBottom: 12,
   },
   title: {
-    fontSize: Platform.select({ default: 17, web: 18 }),
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     color: colors.text,
     marginBottom: 0,
     letterSpacing: -0.2,
@@ -470,7 +549,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       WebkitBackdropFilter: 'blur(20px)' as any,
     } : {}),
     borderRadius: 16,
-    marginBottom: 20,
     shadowColor: colors.shadows.medium.shadowColor,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
@@ -507,6 +585,19 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     gap: 12, // ✅ UX: Фиксированный отступ
     rowGap: 12,
   },
+  groupsList: {
+    gap: DESIGN_TOKENS.spacing.md,
+  },
+  groupSection: {
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
+  groupTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
   buttonsContainerMobile: {
     gap: 10,
     rowGap: 10,
@@ -528,14 +619,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     minHeight: Platform.OS === 'android' ? 48 : 44, // AND-26: M3 touch target
     minWidth: Platform.OS === 'android' ? 48 : 44,
     justifyContent: 'center',
-    borderWidth: 0,
-    borderColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
-        transition: 'background-color 0.15s ease' as any,
+        transition: 'background-color 0.15s ease, border-color 0.15s ease' as any,
         ':hover': {
           backgroundColor: colors.backgroundTertiary,
+          borderColor: colors.border,
         } as any,
       },
     }),

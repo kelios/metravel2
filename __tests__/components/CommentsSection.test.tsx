@@ -14,6 +14,7 @@ import {
 } from '@/hooks/useComments';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/api/client';
+import type { AuthStore } from '@/stores/authStore';
 
 jest.mock('@/hooks/useComments');
 jest.mock('@/context/AuthContext');
@@ -42,6 +43,30 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
   </QueryClientProvider>
 );
 
+const createAuthState = (overrides: Partial<AuthStore> = {}): AuthStore => ({
+  isAuthenticated: false,
+  userId: null,
+  username: '',
+  isSuperuser: false,
+  userAvatar: null,
+  authReady: true,
+  profileRefreshToken: 0,
+  setIsAuthenticated: jest.fn(),
+  setUsername: jest.fn(),
+  setIsSuperuser: jest.fn(),
+  setUserId: jest.fn(),
+  setUserAvatar: jest.fn(),
+  triggerProfileRefresh: jest.fn(),
+  invalidateAuthState: jest.fn(),
+  checkAuthentication: jest.fn(async () => undefined),
+  login: jest.fn(async () => true),
+  loginWithGoogle: jest.fn(async () => true),
+  logout: jest.fn(async () => undefined),
+  sendPassword: jest.fn(async () => ''),
+  setNewPassword: jest.fn(async () => true),
+  ...overrides,
+});
+
 describe('CommentsSection', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -55,25 +80,7 @@ describe('CommentsSection', () => {
 
   describe('Unauthenticated users', () => {
     beforeEach(() => {
-      mockUseAuth.mockReturnValue({
-        isAuthenticated: false,
-        userId: null,
-        username: '',
-        isSuperuser: false,
-        userAvatar: null,
-        authReady: true,
-        profileRefreshToken: 0,
-        setIsAuthenticated: jest.fn(),
-        setUsername: jest.fn(),
-        setIsSuperuser: jest.fn(),
-        setUserId: jest.fn(),
-        setUserAvatar: jest.fn(),
-        triggerProfileRefresh: jest.fn(),
-        logout: jest.fn(),
-        login: jest.fn(),
-        sendPassword: jest.fn(),
-        setNewPassword: jest.fn(),
-      });
+      mockUseAuth.mockReturnValue(createAuthState());
 
       mockUseMainThread.mockReturnValue({
         data: { id: 1, travel: 123, is_main: true, created_at: null, updated_at: null },
@@ -124,25 +131,7 @@ describe('CommentsSection', () => {
 
   describe('Authenticated users', () => {
     beforeEach(() => {
-      mockUseAuth.mockReturnValue({
-        isAuthenticated: true,
-        userId: '1',
-        username: 'Current User',
-        isSuperuser: false,
-        userAvatar: null,
-        authReady: true,
-        profileRefreshToken: 0,
-        setIsAuthenticated: jest.fn(),
-        setUsername: jest.fn(),
-        setIsSuperuser: jest.fn(),
-        setUserId: jest.fn(),
-        setUserAvatar: jest.fn(),
-        triggerProfileRefresh: jest.fn(),
-        logout: jest.fn(),
-        login: jest.fn(),
-        sendPassword: jest.fn(),
-        setNewPassword: jest.fn(),
-      });
+      mockUseAuth.mockReturnValue(createAuthState({ isAuthenticated: true, userId: '1', username: 'Current User' }));
 
       mockUseMainThread.mockReturnValue({
         data: { id: 1, travel: 123, is_main: true, created_at: null, updated_at: null },
@@ -230,25 +219,7 @@ describe('CommentsSection', () => {
 
   describe('Loading states', () => {
     beforeEach(() => {
-      mockUseAuth.mockReturnValue({
-        isAuthenticated: true,
-        userId: '1',
-        username: 'User',
-        isSuperuser: false,
-        userAvatar: null,
-        authReady: true,
-        profileRefreshToken: 0,
-        setIsAuthenticated: jest.fn(),
-        setUsername: jest.fn(),
-        setIsSuperuser: jest.fn(),
-        setUserId: jest.fn(),
-        setUserAvatar: jest.fn(),
-        triggerProfileRefresh: jest.fn(),
-        logout: jest.fn(),
-        login: jest.fn(),
-        sendPassword: jest.fn(),
-        setNewPassword: jest.fn(),
-      });
+      mockUseAuth.mockReturnValue(createAuthState({ isAuthenticated: true, userId: '1', username: 'User' }));
     });
 
     it('should show loading indicator when fetching thread', () => {
@@ -313,25 +284,7 @@ describe('CommentsSection', () => {
     });
 
     it('should show login prompt and empty state on 401 thread error (comments are public)', () => {
-      mockUseAuth.mockReturnValue({
-        isAuthenticated: false,
-        userId: null,
-        username: '',
-        isSuperuser: false,
-        userAvatar: null,
-        authReady: true,
-        profileRefreshToken: 0,
-        setIsAuthenticated: jest.fn(),
-        setUsername: jest.fn(),
-        setIsSuperuser: jest.fn(),
-        setUserId: jest.fn(),
-        setUserAvatar: jest.fn(),
-        triggerProfileRefresh: jest.fn(),
-        logout: jest.fn(),
-        login: jest.fn(),
-        sendPassword: jest.fn(),
-        setNewPassword: jest.fn(),
-      });
+      mockUseAuth.mockReturnValue(createAuthState());
 
       mockUseMainThread.mockReturnValue({
         data: undefined,
@@ -357,25 +310,7 @@ describe('CommentsSection', () => {
 
   describe('Empty state', () => {
     beforeEach(() => {
-      mockUseAuth.mockReturnValue({
-        isAuthenticated: true,
-        userId: '1',
-        username: 'User',
-        isSuperuser: false,
-        userAvatar: null,
-        authReady: true,
-        profileRefreshToken: 0,
-        setIsAuthenticated: jest.fn(),
-        setUsername: jest.fn(),
-        setIsSuperuser: jest.fn(),
-        setUserId: jest.fn(),
-        setUserAvatar: jest.fn(),
-        triggerProfileRefresh: jest.fn(),
-        logout: jest.fn(),
-        login: jest.fn(),
-        sendPassword: jest.fn(),
-        setNewPassword: jest.fn(),
-      });
+      mockUseAuth.mockReturnValue(createAuthState({ isAuthenticated: true, userId: '1', username: 'User' }));
 
       mockUseMainThread.mockReturnValue({
         data: { id: 1, travel: 123, is_main: true, created_at: null, updated_at: null },
@@ -396,31 +331,14 @@ describe('CommentsSection', () => {
       render(<CommentsSection travelId={123} />, { wrapper });
 
       expect(screen.getByText('Пока нет комментариев')).toBeTruthy();
-      expect(screen.getByText('Будьте первым, кто оставит комментарий!')).toBeTruthy();
+      expect(screen.getByText('Оставьте первый комментарий — форма уже открыта выше.')).toBeTruthy();
+      expect(screen.getByText('Комментарий можно написать сразу в форме выше.')).toBeTruthy();
     });
   });
 
   describe('Lazy loading guard', () => {
     beforeEach(() => {
-      mockUseAuth.mockReturnValue({
-        isAuthenticated: false,
-        userId: null,
-        username: '',
-        isSuperuser: false,
-        userAvatar: null,
-        authReady: true,
-        profileRefreshToken: 0,
-        setIsAuthenticated: jest.fn(),
-        setUsername: jest.fn(),
-        setIsSuperuser: jest.fn(),
-        setUserId: jest.fn(),
-        setUserAvatar: jest.fn(),
-        triggerProfileRefresh: jest.fn(),
-        logout: jest.fn(),
-        login: jest.fn(),
-        sendPassword: jest.fn(),
-        setNewPassword: jest.fn(),
-      });
+      mockUseAuth.mockReturnValue(createAuthState());
 
       mockUseMainThread.mockReturnValue({
         data: undefined,
@@ -450,25 +368,7 @@ describe('CommentsSection', () => {
 
   describe('Comment organization', () => {
     beforeEach(() => {
-      mockUseAuth.mockReturnValue({
-        isAuthenticated: true,
-        userId: '1',
-        username: 'User',
-        isSuperuser: false,
-        userAvatar: null,
-        authReady: true,
-        profileRefreshToken: 0,
-        setIsAuthenticated: jest.fn(),
-        setUsername: jest.fn(),
-        setIsSuperuser: jest.fn(),
-        setUserId: jest.fn(),
-        setUserAvatar: jest.fn(),
-        triggerProfileRefresh: jest.fn(),
-        logout: jest.fn(),
-        login: jest.fn(),
-        sendPassword: jest.fn(),
-        setNewPassword: jest.fn(),
-      });
+      mockUseAuth.mockReturnValue(createAuthState({ isAuthenticated: true, userId: '1', username: 'User' }));
 
       mockUseMainThread.mockReturnValue({
         data: { id: 1, travel: 123, is_main: true, created_at: null, updated_at: null },

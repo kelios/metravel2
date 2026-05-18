@@ -814,13 +814,13 @@ const AuthorBlock = memo(function AuthorBlock({
               <Button
                 label="Все путешествия автора"
                 onPress={onUserTravels}
-                variant="secondary"
+                variant="outline"
                 size="sm"
-                fullWidth
+                icon={<Feather name="arrow-right" size={14} color={colors.primary} />}
                 accessibilityLabel="Все путешествия автора"
                 style={styles.allTravelsButton}
                 labelStyle={styles.allTravelsButtonLabel}
-                labelNumberOfLines={2}
+                labelNumberOfLines={1}
                 {...webOnly({ testID: 'open-author-travels' } as any)}
               />
             </View>
@@ -1054,14 +1054,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
           } as any)
         : {}),
     },
-    allTravelsWrap: { marginTop: DESIGN_TOKENS.spacing.xs, width: '100%' },
+    allTravelsWrap: { marginTop: DESIGN_TOKENS.spacing.xs, alignSelf: 'flex-start' },
     allTravelsButton: {
-      borderRadius: 999,
-      backgroundColor: colors.surfaceMuted,
+      alignSelf: 'flex-start',
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: 'transparent',
       borderColor: colors.borderLight,
     },
     allTravelsButtonLabel: {
-      color: colors.textSecondary,
+      color: colors.primary,
       fontWeight: '600',
       textAlign: 'center',
     },

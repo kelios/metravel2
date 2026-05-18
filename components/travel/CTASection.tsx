@@ -16,13 +16,16 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { showToast } from '@/utils/toast';
+import { devWarn } from '@/utils/logger';
 
 interface CTASectionProps {
   travel: Travel;
   onFavoriteToggle?: () => void;
+  surface?: 'card' | 'plain';
 }
 
-function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
+function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionProps) {
   const router = useRouter();
   const colors = useThemedColors();
   const { width } = useWindowDimensions();
@@ -55,7 +58,13 @@ function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
       }
       onFavoriteToggle?.();
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      devWarn('[CTASection] Не удалось переключить избранное:', error);
+      void showToast({
+        type: 'error',
+        text1: 'Не удалось сохранить в избранное',
+        text2: 'Попробуйте ещё раз',
+        visibilityTime: 2500,
+      });
     }
   }, [travel, isAuthenticated, isFavorite, addFavorite, removeFavorite, onFavoriteToggle, requireAuth]);
 
@@ -73,13 +82,17 @@ function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
       backgroundColor: colors.surface,
       borderRadius: DESIGN_TOKENS.radii.md,
       padding: Platform.select({ default: DESIGN_TOKENS.spacing.lg, web: DESIGN_TOKENS.spacing.xl }),
-      marginBottom: DESIGN_TOKENS.spacing.xl,
       borderWidth: 1,
       borderColor: colors.borderLight,
     },
     containerMobile: {
       padding: DESIGN_TOKENS.spacing.md,
-      marginBottom: DESIGN_TOKENS.spacing.lg,
+    },
+    containerPlain: {
+      padding: 0,
+      borderWidth: 0,
+      borderColor: 'transparent',
+      backgroundColor: 'transparent',
     },
     content: {
       gap: DESIGN_TOKENS.spacing.md,
@@ -88,7 +101,7 @@ function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
       marginBottom: 8,
     },
     title: {
-      fontSize: Platform.select({ default: 18, web: 20 }),
+      fontSize: 18,
       fontWeight: '700',
       color: colors.text,
       marginBottom: DESIGN_TOKENS.spacing.xs,
@@ -106,73 +119,34 @@ function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
       fontSize: 13,
       lineHeight: 18,
     },
-    actionButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: DESIGN_TOKENS.spacing.sm,
-      paddingVertical: 12,
-      paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    buttonBase: {
+      width: '100%',
       borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: colors.backgroundSecondary,
-      minHeight: 44,
-      borderWidth: 0,
-      borderColor: 'transparent',
-      ...(Platform.OS === 'web' ? {
-        cursor: 'pointer',
-        transition: 'background-color 0.2s ease, box-shadow 0.2s ease',
-        ':hover': {
-          backgroundColor: colors.backgroundTertiary,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-        },
-      } as any : {}),
     },
-    actionButtonMobile: {
-      paddingVertical: 11,
-      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-    },
-    actionButtonSecondary: {
-      backgroundColor: colors.backgroundSecondary,
-      borderColor: colors.borderLight,
-    },
-    actionButtonActive: {
-      backgroundColor: colors.primary,
-      borderColor: colors.primary,
-    },
-    actionButtonText: {
+    buttonLabel: {
       fontSize: 15,
       fontWeight: '600',
-      color: colors.primaryText,
     },
-    actionButtonTextMobile: {
-      fontSize: 14,
-    },
-    actionButtonTextActive: {
-      color: colors.surface,
-    },
-    primaryButton: {
-      paddingVertical: 12,
-      paddingHorizontal: DESIGN_TOKENS.spacing.xl,
-      borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: colors.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: 44,
-      ...(Platform.OS === 'web' ? {
-        cursor: 'pointer',
-        transition: 'background-color 0.2s ease',
-      } as any : {}),
-    },
-    primaryButtonMobile: {
-      paddingVertical: 11,
-      paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    },
-    primaryButtonText: {
-      fontSize: 15,
+    primaryButtonLabel: {
       fontWeight: '700',
-      color: colors.surface,
+      color: colors.textOnPrimary,
     },
-    primaryButtonTextMobile: {
+    secondaryButtonLabel: {
+      color: colors.text,
+    },
+    outlineButton: {
+      borderWidth: 1,
+      borderColor: colors.primary,
+      backgroundColor: 'transparent',
+    },
+    favoriteButtonActive: {
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.primary,
+    },
+    favoriteButtonLabel: {
+      color: colors.primary,
+    },
+    buttonLabelMobile: {
       fontSize: 14,
     },
   }), [colors]);
@@ -181,7 +155,13 @@ function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
   // Не показываем если пользователь не авторизован (или показываем с призывом зарегистрироваться)
   if (!isAuthenticated) {
     return (
-      <View style={[styles.container, isMobile && styles.containerMobile]}>
+      <View
+        style={[
+          styles.container,
+          surface === 'plain' && styles.containerPlain,
+          isMobile && surface !== 'plain' && styles.containerMobile,
+        ]}
+      >
         <View style={styles.content}>
           <View style={styles.textSection}>
             <Text style={[styles.title, isMobile && styles.titleMobile]}>
@@ -196,8 +176,9 @@ function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
             onPress={() => router.push(loginHref as any)}
             variant="primary"
             size="md"
-            style={[styles.primaryButton, isMobile && styles.primaryButtonMobile]}
-            labelStyle={[styles.primaryButtonText, isMobile && styles.primaryButtonTextMobile]}
+            fullWidth
+            style={styles.buttonBase}
+            labelStyle={[styles.primaryButtonLabel, isMobile && styles.buttonLabelMobile]}
             accessibilityLabel="Войти или зарегистрироваться"
           />
         </View>
@@ -206,32 +187,33 @@ function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
   }
 
   return (
-    <View style={[styles.container, isMobile && styles.containerMobile]}>
+    <View
+      style={[
+        styles.container,
+        surface === 'plain' && styles.containerPlain,
+        isMobile && surface !== 'plain' && styles.containerMobile,
+      ]}
+    >
       <View style={styles.content}>
-        {/* Кнопка "Добавить в избранное" */}
+        <View style={styles.textSection}>
+          <Text style={[styles.title, isMobile && styles.titleMobile]}>
+            Сохраните маршрут или начните своё путешествие
+          </Text>
+          <Text style={[styles.subtitle, isMobile && styles.subtitleMobile]}>
+            Выберите главное действие: создать свой маршрут, добавить этот в планы или сохранить в избранное.
+          </Text>
+        </View>
+
         <Button
-          label={isFavorite ? 'В избранном' : 'В избранное'}
-          onPress={handleFavorite}
-          variant={isFavorite ? 'primary' : 'secondary'}
+          label="Создать путешествие"
+          onPress={handleCreateTravel}
+          variant="primary"
           size="md"
-          icon={
-            <Feather
-              name="heart"
-              size={20}
-              color={isFavorite ? colors.surface : colors.primary}
-            />
-          }
-          style={[
-            isFavorite ? styles.primaryButton : styles.actionButton,
-            isMobile && (isFavorite ? styles.primaryButtonMobile : styles.actionButtonMobile),
-            isFavorite && styles.actionButtonActive,
-          ]}
-          labelStyle={[
-            isFavorite ? styles.primaryButtonText : styles.actionButtonText,
-            isMobile && (isFavorite ? styles.primaryButtonTextMobile : styles.actionButtonTextMobile),
-            isFavorite && styles.actionButtonTextActive,
-          ]}
-          accessibilityLabel={isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'}
+          fullWidth
+          icon={<Feather name="plus-circle" size={18} color={colors.textOnPrimary} />}
+          style={styles.buttonBase}
+          labelStyle={[styles.primaryButtonLabel, isMobile && styles.buttonLabelMobile]}
+          accessibilityLabel="Создать свое путешествие"
         />
 
         {/* Кнопка "Добавить в план / Мой календарь" */}
@@ -245,22 +227,30 @@ function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
           travelMonthName={travel.monthName}
         />
 
-        {/* P1-5: «Все путешествия автора» убрана — уже есть в AuthorCard */}
-
-        {/* Кнопка "Создать путешествие" */}
         <Button
-          label="Создать путешествие"
-          onPress={handleCreateTravel}
-          variant="secondary"
+          label={isFavorite ? 'В избранном' : 'В избранное'}
+          onPress={handleFavorite}
+          variant="outline"
           size="md"
-          icon={<Feather name="plus-circle" size={20} color={colors.primary} />}
+          fullWidth
+          icon={
+            <Feather
+              name="heart"
+              size={18}
+              color={colors.primary}
+            />
+          }
           style={[
-            styles.actionButton,
-            isMobile && styles.actionButtonMobile,
-            styles.actionButtonSecondary,
+            styles.buttonBase,
+            styles.outlineButton,
+            isFavorite && styles.favoriteButtonActive,
           ]}
-          labelStyle={[styles.actionButtonText, isMobile && styles.actionButtonTextMobile]}
-          accessibilityLabel="Создать свое путешествие"
+          labelStyle={[
+            styles.buttonLabel,
+            styles.favoriteButtonLabel,
+            isMobile && styles.buttonLabelMobile,
+          ]}
+          accessibilityLabel={isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'}
         />
       </View>
     </View>

@@ -58,9 +58,9 @@ function TelegramDiscussionSection({ travel }: TelegramDiscussionSectionProps) {
         accessibilityRole="button"
         accessibilityLabel={hasUrl ? 'Открыть обсуждение в Telegram' : 'Скоро здесь будет обсуждение в Telegram'}
       >
-        <Feather name="send" size={20} color={colors.textOnPrimary} />
+        <Feather name="send" size={18} color={hasUrl ? colors.primary : colors.textMuted} />
         <Text style={styles.buttonText}>
-          {hasUrl ? 'Открыть обсуждение в Telegram' : 'Скоро здесь будет обсуждение в Telegram'}
+          {hasUrl ? 'Открыть чат в Telegram' : 'Скоро здесь будет чат в Telegram'}
         </Text>
       </Pressable>
       {/* P1-9: Admin hint only in dev mode */}
@@ -85,8 +85,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderColor: colors.borderLight,
   },
   title: {
-    fontSize: Platform.select({ default: 17, web: 18 }),
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     color: colors.text,
     marginBottom: DESIGN_TOKENS.spacing.xs,
     letterSpacing: -0.2,
@@ -104,22 +104,25 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     gap: DESIGN_TOKENS.spacing.sm,
     paddingVertical: 12,
     paddingHorizontal: DESIGN_TOKENS.spacing.xl,
-    borderRadius: 999,
-    backgroundColor: colors.primary,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    backgroundColor: colors.surface,
     minHeight: 44,
+    borderWidth: 1,
+    borderColor: colors.primary,
     ...Platform.select({
       web: {
         cursor: 'pointer',
-        transition: 'all 0.2s ease',
+        transition: 'background-color 0.2s ease, border-color 0.2s ease',
       } as any,
     }),
   },
   buttonPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.97 }],
+    backgroundColor: colors.primarySoft,
+    transform: [{ scale: 0.98 }],
   },
   buttonDisabled: {
-    backgroundColor: colors.disabled,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.backgroundSecondary,
     ...Platform.select({
       web: {
         cursor: 'not-allowed',
@@ -129,7 +132,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   buttonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.textOnPrimary,
+    color: colors.primary,
   },
   helperText: {
     marginTop: DESIGN_TOKENS.spacing.sm,

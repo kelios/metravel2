@@ -163,6 +163,27 @@ export const createCommentsSectionStyles = (colors: ThemedColors) =>
       maxWidth: 360,
       lineHeight: 20,
     },
+    emptyHint: {
+      color: colors.textSecondary,
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      textAlign: 'center',
+      lineHeight: 20,
+    },
+    emptyActionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+      paddingHorizontal: DESIGN_TOKENS.spacing.md,
+      paddingVertical: DESIGN_TOKENS.spacing.sm,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.primary,
+      marginTop: DESIGN_TOKENS.spacing.xs,
+    },
+    emptyActionButtonText: {
+      color: colors.primaryText,
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      fontWeight: DESIGN_TOKENS.typography.weights.semibold,
+    },
     commentThread: {
       gap: DESIGN_TOKENS.spacing.sm,
     },
