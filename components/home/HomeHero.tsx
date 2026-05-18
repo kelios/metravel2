@@ -63,6 +63,8 @@ function detectDisableHeroSliderBlur() {
   return shouldDisableHomeHeroSliderBlur(String(navigator.userAgent || ''), touch)
 }
 
+const getBookSlideSource = (slide: (typeof BOOK_IMAGES)[number]) => slide.source
+
 const HomeHero = memo(function HomeHero({
   travelsCount = 0,
   travelsCountLoading = false,
@@ -193,7 +195,7 @@ const HomeHero = memo(function HomeHero({
     sliderMediaWidth,
     sliderHeight,
     prefersReducedMotion,
-    getSlideSource: (slide) => slide.source,
+    getSlideSource: getBookSlideSource,
   })
 
   const showNavigationFeedback = useCallback((key: string) => {

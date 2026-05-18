@@ -279,7 +279,14 @@ const GET_TRAVELS_OF_MONTH = `${URLAPI}/travels/of-month/`;
 const GET_TRAVELS_RANDOM = `${URLAPI}/travels/random/`;
 const SEARCH_TRAVELS_NEAR_ROUTE = `${URLAPI}/travels/near-route/`;
 
-type ApiOptions = { signal?: AbortSignal; throwOnError?: boolean };
+type ApiOptions = { signal?: AbortSignal; throwOnError?: boolean; limit?: number };
+
+const withOptionalLimit = (url: string, limit?: number): string => {
+  if (!Number.isFinite(limit) || !limit || limit <= 0) return url;
+  const separator = url.includes('?') ? '&' : '?';
+  const perPage = Math.max(1, Math.floor(limit));
+  return `${url}${separator}page=1&perPage=${perPage}`;
+};
 
 export const fetchTravelsNear = async (travel_id: number, signal?: AbortSignal) => {
   try {
@@ -308,7 +315,7 @@ export const fetchTravelsNear = async (travel_id: number, signal?: AbortSignal) 
 
 export const fetchTravelsPopular = async (options?: ApiOptions): Promise<TravelsMap> => {
   try {
-    const urlTravel = `${GET_TRAVELS}popular/`;
+    const urlTravel = withOptionalLimit(`${GET_TRAVELS}popular/`, options?.limit);
     const res = await fetchWithTimeout(urlTravel, { signal: options?.signal }, DEFAULT_TIMEOUT);
     if (!res.ok) {
       // Keep behavior: return empty payload, but surface actionable info in dev.
@@ -335,7 +342,7 @@ export const fetchTravelsPopular = async (options?: ApiOptions): Promise<Travels
 
 export const fetchTravelsOfMonth = async (options?: ApiOptions): Promise<TravelsMap> => {
   try {
-    const urlTravel = GET_TRAVELS_OF_MONTH;
+    const urlTravel = withOptionalLimit(GET_TRAVELS_OF_MONTH, options?.limit);
     const res = await fetchWithTimeout(urlTravel, { signal: options?.signal }, DEFAULT_TIMEOUT);
     if (!res.ok) {
       const err = new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -355,7 +362,7 @@ export const fetchTravelsOfMonth = async (options?: ApiOptions): Promise<Travels
 
 export const fetchTravelsRandom = async (options?: ApiOptions): Promise<unknown[]> => {
   try {
-    const urlTravel = GET_TRAVELS_RANDOM;
+    const urlTravel = withOptionalLimit(GET_TRAVELS_RANDOM, options?.limit);
     const res = await fetchWithTimeout(urlTravel, { signal: options?.signal }, DEFAULT_TIMEOUT);
     if (!res.ok) {
       const err = new Error(`HTTP ${res.status}: ${res.statusText}`);

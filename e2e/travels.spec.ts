@@ -20,6 +20,15 @@ test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
     return navigateToFirstTravel(page);
   }
 
+  async function scrollTravelDetailsToBottom(page: import('@playwright/test').Page) {
+    const scroll = page.locator('[data-testid="travel-details-scroll"]');
+    await scroll.evaluate((node: Element) => {
+      const element = node as HTMLElement;
+      element.scrollTop = element.scrollHeight;
+      element.dispatchEvent(new Event('scroll', { bubbles: true }));
+    });
+  }
+
   test.describe('Page Loading', () => {
     test('should load page with complete content', async ({ page }) => {
       if (!(await goToTravelDetails(page))) return;
@@ -204,11 +213,23 @@ test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
     test('should open share buttons menu', async ({ page }) => {
       if (!(await goToTravelDetails(page))) return;
 
-      const shareSection = page.locator('[data-testid="travel-details-share"]');
-      if ((await shareSection.count()) > 0) {
-        await shareSection.scrollIntoViewIfNeeded();
-        await expect(shareSection).toBeVisible({ timeout: 5000 });
-      }
+      const shareSection = page
+        .locator('[data-testid="travel-details-share"], [data-testid="travel-details-share-mobile"]')
+        .first();
+
+      await expect
+        .poll(
+          async () => {
+            await scrollTravelDetailsToBottom(page);
+            return shareSection.isVisible().catch(() => false);
+          },
+          { timeout: 30_000, message: 'Expected deferred share section to become visible' }
+        )
+        .toBeTruthy();
+
+      await expect(
+        shareSection.getByRole('button', { name: /Копировать ссылку|Telegram|WhatsApp/i }).first()
+      ).toBeVisible({ timeout: 5_000 });
     });
 
     test('should share to Facebook', async ({ page }) => {
@@ -411,10 +432,10 @@ test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
       await preacceptCookies(page);
       await page.route('**/api/travels/**', (route: any) => route.abort('failed'));
 
-      await page.goto(`/travels/e2e-force-error-${Date.now()}`, { waitUntil: 'domcontentloaded' });
+      await page.goto('/travels/999999999999', { waitUntil: 'domcontentloaded' });
 
       await expect(
-        page.locator('text=/Не удалось загрузить путешествие|не найдено/i').first()
+        page.locator('text=/Не удалось загрузить путешествие/i').first()
       ).toBeVisible({ timeout: 10_000 });
       await expect(page.getByRole('button', { name: 'Повторить' }).first()).toBeVisible({ timeout: 10_000 });
     });

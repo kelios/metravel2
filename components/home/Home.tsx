@@ -35,6 +35,12 @@ const HomeFAQSection = lazy(() => import('./HomeFAQSection'))
 const HomeInspirationSections = lazy(() => import('./HomeInspirationSections'))
 const HomeFavoritesHistorySection = lazy(() => import('./HomeFavoritesHistorySection'))
 
+const fetchHomeRandomTravels = (options?: { signal?: AbortSignal }) =>
+  fetchTravelsRandom({ ...options, limit: 3 })
+
+const fetchHomeTravelsOfMonth = (options?: { signal?: AbortSignal }) =>
+  fetchTravelsOfMonth({ ...options, limit: 6 })
+
 type PageSectionProps = {
   children: React.ReactNode
   marginTop: number
@@ -279,7 +285,7 @@ function Home() {
           titleAccent="выбирать долго?"
           subtitle="Откройте случайный маршрут для спонтанного выезда"
           queryKey="home-random-travels"
-          fetchFn={fetchTravelsRandom}
+          fetchFn={fetchHomeRandomTravels}
           fixedCount={3}
           hideAuthor
         />
@@ -301,7 +307,7 @@ function Home() {
           titleAccent="ближайшие выходные"
           subtitle="Реальные поездки, которые можно успеть за 1-2 дня"
           queryKey="home-travels-of-month"
-          fetchFn={fetchTravelsOfMonth}
+          fetchFn={fetchHomeTravelsOfMonth}
         />
       </PageSection>
 

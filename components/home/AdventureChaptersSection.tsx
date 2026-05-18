@@ -22,6 +22,12 @@ const PLACEHOLDER_BLURHASH = 'LEHL6nWB2yk8pyo0adR*.7kCMdnj'
 const SECTION_SUBTITLE =
   'Собрали маршруты, к которым чаще всего возвращаются: для первого вдохновения, быстрого выбора и новых идей на выходные.'
 
+function chunkRows<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = []
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
+  return out
+}
+
 function isLikelyWatermarked(url: string | null | undefined): boolean {
   if (!url) return false
   const lower = url.toLowerCase()
@@ -308,7 +314,7 @@ function AdventureChaptersSection() {
     refetch,
   } = useQuery({
     queryKey: ['home-popular-travels'],
-    queryFn: ({ signal } = {} as any) => fetchTravelsPopular({ signal }),
+    queryFn: ({ signal } = {} as any) => fetchTravelsPopular({ signal, limit: 6 }),
     ...queryConfigs.dynamic,
   })
 
@@ -343,6 +349,14 @@ function AdventureChaptersSection() {
     sendAnalyticsEvent('AdventureChapters_ViewAll')
     router.push('/search' as any)
   }, [router])
+
+  const rows = useMemo(
+    () =>
+      numColumns === 1
+        ? travelsList.map((item) => [item])
+        : chunkRows(travelsList, numColumns),
+    [numColumns, travelsList],
+  )
 
   const isWeb = Platform.OS === 'web'
 
@@ -398,18 +412,6 @@ function AdventureChaptersSection() {
       </View>
     )
   }
-
-  // ── Grid rows ──
-  function chunkArray<T>(arr: T[], size: number): T[][] {
-    const out: T[][] = []
-    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
-    return out
-  }
-
-  const rows =
-    numColumns === 1
-      ? travelsList.map((item) => [item])
-      : chunkArray(travelsList, numColumns)
 
   return (
     <View style={styles.section}>

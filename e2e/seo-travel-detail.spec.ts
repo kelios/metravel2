@@ -31,6 +31,32 @@ async function getRenderedHtml(page: import('@playwright/test').Page, path: stri
   return page.content();
 }
 
+function getTagAttribute(tag: string, attribute: string): string | null {
+  const match = tag.match(new RegExp(`\\s${attribute}\\s*=\\s*(["'])(.*?)\\1`, 'i'));
+  return match?.[2] ?? null;
+}
+
+function getMetaContent(html: string, attribute: 'name' | 'property', value: string): string | null {
+  const tags = html.match(/<meta\b[^>]*>/gi) ?? [];
+  const normalizedValue = value.toLowerCase();
+
+  for (const tag of tags) {
+    const attrValue = getTagAttribute(tag, attribute);
+    if (attrValue?.toLowerCase() === normalizedValue) {
+      return getTagAttribute(tag, 'content') ?? '';
+    }
+  }
+
+  return null;
+}
+
+function countMetaTags(html: string, attribute: 'name' | 'property', value: string): number {
+  const tags = html.match(/<meta\b[^>]*>/gi) ?? [];
+  const normalizedValue = value.toLowerCase();
+
+  return tags.filter((tag) => getTagAttribute(tag, attribute)?.toLowerCase() === normalizedValue).length;
+}
+
 test.describe('SEO: travel detail page meta tags', () => {
   const TRAVEL_SLUG = 'tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele';
   const TRAVEL_PATH = `/travels/${TRAVEL_SLUG}`;
@@ -51,9 +77,9 @@ test.describe('SEO: travel detail page meta tags', () => {
 
   // --- Meta description ---
   test('has a non-empty meta description', () => {
-    const match = html.match(/<meta[^>]*name="description"[^>]*content="([^"]*)"/i);
-    expect(match).toBeTruthy();
-    expect(match![1].length).toBeGreaterThan(10);
+    const content = getMetaContent(html, 'name', 'description');
+    expect(content).toBeTruthy();
+    expect(content!.length).toBeGreaterThan(10);
   });
 
   // --- Canonical ---
@@ -70,77 +96,73 @@ test.describe('SEO: travel detail page meta tags', () => {
 
   // --- Open Graph ---
   test('has og:type', () => {
-    expect(html).toMatch(/<meta[^>]*property="og:type"[^>]*content="article"/i);
+    expect(getMetaContent(html, 'property', 'og:type')).toBe('article');
   });
 
   test('has og:title', () => {
-    const match = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]*)"/i);
-    expect(match).toBeTruthy();
-    expect(match![1].length).toBeGreaterThan(0);
+    const content = getMetaContent(html, 'property', 'og:title');
+    expect(content).toBeTruthy();
+    expect(content!.length).toBeGreaterThan(0);
   });
 
   test('has og:description', () => {
-    const match = html.match(/<meta[^>]*property="og:description"[^>]*content="([^"]*)"/i);
-    expect(match).toBeTruthy();
-    expect(match![1].length).toBeGreaterThan(10);
+    const content = getMetaContent(html, 'property', 'og:description');
+    expect(content).toBeTruthy();
+    expect(content!.length).toBeGreaterThan(10);
   });
 
   test('has og:url with correct path', () => {
-    const match = html.match(/<meta[^>]*property="og:url"[^>]*content="([^"]*)"/i);
-    expect(match).toBeTruthy();
-    expect(match![1]).toContain(`/travels/${TRAVEL_SLUG}`);
+    const content = getMetaContent(html, 'property', 'og:url');
+    expect(content).toBeTruthy();
+    expect(content!).toContain(`/travels/${TRAVEL_SLUG}`);
   });
 
   test('has og:image (not empty)', () => {
-    const match = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]*)"/i);
-    expect(match).toBeTruthy();
-    expect(match![1].length).toBeGreaterThan(0);
+    const content = getMetaContent(html, 'property', 'og:image');
+    expect(content).toBeTruthy();
+    expect(content!.length).toBeGreaterThan(0);
   });
 
   test('og:image is not a 200px thumbnail', () => {
-    const match = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]*)"/i);
-    if (match) {
-      expect(match[1]).not.toContain('thumb_200');
+    const content = getMetaContent(html, 'property', 'og:image');
+    if (content) {
+      expect(content).not.toContain('thumb_200');
     }
   });
 
   test('has og:site_name', () => {
-    expect(html).toMatch(/<meta[^>]*property="og:site_name"[^>]*content="MeTravel"/i);
+    expect(getMetaContent(html, 'property', 'og:site_name')).toBe('MeTravel');
   });
 
   // --- Twitter ---
   test('has twitter:card as summary_large_image', () => {
-    expect(html).toMatch(/<meta[^>]*name="twitter:card"[^>]*content="summary_large_image"/i);
+    expect(getMetaContent(html, 'name', 'twitter:card')).toBe('summary_large_image');
   });
 
   test('has twitter:title', () => {
-    const match = html.match(/<meta[^>]*name="twitter:title"[^>]*content="([^"]*)"/i);
-    expect(match).toBeTruthy();
-    expect(match![1].length).toBeGreaterThan(0);
+    const content = getMetaContent(html, 'name', 'twitter:title');
+    expect(content).toBeTruthy();
+    expect(content!.length).toBeGreaterThan(0);
   });
 
   test('has twitter:description', () => {
-    const match = html.match(/<meta[^>]*name="twitter:description"[^>]*content="([^"]*)"/i);
-    expect(match).toBeTruthy();
-    expect(match![1].length).toBeGreaterThan(10);
+    const content = getMetaContent(html, 'name', 'twitter:description');
+    expect(content).toBeTruthy();
+    expect(content!.length).toBeGreaterThan(10);
   });
 
   test('has twitter:image', () => {
-    const twitterMatch = html.match(/<meta[^>]*name="twitter:image"[^>]*content="([^"]*)"/i);
-    const ogMatch = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]*)"/i);
-    const image = twitterMatch?.[1] || ogMatch?.[1] || '';
+    const image = getMetaContent(html, 'name', 'twitter:image') || getMetaContent(html, 'property', 'og:image') || '';
     expect(image.length).toBeGreaterThan(0);
   });
 
   // --- No duplicates ---
   test('no duplicate og:title tags', () => {
-    const count = (html.match(/<meta[^>]*property="og:title"/gi) || []).length;
-    expect(count).toBe(1);
+    expect(countMetaTags(html, 'property', 'og:title')).toBe(1);
   });
 
   test('no duplicate og:description tags', () => {
-    const count = (html.match(/<meta[^>]*property="og:description"/gi) || []).length;
-    expect(count).toBe(1);
+    expect(countMetaTags(html, 'property', 'og:description')).toBe(1);
   });
 
   test('no duplicate og:image tags', async ({ page }) => {
@@ -183,16 +205,16 @@ test.describe('SEO: static pages meta tags', () => {
       expect(html).toMatch(/<link[^>]*rel="canonical"/i);
 
       // OG tags
-      expect(html).toMatch(/<meta[^>]*property="og:title"[^>]*content="[^"]+"/i);
-      expect(html).toMatch(/<meta[^>]*property="og:description"[^>]*content="[^"]+"/i);
-      expect(html).toMatch(/<meta[^>]*property="og:url"[^>]*content="[^"]+"/i);
-      expect(html).toMatch(/<meta[^>]*property="og:image"[^>]*content="[^"]+"/i);
-      expect(html).toMatch(new RegExp(`property="og:type"[^>]*content="${pg.ogType}"`, 'i'));
+      expect(getMetaContent(html, 'property', 'og:title')).toBeTruthy();
+      expect(getMetaContent(html, 'property', 'og:description')).toBeTruthy();
+      expect(getMetaContent(html, 'property', 'og:url')).toBeTruthy();
+      expect(getMetaContent(html, 'property', 'og:image')).toBeTruthy();
+      expect(getMetaContent(html, 'property', 'og:type')).toBe(pg.ogType);
 
       // Twitter tags
-      expect(html).toMatch(/<meta[^>]*name="twitter:card"[^>]*content="summary_large_image"/i);
-      expect(html).toMatch(/<meta[^>]*name="twitter:title"[^>]*content="[^"]+"/i);
-      expect(html).toMatch(/<meta[^>]*name="twitter:description"[^>]*content="[^"]+"/i);
+      expect(getMetaContent(html, 'name', 'twitter:card')).toBe('summary_large_image');
+      expect(getMetaContent(html, 'name', 'twitter:title')).toBeTruthy();
+      expect(getMetaContent(html, 'name', 'twitter:description')).toBeTruthy();
     });
   }
 });

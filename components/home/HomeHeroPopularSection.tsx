@@ -162,8 +162,8 @@ export default function HomeHeroPopularSection({
   bookImages,
   onOpenArticle,
 }: HomeHeroPopularSectionProps) {
-  const popularItems = useMobileGrid ? bookImages.slice(0, 4) : bookImages
   const featuredImage = bookImages[0]
+  const popularItems = useMobileGrid ? bookImages.slice(1, 5) : bookImages.slice(1)
 
   return (
     <View style={styles.popularSection}>
