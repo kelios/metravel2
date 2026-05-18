@@ -221,12 +221,16 @@ const AddressListItem: React.FC<Props> = ({
     const badges = distanceInfo
       ? [distanceInfo.distanceText, `${TRANSPORT_LABELS[transportMode]} ${distanceInfo.travelTimeText}`]
       : []
+    const travelRecord = travel as Record<string, unknown>
 
     return (
       <PlaceListCard
         title={address ?? ''}
         imageUrl={imgUri}
         categoryLabel={categoryLabel || undefined}
+          relatedTravelUrl={urlTravel}
+        relatedTravelCountry={typeof travelRecord.countryName === 'string' ? travelRecord.countryName : undefined}
+        relatedTravelCity={typeof travelRecord.cityName === 'string' ? travelRecord.cityName : undefined}
         coord={coord}
         badges={badges}
         onCardPress={handleMainPress}

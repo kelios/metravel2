@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import type { ThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia, { isIOSSafariUserAgent } from '@/components/ui/ImageCardMedia';
 import CardActionPressable from '@/components/ui/CardActionPressable';
+import RelatedTravelActionStack from '@/components/travel/RelatedTravelActionStack'
 import {
   COMPACT_IMAGE_MAX_HEIGHT_BY_BREAKPOINT,
   COMPACT_POPUP_MAX_WIDTH_BY_BREAKPOINT,
@@ -35,6 +36,9 @@ type Props = {
   isDrivingLoading?: boolean;
   onOpenArticle?: () => void;
   articleHref?: string | null;
+  relatedTravelUrl?: string | null;
+  relatedTravelCountry?: string | null;
+  relatedTravelCity?: string | null;
   onCopyCoord?: () => void;
   onShareTelegram?: () => void;
   onOpenGoogleMaps?: () => void;
@@ -120,6 +124,9 @@ const PlacePopupCard: React.FC<Props> = ({
   isDrivingLoading = false,
   onOpenArticle,
   articleHref,
+  relatedTravelUrl,
+  relatedTravelCountry,
+  relatedTravelCity,
   onCopyCoord,
   onShareTelegram,
   onOpenGoogleMaps,
@@ -610,6 +617,17 @@ const PlacePopupCard: React.FC<Props> = ({
         : null)}
     >
       <View style={styles.popupCard}>
+        {relatedTravelUrl ? (
+          <View style={styles.relatedTravelActions} pointerEvents="box-none">
+            <RelatedTravelActionStack
+              relatedTravelUrl={relatedTravelUrl}
+              fallbackTitle={title}
+              fallbackImageUrl={imageUrl}
+              fallbackCountry={relatedTravelCountry}
+              fallbackCity={relatedTravelCity}
+            />
+          </View>
+        ) : null}
         <View style={[styles.topSection, useSplitLayout && styles.topSectionSplit]}>
           {imageUrl && (
             <Pressable

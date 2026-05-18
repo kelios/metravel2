@@ -3,6 +3,7 @@ import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-nativ
 import Feather from '@expo/vector-icons/Feather';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import CardActionPressable from '@/components/ui/CardActionPressable';
+import RelatedTravelActionStack from '@/components/travel/RelatedTravelActionStack'
 import { Menu } from '@/ui/paper';
 
 import { useThemedColors } from '@/hooks/useTheme';
@@ -51,6 +52,9 @@ type Props = {
   compact?: boolean;
   titleLayout?: 'overlay' | 'content';
   titleNumberOfLines?: number;
+  relatedTravelUrl?: string | null;
+  relatedTravelCountry?: string | null;
+  relatedTravelCity?: string | null;
 };
 
 const MapActionChip = React.memo(function MapActionChip({
@@ -212,6 +216,9 @@ const PlaceListCard: React.FC<Props> = ({
   compact = false,
   titleLayout = 'overlay',
   titleNumberOfLines = 2,
+  relatedTravelUrl,
+  relatedTravelCountry,
+  relatedTravelCity,
 }) => {
   const colors = useThemedColors();
   const showTitleInContent = titleLayout === 'content';
@@ -236,6 +243,15 @@ const PlaceListCard: React.FC<Props> = ({
   );
   const openOverflowMenu = useCallback(() => setOverflowVisible(true), []);
   const closeOverflowMenu = useCallback(() => setOverflowVisible(false), []);
+  const relatedTravelActions = relatedTravelUrl ? (
+    <RelatedTravelActionStack
+      relatedTravelUrl={relatedTravelUrl}
+      fallbackTitle={title}
+      fallbackImageUrl={imageUrl}
+      fallbackCountry={relatedTravelCountry}
+      fallbackCity={relatedTravelCity}
+    />
+  ) : null
 
   return (
     <UnifiedTravelCard
@@ -252,6 +268,7 @@ const PlaceListCard: React.FC<Props> = ({
       heroTitleOverlay={!showTitleInContent}
       webHoverScale={false}
       webTouchAction={webTouchAction}
+      rightTopSlot={relatedTravelActions}
       contentSlot={
         <View style={styles.content}>
           {showTitleInContent && (

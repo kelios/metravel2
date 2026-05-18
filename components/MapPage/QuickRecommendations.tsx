@@ -136,6 +136,9 @@ export const QuickRecommendations: React.FC<Props> = React.memo(
           title={place.address || 'Место'}
           imageUrl={thumbUrl}
           categoryLabel={categoryName || undefined}
+          relatedTravelUrl={place.urlTravel}
+          relatedTravelCountry={typeof place.countryName === 'string' ? place.countryName : undefined}
+          relatedTravelCity={typeof place.cityName === 'string' ? place.cityName : undefined}
           badges={badges}
           onCardPress={() => onPlaceSelect(place)}
           imageHeight={IS_WEB ? 156 : 148}

@@ -92,6 +92,7 @@ const MapPopup: React.FC<MapPopupConfig> = ({
   const [drivingDurationSeconds, setDrivingDurationSeconds] = useState<number | null>(null);
 
   const coord = String(point.coord ?? '').trim();
+  const pointRecord = point as unknown as Record<string, unknown>;
   const { isAuthenticated, authReady } = useAuth();
   const queryClient = useQueryClient();
 
@@ -331,6 +332,13 @@ const MapPopup: React.FC<MapPopupConfig> = ({
       drivingDurationSeconds={drivingDurationSeconds}
       isDrivingLoading={isDrivingLoading}
       onOpenArticle={handleOpenArticle}
+      relatedTravelUrl={point.urlTravel}
+      relatedTravelCountry={typeof pointRecord.countryName === 'string'
+        ? String(pointRecord.countryName)
+        : null}
+      relatedTravelCity={typeof pointRecord.cityName === 'string'
+        ? String(pointRecord.cityName)
+        : null}
       onCopyCoord={handleCopyCoord}
       onShareTelegram={handleShareTelegram}
       onOpenGoogleMaps={handleOpenGoogleMaps}

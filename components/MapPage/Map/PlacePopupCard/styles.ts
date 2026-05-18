@@ -45,6 +45,7 @@ export const getStyles = (
       width: '100%',
       backgroundColor: colors.surface,
       borderRadius: compactLayout ? compactSp.radius + 4 : sp.radius + 4,
+      position: 'relative',
       overflow: 'hidden',
       ...(Platform.OS === 'web'
         ? ({
@@ -62,6 +63,12 @@ export const getStyles = (
       width: '100%',
       paddingTop: splitLayout ? 0 : topPadding,
       paddingHorizontal: splitLayout ? 0 : horizontalPadding,
+    },
+    relatedTravelActions: {
+      position: 'absolute',
+      top: compactLayout ? 10 : 12,
+      right: compactLayout ? 10 : 12,
+      zIndex: 6,
     },
     topSectionSplit: {
       flexDirection: 'row',

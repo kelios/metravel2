@@ -21,6 +21,7 @@ import { fetchPlacesCatalog } from '@/api/places'
 import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
+import RelatedTravelActionStack from '@/components/travel/RelatedTravelActionStack'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { Menu } from '@/ui/paper'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -33,6 +34,7 @@ import {
   type CatalogPlace,
 } from '@/utils/placesCatalog'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH, getSiteBaseUrl } from '@/utils/seo'
+import { normalizeRelatedTravelRoute } from '@/utils/relatedTravel'
 import ContributionBanner from '@/components/common/ContributionBanner'
 
 const MAP_FOCUS_RADIUS_KM = '5'
@@ -152,21 +154,6 @@ const getActiveCategoryTitle = (categories: string[]): string => {
   return `${categories.length} категорий`
 }
 
-const normalizeInternalTravelRoute = (rawUrl: string): string | null => {
-  const trimmed = rawUrl.trim()
-  if (!trimmed) return null
-  if (trimmed.startsWith('/')) return trimmed
-
-  try {
-    const siteBase = new URL(getSiteBaseUrl())
-    const parsed = new URL(trimmed, siteBase)
-    if (parsed.host !== siteBase.host) return null
-    return `${parsed.pathname}${parsed.search}${parsed.hash}`
-  } catch {
-    return null
-  }
-}
-
 export default function PlacesScreen() {
   const router = useRouter()
   const params = useLocalSearchParams<{ category?: string; country?: string }>()
@@ -268,9 +255,9 @@ export default function PlacesScreen() {
       name: seoHeading,
       numberOfItems: filteredPlaces.length,
       itemListElement: visiblePlaces.slice(0, 12).map((place, index) => {
-        const internal = place.urlTravel
-          ? normalizeInternalTravelRoute(place.urlTravel)
-          : null
+          const internal = place.urlTravel
+            ? normalizeRelatedTravelRoute(place.urlTravel)
+            : null
         return {
           '@type': 'ListItem',
           position: index + 1,
@@ -355,7 +342,7 @@ export default function PlacesScreen() {
 
   const openTravel = useCallback((place: CatalogPlace) => {
     if (!place.urlTravel) return
-    const internalRoute = normalizeInternalTravelRoute(place.urlTravel)
+    const internalRoute = normalizeRelatedTravelRoute(place.urlTravel)
     if (internalRoute) {
       router.push(internalRoute as any)
       return
@@ -763,6 +750,7 @@ const PlaceCard = React.memo(function PlaceCard({
   onOpenTravel: (place: CatalogPlace) => void
 }) {
   const imageUrl = place.imageUrl || place.travelImageThumbUrl || null
+  const relatedTravelUrl = normalizeRelatedTravelRoute(place.urlTravel)
 
   return (
     <View style={[styles.card, styles.cardInner]}>
@@ -791,6 +779,16 @@ const PlaceCard = React.memo(function PlaceCard({
           <View style={styles.cardMediaFallback} />
         )}
         <View style={styles.cardMediaScrim} />
+        {relatedTravelUrl ? (
+          <View style={styles.cardTravelActions} pointerEvents="box-none">
+            <RelatedTravelActionStack
+              relatedTravelUrl={relatedTravelUrl}
+              fallbackTitle={place.title}
+              fallbackImageUrl={imageUrl}
+              fallbackCountry={place.country}
+            />
+          </View>
+        ) : null}
         <View style={styles.categoryBadge}>
           <Feather name="tag" size={10} color={colors.textOnDark} />
           <Text style={styles.categoryBadgeText} numberOfLines={1}>
@@ -1418,6 +1416,12 @@ const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean)
     height: 64,
     backgroundColor: colors.overlayLight,
     pointerEvents: 'none',
+  },
+  cardTravelActions: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 4,
   },
   categoryBadge: {
     position: 'absolute',

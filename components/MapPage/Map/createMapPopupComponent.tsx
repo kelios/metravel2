@@ -96,6 +96,7 @@ export const createMapPopupComponent = ({
     const [drivingDistanceMeters, setDrivingDistanceMeters] = useState<number | null>(null);
     const [drivingDurationSeconds, setDrivingDurationSeconds] = useState<number | null>(null);
     const coord = String(point.coord ?? '').trim();
+    const pointRecord = point as unknown as Record<string, unknown>
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
     const authReady = useAuthStore((s) => s.authReady);
 
@@ -374,6 +375,13 @@ export const createMapPopupComponent = ({
           subtitle={isQuest ? questSubtitle : popupTitle.subtitle}
           imageUrl={isQuest ? questMeta!.cover : point.imageUrl || point.travelImageThumbUrl}
           articleHref={isQuest ? null : articleHref}
+          relatedTravelUrl={isQuest ? null : point.urlTravel}
+          relatedTravelCountry={!isQuest && typeof pointRecord.countryName === 'string'
+            ? String(pointRecord.countryName)
+            : null}
+          relatedTravelCity={!isQuest && typeof pointRecord.cityName === 'string'
+            ? String(pointRecord.cityName)
+            : null}
           categoryLabel={isQuest ? null : categoryLabel}
           coord={isQuest ? null : coord}
           drivingDistanceMeters={isQuest ? null : drivingDistanceMeters}

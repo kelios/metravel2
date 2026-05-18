@@ -159,6 +159,8 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     const lastSanitizedForceSyncRef = useRef<{ raw: string; clean: string } | null>(null);
     const pendingDroppedImageRef = useRef<File | null>(null);
     const processingPendingDroppedImageRef = useRef(false);
+    const fireChangeRef = useRef<(val: string, selection?: { index: number; length: number } | null, markUserEdited?: boolean) => void>(() => {});
+    const openImagePickerRef = useRef<() => void>(() => {});
 
     const anchorInputRef = useRef<any>(null);
     const linkInputRef = useRef<any>(null);
@@ -522,6 +524,10 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         [debouncedParentChange]
     );
 
+    useEffect(() => {
+        fireChangeRef.current = fireChange;
+    }, [fireChange]);
+
     const focusQuill = useCallback(() => {
         if (!isWeb) return;
         if (showHtml) return;
@@ -609,6 +615,10 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             },
         });
     }, [uploadAndInsert]);
+
+    useEffect(() => {
+        openImagePickerRef.current = openImagePicker;
+    }, [openImagePicker]);
 
     const handleSurfaceFileDrop = useCallback((file: File | null | undefined) => {
         return handleEditorSurfaceFileDrop({
@@ -1030,7 +1040,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                         if (value === false) {
                             try {
                                 quill.format('link', false, 'user');
-                                fireChange(quill.root.innerHTML);
+                                fireChangeRef.current(String(quill.root.innerHTML ?? ''));
                             } catch {
                                 // noop
                             }
@@ -1063,12 +1073,12 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                         setLinkModalVisible(true);
                     },
                     image: function () {
-                        openImagePicker();
+                        openImagePickerRef.current();
                     },
                 },
             },
         } as any;
-    }, [fireChange, openImagePicker, variant]);
+    }, [variant]);
 
     const toolbarActions = useMemo(() => {
         return buildArticleEditorToolbarActions({

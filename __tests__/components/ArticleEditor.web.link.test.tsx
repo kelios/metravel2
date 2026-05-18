@@ -39,7 +39,7 @@ jest.mock('@/components/article/QuillEditor.web', () => {
         return { index: 0, length: 0 };
       };
 
-      const editorRef = React.useRef({
+      const editor: any = {
         root: {
           innerHTML: props.value ?? '',
           addEventListener: jest.fn(),
@@ -47,33 +47,34 @@ jest.mock('@/components/article/QuillEditor.web', () => {
         },
         focus: jest.fn(),
         getSelection: () => readSelection(),
-        getLength: () => (typeof editorRef.current?.root?.innerHTML === 'string' ? editorRef.current.root.innerHTML.length : 0),
+        getLength: () => (typeof editor.root?.innerHTML === 'string' ? editor.root.innerHTML.length : 0),
         setSelection: jest.fn(),
         getFormat: jest.fn(() => ({})),
-        getContents: jest.fn(() => ({ ops: [{ insert: String(editorRef.current?.root?.innerHTML ?? '') }] })),
+        getContents: jest.fn(() => ({ ops: [{ insert: String(editor.root?.innerHTML ?? '') }] })),
         format: jest.fn(),
         formatText: jest.fn(),
         formatLine: jest.fn(),
         removeFormat: jest.fn(),
         insertEmbed: jest.fn((index: number, type: string, value: string) => {
-          const current = String(editorRef.current.root.innerHTML ?? '');
+          const current = String(editor.root.innerHTML ?? '');
           const safeIndex = Math.max(0, Math.min(current.length, Number(index) || 0));
           if (type === 'image') {
-            editorRef.current.root.innerHTML =
-              current.slice(0, safeIndex) + `<img src="${value}" />` + current.slice(safeIndex);
+            editor.root.innerHTML =
+              current.slice(0, safeIndex) + `<img src="${value}" alt="" />` + current.slice(safeIndex);
           }
         }),
         insertText: jest.fn((index: number, text: string) => {
-          const current = String(editorRef.current.root.innerHTML ?? '')
+          const current = String(editor.root.innerHTML ?? '')
           const safeIndex = Math.max(0, Math.min(current.length, Number(index) || 0))
-          editorRef.current.root.innerHTML =
+          editor.root.innerHTML =
             current.slice(0, safeIndex) + text + current.slice(safeIndex)
         }),
         history: { undo: jest.fn(), redo: jest.fn() },
         clipboard: {
           dangerouslyPasteHTML: jest.fn(),
         },
-      } as any);
+      };
+      const editorRef = React.useRef(editor);
 
       ;(globalThis as any).__quillEditor__ = editorRef.current;
 
@@ -236,7 +237,7 @@ describe('ArticleEditor.web link', () => {
 
     const { getByLabelText, getByTestId } = render(
       <ArticleEditor
-        content={'<p><strong>Hello</strong><img src="https://example.com/keep.jpg" />world</p>'}
+        content={'<p><strong>Hello</strong><img src="https://example.com/keep.jpg" alt="" />world</p>'}
         onChange={jest.fn()}
       />
     );
@@ -364,6 +365,31 @@ describe('ArticleEditor.web link', () => {
     documentAddEventListenerSpy.mockRestore();
   });
 
+  it('keeps quill modules stable when parent passes a new onChange callback', async () => {
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
+
+    const firstOnChange = jest.fn();
+    const secondOnChange = jest.fn();
+
+    const { getByTestId, rerender } = render(
+      <ArticleEditor content={'hello'} onChange={firstOnChange} />
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('quill-mock')).toBeTruthy();
+      expect((globalThis as any).__quillProps__).toBeTruthy();
+    });
+
+    const firstModules = (globalThis as any).__quillProps__?.modules;
+    expect(firstModules).toBeTruthy();
+
+    rerender(<ArticleEditor content={'hello'} onChange={secondOnChange} />);
+
+    await waitFor(() => {
+      expect((globalThis as any).__quillProps__?.modules).toBe(firstModules);
+    });
+  });
+
   it('passes the latest editor html into manual save and blocks save while image upload is in progress', async () => {
     const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
     const onManualSave = jest.fn();
@@ -420,7 +446,10 @@ describe('ArticleEditor.web link', () => {
     fireEvent.press(getByLabelText('Загрузка изображения…') as any);
     expect(onManualSave).not.toHaveBeenCalled();
 
-    resolveUpload?.({ url: 'https://example.com/uploaded.jpg' });
+    const finishUpload = resolveUpload as ((value: unknown) => void) | null;
+    if (typeof finishUpload === 'function') {
+      finishUpload({ url: 'https://example.com/uploaded.jpg' });
+    }
 
     await waitFor(() => {
       expect(getByLabelText('Сохранить путешествие')).toBeTruthy();
