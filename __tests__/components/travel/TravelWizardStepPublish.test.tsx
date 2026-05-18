@@ -454,7 +454,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       moderation: true,
     };
 
-    const { getByText, getByLabelText } = render(
+    const { getByText, getByTestId } = render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -476,10 +476,8 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       fireEvent.press(draftRow);
     });
 
-    // Press the header primary button (it uses accessibilityLabel=primaryLabel)
-    const primarySubmit = getByLabelText('Сохранить');
     await act(async () => {
-      fireEvent.press(primarySubmit);
+      fireEvent.press(getByTestId('primary-button'));
     });
 
     expect(setFormData).toHaveBeenCalledWith(
@@ -538,7 +536,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       moderation: false,
     };
 
-    const { getByText } = render(
+    const { getByLabelText } = render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -551,11 +549,13 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       />
     );
 
-    const rejectButton = getByText('Отклонить');
+    await act(async () => {
+      fireEvent.press(getByLabelText('Отклонить модерацию'));
+    });
 
     await act(async () => {
-      fireEvent.press(rejectButton);
-      fireEvent.press(rejectButton);
+      fireEvent.press(getByLabelText('Отклонить'));
+      fireEvent.press(getByLabelText('Отклонить'));
     });
 
     expect(onManualSave).toHaveBeenCalledTimes(1);

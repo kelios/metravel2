@@ -95,6 +95,7 @@ interface RightColumnProps {
     description: string
     variant: 'search' | 'error' | 'default' | 'empty' | 'inspire'
     suggestions?: string[]
+    action?: { label: string; onPress: () => void }
   } | null
   travels: Travel[]
   gridColumns: number
@@ -724,13 +725,19 @@ const RightColumn: React.FC<RightColumnProps> = (
                   title={getEmptyStateMessage.title}
                   description={getEmptyStateMessage.description}
                   variant={getEmptyStateMessage.variant}
-                  action={activeFiltersCount > 0 || search ? {
-                    label: 'Сбросить условия',
-                    onPress: () => {
-                      onClearAll?.();
-                      setSearch?.('');
-                    },
-                  } : undefined}
+                  action={
+                    getEmptyStateMessage.action
+                      ? getEmptyStateMessage.action
+                      : activeFiltersCount > 0 || search
+                        ? {
+                            label: 'Сбросить условия',
+                            onPress: () => {
+                              onClearAll?.();
+                              setSearch?.('');
+                            },
+                          }
+                        : undefined
+                  }
                   suggestions={getEmptyStateMessage.suggestions}
                 />
               </View>

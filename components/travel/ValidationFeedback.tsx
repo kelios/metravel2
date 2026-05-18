@@ -3,8 +3,8 @@
  * ✅ РЕДИЗАЙН: Темная тема
  */
 
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { FieldValidationResult } from '@/utils/travelWizardValidation';
@@ -404,6 +404,99 @@ export const ValidationSummary: React.FC<ValidationSummaryProps> = ({
               <Text style={[summaryStyles.messageText, summaryStyles.messageTextWarning]}>{message}</Text>
             </View>
           ))}
+        </View>
+      )}
+    </View>
+  );
+};
+
+/**
+ * Компактная сворачиваемая сводка валидации (для мобильного).
+ * Свёрнута по умолчанию: показывает плашку «N ошибок · M рекомендаций»,
+ * по тапу раскрывается в полную ValidationSummary.
+ */
+export const CollapsibleValidationSummary: React.FC<ValidationSummaryProps> = ({
+  errorCount,
+  warningCount,
+  errorMessages,
+  warningMessages,
+}) => {
+  const colors = useThemedColors();
+  const [expanded, setExpanded] = useState(false);
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        toggle: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          paddingHorizontal: 12,
+          paddingVertical: 10,
+          borderRadius: 8,
+          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderColor: errorCount > 0 ? colors.dangerLight : colors.warningLight,
+        },
+        toggleText: {
+          flex: 1,
+          fontSize: DESIGN_TOKENS.typography.sizes.sm,
+          fontWeight: '600',
+          color: errorCount > 0 ? colors.danger : colors.warning,
+        },
+        body: {
+          marginTop: 8,
+        },
+      }),
+    [colors, errorCount],
+  );
+
+  if (errorCount === 0 && warningCount === 0) {
+    return null;
+  }
+
+  const summaryParts: string[] = [];
+  if (errorCount > 0) {
+    summaryParts.push(`${errorCount} ${pluralRu(errorCount, 'ошибка', 'ошибки', 'ошибок')}`);
+  }
+  if (warningCount > 0) {
+    summaryParts.push(
+      `${warningCount} ${pluralRu(warningCount, 'рекомендация', 'рекомендации', 'рекомендаций')}`,
+    );
+  }
+
+  return (
+    <View>
+      <Pressable
+        onPress={() => setExpanded((v) => !v)}
+        style={({ pressed }) => [
+          styles.toggle,
+          Platform.OS === 'web' && { cursor: 'pointer' },
+          pressed && { opacity: 0.85 },
+        ]}
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        accessibilityLabel={`${summaryParts.join(', ')}. ${expanded ? 'Свернуть' : 'Развернуть'}`}
+      >
+        <Feather
+          name={errorCount > 0 ? 'alert-circle' : 'info'}
+          size={16}
+          color={errorCount > 0 ? colors.danger : colors.warning}
+        />
+        <Text style={styles.toggleText} numberOfLines={1}>
+          {summaryParts.join(' · ')}
+        </Text>
+        <Feather name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
+      </Pressable>
+
+      {expanded && (
+        <View style={styles.body}>
+          <ValidationSummary
+            errorCount={errorCount}
+            warningCount={warningCount}
+            errorMessages={errorMessages}
+            warningMessages={warningMessages}
+          />
         </View>
       )}
     </View>

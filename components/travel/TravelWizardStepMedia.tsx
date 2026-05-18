@@ -17,7 +17,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import YoutubeLinkComponent from '@/components/ui/YoutubeLinkComponent';
 import type { GalleryValueItem } from '@/components/travel/gallery/types';
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
-import { ValidationSummary } from '@/components/travel/ValidationFeedback';
+import { CollapsibleValidationSummary, ValidationSummary } from '@/components/travel/ValidationFeedback';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -235,16 +235,25 @@ const MediaValidationSummary = React.memo(function MediaValidationSummary({
     errorMessages,
     warningMessages,
 }: MediaValidationSummaryProps) {
-    if (isMobile || warningMessages.length === 0) return null;
+    if (errorMessages.length === 0 && warningMessages.length === 0) return null;
 
     return (
         <View style={styles.validationSummaryWrapper}>
-            <ValidationSummary
-                errorCount={errorMessages.length}
-                warningCount={warningMessages.length}
-                errorMessages={errorMessages}
-                warningMessages={warningMessages}
-            />
+            {isMobile ? (
+                <CollapsibleValidationSummary
+                    errorCount={errorMessages.length}
+                    warningCount={warningMessages.length}
+                    errorMessages={errorMessages}
+                    warningMessages={warningMessages}
+                />
+            ) : (
+                <ValidationSummary
+                    errorCount={errorMessages.length}
+                    warningCount={warningMessages.length}
+                    errorMessages={errorMessages}
+                    warningMessages={warningMessages}
+                />
+            )}
         </View>
     );
 });

@@ -8,7 +8,8 @@ import {
   ViewStyle,
 } from 'react-native'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
-import { useLocalSearchParams, usePathname } from 'expo-router'
+import { showToastMessage } from '@/utils/toast'
+import { useLocalSearchParams, usePathname, useRouter } from 'expo-router'
 import { useRoute } from '@react-navigation/native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import RenderTravelItem from './RenderTravelItem'
@@ -90,6 +91,7 @@ function ListTravelBase() {
     }, [viewportState.width]);
     const route = useRoute();
     const pathname = usePathname();
+    const router = useRouter();
 
     const params = useLocalSearchParams<{
       user_id?: string;
@@ -412,9 +414,10 @@ function ListTravelBase() {
           setDelete(null);
           deleteInFlightRef.current = null;
           await queryClient.invalidateQueries({ queryKey: ["travels"] });
-          if (Platform.OS === 'web') {
-            // Можно добавить Toast здесь, если нужно
-          }
+          void showToastMessage({
+            type: 'success',
+            text1: 'Путешествие удалено',
+          });
         } catch (error) {
           const errorStatus =
             error && typeof error === 'object' && 'status' in error
@@ -766,6 +769,19 @@ function ListTravelBase() {
 
       // Формируем сообщение
       if (activeFilters.length === 0) {
+        if (isMeTravel) {
+          return {
+            icon: 'map',
+            title: 'У вас пока нет путешествий',
+            description:
+              'Создайте первое — расскажите о маршруте, добавьте фото и сохраните воспоминания.',
+            variant: 'empty' as const,
+            action: {
+              label: 'Создать путешествие',
+              onPress: () => router.push('/travel/new'),
+            },
+          };
+        }
         return {
           icon: 'inbox',
           title: 'Пока нет путешествий',
@@ -799,7 +815,7 @@ function ListTravelBase() {
         variant: 'search' as const,
         suggestions,
       };
-    }, [showEmptyState, filter, options?.categories, options?.transports, options?.categoryTravelAddress, debSearch]);
+    }, [showEmptyState, filter, options?.categories, options?.transports, options?.categoryTravelAddress, debSearch, isMeTravel, router]);
 
     const filterGroups = useMemo(
       () => buildTravelFilterGroups({
