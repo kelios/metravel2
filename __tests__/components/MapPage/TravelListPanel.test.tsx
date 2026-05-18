@@ -25,12 +25,41 @@ const mockAddressListItem = jest.fn((props: any) => {
   );
 });
 
+const mockAddFavorite = jest.fn();
+const mockRemoveFavorite = jest.fn();
+const mockIsFavorite = jest.fn(() => false);
+const mockRequireAuth = jest.fn(() => true);
+const mockShowToast = jest.fn();
+const mockUseRequireAuth = jest.fn(() => ({
+  isAuthenticated: true,
+  authReady: true,
+  loginHref: '/login',
+  requireAuth: mockRequireAuth,
+}));
+
 jest.mock('@/components/MapPage/AddressListItem', () => {
   return {
     __esModule: true,
     default: (props: any) => mockAddressListItem(props),
   };
 });
+
+jest.mock('@/context/FavoritesContext', () => ({
+  useFavorites: () => ({
+    addFavorite: mockAddFavorite,
+    removeFavorite: mockRemoveFavorite,
+    isFavorite: mockIsFavorite,
+    favorites: [],
+  }),
+}));
+
+jest.mock('@/hooks/useRequireAuth', () => ({
+  useRequireAuth: (params: any) => mockUseRequireAuth(params),
+}));
+
+jest.mock('@/utils/toast', () => ({
+  showToast: (payload: any) => mockShowToast(payload),
+}));
 
 import TravelListPanel, {
   buildTravelListSummaryHint,
@@ -52,6 +81,19 @@ const travelsData = [
 describe('TravelListPanel (right list on map page)', () => {
   beforeEach(() => {
     mockAddressListItem.mockClear();
+    mockAddFavorite.mockClear();
+    mockRemoveFavorite.mockClear();
+    mockIsFavorite.mockReset();
+    mockIsFavorite.mockReturnValue(false);
+    mockRequireAuth.mockClear();
+    mockShowToast.mockClear();
+    mockUseRequireAuth.mockClear();
+    mockUseRequireAuth.mockReturnValue({
+      isAuthenticated: true,
+      authReady: true,
+      loginHref: '/login',
+      requireAuth: mockRequireAuth,
+    });
   });
 
   it('renders AddressListItem for each travel', () => {
@@ -91,6 +133,45 @@ describe('TravelListPanel (right list on map page)', () => {
 
     expect(buildRouteTo).toHaveBeenCalledTimes(1);
     expect(buildRouteTo).toHaveBeenCalledWith(travelsData[0]);
+  });
+
+  it('uses favorite auth intent and context favorite lookup for web card actions', () => {
+    mockIsFavorite.mockImplementation((id: string | number, type: string) => id === 1 && type === 'travel');
+
+    render(
+      <TravelListPanel
+        travelsData={travelsData}
+        buildRouteTo={jest.fn()}
+        isMobile={false}
+        isLoading={false}
+      />
+    );
+
+    expect(mockUseRequireAuth).toHaveBeenCalledWith({ intent: 'favorite' });
+    expect(mockIsFavorite).toHaveBeenCalledWith(1, 'travel');
+    expect(mockAddressListItem.mock.calls[0][0].isFavorite).toBe(true);
+  });
+
+  it('shows feedback when web favorite toggle fails', async () => {
+    mockAddFavorite.mockRejectedValueOnce(new Error('failed'));
+
+    render(
+      <TravelListPanel
+        travelsData={travelsData}
+        buildRouteTo={jest.fn()}
+        isMobile={false}
+        isLoading={false}
+      />
+    );
+
+    await mockAddressListItem.mock.calls[0][0].onToggleFavorite();
+
+    expect(mockShowToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'error',
+        text1: 'Не удалось обновить избранное',
+      })
+    );
   });
 
   it('keeps the mobile list header free of legacy filter and map buttons', () => {

@@ -96,6 +96,15 @@ export default function TravelDetailsLoadingFallback() {
               <SkeletonLoader width="92%" height={18} borderRadius={6} />
               <SkeletonLoader width="84%" height={18} borderRadius={6} />
             </View>
+
+            <View style={{ gap: DESIGN_TOKENS.spacing.md }}>
+              <SkeletonLoader width={200} height={24} borderRadius={8} />
+              <SkeletonLoader width="100%" height={220} borderRadius={DESIGN_TOKENS.radii.lg} />
+            </View>
+            <View style={{ gap: DESIGN_TOKENS.spacing.md }}>
+              <SkeletonLoader width={200} height={24} borderRadius={8} />
+              <SkeletonLoader width="100%" height={220} borderRadius={DESIGN_TOKENS.radii.lg} />
+            </View>
           </View>
         </View>
       ) : (
@@ -139,6 +148,15 @@ export default function TravelDetailsLoadingFallback() {
             <View style={{ gap: DESIGN_TOKENS.spacing.md }}>
               <SkeletonLoader width={180} height={24} borderRadius={8} />
               <SkeletonLoader width="100%" height={320} borderRadius={DESIGN_TOKENS.radii.lg} />
+            </View>
+
+            <View style={{ gap: DESIGN_TOKENS.spacing.md }}>
+              <SkeletonLoader width={180} height={22} borderRadius={8} />
+              <SkeletonLoader width="100%" height={220} borderRadius={DESIGN_TOKENS.radii.lg} />
+            </View>
+            <View style={{ gap: DESIGN_TOKENS.spacing.md }}>
+              <SkeletonLoader width={180} height={22} borderRadius={8} />
+              <SkeletonLoader width="100%" height={220} borderRadius={DESIGN_TOKENS.radii.lg} />
             </View>
           </View>
         </>

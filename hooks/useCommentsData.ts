@@ -12,6 +12,7 @@ import {
 } from './useComments';
 import { useAuth } from '@/context/AuthContext';
 import { sendAnalyticsEvent } from '@/utils/analytics';
+import { devWarn } from '@/utils/logger';
 import type { TravelComment } from '@/types/comments';
 import {
   buildCommentThreadModel,
@@ -53,7 +54,7 @@ export function useCommentsData(travelId: number, options?: { enabled?: boolean 
   const { topLevel, replies, allComments, subThreadToParent } = useMemo(() => {
     const model = buildCommentThreadModel(comments, didWarnAllSubThread.current)
     if (model.warnedAllSubThread && !didWarnAllSubThread.current && comments.length > 0) {
-      console.warn('BUG: All comments ended up as replies! Showing them anyway.')
+      devWarn('[Comments] All comments ended up as replies; showing them as top-level fallback.')
       didWarnAllSubThread.current = true
     }
     return model
@@ -74,34 +75,30 @@ export function useCommentsData(travelId: number, options?: { enabled?: boolean 
     finally { setIsRefreshing(false); }
   }, [refetchComments, refetchThread]);
 
-  const handleSubmitComment = useCallback((text: string) => {
+  const handleSubmitComment = useCallback(async (text: string) => {
     if (editComment) {
-      updateComment.mutate({ commentId: editComment.id, data: { text } }, {
-        onSuccess: () => setEditComment(null),
-      });
+      await updateComment.mutateAsync({ commentId: editComment.id, data: { text } });
+      setEditComment(null);
       return;
     }
     if (replyTo) {
-      replyToComment.mutate(
-        { commentId: replyTo.id, data: { text, thread_id: replyTo.thread, travel_id: travelId } },
-        {
-          onSuccess: () => {
-            const topLevelId = findTopLevelAncestor(replyTo.id);
-            if (topLevelId != null) {
-              setExpandedThreads((prev) => {
-                if (prev.has(topLevelId)) return prev;
-                const next = new Set(prev);
-                next.add(topLevelId);
-                return next;
-              });
-            }
-            setReplyTo(null);
-          },
-        }
-      );
+      await replyToComment.mutateAsync({
+        commentId: replyTo.id,
+        data: { text, thread_id: replyTo.thread, travel_id: travelId },
+      });
+      const topLevelId = findTopLevelAncestor(replyTo.id);
+      if (topLevelId != null) {
+        setExpandedThreads((prev) => {
+          if (prev.has(topLevelId)) return prev;
+          const next = new Set(prev);
+          next.add(topLevelId);
+          return next;
+        });
+      }
+      setReplyTo(null);
       return;
     }
-    createComment.mutate({
+    await createComment.mutateAsync({
       text,
       travel_id: travelId,
     });

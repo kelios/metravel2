@@ -157,7 +157,7 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
             backgroundImage:
               'linear-gradient(to top, rgba(7,12,19,0.92) 0%, rgba(7,12,19,0.62) 36%, rgba(7,12,19,0.22) 64%, transparent 84%)',
           } as any)
-        : {}),
+        : { backgroundColor: 'rgba(7,12,19,0.45)' }),
     },
     heroTitleWrap: {
       alignSelf: 'flex-start',

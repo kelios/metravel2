@@ -422,10 +422,12 @@ function CompactSideBarTravel({
 
           {hasDownloadableRoute && (
             <Pressable
-              style={({ pressed }) => [styles.link, pressed && styles.linkPressed]}
+              style={({ pressed }) => [styles.link, pressed && styles.linkPressed, isRouteDownloading && { opacity: 0.6 }]}
               onPress={handleDownloadRoute}
+              disabled={isRouteDownloading}
               accessibilityRole="button"
               accessibilityLabel="Скачать маршрут"
+              accessibilityState={{ disabled: isRouteDownloading, busy: isRouteDownloading }}
               {...webOnly({
                 'data-sidebar-link': true,
                 role: 'button',
@@ -434,11 +436,19 @@ function CompactSideBarTravel({
             >
               <View style={styles.activeIndicator} />
               <View style={styles.linkLeft}>
-                <Feather
-                  name="download"
-                  size={(Platform.OS === 'web') && isTablet ? 20 : 18}
-                  color={mutedText}
-                />
+                {isRouteDownloading ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={mutedText}
+                    style={{ width: (Platform.OS === 'web') && isTablet ? 20 : 18 }}
+                  />
+                ) : (
+                  <Feather
+                    name="download"
+                    size={(Platform.OS === 'web') && isTablet ? 20 : 18}
+                    color={mutedText}
+                  />
+                )}
                 <Text
                   style={[
                     styles.linkTxt,
@@ -683,10 +693,24 @@ const AuthorBlock = memo(function AuthorBlock({
               )}
             >
               <Text style={[styles.userName, { color: textColor }]} numberOfLines={1}>
-                <Text style={[styles.userNamePrimary, { color: textColor }]}>
+                <Text
+                  style={[
+                    styles.userNamePrimary,
+                    { color: textColor },
+                    authorUserId ? { textDecorationLine: 'underline' } : null,
+                  ]}
+                >
                   {displayName}
                 </Text>
               </Text>
+              {authorUserId ? (
+                <Feather
+                  name="chevron-right"
+                  size={14}
+                  color={mutedText}
+                  style={{ marginLeft: 2 }}
+                />
+              ) : null}
             </Pressable>
 
             <View style={styles.actionsRow}>
@@ -921,7 +945,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     actionBtnPressed: { opacity: 0.85, backgroundColor: colors.backgroundSecondary },
     actionBtnDisabled: { opacity: 0.4, backgroundColor: colors.backgroundSecondary },
-    userNameWrap: { flexGrow: 1, flexShrink: 1, minWidth: 0 },
+    userNameWrap: { flexGrow: 1, flexShrink: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center' },
     userName: {
       fontSize: 15,
       fontWeight: '700',

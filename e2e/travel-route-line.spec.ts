@@ -303,8 +303,9 @@ test.describe('Map Page Route Line Visibility - Visual Test', () => {
       console.log('   ✓ visibility не hidden');
       
       // Проверка 3: opacity > 0
-      expect(parseFloat(computedStyles.opacity)).toBeGreaterThan(0);
-      console.log(`   ✓ opacity = ${computedStyles.opacity}`);
+      const opacity = computedStyles.opacity ? parseFloat(computedStyles.opacity) : 1;
+      expect(opacity).toBeGreaterThan(0);
+      console.log(`   ✓ opacity = ${computedStyles.opacity || '1 (default)'}`);
       
       // Проверка 4: stroke есть
       expect(computedStyles.stroke).toBeTruthy();

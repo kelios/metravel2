@@ -170,11 +170,17 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
                         testID="location-clear-button"
                         onPress={handleClear}
                         style={styles.clearButton}
+                        accessibilityRole="button"
+                        accessibilityLabel="Очистить поле поиска"
                     >
                         <Feather name="x" size={18} color={colors.textMuted} />
                     </Pressable>
                 )}
             </View>
+
+            {query.trim().length > 0 && query.trim().length < 3 && !isLoading && !error && (
+                <Text style={styles.minCharsHint}>Введите минимум 3 символа для поиска</Text>
+            )}
 
             {!!error && (
                 <View style={styles.errorContainer}>
@@ -268,8 +274,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         gap: DESIGN_TOKENS.spacing.xs,
         marginTop: DESIGN_TOKENS.spacing.xs,
         padding: DESIGN_TOKENS.spacing.sm,
-        backgroundColor: colors.dangerSoft ?? colors.danger,
+        backgroundColor: colors.dangerSoft ?? colors.surface,
         borderRadius: DESIGN_TOKENS.radii.sm,
+    },
+    minCharsHint: {
+        marginTop: DESIGN_TOKENS.spacing.xs,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        color: colors.textMuted,
     },
     errorText: {
         flex: 1,

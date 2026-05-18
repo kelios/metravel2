@@ -1,5 +1,6 @@
 import React, { Suspense } from 'react'
 import { Pressable, Text, View } from 'react-native'
+import Feather from '@expo/vector-icons/Feather'
 
 import WeatherWidget from '@/components/home/WeatherWidget'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -24,12 +25,16 @@ export const TravelWeatherBlock: React.FC<{
       style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
     >
       <Text style={styles.sectionHeaderText}>Погода</Text>
+      <Text style={styles.sectionSubtitle}>Прогноз по точкам маршрута</Text>
       {!weatherVisible ? (
         <Pressable
           onPress={() => setWeatherVisible(true)}
           accessibilityRole="button"
-          accessibilityLabel="Показать погоду"
+          accessibilityLabel="Показать погоду по точкам маршрута"
           style={({ pressed }) => [{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: DESIGN_TOKENS.spacing.xs,
             minHeight: 44,
             borderRadius: DESIGN_TOKENS.radii.md,
             paddingHorizontal: DESIGN_TOKENS.spacing.md,
@@ -42,6 +47,7 @@ export const TravelWeatherBlock: React.FC<{
             marginTop: DESIGN_TOKENS.spacing.sm,
           } as any]}
         >
+          <Feather name="cloud" size={16} color={colors.text} />
           <Text style={{ color: colors.text, fontWeight: '600', fontSize: DESIGN_TOKENS.typography.sizes.sm } as any}>
             Показать погоду
           </Text>

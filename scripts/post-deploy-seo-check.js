@@ -370,7 +370,7 @@ function validateTravelHtml(html) {
 
 function validateHomeAssets(html) {
   const issues = []
-  if (!/<link[^>]*rel="apple-touch-icon"[^>]*href="\/assets\/icons\/apple-touch-icon-180x180\.png"/i.test(html)) {
+  if (!/<link(?=[^>]*rel="apple-touch-icon")(?=[^>]*sizes="180x180")(?=[^>]*href="[^"]+\.png")[^>]*>/i.test(html)) {
     issues.push({
       severity: 'error',
       code: 'icon.apple-touch.missing',

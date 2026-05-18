@@ -92,6 +92,9 @@ const ToggleableMapSection = ({
         <View ref={wrapperRef} style={styles.wrapper}>
             <Pressable
                 onPress={handleToggle}
+                accessibilityRole="button"
+                accessibilityLabel={hintText}
+                accessibilityState={{ expanded: showMap }}
                 style={({ pressed }) => [
                     styles.toggleButton,
                     pressed && styles.toggleButtonPressed,
@@ -148,6 +151,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 10,
+        minHeight: 44,
         paddingHorizontal: DESIGN_TOKENS.spacing.lg,
         borderRadius: DESIGN_TOKENS.radii.md,
         gap: DESIGN_TOKENS.spacing.sm,

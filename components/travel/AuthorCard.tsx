@@ -56,6 +56,10 @@ function resolveAuthorId(travel: any): number | string | null {
   return null
 }
 
+export function hasResolvableAuthor(travel: any): boolean {
+  return Boolean(resolveAuthorName(travel) || resolveAuthorId(travel) != null)
+}
+
 function resolveAuthorCountry(profile: any, travel: any): string {
   const raw =
     profile?.countryName ||

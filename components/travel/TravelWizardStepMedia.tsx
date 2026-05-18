@@ -23,6 +23,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import type { Travel, TravelFormData } from '@/types/types';
+import { showToastMessage } from '@/utils/toast';
 import { validateStep } from '@/utils/travelWizardValidation';
 
 const MEDIA_COVER_ANCHOR_ID = 'travelwizard-media-cover';
@@ -200,6 +201,12 @@ function useCoverDeletion(travelId: string | null | undefined, setFormData: Trav
             await deleteTravelMainImage(travelId);
             setCoverDeleted(true);
             clearCoverUrls();
+        } catch {
+            void showToastMessage({
+                type: 'error',
+                text1: 'Не удалось удалить обложку',
+                text2: 'Проверьте соединение и попробуйте ещё раз',
+            });
         } finally {
             closeDeleteDialog();
         }

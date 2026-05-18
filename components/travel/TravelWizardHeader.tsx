@@ -86,69 +86,69 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
     const hasTip = !!tipBody && tipBody.trim().length > 0;
     const resolvedTipTitle = tipTitle ?? 'Совет';
 
-    const [hoveredAction, setHoveredAction] = useState<string | null>(null);
-    const showHover = useCallback((id: string) => {
-        if (Platform.OS !== 'web') return;
-        setHoveredAction(id);
-    }, []);
-    const hideHover = useCallback(() => {
-        if (Platform.OS !== 'web') return;
-        setHoveredAction(null);
-    }, []);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с использованием динамических цветов
     const styles = useMemo(() => createWizardHeaderStyles(colors), [colors]);
 
-    const TipTrigger = hasTip ? (
-        <Pressable
-            onPress={() => setIsTipOpen(v => !v)}
-            style={({ pressed }) => [
-                styles.iconButton,
-                isMobile && styles.iconButtonMobile,
-                isTipOpen && styles.iconButtonActive,
-                globalFocusStyles.focusable,
-                Platform.OS === 'web' && { cursor: 'pointer' },
-                pressed && { opacity: 0.8 }
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={isTipOpen ? 'Скрыть советы' : 'Показать советы'}
-            onHoverIn={() => showHover('tips')}
-            onHoverOut={hideHover}
-        >
-            <Feather
-                name="help-circle"
-                size={16}
-                color={isTipOpen ? colors.primary : colors.textMuted}
-            />
-            {Platform.OS === 'web' && hoveredAction === 'tips' ? (
-                <View style={styles.tooltipBubble}>
-                    <Text style={styles.tooltipText}>{isTipOpen ? 'Скрыть советы' : 'Показать советы'}</Text>
-                </View>
-            ) : null}
-        </Pressable>
-    ) : null;
+    type MenuItem = {
+        key: string;
+        icon: React.ComponentProps<typeof Feather>['name'];
+        label: string;
+        onPress: () => void;
+        testID?: string;
+    };
 
-    const OpenPublicAction = onOpenPublic ? (
+    const menuItems = useMemo<MenuItem[]>(() => {
+        const items: MenuItem[] = [];
+        if (onPreview) {
+            items.push({ key: 'preview', icon: 'eye', label: 'Превью', onPress: onPreview, testID: 'travel-wizard-preview' });
+        }
+        if (onOpenPublic) {
+            items.push({ key: 'open-public', icon: 'external-link', label: 'Открыть путешествие', onPress: onOpenPublic });
+        }
+        if ((warningCount ?? 0) > 0 && onWarningsPress) {
+            items.push({ key: 'warnings', icon: 'info', label: `Предупреждения: ${warningCount}`, onPress: onWarningsPress });
+        }
+        if (hasTip) {
+            items.push({
+                key: 'tips',
+                icon: 'help-circle',
+                label: isTipOpen ? 'Скрыть советы' : 'Показать советы',
+                onPress: () => setIsTipOpen(v => !v),
+            });
+        }
+        if (onQuickDraft) {
+            items.push({ key: 'quick-draft', icon: 'archive', label: quickDraftLabel, onPress: onQuickDraft, testID: 'travel-wizard-quick-draft' });
+        }
+        if (onSave) {
+            items.push({ key: 'save', icon: 'save', label: saveLabel, onPress: onSave });
+        }
+        return items;
+    }, [onPreview, onOpenPublic, warningCount, onWarningsPress, hasTip, isTipOpen, onQuickDraft, quickDraftLabel, onSave, saveLabel]);
+
+    const handleMenuItemPress = useCallback((item: MenuItem) => {
+        setIsMenuOpen(false);
+        item.onPress();
+    }, []);
+
+    const MoreMenuTrigger = menuItems.length > 0 ? (
         <Pressable
-            onPress={onOpenPublic}
+            onPress={() => setIsMenuOpen(v => !v)}
             style={({ pressed }) => [
                 styles.iconButton,
                 isMobile && styles.iconButtonMobile,
+                isMenuOpen && styles.iconButtonActive,
                 globalFocusStyles.focusable,
                 Platform.OS === 'web' && { cursor: 'pointer' },
-                pressed && { opacity: 0.8 }
+                pressed && { opacity: 0.8 },
             ]}
+            testID="travel-wizard-more"
             accessibilityRole="button"
-            accessibilityLabel="Открыть статью"
-            onHoverIn={() => showHover('open-public')}
-            onHoverOut={hideHover}
+            accessibilityLabel={isMenuOpen ? 'Закрыть меню действий' : 'Открыть меню действий'}
+            accessibilityState={{ expanded: isMenuOpen }}
         >
-            <Feather name="external-link" size={16} color={colors.textMuted} />
-            {Platform.OS === 'web' && hoveredAction === 'open-public' ? (
-                <View style={styles.tooltipBubble}>
-                    <Text style={styles.tooltipText}>Открыть статью</Text>
-                </View>
-            ) : null}
+            <Feather name="more-horizontal" size={18} color={isMenuOpen ? colors.primary : colors.textMuted} />
         </Pressable>
     ) : null;
 
@@ -196,74 +196,27 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
         </Pressable>
     ) : null;
 
-    const SaveAction = onSave ? (
-        <Pressable
-            onPress={onSave}
-            style={({ pressed }) => [
-                styles.iconButton,
-                isMobile && styles.iconButtonMobile,
-                globalFocusStyles.focusable,
-                Platform.OS === 'web' && { cursor: 'pointer' },
-                pressed && { opacity: 0.9 },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={saveLabel}
-            onHoverIn={() => showHover('save')}
-            onHoverOut={hideHover}
-        >
-            <Feather name="save" size={16} color={colors.textMuted} />
-            {Platform.OS === 'web' && hoveredAction === 'save' ? (
-                <View style={styles.tooltipBubble}>
-                    <Text style={styles.tooltipText}>{saveLabel}</Text>
-                </View>
-            ) : null}
-        </Pressable>
-    ) : null;
-
-    const QuickDraftAction = onQuickDraft ? (
-        <Pressable
-            onPress={onQuickDraft}
-            style={({ pressed }) => [
-                styles.iconButton,
-                isMobile && styles.iconButtonMobile,
-                globalFocusStyles.focusable,
-                Platform.OS === 'web' && { cursor: 'pointer' },
-                pressed && { opacity: 0.9 },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={quickDraftLabel}
-            testID="travel-wizard-quick-draft"
-            onHoverIn={() => showHover('draft')}
-            onHoverOut={hideHover}
-        >
-            <Feather name="archive" size={16} color={colors.textMuted} />
-            {Platform.OS === 'web' && hoveredAction === 'draft' ? (
-                <View style={styles.tooltipBubble}>
-                    <Text style={styles.tooltipText}>{quickDraftLabel}</Text>
-                </View>
-            ) : null}
-        </Pressable>
-    ) : null;
-
-    const WarningsAction = isMobile && (warningCount ?? 0) > 0 ? (
-        <Pressable
-            onPress={onWarningsPress}
-            style={({ pressed }) => [
-                styles.iconButton,
-                isMobile && styles.iconButtonMobile,
-                globalFocusStyles.focusable,
-                Platform.OS === 'web' && { cursor: onWarningsPress ? 'pointer' : 'default' },
-                pressed && { opacity: 0.9 },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={`Предупреждения: ${warningCount}`}
-            disabled={!onWarningsPress}
-        >
-            <Feather name="info" size={16} color={colors.warning} />
-            <View style={styles.badge}>
-                <Text style={styles.badgeText}>{warningCount}</Text>
-            </View>
-        </Pressable>
+    const MoreMenuPanel = isMenuOpen && menuItems.length > 0 ? (
+        <View style={styles.menuPanel} accessibilityRole="menu">
+            {menuItems.map((item) => (
+                <Pressable
+                    key={item.key}
+                    onPress={() => handleMenuItemPress(item)}
+                    testID={item.testID}
+                    accessibilityRole="menuitem"
+                    accessibilityLabel={item.label}
+                    style={({ pressed }) => [
+                        styles.menuItem,
+                        globalFocusStyles.focusable,
+                        Platform.OS === 'web' && { cursor: 'pointer' },
+                        pressed && { backgroundColor: colors.surfaceMuted },
+                    ]}
+                >
+                    <Feather name={item.icon} size={16} color={colors.textMuted} />
+                    <Text style={styles.menuItemText} numberOfLines={1}>{item.label}</Text>
+                </Pressable>
+            ))}
+        </View>
     ) : null;
 
     return (
@@ -285,37 +238,11 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                 </View>
 
                 <View style={[styles.titleActionsRow, isMobile && styles.titleActionsRowMobile]}>
-                    {onPreview && (
-                        <Pressable
-                            onPress={onPreview}
-                            style={({ pressed }) => [
-                                styles.iconButton,
-                                isMobile && styles.iconButtonMobile,
-                                globalFocusStyles.focusable,
-                                Platform.OS === 'web' && { cursor: 'pointer' },
-                                pressed && { opacity: 0.8 }
-                            ]}
-                            testID="travel-wizard-preview"
-                            accessibilityRole="button"
-                            accessibilityLabel="Показать превью"
-                            onHoverIn={() => showHover('preview')}
-                            onHoverOut={hideHover}
-                        >
-                            <Feather name="eye" size={16} color={colors.textMuted} />
-                            {Platform.OS === 'web' && hoveredAction === 'preview' ? (
-                                <View style={styles.tooltipBubble}>
-                                    <Text style={styles.tooltipText}>Превью</Text>
-                                </View>
-                            ) : null}
-                        </Pressable>
-                    )}
-                    {OpenPublicAction}
-                    {WarningsAction}
-                    {TipTrigger}
-                    {QuickDraftAction}
-                    {SaveAction}
+                    {MoreMenuTrigger}
                 </View>
             </View>
+
+            {MoreMenuPanel}
 
             <Text
                 style={isMobile ? styles.headerSubtitleMobile : styles.headerSubtitle}

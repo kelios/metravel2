@@ -48,6 +48,16 @@ if (typeof document !== 'undefined') {
       [aria-label="Next slide"]:active {
         transform: scale(0.95) !important;
       }
+      [aria-label="Previous slide"]:focus-visible,
+      [aria-label="Next slide"]:focus-visible {
+        opacity: 1 !important;
+      }
+      @media (hover: none) {
+        [data-testid="slider-wrapper"] [aria-label="Previous slide"],
+        [data-testid="slider-wrapper"] [aria-label="Next slide"] {
+          opacity: 1 !important;
+        }
+      }
     `
     document.head.appendChild(style)
   }

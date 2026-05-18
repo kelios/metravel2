@@ -1,7 +1,7 @@
 import React, { memo } from 'react'
 import { Text, View } from 'react-native'
 
-import AuthorCard from '@/components/travel/AuthorCard'
+import AuthorCard, { hasResolvableAuthor } from '@/components/travel/AuthorCard'
 import ShareButtons from '@/components/travel/ShareButtons'
 import type { Travel } from '@/types/types'
 
@@ -18,20 +18,23 @@ const DesktopAuthorSection: React.FC<{ travel: Travel }> = memo(function Desktop
 
 const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(function MobileAuthorShareSection({ travel }) {
   const styles = useTravelDetailsStyles()
+  const showAuthor = hasResolvableAuthor(travel)
   return (
     <>
-      <View
-        testID="travel-details-author-mobile"
-        accessibilityRole={'region' as any}
-        accessibilityLabel="Автор маршрута"
-        style={[styles.sectionContainer, styles.contentStable, styles.authorCardContainer]}
-      >
-        <Text style={styles.sectionHeaderText}>Автор</Text>
-        <Text style={styles.sectionSubtitle}>Профиль, соцсети и другие путешествия автора</Text>
-        <View style={PLACEHOLDER_MT_12}>
-          <AuthorCard travel={travel} />
+      {showAuthor && (
+        <View
+          testID="travel-details-author-mobile"
+          accessibilityRole={'region' as any}
+          accessibilityLabel="Автор маршрута"
+          style={[styles.sectionContainer, styles.contentStable, styles.authorCardContainer]}
+        >
+          <Text style={styles.sectionHeaderText}>Автор</Text>
+          <Text style={styles.sectionSubtitle}>Профиль, соцсети и другие путешествия автора</Text>
+          <View style={PLACEHOLDER_MT_12}>
+            <AuthorCard travel={travel} />
+          </View>
         </View>
-      </View>
+      )}
 
       <View
         testID="travel-details-share-mobile"

@@ -1,6 +1,7 @@
-import { Image, Linking, Platform } from 'react-native'
+import { Alert, Image, Linking, Platform } from 'react-native'
 
 import { openExternalUrl } from '@/utils/externalLinks'
+import { showToastMessage } from '@/utils/toast'
 
 import { getQuestClipboard } from './questWizardMedia'
 
@@ -15,19 +16,24 @@ type QuestMapPoint = {
 const QUEST_MAP_PROTOCOLS = ['http:', 'https:', 'geo:', 'om:', 'organicmaps:', 'mapsme:'] as const
 
 export const notifyQuest = (message: string) => {
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    window.alert(message)
-    return
-  }
-  console.info('[INFO]', message)
+  void showToastMessage({ text1: message, type: 'info', visibilityTime: 2500 })
 }
 
-export const confirmQuestAsync = async (title: string, message: string): Promise<boolean> => {
+export const confirmQuestAsync = (title: string, message: string): Promise<boolean> => {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    return window.confirm(`${title}\n\n${message}`)
+    return Promise.resolve(window.confirm(`${title}\n\n${message}`))
   }
-  console.info('[CONFIRM]', title, message)
-  return true
+  return new Promise((resolve) => {
+    Alert.alert(
+      title,
+      message,
+      [
+        { text: 'Отмена', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'ОК', style: 'destructive', onPress: () => resolve(true) },
+      ],
+      { cancelable: true, onDismiss: () => resolve(false) },
+    )
+  })
 }
 
 export const resolveQuestUri = (src: any | undefined): string | undefined => {

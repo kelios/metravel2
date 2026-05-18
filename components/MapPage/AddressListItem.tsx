@@ -48,6 +48,8 @@ type Props = {
   onHidePress?: () => void
   userLocation?: { latitude: number; longitude: number } | null
   transportMode?: 'car' | 'bike' | 'foot'
+  isFavorite?: boolean
+  onToggleFavorite?: () => void
 }
 
 function addVersion(url?: string, updated?: string) {
@@ -107,6 +109,8 @@ const AddressListItem: React.FC<Props> = ({
   onHidePress,
   userLocation,
   transportMode = 'car',
+  isFavorite = false,
+  onToggleFavorite,
 }) => {
   const { address, coord, travelImageThumbUrl, articleUrl, urlTravel } = travel
 
@@ -422,13 +426,14 @@ const AddressListItem: React.FC<Props> = ({
                 ))}
               </View>
             )}
-            <View style={styles.addButtonRow}>
+            <View style={[styles.addButtonRow, onToggleFavorite && styles.addButtonRowWithFav]}>
               <CardActionPressable
                 accessibilityLabel={pointAdded ? 'Сохранено' : 'Сохранить место'}
                 onPress={() => void handleAddPoint()}
                 disabled={!authReady || !isAuthenticated || isAddingPoint}
                 style={({ pressed }: any) => [
                   styles.addButton,
+                  onToggleFavorite && styles.addButtonFlex,
                   isMobile && styles.addButtonMobile,
                   pointAdded && styles.addButtonSuccess,
                   (pressed || isAddingPoint) && styles.addButtonPressed,
@@ -438,6 +443,30 @@ const AddressListItem: React.FC<Props> = ({
               >
                 {renderAddButtonContent()}
               </CardActionPressable>
+              {onToggleFavorite && (
+                <CardActionPressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isFavorite }}
+                  accessibilityLabel={
+                    isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'
+                  }
+                  onPress={onToggleFavorite}
+                  style={({ pressed }: any) => [
+                    styles.favButton,
+                    { width: iconButtonSize, height: iconButtonSize },
+                    isFavorite && styles.favButtonActive,
+                    pressed && PRESSED_OPACITY,
+                  ]}
+                  title={isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
+                >
+                  <Feather
+                    name="heart"
+                    size={iconSize}
+                    color={isFavorite ? colors.textOnPrimary : colors.danger}
+                    {...(isFavorite ? ({ fill: colors.textOnPrimary } as any) : null)}
+                  />
+                </CardActionPressable>
+              )}
             </View>
           </View>
         )}
@@ -624,6 +653,27 @@ const getStyles = (colors: ThemedColors) =>
       letterSpacing: 0.2,
     },
     addButtonRow: { marginTop: DESIGN_TOKENS.spacing.md },
+    addButtonRowWithFav: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.sm,
+    },
+    addButtonFlex: { flex: 1 },
+    favButton: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      backgroundColor: colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+      ...Platform.select({
+        web: { cursor: 'pointer' as any, transition: 'all 0.2s ease' },
+      }),
+    },
+    favButtonActive: {
+      backgroundColor: colors.danger,
+      borderColor: colors.danger,
+    },
     addButton: {
       flexDirection: 'row',
       alignItems: 'center',

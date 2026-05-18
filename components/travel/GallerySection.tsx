@@ -38,7 +38,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({ images, travelId, onCha
             <View style={styles.galleryContainer}>
                 <ActivityIndicator size="large" color={colors.primary} />
                 <Text style={styles.loadingText}>
-                    Загрузка данных...
+                    Загрузка галереи…
                 </Text>
             </View>
         );

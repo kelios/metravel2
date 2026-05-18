@@ -207,7 +207,7 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
     {
       key: 'copyPost',
       label: 'Текст для поста',
-      icon: 'file-text',
+      icon: 'type',
       onPress: handleCopyPostText,
       color: palette.neutral,
     },
@@ -232,7 +232,7 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
     {
       key: 'vk',
       label: 'VK',
-      icon: 'share',
+      icon: 'users',
       onPress: handleShareVK,
       color: palette.vk,
     },
@@ -271,9 +271,14 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
           }
         ]}
         accessibilityRole="button"
-        accessibilityLabel="Показать панель действий"
+        accessibilityLabel="Показать панель «Поделиться»"
       >
-        <Feather name="more-horizontal" size={24} color={colors.textMuted} />
+        <Feather name="share-2" size={22} color={colors.textMuted} />
+        {!isSticky && (
+          <Text style={[styles.buttonText, { color: colors.text, marginLeft: 8 }]}>
+            Поделиться
+          </Text>
+        )}
       </Pressable>
     );
   }
@@ -353,7 +358,7 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
                   android_ripple={{ color: colors.overlayLight }}
                 >
                   <Feather name={button.icon as any} size={20} color={button.color} />
-                  {!isMobile && !isSticky && <Text style={[styles.buttonText, { color: colors.text }]}>{button.label}</Text>}
+                  {!isSticky && <Text style={[styles.buttonText, { color: colors.text }]}>{button.label}</Text>}
                   {button.key === 'copy' && copied && (
                     <Feather name="check" size={16} color={colors.success} style={{ marginLeft: 2 }} />
                   )}
@@ -456,6 +461,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     backgroundColor: colors.backgroundSecondary,
   },
   collapsedIndicator: {
+    flexDirection: 'row',
     paddingVertical: 12,
     paddingHorizontal: 16,
     backgroundColor: colors.surface,

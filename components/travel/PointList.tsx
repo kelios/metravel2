@@ -272,6 +272,8 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
     ]
   );
 
+  if (safePoints.length === 0) return null;
+
   return (
     <View style={styles.wrapper}>
       <PointListStatus

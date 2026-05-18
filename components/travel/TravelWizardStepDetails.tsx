@@ -182,17 +182,13 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                     <View style={styles.contentInner}>
                         <View style={styles.card}>
                             <View style={styles.progressHeader}>
-                                <Text style={styles.progressCardLabel}>Рекомендационные поля</Text>
+                                <Text style={styles.sectionTitle}>Для кого это путешествие</Text>
                                 <Text style={styles.progressValue}>
-                                    {recommendationFieldsFilled.filled} из {recommendationFieldsFilled.total} заполнено
+                                    {recommendationFieldsFilled.filled} из {recommendationFieldsFilled.total}
                                 </Text>
                             </View>
-                        </View>
-
-                        <View style={styles.card}>
-                            <Text style={styles.sectionTitle}>Для кого это путешествие</Text>
                             <Text style={styles.sectionHint}>
-                                Опишите плюсы и минусы маршрута, ваши рекомендации и лайфхаки. Это повышает ценность путешествия для читателей.
+                                Опишите плюсы и минусы маршрута, ваши рекомендации и лайфхаки. Все поля необязательны, но повышают ценность путешествия для читателей.
                             </Text>
                         </View>
 
@@ -275,11 +271,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-    },
-    progressCardLabel: {
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        fontWeight: '700',
-        color: colors.text,
     },
     progressValue: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,

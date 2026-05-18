@@ -41,8 +41,9 @@ const buildApiPrefixedUrl = (value: string): string | null => {
 
 export const OVERLAY_TRANSITION_MS = 320;
 
-export const NeutralHeroPlaceholder: React.FC<{ height?: number }> = ({ height }) => {
+export const NeutralHeroPlaceholder: React.FC<{ height?: number; variant?: 'loading' | 'error' }> = ({ height, variant = 'loading' }) => {
   const colors = useThemedColors();
+  const isError = variant === 'error';
   if (Platform.OS === 'web') {
     return (
       <div
@@ -51,11 +52,21 @@ export const NeutralHeroPlaceholder: React.FC<{ height?: number }> = ({ height }
           height: height ? `${height}px` : '100%',
           borderRadius: 12,
           backgroundColor: colors.backgroundSecondary,
-          opacity: 0,
-          animation: 'fadeInPlaceholder 0.2s ease-in 0.15s forwards',
+          opacity: isError ? 1 : 0,
+          animation: isError ? undefined : 'fadeInPlaceholder 0.2s ease-in 0.15s forwards',
+          display: isError ? 'flex' : undefined,
+          alignItems: isError ? 'center' : undefined,
+          justifyContent: isError ? 'center' : undefined,
         }}
-        aria-hidden="true"
+        aria-hidden={isError ? undefined : 'true'}
+        role={isError ? 'img' : undefined}
+        aria-label={isError ? 'Фото недоступно' : undefined}
       >
+        {isError ? (
+          <span style={{ color: colors.textMuted, fontSize: 14 }}>
+            Фото недоступно
+          </span>
+        ) : null}
         <style dangerouslySetInnerHTML={{ __html: `
           @keyframes fadeInPlaceholder {
             to { opacity: 1; }
@@ -234,7 +245,7 @@ function OptimizedLCPHeroInner({
       }}
     >
       {loadError ? (
-        <NeutralHeroPlaceholder height={height} />
+        <NeutralHeroPlaceholder height={height} variant="error" />
       ) : (
         <div
           style={{

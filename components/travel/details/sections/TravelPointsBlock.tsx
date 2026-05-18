@@ -9,6 +9,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import type { Travel } from '@/types/types'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { buildGpx, buildKml, downloadTextFileWeb } from '@/utils/routeExport'
+import { showToast } from '@/utils/toast'
 import {
   buildGoogleMapsDirectionsUrl,
   buildTravelPointsExportInput,
@@ -43,14 +44,34 @@ export const TravelPointsBlock: React.FC<{
   const canExportPoints = Platform.OS === 'web' && exportableWaypoints.length > 0
 
   const handleExportPoints = (format: 'gpx' | 'kml') => {
-    const input = buildTravelPointsExportInput(travel)
-    const result = format === 'gpx' ? buildGpx(input) : buildKml(input)
-    downloadTextFileWeb(result)
+    try {
+      const input = buildTravelPointsExportInput(travel)
+      const result = format === 'gpx' ? buildGpx(input) : buildKml(input)
+      downloadTextFileWeb(result)
+      showToast({
+        type: 'success',
+        text1: `Файл ${format.toUpperCase()} сохранён`,
+        visibilityTime: 2000,
+      })
+    } catch {
+      showToast({
+        type: 'error',
+        text1: 'Не удалось сохранить файл',
+        visibilityTime: 3000,
+      })
+    }
   }
 
   const handleOpenGoogleMaps = () => {
     const url = buildGoogleMapsDirectionsUrl(exportableWaypoints)
-    if (!url) return
+    if (!url) {
+      showToast({
+        type: 'info',
+        text1: 'Недостаточно точек для маршрута',
+        visibilityTime: 2500,
+      })
+      return
+    }
     void openExternalUrlInNewTab(url)
   }
 

@@ -94,6 +94,7 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
         default: 6,
         web: 10,
       }),
+      minHeight: 44,
       borderRadius: 16,
       backgroundColor: colors.surface,
       borderWidth: 0.5,
@@ -251,7 +252,8 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
             }}
             style={({ pressed }) => [styles.tab, pressed && styles.tabPressed]}
             accessibilityRole="button"
-            accessibilityLabel="Еще разделы"
+            accessibilityLabel={`Еще разделы (${overflowLinks.length})`}
+            accessibilityState={{ expanded: moreOpen }}
           >
             <Feather
               name={"more-horizontal" as any}
@@ -259,7 +261,7 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
               color={colors.textSecondary}
             />
             <Text style={styles.tabLabel} numberOfLines={1}>
-              Еще
+              {`Еще (${overflowLinks.length})`}
             </Text>
           </Pressable>
         )}
@@ -272,7 +274,13 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
           animationType="fade"
           onRequestClose={() => setMoreOpen(false)}
         >
-          <Pressable style={styles.modalOverlay} onPress={() => setMoreOpen(false)} accessibilityRole="button" accessibilityLabel="Закрыть меню разделов">
+          <View style={styles.modalOverlay}>
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => setMoreOpen(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Закрыть меню разделов"
+            />
             <View style={styles.modalSheet}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Разделы</Text>
@@ -315,7 +323,7 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
                 )
               })}
             </View>
-          </Pressable>
+          </View>
         </Modal>
       )}
     </View>

@@ -9,6 +9,7 @@ import { CollapsibleSection } from './CollapsibleSection'
 import { getDayLabel } from '@/services/pdf-export/utils/pluralize'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import TravelDescription from '@/components/travel/TravelDescription'
+import { safeGetYoutubeId } from '@/utils/travelMedia'
 import { useTravelDetailsContentSectionModel } from '../hooks/useTravelDetailsContentSectionModel'
 
 const LazyYouTubeSection = React.lazy(() =>
@@ -118,7 +119,7 @@ export const TravelDetailsContentSection: React.FC<{
         </View>
       )}
 
-      {travel.youtube_link && (
+      {travel.youtube_link && safeGetYoutubeId(travel.youtube_link) && (
         <View
           ref={setVideoSectionRef}
           style={[styles.sectionContainer, styles.contentStable]}

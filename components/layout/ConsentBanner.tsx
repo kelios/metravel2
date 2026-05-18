@@ -85,7 +85,7 @@ function ConsentBanner() {
     // the last row of cards behind the floating cookie banner. bottomOffset already
     // accounts for the bottom dock + safe-area; the banner itself is ~96px on mobile,
     // ~64px on desktop. The +8 keeps an additional breathing gap below the last card.
-    const bannerH = isMobile ? 96 : 64;
+    const bannerH = isMobile ? 124 : 64;
     root.style.setProperty('--mt-consent-h', `${bottomOffset + bannerH + 8}px`);
     return () => {
       root.style.removeProperty('--mt-consent-h');
@@ -165,7 +165,7 @@ function ConsentBanner() {
       >
         <View style={[styles.textBlock, !isMobile && styles.textBlockDesktop]}>
           <Text
-            numberOfLines={isMobile ? 2 : undefined}
+            numberOfLines={isMobile ? 3 : undefined}
             style={[styles.text, isMobile && styles.textMobile, { color: colors.textMuted }]}
           >
             Используем аналитику для улучшения сервиса.{' '}
@@ -174,7 +174,13 @@ function ConsentBanner() {
             </Link>
           </Text>
         </View>
-        <View style={[styles.buttonsRow, isNarrowMobile && styles.buttonsRowNarrow]}>
+        <View
+          style={[
+            styles.buttonsRow,
+            isMobile && !isNarrowMobile && styles.buttonsRowMobile,
+            isNarrowMobile && styles.buttonsRowNarrow,
+          ]}
+        >
           <Button
             label="Отклонить"
             onPress={handleNecessaryOnly}
@@ -259,11 +265,11 @@ const styles = StyleSheet.create({
     maxWidth: 560,
   },
   containerMobile: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'column',
+    alignItems: 'stretch',
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 8 as any,
+    paddingVertical: 10,
+    gap: 10 as any,
   },
   containerNarrow: {
     flexDirection: 'column',
@@ -290,6 +296,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 6 as any,
     flexShrink: 0,
+  },
+  buttonsRowMobile: {
+    justifyContent: 'flex-end',
   },
   buttonsRowNarrow: {
     flexDirection: 'column',

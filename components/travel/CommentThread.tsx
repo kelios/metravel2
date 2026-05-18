@@ -46,8 +46,7 @@ export function CommentThread({
               color={DESIGN_TOKENS.colors.textMuted}
             />
             <Text style={styles.parentChainLabel}>
-              Ответ в треде (показаны {parentChain.length + 1} из{' '}
-              {parentChain.length + 1 + (replies[threadComment.id]?.length || 0)} сообщений)
+              Контекст ветки обсуждения
             </Text>
           </View>
           {parentChain.map((parentComment, index) => (
@@ -62,7 +61,7 @@ export function CommentThread({
         </View>
       )
     },
-    [getParentChain, onEdit, onReply, replies, styles],
+    [getParentChain, onEdit, onReply, styles],
   )
 
   const threadReplies = replies[comment.id] ?? []

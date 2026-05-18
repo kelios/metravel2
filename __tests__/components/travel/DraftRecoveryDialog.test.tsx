@@ -33,7 +33,7 @@ describe('DraftRecoveryDialog', () => {
     );
 
     expect(getByText('Есть несохранённые изменения')).toBeTruthy();
-    expect(getByText(/локальный черновик этой статьи/i)).toBeTruthy();
+    expect(getByText(/локальный черновик этого путешествия/i)).toBeTruthy();
     expect(getByLabelText('Открыть сохранённую версию')).toBeTruthy();
     expect(getByLabelText('Продолжить с локального черновика')).toBeTruthy();
   });

@@ -45,9 +45,9 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 describe('CommentsSection', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseCreateComment.mockReturnValue({ mutate: jest.fn(), isPending: false } as any);
-    mockUseUpdateComment.mockReturnValue({ mutate: jest.fn(), isPending: false } as any);
-    mockUseReplyToComment.mockReturnValue({ mutate: jest.fn(), isPending: false } as any);
+    mockUseCreateComment.mockReturnValue({ mutateAsync: jest.fn(), isPending: false } as any);
+    mockUseUpdateComment.mockReturnValue({ mutateAsync: jest.fn(), isPending: false } as any);
+    mockUseReplyToComment.mockReturnValue({ mutateAsync: jest.fn(), isPending: false } as any);
     mockUseLikeComment.mockReturnValue({ mutate: jest.fn(), isPending: false } as any);
     mockUseUnlikeComment.mockReturnValue({ mutate: jest.fn(), isPending: false } as any);
     mockUseDeleteComment.mockReturnValue({ mutate: jest.fn(), isPending: false } as any);
@@ -159,7 +159,7 @@ describe('CommentsSection', () => {
       } as any);
 
       mockUseCreateComment.mockReturnValue({
-        mutate: jest.fn(),
+        mutateAsync: jest.fn(),
         isPending: false,
       } as any);
     });
@@ -177,9 +177,9 @@ describe('CommentsSection', () => {
     });
 
     it('should handle comment submission', async () => {
-      const mutateMock = jest.fn();
+      const mutateMock = jest.fn().mockResolvedValue(undefined);
       mockUseCreateComment.mockReturnValue({
-        mutate: mutateMock,
+        mutateAsync: mutateMock,
         isPending: false,
       } as any);
 
@@ -196,6 +196,34 @@ describe('CommentsSection', () => {
           text: 'New comment',
           travel_id: 123,
         });
+      });
+    });
+
+    it('should prevent duplicate submissions while the first submit is pending', async () => {
+      let resolveSubmit!: () => void;
+      const pendingSubmit = new Promise<void>((resolve) => {
+        resolveSubmit = resolve;
+      });
+      const mutateMock = jest.fn(() => pendingSubmit);
+      mockUseCreateComment.mockReturnValue({
+        mutateAsync: mutateMock,
+        isPending: false,
+      } as any);
+
+      render(<CommentsSection travelId={123} />, { wrapper });
+
+      const input = screen.getByPlaceholderText('Написать комментарий...');
+      const submitButton = screen.getByLabelText('Отправить комментарий');
+
+      fireEvent.changeText(input, 'New comment');
+      fireEvent.press(submitButton);
+      fireEvent.press(submitButton);
+
+      expect(mutateMock).toHaveBeenCalledTimes(1);
+
+      resolveSubmit();
+      await waitFor(() => {
+        expect(input.props.value).toBe('');
       });
     });
   });

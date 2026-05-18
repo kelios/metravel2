@@ -889,6 +889,11 @@ export default function QuestsScreen() {
         }
     }, [isMobile]);
 
+    const handleSetViewMode = useCallback((mode: 'list' | 'map') => {
+        setViewMode(mode);
+        if (isMobile) setFilterDrawerOpen(false);
+    }, [isMobile]);
+
     const handleSetRadius = useCallback(async (km: number) => {
         setNearbyRadiusKm(km);
         try {
@@ -1284,7 +1289,7 @@ export default function QuestsScreen() {
                             cityQuestCountById={cityQuestCountById}
                             spacingMd={spacing.md}
                             onSelectCity={handleSelectCity}
-                            onSetViewMode={setViewMode}
+                            onSetViewMode={handleSetViewMode}
                             onToggleCountryGroup={handleToggleCountryGroup}
                             onToggleAllCountryGroups={handleToggleAllCountryGroups}
                             onSetRadius={handleSetRadius}
@@ -1309,7 +1314,7 @@ export default function QuestsScreen() {
                     cityQuestCountById={cityQuestCountById}
                     spacingMd={spacing.md}
                     onSelectCity={handleSelectCity}
-                    onSetViewMode={setViewMode}
+                    onSetViewMode={handleSetViewMode}
                     onToggleCountryGroup={handleToggleCountryGroup}
                     onToggleAllCountryGroups={handleToggleAllCountryGroups}
                     onSetRadius={handleSetRadius}
@@ -1333,6 +1338,7 @@ export default function QuestsScreen() {
                 radiiLg={radii.lg}
                 LazyQuestMap={LazyQuestMap}
                 onOpenFilterDrawer={() => setFilterDrawerOpen(true)}
+                onToggleViewMode={() => handleSetViewMode(viewMode === 'map' ? 'list' : 'map')}
                 onMapUserLocationChange={handleMapUserLocationChange}
             />
         </View>

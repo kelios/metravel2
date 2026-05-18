@@ -2,6 +2,13 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import ErrorDisplay from '@/components/ui/ErrorDisplay';
 import { Platform } from 'react-native';
+import { openExternalUrl } from '@/utils/externalLinks';
+
+jest.mock('@/utils/externalLinks', () => ({
+  openExternalUrl: jest.fn(),
+}));
+
+const mockOpenExternalUrl = openExternalUrl as jest.MockedFunction<typeof openExternalUrl>;
 
 // Mock Feather icons
 jest.mock('@expo/vector-icons', () => ({
@@ -57,6 +64,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   openSpy.mockClear();
+  mockOpenExternalUrl.mockClear();
 });
 
 // Mock __DEV__
@@ -254,10 +262,8 @@ describe('ErrorDisplay', () => {
 
     expect(contactButton).toBeDefined();
     fireEvent.press(contactButton);
-    expect(openSpy).toHaveBeenCalledWith(
-      'https://www.instagram.com/metravelby/',
-      '_blank'
-    );
+    expect(mockOpenExternalUrl).toHaveBeenCalledWith('https://www.instagram.com/metravelby/');
+    expect(openSpy).not.toHaveBeenCalled();
     Platform.OS = originalPlatform;
   });
 });

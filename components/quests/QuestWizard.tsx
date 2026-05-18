@@ -309,6 +309,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                         handleVideoError={handleVideoError}
                         handleVideoRetry={handleVideoRetry}
                         setVideoOk={setVideoOk}
+                        onContinue={() => setShowFinaleOnly(false)}
                     />
                 )}
 

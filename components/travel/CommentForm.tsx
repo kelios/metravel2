@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   TextInput,
@@ -14,7 +14,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import type { TravelComment } from '../../types/comments';
 
 interface CommentFormProps {
-  onSubmit: (text: string) => void;
+  onSubmit: (text: string) => void | Promise<unknown>;
   isSubmitting?: boolean;
   placeholder?: string;
   replyTo?: TravelComment | null;
@@ -37,6 +37,9 @@ export function CommentForm({
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [text, setText] = useState('');
+  const [localSubmitPending, setLocalSubmitPending] = useState(false);
+  const submitInFlightRef = useRef(false);
+  const submitting = isSubmitting || localSubmitPending;
 
   useEffect(() => {
     if (editComment) {
@@ -48,11 +51,26 @@ export function CommentForm({
     setText('');
   }, [editComment, replyTo]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const trimmedText = text.trim();
-    if (trimmedText) {
-      onSubmit(trimmedText);
+    if (!trimmedText || submitting || submitInFlightRef.current) return;
+
+    submitInFlightRef.current = true;
+    const result = onSubmit(trimmedText);
+    if (result && typeof (result as Promise<unknown>).then === 'function') {
+      setLocalSubmitPending(true);
+      try {
+        await result;
+        setText('');
+      } catch {
+        // Keep the draft text in place so the user can retry.
+      } finally {
+        setLocalSubmitPending(false);
+        submitInFlightRef.current = false;
+      }
+    } else {
       setText('');
+      submitInFlightRef.current = false;
     }
   };
 
@@ -94,7 +112,7 @@ export function CommentForm({
           multiline
           maxLength={2000}
           autoFocus={autoFocus}
-          editable={!isSubmitting}
+          editable={!submitting}
           accessibilityLabel="Поле ввода комментария"
         />
         <View style={styles.actions}>
@@ -109,13 +127,13 @@ export function CommentForm({
             </Pressable>
           )}
           <Pressable
-            onPress={handleSubmit}
-            disabled={!text.trim() || isSubmitting}
-            style={[styles.sendButton, (!text.trim() || isSubmitting) && styles.sendButtonDisabled]}
+            onPress={() => void handleSubmit()}
+            disabled={!text.trim() || submitting}
+            style={[styles.sendButton, (!text.trim() || submitting) && styles.sendButtonDisabled]}
             accessibilityLabel={editComment ? 'Сохранить изменения' : 'Отправить комментарий'}
             accessibilityRole="button"
           >
-            {isSubmitting ? (
+            {submitting ? (
               <ActivityIndicator size="small" color={colors.textOnPrimary} />
             ) : (
               <Feather name="send" size={18} color={colors.textOnPrimary} />
@@ -211,8 +229,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     gap: 6,
   },
   cancelButton: {
-    width: 38,
-    height: 38,
+    width: 44,
+    height: 44,
     borderRadius: DESIGN_TOKENS.radii.pill,
     backgroundColor: colors.backgroundSecondary,
     justifyContent: 'center',
@@ -227,8 +245,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     }),
   },
   sendButton: {
-    width: 38,
-    height: 38,
+    width: 44,
+    height: 44,
     borderRadius: DESIGN_TOKENS.radii.pill,
     backgroundColor: colors.primary,
     justifyContent: 'center',

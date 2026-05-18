@@ -5,6 +5,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import type { TravelComment } from '../../types/comments';
 import { useAuth } from '../../context/AuthContext';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useLikeComment, useUnlikeComment, useDeleteComment } from '../../hooks/useComments';
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
 import { ru } from 'date-fns/locale/ru';
@@ -18,6 +19,7 @@ interface CommentItemProps {
 
 export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItemProps) {
   const { userId, isSuperuser, isAuthenticated } = useAuth();
+  const { requireAuth } = useRequireAuth({ intent: 'comment' });
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [showActions, setShowActions] = useState(false);
@@ -98,10 +100,13 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
           <Pressable
             onPress={() => setShowActions(!showActions)}
             style={styles.moreButton}
+            hitSlop={12}
+            accessibilityRole="button"
             accessibilityLabel="Действия с комментарием"
+            accessibilityState={{ expanded: showActions }}
             testID="comment-actions-trigger"
           >
-            <Feather name="more-vertical" size={20} color={colors.textMuted} />
+            <Feather name={showActions ? 'x' : 'more-vertical'} size={20} color={colors.textMuted} />
           </Pressable>
         )}
       </View>
@@ -175,10 +180,15 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
         )}
 
         {!isAuthenticated && comment.likes_count > 0 && (
-          <View style={styles.footerButton}>
+          <Pressable
+            onPress={requireAuth}
+            style={styles.footerButton}
+            accessibilityRole="button"
+            accessibilityLabel="Войдите, чтобы оценить комментарий"
+          >
             <Feather name="heart" size={16} color={colors.textMuted} />
             <Text style={styles.footerText}>{comment.likes_count}</Text>
-          </View>
+          </Pressable>
         )}
 
         {isAuthenticated && onReply && level < 2 && (

@@ -66,14 +66,14 @@ export function DraftRecoveryDialog({
 
           <Text style={styles.title}>Есть несохранённые изменения</Text>
           <Text style={styles.message}>
-            Мы нашли локальный черновик этой статьи от {formattedTime}. Вы можете продолжить с ним
-            или открыть сохранённую версию.
+            Мы нашли локальный черновик этого путешествия от {formattedTime}. Вы можете продолжить
+            с ним или открыть сохранённую версию.
           </Text>
 
           <View style={styles.note}>
             <Feather name="info" size={16} color={colors.primary} />
             <Text style={styles.noteText}>
-              Если статью уже сохранили, выбирайте сохранённую версию.
+              Если путешествие уже сохранили, выбирайте сохранённую версию.
             </Text>
           </View>
 

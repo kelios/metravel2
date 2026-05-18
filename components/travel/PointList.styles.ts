@@ -624,9 +624,9 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
   listRowIconBtn: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 28,
-    height: 28,
-    borderRadius: 7,
+    width: 36,
+    height: 36,
+    borderRadius: 9,
     backgroundColor: colors.backgroundSecondary ?? colors.surface,
     ...Platform.select({
       web: {
@@ -639,8 +639,8 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     }),
   },
   listRowMapChip: {
-    paddingHorizontal: 6,
-    paddingVertical: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderRadius: 999,
     backgroundColor: colors.backgroundSecondary,
     borderWidth: StyleSheet.hairlineWidth,
@@ -664,8 +664,8 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
   listRowNavChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderRadius: 999,
     backgroundColor: colors.primarySoft,
     borderWidth: StyleSheet.hairlineWidth,

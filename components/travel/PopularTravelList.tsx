@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Animated,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -68,6 +69,7 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
       data: travelsPopular = {} as TravelsMap,
       isLoading,
       isError: hasError,
+      refetch: refetchPopular,
     } = useQuery({
       queryKey: queryKeys.travelsPopular(),
       ...queryConfigs.static,
@@ -323,8 +325,27 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
       return (
         <View style={styles.loadingContainer} onLayout={onLayout}>
           <Text style={styles.errorText}>
-            {hasError ? 'Ошибка загрузки маршрутов' : 'Нет популярных маршрутов'}
+            {hasError ? 'Не удалось загрузить маршруты' : 'Нет популярных маршрутов'}
           </Text>
+          {hasError && (
+            <Pressable
+              onPress={() => refetchPopular()}
+              accessibilityRole="button"
+              accessibilityLabel="Повторить загрузку популярных маршрутов"
+              style={({ pressed }) => ({
+                marginTop: 12,
+                minHeight: 44,
+                paddingHorizontal: 20,
+                justifyContent: 'center',
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: colors.border,
+                opacity: pressed ? 0.7 : 1,
+              })}
+            >
+              <Text style={{ color: colors.primary, fontWeight: '600' }}>Повторить</Text>
+            </Pressable>
+          )}
         </View>
       );
     }

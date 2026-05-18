@@ -1,11 +1,12 @@
 // Оптимизированный FavoriteButton для списков
-import React, { memo, useMemo } from 'react';
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Platform, Pressable, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { showToast } from '@/utils/toast';
 
 type OptimizedFavoriteButtonProps = {
     id: string | number;
@@ -34,8 +35,18 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
     const { requireAuth } = useRequireAuth({ intent: 'favorite' });
     const { isFavorite, addFavorite, removeFavorite } = useFavorites();
     const serverIsFav = isFavorite(id, type);
+    const [optimisticFav, setOptimisticFav] = useState<boolean | null>(null);
+    const [isPending, setIsPending] = useState(false);
+    const inFlightRef = useRef(false);
+    const isFav = optimisticFav ?? serverIsFav;
     const colors = useThemedColors();
     const styles = useMemo(() => getStyles(colors), [colors]);
+
+    useEffect(() => {
+        if (!inFlightRef.current) {
+            setOptimisticFav(null);
+        }
+    }, [serverIsFav]);
 
     const WebView: any = View;
 
@@ -47,24 +58,42 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
                 e.preventDefault();
             }
         }
-        
+
         if (!isAuthenticated) {
             requireAuth();
             return;
         }
 
-        if (serverIsFav) {
-            await removeFavorite(id, type);
-        } else {
-            await addFavorite({
-                id,
-                type,
-                title,
-                url,
-                imageUrl,
-                country,
-                city,
+        if (inFlightRef.current) return;
+        inFlightRef.current = true;
+        setIsPending(true);
+        const next = !isFav;
+        setOptimisticFav(next);
+
+        try {
+            if (next) {
+                await addFavorite({
+                    id,
+                    type,
+                    title,
+                    url,
+                    imageUrl,
+                    country,
+                    city,
+                });
+            } else {
+                await removeFavorite(id, type);
+            }
+        } catch {
+            setOptimisticFav(serverIsFav);
+            showToast({
+                type: 'error',
+                text1: 'Не удалось обновить избранное',
+                visibilityTime: 3000,
             });
+        } finally {
+            inFlightRef.current = false;
+            setIsPending(false);
         }
     };
 
@@ -82,15 +111,22 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
                         handlePress(e);
                     }
                 }}
-                aria-label={serverIsFav ? 'Удалить из избранного' : 'Добавить в избранное'}
-                style={[styles.favoriteButton, style, { cursor: 'pointer' } as any]}
+                aria-label={isFav ? 'Удалить из избранного' : 'Добавить в избранное'}
+                aria-pressed={isFav}
+                aria-busy={isPending}
+                style={[
+                    styles.favoriteButton,
+                    style,
+                    { cursor: isPending ? 'wait' : 'pointer' } as any,
+                    isPending && styles.favoriteButtonPending,
+                ]}
                 data-testid="favorite-button"
             >
                 <Feather
                     name="heart"
                     size={size}
-                    color={serverIsFav ? colors.danger : colors.textOnDark}
-                    {...(!serverIsFav ? ({ style: { opacity: 0.85 } } as any) : null)}
+                    color={isFav ? colors.danger : colors.textOnDark}
+                    {...(!isFav ? ({ style: { opacity: 0.85 } } as any) : null)}
                 />
             </WebView>
         );
@@ -99,15 +135,19 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
     return (
         <Pressable
             onPress={handlePress}
-            style={[styles.favoriteButton, style]}
+            style={[styles.favoriteButton, style, isPending && styles.favoriteButtonPending]}
             hitSlop={10}
+            disabled={isPending}
+            accessibilityRole="button"
+            accessibilityLabel={isFav ? 'Удалить из избранного' : 'Добавить в избранное'}
+            accessibilityState={{ selected: isFav, busy: isPending, disabled: isPending }}
             testID="favorite-button"
         >
             <Feather
                 name="heart"
                 size={size}
-                color={serverIsFav ? colors.danger : colors.textOnDark}
-                {...(!serverIsFav ? ({ style: { opacity: 0.85 } } as any) : null)}
+                color={isFav ? colors.danger : colors.textOnDark}
+                {...(!isFav ? ({ style: { opacity: 0.85 } } as any) : null)}
             />
         </Pressable>
     );
@@ -123,6 +163,9 @@ const getStyles = (_colors: ThemedColors) => StyleSheet.create({
         ...(Platform.OS === 'web'
             ? { backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' } as any
             : {}),
+    },
+    favoriteButtonPending: {
+        opacity: 0.65,
     },
 });
 

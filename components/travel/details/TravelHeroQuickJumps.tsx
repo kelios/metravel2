@@ -8,7 +8,7 @@ import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
 
 const ACTION_LABELS: Record<string, string> = {
-  map: 'Открыть карту',
+  map: 'Карта маршрута',
   description: 'Описание',
   points: 'Точки маршрута',
   comments: 'Комментарии',
@@ -26,11 +26,11 @@ export function TravelHeroQuickJumps({
 }) {
   const styles = useTravelDetailsHeroStyles()
 
-  const chips = links.map((link, index) => (
+  const chips = links.map((link) => (
     <QuickJumpChip
       key={link.key}
       link={link}
-      isPrimary={link.key === 'map' || index === 0}
+      isPrimary={link.key === 'map'}
       onQuickJump={onQuickJump}
     />
   ))

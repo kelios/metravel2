@@ -1,5 +1,6 @@
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import {
+  ActivityIndicator,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   Platform,
@@ -363,14 +364,7 @@ export default function PlacesScreen() {
   }, [router])
 
   const hasActiveFilters = selectedCategories.length > 0 || !!selectedCountry || !!query
-  const activeFilterCount =
-    (selectedCategories.length > 0 ? 1 : 0) +
-    (selectedCountry ? 1 : 0) +
-    (query ? 1 : 0)
-  const mobileFilterCount =
-    (selectedCategories.length > 0 ? 1 : 0) +
-    (selectedCountry ? 1 : 0) +
-    (query ? 1 : 0)
+  const selectedCategoryCount = selectedCategories.length
 
   const resetAll = useCallback(() => {
     setQuery('')
@@ -396,19 +390,41 @@ export default function PlacesScreen() {
         colors={colors}
         icon="alert-circle"
         title="Не удалось загрузить места"
-        description="Попробуйте обновить каталог."
+        description="Проверьте соединение и попробуйте снова."
         actionLabel="Повторить"
         onAction={() => placesQuery.refetch()}
+        pending={placesQuery.isFetching}
+        pendingLabel="Загружаем…"
       />
     )
   } else if (resultsStatus === 'empty') {
-    resultsContent = (
+    resultsContent = allPlaces.length === 0 ? (
+      <StateBlock
+        styles={styles}
+        colors={colors}
+        icon="inbox"
+        title="Каталог пока пуст"
+        description="Скоро здесь появятся места из путешествий."
+        actionLabel="Обновить"
+        onAction={() => placesQuery.refetch()}
+        pending={placesQuery.isFetching}
+        pendingLabel="Обновляем…"
+      />
+    ) : (
       <StateBlock
         styles={styles}
         colors={colors}
         icon="map-pin"
-        title="Места не найдены"
-        description="Измените категорию, страну или поисковый запрос."
+        title={
+          deferredQuery
+            ? `По запросу «${deferredQuery}» ничего не найдено`
+            : 'Места не найдены'
+        }
+        description={
+          deferredQuery
+            ? 'Попробуйте другое название или сбросьте фильтры.'
+            : 'Измените категорию или страну.'
+        }
         actionLabel="Сбросить фильтры"
         onAction={resetAll}
       />
@@ -578,13 +594,13 @@ export default function PlacesScreen() {
                 accessibilityRole="button"
                 style={({ pressed }) => [styles.mobileFilterToggle, pressed && PRESSED_OPACITY]}
               >
-                <Feather name="sliders" size={16} color={activeFilterCount > 0 ? colors.primary : colors.text} />
-                <Text style={[styles.mobileFilterToggleText, activeFilterCount > 0 && styles.mobileFilterToggleTextActive]}>
+                <Feather name="sliders" size={16} color={selectedCategoryCount > 0 ? colors.primary : colors.text} />
+                <Text style={[styles.mobileFilterToggleText, selectedCategoryCount > 0 && styles.mobileFilterToggleTextActive]}>
                   Категории
                 </Text>
-                {mobileFilterCount > 0 ? (
+                {selectedCategoryCount > 0 ? (
                   <View style={styles.filterBadge}>
-                    <Text style={styles.filterBadgeText}>{mobileFilterCount}</Text>
+                    <Text style={styles.filterBadgeText}>{selectedCategoryCount}</Text>
                   </View>
                 ) : null}
                 <Feather
@@ -883,6 +899,8 @@ function StateBlock({
   description,
   actionLabel,
   onAction,
+  pending = false,
+  pendingLabel,
 }: {
   styles: ReturnType<typeof createStyles>
   colors: ThemedColors
@@ -891,6 +909,8 @@ function StateBlock({
   description: string
   actionLabel: string
   onAction: () => void
+  pending?: boolean
+  pendingLabel?: string
 }) {
   return (
     <View style={styles.stateBlock}>
@@ -901,10 +921,23 @@ function StateBlock({
       <Text style={styles.stateText}>{description}</Text>
       <Pressable
         accessibilityRole="button"
+        accessibilityState={{ disabled: pending, busy: pending }}
+        disabled={pending}
         onPress={onAction}
-        style={({ pressed }) => [styles.stateAction, pressed && PRESSED_OPACITY]}
+        style={({ pressed }) => [
+          styles.stateAction,
+          pending && styles.stateActionPending,
+          pressed && !pending && PRESSED_OPACITY,
+        ]}
       >
-        <Text style={styles.stateActionText}>{actionLabel}</Text>
+        {pending ? (
+          <View style={styles.stateActionPendingRow}>
+            <ActivityIndicator size="small" color={colors.textOnPrimary} />
+            <Text style={styles.stateActionText}>{pendingLabel ?? actionLabel}</Text>
+          </View>
+        ) : (
+          <Text style={styles.stateActionText}>{actionLabel}</Text>
+        )}
       </Pressable>
     </View>
   )
@@ -1564,5 +1597,13 @@ const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean)
     color: colors.textOnPrimary,
     fontWeight: '700',
     fontSize: DESIGN_TOKENS.typography.sizes.md,
+  },
+  stateActionPending: {
+    opacity: 0.85,
+  },
+  stateActionPendingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.sm,
   },
 })

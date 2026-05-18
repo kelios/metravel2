@@ -17,6 +17,9 @@ import { SwipeableListItem } from './SwipeableListItem'
 import Button from '@/components/ui/Button'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { useFavorites } from '@/context/FavoritesContext'
+import { useRequireAuth } from '@/hooks/useRequireAuth'
+import { showToast } from '@/utils/toast'
 
 const IS_WEB = Platform.OS === 'web'
 const WEB_LIST_OVERSCAN_ITEMS = 5
@@ -147,6 +150,9 @@ const TravelListPanel: React.FC<Props> = ({
   const themeColors = useThemedColors()
   const styles = useMemo(() => getStyles(themeColors), [themeColors])
 
+  const { addFavorite, removeFavorite, isFavorite: isFavoriteInContext } = useFavorites()
+  const { isAuthenticated, requireAuth } = useRequireAuth({ intent: 'favorite' })
+
   const webScrollRafRef = useRef<number | null>(null)
   const [webScrollY, setWebScrollY] = useState(0)
   const [webViewportH, setWebViewportH] = useState(0)
@@ -157,19 +163,11 @@ const TravelListPanel: React.FC<Props> = ({
       const canUseItemId = itemId !== undefined && itemId !== null
       const isFavorite = canUseItemId ? favorites.has(itemId) : false
 
-      const content = (
-        <AddressListItem
-          travel={item}
-          isMobile={isMobile}
-          onPress={() => buildRouteTo(item)}
-          onHidePress={
-            onHideTravel && canUseItemId ? () => onHideTravel(itemId) : undefined
-          }
-          userLocation={userLocation}
-          transportMode={transportMode}
-        />
-      )
+      const onHidePress =
+        onHideTravel && canUseItemId ? () => onHideTravel(itemId) : undefined
 
+      // Native mobile: favorite is handled by the swipe gesture, so the card
+      // itself must NOT render a favorite button (avoids a duplicate action).
       if (!IS_WEB && isMobile) {
         return (
           <SwipeableListItem
@@ -181,13 +179,76 @@ const TravelListPanel: React.FC<Props> = ({
             showRoute
             isFavorite={isFavorite}
           >
-            {content}
+            <AddressListItem
+              travel={item}
+              isMobile={isMobile}
+              onPress={() => buildRouteTo(item)}
+              onHidePress={onHidePress}
+              userLocation={userLocation}
+              transportMode={transportMode}
+            />
           </SwipeableListItem>
         )
       }
-      return content
+
+      // Web (incl. web-mobile) and native desktop: no swipe, so expose an
+      // explicit favorite toggle button on the card, backed by the favorites
+      // context (the prop-based path is only used by the native swipe wrapper).
+      const ctxIsFavorite =
+        canUseItemId && isFavoriteInContext(itemId, 'travel')
+      const handleToggleFavorite = canUseItemId
+        ? () => {
+            if (!isAuthenticated) {
+              requireAuth()
+              return
+            }
+            const action = ctxIsFavorite
+              ? removeFavorite(itemId as string | number, 'travel')
+              : addFavorite({
+                  id: itemId as string | number,
+                  type: 'travel',
+                  title: item?.address || item?.name || item?.title || 'Место',
+                  url:
+                    item?.urlTravel || item?.articleUrl || `/travels/${itemId}`,
+                  imageUrl: item?.travelImageThumbUrl || item?.imageUrl,
+                })
+            void Promise.resolve(action).catch(() => {
+              void showToast({
+                type: 'error',
+                text1: 'Не удалось обновить избранное',
+                position: 'bottom',
+              })
+            })
+          }
+        : undefined
+
+      return (
+        <AddressListItem
+          travel={item}
+          isMobile={isMobile}
+          onPress={() => buildRouteTo(item)}
+          onHidePress={onHidePress}
+          userLocation={userLocation}
+          transportMode={transportMode}
+          isFavorite={ctxIsFavorite}
+          onToggleFavorite={handleToggleFavorite}
+        />
+      )
     },
-    [isMobile, buildRouteTo, onHideTravel, userLocation, transportMode, onToggleFavorite, favorites],
+    [
+      isMobile,
+      buildRouteTo,
+      onHideTravel,
+      userLocation,
+      transportMode,
+      onToggleFavorite,
+      favorites,
+      addFavorite,
+      removeFavorite,
+      isFavoriteInContext,
+      isAuthenticated,
+      requireAuth,
+    ],
   )
 
   const skeletonCards = useMemo(

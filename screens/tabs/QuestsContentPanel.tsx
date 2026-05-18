@@ -43,6 +43,7 @@ type QuestsContentPanelProps = {
     radiiLg: number;
     LazyQuestMap: any;
     onOpenFilterDrawer: () => void;
+    onToggleViewMode: () => void;
     onMapUserLocationChange: (loc: { latitude: number; longitude: number } | null) => void;
 };
 
@@ -63,6 +64,7 @@ export default function QuestsContentPanel({
     radiiLg,
     LazyQuestMap,
     onOpenFilterDrawer,
+    onToggleViewMode,
     onMapUserLocationChange,
 }: QuestsContentPanelProps) {
     const { isMobile } = useResponsive();
@@ -82,15 +84,26 @@ export default function QuestsContentPanel({
                     {dataLoaded && <Text style={styles.contentCount}>{pluralizeQuest(questsAll.length)}</Text>}
                 </View>
                 {isMobile && (
-                    <Pressable
-                        style={styles.mobileFilterBtn}
-                        onPress={onOpenFilterDrawer}
-                        accessibilityRole="button"
-                        accessibilityLabel="Выбрать город"
-                    >
-                        <Feather name="filter" size={16} color={colors.text} />
-                        <Text style={styles.mobileFilterBtnText}>Город</Text>
-                    </Pressable>
+                    <View style={{ flexDirection: 'row', gap: 8, flexShrink: 0 }}>
+                        <Pressable
+                            style={styles.mobileFilterBtn}
+                            onPress={onToggleViewMode}
+                            accessibilityRole="button"
+                            accessibilityLabel={viewMode === 'map' ? 'Показать списком' : 'Показать на карте'}
+                        >
+                            <Feather name={viewMode === 'map' ? 'list' : 'map'} size={16} color={colors.text} />
+                            <Text style={styles.mobileFilterBtnText}>{viewMode === 'map' ? 'Список' : 'Карта'}</Text>
+                        </Pressable>
+                        <Pressable
+                            style={styles.mobileFilterBtn}
+                            onPress={onOpenFilterDrawer}
+                            accessibilityRole="button"
+                            accessibilityLabel="Выбрать город"
+                        >
+                            <Feather name="filter" size={16} color={colors.text} />
+                            <Text style={styles.mobileFilterBtnText}>Город</Text>
+                        </Pressable>
+                    </View>
                 )}
             </View>
 

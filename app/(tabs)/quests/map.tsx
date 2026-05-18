@@ -151,6 +151,7 @@ export default function QuestsMapScreen() {
         return (
             <View style={styles.fallback}>
                 <ActivityIndicator color={colors.primary} />
+                <Text style={styles.fallbackText}>Загружаем карту квестов…</Text>
             </View>
         );
     }

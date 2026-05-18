@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import {
+  ActivityIndicator,
   LayoutChangeEvent,
   Platform,
   Pressable,
@@ -440,7 +441,8 @@ export default function RouteElevationProfile({
           <Pressable
             onPress={() => void onDownloadTrack()}
             accessibilityRole="button"
-            accessibilityLabel="Скачать трек"
+            accessibilityLabel="Скачать трек в GPX"
+            accessibilityState={{ disabled: isDownloadPending, busy: isDownloadPending }}
             style={({ pressed }) => [
               styles.downloadBtn,
               pressed && styles.downloadBtnPressed,
@@ -448,7 +450,14 @@ export default function RouteElevationProfile({
             ]}
             disabled={isDownloadPending}
           >
-            <Feather name="download" size={14} color={colors.primary} />
+            {isDownloadPending ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Feather name="download" size={14} color={colors.primary} />
+            )}
+            <Text style={styles.downloadBtnText}>
+              {isDownloadPending ? 'Скачивание…' : 'GPX'}
+            </Text>
           </Pressable>
         ) : null}
       </View>
@@ -646,7 +655,7 @@ export default function RouteElevationProfile({
           <View
             style={styles.chartHitArea}
             onStartShouldSetResponder={() => true}
-            onMoveShouldSetResponder={() => true}
+            onMoveShouldSetResponder={() => Platform.OS === 'web'}
             onResponderGrant={(event) =>
               updateActivePoint(event.nativeEvent.locationX)
             }

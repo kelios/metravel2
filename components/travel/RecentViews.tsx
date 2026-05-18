@@ -241,7 +241,7 @@ function RecentViews({
         <ScrollView
           testID="recent-views-list"
           horizontal
-          showsHorizontalScrollIndicator={false}
+          showsHorizontalScrollIndicator
           contentContainerStyle={styles.listContent}
           {...({ onWheel: handleHorizontalWheel } as any)}
         >

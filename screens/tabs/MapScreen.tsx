@@ -24,6 +24,7 @@ import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig'
 import { MAP_SEO_TITLE, MAP_SEO_DESCRIPTION } from '@/constants/mapSeo'
 import { buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
 import { createMapStructuredData } from '@/utils/discoverySeo'
+import { devWarn } from '@/utils/logger'
 
 const IS_WEB = Platform.OS === 'web'
 const MAP_STRUCTURED_DATA_ENTRY_LIMIT = 12
@@ -39,7 +40,11 @@ const PRESSED_OPACITY_06 = { opacity: 0.6 } as const
 const POINTER_EVENTS_NONE = { pointerEvents: 'none' } as const
 
 if (IS_WEB) {
-  import('@/utils/loadLeafletRuntime').then((m) => m.loadLeafletRuntime()).catch(() => {})
+  import('@/utils/loadLeafletRuntime')
+    .then((m) => m.loadLeafletRuntime())
+    .catch((error) => {
+      devWarn('[MapScreen] Failed to preload Leaflet runtime', error)
+    })
 }
 
 const LazyMapOnboarding = lazy(() => import('@/components/MapPage/MapOnboarding'))

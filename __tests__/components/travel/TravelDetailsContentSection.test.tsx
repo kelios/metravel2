@@ -1,5 +1,5 @@
 import { createRef } from 'react'
-import { render, screen } from '@testing-library/react-native'
+import { render, screen, waitFor } from '@testing-library/react-native'
 
 import type { Travel } from '@/types/types'
 import { TravelDetailsContentSection } from '@/components/travel/details/sections/TravelDetailsContentSection'
@@ -88,7 +88,7 @@ const createTravel = (overrides: Partial<Travel> = {}) =>
     recommendation: '<p>Советы</p>',
     plus: '<p>Плюсы</p>',
     minus: '<p>Минусы</p>',
-    youtube_link: 'https://youtube.com/watch?v=test',
+    youtube_link: 'https://youtube.com/watch?v=dQw4w9WgXcQ',
     number_days: 2,
     countryName: 'Беларусь',
     monthName: 'Июль',
@@ -131,7 +131,7 @@ describe('TravelDetailsContentSection', () => {
     expect(screen.getByTestId('collapsible-Минусы').props['data-open']).toBe(true)
   })
 
-  it('shows lazy youtube only when progressive video loading is ready', () => {
+  it('shows lazy youtube only when progressive video loading is ready', async () => {
     mockProgressiveShouldLoad = false
     const view = render(
       <TravelDetailsContentSection
@@ -154,6 +154,8 @@ describe('TravelDetailsContentSection', () => {
       />
     )
 
-    expect(screen.getByTestId('lazy-youtube')).toBeTruthy()
+    await waitFor(() => {
+      expect(screen.getByTestId('lazy-youtube')).toBeTruthy()
+    })
   })
 })

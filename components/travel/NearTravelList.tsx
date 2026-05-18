@@ -16,6 +16,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
+import Feather from '@expo/vector-icons/Feather';
 import { Title } from '@/ui/paper';
 
 import { Travel } from '@/types/types';
@@ -545,6 +546,32 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       );
     }
 
+    if (!isLoading && travelsNear.length === 0) {
+      return (
+        <View style={embedded ? styles.embeddedSection : styles.section} onLayout={onLayout}>
+          {showHeader && (
+            <View style={styles.header}>
+              <Title style={styles.title}>Рядом можно посмотреть</Title>
+              <Text style={styles.subtitle}>Маршруты в радиусе ~60 км</Text>
+            </View>
+          )}
+          <View style={{ alignItems: 'center', paddingVertical: DESIGN_TOKENS.spacing.xl }}>
+            <Feather name="map-pin" size={28} color={colors.textMuted} />
+            <Text
+              style={{
+                marginTop: 8,
+                fontSize: 14,
+                color: colors.textMuted,
+                textAlign: 'center',
+              }}
+            >
+              Рядом пока нет других маршрутов
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
     return (
       <View style={embedded ? styles.embeddedSection : styles.section} onLayout={onLayout}>
         {showHeader && (
@@ -594,7 +621,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                   {visibleCount < travelsNear.length && (
                     <View style={styles.loadMoreContainer}>
                       <Button
-                        label={`Показать ещё ${Math.min(loadMoreCount, travelsNear.length - visibleCount)} из ${travelsNear.length - visibleCount}`}
+                        label={`Показать ещё (${travelsNear.length - visibleCount})`}
                         onPress={handleLoadMore}
                         variant="outline"
                         size="md"
@@ -610,14 +637,16 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
           </>
         ) : (
           <>
-            <SegmentedControl
-              options={segmentOptions}
-              value={viewMode}
-              onChange={(key) => setViewMode(key as Segment)}
-              accessibilityLabel="Переключатель вида"
-              compact
-              tone="subtle"
-            />
+            {!embedded && (
+              <SegmentedControl
+                options={segmentOptions}
+                value={viewMode}
+                onChange={(key) => setViewMode(key as Segment)}
+                accessibilityLabel="Переключатель вида"
+                compact
+                tone="subtle"
+              />
+            )}
 
             {viewMode === 'list' ? (
               embedded && Platform.OS === 'web' ? (

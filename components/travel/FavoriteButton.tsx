@@ -46,6 +46,7 @@ function FavoriteButton({
     // Оптимистичное состояние для мгновенного отклика
     const [optimisticIsFav, setOptimisticIsFav] = useState(serverIsFav);
     const [pendingSync, setPendingSync] = useState(false);
+    const [isPending, setIsPending] = useState(false);
     const inFlightRef = useRef(false);
     
     // Синхронизируем с серверным состоянием
@@ -109,6 +110,7 @@ function FavoriteButton({
         }
 
         inFlightRef.current = true;
+        setIsPending(true);
 
         // Оптимистичное обновление UI
         const newState = !isFav;
@@ -167,6 +169,7 @@ function FavoriteButton({
             });
         } finally {
             inFlightRef.current = false;
+            setIsPending(false);
         }
     }, [isAuthenticated, requireAuth, isFav, id, type, title, imageUrl, url, country, city, addFavorite, removeFavorite]);
 
@@ -177,11 +180,12 @@ function FavoriteButton({
 
     return (
         <ButtonComponent
-            style={[styles.button, globalFocusStyles.focusable, style]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+            style={[styles.button, globalFocusStyles.focusable, style, isPending && { opacity: 0.6 }]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
             {...(Platform.OS === 'web'
                 ? {
                       role: 'button',
                       tabIndex: 0,
+                      'aria-busy': isPending,
                       onClick: handlePress as any,
                       onKeyDown: (e: any) => {
                           if (e.key === 'Enter' || e.key === ' ') {

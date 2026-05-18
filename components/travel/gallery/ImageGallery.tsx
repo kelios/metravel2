@@ -505,7 +505,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
       .filter((img) => !img.isUploading && !img.error && !img.hasLoaded)
       .map((img) => {
         const isBlobUrl = /^(blob:|data:)/i.test(img.url)
-        const timeout = isBlobUrl ? 30000 : 15000
+        const timeout = isBlobUrl ? 60000 : 45000
 
         return setTimeout(() => {
           const stableKey = img.stableKey ?? img.id

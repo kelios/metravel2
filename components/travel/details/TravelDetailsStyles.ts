@@ -380,7 +380,7 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
       flexShrink: 0,
     },
     pointsExportButton: {
-      minHeight: 36,
+      minHeight: 44,
       paddingHorizontal: DESIGN_TOKENS.spacing.sm,
       paddingVertical: DESIGN_TOKENS.spacing.xs,
       borderColor: colors.borderLight,

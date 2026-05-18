@@ -81,11 +81,11 @@ function useTravelSeoElement({
   readyTitle,
 }: {
   backgroundColor: string
-  canonicalUrl: string
+  canonicalUrl?: string
   headKey: string
-  jsonLd: unknown
+  jsonLd?: Record<string, unknown> | null
   readyDesc: string
-  readyImage?: string
+  readyImage: string
   readyTitle: string
 }) {
   return useMemo(

@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from 'react'
 import { Platform } from 'react-native'
 
 import type { Travel } from '@/types/types'
+import { devWarn } from '@/utils/logger'
 import { rIC } from '@/utils/rIC'
 
 const NON_TRAVEL_PERFORMANCE_INIT_DELAY_MS = 1000
@@ -102,7 +103,9 @@ export function useTravelDetailsPerformance({
     let cancelled = false
 
     preloadTravelHeroSliderRuntime()
-      .catch(() => {})
+      .catch((error) => {
+        devWarn('[TravelDetailsPerformance] Failed to preload hero slider runtime', error)
+      })
       .finally(() => {
         if (!cancelled) setSliderReady(true)
       })

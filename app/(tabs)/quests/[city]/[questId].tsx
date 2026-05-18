@@ -13,7 +13,7 @@ import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/uti
 import type { QuestWizardProps } from '@/components/quests/QuestWizard';
 import type { FrontendQuestBundle } from '@/utils/questAdapters';
 
-const FeatherIcon = React.lazy(() =>
+const FeatherIcon = React.lazy<React.ComponentType<{ name: IconName; size: number; color: string }>>(() =>
   import('@expo/vector-icons/Feather').then((module: any) => ({ default: module.Feather || module.default })),
 );
 
@@ -141,7 +141,7 @@ const useQuestHeadSync = (isFocused: boolean, seo: QuestSeoModel, canonical: str
 
 const Icon = ({ name, color, size = 18 }: { name: IconName; color: string; size?: number }) => (
   <Suspense fallback={null}>
-    <FeatherIcon name={name as any} size={size} color={color} />
+    <FeatherIcon name={name} size={size} color={color} />
   </Suspense>
 );
 
@@ -217,6 +217,7 @@ const LoadingState = ({
       />
     ) : null}
     <ActivityIndicator color={colors.primary} />
+    <Text style={[styles.stateText, { marginTop: 12 }]}>Загружаем квест…</Text>
   </CenteredPage>
 );
 

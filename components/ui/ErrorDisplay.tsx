@@ -7,6 +7,9 @@ import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { openExternalUrl } from '@/utils/externalLinks';
+
+const SUPPORT_URL = 'https://www.instagram.com/metravelby/';
 
 /** AND-10: Detect network-related errors from message text */
 function isNetworkRelatedMessage(msg: string): boolean {
@@ -219,12 +222,7 @@ export default function ErrorDisplay({
             <Pressable
               style={[styles.button, styles.secondaryButton]}
               onPress={() => {
-                if (Platform.OS === 'web') {
-                  window?.open?.('https://www.instagram.com/metravelby/', '_blank');
-                } else {
-                  // На мобильных можно открыть приложение Instagram
-                  // или показать email
-                }
+                void openExternalUrl(SUPPORT_URL)
               }}
               accessibilityRole="button"
               accessibilityLabel="Связаться с поддержкой"

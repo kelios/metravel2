@@ -180,8 +180,16 @@ test.describe('Gallery: delete broken image (404)', () => {
 
     // Save once so gallery becomes available.
     const saveButton = page.getByRole('button', { name: 'Сохранить' }).first();
-    await expect(saveButton).toBeVisible({ timeout: 30_000 });
-    await saveButton.click({ force: true });
+    if (await saveButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await saveButton.click({ force: true });
+    } else {
+      const moreButton = page.getByRole('button', { name: 'Открыть меню действий' }).first();
+      await expect(moreButton).toBeVisible({ timeout: 30_000 });
+      await moreButton.click({ force: true });
+      const saveMenuItem = page.getByRole('menuitem', { name: 'Сохранить' }).first();
+      await expect(saveMenuItem).toBeVisible({ timeout: 30_000 });
+      await saveMenuItem.click({ force: true });
+    }
 
     // Wait until the "gallery available after save" hint disappears.
     const galleryLockedHint = page.getByText('Галерея станет доступна после сохранения путешествия.', { exact: true }).first();

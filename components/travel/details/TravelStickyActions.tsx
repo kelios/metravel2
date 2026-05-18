@@ -95,22 +95,26 @@ function TravelStickyActions({
     return () => scrollY.removeListener(listenerId);
   }, [scrollY, translateY]);
 
-  const handleFavorite = useCallback(() => {
+  const handleFavorite = useCallback(async () => {
     if (!travelId) return;
     if (!isAuthenticated) {
       requireAuth();
       return;
     }
     hapticImpact('light');
-    if (isFav) {
-      void removeFavorite(travelId, 'travel');
-      void showToast({ type: 'info', text1: 'Удалено из избранного', position: 'bottom' });
-    } else {
-      const url = travel?.slug
-        ? `/travels/${travel.slug}`
-        : `/travels/${travelId}`;
-      void addFavorite({ id: travelId, type: 'travel', title: travel?.name || '', url });
-      void showToast({ type: 'success', text1: 'Добавлено в избранное', position: 'bottom' });
+    try {
+      if (isFav) {
+        await removeFavorite(travelId, 'travel');
+        void showToast({ type: 'info', text1: 'Удалено из избранного', position: 'bottom' });
+      } else {
+        const url = travel?.slug
+          ? `/travels/${travel.slug}`
+          : `/travels/${travelId}`;
+        await addFavorite({ id: travelId, type: 'travel', title: travel?.name || '', url });
+        void showToast({ type: 'success', text1: 'Добавлено в избранное', position: 'bottom' });
+      }
+    } catch {
+      void showToast({ type: 'error', text1: 'Не удалось обновить избранное', position: 'bottom' });
     }
   }, [travelId, isAuthenticated, isFav, addFavorite, removeFavorite, requireAuth, travel?.name, travel?.slug]);
 
@@ -130,8 +134,12 @@ function TravelStickyActions({
           return;
         } catch { /* user cancelled */ }
       }
-      await Clipboard.setStringAsync(url);
-      void showToast({ type: 'success', text1: 'Ссылка скопирована', position: 'bottom' });
+      try {
+        await Clipboard.setStringAsync(url);
+        void showToast({ type: 'success', text1: 'Ссылка скопирована', position: 'bottom' });
+      } catch {
+        void showToast({ type: 'error', text1: 'Не удалось скопировать ссылку', position: 'bottom' });
+      }
     } else {
       try {
         await Share.share({ message: `${title}\n${url}` });

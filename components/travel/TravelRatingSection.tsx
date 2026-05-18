@@ -126,11 +126,17 @@ function TravelRatingSection({
                     showValue
                     showCount
                 />
-                {userRating != null && userRating > 0 && (
+                {isSubmitting ? (
+                    <Text style={styles.yourRatingText}>Сохранение…</Text>
+                ) : showSuccess ? (
+                    <Text style={[styles.yourRatingText, { color: colors.success ?? colors.primary }]}>
+                        Спасибо за оценку!
+                    </Text>
+                ) : userRating != null && userRating > 0 ? (
                     <Text style={styles.yourRatingText}>
                         Ваша оценка: {userRating}
                     </Text>
-                )}
+                ) : null}
             </View>
         );
     }

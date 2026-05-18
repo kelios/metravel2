@@ -279,7 +279,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                         <ScrollView
                             testID="personalized-favorites-rail"
                             horizontal
-                            showsHorizontalScrollIndicator={false}
+                            showsHorizontalScrollIndicator={Platform.OS === 'web'}
                             nestedScrollEnabled
                             scrollEnabled={true}
                             style={styles.webHorizontalScroll}

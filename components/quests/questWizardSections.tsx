@@ -238,6 +238,7 @@ export function QuestFinalePanel({
   handleVideoError,
   handleVideoRetry,
   setVideoOk,
+  onContinue,
 }: SharedProps & {
   finale: FinaleLike
   allCompleted: boolean
@@ -251,6 +252,7 @@ export function QuestFinalePanel({
   handleVideoError: () => void
   handleVideoRetry: () => void
   setVideoOk: React.Dispatch<React.SetStateAction<boolean>>
+  onContinue?: () => void
 }) {
   return (
     <View style={styles.completionScreen}>
@@ -324,9 +326,21 @@ export function QuestFinalePanel({
           <Text style={styles.completionText}>{finale.text}</Text>
         </>
       ) : (
-        <Text style={[styles.completionText, { opacity: 0.8 }]}>
-          Чтобы открыть приз/видео — завершите все шаги ({completedCount} из {stepsCount}).
-        </Text>
+        <>
+          <Text style={[styles.completionText, { opacity: 0.8 }]}>
+            Чтобы открыть приз и видео, завершите все шаги — пройдено {completedCount} из {stepsCount}.
+          </Text>
+          {onContinue && (
+            <Pressable
+              style={styles.primaryButton}
+              onPress={onContinue}
+              accessibilityRole="button"
+              accessibilityLabel="Продолжить квест"
+            >
+              <Text style={styles.buttonText}>Продолжить квест</Text>
+            </Pressable>
+          )}
+        </>
       )}
     </View>
   )

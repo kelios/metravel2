@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import Feather from '@expo/vector-icons/Feather';
 import {
   ActivityIndicator,
@@ -174,8 +174,17 @@ const PointCard = React.memo(function PointCard({
   const [hovered, setHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
 
+  const isTouchWeb = useMemo(
+    () =>
+      Platform.OS === 'web' &&
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(hover: none)').matches,
+    [],
+  );
+
   const openMapFromLink = useCallback(() => onOpenMap(point.coord), [onOpenMap, point.coord]);
-  const showActions = isMobile || hovered;
+  const showActions = isMobile || hovered || isTouchWeb;
 
   const handleImageError = useCallback(() => {
     setImageError(true);
