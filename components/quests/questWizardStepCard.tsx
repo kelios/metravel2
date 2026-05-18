@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native'
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler'
+import Feather from '@expo/vector-icons/Feather'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { globalFocusStyles } from '@/styles/globalFocus'
@@ -241,8 +242,16 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
         )}
         <View style={styles.headerContent}>
           <Text style={styles.stepTitle}>{step.title}</Text>
-          <Pressable onPress={openDefaultMap} accessibilityRole="button" accessibilityLabel={`Открыть в картах: ${step.location}`}>
-            <Text style={styles.location} numberOfLines={2}>{step.location}</Text>
+          <Pressable
+            onPress={openDefaultMap}
+            accessibilityRole="button"
+            accessibilityLabel={`Открыть в картах: ${step.location}`}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+            hitSlop={6}
+          >
+            <Feather name="map-pin" size={13} color={colors.brandText} />
+            <Text style={[styles.location, { flexShrink: 1 }]} numberOfLines={2}>{step.location}</Text>
+            <Feather name="external-link" size={12} color={colors.brandText} />
           </Pressable>
         </View>
         {isPassed && (<View style={styles.completedBadge}><Text style={styles.completedText}>✓</Text></View>)}
@@ -277,7 +286,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
                     />
                   </Animated.View>
                   <Pressable style={styles.checkButton} onPress={handleCheck} hitSlop={6} accessibilityRole="button" accessibilityLabel="Проверить ответ">
-                    <Text style={styles.checkButtonText}>→</Text>
+                    <Feather name="arrow-right" size={24} color={colors.textOnPrimary} />
                   </Pressable>
                 </View>
                 {!!error && (

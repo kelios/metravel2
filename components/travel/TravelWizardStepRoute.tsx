@@ -426,7 +426,7 @@ const RouteCoachmark = React.memo(function RouteCoachmark({
     <View
       style={styles.coachmark}
       testID="travel-wizard.step-route.coachmark"
-      accessibilityLabel="travel-wizard.step-route.coachmark"
+      accessibilityLabel="Подсказка: как добавить первую точку маршрута"
     >
       <View style={styles.flexFill}>
         <Text style={styles.coachmarkTitle}>Как добавить первую точку</Text>
@@ -437,7 +437,7 @@ const RouteCoachmark = React.memo(function RouteCoachmark({
         onPress={onDismiss}
         compact
         testID="travel-wizard.step-route.coachmark.dismiss"
-        accessibilityLabel="travel-wizard.step-route.coachmark.dismiss"
+        accessibilityLabel="Скрыть подсказку"
       >
         Понятно
       </Button>
@@ -468,7 +468,7 @@ const ManualPointPanel = React.memo(function ManualPointPanel({
           onPress={onToggle}
           compact
           testID="travel-wizard.step-route.manual.toggle"
-          accessibilityLabel="travel-wizard.step-route.manual.toggle"
+          accessibilityLabel="Добавить точку вручную"
         >
           Добавить точку вручную
         </Button>
@@ -478,7 +478,7 @@ const ManualPointPanel = React.memo(function ManualPointPanel({
         <View
           style={styles.manualPointCard}
           testID="travel-wizard.step-route.manual.panel"
-          accessibilityLabel="travel-wizard.step-route.manual.panel"
+          accessibilityLabel="Панель добавления точки вручную"
         >
           {Platform.OS === 'web' && (
             <View style={styles.manualPhotoRow}>
@@ -487,7 +487,7 @@ const ManualPointPanel = React.memo(function ManualPointPanel({
                 onPress={onPhotoPick}
                 compact
                 testID="travel-wizard.step-route.manual.photo.pick"
-                accessibilityLabel="travel-wizard.step-route.manual.photo.pick"
+                accessibilityLabel="Определить координаты из фото"
               >
                 Координаты из фото
               </Button>
@@ -497,7 +497,7 @@ const ManualPointPanel = React.memo(function ManualPointPanel({
                   onPress={onClearPhoto}
                   compact
                   testID="travel-wizard.step-route.manual.photo.clear"
-                  accessibilityLabel="travel-wizard.step-route.manual.photo.clear"
+                  accessibilityLabel="Убрать фото"
                 >
                   Убрать фото
                 </Button>
@@ -524,7 +524,7 @@ const ManualPointPanel = React.memo(function ManualPointPanel({
               style={styles.manualPointInput}
               inputMode="text"
               testID="travel-wizard.step-route.manual.coords"
-              accessibilityLabel="travel-wizard.step-route.manual.coords"
+              accessibilityLabel="Координаты точки: широта, долгота"
             />
           </View>
 
@@ -538,7 +538,7 @@ const ManualPointPanel = React.memo(function ManualPointPanel({
                 style={styles.manualPointInput}
                 inputMode="decimal"
                 testID="travel-wizard.step-route.manual.lat"
-                accessibilityLabel="travel-wizard.step-route.manual.lat"
+                accessibilityLabel="Широта"
               />
             </View>
             <View style={styles.manualPointInputWrapper}>
@@ -550,7 +550,7 @@ const ManualPointPanel = React.memo(function ManualPointPanel({
                 style={styles.manualPointInput}
                 inputMode="decimal"
                 testID="travel-wizard.step-route.manual.lng"
-                accessibilityLabel="travel-wizard.step-route.manual.lng"
+                accessibilityLabel="Долгота"
               />
             </View>
           </View>
@@ -561,7 +561,7 @@ const ManualPointPanel = React.memo(function ManualPointPanel({
               onPress={onAdd}
               compact
               testID="travel-wizard.step-route.manual.add"
-              accessibilityLabel="travel-wizard.step-route.manual.add"
+              accessibilityLabel="Добавить точку"
             >
               Добавить
             </Button>
@@ -570,7 +570,7 @@ const ManualPointPanel = React.memo(function ManualPointPanel({
               onPress={onCancel}
               compact
               testID="travel-wizard.step-route.manual.cancel"
-              accessibilityLabel="travel-wizard.step-route.manual.cancel"
+              accessibilityLabel="Отмена"
             >
               Отмена
             </Button>
@@ -607,7 +607,7 @@ const CountriesField = React.memo(function CountriesField({
       valueField="country_id"
       disabled={true}
       testID="travel-wizard.step-route.countries"
-      accessibilityLabel="travel-wizard.step-route.countries"
+      accessibilityLabel="Страны маршрута"
     />
   );
 });
@@ -1008,7 +1008,6 @@ function TravelWizardStepRoute({
           contentContainerStyle={styles.contentContainer}
           keyboardShouldPersistTaps="handled"
           testID="travel-wizard.step-route.scroll"
-          accessibilityLabel="travel-wizard.step-route.scroll"
         >
           <View style={styles.contentInner}>
             <View style={styles.card}>

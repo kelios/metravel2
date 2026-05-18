@@ -177,8 +177,10 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     }, [setShowMap]);
 
     const skipStep = useCallback(() => {
+        const hasNext = currentIndex < allSteps.length - 1;
         advanceToNextStep();
-    }, [advanceToNextStep]);
+        if (hasNext) notifyQuest('Шаг пропущен');
+    }, [advanceToNextStep, allSteps.length, currentIndex]);
 
     const goToStep = useCallback((index: number) => {
         const step = allSteps[index];

@@ -5,6 +5,7 @@
  * via the map instance (react-leaflet v4+ does not ship a built-in cluster wrapper).
  */
 import React, { useEffect, useRef, useMemo } from 'react'
+import { QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import type { Point } from './types'
 import { strToLatLng } from './utils'
 import { CoordinateConverter } from '@/utils/coordinateConverter'
@@ -119,6 +120,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
   hintCenter,
 }) => {
   const map = useMap()
+  const queryClient = useQueryClient()
   const clusterGroupRef = useRef<any>(null)
   const markerMapRef = useRef<Map<string, any>>(new Map())
   const renderRootMapRef = useRef<Map<string, any>>(new Map())
@@ -324,16 +326,20 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
             renderRootMapRef.current.set(key, root)
             const React = require('react')
             root.render(
-              React.createElement(PopupContent, {
-                point,
-                closePopup: () => {
-                  try {
-                    map?.closePopup?.()
-                  } catch {
-                    // noop
-                  }
-                },
-              }),
+              React.createElement(
+                QueryClientProvider,
+                { client: queryClient },
+                React.createElement(PopupContent, {
+                  point,
+                  closePopup: () => {
+                    try {
+                      map?.closePopup?.()
+                    } catch {
+                      // noop
+                    }
+                  },
+                }),
+              ),
             )
           } catch {
             // Fallback: simple HTML
@@ -426,6 +432,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
     markerOpacity,
     PopupContent,
     popupProps,
+    queryClient,
     onMarkerClick,
     onMarkerInstance,
   ])

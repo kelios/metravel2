@@ -27,6 +27,7 @@ import { useTravelPublishChecklist } from '@/components/travel/useTravelPublishC
 import PublishChecklistCard from '@/components/travel/PublishChecklistCard';
 import InstagramPublishPanel from '@/components/travel/InstagramPublishPanel';
 import PublishModerationAdminPanel from '@/components/travel/PublishModerationAdminPanel';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import PublishStatusSummaryPanel from '@/components/travel/PublishStatusSummaryPanel';
 import { useInstagramPublishDraft } from '@/components/travel/useInstagramPublishDraft';
 import {
@@ -136,6 +137,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
 
     const [missingForModeration, setMissingForModeration] = useState<ModerationIssue[]>([]);
     const [rejectionComment, setRejectionComment] = useState('');
+    const [rejectConfirmVisible, setRejectConfirmVisible] = useState(false);
     const isNew = !formData.id;
 
     const scrollRef = useRef<ScrollView | null>(null);
@@ -533,7 +535,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                         (pendingModeration
                             ? 'Отправлено на модерацию'
                             : status === 'draft'
-                            ? 'Сохранить'
+                            ? 'Сохранить и выйти'
                             : 'Отправить на модерацию')
                     }
                     primaryTestID="primary-button"
@@ -584,7 +586,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                             rejectionComment={rejectionComment}
                             onRejectionCommentChange={setRejectionComment}
                             onApprove={() => void handleApproveModeration()}
-                            onReject={() => void handleRejectModeration()}
+                            onReject={() => setRejectConfirmVisible(true)}
                         />
                     )}
 
@@ -617,6 +619,23 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     )}
                     </View>
                 </ScrollView>
+
+                <ConfirmDialog
+                    visible={rejectConfirmVisible}
+                    onClose={() => setRejectConfirmVisible(false)}
+                    onConfirm={() => {
+                        setRejectConfirmVisible(false);
+                        void handleRejectModeration();
+                    }}
+                    title="Отклонить модерацию"
+                    message={
+                        rejectionComment.trim()
+                            ? 'Путешествие вернётся в черновики, автор получит сообщение с вашим комментарием. Действие необратимо.'
+                            : 'Путешествие вернётся в черновики и будет снято с публикации. Комментарий не заполнен — автор не узнает причину. Действие необратимо.'
+                    }
+                    confirmText="Отклонить"
+                    cancelText="Отмена"
+                />
             </KeyboardAvoidingView>
         </SafeAreaView>
     );

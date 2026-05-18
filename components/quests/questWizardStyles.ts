@@ -537,7 +537,6 @@ export const createQuestWizardStyles = (colors: ReturnType<typeof useThemedColor
             default: { backgroundColor: colors.brand },
         }),
     },
-    checkButtonText: { color: colors.textOnPrimary, fontSize: 24, fontWeight: '700' },
 
     inlineActions: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
