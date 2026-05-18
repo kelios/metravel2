@@ -9,9 +9,9 @@ const toItems = (value: unknown): MyTravelsItem[] =>
   Array.isArray(value) ? (value as MyTravelsItem[]) : [];
 
 export const mockUnwrapMyTravelsPayload = (payload: MyTravelsPayload | null | undefined) => {
-  if (!payload) return { items: [], total: 0 };
+  if (!payload) return { items: [], total: 0, engagementSummary: null };
 
-  if (Array.isArray(payload)) return { items: payload, total: payload.length };
+  if (Array.isArray(payload)) return { items: payload, total: payload.length, engagementSummary: null };
 
   const obj = asRecord(payload);
   const data = toItems(obj.data);
@@ -24,6 +24,7 @@ export const mockUnwrapMyTravelsPayload = (payload: MyTravelsPayload | null | un
     return {
       items: results,
       total: Number(obj.count ?? obj.total ?? results.length) || results.length,
+      engagementSummary: null,
     };
   }
 
@@ -32,10 +33,11 @@ export const mockUnwrapMyTravelsPayload = (payload: MyTravelsPayload | null | un
     return {
       items,
       total: Number(obj.total ?? obj.count ?? items.length) || items.length,
+      engagementSummary: null,
     };
   }
 
-  return { items: [], total: Number(obj.total ?? obj.count ?? 0) || 0 };
+  return { items: [], total: Number(obj.total ?? obj.count ?? 0) || 0, engagementSummary: null };
 };
 
 export const resetTravelsApiMocks = () => {

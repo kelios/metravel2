@@ -24,6 +24,7 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 
 - `docs/features/README.md` — шаблон и план карт фич
 - `docs/features/places.md` — каталог отдельных точек `/places`
+- `docs/features/user.md` — профиль, collections, calendar statuses, author stats
 
 ## Governance templates
 

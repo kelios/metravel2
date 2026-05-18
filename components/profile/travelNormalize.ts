@@ -1,4 +1,5 @@
 import type { Travel } from '@/types/types';
+import { attachTravelEngagementStats } from '@/utils/travelEngagementStats'
 
 export type ProfileListItem = {
   type?: string;
@@ -57,7 +58,7 @@ export const normalizeToTravel = (item: Record<string, unknown>): Travel => {
   const cityName = String(item?.cityName ?? item?.city ?? '').trim();
   const countUnicIpView = String(item?.countUnicIpView ?? item?.views ?? '0');
 
-  return {
+  return attachTravelEngagementStats({
     id,
     slug,
     name,
@@ -85,5 +86,5 @@ export const normalizeToTravel = (item: Record<string, unknown>): Travel => {
     user: item?.user as Travel['user'],
     created_at: item?.created_at as string | undefined,
     updated_at: item?.updated_at as string | undefined,
-  };
+  }, item)
 };

@@ -176,6 +176,8 @@ describe('ProfileScreen', () => {
 
     // Header actions
     expect(await findByText('Редактировать')).toBeTruthy();
+    expect(await findByText('Социальная статистика путешествий')).toBeTruthy();
+    expect(await findByText('По каждому путешествию')).toBeTruthy();
 
     await waitFor(() => {
       expect(getByLabelText('Мои: 3')).toBeTruthy();

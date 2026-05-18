@@ -710,6 +710,7 @@ describe('src/api/travelsApi.ts', () => {
       const { unwrapMyTravelsPayload } = loadTravelsApi();
 
       expect(unwrapMyTravelsPayload([{ id: 1 } as any])).toEqual({
+        engagementSummary: null,
         items: [{ id: 1 }],
         total: 1,
       });
@@ -720,6 +721,7 @@ describe('src/api/travelsApi.ts', () => {
           count: '7',
         } as any)
       ).toEqual({
+        engagementSummary: null,
         items: [{ id: 1 }, { id: 2 }],
         total: 7,
       });

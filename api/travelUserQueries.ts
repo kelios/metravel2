@@ -2,6 +2,10 @@ import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { devError } from '@/utils/logger';
 import { safeJsonParse } from '@/utils/safeJsonParse';
 import { getSecureItem } from '@/utils/secureStorage';
+import {
+    extractTravelEngagementStats,
+    type TravelEngagementStats,
+} from '@/utils/travelEngagementStats'
 import type { MyTravelsPayload } from './travelsNormalize';
 import {
     LONG_TIMEOUT,
@@ -12,30 +16,39 @@ import {
 
 export const unwrapMyTravelsPayload = (
     payload: MyTravelsPayload | null | undefined
-): { items: Record<string, unknown>[]; total: number } => {
-    if (!payload) return { items: [], total: 0 };
-    if (Array.isArray(payload)) return { items: payload, total: payload.length };
+): { items: Record<string, unknown>[]; total: number; engagementSummary: TravelEngagementStats | null } => {
+    if (!payload) return { items: [], total: 0, engagementSummary: null };
+    if (Array.isArray(payload)) return { items: payload, total: payload.length, engagementSummary: null };
+
+    const engagementSummary = extractTravelEngagementStats(payload)
 
     if (Array.isArray(payload.data)) {
         return {
             items: payload.data,
             total: coerceTotal(payload.total, coerceTotal(payload.count, payload.data.length)),
+            engagementSummary,
         };
     }
     if (Array.isArray(payload.results)) {
         return {
             items: payload.results,
             total: coerceTotal(payload.count, coerceTotal(payload.total, payload.results.length)),
+            engagementSummary,
         };
     }
     if (Array.isArray(payload.items)) {
         return {
             items: payload.items,
             total: coerceTotal(payload.total, coerceTotal(payload.count, payload.items.length)),
+            engagementSummary,
         };
     }
 
-    return { items: [], total: coerceTotal(payload.total, coerceTotal(payload.count, 0)) };
+    return {
+        items: [],
+        total: coerceTotal(payload.total, coerceTotal(payload.count, 0)),
+        engagementSummary,
+    };
 };
 
 export const fetchMyTravels = async (params: {

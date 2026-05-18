@@ -21,6 +21,10 @@ import { ProfileStats } from '@/components/profile/ProfileStats';
 import { ProfileCompleteness } from '@/components/profile/ProfileCompleteness';
 import { ProfileTabs, type ProfileTabKey } from '@/components/profile/ProfileTabs';
 import { ProfileQuickActions } from '@/components/profile/ProfileQuickActions';
+import {
+  ProfileTravelEngagementDetails,
+  ProfileTravelEngagementSummary,
+} from '@/components/profile/ProfileTravelEngagementSection'
 import EmptyState from '@/components/ui/EmptyState';
 import { isTravelListItem, normalizeToTravel } from '@/components/profile/travelNormalize';
 import { useMyTravels } from '@/hooks/useMyTravels';
@@ -43,6 +47,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAvatarUpload } from '@/hooks/useAvatarUpload';
 import { getStorageBatch } from '@/utils/storageBatch';
 import { hapticImpact } from '@/utils/haptics';
+import { computeTravelEngagementSummary } from '@/utils/travelEngagementStats'
 
 interface UserStats {
   travelsCount: number;
@@ -135,6 +140,7 @@ export default function ProfileScreen() {
 
   const {
     myTravels,
+    engagementSummary,
     isLoading: travelsLoading,
     isLoadingMore: travelsLoadingMore,
     hasMore: travelsHasMore,
@@ -253,6 +259,24 @@ export default function ProfileScreen() {
     if (activeTab === 'history') return normalizedHistory;
     return [];
   }, [activeTab, myTravels, normalizedFavorites, normalizedHistory]);
+
+  const authoredTravelEngagementSummary = useMemo(() => {
+    if (engagementSummary) return engagementSummary
+
+    if (!travelsLoading && stats.travelsCount === 0) {
+      return {
+        favoritesCount: 0,
+        wishlistCount: 0,
+        plannedCount: 0,
+      }
+    }
+
+    if (!travelsHasMore && myTravels.length > 0 && myTravels.length === stats.travelsCount) {
+      return computeTravelEngagementSummary(myTravels)
+    }
+
+    return null
+  }, [engagementSummary, myTravels, stats.travelsCount, travelsHasMore, travelsLoading])
 
   const rows = useMemo(() => {
     const cols = Math.max(1, (isCardsSingleColumn ? 1 : gridColumns) || 1);
@@ -493,6 +517,11 @@ export default function ProfileScreen() {
                 else if (key === 'views') setActiveTab('history');
               }}
             />
+            <ProfileTravelEngagementSummary
+              summary={authoredTravelEngagementSummary}
+              travelsCount={stats.travelsCount}
+              isLoading={travelsLoading}
+            />
             <ProfileCompleteness
               user={userProp}
               profile={profile}
@@ -518,6 +547,13 @@ export default function ProfileScreen() {
             </View>
           </View>
         ) : null}
+        {activeTab === 'travels' ? (
+          <ProfileTravelEngagementDetails
+            travels={myTravels}
+            totalTravels={stats.travelsCount}
+            isLoading={travelsLoading}
+          />
+        ) : null}
       </View>
     ),
     [
@@ -530,11 +566,14 @@ export default function ProfileScreen() {
       pickAndUpload,
       avatarUploading,
       handleQuickAction,
+      authoredTravelEngagementSummary,
       stats,
       tabCounts,
       activeTab,
       showClearButton,
       handleClearActiveTab,
+      myTravels,
+      travelsLoading,
     ]
   );
 

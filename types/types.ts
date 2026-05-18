@@ -69,6 +69,11 @@ export type Travel = {
     }
     created_at?: string
     updated_at?: string
+    engagementStats?: {
+        favoritesCount: number | null
+        wishlistCount: number | null
+        plannedCount: number | null
+    }
 }
 
 export type TravelCoords = {

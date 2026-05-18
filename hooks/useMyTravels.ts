@@ -3,6 +3,7 @@ import { deleteTravel, fetchMyTravels, unwrapMyTravelsPayload } from '@/api/trav
 import type { Travel } from '@/types/types';
 import { normalizeToTravel } from '@/components/profile/travelNormalize';
 import { confirmAction } from '@/utils/confirmAction';
+import type { TravelEngagementStats } from '@/utils/travelEngagementStats'
 
 interface UseMyTravelsArgs {
   userId?: string | null;
@@ -12,6 +13,7 @@ interface UseMyTravelsArgs {
 
 export interface UseMyTravelsResult {
   myTravels: Travel[];
+  engagementSummary: TravelEngagementStats | null;
   isLoading: boolean;
   isLoadingMore: boolean;
   hasMore: boolean;
@@ -22,6 +24,7 @@ export interface UseMyTravelsResult {
 
 export function useMyTravels({ userId, perPage, onTotalChange }: UseMyTravelsArgs): UseMyTravelsResult {
   const [myTravels, setMyTravels] = useState<Travel[]>([]);
+  const [engagementSummary, setEngagementSummary] = useState<TravelEngagementStats | null>(null)
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
@@ -36,6 +39,7 @@ export function useMyTravels({ userId, perPage, onTotalChange }: UseMyTravelsArg
       setPage(1);
       setHasMore(false);
       setMyTravels([]);
+      setEngagementSummary(null)
       return;
     }
     setIsLoading(true);
@@ -43,16 +47,18 @@ export function useMyTravels({ userId, perPage, onTotalChange }: UseMyTravelsArg
     lastRequestRef.current = 0;
     try {
       const payload = await fetchMyTravels({ user_id: uid, page: 1, perPage });
-      const { items, total } = unwrapMyTravelsPayload(payload);
+      const { items, total, engagementSummary: nextEngagementSummary } = unwrapMyTravelsPayload(payload);
       const normalized = items.map(normalizeToTravel);
       const effectiveTotal = total || normalized.length;
 
       setMyTravels(normalized);
+      setEngagementSummary(nextEngagementSummary)
       setPage(1);
       setHasMore(normalized.length < effectiveTotal && items.length > 0);
       onTotalChange?.(effectiveTotal);
     } catch {
       setMyTravels([]);
+      setEngagementSummary(null)
       setPage(1);
       setHasMore(false);
       onTotalChange?.(0);
@@ -71,7 +77,7 @@ export function useMyTravels({ userId, perPage, onTotalChange }: UseMyTravelsArg
     setIsLoadingMore(true);
     try {
       const payload = await fetchMyTravels({ user_id: uid, page: nextPage, perPage });
-      const { items, total } = unwrapMyTravelsPayload(payload);
+      const { items, total, engagementSummary: nextEngagementSummary } = unwrapMyTravelsPayload(payload);
       const normalized = items.map(normalizeToTravel);
 
       const existingIds = new Set(myTravels.map((travel) => String(travel.id)));
@@ -80,6 +86,7 @@ export function useMyTravels({ userId, perPage, onTotalChange }: UseMyTravelsArg
       const effectiveTotal = total || merged.length;
 
       setMyTravels(merged);
+      setEngagementSummary((current) => current ?? nextEngagementSummary)
       setPage(nextPage);
       setHasMore(merged.length < effectiveTotal && items.length > 0);
       onTotalChange?.(effectiveTotal);
@@ -109,5 +116,5 @@ export function useMyTravels({ userId, perPage, onTotalChange }: UseMyTravelsArg
     [load],
   );
 
-  return { myTravels, isLoading, isLoadingMore, hasMore, load, loadMore, remove };
+  return { myTravels, engagementSummary, isLoading, isLoadingMore, hasMore, load, loadMore, remove };
 }
