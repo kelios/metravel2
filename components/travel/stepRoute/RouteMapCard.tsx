@@ -1,0 +1,54 @@
+import React, { Suspense } from 'react'
+import { Platform, Text, View } from 'react-native'
+
+import { ROUTE_MARKERS_ANCHOR_ID } from './helpers'
+import { NativeMapPlaceholder } from './NativeMapPlaceholder'
+import type { RouteMapCardProps } from './types'
+
+const WebMapComponent = Platform.OS === 'web'
+  ? React.lazy(() => import('@/components/travel/WebMapComponent'))
+  : null
+
+export const RouteMapCard = React.memo(function RouteMapCard({
+  categoryTravelAddress,
+  countries,
+  markers,
+  styles,
+  isCompactLayout,
+  anchorRef,
+  onMarkersChange,
+  onCountrySelect,
+  onCountryDeselect,
+  onPhotoMarkerReady,
+  onMarkerEditSave,
+}: RouteMapCardProps) {
+  return (
+    <View style={styles.card}>
+      <View ref={anchorRef} nativeID={ROUTE_MARKERS_ANCHOR_ID} />
+      <View style={[styles.mapContainer, isCompactLayout && styles.mapContainerCompact]}>
+        {Platform.OS === 'web' && WebMapComponent ? (
+          <Suspense
+            fallback={
+              <View style={styles.lazyFallback}>
+                <Text style={styles.lazyFallbackText}>Загрузка карты…</Text>
+              </View>
+            }
+          >
+            <WebMapComponent
+              markers={markers}
+              onMarkersChange={onMarkersChange}
+              categoryTravelAddress={categoryTravelAddress}
+              countrylist={countries}
+              onCountrySelect={onCountrySelect}
+              onCountryDeselect={onCountryDeselect}
+              onPhotoMarkerReady={onPhotoMarkerReady}
+              onMarkerEditSave={onMarkerEditSave}
+            />
+          </Suspense>
+        ) : (
+          <NativeMapPlaceholder styles={styles} />
+        )}
+      </View>
+    </View>
+  )
+})
