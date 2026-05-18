@@ -132,7 +132,12 @@ function TravelStickyActions({
         try {
           await navigator.share({ title, url });
           return;
-        } catch { /* user cancelled */ }
+        } catch (err) {
+          // Пользователь отменил системный диалог — это не ошибка,
+          // не подменяем действие копированием со «успешным» тостом.
+          if (err && (err as { name?: string }).name === 'AbortError') return;
+          // Иной сбой share — падаем в копирование ссылки ниже.
+        }
       }
       try {
         await Clipboard.setStringAsync(url);
