@@ -8,6 +8,8 @@ import {
   ScrollView,
   TextInput,
   Platform,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useAuth } from '@/context/AuthContext'
@@ -41,6 +43,7 @@ type Props = {
   travelMonthName?: string
   /** Компактный режим: только иконка, стиль как у OptimizedFavoriteButton */
   compact?: boolean
+  style?: StyleProp<ViewStyle>
 }
 
 /** Валидация ISO-даты YYYY-MM-DD */
@@ -99,6 +102,7 @@ export default function TravelStatusButton({
   travelMonth,
   travelMonthName,
   compact = false,
+  style,
 }: Props) {
   const colors = useThemedColors()
   const { isAuthenticated, userId } = useAuth()
@@ -556,7 +560,7 @@ export default function TravelStatusButton({
   return (
     <>
       <Pressable
-        style={[styles.btn, globalFocusStyles.focusable]}
+        style={[styles.btn, globalFocusStyles.focusable, style]}
         onPress={handleMainPress}
         accessibilityRole="button"
         accessibilityLabel={currentOption ? currentOption.label : 'Добавить в план'}

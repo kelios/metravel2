@@ -186,6 +186,9 @@ export default function TravelDetailsContainer() {
     styles,
     themedBackground: colors.background,
     themedBackgroundSecondary: colors.backgroundSecondary,
+    themedBorderLight: colors.borderLight,
+    themedBrandSoft: colors.brandSoft,
+    themedPrimarySoft: colors.primarySoft,
     travel,
   })
 

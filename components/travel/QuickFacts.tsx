@@ -13,6 +13,8 @@ import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 
 const isWeb = Platform.OS === 'web' || typeof document !== 'undefined';
+const JOURNAL_FONT_FAMILY =
+  "'Georgia', 'Times New Roman', 'Inter', serif";
 
 const getWebA11yProps = (label?: string, role?: string) => {
   if (!isWeb) {
@@ -228,7 +230,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderRadius: DESIGN_TOKENS.radii.sm,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: colors.borderStrong,
+    borderStyle: 'solid',
     minHeight: Platform.select({
       default: 38,
       web: 40,
@@ -236,7 +239,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     ...(Platform.OS === 'web'
       ? ({
           transition: 'background-color 0.2s ease, box-shadow 0.2s ease',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+          boxShadow: `0 2px 0 ${colors.primarySoft}`,
         } as any)
       : {}),
   },
@@ -248,8 +251,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     }),
     fontWeight: '500',
     color: colors.text,
-    letterSpacing: -0.1,
+    letterSpacing: 0,
     lineHeight: 20,
+    ...(Platform.OS === 'web'
+      ? ({
+          fontFamily: JOURNAL_FONT_FAMILY,
+          fontStyle: 'italic',
+        } as any)
+      : {}),
   },
   categoriesContainer: {
     flexDirection: 'row',
@@ -281,7 +290,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flex: 1,
   },
   categoryTag: {
-    backgroundColor: colors.primarySoft,
+    backgroundColor: colors.brandLight,
     paddingHorizontal: Platform.select({
       default: 12,
       web: 14,
@@ -292,7 +301,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     }),
     borderRadius: DESIGN_TOKENS.radii.sm,
     borderWidth: 1,
-    borderColor: colors.primaryAlpha30,
+    borderColor: colors.borderStrong,
+    borderStyle: 'solid',
     minHeight: Platform.select({
       default: 30,
       web: 32,
@@ -305,7 +315,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         transition: 'background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease' as any,
         ':hover': {
           transform: 'translateY(-1px)',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+          boxShadow: `0 2px 0 ${colors.primarySoft}`,
           borderColor: colors.primary,
         } as any,
       },
@@ -315,7 +325,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontSize: 12,
     fontWeight: '600',
     color: colors.primaryText,
-    letterSpacing: 0.1,
+    letterSpacing: 0,
+    ...(Platform.OS === 'web'
+      ? ({
+          fontFamily: JOURNAL_FONT_FAMILY,
+          fontStyle: 'italic',
+        } as any)
+      : {}),
   },
 });
 

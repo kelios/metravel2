@@ -6,6 +6,8 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
 export const HEADER_OFFSET_DESKTOP = 72
 export const HEADER_OFFSET_MOBILE = 56
+const JOURNAL_FONT_FAMILY =
+  "'Georgia', 'Times New Roman', 'Inter', serif"
 
 export const getTravelDetailsShellStyles = (colors: ThemedColors) =>
   StyleSheet.create({
@@ -30,9 +32,10 @@ export const getTravelDetailsShellStyles = (colors: ThemedColors) =>
       marginHorizontal: 0 as any,
     },
     sideMenuBase: {
-      backgroundColor: colors.surface,
+      backgroundColor: colors.surfaceMuted,
       borderRightWidth: 1,
-      borderRightColor: colors.borderLight,
+      borderRightColor: colors.borderStrong,
+      borderStyle: 'dashed',
     },
     sideMenuNative: {
       position: 'absolute',
@@ -43,8 +46,8 @@ export const getTravelDetailsShellStyles = (colors: ThemedColors) =>
     sideMenuWebDesktop: {
       position: 'sticky' as any,
       top: HEADER_OFFSET_DESKTOP as any,
-      backgroundColor: colors.surfaceMuted,
-      backdropFilter: 'blur(20px)' as any,
+      backgroundColor: colors.surface,
+      backdropFilter: 'blur(10px)' as any,
       maxHeight: `calc(100vh - ${HEADER_OFFSET_DESKTOP}px)` as any,
       overflowY: 'auto' as any,
       overflowX: 'hidden' as any,
@@ -72,7 +75,7 @@ export const getTravelDetailsShellStyles = (colors: ThemedColors) =>
       paddingBottom: Platform.select({
         // Web: reserve space for the bottom dock + sticky action bar so the
         // last rows of content stay visible above the fixed chrome on mobile.
-        web: `calc(var(--mt-dock-h, 0px) + 72px)` as any,
+        web: `calc(var(--mt-dock-h, 0px) + ${DESIGN_TOKENS.spacing.lg}px)` as any,
         default: DESIGN_TOKENS.spacing.xxl,
       }),
     },
@@ -81,6 +84,11 @@ export const getTravelDetailsShellStyles = (colors: ThemedColors) =>
     },
     contentWrapper: {
       flex: 1,
+      ...(Platform.OS === 'web'
+        ? ({
+            fontFamily: JOURNAL_FONT_FAMILY,
+          } as any)
+        : {}),
     },
     sectionTabsContainer: {
       marginBottom: DESIGN_TOKENS.spacing.md,

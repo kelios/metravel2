@@ -19,6 +19,9 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { showToast } from '@/utils/toast';
 import { devWarn } from '@/utils/logger';
 
+const JOURNAL_FONT_FAMILY =
+  "'Georgia', 'Times New Roman', 'Inter', serif";
+
 interface CTASectionProps {
   travel: Travel;
   onFavoriteToggle?: () => void;
@@ -80,10 +83,16 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
     container: {
       width: '100%',
       backgroundColor: colors.surface,
-      borderRadius: DESIGN_TOKENS.radii.md,
+      borderRadius: DESIGN_TOKENS.radii.sm,
       padding: Platform.select({ default: DESIGN_TOKENS.spacing.lg, web: DESIGN_TOKENS.spacing.xl }),
       borderWidth: 1,
-      borderColor: colors.borderLight,
+      borderColor: colors.borderStrong,
+      borderStyle: 'solid',
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: `0 3px 0 ${colors.brandSoft}`,
+          } as any)
+        : {}),
     },
     containerMobile: {
       padding: DESIGN_TOKENS.spacing.md,
@@ -98,14 +107,20 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
       gap: DESIGN_TOKENS.spacing.md,
     },
     textSection: {
-      marginBottom: 8,
+      marginBottom: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: 2 }),
     },
     title: {
       fontSize: 18,
       fontWeight: '700',
       color: colors.text,
       marginBottom: DESIGN_TOKENS.spacing.xs,
-      letterSpacing: -0.3,
+      letterSpacing: 0,
+      ...(Platform.OS === 'web'
+        ? ({
+            fontFamily: JOURNAL_FONT_FAMILY,
+            fontStyle: 'italic',
+          } as any)
+        : {}),
     },
     titleMobile: {
       fontSize: 17,
@@ -122,6 +137,10 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
     buttonBase: {
       width: '100%',
       borderRadius: DESIGN_TOKENS.radii.pill,
+    },
+    planButton: {
+      width: '100%',
+      justifyContent: 'center',
     },
     buttonLabel: {
       fontSize: 15,
@@ -197,10 +216,10 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
       <View style={styles.content}>
         <View style={styles.textSection}>
           <Text style={[styles.title, isMobile && styles.titleMobile]}>
-            Сохраните маршрут или начните своё путешествие
+            Действия с маршрутом
           </Text>
           <Text style={[styles.subtitle, isMobile && styles.subtitleMobile]}>
-            Выберите главное действие: создать свой маршрут, добавить этот в планы или сохранить в избранное.
+            Создайте свой маршрут, добавьте этот в планы или сохраните в избранном.
           </Text>
         </View>
 
@@ -225,6 +244,7 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
           travelCountry={(travel as any).countryName}
           travelYear={travel.year}
           travelMonthName={travel.monthName}
+          style={styles.planButton}
         />
 
         <Button

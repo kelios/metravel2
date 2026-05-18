@@ -25,8 +25,8 @@ function ScrollToTopButton({
 	  const styles = useMemo(() => StyleSheet.create({
     container: {
       position: 'absolute',
-      bottom: 80,
-      right: 16,
+      bottom: Platform.select({ web: 96, default: 80 }),
+      right: Platform.select({ web: -72, default: 16 }),
       zIndex: 1000,
     },
 	    button: {

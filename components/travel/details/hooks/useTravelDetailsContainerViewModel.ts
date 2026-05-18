@@ -26,6 +26,9 @@ type UseTravelDetailsContainerViewModelArgs = {
   styles: any
   themedBackground: string
   themedBackgroundSecondary: string
+  themedBorderLight: string
+  themedBrandSoft: string
+  themedPrimarySoft: string
   travel: any
 }
 
@@ -45,6 +48,9 @@ export function useTravelDetailsContainerViewModel({
   styles,
   themedBackground,
   themedBackgroundSecondary,
+  themedBorderLight,
+  themedBrandSoft,
+  themedPrimarySoft,
   travel,
 }: UseTravelDetailsContainerViewModelArgs) {
   const sectionLinks = useMemo(() => buildTravelSectionLinks(travel), [travel])
@@ -103,8 +109,23 @@ export function useTravelDetailsContainerViewModel({
   )
 
   const wrapperStyle = useMemo(
-    () => getTravelDetailsWrapperStyle({ styles, themedBackground, themedBackgroundSecondary }),
-    [styles, themedBackground, themedBackgroundSecondary]
+    () =>
+      getTravelDetailsWrapperStyle({
+        styles,
+        themedBackground,
+        themedBackgroundSecondary,
+        themedBorderLight,
+        themedBrandSoft,
+        themedPrimarySoft,
+      }),
+    [
+      styles,
+      themedBackground,
+      themedBackgroundSecondary,
+      themedBorderLight,
+      themedBrandSoft,
+      themedPrimarySoft,
+    ]
   )
 
   const scrollViewStyle = useMemo(

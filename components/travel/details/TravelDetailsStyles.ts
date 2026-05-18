@@ -14,6 +14,9 @@ import {
   createTravelDetailsStatusStyles,
 } from './TravelDetailsStyleFragments'
 
+const JOURNAL_FONT_FAMILY =
+  "'Georgia', 'Times New Roman', 'Inter', serif"
+
 export {
   COMPACT_SPACING,
   COMPACT_TYPOGRAPHY,
@@ -69,7 +72,8 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
     sideMenuBase: {
       backgroundColor: colors.surface,
       borderRightWidth: 1,
-      borderRightColor: colors.borderLight,
+      borderRightColor: colors.borderStrong,
+      borderStyle: 'solid',
     },
     scrollView: {
       flex: 1,
@@ -77,7 +81,7 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
     scrollContent: {
       paddingBottom: Platform.select({
         default: DESIGN_TOKENS.spacing.xxl,
-        web: DESIGN_TOKENS.spacing.xl,
+        web: DESIGN_TOKENS.spacing.lg,
       }),
     },
     sectionContainer: {
@@ -99,6 +103,11 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
 
     contentWrapper: {
       flex: 1,
+      ...(Platform.OS === 'web'
+        ? ({
+            fontFamily: JOURNAL_FONT_FAMILY,
+          } as any)
+        : {}),
     },
 
     sectionTabsContainer: {
@@ -136,8 +145,10 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
         web: 16,
       }),
       borderRadius: DESIGN_TOKENS.radii.pill,
-      borderWidth: 0,
-      backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.borderStrong,
+      borderStyle: 'solid',
+      backgroundColor: colors.surface,
       marginRight: DESIGN_TOKENS.spacing.xs,
       marginBottom: DESIGN_TOKENS.spacing.xs,
       gap: 6,
@@ -145,10 +156,12 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
         ? ({
             transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.15s ease',
             cursor: 'pointer',
+            boxShadow: `0 1px 0 ${colors.primarySoft}`,
             // ✅ УЛУЧШЕНИЕ: Микроинтеракция при hover
             ':hover': {
+              backgroundColor: colors.primarySoft,
               transform: 'translateY(-1px)',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+              boxShadow: `0 2px 0 ${colors.brandSoft}`,
             },
             ':active': {
               transform: 'translateY(0)',
@@ -178,15 +191,21 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
       fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
       color: colors.text,
       marginBottom: DESIGN_TOKENS.spacing.sm,
-      letterSpacing: -0.3,
+      letterSpacing: 0,
       lineHeight: Platform.select({ default: 26, web: 30 }),
+      ...(Platform.OS === 'web'
+        ? ({
+            fontFamily: JOURNAL_FONT_FAMILY,
+            fontStyle: 'italic',
+          } as any)
+        : {}),
     },
 
     descriptionIntroText: {
       fontSize: COMPACT_TYPOGRAPHY.body.mobile,
       color: colors.textMuted,
       lineHeight: Platform.select({ default: 24, web: 24 }),
-      letterSpacing: -0.1,
+      letterSpacing: 0,
     },
 
     backToTopWrapper: {
@@ -220,8 +239,8 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
     sideMenuWebDesktop: {
       position: 'sticky' as any,
       top: HEADER_OFFSET_DESKTOP as any,
-      backgroundColor: colors.surfaceMuted,
-      backdropFilter: 'blur(20px)' as any,
+      backgroundColor: colors.surface,
+      backdropFilter: 'blur(10px)' as any,
       // Ensure the sidebar can scroll independently on long menus
       maxHeight: `calc(100vh - ${HEADER_OFFSET_DESKTOP}px)` as any,
       overflowY: 'auto' as any,
@@ -258,40 +277,41 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
         web: 20,
       }),
       backgroundColor: colors.surface,
-      borderRadius: DESIGN_TOKENS.radii.md,
+      borderRadius: DESIGN_TOKENS.radii.sm,
       justifyContent: 'space-between',
       borderWidth: 1,
-      borderColor: colors.borderLight,
+      borderColor: colors.borderStrong,
+      borderStyle: 'solid',
       minHeight: 56,
       ...(Platform.OS === 'web'
         ? ({
             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
             cursor: 'pointer',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+            boxShadow: `0 3px 0 ${colors.primarySoft}`,
             ':hover': {
-              backgroundColor: colors.backgroundSecondary,
-              borderColor: colors.border,
-              boxShadow: '0 3px 10px rgba(0,0,0,0.06)',
+              backgroundColor: colors.primarySoft,
+              borderColor: colors.primary,
+              boxShadow: `0 4px 0 ${colors.brandSoft}`,
               transform: 'translateY(-1px)',
             } as any,
           } as any)
         : {}),
     },
     sectionHeaderPositive: {
-      backgroundColor: colors.successSoft,
-      borderColor: colors.successLight,
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.primary,
     },
     sectionHeaderNegative: {
-      backgroundColor: colors.dangerSoft,
-      borderColor: colors.dangerLight,
+      backgroundColor: colors.brandSoft,
+      borderColor: colors.brand,
     },
     sectionHeaderInfo: {
-      backgroundColor: colors.infoSoft,
-      borderColor: colors.infoLight,
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.borderStrong,
     },
     sectionHeaderActive: {
-      borderColor: colors.primaryAlpha30,
-      backgroundColor: colors.primarySoft,
+      borderColor: colors.primary,
+      backgroundColor: colors.surface,
     },
     sectionHeaderTitleWrap: {
       flexDirection: 'row',
@@ -305,18 +325,22 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
       width: Platform.select({ default: 28, web: 30 }),
       height: Platform.select({ default: 28, web: 30 }),
       borderRadius: Platform.select({ default: 8, web: 8 }),
-      backgroundColor: 'transparent',
+      backgroundColor: colors.surface,
       justifyContent: 'center',
       alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.borderStrong,
+      borderStyle: 'solid',
     },
     sectionHeaderCover: {
       width: Platform.select({ default: 52, web: 56 }),
       height: Platform.select({ default: 52, web: 56 }),
       borderRadius: 10,
       overflow: 'hidden',
-      backgroundColor: colors.backgroundSecondary,
+      backgroundColor: colors.surface,
       borderWidth: 1,
-      borderColor: colors.borderLight,
+      borderColor: colors.borderStrong,
+      borderStyle: 'solid',
       flexShrink: 0,
     },
     sectionHeaderCoverImage: {
@@ -333,10 +357,13 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
       fontSize: 12,
       fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
       color: colors.textMuted,
-      backgroundColor: colors.backgroundSecondary,
+      backgroundColor: colors.brandLight,
       paddingHorizontal: DESIGN_TOKENS.spacing.sm,
       paddingVertical: DESIGN_TOKENS.spacing.xxs,
-      borderRadius: DESIGN_TOKENS.radii.pill,
+      borderRadius: DESIGN_TOKENS.radii.sm,
+      borderWidth: 1,
+      borderColor: colors.borderStrong,
+      borderStyle: 'solid',
       flexShrink: 0,
     },
 
@@ -347,12 +374,18 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
       }),
       fontWeight: '600' as any,
       color: colors.text,
-      letterSpacing: -0.2,
+      letterSpacing: 0,
       lineHeight: Platform.select({
         default: 24,
         web: 26,
       }),
       flexShrink: 1,
+      ...(Platform.OS === 'web'
+        ? ({
+            fontFamily: JOURNAL_FONT_FAMILY,
+            fontStyle: 'italic',
+          } as any)
+        : {}),
     },
     sectionHeaderRow: {
       flexDirection: 'row',
@@ -411,11 +444,12 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
       borderRadius: DESIGN_TOKENS.radii.md,
       overflow: 'hidden',
       borderWidth: 1,
-      borderColor: colors.borderLight,
+      borderColor: colors.borderStrong,
+      borderStyle: 'solid',
       backgroundColor: colors.surface,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: colors.boxShadows.light,
+            boxShadow: `0 3px 0 ${colors.primarySoft}`,
           }
         : colors.shadows.light),
     },

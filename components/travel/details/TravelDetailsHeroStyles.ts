@@ -5,6 +5,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
 const COMPACT_SECTION_DESKTOP = 24
+const JOURNAL_FONT_FAMILY =
+  "'Georgia', 'Times New Roman', 'Inter', serif"
 
 export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
   StyleSheet.create({
@@ -50,7 +52,8 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       }),
       borderRadius: DESIGN_TOKENS.radii.sm,
       borderWidth: 1,
-      borderColor: colors.borderLight,
+      borderColor: colors.borderStrong,
+      borderStyle: 'solid',
       backgroundColor: colors.surface,
       marginRight: DESIGN_TOKENS.spacing.xs,
       marginBottom: DESIGN_TOKENS.spacing.xs,
@@ -59,12 +62,12 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
         ? ({
             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
             cursor: 'pointer',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+            boxShadow: `0 1px 0 ${colors.primarySoft}`,
             ':hover': {
               backgroundColor: colors.primarySoft,
-              borderColor: colors.primaryAlpha30,
+              borderColor: colors.primary,
               transform: 'translateY(-1px)',
-              boxShadow: '0 3px 10px rgba(0,0,0,0.08)',
+              boxShadow: `0 2px 0 ${colors.brandSoft}`,
             } as any,
           } as any)
         : {}),
@@ -93,6 +96,12 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       color: colors.text,
       letterSpacing: 0,
       lineHeight: 18,
+      ...(Platform.OS === 'web'
+        ? ({
+            fontFamily: JOURNAL_FONT_FAMILY,
+            fontStyle: 'italic',
+          } as any)
+        : {}),
     },
     quickJumpLabelPrimary: {
       color: colors.textOnPrimary,
@@ -108,12 +117,18 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       }),
       fontWeight: '600' as any,
       color: colors.text,
-      letterSpacing: -0.2,
+      letterSpacing: 0,
       lineHeight: Platform.select({
         default: 24,
         web: 26,
       }),
       flexShrink: 1,
+      ...(Platform.OS === 'web'
+        ? ({
+            fontFamily: JOURNAL_FONT_FAMILY,
+            fontStyle: 'italic',
+          } as any)
+        : {}),
     },
     sectionSubtitle: {
       fontSize: Platform.select({ default: 13, web: 14 }),
@@ -123,17 +138,18 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
     },
     sliderContainer: {
       width: '100%',
-      borderRadius: DESIGN_TOKENS.radii.xl,
+      borderRadius: DESIGN_TOKENS.radii.md,
       overflow: 'hidden',
       marginBottom: 0,
-      backgroundColor: Platform.OS === 'web' ? 'transparent' : colors.surfaceMuted,
+      backgroundColor: colors.surface,
       position: 'relative' as any,
-      borderWidth: 1,
-      borderColor: Platform.OS === 'web' ? 'rgba(255,255,255,0.08)' : 'transparent',
+      borderWidth: Platform.select({ default: 1, web: 10 }),
+      borderColor: colors.borderStrong,
+      borderStyle: 'solid',
       ...(Platform.OS === 'web'
         ? ({
             boxShadow:
-              '0 24px 64px rgba(16,24,40,0.14), 0 8px 20px rgba(16,24,40,0.08)',
+              `0 0 0 1px ${colors.borderLight}, 0 14px 34px rgba(45, 45, 45, 0.08), 10px 10px 0 ${colors.brandSoft}`,
           } as any)
         : {
             shadowColor: colors.text,
@@ -142,6 +158,48 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
             shadowOffset: { width: 0, height: 10 },
             elevation: 4,
           }),
+    },
+    heroSketchOverlay: {
+      position: 'absolute' as any,
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      zIndex: 1,
+      pointerEvents: 'none' as any,
+      ...(Platform.OS === 'web'
+        ? ({
+            backgroundImage:
+              'repeating-linear-gradient(108deg, rgba(255,255,255,0.04) 0, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 7px), repeating-linear-gradient(0deg, rgba(42,42,42,0.035) 0, rgba(42,42,42,0.035) 1px, transparent 1px, transparent 11px)',
+            mixBlendMode: 'soft-light',
+          } as any)
+        : {}),
+    },
+    heroPhotoTapeLeft: {
+      position: 'absolute' as any,
+      top: Platform.select({ default: 10, web: 12 }),
+      left: Platform.select({ default: 18, web: 22 }),
+      zIndex: 6,
+      width: Platform.select({ default: 64, web: 78 }),
+      height: Platform.select({ default: 18, web: 20 }),
+      borderRadius: 4,
+      backgroundColor: colors.brandSoft,
+      opacity: 0.78,
+      transform: [{ rotate: '-4deg' }],
+      pointerEvents: 'none' as any,
+    },
+    heroPhotoTapeRight: {
+      position: 'absolute' as any,
+      top: Platform.select({ default: 10, web: 12 }),
+      right: Platform.select({ default: 54, web: 66 }),
+      zIndex: 6,
+      width: Platform.select({ default: 58, web: 72 }),
+      height: Platform.select({ default: 18, web: 20 }),
+      borderRadius: 4,
+      backgroundColor: colors.primarySoft,
+      opacity: 0.72,
+      transform: [{ rotate: '5deg' }],
+      pointerEvents: 'none' as any,
     },
     heroOverlay: {
       position: 'absolute' as any,
@@ -155,30 +213,44 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       ...(Platform.OS === 'web'
         ? ({
             backgroundImage:
-              'linear-gradient(to top, rgba(7,12,19,0.92) 0%, rgba(7,12,19,0.62) 36%, rgba(7,12,19,0.22) 64%, transparent 84%)',
+              'linear-gradient(to top, rgba(7,12,19,0.72) 0%, rgba(7,12,19,0.44) 34%, rgba(7,12,19,0.14) 64%, transparent 84%)',
           } as any)
         : { backgroundColor: 'rgba(7,12,19,0.45)' }),
     },
     heroTitleWrap: {
       alignSelf: 'flex-start',
-      maxWidth: Platform.OS === 'web' ? 760 : '100%',
-    },
-    heroTitle: {
-      fontSize: Platform.select({ default: 28, web: 36 }),
-      fontWeight: '700' as any,
-      color: colors.textOnDark,
-      letterSpacing: 0,
-      lineHeight: Platform.select({ default: 34, web: 44 }),
+      maxWidth: Platform.OS === 'web' ? 720 : '92%',
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: DESIGN_TOKENS.radii.sm,
+      borderWidth: 1,
+      borderColor: colors.borderStrong,
+      paddingHorizontal: Platform.select({ default: 12, web: 16 }),
+      paddingVertical: Platform.select({ default: 9, web: 12 }),
       ...(Platform.OS === 'web'
         ? ({
-            textShadow: '0 2px 20px rgba(0,0,0,0.6), 0 1px 6px rgba(0,0,0,0.3)',
+            backdropFilter: 'blur(6px)',
+            boxShadow: `0 2px 0 ${colors.brandSoft}`,
+          } as any)
+        : {}),
+    },
+    heroTitle: {
+      fontSize: Platform.select({ default: 18, web: 28 }),
+      fontWeight: '600' as any,
+      color: colors.text,
+      letterSpacing: 0,
+      lineHeight: Platform.select({ default: 24, web: 36 }),
+      ...(Platform.OS === 'web'
+        ? ({
+            fontFamily: JOURNAL_FONT_FAMILY,
+            fontStyle: 'italic',
+            textShadow: 'none',
           } as any)
         : {
-            textShadowColor: 'rgba(0,0,0,0.7)',
-            textShadowOffset: { width: 0, height: 2 },
-            textShadowRadius: 6,
+            textShadowColor: 'transparent',
+            textShadowOffset: { width: 0, height: 0 },
+            textShadowRadius: 0,
           }),
-      maxWidth: Platform.OS === 'web' ? 760 : '100%',
+      maxWidth: Platform.OS === 'web' ? 680 : '100%',
     },
     heroFavoriteBtn: {
       position: 'absolute' as any,

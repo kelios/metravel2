@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react'
-import { View } from 'react-native'
+import { Platform, View } from 'react-native'
 
 import { withLazy } from './TravelDetailsLazy'
 
@@ -71,13 +71,52 @@ export const Icon: React.FC<
   size = 22,
   color,
   ...rest
-}) => (
-  <Suspense fallback={<View style={{ width: size, height: size }} />}>
-    <LazyFeather
-      name={mapIconName(name)}
-      size={size}
-      color={color}
-      {...(rest as any)}
-    />
-  </Suspense>
-))
+}) => {
+  const mappedName = mapIconName(name)
+  const iconColor = color
+
+  if (Platform.OS !== 'web') {
+    return (
+      <Suspense fallback={<View style={{ width: size, height: size }} />}>
+        <LazyFeather
+          name={mappedName}
+          size={size}
+          color={iconColor}
+          strokeWidth={1.8}
+          {...(rest as any)}
+        />
+      </Suspense>
+    )
+  }
+
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        position: 'relative',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Suspense fallback={<View style={{ width: size, height: size }} />}>
+        <LazyFeather
+          name={mappedName}
+          size={size}
+          color={iconColor}
+          strokeWidth={1.45}
+          style={{ position: 'absolute', left: 0, top: 0, opacity: 0.74 }}
+          {...(rest as any)}
+        />
+        <LazyFeather
+          name={mappedName}
+          size={size}
+          color={iconColor}
+          strokeWidth={0.9}
+          style={{ position: 'absolute', left: 1, top: 1, opacity: 0.42 }}
+          {...(rest as any)}
+        />
+      </Suspense>
+    </View>
+  )
+})

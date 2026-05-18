@@ -233,6 +233,14 @@ function TravelHeroSectionInner({
             </Suspense>
           )}
 
+          {Platform.OS === 'web' && (
+            <>
+              <View style={styles.heroSketchOverlay} />
+              <View style={styles.heroPhotoTapeLeft} />
+              <View style={styles.heroPhotoTapeRight} />
+            </>
+          )}
+
           {travel?.name ? (
             <View style={heroOverlayStyle}>
               <View style={heroTitleWrapStyle}>

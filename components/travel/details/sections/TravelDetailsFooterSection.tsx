@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { Platform, StyleSheet, View } from 'react-native'
 
 import ShareButtons from '@/components/travel/ShareButtons'
 import TelegramDiscussionSection from '@/components/travel/TelegramDiscussionSection'
@@ -25,15 +25,34 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
         combinedCard: {
           width: '100%',
           backgroundColor: colors.surface,
-          borderRadius: DESIGN_TOKENS.radii.md,
+          borderRadius: DESIGN_TOKENS.radii.sm,
           borderWidth: 1,
-          borderColor: colors.borderLight,
+          borderColor: colors.borderStrong,
+          borderStyle: 'solid',
           padding: DESIGN_TOKENS.spacing.lg,
+          flexDirection: 'row',
+          alignItems: 'stretch',
+          gap: DESIGN_TOKENS.spacing.lg,
+          ...(Platform.OS === 'web'
+            ? ({
+                boxShadow: `0 3px 0 ${colors.primarySoft}`,
+              } as any)
+            : {}),
+        },
+        sharePane: {
+          flex: 1,
+          minWidth: 0,
+          justifyContent: 'flex-start',
+        },
+        actionPane: {
+          width: 430,
+          maxWidth: '42%',
+          justifyContent: 'center',
         },
         combinedDivider: {
-          height: 1,
-          backgroundColor: colors.borderLight,
-          marginVertical: DESIGN_TOKENS.spacing.lg,
+          width: 1,
+          backgroundColor: colors.borderStrong,
+          alignSelf: 'stretch',
         },
       }),
     [colors]
@@ -56,9 +75,13 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
           style={[styles.sectionContainer, styles.shareButtonsContainer, footerStyles.compactSection]}
         >
           <View style={footerStyles.combinedCard}>
-            <ShareButtons travel={travel} surface="plain" />
+            <View style={footerStyles.sharePane}>
+              <ShareButtons travel={travel} surface="plain" />
+            </View>
             <View style={footerStyles.combinedDivider} />
-            <CTASection travel={travel} surface="plain" />
+            <View style={footerStyles.actionPane}>
+              <CTASection travel={travel} surface="plain" />
+            </View>
           </View>
         </View>
       )}

@@ -515,7 +515,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontWeight: '700',
     color: colors.text,
     marginBottom: 0,
-    letterSpacing: -0.2,
+    letterSpacing: 0,
   },
   collapseButton: {
     padding: 4,
@@ -650,7 +650,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontSize: 13,
     fontWeight: '600',
     color: colors.text,
-    letterSpacing: -0.1,
+    letterSpacing: 0,
   },
   copiedText: {
     fontSize: 14,
