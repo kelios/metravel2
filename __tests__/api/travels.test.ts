@@ -1044,6 +1044,52 @@ describe('src/api/travelsApi.ts', () => {
       expect(firstQuery).toBe('modyn');
     });
 
+    it('fetchTravelBySlug fallback быстро резолвит близкий translit slug', async () => {
+      const { fetchTravelBySlug } = loadTravelsApi();
+      const notFoundError = Object.assign(new Error('not found'), { status: 404 });
+      mockedApiClientGet.mockRejectedValueOnce(notFoundError);
+      mockedApiClientGet.mockResolvedValueOnce({
+        id: 390,
+        name: 'Дворцово-парковый комплекс Слотвинских',
+        slug: 'dvorcovo-parkovyy-kompleks-slotvinskih',
+        description: '<p>detail payload</p>',
+        gallery: [],
+        travelAddress: [{ id: 1, coord: '53.8843369,28.6151820' }],
+      } as any);
+
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        data: [
+          {
+            id: 452,
+            name: 'Дворцово-парковый комплекс в Кровярках',
+            slug: 'dvorcovo-parkovyy-kompleks-v-krovyarkah',
+            url: '/travels/dvorcovo-parkovyy-kompleks-v-krovyarkah',
+            publish: true,
+            moderation: true,
+          },
+          {
+            id: 390,
+            name: 'Дворцово-парковый комплекс Слотвинских',
+            slug: 'dvorcovo-parkovyy-kompleks-slotvinskih',
+            url: '/travels/dvorcovo-parkovyy-kompleks-slotvinskih',
+            publish: true,
+            moderation: true,
+          },
+        ],
+        total: 2,
+      } as any);
+
+      const result = await fetchTravelBySlug('dvorcovo-parkovyy-kompleks-slotvinskikh');
+
+      expect(result.id).toBe(390);
+      expect(result.slug).toBe('dvorcovo-parkovyy-kompleks-slotvinskih');
+      expect(result.description).toBe('<p>detail payload</p>');
+      expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
+      expect(mockedApiClientGet).toHaveBeenCalledTimes(2);
+      expect(mockedApiClientGet.mock.calls[1][0]).toBe('/travels/390/');
+    });
+
     it('fetchTravelBySlug fallback корректно обрабатывает slug с числовым суффиксом', async () => {
       const { fetchTravelBySlug } = loadTravelsApi();
       const notFoundError = Object.assign(new Error('not found'), { status: 404 });

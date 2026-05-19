@@ -78,6 +78,7 @@ function FeaturedRouteCard({
         borderRadius={0}
         fit="contain"
         blurBackground
+        allowCriticalWebBlur
         quality={60}
         alt={image.alt}
         loading="eager"
@@ -126,7 +127,7 @@ function PopularRouteCard({
         width={width}
         height={height}
         borderRadius={0}
-        fit="cover"
+        fit="contain"
         blurBackground
         allowCriticalWebBlur
         quality={72}

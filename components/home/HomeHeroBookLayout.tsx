@@ -217,6 +217,7 @@ function TabletFeaturedRoute({
         borderRadius={0}
         fit="contain"
         blurBackground
+        allowCriticalWebBlur
         quality={68}
         alt={bookImage.alt}
         loading="eager"

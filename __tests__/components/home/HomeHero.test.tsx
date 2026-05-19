@@ -5,6 +5,12 @@ import { useRouter } from 'expo-router'
 import HomeHero from '@/components/home/HomeHero'
 import { queueAnalyticsEvent } from '@/utils/analytics'
 
+const mockImageCardMedia = jest.fn((props: any) => {
+  const React = require('react')
+  const { View } = require('react-native')
+  return React.createElement(View, { testID: 'mock-image-card-media', ...props })
+})
+
 const mockResponsiveState = {
   isPhone: false,
   isLargePhone: false,
@@ -21,6 +27,23 @@ jest.mock('expo-router', () => ({
   useRouter: jest.fn(),
 }))
 jest.mock('@/utils/analytics')
+jest.mock('@/components/ui/ImageCardMedia', () => ({
+  __esModule: true,
+  default: (props: any) => mockImageCardMedia(props),
+  isIOSSafariUserAgent: (userAgent: string, maxTouchPoints = 0) => {
+    const normalizedUserAgent = String(userAgent || '')
+    const isIOSDevice =
+      /iPad|iPhone|iPod/i.test(normalizedUserAgent) ||
+      (/Macintosh/i.test(normalizedUserAgent) && maxTouchPoints > 1)
+    const isSafari =
+      /Safari/i.test(normalizedUserAgent) &&
+      !/(Chrome|CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|GSA|Chromium|Firefox)/i.test(
+        normalizedUserAgent,
+      )
+
+    return isIOSDevice && isSafari
+  },
+}))
 jest.mock('@/components/home/useHomeViewport', () => ({
   useHomeViewport: () => mockResponsiveState,
 }))
@@ -113,6 +136,23 @@ describe('HomeHero Component', () => {
 
       expect(getByText('Популярные маршруты')).toBeTruthy()
       expect(getByText('Маршрут недели')).toBeTruthy()
+    })
+
+    it('renders every home hero media surface with contain fit and blur backdrop', () => {
+      Object.assign(mockResponsiveState, {
+        isDesktop: false,
+        width: 1025,
+        isPortrait: true,
+      })
+
+      render(<HomeHero />)
+
+      expect(mockImageCardMedia).toHaveBeenCalled()
+      mockImageCardMedia.mock.calls.forEach(([props]) => {
+        expect(props.fit).toBe('contain')
+        expect(props.blurBackground).toBe(true)
+        expect(props.allowCriticalWebBlur).toBe(true)
+      })
     })
   })
 

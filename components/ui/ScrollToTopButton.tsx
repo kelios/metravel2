@@ -1,16 +1,16 @@
 // Кнопка "Наверх" с анимацией и прогресс-баром
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Pressable, StyleSheet, Animated, Platform } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
-import { useThemedColors } from '@/hooks/useTheme';
-import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import React, { useState, useEffect, useMemo, useRef } from 'react'
+import { Pressable, StyleSheet, Animated, Platform } from 'react-native'
+import Feather from '@expo/vector-icons/Feather'
+import { useThemedColors } from '@/hooks/useTheme'
+import { globalFocusStyles } from '@/styles/globalFocus' // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 interface ScrollToTopButtonProps {
-  scrollViewRef?: React.RefObject<any>;
-  flatListRef?: React.RefObject<any>;
-  scrollY?: Animated.Value;
-  threshold?: number;
-  forceVisible?: boolean;
+  scrollViewRef?: React.RefObject<any>
+  flatListRef?: React.RefObject<any>
+  scrollY?: Animated.Value
+  threshold?: number
+  forceVisible?: boolean
 }
 
 function ScrollToTopButton({
@@ -20,73 +20,77 @@ function ScrollToTopButton({
   threshold = 300,
   forceVisible,
 }: ScrollToTopButtonProps) {
-  const colors = useThemedColors();
-  const shouldUseNativeDriver = false;
-    const styles = useMemo(() => StyleSheet.create({
-    container: {
-      position: Platform.select({ web: 'fixed' as 'absolute', default: 'absolute' }),
-      bottom: Platform.select({ web: 96, default: 80 }),
-      right: Platform.select({ web: 24, default: 16 }),
-      zIndex: 1000,
-    },
-	    button: {
-      width: 48,
-      height: 48,
-      minWidth: 48, // ✅ ИСПРАВЛЕНИЕ: Минимальная ширина для touch-целей
-      minHeight: 48, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
-      borderRadius: 999,
-      justifyContent: 'center',
-      alignItems: 'center',
-	      ...(Platform.OS === 'web'
-	        ? ({
-	            boxShadow: colors.boxShadows.medium,
-	            transition: 'all 0.2s ease',
-	            // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
-	            ':hover': {
-	              backgroundColor: colors.primaryDark, // Темнее primary для hover
-	              transform: 'translateY(-2px) scale(1.05)',
-	            },
-	          } as any)
-	        : Platform.OS === 'android'
-	          ? { elevation: 4 }
-	          : colors.shadows.medium),
-	    },
-	  }), [colors]);
-  const [isVisible, setIsVisible] = useState(false);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
-  const lastScrollValue = useRef(0);
-  const isVisibleRef = useRef(false);
+  const colors = useThemedColors()
+  const shouldUseNativeDriver = false
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute',
+          bottom: Platform.select({ web: 96, default: 80 }),
+          right: Platform.select({ web: 24, default: 16 }),
+          zIndex: 1000,
+        },
+        button: {
+          width: 48,
+          height: 48,
+          minWidth: 48, // ✅ ИСПРАВЛЕНИЕ: Минимальная ширина для touch-целей
+          minHeight: 48, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+          borderRadius: 999,
+          justifyContent: 'center',
+          alignItems: 'center',
+          ...(Platform.OS === 'web'
+            ? ({
+                boxShadow: colors.boxShadows.medium,
+                transition: 'all 0.2s ease',
+                // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
+                ':hover': {
+                  backgroundColor: colors.primaryDark, // Темнее primary для hover
+                  transform: 'translateY(-2px) scale(1.05)',
+                },
+              } as any)
+            : Platform.OS === 'android'
+              ? { elevation: 4 }
+              : colors.shadows.medium),
+        },
+      }),
+    [colors],
+  )
+  const [isVisible, setIsVisible] = useState(false)
+  const fadeAnim = useRef(new Animated.Value(0)).current
+  const scaleAnim = useRef(new Animated.Value(0.8)).current
+  const lastScrollValue = useRef(0)
+  const isVisibleRef = useRef(false)
 
   useEffect(() => {
-    isVisibleRef.current = isVisible;
-  }, [isVisible]);
+    isVisibleRef.current = isVisible
+  }, [isVisible])
 
   useEffect(() => {
     if (typeof forceVisible === 'boolean') {
-      setIsVisible(forceVisible);
-      return;
+      setIsVisible(forceVisible)
+      return
     }
 
-    if (!scrollY) return;
+    if (!scrollY) return
 
     const listener = scrollY.addListener(({ value }) => {
       if (Math.abs(value - lastScrollValue.current) < 5) {
-        return;
+        return
       }
 
-      lastScrollValue.current = value;
-      const nextVisible = value > threshold;
+      lastScrollValue.current = value
+      const nextVisible = value > threshold
 
       if (nextVisible !== isVisibleRef.current) {
-        setIsVisible(nextVisible);
+        setIsVisible(nextVisible)
       }
-    });
+    })
 
     return () => {
-      scrollY.removeListener(listener);
-    };
-  }, [forceVisible, scrollY, threshold]);
+      scrollY.removeListener(listener)
+    }
+  }, [forceVisible, scrollY, threshold])
 
   useEffect(() => {
     Animated.parallel([
@@ -101,29 +105,29 @@ function ScrollToTopButton({
         tension: 100,
         friction: 8,
       }),
-    ]).start();
-  }, [fadeAnim, isVisible, scaleAnim, shouldUseNativeDriver]);
+    ]).start()
+  }, [fadeAnim, isVisible, scaleAnim, shouldUseNativeDriver])
 
   const scrollToTop = () => {
     if (scrollViewRef?.current) {
-      scrollViewRef.current.scrollTo({ y: 0, animated: true });
+      scrollViewRef.current.scrollTo({ y: 0, animated: true })
     } else if (flatListRef?.current) {
       // ✅ УЛУЧШЕНИЕ: Улучшенная прокрутка для FlatList
       try {
-        flatListRef.current.scrollToOffset({ offset: 0, animated: true });
+        flatListRef.current.scrollToOffset({ offset: 0, animated: true })
       } catch {
         // Fallback для веб-версии
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          window.scrollTo({ top: 0, behavior: 'smooth' })
         }
       }
     } else if (Platform.OS === 'web' && typeof window !== 'undefined') {
       // Fallback для веб-версии без ref
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
-  };
+  }
 
-  if (!isVisible) return null;
+  if (!isVisible) return null
 
   return (
     <Animated.View
@@ -136,13 +140,17 @@ function ScrollToTopButton({
       ]}
     >
       <Pressable
-        style={[styles.button, globalFocusStyles.focusable, { backgroundColor: colors.primary }]} // ✅ Динамический цвет
+        style={[
+          styles.button,
+          globalFocusStyles.focusable,
+          { backgroundColor: colors.primary },
+        ]} // ✅ Динамический цвет
         onPress={scrollToTop}
         accessibilityRole="button"
         accessibilityLabel="Прокрутить наверх"
         accessibilityHint="Прокручивает страницу к началу"
         {...Platform.select({
-          web: { 
+          web: {
             cursor: 'pointer',
             // @ts-ignore -- aria-label is a web-only ARIA attribute not in RN Pressable types
             'aria-label': 'Прокрутить наверх',
@@ -155,7 +163,7 @@ function ScrollToTopButton({
         <Feather name="arrow-up" size={20} color={colors.textOnPrimary} />
       </Pressable>
     </Animated.View>
-  );
+  )
 }
 
-export default React.memo(ScrollToTopButton);
+export default React.memo(ScrollToTopButton)

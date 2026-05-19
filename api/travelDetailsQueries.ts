@@ -49,6 +49,7 @@ const SLUG_FALLBACK_STOPWORDS = new Set([
     'a', 'i', 'iz', 'k', 'na', 'o', 'odna', 'odin', 'odno',
     'odnoi', 'odnoy', 'po', 's', 'v', 'vershin',
 ]);
+const STRONG_SLUG_FALLBACK_SCORE = 1.0;
 
 const buildSlugFallbackQueries = (slug: string): string[] => {
     const tokens = slugTokenize(slug).filter((token) => !/^\d+$/.test(token));
@@ -175,7 +176,7 @@ const findTravelBySlugFallback = async (
                 }
             }
 
-            if (bestMatch && bestScore >= 1.1) {
+            if (bestMatch && bestScore >= STRONG_SLUG_FALLBACK_SCORE) {
                 return bestMatch;
             }
         }
