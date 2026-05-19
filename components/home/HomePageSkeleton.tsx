@@ -137,7 +137,7 @@ const HeroSkeleton = memo(({ isMobile }: { isMobile: boolean }) => {
                     height={styles.featuredImage.height as number}
                     borderRadius={0}
                     fit="contain"
-                    blurBackground={false}
+                    allowCriticalWebBlur
                     quality={60}
                     alt={BOOK_IMAGES[0].alt}
                     loading="eager"

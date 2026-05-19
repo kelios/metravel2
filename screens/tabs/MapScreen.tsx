@@ -27,6 +27,7 @@ import { createMapStructuredData } from '@/utils/discoverySeo'
 import { devWarn } from '@/utils/logger'
 
 const IS_WEB = Platform.OS === 'web'
+const CAN_PRELOAD_LEAFLET = IS_WEB && typeof window !== 'undefined'
 const MAP_STRUCTURED_DATA_ENTRY_LIMIT = 12
 const BADGE_COUNT_CAP = 999
 const RADIUS_EXPAND_MAX_KM = 500
@@ -39,7 +40,7 @@ const PRESSED_OPACITY_085 = { opacity: 0.85 } as const
 const PRESSED_OPACITY_06 = { opacity: 0.6 } as const
 const POINTER_EVENTS_NONE = { pointerEvents: 'none' } as const
 
-if (IS_WEB) {
+if (CAN_PRELOAD_LEAFLET) {
   import('@/utils/loadLeafletRuntime')
     .then((m) => m.loadLeafletRuntime())
     .catch((error) => {
