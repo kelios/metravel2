@@ -58,6 +58,9 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     logo: { 
         width: 32, 
         height: 32,
+        ...Platform.select({
+            web: { objectFit: 'contain' } as any,
+        }),
     },
     logoCompact: {
         width: 26, 
