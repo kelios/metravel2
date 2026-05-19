@@ -2,10 +2,16 @@ import React, { memo, useMemo } from 'react'
 import { Platform, ScrollView, StyleSheet, View } from 'react-native'
 
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
+import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { useThemedColors } from '@/hooks/useTheme'
+import { BOOK_IMAGES } from './homeHeroContent'
 import { useHomeViewport } from './useHomeViewport'
 
 const BOOK_ASPECT_RATIO = 1040 / 765
+const HOME_SKELETON_FEATURED_SOURCE =
+  typeof BOOK_IMAGES[0].source === 'number'
+    ? BOOK_IMAGES[0].source
+    : { uri: String(BOOK_IMAGES[0].source.uri || '') }
 
 const HeroSkeleton = memo(({ isMobile }: { isMobile: boolean }) => {
   const colors = useThemedColors()
@@ -124,11 +130,28 @@ const HeroSkeleton = memo(({ isMobile }: { isMobile: boolean }) => {
 
           <View style={styles.rightPage}>
             <View style={styles.featuredCard}>
-              <SkeletonLoader
-                width="100%"
-                height={styles.featuredImage.height as number}
-                borderRadius={0}
-              />
+                {Platform.OS === 'web' ? (
+                  <ImageCardMedia
+                    source={HOME_SKELETON_FEATURED_SOURCE}
+                    width={isMobile ? 380 : 500}
+                    height={styles.featuredImage.height as number}
+                    borderRadius={0}
+                    fit="contain"
+                    blurBackground={false}
+                    quality={60}
+                    alt={BOOK_IMAGES[0].alt}
+                    loading="eager"
+                    priority="high"
+                    style={styles.featuredImage}
+                    preserveOptimizedWebSrc
+                  />
+                ) : (
+                  <SkeletonLoader
+                    width="100%"
+                    height={styles.featuredImage.height as number}
+                    borderRadius={0}
+                  />
+                )}
               <View style={styles.featuredText}>
                 <SkeletonLoader width={120} height={22} borderRadius={11} />
                 <SkeletonLoader width="56%" height={30} borderRadius={8} />

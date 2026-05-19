@@ -217,8 +217,7 @@ function TabletFeaturedRoute({
         borderRadius={0}
         fit="contain"
         blurBackground
-        allowCriticalWebBlur
-        quality={75}
+        quality={68}
         alt={bookImage.alt}
         loading="eager"
         priority="high"
@@ -314,7 +313,7 @@ function HeroSlider({
                   fit="contain"
                   blurBackground={!disableHeroSliderBlur}
                   allowCriticalWebBlur={!disableHeroSliderBlur}
-                  quality={75}
+                  quality={70}
                   alt={slide.alt}
                   loading={isFirst || isLoaded ? 'eager' : 'lazy'}
                   priority={isFirst ? 'high' : 'normal'}
