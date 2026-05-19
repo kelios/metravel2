@@ -273,17 +273,6 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <link rel="dns-prefetch" href="https://mc.yandex.ru" />
       <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
 
-      <link
-        rel="preload"
-        as="image"
-        media="(max-width: 767px)"
-        href="https://metravel.by/travel-image/544/conversions/26d572d144174803a61fe96f2d7aa142.webp?w=760&q=60&fit=contain"
-        crossOrigin="anonymous"
-      />
-
-      {/* Home hero image preload — same first image, but with viewport-specific dimensions
-          that mirror the real home hero/featured-card layouts on mobile, tablet and desktop. */}
-      <script dangerouslySetInnerHTML={{ __html: `(function(){try{var p=window.location&&window.location.pathname;if(p!=='/'&&p!=='/index')return;var vw=window.innerWidth||0;if(!vw)return;var imgW=0;var imgH=0;var quality=70;if(vw>=1280){imgW=vw>=1480?500:480;imgH=vw>=1480?420:360;quality=70}else if(vw>=770){imgW=Math.round(vw*0.45);imgH=340;quality=68}else if(vw>=768){imgW=Math.max(280,Math.min(vw-32,800));imgH=280;quality=60}else{return}var u='https://metravel.by/travel-image/544/conversions/26d572d144174803a61fe96f2d7aa142.webp?w='+imgW+'&h='+imgH+'&q='+quality+'&fit=contain';if(document.querySelector('link[rel="preload"][href="'+u+'"]'))return;var l=document.createElement('link');l.rel='preload';l.as='image';l.href=u;try{l.fetchPriority='high';l.setAttribute('fetchPriority','high')}catch(_){}document.head.appendChild(l)}catch(_){}})();` }} />
 
       {/* Leaflet CSS early-load for map page — self-hosted, no CDN roundtrip.
           Applies stylesheet immediately (not just preload) so it is ready before JS hydration.

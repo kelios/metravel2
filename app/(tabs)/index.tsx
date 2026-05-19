@@ -1,15 +1,14 @@
-import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, Platform, StyleSheet, View } from 'react-native'
 import { usePathname } from 'expo-router'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import ErrorBoundary from '@/components/ui/ErrorBoundary'
 import ErrorDisplay from '@/components/ui/ErrorDisplay'
+import Home from '@/components/home/Home'
+import { HomePageSkeleton } from '@/components/home/HomePageSkeleton'
 import { useThemedColors } from '@/hooks/useTheme'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
-import { HomePageSkeleton } from '@/components/home/HomePageSkeleton'
-
-const Home = lazy(() => import('@/components/home/Home'))
 
 const SEO_TITLE = 'Идеи поездок на выходные и книга путешествий | Metravel'
 const SEO_DESCRIPTION =
@@ -93,31 +92,9 @@ function HomeScreen() {
     }).start()
   }, [contentReady])
 
-  const webSkeletonStyle = useMemo(
-    () =>
-      IS_WEB
-        ? {
-            opacity: contentReady ? 0 : 1,
-            pointerEvents: (contentReady ? 'none' : 'auto') as 'none' | 'auto',
-            transition: `opacity ${TRANSITION_MS}ms ease-out`,
-          }
-        : null,
-    [contentReady],
-  )
-
-  const webContentStyle = useMemo(
-    () =>
-      IS_WEB
-        ? {
-            opacity: contentReady ? 1 : 0,
-            transition: `opacity ${TRANSITION_MS}ms ease-out`,
-          }
-        : null,
-    [contentReady],
-  )
-
   const handleContentReady = useCallback(() => setContentReady(true), [])
   const canMountContent = hydrated
+  const shouldShowSkeleton = !canMountContent || (!IS_WEB && !contentReady)
 
   if (!isHomePath) {
     return shouldRenderSeo ? renderHomeSeo(canonical) : null
@@ -142,9 +119,9 @@ function HomeScreen() {
           }
         >
           <View style={styles.contentWrapper}>
-            {!contentReady && (
+            {shouldShowSkeleton && (
               <View
-                style={[styles.skeletonLayer, webSkeletonStyle as any]}
+                style={styles.skeletonLayer}
                 testID="home-skeleton-layer"
               >
                 <HomePageSkeleton />
@@ -154,12 +131,10 @@ function HomeScreen() {
             {canMountContent && (
               <ContentLayer
                 style={styles.contentLayer}
-                webStyle={webContentStyle}
+                webStyle={null}
                 fadeAnim={fadeAnim.current}
               >
-                <Suspense fallback={<HomePageSkeleton />}>
-                  <HomeWithReadyCallback onReady={handleContentReady} />
-                </Suspense>
+                <HomeWithReadyCallback onReady={handleContentReady} />
               </ContentLayer>
             )}
           </View>

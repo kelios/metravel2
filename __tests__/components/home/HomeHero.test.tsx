@@ -190,7 +190,12 @@ describe('HomeHero Component', () => {
 
     it('builds the same optimized slide preload url shape used by the slider media', () => {
       const { BOOK_IMAGES_FOR_TEST, buildHomeHeroSlidePreloadUrl } = require('@/components/home/HomeHero')
-      const preloadUrl = buildHomeHeroSlidePreloadUrl(BOOK_IMAGES_FOR_TEST[0].source, 480, 360)
+      const remoteSlide = BOOK_IMAGES_FOR_TEST.find((image: any) => {
+        return buildHomeHeroSlidePreloadUrl(image.source, 480, 360)
+      })
+      const preloadUrl = remoteSlide
+        ? buildHomeHeroSlidePreloadUrl(remoteSlide.source, 480, 360)
+        : null
 
       expect(preloadUrl).toBeTruthy()
       expect(preloadUrl).toContain('w=480')

@@ -56,6 +56,27 @@ export const HOME_HERO_BOOK_LAYOUT_MIN_WIDTH = 1280
 
 export const BOOK_IMAGES: readonly BookImage[] = [
   {
+    source: require('../../assets/images/cover_sorapiso.jpg'),
+    alt: 'Озеро Сорапис — Доломиты',
+    title: 'Озеро Сорапис',
+    subtitle: 'Поход по Доломитам • Озеро • Италия',
+    href: 'https://metravel.by/travels/ozero-sorapis-pokhod-po-marshrutam-215-i-217-v-dolomitakh',
+  },
+  {
+    source: require('../../assets/images/cover_trecime.jpg'),
+    alt: 'Tre Cime di Lavaredo — Доломиты',
+    title: 'Tre Cime di Lavaredo',
+    subtitle: 'Круговой маршрут 10 км • Горы • Италия',
+    href: 'https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km-opisanie-i-vidy',
+  },
+  {
+    source: require('../../assets/images/cover_bled.jpg'),
+    alt: 'Озеро Блед — Словения',
+    title: 'Озеро Блед',
+    subtitle: 'Что посмотреть за 1 день • Озеро • Словения',
+    href: 'https://metravel.by/travels/vintgarskoe-ushchele-i-ozero-bled-chto-posmotret-v-slovenii-za-1-den',
+  },
+  {
     source: {
       uri: 'https://metravel.by/travel-image/544/conversions/26d572d144174803a61fe96f2d7aa142.webp',
     },
@@ -63,33 +84,6 @@ export const BOOK_IMAGES: readonly BookImage[] = [
     title: 'Тропа ведьм',
     subtitle: 'Хайкинг • Горный маршрут • Германия',
     href: 'https://metravel.by/travels/tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele',
-  },
-  {
-    source: {
-      uri: 'https://metravel.by/gallery/540/gallery/79641dcc63dc476bb89dd66a9faa8527.JPG',
-    },
-    alt: 'Озеро Сорапис — Доломиты',
-    title: 'Озеро Сорапис',
-    subtitle: 'Поход по Доломитам • Озеро • Италия',
-    href: 'https://metravel.by/travels/ozero-sorapis-pokhod-po-marshrutam-215-i-217-v-dolomitakh',
-  },
-  {
-    source: {
-      uri: 'https://metravel.by/travel-image/536/conversions/b254498810ab43fcb7749c3a51ecf3ee.JPG',
-    },
-    alt: 'Tre Cime di Lavaredo — Доломиты',
-    title: 'Tre Cime di Lavaredo',
-    subtitle: 'Круговой маршрут 10 км • Горы • Италия',
-    href: 'https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km-opisanie-i-vidy',
-  },
-  {
-    source: {
-      uri: 'https://metravel.by/gallery/532/gallery/ce0f0221a2ac42e08bc274c0f059dfc9.JPG',
-    },
-    alt: 'Озеро Блед — Словения',
-    title: 'Озеро Блед',
-    subtitle: 'Что посмотреть за 1 день • Озеро • Словения',
-    href: 'https://metravel.by/travels/vintgarskoe-ushchele-i-ozero-bled-chto-posmotret-v-slovenii-za-1-den',
   },
   {
     source: {
