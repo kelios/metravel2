@@ -22,11 +22,11 @@ function ScrollToTopButton({
 }: ScrollToTopButtonProps) {
   const colors = useThemedColors();
   const shouldUseNativeDriver = false;
-	  const styles = useMemo(() => StyleSheet.create({
+    const styles = useMemo(() => StyleSheet.create({
     container: {
-      position: 'absolute',
+      position: Platform.select({ web: 'fixed' as 'absolute', default: 'absolute' }),
       bottom: Platform.select({ web: 96, default: 80 }),
-      right: Platform.select({ web: -72, default: 16 }),
+      right: Platform.select({ web: 24, default: 16 }),
       zIndex: 1000,
     },
 	    button: {
