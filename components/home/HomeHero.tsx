@@ -32,6 +32,7 @@ const BOOK_WIDTH_STABILIZE_THRESHOLD = 20
 const TABLET_LAYOUT_MIN_WIDTH = 770
 const INLINE_BOOKMARK_MIN_WIDTH = 1280
 const STACKED_CTA_MAX_WIDTH = 1180
+const HOME_HERO_DESKTOP_CONTAINER_HORIZONTAL_PADDING = 80
 const COMPACT_BOOK_MAX_HEIGHT = 760
 const SLIDER_HEIGHT_NARROW = 360
 const SLIDER_HEIGHT_WIDE = 420
@@ -61,6 +62,18 @@ function detectDisableHeroSliderBlur() {
   if (!IS_WEB || typeof navigator === 'undefined') return false
   const touch = typeof navigator.maxTouchPoints === 'number' ? navigator.maxTouchPoints : 0
   return shouldDisableHomeHeroSliderBlur(String(navigator.userAgent || ''), touch)
+}
+
+function getEstimatedBookWrapperWidth(viewportWidth: number) {
+  if (viewportWidth <= 0) return 0
+
+  const maxBookWidth =
+    viewportWidth >= 2560 ? 1780 : viewportWidth >= 1920 ? 1600 : 1400
+
+  return Math.max(
+    0,
+    Math.min(viewportWidth - HOME_HERO_DESKTOP_CONTAINER_HORIZONTAL_PADDING, maxBookWidth),
+  )
 }
 
 const getBookSlideSource = (slide: (typeof BOOK_IMAGES)[number]) => slide.source
@@ -149,11 +162,17 @@ const HomeHero = memo(function HomeHero({
     [],
   )
 
+  const resolvedBookWrapperWidth = useMemo(() => {
+    if (!showSideSlider) return 0
+    if (bookWrapperWidth > 0) return bookWrapperWidth
+    return getEstimatedBookWrapperWidth(width)
+  }, [bookWrapperWidth, showSideSlider, width])
+
   const bookHeight = useMemo(() => {
-    if (bookWrapperWidth <= 0) return 0
-    const aspectH = Math.round((bookWrapperWidth * 765) / 1040)
+    if (resolvedBookWrapperWidth <= 0) return 0
+    const aspectH = Math.round((resolvedBookWrapperWidth * 765) / 1040)
     return Math.min(aspectH, getWebViewportHeight() - DESKTOP_BOOK_VIEWPORT_RESERVE)
-  }, [bookWrapperWidth])
+  }, [resolvedBookWrapperWidth])
 
   const isCompactBookLayout = showSideSlider && bookHeight > 0 && bookHeight <= COMPACT_BOOK_MAX_HEIGHT
   const useInlineBookmarkRail =

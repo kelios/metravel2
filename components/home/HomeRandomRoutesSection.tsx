@@ -10,9 +10,8 @@ const fetchHomeRandomTravels = (options?: { signal?: AbortSignal }) =>
 export default function HomeRandomRoutesSection() {
   return (
     <HomeInspirationSection
-      title="Не хотите"
-      titleAccent="выбирать долго?"
-      subtitle="Откройте случайный маршрут для спонтанного выезда"
+      title="Куда поехать без долгих поисков"
+      subtitle="Откройте случайный маршрут и выберите идею за минуту"
       queryKey="home-random-travels"
       fetchFn={fetchHomeRandomTravels}
       fixedCount={3}

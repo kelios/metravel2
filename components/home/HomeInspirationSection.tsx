@@ -47,13 +47,12 @@ const EMPTY_STATE_TEXT: Record<string, { title: string; subtitle: string }> = {
 
 const SECTION_BADGES: Record<string, string> = {
   'home-travels-of-month': 'Подборка выходного дня',
-  'home-random-travels': 'Быстрый старт',
+  'home-random-travels': 'Случайный выбор',
   'home-popular-travels': 'Популярное',
 }
 
 const SECTION_META: Record<string, string> = {
   'home-travels-of-month': '1-2 дня',
-  'home-random-travels': 'Спонтанно',
   'home-popular-travels': 'По интересу',
 }
 

@@ -1,6 +1,7 @@
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
+  FlatList,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   Platform,
@@ -368,6 +369,34 @@ export default function PlacesScreen() {
         ? 'empty'
         : 'list'
 
+  const useVirtualList = Platform.OS !== 'web' && isCompact && resultsStatus === 'list'
+
+  const renderVirtualCard = useCallback(
+    ({ item }: { item: CatalogPlace }) => (
+      <View style={styles.virtualCardItem}>
+        <PlaceCard
+          place={item}
+          styles={styles}
+          colors={colors}
+          onOpenMap={openOnMap}
+          onOpenTravel={openTravel}
+        />
+      </View>
+    ),
+    [styles, colors, openOnMap, openTravel],
+  )
+
+  const keyExtractor = useCallback((item: CatalogPlace) => item.id, [])
+
+  const loadMoreBlock = hasMorePlaces ? (
+    <View style={styles.loadMoreFooter}>
+      <Text style={styles.loadMoreText}>
+        Показано {visiblePlaces.length} из {filteredPlaces.length}
+      </Text>
+      <Button label="Показать ещё" variant="secondary" size="sm" onPress={loadMorePlaces} />
+    </View>
+  ) : null
+
   let resultsContent: React.ReactNode
   if (resultsStatus === 'loading') {
     resultsContent = <SkeletonGrid styles={styles} isCompact={isCompact} isWide={isWide} />
@@ -430,47 +459,13 @@ export default function PlacesScreen() {
             onOpenTravel={openTravel}
           />
         ))}
-        {hasMorePlaces ? (
-          <View style={styles.loadMoreFooter}>
-            <Text style={styles.loadMoreText}>
-              Показано {visiblePlaces.length} из {filteredPlaces.length}
-            </Text>
-            <Button
-              label="Показать ещё"
-              variant="secondary"
-              size="sm"
-              onPress={loadMorePlaces}
-            />
-          </View>
-        ) : null}
+        {loadMoreBlock}
       </View>
     )
   }
 
-  return (
-    <View style={styles.screen}>
-      {Platform.OS === 'web' && isFocused ? (
-        <InstantSEO
-          headKey="places"
-          title={seoTitle}
-          description={pageDescription}
-          canonical={buildCanonicalUrl('/places')}
-          image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
-          ogType="website"
-          additionalTags={placesJsonLd}
-        />
-      ) : null}
-      {Platform.OS === 'web'
-        ? React.createElement('h1', { style: styles.srOnly as any }, seoHeading)
-        : null}
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        onScroll={handleScroll}
-        scrollEventThrottle={180}
-      >
-
+  const pageChrome = (
+    <>
         <View style={styles.topBar}>
           <View style={styles.topBarMeta}>
             <View style={styles.heroTitleRow}>
@@ -728,11 +723,62 @@ export default function PlacesScreen() {
               ) : null}
             </View>
 
-            {resultsContent}
+            {useVirtualList ? null : resultsContent}
           </View>
         </View>
-        <ContributionBanner variant="places" />
-      </ScrollView>
+    </>
+  )
+
+  return (
+    <View style={styles.screen}>
+      {Platform.OS === 'web' && isFocused ? (
+        <InstantSEO
+          headKey="places"
+          title={seoTitle}
+          description={pageDescription}
+          canonical={buildCanonicalUrl('/places')}
+          image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
+          ogType="website"
+          additionalTags={placesJsonLd}
+        />
+      ) : null}
+      {Platform.OS === 'web'
+        ? React.createElement('h1', { style: styles.srOnly as any }, seoHeading)
+        : null}
+      {useVirtualList ? (
+        <FlatList
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          data={visiblePlaces}
+          keyExtractor={keyExtractor}
+          renderItem={renderVirtualCard}
+          ListHeaderComponent={pageChrome}
+          ListFooterComponent={
+            <>
+              {loadMoreBlock}
+              <ContributionBanner variant="places" />
+            </>
+          }
+          onEndReached={loadMorePlaces}
+          onEndReachedThreshold={0.6}
+          keyboardShouldPersistTaps="handled"
+          removeClippedSubviews
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={9}
+        />
+      ) : (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          onScroll={handleScroll}
+          scrollEventThrottle={180}
+        >
+          {pageChrome}
+          <ContributionBanner variant="places" />
+        </ScrollView>
+      )}
     </View>
   )
 }
@@ -1361,6 +1407,10 @@ const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean)
     gap: DESIGN_TOKENS.spacing.md,
     alignItems: 'stretch',
   },
+  virtualCardItem: {
+    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+    paddingBottom: DESIGN_TOKENS.spacing.md,
+  },
 
   // ─── Card ───
   card: {
@@ -1369,12 +1419,6 @@ const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean)
     flexBasis: isCompact ? '100%' : isWide ? '30%' : '46%',
     minWidth: isCompact ? undefined : isWide ? 280 : 260,
     maxWidth: isCompact ? '100%' : isWide ? '33.333%' : '50%',
-    ...(Platform.OS === 'web'
-      ? ({
-          contentVisibility: 'auto',
-          containIntrinsicSize: `0 ${(isCompact ? 156 : isWide ? 170 : 160) + 188}px`,
-        } as any)
-      : null),
   },
   cardInner: {
     backgroundColor: colors.surface,

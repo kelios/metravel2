@@ -48,8 +48,9 @@ import {
   normalizeListTravelParam,
 } from './listTravelBaseModel'
 
-const MemoizedTravelItem = memo(RenderTravelItem);
 const ListTravelExportControlsLazy = lazy(() => import('./ListTravelExportControls'));
+
+const EMPTY_FALLBACK_STEPS: ReturnType<typeof buildListTravelFallbackSteps> = [];
 
 type ActiveConditionChip = {
   key: string
@@ -80,15 +81,14 @@ function ListTravelBase() {
       rawWidth,
     });
 
-    // Стабилизируем width: мобильная адресная строка может менять viewport
-    const stableWidthRef = useRef(viewportState.width);
-    const width = useMemo(() => {
-      // Обновляем только при значительном изменении (>50px)
-      if (Math.abs(viewportState.width - stableWidthRef.current) > 50) {
-        stableWidthRef.current = viewportState.width;
-      }
-      return stableWidthRef.current;
-    }, [viewportState.width]);
+    // Стабилизируем width: мобильная адресная строка может менять viewport.
+    // Обновляем только при значительном изменении (>50px). setState во время
+    // рендера — поддерживаемый React-паттерн для производной величины с гистерезисом
+    // (без мутации ref в рендере и без лишнего кадра).
+    const [width, setWidth] = useState(viewportState.width);
+    if (Math.abs(viewportState.width - width) > 50) {
+      setWidth(viewportState.width);
+    }
     const route = useRoute();
     const pathname = usePathname();
     const router = useRouter();
@@ -339,13 +339,18 @@ function ListTravelBase() {
         isQueryEnabled,
     });
 
+    // Запасные шаги нужны только когда основная выдача пуста. В обычном случае
+    // отдаём стабильный пустой массив, чтобы 4 fallback-хука ниже не делали
+    // никакой работы (пустые params + disabled query).
     const fallbackSteps = useMemo(
       () =>
-        buildListTravelFallbackSteps({
-          queryParams,
-          search: debSearch,
-        }),
-      [debSearch, queryParams],
+        isEmpty
+          ? buildListTravelFallbackSteps({
+              queryParams,
+              search: debSearch,
+            })
+          : EMPTY_FALLBACK_STEPS,
+      [isEmpty, debSearch, queryParams],
     );
 
     const fallbackStepLight = fallbackSteps[0];
@@ -538,7 +543,7 @@ function ListTravelBase() {
 
     const renderTravelListItem = useCallback(
       (travel: Travel, index: number) => (
-        <MemoizedTravelItem
+        <RenderTravelItem
           item={travel}
           index={index}
           isMobile={isMobileDevice}
@@ -549,7 +554,7 @@ function ListTravelBase() {
           isFirst={index === 0}
           selectable={isExport}
           isSelected={isSelected(travel.id)}
-          onToggle={() => toggleSelect(travel)}
+          onToggle={isExport ? () => toggleSelect(travel) : undefined}
           cardWidth={searchCardWidth}
           imageHeight={searchCardImageHeight}
           viewportWidth={width}
@@ -829,6 +834,8 @@ function ListTravelBase() {
     );
 
     const fallbackMatch = useMemo(() => {
+      if (!isEmpty) return null;
+
       const candidates = [
         { step: fallbackStepLight, query: fallbackQueryLight },
         { step: fallbackStepMedium, query: fallbackQueryMedium },
@@ -840,6 +847,7 @@ function ListTravelBase() {
         candidates.find((candidate) => candidate.step && candidate.query.data.length > 0) ?? null
       );
     }, [
+      isEmpty,
       fallbackQueryBroad,
       fallbackQueryLight,
       fallbackQueryMedium,
@@ -850,7 +858,7 @@ function ListTravelBase() {
       fallbackStepSearchless,
     ]);
 
-    const activeFallbackMatch = isEmpty ? fallbackMatch : null;
+    const activeFallbackMatch = fallbackMatch;
 
     const isFallbackLoading =
       isEmpty &&

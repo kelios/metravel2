@@ -11,7 +11,7 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
   StyleProp,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native'
 import { FlashList } from '@shopify/flash-list'
 import Feather from '@expo/vector-icons/Feather'
@@ -207,13 +207,8 @@ const RightColumn: React.FC<RightColumnProps> = (
       })
     }, [scheduleAfterLayout, scrollToRecommendations])
 
-    const webWidth = useMemo(
-      () => (Platform.OS === 'web' ? Dimensions.get('window').width : 0),
-      // Dimensions stay stable between re-renders; update on layout change via isMobile prop
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      [isMobile],
-    )
-    const isWebMobile = Platform.OS === 'web' && (isMobile || webWidth <= 420)
+    const windowWidth = useWindowDimensions().width
+    const isWebMobile = Platform.OS === 'web' && (isMobile || windowWidth <= 420)
     const showRecommendations = isRecommendationsVisible
 
     useEffect(() => {
@@ -350,69 +345,86 @@ const RightColumn: React.FC<RightColumnProps> = (
       [colors.border, colors.surface, colors.text, isMobile],
     )
 
+    // Инварианты строки зависят только от сетки/размеров, а не от конкретной
+    // строки — считаем один раз на рендер, а не на каждую из N строк.
+    const rowLayout = useMemo(() => {
+      const cols = getRightColumnColumns(gridColumns, isMobile)
+      const calcWidth =
+        cols > 1 ? `calc((100% - ${(cols - 1) * cardSpacing}px) / ${cols})` : '100%'
+
+      const rowStyle = [
+        cardsGridStyle,
+        (Platform.OS === 'web'
+          ? (getRightColumnWebRowBaseStyle({ cardSpacing, isExport, isMobile }) as any)
+          : ({
+              flexWrap: 'nowrap',
+              width: '100%',
+              maxWidth: '100%',
+              minWidth: 0,
+            } as any)),
+      ]
+
+      const itemWrapperStyle = [
+        (Platform.OS === 'web'
+          ? (isMobile
+              ? ({
+                  flex: 1,
+                  width: '100%',
+                  maxWidth: '100%',
+                  minWidth: 0,
+                  flexBasis: '100%',
+                } as any)
+              : ({
+                  // Equal column widths on web (prevents last-row stretching and uneven widths)
+                  flexGrow: 0,
+                  flexShrink: 0,
+                  flexBasis: calcWidth,
+                  width: calcWidth,
+                  maxWidth: calcWidth,
+                  minWidth: 0,
+                  alignSelf: 'stretch',
+                } as any))
+          : ({
+              flex: 1,
+              width: '100%',
+              maxWidth: '100%',
+            } as any)) as ViewStyle,
+        Platform.OS === 'web'
+          ? null
+          : {
+              paddingHorizontal: cardSpacing / 2,
+              paddingBottom: cardSpacing,
+            },
+      ]
+
+      const placeholderStyle = [
+        ({
+          flexGrow: 0,
+          flexShrink: 0,
+          flexBasis: calcWidth,
+          width: calcWidth,
+          maxWidth: calcWidth,
+          minWidth: 0,
+          opacity: 0,
+          pointerEvents: 'none',
+          paddingHorizontal: cardSpacing / 2,
+        } as any) as ViewStyle,
+      ]
+
+      return { cols, rowStyle, itemWrapperStyle, placeholderStyle }
+    }, [cardsGridStyle, cardSpacing, gridColumns, isMobile, isExport])
+
     const renderRow = useCallback((item: { item: Travel[]; index: number }) => {
         const { item: rowItems, index: rowIndex } = item;
-        const cols = getRightColumnColumns(gridColumns, isMobile);
+        const { cols, rowStyle, itemWrapperStyle, placeholderStyle } = rowLayout;
         const missingSlots = Math.max(0, cols - rowItems.length);
-        const calcWidth =
-          cols > 1
-            ? `calc((100% - ${(cols - 1) * cardSpacing}px) / ${cols})`
-            : '100%';
         return (
-          <View
-            testID={`travel-row-${rowIndex}`}
-            style={[
-              cardsGridStyle,
-              (Platform.OS === 'web'
-                ? (getRightColumnWebRowBaseStyle({
-                    cardSpacing,
-                    isExport,
-                    isMobile,
-                  }) as any)
-                : ({
-                    flexWrap: 'nowrap',
-                    width: '100%',
-                    maxWidth: '100%',
-                    minWidth: 0,
-                  } as any)),
-            ]}
-          >
+          <View testID={`travel-row-${rowIndex}`} style={rowStyle}>
             {rowItems.map((travel, itemIndex) => (
               <View
                 key={String(travel.id)}
                 testID={`travel-row-${rowIndex}-item-${itemIndex}`}
-                style={[
-                  (Platform.OS === 'web'
-                    ? (isMobile
-                        ? ({
-                            flex: 1,
-                            width: '100%',
-                            maxWidth: '100%',
-                            minWidth: 0,
-                            flexBasis: '100%',
-                          } as any)
-                        : ({
-                            // Equal column widths on web (prevents last-row stretching and uneven widths)
-                            flexGrow: 0,
-                            flexShrink: 0,
-                            flexBasis: calcWidth,
-                            width: calcWidth,
-                            maxWidth: calcWidth,
-                            minWidth: 0,
-                            alignSelf: 'stretch',
-                          } as any))
-                    : ({
-                        flex: 1,
-                        width: '100%',
-                        maxWidth: '100%',
-                      } as any)) as ViewStyle,
-                  Platform.OS === 'web'
-                    ? null
-                    : {
-                        paddingHorizontal: cardSpacing / 2,
-                        paddingBottom: cardSpacing,
-                      },
-                ]}
+                style={itemWrapperStyle}
               >
                 {renderItem(travel, rowIndex * cols + itemIndex)}
               </View>
@@ -421,28 +433,9 @@ const RightColumn: React.FC<RightColumnProps> = (
             {Platform.OS === 'web' && !isMobile && missingSlots > 0
               ? Array.from({ length: missingSlots }).map((_, placeholderIndex) => (
                   <View
-                     
                     key={`placeholder-${rowIndex}-${placeholderIndex}`}
                     testID={`travel-row-${rowIndex}-placeholder-${placeholderIndex}`}
-                    style={[
-                      ({
-                        flexGrow: 0,
-                        flexShrink: 0,
-                        flexBasis: calcWidth,
-                        width: calcWidth,
-                        maxWidth: calcWidth,
-                        minWidth: 0,
-                        opacity: 0,
-                        pointerEvents: 'none',
-                        paddingHorizontal: cardSpacing / 2,
-                      } as any) as ViewStyle,
-                      Platform.OS === 'web'
-                        ? null
-                        : {
-                            paddingHorizontal: cardSpacing / 2,
-                            paddingBottom: cardSpacing,
-                          },
-                    ]}
+                    style={placeholderStyle}
                   />
                 ))
               : null}
@@ -456,12 +449,9 @@ const RightColumn: React.FC<RightColumnProps> = (
         )
       },
       [
-        cardsGridStyle,
-        cardSpacing,
+        rowLayout,
         renderItem,
-        gridColumns,
         isMobile,
-        isExport,
         showNextPageLoading,
         rows.length,
         footerLoaderStyle,
@@ -534,6 +524,28 @@ const RightColumn: React.FC<RightColumnProps> = (
 
     // Always render the search bar, even on mobile
 
+    const listFooter = useMemo(
+      () => (
+        <>
+          {showNextPageLoading ? (
+            <View
+              style={[
+                footerLoaderStyle,
+                isWeb ? { flexDirection: 'row', alignItems: 'center', gap: 8 } : null,
+              ]}
+            >
+              <ActivityIndicator size="small" accessibilityLabel="Загружаем ещё маршруты" />
+              {isWeb ? (
+                <Text style={{ fontSize: 13, color: colors.textMuted }}>Загружаем ещё...</Text>
+              ) : null}
+            </View>
+          ) : null}
+          <ContributionBanner variant="search" />
+        </>
+      ),
+      [showNextPageLoading, footerLoaderStyle, colors.textMuted]
+    )
+
     const loadedResultsContent = useMemo(() => {
       if (showInitialLoading || isError || showEmptyState || travels.length === 0) {
         return null
@@ -583,16 +595,7 @@ const RightColumn: React.FC<RightColumnProps> = (
           keyExtractor={(_, index) => `row-${(isMobile ? 1 : gridColumns) || 1}-${index}`}
           {...({ estimatedItemSize: 320 } as any)}
           ListHeaderComponent={ListHeader}
-          ListFooterComponent={
-            <>
-              {showNextPageLoading ? (
-                <View style={footerLoaderStyle}>
-                  <ActivityIndicator size="small" accessibilityLabel="Загружаем ещё маршруты" />
-                </View>
-              ) : null}
-              <ContributionBanner variant="search" />
-            </>
-          }
+          ListFooterComponent={listFooter}
           onEndReached={onEndReached}
           onEndReachedThreshold={onEndReachedThreshold}
           drawDistance={800}
@@ -609,6 +612,7 @@ const RightColumn: React.FC<RightColumnProps> = (
     }, [
       ListHeader,
       RowSeparator,
+      listFooter,
       colors.textMuted,
       footerLoaderStyle,
       gridColumns,

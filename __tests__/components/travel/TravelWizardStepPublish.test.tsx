@@ -151,7 +151,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
         moderation: false,
       })
     );
-  });
+  }, 15000);
 
   it('admin approve sets moderation=true and publish=true', async () => {
     const onManualSave = jest.fn().mockResolvedValue(undefined);

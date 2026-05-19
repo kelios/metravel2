@@ -98,10 +98,25 @@ html[data-theme="dark"] .ssg-pulse{animation-name:ssg-shimmer-dark}
 }
 
 /**
- * Skeleton auto-removal script: watches #root, removes skeleton when React mounts.
+ * Skeleton auto-removal script.
+ *
+ * The SSG hero <img> (inside #ssg-skeleton, a sibling BEFORE #root) is the LCP
+ * element — it paints ~FCP. React's own hero <img data-lcp> renders later
+ * INSIDE #root. If the skeleton is torn down as soon as #root gets any child
+ * (React's loading shell), the SSG hero disappears and React's hero becomes a
+ * new, late LCP candidate that only paints after full hydration (>15s on
+ * throttled mobile) — wrecking LCP.
+ *
+ * Fix: keep the SSG hero on screen until React's own hero image
+ * (#root img[data-lcp]) is actually loaded. The large full-bleed SSG hero
+ * stays the largest contentful paint the whole time, so Chrome keeps the
+ * early (~FCP) paint as the final LCP instead of resetting it to hydration
+ * time. A safety net still tears the skeleton down if React mounted real
+ * content but the hero never reports load, and leaves it in place (only
+ * visible content) if React never mounted at all.
  */
 function buildRemovalScript() {
-  return `<script>(function(){try{var s=document.getElementById('ssg-skeleton');if(!s)return;var r=document.getElementById('root');if(!r){s.remove();return}if(r.childNodes.length>0){s.classList.add('ssg-hiding');setTimeout(function(){s.remove();var c=document.getElementById('ssg-skeleton-css');if(c)c.remove()},300);return}var o=new MutationObserver(function(){if(r.childNodes.length>0){o.disconnect();s.classList.add('ssg-hiding');setTimeout(function(){s.remove();var c=document.getElementById('ssg-skeleton-css');if(c)c.remove()},300)}});o.observe(r,{childList:true});setTimeout(function(){try{o.disconnect();if(s.parentNode)s.remove();var c=document.getElementById('ssg-skeleton');if(c&&c.parentNode)c.remove()}catch(e){}},10000)}catch(e){}})();</script>`;
+  return `<script>(function(){try{var s=document.getElementById('ssg-skeleton');if(!s)return;var r=document.getElementById('root');if(!r){s.remove();return}var done=false;function killCss(){var c=document.getElementById('ssg-skeleton-css');if(c&&c.parentNode)c.parentNode.removeChild(c)}function teardown(){if(done)return;done=true;try{s.classList.add('ssg-hiding')}catch(e){}setTimeout(function(){try{if(s.parentNode)s.parentNode.removeChild(s)}catch(e){}killCss()},300)}function heroReady(){var i=r.querySelector('img[data-lcp]');return !!(i&&i.complete&&i.naturalWidth>0)}function check(){if(done)return false;if(heroReady()){teardown();return true}return false}if(check())return;var o=new MutationObserver(function(){if(check()){o.disconnect()}});o.observe(r,{childList:true,subtree:true});var iv=setInterval(function(){if(done){clearInterval(iv);return}if(check()){clearInterval(iv);try{o.disconnect()}catch(e){}}},120);setTimeout(function(){try{o.disconnect()}catch(e){}clearInterval(iv);if(done)return;if(r.childNodes.length>0){teardown()}},20000)}catch(e){}})();</script>`;
 }
 
 function buildCards(count) {

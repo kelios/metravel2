@@ -108,7 +108,6 @@ describe('ArticleEditor.web link', () => {
   });
 
   it('applies link to selected text using stored selection (custom link modal)', async () => {
-    jest.setTimeout(15000);
     const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
 
     ;(globalThis as any).__quillSelection__ = { index: 6, length: 5 };
@@ -147,7 +146,7 @@ describe('ArticleEditor.web link', () => {
     await waitFor(() => {
       expect(editor.formatText).toHaveBeenCalledWith(6, 5, 'link', 'https://example.com', 'user');
     });
-  });
+  }, 15000);
 
   it('inserts link text when selection is collapsed', async () => {
     const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;

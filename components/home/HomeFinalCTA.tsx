@@ -44,22 +44,22 @@ function pluralizeTravels(count: number) {
 
 const CTA_COPY: Record<CtaState, { eyebrow: string; button: string; subtitle: string }> = {
   guest: {
-    eyebrow: 'Ваш travel-дневник',
+    eyebrow: 'Ваши маршруты в одном месте',
     button: 'Начать бесплатно',
     subtitle:
-      'Сохраняйте маршруты с фото и заметками, экспортируйте в красивый PDF и возвращайтесь к идеям поездок без лишней подготовки.',
+      'Сохраняйте маршруты с фото и заметками, чтобы быстро находить их снова и при необходимости собрать PDF.',
   },
   empty: {
-    eyebrow: 'Старт вашей коллекции',
+    eyebrow: 'Первая поездка в подборке',
     button: 'Добавить первую поездку',
     subtitle:
-      'Добавьте первую поездку, чтобы начать личную книгу маршрутов и собрать её в аккуратный PDF, когда захотите.',
+      'Добавьте первую поездку, чтобы все маршруты, фото и заметки были собраны в одном месте.',
   },
   started: {
-    eyebrow: 'Книга уже собирается',
+    eyebrow: 'Подборка уже собирается',
     button: 'Открыть мою книгу',
     subtitle:
-      'У вас уже есть база для книги. Откройте подборку, добавьте новые поездки и соберите финальный PDF в пару кликов.',
+      'У вас уже есть сохранённые поездки. Добавляйте новые маршруты и собирайте PDF, когда он понадобится.',
   },
 }
 
@@ -128,8 +128,8 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
           </View>
 
           <View style={styles.titleRow}>
-            <Text style={styles.title}>Начните собирать</Text>
-            <Text style={styles.titleAccent}>книгу путешествий</Text>
+            <Text style={styles.title}>Соберите свою</Text>
+            <Text style={styles.titleAccent}>подборку поездок</Text>
           </View>
 
           <Text style={styles.subtitle}>{copy.subtitle}</Text>

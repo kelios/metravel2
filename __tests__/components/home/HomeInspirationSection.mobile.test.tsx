@@ -70,9 +70,8 @@ describe('HomeInspirationSection mobile weekend showcase', () => {
   it('renders every weekend route on mobile instead of truncating to two cards', () => {
     render(
       <HomeInspirationSection
-        title="Маршруты на"
-        titleAccent="ближайшие выходные"
-        subtitle="Реальные поездки, которые можно успеть за 1-2 дня"
+        title="Идеи для ближайших выходных"
+        subtitle="Реальные маршруты без долгого планирования"
         queryKey="home-travels-of-month"
         fetchFn={jest.fn()}
       />,

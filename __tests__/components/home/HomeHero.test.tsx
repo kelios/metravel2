@@ -21,11 +21,8 @@ jest.mock('expo-router', () => ({
   useRouter: jest.fn(),
 }))
 jest.mock('@/utils/analytics')
-jest.mock('@/hooks/useResponsive', () => ({
-  useResponsive: () => mockResponsiveState,
-  useResponsiveColumns: () => 3,
-  useResponsiveValue: (values: any) =>
-    values.desktop ?? values.default ?? Object.values(values)[0],
+jest.mock('@/components/home/useHomeViewport', () => ({
+  useHomeViewport: () => mockResponsiveState,
 }))
 
 const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>

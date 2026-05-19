@@ -152,9 +152,9 @@ function HomeHowItWorks() {
             <Feather name="book-open" size={14} color={colors.primary} />
             <Text style={styles.eyebrowText}>Как это работает</Text>
           </View>
-          <Text style={styles.title}>Три шага до вашей книги</Text>
+          <Text style={styles.title}>Как сохранить маршрут и вернуться к нему позже</Text>
           <Text style={styles.subtitle}>
-            Просто выберите маршрут, сохраните поездку и получите красивый PDF
+            Выберите поездку, добавьте заметки и откройте всё снова, когда это понадобится
           </Text>
           <View style={styles.valuePills}>
             {VALUE_PILLS.map((pill) => (

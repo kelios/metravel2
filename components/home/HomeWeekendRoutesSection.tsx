@@ -10,9 +10,8 @@ const fetchHomeTravelsOfMonth = (options?: { signal?: AbortSignal }) =>
 export default function HomeWeekendRoutesSection() {
   return (
     <HomeInspirationSection
-      title="Маршруты на"
-      titleAccent="ближайшие выходные"
-      subtitle="Реальные поездки, которые можно успеть за 1-2 дня"
+      title="Идеи для ближайших выходных"
+      subtitle="Реальные маршруты без долгого планирования"
       queryKey="home-travels-of-month"
       fetchFn={fetchHomeTravelsOfMonth}
     />
