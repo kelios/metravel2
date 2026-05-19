@@ -244,7 +244,7 @@ describe('Slider (web) blur background', () => {
 
     const secondImage = tree.root.findByProps({ testID: 'slider-image-1' })
     expect(secondImage.props.loading).toBe('eager')
-    expect(secondImage.props.fetchPriority).toBe('high')
+    expect(secondImage.props.fetchPriority).toBe('auto')
   })
 
   it('keeps blur rendering inside slide media instead of a separate shared backdrop track', async () => {

@@ -6,7 +6,7 @@
 import { useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { TravelCoords } from '@/types/types';
-import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useDebouncedValueWithPending } from '@/hooks/useDebouncedValue';
 import type { Coordinates } from './useMapCoordinates';
 import type { FiltersData } from './useMapFilters';
 import type { MapFilterValues } from '@/utils/mapFiltersStorage';
@@ -107,29 +107,6 @@ interface UseMapDataControllerResult {
   isDebouncingFilters: boolean;
 }
 
-function areValuesEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if (a == null || b == null) return false;
-  if (typeof a !== typeof b) return false;
-
-  if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) return false;
-    return a.every((item, index) => areValuesEqual(item, b[index]));
-  }
-
-  if (typeof a === 'object' && typeof b === 'object') {
-    const keysA = Object.keys(a as Record<string, unknown>);
-    const keysB = Object.keys(b as Record<string, unknown>);
-    if (keysA.length !== keysB.length) return false;
-    return keysA.every((key) => areValuesEqual(
-      (a as Record<string, unknown>)[key],
-      (b as Record<string, unknown>)[key],
-    ));
-  }
-
-  return false;
-}
-
 /**
  * Manages travel data fetching, debouncing, and filtering
  *
@@ -172,10 +149,15 @@ export function useMapDataController(
 
   // Debounced values for stable queries
   const debounceTime = isMobile ? 300 : 500;
-  const debouncedCoordinates = useDebouncedValue(coordinates, debounceTime);
-  const debouncedFilterValues = useDebouncedValue(filterValues, 300);
-  const isDebouncingFilters =
-    !areValuesEqual(debouncedCoordinates, coordinates) || !areValuesEqual(debouncedFilterValues, filterValues);
+  const [debouncedCoordinates, coordsPending] = useDebouncedValueWithPending(
+    coordinates,
+    debounceTime,
+  );
+  const [debouncedFilterValues, filtersPending] = useDebouncedValueWithPending(
+    filterValues,
+    300,
+  );
+  const isDebouncingFilters = coordsPending || filtersPending;
 
   // Travels data
   const {

@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { strToLatLng } from './utils';
+import MarkerPopup from './MarkerPopup';
 
 interface Point {
   id?: string | number;
@@ -29,18 +30,6 @@ interface MapMarkersProps {
   hintCenter?: { lat: number; lng: number } | null;
   useMap?: () => any;
 }
-
-const PopupContentWithClose: React.FC<{
-  point: Point;
-  PopupContent: React.ComponentType<{ point: Point; closePopup?: () => void }>;
-  useMap?: () => any;
-}> = ({ point, PopupContent, useMap: useMapHook }) => {
-  const map = useMapHook?.();
-  const closePopup = useCallback(() => {
-    map?.closePopup();
-  }, [map]);
-  return <PopupContent point={point} closePopup={closePopup} />;
-};
 
 const TOOLTIP_MAX_LEN = 30;
 
@@ -91,17 +80,16 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
         // noop
       }
 
-      if (typeof onMarkerClick === 'function') {
-        onMarkerClick(point, coords, e?.target);
-        return;
-      }
-
       if (e?.target?.openPopup) {
         try {
           e.target.openPopup();
         } catch {
           // noop
         }
+      }
+
+      if (typeof onMarkerClick === 'function') {
+        onMarkerClick(point, coords, e?.target);
       }
     },
     [onMarkerClick]
@@ -148,9 +136,13 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
                 : point.address}
             </Tooltip>
           )}
-          <Popup {...(popupProps || {})}>
-            <PopupContentWithClose point={point} PopupContent={PopupContent} useMap={useMapHook} />
-          </Popup>
+          <MarkerPopup
+            point={point}
+            Popup={Popup}
+            PopupContent={PopupContent}
+            popupProps={popupProps}
+            useMap={useMapHook}
+          />
         </Marker>
       );
       })}

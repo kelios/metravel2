@@ -40,14 +40,25 @@ async function tapMobileMarker(
   marker: import('@playwright/test').Locator,
   page: import('@playwright/test').Page,
 ) {
-  await marker.scrollIntoViewIfNeeded()
+  const closeBtn = page.locator('button[aria-label="Закрыть"]')
+  const attempts = [
+    () => marker.tap({ force: true }),
+    () => marker.click({ force: true }),
+    () => marker.dispatchEvent('click'),
+  ]
 
-  // On mobile emulation Leaflet markers can overlap each other, which makes
-  // Playwright's pointer click flaky even though the marker is already in the
-  // expected place. Dispatching the click event opens the same popup branch
-  // without depending on pixel-perfect hit-testing.
-  await marker.dispatchEvent('click')
-  await page.waitForTimeout(250)
+  for (const attempt of attempts) {
+    await marker.scrollIntoViewIfNeeded().catch(() => null)
+    await attempt().catch(() => null)
+
+    const opened = await closeBtn
+      .waitFor({ state: 'visible', timeout: 2_000 })
+      .then(() => true)
+      .catch(() => false)
+
+    if (opened) return
+  }
+
 }
 
 async function openDesktopPopup(page: import('@playwright/test').Page) {
@@ -229,4 +240,3 @@ test.describe('Travel detail page — map popup close @smoke', () => {
     }
   })
 })
-

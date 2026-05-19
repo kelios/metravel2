@@ -220,6 +220,88 @@ export const PointListViewModeBar = React.memo(function PointListViewModeBar({
   );
 });
 
+type WebPointListRowProps = {
+  item: PointLike;
+  index: number;
+  isAdding: boolean;
+  getCategoryLabel: (raw: PointLike['categoryName'] | null | undefined) => string;
+  getImageUrl: (url?: string, updatedAt?: string) => string | undefined;
+  buildMapUrl: (coordStr: string) => string;
+  buildOsmUrl: (coordStr: string) => string;
+  buildWazeUrl?: (coordStr: string) => string;
+  buildYandexMapsUrl: (coordStr: string) => string;
+  buildYandexNaviUrl?: (coordStr: string) => string;
+  openExternal: (url: string) => void | Promise<void>;
+  onCopy: (coordStr: string) => void | Promise<void>;
+  onShare: (coordStr: string) => void | Promise<void>;
+  onOpenMap: (coordStr: string) => void | Promise<void>;
+  handleAddPoint: (point: PointLike) => void | Promise<void>;
+  onPointCardPress?: (point: PointLike) => void;
+  colors: { primary: string; textMuted: string };
+  styles: Record<string, any>;
+};
+
+const WebPointListRow = React.memo(function WebPointListRow({
+  item,
+  index,
+  isAdding,
+  getCategoryLabel,
+  getImageUrl,
+  buildMapUrl,
+  buildOsmUrl,
+  buildWazeUrl,
+  buildYandexMapsUrl,
+  buildYandexNaviUrl,
+  openExternal,
+  onCopy,
+  onShare,
+  onOpenMap,
+  handleAddPoint,
+  onPointCardPress,
+  colors,
+  styles,
+}: WebPointListRowProps) {
+  const categoryLabel = getCategoryLabel(item.categoryName).split(',')[0]?.trim();
+  const imageUrl = getImageUrl(item.travelImageThumbUrl, item.updated_at);
+
+  return (
+    <PointListRow
+      point={{ id: item.id, address: item.address, coord: item.coord }}
+      categoryLabel={categoryLabel || undefined}
+      imageUrl={imageUrl}
+      index={index}
+      onCopy={onCopy}
+      onShare={onShare}
+      onOpenMap={onOpenMap}
+      onOpenGoogleMap={() => void openExternal(buildMapUrl(item.coord))}
+      onOpenYandexMap={() => void openExternal(buildYandexMapsUrl(item.coord))}
+      onOpenOsmMap={() => void openExternal(buildOsmUrl(item.coord))}
+      onOpenWaze={buildWazeUrl ? () => void openExternal(buildWazeUrl(item.coord)) : undefined}
+      onOpenYandexNavi={
+        buildYandexNaviUrl ? () => void openExternal(buildYandexNaviUrl(item.coord)) : undefined
+      }
+      onAddPoint={() => {
+        void handleAddPoint(item);
+      }}
+      addButtonLoading={isAdding}
+      addButtonDisabled={false}
+      onCardPress={onPointCardPress ? () => onPointCardPress(item) : undefined}
+      colors={colors}
+      styles={styles}
+    />
+  );
+});
+
+const RenderItemSlot = React.memo(function RenderItemSlot({
+  renderItem,
+  item,
+}: {
+  renderItem: ({ item }: { item: PointLike }) => React.ReactElement;
+  item: PointLike;
+}) {
+  return renderItem({ item });
+});
+
 export const PointListExpandedContent = React.memo(function PointListExpandedContent({
   addingPointId,
   buildMapUrl,
@@ -277,49 +359,35 @@ export const PointListExpandedContent = React.memo(function PointListExpandedCon
   return Platform.OS === 'web' ? (
     shouldRenderWebListMode ? (
       <View style={styles.verticalListWrap}>
-        {safePoints.map((item, idx) => {
-          const isAdding = addingPointId === item.id;
-          const addDisabled = false;
-          const categoryLabel = getCategoryLabel(item.categoryName).split(',')[0]?.trim();
-          const imageUrl = getImageUrl(item.travelImageThumbUrl, item.updated_at);
-          return (
-            <PointListRow
-              key={item.id}
-              point={{
-                id: item.id,
-                address: item.address,
-                coord: item.coord,
-              }}
-              categoryLabel={categoryLabel || undefined}
-              imageUrl={imageUrl}
-              index={idx}
-              onCopy={onCopy}
-              onShare={onShare}
-              onOpenMap={onOpenMap}
-              onOpenGoogleMap={() => void openExternal(buildMapUrl(item.coord))}
-              onOpenYandexMap={() => void openExternal(buildYandexMapsUrl(item.coord))}
-              onOpenOsmMap={() => void openExternal(buildOsmUrl(item.coord))}
-              onOpenWaze={buildWazeUrl ? () => void openExternal(buildWazeUrl(item.coord)) : undefined}
-              onOpenYandexNavi={buildYandexNaviUrl ? () => void openExternal(buildYandexNaviUrl(item.coord)) : undefined}
-              onAddPoint={() => {
-                void handleAddPoint(item);
-              }}
-              addButtonLoading={isAdding}
-              addButtonDisabled={addDisabled}
-              onCardPress={onPointCardPress ? () => onPointCardPress(item) : undefined}
-              colors={colors}
-              styles={styles}
-            />
-          );
-        })}
+        {safePoints.map((item, idx) => (
+          <WebPointListRow
+            key={item.id}
+            item={item}
+            index={idx}
+            isAdding={addingPointId === item.id}
+            getCategoryLabel={getCategoryLabel}
+            getImageUrl={getImageUrl}
+            buildMapUrl={buildMapUrl}
+            buildOsmUrl={buildOsmUrl}
+            buildWazeUrl={buildWazeUrl}
+            buildYandexMapsUrl={buildYandexMapsUrl}
+            buildYandexNaviUrl={buildYandexNaviUrl}
+            openExternal={openExternal}
+            onCopy={onCopy}
+            onShare={onShare}
+            onOpenMap={onOpenMap}
+            handleAddPoint={handleAddPoint}
+            onPointCardPress={onPointCardPress}
+            colors={colors}
+            styles={styles}
+          />
+        ))}
       </View>
     ) : shouldRenderWebCardsMode ? (
       isWebGrid ? (
         <View style={styles.webGridWrap}>
           {safePoints.map((item) => (
-            <React.Fragment key={keyExtractor(item)}>
-              {renderItem({ item })}
-            </React.Fragment>
+            <RenderItemSlot key={keyExtractor(item)} renderItem={renderItem} item={item} />
           ))}
         </View>
       ) : (
@@ -331,9 +399,7 @@ export const PointListExpandedContent = React.memo(function PointListExpandedCon
           style={styles.horizontalScroll}
         >
           {safePoints.map((item) => (
-            <React.Fragment key={keyExtractor(item)}>
-              {renderItem({ item })}
-            </React.Fragment>
+            <RenderItemSlot key={keyExtractor(item)} renderItem={renderItem} item={item} />
           ))}
         </ScrollView>
       )

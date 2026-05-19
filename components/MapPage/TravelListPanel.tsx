@@ -7,6 +7,7 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
+  useWindowDimensions,
   View,
 } from 'react-native'
 import { FlashList } from '@shopify/flash-list'
@@ -109,20 +110,47 @@ const getTravelItemKey = (item: any): string =>
       JSON.stringify(item ?? {}),
   )
 
-function computeVirtualWindow(
+// Variable-height windowing: card heights vary (~200–360px depending on
+// breakpoint/content), so a single fixed estimate produces drifting spacers
+// and scroll jumps. We use measured heights (falling back to the estimate for
+// rows not yet laid out) and a running offset scan.
+function computeVirtualWindowVariable(
   scrollY: number,
   viewportH: number,
   itemCount: number,
-  itemHeight: number,
+  getItemHeight: (index: number) => number,
   overscan: number,
 ) {
-  const startIndex = Math.max(0, Math.floor(scrollY / itemHeight) - overscan)
-  const endIndex = Math.min(
-    itemCount,
-    Math.ceil((scrollY + viewportH) / itemHeight) + overscan,
-  )
-  const topSpacerHeight = startIndex * itemHeight
-  const bottomSpacerHeight = Math.max(0, (itemCount - endIndex) * itemHeight)
+  let startIndex = 0
+  let endIndex = itemCount
+  let topSpacerHeight = 0
+  let bottomSpacerHeight = 0
+
+  let offset = 0
+  let i = 0
+  for (; i < itemCount; i++) {
+    const h = getItemHeight(i)
+    if (offset + h > scrollY) break
+    offset += h
+  }
+  startIndex = Math.max(0, i - overscan)
+
+  let topOffset = 0
+  for (let k = 0; k < startIndex; k++) topOffset += getItemHeight(k)
+  topSpacerHeight = topOffset
+
+  let visibleBottom = topOffset
+  let j = startIndex
+  for (; j < itemCount; j++) {
+    if (visibleBottom > scrollY + viewportH) break
+    visibleBottom += getItemHeight(j)
+  }
+  endIndex = Math.min(itemCount, j + overscan)
+
+  let bottomOffset = 0
+  for (let k = endIndex; k < itemCount; k++) bottomOffset += getItemHeight(k)
+  bottomSpacerHeight = Math.max(0, bottomOffset)
+
   return { startIndex, endIndex, topSpacerHeight, bottomSpacerHeight }
 }
 
@@ -149,6 +177,7 @@ const TravelListPanel: React.FC<Props> = ({
 }) => {
   const themeColors = useThemedColors()
   const styles = useMemo(() => getStyles(themeColors), [themeColors])
+  const { width: screenWidth } = useWindowDimensions()
 
   const { addFavorite, removeFavorite, isFavorite: isFavoriteInContext } = useFavorites()
   const { isAuthenticated, requireAuth } = useRequireAuth({ intent: 'favorite' })
@@ -156,6 +185,16 @@ const TravelListPanel: React.FC<Props> = ({
   const webScrollRafRef = useRef<number | null>(null)
   const [webScrollY, setWebScrollY] = useState(0)
   const [webViewportH, setWebViewportH] = useState(0)
+  const itemHeightsRef = useRef<Map<string, number>>(new Map())
+  const [heightsVersion, setHeightsVersion] = useState(0)
+
+  const recordItemHeight = useCallback((key: string, h: number) => {
+    if (!h) return
+    const prev = itemHeightsRef.current.get(key)
+    if (prev != null && Math.abs(prev - h) < 1) return
+    itemHeightsRef.current.set(key, h)
+    setHeightsVersion((v) => v + 1)
+  }, [])
 
   const renderItem = useCallback(
     ({ item }: any) => {
@@ -186,6 +225,7 @@ const TravelListPanel: React.FC<Props> = ({
               onHidePress={onHidePress}
               userLocation={userLocation}
               transportMode={transportMode}
+              screenWidth={screenWidth}
             />
           </SwipeableListItem>
         )
@@ -232,6 +272,7 @@ const TravelListPanel: React.FC<Props> = ({
           transportMode={transportMode}
           isFavorite={ctxIsFavorite}
           onToggleFavorite={handleToggleFavorite}
+          screenWidth={screenWidth}
         />
       )
     },
@@ -241,6 +282,7 @@ const TravelListPanel: React.FC<Props> = ({
       onHideTravel,
       userLocation,
       transportMode,
+      screenWidth,
       onToggleFavorite,
       favorites,
       addFavorite,
@@ -305,6 +347,27 @@ const TravelListPanel: React.FC<Props> = ({
   const visibleTravelsData = useMemo(
     () => (compactPreview ? travelsData.slice(0, 3) : travelsData),
     [compactPreview, travelsData],
+  )
+
+  const itemKeys = useMemo(
+    () => visibleTravelsData.map((item: any) => getTravelItemKey(item)),
+    [visibleTravelsData],
+  )
+
+  const webWindow = useMemo(
+    () =>
+      computeVirtualWindowVariable(
+        webScrollY,
+        webViewportH || WEB_DEFAULT_VIEWPORT_HEIGHT,
+        itemKeys.length,
+        (i) =>
+          itemHeightsRef.current.get(itemKeys[i]) ?? WEB_ESTIMATED_ITEM_HEIGHT_PX,
+        WEB_LIST_OVERSCAN_ITEMS,
+      ),
+    // heightsVersion intentionally included: bumped when a row reports a new
+    // measured height so the window recomputes against real offsets.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [webScrollY, webViewportH, itemKeys, heightsVersion],
   )
 
   const footer = useMemo(() => {
@@ -386,32 +449,8 @@ const TravelListPanel: React.FC<Props> = ({
     )
   }
 
-  if (IS_WEB && isMobile) {
-    return (
-      <ScrollView
-        style={styles.webScrollView}
-        contentContainerStyle={styles.list}
-        refreshControl={refreshControl}
-      >
-        {listHeader}
-        {visibleTravelsData.map((item: any) => (
-          <React.Fragment key={getTravelItemKey(item)}>
-            {renderItem({ item })}
-          </React.Fragment>
-        ))}
-        {footer}
-      </ScrollView>
-    )
-  }
-
   if (IS_WEB) {
-    const { startIndex, endIndex, topSpacerHeight, bottomSpacerHeight } = computeVirtualWindow(
-      webScrollY,
-      webViewportH || WEB_DEFAULT_VIEWPORT_HEIGHT,
-      visibleTravelsData.length,
-      WEB_ESTIMATED_ITEM_HEIGHT_PX,
-      WEB_LIST_OVERSCAN_ITEMS,
-    )
+    const { startIndex, endIndex, topSpacerHeight, bottomSpacerHeight } = webWindow
     return (
       <ScrollView
         style={styles.webScrollView}
@@ -421,11 +460,19 @@ const TravelListPanel: React.FC<Props> = ({
         scrollEventThrottle={32}
         refreshControl={refreshControl}
       >
-        {topSpacerHeight > 0 && <View style={{ height: topSpacerHeight }} />}
         {listHeader}
-        {visibleTravelsData.slice(startIndex, endIndex).map((item: any) => (
-          <React.Fragment key={getTravelItemKey(item)}>{renderItem({ item })}</React.Fragment>
-        ))}
+        {topSpacerHeight > 0 && <View style={{ height: topSpacerHeight }} />}
+        {visibleTravelsData.slice(startIndex, endIndex).map((item: any) => {
+          const key = getTravelItemKey(item)
+          return (
+            <View
+              key={key}
+              onLayout={(e) => recordItemHeight(key, e.nativeEvent.layout.height)}
+            >
+              {renderItem({ item })}
+            </View>
+          )
+        })}
         {bottomSpacerHeight > 0 && <View style={{ height: bottomSpacerHeight }} />}
         {footer}
       </ScrollView>

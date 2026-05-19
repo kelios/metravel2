@@ -1,5 +1,5 @@
 import React, { Suspense, useMemo } from 'react'
-import { Platform, Text, View } from 'react-native'
+import { Platform, View } from 'react-native'
 
 import type { Travel } from '@/types/types'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
@@ -38,9 +38,6 @@ const ABSOLUTE_FILL = {
   bottom: 0,
   left: 0,
 } as const
-
-const HERO_OVERLAY_NO_POINTER = { pointerEvents: 'none' } as const
-const HERO_TITLE_POINTER_AUTO = { pointerEvents: 'auto' } as const
 
 type Props = {
   travel: Travel
@@ -145,15 +142,6 @@ function TravelHeroSectionInner({
     [styles.sectionContainer, styles.contentStable],
   )
 
-  const heroOverlayStyle = useMemo(
-    () => [styles.heroOverlay, HERO_OVERLAY_NO_POINTER],
-    [styles.heroOverlay],
-  )
-  const heroTitleWrapStyle = useMemo(
-    () => [styles.heroTitleWrap, HERO_TITLE_POINTER_AUTO],
-    [styles.heroTitleWrap],
-  )
-
   if (!firstImg) {
     return <ExtrasSlot
       styles={styles}
@@ -173,7 +161,7 @@ function TravelHeroSectionInner({
         testID="travel-details-hero"
         ref={anchors.gallery}
         accessibilityRole="none"
-        accessibilityLabel="Геройский блок с изображением, заголовком и кнопкой избранного"
+        accessibilityLabel="Геройский блок с изображением и кнопкой избранного"
         {...(Platform.OS === 'web' ? { 'data-section-key': 'gallery' } : null)}
         style={sectionAndStable}
       >
@@ -193,7 +181,7 @@ function TravelHeroSectionInner({
                       galleryImages={heroSliderImages}
                       isMobile={isMobile}
                       aspectRatio={aspectRatio as number}
-                      preloadCount={1}
+                      preloadCount={sliderPreloadCount}
                       controlsVisible
                       onFirstImageLoad={handleSliderImageLoad}
                       firstImagePreloaded={webHeroLoaded}
@@ -240,20 +228,6 @@ function TravelHeroSectionInner({
               <View style={styles.heroPhotoTapeRight} />
             </>
           )}
-
-          {travel?.name ? (
-            <View style={heroOverlayStyle}>
-              <View style={heroTitleWrapStyle}>
-                <Text
-                  style={styles.heroTitle}
-                  numberOfLines={2}
-                  accessibilityRole="header"
-                >
-                  {travel.name}
-                </Text>
-              </View>
-            </View>
-          ) : null}
 
           {showFavoriteToggle && (
             <Suspense fallback={null}>

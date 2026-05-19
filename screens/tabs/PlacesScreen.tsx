@@ -246,15 +246,16 @@ export default function PlacesScreen() {
     return parts.join(' — ')
   }, [activeCategoryTitle, selectedCategories.length, selectedCountry])
   const seoTitle = `${seoHeading} | MeTravel`
+  const seoPlaces = useMemo(() => filteredPlaces.slice(0, 12), [filteredPlaces])
   const placesJsonLd = useMemo(() => {
-    if (Platform.OS !== 'web' || !isFocused || visiblePlaces.length === 0) return undefined
+    if (Platform.OS !== 'web' || !isFocused || seoPlaces.length === 0) return undefined
     const base = getSiteBaseUrl().replace(/\/$/, '')
     const data = {
       '@context': 'https://schema.org',
       '@type': 'ItemList',
       name: seoHeading,
       numberOfItems: filteredPlaces.length,
-      itemListElement: visiblePlaces.slice(0, 12).map((place, index) => {
+      itemListElement: seoPlaces.map((place, index) => {
           const internal = place.urlTravel
             ? normalizeRelatedTravelRoute(place.urlTravel)
             : null
@@ -273,7 +274,7 @@ export default function PlacesScreen() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
       />
     )
-  }, [filteredPlaces.length, isFocused, seoHeading, visiblePlaces])
+  }, [filteredPlaces.length, isFocused, seoHeading, seoPlaces])
 
   const syncCategoryParams = useCallback((categories: string[]) => {
     router.setParams(categories.length > 0 ? { category: categories.join(',') } : { category: '' })
@@ -1368,6 +1369,12 @@ const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean)
     flexBasis: isCompact ? '100%' : isWide ? '30%' : '46%',
     minWidth: isCompact ? undefined : isWide ? 280 : 260,
     maxWidth: isCompact ? '100%' : isWide ? '33.333%' : '50%',
+    ...(Platform.OS === 'web'
+      ? ({
+          contentVisibility: 'auto',
+          containIntrinsicSize: `0 ${(isCompact ? 156 : isWide ? 170 : 160) + 188}px`,
+        } as any)
+      : null),
   },
   cardInner: {
     backgroundColor: colors.surface,

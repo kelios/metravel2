@@ -7,6 +7,7 @@ export type CatalogPlace = TravelCoords & {
   country: string
   latNumber: number
   lngNumber: number
+  searchText: string
 }
 
 export type PlaceCategoryGroup = {
@@ -201,15 +202,23 @@ export const normalizeCatalogPlaces = (rawPlaces: TravelCoords[]): CatalogPlace[
     if (seen.has(identity)) return
     seen.add(identity)
 
+    const title = getPlaceTitle(place)
+    const category = getPrimaryCategory(place.categoryName)
+    const country = getPlaceCountry(place)
+
     places.push({
       ...place,
       id: identity,
-      title: getPlaceTitle(place),
-      category: getPrimaryCategory(place.categoryName),
-      country: getPlaceCountry(place),
+      title,
+      category,
+      country,
       latNumber: coords.lat,
       lngNumber: coords.lng,
       urlTravel: travelUrl,
+      searchText: [title, place.address, category, country]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase(),
     })
   })
 
@@ -279,10 +288,6 @@ export const filterCatalogPlaces = (
     if (normalizedCountry && place.country !== normalizedCountry) return false
     if (!normalizedQuery) return true
 
-    return [place.title, place.address, place.category, place.country]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase()
-      .includes(normalizedQuery)
+    return place.searchText.includes(normalizedQuery)
   })
 }

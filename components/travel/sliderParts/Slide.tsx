@@ -146,16 +146,17 @@ const Slide = memo(function Slide({
   const slideLoadReportedRef = useRef(false);
   const fallbackTriedRef = useRef(false);
   const loadedStateRef = useRef(isLoaded);
+  const shouldPreloadAhead = !!preloadPriority && !isActive && !isFirstSlide;
   const shouldEagerLoad =
     Platform.OS === 'web'
-      ? isFirstSlide || isActive || !!preloadPriority
-      : isFirstSlide || isActive || !!preloadPriority;
+      ? isFirstSlide || isActive || shouldPreloadAhead
+      : isFirstSlide || isActive || shouldPreloadAhead;
   const mainPriority =
     Platform.OS === 'web'
-      ? shouldEagerLoad
+      ? isFirstSlide || isActive
         ? 'high'
         : 'normal'
-      : shouldEagerLoad
+      : isFirstSlide || isActive
         ? 'high'
         : 'low';
 
@@ -308,7 +309,7 @@ const Slide = memo(function Slide({
             blurBackground={effectiveBlurBackground}
             blurRadius={12}
             priority={mainPriority as any}
-            prefetch={Platform.OS === 'web' ? (isFirstSlide || isActive || !!preloadPriority) : false}
+            prefetch={Platform.OS === 'web' ? shouldPreloadAhead : false}
             loading={
               Platform.OS === 'web'
                 ? shouldEagerLoad

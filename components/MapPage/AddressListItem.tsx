@@ -5,7 +5,6 @@ import {
   Pressable,
   StyleSheet,
   View,
-  useWindowDimensions,
 } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -50,6 +49,11 @@ type Props = {
   transportMode?: 'car' | 'bike' | 'foot'
   isFavorite?: boolean
   onToggleFavorite?: () => void
+  /**
+   * Viewport width supplied by the list. Lifted out of a per-row
+   * useWindowDimensions so a resize doesn't re-subscribe every visible card.
+   */
+  screenWidth: number
 }
 
 function addVersion(url?: string, updated?: string) {
@@ -111,6 +115,7 @@ const AddressListItem: React.FC<Props> = ({
   transportMode = 'car',
   isFavorite = false,
   onToggleFavorite,
+  screenWidth,
 }) => {
   const { address, coord, travelImageThumbUrl, articleUrl, urlTravel } = travel
 
@@ -119,7 +124,7 @@ const AddressListItem: React.FC<Props> = ({
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
 
-  const { width } = useWindowDimensions()
+  const width = screenWidth
   const isPhone = width >= METRICS.breakpoints.phone && width < METRICS.breakpoints.largePhone
   const isLargePhone =
     width >= METRICS.breakpoints.largePhone && width < METRICS.breakpoints.tablet

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   LayoutChangeEvent,
@@ -40,6 +40,138 @@ type Props = {
     finishName?: string | null
   }
 }
+
+function minMax(values: number[]): { min: number; max: number } {
+  let min = values[0]
+  let max = values[0]
+  for (let i = 1; i < values.length; i += 1) {
+    const v = values[i]
+    if (v < min) min = v
+    if (v > max) max = v
+  }
+  return { min, max }
+}
+
+function findNearestIndex(points: ReadonlyArray<{ x: number }>, targetX: number) {
+  if (points.length === 0) return 0
+  let lo = 0
+  let hi = points.length - 1
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1
+    if (points[mid].x < targetX) lo = mid + 1
+    else hi = mid
+  }
+  if (
+    lo > 0 &&
+    Math.abs(points[lo - 1].x - targetX) <= Math.abs(points[lo].x - targetX)
+  ) {
+    return lo - 1
+  }
+  return lo
+}
+
+type ChartPoint = {
+  index: number
+  sample: { distanceKm: number; elevationM: number }
+  x: number
+  y: number
+}
+
+type ChartStaticLayersProps = {
+  width: number
+  yAxisGuides: Array<{ key: string; y: number; x1: number; x2: number }>
+  areaPath: string
+  polylinePoints: string
+  chartAreaColor: string
+  chartLineColor: string
+  borderLightColor: string
+  infoColor: string
+  primaryDarkColor: string
+  keyPoints: {
+    start: { x: number; y: number } | null
+    peak: { x: number; y: number } | null
+    finish: { x: number; y: number } | null
+  } | null
+}
+
+const ChartStaticLayers = React.memo(function ChartStaticLayers({
+  width,
+  yAxisGuides,
+  areaPath,
+  polylinePoints,
+  chartAreaColor,
+  chartLineColor,
+  borderLightColor,
+  infoColor,
+  primaryDarkColor,
+  keyPoints,
+}: ChartStaticLayersProps) {
+  return (
+    <>
+      {yAxisGuides.map((guide) => (
+        <Line
+          key={guide.key}
+          x1={guide.x1}
+          y1={guide.y}
+          x2={guide.x2}
+          y2={guide.y}
+          stroke={borderLightColor}
+          strokeWidth={1}
+          strokeDasharray="2 4"
+          opacity={0.75}
+        />
+      ))}
+      <Rect x={0} y={0} width={width} height={CHART_HEIGHT} fill="transparent" />
+      {keyPoints?.peak ? (
+        <Line
+          x1={keyPoints.peak.x}
+          y1={CHART_PADDING}
+          x2={keyPoints.peak.x}
+          y2={CHART_HEIGHT - CHART_PADDING}
+          stroke={infoColor}
+          strokeWidth={1}
+          strokeDasharray="4 3"
+          opacity={0.7}
+        />
+      ) : null}
+      {areaPath ? (
+        <Path d={areaPath} fill={chartAreaColor} opacity={0.7} />
+      ) : null}
+      <Polyline
+        points={polylinePoints}
+        fill="none"
+        stroke={chartLineColor}
+        strokeWidth={2.5}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      {keyPoints?.start ? (
+        <Circle
+          cx={keyPoints.start.x}
+          cy={keyPoints.start.y}
+          r={3.5}
+          fill={chartLineColor}
+        />
+      ) : null}
+      {keyPoints?.peak ? (
+        <Circle
+          cx={keyPoints.peak.x}
+          cy={keyPoints.peak.y}
+          r={4}
+          fill={infoColor}
+        />
+      ) : null}
+      {keyPoints?.finish ? (
+        <Circle
+          cx={keyPoints.finish.x}
+          cy={keyPoints.finish.y}
+          r={3.5}
+          fill={primaryDarkColor}
+        />
+      ) : null}
+    </>
+  )
+})
 
 export default function RouteElevationProfile({
   title = 'Профиль высот',
@@ -91,8 +223,7 @@ export default function RouteElevationProfile({
       }
     }
 
-    const minElevation = Math.min(...elevations)
-    const maxElevation = Math.max(...elevations)
+    const { min: minElevation, max: maxElevation } = minMax(elevations)
     const elevationRange = Math.max(1, maxElevation - minElevation)
     const startSample = samples[0] ?? null
     const finishSample = samples[samples.length - 1] ?? null
@@ -401,29 +532,50 @@ export default function RouteElevationProfile({
     metrics,
   ])
 
+  const chartPointsRef = useRef<ChartPoint[]>(chartPoints)
+  chartPointsRef.current = chartPoints
+  const rafRef = useRef<number | null>(null)
+  const pendingXRef = useRef<number | null>(null)
+
+  const handleLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      const nextWidth = Math.round(event.nativeEvent.layout.width)
+      setWidth((prev) => (prev === nextWidth ? prev : nextWidth))
+    },
+    [],
+  )
+
+  const updateActivePoint = useCallback((locationX: number) => {
+    pendingXRef.current = locationX
+    if (rafRef.current != null) return
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null
+      const x = pendingXRef.current
+      if (x == null) return
+      const pts = chartPointsRef.current
+      if (pts.length < 2) return
+      setActiveSampleIndex(findNearestIndex(pts, x))
+    })
+  }, [])
+
+  const clearActivePoint = useCallback(() => {
+    pendingXRef.current = null
+    if (rafRef.current != null) {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = null
+    }
+    setActiveSampleIndex(null)
+  }, [])
+
+  useEffect(
+    () => () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current)
+    },
+    [],
+  )
+
   if (!metrics) {
     return null
-  }
-
-  const handleLayout = (event: LayoutChangeEvent) => {
-    const nextWidth = Math.round(event.nativeEvent.layout.width)
-    if (nextWidth !== width) {
-      setWidth(nextWidth)
-    }
-  }
-
-  const updateActivePoint = (locationX: number) => {
-    if (chartPoints.length < 2) return
-    let nextIndex = 0
-    let minDistance = Number.POSITIVE_INFINITY
-    for (let i = 0; i < chartPoints.length; i += 1) {
-      const distance = Math.abs(chartPoints[i].x - locationX)
-      if (distance < minDistance) {
-        minDistance = distance
-        nextIndex = i
-      }
-    }
-    setActiveSampleIndex(nextIndex)
   }
 
   return (
@@ -546,73 +698,18 @@ export default function RouteElevationProfile({
             </View>
           ) : null}
           <Svg width={width} height={CHART_HEIGHT}>
-            {yAxisGuides.map((guide) => (
-              <Line
-                key={guide.key}
-                x1={guide.x1}
-                y1={guide.y}
-                x2={guide.x2}
-                y2={guide.y}
-                stroke={colors.borderLight}
-                strokeWidth={1}
-                strokeDasharray="2 4"
-                opacity={0.75}
-              />
-            ))}
-            <Rect
-              x={0}
-              y={0}
+            <ChartStaticLayers
               width={width}
-              height={CHART_HEIGHT}
-              fill="transparent"
+              yAxisGuides={yAxisGuides}
+              areaPath={areaPath}
+              polylinePoints={polylinePoints}
+              chartAreaColor={chartAreaColor}
+              chartLineColor={chartLineColor}
+              borderLightColor={colors.borderLight}
+              infoColor={colors.info}
+              primaryDarkColor={colors.primaryDark}
+              keyPoints={keyPoints}
             />
-            {keyPoints?.peak ? (
-              <Line
-                x1={keyPoints.peak.x}
-                y1={CHART_PADDING}
-                x2={keyPoints.peak.x}
-                y2={CHART_HEIGHT - CHART_PADDING}
-                stroke={colors.info}
-                strokeWidth={1}
-                strokeDasharray="4 3"
-                opacity={0.7}
-              />
-            ) : null}
-            {areaPath ? (
-              <Path d={areaPath} fill={chartAreaColor} opacity={0.7} />
-            ) : null}
-            <Polyline
-              points={polylinePoints}
-              fill="none"
-              stroke={chartLineColor}
-              strokeWidth={2.5}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
-            {keyPoints?.start ? (
-              <Circle
-                cx={keyPoints.start.x}
-                cy={keyPoints.start.y}
-                r={3.5}
-                fill={chartLineColor}
-              />
-            ) : null}
-            {keyPoints?.peak ? (
-              <Circle
-                cx={keyPoints.peak.x}
-                cy={keyPoints.peak.y}
-                r={4}
-                fill={colors.info}
-              />
-            ) : null}
-            {keyPoints?.finish ? (
-              <Circle
-                cx={keyPoints.finish.x}
-                cy={keyPoints.finish.y}
-                r={3.5}
-                fill={colors.primaryDark}
-              />
-            ) : null}
             {activePoint ? (
               <>
                 <Line
@@ -662,7 +759,7 @@ export default function RouteElevationProfile({
             onResponderMove={(event) =>
               updateActivePoint(event.nativeEvent.locationX)
             }
-            onResponderRelease={() => setActiveSampleIndex(null)}
+            onResponderRelease={clearActivePoint}
             {...(Platform.OS === 'web'
               ? ({
                   onPointerMove: (event: any) => {
@@ -671,7 +768,7 @@ export default function RouteElevationProfile({
                       updateActivePoint(nextLocationX)
                     }
                   },
-                  onPointerLeave: () => setActiveSampleIndex(null),
+                  onPointerLeave: clearActivePoint,
                 } as any)
               : null)}
           />

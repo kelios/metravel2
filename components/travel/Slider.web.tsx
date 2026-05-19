@@ -293,6 +293,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     dismissSwipeHint,
     prefetchEnabled,
     enablePrefetch,
+    warmNeighbors,
     scrollTo,
     setScrollToImpl,
     pauseAutoplay,
@@ -323,7 +324,6 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const containerHeight = fillContainer ? ('100%' as const) : containerHeightPx
   const maxIndex = Math.max(0, images.length - 1)
   const imagesLen = images.length
-  const windowRadius = Math.max(2, effectivePreloadCount + 1)
   const navOffset = getNavOffset(isMobile, isTablet, insets)
 
   const {
@@ -401,14 +401,20 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const onPrev = useCallback(() => {
     enablePrefetch()
     const target = Math.max(0, indexRef.current - 1)
-    if (target !== indexRef.current) scrollTo(target)
-  }, [enablePrefetch, indexRef, scrollTo])
+    if (target !== indexRef.current) {
+      warmNeighbors(target)
+      scrollTo(target)
+    }
+  }, [enablePrefetch, indexRef, scrollTo, warmNeighbors])
 
   const onNext = useCallback(() => {
     enablePrefetch()
     const target = Math.min(maxIndex, indexRef.current + 1)
-    if (target !== indexRef.current) scrollTo(target)
-  }, [enablePrefetch, indexRef, maxIndex, scrollTo])
+    if (target !== indexRef.current) {
+      warmNeighbors(target)
+      scrollTo(target)
+    }
+  }, [enablePrefetch, indexRef, maxIndex, scrollTo, warmNeighbors])
 
   const wrapperMaxStyle = useMemo(() => {
     if (fullBleed) return null
@@ -472,8 +478,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                   layoutMeasured &&
                   blurBackground &&
                   (isMobileDevice ? distanceToCurrent === 0 : distanceToCurrent <= 1)
-                const withinWindow = distanceToCurrent <= windowRadius
-                const slideUri = withinWindow ? getUri(index) : ''
+                const slideUri = getUri(index)
 
                 return (
                   <View
@@ -485,7 +490,6 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       { width: slideWidthStyle, height: containerHeight, zIndex: 1 },
                     ]}
                   >
-                    {withinWindow && (
                     <Slide
                       item={item}
                       index={index}
@@ -507,7 +511,6 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       prepareBlur={prepareBlur}
                       skipImage={skipFirstSlideImage && index === 0}
                     />
-                    )}
                   </View>
                 )
               })}

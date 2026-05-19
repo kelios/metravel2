@@ -7,6 +7,7 @@ import type { Point, ClusterData } from './types'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 
 import { buildClusterIconHtml } from './mapMarkerStyles'
+import MarkerPopup from './MarkerPopup'
 
 interface ClusterLayerProps {
   L?: any
@@ -34,18 +35,6 @@ interface ClusterLayerProps {
 }
 
 const TOOLTIP_MAX_LEN = 30
-
-const ClusterPopupContentWithClose: React.FC<{
-  point: Point
-  PopupContent: React.ComponentType<{ point: Point; closePopup?: () => void }>
-  useMap?: () => any
-}> = ({ point, PopupContent, useMap: useMapHook }) => {
-  const map = useMapHook?.()
-  const closePopup = useCallback(() => {
-    map?.closePopup()
-  }, [map])
-  return <PopupContent point={point} closePopup={closePopup} />
-}
 
 const ClusterLayer: React.FC<ClusterLayerProps> = ({
   L,
@@ -216,13 +205,13 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
                           : item.address}
                       </Tooltip>
                     )}
-                    <Popup>
-                      <ClusterPopupContentWithClose
-                        point={item}
-                        PopupContent={PopupContent}
-                        useMap={useMapHook}
-                      />
-                    </Popup>
+                    <MarkerPopup
+                      point={item}
+                      Popup={Popup}
+                      PopupContent={PopupContent}
+                      popupProps={popupProps}
+                      useMap={useMapHook}
+                    />
                   </Marker>
                 )
               })}
@@ -279,13 +268,13 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
                     : item.address}
                 </Tooltip>
               )}
-              <Popup {...(popupProps || {})}>
-                <ClusterPopupContentWithClose
-                  point={item}
-                  PopupContent={PopupContent}
-                  useMap={useMapHook}
-                />
-              </Popup>
+              <MarkerPopup
+                point={item}
+                Popup={Popup}
+                PopupContent={PopupContent}
+                popupProps={popupProps}
+                useMap={useMapHook}
+              />
             </Marker>
           )
         }
@@ -368,4 +357,26 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
   )
 }
 
-export default ClusterLayer
+// `clusters` is memoized upstream (useClustering), so a reference check is
+// enough to detect real data changes. Event handlers are intentionally excluded:
+// the only consumer (TravelMap) passes stable refs / no-op inline callbacks, and
+// including them would defeat the memo on every parent render.
+export default React.memo(ClusterLayer, (prev, next) => {
+  return (
+    prev.clusters === next.clusters &&
+    prev.expandedClusterKey === next.expandedClusterKey &&
+    prev.expandedClusterItems === next.expandedClusterItems &&
+    prev.markerOpacity === next.markerOpacity &&
+    prev.markerIcon === next.markerIcon &&
+    prev.renderer === next.renderer &&
+    prev.L === next.L &&
+    prev.Marker === next.Marker &&
+    prev.Popup === next.Popup &&
+    prev.Tooltip === next.Tooltip &&
+    prev.PopupContent === next.PopupContent &&
+    prev.popupProps === next.popupProps &&
+    prev.useMap === next.useMap &&
+    prev.hintCenter?.lat === next.hintCenter?.lat &&
+    prev.hintCenter?.lng === next.hintCenter?.lng
+  )
+})

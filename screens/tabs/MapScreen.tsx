@@ -318,10 +318,21 @@ export default function MapScreen() {
     openRightPanelRef.current()
   }, [openNonce, requestedOpenTab, selectFiltersTab, selectTravelsTab])
 
-  const currentRadius = filtersPanelProps?.contextValue?.filterValue?.radius ?? ''
+  const filtersCtx = filtersPanelProps?.contextValue
+  const currentRadius = filtersCtx?.filterValue?.radius ?? ''
+  // Depend on the individual context slices buildQuickFiltersData reads (each
+  // keeps a stable identity), not the whole filtersPanelProps object which is
+  // rebuilt on every routing-state change.
   const quickFilters = useMemo(
     () => buildQuickFiltersData(filtersPanelProps, currentRadius),
-    [filtersPanelProps, currentRadius],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      filtersCtx?.filterValue,
+      filtersCtx?.filters,
+      filtersCtx?.overlayOptions,
+      filtersCtx?.enabledOverlays,
+      currentRadius,
+    ],
   )
 
   const mapQuickActionButtons = useMemo(

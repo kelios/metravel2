@@ -201,57 +201,6 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       transform: [{ rotate: '5deg' }],
       pointerEvents: 'none' as any,
     },
-    heroOverlay: {
-      position: 'absolute' as any,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      zIndex: 2,
-      paddingHorizontal: Platform.select({ default: 16, web: 40 }),
-      paddingBottom: Platform.select({ default: 24, web: 40 }),
-      paddingTop: Platform.select({ default: 56, web: 80 }),
-      ...(Platform.OS === 'web'
-        ? ({
-            backgroundImage:
-              'linear-gradient(to top, rgba(7,12,19,0.72) 0%, rgba(7,12,19,0.44) 34%, rgba(7,12,19,0.14) 64%, transparent 84%)',
-          } as any)
-        : { backgroundColor: 'rgba(7,12,19,0.45)' }),
-    },
-    heroTitleWrap: {
-      alignSelf: 'flex-start',
-      maxWidth: Platform.OS === 'web' ? 720 : '92%',
-      backgroundColor: colors.surfaceMuted,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      borderWidth: 1,
-      borderColor: colors.borderStrong,
-      paddingHorizontal: Platform.select({ default: 12, web: 16 }),
-      paddingVertical: Platform.select({ default: 9, web: 12 }),
-      ...(Platform.OS === 'web'
-        ? ({
-            backdropFilter: 'blur(6px)',
-            boxShadow: `0 2px 0 ${colors.brandSoft}`,
-          } as any)
-        : {}),
-    },
-    heroTitle: {
-      fontSize: Platform.select({ default: 18, web: 28 }),
-      fontWeight: '600' as any,
-      color: colors.text,
-      letterSpacing: 0,
-      lineHeight: Platform.select({ default: 24, web: 36 }),
-      ...(Platform.OS === 'web'
-        ? ({
-            fontFamily: JOURNAL_FONT_FAMILY,
-            fontStyle: 'italic',
-            textShadow: 'none',
-          } as any)
-        : {
-            textShadowColor: 'transparent',
-            textShadowOffset: { width: 0, height: 0 },
-            textShadowRadius: 0,
-          }),
-      maxWidth: Platform.OS === 'web' ? 680 : '100%',
-    },
     heroFavoriteBtn: {
       position: 'absolute' as any,
       top: 14,

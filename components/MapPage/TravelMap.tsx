@@ -30,6 +30,8 @@ function ignoreTravelMapRuntimeError() {
   return
 }
 
+const NOOP = () => {}
+
 function isValidLatLng(lat: number, lng: number) {
   return (
     Number.isFinite(lat) &&
@@ -368,12 +370,14 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     return parseCoordString(safeTravelData[0]?.coord) ?? DEFAULT_CENTER
   }, [safeTravelData, routeLineCoordsProp, routeLinesProp])
 
+  const hintCenter = useMemo(() => ({ lat: center[0], lng: center[1] }), [center])
+
   const { shouldRenderClusters, clusters, markers, markerOpacity } = useMapMarkers({
     travelData: safeTravelData,
     mapZoom: initialZoom,
     expandedClusterKey: null,
     mode: 'radius',
-    hintCenter: { lat: center[0], lng: center[1] },
+    hintCenter,
   })
 
   const PopupComponent = useMemo(() => {
@@ -705,8 +709,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
             Popup={rl.Popup}
             PopupContent={PopupComponent}
             popupProps={popupProps}
-            onMarkerClick={() => {}}
-            hintCenter={{ lat: center[0], lng: center[1] }}
+            onMarkerClick={NOOP}
+            hintCenter={hintCenter}
             useMap={rl.useMap}
             onMarkerInstance={handleMarkerInstance}
           />
@@ -724,9 +728,9 @@ export const TravelMap: React.FC<TravelMapProps> = ({
             markerOpacity={markerOpacity}
             expandedClusterKey={null}
             expandedClusterItems={null as any}
-            hintCenter={{ lat: center[0], lng: center[1] }}
-            onClusterZoom={() => {}}
-            onMarkerClick={() => {}}
+            hintCenter={hintCenter}
+            onClusterZoom={NOOP}
+            onMarkerClick={NOOP}
             useMap={rl.useMap}
             onMarkerInstance={handleMarkerInstance}
           />

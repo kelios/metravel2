@@ -40,6 +40,37 @@ export function deepEqual(a: unknown, b: unknown): boolean {
  *   fetchData(debouncedSearch);
  * }, [debouncedSearch]);
  */
+/**
+ * Как useDebouncedValue, но дополнительно возвращает флаг "ожидания":
+ * true, пока значение изменилось, но debounced-значение ещё не догнало его.
+ * Позволяет не делать повторное глубокое сравнение на каждом рендере.
+ */
+export function useDebouncedValueWithPending<T>(value: T, delay: number): [T, boolean] {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  const prevValueRef = useRef<T>(value);
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    if (deepEqual(prevValueRef.current, value)) {
+      return;
+    }
+
+    prevValueRef.current = value;
+    setPending(true);
+
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+      setPending(false);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return [debouncedValue, pending];
+}
+
 export function useDebouncedValue<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
   const prevValueRef = useRef<T>(value);

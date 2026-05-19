@@ -1,18 +1,17 @@
 import React from 'react'
-import { render } from '@testing-library/react-native'
+import { act, render } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import MarkerClusterGroup from '@/components/MapPage/Map/MarkerClusterGroup'
 
-const mockRootRender = jest.fn()
-const mockRootUnmount = jest.fn()
-const mockCreateRoot = jest.fn(() => ({
-  render: mockRootRender,
-  unmount: mockRootUnmount,
-}))
+const mockCreatePortal = jest.fn((children: React.ReactNode) => children)
 
-jest.mock('react-dom/client', () => ({
-  createRoot: (container: unknown) => mockCreateRoot(container),
+jest.mock('react-dom', () => ({
+  createPortal: (
+    children: React.ReactNode,
+    container: Element | DocumentFragment,
+    key?: string | null,
+  ) => mockCreatePortal(children, container, key),
 }))
 
 type TestMarker = {
@@ -184,7 +183,7 @@ describe('MarkerClusterGroup', () => {
     expect(onMarkerClick.mock.calls[0][2]).toBe(marker)
   })
 
-  it('renders popup content inside QueryClientProvider for the separate popup root', () => {
+  it('renders popup content through a portal into the Leaflet popup container', () => {
     const markerHandlers = new Map<string, (event: any) => void>()
     const marker = {} as TestMarker
     marker.bindPopup = jest.fn()
@@ -211,7 +210,7 @@ describe('MarkerClusterGroup', () => {
       divIcon: jest.fn(),
     }
 
-    const { queryClient } = renderWithClient(
+    renderWithClient(
       <MarkerClusterGroup
         L={L}
         useMap={() => map}
@@ -228,14 +227,18 @@ describe('MarkerClusterGroup', () => {
       />,
     )
 
-    markerHandlers.get('popupopen')?.({})
+    act(() => {
+      markerHandlers.get('popupopen')?.({})
+    })
 
-    expect(mockCreateRoot).toHaveBeenCalledTimes(1)
-    expect(mockRootRender).toHaveBeenCalledTimes(1)
+    expect(mockCreatePortal).toHaveBeenCalledTimes(1)
 
-    const popupTree = mockRootRender.mock.calls[0]?.[0]
+    const popupTree = mockCreatePortal.mock.calls[0]?.[0]
+    const popupContainer = mockCreatePortal.mock.calls[0]?.[1]
     expect(React.isValidElement(popupTree)).toBe(true)
-    expect(popupTree.type).toBe(QueryClientProvider)
-    expect(popupTree.props.client).toBe(queryClient)
+    expect(popupTree.type).toBeDefined()
+    expect(popupTree.props.point.id).toBe(1)
+    expect(popupTree.props.closePopup).toEqual(expect.any(Function))
+    expect(popupContainer?.className).toBe('metravel-cluster-popup-root')
   })
 })

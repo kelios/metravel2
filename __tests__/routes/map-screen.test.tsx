@@ -35,6 +35,7 @@ jest.mock('@/hooks/useResponsive', () => ({
 
 jest.mock('@/hooks/useDebouncedValue', () => ({
   useDebouncedValue: (value: any) => value,
+  useDebouncedValueWithPending: (value: any) => [value, false],
 }))
 
 // Мокаем expo-router/usePathname, чтобы не тянуть реальный роутер

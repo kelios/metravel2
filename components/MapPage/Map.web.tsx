@@ -219,11 +219,20 @@ const MapPageComponent: React.FC<Props> = (props) => {
     isFallbackMinskCenter,
   })
 
+  // The radius guard below uses radius*2 as the cutoff, so sub-100m GPS jitter
+  // is irrelevant. Coarsen the center to ~3 decimals (~100m) so a stream of
+  // GPS updates doesn't re-run this O(n) filter on every tick.
+  const filterCenter = useMemo(() => {
+    const c = userLocationLatLng ?? coordinatesLatLng
+    if (!c || !Number.isFinite(c.lat) || !Number.isFinite(c.lng)) return null
+    return { lat: Math.round(c.lat * 1000) / 1000, lng: Math.round(c.lng * 1000) / 1000 }
+  }, [userLocationLatLng, coordinatesLatLng])
+
   const filteredTravelData = useMemo(() => {
     if (mode !== 'radius') return travelData
     if (!Array.isArray(travelData) || travelData.length === 0) return travelData
 
-    const center = userLocationLatLng ?? coordinatesLatLng
+    const center = filterCenter ?? coordinatesLatLng
     const hasValidCenter = CoordinateConverter.isValid(center)
     const hasValidRadius =
       Number.isFinite(radiusInMeters as any) && !!radiusInMeters && (radiusInMeters as number) > 0
@@ -242,7 +251,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
         return false
       }
     })
-  }, [coordinatesLatLng, mode, radiusInMeters, travelData, userLocationLatLng])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, radiusInMeters, travelData, filterCenter?.lat, filterCenter?.lng, coordinatesLatLng])
 
   const hintCenterForMarkers = useMemo(() => {
     if (

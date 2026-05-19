@@ -35,7 +35,7 @@ export function useTravelDetailsHeroCompositionModel({
     hasInteractiveWebGallery &&
     renderSlider &&
     sliderUpgradeAllowed
-  const sliderPreloadCount = Platform.OS === 'web' ? 0 : isMobile ? 1 : 2
+  const sliderPreloadCount = Platform.OS === 'web' ? (isMobile ? 2 : 3) : isMobile ? 1 : 2
 
   const handleImagePress = useCallback((index: number) => {
     if (Platform.OS === 'web') return

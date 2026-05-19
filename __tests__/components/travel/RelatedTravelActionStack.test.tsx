@@ -50,48 +50,55 @@ describe('RelatedTravelActionStack', () => {
     mockFetchTravelBySlug.mockReset()
   })
 
-  it('renders favorite and planned actions for numeric travel routes', async () => {
-    mockFetchTravel.mockResolvedValue({
-      id: 42,
-      name: 'Поход в Альпы',
-      url: '/travels/alps-hike',
-      travel_image_thumb_url: 'https://cdn.example.com/alps.jpg',
-      countryName: 'Швейцария',
-      cityName: 'Берн',
-      year: '2026',
-      monthName: 'Июль',
-    })
-
+  it('renders actions from fallbacks for numeric travel routes without fetching detail', async () => {
     renderWithQuery(
       <RelatedTravelActionStack
         relatedTravelUrl="/travel/42"
         fallbackTitle="Связанное путешествие"
+        fallbackImageUrl="https://cdn.example.com/fallback.jpg"
+        fallbackCountry="Беларусь"
       />,
     )
 
     await waitFor(() => {
-      expect(mockFavoriteButton.mock.calls.some(([props]) => props?.title === 'Поход в Альпы')).toBe(true)
-      expect(mockStatusButton.mock.calls.some(([props]) => props?.travelTitle === 'Поход в Альпы')).toBe(true)
+      expect(mockStatusButton).toHaveBeenCalled()
     })
 
-    expect(mockFetchTravel.mock.calls[0]?.[0]).toBe(42)
+    // id is known from the route, so no per-card travel-detail request is made
+    expect(mockFetchTravel).not.toHaveBeenCalled()
+    expect(mockFetchTravelBySlug).not.toHaveBeenCalled()
     expect(mockFavoriteButton.mock.calls.at(-1)?.[0]).toEqual(
       expect.objectContaining({
         id: 42,
-        title: 'Поход в Альпы',
-        url: '/travels/alps-hike',
-        country: 'Швейцария',
+        title: 'Связанное путешествие',
+        country: 'Беларусь',
       }),
     )
     expect(mockStatusButton.mock.calls.at(-1)?.[0]).toEqual(
       expect.objectContaining({
         travelId: 42,
-        travelTitle: 'Поход в Альпы',
-        travelUrl: '/travels/alps-hike',
-        travelYear: '2026',
-        travelMonthName: 'Июль',
+        travelTitle: 'Связанное путешествие',
         compact: true,
       }),
+    )
+  })
+
+  it('does not fetch detail when slug route carries an ?id query', async () => {
+    renderWithQuery(
+      <RelatedTravelActionStack
+        relatedTravelUrl="https://metravel.by/travels/ourvietnam?id=129"
+        fallbackTitle="Вьетнам"
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockStatusButton).toHaveBeenCalled()
+    })
+
+    expect(mockFetchTravel).not.toHaveBeenCalled()
+    expect(mockFetchTravelBySlug).not.toHaveBeenCalled()
+    expect(mockStatusButton.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({ travelId: 129, travelTitle: 'Вьетнам' }),
     )
   })
 

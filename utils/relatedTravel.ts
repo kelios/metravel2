@@ -45,6 +45,18 @@ export const resolveRelatedTravelRef = (rawUrl: string | null | undefined): Rela
       }
     }
 
+    // Slug routes from the places catalog carry the canonical id as `?id=NNN`.
+    // Reading it lets the related-travel buttons render without a per-card
+    // travel-detail fetch (avoids an N+1 across the list).
+    const queryId = Number(parsed.searchParams.get('id'))
+    if (Number.isFinite(queryId) && queryId > 0) {
+      return {
+        route: normalizedRoute,
+        id: queryId,
+        slug: rawParam,
+      }
+    }
+
     return {
       route: normalizedRoute,
       slug: rawParam,

@@ -42,6 +42,12 @@ export default function RelatedTravelActionStack({
 }: Props) {
   const travelRef = useMemo(() => resolveRelatedTravelRef(relatedTravelUrl), [relatedTravelUrl])
 
+  // For id-based URLs we already have everything the buttons need (id + fallbacks),
+  // so the request is only required to resolve a slug into a numeric id. Keeping it
+  // disabled for id refs avoids an N+1 of full travel-detail fetches across the list,
+  // while React Query still serves cached detail data if the travel was visited.
+  const needsFetch = Boolean(travelRef && !travelRef.id && travelRef.slug)
+
   const { data: relatedTravel } = useQuery({
     queryKey: travelRef ? queryKeys.travel(travelRef.id ?? travelRef.slug ?? 'related') : ['travel', 'related', 'missing'],
     queryFn: ({ signal }) => {
@@ -50,7 +56,7 @@ export default function RelatedTravelActionStack({
       if (travelRef.slug) return fetchTravelBySlug(travelRef.slug, { signal })
       return null
     },
-    enabled: Boolean(travelRef),
+    enabled: needsFetch,
     staleTime: 10 * 60 * 1000,
     gcTime: 20 * 60 * 1000,
     retry: 1,
