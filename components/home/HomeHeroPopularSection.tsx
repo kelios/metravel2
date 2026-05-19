@@ -82,6 +82,7 @@ function FeaturedRouteCard({
         quality={72}
         alt={image.alt}
         loading="eager"
+        priority="high"
         style={styles.featuredCardImage}
       />
       <View style={styles.featuredCardOverlay}>

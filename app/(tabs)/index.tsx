@@ -6,7 +6,6 @@ import InstantSEO from '@/components/seo/LazyInstantSEO'
 import ErrorBoundary from '@/components/ui/ErrorBoundary'
 import ErrorDisplay from '@/components/ui/ErrorDisplay'
 import { useThemedColors } from '@/hooks/useTheme'
-import { useResponsive } from '@/hooks/useResponsive'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
 import { HomePageSkeleton } from '@/components/home/HomePageSkeleton'
 
@@ -40,7 +39,6 @@ function normalizePath(raw: string | null | undefined) {
 function HomeScreen() {
   const pathname = usePathname()
   const colors = useThemedColors()
-  const { isHydrated: isResponsiveHydrated = true } = useResponsive()
   const styles = useMemo(() => createStyles(colors), [colors])
 
   // On web, start as false so SSR and first client render produce the same
@@ -119,7 +117,7 @@ function HomeScreen() {
   )
 
   const handleContentReady = useCallback(() => setContentReady(true), [])
-  const canMountContent = hydrated && isResponsiveHydrated
+  const canMountContent = hydrated
 
   if (!isHomePath) {
     return shouldRenderSeo ? renderHomeSeo(canonical) : null

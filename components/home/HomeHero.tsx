@@ -2,13 +2,13 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Dimensions, Platform, View } from 'react-native'
 import { useRouter } from 'expo-router'
 
-import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { ResponsiveContainer } from '@/components/layout'
 import { queueAnalyticsEvent } from '@/utils/analytics'
 import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { createHomeHeroStyles } from './homeHeroStyles'
+import { useHomeViewport } from './useHomeViewport'
 import HomeHeroBookLayout from './HomeHeroBookLayout'
 import HomeHeroMoodRail from './HomeHeroMoodRail'
 import HomeHeroPopularSection from './HomeHeroPopularSection'
@@ -83,7 +83,7 @@ const HomeHero = memo(function HomeHero({
     isDesktop,
     width: rawWidth,
     isPortrait,
-  } = useResponsive()
+  } = useHomeViewport()
 
   // Stabilize width — ignore <50px jitters (e.g. mobile address bar collapse).
   const stableWidthRef = useRef(rawWidth)

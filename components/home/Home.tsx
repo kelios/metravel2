@@ -5,17 +5,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useAuth } from '@/context/AuthContext'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
-import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import { ResponsiveContainer, ResponsiveStack } from '@/components/layout'
 import HomeHero from './HomeHero'
-import HomeFinalCTA from './HomeFinalCTA'
-import ContributionBanner from '@/components/common/ContributionBanner'
 import { queueAnalyticsEvent } from '@/utils/analytics'
 import { hapticImpact } from '@/utils/haptics'
 import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries'
-import { HomeInspirationSection } from './HomeInspirationSection'
-import { fetchTravelsRandom, fetchTravelsOfMonth } from '@/api/map'
+import { useHomeViewport } from './useHomeViewport'
 
 const IS_WEB = Platform.OS === 'web'
 
@@ -34,12 +30,9 @@ const HomeHowItWorks = lazy(() => import('./HomeHowItWorks'))
 const HomeFAQSection = lazy(() => import('./HomeFAQSection'))
 const HomeInspirationSections = lazy(() => import('./HomeInspirationSections'))
 const HomeFavoritesHistorySection = lazy(() => import('./HomeFavoritesHistorySection'))
-
-const fetchHomeRandomTravels = (options?: { signal?: AbortSignal }) =>
-  fetchTravelsRandom({ ...options, limit: 3 })
-
-const fetchHomeTravelsOfMonth = (options?: { signal?: AbortSignal }) =>
-  fetchTravelsOfMonth({ ...options, limit: 6 })
+const HomeRandomRoutesSection = lazy(() => import('./HomeRandomRoutesSection'))
+const HomeWeekendRoutesSection = lazy(() => import('./HomeWeekendRoutesSection'))
+const HomeBottomCtaSection = lazy(() => import('./HomeBottomCtaSection'))
 
 type PageSectionProps = {
   children: React.ReactNode
@@ -196,7 +189,7 @@ function Home() {
   const { isAuthenticated, userId } = useAuth()
   const colors = useThemedColors()
   const queryClient = useQueryClient()
-  const { isSmallPhone, isPhone } = useResponsive()
+  const { isSmallPhone, isPhone } = useHomeViewport()
   const isMobile = isSmallPhone || isPhone
 
   const [refreshing, setRefreshing] = useState(false)
@@ -280,15 +273,9 @@ function Home() {
       />
 
       <PageSection marginTop={gap.hero}>
-        <HomeInspirationSection
-          title="Не хотите"
-          titleAccent="выбирать долго?"
-          subtitle="Откройте случайный маршрут для спонтанного выезда"
-          queryKey="home-random-travels"
-          fetchFn={fetchHomeRandomTravels}
-          fixedCount={3}
-          hideAuthor
-        />
+        <Suspense fallback={<SectionSkeleton />}>
+          <HomeRandomRoutesSection />
+        </Suspense>
       </PageSection>
 
       <Section marginTop={gap.howItWorks} minHeight={HOW_IT_WORKS_PLACEHOLDER_STYLE.minHeight}>
@@ -302,13 +289,9 @@ function Home() {
       </Section>
 
       <PageSection marginTop={gap.weekends}>
-        <HomeInspirationSection
-          title="Маршруты на"
-          titleAccent="ближайшие выходные"
-          subtitle="Реальные поездки, которые можно успеть за 1-2 дня"
-          queryKey="home-travels-of-month"
-          fetchFn={fetchHomeTravelsOfMonth}
-        />
+        <Suspense fallback={<SectionSkeleton />}>
+          <HomeWeekendRoutesSection />
+        </Suspense>
       </PageSection>
 
       <Section marginTop={gap.history}>
@@ -332,11 +315,9 @@ function Home() {
       </Section>
 
       <Section marginTop={gap.finalCta}>
-        <ContributionBanner variant="home" />
-      </Section>
-
-      <Section marginTop={16}>
-        <HomeFinalCTA travelsCount={travelsCount} />
+        <Suspense fallback={<SectionSkeleton />}>
+          <HomeBottomCtaSection travelsCount={travelsCount} />
+        </Suspense>
       </Section>
     </ScrollView>
   )

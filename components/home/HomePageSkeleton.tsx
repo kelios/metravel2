@@ -2,8 +2,8 @@ import React, { memo, useMemo } from 'react'
 import { Platform, ScrollView, StyleSheet, View } from 'react-native'
 
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
-import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
+import { useHomeViewport } from './useHomeViewport'
 
 const BOOK_ASPECT_RATIO = 1040 / 765
 
@@ -338,7 +338,7 @@ FaqSkeleton.displayName = 'FaqSkeleton'
 
 export const HomePageSkeleton = memo(() => {
   const colors = useThemedColors()
-  const { isSmallPhone, isPhone, isLargePhone } = useResponsive()
+  const { isSmallPhone, isPhone, isLargePhone } = useHomeViewport()
   const isMobile = isSmallPhone || isPhone || isLargePhone
 
   const styles = useMemo(
