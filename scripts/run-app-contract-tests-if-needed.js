@@ -30,7 +30,7 @@ const CATEGORY_DEFINITIONS = [
       '__tests__/components/listTravel/ListTravel.integration.test.tsx',
       '__tests__/components/listTravel/ListTravel.filters.integration.test.tsx',
       '__tests__/components/travel/TravelDetailsLazy.test.tsx',
-      '__tests__/components/travel/TravelDetailsContainer.redesign.test.tsx',
+      '__tests__/components/travel/TravelDetailsContainer.skeleton.web.test.tsx',
       '__tests__/components/travel/UpsertTravel.integration.test.tsx',
       '__tests__/hooks/useTravelDetails.test.ts',
       '__tests__/hooks/useUpsertTravelController.test.ts',
