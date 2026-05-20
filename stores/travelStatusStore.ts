@@ -6,6 +6,8 @@ import { buildTravelMonthFallbackDate } from '@/utils/travelCalendarDate'
 
 const TRAVEL_STATUS_KEY = 'metravel_travel_status'
 
+const getUserApi = async () => import('@/api/user')
+
 export type TravelStatus = 'visited' | 'planned' | 'wishlist'
 
 export type TravelStatusEntry = {
@@ -119,6 +121,40 @@ const normalizeEntry = (item: unknown): TravelStatusEntry | null => {
   })
 }
 
+const getStorageKey = (userId: string | null): string =>
+  userId ? `${TRAVEL_STATUS_KEY}_${userId}` : TRAVEL_STATUS_KEY
+
+const persistEntries = async (entries: TravelStatusEntry[], userId: string | null): Promise<void> => {
+  await AsyncStorage.setItem(getStorageKey(userId), JSON.stringify(entries))
+}
+
+const getNumericTravelId = (id: string | number): number => {
+  const travelId = Number(id)
+  if (!Number.isInteger(travelId) || travelId <= 0) {
+    throw new Error('INVALID_TRAVEL_ID')
+  }
+  return travelId
+}
+
+const syncStatusToServer = async (entry: TravelStatusEntry, userId: string | null): Promise<void> => {
+  if (!userId) return
+
+  const { upsertUserTravelStatus } = await getUserApi()
+  await upsertUserTravelStatus(userId, {
+    travel_id: getNumericTravelId(entry.id),
+    status: entry.status,
+    planned_date: entry.status === 'planned' ? entry.plannedDate ?? null : null,
+    visited_date: entry.status === 'visited' ? entry.visitedDate ?? null : null,
+  })
+}
+
+const syncRemoveStatusFromServer = async (id: string | number, userId: string | null): Promise<void> => {
+  if (!userId) return
+
+  const { deleteUserTravelStatus } = await getUserApi()
+  await deleteUserTravelStatus(userId, getNumericTravelId(id))
+}
+
 interface TravelStatusState {
   entries: TravelStatusEntry[]
   _userId: string | null
@@ -139,6 +175,7 @@ export const useTravelStatusStore = create<TravelStatusState>((set, get) => ({
     get().entries.find((e) => String(e.id) === String(id)),
 
   setStatus: async (entry, userId) => {
+    const previousEntries = get().entries
     const existing = get().entries.find((e) => String(e.id) === String(entry.id))
     const newEntry: TravelStatusEntry = normalizeStatusDates({
       ...entry,
@@ -150,21 +187,36 @@ export const useTravelStatusStore = create<TravelStatusState>((set, get) => ({
     ]
     set({ entries: newEntries })
     try {
-      const key = userId ? `${TRAVEL_STATUS_KEY}_${userId}` : TRAVEL_STATUS_KEY
-      await AsyncStorage.setItem(key, JSON.stringify(newEntries))
+      await persistEntries(newEntries, userId)
+      await syncStatusToServer(newEntry, userId)
     } catch (error) {
+      set({ entries: previousEntries })
+      try {
+        await persistEntries(previousEntries, userId)
+      } catch (persistError) {
+        devError('Ошибка отката статуса путешествия:', persistError)
+      }
       devError('Ошибка сохранения статуса путешествия:', error)
+      throw error
     }
   },
 
   removeStatus: async (id, userId) => {
+    const previousEntries = get().entries
     const newEntries = get().entries.filter((e) => String(e.id) !== String(id))
     set({ entries: newEntries })
     try {
-      const key = userId ? `${TRAVEL_STATUS_KEY}_${userId}` : TRAVEL_STATUS_KEY
-      await AsyncStorage.setItem(key, JSON.stringify(newEntries))
+      await persistEntries(newEntries, userId)
+      await syncRemoveStatusFromServer(id, userId)
     } catch (error) {
+      set({ entries: previousEntries })
+      try {
+        await persistEntries(previousEntries, userId)
+      } catch (persistError) {
+        devError('Ошибка отката удаления статуса путешествия:', persistError)
+      }
       devError('Ошибка удаления статуса путешествия:', error)
+      throw error
     }
   },
 
@@ -179,8 +231,7 @@ export const useTravelStatusStore = create<TravelStatusState>((set, get) => ({
 
   loadLocal: async (userId) => {
     try {
-      const key = userId ? `${TRAVEL_STATUS_KEY}_${userId}` : TRAVEL_STATUS_KEY
-      const data = await AsyncStorage.getItem(key)
+      const data = await AsyncStorage.getItem(getStorageKey(userId))
       if (data) {
         const parsed = safeJsonParseString(data, [])
         const normalized = (Array.isArray(parsed) ? parsed : [])

@@ -1,8 +1,10 @@
 import {
+    deleteUserTravelStatus,
     subscribeToUser,
     unsubscribeFromUser,
     fetchMySubscriptions,
     fetchMySubscribers,
+    upsertUserTravelStatus,
 } from '@/api/user';
 
 jest.mock('@/api/client', () => ({
@@ -80,6 +82,30 @@ describe('api/user subscriptions', () => {
             const result = await fetchMySubscribers();
             expect(mockedGet).toHaveBeenCalledWith('/user/subscribers/');
             expect(result).toEqual(profiles);
+        });
+    });
+
+    describe('travel statuses', () => {
+        it('upserts one travel status through POST /user/{id}/travel-statuses/', async () => {
+            const payload = {
+                travel_id: 123,
+                status: 'planned' as const,
+                planned_date: '2026-07-15',
+                visited_date: null,
+            };
+            mockedPost.mockResolvedValueOnce({ ...payload, added_at: '2026-05-20T10:00:00Z', updated_at: null });
+
+            await upsertUserTravelStatus('42', payload);
+
+            expect(mockedPost).toHaveBeenCalledWith('/user/42/travel-statuses/', payload);
+        });
+
+        it('deletes one travel status through DELETE /user/{id}/travel-statuses/{travel_id}/', async () => {
+            mockedDelete.mockResolvedValueOnce(null);
+
+            await deleteUserTravelStatus('42', 123);
+
+            expect(mockedDelete).toHaveBeenCalledWith('/user/42/travel-statuses/123/');
         });
     });
 });

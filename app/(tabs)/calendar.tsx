@@ -67,6 +67,7 @@ type CalendarEntry = TravelStatusEntry & {
 
 type DateEditorState = {
   item: CalendarEntry
+  status: TravelStatus
   value: string
   error: string
 } | null
@@ -385,31 +386,65 @@ const CalendarTravelCard = memo(function CalendarTravelCard({
 function DateEditorModal({
   editor,
   colors,
+  badgeColors,
   styles,
   onChange,
+  onStatusChange,
   onClose,
   onClear,
+  onRemove,
   onSave,
 }: {
   editor: DateEditorState
   colors: ReturnType<typeof useThemedColors>
+  badgeColors: Record<TravelStatus, string>
   styles: CalendarStyles
   onChange: (value: string) => void
+  onStatusChange: (status: TravelStatus) => void
   onClose: () => void
   onClear: () => void
+  onRemove: () => void
   onSave: () => void
 }) {
   const item = editor?.item
+  const selectedStatus = editor?.status ?? item?.status
   const canClearDate = item ? Boolean(getExplicitTravelStatusDate(item)) : false
-  const subtitle = getDateEditorSubtitle(item?.status)
+  const canRemoveStatus = item ? !item._isFavorite && !item._isAuthored : false
+  const subtitle = getDateEditorSubtitle(selectedStatus)
 
   return (
     <Modal visible={Boolean(editor)} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.modalOverlay} onPress={onClose}>
         <Pressable style={styles.modalSheet} onPress={(event) => event.stopPropagation()}>
           <View style={styles.modalHandle} />
-          <Text style={styles.modalTitle}>Дата путешествия</Text>
+          <Text style={styles.modalTitle}>Статус в календаре</Text>
           <Text style={styles.modalSubtitle}>{subtitle}</Text>
+
+          <View style={styles.statusEditorRow}>
+            {TABS.map((statusOption) => {
+              const isActive = selectedStatus === statusOption.key
+              const accentColor = badgeColors[statusOption.key]
+              return (
+                <Pressable
+                  key={statusOption.key}
+                  style={[
+                    styles.statusEditorOption,
+                    isActive && { backgroundColor: accentColor, borderColor: accentColor },
+                    globalFocusStyles.focusable,
+                  ]}
+                  onPress={() => onStatusChange(statusOption.key)}
+                  accessibilityRole="button"
+                  accessibilityLabel={statusOption.label}
+                  accessibilityState={{ selected: isActive }}
+                >
+                  <Feather name={statusOption.icon} size={14} color={isActive ? colors.surface : colors.textMuted} />
+                  <Text style={[styles.statusEditorOptionText, isActive && { color: colors.surface }]}>
+                    {statusOption.label}
+                  </Text>
+                </Pressable>
+              )
+            })}
+          </View>
 
           {Platform.OS === 'web' ? (
             <WebDateInput value={editor?.value ?? ''} onChange={onChange} />
@@ -429,6 +464,16 @@ function DateEditorModal({
           {!!editor?.error && <Text style={styles.dateError}>{editor.error}</Text>}
 
           <View style={styles.dateActions}>
+            {canRemoveStatus && (
+              <Pressable
+                style={[styles.dateDangerButton, globalFocusStyles.focusable]}
+                onPress={onRemove}
+                accessibilityRole="button"
+                accessibilityLabel="Удалить из календаря"
+              >
+                <Text style={styles.dateDangerText}>Удалить</Text>
+              </Pressable>
+            )}
             {canClearDate && (
               <Pressable
                 style={[styles.dateSecondaryButton, globalFocusStyles.focusable]}
@@ -490,6 +535,7 @@ export default function CalendarScreen() {
   const entries = useTravelStatusStore((state) => state.entries)
   const loadLocal = useTravelStatusStore((state) => state.loadLocal)
   const setStatus = useTravelStatusStore((state) => state.setStatus)
+  const removeStatus = useTravelStatusStore((state) => state.removeStatus)
   const { myTravels, load: loadMyTravels } = useMyTravels({ userId: userId ?? null, perPage: 9999 })
 
   const [activeTab, setActiveTab] = useState<TravelStatus>('planned')
@@ -666,6 +712,7 @@ export default function CalendarScreen() {
 
     setDateEditor({
       item,
+      status: item.status,
       value: getCalendarDate(item) ?? '',
       error: '',
     })
@@ -679,8 +726,12 @@ export default function CalendarScreen() {
     setDateEditor((current) => current ? { ...current, value, error: '' } : current)
   }, [])
 
-  const saveItemDate = useCallback(async (item: CalendarEntry, value: string | null) => {
-    const dateField = getDateFieldForTravelStatus(item.status)
+  const handleStatusInputChange = useCallback((status: TravelStatus) => {
+    setDateEditor((current) => current ? { ...current, status, error: '' } : current)
+  }, [])
+
+  const saveItemStatus = useCallback(async (item: CalendarEntry, status: TravelStatus, value: string | null) => {
+    const dateField = getDateFieldForTravelStatus(status)
 
     await setStatus(
       {
@@ -694,7 +745,7 @@ export default function CalendarScreen() {
         travelYear: item.travelYear,
         travelMonth: item.travelMonth,
         travelMonthName: item.travelMonthName,
-        status: item.status,
+        status,
         ...(value ? { [dateField]: value } : {}),
       },
       userId
@@ -704,25 +755,31 @@ export default function CalendarScreen() {
   const handleSaveDate = useCallback(async () => {
     if (!dateEditor) return
 
-    if (!dateEditor.value) {
+    if (dateEditor.status === 'planned' && !dateEditor.value) {
       setDateEditor({ ...dateEditor, error: 'Укажите дату' })
       return
     }
 
-    if (!parseTravelStatusDateParts(dateEditor.value)) {
+    if (dateEditor.value && !parseTravelStatusDateParts(dateEditor.value)) {
       setDateEditor({ ...dateEditor, error: 'Введите дату в формате ГГГГ-ММ-ДД' })
       return
     }
 
-    await saveItemDate(dateEditor.item, dateEditor.value)
+    await saveItemStatus(dateEditor.item, dateEditor.status, dateEditor.value || null)
     handleCloseDateEditor()
-  }, [dateEditor, handleCloseDateEditor, saveItemDate])
+  }, [dateEditor, handleCloseDateEditor, saveItemStatus])
 
   const handleClearDate = useCallback(async () => {
     if (!dateEditor) return
-    await saveItemDate(dateEditor.item, null)
+    await saveItemStatus(dateEditor.item, dateEditor.status, null)
     handleCloseDateEditor()
-  }, [dateEditor, handleCloseDateEditor, saveItemDate])
+  }, [dateEditor, handleCloseDateEditor, saveItemStatus])
+
+  const handleRemoveFromCalendar = useCallback(async () => {
+    if (!dateEditor) return
+    await removeStatus(dateEditor.item.id, userId)
+    handleCloseDateEditor()
+  }, [dateEditor, handleCloseDateEditor, removeStatus, userId])
 
   const handleLogin = useCallback(() => {
     router.push(buildLoginHref({ redirect: '/calendar', intent: 'calendar' }) as any)
@@ -825,10 +882,13 @@ export default function CalendarScreen() {
       <DateEditorModal
         editor={dateEditor}
         colors={colors}
+        badgeColors={badgeColors}
         styles={styles}
         onChange={handleDateInputChange}
+        onStatusChange={handleStatusInputChange}
         onClose={handleCloseDateEditor}
         onClear={handleClearDate}
+        onRemove={handleRemoveFromCalendar}
         onSave={handleSaveDate}
       />
     </SafeAreaView>
@@ -1046,6 +1106,29 @@ function createCalendarStyles(colors: ReturnType<typeof useThemedColors>, isWide
       lineHeight: 18,
       marginBottom: 14,
     },
+    statusEditorRow: {
+      flexDirection: 'row',
+      gap: 8,
+      flexWrap: 'wrap',
+      marginBottom: 14,
+    },
+    statusEditorOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : null),
+    },
+    statusEditorOptionText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.textSecondary,
+    },
     dateInput: {
       borderWidth: 1,
       borderColor: colors.border,
@@ -1085,6 +1168,16 @@ function createCalendarStyles(colors: ReturnType<typeof useThemedColors>, isWide
       alignItems: 'center',
       backgroundColor: colors.primary,
     },
+    dateDangerButton: {
+      flexGrow: 1,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      alignItems: 'center',
+      backgroundColor: colors.dangerLight,
+      borderWidth: 1,
+      borderColor: colors.danger,
+    },
     dateSecondaryText: {
       fontSize: 14,
       fontWeight: '600',
@@ -1094,6 +1187,11 @@ function createCalendarStyles(colors: ReturnType<typeof useThemedColors>, isWide
       fontSize: 14,
       fontWeight: '700',
       color: colors.surface,
+    },
+    dateDangerText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.danger,
     },
   })
 }

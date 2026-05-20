@@ -15,8 +15,25 @@ jest.mock('@/utils/safeJsonParse', () => ({
   }),
 }))
 
+jest.mock('@/api/user', () => ({
+  upsertUserTravelStatus: jest.fn(() => Promise.resolve({
+    travel_id: 1,
+    status: 'planned',
+    planned_date: null,
+    visited_date: null,
+    added_at: '2026-05-20T10:00:00Z',
+    updated_at: null,
+  })),
+  deleteUserTravelStatus: jest.fn(() => Promise.resolve(null)),
+}))
+
 import { getTravelStatusCalendarDate, parseTravelStatusDateParts, useTravelStatusStore } from '@/stores/travelStatusStore'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
+
+const { upsertUserTravelStatus, deleteUserTravelStatus } = require('@/api/user') as {
+  upsertUserTravelStatus: jest.Mock
+  deleteUserTravelStatus: jest.Mock
+}
 
 const getIsoDayOfWeek = (date: string | undefined) => {
   if (!date) return null
@@ -41,6 +58,15 @@ beforeEach(() => {
   jest.clearAllMocks()
   ;(AsyncStorage.getItem as jest.Mock).mockResolvedValue(null)
   ;(AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined)
+  upsertUserTravelStatus.mockResolvedValue({
+    travel_id: 1,
+    status: 'planned',
+    planned_date: null,
+    visited_date: null,
+    added_at: '2026-05-20T10:00:00Z',
+    updated_at: null,
+  })
+  deleteUserTravelStatus.mockResolvedValue(null)
   useTravelStatusStore.setState({ entries: [], _userId: null })
 })
 
@@ -134,6 +160,33 @@ describe('travelStatusStore', () => {
       )
     })
 
+    it('отправляет статус авторизованного пользователя на backend', async () => {
+      await act(() =>
+        useTravelStatusStore.getState().setStatus(
+          makeEntry(123, 'planned', { plannedDate: '2026-07-15' }),
+          '42'
+        )
+      )
+
+      expect(upsertUserTravelStatus).toHaveBeenCalledWith('42', {
+        travel_id: 123,
+        status: 'planned',
+        planned_date: '2026-07-15',
+        visited_date: null,
+      })
+    })
+
+    it('откатывает optimistic update, если backend не сохранил статус', async () => {
+      await act(() => useTravelStatusStore.getState().setStatus(makeEntry(1, 'wishlist'), null))
+      upsertUserTravelStatus.mockRejectedValueOnce(new Error('Network error'))
+
+      await expect(
+        useTravelStatusStore.getState().setStatus(makeEntry(123, 'planned', { plannedDate: '2026-07-15' }), '42')
+      ).rejects.toThrow('Network error')
+
+      expect(useTravelStatusStore.getState().entries.map((entry) => entry.id)).toEqual([1])
+    })
+
     it('не дублирует записи при повторном вызове', async () => {
       const userId = 'u1'
       await act(() => useTravelStatusStore.getState().setStatus(makeEntry(5, 'wishlist'), userId))
@@ -161,6 +214,25 @@ describe('travelStatusStore', () => {
       ;(AsyncStorage.setItem as jest.Mock).mockClear()
       await act(() => useTravelStatusStore.getState().removeStatus(1, null))
       expect(AsyncStorage.setItem).toHaveBeenCalledWith('metravel_travel_status', '[]')
+    })
+
+    it('удаляет статус авторизованного пользователя на backend', async () => {
+      await act(() => useTravelStatusStore.getState().setStatus(makeEntry(123, 'visited'), null))
+
+      await act(() => useTravelStatusStore.getState().removeStatus(123, '42'))
+
+      expect(deleteUserTravelStatus).toHaveBeenCalledWith('42', 123)
+    })
+
+    it('откатывает удаление, если backend не удалил статус', async () => {
+      await act(() => useTravelStatusStore.getState().setStatus(makeEntry(123, 'visited'), null))
+      deleteUserTravelStatus.mockRejectedValueOnce(new Error('Network error'))
+
+      await expect(
+        useTravelStatusStore.getState().removeStatus(123, '42')
+      ).rejects.toThrow('Network error')
+
+      expect(useTravelStatusStore.getState().getStatus(123)).toBeDefined()
     })
   })
 

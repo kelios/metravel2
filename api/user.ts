@@ -40,6 +40,32 @@ export type UpdateUserProfilePayload = Partial<
     >
 >;
 
+export type UserTravelStatusKind = 'visited' | 'planned' | 'wishlist';
+
+export type UserTravelStatusPayload = {
+    travel_id: number;
+    status: UserTravelStatusKind;
+    planned_date?: string | null;
+    visited_date?: string | null;
+};
+
+export type UserTravelStatusDto = {
+    travel_id: number;
+    status: UserTravelStatusKind;
+    planned_date: string | null;
+    visited_date: string | null;
+    added_at: string;
+    updated_at: string | null;
+    travel?: {
+        id: number;
+        name: string | null;
+        slug: string;
+        url: string;
+        travel_image_thumb_url: string;
+        countryName: string;
+    } | null;
+};
+
 /**
  * Normalizes an avatar string from the API.
  * Returns `null` for empty, "null", or "undefined" values.
@@ -159,6 +185,22 @@ export const fetchUserRecommendedTravels = async (userId: string | number): Prom
     // apiClient.baseURL уже содержит /api
     const res = await apiClient.get<MaybePaginated<CardViewTravelDto>>(`/user/${userId}/recommended-travels/`);
     return unwrapList(res);
+};
+
+// ---- Travel statuses / planning ----
+
+export const upsertUserTravelStatus = async (
+    userId: string | number,
+    payload: UserTravelStatusPayload
+): Promise<UserTravelStatusDto> => {
+    return apiClient.post<UserTravelStatusDto>(`/user/${userId}/travel-statuses/`, payload);
+};
+
+export const deleteUserTravelStatus = async (
+    userId: string | number,
+    travelId: string | number
+): Promise<UserTravelStatusDto | null> => {
+    return apiClient.delete<UserTravelStatusDto | null>(`/user/${userId}/travel-statuses/${travelId}/`);
 };
 
 // ---- Subscriptions ----
