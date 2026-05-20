@@ -5,6 +5,7 @@ import { useFavorites } from '@/context/FavoritesContext'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
 import type { Travel } from '@/types/types'
 import { showToast } from '@/utils/toast'
+import { buildTravelPath } from '@/utils/travelSeo'
 
 export function useTravelHeroFavoriteToggleModel({
   isMobile,
@@ -51,7 +52,7 @@ export function useTravelHeroFavoriteToggleModel({
         type: 'travel',
         title: travel.name,
         imageUrl: travel.travel_image_thumb_url,
-        url: `/travels/${(travel as Record<string, unknown>).slug || travel.id}`,
+        url: buildTravelPath(travel) ?? '',
         country: (travel as Record<string, unknown>).countryName as
           | string
           | undefined,

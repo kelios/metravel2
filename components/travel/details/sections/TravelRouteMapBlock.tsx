@@ -6,12 +6,15 @@ import { useThemedColors } from '@/hooks/useTheme'
 
 import { MapSkeleton } from '@/components/travel/TravelDetailSkeletons'
 import ToggleableMap from '@/components/travel/ToggleableMapSection'
-import { TravelMap } from '@/components/MapPage/TravelMap'
 import RouteElevationProfile from '@/components/travel/details/sections/RouteElevationProfile'
 import type { Travel } from '@/types/types'
 
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { useTravelRouteMapBlockModel } from '../hooks/useTravelRouteMapBlockModel'
+
+const TravelMap = React.lazy(() =>
+  import('@/components/MapPage/TravelMap').then((m) => ({ default: m.TravelMap })),
+)
 
 const SECTION_CONTENT_MARGIN_STYLE = { marginTop: 12 } as const
 

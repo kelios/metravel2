@@ -28,12 +28,8 @@ import { useSliderPointerDrag } from './sliderParts/useSliderPointerDrag'
 
 export type { SliderImage, SliderProps, SliderRef } from './sliderParts/types'
 
-if (typeof document !== 'undefined') {
-  const STYLE_ID = 'slider-web-carousel-styles'
-  if (!document.getElementById(STYLE_ID)) {
-    const style = document.createElement('style')
-    style.id = STYLE_ID
-    style.textContent = `
+const SLIDER_WEB_STYLE_ID = 'slider-web-carousel-styles'
+const SLIDER_WEB_STYLE_CONTENT = `
       [data-testid="slider-wrapper"]:hover [aria-label="Previous slide"],
       [data-testid="slider-wrapper"]:hover [aria-label="Next slide"] {
         opacity: 1 !important;
@@ -59,8 +55,16 @@ if (typeof document !== 'undefined') {
         }
       }
     `
+
+function useEnsureSliderWebStyles() {
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    if (document.getElementById(SLIDER_WEB_STYLE_ID)) return
+    const style = document.createElement('style')
+    style.id = SLIDER_WEB_STYLE_ID
+    style.textContent = SLIDER_WEB_STYLE_CONTENT
     document.head.appendChild(style)
-  }
+  }, [])
 }
 
 const POINTER_EVENTS_NONE = { pointerEvents: 'none' as const }
@@ -232,6 +236,7 @@ const PaginationDots = memo(function PaginationDots({
 })
 
 const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
+  useEnsureSliderWebStyles()
   const colors = useThemedColors()
   const styles = useMemo(() => createSliderStyles(colors), [colors])
 

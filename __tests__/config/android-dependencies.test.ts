@@ -128,16 +128,8 @@ describe('Android Dependencies Tests', () => {
   });
 
   describe('Document and File Handling', () => {
-    it('should have react-native-document-picker', () => {
-      expect(packageJson.dependencies['react-native-document-picker']).toBeDefined();
-    });
-
     it('should have expo-sharing', () => {
       expect(packageJson.dependencies['expo-sharing']).toBeDefined();
-    });
-
-    it('should have expo-print', () => {
-      expect(packageJson.dependencies['expo-print']).toBeDefined();
     });
   });
 

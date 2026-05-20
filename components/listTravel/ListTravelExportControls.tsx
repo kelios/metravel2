@@ -12,7 +12,7 @@ import ProgressIndicator from '@/components/ui/ProgressIndicator';
 import BookSettingsModal from '@/components/export/BookSettingsModal';
 import SelectedTravelOrderCard from './SelectedTravelOrderCard';
 import { createStyles } from './listTravelStyles';
-import { getTravelLabel } from '@/services/pdf-export/utils/pluralize';
+import { getTravelLabel } from '@/utils/pluralize';
 import { useThemedColors } from '@/hooks/useTheme';
 
 type Props = {

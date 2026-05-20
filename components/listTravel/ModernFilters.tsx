@@ -13,7 +13,7 @@ import {
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import { getTravelLabel } from '@/services/pdf-export/utils/pluralize';
+import { getTravelLabel } from '@/utils/pluralize';
 import { BREAKPOINTS } from './utils/listTravelConstants';
 
 // Подкомпоненты из filters/

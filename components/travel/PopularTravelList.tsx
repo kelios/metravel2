@@ -76,9 +76,13 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
       queryFn: ({ signal } = {} as any) => fetchTravelsPopular({ signal, throwOnError: true }),
     });
 
+    const popularValues = useMemo(
+      () => Object.values(travelsPopular ?? {}) as any[],
+      [travelsPopular],
+    );
+
     const popularList = useMemo(() => {
-      const list = Object.values(travelsPopular) as any[];
-      const filtered = list.filter((item) => {
+      const filtered = popularValues.filter((item) => {
         const name = (item?.name || '').trim();
         const country = (item?.countryName || '').trim();
         const rawViews = item?.countUnicIpView ?? item?.views;
@@ -89,7 +93,7 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
       });
       // Ограничиваем количество элементов для первоначального рендера
       return filtered.slice(0, Platform.OS === 'web' ? 8 : filtered.length);
-    }, [travelsPopular]);
+    }, [popularValues]);
 
     // ✅ РЕДИЗАЙН: Стили с поддержкой темной темы
     const styles = useMemo(() => StyleSheet.create({

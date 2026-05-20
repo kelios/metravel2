@@ -41,17 +41,6 @@ type Props = {
   }
 }
 
-function minMax(values: number[]): { min: number; max: number } {
-  let min = values[0]
-  let max = values[0]
-  for (let i = 1; i < values.length; i += 1) {
-    const v = values[i]
-    if (v < min) min = v
-    if (v > max) max = v
-  }
-  return { min, max }
-}
-
 function findNearestIndex(points: ReadonlyArray<{ x: number }>, targetX: number) {
   if (points.length === 0) return 0
   let lo = 0
@@ -197,20 +186,44 @@ export default function RouteElevationProfile({
   )
   const isCompactLayout = width > 0 && width < 520
 
-  const metrics = useMemo(() => {
+  const profileData = useMemo(() => {
     const samples = Array.isArray(preview?.elevationProfile)
       ? preview.elevationProfile
       : []
     const totalDistanceKm = calculateRouteDistanceKm(preview?.linePoints ?? [])
-    const elevations = samples
-      .map((s) => s.elevationM)
-      .filter((v) => Number.isFinite(v))
-    const hasElevation = elevations.length >= 2
+
+    // Single pass over samples: compute min/max/ascent/descent/peak
+    let minElevation = Infinity
+    let maxElevation = -Infinity
+    let peakSample: (typeof samples)[number] | null = null
+    let ascent = 0
+    let descent = 0
+    let validElevationCount = 0
+
+    for (let i = 0; i < samples.length; i += 1) {
+      const s = samples[i]
+      const e = s.elevationM
+      if (!Number.isFinite(e)) continue
+      validElevationCount += 1
+      if (e < minElevation) minElevation = e
+      if (e > maxElevation) {
+        maxElevation = e
+        peakSample = s
+      }
+      if (i > 0) {
+        const delta = e - samples[i - 1].elevationM
+        if (delta > 0) ascent += delta
+        else if (delta < 0) descent += -delta
+      }
+    }
+
+    const hasElevation = validElevationCount >= 2
 
     if (!hasElevation) {
       return {
+        samples,
         totalDistanceKm,
-        hasElevation: false,
+        hasElevation: false as const,
         minElevation: null as number | null,
         maxElevation: null as number | null,
         elevationRange: 1,
@@ -223,29 +236,15 @@ export default function RouteElevationProfile({
       }
     }
 
-    const { min: minElevation, max: maxElevation } = minMax(elevations)
     const elevationRange = Math.max(1, maxElevation - minElevation)
     const startSample = samples[0] ?? null
     const finishSample = samples[samples.length - 1] ?? null
-    const peakSample = samples.reduce(
-      (peak, current) =>
-        current.elevationM > peak.elevationM ? current : peak,
-      samples[0],
-    )
-
-    let ascent = 0
-    let descent = 0
-    for (let i = 1; i < samples.length; i += 1) {
-      const delta = samples[i].elevationM - samples[i - 1].elevationM
-      if (delta > 0) ascent += delta
-      if (delta < 0) descent += Math.abs(delta)
-    }
-
     const avgClimbMPerKm = totalDistanceKm > 0 ? ascent / totalDistanceKm : null
 
     return {
+      samples,
       totalDistanceKm,
-      hasElevation: true,
+      hasElevation: true as const,
       minElevation,
       maxElevation,
       elevationRange,
@@ -257,6 +256,75 @@ export default function RouteElevationProfile({
       peakSample,
     }
   }, [preview])
+
+  const metrics = profileData
+
+  const chartGeometry = useMemo(() => {
+    const empty = {
+      chartPoints: [] as Array<{
+        index: number
+        sample: (typeof profileData.samples)[number]
+        x: number
+        y: number
+      }>,
+      polylinePoints: '',
+      areaPath: '',
+      yAxisGuides: [] as Array<{
+        key: string
+        y: number
+        x1: number
+        x2: number
+        label: string
+      }>,
+    }
+    if (!profileData.hasElevation || width <= 0 || profileData.samples.length < 2) {
+      return empty
+    }
+
+    const chartW = Math.max(1, width - CHART_PADDING * 2)
+    const chartH = CHART_HEIGHT - CHART_PADDING * 2
+    const totalDistance = Math.max(0.001, profileData.totalDistanceKm)
+    const minElev = profileData.minElevation ?? 0
+    const range = profileData.elevationRange
+    const baselineY = CHART_HEIGHT - CHART_PADDING
+
+    const chartPoints = new Array(profileData.samples.length)
+    let polylineStr = ''
+    for (let i = 0; i < profileData.samples.length; i += 1) {
+      const sample = profileData.samples[i]
+      const x = CHART_PADDING + (sample.distanceKm / totalDistance) * chartW
+      const y =
+        CHART_PADDING +
+        (1 - (sample.elevationM - minElev) / range) * chartH
+      chartPoints[i] = { index: i, sample, x, y }
+      polylineStr += i === 0 ? `${x},${y}` : ` ${x},${y}`
+    }
+
+    const first = chartPoints[0]
+    const last = chartPoints[chartPoints.length - 1]
+    const areaPath = `M ${first.x} ${baselineY} L ${polylineStr} L ${last.x} ${baselineY} Z`
+
+    const guideCount = isCompactLayout ? 2 : 3
+    const yAxisGuides = Array.from({ length: guideCount }, (_, index) => {
+      const progress = index / (guideCount - 1)
+      const elevation = (profileData.maxElevation ?? 0) - range * progress
+      const y = CHART_PADDING + chartH * progress
+      return {
+        key: `guide-${index}`,
+        y,
+        x1: CHART_PADDING,
+        x2: CHART_PADDING + chartW,
+        label: formatProfileMeters(elevation),
+      }
+    })
+
+    return { chartPoints, polylinePoints: polylineStr, areaPath, yAxisGuides }
+  }, [profileData, width, isCompactLayout])
+
+  const chartPoints = chartGeometry.chartPoints
+  const polylinePoints = chartGeometry.polylinePoints
+  const areaPath = chartGeometry.areaPath
+  const yAxisGuides = chartGeometry.yAxisGuides
 
   const locationLabels = useMemo(() => {
     const linePoints = Array.isArray(preview?.linePoints)
@@ -295,45 +363,6 @@ export default function RouteElevationProfile({
     preview,
   ])
 
-  const chartPoints = useMemo(() => {
-    const samples = Array.isArray(preview?.elevationProfile)
-      ? preview.elevationProfile
-      : []
-    if (!metrics || !metrics.hasElevation || width <= 0 || samples.length < 2)
-      return []
-
-    const chartW = Math.max(1, width - CHART_PADDING * 2)
-    const chartH = CHART_HEIGHT - CHART_PADDING * 2
-    const totalDistance = Math.max(0.001, metrics.totalDistanceKm)
-    const minElevation = metrics.minElevation ?? 0
-
-    return samples.map((sample, index) => ({
-      index,
-      sample,
-      x: CHART_PADDING + (sample.distanceKm / totalDistance) * chartW,
-      y:
-        CHART_PADDING +
-        (1 - (sample.elevationM - minElevation) / metrics.elevationRange) *
-          chartH,
-    }))
-  }, [metrics, preview, width])
-
-  const polylinePoints = useMemo(
-    () => chartPoints.map((point) => `${point.x},${point.y}`).join(' '),
-    [chartPoints],
-  )
-
-  const areaPath = useMemo(() => {
-    if (chartPoints.length < 2) return ''
-    const baselineY = CHART_HEIGHT - CHART_PADDING
-    const first = chartPoints[0]
-    const last = chartPoints[chartPoints.length - 1]
-    const pointPath = chartPoints
-      .map((point) => `${point.x},${point.y}`)
-      .join(' ')
-    return `M ${first.x} ${baselineY} L ${pointPath} L ${last.x} ${baselineY} Z`
-  }, [chartPoints])
-
   const keyPoints = useMemo(() => {
     const samples = Array.isArray(preview?.elevationProfile)
       ? preview.elevationProfile
@@ -369,25 +398,6 @@ export default function RouteElevationProfile({
     if (activeSampleIndex == null) return null
     return chartPoints[activeSampleIndex] ?? null
   }, [activeSampleIndex, chartPoints])
-
-  const yAxisGuides = useMemo(() => {
-    if (!metrics.hasElevation || width <= 0) return []
-    const guideCount = isCompactLayout ? 2 : 3
-    const chartWidth = Math.max(1, width - CHART_PADDING * 2)
-    return Array.from({ length: guideCount }, (_, index) => {
-      const progress = index / (guideCount - 1)
-      const elevation =
-        (metrics.maxElevation ?? 0) - metrics.elevationRange * progress
-      const y = CHART_PADDING + (CHART_HEIGHT - CHART_PADDING * 2) * progress
-      return {
-        key: `guide-${index}`,
-        y,
-        x1: CHART_PADDING,
-        x2: CHART_PADDING + chartWidth,
-        label: formatProfileMeters(elevation),
-      }
-    })
-  }, [isCompactLayout, metrics, width])
 
   const tooltipText = useMemo(() => {
     if (!activePoint) return null

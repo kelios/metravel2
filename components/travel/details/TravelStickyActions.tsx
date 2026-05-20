@@ -23,6 +23,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { showToast } from '@/utils/toast';
 import { buildCanonicalUrl } from '@/utils/seo';
+import { buildTravelPath } from '@/utils/travelSeo';
 import { hapticImpact } from '@/utils/haptics';
 import type { Travel } from '@/types/types';
 
@@ -120,11 +121,8 @@ function TravelStickyActions({
 
   const handleShare = useCallback(async () => {
     hapticImpact('light');
-    const url = travel?.slug
-      ? buildCanonicalUrl(`/travels/${travel.slug}`)
-      : travelId
-        ? buildCanonicalUrl(`/travels/${travelId}`)
-        : '';
+    const path = buildTravelPath(travel);
+    const url = path ? buildCanonicalUrl(path) : '';
     const title = travel?.name || 'Путешествие';
 
     if (Platform.OS === 'web') {
@@ -150,7 +148,7 @@ function TravelStickyActions({
         await Share.share({ message: `${title}\n${url}` });
       } catch { /* user cancelled */ }
     }
-  }, [travel, travelId]);
+  }, [travel]);
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 

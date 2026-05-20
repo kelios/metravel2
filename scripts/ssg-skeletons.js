@@ -69,10 +69,13 @@ function buildSkeletonCSS() {
 .ssg-search-bar{height:48px;border-radius:12px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border};margin-bottom:16px;display:flex;align-items:center;padding:0 16px;font:400 15px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.textMuted}}
 .ssg-travel-spacer{height:88px}
 .ssg-travel-wrap{max-width:1200px;margin:0 auto;padding:0 6px}
-.ssg-travel-hero{position:relative;width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:${COLORS.light.bgSecondary};margin:8px 0 16px}
-@media(max-width:767px){.ssg-travel-hero{aspect-ratio:4/5;border-radius:0;margin:0 -6px 16px;width:calc(100% + 12px)}}
-.ssg-travel-hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-.ssg-travel-hero-bg{position:absolute;inset:0;background:rgba(7,12,19,0.24);pointer-events:none}
+.ssg-travel-hero{position:relative;width:100%;height:70vh;min-height:360px;max-height:750px;border-radius:12px;overflow:hidden;background:${COLORS.light.bgSecondary};margin:8px 0 16px}
+@media(max-width:767px){.ssg-travel-hero{height:min(56vh,520px);min-height:260px;max-height:520px;border-radius:0;margin:0 -6px 16px;width:calc(100% + 12px)}}
+.ssg-travel-hero-blur{position:absolute;inset:0;background-position:center;background-repeat:no-repeat;background-size:cover;filter:blur(18px) saturate(1.08) brightness(0.82);transform:scale(1.08);transform-origin:center;pointer-events:none;z-index:0}
+.ssg-blur-mobile{display:block}.ssg-blur-desktop{display:none}
+@media(min-width:768px){.ssg-blur-mobile{display:none}.ssg-blur-desktop{display:block}}
+.ssg-travel-hero-img{position:relative;width:100%;height:100%;object-fit:contain;object-position:center;display:block;z-index:1}
+.ssg-travel-hero-bg{position:absolute;inset:0;background:rgba(7,12,19,0.24);pointer-events:none;z-index:1}
 .ssg-travel-title{height:32px;width:70%;border-radius:8px;margin:0 0 12px}
 .ssg-travel-meta{height:16px;width:40%;border-radius:6px;margin:0 0 24px}
 .ssg-travel-line{height:14px;border-radius:4px;margin-bottom:10px}
@@ -236,8 +239,18 @@ function buildTravelSkeletonHtml({ heroPreload, name } = {}) {
       `<picture>${sources.join('')}` +
       `<img class="ssg-travel-hero-img" src="${escapeHtmlAttr(fallback)}" alt="${escapeHtmlAttr(name || 'Фотография маршрута')}" decoding="async" fetchpriority="high" data-lcp data-ssg-lcp="true"/></picture>`;
   }
+  let blurLayers = '';
+  if (heroPreload?.mobile?.href || heroPreload?.desktop?.href) {
+    const mobileBlurHref = heroPreload.mobile?.href || heroPreload.desktop?.href;
+    const desktopBlurHref = heroPreload.desktop?.href || heroPreload.mobile?.href;
+    // Backdrop image URLs match the preloaded hero variants exactly, so the
+    // browser serves them from cache — no extra network request.
+    blurLayers =
+      `<div class="ssg-travel-hero-blur ssg-blur-mobile" style="background-image:url(&quot;${escapeHtmlAttr(mobileBlurHref)}&quot;)" aria-hidden="true"></div>` +
+      `<div class="ssg-travel-hero-blur ssg-blur-desktop" style="background-image:url(&quot;${escapeHtmlAttr(desktopBlurHref)}&quot;)" aria-hidden="true"></div>`;
+  }
   const heroBlock = heroImg
-    ? `<div class="ssg-travel-hero">${heroImg}<div class="ssg-travel-hero-bg"></div></div>`
+    ? `<div class="ssg-travel-hero">${blurLayers}${heroImg}<div class="ssg-travel-hero-bg"></div></div>`
     : `<div class="ssg-travel-hero ssg-pulse"></div>`;
 
   return `<div id="ssg-skeleton">

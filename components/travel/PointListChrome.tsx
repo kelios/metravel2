@@ -356,10 +356,32 @@ export const PointListExpandedContent = React.memo(function PointListExpandedCon
   shouldRenderWebListMode: boolean;
   styles: Record<string, any>;
 }) {
+  const [visibleCount, setVisibleCount] = React.useState(20);
+  const visiblePoints = React.useMemo(
+    () => (safePoints.length > visibleCount ? safePoints.slice(0, visibleCount) : safePoints),
+    [safePoints, visibleCount],
+  );
+  const remaining = safePoints.length - visibleCount;
+  const onShowMore = React.useCallback(() => setVisibleCount((c) => c + 20), []);
+  const showMoreButton =
+    remaining > 0 ? (
+      <Pressable
+        onPress={onShowMore}
+        style={({ pressed }) => [styles.toggle, pressed && styles.togglePressed]}
+        accessibilityRole="button"
+        accessibilityLabel={`Показать ещё ${remaining} точек`}
+      >
+        <View style={styles.toggleRow}>
+          <Feather name="chevron-down" size={16} color={colors.primary} />
+          <Text style={styles.toggleText}>{`Показать ещё (${remaining})`}</Text>
+        </View>
+      </Pressable>
+    ) : null;
+
   return Platform.OS === 'web' ? (
     shouldRenderWebListMode ? (
       <View style={styles.verticalListWrap}>
-        {safePoints.map((item, idx) => (
+        {visiblePoints.map((item, idx) => (
           <WebPointListRow
             key={item.id}
             item={item}
@@ -382,14 +404,18 @@ export const PointListExpandedContent = React.memo(function PointListExpandedCon
             styles={styles}
           />
         ))}
+        {showMoreButton}
       </View>
     ) : shouldRenderWebCardsMode ? (
       isWebGrid ? (
-        <View style={styles.webGridWrap}>
-          {safePoints.map((item) => (
-            <RenderItemSlot key={keyExtractor(item)} renderItem={renderItem} item={item} />
-          ))}
-        </View>
+        <>
+          <View style={styles.webGridWrap}>
+            {visiblePoints.map((item) => (
+              <RenderItemSlot key={keyExtractor(item)} renderItem={renderItem} item={item} />
+            ))}
+          </View>
+          {showMoreButton}
+        </>
       ) : (
         <ScrollView
           testID="travel-points-rail"

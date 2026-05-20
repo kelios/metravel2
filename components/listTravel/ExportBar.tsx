@@ -4,7 +4,7 @@ import UIButton from '@/components/ui/Button';
 import ProgressIndicator from '@/components/ui/ProgressIndicator';
 import { createStyles } from './listTravelStyles';
 import { useThemedColors } from '@/hooks/useTheme';
-import { getTravelLabel } from '@/services/pdf-export/utils/pluralize';
+import { getTravelLabel } from '@/utils/pluralize';
 
 function WebTextButton({
   label,

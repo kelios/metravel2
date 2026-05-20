@@ -5,7 +5,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { TravelFormData } from '@/types/types';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
-import { getCountryLabel } from '@/services/pdf-export/utils/pluralize';
+import { getCountryLabel } from '@/utils/pluralize';
 
 interface TravelPreviewModalProps {
     visible: boolean;

@@ -112,16 +112,18 @@ function TravelHeroSectionInner({
     [styles.sliderContainer, heroHeight],
   )
 
+  const isWeb = Platform.OS === 'web'
+
   const sliderUnderOverlayStyle = useMemo(
     () => [
       ABSOLUTE_FILL,
       {
         opacity: overlayUnmounted ? 1 : 0,
         pointerEvents: (overlayUnmounted ? 'auto' : 'none') as 'auto' | 'none',
-        transition: `opacity ${OVERLAY_TRANSITION_MS}ms ease`,
+        ...(isWeb ? null : { transition: `opacity ${OVERLAY_TRANSITION_MS}ms ease` }),
       },
     ],
-    [overlayUnmounted],
+    [overlayUnmounted, isWeb],
   )
 
   const lcpOverlayStyle = useMemo(
@@ -131,10 +133,19 @@ function TravelHeroSectionInner({
         zIndex: 5,
         opacity: isOverlayFading ? 0 : 1,
         pointerEvents: 'none' as const,
-        transition: `opacity ${OVERLAY_TRANSITION_MS}ms ease`,
+        ...(isWeb ? null : { transition: `opacity ${OVERLAY_TRANSITION_MS}ms ease` }),
       },
     ],
-    [isOverlayFading],
+    [isOverlayFading, isWeb],
+  )
+
+  const sliderUnderOverlayWebProps = useMemo(
+    () => (isWeb ? ({ dataSet: { travelHeroSliderUnder: 'true' } } as any) : null),
+    [isWeb],
+  )
+  const lcpOverlayWebProps = useMemo(
+    () => (isWeb ? ({ dataSet: { travelHeroOverlay: 'true' } } as any) : null),
+    [isWeb],
   )
 
   const sectionAndStable = useMemo(
@@ -174,7 +185,7 @@ function TravelHeroSectionInner({
           {useLcpOverlayFlow ? (
             <>
               {mountSliderUnderOverlay && (
-                <View style={sliderUnderOverlayStyle} collapsable={false}>
+                <View style={sliderUnderOverlayStyle} collapsable={false} {...(sliderUnderOverlayWebProps || {})}>
                   <Suspense fallback={null}>
                     <InteractiveSliderLazy
                       visible
@@ -191,7 +202,7 @@ function TravelHeroSectionInner({
                 </View>
               )}
               {!overlayUnmounted && (
-                <View style={lcpOverlayStyle} collapsable={false}>
+                <View style={lcpOverlayStyle} collapsable={false} {...(lcpOverlayWebProps || {})}>
                   <OptimizedLCPHero
                     img={firstImg}
                     alt={heroAlt}

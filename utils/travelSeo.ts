@@ -7,6 +7,21 @@ const SEO_TITLE_SUFFIX = ' | Metravel';
 const SITE_URL = 'https://metravel.by';
 const ORGANIZATION_ID = `${SITE_URL}/#organization`;
 
+/**
+ * Возвращает относительный путь к странице путешествия: `/travels/{slug|id}`.
+ * Без encodeURIComponent и без валидации slug — для совместимости
+ * с существующими прямыми использованиями в hero/sticky-actions.
+ */
+export function buildTravelPath(
+  travel: Pick<Travel, 'slug' | 'id'> | null | undefined,
+): string | null {
+  if (!travel) return null;
+  const slug = typeof travel.slug === 'string' ? travel.slug : '';
+  const id = travel.id;
+  const key = slug || (id != null ? String(id) : '');
+  return key ? `/travels/${key}` : null;
+}
+
 function getTravelCanonicalUrl(travel: Travel | null | undefined): string | null {
   if (!travel) return null;
 

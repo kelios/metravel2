@@ -67,11 +67,6 @@ export const NeutralHeroPlaceholder: React.FC<{ height?: number; variant?: 'load
             Фото недоступно
           </span>
         ) : null}
-        <style dangerouslySetInnerHTML={{ __html: `
-          @keyframes fadeInPlaceholder {
-            to { opacity: 1; }
-          }
-        `}} />
       </div>
     );
   }
@@ -266,6 +261,7 @@ function OptimizedLCPHeroInner({
                   data-hero-backdrop="true"
                   data-hero-backdrop-segment="true"
                   data-hero-backdrop-layer="true"
+                  className="travel-lcp-hero-backdrop-segment"
                   style={{
                     position: 'absolute',
                     top: segment.top,
@@ -274,14 +270,7 @@ function OptimizedLCPHeroInner({
                     height: segment.height,
                     zIndex: 0,
                     backgroundImage: `url("${srcWithRetry.replace(/"/g, '\\"')}")`,
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundSize: 'cover',
-                    filter: 'blur(18px) saturate(1.08) brightness(0.82)',
-                    transform: 'scale(1.08)',
-                    transformOrigin: 'center',
                     opacity: 1,
-                    pointerEvents: 'none',
                   }}
                 />
               ))}

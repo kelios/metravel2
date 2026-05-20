@@ -85,14 +85,18 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
         enabled,
     });
 
+    const popularValues = useMemo<any[]>(() => {
+        if (!popularTravels || typeof popularTravels !== 'object') return [];
+        return Object.values(popularTravels) as any[];
+    }, [popularTravels]);
+
     // Фильтруем те, которые пользователь еще не видел
     const highlights = useMemo(() => {
-        if (!popularTravels || typeof popularTravels !== 'object') return [];
-        
+        if (popularValues.length === 0) return [];
+
         const viewedIds = new Set(viewHistory.map(h => `${h.type}-${h.id}`));
-        const travels = Object.values(popularTravels) as any[];
-        
-        return travels
+
+        return popularValues
             .filter((t: any) => {
                 const key = `travel-${t.id}`;
                 return !viewedIds.has(key);
@@ -105,7 +109,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                 url: resolveTravelUrl({ id: Number(t.id) || 0, slug: t.slug, url: t.url } as any),
                 country: t.countryName,
             }));
-    }, [popularTravels, viewHistory]);
+    }, [popularValues, viewHistory]);
 
     // ВАЖНО: все хуки должны быть вызваны до условных возвратов
     const handleItemPress = useCallback((url: string) => {

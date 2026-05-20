@@ -14,7 +14,7 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { normalizeAvatarUrl } from '@/utils/mediaUrl'
 import { routes } from '@/utils/routes'
 import SubscribeButton from '@/components/ui/SubscribeButton'
-import { getTravelLabel } from '@/services/pdf-export/utils/pluralize'
+import { getTravelLabel } from '@/utils/pluralize'
 
 const STRICT_PLACEHOLDER = /^[.\s·•]+$|^Автор|^Пользователь|^User/i
 const LOOSE_PLACEHOLDER = /^[.\s·•]{4,}$|^Автор|^Пользователь|^User|^Anonymous/i

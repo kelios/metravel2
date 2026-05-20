@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react-native'
+import { act, render, screen } from '@testing-library/react-native'
 
 import { TravelRouteMapBlock } from '@/components/travel/details/sections/TravelRouteMapBlock'
 
@@ -99,8 +99,12 @@ describe('TravelRouteMapBlock', () => {
     })
   })
 
-  it('renders interactive map branch with route lines and elevation profiles', () => {
+  it('renders interactive map branch with route lines and elevation profiles', async () => {
     render(<TravelRouteMapBlock {...baseProps} />)
+
+    await act(async () => {
+      await Promise.resolve()
+    })
 
     expect(mockToggleableMap).toHaveBeenCalledWith(
       expect.objectContaining({

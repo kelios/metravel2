@@ -65,6 +65,12 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
         }
     }, [onVisibilityChange]);
 
+    // O(1) lookup set instead of O(n*m) some() scan
+    const favoriteKeys = useMemo(
+        () => new Set(favorites.map((f) => `${f.type}-${f.id}`)),
+        [favorites],
+    );
+
     // ✅ ИСПРАВЛЕНИЕ: Показываем только алгоритмические рекомендации (не дублируем избранное и историю)
     const recommendations = useMemo(() => {
         if (!isAuthenticated) return [];
@@ -74,8 +80,8 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
         }
         // getRecommendations возвращает избранное, отсортированное по дате
         // Здесь исключаем элементы, которые уже отображаются в «Избранном», чтобы не дублировать карточки
-        return raw.filter(item => !favorites.some(f => f.id === item.id && f.type === item.type));
-    }, [favorites, isAuthenticated, getRecommendations, onlyRecommendations]);
+        return raw.filter((item) => !favoriteKeys.has(`${item.type}-${item.id}`));
+    }, [favoriteKeys, isAuthenticated, getRecommendations, onlyRecommendations]);
 
     const containerStyles = useMemo(() => [
         styles.container,

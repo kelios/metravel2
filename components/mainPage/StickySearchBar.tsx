@@ -16,7 +16,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
-import { getTravelLabel } from '@/services/pdf-export/utils/pluralize';
+import { getTravelLabel } from '@/utils/pluralize';
 import Chip from '@/components/ui/Chip';
 import {
   getStickySearchShortcutLabel,

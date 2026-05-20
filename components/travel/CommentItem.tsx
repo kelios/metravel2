@@ -17,7 +17,7 @@ interface CommentItemProps {
   level?: number;
 }
 
-export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItemProps) {
+function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentItemProps) {
   const { userId, isSuperuser, isAuthenticated } = useAuth();
   const { requireAuth } = useRequireAuth({ intent: 'comment' });
   const colors = useThemedColors();
@@ -208,6 +208,8 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
     </View>
   );
 }
+
+export const CommentItem = React.memo(CommentItemComponent);
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create<Record<string, any>>({
   wrapper: {

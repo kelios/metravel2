@@ -102,11 +102,6 @@ jest.mock('@/hooks/travel-details', () => ({
   }),
 }))
 
-jest.mock('@/components/travel/TravelDetailPageSkeleton', () => ({
-  __esModule: true,
-  TravelDetailPageSkeleton: () => null,
-}))
-
 jest.mock('@/components/travel/CompactSideBarTravel', () => ({
   __esModule: true,
   default: () => null,

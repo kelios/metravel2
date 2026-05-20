@@ -49,8 +49,8 @@ export function useTravelDetailsHeroCompositionModel({
 
   const handleHeroContainerLayout = useCallback(
     (e: LayoutChangeEvent) => {
-      const width = e.nativeEvent.layout.width
-      if (width && Math.abs((heroContainerWidth ?? 0) - width) > 2) {
+      const width = Math.round(e.nativeEvent.layout.width)
+      if (width && Math.abs((heroContainerWidth ?? 0) - width) >= 1) {
         setHeroContainerWidth(width)
       }
     },

@@ -25,6 +25,7 @@ export function CommentsSection({
   const colors = useThemedColors();
   const styles = useMemo(() => createCommentsSectionStyles(colors), [colors]);
   const [isEnabled, setIsEnabled] = useState(lazyLoad ? autoload : true);
+  const [visibleCount, setVisibleCount] = useState(20);
 
   useEffect(() => {
     if (!lazyLoad) {
@@ -162,22 +163,37 @@ export function CommentsSection({
                 )}
               </View>
             ) : (
-              topLevel.map((comment) => {
-                return (
-                  <CommentThread
-                    key={comment.id}
-                    comment={comment}
-                    replies={replies}
-                    expandedThreads={expandedThreads}
-                    getParentChain={getParentChain}
-                    onReply={handleReply}
-                    onEdit={handleEdit}
-                    onToggleThread={toggleThread}
-                    colors={colors}
-                    styles={styles}
-                  />
-                )
-              })
+              <>
+                {topLevel.slice(0, visibleCount).map((comment) => {
+                  return (
+                    <CommentThread
+                      key={comment.id}
+                      comment={comment}
+                      replies={replies}
+                      expandedThreads={expandedThreads}
+                      getParentChain={getParentChain}
+                      onReply={handleReply}
+                      onEdit={handleEdit}
+                      onToggleThread={toggleThread}
+                      colors={colors}
+                      styles={styles}
+                    />
+                  )
+                })}
+                {topLevel.length > visibleCount && (
+                  <Pressable
+                    onPress={() => setVisibleCount((c) => c + 20)}
+                    style={styles.loadPromptButton}
+                    accessibilityRole="button"
+                    accessibilityLabel="Показать ещё комментарии"
+                  >
+                    <Feather name="chevron-down" size={16} color={colors.primaryText} />
+                    <Text style={styles.loadPromptButtonText}>
+                      {`Показать ещё (${topLevel.length - visibleCount})`}
+                    </Text>
+                  </Pressable>
+                )}
+              </>
             )}
           </View>
         </>

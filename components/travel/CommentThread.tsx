@@ -21,7 +21,7 @@ type CommentThreadProps = {
   styles: Record<string, any>
 }
 
-export function CommentThread({
+function CommentThreadComponent({
   comment,
   replies,
   expandedThreads,
@@ -128,3 +128,5 @@ export function CommentThread({
     </View>
   )
 }
+
+export const CommentThread = React.memo(CommentThreadComponent)

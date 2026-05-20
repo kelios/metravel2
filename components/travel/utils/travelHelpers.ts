@@ -64,6 +64,11 @@ export function getYoutubeId(url?: string | null): string | null {
   return null;
 }
 
+export function stripHtmlTags(html: string | null | undefined): string {
+  if (!html) return '';
+  return String(html).replace(/<[^>]*>/g, '');
+}
+
 // ✅ ОПТИМИЗАЦИЯ: Очистка HTML для описания
 export function stripToDescription(html?: string, maxLength: number = 160): string {
   const FALLBACK = 'Найди место для путешествия и поделись своим опытом.';

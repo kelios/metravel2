@@ -95,15 +95,6 @@ jest.mock('@/components/travel/TravelPreviewModal', () => (props: any) => {
     );
 });
 
-jest.mock('@/components/travel/ContextualTipCard', () => (props: any) => {
-    const { View, Text } = require('react-native');
-    return (
-        <View>
-            <Text>{props.tip?.title ?? 'tip'}</Text>
-        </View>
-    );
-});
-
 jest.mock('react-native-paper', () => ({
     Snackbar: ({ children }: any) => children,
 }));
