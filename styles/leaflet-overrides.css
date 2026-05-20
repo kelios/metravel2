@@ -196,6 +196,8 @@
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
+  pointer-events: auto !important;
+  z-index: 30 !important;
 }
 
 .leaflet-popup-close-button:hover {

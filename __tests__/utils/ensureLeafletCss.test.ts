@@ -24,7 +24,11 @@ describe('ensureLeafletCss', () => {
     expect(
       document.getElementById('metravel-markercluster-overrides')?.textContent,
     ).toContain('@keyframes metravelClusterPulse')
-    expect(document.getElementById('metravel-leaflet-overrides')).toBeTruthy()
+    const overrides = document.getElementById('metravel-leaflet-overrides')?.textContent
+    expect(overrides).toBeTruthy()
+    expect(overrides).toContain('leaflet-popup-close-button')
+    expect(overrides).toContain('pointer-events:auto!important')
+    expect(overrides).toContain('z-index:30!important')
     expect(document.getElementById('metravel-tile-preconnect')).toBeTruthy()
   })
 })
