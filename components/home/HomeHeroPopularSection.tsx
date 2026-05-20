@@ -64,12 +64,18 @@ function FeaturedRouteCard({
   return (
     <Pressable
       onPress={() => onOpenArticle(image.href)}
-      style={({ pressed, hovered }) => [
+      style={({ pressed, hovered, focused }: any) => [
         styles.featuredCard,
         (pressed || hovered) && styles.featuredCardHover,
+        Platform.OS === 'web' && focused && {
+          outlineWidth: 2,
+          outlineStyle: 'solid',
+          outlineColor: colors.primary,
+          outlineOffset: 2,
+        },
       ]}
       accessibilityRole="link"
-      accessibilityLabel={`Открыть маршрут: ${image.title}`}
+      accessibilityLabel={`Открыть маршрут недели: ${image.title}. ${image.subtitle}`}
     >
       <ImageCardMedia
         source={image.source}
@@ -87,7 +93,12 @@ function FeaturedRouteCard({
       />
       <View style={styles.featuredCardOverlay}>
         <View style={styles.slideEyebrow}>
-          <Feather name="map-pin" size={11} color={colors.textOnDark} />
+          <Feather
+            name="map-pin"
+            size={11}
+            color={colors.textOnDark}
+            {...({ 'aria-hidden': true, focusable: false } as any)}
+          />
           <Text style={styles.slideEyebrowText}>Маршрут недели</Text>
         </View>
         <Text style={styles.featuredCardTitle} numberOfLines={1}>
@@ -113,14 +124,20 @@ function PopularRouteCard({
     <Pressable
       key={image.title}
       onPress={() => onOpenArticle(image.href)}
-      style={({ pressed, hovered }) => [
+      style={({ pressed, hovered, focused }: any) => [
         styles.imageCard,
         useGridLayout && styles.imageCardGrid,
         useGridLayout && width ? { width } : null,
         (pressed || hovered) && styles.imageCardHover,
+        Platform.OS === 'web' && focused && {
+          outlineWidth: 2,
+          outlineStyle: 'solid',
+          outlineColor: '#7a9d8f',
+          outlineOffset: 2,
+        },
       ]}
-      accessibilityRole="button"
-      accessibilityLabel={image.title}
+      accessibilityRole="link"
+      accessibilityLabel={`Открыть маршрут: ${image.title}. ${image.subtitle}`}
     >
       <ImageCardMedia
         source={image.source}
@@ -176,7 +193,13 @@ export default function HomeHeroPopularSection({
         onOpenArticle={onOpenArticle}
         styles={styles}
       />
-      <Text style={styles.popularTitle}>Популярные маршруты</Text>
+      <Text
+        style={styles.popularTitle}
+        accessibilityRole="header"
+        {...({ 'aria-level': 2 } as any)}
+      >
+        Популярные маршруты
+      </Text>
       {useMobileGrid ? (
         <View style={styles.popularGrid}>
           {popularItems.map((image) => (

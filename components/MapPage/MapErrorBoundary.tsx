@@ -127,10 +127,15 @@ class MapErrorBoundary extends Component<Props, State> {
       const styles = createStyles(colors);
 
       return (
-        <View style={styles.container}>
+        <View
+          style={styles.container}
+          accessibilityRole="alert"
+          accessibilityLiveRegion="assertive"
+          {...({ 'aria-live': 'assertive', role: 'alert' } as any)}
+        >
           <View style={styles.content}>
             <Feather name="alert-circle" size={48} color={colors.danger} />
-            <Text style={styles.title}>Ошибка загрузки карты</Text>
+            <Text style={styles.title} accessibilityRole="header">Ошибка загрузки карты</Text>
             <Text style={styles.message}>
               {this.getFriendlyMessage()}
             </Text>

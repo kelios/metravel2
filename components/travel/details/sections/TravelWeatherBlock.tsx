@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react'
-import { Pressable, Text, View } from 'react-native'
+import { Platform, Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import WeatherWidget from '@/components/home/WeatherWidget'
@@ -20,11 +20,15 @@ export const TravelWeatherBlock: React.FC<{
 
   return (
     <View
-      accessibilityRole="none"
+      accessibilityRole={Platform.OS === 'web' ? ('region' as any) : 'none'}
       accessibilityLabel="Погода"
       style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
     >
-      <Text style={styles.sectionHeaderText}>Погода</Text>
+      <Text
+        style={styles.sectionHeaderText}
+        accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
+        aria-level={2 as any}
+      >Погода</Text>
       <Text style={styles.sectionSubtitle}>Прогноз по точкам маршрута</Text>
       {!weatherVisible ? (
         <Pressable

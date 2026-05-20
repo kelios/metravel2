@@ -284,11 +284,20 @@ export function HomeInspirationSection({
         <View style={[styles.heroHeader, { marginBottom: isMobile ? 20 : 32 }]}>
           {sectionBadge && (
             <View style={styles.sectionBadge}>
-              <Feather name="star" size={12} color={colors.textMuted} />
+              <Feather
+                name="star"
+                size={12}
+                color={colors.textMuted}
+                {...({ 'aria-hidden': true, focusable: false } as any)}
+              />
               <Text style={styles.sectionBadgeText}>{sectionBadge}</Text>
             </View>
           )}
-          <View style={{ alignItems: 'center', gap: isMobile ? 6 : 10 }}>
+          <View
+            style={{ alignItems: 'center', gap: isMobile ? 6 : 10 }}
+            accessibilityRole="header"
+            {...({ 'aria-level': 2 } as any)}
+          >
             <Text style={styles.heroTitle}>{title}</Text>
             {titleAccent && <Text style={styles.heroTitleAccent}>{titleAccent}</Text>}
           </View>
@@ -449,8 +458,13 @@ function EmptyState({
 }) {
   return (
     <View style={styles.emptyState} testID={`home-empty-${queryKey}`}>
-      <View style={styles.emptyStateIconWrap}>
-        <Feather name="compass" size={22} color={colors.primary} />
+      <View
+        style={styles.emptyStateIconWrap}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        {...({ 'aria-hidden': true } as any)}
+      >
+        <Feather name="compass" size={22} color={colors.primary} focusable={false as any} />
       </View>
       <View style={buildEmptyPillStyle(colors)}>
         <Text style={buildEmptyPillTextStyle(colors)}>Пока без совпадений</Text>

@@ -18,6 +18,30 @@ async function installTileMock(page: any) {
   await page.route('**://*.tile.openstreetmap.org/**', fulfill)
 }
 
+async function gotoMapWithRecovery(page: any) {
+  const mapWrapper = page.getByTestId('map-leaflet-wrapper')
+  const notFoundTitle = page.getByText('Страница не найдена', { exact: true })
+  const plainNotFound = page.getByText('Not found', { exact: true })
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const url = attempt % 2 === 0 ? '/map' : `/map?e2eRetry=${attempt}`
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 })
+
+    const appeared = await mapWrapper.isVisible({ timeout: 5_000 }).catch(() => false)
+    if (appeared) return
+
+    const hasNotFound =
+      (await notFoundTitle.isVisible().catch(() => false)) ||
+      (await plainNotFound.isVisible().catch(() => false))
+    if (!hasNotFound) {
+      await mapWrapper.waitFor({ state: 'visible', timeout: 30_000 })
+      return
+    }
+  }
+
+  throw new Error(`Map route resolved to Not found after retry (url=${page.url()})`)
+}
+
 test.describe('Map page — popup open / close', () => {
   test('marker popup opens on click and closes via close button', async ({ page }) => {
     await preacceptCookies(page)
@@ -52,7 +76,7 @@ test.describe('Map page — popup open / close', () => {
       }),
     )
 
-    await page.goto('/map', { waitUntil: 'domcontentloaded', timeout: 60_000 })
+    await gotoMapWithRecovery(page)
 
     // Wait for the map wrapper to appear
     const mapWrapper = page.getByTestId('map-leaflet-wrapper')

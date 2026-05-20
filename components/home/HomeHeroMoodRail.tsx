@@ -14,6 +14,7 @@ import type { QuickFilterParams } from './homeHeroShared'
 type HomeHeroMoodRailProps = {
   colors: {
     textMuted?: string
+    primary?: string
   }
   styles: any
   isMobile: boolean
@@ -35,14 +36,25 @@ const renderMoodChip = (
   <Pressable
     key={card.title}
     onPress={() => onQuickFilterPress(card.title, card.filters, card.route)}
-    style={({ pressed, hovered }) => [
+    style={({ pressed, hovered, focused }: any) => [
       styles.moodChip,
       (pressed || hovered) && styles.moodChipHover,
+      Platform.OS === 'web' && focused && {
+        outlineWidth: 2,
+        outlineStyle: 'solid',
+        outlineColor: (colors as any).primary ?? '#7a9d8f',
+        outlineOffset: 2,
+      },
     ]}
     accessibilityRole="button"
     accessibilityLabel={`${card.title}. Идея поездки`}
   >
-    <Feather name={card.icon as any} size={19} color={colors.textMuted} />
+    <Feather
+      name={card.icon as any}
+      size={19}
+      color={colors.textMuted}
+      {...({ 'aria-hidden': true, focusable: false } as any)}
+    />
     <Text style={styles.moodChipTitle}>{card.title}</Text>
   </Pressable>
 )

@@ -245,6 +245,7 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
       key: 'telegram',
       label: 'Telegram',
       accessibilityLabel: 'Поделиться в Telegram',
+      accessibilityHint: 'Открывает диалог отправки в Telegram',
       icon: 'send',
       onPress: handleShareTelegram,
       color: palette.telegram,
@@ -254,6 +255,7 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
       key: 'vk',
       label: 'VK',
       accessibilityLabel: 'Поделиться во ВКонтакте',
+      accessibilityHint: 'Открывает диалог отправки во ВКонтакте',
       icon: 'users',
       onPress: handleShareVK,
       color: palette.vk,
@@ -263,6 +265,7 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
       key: 'whatsapp',
       label: 'WhatsApp',
       accessibilityLabel: 'Поделиться в WhatsApp',
+      accessibilityHint: 'Открывает диалог отправки в WhatsApp',
       icon: 'message-circle',
       onPress: handleShareWhatsApp,
       color: palette.whatsapp,
@@ -398,6 +401,7 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
                     ]}
                     accessibilityRole="button"
                     accessibilityLabel={button.accessibilityLabel}
+                    accessibilityHint={(button as any).accessibilityHint}
                     android_ripple={{ color: colors.overlayLight }}
                   >
                     <Feather name={button.icon as any} size={20} color={button.color} />
@@ -427,6 +431,7 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
                           ]}
                           accessibilityRole="button"
                           accessibilityLabel={button.accessibilityLabel}
+                          accessibilityHint={(button as any).accessibilityHint}
                           android_ripple={{ color: colors.overlayLight }}
                         >
                           <Feather name={button.icon as any} size={18} color={button.color} />

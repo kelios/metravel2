@@ -75,10 +75,18 @@ function FAQItemCard({
         accessibilityLabel={item.q}
         accessibilityState={{ expanded: isOpen }}
         accessibilityHint={isOpen ? 'Свернуть ответ' : 'Развернуть ответ'}
-        style={({ pressed, hovered }) => [
+        {...(IS_WEB
+          ? ({
+              'aria-expanded': isOpen,
+              'aria-controls': `faq-answer-${index}`,
+              id: `faq-question-${index}`,
+            } as any)
+          : {})}
+        style={({ pressed, hovered, focused }: any) => [
           styles.itemHeader,
           isOpen && styles.itemHeaderOpen,
           IS_WEB && !isOpen && (pressed || hovered) && styles.itemHeaderHover,
+          IS_WEB && focused && styles.itemHeaderFocused,
         ]}
       >
         <View style={styles.questionWrap}>
@@ -97,7 +105,15 @@ function FAQItemCard({
       </Pressable>
 
       {IS_WEB ? (
-        <View style={[styles.answerWrap, !isOpen && styles.answerWrapCollapsed]}>
+        <View
+          style={[styles.answerWrap, !isOpen && styles.answerWrapCollapsed]}
+          {...({
+            id: `faq-answer-${index}`,
+            role: 'region',
+            'aria-labelledby': `faq-question-${index}`,
+            'aria-hidden': !isOpen,
+          } as any)}
+        >
           <Text style={styles.answer}>{item.a}</Text>
         </View>
       ) : (
@@ -132,10 +148,17 @@ function HomeFAQSection() {
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={styles.header}>
           <View style={styles.eyebrow}>
-            <Feather name="help-circle" size={14} color={colors.primary} />
+            <Feather
+              name="help-circle"
+              size={14}
+              color={colors.primary}
+              {...({ 'aria-hidden': true, focusable: false } as any)}
+            />
             <Text style={styles.eyebrowText}>FAQ</Text>
           </View>
-          <Text style={styles.title}>Всё, что нужно знать</Text>
+          <Text style={styles.title} accessibilityRole="header" {...({ 'aria-level': 2 } as any)}>
+            Всё, что нужно знать
+          </Text>
           <Text style={styles.subtitle}>Ответы на самые частые вопросы о сервисе</Text>
           <View style={styles.highlightsRow}>
             {FAQ_HIGHLIGHTS.map((highlight) => (
@@ -278,6 +301,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: bool
     },
     itemHeaderHover: { backgroundColor: colors.primarySoft },
     itemHeaderOpen: { backgroundColor: colors.primarySoft },
+    itemHeaderFocused: Platform.select({
+      web: {
+        outlineWidth: 2,
+        outlineStyle: 'solid',
+        outlineColor: colors.primary,
+        outlineOffset: 2,
+      } as any,
+      default: {},
+    }) as any,
     question: {
       fontSize: isMobile ? 15 : 17,
       fontWeight: '700',

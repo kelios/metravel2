@@ -196,6 +196,7 @@ function NavigationArrows({
           style={({ pressed }) => [styles.navCard, styles.prevCard, globalFocusStyles.focusable, pressed && styles.navCardPressed]}
           accessibilityRole="button"
           accessibilityLabel={`${isFallback ? 'Похожий маршрут' : 'Предыдущее путешествие'}: ${prevTravel.name || ''}`}
+          accessibilityHint="Открывает страницу путешествия"
           android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
         >
           <View style={styles.navContent}>
@@ -236,6 +237,7 @@ function NavigationArrows({
           style={({ pressed }) => [styles.navCard, styles.nextCard, globalFocusStyles.focusable, pressed && styles.navCardPressed]}
           accessibilityRole="button"
           accessibilityLabel={`${isFallback ? 'Похожий маршрут' : 'Следующее путешествие'}: ${nextTravel.name || ''}`}
+          accessibilityHint="Открывает страницу путешествия"
           android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
         >
           <View style={styles.navContent}>

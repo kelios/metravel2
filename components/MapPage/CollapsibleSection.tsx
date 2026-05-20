@@ -28,7 +28,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   badge,
   defaultOpen = true,
   children,
-  accessibilityLabel: _accessibilityLabel,
+  accessibilityLabel,
   icon,
   tone = 'default',
 }) => {
@@ -69,6 +69,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
         onPress={toggleOpen}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
+        accessibilityLabel={accessibilityLabel ?? `${title}${open ? ', развернуто' : ', свернуто'}`}
         hitSlop={8}
       >
         <View style={styles.collapsibleTitle}>
@@ -87,7 +88,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
             </View>
           )}
         </View>
-        <Animated.View style={chevronStyle}>
+        <Animated.View style={chevronStyle} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
           <Feather
             name="chevron-down"
             size={tone === 'flat' ? 18 : 20}

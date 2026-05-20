@@ -43,6 +43,8 @@ export function TravelHeroQuickJumps({
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.quickJumpScrollContent}
       style={styles.quickJumpScroll}
+      accessibilityRole={'navigation' as any}
+      accessibilityLabel="Быстрая навигация по разделам"
     >
       {chips}
     </ScrollView>
@@ -73,6 +75,7 @@ const QuickJumpChip = React.memo(function QuickJumpChip({
       ]}
       accessibilityRole="button"
       accessibilityLabel={`Перейти к разделу ${link.label}`}
+      accessibilityHint="Прокручивает страницу к разделу"
     >
       <Feather
         name={link.icon as any}

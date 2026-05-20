@@ -57,6 +57,7 @@ function TelegramDiscussionSection({ travel }: TelegramDiscussionSectionProps) {
         ]}
         accessibilityRole="button"
         accessibilityLabel={hasUrl ? 'Открыть обсуждение в Telegram' : 'Скоро здесь будет обсуждение в Telegram'}
+        accessibilityHint={hasUrl ? 'Откроется внешнее приложение или вкладка' : undefined}
       >
         <Feather name="send" size={18} color={hasUrl ? colors.primary : colors.textMuted} />
         <Text style={styles.buttonText}>

@@ -64,16 +64,22 @@ function StepCard({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed, hovered }) => [
+      style={({ pressed, hovered, focused }: any) => [
         styles.step,
         (pressed || hovered) && styles.stepHover,
+        Platform.OS === 'web' && focused && styles.stepFocused,
       ]}
       accessibilityRole="button"
       accessibilityLabel={`${step.number}. ${step.title}`}
       accessibilityHint={step.description}
     >
       {showBackgroundNumber && (
-        <Text style={styles.stepBgNumber} aria-hidden>
+        <Text
+          style={styles.stepBgNumber}
+          {...({ 'aria-hidden': true } as any)}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
           {step.number}
         </Text>
       )}
@@ -83,11 +89,22 @@ function StepCard({
         </View>
         <View style={styles.iconOuter}>
           <View style={styles.iconInner}>
-            <Feather name={step.icon as any} size={20} color={colors.primary} />
+            <Feather
+              name={step.icon as any}
+              size={20}
+              color={colors.primary}
+              {...({ 'aria-hidden': true, focusable: false } as any)}
+            />
           </View>
         </View>
         <View style={styles.stepHeaderText}>
-          <Text style={styles.stepTitle}>{step.title}</Text>
+          <Text
+            style={styles.stepTitle}
+            accessibilityRole="header"
+            {...({ 'aria-level': 3 } as any)}
+          >
+            {step.title}
+          </Text>
           <Text style={styles.stepKicker}>Шаг {step.number}</Text>
         </View>
       </View>
@@ -95,7 +112,12 @@ function StepCard({
       <View style={styles.stepFooter}>
         <View style={styles.stepAction}>
           <Text style={styles.stepActionText}>{step.actionLabel}</Text>
-          <Feather name="arrow-right" size={13} color={colors.primary} />
+          <Feather
+            name="arrow-right"
+            size={13}
+            color={colors.primary}
+            {...({ 'aria-hidden': true, focusable: false } as any)}
+          />
         </View>
       </View>
     </Pressable>
@@ -149,10 +171,21 @@ function HomeHowItWorks() {
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={styles.header}>
           <View style={styles.eyebrow}>
-            <Feather name="book-open" size={14} color={colors.primary} />
+            <Feather
+              name="book-open"
+              size={14}
+              color={colors.primary}
+              {...({ 'aria-hidden': true, focusable: false } as any)}
+            />
             <Text style={styles.eyebrowText}>Как это работает</Text>
           </View>
-          <Text style={styles.title}>Как сохранить маршрут и вернуться к нему позже</Text>
+          <Text
+            style={styles.title}
+            accessibilityRole="header"
+            {...({ 'aria-level': 2 } as any)}
+          >
+            Как сохранить маршрут и вернуться к нему позже
+          </Text>
           <Text style={styles.subtitle}>
             Выберите поездку, добавьте заметки и откройте всё снова, когда это понадобится
           </Text>
@@ -306,6 +339,15 @@ const createStyles = (colors: ThemedColors, isMobile: boolean) =>
         },
       }),
     },
+    stepFocused: Platform.select({
+      web: {
+        outlineWidth: 2,
+        outlineStyle: 'solid',
+        outlineColor: colors.primary,
+        outlineOffset: 2,
+      } as any,
+      default: {},
+    }) as any,
     stepBgNumber: {
       position: 'absolute' as const,
       top: -12,

@@ -422,6 +422,7 @@ export default function TravelStatusButton({
                     onPress={() => handleSelectStatus(opt.key)}
                     accessibilityRole="button"
                     accessibilityLabel={opt.label}
+                    accessibilityHint={opt.hint}
                     accessibilityState={{ selected: isActive }}
                   >
                     <View style={[styles.optionIconWrap, isActive && styles.optionIconWrapActive]}>
@@ -516,8 +517,10 @@ export default function TravelStatusButton({
             style={[compactStyles.btn, globalFocusStyles.focusable]}
             {...({
               tabIndex: 0,
+              role: 'button',
               'aria-label': compactAccessibilityLabel,
               'aria-pressed': Boolean(current),
+              title: 'Управление статусом путешествия',
               'data-card-action': 'true',
               onClick: handleMainPress,
               onMouseDown: stopWebCardEvent,

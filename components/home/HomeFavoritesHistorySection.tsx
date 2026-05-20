@@ -116,10 +116,21 @@ function SectionHeader({
     <View style={styles.sectionHeaderRow} testID={testID}>
       <View style={styles.headerTitleBlock}>
         <View style={styles.headerEyebrow}>
-          <Feather name="bookmark" size={12} color={colors.primaryText} />
+          <Feather
+            name="bookmark"
+            size={12}
+            color={colors.primaryText}
+            {...({ 'aria-hidden': true, focusable: false } as any)}
+          />
           <Text style={styles.headerEyebrowText}>{eyebrow}</Text>
         </View>
-        <Text style={styles.sectionTitle}>{title}</Text>
+        <Text
+          style={styles.sectionTitle}
+          accessibilityRole="header"
+          {...({ 'aria-level': 2 } as any)}
+        >
+          {title}
+        </Text>
         <Text style={styles.sectionSubtitle}>{subtitle}</Text>
         <View style={styles.headerMetaRow}>
           <View style={styles.headerStatPill}>

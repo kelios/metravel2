@@ -163,12 +163,17 @@ function TravelStickyActions({
         { transform: [{ translateY }], pointerEvents: 'box-none' },
       ]}
     >
-      <View style={styles.bar}>
+      <View
+        style={styles.bar}
+        accessibilityRole={Platform.OS === 'web' ? ('toolbar' as any) : 'none'}
+        accessibilityLabel="Действия с путешествием"
+      >
         <Pressable
           onPress={handleFavorite}
           style={styles.button}
           accessibilityRole="button"
           accessibilityLabel={isFav ? 'Удалить из избранного' : 'Добавить в избранное'}
+          accessibilityHint="Сохраняет путешествие в вашем списке избранного"
         >
           <Feather
             name="heart"
@@ -187,6 +192,7 @@ function TravelStickyActions({
           style={styles.button}
           accessibilityRole="button"
           accessibilityLabel="Поделиться"
+          accessibilityHint="Открывает диалог отправки ссылки на это путешествие"
         >
           <Feather name="share-2" size={20} color={colors.text} />
           <Text style={styles.label}>Поделиться</Text>
@@ -199,6 +205,7 @@ function TravelStickyActions({
           style={styles.button}
           accessibilityRole="button"
           accessibilityLabel="К комментариям"
+          accessibilityHint="Прокручивает страницу к разделу обсуждения"
         >
           <Feather name="message-circle" size={20} color={colors.text} />
           <Text style={styles.label}>Обсуждение</Text>

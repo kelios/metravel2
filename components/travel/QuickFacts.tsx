@@ -171,6 +171,7 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
                   disabled={!onCategoryPress}
                   accessibilityRole={categoryRole}
                   accessibilityLabel={categoryLabel}
+                  accessibilityHint={onCategoryPress ? 'Фильтрует путешествия по этой категории' : undefined}
                   {...(webA11yProps as any)}
                 >
                 <Text style={styles.categoryText}>{cat}</Text>

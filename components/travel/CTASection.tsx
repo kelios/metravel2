@@ -198,7 +198,7 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
             fullWidth
             style={styles.buttonBase}
             labelStyle={[styles.primaryButtonLabel, isMobile && styles.buttonLabelMobile]}
-            accessibilityLabel="Войти или зарегистрироваться"
+            accessibilityLabel="Войти или зарегистрироваться. Откроется экран авторизации"
           />
         </View>
       </View>
@@ -232,7 +232,7 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
           icon={<Feather name="plus-circle" size={18} color={colors.textOnPrimary} />}
           style={styles.buttonBase}
           labelStyle={[styles.primaryButtonLabel, isMobile && styles.buttonLabelMobile]}
-          accessibilityLabel="Создать свое путешествие"
+          accessibilityLabel="Создать свое путешествие. Откроется форма создания нового путешествия"
         />
 
         {/* Кнопка "Добавить в план / Мой календарь" */}

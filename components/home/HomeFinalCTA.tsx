@@ -115,11 +115,21 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       <ResponsiveContainer maxWidth="lg" padding>
         <View style={styles.content}>
           <View style={styles.eyebrow}>
-            <Feather name="star" size={12} color={colors.primaryText} />
+            <Feather
+              name="star"
+              size={12}
+              color={colors.primaryText}
+              {...({ 'aria-hidden': true, focusable: false } as any)}
+            />
             <Text style={styles.eyebrowText}>{copy.eyebrow}</Text>
           </View>
 
-          <View style={styles.iconWrap}>
+          <View
+            style={styles.iconWrap}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            {...({ 'aria-hidden': true } as any)}
+          >
             <Feather
               name="book-open"
               size={isMobile ? 28 : 32}
@@ -127,7 +137,11 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
             />
           </View>
 
-          <View style={styles.titleRow}>
+          <View
+            style={styles.titleRow}
+            accessibilityRole="header"
+            {...({ 'aria-level': 2 } as any)}
+          >
             <Text style={styles.title}>Соберите свою</Text>
             <Text style={styles.titleAccent}>подборку поездок</Text>
           </View>
@@ -142,11 +156,16 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
             ))}
           </View>
 
-          <View style={styles.featuresGrid}>
+          <View style={styles.featuresGrid} accessibilityRole="list">
             {CTA_FEATURES.map((feature) => (
-              <View key={feature.label} style={styles.featureCard}>
+              <View key={feature.label} style={styles.featureCard} accessibilityRole={'listitem' as any}>
                 <View style={styles.featureIcon}>
-                  <Feather name={feature.icon as any} size={16} color={colors.primary} />
+                  <Feather
+                    name={feature.icon as any}
+                    size={16}
+                    color={colors.primary}
+                    {...({ 'aria-hidden': true, focusable: false } as any)}
+                  />
                 </View>
                 <Text style={styles.featureText}>{feature.label}</Text>
               </View>
@@ -183,13 +202,14 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
             />
           </View>
 
-          <View style={styles.trustBadgesRow}>
+          <View style={styles.trustBadgesRow} accessibilityRole="list">
             {TRUST_BADGES.map((badge) => (
-              <View key={badge.label} style={styles.trustBadge}>
+              <View key={badge.label} style={styles.trustBadge} accessibilityRole={'listitem' as any}>
                 <Feather
                   name={badge.icon as any}
                   size={13}
                   color={colors.success ?? colors.primary}
+                  {...({ 'aria-hidden': true, focusable: false } as any)}
                 />
                 <Text style={styles.trustBadgeText}>{badge.label}</Text>
               </View>

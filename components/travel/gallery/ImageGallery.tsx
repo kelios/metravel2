@@ -3,7 +3,7 @@ import {
   View,
   Platform,
 } from 'react-native'
-import { useDropzone } from 'react-dropzone'
+import { useDropzone, type FileRejection } from 'react-dropzone'
 import { QueryClientContext } from '@tanstack/react-query'
 
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
@@ -12,6 +12,7 @@ import { ApiError } from '@/api/client'
 import { queryKeys } from '@/queryKeys'
 import { useThemedColors } from '@/hooks/useTheme'
 import { validateImageFile } from '@/utils/aiValidation'
+import { prepareWebImageFileForUpload } from '@/utils/webImageUpload'
 
 import type { GalleryItem, ImageGalleryComponentProps } from './types'
 import { GalleryControls } from './GalleryControls'
@@ -26,6 +27,60 @@ import {
   isBackendImageId,
   normalizeDisplayUrl,
 } from './utils'
+
+const WEB_SUPPORTED_UPLOAD_TYPES = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/heic',
+  'image/heif',
+  'image/heic-sequence',
+  'image/heif-sequence',
+])
+
+const WEB_SUPPORTED_UPLOAD_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.heic', '.heif', '.heics', '.heifs']
+
+const WEB_GALLERY_DROPZONE_ACCEPT = {
+  'image/*': WEB_SUPPORTED_UPLOAD_EXTENSIONS,
+  'image/heic': ['.heic', '.heics'],
+  'image/heif': ['.heif', '.heifs'],
+  'image/heic-sequence': ['.heics'],
+  'image/heif-sequence': ['.heifs'],
+}
+
+const createRejectedGalleryItem = (
+  file: File,
+  index: number,
+  fallbackMessage = 'Этот файл не удалось добавить в галерею.',
+): GalleryItem => {
+  const tempId = `invalid-${Date.now()}-${index}-${String(file.name || 'file')}`
+
+  return {
+    id: tempId,
+    stableKey: tempId,
+    url: '',
+    isUploading: false,
+    uploadProgress: 0,
+    error: fallbackMessage,
+    hasLoaded: false,
+  }
+}
+
+const getDropRejectionError = (rejection: FileRejection): string => {
+  if (rejection.errors.some((error) => error.code === 'file-invalid-type')) {
+    return 'Этот формат пока не загружается в веб-галерею. Используйте JPG, PNG, WEBP, GIF или HEIC.'
+  }
+
+  if (rejection.errors.some((error) => error.code === 'file-too-large')) {
+    const validation = validateImageFile(rejection.file)
+    return validation.error || 'Файл слишком большой для загрузки.'
+  }
+
+  const validation = validateImageFile(rejection.file)
+  return validation.error || 'Этот файл не удалось добавить в галерею.'
+}
 
 const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   collection,
@@ -131,19 +186,9 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
 
     const normalizedType = String(file.type || '').toLowerCase()
     const normalizedName = String(file.name || '').toLowerCase()
-    const supportedWebTypes = new Set([
-      'image/jpeg',
-      'image/jpg',
-      'image/png',
-      'image/webp',
-      'image/gif',
-      'image/heic',
-      'image/heif',
-    ])
-    const supportedWebExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.heic', '.heif']
-    const hasSupportedExtension = supportedWebExtensions.some((ext) => normalizedName.endsWith(ext))
+    const hasSupportedExtension = WEB_SUPPORTED_UPLOAD_EXTENSIONS.some((ext) => normalizedName.endsWith(ext))
 
-    if (Platform.OS === 'web' && normalizedType && !supportedWebTypes.has(normalizedType) && !hasSupportedExtension) {
+    if (Platform.OS === 'web' && normalizedType && !WEB_SUPPORTED_UPLOAD_TYPES.has(normalizedType) && !hasSupportedExtension) {
       return 'Этот формат пока не загружается в веб-галерею. Используйте JPG, PNG, WEBP, GIF или HEIC.'
     }
 
@@ -280,8 +325,11 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
         const placeholder = placeholders[i]
 
         try {
+          const uploadableFile =
+            Platform.OS === 'web' ? await prepareWebImageFileForUpload(file) : file
+
           const formData = new FormData()
-          formData.append('file', file)
+          formData.append('file', uploadableFile)
           formData.append('collection', collection)
           formData.append('id', idTravel)
 
@@ -348,15 +396,23 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    accept: {
-      'image/jpeg': ['.jpg', '.jpeg'],
-      'image/png': ['.png'],
-      'image/webp': ['.webp'],
-      'image/gif': ['.gif'],
-    },
+    accept: WEB_GALLERY_DROPZONE_ACCEPT,
     multiple: true,
     disabled: Platform.OS !== 'web',
-    onDrop: (acceptedFiles) => handleUploadImages(acceptedFiles),
+    onDrop: (acceptedFiles, fileRejections) => {
+      const rejections = Array.isArray(fileRejections) ? fileRejections : []
+
+      if (rejections.length > 0) {
+        const rejectedItems = rejections.map((rejection, index) =>
+          createRejectedGalleryItem(rejection.file, index, getDropRejectionError(rejection)),
+        )
+        setImages((prev) => dedupeGalleryItems([...prev, ...rejectedItems]))
+      }
+
+      if (acceptedFiles.length > 0) {
+        void handleUploadImages(acceptedFiles)
+      }
+    },
   })
 
   const dropzoneRootProps = useCallback(() => {

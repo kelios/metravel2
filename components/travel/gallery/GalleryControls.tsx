@@ -55,23 +55,27 @@ export const GalleryControls: React.FC<{
         </Text>
       </View>
 
-      <View
+      <div
         {...(dropzone.rootProps as any)}
         tabIndex={dropzone.tabIndex}
-        style={[
-          styles.dropzone,
-          isDragActive && styles.activeDropzone,
-          {
-            backgroundColor: colors.backgroundSecondary,
-            borderColor: colors.primary,
-          },
-        ]}
+        style={{ width: '100%', display: 'flex' }}
       >
         <input {...inputProps} />
-        <Text style={[styles.dropzoneText, { color: colors.textMuted }]}>
-          {isDragActive ? 'Отпустите файлы...' : 'Перетащите сюда изображения'}
-        </Text>
-      </View>
+        <View
+          style={[
+            styles.dropzone,
+            isDragActive && styles.activeDropzone,
+            {
+              backgroundColor: colors.backgroundSecondary,
+              borderColor: colors.primary,
+            },
+          ]}
+        >
+          <Text style={[styles.dropzoneText, { color: colors.textMuted }]}>
+            {isDragActive ? 'Отпустите файлы...' : 'Перетащите сюда изображения'}
+          </Text>
+        </View>
+      </div>
 
       {batchUploadProgress && (
         <View

@@ -127,7 +127,13 @@ export const TravelDetailsContentSection: React.FC<{
           accessibilityLabel="Видео маршрута"
           {...(Platform.OS === 'web' ? { 'data-section-key': 'video' } : {})}
         >
-          <Text style={styles.sectionHeaderText}>Видео</Text>
+          <Text
+            style={styles.sectionHeaderText}
+            accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
+            aria-level={2 as any}
+          >
+            Видео
+          </Text>
           <Text style={styles.sectionSubtitle}>Одно нажатие — и ролик начнёт проигрываться</Text>
           <View style={SECTION_CONTENT_MARGIN_STYLE}>
             {shouldLoadVideo ? (
@@ -147,7 +153,11 @@ export const TravelDetailsContentSection: React.FC<{
           style={[styles.sectionContainer, styles.mobileInsightTabsWrapper]}
         >
           <Text style={styles.mobileInsightLabel}>Впечатления автора</Text>
-          <View style={styles.mobileInsightTabs}>
+          <View
+            style={styles.mobileInsightTabs}
+            accessibilityRole={'tablist' as any}
+            accessibilityLabel="Впечатления автора"
+          >
             {insightConfigs.map((section) => (
               <Pressable
                 key={section.key}
@@ -156,7 +166,8 @@ export const TravelDetailsContentSection: React.FC<{
                   styles.mobileInsightChip,
                   mobileInsightKey === section.key && styles.mobileInsightChipActive,
                 ]}
-                accessibilityRole="button"
+                accessibilityRole="tab"
+                accessibilityState={{ selected: mobileInsightKey === section.key }}
                 accessibilityLabel={`Показать раздел ${section.label}`}
               >
                 <Text

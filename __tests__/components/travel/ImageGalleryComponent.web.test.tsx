@@ -42,10 +42,11 @@ jest.mock('expo-image-picker', () => ({
 }));
 
 jest.mock('react-dropzone', () => {
-  const dropMock = { rootProps: {}, tabIndex: undefined, onDrop: (_files: any) => {} };
+  const dropMock = { rootProps: {}, tabIndex: undefined, onDrop: (_files: any) => {}, accept: undefined };
   return {
     useDropzone: (opts: any) => {
       dropMock.onDrop = opts.onDrop;
+      dropMock.accept = opts.accept;
       return {
         getRootProps: () => ({ tabIndex: -1 }),
         getInputProps: () => ({ accept: opts.accept, multiple: opts.multiple }),
@@ -54,6 +55,15 @@ jest.mock('react-dropzone', () => {
       };
     },
     __dropMock: dropMock,
+  };
+});
+
+jest.mock('@/utils/webImageUpload', () => {
+  const prepareWebImageFileForUpload = jest.fn(async (file: File) => file);
+  return {
+    __esModule: true,
+    prepareWebImageFileForUpload,
+    __mocks: { prepareWebImageFileForUpload },
   };
 });
 
@@ -96,6 +106,8 @@ const { __mocks } = jest.requireMock('@/api/misc') as any;
 const uploadImageMock = __mocks.uploadImageMock as jest.Mock;
 const deleteImageMock = __mocks.deleteImageMock as jest.Mock;
 const reorderGalleryMock = __mocks.reorderGalleryMock as jest.Mock;
+const { __mocks: webImageUploadMocks } = jest.requireMock('@/utils/webImageUpload') as any;
+const prepareWebImageFileForUploadMock = webImageUploadMocks.prepareWebImageFileForUpload as jest.Mock;
 
 const renderSafe = (ui: React.ReactElement) => {
   try {
@@ -167,6 +179,8 @@ describe('ImageGalleryComponent.web', () => {
     uploadImageMock.mockClear();
     deleteImageMock.mockClear();
     reorderGalleryMock.mockClear();
+    prepareWebImageFileForUploadMock.mockClear();
+    prepareWebImageFileForUploadMock.mockImplementation(async (file: File) => file);
   });
 
   it('renders initial images with absolute URLs and count', () => {
@@ -219,6 +233,21 @@ describe('ImageGalleryComponent.web', () => {
     expect(images.length).toBeGreaterThan(0);
   });
 
+  it('registers HEIC and HEIF in the web dropzone accept list', () => {
+    renderSafe(
+      <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={5} />,
+    );
+
+    const { __dropMock } = jest.requireMock('react-dropzone') as any;
+    expect(__dropMock.accept).toEqual(
+      expect.objectContaining({
+        'image/*': expect.arrayContaining(['.heic', '.heif', '.heics', '.heifs']),
+        'image/heic': expect.arrayContaining(['.heic']),
+        'image/heif': expect.arrayContaining(['.heif']),
+      }),
+    );
+  });
+
   it('keeps uploaded image visible even if in-flight placeholder is dropped by props sync', async () => {
     const file = new File(['data'], 'test.jpg', { type: 'image/jpeg' });
 
@@ -236,6 +265,11 @@ describe('ImageGalleryComponent.web', () => {
     );
 
     runDropNoWait([file]);
+
+    await waitFor(() => {
+      expect(prepareWebImageFileForUploadMock).toHaveBeenCalledWith(file);
+      expect(uploadImageMock).toHaveBeenCalled();
+    });
 
     // Simulate a parent prop sync (e.g. wizard form re-renders with initialImages)
     // that previously could drop the uploading placeholders.
@@ -623,6 +657,9 @@ describe('ImageGalleryComponent.web', () => {
 
   it('allows HEIC upload on web', async () => {
     const file = new File(['data'], 'iphone.heic', { type: 'image/heic' });
+    const convertedFile = new File(['jpeg-data'], 'iphone.jpg', { type: 'image/jpeg' });
+
+    prepareWebImageFileForUploadMock.mockResolvedValueOnce(convertedFile);
 
     renderSafe(
       <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={5} />,
@@ -633,6 +670,10 @@ describe('ImageGalleryComponent.web', () => {
     await waitFor(() => {
       expect(uploadImageMock).toHaveBeenCalled();
     });
+
+    expect(prepareWebImageFileForUploadMock).toHaveBeenCalledWith(file);
+    const formData = uploadImageMock.mock.calls[0][0] as FormData;
+    expect(formData.get('file')).toBe(convertedFile);
   });
 
   it('shows delete button for items with missing url and removes them locally', async () => {

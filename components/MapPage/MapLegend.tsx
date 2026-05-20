@@ -63,21 +63,31 @@ function MapLegend({ showRouteMode = false }: MapLegendProps) {
   const [collapsed, setCollapsed] = useState(true);
 
   return (
-    <View style={[styles.container, isMobile && styles.containerMobile]}>
+    <View
+      style={[styles.container, isMobile && styles.containerMobile]}
+      accessibilityRole={'region' as any}
+      accessibilityLabel="Легенда карты"
+    >
       <Pressable
         style={({ pressed }) => [styles.header, collapsed && styles.headerCollapsed, pressed && { opacity: 0.7 }]}
         onPress={() => setCollapsed((v) => !v)}
         accessibilityRole="button"
         accessibilityLabel={collapsed ? 'Показать легенду' : 'Скрыть легенду'}
+        accessibilityState={{ expanded: !collapsed }}
       >
         <Feather name="info" size={16} color={colors.textMuted} />
-        <Text style={styles.title}>Легенда карты</Text>
+        <Text style={styles.title} accessibilityRole="header">Легенда карты</Text>
         <Feather name={collapsed ? 'chevron-down' : 'chevron-up'} size={14} color={colors.textMuted} />
       </Pressable>
       {!collapsed && (
-        <View style={styles.items}>
+        <View style={styles.items} accessibilityRole="list">
           {legendItems.map((item, index) => (
-            <View key={index} style={styles.item}>
+            <View
+              key={index}
+              style={styles.item}
+              accessibilityRole={'listitem' as any}
+              accessibilityLabel={`${item.label}: ${item.description}`}
+            >
               <View style={[styles.iconContainer, { backgroundColor: item.background }]}>
                 <Feather name={item.icon as any} size={14} color={item.color} />
               </View>

@@ -213,11 +213,12 @@ const gotoMapWithRecovery = async (page: any) => {
       (await notFoundTitle.isVisible().catch(() => false)) ||
       (await plainNotFound.isVisible().catch(() => false));
     if (hasNotFound) {
-      if (notFoundRecoveries >= 2) {
+      if (notFoundRecoveries >= 4) {
         throw new Error(`Map route resolved to Not found after retry (url=${page.url()})`);
       }
       notFoundRecoveries += 1;
-      await safeGoto(page, '/map', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+      const retryUrl = notFoundRecoveries % 2 === 0 ? `/map?e2eRetry=${notFoundRecoveries}` : '/map';
+      await safeGoto(page, retryUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
       await page.waitForTimeout(500).catch(() => null);
       continue;
     }

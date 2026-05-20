@@ -150,6 +150,11 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           { ...bottomStyle, pointerEvents: hiddenWhenCollapsed ? 'none' : 'auto' },
         ]}
         accessibilityLabel="Панель карты"
+        accessibilityRole={!isCollapsed ? ('dialog' as any) : undefined}
+        accessibilityViewIsModal={isFullScreen}
+        {...(!isCollapsed
+          ? ({ role: 'dialog', 'aria-modal': isFullScreen ? 'true' : 'false' } as any)
+          : null)}
       >
         <Pressable
           onPress={isCollapsed ? handlePeekTap : handleClose}

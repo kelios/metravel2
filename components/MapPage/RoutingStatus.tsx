@@ -120,7 +120,15 @@ function RoutingStatus({
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
+      <View
+        style={styles.container}
+        accessibilityRole="progressbar"
+        accessibilityLabel="Построение маршрута"
+        accessibilityLiveRegion="polite"
+        {...(Platform.OS === 'web'
+          ? ({ role: 'progressbar', 'aria-busy': true, 'aria-live': 'polite' } as any)
+          : null)}
+      >
         <View style={styles.loadingContent}>
           <ActivityIndicator size="small" color={colors.info} />
           <Text style={styles.loadingText}>Построение маршрута…</Text>
@@ -136,7 +144,12 @@ function RoutingStatus({
 
   if (error && typeof error === 'string' && error !== 'Using direct line') {
     return (
-      <View style={[styles.container, styles.errorContainer]}>
+      <View
+        style={[styles.container, styles.errorContainer]}
+        accessibilityRole="alert"
+        accessibilityLiveRegion="assertive"
+        {...(Platform.OS === 'web' ? ({ role: 'alert', 'aria-live': 'assertive' } as any) : null)}
+      >
         <View style={styles.errorContent}>
           <Feather name="alert-circle" size={16} color={colors.danger} />
           <View style={styles.errorTextContainer}>

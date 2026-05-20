@@ -88,6 +88,7 @@ export const TravelRouteMapBlock: React.FC<{
       ]}
       collapsable={false}
       accessibilityLabel="Карта маршрута"
+      accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
       {...(Platform.OS === 'web'
         ? {
             'data-testid': 'travel-details-map',
@@ -96,7 +97,11 @@ export const TravelRouteMapBlock: React.FC<{
           }
         : {})}
     >
-      <Text style={styles.sectionHeaderText}>Карта маршрута</Text>
+      <Text
+        style={styles.sectionHeaderText}
+        accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
+        aria-level={2 as any}
+      >Карта маршрута</Text>
       <View style={SECTION_CONTENT_MARGIN_STYLE}>
         {hasMapData ? (
           <>

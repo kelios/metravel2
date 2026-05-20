@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import Feather from '@expo/vector-icons/Feather';
 import MarkersListComponent from '@/components/map/MarkersListComponent';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -605,8 +606,9 @@ const WebMapComponent = ({
                                             type="button"
                                             onClick={() => setIsExpanded(false)}
                                             style={styles.mobileSheetClose}
+                                            aria-label="Закрыть"
                                         >
-                                            ✕
+                                            <Feather name="x" size={18} color={colors.textMuted} />
                                         </button>
                                     </div>
                                     <div id="markers-scroll-container" style={styles.mobileSheetBody}>

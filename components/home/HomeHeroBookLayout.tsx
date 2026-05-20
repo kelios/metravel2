@@ -83,7 +83,12 @@ function HeroWeekEyebrow({
 }) {
   return (
     <View style={styles.slideEyebrow}>
-      <Feather name="map-pin" size={11} color={iconColor} />
+      <Feather
+        name="map-pin"
+        size={11}
+        color={iconColor}
+        {...({ 'aria-hidden': true, focusable: false } as any)}
+      />
       <Text style={styles.slideEyebrowText}>Маршрут недели</Text>
     </View>
   )
@@ -134,10 +139,16 @@ function HeroPageNote({
   return (
     <Pressable
       onPress={() => onQuickFilterPress(card.title, card.filters, card.route)}
-      style={({ pressed, hovered }) => [
+      style={({ pressed, hovered, focused }: any) => [
         styles.pageNote,
         (pressed || hovered) && styles.pageNoteHover,
         active && styles.pageNoteActive,
+        focused && {
+          outlineWidth: 2,
+          outlineStyle: 'solid',
+          outlineColor: colors.primary,
+          outlineOffset: 2,
+        },
       ]}
       accessibilityRole="button"
       accessibilityLabel={`${card.title}. Подобрать идею поездки`}
@@ -148,6 +159,7 @@ function HeroPageNote({
           name={active ? 'loader' : (card.icon as any)}
           size={14}
           color={active ? colors.textOnPrimary : colors.brand}
+          {...({ 'aria-hidden': true, focusable: false } as any)}
         />
       </View>
       <View style={styles.pageNoteTextWrap}>
@@ -206,9 +218,17 @@ function TabletFeaturedRoute({
   return (
     <Pressable
       onPress={() => onOpenArticle(bookImage.href)}
-      style={styles.tabletHeroRight}
+      style={({ focused }: any) => [
+        styles.tabletHeroRight,
+        focused && {
+          outlineWidth: 2,
+          outlineStyle: 'solid',
+          outlineColor: iconColor,
+          outlineOffset: 2,
+        },
+      ]}
       accessibilityRole="link"
-      accessibilityLabel={`Открыть маршрут: ${bookImage.title}`}
+      accessibilityLabel={`Открыть маршрут: ${bookImage.title}. ${bookImage.subtitle}`}
     >
       <ImageCardMedia
         source={bookImage.source}
@@ -284,7 +304,15 @@ function HeroSlider({
         <Pressable
           onPress={() => onOpenArticle(currentSlide.href)}
           testID="home-hero-slider-container"
-          style={styles.sliderContainer}
+          style={({ focused }: any) => [
+            styles.sliderContainer,
+            isWeb && focused && {
+              outlineWidth: 2,
+              outlineStyle: 'solid',
+              outlineColor: sliderIconColor,
+              outlineOffset: 2,
+            },
+          ]}
           {...((isWeb ? { dataSet: { bookSlider: 'true' } } : {}) as any)}
           accessibilityRole="link"
           accessibilityLabel={`Маршрут недели: ${currentSlide.title}. ${currentSlide.subtitle}`}
@@ -359,30 +387,63 @@ function HeroSlider({
             </>
           )}
 
-          <View style={styles.sliderNav}>
+          <View
+            style={styles.sliderNav}
+            accessibilityRole="group"
+            {...({ 'aria-label': 'Навигация по слайдам' } as any)}
+          >
             <Pressable
               onPress={onPrevSlide}
-              style={({ hovered }) => [styles.sliderNavBtn, hovered && styles.sliderNavBtnHover]}
+              style={({ hovered, focused }: any) => [
+                styles.sliderNavBtn,
+                hovered && styles.sliderNavBtnHover,
+                isWeb && focused && {
+                  outlineWidth: 2,
+                  outlineStyle: 'solid',
+                  outlineColor: sliderIconColor,
+                  outlineOffset: 2,
+                },
+              ]}
               accessibilityRole="button"
               accessibilityLabel="Предыдущий слайд"
             >
-              <Feather name="chevron-left" size={14} color={sliderIconColor} />
+              <Feather
+                name="chevron-left"
+                size={14}
+                color={sliderIconColor}
+                {...({ 'aria-hidden': true, focusable: false } as any)}
+              />
             </Pressable>
             <Text
               style={[
                 styles.sliderNavIndicator ?? { ...SLIDER_NAV_INDICATOR_FALLBACK, color: sliderIconColor },
               ]}
               accessibilityLabel={`Слайд ${visibleSlide + 1} из ${bookImages.length}`}
+              {...({ 'aria-live': 'polite', 'aria-atomic': true } as any)}
             >
               {visibleSlide + 1}/{bookImages.length}
             </Text>
             <Pressable
               onPress={onNextSlide}
-              style={({ hovered }) => [styles.sliderNavBtn, hovered && styles.sliderNavBtnHover]}
+              style={({ hovered, focused }: any) => [
+                styles.sliderNavBtn,
+                hovered && styles.sliderNavBtnHover,
+                isWeb && focused && {
+                  outlineWidth: 2,
+                  outlineStyle: 'solid',
+                  outlineColor: sliderIconColor,
+                  outlineOffset: 2,
+                },
+              ]}
               accessibilityRole="button"
               accessibilityLabel="Следующий слайд"
             >
-              <Feather name="chevron-right" size={14} color={sliderIconColor} />
+              <Feather
+                name="chevron-right"
+                size={14}
+                color={sliderIconColor}
+                {...({ 'aria-hidden': true, focusable: false } as any)}
+              />
             </Pressable>
           </View>
         </Pressable>
@@ -450,7 +511,11 @@ export default function HomeHeroBookLayout({
                     <View style={styles.chapterDivider} />
                   </View>
                 )}
-                <View>
+                <View
+                  accessibilityRole="header"
+                  {...({ 'aria-level': 1 } as any)}
+                  accessibilityLabel="Куда поехать в эти выходные?"
+                >
                   <Text style={styles.title}>
                     Куда поехать{isNarrowLayout ? ' ' : '\n'}
                   </Text>

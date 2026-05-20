@@ -95,7 +95,8 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = memo(
             highlight === 'info' && styles.sectionHeaderInfo,
             open && styles.sectionHeaderActive,
           ]}
-          accessibilityLabel={getAccessibilityLabel(title, `${open ? 'Expanded' : 'Collapsed'}`)}
+          accessibilityLabel={getAccessibilityLabel(title, `${open ? 'развёрнуто' : 'свёрнуто'}`)}
+          accessibilityHint={`Нажмите, чтобы ${open ? 'свернуть' : 'развернуть'} раздел`}
         >
           <View style={styles.sectionHeaderTitleWrap}>
             {coverImageUrl ? (

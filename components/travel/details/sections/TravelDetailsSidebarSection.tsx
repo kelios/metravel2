@@ -67,11 +67,16 @@ export const TravelDetailsSidebarSection: React.FC<{
         style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
         collapsable={false}
         accessibilityLabel="Рядом можно посмотреть"
+        accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
         {...(Platform.OS === 'web' ? { 'data-section-key': 'near' } : {})}
       >
         <View style={styles.sectionHeaderRow}>
           <Feather name="map-pin" size={18} color={colors.primary} />
-          <Text style={styles.sectionHeaderText}>Рядом можно посмотреть</Text>
+          <Text
+            style={styles.sectionHeaderText}
+            accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
+            aria-level={2 as any}
+          >Рядом можно посмотреть</Text>
         </View>
         <Text style={styles.sectionSubtitle}>Маршруты в радиусе ~60 км</Text>
         <View style={SIDEBAR_CONTENT_MARGIN_STYLE}>
@@ -94,8 +99,7 @@ export const TravelDetailsSidebarSection: React.FC<{
         <View
           style={[styles.sectionContainer, styles.navigationArrowsContainer]}
           accessibilityLabel="Навигация по похожим маршрутам"
-          accessibilityRole="none"
-          role="navigation"
+          accessibilityRole={'navigation' as any}
         >
           <NavigationArrows currentTravel={travel} relatedTravels={relatedTravels} />
         </View>
@@ -111,11 +115,16 @@ export const TravelDetailsSidebarSection: React.FC<{
         style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
         collapsable={false}
         accessibilityLabel="Популярные маршруты"
+        accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
         {...(Platform.OS === 'web' ? { 'data-section-key': 'popular' } : {})}
       >
         <View style={styles.sectionHeaderRow}>
           <Feather name="trending-up" size={18} color={colors.primary} />
-          <Text style={styles.sectionHeaderText}>Популярные маршруты</Text>
+          <Text
+            style={styles.sectionHeaderText}
+            accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
+            aria-level={2 as any}
+          >Популярные маршруты</Text>
         </View>
         <Text style={styles.sectionSubtitle}>Самые просматриваемые направления за неделю</Text>
         <View style={SIDEBAR_CONTENT_MARGIN_STYLE}>

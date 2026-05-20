@@ -149,9 +149,7 @@ export function CommentsSection({
                     ? 'Оставьте первый комментарий — форма уже открыта выше.'
                     : 'Начните обсуждение первым: войдите и оставьте комментарий.'}
                 </Text>
-                {isAuthenticated ? (
-                  <Text style={styles.emptyHint}>Комментарий можно написать сразу в форме выше.</Text>
-                ) : (
+                {!isAuthenticated && (
                   <Pressable
                     onPress={handleLoginPress}
                     style={styles.emptyActionButton}

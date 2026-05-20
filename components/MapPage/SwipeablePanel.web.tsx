@@ -163,7 +163,14 @@ const SwipeablePanel: React.FC<SwipeablePanelProps> = ({
       onPointerCancel={handlePointerCancel as any}
     >
       <Pressable style={styles.overlay} onPress={onClose} accessibilityRole="button" accessibilityLabel="Закрыть панель" />
-      <View style={[styles.panel, style]}>{children}</View>
+      <View
+        style={[styles.panel, style]}
+        accessibilityViewIsModal
+        accessibilityRole={'dialog' as any}
+        {...({ role: 'dialog', 'aria-modal': 'true' } as any)}
+      >
+        {children}
+      </View>
     </View>
   );
 };

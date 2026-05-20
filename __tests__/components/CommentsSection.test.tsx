@@ -332,7 +332,7 @@ describe('CommentsSection', () => {
 
       expect(screen.getByText('Пока нет комментариев')).toBeTruthy();
       expect(screen.getByText('Оставьте первый комментарий — форма уже открыта выше.')).toBeTruthy();
-      expect(screen.getByText('Комментарий можно написать сразу в форме выше.')).toBeTruthy();
+      expect(screen.queryByText('Комментарий можно написать сразу в форме выше.')).toBeNull();
     });
   });
 

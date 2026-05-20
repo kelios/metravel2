@@ -210,6 +210,9 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
           placeholderTextColor={colors.textMuted}
           onFocus={handleFocus}
           onSubmitEditing={trySubmitCoords}
+          accessibilityLabel={placeholder}
+          accessibilityRole="search"
+          returnKeyType="search"
         />
 
         {loading && (
@@ -228,7 +231,11 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
       </View>
 
       {showResults && results.length > 0 && (
-        <View style={styles.resultsContainer}>
+        <View
+          style={styles.resultsContainer}
+          accessibilityRole={('listbox' as any)}
+          accessibilityLabel="Результаты поиска адреса"
+        >
           <FlatList
             data={results}
             keyExtractor={(item) => item.place_id}
@@ -239,6 +246,8 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
                   pressed && styles.resultItemPressed,
                 ]}
                 onPress={() => handleSelectResult(item)}
+                accessibilityRole={('option' as any)}
+                accessibilityLabel={item.display_name}
               >
                 <MapIcon name="place" size={18} color={colors.primary} />
                 <Text style={styles.resultText} numberOfLines={2}>

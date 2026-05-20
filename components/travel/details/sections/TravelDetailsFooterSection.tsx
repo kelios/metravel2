@@ -63,6 +63,7 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
       <View
         testID="travel-details-telegram"
         accessibilityLabel="Обсуждение в Telegram"
+        accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
         style={[styles.sectionContainer, styles.authorCardContainer, footerStyles.compactSection]}
       >
         <TelegramDiscussionSection travel={travel} />
@@ -72,6 +73,7 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
         <View
           testID="travel-details-share"
           accessibilityLabel="Поделиться маршрутом"
+          accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
           style={[styles.sectionContainer, styles.shareButtonsContainer, footerStyles.compactSection]}
         >
           <View style={footerStyles.combinedCard}>
@@ -90,6 +92,7 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
         <View
           testID="travel-details-cta"
           accessibilityLabel="Призыв к действию"
+          accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
           style={[styles.sectionContainer, footerStyles.compactSection]}
         >
           <CTASection travel={travel} />

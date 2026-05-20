@@ -42,9 +42,14 @@ export const ExcursionsSection: React.FC<{
           style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
           collapsable={false}
           accessibilityLabel="Экскурсии"
+          accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
           data-section-key="excursions"
         >
-          <Text style={styles.sectionHeaderText}>Экскурсии</Text>
+          <Text
+            style={styles.sectionHeaderText}
+            accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
+            aria-level={2 as any}
+          >Экскурсии</Text>
           <Text style={styles.sectionSubtitle}>Покажем экскурсии рядом с точками маршрута</Text>
 
           <View style={[EXCURSION_CONTAINER_STYLE, styles.excursionsWidgetCard]}>

@@ -82,12 +82,17 @@ export const TravelPointsBlock: React.FC<{
       style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
       collapsable={false}
       accessibilityLabel="Координаты мест"
+      accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
       {...(Platform.OS === 'web'
         ? { 'data-testid': 'travel-details-points', 'data-section-key': 'points' }
         : {})}
     >
       <View style={styles.pointsHeaderRow}>
-        <Text style={styles.sectionHeaderText}>Координаты мест</Text>
+        <Text
+          style={styles.sectionHeaderText}
+          accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
+          aria-level={2 as any}
+        >Координаты мест</Text>
         {canExportPoints ? (
           <View style={styles.pointsExportWrap}>
             <View style={styles.pointsExportActions}>
