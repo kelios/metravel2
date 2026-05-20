@@ -319,10 +319,6 @@ const replaceStandaloneInstagramLinks = (html: string) =>
     }
   )
 
-const shouldReplaceInstagramIframesWithCards = () =>
-  Platform.OS !== 'web' ||
-  (typeof globalThis.window !== 'undefined' && (globalThis.window.innerWidth || 0) <= 768)
-
 const decorateRichImageFrames = (html: string) => {
   if (!html) return html
 
@@ -347,11 +343,7 @@ const decorateRichImageFrames = (html: string) => {
 
 export const prepareStableContentHtml = (html: string) => {
   const normalizedEmbeds = normalizeArticleEditorHtmlForInput(html)
-  const instagramSafeHtml = Platform.OS === 'web'
-    ? replaceInstagramEmbedsWithCards(normalizedEmbeds, {
-        replaceIframes: shouldReplaceInstagramIframesWithCards(),
-      })
-    : normalizedEmbeds
+  const instagramSafeHtml = replaceInstagramEmbedsWithCards(normalizedEmbeds)
   const safe = sanitizeRichText(instagramSafeHtml)
   const normalizedBase = replaceYouTubeIframes(normalizeImgTags(stripDangerousTags(safe)))
   const normalized = Platform.OS === 'web'
