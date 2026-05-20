@@ -1,0 +1,523 @@
+// app/login.tsx (или соответствующий путь)
+import React, { useMemo, useRef, useState } from 'react';
+import {
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+    Image,
+} from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
+import Button from '@/components/ui/Button';
+import { useIsFocused } from '@react-navigation/native';
+import { Link, useLocalSearchParams, usePathname, useRouter } from 'expo-router';
+
+import InstantSEO from '@/components/seo/LazyInstantSEO';
+import { useAuth } from '@/context/AuthContext';
+import { loginSchema } from '@/utils/validation';
+import { useYupForm } from '@/hooks/useYupForm';
+import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation'; // ✅ ИСПРАВЛЕНИЕ: Импорт улучшенного компонента
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { sendAnalyticsEvent } from '@/utils/analytics';
+import { useThemedColors } from '@/hooks/useTheme';
+import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
+import { webTouchScrollStyle } from '@/utils';
+
+interface LoginFormValues {
+    email: string;
+    password: string;
+}
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+    if (error instanceof Error && typeof error.message === 'string' && error.message.trim()) {
+        return error.message;
+    }
+    return fallback;
+};
+
+export default function Login() {
+    /* ---------- state ---------- */
+    const [msg, setMsg] = useState<{ text: string; error: boolean }>({ text: '', error: false });
+    const [showPassword, setShowPassword] = useState(false);
+    const passwordRef = useRef<TextInput>(null);
+
+    /* ---------- helpers ---------- */
+    const router = useRouter();
+    const { login, loginWithGoogle, sendPassword } = useAuth();
+    const { redirect, intent } = useLocalSearchParams<{ redirect?: string; intent?: string }>();
+
+    const isFocused = useIsFocused();
+    const pathname = usePathname();
+    const { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } = require('@/utils/seo');
+    const canonical = buildCanonicalUrl(pathname || '/login');
+    const colors = useThemedColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
+
+    const showMsg = (text: string, error = false) => setMsg({ text, error });
+
+    const resolvePostAuthPath = (): string => {
+        if (intent === 'create-book') return '/travel/new';
+        if (intent === 'build-pdf') return '/export';
+        if (redirect && typeof redirect === 'string' && redirect.startsWith('/')) {
+            return redirect;
+        }
+        return '/';
+    };
+
+    React.useEffect(() => {
+        if (!isFocused) return;
+        if (!intent) return;
+        sendAnalyticsEvent('AuthViewed', { source: String(intent || 'unknown'), intent });
+    }, [intent, isFocused]);
+
+    /* ---------- actions ---------- */
+    const handleResetPassword = async (email: string) => {
+        // ✅ ИСПРАВЛЕНИЕ: Валидация email перед отправкой запроса
+        const trimmedEmail = email.trim();
+        
+        if (!trimmedEmail) {
+            showMsg('Введите email адрес', true);
+            return;
+        }
+        
+        // Проверка формата email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(trimmedEmail)) {
+            showMsg('Введите корректный email адрес', true);
+            return;
+        }
+        
+        try {
+            const res = await sendPassword(trimmedEmail);
+            showMsg(res, /ошиб|не удалось/i.test(res));
+        } catch (error) {
+            showMsg(getErrorMessage(error, 'Ошибка при сбросе пароля.'), true);
+        }
+    };
+
+    const handleLogin = async (
+        values: LoginFormValues,
+        { setSubmitting }: { setSubmitting: (v: boolean) => void }
+    ) => {
+        try {
+            showMsg('');
+            const ok = await login(values.email.trim(), values.password);
+            if (ok) {
+                if (intent) {
+                    sendAnalyticsEvent('AuthSuccess', { source: String(intent || 'unknown'), intent });
+                }
+                router.replace(resolvePostAuthPath() as any);
+            } else {
+                showMsg('Неверный email или пароль.', true);
+            }
+        } catch (error) {
+            showMsg(getErrorMessage(error, 'Ошибка при входе.'), true);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleGoogleSignIn = async (credential: string) => {
+        try {
+            showMsg('');
+            const ok = await loginWithGoogle(credential);
+            if (ok) {
+                if (intent) {
+                    sendAnalyticsEvent('AuthSuccess', { source: 'google', intent });
+                }
+                router.replace(resolvePostAuthPath() as any);
+            } else {
+                showMsg('Не удалось войти через Google.', true);
+            }
+        } catch (error) {
+            showMsg(getErrorMessage(error, 'Ошибка при входе через Google.'), true);
+        }
+    };
+
+    const handleGoogleError = (error: string) => {
+        showMsg(error, true);
+    };
+
+    const {
+        values,
+        errors,
+        touched,
+        isSubmitting,
+        handleChange,
+        handleBlur,
+        handleSubmit,
+    } = useYupForm<LoginFormValues>({
+        initialValues: { email: '', password: '' },
+        validationSchema: loginSchema,
+        onSubmit: handleLogin,
+    });
+
+    const title = 'Вход в Metravel: аккаунт, маршруты и избранное | Metravel';
+    const description =
+        'Войдите в аккаунт Metravel, чтобы сохранять маршруты, управлять избранным, публиковать поездки и собирать личную книгу путешествий.';
+
+    /* ---------- render ---------- */
+    return (
+        <>
+            <InstantSEO
+                headKey="login"
+                title={title}
+                description={description}
+                canonical={canonical}
+                image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
+                ogType="website"
+                robots="noindex, nofollow"
+            />
+
+            <KeyboardAvoidingView
+                style={styles.container}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            >
+                {Platform.OS === 'web' && (
+                    <Image
+                        source={require('../../assets/travel/roulette-map-bg.jpg')}
+                        style={styles.mapBackground}
+                        resizeMode="cover"
+                    />
+                )}
+                <ScrollView
+                    style={webTouchScrollStyle}
+                    contentContainerStyle={styles.scrollViewContent}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <View style={styles.bg}>
+                        <View style={styles.inner}>
+                            <View style={styles.card}>
+                                    {Platform.OS === 'web' &&
+                                        React.createElement(
+                                            'h1',
+                                            {
+                                                style: {
+                                                    position: 'absolute' as const,
+                                                    width: 1,
+                                                    height: 1,
+                                                    padding: 0,
+                                                    margin: -1,
+                                                    overflow: 'hidden' as const,
+                                                    clip: 'rect(0,0,0,0)',
+                                                    whiteSpace: 'nowrap',
+                                                    borderWidth: 0,
+                                                } as any,
+                                            },
+                                            title
+                                        )}
+                                    {msg.text !== '' && (
+                                        <Text
+                                            style={[
+                                                styles.message,
+                                                msg.error ? styles.err : styles.ok,
+                                            ]}
+                                        >
+                                            {msg.text}
+                                        </Text>
+                                    )}
+
+                                                {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для email */}
+                                                <FormFieldWithValidation
+                                                    label="Email"
+                                                    error={touched.email && errors.email ? errors.email : null}
+                                                    required
+                                                >
+                                                    <TextInput
+                                                        style={[
+                                                            styles.input,
+                                                            touched.email && errors.email && styles.inputError,
+                                                            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                                                        ]}
+                                                        placeholder="Email"
+                                                        value={values.email}
+                                                        onChangeText={handleChange('email')}
+                                                        onBlur={handleBlur('email')}
+                                                        keyboardType="email-address"
+                                                        autoCapitalize="none"
+                                                        placeholderTextColor={colors.textMuted}
+                                                        returnKeyType="next"
+                                                        blurOnSubmit={false}
+                                                        onSubmitEditing={() => passwordRef.current?.focus()}
+                                                    />
+                                                </FormFieldWithValidation>
+
+                                                {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для пароля */}
+                                                <FormFieldWithValidation
+                                                    label="Пароль"
+                                                    error={touched.password && errors.password ? errors.password : null}
+                                                    required
+                                                >
+                                                    <View style={styles.passwordContainer}>
+                                                        <TextInput
+                                                            ref={passwordRef}
+                                                            style={[
+                                                                styles.input,
+                                                                styles.passwordInput,
+                                                                touched.password && errors.password && styles.inputError,
+                                                                globalFocusStyles.focusable,
+                                                            ]}
+                                                            placeholder="Пароль"
+                                                            value={values.password}
+                                                            onChangeText={handleChange('password')}
+                                                            onBlur={handleBlur('password')}
+                                                            secureTextEntry={!showPassword}
+                                                            placeholderTextColor={colors.textMuted}
+                                                            returnKeyType="done"
+                                                            onSubmitEditing={() => handleSubmit()}
+                                                        />
+                                                        <Pressable
+                                                            onPress={() => setShowPassword((v) => !v)}
+                                                            style={[styles.eyeButton, globalFocusStyles.focusable]}
+                                                            accessibilityRole="button"
+                                                            accessibilityLabel={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                                                            hitSlop={8}
+                                                        >
+                                                            <Feather
+                                                                name={showPassword ? 'eye-off' : 'eye'}
+                                                                size={20}
+                                                                color={colors.textMuted}
+                                                            />
+                                                        </Pressable>
+                                                    </View>
+                                                </FormFieldWithValidation>
+
+                                                <Button
+                                                    label={isSubmitting ? 'Подождите…' : 'Войти'}
+                                                    onPress={() => handleSubmit()}
+                                                    disabled={isSubmitting}
+                                                    variant="primary"
+                                                    size="lg"
+                                                    style={styles.btn}
+                                                    accessibilityLabel="Войти"
+                                                />
+
+                                                <Pressable
+                                                    onPress={() => handleResetPassword(values.email)}
+                                                    disabled={isSubmitting}
+                                                    style={({ pressed }) => [
+                                                        styles.forgotButton,
+                                                        pressed && { opacity: 0.7 },
+                                                        globalFocusStyles.focusable,
+                                                    ]}
+                                                    accessibilityRole="button"
+                                                    accessibilityLabel="Сбросить пароль"
+                                                >
+                                                    <Text style={styles.forgot}>Забыли пароль?</Text>
+                                                </Pressable>
+
+                                                <View style={styles.dividerContainer}>
+                                                    <View style={styles.dividerLine} />
+                                                    <Text style={styles.dividerText}>или</Text>
+                                                    <View style={styles.dividerLine} />
+                                                </View>
+
+                                                <GoogleSignInButton
+                                                    onSuccess={handleGoogleSignIn}
+                                                    onError={handleGoogleError}
+                                                    disabled={isSubmitting}
+                                                />
+
+                                            <View style={styles.registerContainer}>
+                                                <Text style={styles.registerText}>Нет аккаунта? </Text>
+                                                <Link
+                                                    href={
+                                                        (redirect && typeof redirect === 'string')
+                                                            ? (`/registration?redirect=${encodeURIComponent(redirect)}${intent ? `&intent=${encodeURIComponent(intent)}` : ''}` as any)
+                                                            : (`/registration${intent ? `?intent=${encodeURIComponent(intent)}` : ''}` as any)
+                                                    }
+                                                    style={styles.registerLink}
+                                                    disabled={isSubmitting}
+                                                >
+                                                    Зарегистрируйтесь
+                                                </Link>
+                                            </View>
+                            </View>
+                        </View>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
+        </>
+    );
+}
+
+/* ---------- styles ---------- */
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: colors.backgroundSecondary,
+    },
+    mapBackground: {
+        ...StyleSheet.absoluteFillObject,
+        width: '100%',
+        height: '100%',
+    },
+    scrollViewContent: {
+        flexGrow: 1,
+        justifyContent: 'center',
+        ...Platform.select({
+            web: {
+                paddingBottom: 'var(--mt-consent-h, 0px)' as any,
+            },
+        }),
+    },
+    bg: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: '100%',
+    },
+    inner: {
+        width: '100%',
+        maxWidth: 440,
+        paddingHorizontal: 16,
+    },
+    card: {
+        backgroundColor: colors.surface,
+        borderRadius: DESIGN_TOKENS.radii.xl,
+        padding: 24,
+        ...Platform.select({
+            ios: {
+                shadowColor: colors.shadows.heavy.shadowColor,
+                shadowOffset: { width: 0, height: 14 },
+                shadowOpacity: 0.16,
+                shadowRadius: 24,
+            },
+            android: {
+                elevation: 6,
+            },
+            web: {
+                boxShadow: colors.boxShadows.modal,
+            },
+        }),
+    },
+    input: {
+        marginBottom: 0, // ✅ Отступ управляется FormFieldWithValidation
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        fontSize: 16,
+        backgroundColor: colors.surface,
+        color: colors.text,
+        minHeight: 48,
+        ...Platform.select({
+            web: {
+                transition: 'border-color 0.18s ease, box-shadow 0.18s ease',
+            },
+        }),
+    },
+    btn: {
+        backgroundColor: colors.primary,
+        borderRadius: DESIGN_TOKENS.radii.lg,
+        marginTop: 8,
+    },
+    passwordContainer: {
+        position: 'relative' as const,
+        width: '100%',
+    },
+    passwordInput: {
+        paddingRight: 48,
+    },
+    eyeButton: {
+        position: 'absolute' as const,
+        right: 4,
+        top: 0,
+        bottom: 0,
+        justifyContent: 'center' as const,
+        alignItems: 'center' as const,
+        width: 44,
+        minHeight: 44,
+        ...Platform.select({
+            web: {
+                cursor: 'pointer' as any,
+            },
+        }),
+    },
+    forgotButton: {
+        alignSelf: 'center' as const,
+        marginTop: 16,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 6,
+        minHeight: 44,
+        justifyContent: 'center' as const,
+        ...Platform.select({
+            web: {
+                cursor: 'pointer' as any,
+                transition: 'opacity 0.15s ease' as any,
+            },
+        }),
+    },
+    forgot: {
+        color: colors.primaryText,
+        fontSize: 14,
+        fontWeight: '500' as const,
+    },
+    registerContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 20,
+        paddingTop: 20,
+        borderTopWidth: 1,
+        borderTopColor: colors.border,
+    },
+    registerText: {
+        fontSize: 14,
+        color: colors.textMuted,
+    },
+    registerLink: {
+        fontSize: 14,
+        color: colors.primaryText,
+        fontWeight: '600',
+        textDecorationLine: 'underline',
+    },
+    message: { 
+        marginBottom: 15, 
+        textAlign: 'center', 
+        fontSize: 16,
+        padding: 12,
+        borderRadius: 8,
+        fontWeight: '500',
+    },
+    err: { 
+        color: colors.danger,
+        backgroundColor: colors.dangerSoft,
+        borderLeftWidth: 3,
+        borderLeftColor: colors.danger,
+    },
+    ok: { 
+        color: colors.success,
+        backgroundColor: colors.successSoft,
+        borderLeftWidth: 3,
+        borderLeftColor: colors.success,
+    },
+    inputError: {
+        borderColor: colors.danger,
+        borderWidth: 2,
+        backgroundColor: colors.dangerSoft,
+    },
+    dividerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 20,
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: colors.border,
+    },
+    dividerText: {
+        marginHorizontal: 16,
+        fontSize: 14,
+        color: colors.textMuted,
+        fontWeight: '500',
+    },
+});

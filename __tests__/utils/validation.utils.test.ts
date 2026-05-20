@@ -12,8 +12,12 @@ import {
 
 // Набор unit-тестов для yup-схем и вспомогательных функций в utils/validation.ts
 
+const resolveSchema = async (schema: any): Promise<any> =>
+  typeof schema === 'function' ? await schema() : schema
+
 const expectValidationError = async (schema: any, data: any, path: string, message: string) => {
-  await expect(schema.validate(data)).rejects.toMatchObject({
+  const resolved = await resolveSchema(schema)
+  await expect(resolved.validate(data)).rejects.toMatchObject({
     path,
     errors: expect.arrayContaining([message]),
   })
@@ -29,7 +33,7 @@ describe('utils/validation - yup schemas', () => {
         confirmPassword: 'Aa123456',
       }
 
-      await expect(registrationSchema.validate(data)).resolves.toMatchObject(data)
+      await expect((await registrationSchema()).validate(data)).resolves.toMatchObject(data)
     })
 
     it('rejects invalid username (too short, too long, invalid chars)', async () => {
@@ -99,7 +103,7 @@ describe('utils/validation - yup schemas', () => {
   describe('loginSchema', () => {
     it('accepts valid login data', async () => {
       const data = { email: 'user@example.com', password: 'secret' }
-      await expect(loginSchema.validate(data)).resolves.toMatchObject(data)
+      await expect((await loginSchema()).validate(data)).resolves.toMatchObject(data)
     })
 
     it('rejects missing email and password', async () => {
@@ -110,7 +114,7 @@ describe('utils/validation - yup schemas', () => {
 
   describe('resetPasswordSchema', () => {
     it('accepts valid email', async () => {
-      await expect(resetPasswordSchema.validate({ email: 'user@example.com' })).resolves.toBeTruthy()
+      await expect((await resetPasswordSchema()).validate({ email: 'user@example.com' })).resolves.toBeTruthy()
     })
 
     it('rejects invalid email', async () => {
@@ -126,7 +130,7 @@ describe('utils/validation - yup schemas', () => {
   describe('setNewPasswordSchema', () => {
     it('accepts valid new password', async () => {
       const data = { password: 'Aa123456', confirmPassword: 'Aa123456' }
-      await expect(setNewPasswordSchema.validate(data)).resolves.toMatchObject(data)
+      await expect((await setNewPasswordSchema()).validate(data)).resolves.toMatchObject(data)
     })
 
     it('rejects weak password and mismatched confirmation', async () => {
@@ -168,7 +172,7 @@ describe('utils/validation - yup schemas', () => {
     }
 
     it('accepts fully valid travel entity', async () => {
-      await expect(travelSchema.validate(validBase)).resolves.toMatchObject(validBase)
+      await expect((await travelSchema()).validate(validBase)).resolves.toMatchObject(validBase)
     })
 
     it('rejects invalid year format and range', async () => {
@@ -221,7 +225,7 @@ describe('utils/validation - yup schemas', () => {
       )
 
       await expect(
-        travelSchema.validate({ ...validBase, youtube_link: 'https://www.youtube.com/watch?v=abc123' }),
+        (await travelSchema()).validate({ ...validBase, youtube_link: 'https://www.youtube.com/watch?v=abc123' }),
       ).resolves.toBeTruthy()
     })
   })
@@ -229,7 +233,7 @@ describe('utils/validation - yup schemas', () => {
   describe('feedbackSchema', () => {
     it('accepts valid feedback data', async () => {
       const data = { name: 'Иван', email: 'user@example.com', message: 'Длинное сообщение об ошибке' }
-      await expect(feedbackSchema.validate(data)).resolves.toMatchObject(data)
+      await expect((await feedbackSchema()).validate(data)).resolves.toMatchObject(data)
     })
 
     it('rejects too short name and message', async () => {

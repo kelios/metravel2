@@ -90,7 +90,7 @@ jest.mock('@/components/seo/InstantSEO', () => {
 });
 
 // Test utilities
-const renderLogin = (mockLogin?: jest.Mock, mockSendPassword?: jest.Mock) => {
+const renderLogin = async (mockLogin?: jest.Mock, mockSendPassword?: jest.Mock) => {
   const defaultLogin = jest.fn().mockResolvedValue(true);
   const defaultSendPassword = jest.fn().mockResolvedValue('Пароль отправлен на email');
 
@@ -103,11 +103,15 @@ const renderLogin = (mockLogin?: jest.Mock, mockSendPassword?: jest.Mock) => {
     isSuperuser: false,
   });
 
-  return render(
+  const utils = render(
     <NavigationContainer>
       <Login />
     </NavigationContainer>
   );
+
+  await utils.findByPlaceholderText('Email');
+
+  return utils;
 };
 
 describe('Login Component', () => {
@@ -121,7 +125,7 @@ describe('Login Component', () => {
   describe('Email Validation', () => {
     it('should show error for invalid email format', async () => {
       const mockLogin = jest.fn();
-      const { getByPlaceholderText, getByText } = renderLogin(mockLogin);
+      const { getByPlaceholderText, getByText } = await renderLogin(mockLogin);
 
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
@@ -139,7 +143,7 @@ describe('Login Component', () => {
 
     it('should accept valid email format', async () => {
       const mockLogin = jest.fn().mockResolvedValue(true);
-      const { getByPlaceholderText, getByText } = renderLogin(mockLogin);
+      const { getByPlaceholderText, getByText } = await renderLogin(mockLogin);
 
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
@@ -155,7 +159,7 @@ describe('Login Component', () => {
 
     it('should trim email whitespace', async () => {
       const mockLogin = jest.fn().mockResolvedValue(true);
-      const { getByPlaceholderText, getByText } = renderLogin(mockLogin);
+      const { getByPlaceholderText, getByText } = await renderLogin(mockLogin);
 
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
@@ -173,7 +177,7 @@ describe('Login Component', () => {
   describe('Password Validation', () => {
     it('should show error for empty password', async () => {
       const mockLogin = jest.fn();
-      const { getByPlaceholderText, getByText } = renderLogin(mockLogin);
+      const { getByPlaceholderText, getByText } = await renderLogin(mockLogin);
 
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
@@ -191,7 +195,7 @@ describe('Login Component', () => {
 
     it('should accept non-empty password', async () => {
       const mockLogin = jest.fn().mockResolvedValue(true);
-      const { getByPlaceholderText, getByText } = renderLogin(mockLogin);
+      const { getByPlaceholderText, getByText } = await renderLogin(mockLogin);
 
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
@@ -209,7 +213,7 @@ describe('Login Component', () => {
   describe('Login Flow', () => {
     it('should call login with correct credentials', async () => {
       const mockLogin = jest.fn().mockResolvedValue(true);
-      const { getByPlaceholderText, getByText } = renderLogin(mockLogin);
+      const { getByPlaceholderText, getByText } = await renderLogin(mockLogin);
 
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
@@ -225,7 +229,7 @@ describe('Login Component', () => {
 
     it('should show error message on failed login', async () => {
       const mockLogin = jest.fn().mockResolvedValue(false);
-      const { getByPlaceholderText, getByText } = renderLogin(mockLogin);
+      const { getByPlaceholderText, getByText } = await renderLogin(mockLogin);
 
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
@@ -241,7 +245,7 @@ describe('Login Component', () => {
 
     it('should show error message on login exception', async () => {
       const mockLogin = jest.fn().mockRejectedValue(new Error('Network error'));
-      const { getByPlaceholderText, getByText } = renderLogin(mockLogin);
+      const { getByPlaceholderText, getByText } = await renderLogin(mockLogin);
 
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
@@ -257,7 +261,7 @@ describe('Login Component', () => {
 
     it('should show generic error message when exception has no message', async () => {
       const mockLogin = jest.fn().mockRejectedValue({});
-      const { getByPlaceholderText, getByText } = renderLogin(mockLogin);
+      const { getByPlaceholderText, getByText } = await renderLogin(mockLogin);
 
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
@@ -275,7 +279,7 @@ describe('Login Component', () => {
       const mockLogin = jest.fn(
         () => new Promise((resolve) => setTimeout(() => resolve(true), 100))
       );
-      const { getByPlaceholderText, getByText } = renderLogin(mockLogin);
+      const { getByPlaceholderText, getByText } = await renderLogin(mockLogin);
 
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
@@ -293,7 +297,7 @@ describe('Login Component', () => {
   describe('Password Reset Flow', () => {
     it('should show error for invalid email when resetting password', async () => {
       const mockSendPassword = jest.fn();
-      const { getByPlaceholderText, getByText } = renderLogin(undefined, mockSendPassword);
+      const { getByPlaceholderText, getByText } = await renderLogin(undefined, mockSendPassword);
 
       const emailInput = getByPlaceholderText('Email');
       fireEvent.changeText(emailInput, 'invalid-email');
@@ -308,7 +312,7 @@ describe('Login Component', () => {
 
     it('should call sendPassword with trimmed email', async () => {
       const mockSendPassword = jest.fn().mockResolvedValue('Пароль отправлен на email');
-      const { getByPlaceholderText, getByText } = renderLogin(undefined, mockSendPassword);
+      const { getByPlaceholderText, getByText } = await renderLogin(undefined, mockSendPassword);
 
       const emailInput = getByPlaceholderText('Email');
       fireEvent.changeText(emailInput, '  test@example.com  ');
@@ -321,7 +325,7 @@ describe('Login Component', () => {
 
     it('should show success message on successful password reset', async () => {
       const mockSendPassword = jest.fn().mockResolvedValue('Пароль отправлен на email');
-      const { getByPlaceholderText, getByText } = renderLogin(undefined, mockSendPassword);
+      const { getByPlaceholderText, getByText } = await renderLogin(undefined, mockSendPassword);
 
       const emailInput = getByPlaceholderText('Email');
       fireEvent.changeText(emailInput, 'test@example.com');
@@ -334,7 +338,7 @@ describe('Login Component', () => {
 
     it('should show error message when password reset fails', async () => {
       const mockSendPassword = jest.fn().mockResolvedValue('Ошибка: не удалось отправить');
-      const { getByPlaceholderText, getByText } = renderLogin(undefined, mockSendPassword);
+      const { getByPlaceholderText, getByText } = await renderLogin(undefined, mockSendPassword);
 
       const emailInput = getByPlaceholderText('Email');
       fireEvent.changeText(emailInput, 'test@example.com');
@@ -347,7 +351,7 @@ describe('Login Component', () => {
 
     it('should show error message on password reset exception', async () => {
       const mockSendPassword = jest.fn().mockRejectedValue(new Error('Network error'));
-      const { getByPlaceholderText, getByText } = renderLogin(undefined, mockSendPassword);
+      const { getByPlaceholderText, getByText } = await renderLogin(undefined, mockSendPassword);
 
       const emailInput = getByPlaceholderText('Email');
       fireEvent.changeText(emailInput, 'test@example.com');
@@ -360,7 +364,7 @@ describe('Login Component', () => {
 
     it('should show generic error when password reset exception has no message', async () => {
       const mockSendPassword = jest.fn().mockRejectedValue({});
-      const { getByPlaceholderText, getByText } = renderLogin(undefined, mockSendPassword);
+      const { getByPlaceholderText, getByText } = await renderLogin(undefined, mockSendPassword);
 
       const emailInput = getByPlaceholderText('Email');
       fireEvent.changeText(emailInput, 'test@example.com');
@@ -375,7 +379,7 @@ describe('Login Component', () => {
       const mockSendPassword = jest.fn(
         () => new Promise((resolve) => setTimeout(() => resolve('Success'), 100))
       );
-      const { getByPlaceholderText, getByText } = renderLogin(undefined, mockSendPassword);
+      const { getByPlaceholderText, getByText } = await renderLogin(undefined, mockSendPassword);
 
       const emailInput = getByPlaceholderText('Email');
       fireEvent.changeText(emailInput, 'test@example.com');
@@ -389,25 +393,25 @@ describe('Login Component', () => {
   });
 
   describe('Input Handling', () => {
-    it('should update email input value', () => {
-      const { getByPlaceholderText } = renderLogin();
+    it('should update email input value', async () => {
+      const { getByPlaceholderText } = await renderLogin();
       const emailInput = getByPlaceholderText('Email');
 
       fireEvent.changeText(emailInput, 'test@example.com');
       expect(emailInput.props.value).toBe('test@example.com');
     });
 
-    it('should update password input value', () => {
-      const { getByPlaceholderText } = renderLogin();
+    it('should update password input value', async () => {
+      const { getByPlaceholderText } = await renderLogin();
       const passwordInput = getByPlaceholderText('Пароль');
 
       fireEvent.changeText(passwordInput, 'password123');
       expect(passwordInput.props.value).toBe('password123');
     });
 
-    it('should focus password input when email input is submitted', () => {
+    it('should focus password input when email input is submitted', async () => {
       const focusSpy = jest.spyOn(TextInput.prototype, 'focus');
-      const { getByPlaceholderText } = renderLogin();
+      const { getByPlaceholderText } = await renderLogin();
       const emailInput = getByPlaceholderText('Email');
 
       fireEvent(emailInput, 'submitEditing');
@@ -417,7 +421,7 @@ describe('Login Component', () => {
 
     it('should submit login when password input is submitted', async () => {
       const mockLogin = jest.fn().mockResolvedValue(true);
-      const { getByPlaceholderText } = renderLogin(mockLogin);
+      const { getByPlaceholderText } = await renderLogin(mockLogin);
 
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
@@ -435,7 +439,7 @@ describe('Login Component', () => {
   describe('Edge Cases', () => {
     it('should handle email with multiple @ symbols', async () => {
       const mockLogin = jest.fn();
-      const { getByPlaceholderText, getByText } = renderLogin(mockLogin);
+      const { getByPlaceholderText, getByText } = await renderLogin(mockLogin);
 
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
@@ -453,7 +457,7 @@ describe('Login Component', () => {
 
     it('should handle email without domain', async () => {
       const mockLogin = jest.fn();
-      const { getByPlaceholderText, getByText } = renderLogin(mockLogin);
+      const { getByPlaceholderText, getByText } = await renderLogin(mockLogin);
 
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
@@ -471,7 +475,7 @@ describe('Login Component', () => {
 
     it('should handle email without @ symbol', async () => {
       const mockLogin = jest.fn();
-      const { getByPlaceholderText, getByText } = renderLogin(mockLogin);
+      const { getByPlaceholderText, getByText } = await renderLogin(mockLogin);
 
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
@@ -489,7 +493,7 @@ describe('Login Component', () => {
 
     it('should handle very long email', async () => {
       const mockLogin = jest.fn().mockResolvedValue(true);
-      const { getByPlaceholderText, getByText } = renderLogin(mockLogin);
+      const { getByPlaceholderText, getByText } = await renderLogin(mockLogin);
 
       const longEmail = 'a'.repeat(100) + '@example.com';
       const emailInput = getByPlaceholderText('Email');
@@ -506,7 +510,7 @@ describe('Login Component', () => {
 
     it('should handle special characters in email', async () => {
       const mockLogin = jest.fn().mockResolvedValue(true);
-      const { getByPlaceholderText, getByText } = renderLogin(mockLogin);
+      const { getByPlaceholderText, getByText } = await renderLogin(mockLogin);
 
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
