@@ -25,6 +25,15 @@ const expectOneVisible = async (locators: Locator[], timeout = 20_000) => {
 }
 
 const expectCanonicalPath = async (page: Page, path: string) => {
+  await page.waitForFunction(
+    (expectedPath) => {
+      const canonical = document.querySelector('link[rel="canonical"]')?.getAttribute('href')
+      return typeof canonical === 'string' && canonical.includes(String(expectedPath))
+    },
+    path,
+    { timeout: 20_000 }
+  )
+
   const canonical = await page.locator('link[rel="canonical"]').getAttribute('href')
   expect(canonical, `canonical link for ${path} should be present`).toBeTruthy()
   expect(canonical).toContain(path)
@@ -130,4 +139,3 @@ test.describe('@smoke Cookie consent', () => {
     expect(storedConsent).toMatchObject({ necessary: true, analytics: true })
   })
 })
-

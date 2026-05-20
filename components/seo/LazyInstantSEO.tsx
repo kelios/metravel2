@@ -48,6 +48,29 @@ function StaticHead({
     upsertMeta('robots', robots);
   }, [robots]);
 
+  useEffect(() => {
+    if (typeof document === 'undefined' || !canonical) return;
+
+    const canonicalLinks = Array.from(document.querySelectorAll('link[rel="canonical"]')) as HTMLLinkElement[];
+    const canonicalLink = canonicalLinks[0] ?? document.createElement('link');
+    canonicalLink.setAttribute('rel', 'canonical');
+    canonicalLink.setAttribute('href', canonical);
+
+    if (!canonicalLink.parentNode) {
+      document.head.appendChild(canonicalLink);
+    }
+
+    canonicalLinks.slice(1).forEach((link) => link.parentNode?.removeChild(link));
+
+    let ogUrl = document.querySelector('meta[property="og:url"]') as HTMLMetaElement | null;
+    if (!ogUrl) {
+      ogUrl = document.createElement('meta');
+      ogUrl.setAttribute('property', 'og:url');
+      document.head.appendChild(ogUrl);
+    }
+    ogUrl.setAttribute('content', canonical);
+  }, [canonical]);
+
   return (
     <Head key={headKey ?? 'instant-seo'}>
       <title key="title">{title}</title>
