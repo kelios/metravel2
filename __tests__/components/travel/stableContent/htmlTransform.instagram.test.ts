@@ -1,0 +1,53 @@
+jest.mock('react-native', () => ({
+  Platform: {
+    OS: 'web',
+  },
+}))
+
+import { prepareStableContentHtml } from '@/components/travel/stableContent/htmlTransform'
+import { replaceInstagramEmbedsWithCards } from '@/utils/instagramRichText'
+
+describe('prepareStableContentHtml Instagram embeds on web travel content', () => {
+  const originalWindow = global.window
+
+  afterEach(() => {
+    Object.defineProperty(global, 'window', {
+      configurable: true,
+      value: originalWindow,
+    })
+  })
+
+  it('preserves real Instagram iframe embeds for travel rich text', () => {
+    const result = prepareStableContentHtml(
+      '<p><iframe src="https://www.instagram.com/p/CRTm_GpnjVR/embed/captioned/?cr=1&amp;v=14" width="540" height="680"></iframe></p>',
+    )
+
+    expect(result).toContain('<iframe')
+    expect(result).toContain('instagram.com/p/CRTm_GpnjVR/embed/captioned/')
+    expect(result).not.toContain('rich-social-card--instagram')
+  })
+
+  it('converts Instagram iframe embeds into safe cards on mobile web', () => {
+    Object.defineProperty(globalThis.window, 'innerWidth', {
+      configurable: true,
+      value: 390,
+    })
+
+    const result = prepareStableContentHtml(
+      '<p><iframe src="https://www.instagram.com/p/CRTm_GpnjVR/embed/captioned/?cr=1&amp;v=14" width="540" height="680"></iframe></p>',
+    )
+
+    expect(result).not.toContain('<iframe')
+    expect(result).toContain('rich-social-card--instagram')
+    expect(result).toContain('https://www.instagram.com/p/CRTm_GpnjVR/')
+  })
+
+  it('still converts Instagram blockquote fallbacks into safe cards', () => {
+    const result = replaceInstagramEmbedsWithCards(
+      '<blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/CRTm_GpnjVR/"></blockquote>',
+    )
+
+    expect(result).toContain('rich-social-card--instagram')
+    expect(result).not.toContain('instagram-media')
+  })
+})

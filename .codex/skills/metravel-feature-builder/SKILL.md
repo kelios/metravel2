@@ -15,6 +15,7 @@ Read `docs/RULES.md`, `docs/README.md`, and the task triage section in `docs/COD
 Implement the smallest change that solves the task.
 
 - Before editing, run `git status --short` and keep unrelated user changes separate.
+- Put temporary screenshots, traces, logs, JSON reports, and other debug output only under ignored local folders such as `.codex-temp/` or `.codex-debug/`; remove stale or unnecessary debug artifacts before handoff.
 - Reuse existing components, hooks, helpers, and utilities before creating new ones.
 - Keep functions and components local, readable, and easy to remove or extend later.
 - Remove clearly dead code in the touched area when it is safe to do so.

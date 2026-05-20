@@ -30,6 +30,7 @@
 | Тип задачи | Минимальный контекст | Обязательные акценты |
 | --- | --- | --- |
 | Feature, bugfix, refactor | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, профильный feature-doc при наличии | переиспользование существующих компонентов, hooks, utils; минимальный diff |
+| Backend task planning | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `tasks/000-template.md` | новые задачи для бэка оформляй отдельными файлами в `tasks/` только по шаблону `000-template.md` |
 | Видимый UI, media, icons, tokens | всё из feature-контекста + `$metravel-ui-guardrails` | проверка в браузере на web, screenshot, отсутствие новых console errors |
 | External links | `docs/RULES.md`, `docs/TESTING.md`, `utils/externalLinks.ts` | никаких direct `window.open(...)` и `Linking.openURL(...)` вне chokepoint |
 | SEO / route pages | `docs/DEVELOPMENT.md` SEO-раздел | `buildCanonicalUrl`, `buildOgImageUrl`, `LazyInstantSEO` |
@@ -75,10 +76,11 @@
 2. Найди существующий путь реализации через поиск по компонентам, hooks, services, utils и тестам.
 3. Перед правкой проверь текущую ветку и `git status --short`; работай только на `main`, а если текущая ветка не `main`, остановись и уточни дальнейшие действия.
 4. Вноси маленький diff, который решает задачу без побочных рефакторингов.
-5. Чини все реальные проблемы, которые нашёл в затронутой зоне или проверках: падающие тесты, runtime errors, broken UI states, direct external-link нарушения, dead imports и очевидные регрессии. Не оставляй их на потом.
-6. Если найденная проблема вне scope, требует недоступного сервера/секретов или рискованной миграции, явно зафиксируй блокер, риск и нужную следующую проверку.
-7. После законченного логического блока запускай scope-проверку.
-8. В финале перечисли измененные файлы, выполненные проверки и любые остаточные риски.
+5. Складывай временную отладочную информацию только в игнорируемые локальные папки (`.codex-temp/`, `.codex-debug/`) и удаляй всё ненужное перед передачей результата.
+6. Чини все реальные проблемы, которые нашёл в затронутой зоне или проверках: падающие тесты, runtime errors, broken UI states, direct external-link нарушения, dead imports и очевидные регрессии. Не оставляй их на потом.
+7. Если найденная проблема вне scope, требует недоступного сервера/секретов или рискованной миграции, явно зафиксируй блокер, риск и нужную следующую проверку.
+8. После законченного логического блока запускай scope-проверку.
+9. В финале перечисли измененные файлы, выполненные проверки и любые остаточные риски.
 
 Полезный шаблон для внутреннего self-check перед кодом:
 
@@ -124,6 +126,7 @@ Skills:
 - Tests: `__tests__/` for Jest, `e2e/` for Playwright.
 - Governance scripts: `scripts/`, command details in `docs/TESTING.md`.
 - Feature maps: `docs/features/`.
+- Backend task template: `tasks/000-template.md`; новые задачи для бэка создавай в `tasks/` по этому шаблону.
 
 ## Кодировка документации
 

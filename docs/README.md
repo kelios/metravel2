@@ -73,6 +73,7 @@ yarn lint
 - Redoc: [`http://192.168.50.36/api/schema/redoc/`](http://192.168.50.36/api/schema/redoc/)
 - OpenAPI schema: `${EXPO_PUBLIC_API_URL}/api/schema/`
 - Auth: `Authorization: Token <token>`
+- Backend task files: create new backend tasks in `tasks/` using `tasks/000-template.md`.
 
 ### Auth
 - `POST /api/user/login/` → `{ token, name, email, id, is_superuser }`

@@ -20,6 +20,10 @@ type InstagramTarget = {
   subtitle: string
 }
 
+type ReplaceInstagramEmbedsOptions = {
+  replaceIframes?: boolean
+}
+
 const INSTAGRAM_URL_RE = /https?:\/\/(?:www\.)?instagram\.com\/[^\s"'<>]+/i
 
 const decodeEntities = (value: string) =>
@@ -157,11 +161,17 @@ function replaceInstagramBlockquotes(html: string): string {
   )
 }
 
-export function replaceInstagramEmbedsWithCards(html: string): string {
+export function replaceInstagramEmbedsWithCards(
+  html: string,
+  options: ReplaceInstagramEmbedsOptions = {},
+): string {
   const initial = String(html || '')
   if (!initial.trim()) return initial
 
-  let next = replaceInstagramIframes(initial)
+  let next = initial
+  if (options.replaceIframes !== false) {
+    next = replaceInstagramIframes(next)
+  }
   next = replaceInstagramBlockquotes(next)
   next = replaceStandaloneInstagramBlocks(next)
 

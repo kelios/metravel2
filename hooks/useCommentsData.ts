@@ -44,7 +44,7 @@ export function useCommentsData(travelId: number, options?: { enabled?: boolean 
     isLoading: isLoadingComments,
     error: commentsError,
     refetch: refetchComments,
-  } = useTravelComments(travelId, mainThread?.id, { enabled: isEnabled });
+  } = useTravelComments(travelId, mainThread?.id, { enabled: isEnabled && !isLoadingThread });
 
   const createComment = useCreateComment();
   const updateComment = useUpdateComment();

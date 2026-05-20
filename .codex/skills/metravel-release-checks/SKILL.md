@@ -15,6 +15,7 @@ Select checks by change scope instead of defaulting to the heaviest run every ti
 - Large, cross-cutting, or infrastructure-heavy change: run `npm run lint` and `npm run test:run`.
 - Any failed check that points to the touched scope must be fixed before handoff and then rerun.
 - If a failed check exposes an unrelated existing issue, record the failing command, concrete failure, risk, and reason it was not fixed in this task.
+- Store temporary check logs, screenshots, traces, JSON reports, and other debug output only in ignored local folders such as `.codex-temp/` or `.codex-debug/`; delete stale or unnecessary artifacts before final handoff.
 
 Use the project-specific command map:
 

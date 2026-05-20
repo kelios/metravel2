@@ -46,6 +46,6 @@ Respect web interaction constraints:
 Verify visual changes before finishing:
 
 - Open the changed scenario in a real browser if the task affects visible web UI.
-- Capture a screenshot to confirm final rendering.
+- Capture a screenshot to confirm final rendering, storing it only in ignored local debug folders such as `.codex-temp/` or `.codex-debug/`.
 - Check the browser console for new errors.
 - Run `npm run guard:external-links` or `npm run governance:verify` whenever link handling or policy-sensitive UI changed.

@@ -1092,6 +1092,25 @@ export const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>)
   }
 }
 
+.${WEB_RICH_TEXT_CLASS} .instagram-wrapper {
+  width: min(100%, 540px);
+  max-width: 540px;
+  margin: ${DESIGN_TOKENS.spacing.md}px auto ${DESIGN_TOKENS.spacing.lg}px;
+  border-radius: 22px;
+  overflow: hidden;
+  border: 1px solid ${colors.borderLight};
+  background: linear-gradient(180deg, ${colors.surface} 0%, ${colors.surfaceMuted} 100%);
+  box-shadow: ${colors.boxShadows?.light || 'none'};
+}
+
+.${WEB_RICH_TEXT_CLASS} .instagram-embed {
+  display: block;
+  width: 100%;
+  min-height: 680px;
+  border: 0;
+  background: ${colors.surfaceMuted};
+}
+
 /* Стили для подписей Instagram */
 .${WEB_RICH_TEXT_CLASS} .instagram-caption {
   font-size: 14px;

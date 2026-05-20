@@ -75,7 +75,7 @@ const reporter: Array<['list'] | ['html', { open: 'never' }] | ['json', { output
   ? [
       ['list'],
       ...(hasPlaywrightCore ? [['html', { open: 'never' }] as ['html', { open: 'never' }]] : []),
-      ['json', { outputFile: 'e2e-results.json' }],
+      ['json', { outputFile: 'test-results/e2e-results.json' }],
     ]
   : [
       ['list'],

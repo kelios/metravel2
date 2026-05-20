@@ -32,6 +32,7 @@ Avoid documentation drift:
 - When changing rules, update both the canonical source and the short Codex map if the skill selection or agent workflow changes.
 - When changing Codex behavior rules, update the matching skill prompts/metadata so agents see the rule before starting work.
 - Preserve existing project constraints for external links, UI guardrails, server path safety, release checks, and e2e secrets.
+- Keep Codex/debug artifact rules aligned across `AGENTS.md`, `docs/RULES.md`, `docs/CODEX.md`, and relevant skills: temporary debugging output belongs only in ignored local folders such as `.codex-temp/` or `.codex-debug/`, and stale artifacts should be removed before handoff.
 - Do not print secrets from `.env`, `.env.e2e`, or deployment configs.
 - Read Markdown as UTF-8; if PowerShell displays Cyrillic as mojibake, reread with `Get-Content -Encoding UTF8` before assuming the file is corrupt.
 

@@ -61,6 +61,10 @@ android-keystore.jks
 upload-keystore.jks
 
 # Local tooling artifacts
+/artifacts/
+/e2e-results.json
+/jest-smoke-results.json
+/*-review-*.png
 lighthouse-report*.json
 lighthouse*.json
 lighthouse-reports/
@@ -99,6 +103,7 @@ nginx/ssl/
 .claude/tmp/
 .claude/scheduled_tasks.lock
 .codex-temp/
+.codex-debug/
 .tmp/
 
 # iOS signing & certificates (never commit)

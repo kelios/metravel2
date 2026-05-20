@@ -60,7 +60,7 @@ export const BOOK_IMAGES: readonly BookImage[] = [
     alt: 'Озеро Сорапис — Доломиты',
     title: 'Озеро Сорапис',
     subtitle: 'Поход по Доломитам • Озеро • Италия',
-    href: 'https://metravel.by/travels/ozero-sorapis-pokhod-po-marshrutam-215-i-217-v-dolomitakh',
+    href: 'https://metravel.by/travels/ozero-sorapis-krugovoi-marshrut-215-217-kak-doiti-chto-zhdat-po-puti-i-chto-posmotret-riadom?returnTo=%2Fsearch',
   },
   {
     source: require('../../assets/images/cover_trecime.jpg'),

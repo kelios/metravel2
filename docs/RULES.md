@@ -43,10 +43,23 @@ npm run test:run
 - Always verify the changed scope before finishing the task.
   - For small, isolated changes, this can be a targeted lint/test check instead of the full suite.
   - For larger changes, use the full `npm run lint` and `npm run test:run` pass.
+- Store temporary debugging artifacts only in ignored local folders such as `.codex-temp/` or `.codex-debug/`.
+  - Do not put ad-hoc screenshots, traces, logs, JSON reports, or throwaway QA output in tracked project folders.
+  - Keep only artifacts that are still useful for the current task, and delete stale or unnecessary debug output before handoff.
 - Always fix known real problems before handoff.
   - Treat failures, runtime errors, broken UI states, invalid external-link usage, dead imports, and regressions discovered in the touched area as part of the current task.
   - Do not leave known failing checks or broken behavior in the changed scope.
   - If a discovered issue is outside the task boundary, requires unavailable server/secret access, or would need a risky migration, document it as a blocker with the concrete risk and required next verification instead of silently ignoring it.
+- Debug/output hygiene (mandatory):
+  - do not place debug information, temporary screenshots, console dumps, ad-hoc JSON reports, QA captures, or other local investigation artifacts in the repository root;
+  - such files must not be committed to git;
+  - use ignored locations like `tmp/`, `artifacts/`, `test-results/`, `playwright-report/` or keep them outside the repository;
+  - if a temporary debug file already appeared in the root or in git, remove it in the same task instead of leaving it behind.
+- Backend task tracking (mandatory):
+  - all backend work items must be documented as task files in `tasks/`;
+  - create new backend tasks from `tasks/000-template.md`;
+  - keep the template structure intact unless the user explicitly asks for a different task format;
+  - do not create ad-hoc backend task notes outside `tasks/`.
 - For performance checks (Lighthouse), run against a production web export:
 
 ```bash

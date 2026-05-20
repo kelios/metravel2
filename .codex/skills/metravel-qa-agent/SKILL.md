@@ -19,6 +19,7 @@ Read first:
 
 - Check the current branch and `git status --short` before running risky flows.
 - Use `.env.e2e` for e2e credentials when present, and never print secrets.
+- Store screenshots, traces, logs, JSON reports, and other QA debug output only in ignored local folders such as `.codex-temp/` or `.codex-debug/`; keep only current-task evidence and delete unnecessary artifacts before handoff.
 - For web UI, use a real browser flow, collect a screenshot when useful, and check console errors.
 - Do not treat missing production-hosted media in local dev as a frontend bug by itself.
 - Do not infer production performance from Expo dev bundles.
