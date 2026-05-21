@@ -66,6 +66,14 @@ export type UserTravelStatusDto = {
     } | null;
 };
 
+export type UserTravelStatusesQuery = {
+    status?: UserTravelStatusKind;
+    year?: number;
+    month?: number;
+    page?: number;
+    perPage?: number;
+};
+
 /**
  * Normalizes an avatar string from the API.
  * Returns `null` for empty, "null", or "undefined" values.
@@ -159,6 +167,17 @@ const unwrapList = <T>(payload: MaybePaginated<T>): T[] => {
     return [];
 };
 
+const buildQueryString = (query: Record<string, string | number | undefined>): string => {
+    const params = new URLSearchParams();
+    Object.entries(query).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+            params.set(key, String(value));
+        }
+    });
+    const result = params.toString();
+    return result ? `?${result}` : '';
+};
+
 export const fetchUserFavoriteTravels = async (userId: string | number): Promise<CardViewTravelDto[]> => {
     // apiClient.baseURL уже содержит /api
     const res = await apiClient.get<MaybePaginated<CardViewTravelDto>>(`/user/${userId}/favorite-travels/`);
@@ -188,6 +207,17 @@ export const fetchUserRecommendedTravels = async (userId: string | number): Prom
 };
 
 // ---- Travel statuses / planning ----
+
+export const fetchUserTravelStatuses = async (
+    userId: string | number,
+    query: UserTravelStatusesQuery = {}
+): Promise<UserTravelStatusDto[]> => {
+    const queryString = buildQueryString(query);
+    const res = await apiClient.get<MaybePaginated<UserTravelStatusDto>>(
+        `/user/${userId}/travel-statuses/${queryString}`
+    );
+    return unwrapList(res);
+};
 
 export const upsertUserTravelStatus = async (
     userId: string | number,

@@ -59,38 +59,6 @@ const stopWebCardEvent = (e?: any) => {
   e?.nativeEvent?.stopImmediatePropagation?.()
 }
 
-/** Нативный HTML date-input для web */
-function WebDateInput({
-  value,
-  onChange,
-  style,
-}: {
-  value: string
-  onChange: (v: string) => void
-  style?: object
-}) {
-  if (Platform.OS !== 'web') return null
-  return (
-    <input
-      type="date"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      style={{
-        width: '100%',
-        padding: '10px 12px',
-        fontSize: 15,
-        borderRadius: 8,
-        border: '1px solid var(--color-border)',
-        backgroundColor: 'var(--color-background)',
-        color: 'var(--color-text)',
-        outline: 'none',
-        boxSizing: 'border-box',
-        ...style,
-      } as React.CSSProperties}
-    />
-  )
-}
-
 export default function TravelStatusButton({
   travelId,
   travelTitle,
@@ -258,7 +226,9 @@ export default function TravelStatusButton({
     overlay: {
       flex: 1,
       backgroundColor: 'rgba(0,0,0,0.45)',
-      justifyContent: 'flex-end',
+      justifyContent: Platform.OS === 'web' ? 'center' : 'flex-end',
+      alignItems: Platform.OS === 'web' ? 'center' : 'stretch',
+      padding: Platform.OS === 'web' ? 20 : 0,
     },
     sheet: {
       backgroundColor: colors.surface,
@@ -267,6 +237,14 @@ export default function TravelStatusButton({
       paddingTop: 8,
       paddingBottom: Platform.OS === 'ios' ? 36 : 24,
       maxHeight: '80%',
+      ...(Platform.OS === 'web'
+        ? {
+            width: 'min(520px, calc(100vw - 40px))',
+            borderBottomLeftRadius: DESIGN_TOKENS.radii.xl,
+            borderBottomRightRadius: DESIGN_TOKENS.radii.xl,
+            boxShadow: DESIGN_TOKENS.shadows.heavy,
+          } as any
+        : null),
     },
     handle: {
       width: 36,
@@ -346,6 +324,12 @@ export default function TravelStatusButton({
       fontSize: 15,
       fontWeight: '600',
       color: colors.text,
+      marginBottom: 4,
+    },
+    dateSectionHint: {
+      fontSize: 13,
+      color: colors.textMuted,
+      lineHeight: 18,
       marginBottom: 10,
     },
     dateInput: {
@@ -357,6 +341,11 @@ export default function TravelStatusButton({
       fontSize: 15,
       color: colors.text,
       backgroundColor: colors.background,
+      ...(Platform.OS === 'web'
+        ? {
+            outlineStyle: 'none',
+          } as any
+        : null),
     },
     dateError: {
       fontSize: 12,
@@ -459,20 +448,18 @@ export default function TravelStatusButton({
           ) : (
             <View style={styles.dateSection}>
               <Text style={styles.dateSectionTitle}>Дата поездки</Text>
-              {Platform.OS === 'web' ? (
-                <WebDateInput value={dateInput} onChange={setDateInput} />
-              ) : (
-                <TextInput
-                  style={styles.dateInput}
-                  value={dateInput}
-                  onChangeText={(v) => { setDateInput(v); setDateError('') }}
-                  placeholder="ГГГГ-ММ-ДД"
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="numbers-and-punctuation"
-                  maxLength={10}
-                  accessibilityLabel="Дата поездки"
-                />
-              )}
+              <Text style={styles.dateSectionHint}>Введите дату в формате ГГГГ-ММ-ДД.</Text>
+              <TextInput
+                style={styles.dateInput}
+                value={dateInput}
+                onChangeText={(v) => { setDateInput(v); setDateError('') }}
+                placeholder="ГГГГ-ММ-ДД"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="numbers-and-punctuation"
+                maxLength={10}
+                accessibilityLabel="Дата поездки"
+                inputMode={Platform.OS === 'web' ? 'numeric' as any : undefined}
+              />
               {!!dateError && <Text style={styles.dateError}>{dateError}</Text>}
               <View style={styles.dateActions}>
                 <Pressable

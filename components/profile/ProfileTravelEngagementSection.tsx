@@ -18,10 +18,16 @@ type MetricDefinition = {
   icon: React.ComponentProps<typeof Feather>['name']
 }
 
-const METRICS: MetricDefinition[] = [
+const AUTHOR_METRICS: MetricDefinition[] = [
   { key: 'favoritesCount', label: 'Сохранили', icon: 'heart' },
   { key: 'wishlistCount', label: 'Хочу', icon: 'bookmark' },
   { key: 'plannedCount', label: 'Планируют', icon: 'calendar' },
+]
+
+const CALENDAR_METRICS: MetricDefinition[] = [
+  { key: 'favoritesCount', label: 'Был', icon: 'check-circle' },
+  { key: 'wishlistCount', label: 'Хочу', icon: 'bookmark' },
+  { key: 'plannedCount', label: 'Планирую', icon: 'calendar' },
 ]
 
 const formatMetricValue = (value: number | null | undefined) =>
@@ -92,16 +98,24 @@ export function ProfileTravelEngagementSummary({
   summary,
   travelsCount,
   isLoading = false,
+  mode = 'author',
 }: {
   summary: TravelEngagementStats | null
   travelsCount: number
   isLoading?: boolean
+  mode?: 'author' | 'calendar'
 }) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const isAvailable = hasAnyTravelEngagementStats(summary)
+  const isCalendarMode = mode === 'calendar'
+  const metrics = isCalendarMode ? CALENDAR_METRICS : AUTHOR_METRICS
 
   const description = useMemo(() => {
+    if (isCalendarMode) {
+      return 'Ваши путешествия по статусам календаря: где уже были, куда хотите поехать и что запланировали.'
+    }
+
     if (travelsCount === 0) {
       return 'Опубликуйте первое путешествие — здесь появится общая статистика интереса аудитории.'
     }
@@ -111,12 +125,14 @@ export function ProfileTravelEngagementSummary({
     }
 
     return 'Блок уже готов на фронтенде. Как только профиль начнёт получать агрегированные данные, значения появятся автоматически.'
-  }, [isAvailable, travelsCount])
+  }, [isAvailable, isCalendarMode, travelsCount])
 
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Социальная статистика путешествий</Text>
+        <Text style={styles.sectionTitle}>
+          {isCalendarMode ? 'Календарь путешествий' : 'Социальная статистика путешествий'}
+        </Text>
         <Text style={styles.sectionDescription}>{description}</Text>
       </View>
 
@@ -128,7 +144,7 @@ export function ProfileTravelEngagementSummary({
         </View>
       ) : (
         <View style={styles.metricsGrid}>
-          {METRICS.map((metric) => (
+          {metrics.map((metric) => (
             <View key={metric.key} style={styles.metricCard}>
               <View style={styles.metricIconWrap}>
                 <Feather name={metric.icon} size={15} color={colors.primary} />

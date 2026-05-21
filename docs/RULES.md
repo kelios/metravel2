@@ -254,6 +254,14 @@ npx serve dist/prod -l 3000 -s
 - Keep image geometry stable across skeleton, static hero, and slider handoff.
   - Do not let the slider/background path introduce a different aspect-ratio box or a late background mount.
 
+### Rich-text embeds
+
+- On web travel/article rich text, Instagram post/reel/tv embeds must render as visible embedded posts when the content contains a valid Instagram iframe or standalone post/reel/tv URL.
+  - Do not replace valid Instagram post/reel/tv embeds with generic fallback cards on web.
+  - Fallback cards are allowed only for Instagram URLs that cannot be reliably embedded, such as stories/highlights/profile links, invalid URLs, or contexts where iframes are not supported.
+  - Sanitize and normalize iframe URLs through the existing rich-text pipeline; do not bypass sanitization to keep an embed.
+  - When changing Instagram rich-text handling, add or update targeted tests and verify the changed web scenario in a real browser with no new console errors.
+
 ### Icons
 
 - Avoid emoji in production UI.

@@ -16,6 +16,7 @@ jest.mock('@/utils/safeJsonParse', () => ({
 }))
 
 jest.mock('@/api/user', () => ({
+  fetchUserTravelStatuses: jest.fn(() => Promise.resolve([])),
   upsertUserTravelStatus: jest.fn(() => Promise.resolve({
     travel_id: 1,
     status: 'planned',
@@ -30,7 +31,8 @@ jest.mock('@/api/user', () => ({
 import { getTravelStatusCalendarDate, parseTravelStatusDateParts, useTravelStatusStore } from '@/stores/travelStatusStore'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
 
-const { upsertUserTravelStatus, deleteUserTravelStatus } = require('@/api/user') as {
+const { fetchUserTravelStatuses, upsertUserTravelStatus, deleteUserTravelStatus } = require('@/api/user') as {
+  fetchUserTravelStatuses: jest.Mock
   upsertUserTravelStatus: jest.Mock
   deleteUserTravelStatus: jest.Mock
 }
@@ -67,6 +69,7 @@ beforeEach(() => {
     updated_at: null,
   })
   deleteUserTravelStatus.mockResolvedValue(null)
+  fetchUserTravelStatuses.mockResolvedValue([])
   useTravelStatusStore.setState({ entries: [], _userId: null })
 })
 
@@ -377,6 +380,44 @@ describe('travelStatusStore', () => {
       ;(AsyncStorage.getItem as jest.Mock).mockResolvedValue(null)
       await act(() => useTravelStatusStore.getState().loadLocal('55'))
       expect(useTravelStatusStore.getState()._userId).toBe('55')
+    })
+
+    it('загружает серверные статусы авторизованного пользователя и сохраняет локальный кэш', async () => {
+      fetchUserTravelStatuses.mockResolvedValueOnce([
+        {
+          travel_id: 123,
+          status: 'planned',
+          planned_date: '2026-07-15',
+          visited_date: null,
+          added_at: '2026-05-12T10:00:00Z',
+          updated_at: '2026-05-12T10:00:00Z',
+          travel: {
+            id: 123,
+            name: 'Alps hike',
+            slug: 'alps-hike',
+            url: '/travels/alps-hike',
+            travel_image_thumb_url: 'https://example.com/alps.webp',
+            countryName: 'Switzerland',
+          },
+        },
+      ])
+
+      await act(() => useTravelStatusStore.getState().loadLocal('77'))
+
+      expect(fetchUserTravelStatuses).toHaveBeenCalledWith('77', { perPage: 9999 })
+      expect(useTravelStatusStore.getState().entries).toEqual([
+        expect.objectContaining({
+          id: 123,
+          title: 'Alps hike',
+          status: 'planned',
+          plannedDate: '2026-07-15',
+          url: '/travels/alps-hike',
+        }),
+      ])
+      expect(AsyncStorage.setItem).toHaveBeenLastCalledWith(
+        'metravel_travel_status_77',
+        expect.stringContaining('Alps hike')
+      )
     })
   })
 

@@ -37,6 +37,12 @@ Handle images and placeholders the metravel way:
 - Do not defer hero/background/slider appearance with click gates, scroll gates, or reveal timers.
 - On web travel hero and gallery surfaces, preserve the canonical `70vh` height contract.
 
+Preserve rich-text embeds:
+
+- On web travel/article rich text, valid Instagram post/reel/tv iframes and standalone post/reel/tv URLs must render as visible embedded posts.
+- Do not downgrade valid Instagram post/reel/tv embeds to generic fallback cards on web; fallback cards are only for non-embeddable or unsupported Instagram URLs such as stories/highlights/profile links.
+- Keep Instagram iframe handling inside the existing sanitize/normalize pipeline and verify changed Instagram rich-text behavior in a real browser.
+
 Respect web interaction constraints:
 
 - Avoid nested button semantics on web.

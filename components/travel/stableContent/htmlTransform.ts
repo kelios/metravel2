@@ -343,8 +343,10 @@ const decorateRichImageFrames = (html: string) => {
 
 export const prepareStableContentHtml = (html: string) => {
   const normalizedEmbeds = normalizeArticleEditorHtmlForInput(html)
+  const shouldPreserveInstagramIframes =
+    Platform.OS === 'web' || typeof document !== 'undefined'
   const instagramSafeHtml = replaceInstagramEmbedsWithCards(normalizedEmbeds, {
-    replaceIframes: Platform.OS !== 'web',
+    replaceIframes: !shouldPreserveInstagramIframes,
   })
   const safe = sanitizeRichText(instagramSafeHtml)
   const normalizedBase = replaceYouTubeIframes(normalizeImgTags(stripDangerousTags(safe)))

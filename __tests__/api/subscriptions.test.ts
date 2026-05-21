@@ -1,5 +1,6 @@
 import {
     deleteUserTravelStatus,
+    fetchUserTravelStatuses,
     subscribeToUser,
     unsubscribeFromUser,
     fetchMySubscriptions,
@@ -86,6 +87,23 @@ describe('api/user subscriptions', () => {
     });
 
     describe('travel statuses', () => {
+        it('fetches travel statuses with schema query params', async () => {
+            const statuses = [
+                { travel_id: 123, status: 'planned', planned_date: '2026-07-15', visited_date: null },
+            ];
+            mockedGet.mockResolvedValueOnce({ count: 1, results: statuses });
+
+            const result = await fetchUserTravelStatuses('42', {
+                status: 'planned',
+                year: 2026,
+                month: 7,
+                perPage: 50,
+            });
+
+            expect(mockedGet).toHaveBeenCalledWith('/user/42/travel-statuses/?status=planned&year=2026&month=7&perPage=50');
+            expect(result).toEqual(statuses);
+        });
+
         it('upserts one travel status through POST /user/{id}/travel-statuses/', async () => {
             const payload = {
                 travel_id: 123,

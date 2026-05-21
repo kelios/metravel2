@@ -46,7 +46,8 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAvatarUpload } from '@/hooks/useAvatarUpload';
 import { getStorageBatch } from '@/utils/storageBatch';
 import { hapticImpact } from '@/utils/haptics';
-import { computeTravelEngagementSummary } from '@/utils/travelEngagementStats'
+import { computeTravelEngagementSummary, hasAnyTravelEngagementStats } from '@/utils/travelEngagementStats'
+import { useTravelStatusStore } from '@/stores/travelStatusStore';
 
 interface UserStats {
   travelsCount: number;
@@ -132,6 +133,8 @@ export default function ProfileScreen() {
   });
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('travels');
   const lastEndReachedAtRef = useRef(0);
+  const travelStatusEntries = useTravelStatusStore((state) => state.entries);
+  const loadTravelStatuses = useTravelStatusStore((state) => state.loadLocal);
 
   const handleTotalChange = useCallback((total: number) => {
     setStats((prev) => ({ ...prev, travelsCount: total }));
@@ -211,7 +214,8 @@ export default function ProfileScreen() {
   useEffect(() => {
     loadUserInfo();
     loadTravels();
-  }, [loadUserInfo, loadTravels]);
+    void loadTravelStatuses(userId ?? null);
+  }, [loadUserInfo, loadTravels, loadTravelStatuses, userId]);
 
   const handleLogout = useCallback(async () => {
     try {
@@ -276,6 +280,19 @@ export default function ProfileScreen() {
 
     return null
   }, [engagementSummary, myTravels, stats.travelsCount, travelsHasMore, travelsLoading])
+
+  const calendarStatusSummary = useMemo(() => ({
+    favoritesCount: travelStatusEntries.filter((entry) => entry.status === 'visited').length,
+    wishlistCount: travelStatusEntries.filter((entry) => entry.status === 'wishlist').length,
+    plannedCount: travelStatusEntries.filter((entry) => entry.status === 'planned').length,
+  }), [travelStatusEntries])
+
+  const hasAuthorEngagementSummary =
+    stats.travelsCount > 0 && hasAnyTravelEngagementStats(authoredTravelEngagementSummary)
+  const profileTravelSummary = hasAuthorEngagementSummary
+    ? authoredTravelEngagementSummary
+    : calendarStatusSummary
+  const profileTravelSummaryMode = hasAuthorEngagementSummary ? 'author' : 'calendar'
 
   const rows = useMemo(() => {
     const cols = Math.max(1, (isCardsSingleColumn ? 1 : gridColumns) || 1);
@@ -517,9 +534,10 @@ export default function ProfileScreen() {
               }}
             />
             <ProfileTravelEngagementSummary
-              summary={authoredTravelEngagementSummary}
+              summary={profileTravelSummary}
               travelsCount={stats.travelsCount}
               isLoading={travelsLoading}
+              mode={profileTravelSummaryMode}
             />
             <ProfileCompleteness
               user={userProp}
@@ -558,7 +576,8 @@ export default function ProfileScreen() {
       pickAndUpload,
       avatarUploading,
       handleQuickAction,
-      authoredTravelEngagementSummary,
+      profileTravelSummary,
+      profileTravelSummaryMode,
       stats,
       tabCounts,
       activeTab,

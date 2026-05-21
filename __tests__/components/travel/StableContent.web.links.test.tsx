@@ -146,7 +146,7 @@ describe('StableContent (web) link styles', () => {
     expect(richText?.innerHTML).toContain('>Example<');
   });
 
-  it('converts standalone instagram post links into fallback cards in travel content on web', async () => {
+  it('renders standalone instagram post links as embeds in travel content on web', async () => {
     const html =
       '<p><a href="https://www.instagram.com/p/CScU4bJI2Ud/">https://www.instagram.com/p/CScU4bJI2Ud/</a></p>';
 
@@ -155,12 +155,10 @@ describe('StableContent (web) link styles', () => {
     );
 
     await waitFor(() => {
-      const card = container.querySelector('.travel-rich-text .rich-social-card--instagram') as HTMLDivElement | null;
-      const link = container.querySelector('.travel-rich-text .rich-social-card__title') as HTMLAnchorElement | null;
-      expect(card).toBeTruthy();
-      expect(container.querySelector('.travel-rich-text iframe[src*="instagram.com"]')).toBeNull();
-      expect(link?.getAttribute('href')).toBe('https://www.instagram.com/p/CScU4bJI2Ud/');
-      expect(link?.textContent).toContain('Публикация');
+      const iframe = container.querySelector('.travel-rich-text iframe[src*="instagram.com"]') as HTMLIFrameElement | null;
+      expect(iframe).toBeTruthy();
+      expect(container.querySelector('.travel-rich-text .rich-social-card--instagram')).toBeNull();
+      expect(iframe?.getAttribute('src')).toBe('https://www.instagram.com/p/CScU4bJI2Ud/embed/captioned/');
     });
   });
 

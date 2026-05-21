@@ -33,6 +33,7 @@ jest.mock('@/api/user', () => ({
     avatar: null,
   }),
   uploadUserProfileAvatarFile: jest.fn(),
+  fetchUserTravelStatuses: jest.fn().mockResolvedValue([]),
   normalizeAvatar: (raw: unknown) => {
     const str = String(raw ?? '').trim();
     if (!str) return null;
@@ -40,6 +41,24 @@ jest.mock('@/api/user', () => ({
     if (lower === 'null' || lower === 'undefined') return null;
     return str;
   },
+}));
+
+const mockLoadTravelStatuses = jest.fn(() => Promise.resolve());
+let mockTravelStatusEntries: Array<{ status: 'visited' | 'planned' | 'wishlist' }> = [];
+
+jest.mock('@/stores/travelStatusStore', () => ({
+  useTravelStatusStore: jest.fn((selector?: (state: any) => unknown) => {
+    const state = {
+      entries: mockTravelStatusEntries,
+      loadLocal: mockLoadTravelStatuses,
+      getStatus: jest.fn(),
+      setStatus: jest.fn(() => Promise.resolve()),
+      removeStatus: jest.fn(() => Promise.resolve()),
+      getByStatus: jest.fn(() => []),
+      getByMonth: jest.fn(() => []),
+    };
+    return typeof selector === 'function' ? selector(state) : state;
+  }),
 }));
 
 jest.mock('@/hooks/useUserProfile', () => ({
@@ -145,6 +164,12 @@ describe('ProfileScreen', () => {
     resetExpoRouterMocks();
     resetTravelsApiMocks();
     mockFetchMyTravels.mockResolvedValue(require('../fixtures/travelFixtures').MY_TRAVELS_FIXTURE);
+    mockTravelStatusEntries = [
+      { status: 'visited' },
+      { status: 'wishlist' },
+      { status: 'planned' },
+      { status: 'planned' },
+    ];
   });
 
   const renderProfile = () => {
@@ -176,7 +201,9 @@ describe('ProfileScreen', () => {
 
     // Header actions
     expect(await findByText('Редактировать')).toBeTruthy();
-    expect(await findByText('Социальная статистика путешествий')).toBeTruthy();
+    expect(await findByText('Календарь путешествий')).toBeTruthy();
+    expect(await findByText('Был')).toBeTruthy();
+    expect(await findByText('Планирую')).toBeTruthy();
     expect(queryByText('По каждому путешествию')).toBeNull();
 
     await waitFor(() => {

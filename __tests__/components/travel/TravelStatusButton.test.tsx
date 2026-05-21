@@ -14,6 +14,17 @@ jest.mock('@/hooks/useRequireAuth', () => ({
 
 jest.mock('@/stores/travelStatusStore', () => ({
   useTravelStatusStore: jest.fn(),
+  parseTravelStatusDateParts: jest.fn((value: unknown) => {
+    if (typeof value !== 'string') return null
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+    if (!match) return null
+    const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+    return date.getFullYear() === Number(match[1]) &&
+      date.getMonth() === Number(match[2]) - 1 &&
+      date.getDate() === Number(match[3])
+      ? { year: Number(match[1]), month: Number(match[2]), day: Number(match[3]) }
+      : null
+  }),
 }))
 
 jest.mock('@/utils/toast', () => ({
@@ -145,6 +156,47 @@ describe('TravelStatusButton — полный режим (default)', () => {
 
     expect(screen.getByText('Укажите дату поездки')).toBeTruthy()
     expect(screen.getByText('Дата поездки')).toBeTruthy()
+    expect(screen.getByText('Введите дату в формате ГГГГ-ММ-ДД.')).toBeTruthy()
+    expect(screen.getByPlaceholderText('ГГГГ-ММ-ДД')).toBeTruthy()
+  })
+
+  it('на web использует текстовое поле даты без нативного date-picker', () => {
+    Platform.OS = 'web'
+    useAuth.mockReturnValue(makeAuthMock(true, '1'))
+    render(<TravelStatusButton {...baseProps} />)
+
+    fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
+    fireEvent.press(screen.getByRole('button', { name: 'Планирую' }))
+
+    expect(screen.getByPlaceholderText('ГГГГ-ММ-ДД')).toBeTruthy()
+    expect(screen.getByLabelText('Дата поездки')).toBeTruthy()
+  })
+
+  it('сохраняет planned статус с валидной датой', async () => {
+    const setStatus = jest.fn(() => Promise.resolve())
+    useTravelStatusStore.mockReturnValue(makeStoreMock({ setStatus }))
+    useAuth.mockReturnValue(makeAuthMock(true, '1'))
+    render(<TravelStatusButton {...baseProps} />)
+
+    fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
+    fireEvent.press(screen.getByRole('button', { name: 'Планирую' }))
+    fireEvent.changeText(screen.getByLabelText('Дата поездки'), '2026-07-15')
+
+    await act(async () => {
+      fireEvent.press(screen.getByRole('button', { name: 'Сохранить дату' }))
+    })
+
+    expect(setStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 42,
+        status: 'planned',
+        plannedDate: '2026-07-15',
+      }),
+      '1'
+    )
+    expect(showToast).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'success', text1: 'Добавлено в планы', text2: '2026-07-15' })
+    )
   })
 
   it('показывает ошибку при попытке сохранить пустую дату', async () => {
@@ -265,4 +317,3 @@ describe('TravelStatusButton — compact режим', () => {
     )
   })
 })
-

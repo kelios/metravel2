@@ -121,6 +121,50 @@ const normalizeEntry = (item: unknown): TravelStatusEntry | null => {
   })
 }
 
+const parseServerTimestamp = (value: unknown): number => {
+  if (typeof value !== 'string') return Date.now()
+  const time = new Date(value).getTime()
+  return Number.isFinite(time) ? time : Date.now()
+}
+
+const normalizeServerStatusEntry = (item: unknown): TravelStatusEntry | null => {
+  if (!isRecord(item)) return null
+  const status = item.status
+  const travel = isRecord(item.travel) ? item.travel : {}
+  const travelId = item.travel_id ?? travel.id
+  const title = typeof travel.name === 'string' && travel.name.trim()
+    ? travel.name.trim()
+    : `Путешествие ${String(travelId ?? '').trim()}`
+  const url = typeof travel.url === 'string' && travel.url.trim()
+    ? travel.url.trim()
+    : typeof travel.slug === 'string' && travel.slug.trim()
+      ? `/travels/${travel.slug.trim()}`
+      : travelId != null
+        ? `/travels/${String(travelId)}`
+        : ''
+
+  if (
+    (typeof travelId !== 'string' && typeof travelId !== 'number') ||
+    (status !== 'visited' && status !== 'planned' && status !== 'wishlist') ||
+    !url
+  ) {
+    return null
+  }
+
+  return normalizeStatusDates({
+    id: travelId,
+    type: 'travel' as const,
+    title,
+    url,
+    status,
+    addedAt: parseServerTimestamp(item.added_at),
+    imageUrl: typeof travel.travel_image_thumb_url === 'string' ? travel.travel_image_thumb_url : undefined,
+    country: typeof travel.countryName === 'string' ? travel.countryName : undefined,
+    plannedDate: typeof item.planned_date === 'string' ? item.planned_date : undefined,
+    visitedDate: typeof item.visited_date === 'string' ? item.visited_date : undefined,
+  })
+}
+
 const getStorageKey = (userId: string | null): string =>
   userId ? `${TRAVEL_STATUS_KEY}_${userId}` : TRAVEL_STATUS_KEY
 
@@ -232,15 +276,24 @@ export const useTravelStatusStore = create<TravelStatusState>((set, get) => ({
   loadLocal: async (userId) => {
     try {
       const data = await AsyncStorage.getItem(getStorageKey(userId))
-      if (data) {
-        const parsed = safeJsonParseString(data, [])
-        const normalized = (Array.isArray(parsed) ? parsed : [])
+      const parsed = data ? safeJsonParseString(data, []) : []
+      const localEntries = Array.isArray(parsed)
+        ? parsed
           .map(normalizeEntry)
           .filter((item): item is TravelStatusEntry => item !== null)
-        set({ entries: normalized, _userId: userId })
-      } else {
-        set({ entries: [], _userId: userId })
-      }
+        : []
+
+      set({ entries: localEntries, _userId: userId })
+
+      if (!userId) return
+
+      const { fetchUserTravelStatuses } = await getUserApi()
+      const serverEntries = (await fetchUserTravelStatuses(userId, { perPage: 9999 }))
+        .map(normalizeServerStatusEntry)
+        .filter((item): item is TravelStatusEntry => item !== null)
+
+      set({ entries: serverEntries, _userId: userId })
+      await persistEntries(serverEntries, userId)
     } catch (error) {
       devError('Ошибка загрузки статусов путешествий:', error)
     }
