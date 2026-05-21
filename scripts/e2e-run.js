@@ -229,7 +229,7 @@ async function main() {
   // Keep worker count conservative to avoid long-run Playwright artifact/trace flakes
   // under local parallel load. Local runs can still opt back up with E2E_WORKERS.
   const workersFast = getNumberEnv('E2E_WORKERS', process.env.CI ? 2 : 1);
-  const fastShards = getNumberEnv('E2E_FAST_SHARDS', process.env.CI ? 1 : 2);
+  const fastShards = getNumberEnv('E2E_FAST_SHARDS', process.env.CI ? 1 : 4);
   const requestedPort = getNumberEnv('E2E_WEB_PORT', 8085);
   const autoSelectPort = String(process.env.E2E_AUTO_SELECT_PORT || '1') !== '0';
   const selectedPort = autoSelectPort

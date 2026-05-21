@@ -619,6 +619,7 @@ test.describe('User points', () => {
 	    const api = await installUserPointsApiMock(page);
 	    let pointA: MockPoint | null = null;
 	    let pointB: MockPoint | null = null;
+      let userPointsAvailable = false;
 	
 	    try {
 	      await test.step('Open /userpoints', async () => {
@@ -630,9 +631,12 @@ test.describe('User points', () => {
           });
           return;
         }
+        userPointsAvailable = true;
         await expect(page).not.toHaveURL(/\/login/);
         await expect(page.getByTestId('userpoints-screen')).toBeVisible({ timeout: 30_000 });
       });
+
+      if (!userPointsAvailable) return;
 
       await test.step('Switch to list view', async () => {
         await openListPanelTab(page);
