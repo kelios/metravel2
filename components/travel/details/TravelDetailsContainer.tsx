@@ -137,10 +137,11 @@ export default function TravelDetailsContainer() {
 
   useNativeOfflineTravelCache(travel, isLoading, isError)
 
+  const isWebAutomation = isWebAutomationRuntime()
   const isFirstScreenReady = isTravelDetailsFirstScreenReady(travel, lcpLoaded)
   const skeletonPhase = useSkeletonPhase({
     isDataReady: Boolean(travel),
-    isVisualReady: isFirstScreenReady,
+    isVisualReady: isFirstScreenReady || isWebAutomation,
   })
 
   useTravelDetailsTrace({
@@ -174,7 +175,7 @@ export default function TravelDetailsContainer() {
     closeMenu,
     forceOpenKey,
     isMobile,
-    isWebAutomation: isWebAutomationRuntime(),
+    isWebAutomation,
     lcpLoaded,
     navigationSetOptions: navigation.setOptions,
     postLcpRuntimeReady,

@@ -38,10 +38,6 @@ export const createSliderStyles = (colors: Record<string, any>) =>
       borderRadius: DESIGN_TOKENS.radii.md,
       backgroundColor: 'transparent',
       position: 'relative',
-      ...Platform.select<any>({
-        web: { willChange: 'transform', contain: 'paint' },
-        default: {},
-      }),
     },
     clipMobile: {
       borderRadius: DESIGN_TOKENS.radii.md,
@@ -102,7 +98,6 @@ export const createSliderStyles = (colors: Record<string, any>) =>
       position: 'relative',
       ...Platform.select<any>({
         web: {
-          contain: 'layout paint size',
           userSelect: 'none',
         },
         default: {},
@@ -111,24 +106,12 @@ export const createSliderStyles = (colors: Record<string, any>) =>
     carouselTrack: {
       flexDirection: 'row',
       height: '100%',
-      ...Platform.select<any>({
-        web: {
-          willChange: 'transform',
-          backfaceVisibility: 'hidden',
-          transform: 'translate3d(0,0,0)',
-        },
-        default: {},
-      }),
     },
     slide: {
       flexShrink: 0,
       position: 'relative',
       backgroundColor: 'transparent',
       overflow: 'hidden',
-      ...Platform.select<any>({
-        web: { contain: 'content', willChange: 'transform' },
-        default: {},
-      }),
     },
     slidePlaceholder: {
       backgroundColor: colors.backgroundTertiary || DESIGN_TOKENS.colors.backgroundTertiary,

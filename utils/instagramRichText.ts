@@ -36,6 +36,11 @@ const decodeEntities = (value: string) =>
     .replace(/&#39;/gi, "'")
     .replace(/&#x27;/gi, "'")
 
+const normalizeUrlScheme = (value: string) => {
+  const trimmed = String(value || '').trim()
+  return trimmed.startsWith('//') ? `https:${trimmed}` : trimmed
+}
+
 const encodeHtml = (value: string) =>
   value
     .replace(/&/g, '&amp;')
@@ -45,10 +50,20 @@ const encodeHtml = (value: string) =>
     .replace(/'/g, '&#39;')
 
 function normalizeInstagramUrl(rawUrl: string): string {
-  return String(rawUrl || '')
-    .trim()
-    .replace(/\/embed\/captioned\/?$/i, '/')
-    .replace(/\/embed\/?$/i, '/')
+  const normalized = normalizeUrlScheme(decodeEntities(rawUrl))
+  if (!normalized) return ''
+
+  try {
+    const parsed = new URL(normalized)
+    parsed.pathname = parsed.pathname
+      .replace(/\/embed\/captioned\/?$/i, '/')
+      .replace(/\/embed\/?$/i, '/')
+    return parsed.toString()
+  } catch {
+    return normalized
+      .replace(/\/embed\/captioned\/?(?=[?#]|$)/i, '/')
+      .replace(/\/embed\/?(?=[?#]|$)/i, '/')
+  }
 }
 
 export function resolveInstagramTarget(rawUrl: string): InstagramTarget | null {
@@ -140,7 +155,7 @@ function replaceStandaloneInstagramBlocks(html: string): string {
 }
 
 function replaceInstagramIframes(html: string): string {
-  return html.replace(/<iframe\b([^>]*)>[\s\S]*?<\/iframe>/gi, (full, rawAttrs = '') => {
+  return html.replace(/<iframe\b([^>]*?)(?:\/>|>[\s\S]*?<\/iframe>)/gi, (full, rawAttrs = '') => {
     const attrs = String(rawAttrs || '')
     const src = attrs.match(/\ssrc=(['"])(.*?)\1/i)?.[2] ?? ''
     const card = buildInstagramCardHtml(src)

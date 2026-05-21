@@ -51,7 +51,7 @@ export default function TravelHeroInteractiveSlider({
         showDots={isMobile}
         autoPlay={false}
         preloadCount={preloadCount}
-        blurBackground
+        blurBackground={!isMobile}
         aspectRatio={aspectRatio}
         contentAspectRatio={aspectRatio}
         fillContainer

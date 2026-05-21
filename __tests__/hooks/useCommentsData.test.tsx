@@ -105,4 +105,17 @@ describe('useCommentsData', () => {
 
     expect(mockUseTravelComments).toHaveBeenCalledWith(123, undefined, { enabled: false });
   });
+
+  it('does not fetch travel comments when the main thread is missing', () => {
+    mockUseMainThread.mockReturnValue({
+      data: null,
+      isLoading: false,
+      error: null,
+      refetch: jest.fn(),
+    } as any);
+
+    renderHook(() => useCommentsData(123), { wrapper });
+
+    expect(mockUseTravelComments).toHaveBeenCalledWith(123, undefined, { enabled: false });
+  });
 });

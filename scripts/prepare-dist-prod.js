@@ -34,6 +34,7 @@ function copyDistToProd({
   }
 
   fs.rmSync(destDir, { recursive: true, force: true })
+  fs.mkdirSync(path.dirname(destDir), { recursive: true })
   try {
     fs.renameSync(tempDir, destDir)
   } catch (error) {
