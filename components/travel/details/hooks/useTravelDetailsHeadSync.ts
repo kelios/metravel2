@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { Platform } from 'react-native'
 
+import { ensureSingleTitleTag } from '@/utils/seo'
+
 type UseTravelDetailsHeadSyncArgs = {
   canonicalUrl?: string
   isFocused: boolean
@@ -38,7 +40,7 @@ export function useTravelDetailsHeadSync({
       let el = all[0] ?? null
       if (!el) {
         el = document.createElement('meta')
-        const m = sel.match(/\[(\w+)="([^"]+)"\]/)
+        const m = sel.match(/\[(\w+)="([^"]+)"]/)
         if (m) el.setAttribute(m[1], m[2])
         el.setAttribute('data-rh', 'true')
         document.head.appendChild(el)
@@ -68,7 +70,7 @@ export function useTravelDetailsHeadSync({
       if (isApplying) return
       isApplying = true
       enforceHtmlLang()
-      document.title = readyTitle
+      ensureSingleTitleTag(readyTitle)
       patchMeta('meta[property="og:title"]', 'content', readyTitle)
       patchMeta('meta[name="twitter:title"]', 'content', readyTitle)
       if (readyDesc) {
@@ -91,12 +93,12 @@ export function useTravelDetailsHeadSync({
     const t3 = setTimeout(applyAll, 800)
     applyAll()
 
-    const titleEl = document.querySelector('title')
+    const titleEl = ensureSingleTitleTag(readyTitle)
     let titleObs: MutationObserver | null = null
     if (titleEl) {
       titleObs = new MutationObserver(() => {
         if (document.title !== readyTitle) {
-          document.title = readyTitle
+          ensureSingleTitleTag(readyTitle)
         }
       })
       titleObs.observe(titleEl, { childList: true, characterData: true, subtree: true })

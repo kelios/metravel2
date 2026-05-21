@@ -97,9 +97,9 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
   );
 
   const tabs: Array<{ key: ProfileTabKey; label: string; hint: string }> = [
-    { key: 'travels', label: 'Маршруты', hint: 'Показать ваши путешествия' },
-    { key: 'favorites', label: 'Избранное', hint: 'Показать избранные путешествия' },
-    { key: 'history', label: 'История', hint: 'Показать историю просмотров' },
+    { key: 'travels', label: 'Мои маршруты', hint: 'Показать ваши опубликованные путешествия' },
+    { key: 'favorites', label: 'Сохранённое', hint: 'Показать сохранённые путешествия' },
+    { key: 'history', label: 'Недавно смотрел', hint: 'Показать историю просмотров' },
   ];
 
   return (

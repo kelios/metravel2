@@ -205,18 +205,20 @@ describe('ProfileScreen', () => {
     // Header actions
     expect(await findByText('Редактировать')).toBeTruthy();
     expect(await findByText('Календарь')).toBeTruthy();
+    expect(await findByText('Личный календарь')).toBeTruthy();
+    expect(await findByText('Мои статусы поездок')).toBeTruthy();
     expect(await findByText('Были')).toBeTruthy();
     expect(await findByText('Планируют')).toBeTruthy();
     expect(queryByText('По каждому путешествию')).toBeNull();
 
     await waitFor(() => {
-      expect(getByLabelText('Маршруты: 3')).toBeTruthy();
-      expect(getByLabelText('Избранное: 2')).toBeTruthy();
-      expect(getByLabelText('История: 5')).toBeTruthy();
+      expect(getByLabelText('Мои маршруты: 3')).toBeTruthy();
+      expect(getByLabelText('Сохранённое: 2')).toBeTruthy();
+      expect(getByLabelText('Недавно смотрел: 5')).toBeTruthy();
     });
-    expect(getAllByLabelText('Маршруты: 3')).toHaveLength(1);
-    expect(getAllByLabelText('Избранное: 2')).toHaveLength(1);
-    expect(getAllByLabelText('История: 5')).toHaveLength(1);
+    expect(getAllByLabelText('Мои маршруты: 3')).toHaveLength(1);
+    expect(getAllByLabelText('Сохранённое: 2')).toHaveLength(1);
+    expect(getAllByLabelText('Недавно смотрел: 5')).toHaveLength(1);
 
     expect(await findByLabelText('Сохранили: 8')).toBeTruthy();
     expect(await findByLabelText('Были: 3')).toBeTruthy();
@@ -253,12 +255,12 @@ describe('ProfileScreen', () => {
     // По умолчанию активна вкладка "Маршруты" и показываются путешествия пользователя
     expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
 
-    fireEvent.press(getByLabelText('Избранное: 1'));
+    fireEvent.press(getByLabelText('Сохранённое: 1'));
     expect(await findByLabelText(/Fav 1/)).toBeTruthy();
     expect(getAllByLabelText('Были: 3').length).toBeGreaterThan(0);
     expect(getAllByLabelText('Планируют: 7').length).toBeGreaterThan(0);
 
-    fireEvent.press(getByLabelText('История: 1'));
+    fireEvent.press(getByLabelText('Недавно смотрел: 1'));
     expect(await findByLabelText(/History 1/)).toBeTruthy();
   });
 

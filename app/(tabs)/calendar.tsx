@@ -98,7 +98,7 @@ const EMPTY_STATE: Record<TravelStatus, EmptyStateConfig> = {
 const TAB_HINTS: Record<TravelStatus, string> = {
   visited: 'Выбери дату, чтобы увидеть посещённые поездки за этот день. Если точной даты нет, добавь её прямо в карточке.',
   planned: 'Выбери дату, чтобы отфильтровать запланированные поездки.',
-  wishlist: 'Выбери дату, чтобы увидеть поездки из своего списка желаний на этот день.',
+  wishlist: 'Это личный список желаний. Дата для него не обязательна — главное, что вы хотите сохранить маршрут на потом.',
 }
 
 const CARD_META_ICON_STYLE = { marginRight: 4 } as const
@@ -160,7 +160,7 @@ const sortCalendarEntries = (entries: CalendarEntry[], status: TravelStatus) =>
 
 const getDateEditorSubtitle = (status?: TravelStatus) => {
   if (status === 'visited') return 'Укажи дату, когда ты был в этом путешествии.'
-  if (status === 'wishlist') return 'Укажи ориентировочную дату для списка желаний.'
+  if (status === 'wishlist') return 'Этот статус просто сохраняет маршрут в ваш личный список желаний. Дата не обязательна.'
   return 'Укажи дату запланированной поездки.'
 }
 
@@ -299,8 +299,11 @@ const CalendarTravelCard = memo(function CalendarTravelCard({
   const location = getLocationLabel(entry)
   const travelPeriod = getTravelPeriodLabel(entry)
   const explicitDate = getExplicitTravelStatusDate(entry)
+  const isWishlist = entry.status === 'wishlist'
   const dateMetaLabel = explicitDate
     ? `Дата: ${explicitDate}`
+    : isWishlist
+      ? 'Личный статус без даты'
     : travelPeriod
       ? 'Точная дата не указана'
       : 'Дата не указана'
@@ -358,10 +361,10 @@ const CalendarTravelCard = memo(function CalendarTravelCard({
         ]}
         onPress={(event) => onEditDate(entry, event)}
         accessibilityRole="button"
-        accessibilityLabel={hasCalendarDate ? `Изменить дату ${calendarDate}` : 'Добавить дату'}
+        accessibilityLabel={isWishlist ? 'Изменить статус' : hasCalendarDate ? `Изменить дату ${calendarDate}` : 'Добавить дату'}
         {...(Platform.OS === 'web' ? ({ 'data-card-action': 'true' } as any) : null)}
       >
-        <Feather name={hasCalendarDate ? 'calendar' : 'plus'} size={12} color={hasCalendarDate ? colors.surface : accentColor} />
+        <Feather name={isWishlist ? 'bookmark' : hasCalendarDate ? 'calendar' : 'plus'} size={12} color={hasCalendarDate ? colors.surface : accentColor} />
         <Text
           style={[
             styles.dateBadgeText,
@@ -369,7 +372,7 @@ const CalendarTravelCard = memo(function CalendarTravelCard({
             !hasCalendarDate && { color: accentColor },
           ]}
         >
-          {calendarDate ?? 'Дата'}
+          {isWishlist ? 'Статус' : calendarDate ?? 'Дата'}
         </Text>
       </Pressable>
     </View>
@@ -404,6 +407,7 @@ function DateEditorModal({
   const canClearDate = item ? Boolean(getExplicitTravelStatusDate(item)) : false
   const canRemoveStatus = Boolean(item)
   const subtitle = getDateEditorSubtitle(selectedStatus)
+  const needsDateInput = selectedStatus !== 'wishlist'
 
   return (
     <Modal visible={Boolean(editor)} transparent animationType="slide" onRequestClose={onClose}>
@@ -439,19 +443,26 @@ function DateEditorModal({
             })}
           </View>
 
-          {Platform.OS === 'web' ? (
-            <WebDateInput value={editor?.value ?? ''} onChange={onChange} />
+          {needsDateInput ? (
+            Platform.OS === 'web' ? (
+              <WebDateInput value={editor?.value ?? ''} onChange={onChange} />
+            ) : (
+              <TextInput
+                style={styles.dateInput}
+                value={editor?.value ?? ''}
+                onChangeText={onChange}
+                placeholder="ГГГГ-ММ-ДД"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="numbers-and-punctuation"
+                maxLength={10}
+                accessibilityLabel="Дата путешествия"
+              />
+            )
           ) : (
-            <TextInput
-              style={styles.dateInput}
-              value={editor?.value ?? ''}
-              onChangeText={onChange}
-              placeholder="ГГГГ-ММ-ДД"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="numbers-and-punctuation"
-              maxLength={10}
-              accessibilityLabel="Дата путешествия"
-            />
+            <View style={styles.statusNoteBox}>
+              <Feather name="bookmark" size={14} color={colors.textMuted} />
+              <Text style={styles.statusNoteText}>Для статуса «Хочу» достаточно просто сохранить маршрут.</Text>
+            </View>
           )}
 
           {!!editor?.error && <Text style={styles.dateError}>{editor.error}</Text>}
@@ -489,9 +500,9 @@ function DateEditorModal({
               style={[styles.datePrimaryButton, globalFocusStyles.focusable]}
               onPress={onSave}
               accessibilityRole="button"
-              accessibilityLabel="Сохранить дату"
+              accessibilityLabel={needsDateInput ? 'Сохранить дату' : 'Сохранить статус'}
             >
-              <Text style={styles.datePrimaryText}>Сохранить</Text>
+              <Text style={styles.datePrimaryText}>{needsDateInput ? 'Сохранить' : 'Сохранить статус'}</Text>
             </Pressable>
           </View>
         </Pressable>
@@ -565,8 +576,7 @@ export default function CalendarScreen() {
     }
   }, [authReady, isAuthenticated, loadLocal, userId])
 
-  const explicitEntries = useMemo(() => groupEntriesByStatus(entries), [entries])
-  const statusEntries = explicitEntries
+  const statusEntries = useMemo(() => groupEntriesByStatus(entries), [entries])
 
   const activeEntries = statusEntries[activeTab] ?? DEFAULT_BUCKETS[activeTab]
   const visibleEntries = useMemo(
@@ -684,6 +694,12 @@ export default function CalendarScreen() {
       return
     }
 
+    if (dateEditor.status === 'wishlist') {
+      await saveItemStatus(dateEditor.item, dateEditor.status, null)
+      handleCloseDateEditor()
+      return
+    }
+
     if (dateEditor.value && !parseTravelStatusDateParts(dateEditor.value)) {
       setDateEditor({ ...dateEditor, error: 'Введите дату в формате ГГГГ-ММ-ДД' })
       return
@@ -741,6 +757,16 @@ export default function CalendarScreen() {
     <SafeAreaView style={styles.container}>
       {seoBlock}
       <ProfileCollectionHeader title="Мой календарь" onBackPress={handleBackToProfile} />
+
+      <View style={styles.introCard}>
+        <View style={styles.introBadge}>
+          <Text style={styles.introBadgeText}>Только мои статусы</Text>
+        </View>
+        <Text style={styles.introTitle}>Где я был, что хочу и что планирую</Text>
+        <Text style={styles.introDescription}>
+          Этот экран не показывает общую статистику по маршрутам автора. Здесь только ваши личные отметки по поездкам.
+        </Text>
+      </View>
 
       <CalendarTabs
         activeTab={activeTab}
@@ -832,6 +858,41 @@ function createCalendarStyles(colors: ReturnType<typeof useThemedColors>, isWide
       paddingBottom: 4,
       gap: 8,
       flexWrap: 'wrap',
+    },
+    introCard: {
+      marginHorizontal: 16,
+      marginTop: 8,
+      marginBottom: 4,
+      padding: 16,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      gap: 8,
+    },
+    introBadge: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+    },
+    introBadgeText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textMuted,
+    },
+    introTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    introDescription: {
+      fontSize: 14,
+      lineHeight: 20,
+      color: colors.textMuted,
     },
     tabButton: {
       flexDirection: 'row',
@@ -1067,6 +1128,23 @@ function createCalendarStyles(colors: ReturnType<typeof useThemedColors>, isWide
       fontSize: 12,
       color: colors.danger,
       marginTop: 6,
+    },
+    statusNoteBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingVertical: 12,
+      paddingHorizontal: 12,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+    },
+    statusNoteText: {
+      flex: 1,
+      fontSize: 13,
+      lineHeight: 18,
+      color: colors.textMuted,
     },
     dateActions: {
       flexDirection: 'row',

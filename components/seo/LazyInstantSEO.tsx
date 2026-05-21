@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
 import Head from 'expo-router/head';
-import { normalizeOgImageUrl } from '@/utils/seo';
+import { ensureSingleTitleTag, normalizeOgImageUrl } from '@/utils/seo';
 
 type Props = {
   headKey?: string | null;
@@ -34,6 +34,13 @@ function StaticHead({
 }: Props) {
   const normalizedImage = normalizeOgImageUrl(image);
   const twitterCard = normalizedImage ? 'summary_large_image' : 'summary';
+
+  useEffect(() => {
+    if (typeof document === 'undefined' || !title) return;
+
+    ensureSingleTitleTag(title);
+  }, [title]);
+
   useEffect(() => {
     if (typeof document === 'undefined' || !robots) return;
     const upsertMeta = (name: string, content: string) => {

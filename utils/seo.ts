@@ -65,3 +65,30 @@ export function normalizeOgImageUrl(image?: string | null): string | null {
   if (trimmed.startsWith('/')) return buildOgImageUrl(trimmed);
   return buildOgImageUrl(`/${trimmed}`);
 }
+
+export function ensureSingleTitleTag(title: string): HTMLTitleElement | null {
+  if (typeof document === 'undefined') return null;
+
+  const normalizedTitle = String(title || '').trim();
+  if (!normalizedTitle) return null;
+
+  const titleElements = Array.from(document.head.querySelectorAll('title'));
+  const titleElement = titleElements[0] ?? document.createElement('title');
+
+  if (!titleElement.parentNode) {
+    document.head.insertBefore(titleElement, document.head.firstChild);
+  }
+
+  if (titleElement.textContent !== normalizedTitle) {
+    titleElement.textContent = normalizedTitle;
+  }
+
+  if (document.title !== normalizedTitle) {
+    document.title = normalizedTitle;
+  }
+
+  titleElements.slice(1).forEach((element) => element.parentNode?.removeChild(element));
+
+  return titleElement;
+}
+

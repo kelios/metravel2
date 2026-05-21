@@ -2,6 +2,7 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
+  Text,
   StyleSheet,
   ActivityIndicator,
   Platform,
@@ -296,8 +297,6 @@ export default function ProfileScreen() {
     return null
   }, [engagementSummary, profileTravels, stats.travelsCount, travelsHasMore, travelsLoading])
 
-  const profileTravelSummary = authoredTravelEngagementSummary
-
   const currentData = useMemo<Travel[]>(() => {
     if (activeTravelMetric) return authoredMetricTravels;
     if (activeTab === 'travels') return profileTravels;
@@ -513,6 +512,73 @@ export default function ProfileScreen() {
       flexDirection: 'row',
       justifyContent: 'flex-end',
     },
+    calendarSummaryCard: {
+      marginHorizontal: contentPadding,
+      marginBottom: 12,
+      padding: 16,
+      borderRadius: 16,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      gap: 12,
+    },
+    calendarSummaryHeader: {
+      gap: 6,
+    },
+    calendarSummaryBadge: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+    },
+    calendarSummaryBadgeText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textMuted,
+    },
+    calendarSummaryTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    calendarSummaryDescription: {
+      fontSize: 14,
+      lineHeight: 20,
+      color: colors.textMuted,
+    },
+    calendarSummaryMetrics: {
+      flexDirection: 'row',
+      gap: 8,
+      flexWrap: 'wrap',
+    },
+    calendarSummaryMetric: {
+      minWidth: 96,
+      flexGrow: 1,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 12,
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      gap: 4,
+    },
+    calendarSummaryCta: {
+      alignSelf: 'flex-start',
+    },
+    calendarSummaryMetricLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textMuted,
+    },
+    calendarSummaryMetricValue: {
+      fontSize: 16,
+      lineHeight: 20,
+      fontWeight: '700',
+      color: colors.text,
+    },
     footerLoader: {
       paddingVertical: 14,
       alignItems: 'center',
@@ -579,13 +645,46 @@ export default function ProfileScreen() {
               counts={tabCounts}
             />
             <ProfileTravelEngagementSummary
-              summary={profileTravelSummary}
+              summary={authoredTravelEngagementSummary}
               travelsCount={stats.travelsCount}
               isLoading={travelsLoading}
               mode="author"
               activeMetric={activeTravelMetric}
               onMetricPress={handleTravelMetricPress}
             />
+            <View style={styles.calendarSummaryCard}>
+              <View style={styles.calendarSummaryHeader}>
+                <View style={styles.calendarSummaryBadge}>
+                  <Text style={styles.calendarSummaryBadgeText}>Личный календарь</Text>
+                </View>
+                <Text style={styles.calendarSummaryTitle}>Мои статусы поездок</Text>
+                <Text style={styles.calendarSummaryDescription}>
+                  Здесь только ваши личные отметки: где уже были, что хотите сохранить и какие поездки планируете.
+                </Text>
+              </View>
+              <View style={styles.calendarSummaryMetrics}>
+                <View style={styles.calendarSummaryMetric}>
+                  <Text style={styles.calendarSummaryMetricLabel}>Был</Text>
+                  <Text style={styles.calendarSummaryMetricValue}>Личный статус</Text>
+                </View>
+                <View style={styles.calendarSummaryMetric}>
+                  <Text style={styles.calendarSummaryMetricLabel}>Хочу</Text>
+                  <Text style={styles.calendarSummaryMetricValue}>Только моё</Text>
+                </View>
+                <View style={styles.calendarSummaryMetric}>
+                  <Text style={styles.calendarSummaryMetricLabel}>Планирую</Text>
+                  <Text style={styles.calendarSummaryMetricValue}>С датой поездки</Text>
+                </View>
+              </View>
+              <View style={styles.calendarSummaryCta}>
+                <Button
+                  label="Открыть календарь"
+                  onPress={() => router.push('/calendar' as any)}
+                  variant="secondary"
+                  size="sm"
+                />
+              </View>
+            </View>
             <ProfileCompleteness
               user={userProp}
               profile={profile}
@@ -618,7 +717,7 @@ export default function ProfileScreen() {
       pickAndUpload,
       avatarUploading,
       handleQuickAction,
-      profileTravelSummary,
+      authoredTravelEngagementSummary,
       stats,
       tabCounts,
       activeTab,
@@ -627,6 +726,7 @@ export default function ProfileScreen() {
       handleClearActiveTab,
       handleProfileTabChange,
       handleTravelMetricPress,
+      router,
       travelsLoading,
     ]
   );
