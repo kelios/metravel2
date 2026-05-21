@@ -83,12 +83,7 @@ export function ensureSingleTitleTag(title: string): HTMLTitleElement | null {
     titleElement.textContent = normalizedTitle;
   }
 
-  if (document.title !== normalizedTitle) {
-    document.title = normalizedTitle;
-  }
-
   titleElements.slice(1).forEach((element) => element.parentNode?.removeChild(element));
 
   return titleElement;
 }
-

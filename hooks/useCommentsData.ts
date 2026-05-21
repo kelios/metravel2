@@ -4,6 +4,7 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import {
+  useMainThread,
   useTravelComments,
   useCreateComment,
   useUpdateComment,
@@ -32,12 +33,24 @@ export function useCommentsData(travelId: number, options?: { enabled?: boolean 
   const didWarnAllSubThread = useRef(false);
 
   const {
+    data: mainThread,
+    isLoading: isLoadingMainThread,
+    error: threadError,
+    refetch: refetchMainThread,
+  } = useMainThread(travelId, {
+    enabled: isEnabled,
+  });
+  const mainThreadId = mainThread?.id;
+  const mainThreadMissing = !isLoadingMainThread && !threadError && !mainThreadId;
+  const canFetchComments = isEnabled && !isLoadingMainThread && !mainThreadMissing;
+
+  const {
     data: comments = [],
     isLoading: isLoadingComments,
     error: commentsError,
     refetch: refetchComments,
-  } = useTravelComments(travelId, null, {
-    enabled: isEnabled,
+  } = useTravelComments(travelId, mainThreadId, {
+    enabled: canFetchComments,
   });
 
   const createComment = useCreateComment();
@@ -65,9 +78,12 @@ export function useCommentsData(travelId: number, options?: { enabled?: boolean 
   // Handlers
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    try { await refetchComments(); }
+    try {
+      await refetchMainThread();
+      await refetchComments();
+    }
     finally { setIsRefreshing(false); }
-  }, [refetchComments]);
+  }, [refetchMainThread, refetchComments]);
 
   const handleSubmitComment = useCallback(async (text: string) => {
     if (editComment) {
@@ -133,13 +149,13 @@ export function useCommentsData(travelId: number, options?: { enabled?: boolean 
     expandedThreads,
     replyTo,
     editComment,
-    isLoading: isLoadingComments,
+    isLoading: isLoadingMainThread || isLoadingComments,
     isRefreshing,
     isSubmitting: createComment.isPending || updateComment.isPending || replyToComment.isPending,
     hasError: !!commentsError,
-    threadError: null,
+    threadError,
     commentsError,
-    mainThread: null,
+    mainThread: mainThread ?? null,
     handleRefresh,
     handleSubmitComment,
     handleReply: isAuthenticated ? handleReply : undefined,

@@ -157,6 +157,15 @@ async function waitForTravelPreload(slug: string, isId: boolean, idNum: number):
   if (immediate) return immediate;
 
   let scriptLoaded = Boolean(win.__metravelTravelPreloadScriptLoaded);
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    !scriptLoaded &&
+    !win.__metravelTravelPreloadPending &&
+    !win.__metravelTravelPreloadPromise
+  ) {
+    return undefined;
+  }
+
   if (!scriptLoaded) {
     const scriptDeadline = Date.now() + 1000;
     while (Date.now() < scriptDeadline) {

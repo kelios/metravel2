@@ -15,7 +15,7 @@ jest.mock('react-native-document-picker', () => ({
       images: 'images',
     },
   },
-}));
+}), { virtual: true });
 
 jest.mock('expo-image-picker', () => ({
   requestMediaLibraryPermissionsAsync: jest.fn(),
