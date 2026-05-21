@@ -58,6 +58,7 @@ const NESTED_STATS_KEYS = [
   'engagement_summary',
   'engagement',
   'summary',
+  'stats',
   'travelStats',
   'travel_stats',
   'authorStats',
@@ -66,10 +67,31 @@ const NESTED_STATS_KEYS = [
   'social_stats',
 ]
 
-const asRecord = (value: unknown): Record<string, unknown> =>
-  value && typeof value === 'object' && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {}
+const tryParseJsonRecord = (value: string): Record<string, unknown> => {
+  const trimmed = value.trim()
+  if (!trimmed || (!trimmed.startsWith('{') && !trimmed.startsWith('['))) return {}
+
+  try {
+    const parsed = JSON.parse(trimmed)
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {}
+  } catch {
+    return {}
+  }
+}
+
+const asRecord = (value: unknown): Record<string, unknown> => {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>
+  }
+
+  if (typeof value === 'string') {
+    return tryParseJsonRecord(value)
+  }
+
+  return {}
+}
 
 const toNonNegativeNumber = (value: unknown): number | null => {
   if (value == null || value === '') return null

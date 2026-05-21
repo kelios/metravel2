@@ -48,6 +48,8 @@ import { useAvatarUpload } from '@/hooks/useAvatarUpload';
 import { getStorageBatch } from '@/utils/storageBatch';
 import { hapticImpact } from '@/utils/haptics';
 import { computeTravelEngagementSummary } from '@/utils/travelEngagementStats'
+import { useTravelStatusStore } from '@/stores/travelStatusStore'
+import { showToastMessage } from '@/utils/toast'
 
 interface UserStats {
   travelsCount: number;
@@ -158,11 +160,14 @@ export default function ProfileScreen() {
     engagementSummary,
     isLoading: travelsLoading,
     isLoadingMore: travelsLoadingMore,
+    removingTravelId,
     hasMore: travelsHasMore,
     load: loadTravels,
     loadMore: loadMoreTravelsHook,
     remove: removeMyTravel,
   } = useMyTravels({ userId, perPage: PROFILE_TRAVELS_PER_PAGE, onTotalChange: handleTotalChange });
+  const personalTravelStatusEntries = useTravelStatusStore((state) => state.entries)
+  const loadPersonalTravelStatuses = useTravelStatusStore((state) => state.loadLocal)
 
   const loadMoreTravels = useCallback(async () => {
     if (activeTab !== 'travels') return;
@@ -229,6 +234,11 @@ export default function ProfileScreen() {
     loadTravels();
   }, [loadUserInfo, loadTravels]);
 
+  useEffect(() => {
+    if (!isAuthenticated) return
+    void loadPersonalTravelStatuses(userId ?? null)
+  }, [isAuthenticated, loadPersonalTravelStatuses, userId])
+
   const handleLogout = useCallback(async () => {
     try {
       await logout();
@@ -278,6 +288,12 @@ export default function ProfileScreen() {
     return profileTravels.filter((travel) => (travel.engagementStats?.[activeTravelMetric] ?? 0) > 0);
   }, [activeTravelMetric, profileTravels]);
 
+  const authoredTravelEngagementScope = useMemo<'all' | 'loaded'>(() => {
+    if (engagementSummary) return 'all'
+    if (profileTravels.length === 0) return 'all'
+    return profileTravels.length >= stats.travelsCount || !travelsHasMore ? 'all' : 'loaded'
+  }, [engagementSummary, profileTravels.length, stats.travelsCount, travelsHasMore])
+
   const authoredTravelEngagementSummary = useMemo(() => {
     if (engagementSummary) return engagementSummary
 
@@ -290,12 +306,35 @@ export default function ProfileScreen() {
       }
     }
 
-    if (!travelsHasMore && profileTravels.length > 0 && profileTravels.length === stats.travelsCount) {
+    if (profileTravels.length > 0) {
       return computeTravelEngagementSummary(profileTravels)
     }
 
     return null
-  }, [engagementSummary, profileTravels, stats.travelsCount, travelsHasMore, travelsLoading])
+  }, [engagementSummary, profileTravels, stats.travelsCount, travelsLoading])
+
+  const personalTravelStatusSummary = useMemo(
+    () =>
+      personalTravelStatusEntries.reduce(
+        (acc, entry) => {
+          if (entry.status === 'visited') acc.visited += 1
+          if (entry.status === 'wishlist') acc.wishlist += 1
+          if (entry.status === 'planned') acc.planned += 1
+          return acc
+        },
+        { visited: 0, wishlist: 0, planned: 0 }
+      ),
+    [personalTravelStatusEntries]
+  )
+
+  const formatTripsCount = useCallback((count: number) => {
+    if (count === 0) return 'Пока пусто'
+    const mod10 = count % 10
+    const mod100 = count % 100
+    if (mod10 === 1 && mod100 !== 11) return `${count} поездка`
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} поездки`
+    return `${count} поездок`
+  }, [])
 
   const currentData = useMemo<Travel[]>(() => {
     if (activeTravelMetric) return authoredMetricTravels;
@@ -407,6 +446,7 @@ export default function ProfileScreen() {
         });
         if (!ok) return;
         await clearFavorites?.();
+        void showToastMessage({ type: 'success', text1: 'Избранное очищено' })
         return;
       }
 
@@ -419,8 +459,14 @@ export default function ProfileScreen() {
         });
         if (!ok) return;
         await clearHistory?.();
+        void showToastMessage({ type: 'success', text1: 'История очищена' })
       }
     } catch (error) {
+      void showToastMessage({
+        type: 'error',
+        text1: 'Не удалось очистить список',
+        text2: error instanceof Error ? error.message : 'Попробуйте позже.',
+      })
       console.error('Error clearing profile tab data:', error);
     }
   }, [activeTab, clearFavorites, clearHistory]);
@@ -647,10 +693,12 @@ export default function ProfileScreen() {
             <ProfileTravelEngagementSummary
               summary={authoredTravelEngagementSummary}
               travelsCount={stats.travelsCount}
+              loadedTravelsCount={profileTravels.length}
               isLoading={travelsLoading}
               mode="author"
               activeMetric={activeTravelMetric}
               onMetricPress={handleTravelMetricPress}
+              summaryScope={authoredTravelEngagementScope}
             />
             <View style={styles.calendarSummaryCard}>
               <View style={styles.calendarSummaryHeader}>
@@ -659,21 +707,21 @@ export default function ProfileScreen() {
                 </View>
                 <Text style={styles.calendarSummaryTitle}>Мои статусы поездок</Text>
                 <Text style={styles.calendarSummaryDescription}>
-                  Здесь только ваши личные отметки: где уже были, что хотите сохранить и какие поездки планируете.
+                  Здесь только ваши личные отметки из календаря: где уже были, что сохранили на будущее и что уже внесли в планы.
                 </Text>
               </View>
               <View style={styles.calendarSummaryMetrics}>
                 <View style={styles.calendarSummaryMetric}>
-                  <Text style={styles.calendarSummaryMetricLabel}>Был</Text>
-                  <Text style={styles.calendarSummaryMetricValue}>Личный статус</Text>
+                  <Text style={styles.calendarSummaryMetricLabel}>Были</Text>
+                  <Text style={styles.calendarSummaryMetricValue}>{formatTripsCount(personalTravelStatusSummary.visited)}</Text>
                 </View>
                 <View style={styles.calendarSummaryMetric}>
                   <Text style={styles.calendarSummaryMetricLabel}>Хочу</Text>
-                  <Text style={styles.calendarSummaryMetricValue}>Только моё</Text>
+                  <Text style={styles.calendarSummaryMetricValue}>{formatTripsCount(personalTravelStatusSummary.wishlist)}</Text>
                 </View>
                 <View style={styles.calendarSummaryMetric}>
                   <Text style={styles.calendarSummaryMetricLabel}>Планирую</Text>
-                  <Text style={styles.calendarSummaryMetricValue}>С датой поездки</Text>
+                  <Text style={styles.calendarSummaryMetricValue}>{formatTripsCount(personalTravelStatusSummary.planned)}</Text>
                 </View>
               </View>
               <View style={styles.calendarSummaryCta}>
@@ -728,6 +776,12 @@ export default function ProfileScreen() {
       handleTravelMetricPress,
       router,
       travelsLoading,
+      profileTravels.length,
+      authoredTravelEngagementScope,
+      personalTravelStatusSummary.planned,
+      personalTravelStatusSummary.visited,
+      personalTravelStatusSummary.wishlist,
+      formatTripsCount,
     ]
   );
 
@@ -741,8 +795,9 @@ export default function ProfileScreen() {
       isSuperuser={isSuperuser}
       onDeletePress={activeTab === 'travels' ? handleDeleteMyTravel : undefined}
       viewportWidth={width}
+      isDeleting={removingTravelId === item.id}
     />
-  ), [isMobileDevice, userId, isSuperuser, activeTab, handleDeleteMyTravel, width]);
+  ), [isMobileDevice, userId, isSuperuser, activeTab, handleDeleteMyTravel, removingTravelId, width]);
 
   const scrollViewStyle = useMemo(() => ({ flex: 1 } as const), []);
 
@@ -856,6 +911,7 @@ export default function ProfileScreen() {
                               isSuperuser={isSuperuser}
                               onDeletePress={activeTab === 'travels' ? handleDeleteMyTravel : undefined}
                               viewportWidth={width}
+                               isDeleting={removingTravelId === travel.id}
                             />
                           </View>
                         );

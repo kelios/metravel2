@@ -1,4 +1,5 @@
 import type { MyTravelsItem, MyTravelsPayload } from '@/api/travelsApi';
+import { extractTravelEngagementStats } from '@/utils/travelEngagementStats'
 
 export const mockFetchMyTravels = jest.fn();
 
@@ -14,9 +15,14 @@ export const mockUnwrapMyTravelsPayload = (payload: MyTravelsPayload | null | un
   if (Array.isArray(payload)) return { items: payload, total: payload.length, engagementSummary: null };
 
   const obj = asRecord(payload);
+  const engagementSummary = extractTravelEngagementStats(obj)
   const data = toItems(obj.data);
   if (data.length > 0) {
-    return { items: data, total: data.length };
+    return {
+      items: data,
+      total: Number(obj.total ?? obj.count ?? data.length) || data.length,
+      engagementSummary,
+    };
   }
 
   const results = toItems(obj.results);
@@ -24,7 +30,7 @@ export const mockUnwrapMyTravelsPayload = (payload: MyTravelsPayload | null | un
     return {
       items: results,
       total: Number(obj.count ?? obj.total ?? results.length) || results.length,
-      engagementSummary: null,
+        engagementSummary,
     };
   }
 
@@ -33,11 +39,11 @@ export const mockUnwrapMyTravelsPayload = (payload: MyTravelsPayload | null | un
     return {
       items,
       total: Number(obj.total ?? obj.count ?? items.length) || items.length,
-      engagementSummary: null,
+        engagementSummary,
     };
   }
 
-  return { items: [], total: Number(obj.total ?? obj.count ?? 0) || 0, engagementSummary: null };
+  return { items: [], total: Number(obj.total ?? obj.count ?? 0) || 0, engagementSummary };
 };
 
 export const resetTravelsApiMocks = () => {

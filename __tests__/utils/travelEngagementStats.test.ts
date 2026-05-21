@@ -22,6 +22,19 @@ describe('travelEngagementStats', () => {
     })
   })
 
+  it('extracts stats when backend serializes engagement payload as JSON string', () => {
+    const stats = extractTravelEngagementStats({
+      engagement_summary: '{"favorites_count":4,"wishlist_count":2,"planned_count":1}',
+    })
+
+    expect(stats).toEqual({
+      favoritesCount: 4,
+      wishlistCount: 2,
+      visitedCount: null,
+      plannedCount: 1,
+    })
+  })
+
   it('returns null when no supported counters are present', () => {
     expect(extractTravelEngagementStats({ count: 10, results: [] })).toBeNull()
   })

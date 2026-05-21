@@ -193,7 +193,7 @@ describe('ProfileScreen', () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(2, 5);
 
-    const { findByText, findByLabelText, getByLabelText, getAllByLabelText, queryByText } = renderProfile();
+    const { findByText, findByLabelText, findAllByLabelText, findAllByText, getByLabelText, getAllByLabelText, queryByText } = renderProfile();
 
     expect(await findByText('Test User')).toBeTruthy();
     expect(await findByText('user@example.com')).toBeTruthy();
@@ -207,9 +207,10 @@ describe('ProfileScreen', () => {
     expect(await findByText('Календарь')).toBeTruthy();
     expect(await findByText('Личный календарь')).toBeTruthy();
     expect(await findByText('Мои статусы поездок')).toBeTruthy();
-    expect(await findByText('Были')).toBeTruthy();
+    expect((await findAllByText('Были')).length).toBeGreaterThan(0);
     expect(await findByText('Планируют')).toBeTruthy();
     expect(queryByText('По каждому путешествию')).toBeNull();
+    expect(queryByText(/Когда backend начнёт отдавать/i)).toBeNull();
 
     await waitFor(() => {
       expect(getByLabelText('Мои маршруты: 3')).toBeTruthy();
@@ -221,8 +222,8 @@ describe('ProfileScreen', () => {
     expect(getAllByLabelText('Недавно смотрел: 5')).toHaveLength(1);
 
     expect(await findByLabelText('Сохранили: 8')).toBeTruthy();
-    expect(await findByLabelText('Были: 3')).toBeTruthy();
-    expect(await findByLabelText('Планируют: 7')).toBeTruthy();
+    expect((await findAllByLabelText('Были: 3')).length).toBeGreaterThan(0);
+    expect((await findAllByLabelText('Планируют: 7')).length).toBeGreaterThan(0);
   });
 
   it('logout works', async () => {
@@ -268,17 +269,17 @@ describe('ProfileScreen', () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(0, 0);
 
-    const { getByLabelText, findByLabelText, queryByLabelText } = renderProfile();
+    const { getAllByLabelText, findByLabelText, queryByLabelText } = renderProfile();
 
     expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
 
-    fireEvent.press(getByLabelText('Были: 3'));
+    fireEvent.press(getAllByLabelText('Были: 3')[0]);
 
     expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
     expect(queryByLabelText(/My Travel 2/)).toBeNull();
     expect(queryByLabelText(/My Travel 3/)).toBeNull();
 
-    fireEvent.press(getByLabelText('Планируют: 7'));
+    fireEvent.press(getAllByLabelText('Планируют: 7')[0]);
 
     expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
     expect(await findByLabelText(/My Travel 2/)).toBeTruthy();

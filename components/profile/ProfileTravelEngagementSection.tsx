@@ -11,7 +11,7 @@ import {
   type TravelEngagementStats,
 } from '@/utils/travelEngagementStats'
 
-type MetricKey = 'favoritesCount' | 'visitedCount' | 'plannedCount'
+type MetricKey = 'favoritesCount' | 'wishlistCount' | 'visitedCount' | 'plannedCount'
 export type ProfileTravelEngagementMetricKey = MetricKey
 
 type MetricDefinition = {
@@ -23,6 +23,7 @@ type MetricDefinition = {
 
 const AUTHOR_METRICS: MetricDefinition[] = [
   { key: 'favoritesCount', label: 'Сохранили', icon: 'heart', helper: 'добавили в избранное' },
+  { key: 'wishlistCount', label: 'Хотят', icon: 'bookmark', helper: 'добавили в список желаний' },
   { key: 'visitedCount', label: 'Были', icon: 'check-circle', helper: 'уже посетили маршрут' },
   { key: 'plannedCount', label: 'Планируют', icon: 'calendar', helper: 'собираются поехать' },
 ]
@@ -35,6 +36,10 @@ const CALENDAR_METRICS: MetricDefinition[] = [
 
 const formatMetricValue = (value: number | null | undefined) =>
   value == null ? '—' : String(value)
+
+const DEFAULT_AUTHOR_METRICS: MetricDefinition[] = AUTHOR_METRICS.filter(
+  (metric) => metric.key !== 'visitedCount'
+)
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
@@ -74,12 +79,32 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       color: colors.textMuted,
       lineHeight: 20,
     },
+    sectionMetaRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    sectionMetaChip: {
+      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+      paddingVertical: 6,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+    },
+    sectionMetaChipText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      color: colors.textSecondary,
+      fontWeight: DESIGN_TOKENS.typography.weights.medium as never,
+    },
     metricsGrid: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: DESIGN_TOKENS.spacing.xs,
     },
     metricCard: {
-      flex: 1,
+      flexGrow: 1,
+      flexBasis: 160,
       minHeight: 88,
       paddingHorizontal: DESIGN_TOKENS.spacing.sm,
       paddingVertical: DESIGN_TOKENS.spacing.sm,
@@ -131,39 +156,63 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
 export function ProfileTravelEngagementSummary({
   summary,
   travelsCount,
+  loadedTravelsCount,
   isLoading = false,
   mode = 'author',
   activeMetric,
   onMetricPress,
+  summaryScope = 'all',
 }: {
   summary: TravelEngagementStats | null
   travelsCount: number
+  loadedTravelsCount?: number
   isLoading?: boolean
   mode?: 'author' | 'calendar'
   activeMetric?: MetricKey | null
   onMetricPress?: (metric: MetricKey) => void
+  summaryScope?: 'all' | 'loaded'
 }) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const isAvailable = hasAnyTravelEngagementStats(summary)
   const isCalendarMode = mode === 'calendar'
-  const metrics = isCalendarMode ? CALENDAR_METRICS : AUTHOR_METRICS
+  const metrics = useMemo(() => {
+    if (isCalendarMode) return CALENDAR_METRICS
+    if (!summary) return DEFAULT_AUTHOR_METRICS
+
+    const availableMetrics = AUTHOR_METRICS.filter((metric) => summary[metric.key] !== null)
+    if (availableMetrics.length === 0) return DEFAULT_AUTHOR_METRICS
+
+    if (activeMetric && !availableMetrics.some((metric) => metric.key === activeMetric)) {
+      return [...availableMetrics, ...AUTHOR_METRICS.filter((metric) => metric.key === activeMetric)]
+    }
+
+    return availableMetrics
+  }, [activeMetric, isCalendarMode, summary])
 
   const description = useMemo(() => {
     if (isCalendarMode) {
       return 'Ваши личные статусы по поездкам: где уже были, что хотите и что уже внесли в планы.'
     }
 
+    if (isLoading) {
+      return 'Собираем сводную статистику по вашим опубликованным маршрутам.'
+    }
+
     if (travelsCount === 0) {
       return 'Опубликуйте первое путешествие — здесь появится общая статистика интереса аудитории.'
     }
 
-    if (isAvailable) {
-      return 'Здесь собрана реакция других пользователей на ваши маршруты: сохранения, посещения и планы.'
+    if (summaryScope === 'loaded' && (loadedTravelsCount ?? 0) > 0 && (loadedTravelsCount ?? 0) < travelsCount) {
+      return 'Пока показываем сумму по уже загруженным карточкам. Полная сводка появится после подгрузки всех маршрутов.'
     }
 
-    return 'Когда backend начнёт отдавать author-агрегаты, здесь появятся сохранения, посещения и планы других пользователей.'
-  }, [isAvailable, isCalendarMode, travelsCount])
+    if (isAvailable) {
+      return 'Здесь собрана суммарная реакция других пользователей на ваши маршруты: сохранения, желания, посещения и планы.'
+    }
+
+    return 'Статистика уже подключена. Как только у маршрутов появятся сохранения, желания и планы, значения отобразятся здесь.'
+  }, [isAvailable, isCalendarMode, isLoading, loadedTravelsCount, summaryScope, travelsCount])
 
   return (
     <View style={styles.section}>
@@ -177,6 +226,20 @@ export function ProfileTravelEngagementSummary({
           {isCalendarMode ? 'Мои статусы поездок' : 'Что делают пользователи с вашими маршрутами'}
         </Text>
         <Text style={styles.sectionDescription}>{description}</Text>
+        {!isCalendarMode ? (
+          <View style={styles.sectionMetaRow}>
+            <View style={styles.sectionMetaChip}>
+              <Text style={styles.sectionMetaChipText}>Маршрутов: {travelsCount}</Text>
+            </View>
+            {summaryScope === 'loaded' && (loadedTravelsCount ?? 0) > 0 && (loadedTravelsCount ?? 0) < travelsCount ? (
+              <View style={styles.sectionMetaChip}>
+                <Text style={styles.sectionMetaChipText}>
+                  Загружено: {loadedTravelsCount} из {travelsCount}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
       </View>
 
       {isLoading ? (

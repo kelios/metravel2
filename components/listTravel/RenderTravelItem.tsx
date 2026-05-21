@@ -37,6 +37,7 @@ const hasSameRenderedTravelSnapshot = (prev: Travel, next: Travel) => {
         p.countUnicIpView === n.countUnicIpView &&
         p.engagementStats?.favoritesCount === n.engagementStats?.favoritesCount &&
         p.engagementStats?.wishlistCount === n.engagementStats?.wishlistCount &&
+        p.engagementStats?.visitedCount === n.engagementStats?.visitedCount &&
         p.engagementStats?.plannedCount === n.engagementStats?.plannedCount &&
         p.url === n.url &&
         p.rating === n.rating &&
@@ -77,7 +78,14 @@ type RenderTravelItemProps = {
     viewportWidth?: number;
     hideAuthor?: boolean;
     visualVariant?: 'default' | 'home-featured';
+    isDeleting?: boolean;
 };
+
+type TravelListItemCompatProps = React.ComponentProps<typeof TravelListItem> & {
+    isDeleting?: boolean;
+};
+
+const TravelListItemCompat = TravelListItem as React.ComponentType<TravelListItemCompatProps>;
 
 function RenderTravelItem({
                               item,
@@ -97,6 +105,7 @@ function RenderTravelItem({
                               viewportWidth = 0,
                               hideAuthor = false,
                               visualVariant = 'default',
+                               isDeleting = false,
                           }: RenderTravelItemProps) {
 
     const cardWidthNumber = useMemo(() => {
@@ -120,7 +129,7 @@ function RenderTravelItem({
 
     return (
         <View style={containerStyle}>
-            <TravelListItem
+            <TravelListItemCompat
                 travel={item}
                 currentUserId={currentUserId}
                 isSuperuser={isSuperuser}
@@ -137,6 +146,7 @@ function RenderTravelItem({
                 imageHeight={imageHeight}
                 hideAuthor={hideAuthor}
                 visualVariant={visualVariant}
+                isDeleting={isDeleting}
             />
         </View>
     );
@@ -169,6 +179,7 @@ function areEqual(prev: RenderTravelItemProps, next: RenderTravelItemProps) {
     if (prev.viewportWidth !== next.viewportWidth) return false;
     if (prev.imageHeight !== next.imageHeight) return false;
     if (prev.visualVariant !== next.visualVariant) return false;
+    if (prev.isDeleting !== next.isDeleting) return false;
 
     return true;
 }

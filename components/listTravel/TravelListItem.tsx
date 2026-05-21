@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useMemo, useRef, useState } from 'react'
-import { Platform, Pressable, Text, View } from 'react-native'
+import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { router } from 'expo-router'
 
@@ -57,6 +57,7 @@ const ENGAGEMENT_METRICS: Array<{
 }> = [
   { key: 'favoritesCount', label: 'Сохранили', icon: 'heart' },
   { key: 'wishlistCount', label: 'Хочу', icon: 'bookmark' },
+  { key: 'visitedCount', label: 'Были', icon: 'check-circle' },
   { key: 'plannedCount', label: 'Планируют', icon: 'calendar' },
 ]
 
@@ -108,6 +109,7 @@ type Props = {
   hideAuthor?: boolean
   visualVariant?: 'default' | 'home-featured'
   webTouchAction?: string
+  isDeleting?: boolean
 }
 
 function TravelListItem({
@@ -128,6 +130,7 @@ function TravelListItem({
   hideAuthor = false,
   visualVariant = 'default',
   webTouchAction,
+  isDeleting = false,
 }: Props) {
   const colors = useThemedColors()
   const styles = useMemo(() => createTravelListItemStyles(colors), [colors])
@@ -400,18 +403,26 @@ function TravelListItem({
         title="Редактировать"
         onPress={handleEdit}
         style={styles.adminBtn}
+        disabled={isDeleting}
+        accessibilityState={{ disabled: isDeleting }}
       >
         <Feather name="edit-2" size={14} color={colors.text} />
       </CardActionPressable>
       <View style={styles.adminDivider} />
       <CardActionPressable
-        accessibilityLabel="Удалить"
-        title="Удалить"
+        accessibilityLabel={isDeleting ? 'Маршрут удаляется' : 'Удалить'}
+        title={isDeleting ? 'Удаляется…' : 'Удалить'}
         onPress={handleDelete}
         style={styles.adminBtn}
         testID="delete-button"
+        disabled={isDeleting}
+        accessibilityState={{ disabled: isDeleting, busy: isDeleting }}
       >
-        <Feather name="trash-2" size={14} color={colors.danger} />
+        {isDeleting ? (
+          <ActivityIndicator size="small" color={colors.danger} />
+        ) : (
+          <Feather name="trash-2" size={14} color={colors.danger} />
+        )}
       </CardActionPressable>
     </View>
   ) : null
@@ -549,6 +560,7 @@ function TravelListItem({
   const cardStyle = [
     styles.card,
     visualVariant === 'home-featured' && styles.cardHomeFeatured,
+    isDeleting && ({ opacity: 0.6 } as any),
     IS_WEB && ({ height: '100%' } as any),
     IS_WEB && ({ borderRadius: responsiveValues.borderRadius } as any),
     globalFocusStyles.focusable,
@@ -638,6 +650,7 @@ function areEqual(prev: Props, next: Props) {
       a.countUnicIpView !== b.countUnicIpView ||
       a.engagementStats?.favoritesCount !== b.engagementStats?.favoritesCount ||
       a.engagementStats?.wishlistCount !== b.engagementStats?.wishlistCount ||
+      a.engagementStats?.visitedCount !== b.engagementStats?.visitedCount ||
       a.engagementStats?.plannedCount !== b.engagementStats?.plannedCount ||
       a.rating !== b.rating ||
       a.rating_count !== b.rating_count
@@ -656,7 +669,8 @@ function areEqual(prev: Props, next: Props) {
     prev.isMobile === next.isMobile &&
     prev.cardWidth === next.cardWidth &&
     prev.imageHeight === next.imageHeight &&
-    prev.viewportWidth === next.viewportWidth
+    prev.viewportWidth === next.viewportWidth &&
+    prev.isDeleting === next.isDeleting
   )
 }
 
