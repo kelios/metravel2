@@ -13,7 +13,7 @@ async function setupFakeAuth(page: import('@playwright/test').Page) {
   await mockFakeAuthApis(page);
 }
 
-// Helper: mock travels API for "authored" travels shown in "Был" tab
+// Helper: mock travels API; календарь больше не должен автоматически подмешивать авторские маршруты.
 async function mockMyTravels(
   page: import('@playwright/test').Page,
   travels: unknown[] = []
@@ -126,7 +126,7 @@ test.describe('Calendar @smoke', () => {
     await page.waitForTimeout(300);
 
     // After clicking "Был", hint text should be visible
-    const visitedHint = page.getByText(/путешествия, которые ты добавил на сайт/i);
+    const visitedHint = page.getByText(/посещённые поездки за этот день|добавь её прямо в карточке/i);
     const hasHint = await visitedHint
       .first()
       .waitFor({ state: 'visible', timeout: 5_000 })
@@ -159,7 +159,7 @@ test.describe('Calendar @smoke', () => {
     await wishlistTab.click();
     await page.waitForTimeout(300);
 
-    const wishlistHint = page.getByText(/Избранные.*автоматически|Добавляй путешествия в избранное/i);
+    const wishlistHint = page.getByText(/списка желаний на этот день|статус «Хочу поехать»/i);
     const hasWishlistHint = await wishlistHint
       .first()
       .waitFor({ state: 'visible', timeout: 5_000 })
@@ -171,7 +171,7 @@ test.describe('Calendar @smoke', () => {
     }
   });
 
-  test('"Был" tab shows authored travels from API', async ({ page }) => {
+  test('"Был" tab ignores authored travels without an explicit user status', async ({ page }) => {
     const mockTravel = {
       id: 9001,
       name: 'Тестовое путешествие E2E',
@@ -222,22 +222,14 @@ test.describe('Calendar @smoke', () => {
     await wasTab.click();
     await page.waitForTimeout(500);
 
-    // Check if authored travel card appears
+    // Authored travel must not appear automatically without an explicit personal status.
     const travelCard = page.getByText(/Тестовое путешествие E2E/i);
-    const cardVisible = await travelCard
-      .first()
-      .waitFor({ state: 'visible', timeout: 8_000 })
-      .then(() => true)
-      .catch(() => false);
+    await expect(travelCard.first()).toBeHidden({ timeout: 8_000 }).catch(async () => {
+      await expect(travelCard.first()).not.toBeVisible()
+    })
 
-    if (cardVisible) {
-      await expect(travelCard.first()).toBeVisible();
-    } else {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Authored travel card not rendered (env limitation): skipping strict card assertion',
-      });
-    }
+    const emptyState = page.getByText(/Нет посещённых мест|Найти путешествия/i)
+    await expect(emptyState.first()).toBeVisible({ timeout: 8_000 })
   });
 
   test('"Планирую" tab shows MiniCalendar grid', async ({ page }) => {
@@ -419,71 +411,6 @@ test.describe('Calendar @smoke', () => {
     }
   });
 
-  test('year-only authored travel is placed on the calendar (no exact date)', async ({ page }) => {
-    // Путешествие без точной даты и без месяца — только год.
-    // Регрессия: раньше оно не получало дату и пропадало с сетки календаря.
-    const yearOnlyTravel = {
-      id: 9042,
-      name: 'Путешествие только с годом E2E',
-      slug: 'year-only-e2e',
-      url: '/travels/year-only-e2e',
-      travel_image_thumb_url: '',
-      countryName: 'Беларусь',
-      cityName: 'Гродно',
-      year: '2024',
-      publish: 1,
-      moderation: 1,
-      created_at: new Date().toISOString(),
-    };
-
-    await setupFakeAuth(page);
-    await mockMyTravels(page, [yearOnlyTravel]);
-    await preacceptCookies(page);
-    await gotoWithRetry(page, CALENDAR_URL);
-
-    const authPromptVisible = await page
-      .getByText(/Войдите в аккаунт/i)
-      .first()
-      .isVisible()
-      .catch(() => false);
-
-    if (authPromptVisible) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Auth prompt visible; skipping year-only placement assertion',
-      });
-      return;
-    }
-
-    const wasTab = page.getByRole('button', { name: /Был/i }).first();
-    const isVisible = await wasTab
-      .waitFor({ state: 'visible', timeout: 15_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (!isVisible) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Calendar tabs not available; skipping year-only placement assertion',
-      });
-      return;
-    }
-
-    await wasTab.click();
-    await page.waitForTimeout(800);
-
-    // Карточка путешествия должна отображаться.
-    await expect(
-      page.getByText(/Путешествие только с годом E2E/i).first()
-    ).toBeVisible({ timeout: 8_000 });
-
-    // Ключевая проверка фикса: MiniCalendar сфокусирован на годе путешествия (2024),
-    // а не на текущем годе. Заголовок MiniCalendar — "<Месяц> 2024".
-    const miniCalendarHeader = page.getByText(
-      /(Январь|Февраль|Март|Апрель|Май|Июнь|Июль|Август|Сентябрь|Октябрь|Ноябрь|Декабрь)\s+2024/
-    );
-    await expect(miniCalendarHeader.first()).toBeVisible({ timeout: 8_000 });
-  });
 
   test('calendar page has no console errors on load', async ({ page }) => {
     const errors: string[] = [];

@@ -72,6 +72,7 @@ export type Travel = {
     engagementStats?: {
         favoritesCount: number | null
         wishlistCount: number | null
+        visitedCount: number | null
         plannedCount: number | null
     }
 }

@@ -18,6 +18,17 @@ const travelCache = new Map<number, Travel>();
 const travelSlugCache = new Map<string, Travel>();
 const travelInFlight = new Map<string, Promise<Travel>>();
 
+type TravelPreloadWindow = Window & typeof globalThis & {
+    __metravelTravelPreload?: {
+        data?: unknown;
+        slug?: string;
+        isId?: boolean;
+        source?: string;
+    };
+    __metravelTravelPreloadPending?: boolean;
+    __metravelTravelPreloadPromise?: Promise<unknown>;
+};
+
 const getSlugCacheKey = (slug: string): string =>
     String(slug || '').replace(/^\/+/, '').trim();
 
@@ -33,6 +44,61 @@ const runSharedGuestTravelRequest = async (
     });
     travelInFlight.set(key, pending);
     return pending;
+};
+
+const hasMinimumTravelIdentity = (travel: Travel | undefined): travel is Travel => {
+    if (!travel) return false;
+    const hasIdentity =
+        (typeof travel.id === 'number' && Number.isFinite(travel.id) && travel.id > 0) ||
+        (typeof travel.slug === 'string' && travel.slug.trim().length > 0);
+    const hasName = typeof travel.name === 'string' && travel.name.trim().length > 0;
+    return hasIdentity && hasName;
+};
+
+const consumeDirectApiWindowPreload = (
+    key: string | number,
+    isId: boolean
+): Travel | undefined => {
+    if (typeof window === 'undefined') return undefined;
+    const win = window as TravelPreloadWindow;
+    const preload = win.__metravelTravelPreload;
+    if (preload?.source !== 'direct-api' || !preload.data) return undefined;
+
+    const matches = isId
+        ? preload.isId && String(preload.slug) === String(key)
+        : !preload.isId && getSlugCacheKey(String(preload.slug || '')) === String(key);
+    if (!matches) return undefined;
+
+    try {
+        const normalized = normalizeTravelItem(preload.data);
+        if (!hasMinimumTravelIdentity(normalized)) return undefined;
+        return normalized;
+    } catch {
+        return undefined;
+    }
+};
+
+const waitForDirectApiWindowPreload = async (
+    key: string | number,
+    isId: boolean
+): Promise<Travel | undefined> => {
+    if (typeof window === 'undefined') return undefined;
+    const immediate = consumeDirectApiWindowPreload(key, isId);
+    if (immediate) return immediate;
+
+    const win = window as TravelPreloadWindow;
+    if (!win.__metravelTravelPreloadPending && !win.__metravelTravelPreloadPromise) return undefined;
+
+    try {
+        await Promise.race([
+            win.__metravelTravelPreloadPromise ?? Promise.resolve(),
+            new Promise((resolve) => setTimeout(resolve, 1000)),
+        ]);
+    } catch {
+        // noop
+    }
+
+    return consumeDirectApiWindowPreload(key, isId);
 };
 
 const getErrorStatus = (error: unknown): number | null => {
@@ -235,6 +301,12 @@ export const fetchTravel = async (
     }
 
     if (!isAuthenticated) {
+        const preloaded = await waitForDirectApiWindowPreload(id, true);
+        if (preloaded) {
+            travelCache.set(id, preloaded);
+            return preloaded;
+        }
+
         return runSharedGuestTravelRequest(cacheKey, async () => {
             try {
                 const travel = await apiClient.get<Travel>(`/travels/${id}/`, LONG_TIMEOUT);
@@ -322,6 +394,15 @@ export const fetchTravelBySlug = async (
     };
 
     if (!isAuthenticated) {
+        const preloaded = await waitForDirectApiWindowPreload(slugCacheKey, false);
+        if (preloaded) {
+            travelSlugCache.set(slugCacheKey, preloaded);
+            if (typeof preloaded.id === 'number' && Number.isFinite(preloaded.id) && preloaded.id > 0) {
+                travelCache.set(preloaded.id, preloaded);
+            }
+            return preloaded;
+        }
+
         return runSharedGuestTravelRequest(cacheKey, async () => {
             const normalized = await fetchBySlugWithFallback();
             travelSlugCache.set(slugCacheKey, normalized);

@@ -172,44 +172,7 @@ describe('ProfileScreen', () => {
     resetExpoRouterMocks();
     resetTravelsApiMocks();
     mockFetchMyTravels.mockResolvedValue(require('../fixtures/travelFixtures').MY_TRAVELS_FIXTURE);
-    mockTravelStatusEntries = [
-      {
-        id: 201,
-        type: 'travel',
-        title: 'Visited status route',
-        url: '/travels/visited-status-route',
-        country: 'Беларусь',
-        status: 'visited',
-        addedAt: 1,
-      },
-      {
-        id: 202,
-        type: 'travel',
-        title: 'Wishlist status route',
-        url: '/travels/wishlist-status-route',
-        country: 'Армения',
-        status: 'wishlist',
-        addedAt: 2,
-      },
-      {
-        id: 203,
-        type: 'travel',
-        title: 'Planned status route',
-        url: '/travels/planned-status-route',
-        country: 'Польша',
-        status: 'planned',
-        addedAt: 3,
-      },
-      {
-        id: 204,
-        type: 'travel',
-        title: 'Second planned status route',
-        url: '/travels/second-planned-status-route',
-        country: 'Грузия',
-        status: 'planned',
-        addedAt: 4,
-      },
-    ];
+    mockTravelStatusEntries = [];
   });
 
   const renderProfile = () => {
@@ -241,9 +204,9 @@ describe('ProfileScreen', () => {
 
     // Header actions
     expect(await findByText('Редактировать')).toBeTruthy();
-    expect(await findByText('Календарь путешествий')).toBeTruthy();
-    expect(await findByText('Был')).toBeTruthy();
-    expect(await findByText('Планирую')).toBeTruthy();
+    expect(await findByText('Календарь')).toBeTruthy();
+    expect(await findByText('Были')).toBeTruthy();
+    expect(await findByText('Планируют')).toBeTruthy();
     expect(queryByText('По каждому путешествию')).toBeNull();
 
     await waitFor(() => {
@@ -255,10 +218,9 @@ describe('ProfileScreen', () => {
     expect(getAllByLabelText('Избранное: 2')).toHaveLength(1);
     expect(getAllByLabelText('История: 5')).toHaveLength(1);
 
-    expect(await findByLabelText('Сохранили: 7')).toBeTruthy();
-    expect(await findByLabelText('Хочу: 3')).toBeTruthy();
-    expect(await findByLabelText('Планируют: 2')).toBeTruthy();
-    expect(await findByLabelText('Сохранили: 0')).toBeTruthy();
+    expect(await findByLabelText('Сохранили: 8')).toBeTruthy();
+    expect(await findByLabelText('Были: 3')).toBeTruthy();
+    expect(await findByLabelText('Планируют: 7')).toBeTruthy();
   });
 
   it('logout works', async () => {
@@ -293,14 +255,14 @@ describe('ProfileScreen', () => {
 
     fireEvent.press(getByLabelText('Избранное: 1'));
     expect(await findByLabelText(/Fav 1/)).toBeTruthy();
-    expect(getAllByLabelText('Хочу: 0').length).toBeGreaterThan(0);
-    expect(getAllByLabelText('Планируют: 0').length).toBeGreaterThan(0);
+    expect(getAllByLabelText('Были: 3').length).toBeGreaterThan(0);
+    expect(getAllByLabelText('Планируют: 7').length).toBeGreaterThan(0);
 
     fireEvent.press(getByLabelText('История: 1'));
     expect(await findByLabelText(/History 1/)).toBeTruthy();
   });
 
-  it('filters profile list by clicked calendar status metric', async () => {
+  it('filters profile list by clicked author engagement metric', async () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(0, 0);
 
@@ -308,16 +270,16 @@ describe('ProfileScreen', () => {
 
     expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
 
-    fireEvent.press(getByLabelText('Хочу: 1'));
+    fireEvent.press(getByLabelText('Были: 3'));
 
-    expect(await findByLabelText(/Wishlist status route/)).toBeTruthy();
-    expect(queryByLabelText(/Visited status route/)).toBeNull();
-    expect(queryByLabelText(/Planned status route/)).toBeNull();
+    expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
+    expect(queryByLabelText(/My Travel 2/)).toBeNull();
+    expect(queryByLabelText(/My Travel 3/)).toBeNull();
 
-    fireEvent.press(getByLabelText('Планирую: 2'));
+    fireEvent.press(getByLabelText('Планируют: 7'));
 
-    expect(await findByLabelText(/Planned status route/)).toBeTruthy();
-    expect(await findByLabelText(/Second planned status route/)).toBeTruthy();
-    expect(queryByLabelText(/Wishlist status route/)).toBeNull();
+    expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
+    expect(await findByLabelText(/My Travel 2/)).toBeTruthy();
+    expect(queryByLabelText(/My Travel 3/)).toBeNull();
   });
 });

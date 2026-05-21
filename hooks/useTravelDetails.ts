@@ -124,19 +124,21 @@ export function consumePreloadedTravel(
   if (!matches) return undefined;
   try {
     const normalized = normalizeTravelItem(preload.data);
+    const shouldKeepDirectApiPreload =
+      options.allowDirectApiIncomplete && preload.source === 'direct-api';
     if (!hasSufficientPreloadedTravelData(normalized)) {
       if (
         options.allowDirectApiIncomplete &&
         preload.source === 'direct-api' &&
         hasMinimumPreloadedTravelIdentity(normalized)
       ) {
-        if (options.consume !== false) delete win.__metravelTravelPreload;
+        if (options.consume !== false && !shouldKeepDirectApiPreload) delete win.__metravelTravelPreload;
         return normalized;
       }
       if (options.consume !== false) delete win.__metravelTravelPreload;
       return undefined;
     }
-    if (options.consume !== false) delete win.__metravelTravelPreload;
+    if (options.consume !== false && !shouldKeepDirectApiPreload) delete win.__metravelTravelPreload;
     return normalized;
   } catch {
     if (options.consume !== false) delete win.__metravelTravelPreload;
@@ -156,18 +158,11 @@ async function waitForTravelPreload(slug: string, isId: boolean, idNum: number):
 
   let scriptLoaded = Boolean(win.__metravelTravelPreloadScriptLoaded);
   if (!scriptLoaded) {
-    const routePath = String(window.location?.pathname || '');
-    const isCurrentTravelRoute = routePath.startsWith('/travels/');
-    const expectedSegment = isId ? String(idNum) : slug;
-    const isSameRoute = isCurrentTravelRoute && routePath.replace(/^\/travels\//, '').replace(/\/+$/, '') === expectedSegment;
-
-    if (isSameRoute) {
-      const scriptDeadline = Date.now() + 350;
-      while (Date.now() < scriptDeadline) {
-        scriptLoaded = Boolean(win.__metravelTravelPreloadScriptLoaded);
-        if (scriptLoaded || win.__metravelTravelPreloadPending || win.__metravelTravelPreloadPromise) break;
-        await new Promise((resolve) => setTimeout(resolve, 25));
-      }
+    const scriptDeadline = Date.now() + 1000;
+    while (Date.now() < scriptDeadline) {
+      scriptLoaded = Boolean(win.__metravelTravelPreloadScriptLoaded);
+      if (scriptLoaded || win.__metravelTravelPreloadPending || win.__metravelTravelPreloadPromise) break;
+      await new Promise((resolve) => setTimeout(resolve, 25));
     }
   }
 

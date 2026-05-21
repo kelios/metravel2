@@ -46,8 +46,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAvatarUpload } from '@/hooks/useAvatarUpload';
 import { getStorageBatch } from '@/utils/storageBatch';
 import { hapticImpact } from '@/utils/haptics';
-import { computeTravelEngagementSummary, hasAnyTravelEngagementStats } from '@/utils/travelEngagementStats'
-import { useTravelStatusStore, type TravelStatus } from '@/stores/travelStatusStore';
+import { computeTravelEngagementSummary } from '@/utils/travelEngagementStats'
 
 interface UserStats {
   travelsCount: number;
@@ -60,29 +59,9 @@ const PROFILE_TRAVELS_PER_PAGE = PER_PAGE;
 const EMPTY_ENGAGEMENT_STATS = {
   favoritesCount: 0,
   wishlistCount: 0,
+  visitedCount: 0,
   plannedCount: 0,
 } as const;
-
-const CALENDAR_STATUS_BY_METRIC: Record<ProfileTravelEngagementMetricKey, TravelStatus> = {
-  favoritesCount: 'visited',
-  wishlistCount: 'wishlist',
-  plannedCount: 'planned',
-};
-
-const CALENDAR_EMPTY_COPY: Record<ProfileTravelEngagementMetricKey, { title: string; description: string }> = {
-  favoritesCount: {
-    title: 'Пока нет посещённых маршрутов',
-    description: 'Отметьте путешествие как «Был», и оно появится здесь.',
-  },
-  wishlistCount: {
-    title: 'Пока нет маршрутов в списке желаний',
-    description: 'Отметьте путешествие как «Хочу», и оно появится здесь.',
-  },
-  plannedCount: {
-    title: 'Пока нет запланированных маршрутов',
-    description: 'Отметьте путешествие как «Планирую», и оно появится здесь.',
-  },
-};
 
 const withVisibleEngagementStats = (travel: Travel): Travel =>
   travel.engagementStats
@@ -168,8 +147,6 @@ export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('travels');
   const [activeTravelMetric, setActiveTravelMetric] = useState<ProfileTravelEngagementMetricKey | null>(null);
   const lastEndReachedAtRef = useRef(0);
-  const travelStatusEntries = useTravelStatusStore((state) => state.entries);
-  const loadTravelStatuses = useTravelStatusStore((state) => state.loadLocal);
 
   const handleTotalChange = useCallback((total: number) => {
     setStats((prev) => ({ ...prev, travelsCount: total }));
@@ -249,8 +226,7 @@ export default function ProfileScreen() {
   useEffect(() => {
     loadUserInfo();
     loadTravels();
-    void loadTravelStatuses(userId ?? null);
-  }, [loadUserInfo, loadTravels, loadTravelStatuses, userId]);
+  }, [loadUserInfo, loadTravels]);
 
   const handleLogout = useCallback(async () => {
     try {
@@ -296,15 +272,6 @@ export default function ProfileScreen() {
     [myTravels]
   )
 
-  const calendarStatusTravels = useMemo<Travel[]>(() => {
-    if (!activeTravelMetric) return [];
-
-    const status = CALENDAR_STATUS_BY_METRIC[activeTravelMetric];
-    return travelStatusEntries
-      .filter((entry) => entry.status === status && isTravelListItem(entry))
-      .map((entry) => withVisibleEngagementStats(normalizeToTravel(entry)));
-  }, [activeTravelMetric, travelStatusEntries]);
-
   const authoredMetricTravels = useMemo<Travel[]>(() => {
     if (!activeTravelMetric) return [];
     return profileTravels.filter((travel) => (travel.engagementStats?.[activeTravelMetric] ?? 0) > 0);
@@ -317,34 +284,22 @@ export default function ProfileScreen() {
       return {
         favoritesCount: 0,
         wishlistCount: 0,
+        visitedCount: 0,
         plannedCount: 0,
       }
     }
 
-    if (!travelsHasMore && myTravels.length > 0 && myTravels.length === stats.travelsCount) {
-      return computeTravelEngagementSummary(myTravels)
+    if (!travelsHasMore && profileTravels.length > 0 && profileTravels.length === stats.travelsCount) {
+      return computeTravelEngagementSummary(profileTravels)
     }
 
     return null
-  }, [engagementSummary, myTravels, stats.travelsCount, travelsHasMore, travelsLoading])
+  }, [engagementSummary, profileTravels, stats.travelsCount, travelsHasMore, travelsLoading])
 
-  const calendarStatusSummary = useMemo(() => ({
-    favoritesCount: travelStatusEntries.filter((entry) => entry.status === 'visited').length,
-    wishlistCount: travelStatusEntries.filter((entry) => entry.status === 'wishlist').length,
-    plannedCount: travelStatusEntries.filter((entry) => entry.status === 'planned').length,
-  }), [travelStatusEntries])
-
-  const hasAuthorEngagementSummary =
-    stats.travelsCount > 0 && hasAnyTravelEngagementStats(authoredTravelEngagementSummary)
-  const profileTravelSummary = hasAuthorEngagementSummary
-    ? authoredTravelEngagementSummary
-    : calendarStatusSummary
-  const profileTravelSummaryMode = hasAuthorEngagementSummary ? 'author' : 'calendar'
+  const profileTravelSummary = authoredTravelEngagementSummary
 
   const currentData = useMemo<Travel[]>(() => {
-    if (activeTravelMetric) {
-      return profileTravelSummaryMode === 'calendar' ? calendarStatusTravels : authoredMetricTravels;
-    }
+    if (activeTravelMetric) return authoredMetricTravels;
     if (activeTab === 'travels') return profileTravels;
     if (activeTab === 'favorites') return normalizedFavorites.map(withVisibleEngagementStats);
     if (activeTab === 'history') return normalizedHistory.map(withVisibleEngagementStats);
@@ -353,10 +308,8 @@ export default function ProfileScreen() {
     activeTab,
     activeTravelMetric,
     authoredMetricTravels,
-    calendarStatusTravels,
     normalizedFavorites,
     normalizedHistory,
-    profileTravelSummaryMode,
     profileTravels,
   ]);
 
@@ -381,21 +334,17 @@ export default function ProfileScreen() {
 
   const emptyStateProps = useMemo(() => {
     if (activeTravelMetric) {
-      const copy = profileTravelSummaryMode === 'calendar'
-        ? CALENDAR_EMPTY_COPY[activeTravelMetric]
-        : {
-            title: 'Нет маршрутов с этой метрикой',
-            description: 'Когда у маршрутов появятся такие действия пользователей, они будут показаны здесь.',
-          };
+      const copy = {
+        title: 'Нет маршрутов с этой метрикой',
+        description: 'Когда пользователи начнут сохранять, посещать или планировать эти маршруты, карточки появятся здесь.',
+      };
 
       return {
-        icon: profileTravelSummaryMode === 'calendar'
-          ? CALENDAR_STATUS_BY_METRIC[activeTravelMetric] === 'visited'
-            ? 'check-circle'
-            : CALENDAR_STATUS_BY_METRIC[activeTravelMetric] === 'planned'
-              ? 'calendar'
-              : 'bookmark'
-          : 'bar-chart-2',
+        icon: activeTravelMetric === 'visitedCount'
+          ? 'check-circle'
+          : activeTravelMetric === 'plannedCount'
+            ? 'calendar'
+            : 'heart',
         title: copy.title,
         description: copy.description,
         variant: 'empty' as const,
@@ -431,7 +380,7 @@ export default function ProfileScreen() {
         };
       default: return { icon: 'layers', title: 'Пусто', description: '' };
     }
-  }, [activeTab, activeTravelMetric, profileTravelSummaryMode, router]);
+  }, [activeTab, activeTravelMetric, router]);
 
   const displayName = useMemo(
     () => (fullName || userInfo.name || 'Пользователь').trim(),
@@ -633,7 +582,7 @@ export default function ProfileScreen() {
               summary={profileTravelSummary}
               travelsCount={stats.travelsCount}
               isLoading={travelsLoading}
-              mode={profileTravelSummaryMode}
+              mode="author"
               activeMetric={activeTravelMetric}
               onMetricPress={handleTravelMetricPress}
             />
@@ -670,7 +619,6 @@ export default function ProfileScreen() {
       avatarUploading,
       handleQuickAction,
       profileTravelSummary,
-      profileTravelSummaryMode,
       stats,
       tabCounts,
       activeTab,

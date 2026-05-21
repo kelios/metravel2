@@ -11,7 +11,7 @@ import {
   type TravelEngagementStats,
 } from '@/utils/travelEngagementStats'
 
-type MetricKey = keyof TravelEngagementStats
+type MetricKey = 'favoritesCount' | 'visitedCount' | 'plannedCount'
 export type ProfileTravelEngagementMetricKey = MetricKey
 
 type MetricDefinition = {
@@ -22,13 +22,13 @@ type MetricDefinition = {
 
 const AUTHOR_METRICS: MetricDefinition[] = [
   { key: 'favoritesCount', label: 'Сохранили', icon: 'heart' },
-  { key: 'wishlistCount', label: 'Хочу', icon: 'bookmark' },
+  { key: 'visitedCount', label: 'Были', icon: 'check-circle' },
   { key: 'plannedCount', label: 'Планируют', icon: 'calendar' },
 ]
 
 const CALENDAR_METRICS: MetricDefinition[] = [
-  { key: 'favoritesCount', label: 'Был', icon: 'check-circle' },
-  { key: 'wishlistCount', label: 'Хочу', icon: 'bookmark' },
+  { key: 'visitedCount', label: 'Был', icon: 'check-circle' },
+  { key: 'favoritesCount', label: 'Хочу', icon: 'bookmark' },
   { key: 'plannedCount', label: 'Планирую', icon: 'calendar' },
 ]
 
@@ -139,7 +139,7 @@ export function ProfileTravelEngagementSummary({
     }
 
     if (isAvailable) {
-      return 'Сколько раз ваши путешествия сохранили в избранное и сколько пользователей хотят или уже планируют поездку.'
+      return 'Сколько пользователей сохранили ваши маршруты, уже были там или только планируют поездку.'
     }
 
     return 'Блок уже готов на фронтенде. Как только профиль начнёт получать агрегированные данные, значения появятся автоматически.'

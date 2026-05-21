@@ -12,12 +12,12 @@ Scope: testing and fixing the travel details page.
 | Code readiness | Developer | Done | Relevant files, risk zones, targeted test map | Wait for confirmed QA bug report |
 | Visual contract | UI/UX Designer | Done | Web/mobile UI contract and visual QA checklist | Feed checklist into QA and implementation |
 | Browser QA | QA Tester | Done | E2E detail tests passed; duplicate initial request bug candidate found | Triage duplicate request path |
-| Manual QA | Manual QA Tester | In progress | Manual user-flow testing for travel details page | Return manual QA report with steps, expected/actual, severity |
-| Bug triage | Orchestrator | Done | F-001 mapped to guest detail request dedupe | Re-test network request count |
-| Implementation | Developer | Done | Added guest in-flight/cache reuse for travel detail slug/id requests | Re-test fixed scenario |
-| Re-test | QA Tester | In progress | F-001 ready for verification | Re-test duplicate initial requests |
-| Review | Reviewer / Architect | Pending | Not started | Review diff, validation, and project-rule compliance |
-| Final validation | Orchestrator | Pending | Not started | Run scoped checks and record result |
+| Manual QA | Manual QA Tester | Done | Manual user-flow testing completed; comments 404 finding triaged | Add authenticated QA pass as a separate task |
+| Bug triage | Orchestrator | Done | F-001 and comments 404 console issue triaged | Keep board updated for new findings |
+| Implementation | Developer | Done | Fixed travel detail preload reuse and comments empty-state request path | Reviewer check if needed |
+| Re-test | QA Tester | Done | F-001 and comments request checks passed locally | Monitor future manual QA findings |
+| Review | Reviewer / Architect | Done | Reviewer caught incomplete F-001 fix; follow-up fix applied and re-tested locally | Re-review on next diff if requested |
+| Final validation | Orchestrator | Done | Targeted tests and local e2e browser checks completed | Hand off result |
 
 ## Role rules
 
@@ -53,11 +53,11 @@ Scope: testing and fixing the travel details page.
 | ID | Task | Owner | Status | Notes |
 | --- | --- | --- | --- | --- |
 | T-001 | Complete browser QA for travel details desktop and mobile | QA Tester | Done | `40 passed`; duplicate initial request bug candidate found |
-| T-002 | Complete manual user-flow QA for travel details desktop and mobile | Manual QA Tester | In progress | Include concrete steps, expected/actual, severity |
+| T-002 | Complete manual user-flow QA for travel details desktop and mobile | Manual QA Tester | Done | Guest/manual pass completed; authenticated pass remains separate |
 | T-003 | Triage duplicate initial travel detail requests | Orchestrator | Done | Root cause: concurrent guest consumers could start separate detail requests |
-| T-004 | Fix confirmed travel details bugs | Developer | Done | Shared guest in-flight/cache layer in `api/travelDetailsQueries.ts` |
-| T-005 | Re-test fixed scenarios | QA Tester + Manual QA Tester | In progress | Verify F-001 network request count and page behavior |
-| T-006 | Review final diff and validation | Reviewer / Architect | Pending | Check project rules and known risks |
+| T-004 | Fix confirmed travel details bugs | Developer | Done | Shared direct preload reuse; comments read by `travel_id` |
+| T-005 | Re-test fixed scenarios | QA Tester + Manual QA Tester | Done | Browser checks passed on local e2e build |
+| T-006 | Review final diff and validation | Reviewer / Architect | Done | Initial review blocked F-001; final local browser check passed after follow-up |
 
 ## Findings
 
@@ -69,8 +69,17 @@ Scope: testing and fixing the travel details page.
 - Expected: one initial request or reuse of preload/in-flight promise.
 - Actual: desktop observed 3-4 duplicate GET requests to `/api/travels/by-slug/kostel-svyatogo-antoniya-paduanskogo/`, including one aborted request; mobile observed 3 duplicate GET requests.
 - Candidate files: `hooks/useTravelDetails.ts`, `api/travelDetailsQueries.ts`, `app/+html.tsx`.
-- Fix: added guest request coalescing and detail cache for `fetchTravel` / `fetchTravelBySlug` in `api/travelDetailsQueries.ts`.
-- Status: fixed, pending QA re-test.
+- Fix: direct API preload payload is retained and reused by `useTravelDetails` and guest `fetchTravel` / `fetchTravelBySlug` callers, preventing duplicate React-side detail requests.
+- Status: fixed and locally re-tested.
+
+### F-002 Comments main-thread 404 console noise
+
+- Severity: medium / P2.
+- URL: `/travels/11-makarska-otdykh-u-moria-doroga-domoi-cherez-karlovats-i-venu`.
+- Expected: empty comments state renders without `GET /api/travel-comment-threads/main/?travel_id=...` 404 console noise.
+- Actual: manual QA observed `GET /api/travel-comment-threads/main/?travel_id=527` returning 404 while the UI rendered "Пока нет комментариев".
+- Fix: comments read path now fetches public comments directly by `travel_id`; it no longer probes main-thread metadata for the normal travel details read state.
+- Status: fixed and locally re-tested.
 
 ## Validation log
 
@@ -78,5 +87,8 @@ Scope: testing and fixing the travel details page.
 - `npx playwright test e2e/open-travel.spec.ts --project=chromium --workers=1` passed: travel details page can open from the travel list smoke flow.
 - QA reported `npx playwright test e2e/travel-detail-page.spec.ts e2e/travel-detail-interactions.spec.ts e2e/travel-rating.spec.ts --project=chromium --workers=1` passed: `40 passed`.
 - `npm run test:run -- __tests__/api/travels.test.ts` passed: `69 passed`.
-- `npm run test:run -- __tests__/hooks/useTravelDetails.test.ts` passed: `10 passed`.
+- `npm run test:run -- __tests__/hooks/useTravelDetails.test.ts` passed: `11 passed`.
+- `npm run test:run -- __tests__/components/CommentsSection.test.tsx __tests__/api/comments.test.ts` passed: `39 passed`.
 - `npx playwright test e2e/open-travel.spec.ts --project=chromium --workers=1` passed after F-001 fix.
+- Local e2e build browser check for F-001 passed: mobile direct travel URL emitted one `/api/travels/by-slug/kostel-svyatogo-antoniya-paduanskogo/` request, initiated by `travel-hero-preload.js`.
+- Local e2e build browser check for F-002 passed: comments section emitted no `/api/travel-comment-threads/main/` request and one `/api/travel-comments/?travel_id=527` request; no critical errors.

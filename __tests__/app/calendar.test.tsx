@@ -8,7 +8,6 @@ const mockPush = jest.fn()
 const mockLoadLocal = jest.fn(() => Promise.resolve())
 const mockSetStatus = jest.fn(() => Promise.resolve())
 const mockRemoveStatus = jest.fn(() => Promise.resolve())
-const mockLoadMyTravels = jest.fn(() => Promise.resolve())
 
 let mockEntries: TravelStatusEntry[] = []
 
@@ -21,19 +20,6 @@ jest.mock('@/context/AuthContext', () => ({
     isAuthenticated: true,
     authReady: true,
     userId: '42',
-  }),
-}))
-
-jest.mock('@/context/FavoritesContext', () => ({
-  useFavorites: () => ({
-    favorites: [],
-  }),
-}))
-
-jest.mock('@/hooks/useMyTravels', () => ({
-  useMyTravels: () => ({
-    myTravels: [],
-    load: mockLoadMyTravels,
   }),
 }))
 
@@ -153,5 +139,16 @@ describe('CalendarScreen status editor', () => {
     })
 
     expect(mockRemoveStatus).toHaveBeenCalledWith(123, '42')
+  })
+
+  it('shows empty state when the user has no explicit travel statuses', async () => {
+    mockEntries = []
+
+    render(<CalendarScreen />)
+
+    await waitFor(() => expect(mockLoadLocal).toHaveBeenCalledWith('42'))
+
+    expect(screen.getByText('Нет запланированных поездок')).toBeTruthy()
+    expect(screen.queryByText('Test Travel')).toBeNull()
   })
 })

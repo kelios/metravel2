@@ -16,7 +16,6 @@ import { useRouter } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import { useAuth } from '@/context/AuthContext'
-import { useFavorites } from '@/context/FavoritesContext'
 import {
   getTravelStatusCalendarDate,
   parseTravelStatusDateParts,
@@ -24,7 +23,6 @@ import {
   type TravelStatus,
   type TravelStatusEntry,
 } from '@/stores/travelStatusStore'
-import { useMyTravels } from '@/hooks/useMyTravels'
 import EmptyState from '@/components/ui/EmptyState'
 import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader'
 import MiniCalendar from '@/components/calendar/MiniCalendar'
@@ -38,7 +36,6 @@ import { webTouchScrollStyle } from '@/utils'
 import { buildCanonicalUrl } from '@/utils/seo'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { cleanTravelTitle } from '@/utils/cleanTravelTitle'
-import { buildTravelMonthFallbackDate } from '@/utils/travelCalendarDate'
 import {
   getDateFieldForTravelStatus,
   getExplicitTravelStatusDate,
@@ -59,11 +56,7 @@ type EmptyStateConfig = {
   actionLabel: string
 }
 
-type CalendarEntry = TravelStatusEntry & {
-  _isFavorite?: boolean
-  _isAuthored?: boolean
-  _fallbackCalendarDate?: string
-}
+type CalendarEntry = TravelStatusEntry
 
 type DateEditorState = {
   item: CalendarEntry
@@ -85,7 +78,7 @@ const EMPTY_STATE: Record<TravelStatus, EmptyStateConfig> = {
   visited: {
     icon: 'check-circle',
     title: 'Нет посещённых мест',
-    description: 'Открой любое путешествие и нажми «Добавить в план» → «Был здесь».',
+    description: 'Открой путешествие и отметь его статусом «Был здесь», чтобы оно появилось в этом разделе.',
     actionLabel: 'Найти путешествия',
   },
   planned: {
@@ -97,7 +90,7 @@ const EMPTY_STATE: Record<TravelStatus, EmptyStateConfig> = {
   wishlist: {
     icon: 'bookmark',
     title: 'Список желаний пуст',
-    description: 'Добавляй путешествия в избранное или открой путешествие и выбери «Хочу поехать».',
+    description: 'Открой путешествие и выбери статус «Хочу поехать», чтобы собрать здесь личный список желаний.',
     actionLabel: 'Найти маршруты',
   },
 }
@@ -105,7 +98,7 @@ const EMPTY_STATE: Record<TravelStatus, EmptyStateConfig> = {
 const TAB_HINTS: Record<TravelStatus, string> = {
   visited: 'Выбери дату, чтобы увидеть посещённые поездки за этот день. Если точной даты нет, добавь её прямо в карточке.',
   planned: 'Выбери дату, чтобы отфильтровать запланированные поездки.',
-  wishlist: 'Выбери дату, чтобы увидеть поездки из списка желаний на этот день. Избранные автоматически попадают сюда.',
+  wishlist: 'Выбери дату, чтобы увидеть поездки из своего списка желаний на этот день.',
 }
 
 const CARD_META_ICON_STYLE = { marginRight: 4 } as const
@@ -116,7 +109,7 @@ const DEFAULT_BUCKETS: StatusBuckets = {
 }
 
 const getCalendarDate = (entry: CalendarEntry): string | undefined =>
-  getExplicitTravelStatusDate(entry) ?? entry._fallbackCalendarDate ?? getTravelStatusCalendarDate(entry)
+  getExplicitTravelStatusDate(entry) ?? getTravelStatusCalendarDate(entry)
 
 const getLocationLabel = (entry: CalendarEntry) =>
   [entry.city, entry.country].filter(Boolean).join(', ')
@@ -128,7 +121,7 @@ const getTravelPeriodLabel = (entry: CalendarEntry) => {
 }
 
 const getEntryKey = (entry: CalendarEntry) =>
-  `${entry._isFavorite ? 'favorite' : entry._isAuthored ? 'authored' : entry.status}-${String(entry.id)}`
+  `${entry.status}-${String(entry.id)}`
 
 const isSelectedCalendarDate = (entry: CalendarEntry, selectedDate: string | null) => {
   if (!selectedDate) return true
@@ -146,7 +139,7 @@ const isSelectedCalendarDate = (entry: CalendarEntry, selectedDate: string | nul
 const groupEntriesByStatus = (entries: TravelStatusEntry[]): StatusBuckets =>
   entries.reduce<StatusBuckets>(
     (buckets, entry) => {
-      buckets[entry.status].push({ ...entry, _isFavorite: false })
+      buckets[entry.status].push(entry)
       return buckets
     },
     { visited: [], planned: [], wishlist: [] }
@@ -409,7 +402,7 @@ function DateEditorModal({
   const item = editor?.item
   const selectedStatus = editor?.status ?? item?.status
   const canClearDate = item ? Boolean(getExplicitTravelStatusDate(item)) : false
-  const canRemoveStatus = item ? !item._isFavorite && !item._isAuthored : false
+  const canRemoveStatus = Boolean(item)
   const subtitle = getDateEditorSubtitle(selectedStatus)
 
   return (
@@ -531,12 +524,10 @@ export default function CalendarScreen() {
   const colors = useThemedColors()
   const { width } = useWindowDimensions()
   const { isAuthenticated, authReady, userId } = useAuth()
-  const { favorites } = useFavorites()
   const entries = useTravelStatusStore((state) => state.entries)
   const loadLocal = useTravelStatusStore((state) => state.loadLocal)
   const setStatus = useTravelStatusStore((state) => state.setStatus)
   const removeStatus = useTravelStatusStore((state) => state.removeStatus)
-  const { myTravels, load: loadMyTravels } = useMyTravels({ userId: userId ?? null, perPage: 9999 })
 
   const [activeTab, setActiveTab] = useState<TravelStatus>('planned')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
@@ -574,75 +565,8 @@ export default function CalendarScreen() {
     }
   }, [authReady, isAuthenticated, loadLocal, userId])
 
-  useEffect(() => {
-    if (authReady && isAuthenticated) {
-      loadMyTravels()
-    }
-  }, [authReady, isAuthenticated, loadMyTravels])
-
   const explicitEntries = useMemo(() => groupEntriesByStatus(entries), [entries])
-
-  const statusIds = useMemo(() => new Set(entries.map((entry) => String(entry.id))), [entries])
-  const authoredEntries = useMemo<CalendarEntry[]>(() => {
-    const occupiedDates = new Set(
-      entries
-        .map(getTravelStatusCalendarDate)
-        .filter((date): date is string => Boolean(date))
-    )
-
-    return myTravels
-      .filter((travel) => !statusIds.has(String(travel.id)))
-      .map((travel) => {
-        const fallbackDate = buildTravelMonthFallbackDate({
-          year: travel.year,
-          monthName: travel.monthName,
-          seed: travel.id,
-          occupiedDates,
-          allowYearOnly: true,
-        })
-
-        if (fallbackDate) occupiedDates.add(fallbackDate)
-
-        return {
-          id: travel.id,
-          type: 'travel' as const,
-          title: travel.name,
-          imageUrl: travel.travel_image_thumb_url || travel.travel_image_thumb_small_url || undefined,
-          url: travel.url || `/travels/${travel.slug || travel.id}`,
-          country: travel.countryName || undefined,
-          city: travel.cityName || undefined,
-          travelYear: travel.year,
-          travelMonthName: travel.monthName,
-          status: 'visited' as const,
-          addedAt: travel.created_at ? new Date(travel.created_at).getTime() : 0,
-          _fallbackCalendarDate: fallbackDate,
-          _isAuthored: true,
-        }
-      })
-  }, [entries, myTravels, statusIds])
-
-  const favoriteEntries = useMemo<CalendarEntry[]>(() =>
-    (Array.isArray(favorites) ? favorites : [])
-      .filter((favorite) => favorite.type === 'travel' && !statusIds.has(String(favorite.id)))
-      .map((favorite) => ({
-        id: favorite.id,
-        type: 'travel' as const,
-        title: favorite.title,
-        imageUrl: favorite.imageUrl,
-        url: favorite.url,
-        country: favorite.country,
-        city: favorite.city,
-        status: 'wishlist' as const,
-        addedAt: favorite.addedAt,
-        _isFavorite: true,
-      })),
-  [favorites, statusIds])
-
-  const statusEntries = useMemo<StatusBuckets>(() => ({
-    visited: [...explicitEntries.visited, ...authoredEntries],
-    planned: explicitEntries.planned,
-    wishlist: [...explicitEntries.wishlist, ...favoriteEntries],
-  }), [authoredEntries, explicitEntries, favoriteEntries])
+  const statusEntries = explicitEntries
 
   const activeEntries = statusEntries[activeTab] ?? DEFAULT_BUCKETS[activeTab]
   const visibleEntries = useMemo(

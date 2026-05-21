@@ -4,7 +4,7 @@ export const MY_TRAVELS_FIXTURE = [
     title: 'My Travel 1',
     engagement_stats: {
       favorites_count: 7,
-      wishlist_count: 3,
+      visited_count: 3,
       planned_count: 2,
     },
   },
@@ -13,7 +13,7 @@ export const MY_TRAVELS_FIXTURE = [
     title: 'My Travel 2',
     engagementStats: {
       favoritesCount: 1,
-      wishlistCount: 0,
+      visitedCount: 0,
       plannedCount: 5,
     },
   },

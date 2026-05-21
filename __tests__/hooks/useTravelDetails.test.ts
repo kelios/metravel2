@@ -179,8 +179,42 @@ describe('useTravelDetails', () => {
       name: 'Awesome Trip',
       userName: 'Julia',
     });
-    // Sparse preload is still consumed so it cannot poison future navigations.
+    // Sparse non-direct preload is still consumed so it cannot poison future navigations.
     expect((global as any).window.__metravelTravelPreload).toBeUndefined();
+  });
+
+  it('reuses direct-api preload payloads even when they miss optional detail arrays', async () => {
+    (Platform.OS as any) = 'web';
+    (global as any).window = {
+      __metravelTravelPreload: {
+        data: {
+          id: 498,
+          slug: 'awesome-trip',
+          name: 'Awesome Trip',
+          description: '<p>Full text</p>',
+        },
+        slug: 'awesome-trip',
+        isId: false,
+        source: 'direct-api',
+      },
+    };
+
+    useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
+    (fetchTravelBySlug as jest.Mock).mockResolvedValue({ slug: 'awesome-trip', from: 'network' });
+
+    renderHook(() => useTravelDetails());
+
+    const data = await capturedQueryFn!();
+    expect(fetchTravelBySlug).not.toHaveBeenCalled();
+    expect(data).toEqual({
+      id: 498,
+      slug: 'awesome-trip',
+      name: 'Awesome Trip',
+      description: '<p>Full text</p>',
+    });
+    expect((global as any).window.__metravelTravelPreload).toEqual(
+      expect.objectContaining({ source: 'direct-api' })
+    );
   });
 
   it('waits briefly for bootstrap preload and uses it when full detail fields arrive', async () => {

@@ -9,14 +9,15 @@ describe('travelEngagementStats', () => {
     const stats = extractTravelEngagementStats({
       engagement_summary: {
         favorites_count: 12,
-        wishlist_count: '5',
+        visited_count: '5',
         planned_count: 3,
       },
     })
 
     expect(stats).toEqual({
       favoritesCount: 12,
-      wishlistCount: 5,
+      wishlistCount: null,
+      visitedCount: 5,
       plannedCount: 3,
     })
   })
@@ -31,6 +32,7 @@ describe('travelEngagementStats', () => {
         engagementStats: {
           favoritesCount: 4,
           wishlistCount: 2,
+          visitedCount: 2,
           plannedCount: 1,
         },
       },
@@ -38,6 +40,7 @@ describe('travelEngagementStats', () => {
         engagementStats: {
           favoritesCount: 3,
           wishlistCount: null,
+          visitedCount: null,
           plannedCount: 2,
         },
       },
@@ -46,6 +49,7 @@ describe('travelEngagementStats', () => {
     expect(summary).toEqual({
       favoritesCount: 7,
       wishlistCount: null,
+      visitedCount: null,
       plannedCount: 3,
     })
     expect(hasAnyTravelEngagementStats(summary)).toBe(true)
