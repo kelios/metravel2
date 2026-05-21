@@ -32,16 +32,8 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
         wrapper: {
           backgroundColor: colors.background,
           paddingHorizontal: DESIGN_TOKENS.spacing.md,
-          paddingTop: DESIGN_TOKENS.spacing.sm,
-          paddingBottom: DESIGN_TOKENS.spacing.xs,
-          ...Platform.select({
-            web: {
-              position: 'sticky',
-              top: 0,
-              zIndex: DESIGN_TOKENS.zIndex.sticky,
-            } as any,
-            default: {},
-          }),
+          paddingTop: DESIGN_TOKENS.spacing.xs,
+          paddingBottom: DESIGN_TOKENS.spacing.md,
         },
         tabRow: {
           flexDirection: 'row',
@@ -54,7 +46,7 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
           gap: DESIGN_TOKENS.spacing.xs,
           paddingVertical: DESIGN_TOKENS.spacing.sm,
           paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-          minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+          minHeight: 92,
           borderRadius: DESIGN_TOKENS.radii.lg,
           borderWidth: 1,
           borderColor: colors.borderLight,
@@ -68,6 +60,17 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
           borderColor: colors.primary,
           backgroundColor: colors.primarySoft,
         },
+        iconWrap: {
+          width: 34,
+          height: 34,
+          borderRadius: DESIGN_TOKENS.radii.sm,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: colors.backgroundSecondary,
+        },
+        activeIconWrap: {
+          backgroundColor: colors.surface,
+        },
         countText: {
           ...DESIGN_TOKENS.typography.scale.h2,
           color: colors.text,
@@ -79,7 +82,6 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
         labelRow: {
           flexDirection: 'row',
           alignItems: 'center',
-          gap: DESIGN_TOKENS.spacing.xxs,
         },
         tabText: {
           fontSize: DESIGN_TOKENS.typography.sizes.sm,
@@ -95,7 +97,7 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
   );
 
   const tabs: Array<{ key: ProfileTabKey; label: string; hint: string }> = [
-    { key: 'travels', label: 'Мои', hint: 'Показать ваши путешествия' },
+    { key: 'travels', label: 'Маршруты', hint: 'Показать ваши путешествия' },
     { key: 'favorites', label: 'Избранное', hint: 'Показать избранные путешествия' },
     { key: 'history', label: 'История', hint: 'Показать историю просмотров' },
   ];
@@ -121,13 +123,15 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
               accessibilityLabel={`${tab.label}: ${count}`}
               accessibilityHint={tab.hint}
             >
-              <Text style={[styles.countText, isActive && styles.activeCountText]}>{count}</Text>
-              <View style={styles.labelRow}>
+              <View style={[styles.iconWrap, isActive && styles.activeIconWrap]}>
                 <Feather
                   name={TAB_ICONS[tab.key]}
-                  size={15}
+                  size={16}
                   color={isActive ? colors.primary : colors.textMuted}
                 />
+              </View>
+              <Text style={[styles.countText, isActive && styles.activeCountText]}>{count}</Text>
+              <View style={styles.labelRow}>
                 <Text style={[styles.tabText, isActive && styles.activeTabText]}>
                   {tab.label}
                 </Text>

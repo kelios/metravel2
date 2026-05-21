@@ -22,6 +22,7 @@ import { ProfileTabs, type ProfileTabKey } from '@/components/profile/ProfileTab
 import { ProfileQuickActions } from '@/components/profile/ProfileQuickActions';
 import {
   ProfileTravelEngagementSummary,
+  type ProfileTravelEngagementMetricKey,
 } from '@/components/profile/ProfileTravelEngagementSection'
 import EmptyState from '@/components/ui/EmptyState';
 import { isTravelListItem, normalizeToTravel } from '@/components/profile/travelNormalize';
@@ -46,7 +47,7 @@ import { useAvatarUpload } from '@/hooks/useAvatarUpload';
 import { getStorageBatch } from '@/utils/storageBatch';
 import { hapticImpact } from '@/utils/haptics';
 import { computeTravelEngagementSummary, hasAnyTravelEngagementStats } from '@/utils/travelEngagementStats'
-import { useTravelStatusStore } from '@/stores/travelStatusStore';
+import { useTravelStatusStore, type TravelStatus } from '@/stores/travelStatusStore';
 
 interface UserStats {
   travelsCount: number;
@@ -56,6 +57,40 @@ interface UserStats {
 
 const keyExtractor = (item: Travel, index: number) => `${item.id}-${index}`;
 const PROFILE_TRAVELS_PER_PAGE = PER_PAGE;
+const EMPTY_ENGAGEMENT_STATS = {
+  favoritesCount: 0,
+  wishlistCount: 0,
+  plannedCount: 0,
+} as const;
+
+const CALENDAR_STATUS_BY_METRIC: Record<ProfileTravelEngagementMetricKey, TravelStatus> = {
+  favoritesCount: 'visited',
+  wishlistCount: 'wishlist',
+  plannedCount: 'planned',
+};
+
+const CALENDAR_EMPTY_COPY: Record<ProfileTravelEngagementMetricKey, { title: string; description: string }> = {
+  favoritesCount: {
+    title: 'Пока нет посещённых маршрутов',
+    description: 'Отметьте путешествие как «Был», и оно появится здесь.',
+  },
+  wishlistCount: {
+    title: 'Пока нет маршрутов в списке желаний',
+    description: 'Отметьте путешествие как «Хочу», и оно появится здесь.',
+  },
+  plannedCount: {
+    title: 'Пока нет запланированных маршрутов',
+    description: 'Отметьте путешествие как «Планирую», и оно появится здесь.',
+  },
+};
+
+const withVisibleEngagementStats = (travel: Travel): Travel =>
+  travel.engagementStats
+    ? travel
+    : {
+        ...travel,
+        engagementStats: EMPTY_ENGAGEMENT_STATS,
+      };
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -131,6 +166,7 @@ export default function ProfileScreen() {
     viewsCount: 0,
   });
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('travels');
+  const [activeTravelMetric, setActiveTravelMetric] = useState<ProfileTravelEngagementMetricKey | null>(null);
   const lastEndReachedAtRef = useRef(0);
   const travelStatusEntries = useTravelStatusStore((state) => state.entries);
   const loadTravelStatuses = useTravelStatusStore((state) => state.loadLocal);
@@ -256,27 +292,23 @@ export default function ProfileScreen() {
   );
 
   const profileTravels = useMemo<Travel[]>(() =>
-    myTravels.map((travel) =>
-      travel.engagementStats
-        ? travel
-        : {
-            ...travel,
-            engagementStats: {
-              favoritesCount: 0,
-              wishlistCount: 0,
-              plannedCount: 0,
-            },
-          }
-    ),
+    myTravels.map(withVisibleEngagementStats),
     [myTravels]
   )
 
-  const currentData = useMemo<Travel[]>(() => {
-    if (activeTab === 'travels') return profileTravels;
-    if (activeTab === 'favorites') return normalizedFavorites;
-    if (activeTab === 'history') return normalizedHistory;
-    return [];
-  }, [activeTab, normalizedFavorites, normalizedHistory, profileTravels]);
+  const calendarStatusTravels = useMemo<Travel[]>(() => {
+    if (!activeTravelMetric) return [];
+
+    const status = CALENDAR_STATUS_BY_METRIC[activeTravelMetric];
+    return travelStatusEntries
+      .filter((entry) => entry.status === status && isTravelListItem(entry))
+      .map((entry) => withVisibleEngagementStats(normalizeToTravel(entry)));
+  }, [activeTravelMetric, travelStatusEntries]);
+
+  const authoredMetricTravels = useMemo<Travel[]>(() => {
+    if (!activeTravelMetric) return [];
+    return profileTravels.filter((travel) => (travel.engagementStats?.[activeTravelMetric] ?? 0) > 0);
+  }, [activeTravelMetric, profileTravels]);
 
   const authoredTravelEngagementSummary = useMemo(() => {
     if (engagementSummary) return engagementSummary
@@ -309,6 +341,35 @@ export default function ProfileScreen() {
     : calendarStatusSummary
   const profileTravelSummaryMode = hasAuthorEngagementSummary ? 'author' : 'calendar'
 
+  const currentData = useMemo<Travel[]>(() => {
+    if (activeTravelMetric) {
+      return profileTravelSummaryMode === 'calendar' ? calendarStatusTravels : authoredMetricTravels;
+    }
+    if (activeTab === 'travels') return profileTravels;
+    if (activeTab === 'favorites') return normalizedFavorites.map(withVisibleEngagementStats);
+    if (activeTab === 'history') return normalizedHistory.map(withVisibleEngagementStats);
+    return [];
+  }, [
+    activeTab,
+    activeTravelMetric,
+    authoredMetricTravels,
+    calendarStatusTravels,
+    normalizedFavorites,
+    normalizedHistory,
+    profileTravelSummaryMode,
+    profileTravels,
+  ]);
+
+  const handleTravelMetricPress = useCallback((metric: ProfileTravelEngagementMetricKey) => {
+    setActiveTab('travels');
+    setActiveTravelMetric((current) => (current === metric ? null : metric));
+  }, []);
+
+  const handleProfileTabChange = useCallback((tab: ProfileTabKey) => {
+    setActiveTravelMetric(null);
+    setActiveTab(tab);
+  }, []);
+
   const rows = useMemo(() => {
     const cols = Math.max(1, (isCardsSingleColumn ? 1 : gridColumns) || 1);
     const result: Travel[][] = [];
@@ -319,6 +380,29 @@ export default function ProfileScreen() {
   }, [currentData, gridColumns, isCardsSingleColumn]);
 
   const emptyStateProps = useMemo(() => {
+    if (activeTravelMetric) {
+      const copy = profileTravelSummaryMode === 'calendar'
+        ? CALENDAR_EMPTY_COPY[activeTravelMetric]
+        : {
+            title: 'Нет маршрутов с этой метрикой',
+            description: 'Когда у маршрутов появятся такие действия пользователей, они будут показаны здесь.',
+          };
+
+      return {
+        icon: profileTravelSummaryMode === 'calendar'
+          ? CALENDAR_STATUS_BY_METRIC[activeTravelMetric] === 'visited'
+            ? 'check-circle'
+            : CALENDAR_STATUS_BY_METRIC[activeTravelMetric] === 'planned'
+              ? 'calendar'
+              : 'bookmark'
+          : 'bar-chart-2',
+        title: copy.title,
+        description: copy.description,
+        variant: 'empty' as const,
+        action: { label: 'Показать все маршруты', onPress: () => setActiveTravelMetric(null) },
+      };
+    }
+
     switch (activeTab) {
       case 'travels':
         return {
@@ -347,7 +431,7 @@ export default function ProfileScreen() {
         };
       default: return { icon: 'layers', title: 'Пусто', description: '' };
     }
-  }, [activeTab, router]);
+  }, [activeTab, activeTravelMetric, profileTravelSummaryMode, router]);
 
   const displayName = useMemo(
     () => (fullName || userInfo.name || 'Пользователь').trim(),
@@ -540,11 +624,18 @@ export default function ProfileScreen() {
               onAvatarUpload={pickAndUpload}
               avatarUploading={avatarUploading}
             />
+            <ProfileTabs
+              activeTab={activeTab}
+              onChangeTab={handleProfileTabChange}
+              counts={tabCounts}
+            />
             <ProfileTravelEngagementSummary
               summary={profileTravelSummary}
               travelsCount={stats.travelsCount}
               isLoading={travelsLoading}
               mode={profileTravelSummaryMode}
+              activeMetric={activeTravelMetric}
+              onMetricPress={handleTravelMetricPress}
             />
             <ProfileCompleteness
               user={userProp}
@@ -554,11 +645,6 @@ export default function ProfileScreen() {
             <ProfileQuickActions onPress={handleQuickAction} />
           </>
         )}
-        <ProfileTabs
-          activeTab={activeTab}
-          onChangeTab={setActiveTab}
-          counts={tabCounts}
-        />
         {showClearButton ? (
           <View style={styles.tabActions}>
             <View style={styles.tabActionsRow}>
@@ -588,8 +674,11 @@ export default function ProfileScreen() {
       stats,
       tabCounts,
       activeTab,
+      activeTravelMetric,
       showClearButton,
       handleClearActiveTab,
+      handleProfileTabChange,
+      handleTravelMetricPress,
       travelsLoading,
     ]
   );

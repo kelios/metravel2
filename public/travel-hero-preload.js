@@ -274,7 +274,7 @@
         if (!data) return;
 
         // Cache API response globally so React Query can reuse it (avoids double fetch)
-        try { window.__metravelTravelPreload = { data: data, slug: slug, isId: isId }; } catch (_e) {}
+        try { window.__metravelTravelPreload = { data: data, slug: slug, isId: isId, source: 'direct-api' }; } catch (_e) {}
 
         // ── SEO: patch meta tags BEFORE React hydration so crawlers see real data ──
         try {

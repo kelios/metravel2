@@ -4,7 +4,6 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import {
-  useMainThread,
   useTravelComments,
   useCreateComment,
   useUpdateComment,
@@ -33,19 +32,12 @@ export function useCommentsData(travelId: number, options?: { enabled?: boolean 
   const didWarnAllSubThread = useRef(false);
 
   const {
-    data: mainThread,
-    isLoading: isLoadingThread,
-    error: threadError,
-    refetch: refetchThread,
-  } = useMainThread(travelId, { enabled: isEnabled });
-
-  const {
     data: comments = [],
     isLoading: isLoadingComments,
     error: commentsError,
     refetch: refetchComments,
-  } = useTravelComments(travelId, mainThread?.id, {
-    enabled: isEnabled && !isLoadingThread && !!mainThread?.id,
+  } = useTravelComments(travelId, null, {
+    enabled: isEnabled,
   });
 
   const createComment = useCreateComment();
@@ -73,9 +65,9 @@ export function useCommentsData(travelId: number, options?: { enabled?: boolean 
   // Handlers
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    try { await Promise.allSettled([refetchThread(), refetchComments()]); }
+    try { await refetchComments(); }
     finally { setIsRefreshing(false); }
-  }, [refetchComments, refetchThread]);
+  }, [refetchComments]);
 
   const handleSubmitComment = useCallback(async (text: string) => {
     if (editComment) {
@@ -141,13 +133,13 @@ export function useCommentsData(travelId: number, options?: { enabled?: boolean 
     expandedThreads,
     replyTo,
     editComment,
-    isLoading: isLoadingThread || isLoadingComments,
+    isLoading: isLoadingComments,
     isRefreshing,
     isSubmitting: createComment.isPending || updateComment.isPending || replyToComment.isPending,
     hasError: !!commentsError,
-    threadError,
+    threadError: null,
     commentsError,
-    mainThread,
+    mainThread: null,
     handleRefresh,
     handleSubmitComment,
     handleReply: isAuthenticated ? handleReply : undefined,

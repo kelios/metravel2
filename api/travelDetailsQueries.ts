@@ -15,6 +15,25 @@ import {
 } from './travelQueryShared';
 
 const travelCache = new Map<number, Travel>();
+const travelSlugCache = new Map<string, Travel>();
+const travelInFlight = new Map<string, Promise<Travel>>();
+
+const getSlugCacheKey = (slug: string): string =>
+    String(slug || '').replace(/^\/+/, '').trim();
+
+const runSharedGuestTravelRequest = async (
+    key: string,
+    request: () => Promise<Travel>
+): Promise<Travel> => {
+    const existing = travelInFlight.get(key);
+    if (existing) return existing;
+
+    const pending = request().finally(() => {
+        travelInFlight.delete(key);
+    });
+    travelInFlight.set(key, pending);
+    return pending;
+};
 
 const getErrorStatus = (error: unknown): number | null => {
     if (!error || typeof error !== 'object') return null;
@@ -209,17 +228,30 @@ export const fetchTravel = async (
 ): Promise<Travel> => {
     const token = await getSecureItem(TOKEN_KEY);
     const isAuthenticated = Boolean(token);
+    const cacheKey = `id:${id}`;
 
     if (!isAuthenticated && travelCache.has(id)) {
         return travelCache.get(id) as Travel;
     }
 
+    if (!isAuthenticated) {
+        return runSharedGuestTravelRequest(cacheKey, async () => {
+            try {
+                const travel = await apiClient.get<Travel>(`/travels/${id}/`, LONG_TIMEOUT);
+                const normalized = normalizeTravelItem(travel);
+                travelCache.set(id, normalized);
+                return normalized;
+            } catch (e: unknown) {
+                if (isAbortError(e)) throw e;
+                devError('Error fetching Travel:', e);
+                throw e;
+            }
+        });
+    }
+
     try {
         const travel = await apiClient.get<Travel>(`/travels/${id}/`, LONG_TIMEOUT, { signal: options?.signal });
         const normalized = normalizeTravelItem(travel);
-        if (!isAuthenticated) {
-            travelCache.set(id, normalized);
-        }
         return normalized;
     } catch (e: unknown) {
         if (isAbortError(e)) throw e;
@@ -232,41 +264,73 @@ export const fetchTravelBySlug = async (
     slug: string,
     options?: { signal?: AbortSignal }
 ): Promise<Travel> => {
-    try {
-        const safeSlug = encodeURIComponent(String(slug).replace(/^\/+/, ''));
-        const travel = await apiClient.get<Travel>(`/travels/by-slug/${safeSlug}/`, LONG_TIMEOUT, { signal: options?.signal });
-        return normalizeTravelItem(travel);
-    } catch (e: unknown) {
-        if (isAbortError(e)) throw e;
+    const token = await getSecureItem(TOKEN_KEY);
+    const isAuthenticated = Boolean(token);
+    const slugCacheKey = getSlugCacheKey(slug);
+    const cacheKey = `slug:${slugCacheKey}`;
 
-        const status = getErrorStatus(e);
-        if (shouldUseSlugFallback(status)) {
-            const fallbackTravel = await findTravelBySlugFallbackWithDeadline(slug, options);
-            if (fallbackTravel) {
-                const fallbackTravelId = Number(fallbackTravel.id);
-                if (Number.isFinite(fallbackTravelId) && fallbackTravelId > 0) {
-                    const detailedTravel = await fetchTravel(fallbackTravelId, options);
+    if (!isAuthenticated && travelSlugCache.has(slugCacheKey)) {
+        return travelSlugCache.get(slugCacheKey) as Travel;
+    }
+
+    const fetchBySlug = async (requestOptions?: { signal?: AbortSignal }) => {
+        const safeSlug = encodeURIComponent(slugCacheKey);
+        const travel = await apiClient.get<Travel>(
+            `/travels/by-slug/${safeSlug}/`,
+            LONG_TIMEOUT,
+            requestOptions,
+        );
+        return normalizeTravelItem(travel);
+    };
+
+    const fetchBySlugWithFallback = async (requestOptions?: { signal?: AbortSignal }) => {
+        try {
+            return await fetchBySlug(requestOptions);
+        } catch (e: unknown) {
+            if (isAbortError(e)) throw e;
+
+            const status = getErrorStatus(e);
+            if (shouldUseSlugFallback(status)) {
+                const fallbackTravel = await findTravelBySlugFallbackWithDeadline(slug, requestOptions);
+                if (fallbackTravel) {
+                    const fallbackTravelId = Number(fallbackTravel.id);
+                    if (Number.isFinite(fallbackTravelId) && fallbackTravelId > 0) {
+                        const detailedTravel = await fetchTravel(fallbackTravelId, requestOptions);
+                        if (__DEV__) {
+                            devWarn('Resolved travel by slug fallback via detail fetch', {
+                                requestedSlug: slug,
+                                resolvedSlug: fallbackTravel.slug,
+                                id: fallbackTravelId,
+                            });
+                        }
+                        return normalizeTravelItem(detailedTravel);
+                    }
                     if (__DEV__) {
-                        devWarn('Resolved travel by slug fallback via detail fetch', {
+                        devWarn('Resolved travel by slug fallback', {
                             requestedSlug: slug,
                             resolvedSlug: fallbackTravel.slug,
-                            id: fallbackTravelId,
+                            id: fallbackTravel.id,
                         });
                     }
-                    return normalizeTravelItem(detailedTravel);
+                    return normalizeTravelItem(fallbackTravel);
                 }
-                if (__DEV__) {
-                    devWarn('Resolved travel by slug fallback', {
-                        requestedSlug: slug,
-                        resolvedSlug: fallbackTravel.slug,
-                        id: fallbackTravel.id,
-                    });
-                }
-                return normalizeTravelItem(fallbackTravel);
             }
-        }
 
-        devError('Error fetching Travel by slug:', e);
-        throw e;
+            devError('Error fetching Travel by slug:', e);
+            throw e;
+        }
+    };
+
+    if (!isAuthenticated) {
+        return runSharedGuestTravelRequest(cacheKey, async () => {
+            const normalized = await fetchBySlugWithFallback();
+            travelSlugCache.set(slugCacheKey, normalized);
+            if (typeof normalized.id === 'number' && Number.isFinite(normalized.id) && normalized.id > 0) {
+                travelCache.set(normalized.id, normalized);
+            }
+            return normalized;
+        });
     }
+
+    return fetchBySlugWithFallback({ signal: options?.signal });
 };

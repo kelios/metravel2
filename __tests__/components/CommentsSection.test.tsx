@@ -222,17 +222,17 @@ describe('CommentsSection', () => {
       mockUseAuth.mockReturnValue(createAuthState({ isAuthenticated: true, userId: '1', username: 'User' }));
     });
 
-    it('should show loading indicator when fetching thread', () => {
+    it('should show loading indicator when fetching travel comments', () => {
       mockUseMainThread.mockReturnValue({
         data: undefined,
-        isLoading: true,
+        isLoading: false,
         error: null,
         refetch: jest.fn(),
       } as any);
 
       mockUseTravelComments.mockReturnValue({
         data: [],
-        isLoading: false,
+        isLoading: true,
         error: null,
         refetch: jest.fn(),
       } as any);

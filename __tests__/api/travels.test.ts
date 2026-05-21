@@ -816,6 +816,50 @@ describe('src/api/travelsApi.ts', () => {
       expect(mockedApiClientGet.mock.calls[0][0]).toBe('/travels/by-slug/sluggy/');
     });
 
+    it('fetchTravelBySlug переиспользует in-flight guest-запросы для одного slug', async () => {
+      const { fetchTravelBySlug } = loadTravelsApi();
+      let resolveRequest: ((value: any) => void) | null = null;
+      const pendingRequest = new Promise((resolve) => {
+        resolveRequest = resolve;
+      });
+
+      mockedGetSecureItem.mockResolvedValue(null);
+      mockedApiClientGet.mockReturnValue(pendingRequest as any);
+
+      const first = fetchTravelBySlug('sluggy');
+      const second = fetchTravelBySlug('sluggy');
+
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(mockedApiClientGet).toHaveBeenCalledTimes(1);
+      resolveRequest?.({ id: 1, slug: 'sluggy', name: 'Sluggy' });
+
+      await expect(Promise.all([first, second])).resolves.toEqual([
+        { id: 1, slug: 'sluggy', name: 'Sluggy' },
+        { id: 1, slug: 'sluggy', name: 'Sluggy' },
+      ]);
+    });
+
+    it('fetchTravelBySlug кэширует guest detail после успешного slug-запроса', async () => {
+      const { fetchTravelBySlug } = loadTravelsApi();
+      mockedGetSecureItem.mockResolvedValue(null);
+      mockedApiClientGet.mockResolvedValueOnce({ id: 1, slug: 'sluggy', name: 'Sluggy' } as any);
+
+      await expect(fetchTravelBySlug('sluggy')).resolves.toEqual({
+        id: 1,
+        slug: 'sluggy',
+        name: 'Sluggy',
+      });
+      await expect(fetchTravelBySlug('sluggy')).resolves.toEqual({
+        id: 1,
+        slug: 'sluggy',
+        name: 'Sluggy',
+      });
+
+      expect(mockedApiClientGet).toHaveBeenCalledTimes(1);
+    });
+
     it('fetchTravelBySlug использует fallback-поиск по похожему slug при 404', async () => {
       const { fetchTravelBySlug } = loadTravelsApi();
       const notFoundError = Object.assign(new Error('not found'), { status: 404 });

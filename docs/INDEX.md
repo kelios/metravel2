@@ -11,6 +11,7 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 - `docs/TESTING.md` — Jest + Playwright (E2E) + CI quality gate
 - `docs/RELEASE.md` — release/deploy flow
 - `docs/PRODUCTION_CHECKLIST.md` — production checklist
+- `docs/AGENT_WORKBOARD.md` — active agent board for current multi-agent work
 - `docs/TRAVEL_PERFORMANCE_REFACTOR.md` — рабочая спецификация performance refactor для travel details web
 - `docs/POLISH_CAMINO_PDF_UI_AUDIT.md` — постраничный UI-аудит PDF и пошаговый план редизайна
 

@@ -44,7 +44,15 @@ jest.mock('@/api/user', () => ({
 }));
 
 const mockLoadTravelStatuses = jest.fn(() => Promise.resolve());
-let mockTravelStatusEntries: Array<{ status: 'visited' | 'planned' | 'wishlist' }> = [];
+let mockTravelStatusEntries: Array<{
+  id: number;
+  type: 'travel';
+  title: string;
+  url: string;
+  country?: string;
+  status: 'visited' | 'planned' | 'wishlist';
+  addedAt: number;
+}> = [];
 
 jest.mock('@/stores/travelStatusStore', () => ({
   useTravelStatusStore: jest.fn((selector?: (state: any) => unknown) => {
@@ -165,10 +173,42 @@ describe('ProfileScreen', () => {
     resetTravelsApiMocks();
     mockFetchMyTravels.mockResolvedValue(require('../fixtures/travelFixtures').MY_TRAVELS_FIXTURE);
     mockTravelStatusEntries = [
-      { status: 'visited' },
-      { status: 'wishlist' },
-      { status: 'planned' },
-      { status: 'planned' },
+      {
+        id: 201,
+        type: 'travel',
+        title: 'Visited status route',
+        url: '/travels/visited-status-route',
+        country: 'Беларусь',
+        status: 'visited',
+        addedAt: 1,
+      },
+      {
+        id: 202,
+        type: 'travel',
+        title: 'Wishlist status route',
+        url: '/travels/wishlist-status-route',
+        country: 'Армения',
+        status: 'wishlist',
+        addedAt: 2,
+      },
+      {
+        id: 203,
+        type: 'travel',
+        title: 'Planned status route',
+        url: '/travels/planned-status-route',
+        country: 'Польша',
+        status: 'planned',
+        addedAt: 3,
+      },
+      {
+        id: 204,
+        type: 'travel',
+        title: 'Second planned status route',
+        url: '/travels/second-planned-status-route',
+        country: 'Грузия',
+        status: 'planned',
+        addedAt: 4,
+      },
     ];
   });
 
@@ -190,7 +230,7 @@ describe('ProfileScreen', () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(2, 5);
 
-    const { findByText, findByLabelText, getByLabelText, queryByText } = renderProfile();
+    const { findByText, findByLabelText, getByLabelText, getAllByLabelText, queryByText } = renderProfile();
 
     expect(await findByText('Test User')).toBeTruthy();
     expect(await findByText('user@example.com')).toBeTruthy();
@@ -207,12 +247,16 @@ describe('ProfileScreen', () => {
     expect(queryByText('По каждому путешествию')).toBeNull();
 
     await waitFor(() => {
-      expect(getByLabelText('Мои: 3')).toBeTruthy();
+      expect(getByLabelText('Маршруты: 3')).toBeTruthy();
       expect(getByLabelText('Избранное: 2')).toBeTruthy();
       expect(getByLabelText('История: 5')).toBeTruthy();
     });
+    expect(getAllByLabelText('Маршруты: 3')).toHaveLength(1);
+    expect(getAllByLabelText('Избранное: 2')).toHaveLength(1);
+    expect(getAllByLabelText('История: 5')).toHaveLength(1);
 
     expect(await findByLabelText('Сохранили: 7')).toBeTruthy();
+    expect(await findByLabelText('Хочу: 3')).toBeTruthy();
     expect(await findByLabelText('Планируют: 2')).toBeTruthy();
     expect(await findByLabelText('Сохранили: 0')).toBeTruthy();
   });
@@ -242,17 +286,38 @@ describe('ProfileScreen', () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(1, 1);
 
-    const { getAllByText, findByLabelText } = renderProfile();
+    const { getByLabelText, getAllByLabelText, findByLabelText } = renderProfile();
 
-    // По умолчанию активна вкладка "Мои" и показываются путешествия пользователя
+    // По умолчанию активна вкладка "Маршруты" и показываются путешествия пользователя
     expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
 
-    const favCandidates = getAllByText('Избранное');
-    fireEvent.press(favCandidates[favCandidates.length - 1]);
+    fireEvent.press(getByLabelText('Избранное: 1'));
     expect(await findByLabelText(/Fav 1/)).toBeTruthy();
+    expect(getAllByLabelText('Хочу: 0').length).toBeGreaterThan(0);
+    expect(getAllByLabelText('Планируют: 0').length).toBeGreaterThan(0);
 
-    const historyCandidates = getAllByText('История');
-    fireEvent.press(historyCandidates[historyCandidates.length - 1]);
+    fireEvent.press(getByLabelText('История: 1'));
     expect(await findByLabelText(/History 1/)).toBeTruthy();
+  });
+
+  it('filters profile list by clicked calendar status metric', async () => {
+    setupAuth({ isAuthenticated: true });
+    setupFavorites(0, 0);
+
+    const { getByLabelText, findByLabelText, queryByLabelText } = renderProfile();
+
+    expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
+
+    fireEvent.press(getByLabelText('Хочу: 1'));
+
+    expect(await findByLabelText(/Wishlist status route/)).toBeTruthy();
+    expect(queryByLabelText(/Visited status route/)).toBeNull();
+    expect(queryByLabelText(/Planned status route/)).toBeNull();
+
+    fireEvent.press(getByLabelText('Планирую: 2'));
+
+    expect(await findByLabelText(/Planned status route/)).toBeTruthy();
+    expect(await findByLabelText(/Second planned status route/)).toBeTruthy();
+    expect(queryByLabelText(/Wishlist status route/)).toBeNull();
   });
 });

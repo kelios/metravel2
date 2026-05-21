@@ -29,6 +29,7 @@ type TravelPreloadWindow = Window & typeof globalThis & {
     data?: unknown;
     slug?: string;
     isId?: boolean;
+    source?: string;
   };
   __metravelTravelPreloadScriptLoaded?: boolean;
   __metravelTravelPreloadPending?: boolean;
@@ -92,6 +93,15 @@ function hasSufficientPreloadedTravelData(travel: Travel | undefined): travel is
   );
 }
 
+function hasMinimumPreloadedTravelIdentity(travel: Travel | undefined): travel is Travel {
+  if (!travel) return false;
+  const hasIdentity =
+    (typeof travel.id === 'number' && Number.isFinite(travel.id) && travel.id > 0) ||
+    (typeof travel.slug === 'string' && travel.slug.trim().length > 0);
+  const hasName = typeof travel.name === 'string' && travel.name.trim().length > 0;
+  return hasIdentity && hasName;
+}
+
 /**
  * Consume preloaded travel data from the inline script in +html.tsx.
  * Returns normalized Travel if the preload matches the current slug/id.
@@ -102,7 +112,7 @@ export function consumePreloadedTravel(
   slug: string,
   isId: boolean,
   idNum: number,
-  options: { consume?: boolean } = {},
+  options: { allowDirectApiIncomplete?: boolean; consume?: boolean } = {},
 ): Travel | undefined {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return undefined;
   const win = window as TravelPreloadWindow;
@@ -115,6 +125,14 @@ export function consumePreloadedTravel(
   try {
     const normalized = normalizeTravelItem(preload.data);
     if (!hasSufficientPreloadedTravelData(normalized)) {
+      if (
+        options.allowDirectApiIncomplete &&
+        preload.source === 'direct-api' &&
+        hasMinimumPreloadedTravelIdentity(normalized)
+      ) {
+        if (options.consume !== false) delete win.__metravelTravelPreload;
+        return normalized;
+      }
       if (options.consume !== false) delete win.__metravelTravelPreload;
       return undefined;
     }
@@ -129,21 +147,49 @@ export function consumePreloadedTravel(
 async function waitForTravelPreload(slug: string, isId: boolean, idNum: number): Promise<Travel | undefined> {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return undefined;
   const win = window as TravelPreloadWindow;
+  const consumeForQuery = () => consumePreloadedTravel(slug, isId, idNum, {
+    allowDirectApiIncomplete: true,
+  });
 
-  const immediate = consumePreloadedTravel(slug, isId, idNum);
+  const immediate = consumeForQuery();
   if (immediate) return immediate;
 
-  const scriptLoaded = Boolean(win.__metravelTravelPreloadScriptLoaded);
+  let scriptLoaded = Boolean(win.__metravelTravelPreloadScriptLoaded);
+  if (!scriptLoaded) {
+    const routePath = String(window.location?.pathname || '');
+    const isCurrentTravelRoute = routePath.startsWith('/travels/');
+    const expectedSegment = isId ? String(idNum) : slug;
+    const isSameRoute = isCurrentTravelRoute && routePath.replace(/^\/travels\//, '').replace(/\/+$/, '') === expectedSegment;
+
+    if (isSameRoute) {
+      const scriptDeadline = Date.now() + 350;
+      while (Date.now() < scriptDeadline) {
+        scriptLoaded = Boolean(win.__metravelTravelPreloadScriptLoaded);
+        if (scriptLoaded || win.__metravelTravelPreloadPending || win.__metravelTravelPreloadPromise) break;
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+    }
+  }
+
   if (scriptLoaded) {
     const bootstrapDeadline = Date.now() + 350;
     while (Date.now() < bootstrapDeadline) {
-      const retry = consumePreloadedTravel(slug, isId, idNum);
+      const retry = consumeForQuery();
       if (retry) return retry;
 
       const pendingBootstrap = Boolean(win.__metravelTravelPreloadPending);
       const bootstrapPromise = win.__metravelTravelPreloadPromise;
       if (pendingBootstrap || (bootstrapPromise && typeof bootstrapPromise.then === 'function')) {
-        break;
+        const promiseTimeoutMs = 2500;
+        try {
+          await Promise.race([
+            bootstrapPromise,
+            new Promise((resolve) => setTimeout(resolve, promiseTimeoutMs)),
+          ]);
+        } catch {
+          // noop
+        }
+        return consumeForQuery();
       }
 
       await new Promise((resolve) => setTimeout(resolve, 25));
@@ -166,17 +212,17 @@ async function waitForTravelPreload(slug: string, isId: boolean, idNum: number):
     } catch {
       // noop
     }
-    return consumePreloadedTravel(slug, isId, idNum);
+    return consumeForQuery();
   }
 
   while (Date.now() - start < timeoutMs) {
     await new Promise((resolve) => setTimeout(resolve, 50));
-    const retry = consumePreloadedTravel(slug, isId, idNum);
+    const retry = consumeForQuery();
     if (retry) return retry;
     if (!win.__metravelTravelPreloadPending) break;
   }
 
-  return consumePreloadedTravel(slug, isId, idNum);
+  return consumeForQuery();
 }
 
 export function useTravelDetails(): UseTravelDetailsReturn {
