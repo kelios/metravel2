@@ -1,0 +1,1488 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Metravel Local Agent Board</title>
+  <style>
+    :root {
+      --bg: #f7f5f0;
+      --surface: #fffdf8;
+      --surface-2: #f0eee7;
+      --border: #dfdbd1;
+      --text: #25231f;
+      --muted: #6f6a61;
+      --primary: #6f9382;
+      --primary-soft: #dfeae4;
+      --brand: #d9852b;
+      --brand-soft: #f8ead8;
+      --success: #4d8a63;
+      --success-soft: #dfece3;
+      --info: #527fa3;
+      --info-soft: #dfe9f1;
+      --warning: #b9812c;
+      --warning-soft: #f4e9d5;
+      --danger: #b55a50;
+      --danger-soft: #f1dfdc;
+      --shadow: 0 10px 30px rgba(43, 38, 30, .08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.45 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button, select {
+      font: inherit;
+    }
+
+    .shell {
+      width: min(1320px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .eyebrow {
+      margin: 0 0 6px;
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(26px, 4vw, 38px);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 10px 0 0;
+      max-width: 780px;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .local-note {
+      min-width: 220px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .local-note strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+
+    .local-note span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+
+    .filters {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .filter,
+    .action {
+      min-height: 40px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--muted);
+      padding: 0 14px;
+      cursor: pointer;
+    }
+
+    .filter[aria-pressed="true"],
+    .action.primary {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .action.active {
+      border-color: var(--info);
+      background: var(--info-soft);
+      color: var(--info);
+      font-weight: 800;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin: 18px 0;
+    }
+
+    .metric,
+    .panel,
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .metric {
+      padding: 14px;
+    }
+
+    .metric-value {
+      display: block;
+      font-size: 30px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .live-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(320px, .55fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .live-panel {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .live-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .live-title {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 900;
+    }
+
+    .live-clock {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .activity-list {
+      display: grid;
+      gap: 9px;
+    }
+
+    .activity-item {
+      display: grid;
+      grid-template-columns: 80px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      border-top: 1px solid var(--border);
+      padding-top: 9px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .activity-item:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .activity-time {
+      color: var(--primary);
+      font-weight: 900;
+    }
+
+    .designer-focus {
+      display: grid;
+      gap: 10px;
+    }
+
+    .designer-row {
+      display: grid;
+      gap: 5px;
+    }
+
+    .designer-row strong {
+      font-size: 13px;
+    }
+
+    .progress {
+      height: 8px;
+      border-radius: 999px;
+      background: var(--surface-2);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: var(--progress, 18%);
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--primary), var(--brand));
+      transition: width .7s ease;
+    }
+
+    .progress-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .panel {
+      padding: 14px;
+    }
+
+    .panel + .panel {
+      margin-top: 16px;
+    }
+
+    .panel-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .panel-title h2 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .cards {
+      display: grid;
+      gap: 12px;
+    }
+
+    .jira-board {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(240px, 1fr));
+      gap: 12px;
+      align-items: start;
+      padding-bottom: 6px;
+    }
+
+    .jira-column {
+      min-width: 240px;
+      max-width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(255, 253, 248, .72);
+      padding: 10px;
+      overflow: hidden;
+    }
+
+    .jira-column-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      min-height: 36px;
+      margin-bottom: 10px;
+    }
+
+    .jira-column-title {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin: 0;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .jira-count {
+      min-width: 26px;
+      min-height: 24px;
+      border-radius: 999px;
+      background: var(--surface-2);
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .jira-column-body {
+      display: grid;
+      gap: 10px;
+      min-height: 120px;
+    }
+
+    .jira-card {
+      min-width: 0;
+      max-width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      padding: 12px;
+      box-shadow: 0 4px 16px rgba(43, 38, 30, .06);
+      overflow: hidden;
+    }
+
+    .jira-card.active-work {
+      border-color: rgba(82, 127, 163, .55);
+      animation: cardPulse 2.4s ease-in-out infinite;
+    }
+
+    .jira-card-key {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .jira-card-title {
+      margin: 0 0 10px;
+      font-size: 14px;
+      font-weight: 850;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }
+
+    .jira-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .assignee {
+      min-width: 0;
+      max-width: 145px;
+      color: var(--muted);
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .quick-move {
+      max-width: 120px;
+      min-height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      padding: 0 6px;
+      font-size: 12px;
+    }
+
+    .card {
+      padding: 14px;
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    .people-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .person-card {
+      display: grid;
+      gap: 12px;
+      min-height: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .person-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .person-name {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 900;
+      line-height: 1.2;
+    }
+
+    .person-role {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .load {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: var(--text);
+      padding: 0 9px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .load.idle {
+      background: var(--warning-soft);
+      color: var(--warning);
+    }
+
+    .load.active {
+      background: var(--info-soft);
+      color: var(--info);
+      animation: softPulse 1.8s ease-in-out infinite;
+    }
+
+    .work-lanes {
+      display: grid;
+      gap: 10px;
+    }
+
+    .work-lane {
+      display: grid;
+      gap: 5px;
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+    }
+
+    .lane-title {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .work-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .work-item::before {
+      content: "";
+      flex: 0 0 auto;
+      width: 7px;
+      height: 7px;
+      margin-top: 6px;
+      border-radius: 999px;
+      background: var(--primary);
+    }
+
+    .work-item.done {
+      color: var(--muted);
+    }
+
+    .work-item.done::before {
+      background: var(--success);
+    }
+
+    .work-item.backlog::before {
+      background: var(--warning);
+    }
+
+    .work-item.current::before {
+      animation: dotPulse 1.4s ease-in-out infinite;
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .id {
+      color: var(--primary);
+      font-weight: 800;
+    }
+
+    .title {
+      margin: 0 0 8px;
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+
+    .meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .priority {
+      border-radius: 999px;
+      background: var(--brand-soft);
+      color: var(--text);
+      padding: 3px 8px;
+      font-weight: 800;
+    }
+
+    .approval {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      border-radius: 999px;
+      padding: 0 8px;
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .approval.Approved {
+      background: var(--success-soft);
+      color: var(--success);
+    }
+
+    .approval.NeedsApproval,
+    .approval.Needsapproval {
+      background: var(--warning-soft);
+      color: var(--warning);
+    }
+
+    .approval.Draft {
+      background: var(--surface-2);
+      color: var(--muted);
+    }
+
+    .note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 28px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0 9px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .status::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: currentColor;
+    }
+
+    .status.Done { background: var(--success-soft); color: var(--success); }
+    .status.InProgress,
+    .status.Inprogress { background: var(--info-soft); color: var(--info); }
+    .status.Open { background: var(--surface-2); color: var(--muted); }
+    .status.Flaky { background: var(--warning-soft); color: var(--warning); }
+    .status.Blocked { background: var(--danger-soft); color: var(--danger); }
+
+    .status-select {
+      min-height: 36px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      padding: 0 8px;
+    }
+
+    .role-row,
+    .case-row {
+      display: grid;
+      gap: 4px;
+      padding: 12px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .role-row:first-child,
+    .case-row:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .role-owner {
+      font-weight: 800;
+    }
+
+    .role-task,
+    .case-row {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .finding {
+      border-left: 4px solid var(--primary);
+    }
+
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(320px, .45fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .foot {
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @keyframes softPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(82, 127, 163, .18); }
+      50% { box-shadow: 0 0 0 6px rgba(82, 127, 163, .06); }
+    }
+
+    @keyframes dotPulse {
+      0%, 100% { transform: scale(1); opacity: .75; }
+      50% { transform: scale(1.45); opacity: 1; }
+    }
+
+    @keyframes cardPulse {
+      0%, 100% { box-shadow: 0 4px 16px rgba(43, 38, 30, .06); }
+      50% { box-shadow: 0 8px 24px rgba(82, 127, 163, .14); }
+    }
+
+    @media (max-width: 900px) {
+      .shell { width: min(100vw - 20px, 760px); padding-top: 18px; }
+      .topbar { display: block; }
+      .local-note { margin-top: 14px; }
+      .live-grid { grid-template-columns: 1fr; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .people-grid { grid-template-columns: 1fr; }
+      .jira-board { grid-template-columns: 1fr; }
+      .jira-column { min-width: 0; }
+      .jira-card-footer { align-items: stretch; flex-direction: column; }
+      .assignee { max-width: none; white-space: normal; }
+      .quick-move { width: 100%; max-width: none; }
+      .bottom-grid { grid-template-columns: minmax(0, 1fr) !important; }
+    }
+
+    @media (min-width: 901px) and (max-width: 1180px) {
+      .people-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .jira-board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .jira-column { min-width: 0; }
+    }
+
+    @media (min-width: 1181px) and (max-width: 1340px) {
+      .jira-board { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .jira-column { min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="topbar">
+      <div>
+        <p class="eyebrow">Local only</p>
+        <h1>Agent Workboard</h1>
+        <p class="subtitle">
+          Локальный борд для отслеживания сотрудников, задач, тестирования, дизайнерских работ и ручных test cases.
+          Изменения статусов сохраняются только в браузере через localStorage.
+        </p>
+      </div>
+      <aside class="local-note">
+        <strong>Не для production</strong>
+        <span>Открывай как локальный файл из репозитория. Эта страница не находится в Expo Router.</span>
+      </aside>
+    </section>
+
+    <section class="metrics" id="metrics"></section>
+
+    <section class="toolbar">
+      <div class="filters" id="filters"></div>
+      <div class="filters">
+        <button class="action primary" type="button" id="work-step">Сделать шаг работы</button>
+        <button class="action" type="button" id="auto-cycle">Авто-цикл: выкл</button>
+        <button class="action" type="button" id="reset">Сбросить локальные статусы</button>
+      </div>
+    </section>
+
+    <section class="live-grid">
+      <div class="live-panel">
+        <div class="live-head">
+          <h2 class="live-title">Live activity</h2>
+          <span class="live-clock" id="live-clock">Обновляется</span>
+        </div>
+        <div class="activity-list" id="activity"></div>
+      </div>
+      <div class="live-panel">
+        <div class="live-head">
+          <h2 class="live-title">Дизайнер сейчас</h2>
+          <span class="live-clock">UI/UX</span>
+        </div>
+        <div class="designer-focus" id="designer-focus"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">
+        <h2>Команда: кто что делает</h2>
+        <span id="people-summary"></span>
+      </div>
+      <div class="people-grid" id="people"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">
+        <h2>Jira board</h2>
+        <span id="visible-count"></span>
+      </div>
+      <div class="jira-board" id="jira-board"></div>
+    </section>
+
+    <section class="bottom-grid">
+      <section class="panel">
+        <div class="panel-title">
+          <h2>Findings</h2>
+        </div>
+        <div class="cards" id="findings"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <h2>Manual test cases</h2>
+        </div>
+        <div id="cases"></div>
+      </section>
+    </section>
+
+    <p class="foot">
+      Канонический журнал остается в docs/AGENT_WORKBOARD.md. Эта HTML-страница нужна только для локального визуального контроля.
+    </p>
+  </main>
+
+  <script>
+    const STORAGE_KEY = 'metravel.localAgentBoard.v1';
+    const PROGRESS_KEY = 'metravel.localAgentBoard.progress.v1';
+    const APPROVAL_KEY = 'metravel.localAgentBoard.approvals.v1';
+    const ACTIVITY_KEY = 'metravel.localAgentBoard.activity.v1';
+    const AUTO_KEY = 'metravel.localAgentBoard.autoCycle.v1';
+    const statuses = ['Open', 'In progress', 'Blocked', 'Flaky', 'Done'];
+    const filters = ['All', ...statuses];
+    const boardStartedAt = Date.now();
+    const progressTargets = {
+      'T-007': 76,
+      'T-008': 68,
+      'T-009': 61,
+      'T-015': 82,
+      'T-016': 54,
+      'T-017': 43,
+      'T-018': 48,
+    };
+
+    const initialTickets = [
+      { id: 'T-001', title: 'Complete browser QA for travel details desktop and mobile', owner: 'QA Tester', status: 'Done', priority: 'P1', approval: 'Approved', approver: 'Approver / Product Owner', notes: '40 passed; duplicate initial request bug candidate found' },
+      { id: 'T-002', title: 'Complete manual user-flow QA for travel details', owner: 'Manual QA Tester', status: 'Done', priority: 'P1', approval: 'Approved', approver: 'Approver / Product Owner', notes: 'Guest/manual pass completed' },
+      { id: 'T-007', title: 'Run extended web QA for travel details and related public flows', owner: 'QA Tester', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Approver / Product Owner', notes: 'Desktop Chrome travel details, interactions, comments, Instagram rich text, responsive layout' },
+      { id: 'T-008', title: 'Run extended mobile-web QA for travel details', owner: 'QA Tester', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Approver / Product Owner', notes: '390x844 viewport, horizontal overflow, clipped actions, sticky/navigation states' },
+      { id: 'T-009', title: 'Create designer UX/UI audit backlog from QA evidence', owner: 'UI/UX Designer', status: 'In progress', priority: 'P2', approval: 'Approved', approver: 'Approver / Product Owner', notes: 'Visual hierarchy, touch targets, empty states, and mobile polish' },
+      { id: 'T-010', title: 'Run authenticated manual QA for write flows', owner: 'Manual QA Tester', status: 'Open', priority: 'P1', approval: 'Needs approval', approver: 'Approver / Product Owner', notes: 'Use .env.e2e; cover favorite, rating, comment create/edit/delete' },
+      { id: 'T-011', title: 'Write manual test cases for travel details web/mobile', owner: 'QA Test Analyst', status: 'Open', priority: 'P1', approval: 'Needs approval', approver: 'Approver / Product Owner', notes: 'Prerequisites, steps, expected result, viewport, and evidence checklist' },
+      { id: 'T-012', title: 'Align Instagram rich-text e2e expectation with project rules', owner: 'QA Test Analyst + Developer', status: 'Open', priority: 'P2', approval: 'Needs approval', approver: 'Approver / Product Owner', notes: 'Current e2e expects fallback cards, while rules require iframe embeds for valid post/reel/tv URLs' },
+      { id: 'T-013', title: 'Redesign missing hero media state for travel details', owner: 'UI/UX Designer', status: 'Open', priority: 'P2', approval: 'Needs approval', approver: 'Approver / Product Owner', notes: 'Current placeholder displays text; project rule requires neutral placeholder' },
+      { id: 'T-014', title: 'Audit mobile bottom overlays and touch target sizes', owner: 'UI/UX Designer', status: 'Open', priority: 'P3', approval: 'Needs approval', approver: 'Approver / Product Owner', notes: 'Cookie banner, bottom nav, sticky section tabs, and several actions need review' },
+      { id: 'T-015', title: 'Form and groom backlog from QA/design findings', owner: 'Backlog Manager / Product Owner', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Approver / Product Owner', notes: 'Convert findings, manual cases, and idle capacity into prioritized implementation-ready tasks' },
+      { id: 'T-016', title: 'Write business requirements and acceptance criteria for travel QA fixes', owner: 'Business Analyst', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Approver / Product Owner', notes: 'Separate product requirements, user stories, non-goals, risks, and acceptance criteria from manager coordination' },
+      { id: 'T-017', title: 'Prepare technical fix plan for travel QA findings', owner: 'Developer', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Approver / Product Owner', notes: 'Locate files and prepare implementation approach for D-001 neutral placeholder and T-012 Instagram e2e alignment' },
+      { id: 'T-018', title: 'Approve and govern task readiness flow', owner: 'Approver / Product Owner', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Approver / Product Owner', notes: 'Define who approves requirements, design, QA findings, and developer-ready tickets before implementation' },
+    ];
+
+    const roles = [
+      { owner: 'Manager', task: 'Coordination, staffing, delivery status, scope control', status: 'In progress' },
+      { owner: 'Approver / Product Owner', task: 'Approves scope, design decisions, QA findings, and developer-ready tasks', status: 'In progress' },
+      { owner: 'Business Analyst', task: 'Requirements, user stories, acceptance criteria, non-goals, risks', status: 'In progress' },
+      { owner: 'Backlog Manager / Product Owner', task: 'Forms backlog, assigns priorities, prepares next work for idle roles', status: 'In progress' },
+      { owner: 'Developer', task: 'Technical fix plan for D-001 and T-012', status: 'In progress' },
+      { owner: 'QA Tester', task: 'Extended web/mobile QA pass', status: 'In progress' },
+      { owner: 'Manual QA Tester', task: 'Authenticated favorite/rating/comments pass', status: 'Open' },
+      { owner: 'QA Test Analyst', task: 'Manual test cases and Instagram spec alignment', status: 'Open' },
+      { owner: 'UI/UX Designer', task: 'Hero placeholder, mobile overlays, touch targets', status: 'In progress' },
+      { owner: 'Reviewer / Architect', task: 'Review next diff after implementation', status: 'Open' },
+    ];
+
+    const people = [
+      {
+        name: 'Manager',
+        aliases: ['Manager'],
+        role: 'Координация команды, статусы, staffing, delivery',
+        done: ['Запущены роли команды', 'Борд переведен в локальный Jira-style формат'],
+        backlog: ['Следить за idle сотрудниками', 'Подтвердить следующий implementation sprint'],
+      },
+      {
+        name: 'Approver / Product Owner',
+        aliases: ['Approver / Product Owner'],
+        role: 'Апрувит scope, требования, дизайн и developer-ready задачи',
+        done: ['Утверждены T-001, T-002, T-007, T-008, T-009, T-015, T-016, T-017'],
+        backlog: ['T-018: описать approval flow', 'Согласовать T-010...T-014 перед implementation'],
+      },
+      {
+        name: 'Business Analyst',
+        aliases: ['Business Analyst'],
+        role: 'Требования, user stories, acceptance criteria',
+        done: ['Сформирован первичный QA scope для travel page', 'Выделены acceptance gates для web/mobile'],
+        backlog: ['T-016: оформить требования по travel QA fixes', 'Согласовать expected behavior для Instagram embeds'],
+      },
+      {
+        name: 'Backlog Manager / Product Owner',
+        aliases: ['Backlog Manager / Product Owner'],
+        role: 'Формирует backlog и раскладывает задачи по ролям',
+        done: ['Добавлен локальный Jira-style board', 'Выделены открытые findings и дизайнерские задачи'],
+        backlog: ['Сделать задачи implementation-ready', 'Раздать idle сотрудникам следующую работу', 'Поддерживать приоритеты P1/P2/P3'],
+      },
+      {
+        name: 'Developer',
+        aliases: ['Developer'],
+        role: 'Фиксы подтвержденных багов',
+        done: ['F-001: переиспользование travel detail preload', 'F-002: проверка comments read path'],
+        backlog: ['Подготовить patch после решения по spec', 'Подготовить patch после дизайна placeholder'],
+      },
+      {
+        name: 'QA Tester',
+        aliases: ['QA Tester'],
+        role: 'Автоматизированный и browser QA',
+        done: ['Базовый travel details e2e pass', 'Comments e2e write-flow прошел'],
+        backlog: ['Повторить flaky responsive check', 'Закрыть extended mobile QA pass'],
+      },
+      {
+        name: 'Manual QA Tester',
+        aliases: ['Manual QA Tester'],
+        role: 'Ручная проверка сценариев',
+        done: ['Guest/manual pass выполнен', 'Comments 404 finding передан в triage'],
+        backlog: ['Authenticated favorite/rating/comments pass'],
+      },
+      {
+        name: 'QA Test Analyst',
+        aliases: ['QA Test Analyst'],
+        role: 'Ручные test cases и спецификации',
+        done: ['Сформирован backlog MTC-001...MTC-010'],
+        backlog: ['Детализировать steps/expected для каждого MTC', 'Согласовать Instagram expected behavior'],
+      },
+      {
+        name: 'UI/UX Designer',
+        aliases: ['UI/UX Designer'],
+        role: 'Визуальный аудит и UX backlog',
+        done: ['Получил evidence по desktop/mobile screenshots', 'Нашел задачи по placeholder и touch targets'],
+        backlog: ['D-001 neutral hero placeholder', 'D-002 mobile overlays and touch targets'],
+      },
+      {
+        name: 'Reviewer / Architect',
+        aliases: ['Reviewer / Architect'],
+        role: 'Review diff, риски, соответствие правилам',
+        done: ['Поймал неполный F-001 fix на предыдущем review'],
+        backlog: ['Review после следующего implementation diff'],
+      },
+    ];
+
+    const findings = [
+      { id: 'F-001', title: 'Duplicate initial travel detail requests', status: 'Done', owner: 'Developer + QA', notes: 'Direct API preload reuse verified.' },
+      { id: 'F-002', title: 'Comments main-thread 404 console noise', status: 'Done', owner: 'Developer + QA', notes: 'Comments read path verified through travel_id.' },
+      { id: 'F-003', title: 'Instagram rich-text e2e spec mismatch', status: 'Open', owner: 'QA Test Analyst + Developer', notes: 'Rendered page contains iframe, while old e2e expects fallback cards.' },
+      { id: 'D-001', title: 'Missing hero media placeholder is not neutral', status: 'Open', owner: 'UI/UX Designer', notes: 'Hero fallback shows visible text "Фото недоступно".' },
+      { id: 'D-002', title: 'Mobile overlays and touch targets need designer review', status: 'Open', owner: 'UI/UX Designer', notes: 'Several mobile controls are below comfortable size; overlays compete for space.' },
+    ];
+
+    const manualCases = [
+      'MTC-001 Open public travel details by direct URL',
+      'MTC-002 Scroll travel details internal container on mobile',
+      'MTC-003 Missing media fallback',
+      'MTC-004 Authenticated comments write flow',
+      'MTC-005 Favorite and rating flow',
+      'MTC-006 Section navigation',
+      'MTC-007 Share/export actions',
+      'MTC-008 Instagram rich text',
+      'MTC-009 Cookie consent and bottom nav overlap',
+      'MTC-010 Error states',
+    ];
+
+    const activityItems = [
+      { role: 'QA Tester', text: 'Проверяет extended web/mobile QA по travel details' },
+      { role: 'UI/UX Designer', text: 'Разбирает D-001 neutral hero placeholder' },
+      { role: 'UI/UX Designer', text: 'Смотрит D-002 mobile overlays и touch targets' },
+      { role: 'Backlog Manager', text: 'Грумит findings в implementation-ready backlog' },
+      { role: 'Business Analyst', text: 'Описывает acceptance criteria для travel QA fixes' },
+      { role: 'Manual QA Tester', text: 'Готовит authenticated pass для favorite/rating/comments' },
+    ];
+
+    let activeFilter = 'All';
+    let autoCycleTimer = null;
+
+    function statusClass(status) {
+      return String(status).replace(/\s+/g, '');
+    }
+
+    function loadState() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      } catch {
+        return {};
+      }
+    }
+
+    function saveState(next) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    }
+
+    function loadProgressState() {
+      try {
+        return JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}');
+      } catch {
+        return {};
+      }
+    }
+
+    function saveProgressState(next) {
+      localStorage.setItem(PROGRESS_KEY, JSON.stringify(next));
+    }
+
+    function loadApprovalState() {
+      try {
+        return JSON.parse(localStorage.getItem(APPROVAL_KEY) || '{}');
+      } catch {
+        return {};
+      }
+    }
+
+    function saveApprovalState(next) {
+      localStorage.setItem(APPROVAL_KEY, JSON.stringify(next));
+    }
+
+    function loadActivityLog() {
+      try {
+        return JSON.parse(localStorage.getItem(ACTIVITY_KEY) || '[]');
+      } catch {
+        return [];
+      }
+    }
+
+    function saveActivityLog(next) {
+      localStorage.setItem(ACTIVITY_KEY, JSON.stringify(next.slice(0, 12)));
+    }
+
+    function appendActivity(role, text) {
+      const next = [
+        { time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' }), role, text },
+        ...loadActivityLog(),
+      ];
+      saveActivityLog(next);
+    }
+
+    function ensureProgressForTickets(tickets) {
+      const progress = loadProgressState();
+      let changed = false;
+      tickets.forEach((ticket) => {
+        const target = getProgressTarget(ticket);
+        if (!progress[ticket.id]) {
+          progress[ticket.id] = {
+            value: ticket.status === 'Done' ? 100 : ticket.status === 'In progress' ? 18 : 0,
+            lastUpdated: Date.now(),
+          };
+          changed = true;
+        }
+        if (ticket.status === 'Done' && progress[ticket.id].value !== 100) {
+          progress[ticket.id].value = 100;
+          progress[ticket.id].lastUpdated = Date.now();
+          changed = true;
+        }
+        if (ticket.status === 'Open' && progress[ticket.id].value > 0 && progress[ticket.id].value < 100) {
+          progress[ticket.id].value = 0;
+          progress[ticket.id].lastUpdated = Date.now();
+          changed = true;
+        }
+        if (ticket.status === 'In progress' && progress[ticket.id].value <= 0) {
+          progress[ticket.id].value = 18;
+          progress[ticket.id].lastUpdated = Date.now();
+          changed = true;
+        }
+        if (ticket.status === 'In progress' && progress[ticket.id].value > target) {
+          progress[ticket.id].value = target;
+          progress[ticket.id].lastUpdated = Date.now();
+          changed = true;
+        }
+      });
+      if (changed) saveProgressState(progress);
+      return progress;
+    }
+
+    function getTickets() {
+      const saved = loadState();
+      const approvals = loadApprovalState();
+      const tickets = initialTickets.map((ticket) => ({
+        ...ticket,
+        status: saved[ticket.id] || ticket.status,
+        approval: approvals[ticket.id] || ticket.approval,
+      }));
+      ensureProgressForTickets(tickets);
+      return tickets;
+    }
+
+    function setTicketApproval(id, approval) {
+      const approvals = loadApprovalState();
+      approvals[id] = approval;
+      saveApprovalState(approvals);
+      appendActivity('Approver / Product Owner', `${id}: ${approval}`);
+      render();
+    }
+
+    function setTicketStatus(id, status) {
+      const saved = loadState();
+      saved[id] = status;
+      saveState(saved);
+      const progress = loadProgressState();
+      progress[id] = progress[id] || { value: 0, lastUpdated: Date.now() };
+      if (status === 'Done') progress[id].value = 100;
+      if (status === 'In progress' && progress[id].value <= 0) progress[id].value = 18;
+      if (status === 'Open') progress[id].value = 0;
+      progress[id].lastUpdated = Date.now();
+      saveProgressState(progress);
+      appendActivity('Board', `${id}: moved to ${status}`);
+      render();
+    }
+
+    function renderStatus(status) {
+      return `<span class="status ${statusClass(status)}">${status}</span>`;
+    }
+
+    function renderMetrics(tickets) {
+      const metrics = [
+        ['Open', tickets.filter((item) => item.status === 'Open').length],
+        ['In progress', tickets.filter((item) => item.status === 'In progress').length],
+        ['Done', tickets.filter((item) => item.status === 'Done').length],
+        ['Findings', findings.length],
+      ];
+      document.getElementById('metrics').innerHTML = metrics.map(([label, value]) => `
+        <article class="metric">
+          <span class="metric-value">${value}</span>
+          <span class="metric-label">${label}</span>
+        </article>
+      `).join('');
+    }
+
+    function renderFilters() {
+      document.getElementById('filters').innerHTML = filters.map((filter) => `
+        <button class="filter" type="button" aria-pressed="${activeFilter === filter}" data-filter="${filter}">
+          ${filter}
+        </button>
+      `).join('');
+      document.querySelectorAll('[data-filter]').forEach((button) => {
+        button.addEventListener('click', () => {
+          activeFilter = button.dataset.filter;
+          render();
+        });
+      });
+    }
+
+    function renderKanban(tickets) {
+      const visible = tickets.filter((ticket) => activeFilter === 'All' || ticket.status === activeFilter);
+      document.getElementById('visible-count').textContent = `${visible.length} visible`;
+      document.getElementById('jira-board').innerHTML = statuses.map((status) => {
+        const columnTickets = visible.filter((ticket) => ticket.status === status);
+        return `
+          <section class="jira-column" data-column="${status}">
+            <div class="jira-column-header">
+              <h3 class="jira-column-title">${renderStatus(status)}</h3>
+              <span class="jira-count">${columnTickets.length}</span>
+            </div>
+            <div class="jira-column-body">
+              ${columnTickets.map((ticket) => `
+                <article class="jira-card ${ticket.status === 'In progress' ? 'active-work' : ''}">
+                  <div class="jira-card-key">
+                    <span class="id">${ticket.id}</span>
+                    <span class="priority">${ticket.priority}</span>
+                  </div>
+                  <h4 class="jira-card-title">${ticket.title}</h4>
+                  <div class="meta">
+                    <span class="approval ${statusClass(ticket.approval || 'Draft')}">${ticket.approval || 'Draft'}</span>
+                    <span>${ticket.approver || 'No approver'}</span>
+                  </div>
+                  <p class="note">${ticket.notes}</p>
+                  ${ticket.status === 'In progress' ? `
+                    <div class="progress" aria-label="Прогресс ${ticket.id}">
+                      <div class="progress-fill" data-progress-ticket="${ticket.id}"></div>
+                    </div>
+                    <span class="progress-label" data-progress-label="${ticket.id}">В работе</span>
+                  ` : ''}
+                  <div class="jira-card-footer">
+                    <span class="assignee">${ticket.owner}</span>
+                    <select class="quick-move" data-ticket="${ticket.id}" aria-label="Изменить статус ${ticket.id}">
+                      ${statuses.map((next) => `<option value="${next}" ${next === ticket.status ? 'selected' : ''}>${next}</option>`).join('')}
+                    </select>
+                  </div>
+                </article>
+              `).join('') || '<p class="note">Нет задач</p>'}
+            </div>
+          </section>
+        `;
+      }).join('');
+      document.querySelectorAll('[data-ticket]').forEach((select) => {
+        select.addEventListener('change', () => setTicketStatus(select.dataset.ticket, select.value));
+      });
+    }
+
+    function getProgressTarget(ticket) {
+      if (ticket.status === 'Done') return 100;
+      if (ticket.status !== 'In progress') return 0;
+      return progressTargets[ticket.id] || 70;
+    }
+
+    function getProgressLabel(ticket, progress) {
+      if (ticket.status === 'Done') return '100% · готово';
+      if (ticket.status !== 'In progress') return `${progress}%`;
+      const target = getProgressTarget(ticket);
+      if (progress >= target) {
+        if ((ticket.approval || '').toLowerCase().includes('needs')) return `${progress}% · ждёт approval`;
+        return `${progress}% · ждёт следующий шаг`;
+      }
+      return `${progress}% · в работе`;
+    }
+
+    function getTicketProgress(ticket) {
+      const progress = ensureProgressForTickets(getTickets());
+      const item = progress[ticket.id] || { value: 0 };
+      if (ticket.status === 'Done') return 100;
+      if (ticket.status === 'In progress') return Math.min(getProgressTarget(ticket), Math.max(18, Math.round(item.value || 18)));
+      return Math.max(0, Math.min(100, Math.round(item.value || 0)));
+    }
+
+    function advanceProgress() {
+      const tickets = getTickets();
+      const progress = ensureProgressForTickets(tickets);
+      let changed = false;
+      tickets.forEach((ticket, index) => {
+        const item = progress[ticket.id];
+        if (!item) return;
+        if (ticket.status === 'Done') {
+          if (item.value !== 100) {
+            item.value = 100;
+            changed = true;
+          }
+          return;
+        }
+        if (ticket.status !== 'In progress') return;
+        const current = Number(item.value || 18);
+        const target = getProgressTarget(ticket);
+        if (current >= target) return;
+        const increment = index % 2 === 0 ? 1 : 2;
+        item.value = Math.min(target, current + increment);
+        item.lastUpdated = Date.now();
+        changed = true;
+      });
+      if (changed) saveProgressState(progress);
+    }
+
+    function updateLiveProgress() {
+      const tickets = getTickets().filter((ticket) => ticket.status === 'In progress');
+      tickets.forEach((ticket) => {
+        const progress = getTicketProgress(ticket);
+        const fill = document.querySelector(`[data-progress-ticket="${ticket.id}"]`);
+        const label = document.querySelector(`[data-progress-label="${ticket.id}"]`);
+        if (fill) fill.style.setProperty('--progress', `${progress}%`);
+        if (label) label.textContent = getProgressLabel(ticket, progress);
+      });
+    }
+
+    function renderActivity() {
+      const elapsed = Math.floor((Date.now() - boardStartedAt) / 1000);
+      const saved = loadActivityLog();
+      const savedHtml = saved.map((item) => `
+        <div class="activity-item">
+          <span class="activity-time">${item.time}</span>
+          <span><strong>${item.role}</strong>: ${item.text}</span>
+        </div>
+      `);
+      const liveHtml = activityItems.map((item, index) => {
+        const minutesAgo = Math.max(0, Math.floor((elapsed + index * 19) / 60));
+        const time = minutesAgo === 0 ? 'только что' : `${minutesAgo} мин`;
+        return `
+          <div class="activity-item">
+            <span class="activity-time">${time}</span>
+            <span><strong>${item.role}</strong>: ${item.text}</span>
+          </div>
+        `;
+      });
+      document.getElementById('activity').innerHTML = [...savedHtml, ...liveHtml].slice(0, 10).join('');
+    }
+
+    function runWorkStep() {
+      const tickets = getTickets();
+      const inProgress = tickets.filter((ticket) => ticket.status === 'In progress');
+      const readyToFinish = inProgress.find((ticket) => getTicketProgress(ticket) >= getProgressTarget(ticket));
+      if (readyToFinish) {
+        setTicketStatus(readyToFinish.id, 'Done');
+        appendActivity(readyToFinish.owner, `${readyToFinish.id}: завершил текущий этап`);
+        return;
+      }
+
+      const needsApproval = tickets.find((ticket) => ticket.status === 'Open' && (ticket.approval || '').toLowerCase().includes('needs'));
+      if (needsApproval) {
+        setTicketApproval(needsApproval.id, 'Approved');
+        appendActivity('Approver / Product Owner', `${needsApproval.id}: согласовано и готово к работе`);
+        return;
+      }
+
+      const approvedOpen = tickets.find((ticket) => ticket.status === 'Open' && ticket.approval === 'Approved');
+      if (approvedOpen) {
+        setTicketStatus(approvedOpen.id, 'In progress');
+        appendActivity(approvedOpen.owner, `${approvedOpen.id}: взял задачу в работу`);
+        return;
+      }
+
+      advanceProgress();
+      appendActivity('Team', 'Продвинули активные задачи без смены статуса');
+      render();
+    }
+
+    function isAutoCycleEnabled() {
+      return localStorage.getItem(AUTO_KEY) === '1';
+    }
+
+    function setAutoCycle(enabled) {
+      localStorage.setItem(AUTO_KEY, enabled ? '1' : '0');
+      const button = document.getElementById('auto-cycle');
+      if (button) {
+        button.textContent = `Авто-цикл: ${enabled ? 'вкл' : 'выкл'}`;
+        button.classList.toggle('active', enabled);
+      }
+      if (autoCycleTimer) {
+        clearInterval(autoCycleTimer);
+        autoCycleTimer = null;
+      }
+      if (enabled) {
+        autoCycleTimer = setInterval(runWorkStep, 7000);
+      }
+    }
+
+    function renderDesignerFocus(tickets) {
+      const designerTickets = tickets.filter((ticket) => ticket.owner.includes('UI/UX Designer'));
+      document.getElementById('designer-focus').innerHTML = designerTickets.map((ticket) => {
+        const progress = getTicketProgress(ticket);
+        return `
+          <div class="designer-row">
+            <strong>${ticket.id} · ${ticket.title}</strong>
+            <div class="progress"><div class="progress-fill" style="--progress:${progress}%"></div></div>
+            <span class="progress-label">${getProgressLabel(ticket, progress)}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function updateLiveClock() {
+      const now = new Date();
+      document.getElementById('live-clock').textContent =
+        `live · ${now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+    }
+
+    function tickLive() {
+      advanceProgress();
+      updateLiveClock();
+      updateLiveProgress();
+      renderActivity();
+      renderDesignerFocus(getTickets());
+    }
+
+    function renderTickets(tickets) {
+      const visible = tickets.filter((ticket) => activeFilter === 'All' || ticket.status === activeFilter);
+      document.getElementById('visible-count').textContent = `${visible.length} visible`;
+      const ticketsNode = document.getElementById('tickets');
+      if (!ticketsNode) return;
+      ticketsNode.innerHTML = visible.map((ticket) => `
+        <article class="card">
+          <div class="card-top">
+            <span class="id">${ticket.id}</span>
+            ${renderStatus(ticket.status)}
+          </div>
+          <h3 class="title">${ticket.title}</h3>
+        </article>
+      `).join('');
+    }
+
+    function ticketMatchesPerson(ticket, person) {
+      return person.aliases.some((alias) => ticket.owner.includes(alias));
+    }
+
+    function renderWorkItems(items, kind) {
+      if (!items.length) return '<span class="note">Нет задач</span>';
+      return items.map((item) => `<span class="work-item ${kind}">${item}</span>`).join('');
+    }
+
+    function renderPeople(tickets) {
+      const peopleHtml = people.map((person) => {
+        const owned = tickets.filter((ticket) => ticketMatchesPerson(ticket, person));
+        const current = owned
+          .filter((ticket) => ticket.status === 'In progress')
+          .map((ticket) => `${ticket.id}: ${ticket.title}`);
+        const done = [
+          ...person.done,
+          ...owned
+            .filter((ticket) => ticket.status === 'Done')
+            .map((ticket) => `${ticket.id}: ${ticket.title}`),
+        ];
+        const backlog = [
+          ...owned
+            .filter((ticket) => ['Open', 'Blocked', 'Flaky'].includes(ticket.status))
+            .map((ticket) => `${ticket.id}: ${ticket.title}`),
+          ...person.backlog,
+        ];
+        const isIdle = current.length === 0;
+        const load = current.length ? `${current.length} active` : 'idle';
+
+        return `
+          <article class="person-card">
+            <div class="person-head">
+              <div>
+                <h3 class="person-name">${person.name}</h3>
+                <span class="person-role">${person.role}</span>
+              </div>
+              <span class="load ${isIdle ? 'idle' : 'active'}">${load}</span>
+            </div>
+            <div class="work-lanes">
+              <div class="work-lane">
+                <span class="lane-title">Сейчас делает</span>
+                ${renderWorkItems(current, 'current')}
+              </div>
+              <div class="work-lane">
+                <span class="lane-title">Сделал</span>
+                ${renderWorkItems(done, 'done')}
+              </div>
+              <div class="work-lane">
+                <span class="lane-title">Бэклог</span>
+                ${renderWorkItems(backlog, 'backlog')}
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
+
+      const activePeople = people.filter((person) =>
+        tickets.some((ticket) => ticket.status === 'In progress' && ticketMatchesPerson(ticket, person))
+      ).length;
+      document.getElementById('people-summary').textContent = `${activePeople}/${people.length} active`;
+      document.getElementById('people').innerHTML = peopleHtml;
+    }
+
+    function renderRoles() {
+      const rolesNode = document.getElementById('roles');
+      if (!rolesNode) return;
+      rolesNode.innerHTML = roles.map((role) => `
+        <div class="role-row">
+          <div class="card-top">
+            <span class="role-owner">${role.owner}</span>
+            ${renderStatus(role.status)}
+          </div>
+          <span class="role-task">${role.task}</span>
+        </div>
+      `).join('');
+    }
+
+    function renderFindings() {
+      document.getElementById('findings').innerHTML = findings.map((finding) => `
+        <article class="card finding">
+          <div class="card-top">
+            <span class="id">${finding.id}</span>
+            ${renderStatus(finding.status)}
+          </div>
+          <h3 class="title">${finding.title}</h3>
+          <div class="meta"><span>${finding.owner}</span></div>
+          <p class="note">${finding.notes}</p>
+        </article>
+      `).join('');
+    }
+
+    function renderCases() {
+      document.getElementById('cases').innerHTML = manualCases.map((item) => `
+        <div class="case-row">${item}</div>
+      `).join('');
+    }
+
+    function render() {
+      const tickets = getTickets();
+      renderMetrics(tickets);
+      renderFilters();
+      renderPeople(tickets);
+      renderKanban(tickets);
+      renderActivity();
+      renderDesignerFocus(tickets);
+      updateLiveProgress();
+      updateLiveClock();
+      renderRoles();
+      renderFindings();
+      renderCases();
+    }
+
+    document.getElementById('reset').addEventListener('click', () => {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(PROGRESS_KEY);
+      localStorage.removeItem(APPROVAL_KEY);
+      localStorage.removeItem(ACTIVITY_KEY);
+      render();
+    });
+    document.getElementById('work-step').addEventListener('click', runWorkStep);
+    document.getElementById('auto-cycle').addEventListener('click', () => {
+      setAutoCycle(!isAutoCycleEnabled());
+    });
+
+    render();
+    setAutoCycle(isAutoCycleEnabled());
+    setInterval(tickLive, 1000);
+  </script>
+</body>
+</html>

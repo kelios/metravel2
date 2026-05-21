@@ -156,6 +156,46 @@ function runPlaywright(args) {
   });
 }
 
+async function runFastPlaywrightPass({
+  workers,
+  outputRoot,
+  forwarded,
+  port,
+  shards,
+}) {
+  const shardCount = Math.max(1, Number.isFinite(shards) ? Math.floor(shards) : 1);
+  for (let shardIndex = 1; shardIndex <= shardCount; shardIndex += 1) {
+    const shardArgs =
+      shardCount > 1
+        ? ['--shard', `${shardIndex}/${shardCount}`]
+        : [];
+    const shardOutput =
+      shardCount > 1
+        ? path.join(outputRoot, `e2e-fast-shard-${shardIndex}-of-${shardCount}`)
+        : path.join(outputRoot, 'e2e-fast');
+
+    if (shardCount > 1) {
+      console.log(`[e2e-run] Fast pass shard ${shardIndex}/${shardCount}`);
+    }
+
+    await runPlaywright([
+      'test',
+      '--forbid-only',
+      '--retries=0',
+      '--pass-with-no-tests',
+      `--workers=${workers}`,
+      '--grep-invert',
+      '@perf',
+      '--output',
+      shardOutput,
+      ...shardArgs,
+      ...forwarded,
+    ]);
+
+    await cleanupManagedWebServer(port);
+  }
+}
+
 function checkPortFree(port) {
   return new Promise((resolve) => {
     const server = net.createServer();
@@ -189,6 +229,7 @@ async function main() {
   // Keep worker count conservative to avoid long-run Playwright artifact/trace flakes
   // under local parallel load. Local runs can still opt back up with E2E_WORKERS.
   const workersFast = getNumberEnv('E2E_WORKERS', process.env.CI ? 2 : 1);
+  const fastShards = getNumberEnv('E2E_FAST_SHARDS', process.env.CI ? 1 : 2);
   const requestedPort = getNumberEnv('E2E_WEB_PORT', 8085);
   const autoSelectPort = String(process.env.E2E_AUTO_SELECT_PORT || '1') !== '0';
   const selectedPort = autoSelectPort
@@ -214,20 +255,13 @@ async function main() {
 
   try {
     // Pass 1: functional/UI/regression tests in parallel (exclude perf).
-    await runPlaywright([
-      'test',
-      '--forbid-only',
-      '--retries=0',
-      '--pass-with-no-tests',
-      `--workers=${workersFast}`,
-      '--grep-invert',
-      '@perf',
-      '--output',
-      path.join(outputRoot, 'e2e-fast'),
-      ...forwardedWithoutOutput,
-    ]);
-
-    await cleanupManagedWebServer(selectedPort);
+    await runFastPlaywrightPass({
+      workers: workersFast,
+      outputRoot,
+      forwarded: forwardedWithoutOutput,
+      port: selectedPort,
+      shards: fastShards,
+    });
 
     // Pass 2: perf/vitals tests in isolation (single worker).
     // Local environments occasionally hit transient web-server disconnects between long phases.
