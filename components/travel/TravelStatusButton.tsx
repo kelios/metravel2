@@ -6,7 +6,6 @@ import {
   Pressable,
   Modal,
   ScrollView,
-  TextInput,
   Platform,
   type StyleProp,
   type ViewStyle,
@@ -14,6 +13,7 @@ import {
 import Feather from '@expo/vector-icons/Feather'
 import { useAuth } from '@/context/AuthContext'
 import { parseTravelStatusDateParts, useTravelStatusStore, type TravelStatus } from '@/stores/travelStatusStore'
+import MiniCalendar from '@/components/calendar/MiniCalendar'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
 import { useThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -133,6 +133,11 @@ export default function TravelStatusButton({
       inFlightRef.current = false
     }
   }, [travelId, travelTitle, travelUrl, travelImageUrl, travelCountry, travelCity, travelYear, travelMonth, travelMonthName, userId, setStatus, current?.plannedDate])
+
+  const handleCalendarDateSelect = useCallback((value: string) => {
+    setDateInput(value)
+    setDateError('')
+  }, [])
 
   const handleConfirmDate = useCallback(async () => {
     if (!dateInput) {
@@ -332,20 +337,25 @@ export default function TravelStatusButton({
       lineHeight: 18,
       marginBottom: 10,
     },
-    dateInput: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      paddingHorizontal: 12,
+    calendarWrap: {
+      marginHorizontal: -16,
+    },
+    selectedDateBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
       paddingVertical: 10,
-      fontSize: 15,
+      paddingHorizontal: 12,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: dateInput ? colors.primaryLight : colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: dateInput ? colors.primary : colors.borderLight,
+      marginTop: 2,
+    },
+    selectedDateText: {
+      fontSize: 14,
+      fontWeight: '600',
       color: colors.text,
-      backgroundColor: colors.background,
-      ...(Platform.OS === 'web'
-        ? {
-            outlineStyle: 'none',
-          } as any
-        : null),
     },
     dateError: {
       fontSize: 12,
@@ -383,7 +393,7 @@ export default function TravelStatusButton({
       fontWeight: '700',
       color: colors.surface,
     },
-  }), [colors, current])
+  }), [colors, current, dateInput])
 
   // --- modal JSX (shared between compact and full) ---
   const modalJsx = (
@@ -448,27 +458,32 @@ export default function TravelStatusButton({
           ) : (
             <View style={styles.dateSection}>
               <Text style={styles.dateSectionTitle}>Дата поездки</Text>
-              <Text style={styles.dateSectionHint}>Введите дату в формате ГГГГ-ММ-ДД.</Text>
-              <TextInput
-                style={styles.dateInput}
-                value={dateInput}
-                onChangeText={(v) => { setDateInput(v); setDateError('') }}
-                placeholder="ГГГГ-ММ-ДД"
-                placeholderTextColor={colors.textMuted}
-                keyboardType="numbers-and-punctuation"
-                maxLength={10}
-                accessibilityLabel="Дата поездки"
-                inputMode={Platform.OS === 'web' ? 'numeric' as any : undefined}
-              />
+              <Text style={styles.dateSectionHint}>Выберите день в календаре.</Text>
+              <View style={styles.calendarWrap}>
+                <MiniCalendar
+                  entries={[]}
+                  selectedDate={dateInput || null}
+                  focusDate={dateInput || current?.plannedDate || null}
+                  onDayPress={handleCalendarDateSelect}
+                  accentColor={colors.primary}
+                  accentSoftColor={colors.primaryLight}
+                />
+              </View>
+              <View style={styles.selectedDateBox}>
+                <Feather name="calendar" size={15} color={dateInput ? colors.primary : colors.textMuted} />
+                <Text style={styles.selectedDateText}>
+                  {dateInput ? `Выбрано: ${dateInput}` : 'Дата не выбрана'}
+                </Text>
+              </View>
               {!!dateError && <Text style={styles.dateError}>{dateError}</Text>}
               <View style={styles.dateActions}>
                 <Pressable
                   style={[styles.dateCancelBtn, globalFocusStyles.focusable]}
                   onPress={() => setDatePicking(false)}
                   accessibilityRole="button"
-                  accessibilityLabel="Отмена"
+                  accessibilityLabel="Назад к выбору статуса"
                 >
-                  <Text style={styles.dateCancelText}>Отмена</Text>
+                  <Text style={styles.dateCancelText}>Назад</Text>
                 </Pressable>
                 <Pressable
                   style={[styles.dateConfirmBtn, globalFocusStyles.focusable]}

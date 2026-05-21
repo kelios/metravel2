@@ -31,6 +31,25 @@ jest.mock('@/utils/toast', () => ({
   showToast: jest.fn(() => Promise.resolve()),
 }))
 
+jest.mock('@/components/calendar/MiniCalendar', () => {
+  return function MockMiniCalendar({ onDayPress, selectedDate }: any) {
+    const { Pressable, Text, View } = require('react-native')
+    return (
+      <View testID="planned-date-calendar">
+        <Text>Календарь выбора даты</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="15 Июль"
+          onPress={() => onDayPress?.('2026-07-15')}
+        >
+          <Text>15</Text>
+        </Pressable>
+        {selectedDate ? <Text>{selectedDate}</Text> : null}
+      </View>
+    )
+  }
+})
+
 jest.mock('@/styles/globalFocus', () => ({
   globalFocusStyles: { focusable: {} },
 }))
@@ -147,7 +166,7 @@ describe('TravelStatusButton — полный режим (default)', () => {
     )
   })
 
-  it('показывает поле ввода даты при выборе «Планирую»', () => {
+  it('показывает календарь при выборе «Планирую»', () => {
     useAuth.mockReturnValue(makeAuthMock(true, '1'))
     render(<TravelStatusButton {...baseProps} />)
 
@@ -156,11 +175,12 @@ describe('TravelStatusButton — полный режим (default)', () => {
 
     expect(screen.getByText('Укажите дату поездки')).toBeTruthy()
     expect(screen.getByText('Дата поездки')).toBeTruthy()
-    expect(screen.getByText('Введите дату в формате ГГГГ-ММ-ДД.')).toBeTruthy()
-    expect(screen.getByPlaceholderText('ГГГГ-ММ-ДД')).toBeTruthy()
+    expect(screen.getByText('Выберите день в календаре.')).toBeTruthy()
+    expect(screen.getByTestId('planned-date-calendar')).toBeTruthy()
+    expect(screen.getByText('Дата не выбрана')).toBeTruthy()
   })
 
-  it('на web использует текстовое поле даты без нативного date-picker', () => {
+  it('на web показывает встроенный календарь без ручного поля ввода даты', () => {
     Platform.OS = 'web'
     useAuth.mockReturnValue(makeAuthMock(true, '1'))
     render(<TravelStatusButton {...baseProps} />)
@@ -168,11 +188,12 @@ describe('TravelStatusButton — полный режим (default)', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
     fireEvent.press(screen.getByRole('button', { name: 'Планирую' }))
 
-    expect(screen.getByPlaceholderText('ГГГГ-ММ-ДД')).toBeTruthy()
-    expect(screen.getByLabelText('Дата поездки')).toBeTruthy()
+    expect(screen.getByTestId('planned-date-calendar')).toBeTruthy()
+    expect(screen.queryByPlaceholderText('ГГГГ-ММ-ДД')).toBeNull()
+    expect(screen.queryByLabelText('Дата поездки')).toBeNull()
   })
 
-  it('сохраняет planned статус с валидной датой', async () => {
+  it('сохраняет planned статус с датой, выбранной в календаре', async () => {
     const setStatus = jest.fn(() => Promise.resolve())
     useTravelStatusStore.mockReturnValue(makeStoreMock({ setStatus }))
     useAuth.mockReturnValue(makeAuthMock(true, '1'))
@@ -180,7 +201,8 @@ describe('TravelStatusButton — полный режим (default)', () => {
 
     fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
     fireEvent.press(screen.getByRole('button', { name: 'Планирую' }))
-    fireEvent.changeText(screen.getByLabelText('Дата поездки'), '2026-07-15')
+    fireEvent.press(screen.getByRole('button', { name: '15 Июль' }))
+    expect(screen.getByText('Выбрано: 2026-07-15')).toBeTruthy()
 
     await act(async () => {
       fireEvent.press(screen.getByRole('button', { name: 'Сохранить дату' }))

@@ -190,7 +190,7 @@ describe('ProfileScreen', () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(2, 5);
 
-    const { findByText, getByLabelText, getAllByLabelText, queryByText } = renderProfile();
+    const { findByText, findByLabelText, getByLabelText, queryByText } = renderProfile();
 
     expect(await findByText('Test User')).toBeTruthy();
     expect(await findByText('user@example.com')).toBeTruthy();
@@ -208,10 +208,13 @@ describe('ProfileScreen', () => {
 
     await waitFor(() => {
       expect(getByLabelText('Мои: 3')).toBeTruthy();
-      // ProfileStats and ProfileTabs both render 'Избранное: 2' / 'История: 5'
-      expect(getAllByLabelText('Избранное: 2').length).toBeGreaterThanOrEqual(1);
-      expect(getAllByLabelText('История: 5').length).toBeGreaterThanOrEqual(1);
+      expect(getByLabelText('Избранное: 2')).toBeTruthy();
+      expect(getByLabelText('История: 5')).toBeTruthy();
     });
+
+    expect(await findByLabelText('Сохранили: 7')).toBeTruthy();
+    expect(await findByLabelText('Планируют: 2')).toBeTruthy();
+    expect(await findByLabelText('Сохранили: 0')).toBeTruthy();
   });
 
   it('logout works', async () => {

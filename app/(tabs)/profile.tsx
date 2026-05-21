@@ -17,7 +17,6 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
-import { ProfileStats } from '@/components/profile/ProfileStats';
 import { ProfileCompleteness } from '@/components/profile/ProfileCompleteness';
 import { ProfileTabs, type ProfileTabKey } from '@/components/profile/ProfileTabs';
 import { ProfileQuickActions } from '@/components/profile/ProfileQuickActions';
@@ -256,12 +255,28 @@ export default function ProfileScreen() {
     [viewHistory]
   );
 
+  const profileTravels = useMemo<Travel[]>(() =>
+    myTravels.map((travel) =>
+      travel.engagementStats
+        ? travel
+        : {
+            ...travel,
+            engagementStats: {
+              favoritesCount: 0,
+              wishlistCount: 0,
+              plannedCount: 0,
+            },
+          }
+    ),
+    [myTravels]
+  )
+
   const currentData = useMemo<Travel[]>(() => {
-    if (activeTab === 'travels') return myTravels;
+    if (activeTab === 'travels') return profileTravels;
     if (activeTab === 'favorites') return normalizedFavorites;
     if (activeTab === 'history') return normalizedHistory;
     return [];
-  }, [activeTab, myTravels, normalizedFavorites, normalizedHistory]);
+  }, [activeTab, normalizedFavorites, normalizedHistory, profileTravels]);
 
   const authoredTravelEngagementSummary = useMemo(() => {
     if (engagementSummary) return engagementSummary
@@ -524,14 +539,6 @@ export default function ProfileScreen() {
               onLogout={handleLogout}
               onAvatarUpload={pickAndUpload}
               avatarUploading={avatarUploading}
-            />
-            <ProfileStats
-              stats={stats}
-              onPressStat={(key) => {
-                if (key === 'travels') setActiveTab('travels');
-                else if (key === 'favorites') setActiveTab('favorites');
-                else if (key === 'views') setActiveTab('history');
-              }}
             />
             <ProfileTravelEngagementSummary
               summary={profileTravelSummary}

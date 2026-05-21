@@ -1,16 +1,18 @@
 import { useMemo } from 'react'
-import { View, Text, StyleSheet } from 'react-native'
+import { View, Text, StyleSheet, Pressable, Platform } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
+import { globalFocusStyles } from '@/styles/globalFocus'
 import {
   hasAnyTravelEngagementStats,
   type TravelEngagementStats,
 } from '@/utils/travelEngagementStats'
 
 type MetricKey = keyof TravelEngagementStats
+export type ProfileTravelEngagementMetricKey = MetricKey
 
 type MetricDefinition = {
   key: MetricKey
@@ -73,6 +75,18 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       gap: DESIGN_TOKENS.spacing.xxs,
       justifyContent: 'center',
     },
+    metricCardInteractive: {
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+        } as any,
+        default: {},
+      }),
+    },
+    metricCardActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primarySoft,
+    },
     metricIconWrap: {
       width: 24,
       height: 24,
@@ -99,11 +113,15 @@ export function ProfileTravelEngagementSummary({
   travelsCount,
   isLoading = false,
   mode = 'author',
+  activeMetric,
+  onMetricPress,
 }: {
   summary: TravelEngagementStats | null
   travelsCount: number
   isLoading?: boolean
   mode?: 'author' | 'calendar'
+  activeMetric?: MetricKey | null
+  onMetricPress?: (metric: MetricKey) => void
 }) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -145,13 +163,32 @@ export function ProfileTravelEngagementSummary({
       ) : (
         <View style={styles.metricsGrid}>
           {metrics.map((metric) => (
-            <View key={metric.key} style={styles.metricCard}>
+            <Pressable
+              key={metric.key}
+              style={({ pressed }) => [
+                styles.metricCard,
+                onMetricPress && styles.metricCardInteractive,
+                activeMetric === metric.key && styles.metricCardActive,
+                pressed && onMetricPress ? { opacity: 0.92 } : null,
+                onMetricPress ? globalFocusStyles.focusable : null,
+              ]}
+              onPress={onMetricPress ? () => onMetricPress(metric.key) : undefined}
+              disabled={!onMetricPress}
+              accessibilityRole={onMetricPress ? 'button' : undefined}
+              accessibilityLabel={`${metric.label}: ${formatMetricValue(summary?.[metric.key])}`}
+              accessibilityHint={onMetricPress ? 'Показать соответствующие карточки' : undefined}
+              accessibilityState={onMetricPress ? { selected: activeMetric === metric.key } : undefined}
+            >
               <View style={styles.metricIconWrap}>
-                <Feather name={metric.icon} size={15} color={colors.primary} />
+                <Feather
+                  name={metric.icon}
+                  size={15}
+                  color={activeMetric === metric.key ? colors.primary : colors.primary}
+                />
               </View>
               <Text style={styles.metricValue}>{formatMetricValue(summary?.[metric.key])}</Text>
               <Text style={styles.metricLabel}>{metric.label}</Text>
-            </View>
+            </Pressable>
           ))}
         </View>
       )}

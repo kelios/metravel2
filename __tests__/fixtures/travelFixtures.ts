@@ -1,6 +1,22 @@
 export const MY_TRAVELS_FIXTURE = [
-  { id: 101, title: 'My Travel 1' },
-  { id: 102, title: 'My Travel 2' },
+  {
+    id: 101,
+    title: 'My Travel 1',
+    engagement_stats: {
+      favorites_count: 7,
+      wishlist_count: 3,
+      planned_count: 2,
+    },
+  },
+  {
+    id: 102,
+    title: 'My Travel 2',
+    engagementStats: {
+      favoritesCount: 1,
+      wishlistCount: 0,
+      plannedCount: 5,
+    },
+  },
   { id: 103, title: 'My Travel 3' },
 ] as const;
 

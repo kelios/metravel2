@@ -31,8 +31,9 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
       StyleSheet.create({
         wrapper: {
           backgroundColor: colors.background,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.borderLight,
+          paddingHorizontal: DESIGN_TOKENS.spacing.md,
+          paddingTop: DESIGN_TOKENS.spacing.sm,
+          paddingBottom: DESIGN_TOKENS.spacing.xs,
           ...Platform.select({
             web: {
               position: 'sticky',
@@ -44,56 +45,50 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
         },
         tabRow: {
           flexDirection: 'row',
-          paddingHorizontal: DESIGN_TOKENS.spacing.md,
+          gap: DESIGN_TOKENS.spacing.xs,
         },
         tab: {
           flex: 1,
-          flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 6,
+          gap: DESIGN_TOKENS.spacing.xs,
           paddingVertical: DESIGN_TOKENS.spacing.sm,
-          paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+          paddingHorizontal: DESIGN_TOKENS.spacing.sm,
           minHeight: DESIGN_TOKENS.touchTarget.minHeight,
-          borderBottomWidth: 2,
-          borderBottomColor: 'transparent',
-          marginBottom: -1,
+          borderRadius: DESIGN_TOKENS.radii.lg,
+          borderWidth: 1,
+          borderColor: colors.borderLight,
+          backgroundColor: colors.surface,
           ...Platform.select({
             web: { cursor: 'pointer' } as any,
             default: {},
           }),
         },
         activeTab: {
-          borderBottomColor: colors.primary,
+          borderColor: colors.primary,
+          backgroundColor: colors.primarySoft,
+        },
+        countText: {
+          ...DESIGN_TOKENS.typography.scale.h2,
+          color: colors.text,
+          textAlign: 'center',
+        },
+        activeCountText: {
+          color: colors.primary,
+        },
+        labelRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: DESIGN_TOKENS.spacing.xxs,
         },
         tabText: {
           fontSize: DESIGN_TOKENS.typography.sizes.sm,
-          fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+          fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
           color: colors.textMuted,
+          textAlign: 'center',
         },
         activeTabText: {
           color: colors.primary,
-          fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-        },
-        badge: {
-          paddingHorizontal: 6,
-          paddingVertical: 1,
-          borderRadius: DESIGN_TOKENS.radii.pill,
-          backgroundColor: colors.backgroundSecondary,
-          minWidth: 20,
-          alignItems: 'center',
-        },
-        activeBadge: {
-          backgroundColor: colors.primarySoft,
-        },
-        badgeText: {
-          fontSize: 11,
-          fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-          color: colors.textMuted,
-        },
-        activeBadgeText: {
-          color: colors.primary,
-          fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
         },
       }),
     [colors]
@@ -110,8 +105,7 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
       <View style={styles.tabRow}>
         {tabs.map((tab) => {
           const isActive = activeTab === tab.key;
-          const count = counts?.[tab.key];
-          const showBadge = typeof count === 'number' && count >= 0;
+          const count = typeof counts?.[tab.key] === 'number' ? counts[tab.key] : 0;
 
           return (
             <Pressable
@@ -124,24 +118,20 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
               onPress={() => onChangeTab(tab.key)}
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}
-              accessibilityLabel={`${tab.label}${showBadge ? `: ${count}` : ''}`}
+              accessibilityLabel={`${tab.label}: ${count}`}
               accessibilityHint={tab.hint}
             >
-              <Feather
-                name={TAB_ICONS[tab.key]}
-                size={15}
-                color={isActive ? colors.primary : colors.textMuted}
-              />
-              <Text style={[styles.tabText, isActive && styles.activeTabText]}>
-                {tab.label}
-              </Text>
-              {showBadge && (
-                <View style={[styles.badge, isActive && styles.activeBadge]}>
-                  <Text style={[styles.badgeText, isActive && styles.activeBadgeText]}>
-                    {count}
-                  </Text>
-                </View>
-              )}
+              <Text style={[styles.countText, isActive && styles.activeCountText]}>{count}</Text>
+              <View style={styles.labelRow}>
+                <Feather
+                  name={TAB_ICONS[tab.key]}
+                  size={15}
+                  color={isActive ? colors.primary : colors.textMuted}
+                />
+                <Text style={[styles.tabText, isActive && styles.activeTabText]}>
+                  {tab.label}
+                </Text>
+              </View>
             </Pressable>
           );
         })}
