@@ -116,5 +116,41 @@ describe('TravelDetailsContainer performance (web)', () => {
     expect(lcpImg?.getAttribute('srcset')).not.toContain('dpr=')
   })
 
+  it('renders a neutral hero placeholder without visible text when the LCP image fails', () => {
+    const { container, queryByText } = render(
+      <__testables.OptimizedLCPHero
+        img={{
+          url: 'https://cdn.example.com/missing.jpg',
+          width: 1200,
+          height: 800,
+          updated_at: '2025-01-01',
+          id: 1,
+        }}
+        alt='Hero image'
+        isMobile={false}
+        height={600}
+        containerWidth={720}
+      />,
+    )
+
+    const lcpImg = container.querySelector('img[data-lcp]') as HTMLImageElement | null
+    expect(lcpImg).toBeTruthy()
+
+    if (lcpImg) {
+      fireEvent.error(lcpImg)
+    }
+
+    const placeholder = container.querySelector(
+      '[data-testid="travel-hero-neutral-placeholder"]',
+    ) as HTMLDivElement | null
+
+    expect(placeholder).toBeTruthy()
+    expect(placeholder?.getAttribute('aria-hidden')).toBe('true')
+    expect(placeholder?.getAttribute('role')).toBeNull()
+    expect(placeholder?.getAttribute('aria-label')).toBeNull()
+    expect(queryByText('Фото недоступно')).toBeNull()
+    expect(placeholder?.textContent).toBe('')
+  })
+
   // useLCPPreload was removed — preloading is handled by the inline script in +html.tsx
 })

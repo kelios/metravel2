@@ -173,6 +173,14 @@ npm run release:check  # Полная проверка (lint + tests + build + a
 
 ---
 
+## Skills для агентского workflow
+
+- Полная карта skills и сценариев их выбора живёт в `docs/CODEX.md`.
+- `$metravel-hook-builder` — используй, когда задача в основном состоит в выносе или упрощении focused React hooks, cleanup hook-границ и сохранении текущих public contracts.
+- `$metravel-code-reviewer` — используй для focused review diff'а перед handoff: поиск рисков, rule violations, validation gaps и residual risk.
+
+---
+
 ## Стиль ответов Claude в этом проекте
 
 1. Сначала короткий план (2-5 пунктов) — что и где меняется

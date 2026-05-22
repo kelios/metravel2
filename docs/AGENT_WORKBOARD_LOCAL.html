@@ -233,9 +233,166 @@
       font-weight: 900;
     }
 
+    .active-work-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .active-work-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      padding: 12px;
+      min-width: 0;
+      animation: cardPulse 2.8s ease-in-out infinite;
+    }
+
+    .active-work-card strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .active-work-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .active-work-card .active-owner {
+      color: var(--primary);
+      font-weight: 900;
+    }
+
     .designer-focus {
       display: grid;
       gap: 10px;
+    }
+
+    .ritual-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .ritual-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .ritual-card h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      line-height: 1.2;
+    }
+
+    .ritual-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .planning-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .planning-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      padding: 14px;
+      min-width: 0;
+    }
+
+    .planning-card h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      line-height: 1.2;
+    }
+
+    .planning-card ul {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .planning-card li + li {
+      margin-top: 5px;
+    }
+
+    .sprint-summary {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) repeat(3, minmax(150px, .38fr));
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .sprint-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      padding: 14px;
+      min-width: 0;
+    }
+
+    .sprint-card h2,
+    .sprint-card h3 {
+      margin: 0 0 8px;
+      line-height: 1.15;
+    }
+
+    .sprint-card h2 {
+      font-size: 20px;
+    }
+
+    .sprint-card h3 {
+      font-size: 13px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .sprint-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .sprint-value {
+      display: block;
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 900;
+      line-height: 1.15;
+    }
+
+    .sprint-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .sprint-chip {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface-2);
+      color: var(--muted);
+      padding: 4px 9px;
+      font-size: 12px;
+      font-weight: 800;
     }
 
     .designer-row {
@@ -609,6 +766,43 @@
       overflow-wrap: anywhere;
     }
 
+    .evidence-list {
+      display: grid;
+      gap: 6px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+
+    .evidence-label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .evidence-item {
+      border-radius: 6px;
+      background: var(--surface-2);
+      color: var(--muted);
+      padding: 6px 8px;
+      font-size: 12px;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
+    }
+
+    .evidence-item.pass {
+      background: var(--success-soft);
+      color: var(--success);
+      font-weight: 800;
+    }
+
+    .evidence-item.file {
+      background: var(--info-soft);
+      color: var(--info);
+    }
+
     .status {
       display: inline-flex;
       align-items: center;
@@ -707,6 +901,10 @@
       .topbar { display: block; }
       .local-note { margin-top: 14px; }
       .live-grid { grid-template-columns: 1fr; }
+      .active-work-grid { grid-template-columns: 1fr; }
+      .ritual-grid { grid-template-columns: 1fr; }
+      .sprint-summary { grid-template-columns: 1fr; }
+      .planning-grid { grid-template-columns: 1fr; }
       .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .people-grid { grid-template-columns: 1fr; }
       .jira-board { grid-template-columns: 1fr; }
@@ -751,8 +949,8 @@
     <section class="toolbar">
       <div class="filters" id="filters"></div>
       <div class="filters">
-        <button class="action primary" type="button" id="work-step">Сделать шаг работы</button>
-        <button class="action" type="button" id="auto-cycle">Авто-цикл: выкл</button>
+        <button class="action primary" type="button" id="work-step">Записать реальный check-in</button>
+        <button class="action" type="button" id="auto-cycle">Demo mode: выкл</button>
         <button class="action" type="button" id="reset">Сбросить локальные статусы</button>
       </div>
     </section>
@@ -774,12 +972,106 @@
       </div>
     </section>
 
+    <section class="live-panel">
+      <div class="live-head">
+        <h2 class="live-title">Сейчас в работе</h2>
+        <span class="live-clock" id="active-work-summary">0 active</span>
+      </div>
+      <div class="active-work-grid" id="active-work"></div>
+    </section>
+
+    <section class="ritual-grid">
+      <article class="ritual-card">
+        <h3>Daily standup</h3>
+        <p>Каждый день 10:00. Статусы, blockers, approval-needed, next actions.</p>
+      </article>
+      <article class="ritual-card">
+        <h3>Sprint planning</h3>
+        <p>Каждый понедельник 10:30. Scope, backlog readiness, owners, acceptance criteria.</p>
+      </article>
+      <article class="ritual-card">
+        <h3>Monthly retro</h3>
+        <p>Последняя пятница месяца 16:00. Что сработало, что блокировало, process improvements.</p>
+      </article>
+    </section>
+
+    <section class="sprint-summary" aria-label="Sprint planning result">
+      <article class="sprint-card">
+        <h2>Travel QA Stabilization</h2>
+        <p>Планинг проведен 2026-05-22. Спринт: 2026-05-22 - 2026-05-29. Фокус: закрыть QA/design/SEO discovery и подготовить developer-ready fixes для travel page.</p>
+        <div class="sprint-meta" aria-label="Sprint commitment">
+          <span class="sprint-chip">Committed: T-010...T-013, T-016, T-017</span>
+          <span class="sprint-chip">Stretch: T-014, T-020</span>
+          <span class="sprint-chip">No prod deploy</span>
+        </div>
+      </article>
+      <article class="sprint-card">
+        <h3>Capacity</h3>
+        <span class="sprint-value">7 active roles</span>
+        <p>QA, Manual QA, QA Analyst, Designer, BA, Dev, SEO.</p>
+      </article>
+      <article class="sprint-card">
+        <h3>Approval</h3>
+        <span class="sprint-value">Approved to start</span>
+        <p>Андриуш approved discovery and planning scope; implementation waits for spec/design output.</p>
+      </article>
+      <article class="sprint-card">
+        <h3>Main risk</h3>
+        <span class="sprint-value">Spec mismatch</span>
+        <p>T-012 Instagram e2e expectation conflicts with project rules and must be aligned first.</p>
+      </article>
+    </section>
+
+    <section class="planning-grid">
+      <article class="planning-card">
+        <h3>Sprint goal</h3>
+        <ul>
+          <li>Закрыть approval blockers по T-010...T-014.</li>
+          <li>Подготовить developer-ready scope для travel page fixes.</li>
+          <li>Синхронизировать QA, UX, SEO и BA criteria.</li>
+        </ul>
+      </article>
+      <article class="planning-card">
+        <h3>Committed</h3>
+        <ul>
+          <li>T-010 authenticated manual QA.</li>
+          <li>T-011 manual test cases.</li>
+          <li>T-012 Instagram expected behavior.</li>
+          <li>T-013 neutral hero placeholder.</li>
+        </ul>
+      </article>
+      <article class="planning-card">
+        <h3>Stretch</h3>
+        <ul>
+          <li>T-014 mobile overlays and touch targets.</li>
+          <li>T-020 SEO metadata/schema audit.</li>
+          <li>Implementation patch after approval.</li>
+        </ul>
+      </article>
+      <article class="planning-card">
+        <h3>Decisions</h3>
+        <ul>
+          <li>Андриуш approves readiness before dev implementation.</li>
+          <li>Крина owns acceptance criteria.</li>
+          <li>Ромик starts patch only after design/spec approval.</li>
+        </ul>
+      </article>
+    </section>
+
     <section class="panel">
       <div class="panel-title">
         <h2>Команда: кто что делает</h2>
         <span id="people-summary"></span>
       </div>
       <div class="people-grid" id="people"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">
+        <h2>Real work evidence</h2>
+        <span id="evidence-summary-count"></span>
+      </div>
+      <div class="active-work-grid" id="evidence-summary"></div>
     </section>
 
     <section class="panel">
@@ -812,9 +1104,12 @@
   </main>
 
   <script>
-    const STORAGE_KEY = 'metravel.localAgentBoard.v1';
-    const PROGRESS_KEY = 'metravel.localAgentBoard.progress.v1';
-    const APPROVAL_KEY = 'metravel.localAgentBoard.approvals.v1';
+    const STORAGE_KEY = 'metravel.localAgentBoard.v4';
+    const LEGACY_STORAGE_KEYS = ['metravel.localAgentBoard.v1', 'metravel.localAgentBoard.v2', 'metravel.localAgentBoard.v3'];
+    const PROGRESS_KEY = 'metravel.localAgentBoard.progress.v4';
+    const LEGACY_PROGRESS_KEYS = ['metravel.localAgentBoard.progress.v1', 'metravel.localAgentBoard.progress.v2', 'metravel.localAgentBoard.progress.v3'];
+    const APPROVAL_KEY = 'metravel.localAgentBoard.approvals.v4';
+    const LEGACY_APPROVAL_KEYS = ['metravel.localAgentBoard.approvals.v1', 'metravel.localAgentBoard.approvals.v2', 'metravel.localAgentBoard.approvals.v3'];
     const ACTIVITY_KEY = 'metravel.localAgentBoard.activity.v1';
     const AUTO_KEY = 'metravel.localAgentBoard.autoCycle.v1';
     const statuses = ['Open', 'In progress', 'Blocked', 'Flaky', 'Done'];
@@ -828,91 +1123,179 @@
       'T-016': 54,
       'T-017': 43,
       'T-018': 48,
+      'T-019': 57,
+      'T-020': 52,
+      'T-021': 24,
+      'T-022': 22,
+      'T-023': 18,
+      'T-024': 18,
+      'T-025': 18,
+      'T-026': 18,
+      'T-027': 18,
+      'T-028': 18,
+      'T-029': 20,
+      'T-030': 20,
+      'T-031': 18,
+      'T-032': 18,
+      'T-033': 18,
+      'T-034': 18,
+      'T-035': 18,
+      'T-036': 18,
+      'T-037': 18,
+      'T-038': 18,
+      'T-039': 18,
+      'T-040': 18,
+      'T-041': 18,
+      'T-042': 18,
+      'T-043': 18,
+      'T-044': 18,
+      'T-045': 18,
+      'T-046': 18,
+      'T-047': 18,
+      'T-048': 18,
+      'T-049': 18,
+      'T-050': 18,
+      'T-051': 18,
+      'T-052': 18,
+      'T-053': 0,
+      'T-054': 18,
     };
 
     const initialTickets = [
-      { id: 'T-001', title: 'Complete browser QA for travel details desktop and mobile', owner: 'QA Tester', status: 'Done', priority: 'P1', approval: 'Approved', approver: 'Approver / Product Owner', notes: '40 passed; duplicate initial request bug candidate found' },
-      { id: 'T-002', title: 'Complete manual user-flow QA for travel details', owner: 'Manual QA Tester', status: 'Done', priority: 'P1', approval: 'Approved', approver: 'Approver / Product Owner', notes: 'Guest/manual pass completed' },
-      { id: 'T-007', title: 'Run extended web QA for travel details and related public flows', owner: 'QA Tester', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Approver / Product Owner', notes: 'Desktop Chrome travel details, interactions, comments, Instagram rich text, responsive layout' },
-      { id: 'T-008', title: 'Run extended mobile-web QA for travel details', owner: 'QA Tester', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Approver / Product Owner', notes: '390x844 viewport, horizontal overflow, clipped actions, sticky/navigation states' },
-      { id: 'T-009', title: 'Create designer UX/UI audit backlog from QA evidence', owner: 'UI/UX Designer', status: 'In progress', priority: 'P2', approval: 'Approved', approver: 'Approver / Product Owner', notes: 'Visual hierarchy, touch targets, empty states, and mobile polish' },
-      { id: 'T-010', title: 'Run authenticated manual QA for write flows', owner: 'Manual QA Tester', status: 'Open', priority: 'P1', approval: 'Needs approval', approver: 'Approver / Product Owner', notes: 'Use .env.e2e; cover favorite, rating, comment create/edit/delete' },
-      { id: 'T-011', title: 'Write manual test cases for travel details web/mobile', owner: 'QA Test Analyst', status: 'Open', priority: 'P1', approval: 'Needs approval', approver: 'Approver / Product Owner', notes: 'Prerequisites, steps, expected result, viewport, and evidence checklist' },
-      { id: 'T-012', title: 'Align Instagram rich-text e2e expectation with project rules', owner: 'QA Test Analyst + Developer', status: 'Open', priority: 'P2', approval: 'Needs approval', approver: 'Approver / Product Owner', notes: 'Current e2e expects fallback cards, while rules require iframe embeds for valid post/reel/tv URLs' },
-      { id: 'T-013', title: 'Redesign missing hero media state for travel details', owner: 'UI/UX Designer', status: 'Open', priority: 'P2', approval: 'Needs approval', approver: 'Approver / Product Owner', notes: 'Current placeholder displays text; project rule requires neutral placeholder' },
-      { id: 'T-014', title: 'Audit mobile bottom overlays and touch target sizes', owner: 'UI/UX Designer', status: 'Open', priority: 'P3', approval: 'Needs approval', approver: 'Approver / Product Owner', notes: 'Cookie banner, bottom nav, sticky section tabs, and several actions need review' },
-      { id: 'T-015', title: 'Form and groom backlog from QA/design findings', owner: 'Backlog Manager / Product Owner', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Approver / Product Owner', notes: 'Convert findings, manual cases, and idle capacity into prioritized implementation-ready tasks' },
-      { id: 'T-016', title: 'Write business requirements and acceptance criteria for travel QA fixes', owner: 'Business Analyst', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Approver / Product Owner', notes: 'Separate product requirements, user stories, non-goals, risks, and acceptance criteria from manager coordination' },
-      { id: 'T-017', title: 'Prepare technical fix plan for travel QA findings', owner: 'Developer', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Approver / Product Owner', notes: 'Locate files and prepare implementation approach for D-001 neutral placeholder and T-012 Instagram e2e alignment' },
-      { id: 'T-018', title: 'Approve and govern task readiness flow', owner: 'Approver / Product Owner', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Approver / Product Owner', notes: 'Define who approves requirements, design, QA findings, and developer-ready tickets before implementation' },
+      { id: 'T-001', title: 'Complete browser QA for travel details desktop and mobile', owner: 'Мариночка (QA)', status: 'Done', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: '40 passed; duplicate initial request bug candidate found' },
+      { id: 'T-002', title: 'Complete manual user-flow QA for travel details', owner: 'Мариночка (Manual QA)', status: 'Done', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Guest/manual pass completed' },
+      { id: 'T-007', title: 'Run extended web QA for travel details and related public flows', owner: 'Мариночка (QA)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Desktop Chrome travel details, interactions, comments, Instagram rich text, responsive layout' },
+      { id: 'T-008', title: 'Run extended mobile-web QA for travel details', owner: 'Мариночка (QA)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: '390x844 viewport, horizontal overflow, clipped actions, sticky/navigation states' },
+      { id: 'T-009', title: 'Create designer UX/UI audit backlog from QA evidence', owner: 'UI/UX Designer', status: 'In progress', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Visual hierarchy, touch targets, empty states, and mobile polish' },
+      { id: 'T-010', title: 'Run authenticated manual QA for write flows', owner: 'Мариночка (Manual QA)', status: 'Open', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Sprint approved to start; use .env.e2e; cover favorite, rating, comment create/edit/delete' },
+      { id: 'T-011', title: 'Write manual test cases for travel details web/mobile', owner: 'Мариночка (QA Analyst)', status: 'Open', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Sprint approved to start; prerequisites, steps, expected result, viewport, and evidence checklist' },
+      { id: 'T-012', title: 'Align Instagram rich-text e2e expectation with project rules', owner: 'Мариночка (QA Analyst) + Ромик (Dev)', status: 'Open', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Sprint approved to start; current e2e expects fallback cards, while rules require iframe embeds for valid post/reel/tv URLs' },
+      { id: 'T-013', title: 'Redesign missing hero media state for travel details', owner: 'UI/UX Designer + Ромик (Dev)', status: 'Done', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Fixed in code: hero fallback is now a neutral geometry-preserving block with no visible text/icons' },
+      { id: 'T-014', title: 'Audit mobile bottom overlays and touch target sizes', owner: 'UI/UX Designer', status: 'Open', priority: 'P3', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Stretch approved to start if capacity remains; cookie banner, bottom nav, sticky section tabs, and several actions need review' },
+      { id: 'T-015', title: 'Form and groom backlog from QA/design findings', owner: 'Андриуш (Backlog Manager)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Convert findings, manual cases, and idle capacity into prioritized implementation-ready tasks' },
+      { id: 'T-016', title: 'Write business requirements and acceptance criteria for travel QA fixes', owner: 'Крина (Business Analyst)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Separate product requirements, user stories, non-goals, risks, and acceptance criteria from manager coordination' },
+      { id: 'T-017', title: 'Prepare technical fix plan for travel QA findings', owner: 'Ромик (Dev)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Locate files and prepare implementation approach for D-001 neutral placeholder and T-012 Instagram e2e alignment' },
+      { id: 'T-018', title: 'Approve and govern task readiness flow', owner: 'Андриуш (Approver)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Define who approves requirements, design, QA findings, and developer-ready tickets before implementation' },
+      { id: 'T-019', title: 'Keep local QA automation and workboard health green', owner: 'Витаутас (DevOps)', status: 'In progress', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Watch local board, e2e artifacts, scheduled rituals, and automation health for the team' },
+      { id: 'T-020', title: 'Audit travel page SEO metadata and schema health', owner: 'Сео (SEO Engineer)', status: 'In progress', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Review canonical, title, description, OG tags, schema.org, and SEO e2e coverage for travel details' },
+      { id: 'T-021', title: 'Create cross-page QA acceptance matrix', owner: 'Крина (Business Analyst)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Define acceptance criteria for Search, Home, Map, Places, Quests, and PDF/export before implementation starts' },
+      { id: 'T-022', title: 'Write manual test cases for next-page QA wave', owner: 'Мариночка (QA Analyst)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Create reusable cases for Search, Home, Map, Places, Quests, PDF/export with prerequisites, steps, expected results, viewport, and evidence fields' },
+      { id: 'T-023', title: 'Run Search page web and mobile QA pass', owner: 'Мариночка (QA)', status: 'Done', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Verified search input, filtered empty/results state, desktop/mobile layout, horizontal overflow, and console/page errors' },
+      { id: 'T-024', title: 'Run Home page web and mobile QA pass', owner: 'Мариночка (QA)', status: 'Done', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Verified home title/h1, quick filters, Home -> Search filter navigation, desktop/mobile layout, horizontal overflow, and console/page errors' },
+      { id: 'T-025', title: 'Run Map page web and mobile QA pass', owner: 'Мариночка (QA)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Cover map load, markers, filters, popups, route interactions, mobile controls, and external links' },
+      { id: 'T-026', title: 'Run Places page web and mobile QA pass', owner: 'Мариночка (QA)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Cover places catalog, country/category/search filters, cards, map focus links, incremental loading, and mobile layout' },
+      { id: 'T-027', title: 'Run Quests page web and mobile QA pass', owner: 'Мариночка (QA)', status: 'In progress', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Cover quest list/detail/start flows, media states, map dependencies, responsive layout, and console errors' },
+      { id: 'T-028', title: 'Run PDF/export QA pass', owner: 'Мариночка (Manual QA)', status: 'In progress', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Manually verify PDF/export entry points, generated output, loading/errors, and permissions without exposing secrets' },
+      { id: 'T-029', title: 'Create UX/UI audit for next-page QA wave', owner: 'UI/UX Designer', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Audit Search, Home, Map, Places, Quests, PDF/export for hierarchy, touch targets, overlays, placeholders, and responsive polish' },
+      { id: 'T-030', title: 'Run SEO audit for indexable pages', owner: 'Сео (SEO Engineer)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Check titles, descriptions, canonical, OG, schema, indexability, and SEO e2e coverage for Home, Search, Places, Quests, and Travel' },
+      { id: 'T-031', title: 'Prepare implementation queue for confirmed page findings', owner: 'Ромик (Dev)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Triage confirmed QA/design/SEO findings into fix-ready diffs; do not code vague issues without acceptance criteria' },
+      { id: 'T-032', title: 'Review cross-page QA findings and fix readiness', owner: 'Андриуш (Reviewer)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Review findings for duplicates, severity, owner, acceptance criteria, validation plan, and project-rule compliance' },
+      { id: 'T-033', title: 'Prepare multi-page e2e and local environment health plan', owner: 'Витаутас (DevOps)', status: 'In progress', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Keep e2e server/build health stable, define selective commands, and watch for stale local artifacts or stuck servers' },
+      { id: 'T-034', title: 'Maintain cross-page backlog and capacity board', owner: 'Андриуш (Backlog Manager)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Keep all findings assigned, prioritized, evidence-tagged, and ready for weekly planning without idle roles' },
+      { id: 'T-035', title: 'Run mobile manual smoke for Search, Home, Map, Places, Quests', owner: 'Мариночка (Manual QA)', status: 'In progress', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Manual mobile pass for tap targets, navigation, overlays, scroll behavior, and screenshots/evidence notes' },
+      { id: 'T-036', title: 'Write Search page test cases', owner: 'Мариночка (QA Analyst)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Cover query, filters, sorting, pagination/infinite load, empty state, deep links, and mobile variants' },
+      { id: 'T-037', title: 'Create Search page UX audit', owner: 'UI/UX Designer', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Audit filter ergonomics, result cards, empty states, touch targets, and mobile filter access' },
+      { id: 'T-038', title: 'Run Search page SEO audit', owner: 'Сео (SEO Engineer)', status: 'In progress', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Check title, description, canonical, indexability, schema risk, and e2e coverage notes' },
+      { id: 'T-039', title: 'Prepare Search findings for development', owner: 'Ромик (Dev)', status: 'Open', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Wait for QA/BA/design evidence; then map confirmed findings to target files and validation commands' },
+      { id: 'T-040', title: 'Write Home page test cases', owner: 'Мариночка (QA Analyst)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Cover first load, hero, navigation to details/search/map, degraded data, and responsive sections' },
+      { id: 'T-041', title: 'Create Home page UX audit', owner: 'UI/UX Designer', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Audit hierarchy, cards, media placeholders, CTAs, section spacing, and mobile bottom/nav overlap' },
+      { id: 'T-042', title: 'Run Home page SEO audit', owner: 'Сео (SEO Engineer)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Review metadata, OG, heading structure, internal links, and structured data risks' },
+      { id: 'T-043', title: 'Write Map page test cases', owner: 'Мариночка (QA Analyst)', status: 'Open', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Cover geolocation allowed/denied, marker click, popup, filters/search, route interactions, and error state' },
+      { id: 'T-044', title: 'Create Map controls UX audit', owner: 'UI/UX Designer', status: 'Open', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Audit touch targets, popup layout, map controls, overlays, and mobile gesture conflicts' },
+      { id: 'T-045', title: 'Write Places page test cases', owner: 'Мариночка (QA Analyst)', status: 'Open', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Cover list, filters, place card, map relation, missing media, empty state, and incremental loading' },
+      { id: 'T-046', title: 'Run Places SEO audit', owner: 'Сео (SEO Engineer)', status: 'Open', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Check metadata, canonical, OG, schema notes, and indexability for Places surfaces' },
+      { id: 'T-047', title: 'Write Quests page test cases', owner: 'Мариночка (QA Analyst)', status: 'Open', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Cover list, detail, start/resume where available, locked/empty/error states, and media handling' },
+      { id: 'T-048', title: 'Create Quests UX audit', owner: 'UI/UX Designer', status: 'Open', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Audit quest flow clarity, cards, next-action states, empty states, and dead-end prevention' },
+      { id: 'T-049', title: 'Write PDF/export test cases', owner: 'Мариночка (QA Analyst)', status: 'Open', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Cover export entry points, permissions, loading, error, generated output, and download/result verification' },
+      { id: 'T-050', title: 'Prepare PDF/export findings for development', owner: 'Ромик (Dev)', status: 'Open', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Only confirmed PDF/export bugs with repro, expected result, target files, and validation enter implementation' },
+      { id: 'T-051', title: 'Run cross-page review gate', owner: 'Андриуш (Reviewer)', status: 'Open', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Deduplicate findings, verify severity, reject vague bugs, and approve implementation-ready tasks' },
+      { id: 'T-052', title: 'Keep new sprint evidence and e2e health green', owner: 'Витаутас (DevOps)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Ensure board shows active work, no fake Done, evidence required for every closed task, and e2e setup remains stable' },
+      { id: 'T-053', title: 'Cross-page implementation lane', owner: 'Ромик (Dev)', status: 'Blocked', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Blocked until QA/BA/design evidence produces approved bug/spec/design output from T-023 onward' },
+      { id: 'T-054', title: 'Create cross-page final regression plan', owner: 'Крина (Business Analyst) + Мариночка (QA Analyst)', status: 'Open', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'One reusable release checklist covers web/mobile/page-specific risks before final regression' },
     ];
 
     const roles = [
-      { owner: 'Manager', task: 'Coordination, staffing, delivery status, scope control', status: 'In progress' },
-      { owner: 'Approver / Product Owner', task: 'Approves scope, design decisions, QA findings, and developer-ready tasks', status: 'In progress' },
-      { owner: 'Business Analyst', task: 'Requirements, user stories, acceptance criteria, non-goals, risks', status: 'In progress' },
-      { owner: 'Backlog Manager / Product Owner', task: 'Forms backlog, assigns priorities, prepares next work for idle roles', status: 'In progress' },
-      { owner: 'Developer', task: 'Technical fix plan for D-001 and T-012', status: 'In progress' },
-      { owner: 'QA Tester', task: 'Extended web/mobile QA pass', status: 'In progress' },
-      { owner: 'Manual QA Tester', task: 'Authenticated favorite/rating/comments pass', status: 'Open' },
-      { owner: 'QA Test Analyst', task: 'Manual test cases and Instagram spec alignment', status: 'Open' },
+      { owner: 'Андриуш (Manager)', task: 'Coordination, staffing, delivery status, scope control', status: 'In progress' },
+      { owner: 'Андриуш (Approver)', task: 'Approves scope, design decisions, QA findings, and developer-ready tasks', status: 'In progress' },
+      { owner: 'Крина (Business Analyst)', task: 'Requirements, user stories, acceptance criteria, non-goals, risks', status: 'In progress' },
+      { owner: 'Андриуш (Backlog Manager)', task: 'Forms backlog, assigns priorities, prepares next work for idle roles', status: 'In progress' },
+      { owner: 'Ромик (Dev)', task: 'T-013 fixed in code; next technical work is T-012', status: 'In progress' },
+      { owner: 'Витаутас (DevOps)', task: 'Local automation, scheduled rituals, and board health', status: 'In progress' },
+      { owner: 'Сео (SEO Engineer)', task: 'Travel page metadata, schema, OG, canonical, and SEO checks', status: 'In progress' },
+      { owner: 'Мариночка (QA)', task: 'Extended web/mobile QA pass', status: 'In progress' },
+      { owner: 'Мариночка (Manual QA)', task: 'Authenticated favorite/rating/comments pass', status: 'Open' },
+      { owner: 'Мариночка (QA Analyst)', task: 'Manual test cases and Instagram spec alignment', status: 'Open' },
       { owner: 'UI/UX Designer', task: 'Hero placeholder, mobile overlays, touch targets', status: 'In progress' },
-      { owner: 'Reviewer / Architect', task: 'Review next diff after implementation', status: 'Open' },
+      { owner: 'Андриуш (Reviewer)', task: 'Review next diff after implementation', status: 'Open' },
     ];
 
     const people = [
       {
-        name: 'Manager',
-        aliases: ['Manager'],
+        name: 'Андриуш (Manager)',
+        aliases: ['Андриуш (Manager)'],
         role: 'Координация команды, статусы, staffing, delivery',
-        done: ['Запущены роли команды', 'Борд переведен в локальный Jira-style формат'],
-        backlog: ['Следить за idle сотрудниками', 'Подтвердить следующий implementation sprint'],
+        done: ['Запущены роли команды', 'Борд переведен в локальный Jira-style формат', 'Проведен sprint planning 2026-05-22'],
+        backlog: ['Следить за idle сотрудниками', 'Проверить sprint progress к 2026-05-29'],
       },
       {
-        name: 'Approver / Product Owner',
-        aliases: ['Approver / Product Owner'],
+        name: 'Андриуш (Approver)',
+        aliases: ['Андриуш (Approver)'],
         role: 'Апрувит scope, требования, дизайн и developer-ready задачи',
-        done: ['Утверждены T-001, T-002, T-007, T-008, T-009, T-015, T-016, T-017'],
-        backlog: ['T-018: описать approval flow', 'Согласовать T-010...T-014 перед implementation'],
+        done: ['Утверждены T-001, T-002, T-007, T-008, T-009, T-015, T-016, T-017', 'Approved-to-start для T-010...T-014'],
+        backlog: ['T-018: описать approval flow', 'Апрувить implementation только после spec/design output'],
       },
       {
-        name: 'Business Analyst',
-        aliases: ['Business Analyst'],
+        name: 'Крина (Business Analyst)',
+        aliases: ['Крина (Business Analyst)'],
         role: 'Требования, user stories, acceptance criteria',
-        done: ['Сформирован первичный QA scope для travel page', 'Выделены acceptance gates для web/mobile'],
+        done: ['Сформирован первичный QA scope для travel page', 'Выделены acceptance gates для web/mobile', 'Зафиксирован sprint goal Travel QA Stabilization'],
         backlog: ['T-016: оформить требования по travel QA fixes', 'Согласовать expected behavior для Instagram embeds'],
       },
       {
-        name: 'Backlog Manager / Product Owner',
-        aliases: ['Backlog Manager / Product Owner'],
+        name: 'Андриуш (Backlog Manager)',
+        aliases: ['Андриуш (Backlog Manager)'],
         role: 'Формирует backlog и раскладывает задачи по ролям',
-        done: ['Добавлен локальный Jira-style board', 'Выделены открытые findings и дизайнерские задачи'],
+        done: ['Добавлен локальный Jira-style board', 'Выделены открытые findings и дизайнерские задачи', 'Сформирован sprint commitment'],
         backlog: ['Сделать задачи implementation-ready', 'Раздать idle сотрудникам следующую работу', 'Поддерживать приоритеты P1/P2/P3'],
       },
       {
-        name: 'Developer',
-        aliases: ['Developer'],
+        name: 'Ромик (Dev)',
+        aliases: ['Ромик (Dev)'],
         role: 'Фиксы подтвержденных багов',
-        done: ['F-001: переиспользование travel detail preload', 'F-002: проверка comments read path'],
-        backlog: ['Подготовить patch после решения по spec', 'Подготовить patch после дизайна placeholder'],
+        done: ['F-001: переиспользование travel detail preload', 'F-002: проверка comments read path', 'D-001/T-013: neutral hero placeholder fixed in code'],
+        backlog: ['Подготовить patch после решения по Instagram spec'],
       },
       {
-        name: 'QA Tester',
-        aliases: ['QA Tester'],
+        name: 'Витаутас (DevOps)',
+        aliases: ['Витаутас (DevOps)'],
+        role: 'Следит за автоматизациями, e2e-средой и здоровьем борда',
+        done: ['Созданы daily, sprint planning и monthly retro automation'],
+        backlog: ['T-019: проверить scheduled rituals', 'Следить за локальными QA artifacts', 'Не допускать зависших e2e серверов'],
+      },
+      {
+        name: 'Сео (SEO Engineer)',
+        aliases: ['Сео (SEO Engineer)'],
+        role: 'Следит за SEO travel page: metadata, schema, canonical, OG',
+        done: ['SEO e2e coverage найден в travel-detail-page.spec.ts и seo-travel-detail.spec.ts'],
+        backlog: ['T-020: проверить metadata/schema health', 'Сверить SEO acceptance criteria с Крина (Business Analyst)', 'Подготовить рекомендации для Ромик (Dev)'],
+      },
+      {
+        name: 'Мариночка (QA)',
+        aliases: ['Мариночка (QA)'],
         role: 'Автоматизированный и browser QA',
         done: ['Базовый travel details e2e pass', 'Comments e2e write-flow прошел'],
         backlog: ['Повторить flaky responsive check', 'Закрыть extended mobile QA pass'],
       },
       {
-        name: 'Manual QA Tester',
-        aliases: ['Manual QA Tester'],
+        name: 'Мариночка (Manual QA)',
+        aliases: ['Мариночка (Manual QA)'],
         role: 'Ручная проверка сценариев',
         done: ['Guest/manual pass выполнен', 'Comments 404 finding передан в triage'],
         backlog: ['Authenticated favorite/rating/comments pass'],
       },
       {
-        name: 'QA Test Analyst',
-        aliases: ['QA Test Analyst'],
+        name: 'Мариночка (QA Analyst)',
+        aliases: ['Мариночка (QA Analyst)'],
         role: 'Ручные test cases и спецификации',
         done: ['Сформирован backlog MTC-001...MTC-010'],
         backlog: ['Детализировать steps/expected для каждого MTC', 'Согласовать Instagram expected behavior'],
@@ -921,12 +1304,12 @@
         name: 'UI/UX Designer',
         aliases: ['UI/UX Designer'],
         role: 'Визуальный аудит и UX backlog',
-        done: ['Получил evidence по desktop/mobile screenshots', 'Нашел задачи по placeholder и touch targets'],
-        backlog: ['D-001 neutral hero placeholder', 'D-002 mobile overlays and touch targets'],
+        done: ['Получил evidence по desktop/mobile screenshots', 'D-001 neutral hero placeholder direction accepted'],
+        backlog: ['D-002 mobile overlays and touch targets'],
       },
       {
-        name: 'Reviewer / Architect',
-        aliases: ['Reviewer / Architect'],
+        name: 'Андриуш (Reviewer)',
+        aliases: ['Андриуш (Reviewer)'],
         role: 'Review diff, риски, соответствие правилам',
         done: ['Поймал неполный F-001 fix на предыдущем review'],
         backlog: ['Review после следующего implementation diff'],
@@ -934,12 +1317,62 @@
     ];
 
     const findings = [
-      { id: 'F-001', title: 'Duplicate initial travel detail requests', status: 'Done', owner: 'Developer + QA', notes: 'Direct API preload reuse verified.' },
-      { id: 'F-002', title: 'Comments main-thread 404 console noise', status: 'Done', owner: 'Developer + QA', notes: 'Comments read path verified through travel_id.' },
-      { id: 'F-003', title: 'Instagram rich-text e2e spec mismatch', status: 'Open', owner: 'QA Test Analyst + Developer', notes: 'Rendered page contains iframe, while old e2e expects fallback cards.' },
-      { id: 'D-001', title: 'Missing hero media placeholder is not neutral', status: 'Open', owner: 'UI/UX Designer', notes: 'Hero fallback shows visible text "Фото недоступно".' },
+      { id: 'F-001', title: 'Duplicate initial travel detail requests', status: 'Done', owner: 'Ромик (Dev) + QA', notes: 'Direct API preload reuse verified.' },
+      { id: 'F-002', title: 'Comments main-thread 404 console noise', status: 'Done', owner: 'Ромик (Dev) + QA', notes: 'Comments read path verified through travel_id.' },
+      { id: 'F-003', title: 'Instagram rich-text e2e spec mismatch', status: 'Open', owner: 'Мариночка (QA Analyst) + Ромик (Dev)', notes: 'Rendered page contains iframe, while old e2e expects fallback cards.' },
+      { id: 'D-001', title: 'Missing hero media placeholder is not neutral', status: 'Done', owner: 'UI/UX Designer + Ромик (Dev)', notes: 'Fixed: removed visible fallback text and added regression coverage for neutral placeholder.' },
       { id: 'D-002', title: 'Mobile overlays and touch targets need designer review', status: 'Open', owner: 'UI/UX Designer', notes: 'Several mobile controls are below comfortable size; overlays compete for space.' },
     ];
+
+    const ticketEvidence = {
+      'T-013': {
+        status: 'Verified',
+        changedFiles: [
+          'components/travel/details/TravelDetailsOptimizedLCPHero.tsx',
+          '__tests__/components/travel/TravelDetailsContainer.performance.web.test.tsx',
+        ],
+        tests: [
+          'npm run test:run -- __tests__/components/travel/TravelDetailsContainer.performance.web.test.tsx · 4 passed',
+          'npm run check:fast · 199 targeted tests passed + external-link guards passed',
+        ],
+        browserChecks: [
+          'Playwright e2e/travels.spec.ts --grep "should display hero image" · 1 passed',
+        ],
+        result: 'Real code fix: fallback text removed; neutral placeholder is covered by regression test.',
+      },
+      'T-001': {
+        status: 'Verified',
+        tests: ['Travel details e2e pass · 40 passed'],
+        result: 'QA evidence exists from previous browser pass.',
+      },
+      'T-002': {
+        status: 'Verified',
+        tests: ['Manual guest pass completed'],
+        result: 'Manual QA evidence logged in workboard document.',
+      },
+      'T-023': {
+        status: 'Verified',
+        tests: [
+          'E2E_FORCE_REBUILD=1 E2E_API_PROXY_INSECURE=true EXPO_PUBLIC_E2E=true npx playwright test e2e/search.spec.ts --project=chromium --workers=1 · 1 passed',
+        ],
+        browserChecks: [
+          'Local web build http://127.0.0.1:8091/search · desktop 1440x900: search "минск" applied, 0-results state rendered, overflowX=false, consoleErrors=0, pageErrors=0',
+          'Local web build http://127.0.0.1:8091/search · mobile iPhone 13 390px: search "минск" applied, result/empty-state signal rendered, overflowX=false, consoleErrors=0, pageErrors=0',
+        ],
+        result: 'Search page web/mobile QA pass completed without layout overflow or runtime errors.',
+      },
+      'T-024': {
+        status: 'Verified',
+        tests: [
+          'E2E_FORCE_REBUILD=0 E2E_API_PROXY_INSECURE=true EXPO_PUBLIC_E2E=true E2E_WEB_PORT=8091 npx playwright test e2e/home-quick-filters-nightstay.spec.ts --project=chromium --workers=1 · 1 passed',
+        ],
+        browserChecks: [
+          'Local web build http://127.0.0.1:8091/ · desktop 1440x900: title/h1 rendered, quick filters visible, overflowX=false, consoleErrors=0, pageErrors=0',
+          'Local web build http://127.0.0.1:8091/ · mobile iPhone 13 390px: title/h1 rendered, quick filters visible, overflowX=false, consoleErrors=0, pageErrors=0',
+        ],
+        result: 'Home page web/mobile QA pass completed; quick filter navigation to Search was verified by e2e.',
+      },
+    };
 
     const manualCases = [
       'MTC-001 Open public travel details by direct URL',
@@ -955,12 +1388,18 @@
     ];
 
     const activityItems = [
-      { role: 'QA Tester', text: 'Проверяет extended web/mobile QA по travel details' },
-      { role: 'UI/UX Designer', text: 'Разбирает D-001 neutral hero placeholder' },
+      { role: 'Андриуш (Manager)', text: 'Провел sprint planning: Travel QA Stabilization, 2026-05-22 - 2026-05-29' },
+      { role: 'Андриуш (Approver)', text: 'Approved-to-start для T-010...T-014; implementation ждёт spec/design output' },
+      { role: 'Ромик (Dev)', text: 'Закрыл D-001 в коде: neutral hero placeholder без текста/иконок' },
+      { role: 'Мариночка (QA)', text: 'Проверила D-001: targeted Jest, check:fast и Playwright hero smoke прошли' },
+      { role: 'Мариночка (QA)', text: 'Проверяет extended web/mobile QA по travel details' },
       { role: 'UI/UX Designer', text: 'Смотрит D-002 mobile overlays и touch targets' },
-      { role: 'Backlog Manager', text: 'Грумит findings в implementation-ready backlog' },
-      { role: 'Business Analyst', text: 'Описывает acceptance criteria для travel QA fixes' },
-      { role: 'Manual QA Tester', text: 'Готовит authenticated pass для favorite/rating/comments' },
+      { role: 'Андриуш (Backlog Manager)', text: 'Грумит findings в implementation-ready backlog' },
+      { role: 'Крина (Business Analyst)', text: 'Описывает acceptance criteria для travel QA fixes' },
+      { role: 'Сео (SEO Engineer)', text: 'Проверяет metadata, schema.org и canonical для travel page' },
+      { role: 'Мариночка (Manual QA)', text: 'Готовит authenticated pass для favorite/rating/comments' },
+      { role: 'Мариночка (QA)', text: 'Закрыла T-023: Search QA прошел e2e, desktop и mobile browser pass без overflow/runtime errors' },
+      { role: 'Мариночка (QA)', text: 'Закрыла T-024: Home QA прошел e2e quick-filter и desktop/mobile browser pass' },
     ];
 
     let activeFilter = 'All';
@@ -972,7 +1411,9 @@
 
     function loadState() {
       try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        const current = localStorage.getItem(STORAGE_KEY);
+        if (current) return JSON.parse(current);
+        return {};
       } catch {
         return {};
       }
@@ -984,7 +1425,9 @@
 
     function loadProgressState() {
       try {
-        return JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}');
+        const current = localStorage.getItem(PROGRESS_KEY);
+        if (current) return JSON.parse(current);
+        return {};
       } catch {
         return {};
       }
@@ -996,7 +1439,10 @@
 
     function loadApprovalState() {
       try {
-        return JSON.parse(localStorage.getItem(APPROVAL_KEY) || '{}');
+        const current = localStorage.getItem(APPROVAL_KEY);
+        if (current) return JSON.parse(current);
+        const legacy = LEGACY_APPROVAL_KEYS.map((key) => localStorage.getItem(key)).find(Boolean);
+        return legacy ? JSON.parse(legacy) : {};
       } catch {
         return {};
       }
@@ -1024,6 +1470,33 @@
         ...loadActivityLog(),
       ];
       saveActivityLog(next);
+    }
+
+    function isValidStatus(status) {
+      return statuses.includes(status);
+    }
+
+    function isValidApproval(approval) {
+      return ['Approved', 'Needs approval', 'Draft'].includes(approval);
+    }
+
+    function cleanStoredMap(raw, validIds, validator, fallbackMap) {
+      const next = {};
+      let changed = false;
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { next, changed: Boolean(raw) };
+      Object.entries(raw).forEach(([id, value]) => {
+        if (!validIds.has(id)) {
+          changed = true;
+          return;
+        }
+        if (!validator(value)) {
+          changed = true;
+          return;
+        }
+        if (fallbackMap.get(id) !== value) next[id] = value;
+      });
+      if (Object.keys(next).length !== Object.keys(raw).length) changed = true;
+      return { next, changed };
     }
 
     function ensureProgressForTickets(tickets) {
@@ -1066,10 +1539,19 @@
     function getTickets() {
       const saved = loadState();
       const approvals = loadApprovalState();
+      const validIds = new Set(initialTickets.map((ticket) => ticket.id));
+      const defaultStatuses = new Map(initialTickets.map((ticket) => [ticket.id, ticket.status]));
+      const defaultApprovals = new Map(initialTickets.map((ticket) => [ticket.id, ticket.approval]));
+      const cleanedStatuses = cleanStoredMap(saved, validIds, isValidStatus, defaultStatuses);
+      const cleanedApprovals = cleanStoredMap(approvals, validIds, isValidApproval, defaultApprovals);
+
+      if (cleanedStatuses.changed) saveState(cleanedStatuses.next);
+      if (cleanedApprovals.changed) saveApprovalState(cleanedApprovals.next);
+
       const tickets = initialTickets.map((ticket) => ({
         ...ticket,
-        status: saved[ticket.id] || ticket.status,
-        approval: approvals[ticket.id] || ticket.approval,
+        status: cleanedStatuses.next[ticket.id] || ticket.status,
+        approval: cleanedApprovals.next[ticket.id] || ticket.approval,
       }));
       ensureProgressForTickets(tickets);
       return tickets;
@@ -1079,11 +1561,17 @@
       const approvals = loadApprovalState();
       approvals[id] = approval;
       saveApprovalState(approvals);
-      appendActivity('Approver / Product Owner', `${id}: ${approval}`);
+      appendActivity('Андриуш (Approver)', `${id}: ${approval}`);
       render();
     }
 
     function setTicketStatus(id, status) {
+      if (!isValidStatus(status)) return;
+      if (status === 'Done' && !ticketEvidence[id]) {
+        appendActivity('Board', `${id}: Done заблокирован без real evidence`);
+        render();
+        return;
+      }
       const saved = loadState();
       saved[id] = status;
       saveState(saved);
@@ -1100,6 +1588,30 @@
 
     function renderStatus(status) {
       return `<span class="status ${statusClass(status)}">${status}</span>`;
+    }
+
+    function renderEvidence(ticket) {
+      const evidence = ticketEvidence[ticket.id];
+      if (!evidence) {
+        return `
+          <div class="evidence-list">
+            <span class="evidence-label">Evidence</span>
+            <span class="evidence-item">No code/test evidence yet. This task cannot be honestly moved to Done.</span>
+          </div>
+        `;
+      }
+      const files = (evidence.changedFiles || []).map((item) => `<span class="evidence-item file">${item}</span>`);
+      const tests = (evidence.tests || []).map((item) => `<span class="evidence-item pass">${item}</span>`);
+      const browser = (evidence.browserChecks || []).map((item) => `<span class="evidence-item pass">${item}</span>`);
+      return `
+        <div class="evidence-list">
+          <span class="evidence-label">Evidence · ${evidence.status}</span>
+          ${files.join('')}
+          ${tests.join('')}
+          ${browser.join('')}
+          <span class="evidence-item">${evidence.result}</span>
+        </div>
+      `;
     }
 
     function renderMetrics(tickets) {
@@ -1155,6 +1667,7 @@
                     <span>${ticket.approver || 'No approver'}</span>
                   </div>
                   <p class="note">${ticket.notes}</p>
+                  ${renderEvidence(ticket)}
                   ${ticket.status === 'In progress' ? `
                     <div class="progress" aria-label="Прогресс ${ticket.id}">
                       <div class="progress-fill" data-progress-ticket="${ticket.id}"></div>
@@ -1262,32 +1775,58 @@
       document.getElementById('activity').innerHTML = [...savedHtml, ...liveHtml].slice(0, 10).join('');
     }
 
+    function getNextAction(ticket) {
+      if (ticket.id === 'T-007') return 'Мариночка закрывает extended web QA evidence.';
+      if (ticket.id === 'T-008') return 'Мариночка проверяет mobile viewport и sticky states.';
+      if (ticket.id === 'T-009') return 'Дизайнер готовит UX backlog по findings.';
+      if (ticket.id === 'T-015') return 'Андриуш превращает findings в implementation-ready backlog.';
+      if (ticket.id === 'T-016') return 'Крина пишет acceptance criteria и non-goals.';
+      if (ticket.id === 'T-017') return 'Ромик готовит следующий code patch только после решения по T-012.';
+      if (ticket.id === 'T-018') return 'Андриуш фиксирует approval gate для задач.';
+      if (ticket.id === 'T-019') return 'Витаутас следит за automations и e2e health.';
+      if (ticket.id === 'T-020') return 'Сео проверяет metadata, schema и canonical.';
+      return 'Следующий шаг за владельцем задачи.';
+    }
+
+    function renderActiveWork(tickets) {
+      const active = tickets.filter((ticket) => ticket.status === 'In progress');
+      document.getElementById('active-work-summary').textContent = `${active.length} active`;
+      document.getElementById('active-work').innerHTML = active.map((ticket) => {
+        const progress = getTicketProgress(ticket);
+        return `
+          <article class="active-work-card">
+            <span class="active-owner">${ticket.owner}</span>
+            <strong>${ticket.id} · ${ticket.title}</strong>
+            <div class="progress"><div class="progress-fill" style="--progress:${progress}%"></div></div>
+            <span>${getProgressLabel(ticket, progress)}</span>
+            <span>${getNextAction(ticket)}</span>
+          </article>
+        `;
+      }).join('') || '<p class="note">Нет активных задач. Нажми "Сделать шаг работы", чтобы взять approved задачу в работу.</p>';
+    }
+
+    function renderEvidenceSummary(tickets) {
+      const evidenceTickets = tickets.filter((ticket) => ticketEvidence[ticket.id]);
+      const noEvidenceActive = tickets.filter((ticket) => ticket.status === 'In progress' && !ticketEvidence[ticket.id]);
+      document.getElementById('evidence-summary-count').textContent = `${evidenceTickets.length} with evidence · ${noEvidenceActive.length} active without evidence`;
+      document.getElementById('evidence-summary').innerHTML = evidenceTickets.map((ticket) => {
+        const evidence = ticketEvidence[ticket.id];
+        return `
+          <article class="active-work-card">
+            <span class="active-owner">${ticket.id} · ${evidence.status}</span>
+            <strong>${ticket.title}</strong>
+            ${(evidence.changedFiles || []).map((item) => `<span>${item}</span>`).join('')}
+            ${(evidence.tests || []).slice(0, 2).map((item) => `<span>${item}</span>`).join('')}
+            <span>${evidence.result}</span>
+          </article>
+        `;
+      }).join('');
+    }
+
     function runWorkStep() {
       const tickets = getTickets();
-      const inProgress = tickets.filter((ticket) => ticket.status === 'In progress');
-      const readyToFinish = inProgress.find((ticket) => getTicketProgress(ticket) >= getProgressTarget(ticket));
-      if (readyToFinish) {
-        setTicketStatus(readyToFinish.id, 'Done');
-        appendActivity(readyToFinish.owner, `${readyToFinish.id}: завершил текущий этап`);
-        return;
-      }
-
-      const needsApproval = tickets.find((ticket) => ticket.status === 'Open' && (ticket.approval || '').toLowerCase().includes('needs'));
-      if (needsApproval) {
-        setTicketApproval(needsApproval.id, 'Approved');
-        appendActivity('Approver / Product Owner', `${needsApproval.id}: согласовано и готово к работе`);
-        return;
-      }
-
-      const approvedOpen = tickets.find((ticket) => ticket.status === 'Open' && ticket.approval === 'Approved');
-      if (approvedOpen) {
-        setTicketStatus(approvedOpen.id, 'In progress');
-        appendActivity(approvedOpen.owner, `${approvedOpen.id}: взял задачу в работу`);
-        return;
-      }
-
-      advanceProgress();
-      appendActivity('Team', 'Продвинули активные задачи без смены статуса');
+      const withEvidence = tickets.filter((ticket) => ticketEvidence[ticket.id]);
+      appendActivity('Team', `Real check-in: ${withEvidence.length} задач имеют evidence; Done без evidence заблокирован`);
       render();
     }
 
@@ -1299,7 +1838,7 @@
       localStorage.setItem(AUTO_KEY, enabled ? '1' : '0');
       const button = document.getElementById('auto-cycle');
       if (button) {
-        button.textContent = `Авто-цикл: ${enabled ? 'вкл' : 'выкл'}`;
+        button.textContent = `Demo mode: ${enabled ? 'вкл' : 'выкл'}`;
         button.classList.toggle('active', enabled);
       }
       if (autoCycleTimer) {
@@ -1307,7 +1846,10 @@
         autoCycleTimer = null;
       }
       if (enabled) {
-        autoCycleTimer = setInterval(runWorkStep, 7000);
+        autoCycleTimer = setInterval(() => {
+          appendActivity('Demo mode', 'Timer tick only refreshes board; it does not move tasks to Done');
+          render();
+        }, 7000);
       }
     }
 
@@ -1332,11 +1874,13 @@
     }
 
     function tickLive() {
-      advanceProgress();
       updateLiveClock();
       updateLiveProgress();
       renderActivity();
-      renderDesignerFocus(getTickets());
+      const tickets = getTickets();
+      renderDesignerFocus(tickets);
+      renderActiveWork(tickets);
+      renderEvidenceSummary(tickets);
     }
 
     function renderTickets(tickets) {
@@ -1460,6 +2004,8 @@
       renderPeople(tickets);
       renderKanban(tickets);
       renderActivity();
+      renderActiveWork(tickets);
+      renderEvidenceSummary(tickets);
       renderDesignerFocus(tickets);
       updateLiveProgress();
       updateLiveClock();
@@ -1472,6 +2018,9 @@
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(PROGRESS_KEY);
       localStorage.removeItem(APPROVAL_KEY);
+      LEGACY_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+      LEGACY_PROGRESS_KEYS.forEach((key) => localStorage.removeItem(key));
+      LEGACY_APPROVAL_KEYS.forEach((key) => localStorage.removeItem(key));
       localStorage.removeItem(ACTIVITY_KEY);
       render();
     });

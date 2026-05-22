@@ -27,6 +27,17 @@
 5. Если находишь явный мёртвый код или очевидную локальную ошибку в зоне задачи — убери или исправь её в рамках того же изменения.
 6. Проверяй результат командами по масштабу задачи, а не «на глаз».
 
+### Рекомендуемые skills для GitHub-side workflow
+
+- `$metravel-feature-builder` — фичи, багфиксы, рефакторинг, API, services, SEO.
+- `$metravel-hook-builder` — вынос и проектирование focused hooks, упрощение компонентов через локальную hook-логику, работа с `hooks/` без новых `any`.
+- `$metravel-ui-guardrails` — видимый UI, media, placeholders, icons, tokens, external links.
+- `$metravel-test-runner` — выбор и запуск минимально достаточных Jest/integration/governance checks.
+- `$metravel-test-writer` — написание/обновление unit, integration и governance тестов без `.skip`.
+- `$metravel-e2e-runner` — Playwright, browser smoke, trace/screenshot evidence, `.env.e2e`.
+- `$metravel-performance-analyst` — Lighthouse, bundle/perf budgets, baseline comparison только по production build или real URL.
+- `$metravel-code-reviewer` — review diff, поиск рисков, проверка project-rule compliance и validation gaps перед handoff.
+
 ## Технические guardrails
 
 - Импорты — через алиас `@/`.

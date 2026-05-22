@@ -54,20 +54,10 @@ export const NeutralHeroPlaceholder: React.FC<{ height?: number; variant?: 'load
           backgroundColor: colors.backgroundSecondary,
           opacity: isError ? 1 : 0,
           animation: isError ? undefined : 'fadeInPlaceholder 0.2s ease-in 0.15s forwards',
-          display: isError ? 'flex' : undefined,
-          alignItems: isError ? 'center' : undefined,
-          justifyContent: isError ? 'center' : undefined,
         }}
-        aria-hidden={isError ? undefined : 'true'}
-        role={isError ? 'img' : undefined}
-        aria-label={isError ? 'Фото недоступно' : undefined}
-      >
-        {isError ? (
-          <span style={{ color: colors.textMuted, fontSize: 14 }}>
-            Фото недоступно
-          </span>
-        ) : null}
-      </div>
+        aria-hidden="true"
+        data-testid="travel-hero-neutral-placeholder"
+      />
     );
   }
   return (

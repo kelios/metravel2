@@ -1,0 +1,5 @@
+interface:
+  display_name: "Metravel Hook Builder"
+  short_description: "Extract and refine focused React hooks safely."
+  default_prompt: "Use $metravel-hook-builder to design or refactor focused metravel React hooks, preserve public contracts, keep state-layer boundaries clean, avoid new any in hooks, and validate the affected behavior with the smallest reliable checks."
+

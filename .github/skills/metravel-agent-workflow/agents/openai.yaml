@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel Agent Workflow"
+  short_description: "Coordinate BA, architecture, build, QA, review, and deploy."
+  default_prompt: "Use $metravel-agent-workflow to coordinate a metravel role-based workflow. Keep QA and analysis read-only, route confirmed bugs to $metravel-feature-builder, use $metravel-ui-guardrails for visible UI, and use $metravel-devops-agent only for explicit deploy or post-deploy verification requests."

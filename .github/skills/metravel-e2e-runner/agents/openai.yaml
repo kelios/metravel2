@@ -1,0 +1,5 @@
+interface:
+  display_name: "Metravel E2E Runner"
+  short_description: "Run and debug Playwright and browser smoke flows."
+  default_prompt: "Use $metravel-e2e-runner to validate the requested metravel flow in Playwright or a real browser, keep .env.e2e secrets hidden, collect evidence in ignored folders, and report concrete blockers if the scenario cannot be verified."
+

@@ -1,0 +1,5 @@
+interface:
+  display_name: "Metravel Test Runner"
+  short_description: "Run the right Jest and governance checks for the touched scope."
+  default_prompt: "Use $metravel-test-runner to choose the narrowest reliable metravel test commands for this task, analyze failures, rerun after fixes, and report any unrelated blocker explicitly."
+

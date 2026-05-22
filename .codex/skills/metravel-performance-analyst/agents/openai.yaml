@@ -1,0 +1,5 @@
+interface:
+  display_name: "Metravel Performance Analyst"
+  short_description: "Measure Lighthouse, bundle, and perf-budget regressions correctly."
+  default_prompt: "Use $metravel-performance-analyst to measure metravel performance with production builds or real URLs only, compare against baselines and budgets, and report actionable regressions without relying on dev-server behavior."
+
