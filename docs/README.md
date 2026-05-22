@@ -18,6 +18,17 @@ See `INDEX.md` for full docs map.
 - `PRODUCTION_CHECKLIST.md` — production release checklist
 - `EXTERNAL_LINK_GOVERNANCE_PR_SUMMARY.md` — external-links governance PR summary/template
 
+## Agent skills quick map
+
+Полная карта skills и критерии выбора живут в `CODEX.md`. Для самых частых инженерных задач:
+
+- `$metravel-feature-builder` — фичи, багфиксы, рефакторинг.
+- `$metravel-hook-builder` — focused hooks, вынос локальной логики, cleanup hook-границ.
+- `$metravel-code-reviewer` — review diff'а, validation gaps, rule compliance, residual risk.
+- `$metravel-test-runner` / `$metravel-test-writer` — запуск и написание Jest/integration/governance тестов.
+- `$metravel-e2e-runner` — Playwright и browser smoke.
+- `$metravel-performance-analyst` — Lighthouse, bundle/perf budgets, baseline comparison.
+
 ## Quick start
 
 ```bash
