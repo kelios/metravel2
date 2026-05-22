@@ -32,6 +32,7 @@
 - `$metravel-feature-builder` — фичи, багфиксы, рефакторинг, API, services, SEO.
 - `$metravel-hook-builder` — вынос и проектирование focused hooks, упрощение компонентов через локальную hook-логику, работа с `hooks/` без новых `any`.
 - `$metravel-ui-guardrails` — видимый UI, media, placeholders, icons, tokens, external links.
+- `$metravel-quality-fixer` — полный цикл lint + Jest + Playwright, исправление падений и повторная валидация до зелёного baseline.
 - `$metravel-test-runner` — выбор и запуск минимально достаточных Jest/integration/governance checks.
 - `$metravel-test-writer` — написание/обновление unit, integration и governance тестов без `.skip`.
 - `$metravel-e2e-runner` — Playwright, browser smoke, trace/screenshot evidence, `.env.e2e`.

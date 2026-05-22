@@ -4,7 +4,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import MarkerClusterGroup from '@/components/MapPage/Map/MarkerClusterGroup'
 
-const mockCreatePortal = jest.fn((children: React.ReactNode) => children)
+const mockCreatePortal = jest.fn(
+  (
+    children: React.ReactNode,
+    _container: Element | DocumentFragment,
+    key?: string | null,
+  ) => <React.Fragment key={key ?? undefined}>{children}</React.Fragment>,
+)
 
 jest.mock('react-dom', () => ({
   createPortal: (
