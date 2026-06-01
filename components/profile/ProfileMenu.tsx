@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, Modal } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, Modal, Dimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -13,27 +13,38 @@ interface ProfileMenuProps {
 export function ProfileMenu({ onLogout, onSettings }: ProfileMenuProps) {
   const colors = useThemedColors();
   const [isOpen, setIsOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState({ top: 0 });
+  // Default position keeps the menu usable in tests (where measure returns 0)
+  // and before measureInWindow resolves.
+  const [menuPosition, setMenuPosition] = useState({ top: 60, right: DESIGN_TOKENS.spacing.md });
   const triggerRef = useRef<View>(null);
 
   const handleToggle = useCallback(() => {
-    if (!isOpen) {
-      // Сначала открываем меню с дефолтной позицией для работы в тестах
-      setMenuPosition({ top: 60 });
-      setIsOpen(true);
-
-      // Затем пытаемся уточнить позицию через measure (для production)
-      if (triggerRef.current && typeof triggerRef.current.measure === 'function') {
-        triggerRef.current.measure((_x, _y, _width, height, _pageX, pageY) => {
-          if (pageY > 0) {
-            setMenuPosition({
-              top: pageY + height + DESIGN_TOKENS.spacing.xs,
-            });
-          }
-        });
-      }
-    } else {
+    if (isOpen) {
       setIsOpen(false);
+      return;
+    }
+
+    // Open immediately with the last/default position so the menu is interactive
+    // even if measurement is unavailable (RNTL) or slow.
+    setIsOpen(true);
+
+    const node = triggerRef.current;
+    if (node && typeof node.measureInWindow === 'function') {
+      // measureInWindow gives absolute window coordinates directly — more reliable
+      // than parent-relative measure() across web/native.
+      node.measureInWindow((x, y, width, height) => {
+        if (width === 0 && height === 0) return; // no layout yet (e.g. tests) → keep fallback
+
+        const { width: winWidth, height: winHeight } = Dimensions.get('window');
+        // Anchor below the trigger, clamped so the menu never overflows the viewport bottom.
+        const top = Math.max(
+          DESIGN_TOKENS.spacing.xs,
+          Math.min(y + height + DESIGN_TOKENS.spacing.xs, winHeight - 160)
+        );
+        // Align the menu's right edge to the trigger's right edge.
+        const right = Math.max(DESIGN_TOKENS.spacing.md, winWidth - (x + width));
+        setMenuPosition({ top, right });
+      });
     }
   }, [isOpen]);
 
@@ -68,7 +79,6 @@ export function ProfileMenu({ onLogout, onSettings }: ProfileMenuProps) {
     },
     menu: {
       position: 'absolute',
-      right: DESIGN_TOKENS.spacing.md,
       backgroundColor: colors.surface,
       borderRadius: DESIGN_TOKENS.radii.lg,
       borderWidth: 1,
@@ -141,7 +151,7 @@ export function ProfileMenu({ onLogout, onSettings }: ProfileMenuProps) {
         onRequestClose={handleClose}
       >
         <Pressable style={styles.overlay} onPress={handleClose}>
-          <View style={[styles.menu, { top: menuPosition.top }]}>
+          <View style={[styles.menu, { top: menuPosition.top, right: menuPosition.right }]}>
             {onSettings && (
               <Pressable
                 onPress={handleSettings}

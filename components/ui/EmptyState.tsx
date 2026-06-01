@@ -150,7 +150,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     marginBottom: 28,
     ...Platform.select({
       web: {
-        boxShadow: '0 4px 12px rgba(59, 130, 246, 0.15)',
+        boxShadow: `0 4px 12px ${colors.primaryAlpha30}`,
       },
       ios: {
         shadowColor: colors.primary,
