@@ -202,9 +202,36 @@ Routing: god-components → `refactor-surgeon`; travel files → `travel-expert`
 | TD-012 | Reduce `api/client.ts` (836 LOC) by extracting domain modules | `refactor-surgeon` | P2 | guard:file-complexity = 836 LOC | Open |
 | TD-013 | Split `components/quests/QuestPrintable.tsx` (992 LOC) | `refactor-surgeon` | P3 | guard:file-complexity = 992 LOC | Open |
 | TD-014 | Split `components/UserPoints/PointsList.tsx` (909) and `PointCard.tsx` (877) | `refactor-surgeon` | P3 | guard:file-complexity = 909 / 877 LOC | Open |
-| TD-015 | Extract oversized style modules >800 LOC | `refactor-surgeon` | P3 | ✅ `TravelDetailsStyles.ts` 831 → 44 LOC (6 group modules in `styles/`; `check:fast` 11 suites / 199 passed; `guard:file-complexity:changed` violations=0; `typecheck` green; both public exports + const re-exports preserved). Remaining: `homeHeroStyles.ts` 1908, `webStyles.ts` 1128, `filtersPanelStyles.ts` 935, `questWizardStyles.ts` 870, `modernFiltersStyles.ts` 859 | In progress — 1/6 done |
+| TD-015 | Extract oversized style modules >800 LOC | `refactor-surgeon` | P3 | ✅ `TravelDetailsStyles.ts` 831→44 LOC (6 modules). ✅ `webStyles.ts` 1128→22 LOC (7 modules; CSS byte-identical). ✅ `homeHeroStyles.ts` 1908→177 LOC (8 modules in `homeHeroStyles/`; normalized style-body diff IDENTICAL, 153 keys; HomeHero+Home tests 28/28; `guard:file-complexity:changed` violations=0; `typecheck` green; `createHomeHeroStyles` signature preserved). ✅ `filtersPanelStyles.ts` 935→30 LOC (8 modules in `filtersPanelStyles/`; 117 keys identical, no dup keys; dedicated `filtersPanelStyles.test.ts` passed; `check:fast` 6 suites / 52; named+default exports preserved). ✅ `questWizardStyles.ts` 870→22 LOC (9 modules; 146 keys identical; Quest tests 80/80). ✅ `modernFiltersStyles.ts` 859→45 LOC (8 modules; 105 keys identical, no dups; listTravel/filters tests 48 suites / 345; `index.ts` untouched). All 6 modules now <800 LOC | Done — 6/6 |
 | TD-016 | Audit 12 `eslint-disable react-hooks/exhaustive-deps` for stale-closure risk | `test-author` + domain expert | P3 | 12 occurrences across `components/`, `hooks/`, `app/` | Open |
 | TD-017 | Split `components/article/ArticleEditor.web.tsx` (1290 LOC) | `refactor-surgeon` | P4 | guard:file-complexity = 1290 LOC; article pages not in active use | Open |
+
+## Performance Refactor backlog
+
+Created: 2026-06-01. Цель: открыть задачи на рефакторинг/переписывание/замену для главной, поиска, страницы путешествия, карты и мест, плюс отдельное тестирование перфоманса и сквозной план ускорения.
+
+Контекст: подробная модель `SSR-first + deferred islands` и уже сделанная работа по travel описаны в `docs/TRAVEL_PERFORMANCE_REFACTOR.md`. Та же модель тиражируется на остальные страницы. Цель по Lighthouse, как в travel-доке: mobile `>= 60`, desktop `>= 70`, и снижение unused JS / bootup на critical path.
+
+Правила: не ломать SSR SEO (`H1`, canonical, `og:*`, JSON-LD); не возвращать service worker / cache-bust / reload workaround; маленькие поэтапные изменения, не big-bang rewrite; после каждого этапа — targeted checks. Splits god-компонентов координируются с tech-debt backlog (TD-*) и профильными агентами (`refactor-surgeon`, `map-expert`, `travel-expert`).
+
+Routing: главная/поиск/места → `refactor-surgeon` + `travel-expert`; карта → `refactor-surgeon` + `map-expert`; тесты/budget-гварды → `test-author`; план → Ромик (Dev) + Андриуш (Approver).
+
+| ID | Страница / Тема | Тип | Owner | Priority | Цель | Кандидаты файлов | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PERF-001 | Главная | Рефакторинг | `refactor-surgeon` + `travel-expert` | P1 | Перевести `Home` на `SSR-first + deferred islands`: critical hero shell в initial render, тяжёлые секции ниже фолда — через visibility/idle defer; убрать eager-импорт `Home` из route | `app/(tabs)/index.tsx` (eager `Home`), `components/home/Home.tsx` (340), `HomeInspirationSection.tsx` (698), `HomeHeroBookLayout.tsx` (605), `HomeFavoritesHistorySection.tsx` (581), `AdventureChaptersSection.tsx` (513) | Open |
+| PERF-002 | Главная | Замена/распил стилей | `refactor-surgeon` | P1 | Закрыть `homeHeroStyles.ts` (1908 LOC) — разбить на chunk-модули, убрать из critical path лишние стили (см. TD-015) | `components/home/homeHeroStyles.ts` 1908→177 LOC + 8 модулей в `homeHeroStyles/` (context/shell/sliderSection/sliderMedia/sliderNav/typography/bookWidget/cta). Validation: `typecheck` green; style-keys diff HEAD↔split = 153/153, 0 lost/0 added; 0 дублей ключей между модулями; `guard:file-complexity:changed` violations=0; `check:image-architecture` passed; Jest home `30 passed` (HomeHero/Home/home-screen.regression). Единственный потребитель `HomeHero.tsx` не тронут | Done |
+| PERF-003 | Главная | Image delivery | `travel-expert` | P2 | Один LCP hero image с `fetchpriority=high`+eager, остальное media — lazy; корректные `srcset/sizes`; нет oversized для small slots; нейтральные placeholders | `components/home/HomeHero.tsx`, `HomeHeroPopularSection.tsx`, `HomeHeroMoodRail.tsx`, `components/ui/ImageCardMedia.tsx` | Open |
+| PERF-004 | Поиск | Рефакторинг/распил | `refactor-surgeon` + `travel-expert` | P1 | Распилить и облегчить список: critical shell (поле поиска + первый экран результатов) рано, фильтры/правую колонку/экспорт — defer; уменьшить initial JS search route | `app/(tabs)/search.tsx` (lazy), `components/listTravel/ListTravelBase.tsx` (1037, см. TD-005), `RightColumn.tsx` (758), `TravelListItem.tsx` (677), `ModernFilters.tsx` (587) | Open |
+| PERF-005 | Поиск | Перфоманс списка | `travel-expert` | P2 | Виртуализация/инкрементальная подгрузка результатов, мемоизация карточек, lazy-image в карточках, отсечь лишние ререндеры при смене фильтров | `components/listTravel/RenderTravelItem.tsx`, `TravelListItem.tsx`, `RecommendationsTabs.tsx` (634) | Open |
+| PERF-006 | Путешествие | Продолжение рефактора | `travel-expert` | P1 | Доделать незакрытые этапы из `docs/TRAVEL_PERFORMANCE_REFACTOR.md`: Этап 4 (сократить initial JS — резерв в `entry`/`__common`), Этап 5 (image delivery: hero srcset, avatar bytes, inline images), Этап 7 (budgets + regression guard) | `app/(tabs)/travels/[param].tsx`, `components/travel/details/*`, `entry`/`__common` audit | In progress |
+| PERF-007 | Путешествие | Замена тяжёлых чанков | `refactor-surgeon` + `map-expert` | P2 | `TravelDetailsMapSection-*` (~73 KB) и `CommentsSection-*` (~77 KB) — самые тяжёлые lazy-чанки; проверить замену Leaflet-зависимости на легче/общую с картой, lazy-границы комментариев | `components/travel/details/sections/*`, общая map-зависимость | Open |
+| PERF-008 | Карта | Рефакторинг/распил | `refactor-surgeon` + `map-expert` | P1 | Облегчить map route: critical shell + skeleton рано, Leaflet/маркеры/панели — defer; распил `MapQuickFilters.tsx` (926, см. TD-007) и тяжёлых панелей | `app/(tabs)/map.tsx`, `screens/tabs/MapScreen.tsx` (746), `components/MapPage/MapQuickFilters.tsx` (926), `TravelMap.tsx` (752), `Map.web.tsx` (652), `TravelListPanel.tsx` (655) | Open |
+| PERF-009 | Карта | Перфоманс маркеров | `map-expert` | P2 | Кластеризация/виртуализация маркеров, отложенный routing (ORS), дебаунс фильтров, проверить bytes Leaflet bundle и tile loading | `components/MapPage/TravelMap.tsx`, `RoutingStatus.tsx` (353), `MapMobileLayout.tsx` (338) | Open |
+| PERF-010 | Места | Рефакторинг/распил | `refactor-surgeon` + `travel-expert` | P1 | `PlacesScreen.tsx` (1664 LOC) распилить и перевести на critical shell + deferred islands; инкрементальная подгрузка каталога, lazy-image карточек, defer карты/фильтров | `app/(tabs)/places.tsx`, `screens/tabs/PlacesScreen.tsx` (1664) | Open |
+| PERF-011 | Тестирование перфоманса | Отдельный трек | `test-author` + Витаутас (DevOps) | P1 | Расширить perf-тесты с travel на все страницы: Lighthouse mobile/desktop для `/`, `/search`, `/map`, `/places`; зафиксировать baseline и budget thresholds (initial JS, hero bytes, eager images, score) | `scripts/test-pages-performance.js`, `scripts/run-lighthouse.js`, `e2e/travel-details-perf-budget.spec.ts` (как образец), `package.json` perf-скрипты | Open |
+| PERF-012 | Тестирование перфоманса | Regression guard | `test-author` | P2 | Bundle-size budget guard на `entry`/`__common` и per-route chunks + e2e perf-budget spec для каждой страницы; падение при регрессе; задокументировать thresholds в `docs/` | `scripts/check-performance.sh`, `analyze:bundle`, новые `e2e/*-perf-budget.spec.ts` | Open |
+| PERF-013 | План ускорения | Сквозной план | Ромик (Dev) + Андриуш (Approver) | P1 | Единый план ускорения для всех страниц: приоритизация (главная и поиск как точки входа → карта/места → travel-доводка), порядок этапов, метрики до/после, definition of done; оформить в `docs/OPTIMIZATION_AND_FIX_PLAN.md` или новом perf-плане | `docs/OPTIMIZATION_AND_FIX_PLAN.md`, `docs/TRAVEL_PERFORMANCE_REFACTOR.md` | Open |
+| PERF-014 | Сквозное | Замена shared runtime | `refactor-surgeon` | P2 | Аудит того, что попадает в `entry`/`__common` для всех route (не только travel): убрать ранние shared-импорты, тиражировать `useWindowDimensions`-вместо-`useResponsive` приём и interaction-defer providers на остальные страницы | `app/_layout.tsx`, `AppProviders`, `stores/*`, `api/client.ts` (836, см. TD-012) | Open |
 
 ## Findings
 
@@ -257,6 +284,26 @@ Routing: god-components → `refactor-surgeon`; travel files → `travel-expert`
 - Expected: mobile controls meet comfortable touch target sizing and overlays do not hide key actions.
 - Owner: UI/UX Designer.
 - Status: open.
+
+### F-004 Places cards emit nested-`<button>` hydration errors
+
+- Severity: medium / P2 (console-error noise + invalid SSR markup; no broken final DOM).
+- URL: `/places`, viewport mobile `375x812`, guest.
+- Expected: place cards render valid, non-nested interactive elements; no React hydration warnings.
+- Actual: on first render the console logs repeated React 19 errors: `In HTML, <button> cannot be a descendant of <button>. This will cause a hydration error.` and `<button> cannot contain a nested button.` (6+ occurrences). The outer `<button aria-label="Открыть … на карте">` contains `OptimizedFavoriteButton` + `TravelStatusButton` (`aria-label="Добавить в план"`).
+- After client reconciliation the live DOM has `nestedCount: 0` (React recovers), so the symptom is hydration-time only.
+- Source path: `components/places/PlaceListCard.tsx` → `components/ui/UnifiedTravelCard.tsx` (`rightTopSlot` = `RelatedTravelActionStack`). `UnifiedTravelCard` already renders its web container as `View role="link"` (not button) to avoid this; the offending button wrapper comes from the media/card press-target path when `onCardPress` + `onMediaPress` + `rightTopSlot` are all supplied.
+- Repro: open `/places` on mobile web as guest, read browser console at initial load.
+- Not reproduced on `/` (Home) or `/search` with the same card component.
+- Status: open; fix is in a shared sensitive component — needs scoped change + browser verification before edit.
+
+### D-003 Minor mobile UX observations (guest screenshot pass)
+
+- Severity: low / polish.
+- Home `/`: cookie consent banner overlaps the featured "Маршрут недели" card content until dismissed (related to D-002 overlay audit).
+- Map place popup: save action label renders truncated as `Сохран…` instead of `Сохранить`.
+- Places `/places`: some records show `СТРАНА НЕ УКАЗ…` / `Дворец без названия` — backend data quality, not UI.
+- Status: open; cosmetic, batch with designer audit (T-029/T-044).
 
 ## Validation log
 
