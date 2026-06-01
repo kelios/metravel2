@@ -41,6 +41,20 @@ describe('travel wizard validation', () => {
       expect(step3.isValid).toBe(true);
       expect(step4.isValid).toBe(true);
     });
+
+    it('step 2: required messages use plural agreement for route points and countries (D-008)', () => {
+      // NOTE: the blocking step-2 required messages come from the wizard validator,
+      // not from formValidation.validateStep (which is non-blocking for steps 2-4).
+      const {
+        validateStep: validateWizardStep,
+      } = require('@/utils/travelWizardValidation');
+      const step2 = validateWizardStep(2, {} as any);
+      const messages = step2.errors.map((e: { message: string }) => e.message);
+      expect(messages).toContain('Точки маршрута обязательны для заполнения');
+      expect(messages).toContain('Страны маршрута обязательны для заполнения');
+      // regression guard: must not revert to the neuter "обязательно" form
+      expect(messages).not.toContain('Точки маршрута обязательно для заполнения');
+    });
   });
 
   describe('getModerationIssues', () => {

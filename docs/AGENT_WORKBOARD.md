@@ -214,14 +214,14 @@ Rule: one owner, one active deliverable. A role is considered idle again if the 
 | T-034 | Maintain cross-page backlog and capacity board | Андриуш (Backlog Manager) | In progress | Backlog evidence pending | All findings assigned, prioritized, evidence-tagged, and ready for weekly planning |
 | T-035 | Run mobile manual smoke for Search, Home, Map, Places, Quests | Мариночка (Manual QA) | In progress | Manual mobile evidence pending | Tap targets, navigation, overlays, scroll behavior, and screenshots/evidence notes |
 | T-036 | Write Search page test cases | Мариночка (QA Analyst) | In progress | Test cases pending | Query, filters, sorting, pagination/infinite load, empty state, deep links, and mobile variants |
-| T-037 | Create Search page UX audit | UI/UX Designer | In progress | Screenshot audit pending | Filter ergonomics, result cards, empty states, touch targets, and mobile filter access |
+| T-037 | Create Search page UX audit | UI/UX Designer | In progress | Round-2 live audit done (desktop, 380 results): filed `D-010` (touch targets), `D-011` (stale `Год 2024` default), `F-007` (transient error/empty), `D-004` overlap confirm. Mobile filter-access re-shoot `verify pending` (contended tab) | Filter ergonomics, result cards, empty states, touch targets, and mobile filter access |
 | T-038 | Run Search page SEO audit | Сео (SEO Engineer) | In progress | SEO audit pending | Title, description, canonical, indexability, schema risk, and e2e coverage notes |
 | T-039 | Prepare Search findings for development | Ромик (Dev) | Open | Code evidence pending | Wait for QA/BA/design evidence; then map confirmed findings to target files and validation commands |
 | T-040 | Write Home page test cases | Мариночка (QA Analyst) | In progress | Test cases pending | First load, hero, navigation to details/search/map, degraded data, and responsive sections |
-| T-041 | Create Home page UX audit | UI/UX Designer | In progress | Screenshot audit pending | Hierarchy, cards, media placeholders, CTAs, section spacing, and mobile bottom/nav overlap |
+| T-041 | Create Home page UX audit | UI/UX Designer | In progress | Round-2 live audit done (desktop + mobile): hero/chips/CTA hierarchy solid, route-card image correct contain+blur; filed `D-010` (touch targets), `D-012` (carousel loading placeholder), `D-004` overlap confirm; random-route empty state on-brand (keep) | Hierarchy, cards, media placeholders, CTAs, section spacing, and mobile bottom/nav overlap |
 | T-042 | Run Home page SEO audit | Сео (SEO Engineer) | In progress | SEO audit pending | Metadata, OG, heading structure, internal links, and structured data risks |
 | T-043 | Write Map page test cases | Мариночка (QA Analyst) | Active today | Dispatch assigned 2026-06-01 | Geolocation allowed/denied, marker click, popup, filters/search, route interactions, and error state |
-| T-044 | Create Map controls UX audit | UI/UX Designer | Active today | Dispatch assigned 2026-06-01 | Touch targets, popup layout, map controls, overlays, and mobile gesture conflicts |
+| T-044 | Create Map controls UX audit | UI/UX Designer | In progress | Round-2 live audit (mobile): controls locate/+/−/60км/layers/list ≈48px (good), `Найти места рядом` CTA good, markers render; `D-004` overlap confirm (cookie banner over map bottom). Desktop map + popup layout re-shoot `verify pending` (contended tab) | Touch targets, popup layout, map controls, overlays, and mobile gesture conflicts |
 | T-045 | Write Places page test cases | Мариночка (QA Analyst) | Active today | Dispatch assigned 2026-06-01 | List, filters, place card, map relation, missing media, empty state, incremental loading, and `F-004` nested controls |
 | T-046 | Run Places SEO audit | Сео (SEO Engineer) | Active today | Dispatch assigned 2026-06-01 | Metadata, canonical, OG, schema notes, and indexability for Places surfaces |
 | T-047 | Write Quests page test cases | Мариночка (QA Analyst) | Active today | Dispatch assigned 2026-06-01 | List, detail, start/resume where available, locked/empty/error states, and media handling |
@@ -349,7 +349,7 @@ Page inventory (роуты вне уже покрытых travel/Search/Home/Map
 | T-059 | QA pass: Travel authoring (wizard + edit) | Мариночка (Manual QA) | Done | Guest: `travel/new` renders auth-gate. Authed manual walkthrough on E2E build: 6-step wizard (основная инфо → маршрут → медиа → детали → доп → публикация), step pills + `Назад`/`Далее` nav work, title field + rich-text editor render, `Далее` advances step 1→2, step-2 validation surfaces required-field errors (`Точки/Страны маршрута…`). Evidence `.codex-temp/manual/B1-wizard-step1.png`, `B3-wizard-step2.png` | No publish/save performed; copy nit → `D-008`; `travel/[id]` edit walkthrough still pending |
 | T-060 | QA pass: Legal / info / system pages | Мариночка (QA) | Done | `report-all.json`: `about`, `contact`, `privacy`, `cookies`, `modal`, `error`, `404` all overflowX=false, console=0, pageErr=0; screenshots captured | `/modal` boilerplate → `F-005`; `/contact` missing header → `D-006` |
 | T-061 | QA pass: Articles pages (deprioritized) | Мариночка (QA) | Done | `report-all.json`: `articles` clean (overflowX=false, console=0, pageErr=0, bodyText≈1900) | Smoke only per active-features rule; `article/[id]` needs a real id, deferred |
-| T-062 | UI/UX visual audit → file F-*/D- tickets for all wave pages | UI/UX Designer | Done | Guest + authenticated screenshots reviewed (guest `page-audit/`, authed `page-audit-auth/`, manual `manual/`). Tickets filed: `F-005`, `D-004`, `D-005`, `D-006`, `D-007`, `D-008`, `D-009`. Profile-area empty-states (favorites/calendar/messages/subscriptions) judged well-designed and on-brand — no redesign ticket needed | Main new UX risk = `D-009` (header `Гость` while logged in); rest are polish/copy/perf. `travel/[id]` edit visual review still pending |
+| T-062 | UI/UX visual audit → file F-*/D- tickets for all wave pages | UI/UX Designer | Done | Guest + authenticated screenshots reviewed (guest `page-audit/`, authed `page-audit-auth/`, manual `manual/`). Tickets filed: `F-005`, `D-004`, `D-005`, `D-006`, `D-007`, `D-008` (and `D-009` opened then RETRACTED as a timing artifact after verification). Profile-area empty-states (favorites/calendar/messages/subscriptions) judged well-designed and on-brand — no redesign ticket needed. **Round-2 live preview audit (2026-06-01)** added `D-010`/`D-011`/`D-012`/`F-007` + `D-004` confirm across Home/Search/Map (see dedicated section) | Valid findings are polish/copy/perf; no medium+ UX bug confirmed. `travel/[id]` edit visual review still pending; Places / Map-desktop / populated travel-detail / mobile-search re-shoot `verify pending` (contended tab + intermittent E2E API) |
 | T-063 | Acceptance criteria for full-page QA wave findings | Крина (Business Analyst) | Active today | Dispatch assigned 2026-06-01 | Severity, expected result, non-goals, and DoD per confirmed `F-*`/`D-*` before they enter implementation |
 | T-064 | Prepare implementation queue for wave findings | Ромик (Dev) | Waiting on BA/QA gate | Queue exists; awaiting `T-063` + `F-004` retest evidence | Only confirmed `F-*`/`D-*` with repro, expected result, target files, and validation commands enter implementation |
 
@@ -475,15 +475,15 @@ Findings:
 - Owner: UI/UX Designer.
 - Status: open; batch with `D-002`/`TD-006`.
 
-### D-005 `/metravel` has no empty-state and a stale default year filter
+### D-005 `/metravel` empty results area + stale year placeholder (partially CORRECTED)
 
-- Severity: low-medium / UX.
+- Severity: low / UX.
 - URL: `/metravel`, desktop `1440x900`, guest.
-- Actual: left filter rail shows `0 путешествий`; the entire results area is blank white with no empty-state message or guidance. The `Год` filter defaults to `2024` while the current year is `2026`, which can itself drive a zero-result view.
-- Evidence: `.codex-temp/page-audit/metravel/desktop-top.png`.
-- Expected: a clear empty-state ("ничего не найдено" + reset/adjust filters), and a sensible default year (current year or "all").
-- Owner: UI/UX Designer for empty-state; Ромик (Dev) to confirm default-year source.
-- Status: open.
+- Correction after code check: the `Год` field is **not** a stale applied filter. `components/listTravel/ModernFilters.tsx:405` uses `value={year ? String(year) : ''}` with `placeholder="2024"`, i.e. the year is empty by default and `2024` is only grey placeholder text — it does NOT filter results. The original "default 2024 → 0 results" claim is withdrawn.
+- Remaining valid points: (1) the `placeholder="2024"` is a hardcoded past year (in 2026) — should be dynamic (`new Date().getFullYear()`) or a neutral hint like `Год`; (2) the guest results area showed blank with no visible empty-state copy (needs confirmation on a logged-in account with zero travels, since `/metravel` is the user's own list).
+- Evidence: `.codex-temp/page-audit/metravel/desktop-top.png`; `ModernFilters.tsx:405-414`.
+- Owner: `travel-expert` for placeholder; UI/UX Designer to confirm empty-state.
+- Status: open (downgraded; mostly cosmetic).
 
 ### D-006 `/contact` renders without the global top navigation header
 
@@ -511,12 +511,16 @@ Findings:
 - URL: `/travel/new`, step 2 (Маршрут), authenticated.
 - Actual: required-field validation renders `Точки маршрута обязательно для заполнения` and `Страны маршрута обязательно для заполнения`.
 - Expected: plural agreement — `Точки маршрута обязательны для заполнения`, `Страны маршрута обязательны для заполнения` (or singular `Точка/Страна … обязательна`).
-- Evidence: `.codex-temp/manual/B3-wizard-step2.png`.
+- Evidence (before): `.codex-temp/manual/B3-wizard-step2.png`.
 - Owner: UI/UX Designer / Крина (BA) for copy; Ромик (Dev) for the string.
-- Status: open; cosmetic.
+- Fix: added optional `requiredMessage` override to `FieldRule` in `utils/travelWizardValidation.ts` and set it for `coordsMeTravel` / `countries` (`«… обязательны для заполнения»`) in both step-2 rule sets; the generic neuter template is unchanged so `Название`/`Описание` messages stay correct. Unit test added (`__tests__/utils/formValidation.travelWizard.test.ts`).
+- Validation: `formValidation.travelWizard.test.ts` 18 passed; `typecheck` clean; `check:image-architecture` + `guard:external-links` passed; browser verify on rebuilt E2E dist — step 2 renders `Точки/Страны маршрута обязательны для заполнения`, no `обязательно` form, 0 console errors (`.codex-temp/manual/D008-verify-step2.png`).
+- Status: fixed (awaiting commit).
 
-### D-009 Global header shows `Гость` on authenticated profile-area pages
+### D-009 Global header shows `Гость` on authenticated profile-area pages — RETRACTED (invalid)
 
+- Resolution: **invalid / not a bug.** Re-tested by polling the header account label for ~12s on `/favorites` and `/profile` (authed): both resolve to `Открыть меню аккаунта sergey@lyte.com`. The `Гость` seen in the audit screenshots was a timing artifact — `AuthContext` defers `checkAuthentication()` on web via `requestIdleCallback({timeout:1500})` (intentional, to reduce TBT, per `context/AuthContext.tsx`), so the screenshot at ~1.8s captured the pre-hydration header. A real logged-in user sees their account. Evidence: `.codex-temp/hdr-check.mjs` output. No ticket.
+- (original report below, kept for the journal)
 - Severity: medium / UX (auth-state confusion).
 - URLs: `/profile`, `/favorites`, `/history`, `/calendar`, `/messages`, `/subscriptions`, `/settings`, authenticated (account `sergey@lyte.com`), E2E build, desktop `1440x900`.
 - Actual: the top-right account menu renders `Гость` on all these gated pages even though the user is logged in and the page's personal data loads (empty-states are the user's own). On `/travels/{slug}` the same header correctly shows the logged-in account (`sergey@lyte.com`).
@@ -535,6 +539,54 @@ Findings:
 - Fix: `__tests__/components/login.test.tsx:112` — `findByPlaceholderText('Email', undefined, { timeout: 10000 })` (headroom для lazy-резолва). Поведение не меняется.
 - Verification: полный 25-сьютовый batch из репорта снова зелёный — `25 suites / 335 tests passed` (7.95s, без flake); `eslint` clean.
 - Status: fixed.
+
+## Full-page UI/UX QA wave — round 2 (live preview audit, 2026-06-01)
+
+Audited the running app in a real browser via the preview harness, in page order Главная → Поиск → Путешествие → Карта → Места, on desktop `1440x900` and mobile `390x844`. Served the fresh web export (`dist/`, built 2026-06-01 22:15) through a local clean-URL static server (`.claude/dist-server.js` on `:4601`) because the Metro dev server OOM-crashed on heavy RN-Web routes and the static export is stable for screenshots.
+
+Captured with real rendered evidence: **Home** (desktop hero + weekend-route carousel, desktop random-route empty state, mobile hero/chips/route-card/bottom-nav), **Search** (desktop with live data — 380 results, country facets, cards), **Map** (mobile controls + markers), **Travel detail** (not-found state). Positive notes (do NOT touch): the random-route, search-retry, and travel-not-found empty states are all on-brand and well-composed (neutral icon + message + single CTA); the mobile home route-card image renders correct `fit=contain` + blurred letterbox from the first frame (image rule satisfied).
+
+`verify pending` (external blocker, not app bugs): the preview browser tab was contended by another automation that repeatedly drove navigations to `/map` and to specific travel slugs mid-hydration, and the E2E build's API (`127.0.0.1:8124`) was intermittent. As a result, fully-populated **Places**, **Map desktop**, a **populated travel detail**, and **mobile Search** were not cleanly captured this pass and remain to re-shoot once the tab/API are exclusive and warm.
+
+### D-010 Touch targets below 44px across cards/carousel/footer/cookie (mobile = bug, desktop = polish)
+
+- Severity: medium / P2 (WCAG 2.1 AA 2.5.5 target size). Extends `D-002`.
+- URLs/viewport: `/` and `/search`, mobile `390x844` (bug) + desktop `1440x900` (polish). Guest, E2E `dist` build.
+- Actual (measured via bounding boxes): travel-card favorite (heart) and add (plus) buttons ≈36px; home weekend-carousel prev/next arrows 32×32; footer link rows ≈32px tall; cookie banner `Отклонить`/`Принять` ≈36px tall. Several `a/button` nodes report height<44 on the home/search shells.
+- Expected: interactive controls have a ≥44×44px hit area on touch (hit-slop/padding is fine; the visual can stay compact). Desktop pointer targets can be smaller but the card heart/plus should still be comfortable.
+- Owner: UI/UX Designer to set the target-size token / hit-slop rule; Ромик (Dev) to apply (card actions, carousel arrows, cookie buttons).
+- Status: open. Evidence: round-2 preview screenshots (home desktop/mobile, search desktop).
+
+### D-011 Search year facet defaults to stale `Год 2024` (cross-links D-005)
+
+- Severity: medium / P2 (UX correctness). Same class as `D-005` (`/metravel` stale year), now confirmed on `/search`.
+- URLs/viewport: `/search`, desktop `1440x900` (and mobile filter sheet). Guest, E2E build.
+- Actual: on first load the left-sidebar year filter shows `Год 2024` while the current year is 2026. With live data the page still returned 380 results, so the 2024 value is a hardcoded/stale default rather than "latest year with data".
+- Expected: default to no year filter, or to the most recent year actually present in the dataset; never a hardcoded past year.
+- Owner: Ромик (Dev) to confirm the default-year source (same investigation as `D-005`); UI/UX Designer to confirm the desired default (no-filter vs latest-year).
+- Status: open. Evidence: search desktop screenshot (facet `Год 2024`, `380 путешествий`).
+
+### D-012 Home weekend-route carousel sits as a grey/dark placeholder during slow API (polish)
+
+- Severity: low / P3 (polish; image-rule compliant, not a defect).
+- URLs/viewport: `/`, desktop `1440x900`. Guest, E2E build under slow/cold API.
+- Actual: the right-page "Маршрут недели" carousel card (`Тропа ведьм` 4/5, then `Озеро Блед`) renders the neutral grey placeholder + dark bottom gradient for a few seconds before the contained photo appears. The placeholder itself is correct per the neutral-placeholder rule.
+- Expected (polish only): consider a subtle shimmer or keeping the shared-source blur visible during the fetch so the hero card reads as "loading" rather than "empty" on first paint. Must keep `fit=contain` + blur-from-first-frame; do not add lazy/offscreen skipping.
+- Owner: UI/UX Designer (loading affordance) + `travel-expert`/Ромик (Dev) for the card.
+- Status: open. Evidence: home desktop hero screenshots (grey card vs loaded `Озеро Блед`).
+
+### F-007 Search/home initial loads can flash a transient error/empty state under slow API (not a stable bug)
+
+- Severity: low / P3 (resilience observation; reproduced as transient only).
+- URLs/viewport: `/search` (`Ошибка загрузки / Не удалось загрузить путешествия / Повторить`) and `/` random-route (`Случайная идея пока не загрузилась`), both viewports.
+- Actual: on a cold/slow API the first paint showed the error/empty state, and a subsequent load of the same route rendered full data (`380 путешествий`). The states themselves are well-designed; the finding is only that they can appear before data settles.
+- Expected: confirm there is a retry/skeleton path so a slow first response does not strand the user on the error card (the `Повторить` CTA already exists — verify it refetches).
+- Owner: Ромик (Dev) to confirm refetch/skeleton behavior; QA to retest under throttled network. Likely no change needed beyond confirming.
+- Status: open (needs confirm-or-close). Evidence: search desktop error-state vs data-state screenshots.
+
+### D-004 — round-2 confirmation (cookie banner overlap, cross-page)
+
+- Re-confirmed live on the running app: the cookie consent banner overlaps page content on every audited route — on mobile home it covers the bottom of the featured route card; on mobile/desktop search it sits over lower result cards; on mobile map it overlaps the bottom of the map canvas above the bottom nav. Temporary/dismissible, so still polish, but the mobile stacking (banner + 6-tab bottom nav) eats meaningful vertical space. Recommendation unchanged from `D-004`/`MTC-009`: lift the banner above the bottom nav with safe-area inset (or a slimmer bottom bar) and ensure it never covers a primary card CTA. Evidence: round-2 home mobile, search desktop, map mobile screenshots.
 
 ## Validation log
 
@@ -570,6 +622,8 @@ Findings:
 - Manual authenticated interaction pass (E2E build, account `sergey@lyte.com`, non-destructive): on `/travels/kostel-svyatogo-antoniya-paduanskogo` — favorite `Добавить в избранное` → click flips to remove-state → reverted back, test account left clean (verified by a fresh action-state dump); `Добавить в план` opens a status picker (`Был здесь`/`Планирую`/`Хочу побывать`, no status selected); `Перейти к разделу Комментарии` scrolls and the `Написать комментарий…` input is present (not posted); rating control `Оценить на N из 5` present (not submitted); gallery `Next/Previous slide` clickable when tested in isolation. On `/travel/new` — 6-step wizard navigates, `Далее` advances step 1→2, step-2 required-field validation fires. No rating/comment/publish writes performed. Evidence `.codex-temp/manual/*.png`, `manual-interact-log.txt`. New copy nit `D-008`.
 - Infra note (NOT an app bug): `scripts/serve-web-build.js` intermittently returns `404` for both HTML documents and lazy JS chunks under parallel browser fetches; for a lazy chunk this hard-crashes into the error boundary (`Что-то пошло не так` + `Loading module …TravelHeroInteractiveSlider-….js failed`). The chunk exists and `curl` serves it `200` consistently; mitigated in harnesses with reload-on-crash retry. DevOps (`T-052`/`T-056`) should consider making the local serve concurrency-safe.
 - Comment write-flow CRUD (approved scope = comments-with-rollback; account `sergey@lyte.com`, travel `391`): the lazy `CommentsSection` chunk would not reliably mount on the flaky local serve (no comment XHR after several full reloads), so the write flow was exercised against the real API the UI calls (`api/comments.ts` contract). Sequence: `POST /api/travel-comments/ {travel_id, text}` → `201` (returned the new comment); `PATCH /api/travel-comments/{id}/ {text}` → `200` (text updated to "…(отредактировано)"); `DELETE /api/travel-comments/{id}/` → `204`. Mandatory cleanup ran in `finally`; net-zero on prod. Observed: `GET /api/travel-comments/?travel_id=391` → `400`, which `api/comments.ts` already swallows as an empty state (consistent with `F-002`). Publish and author-only flows were intentionally not run. Evidence `.codex-temp/manual/cmt-api-crud-log.txt`.
+- Finding validation before fixing (caught two false positives): `D-009` (header `Гость` while logged in) RETRACTED — polling the account label ~12s on `/favorites` and `/profile` resolves to `sergey@lyte.com`; it was the intentional deferred `checkAuthentication` (`requestIdleCallback({timeout:1500})`) captured pre-hydration. `D-005` corrected — `ModernFilters.tsx` year is empty by default with `placeholder="2024"` (not an applied filter), so "default 2024 → 0 results" is withdrawn; only the stale placeholder year remains.
+- `D-008` fix + browser verification: edited `utils/travelWizardValidation.ts` (added `FieldRule.requiredMessage`, set plural messages for `coordsMeTravel`/`countries`), added a regression test. `npx jest __tests__/utils/formValidation.travelWizard.test.ts` → 18 passed; `__tests__/api/misc.behavior.test.ts` → 19 passed; `tsc --noEmit` clean on touched files; `check:image-architecture` + `guard:external-links` passed. Rebuilt the E2E dist and drove `/travel/new` to step 2: validation now shows `Точки/Страны маршрута обязательны для заполнения`, the `обязательно` form is gone, 0 console errors. Evidence `.codex-temp/manual/D008-verify-step2.png`.
 - Authenticated DATA limitation on the PRODUCTION dist build (NOT an app bug): every gated page's authed API calls returned `401` (`/api/user/104/profile/`, `/api/user/subscriptions/`, `/api/message-threads/`, `/api/user-points/…`, `/api/travels/?where=user_id:104…`). Root cause isolated: the login token is valid — direct calls succeed (`PROD` and local `PROXY` both `200` with `Authorization: Token …`; `/api/user/104/profile/` is even `200` without auth) — but a manually injected `enc1:` token does not survive `utils/secureStorage` decode in this **production** `dist` build, so the app sends a malformed `Authorization` header → `401`. The supported authenticated-data path is an E2E-built dist (`EXPO_PUBLIC_E2E=true`) via the Playwright `webServer`; authed data walkthrough (favorites/history/userpoints/subscriptions/messages content, wizard data steps, `travel/[id]` edit) remains pending on that build.
 
 ## Manual test cases backlog

@@ -48,6 +48,12 @@ interface FieldRule {
    */
   content?: 'plain' | 'html';
   label: string;
+  /**
+   * Optional override for the "required" error message.
+   * Use when the label is plural/feminine and the default neuter
+   * `<label> обязательно для заполнения` would not agree grammatically.
+   */
+  requiredMessage?: string;
 }
 
 interface StepRule {
@@ -83,10 +89,12 @@ export const STEP_VALIDATION_RULES: Record<number, StepRule> = {
       coordsMeTravel: {
         minItems: 1,
         label: 'Точки маршрута',
+        requiredMessage: 'Точки маршрута обязательны для заполнения',
       },
       countries: {
         minItems: 1,
         label: 'Страны маршрута',
+        requiredMessage: 'Страны маршрута обязательны для заполнения',
       },
     },
   },
@@ -173,10 +181,12 @@ export const STEP_VALIDATION_RULES: Record<number, StepRule> = {
       coordsMeTravel: {
         minItems: 1,
         label: 'Точки маршрута',
+        requiredMessage: 'Точки маршрута обязательны для заполнения',
       },
       countries: {
         minItems: 1,
         label: 'Страны маршрута',
+        requiredMessage: 'Страны маршрута обязательны для заполнения',
       },
       categories: {
         minItems: 1,
@@ -302,7 +312,9 @@ export function validateStep(
       if (isEmpty) {
         errors.push({
           field: fieldName,
-          message: `${fieldRules?.label || fieldName} обязательно для заполнения`,
+          message:
+            fieldRules?.requiredMessage ||
+            `${fieldRules?.label || fieldName} обязательно для заполнения`,
           severity: 'error',
           anchorId: `field-${fieldName}`,
         });
