@@ -1,6 +1,6 @@
 # Agent workboard
 
-Last updated: 2026-05-22
+Last updated: 2026-06-01
 
 Scope: testing and fixing the travel details page.
 
@@ -178,6 +178,33 @@ Planning risks:
 | T-052 | Keep new sprint evidence and e2e health green | Витаутас (DevOps) | In progress | Board/e2e evidence pending | Board shows active work, no fake Done, evidence required for every closed task, and e2e setup remains stable |
 | T-053 | Cross-page implementation lane | Ромик (Dev) | Blocked | Waiting for QA/BA/design evidence | Starts only after approved bug/spec/design output from T-023 onward |
 | T-054 | Create cross-page final regression plan | Крина (Business Analyst) + Мариночка (QA Analyst) | Open | Regression plan pending | One reusable release checklist covers web/mobile/page-specific risks before final regression |
+| T-055 | Split `app/(tabs)/profile.tsx` below 800 LOC | Ромик (Dev) | Done | profile.tsx 889 → 783 LOC; new `app/(tabs)/profileScreen.styles.ts` + `profileScreen.helpers.ts`; validation: `npm run typecheck`, `npm run check:fast` (8 suites / 84 tests passed), `guard:file-complexity:changed` violations=0, `check:image-architecture`, `guard:external-links` all passed | Behavior-neutral extraction via `refactor-surgeon`: styles factory + pure helpers; hook order/deps unchanged |
+
+## Tech debt backlog
+
+Created: 2026-06-01. Source: `guard:file-complexity` (>800 LOC), open findings, and source scan (`@ts-ignore`/`exhaustive-deps`).
+
+Routing: god-components → `refactor-surgeon`; travel files → `travel-expert`; map files → `map-expert`; tests → `test-author`. Splits must preserve behavior; re-run `check:fast` + guards to green. Priority order favors travel (primary feature); article pages are deprioritized (not in active use).
+
+| ID | Item | Owner | Priority | Evidence | Status |
+| --- | --- | --- | --- | --- | --- |
+| TD-001 | Finish `T-055` profile split below 800 LOC and commit the dirty diff | Ромик (Dev) / `refactor-surgeon` | P1 | Split done: `app/(tabs)/profile.tsx` = 783 LOC, `guard:file-complexity:changed` violations=0, `check:fast` 84 passed, no dead `ProfileStats` refs. Helpers/styles wired and imported | Code goal met & green; commit of dirty diff awaits user approval |
+| TD-002 | Resolve `F-003` Instagram rich-text e2e spec mismatch (iframe vs fallback card) | Мариночка (QA Analyst) + Ромик (Dev) | P1 | `e2e/travel-instagram-rich-text.spec.ts` expects `.rich-social-card--instagram`, DOM renders iframe | Open |
+| TD-003 | Split `components/travel/TravelWizardStepPublish.tsx` (1250 LOC) | `refactor-surgeon` + `travel-expert` | P1 | guard:file-complexity = 1250 LOC | Open |
+| TD-004 | Split `components/travel/CompactSideBarTravel.tsx` (1101 LOC) | `refactor-surgeon` + `travel-expert` | P1 | guard:file-complexity = 1101 LOC | Open |
+| TD-005 | Split `components/listTravel/ListTravelBase.tsx` (1037 LOC) | `refactor-surgeon` + `travel-expert` | P1 | guard:file-complexity = 1037 LOC | Open |
+| TD-006 | Resolve `D-002` mobile overlays and touch-target sizing | UI/UX Designer + Ромик (Dev) | P2 | action targets ~33-38px, Leaflet controls 30x30, cookie banner vs bottom nav | Open |
+| TD-007 | Split `components/MapPage/MapQuickFilters.tsx` (926 LOC) | `refactor-surgeon` + `map-expert` | P2 | guard:file-complexity = 926 LOC | Open |
+| TD-008 | Split `app/(tabs)/calendar.tsx` (1199 LOC) | `refactor-surgeon` | P2 | guard:file-complexity = 1199 LOC | Open |
+| TD-009 | Split `components/export/BookSettingsModal.tsx` (1120 LOC) | `refactor-surgeon` | P2 | guard:file-complexity = 1120 LOC | Open |
+| TD-010 | Split `components/travel/details/sections/RouteElevationProfile.tsx` (853 LOC) | `refactor-surgeon` + `travel-expert` | P2 | guard:file-complexity = 853 LOC | Open |
+| TD-011 | Split `components/travel/UnifiedSlider.tsx` (817 LOC) — keep blur background, optimize render cost only, do not remove | `refactor-surgeon` + `travel-expert` | P2 | guard:file-complexity = 817 LOC; slider blur rule | Open |
+| TD-012 | Reduce `api/client.ts` (836 LOC) by extracting domain modules | `refactor-surgeon` | P2 | guard:file-complexity = 836 LOC | Open |
+| TD-013 | Split `components/quests/QuestPrintable.tsx` (992 LOC) | `refactor-surgeon` | P3 | guard:file-complexity = 992 LOC | Open |
+| TD-014 | Split `components/UserPoints/PointsList.tsx` (909) and `PointCard.tsx` (877) | `refactor-surgeon` | P3 | guard:file-complexity = 909 / 877 LOC | Open |
+| TD-015 | Extract oversized style modules >800 LOC | `refactor-surgeon` | P3 | `homeHeroStyles.ts` 1908, `webStyles.ts` 1128, `filtersPanelStyles.ts` 935, `questWizardStyles.ts` 870, `modernFiltersStyles.ts` 859, `TravelDetailsStyles.ts` 831 | In progress — `TravelDetailsStyles.ts` first (behavior-neutral) |
+| TD-016 | Audit 12 `eslint-disable react-hooks/exhaustive-deps` for stale-closure risk | `test-author` + domain expert | P3 | 12 occurrences across `components/`, `hooks/`, `app/` | Open |
+| TD-017 | Split `components/article/ArticleEditor.web.tsx` (1290 LOC) | `refactor-surgeon` | P4 | guard:file-complexity = 1290 LOC; article pages not in active use | Open |
 
 ## Findings
 

@@ -39,8 +39,8 @@ const SOCIAL_ICONS: Record<string, React.ComponentProps<typeof Feather>['name']>
   vk: 'link',
 };
 
-const AVATAR_SIZE = 116;
-const COVER_HEIGHT = 130;
+const AVATAR_SIZE = 124;
+const COVER_HEIGHT = 148;
 const AVATAR_BORDER = 4;
 
 const getInitials = (name: string) =>
@@ -86,19 +86,38 @@ export function ProfileHeader({
           backgroundColor: colors.primaryLight,
           position: 'relative',
           overflow: 'hidden',
+          ...Platform.select({
+            web: {
+              backgroundImage: `linear-gradient(135deg, ${colors.brand} 0%, ${colors.primary} 55%, ${colors.accent} 100%)`,
+            } as any,
+            default: {},
+          }),
         },
         coverGradient: {
           position: 'absolute',
           bottom: 0,
           left: 0,
           right: 0,
-          height: 60,
+          height: 80,
           ...Platform.select({
             web: {
-              backgroundImage: `linear-gradient(to bottom, transparent, ${colors.background}22)`,
+              backgroundImage: `linear-gradient(to bottom, transparent, ${colors.background})`,
             } as any,
-            default: {},
+            default: {
+              backgroundColor: colors.background,
+              opacity: 0.18,
+            },
           }),
+        },
+        coverGlow: {
+          position: 'absolute',
+          top: -40,
+          right: -40,
+          width: 180,
+          height: 180,
+          borderRadius: 90,
+          backgroundColor: colors.accentSoft,
+          opacity: 0.45,
         },
         menuWrap: {
           position: 'absolute',
@@ -170,9 +189,10 @@ export function ProfileHeader({
           gap: 4,
         },
         userName: {
-          ...DESIGN_TOKENS.typography.scale.h2,
+          ...DESIGN_TOKENS.typography.scale.h1,
           color: colors.text,
           textAlign: 'center',
+          letterSpacing: -0.4,
         },
         userEmail: {
           fontSize: DESIGN_TOKENS.typography.sizes.sm,
@@ -260,9 +280,10 @@ export function ProfileHeader({
 
   return (
     <View style={styles.container}>
-      {/* Cover band with subtle gradient overlay */}
+      {/* Cover band with diagonal brand gradient and soft glow */}
       <View style={styles.cover}>
-        <View style={styles.coverGradient} />
+        <View style={styles.coverGlow} pointerEvents="none" />
+        <View style={styles.coverGradient} pointerEvents="none" />
         <View style={styles.menuWrap}>
           <ProfileMenu onLogout={onLogout} onSettings={onEdit} />
         </View>
@@ -355,7 +376,6 @@ export function ProfileHeader({
         </View>
       )}
 
-      <View style={styles.divider} />
     </View>
   );
 }

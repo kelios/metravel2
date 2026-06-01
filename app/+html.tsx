@@ -192,7 +192,10 @@ export default function Root({ children }: { children: React.ReactNode }) {
 	      <meta name="theme-color" content={DESIGN_COLORS.themeColorDark} media="(prefers-color-scheme: dark)" />
 	      <meta name="theme-color" content={DESIGN_COLORS.themeColorLight} media="(prefers-color-scheme: light)" />
       <meta name="color-scheme" content="light dark" />
-      <title>{SITE_BRAND}</title>
+      {/* No static <title> here: React Helmet bakes a per-page title (data-rh="true")
+          into the exported HTML, and the inline critical script below sets document.title
+          for SPA-only routes. A static <title> would NOT be deduped by Expo export and
+          produced a duplicate <title> tag on every page. */}
       <meta name="description" content={DEFAULT_DESCRIPTION} />
 
       {/* Legacy URL guard: /?param=<id|slug> -> /travels/<id|slug> */}

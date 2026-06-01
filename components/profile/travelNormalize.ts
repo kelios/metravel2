@@ -64,7 +64,7 @@ export const normalizeToTravel = (item: Record<string, unknown>): Travel => {
     name,
     travel_image_thumb_url,
     travel_image_thumb_small_url: travel_image_thumb_url,
-    url: url || `/travels/${slug || id}`,
+    url: slug ? `/travels/${slug}` : (url ? String(url).split('?')[0].split('#')[0] : `/travels/${id}`),
     youtube_link: '',
     userName: String(item?.userName ?? item?.authorName ?? ''),
     description: String(item?.description ?? ''),

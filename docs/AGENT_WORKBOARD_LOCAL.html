@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
-  <title>Metravel Local Agent Board</title>
+  <title>Metravel · Live Agent Board</title>
   <style>
     :root {
       --bg: #f7f5f0;
@@ -25,7 +25,10 @@
       --warning-soft: #f4e9d5;
       --danger: #b55a50;
       --danger-soft: #f1dfdc;
+      --idle: #9a948a;
+      --idle-soft: #ece9e2;
       --shadow: 0 10px 30px rgba(43, 38, 30, .08);
+      --shadow-sm: 0 2px 8px rgba(43, 38, 30, .06);
     }
 
     * { box-sizing: border-box; }
@@ -38,2000 +41,644 @@
       font: 15px/1.45 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
-    button, select {
-      font: inherit;
-    }
+    button, select { font: inherit; cursor: pointer; }
 
     .shell {
       width: min(1320px, calc(100vw - 32px));
       margin: 0 auto;
-      padding: 28px 0 48px;
+      padding: 28px 0 56px;
     }
 
+    /* ---- topbar ---- */
     .topbar {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
       gap: 18px;
-      margin-bottom: 18px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
     }
-
     .eyebrow {
       margin: 0 0 6px;
-      color: var(--primary);
       font-size: 12px;
-      font-weight: 800;
-      letter-spacing: .08em;
+      letter-spacing: .14em;
       text-transform: uppercase;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(26px, 4vw, 38px);
-      line-height: 1.05;
-      letter-spacing: 0;
-    }
-
-    .subtitle {
-      margin: 10px 0 0;
-      max-width: 780px;
-      color: var(--muted);
-      font-size: 16px;
-    }
-
-    .local-note {
-      min-width: 220px;
-      padding: 14px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--surface);
-      box-shadow: var(--shadow);
-    }
-
-    .local-note strong {
-      display: block;
-      margin-bottom: 4px;
-      color: var(--text);
-    }
-
-    .local-note span {
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin: 20px 0;
-    }
-
-    .filters {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .filter,
-    .action {
-      min-height: 40px;
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      background: var(--surface);
-      color: var(--muted);
-      padding: 0 14px;
-      cursor: pointer;
-    }
-
-    .filter[aria-pressed="true"],
-    .action.primary {
-      border-color: var(--primary);
-      background: var(--primary-soft);
-      color: var(--text);
+      color: var(--brand);
       font-weight: 700;
     }
-
-    .action.active {
-      border-color: var(--info);
-      background: var(--info-soft);
-      color: var(--info);
-      font-weight: 800;
+    h1 { margin: 0; font-size: 27px; letter-spacing: -.01em; }
+    .subtitle { margin: 6px 0 0; color: var(--muted); font-size: 13.5px; max-width: 640px; }
+    .subtitle code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px; background: var(--surface-2); padding: 1px 5px; border-radius: 5px;
     }
 
-    .metrics {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-      margin: 18px 0;
-    }
-
-    .metric,
-    .panel,
-    .card {
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--surface);
-      box-shadow: var(--shadow);
-    }
-
-    .metric {
-      padding: 14px;
-    }
-
-    .metric-value {
-      display: block;
-      font-size: 30px;
-      font-weight: 800;
-      line-height: 1;
-    }
-
-    .metric-label {
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .live-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(320px, .55fr);
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .live-panel {
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--surface);
-      box-shadow: var(--shadow);
-      padding: 14px;
-    }
-
-    .live-head {
+    .controls {
       display: flex;
-      justify-content: space-between;
       align-items: center;
       gap: 10px;
-      margin-bottom: 12px;
-    }
-
-    .live-title {
-      margin: 0;
-      font-size: 16px;
-      font-weight: 900;
-    }
-
-    .live-clock {
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 800;
-    }
-
-    .activity-list {
-      display: grid;
-      gap: 9px;
-    }
-
-    .activity-item {
-      display: grid;
-      grid-template-columns: 80px minmax(0, 1fr);
-      gap: 10px;
-      align-items: start;
-      border-top: 1px solid var(--border);
-      padding-top: 9px;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .activity-item:first-child {
-      border-top: 0;
-      padding-top: 0;
-    }
-
-    .activity-time {
-      color: var(--primary);
-      font-weight: 900;
-    }
-
-    .active-work-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-    }
-
-    .active-work-card {
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--surface);
-      padding: 12px;
-      min-width: 0;
-      animation: cardPulse 2.8s ease-in-out infinite;
-    }
-
-    .active-work-card strong {
-      display: block;
-      margin-bottom: 4px;
-      font-size: 13px;
-      line-height: 1.25;
-    }
-
-    .active-work-card span {
-      display: block;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .active-work-card .active-owner {
-      color: var(--primary);
-      font-weight: 900;
-    }
-
-    .designer-focus {
-      display: grid;
-      gap: 10px;
-    }
-
-    .ritual-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .ritual-card {
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--surface);
-      box-shadow: var(--shadow);
-      padding: 14px;
-    }
-
-    .ritual-card h3 {
-      margin: 0 0 8px;
-      font-size: 15px;
-      line-height: 1.2;
-    }
-
-    .ritual-card p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .planning-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .planning-card {
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--surface);
-      box-shadow: var(--shadow);
-      padding: 14px;
-      min-width: 0;
-    }
-
-    .planning-card h3 {
-      margin: 0 0 8px;
-      font-size: 15px;
-      line-height: 1.2;
-    }
-
-    .planning-card ul {
-      margin: 0;
-      padding-left: 18px;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .planning-card li + li {
-      margin-top: 5px;
-    }
-
-    .sprint-summary {
-      display: grid;
-      grid-template-columns: minmax(0, 1.15fr) repeat(3, minmax(150px, .38fr));
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-
-    .sprint-card {
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--surface);
-      box-shadow: var(--shadow);
-      padding: 14px;
-      min-width: 0;
-    }
-
-    .sprint-card h2,
-    .sprint-card h3 {
-      margin: 0 0 8px;
-      line-height: 1.15;
-    }
-
-    .sprint-card h2 {
-      font-size: 20px;
-    }
-
-    .sprint-card h3 {
-      font-size: 13px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: .06em;
-    }
-
-    .sprint-card p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .sprint-value {
-      display: block;
-      color: var(--text);
-      font-size: 18px;
-      font-weight: 900;
-      line-height: 1.15;
-    }
-
-    .sprint-meta {
-      display: flex;
       flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 10px;
     }
-
-    .sprint-chip {
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      background: var(--surface-2);
-      color: var(--muted);
-      padding: 4px 9px;
-      font-size: 12px;
-      font-weight: 800;
-    }
-
-    .designer-row {
-      display: grid;
-      gap: 5px;
-    }
-
-    .designer-row strong {
-      font-size: 13px;
-    }
-
-    .progress {
-      height: 8px;
-      border-radius: 999px;
-      background: var(--surface-2);
-      overflow: hidden;
-    }
-
-    .progress-fill {
-      height: 100%;
-      width: var(--progress, 18%);
-      border-radius: inherit;
-      background: linear-gradient(90deg, var(--primary), var(--brand));
-      transition: width .7s ease;
-    }
-
-    .progress-label {
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .panel {
-      padding: 14px;
-    }
-
-    .panel + .panel {
-      margin-top: 16px;
-    }
-
-    .panel-title {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-
-    .panel-title h2 {
-      margin: 0;
-      font-size: 20px;
-      line-height: 1.2;
-      letter-spacing: 0;
-    }
-
-    .cards {
-      display: grid;
-      gap: 12px;
-    }
-
-    .jira-board {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(240px, 1fr));
-      gap: 12px;
-      align-items: start;
-      padding-bottom: 6px;
-    }
-
-    .jira-column {
-      min-width: 240px;
-      max-width: 100%;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: rgba(255, 253, 248, .72);
-      padding: 10px;
-      overflow: hidden;
-    }
-
-    .jira-column-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      min-height: 36px;
-      margin-bottom: 10px;
-    }
-
-    .jira-column-title {
-      display: flex;
+    .control {
+      display: inline-flex;
       align-items: center;
       gap: 7px;
-      margin: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 8px 12px;
+      box-shadow: var(--shadow-sm);
+    }
+    .control label { font-size: 12px; color: var(--muted); }
+    select {
+      border: none;
+      background: transparent;
+      color: var(--text);
       font-size: 13px;
-      font-weight: 900;
+      font-weight: 600;
+      outline: none;
+    }
+    .btn {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      border-radius: 11px;
+      padding: 9px 15px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: var(--shadow-sm);
+      transition: transform .08s ease, background .15s ease;
+    }
+    .btn:hover { background: var(--surface-2); }
+    .btn:active { transform: translateY(1px); }
+    .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+    .btn.primary:hover { background: #c5771f; }
+
+    /* ---- connection pill ---- */
+    .conn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 13px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--idle);
+      flex: none;
+    }
+    .conn.live   .dot { background: var(--success); animation: pulse 1.6s infinite; }
+    .conn.error  .dot { background: var(--danger); }
+    .conn.stale  .dot { background: var(--warning); }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(77,138,99,.5); }
+      70%  { box-shadow: 0 0 0 7px rgba(77,138,99,0); }
+      100% { box-shadow: 0 0 0 0 rgba(77,138,99,0); }
+    }
+
+    /* ---- layout ---- */
+    .grid { display: grid; grid-template-columns: 1.55fr 1fr; gap: 18px; align-items: start; }
+    @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 18px 20px;
+    }
+    .card h2 {
+      margin: 0 0 14px;
+      font-size: 14px;
       letter-spacing: .04em;
       text-transform: uppercase;
+      color: var(--muted);
+      display: flex; align-items: center; gap: 9px;
+    }
+    .card h2 .count {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 600;
     }
 
-    .jira-count {
-      min-width: 26px;
-      min-height: 24px;
-      border-radius: 999px;
+    /* ---- live automation hero ---- */
+    .pulse-hero {
+      display: flex; align-items: center; gap: 16px;
+      padding: 16px 18px;
+      border-radius: 14px;
       background: var(--surface-2);
-      color: var(--muted);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      font-weight: 900;
-    }
-
-    .jira-column-body {
-      display: grid;
-      gap: 10px;
-      min-height: 120px;
-    }
-
-    .jira-card {
-      min-width: 0;
-      max-width: 100%;
       border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--surface);
-      padding: 12px;
-      box-shadow: 0 4px 16px rgba(43, 38, 30, .06);
-      overflow: hidden;
+      margin-bottom: 16px;
     }
-
-    .jira-card.active-work {
-      border-color: rgba(82, 127, 163, .55);
-      animation: cardPulse 2.4s ease-in-out infinite;
+    .pulse-ring {
+      width: 54px; height: 54px; border-radius: 50%;
+      display: grid; place-items: center;
+      flex: none;
+      background: var(--idle-soft);
+      color: var(--idle);
+      font-size: 22px;
     }
-
-    .jira-card-key {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
+    .pulse-hero.running .pulse-ring {
+      background: var(--info-soft); color: var(--info);
+      animation: spin 1.1s linear infinite;
     }
+    .pulse-hero.passed .pulse-ring { background: var(--success-soft); color: var(--success); }
+    .pulse-hero.failed .pulse-ring { background: var(--danger-soft); color: var(--danger); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .pulse-main { flex: 1; min-width: 0; }
+    .pulse-title { font-size: 16px; font-weight: 700; }
+    .pulse-meta { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+    .pulse-meta b { color: var(--text); font-weight: 600; }
 
-    .jira-card-title {
-      margin: 0 0 10px;
-      font-size: 14px;
-      font-weight: 850;
-      line-height: 1.25;
-      overflow-wrap: anywhere;
-    }
-
-    .jira-card-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      margin-top: 10px;
-    }
-
-    .assignee {
-      min-width: 0;
-      max-width: 145px;
-      color: var(--muted);
-      font-size: 12px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .quick-move {
-      max-width: 120px;
-      min-height: 32px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--surface);
-      color: var(--text);
-      padding: 0 6px;
-      font-size: 12px;
-    }
-
-    .card {
-      padding: 14px;
-      min-width: 0;
-      max-width: 100%;
-      overflow: hidden;
-    }
-
-    .people-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-    }
-
-    .person-card {
-      display: grid;
-      gap: 12px;
-      min-height: 100%;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--surface);
-      box-shadow: var(--shadow);
-      padding: 14px;
-    }
-
-    .person-head {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .person-name {
-      margin: 0;
-      font-size: 16px;
-      font-weight: 900;
-      line-height: 1.2;
-    }
-
-    .person-role {
-      display: block;
-      margin-top: 3px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .load {
-      display: inline-flex;
-      align-items: center;
-      min-height: 28px;
+    /* ---- badges ---- */
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 9px;
       border-radius: 999px;
-      background: var(--primary-soft);
-      color: var(--text);
-      padding: 0 9px;
-      font-size: 12px;
-      font-weight: 800;
-      white-space: nowrap;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: .02em;
     }
+    .badge.passed  { background: var(--success-soft); color: var(--success); }
+    .badge.failed  { background: var(--danger-soft);  color: var(--danger); }
+    .badge.running { background: var(--info-soft);    color: var(--info); }
+    .badge.idle    { background: var(--idle-soft);    color: var(--idle); }
+    .badge.warn    { background: var(--warning-soft); color: var(--warning); }
 
-    .load.idle {
+    /* ---- command rows ---- */
+    .cmd { display: flex; align-items: center; gap: 11px; padding: 9px 0; border-top: 1px solid var(--border); }
+    .cmd:first-of-type { border-top: none; }
+    .cmd .name { font-weight: 600; font-size: 13.5px; }
+    .cmd .desc { font-size: 12px; color: var(--muted); }
+    .cmd code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11.5px;
+      color: var(--muted);
+      background: var(--surface-2);
+      padding: 1px 6px; border-radius: 6px;
+      display: inline-block; margin-top: 3px;
+      word-break: break-all;
+    }
+    .cmd .right { margin-left: auto; text-align: right; flex: none; }
+    .cmd .dur { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+
+    /* ---- changed files ---- */
+    details.files { margin-top: 14px; }
+    details.files > summary {
+      cursor: pointer; font-size: 13px; font-weight: 600; color: var(--info);
+      list-style: none; user-select: none;
+    }
+    details.files > summary::-webkit-details-marker { display: none; }
+    .file-list { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+    .file-row {
+      display: flex; gap: 9px; align-items: center;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+    }
+    .gst {
+      width: 22px; flex: none; text-align: center;
+      font-weight: 700; border-radius: 5px; font-size: 11px; padding: 1px 0;
+    }
+    .gst.A { background: var(--success-soft); color: var(--success); }
+    .gst.M { background: var(--warning-soft); color: var(--warning); }
+    .gst.D { background: var(--danger-soft);  color: var(--danger); }
+    .gst.x { background: var(--idle-soft);    color: var(--idle); }
+
+    /* ---- agents grid ---- */
+    .agents { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+    .agent {
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      padding: 13px 14px;
+      background: var(--surface);
+      transition: border-color .2s ease, box-shadow .2s ease;
+    }
+    .agent.active { border-color: var(--info); box-shadow: 0 0 0 3px var(--info-soft); }
+    .agent-top { display: flex; align-items: center; gap: 10px; }
+    .avatar {
+      width: 34px; height: 34px; border-radius: 9px; flex: none;
+      display: grid; place-items: center;
+      font-weight: 700; font-size: 13px; color: #fff;
+    }
+    .agent-name { font-weight: 700; font-size: 14px; line-height: 1.2; }
+    .agent-role { font-size: 11.5px; color: var(--muted); }
+    .agent-track { font-size: 12.5px; color: var(--text); margin-top: 9px; min-height: 34px; }
+    .agent-foot { display: flex; align-items: center; gap: 7px; margin-top: 10px; }
+
+    /* ---- activity feed ---- */
+    .feed { display: flex; flex-direction: column; gap: 0; max-height: 520px; overflow: auto; }
+    .event { display: flex; gap: 12px; padding: 11px 2px; border-top: 1px dashed var(--border); }
+    .event:first-child { border-top: none; }
+    .event-rail { display: flex; flex-direction: column; align-items: center; flex: none; padding-top: 3px; }
+    .event-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--idle); }
+    .event.passed  .event-dot { background: var(--success); }
+    .event.failed  .event-dot { background: var(--danger); }
+    .event.running .event-dot { background: var(--info); }
+    .event-body { min-width: 0; }
+    .event-title { font-size: 13.5px; font-weight: 600; }
+    .event-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .event-time { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+    .empty { color: var(--muted); font-size: 13px; padding: 18px 4px; text-align: center; }
+
+    /* ---- fallback banner ---- */
+    .banner {
+      display: none;
+      margin-bottom: 18px;
+      padding: 14px 16px;
+      border-radius: 13px;
       background: var(--warning-soft);
-      color: var(--warning);
-    }
-
-    .load.active {
-      background: var(--info-soft);
-      color: var(--info);
-      animation: softPulse 1.8s ease-in-out infinite;
-    }
-
-    .work-lanes {
-      display: grid;
-      gap: 10px;
-    }
-
-    .work-lane {
-      display: grid;
-      gap: 5px;
-      border-top: 1px solid var(--border);
-      padding-top: 10px;
-    }
-
-    .lane-title {
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 900;
-      letter-spacing: .06em;
-      text-transform: uppercase;
-    }
-
-    .work-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 7px;
-      color: var(--text);
+      border: 1px solid var(--warning);
+      color: #6b4f1c;
       font-size: 13px;
     }
-
-    .work-item::before {
-      content: "";
-      flex: 0 0 auto;
-      width: 7px;
-      height: 7px;
-      margin-top: 6px;
-      border-radius: 999px;
-      background: var(--primary);
+    .banner.show { display: block; }
+    .banner code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: rgba(0,0,0,.06); padding: 1px 6px; border-radius: 5px;
     }
+    .banner b { display: block; margin-bottom: 5px; }
 
-    .work-item.done {
-      color: var(--muted);
-    }
-
-    .work-item.done::before {
-      background: var(--success);
-    }
-
-    .work-item.backlog::before {
-      background: var(--warning);
-    }
-
-    .work-item.current::before {
-      animation: dotPulse 1.4s ease-in-out infinite;
-    }
-
-    .card-top {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-
-    .id {
-      color: var(--primary);
-      font-weight: 800;
-    }
-
-    .title {
-      margin: 0 0 8px;
-      font-size: 16px;
-      font-weight: 800;
-      line-height: 1.25;
-    }
-
-    .meta {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      align-items: center;
-      margin-bottom: 8px;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .priority {
-      border-radius: 999px;
-      background: var(--brand-soft);
-      color: var(--text);
-      padding: 3px 8px;
-      font-weight: 800;
-    }
-
-    .approval {
-      display: inline-flex;
-      align-items: center;
-      min-height: 24px;
-      border-radius: 999px;
-      padding: 0 8px;
-      font-size: 11px;
-      font-weight: 900;
-      white-space: nowrap;
-    }
-
-    .approval.Approved {
-      background: var(--success-soft);
-      color: var(--success);
-    }
-
-    .approval.NeedsApproval,
-    .approval.Needsapproval {
-      background: var(--warning-soft);
-      color: var(--warning);
-    }
-
-    .approval.Draft {
-      background: var(--surface-2);
-      color: var(--muted);
-    }
-
-    .note {
-      margin: 0;
-      color: var(--muted);
-      font-size: 13px;
-      overflow-wrap: anywhere;
-    }
-
-    .evidence-list {
-      display: grid;
-      gap: 6px;
-      margin-top: 10px;
-      padding-top: 10px;
-      border-top: 1px solid var(--border);
-    }
-
-    .evidence-label {
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 900;
-      letter-spacing: .06em;
-      text-transform: uppercase;
-    }
-
-    .evidence-item {
-      border-radius: 6px;
-      background: var(--surface-2);
-      color: var(--muted);
-      padding: 6px 8px;
-      font-size: 12px;
-      line-height: 1.3;
-      overflow-wrap: anywhere;
-    }
-
-    .evidence-item.pass {
-      background: var(--success-soft);
-      color: var(--success);
-      font-weight: 800;
-    }
-
-    .evidence-item.file {
-      background: var(--info-soft);
-      color: var(--info);
-    }
-
-    .status {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      min-height: 28px;
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      padding: 0 9px;
-      font-size: 12px;
-      font-weight: 800;
-      white-space: nowrap;
-    }
-
-    .status::before {
-      content: "";
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: currentColor;
-    }
-
-    .status.Done { background: var(--success-soft); color: var(--success); }
-    .status.InProgress,
-    .status.Inprogress { background: var(--info-soft); color: var(--info); }
-    .status.Open { background: var(--surface-2); color: var(--muted); }
-    .status.Flaky { background: var(--warning-soft); color: var(--warning); }
-    .status.Blocked { background: var(--danger-soft); color: var(--danger); }
-
-    .status-select {
-      min-height: 36px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--surface);
-      color: var(--text);
-      padding: 0 8px;
-    }
-
-    .role-row,
-    .case-row {
-      display: grid;
-      gap: 4px;
-      padding: 12px 0;
-      border-top: 1px solid var(--border);
-    }
-
-    .role-row:first-child,
-    .case-row:first-child {
-      border-top: 0;
-      padding-top: 0;
-    }
-
-    .role-owner {
-      font-weight: 800;
-    }
-
-    .role-task,
-    .case-row {
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .finding {
-      border-left: 4px solid var(--primary);
-    }
-
-    .bottom-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(320px, .45fr);
-      gap: 16px;
-      align-items: start;
-    }
-
-    .foot {
-      margin-top: 16px;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    @keyframes softPulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(82, 127, 163, .18); }
-      50% { box-shadow: 0 0 0 6px rgba(82, 127, 163, .06); }
-    }
-
-    @keyframes dotPulse {
-      0%, 100% { transform: scale(1); opacity: .75; }
-      50% { transform: scale(1.45); opacity: 1; }
-    }
-
-    @keyframes cardPulse {
-      0%, 100% { box-shadow: 0 4px 16px rgba(43, 38, 30, .06); }
-      50% { box-shadow: 0 8px 24px rgba(82, 127, 163, .14); }
-    }
-
-    @media (max-width: 900px) {
-      .shell { width: min(100vw - 20px, 760px); padding-top: 18px; }
-      .topbar { display: block; }
-      .local-note { margin-top: 14px; }
-      .live-grid { grid-template-columns: 1fr; }
-      .active-work-grid { grid-template-columns: 1fr; }
-      .ritual-grid { grid-template-columns: 1fr; }
-      .sprint-summary { grid-template-columns: 1fr; }
-      .planning-grid { grid-template-columns: 1fr; }
-      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .people-grid { grid-template-columns: 1fr; }
-      .jira-board { grid-template-columns: 1fr; }
-      .jira-column { min-width: 0; }
-      .jira-card-footer { align-items: stretch; flex-direction: column; }
-      .assignee { max-width: none; white-space: normal; }
-      .quick-move { width: 100%; max-width: none; }
-      .bottom-grid { grid-template-columns: minmax(0, 1fr) !important; }
-    }
-
-    @media (min-width: 901px) and (max-width: 1180px) {
-      .people-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .jira-board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .jira-column { min-width: 0; }
-    }
-
-    @media (min-width: 1181px) and (max-width: 1340px) {
-      .jira-board { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      .jira-column { min-width: 0; }
-    }
+    .footnote { margin-top: 22px; font-size: 12px; color: var(--muted); text-align: center; }
+    .footnote code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   </style>
 </head>
 <body>
-  <main class="shell">
-    <section class="topbar">
+  <div class="shell">
+    <div class="topbar">
       <div>
-        <p class="eyebrow">Local only</p>
-        <h1>Agent Workboard</h1>
+        <p class="eyebrow">Metravel · local only</p>
+        <h1>Live Agent Board</h1>
         <p class="subtitle">
-          Локальный борд для отслеживания сотрудников, задач, тестирования, дизайнерских работ и ручных test cases.
-          Изменения статусов сохраняются только в браузере через localStorage.
+          Асинхронный борд читает мост автоматизации
+          <code>.codex-temp/workboard/current.json</code> и показывает, что прямо сейчас делают агенты:
+          активный цикл, последний прогон, результаты команд и изменённые файлы.
         </p>
       </div>
-      <aside class="local-note">
-        <strong>Не для production</strong>
-        <span>Открывай как локальный файл из репозитория. Эта страница не находится в Expo Router.</span>
-      </aside>
-    </section>
-
-    <section class="metrics" id="metrics"></section>
-
-    <section class="toolbar">
-      <div class="filters" id="filters"></div>
-      <div class="filters">
-        <button class="action primary" type="button" id="work-step">Записать реальный check-in</button>
-        <button class="action" type="button" id="auto-cycle">Demo mode: выкл</button>
-        <button class="action" type="button" id="reset">Сбросить локальные статусы</button>
+      <div class="controls">
+        <span id="conn" class="conn"><span class="dot"></span><span id="connText">Подключение…</span></span>
+        <span class="control">
+          <label for="interval">Интервал</label>
+          <select id="interval">
+            <option value="2000">2 с</option>
+            <option value="5000" selected>5 с</option>
+            <option value="10000">10 с</option>
+            <option value="30000">30 с</option>
+            <option value="0">Пауза</option>
+          </select>
+        </span>
+        <button class="btn primary" id="refresh">Обновить</button>
       </div>
-    </section>
+    </div>
 
-    <section class="live-grid">
-      <div class="live-panel">
-        <div class="live-head">
-          <h2 class="live-title">Live activity</h2>
-          <span class="live-clock" id="live-clock">Обновляется</span>
+    <div class="banner" id="banner">
+      <b>Не удалось прочитать мост автоматизации напрямую из файла.</b>
+      Браузеры блокируют <code>fetch()</code> локальных файлов при открытии через <code>file://</code>.
+      Запусти статический сервер из корня репозитория и открой борд по http:
+      <code>npx serve .</code> → <code>http://localhost:3000/docs/AGENT_WORKBOARD_LOCAL.html</code>
+      (или <code>python3 -m http.server</code>). Данные обновляет
+      <code>npm run workboard:heartbeat</code>.
+    </div>
+
+    <div class="grid">
+      <!-- LEFT: live automation -->
+      <section class="card">
+        <h2>Живая автоматизация <span class="count" id="cycleUpdated"></span></h2>
+
+        <div class="pulse-hero" id="pulseHero">
+          <div class="pulse-ring" id="pulseRing">○</div>
+          <div class="pulse-main">
+            <div class="pulse-title" id="pulseTitle">Ожидание данных…</div>
+            <div class="pulse-meta" id="pulseMeta">Запусти heartbeat, чтобы увидеть активность.</div>
+          </div>
+          <span class="badge idle" id="pulseBadge">idle</span>
         </div>
-        <div class="activity-list" id="activity"></div>
-      </div>
-      <div class="live-panel">
-        <div class="live-head">
-          <h2 class="live-title">Дизайнер сейчас</h2>
-          <span class="live-clock">UI/UX</span>
-        </div>
-        <div class="designer-focus" id="designer-focus"></div>
-      </div>
-    </section>
 
-    <section class="live-panel">
-      <div class="live-head">
-        <h2 class="live-title">Сейчас в работе</h2>
-        <span class="live-clock" id="active-work-summary">0 active</span>
-      </div>
-      <div class="active-work-grid" id="active-work"></div>
-    </section>
+        <div id="cmdList"></div>
 
-    <section class="ritual-grid">
-      <article class="ritual-card">
-        <h3>Daily standup</h3>
-        <p>Каждый день 10:00. Статусы, blockers, approval-needed, next actions.</p>
-      </article>
-      <article class="ritual-card">
-        <h3>Sprint planning</h3>
-        <p>Каждый понедельник 10:30. Scope, backlog readiness, owners, acceptance criteria.</p>
-      </article>
-      <article class="ritual-card">
-        <h3>Monthly retro</h3>
-        <p>Последняя пятница месяца 16:00. Что сработало, что блокировало, process improvements.</p>
-      </article>
-    </section>
-
-    <section class="sprint-summary" aria-label="Sprint planning result">
-      <article class="sprint-card">
-        <h2>Travel QA Stabilization</h2>
-        <p>Планинг проведен 2026-05-22. Спринт: 2026-05-22 - 2026-05-29. Фокус: закрыть QA/design/SEO discovery и подготовить developer-ready fixes для travel page.</p>
-        <div class="sprint-meta" aria-label="Sprint commitment">
-          <span class="sprint-chip">Committed: T-010...T-013, T-016, T-017</span>
-          <span class="sprint-chip">Stretch: T-014, T-020</span>
-          <span class="sprint-chip">No prod deploy</span>
-        </div>
-      </article>
-      <article class="sprint-card">
-        <h3>Capacity</h3>
-        <span class="sprint-value">7 active roles</span>
-        <p>QA, Manual QA, QA Analyst, Designer, BA, Dev, SEO.</p>
-      </article>
-      <article class="sprint-card">
-        <h3>Approval</h3>
-        <span class="sprint-value">Approved to start</span>
-        <p>Андриуш approved discovery and planning scope; implementation waits for spec/design output.</p>
-      </article>
-      <article class="sprint-card">
-        <h3>Main risk</h3>
-        <span class="sprint-value">Spec mismatch</span>
-        <p>T-012 Instagram e2e expectation conflicts with project rules and must be aligned first.</p>
-      </article>
-    </section>
-
-    <section class="planning-grid">
-      <article class="planning-card">
-        <h3>Sprint goal</h3>
-        <ul>
-          <li>Закрыть approval blockers по T-010...T-014.</li>
-          <li>Подготовить developer-ready scope для travel page fixes.</li>
-          <li>Синхронизировать QA, UX, SEO и BA criteria.</li>
-        </ul>
-      </article>
-      <article class="planning-card">
-        <h3>Committed</h3>
-        <ul>
-          <li>T-010 authenticated manual QA.</li>
-          <li>T-011 manual test cases.</li>
-          <li>T-012 Instagram expected behavior.</li>
-          <li>T-013 neutral hero placeholder.</li>
-        </ul>
-      </article>
-      <article class="planning-card">
-        <h3>Stretch</h3>
-        <ul>
-          <li>T-014 mobile overlays and touch targets.</li>
-          <li>T-020 SEO metadata/schema audit.</li>
-          <li>Implementation patch after approval.</li>
-        </ul>
-      </article>
-      <article class="planning-card">
-        <h3>Decisions</h3>
-        <ul>
-          <li>Андриуш approves readiness before dev implementation.</li>
-          <li>Крина owns acceptance criteria.</li>
-          <li>Ромик starts patch only after design/spec approval.</li>
-        </ul>
-      </article>
-    </section>
-
-    <section class="panel">
-      <div class="panel-title">
-        <h2>Команда: кто что делает</h2>
-        <span id="people-summary"></span>
-      </div>
-      <div class="people-grid" id="people"></div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-title">
-        <h2>Real work evidence</h2>
-        <span id="evidence-summary-count"></span>
-      </div>
-      <div class="active-work-grid" id="evidence-summary"></div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-title">
-        <h2>Jira board</h2>
-        <span id="visible-count"></span>
-      </div>
-      <div class="jira-board" id="jira-board"></div>
-    </section>
-
-    <section class="bottom-grid">
-      <section class="panel">
-        <div class="panel-title">
-          <h2>Findings</h2>
-        </div>
-        <div class="cards" id="findings"></div>
+        <details class="files" id="filesBlock" style="display:none">
+          <summary>Изменённые файлы (<span id="filesCount">0</span>)</summary>
+          <div class="file-list" id="fileList"></div>
+        </details>
       </section>
 
-      <section class="panel">
-        <div class="panel-title">
-          <h2>Manual test cases</h2>
+      <!-- RIGHT: activity feed -->
+      <section class="card">
+        <h2>Лента активности <span class="count" id="feedCount"></span></h2>
+        <div class="feed" id="feed">
+          <div class="empty">Событий пока нет. Каждый завершённый цикл появится здесь.</div>
         </div>
-        <div id="cases"></div>
       </section>
+    </div>
+
+    <!-- AGENTS -->
+    <section class="card" style="margin-top:18px">
+      <h2>Команда агентов <span class="count" id="agentsHint">статичный ростер · DevOps отражает живой цикл</span></h2>
+      <div class="agents" id="agents"></div>
     </section>
 
-    <p class="foot">
-      Канонический журнал остается в docs/AGENT_WORKBOARD.md. Эта HTML-страница нужна только для локального визуального контроля.
+    <p class="footnote">
+      Локальный борд, не часть прод-сборки Expo. Канонический журнал —
+      <code>docs/AGENT_WORKBOARD.md</code>. Статус <code>Done</code> требует доказательств; борд только отображает.
     </p>
-  </main>
+  </div>
 
   <script>
-    const STORAGE_KEY = 'metravel.localAgentBoard.v4';
-    const LEGACY_STORAGE_KEYS = ['metravel.localAgentBoard.v1', 'metravel.localAgentBoard.v2', 'metravel.localAgentBoard.v3'];
-    const PROGRESS_KEY = 'metravel.localAgentBoard.progress.v4';
-    const LEGACY_PROGRESS_KEYS = ['metravel.localAgentBoard.progress.v1', 'metravel.localAgentBoard.progress.v2', 'metravel.localAgentBoard.progress.v3'];
-    const APPROVAL_KEY = 'metravel.localAgentBoard.approvals.v4';
-    const LEGACY_APPROVAL_KEYS = ['metravel.localAgentBoard.approvals.v1', 'metravel.localAgentBoard.approvals.v2', 'metravel.localAgentBoard.approvals.v3'];
-    const ACTIVITY_KEY = 'metravel.localAgentBoard.activity.v1';
-    const AUTO_KEY = 'metravel.localAgentBoard.autoCycle.v1';
-    const statuses = ['Open', 'In progress', 'Blocked', 'Flaky', 'Done'];
-    const filters = ['All', ...statuses];
-    const boardStartedAt = Date.now();
-    const progressTargets = {
-      'T-007': 76,
-      'T-008': 68,
-      'T-009': 61,
-      'T-015': 82,
-      'T-016': 54,
-      'T-017': 43,
-      'T-018': 48,
-      'T-019': 57,
-      'T-020': 52,
-      'T-021': 24,
-      'T-022': 22,
-      'T-023': 18,
-      'T-024': 18,
-      'T-025': 18,
-      'T-026': 18,
-      'T-027': 18,
-      'T-028': 18,
-      'T-029': 20,
-      'T-030': 20,
-      'T-031': 18,
-      'T-032': 18,
-      'T-033': 18,
-      'T-034': 18,
-      'T-035': 18,
-      'T-036': 18,
-      'T-037': 18,
-      'T-038': 18,
-      'T-039': 18,
-      'T-040': 18,
-      'T-041': 18,
-      'T-042': 18,
-      'T-043': 18,
-      'T-044': 18,
-      'T-045': 18,
-      'T-046': 18,
-      'T-047': 18,
-      'T-048': 18,
-      'T-049': 18,
-      'T-050': 18,
-      'T-051': 18,
-      'T-052': 18,
-      'T-053': 0,
-      'T-054': 18,
+  (function () {
+    'use strict';
+
+    // current.json lives at repo-root/.codex-temp; this file is at repo-root/docs
+    var BRIDGE_URL = '../.codex-temp/workboard/current.json';
+    var EVENTS_KEY = 'metravel.liveboard.events.v1';
+    var MAX_EVENTS = 40;
+    var STALE_MS = 15 * 60 * 1000;
+
+    // Static agent roster (mirrors docs/AGENT_WORKBOARD.md status board).
+    var AGENTS = [
+      { id: 'manager',  name: 'Андриуш',      role: 'Manager / Approver / Reviewer', track: 'Стаффинг, ревью, gate готовности', color: '#527fa3', initials: 'АН' },
+      { id: 'ba',       name: 'Крина',        role: 'Business Analyst', track: 'Требования, user stories, acceptance criteria', color: '#6f9382', initials: 'КР' },
+      { id: 'dev',      name: 'Ромик',        role: 'Developer',        track: 'Фикс подтверждённых багов, fix-план', color: '#d9852b', initials: 'РО' },
+      { id: 'qa',       name: 'Мариночка',    role: 'QA / Manual QA',   track: 'Browser + manual QA, ре-тест', color: '#b55a50', initials: 'МА' },
+      { id: 'devops',   name: 'Витаутас',     role: 'DevOps',           track: 'Локальная автоматизация, e2e, здоровье борда', color: '#4d8a63', initials: 'ВИ' },
+      { id: 'seo',      name: 'Сео',          role: 'SEO Engineer',     track: 'Metadata, schema, OG, индексируемость', color: '#b9812c', initials: 'СЕ' },
+      { id: 'design',   name: 'UI/UX',        role: 'Designer',         track: 'Визуальный контракт, touch targets, overlays', color: '#9a7bb0', initials: 'UX' },
+      { id: 'orch',     name: 'Orchestrator', role: 'Coordination',     track: 'Триаж находок, финальная валидация', color: '#6f6a61', initials: 'OR' }
+    ];
+
+    var els = {
+      conn: document.getElementById('conn'),
+      connText: document.getElementById('connText'),
+      interval: document.getElementById('interval'),
+      refresh: document.getElementById('refresh'),
+      banner: document.getElementById('banner'),
+      pulseHero: document.getElementById('pulseHero'),
+      pulseRing: document.getElementById('pulseRing'),
+      pulseTitle: document.getElementById('pulseTitle'),
+      pulseMeta: document.getElementById('pulseMeta'),
+      pulseBadge: document.getElementById('pulseBadge'),
+      cycleUpdated: document.getElementById('cycleUpdated'),
+      cmdList: document.getElementById('cmdList'),
+      filesBlock: document.getElementById('filesBlock'),
+      filesCount: document.getElementById('filesCount'),
+      fileList: document.getElementById('fileList'),
+      feed: document.getElementById('feed'),
+      feedCount: document.getElementById('feedCount'),
+      agents: document.getElementById('agents')
     };
 
-    const initialTickets = [
-      { id: 'T-001', title: 'Complete browser QA for travel details desktop and mobile', owner: 'Мариночка (QA)', status: 'Done', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: '40 passed; duplicate initial request bug candidate found' },
-      { id: 'T-002', title: 'Complete manual user-flow QA for travel details', owner: 'Мариночка (Manual QA)', status: 'Done', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Guest/manual pass completed' },
-      { id: 'T-007', title: 'Run extended web QA for travel details and related public flows', owner: 'Мариночка (QA)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Desktop Chrome travel details, interactions, comments, Instagram rich text, responsive layout' },
-      { id: 'T-008', title: 'Run extended mobile-web QA for travel details', owner: 'Мариночка (QA)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: '390x844 viewport, horizontal overflow, clipped actions, sticky/navigation states' },
-      { id: 'T-009', title: 'Create designer UX/UI audit backlog from QA evidence', owner: 'UI/UX Designer', status: 'In progress', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Visual hierarchy, touch targets, empty states, and mobile polish' },
-      { id: 'T-010', title: 'Run authenticated manual QA for write flows', owner: 'Мариночка (Manual QA)', status: 'Open', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Sprint approved to start; use .env.e2e; cover favorite, rating, comment create/edit/delete' },
-      { id: 'T-011', title: 'Write manual test cases for travel details web/mobile', owner: 'Мариночка (QA Analyst)', status: 'Open', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Sprint approved to start; prerequisites, steps, expected result, viewport, and evidence checklist' },
-      { id: 'T-012', title: 'Align Instagram rich-text e2e expectation with project rules', owner: 'Мариночка (QA Analyst) + Ромик (Dev)', status: 'Open', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Sprint approved to start; current e2e expects fallback cards, while rules require iframe embeds for valid post/reel/tv URLs' },
-      { id: 'T-013', title: 'Redesign missing hero media state for travel details', owner: 'UI/UX Designer + Ромик (Dev)', status: 'Done', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Fixed in code: hero fallback is now a neutral geometry-preserving block with no visible text/icons' },
-      { id: 'T-014', title: 'Audit mobile bottom overlays and touch target sizes', owner: 'UI/UX Designer', status: 'Open', priority: 'P3', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Stretch approved to start if capacity remains; cookie banner, bottom nav, sticky section tabs, and several actions need review' },
-      { id: 'T-015', title: 'Form and groom backlog from QA/design findings', owner: 'Андриуш (Backlog Manager)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Convert findings, manual cases, and idle capacity into prioritized implementation-ready tasks' },
-      { id: 'T-016', title: 'Write business requirements and acceptance criteria for travel QA fixes', owner: 'Крина (Business Analyst)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Separate product requirements, user stories, non-goals, risks, and acceptance criteria from manager coordination' },
-      { id: 'T-017', title: 'Prepare technical fix plan for travel QA findings', owner: 'Ромик (Dev)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Locate files and prepare implementation approach for D-001 neutral placeholder and T-012 Instagram e2e alignment' },
-      { id: 'T-018', title: 'Approve and govern task readiness flow', owner: 'Андриуш (Approver)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Define who approves requirements, design, QA findings, and developer-ready tickets before implementation' },
-      { id: 'T-019', title: 'Keep local QA automation and workboard health green', owner: 'Витаутас (DevOps)', status: 'In progress', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Watch local board, e2e artifacts, scheduled rituals, and automation health for the team' },
-      { id: 'T-020', title: 'Audit travel page SEO metadata and schema health', owner: 'Сео (SEO Engineer)', status: 'In progress', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Review canonical, title, description, OG tags, schema.org, and SEO e2e coverage for travel details' },
-      { id: 'T-021', title: 'Create cross-page QA acceptance matrix', owner: 'Крина (Business Analyst)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Define acceptance criteria for Search, Home, Map, Places, Quests, and PDF/export before implementation starts' },
-      { id: 'T-022', title: 'Write manual test cases for next-page QA wave', owner: 'Мариночка (QA Analyst)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Create reusable cases for Search, Home, Map, Places, Quests, PDF/export with prerequisites, steps, expected results, viewport, and evidence fields' },
-      { id: 'T-023', title: 'Run Search page web and mobile QA pass', owner: 'Мариночка (QA)', status: 'Done', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Verified search input, filtered empty/results state, desktop/mobile layout, horizontal overflow, and console/page errors' },
-      { id: 'T-024', title: 'Run Home page web and mobile QA pass', owner: 'Мариночка (QA)', status: 'Done', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Verified home title/h1, quick filters, Home -> Search filter navigation, desktop/mobile layout, horizontal overflow, and console/page errors' },
-      { id: 'T-025', title: 'Run Map page web and mobile QA pass', owner: 'Мариночка (QA)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Cover map load, markers, filters, popups, route interactions, mobile controls, and external links' },
-      { id: 'T-026', title: 'Run Places page web and mobile QA pass', owner: 'Мариночка (QA)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Cover places catalog, country/category/search filters, cards, map focus links, incremental loading, and mobile layout' },
-      { id: 'T-027', title: 'Run Quests page web and mobile QA pass', owner: 'Мариночка (QA)', status: 'In progress', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Cover quest list/detail/start flows, media states, map dependencies, responsive layout, and console errors' },
-      { id: 'T-028', title: 'Run PDF/export QA pass', owner: 'Мариночка (Manual QA)', status: 'In progress', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Manually verify PDF/export entry points, generated output, loading/errors, and permissions without exposing secrets' },
-      { id: 'T-029', title: 'Create UX/UI audit for next-page QA wave', owner: 'UI/UX Designer', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Audit Search, Home, Map, Places, Quests, PDF/export for hierarchy, touch targets, overlays, placeholders, and responsive polish' },
-      { id: 'T-030', title: 'Run SEO audit for indexable pages', owner: 'Сео (SEO Engineer)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Check titles, descriptions, canonical, OG, schema, indexability, and SEO e2e coverage for Home, Search, Places, Quests, and Travel' },
-      { id: 'T-031', title: 'Prepare implementation queue for confirmed page findings', owner: 'Ромик (Dev)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Triage confirmed QA/design/SEO findings into fix-ready diffs; do not code vague issues without acceptance criteria' },
-      { id: 'T-032', title: 'Review cross-page QA findings and fix readiness', owner: 'Андриуш (Reviewer)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Review findings for duplicates, severity, owner, acceptance criteria, validation plan, and project-rule compliance' },
-      { id: 'T-033', title: 'Prepare multi-page e2e and local environment health plan', owner: 'Витаутас (DevOps)', status: 'In progress', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Keep e2e server/build health stable, define selective commands, and watch for stale local artifacts or stuck servers' },
-      { id: 'T-034', title: 'Maintain cross-page backlog and capacity board', owner: 'Андриуш (Backlog Manager)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Keep all findings assigned, prioritized, evidence-tagged, and ready for weekly planning without idle roles' },
-      { id: 'T-035', title: 'Run mobile manual smoke for Search, Home, Map, Places, Quests', owner: 'Мариночка (Manual QA)', status: 'In progress', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Manual mobile pass for tap targets, navigation, overlays, scroll behavior, and screenshots/evidence notes' },
-      { id: 'T-036', title: 'Write Search page test cases', owner: 'Мариночка (QA Analyst)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Cover query, filters, sorting, pagination/infinite load, empty state, deep links, and mobile variants' },
-      { id: 'T-037', title: 'Create Search page UX audit', owner: 'UI/UX Designer', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Audit filter ergonomics, result cards, empty states, touch targets, and mobile filter access' },
-      { id: 'T-038', title: 'Run Search page SEO audit', owner: 'Сео (SEO Engineer)', status: 'In progress', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Check title, description, canonical, indexability, schema risk, and e2e coverage notes' },
-      { id: 'T-039', title: 'Prepare Search findings for development', owner: 'Ромик (Dev)', status: 'Open', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Wait for QA/BA/design evidence; then map confirmed findings to target files and validation commands' },
-      { id: 'T-040', title: 'Write Home page test cases', owner: 'Мариночка (QA Analyst)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Cover first load, hero, navigation to details/search/map, degraded data, and responsive sections' },
-      { id: 'T-041', title: 'Create Home page UX audit', owner: 'UI/UX Designer', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Audit hierarchy, cards, media placeholders, CTAs, section spacing, and mobile bottom/nav overlap' },
-      { id: 'T-042', title: 'Run Home page SEO audit', owner: 'Сео (SEO Engineer)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Review metadata, OG, heading structure, internal links, and structured data risks' },
-      { id: 'T-043', title: 'Write Map page test cases', owner: 'Мариночка (QA Analyst)', status: 'Open', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Cover geolocation allowed/denied, marker click, popup, filters/search, route interactions, and error state' },
-      { id: 'T-044', title: 'Create Map controls UX audit', owner: 'UI/UX Designer', status: 'Open', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Audit touch targets, popup layout, map controls, overlays, and mobile gesture conflicts' },
-      { id: 'T-045', title: 'Write Places page test cases', owner: 'Мариночка (QA Analyst)', status: 'Open', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Cover list, filters, place card, map relation, missing media, empty state, and incremental loading' },
-      { id: 'T-046', title: 'Run Places SEO audit', owner: 'Сео (SEO Engineer)', status: 'Open', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Check metadata, canonical, OG, schema notes, and indexability for Places surfaces' },
-      { id: 'T-047', title: 'Write Quests page test cases', owner: 'Мариночка (QA Analyst)', status: 'Open', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Cover list, detail, start/resume where available, locked/empty/error states, and media handling' },
-      { id: 'T-048', title: 'Create Quests UX audit', owner: 'UI/UX Designer', status: 'Open', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Audit quest flow clarity, cards, next-action states, empty states, and dead-end prevention' },
-      { id: 'T-049', title: 'Write PDF/export test cases', owner: 'Мариночка (QA Analyst)', status: 'Open', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Cover export entry points, permissions, loading, error, generated output, and download/result verification' },
-      { id: 'T-050', title: 'Prepare PDF/export findings for development', owner: 'Ромик (Dev)', status: 'Open', priority: 'P2', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Only confirmed PDF/export bugs with repro, expected result, target files, and validation enter implementation' },
-      { id: 'T-051', title: 'Run cross-page review gate', owner: 'Андриуш (Reviewer)', status: 'Open', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Deduplicate findings, verify severity, reject vague bugs, and approve implementation-ready tasks' },
-      { id: 'T-052', title: 'Keep new sprint evidence and e2e health green', owner: 'Витаутас (DevOps)', status: 'In progress', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Ensure board shows active work, no fake Done, evidence required for every closed task, and e2e setup remains stable' },
-      { id: 'T-053', title: 'Cross-page implementation lane', owner: 'Ромик (Dev)', status: 'Blocked', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'Blocked until QA/BA/design evidence produces approved bug/spec/design output from T-023 onward' },
-      { id: 'T-054', title: 'Create cross-page final regression plan', owner: 'Крина (Business Analyst) + Мариночка (QA Analyst)', status: 'Open', priority: 'P1', approval: 'Approved', approver: 'Андриуш (Approver)', notes: 'One reusable release checklist covers web/mobile/page-specific risks before final regression' },
-    ];
+    var timer = null;
+    var lastSeenRunId = null;
+    var events = loadEvents();
 
-    const roles = [
-      { owner: 'Андриуш (Manager)', task: 'Coordination, staffing, delivery status, scope control', status: 'In progress' },
-      { owner: 'Андриуш (Approver)', task: 'Approves scope, design decisions, QA findings, and developer-ready tasks', status: 'In progress' },
-      { owner: 'Крина (Business Analyst)', task: 'Requirements, user stories, acceptance criteria, non-goals, risks', status: 'In progress' },
-      { owner: 'Андриуш (Backlog Manager)', task: 'Forms backlog, assigns priorities, prepares next work for idle roles', status: 'In progress' },
-      { owner: 'Ромик (Dev)', task: 'T-013 fixed in code; next technical work is T-012', status: 'In progress' },
-      { owner: 'Витаутас (DevOps)', task: 'Local automation, scheduled rituals, and board health', status: 'In progress' },
-      { owner: 'Сео (SEO Engineer)', task: 'Travel page metadata, schema, OG, canonical, and SEO checks', status: 'In progress' },
-      { owner: 'Мариночка (QA)', task: 'Extended web/mobile QA pass', status: 'In progress' },
-      { owner: 'Мариночка (Manual QA)', task: 'Authenticated favorite/rating/comments pass', status: 'Open' },
-      { owner: 'Мариночка (QA Analyst)', task: 'Manual test cases and Instagram spec alignment', status: 'Open' },
-      { owner: 'UI/UX Designer', task: 'Hero placeholder, mobile overlays, touch targets', status: 'In progress' },
-      { owner: 'Андриуш (Reviewer)', task: 'Review next diff after implementation', status: 'Open' },
-    ];
-
-    const people = [
-      {
-        name: 'Андриуш (Manager)',
-        aliases: ['Андриуш (Manager)'],
-        role: 'Координация команды, статусы, staffing, delivery',
-        done: ['Запущены роли команды', 'Борд переведен в локальный Jira-style формат', 'Проведен sprint planning 2026-05-22'],
-        backlog: ['Следить за idle сотрудниками', 'Проверить sprint progress к 2026-05-29'],
-      },
-      {
-        name: 'Андриуш (Approver)',
-        aliases: ['Андриуш (Approver)'],
-        role: 'Апрувит scope, требования, дизайн и developer-ready задачи',
-        done: ['Утверждены T-001, T-002, T-007, T-008, T-009, T-015, T-016, T-017', 'Approved-to-start для T-010...T-014'],
-        backlog: ['T-018: описать approval flow', 'Апрувить implementation только после spec/design output'],
-      },
-      {
-        name: 'Крина (Business Analyst)',
-        aliases: ['Крина (Business Analyst)'],
-        role: 'Требования, user stories, acceptance criteria',
-        done: ['Сформирован первичный QA scope для travel page', 'Выделены acceptance gates для web/mobile', 'Зафиксирован sprint goal Travel QA Stabilization'],
-        backlog: ['T-016: оформить требования по travel QA fixes', 'Согласовать expected behavior для Instagram embeds'],
-      },
-      {
-        name: 'Андриуш (Backlog Manager)',
-        aliases: ['Андриуш (Backlog Manager)'],
-        role: 'Формирует backlog и раскладывает задачи по ролям',
-        done: ['Добавлен локальный Jira-style board', 'Выделены открытые findings и дизайнерские задачи', 'Сформирован sprint commitment'],
-        backlog: ['Сделать задачи implementation-ready', 'Раздать idle сотрудникам следующую работу', 'Поддерживать приоритеты P1/P2/P3'],
-      },
-      {
-        name: 'Ромик (Dev)',
-        aliases: ['Ромик (Dev)'],
-        role: 'Фиксы подтвержденных багов',
-        done: ['F-001: переиспользование travel detail preload', 'F-002: проверка comments read path', 'D-001/T-013: neutral hero placeholder fixed in code'],
-        backlog: ['Подготовить patch после решения по Instagram spec'],
-      },
-      {
-        name: 'Витаутас (DevOps)',
-        aliases: ['Витаутас (DevOps)'],
-        role: 'Следит за автоматизациями, e2e-средой и здоровьем борда',
-        done: ['Созданы daily, sprint planning и monthly retro automation'],
-        backlog: ['T-019: проверить scheduled rituals', 'Следить за локальными QA artifacts', 'Не допускать зависших e2e серверов'],
-      },
-      {
-        name: 'Сео (SEO Engineer)',
-        aliases: ['Сео (SEO Engineer)'],
-        role: 'Следит за SEO travel page: metadata, schema, canonical, OG',
-        done: ['SEO e2e coverage найден в travel-detail-page.spec.ts и seo-travel-detail.spec.ts'],
-        backlog: ['T-020: проверить metadata/schema health', 'Сверить SEO acceptance criteria с Крина (Business Analyst)', 'Подготовить рекомендации для Ромик (Dev)'],
-      },
-      {
-        name: 'Мариночка (QA)',
-        aliases: ['Мариночка (QA)'],
-        role: 'Автоматизированный и browser QA',
-        done: ['Базовый travel details e2e pass', 'Comments e2e write-flow прошел'],
-        backlog: ['Повторить flaky responsive check', 'Закрыть extended mobile QA pass'],
-      },
-      {
-        name: 'Мариночка (Manual QA)',
-        aliases: ['Мариночка (Manual QA)'],
-        role: 'Ручная проверка сценариев',
-        done: ['Guest/manual pass выполнен', 'Comments 404 finding передан в triage'],
-        backlog: ['Authenticated favorite/rating/comments pass'],
-      },
-      {
-        name: 'Мариночка (QA Analyst)',
-        aliases: ['Мариночка (QA Analyst)'],
-        role: 'Ручные test cases и спецификации',
-        done: ['Сформирован backlog MTC-001...MTC-010'],
-        backlog: ['Детализировать steps/expected для каждого MTC', 'Согласовать Instagram expected behavior'],
-      },
-      {
-        name: 'UI/UX Designer',
-        aliases: ['UI/UX Designer'],
-        role: 'Визуальный аудит и UX backlog',
-        done: ['Получил evidence по desktop/mobile screenshots', 'D-001 neutral hero placeholder direction accepted'],
-        backlog: ['D-002 mobile overlays and touch targets'],
-      },
-      {
-        name: 'Андриуш (Reviewer)',
-        aliases: ['Андриуш (Reviewer)'],
-        role: 'Review diff, риски, соответствие правилам',
-        done: ['Поймал неполный F-001 fix на предыдущем review'],
-        backlog: ['Review после следующего implementation diff'],
-      },
-    ];
-
-    const findings = [
-      { id: 'F-001', title: 'Duplicate initial travel detail requests', status: 'Done', owner: 'Ромик (Dev) + QA', notes: 'Direct API preload reuse verified.' },
-      { id: 'F-002', title: 'Comments main-thread 404 console noise', status: 'Done', owner: 'Ромик (Dev) + QA', notes: 'Comments read path verified through travel_id.' },
-      { id: 'F-003', title: 'Instagram rich-text e2e spec mismatch', status: 'Open', owner: 'Мариночка (QA Analyst) + Ромик (Dev)', notes: 'Rendered page contains iframe, while old e2e expects fallback cards.' },
-      { id: 'D-001', title: 'Missing hero media placeholder is not neutral', status: 'Done', owner: 'UI/UX Designer + Ромик (Dev)', notes: 'Fixed: removed visible fallback text and added regression coverage for neutral placeholder.' },
-      { id: 'D-002', title: 'Mobile overlays and touch targets need designer review', status: 'Open', owner: 'UI/UX Designer', notes: 'Several mobile controls are below comfortable size; overlays compete for space.' },
-    ];
-
-    const ticketEvidence = {
-      'T-013': {
-        status: 'Verified',
-        changedFiles: [
-          'components/travel/details/TravelDetailsOptimizedLCPHero.tsx',
-          '__tests__/components/travel/TravelDetailsContainer.performance.web.test.tsx',
-        ],
-        tests: [
-          'npm run test:run -- __tests__/components/travel/TravelDetailsContainer.performance.web.test.tsx · 4 passed',
-          'npm run check:fast · 199 targeted tests passed + external-link guards passed',
-        ],
-        browserChecks: [
-          'Playwright e2e/travels.spec.ts --grep "should display hero image" · 1 passed',
-        ],
-        result: 'Real code fix: fallback text removed; neutral placeholder is covered by regression test.',
-      },
-      'T-001': {
-        status: 'Verified',
-        tests: ['Travel details e2e pass · 40 passed'],
-        result: 'QA evidence exists from previous browser pass.',
-      },
-      'T-002': {
-        status: 'Verified',
-        tests: ['Manual guest pass completed'],
-        result: 'Manual QA evidence logged in workboard document.',
-      },
-      'T-023': {
-        status: 'Verified',
-        tests: [
-          'E2E_FORCE_REBUILD=1 E2E_API_PROXY_INSECURE=true EXPO_PUBLIC_E2E=true npx playwright test e2e/search.spec.ts --project=chromium --workers=1 · 1 passed',
-        ],
-        browserChecks: [
-          'Local web build http://127.0.0.1:8091/search · desktop 1440x900: search "минск" applied, 0-results state rendered, overflowX=false, consoleErrors=0, pageErrors=0',
-          'Local web build http://127.0.0.1:8091/search · mobile iPhone 13 390px: search "минск" applied, result/empty-state signal rendered, overflowX=false, consoleErrors=0, pageErrors=0',
-        ],
-        result: 'Search page web/mobile QA pass completed without layout overflow or runtime errors.',
-      },
-      'T-024': {
-        status: 'Verified',
-        tests: [
-          'E2E_FORCE_REBUILD=0 E2E_API_PROXY_INSECURE=true EXPO_PUBLIC_E2E=true E2E_WEB_PORT=8091 npx playwright test e2e/home-quick-filters-nightstay.spec.ts --project=chromium --workers=1 · 1 passed',
-        ],
-        browserChecks: [
-          'Local web build http://127.0.0.1:8091/ · desktop 1440x900: title/h1 rendered, quick filters visible, overflowX=false, consoleErrors=0, pageErrors=0',
-          'Local web build http://127.0.0.1:8091/ · mobile iPhone 13 390px: title/h1 rendered, quick filters visible, overflowX=false, consoleErrors=0, pageErrors=0',
-        ],
-        result: 'Home page web/mobile QA pass completed; quick filter navigation to Search was verified by e2e.',
-      },
-    };
-
-    const manualCases = [
-      'MTC-001 Open public travel details by direct URL',
-      'MTC-002 Scroll travel details internal container on mobile',
-      'MTC-003 Missing media fallback',
-      'MTC-004 Authenticated comments write flow',
-      'MTC-005 Favorite and rating flow',
-      'MTC-006 Section navigation',
-      'MTC-007 Share/export actions',
-      'MTC-008 Instagram rich text',
-      'MTC-009 Cookie consent and bottom nav overlap',
-      'MTC-010 Error states',
-    ];
-
-    const activityItems = [
-      { role: 'Андриуш (Manager)', text: 'Провел sprint planning: Travel QA Stabilization, 2026-05-22 - 2026-05-29' },
-      { role: 'Андриуш (Approver)', text: 'Approved-to-start для T-010...T-014; implementation ждёт spec/design output' },
-      { role: 'Ромик (Dev)', text: 'Закрыл D-001 в коде: neutral hero placeholder без текста/иконок' },
-      { role: 'Мариночка (QA)', text: 'Проверила D-001: targeted Jest, check:fast и Playwright hero smoke прошли' },
-      { role: 'Мариночка (QA)', text: 'Проверяет extended web/mobile QA по travel details' },
-      { role: 'UI/UX Designer', text: 'Смотрит D-002 mobile overlays и touch targets' },
-      { role: 'Андриуш (Backlog Manager)', text: 'Грумит findings в implementation-ready backlog' },
-      { role: 'Крина (Business Analyst)', text: 'Описывает acceptance criteria для travel QA fixes' },
-      { role: 'Сео (SEO Engineer)', text: 'Проверяет metadata, schema.org и canonical для travel page' },
-      { role: 'Мариночка (Manual QA)', text: 'Готовит authenticated pass для favorite/rating/comments' },
-      { role: 'Мариночка (QA)', text: 'Закрыла T-023: Search QA прошел e2e, desktop и mobile browser pass без overflow/runtime errors' },
-      { role: 'Мариночка (QA)', text: 'Закрыла T-024: Home QA прошел e2e quick-filter и desktop/mobile browser pass' },
-    ];
-
-    let activeFilter = 'All';
-    let autoCycleTimer = null;
-
-    function statusClass(status) {
-      return String(status).replace(/\s+/g, '');
+    function loadEvents() {
+      try { return JSON.parse(localStorage.getItem(EVENTS_KEY)) || []; }
+      catch (_) { return []; }
+    }
+    function saveEvents() {
+      try { localStorage.setItem(EVENTS_KEY, JSON.stringify(events.slice(0, MAX_EVENTS))); }
+      catch (_) { /* ignore quota */ }
     }
 
-    function loadState() {
-      try {
-        const current = localStorage.getItem(STORAGE_KEY);
-        if (current) return JSON.parse(current);
-        return {};
-      } catch {
-        return {};
-      }
-    }
-
-    function saveState(next) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    }
-
-    function loadProgressState() {
-      try {
-        const current = localStorage.getItem(PROGRESS_KEY);
-        if (current) return JSON.parse(current);
-        return {};
-      } catch {
-        return {};
-      }
-    }
-
-    function saveProgressState(next) {
-      localStorage.setItem(PROGRESS_KEY, JSON.stringify(next));
-    }
-
-    function loadApprovalState() {
-      try {
-        const current = localStorage.getItem(APPROVAL_KEY);
-        if (current) return JSON.parse(current);
-        const legacy = LEGACY_APPROVAL_KEYS.map((key) => localStorage.getItem(key)).find(Boolean);
-        return legacy ? JSON.parse(legacy) : {};
-      } catch {
-        return {};
-      }
-    }
-
-    function saveApprovalState(next) {
-      localStorage.setItem(APPROVAL_KEY, JSON.stringify(next));
-    }
-
-    function loadActivityLog() {
-      try {
-        return JSON.parse(localStorage.getItem(ACTIVITY_KEY) || '[]');
-      } catch {
-        return [];
-      }
-    }
-
-    function saveActivityLog(next) {
-      localStorage.setItem(ACTIVITY_KEY, JSON.stringify(next.slice(0, 12)));
-    }
-
-    function appendActivity(role, text) {
-      const next = [
-        { time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' }), role, text },
-        ...loadActivityLog(),
-      ];
-      saveActivityLog(next);
-    }
-
-    function isValidStatus(status) {
-      return statuses.includes(status);
-    }
-
-    function isValidApproval(approval) {
-      return ['Approved', 'Needs approval', 'Draft'].includes(approval);
-    }
-
-    function cleanStoredMap(raw, validIds, validator, fallbackMap) {
-      const next = {};
-      let changed = false;
-      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { next, changed: Boolean(raw) };
-      Object.entries(raw).forEach(([id, value]) => {
-        if (!validIds.has(id)) {
-          changed = true;
-          return;
-        }
-        if (!validator(value)) {
-          changed = true;
-          return;
-        }
-        if (fallbackMap.get(id) !== value) next[id] = value;
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c];
       });
-      if (Object.keys(next).length !== Object.keys(raw).length) changed = true;
-      return { next, changed };
     }
 
-    function ensureProgressForTickets(tickets) {
-      const progress = loadProgressState();
-      let changed = false;
-      tickets.forEach((ticket) => {
-        const target = getProgressTarget(ticket);
-        if (!progress[ticket.id]) {
-          progress[ticket.id] = {
-            value: ticket.status === 'Done' ? 100 : ticket.status === 'In progress' ? 18 : 0,
-            lastUpdated: Date.now(),
-          };
-          changed = true;
-        }
-        if (ticket.status === 'Done' && progress[ticket.id].value !== 100) {
-          progress[ticket.id].value = 100;
-          progress[ticket.id].lastUpdated = Date.now();
-          changed = true;
-        }
-        if (ticket.status === 'Open' && progress[ticket.id].value > 0 && progress[ticket.id].value < 100) {
-          progress[ticket.id].value = 0;
-          progress[ticket.id].lastUpdated = Date.now();
-          changed = true;
-        }
-        if (ticket.status === 'In progress' && progress[ticket.id].value <= 0) {
-          progress[ticket.id].value = 18;
-          progress[ticket.id].lastUpdated = Date.now();
-          changed = true;
-        }
-        if (ticket.status === 'In progress' && progress[ticket.id].value > target) {
-          progress[ticket.id].value = target;
-          progress[ticket.id].lastUpdated = Date.now();
-          changed = true;
-        }
-      });
-      if (changed) saveProgressState(progress);
-      return progress;
+    function fmtDuration(ms) {
+      if (ms == null) return '—';
+      if (ms < 1000) return ms + ' мс';
+      var s = ms / 1000;
+      if (s < 60) return s.toFixed(s < 10 ? 1 : 0) + ' с';
+      var m = Math.floor(s / 60);
+      return m + ' м ' + Math.round(s % 60) + ' с';
     }
 
-    function getTickets() {
-      const saved = loadState();
-      const approvals = loadApprovalState();
-      const validIds = new Set(initialTickets.map((ticket) => ticket.id));
-      const defaultStatuses = new Map(initialTickets.map((ticket) => [ticket.id, ticket.status]));
-      const defaultApprovals = new Map(initialTickets.map((ticket) => [ticket.id, ticket.approval]));
-      const cleanedStatuses = cleanStoredMap(saved, validIds, isValidStatus, defaultStatuses);
-      const cleanedApprovals = cleanStoredMap(approvals, validIds, isValidApproval, defaultApprovals);
-
-      if (cleanedStatuses.changed) saveState(cleanedStatuses.next);
-      if (cleanedApprovals.changed) saveApprovalState(cleanedApprovals.next);
-
-      const tickets = initialTickets.map((ticket) => ({
-        ...ticket,
-        status: cleanedStatuses.next[ticket.id] || ticket.status,
-        approval: cleanedApprovals.next[ticket.id] || ticket.approval,
-      }));
-      ensureProgressForTickets(tickets);
-      return tickets;
+    function relTime(iso) {
+      var t = Date.parse(iso);
+      if (!isFinite(t)) return '';
+      var diff = Date.now() - t;
+      if (diff < 0) diff = 0;
+      var s = Math.floor(diff / 1000);
+      if (s < 5) return 'только что';
+      if (s < 60) return s + ' с назад';
+      var m = Math.floor(s / 60);
+      if (m < 60) return m + ' мин назад';
+      var h = Math.floor(m / 60);
+      if (h < 24) return h + ' ч назад';
+      return Math.floor(h / 24) + ' дн назад';
     }
 
-    function setTicketApproval(id, approval) {
-      const approvals = loadApprovalState();
-      approvals[id] = approval;
-      saveApprovalState(approvals);
-      appendActivity('Андриуш (Approver)', `${id}: ${approval}`);
-      render();
+    function setConn(state, text) {
+      els.conn.className = 'conn ' + state;
+      els.connText.textContent = text;
     }
 
-    function setTicketStatus(id, status) {
-      if (!isValidStatus(status)) return;
-      if (status === 'Done' && !ticketEvidence[id]) {
-        appendActivity('Board', `${id}: Done заблокирован без real evidence`);
-        render();
+    // ---- rendering ----------------------------------------------------------
+
+    function renderCycle(data) {
+      var active = data && data.activeCycle;
+      var last = data && data.lastRun;
+
+      els.cycleUpdated.textContent = data && data.updatedAt ? ('обновлено ' + relTime(data.updatedAt)) : '';
+
+      var state, ring, title, meta, badgeClass, badgeText;
+
+      if (active) {
+        state = 'running';
+        ring = '◴';
+        badgeClass = 'running'; badgeText = 'running';
+        title = 'Цикл «' + esc(active.mode || 'cycle') + '» выполняется';
+        meta = 'ветка <b>' + esc(active.branch || '?') + '</b> · команды: <b>' +
+               esc((active.commands || []).join(', ') || '—') + '</b> · старт ' + relTime(active.startedAt);
+        renderCommands(null, true);
+        renderFiles(null);
+      } else if (last) {
+        var ok = last.status === 'passed';
+        state = ok ? 'passed' : 'failed';
+        ring = ok ? '✓' : '✕';
+        badgeClass = ok ? 'passed' : 'failed';
+        badgeText = last.status;
+        title = 'Последний цикл «' + esc(last.mode || 'cycle') + '» — ' + (ok ? 'успех' : 'провал');
+        meta = 'ветка <b>' + esc(last.branch || '?') + '</b>' +
+               (last.dryRun ? ' · <b>dry-run</b>' : '') +
+               (last.worktreeDirty ? ' · рабочее дерево изменено' : '') +
+               ' · завершён ' + relTime(last.finishedAt);
+        renderCommands(last.commands || [], false);
+        renderFiles(last.changedFiles || []);
+      } else {
+        state = 'idle';
+        ring = '○';
+        badgeClass = 'idle'; badgeText = 'idle';
+        title = 'Ожидание данных…';
+        meta = 'Запусти <b>npm run workboard:heartbeat</b>, чтобы увидеть активность.';
+        renderCommands([], false);
+        renderFiles(null);
+      }
+
+      els.pulseHero.className = 'pulse-hero ' + state;
+      els.pulseRing.textContent = ring;
+      els.pulseTitle.innerHTML = title;
+      els.pulseMeta.innerHTML = meta;
+      els.pulseBadge.className = 'badge ' + badgeClass;
+      els.pulseBadge.textContent = badgeText;
+
+      return { active: active, last: last };
+    }
+
+    function renderCommands(commands, running) {
+      if (running) {
+        els.cmdList.innerHTML = '<div class="cmd"><span class="badge running">▶</span>' +
+          '<div><div class="name">Команды выполняются…</div>' +
+          '<div class="desc">Результаты появятся после завершения цикла.</div></div></div>';
         return;
       }
-      const saved = loadState();
-      saved[id] = status;
-      saveState(saved);
-      const progress = loadProgressState();
-      progress[id] = progress[id] || { value: 0, lastUpdated: Date.now() };
-      if (status === 'Done') progress[id].value = 100;
-      if (status === 'In progress' && progress[id].value <= 0) progress[id].value = 18;
-      if (status === 'Open') progress[id].value = 0;
-      progress[id].lastUpdated = Date.now();
-      saveProgressState(progress);
-      appendActivity('Board', `${id}: moved to ${status}`);
-      render();
-    }
-
-    function renderStatus(status) {
-      return `<span class="status ${statusClass(status)}">${status}</span>`;
-    }
-
-    function renderEvidence(ticket) {
-      const evidence = ticketEvidence[ticket.id];
-      if (!evidence) {
-        return `
-          <div class="evidence-list">
-            <span class="evidence-label">Evidence</span>
-            <span class="evidence-item">No code/test evidence yet. This task cannot be honestly moved to Done.</span>
-          </div>
-        `;
+      if (!commands || !commands.length) {
+        els.cmdList.innerHTML = '<div class="empty">Нет данных о командах.</div>';
+        return;
       }
-      const files = (evidence.changedFiles || []).map((item) => `<span class="evidence-item file">${item}</span>`);
-      const tests = (evidence.tests || []).map((item) => `<span class="evidence-item pass">${item}</span>`);
-      const browser = (evidence.browserChecks || []).map((item) => `<span class="evidence-item pass">${item}</span>`);
-      return `
-        <div class="evidence-list">
-          <span class="evidence-label">Evidence · ${evidence.status}</span>
-          ${files.join('')}
-          ${tests.join('')}
-          ${browser.join('')}
-          <span class="evidence-item">${evidence.result}</span>
-        </div>
-      `;
-    }
-
-    function renderMetrics(tickets) {
-      const metrics = [
-        ['Open', tickets.filter((item) => item.status === 'Open').length],
-        ['In progress', tickets.filter((item) => item.status === 'In progress').length],
-        ['Done', tickets.filter((item) => item.status === 'Done').length],
-        ['Findings', findings.length],
-      ];
-      document.getElementById('metrics').innerHTML = metrics.map(([label, value]) => `
-        <article class="metric">
-          <span class="metric-value">${value}</span>
-          <span class="metric-label">${label}</span>
-        </article>
-      `).join('');
-    }
-
-    function renderFilters() {
-      document.getElementById('filters').innerHTML = filters.map((filter) => `
-        <button class="filter" type="button" aria-pressed="${activeFilter === filter}" data-filter="${filter}">
-          ${filter}
-        </button>
-      `).join('');
-      document.querySelectorAll('[data-filter]').forEach((button) => {
-        button.addEventListener('click', () => {
-          activeFilter = button.dataset.filter;
-          render();
-        });
-      });
-    }
-
-    function renderKanban(tickets) {
-      const visible = tickets.filter((ticket) => activeFilter === 'All' || ticket.status === activeFilter);
-      document.getElementById('visible-count').textContent = `${visible.length} visible`;
-      document.getElementById('jira-board').innerHTML = statuses.map((status) => {
-        const columnTickets = visible.filter((ticket) => ticket.status === status);
-        return `
-          <section class="jira-column" data-column="${status}">
-            <div class="jira-column-header">
-              <h3 class="jira-column-title">${renderStatus(status)}</h3>
-              <span class="jira-count">${columnTickets.length}</span>
-            </div>
-            <div class="jira-column-body">
-              ${columnTickets.map((ticket) => `
-                <article class="jira-card ${ticket.status === 'In progress' ? 'active-work' : ''}">
-                  <div class="jira-card-key">
-                    <span class="id">${ticket.id}</span>
-                    <span class="priority">${ticket.priority}</span>
-                  </div>
-                  <h4 class="jira-card-title">${ticket.title}</h4>
-                  <div class="meta">
-                    <span class="approval ${statusClass(ticket.approval || 'Draft')}">${ticket.approval || 'Draft'}</span>
-                    <span>${ticket.approver || 'No approver'}</span>
-                  </div>
-                  <p class="note">${ticket.notes}</p>
-                  ${renderEvidence(ticket)}
-                  ${ticket.status === 'In progress' ? `
-                    <div class="progress" aria-label="Прогресс ${ticket.id}">
-                      <div class="progress-fill" data-progress-ticket="${ticket.id}"></div>
-                    </div>
-                    <span class="progress-label" data-progress-label="${ticket.id}">В работе</span>
-                  ` : ''}
-                  <div class="jira-card-footer">
-                    <span class="assignee">${ticket.owner}</span>
-                    <select class="quick-move" data-ticket="${ticket.id}" aria-label="Изменить статус ${ticket.id}">
-                      ${statuses.map((next) => `<option value="${next}" ${next === ticket.status ? 'selected' : ''}>${next}</option>`).join('')}
-                    </select>
-                  </div>
-                </article>
-              `).join('') || '<p class="note">Нет задач</p>'}
-            </div>
-          </section>
-        `;
+      els.cmdList.innerHTML = commands.map(function (c) {
+        var ok = c.status === 'passed';
+        return '<div class="cmd">' +
+          '<span class="badge ' + (ok ? 'passed' : 'failed') + '">' + (ok ? '✓' : '✕') + '</span>' +
+          '<div><div class="name">' + esc(c.id) + '</div>' +
+          '<div class="desc">' + esc(c.description || '') + '</div>' +
+          '<code>' + esc(c.command || '') + '</code></div>' +
+          '<div class="right"><span class="badge ' + (ok ? 'passed' : 'failed') + '">' +
+          esc(c.status) + '</span><div class="dur">' + fmtDuration(c.durationMs) +
+          ' · exit ' + esc(c.exitCode) + '</div></div></div>';
       }).join('');
-      document.querySelectorAll('[data-ticket]').forEach((select) => {
-        select.addEventListener('change', () => setTicketStatus(select.dataset.ticket, select.value));
-      });
     }
 
-    function getProgressTarget(ticket) {
-      if (ticket.status === 'Done') return 100;
-      if (ticket.status !== 'In progress') return 0;
-      return progressTargets[ticket.id] || 70;
-    }
-
-    function getProgressLabel(ticket, progress) {
-      if (ticket.status === 'Done') return '100% · готово';
-      if (ticket.status !== 'In progress') return `${progress}%`;
-      const target = getProgressTarget(ticket);
-      if (progress >= target) {
-        if ((ticket.approval || '').toLowerCase().includes('needs')) return `${progress}% · ждёт approval`;
-        return `${progress}% · ждёт следующий шаг`;
+    function renderFiles(files) {
+      if (!files || !files.length) {
+        els.filesBlock.style.display = 'none';
+        return;
       }
-      return `${progress}% · в работе`;
+      els.filesBlock.style.display = '';
+      els.filesCount.textContent = files.length;
+      els.fileList.innerHTML = files.map(function (raw) {
+        // git --short format: "XY path", e.g. " M app/x.ts", "A  scripts/y.js"
+        var code = raw.slice(0, 2).trim() || '?';
+        var path = raw.slice(2).trim() || raw.trim();
+        var cls = code.indexOf('A') > -1 ? 'A'
+                : code.indexOf('D') > -1 ? 'D'
+                : code.indexOf('M') > -1 ? 'M' : 'x';
+        return '<div class="file-row"><span class="gst ' + cls + '">' + esc(code) + '</span>' +
+               '<span>' + esc(path) + '</span></div>';
+      }).join('');
     }
 
-    function getTicketProgress(ticket) {
-      const progress = ensureProgressForTickets(getTickets());
-      const item = progress[ticket.id] || { value: 0 };
-      if (ticket.status === 'Done') return 100;
-      if (ticket.status === 'In progress') return Math.min(getProgressTarget(ticket), Math.max(18, Math.round(item.value || 18)));
-      return Math.max(0, Math.min(100, Math.round(item.value || 0)));
-    }
-
-    function advanceProgress() {
-      const tickets = getTickets();
-      const progress = ensureProgressForTickets(tickets);
-      let changed = false;
-      tickets.forEach((ticket, index) => {
-        const item = progress[ticket.id];
-        if (!item) return;
-        if (ticket.status === 'Done') {
-          if (item.value !== 100) {
-            item.value = 100;
-            changed = true;
+    function renderAgents(snapshot) {
+      var active = snapshot && snapshot.active;
+      els.agents.innerHTML = AGENTS.map(function (a) {
+        var isActive = false, status = 'idle', statusText = 'в ожидании';
+        if (a.id === 'devops') {
+          if (active) { isActive = true; status = 'running'; statusText = 'гоняет цикл'; }
+          else if (snapshot && snapshot.last) {
+            status = snapshot.last.status === 'passed' ? 'passed' : 'failed';
+            statusText = status === 'passed' ? 'последний прогон ок' : 'последний прогон упал';
           }
-          return;
         }
-        if (ticket.status !== 'In progress') return;
-        const current = Number(item.value || 18);
-        const target = getProgressTarget(ticket);
-        if (current >= target) return;
-        const increment = index % 2 === 0 ? 1 : 2;
-        item.value = Math.min(target, current + increment);
-        item.lastUpdated = Date.now();
-        changed = true;
-      });
-      if (changed) saveProgressState(progress);
-    }
-
-    function updateLiveProgress() {
-      const tickets = getTickets().filter((ticket) => ticket.status === 'In progress');
-      tickets.forEach((ticket) => {
-        const progress = getTicketProgress(ticket);
-        const fill = document.querySelector(`[data-progress-ticket="${ticket.id}"]`);
-        const label = document.querySelector(`[data-progress-label="${ticket.id}"]`);
-        if (fill) fill.style.setProperty('--progress', `${progress}%`);
-        if (label) label.textContent = getProgressLabel(ticket, progress);
-      });
-    }
-
-    function renderActivity() {
-      const elapsed = Math.floor((Date.now() - boardStartedAt) / 1000);
-      const saved = loadActivityLog();
-      const savedHtml = saved.map((item) => `
-        <div class="activity-item">
-          <span class="activity-time">${item.time}</span>
-          <span><strong>${item.role}</strong>: ${item.text}</span>
-        </div>
-      `);
-      const liveHtml = activityItems.map((item, index) => {
-        const minutesAgo = Math.max(0, Math.floor((elapsed + index * 19) / 60));
-        const time = minutesAgo === 0 ? 'только что' : `${minutesAgo} мин`;
-        return `
-          <div class="activity-item">
-            <span class="activity-time">${time}</span>
-            <span><strong>${item.role}</strong>: ${item.text}</span>
-          </div>
-        `;
-      });
-      document.getElementById('activity').innerHTML = [...savedHtml, ...liveHtml].slice(0, 10).join('');
-    }
-
-    function getNextAction(ticket) {
-      if (ticket.id === 'T-007') return 'Мариночка закрывает extended web QA evidence.';
-      if (ticket.id === 'T-008') return 'Мариночка проверяет mobile viewport и sticky states.';
-      if (ticket.id === 'T-009') return 'Дизайнер готовит UX backlog по findings.';
-      if (ticket.id === 'T-015') return 'Андриуш превращает findings в implementation-ready backlog.';
-      if (ticket.id === 'T-016') return 'Крина пишет acceptance criteria и non-goals.';
-      if (ticket.id === 'T-017') return 'Ромик готовит следующий code patch только после решения по T-012.';
-      if (ticket.id === 'T-018') return 'Андриуш фиксирует approval gate для задач.';
-      if (ticket.id === 'T-019') return 'Витаутас следит за automations и e2e health.';
-      if (ticket.id === 'T-020') return 'Сео проверяет metadata, schema и canonical.';
-      return 'Следующий шаг за владельцем задачи.';
-    }
-
-    function renderActiveWork(tickets) {
-      const active = tickets.filter((ticket) => ticket.status === 'In progress');
-      document.getElementById('active-work-summary').textContent = `${active.length} active`;
-      document.getElementById('active-work').innerHTML = active.map((ticket) => {
-        const progress = getTicketProgress(ticket);
-        return `
-          <article class="active-work-card">
-            <span class="active-owner">${ticket.owner}</span>
-            <strong>${ticket.id} · ${ticket.title}</strong>
-            <div class="progress"><div class="progress-fill" style="--progress:${progress}%"></div></div>
-            <span>${getProgressLabel(ticket, progress)}</span>
-            <span>${getNextAction(ticket)}</span>
-          </article>
-        `;
-      }).join('') || '<p class="note">Нет активных задач. Нажми "Сделать шаг работы", чтобы взять approved задачу в работу.</p>';
-    }
-
-    function renderEvidenceSummary(tickets) {
-      const evidenceTickets = tickets.filter((ticket) => ticketEvidence[ticket.id]);
-      const noEvidenceActive = tickets.filter((ticket) => ticket.status === 'In progress' && !ticketEvidence[ticket.id]);
-      document.getElementById('evidence-summary-count').textContent = `${evidenceTickets.length} with evidence · ${noEvidenceActive.length} active without evidence`;
-      document.getElementById('evidence-summary').innerHTML = evidenceTickets.map((ticket) => {
-        const evidence = ticketEvidence[ticket.id];
-        return `
-          <article class="active-work-card">
-            <span class="active-owner">${ticket.id} · ${evidence.status}</span>
-            <strong>${ticket.title}</strong>
-            ${(evidence.changedFiles || []).map((item) => `<span>${item}</span>`).join('')}
-            ${(evidence.tests || []).slice(0, 2).map((item) => `<span>${item}</span>`).join('')}
-            <span>${evidence.result}</span>
-          </article>
-        `;
+        return '<div class="agent' + (isActive ? ' active' : '') + '">' +
+          '<div class="agent-top">' +
+            '<div class="avatar" style="background:' + a.color + '">' + esc(a.initials) + '</div>' +
+            '<div><div class="agent-name">' + esc(a.name) + '</div>' +
+            '<div class="agent-role">' + esc(a.role) + '</div></div></div>' +
+          '<div class="agent-track">' + esc(a.track) + '</div>' +
+          '<div class="agent-foot"><span class="badge ' + status + '">' + esc(statusText) + '</span></div>' +
+        '</div>';
       }).join('');
     }
 
-    function runWorkStep() {
-      const tickets = getTickets();
-      const withEvidence = tickets.filter((ticket) => ticketEvidence[ticket.id]);
-      appendActivity('Team', `Real check-in: ${withEvidence.length} задач имеют evidence; Done без evidence заблокирован`);
-      render();
-    }
-
-    function isAutoCycleEnabled() {
-      return localStorage.getItem(AUTO_KEY) === '1';
-    }
-
-    function setAutoCycle(enabled) {
-      localStorage.setItem(AUTO_KEY, enabled ? '1' : '0');
-      const button = document.getElementById('auto-cycle');
-      if (button) {
-        button.textContent = `Demo mode: ${enabled ? 'вкл' : 'выкл'}`;
-        button.classList.toggle('active', enabled);
+    function renderFeed() {
+      els.feedCount.textContent = events.length ? events.length + ' событий' : '';
+      if (!events.length) {
+        els.feed.innerHTML = '<div class="empty">Событий пока нет. Каждый завершённый цикл появится здесь.</div>';
+        return;
       }
-      if (autoCycleTimer) {
-        clearInterval(autoCycleTimer);
-        autoCycleTimer = null;
-      }
-      if (enabled) {
-        autoCycleTimer = setInterval(() => {
-          appendActivity('Demo mode', 'Timer tick only refreshes board; it does not move tasks to Done');
-          render();
-        }, 7000);
-      }
-    }
-
-    function renderDesignerFocus(tickets) {
-      const designerTickets = tickets.filter((ticket) => ticket.owner.includes('UI/UX Designer'));
-      document.getElementById('designer-focus').innerHTML = designerTickets.map((ticket) => {
-        const progress = getTicketProgress(ticket);
-        return `
-          <div class="designer-row">
-            <strong>${ticket.id} · ${ticket.title}</strong>
-            <div class="progress"><div class="progress-fill" style="--progress:${progress}%"></div></div>
-            <span class="progress-label">${getProgressLabel(ticket, progress)}</span>
-          </div>
-        `;
+      els.feed.innerHTML = events.slice(0, MAX_EVENTS).map(function (e) {
+        return '<div class="event ' + e.status + '">' +
+          '<div class="event-rail"><span class="event-dot"></span></div>' +
+          '<div class="event-body">' +
+            '<div class="event-title">' + esc(e.title) + '</div>' +
+            '<div class="event-sub">' + esc(e.sub) + '</div>' +
+            '<div class="event-time">' + relTime(e.at) + ' · ' + esc(e.runId) + '</div>' +
+          '</div></div>';
       }).join('');
     }
 
-    function updateLiveClock() {
-      const now = new Date();
-      document.getElementById('live-clock').textContent =
-        `live · ${now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+    function maybePushEvent(last) {
+      if (!last || !last.runId || last.runId === lastSeenRunId) return;
+      lastSeenRunId = last.runId;
+      var cmds = (last.commands || []).map(function (c) { return c.id; }).join(', ');
+      events.unshift({
+        runId: last.runId,
+        status: last.status === 'passed' ? 'passed' : 'failed',
+        title: 'Цикл «' + (last.mode || 'cycle') + '» — ' + (last.status === 'passed' ? 'успех' : 'провал'),
+        sub: 'команды: ' + (cmds || '—') + ' · ' +
+             (last.changedFiles ? last.changedFiles.length : 0) + ' изм. файлов',
+        at: last.finishedAt || new Date().toISOString()
+      });
+      events = events.slice(0, MAX_EVENTS);
+      saveEvents();
     }
 
-    function tickLive() {
-      updateLiveClock();
-      updateLiveProgress();
-      renderActivity();
-      const tickets = getTickets();
-      renderDesignerFocus(tickets);
-      renderActiveWork(tickets);
-      renderEvidenceSummary(tickets);
+    // ---- polling ------------------------------------------------------------
+
+    function poll() {
+      var url = BRIDGE_URL + '?t=' + Date.now();
+      fetch(url, { cache: 'no-store' })
+        .then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
+        .then(function (data) {
+          els.banner.classList.remove('show');
+          var stale = data && data.updatedAt && (Date.now() - Date.parse(data.updatedAt) > STALE_MS);
+          if (data && data.activeCycle) setConn('live', 'Цикл активен');
+          else if (stale) setConn('stale', 'Данные устарели');
+          else setConn('live', 'Подключено');
+
+          var snapshot = renderCycle(data);
+          maybePushEvent(snapshot.last);
+          renderAgents(snapshot);
+          renderFeed();
+        })
+        .catch(function (err) {
+          setConn('error', 'Нет данных');
+          // file:// fetch is blocked by browsers → show the fallback banner.
+          if (location.protocol === 'file:') els.banner.classList.add('show');
+          els.pulseTitle.textContent = 'Мост автоматизации недоступен';
+          els.pulseMeta.textContent = String(err && err.message ? err.message : err);
+        });
     }
 
-    function renderTickets(tickets) {
-      const visible = tickets.filter((ticket) => activeFilter === 'All' || ticket.status === activeFilter);
-      document.getElementById('visible-count').textContent = `${visible.length} visible`;
-      const ticketsNode = document.getElementById('tickets');
-      if (!ticketsNode) return;
-      ticketsNode.innerHTML = visible.map((ticket) => `
-        <article class="card">
-          <div class="card-top">
-            <span class="id">${ticket.id}</span>
-            ${renderStatus(ticket.status)}
-          </div>
-          <h3 class="title">${ticket.title}</h3>
-        </article>
-      `).join('');
+    function schedule() {
+      if (timer) { clearInterval(timer); timer = null; }
+      var ms = parseInt(els.interval.value, 10);
+      if (ms > 0) timer = setInterval(poll, ms);
     }
 
-    function ticketMatchesPerson(ticket, person) {
-      return person.aliases.some((alias) => ticket.owner.includes(alias));
-    }
-
-    function renderWorkItems(items, kind) {
-      if (!items.length) return '<span class="note">Нет задач</span>';
-      return items.map((item) => `<span class="work-item ${kind}">${item}</span>`).join('');
-    }
-
-    function renderPeople(tickets) {
-      const peopleHtml = people.map((person) => {
-        const owned = tickets.filter((ticket) => ticketMatchesPerson(ticket, person));
-        const current = owned
-          .filter((ticket) => ticket.status === 'In progress')
-          .map((ticket) => `${ticket.id}: ${ticket.title}`);
-        const done = [
-          ...person.done,
-          ...owned
-            .filter((ticket) => ticket.status === 'Done')
-            .map((ticket) => `${ticket.id}: ${ticket.title}`),
-        ];
-        const backlog = [
-          ...owned
-            .filter((ticket) => ['Open', 'Blocked', 'Flaky'].includes(ticket.status))
-            .map((ticket) => `${ticket.id}: ${ticket.title}`),
-          ...person.backlog,
-        ];
-        const isIdle = current.length === 0;
-        const load = current.length ? `${current.length} active` : 'idle';
-
-        return `
-          <article class="person-card">
-            <div class="person-head">
-              <div>
-                <h3 class="person-name">${person.name}</h3>
-                <span class="person-role">${person.role}</span>
-              </div>
-              <span class="load ${isIdle ? 'idle' : 'active'}">${load}</span>
-            </div>
-            <div class="work-lanes">
-              <div class="work-lane">
-                <span class="lane-title">Сейчас делает</span>
-                ${renderWorkItems(current, 'current')}
-              </div>
-              <div class="work-lane">
-                <span class="lane-title">Сделал</span>
-                ${renderWorkItems(done, 'done')}
-              </div>
-              <div class="work-lane">
-                <span class="lane-title">Бэклог</span>
-                ${renderWorkItems(backlog, 'backlog')}
-              </div>
-            </div>
-          </article>
-        `;
-      }).join('');
-
-      const activePeople = people.filter((person) =>
-        tickets.some((ticket) => ticket.status === 'In progress' && ticketMatchesPerson(ticket, person))
-      ).length;
-      document.getElementById('people-summary').textContent = `${activePeople}/${people.length} active`;
-      document.getElementById('people').innerHTML = peopleHtml;
-    }
-
-    function renderRoles() {
-      const rolesNode = document.getElementById('roles');
-      if (!rolesNode) return;
-      rolesNode.innerHTML = roles.map((role) => `
-        <div class="role-row">
-          <div class="card-top">
-            <span class="role-owner">${role.owner}</span>
-            ${renderStatus(role.status)}
-          </div>
-          <span class="role-task">${role.task}</span>
-        </div>
-      `).join('');
-    }
-
-    function renderFindings() {
-      document.getElementById('findings').innerHTML = findings.map((finding) => `
-        <article class="card finding">
-          <div class="card-top">
-            <span class="id">${finding.id}</span>
-            ${renderStatus(finding.status)}
-          </div>
-          <h3 class="title">${finding.title}</h3>
-          <div class="meta"><span>${finding.owner}</span></div>
-          <p class="note">${finding.notes}</p>
-        </article>
-      `).join('');
-    }
-
-    function renderCases() {
-      document.getElementById('cases').innerHTML = manualCases.map((item) => `
-        <div class="case-row">${item}</div>
-      `).join('');
-    }
-
-    function render() {
-      const tickets = getTickets();
-      renderMetrics(tickets);
-      renderFilters();
-      renderPeople(tickets);
-      renderKanban(tickets);
-      renderActivity();
-      renderActiveWork(tickets);
-      renderEvidenceSummary(tickets);
-      renderDesignerFocus(tickets);
-      updateLiveProgress();
-      updateLiveClock();
-      renderRoles();
-      renderFindings();
-      renderCases();
-    }
-
-    document.getElementById('reset').addEventListener('click', () => {
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem(PROGRESS_KEY);
-      localStorage.removeItem(APPROVAL_KEY);
-      LEGACY_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
-      LEGACY_PROGRESS_KEYS.forEach((key) => localStorage.removeItem(key));
-      LEGACY_APPROVAL_KEYS.forEach((key) => localStorage.removeItem(key));
-      localStorage.removeItem(ACTIVITY_KEY);
-      render();
-    });
-    document.getElementById('work-step').addEventListener('click', runWorkStep);
-    document.getElementById('auto-cycle').addEventListener('click', () => {
-      setAutoCycle(!isAutoCycleEnabled());
+    els.interval.addEventListener('change', schedule);
+    els.refresh.addEventListener('click', poll);
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') poll();
     });
 
-    render();
-    setAutoCycle(isAutoCycleEnabled());
-    setInterval(tickLive, 1000);
+    // initial paint
+    renderAgents({ active: null, last: null });
+    renderFeed();
+    poll();
+    schedule();
+  })();
   </script>
 </body>
 </html>

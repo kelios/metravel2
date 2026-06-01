@@ -44,8 +44,9 @@ export const normalizeTravelPreview = (value: unknown): TravelPreview => {
 };
 
 export const resolveTravelUrl = (travel: TravelPreview): string => {
+  const slug = String(travel.slug ?? '').trim();
+  if (slug) return `/travels/${slug}`;
   const explicitUrl = String(travel.url ?? '').trim();
-  if (explicitUrl) return explicitUrl;
-  const key = String(travel.slug ?? travel.id).trim();
-  return `/travels/${key || travel.id}`;
+  if (explicitUrl) return explicitUrl.split('?')[0].split('#')[0];
+  return `/travels/${travel.id}`;
 };

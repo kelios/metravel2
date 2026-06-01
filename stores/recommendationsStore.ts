@@ -95,7 +95,7 @@ export const useRecommendationsStore = create<RecommendationsState>((set, get) =
                 id: t.id,
                 type: 'travel' as const,
                 title: t.name || 'Без названия',
-                url: t.url || `/travels/${t.slug || t.id}`,
+                url: t.slug ? `/travels/${t.slug}` : (t.url ? String(t.url).split('?')[0].split('#')[0] : `/travels/${t.id}`),
                 imageUrl: t.travel_image_thumb_url,
                 addedAt: t.updated_at ? new Date(t.updated_at).getTime() : Date.now(),
                 country: t.countryName ?? undefined,

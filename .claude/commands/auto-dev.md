@@ -1,0 +1,40 @@
+---
+description: Одна итерация непрерывного цикла разработка→тест→багфикс (для /loop)
+allowed-tools: Bash(npm run check:fast), Bash(npm run check:fast:dry), Bash(npm run check:changed:dry), Bash(npm run test:run:*), Bash(npm run guard:*), Bash(npm run check:image-architecture), Bash(npm run governance:verify), Bash(npm run workboard:cycle:dry), Bash(git status:*), Bash(git diff:*), Bash(git log:*), Read, Grep, Glob, Edit, Write, Agent
+---
+
+Выполни ОДНУ итерацию цикла разработка→тест→багфикс. Команда рассчитана на запуск через `/loop /auto-dev` — каждая итерация должна оставлять проект в чуть более зелёном состоянии и быть самодостаточной.
+
+## Предусловия (стоп при нарушении)
+
+1. `git branch --show-current` обязан быть `main`. Если нет — остановись и сообщи, ничего не меняй.
+2. Прочитай `git status --short` и `git diff --stat` — это текущий scope.
+
+## Выбор работы (в порядке приоритета)
+
+1. **Красный baseline в затронутом scope** — если `npm run check:fast` падает, чинить это первым.
+2. **Подтверждённый баг** — если есть Bug Report или явный запрос пользователя, бери один баг.
+3. **Незавершённый незакоммиченный diff** — доведи до зелёного и консистентного состояния то, что уже начато.
+4. **Гигиена scope** — dead imports, нарушенные guard-ы, broken UI states в уже изменённых файлах.
+
+Если работы нет (scope чистый, проверки зелёные) — сообщи «нет открытой работы» и заверши итерацию без правок.
+
+## Маршрутизация по доменам (обязательно)
+
+- `components/travel/**`, `components/listTravel/**`, `hooks/useTravel*` → агент `travel-expert`
+- `components/MapPage/**`, `components/map/**`, `app/map*`, `hooks/useMap*` → агент `map-expert`
+- guard-нарушения → агент `guard-enforcer`
+- файл >800 LOC → агент `refactor-surgeon`
+- тесты → агент `test-author`
+
+## Цикл
+
+1. Зафиксируй минимальный diff, решающий ровно одну проблему. Без побочных рефакторингов.
+2. Соблюдай правила: изображения через `components/ui/ImageCardMedia` (fit=contain + blur из DOM с первого кадра), внешние ссылки через `@/utils/externalLinks.openExternalUrl`, серверный стейт — React Query, клиентский — Zustand.
+3. `npm run check:fast` — прогон по изменённому scope.
+4. Упало → прочитай вывод, найди виновные файлы, почини root cause (не глуши warning'и, не добавляй eslint-disable). Повтори до зелёного.
+5. Затронул web UI → проверка в браузере (preview_*), screenshot, console без новых ошибок.
+
+## Завершение итерации
+
+Короткий отчёт: что взято в работу → изменённые файлы → выполненные проверки → остаточные риски/блокеры. Если упёрся в недоступный сервер, секреты или рискованную миграцию — явно зафиксируй блокер и нужную следующую проверку, не имитируй прогресс.

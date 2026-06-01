@@ -68,13 +68,14 @@ export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: Profil
         actionChip: {
           flexDirection: 'row',
           alignItems: 'center',
-          gap: DESIGN_TOKENS.spacing.xxs,
-          paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-          paddingVertical: 10,
+          gap: 8,
+          paddingLeft: 6,
+          paddingRight: DESIGN_TOKENS.spacing.sm,
+          paddingVertical: 6,
           borderRadius: DESIGN_TOKENS.radii.pill,
           backgroundColor: colors.surface,
           borderWidth: 1,
-          borderColor: colors.border,
+          borderColor: colors.borderLight,
           minHeight: DESIGN_TOKENS.touchTarget.minHeight,
           position: 'relative',
           ...Platform.select({
@@ -95,6 +96,14 @@ export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: Profil
         actionChipPressed: {
           backgroundColor: colors.backgroundSecondary,
           borderColor: colors.primary,
+        },
+        iconPill: {
+          width: 30,
+          height: 30,
+          borderRadius: 15,
+          backgroundColor: colors.primarySoft,
+          alignItems: 'center',
+          justifyContent: 'center',
         },
         chipLabel: {
           fontSize: DESIGN_TOKENS.typography.sizes.sm,
@@ -152,7 +161,9 @@ export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: Profil
                 pressed && styles.actionChipPressed,
               ]}
             >
-              <Feather name={item.icon} size={16} color={colors.primary} />
+              <View style={styles.iconPill}>
+                <Feather name={item.icon} size={15} color={colors.primary} />
+              </View>
               <Text style={styles.chipLabel}>{item.title}</Text>
               {showBadge && (
                 <View style={styles.badge}>

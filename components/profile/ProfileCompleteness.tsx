@@ -122,13 +122,13 @@ export function ProfileCompleteness({ user, profile, travelsCount }: ProfileComp
           marginBottom: DESIGN_TOKENS.spacing.sm,
         },
         track: {
-          height: 5,
+          height: 6,
           borderRadius: 3,
-          backgroundColor: colors.borderLight,
+          backgroundColor: colors.backgroundSecondary,
           overflow: 'hidden',
         },
         fill: {
-          height: 5,
+          height: 6,
           borderRadius: 3,
           backgroundColor: colors.primary,
           ...Platform.select({

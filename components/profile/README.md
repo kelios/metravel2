@@ -77,42 +77,40 @@ import { ProfileHeader } from '@/components/profile/ProfileHeader';
 
 ---
 
-## ProfileStats
+## PersonalStatusSummary
 
-Статистика профиля (путешествия, избранное, просмотры).
+Карточка личных статусов поездок (Были / Хочу / Планирую) с переходом в календарь.
 
 ### Импорт
 ```typescript
-import { ProfileStats } from '@/components/profile/ProfileStats';
+import { PersonalStatusSummary } from '@/components/profile/PersonalStatusSummary';
 ```
 
 ### Использование
 ```typescript
-<ProfileStats
-  stats={{
-    travelsCount: 42,
-    favoritesCount: 12,
-    viewsCount: 156,
-  }}
-  onPressStat={(key) => {
-    if (key === 'travels') setActiveTab('travels');
-    if (key === 'favorites') setActiveTab('favorites');
-    if (key === 'views') setActiveTab('history');
-  }}
+<PersonalStatusSummary
+  visited={summary.visited}
+  wishlist={summary.wishlist}
+  planned={summary.planned}
+  formatTripsCount={formatTripsCount}
+  onOpenCalendar={() => router.push('/calendar')}
 />
 ```
 
 ### Пропсы
 | Пропс | Тип | Обязательный | Описание |
 |-------|-----|--------------|----------|
-| `stats` | `{ travelsCount, favoritesCount, viewsCount }` | ✅ | Данные статистики |
-| `onPressStat` | `(key) => void` | ❌ | Callback при нажатии |
+| `visited` | `number` | ✅ | Количество посещённых поездок |
+| `wishlist` | `number` | ✅ | Количество сохранённых (Хочу) |
+| `planned` | `number` | ✅ | Количество запланированных |
+| `formatTripsCount` | `(count: number) => string` | ✅ | Форматирование числа поездок |
+| `onOpenCalendar` | `() => void` | ✅ | Callback для перехода в календарь |
 
-### Изменения
-- ✅ Иконки над числами (map-pin, heart, eye)
-- ✅ Pressed scale анимация
-- ✅ Hover shadow на web
-- ✅ Accessibility улучшения
+### Особенности
+- Иконки на каждом статусе (check-circle, bookmark, calendar)
+- Адаптивная сетка плиток (flex-wrap)
+- CTA "Открыть календарь" с focus/pressed состояниями
+- Только личные отметки пользователя, не публичная статистика
 
 ---
 
@@ -192,7 +190,7 @@ import { ProfileQuickActions } from '@/components/profile/ProfileQuickActions';
 ```typescript
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfileQuickActions } from '@/components/profile/ProfileQuickActions';
-import { ProfileStats } from '@/components/profile/ProfileStats';
+import { PersonalStatusSummary } from '@/components/profile/PersonalStatusSummary';
 import { ProfileTabs } from '@/components/profile/ProfileTabs';
 
 export default function ProfileScreen() {
@@ -218,12 +216,12 @@ export default function ProfileScreen() {
         unreadMessagesCount={5}
       />
 
-      <ProfileStats
-        stats={stats}
-        onPressStat={(key) => {
-          if (key === 'views') setActiveTab('history');
-          else setActiveTab(key);
-        }}
+      <PersonalStatusSummary
+        visited={summary.visited}
+        wishlist={summary.wishlist}
+        planned={summary.planned}
+        formatTripsCount={formatTripsCount}
+        onOpenCalendar={() => router.push('/calendar')}
       />
 
       <ProfileTabs
@@ -261,23 +259,6 @@ export default function ProfileScreen() {
   onLogout={onLogout} // в dropdown-меню
   onAvatarUpload={onAvatarUpload} // новый пропс
 />
-```
-
-### ProfileStats
-
-**Было:**
-```typescript
-<ProfileStats stats={stats} />
-// Без иконок, без анимаций
-```
-
-**Стало:**
-```typescript
-<ProfileStats 
-  stats={stats}
-  onPressStat={handlePress} // новый пропс
-/>
-// С иконками, анимациями, accessibility
 ```
 
 ### ProfileTabs

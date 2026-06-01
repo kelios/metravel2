@@ -37,69 +37,79 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
         },
         tabRow: {
           flexDirection: 'row',
-          gap: DESIGN_TOKENS.spacing.xs,
+          padding: 4,
+          gap: 4,
+          borderRadius: DESIGN_TOKENS.radii.pill,
+          backgroundColor: colors.backgroundSecondary,
+          borderWidth: 1,
+          borderColor: colors.borderLight,
         },
         tab: {
           flex: 1,
+          flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: DESIGN_TOKENS.spacing.xs,
-          paddingVertical: DESIGN_TOKENS.spacing.sm,
+          gap: 6,
+          paddingVertical: 9,
           paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-          minHeight: 92,
-          borderRadius: DESIGN_TOKENS.radii.lg,
-          borderWidth: 1,
-          borderColor: colors.borderLight,
-          backgroundColor: colors.surface,
+          borderRadius: DESIGN_TOKENS.radii.pill,
+          backgroundColor: 'transparent',
+          minHeight: DESIGN_TOKENS.touchTarget.minHeight,
           ...Platform.select({
             web: { cursor: 'pointer' } as any,
             default: {},
           }),
         },
         activeTab: {
-          borderColor: colors.primary,
-          backgroundColor: colors.primarySoft,
-        },
-        iconWrap: {
-          width: 34,
-          height: 34,
-          borderRadius: DESIGN_TOKENS.radii.sm,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: colors.backgroundSecondary,
-        },
-        activeIconWrap: {
           backgroundColor: colors.surface,
-        },
-        countText: {
-          ...DESIGN_TOKENS.typography.scale.h2,
-          color: colors.text,
-          textAlign: 'center',
-        },
-        activeCountText: {
-          color: colors.primary,
-        },
-        labelRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
+          ...Platform.select({
+            ios: {
+              shadowColor: '#000',
+              shadowOpacity: 0.08,
+              shadowRadius: 6,
+              shadowOffset: { width: 0, height: 2 },
+            },
+            android: { elevation: 2 },
+            default: {},
+          }),
         },
         tabText: {
           fontSize: DESIGN_TOKENS.typography.sizes.sm,
           fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
           color: colors.textMuted,
-          textAlign: 'center',
         },
         activeTabText: {
-          color: colors.primary,
+          color: colors.text,
+        },
+        countBadge: {
+          minWidth: 22,
+          height: 18,
+          paddingHorizontal: 6,
+          borderRadius: DESIGN_TOKENS.radii.pill,
+          backgroundColor: colors.borderLight,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        activeCountBadge: {
+          backgroundColor: colors.primary,
+        },
+        countText: {
+          fontSize: 11,
+          fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
+          color: colors.textMuted,
+          lineHeight: 14,
+        },
+        activeCountText: {
+          color: colors.textOnPrimary,
         },
       }),
     [colors]
   );
 
-  const tabs: Array<{ key: ProfileTabKey; label: string; hint: string }> = [
-    { key: 'travels', label: 'Мои маршруты', hint: 'Показать ваши опубликованные путешествия' },
-    { key: 'favorites', label: 'Сохранённое', hint: 'Показать сохранённые путешествия' },
-    { key: 'history', label: 'Недавно смотрел', hint: 'Показать историю просмотров' },
+  const tabs: Array<{ key: ProfileTabKey; label: string; a11yLabel: string; hint: string }> = [
+    { key: 'travels', label: 'Маршруты', a11yLabel: 'Мои маршруты', hint: 'Показать ваши опубликованные путешествия' },
+    { key: 'favorites', label: 'Избранное', a11yLabel: 'Сохранённое', hint: 'Показать сохранённые путешествия' },
+    { key: 'history', label: 'История', a11yLabel: 'Недавно смотрел', hint: 'Показать историю просмотров' },
   ];
 
   return (
@@ -107,7 +117,7 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
       <View style={styles.tabRow}>
         {tabs.map((tab) => {
           const isActive = activeTab === tab.key;
-          const count = typeof counts?.[tab.key] === 'number' ? counts[tab.key] : 0;
+          const count = typeof counts?.[tab.key] === 'number' ? (counts[tab.key] as number) : 0;
 
           return (
             <Pressable
@@ -120,22 +130,24 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
               onPress={() => onChangeTab(tab.key)}
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}
-              accessibilityLabel={`${tab.label}: ${count}`}
+              accessibilityLabel={`${tab.a11yLabel}: ${count}`}
               accessibilityHint={tab.hint}
             >
-              <View style={[styles.iconWrap, isActive && styles.activeIconWrap]}>
-                <Feather
-                  name={TAB_ICONS[tab.key]}
-                  size={16}
-                  color={isActive ? colors.primary : colors.textMuted}
-                />
-              </View>
-              <Text style={[styles.countText, isActive && styles.activeCountText]}>{count}</Text>
-              <View style={styles.labelRow}>
-                <Text style={[styles.tabText, isActive && styles.activeTabText]}>
-                  {tab.label}
-                </Text>
-              </View>
+              <Feather
+                name={TAB_ICONS[tab.key]}
+                size={15}
+                color={isActive ? colors.primary : colors.textMuted}
+              />
+              <Text style={[styles.tabText, isActive && styles.activeTabText]} numberOfLines={1}>
+                {tab.label}
+              </Text>
+              {count > 0 ? (
+                <View style={[styles.countBadge, isActive && styles.activeCountBadge]}>
+                  <Text style={[styles.countText, isActive && styles.activeCountText]}>
+                    {count > 999 ? '999+' : count}
+                  </Text>
+                </View>
+              ) : null}
             </Pressable>
           );
         })}

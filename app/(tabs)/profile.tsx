@@ -2,8 +2,6 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
   ActivityIndicator,
   Platform,
   ScrollView,
@@ -21,6 +19,7 @@ import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfileCompleteness } from '@/components/profile/ProfileCompleteness';
 import { ProfileTabs, type ProfileTabKey } from '@/components/profile/ProfileTabs';
 import { ProfileQuickActions } from '@/components/profile/ProfileQuickActions';
+import { PersonalStatusSummary } from '@/components/profile/PersonalStatusSummary';
 import {
   ProfileTravelEngagementSummary,
   type ProfileTravelEngagementMetricKey,
@@ -32,7 +31,7 @@ import Button from '@/components/ui/Button';
 import type { Travel } from '@/types/types';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import { calculateColumns } from '@/components/listTravel/utils/listTravelHelpers';
-import { BREAKPOINTS, PER_PAGE } from '@/components/listTravel/utils/listTravelConstants';
+import { BREAKPOINTS } from '@/components/listTravel/utils/listTravelConstants';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -50,29 +49,13 @@ import { hapticImpact } from '@/utils/haptics';
 import { computeTravelEngagementSummary } from '@/utils/travelEngagementStats'
 import { useTravelStatusStore } from '@/stores/travelStatusStore'
 import { showToastMessage } from '@/utils/toast'
-
-interface UserStats {
-  travelsCount: number;
-  favoritesCount: number;
-  viewsCount: number;
-}
-
-const keyExtractor = (item: Travel, index: number) => `${item.id}-${index}`;
-const PROFILE_TRAVELS_PER_PAGE = PER_PAGE;
-const EMPTY_ENGAGEMENT_STATS = {
-  favoritesCount: 0,
-  wishlistCount: 0,
-  visitedCount: 0,
-  plannedCount: 0,
-} as const;
-
-const withVisibleEngagementStats = (travel: Travel): Travel =>
-  travel.engagementStats
-    ? travel
-    : {
-        ...travel,
-        engagementStats: EMPTY_ENGAGEMENT_STATS,
-      };
+import { createProfileScreenStyles } from './profileScreen.styles';
+import {
+  keyExtractor,
+  PROFILE_TRAVELS_PER_PAGE,
+  withVisibleEngagementStats,
+  type UserStats,
+} from './profileScreen.helpers';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -471,166 +454,10 @@ export default function ProfileScreen() {
     }
   }, [activeTab, clearFavorites, clearHistory]);
 
-  const styles = useMemo(() => StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    centered: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    listContent: {
-      paddingHorizontal: contentPadding,
-      paddingBottom: 0,
-      paddingTop: 12,
-      rowGap: gapSize,
-      maxWidth: Platform.OS === 'web' ? (isDesktopWeb ? maxContentWidth : undefined) : undefined,
-      alignSelf: Platform.OS === 'web' ? 'center' : undefined,
-      width: Platform.OS === 'web' ? '100%' : undefined,
-    },
-    headerComponent: {
-      backgroundColor: colors.background,
-    },
-    fullRow: {
-      width: '100%',
-    },
-    cardsRow: {
-      width: '100%',
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      maxWidth: '100%',
-      minWidth: 0,
-      alignItems: 'flex-start',
-      ...Platform.select({
-        web: {
-          columnGap: gapSize,
-          rowGap: gapSize,
-        },
-        default: {},
-      }),
-    },
-    rowSeparator: {
-      height: gapSize,
-    },
-    emptyWrap: {
-      paddingHorizontal: contentPadding,
-      paddingTop: 16,
-    },
-    skeletonWrap: {
-      gap: 0,
-      overflow: 'hidden',
-    },
-        skeletonAvatarRow: {
-          alignItems: 'center',
-          marginTop: -62,
-          paddingBottom: 12,
-        },
-    skeletonCenterText: {
-      alignItems: 'center',
-      gap: 8,
-      paddingBottom: 12,
-    },
-    skeletonHeaderRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 16,
-      marginBottom: 10,
-    },
-    skeletonHeaderText: {
-      gap: 8,
-    },
-    skeletonStatsRow: {
-      paddingHorizontal: 16,
-      marginBottom: 16,
-    },
-    skeletonListWrap: {
-      marginTop: 16,
-      gap: 12,
-    },
-    tabActions: {
-      paddingHorizontal: contentPadding,
-      paddingTop: 12,
-      paddingBottom: 8,
-    },
-    tabActionsRow: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-    },
-    calendarSummaryCard: {
-      marginHorizontal: contentPadding,
-      marginBottom: 12,
-      padding: 16,
-      borderRadius: 16,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      gap: 12,
-    },
-    calendarSummaryHeader: {
-      gap: 6,
-    },
-    calendarSummaryBadge: {
-      alignSelf: 'flex-start',
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 999,
-      backgroundColor: colors.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-    },
-    calendarSummaryBadgeText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: colors.textMuted,
-    },
-    calendarSummaryTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: colors.text,
-    },
-    calendarSummaryDescription: {
-      fontSize: 14,
-      lineHeight: 20,
-      color: colors.textMuted,
-    },
-    calendarSummaryMetrics: {
-      flexDirection: 'row',
-      gap: 8,
-      flexWrap: 'wrap',
-    },
-    calendarSummaryMetric: {
-      minWidth: 96,
-      flexGrow: 1,
-      paddingVertical: 10,
-      paddingHorizontal: 12,
-      borderRadius: 12,
-      backgroundColor: colors.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      gap: 4,
-    },
-    calendarSummaryCta: {
-      alignSelf: 'flex-start',
-    },
-    calendarSummaryMetricLabel: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: colors.textMuted,
-    },
-    calendarSummaryMetricValue: {
-      fontSize: 16,
-      lineHeight: 20,
-      fontWeight: '700',
-      color: colors.text,
-    },
-    footerLoader: {
-      paddingVertical: 14,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-  }), [colors, contentPadding, gapSize, isDesktopWeb, maxContentWidth]);
+  const styles = useMemo(
+    () => createProfileScreenStyles({ colors, contentPadding, gapSize, isDesktopWeb, maxContentWidth }),
+    [colors, contentPadding, gapSize, isDesktopWeb, maxContentWidth],
+  );
 
   const tabCounts = useMemo(() => ({
     travels: stats.travelsCount,
@@ -651,28 +478,28 @@ export default function ProfileScreen() {
       <View style={[styles.headerComponent, styles.fullRow]}>
         {profileLoading ? (
           <View style={styles.skeletonWrap}>
-            {/* Cover skeleton */}
-            <SkeletonLoader width="100%" height={130} borderRadius={0} />
-            {/* Avatar skeleton centered below cover */}
+            {/* Cover skeleton — matches new gradient hero (148px) */}
+            <SkeletonLoader width="100%" height={148} borderRadius={0} />
+            {/* Avatar skeleton overlapping cover (124 + 4*2 ring) */}
             <View style={styles.skeletonAvatarRow}>
-              <SkeletonLoader width={124} height={124} borderRadius={62} />
+              <SkeletonLoader width={132} height={132} borderRadius={66} />
             </View>
             {/* Name + email centered */}
             <View style={styles.skeletonCenterText}>
-              <SkeletonLoader width={170} height={22} borderRadius={4} />
-              <SkeletonLoader width={210} height={14} borderRadius={4} />
+              <SkeletonLoader width={200} height={26} borderRadius={4} />
+              <SkeletonLoader width={220} height={14} borderRadius={4} />
             </View>
             {/* Edit button */}
             <View style={styles.skeletonCenterText}>
-              <SkeletonLoader width={140} height={40} borderRadius={20} />
+              <SkeletonLoader width={150} height={40} borderRadius={20} />
             </View>
-            {/* Stats row — 3 separate cards */}
+            {/* Engagement metrics card */}
             <View style={styles.skeletonStatsRow}>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <SkeletonLoader width="31%" height={88} borderRadius={12} />
-                <SkeletonLoader width="31%" height={88} borderRadius={12} />
-                <SkeletonLoader width="31%" height={88} borderRadius={12} />
-              </View>
+              <SkeletonLoader width="100%" height={180} borderRadius={16} />
+            </View>
+            {/* Personal status card */}
+            <View style={styles.skeletonStatsRow}>
+              <SkeletonLoader width="100%" height={150} borderRadius={20} />
             </View>
           </View>
         ) : (
@@ -685,11 +512,6 @@ export default function ProfileScreen() {
               onAvatarUpload={pickAndUpload}
               avatarUploading={avatarUploading}
             />
-            <ProfileTabs
-              activeTab={activeTab}
-              onChangeTab={handleProfileTabChange}
-              counts={tabCounts}
-            />
             <ProfileTravelEngagementSummary
               summary={authoredTravelEngagementSummary}
               travelsCount={stats.travelsCount}
@@ -700,45 +522,24 @@ export default function ProfileScreen() {
               onMetricPress={handleTravelMetricPress}
               summaryScope={authoredTravelEngagementScope}
             />
-            <View style={styles.calendarSummaryCard}>
-              <View style={styles.calendarSummaryHeader}>
-                <View style={styles.calendarSummaryBadge}>
-                  <Text style={styles.calendarSummaryBadgeText}>Личный календарь</Text>
-                </View>
-                <Text style={styles.calendarSummaryTitle}>Мои статусы поездок</Text>
-                <Text style={styles.calendarSummaryDescription}>
-                  Здесь только ваши личные отметки из календаря: где уже были, что сохранили на будущее и что уже внесли в планы.
-                </Text>
-              </View>
-              <View style={styles.calendarSummaryMetrics}>
-                <View style={styles.calendarSummaryMetric}>
-                  <Text style={styles.calendarSummaryMetricLabel}>Были</Text>
-                  <Text style={styles.calendarSummaryMetricValue}>{formatTripsCount(personalTravelStatusSummary.visited)}</Text>
-                </View>
-                <View style={styles.calendarSummaryMetric}>
-                  <Text style={styles.calendarSummaryMetricLabel}>Хочу</Text>
-                  <Text style={styles.calendarSummaryMetricValue}>{formatTripsCount(personalTravelStatusSummary.wishlist)}</Text>
-                </View>
-                <View style={styles.calendarSummaryMetric}>
-                  <Text style={styles.calendarSummaryMetricLabel}>Планирую</Text>
-                  <Text style={styles.calendarSummaryMetricValue}>{formatTripsCount(personalTravelStatusSummary.planned)}</Text>
-                </View>
-              </View>
-              <View style={styles.calendarSummaryCta}>
-                <Button
-                  label="Открыть календарь"
-                  onPress={() => router.push('/calendar' as any)}
-                  variant="secondary"
-                  size="sm"
-                />
-              </View>
-            </View>
+            <PersonalStatusSummary
+              visited={personalTravelStatusSummary.visited}
+              wishlist={personalTravelStatusSummary.wishlist}
+              planned={personalTravelStatusSummary.planned}
+              formatTripsCount={formatTripsCount}
+              onOpenCalendar={() => router.push('/calendar' as any)}
+            />
             <ProfileCompleteness
               user={userProp}
               profile={profile}
               travelsCount={stats.travelsCount}
             />
             <ProfileQuickActions onPress={handleQuickAction} />
+            <ProfileTabs
+              activeTab={activeTab}
+              onChangeTab={handleProfileTabChange}
+              counts={tabCounts}
+            />
           </>
         )}
         {showClearButton ? (
