@@ -88,8 +88,16 @@ const TravelPreviewModal: React.FC<TravelPreviewModalProps> = ({
                 />
                 <View
                     style={styles.modalContent}
-                    accessibilityRole="dialog"
                     accessibilityLabel="Превью карточки"
+                    {...Platform.select({
+                        web: {
+                            // @ts-ignore -- role dialog is a web-only ARIA role not in RN View types
+                            role: 'dialog',
+                            // @ts-ignore -- aria-modal is a web-only ARIA attribute not in RN View types
+                            'aria-modal': true,
+                        },
+                        default: {},
+                    })}
                 >
                     <View style={styles.modalHeader}>
                         <Text style={styles.modalTitle}>Превью карточки</Text>

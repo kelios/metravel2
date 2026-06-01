@@ -502,6 +502,16 @@ Findings:
 - Owner: Ромик (Dev) to confirm fetch size + render strategy; UI/UX Designer for list/pagination pattern.
 - Status: open; candidate for `PERF-*` follow-up.
 
+### F-006 Flaky `login.test.tsx` under full-suite load (lazy LoginForm)
+
+- Severity: medium / P2 (CI/pre-commit flakiness; не баг продакшена).
+- Симптом: при широком `check:fast`/полном batch (25 сьютов параллельно) `__tests__/components/login.test.tsx` падал: `Unable to find an element with placeholder: Email`, дерево = `<View><ActivityIndicator/></View>`.
+- Root cause: `app/(tabs)/login.tsx` рендерит `<Suspense fallback={<ActivityIndicator/>}>` поверх `React.lazy(() => import('@/components/auth/LoginForm'))`. Под нагрузкой динамический `import()` резолвится дольше дефолтного ~1000ms таймаута `findByPlaceholderText` → тест видит только спиннер.
+- Не регрессия PERF-работы: `LoginForm` не импортирует изменённые модули (`Home`/`homeHeroStyles`/`useProgressiveLoading`/`perfBudget`); в изоляции и под 5-сьютовой нагрузкой тест проходит (76 passed).
+- Fix: `__tests__/components/login.test.tsx:112` — `findByPlaceholderText('Email', undefined, { timeout: 10000 })` (headroom для lazy-резолва). Поведение не меняется.
+- Verification: полный 25-сьютовый batch из репорта снова зелёный — `25 suites / 335 tests passed` (7.95s, без flake); `eslint` clean.
+- Status: fixed.
+
 ## Validation log
 
 - `npm run check:fast:dry` showed the current dirty working tree is limited to existing profile-related files at the time of the dry run.
