@@ -268,12 +268,6 @@ export function ProfileHeader({
           fontSize: DESIGN_TOKENS.typography.sizes.xs,
           fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
         },
-        divider: {
-          height: 1,
-          backgroundColor: colors.borderLight,
-          marginTop: DESIGN_TOKENS.spacing.md,
-          marginHorizontal: DESIGN_TOKENS.spacing.md,
-        },
       }),
     [colors]
   );

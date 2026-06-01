@@ -25,13 +25,12 @@
 ```text
 <ProfileScreen>
  ├─ <ProfileHeader>
- ├─ <ProfileStats>
  ├─ <ProfileTravelEngagementSummary>
+ ├─ <PersonalStatusSummary>
  ├─ <ProfileCompleteness>
  ├─ <ProfileQuickActions>
  ├─ <ProfileTabs>
- └─ <ProfileTravelEngagementDetails>
-     └─ список карточек путешествий автора
+ └─ список карточек путешествий автора (RenderTravelItem)
 ```
 
 ## Данные
