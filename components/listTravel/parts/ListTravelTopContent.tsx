@@ -2,16 +2,20 @@ import { lazy, Suspense } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import type { Travel } from '@/types/types'
 import type ListTravelExportControls from '../ListTravelExportControls'
+import type { createListTravelBaseStyles } from '../ListTravelBase.styles'
 
 const ListTravelExportControlsLazy = lazy(() => import('../ListTravelExportControls'))
 
-type TopContentStyles = {
-  fallbackNotice: any
-  fallbackNoticeTitle: any
-  fallbackNoticeText: any
-  fallbackNoticeAction: any
-  fallbackNoticeActionText: any
-}
+type ListTravelBaseStyles = ReturnType<typeof createListTravelBaseStyles>
+
+type TopContentStyles = Pick<
+  ListTravelBaseStyles,
+  | 'fallbackNotice'
+  | 'fallbackNoticeTitle'
+  | 'fallbackNoticeText'
+  | 'fallbackNoticeAction'
+  | 'fallbackNoticeActionText'
+>
 
 type ExportControlsProps = React.ComponentProps<typeof ListTravelExportControls>
 

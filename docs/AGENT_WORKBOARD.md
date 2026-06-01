@@ -72,6 +72,38 @@ Planning risks:
 - `D-001` needs a designer decision before code changes because the current visible text placeholder violates the neutral-placeholder rule.
 - Authenticated manual QA depends on `.env.e2e` access being available without exposing secrets.
 
+## Sprint Planning — Performance Refactor
+
+Sprint: `Page Performance Refactor`.
+
+Planning date: 2026-06-01.
+
+Sprint goal:
+
+- Тиражировать `SSR-first + deferred islands` модель с travel на главную/поиск/карту/места.
+- Завести и начать perf-backlog (`PERF-001`…`PERF-014`).
+- Каждое видимое/web-изменение закрывать через mandatory verification rule (browser + sprint + reviewer).
+
+Committed scope:
+
+- `PERF-002` распил `homeHeroStyles.ts` (1908→177 LOC). Status: Done (docs-only style split + tests).
+- `PERF-001` главная → deferred islands (`DeferredSection` поверх `useProgressiveLoad`). Status: In progress — browser ✅ (e2e home `1 passed`), reviewer ✅ (code-review: 0 actionable findings); ожидает sprint sign-off (Андриуш-Approver).
+
+Stretch scope:
+
+- `PERF-004` поиск: распил/облегчение `ListTravelBase.tsx`.
+- `PERF-011` отдельный perf-тест трек (Lighthouse для `/`, `/search`, `/map`, `/places`).
+
+Planning decisions:
+
+- Андриуш (Approver) даёт sprint sign-off для перевода PERF-задач в `Done`.
+- Андриуш (Reviewer) подтверждает diff каждого PERF-кода.
+- Ромик (Dev) ведёт implementation PERF-001/002/004 через профильных агентов (`refactor-surgeon`/`travel-expert`).
+
+Non-goals:
+
+- Production deploy и prod-URL Lighthouse не входят в этот спринт без отдельного запроса.
+
 ## Status board
 
 | Track | Owner | Status | Current output | Next action |
@@ -250,7 +282,7 @@ Routing: главная/поиск/места → `refactor-surgeon` + `travel-e
 
 | ID | Страница / Тема | Тип | Owner | Priority | Цель | Кандидаты файлов | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| PERF-001 | Главная | Рефакторинг | `refactor-surgeon` + `travel-expert` | P1 | Перевести `Home` на `SSR-first + deferred islands`: critical hero shell в initial render, тяжёлые секции ниже фолда — через visibility/idle defer | Done in code: `components/home/Home.tsx` — все 7 below-fold секций обёрнуты в новый `DeferredSection` поверх `useProgressiveLoad` (visibility-first + fallback timer, rootMargin 400px / 1000ms, compliant with timeout policy); lazy-чанки секций больше не стартуют все сразу при mount и не конкурируют с hero LCP. Hero остаётся eager. Native поведение не меняется (`shouldLoad=true` сразу). Validation: `typecheck` green, home Jest `62 passed`, `check:image-architecture` + `guard:external-links` passed, `eslint Home.tsx` clean. Без lazy-skip изображений / без `content-visibility`. Browser ✅: `npm run e2e -- e2e/home-quick-filters-nightstay.spec.ts --project=chromium` → `1 passed` (4.6s), hero/quick-filters путь и навигация Home→Search не сломаны. Eager-импорт `Home` в `app/(tabs)/index.tsx` сохранён намеренно (Home = critical shell с hero/LCP; lazy route задержал бы LCP). **Осталось до Done (mandatory verification rule): подтверждение спринтом + ревьювером (Андриуш-Reviewer).** Прим.: reveal-on-scroll deferred-секций этим spec явно не ассертится | In progress |
+| PERF-001 | Главная | Рефакторинг | `refactor-surgeon` + `travel-expert` | P1 | Перевести `Home` на `SSR-first + deferred islands`: critical hero shell в initial render, тяжёлые секции ниже фолда — через visibility/idle defer | Done in code: `components/home/Home.tsx` — все 7 below-fold секций обёрнуты в новый `DeferredSection` поверх `useProgressiveLoad` (visibility-first + fallback timer, rootMargin 400px / 1000ms, compliant with timeout policy); lazy-чанки секций больше не стартуют все сразу при mount и не конкурируют с hero LCP. Hero остаётся eager. Native поведение не меняется (`shouldLoad=true` сразу). Validation: `typecheck` green, home Jest `62 passed`, `check:image-architecture` + `guard:external-links` passed, `eslint Home.tsx` clean. Без lazy-skip изображений / без `content-visibility`. Browser ✅: `npm run e2e -- e2e/home-quick-filters-nightstay.spec.ts --project=chromium` → `1 passed` (4.6s), hero/quick-filters путь и навигация Home→Search не сломаны. Eager-импорт `Home` в `app/(tabs)/index.tsx` сохранён намеренно (Home = critical shell с hero/LCP; lazy route задержал бы LCP). Reviewer ✅: code-review (7 углов, 1-vote verify) → 0 actionable findings; native/test-compat, removed-behavior (`container={{}}`↔`PageSection` defaults), fallback-swap без скачка — подтверждены. Sprint ✅: sign-off Андриуш-Approver в спринте `Page Performance Refactor`. Все 3 гейта пройдены. Прим.: reveal-on-scroll deferred-секций этим spec явно не ассертится | Done |
 | PERF-002 | Главная | Замена/распил стилей | `refactor-surgeon` | P1 | Закрыть `homeHeroStyles.ts` (1908 LOC) — разбить на chunk-модули, убрать из critical path лишние стили (см. TD-015) | `components/home/homeHeroStyles.ts` 1908→177 LOC + 8 модулей в `homeHeroStyles/` (context/shell/sliderSection/sliderMedia/sliderNav/typography/bookWidget/cta). Validation: `typecheck` green; style-keys diff HEAD↔split = 153/153, 0 lost/0 added; 0 дублей ключей между модулями; `guard:file-complexity:changed` violations=0; `check:image-architecture` passed; Jest home `30 passed` (HomeHero/Home/home-screen.regression). Единственный потребитель `HomeHero.tsx` не тронут | Done |
 | PERF-003 | Главная | Image delivery | `travel-expert` | P2 | Один LCP hero image с `fetchpriority=high`+eager, остальное media — lazy; корректные `srcset/sizes`; нет oversized для small slots; нейтральные placeholders | `components/home/HomeHero.tsx`, `HomeHeroPopularSection.tsx`, `HomeHeroMoodRail.tsx`, `components/ui/ImageCardMedia.tsx` | Open |
 | PERF-004 | Поиск | Рефакторинг/распил | `refactor-surgeon` + `travel-expert` | P1 | Распилить и облегчить список: critical shell (поле поиска + первый экран результатов) рано, фильтры/правую колонку/экспорт — defer; уменьшить initial JS search route | `app/(tabs)/search.tsx` (lazy), `components/listTravel/ListTravelBase.tsx` (now 796 after TD-005), `RightColumn.tsx` (758), `TravelListItem.tsx` (677), `ModernFilters.tsx` (587) | Open |

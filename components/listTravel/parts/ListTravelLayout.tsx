@@ -1,4 +1,4 @@
-import { Platform, View } from 'react-native'
+import { Platform, View, type StyleProp, type ViewStyle } from 'react-native'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import SidebarFilters from '../SidebarFilters'
 import RightColumn from '../RightColumn'
@@ -7,7 +7,7 @@ type SidebarFiltersProps = React.ComponentProps<typeof SidebarFilters>
 type RightColumnProps = React.ComponentProps<typeof RightColumn>
 
 type ListTravelLayoutProps = {
-  rootStyle: any
+  rootStyle: StyleProp<ViewStyle>
   deleteId: number | null
   deleteError: string | null
   onConfirmDelete: () => void

@@ -801,12 +801,7 @@ const PlaceCard = React.memo(function PlaceCard({
 
   return (
     <View style={[styles.card, styles.cardInner]}>
-      <Pressable
-        onPress={() => onOpenMap(place)}
-        accessibilityRole="button"
-        accessibilityLabel={`Открыть ${place.title} на карте`}
-        style={({ pressed }) => [styles.cardMediaWrap, pressed && styles.cardPressed]}
-      >
+      <View style={styles.cardMediaWrap}>
         {imageUrl ? (
           <ImageCardMedia
             src={imageUrl}
@@ -826,6 +821,14 @@ const PlaceCard = React.memo(function PlaceCard({
           <View style={styles.cardMediaFallback} />
         )}
         <View style={styles.cardMediaScrim} />
+        {/* Press target is a sibling overlay (not a wrapper) so the favorite /
+            status buttons in cardTravelActions are never nested inside a button. */}
+        <Pressable
+          onPress={() => onOpenMap(place)}
+          accessibilityRole="button"
+          accessibilityLabel={`Открыть ${place.title} на карте`}
+          style={({ pressed }) => [styles.cardMediaPressLayer, pressed && styles.cardPressed]}
+        />
         {relatedTravelUrl ? (
           <View style={styles.cardTravelActions} pointerEvents="box-none">
             <RelatedTravelActionStack
@@ -842,7 +845,7 @@ const PlaceCard = React.memo(function PlaceCard({
             {place.category}
           </Text>
         </View>
-      </Pressable>
+      </View>
 
       <View style={styles.cardBody}>
         <Pressable
@@ -1453,6 +1456,14 @@ const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean)
   cardMedia: {
     width: '100%',
     height: '100%',
+  },
+  cardMediaPressLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 2,
   },
   cardMediaFallback: {
     flex: 1,
