@@ -111,6 +111,7 @@ for (const target of PAGES) {
           cls: metrics.cls.toFixed(4),
           longTaskCount: metrics.longTaskCount,
         },
+        clsSources: metrics.clsSources,
       }
       console.log(`\n📊 PERF BUDGET — ${target.name} (Desktop)`)
       console.log(JSON.stringify(report, null, 2))

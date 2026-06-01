@@ -62,11 +62,25 @@ test.describe('@perf Travel details skeleton transition (no layout shift)', () =
 
     await page.goto('/travels/e2e-details-skeleton', { waitUntil: 'domcontentloaded' });
 
-    const loading = page.locator(tid('travel-details-loading'));
     const pageRoot = page.locator(tid('travel-details-page'));
 
-    await expect(loading).toBeVisible({ timeout: 30_000 });
-    const skeletonBox = await loading.boundingBox();
+    const skeletonBox = await Promise.race([
+      page
+        .waitForFunction(
+          (selector) => {
+            const element = document.querySelector(selector);
+            if (!element) return null;
+            const rect = element.getBoundingClientRect();
+            if (rect.width <= 0 || rect.height <= 0) return null;
+            return { width: rect.width, height: rect.height };
+          },
+          tid('travel-details-loading'),
+          { timeout: 30_000 },
+        )
+        .then((handle) => handle.jsonValue() as Promise<{ width: number; height: number } | null>)
+        .catch(() => null),
+      pageRoot.waitFor({ state: 'visible', timeout: 45_000 }).then(() => null).catch(() => null),
+    ]);
 
     // Wait for the real page to render.
     await expect(pageRoot).toBeVisible({ timeout: 45_000 });

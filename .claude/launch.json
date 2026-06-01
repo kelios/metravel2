@@ -30,9 +30,16 @@
     },
     {
       "name": "Workboard Static",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "4599"],
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["scripts/workboard-server.js", "4599"],
       "port": 4599,
+      "autoPort": false
+    },
+    {
+      "name": "Dist Static",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "4600", "--directory", "dist"],
+      "port": 4600,
       "autoPort": false
     }
   ]

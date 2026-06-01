@@ -358,6 +358,52 @@
     .ksection { font-style: italic; }
     .kcol-empty { color: var(--muted); font-size: 12px; padding: 8px 2px; text-align: center; }
 
+    /* card controls */
+    .kctrls { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+    .kmove {
+      flex: 1; min-width: 0;
+      border: 1px solid var(--border); background: var(--surface-2);
+      border-radius: 7px; padding: 3px 6px; font-size: 11px; font-weight: 600; color: var(--text);
+    }
+    .kassign {
+      flex: none; border: 1px solid var(--border); background: var(--surface);
+      border-radius: 7px; padding: 3px 7px; font-size: 11px;
+    }
+    .kassign:hover { background: var(--surface-2); }
+
+    /* ---- modal ---- */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 50;
+      background: rgba(43, 38, 30, .42);
+      display: none; align-items: flex-start; justify-content: center;
+      padding: 7vh 16px;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      width: min(520px, 100%);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 22px 22px 18px;
+    }
+    .modal h3 { margin: 0 0 4px; font-size: 18px; }
+    .modal p.hint { margin: 0 0 16px; font-size: 12.5px; color: var(--muted); }
+    .field { margin-bottom: 13px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 5px; }
+    .field input, .field textarea, .field select {
+      width: 100%; border: 1px solid var(--border); background: var(--surface);
+      border-radius: 9px; padding: 9px 11px; font-size: 13.5px; color: var(--text); outline: none;
+    }
+    .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--primary); }
+    .field textarea { resize: vertical; min-height: 54px; }
+    .field-row { display: flex; gap: 11px; }
+    .field-row .field { flex: 1; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+    .modal-msg { font-size: 12.5px; margin-top: 10px; min-height: 16px; }
+    .modal-msg.err { color: var(--danger); }
+    .modal-msg.ok { color: var(--success); }
+
     /* ---- fallback banner ---- */
     .banner {
       display: none;
@@ -404,7 +450,72 @@
             <option value="0">Пауза</option>
           </select>
         </span>
+        <button class="btn" id="addTask">➕ Задача</button>
         <button class="btn primary" id="refresh">Обновить</button>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <h3 id="modalTitle">Новая задача</h3>
+        <p class="hint">Строка допишется в таблицу <code>docs/AGENT_WORKBOARD.md</code>. ID присвоится автоматически.</p>
+        <div class="field">
+          <label for="fTitle">Задача *</label>
+          <textarea id="fTitle" placeholder="Что нужно сделать"></textarea>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="fOwner">Исполнитель</label>
+            <input id="fOwner" placeholder="Напр. Ромик (Dev)" list="ownerList">
+            <datalist id="ownerList">
+              <option value="Андриуш (Manager)"></option>
+              <option value="Крина (Business Analyst)"></option>
+              <option value="Ромик (Dev)"></option>
+              <option value="Мариночка (QA)"></option>
+              <option value="Витаутас (DevOps)"></option>
+              <option value="Сео (SEO Engineer)"></option>
+              <option value="UI/UX Designer"></option>
+            </datalist>
+          </div>
+          <div class="field">
+            <label for="fPrio">Приоритет</label>
+            <select id="fPrio">
+              <option value="">—</option>
+              <option value="P1">P1</option>
+              <option value="P2">P2</option>
+              <option value="P3">P3</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="fSection">Раздел</label>
+            <select id="fSection">
+              <option value="Open tasks">Open tasks (T-)</option>
+              <option value="Tech debt backlog">Tech debt backlog (TD-)</option>
+              <option value="Performance Refactor backlog">Performance Refactor (PERF-)</option>
+              <option value="Full-page UI/UX QA wave">Full-page UI/UX QA wave (T-)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="fStatus">Статус → колонка</label>
+            <select id="fStatus">
+              <option value="Open">Open → Backlog/Planned</option>
+              <option value="In progress">In progress → В работе</option>
+              <option value="Done">Done → Готово</option>
+              <option value="Blocked">Blocked → Блок</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="fNotes">Заметки / acceptance (необязательно)</label>
+          <input id="fNotes" placeholder="Контекст, критерии приёмки">
+        </div>
+        <div class="modal-msg" id="modalMsg"></div>
+        <div class="modal-actions">
+          <button class="btn" id="modalCancel">Отмена</button>
+          <button class="btn primary" id="modalSave">Добавить</button>
+        </div>
       </div>
     </div>
 
@@ -519,6 +630,14 @@
       { key: 'done',     cls: 'done',     title: 'Done' },
       { key: 'blocked',  cls: 'blocked',  title: 'Blocked' }
     ];
+    // Status values offered on each card (move between columns).
+    var MOVE_STATUSES = [
+      { value: 'Open',        bucket: 'planned',  label: '○ Open' },
+      { value: 'In progress', bucket: 'progress', label: '◴ В работе' },
+      { value: 'Done',        bucket: 'done',     label: '✓ Готово' },
+      { value: 'Blocked',     bucket: 'blocked',  label: '✕ Блок' }
+    ];
+    var API_OK = location.protocol !== 'file:';
 
     var timer = null;
     var lastSeenRunId = null;
@@ -808,7 +927,11 @@
       els.kanban.innerHTML = KCOLS.map(function (col) {
         var items = by[col.key];
         var body = items.length ? items.map(function (c) {
-          return '<div class="kcard">' +
+          var moveOpts = MOVE_STATUSES.map(function (m) {
+            var sel = m.bucket === c.bucket ? ' selected' : '';
+            return '<option value="' + m.value + '"' + sel + '>' + m.label + '</option>';
+          }).join('');
+          return '<div class="kcard" data-id="' + esc(c.id) + '">' +
             '<div class="kcard-top">' +
               (c.id ? '<span class="kid">' + esc(c.id) + '</span>' : '') +
               (c.prio ? '<span class="kprio ' + c.prio + '">' + esc(c.prio) + '</span>' : '') +
@@ -817,7 +940,12 @@
             '<div class="kmeta">' +
               (c.owner ? '<span class="kowner">' + esc(c.owner) + '</span>' : '') +
               (c.section ? '<span class="ksection">' + esc(c.section) + '</span>' : '') +
-            '</div></div>';
+            '</div>' +
+            (c.id ? '<div class="kctrls">' +
+              '<select class="kmove" title="Перевести">' + moveOpts + '</select>' +
+              '<button class="kassign" title="Назначить исполнителя">👤</button>' +
+            '</div>' : '') +
+          '</div>';
         }).join('') : '<div class="kcol-empty">пусто</div>';
         return '<div class="kcol ' + col.cls + '">' +
           '<div class="kcol-head"><span class="kcol-dot"></span>' +
@@ -839,6 +967,108 @@
             'AGENT_WORKBOARD.md — открой борд по http (см. баннер выше).</div>';
         });
     }
+
+    function postWorkboard(action, payload) {
+      return fetch('/api/workboard/' + action, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(function (r) {
+        return r.json().then(function (j) {
+          if (!r.ok || j.error) throw new Error(j.error || ('HTTP ' + r.status));
+          return j;
+        });
+      });
+    }
+
+    // ---- add-task modal -----------------------------------------------------
+
+    var modal = {
+      overlay: document.getElementById('modalOverlay'),
+      title: document.getElementById('fTitle'),
+      owner: document.getElementById('fOwner'),
+      prio: document.getElementById('fPrio'),
+      section: document.getElementById('fSection'),
+      status: document.getElementById('fStatus'),
+      notes: document.getElementById('fNotes'),
+      msg: document.getElementById('modalMsg'),
+      save: document.getElementById('modalSave')
+    };
+
+    function openModal() {
+      modal.msg.className = 'modal-msg';
+      modal.msg.textContent = API_OK ? '' : 'Открой борд через node-сервер (порт 4599), иначе запись недоступна.';
+      modal.overlay.classList.add('show');
+      modal.title.focus();
+    }
+    function closeModal() { modal.overlay.classList.remove('show'); }
+
+    function saveTask() {
+      var title = modal.title.value.trim();
+      if (!title) {
+        modal.msg.className = 'modal-msg err';
+        modal.msg.textContent = 'Укажи текст задачи.';
+        return;
+      }
+      modal.save.disabled = true;
+      modal.msg.className = 'modal-msg';
+      modal.msg.textContent = 'Сохраняю…';
+      postWorkboard('add', {
+        section: modal.section.value,
+        title: title,
+        owner: modal.owner.value.trim(),
+        priority: modal.prio.value,
+        status: modal.status.value,
+        notes: modal.notes.value.trim()
+      }).then(function (j) {
+        modal.msg.className = 'modal-msg ok';
+        modal.msg.textContent = 'Добавлено: ' + j.id;
+        modal.title.value = ''; modal.owner.value = ''; modal.notes.value = '';
+        fetchKanban();
+        setTimeout(closeModal, 700);
+      }).catch(function (e) {
+        modal.msg.className = 'modal-msg err';
+        modal.msg.textContent = 'Ошибка: ' + e.message;
+      }).then(function () { modal.save.disabled = false; });
+    }
+
+    document.getElementById('addTask').addEventListener('click', openModal);
+    document.getElementById('modalCancel').addEventListener('click', closeModal);
+    modal.save.addEventListener('click', saveTask);
+    modal.overlay.addEventListener('click', function (e) {
+      if (e.target === modal.overlay) closeModal();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // ---- card controls (move / assign) --------------------------------------
+
+    function patchCard(id, payload, cardEl) {
+      if (cardEl) cardEl.style.opacity = '.5';
+      postWorkboard('update', Object.assign({ id: id }, payload))
+        .then(function () { fetchKanban(); })
+        .catch(function (e) {
+          if (cardEl) cardEl.style.opacity = '';
+          alert('Не удалось обновить ' + id + ': ' + e.message);
+        });
+    }
+
+    els.kanban.addEventListener('change', function (e) {
+      var sel = e.target.closest('.kmove');
+      if (!sel) return;
+      var card = sel.closest('.kcard');
+      patchCard(card.getAttribute('data-id'), { status: sel.value }, card);
+    });
+    els.kanban.addEventListener('click', function (e) {
+      var btn = e.target.closest('.kassign');
+      if (!btn) return;
+      var card = btn.closest('.kcard');
+      var current = (card.querySelector('.kowner') || {}).textContent || '';
+      var who = window.prompt('Назначить исполнителя для ' + card.getAttribute('data-id') + ':', current);
+      if (who == null) return;
+      patchCard(card.getAttribute('data-id'), { owner: who.trim() }, card);
+    });
 
     // ---- polling ------------------------------------------------------------
 

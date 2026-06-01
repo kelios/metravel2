@@ -4,7 +4,7 @@ import type { ThemedColors } from '@/hooks/useTheme';
 
 const PANEL_RADIUS = DESIGN_TOKENS.radii.lg;
 const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm;
-const CONTROL_SIZE = 40;
+const CONTROL_SIZE = 44;
 
 /**
  * Creates styles for CustomHeader component.

@@ -25,9 +25,22 @@ async function getRenderedHtml(page: import('@playwright/test').Page, path: stri
   ).catch(() => {
     // Fallback: if title never changes from generic, continue — test assertions will catch it.
   });
-  // TravelDetailsContainer patches og:title, description, and twitter:image via
-  // setTimeout at 50/300/800ms after data loads. Wait long enough for all patches.
-  await page.waitForTimeout(2000);
+  // SEO meta tags are injected only after travel data loads, which can lag well
+  // past the fixed buffer below on a slow run. og:description is patched
+  // atomically with name="description"/twitter:description (useTravelDetailsHeadSync),
+  // so waiting for it to be populated makes the capture deterministic instead of
+  // racing a fixed timeout. Best-effort: pages without it just fall through.
+  await page.waitForFunction(
+    () => {
+      const m = document.querySelector('meta[property="og:description"]');
+      return !!m && (m.getAttribute('content') || '').length > 10;
+    },
+    { timeout: 25_000 },
+  ).catch(() => {
+    // Fallback: assertions catch a genuinely missing description.
+  });
+  // Settle remaining patches (og:title, twitter:image) applied in the same pass.
+  await page.waitForTimeout(1000);
   return page.content();
 }
 

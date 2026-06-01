@@ -51,9 +51,12 @@ export default React.memo(function Logo({
 });
 
 const getStyles = (colors: ThemedColors) => StyleSheet.create({
-    logoContainer: { 
-        flexDirection: 'row', 
+    logoContainer: {
+        flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 44,
+        minHeight: 44,
     },
     logo: { 
         width: 32, 

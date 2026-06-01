@@ -648,9 +648,14 @@ export default function PlacesScreen() {
                               {collection.title}
                             </Text>
                           </View>
-                          {showLoadedCounts ? (
-                            <Text style={styles.featuredCount}>{collection.count}</Text>
-                          ) : null}
+                          {/* Reserve the count slot from first paint so the count
+                              appearing after load does not narrow the text block and
+                              re-wrap featuredName, which caused cascading CLS on /places. */}
+                          <View style={styles.featuredCountSlot}>
+                            {showLoadedCounts ? (
+                              <Text style={styles.featuredCount}>{collection.count}</Text>
+                            ) : null}
+                          </View>
                         </Pressable>
                         {selected ? (
                           <Pressable
@@ -1244,6 +1249,11 @@ const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean)
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: '600',
     lineHeight: 17,
+  },
+  featuredCountSlot: {
+    minWidth: 28,
+    alignItems: 'flex-end',
+    flexShrink: 0,
   },
   featuredCount: {
     color: colors.primaryText,

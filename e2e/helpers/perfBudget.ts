@@ -33,11 +33,37 @@ export async function injectPerfObservers(page: any) {
       longTasks: [] as number[],
     }
 
+    w.__perfBudget.clsSources = []
     try {
       new PerformanceObserver((list) => {
         for (const entry of list.getEntries() as any[]) {
           if (entry && !entry.hadRecentInput && typeof entry.value === 'number') {
             w.__perfBudget.cls += entry.value
+            try {
+              const sources = Array.isArray(entry.sources) ? entry.sources : []
+              const fingerprints = sources
+                .map((s: any) => {
+                  const el = s?.node as Element | null
+                  if (!el || !el.tagName) return null
+                  const tag = el.tagName.toLowerCase()
+                  const tid = (el as any).getAttribute?.('data-testid') || ''
+                  const cls = ((el as any).getAttribute?.('class') || '')
+                    .split(' ')
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .join('.')
+                  const aria = (el as any).getAttribute?.('aria-label') || ''
+                  const pr = s?.previousRect
+                  const cr = s?.currentRect
+                  const move =
+                    pr && cr ? ` (y ${Math.round(pr.y)}→${Math.round(cr.y)}, h ${Math.round(cr.height)})` : ''
+                  return `${tag}${tid ? `[testid=${tid}]` : ''}${aria ? `[aria=${aria.slice(0, 40)}]` : ''}${cls ? `.${cls}` : ''}${move}`
+                })
+                .filter(Boolean)
+              w.__perfBudget.clsSources.push({ value: entry.value, sources: fingerprints })
+            } catch {
+              /* ignore source extraction */
+            }
           }
         }
       }).observe({ type: 'layout-shift', buffered: true } as any)
@@ -77,6 +103,7 @@ export type PerfMetrics = {
   cls: number
   tbt: number
   longTaskCount: number
+  clsSources: Array<{ value: number; sources: string[] }>
 }
 
 export async function collectMetrics(page: any): Promise<PerfMetrics> {
@@ -93,12 +120,20 @@ export async function collectMetrics(page: any): Promise<PerfMetrics> {
     const longTasks: number[] = pb.longTasks || []
     const tbt = longTasks.reduce((sum: number, d: number) => sum + Math.max(0, d - 50), 0)
 
+    const clsSources = Array.isArray(pb.clsSources)
+      ? pb.clsSources
+          .filter((e: any) => e && typeof e.value === 'number')
+          .sort((a: any, b: any) => b.value - a.value)
+          .slice(0, 5)
+      : []
+
     return {
       lcp: typeof pb.lcp === 'number' ? pb.lcp : null,
       fcp: typeof fcp === 'number' ? fcp : null,
       cls: typeof pb.cls === 'number' ? pb.cls : 0,
       tbt,
       longTaskCount: longTasks.length,
+      clsSources,
     }
   })
 }
