@@ -76,15 +76,6 @@ export const createProfileScreenStyles = ({
       gap: 8,
       paddingBottom: 12,
     },
-    skeletonHeaderRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 16,
-      marginBottom: 10,
-    },
-    skeletonHeaderText: {
-      gap: 8,
-    },
     skeletonStatsRow: {
       paddingHorizontal: 16,
       marginBottom: 16,

@@ -11,7 +11,7 @@ export const keyExtractor = (item: Travel, index: number) => `${item.id}-${index
 
 export const PROFILE_TRAVELS_PER_PAGE = PER_PAGE;
 
-export const EMPTY_ENGAGEMENT_STATS = {
+const EMPTY_ENGAGEMENT_STATS = {
   favoritesCount: 0,
   wishlistCount: 0,
   visitedCount: 0,
