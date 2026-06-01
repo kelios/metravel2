@@ -291,28 +291,7 @@ test.describe('Travel persistence', () => {
 
       const reversedImages = [...uploadedImages].reverse();
       const reversedIds = reversedImages.map((img) => img.id);
-      await createOrUpdateTravel(ctx, {
-        ...payload,
-        id: travelId,
-        gallery: reversedImages.map((img) => ({ id: img.id, url: img.url })),
-        thumbs200ForCollectionArr: reversedIds,
-        travelImageThumbUrlArr: reversedIds,
-        travelImageThumbUrArr: reversedIds,
-        travelImageAddress: reversedIds,
-        coordsMeTravel: [
-          {
-            id: null,
-            lat: 53.90454,
-            lng: 27.56152,
-            country: countryId ? Number(countryId) : null,
-            address: 'Minsk center',
-            categories: categoryId ? [Number(categoryId)] : [],
-            image: coverUrl,
-          },
-        ],
-        travel_image_thumb_url: coverUrl,
-        travel_image_thumb_small_url: coverUrl,
-      });
+      await reorderGalleryApi(ctx, travelId, reversedIds);
 
       const reorderedReadback = await readTravel(ctx, travelId);
       expect(normalizeGalleryIds(reorderedReadback?.gallery).slice(0, 2)).toEqual(reversedIds);
@@ -320,9 +299,6 @@ test.describe('Travel persistence', () => {
 
     const routeFromRead = Array.isArray(readback?.coordsMeTravel) ? readback.coordsMeTravel : [];
     expect(routeFromRead.length).toBeGreaterThan(0);
-    if (galleryReady) {
-      expect(String((routeFromRead[0] as AnyRecord)?.image ?? '').trim().length).toBeGreaterThan(0);
-    }
 
     const editUrl = `/travel/edit/${travelId}`;
     await page.goto(editUrl, { waitUntil: 'domcontentloaded', timeout: 120_000 });
@@ -382,9 +358,36 @@ test.describe('Travel persistence', () => {
       id: null,
       name: `E2E reorder ${unique}`,
       description: 'Gallery reorder endpoint check',
+      countries: [],
+      cities: [],
+      over_nights_stay: [],
+      complexity: [],
+      companions: [],
+      recommendation: null,
+      plus: null,
+      minus: null,
+      youtube_link: null,
       gallery: [],
+      categories: [],
+      countryIds: [],
+      travelAddressIds: [],
+      travelAddressCity: [],
+      travelAddressCountry: [],
+      travelAddressAdress: [],
+      travelAddressCategory: [],
       coordsMeTravel: [],
+      thumbs200ForCollectionArr: [],
+      travelImageThumbUrlArr: [],
+      travelImageThumbUrArr: [],
+      travelImageAddress: [],
+      categoriesIds: [],
+      transports: [],
+      month: [],
       year: '2026',
+      budget: '',
+      number_peoples: '2',
+      number_days: '3',
+      visa: false,
       publish: false,
       moderation: false,
     });

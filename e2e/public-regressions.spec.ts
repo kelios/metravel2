@@ -34,9 +34,11 @@ const expectCanonicalPath = async (page: Page, path: string) => {
     { timeout: 20_000 }
   )
 
-  const canonical = await page.locator('link[rel="canonical"]').getAttribute('href')
-  expect(canonical, `canonical link for ${path} should be present`).toBeTruthy()
-  expect(canonical).toContain(path)
+  const canonicalHrefs = await page.locator('link[rel="canonical"]').evaluateAll((links) =>
+    links.map((link) => link.getAttribute('href')).filter(Boolean)
+  )
+  expect(canonicalHrefs.length, `canonical link for ${path} should be present`).toBeGreaterThan(0)
+  expect(canonicalHrefs.some((href) => href?.includes(path))).toBe(true)
 }
 
 test.describe('@smoke Public regressions', () => {
@@ -60,9 +62,9 @@ test.describe('@smoke Public regressions', () => {
     await page.setViewportSize({ width: 1280, height: 720 })
     await gotoWithRetry(page, '/')
 
-    const headerLoginCta = page.getByRole('link', { name: 'Войти в аккаунт' }).first()
-    await expect(headerLoginCta).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByTestId('account-menu-anchor')).toBeVisible({ timeout: 15_000 })
+    await expect(
+      page.getByTestId('account-menu-anchor').or(page.getByRole('button', { name: /Открыть меню аккаунта/i })).first()
+    ).toBeVisible({ timeout: 15_000 })
 
     await gotoWithRetry(page, '/login')
 

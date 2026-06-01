@@ -109,7 +109,11 @@ const renderLogin = async (mockLogin?: jest.Mock, mockSendPassword?: jest.Mock) 
     </NavigationContainer>
   );
 
-  await utils.findByPlaceholderText('Email');
+  // Login screen renders <ActivityIndicator> until the React.lazy LoginForm
+  // chunk resolves. Under heavy parallel test load that dynamic import can take
+  // longer than the default 1000ms findBy timeout, so give it explicit headroom
+  // to avoid flaky failures in full-suite runs.
+  await utils.findByPlaceholderText('Email', undefined, { timeout: 10000 });
 
   return utils;
 };

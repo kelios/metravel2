@@ -23,12 +23,32 @@ async function installTileMock(page: import('@playwright/test').Page) {
 
 /** Scroll the travel detail page down to the map section and wait for markers */
 async function scrollToMapAndWaitForMarkers(page: import('@playwright/test').Page) {
+  const mapTab = page.getByRole('tab', { name: /Карта/i }).first()
+  if (await mapTab.isVisible().catch(() => false)) {
+    await mapTab.click().catch(() => null)
+  }
+
+  const mapSection = page.locator('[data-testid="travel-details-map"], [testID="travel-details-map"]').first()
+  const scrollContainer = page.locator('[data-testid="travel-details-scroll"], [testID="travel-details-scroll"]').first()
+
   // Scroll until the map container or a Leaflet marker appears
   for (let i = 0; i < 15; i++) {
     const markerCount = await page.locator('.leaflet-marker-icon').count()
     if (markerCount > 0) return true
 
-    await page.evaluate(() => window.scrollBy(0, 600))
+    if (await mapSection.isVisible().catch(() => false)) {
+      await mapSection.scrollIntoViewIfNeeded().catch(() => null)
+    }
+
+    if (await scrollContainer.isVisible().catch(() => false)) {
+      await scrollContainer.evaluate((node: Element) => {
+        const element = node as HTMLElement
+        element.scrollTop += 700
+        element.dispatchEvent(new Event('scroll', { bubbles: true }))
+      }).catch(() => null)
+    } else {
+      await page.evaluate(() => window.scrollBy(0, 600))
+    }
     await page.waitForTimeout(500)
   }
 

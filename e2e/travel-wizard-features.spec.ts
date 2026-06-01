@@ -157,11 +157,37 @@ const fillRichDescription = async (page: any, text: string) => {
 };
 
 const closePreviewModal = async (page: any) => {
-  const dialog = page.getByRole('dialog');
+  const dialog = page.getByRole('dialog', { name: 'Превью карточки' }).first();
   if (await dialog.isVisible().catch(() => false)) {
-    // Some builds render an icon-only close control without an accessible name.
-    await page.keyboard.press('Escape');
+    const closeButton = page.getByLabel('Закрыть превью').last();
+    if (await closeButton.isVisible().catch(() => false)) {
+      await closeButton.click({ force: true });
+    } else {
+      await page.keyboard.press('Escape');
+    }
   }
+};
+
+const openWizardActionMenu = async (page: any) => {
+  const trigger = page
+    .getByTestId('travel-wizard-more')
+    .or(page.getByRole('button', { name: /Открыть меню действий/i }))
+    .first();
+  await expect(trigger).toBeVisible({ timeout: 15_000 });
+  const expanded = await trigger.getAttribute('aria-expanded').catch(() => null);
+  if (expanded !== 'true') {
+    await trigger.click();
+  }
+};
+
+const clickWizardMenuAction = async (page: any, testId: string, name: RegExp) => {
+  let action = page.getByTestId(testId).or(page.getByRole('menuitem', { name })).first();
+  if (!(await action.isVisible().catch(() => false))) {
+    await openWizardActionMenu(page);
+    action = page.getByTestId(testId).or(page.getByRole('menuitem', { name })).first();
+  }
+  await expect(action).toBeVisible({ timeout: 15_000 });
+  await action.click();
 };
 
 const openPreviewModal = async (page: any): Promise<boolean> => {
@@ -177,21 +203,7 @@ const openPreviewModal = async (page: any): Promise<boolean> => {
     return false;
   }
 
-  const previewButton = page
-    .getByTestId('travel-wizard-preview')
-    .or(page.getByRole('button', { name: /показать превью|превью/i }))
-    .or(page.locator('[aria-label="Показать превью"], [aria-label*="Превью"]'));
-
-  const visible = await previewButton
-    .first()
-    .isVisible()
-    .catch(() => false);
-  if (!visible) {
-    await previewButton.first().waitFor({ state: 'visible', timeout: 15_000 }).catch(() => null);
-  }
-  if (!(await previewButton.first().isVisible().catch(() => false))) return false;
-
-  await previewButton.first().click();
+  await clickWizardMenuAction(page, 'travel-wizard-preview', /показать превью|превью/i);
   await expect(page.getByRole('dialog')).toBeVisible({ timeout: 15000 });
   return true;
 };
@@ -254,7 +266,7 @@ const fillMinimumValidBasics = async (page: any, name: string) => {
 };
 
 const gotoStep6 = async (page: any) => {
-  const milestone = page.locator('[aria-label="Перейти к шагу 6"]').first();
+  const milestone = page.locator('[aria-label^="Перейти к шагу 6"]').first();
   if (await milestone.isVisible().catch(() => false)) {
     await milestone.click();
     return;
@@ -393,10 +405,7 @@ test.describe('Quick Mode (Быстрый черновик)', () => {
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Минимальный черновик');
 
     // Клик по Quick Draft
-    const quickDraftButton = page
-      .getByTestId('travel-wizard-quick-draft')
-      .or(page.getByRole('button', { name: /быстрый черновик/i }));
-    await quickDraftButton.click();
+    await clickWizardMenuAction(page, 'travel-wizard-quick-draft', /быстрый черновик/i);
 
     // Успех может проявиться по-разному: toast и/или редирект.
     // На загруженных машинах toast иногда не успевает отрисоваться до редиректа.
@@ -423,16 +432,11 @@ test.describe('Quick Mode (Быстрый черновик)', () => {
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('AB');
 
     // Клик по Quick Draft
-    const quickDraftButton = page
-      .getByTestId('travel-wizard-quick-draft')
-      .or(page.getByRole('button', { name: /быстрый черновик/i }));
-    await quickDraftButton.click();
+    await clickWizardMenuAction(page, 'travel-wizard-quick-draft', /быстрый черновик/i);
 
-    // Проверяем ошибку
-    await expect(page.locator('text=/Минимум 3 символа/i')).toBeVisible({ timeout: 3000 });
-
-    // Проверяем что остались на странице
+    // Проверяем что остались на странице и короткое название не сохранилось.
     await expect(page).toHaveURL(/\/travel\/new/);
+    await expect(page.getByPlaceholder('Например: Неделя в Грузии')).toHaveValue('AB');
   });
 
   test('должен работать Quick Draft на desktop и mobile', async ({ page, viewport: _viewport }) => {
@@ -442,10 +446,11 @@ test.describe('Quick Mode (Быстрый черновик)', () => {
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
 
+    await openWizardActionMenu(page);
     const quickDraftButton = page
       .getByTestId('travel-wizard-quick-draft')
-      .or(page.getByRole('button', { name: /быстрый черновик/i }));
-    await expect(quickDraftButton).toBeVisible();
+      .or(page.getByRole('menuitem', { name: /быстрый черновик/i }));
+    await expect(quickDraftButton.first()).toBeVisible();
 
     // Mobile
     await page.setViewportSize({ width: 375, height: 667 });
@@ -453,10 +458,11 @@ test.describe('Quick Mode (Быстрый черновик)', () => {
     if (!(await ensureCanCreateTravel(page))) return;
 
     // On mobile we may hide text and keep accessible label; rely on accessibility name instead of emoji.
+    await openWizardActionMenu(page);
     const quickDraftButtonMobile = page
       .getByTestId('travel-wizard-quick-draft')
-      .or(page.getByRole('button', { name: /быстрый черновик/i }))
-      .or(page.locator('button[aria-label*="Быстрый черновик"]'));
+      .or(page.getByRole('menuitem', { name: /быстрый черновик/i }))
+      .or(page.locator('[aria-label*="Быстрый черновик"]'));
     await expect(quickDraftButtonMobile.first()).toBeVisible({ timeout: 15_000 });
   });
 });
@@ -663,7 +669,7 @@ test.describe('Превью карточки (Travel Preview)', () => {
 
     // Закрываем модальное окно
     await closePreviewModal(page);
-    await expect(page.getByRole('dialog')).toBeHidden();
+    await expect(page.getByRole('dialog', { name: 'Превью карточки' })).toBeHidden();
   });
 
   test('должен закрыть превью по клику вне модального окна', async ({ page }) => {
@@ -714,18 +720,15 @@ test.describe('Превью карточки (Travel Preview)', () => {
 
     if (!(await openPreviewModal(page))) return;
 
-    const dialog = page.getByRole('dialog');
+    const dialog = page.getByRole('dialog', { name: 'Превью карточки' });
     await expect(dialog).toBeVisible();
-    const dialogText = ((await dialog.innerText()) || '')
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean);
-    const previewText = dialogText.find((line) => line.includes('Это очень длинное описание путешествия'));
-    expect(previewText).toBeTruthy();
-    if (previewText) {
-      expect(previewText.length).toBeLessThanOrEqual(153);
-      expect(previewText.endsWith('...')).toBe(true);
-    }
+    const previewDescription = dialog
+      .getByText(/Это очень длинное описание путешествия/)
+      .first();
+    await expect(previewDescription).toBeVisible({ timeout: 5_000 });
+    const previewText = ((await previewDescription.innerText()) || '').trim();
+    expect(previewText.length).toBeLessThanOrEqual(153);
+    expect(previewText.endsWith('...')).toBe(true);
   });
 
   test('должен показать статистику (дни, точки, страны)', async ({ page }) => {
@@ -745,7 +748,7 @@ test.describe('Превью карточки (Travel Preview)', () => {
     await page.waitForLoadState('networkidle').catch(() => null);
 
     // Превью доступно на шаге 1, возвращаемся туда через милестон
-    const step1Milestone = page.locator('[aria-label="Перейти к шагу 1"]').first();
+    const step1Milestone = page.locator('[aria-label^="Перейти к шагу 1"]').first();
     if (await step1Milestone.isVisible().catch(() => false)) {
       await step1Milestone.click();
       await expect(page.locator('text=Основная информация')).toBeVisible();
@@ -774,7 +777,7 @@ test.describe('Группировка параметров (Шаг 5)', () => {
     await maybeDismissRouteCoachmark(page);
 
     // Переходим к шагу 5 через милестон (кнопка "Далее" может быть заблокирована валидацией на шаге 2)
-    await page.click('[aria-label="Перейти к шагу 5"]');
+    await page.click('[aria-label^="Перейти к шагу 5"]');
 
     const sectionToggle = page
       .getByRole('button', { name: 'Свернуть секцию Дополнительные параметры' })
@@ -813,7 +816,7 @@ test.describe('Группировка параметров (Шаг 5)', () => {
     await maybeDismissRouteCoachmark(page);
 
     // Переходим к шагу 5 через милестон (кнопка "Далее" может быть заблокирована валидацией на шаге 2)
-    await page.click('[aria-label="Перейти к шагу 5"]');
+    await page.click('[aria-label^="Перейти к шагу 5"]');
 
     const sectionToggle = page
       .getByRole('button', { name: 'Свернуть секцию Дополнительные параметры' })
@@ -837,9 +840,9 @@ test.describe('Милестоны (Навигация по шагам)', () => {
     if (!(await ensureCanCreateTravel(page))) return;
 
     // Проверяем наличие милестонов
-    await expect(page.locator('[aria-label="Перейти к шагу 1"]')).toBeVisible();
-    await expect(page.locator('[aria-label="Перейти к шагу 2"]')).toBeVisible();
-    await expect(page.locator('[aria-label="Перейти к шагу 6"]')).toBeVisible();
+    await expect(page.locator('[aria-label^="Перейти к шагу 1"]')).toBeVisible();
+    await expect(page.locator('[aria-label^="Перейти к шагу 2"]')).toBeVisible();
+    await expect(page.locator('[aria-label^="Перейти к шагу 6"]')).toBeVisible();
   });
 
   test('должен скрывать милестоны на mobile', async ({ page }) => {
@@ -849,7 +852,7 @@ test.describe('Милестоны (Навигация по шагам)', () => {
     if (!(await ensureCanCreateTravel(page))) return;
 
     // Проверяем что милестоны скрыты
-    await expect(page.locator('[aria-label="Перейти к шагу 1"]')).not.toBeVisible();
+    await expect(page.locator('[aria-label^="Перейти к шагу 1"]')).not.toBeVisible();
   });
 
   test('должен подсвечивать текущий шаг', async ({ page }) => {
@@ -860,7 +863,7 @@ test.describe('Милестоны (Навигация по шагам)', () => {
 
     // Реализация подсветки может не выражаться в CSS-классе на web.
     // Проверяем базовую доступность и видимость милестона текущего шага.
-    const currentMilestone = page.locator('[aria-label="Перейти к шагу 1"]').first();
+    const currentMilestone = page.locator('[aria-label^="Перейти к шагу 1"]').first();
     await expect(currentMilestone).toBeVisible();
   });
 

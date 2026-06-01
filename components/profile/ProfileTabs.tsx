@@ -46,12 +46,12 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
         },
         tab: {
           flex: 1,
-          flexDirection: 'row',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 6,
-          paddingVertical: 9,
-          paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+          gap: 3,
+          paddingVertical: 8,
+          paddingHorizontal: 6,
           borderRadius: DESIGN_TOKENS.radii.pill,
           backgroundColor: 'transparent',
           minHeight: DESIGN_TOKENS.touchTarget.minHeight,
@@ -59,6 +59,12 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
             web: { cursor: 'pointer' } as any,
             default: {},
           }),
+        },
+        tabTopRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 5,
         },
         activeTab: {
           backgroundColor: colors.surface,
@@ -77,6 +83,8 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
           fontSize: DESIGN_TOKENS.typography.sizes.sm,
           fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
           color: colors.textMuted,
+          textAlign: 'center',
+          alignSelf: 'stretch',
         },
         activeTabText: {
           color: colors.text,
@@ -133,21 +141,23 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
               accessibilityLabel={`${tab.a11yLabel}: ${count}`}
               accessibilityHint={tab.hint}
             >
-              <Feather
-                name={TAB_ICONS[tab.key]}
-                size={15}
-                color={isActive ? colors.primary : colors.textMuted}
-              />
+              <View style={styles.tabTopRow}>
+                <Feather
+                  name={TAB_ICONS[tab.key]}
+                  size={15}
+                  color={isActive ? colors.primary : colors.textMuted}
+                />
+                {count > 0 ? (
+                  <View style={[styles.countBadge, isActive && styles.activeCountBadge]}>
+                    <Text style={[styles.countText, isActive && styles.activeCountText]}>
+                      {count > 999 ? '999+' : count}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
               <Text style={[styles.tabText, isActive && styles.activeTabText]} numberOfLines={1}>
                 {tab.label}
               </Text>
-              {count > 0 ? (
-                <View style={[styles.countBadge, isActive && styles.activeCountBadge]}>
-                  <Text style={[styles.countText, isActive && styles.activeCountText]}>
-                    {count > 999 ? '999+' : count}
-                  </Text>
-                </View>
-              ) : null}
             </Pressable>
           );
         })}

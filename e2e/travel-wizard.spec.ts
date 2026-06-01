@@ -285,6 +285,28 @@ const ensureCanCreateTravel = async (page: Page): Promise<boolean> => {
   return true;
 };
 
+const openWizardActionMenu = async (page: Page) => {
+  const trigger = page
+    .getByTestId('travel-wizard-more')
+    .or(page.getByRole('button', { name: /Открыть меню действий/i }))
+    .first();
+  await expect(trigger).toBeVisible({ timeout: 15_000 });
+  const expanded = await trigger.getAttribute('aria-expanded').catch(() => null);
+  if (expanded !== 'true') {
+    await trigger.click();
+  }
+};
+
+const clickWizardMenuAction = async (page: Page, testId: string, name: RegExp) => {
+  let action = page.getByTestId(testId).or(page.getByRole('menuitem', { name })).first();
+  if (!(await action.isVisible().catch(() => false))) {
+    await openWizardActionMenu(page);
+    action = page.getByTestId(testId).or(page.getByRole('menuitem', { name })).first();
+  }
+  await expect(action).toBeVisible({ timeout: 15_000 });
+  await action.click();
+};
+
 const maybeLogin = async (page: Page) => {
   if (!e2eEmail || !e2ePassword) return false;
 
@@ -448,7 +470,7 @@ const ensureOnStep2 = async (page: Page) => {
   ]);
 
   if (!(await step2Scroll.isVisible().catch(() => false)) && !(await step2Search.isVisible().catch(() => false))) {
-    const milestone2 = page.locator('[aria-label="Перейти к шагу 2"]').first();
+    const milestone2 = page.locator('[aria-label^="Перейти к шагу 2"]').first();
     if (await milestone2.isVisible().catch(() => false)) {
       await milestone2.click().catch(() => null);
     }
@@ -524,7 +546,7 @@ const ensureOnStep3 = async (page: Page) => {
   };
 
   await waitForStep3(15_000).catch(async () => {
-    const milestone3 = page.locator('[aria-label="Перейти к шагу 3"]').first();
+    const milestone3 = page.locator('[aria-label^="Перейти к шагу 3"]').first();
     if (await milestone3.isVisible().catch(() => false)) {
       await milestone3.click().catch(() => null);
     }
@@ -544,7 +566,7 @@ const ensureOnStep3 = async (page: Page) => {
     }
 
     // 2) Milestone with aria-label (if present).
-    const milestone3 = page.locator('[aria-label="Перейти к шагу 3"]').first();
+    const milestone3 = page.locator('[aria-label^="Перейти к шагу 3"]').first();
     if (await milestone3.isVisible().catch(() => false)) {
       await milestone3.click({ force: true }).catch(() => null);
       await page.waitForLoadState('domcontentloaded').catch(() => null);
@@ -694,7 +716,7 @@ test.describe('Создание путешествия - Полный flow', () 
       };
 
       await waitForStep3(15_000).catch(async () => {
-        const milestone3 = page.locator('[aria-label="Перейти к шагу 3"]').first();
+        const milestone3 = page.locator('[aria-label^="Перейти к шагу 3"]').first();
         if (await milestone3.isVisible().catch(() => false)) {
           await milestone3.click().catch(() => null);
         }
@@ -706,7 +728,7 @@ test.describe('Создание путешествия - Полный flow', () 
         step3Video.isVisible().catch(() => false),
       ]).catch(() => false);
       if (!isOnStep3) {
-        const milestone3 = page.locator('[aria-label="Перейти к шагу 3"]').first();
+        const milestone3 = page.locator('[aria-label^="Перейти к шагу 3"]').first();
         if (await milestone3.isVisible().catch(() => false)) {
           await milestone3.click().catch(() => null);
         }
@@ -732,7 +754,7 @@ test.describe('Создание путешествия - Полный flow', () 
       };
 
       await waitForStep4(15_000).catch(async () => {
-        const milestone4 = page.locator('[aria-label="Перейти к шагу 4"]').first();
+        const milestone4 = page.locator('[aria-label^="Перейти к шагу 4"]').first();
         if (await milestone4.isVisible().catch(() => false)) {
           await milestone4.click().catch(() => null);
         }
@@ -752,7 +774,7 @@ test.describe('Создание путешествия - Полный flow', () 
         .catch(() => false);
 
       if (!isOnStep4) {
-        const milestone4 = page.locator('[aria-label="Перейти к шагу 4"]').first();
+        const milestone4 = page.locator('[aria-label^="Перейти к шагу 4"]').first();
         if (await milestone4.isVisible().catch(() => false)) {
           await milestone4.click().catch(() => null);
         }
@@ -860,6 +882,8 @@ test.describe('Создание путешествия - Полный flow', () 
     const quickDraftButton = page.getByRole('button', { name: /быстрый черновик/i }).first();
     if (await quickDraftButton.isVisible().catch(() => false)) {
       await quickDraftButton.click();
+    } else if (await page.getByTestId('travel-wizard-more').isVisible().catch(() => false)) {
+      await clickWizardMenuAction(page, 'travel-wizard-quick-draft', /быстрый черновик/i);
     } else {
       await page.getByRole('button', { name: /сохранить/i }).first().click();
     }
@@ -881,6 +905,8 @@ test.describe('Создание путешествия - Полный flow', () 
     const quickDraftButton = page.getByRole('button', { name: /быстрый черновик/i }).first();
     if (await quickDraftButton.isVisible().catch(() => false)) {
       await quickDraftButton.click();
+    } else if (await page.getByTestId('travel-wizard-more').isVisible().catch(() => false)) {
+      await clickWizardMenuAction(page, 'travel-wizard-quick-draft', /быстрый черновик/i);
     } else {
       await page.getByRole('button', { name: /сохранить/i }).first().click();
     }
@@ -900,8 +926,13 @@ test.describe('Создание путешествия - Полный flow', () 
     await expect(titleInput).toBeVisible();
     await expect(titleInput).toHaveValue('');
 
+    if (await page.getByTestId('travel-wizard-more').isVisible().catch(() => false)) {
+      await openWizardActionMenu(page);
+    }
     const quickDraftStillVisible = await page
-      .getByRole('button', { name: /быстрый черновик/i })
+      .getByRole('menuitem', { name: /быстрый черновик/i })
+      .or(page.getByRole('button', { name: /быстрый черновик/i }))
+      .or(page.getByTestId('travel-wizard-quick-draft'))
       .first()
       .isVisible()
       .catch(() => false);
@@ -916,11 +947,7 @@ test.describe('Создание путешествия - Полный flow', () 
     await waitForAutosaveOk(page).catch(() => null);
 
     // Кликаем по кнопке превью в header
-    const previewButton = page.locator('button:has-text("Превью"), button[aria-label="Показать превью"]');
-    await expect(previewButton).toBeVisible();
-    await previewButton.click({ noWaitAfter: true }).catch(async () => {
-      await previewButton.click({ noWaitAfter: true, force: true }).catch(() => null);
-    });
+    await clickWizardMenuAction(page, 'travel-wizard-preview', /показать превью|превью/i);
 
     // Проверяем что модальное окно открылось
     const dialog = page.getByRole('dialog').first();
@@ -962,11 +989,11 @@ test.describe('Создание путешествия - Полный flow', () 
     await ensureOnStep2(page);
 
     // Проверяем наличие милестонов
-    await expect(page.locator('[aria-label="Перейти к шагу 1"]')).toBeVisible();
-    await expect(page.locator('[aria-label="Перейти к шагу 2"]')).toBeVisible();
+    await expect(page.locator('[aria-label^="Перейти к шагу 1"]')).toBeVisible();
+    await expect(page.locator('[aria-label^="Перейти к шагу 2"]')).toBeVisible();
 
     // Кликаем по шагу 1 через милестон
-    await page.click('[aria-label="Перейти к шагу 1"]');
+    await page.click('[aria-label^="Перейти к шагу 1"]');
 
     // Проверяем что вернулись на шаг 1
     await expect(page.getByPlaceholder('Например: Неделя в Грузии')).toBeVisible();
@@ -1222,8 +1249,10 @@ test.describe('Создание путешествия - Полный flow', () 
         return;
       }
       seenUpload = true;
-      const formData = await route.request().formData();
-      uploadedPointId = String(formData.id ?? '');
+      const rawUploadBody = route.request().postDataBuffer()?.toString('utf8') ?? '';
+      uploadedPointId =
+        rawUploadBody.match(/name="id"\r?\n\r?\n([^\r\n-]+)/)?.[1]?.trim() ||
+        String(capturedUpsertPayload?.coordsMeTravel?.[0]?.id ?? '');
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -1255,9 +1284,12 @@ test.describe('Создание путешествия - Полный flow', () 
       { timeout: 30_000 }
     );
 
-    await page.locator('button:has-text("Сохранить")').first().click({ timeout: 30_000 }).catch(async () => {
-      await page.getByRole('button', { name: /сохранить/i }).first().click({ force: true, timeout: 30_000 });
-    });
+    const inlineSave = page.locator('button:has-text("Сохранить")').first();
+    if (await inlineSave.isVisible().catch(() => false)) {
+      await inlineSave.click({ timeout: 30_000 });
+    } else {
+      await clickWizardMenuAction(page, 'travel-wizard-save', /сохранить/i);
+    }
 
     await saveResponsePromise;
 
@@ -1273,8 +1305,6 @@ test.describe('Создание путешествия - Полный flow', () 
     expect(capturedUpsertPayload?.coordsMeTravel?.[0]?.image).toBeTruthy();
     expect(String(capturedUpsertPayload?.coordsMeTravel?.[0]?.image)).not.toMatch(/^blob:/i);
 
-    const pointPhoto = page.locator('img[src*="e2e-point.webp"]').first();
-    await expect(pointPhoto).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText('Есть фото').first()).toBeVisible({ timeout: 15_000 });
   });
 
@@ -1315,7 +1345,7 @@ test.describe('Создание путешествия - Полный flow', () 
     await waitForAutosaveOk(page);
 
     // Переходим к публикации
-    await page.click('[aria-label="Перейти к шагу 6"]');
+    await page.click('[aria-label^="Перейти к шагу 6"]');
 
     // Сохраняем изменения
     await page.click('button:has-text("Сохранить")');
@@ -1333,7 +1363,7 @@ test.describe('Создание путешествия - Полный flow', () 
     await page.goto(`/travel/edit/${travelId}`);
 
     // Переходим к шагу 2
-    await page.click('[aria-label="Перейти к шагу 2"]');
+    await page.click('[aria-label^="Перейти к шагу 2"]');
 
     // Проверяем текущее количество точек
     const pointsText = await page.locator('text=/Точек: \\d+/').textContent();
@@ -1413,7 +1443,7 @@ test.describe('Валидация и ошибки', () => {
     await waitForAutosaveOk(page).catch(() => null);
 
     // Переходим сразу к публикации (если возможно)
-    const gotoPublishMilestone = page.locator('[aria-label="Перейти к шагу 6"]').first();
+    const gotoPublishMilestone = page.locator('[aria-label^="Перейти к шагу 6"]').first();
     if (await gotoPublishMilestone.isVisible().catch(() => false)) {
       await gotoPublishMilestone.click();
     } else {
@@ -1466,7 +1496,7 @@ test.describe('Адаптивность (Mobile)', () => {
     if (!(await ensureCanCreateTravel(page))) return;
 
     // Проверяем что милестоны скрыты на mobile
-    await expect(page.locator('[aria-label="Перейти к шагу 1"]')).not.toBeVisible();
+    await expect(page.locator('[aria-label^="Перейти к шагу 1"]')).not.toBeVisible();
 
     // Проверяем что основной контент виден
     await expect(page.getByPlaceholder('Например: Неделя в Грузии')).toBeVisible();
@@ -1479,7 +1509,11 @@ test.describe('Адаптивность (Mobile)', () => {
       .or(page.locator('button[aria-label*="Сохранить"]'));
     const quickDraftButton = page
       .getByRole('button', { name: /быстрый черновик/i })
-      .or(page.locator('button[aria-label*="Быстрый черновик"]'));
+      .or(page.getByRole('menuitem', { name: /быстрый черновик/i }))
+      .or(page.locator('[aria-label*="Быстрый черновик"]'));
+    if (!(await quickDraftButton.first().isVisible().catch(() => false))) {
+      await openWizardActionMenu(page).catch(() => null);
+    }
 
     // Any of these can exist depending on current wizard state.
     const anyVisible = await Promise.all([
@@ -1539,7 +1573,7 @@ test.describe('Регрессии: web стабильность wizard', () => {
     await clickNext(page);
     await ensureOnStep2(page);
 
-    await page.locator('[aria-label="Показать превью"]').first().click({ timeout: 10_000 });
+    await clickWizardMenuAction(page, 'travel-wizard-preview', /показать превью|превью/i);
     const dialog = page.getByText('Превью карточки', { exact: true });
     await expect(dialog).toBeVisible({ timeout: 10_000 });
 

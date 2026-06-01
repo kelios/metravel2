@@ -81,6 +81,7 @@
     "test:pages:performance": "node scripts/test-pages-performance.js",
     "e2e:perf-budget": "npx playwright test e2e/travel-details-perf-budget.spec.ts",
     "e2e:perf-budget:headed": "npx playwright test e2e/travel-details-perf-budget.spec.ts --headed",
+    "e2e:perf-budget:pages": "npx playwright test e2e/pages-perf-budget.spec.ts --project=chromium",
     "clean": "npx expo start --clear",
     "reset": "EXPO_RESET_CACHE=true npx expo start --clear",
     "prod:web": "NODE_ENV=production node ./node_modules/expo/bin/cli export -p web",

@@ -283,7 +283,7 @@ export const getStyles = (
       alignItems: 'center',
       justifyContent: 'flex-start',
       gap: 4,
-      width: compactLayout ? 56 : 60,
+      width: compactLayout ? 64 : 68,
       paddingVertical: 4,
       paddingHorizontal: 2,
       borderRadius: DESIGN_TOKENS.radii.md,

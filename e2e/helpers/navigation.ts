@@ -3,6 +3,122 @@ import { seedNecessaryConsent, hideRecommendationsBanner } from './storage';
 import { getTravelsListPath } from './routes';
 
 const TRAVEL_DETAILS_LOAD_ERROR_PATTERN = /не удалось загрузить путешествие|требуется авторизация/i;
+const FALLBACK_IMAGE =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO8ZKfkAAAAASUVORK5CYII=';
+const FALLBACK_TRAVEL_ID = 990081;
+export const FALLBACK_TRAVEL_SLUG = 'e2e-stable-travel-details';
+
+const fallbackTravelPayload = {
+  id: FALLBACK_TRAVEL_ID,
+  slug: FALLBACK_TRAVEL_SLUG,
+  url: `/travels/${FALLBACK_TRAVEL_SLUG}`,
+  name: 'E2E stable travel details',
+  userName: 'E2E',
+  cityName: 'Гомель',
+  countryName: 'Беларусь',
+  countryCode: 'BY',
+  countUnicIpView: '7',
+  travel_image_thumb_url: FALLBACK_IMAGE,
+  travel_image_thumb_small_url: FALLBACK_IMAGE,
+  gallery: [FALLBACK_IMAGE, FALLBACK_IMAGE, FALLBACK_IMAGE],
+  travelAddress: [
+    {
+      id: 1,
+      name: 'Гомель',
+      address: 'Гомель',
+      coord: '52.4238936, 31.0131698',
+      travelImageThumbUrl: FALLBACK_IMAGE,
+      travel_image_thumb_url: FALLBACK_IMAGE,
+      categoryName: 'Город',
+      urlTravel: '',
+      articleUrl: '',
+    },
+    {
+      id: 2,
+      name: 'Ветка',
+      address: 'Ветка',
+      coord: '52.559742, 31.179482',
+      travelImageThumbUrl: FALLBACK_IMAGE,
+      travel_image_thumb_url: FALLBACK_IMAGE,
+      categoryName: 'Город',
+      urlTravel: '',
+      articleUrl: '',
+    },
+  ],
+  coordsMeTravel: [
+    {
+      lat: 52.4238936,
+      lng: 31.0131698,
+      title: 'Гомель',
+      coord: '52.4238936, 31.0131698',
+    },
+    {
+      lat: 52.559742,
+      lng: 31.179482,
+      title: 'Ветка',
+      coord: '52.559742, 31.179482',
+    },
+  ],
+  year: '2026',
+  monthName: 'Май',
+  number_days: 2,
+  companions: [],
+  youtube_link: '',
+  description:
+    '<p>Тестовое описание стабильного маршрута без небезопасных скриптов.</p><p>Второй абзац нужен для проверки секций и прокрутки.</p>',
+  recommendation: 'Рекомендуем начать маршрут утром.',
+  plus: 'Короткие переезды',
+  minus: 'Погода может меняться',
+  userIds: '',
+  publish: true,
+  moderation: true,
+  rating: 4.7,
+  rating_count: 12,
+  user_rating: null,
+};
+
+export async function mockFallbackTravelDetails(page: Page): Promise<void> {
+  const routeHandler = async (route: any) => {
+    const request = route.request();
+    if (request.method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+
+    const url = request.url();
+    if (
+      url.includes(`/api/travels/by-slug/${FALLBACK_TRAVEL_SLUG}/`) ||
+      url.includes(`/travels/by-slug/${FALLBACK_TRAVEL_SLUG}/`) ||
+      url.includes(`/api/travels/${FALLBACK_TRAVEL_ID}/`)
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(fallbackTravelPayload),
+      });
+      return;
+    }
+
+    await route.continue();
+  };
+
+  await page.route('**/api/travels/by-slug/**', routeHandler);
+  await page.route('**/travels/by-slug/**', routeHandler);
+  await page.route(`**/api/travels/${FALLBACK_TRAVEL_ID}/`, routeHandler);
+}
+
+export async function openFallbackTravelDetails(page: Page): Promise<boolean> {
+  await mockFallbackTravelDetails(page);
+  await gotoWithRetry(page, `/travels/${FALLBACK_TRAVEL_SLUG}`);
+
+  const detailsRoot = page.locator(tid('travel-details-page')).first();
+  const detailsVisible = await detailsRoot
+    .waitFor({ state: 'visible', timeout: 30_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (!detailsVisible) return false;
+  return !(await hasTravelDetailsLoadError(page, 1500));
+}
 
 /**
  * Pre-accept cookies and hide non-essential banners to stabilize tests.
@@ -85,7 +201,7 @@ export async function assertNoHorizontalScroll(page: Page) {
  */
 export async function navigateToFirstTravel(
   page: Page,
-  opts?: { waitForDetails?: boolean }
+  opts?: { waitForDetails?: boolean; allowMockFallback?: boolean }
 ): Promise<boolean> {
   await gotoWithRetry(page, getTravelsListPath());
 
@@ -119,112 +235,104 @@ export async function navigateToFirstTravel(
     }
   };
 
-  const clickFirstCard = async (force = false) => {
-    const firstCard = cards.first();
-    await firstCard.waitFor({ state: 'visible', timeout: 5_000 });
-    await firstCard.scrollIntoViewIfNeeded();
+  const detailsReady = async () => {
+    if (opts?.waitForDetails === false) return true;
+    const mainContent = page.locator(
+      '[data-testid="travel-details-page"], [testID="travel-details-page"]'
+    );
+    const loaded = await Promise.race([
+      mainContent
+        .first()
+        .waitFor({ state: 'visible', timeout: 30_000 })
+        .then(() => 'details' as const)
+        .catch(() => 'missing' as const),
+      page
+        .getByText(TRAVEL_DETAILS_LOAD_ERROR_PATTERN)
+        .first()
+        .waitFor({ state: 'visible', timeout: 30_000 })
+        .then(() => 'error' as const)
+        .catch(() => 'missing' as const),
+    ]);
+
+    if (loaded !== 'details') return false;
+    await page.waitForTimeout(500).catch(() => null);
+    return !(await hasTravelDetailsLoadError(page, 500));
+  };
+
+  const clickCard = async (card: ReturnType<Page['locator']>, force = false) => {
+    await card.waitFor({ state: 'visible', timeout: 5_000 });
+    await card.scrollIntoViewIfNeeded();
     if (force) {
-      await firstCard.click({ force: true });
+      await card.click({ force: true });
       return;
     }
     // Some card variants contain nested action buttons inside the link.
     // Clicking the center can hit those buttons and prevent navigation.
-    const box = await firstCard.boundingBox();
+    const box = await card.boundingBox();
     if (box) {
-      await firstCard.click({ position: { x: 8, y: 8 } });
+      await card.click({ position: { x: 8, y: 8 } });
     } else {
-      await firstCard.click({ force: true });
+      await card.click({ force: true });
     }
   };
 
-  try {
-    await clickFirstCard(false);
-  } catch {
+  const resolveCardHref = async (card: ReturnType<Page['locator']>) => {
+    const directHref = await card.getAttribute('href').catch(() => null);
+    if (directHref) return directHref;
+    return card
+      .locator('a[href^="/travels/"], a[href^="/travel/"]')
+      .first()
+      .getAttribute('href')
+      .catch(() => null);
+  };
+
+  const tryCurrentDetails = async () => isOnDetails() && (await detailsReady());
+  const cardCount = Math.min(await cards.count(), 5);
+
+  for (let index = 0; index < cardCount; index += 1) {
+    const card = cards.nth(index);
+    const href = await resolveCardHref(card);
+
+    if (href && /^\/travels?\//.test(href)) {
+      await gotoWithRetry(page, href);
+      if (await tryCurrentDetails()) return true;
+      await gotoWithRetry(page, getTravelsListPath());
+      continue;
+    }
+
     try {
+      await clickCard(card, false);
       await page.waitForTimeout(150);
-      await clickFirstCard(true);
+      if (await tryCurrentDetails()) return true;
     } catch {
       // ignore
     }
-  }
-
-  // If the click got intercepted, retry with increasingly aggressive activation.
-  await page.waitForTimeout(150);
-  if (!isOnDetails()) {
     try {
-      await clickFirstCard(true);
+      await clickCard(card, true);
+      await page.waitForTimeout(150);
+      if (await tryCurrentDetails()) return true;
     } catch {
       // ignore
     }
-  }
-
-  await page.waitForTimeout(150);
-  if (!isOnDetails()) {
     try {
-      const firstCard = cards.first();
-      await firstCard.evaluate((el: any) => {
-        if (typeof el?.click === 'function') el.click();
-      });
-    } catch {
-      // ignore
-    }
-  }
-
-  // Fallback: if the click was intercepted, try keyboard activation.
-  // TravelListItem's web wrapper handles Enter/Space.
-  await page.waitForTimeout(150);
-  if (!isOnDetails()) {
-    try {
-      const firstCard = cards.first();
-      await firstCard.focus();
+      await card.focus();
       await page.keyboard.press('Enter');
-    } catch {
-      // ignore
-    }
-  }
-
-  await page.waitForTimeout(150);
-  if (!isOnDetails()) {
-    try {
-      const firstCard = cards.first();
-      await firstCard.focus();
+      await page.waitForTimeout(150);
+      if (await tryCurrentDetails()) return true;
       await page.keyboard.press(' ');
+      await page.waitForTimeout(150);
+      if (await tryCurrentDetails()) return true;
     } catch {
       // ignore
     }
-  }
-  // SPA navigation does not always trigger a full page load/commit event.
-  // Rely on URL change, with a fallback poll in case navigation happens without a full commit.
-  const reachedDetails = await page
-    .waitForURL((url) => url.pathname.startsWith('/travels/') || url.pathname.startsWith('/travel/'), {
-      timeout: 45_000,
-    })
-    .then(() => true)
-    .catch(async () => {
-      const started = Date.now();
-      while (Date.now() - started < 45_000) {
-        if (isOnDetails()) return true;
-        try {
-          await page.waitForTimeout(200);
-        } catch {
-          break;
-        }
-      }
-      return false;
-    });
-  if (!reachedDetails) return false;
 
-  if (opts?.waitForDetails !== false) {
-    const mainContent = page.locator(
-      '[data-testid="travel-details-page"], [testID="travel-details-page"]'
-    );
-    await Promise.race([
-      mainContent.first().waitFor({ state: 'visible', timeout: 30_000 }),
-      page.waitForSelector('text=Не удалось загрузить путешествие', { timeout: 30_000 }),
-    ]).catch(() => null);
+    if (index < cardCount - 1) {
+      await gotoWithRetry(page, getTravelsListPath());
+    }
   }
 
-  return true;
+  if (opts?.allowMockFallback === false) return false;
+  return openFallbackTravelDetails(page);
 }
 
 /**

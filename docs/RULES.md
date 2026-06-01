@@ -35,6 +35,10 @@ npm run test:run
   - open a local browser preview and visually verify the changed scenario in the browser before considering the task complete;
   - take a screenshot of the result to confirm visual correctness;
   - check the browser console for errors (no new errors should appear after the change).
+- Always self-verify (mandatory):
+  - the agent must verify its own changes end-to-end (browser and/or tests) before handoff — never defer verification to the user and never report a change as done/fixed while verification is still pending;
+  - if the preview/dev server is flaky (crashes, slow bundling, route redirects, transient API timeouts), restart it, wait, re-navigate, or retry until verification actually completes — instability is not an acceptable reason to skip verification;
+  - if a change genuinely cannot be verified after real effort (e.g. an environment blocker outside the code), say so explicitly, mark the item as `verify pending` with the concrete blocker, and do not claim it is done.
 - Authenticated QA (allowed):
   - for QA/testing that requires a signed-in user, you may sign in using the dedicated end-to-end test account from `.env.e2e` (`E2E_EMAIL` / `E2E_PASSWORD`);
   - prefer the e2e auth mechanism — the Playwright auth setup or a programmatic login (login API → `Authorization: Token <token>` injected into the store/headers) — over hand-typing credentials into UI fields, and reuse the e2e session where possible;

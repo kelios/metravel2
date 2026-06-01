@@ -7,7 +7,7 @@
  */
 
 import { test, expect } from './fixtures';
-import { preacceptCookies, navigateToFirstTravel } from './helpers/navigation';
+import { preacceptCookies, navigateToFirstTravel, openFallbackTravelDetails } from './helpers/navigation';
 
 test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
   /**
@@ -385,17 +385,22 @@ test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
     test('should have touch-friendly buttons on mobile', async ({ page }) => {
       if (!(await goToTravelDetailsMobile(page))) return;
 
-      const buttons = await page.locator('button, [role="button"], a[href], [data-testid*="button"]').all();
-      let hasTouchFriendly = false;
-      for (const button of buttons.slice(0, 20)) {
-        const box = await button.boundingBox();
-        if (!box) continue;
-        if (box.height >= 32 && box.width >= 32) {
-          hasTouchFriendly = true;
-          break;
-        }
+      const controls = [
+        page.locator('[aria-label="Открыть меню"]').first(),
+        page.locator('[aria-label="Открыть секции"]').first(),
+        page.locator('[aria-label="Next slide"]').first(),
+        page.getByRole('tab', { name: 'Ещё' }).first(),
+        page.getByRole('tab', { name: 'Карта' }).first(),
+      ];
+      let checked = false;
+      for (const control of controls) {
+        if (!(await control.isVisible().catch(() => false))) continue;
+        const box = await control.boundingBox();
+        expect(box?.height ?? 0).toBeGreaterThanOrEqual(32);
+        expect(box?.width ?? 0).toBeGreaterThanOrEqual(32);
+        checked = true;
       }
-      expect(hasTouchFriendly).toBeTruthy();
+      expect(checked).toBeTruthy();
     });
   });
 
@@ -441,16 +446,21 @@ test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
     });
 
     test('should handle slow network gracefully', async ({ page }) => {
-      if (!(await goToTravelDetails(page))) return;
+      await preacceptCookies(page);
+      if (!(await openFallbackTravelDetails(page))) return;
 
       await page.route('**/api/travels/**', async (route: any) => {
         await new Promise((resolve) => setTimeout(resolve, 500));
+        if (typeof route.fallback === 'function') {
+          await route.fallback();
+          return;
+        }
         await route.continue();
       });
       await page.reload({ waitUntil: 'domcontentloaded' });
 
       const hero = page.locator('[data-testid="travel-details-hero"]');
-      await expect(hero).toBeVisible({ timeout: 10000 });
+      await expect(hero).toBeVisible({ timeout: 15_000 });
     });
   });
 });

@@ -142,7 +142,7 @@ describe('TravelListItem - Action Buttons', () => {
     fireEvent.press(card);
     
     // Should navigate to travel detail
-    expect(router.push).toHaveBeenCalledWith('/test-travel');
+    expect(router.push).toHaveBeenCalledWith('/travels/test-travel');
   });
 
   it('should work correctly on mobile platform', () => {
@@ -158,7 +158,7 @@ describe('TravelListItem - Action Buttons', () => {
     fireEvent.press(cardTitle);
     
     // Should still navigate on mobile
-    expect(router.push).toHaveBeenCalledWith('/test-travel');
+    expect(router.push).toHaveBeenCalledWith('/travels/test-travel');
   });
 
   it('should open view mode from metravel even for drafts', () => {
@@ -181,7 +181,7 @@ describe('TravelListItem - Action Buttons', () => {
     const card = screen.getByTestId('travel-card-test-travel');
     fireEvent.press(card);
 
-    expect(router.push).toHaveBeenCalledWith('/test-travel?returnTo=%2Fmetravel');
+    expect(router.push).toHaveBeenCalledWith('/travels/test-travel?returnTo=%2Fmetravel');
     expect(router.push).not.toHaveBeenCalledWith('/travel/1');
   });
 

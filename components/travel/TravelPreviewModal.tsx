@@ -86,7 +86,11 @@ const TravelPreviewModal: React.FC<TravelPreviewModalProps> = ({
                     accessibilityRole="button"
                     accessibilityLabel="Закрыть превью"
                 />
-                <View style={styles.modalContent}>
+                <View
+                    style={styles.modalContent}
+                    accessibilityRole="dialog"
+                    accessibilityLabel="Превью карточки"
+                >
                     <View style={styles.modalHeader}>
                         <Text style={styles.modalTitle}>Превью карточки</Text>
                         <Pressable

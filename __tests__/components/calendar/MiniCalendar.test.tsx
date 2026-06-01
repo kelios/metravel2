@@ -147,8 +147,7 @@ describe('MiniCalendar', () => {
 
   describe('сетка дней', () => {
     it('рендерит корректное количество дней в May 2026 (31 день)', () => {
-      // Navigate to May 2026 from current date (May 12, 2026)
-      const { getAllByRole } = render(<MiniCalendar entries={[]} />)
+      const { getAllByRole } = render(<MiniCalendar entries={[]} focusDate="2026-05-01" />)
       // Day buttons are rendered as buttons in the grid
       const buttons = getAllByRole('button')
       // Filter out nav buttons (Предыдущий/Следующий месяц)

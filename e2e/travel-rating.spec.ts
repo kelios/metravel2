@@ -780,7 +780,7 @@ test.describe('Travel Rating - API Integration', () => {
     }
 
     // После клика должен появиться текст "Ваша оценка" или число оценки
-    const newText = await ratingSection.textContent();
+    const newText = (await ratingSection.textContent().catch(() => '')) || '';
     const hasUserRating = newText && YOUR_RATING_PATTERN.test(newText);
     const hasRatingNumber = newText && /[1-5]/.test(newText);
 

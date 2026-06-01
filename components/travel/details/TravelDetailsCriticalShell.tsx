@@ -19,6 +19,18 @@ import type { AnchorsMap } from './TravelDetailsTypes';
 import TravelDetailsSkeletonOverlay from './TravelDetailsSkeletonOverlay';
 import TravelDetailsHeroDeferredColumn from './TravelDetailsHeroDeferredColumn';
 
+const WEB_SR_ONLY_HEADING_STYLE = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: 'hidden',
+  clip: 'rect(0,0,0,0)',
+  whiteSpace: 'nowrap',
+  borderWidth: 0,
+} as const;
+
 type TravelDetailsCriticalShellProps = {
   travel?: Travel;
   isMobile: boolean;
@@ -194,6 +206,9 @@ export default function TravelDetailsCriticalShell({
                 style={contentWrapperStyle}
                 collapsable={false}
               >
+                {Platform.OS === 'web' && travel ? (
+                  <h1 style={WEB_SR_ONLY_HEADING_STYLE as any}>{travel.name}</h1>
+                ) : null}
                 {travel && showDesktopSidebar ? (
                   <View style={desktopLayoutStyle} collapsable={false}>
                     <View style={desktopSidebarContainerStyle}>

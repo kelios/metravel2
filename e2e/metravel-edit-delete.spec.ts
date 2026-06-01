@@ -160,18 +160,17 @@ test.describe('Metravel edit/delete flow', () => {
       { timeout: 60_000 }
     );
 
-    const confirmDialogPromise = page
-      .waitForEvent('dialog', { timeout: 10_000 })
-      .then(async (dialog) => {
-        await dialog.accept();
-      });
-
     await editedCard.hover();
     const deleteButton = editedCard.getByLabel('Удалить').first();
     await expect(deleteButton).toBeVisible({ timeout: 10_000 });
     await deleteButton.click();
 
-    await confirmDialogPromise;
+    const confirmButton = page
+      .getByTestId('confirm-delete-button')
+      .or(page.getByRole('button', { name: 'Удалить' }))
+      .first();
+    await expect(confirmButton).toBeVisible({ timeout: 10_000 });
+    await confirmButton.click();
 
     const deleteResponse = await deleteResponsePromise;
     expect(

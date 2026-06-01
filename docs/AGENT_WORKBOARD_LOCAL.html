@@ -288,6 +288,76 @@
 
     .empty { color: var(--muted); font-size: 13px; padding: 18px 4px; text-align: center; }
 
+    /* ---- kanban ---- */
+    .kanban {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      align-items: start;
+    }
+    @media (max-width: 1100px) { .kanban { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 600px)  { .kanban { grid-template-columns: 1fr; } }
+
+    .kcol {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      padding: 12px;
+      min-height: 80px;
+    }
+    .kcol-head {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 11px;
+    }
+    .kcol-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+    .kcol-title {
+      font-size: 12px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
+    }
+    .kcol-count {
+      margin-left: auto; font-size: 11.5px; font-weight: 700;
+      color: var(--muted); background: var(--surface); border: 1px solid var(--border);
+      border-radius: 999px; padding: 1px 8px;
+    }
+    .kcol.backlog  .kcol-dot { background: var(--idle); }
+    .kcol.planned  .kcol-dot { background: var(--info); }
+    .kcol.progress .kcol-dot { background: var(--brand); }
+    .kcol.done     .kcol-dot { background: var(--success); }
+    .kcol.blocked  .kcol-dot { background: var(--danger); }
+
+    .klist { display: flex; flex-direction: column; gap: 9px; max-height: 560px; overflow: auto; }
+    .kcard {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 11px;
+      box-shadow: var(--shadow-sm);
+    }
+    .kcol.backlog  .kcard { border-left-color: var(--idle); }
+    .kcol.planned  .kcard { border-left-color: var(--info); }
+    .kcol.progress .kcard { border-left-color: var(--brand); }
+    .kcol.done     .kcard { border-left-color: var(--success); }
+    .kcol.blocked  .kcard { border-left-color: var(--danger); }
+    .kcard-top { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+    .kid {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11px; font-weight: 700; color: var(--text);
+      background: var(--surface-2); border-radius: 5px; padding: 1px 6px;
+    }
+    .kprio {
+      font-size: 10px; font-weight: 700; letter-spacing: .03em;
+      border-radius: 5px; padding: 1px 5px;
+      background: var(--surface-2); color: var(--muted);
+    }
+    .kprio.P1 { background: var(--danger-soft); color: var(--danger); }
+    .kprio.P2 { background: var(--warning-soft); color: var(--warning); }
+    .kprio.P3 { background: var(--info-soft); color: var(--info); }
+    .ktitle { font-size: 12.5px; line-height: 1.35; margin-top: 6px; color: var(--text); }
+    .kmeta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 7px; font-size: 11px; color: var(--muted); }
+    .kowner { font-weight: 600; color: var(--text); }
+    .ksection { font-style: italic; }
+    .kcol-empty { color: var(--muted); font-size: 12px; padding: 8px 2px; text-align: center; }
+
     /* ---- fallback banner ---- */
     .banner {
       display: none;
@@ -378,6 +448,12 @@
       </section>
     </div>
 
+    <!-- KANBAN -->
+    <section class="card" style="margin-top:18px">
+      <h2>Kanban-доска <span class="count" id="kanbanHint">парсит таблицы из docs/AGENT_WORKBOARD.md</span></h2>
+      <div class="kanban" id="kanban"></div>
+    </section>
+
     <!-- AGENTS -->
     <section class="card" style="margin-top:18px">
       <h2>Команда агентов <span class="count" id="agentsHint">статичный ростер · DevOps отражает живой цикл</span></h2>
@@ -430,8 +506,19 @@
       fileList: document.getElementById('fileList'),
       feed: document.getElementById('feed'),
       feedCount: document.getElementById('feedCount'),
-      agents: document.getElementById('agents')
+      agents: document.getElementById('agents'),
+      kanban: document.getElementById('kanban'),
+      kanbanHint: document.getElementById('kanbanHint')
     };
+
+    var WORKBOARD_URL = 'AGENT_WORKBOARD.md';
+    var KCOLS = [
+      { key: 'backlog',  cls: 'backlog',  title: 'Backlog' },
+      { key: 'planned',  cls: 'planned',  title: 'Planned' },
+      { key: 'progress', cls: 'progress', title: 'In progress' },
+      { key: 'done',     cls: 'done',     title: 'Done' },
+      { key: 'blocked',  cls: 'blocked',  title: 'Blocked' }
+    ];
 
     var timer = null;
     var lastSeenRunId = null;
@@ -631,6 +718,128 @@
       saveEvents();
     }
 
+    // ---- kanban -------------------------------------------------------------
+
+    function splitRow(line) {
+      var s = line.trim().replace(/^\|/, '').replace(/\|$/, '');
+      return s.split('|').map(function (c) { return c.trim(); });
+    }
+
+    function findCol(header, re) {
+      for (var i = 0; i < header.length; i++) {
+        if (re.test(header[i])) return i;
+      }
+      return -1;
+    }
+
+    // Strip markdown emphasis/backticks/links for compact card text.
+    function plain(s) {
+      return String(s || '')
+        .replace(/`([^`]*)`/g, '$1')
+        .replace(/\*\*([^*]*)\*\*/g, '$1')
+        .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+        .replace(/[*_]/g, '')
+        .trim();
+    }
+
+    function bucketOf(statusRaw, isBacklogSection) {
+      var s = statusRaw.toLowerCase();
+      if (/block|заблок|в блок/.test(s)) return 'blocked';
+      if (/^done|✅ *done|^готов/.test(s)) return 'done';
+      if (/in progress|в работе/.test(s)) return 'progress';
+      if (/^open|planned|backlog/.test(s)) return isBacklogSection ? 'backlog' : 'planned';
+      return isBacklogSection ? 'backlog' : 'planned';
+    }
+
+    // Parse every `| ID | … | Status | … |` table; roadmap/test-case tables
+    // (no ID+Status pair) are skipped automatically.
+    function parseWorkboard(md) {
+      var lines = md.split('\n');
+      var cards = [], section = '';
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        var h = line.match(/^##\s+(.*)$/);
+        if (h) { section = h[1].trim(); continue; }
+        // header row must be followed by a `| --- | … |` separator
+        if (line.indexOf('|') !== 0) continue;
+        var sep = lines[i + 1] || '';
+        if (!/^\|[\s:|-]+\|?\s*$/.test(sep) || sep.indexOf('-') === -1) continue;
+
+        var header = splitRow(line);
+        var idCol = findCol(header, /^id$/i);
+        var statusCol = findCol(header, /^status$/i);
+        if (idCol < 0 || statusCol < 0) continue;
+
+        var titleCol = findCol(header, /task|item|тема|страница/i);
+        if (titleCol < 0) titleCol = idCol + 1;
+        var ownerCol = findCol(header, /owner/i);
+        var prioCol = findCol(header, /priorit/i);
+        var isBacklog = /backlog|бэклог/i.test(section);
+
+        for (var j = i + 2; j < lines.length; j++) {
+          var row = lines[j];
+          if (row.indexOf('|') !== 0) break;
+          var cells = splitRow(row);
+          if (cells.length <= statusCol) continue;
+          var statusRaw = plain(cells[statusCol]);
+          if (!statusRaw) continue;
+          var prio = prioCol > -1 ? plain(cells[prioCol]) : '';
+          cards.push({
+            id: plain(cells[idCol]),
+            title: plain(cells[titleCol]),
+            owner: ownerCol > -1 ? plain(cells[ownerCol]) : '',
+            prio: /^P[123]$/.test(prio) ? prio : '',
+            bucket: bucketOf(statusRaw, isBacklog),
+            section: section
+          });
+        }
+        i = j - 1;
+      }
+      return cards;
+    }
+
+    function renderKanban(cards) {
+      var by = { backlog: [], planned: [], progress: [], done: [], blocked: [] };
+      (cards || []).forEach(function (c) { (by[c.bucket] || by.backlog).push(c); });
+      els.kanbanHint.textContent = cards && cards.length
+        ? cards.length + ' задач · парсит docs/AGENT_WORKBOARD.md'
+        : 'парсит таблицы из docs/AGENT_WORKBOARD.md';
+
+      els.kanban.innerHTML = KCOLS.map(function (col) {
+        var items = by[col.key];
+        var body = items.length ? items.map(function (c) {
+          return '<div class="kcard">' +
+            '<div class="kcard-top">' +
+              (c.id ? '<span class="kid">' + esc(c.id) + '</span>' : '') +
+              (c.prio ? '<span class="kprio ' + c.prio + '">' + esc(c.prio) + '</span>' : '') +
+            '</div>' +
+            '<div class="ktitle">' + esc(c.title) + '</div>' +
+            '<div class="kmeta">' +
+              (c.owner ? '<span class="kowner">' + esc(c.owner) + '</span>' : '') +
+              (c.section ? '<span class="ksection">' + esc(c.section) + '</span>' : '') +
+            '</div></div>';
+        }).join('') : '<div class="kcol-empty">пусто</div>';
+        return '<div class="kcol ' + col.cls + '">' +
+          '<div class="kcol-head"><span class="kcol-dot"></span>' +
+          '<span class="kcol-title">' + col.title + '</span>' +
+          '<span class="kcol-count">' + items.length + '</span></div>' +
+          '<div class="klist">' + body + '</div></div>';
+      }).join('');
+    }
+
+    function fetchKanban() {
+      fetch(WORKBOARD_URL + '?t=' + Date.now(), { cache: 'no-store' })
+        .then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.text();
+        })
+        .then(function (md) { renderKanban(parseWorkboard(md)); })
+        .catch(function () {
+          els.kanban.innerHTML = '<div class="kcol-empty">Не удалось прочитать ' +
+            'AGENT_WORKBOARD.md — открой борд по http (см. баннер выше).</div>';
+        });
+    }
+
     // ---- polling ------------------------------------------------------------
 
     function poll() {
@@ -668,15 +877,16 @@
     }
 
     els.interval.addEventListener('change', schedule);
-    els.refresh.addEventListener('click', poll);
+    els.refresh.addEventListener('click', function () { poll(); fetchKanban(); });
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'visible') poll();
+      if (document.visibilityState === 'visible') { poll(); fetchKanban(); }
     });
 
     // initial paint
     renderAgents({ active: null, last: null });
     renderFeed();
     poll();
+    fetchKanban();
     schedule();
   })();
   </script>

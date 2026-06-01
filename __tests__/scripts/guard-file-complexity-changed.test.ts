@@ -79,7 +79,7 @@ describe('guard-file-complexity-changed', () => {
   })
 
   it('treats already oversized tracked files as non-blocking legacy touches', () => {
-    const legacyOversizedFile = 'components/home/homeHeroStyles.ts'
+    const legacyOversizedFile = 'services/pdf-export/themes/PdfThemeConfig.ts'
     const baselineLoc = getGitTrackedFileLoc(legacyOversizedFile)
     expect(typeof baselineLoc).toBe('number')
     expect(Number(baselineLoc)).toBeGreaterThan(MAX_LOC)
