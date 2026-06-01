@@ -130,4 +130,4 @@ export const createTravelDetailsLayoutStyles = (colors: ThemedColors) => ({
     overflowY: 'auto' as any,
     paddingTop: HEADER_OFFSET_MOBILE + DESIGN_TOKENS.spacing.xl,
   },
-})
+}) as const

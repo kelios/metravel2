@@ -119,4 +119,4 @@ export const createTravelDetailsNavStyles = (colors: ThemedColors) => ({
   shareButtonsContainer: {
     marginBottom: DESIGN_TOKENS.spacing.md,
   },
-})
+}) as const

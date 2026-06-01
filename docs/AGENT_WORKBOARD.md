@@ -202,7 +202,7 @@ Routing: god-components → `refactor-surgeon`; travel files → `travel-expert`
 | TD-012 | Reduce `api/client.ts` (836 LOC) by extracting domain modules | `refactor-surgeon` | P2 | guard:file-complexity = 836 LOC | Open |
 | TD-013 | Split `components/quests/QuestPrintable.tsx` (992 LOC) | `refactor-surgeon` | P3 | guard:file-complexity = 992 LOC | Open |
 | TD-014 | Split `components/UserPoints/PointsList.tsx` (909) and `PointCard.tsx` (877) | `refactor-surgeon` | P3 | guard:file-complexity = 909 / 877 LOC | Open |
-| TD-015 | Extract oversized style modules >800 LOC | `refactor-surgeon` | P3 | `homeHeroStyles.ts` 1908, `webStyles.ts` 1128, `filtersPanelStyles.ts` 935, `questWizardStyles.ts` 870, `modernFiltersStyles.ts` 859, `TravelDetailsStyles.ts` 831 | In progress — `TravelDetailsStyles.ts` first (behavior-neutral) |
+| TD-015 | Extract oversized style modules >800 LOC | `refactor-surgeon` | P3 | ✅ `TravelDetailsStyles.ts` 831 → 44 LOC (6 group modules in `styles/`; `check:fast` 11 suites / 199 passed; `guard:file-complexity:changed` violations=0; `typecheck` green; both public exports + const re-exports preserved). Remaining: `homeHeroStyles.ts` 1908, `webStyles.ts` 1128, `filtersPanelStyles.ts` 935, `questWizardStyles.ts` 870, `modernFiltersStyles.ts` 859 | In progress — 1/6 done |
 | TD-016 | Audit 12 `eslint-disable react-hooks/exhaustive-deps` for stale-closure risk | `test-author` + domain expert | P3 | 12 occurrences across `components/`, `hooks/`, `app/` | Open |
 | TD-017 | Split `components/article/ArticleEditor.web.tsx` (1290 LOC) | `refactor-surgeon` | P4 | guard:file-complexity = 1290 LOC; article pages not in active use | Open |
 
