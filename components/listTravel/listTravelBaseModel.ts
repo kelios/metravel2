@@ -1,6 +1,53 @@
 import { Platform } from 'react-native'
+import type { ViewStyle } from 'react-native'
 import { BREAKPOINTS } from './utils/listTravelConstants'
 import { calculateColumns } from './utils/listTravelHelpers'
+
+export function buildCardsGridDynamicStyle(cardsGridStyle: ViewStyle, gapSize: number): ViewStyle[] {
+  const styleArray: ViewStyle[] = [cardsGridStyle]
+
+  if (Platform.OS === 'web') {
+    styleArray.push({
+      gap: gapSize,
+      rowGap: gapSize,
+      columnGap: gapSize,
+    })
+  } else {
+    styleArray.push({
+      marginHorizontal: -(gapSize / 2),
+    })
+  }
+
+  return styleArray
+}
+
+export function getSearchCardImageHeight(effectiveWidth: number): number {
+  if (effectiveWidth < BREAKPOINTS.MOBILE) return 220
+  if (effectiveWidth < BREAKPOINTS.TABLET) return 240
+  if (effectiveWidth < BREAKPOINTS.DESKTOP) return 270
+  return 300
+}
+
+export function getSearchCardWidth({
+  effectiveWidth,
+  gapSize,
+  gridColumns,
+  contentPadding,
+}: {
+  effectiveWidth: number
+  gapSize: number
+  gridColumns: number
+  contentPadding: number
+}): number | undefined {
+  if (Platform.OS !== 'web') return undefined
+
+  const columns = Math.max(gridColumns, 1)
+  const totalGap = gapSize * Math.max(columns - 1, 0)
+  const paddedWidth = effectiveWidth - contentPadding * 2
+  const resolvedWidth = (paddedWidth - totalGap) / columns
+
+  return Number.isFinite(resolvedWidth) && resolvedWidth > 0 ? Math.round(resolvedWidth) : undefined
+}
 
 type ResponsiveParams = {
   isDesktopSize: boolean

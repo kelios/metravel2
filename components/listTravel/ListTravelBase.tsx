@@ -1,62 +1,50 @@
-import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   Platform,
-  Pressable,
-  Text,
-  View,
-  ViewStyle,
 } from 'react-native'
-import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { showToastMessage } from '@/utils/toast'
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router'
 import { useRoute } from '@react-navigation/native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import RenderTravelItem from './RenderTravelItem'
-import SidebarFilters from './SidebarFilters'
-import RightColumn from './RightColumn'
+import ListTravelTopContent from './parts/ListTravelTopContent'
+import ListTravelLayout from './parts/ListTravelLayout'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useAuth } from '@/context/AuthContext'
 import { fetchAllFiltersOptimized } from '@/api/miscOptimized'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useResponsive } from '@/hooks/useResponsive'
 import type { Travel } from '@/types/types'
-import {
-  BREAKPOINTS,
-  SEARCH_DEBOUNCE,
-} from './utils/listTravelConstants'
+import { SEARCH_DEBOUNCE } from './utils/listTravelConstants'
 import { useListTravelFilters } from './hooks/useListTravelFilters'
 import { useListTravelData } from './hooks/useListTravelData'
 import { useListTravelExport } from './hooks/useListTravelExport'
 import { buildFacetCounts, buildTravelFilterGroups } from './utils/filterGroups'
 import { fetchTravelFacets } from '@/api/travelListQueries'
-import type { FilterOptions, FilterState } from './utils/listTravelTypes'
 import {
-  SORT_LABEL_FALLBACKS,
-  normalizeCountryOptions,
-  normalizeNamedOptions,
+  buildActiveConditionChips,
+  buildEmptyStateMessage,
+  describeTravelDeleteError,
+  isTravelAlreadyDeletedError,
+  normalizeFilterOptions,
   removeTravelFromInfiniteTravelsCache,
-  summarizeFilterValues,
 } from './ListTravelBase.helpers'
+import type { ActiveConditionChip } from './ListTravelBase.helpers'
 import { useRecommendationsVisibility } from './hooks/useRecommendationsVisibility'
 import { createListTravelBaseStyles } from './ListTravelBase.styles'
 import {
+  buildCardsGridDynamicStyle,
   buildListTravelInitialFilter,
   buildListTravelFallbackSteps,
   getListTravelActiveFiltersCount,
   getListTravelViewportState,
+  getSearchCardImageHeight,
+  getSearchCardWidth,
   normalizeListTravelParam,
 } from './listTravelBaseModel'
 
-const ListTravelExportControlsLazy = lazy(() => import('./ListTravelExportControls'));
-
 const EMPTY_FALLBACK_STEPS: ReturnType<typeof buildListTravelFallbackSteps> = [];
-
-type ActiveConditionChip = {
-  key: string
-  label: string
-  onRemove: () => void
-}
 
 function ListTravelBase() {
     const colors = useThemedColors();
@@ -169,23 +157,10 @@ function ListTravelBase() {
     const isCardsSingleColumn = viewportState.isCardsSingleColumn;
     const gapSize = viewportState.gapSize;
 
-    const cardsGridDynamicStyle = useMemo(() => {
-      const styleArray: ViewStyle[] = [styles.cardsGrid]
-
-      if (Platform.OS === 'web') {
-        styleArray.push({
-          gap: gapSize,
-          rowGap: gapSize,
-          columnGap: gapSize,
-        })
-      } else {
-        styleArray.push({
-          marginHorizontal: -(gapSize / 2),
-        })
-      }
-
-      return styleArray
-    }, [gapSize, styles.cardsGrid]);
+    const cardsGridDynamicStyle = useMemo(
+      () => buildCardsGridDynamicStyle(styles.cardsGrid, gapSize),
+      [gapSize, styles.cardsGrid]
+    );
 
     const contentPadding = viewportState.contentPadding;
     const gridColumns = viewportState.gridColumns;
@@ -232,21 +207,7 @@ function ListTravelBase() {
         staleTime: 10 * 60 * 1000,
     });
 
-    const options = useMemo((): FilterOptions | undefined => {
-       if (!rawOptions) return undefined;
-
-       return {
-           countries: normalizeCountryOptions(rawOptions.countries),
-           categories: normalizeNamedOptions(rawOptions.categories),
-           transports: normalizeNamedOptions(rawOptions.transports),
-           categoryTravelAddress: normalizeNamedOptions(rawOptions.categoryTravelAddress),
-           companions: normalizeNamedOptions(rawOptions.companions),
-           complexity: normalizeNamedOptions(rawOptions.complexity),
-           month: normalizeNamedOptions(rawOptions.month),
-           over_nights_stay: normalizeNamedOptions(rawOptions.over_nights_stay),
-           sortings: rawOptions.sortings || [],
-       };
-    }, [rawOptions]);
+    const options = useMemo(() => normalizeFilterOptions(rawOptions), [rawOptions]);
 
     const {
         filter,
@@ -424,18 +385,7 @@ function ListTravelBase() {
             text1: 'Путешествие удалено',
           });
         } catch (error) {
-          const errorStatus =
-            error && typeof error === 'object' && 'status' in error
-              ? Number((error as { status?: unknown }).status)
-              : null;
-          const errorMessageText = error instanceof Error ? error.message.toLowerCase() : String(error || '').toLowerCase();
-          const isAlreadyDeleted =
-            errorStatus === 404 ||
-            errorMessageText.includes('404') ||
-            errorMessageText.includes('not found') ||
-            errorMessageText.includes('не найден');
-
-          if (isAlreadyDeleted) {
+          if (isTravelAlreadyDeletedError(error)) {
             removeTravelFromInfiniteTravelsCache(queryClient, targetId);
             setDelete(null);
             deleteInFlightRef.current = null;
@@ -444,27 +394,8 @@ function ListTravelBase() {
           }
 
           deleteInFlightRef.current = null;
-          let errorMessage = 'Не удалось удалить путешествие.';
-          let errorDetails = 'Попробуйте позже.';
-          
-          if (error instanceof Error) {
-            if (error.message.includes('timeout') || error.message.includes('время ожидания')) {
-              errorMessage = 'Превышено время ожидания';
-              errorDetails = 'Проверьте подключение к интернету и попробуйте снова.';
-            } else if (error.message.includes('network') || error.message.includes('сеть')) {
-              errorMessage = 'Проблема с подключением';
-              errorDetails = 'Проверьте подключение к интернету и попробуйте снова.';
-            } else if (error.message.includes('404') || error.message.includes('не найдено')) {
-              errorMessage = 'Путешествие не найдено';
-              errorDetails = 'Возможно, оно уже было удалено.';
-            } else if (error.message.includes('403') || error.message.includes('доступ')) {
-              errorMessage = 'Нет доступа';
-              errorDetails = 'У вас нет прав для удаления этого путешествия.';
-            } else {
-              errorDetails = error.message;
-            }
-          }
-          
+          const { errorMessage, errorDetails } = describeTravelDeleteError(error);
+
           if (Platform.OS === 'web') {
             // Показываем ошибку в диалоге; он остаётся открытым чтобы пользователь мог попробовать снова
             setDeleteError(`${errorMessage}. ${errorDetails}`);
@@ -521,25 +452,15 @@ function ListTravelBase() {
     // Keep mobile/tablet geometry tighter to avoid overgrowing the feed.
     // Use effectiveWidth (content area after sidebar) for correct sizing.
     const effectiveWidth = viewportState.effectiveWidth;
-    const searchCardImageHeight = useMemo(() => {
-      if (effectiveWidth < BREAKPOINTS.MOBILE) return 220;
-      if (effectiveWidth < BREAKPOINTS.TABLET) return 240;
-      if (effectiveWidth < BREAKPOINTS.DESKTOP) return 270;
-      return 300;
-    }, [effectiveWidth]);
+    const searchCardImageHeight = useMemo(
+      () => getSearchCardImageHeight(effectiveWidth),
+      [effectiveWidth]
+    );
 
-    const searchCardWidth = useMemo(() => {
-      if (Platform.OS !== 'web') return undefined;
-
-      const columns = Math.max(gridColumns, 1);
-      const totalGap = gapSize * Math.max(columns - 1, 0);
-      const paddedWidth = effectiveWidth - contentPadding * 2;
-      const resolvedWidth = (paddedWidth - totalGap) / columns;
-
-      return Number.isFinite(resolvedWidth) && resolvedWidth > 0
-        ? Math.round(resolvedWidth)
-        : undefined;
-    }, [effectiveWidth, gapSize, gridColumns, contentPadding]);
+    const searchCardWidth = useMemo(
+      () => getSearchCardWidth({ effectiveWidth, gapSize, gridColumns, contentPadding }),
+      [effectiveWidth, gapSize, gridColumns, contentPadding]
+    );
 
     const renderTravelListItem = useCallback(
       (travel: Travel, index: number) => (
@@ -585,61 +506,14 @@ function ListTravelBase() {
     const handleOpenFilters = useCallback(() => setShowFilters(true), []);
 
     const activeConditionChips = useMemo<ActiveConditionChip[]>(() => {
-      const chips: ActiveConditionChip[] = []
-      const addArrayChip = (
-        key: keyof FilterState,
-        title: string,
-        values: Array<string | number> | undefined,
-        optionList?: Array<{ id?: string | number; country_id?: string | number; name?: string; title_ru?: string }>,
-      ) => {
-        const label = summarizeFilterValues(title, values, optionList)
-        if (!label) return
-        chips.push({
-          key: String(key),
-          label,
-          onRemove: () => onSelect(String(key), undefined),
-        })
-      }
-
-      if (debSearch.trim()) {
-        chips.push({
-          key: 'search',
-          label: `Поиск: ${debSearch.trim()}`,
-          onRemove: () => setSearch(''),
-        })
-      }
-
-      const sortValue = typeof filter.sort === 'string' ? filter.sort.trim() : ''
-      if (sortValue) {
-        const sortLabel =
-          options?.sortings?.find((item) => item.id === sortValue)?.name ||
-          SORT_LABEL_FALLBACKS[sortValue] ||
-          sortValue
-        chips.push({
-          key: 'sort',
-          label: `Сортировка: ${sortLabel}`,
-          onRemove: () => onSelect('sort', undefined),
-        })
-      }
-
-      addArrayChip('countries', 'Страны', filter.countries, options?.countries)
-      addArrayChip('categories', 'Категории', filter.categories, options?.categories)
-      addArrayChip('categoryTravelAddress', 'Что посмотреть', filter.categoryTravelAddress, options?.categoryTravelAddress)
-      addArrayChip('transports', 'Транспорт', filter.transports, options?.transports)
-      addArrayChip('companions', 'Спутники', filter.companions, options?.companions)
-      addArrayChip('complexity', 'Сложность', filter.complexity, options?.complexity)
-      addArrayChip('month', 'Месяц', filter.month, options?.month)
-      addArrayChip('over_nights_stay', 'Ночлег', filter.over_nights_stay, options?.over_nights_stay)
-
-      if (filter.year) {
-        chips.push({
-          key: 'year',
-          label: `Год: ${filter.year}`,
-          onRemove: () => onSelect('year', undefined),
-        })
-      }
-
-      return chips
+      return buildActiveConditionChips({
+        debSearch,
+        filter,
+        options,
+        onSelect,
+        setSearch,
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
       debSearch,
       filter.categories,
@@ -728,98 +602,15 @@ function ListTravelBase() {
     const activeFiltersCount = useMemo(() => getListTravelActiveFiltersCount(filter, debSearch), [filter, debSearch]);
 
     const getEmptyStateMessage = useMemo(() => {
-      if (!showEmptyState) return null;
-
-      const activeFilters: string[] = [];
-
-      // Определяем активные фильтры - оптимизированная версия с проверками типов
-      if (Array.isArray(filter.categories) && filter.categories.length > 0) {
-        const categoryNames = (options?.categories || [])
-          .filter((cat: any) => cat?.name && filter.categories?.includes(cat.id))
-          .map((cat: any) => cat.name)
-          .slice(0, 2);
-        if (categoryNames.length > 0) {
-          activeFilters.push(`категории "${categoryNames.join('", "')}"${categoryNames.length < filter.categories.length ? ' и другие' : ''}`);
-        }
-      }
-
-      if (Array.isArray(filter.transports) && filter.transports.length > 0 && options?.transports) {
-        const transportNames = (options.transports || [])
-          .filter((t: any) => t?.name && filter.transports?.some((fid: any) => String(fid) === String(t.id)))
-          .map((t: any) => t.name)
-          .slice(0, 2);
-        if (transportNames.length > 0) {
-          activeFilters.push(`транспорт "${transportNames.join('", "')}"${transportNames.length < filter.transports.length ? ' и другой' : ''}`);
-        }
-      }
-
-      if (Array.isArray(filter.categoryTravelAddress) && filter.categoryTravelAddress.length > 0 && options?.categoryTravelAddress) {
-        const objectNames = (options.categoryTravelAddress || [])
-          .filter((obj: any) => obj?.name && filter.categoryTravelAddress?.some((fid: any) => String(fid) === String(obj.id)))
-          .map((obj: any) => obj.name)
-          .slice(0, 2);
-        if (objectNames.length > 0) {
-          activeFilters.push(`что посмотреть "${objectNames.join('", "')}"${objectNames.length < filter.categoryTravelAddress.length ? ' и другие' : ''}`);
-        }
-      }
-
-      // Остальные фильтры - простые проверки с type guards
-      if (Array.isArray(filter.companions) && filter.companions.length > 0) activeFilters.push('спутники');
-      if (Array.isArray(filter.complexity) && filter.complexity.length > 0) activeFilters.push('сложность');
-      if (Array.isArray(filter.month) && filter.month.length > 0) activeFilters.push('месяц');
-      if (Array.isArray(filter.over_nights_stay) && filter.over_nights_stay.length > 0) activeFilters.push('ночлег');
-      if (filter.year) activeFilters.push(`год ${filter.year}`);
-      if (filter.sort) activeFilters.push('сортировка');
-      if (debSearch) activeFilters.push(`поиск "${debSearch}"`);
-
-      // Формируем сообщение
-      if (activeFilters.length === 0) {
-        if (isMeTravel) {
-          return {
-            icon: 'map',
-            title: 'У вас пока нет путешествий',
-            description:
-              'Создайте первое — расскажите о маршруте, добавьте фото и сохраните воспоминания.',
-            variant: 'empty' as const,
-            action: {
-              label: 'Создать путешествие',
-              onPress: () => router.push('/travel/new'),
-            },
-          };
-        }
-        return {
-          icon: 'inbox',
-          title: 'Пока нет путешествий',
-          description: 'Путешествия появятся здесь, когда будут добавлены.',
-          variant: 'empty' as const,
-        };
-      }
-
-      // Формируем красивое описание
-      let description: string;
-      if (activeFilters.length === 1) {
-        description = `По фильтру ${activeFilters[0]} ничего не найдено.`;
-      } else if (activeFilters.length === 2) {
-        description = `По фильтрам ${activeFilters[0]} и ${activeFilters[1]} ничего не найдено.`;
-      } else {
-        const lastFilter = activeFilters[activeFilters.length - 1];
-        const otherFilters = activeFilters.slice(0, -1).join(', ');
-        description = `По фильтрам ${otherFilters} и ${lastFilter} ничего не найдено.`;
-      }
-
-      description += ' Попробуйте убрать фильтры или изменить запрос.';
-
-      const suggestions = debSearch
-        ? ['Проверьте написание', 'Попробуйте другие ключевые слова']
-        : ['Уберите один из фильтров', 'Выберите другую категорию'];
-
-      return {
-        icon: 'search',
-        title: 'Ничего не найдено',
-        description,
-        variant: 'search' as const,
-        suggestions,
-      };
+      return buildEmptyStateMessage({
+        showEmptyState,
+        filter,
+        options,
+        debSearch,
+        isMeTravel,
+        onCreateTravel: () => router.push('/travel/new'),
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [showEmptyState, filter, options?.categories, options?.transports, options?.categoryTravelAddress, debSearch, isMeTravel, router]);
 
     const filterGroups = useMemo(
@@ -893,52 +684,30 @@ function ListTravelBase() {
     }, [displayedHandleEndReached, hasDisplayedItems]);
 
     const topContent = useMemo(() => {
-      const exportControls = isExport ? (
-        <Suspense fallback={null}>
-          <ListTravelExportControlsLazy
-            isMobile={isMobileDevice}
-            travels={displayedTravels}
-            selected={exportState.selected}
-            ownerName={userId}
-            toggleSelectAll={toggleSelectAll}
-            clearSelection={clearSelection}
-            moveSelected={moveSelected}
-            moveSelectedTo={moveSelectedTo}
-            hasSelection={hasSelection}
-            selectionCount={selectionCount}
-            baseSettings={baseSettings}
-            lastSettings={lastSettings}
-            settingsSummary={settingsSummary}
-            setLastSettings={setLastSettings}
-          />
-        </Suspense>
-      ) : null;
-
-      const fallbackNotice = activeFallbackMatch?.step ? (
-        <View style={styles.fallbackNotice} testID="travel-results-fallback-notice">
-          <Text style={styles.fallbackNoticeTitle}>Похожие маршруты</Text>
-          <Text style={styles.fallbackNoticeText}>
-            По вашему запросу точных совпадений не нашлось. Подобрали похожие маршруты — возможно, что-то из них вам подойдёт.
-          </Text>
-          <Pressable
-            onPress={handleClearAll}
-            style={styles.fallbackNoticeAction}
-            accessibilityRole="button"
-            accessibilityLabel="Сбросить условия и показать все маршруты"
-          >
-            <Text style={styles.fallbackNoticeActionText}>Сбросить условия</Text>
-          </Pressable>
-        </View>
-      ) : null;
-
-      if (!fallbackNotice && !exportControls) return null;
-
+      if (!isExport && !activeFallbackMatch?.step) return null;
       return (
-        <>
-          {fallbackNotice}
-          {exportControls}
-        </>
+        <ListTravelTopContent
+          isExport={isExport}
+          showFallbackNotice={!!activeFallbackMatch?.step}
+          onClearAll={handleClearAll}
+          styles={styles}
+          isMobile={isMobileDevice}
+          travels={displayedTravels}
+          selected={exportState.selected}
+          ownerName={userId}
+          toggleSelectAll={toggleSelectAll}
+          clearSelection={clearSelection}
+          moveSelected={moveSelected}
+          moveSelectedTo={moveSelectedTo}
+          hasSelection={hasSelection}
+          selectionCount={selectionCount}
+          baseSettings={baseSettings}
+          lastSettings={lastSettings}
+          settingsSummary={settingsSummary}
+          setLastSettings={setLastSettings}
+        />
       );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
       baseSettings,
       clearSelection,
@@ -965,72 +734,62 @@ function ListTravelBase() {
     ]);
     
   return (
-    <View style={[styles.root, usesOverlaySidebar ? styles.rootMobile : undefined]}>
-      {/* Диалог подтверждения удаления (web) */}
-      {Platform.OS === 'web' && (
-        <ConfirmDialog
-          visible={!!deleteId}
-          title="Удалить путешествие?"
-          message={deleteError ?? 'Это действие нельзя отменить.'}
-          confirmText="Удалить"
-          cancelText="Отмена"
-          onConfirm={() => handleDelete(deleteId ?? undefined)}
-          onClose={() => { setDelete(null); setDeleteError(null); }}
-          confirmTestID="confirm-delete-button"
-          cancelTestID="cancel-delete-button"
-        />
-      )}
-      <SidebarFilters
-        isMobile={usesOverlaySidebar}
-        filterGroups={filterGroups}
-        filter={filter}
-        onSelect={onSelect}
-        total={displayedTotal}
-        isSuper={isSuper}
-        setSearch={setSearch}
-        resetFilters={resetFilters}
-        isVisible={!usesOverlaySidebar || showFilters}
-        isLoading={filterOptionsLoading}
-        onClose={usesOverlaySidebar ? handleCloseFilters : undefined}
-        containerStyle={sidebarContainerStyle}
-      />
-
-      <RightColumn
-        search={search}
-        setSearch={setSearch}
-        onClearAll={handleClearAll}
-        activeConditionChips={activeConditionChips}
-        topContent={topContent}
-        isRecommendationsVisible={isRecommendationsVisible}
-        handleRecommendationsVisibilityChange={handleRecommendationsVisibilityChange}
-        activeFiltersCount={activeFiltersCount}
-        total={displayedTotal}
-        contentPadding={contentPadding}
-        showInitialLoading={displayedShowInitialLoading}
-        isSearchPending={isSearchPending}
-        isError={isError}
-        showEmptyState={displayedShowEmptyState}
-        getEmptyStateMessage={getEmptyStateMessage}
-        travels={displayedTravels}
-        gridColumns={gridColumns}
-        isMobile={isCardsSingleColumn}
-        showNextPageLoading={displayedShowNextPageLoading}
-        refetch={displayedRefetch}
-        onEndReached={handleListEndReached}
-        onEndReachedThreshold={0.5}
-        onFiltersPress={usesOverlaySidebar ? handleOpenFilters : undefined}
-        containerStyle={rightColumnContainerStyle}
-        searchHeaderStyle={searchHeaderStyle}
-        cardsContainerStyle={cardsContainerStyle}
-        cardsGridStyle={cardsGridDynamicStyle}
-        cardSpacing={gapSize}
-        footerLoaderStyle={styles.footerLoader}
-        renderItem={renderTravelListItem}
-        listRef={flatListRef as any}
-        isExport={isExport}
-        testID="travels-list"
-      />
-    </View>
+    <ListTravelLayout
+      rootStyle={[styles.root, usesOverlaySidebar ? styles.rootMobile : undefined]}
+      deleteId={deleteId}
+      deleteError={deleteError}
+      onConfirmDelete={() => handleDelete(deleteId ?? undefined)}
+      onCloseDelete={() => { setDelete(null); setDeleteError(null); }}
+      sidebar={{
+        isMobile: usesOverlaySidebar,
+        filterGroups,
+        filter,
+        onSelect,
+        total: displayedTotal,
+        isSuper,
+        setSearch,
+        resetFilters,
+        isVisible: !usesOverlaySidebar || showFilters,
+        isLoading: filterOptionsLoading,
+        onClose: usesOverlaySidebar ? handleCloseFilters : undefined,
+        containerStyle: sidebarContainerStyle,
+      }}
+      rightColumn={{
+        search,
+        setSearch,
+        onClearAll: handleClearAll,
+        activeConditionChips,
+        topContent,
+        isRecommendationsVisible,
+        handleRecommendationsVisibilityChange,
+        activeFiltersCount,
+        total: displayedTotal,
+        contentPadding,
+        showInitialLoading: displayedShowInitialLoading,
+        isSearchPending,
+        isError,
+        showEmptyState: displayedShowEmptyState,
+        getEmptyStateMessage,
+        travels: displayedTravels,
+        gridColumns,
+        isMobile: isCardsSingleColumn,
+        showNextPageLoading: displayedShowNextPageLoading,
+        refetch: displayedRefetch,
+        onEndReached: handleListEndReached,
+        onEndReachedThreshold: 0.5,
+        onFiltersPress: usesOverlaySidebar ? handleOpenFilters : undefined,
+        containerStyle: rightColumnContainerStyle,
+        searchHeaderStyle,
+        cardsContainerStyle,
+        cardsGridStyle: cardsGridDynamicStyle,
+        cardSpacing: gapSize,
+        footerLoaderStyle: styles.footerLoader,
+        renderItem: renderTravelListItem,
+        listRef: flatListRef as any,
+        isExport,
+        testID: 'travels-list',
+      }}
+    />
   );
 }
 

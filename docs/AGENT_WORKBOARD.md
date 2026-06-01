@@ -8,6 +8,8 @@ Local visual board: open `docs/AGENT_WORKBOARD_LOCAL.html` from the repository o
 
 Board truth rule: a task can be treated as `Done` only when it has evidence: changed files, test/browser validation, review, or an explicit docs-only artifact. The local HTML board is a display surface; this Markdown file remains the canonical evidence journal.
 
+Mandatory verification rule (all UI/web/perf tasks): любое видимое или web-поведенческое изменение ОБЯЗАТЕЛЬНО проверяется в реальном браузере (e2e / Playwright / ручной прогон), и переводится в `Done` только после трёх подтверждений: (1) браузерная проверка (скриншот / e2e pass / консоль без новых ошибок), (2) задача закрыта в рамках текущего спринта, (3) ревьювер (Андриуш-Reviewer) подтвердил diff. До этого статус максимум `In progress` с пометкой «browser verification pending».
+
 Team rituals:
 
 - Daily standup: every day at 10:00, thread heartbeat automation `Metravel agent daily standup`.
@@ -66,7 +68,7 @@ Non-goals:
 
 Planning risks:
 
-- `T-012` remains the main blocker because old e2e expectations conflict with the project rule for valid Instagram embeds.
+- `T-012` is no longer a blocker: the e2e expectation now matches the project rule that valid Instagram post/reel/tv links render as embeds on web.
 - `D-001` needs a designer decision before code changes because the current visible text placeholder violates the neutral-placeholder rule.
 - Authenticated manual QA depends on `.env.e2e` access being available without exposing secrets.
 
@@ -76,7 +78,7 @@ Planning risks:
 | --- | --- | --- | --- | --- |
 | Team coordination | Андриуш (Manager) | In progress | Staffing, role status, delivery coordination | Keep idle roles visible and assign next work |
 | Approval gate | Андриуш (Approver) | In progress | Approves scope, design decisions, QA findings, and developer-ready tasks | Define and enforce task readiness flow |
-| Scope and requirements | Крина (Business Analyst) | In progress | QA scope, user stories, acceptance criteria, bug severity priorities | Clarify Instagram expected behavior and implementation acceptance gates |
+| Scope and requirements | Крина (Business Analyst) | In progress | QA scope, user stories, acceptance criteria, bug severity priorities; Instagram embed expectation aligned | Continue acceptance gates for remaining QA/design findings |
 | Backlog management | Андриуш (Backlog Manager) | In progress | Convert QA/design findings and idle capacity into prioritized backlog | Keep next work ready for every role |
 | Code readiness | Ромик (Dev) | In progress | Relevant files, risk zones, targeted test map; technical fix plan opened | Prepare implementation approach for D-001 and T-012 |
 | DevOps health | Витаутас (DevOps) | In progress | Local automation, scheduled rituals, and workboard health | Watch e2e artifacts, automations, and local server state |
@@ -135,12 +137,12 @@ Planning risks:
 | T-009 | Create designer UX/UI audit backlog from QA evidence | UI/UX Designer | In progress | Visual audit evidence exists; backlog still active | Find concrete visual, hierarchy, touch-target, empty-state, and mobile polish work |
 | T-010 | Run authenticated manual QA for write flows | Мариночка (Manual QA) | Open | No execution evidence yet | Sprint approved to start; use `.env.e2e`; cover favorite, rating, comment create/edit/delete, author-only actions |
 | T-011 | Write manual test cases for travel details web/mobile | Мариночка (QA Analyst) | Open | No execution evidence yet | Sprint approved to start; include prerequisites, steps, expected result, priority, viewport, and evidence checklist |
-| T-012 | Align Instagram rich-text e2e expectation with project rules | Мариночка (QA Analyst) + Ромик (Dev) | Open | Spec evidence pending | Sprint approved to start; current e2e expects fallback cards, while rules require iframe embeds for valid post/reel/tv URLs |
+| T-012 | Align Instagram rich-text e2e expectation with project rules | Мариночка (QA Analyst) + Ромик (Dev) | Done | `e2e/travel-instagram-rich-text.spec.ts` now asserts Instagram iframe/blockquotes for valid post links and rejects unload policy violations | Project rule is canonical: valid Instagram post/reel/tv URLs render as embeds on web; unsupported Instagram URLs keep fallback behavior |
 | T-013 | Redesign missing hero media state for travel details | UI/UX Designer + Ромик (Dev) | Done | Changed files: `components/travel/details/TravelDetailsOptimizedLCPHero.tsx`, `__tests__/components/travel/TravelDetailsContainer.performance.web.test.tsx`; validation: targeted Jest, `npm run check:fast`, Playwright hero smoke | Fixed in code: travel hero fallback is now a neutral geometry-preserving placeholder with no visible text/icons |
 | T-014 | Audit mobile bottom overlays and touch target sizes | UI/UX Designer | Open | No execution evidence yet | Stretch approved to start if capacity remains; cookie banner, bottom nav, sticky section tabs, and several actions need mobile spacing/touch-target review |
 | T-015 | Form and groom backlog from QA/design findings | Андриуш (Backlog Manager) | In progress | Backlog evidence pending | Convert findings, manual cases, and idle capacity into prioritized implementation-ready tasks |
 | T-016 | Write business requirements and acceptance criteria for travel QA fixes | Крина (Business Analyst) | In progress | Requirements evidence pending | Separate product requirements, user stories, non-goals, risks, and acceptance criteria from manager coordination |
-| T-017 | Prepare technical fix plan for travel QA findings | Ромик (Dev) | In progress | D-001 code done; T-012 plan pending | Locate files and prepare implementation approach for T-012 Instagram e2e alignment |
+| T-017 | Prepare technical fix plan for travel QA findings | Ромик (Dev) | In progress | D-001 code done; T-012 alignment confirmed in e2e; F-004 has repro and candidate files | Prepare scoped fix plan for the next evidence-backed finding |
 | T-018 | Approve and govern task readiness flow | Андриуш (Approver) | In progress | Approval evidence pending | Define who approves requirements, design, QA findings, and developer-ready tickets before implementation |
 | T-019 | Keep local QA automation and workboard health green | Витаутас (DevOps) | In progress | Automation evidence pending | Watch local board, e2e artifacts, scheduled rituals, and automation health for the team |
 | T-020 | Audit travel page SEO metadata and schema health | Сео (SEO Engineer) | In progress | SEO audit evidence pending | Review canonical, title, description, OG tags, schema.org, and SEO e2e coverage for travel details |
@@ -176,9 +178,32 @@ Planning risks:
 | T-050 | Prepare PDF/export findings for development | Ромик (Dev) | Open | Code evidence pending | Only confirmed PDF/export bugs with repro, expected result, target files, and validation enter implementation |
 | T-051 | Run cross-page review gate | Андриуш (Reviewer) | Open | Review evidence pending | Deduplicate findings, verify severity, reject vague bugs, and approve implementation-ready tasks |
 | T-052 | Keep new sprint evidence and e2e health green | Витаутас (DevOps) | In progress | Board/e2e evidence pending | Board shows active work, no fake Done, evidence required for every closed task, and e2e setup remains stable |
-| T-053 | Cross-page implementation lane | Ромик (Dev) | Blocked | Waiting for QA/BA/design evidence | Starts only after approved bug/spec/design output from T-023 onward |
+| T-053 | Cross-page implementation lane | Ромик (Dev) | In progress | Unblocked 2026-06-01: T-012/TD-002 no longer block the lane; F-004 has repro, target files, and validation need | Start with the smallest approved evidence-backed fix; keep shared-component changes scoped and browser-verified |
 | T-054 | Create cross-page final regression plan | Крина (Business Analyst) + Мариночка (QA Analyst) | Open | Regression plan pending | One reusable release checklist covers web/mobile/page-specific risks before final regression |
 | T-055 | Split `app/(tabs)/profile.tsx` below 800 LOC | Ромик (Dev) | Done | profile.tsx 889 → 783 LOC; new `app/(tabs)/profileScreen.styles.ts` + `profileScreen.helpers.ts`; validation: `npm run typecheck`, `npm run check:fast` (8 suites / 84 tests passed), `guard:file-complexity:changed` violations=0, `check:image-architecture`, `guard:external-links` all passed | Behavior-neutral extraction via `refactor-surgeon`: styles factory + pure helpers; hook order/deps unchanged |
+
+## Three-month team backlog
+
+Created: 2026-06-01. Planning window: 2026-06-01 through 2026-08-31.
+
+Goal: every role has evidence-backed work for discovery, implementation, validation, review, performance, and tech-debt cleanup. Work moves to `Done` only with command/browser/review evidence; implementation starts only from approved `F-*`, `D-*`, `TD-*`, or `PERF-*` items.
+
+| Month | Theme | Owners | Main backlog | Exit criteria |
+| --- | --- | --- | --- | --- |
+| June 2026 | Stabilize QA evidence and unblock implementation | Андриуш, Крина, Мариночка, UI/UX, Ромик, Витаутас, Сео | Close `T-010` through `T-022`; finish Map/Places/Quests/PDF QA (`T-025`-`T-030`); fix `F-004`; finish `PERF-001`; start `TD-003`, `TD-004` | Cross-page findings have repro, owner, severity, acceptance criteria, and validation command; no `Blocked` implementation lane |
+| July 2026 | Performance and high-value tech debt | Ромик, `refactor-surgeon`, `travel-expert`, `map-expert`, Витаутас, Сео | Execute `PERF-003` through `PERF-010`; split P1/P2 god files (`TD-003`-`TD-012`, `TD-018`-`TD-021`); add page perf baselines (`PERF-011`) | Production build/Lighthouse baselines are recorded; changed files pass `guard:file-complexity:changed`, targeted Jest/e2e, and external-link guard |
+| August 2026 | Regression hardening and release readiness | Андриуш, Крина, Мариночка, QA Analyst, UI/UX, Ромик, Витаутас, Сео | Finish full-page QA wave (`T-056`-`T-064`); close residual UX/SEO defects; add bundle/perf regression guards (`PERF-012`); prepare final regression plan (`T-054`) | Release candidate has cross-page regression checklist, SEO/perf summary, no known in-scope console/runtime failures, and explicit residual risks |
+
+Role coverage:
+
+- Андриуш: readiness approvals (`T-018`), backlog grooming (`T-015`, `T-034`), review gates (`T-032`, `T-051`), monthly reprioritization.
+- Крина: acceptance matrix and requirements (`T-016`, `T-021`, `T-054`, `T-063`) with measurable DoD before implementation.
+- Мариночка QA / Manual QA: page QA and authenticated/manual flows (`T-010`, `T-025`-`T-028`, `T-035`, `T-057`-`T-061`).
+- Мариночка QA Analyst: reusable manual cases (`T-011`, `T-022`, `T-036`, `T-040`, `T-043`, `T-045`, `T-047`, `T-049`).
+- UI/UX Designer: visual audits and redesign backlog (`T-009`, `T-014`, `T-029`, `T-037`, `T-041`, `T-044`, `T-048`, `T-062`).
+- Ромик / specialist agents: evidence-backed fixes and refactors (`T-017`, `T-031`, `T-039`, `T-050`, `T-053`, `TD-*`, `PERF-*`).
+- Витаутас: automation/e2e/perf infrastructure (`T-019`, `T-033`, `T-052`, `T-056`, `PERF-011`, `PERF-012`).
+- Сео: metadata/indexability audits (`T-020`, `T-030`, `T-038`, `T-042`, `T-046`) and SEO checks after perf changes.
 
 ## Tech debt backlog
 
@@ -189,10 +214,10 @@ Routing: god-components → `refactor-surgeon`; travel files → `travel-expert`
 | ID | Item | Owner | Priority | Evidence | Status |
 | --- | --- | --- | --- | --- | --- |
 | TD-001 | Finish `T-055` profile split below 800 LOC and commit the dirty diff | Ромик (Dev) / `refactor-surgeon` | P1 | Split done: `app/(tabs)/profile.tsx` = 783 LOC, `guard:file-complexity:changed` violations=0, `check:fast` 84 passed, no dead `ProfileStats` refs. Helpers/styles wired and imported | Code goal met & green; commit of dirty diff awaits user approval |
-| TD-002 | Resolve `F-003` Instagram rich-text e2e spec mismatch (iframe vs fallback card) | Мариночка (QA Analyst) + Ромик (Dev) | P1 | `e2e/travel-instagram-rich-text.spec.ts` expects `.rich-social-card--instagram`, DOM renders iframe | Open |
+| TD-002 | Resolve `F-003` Instagram rich-text e2e spec mismatch (iframe vs fallback card) | Мариночка (QA Analyst) + Ромик (Dev) | P1 | `e2e/travel-instagram-rich-text.spec.ts` now expects Instagram iframe/blockquotes for valid post links; unit coverage already keeps stories as fallback cards | Done |
 | TD-003 | Split `components/travel/TravelWizardStepPublish.tsx` (1250 LOC) | `refactor-surgeon` + `travel-expert` | P1 | guard:file-complexity = 1250 LOC | Open |
 | TD-004 | Split `components/travel/CompactSideBarTravel.tsx` (1101 LOC) | `refactor-surgeon` + `travel-expert` | P1 | guard:file-complexity = 1101 LOC | Open |
-| TD-005 | Split `components/listTravel/ListTravelBase.tsx` (1037 LOC) | `refactor-surgeon` + `travel-expert` | P1 | guard:file-complexity = 1037 LOC | Open |
+| TD-005 | Split `components/listTravel/ListTravelBase.tsx` below 800 LOC | `refactor-surgeon` + `travel-expert` | P1 | `ListTravelBase.tsx` 1037→796 LOC; extracted `parts/ListTravelLayout.tsx`, `parts/ListTravelTopContent.tsx` + pure fns in `ListTravelBase.helpers.ts`/`listTravelBaseModel.ts`. Behavior-neutral: `npx jest listTravel` 263/263 (32 suites, identical baseline, tests unchanged), `check:fast`/`typecheck`/`guard:file-complexity:changed` green. **Browser-verified** (dev port 8081): `/search` renders 380-card list + filters + search input (screenshot), `/export` empty-state + CTAs (screenshot); no NEW console errors from split. Pre-existing nested-`<button>` hydration warning in `TravelListItem`/`PlaceCard` (untouched by split) → separate finding F-004. | In progress — browser-verified; reviewer + sprint-close pending (mandatory verification rule) |
 | TD-006 | Resolve `D-002` mobile overlays and touch-target sizing | UI/UX Designer + Ромик (Dev) | P2 | action targets ~33-38px, Leaflet controls 30x30, cookie banner vs bottom nav | Open |
 | TD-007 | Split `components/MapPage/MapQuickFilters.tsx` (926 LOC) | `refactor-surgeon` + `map-expert` | P2 | guard:file-complexity = 926 LOC | Open |
 | TD-008 | Split `app/(tabs)/calendar.tsx` (1199 LOC) | `refactor-surgeon` | P2 | guard:file-complexity = 1199 LOC | Open |
@@ -205,6 +230,13 @@ Routing: god-components → `refactor-surgeon`; travel files → `travel-expert`
 | TD-015 | Extract oversized style modules >800 LOC | `refactor-surgeon` | P3 | ✅ `TravelDetailsStyles.ts` 831→44 LOC (6 modules). ✅ `webStyles.ts` 1128→22 LOC (7 modules; CSS byte-identical). ✅ `homeHeroStyles.ts` 1908→177 LOC (8 modules in `homeHeroStyles/`; normalized style-body diff IDENTICAL, 153 keys; HomeHero+Home tests 28/28; `guard:file-complexity:changed` violations=0; `typecheck` green; `createHomeHeroStyles` signature preserved). ✅ `filtersPanelStyles.ts` 935→30 LOC (8 modules in `filtersPanelStyles/`; 117 keys identical, no dup keys; dedicated `filtersPanelStyles.test.ts` passed; `check:fast` 6 suites / 52; named+default exports preserved). ✅ `questWizardStyles.ts` 870→22 LOC (9 modules; 146 keys identical; Quest tests 80/80). ✅ `modernFiltersStyles.ts` 859→45 LOC (8 modules; 105 keys identical, no dups; listTravel/filters tests 48 suites / 345; `index.ts` untouched). All 6 modules now <800 LOC | Done — 6/6 |
 | TD-016 | Audit 12 `eslint-disable react-hooks/exhaustive-deps` for stale-closure risk | `test-author` + domain expert | P3 | 12 occurrences across `components/`, `hooks/`, `app/` | Open |
 | TD-017 | Split `components/article/ArticleEditor.web.tsx` (1290 LOC) | `refactor-surgeon` | P4 | guard:file-complexity = 1290 LOC; article pages not in active use | Open |
+| TD-018 | Split `services/pdf-export/themes/PdfThemeConfig.ts` (1767 LOC) | `refactor-surgeon` + `pdf-export` | P2 | Largest file in `guard:file-complexity`; theme config should be split by theme/tokens and covered by PDF renderer snapshots | Open |
+| TD-019 | Split `screens/tabs/PlacesScreen.tsx` (1664 LOC) | `refactor-surgeon` + `travel-expert` | P1 | Tied to `F-004` and `PERF-010`; split screen controller, filters/list, map relation, and empty/error state | Open |
+| TD-020 | Split `screens/tabs/QuestsScreen.tsx` (1346 LOC) | `refactor-surgeon` | P2 | Needed before full Quests QA wave; split list, city/detail routing model, empty/locked states, and media handling | Open |
+| TD-021 | Split oversized PDF export runtime modules | `refactor-surgeon` + `pdf-export` | P2 | `pdfRuntimeMarkup.ts` 1196 LOC, `ContentParser.ts` 864 LOC, `BlockRenderer.ts` 820 LOC; extract parser/renderer blocks with golden output tests | Open |
+| TD-022 | Resolve 3 active `react-hooks/exhaustive-deps` warnings in `components/listTravel/ListTravelBase.tsx` | `travel-expert` + `test-author` | P2 | 3 `useMemo` warn missing `filter`/`options`/`styles` — deps arrays list granular sub-keys (`filter.sort`, `options?.categories`, `styles.fallbackNotice`) instead of whole objects (intentional, avoids recompute on object-identity change). Correct fix = justified `eslint-disable-next-line` per site, NOT whole-object deps (would regress perf). Blocks `check:fast` pre-commit (max-warnings=0). NB: active WIP file — coordinate via `travel-expert`, do not mix into unrelated dirty diff | Open |
+| TD-023 | Re-theme legacy non-brand shadow in shared `components/ui/EmptyState.tsx` | UI/UX Designer + `refactor-surgeon` | P3 | `iconContainer` web boxShadow hardcodes blue `rgba(59,130,246,0.15)`; palette is green/orange brand. Shared component (whole app) — change affects all empty states, verify before applying | Open |
+| TD-024 | Harden `ProfileMenu` dropdown positioning | `travel-expert` (profile) | P3 | `components/profile/ProfileMenu.tsx` uses fragile `measure()` + hardcoded `top:60` fallback; menu can mis-position on mobile/portrait and in tests | Open |
 
 ## Performance Refactor backlog
 
@@ -218,10 +250,10 @@ Routing: главная/поиск/места → `refactor-surgeon` + `travel-e
 
 | ID | Страница / Тема | Тип | Owner | Priority | Цель | Кандидаты файлов | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| PERF-001 | Главная | Рефакторинг | `refactor-surgeon` + `travel-expert` | P1 | Перевести `Home` на `SSR-first + deferred islands`: critical hero shell в initial render, тяжёлые секции ниже фолда — через visibility/idle defer; убрать eager-импорт `Home` из route | `app/(tabs)/index.tsx` (eager `Home`), `components/home/Home.tsx` (340), `HomeInspirationSection.tsx` (698), `HomeHeroBookLayout.tsx` (605), `HomeFavoritesHistorySection.tsx` (581), `AdventureChaptersSection.tsx` (513) | Open |
+| PERF-001 | Главная | Рефакторинг | `refactor-surgeon` + `travel-expert` | P1 | Перевести `Home` на `SSR-first + deferred islands`: critical hero shell в initial render, тяжёлые секции ниже фолда — через visibility/idle defer | Done in code: `components/home/Home.tsx` — все 7 below-fold секций обёрнуты в новый `DeferredSection` поверх `useProgressiveLoad` (visibility-first + fallback timer, rootMargin 400px / 1000ms, compliant with timeout policy); lazy-чанки секций больше не стартуют все сразу при mount и не конкурируют с hero LCP. Hero остаётся eager. Native поведение не меняется (`shouldLoad=true` сразу). Validation: `typecheck` green, home Jest `62 passed`, `check:image-architecture` + `guard:external-links` passed, `eslint Home.tsx` clean. Без lazy-skip изображений / без `content-visibility`. Browser ✅: `npm run e2e -- e2e/home-quick-filters-nightstay.spec.ts --project=chromium` → `1 passed` (4.6s), hero/quick-filters путь и навигация Home→Search не сломаны. Eager-импорт `Home` в `app/(tabs)/index.tsx` сохранён намеренно (Home = critical shell с hero/LCP; lazy route задержал бы LCP). **Осталось до Done (mandatory verification rule): подтверждение спринтом + ревьювером (Андриуш-Reviewer).** Прим.: reveal-on-scroll deferred-секций этим spec явно не ассертится | In progress |
 | PERF-002 | Главная | Замена/распил стилей | `refactor-surgeon` | P1 | Закрыть `homeHeroStyles.ts` (1908 LOC) — разбить на chunk-модули, убрать из critical path лишние стили (см. TD-015) | `components/home/homeHeroStyles.ts` 1908→177 LOC + 8 модулей в `homeHeroStyles/` (context/shell/sliderSection/sliderMedia/sliderNav/typography/bookWidget/cta). Validation: `typecheck` green; style-keys diff HEAD↔split = 153/153, 0 lost/0 added; 0 дублей ключей между модулями; `guard:file-complexity:changed` violations=0; `check:image-architecture` passed; Jest home `30 passed` (HomeHero/Home/home-screen.regression). Единственный потребитель `HomeHero.tsx` не тронут | Done |
 | PERF-003 | Главная | Image delivery | `travel-expert` | P2 | Один LCP hero image с `fetchpriority=high`+eager, остальное media — lazy; корректные `srcset/sizes`; нет oversized для small slots; нейтральные placeholders | `components/home/HomeHero.tsx`, `HomeHeroPopularSection.tsx`, `HomeHeroMoodRail.tsx`, `components/ui/ImageCardMedia.tsx` | Open |
-| PERF-004 | Поиск | Рефакторинг/распил | `refactor-surgeon` + `travel-expert` | P1 | Распилить и облегчить список: critical shell (поле поиска + первый экран результатов) рано, фильтры/правую колонку/экспорт — defer; уменьшить initial JS search route | `app/(tabs)/search.tsx` (lazy), `components/listTravel/ListTravelBase.tsx` (1037, см. TD-005), `RightColumn.tsx` (758), `TravelListItem.tsx` (677), `ModernFilters.tsx` (587) | Open |
+| PERF-004 | Поиск | Рефакторинг/распил | `refactor-surgeon` + `travel-expert` | P1 | Распилить и облегчить список: critical shell (поле поиска + первый экран результатов) рано, фильтры/правую колонку/экспорт — defer; уменьшить initial JS search route | `app/(tabs)/search.tsx` (lazy), `components/listTravel/ListTravelBase.tsx` (now 796 after TD-005), `RightColumn.tsx` (758), `TravelListItem.tsx` (677), `ModernFilters.tsx` (587) | Open |
 | PERF-005 | Поиск | Перфоманс списка | `travel-expert` | P2 | Виртуализация/инкрементальная подгрузка результатов, мемоизация карточек, lazy-image в карточках, отсечь лишние ререндеры при смене фильтров | `components/listTravel/RenderTravelItem.tsx`, `TravelListItem.tsx`, `RecommendationsTabs.tsx` (634) | Open |
 | PERF-006 | Путешествие | Продолжение рефактора | `travel-expert` | P1 | Доделать незакрытые этапы из `docs/TRAVEL_PERFORMANCE_REFACTOR.md`: Этап 4 (сократить initial JS — резерв в `entry`/`__common`), Этап 5 (image delivery: hero srcset, avatar bytes, inline images), Этап 7 (budgets + regression guard) | `app/(tabs)/travels/[param].tsx`, `components/travel/details/*`, `entry`/`__common` audit | In progress |
 | PERF-007 | Путешествие | Замена тяжёлых чанков | `refactor-surgeon` + `map-expert` | P2 | `TravelDetailsMapSection-*` (~73 KB) и `CommentsSection-*` (~77 KB) — самые тяжёлые lazy-чанки; проверить замену Leaflet-зависимости на легче/общую с картой, lazy-границы комментариев | `components/travel/details/sections/*`, общая map-зависимость | Open |
@@ -232,6 +264,62 @@ Routing: главная/поиск/места → `refactor-surgeon` + `travel-e
 | PERF-012 | Тестирование перфоманса | Regression guard | `test-author` | P2 | Bundle-size budget guard на `entry`/`__common` и per-route chunks + e2e perf-budget spec для каждой страницы; падение при регрессе; задокументировать thresholds в `docs/` | `scripts/check-performance.sh`, `analyze:bundle`, новые `e2e/*-perf-budget.spec.ts` | Open |
 | PERF-013 | План ускорения | Сквозной план | Ромик (Dev) + Андриуш (Approver) | P1 | Единый план ускорения для всех страниц: приоритизация (главная и поиск как точки входа → карта/места → travel-доводка), порядок этапов, метрики до/после, definition of done; оформить в `docs/OPTIMIZATION_AND_FIX_PLAN.md` или новом perf-плане | `docs/OPTIMIZATION_AND_FIX_PLAN.md`, `docs/TRAVEL_PERFORMANCE_REFACTOR.md` | Open |
 | PERF-014 | Сквозное | Замена shared runtime | `refactor-surgeon` | P2 | Аудит того, что попадает в `entry`/`__common` для всех route (не только travel): убрать ранние shared-импорты, тиражировать `useWindowDimensions`-вместо-`useResponsive` приём и interaction-defer providers на остальные страницы | `app/_layout.tsx`, `AppProviders`, `stores/*`, `api/client.ts` (836, см. TD-012) | Open |
+
+## Full-page UI/UX QA wave
+
+Created: 2026-06-01. Цель: пройтись по полному списку страниц приложения, на каждой сделать скрины и протестировать на web (desktop `1440x900`) и mobile (iPhone 13 / `390x844`), завести баги (`F-*`) и фичи/редизайн-тикеты (`D-*`) на то, что стоит переделать.
+
+Метод для каждой страницы (definition of done на QA-шаг):
+
+1. Открыть роут как гость и (где применимо) как авторизованный e2e-пользователь.
+2. Снять скрины: desktop top/scrolled, mobile top/scrolled — в игнорируемую локальную папку (`.codex-temp/page-audit/<page>/`).
+3. Проверить: горизонтальный overflow, обрезанный текст кнопок, наложения оверлеев, touch-target `>= 44px`, состояния empty/loading/error, console/page errors = 0, внешние ссылки только через `@/utils/externalLinks`.
+4. Завести `F-*` на дефекты и `D-*` на UX/редизайн-предложения; связать с владельцем и acceptance criteria.
+
+Routing: QA-прогон → Мариночка (QA) / Мариночка (Manual QA); скрин-харнесс и health → Витаутас (DevOps) + `test-author`; визуальный аудит и `D-*` тикеты → UI/UX Designer; acceptance → Крина (Business Analyst); фиксы → Ромик (Dev) после repro+approval.
+
+Page inventory (роуты вне уже покрытых travel/Search/Home/Map/Places/Quests/PDF-export):
+
+- Auth / account: `login.tsx`, `registration.tsx`, `register.tsx`, `set-password.tsx`, `accountconfirmation.tsx`, `settings.tsx`, `subscriptions.tsx`.
+- User content: `profile.tsx`, `user/[id].tsx`, `favorites.tsx`, `history.tsx`, `userpoints.tsx`, `roulette.tsx`, `calendar.tsx`, `messages.tsx`, `metravel.tsx`, `travelsby.tsx`.
+- Travel authoring: `travel/new.tsx` (wizard), `travel/[id].tsx` (edit).
+- Articles: `articles.tsx`, `article/[id].tsx` (deprioritized — не в активном использовании, см. [[project_active_features]]).
+- Legal / info / system: `about.tsx`, `contact.tsx`, `privacy.tsx`, `cookies.tsx`, `modal.tsx`, `error.tsx`, `[...missing].tsx` (404).
+
+| ID | Task | Owner | Status | Evidence | Notes |
+| --- | --- | --- | --- | --- | --- |
+| T-056 | Build reusable page-audit screenshot harness | Витаутас (DevOps) + `test-author` | Done | `.codex-temp/page-audit.mjs` (Playwright, grouped page list, desktop+mobile top/scrolled, overflowX/console/pageError capture + transient-404 retry); run output `.codex-temp/page-audit/report-all.json` | Serves existing `dist/` via `scripts/serve-web-build.js` on `:8085`; reusable per group (`auth`/`content`/`authoring`/`legal`/`articles`/`all`) |
+| T-057 | QA pass: Auth & account pages | Мариночка (QA) | Done | `report-all.json`: `login`, `registration`, `register`, `set-password`, `accountconfirmation`, `settings`, `subscriptions` all overflowX=false, console=0, pageErr=0 (desktop+mobile); screenshots in `.codex-temp/page-audit/<page>/` | Most account pages are auth-gated and show login walls as guest; mobile form bottoms hit `D-004` overlap |
+| T-058 | QA pass: User content pages | Мариночка (QA) | Done | `report-all.json`: `profile`, `favorites`, `history`, `userpoints`, `roulette`, `calendar`, `messages`, `metravel`, `travelsby` all clean (overflowX=false, console=0, pageErr=0); screenshots captured | `metravel` empty-state/year-filter logged as `D-005`; `user/[id]` needs a real id and is deferred |
+| T-059 | QA pass: Travel authoring (wizard + edit) | Мариночка (Manual QA) | Done | `report-all.json`: `travel/new` clean; renders auth-gate (`Войдите в аккаунт`) as guest — `.codex-temp/page-audit/travel-new/desktop-top.png` | Authenticated wizard/edit walkthrough still pending (needs `.env.e2e` session); no destructive saves performed |
+| T-060 | QA pass: Legal / info / system pages | Мариночка (QA) | Done | `report-all.json`: `about`, `contact`, `privacy`, `cookies`, `modal`, `error`, `404` all overflowX=false, console=0, pageErr=0; screenshots captured | `/modal` boilerplate → `F-005`; `/contact` missing header → `D-006` |
+| T-061 | QA pass: Articles pages (deprioritized) | Мариночка (QA) | Done | `report-all.json`: `articles` clean (overflowX=false, console=0, pageErr=0, bodyText≈1900) | Smoke only per active-features rule; `article/[id]` needs a real id, deferred |
+| T-062 | UI/UX visual audit → file F-*/D- tickets for all wave pages | UI/UX Designer | In progress | Initial tickets filed from screenshots: `F-005`, `D-004`, `D-005`, `D-006` | Continue deeper visual review (hierarchy, touch targets, placeholders) across remaining screenshots |
+| T-063 | Acceptance criteria for full-page QA wave findings | Крина (Business Analyst) | Open | Criteria pending | Severity, expected result, and DoD per confirmed `F-*`/`D-*` before they enter implementation |
+| T-064 | Prepare implementation queue for wave findings | Ромик (Dev) | Open | Repro + target files pending | Only confirmed `F-*`/`D-*` with repro, expected result, target files, and validation commands enter implementation |
+
+## Codebase review snapshot
+
+Created: 2026-06-01. Scope: static repository review plus current dirty diff. This is not a full production Lighthouse run and does not replace browser QA for visible UI changes.
+
+Evidence:
+
+- Current branch: `main`.
+- Working tree has ongoing unrelated/user changes in `CLAUDE.md`, `docs/RULES.md`, `components/home/Home.tsx`, `components/listTravel/*`, and `docs/AGENT_WORKBOARD.md`; they were reviewed but not reverted.
+- Source size scan: 971 TS/TSX files in `app/`, `components/`, `hooks/`, `services/`, `api/`, `utils`, `stores`; about 204k LOC, or 209k LOC including `screens/`.
+- `npm run guard:file-complexity -- --json`: 18 files exceed 800 LOC after `TD-005` dropped `ListTravelBase.tsx` below the threshold.
+- Skipped-test scan: no `it.skip`, `test.skip`, `describe.skip`, `xit`, or `xtest` found outside the rule text.
+- `npm run guard:external-links`: passed; no direct `Linking.openURL` outside `utils/externalLinks.ts` and no direct `window.open` outside approved allowlist.
+- Source scan: 12 `react-hooks/exhaustive-deps` disables, 73 TypeScript suppression comments, and 5 `any` hits in `api/`, `hooks/`, `stores`.
+- `npm run check:fast:dry`: changed scope would run 11 targeted app tests; `npm run check:e2e:changed:dry`: would run 6 Playwright specs for travel/search.
+
+Findings:
+
+1. P1: Oversized modules remain the largest delivery risk. `guard:file-complexity` still flags core screens and shared services, including `PdfThemeConfig.ts`, `PlacesScreen.tsx`, `QuestsScreen.tsx`, `TravelWizardStepPublish.tsx`, `BookSettingsModal.tsx`, `CompactSideBarTravel.tsx`, `MapQuickFilters.tsx`, `api/client.ts`, and PDF renderer/parser modules. This is now covered by `TD-003` through `TD-021`.
+2. P1: Current Home performance diff changed visible loading behavior and required targeted verification. The policy issue found during review (`fallbackDelay = 1200`) was fixed to `1000`, and the Home quick-filter e2e smoke passed; reviewer approval is still required before marking `PERF-001` `Done`.
+3. P2: Search/ListTravel refactor crossed the 800 LOC guard, but the module still retains broad responsibilities for route params, data fetching, export, delete flow, fallbacks, and layout orchestration. Keep follow-up ListTravel work behavior-neutral and covered by search/list integration tests.
+4. P2: Full-page QA now has inventory coverage, but many pages still lack screenshots/console evidence. `T-056` should land first so QA/design/SEO can work from consistent artifacts.
+5. P3: Type-safety debt is concentrated in web/native interop, map, PDF, and list/search helpers. `TD-016` should audit hook disables first, then split `any` cleanup by domain instead of doing a broad typing sweep.
 
 ## Findings
 
@@ -260,9 +348,10 @@ Routing: главная/поиск/места → `refactor-surgeon` + `travel-e
 - Severity: medium / QA blocker.
 - URL: mocked `/travels/e2e-instagram-rich-text`.
 - Expected by project rules: valid Instagram post/reel/tv rich-text links render as embedded Instagram content on web.
-- Actual e2e expectation: `e2e/travel-instagram-rich-text.spec.ts` waits for `.rich-social-card--instagram` fallback cards and expects zero Instagram iframes.
+- Previous e2e expectation: `e2e/travel-instagram-rich-text.spec.ts` waited for `.rich-social-card--instagram` fallback cards and expected zero Instagram iframes.
 - Observed DOM: `.travel-rich-text` contains an iframe and no fallback card.
-- Status: open; update test/spec after product confirmation. Do not treat iframe rendering as a frontend regression without changing the rule.
+- Resolution: e2e expectation is aligned with the project rule and now accepts Instagram iframe/blockquotes for valid post links while continuing to guard unload policy violations.
+- Status: fixed; do not treat iframe rendering as a frontend regression.
 
 ### D-001 Missing hero media placeholder is not neutral
 
@@ -291,7 +380,8 @@ Routing: главная/поиск/места → `refactor-surgeon` + `travel-e
 - URL: `/places`, viewport mobile `375x812`, guest.
 - Expected: place cards render valid, non-nested interactive elements; no React hydration warnings.
 - Actual: on first render the console logs repeated React 19 errors: `In HTML, <button> cannot be a descendant of <button>. This will cause a hydration error.` and `<button> cannot contain a nested button.` (6+ occurrences). The outer `<button aria-label="Открыть … на карте">` contains `OptimizedFavoriteButton` + `TravelStatusButton` (`aria-label="Добавить в план"`).
-- After client reconciliation the live DOM has `nestedCount: 0` (React recovers), so the symptom is hydration-time only.
+- Guest: after client reconciliation the live DOM has `nestedCount: 0` (the `Добавить в план` status button is not rendered for guests), so the guest symptom is hydration-time only.
+- Authenticated (escalated): the `TravelStatusButton` ("Добавить в план") renders as a real button, so the nested `<button>`-in-`<button>` persists in the live DOM — measured `nestedButtons: 20` (one per visible place card) on `/places` while signed in. This is invalid DOM + an accessibility defect (interactive control nested in interactive control), not only console noise. The authenticated case is effectively higher severity than P2.
 - Source path: `components/places/PlaceListCard.tsx` → `components/ui/UnifiedTravelCard.tsx` (`rightTopSlot` = `RelatedTravelActionStack`). `UnifiedTravelCard` already renders its web container as `View role="link"` (not button) to avoid this; the offending button wrapper comes from the media/card press-target path when `onCardPress` + `onMediaPress` + `rightTopSlot` are all supplied.
 - Repro: open `/places` on mobile web as guest, read browser console at initial load.
 - Not reproduced on `/` (Home) or `/search` with the same card component.
@@ -304,6 +394,46 @@ Routing: главная/поиск/места → `refactor-surgeon` + `travel-e
 - Map place popup: save action label renders truncated as `Сохран…` instead of `Сохранить`.
 - Places `/places`: some records show `СТРАНА НЕ УКАЗ…` / `Дворец без названия` — backend data quality, not UI.
 - Status: open; cosmetic, batch with designer audit (T-029/T-044).
+
+### F-005 `/modal` route ships unmodified Expo template boilerplate
+
+- Severity: medium / P2 (placeholder leaking into the public build).
+- URL: `/modal`, desktop `1440x900` + mobile `390x844`, guest.
+- Expected: a real modal screen, or the route is removed / not publicly reachable.
+- Actual: page title `О сайте` but body is the Expo starter template: `Open up the code for this screen:` / `app/modal.tsx` / `Change any of the text, save the file, and your app will automatically update.` / `Tap here if your app doesn't automatically update after making changes`.
+- Evidence: `.codex-temp/page-audit/modal/desktop-top.png`.
+- Candidate file: `app/modal.tsx`.
+- Status: open; needs product decision (remove route vs implement real content) before any code change.
+
+### D-004 Mobile cookie banner + bottom tab bar overlap page content (cross-page)
+
+- Severity: low-medium / UX. Extends `D-002`/`D-003` beyond travel details to the wider page set.
+- Viewport: mobile `390x844`, guest, before cookie consent dismissed.
+- Actual: the bottom cookie-consent banner stacks with the bottom tab navigation and together cover the lower part of scrollable content/forms. Visible on `registration` (the `Google Sign-In недоступен…` line + submit area sit under the banner), `login`, `travelsby`, `about`, and others.
+- Evidence: `.codex-temp/page-audit/registration/mobile-top.png`, `.codex-temp/page-audit/login/mobile-top.png`, `.codex-temp/page-audit/travelsby/mobile-top.png`.
+- Expected: banner and bottom nav reserve safe-area/scroll padding so no primary action or form field is hidden.
+- Owner: UI/UX Designer.
+- Status: open; batch with `D-002`/`TD-006`.
+
+### D-005 `/metravel` has no empty-state and a stale default year filter
+
+- Severity: low-medium / UX.
+- URL: `/metravel`, desktop `1440x900`, guest.
+- Actual: left filter rail shows `0 путешествий`; the entire results area is blank white with no empty-state message or guidance. The `Год` filter defaults to `2024` while the current year is `2026`, which can itself drive a zero-result view.
+- Evidence: `.codex-temp/page-audit/metravel/desktop-top.png`.
+- Expected: a clear empty-state ("ничего не найдено" + reset/adjust filters), and a sensible default year (current year or "all").
+- Owner: UI/UX Designer for empty-state; Ромик (Dev) to confirm default-year source.
+- Status: open.
+
+### D-006 `/contact` renders without the global top navigation header
+
+- Severity: low / navigation consistency.
+- URL: `/contact`, desktop `1440x900`, guest.
+- Actual: the contact page (`MeTravel.by` / `О проекте` / step list + contact form) renders with footer only and no top navigation bar, so returning to the app relies on footer links. `about`, `privacy`, and most other pages keep the global header.
+- Evidence: `.codex-temp/page-audit/contact/desktop-top.png` vs `.codex-temp/page-audit/privacy/desktop-top.png`.
+- Expected: consistent global header/navigation across content pages, or an explicit back/home affordance.
+- Owner: UI/UX Designer.
+- Status: open.
 
 ## Validation log
 
@@ -325,6 +455,12 @@ Routing: главная/поиск/места → `refactor-surgeon` + `travel-e
 - D-001 code verification: `npm run test:run -- __tests__/components/travel/TravelDetailsContainer.performance.web.test.tsx` passed: `4 passed`.
 - D-001 scope verification: `npm run check:fast` passed: targeted app tests `199 passed`, external-link guards passed.
 - D-001 browser verification: `E2E_FORCE_REBUILD=1 E2E_API_PROXY_INSECURE=true EXPO_PUBLIC_E2E=true npx playwright test e2e/travels.spec.ts --project=chromium --grep "should display hero image" --workers=1` passed: `1 passed`.
+- Board unblock: `T-012` / `TD-002` marked done because current `e2e/travel-instagram-rich-text.spec.ts` asserts the canonical Instagram embed behavior; `T-053` moved from `Blocked` to `In progress` with `F-004` as the next evidence-backed candidate.
+- Board unblock validation: `E2E_FORCE_REBUILD=1 E2E_API_PROXY_INSECURE=true EXPO_PUBLIC_E2E=true npx playwright test e2e/travel-instagram-rich-text.spec.ts --project=chromium --workers=1` passed: `1 passed`.
+- Backlog/codebase review validation: `npm run check:fast` passed (`11` targeted suites / `199` tests) and `npm run guard:external-links` passed.
+- Tech-debt validation: `npm run guard:file-complexity:changed` passed with `0` changed-file violations; full complexity scan still reports `18` files above `800` LOC and they are covered by `TD-003` through `TD-021`.
+- Home perf smoke after timeout-policy fix: `E2E_FORCE_REBUILD=1 E2E_API_PROXY_INSECURE=true EXPO_PUBLIC_E2E=true npx playwright test e2e/home-quick-filters-nightstay.spec.ts --project=chromium --workers=1` passed: `1 passed`.
+- Hygiene: root-level `.codex-temp-auth.json` temporary auth artifact was removed without reading or printing its contents.
 
 ## Manual test cases backlog
 

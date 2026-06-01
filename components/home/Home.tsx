@@ -12,6 +12,7 @@ import { queueAnalyticsEvent } from '@/utils/analytics'
 import { hapticImpact } from '@/utils/haptics'
 import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries'
 import { useHomeViewport } from './useHomeViewport'
+import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
 
 const IS_WEB = Platform.OS === 'web'
 
@@ -41,29 +42,52 @@ type PageSectionProps = {
   padding?: boolean
 }
 
-function PageSection({
-  children,
-  marginTop,
-  maxWidth = 'xl',
-  padding = true,
-}: PageSectionProps) {
-  return (
-    <ResponsiveContainer maxWidth={maxWidth} padding={padding}>
-      <View style={{ marginTop }}>{children}</View>
-    </ResponsiveContainer>
-  )
-}
-
-function Section({
-  children,
-  marginTop,
-  minHeight,
-}: {
+type DeferredSectionProps = {
   children: React.ReactNode
+  fallback: React.ReactNode
   marginTop: number
   minHeight?: number
-}) {
-  return <View style={minHeight ? { marginTop, minHeight } : { marginTop }}>{children}</View>
+  container?: { maxWidth?: PageSectionProps['maxWidth']; padding?: boolean }
+  rootMargin?: string
+  fallbackDelay?: number
+}
+
+// Below-the-fold island: on web its lazy chunk only starts loading when the
+// section approaches the viewport (or after a short fallback timer), so heavy
+// sections don't compete with the hero LCP. On native useProgressiveLoad
+// returns shouldLoad=true immediately, preserving current behavior.
+function DeferredSection({
+  children,
+  fallback,
+  marginTop,
+  minHeight,
+  container,
+  rootMargin = '400px',
+  fallbackDelay = 1000,
+}: DeferredSectionProps) {
+  const { shouldLoad, setElementRef } = useProgressiveLoad({
+    priority: 'low',
+    rootMargin,
+    fallbackDelay,
+  })
+
+  const content = shouldLoad ? <Suspense fallback={fallback}>{children}</Suspense> : fallback
+  const wrapped = container ? (
+    <ResponsiveContainer maxWidth={container.maxWidth ?? 'xl'} padding={container.padding ?? true}>
+      {content}
+    </ResponsiveContainer>
+  ) : (
+    content
+  )
+
+  return (
+    <View
+      ref={IS_WEB ? (setElementRef as any) : undefined}
+      style={minHeight ? { marginTop, minHeight } : { marginTop }}
+    >
+      {wrapped}
+    </View>
+  )
 }
 
 const SectionSkeleton = memo(function SectionSkeleton() {
@@ -272,53 +296,42 @@ function Home() {
         travelsCountLoading={isAuthenticated && travelsCountLoading}
       />
 
-      <PageSection marginTop={gap.hero}>
-        <Suspense fallback={<SectionSkeleton />}>
-          <HomeRandomRoutesSection />
-        </Suspense>
-      </PageSection>
+      <DeferredSection marginTop={gap.hero} container={{}} fallback={<SectionSkeleton />}>
+        <HomeRandomRoutesSection />
+      </DeferredSection>
 
-      <Section marginTop={gap.howItWorks} minHeight={HOW_IT_WORKS_PLACEHOLDER_STYLE.minHeight}>
-        <Suspense
-          fallback={
-            <HowItWorksFallback colors={colors} isMobile={isMobile} padH={padH} padV={padV} />
-          }
-        >
-          <HomeHowItWorks />
-        </Suspense>
-      </Section>
+      <DeferredSection
+        marginTop={gap.howItWorks}
+        minHeight={HOW_IT_WORKS_PLACEHOLDER_STYLE.minHeight}
+        fallback={
+          <HowItWorksFallback colors={colors} isMobile={isMobile} padH={padH} padV={padV} />
+        }
+      >
+        <HomeHowItWorks />
+      </DeferredSection>
 
-      <PageSection marginTop={gap.weekends}>
-        <Suspense fallback={<SectionSkeleton />}>
-          <HomeWeekendRoutesSection />
-        </Suspense>
-      </PageSection>
+      <DeferredSection marginTop={gap.weekends} container={{}} fallback={<SectionSkeleton />}>
+        <HomeWeekendRoutesSection />
+      </DeferredSection>
 
-      <Section marginTop={gap.history}>
-        <Suspense fallback={<SectionSkeleton />}>
-          <HomeFavoritesHistorySection />
-        </Suspense>
-      </Section>
+      <DeferredSection marginTop={gap.history} fallback={<SectionSkeleton />}>
+        <HomeFavoritesHistorySection />
+      </DeferredSection>
 
-      <Section marginTop={gap.sections}>
-        <Suspense fallback={<SectionSkeleton />}>
-          <HomeInspirationSections />
-        </Suspense>
-      </Section>
+      <DeferredSection marginTop={gap.sections} fallback={<SectionSkeleton />}>
+        <HomeInspirationSections />
+      </DeferredSection>
 
-      <Section marginTop={gap.faq}>
-        <Suspense
-          fallback={<FaqFallback colors={colors} isMobile={isMobile} padH={padH} padV={padV} />}
-        >
-          <HomeFAQSection />
-        </Suspense>
-      </Section>
+      <DeferredSection
+        marginTop={gap.faq}
+        fallback={<FaqFallback colors={colors} isMobile={isMobile} padH={padH} padV={padV} />}
+      >
+        <HomeFAQSection />
+      </DeferredSection>
 
-      <Section marginTop={gap.finalCta}>
-        <Suspense fallback={<SectionSkeleton />}>
-          <HomeBottomCtaSection travelsCount={travelsCount} />
-        </Suspense>
-      </Section>
+      <DeferredSection marginTop={gap.finalCta} fallback={<SectionSkeleton />}>
+        <HomeBottomCtaSection travelsCount={travelsCount} />
+      </DeferredSection>
     </ScrollView>
   )
 }

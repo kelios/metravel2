@@ -151,6 +151,7 @@ npm run release:check  # Полная проверка (lint + tests + build + a
 - Env-файлы: `.env`, `.env.dev`, `.env.prod`, `.env.e2e`, `.env.preprod`
 - Локальный API: `EXPO_PUBLIC_IS_LOCAL_API=true`
 - Карты (routing): `EXPO_PUBLIC_ORS_API_KEY` (OpenRouteService, опционально)
+- Авторизованный QA: можно логиниться тестовым e2e-аккаунтом из `.env.e2e` (`E2E_EMAIL`/`E2E_PASSWORD`) через e2e-механизм (Playwright auth setup или программный логин: login API → `Authorization: Token`), без ручного ввода пароля в поля и без вывода секретов в логи/скрины. Только для локального/preview QA, без деструктивных действий.
 
 ---
 

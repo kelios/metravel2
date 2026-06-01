@@ -35,6 +35,11 @@ npm run test:run
   - open a local browser preview and visually verify the changed scenario in the browser before considering the task complete;
   - take a screenshot of the result to confirm visual correctness;
   - check the browser console for errors (no new errors should appear after the change).
+- Authenticated QA (allowed):
+  - for QA/testing that requires a signed-in user, you may sign in using the dedicated end-to-end test account from `.env.e2e` (`E2E_EMAIL` / `E2E_PASSWORD`);
+  - prefer the e2e auth mechanism — the Playwright auth setup or a programmatic login (login API → `Authorization: Token <token>` injected into the store/headers) — over hand-typing credentials into UI fields, and reuse the e2e session where possible;
+  - this is scoped to local/preview QA against the dev server only; never use it for destructive or irreversible actions;
+  - never print, echo, log, screenshot, or commit the credential values — keep them only in `.env.e2e`.
 - Dev media caveat:
   - in local dev, article/travel images may fail to load because content can come from production data while media files remain tied to production storage/CDN access;
   - do not treat this alone as a frontend bug and do not change app code only to “fix” dev-only missing production media;

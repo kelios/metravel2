@@ -1,4 +1,27 @@
 import type { QueryClient } from '@tanstack/react-query'
+import type { FilterOptions, FilterState } from './utils/listTravelTypes'
+
+export type ActiveConditionChip = {
+  key: string
+  label: string
+  onRemove: () => void
+}
+
+export type EmptyStateMessage =
+  | {
+      icon: string
+      title: string
+      description: string
+      variant: 'empty'
+      action?: { label: string; onPress: () => void }
+    }
+  | {
+      icon: string
+      title: string
+      description: string
+      variant: 'search'
+      suggestions: string[]
+    }
 
 export const normalizeNamedOptions = (items: unknown): Array<{ id: string; name: string }> => {
   if (!Array.isArray(items)) return []
@@ -51,6 +74,22 @@ export const normalizeCountryOptions = (items: unknown): Array<{ country_id?: nu
       return null
     })
     .filter((item): item is NonNullable<typeof item> => item !== null)
+}
+
+export const normalizeFilterOptions = (rawOptions: any): FilterOptions | undefined => {
+  if (!rawOptions) return undefined
+
+  return {
+    countries: normalizeCountryOptions(rawOptions.countries),
+    categories: normalizeNamedOptions(rawOptions.categories),
+    transports: normalizeNamedOptions(rawOptions.transports),
+    categoryTravelAddress: normalizeNamedOptions(rawOptions.categoryTravelAddress),
+    companions: normalizeNamedOptions(rawOptions.companions),
+    complexity: normalizeNamedOptions(rawOptions.complexity),
+    month: normalizeNamedOptions(rawOptions.month),
+    over_nights_stay: normalizeNamedOptions(rawOptions.over_nights_stay),
+    sortings: rawOptions.sortings || [],
+  }
 }
 
 export const removeTravelFromInfiniteTravelsCache = (
@@ -117,6 +156,48 @@ export const removeTravelFromInfiniteTravelsCache = (
   })
 }
 
+export const isTravelAlreadyDeletedError = (error: unknown): boolean => {
+  const errorStatus =
+    error && typeof error === 'object' && 'status' in error
+      ? Number((error as { status?: unknown }).status)
+      : null
+  const errorMessageText =
+    error instanceof Error ? error.message.toLowerCase() : String(error || '').toLowerCase()
+  return (
+    errorStatus === 404 ||
+    errorMessageText.includes('404') ||
+    errorMessageText.includes('not found') ||
+    errorMessageText.includes('не найден')
+  )
+}
+
+export const describeTravelDeleteError = (
+  error: unknown,
+): { errorMessage: string; errorDetails: string } => {
+  let errorMessage = 'Не удалось удалить путешествие.'
+  let errorDetails = 'Попробуйте позже.'
+
+  if (error instanceof Error) {
+    if (error.message.includes('timeout') || error.message.includes('время ожидания')) {
+      errorMessage = 'Превышено время ожидания'
+      errorDetails = 'Проверьте подключение к интернету и попробуйте снова.'
+    } else if (error.message.includes('network') || error.message.includes('сеть')) {
+      errorMessage = 'Проблема с подключением'
+      errorDetails = 'Проверьте подключение к интернету и попробуйте снова.'
+    } else if (error.message.includes('404') || error.message.includes('не найдено')) {
+      errorMessage = 'Путешествие не найдено'
+      errorDetails = 'Возможно, оно уже было удалено.'
+    } else if (error.message.includes('403') || error.message.includes('доступ')) {
+      errorMessage = 'Нет доступа'
+      errorDetails = 'У вас нет прав для удаления этого путешествия.'
+    } else {
+      errorDetails = error.message
+    }
+  }
+
+  return { errorMessage, errorDetails }
+}
+
 export const SORT_LABEL_FALLBACKS: Record<string, string> = {
   newest: 'Новые',
   oldest: 'Старые',
@@ -160,4 +241,183 @@ export const summarizeFilterValues = (
   const extraCount = labels.length - 2
 
   return `${title}: ${shownLabels}${extraCount > 0 ? ` +${extraCount}` : ''}`
+}
+
+export const buildActiveConditionChips = ({
+  debSearch,
+  filter,
+  options,
+  onSelect,
+  setSearch,
+}: {
+  debSearch: string
+  filter: FilterState
+  options?: FilterOptions
+  onSelect: (key: string, value: unknown) => void
+  setSearch: (value: string) => void
+}): ActiveConditionChip[] => {
+  const chips: ActiveConditionChip[] = []
+  const addArrayChip = (
+    key: keyof FilterState,
+    title: string,
+    values: Array<string | number> | undefined,
+    optionList?: Array<{ id?: string | number; country_id?: string | number; name?: string; title_ru?: string }>,
+  ) => {
+    const label = summarizeFilterValues(title, values, optionList)
+    if (!label) return
+    chips.push({
+      key: String(key),
+      label,
+      onRemove: () => onSelect(String(key), undefined),
+    })
+  }
+
+  if (debSearch.trim()) {
+    chips.push({
+      key: 'search',
+      label: `Поиск: ${debSearch.trim()}`,
+      onRemove: () => setSearch(''),
+    })
+  }
+
+  const sortValue = typeof filter.sort === 'string' ? filter.sort.trim() : ''
+  if (sortValue) {
+    const sortLabel =
+      options?.sortings?.find((item) => item.id === sortValue)?.name ||
+      SORT_LABEL_FALLBACKS[sortValue] ||
+      sortValue
+    chips.push({
+      key: 'sort',
+      label: `Сортировка: ${sortLabel}`,
+      onRemove: () => onSelect('sort', undefined),
+    })
+  }
+
+  addArrayChip('countries', 'Страны', filter.countries, options?.countries)
+  addArrayChip('categories', 'Категории', filter.categories, options?.categories)
+  addArrayChip('categoryTravelAddress', 'Что посмотреть', filter.categoryTravelAddress, options?.categoryTravelAddress)
+  addArrayChip('transports', 'Транспорт', filter.transports, options?.transports)
+  addArrayChip('companions', 'Спутники', filter.companions, options?.companions)
+  addArrayChip('complexity', 'Сложность', filter.complexity, options?.complexity)
+  addArrayChip('month', 'Месяц', filter.month, options?.month)
+  addArrayChip('over_nights_stay', 'Ночлег', filter.over_nights_stay, options?.over_nights_stay)
+
+  if (filter.year) {
+    chips.push({
+      key: 'year',
+      label: `Год: ${filter.year}`,
+      onRemove: () => onSelect('year', undefined),
+    })
+  }
+
+  return chips
+}
+
+export const buildEmptyStateMessage = ({
+  showEmptyState,
+  filter,
+  options,
+  debSearch,
+  isMeTravel,
+  onCreateTravel,
+}: {
+  showEmptyState: boolean
+  filter: FilterState
+  options?: FilterOptions
+  debSearch: string
+  isMeTravel: boolean
+  onCreateTravel: () => void
+}): EmptyStateMessage | null => {
+  if (!showEmptyState) return null
+
+  const activeFilters: string[] = []
+
+  // Определяем активные фильтры - оптимизированная версия с проверками типов
+  if (Array.isArray(filter.categories) && filter.categories.length > 0) {
+    const categoryNames = (options?.categories || [])
+      .filter((cat: any) => cat?.name && filter.categories?.includes(cat.id))
+      .map((cat: any) => cat.name)
+      .slice(0, 2)
+    if (categoryNames.length > 0) {
+      activeFilters.push(`категории "${categoryNames.join('", "')}"${categoryNames.length < filter.categories.length ? ' и другие' : ''}`)
+    }
+  }
+
+  if (Array.isArray(filter.transports) && filter.transports.length > 0 && options?.transports) {
+    const transportNames = (options.transports || [])
+      .filter((t: any) => t?.name && filter.transports?.some((fid: any) => String(fid) === String(t.id)))
+      .map((t: any) => t.name)
+      .slice(0, 2)
+    if (transportNames.length > 0) {
+      activeFilters.push(`транспорт "${transportNames.join('", "')}"${transportNames.length < filter.transports.length ? ' и другой' : ''}`)
+    }
+  }
+
+  if (Array.isArray(filter.categoryTravelAddress) && filter.categoryTravelAddress.length > 0 && options?.categoryTravelAddress) {
+    const objectNames = (options.categoryTravelAddress || [])
+      .filter((obj: any) => obj?.name && filter.categoryTravelAddress?.some((fid: any) => String(fid) === String(obj.id)))
+      .map((obj: any) => obj.name)
+      .slice(0, 2)
+    if (objectNames.length > 0) {
+      activeFilters.push(`что посмотреть "${objectNames.join('", "')}"${objectNames.length < filter.categoryTravelAddress.length ? ' и другие' : ''}`)
+    }
+  }
+
+  // Остальные фильтры - простые проверки с type guards
+  if (Array.isArray(filter.companions) && filter.companions.length > 0) activeFilters.push('спутники')
+  if (Array.isArray(filter.complexity) && filter.complexity.length > 0) activeFilters.push('сложность')
+  if (Array.isArray(filter.month) && filter.month.length > 0) activeFilters.push('месяц')
+  if (Array.isArray(filter.over_nights_stay) && filter.over_nights_stay.length > 0) activeFilters.push('ночлег')
+  if (filter.year) activeFilters.push(`год ${filter.year}`)
+  if (filter.sort) activeFilters.push('сортировка')
+  if (debSearch) activeFilters.push(`поиск "${debSearch}"`)
+
+  // Формируем сообщение
+  if (activeFilters.length === 0) {
+    if (isMeTravel) {
+      return {
+        icon: 'map',
+        title: 'У вас пока нет путешествий',
+        description:
+          'Создайте первое — расскажите о маршруте, добавьте фото и сохраните воспоминания.',
+        variant: 'empty' as const,
+        action: {
+          label: 'Создать путешествие',
+          onPress: onCreateTravel,
+        },
+      }
+    }
+    return {
+      icon: 'inbox',
+      title: 'Пока нет путешествий',
+      description: 'Путешествия появятся здесь, когда будут добавлены.',
+      variant: 'empty' as const,
+    }
+  }
+
+  // Формируем красивое описание
+  let description: string
+  if (activeFilters.length === 1) {
+    description = `По фильтру ${activeFilters[0]} ничего не найдено.`
+  } else if (activeFilters.length === 2) {
+    description = `По фильтрам ${activeFilters[0]} и ${activeFilters[1]} ничего не найдено.`
+  } else {
+    const lastFilter = activeFilters[activeFilters.length - 1]
+    const otherFilters = activeFilters.slice(0, -1).join(', ')
+    description = `По фильтрам ${otherFilters} и ${lastFilter} ничего не найдено.`
+  }
+
+  description += ' Попробуйте убрать фильтры или изменить запрос.'
+
+  const suggestions = debSearch
+    ? ['Проверьте написание', 'Попробуйте другие ключевые слова']
+    : ['Уберите один из фильтров', 'Выберите другую категорию']
+
+  return {
+    icon: 'search',
+    title: 'Ничего не найдено',
+    description,
+    variant: 'search' as const,
+    suggestions,
+  }
 }
