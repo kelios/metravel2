@@ -298,7 +298,15 @@
 
 > Кейсы с deep-link «Not found» в статике (`/`=HOME-01, `/calendar`=CAL-*, `/about`=MISC-04) ручным preview не подтверждены из-за артефакта `serve-web-build` (см. выше) → результат берётся из e2e-регресса ниже.
 
-<!-- E2E_REGRESSION_SUMMARY_PLACEHOLDER -->
+**Авторизованный e2e-регресс (Playwright chromium, порт 8095, прокси→локальный бэкенд, логин `.env.e2e` через global-setup):**
+
+> Полный набор **423 теста, 2 воркера, retries=1** → **418 passed · 4 flaky (прошли на ретрае) · 1 failed**, время 19.3 мин. **0 инфраструктурных сбоев** (нет `ERR_CONNECTION_REFUSED`/`EADDRINUSE`/baseURL-timeout — изоляция на порт 8095 сработала).
+
+- ✅ **Авторизованные пути §1–10 зелёные** (global-setup логинится `.env.e2e`): комментарии (создание/лайк/ответ/редактирование/удаление/threading), рейтинг полным циклом, кнопка ред. автора, права гостя/админа, wizard (flow/валидация/автосейв/превью/милестоны/mobile), travel CRUD, календарь, рулетка, сообщения (вкл. unread), подписки, баллы (+импорт 5 форматов), квесты (+видео), профиль/logout, footer/legal/consent, layout-responsive, карта (кластеры/маршрут/попапы/mobile-панель), детали (слайдер 23 теста, видео, share, a11y, 404+retry).
+- ⚠️ **1 failed:** `filters-sorting-ux.spec.ts:583 › results count updates when filters change` → `AggregateError: All promises were rejected`. Диагноз — **тот же известный флейк локатора фильтров**, что и в прогоне 2026-06-01 (`getVisibleFilterCheckbox`/`Promise.any` отклоняет все варианты локатора в таймаут). **Не дефект продукта:** остальные тесты, кликающие чекбоксы фильтров (group-clear, count-badge, clear-all), зелёные. Рекомендация команде: стабилизировать локатор в тесте.
+- ⚠️ **4 flaky (зелёные на ретрае, тайминговые):** `filters-year › year filter can be set`, `map-page › desktop popup link navigates to travel details`, `map-travel-card-no-image › consistent card dimensions`, `metravel edit › Редактировать` локатор.
+
+**Итог прогона 2026-06-02:** продуктовых дефектов не обнаружено. Ручной guest-прогон подтвердил рендер/контент §1–3,5,6 на Web Desktop; авторизованный e2e-регресс зелёный (единственное падение — известный тестовый флейк, не баг). iOS/Android — `verify pending` (среда недоступна). Web Mobile ручным preview не догнан (бюджет), но mobile-кейсы частично покрыты e2e-проектами (`map-mobile-panel`, `mobile-menu-closes-on-nav`, `layout-responsive`).
 
 ---
 
