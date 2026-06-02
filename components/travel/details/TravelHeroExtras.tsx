@@ -50,6 +50,7 @@ export const TravelHeroExtras: React.FC<{
             styles.sectionContainer,
             styles.contentStable,
             styles.quickJumpWrapper,
+            isMobile && styles.quickJumpStickyMobile,
           ]}
         >
           <TravelHeroQuickJumps

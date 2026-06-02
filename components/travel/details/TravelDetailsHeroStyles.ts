@@ -27,6 +27,22 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       marginTop: DESIGN_TOKENS.spacing.xs,
       gap: 0,
     },
+    quickJumpStickyMobile: {
+      ...(Platform.OS === 'web'
+        ? ({
+            position: 'sticky',
+            top: 0,
+            zIndex: 20,
+            marginTop: 0,
+            marginBottom: DESIGN_TOKENS.spacing.md,
+            paddingTop: DESIGN_TOKENS.spacing.xs,
+            paddingBottom: DESIGN_TOKENS.spacing.xs,
+            backgroundColor: colors.background,
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: colors.borderLight,
+          } as any)
+        : {}),
+    },
     quickJumpScrollWrap: {
       position: 'relative' as any,
       width: '100%',
