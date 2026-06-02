@@ -13,8 +13,6 @@ import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 
 const isWeb = Platform.OS === 'web' || typeof document !== 'undefined';
-const JOURNAL_FONT_FAMILY =
-  "'Georgia', 'Times New Roman', 'Inter', serif";
 
 const getWebA11yProps = (label?: string, role?: string) => {
   if (!isWeb) {
@@ -231,7 +229,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderRadius: DESIGN_TOKENS.radii.sm,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderColor: colors.borderLight,
     borderStyle: 'solid',
     minHeight: Platform.select({
       default: 38,
@@ -240,7 +238,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     ...(Platform.OS === 'web'
       ? ({
           transition: 'background-color 0.2s ease, box-shadow 0.2s ease',
-          boxShadow: `0 2px 0 ${colors.primarySoft}`,
         } as any)
       : {}),
   },
@@ -254,12 +251,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     color: colors.text,
     letterSpacing: 0,
     lineHeight: 20,
-    ...(Platform.OS === 'web'
-      ? ({
-          fontFamily: JOURNAL_FONT_FAMILY,
-          fontStyle: 'italic',
-        } as any)
-      : {}),
   },
   categoriesContainer: {
     flexDirection: 'row',
@@ -291,7 +282,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flex: 1,
   },
   categoryTag: {
-    backgroundColor: colors.brandLight,
+    backgroundColor: colors.surface,
     paddingHorizontal: Platform.select({
       default: 12,
       web: 14,
@@ -302,7 +293,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     }),
     borderRadius: DESIGN_TOKENS.radii.sm,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderColor: colors.borderLight,
     borderStyle: 'solid',
     minHeight: Platform.select({
       default: 30,
@@ -316,7 +307,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         transition: 'background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease' as any,
         ':hover': {
           transform: 'translateY(-1px)',
-          boxShadow: `0 2px 0 ${colors.primarySoft}`,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
           borderColor: colors.primary,
         } as any,
       },
@@ -325,14 +316,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   categoryText: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.primaryText,
+    color: colors.text,
     letterSpacing: 0,
-    ...(Platform.OS === 'web'
-      ? ({
-          fontFamily: JOURNAL_FONT_FAMILY,
-          fontStyle: 'italic',
-        } as any)
-      : {}),
   },
 });
 

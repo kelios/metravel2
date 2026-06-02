@@ -43,7 +43,6 @@ export type BottomDockMoreMenuSection = {
 
 export const BOTTOM_DOCK_ITEM_DEFS: BottomDockItemDef[] = [
   { key: 'home', label: 'Маршруты', accessibilityLabel: 'Идеи поездок', route: '/search', iconName: 'compass' },
-  { key: 'search', label: 'Беларусь', accessibilityLabel: 'Беларусь', route: '/travelsby', iconName: 'belarus-outline' },
   { key: 'map', label: 'Карта', accessibilityLabel: 'Карта', route: '/map', iconName: 'map' },
   { key: 'places', label: 'Места', accessibilityLabel: 'Места', route: '/places', iconName: 'map-pin' },
   { key: 'favorites', label: 'Профиль', accessibilityLabel: 'Профиль', route: '/profile', iconName: 'user' },
@@ -54,6 +53,7 @@ export const BOTTOM_DOCK_MORE_MENU_SECTIONS: BottomDockMoreMenuSection[] = [
   {
     key: 'primary',
     items: [
+      { key: 'search', label: 'Беларусь', accessibilityLabel: 'Беларусь', route: '/travelsby', iconName: 'flag' },
       { key: 'quests', label: 'Квесты', accessibilityLabel: 'Квесты', route: '/quests', iconName: 'target' },
       { key: 'roulette', label: 'Случайный маршрут', accessibilityLabel: 'Случайный маршрут', route: '/roulette', iconName: 'shuffle' },
       { key: 'travel-new', label: 'Создать маршрут', accessibilityLabel: 'Создать маршрут', route: '/travel/new', iconName: 'plus-circle' },

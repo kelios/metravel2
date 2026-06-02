@@ -35,7 +35,7 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
           gap: DESIGN_TOKENS.spacing.lg,
           ...(Platform.OS === 'web'
             ? ({
-                boxShadow: `0 3px 0 ${colors.primarySoft}`,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
               } as any)
             : {}),
         },

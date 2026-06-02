@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react'
-import { Pressable, ScrollView, Text } from 'react-native'
+import { Platform, Pressable, ScrollView, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { useThemedColors } from '@/hooks/useTheme'
@@ -19,18 +19,26 @@ export function TravelHeroQuickJumps({
   links,
   isMobile,
   onQuickJump,
+  activeKey,
 }: {
   links: TravelSectionLink[]
   isMobile: boolean
   onQuickJump: (key: string) => void
+  activeKey?: string
 }) {
   const styles = useTravelDetailsHeroStyles()
+
+  // Подсвечиваем активную секцию (scroll-spy); если её нет среди чипов —
+  // подсвечиваем первый чип, чтобы навигация всегда имела явный акцент.
+  const activeOrDefault = links.some((l) => l.key === activeKey)
+    ? activeKey
+    : links[0]?.key
 
   const chips = links.map((link) => (
     <QuickJumpChip
       key={link.key}
       link={link}
-      isPrimary={link.key === 'map'}
+      isPrimary={link.key === activeOrDefault}
       onQuickJump={onQuickJump}
     />
   ))
@@ -38,16 +46,21 @@ export function TravelHeroQuickJumps({
   if (!isMobile) return <>{chips}</>
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.quickJumpScrollContent}
-      style={styles.quickJumpScroll}
-      accessibilityRole={'navigation' as any}
-      accessibilityLabel="Быстрая навигация по разделам"
-    >
-      {chips}
-    </ScrollView>
+    <View style={styles.quickJumpScrollWrap}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.quickJumpScrollContent}
+        style={styles.quickJumpScroll}
+        accessibilityRole={'navigation' as any}
+        accessibilityLabel="Быстрая навигация по разделам"
+      >
+        {chips}
+      </ScrollView>
+      {Platform.OS === 'web' ? (
+        <View style={styles.quickJumpScrollFade} pointerEvents="none" />
+      ) : null}
+    </View>
   )
 }
 

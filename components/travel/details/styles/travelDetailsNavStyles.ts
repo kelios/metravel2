@@ -5,8 +5,6 @@ import { type ThemedColors } from '@/hooks/useTheme'
 
 import { COMPACT_SPACING, COMPACT_TYPOGRAPHY } from '../TravelDetailsStyleFragments'
 
-const JOURNAL_FONT_FAMILY = "'Georgia', 'Times New Roman', 'Inter', serif"
-
 export const createTravelDetailsNavStyles = (colors: ThemedColors) => ({
   quickJumpWrapper: {
     flexDirection: 'row',
@@ -36,7 +34,7 @@ export const createTravelDetailsNavStyles = (colors: ThemedColors) => ({
     }),
     borderRadius: DESIGN_TOKENS.radii.pill,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderColor: colors.borderLight,
     borderStyle: 'solid',
     backgroundColor: colors.surface,
     marginRight: DESIGN_TOKENS.spacing.xs,
@@ -46,12 +44,11 @@ export const createTravelDetailsNavStyles = (colors: ThemedColors) => ({
       ? ({
           transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.15s ease',
           cursor: 'pointer',
-          boxShadow: `0 1px 0 ${colors.primarySoft}`,
           // ✅ УЛУЧШЕНИЕ: Микроинтеракция при hover
           ':hover': {
             backgroundColor: colors.primarySoft,
             transform: 'translateY(-1px)',
-            boxShadow: `0 2px 0 ${colors.brandSoft}`,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
           },
           ':active': {
             transform: 'translateY(0)',
@@ -71,24 +68,6 @@ export const createTravelDetailsNavStyles = (colors: ThemedColors) => ({
 
   descriptionIntroWrapper: {
     marginBottom: COMPACT_SPACING.section.mobile + 4, // было lg (24px)
-  },
-
-  descriptionIntroTitle: {
-    fontSize: Platform.select({
-      default: COMPACT_TYPOGRAPHY.subtitle.mobile,
-      web: COMPACT_TYPOGRAPHY.subtitle.desktop,
-    }),
-    fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
-    color: colors.text,
-    marginBottom: DESIGN_TOKENS.spacing.sm,
-    letterSpacing: 0,
-    lineHeight: Platform.select({ default: 26, web: 30 }),
-    ...(Platform.OS === 'web'
-      ? ({
-          fontFamily: JOURNAL_FONT_FAMILY,
-          fontStyle: 'italic',
-        } as any)
-      : {}),
   },
 
   descriptionIntroText: {

@@ -3,8 +3,6 @@ import { Platform } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { type ThemedColors } from '@/hooks/useTheme'
 
-const JOURNAL_FONT_FAMILY = "'Georgia', 'Times New Roman', 'Inter', serif"
-
 export const createTravelDetailsSectionHeaderStyles = (colors: ThemedColors) => ({
   // ✅ РЕДИЗАЙН: Современные карточки с улучшенными тенями
   // ✅ РЕДИЗАЙН: Унифицированные карточки с единой системой радиусов (12px)
@@ -23,18 +21,17 @@ export const createTravelDetailsSectionHeaderStyles = (colors: ThemedColors) => 
     borderRadius: DESIGN_TOKENS.radii.sm,
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderColor: colors.borderLight,
     borderStyle: 'solid',
     minHeight: 56,
     ...(Platform.OS === 'web'
       ? ({
           transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
           cursor: 'pointer',
-          boxShadow: `0 3px 0 ${colors.primarySoft}`,
           ':hover': {
-            backgroundColor: colors.primarySoft,
+            backgroundColor: colors.surfaceMuted,
             borderColor: colors.primary,
-            boxShadow: `0 4px 0 ${colors.brandSoft}`,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
             transform: 'translateY(-1px)',
           } as any,
         } as any)
@@ -49,8 +46,8 @@ export const createTravelDetailsSectionHeaderStyles = (colors: ThemedColors) => 
     borderColor: colors.brand,
   },
   sectionHeaderInfo: {
-    backgroundColor: colors.primarySoft,
-    borderColor: colors.borderStrong,
+    backgroundColor: colors.surface,
+    borderColor: colors.borderLight,
   },
   sectionHeaderActive: {
     borderColor: colors.primary,
@@ -123,12 +120,6 @@ export const createTravelDetailsSectionHeaderStyles = (colors: ThemedColors) => 
       web: 26,
     }),
     flexShrink: 1,
-    ...(Platform.OS === 'web'
-      ? ({
-          fontFamily: JOURNAL_FONT_FAMILY,
-          fontStyle: 'italic',
-        } as any)
-      : {}),
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -187,12 +178,12 @@ export const createTravelDetailsSectionHeaderStyles = (colors: ThemedColors) => 
     borderRadius: DESIGN_TOKENS.radii.md,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderColor: colors.borderLight,
     borderStyle: 'solid',
     backgroundColor: colors.surface,
     ...(Platform.OS === 'web'
       ? {
-          boxShadow: `0 3px 0 ${colors.primarySoft}`,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
         }
       : colors.shadows.light),
   },

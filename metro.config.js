@@ -150,6 +150,26 @@ config.resolver.resolveRequest = ((orig) => {
         type: 'sourceFile',
       }
     }
+    // PERF-014: on web the bare `react-native-gesture-handler` import is pulled into
+    // the eager (entry + __common) bundle ONLY by entry.js's native-guarded require,
+    // which in turn drags in react-native-reanimated. Together that is ~910KB
+    // transformed (~47% of the eager bundle) loaded on EVERY page before any
+    // interaction, even though the entry require never executes on web.
+    // Resolving the bare specifier to the existing web stub removes that dead weight.
+    // First-party web gestures degrade gracefully (the stub is a no-op passthrough;
+    // SwipeablePanel already has a DOM-event `.web` variant). Reanimated-using web
+    // components import it directly and keep their own lazy chunk, so they are
+    // unaffected. Opt out with DISABLE_GH_STUB=1 if real web gestures are needed.
+    if (
+      process.env.DISABLE_GH_STUB !== '1' &&
+      platform === 'web' &&
+      moduleName === 'react-native-gesture-handler'
+    ) {
+      return {
+        filePath: path.resolve(__dirname, 'metro-stubs/react-native-gesture-handler.js'),
+        type: 'sourceFile',
+      }
+    }
     if (platform === 'web' && moduleName === 'quill/dist/quill.snow.css') {
       return orig(context, moduleName, platform)
     }

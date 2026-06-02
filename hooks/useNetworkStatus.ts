@@ -15,6 +15,29 @@ interface NetInfoModuleLike {
   addEventListener: (listener: (state: NetInfoStateLike) => void) => () => void;
 }
 
+let webReachabilityProbeId = 0;
+
+async function checkWebReachability(): Promise<boolean> {
+  if (typeof window === 'undefined' || typeof fetch === 'undefined') {
+    return false;
+  }
+
+  try {
+    const url = new URL('/favicon.ico', window.location.origin);
+    url.searchParams.set('__network_probe', String(Date.now()));
+
+    const response = await fetch(url.toString(), {
+      method: 'HEAD',
+      cache: 'no-store',
+      credentials: 'same-origin',
+    });
+
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 export interface NetworkStatus {
   isConnected: boolean;
   isInternetReachable: boolean | null;
@@ -39,12 +62,27 @@ export function useNetworkStatus(): NetworkStatus {
         return;
       }
 
-      const updateStatus = () => {
-        const isOnline = navigator.onLine;
+      const applyStatus = (isOnline: boolean) => {
         setNetworkStatus({
           isConnected: isOnline,
           isInternetReachable: isOnline,
           type: 'unknown',
+        });
+      };
+
+      const updateStatus = () => {
+        const isOnline = navigator.onLine;
+
+        if (isOnline) {
+          webReachabilityProbeId += 1;
+          applyStatus(true);
+          return;
+        }
+
+        const probeId = ++webReachabilityProbeId;
+        void checkWebReachability().then((isReachable) => {
+          if (probeId !== webReachabilityProbeId) return;
+          applyStatus(isReachable);
         });
       };
 

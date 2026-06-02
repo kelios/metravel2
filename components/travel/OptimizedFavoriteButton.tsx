@@ -102,31 +102,39 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
     // On web, avoid rendering a <button> to prevent nested button warnings inside other Pressables.
     if (isWeb) {
         return (
-            <WebView
-                tabIndex={0}
-                onClick={handlePress as any}
-                onKeyDown={(e: any) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault?.();
-                        handlePress(e);
-                    }
-                }}
-                aria-label={isFav ? 'Удалить из избранного' : 'Добавить в избранное'}
-                aria-pressed={isFav}
-                aria-busy={isPending}
-                style={[
-                    styles.favoriteButton,
-                    style,
-                    { cursor: isPending ? 'wait' : 'pointer' } as any,
-                    isPending && styles.favoriteButtonPending,
-                ]}
-                data-testid="favorite-button"
-            >
-                <Feather
-                    name="heart"
-                    size={size}
-                    color={isFav ? colors.danger : colors.textOnDark}
-                    {...(!isFav ? ({ style: { opacity: 0.85 } } as any) : null)}
+            <WebView style={[styles.favoriteButtonWrapper, style]}>
+                <WebView
+                    style={[
+                        styles.favoriteButton,
+                        { cursor: isPending ? 'wait' : 'pointer' } as any,
+                        isPending && styles.favoriteButtonPending,
+                    ]}
+                    pointerEvents="none"
+                >
+                    <Feather
+                        name="heart"
+                        size={size}
+                        color={isFav ? colors.danger : colors.textOnDark}
+                        {...(!isFav ? ({ style: { opacity: 0.85 } } as any) : null)}
+                    />
+                </WebView>
+                <WebView
+                    tabIndex={0}
+                    onClick={handlePress as any}
+                    onKeyDown={(e: any) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault?.();
+                            handlePress(e);
+                        }
+                    }}
+                    aria-label={isFav ? 'Удалить из избранного' : 'Добавить в избранное'}
+                    aria-pressed={isFav}
+                    aria-busy={isPending}
+                    style={[
+                        styles.favoriteButtonHitArea,
+                        { cursor: isPending ? 'wait' : 'pointer' } as any,
+                    ]}
+                    data-testid="favorite-button"
                 />
             </WebView>
         );
@@ -154,6 +162,10 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
 });
 
 const getStyles = (_colors: ThemedColors) => StyleSheet.create({
+    favoriteButtonWrapper: {
+        position: 'relative',
+        alignSelf: 'flex-start',
+    },
     favoriteButton: {
         padding: 8,
         borderRadius: 999,
@@ -163,6 +175,16 @@ const getStyles = (_colors: ThemedColors) => StyleSheet.create({
         ...(Platform.OS === 'web'
             ? { backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' } as any
             : {}),
+    },
+    favoriteButtonHitArea: {
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        width: 44,
+        height: 44,
+        marginTop: -22,
+        marginLeft: -22,
+        borderRadius: 999,
     },
     favoriteButtonPending: {
         opacity: 0.65,

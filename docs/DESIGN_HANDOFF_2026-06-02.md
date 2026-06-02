@@ -71,6 +71,8 @@ Measured <44px hit areas:
 > - `components/travel/OptimizedFavoriteButton.tsx` web overlay heart (~34px **visible** circle) — raising min-size would enlarge the circle; needs a transparent centering wrapper (layout-shift risk in a `memo` list slot).
 > - Hero slider arrows **web** — same visible-circle constraint (`hitSlop` is native-only on RN-Web).
 > These two are the only residual <44px web targets; queue for the next browser-verifiable pass.
+>
+> **Acceptance spec authored:** `e2e/touch-targets.spec.ts` — asserts ≥44px for cookie consent buttons and the travel-detail favorite/plan controls; the two deferred web targets (hero slider arrows, card overlay heart) are encoded as `test.fixme` so they flag the remaining work without failing the suite. Statically valid (tsc 0 / eslint clean / `playwright --list` collects all 4). Run with `npx playwright test e2e/touch-targets.spec.ts --project=chromium` once a dev/e2e server is available (currently blocked by the concurrent CI run).
 
 ---
 
@@ -80,4 +82,16 @@ Desktop PlacePopupCard verified good (`components/MapPage/Map/createMapPopupComp
 
 **Acceptance:** on mobile the popup title is fully visible, map controls stay reachable, and `Открыть страницу` + the nav grid are tappable (≥44px).
 
-**Status:** mobile re-shoot pending — blocked by a concurrent CI run repeatedly wiping/rebuilding `dist/`; spec ready for `map-expert` once the repo is quiet and a populated `/map` is capturable.
+**Status: VERIFIED — no defect (2026-06-02).** Captured mobile `390x844` against an isolated build with live data: the PlacePopupCard opens as a full mobile sheet — title (`Новосёлковский сельский Совет`) fully visible (not clipped), `×` close reachable, `Открыть страницу` + the full nav grid (Google/Organic/Waze/Яндекс/Telegram/Сохранить) present. No clipping; this is a standard mobile sheet layout. Follow-up (a) external links already code-verified. **D-002 popup-layout closed.**
+
+---
+
+## Browser verification (2026-06-02, isolated build on :8090, live backend)
+
+To get a stable window immune to the concurrent CI run, I built an isolated web export (`/tmp/mt-own-dist-a`, includes these fixes) and served it via `scripts/serve-web-build.js` (proxy → `192.168.50.36`), then drove Playwright/Chromium against it.
+
+- **HANDOFF-2 — PASSED.** `npx playwright test e2e/touch-targets.spec.ts` → `2 passed, 2 skipped`: cookie consent buttons ≥44px (measured `h=44`), travel-detail favorite + `Добавить в план` ≥44px. The 2 deferred web visible-circle targets are the intentional `test.fixme` skips.
+- **HANDOFF-1 — VERIFIED.** Live computed styles: `--mt-consent-h = 196px`; the Home root `ScrollView` contentContainer and the Places `styles.content` both resolve to `paddingBottom: 204px` (= `max(base, 196) + 8`). On Home, scrolled to the true bottom, **0 non-banner controls overlap the banner** (lowest control `Смотреть маршруты` ends at y466, banner top y691). On Places the catalog is an infinite list (1800 items) so mid-list cards always sit under the floating banner (expected, temporary) — the D-013 empty-state CTA renders inside the same 204px-reserved container, so it clears the banner when shown.
+- **HANDOFF-3 (b) — VERIFIED no defect** (see above).
+
+All three browser-verified. Residual: only the 2 deferred web visible-circle touch targets (`OptimizedFavoriteButton` overlay heart, hero slider arrows) — need a transparent centering wrapper; tracked as `test.fixme` in `e2e/touch-targets.spec.ts`.

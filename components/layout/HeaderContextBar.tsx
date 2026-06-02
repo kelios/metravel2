@@ -127,7 +127,6 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
             </ActionButton>
 
             <View style={styles.mobileTitleWrap}>
-              <Text style={styles.mobileEyebrow}>Навигация</Text>
               <Text style={styles.mobileTitle} numberOfLines={1}>
                 {model.currentTitle}
               </Text>

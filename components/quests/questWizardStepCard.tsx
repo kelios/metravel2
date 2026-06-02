@@ -87,9 +87,11 @@ function ImageZoomModal({
         <Pressable style={styles.closeButton} onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Закрыть просмотр фото">
           <Text style={styles.closeButtonText}>✕</Text>
         </Pressable>
-        <View style={styles.zoomHintContainer}>
-          <Text style={styles.zoomHint}>Используйте два пальца, чтобы увеличить фото</Text>
-        </View>
+        {Platform.OS !== 'web' && (
+          <View style={styles.zoomHintContainer}>
+            <Text style={styles.zoomHint}>Используйте два пальца, чтобы увеличить фото</Text>
+          </View>
+        )}
       </View>
     </Modal>
   )

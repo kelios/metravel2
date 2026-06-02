@@ -6,7 +6,6 @@ import type { Travel } from '@/types/types'
 import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { CollapsibleSection } from './CollapsibleSection'
-import { getDayLabel } from '@/utils/pluralize'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import TravelDescription from '@/components/travel/TravelDescription'
 import { safeGetYoutubeId } from '@/utils/travelMedia'
@@ -91,7 +90,7 @@ export const TravelDetailsContentSection: React.FC<{
           {...(Platform.OS === 'web' ? { 'data-section-key': 'description' } : {})}
         >
           <CollapsibleSection
-            title={travel.name}
+            title="Описание маршрута"
             initiallyOpen
             forceOpen={forceOpenKey === 'description'}
             iconName="menu-book"
@@ -100,13 +99,10 @@ export const TravelDetailsContentSection: React.FC<{
           >
             <View style={styles.descriptionContainer}>
               <View style={styles.descriptionIntroWrapper}>
-                <Text style={styles.descriptionIntroTitle}>Описание маршрута</Text>
                 <Text style={styles.descriptionIntroText}>
-                  {`${travel.number_days || 0} ${getDayLabel(travel.number_days || 0)}`}
-                  {travel.countryName ? ` · ${travel.countryName}` : ''}
-                  {travel.monthName ? ` · лучший сезон: ${travel.monthName.toLowerCase()}` : ''}
-                  {/* P2-2: Оценка времени чтения */}
-                  {readingTimeLabel}
+                  {travel.monthName
+                    ? `лучший сезон: ${travel.monthName.toLowerCase()}${readingTimeLabel}`
+                    : readingTimeLabel.replace(/^ · /, '')}
                 </Text>
               </View>
               {Platform.OS === 'web' && <h2 style={WEB_SR_ONLY_HEADING_STYLE as any}>Содержание маршрута</h2>}

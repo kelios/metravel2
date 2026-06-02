@@ -18,6 +18,7 @@ type TravelDetailsHeroDeferredColumnProps = {
   onQuickJump: (key: string) => void
   sectionLinks: TravelSectionLink[]
   travel: Travel
+  activeKey?: string
 }
 
 export default function TravelDetailsHeroDeferredColumn({
@@ -30,6 +31,7 @@ export default function TravelDetailsHeroDeferredColumn({
   onQuickJump,
   sectionLinks,
   travel,
+  activeKey,
 }: TravelDetailsHeroDeferredColumnProps) {
   return (
     <>
@@ -42,6 +44,7 @@ export default function TravelDetailsHeroDeferredColumn({
         onFirstImageLoad={onFirstImageLoad}
         onQuickJump={onQuickJump}
         sectionLinks={sectionLinks}
+        activeKey={activeKey}
       />
 
       {deferredContent}
@@ -58,6 +61,7 @@ const TravelDetailsPrimaryColumn = memo(function TravelDetailsPrimaryColumn({
   onQuickJump,
   sectionLinks,
   travel,
+  activeKey,
 }: Omit<TravelDetailsHeroDeferredColumnProps, 'deferredContent'>) {
   return (
     <>
@@ -71,6 +75,7 @@ const TravelDetailsPrimaryColumn = memo(function TravelDetailsPrimaryColumn({
           sectionLinks={sectionLinks}
           onQuickJump={onQuickJump}
           deferExtras={deferHeroExtras}
+          activeKey={activeKey}
         />
       </View>
 

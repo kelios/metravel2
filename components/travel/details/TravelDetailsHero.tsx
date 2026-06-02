@@ -48,6 +48,7 @@ type Props = {
   sectionLinks: TravelSectionLink[]
   onQuickJump: (key: string) => void
   deferExtras?: boolean
+  activeKey?: string
 }
 
 function TravelHeroSectionInner({
@@ -59,6 +60,7 @@ function TravelHeroSectionInner({
   sectionLinks,
   onQuickJump,
   deferExtras = false,
+  activeKey,
 }: Props) {
   const styles = useTravelDetailsHeroStyles()
 
@@ -163,6 +165,7 @@ function TravelHeroSectionInner({
       isMobile={isMobile}
       sectionLinks={sectionLinks}
       onQuickJump={onQuickJump}
+      activeKey={activeKey}
     />
   }
 
@@ -232,14 +235,6 @@ function TravelHeroSectionInner({
             </Suspense>
           )}
 
-          {Platform.OS === 'web' && (
-            <>
-              <View style={styles.heroSketchOverlay} />
-              <View style={styles.heroPhotoTapeLeft} />
-              <View style={styles.heroPhotoTapeRight} />
-            </>
-          )}
-
           {showFavoriteToggle && (
             <Suspense fallback={null}>
               <FavoriteToggleLazy travel={travel} isMobile={isMobile} />
@@ -257,6 +252,7 @@ function TravelHeroSectionInner({
         isMobile={isMobile}
         sectionLinks={sectionLinks}
         onQuickJump={onQuickJump}
+        activeKey={activeKey}
       />
     </>
   )
@@ -271,6 +267,7 @@ type ExtrasSlotProps = {
   isMobile: boolean
   sectionLinks: TravelSectionLink[]
   onQuickJump: (key: string) => void
+  activeKey?: string
 }
 
 function ExtrasSlot({
@@ -282,6 +279,7 @@ function ExtrasSlot({
   isMobile,
   sectionLinks,
   onQuickJump,
+  activeKey,
 }: ExtrasSlotProps) {
   const skeleton = (
     <>
@@ -320,6 +318,7 @@ function ExtrasSlot({
         isMobile={isMobile}
         sectionLinks={sectionLinks}
         onQuickJump={onQuickJump}
+        activeKey={activeKey}
       />
     </Suspense>
   )

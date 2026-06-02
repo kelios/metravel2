@@ -167,6 +167,7 @@ export default function TravelDetailsCriticalShell({
       deferHeroExtras={deferHeroExtras}
       forceOpenKey={forceOpenKey}
       deferredContent={deferredContent}
+      activeKey={activeSection ?? undefined}
     />
   ) : null;
 

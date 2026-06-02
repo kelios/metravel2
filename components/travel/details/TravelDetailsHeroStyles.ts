@@ -5,8 +5,6 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
 const COMPACT_SECTION_DESKTOP = 24
-const JOURNAL_FONT_FAMILY =
-  "'Georgia', 'Times New Roman', 'Inter', serif"
 
 export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
   StyleSheet.create({
@@ -28,6 +26,24 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       flexWrap: 'wrap',
       marginTop: DESIGN_TOKENS.spacing.xs,
       gap: 0,
+    },
+    quickJumpScrollWrap: {
+      position: 'relative' as any,
+      width: '100%',
+    },
+    quickJumpScrollFade: {
+      position: 'absolute' as any,
+      top: 0,
+      bottom: 0,
+      right: 0,
+      width: 28,
+      zIndex: 2,
+      pointerEvents: 'none' as any,
+      ...(Platform.OS === 'web'
+        ? ({
+            backgroundImage: `linear-gradient(to right, rgba(255,255,255,0), ${colors.surface})`,
+          } as any)
+        : {}),
     },
     quickJumpScroll: {
       flexGrow: 0,
@@ -52,7 +68,7 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       }),
       borderRadius: DESIGN_TOKENS.radii.sm,
       borderWidth: 1,
-      borderColor: colors.borderStrong,
+      borderColor: colors.borderLight,
       borderStyle: 'solid',
       backgroundColor: colors.surface,
       marginRight: DESIGN_TOKENS.spacing.xs,
@@ -62,12 +78,11 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
         ? ({
             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
             cursor: 'pointer',
-            boxShadow: `0 1px 0 ${colors.primarySoft}`,
             ':hover': {
               backgroundColor: colors.primarySoft,
               borderColor: colors.primary,
               transform: 'translateY(-1px)',
-              boxShadow: `0 2px 0 ${colors.brandSoft}`,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
             } as any,
           } as any)
         : {}),
@@ -96,12 +111,6 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       color: colors.text,
       letterSpacing: 0,
       lineHeight: 18,
-      ...(Platform.OS === 'web'
-        ? ({
-            fontFamily: JOURNAL_FONT_FAMILY,
-            fontStyle: 'italic',
-          } as any)
-        : {}),
     },
     quickJumpLabelPrimary: {
       color: colors.textOnPrimary,
@@ -123,12 +132,6 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
         web: 26,
       }),
       flexShrink: 1,
-      ...(Platform.OS === 'web'
-        ? ({
-            fontFamily: JOURNAL_FONT_FAMILY,
-            fontStyle: 'italic',
-          } as any)
-        : {}),
     },
     sectionSubtitle: {
       fontSize: Platform.select({ default: 13, web: 14 }),
@@ -143,13 +146,12 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       marginBottom: 0,
       backgroundColor: colors.surface,
       position: 'relative' as any,
-      borderWidth: Platform.select({ default: 1, web: 10 }),
-      borderColor: colors.borderStrong,
+      borderWidth: Platform.select({ default: 1, web: 1 }),
+      borderColor: colors.borderLight,
       borderStyle: 'solid',
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow:
-              `0 0 0 1px ${colors.borderLight}, 0 14px 34px rgba(45, 45, 45, 0.08), 10px 10px 0 ${colors.brandSoft}`,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
           } as any)
         : {
             shadowColor: colors.text,
@@ -159,48 +161,6 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
             elevation: 4,
           }),
     },
-    heroSketchOverlay: {
-      position: 'absolute' as any,
-      top: 0,
-      right: 0,
-      bottom: 0,
-      left: 0,
-      zIndex: 1,
-      pointerEvents: 'none' as any,
-      ...(Platform.OS === 'web'
-        ? ({
-            backgroundImage:
-              'repeating-linear-gradient(108deg, rgba(255,255,255,0.04) 0, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 7px), repeating-linear-gradient(0deg, rgba(42,42,42,0.035) 0, rgba(42,42,42,0.035) 1px, transparent 1px, transparent 11px)',
-            mixBlendMode: 'soft-light',
-          } as any)
-        : {}),
-    },
-    heroPhotoTapeLeft: {
-      position: 'absolute' as any,
-      top: Platform.select({ default: 10, web: 12 }),
-      left: Platform.select({ default: 18, web: 22 }),
-      zIndex: 6,
-      width: Platform.select({ default: 64, web: 78 }),
-      height: Platform.select({ default: 18, web: 20 }),
-      borderRadius: 4,
-      backgroundColor: colors.brandSoft,
-      opacity: 0.78,
-      transform: [{ rotate: '-4deg' }],
-      pointerEvents: 'none' as any,
-    },
-    heroPhotoTapeRight: {
-      position: 'absolute' as any,
-      top: Platform.select({ default: 10, web: 12 }),
-      right: Platform.select({ default: 54, web: 66 }),
-      zIndex: 6,
-      width: Platform.select({ default: 58, web: 72 }),
-      height: Platform.select({ default: 18, web: 20 }),
-      borderRadius: 4,
-      backgroundColor: colors.primarySoft,
-      opacity: 0.72,
-      transform: [{ rotate: '5deg' }],
-      pointerEvents: 'none' as any,
-    },
     heroFavoriteBtn: {
       position: 'absolute' as any,
       top: 14,
@@ -209,7 +169,7 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       width: 44,
       height: 44,
       borderRadius: 22,
-      backgroundColor: 'rgba(0,0,0,0.2)',
+      backgroundColor: 'rgba(0,0,0,0.45)',
       alignItems: 'center' as any,
       justifyContent: 'center' as any,
       borderWidth: 1,
