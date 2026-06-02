@@ -157,7 +157,7 @@ config.resolver.resolveRequest = ((orig) => {
     // interaction, even though the entry require never executes on web.
     // Resolving the bare specifier to the existing web stub removes that dead weight.
     // First-party web gestures degrade gracefully (the stub is a no-op passthrough;
-    // SwipeablePanel already has a DOM-event `.web` variant). Reanimated-using web
+    // web-facing components ship DOM-event `.web` variants). Reanimated-using web
     // components import it directly and keep their own lazy chunk, so they are
     // unaffected. Opt out with DISABLE_GH_STUB=1 if real web gestures are needed.
     if (
