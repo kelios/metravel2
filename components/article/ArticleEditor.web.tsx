@@ -9,7 +9,6 @@ import React, {
 } from 'react';
 import {
     View,
-    Alert,
     Modal,
     Platform,
 } from 'react-native';
@@ -19,11 +18,9 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useDebounce } from '@/hooks/useDebounce';
 import { sanitizeArticleEditorHtml } from '@/utils/articleEditorSanitize';
-import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import {
     ARTICLE_EDITOR_CHANGE_DEBOUNCE_MS,
     ARTICLE_EDITOR_DEFAULT_AUTOSAVE_DELAY,
-    normalizeArticleEditorHtmlForOutput,
 } from './articleEditorConfig';
 import {
     handleSurfaceFileDrop as handleEditorSurfaceFileDrop,
@@ -63,8 +60,17 @@ import {
 } from './ArticleEditor.web.parts';
 import { buildArticleEditorQuillModules } from './ArticleEditor.web.modules';
 import {
+    attachEditorKeyboardShortcuts,
+    blurActiveEditorElement,
+    emitDebouncedParentChange,
+    focusEditorInput,
+    focusQuillEditor,
+    getCurrentEditorHtml,
+    getSafeEditorHtmlFrom,
+    openArticleEditorPreview,
     runAutosaveEffect,
     runInitialForceSyncEffect,
+    suppressFindDomNodeWarning,
 } from './ArticleEditor.web.effects';
 import {
     attachEditorSurfaceHandlers,
@@ -164,51 +170,15 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     const linkInputRef = useRef<any>(null);
 
     const blurActiveElement = useCallback(() => {
-        if (!isWeb || !win) return;
-        try {
-            const el = win.document?.activeElement as any;
-            if (el && typeof el.blur === 'function') el.blur();
-        } catch {
-            // noop
-        }
+        blurActiveEditorElement({ isWeb, windowObject: win });
     }, []);
 
     const focusAnchorInput = useCallback(() => {
-        if (!isWeb) return;
-        blurActiveElement();
-        const schedule = (fn: () => void) => {
-            if (typeof win?.requestAnimationFrame === 'function') {
-                win.requestAnimationFrame(fn);
-                return;
-            }
-            setTimeout(fn, 0);
-        };
-        schedule(() => {
-            try {
-                anchorInputRef.current?.focus?.();
-            } catch {
-                // noop
-            }
-        });
+        focusEditorInput({ isWeb, windowObject: win, blurActiveElement, inputRef: anchorInputRef });
     }, [blurActiveElement]);
 
     const focusLinkInput = useCallback(() => {
-        if (!isWeb) return;
-        blurActiveElement();
-        const schedule = (fn: () => void) => {
-            if (typeof win?.requestAnimationFrame === 'function') {
-                win.requestAnimationFrame(fn);
-                return;
-            }
-            setTimeout(fn, 0);
-        };
-        schedule(() => {
-            try {
-                linkInputRef.current?.focus?.();
-            } catch {
-                // noop
-            }
-        });
+        focusEditorInput({ isWeb, windowObject: win, blurActiveElement, inputRef: linkInputRef });
     }, [blurActiveElement]);
 
     useEffect(() => {
@@ -261,70 +231,34 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     );
 
     useEffect(() => {
-        if (!isWeb) return;
-        const originalError = console.error;
-        console.error = (...args: any[]) => {
-            if (typeof args[0] === 'string' && args[0].includes('findDOMNode is deprecated')) {
-                return;
-            }
-            originalError(...args);
-        };
-        return () => {
-            console.error = originalError;
-        };
+        return suppressFindDomNodeWarning(isWeb);
     }, []);
 
     useEffect(() => {
-        if (!isWeb || !win) return;
-        if (!fullscreen && !anchorModalVisible && !linkModalVisible) return;
-
-        const onKeyDown = (event: KeyboardEvent) => {
-            const key = String(event.key ?? '').toLowerCase();
-
-            if (key === 'escape') {
-                event.preventDefault();
-                if (linkModalVisible) {
-                    setLinkModalVisible(false);
-                    tmpStoredRange.current = null;
-                    tmpStoredLinkQuill.current = null;
-                    return;
-                }
-                if (anchorModalVisible) {
-                    setAnchorModalVisible(false);
-                    return;
-                }
-                if (fullscreen) {
-                    setFullscreen(false);
-                }
-                return;
-            }
-
-            if ((event.metaKey || event.ctrlKey) && key === 'enter' && fullscreen) {
-                event.preventDefault();
-                setFullscreen(false);
-            }
-        };
-
-        win.addEventListener('keydown', onKeyDown);
-        return () => {
-            win.removeEventListener('keydown', onKeyDown);
-        };
+        return attachEditorKeyboardShortcuts({
+            isWeb,
+            windowObject: win,
+            fullscreen,
+            anchorModalVisible,
+            linkModalVisible,
+            setFullscreen,
+            setAnchorModalVisible,
+            setLinkModalVisible,
+            tmpStoredRange,
+            tmpStoredLinkQuill,
+        });
     }, [anchorModalVisible, fullscreen, linkModalVisible]);
 
     const debouncedParentChangeRaw = useDebounce(onChange, ARTICLE_EDITOR_CHANGE_DEBOUNCE_MS);
     const debouncedParentChange = useCallback(
         (val: string) => {
-            sentToParentSetRef.current.add(val);
-            // Keep the set bounded to avoid memory leaks.
-            if (sentToParentSetRef.current.size > 20) {
-                const iter = sentToParentSetRef.current.values();
-                sentToParentSetRef.current.delete(iter.next().value as string);
-            }
-            if (variant === 'compact') {
-                onChange(val);
-                return;
-            }
-            debouncedParentChangeRaw(val);
+            emitDebouncedParentChange({
+                val,
+                variant,
+                sentToParentSetRef,
+                onChange,
+                debouncedParentChangeRaw,
+            });
         },
         [debouncedParentChangeRaw, onChange, variant]
     );
@@ -437,37 +371,23 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }, [fireChange]);
 
     const focusQuill = useCallback(() => {
-        if (!isWeb) return;
-        if (showHtml) return;
-        try {
-            const editor = quillRef.current?.getEditor?.();
-            if (editor && typeof editor.focus === 'function') {
-                editor.focus();
-                return;
-            }
-            const root = editor?.root as HTMLElement | undefined;
-            if (root && typeof root.focus === 'function') root.focus();
-        } catch {
-            // noop
-        }
+        focusQuillEditor({
+            isWeb,
+            showHtml,
+            getEditor: () => quillRef.current?.getEditor?.(),
+        });
     }, [showHtml]);
 
     const getSafeEditorHtml = useCallback(() => {
-        try {
-            const editor = quillRef.current?.getEditor?.();
-            return normalizeArticleEditorHtmlForOutput(String(editor?.root?.innerHTML ?? ''));
-        } catch {
-            return '';
-        }
+        return getSafeEditorHtmlFrom(() => quillRef.current?.getEditor?.());
     }, []);
 
     const getCurrentHtml = useCallback(() => {
-        if (showHtml) {
-            return normalizeArticleEditorHtmlForOutput(typeof htmlRef.current === 'string' ? htmlRef.current : '');
-        }
-        const fromEditor = getSafeEditorHtml();
-        if (fromEditor) return fromEditor;
-        return normalizeArticleEditorHtmlForOutput(typeof htmlRef.current === 'string' ? htmlRef.current : '');
+        return getCurrentEditorHtml({
+            showHtml,
+            htmlRef,
+            getSafeEditorHtml,
+        });
     }, [getSafeEditorHtml, showHtml]);
 
     const readEditorImageDimensions = useCallback((file: File) => {
@@ -488,18 +408,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }, [fireChange]);
 
     const openPreview = useCallback(async () => {
-        if (!isWeb || !win) return;
-        if (!idTravel) {
-            Alert.alert('Превью', 'Сначала сохраните путешествие, чтобы открыть превью');
-            return;
-        }
-
-        try {
-            const url = `${win.location.origin}/travels/${encodeURIComponent(String(idTravel))}`;
-            await openExternalUrlInNewTab(url);
-        } catch {
-            // noop
-        }
+        await openArticleEditorPreview({ isWeb, windowObject: win, idTravel });
     }, [idTravel]);
 
     const uploadAndInsert = useCallback(async (file: File) => {
