@@ -633,8 +633,20 @@ Net: all five pages now have populated evidence on desktop + mobile (where appli
 - Owner: Ромик (Dev) / `map-expert` + `travel-expert` to confirm the two data sources; UI/UX Designer for the copy if they are intentionally different.
 - Status: **RESOLVED / not a bug** — verified on the live backend (2026-06-02): Places catalog shows `1504 в каталоге` and the Map shows clusters + `Места 23` with populated `Что посмотреть` counts. Both are populated when the API is up; the earlier `0 в каталоге` was purely the cold/down API, not a real map-vs-catalog mismatch. Evidence: populated map desktop (clusters + PlacePopupCard) and places desktop (`1504`).
 
+### D-010 Public author profile `/user/[id]` is a sparse card with a large empty body
+
+- Severity: low / UX polish.
+- URL: `/user/125` (populated author "Виктория Кряжева", `userIds:[125]`), guest + mobile + authed, E2E build.
+- Actual: the page renders only a profile card (avatar, name, "Автор путешествий", buttons `Подписаться` / `Написать` / `Путешествия автора` / `Назад`) followed by a large empty area for the rest of the viewport. The author's travels are not previewed inline — the user must tap `Путешествия автора` to see any content. Especially pronounced on mobile.
+- Otherwise solid: across guest/desktop, guest/mobile and authed/desktop the page had `overflowX=false`, `console=0`, `pageErr=0`, valid `<h1>`; buttons wrap cleanly on mobile.
+- Evidence: `.codex-temp/manual/userpage/guest-desktop.png`, `guest-mobile.png`, `authed-desktop.png`.
+- Expected: show an inline preview/grid of the author's travels (or stats) so the profile isn't mostly empty space; for an "Автор путешествий" the works are the main content.
+- Owner: UI/UX Designer (layout/empty-space) + `travel-expert` (inline travels list/preview).
+- Status: open.
+
 ## Validation log
 
+- Dynamic-page search (2026-06-02): owners assigned for `D-004` (→ `TD-006`, Designer+Dev), `D-006` (→ BA/Approver IA decision), `D-007` (→ `TD-014`/`PERF`, virtualization). Extended the wave beyond static top-level routes to a populated dynamic detail route: audited `/user/125` (author "Виктория Кряжева") guest+mobile+authed — all clean (`overflowX=false`, `console=0`, `pageErr=0`, valid `<h1>`), one low UX finding `D-010` (sparse profile, no inline travels). `article/[id]` skipped (list API exposes no id/slug + articles deprioritized); `travel/[id]` edit not exercised (test account `sergey@lyte.com` owns 0 travels). Evidence under `.codex-temp/manual/userpage/`.
 - `npm run check:fast:dry` showed the current dirty working tree is limited to existing profile-related files at the time of the dry run.
 - `npx playwright test e2e/open-travel.spec.ts --project=chromium --workers=1` passed: travel details page can open from the travel list smoke flow.
 - QA reported `npx playwright test e2e/travel-detail-page.spec.ts e2e/travel-detail-interactions.spec.ts e2e/travel-rating.spec.ts --project=chromium --workers=1` passed: `40 passed`.
