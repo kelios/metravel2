@@ -58,8 +58,8 @@ function createScriptContext(options: ScriptContextOptions = {}) {
   return { context, fetchMock }
 }
 
-describe('public/travel-hero-preload.js', () => {
-  const scriptPath = path.resolve(process.cwd(), 'public/travel-hero-preload.js')
+describe('public/travel-hero-preload-v2.js', () => {
+  const scriptPath = path.resolve(process.cwd(), 'public/travel-hero-preload-v2.js')
   const source = fs.readFileSync(scriptPath, 'utf8')
 
   it('uses same-origin api on public host when leaked localhost e2e api url is present', async () => {

@@ -31,6 +31,7 @@ const ROULETTE_TITLE = 'Рулетка идей для спонтанной по
 const ROULETTE_DESCRIPTION = 'Откройте случайный маршрут для спонтанного выезда и найдите новую идею путешествия на Metravel.';
 const ARTICLE_FALLBACK_TITLE = 'Статья | Metravel';
 const ARTICLE_FALLBACK_DESCRIPTION = 'Страница статьи в Metravel. Открывайте материалы о путешествиях, маршрутах и полезных находках.';
+const TRAVEL_HERO_PRELOAD_SCRIPT_SRC = '/travel-hero-preload-v2.js';
 
 if (!METRIKA_ID && typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
   console.error('[Analytics] EXPO_PUBLIC_METRIKA_ID is not set. Analytics will be disabled.');
@@ -137,7 +138,7 @@ const getTravelHeroPreloadScript = () => String.raw`
     window.__metravelTravelPreloadScriptLoaded = true;
     window.__METRAVEL_API_URL__ = '';
     var s = document.createElement('script');
-    s.src = '/travel-hero-preload.js';
+    s.src = ${JSON.stringify(TRAVEL_HERO_PRELOAD_SCRIPT_SRC)};
     s.async = true;
     try {
       s.fetchPriority = 'high';

@@ -6,6 +6,6 @@ describe('copy-public-files', () => {
     const filePath = path.resolve(process.cwd(), 'scripts/copy-public-files.js');
     const source = fs.readFileSync(filePath, 'utf8');
 
-    expect(source).toContain("'travel-hero-preload.js'");
+    expect(source).toContain("'travel-hero-preload-v2.js'");
   });
 });
