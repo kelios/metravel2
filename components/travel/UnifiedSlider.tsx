@@ -14,22 +14,20 @@ import {
   FlatList,
   ScrollView,
   LayoutChangeEvent,
-  Text,
-  TouchableOpacity,
   Platform,
 } from 'react-native';
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
 } from 'react-native-reanimated';
-import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import type { SliderImage, SliderProps, SliderRef } from './sliderParts/types';
 import { buildUriNative, buildUriWeb, clamp, SLIDER_MAX_WIDTH } from './sliderParts/utils';
 import { useSliderLogic } from './sliderParts/useSliderLogic';
 import { createSliderStyles } from './sliderParts/styles';
-import Arrow from './sliderParts/Arrow';
-import Dot from './sliderParts/Dot';
+import { injectSliderSnapStyles } from './sliderParts/snapStyleInjection';
+import { findSliderNode } from './sliderParts/domNodes';
+import SliderOverlays from './sliderParts/SliderOverlays';
 import Slide from './sliderParts/Slide';
 
 // Re-export types for consumers
@@ -41,30 +39,7 @@ const isWeb = Platform.OS === 'web';
 const useIsomorphicLayoutEffect =
   typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
-// Inject CSS class for disabling scroll-snap during programmatic scrolling (web only)
-if (isWeb && typeof document !== 'undefined') {
-  const STYLE_ID = 'slider-snap-override';
-  if (!document.getElementById(STYLE_ID)) {
-    const style = document.createElement('style');
-    style.id = STYLE_ID;
-    style.textContent = `
-      .slider-snap-disabled { scroll-snap-type: none !important; }
-      [data-testid="slider-wrapper"]:hover [aria-label="Previous slide"],
-      [data-testid="slider-wrapper"]:hover [aria-label="Next slide"] {
-        opacity: 1 !important;
-      }
-      [aria-label="Previous slide"]:hover,
-      [aria-label="Next slide"]:hover { 
-        background-color: rgba(0,0,0,0.5) !important; 
-        border-color: rgba(255,255,255,0.3) !important;
-        transform: scale(1.08) !important;
-      }
-      [aria-label="Previous slide"]:active,
-      [aria-label="Next slide"]:active { transform: scale(0.95) !important; }
-    `;
-    document.head.appendChild(style);
-  }
-}
+injectSliderSnapStyles();
 
 /* --------------------------------- Slider ---------------------------------- */
 
@@ -145,34 +120,16 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
   const x = useSharedValue(0);
 
   // Get scroll node (web only)
-  const getScrollNode = useCallback((): HTMLElement | null => {
-    if (Platform.OS !== 'web' || typeof document === 'undefined') return null;
-    try {
-      const escaped = typeof CSS !== 'undefined' && CSS.escape
-        ? CSS.escape(sliderInstanceId)
-        : sliderInstanceId.replace(/[^a-zA-Z0-9_-]/g, (c) => `\\${c}`);
-      const node = document.querySelector(
-        `[data-testid="slider-scroll"][data-slider-instance="${escaped}"]`
-      ) as HTMLElement | null;
-      if (node) return node;
-    } catch { /* noop */ }
-    return document.querySelector('[data-testid="slider-scroll"]') as HTMLElement | null;
-  }, [sliderInstanceId]);
+  const getScrollNode = useCallback(
+    (): HTMLElement | null => findSliderNode('slider-scroll', sliderInstanceId),
+    [sliderInstanceId]
+  );
 
   // Get wrapper node (web only)
-  const getWrapperNode = useCallback((): HTMLElement | null => {
-    if (Platform.OS !== 'web' || typeof document === 'undefined') return null;
-    try {
-      const escaped = typeof CSS !== 'undefined' && CSS.escape
-        ? CSS.escape(sliderInstanceId)
-        : sliderInstanceId.replace(/[^a-zA-Z0-9_-]/g, (c) => `\\${c}`);
-      const node = document.querySelector(
-        `[data-testid="slider-wrapper"][data-slider-instance="${escaped}"]`
-      ) as HTMLElement | null;
-      if (node) return node;
-    } catch { /* noop */ }
-    return document.querySelector('[data-testid="slider-wrapper"]') as HTMLElement | null;
-  }, [sliderInstanceId]);
+  const getWrapperNode = useCallback(
+    (): HTMLElement | null => findSliderNode('slider-wrapper', sliderInstanceId),
+    [sliderInstanceId]
+  );
 
   // Sync container width from DOM (web only)
   const syncContainerWidthFromDom = useCallback(() => {
@@ -672,141 +629,32 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
       >
         {renderContent()}
 
-        {/* Navigation arrows */}
-        {showArrows && images.length > 1 && !(isMobile && hideArrowsOnMobile) && (
-          <>
-            {isWeb ? (
-              // Web arrows (TouchableOpacity + Feather icon)
-              <>
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  accessibilityLabel="Previous slide"
-                  onPress={() => {
-                    dismissSwipeHint();
-                    enablePrefetch();
-                    const target = (indexRef.current - 1 + images.length) % Math.max(1, images.length);
-                    scrollTo(target);
-                  }}
-                  activeOpacity={0.9}
-                  style={[styles.navBtn, { left: navOffset }]}
-                  {...({ className: 'slider-nav-btn' } as any)}
-                >
-                  <View style={styles.arrowIconContainer}>
-                    <Feather
-                      name="chevron-left"
-                      size={isMobile ? 16 : isTablet ? 18 : 20}
-                      color="rgba(255,255,255,0.95)"
-                      style={styles.arrowIcon}
-                    />
-                  </View>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  accessibilityLabel="Next slide"
-                  onPress={() => {
-                    dismissSwipeHint();
-                    enablePrefetch();
-                    const target = (indexRef.current + 1) % images.length;
-                    scrollTo(target);
-                  }}
-                  activeOpacity={0.9}
-                  style={[styles.navBtn, { right: navOffset }]}
-                  {...({ className: 'slider-nav-btn' } as any)}
-                >
-                  <View style={styles.arrowIconContainer}>
-                    <Feather
-                      name="chevron-right"
-                      size={isMobile ? 16 : isTablet ? 18 : 20}
-                      color="rgba(255,255,255,0.95)"
-                      style={styles.arrowIcon}
-                    />
-                  </View>
-                </TouchableOpacity>
-              </>
-            ) : (
-              // Native arrows (animated)
-              <>
-                <Arrow
-                  dir="left"
-                  onPress={() => {
-                    dismissSwipeHint();
-                    enablePrefetch();
-                    const target = (indexRef.current - 1 + images.length) % Math.max(1, images.length);
-                    scrollTo(target);
-                  }}
-                  isMobile={isMobile}
-                  isTablet={isTablet}
-                  hideArrowsOnMobile={hideArrowsOnMobile}
-                  insets={insets}
-                  dismissSwipeHint={dismissSwipeHint}
-                  colors={colors}
-                  styles={styles}
-                />
-                <Arrow
-                  dir="right"
-                  onPress={() => {
-                    dismissSwipeHint();
-                    enablePrefetch();
-                    const target = (indexRef.current + 1) % images.length;
-                    scrollTo(target);
-                  }}
-                  isMobile={isMobile}
-                  isTablet={isTablet}
-                  hideArrowsOnMobile={hideArrowsOnMobile}
-                  insets={insets}
-                  dismissSwipeHint={dismissSwipeHint}
-                  colors={colors}
-                  styles={styles}
-                />
-              </>
-            )}
-          </>
-        )}
-
-        {/* Counter (Instagram-style 1/N) */}
-        {images.length > 1 && (
-          <View style={[styles.counter, isMobile && styles.counterMobile, { pointerEvents: 'none' }]}>
-            <View style={styles.counterContainer}>
-              <Text style={styles.counterText}>
-                {currentIndex + 1}/{images.length}
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Pagination dots */}
-        {showDots && images.length > 1 && (
-          <View style={[styles.dots, isMobile && styles.dotsMobile, { pointerEvents: 'none' }]}>
-            <View style={styles.dotsContainer}>
-              {isWeb ? (
-                // Web: static dots
-                images.map((_, i) => (
-                  <View
-                    key={i}
-                    style={[
-                      styles.dot,
-                      i === currentIndex && styles.dotActive,
-                    ]}
-                  />
-                ))
-              ) : (
-                // Native: animated dots
-                images.map((_, i) => (
-                  <View key={i} style={styles.dotWrap}>
-                    <Dot
-                      i={i}
-                      x={x}
-                      containerW={containerW}
-                      total={images.length}
-                      reduceMotion={reduceMotion}
-                      dotStyle={styles.dot}
-                    />
-                  </View>
-                ))
-              )}
-            </View>
-          </View>
-        )}
+        <SliderOverlays
+          images={images}
+          styles={styles}
+          colors={colors}
+          currentIndex={currentIndex}
+          containerW={containerW}
+          reduceMotion={reduceMotion}
+          x={x}
+          showArrows={showArrows}
+          showDots={showDots}
+          hideArrowsOnMobile={hideArrowsOnMobile}
+          isMobile={isMobile}
+          isTablet={isTablet}
+          insets={insets}
+          navOffset={navOffset}
+          dismissSwipeHint={dismissSwipeHint}
+          enablePrefetch={enablePrefetch}
+          goPrev={() => {
+            const target = (indexRef.current - 1 + images.length) % Math.max(1, images.length);
+            scrollTo(target);
+          }}
+          goNext={() => {
+            const target = (indexRef.current + 1) % images.length;
+            scrollTo(target);
+          }}
+        />
       </View>
     </View>
   );
