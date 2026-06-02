@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   Platform,
+  View,
 } from 'react-native'
 import { showToastMessage } from '@/utils/toast'
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router'
@@ -12,6 +13,8 @@ import ListTravelTopContent from './parts/ListTravelTopContent'
 import ListTravelLayout from './parts/ListTravelLayout'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useAuth } from '@/context/AuthContext'
+import EmptyState from '@/components/ui/EmptyState'
+import { buildLoginHref } from '@/utils/authNavigation'
 import { fetchAllFiltersOptimized } from '@/api/miscOptimized'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useResponsive } from '@/hooks/useResponsive'
@@ -173,7 +176,7 @@ function ListTravelBase() {
     const queryClient = useQueryClient();
 
     /* Auth flags: используем AuthContext, который уже учитывает наличие токена */
-    const { userId, isSuperuser: isSuper } = useAuth();
+    const { userId, isSuperuser: isSuper, isAuthenticated, authReady } = useAuth();
 
     /* Top-bar state */
     const [search, setSearch] = useState<string>(normalizedSearchParam);
@@ -732,7 +735,29 @@ function ListTravelBase() {
       toggleSelectAll,
       userId,
     ]);
-    
+
+    // Страницы "Мои путешествия" и экспорт привязаны к userId. Гостю показываем
+    // login-wall (как на /favorites), а не пустой счётчик "0 путешествий".
+    const requiresOwnUser = isMeTravel || isExport;
+    if (requiresOwnUser && authReady && !isAuthenticated) {
+      const loginRedirect = isExport ? '/export' : '/metravel';
+      const loginIntent = isExport ? 'export' : 'metravel';
+      return (
+        <View style={styles.root}>
+          <EmptyState
+            icon="map-pin"
+            title="Войдите в аккаунт"
+            description="Войдите, чтобы видеть свои путешествия и собирать личную книгу поездок."
+            action={{
+              label: 'Войти',
+              onPress: () =>
+                router.push(buildLoginHref({ redirect: loginRedirect, intent: loginIntent }) as any),
+            }}
+          />
+        </View>
+      );
+    }
+
   return (
     <ListTravelLayout
       rootStyle={[styles.root, usesOverlaySidebar ? styles.rootMobile : undefined]}
