@@ -157,8 +157,14 @@ async function waitForTravelPreload(slug: string, isId: boolean, idNum: number):
   if (immediate) return immediate;
 
   let scriptLoaded = Boolean(win.__metravelTravelPreloadScriptLoaded);
+  // The preload script is appended only during the initial direct load of a
+  // /travels/* URL (and sets __metravelTravelPreloadScriptLoaded synchronously
+  // before React hydrates). On a client-side SPA navigation (from search,
+  // collections, etc.) it never runs, so there is nothing to wait for. Bailing
+  // out here avoids a wasteful ~1s block on every in-app navigation — that dead
+  // time previously pushed slow networks toward the request timeout and produced
+  // a sticky "не удалось загрузить" error that only a full reload could clear.
   if (
-    process.env.NODE_ENV !== 'production' &&
     !scriptLoaded &&
     !win.__metravelTravelPreloadPending &&
     !win.__metravelTravelPreloadPromise
@@ -279,9 +285,27 @@ export function useTravelDetails(): UseTravelDetailsReturn {
         ? fetchTravel(idNum, { signal })
         : fetchTravelBySlug(normalizedSlug, { signal });
     },
-    // Travel page is a core landing route; retries can keep the UI in "loading"
-    // for a long time when API is misconfigured/unreachable (hurts LCP).
-    retry: Platform.OS === 'web' ? false : undefined,
+    // Travel page is a core landing route. On the initial direct load the data
+    // comes from the preload bootstrap (initialData), so a network retry never
+    // blocks LCP there. On a client-side SPA navigation there is no preload
+    // safety net, and a single transient failure with retry:false turned into a
+    // sticky error (staleTime kept it from refetching) that only a full reload
+    // could clear. Retry transient (non-404) failures a couple of times so the
+    // SPA path self-heals; genuine 404s fail fast (slug fallback already ran).
+    retry: Platform.OS === 'web'
+      ? (failureCount: number, err: unknown) => {
+          if (failureCount >= 2) return false;
+          const status = Number(
+            (err as { status?: unknown } | null)?.status ??
+              (err as { response?: { status?: unknown } } | null)?.response?.status,
+          );
+          if (status === 404) return false;
+          const message = err instanceof Error ? err.message : String(err ?? '');
+          if (/\b404\b|not found|не найден|не существует|удалено/i.test(message)) return false;
+          return true;
+        }
+      : undefined,
+    retryDelay: (attempt: number) => Math.min(1000 * 2 ** attempt, 4000),
     staleTime: 600_000, // 10 минут — пока данные "свежие", повторный заход не покажет сплэш-лоадер
     gcTime: 10 * 60 * 1000,
     // Не дергаем лишние перезапросы при маунте/фокусе окна, чтобы страница не мигала
