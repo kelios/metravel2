@@ -410,7 +410,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                 }}
                 onFocus={() => setYearFocused(true)}
                 onBlur={() => setYearFocused(false)}
-                placeholder="2024"
+                placeholder={String(new Date().getFullYear())}
                 placeholderTextColor={colors.textMuted}
                 keyboardType="numeric"
                 maxLength={4}
