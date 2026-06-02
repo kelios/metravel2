@@ -4,7 +4,6 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import {
-  useMainThread,
   useTravelComments,
   useCreateComment,
   useUpdateComment,
@@ -31,18 +30,7 @@ export function useCommentsData(travelId: number, options?: { enabled?: boolean 
   const [expandedThreads, setExpandedThreads] = useState<Set<number>>(new Set());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const didWarnAllSubThread = useRef(false);
-
-  const {
-    data: mainThread,
-    isLoading: isLoadingMainThread,
-    error: threadError,
-    refetch: refetchMainThread,
-  } = useMainThread(travelId, {
-    enabled: isEnabled,
-  });
-  const mainThreadId = mainThread?.id;
-  const mainThreadMissing = !isLoadingMainThread && !threadError && !mainThreadId;
-  const canFetchComments = isEnabled && !isLoadingMainThread && !mainThreadMissing;
+  const mainThreadId: number | undefined = undefined;
 
   const {
     data: comments = [],
@@ -50,7 +38,7 @@ export function useCommentsData(travelId: number, options?: { enabled?: boolean 
     error: commentsError,
     refetch: refetchComments,
   } = useTravelComments(travelId, mainThreadId, {
-    enabled: canFetchComments,
+    enabled: isEnabled,
   });
 
   const createComment = useCreateComment();
@@ -79,11 +67,10 @@ export function useCommentsData(travelId: number, options?: { enabled?: boolean 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      await refetchMainThread();
       await refetchComments();
     }
     finally { setIsRefreshing(false); }
-  }, [refetchMainThread, refetchComments]);
+  }, [refetchComments]);
 
   const handleSubmitComment = useCallback(async (text: string) => {
     if (editComment) {
@@ -149,13 +136,13 @@ export function useCommentsData(travelId: number, options?: { enabled?: boolean 
     expandedThreads,
     replyTo,
     editComment,
-    isLoading: isLoadingMainThread || isLoadingComments,
+    isLoading: isLoadingComments,
     isRefreshing,
     isSubmitting: createComment.isPending || updateComment.isPending || replyToComment.isPending,
     hasError: !!commentsError,
-    threadError,
+    threadError: null,
     commentsError,
-    mainThread: mainThread ?? null,
+    mainThread: null,
     handleRefresh,
     handleSubmitComment,
     handleReply: isAuthenticated ? handleReply : undefined,

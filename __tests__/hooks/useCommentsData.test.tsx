@@ -3,7 +3,6 @@ import { renderHook } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useCommentsData } from '@/hooks/useCommentsData';
 import {
-  useMainThread,
   useTravelComments,
   useCreateComment,
   useUpdateComment,
@@ -21,7 +20,6 @@ jest.mock('@/utils/analytics', () => ({
   sendAnalyticsEvent: jest.fn(),
 }));
 
-const mockUseMainThread = useMainThread as jest.MockedFunction<typeof useMainThread>;
 const mockUseTravelComments = useTravelComments as jest.MockedFunction<typeof useTravelComments>;
 const mockUseCreateComment = useCreateComment as jest.MockedFunction<typeof useCreateComment>;
 const mockUseUpdateComment = useUpdateComment as jest.MockedFunction<typeof useUpdateComment>;
@@ -61,18 +59,14 @@ describe('useCommentsData', () => {
       setUserId: jest.fn(),
       setUserAvatar: jest.fn(),
       triggerProfileRefresh: jest.fn(),
+      invalidateAuthState: jest.fn(),
+      checkAuthentication: jest.fn(async () => undefined),
       logout: jest.fn(),
       login: jest.fn(),
+      loginWithGoogle: jest.fn(async () => true),
       sendPassword: jest.fn(),
       setNewPassword: jest.fn(),
     });
-
-    mockUseMainThread.mockReturnValue({
-      data: { id: 9, travel: 123, is_main: true, created_at: null, updated_at: null },
-      isLoading: false,
-      error: null,
-      refetch: jest.fn(),
-    } as any);
 
     mockUseTravelComments.mockReturnValue({
       data: [],
@@ -86,36 +80,21 @@ describe('useCommentsData', () => {
     mockUseReplyToComment.mockReturnValue({ mutate: jest.fn(), isPending: false } as any);
   });
 
-  it('enables main thread lookup so comment reads can use thread_id-first backends', () => {
+  it('fetches travel comments directly by travel id', () => {
     renderHook(() => useCommentsData(123), { wrapper });
 
-    expect(mockUseMainThread).toHaveBeenCalledWith(123, { enabled: true });
-    expect(mockUseTravelComments).toHaveBeenCalledWith(123, 9, { enabled: true });
+    expect(mockUseTravelComments).toHaveBeenCalledWith(123, undefined, { enabled: true });
   });
 
-  it('waits for main thread lookup before fetching comments', () => {
-    mockUseMainThread.mockReturnValue({
-      data: undefined,
-      isLoading: true,
-      error: null,
-      refetch: jest.fn(),
-    } as any);
-
-    renderHook(() => useCommentsData(123), { wrapper });
+  it('does not fetch travel comments when comments are disabled', () => {
+    renderHook(() => useCommentsData(123, { enabled: false }), { wrapper });
 
     expect(mockUseTravelComments).toHaveBeenCalledWith(123, undefined, { enabled: false });
   });
 
-  it('does not fetch travel comments when the main thread is missing', () => {
-    mockUseMainThread.mockReturnValue({
-      data: null,
-      isLoading: false,
-      error: null,
-      refetch: jest.fn(),
-    } as any);
-
+  it('keeps fetching travel comments even when there is no main thread metadata', () => {
     renderHook(() => useCommentsData(123), { wrapper });
 
-    expect(mockUseTravelComments).toHaveBeenCalledWith(123, undefined, { enabled: false });
+    expect(mockUseTravelComments).toHaveBeenCalledWith(123, undefined, { enabled: true });
   });
 });
