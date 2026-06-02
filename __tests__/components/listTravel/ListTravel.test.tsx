@@ -3,9 +3,12 @@ import { Platform } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ListTravel from '@/components/listTravel/ListTravelBase';
 
+const mockRouterPush = jest.fn();
+
 // Базовый мок для AuthContext и маршрута, который можно перенастраивать в тестах
 const mockUseAuth: jest.Mock<any, any> = jest.fn(() => ({
   isAuthenticated: false,
+  authReady: true,
   username: '',
   isSuperuser: false,
   userId: null,
@@ -93,7 +96,7 @@ jest.mock('@/components/listTravel/RenderTravelItem', () => {
 });
 
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => ({ push: mockRouterPush }),
   useLocalSearchParams: () => ({}),
   usePathname: () => '/',
 }));
@@ -157,6 +160,7 @@ describe('ListTravel', () => {
     mockUseAuth.mockReset();
     mockUseAuth.mockReturnValue({
       isAuthenticated: false,
+      authReady: true,
       username: '',
       isSuperuser: false,
       userId: null,
@@ -197,9 +201,10 @@ describe('ListTravel', () => {
 
   it('for "Мои путешествия" (metravel) shows empty state only after userId is available', async () => {
     // Этап 1: пока userId нет, используем маршрут metravel и убеждаемся, что текст пустого состояния не показывается
-    mockUseRoute.mockReturnValueOnce({ name: 'metravel' });
-    mockUseAuth.mockReturnValueOnce({
+    mockUseRoute.mockReturnValue({ name: 'metravel' });
+    mockUseAuth.mockReturnValue({
       isAuthenticated: true,
+      authReady: true,
       username: 'User',
       isSuperuser: false,
       userId: null,
@@ -213,16 +218,18 @@ describe('ListTravel', () => {
       setNewPassword: jest.fn(),
     });
 
-    renderComponent();
+    const firstRender = renderComponent();
 
     await waitFor(() => {
       expect(screen.queryByText(/Пока нет путешествий/i)).toBeNull();
     });
+    firstRender.unmount();
 
     // Этап 2: когда userId появляется, снова рендерим список и ожидаем стандартное пустое состояние
-    mockUseRoute.mockReturnValueOnce({ name: 'metravel' });
-    mockUseAuth.mockReturnValueOnce({
+    mockUseRoute.mockReturnValue({ name: 'metravel' });
+    mockUseAuth.mockReturnValue({
       isAuthenticated: true,
+      authReady: true,
       username: 'User',
       isSuperuser: false,
       userId: '123',
@@ -239,6 +246,31 @@ describe('ListTravel', () => {
     renderComponent();
 
     expect(await screen.findByText(/Пока нет путешествий/i)).toBeTruthy();
+  });
+
+  it('for "Мои путешествия" (metravel) shows login CTA to guests', async () => {
+    mockUseRoute.mockReturnValue({ name: 'metravel' });
+    mockUseAuth.mockReturnValueOnce({
+      isAuthenticated: false,
+      authReady: true,
+      username: '',
+      isSuperuser: false,
+      userId: null,
+      setIsAuthenticated: jest.fn(),
+      setUsername: jest.fn(),
+      setIsSuperuser: jest.fn(),
+      setUserId: jest.fn(),
+      login: jest.fn(),
+      logout: jest.fn(),
+      sendPassword: jest.fn(),
+      setNewPassword: jest.fn(),
+    });
+
+    renderComponent();
+
+    expect(await screen.findByText('Войдите в аккаунт')).toBeTruthy();
+    expect(screen.getByText(/видеть свои путешествия/i)).toBeTruthy();
+    expect(screen.queryByText(/Пока нет путешествий/i)).toBeNull();
   });
 
   it('shows timeout error message when deleteTravel fails with timeout on web', async () => {

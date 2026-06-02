@@ -223,6 +223,28 @@ const buildSlugFallbackQueries = (slug: string): string[] => {
     return Array.from(new Set(orderedQueries.map((q) => q.trim()).filter(Boolean)));
 };
 
+const buildSlugDirectFallbackSlugs = (slug: string): string[] => {
+    const tokens = slugTokenize(slug).filter((token) => !/^\d+$/.test(token));
+    if (!tokens.length) return [];
+    if (tokens.length !== 1) return [];
+
+    const requestedSlug = tokens.join('-');
+    const variants: string[] = [];
+
+    tokens.forEach((token, tokenIndex) => {
+        if (SLUG_FALLBACK_STOPWORDS.has(token)) return;
+        buildAdjacentTranspositionVariants(token).forEach((variantToken) => {
+            const candidateTokens = [...tokens];
+            candidateTokens[tokenIndex] = variantToken;
+            variants.push(candidateTokens.join('-'));
+        });
+    });
+
+    return Array.from(new Set(variants))
+        .filter((candidate) => candidate !== requestedSlug && candidate.length >= 3)
+        .slice(0, 20);
+};
+
 const scoreSlugSimilarity = (requestedSlug: string, candidateSlug: string): number => {
     const requested = slugTokenize(requestedSlug)
         .map(simplifySlugToken)
@@ -430,6 +452,29 @@ export const fetchTravelBySlug = async (
         }
     };
 
+    const fetchByDirectSlugVariant = async (requestOptions?: { signal?: AbortSignal }) => {
+        const candidates = buildSlugDirectFallbackSlugs(slugCacheKey);
+        for (const candidate of candidates) {
+            try {
+                const travel = await apiClient.get<Travel>(
+                    `/travels/by-slug/${encodeURIComponent(candidate)}/`,
+                    LONG_TIMEOUT,
+                    {
+                        ...requestOptions,
+                        skipAuth: true,
+                    }
+                );
+                const normalized = normalizeTravelItem(travel);
+                if (hasMinimumTravelIdentity(normalized)) {
+                    return normalized;
+                }
+            } catch (error: unknown) {
+                if (isAbortError(error)) throw error;
+            }
+        }
+        return null;
+    };
+
     const fetchBySlugWithFallback = async (requestOptions?: { signal?: AbortSignal }) => {
         try {
             return await fetchBySlug(requestOptions);
@@ -438,6 +483,18 @@ export const fetchTravelBySlug = async (
 
             const status = getErrorStatus(e);
             if (shouldUseSlugFallback(status)) {
+                const directVariantTravel = await fetchByDirectSlugVariant(requestOptions);
+                if (directVariantTravel) {
+                    if (__DEV__) {
+                        devWarn('Resolved travel by direct slug variant fallback', {
+                            requestedSlug: slug,
+                            resolvedSlug: directVariantTravel.slug,
+                            id: directVariantTravel.id,
+                        });
+                    }
+                    return directVariantTravel;
+                }
+
                 const fallbackTravel = await findTravelBySlugFallbackWithDeadline(slug, requestOptions);
                 if (fallbackTravel) {
                     const fallbackTravelId = Number(fallbackTravel.id);

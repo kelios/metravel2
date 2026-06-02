@@ -8,63 +8,23 @@ import ThemePreview, { type PdfThemeName } from './ThemePreview';
 import PresetSelector from './PresetSelector';
 import GalleryLayoutSelector from './GalleryLayoutSelector';
 import type { BookPreset } from '@/types/pdf-presets';
-import type { GalleryLayout, CaptionPosition } from '@/types/pdf-gallery';
 import { METRICS } from '@/constants/layout';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
-import { getThemedColors, useTheme } from '@/hooks/useTheme';
+import { useTheme } from '@/hooks/useTheme';
 import { showToast } from '@/utils/toast';
+import type { BookSettings, ChecklistSection } from './BookSettingsModal.types';
+import { DEFAULT_CHECKLIST_SELECTION } from './BookSettingsModal.constants';
+import {
+  buildInitialSettings,
+  buildModalColors,
+  resolveThemed,
+} from './BookSettingsModal.helpers';
+import { ChecklistFieldset, ModalFooter } from './BookSettingsModal.parts';
 // ✅ ИСПРАВЛЕНИЕ: Picker не используется в веб-версии модального окна
 // import { Picker } from '@react-native-picker/picker';
 
-export type ChecklistSection =
-  | 'clothing'
-  | 'food'
-  | 'electronics'
-  | 'documents'
-  | 'medicine';
-
-// ✅ Экспортируем интерфейс для использования в других компонентах
-export interface BookSettings {
-  title: string;
-  subtitle?: string;
-  coverType: 'auto' | 'first-photo' | 'gradient' | 'custom';
-  coverImage?: string;
-  template: PdfThemeName;
-  sortOrder: 'manual' | 'date-desc' | 'date-asc' | 'country' | 'alphabetical';
-  includeToc: boolean;
-  includeGallery: boolean;
-  includeMap: boolean;
-  showCoordinatesOnMapPage?: boolean;
-  includeChecklists: boolean;
-  checklistSections: ChecklistSection[];
-  // Настройки галереи
-  galleryLayout?: GalleryLayout;
-  galleryColumns?: number;
-  galleryPhotosPerPage?: number;
-  galleryTwoPerPageLayout?: 'vertical' | 'horizontal';
-  showCaptions?: boolean;
-  captionPosition?: CaptionPosition;
-  gallerySpacing?: 'compact' | 'normal' | 'spacious';
-  // Стиль фото-страницы путешествия
-  photoPageLayout?: 'full-bleed' | 'framed' | 'split';
-}
-
-const DEFAULT_CHECKLIST_SELECTION: ChecklistSection[] = ['clothing', 'food', 'electronics'];
-
-// Цветовые темы и шрифты теперь фиксированы через defaultBookSettings,
-// поэтому отдельные массивы опций для UI не нужны.
-
-const CHECKLIST_OPTIONS: Array<{
-  value: ChecklistSection;
-  label: string;
-  items: string[];
-}> = [
-  { value: 'clothing', label: 'Одежда', items: ['Слои', 'Обувь', 'Дождевик'] },
-  { value: 'food', label: 'Еда', items: ['Перекусы', 'Термос', 'Посуда'] },
-  { value: 'electronics', label: 'Электроника', items: ['Повербанк', 'Камера', 'Переходники'] },
-  { value: 'documents', label: 'Документы', items: ['Паспорт', 'Визы', 'Страховка'] },
-  { value: 'medicine', label: 'Аптечка', items: ['Базовая аптечка', 'Пластыри', 'Солнцезащита'] },
-];
+export type { BookSettings, ChecklistSection } from './BookSettingsModal.types';
+export type { PdfThemeName };
 
 interface BookSettingsModalProps {
   visible: boolean;
@@ -77,54 +37,6 @@ interface BookSettingsModalProps {
   mode?: 'save' | 'preview';
 }
 
-const defaultBookSettings: BookSettings = {
-  title: '',
-  subtitle: '',
-  coverType: 'auto',
-  template: 'minimal',
-  sortOrder: 'manual',
-  includeToc: true,
-  includeGallery: true,
-  includeMap: true,
-  showCoordinatesOnMapPage: true,
-  includeChecklists: false,
-  checklistSections: DEFAULT_CHECKLIST_SELECTION,
-  // Настройки галереи по умолчанию
-  galleryLayout: 'grid',
-  galleryColumns: 3,
-  galleryPhotosPerPage: 2,
-  galleryTwoPerPageLayout: 'vertical',
-  showCaptions: true,
-  captionPosition: 'bottom',
-  gallerySpacing: 'normal',
-};
-
-
-const buildInitialSettings = (
-  overrides?: Partial<BookSettings>
-): BookSettings => {
-  const merged: BookSettings = {
-    ...defaultBookSettings,
-    ...overrides,
-  };
-
-  merged.title = overrides?.title ?? defaultBookSettings.title;
-
-  // Флаги includeGallery/includeMap теперь управляются только логикой экспорта,
-  // без дополнительных режимов photoMode/mapMode.
-
-  merged.checklistSections =
-    overrides?.checklistSections && overrides.checklistSections.length > 0
-      ? overrides.checklistSections
-      : DEFAULT_CHECKLIST_SELECTION;
-
-  if (typeof merged.includeChecklists === 'undefined') {
-    merged.includeChecklists = defaultBookSettings.includeChecklists;
-  }
-
-  return merged;
-};
-
 export default function BookSettingsModal({
   visible,
   onClose,
@@ -136,39 +48,8 @@ export default function BookSettingsModal({
   mode: _mode = 'save',
 }: BookSettingsModalProps) {
   const { isDark } = useTheme();
-  const themed = (() => {
-    if (Platform.OS === 'web' && typeof document !== 'undefined') {
-      const domTheme = document.documentElement.getAttribute('data-theme');
-      if (domTheme === 'dark') return getThemedColors(true);
-      if (domTheme === 'light') return getThemedColors(false);
-    }
-    return getThemedColors(isDark);
-  })();
-
-  const MODAL_COLORS = {
-    overlay: themed.overlay,
-    surface: themed.surface,
-    surfaceMuted: themed.surfaceMuted,
-    backgroundSecondary: themed.backgroundSecondary,
-    backgroundTertiary: themed.backgroundTertiary,
-    text: themed.text,
-    textMuted: themed.textMuted,
-    textSubtle: themed.textTertiary,
-    border: themed.border,
-    borderStrong: themed.borderStrong,
-    primary: themed.primary,
-    primaryDark: themed.primaryDark,
-    primaryLight: themed.primaryLight,
-    primarySoft: themed.primarySoft,
-    focus: themed.focus,
-    textOnPrimary: themed.textOnPrimary,
-    accent: themed.accent,
-    accentLight: themed.accentLight,
-    error: themed.danger,
-    errorSoft: themed.dangerSoft,
-    errorDark: themed.dangerDark,
-    borderAccent: themed.borderAccent,
-  };
+  const themed = resolveThemed(isDark);
+  const MODAL_COLORS = buildModalColors(themed);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const firstFocusableRef = useRef<HTMLButtonElement | null>(null);
 
@@ -834,284 +715,26 @@ export default function BookSettingsModal({
               </label>
             </div>
 
-            <div style={{ marginBottom: '24px', padding: '16px', borderRadius: '14px', border: `1px solid ${MODAL_COLORS.border}`, backgroundColor: MODAL_COLORS.backgroundSecondary, transition: 'all 0.3s ease' }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '16px', marginBottom: '8px' }}>
-                <label style={{ fontWeight: 600, color: MODAL_COLORS.text, fontSize: '14px' }}>
-                  Чек-листы путешественника
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: MODAL_COLORS.textMuted, whiteSpace: 'nowrap' }}>
-                  <input
-                    type="checkbox"
-                    checked={settings.includeChecklists}
-                    onChange={(e) => handleToggleChecklists(e.target.checked)}
-                    style={{
-                      width: '20px',
-                      height: '20px',
-                      minWidth: '20px',
-                      minHeight: '20px',
-                      accentColor: MODAL_COLORS.primary,
-                      cursor: 'pointer',
-                      borderRadius: '4px',
-                    }}
-                  />
-                  Добавить в PDF
-                </label>
-              </div>
-              <div style={{ fontSize: '12px', color: MODAL_COLORS.textSubtle, marginBottom: settings.includeChecklists ? '12px' : 0 }}>
-                Стандартные списки для печати: экипировка, еда, документы, техника и аптечка.
-              </div>
-              {settings.includeChecklists && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-                  {CHECKLIST_OPTIONS.map((option) => {
-                    const selected = checklistSections.includes(option.value);
-                    return (
-                      <label
-                        key={option.value}
-                        style={{
-                          borderRadius: '12px',
-                          border: selected
-                            ? `2px solid ${MODAL_COLORS.primary}`
-                            : `1px solid ${MODAL_COLORS.border}`,
-                          padding: '12px',
-                          backgroundColor: selected ? MODAL_COLORS.primarySoft : MODAL_COLORS.surface,
-                          cursor: 'pointer',
-                          display: 'block',
-                          boxShadow: selected ? (themed.boxShadows.medium as any) : (themed.boxShadows.light as any),
-                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!selected) {
-                            e.currentTarget.style.borderColor = MODAL_COLORS.borderStrong;
-                            e.currentTarget.style.boxShadow = themed.boxShadows.medium as any;
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!selected) {
-                            e.currentTarget.style.borderColor = MODAL_COLORS.border;
-                            e.currentTarget.style.boxShadow = themed.boxShadows.light as any;
-                          }
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
-                          <span style={{ fontWeight: 600, color: MODAL_COLORS.text }}>{option.label}</span>
-                          <input
-                            type="checkbox"
-                            checked={selected}
-                            onChange={() => toggleChecklistSection(option.value)}
-                            style={{
-                              width: '18px',
-                              height: '18px',
-                              minWidth: '18px',
-                              minHeight: '18px',
-                              accentColor: MODAL_COLORS.primary,
-                              cursor: 'pointer',
-                              borderRadius: '4px',
-                            }}
-                          />
-                        </div>
-                        <ul style={{ margin: 0, padding: '0 0 0 16px', fontSize: '12px', color: MODAL_COLORS.textMuted }}>
-                          {option.items.map((item) => (
-                            <li key={item}>{item}</li>
-                          ))}
-                        </ul>
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <ChecklistFieldset
+              settings={settings}
+              checklistSections={checklistSections}
+              MODAL_COLORS={MODAL_COLORS}
+              themed={themed}
+              onToggleChecklists={handleToggleChecklists}
+              onToggleSection={toggleChecklistSection}
+            />
           </div>
-          <div
-            style={{
-              borderTop: `1px solid ${MODAL_COLORS.border}`,
-              paddingTop: '16px',
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: '12px',
-              flexWrap: 'wrap',
-            }}
-          >
-            <button
-              ref={firstFocusableRef}
-              onClick={handleClose}
-              disabled={isSaving}
-              style={{
-                padding: '12px 20px',
-                border: `1px solid ${MODAL_COLORS.border}`,
-                borderRadius: '12px',
-                backgroundColor: MODAL_COLORS.surface,
-                color: MODAL_COLORS.text,
-                fontSize: '15px',
-                fontWeight: 600,
-                cursor: isSaving ? 'not-allowed' : 'pointer',
-                minWidth: '44px',
-                minHeight: '44px',
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                outlineWidth: 0,
-                outlineStyle: 'none',
-                outlineColor: 'transparent',
-                boxShadow: themed.boxShadows.light as any,
-                opacity: isSaving ? 0.5 : 1,
-              }}
-              onFocus={(e) => {
-                if (!isSaving) {
-                  e.target.style.borderColor = MODAL_COLORS.primary;
-                  e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
-                }
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = MODAL_COLORS.border;
-                e.target.style.boxShadow = themed.boxShadows.light as any;
-              }}
-              onMouseEnter={(e) => {
-                if (!isSaving) {
-                  const target = e.target as HTMLButtonElement;
-                  target.style.backgroundColor = MODAL_COLORS.backgroundTertiary;
-                  target.style.transform = 'translateY(-1px)';
-                  target.style.boxShadow = themed.boxShadows.medium as any;
-                }
-              }}
-              onMouseLeave={(e) => {
-                const target = e.target as HTMLButtonElement;
-                target.style.backgroundColor = MODAL_COLORS.surface;
-                target.style.transform = 'translateY(0)';
-                target.style.boxShadow = themed.boxShadows.light as any;
-              }}
-            >
-              Отмена
-            </button>
-            {onPreview && (
-              <button
-                onClick={handlePreview}
-                disabled={isSaving || validationErrors.length > 0}
-                style={{
-                  padding: '12px 20px',
-                  border: `1px solid ${MODAL_COLORS.primary}`,
-                  borderRadius: '12px',
-                  backgroundColor: MODAL_COLORS.surface,
-                  color: MODAL_COLORS.primary,
-                  fontSize: '15px',
-                  fontWeight: 600,
-                  cursor: (isSaving || validationErrors.length > 0) ? 'not-allowed' : 'pointer',
-                  minWidth: '44px',
-                  minHeight: '44px',
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  outlineWidth: 0,
-                  outlineStyle: 'none',
-                  outlineColor: 'transparent',
-                  boxShadow: themed.boxShadows.light as any,
-                  opacity: (isSaving || validationErrors.length > 0) ? 0.5 : 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
-                onFocus={(e) => {
-                  if (!isSaving && validationErrors.length === 0) {
-                    e.target.style.borderColor = MODAL_COLORS.primary;
-                    e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
-                  }
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = MODAL_COLORS.primary;
-                  e.target.style.boxShadow = themed.boxShadows.light as any;
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSaving && validationErrors.length === 0) {
-                    const target = e.target as HTMLButtonElement;
-                    target.style.backgroundColor = MODAL_COLORS.primaryLight;
-                    target.style.transform = 'translateY(-1px)';
-                    target.style.boxShadow = themed.boxShadows.medium as any;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  const target = e.target as HTMLButtonElement;
-                  target.style.backgroundColor = MODAL_COLORS.surface;
-                  target.style.transform = 'translateY(0)';
-                  target.style.boxShadow = themed.boxShadows.light as any;
-                }}
-                aria-label="Предварительный просмотр PDF"
-              >
-                <Feather
-                  name={isSaving ? 'clock' : 'eye'}
-                  size={18}
-                  color={MODAL_COLORS.primary as any}
-                />
-                Превью
-              </button>
-            )}
-            <button
-              onClick={handleSave}
-              disabled={isSaving || validationErrors.length > 0}
-              style={{
-                padding: '12px 20px',
-                border: 'none',
-                borderRadius: '12px',
-                backgroundColor: (isSaving || validationErrors.length > 0) ? MODAL_COLORS.borderStrong : MODAL_COLORS.primary,
-                color: MODAL_COLORS.textOnPrimary,
-                fontSize: '15px',
-                fontWeight: 600,
-                cursor: (isSaving || validationErrors.length > 0) ? 'not-allowed' : 'pointer',
-                minWidth: '44px',
-                minHeight: '44px',
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                outlineWidth: 0,
-                outlineStyle: 'none',
-                outlineColor: 'transparent',
-                boxShadow: themed.boxShadows.medium as any,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-              onFocus={(e) => {
-                if (!isSaving && validationErrors.length === 0) {
-                  e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}, ${themed.boxShadows.medium}`;
-                }
-              }}
-              onBlur={(e) => {
-                e.target.style.boxShadow = themed.boxShadows.medium as any;
-              }}
-              onMouseEnter={(e) => {
-                if (!isSaving && validationErrors.length === 0) {
-                  const target = e.target as HTMLButtonElement;
-                  target.style.backgroundColor = MODAL_COLORS.primaryDark;
-                  target.style.transform = 'translateY(-1px)';
-                  target.style.boxShadow = themed.boxShadows.heavy as any;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isSaving && validationErrors.length === 0) {
-                  const target = e.target as HTMLButtonElement;
-                  target.style.backgroundColor = MODAL_COLORS.primary;
-                  target.style.transform = 'translateY(0)';
-                  target.style.boxShadow = themed.boxShadows.medium as any;
-                }
-              }}
-              aria-label="Сохранить и создать PDF"
-            >
-              {isSaving ? (
-                <>
-                  <span style={{
-                    display: 'inline-block',
-                    animation: 'spin 1s linear infinite',
-                  }}>
-                    <Feather name="clock" size={18} color={MODAL_COLORS.textOnPrimary as any} />
-                  </span>
-                  <style>{`
-                    @keyframes spin {
-                      from { transform: rotate(0deg); }
-                      to { transform: rotate(360deg); }
-                    }
-                  `}</style>
-                  Создание...
-                </>
-              ) : (
-                <>
-                  <Feather name="file-text" size={18} color={MODAL_COLORS.textOnPrimary as any} />
-                  Сохранить PDF
-                </>
-              )}
-            </button>
-          </div>
+          <ModalFooter
+            MODAL_COLORS={MODAL_COLORS}
+            themed={themed}
+            isSaving={isSaving}
+            validationErrors={validationErrors}
+            onPreview={onPreview}
+            firstFocusableRef={firstFocusableRef}
+            onClose={handleClose}
+            onSave={handleSave}
+            onPreviewClick={handlePreview}
+          />
         </div>
       </div>
 

@@ -1137,39 +1137,18 @@ describe('src/api/travelsApi.ts', () => {
     it('fetchTravelBySlug fallback находит slug с переставленными соседними буквами', async () => {
       const { fetchTravelBySlug } = loadTravelsApi();
       const notFoundError = Object.assign(new Error('not found'), { status: 404 });
-      mockedApiClientGet.mockRejectedValueOnce(notFoundError);
-      mockedApiClientGet.mockResolvedValueOnce({
-        id: 427,
-        name: 'Гервяты. Костёл Пресвятой Троицы',
-        slug: 'gervyaty',
-        description: '<p>detail payload</p>',
-        gallery: [],
-        travelAddress: [{ id: 1, coord: '54.6871796,26.1441112' }],
-      } as any);
-
-      mockedFetchWithTimeout.mockImplementation(async (url: string) => ({
-        ok: true,
-        __url: url,
-      } as any));
-      mockedSafeJsonParse.mockImplementation(async (res: any) => {
-        const url = new URL(res.__url);
-        const query = url.searchParams.get('query') || '';
-        if (query === 'gervyaty') {
+      mockedApiClientGet.mockImplementation(async (endpoint: string) => {
+        if (endpoint === '/travels/by-slug/gervyaty/') {
           return {
-            data: [
-              {
-                id: 427,
-                name: 'Гервяты. Костёл Пресвятой Троицы',
-                slug: 'gervyaty',
-                url: '/travels/gervyaty',
-                publish: true,
-                moderation: true,
-              },
-            ],
-            total: 1,
+            id: 427,
+            name: 'Гервяты. Костёл Пресвятой Троицы',
+            slug: 'gervyaty',
+            description: '<p>detail payload</p>',
+            gallery: [],
+            travelAddress: [{ id: 1, coord: '54.6871796,26.1441112' }],
           } as any;
         }
-        return { data: [], total: 0 } as any;
+        throw notFoundError;
       });
 
       const result = await fetchTravelBySlug('geryvaty');
@@ -1177,11 +1156,13 @@ describe('src/api/travelsApi.ts', () => {
       expect(result.id).toBe(427);
       expect(result.slug).toBe('gervyaty');
       expect(result.description).toBe('<p>detail payload</p>');
-      const requestedQueries = mockedFetchWithTimeout.mock.calls.map(
-        (call) => new URL(call[0] as string).searchParams.get('query') || '',
+      expect(mockedFetchWithTimeout).not.toHaveBeenCalled();
+      expect(mockedSafeJsonParse).not.toHaveBeenCalled();
+      const directVariantCall = mockedApiClientGet.mock.calls.find(
+        (call) => call[0] === '/travels/by-slug/gervyaty/'
       );
-      expect(requestedQueries).toContain('gervyaty');
-      expect(mockedApiClientGet.mock.calls[1][0]).toBe('/travels/427/');
+      expect(directVariantCall).toBeTruthy();
+      expect(directVariantCall?.[2]).toEqual({ skipAuth: true });
     });
 
     it('fetchTravelBySlug fallback корректно обрабатывает slug с числовым суффиксом', async () => {

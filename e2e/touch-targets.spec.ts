@@ -119,14 +119,7 @@ test.describe('@smoke Touch targets (D-010)', () => {
 
     // Wait for the hero slider to render
     const prev = page.getByRole('button', { name: 'Предыдущий слайд' }).first()
-    const visible = await prev
-      .waitFor({ state: 'visible', timeout: TIMEOUT })
-      .then(() => true)
-      .catch(() => false)
-    if (!visible) {
-      annotate('Hero slider not visible in this environment (may be hidden on this viewport/data)')
-      return
-    }
+    await expect(prev, 'hero slider must render before arrow target assertions').toBeVisible({ timeout: TIMEOUT })
 
     for (const name of ['Предыдущий слайд', 'Следующий слайд']) {
       const btn = page.getByRole('button', { name }).first()

@@ -7,6 +7,7 @@ import { AboutHeader } from '@/components/about/AboutHeader'
 import { AboutIntroCard } from '@/components/about/AboutIntroCard'
 import { ContactForm } from '@/components/about/ContactForm'
 import { SocialSection } from '@/components/about/SocialSection'
+import CustomHeader from '@/components/layout/CustomHeader'
 import { sendFeedback } from '@/api/misc'
 import { useIsFocused } from '@react-navigation/native'
 import { useResponsive } from '@/hooks/useResponsive'
@@ -174,6 +175,7 @@ function ContactScreen() {
           ogType="website"
         />
       )}
+      <CustomHeader />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView style={webTouchScrollStyle} contentContainerStyle={{ flexGrow: 1 }}>
           <View style={styles.backgroundImage}>

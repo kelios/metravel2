@@ -516,6 +516,7 @@ function ListTravelBase() {
         onSelect,
         setSearch,
       })
+    // Intentional granular deps (filter.* sub-keys) to avoid recompute on filter object-identity change
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
       debSearch,
@@ -613,6 +614,7 @@ function ListTravelBase() {
         isMeTravel,
         onCreateTravel: () => router.push('/travel/new'),
       });
+    // Intentional granular deps (options?.* sub-keys) to avoid recompute on options object-identity change
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [showEmptyState, filter, options?.categories, options?.transports, options?.categoryTravelAddress, debSearch, isMeTravel, router]);
 
@@ -710,6 +712,7 @@ function ListTravelBase() {
           setLastSettings={setLastSettings}
         />
       );
+    // Intentional granular deps (styles.* sub-keys) to avoid recompute on styles object-identity change
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
       baseSettings,
