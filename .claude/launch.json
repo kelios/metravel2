@@ -16,6 +16,13 @@
       "autoPort": false
     },
     {
+      "name": "Expo Web Clear 8082",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["expo", "start", "--web", "--clear", "--port", "8082"],
+      "port": 8082,
+      "autoPort": false
+    },
+    {
       "name": "Expo Start (All Platforms)",
       "runtimeExecutable": "yarn",
       "runtimeArgs": ["start"],
@@ -47,6 +54,20 @@
       "runtimeExecutable": "node",
       "runtimeArgs": [".claude/prod-server.js", "8081"],
       "port": 8081,
+      "autoPort": false
+    },
+    {
+      "name": "Raw Dist 8090",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [".claude/prod-server.js", "8090", "dist"],
+      "port": 8090,
+      "autoPort": false
+    },
+    {
+      "name": "Dist Local API 8091",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [".claude/prod-server.js", "8091", "dist", "http://192.168.50.36"],
+      "port": 8091,
       "autoPort": false
     }
   ]

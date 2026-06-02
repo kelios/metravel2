@@ -327,6 +327,15 @@ export const fetchTravel = async (
         return normalized;
     } catch (e: unknown) {
         if (isAbortError(e)) throw e;
+        // Public travel detail: recover from a stale/expired token by retrying without
+        // auth instead of failing the whole page. The token is left untouched.
+        if (getErrorStatus(e) === 401) {
+            const travel = await apiClient.get<Travel>(`/travels/${id}/`, LONG_TIMEOUT, {
+                signal: options?.signal,
+                skipAuth: true,
+            });
+            return normalizeTravelItem(travel);
+        }
         devError('Error fetching Travel:', e);
         throw e;
     }
@@ -347,12 +356,23 @@ export const fetchTravelBySlug = async (
 
     const fetchBySlug = async (requestOptions?: { signal?: AbortSignal }) => {
         const safeSlug = encodeURIComponent(slugCacheKey);
-        const travel = await apiClient.get<Travel>(
-            `/travels/by-slug/${safeSlug}/`,
-            LONG_TIMEOUT,
-            requestOptions,
-        );
-        return normalizeTravelItem(travel);
+        const endpoint = `/travels/by-slug/${safeSlug}/`;
+        try {
+            const travel = await apiClient.get<Travel>(endpoint, LONG_TIMEOUT, requestOptions);
+            return normalizeTravelItem(travel);
+        } catch (e: unknown) {
+            // Travel detail is public. A 401 means the stored token is stale/expired
+            // (or invalid for the current API backend). Retry once without auth so the
+            // public page still loads instead of showing an error — keep the token intact.
+            if (!isAbortError(e) && getErrorStatus(e) === 401) {
+                const travel = await apiClient.get<Travel>(endpoint, LONG_TIMEOUT, {
+                    ...requestOptions,
+                    skipAuth: true,
+                });
+                return normalizeTravelItem(travel);
+            }
+            throw e;
+        }
     };
 
     const fetchBySlugWithFallback = async (requestOptions?: { signal?: AbortSignal }) => {

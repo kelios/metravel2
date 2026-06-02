@@ -191,4 +191,32 @@ describe('src/api/client.ts apiClient', () => {
     );
     expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(2);
   });
+
+  it('skipAuth: не читает и не отправляет токен', async () => {
+    mockedFetchWithTimeout.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true }),
+    } as any);
+
+    const result = await apiClient.get('/public', undefined, { skipAuth: true });
+
+    expect(result).toEqual({ ok: true });
+    expect(mockedGetSecureItem).not.toHaveBeenCalled();
+    const [, options] = mockedFetchWithTimeout.mock.calls[0];
+    expect((options as any).headers.Authorization).toBeUndefined();
+  });
+
+  it('skipAuth: при 401 не очищает сохранённый токен', async () => {
+    mockedFetchWithTimeout.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      text: async () => 'Unauthorized',
+    } as any);
+
+    await expect(apiClient.get('/public', undefined, { skipAuth: true })).rejects.toEqual(
+      expect.objectContaining({ status: 401 }),
+    );
+    expect(mockedRemoveSecureItems).not.toHaveBeenCalled();
+  });
 });

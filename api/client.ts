@@ -272,9 +272,10 @@ class ApiClient {
      */
     async request<T>(
         endpoint: string,
-        options: RequestInit = {},
+        options: RequestInit & { skipAuth?: boolean } = {},
         timeout: number = DEFAULT_TIMEOUT
     ): Promise<T> {
+        const { skipAuth = false } = options;
         // ✅ FIX: Проверяем rate limit перед запросом
         const rateLimitSlot = this.checkRateLimit(endpoint);
         if (!rateLimitSlot) {
@@ -295,7 +296,7 @@ class ApiClient {
             );
         }
 
-        const token = await this.getAccessToken();
+        const token = skipAuth ? null : await this.getAccessToken();
         const headers: HeadersInit = {
             ...this.defaultHeaders,
             ...(token && { Authorization: `Token ${token}` }),
@@ -312,7 +313,12 @@ class ApiClient {
             // Если токена нет, но сервер вернул 401 — состояние аутентификации, вероятно, устарело
             // (например, токен был удалён в другой вкладке). Сбрасываем состояние, чтобы UI обновился.
             if (response.status === 401 && !token) {
-                await this.clearTokens();
+                // Do not wipe a stored token when the caller explicitly opted out of
+                // auth (skipAuth) — the endpoint is public and the token may still be
+                // valid elsewhere. Only clear when we actually sent no token.
+                if (!skipAuth) {
+                    await this.clearTokens();
+                }
                 throw new ApiError(401, 'Требуется авторизация');
             }
 
@@ -589,7 +595,11 @@ class ApiClient {
     /**
      * GET запрос
      */
-    async get<T>(endpoint: string, timeout?: number, options?: RequestInit): Promise<T> {
+    async get<T>(
+        endpoint: string,
+        timeout?: number,
+        options?: RequestInit & { skipAuth?: boolean }
+    ): Promise<T> {
         return this.request<T>(endpoint, { method: 'GET', ...(options ?? {}) }, timeout);
     }
 

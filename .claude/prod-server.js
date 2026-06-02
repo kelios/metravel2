@@ -6,13 +6,16 @@ const fs = require('fs')
 const path = require('path')
 
 const PORT = Number(process.argv[2] || 8081)
-const ROOT = path.join(__dirname, '..', 'dist', 'prod')
-const API_UPSTREAM = 'https://metravel.by'
+const ROOT = path.isAbsolute(process.argv[3] || '')
+  ? process.argv[3]
+  : path.join(__dirname, '..', process.argv[3] || 'dist/prod')
+const API_UPSTREAM = process.argv[4] || process.env.API_UPSTREAM || 'https://metravel.by'
 
 function proxyApi(req, res) {
   const target = new URL(req.url, API_UPSTREAM)
   const headers = { ...req.headers, host: target.host }
-  const upstream = https.request(
+  const mod = target.protocol === 'http:' ? http : https
+  const upstream = mod.request(
     target,
     { method: req.method, headers },
     (up) => {
