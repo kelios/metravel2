@@ -52,12 +52,24 @@ function isNotFoundError(message?: string): boolean {
   return /\b404\b|not found|не найден|не существует|удалено/i.test(message)
 }
 
+function isRateLimitedError(message?: string): boolean {
+  if (!message) return false
+  return /слишком много запросов|too many requests|429|перегруж/i.test(message)
+}
+
 export function LoadError({ styles, seoBlock, errorMessage, onRetry, onGoHome }: LoadErrorProps) {
   const notFound = isNotFoundError(errorMessage)
-  const title = notFound ? 'Путешествие не найдено' : 'Не удалось загрузить путешествие'
-  const text = notFound
-    ? 'Возможно, оно было удалено или ссылка устарела.'
-    : 'Проверьте подключение к интернету и попробуйте ещё раз.'
+  const rateLimited = !notFound && isRateLimitedError(errorMessage)
+
+  let title = 'Не удалось загрузить путешествие'
+  let text = 'Проверьте подключение к интернету и попробуйте ещё раз.'
+  if (notFound) {
+    title = 'Путешествие не найдено'
+    text = 'Возможно, оно было удалено или ссылка устарела.'
+  } else if (rateLimited) {
+    title = 'Слишком много запросов'
+    text = 'Подождите немного и нажмите «Повторить».'
+  }
 
   return (
     <>

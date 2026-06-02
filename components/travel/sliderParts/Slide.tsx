@@ -257,7 +257,14 @@ const Slide = memo(function Slide({
       fallbackTriedRef.current = true;
     }
     setHasError(true);
-  }, [resolvedUri]);
+    // Even on terminal image failure, release the first-screen LCP gate so the rest
+    // of the travel page (description, sections) renders instead of staying blank
+    // behind the skeleton overlay forever. Mirrors the success path in handleLoad.
+    if (isFirstSlide && !firstLoadReportedRef.current) {
+      firstLoadReportedRef.current = true;
+      onFirstImageLoad?.();
+    }
+  }, [resolvedUri, isFirstSlide, onFirstImageLoad]);
 
   const handlePress = useCallback(() => {
     onImagePress?.(index);

@@ -70,10 +70,16 @@ class ApiClient {
     private refreshTokenPromise: Promise<string> | null = null;
     private refreshTokenLock: boolean = false; // ✅ FIX-003: Lock для предотвращения race condition
 
+    // ⚠️ Чисто клиентский in-memory предохранитель от runaway render-loop'ов
+    // (на сервер не ходит, сбрасывается на полной перезагрузке). Реальный
+    // rate limiting — на бэкенде. Поэтому глобальный потолок держим высоким,
+    // чтобы обычная навигация по SPA (главная/лента/места шлют пачки запросов)
+    // не упёрлась в лимит и не показала ложное «Нет подключения к интернету».
+    // От зацикливания защищает maxPerEndpoint (на один и тот же эндпоинт).
     private rateLimiter = new RateLimiter({
         window: 60_000,
-        maxPerWindow: 100,
-        maxPerEndpoint: 20,
+        maxPerWindow: 600,
+        maxPerEndpoint: 60,
         endpointLimits: { '/travels/upsert/': 120 },
     });
 
