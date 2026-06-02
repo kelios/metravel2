@@ -334,6 +334,42 @@ describe('Slider', () => {
     expect(onFirstImageLoad).toHaveBeenCalledTimes(1)
   })
 
+  it('calls onFirstImageLoad when the first image fails terminally so the page is not left blank', async () => {
+    const onFirstImageLoad = jest.fn()
+
+    const brokenImage: SliderImage = {
+      id: 'broken-hero',
+      url: 'https://metravel.by/api/gallery/532/gallery/63fc9788ca2d4300ac8d7fceb319a9fa.JPG',
+      width: 1600,
+      height: 900,
+    }
+
+    const { getByTestId } = render(
+      <Slider
+        images={[brokenImage, landscapeImage]}
+        showArrows={false}
+        showDots={false}
+        autoPlay={false}
+        preloadCount={0}
+        blurBackground={false}
+        onFirstImageLoad={onFirstImageLoad}
+      />
+    )
+
+    // First error retries the fallback URL; the gate must NOT release yet.
+    act(() => {
+      getByTestId('slider-image-0').props.onError?.()
+    })
+    expect(onFirstImageLoad).not.toHaveBeenCalled()
+
+    // Second (terminal) error must release the first-screen LCP gate so the rest of
+    // the travel page renders instead of staying blank behind the skeleton overlay.
+    act(() => {
+      getByTestId('slider-image-0').props.onError?.()
+    })
+    expect(onFirstImageLoad).toHaveBeenCalledTimes(1)
+  })
+
   it('does not call onFirstImageLoad for subsequent images', async () => {
     const onFirstImageLoad = jest.fn()
 

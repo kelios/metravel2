@@ -29,6 +29,13 @@
       "port": 8085
     },
     {
+      "name": "Manual QA Serve",
+      "runtimeExecutable": "/tmp/metravel-serve.sh",
+      "runtimeArgs": [],
+      "port": 8085,
+      "autoPort": false
+    },
+    {
       "name": "Workboard Static",
       "runtimeExecutable": "node",
       "runtimeArgs": ["scripts/workboard-server.js", "4599"],
