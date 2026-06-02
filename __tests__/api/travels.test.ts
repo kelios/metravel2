@@ -1134,6 +1134,56 @@ describe('src/api/travelsApi.ts', () => {
       expect(mockedApiClientGet.mock.calls[1][0]).toBe('/travels/390/');
     });
 
+    it('fetchTravelBySlug fallback находит slug с переставленными соседними буквами', async () => {
+      const { fetchTravelBySlug } = loadTravelsApi();
+      const notFoundError = Object.assign(new Error('not found'), { status: 404 });
+      mockedApiClientGet.mockRejectedValueOnce(notFoundError);
+      mockedApiClientGet.mockResolvedValueOnce({
+        id: 427,
+        name: 'Гервяты. Костёл Пресвятой Троицы',
+        slug: 'gervyaty',
+        description: '<p>detail payload</p>',
+        gallery: [],
+        travelAddress: [{ id: 1, coord: '54.6871796,26.1441112' }],
+      } as any);
+
+      mockedFetchWithTimeout.mockImplementation(async (url: string) => ({
+        ok: true,
+        __url: url,
+      } as any));
+      mockedSafeJsonParse.mockImplementation(async (res: any) => {
+        const url = new URL(res.__url);
+        const query = url.searchParams.get('query') || '';
+        if (query === 'gervyaty') {
+          return {
+            data: [
+              {
+                id: 427,
+                name: 'Гервяты. Костёл Пресвятой Троицы',
+                slug: 'gervyaty',
+                url: '/travels/gervyaty',
+                publish: true,
+                moderation: true,
+              },
+            ],
+            total: 1,
+          } as any;
+        }
+        return { data: [], total: 0 } as any;
+      });
+
+      const result = await fetchTravelBySlug('geryvaty');
+
+      expect(result.id).toBe(427);
+      expect(result.slug).toBe('gervyaty');
+      expect(result.description).toBe('<p>detail payload</p>');
+      const requestedQueries = mockedFetchWithTimeout.mock.calls.map(
+        (call) => new URL(call[0] as string).searchParams.get('query') || '',
+      );
+      expect(requestedQueries).toContain('gervyaty');
+      expect(mockedApiClientGet.mock.calls[1][0]).toBe('/travels/427/');
+    });
+
     it('fetchTravelBySlug fallback корректно обрабатывает slug с числовым суффиксом', async () => {
       const { fetchTravelBySlug } = loadTravelsApi();
       const notFoundError = Object.assign(new Error('not found'), { status: 404 });

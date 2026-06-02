@@ -258,11 +258,7 @@ class ApiClient {
      * ✅ FIX-005: Проверка offline режима
      */
     private async checkNetworkStatus(): Promise<boolean> {
-        if (typeof navigator !== 'undefined' && 'onLine' in navigator) {
-            return navigator.onLine;
-        }
-        // Для native платформ проверка будет через NetInfo в компонентах
-        return true; // По умолчанию считаем, что сеть есть
+        return true;
     }
 
     /**

@@ -130,6 +130,51 @@ const simplifySlugToken = (token: string): string =>
         .replace(/ii/g, 'i')
         .replace(/yi/g, 'i');
 
+const buildAdjacentTranspositionVariants = (token: string): string[] => {
+    if (token.length < 4 || token.length > 32) return [];
+
+    const variants: string[] = [];
+    for (let index = 0; index < token.length - 1; index += 1) {
+        const left = token[index];
+        const right = token[index + 1];
+        if (left === right) continue;
+
+        variants.push(`${token.slice(0, index)}${right}${left}${token.slice(index + 2)}`);
+    }
+    return variants;
+};
+
+const longestCommonSubsequenceLength = (left: string, right: string): number => {
+    if (!left || !right) return 0;
+
+    const previous = new Array(right.length + 1).fill(0);
+    const current = new Array(right.length + 1).fill(0);
+
+    for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+        for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+            current[rightIndex] = left[leftIndex - 1] === right[rightIndex - 1]
+                ? previous[rightIndex - 1] + 1
+                : Math.max(previous[rightIndex], current[rightIndex - 1]);
+        }
+        for (let rightIndex = 0; rightIndex <= right.length; rightIndex += 1) {
+            previous[rightIndex] = current[rightIndex];
+            current[rightIndex] = 0;
+        }
+    }
+
+    return previous[right.length];
+};
+
+const scoreTokenSimilarity = (requestedToken: string, candidateToken: string): number => {
+    if (requestedToken === candidateToken) return 1;
+    if (!requestedToken || !candidateToken) return 0;
+
+    const maxLength = Math.max(requestedToken.length, candidateToken.length);
+    if (maxLength === 0) return 0;
+
+    return longestCommonSubsequenceLength(requestedToken, candidateToken) / maxLength;
+};
+
 const SLUG_FALLBACK_STOPWORDS = new Set([
     'a', 'i', 'iz', 'k', 'na', 'o', 'odna', 'odin', 'odno',
     'odnoi', 'odnoy', 'po', 's', 'v', 'vershin',
@@ -159,9 +204,11 @@ const buildSlugFallbackQueries = (slug: string): string[] => {
     const simplifiedPrimaryTokens = primaryTokens
         .map(simplifySlugToken)
         .filter((token) => token.length >= 3);
+    const transposedPrimaryTokens = primaryTokens.flatMap(buildAdjacentTranspositionVariants);
 
     const orderedQueries = [
         ...primaryTokens,
+        ...transposedPrimaryTokens,
         ...simplifiedPrimaryTokens,
         firstToken,
         full,
@@ -188,13 +235,21 @@ const scoreSlugSimilarity = (requestedSlug: string, candidateSlug: string): numb
     const candidateSet = new Set(candidate);
     const overlap = requested.reduce((acc, token) => (candidateSet.has(token) ? acc + 1 : acc), 0);
     const overlapRatio = overlap / requested.length;
+    const fuzzyOverlapRatio =
+        requested.reduce((acc, token) => {
+            const bestTokenScore = candidate.reduce(
+                (best, candidateToken) => Math.max(best, scoreTokenSimilarity(token, candidateToken)),
+                0
+            );
+            return acc + (bestTokenScore >= 0.84 ? bestTokenScore : 0);
+        }, 0) / requested.length;
 
     const firstTokenBonus = requested[0] === candidate[0] ? 0.2 : 0;
     const lastToken = requested[requested.length - 1];
     const tailBonus = candidateSet.has(lastToken) ? 0.1 : 0;
     const lengthPenalty = Math.max(0, candidate.length - requested.length) * 0.03;
 
-    return overlapRatio + firstTokenBonus + tailBonus - lengthPenalty;
+    return Math.max(overlapRatio, fuzzyOverlapRatio) + firstTokenBonus + tailBonus - lengthPenalty;
 };
 
 const fetchFallbackTravelCandidates = async (

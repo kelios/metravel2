@@ -51,19 +51,17 @@ describe('src/api/client.ts apiClient', () => {
     expect((options as any).headers.Authorization).toBe('Token token');
   });
 
-  it('кидает ApiError с offline=true, если navigator.onLine=false', async () => {
+  it('на web не блокирует запрос заранее, если navigator.onLine=false', async () => {
     (navigator as any).onLine = false;
+    mockedGetSecureItem.mockResolvedValueOnce(null);
+    mockedFetchWithTimeout.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true }),
+    } as any);
 
-    await expect(apiClient.get('/offline'))
-      .rejects.toEqual(expect.any(ApiError));
-
-    try {
-      await apiClient.get('/offline');
-    } catch (e: any) {
-      expect(e).toBeInstanceOf(ApiError);
-      expect(e.status).toBe(0);
-      expect(e.data).toEqual({ offline: true });
-    }
+    await expect(apiClient.get('/offline')).resolves.toEqual({ ok: true });
+    expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
   });
 
   it('переводит сетевую ошибку в ApiError с offline=true и логирует devError', async () => {

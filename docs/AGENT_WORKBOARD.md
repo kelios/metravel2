@@ -240,6 +240,7 @@ Rule: one owner, one active deliverable. A role is considered idle again if the 
 | T-069 | Review `TD-006/D-010` final diff and touch-target spec quality | Андриуш (Reviewer) | Open | Evidence pending | After `T-068`, verify implementation diff, image/card regressions, and that `e2e/touch-targets.spec.ts` cannot silently pass when the hero slider is absent |
 | T-070 | Close `/contact` information-architecture decision (`D-006`) | Крина (Business Analyst) + Андриуш (Approver) | Open | Decision pending | Decide whether `/contact` stays standalone or joins `(tabs)` with global header; only then hand a scoped implementation packet to Ромик |
 | T-071 | Create stable non-destructive QA data plan for travel edit and PDF/export | Мариночка (Manual QA) + Витаутас (DevOps) | Open | Evidence pending | Define a dedicated e2e account or fixture travel with image + route point so edit/PDF flows can be verified without token races, destructive prod writes, or secret exposure |
+| T-072 | Validate typo-tolerant travel slug fallback | Ромик (Dev) + Андриуш (Reviewer) | In progress | Dirty files: `api/travelDetailsQueries.ts`, `__tests__/api/travels.test.ts`; targeted Jest `npm run test:run -- __tests__/api/travels.test.ts` → 70 passed | Review fuzzy/transposition threshold for false positives, then run a browser/API smoke for the known typo slug before Done |
 
 ## Three-month team backlog
 
