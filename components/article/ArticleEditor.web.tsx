@@ -1,5 +1,4 @@
 import React, {
-    Suspense,
     forwardRef,
     useCallback,
     useEffect,
@@ -10,12 +9,9 @@ import React, {
 } from 'react';
 import {
     View,
-    Text,
-    TextInput,
     Alert,
     Modal,
     Platform,
-    ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
@@ -24,30 +20,23 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useDebounce } from '@/hooks/useDebounce';
 import { sanitizeArticleEditorHtml } from '@/utils/articleEditorSanitize';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
-import Button from '@/components/ui/Button';
 import {
     ARTICLE_EDITOR_CHANGE_DEBOUNCE_MS,
     ARTICLE_EDITOR_DEFAULT_AUTOSAVE_DELAY,
-    getQuillModulesForVariant,
     normalizeArticleEditorHtmlForOutput,
 } from './articleEditorConfig';
 import {
     handleSurfaceFileDrop as handleEditorSurfaceFileDrop,
-    hasSurfaceDraggedFiles,
     insertImageIntoEditor,
     openWebImagePicker,
-    pasteHtmlIntoEditor,
     readImageDimensions,
-    resolvePastePayload,
     uploadImageAndInsert,
 } from './articleEditorMediaHelpers';
 import {
-    createForceSyncController,
     requestArticleEditorQuillLoad,
     restorePendingSelection,
     scheduleEmptyEditorPreload,
     scheduleFullscreenRefresh,
-    syncInitialQuillContent,
 } from './articleEditorLifecycleHelpers';
 import {
     buildArticleEditorToolbarActions,
@@ -68,10 +57,19 @@ import {
 import type { ArticleEditorProps } from './articleEditor.types';
 import { getArticleEditorWebStyles } from './ArticleEditor.web.styles';
 import {
-    ArticleEditorAnchorModal,
-    ArticleEditorLinkModal,
-    ArticleEditorToolbar,
-} from './ArticleEditorWebChrome';
+    ArticleEditorBody,
+    ArticleEditorLoader,
+    ArticleEditorSurfaceContent,
+} from './ArticleEditor.web.parts';
+import { buildArticleEditorQuillModules } from './ArticleEditor.web.modules';
+import {
+    runAutosaveEffect,
+    runInitialForceSyncEffect,
+} from './ArticleEditor.web.effects';
+import {
+    attachEditorSurfaceHandlers,
+    attachFullscreenSurfaceDnd,
+} from './ArticleEditor.web.surfaceEffects';
 
 const isWeb = Platform.OS === 'web';
 const win = isWeb && typeof window !== 'undefined' ? window : undefined;
@@ -367,17 +365,13 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }, [content]);
 
     useEffect(() => {
-        if (!isWeb) return;
-        if (showHtml) return;
-        if (!shouldLoadQuill) return;
-        const next = typeof content === 'string' ? content : '';
-        if (next.trim().length === 0) return;
-
-        const MAX_ATTEMPTS = 20;
-        const ATTEMPT_DELAY_MS = 50;
-        const { clearPending, scheduleForceSyncWork } = createForceSyncController({
+        return runInitialForceSyncEffect({
             isWeb,
             windowObject: win,
+            showHtml,
+            shouldLoadQuill,
+            content,
+            quillRef,
             refs: {
                 pendingTimeoutRef: pendingForceSyncTimeoutRef,
                 pendingIdleRef: pendingForceSyncIdleRef,
@@ -387,47 +381,6 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 lastSanitizedForceSyncRef,
             },
         });
-
-        const attempt = () => {
-            clearPending();
-            forceSyncAttemptRef.current += 1;
-
-            // Wait for lazy-loaded Quill to mount.
-            if (!quillRef.current) {
-                if (forceSyncAttemptRef.current < MAX_ATTEMPTS) {
-                    pendingForceSyncTimeoutRef.current = setTimeout(attempt, ATTEMPT_DELAY_MS);
-                }
-                return;
-            }
-
-            if (lastForceSyncedContentRef.current === next) return;
-
-            scheduleForceSyncWork(() => {
-                try {
-                    syncInitialQuillContent({
-                        next,
-                        quillRef,
-                        refs: {
-                            pendingTimeoutRef: pendingForceSyncTimeoutRef,
-                            pendingIdleRef: pendingForceSyncIdleRef,
-                            pendingRafRef: pendingForceSyncRafRef,
-                            attemptRef: forceSyncAttemptRef,
-                            lastForceSyncedContentRef,
-                            lastSanitizedForceSyncRef,
-                        },
-                    });
-                } catch (_e) {
-                    // noop
-                }
-            });
-        };
-
-        forceSyncAttemptRef.current = 0;
-        pendingForceSyncTimeoutRef.current = setTimeout(attempt, 0);
-
-        return () => {
-            clearPending();
-        };
     }, [content, html, showHtml, shouldLoadQuill]);
 
     useEffect(() => {
@@ -438,64 +391,19 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }, []);
 
     useEffect(() => {
-        if (!autosaveIsMountedRef.current) return;
-        if (!onAutosave) return;
-        if (!hasUserEditedRef.current) return;
-        if (html === lastAutosavedHtmlRef.current) return;
-
-        if (autosaveRetryTimeoutRef.current) {
-            clearTimeout(autosaveRetryTimeoutRef.current);
-            autosaveRetryTimeoutRef.current = null;
-        }
-
-        let canceled = false;
-        const snapshot = html;
-
-        const attemptAutosave = async (failCount: number) => {
-            if (canceled || !autosaveIsMountedRef.current) return;
-            if (!onAutosave) return;
-            if (htmlRef.current !== snapshot) return;
-
-            // Avoid duplicate concurrent saves for the same content.
-            if (autosaveInFlightHtmlRef.current === snapshot) return;
-            autosaveInFlightHtmlRef.current = snapshot;
-
-            try {
-                await onAutosave(snapshot);
-                if (canceled || !autosaveIsMountedRef.current) return;
-                lastAutosavedHtmlRef.current = snapshot;
-                if (htmlRef.current === snapshot) {
-                    hasUserEditedRef.current = false;
-                }
-            } catch {
-                if (canceled || !autosaveIsMountedRef.current) return;
-                if (htmlRef.current !== snapshot) return;
-
-                // Retry with exponential backoff, but keep it bounded.
-                const exp = Math.min(4, Math.max(0, failCount));
-                const retryDelay = Math.min(60_000, autosaveDelay * Math.pow(2, exp));
-                autosaveRetryTimeoutRef.current = setTimeout(() => {
-                    void attemptAutosave(failCount + 1);
-                }, retryDelay);
-            } finally {
-                if (autosaveInFlightHtmlRef.current === snapshot) {
-                    autosaveInFlightHtmlRef.current = null;
-                }
-            }
-        };
-
-        const t = setTimeout(() => {
-            void attemptAutosave(0);
-        }, autosaveDelay);
-
-        return () => {
-            canceled = true;
-            clearTimeout(t);
-            if (autosaveRetryTimeoutRef.current) {
-                clearTimeout(autosaveRetryTimeoutRef.current);
-                autosaveRetryTimeoutRef.current = null;
-            }
-        };
+        return runAutosaveEffect({
+            html,
+            onAutosave,
+            autosaveDelay,
+            refs: {
+                autosaveIsMountedRef,
+                hasUserEditedRef,
+                lastAutosavedHtmlRef,
+                autosaveRetryTimeoutRef,
+                htmlRef,
+                autosaveInFlightHtmlRef,
+            },
+        });
     }, [html, onAutosave, autosaveDelay]);
 
     const fireChange = useCallback(
@@ -649,194 +557,23 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }, [quillMountKey, shouldLoadQuill, uploadAndInsert]);
 
     useEffect(() => {
-        if (!isWeb) return;
-
-        const MAX_ATTEMPTS = 20;
-        const ATTEMPT_DELAY_MS = 50;
-        let attempt = 0;
-        let t: ReturnType<typeof setTimeout> | null = null;
-
-        let cleanup: (() => void) | null = null;
-
-        const tryAttach = () => {
-            attempt += 1;
-
-            const editor = quillRef.current?.getEditor?.();
-            const root = editor?.root as HTMLElement | undefined;
-            if (!root) {
-                if (attempt < MAX_ATTEMPTS) {
-                    t = setTimeout(tryAttach, ATTEMPT_DELAY_MS);
-                }
-                return;
-            }
-
-            const onDragOver = (e: DragEvent) => {
-                if (!e.dataTransfer?.types?.includes('Files')) return;
-                e.preventDefault();
-                try {
-                    e.dataTransfer.dropEffect = 'copy';
-                } catch {
-                    // noop
-                }
-            };
-
-            const onDrop = (e: DragEvent) => {
-                const file = e.dataTransfer?.files?.[0];
-                if (__DEV__) {
-                    console.info('[ArticleEditor] drop event', {
-                        hasFile: !!file,
-                        type: file?.type,
-                        fileCount: e.dataTransfer?.files?.length ?? 0,
-                    });
-                }
-                if (!file) return;
-                if (typeof file.type !== 'string' || !file.type.startsWith('image/')) return;
-                e.preventDefault();
-                e.stopPropagation();
-                try {
-                    (e as any).stopImmediatePropagation?.();
-                } catch {
-                    // noop
-                }
-                void uploadAndInsert(file);
-            };
-            const onPaste = (e: ClipboardEvent) => {
-                const { fileFromFiles, fileFromItems, file, pastedHtml, knownEmbedHtml, cleanedHtml } = resolvePastePayload(e.clipboardData);
-                if (__DEV__) {
-                    console.info('[ArticleEditor] paste event', {
-                        filesCount: e.clipboardData?.files?.length ?? 0,
-                        itemsCount: e.clipboardData?.items?.length ?? 0,
-                        hasFileFromFiles: !!fileFromFiles,
-                        hasFileFromItems: !!fileFromItems,
-                        resolvedType: file?.type,
-                    });
-                }
-                if (file && typeof file.type === 'string' && file.type.startsWith('image/')) {
-                    e.preventDefault();
-                    try {
-                        (e as any).stopImmediatePropagation?.();
-                    } catch (err) {
-                        void err;
-                    }
-                    uploadAndInsert(file);
-                    return;
-                }
-
-                if (knownEmbedHtml) {
-                    e.preventDefault();
-                    try {
-                        (e as any).stopImmediatePropagation?.();
-                    } catch (err) {
-                        void err;
-                    }
-                    pasteHtmlIntoEditor({
-                        editor: quillRef.current?.getEditor?.(),
-                        html: knownEmbedHtml,
-                    });
-                    return;
-                }
-                if (pastedHtml && cleanedHtml !== pastedHtml) {
-                        e.preventDefault();
-                        try {
-                            (e as any).stopImmediatePropagation?.();
-                        } catch (err) {
-                            void err;
-                        }
-                        pasteHtmlIntoEditor({
-                            editor: quillRef.current?.getEditor?.(),
-                            html: cleanedHtml,
-                        });
-                }
-            };
-
-            const onSelectionChange = (range: { index: number; length: number } | null) => {
-                if (!range || typeof range.index !== 'number') return;
-                lastSelectionRef.current = range;
-            };
-
-            root.addEventListener('dragover', onDragOver);
-            root.addEventListener('dragenter', onDragOver);
-            root.addEventListener('drop', onDrop, true);
-            root.addEventListener('paste', onPaste, true);
-
-            if (typeof editor.on === 'function') {
-                editor.on('selection-change', onSelectionChange);
-            }
-
-            cleanup = () => {
-                root.removeEventListener('dragover', onDragOver);
-                root.removeEventListener('dragenter', onDragOver);
-                root.removeEventListener('drop', onDrop, true);
-                root.removeEventListener('paste', onPaste, true);
-                if (typeof editor.off === 'function') {
-                    editor.off('selection-change', onSelectionChange);
-                }
-            };
-        };
-
-        tryAttach();
-
-        return () => {
-            if (t) clearTimeout(t);
-            if (cleanup) cleanup();
-        };
+        return attachEditorSurfaceHandlers({
+            isWeb,
+            getEditor: () => quillRef.current?.getEditor?.(),
+            uploadAndInsert,
+            lastSelectionRef,
+        });
     }, [fireChange, showHtml, shouldLoadQuill, uploadAndInsert, quillMountKey]);
 
     useEffect(() => {
-        if (!isWeb || !win || !fullscreen) return;
-
-        const doc = win.document;
-        if (!doc) return;
-
-        const isInsideEditorSurface = (target: EventTarget | null) => {
-            const editor = quillRef.current?.getEditor?.();
-            const quillRoot = editor?.root as HTMLElement | undefined;
-            const viewport = editorViewportRef.current as HTMLElement | undefined;
-            const candidate = target instanceof win.Node ? target : null;
-            const containers = [viewport, quillRoot, quillRoot?.parentElement].filter(
-                (value): value is HTMLElement => !!value && typeof value.contains === 'function'
-            );
-
-            if (containers.length === 0) return true;
-            if (!candidate) return true;
-
-            return containers.some(container => container === candidate || container.contains(candidate));
-        };
-
-        const onDocumentDragOver = (event: DragEvent) => {
-            if (!hasSurfaceDraggedFiles(event)) return;
-            if (!isInsideEditorSurface(event.target)) return;
-            event.preventDefault();
-            try {
-                event.dataTransfer!.dropEffect = 'copy';
-            } catch {
-                // noop
-            }
-        };
-
-        const onDocumentDrop = (event: DragEvent) => {
-            if (!isInsideEditorSurface(event.target)) return;
-            const file = event.dataTransfer?.files?.[0] ?? null;
-            const accepted = handleSurfaceFileDrop(file);
-            if (!accepted) return;
-            event.preventDefault();
-            event.stopPropagation();
-            try {
-                (event as any).stopImmediatePropagation?.();
-            } catch {
-                // noop
-            }
-        };
-
-        doc.addEventListener('dragenter', onDocumentDragOver, true);
-        doc.addEventListener('dragover', onDocumentDragOver, true);
-        doc.addEventListener('drop', onDocumentDrop, true);
-
-        return () => {
-            doc.removeEventListener('dragenter', onDocumentDragOver, true);
-            doc.removeEventListener('dragover', onDocumentDragOver, true);
-            doc.removeEventListener('drop', onDocumentDrop, true);
-        };
+        return attachFullscreenSurfaceDnd({
+            isWeb,
+            windowObject: win,
+            fullscreen,
+            getEditor: () => quillRef.current?.getEditor?.(),
+            getViewport: () => editorViewportRef.current as HTMLElement | undefined,
+            handleSurfaceFileDrop,
+        });
     }, [fullscreen, handleSurfaceFileDrop, quillMountKey]);
 
     const handleManualSave = useCallback(async () => {
@@ -1001,83 +738,24 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }, [fullscreen, showHtml, shouldLoadQuill, ensureQuillContent]);
 
     const Loader = ({ canActivate = false }: { canActivate?: boolean }) => (
-        <View style={dynamicStyles.loadBox}>
-            {canActivate ? (
-                <>
-                    <Text style={dynamicStyles.loadTxt}>Редактор подготавливается</Text>
-                    <Text style={dynamicStyles.loadHint}>
-                        Можно открыть его сразу или подождать автоматическую загрузку.
-                    </Text>
-                    <Button
-                        onPress={requestQuillLoad}
-                        label="Открыть редактор"
-                        variant="outline"
-                        size="sm"
-                    />
-                </>
-            ) : (
-                <>
-                    <ActivityIndicator size="small" color={colors.primary} />
-                    <Text style={dynamicStyles.loadTxt}>Загрузка…</Text>
-                </>
-            )}
-        </View>
+        <ArticleEditorLoader
+            canActivate={canActivate}
+            dynamicStyles={dynamicStyles}
+            primaryColor={colors.primary}
+            onRequestLoad={requestQuillLoad}
+        />
     );
 
     const modules = useMemo(() => {
-        const base = getQuillModulesForVariant(variant);
-        const container = (base as any).toolbar;
-
-        return {
-            ...base,
-            toolbar: {
-                container,
-                handlers: {
-                    link: function (value: any) {
-                        const quill = (this as any)?.quill;
-                        if (!quill) return;
-
-                        if (value === false) {
-                            try {
-                                quill.format('link', false, 'user');
-                                fireChangeRef.current(String(quill.root.innerHTML ?? ''));
-                            } catch {
-                                // noop
-                            }
-                            return;
-                        }
-
-                        let selection: { index: number; length: number } | null = null;
-                        try {
-                            selection = quill.getSelection(true);
-                        } catch {
-                            try {
-                                selection = quill.getSelection();
-                            } catch {
-                                selection = null;
-                            }
-                        }
-
-                        tmpStoredRange.current = selection;
-                        tmpStoredLinkQuill.current = quill;
-
-                        let existing = '';
-                        try {
-                            const fmt = selection ? quill.getFormat(selection) : quill.getFormat();
-                            existing = typeof fmt?.link === 'string' ? fmt.link : '';
-                        } catch {
-                            existing = '';
-                        }
-
-                        setLinkValue(existing);
-                        setLinkModalVisible(true);
-                    },
-                    image: function () {
-                        openImagePickerRef.current();
-                    },
-                },
-            },
-        } as any;
+        return buildArticleEditorQuillModules({
+            variant,
+            tmpStoredRange,
+            tmpStoredLinkQuill,
+            fireChangeRef,
+            openImagePickerRef,
+            setLinkValue,
+            setLinkModalVisible,
+        });
     }, [variant]);
 
     const toolbarActions = useMemo(() => {
@@ -1106,170 +784,85 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
     if (!QuillEditor) return <Loader />;
 
-    const editorArea = showHtml ? (
-        <TextInput
-            style={dynamicStyles.html}
-            multiline
-            value={html}
-            onChangeText={text => fireChange(text)}
-            selection={htmlForcedSelection ?? undefined}
-            onSelectionChange={(e) => {
-                const sel = e?.nativeEvent?.selection;
-                if (!sel) return;
-                if (
-                    htmlForcedSelection &&
-                    typeof sel.start === 'number' &&
-                    typeof sel.end === 'number' &&
-                    sel.start === htmlForcedSelection.start &&
-                    sel.end === htmlForcedSelection.end
-                ) {
-                    setHtmlForcedSelection(null);
-                }
-                htmlSelectionRef.current = {
-                    start: typeof sel.start === 'number' ? sel.start : 0,
-                    end: typeof sel.end === 'number' ? sel.end : 0,
-                };
-            }}
+    const editorArea = (
+        <ArticleEditorSurfaceContent
+            showHtml={showHtml}
+            shouldLoadQuill={shouldLoadQuill}
+            dynamicStyles={dynamicStyles}
+            colors={colors}
+            html={html}
             placeholder={placeholder}
-            placeholderTextColor={colors.textSecondary}
+            fireChange={fireChange}
+            htmlForcedSelection={htmlForcedSelection}
+            setHtmlForcedSelection={setHtmlForcedSelection}
+            htmlSelectionRef={htmlSelectionRef}
+            QuillEditor={QuillEditor}
+            quillMountKey={quillMountKey}
+            handleQuillRef={handleQuillRef}
+            handleQuillChange={handleQuillChange}
+            modules={modules}
+            isCompactViewport={isCompactViewport}
+            fullscreen={fullscreen}
+            renderLoader={(canActivate) => <Loader canActivate={canActivate} />}
         />
-    ) : (
-        shouldLoadQuill ? (
-            <Suspense fallback={<Loader />}>
-                <QuillEditor
-                    key={quillMountKey}
-                    ref={handleQuillRef}
-                    theme="snow"
-                    value={html}
-                    onChange={handleQuillChange}
-                    modules={modules}
-                    placeholder={placeholder}
-                    style={dynamicStyles.editor}
-                    editorChromeAttrs={{
-                        compact: isCompactViewport,
-                        fullscreen,
-                    }}
-                />
-            </Suspense>
-        ) : (
-            <Loader canActivate />
-        )
     );
 
     const body = (
-        <>
-            <ArticleEditorToolbar
-                colors={colors}
-                dynamicStyles={dynamicStyles}
-                isCompactViewport={isCompactViewport}
-                isImageUploading={isImageUploading}
-                isManualSaving={isManualSaving}
-                isWeb={isWeb}
-                label={label}
-                onManualSave={onManualSave ? () => { void handleManualSave(); } : null}
-                actions={toolbarActions}
-            />
-            <View
-                ref={editorViewportRef}
-                style={dynamicStyles.editorArea}
-                {...(isWeb
-                    ? ({
-                          'data-editor-surface': 'article-editor',
-                          onDragEnter: (e: any) => {
-                              if (!hasSurfaceDraggedFiles(e)) return;
-                              e.preventDefault();
-                          },
-                          onDragOver: (e: any) => {
-                              if (!hasSurfaceDraggedFiles(e)) return;
-                              e.preventDefault();
-                              try {
-                                  e.dataTransfer.dropEffect = 'copy';
-                              } catch {
-                                  // noop
-                              }
-                          },
-                          onDrop: (e: any) => {
-                              const file = e?.dataTransfer?.files?.[0] ?? null;
-                              const accepted = handleSurfaceFileDrop(file);
-                              if (!accepted) return;
-                              e.preventDefault();
-                              e.stopPropagation?.();
-                          },
-                          onFocusCapture: () => {
-                              requestQuillLoad();
-                          },
-                          onPointerDown: () => {
-                              requestQuillLoad();
-                          },
-                          onClickCapture: () => {
-                              requestQuillLoad();
-                          },
-                          onMouseDown: (e: any) => {
-                              requestQuillLoad();
-                              const target = e?.target as HTMLElement | null;
-                              if (target?.closest?.('.ql-editor')) return;
-                              focusQuill();
-                          },
-                          onTouchStart: (e: any) => {
-                              requestQuillLoad();
-                              const target = e?.target as HTMLElement | null;
-                              if (target?.closest?.('.ql-editor')) return;
-                              focusQuill();
-                          },
-                      } as any)
-                    : null)}
-            >
-                {editorArea}
-            </View>
-            <ArticleEditorAnchorModal
-                colors={colors}
-                dynamicStyles={dynamicStyles}
-                visible={anchorModalVisible}
-                value={anchorValue}
-                inputRef={anchorInputRef}
-                onChangeText={setAnchorValue}
-                onShow={focusAnchorInput}
-                onCancel={() => setAnchorModalVisible(false)}
-                onConfirm={() => {
-                    confirmAnchorEditorModal({
-                        setAnchorModalVisible,
-                        tmpStoredRange,
-                        getEditor: () => quillRef.current?.getEditor?.(),
-                        showHtml,
-                        anchorValue,
-                        html,
-                        htmlSelectionRef,
-                        setHtmlForcedSelection: (selection) => setHtmlForcedSelection(selection),
-                        fireChange,
-                        insertAnchor,
-                    });
-                }}
-            />
-
-            <ArticleEditorLinkModal
-                colors={colors}
-                dynamicStyles={dynamicStyles}
-                visible={linkModalVisible}
-                value={linkValue}
-                inputRef={linkInputRef}
-                onChangeText={setLinkValue}
-                onShow={focusLinkInput}
-                onCancel={() => {
-                    cancelLinkEditorModal({
-                        setLinkModalVisible,
-                        tmpStoredRange,
-                        tmpStoredLinkQuill,
-                    });
-                }}
-                onConfirm={() => {
-                    confirmLinkEditorModal({
-                        setLinkModalVisible,
-                        linkValue,
-                        applyLinkToSelection,
-                    });
-                }}
-            />
-        </>
+        <ArticleEditorBody
+            colors={colors}
+            dynamicStyles={dynamicStyles}
+            isCompactViewport={isCompactViewport}
+            isImageUploading={isImageUploading}
+            isManualSaving={isManualSaving}
+            isWeb={isWeb}
+            label={label}
+            onManualSave={onManualSave ? () => { void handleManualSave(); } : null}
+            toolbarActions={toolbarActions}
+            editorViewportRef={editorViewportRef}
+            editorArea={editorArea}
+            handleSurfaceFileDrop={handleSurfaceFileDrop}
+            requestQuillLoad={requestQuillLoad}
+            focusQuill={focusQuill}
+            anchorModalVisible={anchorModalVisible}
+            anchorValue={anchorValue}
+            anchorInputRef={anchorInputRef}
+            setAnchorValue={setAnchorValue}
+            focusAnchorInput={focusAnchorInput}
+            onAnchorCancel={() => setAnchorModalVisible(false)}
+            onAnchorConfirm={() => {
+                confirmAnchorEditorModal({
+                    setAnchorModalVisible,
+                    tmpStoredRange,
+                    getEditor: () => quillRef.current?.getEditor?.(),
+                    showHtml,
+                    anchorValue,
+                    html,
+                    htmlSelectionRef,
+                    setHtmlForcedSelection: (selection) => setHtmlForcedSelection(selection),
+                    fireChange,
+                    insertAnchor,
+                });
+            }}
+            linkModalVisible={linkModalVisible}
+            linkValue={linkValue}
+            linkInputRef={linkInputRef}
+            setLinkValue={setLinkValue}
+            focusLinkInput={focusLinkInput}
+            onLinkCancel={() => {
+                cancelLinkEditorModal({
+                    setLinkModalVisible,
+                    tmpStoredRange,
+                    tmpStoredLinkQuill,
+                });
+            }}
+            onLinkConfirm={() => {
+                confirmLinkEditorModal({
+                    setLinkModalVisible,
+                    linkValue,
+                    applyLinkToSelection,
+                });
+            }}
+        />
     );
 
     return fullscreen ? (
