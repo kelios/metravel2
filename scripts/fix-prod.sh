@@ -1,6 +1,8 @@
 #!/bin/bash
-# Скрипт аварийного восстановления web-прода без смешивания старых и новых chunks.
-# ВАЖНО: старые chunks НЕ копируются в новый релиз, иначе возможен module/version skew.
+# Скрипт аварийного восстановления web-прода.
+# ВАЖНО: старые Expo static assets копируются только как missing-file overlap.
+# Новые артефакты не перетираются, а активные вкладки со старым runtime не падают
+# до очистки браузерного кэша.
 
 set -euo pipefail
 
@@ -55,11 +57,14 @@ ssh "$SERVER" "set -euo pipefail
   rm -rf static/dist.new
   mv dist/$ENV static/dist.new
 
-  # Strict: never mix old/new JS chunks.
-  rm -rf static/dist.new/_expo/static/js/web.old
   find static/dist.new/_expo/static/js/web -type f -name '*.js' >/dev/null
 
   mv static/dist static/dist.old 2>/dev/null || true
+  if [ -d static/dist.old/_expo/static ]; then
+    mkdir -p static/dist.new/_expo/static
+    rsync -a --ignore-existing static/dist.old/_expo/static/ static/dist.new/_expo/static/
+  fi
+
   mv static/dist.new static/dist
   rm -rf static/dist.old
 
@@ -121,4 +126,4 @@ fi
 
 rm -f "$tmp_html" "$tmp_index" "$tmp_header"
 echo "OK: served CustomHeader chunk is safe: $served_custom_header_chunk"
-echo "Done: production web assets replaced without old-chunk carryover."
+echo "Done: production web assets replaced with missing-file static overlap."
