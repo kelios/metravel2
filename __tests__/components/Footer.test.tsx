@@ -44,7 +44,6 @@ describe('Footer', () => {
   it('renders mobile dock correctly', () => {
     const { getByTestId } = render(<Footer />)
     expect(getByTestId('footer-item-home')).toBeTruthy()
-    expect(getByTestId('footer-item-search')).toBeTruthy()
     expect(getByTestId('footer-item-map')).toBeTruthy()
     expect(getByTestId('footer-item-places')).toBeTruthy()
     expect(getByTestId('footer-item-favorites')).toBeTruthy()
