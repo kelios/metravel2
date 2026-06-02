@@ -459,12 +459,25 @@ function HeroSlider({
               accessibilityRole="button"
               accessibilityLabel="Следующий слайд"
             >
-              <Feather
-                name="chevron-right"
-                size={14}
-                color={sliderIconColor}
-                {...({ 'aria-hidden': true, focusable: false } as any)}
-              />
+              {isWeb
+                ? (({ hovered }: any) => (
+                    <View style={[styles.sliderNavBtn, hovered && styles.sliderNavBtnHover]}>
+                      <Feather
+                        name="chevron-right"
+                        size={14}
+                        color={sliderIconColor}
+                        {...({ 'aria-hidden': true, focusable: false } as any)}
+                      />
+                    </View>
+                  ))
+                : (
+                    <Feather
+                      name="chevron-right"
+                      size={14}
+                      color={sliderIconColor}
+                      {...({ 'aria-hidden': true, focusable: false } as any)}
+                    />
+                  )}
             </Pressable>
           </View>
         </Pressable>

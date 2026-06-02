@@ -9,7 +9,7 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
-import { optimizeImageUrl } from '@/utils/imageOptimization';
+import { optimizeImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
 import { hapticImpact } from '@/utils/haptics';
 // AND-16: Native spring animation on press
 import Animated, {
@@ -161,11 +161,20 @@ function UnifiedTravelCard({
           ? 480
           : 320;
 
+    // Bake devicePixelRatio (capped at 2 on web) into the requested dimensions so
+    // retina screens receive a sharp variant instead of an upscaled low-res image.
+    // Without this the proxy returned a CSS-pixel-sized image (e.g. 320px) that the
+    // browser then stretched ~2x on retina, producing the visible blur.
+    const { width: requestWidth, height: requestHeight } = getOptimalImageSize(
+      targetWidth,
+      targetHeight
+    );
+
     return (
       optimizeImageUrl(imageUrl, {
-        width: targetWidth,
-        height: targetHeight,
-        quality: isFeatured ? 60 : 44,
+        width: requestWidth,
+        height: requestHeight,
+        quality: isFeatured ? 66 : 60,
         format: 'auto',
         fit: mediaFit === 'contain' ? 'contain' : 'cover',
       }) ?? imageUrl
