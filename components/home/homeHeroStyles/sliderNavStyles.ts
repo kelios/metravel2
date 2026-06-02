@@ -24,6 +24,19 @@ export const createSliderNavStyles = (ctx: HeroStyleContext) => {
         web: { transform: 'translateY(-50%)', pointerEvents: 'none' },
       }),
     },
+    // D-010: transparent 44×44 hit-area wrapper (web only). The actual visible circle
+    // is the inner sliderNavBtn View; this outer element just provides the ≥44px tap zone.
+    sliderNavBtnHitArea: {
+      width: 44,
+      height: 44,
+      borderRadius: 999,
+      backgroundColor: 'transparent' as const,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...Platform.select({
+        web: { cursor: 'pointer', pointerEvents: 'auto' } as any,
+      }),
+    },
     sliderNavBtn: {
       width: showSideSlider ? 24 : 40,
       height: showSideSlider ? 24 : 40,
@@ -35,12 +48,11 @@ export const createSliderNavStyles = (ctx: HeroStyleContext) => {
       borderColor: 'rgba(248,240,228,0.14)',
       ...Platform.select({
         web: {
-          cursor: 'pointer',
           transition:
             'background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease',
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
-          pointerEvents: 'auto',
+          pointerEvents: 'none', // presentational only when inside hit-area wrapper
         } as any,
       }),
     },

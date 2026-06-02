@@ -394,26 +394,42 @@ function HeroSlider({
           >
             <Pressable
               onPress={onPrevSlide}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              style={({ hovered, focused }: any) => [
-                styles.sliderNavBtn,
-                hovered && styles.sliderNavBtnHover,
-                isWeb && focused && {
-                  outlineWidth: 2,
-                  outlineStyle: 'solid',
-                  outlineColor: sliderIconColor,
-                  outlineOffset: 2,
-                },
-              ]}
+              hitSlop={isWeb ? undefined : { top: 10, bottom: 10, left: 10, right: 10 }}
+              style={({ hovered, focused }: any) =>
+                isWeb
+                  ? [
+                      styles.sliderNavBtnHitArea,
+                      focused && {
+                        outlineWidth: 2,
+                        outlineStyle: 'solid',
+                        outlineColor: sliderIconColor,
+                        outlineOffset: 2,
+                      },
+                    ]
+                  : [styles.sliderNavBtn, hovered && styles.sliderNavBtnHover]
+              }
               accessibilityRole="button"
               accessibilityLabel="Предыдущий слайд"
             >
-              <Feather
-                name="chevron-left"
-                size={14}
-                color={sliderIconColor}
-                {...({ 'aria-hidden': true, focusable: false } as any)}
-              />
+              {isWeb
+                ? (({ hovered }: any) => (
+                    <View style={[styles.sliderNavBtn, hovered && styles.sliderNavBtnHover]}>
+                      <Feather
+                        name="chevron-left"
+                        size={14}
+                        color={sliderIconColor}
+                        {...({ 'aria-hidden': true, focusable: false } as any)}
+                      />
+                    </View>
+                  ))
+                : (
+                    <Feather
+                      name="chevron-left"
+                      size={14}
+                      color={sliderIconColor}
+                      {...({ 'aria-hidden': true, focusable: false } as any)}
+                    />
+                  )}
             </Pressable>
             <Text
               style={[
@@ -426,17 +442,20 @@ function HeroSlider({
             </Text>
             <Pressable
               onPress={onNextSlide}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              style={({ hovered, focused }: any) => [
-                styles.sliderNavBtn,
-                hovered && styles.sliderNavBtnHover,
-                isWeb && focused && {
-                  outlineWidth: 2,
-                  outlineStyle: 'solid',
-                  outlineColor: sliderIconColor,
-                  outlineOffset: 2,
-                },
-              ]}
+              hitSlop={isWeb ? undefined : { top: 10, bottom: 10, left: 10, right: 10 }}
+              style={({ hovered, focused }: any) =>
+                isWeb
+                  ? [
+                      styles.sliderNavBtnHitArea,
+                      focused && {
+                        outlineWidth: 2,
+                        outlineStyle: 'solid',
+                        outlineColor: sliderIconColor,
+                        outlineOffset: 2,
+                      },
+                    ]
+                  : [styles.sliderNavBtn, hovered && styles.sliderNavBtnHover]
+              }
               accessibilityRole="button"
               accessibilityLabel="Следующий слайд"
             >
