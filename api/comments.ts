@@ -56,8 +56,13 @@ export const commentsApi = {
       );
     } catch (error) {
       const status = getErrorStatus(error);
-      // Some backends return 404 for an empty thread instead of [].
-      if (status === 404) {
+      // Some backends return 400/404 for an empty or missing thread instead of [].
+      if (status === 400 || status === 404) {
+        return [];
+      }
+      // Some deployments protect comments behind auth; the read UI should degrade
+      // to an empty discussion instead of showing a hard unavailable state.
+      if (status === 401 || status === 403) {
         return [];
       }
       throw error;

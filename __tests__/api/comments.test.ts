@@ -100,6 +100,28 @@ describe('Comments API', () => {
       );
       expect(result).toEqual([]);
     });
+
+    it('should treat 400 as empty list for missing thread comments', async () => {
+      mockedApiClient.get.mockRejectedValueOnce({ response: { status: 400 } });
+
+      const result = await commentsApi.getComments(1);
+
+      expect(mockedApiClient.get).toHaveBeenCalledWith(
+        '/travel-comments/?thread_id=1'
+      );
+      expect(result).toEqual([]);
+    });
+
+    it('should treat auth-protected thread comments as empty list', async () => {
+      mockedApiClient.get.mockRejectedValueOnce({ response: { status: 403 } });
+
+      const result = await commentsApi.getComments(1);
+
+      expect(mockedApiClient.get).toHaveBeenCalledWith(
+        '/travel-comments/?thread_id=1'
+      );
+      expect(result).toEqual([]);
+    });
   });
 
   describe('getCommentsByTravel', () => {
