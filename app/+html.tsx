@@ -135,7 +135,7 @@ const getTravelHeroPreloadScript = () => String.raw`
     if (window.__metravelTravelPreload && window.__metravelTravelPreload.data) return;
     if (window.__metravelTravelPreloadScriptLoaded) return;
     window.__metravelTravelPreloadScriptLoaded = true;
-    window.__METRAVEL_API_URL__ = ${JSON.stringify(process.env.EXPO_PUBLIC_API_URL || '')};
+    window.__METRAVEL_API_URL__ = '';
     var s = document.createElement('script');
     s.src = '/travel-hero-preload.js';
     s.async = true;

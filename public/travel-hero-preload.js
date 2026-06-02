@@ -46,10 +46,22 @@
         }
       }
     }
+    var currentOrigin = ((window.location && window.location.origin) || '');
+    function getHostname(raw){
+      try {
+        if (!raw) return '';
+        return String(new URL(String(raw)).hostname || '').toLowerCase();
+      } catch (_e) {
+        return '';
+      }
+    }
     var sameOriginApiHost = isPrivateHost(host);
-    var apiOrigin = sameOriginApiHost
-      ? ((window.location && window.location.origin) || '')
-      : (normalizeApiOrigin(apiBaseEnv) || ((window.location && window.location.origin) || ''));
+    var envApiOrigin = normalizeApiOrigin(apiBaseEnv);
+    var envApiHost = getHostname(envApiOrigin);
+    var shouldIgnoreEnvApiOrigin = !sameOriginApiHost && (!envApiOrigin || isPrivateHost(envApiHost));
+    var apiOrigin = sameOriginApiHost || shouldIgnoreEnvApiOrigin
+      ? currentOrigin
+      : (envApiOrigin || currentOrigin);
     if (!apiOrigin) return;
     var endpoint = isId
       ? apiOrigin + '/api/travels/' + encodeURIComponent(slug) + '/'
