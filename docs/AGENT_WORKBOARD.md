@@ -697,3 +697,5 @@ Net: all five pages now have populated evidence on desktop + mobile (where appli
 | MTC-008 | P2 | Desktop + mobile | Instagram rich text | Open mocked/known travel with valid Instagram post/reel/tv link | Valid post/reel/tv renders as embed on web; unsupported Instagram URLs use fallback | Screenshot + DOM note |
 | MTC-009 | P2 | Mobile | Cookie consent and bottom nav overlap | Reset cookie consent; open travel; inspect banner with bottom nav and primary actions | Banner does not hide critical controls; dismiss/accept targets are easy to tap | Screenshot |
 | MTC-010 | P3 | Desktop + mobile | Error states | Open non-existent slug and simulate media/API failures where possible | Error state is readable; no app crash; recovery/back navigation works | Screenshot + console log |
+
+> Design handoff for open polish tickets (D-004/D-013, D-010, D-002 follow-up): see `docs/DESIGN_HANDOFF_2026-06-02.md`.

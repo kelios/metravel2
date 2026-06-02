@@ -66,7 +66,7 @@ function installMockTravelRoutes(page: any) {
 }
 
 test.describe.serial('Created travels cleanup', () => {
-  test('creates travel via API and registers it for cleanup', async ({ page, createdTravels }) => {
+  test('creates travel via API and registers it for cleanup', async ({ page }) => {
     installMockTravelRoutes(page);
     await page.goto('/', { waitUntil: 'domcontentloaded' });
 
@@ -85,7 +85,6 @@ test.describe.serial('Created travels cleanup', () => {
     expect(Number.isFinite(id)).toBeTruthy();
     createdId = id;
     travelExists = true;
-    createdTravels.add(id);
   });
 
   test('removes created travel after previous test', async ({ page }) => {
