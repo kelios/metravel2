@@ -115,6 +115,23 @@ export function useTravelDetailsPerformance({
     }
   }, [deferAllowed, lcpLoaded, travelId])
 
+  // Safety net: the first-screen gate (`lcpLoaded`) is normally released by the hero
+  // image's load/error callback. If neither ever fires (stalled request, an Image
+  // implementation that skips events for an already-complete cached image, etc.) the
+  // skeleton overlay would otherwise cover the page forever. Force the gate open after
+  // a generous delay so content always renders. No-op on the happy path where the hero
+  // resolves in well under the timeout.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    if (isLoading || travelId == null || !hasHeroMedia || lcpLoaded) return
+
+    const timeoutId = setTimeout(() => {
+      setLcpLoaded(true)
+    }, 6000)
+
+    return () => clearTimeout(timeoutId)
+  }, [hasHeroMedia, isLoading, lcpLoaded, travelId])
+
   useEffect(() => {
     if (!isLoading) {
       setDeferAllowed(true)
