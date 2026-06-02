@@ -245,6 +245,7 @@
     "postinstall-postinstall": "^2.1.0",
     "prettier": "3.8.3",
     "react-test-renderer": "19.2.3",
+    "source-map-explorer": "^2.5.3",
     "typescript": "6.0.3"
   },
   "resolutions": {

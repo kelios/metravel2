@@ -165,10 +165,7 @@ test.describe('Metravel edit/delete flow', () => {
     await expect(deleteButton).toBeVisible({ timeout: 10_000 });
     await deleteButton.click();
 
-    const confirmButton = page
-      .getByTestId('confirm-delete-button')
-      .or(page.getByRole('button', { name: 'Удалить' }))
-      .first();
+    const confirmButton = page.getByTestId('confirm-delete-button').first();
     await expect(confirmButton).toBeVisible({ timeout: 10_000 });
     await confirmButton.click();
 

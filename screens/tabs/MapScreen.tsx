@@ -40,12 +40,26 @@ const PRESSED_OPACITY_085 = { opacity: 0.85 } as const
 const PRESSED_OPACITY_06 = { opacity: 0.6 } as const
 const POINTER_EVENTS_NONE = { pointerEvents: 'none' } as const
 
-if (CAN_PRELOAD_LEAFLET) {
+function preloadLeafletRuntime() {
   import('@/utils/loadLeafletRuntime')
     .then((m) => m.loadLeafletRuntime())
     .catch((error) => {
       devWarn('[MapScreen] Failed to preload Leaflet runtime', error)
     })
+}
+
+// Defer the Leaflet runtime prefetch off the critical hydration/LCP path.
+// The map container loads Leaflet on its own once mapReady resolves; this is
+// purely a warm-up prefetch, so yield the main thread to first paint first.
+if (CAN_PRELOAD_LEAFLET) {
+  const requestIdle = (window as any).requestIdleCallback as
+    | ((cb: () => void, opts?: { timeout: number }) => number)
+    | undefined
+  if (typeof requestIdle === 'function') {
+    requestIdle(preloadLeafletRuntime, { timeout: 1500 })
+  } else {
+    setTimeout(preloadLeafletRuntime, 300)
+  }
 }
 
 const LazyMapOnboarding = lazy(() => import('@/components/MapPage/MapOnboarding'))

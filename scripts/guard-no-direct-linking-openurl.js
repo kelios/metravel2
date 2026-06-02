@@ -8,6 +8,7 @@ const IGNORED_DIRS = new Set([
   '.expo',
   '.prod-build-tmp',
   '.tmp',
+  '.codex-temp',
   '.claude',
   'node_modules',
   'dist',

@@ -37,9 +37,9 @@
     },
     {
       "name": "Dist Static",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "4600", "--directory", "dist"],
-      "port": 4600,
+      "runtimeExecutable": "node",
+      "runtimeArgs": [".claude/dist-server.js", "4601"],
+      "port": 4601,
       "autoPort": false
     }
   ]
