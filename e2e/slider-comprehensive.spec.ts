@@ -191,19 +191,24 @@ async function navigateToTravelWithSlider(
   await page.route('**/travels/by-slug/**', fallbackRoute);
   await page.route(`**/api/travels/${fallbackId}/`, fallbackRoute);
 
-  await gotoWithRetry(page, `/travels/${fallbackSlug}`);
-  const nextBtn = getSliderNavButton(page, 'Next slide');
-  const hasNext = await nextBtn
-    .waitFor({ state: 'attached', timeout: 15_000 })
-    .then(() => true)
-    .catch(() => false);
-  if (!hasNext) return null;
-  await expect
-    .poll(async () => getSliderWrapper(page).getAttribute('tabindex'), { timeout: 15_000 })
-    .toBe('0');
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await gotoWithRetry(page, `/travels/${fallbackSlug}`);
+    await page.locator('[data-testid="slider-scroll"]').first().waitFor({ state: 'attached', timeout: 15_000 }).catch(() => null);
 
-  const counter = await waitForCounterValue(page, 1, 10_000);
-  if (counter) return counter;
+    const nextBtn = getSliderNavButton(page, 'Next slide');
+    const hasNext = await nextBtn
+      .waitFor({ state: 'attached', timeout: 15_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!hasNext) continue;
+
+    await expect
+      .poll(async () => getSliderWrapper(page).getAttribute('tabindex'), { timeout: 15_000 })
+      .toBe('0');
+
+    const counter = await waitForCounterValue(page, 1, 10_000);
+    if (counter) return counter;
+  }
 
   // Last resort for environments where mocked by-slug route is bypassed:
   // try to find a suitable card in the list.
