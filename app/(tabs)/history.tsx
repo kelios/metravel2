@@ -1,17 +1,20 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
-import { View, StyleSheet, Platform, ScrollView } from 'react-native';
+import { View, StyleSheet, Platform, ScrollView, Text } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
+import Button from '@/components/ui/Button';
 import EmptyState from '@/components/ui/EmptyState';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { confirmAction } from '@/utils/confirmAction';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { webTouchScrollStyle } from '@/utils';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
@@ -20,22 +23,57 @@ import { useIsFocused } from '@react-navigation/native';
 import { cleanTravelTitle } from '@/utils/cleanTravelTitle';
 import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader';
 import ContributionBanner from '@/components/common/ContributionBanner';
+import { useViewHistoryStore, type ViewHistoryItem } from '@/stores/viewHistoryStore';
+
+const getRussianPlural = (count: number, one: string, few: string, many: string) => {
+    const absCount = Math.abs(count);
+    const lastTwo = absCount % 100;
+    const last = absCount % 10;
+
+    if (lastTwo >= 11 && lastTwo <= 14) return many;
+    if (last === 1) return one;
+    if (last >= 2 && last <= 4) return few;
+    return many;
+};
+
+const getHistorySubtitle = (count: number) => {
+    if (count <= 0) return 'Профиль';
+
+    return `${count} ${getRussianPlural(count, 'последнее открытие', 'последних открытия', 'последних открытий')}`;
+};
 
 export default function HistoryScreen() {
     const router = useRouter();
     const isFocused = useIsFocused();
     const { width } = useResponsive();
-    const { isAuthenticated, authReady } = useAuth();
-    const { viewHistory, clearHistory } = useFavorites() as any;
+    const { isAuthenticated, authReady, userId } = useAuth();
+    const { viewHistory, clearHistory, ensureServerData } = useFavorites();
     const colors = useThemedColors();
-    const [isLoading, setIsLoading] = useState(true);
+    const [isInitialSyncing, setIsInitialSyncing] = useState(false);
 
-    // AND-14: Pull-to-Refresh
     const [refreshing, setRefreshing] = useState(false);
+    const data = useMemo<ViewHistoryItem[]>(() => (Array.isArray(viewHistory) ? viewHistory : []), [viewHistory]);
+    const latestHistoryItem = data[0] ?? null;
+    const latestHistoryTitle = latestHistoryItem
+        ? cleanTravelTitle(latestHistoryItem.title, latestHistoryItem.country ?? latestHistoryItem.city)
+        : null;
+
     const onRefresh = useCallback(async () => {
+        if (refreshing) return;
+
         setRefreshing(true);
-        setTimeout(() => setRefreshing(false), 500);
-    }, []);
+        try {
+            if (isAuthenticated && userId) {
+                useViewHistoryStore.getState().resetFetchState(userId);
+                await useViewHistoryStore.getState().refreshFromServer(userId);
+                return;
+            }
+
+            await useViewHistoryStore.getState().loadLocal(userId ?? null);
+        } finally {
+            setRefreshing(false);
+        }
+    }, [isAuthenticated, refreshing, userId]);
 
     const handleBackToProfile = useCallback(() => {
         router.push('/profile' as any);
@@ -49,7 +87,7 @@ export default function HistoryScreen() {
         gridContent: {
             paddingHorizontal: 16,
             paddingBottom: 24,
-            paddingTop: 6,
+            paddingTop: 12,
         },
         gridRow: {
             justifyContent: 'flex-start',
@@ -67,12 +105,116 @@ export default function HistoryScreen() {
             maxWidth: 360,
             alignSelf: 'center',
         },
+        summaryWrap: {
+            width: '100%',
+            paddingBottom: 18,
+        },
+        summaryCard: {
+            borderRadius: DESIGN_TOKENS.radii.lg,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            backgroundColor: colors.surface,
+            padding: DESIGN_TOKENS.spacing.lg,
+            gap: DESIGN_TOKENS.spacing.md,
+            ...(Platform.OS === 'web'
+                ? ({ boxShadow: colors.boxShadows.card } as any)
+                : Platform.OS === 'ios'
+                  ? colors.shadows.light
+                  : { elevation: 2 }),
+        },
+        summaryHeader: {
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+            gap: DESIGN_TOKENS.spacing.md,
+        },
+        summaryIcon: {
+            width: 44,
+            height: 44,
+            borderRadius: DESIGN_TOKENS.radii.pill,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: colors.primarySoft,
+        },
+        summaryCopy: {
+            flex: 1,
+            gap: 4,
+        },
+        summaryEyebrow: {
+            color: colors.textMuted,
+            fontSize: DESIGN_TOKENS.typography.scale.label.fontSize,
+            lineHeight: DESIGN_TOKENS.typography.scale.label.lineHeight,
+            fontWeight: DESIGN_TOKENS.typography.scale.label.fontWeight as any,
+            letterSpacing: DESIGN_TOKENS.typography.scale.label.letterSpacing,
+            textTransform: 'uppercase',
+        },
+        summaryTitle: {
+            color: colors.text,
+            fontSize: DESIGN_TOKENS.typography.scale.h2.fontSize,
+            lineHeight: DESIGN_TOKENS.typography.scale.h2.lineHeight,
+            fontWeight: DESIGN_TOKENS.typography.scale.h2.fontWeight as any,
+        },
+        summaryDescription: {
+            color: colors.textMuted,
+            fontSize: DESIGN_TOKENS.typography.scale.body.fontSize,
+            lineHeight: DESIGN_TOKENS.typography.scale.body.lineHeight,
+            fontWeight: DESIGN_TOKENS.typography.scale.body.fontWeight as any,
+        },
+        summaryMetaRow: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: DESIGN_TOKENS.spacing.sm,
+        },
+        summaryMetaPill: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+            paddingHorizontal: DESIGN_TOKENS.spacing.md,
+            paddingVertical: DESIGN_TOKENS.spacing.xs,
+            borderRadius: DESIGN_TOKENS.radii.pill,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            backgroundColor: colors.backgroundSecondary,
+        },
+        summaryMetaText: {
+            color: colors.text,
+            fontSize: DESIGN_TOKENS.typography.scale.bodySmall.fontSize,
+            lineHeight: DESIGN_TOKENS.typography.scale.bodySmall.lineHeight,
+            fontWeight: DESIGN_TOKENS.typography.scale.bodyStrong.fontWeight as any,
+        },
+        summaryActions: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: DESIGN_TOKENS.spacing.sm,
+        },
+        summaryActionButton: {
+            minWidth: 180,
+        },
     }), [colors]);
 
     useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 300);
-        return () => clearTimeout(timer);
-    }, [viewHistory]);
+        if (!authReady || !isAuthenticated || data.length > 0 || typeof ensureServerData !== 'function') {
+            setIsInitialSyncing(false);
+            return undefined;
+        }
+
+        let isActive = true;
+        setIsInitialSyncing(true);
+
+        ensureServerData('history')
+            .catch(() => {
+                // no-op: empty state is still a valid fallback for this page
+            })
+            .finally(() => {
+                if (isActive) {
+                    setIsInitialSyncing(false);
+                }
+            });
+
+        return () => {
+            isActive = false;
+        };
+    }, [authReady, data.length, ensureServerData, isAuthenticated]);
 
     const horizontalPadding = 16;
     const columnGap = 14;
@@ -102,12 +244,70 @@ export default function HistoryScreen() {
         await clearHistory();
     }, [clearHistory]);
 
-    const data = useMemo(() => (Array.isArray(viewHistory) ? viewHistory : []), [viewHistory]);
+    const renderHistorySummary = useCallback(
+        () => (
+            <View style={styles.summaryWrap}>
+                <View style={styles.summaryCard}>
+                    <View style={styles.summaryHeader}>
+                        <View style={styles.summaryIcon}>
+                            <Feather name="clock" size={20} color={colors.primary} />
+                        </View>
+
+                        <View style={styles.summaryCopy}>
+                            <Text style={styles.summaryEyebrow}>Недавние открытия</Text>
+                            <Text style={styles.summaryTitle}>Быстрый возврат к тому, что уже смотрел</Text>
+                            <Text style={styles.summaryDescription}>
+                                История помогает не терять интересные маршруты и продолжать поиск с того места, где ты остановился.
+                            </Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.summaryMetaRow}>
+                        <View style={styles.summaryMetaPill}>
+                            <Feather name="layers" size={16} color={colors.primary} />
+                            <Text style={styles.summaryMetaText}>
+                                {data.length} {getRussianPlural(data.length, 'элемент', 'элемента', 'элементов')} в истории
+                            </Text>
+                        </View>
+
+                        {latestHistoryTitle ? (
+                            <View style={styles.summaryMetaPill}>
+                                <Feather name="arrow-up-right" size={16} color={colors.primary} />
+                                <Text style={styles.summaryMetaText} numberOfLines={1}>
+                                    Последнее: {latestHistoryTitle}
+                                </Text>
+                            </View>
+                        ) : null}
+                    </View>
+
+                    <View style={styles.summaryActions}>
+                        <Button
+                            label="Продолжить поиск"
+                            onPress={() => router.push('/search')}
+                            variant="secondary"
+                            size="md"
+                            style={styles.summaryActionButton}
+                        />
+                        <Button
+                            label="Случайный маршрут"
+                            onPress={() => router.push('/roulette')}
+                            variant="outline"
+                            size="md"
+                            style={styles.summaryActionButton}
+                        />
+                    </View>
+                </View>
+            </View>
+        ),
+        [colors.primary, data.length, latestHistoryTitle, router, styles]
+    );
+
+    const isLoading = !authReady || (isInitialSyncing && data.length === 0);
 
     if (!authReady) {
         return (
             <SafeAreaView style={styles.container}>
-                <ProfileCollectionHeader title="История" onBackPress={handleBackToProfile} />
+                <ProfileCollectionHeader title="История" subtitle={getHistorySubtitle(0)} onBackPress={handleBackToProfile} />
                 <View style={styles.gridContent}>
                     {Array.from({ length: numColumns > 1 ? numColumns * 2 : 3 }).map((_, index) => (
                         <View key={index} style={styles.gridItem}>
@@ -138,7 +338,7 @@ export default function HistoryScreen() {
     if (isLoading) {
         return (
             <SafeAreaView style={styles.container}>
-                <ProfileCollectionHeader title="История" onBackPress={handleBackToProfile} />
+                <ProfileCollectionHeader title="История" subtitle={getHistorySubtitle(data.length)} onBackPress={handleBackToProfile} />
                 <View style={styles.gridContent}>
                     {Array.from({ length: numColumns > 1 ? numColumns * 2 : 3 }).map((_, index) => (
                         <View key={index} style={styles.gridItem}>
@@ -184,8 +384,9 @@ export default function HistoryScreen() {
             )}
             <ProfileCollectionHeader
                 title="История"
+                subtitle={getHistorySubtitle(data.length)}
                 onBackPress={handleBackToProfile}
-                showClearButton
+                showClearButton={typeof clearHistory === 'function' && data.length > 0}
                 onClearPress={handleClear}
                 clearAccessibilityLabel="Очистить историю просмотров"
             />
@@ -195,7 +396,8 @@ export default function HistoryScreen() {
                     style={webTouchScrollStyle}
                     contentContainerStyle={[styles.gridContent, numColumns > 1 && { flexDirection: 'row', flexWrap: 'wrap' }]}
                 >
-                    {data.map((item: any, index: number) => {
+                    {renderHistorySummary()}
+                    {data.map((item, index) => {
                         const gap = 14;
                         const columnIndex = numColumns > 0 ? index % numColumns : 0;
                         const isFirstColumn = numColumns <= 1 || columnIndex === 0;
@@ -214,10 +416,10 @@ export default function HistoryScreen() {
                             <TabTravelCard
                                 item={{
                                     id: item.id,
-                                    title: cleanTravelTitle(item.title, item.country ?? item.countryName),
+                                     title: cleanTravelTitle(item.title, item.country),
                                     imageUrl: item.imageUrl,
                                     city: item.city ?? null,
-                                    country: item.country ?? item.countryName ?? null,
+                                     country: item.country ?? null,
                                 }}
                                 badge={{
                                     icon: 'clock',
@@ -234,9 +436,9 @@ export default function HistoryScreen() {
                     <ContributionBanner variant="history" />
                 </ScrollView>
             ) : (
-                <FlashList
+                <FlashList<ViewHistoryItem>
                     data={data}
-                    keyExtractor={(item: any) => `history-${item.type || 'travel'}-${item.id}-${item.viewedAt || ''}`}
+                    keyExtractor={(item: ViewHistoryItem) => `history-${item.type || 'travel'}-${item.id}-${item.viewedAt || ''}`}
                     numColumns={numColumns}
                     key={numColumns}
                     {...({ estimatedItemSize: 280 } as any)}
@@ -244,7 +446,8 @@ export default function HistoryScreen() {
                     drawDistance={500}
                     refreshing={refreshing}
                     onRefresh={onRefresh}
-                    renderItem={({ item, index }: { item: any; index: number }) => {
+                    ListHeaderComponent={renderHistorySummary}
+                    renderItem={({ item, index }: { item: ViewHistoryItem; index: number }) => {
                         const gap = 14;
                         const columnIndex = numColumns > 0 ? index % numColumns : 0;
                         const isFirstColumn = numColumns <= 1 || columnIndex === 0;
@@ -262,10 +465,10 @@ export default function HistoryScreen() {
                             <TabTravelCard
                                 item={{
                                     id: item.id,
-                                    title: cleanTravelTitle(item.title, item.country ?? item.countryName),
+                                     title: cleanTravelTitle(item.title, item.country),
                                     imageUrl: item.imageUrl,
                                     city: item.city ?? null,
-                                    country: item.country ?? item.countryName ?? null,
+                                     country: item.country ?? null,
                                 }}
                                 badge={{
                                     icon: 'clock',

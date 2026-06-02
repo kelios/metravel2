@@ -42,7 +42,7 @@ describe('HistoryScreen grid regression', () => {
     jest.useFakeTimers();
     tabTravelCardProps.length = 0;
 
-    mockUseAuth.mockReturnValue({ isAuthenticated: true, authReady: true });
+    mockUseAuth.mockReturnValue({ isAuthenticated: true, authReady: true, userId: '42' });
     mockUseFavorites.mockReturnValue({
       viewHistory: [
         {
@@ -104,5 +104,13 @@ describe('HistoryScreen grid regression', () => {
 
     expect(tabTravelCardProps.length).toBeGreaterThan(0);
     expect(tabTravelCardProps[0]?.layout).toBe('grid');
+  });
+
+  it('renders the dynamic history subtitle for populated state', async () => {
+    (global as any).__mockResponsive = { width: 900 };
+
+    const utils = await renderLoaded();
+
+    expect(utils.getByText('1 последнее открытие')).toBeTruthy();
   });
 });
