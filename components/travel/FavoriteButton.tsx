@@ -227,8 +227,8 @@ function FavoriteButton({
 const styles = StyleSheet.create({
     button: {
         padding: 8, // ✅ ИСПРАВЛЕНИЕ: Увеличен padding для лучшей touch-цели
-        minWidth: Platform.OS === 'android' ? 48 : 40, // AND-26: M3 touch target 48dp on Android
-        minHeight: Platform.OS === 'android' ? 48 : 40, // AND-26: M3 touch target 48dp on Android
+        minWidth: Platform.OS === 'android' ? 48 : 44, // AND-26: M3 48dp Android; WCAG 2.5.5 ≥44 elsewhere
+        minHeight: Platform.OS === 'android' ? 48 : 44, // AND-26: M3 48dp Android; WCAG 2.5.5 ≥44 elsewhere
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: DESIGN_TOKENS.radii.sm, // ✅ ИСПРАВЛЕНИЕ: Добавлен радиус

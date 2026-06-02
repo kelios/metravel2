@@ -401,4 +401,47 @@ config.resolver.resolveRequest = ((orig) => {
   },
 }
 
+// PERF-014: non-invasive bundle composition probe. Gated by ANALYZE_BUNDLE=1.
+// experimentalSerializerHook does NOT change emitted output; it only reads the
+// module graph and dumps per-module transformed sizes to /tmp for offline
+// aggregation by package. Zero-cost unless the env var is set.
+if (process.env.ANALYZE_BUNDLE === '1') {
+  const os = require('os')
+  config.serializer = {
+    ...config.serializer,
+    experimentalSerializerHook: (graph) => {
+      try {
+        if (!graph || !graph.dependencies || typeof graph.dependencies.forEach !== 'function') return
+        const mods = []
+        graph.dependencies.forEach((m, p) => {
+          let size = 0
+          if (m && Array.isArray(m.output)) {
+            for (const o of m.output) {
+              const code = o && o.data && o.data.code
+              if (typeof code === 'string') size += code.length
+            }
+          }
+          // Sync (non-dynamic-import) dependency edges, to reconstruct the eager
+          // (entry + __common) set via BFS offline.
+          const syncDeps = []
+          if (m && m.dependencies && typeof m.dependencies.forEach === 'function') {
+            m.dependencies.forEach((dep) => {
+              const asyncType =
+                dep && dep.data && dep.data.data ? dep.data.data.asyncType : undefined
+              const abs = dep && dep.absolutePath
+              if (!asyncType && abs) syncDeps.push(abs)
+            })
+          }
+          mods.push([p, size, syncDeps])
+        })
+        const entry = graph.entryPoints ? Array.from(graph.entryPoints).join(',') : 'unknown'
+        const fname = path.join(os.tmpdir(), `metro-analyze-${process.pid}-${mods.length}.json`)
+        fs.writeFileSync(fname, JSON.stringify({ entry, count: mods.length, mods }))
+      } catch (e) {
+        console.error('[ANALYZE_BUNDLE] hook error:', e && e.message)
+      }
+    },
+  }
+}
+
 module.exports = config

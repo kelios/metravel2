@@ -308,6 +308,9 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
     paddingVertical: 5,
     paddingHorizontal: 12,
+    // D-010 / WCAG 2.5.5: the consent buttons use Button size="sm" (minHeight 36);
+    // bump only these two to a ≥44px tap target without touching the shared sm variant.
+    minHeight: 44,
   },
   buttonNarrow: {
     width: '100%',

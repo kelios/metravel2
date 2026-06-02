@@ -1030,7 +1030,14 @@ const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean)
     width: '100%',
     maxWidth: 1280,
     alignSelf: 'center',
-    paddingBottom: DESIGN_TOKENS.spacing.xxl,
+    // Reserve whichever is taller: the base bottom spacing or the floating cookie
+    // consent banner (published by ConsentBanner via --mt-consent-h). Without this the
+    // empty-state "Обновить" CTA and the last cards sit hidden behind the banner on
+    // mobile (D-013). Mirrors components/listTravel/RightColumn.tsx.
+    paddingBottom:
+      Platform.OS === 'web'
+        ? (`calc(max(${DESIGN_TOKENS.spacing.xxl}px, var(--mt-consent-h, 0px)) + 8px)` as any)
+        : DESIGN_TOKENS.spacing.xxl,
   },
 
   // ─── Compact top controls ───

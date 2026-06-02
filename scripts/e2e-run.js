@@ -162,8 +162,10 @@ async function runFastPlaywrightPass({
   forwarded,
   port,
   shards,
+  retries,
 }) {
   const shardCount = Math.max(1, Number.isFinite(shards) ? Math.floor(shards) : 1);
+  const shardRetries = Math.max(0, Number.isFinite(retries) ? Math.floor(retries) : 0);
   for (let shardIndex = 1; shardIndex <= shardCount; shardIndex += 1) {
     const shardArgs =
       shardCount > 1
@@ -178,19 +180,35 @@ async function runFastPlaywrightPass({
       console.log(`[e2e-run] Fast pass shard ${shardIndex}/${shardCount}`);
     }
 
-    await runPlaywright([
-      'test',
-      '--forbid-only',
-      '--retries=0',
-      '--pass-with-no-tests',
-      `--workers=${workers}`,
-      '--grep-invert',
-      '@perf',
-      '--output',
-      shardOutput,
-      ...shardArgs,
-      ...forwarded,
-    ]);
+    let attempt = 0;
+    while (true) {
+      try {
+        await runPlaywright([
+          'test',
+          '--forbid-only',
+          '--retries=0',
+          '--pass-with-no-tests',
+          `--workers=${workers}`,
+          '--grep-invert',
+          '@perf',
+          '--output',
+          shardOutput,
+          ...shardArgs,
+          ...forwarded,
+        ]);
+        break;
+      } catch (err) {
+        if (attempt >= shardRetries) throw err;
+        attempt += 1;
+        const message = err && err.message ? err.message : String(err);
+        console.warn(
+          `[e2e-run] Fast pass shard ${shardIndex}/${shardCount} failed (attempt ${attempt}/${shardRetries + 1}): ${message}`
+        );
+        console.warn(`[e2e-run] Retrying fast pass shard ${shardIndex}/${shardCount}...`);
+        await cleanupManagedWebServer(port);
+        await sleep(1500);
+      }
+    }
 
     await cleanupManagedWebServer(port);
   }
@@ -230,6 +248,7 @@ async function main() {
   // under local parallel load. Local runs can still opt back up with E2E_WORKERS.
   const workersFast = getNumberEnv('E2E_WORKERS', process.env.CI ? 2 : 1);
   const fastShards = getNumberEnv('E2E_FAST_SHARDS', process.env.CI ? 1 : 16);
+  const fastShardRetries = getNumberEnv('E2E_FAST_SHARD_RETRIES', process.env.CI ? 0 : 1);
   const requestedPort = getNumberEnv('E2E_WEB_PORT', 8085);
   const autoSelectPort = String(process.env.E2E_AUTO_SELECT_PORT || '1') !== '0';
   const selectedPort = autoSelectPort
@@ -261,6 +280,7 @@ async function main() {
       forwarded: forwardedWithoutOutput,
       port: selectedPort,
       shards: fastShards,
+      retries: fastShardRetries,
     });
 
     // Pass 2: perf/vitals tests in isolation (single worker).

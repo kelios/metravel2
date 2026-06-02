@@ -23,9 +23,16 @@ Already closed by this audit (no work needed): `D-001` (hero `contain`+blur conf
 
 | Surface | File | Observed defect |
 | --- | --- | --- |
-| Places empty-state + catalog list | `app/(tabs)/places.tsx`, `components/places/PlaceListCard.tsx` | `Обновить` CTA fully hidden behind banner on mobile (**D-013**, severe) |
-| Travel detail sticky actions | `components/travel/details/TravelStickyActions.tsx` | bottom action toolbar partly covered (desktop + mobile) |
-| Home featured weekend card | `components/home/HomeWeekendRoutesSection.tsx` | bottom of the route card covered on mobile |
+| Places empty-state + catalog list | `screens/tabs/PlacesScreen.tsx` (`styles.content`) | `Обновить` CTA fully hidden behind banner on mobile (**D-013**, severe) — **DONE** |
+| Travel detail sticky actions | `components/travel/details/TravelStickyActions.tsx` | bottom action toolbar partly covered — **DONE** (via `travel-expert`) |
+| Home featured weekend card / bottom CTA | `components/home/Home.tsx` (root scroll `contentContainer`) | bottom CTA/sections covered on mobile — **DONE** |
+
+> **Implemented 2026-06-02 (HANDOFF-1 complete — all three surfaces).** Each reserves the floating-banner height via `--mt-consent-h` with `max()` so existing base padding is never reduced (native behavior unchanged):
+> - **Places / D-013** — `screens/tabs/PlacesScreen.tsx` `styles.content.paddingBottom` → web `calc(max(spacing.xxl, var(--mt-consent-h, 0px)) + 8px)`. The catalog `FlatList`/`ScrollView` and the empty-state (`Каталог пока пуст` / `Обновить`) share that container, so the CTA + last cards clear the banner.
+> - **Travel detail** — `components/travel/details/TravelStickyActions.tsx` `container.paddingBottom` → web `calc(max(var(--mt-dock-h,0px), var(--mt-consent-h,0px)) + 10px)` (done by `travel-expert`; public contract `TravelStickyActionsProps` unchanged).
+> - **Home** — `components/home/Home.tsx` root `ScrollView` `contentContainer.paddingBottom` → web `calc(max(96|120px, var(--mt-consent-h, 0px)) + 8px)`.
+>
+> Reference pattern: `components/listTravel/RightColumn.tsx:268-271` (already correct). Static verification green across all three: `tsc --noEmit` 0 errors, `eslint` clean, `check:image-architecture` + `guard:external-links` pass; no behavioral/contract changes (style-only). **Browser verification pending** — blocked by the concurrent CI run wiping `dist/`; re-shoot mobile `/`, `/places`, `/travels/{slug}` with cookie consent un-set once the repo is quiet.
 
 Apply `paddingBottom: var(--mt-consent-h, 0px)` (web) / equivalent inset (native) to each scroll/sticky container.
 
@@ -51,6 +58,19 @@ Measured <44px hit areas:
 **Acceptance:** every interactive control on `/`, `/search`, `/travels/{slug}` cards/carousels reports a ≥44×44 hit box on touch; desktop visuals unchanged (WCAG 2.1 AA 2.5.5).
 
 **Validation:** bounding-box assert Playwright spec (reuse the existing `sort options have adequate touch targets (min 40px)` pattern in `e2e/filters-sorting-ux.spec.ts`) + `npm run check:fast`.
+
+> **Implemented 2026-06-02 (HANDOFF-2 — partial; static-verified, browser pending).**
+> - **Card favorite (heart):** `components/travel/FavoriteButton.tsx` web `minWidth/minHeight` 40 → 44 (transparent button, no visible circle — hit box only; native already had `hitSlop 10`). Done via `travel-expert`.
+> - **`TravelStatusButton` («в план» / plus):** already ≥44 (`minHeight 44` + `hitSlop 6`) — no change needed.
+> - **Hero slider arrows:** `components/home/HomeHeroBookLayout.tsx` prev/next `Pressable` get `hitSlop {10}` (native → ≥44 from 24–40px base; visual circle untouched; slider blur rule respected).
+> - **Cookie banner buttons:** `components/layout/ConsentBanner.tsx` local `styles.button` gets `minHeight: 44` (only these two; the shared `Button size="sm"` 36px variant is untouched).
+> - **`EmptyState`:** already compliant (`actionButton minHeight 48`, secondary `44`) — the original audit note was inaccurate; no change.
+> - Verification across all: `tsc --noEmit` 0 errors, `eslint` clean, image-arch + external-links guards pass, FavoriteButton/TravelStatusButton/UnifiedTravelCard suites 37 tests pass.
+>
+> **Deferred (web, needs transparent wrapper + browser verification — do NOT do blind):**
+> - `components/travel/OptimizedFavoriteButton.tsx` web overlay heart (~34px **visible** circle) — raising min-size would enlarge the circle; needs a transparent centering wrapper (layout-shift risk in a `memo` list slot).
+> - Hero slider arrows **web** — same visible-circle constraint (`hitSlop` is native-only on RN-Web).
+> These two are the only residual <44px web targets; queue for the next browser-verifiable pass.
 
 ---
 

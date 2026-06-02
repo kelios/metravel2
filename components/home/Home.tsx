@@ -341,8 +341,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: bool
     container: { flex: 1, backgroundColor: colors.background },
     contentContainer: {
       flexGrow: 1,
+      // On web also reserve the floating cookie banner height (ConsentBanner publishes
+      // --mt-consent-h) so the bottom CTA/sections are not hidden behind it on mobile
+      // (D-004). max() keeps the existing base padding when the banner is absent/shorter.
       paddingBottom: Platform.select({
-        web: isMobile ? 96 : 120,
+        web: (isMobile
+          ? `calc(max(96px, var(--mt-consent-h, 0px)) + 8px)`
+          : `calc(max(120px, var(--mt-consent-h, 0px)) + 8px)`) as any,
         ios: 96,
         android: 88,
         default: 120,

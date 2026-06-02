@@ -394,6 +394,7 @@ function HeroSlider({
           >
             <Pressable
               onPress={onPrevSlide}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               style={({ hovered, focused }: any) => [
                 styles.sliderNavBtn,
                 hovered && styles.sliderNavBtnHover,
@@ -425,6 +426,7 @@ function HeroSlider({
             </Text>
             <Pressable
               onPress={onNextSlide}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               style={({ hovered, focused }: any) => [
                 styles.sliderNavBtn,
                 hovered && styles.sliderNavBtnHover,

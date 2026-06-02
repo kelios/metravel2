@@ -222,7 +222,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       right: 0,
       zIndex: 999,
       paddingBottom: Platform.select({
-        web: 'calc(var(--mt-dock-h, 0px) + 10px)' as any,
+        // Reserve whichever bottom overlay is taller: the bottom dock or the consent
+        // banner (set by ConsentBanner via --mt-consent-h). max() keeps the toolbar
+        // above the cookie banner without shrinking the existing dock offset.
+        web: 'calc(max(var(--mt-dock-h, 0px), var(--mt-consent-h, 0px)) + 10px)' as any,
         ios: 34,
         default: 10,
       }),
