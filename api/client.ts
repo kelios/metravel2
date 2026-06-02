@@ -3,14 +3,9 @@
 // ✅ FIX-001: Использует безопасное хранилище для токенов
 // ✅ FIX-003: Исправлена race condition при обновлении токена
 
-import { Platform } from 'react-native';
 import { devError } from '@/utils/logger';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
-import { 
-    setSecureItem, 
-    getSecureItem, 
-    removeSecureItems 
-} from '@/utils/secureStorage';
+import { setSecureItem, getSecureItem, removeSecureItems } from '@/utils/secureStorage';
 import {
     API_BASE_URL,
     DEFAULT_TIMEOUT,
@@ -23,43 +18,14 @@ import { notifyAuthInvalidation } from '@/api/authInvalidation';
 export { setAuthInvalidationHandler } from '@/api/authInvalidation';
 import { getApiErrorMessage, getErrorTextField } from '@/utils/errorHelpers';
 import { RateLimiter, type RateLimitSlot } from '@/utils/rateLimiter';
+import { ApiError, hasLoggableRequestError, isOfflineLikeError } from '@/api/clientErrors';
+import {
+    type DownloadResponse,
+    TRANSIENT_UPLOAD_STATUSES,
+    UPLOAD_RETRY_DELAY_MS,
+} from '@/api/clientTypes';
 
-/**
- * Класс ошибки API
- */
-export class ApiError extends Error {
-    constructor(
-        public status: number,
-        public message: string,
-        public data?: unknown
-    ) {
-        super(message);
-        this.name = 'ApiError';
-    }
-}
-
-type DownloadResponse = {
-    blob: Blob;
-    filename?: string;
-    contentType?: string;
-};
-
-const hasLoggableRequestError = (error: unknown): boolean => {
-    if (error == null) return false;
-    if (typeof error === 'string') {
-        return error.trim().length > 0;
-    }
-    if (error instanceof Error) {
-        return error.message.trim().length > 0 || error.name.trim().length > 0;
-    }
-    if (typeof error === 'object') {
-        return Object.keys(error as Record<string, unknown>).length > 0;
-    }
-    return true;
-};
-
-const TRANSIENT_UPLOAD_STATUSES = new Set([502, 503, 504]);
-const UPLOAD_RETRY_DELAY_MS = process.env.NODE_ENV === 'test' ? 0 : 350;
+export { ApiError } from '@/api/clientErrors';
 
 /**
  * Единый API клиент
@@ -428,16 +394,7 @@ class ApiClient {
             }
             
             // Проверяем, является ли это сетевой ошибкой
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            const isOffline = Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.onLine === false;
-            const isFetchFailure =
-                errorMessage.includes('Failed to fetch') ||
-                errorMessage.includes('Network request failed') ||
-                errorMessage.includes('fetch') ||
-                errorMessage.includes('timeout') ||
-                errorMessage.includes('network failed');
-
-            if (isOffline || isFetchFailure) {
+            if (isOfflineLikeError(error)) {
                 throw new ApiError(
                     0,
                     'Нет подключения к интернету. Проверьте ваше соединение и попробуйте снова.',
@@ -567,16 +524,7 @@ class ApiClient {
             if (error instanceof ApiError) throw error;
             devError('API download error:', error);
 
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            const isOffline = Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.onLine === false;
-            const isFetchFailure =
-                errorMessage.includes('Failed to fetch') ||
-                errorMessage.includes('Network request failed') ||
-                errorMessage.includes('fetch') ||
-                errorMessage.includes('timeout') ||
-                errorMessage.includes('network failed');
-
-            if (isOffline || isFetchFailure) {
+            if (isOfflineLikeError(error)) {
                 throw new ApiError(
                     0,
                     'Нет подключения к интернету. Проверьте ваше соединение и попробуйте снова.',
