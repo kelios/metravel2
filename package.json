@@ -66,6 +66,7 @@
     "build": "npm run build:web",
     "build:web": "node scripts/build-web-safe.js",
     "build:web:prod": "node scripts/build-web-prod.js",
+    "serve:prod": "node .claude/prod-server.js 8081",
     "seo:generate-pages": "node scripts/generate-seo-pages.js --dist dist/prod",
     "fetch:lasy-data": "node scripts/fetch-lasy-wfs-data.js",
     "analyze:bundle": "node scripts/analyze-bundle.js",
