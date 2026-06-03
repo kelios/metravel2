@@ -31,6 +31,7 @@ type ShelfSection = {
   countValue: number
   ctaPath: '/favorites' | '/history'
   eyebrow: string
+  icon: keyof typeof Feather.glyphMap
   items: TravelLikeItem[]
   listTestID: string
   subtitle: string
@@ -92,7 +93,7 @@ function handleHorizontalWheelForElement(e: any, el: any, prevent: boolean) {
 }
 
 function SectionHeader({
-  eyebrow,
+  icon,
   title,
   subtitle,
   countLabel,
@@ -102,7 +103,7 @@ function SectionHeader({
   styles,
   colors,
 }: {
-  eyebrow: string
+  icon: keyof typeof Feather.glyphMap
   title: string
   subtitle: string
   countLabel: string
@@ -114,37 +115,40 @@ function SectionHeader({
 }) {
   return (
     <View style={styles.sectionHeaderRow} testID={testID}>
+      <View style={styles.headerIconChip}>
+        <Feather
+          name={icon}
+          size={16}
+          color={colors.primaryText}
+          {...({ 'aria-hidden': true, focusable: false } as any)}
+        />
+      </View>
+
       <View style={styles.headerTitleBlock}>
-        <View style={styles.headerEyebrow}>
-          <Feather
-            name="bookmark"
-            size={12}
-            color={colors.primaryText}
-            {...({ 'aria-hidden': true, focusable: false } as any)}
-          />
-          <Text style={styles.headerEyebrowText}>{eyebrow}</Text>
-        </View>
-        <Text
-          style={styles.sectionTitle}
-          accessibilityRole="header"
-          {...({ 'aria-level': 2 } as any)}
-        >
-          {title}
-        </Text>
-        <Text style={styles.sectionSubtitle}>{subtitle}</Text>
-        <View style={styles.headerMetaRow}>
-          <View style={styles.headerStatPill}>
-            <Text style={styles.headerStatValue}>{countValue}</Text>
-            <Text style={styles.headerStatLabel}>{countLabel}</Text>
+        <View style={styles.headerTitleRow}>
+          <Text
+            style={styles.sectionTitle}
+            accessibilityRole="header"
+            numberOfLines={1}
+            {...({ 'aria-level': 2 } as any)}
+          >
+            {title}
+          </Text>
+          <View style={styles.headerCountPill}>
+            <Text style={styles.headerCountValue}>{countValue}</Text>
+            <Text style={styles.headerCountLabel}>{countLabel}</Text>
           </View>
         </View>
+        <Text style={styles.sectionSubtitle} numberOfLines={1}>
+          {subtitle}
+        </Text>
       </View>
 
       <Button
         label="Смотреть все"
         onPress={onSeeAll}
         accessibilityLabel={`Смотреть все: ${title}`}
-        icon={<Feather name="chevron-right" size={16} color={colors.primary} />}
+        icon={<Feather name="arrow-right" size={15} color={colors.primaryText} />}
         iconPosition="right"
         variant="secondary"
         style={styles.seeAllButton}
@@ -329,6 +333,7 @@ function HomeFavoritesHistorySection() {
         [
           {
             eyebrow: 'Сохранено',
+            icon: 'bookmark',
             title: 'Избранное',
             subtitle: 'Маршруты, к которым вы хотите вернуться позже.',
             countLabel: 'в списке',
@@ -340,6 +345,7 @@ function HomeFavoritesHistorySection() {
           },
           {
             eyebrow: 'Недавнее',
+            icon: 'clock',
             title: 'История',
             subtitle: 'Последние маршруты, которые вы уже открывали.',
             countLabel: 'просмотрено',
@@ -398,7 +404,7 @@ function HomeFavoritesHistorySection() {
           {sections.map((section) => (
             <View key={section.ctaPath} style={styles.section}>
               <SectionHeader
-                eyebrow={section.eyebrow}
+                icon={section.icon}
                 title={section.title}
                 subtitle={section.subtitle}
                 countLabel={section.countLabel}
@@ -432,13 +438,20 @@ const createStyles = (
 ) =>
   StyleSheet.create({
     band: {
-      paddingVertical: 56,
+      paddingVertical: isMobile ? 24 : 36,
       backgroundColor: colors.background,
       width: '100%',
       alignSelf: 'stretch',
     },
-    container: { gap: 44, width: '100%' },
-    section: { gap: 18 },
+    container: { gap: isMobile ? 16 : 20, width: '100%' },
+    section: {
+      gap: 14,
+      padding: isMobile ? 14 : 20,
+      borderRadius: tokens.radii.lg,
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+    },
     emptyContainer: {
       alignItems: 'center',
       paddingVertical: isMobile ? 32 : 48,
@@ -484,79 +497,67 @@ const createStyles = (
     },
     emptyButtonText: { fontSize: 14, fontWeight: '600', color: colors.text },
     sectionHeaderRow: {
-      flexDirection: IS_WEB && !isMobile ? 'row' : 'column',
-      alignItems: IS_WEB && !isMobile ? 'flex-end' : 'stretch',
-      justifyContent: 'space-between',
-      gap: 12,
-    },
-    headerTitleBlock: { flex: 1, minWidth: 0, gap: 8 },
-    headerEyebrow: {
-      alignSelf: 'flex-start',
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: tokens.radii.pill,
+      gap: 12,
+    },
+    headerIconChip: {
+      width: 38,
+      height: 38,
+      borderRadius: tokens.radii.md,
       backgroundColor: colors.primarySoft,
       borderWidth: 1,
       borderColor: colors.primaryAlpha30,
-    },
-    headerEyebrowText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: colors.primaryText,
-      letterSpacing: 0.7,
-      textTransform: 'uppercase',
-    },
-    sectionTitle: {
-      fontSize: 26,
-      fontWeight: '900',
-      color: colors.text,
-      lineHeight: 32,
-      letterSpacing: -0.5,
-    },
-    sectionSubtitle: {
-      fontSize: 15,
-      fontWeight: '500',
-      color: colors.textMuted,
-      lineHeight: 22,
-    },
-    headerMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    headerStatPill: {
-      flexDirection: 'row',
+      justifyContent: 'center',
       alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 12,
-      paddingVertical: 7,
+    },
+    headerTitleBlock: { flex: 1, minWidth: 0, gap: 2 },
+    headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    sectionTitle: {
+      flexShrink: 1,
+      fontSize: isMobile ? 18 : 20,
+      fontWeight: '800',
+      color: colors.text,
+      lineHeight: isMobile ? 24 : 26,
+      letterSpacing: -0.3,
+    },
+    headerCountPill: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
       borderRadius: tokens.radii.pill,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.borderLight,
-      ...Platform.select({ web: { boxShadow: tokens.shadows.medium } }),
     },
-    headerStatValue: { fontSize: 13, fontWeight: '800', color: colors.text },
-    headerStatLabel: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
+    headerCountValue: { fontSize: 12, fontWeight: '800', color: colors.text },
+    headerCountLabel: { fontSize: 11, fontWeight: '600', color: colors.textMuted },
+    sectionSubtitle: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.textMuted,
+      lineHeight: 18,
+    },
     seeAllButton: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      paddingHorizontal: 16,
-      paddingVertical: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
       borderRadius: tokens.radii.pill,
-      backgroundColor: colors.surface,
-      borderWidth: 1.5,
-      borderColor: colors.borderLight,
-      ...Platform.select({ web: { transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)' } }),
+      backgroundColor: colors.primarySoft,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
+      ...Platform.select({ web: { transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' } }),
     },
     seeAllButtonHover: {
-      backgroundColor: colors.primarySoft,
-      borderColor: colors.primaryAlpha30,
-      ...Platform.select({
-        web: { transform: 'translateY(-2px)', boxShadow: tokens.shadows.medium },
-      }),
+      backgroundColor: colors.primaryAlpha30,
+      borderColor: colors.primaryAlpha40,
+      ...Platform.select({ web: { transform: 'translateY(-1px)' } }),
     },
-    seeAllButtonText: { fontSize: 14, fontWeight: '700', color: colors.text },
+    seeAllButtonText: { fontSize: 13, fontWeight: '700', color: colors.primaryText },
     horizontalList: {
       width: '100%',
       ...Platform.select({
