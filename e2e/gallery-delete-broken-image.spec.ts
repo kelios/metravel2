@@ -3,6 +3,16 @@ import { mockFakeAuthApis } from './helpers/auth';
 
 test.describe('Gallery: delete broken image (404)', () => {
   test('shows delete UI for 404 image and removes card after confirm', async ({ page, baseURL }) => {
+    page.on('pageerror', (error) => {
+      console.log('[gallery-delete] pageerror:', error.message);
+      if (error.stack) console.log(error.stack);
+    });
+    page.on('console', (message) => {
+      if (message.type() === 'error') {
+        console.log(`[gallery-delete] console.${message.type()}:`, message.text());
+      }
+    });
+
     const base = (baseURL || '').replace(/\/+$/, '');
     const brokenId = 3796;
     const brokenUrl = `${base}/gallery/${brokenId}/conversions/404.jpg`;
