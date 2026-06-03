@@ -21,6 +21,7 @@ import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { useIsFocused } from '@react-navigation/native';
 import { cleanTravelTitle } from '@/utils/cleanTravelTitle';
+import { formatRelativeTime } from '@/utils/relativeTime';
 import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader';
 import ContributionBanner from '@/components/common/ContributionBanner';
 import { useViewHistoryStore, type ViewHistoryItem } from '@/stores/viewHistoryStore';
@@ -89,21 +90,33 @@ export default function HistoryScreen() {
             paddingBottom: 24,
             paddingTop: 12,
         },
-        gridRow: {
-            justifyContent: 'flex-start',
-            gap: 14,
-            paddingTop: 12,
+        webGrid: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            alignItems: 'stretch',
         },
         gridItem: {
-            flex: 1,
-            paddingTop: 12,
+            flexGrow: 0,
+            flexShrink: 0,
+            width: '100%',
+            paddingTop: 14,
         },
         card: {
             marginRight: 0,
             width: '100%',
-            minWidth: 320,
-            maxWidth: 360,
-            alignSelf: 'center',
+        },
+        cardCaptionRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            paddingTop: 8,
+            paddingHorizontal: 2,
+        },
+        cardCaptionText: {
+            color: colors.textMuted,
+            fontSize: DESIGN_TOKENS.typography.scale.bodySmall.fontSize,
+            lineHeight: DESIGN_TOKENS.typography.scale.bodySmall.lineHeight,
+            fontWeight: DESIGN_TOKENS.typography.scale.bodySmall.fontWeight as any,
         },
         summaryWrap: {
             width: '100%',
@@ -188,7 +201,9 @@ export default function HistoryScreen() {
             gap: DESIGN_TOKENS.spacing.sm,
         },
         summaryActionButton: {
-            minWidth: 180,
+            flexGrow: 1,
+            flexBasis: 160,
+            minWidth: 160,
         },
     }), [colors]);
 
@@ -228,6 +243,61 @@ export default function HistoryScreen() {
             router.push(url as any);
         },
         [router]
+    );
+
+    const renderCard = useCallback(
+        (item: ViewHistoryItem, index: number) => {
+            const isWeb = Platform.OS === 'web';
+            const columnIndex = numColumns > 0 ? index % numColumns : 0;
+            const isFirstColumn = numColumns <= 1 || columnIndex === 0;
+            const isLastColumn = numColumns <= 1 || columnIndex === numColumns - 1;
+            const paddingLeft = numColumns > 1 ? (isFirstColumn ? 0 : columnGap / 2) : 0;
+            const paddingRight = numColumns > 1 ? (isLastColumn ? 0 : columnGap / 2) : 0;
+            const viewedLabel = formatRelativeTime(item.viewedAt);
+
+            // Web: explicit per-column width inside a flex-wrap container.
+            // Native: FlashList already lays out columns, so fill the cell.
+            const columnStyle =
+                numColumns > 1
+                    ? isWeb
+                        ? { width: `${100 / numColumns}%` as const, paddingLeft, paddingRight }
+                        : { paddingLeft, paddingRight }
+                    : null;
+
+            return (
+                <View
+                    key={`history-${item.type || 'travel'}-${item.id}-${item.viewedAt || ''}`}
+                    style={[styles.gridItem, columnStyle]}
+                >
+                    <TabTravelCard
+                        item={{
+                            id: item.id,
+                            title: cleanTravelTitle(item.title, item.country),
+                            imageUrl: item.imageUrl,
+                            city: item.city ?? null,
+                            country: item.country ?? null,
+                        }}
+                        badge={{
+                            icon: 'clock',
+                            backgroundColor: colors.overlay,
+                            iconColor: colors.textOnDark,
+                        }}
+                        onPress={() => handleOpen(item.url)}
+                        layout="grid"
+                        style={styles.card}
+                    />
+                    {viewedLabel ? (
+                        <View style={styles.cardCaptionRow}>
+                            <Feather name="eye" size={13} color={colors.textMuted} />
+                            <Text style={styles.cardCaptionText} numberOfLines={1}>
+                                Просмотрено {viewedLabel}
+                            </Text>
+                        </View>
+                    ) : null}
+                </View>
+            );
+        },
+        [colors.overlay, colors.textMuted, colors.textOnDark, columnGap, handleOpen, numColumns, styles]
     );
 
     const handleClear = useCallback(async () => {
@@ -394,45 +464,12 @@ export default function HistoryScreen() {
             {Platform.OS === 'web' ? (
                 <ScrollView
                     style={webTouchScrollStyle}
-                    contentContainerStyle={[styles.gridContent, numColumns > 1 && { flexDirection: 'row', flexWrap: 'wrap' }]}
+                    contentContainerStyle={styles.gridContent}
                 >
                     {renderHistorySummary()}
-                    {data.map((item, index) => {
-                        const gap = 14;
-                        const columnIndex = numColumns > 0 ? index % numColumns : 0;
-                        const isFirstColumn = numColumns <= 1 || columnIndex === 0;
-                        const isLastColumn = numColumns <= 1 || columnIndex === numColumns - 1;
-                        const paddingLeft = numColumns > 1 ? (isFirstColumn ? 0 : gap / 2) : 0;
-                        const paddingRight = numColumns > 1 ? (isLastColumn ? 0 : gap / 2) : 0;
-
-                        return (
-                        <View
-                            key={`history-${item.type || 'travel'}-${item.id}-${item.viewedAt || ''}`}
-                            style={[
-                            styles.gridItem,
-                            numColumns > 1 ? { width: `${100 / numColumns}%`, paddingLeft, paddingRight } : null,
-                            ]}
-                        >
-                            <TabTravelCard
-                                item={{
-                                    id: item.id,
-                                     title: cleanTravelTitle(item.title, item.country),
-                                    imageUrl: item.imageUrl,
-                                    city: item.city ?? null,
-                                     country: item.country ?? null,
-                                }}
-                                badge={{
-                                    icon: 'clock',
-                                    backgroundColor: colors.overlay,
-                                    iconColor: colors.textOnDark,
-                                }}
-                                onPress={() => handleOpen(item.url)}
-                                layout="grid"
-                                style={styles.card}
-                            />
-                        </View>
-                        );
-                    })}
+                    <View style={styles.webGrid}>
+                        {data.map((item, index) => renderCard(item, index))}
+                    </View>
                     <ContributionBanner variant="history" />
                 </ScrollView>
             ) : (
@@ -447,41 +484,9 @@ export default function HistoryScreen() {
                     refreshing={refreshing}
                     onRefresh={onRefresh}
                     ListHeaderComponent={renderHistorySummary}
-                    renderItem={({ item, index }: { item: ViewHistoryItem; index: number }) => {
-                        const gap = 14;
-                        const columnIndex = numColumns > 0 ? index % numColumns : 0;
-                        const isFirstColumn = numColumns <= 1 || columnIndex === 0;
-                        const isLastColumn = numColumns <= 1 || columnIndex === numColumns - 1;
-                        const paddingLeft = numColumns > 1 ? (isFirstColumn ? 0 : gap / 2) : 0;
-                        const paddingRight = numColumns > 1 ? (isLastColumn ? 0 : gap / 2) : 0;
-
-                        return (
-                        <View
-                            style={[
-                            styles.gridItem,
-                            numColumns > 1 ? { maxWidth: `${100 / numColumns}%`, paddingLeft, paddingRight } : null,
-                            ]}
-                        >
-                            <TabTravelCard
-                                item={{
-                                    id: item.id,
-                                     title: cleanTravelTitle(item.title, item.country),
-                                    imageUrl: item.imageUrl,
-                                    city: item.city ?? null,
-                                     country: item.country ?? null,
-                                }}
-                                badge={{
-                                    icon: 'clock',
-                                    backgroundColor: colors.overlay,
-                                    iconColor: colors.textOnDark,
-                                }}
-                                onPress={() => handleOpen(item.url)}
-                                layout="grid"
-                                style={styles.card}
-                            />
-                        </View>
-                        );
-                    }}
+                    renderItem={({ item, index }: { item: ViewHistoryItem; index: number }) =>
+                        renderCard(item, index)
+                    }
                     ListFooterComponent={<ContributionBanner variant="history" />}
                 />
             )}
