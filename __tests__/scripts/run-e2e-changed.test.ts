@@ -37,6 +37,7 @@ describe('run-e2e-changed', () => {
     ])).toEqual([
       'e2e/messages.spec.ts',
       'e2e/seo-travel-detail.spec.ts',
+      'e2e/travel-detail-page.spec.ts',
       'e2e/travels.spec.ts',
     ])
   })
@@ -56,6 +57,7 @@ describe('run-e2e-changed', () => {
       'e2e/search.spec.ts',
       'e2e/seo-travel-detail.spec.ts',
       'e2e/subscriptions.spec.ts',
+      'e2e/travel-detail-page.spec.ts',
       'e2e/travels.spec.ts',
     ])
   })
