@@ -6,7 +6,6 @@ import { useThemedColors } from '@/hooks/useTheme'
 
 import { MapSkeleton } from '@/components/travel/TravelDetailSkeletons'
 import ToggleableMap from '@/components/travel/ToggleableMapSection'
-import RouteElevationProfile from '@/components/travel/details/sections/RouteElevationProfile'
 import type { Travel } from '@/types/types'
 
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
@@ -14,6 +13,13 @@ import { useTravelRouteMapBlockModel } from '../hooks/useTravelRouteMapBlockMode
 
 const TravelMap = React.lazy(() =>
   import('@/components/MapPage/TravelMap').then((m) => ({ default: m.TravelMap })),
+)
+
+// Elevation profile pulls react-native-svg + chart logic (~700 LOC) and only
+// renders for travels that ship GPX/track files. Defer it so travels without
+// tracks don't pay for the chart code in the map-section chunk.
+const RouteElevationProfile = React.lazy(
+  () => import('@/components/travel/details/sections/RouteElevationProfile'),
 )
 
 const SECTION_CONTENT_MARGIN_STYLE = { marginTop: 12 } as const
@@ -134,20 +140,24 @@ export const TravelRouteMapBlock: React.FC<{
                 <MapFallback />
               )}
             </ToggleableMap>
-            {routeProfiles.map((profile) => (
-              <RouteElevationProfile
-                key={profile.key}
-                title={profile.title}
-                lineColor={profile.lineColor}
-                preview={profile.preview}
-                canDownloadTrack
-                onDownloadTrack={profile.onDownloadTrack}
-                isDownloadPending={profile.isDownloadPending}
-                placeHints={placeHints}
-                transportHints={transportHints}
-                keyPointLabels={profile.keyPointLabels}
-              />
-            ))}
+            {routeProfiles.length > 0 ? (
+              <Suspense fallback={null}>
+                {routeProfiles.map((profile) => (
+                  <RouteElevationProfile
+                    key={profile.key}
+                    title={profile.title}
+                    lineColor={profile.lineColor}
+                    preview={profile.preview}
+                    canDownloadTrack
+                    onDownloadTrack={profile.onDownloadTrack}
+                    isDownloadPending={profile.isDownloadPending}
+                    placeHints={placeHints}
+                    transportHints={transportHints}
+                    keyPointLabels={profile.keyPointLabels}
+                  />
+                ))}
+              </Suspense>
+            ) : null}
           </>
         ) : shouldShowMapLoadingState ? (
           <MapFallback />

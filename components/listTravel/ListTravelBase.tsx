@@ -42,6 +42,8 @@ import {
   buildListTravelFallbackSteps,
   buildListTravelSearchPendingState,
   getListTravelActiveFiltersCount,
+  isListTravelAnyFallbackLoading,
+  isListTravelFallbackStageExhausted,
   selectListTravelFallbackMatch,
   getListTravelViewportState,
   getSearchCardImageHeight,
@@ -62,7 +64,6 @@ function ListTravelBase() {
       isDesktop: isDesktopSize,
       isPortrait,
     } = useResponsive();
-
 
     const viewportState = getListTravelViewportState({
       isDesktopSize,
@@ -335,9 +336,7 @@ function ListTravelBase() {
       isQueryEnabled:
         isQueryEnabled &&
         isEmpty &&
-        !fallbackQueryLight.isInitialLoading &&
-        !fallbackQueryLight.isFetching &&
-        !fallbackQueryLight.data.length &&
+        isListTravelFallbackStageExhausted(fallbackQueryLight) &&
         !!fallbackStepMedium,
     });
     const fallbackQueryBroad = useListTravelData({
@@ -346,12 +345,8 @@ function ListTravelBase() {
       isQueryEnabled:
         isQueryEnabled &&
         isEmpty &&
-        !fallbackQueryLight.isInitialLoading &&
-        !fallbackQueryLight.isFetching &&
-        !fallbackQueryLight.data.length &&
-        !fallbackQueryMedium.isInitialLoading &&
-        !fallbackQueryMedium.isFetching &&
-        !fallbackQueryMedium.data.length &&
+        isListTravelFallbackStageExhausted(fallbackQueryLight) &&
+        isListTravelFallbackStageExhausted(fallbackQueryMedium) &&
         !!fallbackStepBroad,
     });
     const fallbackQuerySearchless = useListTravelData({
@@ -360,15 +355,9 @@ function ListTravelBase() {
       isQueryEnabled:
         isQueryEnabled &&
         isEmpty &&
-        !fallbackQueryLight.isInitialLoading &&
-        !fallbackQueryLight.isFetching &&
-        !fallbackQueryLight.data.length &&
-        !fallbackQueryMedium.isInitialLoading &&
-        !fallbackQueryMedium.isFetching &&
-        !fallbackQueryMedium.data.length &&
-        !fallbackQueryBroad.isInitialLoading &&
-        !fallbackQueryBroad.isFetching &&
-        !fallbackQueryBroad.data.length &&
+        isListTravelFallbackStageExhausted(fallbackQueryLight) &&
+        isListTravelFallbackStageExhausted(fallbackQueryMedium) &&
+        isListTravelFallbackStageExhausted(fallbackQueryBroad) &&
         !!fallbackStepSearchless,
     });
     /* Delete */
@@ -648,18 +637,9 @@ function ListTravelBase() {
       fallbackStepMedium,
       fallbackStepSearchless,
     ]);
-
     const activeFallbackMatch = fallbackMatch;
 
-    const isFallbackLoading =
-      isEmpty &&
-      !activeFallbackMatch &&
-      (
-        fallbackQueryLight.isInitialLoading ||
-        fallbackQueryMedium.isInitialLoading ||
-        fallbackQueryBroad.isInitialLoading ||
-        fallbackQuerySearchless.isInitialLoading
-      );
+    const isFallbackLoading = isEmpty && !activeFallbackMatch && isListTravelAnyFallbackLoading([fallbackQueryLight, fallbackQueryMedium, fallbackQueryBroad, fallbackQuerySearchless]);
 
     const displayedTravels = activeFallbackMatch?.query.data ?? travels;
     const displayedTotal = activeFallbackMatch?.query.total ?? total;

@@ -863,7 +863,7 @@
 
     function bucketOf(statusRaw, isBacklogSection) {
       var s = statusRaw.toLowerCase();
-      if (/block|заблок|в блок/.test(s)) return 'blocked';
+      if (/^✕? *(block|блок|заблок)|^в блок/.test(s)) return 'blocked';
       if (/^done|✅ *done|^готов/.test(s)) return 'done';
       if (/in progress|в работе/.test(s)) return 'progress';
       if (/^open|planned|backlog/.test(s)) return isBacklogSection ? 'backlog' : 'planned';

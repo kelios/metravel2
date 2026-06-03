@@ -128,3 +128,32 @@ reanimated / gesture-handler / @egjs-hammerjs / worklets полностью уш
 web-приложения; безопасного quick-win там нет. `react-native-web` — кандидат на
 slim-barrel tree-shake (уже есть opt-in `EXPO_PUBLIC_RNW_SLIM=1` в `metro.config.js`,
 требует отдельной валидации).
+
+## 11. Regression guard (PERF-017)
+
+Чтобы фикс §8 не откатился молча, добавлен повторяемый гвард
+`scripts/guard-eager-web-bundle.js` (npm: `guard:eager-web`, `guard:eager-web:fail`,
+`guard:eager-web:analyze`). Два режима:
+
+- **static (по умолчанию, без билда, для CI/pre-push):** проверяет, что
+  регрессионная поверхность цела — (1) `metro.config.js` всё ещё резолвит bare
+  `react-native-gesture-handler` → `metro-stubs/react-native-gesture-handler.js` на
+  web под `DISABLE_GH_STUB !== '1'`; (2) стаб экспортирует все 6 символов, которые
+  импортит first-party код (`GestureHandlerRootView`/`Swipeable`/`GestureDetector`/
+  `Gesture`/`PinchGestureHandler`/`State`) — неполный стаб = краш на web; (3) ни
+  `package.json`/`eas.json`/`app.json` не форсят `DISABLE_GH_STUB=1`.
+- **analyze (`--from-analyze`, на проде):** реконструирует eager-набор из дампов
+  `ANALYZE_BUNDLE=1 npm run build:web` (`/tmp/metro-analyze-*.json`, BFS по sync-edges)
+  и падает, если у любого forbidden-пакета (`react-native-reanimated`,
+  `react-native-gesture-handler`, `react-native-worklets`, `@egjs/hammerjs`) >0 байт в
+  eager, либо eager-итог превышает бюджет.
+
+**Пороги (env-overridable):** `EAGER_BUDGET_KB` — потолок eager transformed-байт,
+default **1200KB** (baseline после PERF-014 ≈ **1008KB**, до фикса было 1918KB);
+forbidden-пакеты в eager — всегда 0 байт (hard fail). `METRO_DUMP_DIR` —
+директория дампов (default `os.tmpdir()`).
+
+**Verified 2026-06-03:** static-режим зелёный на текущем дереве (exit 0, 3/3 проверки);
+analyze-режим падает (exit 1) на синтетическом дампе с reanimated в eager
+(«forbidden vendor package react-native-reanimated has 664.1KB in the web eager set»).
+eslint clean, `guard:external-links` + `check:image-architecture` green.

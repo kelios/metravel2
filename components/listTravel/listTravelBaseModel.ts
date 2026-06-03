@@ -400,6 +400,20 @@ type ListTravelFallbackCandidate<S, Q extends { data: any[] }> = {
   query: Q
 }
 
+type ListTravelFallbackStageQuery = {
+  isInitialLoading: boolean
+  isFetching: boolean
+  data: any[]
+}
+
+export function isListTravelFallbackStageExhausted(query: ListTravelFallbackStageQuery): boolean {
+  return !query.isInitialLoading && !query.isFetching && !query.data.length
+}
+
+export function isListTravelAnyFallbackLoading(queries: Array<{ isInitialLoading: boolean }>): boolean {
+  return queries.some((query) => query.isInitialLoading)
+}
+
 export function selectListTravelFallbackMatch<S, Q extends { data: any[] }>({
   isEmpty,
   fallbackStepLight,
