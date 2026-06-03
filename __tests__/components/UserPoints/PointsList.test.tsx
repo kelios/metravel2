@@ -41,15 +41,15 @@ jest.mock('@/api/userPoints', () => ({
   },
 }));
 
-jest.mock('@/api/misc', () => ({
-  fetchFilters: jest.fn(),
+jest.mock('@/api/miscOptimized', () => ({
+  fetchAllFiltersOptimized: jest.fn(),
 }));
 
 describe('PointsList (manual create)', () => {
   const mockGetPoints = require('@/api/userPoints').userPointsApi.getPoints as jest.Mock;
   const mockCreatePoint = require('@/api/userPoints').userPointsApi.createPoint as jest.Mock;
   const mockPurgePoints = require('@/api/userPoints').userPointsApi.purgePoints as jest.Mock;
-  const mockFetchFilters = require('@/api/misc').fetchFilters as jest.Mock;
+  const mockFetchFilters = require('@/api/miscOptimized').fetchAllFiltersOptimized as jest.Mock;
 
   const renderWithClient = () => {
     const client = new QueryClient({
@@ -106,7 +106,7 @@ describe('PointsList (manual create)', () => {
 
   const selectCategory = async (id: string) => {
     const triggers = screen.getAllByLabelText('Открыть выбор');
-    // order: Color, Category, Status
+    // Manual modal has a single multiselect: Category.
     fireEvent.press(triggers[0]);
 
     const item = await screen.findByTestId(`simple-multiselect.item.${id}`);

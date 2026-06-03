@@ -15,14 +15,18 @@ import {
   normalizeTravelCategories,
   normalizeCategoryTravelAddress,
 } from '@/hooks/useTravelFilters';
-import { fetchFilters, fetchAllCountries } from '@/api/misc';
+import { fetchAllCountries } from '@/api/misc';
+import { fetchFiltersOptimized } from '@/api/miscOptimized';
 
 jest.mock('@/api/misc', () => ({
-  fetchFilters: jest.fn(),
   fetchAllCountries: jest.fn(),
 }));
 
-const mockFetchFilters = fetchFilters as jest.Mock;
+jest.mock('@/api/miscOptimized', () => ({
+  fetchFiltersOptimized: jest.fn(),
+}));
+
+const mockFetchFilters = fetchFiltersOptimized as jest.Mock;
 const mockFetchAllCountries = fetchAllCountries as jest.Mock;
 
 describe('initFilters', () => {

@@ -319,12 +319,6 @@ describe('CommentItem', () => {
     });
 
     it('should handle delete with confirmation', async () => {
-      const Alert = require('react-native').Alert;
-      Alert.alert = jest.fn((title, message, buttons) => {
-        // Симулируем нажатие кнопки "Удалить"
-        buttons[1].onPress();
-      });
-
       const mutateMock = jest.fn();
       mockUseDeleteComment.mockReturnValue({
         mutate: mutateMock,
@@ -339,19 +333,15 @@ describe('CommentItem', () => {
       const deleteButton = screen.getByLabelText('Удалить комментарий');
       fireEvent.press(deleteButton);
 
+      const confirmButton = await screen.findByLabelText('Удалить');
+      fireEvent.press(confirmButton);
+
       await waitFor(() => {
-        expect(Alert.alert).toHaveBeenCalled();
         expect(mutateMock).toHaveBeenCalledWith(1);
       });
     });
 
     it('should not delete if confirmation cancelled', async () => {
-      const Alert = require('react-native').Alert;
-      Alert.alert = jest.fn((_title, _message, _buttons) => {
-        // Симулируем нажатие кнопки "Отмена"
-        // Не вызываем никакой callback
-      });
-
       const mutateMock = jest.fn();
       mockUseDeleteComment.mockReturnValue({
         mutate: mutateMock,
@@ -366,8 +356,10 @@ describe('CommentItem', () => {
       const deleteButton = screen.getByLabelText('Удалить комментарий');
       fireEvent.press(deleteButton);
 
+      const cancelButton = await screen.findByLabelText('Отмена');
+      fireEvent.press(cancelButton);
+
       await waitFor(() => {
-        expect(Alert.alert).toHaveBeenCalled();
         expect(mutateMock).not.toHaveBeenCalled();
       });
     });
@@ -488,12 +480,6 @@ describe('CommentItem', () => {
     });
 
     it('should be able to delete any comment', async () => {
-      const Alert = require('react-native').Alert;
-      Alert.alert = jest.fn((title, message, buttons) => {
-        // Симулируем нажатие кнопки "Удалить"
-        buttons[1].onPress();
-      });
-
       const mutateMock = jest.fn();
       mockUseDeleteComment.mockReturnValue({
         mutate: mutateMock,
@@ -507,6 +493,9 @@ describe('CommentItem', () => {
 
       const deleteButton = screen.getByLabelText('Удалить комментарий (Админ)');
       fireEvent.press(deleteButton);
+
+      const confirmButton = await screen.findByLabelText('Удалить');
+      fireEvent.press(confirmButton);
 
       await waitFor(() => {
         expect(mutateMock).toHaveBeenCalledWith(1);

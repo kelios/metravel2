@@ -53,7 +53,7 @@ describe('useRouletteLogic', () => {
 
     // react-query useQuery: immediately call queryFn and return data
     useQuery.mockImplementation(({ queryFn }: any) => {
-      const data = queryFn();
+      const data = queryFn({ signal: undefined });
       return {
         data,
         isLoading: false,
