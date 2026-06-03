@@ -112,9 +112,10 @@ export function useMapWebLayoutEffects({
       rafId = requestAnimationFrame(() => safeInvalidate())
     }
 
-    const t1 = setTimeout(scheduleInvalidate, 50)
-    const t2 = setTimeout(scheduleInvalidate, 250)
-    const t3 = setTimeout(scheduleInvalidate, 1000)
+    // A single deferred pass after layout settles replaces the previous
+    // 50/250/1000ms cascade. scheduleInvalidate already coalesces onto one rAF,
+    // so any resize/observer event during this window collapses into one call.
+    const t1 = setTimeout(scheduleInvalidate, 250)
 
     const element = document.getElementById(mapContainerId)
     let resizeObserver: ResizeObserver | null = null
@@ -131,6 +132,9 @@ export function useMapWebLayoutEffects({
       }
     }
 
+    // Prefer ResizeObserver (already rAF-coalesced via scheduleInvalidate) and
+    // avoid attaching a duplicate window 'resize' listener that would invalidate
+    // the same map twice per resize.
     if (element && typeof (window as any).ResizeObserver !== 'undefined') {
       resizeObserver = new ResizeObserver(() => scheduleInvalidate())
       try {
@@ -149,8 +153,6 @@ export function useMapWebLayoutEffects({
 
     return () => {
       clearTimeout(t1)
-      clearTimeout(t2)
-      clearTimeout(t3)
       try {
         resizeObserver?.disconnect()
       } catch {
@@ -268,7 +270,10 @@ export function useMapWebLayoutEffects({
 
     let cancelled = false
     let timeoutId: ReturnType<typeof setTimeout> | null = null
+    let resizeObserver: ResizeObserver | null = null
 
+    // Cheap, layout-read-free check: Leaflet's own cached size. Avoids forced
+    // synchronous layout (getBoundingClientRect) on the hot retry path.
     const hasZeroSizedMap = () => {
       try {
         const size = typeof map.getSize === 'function' ? map.getSize() : null
@@ -278,42 +283,67 @@ export function useMapWebLayoutEffects({
       } catch {
         return true
       }
-
-      const tilePane = element.querySelector('.leaflet-tile-pane') as HTMLElement | null
-      const markerPane = element.querySelector('.leaflet-marker-pane') as HTMLElement | null
-      const tileRect = tilePane?.getBoundingClientRect?.()
-      const markerRect = markerPane?.getBoundingClientRect?.()
-
-      const tileZero = tileRect ? tileRect.width <= 0 || tileRect.height <= 0 : false
-      const markerZero = markerRect ? markerRect.width <= 0 || markerRect.height <= 0 : false
-
-      return tileZero || markerZero
+      return false
     }
 
-    const attemptInvalidate = (attempt: number) => {
-      if (cancelled) return
-
+    const invalidate = () => {
       try {
         map.invalidateSize?.({ animate: false, pan: false } as any)
       } catch {
         // noop
       }
+    }
 
-      if (!hasZeroSizedMap()) return
-      if (attempt >= 14) return
+    const stop = () => {
+      cancelled = true
+      try {
+        resizeObserver?.disconnect()
+      } catch {
+        // noop
+      }
+      resizeObserver = null
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+        timeoutId = null
+      }
+    }
 
+    // Bounded fallback for environments without ResizeObserver, or if the
+    // container is still collapsed after observation. Far fewer attempts than
+    // the previous 14-step busy loop and no per-attempt layout reads.
+    const attemptInvalidate = (attempt: number) => {
+      if (cancelled) return
+      invalidate()
+      if (!hasZeroSizedMap()) {
+        stop()
+        return
+      }
+      if (attempt >= 5) return
       timeoutId = setTimeout(() => {
         requestAnimationFrame(() => attemptInvalidate(attempt + 1))
-      }, attempt < 4 ? 90 : 180)
+      }, 120)
     }
 
     if (hasZeroSizedMap()) {
+      // Prefer reacting to the container actually gaining a size instead of
+      // polling: a single invalidate when ResizeObserver reports the element.
+      if (typeof (window as any).ResizeObserver !== 'undefined') {
+        resizeObserver = new ResizeObserver(() => {
+          if (cancelled) return
+          invalidate()
+          if (!hasZeroSizedMap()) stop()
+        })
+        try {
+          resizeObserver.observe(element)
+        } catch {
+          // noop
+        }
+      }
       requestAnimationFrame(() => attemptInvalidate(0))
     }
 
     return () => {
-      cancelled = true
-      if (timeoutId) clearTimeout(timeoutId)
+      stop()
     }
   }, [mapContainerId, mapInstance, mapRef])
 

@@ -1,4 +1,4 @@
-const isPrivateOrLocalHost = (host: string): boolean => {
+export const isPrivateOrLocalHost = (host: string): boolean => {
   const normalized = String(host || '').trim().toLowerCase();
   if (!normalized) return false;
   if (normalized === 'localhost' || normalized === '127.0.0.1') return true;

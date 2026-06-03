@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { strToLatLng } from './utils';
 
@@ -46,14 +46,57 @@ const metersToLngDegrees = (meters: number, atLat: number) => {
   return meters / (111_320 * cos);
 };
 
+// Reduce a continuous zoom value to the discrete signal that actually affects
+// clustering output: the radius bucket plus the expand-threshold flag. Two zoom
+// values that map to the same signal produce identical clusters.
+const getClusterZoomSignal = (zoom: number) =>
+  `${getClusterRadiusMetersForZoom(zoom)}|${zoom >= CLUSTER_EXPAND_ZOOM ? 1 : 0}`;
+
+// Coalesce rapid zoom changes (scroll-zoom) onto the next animation frame so the
+// heavy clustering memo runs once the zoom settles instead of on every tick.
+function useDebouncedZoom(mapZoom: number) {
+  const [debouncedZoom, setDebouncedZoom] = useState(mapZoom);
+  const lastSignalRef = useRef(getClusterZoomSignal(mapZoom));
+
+  useEffect(() => {
+    const nextSignal = getClusterZoomSignal(mapZoom);
+    // No change in the discrete clustering signal: keep the previous debounced
+    // zoom so the clustering memo's dependencies stay referentially stable.
+    if (nextSignal === lastSignalRef.current) return;
+
+    const canRaf =
+      typeof requestAnimationFrame === 'function' && typeof cancelAnimationFrame === 'function';
+
+    const commit = () => {
+      lastSignalRef.current = getClusterZoomSignal(mapZoom);
+      setDebouncedZoom(mapZoom);
+    };
+
+    if (canRaf) {
+      const id = requestAnimationFrame(commit);
+      return () => cancelAnimationFrame(id);
+    }
+
+    const id = setTimeout(commit, 16);
+    return () => clearTimeout(id);
+  }, [mapZoom]);
+
+  return debouncedZoom;
+}
+
 export function useClustering(
   points: Point[],
   mapZoom: number,
   hintCenter?: { lat: number; lng: number } | null
 ) {
+  const debouncedZoom = useDebouncedZoom(mapZoom);
+
   const shouldCluster = points.length > CLUSTER_THRESHOLD;
-  const clusterRadiusMeters = useMemo(() => getClusterRadiusMetersForZoom(mapZoom), [mapZoom]);
-  const expandClusters = mapZoom >= CLUSTER_EXPAND_ZOOM;
+  const clusterRadiusMeters = useMemo(
+    () => getClusterRadiusMetersForZoom(debouncedZoom),
+    [debouncedZoom]
+  );
+  const expandClusters = debouncedZoom >= CLUSTER_EXPAND_ZOOM;
   const shouldRenderClusters = shouldCluster && !expandClusters;
 
   const clusters = useMemo<ClusterItem[]>(() => {

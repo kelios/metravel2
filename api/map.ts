@@ -6,6 +6,7 @@ import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { Platform } from 'react-native';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
+import { isPrivateOrLocalHost } from '@/utils/mediaUrl';
 
 const normalizeCoordString = (value: unknown): string | undefined => {
   if (typeof value !== 'string') return undefined;
@@ -50,13 +51,7 @@ const normalizeImageUrl = (value: unknown): string => {
     try {
       const parsed = new URL(url);
       const host = String(parsed.hostname || '').trim().toLowerCase();
-      const isPrivateOrLocal =
-        host === 'localhost' ||
-        host === '127.0.0.1' ||
-        /^10\./.test(host) ||
-        /^192\.168\./.test(host) ||
-        /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
-      if (!isPrivateOrLocal) {
+      if (!isPrivateOrLocalHost(host)) {
         return url.replace(/^http:\/\//i, 'https://');
       }
     } catch {

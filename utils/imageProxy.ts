@@ -2,7 +2,7 @@
 // J4: Image URL proxy/optimization (extracted from imageOptimization.ts)
 
 import { Platform } from 'react-native';
-import { normalizeAbsoluteMediaUrl } from '@/utils/mediaUrl';
+import { normalizeAbsoluteMediaUrl, isPrivateOrLocalHost } from '@/utils/mediaUrl';
 
 export interface ImageOptimizationOptions {
   width?: number;
@@ -18,16 +18,6 @@ const optimizedUrlCache = new Map<string, string>();
 const MAX_CACHE_SIZE = 400;
 const OPTIMIZATION_QUERY_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'dpr', 'blur'];
 const MEDIA_FILE_PATH = /^\/(gallery|travel-image|travel-description-image|address-image)\/(?:[^?#]*\/conversions\/|\d+\/(gallery|travel-image|travel-description-image|address-image)\/|[^/?#]+$)/i;
-
-const isPrivateOrLocalHost = (host: string): boolean => {
-  const h = String(host || '').trim().toLowerCase();
-  if (!h) return false;
-  if (h === 'localhost' || h === '127.0.0.1') return true;
-  if (/^10\./.test(h)) return true;
-  if (/^192\.168\./.test(h)) return true;
-  if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(h)) return true;
-  return false;
-};
 
 const getPublicApiOrigin = (): string | null => {
   try {

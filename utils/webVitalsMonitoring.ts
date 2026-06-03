@@ -30,6 +30,19 @@ export interface WebVitalsMetrics {
 export type PerformanceCallback = (metrics: WebVitalsMetrics) => void;
 
 /**
+ * Нестандартные поля PerformanceEntry, которых нет в стандартных lib.dom типах
+ * (largest-contentful-paint / first-input / layout-shift / event timing).
+ */
+interface PerfEntryExtras extends PerformanceEntry {
+  renderTime?: number;
+  loadTime?: number;
+  processingDuration?: number;
+  hadRecentInput?: boolean;
+  value?: number;
+  interactionId?: number;
+}
+
+/**
  * Performance monitor instance
  */
 interface PerformanceMonitor {
@@ -94,7 +107,8 @@ function trackLCP(): void {
       const entries = list.getEntries();
       const lastEntry = entries[entries.length - 1];
 
-      const lcp = (lastEntry as any).renderTime ?? (lastEntry as any).loadTime ?? lastEntry?.startTime ?? 0;
+      const lcpEntry = lastEntry as PerfEntryExtras | undefined;
+      const lcp = lcpEntry?.renderTime ?? lcpEntry?.loadTime ?? lcpEntry?.startTime ?? 0;
       monitor.metrics.lcp = lcp;
       notifyCallbacks();
     });
@@ -117,8 +131,8 @@ function trackFID(): void {
     const observer = new PerformanceObserver((list) => {
       const entries = list.getEntries();
 
-      entries.forEach((entry: any) => {
-        const fid = entry.processingDuration;
+      entries.forEach((entry: PerfEntryExtras) => {
+        const fid = entry.processingDuration ?? 0;
         monitor.metrics.fid = Math.min(monitor.metrics.fid || fid, fid);
         notifyCallbacks();
       });
@@ -142,10 +156,10 @@ function trackCLS(): void {
 
   try {
     const observer = new PerformanceObserver((list) => {
-      list.getEntries().forEach((entry: any) => {
+      list.getEntries().forEach((entry: PerfEntryExtras) => {
         if (!entry.hadRecentInput) {
           // Only count shifts without recent input
-          clsValue += entry.value;
+          clsValue += entry.value ?? 0;
           monitor.metrics.cls = clsValue;
           notifyCallbacks();
         }
@@ -170,7 +184,7 @@ function trackINP(): void {
     const interactionDurations = new Map<number, number>();
 
     const observer = new PerformanceObserver((list) => {
-      list.getEntries().forEach((entry: any) => {
+      list.getEntries().forEach((entry: PerfEntryExtras) => {
         const duration = entry.duration || 0;
         const interactionId = entry.interactionId || 0;
 

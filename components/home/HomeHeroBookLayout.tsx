@@ -582,14 +582,20 @@ export default function HomeHeroBookLayout({
                   onPress={onOpenSearch}
                   label="Смотреть маршруты"
                   loading={pendingAction === 'search'}
-                  variant="secondary"
+                  variant="primary"
                   size="md"
                   fullWidth={useStackedCtas}
-                  icon={<Feather name="compass" size={16} color={colors.text} />}
-                  style={[styles.secondaryButton, styles.singleCtaButton]}
-                  labelStyle={styles.secondaryButtonText}
-                  hoverStyle={styles.secondaryButtonHover}
-                  pressedStyle={styles.secondaryButtonHover}
+                  icon={
+                    <Feather
+                      name="compass"
+                      size={16}
+                      color={colors.textOnPrimary}
+                    />
+                  }
+                  style={[styles.primaryButton, styles.singleCtaButton]}
+                  labelStyle={styles.primaryButtonText}
+                  hoverStyle={styles.primaryButtonHover}
+                  pressedStyle={styles.primaryButtonHover}
                   accessibilityLabel="Смотреть маршруты"
                 />
               </View>

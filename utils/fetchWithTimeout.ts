@@ -60,10 +60,11 @@ export async function fetchWithTimeout(
             response = await runFetch();
         }
         return response;
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const errObj = error as { code?: string; message?: string; name?: string } | null;
         const isPrematureCloseError =
-            error?.code === 'ERR_STREAM_PREMATURE_CLOSE' ||
-            error?.message === 'Premature close';
+            errObj?.code === 'ERR_STREAM_PREMATURE_CLOSE' ||
+            errObj?.message === 'Premature close';
 
         // In Node (SSR/tests/scripts), abrupt socket closure can bubble up as
         // ERR_STREAM_PREMATURE_CLOSE. Treat it as a transient network failure
@@ -79,16 +80,16 @@ export async function fetchWithTimeout(
 
         // Browsers often throw `TypeError: Failed to fetch` for DNS/connection/CORS issues.
         // Provide a more actionable message while preserving the original error as a cause.
-        const message = String(error?.message ?? '');
+        const message = String(errObj?.message ?? '');
         if (error instanceof TypeError && /failed to fetch/i.test(message)) {
             const err = new Error(
                 `Network error while fetching ${url}. ` +
                   `Is the API server running and reachable from this device/browser?`
             );
-            (err as any).cause = error;
+            (err as Error & { cause?: unknown }).cause = error;
             throw err;
         }
-        if (error.name === 'AbortError') {
+        if (errObj?.name === 'AbortError') {
             // Если отмена произошла из-за внешнего signal, пробрасываем оригинальную ошибку
             if (externalSignal?.aborted) {
                 throw error;

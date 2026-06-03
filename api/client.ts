@@ -158,6 +158,43 @@ class ApiClient {
         return await getSecureItem(TOKEN_KEY);
     }
 
+    /**
+     * Строит заголовки запроса: опциональные defaultHeaders + Authorization (если есть токен)
+     * + переданные extra. Поведение идентично прежним inline-литералам:
+     * пустой/нулевой токен не добавляет Authorization.
+     */
+    private authHeaders(
+        token: string | null,
+        options: { includeDefaults?: boolean; extra?: HeadersInit } = {}
+    ): HeadersInit {
+        const { includeDefaults = false, extra } = options;
+        return {
+            ...(includeDefaults ? this.defaultHeaders : {}),
+            ...(token ? { Authorization: `Token ${token}` } : {}),
+            ...extra,
+        };
+    }
+
+    /** Пытается распарсить тело ошибки как JSON, иначе возвращает исходный текст. */
+    private parseErrorBody(text: string): unknown {
+        try {
+            return JSON.parse(text);
+        } catch {
+            return text;
+        }
+    }
+
+    /** Читает тело ответа-ошибки и бросает ApiError с человекочитаемым сообщением. */
+    private async throwDetailedError(response: Response): Promise<never> {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        const errorData = this.parseErrorBody(errorText);
+        throw new ApiError(
+            response.status,
+            getApiErrorMessage(errorData, response.statusText),
+            errorData
+        );
+    }
+
     private async parseSuccessResponse<T>(response: Response): Promise<T> {
         if (response.status === 204) {
             return null as T;
@@ -260,11 +297,7 @@ class ApiClient {
         }
 
         const token = skipAuth ? null : await this.getAccessToken();
-        const headers: HeadersInit = {
-            ...this.defaultHeaders,
-            ...(token && { Authorization: `Token ${token}` }),
-            ...options.headers,
-        };
+        const headers = this.authHeaders(token, { includeDefaults: true, extra: options.headers });
 
         try {
             const response = await fetchWithTimeout(
@@ -323,10 +356,10 @@ class ApiClient {
                     // падают из‑за устаревшего/некорректного токена в хранилище.
                     await this.clearTokens();
 
-                    const fallbackHeaders: HeadersInit = {
-                        ...this.defaultHeaders,
-                        ...options.headers,
-                    };
+                    const fallbackHeaders = this.authHeaders(null, {
+                        includeDefaults: true,
+                        extra: options.headers,
+                    });
                     const fallbackResponse = await fetchWithTimeout(
                         `${this.baseURL}${endpoint}`,
                         { ...options, headers: fallbackHeaders },
@@ -334,19 +367,7 @@ class ApiClient {
                     );
 
                     if (!fallbackResponse.ok) {
-                        const errorText = await fallbackResponse.text().catch(() => 'Unknown error');
-                        let errorData;
-                        try {
-                            errorData = JSON.parse(errorText);
-                        } catch {
-                            errorData = errorText;
-                        }
-
-                        throw new ApiError(
-                            fallbackResponse.status,
-                            getApiErrorMessage(errorData, fallbackResponse.statusText),
-                            errorData
-                        );
+                        await this.throwDetailedError(fallbackResponse);
                     }
 
                     return await this.parseSuccessResponse<T>(fallbackResponse);
@@ -354,19 +375,7 @@ class ApiClient {
             }
 
             if (!response.ok) {
-                const errorText = await response.text().catch(() => 'Unknown error');
-                let errorData;
-                try {
-                    errorData = JSON.parse(errorText);
-                } catch {
-                    errorData = errorText;
-                }
-
-                throw new ApiError(
-                    response.status,
-                    getApiErrorMessage(errorData, response.statusText),
-                    errorData
-                );
+                await this.throwDetailedError(response);
             }
 
             // Если ответ пустой (204 No Content), возвращаем null
@@ -432,20 +441,12 @@ class ApiClient {
         }
 
         const token = await this.getAccessToken();
-        const headers: HeadersInit = {
-            ...(token && { Authorization: `Token ${token}` }),
-            ...options.headers,
-        };
+        const headers = this.authHeaders(token, { extra: options.headers });
 
         const handle = async (resp: Response): Promise<DownloadResponse> => {
             if (!resp.ok) {
                 const errorText = await resp.text().catch(() => 'Unknown error');
-                let errorData: unknown = errorText;
-                try {
-                    errorData = JSON.parse(errorText);
-                } catch {
-                    // keep raw
-                }
+                const errorData: unknown = this.parseErrorBody(errorText);
                 throw new ApiError(
                     resp.status,
                     getErrorTextField(errorData, 'message') ||
@@ -491,9 +492,7 @@ class ApiClient {
                     return await handle(retryResp);
                 } catch {
                     await this.clearTokens();
-                    const fallbackHeaders: HeadersInit = {
-                        ...options.headers,
-                    };
+                    const fallbackHeaders = this.authHeaders(null, { extra: options.headers });
                     const fallbackResp = await fetchWithTimeout(
                         `${this.baseURL}${endpoint}`,
                         { ...options, method: options.method || 'GET', headers: fallbackHeaders },
@@ -600,9 +599,7 @@ class ApiClient {
         timeout: number = LONG_TIMEOUT
     ): Promise<T> {
         const token = await this.getAccessToken();
-        const headers: HeadersInit = {
-            ...(token && { Authorization: `Token ${token}` }),
-        };
+        const headers = this.authHeaders(token);
 
         try {
             const response = await this.fetchUploadWithTransientRetry(
@@ -743,9 +740,7 @@ class ApiClient {
         method: string,
         timeout: number
     ): Promise<T> {
-        const headers: HeadersInit = {
-            ...(token && { Authorization: `Token ${token}` }),
-        };
+        const headers = this.authHeaders(token);
 
         try {
             const response = await this.fetchUploadWithTransientRetry(

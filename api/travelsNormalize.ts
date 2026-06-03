@@ -2,6 +2,7 @@
 // Travel data normalization utilities extracted from travelsApi.ts (task A2)
 
 import { Travel } from '@/types/types';
+import { isPrivateOrLocalHost } from '@/utils/mediaUrl';
 
 export type MyTravelsItem = Record<string, unknown>;
 export type MyTravelsPayload =
@@ -16,16 +17,6 @@ export type MyTravelsPayload =
 
 const asRecord = (value: unknown): Record<string, unknown> =>
     value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
-
-const isPrivateOrLocalHost = (host: string): boolean => {
-    const normalizedHost = String(host || '').trim().toLowerCase();
-    if (!normalizedHost) return false;
-    return normalizedHost === 'localhost' ||
-        normalizedHost === '127.0.0.1' ||
-        /^10\./.test(normalizedHost) ||
-        /^192\.168\./.test(normalizedHost) ||
-        /^172\.(1[6-9]|2\d|3[0-1])\./.test(normalizedHost);
-};
 
 const getPositiveNumericId = (value: unknown): number | null => {
     const n = typeof value === 'number' ? value : Number(value);
