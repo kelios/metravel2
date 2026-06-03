@@ -143,6 +143,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const scrollRef = useRef<ScrollView | null>(null);
     const missingBannerAnchorRef = useRef<View | null>(null);
     const buttonErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const missingBannerScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [primaryOverrideLabel, setPrimaryOverrideLabel] = useState<string | null>(null);
     const instagramOAuthResolution = useMemo(() => getInstagramOAuthResolution(), []);
 
@@ -171,6 +172,10 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             if (buttonErrorTimeoutRef.current) {
                 clearTimeout(buttonErrorTimeoutRef.current);
                 buttonErrorTimeoutRef.current = null;
+            }
+            if (missingBannerScrollTimerRef.current) {
+                clearTimeout(missingBannerScrollTimerRef.current);
+                missingBannerScrollTimerRef.current = null;
             }
         };
     }, []);
@@ -201,7 +206,9 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         const anchorHandle = findNodeHandle(anchorNode);
         if (!scrollHandle || !anchorHandle) return;
 
-        setTimeout(() => {
+        if (missingBannerScrollTimerRef.current) clearTimeout(missingBannerScrollTimerRef.current);
+        missingBannerScrollTimerRef.current = setTimeout(() => {
+            missingBannerScrollTimerRef.current = null;
             UIManager.measureLayout(
                 anchorHandle,
                 scrollHandle,
@@ -312,6 +319,9 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             const saved = await onManualSave(nextForm);
             const resolvedId = (saved as any)?.id ?? (nextForm as any)?.id ?? null;
             if (!resolvedId) {
+                // Сохранение не дало id — откатываем оптимистичный publish=true,
+                // иначе UI покажет «на модерации», хотя ничего не отправлено.
+                setFormData(previousForm);
                 void showToastMessage({
                     type: 'error',
                     text1: 'Не удалось отправить',
@@ -366,6 +376,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             const saved = await onManualSave(nextForm);
             const resolvedId = (saved as any)?.id ?? (nextForm as any)?.id ?? null;
             if (!resolvedId) {
+                // Откатываем оптимистичный moderation/publish=true при неуспешном сохранении.
+                setFormData(previousForm);
                 void showToastMessage({
                     type: 'error',
                     text1: 'Не удалось сохранить',
@@ -414,6 +426,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             const saved = await onManualSave(nextForm);
             const resolvedId = (saved as any)?.id ?? (nextForm as any)?.id ?? null;
             if (!resolvedId) {
+                // Откатываем оптимистичный moderation/publish=false при неуспешном сохранении.
+                setFormData(previousForm);
                 void showToastMessage({
                     type: 'error',
                     text1: 'Не удалось сохранить',
