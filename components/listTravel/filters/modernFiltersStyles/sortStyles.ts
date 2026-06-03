@@ -140,7 +140,7 @@ export const createSortStyles = (ctx: StylesCtx) => {
       justifyContent: 'center',
     },
     sortOptionTextSelected: {
-      color: colors.brandDark,
+      color: colors.brandText,
       fontWeight: typography.weights.semibold as any,
     },
   } as const

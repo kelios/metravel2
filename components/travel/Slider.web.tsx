@@ -459,9 +459,8 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           <View
             ref={viewportRef}
             testID="slider-scroll"
-            accessibilityRole="adjustable"
-            accessibilityValue={{ min: 0, max: Math.max(0, images.length - 1), now: currentIndex }}
             accessibilityLabel="Галерея изображений"
+            {...({ role: 'group', 'aria-roledescription': 'carousel' } as any)}
             {...dataSetSliderId}
             style={[styles.carouselViewport, { height: containerHeight }, viewportTouchAction]}
           >
