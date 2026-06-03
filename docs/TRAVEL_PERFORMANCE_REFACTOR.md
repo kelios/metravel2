@@ -484,6 +484,18 @@ Production build после delayed comments fallback:
 - закрепить performance budget для travel route;
 - документировать финальные thresholds в `docs/`, а не во временных заметках.
 
+Статус: реализован статический bundle-budget guard.
+
+- Скрипт: `scripts/guard-bundle-budget.js`. Читает чанки prod-сборки из `dist/prod/_expo/static/js/web/*.js`, группирует их по логическому имени (без content-hash), считает raw + gzip и сравнивает с бюджетом.
+- Бюджет: `config/bundle-budget.json` — кураторский набор critical-path чанков (`entry`, `__common`, `index`, `[param]` travel route, `Map`, `TravelDetailsMapSection`, `TravelDetailsPostLcpRuntime`, `TravelDetailsFooterSection`, `TravelDetailsSidebarSection`, `CommentsSection`) плюс агрегатный `total`. Допуск `tolerancePct: 10`.
+- npm-скрипты:
+  - `npm run guard:bundle-budget` — отчёт (exit 0);
+  - `npm run guard:bundle-budget:fail` — exit 1 при любом превышении (для CI/preflight, требует свежий `npm run build:web:prod`);
+  - `npm run guard:bundle-budget:update` — пересобрать снимок бюджета из текущей сборки (затем при необходимости пере-курировать ключи).
+- Baseline на момент закрепления: `total` ≈ `9322 KB` raw / `2356 KB` gzip (114 чанков); `entry` ≈ `1025 KB` raw / `278 KB` gzip; `__common` ≈ `3318 KB` raw / `816 KB` gzip; `[param]` (travel route) ≈ `163 KB` raw / `43 KB` gzip.
+- Чанк, который исчез или переименован, не считается регрессом размера (пропускается) — guard ловит только рост существующих бюджетированных чанков и общего payload.
+- Дополняет уже существующие чекеры: e2e `e2e/travel-details-perf-budget.spec.ts` (runtime LCP/TBT/CLS/transfer) и lighthouse-скрипты (`npm run lighthouse:travel:*`).
+
 ## 8. Технические принципы внедрения
 
 1. Не делать big bang rewrite.

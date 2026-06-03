@@ -1,0 +1,50 @@
+{
+  "description": "Web bundle size budget (KB). Stage 7 regression guard for the travel-route perf refactor (docs/TRAVEL_PERFORMANCE_REFACTOR.md). Tracks core + travel-route critical-path chunks and the total JS payload. Regenerate the full snapshot with: node scripts/guard-bundle-budget.js --update (then re-curate keys).",
+  "tolerancePct": 10,
+  "total": {
+    "maxRawKB": 9321.6,
+    "maxGzipKB": 2355.6
+  },
+  "chunks": {
+    "entry": {
+      "maxRawKB": 1024.8,
+      "maxGzipKB": 277.7
+    },
+    "__common": {
+      "maxRawKB": 3318.3,
+      "maxGzipKB": 816.2
+    },
+    "index": {
+      "maxRawKB": 197.1,
+      "maxGzipKB": 52.3
+    },
+    "[param]": {
+      "maxRawKB": 162.6,
+      "maxGzipKB": 43.2
+    },
+    "Map": {
+      "maxRawKB": 103.4,
+      "maxGzipKB": 30.1
+    },
+    "TravelDetailsMapSection": {
+      "maxRawKB": 100.4,
+      "maxGzipKB": 24.3
+    },
+    "TravelDetailsPostLcpRuntime": {
+      "maxRawKB": 12.6,
+      "maxGzipKB": 4.2
+    },
+    "TravelDetailsFooterSection": {
+      "maxRawKB": 13.9,
+      "maxGzipKB": 3.6
+    },
+    "TravelDetailsSidebarSection": {
+      "maxRawKB": 11.9,
+      "maxGzipKB": 3.6
+    },
+    "CommentsSection": {
+      "maxRawKB": 83.8,
+      "maxGzipKB": 16.5
+    }
+  }
+}
