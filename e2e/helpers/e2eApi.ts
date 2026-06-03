@@ -52,6 +52,30 @@ function tokenFromStorageState(): string {
   return '';
 }
 
+function userIdFromStorageState(): string | null {
+  try {
+    const raw = fs.readFileSync(storageStatePath(), 'utf8');
+    const json = JSON.parse(raw) as any;
+    const origins = Array.isArray(json?.origins) ? json.origins : [];
+    for (const origin of origins) {
+      const ls = Array.isArray(origin?.localStorage) ? origin.localStorage : [];
+      const entry = ls.find((x: any) => x?.name === 'userId' || x?.name === 'secure_userId');
+      const value = String(entry?.value ?? '').trim();
+      if (value) {
+        // secure_userId may be encrypted the same way as secure_userToken.
+        if (entry?.name === 'secure_userId') {
+          const decrypted = simpleDecrypt(value, 'metravel_encryption_key_v1').trim();
+          return decrypted || value;
+        }
+        return value;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
 function normalizeToken(raw: string): string {
   const v = String(raw || '').trim();
   if (!v) return '';
@@ -124,7 +148,7 @@ export async function apiContextFromEnv(): Promise<E2EApiContext | null> {
   // the token used by the live UI session (TD-028).
   const tokenFromState = tokenFromStorageState();
   if (tokenFromState) {
-    return { apiBase, token: tokenFromState, userId: null };
+    return { apiBase, token: tokenFromState, userId: userIdFromStorageState() };
   }
 
   // (c) Only if no storageState token exists, fall back to a memoized login.

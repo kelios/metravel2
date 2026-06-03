@@ -30,22 +30,18 @@ jest.mock('@playwright/test', () => ({
   }),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { apiContextFromEnv } = require('@/e2e/helpers/e2eApi') as typeof import('@/e2e/helpers/e2eApi');
 
 const STORAGE_TOKEN = 'storage-state-token-abc';
 
-function writeStorageState(token: string): string {
+function writeStorageState(token: string, userId?: string): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'e2e-storage-'));
   const file = path.join(dir, 'storageState.json');
-  const json = {
-    origins: [
-      {
-        origin: 'http://localhost',
-        localStorage: [{ name: 'secure_userToken', value: token }],
-      },
-    ],
-  };
+  const localStorage: Array<{ name: string; value: string }> = [
+    { name: 'secure_userToken', value: token },
+  ];
+  if (userId) localStorage.push({ name: 'userId', value: userId });
+  const json = { origins: [{ origin: 'http://localhost', localStorage }] };
   fs.writeFileSync(file, JSON.stringify(json), 'utf8');
   return file;
 }
@@ -106,6 +102,18 @@ describe('apiContextFromEnv priorities (TD-028)', () => {
     expect(ctx?.token).toBe(STORAGE_TOKEN);
     expect(ctx?.apiBase).toBe('https://api.example.test');
     // The core TD-028 assertion: no login network call happened.
+    expect(mockNewContext).not.toHaveBeenCalled();
+  });
+
+  it('(b) recovers userId from storageState so owner-aware specs keep their behavior', async () => {
+    process.env.E2E_EMAIL = 'shared@example.test';
+    process.env.E2E_PASSWORD = 'secret';
+    process.env.E2E_STORAGE_STATE_PATH = writeStorageState(STORAGE_TOKEN, '4242');
+
+    const ctx = await apiContextFromEnv();
+
+    expect(ctx?.token).toBe(STORAGE_TOKEN);
+    expect(ctx?.userId).toBe('4242');
     expect(mockNewContext).not.toHaveBeenCalled();
   });
 
