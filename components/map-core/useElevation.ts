@@ -8,7 +8,28 @@ import type { TransportMode } from './types';
 // ---------------------------------------------------------------------------
 
 const MAX_ELEVATION_SAMPLES = 60;
+const MAX_ELEVATION_CACHE_ENTRIES = 50;
 const elevationCache = new Map<string, { gain: number; loss: number }>();
+
+const elevationCacheGet = (key: string) => {
+  const value = elevationCache.get(key);
+  if (value !== undefined) {
+    // Refresh recency (move to end) for LRU ordering.
+    elevationCache.delete(key);
+    elevationCache.set(key, value);
+  }
+  return value;
+};
+
+const elevationCacheSet = (key: string, value: { gain: number; loss: number }) => {
+  elevationCache.delete(key);
+  if (elevationCache.size >= MAX_ELEVATION_CACHE_ENTRIES) {
+    const oldest = elevationCache.keys().next().value;
+    if (oldest !== undefined) elevationCache.delete(oldest);
+  }
+  elevationCache.set(key, value);
+};
+
 let elevationNextAllowedAtMs = 0;
 let elevationLastAttemptAtMs = 0;
 const ELEVATION_MIN_INTERVAL_MS = 1500;
@@ -108,7 +129,7 @@ export const useElevation = (
     const longitudes = sampled.map((p) => Number(p[0]).toFixed(5)).join(',');
 
     const cacheKey = `${transportMode}:${latitudes}:${longitudes}`;
-    const cached = elevationCache.get(cacheKey);
+    const cached = elevationCacheGet(cacheKey);
     if (cached) {
       try {
         onResultRef.current(cached.gain, cached.loss);
@@ -148,7 +169,7 @@ export const useElevation = (
         if (cancelled) return;
 
         const stats = computeElevationGainLoss(elevations.map((x: any) => Number(x)));
-        elevationCache.set(cacheKey, stats);
+        elevationCacheSet(cacheKey, stats);
         try {
           onResultRef.current(stats.gain, stats.loss);
         } catch {

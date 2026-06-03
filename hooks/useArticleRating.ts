@@ -4,6 +4,7 @@
 import { useCallback, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { rateArticle, getArticleRating, ArticleRatingResponse } from '@/api/articleRating';
+import { queryKeys } from '@/api/queryKeys';
 import { useAuth } from '@/context/AuthContext';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { showToast } from '@/utils/toast';
@@ -44,7 +45,7 @@ export function useArticleRating({
     // Query для получения рейтинга
     // Для авторизованных пользователей всегда делаем запрос, чтобы получить user_rating
     const ratingQuery = useQuery({
-        queryKey: ['articleRating', articleId, isAuthenticated],
+        queryKey: queryKeys.articleRating(articleId, isAuthenticated),
         queryFn: () => getArticleRating(articleId!),
         enabled: enabled && !!articleId && isAuthenticated,
         staleTime: 30 * 1000, // 30 секунд — чтобы быстрее обновлять user_rating
@@ -62,14 +63,14 @@ export function useArticleRating({
         mutationFn: (rating: number) => rateArticle({ articleId: articleId!, rating }),
         onMutate: async (newRating) => {
             setOptimisticRating(newRating);
-            await queryClient.cancelQueries({ queryKey: ['articleRating', articleId, isAuthenticated] });
-            const previousData = queryClient.getQueryData<ArticleRatingResponse>(['articleRating', articleId, isAuthenticated]);
+            await queryClient.cancelQueries({ queryKey: queryKeys.articleRating(articleId, isAuthenticated) });
+            const previousData = queryClient.getQueryData<ArticleRatingResponse>(queryKeys.articleRating(articleId, isAuthenticated));
             return { previousData };
         },
         onError: (_error, _newRating, context) => {
             setOptimisticRating(null);
             if (context?.previousData) {
-                queryClient.setQueryData(['articleRating', articleId, isAuthenticated], context.previousData);
+                queryClient.setQueryData(queryKeys.articleRating(articleId, isAuthenticated), context.previousData);
             }
             showToast({
                 text1: 'Не удалось сохранить оценку',
@@ -78,7 +79,7 @@ export function useArticleRating({
         },
         onSuccess: (data) => {
             setOptimisticRating(null);
-            queryClient.setQueryData(['articleRating', articleId, isAuthenticated], data);
+            queryClient.setQueryData(queryKeys.articleRating(articleId, isAuthenticated), data);
 
             // Инвалидируем кэш статьи, если он есть
             queryClient.invalidateQueries({ queryKey: ['article', articleId] });

@@ -29,6 +29,15 @@ import {
   normalizeDisplayUrl,
 } from './utils'
 
+interface UploadImageResponse {
+  url?: unknown
+  path?: unknown
+  file_url?: unknown
+  id?: unknown
+  data?: { url?: unknown; id?: unknown }
+  [key: string]: unknown
+}
+
 const WEB_SUPPORTED_UPLOAD_TYPES = new Set([
   'image/jpeg',
   'image/jpg',
@@ -214,7 +223,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
       const uploading = prev.filter((img) => img.isUploading)
       const nextFromProps = (initialImagesProp ?? []).map((img) => ({
         ...img,
-        stableKey: (img as any).stableKey ?? String(img.id),
+        stableKey: img.stableKey ?? String(img.id),
         url: normalizeDisplayUrl(img.url),
         isUploading: false,
         uploadProgress: 0,
@@ -334,13 +343,13 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
           formData.append('collection', collection)
           formData.append('id', idTravel)
 
-          const response = await uploadImage(formData)
+          const response: UploadImageResponse = await uploadImage(formData)
           const uploadedUrlRaw =
-            (response as any)?.url ||
-            (response as any)?.data?.url ||
-            (response as any)?.path ||
-            (response as any)?.file_url
-          const uploadedId = (response as any)?.id || (response as any)?.data?.id || placeholder.id
+            response?.url ||
+            response?.data?.url ||
+            response?.path ||
+            response?.file_url
+          const uploadedId = response?.id || response?.data?.id || placeholder.id
           if (uploadedUrlRaw) {
             const finalUrl = normalizeDisplayUrl(String(uploadedUrlRaw))
 
@@ -613,7 +622,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
         onMove={handleMoveImage}
         onImageError={handleImageError}
         onImageLoad={handleImageLoad}
-        DeleteAction={DeleteActionComponent as any}
+        DeleteAction={DeleteActionComponent}
       />
 
       <ConfirmDialog

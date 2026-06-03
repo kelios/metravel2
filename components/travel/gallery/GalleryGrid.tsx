@@ -4,12 +4,17 @@ import Feather from '@expo/vector-icons/Feather'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay'
+import type { ThemedColors } from '@/hooks/useTheme'
 
 import type { GalleryItem } from './types'
+import type { createGalleryStyles } from './styles'
+import type { DeleteActionStyle } from './DeleteAction'
+
+type GalleryStyles = ReturnType<typeof createGalleryStyles>
 
 export const GalleryGrid: React.FC<{
-  styles: any
-  colors: any
+  styles: GalleryStyles
+  colors: ThemedColors
   isInitialLoading: boolean
   images: GalleryItem[]
   onDelete: (stableKey: string) => void
@@ -18,7 +23,7 @@ export const GalleryGrid: React.FC<{
   onImageLoad: (stableKey: string) => void
   DeleteAction: React.ComponentType<{
     onActivate: () => void
-    style?: any
+    style?: DeleteActionStyle
     testID?: string
     accessibilityLabel?: string
     children: React.ReactNode

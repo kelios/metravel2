@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchUserProfile, normalizeAvatar, type UserProfileDto } from '@/api/user';
 import { ApiError } from '@/api/client';
+import { queryKeys } from '@/api/queryKeys';
 
 type Options = {
   enabled?: boolean;
@@ -19,7 +20,7 @@ export function useUserProfileCached(userId: string | number | null | undefined,
   }, [userId]);
 
   const query = useQuery<UserProfileDto | null>({
-    queryKey: ['user-profile', normalizedUserId, options.cacheKeySuffix],
+    queryKey: queryKeys.userProfile(normalizedUserId, options.cacheKeySuffix),
     queryFn: async () => {
       try {
         return await fetchUserProfile(String(normalizedUserId));

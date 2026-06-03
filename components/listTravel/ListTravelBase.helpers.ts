@@ -1,5 +1,20 @@
-import type { QueryClient } from '@tanstack/react-query'
+import type { InfiniteData, QueryClient } from '@tanstack/react-query'
+import type { Travel } from '@/types/types'
 import type { FilterOptions, FilterState } from './utils/listTravelTypes'
+
+type TravelListPage = {
+  data?: Travel[]
+  items?: Travel[]
+  total?: number | string
+  count?: number | string
+}
+
+type InfiniteTravelsData = InfiniteData<TravelListPage>
+
+const isInfiniteTravelsData = (value: unknown): value is InfiniteTravelsData =>
+  !!value &&
+  typeof value === 'object' &&
+  Array.isArray((value as { pages?: unknown }).pages)
 
 export type ActiveConditionChip = {
   key: string
@@ -96,31 +111,31 @@ export const removeTravelFromInfiniteTravelsCache = (
   queryClient: Pick<QueryClient, 'setQueriesData'>,
   travelId: number
 ) => {
-  queryClient.setQueriesData({ queryKey: ['travels'] }, (oldData: any) => {
-    if (!oldData?.pages || !Array.isArray(oldData.pages)) {
+  queryClient.setQueriesData({ queryKey: ['travels'] }, (oldData: unknown) => {
+    if (!isInfiniteTravelsData(oldData)) {
       return oldData
     }
 
     let removed = false
-    const pages = oldData.pages.map((page: any) => {
+    const pages = oldData.pages.map((page) => {
       if (!page || typeof page !== 'object') {
         return page
       }
 
-      const nextPage = { ...page }
+      const nextPage: TravelListPage = { ...page }
       const previousDataLength = Array.isArray(nextPage.data) ? nextPage.data.length : null
       const previousItemsLength = Array.isArray(nextPage.items) ? nextPage.items.length : null
 
       if (Array.isArray(nextPage.data)) {
-        nextPage.data = nextPage.data.filter((item: any) => Number(item?.id) !== travelId)
+        nextPage.data = nextPage.data.filter((item) => Number(item?.id) !== travelId)
       }
 
       if (Array.isArray(nextPage.items)) {
-        nextPage.items = nextPage.items.filter((item: any) => Number(item?.id) !== travelId)
+        nextPage.items = nextPage.items.filter((item) => Number(item?.id) !== travelId)
       }
 
-      const dataRemoved = previousDataLength !== null && nextPage.data.length !== previousDataLength
-      const itemsRemoved = previousItemsLength !== null && nextPage.items.length !== previousItemsLength
+      const dataRemoved = previousDataLength !== null && nextPage.data?.length !== previousDataLength
+      const itemsRemoved = previousItemsLength !== null && nextPage.items?.length !== previousItemsLength
 
       if (!dataRemoved && !itemsRemoved) {
         return page

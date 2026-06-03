@@ -11,4 +11,11 @@ export const queryKeys = {
   addressSearch: (query: string) => ['address-search', query] as const,
   mySubscriptions: () => ['my-subscriptions'] as const,
   mySubscribers: () => ['my-subscribers'] as const,
+  userProfile: (id: string | number | null | undefined, suffix?: unknown) =>
+    (suffix === undefined
+      ? (['user-profile', id] as const)
+      : (['user-profile', id, suffix] as const)),
+  questBundle: (slug: string | null | undefined) => ['quest-bundle', slug] as const,
+  articleRating: (articleId: number | undefined, isAuthenticated: boolean) =>
+    ['articleRating', articleId, isAuthenticated] as const,
 } as const;

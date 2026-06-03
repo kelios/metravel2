@@ -209,7 +209,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
   }, [resolvedPathname]);
 
   const { data: questApiData } = useQuery<ApiQuestBundle | null>({
-    queryKey: ['quest-bundle', questSlugForBreadcrumb],
+    queryKey: queryKeys.questBundle(questSlugForBreadcrumb),
     queryFn: () => questSlugForBreadcrumb ? fetchQuestByQuestId(questSlugForBreadcrumb) : null,
     enabled: !!questSlugForBreadcrumb,
     staleTime: 600_000,
@@ -229,7 +229,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
   }, [resolvedPathname]);
 
   const { data: userProfileData } = useQuery<UserProfileDto | null>({
-    queryKey: ['user-profile', userIdForBreadcrumb],
+    queryKey: queryKeys.userProfile(userIdForBreadcrumb),
     queryFn: () => userIdForBreadcrumb ? fetchUserProfile(userIdForBreadcrumb) : null,
     enabled: !!userIdForBreadcrumb,
     staleTime: 600_000,
