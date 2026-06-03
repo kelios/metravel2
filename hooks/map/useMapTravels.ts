@@ -230,10 +230,14 @@ export function useMapTravels({
   // Параметры запроса
   const queryParams = useMemo(
     () => {
+      const radiusNum = Number(filterValues.radius);
       const params = {
         lat: coordinates?.latitude,
         lng: coordinates?.longitude,
-        radius: filterValues.radius || String(DEFAULT_RADIUS_KM),
+        // Санитизируем: "0"/"abc"/пусто → дефолт, иначе radius=0/NaN даёт пустую выдачу.
+        radius: Number.isFinite(radiusNum) && radiusNum > 0
+          ? String(radiusNum)
+          : String(DEFAULT_RADIUS_KM),
         mode,
         routeKey: routeSignature,
         filtersKey: JSON.stringify(backendFilters),
@@ -259,7 +263,10 @@ export function useMapTravels({
   const enabledRadius = isEnabled && queryParams.mode === 'radius';
   const enabledRoute = isEnabled && queryParams.mode === 'route' && !!queryParams.routeKey;
  
-   type TravelCoordsPage = TravelCoords[] & { __total?: number };
+   // Страница — обычный объект {items,total}. Раньше total хранился как non-enumerable
+   // свойство на массиве, но structural-sharing TanStack Query его не копирует →
+   // в getNextPageParam total терялся и пагинация падала на длину-fallback.
+   type TravelCoordsPage = { items: TravelCoords[]; total?: number };
    const getTotalFromResult = (value: unknown): number | undefined => {
      if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
      const total = (value as { __total?: unknown }).__total;
@@ -289,28 +296,20 @@ export function useMapTravels({
       const values = Array.isArray(result)
         ? result
         : Object.values((typeof result === 'object' && result !== null ? result : {}) as Record<string, unknown>);
-      const items = values as TravelCoordsPage;
-      if (typeof total === 'number' && Array.isArray(items)) {
-        Object.defineProperty(items, '__total', {
-          value: total,
-          enumerable: false,
-          configurable: false,
-          writable: false,
-        });
-      }
-      return items;
+      return { items: values as TravelCoords[], total };
     },
     getNextPageParam: (lastPage, allPages) => {
-      if (!Array.isArray(lastPage)) return undefined;
+      const items = lastPage?.items;
+      if (!Array.isArray(items)) return undefined;
 
-      const total = lastPage.__total;
+      const total = lastPage.total;
       if (typeof total === 'number' && Number.isFinite(total)) {
-        const loaded = allPages.reduce((acc, page) => acc + (Array.isArray(page) ? page.length : 0), 0);
+        const loaded = allPages.reduce((acc, page) => acc + (page?.items?.length ?? 0), 0);
         if (loaded < total) return allPages.length;
         return undefined;
       }
 
-      if (lastPage.length < MAP_TRAVELS_PER_PAGE) return undefined;
+      if (items.length < MAP_TRAVELS_PER_PAGE) return undefined;
       return allPages.length;
     },
     staleTime: 2 * 60 * 1000,
@@ -326,10 +325,12 @@ export function useMapTravels({
     enabled: enabledRoute,
     queryFn: async ({ signal }) => {
       // Восстанавливаем координаты из ключа
-      const coords = queryParams.routeKey!.split('|').map((p) => {
-        const [lng, lat] = p.split(',').map(Number);
-        return [lng, lat] as [number, number];
-      });
+      const coords = queryParams.routeKey!.split('|')
+        .map((p) => {
+          const [lng, lat] = p.split(',').map(Number);
+          return [lng, lat] as [number, number];
+        })
+        .filter(([lng, lat]) => Number.isFinite(lng) && Number.isFinite(lat));
 
       if (coords.length < 2) return [];
 
@@ -356,8 +357,11 @@ export function useMapTravels({
 
   const rawTravelsData = useMemo(() => {
     if (queryParams.mode === 'radius') {
+      // Симметрично route-ветке: при выключенном радиус-режиме не отдаём
+      // stale-данные из кэша (placeholderData).
+      if (!enabledRadius) return [];
       const pages = radiusQuery.data?.pages ?? [];
-      return pages.flat();
+      return pages.flatMap((p) => p?.items ?? []);
     }
 
     // In route mode, only show data when route is actually built;
@@ -365,7 +369,7 @@ export function useMapTravels({
     if (!enabledRoute) return [];
 
     return routeQuery.data ?? [];
-  }, [queryParams.mode, radiusQuery.data?.pages, routeQuery.data, enabledRoute]);
+  }, [queryParams.mode, radiusQuery.data?.pages, routeQuery.data, enabledRoute, enabledRadius]);
 
   const isLoading = queryParams.mode === 'radius' ? radiusQuery.isLoading : routeQuery.isLoading;
   const isFetching = queryParams.mode === 'radius' ? radiusQuery.isFetching : routeQuery.isFetching;

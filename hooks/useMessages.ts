@@ -101,6 +101,7 @@ export function useThreadMessages(threadId: number | null, pollEnabled: boolean 
 
     const load = useCallback(async (reset = false) => {
         if (threadId == null || threadId < 0) return;
+        const requestThreadId = threadId;
         if (reset) {
             pageRef.current = 1;
             setHasMore(true);
@@ -108,8 +109,8 @@ export function useThreadMessages(threadId: number | null, pollEnabled: boolean 
         setLoading(true);
         setError(null);
         try {
-            const data: PaginatedMessages = await fetchMessages(threadId, pageRef.current, 50);
-            if (!mountedRef.current) return;
+            const data: PaginatedMessages = await fetchMessages(requestThreadId, pageRef.current, 50);
+            if (!mountedRef.current || requestThreadId !== threadId) return;
 
             const results = data.results || [];
 
@@ -127,11 +128,11 @@ export function useThreadMessages(threadId: number | null, pollEnabled: boolean 
             pageRef.current += 1;
         } catch (e: unknown) {
             devError('useThreadMessages load error:', e);
-            if (mountedRef.current) {
+            if (mountedRef.current && requestThreadId === threadId) {
                 setError(getErrorMessage(e, 'Ошибка загрузки сообщений'));
             }
         } finally {
-            if (mountedRef.current) setLoading(false);
+            if (mountedRef.current && requestThreadId === threadId) setLoading(false);
         }
     }, [threadId]);
 
@@ -140,16 +141,24 @@ export function useThreadMessages(threadId: number | null, pollEnabled: boolean 
     const silentRefresh = useCallback(async () => {
         if (threadId == null || threadId < 0) return;
         if (consecutiveFailuresRef.current >= MAX_CONSECUTIVE_FAILURES) return;
+        const requestThreadId = threadId;
         try {
-            const data: PaginatedMessages = await fetchMessages(threadId, 1, 50);
-            if (!mountedRef.current) return;
+            const data: PaginatedMessages = await fetchMessages(requestThreadId, 1, 50);
+            if (!mountedRef.current || requestThreadId !== threadId) return;
             consecutiveFailuresRef.current = 0;
             const results = data.results || [];
             setMessages((prev) => {
                 const ids = new Set(prev.map((m) => m.id));
                 const newOnes = results.filter((m) => !ids.has(m.id));
                 if (newOnes.length === 0) return prev;
-                return [...newOnes, ...prev];
+                const merged = [...newOnes, ...prev];
+                merged.sort((a, b) => {
+                    const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+                    const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+                    if (ta !== tb) return ta - tb;
+                    return a.id - b.id;
+                });
+                return merged;
             });
         } catch {
             consecutiveFailuresRef.current += 1;
@@ -158,6 +167,8 @@ export function useThreadMessages(threadId: number | null, pollEnabled: boolean 
 
     useEffect(() => {
         if (threadId != null && threadId >= 0) {
+            setMessages([]);
+            setHasMore(true);
             load(true);
         } else {
             setMessages([]);
@@ -171,23 +182,25 @@ export function useThreadMessages(threadId: number | null, pollEnabled: boolean 
     }, [threadId, pollEnabled, silentRefresh]);
 
     const optimisticRemove = useCallback((messageId: number) => {
-        let removed: Message | null = null;
-        let index = -1;
+        const snapshot: { removed: Message | null; index: number } = { removed: null, index: -1 };
         setMessages((prev) => {
-            index = prev.findIndex((m) => m.id === messageId);
+            const index = prev.findIndex((m) => m.id === messageId);
             if (index === -1) return prev;
-            removed = prev[index];
+            snapshot.removed = prev[index];
+            snapshot.index = index;
             return prev.filter((m) => m.id !== messageId);
         });
-        // Return rollback function
+        // Return rollback function. Читаем snapshot ВНУТРИ rollback: setMessages-updater
+        // выполняется не синхронно, поэтому snapshot заполняется уже после возврата из
+        // optimisticRemove, но к моменту вызова rollback — гарантированно готов. Per-call
+        // объект snapshot изолирует конкурентные вызовы (нет общей мутируемой переменной).
         return () => {
+            const { removed, index } = snapshot;
             if (removed) {
-                const msg = removed;
-                const idx = index;
                 setMessages((prev) => {
-                    if (prev.some((m) => m.id === msg.id)) return prev;
+                    if (prev.some((m) => m.id === removed.id)) return prev;
                     const copy = [...prev];
-                    copy.splice(Math.min(idx, copy.length), 0, msg);
+                    copy.splice(Math.min(index, copy.length), 0, removed);
                     return copy;
                 });
             }
@@ -202,6 +215,12 @@ export function useThreadMessages(threadId: number | null, pollEnabled: boolean 
 export function useSendMessage() {
     const [sending, setSending] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const mountedRef = useRef(true);
+
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => { mountedRef.current = false; };
+    }, []);
 
     const send = useCallback(async (participants: number[], text: string) => {
         setSending(true);
@@ -211,10 +230,10 @@ export function useSendMessage() {
             return true;
         } catch (e: unknown) {
             devError('useSendMessage error:', e);
-            setError(getErrorMessage(e, 'Ошибка отправки сообщения'));
+            if (mountedRef.current) setError(getErrorMessage(e, 'Ошибка отправки сообщения'));
             return false;
         } finally {
-            setSending(false);
+            if (mountedRef.current) setSending(false);
         }
     }, []);
 
@@ -225,6 +244,12 @@ export function useSendMessage() {
 
 export function useDeleteMessage() {
     const [deleting, setDeleting] = useState(false);
+    const mountedRef = useRef(true);
+
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => { mountedRef.current = false; };
+    }, []);
 
     const remove = useCallback(async (id: number | string) => {
         setDeleting(true);
@@ -235,7 +260,7 @@ export function useDeleteMessage() {
             devError('useDeleteMessage error:', e);
             return false;
         } finally {
-            setDeleting(false);
+            if (mountedRef.current) setDeleting(false);
         }
     }, []);
 
@@ -246,6 +271,12 @@ export function useDeleteMessage() {
 
 export function useDeleteThread() {
     const [deleting, setDeleting] = useState(false);
+    const mountedRef = useRef(true);
+
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => { mountedRef.current = false; };
+    }, []);
 
     const remove = useCallback(async (threadId: number | string) => {
         setDeleting(true);
@@ -256,7 +287,7 @@ export function useDeleteThread() {
             devError('useDeleteThread error:', e);
             return false;
         } finally {
-            setDeleting(false);
+            if (mountedRef.current) setDeleting(false);
         }
     }, []);
 

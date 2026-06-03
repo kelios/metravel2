@@ -44,6 +44,7 @@ export function useActiveSection(
   const activeSectionRef = useRef<string>('');
   const observerRef = useRef<IntersectionObserver | null>(null);
   const registeredSectionsRef = useRef<Set<string>>(new Set());
+  const observedElementsRef = useRef<WeakSet<Element>>(new WeakSet());
   const elCacheRef = useRef<Map<string, HTMLElement>>(new Map());
 
   useEffect(() => {
@@ -141,17 +142,19 @@ export function useActiveSection(
       keys.forEach((key) => {
         let el = cache.get(key) ?? null;
         if (!el || !doc.contains(el)) {
+          const stale = cache.get(key);
+          if (stale) observedElementsRef.current.delete(stale);
           el = doc.querySelector(`[data-section-key="${key}"]`) as HTMLElement | null;
           if (el) cache.set(key, el); else { cache.delete(key); return; }
         }
         if (typeof el.getBoundingClientRect !== 'function') return;
-        if (!registeredSectionsRef.current.has(key)) {
+        if (!observedElementsRef.current.has(el)) {
           try {
             observerRef.current?.observe?.(el);
           } catch {
             // noop
           }
-          registeredSectionsRef.current.add(key);
+          observedElementsRef.current.add(el);
         }
         const rect = el.getBoundingClientRect();
         const relativeTop = rootRect ? rect.top - rootRect.top : rect.top;
@@ -278,10 +281,12 @@ export function useActiveSection(
       let registeredThisTick = 0;
 
       sectionKeys.forEach((key) => {
-        if (registeredSectionsRef.current.has(key)) return;
         const element = doc.querySelector(`[data-section-key="${key}"]`);
         if (element && element instanceof Element) {
-          observer?.observe(element);
+          if (!observedElementsRef.current.has(element)) {
+            observer?.observe(element);
+            observedElementsRef.current.add(element);
+          }
           registeredSectionsRef.current.add(key);
           registeredThisTick += 1;
         }
@@ -355,6 +360,7 @@ export function useActiveSection(
         observerRef.current = null;
       }
       registeredSections.clear();
+      observedElementsRef.current = new WeakSet();
       elCache.clear();
     };
   }, [anchors, headerOffset, scrollRoot]);

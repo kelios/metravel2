@@ -219,13 +219,15 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
           )
         }
 
-        const thumbItem = cluster.items.find((p) => p.travelImageThumbUrl)
-        const icon = clusterIcon(cluster.count, thumbItem?.travelImageThumbUrl)
         if (cluster.count === 1 && cluster.items[0]) {
           const item = cluster.items[0]
           const ll = strToLatLng(item.coord, hintCenter)
           if (!ll) return null
           if (!Number.isFinite(ll[0]) || !Number.isFinite(ll[1])) return null
+
+          const singleKey = item.id
+            ? `cluster-single-${cluster.key}-${item.id}`
+            : `cluster-single-${cluster.key}-${item.coord.replace(/,/g, '-')}`
 
           const accessibleName =
             item.address || item.categoryName || 'Точка на карте'
@@ -255,7 +257,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
           if (renderer) singleMarkerProps.renderer = renderer
 
           return (
-            <Marker key={`cluster-single-${idx}`} {...singleMarkerProps}>
+            <Marker key={singleKey} {...singleMarkerProps}>
               {Tooltip && item.address && (
                 <Tooltip
                   direction="top"
@@ -279,10 +281,12 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
           )
         }
 
+        const thumbItem = cluster.items.find((p) => p.travelImageThumbUrl)
+        const icon = clusterIcon(cluster.count, thumbItem?.travelImageThumbUrl)
         const clusterAccessibleName = `Кластер: ${cluster.count} мест`
         return (
           <Marker
-            key={`cluster-${idx}`}
+            key={`cluster-${cluster.key}`}
             position={[cluster.center[0], cluster.center[1]]}
             icon={icon as any}
             alt={clusterAccessibleName}

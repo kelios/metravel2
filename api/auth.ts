@@ -10,7 +10,7 @@ import { validatePassword } from '@/utils/aiValidation';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { getUserFriendlyError } from '@/utils/userFriendlyErrors';
 import { retry, isRetryableError } from '@/utils/retry';
-import { getSecureItem, setSecureItem } from '@/utils/secureStorage';
+import { getSecureItem, setSecureItem, removeSecureItems } from '@/utils/secureStorage';
 import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
 
 const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
@@ -53,13 +53,25 @@ export const loginApi = async (email: string, password: string): Promise<{
             return null;
         }
 
+        const trimmedEmail = (email ?? '').trim();
+        if (!trimmedEmail) {
+            Alert.alert('Ошибка', 'Email не может быть пустым');
+            return null;
+        }
+
         const response = await retry(
             async () => {
-                return await fetchWithTimeout(LOGIN, {
+                const res = await fetchWithTimeout(LOGIN, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password }),
+                    body: JSON.stringify({ email: trimmedEmail, password }),
                 }, DEFAULT_TIMEOUT);
+                // Проверяем статус ВНУТРИ retry: статус в сообщении позволяет shouldRetry
+                // ретраить 5xx (isRetryableError матчит /50\d/) и не ретраить 4xx.
+                if (!res.ok) {
+                    throw new Error(`Login failed: ${res.status}`);
+                }
+                return res;
             },
             {
                 maxAttempts: 2,
@@ -69,10 +81,6 @@ export const loginApi = async (email: string, password: string): Promise<{
                 }
             }
         );
-
-        if (!response.ok) {
-            throw new Error('Неверный email или пароль');
-        }
 
         const json = await safeJsonParse<{
             token?: string;
@@ -94,7 +102,16 @@ export const loginApi = async (email: string, password: string): Promise<{
         return null;
     } catch (error: unknown) {
         devError('Login error:', error);
-        const message = getUserFriendlyError(error);
+        const rawMessage = error instanceof Error ? error.message : '';
+        let message: string;
+        if (/Login failed: (401|403)/.test(rawMessage)) {
+            message = 'Неверный email или пароль';
+        } else if (/Login failed: \d+/.test(rawMessage)) {
+            // 5xx/429/прочее — серверная/временная ошибка, не вводим в заблуждение «неверным паролем».
+            message = 'Сервис временно недоступен. Попробуйте позже.';
+        } else {
+            message = getUserFriendlyError(error);
+        }
         Alert.alert('Ошибка входа', message);
         return null;
     }
@@ -116,12 +133,17 @@ export const logoutApi = async () => {
         }
 
         await safeJsonParse(response, {}).catch(() => undefined);
-        await AsyncStorage.removeItem('userName');
-        await AsyncStorage.removeItem('userId');
     } catch (error) {
         if (__DEV__) {
             console.error(error);
         }
+    } finally {
+        // Чистим креды БЕЗУСЛОВНО — даже если серверный logout упал/таймаут,
+        // иначе на устройстве остаётся валидный токен и запросы шлют старый Authorization.
+        await Promise.allSettled([
+            removeSecureItems(['userToken', 'refreshToken']),
+            AsyncStorage.multiRemove(['userName', 'userId']),
+        ]);
     }
 };
 

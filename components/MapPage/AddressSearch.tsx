@@ -116,9 +116,10 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
     retry: false,
     staleTime: SEARCH_STALE_TIME_MS,
     gcTime: SEARCH_GC_TIME_MS,
-    queryFn: async ({ signal } = {} as any) => {
+    queryFn: async ({ signal, queryKey } = {} as any) => {
+      const q = (queryKey?.[queryKey.length - 1] ?? '') as string
       const response = await nominatimSearch(
-        { q: debouncedQuery, limit: SEARCH_LIMIT, addressdetails: 1 },
+        { q, limit: SEARCH_LIMIT, addressdetails: 1 },
         { signal, headers: { 'User-Agent': 'MeTravel/1.0' } },
       )
       if (!response.ok) throw new Error('Ошибка поиска адреса')
@@ -134,11 +135,13 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
 
   const handleSelectResult = useCallback(
     (result: SearchResult) => {
-      const coords: LatLng = { lat: parseFloat(result.lat), lng: parseFloat(result.lon) }
+      const lat = parseFloat(result.lat)
+      const lng = parseFloat(result.lon)
       setQuery(result.display_name)
       setSearchEnabled(false)
       setShowResults(false)
-      onAddressSelect(result.display_name, coords)
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
+      onAddressSelect(result.display_name, { lat, lng })
     },
     [onAddressSelect],
   )
@@ -166,14 +169,16 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
   }, [value])
 
   useEffect(() => {
-    if (searchEnabled && query.length >= MIN_QUERY_LENGTH && results.length > 0) {
+    if (searchEnabled && debouncedQuery.length >= MIN_QUERY_LENGTH && results.length > 0) {
       setShowResults(true)
     }
-  }, [query.length, results.length, searchEnabled])
+  }, [debouncedQuery.length, results.length, searchEnabled])
 
   const handleFocus = useCallback(() => {
-    if (results.length > 0) setShowResults(true)
-  }, [results.length])
+    if (searchEnabled && debouncedQuery.length >= MIN_QUERY_LENGTH && results.length > 0) {
+      setShowResults(true)
+    }
+  }, [searchEnabled, debouncedQuery.length, results.length])
 
   const showErrorState =
     !loading &&

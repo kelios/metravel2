@@ -63,7 +63,8 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
             abortControllerRef.current.abort();
         }
 
-        abortControllerRef.current = new AbortController();
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
         setIsLoading(true);
         setError(null);
 
@@ -76,7 +77,7 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
                 `limit=7&` +
                 `addressdetails=1&` +
                 `accept-language=ru`,
-                { signal: abortControllerRef.current.signal }
+                { signal: controller.signal }
             );
 
             if (!response.ok) {
@@ -84,6 +85,7 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
             }
 
             const data: unknown = await response.json();
+            if (controller.signal.aborted) return;
             const items = Array.isArray(data)
                 ? (data as SearchResult[]).filter(
                       (item): item is SearchResult =>
@@ -98,9 +100,12 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
                 setError('Ошибка поиска. Попробуйте еще раз.');
             }
         } finally {
-            setIsLoading(false);
+            if (!controller.signal.aborted) setIsLoading(false);
         }
     }, []);
+
+    // Отменяем висящий запрос при размонтировании
+    useEffect(() => () => abortControllerRef.current?.abort(), []);
 
     // Debounce для поиска
     useEffect(() => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Platform, View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
@@ -28,6 +28,16 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
   const colors = useThemedColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
+  const isMountedRef = useRef(true);
+  const selectTokenRef = useRef(0);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const detectAndParse = async (selectedFile: DocumentPicker.DocumentPickerAsset) => {
     let googleError: unknown = null;
     let osmError: unknown = null;
@@ -56,22 +66,29 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
   };
 
   const handleFileSelect = async (selectedFile: DocumentPicker.DocumentPickerAsset) => {
+    const token = ++selectTokenRef.current;
+
     setFile(selectedFile);
     setIsLoading(true);
     setError(null);
 
     try {
       const { points } = await detectAndParse(selectedFile);
+      if (!isMountedRef.current || token !== selectTokenRef.current) return;
       setParsedPoints(points);
       setStep('preview');
     } catch (err) {
+      if (!isMountedRef.current || token !== selectTokenRef.current) return;
       setError(err instanceof Error ? err.message : 'Ошибка парсинга файла');
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current && token === selectTokenRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
   const handleImport = async () => {
+    if (isLoading) return;
     if (!file) return;
 
     setIsLoading(true);
@@ -80,26 +97,39 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
 
     try {
       const result = await userPointsApi.importPoints(file);
+      if (!isMountedRef.current) return;
       setImportResult(result);
       setStep('complete');
 
       await queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() });
+      if (!isMountedRef.current) return;
 
-      const importedCount = (result?.created ?? 0) + (result?.updated ?? 0);
-      if (parsedPoints.length > 0 && importedCount === 0) {
+      const serverHandled =
+        (result?.created ?? 0) + (result?.updated ?? 0) + (result?.skipped ?? 0);
+      const serverParsed = result?.totalParsed ?? serverHandled;
+
+      if (parsedPoints.length > 0 && serverHandled === 0) {
         setError(
           'Импорт на сервере завершился без созданных точек. Возможно, файл слишком большой или сервер не смог распознать данные. Попробуйте JSON из Google Takeout или разделите файл на части.'
         );
+      } else if (parsedPoints.length > 0 && serverParsed !== parsedPoints.length) {
+        setError(
+          `В предпросмотре найдено точек: ${parsedPoints.length}, а сервер обработал: ${serverParsed}. Результат импорта может отличаться от предпросмотра — проверьте импортированные точки.`
+        );
       }
     } catch (err) {
+      if (!isMountedRef.current) return;
       setError(err instanceof Error ? err.message : 'Ошибка импорта');
       setStep('preview');
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
   const pickDocument = async () => {
+    if (isLoading) return;
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: [
@@ -113,7 +143,7 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        handleFileSelect(result.assets[0]);
+        await handleFileSelect(result.assets[0]);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка выбора файла');
@@ -124,9 +154,9 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
     <View style={styles.stepContainer}>
       <Text style={styles.title}>Импорт точек</Text>
       <Text style={styles.subtitle}>
-        Поддерживаемые форматы:\n
-        Google Maps: JSON (Google Takeout), KML, KMZ\n
-        OpenStreetMap: GeoJSON, GPX
+        {'Поддерживаемые форматы:\n'}
+        {'Google Maps: JSON (Google Takeout), KML, KMZ\n'}
+        {'OpenStreetMap: GeoJSON, GPX'}
       </Text>
 
       <Button

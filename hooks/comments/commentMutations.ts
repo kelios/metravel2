@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { commentsApi } from '@/api/comments'
+import { showToast } from '@/utils/toast'
 import type { TravelComment, TravelCommentCreate, TravelCommentUpdate } from '@/types/comments'
 import {
   createOptimisticComment,
@@ -76,6 +77,13 @@ export function useDeleteComment() {
       queryClient.invalidateQueries({
         queryKey: commentKeys.all,
         refetchType: 'active',
+      })
+    },
+    onError: () => {
+      showToast({
+        type: 'error',
+        text1: 'Не удалось удалить комментарий',
+        text2: 'Попробуйте ещё раз',
       })
     },
   })

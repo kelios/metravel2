@@ -102,10 +102,25 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
 }) => {
   const map = useMap()
   const clusterGroupRef = useRef<any>(null)
-  const markerMapRef = useRef<Map<string, any>>(new Map())
+  const markerMapRef = useRef<Map<string, { coord: string; marker: any }>>(new Map())
   const [openPopups, setOpenPopups] = useState<Map<string, OpenPopupEntry>>(
     () => new Map(),
   )
+  // Бамп при (пере)создании cluster-группы — чтобы sync-эффект перезаполнил новую
+  // (пустую) группу. Иначе при пересоздании группы маркеры молча исчезают.
+  const [groupVersion, setGroupVersion] = useState(0)
+
+  // «Latest»-рефы на нестабильные пропсы. Родитель передаёт инлайн onMarkerInstance
+  // (и потенциально onMarkerClick/popupProps); без рефов sync-эффект делал бы полный
+  // destroy+rebuild маркеров и закрывал открытый попап на КАЖДЫЙ рендер родителя.
+  const onMarkerClickRef = useRef(onMarkerClick)
+  const onMarkerInstanceRef = useRef(onMarkerInstance)
+  const popupPropsRef = useRef(popupProps)
+  useEffect(() => {
+    onMarkerClickRef.current = onMarkerClick
+    onMarkerInstanceRef.current = onMarkerInstance
+    popupPropsRef.current = popupProps
+  })
 
   const closeOpenPopup = useCallback(() => {
     try {
@@ -219,6 +234,8 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
     clusterGroupRef.current = group
     map.addLayer(group)
     group.on('clusterclick', handleClusterClick)
+    // Сообщаем sync-эффекту, что появилась новая (пустая) группа — он перезаполнит её.
+    setGroupVersion((v) => v + 1)
 
     const currentMarkerMap = markerMapRef.current
 
@@ -241,8 +258,16 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
     const group = clusterGroupRef.current
     if (!group || !L) return
 
-    // Clear existing
+    // Clear existing — снимаем хендлеры/попапы предыдущих маркеров до clearLayers.
     try {
+      for (const { marker } of markerMapRef.current.values()) {
+        try {
+          marker.off()
+          marker.unbindPopup?.()
+        } catch {
+          // noop
+        }
+      }
       group.clearLayers()
     } catch {
       // noop
@@ -267,8 +292,8 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       popupContainer.className = 'metravel-cluster-popup-root'
       popupContainer.setAttribute('data-point-id', String(point.id ?? ''))
 
-      const { popupOptions: rawPopupOptions, popupEventHandlers } =
-        splitPopupProps(popupProps)
+      const { popupOptions: rawPopupOptions } =
+        splitPopupProps(popupPropsRef.current)
       const popupOptions: any = {
         maxWidth: rawPopupOptions.maxWidth ?? 320,
         minWidth: rawPopupOptions.minWidth ?? 200,
@@ -295,7 +320,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       marker.bindPopup(popupContainer, popupOptions)
 
       marker.on('popupopen', (event: any) => {
-        popupEventHandlers.popupopen?.(event)
+        splitPopupProps(popupPropsRef.current).popupEventHandlers.popupopen?.(event)
         setOpenPopups((prev) => {
           if (prev.get(key)?.container === popupContainer) return prev
           const next = new Map(prev)
@@ -305,7 +330,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       })
 
       marker.on('popupclose', (event: any) => {
-        popupEventHandlers.popupclose?.(event)
+        splitPopupProps(popupPropsRef.current).popupEventHandlers.popupclose?.(event)
         setOpenPopups((prev) => {
           if (!prev.has(key)) return prev
           const next = new Map(prev)
@@ -335,8 +360,9 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
         } catch {
           // noop
         }
-        if (typeof onMarkerClick === 'function') {
-          onMarkerClick(point, coords, e?.target)
+        const handleClick = onMarkerClickRef.current
+        if (typeof handleClick === 'function') {
+          handleClick(point, coords, e?.target)
           return
         }
         if (e?.target?.openPopup) {
@@ -348,10 +374,12 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
         }
       })
 
-      // Register marker instance
+      // Register marker instance — ключуем по уникальному key (а не coordStr),
+      // иначе дубли координат перетирают друг друга и onMarkerInstance(coord,null)
+      // на cleanup зовётся не для всех маркеров.
       const coordStr = String(point.coord ?? '')
-      markerMapRef.current.set(coordStr, marker)
-      onMarkerInstance?.(coordStr, marker)
+      markerMapRef.current.set(key, { coord: coordStr, marker })
+      onMarkerInstanceRef.current?.(coordStr, marker)
 
       newMarkers.push(marker)
     }
@@ -373,9 +401,9 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
     const currentMarkerMap = markerMapRef.current
 
     return () => {
-      // Notify about removed markers
-      for (const [coord] of currentMarkerMap) {
-        onMarkerInstance?.(coord, null)
+      // Notify about removed markers (per unique key → корректный coord для каждого).
+      for (const { coord } of currentMarkerMap.values()) {
+        onMarkerInstanceRef.current?.(coord, null)
       }
     }
   }, [
@@ -385,9 +413,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
     markerIcon,
     markerOpacity,
     PopupContent,
-    popupProps,
-    onMarkerClick,
-    onMarkerInstance,
+    groupVersion,
   ])
 
   return (

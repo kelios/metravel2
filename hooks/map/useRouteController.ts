@@ -3,7 +3,7 @@
  * @module hooks/map/useRouteController
  */
 
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter';
 import { useRouteStore } from '@/stores/routeStore';
@@ -229,6 +229,18 @@ export function useRouteController(
 
   // Handle map click for route building
   const lastRouteClickRef = useRef<{ lng: number; lat: number; ts: number } | null>(null);
+  const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Снимаем отложенное открытие попапа при unmount — иначе колбэк дёргает
+  // mapUiApi на возможно уже снятой карте после teardown.
+  useEffect(() => {
+    return () => {
+      if (popupTimerRef.current) {
+        clearTimeout(popupTimerRef.current);
+        popupTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const handleMapClick = useCallback(
     (lng: number, lat: number) => {
@@ -339,7 +351,9 @@ export function useRouteController(
 
       try {
         // Open popup after the map starts moving so user immediately sees the exact point.
-        setTimeout(() => {
+        if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
+        popupTimerRef.current = setTimeout(() => {
+          popupTimerRef.current = null;
           for (const candidate of popupCoordCandidates) {
             try {
               mapUiApi?.openPopupForCoord?.(candidate);

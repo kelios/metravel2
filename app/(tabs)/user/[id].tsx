@@ -83,7 +83,7 @@ export default function PublicUserProfileScreen() {
   const subscriptionsCount = subscriptionsQuery.data?.length ?? null;
   const subscribersCount = subscribersQuery.data?.length ?? null;
 
-  const { isMobile, isDesktop, width } = useResponsive();
+  const { isMobile } = useResponsive();
 
   const authorTravelsQuery = useQuery<{ data: Travel[]; total: number }>({
     queryKey: queryKeys.userTravels(userId),
@@ -95,16 +95,6 @@ export default function PublicUserProfileScreen() {
 
   const authorTravels = authorTravelsQuery.data?.data ?? [];
   const authorTravelsTotal = authorTravelsQuery.data?.total ?? 0;
-
-  const cardWidth = useMemo(() => {
-    if (isMobile) return undefined;
-    const columns = isDesktop ? 3 : 2;
-    const gap = 16;
-    const horizontalPadding = 32;
-    const available = Math.max(0, (width || 0) - horizontalPadding - gap * (columns - 1));
-    const w = Math.floor(available / columns);
-    return w > 0 ? w : undefined;
-  }, [isMobile, isDesktop, width]);
 
   const handleOpenTravel = useCallback(
     (travel: Travel) => {
@@ -310,7 +300,7 @@ export default function PublicUserProfileScreen() {
                   return (
                     <View
                       key={String(travel.id ?? travel.slug ?? index)}
-                      style={[styles.travelsCardWrap, cardWidth ? { width: cardWidth } : null]}
+                      style={styles.travelsCardWrap}
                     >
                       <UnifiedTravelCard
                         title={travel.name?.trim() || 'Без названия'}
@@ -533,7 +523,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     gap: 16,
   },
   travelsCardWrap: {
-    width: '100%',
+    flexGrow: 1,
+    flexBasis: Platform.OS === 'web' ? 300 : '100%',
+    maxWidth: Platform.OS === 'web' ? 460 : undefined,
     minWidth: 0,
   },
   viewAllButton: {

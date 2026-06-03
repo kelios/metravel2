@@ -29,8 +29,11 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
   const unlikeComment = useUnlikeComment();
   const deleteComment = useDeleteComment();
 
-  const isAuthor = !!userId && Number(userId) === comment.user;
-  const canDelete = isAuthor || isSuperuser;
+  // Оптимистичный комментарий ещё не сохранён на сервере (см. createOptimisticComment):
+  // user === 0 до рефетча. Мутации edit/delete/reply по его временному id привели бы к 404.
+  const isOptimistic = comment.user === 0;
+  const isAuthor = !isOptimistic && !!userId && Number(userId) === comment.user;
+  const canDelete = (isAuthor || isSuperuser) && !isOptimistic;
   const canEdit = isAuthor;
   const isLiked = !!comment.is_liked;
   const showsAdminDeleteLabel = isSuperuser && !isAuthor;
@@ -179,7 +182,7 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
           </Pressable>
         )}
 
-        {isAuthenticated && onReply && level < 2 && (
+        {isAuthenticated && onReply && level < 2 && !isOptimistic && (
           <Pressable
             onPress={() => onReply(comment)}
             style={styles.footerButton}

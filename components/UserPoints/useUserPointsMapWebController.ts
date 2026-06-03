@@ -54,6 +54,16 @@ export function useUserPointsMapWebController({
     }
   }, [leafletControlRef])
 
+  // Освобождаем ссылки на маркеры при unmount — иначе обе Map держат detached-слои.
+  React.useEffect(() => {
+    const byId = markerByIdRef.current
+    const byCoord = markerByCoordRef.current
+    return () => {
+      byId.clear()
+      byCoord.clear()
+    }
+  }, [])
+
   React.useEffect(() => {
     const map = mapInstance
     const L = mods?.L
@@ -133,6 +143,10 @@ export function useUserPointsMapWebController({
     const L = mods?.L
     if (!map || !L) return
 
+    // Сбрасываем цепочку fallback при новом map/L — иначе монотонно растущий индекс
+    // навсегда исчерпался бы и карта осталась без тайлов до полного ремаунта.
+    baseLayerFallbackIndexRef.current = 0
+
     const fallbackUrls = [
       'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
       'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
@@ -182,13 +196,16 @@ export function useUserPointsMapWebController({
           leafletBaseLayerRef.current = nextLayer
           nextLayer.addTo(map)
 
+          // Снимаем listener старого слоя через текущий detach и привязываем новый,
+          // обновляя attachedLayerRef/detach — иначе рекурсивный attach утёк бы
+          // tileerror-listener на detached-слое, а ensureAttached навесил бы дубль.
           try {
-            layer.off?.('tileerror', onTileError)
+            detach?.()
           } catch {
             // noop
           }
-
-          attach(nextLayer)
+          attachedLayerRef.current = nextLayer
+          detach = attach(nextLayer)
           baseLayerFallbackSwitchingRef.current = false
         } catch {
           baseLayerFallbackSwitchingRef.current = false

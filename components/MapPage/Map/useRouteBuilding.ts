@@ -313,7 +313,6 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
 
     const abortController = new AbortController();
     abortRef.current = abortController;
-    lastRouteKeyRef.current = routeKey;
 
     setBuilding(true);
     setError(null);
@@ -374,8 +373,18 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
       };
 
       setRoute(routeData);
+      // Коммитим ключ ТОЛЬКО после успешного построения — иначе абортнутый запрос
+      // оставил бы ключ закоммиченным и dedup навсегда заблокировал бы перестроение.
+      lastRouteKeyRef.current = routeKey;
     } catch (error: any) {
-      if (error?.name === 'AbortError') return;
+      if (error?.name === 'AbortError') {
+        // Сбрасываем спиннер, только если нас не вытеснил более новый запрос
+        // (иначе затрём его setBuilding(true)).
+        if (abortRef.current === abortController) {
+          setBuilding(false);
+        }
+        return;
+      }
 
       const errorMessage = error?.message || 'Не удалось построить маршрут';
       setError(errorMessage);

@@ -248,22 +248,45 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
   const [error, setError] = useState<Error | null>(null);
   
   const loadedRef = useRef(false);
+  const mountedRef = useRef(true);
+  const inFlightCountRef = useRef(0);
   const refetchStateRef = useRef<{ step: number | null; inFlight: boolean }>({
     step: null,
     inFlight: false,
   });
+  const triedPointCatsRef = useRef<number | null>(null);
+  const triedCountriesRef = useRef<number | null>(null);
+
+  const beginLoading = useCallback(() => {
+    inFlightCountRef.current += 1;
+    if (mountedRef.current) setIsLoading(true);
+  }, []);
+
+  const endLoading = useCallback(() => {
+    inFlightCountRef.current = Math.max(0, inFlightCountRef.current - 1);
+    if (mountedRef.current && inFlightCountRef.current === 0) setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const loadFilters = useCallback(async () => {
     if (loadedRef.current) return;
-    
+
     try {
-      setIsLoading(true);
+      beginLoading();
       setError(null);
-      
+
       const [filtersData, countryData] = await Promise.all([
         fetchFiltersOptimized(),
         fetchAllCountries(),
       ]);
+
+      if (!mountedRef.current) return;
 
       const normalizedCategories = normalizeTravelCategories(filtersData?.categories || []);
       const normalizedTransports = normalizeIdNameList(filtersData?.transports || []);
@@ -274,7 +297,9 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
       const normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(
         filtersData?.categoryTravelAddress || []
       );
-      const normalizedCountries = normalizeCountries(filtersData?.countries || countryData || []);
+      const normalizedCountries = normalizeCountries(
+        filtersData?.countries?.length ? filtersData.countries : countryData || []
+      );
 
       setFilters({
         categories: normalizedCategories,
@@ -290,12 +315,12 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
       loadedRef.current = true;
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to load filters');
-      setError(error);
+      if (mountedRef.current) setError(error);
       console.error('Error loading filters:', error);
     } finally {
-      setIsLoading(false);
+      endLoading();
     }
-  }, []);
+  }, [beginLoading, endLoading]);
 
   const refetchPointCategories = useCallback(async () => {
     const refetchState = refetchStateRef.current;
@@ -305,8 +330,10 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
     refetchState.step = currentStep || null;
 
     try {
-      setIsLoading(true);
+      beginLoading();
       const filtersData = await fetchFiltersOptimized();
+
+      if (!mountedRef.current) return;
 
       const normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(
         filtersData?.categoryTravelAddress || []
@@ -319,15 +346,18 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
     } catch (err) {
       console.error('Error refetching point categories:', err);
     } finally {
-      setIsLoading(false);
+      endLoading();
       refetchState.inFlight = false;
     }
-  }, [currentStep]);
+  }, [currentStep, beginLoading, endLoading]);
 
   const refetchCountries = useCallback(async () => {
     try {
-      setIsLoading(true);
+      beginLoading();
       const countryData = await fetchAllCountries();
+
+      if (!mountedRef.current) return;
+
       const normalizedCountries = normalizeCountries(countryData);
 
       setFilters(prev => ({
@@ -337,9 +367,9 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
     } catch (err) {
       console.error('Error refetching countries:', err);
     } finally {
-      setIsLoading(false);
+      endLoading();
     }
-  }, []);
+  }, [beginLoading, endLoading]);
 
   useEffect(() => {
     if (loadOnMount) {
@@ -348,21 +378,34 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
   }, [loadOnMount, loadFilters]);
 
   useEffect(() => {
-    const needsPointCategories =
-      (currentStep === 2 || currentStep === 3) &&
-      (!filters?.categoryTravelAddress || filters.categoryTravelAddress.length === 0);
+    const isPointStep = currentStep === 2 || currentStep === 3;
 
-    if (needsPointCategories) {
-      refetchPointCategories();
+    if (!isPointStep) {
+      triedPointCatsRef.current = null;
+      return;
     }
+
+    const hasPointCats =
+      !!filters?.categoryTravelAddress && filters.categoryTravelAddress.length > 0;
+
+    if (hasPointCats || triedPointCatsRef.current === currentStep) return;
+
+    triedPointCatsRef.current = currentStep;
+    refetchPointCategories();
   }, [currentStep, filters?.categoryTravelAddress, refetchPointCategories]);
 
   useEffect(() => {
-    const needCountries = currentStep === 2 && (!filters?.countries || filters.countries.length === 0);
-
-    if (needCountries) {
-      refetchCountries();
+    if (currentStep !== 2) {
+      triedCountriesRef.current = null;
+      return;
     }
+
+    const hasCountries = !!filters?.countries && filters.countries.length > 0;
+
+    if (hasCountries || triedCountriesRef.current === currentStep) return;
+
+    triedCountriesRef.current = currentStep;
+    refetchCountries();
   }, [currentStep, filters?.countries, refetchCountries]);
 
   return useMemo(() => ({
