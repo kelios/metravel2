@@ -1,0 +1,202 @@
+import React, { Suspense } from 'react'
+import { Text } from 'react-native'
+import { render } from '@testing-library/react-native'
+
+import ContentUpsertSection from '@/components/travel/ContentUpsertSection'
+import type { TravelFormData } from '@/types/types'
+
+// Stub the lazy ArticleEditor so the derived UI around it renders synchronously.
+jest.mock('@/components/article/ArticleEditor', () => ({
+  __esModule: true,
+  default: (props: any) => {
+    const { Text } = require('react-native')
+    return <Text testID={`editor-${props.label}`}>{`editor:${props.label}`}</Text>
+  },
+}))
+
+jest.mock('@/components/forms/TextInputComponent', () => (props: any) => {
+  const { View, Text, TextInput } = require('react-native')
+  return (
+    <View>
+      <Text>{props.label}</Text>
+      <TextInput
+        accessibilityLabel={props.label}
+        value={props.value}
+        onChangeText={(v: string) => props.onChange?.(v)}
+        placeholder={props.placeholder}
+      />
+    </View>
+  )
+})
+
+jest.mock('@/hooks/useWebSpeechDictation', () => ({
+  useWebSpeechDictation: () => ({
+    isSupported: false,
+    isListening: false,
+    interimText: '',
+    start: jest.fn(),
+    stop: jest.fn(),
+    bindFinalTextHandler: jest.fn(),
+  }),
+}))
+
+jest.mock('@/hooks/useTheme', () => {
+  const {
+    MODERN_MATTE_PALETTE,
+    MODERN_MATTE_SHADOWS,
+    MODERN_MATTE_BOX_SHADOWS,
+  } = require('@/constants/modernMattePalette')
+  return {
+    useThemedColors: () => ({
+      ...MODERN_MATTE_PALETTE,
+      shadows: MODERN_MATTE_SHADOWS,
+      boxShadows: MODERN_MATTE_BOX_SHADOWS,
+    }),
+  }
+})
+
+jest.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () => ({ isPhone: false, isLargePhone: false }),
+}))
+
+jest.mock('react-native-safe-area-context', () => ({
+  SafeAreaView: ({ children }: any) => children,
+  useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
+}))
+
+jest.mock('expo-document-picker', () => ({ getDocumentAsync: jest.fn() }))
+jest.mock('expo-file-system', () => ({ readAsStringAsync: jest.fn() }))
+jest.mock('expo-clipboard', () => ({ getStringAsync: jest.fn() }))
+jest.mock('@/utils/toast', () => ({ showToast: jest.fn() }))
+
+const baseFormData: TravelFormData = {
+  id: '5',
+  name: '',
+  countries: [],
+  cities: [],
+  over_nights_stay: [],
+  complexity: [],
+  companions: [],
+  description: null,
+  plus: null,
+  minus: null,
+  recommendation: null,
+  youtube_link: null,
+  gallery: [],
+  categories: [],
+  countryIds: [],
+  travelAddressIds: [],
+  travelAddressCity: [],
+  travelAddressCountry: [],
+  travelAddressAdress: [],
+  travelAddressCategory: [],
+  coordsMeTravel: [],
+  thumbs200ForCollectionArr: [],
+  travelImageThumbUrlArr: [],
+  travelImageAddress: [],
+  categoriesIds: [],
+  transports: [],
+  month: [],
+  year: '',
+  budget: '',
+  number_peoples: '',
+  number_days: '',
+  visa: false,
+  publish: false,
+  moderation: false,
+}
+
+const renderSection = (override: Partial<TravelFormData> = {}) =>
+  render(
+    <Suspense fallback={<Text>loading…</Text>}>
+      <ContentUpsertSection
+        formData={{ ...baseFormData, ...override }}
+        setFormData={jest.fn()}
+      />
+    </Suspense>,
+  )
+
+describe('ContentUpsertSection — derived display logic', () => {
+  it('prompts for a minimum description when empty', () => {
+    const { getByText } = renderSection({ description: '' })
+    expect(getByText(/Минимум 50 символов/)).toBeTruthy()
+    expect(getByText('0 символов')).toBeTruthy()
+  })
+
+  it('shows remaining characters when below the 50-char minimum', () => {
+    const { getByText } = renderSection({ description: 'a'.repeat(40) })
+    // 50 - 40 = 10 remaining
+    expect(getByText('Осталось 10 символов до минимума')).toBeTruthy()
+    expect(getByText('40 символов')).toBeTruthy()
+  })
+
+  it('acknowledges a good short description in the 50–150 range', () => {
+    const { getByText } = renderSection({ description: 'b'.repeat(80) })
+    expect(getByText(/Хорошее краткое описание/)).toBeTruthy()
+    expect(getByText('80 символов')).toBeTruthy()
+  })
+
+  it('celebrates a detailed description above 150 chars', () => {
+    const { getByText } = renderSection({ description: 'c'.repeat(200) })
+    expect(getByText('Отличное подробное описание!')).toBeTruthy()
+    expect(getByText('200 символов')).toBeTruthy()
+  })
+
+  it('strips HTML tags and entities when counting description length', () => {
+    const html = '<p>Hello&nbsp;<b>world</b></p>'
+    // plain text -> "Hello world" = 11 chars
+    const { getByText } = renderSection({ description: html })
+    expect(getByText('11 символов')).toBeTruthy()
+  })
+
+  it('computes 0% form progress when required fields are empty', () => {
+    const { getByText } = renderSection()
+    expect(getByText('0%')).toBeTruthy()
+  })
+
+  it('computes 50% form progress when 2 of 4 required fields are filled', () => {
+    const { getByText } = renderSection({
+      name: 'Поездка',
+      description: 'd'.repeat(60),
+    })
+    expect(getByText('50%')).toBeTruthy()
+  })
+
+  it('computes 100% form progress when all required fields are filled', () => {
+    const { getByText } = renderSection({
+      name: 'Поездка',
+      description: 'd'.repeat(60),
+      countries: ['1'],
+      categories: ['2'],
+    })
+    expect(getByText('100%')).toBeTruthy()
+  })
+
+  it('hides the progress block when showProgress is false', () => {
+    const { queryByText } = render(
+      <Suspense fallback={<Text>loading…</Text>}>
+        <ContentUpsertSection
+          formData={baseFormData}
+          setFormData={jest.fn()}
+          showProgress={false}
+        />
+      </Suspense>,
+    )
+    expect(queryByText('Прогресс заполнения')).toBeNull()
+  })
+
+  it('renders only the requested fields when visibleFields is constrained', () => {
+    const { getByText, queryByText } = render(
+      <Suspense fallback={<Text>loading…</Text>}>
+        <ContentUpsertSection
+          formData={baseFormData}
+          setFormData={jest.fn()}
+          visibleFields={['name']}
+        />
+      </Suspense>,
+    )
+    expect(getByText('Название')).toBeTruthy()
+    expect(queryByText('Плюсы')).toBeNull()
+    expect(queryByText('Минусы')).toBeNull()
+  })
+})
