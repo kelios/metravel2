@@ -23,9 +23,9 @@ import { useMyTravels } from '@/hooks/useMyTravels';
 import type { Travel } from '@/types/types';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
-import { useProfileGrid } from './useProfileGrid';
-import { ProfileHeaderSection } from './ProfileHeaderSection';
-import { ProfileTravelGrid } from './ProfileTravelGrid';
+import { useProfileGrid } from '@/components/screens/profile/useProfileGrid';
+import { ProfileHeaderSection } from '@/components/screens/profile/ProfileHeaderSection';
+import { ProfileTravelGrid } from '@/components/screens/profile/ProfileTravelGrid';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { buildLoginHref } from '@/utils/authNavigation';
@@ -42,13 +42,13 @@ import { hapticImpact } from '@/utils/haptics';
 import { computeTravelEngagementSummary } from '@/utils/travelEngagementStats'
 import { useTravelStatusStore } from '@/stores/travelStatusStore'
 import { showToastMessage } from '@/utils/toast'
-import { createProfileScreenStyles } from './profileScreen.styles';
+import { createProfileScreenStyles } from '@/components/screens/profile/profileScreen.styles';
 import {
   keyExtractor,
   PROFILE_TRAVELS_PER_PAGE,
   withVisibleEngagementStats,
   type UserStats,
-} from './profileScreen.helpers';
+} from '@/components/screens/profile/profileScreen.helpers';
 
 export default function ProfileScreen() {
   const router = useRouter();

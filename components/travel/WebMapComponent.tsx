@@ -189,15 +189,23 @@ const WebMapComponent = ({
     const [localMarkers, setLocalMarkers] = useState(markers);
     const lastMarkersRef = useRef(markers);
     const isInternalUpdateRef = useRef(false);
+    // Ссылка на массив markers (prop) на момент внутреннего апдейта.
+    // Нужна, чтобы отличать внутренний апдейт от наложившегося внешнего.
+    const internalUpdateMarkersRef = useRef<any[]>(markers);
     const prevExternalLengthRef = useRef<number>(markers.length);
     const activeSetByMarkerClickRef = useRef(false);
     
     // Синхронизируем локальное состояние с пропсами только при внешних изменениях
     useEffect(() => {
-        // Пропускаем обновление, если изменение было инициировано внутри компонента
+        // Пропускаем обновление, только если оно было инициировано внутри компонента
+        // И ссылка markers не изменилась с момента внутреннего апдейта.
+        // Если markers пришёл другой ссылкой — это реальное внешнее обновление,
+        // которое нельзя проглатывать.
         if (isInternalUpdateRef.current) {
             isInternalUpdateRef.current = false;
-            return;
+            if (markers === internalUpdateMarkersRef.current) {
+                return;
+            }
         }
 
         const normalizeCoordKey = (value: any) => {
@@ -285,10 +293,13 @@ const WebMapComponent = ({
     // Немедленное обновление родительского компонента (без дебаунса)
     const debouncedMarkersChange = useCallback((updatedMarkers: any[]) => {
         isInternalUpdateRef.current = true;
+        // Запоминаем текущую ссылку prop markers: эффект синхронизации проглотит
+        // апдейт только если markers не сменился внешне с этого момента.
+        internalUpdateMarkersRef.current = markers;
         setLocalMarkers(updatedMarkers);
         onMarkersChange(updatedMarkers);
         lastMarkersRef.current = updatedMarkers;
-    }, [onMarkersChange]);
+    }, [markers, onMarkersChange]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -416,6 +427,14 @@ const WebMapComponent = ({
                 derivedCountryId: markerResult.derivedCountryId,
             });
         } catch {
+            if (previewUrl) {
+                removePendingImageFile(previewUrl);
+                try {
+                    URL.revokeObjectURL(previewUrl);
+                } catch {
+                    // noop
+                }
+            }
             void showToastMessage({
                 type: 'error',
                 text1: 'Не удалось сохранить точку',
@@ -479,6 +498,7 @@ const WebMapComponent = ({
 
     const handleMarkerRemove = (index: number) => {
         const removed = localMarkers[index];
+        if (!removed) return;
         const removedImage = typeof removed?.image === 'string' ? removed.image.trim() : '';
         if (removedImage && /^(blob:)/i.test(removedImage)) {
             removePendingImageFile(removedImage);
@@ -491,7 +511,7 @@ const WebMapComponent = ({
         const updated = localMarkers.filter((_: any, i: any) => i !== index);
         debouncedMarkersChange(updated);
 
-        if (removed.country) {
+        if (removed?.country) {
             const removedId = String(removed.country);
             const stillExists = updated.some((m: any) => String(m.country) === removedId);
             if (!stillExists) onCountryDeselect(removedId);
@@ -567,16 +587,17 @@ const WebMapComponent = ({
                                     activeSetByMarkerClickRef={activeSetByMarkerClickRef}
                                 />
                                 {localMarkers
-                                    .filter(hasValidMarkerCoordinates)
-                                    .map((marker: any, idx: number) => (
+                                    .map((marker: any, originalIdx: number) => ({ marker, originalIdx }))
+                                    .filter(({ marker }) => hasValidMarkerCoordinates(marker))
+                                    .map(({ marker, originalIdx }) => (
                                     <Marker
-                                        key={idx}
+                                        key={marker.id ?? `${marker.lat},${marker.lng}`}
                                         position={[marker.lat, marker.lng]}
                                         icon={markerIcon}
                                         eventHandlers={{
                                             click: () => {
                                                 activeSetByMarkerClickRef.current = true;
-                                                setActiveIndex(idx);
+                                                setActiveIndex(originalIdx);
                                                 setIsExpanded(true);
                                             },
                                         }}
@@ -584,7 +605,7 @@ const WebMapComponent = ({
                                         <Popup>
                                             <WebMapMarkerPopup
                                                 marker={marker}
-                                                markerIndex={idx}
+                                                markerIndex={originalIdx}
                                                 categoryTravelAddress={categoryTravelAddress}
                                                 colors={colors}
                                                 onEdit={handleEditMarker}

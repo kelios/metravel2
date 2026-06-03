@@ -11,6 +11,7 @@ import type { Coordinates } from './useMapCoordinates';
 import type { FiltersData } from './useMapFilters';
 import type { MapFilterValues } from '@/utils/mapFiltersStorage';
 import { useMapTravels } from './useMapTravels';
+import { queryKeys } from '@/api/queryKeys';
 
 interface UseMapDataControllerOptions {
   /**
@@ -184,8 +185,8 @@ export function useMapDataController(
   // Invalidate query cache and refetch
   const queryClient = useQueryClient();
   const invalidateTravelsQuery = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ['travelsForMap'] });
-    void queryClient.invalidateQueries({ queryKey: ['travelsForMapRoute'] });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.travelsForMapAll() });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.travelsForMapRouteAll() });
   }, [queryClient]);
 
   return useMemo(() => ({

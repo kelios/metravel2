@@ -10,6 +10,7 @@ import type { Coordinates } from './types'
 const MOBILE_WEB_USER_FOCUS_MAX_WIDTH = 768
 const MOBILE_WEB_USER_FOCUS_OFFSET: [number, number] = [84, -92]
 const USER_LOCATION_FOCUS_ZOOM = 14
+const GEO_REQUEST_TIMEOUT_MS = 15000
 
 let expoLocationModulePromise: Promise<typeof import('expo-location')> | null = null
 
@@ -74,13 +75,22 @@ export function useMapUserLocation({
         if (notifyOnFailure) showGeolocationErrorToast()
         return
       }
-      const location = await Location.getCurrentPositionAsync({})
+      // getCurrentPositionAsync can hang indefinitely on some browsers/devices.
+      // Race it against a timeout so geoRequestedRef can't get stuck true.
+      const location = await Promise.race([
+        Location.getCurrentPositionAsync({}),
+        new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('geolocation timeout')), GEO_REQUEST_TIMEOUT_MS)
+        }),
+      ])
       const lat = location.coords.latitude
       const lng = location.coords.longitude
       if (isValidCoordinate(lat, lng)) {
         setUserLocation({ latitude: lat, longitude: lng })
       }
     } catch {
+      // Includes the timeout above, so a hung getCurrentPositionAsync no longer
+      // leaves geoRequestedRef stuck true and blocking later retries.
       geoRequestedRef.current = false
       if (notifyOnFailure) showGeolocationErrorToast()
     }

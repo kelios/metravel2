@@ -376,10 +376,18 @@ export const useRouting = (
             isProcessingRef.current = false
         }
 
-        // Проверяем кэш - но только routeCache, не resolvedRouteKeys (для возможности перестроения)
+        // Проверяем кэш - но только routeCache, не resolvedRouteKeys (для возможности перестроения).
+        // routeCache.get ключуется по координатам+transportMode, что эквивалентно routeKey,
+        // поэтому используем его как ПЕРВИЧНЫЙ источник независимо от lastRouteKeyRef.
+        // (lastRouteKeyRef присваивается только внутри отложенного fetchRoute, и завязка на него
+        // приводила к лишним запросам к лимитированному ORS на валидном кэше нового routeKey.)
         const cached = routeCache.get(routePointsRef.current, transportMode)
-        if (cached && lastRouteKeyRef.current === routeKey) {
-            // Используем кэш только если это тот же самый routeKey (не новый запрос)
+        if (cached) {
+            // Помечаем routeKey как обработанный и фиксируем его, чтобы отложенный
+            // fetchRoute из этого же прохода считался stale и не дублировал запрос.
+            lastRouteKeyRef.current = routeKey
+            isProcessingRef.current = false
+            resolvedRouteKeys.add(routeKey)
             setState({
                 loading: false,
                 error: false,
@@ -550,8 +558,26 @@ export const useRouting = (
                     })
                 })
                 if (isStale()) return
-                resolvedRouteKeys.add(routeKey)
-                routeCache.set(currentPoints, transportMode, currentPoints, directDistance, duration)
+
+                // Кэшируем direct-line fallback только при ПЕРМАНЕНТНЫХ ошибках
+                // (невалидные координаты / ключ / 400 / 403 / 404).
+                // Временные сбои (сеть, 429, 5xx) НЕ кэшируем, чтобы следующий
+                // заход в пределах TTL перестроил реальный маршрут.
+                const status = Number(primaryError?.httpStatus)
+                const permanentStatus = status === 400 || status === 401 || status === 403 || status === 404
+                const transientStatus = status === 429 || (status >= 500 && status <= 599)
+                const isPermanentError =
+                    permanentStatus ||
+                    msg.includes('Некорректные координаты') ||
+                    msg.includes('координаты маршрута') ||
+                    msg.includes('Недостаточно точек') ||
+                    msg.includes('Неверный API ключ')
+
+                // Кэшируем только если ошибка надёжно перманентна и не помечена как временная.
+                if (isPermanentError && !transientStatus) {
+                    resolvedRouteKeys.add(routeKey)
+                    routeCache.set(currentPoints, transportMode, currentPoints, directDistance, duration)
+                }
             } finally {
                 // Prevent older in-flight requests from clearing the "processing" flag for newer ones.
                 if (activeRequestIdRef.current === requestId) {

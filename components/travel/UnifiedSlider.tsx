@@ -7,6 +7,7 @@ import React, {
   useImperativeHandle,
   useMemo,
   useRef,
+  useState,
   forwardRef,
 } from 'react';
 import {
@@ -116,6 +117,11 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
   const dragStartXRef = useRef(0);
   const dragScrollLeftRef = useRef(0);
 
+  // Flips to true once the web ScrollView DOM node is available, so effects
+  // that attach listeners re-run after the node mounts (deps don't otherwise
+  // change between initial render and node availability).
+  const [nodeReady, setNodeReady] = useState(false);
+
   // Shared value for animated dots (native only)
   const x = useSharedValue(0);
 
@@ -130,6 +136,14 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
     (): HTMLElement | null => findSliderNode('slider-wrapper', sliderInstanceId),
     [sliderInstanceId]
   );
+
+  // Mark node as ready once the web ScrollView DOM node mounts. containerW
+  // becomes > 0 after layout, by which point the node exists in the DOM.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (nodeReady) return;
+    if (getScrollNode()) setNodeReady(true);
+  }, [getScrollNode, nodeReady, containerW]);
 
   // Sync container width from DOM (web only)
   const syncContainerWidthFromDom = useCallback(() => {
@@ -245,7 +259,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
       next: () => {
         dismissSwipeHint();
         enablePrefetch();
-        const target = (indexRef.current + 1) % images.length;
+        const target = (indexRef.current + 1) % Math.max(1, images.length);
         scrollTo(target);
       },
       prev: () => {
@@ -312,7 +326,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
       } else if (e.key === 'ArrowRight') {
         dismissSwipeHint();
         enablePrefetch();
-        const target = (indexRef.current + 1) % images.length;
+        const target = (indexRef.current + 1) % Math.max(1, images.length);
         scrollTo(target);
       }
     };
@@ -325,7 +339,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
     return () => {
       parent.removeEventListener('keydown', handleKeyDown as EventListener);
     };
-  }, [getScrollNode, dismissSwipeHint, enablePrefetch, indexRef, images.length, scrollTo]);
+  }, [getScrollNode, dismissSwipeHint, enablePrefetch, indexRef, images.length, scrollTo, nodeReady]);
 
   // Mouse drag (web only)
   useEffect(() => {
@@ -440,7 +454,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
       if (scrollEndTimer) clearTimeout(scrollEndTimer);
       if (moveRaf != null) cancelAnimationFrame(moveRaf);
     };
-  }, [images.length, setActiveIndex, getScrollNode, containerWRef, indexRef]);
+  }, [images.length, setActiveIndex, getScrollNode, containerWRef, indexRef, nodeReady]);
 
   // Cleanup scroll idle timer
   useEffect(() => {
@@ -665,7 +679,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
             scrollTo(target);
           }}
           goNext={() => {
-            const target = (indexRef.current + 1) % images.length;
+            const target = (indexRef.current + 1) % Math.max(1, images.length);
             scrollTo(target);
           }}
         />

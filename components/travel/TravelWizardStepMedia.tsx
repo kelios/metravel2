@@ -166,6 +166,16 @@ function useMediaAnchorScroll(focusAnchorId?: string | null, onAnchorHandled?: (
 function useCoverDeletion(travelId: string | null | undefined, setFormData: TravelWizardStepMediaProps['setFormData']) {
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [isCoverDeleted, setCoverDeleted] = useState(false);
+    const hardDeletedRef = useRef(false);
+    const isDeletingRef = useRef(false);
+    const mountedRef = useRef(true);
+
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
+        };
+    }, []);
 
     const clearCoverUrls = useCallback(() => {
         setFormData((prev) => ({
@@ -177,6 +187,8 @@ function useCoverDeletion(travelId: string | null | undefined, setFormData: Trav
 
     const requestDeleteCover = useCallback(() => {
         if (!travelId) {
+            hardDeletedRef.current = true;
+            setCoverDeleted(true);
             clearCoverUrls();
             return;
         }
@@ -188,6 +200,12 @@ function useCoverDeletion(travelId: string | null | undefined, setFormData: Trav
     }, []);
 
     const markCoverAvailable = useCallback(() => {
+        hardDeletedRef.current = false;
+        setCoverDeleted(false);
+    }, []);
+
+    const syncCoverAvailability = useCallback(() => {
+        if (hardDeletedRef.current) return;
         setCoverDeleted(false);
     }, []);
 
@@ -197,10 +215,16 @@ function useCoverDeletion(travelId: string | null | undefined, setFormData: Trav
             return;
         }
 
+        if (isDeletingRef.current) return;
+        isDeletingRef.current = true;
+
         try {
             await deleteTravelMainImage(travelId);
-            setCoverDeleted(true);
-            clearCoverUrls();
+            hardDeletedRef.current = true;
+            if (mountedRef.current) {
+                setCoverDeleted(true);
+                clearCoverUrls();
+            }
         } catch {
             void showToastMessage({
                 type: 'error',
@@ -208,7 +232,10 @@ function useCoverDeletion(travelId: string | null | undefined, setFormData: Trav
                 text2: 'Проверьте соединение и попробуйте ещё раз',
             });
         } finally {
-            closeDeleteDialog();
+            isDeletingRef.current = false;
+            if (mountedRef.current) {
+                closeDeleteDialog();
+            }
         }
     }, [clearCoverUrls, closeDeleteDialog, travelId]);
 
@@ -219,6 +246,7 @@ function useCoverDeletion(travelId: string | null | undefined, setFormData: Trav
         closeDeleteDialog,
         confirmDeleteCover,
         markCoverAvailable,
+        syncCoverAvailability,
     };
 }
 
@@ -430,13 +458,14 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
         closeDeleteDialog,
         confirmDeleteCover,
         markCoverAvailable,
+        syncCoverAvailability,
     } = useCoverDeletion(travelId, setFormData);
 
     useEffect(() => {
         if (hasUrl(coverSmallUrl) || hasUrl(coverFullUrl)) {
-            markCoverAvailable();
+            syncCoverAvailability();
         }
-    }, [coverFullUrl, coverSmallUrl, markCoverAvailable]);
+    }, [coverFullUrl, coverSmallUrl, syncCoverAvailability]);
 
     const coverUrl = useMemo(
         () => (isCoverDeleted ? null : getFirstUrl(coverSmallUrl, coverFullUrl, oldCoverSmallUrl, oldCoverFullUrl)),

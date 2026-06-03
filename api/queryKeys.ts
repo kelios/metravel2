@@ -1,5 +1,6 @@
 export const queryKeys = {
   travel: (slugOrId: string | number) => ['travel', slugOrId] as const,
+  travelAll: () => ['travel'] as const,
   travels: () => ['travels'] as const,
   randomTravels: () => ['random-travels'] as const,
   travelsNear: (travelId: number) => ['travels-near', travelId] as const,
@@ -13,13 +14,21 @@ export const queryKeys = {
   travelFacets: (search: string, params: Record<string, unknown>) =>
     ['travel-facets', search, params] as const,
   userPointsAll: () => ['userPointsAll'] as const,
-  userPointsCategoryDictionary: () => ['userPointsCategoryDictionary'] as const,
   myTravelsCount: (userId: string | number | null | undefined) =>
     ['my-travels-count', userId] as const,
   exportMyTravelsCount: (userId: string | number | null | undefined) =>
     ['export-my-travels-count', userId] as const,
   travelUserRating: (travelId: number | undefined) =>
     ['travelUserRating', travelId] as const,
+  homePopularTravels: () => ['home-popular-travels'] as const,
+  rouletteTravelFacets: (params: Record<string, unknown>) =>
+    ['roulette-travel-facets', params] as const,
+  travelsForMap: (params: Record<string, unknown>, perPage: number) =>
+    ['travelsForMap', params, { perPage }] as const,
+  travelsForMapAll: () => ['travelsForMap'] as const,
+  travelsForMapRoute: (params: Record<string, unknown>) =>
+    ['travelsForMapRoute', params] as const,
+  travelsForMapRouteAll: () => ['travelsForMapRoute'] as const,
   articles: (params: { page: number; itemsPerPage: number; user_id?: string }) =>
     ['articles', params] as const,
   addressSearch: (query: string) => ['address-search', query] as const,

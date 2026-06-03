@@ -5,6 +5,7 @@ import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/utils/filterQue
 import type { TravelCoords } from '@/types/types';
 import { logError } from '@/utils/logger';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
+import { queryKeys } from '@/api/queryKeys';
 import type { Coordinates } from './useMapCoordinates';
 import type { FiltersData } from './useMapFilters';
 import type { MapFilterValues } from '@/utils/mapFiltersStorage';
@@ -266,7 +267,7 @@ export function useMapTravels({
    };
 
   const radiusQuery = useInfiniteQuery<TravelCoordsPage>({
-    queryKey: ['travelsForMap', queryParams, { perPage: MAP_TRAVELS_PER_PAGE }],
+    queryKey: queryKeys.travelsForMap(queryParams, MAP_TRAVELS_PER_PAGE),
     enabled: enabledRadius,
     initialPageParam: 0,
     queryFn: async ({ pageParam, signal }) => {
@@ -321,7 +322,7 @@ export function useMapTravels({
   });
 
   const routeQuery = useQuery<TravelCoords[]>({
-    queryKey: ['travelsForMapRoute', queryParams],
+    queryKey: queryKeys.travelsForMapRoute(queryParams),
     enabled: enabledRoute,
     queryFn: async ({ signal }) => {
       // Восстанавливаем координаты из ключа

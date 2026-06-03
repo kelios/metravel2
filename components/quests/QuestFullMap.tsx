@@ -124,6 +124,7 @@ async function ensureDomToImage(): Promise<any> {
     await (ensureDomToImage as any)._loader;
 
     if (!w.domtoimage) {
+        (ensureDomToImage as any)._loader = null;
         throw new Error('Не удалось загрузить dom-to-image из CDN');
     }
 
@@ -196,6 +197,15 @@ function QuestFullMap({
         () => steps.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng)),
         [steps]
     );
+
+    // Стабильный ключ для зависимостей эффектов: меняется только при реальном
+    // изменении набора/границ точек, а не при смене ссылки массива steps.
+    const pointsKey = useMemo(() => {
+        if (points.length === 0) return '';
+        const first = points[0];
+        const last = points[points.length - 1];
+        return `${points.length}:${first.lat},${first.lng}:${last.lat},${last.lng}`;
+    }, [points]);
 
     // Группировка совпадающих координат
     const groupedPoints = useMemo(() => {
@@ -321,7 +331,7 @@ function QuestFullMap({
     const { L, MapContainer, TileLayer, Marker, Polyline, Popup, FeatureGroup, useMap } = mods;
 
     // Безопасное подгоняние границ
-    const FitBounds: React.FC = () => {
+    const FitBounds: React.FC<{ fitKey: string }> = ({ fitKey }) => {
         const map = useMap();
 
         useEffect(() => {
@@ -370,7 +380,7 @@ function QuestFullMap({
             }, 100);
 
             return () => clearTimeout(timer);
-        }, [map]);
+        }, [map, fitKey]);
 
         return null;
     };
@@ -378,11 +388,14 @@ function QuestFullMap({
     // Автоцентрирование на активный шаг при смене
     const PanToActive: React.FC<{ index?: number }> = ({ index }) => {
         const map = useMap();
-        const prevIndex = useRef(index);
+        const prevIndex = useRef<number | undefined>(undefined);
 
         useEffect(() => {
-            if (index == null || !map || index === prevIndex.current) {
-                prevIndex.current = index;
+            if (index == null || !map) {
+                prevIndex.current = index ?? undefined;
+                return;
+            }
+            if (index === prevIndex.current) {
                 return;
             }
             prevIndex.current = index;
@@ -479,7 +492,7 @@ function QuestFullMap({
                     touchZoom={true}
                     doubleClickZoom={false}
                 >
-                    <FitBounds />
+                    <FitBounds fitKey={pointsKey} />
                     <PanToActive index={activeStepIndex} />
                     <TileLayer
                         attribution="&copy; OpenStreetMap"

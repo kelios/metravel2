@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, useCallback } from 'react';
+import { memo, useMemo, useState, useCallback, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
@@ -111,11 +111,7 @@ function UnifiedTravelCard({
   webHoverScale = true,
   webTouchAction,
 }: Props) {
-  const isWeb =
-    Platform.OS === 'web' ||
-    typeof window !== 'undefined' ||
-    typeof document !== 'undefined' ||
-    webAsView;
+  const isWeb = Platform.OS === 'web' || webAsView;
   const colors = useThemedColors();
   const [isHovered, setIsHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -181,6 +177,11 @@ function UnifiedTravelCard({
     );
   }, [imageUrl, imageHeight, isFeatured, isWeb, mediaFit, mediaProps?.optimizeWeb, width]);
   const [imageFailed, setImageFailed] = useState(false);
+  // Reset the failed flag when the image source changes so that recycled list
+  // cells (FlashList/FlatList) render a new valid URL instead of staying broken.
+  useEffect(() => {
+    setImageFailed(false);
+  }, [optimizedImageUrl]);
   const handleImageLoad = useCallback(() => {
     setImageFailed(false);
   }, []);
@@ -432,7 +433,7 @@ function UnifiedTravelCard({
   const containerProps = useMemo(() => {
     if (!isWeb) return { onPress, ...(onLongPress ? { onLongPress: handleLongPress } : {}) };
 
-    const base = webPressableProps ?? defaultWebProps;
+    const base = { ...defaultWebProps, ...webPressableProps };
     const originalMouseEnter = base?.onMouseEnter;
     const originalMouseLeave = base?.onMouseLeave;
     const originalFocus = base?.onFocus;

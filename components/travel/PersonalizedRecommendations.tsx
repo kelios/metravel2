@@ -23,7 +23,7 @@ interface PersonalizedRecommendationsProps {
 }
 
 function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHeader = true, onlyRecommendations = false }: PersonalizedRecommendationsProps) {
-    const { favorites, viewHistory, getRecommendations } = useFavorites();
+    const { favorites, viewHistory, recommended } = useFavorites();
     const { isAuthenticated } = useAuth();
     const router = useRouter();
     const { width } = useWindowDimensions();
@@ -39,17 +39,26 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
 
     // Проверяем состояние сворачивания при монтировании
     useEffect(() => {
+        let cancelled = false;
         const checkCollapsed = async () => {
             if (Platform.OS === 'web') {
                 const collapsed = sessionStorage.getItem(COLLAPSED_KEY) === 'true';
-                setIsCollapsed(collapsed);
+                if (!cancelled) {
+                    setIsCollapsed(collapsed);
+                    setIsInitialized(true);
+                }
             } else {
                 const collapsed = await AsyncStorage.getItem(COLLAPSED_KEY);
-                setIsCollapsed(collapsed === 'true');
+                if (!cancelled) {
+                    setIsCollapsed(collapsed === 'true');
+                    setIsInitialized(true);
+                }
             }
-            setIsInitialized(true);
         };
         checkCollapsed();
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     const handleExpand = useCallback(() => {
@@ -74,14 +83,14 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
     // ✅ ИСПРАВЛЕНИЕ: Показываем только алгоритмические рекомендации (не дублируем избранное и историю)
     const recommendations = useMemo(() => {
         if (!isAuthenticated) return [];
-        const raw = getRecommendations();
+        const raw = recommended;
         if (onlyRecommendations) {
             return raw;
         }
-        // getRecommendations возвращает избранное, отсортированное по дате
+        // recommended возвращает избранное, отсортированное по дате
         // Здесь исключаем элементы, которые уже отображаются в «Избранном», чтобы не дублировать карточки
         return raw.filter((item) => !favoriteKeys.has(`${item.type}-${item.id}`));
-    }, [favoriteKeys, isAuthenticated, getRecommendations, onlyRecommendations]);
+    }, [favoriteKeys, isAuthenticated, recommended, onlyRecommendations]);
 
     const containerStyles = useMemo(() => [
         styles.container,

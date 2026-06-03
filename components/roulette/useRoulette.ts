@@ -125,8 +125,8 @@ export function useRoulette() {
   }, [queryParams, defaultCountries]);
 
   const { data: facetsData } = useQuery({
-    queryKey: ['roulette-travel-facets', rouletteQueryParams],
-    queryFn: ({ signal } = {} as any) =>
+    queryKey: queryKeys.rouletteTravelFacets(rouletteQueryParams),
+    queryFn: ({ signal }) =>
       fetchTravelFacets('', rouletteQueryParams, { signal, suppressErrors: true }),
     enabled: Boolean(options),
     staleTime: 30 * 1000,

@@ -266,6 +266,9 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
         } catch {
           // noop
         }
+        // Tear down everything created in this aborted pass so the next retry
+        // doesn't end up with a duplicate set of overlays/controllers/subscriptions.
+        cleanup();
         return;
       }
 

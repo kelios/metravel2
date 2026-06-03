@@ -157,14 +157,38 @@ const RightColumn: React.FC<RightColumnProps> = (
     const listRef = externalListRef ?? localListRef
     const recommendationsOffsetRef = useRef<number | null>(null)
     const pendingRecommendationsScrollRef = useRef(false)
+    const scheduledRafRef = useRef<number | null>(null)
+    const scheduledTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const lastEndReachedAtRef = useRef(0)
+    const lastEndReachedHeightRef = useRef(0)
+
+    const cancelScheduledAfterLayout = useCallback(() => {
+      if (scheduledRafRef.current != null && typeof cancelAnimationFrame === 'function') {
+        cancelAnimationFrame(scheduledRafRef.current)
+      }
+      scheduledRafRef.current = null
+      if (scheduledTimeoutRef.current != null) {
+        clearTimeout(scheduledTimeoutRef.current)
+      }
+      scheduledTimeoutRef.current = null
+    }, [])
 
     const scheduleAfterLayout = useCallback((callback: () => void) => {
+      cancelScheduledAfterLayout()
       if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(() => callback())
+        scheduledRafRef.current = requestAnimationFrame(() => {
+          scheduledRafRef.current = null
+          callback()
+        })
         return
       }
-      setTimeout(callback, 0)
-    }, [])
+      scheduledTimeoutRef.current = setTimeout(() => {
+        scheduledTimeoutRef.current = null
+        callback()
+      }, 0)
+    }, [cancelScheduledAfterLayout])
+
+    useEffect(() => cancelScheduledAfterLayout, [cancelScheduledAfterLayout])
 
     const scrollToRecommendations = useCallback(() => {
       const offset = recommendationsOffsetRef.current
@@ -200,6 +224,8 @@ const RightColumn: React.FC<RightColumnProps> = (
       if (!pendingRecommendationsScrollRef.current) return
 
       scheduleAfterLayout(() => {
+        // Сбрасываем pending только при УСПЕШНОМ скролле: если offset ещё не измерен
+        // (layout не пришёл), флаг должен сохраниться, чтобы скролл сработал позже.
         if (scrollToRecommendations()) {
           pendingRecommendationsScrollRef.current = false
         }
@@ -294,9 +320,17 @@ const RightColumn: React.FC<RightColumnProps> = (
       const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent
       const distanceFromEnd = contentSize.height - layoutMeasurement.height - contentOffset.y
       const threshold = (onEndReachedThreshold ?? 0.5) * layoutMeasurement.height
-      if (distanceFromEnd < threshold) {
-        onEndReached()
-      }
+      if (distanceFromEnd >= threshold) return
+
+      // Guard against firing onEndReached on every scroll event: skip if a
+      // request was made for the same scroll height, or more often than ~800ms.
+      const now = Date.now()
+      const sameHeight = contentSize.height === lastEndReachedHeightRef.current
+      if (sameHeight && now - lastEndReachedAtRef.current < 800) return
+
+      lastEndReachedAtRef.current = now
+      lastEndReachedHeightRef.current = contentSize.height
+      onEndReached()
     }, [onEndReached, onEndReachedThreshold])
 
     const topContentNodes = useMemo(() => {

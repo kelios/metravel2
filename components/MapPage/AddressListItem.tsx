@@ -164,18 +164,20 @@ const AddressListItem: React.FC<Props> = ({
     else openArticle()
   }, [onPress, openArticle])
 
+  const travelUpdatedAt = (travel as Record<string, unknown>).updated_at as
+    | string
+    | undefined
   const imgUri = useMemo(() => {
     if (!travelImageThumbUrl) return null
-    return addVersion(
-      travelImageThumbUrl,
-      (travel as Record<string, unknown>).updated_at as string | undefined,
-    )
-  }, [travelImageThumbUrl, travel])
+    return addVersion(travelImageThumbUrl, travelUpdatedAt)
+  }, [travelImageThumbUrl, travelUpdatedAt])
   const isNoImage = !imgUri
 
   useEffect(() => {
-    setImgLoaded(isNoImage)
-  }, [isNoImage])
+    setImgLoaded(!imgUri)
+  }, [imgUri])
+
+  useEffect(() => () => setHovered(false), [])
 
   const distanceInfo = useMemo(() => {
     const parsed = parseCoord(coord)

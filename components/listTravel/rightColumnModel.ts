@@ -39,13 +39,16 @@ type RightColumnComparableProps = {
   activeFiltersCount: number
   cardSpacing?: number
   contentPadding: number
+  getEmptyStateMessage?: unknown
   gridColumns: number
   isError: boolean
   isExport?: boolean
   isMobile: boolean
   isRecommendationsVisible: boolean
   isSearchPending?: boolean
+  onEndReached?: unknown
   onFiltersPress?: unknown
+  refetch?: unknown
   renderItem: unknown
   search: string
   showEmptyState: boolean
@@ -79,7 +82,10 @@ export function areRightColumnPropsEqual(
     prev.showEmptyState === next.showEmptyState &&
     prev.showNextPageLoading === next.showNextPageLoading &&
     prev.activeFiltersCount === next.activeFiltersCount &&
-    prev.isRecommendationsVisible === next.isRecommendationsVisible
+    prev.isRecommendationsVisible === next.isRecommendationsVisible &&
+    prev.getEmptyStateMessage === next.getEmptyStateMessage &&
+    prev.onEndReached === next.onEndReached &&
+    prev.refetch === next.refetch
   )
 }
 

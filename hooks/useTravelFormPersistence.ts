@@ -1,4 +1,4 @@
-import { useCallback, useEffect, type MutableRefObject } from 'react';
+import { useCallback, useEffect, useRef, type MutableRefObject } from 'react';
 import isEqual from 'fast-deep-equal';
 import { type QueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/api/queryKeys';
@@ -71,7 +71,7 @@ async function invalidateTravelDetails(
 
   await Promise.all(
     uniqueKeys.map((key) =>
-      queryClient.invalidateQueries({ queryKey: ['travel', Number.isFinite(Number(key)) ? Number(key) : key] }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.travel(Number.isFinite(Number(key)) ? Number(key) : key) }),
     ),
   );
 }
@@ -129,6 +129,15 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
     rehydrateMarkerIdsFromServer,
     uploadPendingMarkerImages,
   } = params;
+
+  // Каждый вызов applySavedData увеличивает epoch. Асинхронный rehydrate из
+  // более старого вызова не должен затирать state/baseline, выставленные более
+  // новым applySavedData (или последующими правками пользователя).
+  const applyEpochRef = useRef(0);
+
+  // Стабильная ссылка на autosave.cancelPending, чтобы handleManualSave не
+  // пересоздавался на каждый тик статуса автосейва.
+  const autosaveCancelPendingRef = useRef<(() => void) | null>(null);
 
   const cleanAndSave = useCallback(async (data: TravelFormData, options?: { autosave?: boolean }) => {
     // ✅ FIX: Отменяем предыдущий запрос для предотвращения race condition
@@ -229,6 +238,8 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       // ✅ FIX: Проверяем монтирование перед обновлением состояния
       if (!mountedRef.current) return;
 
+      const epoch = ++applyEpochRef.current;
+
       const normalizedSavedData = normalizeDraftPlaceholders(savedData);
       const currentDataSnapshot =
         (sourceData as TravelFormData | undefined) ??
@@ -312,11 +323,14 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         updateBaselineRef.current?.(currentDataSnapshot);
       } else {
         pendingBaselineRef.current = finalData;
-        formState.reset(finalData);
-        formDataRef.current = finalData as TravelFormData;
-        setMarkers(effectiveMarkers);
-        updateBaselineRef.current?.(finalData);
-        pendingBaselineRef.current = null;
+        try {
+          formState.reset(finalData);
+          formDataRef.current = finalData as TravelFormData;
+          setMarkers(effectiveMarkers);
+          updateBaselineRef.current?.(finalData);
+        } finally {
+          pendingBaselineRef.current = null;
+        }
       }
 
       const travelIdForRefresh = normalizeTravelId(finalData.id) ?? stableTravelId;
@@ -326,6 +340,9 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         // Пользователь мог уйти со страницы во время долгого rehydrate-запроса —
         // не трогаем state/ref размонтированного компонента.
         if (!mountedRef.current) return;
+        // Более новый applySavedData (или правки пользователя) уже выставил state —
+        // медленный rehydrate из устаревшего вызова не должен их затирать.
+        if (epoch !== applyEpochRef.current) return;
         if (refreshedMarkers && refreshedMarkers.length > 0) {
           // Keep the refreshed marker ids in form state before attempting upload.
           // Without this step the point can stay "id-less" locally and the pending
@@ -463,7 +480,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         }
 
         // Отменяем отложенный автосейв, чтобы не отправить старые данные (publish=false) после ручного сохранения.
-        autosave?.cancelPending?.();
+        autosaveCancelPendingRef.current?.();
         // Abort any in-flight autosave request (it will still appear in Network, but won't win the race).
         if (saveAbortControllerRef.current) {
           saveAbortControllerRef.current.abort();
@@ -480,7 +497,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         const savedData = await cleanAndSave(toSave);
         const normalizedSavedData = normalizeDraftPlaceholders(savedData);
         applySavedData(normalizedSavedData, toSave as TravelFormData);
-        autosave?.cancelPending?.();
+        autosaveCancelPendingRef.current?.();
         showToast('Сохранено');
         return savedData;
       } catch (error) {
@@ -513,7 +530,6 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
     return promise;
   }, [
     applySavedData,
-    autosave,
     cleanAndSave,
     showToast,
     formDataRef,
@@ -528,6 +544,12 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
   useEffect(() => {
     updateBaselineRef.current = autosave.updateBaseline;
   }, [autosave.updateBaseline, updateBaselineRef]);
+
+  // Держим стабильную ссылку на cancelPending, чтобы handleManualSave не
+  // зависел от объекта autosave (который меняется на каждый тик статуса).
+  useEffect(() => {
+    autosaveCancelPendingRef.current = autosave.cancelPending ?? null;
+  }, [autosave.cancelPending]);
 
   return {
     cleanAndSave,

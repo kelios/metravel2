@@ -147,10 +147,12 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
 
     const appendToDescription = useCallback(
         (plainText: string) => {
-            const next = appendPlainTextToHtml(String(formData.description ?? ''), plainText);
+            const base = descriptionHtmlRef.current;
+            const next = appendPlainTextToHtml(base, plainText);
+            descriptionHtmlRef.current = next;
             handleChange('description', next as any);
         },
-        [formData.description, handleChange]
+        [handleChange]
     );
 
     const readUriAsText = useCallback(async (uri: string): Promise<string> => {
@@ -417,7 +419,12 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                         <View style={styles.modalHeader}>
                                             <View style={styles.modalHeaderSide}>
                                                 <TouchableOpacity
-                                                    onPress={() => setIsDescriptionFullscreen(false)}
+                                                    onPress={() => {
+                                                        if (isDescription) {
+                                                            handleChange('description', descriptionHtmlRef.current as any);
+                                                        }
+                                                        setIsDescriptionFullscreen(false);
+                                                    }}
                                                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                                     style={[
                                                         styles.modalActionButton,
@@ -439,7 +446,12 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                             </View>
                                             <View style={[styles.modalHeaderSide, styles.modalHeaderSideRight]}>
                                                 <TouchableOpacity
-                                                    onPress={() => setIsDescriptionFullscreen(false)}
+                                                    onPress={() => {
+                                                        if (isDescription) {
+                                                            handleChange('description', descriptionHtmlRef.current as any);
+                                                        }
+                                                        setIsDescriptionFullscreen(false);
+                                                    }}
                                                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                                     style={[
                                                         styles.modalActionButton,
@@ -477,9 +489,8 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                                                     : String(descriptionHtmlRef.current ?? formData.description ?? '');
                                                                 descriptionHtmlRef.current = nextDescription;
                                                                 return await onManualSave({
-                                                                    ...formData,
                                                                     description: nextDescription,
-                                                                });
+                                                                } as TravelFormData);
                                                             }
                                                             : undefined}
                                                         placeholder={hint}
@@ -511,9 +522,8 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                         : String(descriptionHtmlRef.current ?? formData.description ?? '');
                                     descriptionHtmlRef.current = nextDescription;
                                     return await onManualSave({
-                                        ...formData,
                                         description: nextDescription,
-                                    });
+                                    } as TravelFormData);
                                 }
                                 : undefined}
                             idTravel={idTravelStr}
@@ -554,6 +564,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             descriptionProgressColor,
             descriptionStatusText,
             dictation,
+            handleChange,
             idTravelStr,
             importDescriptionText,
             isDescriptionFullscreen,

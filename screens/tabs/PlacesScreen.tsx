@@ -174,6 +174,22 @@ export default function PlacesScreen() {
     router.setParams(categories.length > 0 ? { category: categories.join(',') } : { category: '' })
   }, [router])
 
+  // Sync URL params → state when ?category/?country change without a remount
+  // (e.g. in-app navigation to /places?category=...). Guarded on value equality
+  // so it never loops with the syncCategoryParams/handleSelectCountry setParams calls.
+  useEffect(() => {
+    const nextCategories = parseCategoryParam(params.category)
+    setSelectedCategories((current) =>
+      isSameCategorySet(current, nextCategories) ? current : nextCategories,
+    )
+  }, [params.category])
+
+  useEffect(() => {
+    const nextCountry =
+      typeof params.country === 'string' && params.country.trim() ? params.country.trim() : null
+    setSelectedCountry((current) => (current === nextCountry ? current : nextCountry))
+  }, [params.country])
+
   useEffect(() => {
     setVisibleCount(PLACES_PAGE_SIZE)
   }, [deferredQuery, selectedCategories, selectedCountry])
@@ -224,6 +240,7 @@ export default function PlacesScreen() {
   }, [router])
 
   const openOnMap = useCallback((place: CatalogPlace) => {
+    if (!Number.isFinite(place.latNumber) || !Number.isFinite(place.lngNumber)) return
     router.push({
       pathname: '/map',
       params: {

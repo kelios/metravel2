@@ -118,7 +118,9 @@
     "guard:file-complexity": "node scripts/guard-file-complexity.js",
     "guard:file-complexity:fail": "node scripts/guard-file-complexity.js --fail",
     "guard:file-complexity:changed": "node scripts/guard-file-complexity-changed.js",
-    "lint": "npm run guard:external-links && eslint . --max-warnings=186",
+    "guard:query-keys": "node scripts/guard-query-keys.js",
+    "guard:query-keys:json": "node scripts/guard-query-keys.js --json",
+    "lint": "npm run guard:external-links && npm run guard:query-keys && eslint . --max-warnings=186",
     "lint:ci": "mkdir -p test-results && npm run guard:external-links && eslint . --max-warnings=186 --format json --output-file test-results/eslint-results.json",
     "audit:high": "node scripts/yarn-audit-high.js",
     "perf:check": "./scripts/check-performance.sh",
@@ -274,7 +276,8 @@
     "@tootallnate/once": "^3.0.1",
     "dompurify": "3.4.5",
     "sanitize-html": "2.17.4",
-    "tmp": "0.2.7"
+    "tmp": "0.2.7",
+    "expo-image-loader": "55.0.1"
   },
   "prettier": {
     "jsxBracketSameLine": true,
@@ -333,7 +336,8 @@
     "@tootallnate/once": "^3.0.1",
     "dompurify": "3.4.5",
     "sanitize-html": "2.17.4",
-    "tmp": "0.2.7"
+    "tmp": "0.2.7",
+    "expo-image-loader": "55.0.1"
   },
   "packageManager": "yarn@1.22.22",
   "engines": {

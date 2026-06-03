@@ -8,6 +8,7 @@ import { useResponsive, useResponsiveColumns } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import { sendAnalyticsEvent } from '@/utils/analytics'
 import { fetchTravelsPopular } from '@/api/map'
+import { queryKeys } from '@/api/queryKeys'
 import OptimizedFavoriteButton from '@/components/travel/OptimizedFavoriteButton'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import Button from '@/components/ui/Button'
@@ -313,8 +314,8 @@ function AdventureChaptersSection() {
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: ['home-popular-travels'],
-    queryFn: ({ signal } = {} as any) => fetchTravelsPopular({ signal, limit: 6 }),
+    queryKey: queryKeys.homePopularTravels(),
+    queryFn: ({ signal }) => fetchTravelsPopular({ signal, limit: 6 }),
     ...queryConfigs.dynamic,
   })
 

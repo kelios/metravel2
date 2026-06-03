@@ -87,7 +87,7 @@ export function useMapWebLayoutEffects({
     return () => {
       cancelAnimationFrame(raf)
     }
-  }, [leafletBaseLayerRef, mode, mapRef])
+  }, [leafletBaseLayerRef, mode, mapRef, mapInstance])
 
   useEffect(() => {
     if (Platform.OS !== 'web') return

@@ -122,7 +122,7 @@ export function useTravelRating({
             setServerRating(nextAggregateRating);
             setServerCount(nextAggregateCount);
 
-            queryClient.setQueriesData({ queryKey: ['travel'] }, (current) => {
+            queryClient.setQueriesData({ queryKey: queryKeys.travelAll() }, (current) => {
                 if (!current || typeof current !== 'object') return current;
 
                 const currentTravel = current as Record<string, unknown>;
@@ -138,7 +138,7 @@ export function useTravelRating({
             });
 
             // Инвалидируем travel-кэш без exact matching: детальная страница может быть закэширована по slug.
-            queryClient.invalidateQueries({ queryKey: ['travel'] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.travelAll() });
             // Сохраняем старое поведение для id-ключа на случай прямого входа по id.
             queryClient.invalidateQueries({ queryKey: queryKeys.travel(travelId!) });
 

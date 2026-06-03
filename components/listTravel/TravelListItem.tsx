@@ -601,29 +601,17 @@ function TravelListItem({
 }
 
 function areEqual(prev: Props, next: Props) {
-  if (prev.travel !== next.travel) {
-    const a = prev.travel
-    const b = next.travel
-    if (
-      a.id !== b.id ||
-      a.travel_image_thumb_url !== b.travel_image_thumb_url ||
-      a.name !== b.name ||
-      a.countryName !== b.countryName ||
-      a.userName !== b.userName ||
-      a.countUnicIpView !== b.countUnicIpView ||
-      a.engagementStats?.favoritesCount !== b.engagementStats?.favoritesCount ||
-      a.engagementStats?.wishlistCount !== b.engagementStats?.wishlistCount ||
-      a.engagementStats?.visitedCount !== b.engagementStats?.visitedCount ||
-      a.engagementStats?.plannedCount !== b.engagementStats?.plannedCount ||
-      a.rating !== b.rating ||
-      a.rating_count !== b.rating_count
-    ) {
-      return false
-    }
-  }
+  // React Query keeps travel object references stable across renders, so a
+  // changed reference means the underlying data changed — re-render rather than
+  // diffing an allowlist that silently drops slug/companions/year/user/etc.
+  if (prev.travel !== next.travel) return false
   return (
+    prev.currentUserId === next.currentUserId &&
+    prev.onToggle === next.onToggle &&
+    prev.onDeletePress === next.onDeletePress &&
     prev.isSuperuser === next.isSuperuser &&
     prev.isMetravel === next.isMetravel &&
+    prev.isFirst === next.isFirst &&
     prev.isSingle === next.isSingle &&
     prev.selectable === next.selectable &&
     prev.isSelected === next.isSelected &&
@@ -633,6 +621,7 @@ function areEqual(prev: Props, next: Props) {
     prev.cardWidth === next.cardWidth &&
     prev.imageHeight === next.imageHeight &&
     prev.viewportWidth === next.viewportWidth &&
+    prev.webTouchAction === next.webTouchAction &&
     prev.isDeleting === next.isDeleting
   )
 }

@@ -406,7 +406,11 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
           popupProps={popupAutoPanPadding}
           onMarkerClick={handleMarkerZoom}
           onMarkerInstance={(coord, marker) => {
-            markerByCoordRef.current.set(coord, marker)
+            if (marker) {
+              markerByCoordRef.current.set(coord, marker)
+            } else {
+              markerByCoordRef.current.delete(coord)
+            }
           }}
           hintCenter={hintCenterLatLng}
         />

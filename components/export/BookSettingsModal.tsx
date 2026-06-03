@@ -61,7 +61,14 @@ export default function BookSettingsModal({
   const [isSaving, setIsSaving] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [_showUnsavedWarning, setShowUnsavedWarning] = useState(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   // ✅ УЛУЧШЕНИЕ: Focus trap для доступности
   useFocusTrap(dialogRef, {
@@ -70,6 +77,7 @@ export default function BookSettingsModal({
   });
 
   useEffect(() => {
+    if (!visible) return;
     // ✅ УЛУЧШЕНИЕ: Загружаем сохраненные настройки из localStorage
     let savedSettings: Partial<BookSettings> | undefined;
     if (Platform.OS === 'web' && typeof localStorage !== 'undefined' && !defaultSettings) {
@@ -86,7 +94,7 @@ export default function BookSettingsModal({
     setSettings(buildInitialSettings(savedSettings || defaultSettings));
     setHasUnsavedChanges(false);
     setValidationErrors([]);
-  }, [defaultSettings]);
+  }, [visible, defaultSettings]);
 
   // ✅ УЛУЧШЕНИЕ: Валидация настроек
   useEffect(() => {
@@ -103,14 +111,10 @@ export default function BookSettingsModal({
     setValidationErrors(errors);
   }, [settings]);
 
-  // ✅ УЛУЧШЕНИЕ: Обработчик закрытия с предупреждением о несохраненных изменениях
+  // ✅ Обработчик закрытия: несохраненные правки отбрасываются (стандартно для модалки настроек)
   const handleClose = useCallback(() => {
-    if (hasUnsavedChanges) {
-      setShowUnsavedWarning(true);
-      return;
-    }
     onClose();
-  }, [hasUnsavedChanges, onClose]);
+  }, [onClose]);
 
   // ✅ УЛУЧШЕНИЕ: Обработка клавиши Escape
   useEffect(() => {
@@ -149,14 +153,14 @@ export default function BookSettingsModal({
   }, [visible]);
 
   const handlePresetSelect = useCallback((preset: BookPreset) => {
-    setSettings({
+    setSettings((prev) => ({
       ...preset.settings,
-      title: settings.title, // Сохраняем пользовательский заголовок
-      subtitle: settings.subtitle,
-    });
+      title: prev.title, // Сохраняем пользовательский заголовок
+      subtitle: prev.subtitle,
+    }));
     setSelectedPresetId(preset.id);
     setHasUnsavedChanges(true);
-  }, [settings.title, settings.subtitle]);
+  }, []);
 
   const handleThemeSelect = useCallback((theme: PdfThemeName) => {
     setSettings((prev) => ({ ...prev, template: theme }));
@@ -196,6 +200,7 @@ export default function BookSettingsModal({
   }, []);
 
   const handleSave = useCallback(async () => {
+    if (isSaving) return;
     if (validationErrors.length > 0) {
       // Ошибки уже показаны в UI, просто не даем сохранить
       return;
@@ -214,6 +219,7 @@ export default function BookSettingsModal({
 
       await onSave(settings);
       setHasUnsavedChanges(false);
+      if (mountedRef.current) setIsSaving(false);
       onClose();
     } catch (error) {
       console.error('Failed to save PDF settings:', error);
@@ -222,13 +228,13 @@ export default function BookSettingsModal({
         text1: 'Не удалось сохранить настройки PDF',
         position: 'bottom',
       });
-    } finally {
-      setIsSaving(false);
+      if (mountedRef.current) setIsSaving(false);
     }
-  }, [settings, validationErrors, onSave, onClose]);
+  }, [isSaving, settings, validationErrors, onSave, onClose]);
 
   const handlePreview = useCallback(async () => {
     if (!onPreview) return;
+    if (isSaving) return;
 
     if (validationErrors.length > 0) {
       // Ошибки уже показаны в UI, просто не даем создать превью
@@ -238,6 +244,7 @@ export default function BookSettingsModal({
     setIsSaving(true);
     try {
       await onPreview(settings);
+      if (mountedRef.current) setIsSaving(false);
       onClose();
     } catch (error) {
       console.error('Failed to generate preview:', error);
@@ -246,10 +253,9 @@ export default function BookSettingsModal({
         text1: 'Не удалось создать превью PDF',
         position: 'bottom',
       });
-    } finally {
-      setIsSaving(false);
+      if (mountedRef.current) setIsSaving(false);
     }
-  }, [settings, validationErrors, onPreview, onClose]);
+  }, [isSaving, settings, validationErrors, onPreview, onClose]);
 
   if (Platform.OS !== 'web') {
     return null; // Только для web

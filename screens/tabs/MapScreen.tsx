@@ -257,6 +257,11 @@ export default function MapScreen() {
     )
   }, [canonical, isFocused, isWeb, mapError, mapSeoTags])
 
+  const activeResizeHandlersRef = useRef<{
+    onMove: (ev: MouseEvent) => void
+    onUp: () => void
+  } | null>(null)
+
   const handleResizeMouseDown = useCallback(
     (e: any) => {
       if (!isWeb || isMobile) return
@@ -269,13 +274,29 @@ export default function MapScreen() {
         document.removeEventListener('mouseup', onUp)
         document.body.style.cursor = ''
         document.body.style.userSelect = ''
+        activeResizeHandlersRef.current = null
       }
+      activeResizeHandlersRef.current = { onMove, onUp }
       document.body.style.cursor = 'col-resize'
       document.body.style.userSelect = 'none'
       document.addEventListener('mousemove', onMove)
       document.addEventListener('mouseup', onUp)
     },
     [desktopPanelWidth, isMobile, isWeb, onResizePanelWidth],
+  )
+
+  useEffect(
+    () => () => {
+      if (Platform.OS !== 'web' || typeof document === 'undefined') return
+      if (activeResizeHandlersRef.current) {
+        document.removeEventListener('mousemove', activeResizeHandlersRef.current.onMove)
+        document.removeEventListener('mouseup', activeResizeHandlersRef.current.onUp)
+        activeResizeHandlersRef.current = null
+      }
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    },
+    [],
   )
 
   const openNonce = useMapPanelStore((s) => s.openNonce)

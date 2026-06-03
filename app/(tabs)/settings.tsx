@@ -26,7 +26,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAvatarUpload } from '@/hooks/useAvatarUpload';
 import { useBiometricAuth } from '@/hooks/useBiometricAuth';
 import { webTouchScrollStyle } from '@/utils';
-import { createSettingsStyles } from './settings.styles';
+import { createSettingsStyles } from '@/components/screens/settings/settings.styles';
 
 export default function SettingsScreen() {
     const router = useRouter();

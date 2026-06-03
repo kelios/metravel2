@@ -322,6 +322,11 @@ export const PointsListGrid: React.FC<{
     ]
   )
 
+  const listFlashExtraData = React.useMemo(
+    () => ({ listExtraData, showingRecommendations, recommendedRoutes }),
+    [listExtraData, showingRecommendations, recommendedRoutes]
+  )
+
   const renderListPanel = React.useCallback(
     () => (
       isWeb ? (
@@ -333,10 +338,10 @@ export const PointsListGrid: React.FC<{
           showsVerticalScrollIndicator={true}
         >
           {renderListHeader()}
-          {filteredPoints.map((item: any) => {
+          {filteredPoints.map((item: any, index: number) => {
             const routeInfo = recommendedRoutes?.[Number(item?.id)]
             return (
-              <View key={String(item?.id)} style={localStyles.pointsListItem}>
+              <View key={String(item?.id ?? `idx-${index}`)} style={localStyles.pointsListItem}>
                 {renderItem({ item })}
                 {showingRecommendations && routeInfo ? (
                   <View style={localStyles.routeInfo}>
@@ -355,8 +360,8 @@ export const PointsListGrid: React.FC<{
           style={localStyles.rightPanelScroll}
           contentContainerStyle={[localStyles.rightPanelContent, localStyles.pointsList] as any}
           data={filteredPoints}
-          extraData={listExtraData}
-          keyExtractor={(item) => String((item as any)?.id)}
+          extraData={listFlashExtraData}
+          keyExtractor={(item, index) => String((item as any)?.id ?? `idx-${index}`)}
           {...({ estimatedItemSize: 120 } as any)}
           testID="userpoints-panel-content-list"
           renderItem={({ item }) => {
@@ -383,7 +388,7 @@ export const PointsListGrid: React.FC<{
     [
       filteredPoints,
       isWeb,
-      listExtraData,
+      listFlashExtraData,
       listKey,
       localStyles.pointsList,
       localStyles.pointsListItem,
@@ -398,11 +403,14 @@ export const PointsListGrid: React.FC<{
     ]
   )
   
-  // Auto-switch to list tab when showing recommendations
+  // Auto-switch to list tab only on the false->true transition of recommendations,
+  // to avoid loops when setPanelTab identity is unstable.
+  const prevShowingRecommendationsRef = React.useRef(showingRecommendations)
   React.useEffect(() => {
-    if (showingRecommendations) {
+    if (showingRecommendations && !prevShowingRecommendationsRef.current) {
       setPanelTab('list');
     }
+    prevShowingRecommendationsRef.current = showingRecommendations;
   }, [setPanelTab, showingRecommendations]);
   
   // Listen to map panel toggle for mobile
@@ -411,6 +419,14 @@ export const PointsListGrid: React.FC<{
       setShowMobilePanel((prev) => !prev);
     }
   }, [toggleNonce, isWideScreen]);
+
+  // Reset the initial-fit latch when leaving map mode or when there are no points,
+  // so the auto-fit runs again next time the map shows a non-empty set.
+  React.useEffect(() => {
+    if (viewMode !== 'map' || !Array.isArray(filteredPoints) || filteredPoints.length === 0) {
+      didInitialFitRef.current = false;
+    }
+  }, [viewMode, filteredPoints]);
 
   // Initial viewport fit: after first load, auto-fit to currently visible points once.
   React.useEffect(() => {
@@ -513,6 +529,7 @@ export const PointsListGrid: React.FC<{
         clearTimeout(geocodeTimerRef.current)
         geocodeTimerRef.current = null
       }
+      geocodeAbortRef.current?.abort()
     }
   }, [filteredPoints, mapUiApi, searchQuery])
 
@@ -538,15 +555,15 @@ export const PointsListGrid: React.FC<{
                 const paddingLeft = isFirst ? 0 : gap / 2
                 const paddingRight = isLast ? 0 : gap / 2
                 return (
-                  <View key={String(item.id)} style={{ paddingLeft, paddingRight, width: `${100 / columns}%` }}>
+                  <View key={String(item?.id ?? `idx-${index}`)} style={{ paddingLeft, paddingRight, width: `${100 / columns}%` }}>
                     {renderItem({ item })}
                   </View>
                 )
               })}
             </View>
           ) : (
-            filteredPoints.map((item: any) => (
-              <React.Fragment key={String(item.id)}>
+            filteredPoints.map((item: any, index: number) => (
+              <React.Fragment key={String(item?.id ?? `idx-${index}`)}>
                 {renderItem({ item })}
               </React.Fragment>
             ))
@@ -574,7 +591,7 @@ export const PointsListGrid: React.FC<{
             </View>
           )
         }}
-        keyExtractor={(item: { id?: string | number }) => String(item.id ?? '')}
+        keyExtractor={(item: { id?: string | number }, index: number) => String(item?.id ?? `idx-${index}`)}
         {...({ estimatedItemSize: 120 } as any)}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={!isLoading ? renderEmpty : null}

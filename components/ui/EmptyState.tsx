@@ -214,7 +214,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     paddingVertical: 14,
     backgroundColor: 'transparent',
     // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только цвет текста
-    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
+    borderRadius: DESIGN_TOKENS.radii.pill, // pill — единый радиус кнопок по всему приложению
     minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
     ...Platform.select({
       web: {

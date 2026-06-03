@@ -1,7 +1,7 @@
 // hooks/useNearTravelData.ts
 // E9: Data fetching + map points logic extracted from NearTravelList.tsx
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { fetchTravelsNear } from '@/api/map';
 import { queryConfigs } from '@/utils/reactQueryConfig';
@@ -15,6 +15,11 @@ export function useNearTravelData(
 ) {
   const [visibleCount, setVisibleCount] = useState(6);
   const [isQueryEnabled, setIsQueryEnabled] = useState(false);
+
+  const onTravelsLoadedRef = useRef(onTravelsLoaded);
+  useEffect(() => {
+    onTravelsLoadedRef.current = onTravelsLoaded;
+  }, [onTravelsLoaded]);
 
   // Small delay to prioritize main content rendering
   useEffect(() => {
@@ -42,8 +47,8 @@ export function useNearTravelData(
 
   useEffect(() => {
     if (!travelsNear.length) return;
-    onTravelsLoaded?.(travelsNear);
-  }, [onTravelsLoaded, travelsNear]);
+    onTravelsLoadedRef.current?.(travelsNear);
+  }, [travelsNear]);
 
   // Optimized map points conversion
   const mapPoints = useMemo(() => {
@@ -75,6 +80,7 @@ export function useNearTravelData(
 
         const [lat, lng] = String(coordRaw).split(',').map((n) => parseFloat(String(n).trim()));
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+        if (Math.abs(lat) > 90 || Math.abs(lng) > 180) continue;
 
         points.push({
           id: `${item.id}-${j}`,

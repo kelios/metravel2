@@ -27,7 +27,7 @@ import { buildCanonicalUrl } from '@/utils/seo'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { getDateFieldForTravelStatus } from '@/utils/travelStatusCalendarDisplay'
 
-import { createCalendarStyles } from './calendarScreen.styles'
+import { createCalendarStyles } from '@/components/screens/calendar/calendarScreen.styles'
 import {
   type CalendarEntry,
   type DateEditorState,
@@ -39,14 +39,14 @@ import {
   groupEntriesByStatus,
   isSelectedCalendarDate,
   sortCalendarEntries,
-} from './calendarScreen.helpers'
+} from '@/components/screens/calendar/calendarScreen.helpers'
 import {
   CalendarSkeleton,
   CalendarTabs,
   CalendarTravelCard,
   DateEditorModal,
   SelectedDateFilter,
-} from './calendarScreen.parts'
+} from '@/components/screens/calendar/calendarScreen.parts'
 
 export default function CalendarScreen() {
   const router = useRouter()

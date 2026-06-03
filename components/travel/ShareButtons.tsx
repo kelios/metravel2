@@ -4,7 +4,7 @@
  * ✅ РЕДИЗАЙН: Поддержка темной темы + компактный дизайн
  */
 
-import React, { useCallback, useState, useMemo, lazy, Suspense } from 'react';
+import React, { useCallback, useState, useMemo, useRef, useEffect, lazy, Suspense } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, Share, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
@@ -54,6 +54,8 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
 
   const [copied, setCopied] = useState(false);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(copiedTimerRef.current), []);
   const [showExportModal, setShowExportModal] = useState(false);
   const [shouldMountPdfExport, setShouldMountPdfExport] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -90,7 +92,7 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
   }, []);
 
   // Базовая функция копирования в буфер обмена
-  const copyToClipboard = useCallback(async (text: string, showSuccessAlert: boolean) => {
+  const copyToClipboard = useCallback(async (text: string, showSuccessAlert: boolean): Promise<boolean> => {
     try {
       if (Platform.OS === 'web' && (navigator as any)?.clipboard) {
         await (navigator as any).clipboard.writeText(text);
@@ -101,17 +103,21 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
       if (showSuccessAlert) {
         showToast({ type: 'success', text1: 'Ссылка скопирована', visibilityTime: 2000 });
       }
+      return true;
     } catch (error) {
       devWarn('[ShareButtons] Не удалось скопировать ссылку:', error);
       showToast({ type: 'error', text1: 'Не удалось скопировать', text2: 'Попробуйте ещё раз', visibilityTime: 3000 });
+      return false;
     }
   }, []);
 
   // Копирование чистой ссылки
   const handleCopyLink = useCallback(async () => {
-    await copyToClipboard(shareUrl, true);
+    const success = await copyToClipboard(shareUrl, true);
+    if (!success) return;
+    clearTimeout(copiedTimerRef.current);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
   }, [copyToClipboard, shareUrl]);
 
   // Копирование готового текста поста (текст + ссылка)
@@ -137,13 +143,9 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
     const vkUrl = `https://vk.com/share.php?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareTitle)}`;
     void openExternalUrlInNewTab(vkUrl, {
       windowFeatures: 'width=600,height=400,noopener,noreferrer',
-      onError: (error) => {
-        if (__DEV__) {
-          console.warn('[ShareButtons] Не удалось открыть VK:', error);
-        }
-      },
+      onError: (error) => handleShareError('VK', error),
     });
-  }, [shareUrl, shareTitle]);
+  }, [handleShareError, shareUrl, shareTitle]);
 
   // Поделиться в WhatsApp
   const handleShareWhatsApp = useCallback(async () => {

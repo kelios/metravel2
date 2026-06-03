@@ -147,6 +147,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const [mapInstance, setMapInstance] = useState<any>(null)
 
   const markerByCoordRef = useRef<Map<string, any>>(new Map())
+  const markerReopenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const wrapperRef = useRef<View | null>(null)
 
   const colors = useThemedColors()
@@ -193,6 +194,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
   useEffect(() => {
     return () => {
       mapRef.current = null
+      if (markerReopenTimerRef.current) {
+        clearTimeout(markerReopenTimerRef.current)
+        markerReopenTimerRef.current = null
+      }
     }
   }, [])
 
@@ -256,6 +261,19 @@ const MapPageComponent: React.FC<Props> = (props) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, radiusInMeters, travelData, filterCenter?.lat, filterCenter?.lng, coordinatesLatLng])
 
+  // When the marker dataset changes identity, the cluster layer rebuilds its
+  // markers. The cleanup runs before children re-register on the next commit,
+  // so clearing here drops detached Leaflet markers from the previous dataset
+  // (which openPopup lookups would otherwise resolve and hold) without wiping
+  // freshly-registered markers.
+  const markerByCoordRefStable = markerByCoordRef
+  useEffect(() => {
+    const index = markerByCoordRefStable.current
+    return () => {
+      index.clear()
+    }
+  }, [filteredTravelData, markerByCoordRefStable])
+
   const hintCenterForMarkers = useMemo(() => {
     if (
       mode === 'radius' &&
@@ -303,21 +321,28 @@ const MapPageComponent: React.FC<Props> = (props) => {
       }
 
       let reopened = false
-      let reopenTimer: ReturnType<typeof setTimeout> | null = null
+      const reopenTimerRef = markerReopenTimerRef
+      if (reopenTimerRef.current) {
+        clearTimeout(reopenTimerRef.current)
+        reopenTimerRef.current = null
+      }
+
       const reopenPopup = () => {
+        if (reopenTimerRef.current) {
+          clearTimeout(reopenTimerRef.current)
+          reopenTimerRef.current = null
+        }
         if (reopened) return
         reopened = true
         safeInvoke(() => map?.off?.('moveend', reopenPopup))
-        if (reopenTimer) {
-          clearTimeout(reopenTimer)
-          reopenTimer = null
-        }
+        // Bail out if the map was torn down / replaced since scheduling.
+        if (mapRef.current !== map) return
         safeInvoke(() => resolveMarker()?.openPopup?.())
       }
 
       if (typeof map.once === 'function') {
         safeInvoke(() => map.once('moveend', reopenPopup))
-        reopenTimer = setTimeout(reopenPopup, MARKER_REOPEN_TIMEOUT_MS)
+        reopenTimerRef.current = setTimeout(reopenPopup, MARKER_REOPEN_TIMEOUT_MS)
       }
 
       try {

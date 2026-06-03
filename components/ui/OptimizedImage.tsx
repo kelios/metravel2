@@ -6,6 +6,11 @@ import type { ImageProps as ExpoImageProps } from 'expo-image';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
+// Shared cap on network round-trips for a single broken image. The API-prefix
+// fallback and the generic cache-busting retry both draw from this budget via
+// retryAttemptRef, so a failing image cannot exceed this many extra requests.
+const MAX_RETRY_ATTEMPTS = 3;
+
 const hasValidUriSource = (source: { uri: string } | number): boolean => {
   if (!source) return false;
   if (typeof source === 'number') return true;
@@ -192,7 +197,8 @@ function OptimizedImage({
   const [hasError, setHasError] = useState(false);
   const [, setRetryAttempt] = useState(0);
   const retryAttemptRef = useRef(0);
-  const [lastUriKey, setLastUriKey] = useState('');
+  const lastResetKeyRef = useRef<string | null>(null);
+  const mountedRef = useRef(true);
 
   const originalUriKey = useMemo(() => {
     if (typeof source === 'number') return '__asset__';
@@ -215,16 +221,22 @@ function OptimizedImage({
     retryAttemptRef.current = 0;
   }, [originalUriKey]);
 
-  useEffect(() => {
-    if (uriKey === lastUriKey) return;
-    setLastUriKey(uriKey);
+  // Derived-state-on-render: reset loading/error synchronously during render
+  // (before paint) whenever the rendered image identity changes. We key on
+  // both uriKey and recyclingKey so that during list recycling — where the
+  // component instance is reused with a different recyclingKey — the very
+  // first frame does not flash the previous item's hasError/isLoading state.
+  const resetKey = `${recyclingKey ?? ''}|${uriKey}`;
+  if (lastResetKeyRef.current !== resetKey) {
+    lastResetKeyRef.current = resetKey;
     setHasError(false);
     setIsLoading(Boolean(validSource));
-  }, [uriKey, lastUriKey, validSource]);
+  }
 
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
-      // no-op
+      mountedRef.current = false;
     };
   }, []);
 
@@ -263,12 +275,14 @@ function OptimizedImage({
     !shouldDisableNetwork;
 
   const handleLoad = () => {
+    if (!mountedRef.current) return;
     setIsLoading(false);
     setHasError(false);
     onLoad?.();
   };
 
   const handleError = () => {
+    if (!mountedRef.current) return;
     const uri = typeof (activeSource as any)?.uri === 'string' ? String((activeSource as any).uri).trim() : '';
     const stripRetry = (value: string) => {
       try {
@@ -298,22 +312,19 @@ function OptimizedImage({
     if (!overrideUri && uri) {
       const fallback = buildApiPrefixedUrl(uri);
       if (fallback && fallback !== uri) {
-        setIsLoading(true);
-        setHasError(false);
-        if (canRetry && retryAttemptRef.current < 6) {
-          const nextAttempt = Math.min(retryAttemptRef.current + 1, 6);
-          retryAttemptRef.current = nextAttempt;
-          const base = stripRetry(fallback);
-          const glue = base.includes('?') ? '&' : '?';
-          setOverrideUri(`${base}${glue}__retry=${nextAttempt}`);
-          setRetryAttempt(nextAttempt);
-        } else {
+        // The API-prefix fallback already changes the origin/path, so it
+        // does not need a cache-busting __retry param. It still consumes
+        // one slot from the shared retry budget so a broken image cannot
+        // exceed MAX_RETRY_ATTEMPTS network round-trips across both paths.
+        if (retryAttemptRef.current < MAX_RETRY_ATTEMPTS) {
+          retryAttemptRef.current += 1;
+          setRetryAttempt(retryAttemptRef.current);
+          setIsLoading(true);
+          setHasError(false);
           setOverrideUri(fallback);
-          setRetryAttempt(0);
-          retryAttemptRef.current = 0;
+          onError?.();
+          return;
         }
-        onError?.();
-        return;
       }
     }
 
@@ -329,15 +340,16 @@ function OptimizedImage({
     }
 
     // Retry a few times with cache-busting query param.
-    if (canRetry && retryAttemptRef.current < 6) {
+    // Shares MAX_RETRY_ATTEMPTS budget with the API-prefix fallback above.
+    if (canRetry && retryAttemptRef.current < MAX_RETRY_ATTEMPTS) {
+      retryAttemptRef.current += 1;
+      const nextAttempt = retryAttemptRef.current;
+      setRetryAttempt(nextAttempt);
       setIsLoading(true);
       setHasError(false);
-      const nextAttempt = Math.min(retryAttemptRef.current + 1, 6);
-      retryAttemptRef.current = nextAttempt;
       const base = stripRetry(uri);
       const glue = base.includes('?') ? '&' : '?';
       setOverrideUri(`${base}${glue}__retry=${nextAttempt}`);
-      setRetryAttempt(nextAttempt);
 
       onError?.();
       return;
@@ -479,6 +491,7 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
 export default memo(OptimizedImage);
 
 const prefetchedImageUris = new Set<string>();
+const PREFETCH_TIMEOUT_MS = 15000;
 
 export async function prefetchImage(uri: string): Promise<void> {
   if (!uri) return;
@@ -488,7 +501,12 @@ export async function prefetchImage(uri: string): Promise<void> {
   if (Platform.OS === 'web' && typeof Image !== 'undefined') {
     await new Promise<void>((resolve, reject) => {
       const img = new Image();
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
       const cleanup = () => {
+        if (timeoutId !== null) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
         img.onload = null;
         img.onerror = null;
       };
@@ -508,6 +526,15 @@ export async function prefetchImage(uri: string): Promise<void> {
         prefetchedImageUris.delete(uri);
         reject(new Error(`Failed to preload image: ${uri}`));
       };
+
+      // Guard against requests that never settle: drop the uri from the cache
+      // so a later prefetch can retry, and detach handlers to avoid late calls.
+      timeoutId = setTimeout(() => {
+        cleanup();
+        prefetchedImageUris.delete(uri);
+        reject(new Error(`Timed out preloading image: ${uri}`));
+      }, PREFETCH_TIMEOUT_MS);
+
       img.src = uri;
 
       if (img.complete) {
