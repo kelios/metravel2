@@ -604,3 +604,23 @@ test.describe('@smoke Filters and Sorting UX', () => {
     await waitForListResultsSignal(page);
   });
 });
+
+test.describe('Filters — year', () => {
+  // Merged from the former filters-year.spec.ts (same ModernFilters sidebar).
+  test('year filter can be set and applied', async ({ page }) => {
+    await preacceptCookies(page);
+    // The home page has no sidebar; the year input lives in ModernFilters on /search.
+    await page.goto('/search', { waitUntil: 'domcontentloaded' });
+
+    // Prefer the accessibility label over the placeholder so the test stays
+    // stable when the UI hint changes.
+    const yearInput = page.getByLabel('Фильтр по году');
+    await expect(yearInput).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
+
+    await yearInput.fill('2024');
+    await page.waitForTimeout(DEBOUNCE_MS);
+
+    await waitForListResultsSignal(page);
+    await expect(yearInput).toHaveValue('2024');
+  });
+});
