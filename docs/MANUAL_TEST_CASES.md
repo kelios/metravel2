@@ -70,6 +70,45 @@
 | TR-WIZ-12 | Оффлайн | — | Отключить сеть | Баннер «нет соединения», данные кэшируются локально |
 | TR-WIZ-13 | Публикация | Шаг 6 | Пройти чеклист качества → «Отправить на модерацию»/«Опубликовать» | Статус Черновик→Отправлено/Опубликовано; нерешённые проблемы блокируют |
 | TR-WIZ-14 | Модерация (админ) | Роль админа | На шаге публикации одобрить/отклонить | Статус меняется, отображаются проблемы модерации |
+| TR-WIZ-15 | Быстрый черновик (Quick Mode) | Авторизован | Открыть `/travel/new` → ввести название → «Быстрый черновик» | Черновик создаётся без прохождения всех шагов, статус `Черновик` |
+| TR-WIZ-16 | Quick Draft без названия | Quick Mode | Нажать «Быстрый черновик» с пустым/коротким названием | Ошибка валидации, черновик не создаётся |
+| TR-WIZ-17 | Открыть для редактирования | Автор путешествия | Открыть `/travel/[id]` своего путешествия | Wizard грузит существующие данные во все шаги |
+| TR-WIZ-18 | Редактирование: переименование | Режим edit | Изменить название → сохранить | Новое название персистится (reload подтверждает) |
+| TR-WIZ-19 | Точка через фото | Шаг 2 (edit/new) | Добавить точку загрузкой фото | Точка появляется на карте с привязанным фото после сохранения |
+| TR-WIZ-20 | Мобильный wizard | Viewport 390×844 | Пройти шаги на мобильном | Милестоны скрыты, навигация работает, нет горизонтального overflow |
+| TR-WIZ-21 | Web-стабильность поиска места | Шаг 2 | Выбрать место через поиск | В консоли нет `Maximum update depth exceeded` |
+| TR-WIZ-22 | Персист категории точки | Шаг 2 | Выбрать категорию точки → закрыть модалку | Категория отображается у точки после закрытия |
+| TR-WIZ-23 | Удаление (автор) | Автор | Детали → «Удалить» → подтвердить | Подтверждение, затем путешествие удалено |
+
+#### Трассируемость покрытия (TD-025)
+
+Каждый кейс привязан к автоматизации; `unit` верифицированы прогоном (14 suites / 132 tests passed, 2026-06-03), `e2e` — Playwright-специи (прогон env-gated: требует e2e web-сервер + `E2E_API_URL` backend; edit-flow TR-WIZ-17/18 реально прогнаны 2026-06-03 против backend `192.168.50.36` — `2 passed`), `manual` — только ручной прогон.
+
+| Кейс | Приоритет | Автоматизация | Статус |
+|------|-----------|---------------|--------|
+| TR-WIZ-01 | P1 | e2e `travel-wizard.spec.ts › должен создать полное путешествие через все шаги`; unit `UpsertTravel.authReady` | ✅ unit verified |
+| TR-WIZ-02 | P1 | e2e `travel-wizard.spec.ts › ошибку при попытке сохранить без названия`, `travel-wizard-features.spec.ts › валидацию при коротком названии`; unit `travelWizardValidation`, `formValidation.travelWizard` | ✅ unit verified |
+| TR-WIZ-03 | P1 | e2e `travel-wizard.spec.ts › добавить новую точку к существующему маршруту`, `travel-wizard-features.spec.ts › Поиск мест на карте`; unit `TravelWizardStepRoute` | ✅ unit verified |
+| TR-WIZ-04 | P2 | unit `TravelWizardStepMedia` | ✅ unit verified |
+| TR-WIZ-05 | P1 | unit `UpsertTravel.step5FiltersRace`, `UpsertTravel.filtersCategories`, `FiltersUpsertComponent.filtersNormalization` | ✅ unit verified |
+| TR-WIZ-06 | P2 | e2e `travel-wizard-features.spec.ts › Группировка параметров (Шаг 5)` | e2e (env-gated) |
+| TR-WIZ-07 | P1 | e2e `travel-wizard.spec.ts › должен автосохранять изменения`, `сохранить точку без фото (автосохранение v2)`; unit `useUpsertTravelController` | ✅ unit verified |
+| TR-WIZ-08 | P2 | e2e `travel-wizard.spec.ts › показать превью карточки`, `travel-wizard-features.spec.ts › Превью карточки`; unit `FiltersUpsertComponent.preview` | ✅ unit verified |
+| TR-WIZ-09 | P2 | e2e `travel-wizard.spec.ts › милестоны для навигации (desktop)`, `travel-wizard-features.spec.ts › Милестоны` | e2e (env-gated) |
+| TR-WIZ-10 | P3 | e2e `travel-wizard-features.spec.ts › подсвечивать текущий шаг`, `галочку для пройденных шагов` | e2e (env-gated) |
+| TR-WIZ-11 | P1 | e2e `draft-recovery.spec.ts › appears only on page open when stale draft exists` | e2e (env-gated) |
+| TR-WIZ-12 | P3 | manual (offline travel wizard) | manual |
+| TR-WIZ-13 | P1 | e2e `travel-wizard.spec.ts › предупреждения на шаге публикации`, `travel-wizard-features.spec.ts › Разделенный чеклист (Шаг 6)`; unit `TravelWizardStepPublish` | ✅ unit verified |
+| TR-WIZ-14 | P3 | manual (admin role) | manual |
+| TR-WIZ-15 | P2 | e2e `travel-wizard.spec.ts › быстрый черновик (Quick Mode)`, `travel-wizard-features.spec.ts › Quick Mode` | e2e (env-gated) |
+| TR-WIZ-16 | P2 | e2e `travel-wizard.spec.ts › ошибку при Quick Draft без названия` | e2e (env-gated) |
+| TR-WIZ-17 | P1 | e2e `travel-wizard.spec.ts › открыть существующее путешествие для редактирования`; unit `UpsertTravel.createEditFlow` | ✅ e2e + unit verified |
+| TR-WIZ-18 | P1 | e2e `travel-wizard.spec.ts › изменить название и сохранить`; unit `UpsertTravel.createEditFlow` | ✅ e2e + unit verified |
+| TR-WIZ-19 | P2 | e2e `travel-wizard.spec.ts › добавлять точку через фото` | e2e (env-gated) |
+| TR-WIZ-20 | P2 | e2e `travel-wizard.spec.ts › должен работать на мобильных устройствах`, `travel-wizard-features.spec.ts › скрывать милестоны на mobile` | e2e (env-gated) |
+| TR-WIZ-21 | P1 | e2e `travel-wizard.spec.ts › не должен логировать Maximum update depth` | e2e (env-gated) |
+| TR-WIZ-22 | P2 | e2e `travel-wizard.spec.ts › выбор категории точки должен отображаться после закрытия модалки` | e2e (env-gated) |
+| TR-WIZ-23 | P1 | e2e `metravel-edit-delete.spec.ts`, `travel-crud.spec.ts › create, edit, delete travel via API`, `travel-full-flow.spec.ts` | e2e (env-gated) |
 
 ---
 
