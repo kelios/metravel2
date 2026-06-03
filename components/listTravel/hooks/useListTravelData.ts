@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchTravels, fetchRandomTravels } from '@/api/travelListQueries';
+import { queryKeys } from '@/api/queryKeys';
 import type { Travel } from '@/types/types';
 import {
   PER_PAGE,
@@ -197,14 +198,14 @@ function useBaseTravelData(
 
 export function useListTravelData(props: UseListTravelDataProps): UseListTravelDataReturn {
   return useBaseTravelData(props, {
-    queryKeyPrefix: 'travels',
+    queryKeyPrefix: queryKeys.travels()[0],
     fetchFn: fetchTravels,
   });
 }
 
 export function useRandomTravelData(props: UseListTravelDataProps): UseListTravelDataReturn {
   return useBaseTravelData(props, {
-    queryKeyPrefix: 'random-travels',
+    queryKeyPrefix: queryKeys.randomTravels()[0],
     fetchFn: fetchRandomTravels,
   });
 }

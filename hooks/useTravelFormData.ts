@@ -3,6 +3,7 @@ import isEqual from 'fast-deep-equal';
 import { useRouter, type Href } from 'expo-router';
 import { QueryClientContext, type QueryClient } from '@tanstack/react-query';
 import { fetchTravel } from '@/api/travelsApi';
+import { queryKeys } from '@/api/queryKeys';
 import { saveFormData } from '@/api/misc';
 import { ApiError } from '@/api/client';
 import { TravelFormData, Travel, MarkerData } from '@/types/types';
@@ -62,7 +63,7 @@ async function invalidateTravelCollections(
 ) {
   if (!queryClient?.invalidateQueries) return;
 
-  await queryClient.invalidateQueries({ queryKey: ['travels'], refetchType: 'all' });
+  await queryClient.invalidateQueries({ queryKey: queryKeys.travels(), refetchType: 'all' });
 
   if (!userId) return;
 

@@ -1,5 +1,6 @@
 import type { InfiniteData, QueryClient } from '@tanstack/react-query'
 import type { Travel } from '@/types/types'
+import { queryKeys } from '@/api/queryKeys'
 import type { FilterOptions, FilterState } from './utils/listTravelTypes'
 
 type TravelListPage = {
@@ -111,7 +112,7 @@ export const removeTravelFromInfiniteTravelsCache = (
   queryClient: Pick<QueryClient, 'setQueriesData'>,
   travelId: number
 ) => {
-  queryClient.setQueriesData({ queryKey: ['travels'] }, (oldData: unknown) => {
+  queryClient.setQueriesData({ queryKey: queryKeys.travels() }, (oldData: unknown) => {
     if (!isInfiniteTravelsData(oldData)) {
       return oldData
     }

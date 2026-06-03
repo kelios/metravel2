@@ -5,6 +5,7 @@ import {
   View,
 } from 'react-native'
 import { showToastMessage } from '@/utils/toast'
+import { queryKeys } from '@/api/queryKeys'
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router'
 import { useRoute } from '@react-navigation/native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -373,7 +374,7 @@ function ListTravelBase() {
           removeTravelFromInfiniteTravelsCache(queryClient, targetId);
           setDelete(null);
           deleteInFlightRef.current = null;
-          await queryClient.invalidateQueries({ queryKey: ["travels"] });
+          await queryClient.invalidateQueries({ queryKey: queryKeys.travels() });
           void showToastMessage({
             type: 'success',
             text1: 'Путешествие удалено',
@@ -383,7 +384,7 @@ function ListTravelBase() {
             removeTravelFromInfiniteTravelsCache(queryClient, targetId);
             setDelete(null);
             deleteInFlightRef.current = null;
-            await queryClient.invalidateQueries({ queryKey: ["travels"] });
+            await queryClient.invalidateQueries({ queryKey: queryKeys.travels() });
             return;
           }
 

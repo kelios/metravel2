@@ -1,5 +1,7 @@
 export const queryKeys = {
   travel: (slugOrId: string | number) => ['travel', slugOrId] as const,
+  travels: () => ['travels'] as const,
+  randomTravels: () => ['random-travels'] as const,
   travelsNear: (travelId: number) => ['travels-near', travelId] as const,
   travelsPopular: () => ['travels-popular'] as const,
   travelRouteFiles: (travelId: string | number) => ['travel-route-files', travelId] as const,
