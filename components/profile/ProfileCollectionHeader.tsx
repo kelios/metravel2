@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus';
 
 type Props = {
@@ -28,6 +29,7 @@ export default function ProfileCollectionHeader({
   backAccessibilityLabel = 'Перейти в профиль',
 }: Props) {
   const colors = useThemedColors();
+  const { isPhone } = useResponsive();
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -37,13 +39,21 @@ export default function ProfileCollectionHeader({
           paddingBottom: 8,
         },
         headerRow: {
-          flexDirection: 'row',
-          alignItems: 'flex-end',
+          flexDirection: isPhone ? 'column' : 'row',
+          alignItems: isPhone ? 'stretch' : 'flex-end',
           justifyContent: 'space-between',
           gap: 12,
         },
         headerTitleBlock: {
-          flex: 1,
+          flexGrow: 1,
+          flexShrink: isPhone ? 0 : 1,
+          flexBasis: isPhone ? 'auto' : 0,
+        },
+        headerActions: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 12,
         },
         title: {
           fontSize: 20,
@@ -91,7 +101,7 @@ export default function ProfileCollectionHeader({
           color: colors.primary,
         },
       }),
-    [colors]
+    [colors, isPhone]
   );
 
   return (
@@ -102,29 +112,31 @@ export default function ProfileCollectionHeader({
           <Text style={styles.subtitle}>{subtitle}</Text>
         </View>
 
-        <Pressable
-          style={[styles.backToProfileButton, globalFocusStyles.focusable]}
-          onPress={onBackPress}
-          accessibilityRole="button"
-          accessibilityLabel={backAccessibilityLabel}
-          {...Platform.select({ web: { cursor: 'pointer' } })}
-        >
-          <Feather name="user" size={16} color={colors.primary} />
-          <Text style={styles.backToProfileButtonText}>В профиль</Text>
-        </Pressable>
-
-        {showClearButton && typeof onClearPress === 'function' && (
+        <View style={styles.headerActions}>
           <Pressable
-            style={[styles.clearButton, globalFocusStyles.focusable]}
-            onPress={onClearPress}
+            style={[styles.backToProfileButton, globalFocusStyles.focusable]}
+            onPress={onBackPress}
             accessibilityRole="button"
-            accessibilityLabel={clearAccessibilityLabel}
+            accessibilityLabel={backAccessibilityLabel}
             {...Platform.select({ web: { cursor: 'pointer' } })}
           >
-            <Feather name="trash-2" size={16} color={colors.danger} />
-            <Text style={styles.clearButtonText}>{clearButtonText}</Text>
+            <Feather name="user" size={16} color={colors.primary} />
+            <Text style={styles.backToProfileButtonText}>В профиль</Text>
           </Pressable>
-        )}
+
+          {showClearButton && typeof onClearPress === 'function' && (
+            <Pressable
+              style={[styles.clearButton, globalFocusStyles.focusable]}
+              onPress={onClearPress}
+              accessibilityRole="button"
+              accessibilityLabel={clearAccessibilityLabel}
+              {...Platform.select({ web: { cursor: 'pointer' } })}
+            >
+              <Feather name="trash-2" size={16} color={colors.danger} />
+              <Text style={styles.clearButtonText}>{clearButtonText}</Text>
+            </Pressable>
+          )}
+        </View>
       </View>
     </View>
   );
