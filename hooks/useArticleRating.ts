@@ -82,7 +82,7 @@ export function useArticleRating({
             queryClient.setQueryData(queryKeys.articleRating(articleId, isAuthenticated), data);
 
             // Инвалидируем кэш статьи, если он есть
-            queryClient.invalidateQueries({ queryKey: ['article', articleId] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.article(articleId) });
 
             showToast({
                 text1: 'Оценка сохранена',

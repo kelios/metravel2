@@ -656,7 +656,7 @@ Captured with real rendered evidence: **Home** (desktop hero + weekend-route car
 - Impact: backend quest data is controlled, so low real-world likelihood; downstream map code generally guards with `isValidCoordinate`, but the adapter itself emits invalid numbers.
 - Candidate file: `utils/questAdapters.ts:163-164,189-190`.
 - Action: update — guard with `Number.isFinite(parsed)` (fallback to a sentinel / drop the point) so `NaN` never reaches markers.
-- Status: open.
+- Status: **fixed 2026-06-03** — `utils/questAdapters.ts`: new `coordNum(value)` helper wraps all 4 coordinate parse sites (`adaptStep` lat/lng, `adaptCity`, `adaptBundle` city, `adaptMeta`); `__DEV__`-gated `devError` on non-finite so bad backend coords are visible instead of a silent `NaN`. Behavior-neutral for valid data — downstream `isValidCoordinate` filtering unchanged (chosen over a forced numeric fallback that could mask bad data). Verified: `tsc` 0, eslint clean, quest Jest 8 suites/77.
 
 ### Code review 2026-06-03 — false positives explicitly NOT logged
 

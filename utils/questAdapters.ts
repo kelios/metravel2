@@ -12,6 +12,20 @@ import type {
 } from '@/api/quests';
 import { getCountryCodeByCoords } from '@/utils/geoCountry';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
+import { devError } from '@/utils/logger';
+
+/**
+ * Парсит координату из API (число или строка).
+ * Поведение идентично прежнему `parseFloat`, но в dev предупреждает о невалидных
+ * значениях, чтобы плохие backend-данные не уходили в маркеры как тихий `NaN` (F-012).
+ */
+const coordNum = (value: unknown): number => {
+    const n = typeof value === 'number' ? value : parseFloat(String(value));
+    if (__DEV__ && !Number.isFinite(n)) {
+        devError('[Quest] Невалидная координата из API:', value);
+    }
+    return n;
+};
 
 // ===================== ТИПЫ ФРОНТЕНДА =====================
 
@@ -160,8 +174,8 @@ export function adaptStep(apiStep: ApiQuestStep): QuestStep {
         task: apiStep.task,
         hint: apiStep.hint || undefined,
         answer: buildAnswerChecker(answerType, answerValue),
-        lat: typeof apiStep.lat === 'string' ? parseFloat(apiStep.lat) : apiStep.lat,
-        lng: typeof apiStep.lng === 'string' ? parseFloat(apiStep.lng) : apiStep.lng,
+        lat: coordNum(apiStep.lat),
+        lng: coordNum(apiStep.lng),
         mapsUrl: apiStep.maps_url,
         image: fixMediaUrl(apiStep.image_url),
         inputType: apiStep.input_type,
@@ -186,8 +200,8 @@ export function adaptFinale(apiFinale: ApiQuestFinale): QuestFinale {
 
 /** Конвертирует город из API формата */
 export function adaptCity(apiCity: ApiQuestCity): QuestCity {
-    const lat = parseFloat(String(apiCity.lat));
-    const lng = parseFloat(String(apiCity.lng));
+    const lat = coordNum(apiCity.lat);
+    const lng = coordNum(apiCity.lng);
     const countryCode = apiCity.country_code || getCountryCodeByCoords(lat, lng);
     return {
         name: apiCity.name || undefined,
@@ -248,8 +262,8 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
             story: `В этом маршруте ${stepCount} ${stepCount === 1 ? 'шаг' : stepCount < 5 ? 'шага' : 'шагов'}. Нажмите «Начать квест», чтобы перейти к первому заданию.`,
             task: 'Нажмите кнопку «Начать квест».',
             answer: () => true,
-            lat: parseFloat(String(apiBundle.city?.lat || 0)),
-            lng: parseFloat(String(apiBundle.city?.lng || 0)),
+            lat: coordNum(apiBundle.city?.lat || 0),
+            lng: coordNum(apiBundle.city?.lng || 0),
             mapsUrl: 'https://metravel.by/quests',
             inputType: 'text',
         };
@@ -268,8 +282,8 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
 
 /** Конвертирует метаданные квеста из API формата */
 export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
-    const lat = parseFloat(String(apiMeta.lat));
-    const lng = parseFloat(String(apiMeta.lng));
+    const lat = coordNum(apiMeta.lat);
+    const lng = coordNum(apiMeta.lng);
     const normalizedCountryCode = String(
         apiMeta.country_code || getCountryCodeByCoords(lat, lng) || '',
     ).trim().toUpperCase() || undefined;

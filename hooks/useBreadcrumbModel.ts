@@ -186,7 +186,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
   }, [travelSlug]);
 
   const { data: travelData } = useQuery<Travel | null>({
-    queryKey: travelCacheKey != null ? queryKeys.travel(travelCacheKey) : ['travel', 'missing'],
+    queryKey: travelCacheKey != null ? queryKeys.travel(travelCacheKey) : queryKeys.travel('missing'),
     queryFn: ({ signal }) => {
       if (!travelSlug) return null;
       const idNum = Number(travelSlug);

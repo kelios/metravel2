@@ -18,4 +18,5 @@ export const queryKeys = {
   questBundle: (slug: string | null | undefined) => ['quest-bundle', slug] as const,
   articleRating: (articleId: number | undefined, isAuthenticated: boolean) =>
     ['articleRating', articleId, isAuthenticated] as const,
+  article: (articleId: number | undefined) => ['article', articleId] as const,
 } as const;
