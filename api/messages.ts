@@ -2,6 +2,7 @@ import { ApiError } from '@/api/client';
 import { API_BASE_URL, DEFAULT_TIMEOUT, TOKEN_KEY } from '@/api/apiConfig';
 import { getSecureItem } from '@/utils/secureStorage';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
+import { safeJsonParse } from '@/utils/safeJsonParse';
 
 // ---------------------------------------------------------------------------
 // Lightweight fetch helper for messaging endpoints.
@@ -54,9 +55,7 @@ async function messagingFetch<T>(
         );
     }
 
-    const text = await response.text();
-    if (!text || text === 'null') return null as unknown as T;
-    return JSON.parse(text) as T;
+    return safeJsonParse<T>(response, null as unknown as T);
 }
 
 // ---- Types ----

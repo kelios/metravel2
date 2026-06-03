@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 
 /**
- * Глубокая проверка равенства для объектов и массивов
+ * Глубокая проверка равенства для объектов и массивов.
+ * Внутренний хелпер модуля — не часть публичного API.
  */
-export function deepEqual(a: unknown, b: unknown): boolean {
+function deepEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (a == null || b == null) return false;
   if (typeof a !== typeof b) return false;

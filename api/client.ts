@@ -412,7 +412,8 @@ class ApiClient {
         options: RequestInit = {},
         timeout: number = LONG_TIMEOUT
     ): Promise<DownloadResponse> {
-        if (!this.checkRateLimit(endpoint)) {
+        const rateLimitSlot = this.checkRateLimit(endpoint);
+        if (!rateLimitSlot) {
             throw new ApiError(
                 429,
                 'Слишком много запросов. Пожалуйста, подождите немного.',
@@ -521,6 +522,16 @@ class ApiClient {
 
             return await handle(resp);
         } catch (error) {
+            const errorName = error instanceof Error ? error.name : '';
+            const isAbortError =
+                errorName === 'AbortError' ||
+                (typeof options.signal !== 'undefined' && options.signal?.aborted === true);
+            if (isAbortError) {
+                // Отменённая загрузка не должна тратить лимит эндпоинта — возвращаем слот (как в request()).
+                this.releaseRateLimitSlot(rateLimitSlot);
+                throw error;
+            }
+
             if (error instanceof ApiError) throw error;
             devError('API download error:', error);
 

@@ -2,10 +2,11 @@ import React, { Suspense } from 'react'
 import { Platform, Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
-import WeatherWidget from '@/components/home/WeatherWidget'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { Travel } from '@/types/types'
 import { isWebAutomation } from '@/utils/isWebAutomation'
+
+const WeatherWidget = React.lazy(() => import('@/components/home/WeatherWidget'))
 
 const WEATHER_PLACEHOLDER_STYLE = { minHeight: 120 } as const
 

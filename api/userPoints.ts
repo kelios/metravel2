@@ -1,4 +1,5 @@
 import { apiClient } from './client';
+import { devError } from '@/utils/logger';
 import type { 
   ImportedPoint, 
   ImportPointsResult,
@@ -185,7 +186,8 @@ export const userPointsApi = {
               type: 'application/vnd.google-earth.kml+xml',
             });
             formData.append('file', kmlFile);
-          } catch {
+          } catch (error) {
+            devError('KMZ→KML extraction failed, uploading original file:', error);
             formData.append('file', webFile);
           }
         } else {
@@ -202,7 +204,8 @@ export const userPointsApi = {
             const kmlText = await extractKmlFromKmz(buffer);
             const kmlBlob = new Blob([kmlText], { type: 'application/vnd.google-earth.kml+xml' });
             formData.append('file', kmlBlob, toKmlName(asset.name));
-          } catch {
+          } catch (error) {
+            devError('KMZ→KML extraction failed, uploading original file:', error);
             formData.append('file', blob, asset.name);
           }
         } else {
@@ -221,7 +224,8 @@ export const userPointsApi = {
             type: 'application/vnd.google-earth.kml+xml',
           });
           formData.append('file', kmlFile);
-        } catch {
+        } catch (error) {
+          devError('KMZ→KML extraction failed, uploading original file:', error);
           formData.append('file', webFile);
         }
       } else {

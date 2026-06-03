@@ -22,25 +22,15 @@ import { buildCanonicalUrl } from '@/utils/seo';
 import { useIsFocused } from '@react-navigation/native';
 import { cleanTravelTitle } from '@/utils/cleanTravelTitle';
 import { formatRelativeTime } from '@/utils/relativeTime';
+import { pluralizeRu } from '@/utils/pluralize';
 import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader';
 import ContributionBanner from '@/components/common/ContributionBanner';
 import { useViewHistoryStore, type ViewHistoryItem } from '@/stores/viewHistoryStore';
 
-const getRussianPlural = (count: number, one: string, few: string, many: string) => {
-    const absCount = Math.abs(count);
-    const lastTwo = absCount % 100;
-    const last = absCount % 10;
-
-    if (lastTwo >= 11 && lastTwo <= 14) return many;
-    if (last === 1) return one;
-    if (last >= 2 && last <= 4) return few;
-    return many;
-};
-
 const getHistorySubtitle = (count: number) => {
     if (count <= 0) return 'Профиль';
 
-    return `${count} ${getRussianPlural(count, 'последнее открытие', 'последних открытия', 'последних открытий')}`;
+    return `${count} ${pluralizeRu(count, 'последнее открытие', 'последних открытия', 'последних открытий')}`;
 };
 
 export default function HistoryScreen() {
@@ -336,7 +326,7 @@ export default function HistoryScreen() {
                         <View style={styles.summaryMetaPill}>
                             <Feather name="layers" size={16} color={colors.primary} />
                             <Text style={styles.summaryMetaText}>
-                                {data.length} {getRussianPlural(data.length, 'элемент', 'элемента', 'элементов')} в истории
+                                {data.length} {pluralizeRu(data.length, 'элемент', 'элемента', 'элементов')} в истории
                             </Text>
                         </View>
 

@@ -1,7 +1,6 @@
 import React, { Suspense } from 'react'
 import { ActivityIndicator, Platform, View, Text } from 'react-native'
 
-import BelkrajWidget from '@/components/belkraj/BelkrajWidget'
 import type { Travel } from '@/types/types'
 
 import type { AnchorsMap } from '../TravelDetailsTypes'
@@ -9,7 +8,10 @@ import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 
 const EXCURSION_CONTAINER_STYLE = { marginTop: 12 } as const
 
-const BelkrajWidgetComponent = Platform.OS === 'web' ? BelkrajWidget : (() => null) as React.ComponentType<any>
+const LazyBelkrajWidget = React.lazy(() => import('@/components/belkraj/BelkrajWidget'))
+
+const BelkrajWidgetComponent =
+  Platform.OS === 'web' ? LazyBelkrajWidget : ((() => null) as React.ComponentType<any>)
 
 const Fallback = () => {
   const styles = useTravelDetailsStyles()
