@@ -20,6 +20,7 @@ import MessageBubble from '@/components/messages/MessageBubble'
 import IconButton from '@/components/ui/IconButton'
 import type { Message } from '@/api/messages'
 import { routes } from '@/utils/routes'
+import { optimizeImageUrl } from '@/utils/imageOptimization'
 
 const SEND_COOLDOWN_MS = 300
 const MAX_MESSAGE_LENGTH = 2000
@@ -289,7 +290,7 @@ function ChatHeader({
       >
         <View style={styles.headerAvatar}>
           {otherUserAvatar ? (
-            <Image source={{ uri: otherUserAvatar }} style={styles.headerAvatarImage} />
+            <Image source={{ uri: optimizeImageUrl(otherUserAvatar, { width: 72, height: 72, quality: 70, format: 'auto', fit: 'cover' }) ?? otherUserAvatar }} style={styles.headerAvatarImage} />
           ) : (
             <Feather name="user" size={18} color={colors.primary} />
           )}

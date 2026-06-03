@@ -115,10 +115,9 @@ export const createHomeHeroStyles = ({
   const inkSubtle = DESIGN_TOKENS.colors.textSubtle
   const serif = 'Georgia, "Times New Roman", serif'
   const sansSerif =
-    '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", sans-serif'
+    '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif'
   const editorialSerif = 'Baskerville, Georgia, "Times New Roman", serif'
-  const editorialCaps =
-    '"Cormorant Garamond", Baskerville, Georgia, "Times New Roman", serif'
+  const editorialCaps = 'Baskerville, Georgia, "Times New Roman", serif'
 
   const ctx: HeroStyleContext = {
     colors,

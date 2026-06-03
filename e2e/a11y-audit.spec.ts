@@ -9,16 +9,16 @@ import { getTravelsListPath } from './helpers/routes';
 
 /**
  * WCAG 2.1 AA regression gate using axe-core (injected from node_modules, no
- * extra dependency). The app already carries a small amount of known a11y debt
- * (RN-Web emits some disallowed ARIA attributes plus one low-contrast node).
- * Rather than asserting an unrealistic zero, this gate fails when a *new*
- * violation category appears and reports the known debt for visibility.
+ * extra dependency). The previously-known debt (aria-allowed-attr on the
+ * favorite button, aria-required-attr on the gallery slider, and one
+ * low-contrast country label) has been fixed, so this gate now enforces zero
+ * violations. Any new violation category fails the test.
  */
 const AXE_PATH = require.resolve('axe-core/axe.min.js');
 
-// Pre-existing, tracked debt (see follow-up task). New rule ids outside this set
-// fail the test.
-const KNOWN_DEBT = new Set(['aria-allowed-attr', 'color-contrast', 'aria-required-attr']);
+// All previously-tracked debt is resolved — the gate enforces zero. If a new,
+// hard-to-fix violation appears, add its rule id here with a tracking note.
+const KNOWN_DEBT = new Set<string>([]);
 
 type Violation = { id: string; impact: string | null; nodes: number };
 

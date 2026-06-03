@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import IconButton from '@/components/ui/IconButton';
+import { optimizeImageUrl } from '@/utils/imageOptimization';
 import type { MessageThread } from '@/api/messages';
 
 interface ThreadListProps {
@@ -171,7 +172,7 @@ function ThreadList({
                     <View style={[styles.avatar, { backgroundColor: hasUnread ? colors.primary : colors.primarySoft }]}>
                         {avatarUrl ? (
                             <Image
-                                source={{ uri: avatarUrl }}
+                                source={{ uri: optimizeImageUrl(avatarUrl, { width: 88, height: 88, quality: 70, format: 'auto', fit: 'cover' }) ?? avatarUrl }}
                                 style={styles.avatarImage}
                             />
                         ) : (

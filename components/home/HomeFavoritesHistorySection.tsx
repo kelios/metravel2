@@ -12,6 +12,7 @@ import { useResponsive } from '@/hooks/useResponsive'
 import { useTheme, useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import Button from '@/components/ui/Button'
+import { createSectionStyles } from '@/components/home/homeInspirationStyles'
 
 const IS_WEB = Platform.OS === 'web'
 const MAX_ITEMS_PER_SHELF = 10
@@ -30,6 +31,7 @@ type ShelfSection = {
   countLabel: string
   countValue: number
   ctaPath: '/favorites' | '/history'
+  eyebrow: string
   icon: keyof typeof Feather.glyphMap
   items: TravelLikeItem[]
   listTestID: string
@@ -39,6 +41,7 @@ type ShelfSection = {
 }
 
 type Styles = ReturnType<typeof createStyles>
+type SectionStyles = ReturnType<typeof createSectionStyles>
 
 function mapToTravelLikeList(source: unknown): TravelLikeItem[] {
   const arr = Array.isArray(source) ? source : []
@@ -93,70 +96,53 @@ function handleHorizontalWheelForElement(e: any, el: any, prevent: boolean) {
 
 function SectionHeader({
   icon,
+  eyebrow,
   title,
   subtitle,
   countLabel,
   countValue,
-  onSeeAll,
   testID,
   styles,
+  sec,
   colors,
-  isMobile,
 }: {
   icon: keyof typeof Feather.glyphMap
+  eyebrow: string
   title: string
   subtitle: string
   countLabel: string
   countValue: number
-  onSeeAll: () => void
   testID: string
   styles: Styles
+  sec: SectionStyles
   colors: ThemedColors
-  isMobile: boolean
 }) {
   return (
-    <View style={styles.sectionHeaderRow} testID={testID}>
-      <View style={styles.headerIconChip}>
+    <View style={sec.heroHeader} testID={testID}>
+      <View style={sec.sectionBadge}>
         <Feather
           name={icon}
-          size={16}
-          color={colors.primaryText}
+          size={12}
+          color={colors.textMuted}
           {...({ 'aria-hidden': true, focusable: false } as any)}
         />
+        <Text style={sec.sectionBadgeText}>{eyebrow}</Text>
       </View>
 
-      <View style={styles.headerTitleBlock}>
-        <View style={styles.headerTitleRow}>
-          <Text
-            style={styles.sectionTitle}
-            accessibilityRole="header"
-            numberOfLines={1}
-            {...({ 'aria-level': 2 } as any)}
-          >
-            {title}
-          </Text>
-          <View style={styles.headerCountPill}>
-            <Text style={styles.headerCountValue}>{countValue}</Text>
-            <Text style={styles.headerCountLabel}>{countLabel}</Text>
-          </View>
-        </View>
-        <Text style={styles.sectionSubtitle} numberOfLines={1}>
-          {subtitle}
-        </Text>
-      </View>
+      <Text
+        style={sec.heroTitle}
+        accessibilityRole="header"
+        {...({ 'aria-level': 2 } as any)}
+      >
+        {title}
+      </Text>
 
-      <Button
-        label={isMobile ? '' : 'Смотреть все'}
-        onPress={onSeeAll}
-        accessibilityLabel={`Смотреть все: ${title}`}
-        icon={<Feather name="arrow-right" size={isMobile ? 18 : 15} color={colors.primaryText} />}
-        iconPosition="right"
-        variant="secondary"
-        style={isMobile ? styles.seeAllButtonCompact : styles.seeAllButton}
-        labelStyle={styles.seeAllButtonText}
-        hoverStyle={styles.seeAllButtonHover}
-        pressedStyle={styles.seeAllButtonHover}
-      />
+      <Text style={sec.heroSubtitle}>{subtitle}</Text>
+
+      <View style={styles.metaPill}>
+        <Text style={styles.metaPillValue}>{countValue}</Text>
+        <Text style={styles.metaPillLabel}>{countLabel}</Text>
+      </View>
     </View>
   )
 }
@@ -318,6 +304,10 @@ function HomeFavoritesHistorySection() {
     () => createStyles(colors, DESIGN_TOKENS, isMobile),
     [colors, isMobile],
   )
+  const sec = useMemo(
+    () => createSectionStyles(colors, isMobile),
+    [colors, isMobile],
+  )
 
   useEffect(() => {
     if (!isAuthenticated || typeof ensureServerData !== 'function') return
@@ -333,6 +323,7 @@ function HomeFavoritesHistorySection() {
       (
         [
           {
+            eyebrow: 'Сохранено',
             icon: 'bookmark',
             title: 'Избранное',
             subtitle: 'Маршруты, к которым вы хотите вернуться позже.',
@@ -344,6 +335,7 @@ function HomeFavoritesHistorySection() {
             titleTestID: 'home-favorites-header',
           },
           {
+            eyebrow: 'Недавнее',
             icon: 'clock',
             title: 'История',
             subtitle: 'Последние маршруты, которые вы уже открывали.',
@@ -401,18 +393,18 @@ function HomeFavoritesHistorySection() {
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={styles.container}>
           {sections.map((section) => (
-            <View key={section.ctaPath} style={styles.section}>
+            <View key={section.ctaPath} style={sec.sectionFrame}>
               <SectionHeader
                 icon={section.icon}
+                eyebrow={section.eyebrow}
                 title={section.title}
                 subtitle={section.subtitle}
                 countLabel={section.countLabel}
                 countValue={section.countValue}
-                onSeeAll={() => router.push(section.ctaPath as any)}
                 testID={section.titleTestID}
                 styles={styles}
+                sec={sec}
                 colors={colors}
-                isMobile={isMobile}
               />
               <HorizontalCards
                 data={section.items}
@@ -423,6 +415,20 @@ function HomeFavoritesHistorySection() {
                 isMobile={isMobile}
                 styles={styles}
               />
+              <View style={[sec.headerActions, { marginTop: isMobile ? 14 : 20 }]}>
+                <Button
+                  label="Смотреть все"
+                  onPress={() => router.push(section.ctaPath as any)}
+                  accessibilityLabel={`Смотреть все: ${section.title}`}
+                  icon={<Feather name="arrow-right" size={16} color={colors.text} />}
+                  iconPosition="right"
+                  variant="secondary"
+                  style={[sec.viewMoreButton, isMobile && sec.viewMoreButtonMobile]}
+                  labelStyle={sec.viewMoreText}
+                  hoverStyle={sec.viewMoreButtonHover}
+                  pressedStyle={sec.viewMoreButtonHover}
+                />
+              </View>
             </View>
           ))}
         </View>
@@ -443,15 +449,7 @@ const createStyles = (
       width: '100%',
       alignSelf: 'stretch',
     },
-    container: { gap: isMobile ? 16 : 20, width: '100%' },
-    section: {
-      gap: 14,
-      padding: isMobile ? 14 : 20,
-      borderRadius: tokens.radii.lg,
-      backgroundColor: colors.surfaceMuted,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-    },
+    container: { gap: isMobile ? 20 : 32, width: '100%' },
     emptyContainer: {
       alignItems: 'center',
       paddingVertical: isMobile ? 32 : 48,
@@ -496,78 +494,19 @@ const createStyles = (
       borderColor: colors.primaryAlpha30,
     },
     emptyButtonText: { fontSize: 14, fontWeight: '600', color: colors.text },
-    sectionHeaderRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-    },
-    headerIconChip: {
-      width: 38,
-      height: 38,
-      borderRadius: tokens.radii.md,
-      backgroundColor: colors.primarySoft,
-      borderWidth: 1,
-      borderColor: colors.primaryAlpha30,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    headerTitleBlock: { flex: 1, minWidth: 0, gap: 2 },
-    headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    sectionTitle: {
-      flexShrink: 1,
-      fontSize: isMobile ? 18 : 20,
-      fontWeight: '800',
-      color: colors.text,
-      lineHeight: isMobile ? 24 : 26,
-      letterSpacing: -0.3,
-    },
-    headerCountPill: {
+    metaPill: {
       flexDirection: 'row',
       alignItems: 'baseline',
-      gap: 4,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
+      gap: 5,
+      paddingHorizontal: 13,
+      paddingVertical: 6,
       borderRadius: tokens.radii.pill,
-      backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.borderLight,
+      backgroundColor: colors.surface,
     },
-    headerCountValue: { fontSize: 12, fontWeight: '800', color: colors.text },
-    headerCountLabel: { fontSize: 11, fontWeight: '600', color: colors.textMuted },
-    sectionSubtitle: {
-      fontSize: 13,
-      fontWeight: '500',
-      color: colors.textMuted,
-      lineHeight: 18,
-    },
-    seeAllButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: tokens.radii.pill,
-      backgroundColor: colors.primarySoft,
-      borderWidth: 1,
-      borderColor: colors.primaryAlpha30,
-      ...Platform.select({ web: { transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' } }),
-    },
-    seeAllButtonCompact: {
-      width: 40,
-      height: 40,
-      borderRadius: tokens.radii.md,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: colors.primarySoft,
-      borderWidth: 1,
-      borderColor: colors.primaryAlpha30,
-    },
-    seeAllButtonHover: {
-      backgroundColor: colors.primaryAlpha30,
-      borderColor: colors.primaryAlpha40,
-      ...Platform.select({ web: { transform: 'translateY(-1px)' } }),
-    },
-    seeAllButtonText: { fontSize: 13, fontWeight: '700', color: colors.primaryText },
+    metaPillValue: { fontSize: 13, fontWeight: '800', color: colors.text },
+    metaPillLabel: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
     horizontalList: {
       width: '100%',
       ...Platform.select({

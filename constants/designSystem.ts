@@ -295,7 +295,7 @@ export const DESIGN_TOKENS = {
     xxxl: 64,
   },
   typography: {
-    fontFamily: "'Inter', 'System'",
+    fontFamily: "'System'",
     sizes: {
       xs: 12,
       sm: 14,

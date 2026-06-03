@@ -10,6 +10,7 @@ import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
+import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { useThemedColors } from '@/hooks/useTheme';
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
 
@@ -75,7 +76,7 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
           <View style={styles.avatar}>
             {profile.avatar && !avatarError ? (
               <Image
-                source={{ uri: profile.avatar }}
+                source={{ uri: optimizeImageUrl(profile.avatar, { width: 96, height: 96, quality: 70, format: 'auto', fit: 'cover' }) ?? profile.avatar }}
                 style={styles.avatarImage}
                 onError={() => setAvatarError(true)}
               />

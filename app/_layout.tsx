@@ -238,16 +238,15 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
     }, []);
 
     // Fonts:
-    // - On native we must load app fonts before rendering.
+    // - On native we only load the icon font (Feather) used across the UI.
+    //   Text uses the platform system font (San Francisco / Roboto), so no custom
+    //   text faces are bundled — fewer weights to download/parse, faster first paint.
     // - On web we do not load fonts via expo-font here. @expo/vector-icons manages its own
     //   web font injection; attempting to load via expo-font can cause timeouts and missing glyphs.
     const [fontsLoaded, fontError] = useAppFonts(
       isWeb
         ? {}
         : {
-            SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
-            "Roboto-Regular": require("../assets/fonts/Roboto-Regular.ttf"),
-            "Roboto-Medium": require("../assets/fonts/Roboto-Medium.ttf"),
             ...(require('@expo/vector-icons/Feather') as any).font,
           }
     );

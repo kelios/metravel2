@@ -345,11 +345,24 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
       node.style.userSelect = 'none';
     };
 
+    // Coalesce scrollLeft writes to one per frame: multiple mousemove events
+    // can fire within a single frame, and each synchronous scrollLeft write
+    // forces layout. rAF batching keeps the drag visually identical (writes
+    // are bounded by display refresh anyway) while avoiding layout thrashing.
+    let pendingPageX = 0;
+    let moveRaf: number | null = null;
+    const flushMove = () => {
+      moveRaf = null;
+      const dx = pendingPageX - dragStartXRef.current;
+      node.scrollLeft = dragScrollLeftRef.current - dx;
+    };
+
     const onMouseMove = (e: MouseEvent) => {
       if (!isDraggingRef.current) return;
       e.preventDefault();
-      const dx = e.pageX - dragStartXRef.current;
-      node.scrollLeft = dragScrollLeftRef.current - dx;
+      pendingPageX = e.pageX;
+      if (moveRaf != null) return;
+      moveRaf = requestAnimationFrame(flushMove);
     };
 
     const snapToSlide = (targetIdx: number) => {
@@ -425,6 +438,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
       }
       node.removeEventListener('scroll', onScrollForEnd);
       if (scrollEndTimer) clearTimeout(scrollEndTimer);
+      if (moveRaf != null) cancelAnimationFrame(moveRaf);
     };
   }, [images.length, setActiveIndex, getScrollNode, containerWRef, indexRef]);
 

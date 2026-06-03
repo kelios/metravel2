@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Image, Platform, StyleSheet, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { optimizeImageUrl } from '@/utils/imageOptimization';
 
 type UserAvatarProps = {
   uri: string | null;
@@ -27,14 +28,30 @@ function UserAvatar({ uri, size = 'md', onError }: UserAvatarProps) {
     [colors, size],
   );
 
+  const px = SIZES[size];
+  const optimizedUri = useMemo(
+    () =>
+      optimizeImageUrl(uri, {
+        width: px * 2,
+        height: px * 2,
+        quality: 70,
+        format: 'auto',
+        fit: 'cover',
+      }) ?? uri,
+    [uri, px],
+  );
+
   if (uri) {
     if (Platform.OS === 'web') {
       return (
         <View style={styles.container}>
           <img
-            src={uri}
+            src={optimizedUri ?? undefined}
             alt=""
             aria-hidden="true"
+            width={px}
+            height={px}
+            decoding="async"
             referrerPolicy="no-referrer"
             style={webAvatarStyle}
             onError={onError}
@@ -45,7 +62,7 @@ function UserAvatar({ uri, size = 'md', onError }: UserAvatarProps) {
 
     return (
       <View style={styles.container}>
-        <Image source={{ uri }} style={styles.avatar} onError={onError} />
+        <Image source={{ uri: optimizedUri ?? uri }} style={styles.avatar} onError={onError} />
       </View>
     );
   }

@@ -26,8 +26,6 @@ const filesToCopy = [
   'robots.txt',
   'icon.svg',
   'travel-hero-preload-v2.js',
-  'assets/fonts/Roboto-Regular.ttf',
-  'assets/fonts/Roboto-Medium.ttf',
   'assets/icons/logo_yellow_512x512.png',
   'assets/icons/logo_yellow_192x192.png',
   'assets/icons/apple-touch-icon-180x180.png',

@@ -10,7 +10,7 @@ import {
     ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Feather from '@expo/vector-icons/Feather';
 import { useQuestsList } from '@/hooks/useQuestsApi';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useIsFocused } from '@react-navigation/native';
@@ -140,7 +140,7 @@ export default function QuestsMapScreen() {
             <View style={styles.fallback}>
                 <Text style={styles.fallbackText}>Карта доступна в веб-версии</Text>
                 <Pressable onPress={handleBack} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={16} color={colors.textOnPrimary} />
+                    <Feather name="arrow-left" size={16} color={colors.textOnPrimary} />
                     <Text style={styles.backBtnTxt}>Назад</Text>
                 </Pressable>
             </View>
@@ -159,10 +159,10 @@ export default function QuestsMapScreen() {
     if (travel.data.length === 0) {
         return (
             <View style={styles.fallback}>
-                <Ionicons name="map-outline" size={48} color={colors.textMuted} />
+                <Feather name="map" size={48} color={colors.textMuted} />
                 <Text style={styles.fallbackText}>Нет квестов с координатами для отображения на карте</Text>
                 <Pressable onPress={handleBack} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={16} color={colors.textOnPrimary} />
+                    <Feather name="arrow-left" size={16} color={colors.textOnPrimary} />
                     <Text style={styles.backBtnTxt}>К списку квестов</Text>
                 </Pressable>
             </View>
@@ -219,7 +219,7 @@ export default function QuestsMapScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Назад"
             >
-                <Ionicons name="arrow-back" size={18} color={colors.text} />
+                <Feather name="arrow-left" size={18} color={colors.text} />
             </Pressable>
         </View>
     );

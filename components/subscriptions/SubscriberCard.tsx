@@ -10,6 +10,7 @@ import SubscribeButton from '@/components/ui/SubscribeButton';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useThemedColors } from '@/hooks/useTheme';
+import { optimizeImageUrl } from '@/utils/imageOptimization';
 
 const WEB_CARD_SHADOW_STYLE = { boxShadow: DESIGN_TOKENS.shadows.card };
 const WEB_CURSOR_POINTER_STYLE = { cursor: 'pointer' as const };
@@ -54,7 +55,7 @@ function SubscriberCard({ profile, onMessage, onOpenProfile }: SubscriberCardPro
           <View style={styles.avatar}>
             {profile.avatar && !avatarError ? (
               <Image
-                source={{ uri: profile.avatar }}
+                source={{ uri: optimizeImageUrl(profile.avatar, { width: 80, height: 80, quality: 70, format: 'auto', fit: 'cover' }) ?? profile.avatar }}
                 style={styles.avatarImage}
                 onError={() => setAvatarError(true)}
               />

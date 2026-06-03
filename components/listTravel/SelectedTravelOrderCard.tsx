@@ -6,6 +6,7 @@ import type { Travel } from '@/types/types';
 import { useThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { Caption } from '@/components/ui/Typography';
+import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { createStyles } from './listTravelStyles';
 
 type ExportBarStyles = ReturnType<typeof createStyles>;
@@ -65,7 +66,18 @@ export default function SelectedTravelOrderCard({
   onDragEnd,
 }: Props) {
   const colors = useThemedColors();
-  const cover = useMemo(() => resolveTravelCover(travel), [travel]);
+  const cover = useMemo(() => {
+    const raw = resolveTravelCover(travel);
+    return (
+      optimizeImageUrl(raw, {
+        width: MEDIA_WIDTH * 2,
+        height: MEDIA_HEIGHT * 2,
+        quality: 65,
+        format: 'auto',
+        fit: 'cover',
+      }) ?? raw
+    );
+  }, [travel]);
   const asViewStyle = (style: unknown): StyleProp<ViewStyle> => style as StyleProp<ViewStyle>;
   const asTextStyle = (style: unknown): StyleProp<TextStyle> => style as StyleProp<TextStyle>;
 

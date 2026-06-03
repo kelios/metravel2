@@ -23,6 +23,7 @@ import {
     type DownloadResponse,
     TRANSIENT_UPLOAD_STATUSES,
     UPLOAD_RETRY_DELAY_MS,
+    parseDownloadFilename,
 } from '@/api/clientTypes';
 
 export { ApiError } from '@/api/clientErrors';
@@ -436,24 +437,6 @@ class ApiClient {
             ...options.headers,
         };
 
-        const parseFilename = (contentDisposition: string | null): string | undefined => {
-            if (!contentDisposition) return undefined;
-            const v = String(contentDisposition);
-            const utf8 = v.match(/filename\*=UTF-8''([^;]+)/i);
-            if (utf8?.[1]) {
-                try {
-                    return decodeURIComponent(utf8[1].trim().replace(/^"|"$/g, ''));
-                } catch {
-                    return utf8[1].trim().replace(/^"|"$/g, '');
-                }
-            }
-            const plain = v.match(/filename=([^;]+)/i);
-            if (plain?.[1]) {
-                return plain[1].trim().replace(/^"|"$/g, '');
-            }
-            return undefined;
-        };
-
         const handle = async (resp: Response): Promise<DownloadResponse> => {
             if (!resp.ok) {
                 const errorText = await resp.text().catch(() => 'Unknown error');
@@ -474,7 +457,7 @@ class ApiClient {
 
             const blob = await resp.blob();
             const contentType = resp.headers.get('content-type') ?? undefined;
-            const filename = parseFilename(resp.headers.get('content-disposition'));
+            const filename = parseDownloadFilename(resp.headers.get('content-disposition'));
             return { blob, contentType, filename };
         };
 

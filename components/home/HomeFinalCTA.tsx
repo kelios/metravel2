@@ -140,6 +140,7 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
           <View
             style={styles.titleRow}
             accessibilityRole="header"
+            accessibilityLabel="Соберите свою подборку поездок"
             {...({ 'aria-level': 2 } as any)}
           >
             <Text style={styles.title}>Соберите свою</Text>
