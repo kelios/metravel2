@@ -30,7 +30,6 @@ type ShelfSection = {
   countLabel: string
   countValue: number
   ctaPath: '/favorites' | '/history'
-  eyebrow: string
   icon: keyof typeof Feather.glyphMap
   items: TravelLikeItem[]
   listTestID: string
@@ -102,6 +101,7 @@ function SectionHeader({
   testID,
   styles,
   colors,
+  isMobile,
 }: {
   icon: keyof typeof Feather.glyphMap
   title: string
@@ -112,6 +112,7 @@ function SectionHeader({
   testID: string
   styles: Styles
   colors: ThemedColors
+  isMobile: boolean
 }) {
   return (
     <View style={styles.sectionHeaderRow} testID={testID}>
@@ -145,13 +146,13 @@ function SectionHeader({
       </View>
 
       <Button
-        label="Смотреть все"
+        label={isMobile ? '' : 'Смотреть все'}
         onPress={onSeeAll}
         accessibilityLabel={`Смотреть все: ${title}`}
-        icon={<Feather name="arrow-right" size={15} color={colors.primaryText} />}
+        icon={<Feather name="arrow-right" size={isMobile ? 18 : 15} color={colors.primaryText} />}
         iconPosition="right"
         variant="secondary"
-        style={styles.seeAllButton}
+        style={isMobile ? styles.seeAllButtonCompact : styles.seeAllButton}
         labelStyle={styles.seeAllButtonText}
         hoverStyle={styles.seeAllButtonHover}
         pressedStyle={styles.seeAllButtonHover}
@@ -332,7 +333,6 @@ function HomeFavoritesHistorySection() {
       (
         [
           {
-            eyebrow: 'Сохранено',
             icon: 'bookmark',
             title: 'Избранное',
             subtitle: 'Маршруты, к которым вы хотите вернуться позже.',
@@ -344,7 +344,6 @@ function HomeFavoritesHistorySection() {
             titleTestID: 'home-favorites-header',
           },
           {
-            eyebrow: 'Недавнее',
             icon: 'clock',
             title: 'История',
             subtitle: 'Последние маршруты, которые вы уже открывали.',
@@ -413,6 +412,7 @@ function HomeFavoritesHistorySection() {
                 testID={section.titleTestID}
                 styles={styles}
                 colors={colors}
+                isMobile={isMobile}
               />
               <HorizontalCards
                 data={section.items}
@@ -551,6 +551,16 @@ const createStyles = (
       borderWidth: 1,
       borderColor: colors.primaryAlpha30,
       ...Platform.select({ web: { transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' } }),
+    },
+    seeAllButtonCompact: {
+      width: 40,
+      height: 40,
+      borderRadius: tokens.radii.md,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.primarySoft,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
     },
     seeAllButtonHover: {
       backgroundColor: colors.primaryAlpha30,

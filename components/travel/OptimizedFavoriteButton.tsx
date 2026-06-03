@@ -119,6 +119,8 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
                     />
                 </WebView>
                 <WebView
+                    role="button"
+                    accessibilityRole="button"
                     tabIndex={0}
                     onClick={handlePress as any}
                     onKeyDown={(e: any) => {
