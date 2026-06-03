@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Platform,
   Pressable,
-  ScrollView,
   View,
   ViewStyle,
   Text,
@@ -229,8 +228,9 @@ const RightColumn: React.FC<RightColumnProps> = (
         paddingTop: Platform.OS === 'web' ? 0 : 12,
         ...(Platform.OS === 'web'
           ? ({
-              // Important: make ScrollView the only scroll container on web, otherwise onScroll won't fire
-              // and infinite scroll won't fetch next pages.
+              // Important: keep this wrapper non-scrolling so FlashList's internal
+              // ScrollView is the only scroll container on web, otherwise its onScroll
+              // won't fire and infinite scroll won't fetch next pages.
               overflow: 'hidden',
               overflowY: 'hidden',
               overflowX: 'hidden',
@@ -551,41 +551,11 @@ const RightColumn: React.FC<RightColumnProps> = (
         return null
       }
 
-      if (isWeb) {
-        return (
-          <ScrollView
-            ref={listRef as any}
-            onScroll={webScrollHandler}
-            scrollEventThrottle={32}
-            style={{
-              flex: 1,
-              minHeight: 0,
-              WebkitOverflowScrolling: 'touch',
-              touchAction: isExport ? 'auto' : 'pan-y',
-              overscrollBehaviorY: 'contain',
-            } as any}
-            contentContainerStyle={webContentContainerStyle}
-            testID="right-column-scrollview"
-          >
-            {ListHeader}
-            {rows.map((rowItems, rowIndex) => (
-              <React.Fragment key={`row-${rowIndex}`}>
-                {rowIndex > 0 && <RowSeparator />}
-                {renderRow({ item: rowItems, index: rowIndex })}
-              </React.Fragment>
-            ))}
-            {/* PERF-03: Информативный индикатор при подгрузке страниц */}
-            {showNextPageLoading && (
-              <View style={[footerLoaderStyle, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
-                <ActivityIndicator size="small" accessibilityLabel="Загружаем ещё маршруты" />
-                <Text style={{ fontSize: 13, color: colors.textMuted }}>Загружаем ещё...</Text>
-              </View>
-            )}
-            <ContributionBanner variant="search" />
-          </ScrollView>
-        )
-      }
-
+      // Web also uses FlashList to virtualize the grid and avoid unbounded DOM
+      // growth across paginated pages. FlashList's internal ScrollView is the
+      // single scroll container on web, so infinite scroll is driven through its
+      // onScroll prop (webScrollHandler) — the same trigger used before — while
+      // native relies on onEndReached.
       return (
         <FlashList
           ref={listRef as any}
@@ -596,12 +566,25 @@ const RightColumn: React.FC<RightColumnProps> = (
           {...({ estimatedItemSize: 320 } as any)}
           ListHeaderComponent={ListHeader}
           ListFooterComponent={listFooter}
-          onEndReached={onEndReached}
+          ItemSeparatorComponent={isWeb ? RowSeparator : undefined}
+          onEndReached={isWeb ? undefined : onEndReached}
           onEndReachedThreshold={onEndReachedThreshold}
+          onScroll={isWeb ? webScrollHandler : undefined}
           drawDistance={800}
-          contentContainerStyle={nativeContentContainerStyle}
-          testID="right-column-flashlist"
-          scrollEventThrottle={16}
+          contentContainerStyle={isWeb ? webContentContainerStyle : nativeContentContainerStyle}
+          style={
+            isWeb
+              ? ({
+                  flex: 1,
+                  minHeight: 0,
+                  WebkitOverflowScrolling: 'touch',
+                  touchAction: isExport ? 'auto' : 'pan-y',
+                  overscrollBehaviorY: 'contain',
+                } as any)
+              : undefined
+          }
+          testID={isWeb ? 'right-column-scrollview' : 'right-column-flashlist'}
+          scrollEventThrottle={isWeb ? 32 : 16}
           removeClippedSubviews={true}
           maxToRenderPerBatch={10}
           updateCellsBatchingPeriod={50}
@@ -613,8 +596,6 @@ const RightColumn: React.FC<RightColumnProps> = (
       ListHeader,
       RowSeparator,
       listFooter,
-      colors.textMuted,
-      footerLoaderStyle,
       gridColumns,
       isError,
       isExport,
@@ -627,7 +608,6 @@ const RightColumn: React.FC<RightColumnProps> = (
       rows,
       showEmptyState,
       showInitialLoading,
-      showNextPageLoading,
       travels.length,
       webContentContainerStyle,
       webScrollHandler,

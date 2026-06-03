@@ -14,6 +14,7 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import { confirmAction } from '@/utils/confirmAction';
 import { deleteCurrentUserAccount } from '@/api/user';
 import { ApiError } from '@/api/client';
+import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { useSettingsProfileForm } from '@/hooks/useSettingsProfileForm';
 import { Theme, useTheme, useThemedColors } from '@/hooks/useTheme';
 import { showToast } from '@/utils/toast';
@@ -275,7 +276,7 @@ export default function SettingsScreen() {
                         <View style={styles.profileHeaderRow}>
                             <View style={styles.profileAvatar}>
                                 {profile?.avatar && !settingsAvatarError ? (
-                                    <Image source={{ uri: profile.avatar }} style={styles.profileAvatarImage} onError={() => setSettingsAvatarError(true)} />
+                                    <Image source={{ uri: optimizeImageUrl(profile.avatar, { width: 72, height: 72, quality: 70, format: 'auto', fit: 'cover' }) ?? profile.avatar }} style={styles.profileAvatarImage} onError={() => setSettingsAvatarError(true)} />
                                 ) : (
                                     <Feather name="user" size={18} color={colors.primary} />
                                 )}

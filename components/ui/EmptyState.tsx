@@ -197,7 +197,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     ...Platform.select({
       web: {
         backgroundImage: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 50%, ${colors.brand} 100%)`,
-        backgroundSize: '200% 100%',
         boxShadow: `0 4px 16px ${colors.primaryAlpha30}, 0 2px 8px ${colors.brandAlpha40}`,
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       } as any,

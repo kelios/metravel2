@@ -12,6 +12,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { UserProfileDto } from '@/api/user';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { ProfileMenu } from './ProfileMenu';
@@ -295,7 +296,7 @@ export function ProfileHeader({
           <View style={styles.avatarRing}>
             <View style={styles.avatar}>
               {user.avatar ? (
-                <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+                <Image source={{ uri: optimizeImageUrl(user.avatar, { width: 248, height: 248, quality: 72, format: 'auto', fit: 'cover' }) ?? user.avatar }} style={styles.avatarImage} />
               ) : (
                 <Text style={styles.avatarPlaceholder}>{getInitials(user.name || '?')}</Text>
               )}

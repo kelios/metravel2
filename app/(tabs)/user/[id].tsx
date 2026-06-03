@@ -19,6 +19,7 @@ import { queryKeys } from '@/queryKeys';
 import SubscribeButton from '@/components/ui/SubscribeButton';
 import { webTouchScrollStyle } from '@/utils';
 import { routes } from '@/utils/routes';
+import { optimizeImageUrl } from '@/utils/imageOptimization';
 
 export default function PublicUserProfileScreen() {
   const router = useRouter();
@@ -145,7 +146,7 @@ export default function PublicUserProfileScreen() {
             <View style={styles.avatar}>
               {profile.avatar && !avatarError ? (
                 <Image
-                  source={{ uri: profile.avatar }}
+                  source={{ uri: optimizeImageUrl(profile.avatar, { width: 112, height: 112, quality: 70, format: 'auto', fit: 'cover' }) ?? profile.avatar }}
                   style={styles.avatarImage}
                   onError={() => setAvatarError(true)}
                 />

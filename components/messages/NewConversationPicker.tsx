@@ -12,6 +12,7 @@ import {
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { optimizeImageUrl } from '@/utils/imageOptimization';
 import type { MessagingUser } from '@/api/messages';
 import { getMessagingUserDisplayName, getMessagingUserId } from '@/api/messages';
 
@@ -58,7 +59,7 @@ function NewConversationPicker({
                 >
                     <View style={[styles.avatar, { backgroundColor: colors.primarySoft }]}>
                         {item.avatar ? (
-                            <Image source={{ uri: item.avatar }} style={styles.avatarImage} />
+                            <Image source={{ uri: optimizeImageUrl(item.avatar, { width: 80, height: 80, quality: 70, format: 'auto', fit: 'cover' }) ?? item.avatar }} style={styles.avatarImage} />
                         ) : (
                             <Feather name="user" size={20} color={colors.primary} />
                         )}

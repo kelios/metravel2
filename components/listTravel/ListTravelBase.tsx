@@ -466,7 +466,10 @@ function ListTravelBase() {
           currentUserId={userId != null ? String(userId) : null}
           isMetravel={isMeTravel}
           onDeletePress={handleDeletePress}
-          isFirst={index === 0}
+          // Грузим весь первый ряд eager/high-priority (а не только index 0):
+          // на многоколоночных раскладках карточки 2..N тоже above-the-fold и
+          // иначе показывали пустые серые боксы на первом кадре.
+          isFirst={index < gridColumns}
           selectable={isExport}
           isSelected={isSelected(travel.id)}
           onToggle={isExport ? () => toggleSelect(travel) : undefined}
@@ -482,6 +485,7 @@ function ListTravelBase() {
         isMeTravel,
         isMobileDevice,
         isSuper,
+        gridColumns,
         searchCardWidth,
         searchCardImageHeight,
         toggleSelect,
