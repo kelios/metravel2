@@ -92,6 +92,7 @@ function ThreadList({
 
     const getOtherParticipantId = useCallback(
         (thread: MessageThread): number | null => {
+            if (currentUserIdNum == null) return null;
             return thread.participants.find((id) => id !== currentUserIdNum) ?? null;
         },
         [currentUserIdNum]
@@ -348,6 +349,17 @@ function ThreadList({
             refreshing={loading}
             onRefresh={onRefresh}
             ListHeaderComponent={header}
+            ListEmptyComponent={
+                search.trim() ? (
+                    <View style={styles.center}>
+                        <Feather name="search" size={48} color={colors.textMuted} />
+                        <Text style={[styles.emptyTitle, { color: colors.text }]}>Ничего не найдено</Text>
+                        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                            Попробуйте изменить запрос
+                        </Text>
+                    </View>
+                ) : null
+            }
         />
     );
 }

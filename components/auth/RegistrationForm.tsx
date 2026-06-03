@@ -1,5 +1,5 @@
 // app/register.tsx (или соответствующий путь)
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     KeyboardAvoidingView,
     Platform,
@@ -33,6 +33,20 @@ import { webTouchScrollStyle } from '@/utils';
 export default function RegisterForm() {
     const [showPass, setShowPass] = useState(false);
     const [generalMsg, setMsg] = useState<{ text: string; error: boolean }>({ text: '', error: false });
+    // Держим кнопки заблокированными до фактической навигации после успеха,
+    // чтобы за 1с окна до router.replace нельзя было повторно отправить форму.
+    const [submitted, setSubmitted] = useState(false);
+    const [googleBusy, setGoogleBusy] = useState(false);
+    const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (navTimerRef.current) {
+                clearTimeout(navTimerRef.current);
+                navTimerRef.current = null;
+            }
+        };
+    }, []);
     const { redirect, intent } = useLocalSearchParams<{ redirect?: string; intent?: string }>();
     const router = useRouter();
     const { loginWithGoogle } = useAuth();
@@ -70,10 +84,15 @@ export default function RegisterForm() {
             // AUTH-03: Явное welcome-сообщение
             setMsg({ text: 'Добро пожаловать! Аккаунт создан. Проверьте почту для подтверждения.', error: false });
             resetForm();
+            // Не разблокируем кнопку на успехе (finally вызовет setSubmitting(false)):
+            // submitted держит её disabled до фактического router.replace.
+            setSubmitted(true);
             if (intent) {
                 sendAnalyticsEvent('AuthSuccess', { source: 'home', intent });
             }
-            setTimeout(() => {
+            if (navTimerRef.current) clearTimeout(navTimerRef.current);
+            navTimerRef.current = setTimeout(() => {
+                navTimerRef.current = null;
                 router.replace(resolvePostAuthPath() as any);
             }, 1000);
         } catch (e: any) {
@@ -84,6 +103,9 @@ export default function RegisterForm() {
     };
 
     const handleGoogleSignIn = async (credential: string) => {
+        if (googleBusy || submitted) return;
+        setGoogleBusy(true);
+        let navigating = false;
         try {
             setMsg({ text: '', error: false });
             const ok = await loginWithGoogle(credential);
@@ -91,12 +113,17 @@ export default function RegisterForm() {
                 if (intent) {
                     sendAnalyticsEvent('AuthSuccess', { source: 'google', intent });
                 }
+                navigating = true;
+                setSubmitted(true);
                 router.replace(resolvePostAuthPath() as any);
             } else {
                 setMsg({ text: 'Не удалось войти через Google.', error: true });
             }
         } catch (e: any) {
             setMsg({ text: e?.message || 'Ошибка при входе через Google.', error: true });
+        } finally {
+            // На успехе оставляем заблокированным до размонтирования (идёт навигация).
+            if (!navigating) setGoogleBusy(false);
         }
     };
 
@@ -372,10 +399,10 @@ export default function RegisterForm() {
 
                                             {/* ---------- button ---------- */}
                                             <Button
-                                                label={isSubmitting ? 'Подождите…' : 'Зарегистрироваться'}
+                                                label={isSubmitting || submitted ? 'Подождите…' : 'Зарегистрироваться'}
                                                 onPress={() => handleSubmit()}
-                                                disabled={isSubmitting}
-                                                loading={isSubmitting}
+                                                disabled={isSubmitting || submitted || googleBusy}
+                                                loading={isSubmitting || submitted}
                                                 variant="primary"
                                                 size="lg"
                                                 style={styles.btn}
@@ -391,7 +418,7 @@ export default function RegisterForm() {
                                             <GoogleSignInButton
                                                 onSuccess={handleGoogleSignIn}
                                                 onError={handleGoogleError}
-                                                disabled={isSubmitting}
+                                                disabled={isSubmitting || submitted || googleBusy}
                                             />
 
                                             <View style={styles.loginContainer}>
@@ -404,7 +431,7 @@ export default function RegisterForm() {
                                                                 : (`/login${intent ? `?intent=${encodeURIComponent(intent)}` : ''}` as any)
                                                         )
                                                     }
-                                                    disabled={isSubmitting}
+                                                    disabled={isSubmitting || submitted || googleBusy}
                                                     accessibilityRole="button"
                                                     accessibilityLabel="Войти в аккаунт"
                                                 >

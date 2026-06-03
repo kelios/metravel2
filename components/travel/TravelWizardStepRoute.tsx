@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import {
   KeyboardAvoidingView,
   Platform,
@@ -80,6 +80,19 @@ function TravelWizardStepRoute({
   const router = useRouter()
   const { isPhone, isLargePhone } = useResponsive()
   const markersRef = useLatestRef(markers)
+  const isMountedRef = useRef(true)
+  const quickDraftTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+      if (quickDraftTimeoutRef.current != null) {
+        clearTimeout(quickDraftTimeoutRef.current)
+        quickDraftTimeoutRef.current = null
+      }
+    }
+  }, [])
   const {
     fileInputRef: manualPhotoInputRef,
     isPanelVisible: isManualPointVisible,
@@ -143,7 +156,12 @@ function TravelWizardStepRoute({
         text2: 'Вы можете вернуться к нему позже',
       })
 
-      setTimeout(() => {
+      if (quickDraftTimeoutRef.current != null) {
+        clearTimeout(quickDraftTimeoutRef.current)
+      }
+      quickDraftTimeoutRef.current = setTimeout(() => {
+        quickDraftTimeoutRef.current = null
+        if (!isMountedRef.current) return
         router.push('/metravel')
       }, 250)
     } catch (error) {
@@ -241,7 +259,7 @@ function TravelWizardStepRoute({
     }
 
     const updatedMarkers = [
-      ...(markers || []),
+      ...(markersRef.current || []),
       {
         id: null,
         lat,
@@ -266,7 +284,7 @@ function TravelWizardStepRoute({
     manualPointState.lat,
     manualPointState.lng,
     manualPointState.photoPreviewUrl,
-    markers,
+    markersRef,
     onCountrySelect,
     resetManualPoint,
     selectedCountryIds,
@@ -291,6 +309,7 @@ function TravelWizardStepRoute({
     if (!file) return
 
     const coords = await extractGpsFromImageFile(file)
+    if (!isMountedRef.current) return
     if (!coords) {
       void showToastMessage({
         type: 'error',
@@ -304,10 +323,16 @@ function TravelWizardStepRoute({
 
     try {
       const uploadableFile = await prepareWebImageFileForUpload(file)
+      if (!isMountedRef.current) return
       const previewUrl = URL.createObjectURL(uploadableFile)
+      if (!isMountedRef.current) {
+        URL.revokeObjectURL(previewUrl)
+        return
+      }
       registerPendingImageFile(previewUrl, uploadableFile)
       setManualPhotoPreview(previewUrl)
     } catch {
+      if (!isMountedRef.current) return
       void showToastMessage({
         type: 'error',
         text1: 'Не удалось обработать фото',
@@ -316,6 +341,7 @@ function TravelWizardStepRoute({
       return
     }
 
+    if (!isMountedRef.current) return
     void showToastMessage({
       type: 'success',
       text1: 'Координаты заполнены',
@@ -338,7 +364,7 @@ function TravelWizardStepRoute({
         return !removedSet.has(String(marker.country))
       })
 
-      if (filteredMarkers.length !== markers.length) {
+      if (filteredMarkers.length !== (markers || []).length) {
         updateMarkers(filteredMarkers)
       }
     }

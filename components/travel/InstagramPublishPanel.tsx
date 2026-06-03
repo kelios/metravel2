@@ -38,6 +38,7 @@ type InstagramPublishPanelProps = {
   onDragEnd: () => void
   onCopyText: () => void
   onPublish: () => void
+  isPublishing?: boolean
 }
 
 function InstagramGalleryItem({
@@ -48,7 +49,6 @@ function InstagramGalleryItem({
   isDragging,
   isLast,
   iconSize,
-  editableInstagramImagesCount,
   onMoveImage,
   onRemoveImage,
   onDragStart,
@@ -62,7 +62,6 @@ function InstagramGalleryItem({
   isDragging: boolean
   isLast: boolean
   iconSize: number
-  editableInstagramImagesCount: number
   onMoveImage: (index: number, direction: -1 | 1) => void
   onRemoveImage: (index: number) => void
   onDragStart: (index: number) => void
@@ -138,11 +137,10 @@ function InstagramGalleryItem({
         </Pressable>
         <Pressable
           onPress={() => onMoveImage(index, 1)}
-          disabled={index === editableInstagramImagesCount - 1 || isLast}
+          disabled={isLast}
           style={[
             styles.instagramGalleryControlButton,
-            (index === editableInstagramImagesCount - 1 || isLast) &&
-              styles.instagramGalleryControlButtonDisabled,
+            isLast && styles.instagramGalleryControlButtonDisabled,
           ]}
           testID={`instagram-move-right-${index}`}
           accessibilityLabel={`Переместить фото ${index + 1} вправо`}
@@ -182,6 +180,7 @@ export default function InstagramPublishPanel({
   onDragEnd,
   onCopyText,
   onPublish,
+  isPublishing = false,
 }: InstagramPublishPanelProps) {
   return (
     <View style={[styles.card, styles.instagramCard]}>
@@ -259,7 +258,7 @@ export default function InstagramPublishPanel({
         >
           {editableInstagramImages.map((imageUrl, index) => (
             <div
-              key={`${imageUrl}-${index}`}
+              key={imageUrl}
               data-testid="instagram-preview-image"
               style={Object.assign(
                 {},
@@ -353,7 +352,7 @@ export default function InstagramPublishPanel({
         >
           {editableInstagramImages.map((imageUrl, index) => (
             <InstagramGalleryItem
-              key={`${imageUrl}-${index}`}
+              key={imageUrl}
               colors={colors}
               styles={styles}
               imageUrl={imageUrl}
@@ -361,7 +360,6 @@ export default function InstagramPublishPanel({
               isDragging={draggedInstagramImageIndex === index}
               isLast={index === editableInstagramImages.length - 1}
               iconSize={16}
-              editableInstagramImagesCount={editableInstagramImages.length}
               onMoveImage={onMoveImage}
               onRemoveImage={onRemoveImage}
               onDragStart={onDragStart}
@@ -483,6 +481,8 @@ export default function InstagramPublishPanel({
         <Button
           label="Опубликовать в Instagram"
           onPress={onPublish}
+          disabled={isPublishing}
+          loading={isPublishing}
           icon={
             <Feather name="instagram" size={18} color={colors.textOnPrimary} />
           }

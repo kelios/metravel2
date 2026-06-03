@@ -19,6 +19,28 @@ export const resolveBaseImageKey = (value: string | null | undefined): string | 
   }
 };
 
+const OPTIMIZATION_PARAM_KEYS = ['w', 'h', 'q', 'fit', 'f', 'output'];
+
+// Identity key strips ONLY optimization params (w/h/q/fit/f/output) so it stays
+// stable across scroll/resize re-fetches, but PRESERVES meaningful query such as
+// signatures or `?v=` versioning. Two images sharing origin+path but differing by
+// signature/version must NOT collapse to the same key (otherwise webLoaded/node
+// reuse shows a stale image for the new source).
+export const resolveImageIdentityKey = (value: string | null | undefined): string | null => {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return null;
+  if (/^(data:|blob:)/i.test(raw)) return raw;
+
+  try {
+    const url = new URL(raw, 'https://metravel.by');
+    OPTIMIZATION_PARAM_KEYS.forEach((key) => url.searchParams.delete(key));
+    const query = url.searchParams.toString();
+    return `${url.origin}${url.pathname}${query ? `?${query}` : ''}`;
+  } catch {
+    return raw.split('?')[0] || raw;
+  }
+};
+
 export const hasOptimizationParams = (value: string | null | undefined): boolean => {
   const raw = typeof value === 'string' ? value.trim() : '';
   if (!raw) return false;

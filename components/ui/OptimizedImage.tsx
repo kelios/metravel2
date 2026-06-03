@@ -9,7 +9,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 // Shared cap on network round-trips for a single broken image. The API-prefix
 // fallback and the generic cache-busting retry both draw from this budget via
 // retryAttemptRef, so a failing image cannot exceed this many extra requests.
-const MAX_RETRY_ATTEMPTS = 3;
+const MAX_RETRY_ATTEMPTS = 6;
 
 const hasValidUriSource = (source: { uri: string } | number): boolean => {
   if (!source) return false;

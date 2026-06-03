@@ -1,5 +1,5 @@
 // app/login.tsx (или соответствующий путь)
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     KeyboardAvoidingView,
     Platform,
@@ -44,7 +44,18 @@ export default function Login() {
     /* ---------- state ---------- */
     const [msg, setMsg] = useState<{ text: string; error: boolean }>({ text: '', error: false });
     const [showPassword, setShowPassword] = useState(false);
+    // Держим кнопки заблокированными до фактической навигации после успеха,
+    // чтобы окно до router.replace не позволяло повторную/конкурирующую авторизацию.
+    const [submitted, setSubmitted] = useState(false);
+    const [googleBusy, setGoogleBusy] = useState(false);
     const passwordRef = useRef<TextInput>(null);
+    const mountedRef = useRef(true);
+
+    useEffect(() => {
+        return () => {
+            mountedRef.current = false;
+        };
+    }, []);
 
     /* ---------- helpers ---------- */
     const router = useRouter();
@@ -58,7 +69,10 @@ export default function Login() {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const showMsg = (text: string, error = false) => setMsg({ text, error });
+    const showMsg = (text: string, error = false) => {
+        if (!mountedRef.current) return;
+        setMsg({ text, error });
+    };
 
     const resolvePostAuthPath = (): string => {
         if (intent === 'create-book') return '/travel/new';
@@ -111,6 +125,9 @@ export default function Login() {
                 if (intent) {
                     sendAnalyticsEvent('AuthSuccess', { source: String(intent || 'unknown'), intent });
                 }
+                // Держим форму заблокированной до фактической навигации (finally вызовет
+                // setSubmitting(false), но submitted оставляет кнопки disabled).
+                setSubmitted(true);
                 router.replace(resolvePostAuthPath() as any);
             } else {
                 showMsg('Неверный email или пароль.', true);
@@ -123,6 +140,9 @@ export default function Login() {
     };
 
     const handleGoogleSignIn = async (credential: string) => {
+        if (googleBusy || submitted) return;
+        setGoogleBusy(true);
+        let navigating = false;
         try {
             showMsg('');
             const ok = await loginWithGoogle(credential);
@@ -130,12 +150,17 @@ export default function Login() {
                 if (intent) {
                     sendAnalyticsEvent('AuthSuccess', { source: 'google', intent });
                 }
+                navigating = true;
+                setSubmitted(true);
                 router.replace(resolvePostAuthPath() as any);
             } else {
                 showMsg('Не удалось войти через Google.', true);
             }
         } catch (error) {
             showMsg(getErrorMessage(error, 'Ошибка при входе через Google.'), true);
+        } finally {
+            // На успехе оставляем заблокированным до размонтирования (идёт навигация).
+            if (!navigating && mountedRef.current) setGoogleBusy(false);
         }
     };
 
@@ -288,10 +313,10 @@ export default function Login() {
                                                 </FormFieldWithValidation>
 
                                                 <Button
-                                                    label={isSubmitting ? 'Подождите…' : 'Войти'}
+                                                    label={isSubmitting || submitted ? 'Подождите…' : 'Войти'}
                                                     onPress={() => handleSubmit()}
-                                                    disabled={isSubmitting}
-                                                    loading={isSubmitting}
+                                                    disabled={isSubmitting || submitted || googleBusy}
+                                                    loading={isSubmitting || submitted}
                                                     variant="primary"
                                                     size="lg"
                                                     style={styles.btn}
@@ -300,7 +325,7 @@ export default function Login() {
 
                                                 <Pressable
                                                     onPress={() => handleResetPassword(values.email)}
-                                                    disabled={isSubmitting}
+                                                    disabled={isSubmitting || submitted || googleBusy}
                                                     style={({ pressed }) => [
                                                         styles.forgotButton,
                                                         pressed && { opacity: 0.7 },
@@ -321,7 +346,7 @@ export default function Login() {
                                                 <GoogleSignInButton
                                                     onSuccess={handleGoogleSignIn}
                                                     onError={handleGoogleError}
-                                                    disabled={isSubmitting}
+                                                    disabled={isSubmitting || submitted || googleBusy}
                                                 />
 
                                             <View style={styles.registerContainer}>
@@ -333,7 +358,7 @@ export default function Login() {
                                                             : (`/registration${intent ? `?intent=${encodeURIComponent(intent)}` : ''}` as any)
                                                     }
                                                     style={styles.registerLink}
-                                                    disabled={isSubmitting}
+                                                    disabled={isSubmitting || submitted || googleBusy}
                                                 >
                                                     Зарегистрируйтесь
                                                 </Link>

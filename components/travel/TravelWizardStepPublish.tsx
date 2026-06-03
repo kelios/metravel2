@@ -144,6 +144,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const missingBannerAnchorRef = useRef<View | null>(null);
     const buttonErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const missingBannerScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const instagramPublishingRef = useRef(false);
+    const [isPublishingInstagram, setIsPublishingInstagram] = useState(false);
     const [primaryOverrideLabel, setPrimaryOverrideLabel] = useState<string | null>(null);
     const instagramOAuthResolution = useMemo(() => getInstagramOAuthResolution(), []);
 
@@ -506,6 +508,10 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     }, [finalInstagramText]);
 
     const handlePublishToInstagram = useCallback(async () => {
+        // Защита от двойного клика: повторный вызов во время открытия OAuth не должен
+        // открывать вторую вкладку.
+        if (instagramPublishingRef.current) return;
+
         const oauthUrl = buildInstagramOAuthUrl();
 
         if (!oauthUrl) {
@@ -517,13 +523,20 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             return;
         }
 
-        const opened = await openExternalUrl(oauthUrl);
-        if (!opened) {
-            void showToastMessage({
-                type: 'error',
-                text1: 'Не удалось открыть Meta OAuth',
-                text2: 'Проверьте настройки браузера и повторите попытку.',
-            });
+        instagramPublishingRef.current = true;
+        setIsPublishingInstagram(true);
+        try {
+            const opened = await openExternalUrl(oauthUrl);
+            if (!opened) {
+                void showToastMessage({
+                    type: 'error',
+                    text1: 'Не удалось открыть Meta OAuth',
+                    text2: 'Проверьте настройки браузера и повторите попытку.',
+                });
+            }
+        } finally {
+            instagramPublishingRef.current = false;
+            setIsPublishingInstagram(false);
         }
     }, [
         instagramOAuthResolution.reason,
@@ -629,6 +642,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                             onDragEnd={handleInstagramDragEnd}
                             onCopyText={() => void handleCopyInstagramText()}
                             onPublish={() => void handlePublishToInstagram()}
+                            isPublishing={isPublishingInstagram}
                         />
                     )}
                     </View>

@@ -60,9 +60,10 @@ function getDateKey(dateStr: string | null): string {
 
 function buildListItems(messages: Message[]): ChatListItem[] {
   const sorted = [...messages].sort((a, b) => {
-    const da = a.created_at ? new Date(a.created_at).getTime() : 0
-    const db = b.created_at ? new Date(b.created_at).getTime() : 0
-    return db - da
+    const da = a.created_at ? new Date(a.created_at).getTime() : Infinity
+    const db = b.created_at ? new Date(b.created_at).getTime() : Infinity
+    if (da !== db) return db - da
+    return (b.id ?? 0) - (a.id ?? 0)
   })
 
   const items: ChatListItem[] = []
@@ -121,9 +122,13 @@ function ChatView({
 
   const [text, setText] = useState('')
   const lastSentAtRef = useRef(0)
-  const currentUserIdNum = currentUserId ? Number(currentUserId) : null
+  const currentUserIdNum = useMemo(() => {
+    const n = Number(currentUserId)
+    return Number.isFinite(n) ? n : null
+  }, [currentUserId])
 
   const handleSend = useCallback(() => {
+    if (sending) return
     const trimmed = text.trim()
     if (!trimmed) return
     const now = Date.now()
@@ -131,7 +136,7 @@ function ChatView({
     lastSentAtRef.current = now
     onSend(trimmed)
     setText('')
-  }, [text, onSend])
+  }, [text, onSend, sending])
 
   const handleKeyPress = useCallback(
     (e: any) => {

@@ -39,6 +39,15 @@ function TravelRatingSection({
     const spinAnim = useRef(new Animated.Value(0)).current;
     const [showSuccess, setShowSuccess] = useState(false);
     const prevRatingRef = useRef<number | null>(null);
+    const prevSubmittingRef = useRef(false);
+    const isMountedRef = useRef(true);
+
+    useEffect(() => {
+        isMountedRef.current = true;
+        return () => {
+            isMountedRef.current = false;
+        };
+    }, []);
 
     const {
         rating,
@@ -94,9 +103,9 @@ function TravelRatingSection({
 
     // 🎨 Success feedback после сохранения оценки
     useEffect(() => {
-        if (!isSubmitting && userRating !== null && userRating > 0) {
+        if (prevSubmittingRef.current && !isSubmitting && userRating !== null && userRating > 0) {
             setShowSuccess(true);
-            Animated.sequence([
+            const anim = Animated.sequence([
                 Animated.timing(successPulseAnim, {
                     toValue: 1,
                     duration: 300,
@@ -108,8 +117,15 @@ function TravelRatingSection({
                     duration: 300,
                     useNativeDriver: shouldUseNativeDriver,
                 }),
-            ]).start(() => setShowSuccess(false));
+            ]);
+            anim.start(() => {
+                if (isMountedRef.current) setShowSuccess(false);
+            });
+            prevSubmittingRef.current = isSubmitting;
+            return () => anim.stop();
         }
+        prevSubmittingRef.current = isSubmitting;
+        return undefined;
     }, [isSubmitting, userRating, successPulseAnim, shouldUseNativeDriver]);
 
     if (compact) {

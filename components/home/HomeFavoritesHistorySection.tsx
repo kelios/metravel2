@@ -46,7 +46,7 @@ type SectionStyles = ReturnType<typeof createSectionStyles>
 function mapToTravelLikeList(source: unknown): TravelLikeItem[] {
   const arr = Array.isArray(source) ? source : []
   return arr
-    .filter((item: any) => item && item.url)
+    .filter((item: any) => item && item.url && item.id != null)
     .slice(0, MAX_ITEMS_PER_SHELF)
     .map(
       (item: any): TravelLikeItem => ({
@@ -150,6 +150,7 @@ function SectionHeader({
 function useHorizontalWheelBridge(
   scrollRef: React.MutableRefObject<any>,
   isMobile: boolean,
+  itemCount: number,
 ) {
   useEffect(() => {
     if (!IS_WEB || isMobile) return
@@ -179,7 +180,7 @@ function useHorizontalWheelBridge(
       el.removeEventListener('wheel', onWheelPassive)
       el.removeEventListener('wheel', onWheelActive)
     }
-  }, [isMobile, scrollRef])
+  }, [isMobile, scrollRef, itemCount])
 }
 
 function HorizontalCards({
@@ -230,7 +231,7 @@ function HorizontalCards({
     [],
   )
 
-  useHorizontalWheelBridge(scrollRef, isMobile)
+  useHorizontalWheelBridge(scrollRef, isMobile, data.length)
 
   if (isMobile) {
     return (
@@ -261,7 +262,7 @@ function HorizontalCards({
       >
         {data.map((item) => (
           <TabTravelCard
-            key={String(item.id)}
+            key={keyExtractor(item)}
             item={toCardItem(item)}
             badge={historyBadge}
             onPress={() => onPressItem(item.url)}

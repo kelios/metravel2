@@ -109,7 +109,6 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
   const [batchUploadProgress, setBatchUploadProgress] = useState<{ current: number; total: number } | null>(null)
 
-  const blobUrlsRef = useRef<Set<string>>(new Set())
   const retryRef = useRef(new Set<string>())
   const lastReportedUrlsRef = useRef<string>('')
   const deletedKeysRef = useRef<Set<string>>(new Set())
@@ -117,6 +116,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   const selectedImageIdRef = useRef<string | null>(null)
   const imagesRef = useRef<GalleryItem[]>([])
   const reorderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const loadTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const reorderAbortRef = useRef<AbortController | null>(null)
 
   const hasErrors = useMemo(() => images.some((img) => img.error), [images])
@@ -263,27 +263,15 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   }, [images])
 
   useEffect(() => {
-    const urlsRefSnapshot = blobUrlsRef
-    return () => {
-      const urlsSnapshot = Array.from(urlsRefSnapshot.current)
-      urlsSnapshot.forEach((url) => {
-        try {
-          URL.revokeObjectURL(url)
-        } catch {
-          void 0
-        }
-      })
-      urlsRefSnapshot.current.clear()
-    }
-  }, [])
-
-  useEffect(() => {
     reportGalleryItems(images)
   }, [images, reportGalleryItems])
 
   const handleUploadImages = useCallback(
     async (files: File[]) => {
-      if (images.length + files.length > maxImages) {
+      // Читаем актуальную длину из ref, а не из захваченного в замыкании images.length:
+      // два быстрых дропа подряд видели бы одинаковое устаревшее значение и могли
+      // превысить maxImages.
+      if (imagesRef.current.length + files.length > maxImages) {
         alert(`Максимум ${maxImages} изображений`)
         return
       }
@@ -402,7 +390,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
 
       setBatchUploadProgress(null)
     },
-    [collection, idTravel, images.length, maxImages, validateUploadFile],
+    [collection, idTravel, maxImages, validateUploadFile],
   )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -465,11 +453,6 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
             devError('Gallery delete request failed:', error)
           }
         }
-      }
-
-      if (imageToDelete && blobUrlsRef.current.has(imageToDelete.url)) {
-        URL.revokeObjectURL(imageToDelete.url)
-        blobUrlsRef.current.delete(imageToDelete.url)
       }
     } finally {
       setDialogVisible(false)
@@ -566,15 +549,26 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
     )
   }, [])
 
+  // Per-stableKey load-timeout: создаём таймер только для элементов, у которых его
+  // ещё нет, и чистим индивидуально, когда элемент загрузился/ошибся/удалён.
+  // Раньше эффект пересоздавал ВСЕ таймеры на любое изменение images, бесконечно
+  // перезапуская 45/60с отсчёт — медленная картинка могла никогда не таймаутить.
   useEffect(() => {
-    const timers = images
+    const timers = loadTimeoutsRef.current
+    const pendingKeys = new Set<string>()
+
+    images
       .filter((img) => !img.isUploading && !img.error && !img.hasLoaded)
-      .map((img) => {
+      .forEach((img) => {
+        const stableKey = img.stableKey ?? img.id
+        pendingKeys.add(stableKey)
+        if (timers.has(stableKey)) return
+
         const isBlobUrl = /^(blob:|data:)/i.test(img.url)
         const timeout = isBlobUrl ? 60000 : 45000
 
-        return setTimeout(() => {
-          const stableKey = img.stableKey ?? img.id
+        const timer = setTimeout(() => {
+          timers.delete(stableKey)
           setImages((prev) =>
             prev.map((item) => {
               if ((item.stableKey ?? item.id) !== stableKey) return item
@@ -583,11 +577,25 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
             }),
           )
         }, timeout)
+        timers.set(stableKey, timer)
       })
+
+    // Снимаем таймеры для элементов, которые больше не «в ожидании» (загрузились/ошиблись/удалены).
+    timers.forEach((timer, key) => {
+      if (!pendingKeys.has(key)) {
+        clearTimeout(timer)
+        timers.delete(key)
+      }
+    })
+  }, [images])
+
+  useEffect(() => {
+    const timers = loadTimeoutsRef.current
     return () => {
       timers.forEach(clearTimeout)
+      timers.clear()
     }
-  }, [images])
+  }, [])
 
   const confirmDeleteImage = async () => {
     const key = selectedImageIdRef.current || selectedImageId

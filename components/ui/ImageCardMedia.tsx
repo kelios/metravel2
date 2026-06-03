@@ -18,7 +18,7 @@ import {
   isIOSSafariWeb,
   isIOSSafariUserAgent,
   loadedWebImageBaseCache,
-  resolveBaseImageKey,
+  resolveImageIdentityKey,
   type Priority,
 } from '@/components/ui/ImageCardMediaWebHelpers';
 
@@ -108,16 +108,20 @@ function ImageCardMedia({
     if (src) return { uri: src };
     return null;
   }, [source, src]);
-  const currentBaseImageKey = useMemo(() => {
+  // Identity key keeps signature/`?v=` query (distinguishes different images) while
+  // ignoring optimization params (stable across scroll/resize). Used for load-state
+  // reset, the loaded-cache and the web media React key so query-only-differing
+  // images don't reuse a stale node / stale "loaded" flag.
+  const currentImageIdentityKey = useMemo(() => {
     if (!resolvedSource || typeof resolvedSource === 'number') return null;
     if (typeof resolvedSource === 'string') {
-      return resolveBaseImageKey(resolvedSource);
+      return resolveImageIdentityKey(resolvedSource);
     }
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
-    return resolveBaseImageKey(uri);
+    return resolveImageIdentityKey(uri);
   }, [resolvedSource]);
   const [webLoaded, setWebLoaded] = useState(() => {
-    return !!(currentBaseImageKey && loadedWebImageBaseCache.has(currentBaseImageKey));
+    return !!(currentImageIdentityKey && loadedWebImageBaseCache.has(currentImageIdentityKey));
   });
 
   const resolvedBorderRadius = useMemo(() => {
@@ -146,9 +150,20 @@ function ImageCardMedia({
   // Only update when change is significant (>50px) to avoid re-fetching images
   const stableWidthRef = useRef<number | undefined>(typeof width === 'number' ? width : undefined);
   const stableHeightRef = useRef<number | undefined>(typeof height === 'number' ? height : undefined);
-  
+  // Separate identity trackers per dimension so each memo resets its own baseline
+  // when the image identity changes (recycle) without cross-memo coordination.
+  const stableWidthIdentityRef = useRef<string | null>(null);
+  const stableHeightIdentityRef = useRef<string | null>(null);
+
   const stableWidth = useMemo(() => {
     const numericWidth = typeof width === 'number' ? width : undefined;
+    // On recycle (new image in a reused cell) reset the baseline to current props
+    // so the new src isn't optimized for the previous item's dimensions.
+    if (currentImageIdentityKey !== stableWidthIdentityRef.current) {
+      stableWidthIdentityRef.current = currentImageIdentityKey;
+      stableWidthRef.current = numericWidth;
+      return stableWidthRef.current;
+    }
     if (numericWidth !== undefined && stableWidthRef.current !== undefined) {
       if (Math.abs(numericWidth - stableWidthRef.current) > 50) {
         stableWidthRef.current = numericWidth;
@@ -157,10 +172,15 @@ function ImageCardMedia({
       stableWidthRef.current = numericWidth;
     }
     return stableWidthRef.current;
-  }, [width]);
-  
+  }, [width, currentImageIdentityKey]);
+
   const stableHeight = useMemo(() => {
     const numericHeight = typeof height === 'number' ? height : undefined;
+    if (currentImageIdentityKey !== stableHeightIdentityRef.current) {
+      stableHeightIdentityRef.current = currentImageIdentityKey;
+      stableHeightRef.current = numericHeight;
+      return stableHeightRef.current;
+    }
     if (numericHeight !== undefined && stableHeightRef.current !== undefined) {
       if (Math.abs(numericHeight - stableHeightRef.current) > 50) {
         stableHeightRef.current = numericHeight;
@@ -169,7 +189,7 @@ function ImageCardMedia({
       stableHeightRef.current = numericHeight;
     }
     return stableHeightRef.current;
-  }, [height]);
+  }, [height, currentImageIdentityKey]);
 
   const shouldPreserveProvidedOptimizedUrl = useCallback((uri: string): boolean => {
     if (!allowCriticalWebBlur || !hasOptimizationParams(uri)) return false;
@@ -354,11 +374,11 @@ function ImageCardMedia({
   }, [blurOnly, shouldRevealWebMedia, webMainSrc]);
   const webMediaInstanceKey = useMemo(() => {
     if (recyclingKey) return recyclingKey;
-    if (currentBaseImageKey) return currentBaseImageKey;
+    if (currentImageIdentityKey) return currentImageIdentityKey;
     if (webMainSrc) return webMainSrc;
     if (webBlurSrc) return webBlurSrc;
     return 'web-media';
-  }, [currentBaseImageKey, recyclingKey, webBlurSrc, webMainSrc]);
+  }, [currentImageIdentityKey, recyclingKey, webBlurSrc, webMainSrc]);
 
   const webImageProps = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
@@ -367,23 +387,24 @@ function ImageCardMedia({
 
   // Track the base URI (without optimization params) to avoid resetting loaded state
   // when only width/quality changes but the source image is the same
-  const baseUriRef = useRef<string | null>(currentBaseImageKey);
+  const baseUriRef = useRef<string | null>(currentImageIdentityKey);
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-    // Only reset loaded state if the actual image source changed
-    if (currentBaseImageKey !== baseUriRef.current) {
-      baseUriRef.current = currentBaseImageKey;
-      setWebLoaded(Boolean(currentBaseImageKey && loadedWebImageBaseCache.has(currentBaseImageKey)));
+    // Reset loaded state when the underlying image identity changes (different
+    // signature/version), but stay stable across optimization-param changes.
+    if (currentImageIdentityKey !== baseUriRef.current) {
+      baseUriRef.current = currentImageIdentityKey;
+      setWebLoaded(Boolean(currentImageIdentityKey && loadedWebImageBaseCache.has(currentImageIdentityKey)));
     }
-  }, [currentBaseImageKey]);
+  }, [currentImageIdentityKey]);
 
   const handleWebLoad = useCallback((_resolvedSrc: string) => {
-    if (currentBaseImageKey) {
-      loadedWebImageBaseCache.add(currentBaseImageKey);
+    if (currentImageIdentityKey) {
+      loadedWebImageBaseCache.add(currentImageIdentityKey);
     }
     setWebLoaded(true);
     onLoad?.();
-  }, [currentBaseImageKey, onLoad]);
+  }, [currentImageIdentityKey, onLoad]);
 
   const prefetchHref = useMemo(() => {
     if (Platform.OS !== 'web') return null;
@@ -437,6 +458,12 @@ function ImageCardMedia({
     link.as = 'image';
     link.href = prefetchHref;
     document.head.appendChild(link);
+
+    // Удаляем узел при unmount / смене prefetchHref — иначе в ленивых списках
+    // <head> копит по одному осиротевшему <link> на каждый уникальный URL.
+    return () => {
+      link.remove();
+    };
   }, [shouldAddWebPrefetchHint, prefetchHref, shouldDisableNetwork, canUseResourceHint]);
 
   return (

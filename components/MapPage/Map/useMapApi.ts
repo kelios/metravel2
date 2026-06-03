@@ -47,6 +47,9 @@ export function useMapApi({
   const pendingOverlayTogglesRef = useRef<Map<string, boolean>>(new Map());
   const pendingOverlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingOverlayAttemptsRef = useRef(0);
+  // Таймеры openPopupForCoord — трекаем, чтобы снять при unmount (иначе колбэк
+  // дёргает openPopup/setZIndexOffset на снятом маркере уже размонтированной карты).
+  const popupTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
   const centerMapOnUser = useCallback((targetLocation: LatLng, zoom = USER_LOCATION_FOCUS_ZOOM) => {
     if (!map) return;
@@ -226,8 +229,10 @@ export function useMapApi({
           const rawKey = String(coord ?? '').trim();
           if (!rawKey) return;
 
+          // Продьюсер (Map.web.tsx) пишет markerByCoord напрямую на объект ref,
+          // а не в .current — читаем оттуда же.
           const markerIndex: Map<string, any> | undefined =
-            (leafletControlRef as any)?.current?.markerByCoord ?? (leafletControlRef as any)?.markerByCoord;
+            (leafletControlRef as any)?.markerByCoord;
 
           const tryFindMarker = () => {
             const parsed = CoordinateConverter.fromLooseString(rawKey);
@@ -238,7 +243,8 @@ export function useMapApi({
           const marker = tryFindMarker();
           if (!marker) {
             // Marker refs can appear shortly after flyTo/cluster recompute; retry once.
-            setTimeout(() => {
+            const retryTimer = setTimeout(() => {
+              popupTimersRef.current.delete(retryTimer);
               try {
                 const nextMarker = tryFindMarker();
                 if (!nextMarker) return;
@@ -251,6 +257,7 @@ export function useMapApi({
                 // noop
               }
             }, 500);
+            popupTimersRef.current.add(retryTimer);
             return;
           }
 
@@ -279,7 +286,8 @@ export function useMapApi({
             // noop
           }
 
-          setTimeout(() => {
+          const openTimer = setTimeout(() => {
+            popupTimersRef.current.delete(openTimer);
             if (didOpen) return;
             didOpen = true;
             try {
@@ -288,15 +296,18 @@ export function useMapApi({
               // noop
             }
           }, 420);
+          popupTimersRef.current.add(openTimer);
 
           // Reset zIndex after a short delay so it doesn't permanently stay on top
-          setTimeout(() => {
+          const zIndexTimer = setTimeout(() => {
+            popupTimersRef.current.delete(zIndexTimer);
             try {
               marker.setZIndexOffset?.(0);
             } catch {
               // noop
             }
           }, 1400);
+          popupTimersRef.current.add(zIndexTimer);
         } catch {
           // noop
         }
@@ -415,31 +426,35 @@ export function useMapApi({
     leafletControlRef,
   ]);
 
-  // Store api in ref to avoid triggering effects on every render
-  const apiRef = useRef<MapUiApi | null>(null);
-  apiRef.current = api;
-
   // Track if api is ready (map and L are available)
   const isApiReady = Boolean(map && L);
-  const wasApiReadyRef = useRef(false);
 
+  // Держим колбэк в ref, чтобы немемоизированный onMapUiApiReady от родителя не
+  // приводил к лишнему null-уведомлению на каждый ререндер (см. cleanup ниже).
+  const onMapUiApiReadyRef = useRef(onMapUiApiReady);
+  onMapUiApiReadyRef.current = onMapUiApiReady;
+
+  // Пере-доставляем api при каждом его изменении (а не только при первом переходе
+  // в ready), иначе родитель держит устаревший объект с замороженными capabilities
+  // (canCenterOnUser/canFitToResults/...). api === null ровно когда карта не готова,
+  // так что отдельная ветка для not-ready не нужна. Cleanup тут НЕ шлёт null, чтобы
+  // не мигать null→api при каждом изменении api; null при unmount — в эффекте ниже.
   useEffect(() => {
-    if (!onMapUiApiReady) return;
+    onMapUiApiReadyRef.current?.(api);
+  }, [api, isApiReady]);
 
-    // Only call onMapUiApiReady when readiness changes
-    if (isApiReady && !wasApiReadyRef.current) {
-      wasApiReadyRef.current = true;
-      onMapUiApiReady(apiRef.current);
-    } else if (!isApiReady && wasApiReadyRef.current) {
-      wasApiReadyRef.current = false;
-      onMapUiApiReady(null);
-    }
-  }, [isApiReady, onMapUiApiReady]);
-
+  // Снимаем все отложенные таймеры при unmount и уведомляем родителя об уходе api.
+  // overlay-flush и popup-таймеры не должны срабатывать на уничтоженной карте.
   useEffect(() => {
-    if (!onMapUiApiReady) return;
+    const popupTimers = popupTimersRef.current;
     return () => {
-      onMapUiApiReady(null);
+      if (pendingOverlayTimerRef.current) {
+        clearTimeout(pendingOverlayTimerRef.current);
+        pendingOverlayTimerRef.current = null;
+      }
+      popupTimers.forEach((t) => clearTimeout(t));
+      popupTimers.clear();
+      onMapUiApiReadyRef.current?.(null);
     };
-  }, [onMapUiApiReady]);
+  }, []);
 }

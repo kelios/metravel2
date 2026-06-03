@@ -150,6 +150,7 @@ export function useTravelRating({
     });
 
     const handleRate = useCallback((value: number) => {
+        if (rateMutation.isPending) return;
         if (!travelId) return;
 
         if (!isAuthenticated) {

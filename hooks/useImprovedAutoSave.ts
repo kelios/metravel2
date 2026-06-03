@@ -3,7 +3,7 @@ import isEqual from 'fast-deep-equal';
 
 interface UseImprovedAutoSaveOptions<T> {
   debounce?: number;
-  onSave: (data: T) => Promise<T>;
+  onSave: (data: T, signal?: AbortSignal) => Promise<T>;
   onSuccess?: (savedData: T) => void;
   onError?: (error: Error) => void;
   onStart?: () => void;
@@ -148,9 +148,16 @@ export function useImprovedAutoSave<T>(
     if (!enabled) {
       return dataToSave;
     }
-    // Create new abort controller for this save attempt
-    abortControllerRef.current = new AbortController();
-    
+    // Отменяем предыдущее in-flight сохранение, чтобы его контроллер не осиротел
+    // и устаревший результат не перетёр состояние более свежего сохранения.
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    // Этот вызов всё ещё актуален, только если его контроллер — текущий.
+    const isCurrent = () => abortControllerRef.current === controller;
+
     try {
       // ✅ FIX: Проверка монтирования перед setState
       if (mountedRef.current) {
@@ -161,11 +168,11 @@ export function useImprovedAutoSave<T>(
         }));
       }
 
-      const result = await onSave(dataToSave);
-      
-      if (!mountedRef.current) {
-        // Component is gone (e.g. user navigated away). Do not update state or
-        // fire callbacks; just resolve to avoid surfacing a spurious error.
+      const result = await onSave(dataToSave, controller.signal);
+
+      if (!mountedRef.current || !isCurrent()) {
+        // Компонент размонтирован ИЛИ это сохранение вытеснено более новым.
+        // Не трогаем state/baseline и не дёргаем колбэки.
         return result;
       }
 
@@ -190,9 +197,9 @@ export function useImprovedAutoSave<T>(
       return result;
 
     } catch (error) {
-      if (!mountedRef.current) {
-        // Component is gone; avoid propagating errors that would otherwise show
-        // up as console noise or user-facing toasts during navigation.
+      if (!mountedRef.current || !isCurrent()) {
+        // Компонент размонтирован ИЛИ сохранение вытеснено более новым — не
+        // пробрасываем ошибку/abort вытесненного запроса в state и колбэки.
         return dataToSave;
       }
 
@@ -222,10 +229,12 @@ export function useImprovedAutoSave<T>(
           }));
         }
 
-        // Schedule retry
+        // Schedule retry — повторяем с АКТУАЛЬНЫМИ данными, а не с устаревшим
+        // снимком dataToSave (иначе ретрай затрёт новые правки пользователя).
         retryTimeoutRef.current = setTimeout(() => {
+          retryTimeoutRef.current = null;
           if (mountedRef.current) {
-            performSave(dataToSave, retryAttempt + 1).catch(() => {
+            performSave(latestDataRef.current, retryAttempt + 1).catch(() => {
               // Error handled in recursive call
             });
           }
@@ -273,6 +282,12 @@ export function useImprovedAutoSave<T>(
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
+    }
+    // Данные изменились — отменяем отложенный ретрай, чтобы он вместе со свежим
+    // debounce не запустил два параллельных performSave.
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
     }
 
     // Обновляем статус на debouncing только если он не уже debouncing
@@ -375,6 +390,11 @@ export function useImprovedAutoSave<T>(
   const updateBaseline = useCallback((newBaseline: T) => {
     lastSavedDataRef.current = newBaseline;
     latestDataRef.current = newBaseline;
+    // hasUnsavedChanges вычисляется на рендере из lastSavedDataRef. Без рендера
+    // потребитель не увидит сброс флага после updateBaseline — форсим пересчёт.
+    if (mountedRef.current) {
+      setState(prev => ({ ...prev }));
+    }
   }, []);
 
   const hasUnsavedChanges = hasDataChanged();

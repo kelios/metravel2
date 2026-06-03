@@ -162,6 +162,8 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
 
   const pendingIssueNavRef = useRef<{ step: number; anchorId?: string } | null>(null);
   const exitGuardPromptVisibleRef = useRef(false);
+  const hasRestoredRef = useRef(false);
+  const isLeavingRef = useRef(false);
 
   const normalizeStep = useCallback(
     (value: unknown) => {
@@ -214,8 +216,10 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
 
   // Restore step on mount (create/edit).
   useEffect(() => {
-    if (!stepStorageKey) return;
-    if (!enableStepPersistenceInTests) return;
+    if (!stepStorageKey || !enableStepPersistenceInTests) {
+      hasRestoredRef.current = true;
+      return;
+    }
     let cancelled = false;
 
     const restore = async () => {
@@ -224,6 +228,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
       if (stored != null) {
         setCurrentStep(stored);
       }
+      hasRestoredRef.current = true;
     };
 
     void restore();
@@ -237,6 +242,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
   useEffect(() => {
     if (!stepStorageKey) return;
     if (!enableStepPersistenceInTests) return;
+    if (!hasRestoredRef.current) return;
     void setStoredStep(currentStep);
   }, [currentStep, enableStepPersistenceInTests, setStoredStep, stepStorageKey]);
 
@@ -264,9 +270,10 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
   }, [currentStep]);
 
   const handleNavigateToIssue = useCallback((issue: ModerationIssue) => {
-    pendingIssueNavRef.current = { step: issue.targetStep, anchorId: issue.anchorId };
-    setCurrentStep(issue.targetStep);
-  }, []);
+    const targetStep = normalizeStep(issue.targetStep);
+    pendingIssueNavRef.current = { step: targetStep, anchorId: issue.anchorId };
+    setCurrentStep(targetStep);
+  }, [normalizeStep]);
 
   const handleAnchorHandled = useCallback(() => {
     pendingIssueNavRef.current = null;
@@ -287,7 +294,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     if (!anchorId) return;
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
 
-    setTimeout(() => {
+    const t = setTimeout(() => {
       const el = document.getElementById(anchorId);
       if (el && typeof el.scrollIntoView === 'function') {
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -295,6 +302,8 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
       pendingIssueNavRef.current = null;
       setFocusAnchorId(null);
     }, 50);
+
+    return () => clearTimeout(t);
   }, [currentStep, focusAnchorId]);
 
   useEffect(() => {
@@ -360,7 +369,8 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
               onDiscard();
             },
           },
-        ]
+        ],
+        { cancelable: true, onDismiss: reset }
       );
     },
     [hasUnsavedChanges, canSave, onSave, clearPersistedStep]
@@ -380,13 +390,16 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     if (!navigation?.addListener) return;
 
     const unsubscribe = navigation.addListener('beforeRemove', (e: BeforeRemoveEventLike) => {
+      if (isLeavingRef.current) return;
       if (!hasUnsavedChanges) return;
       e.preventDefault();
 
-      void confirmLeaveWizard(
-        () => navigation.dispatch(e.data.action as Parameters<typeof navigation.dispatch>[0]),
-        () => navigation.dispatch(e.data.action as Parameters<typeof navigation.dispatch>[0])
-      );
+      const leave = () => {
+        isLeavingRef.current = true;
+        navigation.dispatch(e.data.action as Parameters<typeof navigation.dispatch>[0]);
+      };
+
+      void confirmLeaveWizard(leave, leave);
     });
 
     return unsubscribe;

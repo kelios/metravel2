@@ -139,7 +139,11 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
   // пересоздавался на каждый тик статуса автосейва.
   const autosaveCancelPendingRef = useRef<(() => void) | null>(null);
 
-  const cleanAndSave = useCallback(async (data: TravelFormData, options?: { autosave?: boolean }) => {
+  const cleanAndSave = useCallback(async (
+    data: TravelFormData,
+    options?: { autosave?: boolean },
+    externalSignal?: AbortSignal,
+  ) => {
     // ✅ FIX: Отменяем предыдущий запрос для предотвращения race condition
     if (saveAbortControllerRef.current) {
       saveAbortControllerRef.current.abort();
@@ -148,6 +152,17 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
     // Создаём новый контроллер для этого запроса
     const abortController = new AbortController();
     saveAbortControllerRef.current = abortController;
+
+    // Связываем внешний signal (от автосейва: cancelPending/unmount) с внутренним,
+    // чтобы отмена реально прерывала in-flight saveFormData-запрос.
+    const onExternalAbort = () => abortController.abort();
+    if (externalSignal) {
+      if (externalSignal.aborted) {
+        abortController.abort();
+      } else {
+        externalSignal.addEventListener('abort', onExternalAbort);
+      }
+    }
 
     try {
       const baseFormData = getEmptyFormData(data?.id ? String(data.id) : null);
@@ -222,6 +237,9 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       }
       throw error;
     } finally {
+      if (externalSignal) {
+        externalSignal.removeEventListener('abort', onExternalAbort);
+      }
       // Очищаем ссылку только если это наш контроллер
       if (saveAbortControllerRef.current === abortController) {
         saveAbortControllerRef.current = null;
@@ -444,12 +462,12 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
 
   const autosave = useImprovedAutoSave(formState.data, initialFormData, {
     debounce: 5000,
-    onSave: async (dataToSave) => {
+    onSave: async (dataToSave, signal) => {
       // Avoid racing autosave requests while a manual save is in progress.
       if (manualSaveInFlightRef.current) {
         throw new Error('Request aborted');
       }
-      return await cleanAndSave(dataToSave as TravelFormData, { autosave: true });
+      return await cleanAndSave(dataToSave as TravelFormData, { autosave: true }, signal);
     },
     onSuccess: handleSaveSuccess,
     onError: handleSaveError,

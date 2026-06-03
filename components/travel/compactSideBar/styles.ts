@@ -212,7 +212,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       paddingVertical: (Platform.OS === 'web') ? 2 : 3,
       borderRadius: 999,
       backgroundColor: colors.surfaceMuted,
-      flexShrink: 1,
+      flexShrink: 0,
       maxWidth: (Platform.OS === 'web') ? 120 : 140,
     },
     linkMetaText: {
@@ -221,7 +221,6 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       fontFamily: 'Georgia',
       fontWeight: '600',
       lineHeight: (Platform.OS === 'web') ? 16 : 18,
-      flexWrap: 'wrap',
     },
     linkDivider: {
       height: 1,

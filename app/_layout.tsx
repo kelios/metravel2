@@ -31,8 +31,9 @@ const SyncIndicatorLazy: React.LazyExoticComponent<React.ComponentType<any>> | n
     )
   : null;
 const ReactQueryDevtoolsLazy: any = __DEV__
-  ? React.lazy(() =>
-      import('@tanstack/react-query-devtools').then((m: any) => ({ default: m.ReactQueryDevtools }))
+  ? safeLazy(
+      () => import('@tanstack/react-query-devtools').then((m: any) => ({ default: m.ReactQueryDevtools })),
+      'ReactQueryDevtools'
     )
   : null;
 const ToastLazy: React.LazyExoticComponent<React.ComponentType<any>> | null = !isWeb
@@ -178,6 +179,11 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
           : false;
 
 
+    // usePathname() is the reactive source of truth and re-runs this memo on every
+    // client-side navigation. The window.location fallback is intentionally only a
+    // first-frame/SSR safety net for when expo-router has not resolved pathname yet
+    // (empty or '/'); it is not a reactive input, so it is deliberately omitted from
+    // deps. Once pathname is populated the fallback branch is never taken again.
     const effectivePathname = useMemo(() => {
       if (typeof pathname === 'string' && pathname.length > 0 && pathname !== '/') {
         return pathname;
@@ -205,6 +211,16 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
     );
 
     // ✅ FIX: Создаем queryClient внутри компонента для избежания проблем с SSR/гидрацией
+    //
+    // NOTE: enableStaticPrefetch is a one-shot flag — createOptimizedQueryClient()
+    // consumes it synchronously at creation time and schedules a single idle-time
+    // static prefetch (filters/countries) for the QueryClient's whole lifetime.
+    // It is NOT a per-route toggle, so freezing it under the initial route here is
+    // harmless: it only decides whether that single startup prefetch runs, and on a
+    // travel-detail entry route we (correctly) skip the static prefetch once.
+    // Reading isTravelPerformanceRoute dynamically would not change behavior unless
+    // the util were refactored to re-evaluate prefetch per navigation (a getter/ref
+    // contract change), which is out of scope for this bootstrap fix.
     const [queryClient] = useState(() => createOptimizedQueryClient(
       {
         mutations: {
@@ -251,16 +267,18 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
           }
     );
 
-    // AND-06: Hide splash screen only after fonts are loaded (native).
+    // AND-06: Hide splash screen after fonts are loaded OR failed to load (native).
+    // Gating on fontsLoaded alone hangs the start when fontError occurs
+    // (fontsLoaded stays false), so the splash/spinner never hides.
     useEffect(() => {
-      if (!isWeb && fontsLoaded) {
+      if (!isWeb && (fontsLoaded || fontError)) {
         SplashScreen.hideAsync().catch((error) => {
           if (__DEV__) {
             console.warn('[RootLayout] Ошибка hideAsync:', error);
           }
         });
       }
-    }, [fontsLoaded]);
+    }, [fontsLoaded, fontError]);
 
     useEffect(() => {
       if (fontError && !isWeb) {
@@ -268,7 +286,7 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
       }
     }, [fontError]);
 
-    if (!fontsLoaded && !isWeb) {
+    if (!fontsLoaded && !fontError && !isWeb) {
       return (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: loadingColors.background }}>
           <ActivityIndicator size="small" color={loadingColors.primary} />

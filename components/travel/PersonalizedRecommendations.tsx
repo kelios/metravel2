@@ -83,7 +83,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
     // ✅ ИСПРАВЛЕНИЕ: Показываем только алгоритмические рекомендации (не дублируем избранное и историю)
     const recommendations = useMemo(() => {
         if (!isAuthenticated) return [];
-        const raw = recommended;
+        const raw = Array.isArray(recommended) ? recommended : [];
         if (onlyRecommendations) {
             return raw;
         }

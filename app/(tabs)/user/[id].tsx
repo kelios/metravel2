@@ -20,6 +20,14 @@ import SubscribeButton from '@/components/ui/SubscribeButton';
 import { webTouchScrollStyle } from '@/utils';
 import { routes } from '@/utils/routes';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
+import { fetchTravels } from '@/api/travelListQueries';
+import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
+import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
+import { useResponsive } from '@/hooks/useResponsive';
+import type { Travel } from '@/types/types';
+
+const AUTHOR_TRAVELS_LIMIT = 12;
+const AUTHOR_CARD_BLURHASH = 'LEHL6nWB2yk8pyo0adR*.7kCMdnj';
 
 export default function PublicUserProfileScreen() {
   const router = useRouter();
@@ -74,6 +82,37 @@ export default function PublicUserProfileScreen() {
 
   const subscriptionsCount = subscriptionsQuery.data?.length ?? null;
   const subscribersCount = subscribersQuery.data?.length ?? null;
+
+  const { isMobile, isDesktop, width } = useResponsive();
+
+  const authorTravelsQuery = useQuery<{ data: Travel[]; total: number }>({
+    queryKey: ['user-travels', userId],
+    queryFn: () => fetchTravels(0, AUTHOR_TRAVELS_LIMIT, '', { user_id: userId }),
+    enabled: !!userId,
+    staleTime: 5 * 60 * 1000,
+    retry: (fc, err) => !(err instanceof ApiError && (err.status === 401 || err.status === 403)) && fc < 2,
+  });
+
+  const authorTravels = authorTravelsQuery.data?.data ?? [];
+  const authorTravelsTotal = authorTravelsQuery.data?.total ?? 0;
+
+  const cardWidth = useMemo(() => {
+    if (isMobile) return undefined;
+    const columns = isDesktop ? 3 : 2;
+    const gap = 16;
+    const horizontalPadding = 32;
+    const available = Math.max(0, (width || 0) - horizontalPadding - gap * (columns - 1));
+    const w = Math.floor(available / columns);
+    return w > 0 ? w : undefined;
+  }, [isMobile, isDesktop, width]);
+
+  const handleOpenTravel = useCallback(
+    (travel: Travel) => {
+      const url = resolveTravelUrl(travel as any);
+      if (url) router.push(url as any);
+    },
+    [router]
+  );
 
   const handleViewTravels = useCallback(() => {
     if (!userId) return;
@@ -218,14 +257,14 @@ export default function PublicUserProfileScreen() {
               </Pressable>
             )}
             <Pressable
-              style={[styles.primaryButton, globalFocusStyles.focusable]}
+              style={[styles.secondaryButton, globalFocusStyles.focusable]}
               onPress={handleViewTravels}
               accessibilityRole="button"
-              accessibilityLabel="Смотреть путешествия автора"
+              accessibilityLabel="Смотреть все путешествия автора"
               {...Platform.select({ web: { cursor: 'pointer' } })}
             >
-              <Feather name="map" size={16} color={colors.textOnPrimary} />
-              <Text style={styles.primaryButtonText}>Путешествия автора</Text>
+              <Feather name="map" size={16} color={colors.primary} />
+              <Text style={styles.secondaryButtonText}>Все путешествия</Text>
             </Pressable>
             <Pressable
               style={[styles.secondaryButton, globalFocusStyles.focusable]}
@@ -238,6 +277,81 @@ export default function PublicUserProfileScreen() {
               <Text style={styles.secondaryButtonText}>Назад</Text>
             </Pressable>
           </View>
+        </View>
+
+        <View style={styles.travelsSection}>
+          <View style={styles.travelsHeader}>
+            <Text style={styles.travelsTitle}>Путешествия автора</Text>
+            {authorTravelsTotal > 0 && (
+              <Text style={styles.travelsCount}>{authorTravelsTotal}</Text>
+            )}
+          </View>
+
+          {authorTravelsQuery.isLoading ? (
+            <View style={styles.travelsState}>
+              <ActivityIndicator size="small" color={colors.primary} />
+            </View>
+          ) : authorTravelsQuery.isError ? (
+            <Text style={styles.travelsStateText}>
+              Не удалось загрузить путешествия автора
+            </Text>
+          ) : authorTravels.length === 0 ? (
+            <Text style={styles.travelsStateText}>
+              У автора пока нет опубликованных путешествий
+            </Text>
+          ) : (
+            <>
+              <View style={styles.travelsGrid}>
+                {authorTravels.map((travel, index) => {
+                  const meta = [travel.cityName, travel.countryName]
+                    .map((v) => String(v ?? '').trim())
+                    .filter(Boolean)
+                    .join(' · ');
+                  return (
+                    <View
+                      key={String(travel.id ?? travel.slug ?? index)}
+                      style={[styles.travelsCardWrap, cardWidth ? { width: cardWidth } : null]}
+                    >
+                      <UnifiedTravelCard
+                        title={travel.name?.trim() || 'Без названия'}
+                        imageUrl={travel.travel_image_thumb_url || null}
+                        metaText={meta || null}
+                        onPress={() => handleOpenTravel(travel)}
+                        mediaFit="contain"
+                        heroTitleOverlay
+                        contentPosition="belowMedia"
+                        imageHeight={180}
+                        webHoverScale={!isMobile}
+                        mediaProps={{
+                          placeholderBlurhash: AUTHOR_CARD_BLURHASH,
+                          blurBackground: true,
+                          allowCriticalWebBlur: Platform.OS === 'web',
+                          recyclingKey: String(travel.slug || travel.id || index),
+                          loading: Platform.OS === 'web' ? (index < 3 ? 'eager' : 'lazy') : 'lazy',
+                          priority: Platform.OS === 'web' && index < 3 ? 'high' : 'low',
+                        }}
+                      />
+                    </View>
+                  );
+                })}
+              </View>
+
+              {authorTravelsTotal > authorTravels.length && (
+                <Pressable
+                  style={[styles.viewAllButton, globalFocusStyles.focusable]}
+                  onPress={handleViewTravels}
+                  accessibilityRole="button"
+                  accessibilityLabel="Смотреть все путешествия автора"
+                  {...Platform.select({ web: { cursor: 'pointer' } })}
+                >
+                  <Text style={styles.viewAllButtonText}>
+                    Смотреть все ({authorTravelsTotal})
+                  </Text>
+                  <Feather name="arrow-right" size={16} color={colors.primary} />
+                </Pressable>
+              )}
+            </>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -376,6 +490,67 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     color: colors.primary,
     fontSize: 14,
     fontWeight: '700',
+  },
+  travelsSection: {
+    marginTop: 20,
+  },
+  travelsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
+  },
+  travelsTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.3,
+  },
+  travelsCount: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  travelsState: {
+    paddingVertical: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  travelsStateText: {
+    fontSize: 14,
+    color: colors.textMuted,
+    paddingVertical: 24,
+    textAlign: 'center',
+  },
+  travelsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  travelsCardWrap: {
+    width: '100%',
+    minWidth: 0,
+  },
+  viewAllButton: {
+    marginTop: 16,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 999,
+    backgroundColor: colors.primarySoft,
+  },
+  viewAllButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.primary,
   },
   errorWrap: {
     flex: 1,
