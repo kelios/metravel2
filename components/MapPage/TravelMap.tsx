@@ -13,6 +13,7 @@ import { createMapPopupComponent } from './Map/createMapPopupComponent'
 import { useLeafletIcons } from './Map/useLeafletIcons'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { normalizePoint } from '@/components/map-core/types'
+import { queryKeys } from '@/api/queryKeys'
 
 const IS_WEB = Platform.OS === 'web'
 const DEFAULT_CENTER: [number, number] = [53.9006, 27.559] // Minsk
@@ -339,12 +340,37 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   const mountedRef = useRef(true)
   const [mapReady, setMapReady] = useState(false)
   const overlayControllersRef = useRef<Map<string, any>>(new Map())
+  const popupCleanupsRef = useRef<Set<() => void>>(new Set())
+
+  // Сбрасываем кэш маркеров при смене данных ДО перерегистрации детьми через ref-колбэк,
+  // иначе highlight-эффект достанет устаревший маркер и вызовет openPopup на снятом слое.
+  const lastTravelDataRef = useRef(safeTravelData)
+  if (lastTravelDataRef.current !== safeTravelData) {
+    lastTravelDataRef.current = safeTravelData
+    markerByCoordRef.current.clear()
+  }
 
   useEffect(() => {
     mountedRef.current = true
+    // Контейнеры стабильны на всё время жизни компонента — захватываем ссылки для cleanup.
+    const popupCleanups = popupCleanupsRef.current
+    const markerByCoord = markerByCoordRef.current
+    const overlayControllers = overlayControllersRef.current
     return () => {
       mountedRef.current = false
+      // Снимаем observer'ы/listener'ы открытых попапов до обнуления mapRef.
+      popupCleanups.forEach((fn) => {
+        try {
+          fn()
+        } catch {
+          ignoreTravelMapRuntimeError()
+        }
+      })
+      popupCleanups.clear()
       mapRef.current = null
+      // Освобождаем ссылки на снятые Leaflet-слои/оверлеи, чтобы не держать их после unmount.
+      markerByCoord.clear()
+      overlayControllers.clear()
     }
   }, [])
 
@@ -389,7 +415,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       compactLayout: compact,
       fullscreenOnMobile: true,
       invalidateUserPoints: () => {
-        void queryClient.invalidateQueries({ queryKey: ['userPointsAll'] })
+        void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() })
       },
     })
   }, [colors, compact, queryClient, rl, themeContextValue])
@@ -433,7 +459,12 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         cleanupTimer = null
       }
       map?.off?.('popupclose', cleanup)
+      // Снимаем себя из набора активных cleanup'ов — чтобы unmount не дёргал повторно.
+      popupCleanupsRef.current.delete(cleanup)
     }
+    // Регистрируем cleanup, чтобы гарантированно снять observer/listener при unmount карты,
+    // если попап не успел закрыться (popupclose) до размонтирования.
+    popupCleanupsRef.current.add(cleanup)
 
     if (typeof ResizeObserver !== 'undefined') {
       resizeObserver = new ResizeObserver(() => scheduleRun())
@@ -491,6 +522,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 
   useEffect(() => {
     if (!highlightedPoint || !mapRef.current) return
+    let timer: ReturnType<typeof setTimeout> | null = null
     try {
       const marker = markerByCoordRef.current.get(highlightedPoint.coord)
       if (marker && typeof marker.openPopup === 'function') {
@@ -498,10 +530,22 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         if (typeof map.setView === 'function') {
           map.setView(marker.getLatLng(), 14, { animate: true })
         }
-        setTimeout(() => marker.openPopup(), 300)
+        timer = setTimeout(() => {
+          // Точка могла смениться/компонент размонтироваться за время задержки —
+          // не открываем попап на устаревшем/снятом маркере.
+          if (!mountedRef.current || !mapRef.current) return
+          try {
+            marker.openPopup()
+          } catch {
+            ignoreTravelMapRuntimeError()
+          }
+        }, 300)
       }
     } catch (err) {
       console.warn('[TravelMap] Failed to highlight point:', err)
+    }
+    return () => {
+      if (timer) clearTimeout(timer)
     }
   }, [highlightedPoint])
 
@@ -679,7 +723,18 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         }}
         whenReady={() => {
           if (!mountedRef.current) return
-          setMapReady(true)
+          // ref-колбэк react-leaflet обычно вызывается до whenReady, но подстрахуемся:
+          // если mapRef ещё не установлен, откладываем флаг на кадр, иначе эффекты по
+          // mapReady тихо выйдут на `!mapRef.current` и не перезапустятся (карта без fitBounds).
+          if (mapRef.current) {
+            setMapReady(true)
+          } else if (typeof requestAnimationFrame !== 'undefined') {
+            requestAnimationFrame(() => {
+              if (mountedRef.current && mapRef.current) setMapReady(true)
+            })
+          } else {
+            setMapReady(true)
+          }
         }}
       >
         <TileLayer

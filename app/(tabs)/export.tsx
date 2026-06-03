@@ -10,6 +10,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import { ResponsiveContainer } from '@/components/layout';
 import { useAuth } from '@/context/AuthContext';
 import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelsApi';
+import { queryKeys } from '@/api/queryKeys';
 import { sendAnalyticsEvent } from '@/utils/analytics';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
@@ -40,7 +41,7 @@ export default function ExportScreen() {
         isFetched: isMyTravelsFetched,
         isError: isMyTravelsError,
     } = useQuery({
-        queryKey: ['export-my-travels-count', userId],
+        queryKey: queryKeys.exportMyTravelsCount(userId),
         queryFn: () =>
             fetchMyTravels({
                 user_id: userId as any,

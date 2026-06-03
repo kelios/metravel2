@@ -14,6 +14,7 @@ import { getSiteBaseUrl } from '@/utils/seo';
 import type { LegacyMapPoint } from './types';
 import { useThemedColors } from '@/hooks/useTheme';
 import { osrmRoute } from '@/api/external/osrm';
+import { queryKeys } from '@/api/queryKeys';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -298,7 +299,7 @@ const MapPopup: React.FC<MapPopupConfig> = ({
     try {
       await userPointsApi.createPoint(payload);
       void showToast({ type: 'success', text1: 'Точка добавлена в «Мои точки»', position: 'bottom' });
-      void queryClient.invalidateQueries({ queryKey: ['userPointsAll'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() });
       handleClose();
     } catch {
       void showToast({ type: 'error', text1: 'Не удалось сохранить точку', position: 'bottom' });

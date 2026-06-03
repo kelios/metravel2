@@ -17,14 +17,18 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import { useRouteStore } from '@/stores/routeStore'
-import MapPanel from '@/components/MapPage/MapPanel'
-import { MapLoadingBar } from '@/components/MapPage/MapLoadingBar'
+import { MapCanvas } from '@/components/MapPage/MapCanvas'
 import MapPanelHeader from '@/components/MapPage/MapPanelHeader'
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig'
 import { MAP_SEO_TITLE, MAP_SEO_DESCRIPTION } from '@/constants/mapSeo'
 import { buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
 import { createMapStructuredData } from '@/utils/discoverySeo'
 import { devWarn } from '@/utils/logger'
+import {
+  buildQuickFiltersData,
+  buildMapQuickActionButtons,
+  buildActiveFilterItems,
+} from '@/screens/tabs/mapScreenHelpers'
 
 const IS_WEB = Platform.OS === 'web'
 const CAN_PRELOAD_LEAFLET = IS_WEB && typeof window !== 'undefined'
@@ -37,7 +41,6 @@ const ONBOARDING_IDLE_TIMEOUT = 1000
 
 const PRESSED_OPACITY_07 = { opacity: 0.7 } as const
 const PRESSED_OPACITY_085 = { opacity: 0.85 } as const
-const PRESSED_OPACITY_06 = { opacity: 0.6 } as const
 const POINTER_EVENTS_NONE = { pointerEvents: 'none' } as const
 
 function preloadLeafletRuntime() {
@@ -67,9 +70,6 @@ const LazyTravelListPanel = lazy(() => import('@/components/MapPage/TravelListPa
 const LazyMapMobileLayout = lazy(() =>
   import('@/components/MapPage/MapMobileLayout').then((mod) => ({ default: mod.MapMobileLayout })),
 )
-const LazyMapQuickFilters = lazy(() =>
-  import('@/components/MapPage/MapQuickFilters').then((mod) => ({ default: mod.MapQuickFilters })),
-)
 const LazyActiveFiltersBar = lazy(() =>
   import('@/components/MapPage/ActiveFiltersBar').then((mod) => ({ default: mod.ActiveFiltersBar })),
 )
@@ -79,8 +79,6 @@ const MAP_PANEL_PLACEHOLDER = <MapPageSkeleton inline />
 const ROOT_MAP_PROPS = IS_WEB
   ? ({ testID: 'map-screen-root', 'data-testid': 'map-screen-root', 'data-active': 'true' } as any)
   : ({ testID: 'map-screen-root' } as any)
-
-const TRANSPORT_LABELS: Record<string, string> = { bike: 'Велосипед', foot: 'Пешком' }
 
 function CollapsedIconButton({
   icon,
@@ -119,44 +117,6 @@ function CollapsedIconButton({
       )}
     </Pressable>
   )
-}
-
-function buildQuickFiltersData(filtersPanelProps: any, currentRadius: string | number | undefined) {
-  const ctx = filtersPanelProps?.contextValue
-  const filterValue = ctx?.filterValue ?? {}
-  const filters = ctx?.filters ?? {}
-
-  const selected: string[] = filterValue?.categoryTravelAddress ?? []
-  const radiusOptions = filters?.radius ?? []
-  const categoryOptions = filters?.categoryTravelAddress ?? []
-  const overlayOptions = ctx?.overlayOptions ?? []
-  const enabledOverlays = ctx?.enabledOverlays ?? {}
-
-  const categoriesValue =
-    selected.length === 0
-      ? 'Все'
-      : selected.length === 1
-        ? selected[0]
-        : `${selected.length} выбрано`
-
-  const radiusValue = currentRadius ? `${currentRadius} км` : `${DEFAULT_RADIUS_KM} км`
-
-  const enabledCount = overlayOptions.filter((option: { id: string }) =>
-    Boolean(enabledOverlays?.[option.id]),
-  ).length
-  const overlaysValue =
-    enabledCount === 0 ? 'Выкл' : enabledCount === 1 ? '1 вкл' : `${enabledCount} вкл`
-
-  return {
-    selected,
-    radiusOptions,
-    categoryOptions,
-    overlayOptions,
-    enabledOverlays,
-    categoriesValue,
-    radiusValue,
-    overlaysValue,
-  }
 }
 
 export default function MapScreen() {
@@ -351,26 +311,16 @@ export default function MapScreen() {
   )
 
   const mapQuickActionButtons = useMemo(
-    () => [
-      { key: 'locate', label: 'Мое местоположение', icon: 'crosshair' as const, onPress: centerOnUser, testID: 'map-center-user-inline' },
-      { key: 'zoom-in', label: 'Приблизить', icon: 'plus' as const, onPress: zoomIn, testID: 'map-zoom-in-inline' },
-      { key: 'zoom-out', label: 'Отдалить', icon: 'minus' as const, onPress: zoomOut, testID: 'map-zoom-out-inline' },
-    ],
+    () => buildMapQuickActionButtons(centerOnUser, zoomIn, zoomOut),
     [centerOnUser, zoomIn, zoomOut],
   )
 
   const currentTransport = transportMode ?? 'car'
   const currentMode = filtersPanelProps?.contextValue?.mode
-  const activeFilterItems = useMemo(() => {
-    const items: { key: string; label: string }[] = []
-    quickFilters.selected.forEach((cat: string) => items.push({ key: `cat:${cat}`, label: cat }))
-    const radiusVal = currentRadius || String(DEFAULT_RADIUS_KM)
-    items.push({ key: 'radius', label: `${radiusVal} км` })
-    if (currentMode === 'route' && currentTransport !== 'car') {
-      items.push({ key: 'transport', label: TRANSPORT_LABELS[currentTransport] ?? currentTransport })
-    }
-    return items
-  }, [quickFilters.selected, currentRadius, currentMode, currentTransport])
+  const activeFilterItems = useMemo(
+    () => buildActiveFilterItems(quickFilters.selected, currentRadius, currentMode, currentTransport),
+    [quickFilters.selected, currentRadius, currentMode, currentTransport],
+  )
 
   const handleRemoveActiveFilter = useCallback(
     (key: string) => {
@@ -427,70 +377,28 @@ export default function MapScreen() {
 
   const mapComponent = useMemo(
     () => (
-      <View style={styles.mapArea}>
-        <MapLoadingBar visible={isFetching || isDebouncingFilters} />
-        {isWeb && !isMobile && (
-          <Suspense fallback={null}>
-            <LazyMapQuickFilters
-              extraActions={mapQuickActionButtons}
-              extraActionsPosition="inside-radius"
-              radiusValue={quickFilters.radiusValue}
-              categoriesValue={quickFilters.categoriesValue}
-              overlaysValue={quickFilters.overlaysValue}
-              radiusOptions={quickFilters.radiusOptions}
-              radiusSelected={currentRadius}
-              onChangeRadius={(next) => onFilterChange?.('radius', next)}
-              categoriesOptions={quickFilters.categoryOptions}
-              categoriesSelected={quickFilters.selected}
-              onChangeCategories={(next) => onFilterChange?.('categoryTravelAddress', next)}
-              overlayOptions={quickFilters.overlayOptions}
-              enabledOverlays={quickFilters.enabledOverlays}
-              onChangeOverlay={(id, enabled) => onOverlayToggle?.(id, enabled)}
-              onResetOverlays={onResetOverlays}
-              travelsData={travelsData}
-            />
-          </Suspense>
-        )}
-        {mapReady ? (
-          <MapPanel {...mapPanelProps} hideFloatingControls={isMobile} />
-        ) : (
-          MAP_PANEL_PLACEHOLDER
-        )}
-        {shouldShowFloatingRadiusPill && (
-          <Pressable
-            style={styles.radiusPill}
-            accessibilityRole="button"
-            accessibilityLabel={`Радиус поиска: ${currentRadius} км. Нажмите, чтобы изменить`}
-            testID="map-radius-pill"
-            onPress={() => {
-              handleSelectSearchTab()
-              openRightPanel()
-            }}
-            hitSlop={8}
-          >
-            <Feather name="radio" size={12} color={themedColors.primary} />
-            <Text style={styles.radiusPillText}>{currentRadius} км</Text>
-            <Feather name="chevron-down" size={11} color={themedColors.textMuted} />
-          </Pressable>
-        )}
-        {showGeoBanner && (
-          <View style={styles.geoBanner} testID="map-geo-banner">
-            <Feather name="map-pin" size={13} color={themedColors.warning} />
-            <Text style={styles.geoBannerText}>
-              Геолокация недоступна — разрешите доступ в настройках браузера
-            </Text>
-            <Pressable
-              onPress={dismissGeoBanner}
-              accessibilityRole="button"
-              accessibilityLabel="Закрыть уведомление"
-              hitSlop={10}
-              style={({ pressed }) => [styles.geoBannerClose, pressed && PRESSED_OPACITY_06]}
-            >
-              <Feather name="x" size={12} color={themedColors.textMuted} />
-            </Pressable>
-          </View>
-        )}
-      </View>
+      <MapCanvas
+        styles={styles}
+        themedColors={themedColors}
+        isWeb={isWeb}
+        isMobile={isMobile}
+        isFetching={isFetching}
+        isDebouncingFilters={isDebouncingFilters}
+        mapReady={mapReady}
+        mapPanelProps={mapPanelProps}
+        travelsData={travelsData}
+        quickFilters={quickFilters}
+        mapQuickActionButtons={mapQuickActionButtons}
+        currentRadius={currentRadius}
+        shouldShowFloatingRadiusPill={shouldShowFloatingRadiusPill}
+        onFilterChange={onFilterChange}
+        onOverlayToggle={onOverlayToggle}
+        onResetOverlays={onResetOverlays}
+        showGeoBanner={showGeoBanner}
+        dismissGeoBanner={dismissGeoBanner}
+        handleSelectSearchTab={handleSelectSearchTab}
+        openRightPanel={openRightPanel}
+      />
     ),
     [
       isFetching,

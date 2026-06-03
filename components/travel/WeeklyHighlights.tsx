@@ -10,6 +10,7 @@ import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { queryConfigs } from '@/utils/reactQueryConfig';
+import { queryKeys } from '@/api/queryKeys';
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
 
 const COLLAPSED_KEY = 'weekly_highlights_collapsed';
@@ -79,7 +80,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
 
     // Получаем популярные путешествия месяца
     const { data: popularTravels } = useQuery({
-        queryKey: ['travelsOfMonth'],
+        queryKey: queryKeys.travelsOfMonth(),
         queryFn: ({ signal }) => fetchTravelsOfMonth({ signal }),
         ...queryConfigs.static,
         enabled,

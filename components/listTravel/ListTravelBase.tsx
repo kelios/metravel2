@@ -6,7 +6,7 @@ import {
 } from 'react-native'
 import { showToastMessage } from '@/utils/toast'
 import { queryKeys } from '@/api/queryKeys'
-import { useLocalSearchParams, usePathname, useRouter } from 'expo-router'
+import { usePathname, useRouter } from 'expo-router'
 import { useRoute } from '@react-navigation/native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import RenderTravelItem from './RenderTravelItem'
@@ -24,6 +24,7 @@ import { SEARCH_DEBOUNCE } from './utils/listTravelConstants'
 import { useListTravelFilters } from './hooks/useListTravelFilters'
 import { useListTravelData } from './hooks/useListTravelData'
 import { useListTravelExport } from './hooks/useListTravelExport'
+import { useListTravelInitialFilter } from './hooks/useListTravelInitialFilter'
 import { buildFacetCounts, buildTravelFilterGroups } from './utils/filterGroups'
 import { fetchTravelFacets } from '@/api/travelListQueries'
 import {
@@ -39,7 +40,6 @@ import { useRecommendationsVisibility } from './hooks/useRecommendationsVisibili
 import { createListTravelBaseStyles } from './ListTravelBase.styles'
 import {
   buildCardsGridDynamicStyle,
-  buildListTravelInitialFilter,
   buildListTravelFallbackSteps,
   buildListTravelSearchPendingState,
   getListTravelActiveFiltersCount,
@@ -49,7 +49,6 @@ import {
   getListTravelViewportState,
   getSearchCardImageHeight,
   getSearchCardWidth,
-  normalizeListTravelParam,
 } from './listTravelBaseModel'
 
 const EMPTY_FALLBACK_STEPS: ReturnType<typeof buildListTravelFallbackSteps> = [];
@@ -88,68 +87,7 @@ function ListTravelBase() {
     const pathname = usePathname();
     const router = useRouter();
 
-    const params = useLocalSearchParams<{
-      user_id?: string;
-      categories?: string | string[];
-      over_nights_stay?: string | string[];
-      // NOTE: expo-router sometimes escapes "_" in query keys to "__" on web.
-      // We accept both variants to keep deep links stable.
-      over__nights__stay?: string | string[];
-      categoryTravelAddress?: string | string[];
-      category_travel_address?: string | string[];
-      category__travel__address?: string | string[];
-      companions?: string | string[];
-      complexity?: string | string[];
-      month?: string | string[];
-      sort?: string | string[];
-      search?: string | string[];
-    }>();
-
-    // Extract individual param values for stable useMemo dependencies
-    // (params object is a new reference every render from useLocalSearchParams)
-    const user_id = params.user_id;
-    const pSearch = params.search;
-    const pCategories = params.categories;
-    const pOverNightsStay = params.over_nights_stay;
-    const pOverNightsStayAlt = params.over__nights__stay;
-    const pCategoryTravelAddress = params.categoryTravelAddress;
-    const pCategoryTravelAddressSnake = params.category_travel_address;
-    const pCategoryTravelAddressAlt = params.category__travel__address;
-    const pCompanions = params.companions;
-    const pComplexity = params.complexity;
-    const pMonth = params.month;
-    const pSort = params.sort;
-
-    const normalizedSearchParam = useMemo(
-      () => normalizeListTravelParam(pSearch) ?? '',
-      [pSearch]
-    );
-
-    const initialFilter = useMemo(() => {
-      return buildListTravelInitialFilter({
-        categories: pCategories,
-        over_nights_stay: pOverNightsStay,
-        over__nights__stay: pOverNightsStayAlt,
-        categoryTravelAddress: pCategoryTravelAddress,
-        category_travel_address: pCategoryTravelAddressSnake,
-        category__travel__address: pCategoryTravelAddressAlt,
-        companions: pCompanions,
-        complexity: pComplexity,
-        month: pMonth,
-        sort: pSort,
-      });
-    }, [
-      pCategories,
-      pOverNightsStay,
-      pOverNightsStayAlt,
-      pCategoryTravelAddress,
-      pCategoryTravelAddressSnake,
-      pCategoryTravelAddressAlt,
-      pCompanions,
-      pComplexity,
-      pMonth,
-      pSort,
-    ]);
+    const { user_id, normalizedSearchParam, initialFilter } = useListTravelInitialFilter();
 
     const isMeTravel = (route as any).name === "metravel" || pathname?.includes('/metravel');
     const isTravelBy = (route as any).name === "travelsby";
@@ -373,8 +311,10 @@ function ListTravelBase() {
           await deleteTravel(String(targetId));
           removeTravelFromInfiniteTravelsCache(queryClient, targetId);
           setDelete(null);
-          deleteInFlightRef.current = null;
+          // Сбрасываем guard ТОЛЬКО после инвалидации: иначе повторный handleDelete(sameId)
+          // в окне до завершения invalidate пройдёт и запустит второй deleteTravel (→ 404).
           await queryClient.invalidateQueries({ queryKey: queryKeys.travels() });
+          deleteInFlightRef.current = null;
           void showToastMessage({
             type: 'success',
             text1: 'Путешествие удалено',
@@ -383,8 +323,8 @@ function ListTravelBase() {
           if (isTravelAlreadyDeletedError(error)) {
             removeTravelFromInfiniteTravelsCache(queryClient, targetId);
             setDelete(null);
-            deleteInFlightRef.current = null;
             await queryClient.invalidateQueries({ queryKey: queryKeys.travels() });
+            deleteInFlightRef.current = null;
             return;
           }
 
@@ -654,6 +594,13 @@ function ListTravelBase() {
     const hasDisplayedItems = displayedTravels.length > 0;
     const displayedShowEmptyState = !activeFallbackMatch && !isFallbackLoading && showEmptyState;
     const displayedShowInitialLoading = isInitialLoading || isFallbackLoading;
+
+    // Троттл lastEndReachedAtRef общий для всех источников. При переключении основной
+    // выдачи ↔ fallback сбрасываем его, иначе первый onEndReached нового списка будет
+    // проглочен таймстампом от предыдущего источника (залипание подгрузки).
+    useEffect(() => {
+        lastEndReachedAtRef.current = 0;
+    }, [activeFallbackMatch?.step]);
 
     const handleListEndReached = useCallback(() => {
         if (!hasDisplayedItems) return;

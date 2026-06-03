@@ -291,6 +291,7 @@ export default function Login() {
                                                     label={isSubmitting ? 'Подождите…' : 'Войти'}
                                                     onPress={() => handleSubmit()}
                                                     disabled={isSubmitting}
+                                                    loading={isSubmitting}
                                                     variant="primary"
                                                     size="lg"
                                                     style={styles.btn}

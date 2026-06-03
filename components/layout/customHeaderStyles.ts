@@ -157,7 +157,7 @@ export const createCustomHeaderStyles = (colors: ThemedColors, isMobile: boolean
     navItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 12,
+      paddingHorizontal: 9,
       paddingVertical: 8,
       borderRadius: 999,
       gap: 6,

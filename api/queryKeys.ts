@@ -5,13 +5,21 @@ export const queryKeys = {
   travelsNear: (travelId: number) => ['travels-near', travelId] as const,
   travelsPopular: () => ['travels-popular'] as const,
   travelRouteFiles: (travelId: string | number) => ['travel-route-files', travelId] as const,
-  travelsOfMonth: () => ['travels-of-month'] as const,
+  travelsOfMonth: () => ['travelsOfMonth'] as const,
   filters: () => ['filters'] as const,
   countries: () => ['countries'] as const,
   filterOptions: () => ['filter-options'] as const,
   allCountries: () => ['all-countries'] as const,
   travelFacets: (search: string, params: Record<string, unknown>) =>
     ['travel-facets', search, params] as const,
+  userPointsAll: () => ['userPointsAll'] as const,
+  userPointsCategoryDictionary: () => ['userPointsCategoryDictionary'] as const,
+  myTravelsCount: (userId: string | number | null | undefined) =>
+    ['my-travels-count', userId] as const,
+  exportMyTravelsCount: (userId: string | number | null | undefined) =>
+    ['export-my-travels-count', userId] as const,
+  travelUserRating: (travelId: number | undefined) =>
+    ['travelUserRating', travelId] as const,
   articles: (params: { page: number; itemsPerPage: number; user_id?: string }) =>
     ['articles', params] as const,
   addressSearch: (query: string) => ['address-search', query] as const,

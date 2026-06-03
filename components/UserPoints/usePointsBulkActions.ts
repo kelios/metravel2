@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { QueryClient } from '@tanstack/react-query';
 
 import { userPointsApi } from '@/api/userPoints';
+import { queryKeys } from '@/api/queryKeys';
 import { PointStatus } from '@/types/userPoints';
 
 type PointLike = { id?: unknown };
@@ -68,7 +69,7 @@ export const usePointsBulkActions = ({ filteredPoints, queryClient }: Params) =>
     try {
       await userPointsApi.bulkUpdatePoints(selectedIds, updates);
       const selectedSet = new Set(selectedIds);
-      queryClient.setQueryData(['userPointsAll'], (prev: unknown) => {
+      queryClient.setQueryData(queryKeys.userPointsAll(), (prev: unknown) => {
         const arr = Array.isArray(prev) ? prev : [];
         return arr.map((p: unknown) => {
           const item = (p ?? {}) as Record<string, unknown>;
@@ -101,7 +102,7 @@ export const usePointsBulkActions = ({ filteredPoints, queryClient }: Params) =>
         setBulkProgress({ current: done, total: selectedIds.length });
       }
       const selectedSet = new Set(selectedIds);
-      queryClient.setQueryData(['userPointsAll'], (prev: unknown) => {
+      queryClient.setQueryData(queryKeys.userPointsAll(), (prev: unknown) => {
         const arr = Array.isArray(prev) ? prev : [];
         return arr.filter((p: unknown) => {
           const item = (p ?? {}) as Record<string, unknown>;
@@ -123,7 +124,7 @@ export const usePointsBulkActions = ({ filteredPoints, queryClient }: Params) =>
     setIsBulkWorking(true);
     try {
       await userPointsApi.purgePoints();
-      queryClient.setQueryData(['userPointsAll'], []);
+      queryClient.setQueryData(queryKeys.userPointsAll(), []);
       exitSelectionMode();
     } catch {
       // noop

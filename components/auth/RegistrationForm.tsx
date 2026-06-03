@@ -375,6 +375,7 @@ export default function RegisterForm() {
                                                 label={isSubmitting ? 'Подождите…' : 'Зарегистрироваться'}
                                                 onPress={() => handleSubmit()}
                                                 disabled={isSubmitting}
+                                                loading={isSubmitting}
                                                 variant="primary"
                                                 size="lg"
                                                 style={styles.btn}

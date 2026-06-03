@@ -796,11 +796,11 @@ test.describe('Travel Comments', () => {
       
       // Click more actions
       await ourComment.locator('[data-testid="comment-actions-trigger"]').click();
-      
-      // Click delete
-      page.once('dialog', dialog => dialog.accept());
+
+      // Click delete — opens the in-app ConfirmDialog (replaces native window.confirm)
       await ourComment.locator('[data-testid="comment-actions-delete"]').click();
-      
+      await page.locator('[data-testid="comment-delete-confirm"]').click();
+
       // Wait for deletion
       await expect(page.getByText(commentText)).not.toBeVisible({ timeout: 15_000 });
     });
@@ -966,9 +966,9 @@ test.describe('Travel Comments', () => {
           }
         });
 
-        // Click delete and accept confirm dialog (web uses window.confirm).
-        page.once('dialog', (dialog) => dialog.accept());
+        // Click delete — opens the in-app ConfirmDialog (replaces native window.confirm).
         await deleteButton.first().click();
+        await page.locator('[data-testid="comment-delete-confirm"]').click();
 
         const deleteResp = await deleteResponsePromise;
         expect(deleteResp.status()).toBe(204);

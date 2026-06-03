@@ -36,6 +36,7 @@ import {
   getSafeCenter,
   normalizeLngLatWithHint as normalizeLngLatWithHintHelper,
 } from './Map/mapWebGeometry'
+import { queryKeys } from '@/api/queryKeys'
 
 type ReactLeafletNS = typeof import('react-leaflet')
 
@@ -499,7 +500,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
       fullscreenOnMobile: useCompactPopupLayout,
       userLocationRef: userLocationLatLngRef,
       invalidateUserPoints: () => {
-        void queryClient.invalidateQueries({ queryKey: ['userPointsAll'] })
+        void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() })
       },
     })
   }, [colors, queryClient, rl, themeContextValue, useCompactPopupLayout])

@@ -148,6 +148,40 @@ const PlacePopupCard: React.FC<Props> = ({
   primaryActionOverride,
 }) => {
   const cardRootRef = useRef<any>(null);
+  const popupGuardCleanupRef = useRef<(() => void) | null>(null);
+  // Callback ref: навешивает/снимает guard'ы всплытия при КАЖДОЙ смене host-узла.
+  // useEffect([]) этого не делал — при свопе layout-ветки (overlay ↔ cardBody по ширине)
+  // или позднем монтировании узла listeners оставались на устаревшем/отсутствующем узле.
+  const setCardRootNode = useCallback((node: any) => {
+    cardRootRef.current = node;
+    if (popupGuardCleanupRef.current) {
+      popupGuardCleanupRef.current();
+      popupGuardCleanupRef.current = null;
+    }
+    if (Platform.OS !== 'web') return;
+    const nodes = getPopupEventNodes(node);
+    if (!nodes.length) return;
+
+    const stopEvent = (event: Event) => {
+      event.stopPropagation();
+      if (isCardActionEvent(event)) return;
+      (event as any).stopImmediatePropagation?.();
+    };
+
+    nodes.forEach((n) => {
+      POPUP_DOM_EVENTS.forEach((eventName) => {
+        (n as any).addEventListener(eventName, stopEvent);
+      });
+    });
+
+    popupGuardCleanupRef.current = () => {
+      nodes.forEach((n) => {
+        POPUP_DOM_EVENTS.forEach((eventName) => {
+          (n as any).removeEventListener(eventName, stopEvent);
+        });
+      });
+    };
+  }, []);
   const [fullscreenVisible, setFullscreenVisible] = useState(false);
   const revealPopupImageOnLoadOnly = useMemo(() => {
     if (Platform.OS !== 'web' || typeof navigator === 'undefined') return false;
@@ -294,32 +328,6 @@ const PlacePopupCard: React.FC<Props> = ({
   useEffect(() => {
     setFullscreenVisible(false);
   }, [imageUrl]);
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    const nodes = getPopupEventNodes(cardRootRef.current);
-    if (!nodes.length) return;
-
-    const stopEvent = (event: Event) => {
-      event.stopPropagation();
-      if (isCardActionEvent(event)) return;
-      (event as any).stopImmediatePropagation?.();
-    };
-
-    nodes.forEach((node) => {
-      POPUP_DOM_EVENTS.forEach((eventName) => {
-        node.addEventListener(eventName, stopEvent);
-      });
-    });
-
-    return () => {
-      nodes.forEach((node) => {
-        POPUP_DOM_EVENTS.forEach((eventName) => {
-          node.removeEventListener(eventName, stopEvent);
-        });
-      });
-    };
-  }, []);
 
   const topInfoSlot = useMemo(() => (
     <View style={styles.infoSection}>
@@ -602,7 +610,7 @@ const PlacePopupCard: React.FC<Props> = ({
 
   const cardBody = (
     <View
-      ref={cardRootRef}
+      ref={setCardRootNode}
       style={[styles.container, { maxWidth: maxPopupWidth }]}
       {...(Platform.OS === 'web'
         ? ({

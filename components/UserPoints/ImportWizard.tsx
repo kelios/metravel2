@@ -5,6 +5,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { GoogleMapsParser } from '@/api/parsers/googleMapsParser';
 import { OSMParser } from '@/api/parsers/osmParser';
 import { userPointsApi } from '@/api/userPoints';
+import { queryKeys } from '@/api/queryKeys';
 import type { ImportPointsResult, ParsedPoint } from '@/types/userPoints';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -82,7 +83,7 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
       setImportResult(result);
       setStep('complete');
 
-      await queryClient.invalidateQueries({ queryKey: ['userPointsAll'] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() });
 
       const importedCount = (result?.created ?? 0) + (result?.updated ?? 0);
       if (parsedPoints.length > 0 && importedCount === 0) {

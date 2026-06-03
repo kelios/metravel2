@@ -56,7 +56,7 @@ export function useTravelRating({
     // Query для получения оценки пользователя
     // Агрегатный рейтинг (rating, rating_count) приходит из travel detail response (initialRating/initialCount)
     const userRatingQuery = useQuery({
-        queryKey: ['travelUserRating', travelId],
+        queryKey: queryKeys.travelUserRating(travelId),
         queryFn: () => getUserTravelRating(travelId!),
         enabled: enabled && !!travelId && isAuthenticated,
         staleTime: 30 * 1000,
@@ -71,15 +71,15 @@ export function useTravelRating({
             setOptimisticRating(newRating);
 
             // Отменяем исходящие запросы
-            await queryClient.cancelQueries({ queryKey: ['travelUserRating', travelId] });
+            await queryClient.cancelQueries({ queryKey: queryKeys.travelUserRating(travelId) });
 
             // Сохраняем предыдущее состояние
-            const previousUserRating = queryClient.getQueryData<number | null>(['travelUserRating', travelId]);
+            const previousUserRating = queryClient.getQueryData<number | null>(queryKeys.travelUserRating(travelId));
             const previousAggregateRating = serverRating ?? initialRating ?? 0;
             const previousAggregateCount = serverCount ?? initialCount;
 
             // Обновляем кэш оптимистично
-            queryClient.setQueryData(['travelUserRating', travelId], newRating);
+            queryClient.setQueryData(queryKeys.travelUserRating(travelId), newRating);
 
             return {
                 previousUserRating,
@@ -91,7 +91,7 @@ export function useTravelRating({
             // Откатываем к предыдущему состоянию
             setOptimisticRating(null);
             if (context?.previousUserRating !== undefined) {
-                queryClient.setQueryData(['travelUserRating', travelId], context.previousUserRating);
+                queryClient.setQueryData(queryKeys.travelUserRating(travelId), context.previousUserRating);
             }
             showToast({
                 text1: 'Не удалось сохранить оценку',
@@ -116,7 +116,7 @@ export function useTravelRating({
 
             // Обновляем кэш user rating
             setOptimisticRating(null);
-            queryClient.setQueryData(['travelUserRating', travelId], nextUserRating);
+            queryClient.setQueryData(queryKeys.travelUserRating(travelId), nextUserRating);
 
             // Сохраняем агрегатный рейтинг из ответа сервера
             setServerRating(nextAggregateRating);

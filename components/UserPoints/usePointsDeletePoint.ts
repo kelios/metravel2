@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import type { QueryClient } from '@tanstack/react-query';
 
 import { userPointsApi } from '@/api/userPoints';
+import { queryKeys } from '@/api/queryKeys';
 
 type PointLike = Record<string, unknown>;
 
@@ -31,7 +32,7 @@ export const usePointsDeletePoint = ({ queryClient, setIsBulkWorking }: Params) 
     setIsBulkWorking(true);
     try {
       await userPointsApi.deletePoint(id);
-      queryClient.setQueryData(['userPointsAll'], (prev: unknown) => {
+      queryClient.setQueryData(queryKeys.userPointsAll(), (prev: unknown) => {
         const arr = Array.isArray(prev) ? prev : [];
         return arr.filter((p: unknown) => {
           const item = (p ?? {}) as Record<string, unknown>;

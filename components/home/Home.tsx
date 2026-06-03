@@ -11,6 +11,7 @@ import HomeHero from './HomeHero'
 import { queueAnalyticsEvent } from '@/utils/analytics'
 import { hapticImpact } from '@/utils/haptics'
 import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries'
+import { queryKeys } from '@/api/queryKeys'
 import { useHomeViewport } from './useHomeViewport'
 import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
 
@@ -228,7 +229,7 @@ function Home() {
   }, [queryClient])
 
   const { data: myTravelsData, isLoading: travelsCountLoading } = useQuery({
-    queryKey: ['my-travels-count', userId],
+    queryKey: queryKeys.myTravelsCount(userId),
     queryFn: async (): Promise<{ items: Record<string, unknown>[]; total: number }> => {
       if (!userId) return { items: [], total: 0 }
       try {

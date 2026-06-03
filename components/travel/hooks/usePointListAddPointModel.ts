@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import * as ReactQuery from '@tanstack/react-query';
 
 import { userPointsApi } from '@/api/userPoints';
+import { queryKeys } from '@/api/queryKeys';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useAuth } from '@/context/AuthContext';
 import type { ImportedPoint } from '@/types/userPoints';
@@ -134,7 +135,7 @@ export function usePointListAddPointModel({
           text1: 'Точка добавлена в «Мои точки»',
           position: 'bottom',
         });
-        void queryClient.invalidateQueries({ queryKey: ['userPointsAll'] });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() });
       } catch (error) {
         if (__DEV__) {
           console.error('Не удалось добавить точку из маршрута в мои точки', error);

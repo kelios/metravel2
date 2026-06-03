@@ -7,6 +7,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '@/context/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { userPointsApi } from '@/api/userPoints';
+import { queryKeys } from '@/api/queryKeys';
 import { PointStatus } from '@/types/userPoints';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { openExternalUrlInNewTab, openExternalUrl } from '@/utils/externalLinks';
@@ -157,7 +158,7 @@ export function useAddressListItemActions(travel: TravelCoords) {
       await userPointsApi.createPoint(payload);
       setPointAdded(true);
       void showToast({ type: 'success', text1: 'Точка добавлена в «Мои точки»', position: 'bottom' });
-      void queryClient.invalidateQueries({ queryKey: ['userPointsAll'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() });
       setTimeout(() => setPointAdded(false), 1000);
     } catch {
       void showToast({ type: 'error', text1: 'Не удалось сохранить точку', position: 'bottom' });

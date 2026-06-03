@@ -6,15 +6,13 @@ import NetInfo from '@react-native-community/netinfo';
 import { useRouter } from 'expo-router';
 
 import DraftRecoveryDialog from '@/components/travel/DraftRecoveryDialog';
-import TravelFormErrorBoundary from '@/components/travel/TravelFormErrorBoundary';
 import TravelPreviewModal from '@/components/travel/TravelPreviewModal';
-import TravelWizardStepBasic from '@/components/travel/TravelWizardStepBasic';
-import TravelWizardStepDetails from '@/components/travel/TravelWizardStepDetails';
-import TravelWizardStepExtras from '@/components/travel/TravelWizardStepExtras';
-import TravelWizardStepMedia from '@/components/travel/TravelWizardStepMedia';
-import TravelWizardStepPublish from '@/components/travel/TravelWizardStepPublish';
-import TravelWizardStepRoute from '@/components/travel/TravelWizardStepRoute';
 import type { UpsertTravelController } from '@/components/travel/upsert/useUpsertTravelController';
+import WizardSkeleton from '@/components/travel/upsert/WizardSkeleton';
+import WizardStepRouter, {
+  type CommonStepProps,
+  type StepNavigationProps,
+} from '@/components/travel/upsert/WizardStepRouter';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useTravelPreview } from '@/hooks/useTravelPreview';
@@ -23,8 +21,6 @@ import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 
 type Colors = UpsertTravelController['colors'];
 type Styles = ReturnType<typeof createStyles>;
-type Wizard = UpsertTravelController['wizard'];
-type StepMeta = UpsertTravelController['currentStepMeta'];
 
 interface UpsertTravelViewProps {
   controller: UpsertTravelController;
@@ -59,64 +55,6 @@ interface EmptyStateProps {
   testID: string;
   accessibilityLabel: string;
 }
-
-interface CommonStepProps {
-  currentStep: number;
-  totalSteps: number;
-  formData: UpsertTravelController['formData'];
-  onManualSave: UpsertTravelController['handleManualSave'];
-  onPreview: () => void;
-  onOpenPublic: () => void;
-  onStepSelect: Wizard['handleStepSelect'];
-  stepMeta: StepMeta;
-  progress: number;
-  autosaveBadge?: string;
-}
-
-interface StepNavigationProps {
-  onBack: Wizard['handleBack'];
-  onNext: Wizard['handleNext'];
-  focusAnchorId: Wizard['focusAnchorId'];
-  onAnchorHandled: Wizard['handleAnchorHandled'];
-}
-
-interface ActiveWizardStepProps {
-  controller: UpsertTravelController;
-  commonStepProps: CommonStepProps;
-  navigationProps: StepNavigationProps;
-  colors: Colors;
-  styles: Styles;
-}
-
-const WizardSkeleton = ({ colors }: { colors: Colors }) => {
-  const pulseAnim = useRef(new Animated.Value(0.3)).current;
-  const skeletonStyle = useMemo(
-    () => ({ opacity: pulseAnim, backgroundColor: colors.surfaceMuted }),
-    [colors.surfaceMuted, pulseAnim],
-  );
-
-  useEffect(() => {
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: false }),
-        Animated.timing(pulseAnim, { toValue: 0.3, duration: 800, useNativeDriver: false }),
-      ]),
-    );
-
-    animation.start();
-    return () => animation.stop();
-  }, [pulseAnim]);
-
-  return (
-    <View style={stylesStatic.skeletonContainer}>
-      <Animated.View style={[stylesStatic.skeletonHeader, skeletonStyle]} />
-      <Animated.View style={[stylesStatic.skeletonProgress, skeletonStyle]} />
-      <Animated.View style={[stylesStatic.skeletonInput, skeletonStyle]} />
-      <Animated.View style={[stylesStatic.skeletonBody, skeletonStyle]} />
-      <Animated.View style={[stylesStatic.skeletonInput, skeletonStyle]} />
-    </View>
-  );
-};
 
 const OfflineBanner = ({ colors, isVisible }: { colors: Colors; isVisible: boolean }) => {
   const opacity = useRef(new Animated.Value(0)).current;
@@ -388,59 +326,26 @@ const AuthRequiredState = ({ colors, styles, router }: WizardStateProps) => {
   );
 };
 
-const StepErrorFallback = ({
-  stepNumber,
-  onBack,
-  colors,
-  styles,
-}: {
-  stepNumber: number;
-  onBack?: () => void;
-  colors: Colors;
-  styles: Styles;
-}) => {
-  const actions = useMemo<EmptyStateAction[]>(
-    () => onBack
-      ? [{
-          label: 'Вернуться назад',
-          accessibilityLabel: 'Вернуться к предыдущему шагу',
-          onPress: onBack,
-        }]
-      : [],
-    [onBack],
-  );
-
-  return (
-    <View style={styles.centeredScreen}>
-      <Feather name="alert-triangle" size={48} color={colors.warning} style={styles.iconSpacing} />
-      <Text style={styles.errorTitle}>Ошибка на шаге {stepNumber}</Text>
-      <Text style={styles.errorText}>Произошла ошибка при отображении этого шага.</Text>
-      {actions.length > 0 && (
-        <View style={styles.actionRow}>
-          <Pressable
-            onPress={actions[0].onPress}
-            style={styles.actionPrimary}
-            accessibilityRole="button"
-            accessibilityLabel={actions[0].accessibilityLabel}
-          >
-            <Text style={styles.actionPrimaryText}>{actions[0].label}</Text>
-          </Pressable>
-        </View>
-      )}
-    </View>
-  );
-};
-
 function useOfflineStatus() {
   const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener((state) => {
+    let active = true;
+    const apply = (state: { isConnected?: boolean | null; isInternetReachable?: boolean | null }) => {
+      if (!active) return;
       const nextIsOffline = state.isConnected === false || state.isInternetReachable === false;
       setIsOffline((current) => (current === nextIsOffline ? current : nextIsOffline));
-    });
+    };
 
-    return unsubscribe;
+    // Первичный снимок: addEventListener на части платформ дёргает callback только при смене
+    // состояния, поэтому без fetch() баннер не покажется, если форма открыта уже без сети.
+    void NetInfo.fetch().then(apply);
+    const unsubscribe = NetInfo.addEventListener(apply);
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
   return isOffline;
@@ -453,118 +358,6 @@ function useResponsiveFlags(): ResponsiveFlags {
     [isDesktop, isMobile, isTablet],
   );
 }
-
-const ActiveWizardStep = React.memo(function ActiveWizardStep({
-  controller,
-  commonStepProps,
-  navigationProps,
-  colors,
-  styles,
-}: ActiveWizardStepProps) {
-  const { wizard } = controller;
-
-  const handleStepError = useCallback(
-    (error: Error, errorInfo: React.ErrorInfo) => {
-      console.error(`Step ${wizard.currentStep} error:`, error, errorInfo);
-    },
-    [wizard.currentStep],
-  );
-
-  const activeStep = useMemo(() => {
-    switch (wizard.currentStep) {
-      case 1:
-        return (
-          <TravelWizardStepBasic
-            {...commonStepProps}
-            setFormData={controller.setFormData}
-            onGoNext={wizard.handleNext}
-            snackbarVisible={controller.autosave.status === 'error'}
-            snackbarMessage={controller.autosave.error?.message || ''}
-            onDismissSnackbar={controller.autosave.clearError}
-            stepErrors={wizard.step1SubmitErrors.map((error) => error.message)}
-            focusAnchorId={wizard.focusAnchorId}
-            onAnchorHandled={wizard.handleAnchorHandled}
-          />
-        );
-      case 2:
-        return (
-          <TravelWizardStepRoute
-            {...commonStepProps}
-            {...navigationProps}
-            markers={controller.markers}
-            setMarkers={controller.setMarkers}
-            categoryTravelAddress={controller.filters.categoryTravelAddress}
-            countries={controller.filters.countries}
-            travelId={controller.formData.id}
-            selectedCountryIds={controller.formData.countries || []}
-            onCountrySelect={controller.handleCountrySelect}
-            onCountryDeselect={controller.handleCountryDeselect}
-            isFiltersLoading={controller.isFiltersLoading}
-          />
-        );
-      case 3:
-        return (
-          <TravelWizardStepMedia
-            {...commonStepProps}
-            {...navigationProps}
-            setFormData={controller.setFormData}
-            travelDataOld={controller.travelDataOld}
-          />
-        );
-      case 4:
-        return (
-          <TravelWizardStepDetails
-            {...commonStepProps}
-            {...navigationProps}
-            setFormData={controller.setFormData}
-          />
-        );
-      case 5:
-        return (
-          <TravelWizardStepExtras
-            {...commonStepProps}
-            {...navigationProps}
-            setFormData={controller.setFormData}
-            filters={controller.filters}
-            travelDataOld={controller.travelDataOld}
-            isSuperAdmin={controller.isSuperAdmin}
-          />
-        );
-      case 6:
-        return (
-          <TravelWizardStepPublish
-            {...commonStepProps}
-            setFormData={controller.setFormData}
-            countries={controller.filters.countries}
-            isSuperAdmin={controller.isSuperAdmin}
-            onGoBack={wizard.handleBack}
-            onFinish={wizard.handleFinishWizard}
-            onNavigateToIssue={wizard.handleNavigateToIssue}
-          />
-        );
-      default:
-        return null;
-    }
-  }, [commonStepProps, controller, navigationProps, wizard]);
-
-  if (!activeStep) return null;
-
-  return (
-    <TravelFormErrorBoundary
-      onError={handleStepError}
-      fallback={
-        <StepErrorFallback
-          stepNumber={wizard.currentStep}
-          onBack={wizard.currentStep > 1 ? wizard.handleBack : undefined}
-          colors={colors}
-          styles={styles}
-        />
-      }
-    >
-      {activeStep}
-    </TravelFormErrorBoundary>
-  );
-});
 
 export default function UpsertTravelView({ controller }: UpsertTravelViewProps) {
   const router = useRouter();
@@ -662,7 +455,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
 
       <OfflineBanner colors={colors} isVisible={isOffline} />
 
-      <ActiveWizardStep
+      <WizardStepRouter
         controller={controller}
         commonStepProps={commonStepProps}
         navigationProps={navigationProps}
@@ -674,30 +467,6 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
 }
 
 const stylesStatic = StyleSheet.create({
-  skeletonContainer: {
-    flex: 1,
-    padding: DESIGN_TOKENS.spacing.lg,
-  },
-  skeletonHeader: {
-    height: 60,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    marginBottom: DESIGN_TOKENS.spacing.lg,
-  },
-  skeletonProgress: {
-    height: 8,
-    borderRadius: 4,
-    marginBottom: DESIGN_TOKENS.spacing.xl,
-  },
-  skeletonInput: {
-    height: 56,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    marginBottom: DESIGN_TOKENS.spacing.md,
-  },
-  skeletonBody: {
-    height: 120,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    marginBottom: DESIGN_TOKENS.spacing.md,
-  },
   offlineBanner: {
     paddingVertical: DESIGN_TOKENS.spacing.sm,
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
