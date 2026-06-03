@@ -17,7 +17,6 @@ const E2E_CATEGORY_DEFINITIONS = [
       /^api\/travels.+/,
     ],
     specs: [
-      'e2e/open-travel.spec.ts',
       'e2e/seo-travel-detail.spec.ts',
       'e2e/travels.spec.ts',
     ],

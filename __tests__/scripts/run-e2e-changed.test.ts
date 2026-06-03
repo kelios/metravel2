@@ -36,7 +36,6 @@ describe('run-e2e-changed', () => {
       'components/messages/ChatView.tsx',
     ])).toEqual([
       'e2e/messages.spec.ts',
-      'e2e/open-travel.spec.ts',
       'e2e/seo-travel-detail.spec.ts',
       'e2e/travels.spec.ts',
     ])
@@ -54,7 +53,6 @@ describe('run-e2e-changed', () => {
       'e2e/integration-core-flows.spec.ts',
       'e2e/map-page.spec.ts',
       'e2e/messages.spec.ts',
-      'e2e/open-travel.spec.ts',
       'e2e/search.spec.ts',
       'e2e/seo-travel-detail.spec.ts',
       'e2e/subscriptions.spec.ts',
