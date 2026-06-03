@@ -125,39 +125,6 @@
   opacity: 0.4;
 }
 
-/* CTA "Все путешествия" */
-[data-all-travels-btn] {
-  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
-  will-change: transform;
-}
-
-[data-all-travels-btn]:hover {
-  background-color: var(--color-primaryLight) !important;
-  transform: translate3d(0, -1px, 0);
-  box-shadow: 0 8px 18px rgba(122, 157, 143, 0.18) !important;
-}
-
-/* Категории-бейджи */
-[data-category-tag] {
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
-  will-change: transform;
-}
-
-[data-category-tag-text] {
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  word-break: keep-all;
-  overflow-wrap: normal;
-}
-
-[data-category-tag]:hover {
-  background-color: var(--color-primaryLight) !important;
-  transform: translate3d(0, -1px, 0);
-  box-shadow: 0 2px 6px rgba(122, 157, 143, 0.15);
-}
-
 /* Разделители с градиентом */
 [data-link-divider] {
   background: linear-gradient(

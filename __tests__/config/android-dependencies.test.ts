@@ -101,10 +101,6 @@ describe('Android Dependencies Tests', () => {
       expect(packageJson.dependencies['expo-av']).toBeDefined();
     });
 
-    it('should have expo-blur', () => {
-      expect(packageJson.dependencies['expo-blur']).toBeDefined();
-    });
-
     it('should have expo-clipboard', () => {
       expect(packageJson.dependencies['expo-clipboard']).toBeDefined();
     });

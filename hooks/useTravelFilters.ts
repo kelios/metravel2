@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { fetchFilters, fetchAllCountries } from '@/api/misc';
+import { fetchAllCountries } from '@/api/misc';
+import { fetchFiltersOptimized } from '@/api/miscOptimized';
 
 export interface TravelFilters {
   categories: Array<{ id: string; name: string }>;
@@ -260,7 +261,7 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
       setError(null);
       
       const [filtersData, countryData] = await Promise.all([
-        fetchFilters(),
+        fetchFiltersOptimized(),
         fetchAllCountries(),
       ]);
 
@@ -305,7 +306,7 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
 
     try {
       setIsLoading(true);
-      const filtersData = await fetchFilters();
+      const filtersData = await fetchFiltersOptimized();
 
       const normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(
         filtersData?.categoryTravelAddress || []

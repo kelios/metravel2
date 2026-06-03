@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import * as ReactQuery from '@tanstack/react-query';
 
-import { fetchFilters } from '@/api/misc';
+import { fetchFiltersOptimized } from '@/api/miscOptimized';
 import { queryKeys } from '@/queryKeys';
 import { queryConfigs } from '@/utils/reactQueryConfig';
 import {
@@ -22,7 +22,7 @@ export function usePointListCategoryDictionaryModel() {
       const queryResult = queryRunner<CategoryDictionaryItem[]>({
         queryKey: queryKeys.filters(),
         queryFn: async () => {
-          const data = await fetchFilters();
+          const data = await fetchFiltersOptimized();
           const raw = (data as any)?.categoryTravelAddress ?? (data as any)?.category_travel_address;
           return normalizeCategoryDictionary(raw);
         },
@@ -40,7 +40,7 @@ export function usePointListCategoryDictionaryModel() {
     let active = true;
     const loadDictionary = async () => {
       try {
-        const data = await fetchFilters();
+        const data = await fetchFiltersOptimized();
         const raw = (data as any)?.categoryTravelAddress ?? (data as any)?.category_travel_address;
         if (active) setSiteCategoryDictionaryFallback(normalizeCategoryDictionary(raw));
       } catch {

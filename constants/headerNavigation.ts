@@ -15,7 +15,7 @@ export const HEADER_NAV_ITEMS: HeaderNavItem[] = [
   { path: '/places', label: 'Места', icon: 'map-pin', priority: 'primary' },
   { path: '/roulette', label: 'Случайный маршрут', icon: 'shuffle', priority: 'primary' },
   { path: '/quests', label: 'Квесты', icon: 'target', priority: 'primary' },
-  { path: 'https://metravel.by/travels/akkaunty-v-instagram-o-puteshestviyah-po-belarusi', label: 'Instagram', icon: 'instagram', priority: 'primary', external: true },
+  { path: 'https://metravel.by/travels/akkaunty-v-instagram-o-puteshestviyah-po-belarusi', label: 'Instagram', icon: 'instagram', priority: 'secondary', external: true },
 ];
 
 export const DOCUMENT_NAV_ITEMS: HeaderNavItem[] = [

@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { userPointsApi } from '@/api/userPoints';
 import { queryKeys } from '@/api/queryKeys';
-import { fetchFilters } from '@/api/misc';
+import { useFilterOptions } from '@/hooks/useFilterOptions';
 import type { PointFilters } from '@/types/userPoints';
 import {
   createCategoryNameToIdsMap,
@@ -26,14 +26,11 @@ export const usePointsDataModel = ({
   currentLocation,
   defaultPointColors,
 }: Params) => {
-  const siteCategoryOptionsQuery = useQuery({
-    queryKey: queryKeys.userPointsCategoryDictionary(),
-    queryFn: async () => {
-      const data = await fetchFilters();
+  const siteCategoryOptionsQuery = useFilterOptions({
+    select: (data) => {
       const raw = (data as any)?.categoryTravelAddress ?? (data as any)?.category_travel_address;
       return normalizeCategoryDictionary(raw);
     },
-    staleTime: 24 * 60 * 60 * 1000,
   });
 
   const categoryData = useMemo(() => siteCategoryOptionsQuery.data ?? [], [siteCategoryOptionsQuery.data]);
