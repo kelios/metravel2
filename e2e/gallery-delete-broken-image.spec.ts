@@ -1,18 +1,9 @@
 import { test, expect } from './fixtures';
 import { mockFakeAuthApis } from './helpers/auth';
+import { gotoWithRetry } from './helpers/navigation';
 
 test.describe('Gallery: delete broken image (404)', () => {
   test('shows delete UI for 404 image and removes card after confirm', async ({ page, baseURL }) => {
-    page.on('pageerror', (error) => {
-      console.log('[gallery-delete] pageerror:', error.message);
-      if (error.stack) console.log(error.stack);
-    });
-    page.on('console', (message) => {
-      if (message.type() === 'error') {
-        console.log(`[gallery-delete] console.${message.type()}:`, message.text());
-      }
-    });
-
     const base = (baseURL || '').replace(/\/+$/, '');
     const brokenId = 3796;
     const brokenUrl = `${base}/gallery/${brokenId}/conversions/404.jpg`;
@@ -122,8 +113,92 @@ test.describe('Gallery: delete broken image (404)', () => {
       });
     }
 
+    const openNewTravelWizard = async () => {
+      const wizardRoot = page.getByTestId('travel-upsert.root').first();
+
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        await gotoWithRetry(page, '/travel/new', { maxAttempts: 2, timeout: 120_000 });
+
+        const isReady = await Promise.any([
+          wizardRoot.waitFor({ state: 'visible', timeout: 15_000 }).then(() => true),
+          page.getByText(/^(Найден черновик|Есть несохранённые изменения)$/).first().waitFor({ state: 'visible', timeout: 15_000 }).then(() => true),
+          page.getByRole('button', { name: /перейти к шагу 3:?\s*медиа/i }).first().waitFor({ state: 'visible', timeout: 15_000 }).then(() => true),
+          page.getByText('Главное изображение', { exact: true }).first().waitFor({ state: 'visible', timeout: 15_000 }).then(() => true),
+        ]).catch(() => false);
+
+        if (isReady) return;
+
+        const notFoundVisible = await page.getByText(/^Not found$/i).first().isVisible().catch(() => false);
+        if (!notFoundVisible) {
+          await page.waitForTimeout(1000);
+        }
+      }
+    };
+
+    const ensureOnStep3 = async () => {
+      const step3HeaderTitle = page.getByText('Медиа путешествия', { exact: true }).first();
+      const step3PrimaryAction = page.getByRole('button', { name: /к деталям/i }).first();
+      const step3MainImage = page.getByText('Главное изображение', { exact: true }).first();
+      const step3Gallery = page.getByText('Галерея путешествия', { exact: true }).first();
+      const step3Video = page.getByText(/Видео о путешествии/i).first();
+
+      const isStep3Visible = async () =>
+        Promise.any([
+          step3HeaderTitle.isVisible().catch(() => false),
+          step3PrimaryAction.isVisible().catch(() => false),
+          step3MainImage.isVisible().catch(() => false),
+          step3Gallery.isVisible().catch(() => false),
+          step3Video.isVisible().catch(() => false),
+        ]).catch(() => false);
+
+      const waitForStep3 = async (timeout: number) => {
+        await Promise.race([
+          step3HeaderTitle.waitFor({ state: 'visible', timeout }).catch(() => null),
+          step3PrimaryAction.waitFor({ state: 'visible', timeout }).catch(() => null),
+          step3MainImage.waitFor({ state: 'visible', timeout }).catch(() => null),
+          step3Gallery.waitFor({ state: 'visible', timeout }).catch(() => null),
+          step3Video.waitFor({ state: 'visible', timeout }).catch(() => null),
+        ]);
+      };
+
+      await waitForStep3(15_000).catch(async () => {
+        const milestone3 = page.locator('[aria-label^="Перейти к шагу 3"]').first();
+        if (await milestone3.isVisible().catch(() => false)) {
+          await milestone3.click().catch(() => null);
+        }
+      });
+
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        if (await isStep3Visible()) return;
+
+        const toMediaPrimary = page.getByRole('button', { name: /к медиа/i }).first();
+        if (await toMediaPrimary.isVisible().catch(() => false)) {
+          await toMediaPrimary.scrollIntoViewIfNeeded().catch(() => null);
+          await toMediaPrimary.click({ force: true }).catch(() => null);
+          await page.waitForLoadState('domcontentloaded').catch(() => null);
+          if (await isStep3Visible()) return;
+        }
+
+        const milestone3 = page.locator('[aria-label^="Перейти к шагу 3"]').first();
+        if (await milestone3.isVisible().catch(() => false)) {
+          await milestone3.click({ force: true }).catch(() => null);
+          await page.waitForLoadState('domcontentloaded').catch(() => null);
+          if (await isStep3Visible()) return;
+        }
+
+        const milestoneText3 = page.getByRole('button', { name: /^3$/ }).first();
+        if (await milestoneText3.isVisible().catch(() => false)) {
+          await milestoneText3.scrollIntoViewIfNeeded().catch(() => null);
+          await milestoneText3.click({ force: true }).catch(() => null);
+          await page.waitForLoadState('domcontentloaded').catch(() => null);
+        }
+      }
+
+      await expect.poll(isStep3Visible, { timeout: 30_000 }).toBeTruthy();
+    };
+
     await mockFakeAuthApis(page);
-    await page.goto('/travel/new', { waitUntil: 'domcontentloaded', timeout: 120_000 });
+    await openNewTravelWizard();
 
     // Recover draft if dialog appears (it can mount async after initial render).
     const draftDialogTitle = page
@@ -145,48 +220,7 @@ test.describe('Gallery: delete broken image (404)', () => {
       await draftDialogTitle.waitFor({ state: 'hidden', timeout: 30_000 }).catch(() => null);
     }
 
-    // Navigate to Media step.
-    const waitForMediaStep = async (timeout: number) => {
-      await Promise.race([
-        page.getByText('Медиа путешествия', { exact: true }).first().waitFor({ state: 'visible', timeout }).catch(() => null),
-        page.getByText('Галерея путешествия', { exact: true }).first().waitFor({ state: 'visible', timeout }).catch(() => null),
-        page.getByText('Главное изображение', { exact: true }).first().waitFor({ state: 'visible', timeout }).catch(() => null),
-      ]);
-    };
-
-    await waitForMediaStep(5000).catch(() => null);
-
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const isOnMedia =
-        (await page.getByText('Медиа путешествия', { exact: true }).first().isVisible().catch(() => false)) ||
-        (await page.getByText('Галерея путешествия', { exact: true }).first().isVisible().catch(() => false)) ||
-        (await page.getByText('Главное изображение', { exact: true }).first().isVisible().catch(() => false));
-      if (isOnMedia) break;
-
-      const milestone3 = page.getByRole('button', { name: /перейти к шагу 3:?\s*медиа/i }).first();
-      if (await milestone3.isVisible().catch(() => false)) {
-        await milestone3.click({ force: true }).catch(() => null);
-        await page.waitForLoadState('domcontentloaded').catch(() => null);
-        continue;
-      }
-
-      const step3TextButton = page.getByRole('button', { name: /^3$/ }).first();
-      if (await step3TextButton.isVisible().catch(() => false)) {
-        await step3TextButton.click({ force: true }).catch(() => null);
-        await page.waitForLoadState('domcontentloaded').catch(() => null);
-      }
-    }
-
-    await expect
-      .poll(
-        async () => {
-          if (await page.getByText('Медиа путешествия', { exact: true }).first().isVisible().catch(() => false)) return true;
-          if (await page.getByText('Галерея путешествия', { exact: true }).first().isVisible().catch(() => false)) return true;
-          return await page.getByText('Главное изображение', { exact: true }).first().isVisible().catch(() => false);
-        },
-        { timeout: 30_000 }
-      )
-      .toBeTruthy();
+    await ensureOnStep3();
 
     // Save once so gallery becomes available.
     const saveButton = page.getByRole('button', { name: 'Сохранить' }).first();
