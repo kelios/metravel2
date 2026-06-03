@@ -24,9 +24,13 @@ function simpleDecrypt(base64: string, key: string): string {
   return result;
 }
 
+function storageStatePath(): string {
+  return String(process.env.E2E_STORAGE_STATE_PATH || '').trim() || 'e2e/.auth/storageState.json';
+}
+
 function tokenFromStorageState(): string {
   try {
-    const raw = fs.readFileSync('e2e/.auth/storageState.json', 'utf8');
+    const raw = fs.readFileSync(storageStatePath(), 'utf8');
     const json = JSON.parse(raw) as any;
     const origins = Array.isArray(json?.origins) ? json.origins : [];
     for (const origin of origins) {
@@ -60,6 +64,24 @@ export function getApiBaseFromEnv(): string {
   return raw.replace(/\/+$/, '');
 }
 
+// Module-level login memoization (TD-028): within a single worker process we
+// must not re-issue logins for the shared test account. The backend rotates the
+// auth token on each login, which would invalidate the live UI session that
+// shares the same token from storageState. Cache the in-flight/resolved login
+// Promise per email; drop the cache on rejection so a failed login can retry.
+const loginCache = new Map<string, Promise<E2EApiContext>>();
+
+function loginMemoized(email: string, password: string): Promise<E2EApiContext> {
+  const cached = loginCache.get(email);
+  if (cached) return cached;
+  const pending = apiLogin(email, password).catch((err) => {
+    loginCache.delete(email);
+    throw err;
+  });
+  loginCache.set(email, pending);
+  return pending;
+}
+
 export async function apiLogin(email: string, password: string): Promise<E2EApiContext> {
   const apiBase = getApiBaseFromEnv();
 
@@ -89,31 +111,34 @@ export async function apiContextFromEnv(): Promise<E2EApiContext | null> {
     `http://127.0.0.1:${Number(process.env.E2E_WEB_PORT || '8085')}`;
   if (!apiBaseRaw) return null;
 
+  const apiBase = apiBaseRaw.replace(/\/+$/, '');
+
+  // (a) Explicit token override always wins.
   const tokenFromEnv = normalizeToken(process.env.E2E_API_TOKEN || '');
   if (tokenFromEnv) {
-    return { apiBase: apiBaseRaw.replace(/\/+$/, ''), token: tokenFromEnv, userId: null };
+    return { apiBase, token: tokenFromEnv, userId: null };
   }
 
+  // (b) Reuse the single session issued by global-setup (storageState token).
+  // This avoids re-logging-in the shared account, which would rotate/invalidate
+  // the token used by the live UI session (TD-028).
+  const tokenFromState = tokenFromStorageState();
+  if (tokenFromState) {
+    return { apiBase, token: tokenFromState, userId: null };
+  }
+
+  // (c) Only if no storageState token exists, fall back to a memoized login.
   const email = String(process.env.E2E_EMAIL || '').trim();
   const password = String(process.env.E2E_PASSWORD || '').trim();
   if (email && password) {
     try {
-      return await apiLogin(email, password);
+      return await loginMemoized(email, password);
     } catch {
-      const tokenFromState = tokenFromStorageState();
-      if (tokenFromState) {
-        return { apiBase: apiBaseRaw.replace(/\/+$/, ''), token: tokenFromState, userId: null };
-      }
       throw new Error('Unable to create E2E API context: API login failed and no token found in storageState');
     }
   }
 
-  // Fallback: use token from the Playwright storageState (global-setup writes it).
-  const tokenFromState = tokenFromStorageState();
-  if (tokenFromState) {
-    return { apiBase: apiBaseRaw.replace(/\/+$/, ''), token: tokenFromState, userId: null };
-  }
-
+  // (d) Nothing available.
   return null;
 }
 

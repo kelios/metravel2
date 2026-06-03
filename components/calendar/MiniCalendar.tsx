@@ -84,6 +84,7 @@ export default function MiniCalendar({
 
   const todayStr = useMemo(() =>
     `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`,
+  // computed once on mount: today's date is fixed for the component lifetime
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [])
 

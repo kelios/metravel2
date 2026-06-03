@@ -122,6 +122,7 @@ export const useMapLifecycle = ({
         if (container) clearContainer(container);
       } catch { /* noop */ }
     };
+  // mount-only: refs are read at cleanup time so no reactive deps are needed
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -138,6 +139,7 @@ export const useMapLifecycle = ({
     });
     ro.observe(el);
     return () => { ro.disconnect(); };
+  // mount-only: observer reads mapRef.current live so no reactive deps are needed
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

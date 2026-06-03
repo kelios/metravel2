@@ -57,9 +57,11 @@ export function useMapScreenController() {
   const params = useLocalSearchParams<{ categories?: string; radius?: string; lat?: string; lng?: string }>();
   const initialCategories = useMemo(
     () => (params.categories ? params.categories.split(',').map((s) => s.trim()).filter(Boolean) : undefined),
+    // mount-only: captures the initial URL param; later filter changes are owned by useMapFilters
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
+  // mount-only: initial radius from URL; subsequent radius is owned by useMapFilters
   const initialRadius = useMemo(() => params.radius ?? undefined, []);  // eslint-disable-line react-hooks/exhaustive-deps
   const urlCoordinates = useMemo(() => {
     const lat = parseUrlCoordinate(params.lat);
@@ -67,6 +69,7 @@ export function useMapScreenController() {
     if (lat == null || lng == null) return null;
     if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
     return { latitude: lat, longitude: lng };
+    // mount-only: initial coordinates from URL params, intentionally not reactive
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

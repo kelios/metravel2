@@ -251,6 +251,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
         return false
       }
     })
+    // filterCenter.lat/lng used instead of filterCenter object to avoid recompute on identity churn
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, radiusInMeters, travelData, filterCenter?.lat, filterCenter?.lng, coordinatesLatLng])
 

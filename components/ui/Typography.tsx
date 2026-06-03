@@ -75,6 +75,7 @@ export function Heading({ level = 2, color, align, style, ...props }: HeadingPro
       color: color ?? colors.text,
       ...(align ? { textAlign: align } : {}),
     };
+  // bp object is recreated each render; its primitive fields are listed instead to avoid churn
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config, bp.isMobile, bp.isTablet, bp.isDesktop, color, colors.text, align, isMobile]);
 

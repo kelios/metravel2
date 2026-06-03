@@ -135,6 +135,7 @@ export function useMapRouting(
     }
 
     onRouteChange?.(result);
+    // result is derived from the listed primitives; onRouteChange omitted intentionally as a stable parent callback
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasTwoPoints, result.loading, result.error, result.distance, result.duration, coordsKey]);
 

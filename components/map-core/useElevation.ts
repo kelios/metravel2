@@ -169,6 +169,7 @@ export const useElevation = (
         // noop
       }
     };
+    // coordsKey is a stable hash of coords; onResultRef is a ref so neither needs listing
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, transportMode, coordsKey]);
 };
