@@ -7,8 +7,7 @@ import type { TravelComment } from '../../types/comments';
 import { useAuth } from '../../context/AuthContext';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useLikeComment, useUnlikeComment, useDeleteComment } from '../../hooks/useComments';
-import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
-import { ru } from 'date-fns/locale/ru';
+import { formatRelativeTime } from '@/utils/relativeTime';
 
 interface CommentItemProps {
   comment: TravelComment;
@@ -70,13 +69,9 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
 
   const formattedDate = (() => {
     if (!comment.created_at) return '';
-    const date = new Date(comment.created_at);
-    if (Number.isNaN(date.getTime())) return '';
-    try {
-      return formatDistanceToNow(date, { addSuffix: true, locale: ru });
-    } catch {
-      return '';
-    }
+    const timestamp = new Date(comment.created_at).getTime();
+    if (Number.isNaN(timestamp)) return '';
+    return formatRelativeTime(timestamp);
   })();
 
   return (

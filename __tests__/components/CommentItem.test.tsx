@@ -103,6 +103,30 @@ describe('CommentItem', () => {
       render(<CommentItem comment={mockComment} />, { wrapper });
       expect(screen.getByText('T')).toBeTruthy();
     });
+
+    it('should render a relative date for a recent comment', () => {
+      const recent = {
+        ...mockComment,
+        created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+      };
+      render(<CommentItem comment={recent} />, { wrapper });
+      expect(screen.getByText('5 минут назад')).toBeTruthy();
+    });
+
+    it('should render "только что" for a sub-minute comment', () => {
+      const justNow = {
+        ...mockComment,
+        created_at: new Date(Date.now() - 10 * 1000).toISOString(),
+      };
+      render(<CommentItem comment={justNow} />, { wrapper });
+      expect(screen.getByText('только что')).toBeTruthy();
+    });
+
+    it('should render an empty date for an invalid timestamp', () => {
+      const invalid = { ...mockComment, created_at: 'not-a-date' };
+      render(<CommentItem comment={invalid} />, { wrapper });
+      expect(screen.queryByText(/назад|только что|вчера/)).toBeNull();
+    });
   });
 
   describe('Unauthenticated users', () => {
