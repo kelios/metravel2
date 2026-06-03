@@ -9,6 +9,7 @@ import { QueryClientContext } from '@tanstack/react-query'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { uploadImage, deleteImage, reorderGallery } from '@/api/misc'
 import { ApiError } from '@/api/client'
+import { devError } from '@/utils/logger'
 import { queryKeys } from '@/queryKeys'
 import { useThemedColors } from '@/hooks/useTheme'
 import { validateImageFile } from '@/utils/aiValidation'
@@ -154,9 +155,9 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
       .then(() => {
         void queryClient?.invalidateQueries?.({ queryKey: queryKeys.travel(numericTravelId) })
       })
-      .catch(() => {
+      .catch((error) => {
         // Порядок также сохраняется при сохранении путешествия — игнорируем сбой запроса.
-        void 0
+        devError('Gallery reorder request failed:', error)
       })
   }, [collection, idTravel, queryClient])
 
@@ -451,8 +452,8 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
           if (error instanceof ApiError && error.status === 404) {
             void 0
           } else {
-            // keep UI deletion
-            void 0
+            // keep UI deletion; порядок/ссылки также сохраняются при сохранении путешествия
+            devError('Gallery delete request failed:', error)
           }
         }
       }

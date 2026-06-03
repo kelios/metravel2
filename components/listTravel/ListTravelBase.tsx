@@ -40,7 +40,9 @@ import {
   buildCardsGridDynamicStyle,
   buildListTravelInitialFilter,
   buildListTravelFallbackSteps,
+  buildListTravelSearchPendingState,
   getListTravelActiveFiltersCount,
+  selectListTravelFallbackMatch,
   getListTravelViewportState,
   getSearchCardImageHeight,
   getSearchCardWidth,
@@ -562,19 +564,15 @@ function ListTravelBase() {
       [isMobileDevice, styles.cardsContainer, styles.cardsContainerMobile]
     );
     
-    const showInitialLoading = isInitialLoading || isUserIdLoading;
-    const showNextPageLoading = isNextPageLoading;
-    const normalizedSearchValue = search.trim();
-    const normalizedDebouncedSearchValue = debSearch.trim();
-    const isSearchInputPending = normalizedSearchValue !== normalizedDebouncedSearchValue;
-    const isSearchFetchPending =
-      !showInitialLoading &&
-      !showNextPageLoading &&
-      normalizedSearchValue.length > 0 &&
-      normalizedSearchValue === normalizedDebouncedSearchValue &&
-      isFetching;
-    const isSearchPending = !isUserIdLoading && (isSearchInputPending || isSearchFetchPending);
-    const showEmptyState = !isUserIdLoading && !isSearchPending && isEmpty;
+    const { isSearchPending, showEmptyState } = buildListTravelSearchPendingState({
+      isInitialLoading,
+      isUserIdLoading,
+      isNextPageLoading,
+      search,
+      debSearch,
+      isFetching,
+      isEmpty,
+    });
 
     useEffect(() => {
         if (Platform.OS !== 'web') return;
@@ -629,20 +627,17 @@ function ListTravelBase() {
       [options, filter, isTravelBy, facetCounts]
     );
 
-    const fallbackMatch = useMemo(() => {
-      if (!isEmpty) return null;
-
-      const candidates = [
-        { step: fallbackStepLight, query: fallbackQueryLight },
-        { step: fallbackStepMedium, query: fallbackQueryMedium },
-        { step: fallbackStepBroad, query: fallbackQueryBroad },
-        { step: fallbackStepSearchless, query: fallbackQuerySearchless },
-      ];
-
-      return (
-        candidates.find((candidate) => candidate.step && candidate.query.data.length > 0) ?? null
-      );
-    }, [
+    const fallbackMatch = useMemo(() => selectListTravelFallbackMatch({
+      isEmpty,
+      fallbackStepLight,
+      fallbackStepMedium,
+      fallbackStepBroad,
+      fallbackStepSearchless,
+      fallbackQueryLight,
+      fallbackQueryMedium,
+      fallbackQueryBroad,
+      fallbackQuerySearchless,
+    }), [
       isEmpty,
       fallbackQueryBroad,
       fallbackQueryLight,

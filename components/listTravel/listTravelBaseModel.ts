@@ -361,6 +361,78 @@ export function getListTravelViewportState(params: ResponsiveParams): ViewportSt
   }
 }
 
+export function buildListTravelSearchPendingState({
+  isInitialLoading,
+  isUserIdLoading,
+  isNextPageLoading,
+  search,
+  debSearch,
+  isFetching,
+  isEmpty,
+}: {
+  isInitialLoading: boolean
+  isUserIdLoading: boolean
+  isNextPageLoading: boolean
+  search: string
+  debSearch: string
+  isFetching: boolean
+  isEmpty: boolean
+}) {
+  const showInitialLoading = isInitialLoading || isUserIdLoading
+  const showNextPageLoading = isNextPageLoading
+  const normalizedSearchValue = search.trim()
+  const normalizedDebouncedSearchValue = debSearch.trim()
+  const isSearchInputPending = normalizedSearchValue !== normalizedDebouncedSearchValue
+  const isSearchFetchPending =
+    !showInitialLoading &&
+    !showNextPageLoading &&
+    normalizedSearchValue.length > 0 &&
+    normalizedSearchValue === normalizedDebouncedSearchValue &&
+    isFetching
+  const isSearchPending = !isUserIdLoading && (isSearchInputPending || isSearchFetchPending)
+  const showEmptyState = !isUserIdLoading && !isSearchPending && isEmpty
+
+  return { showInitialLoading, showNextPageLoading, isSearchPending, showEmptyState }
+}
+
+type ListTravelFallbackCandidate<S, Q extends { data: any[] }> = {
+  step: S
+  query: Q
+}
+
+export function selectListTravelFallbackMatch<S, Q extends { data: any[] }>({
+  isEmpty,
+  fallbackStepLight,
+  fallbackStepMedium,
+  fallbackStepBroad,
+  fallbackStepSearchless,
+  fallbackQueryLight,
+  fallbackQueryMedium,
+  fallbackQueryBroad,
+  fallbackQuerySearchless,
+}: {
+  isEmpty: boolean
+  fallbackStepLight: S
+  fallbackStepMedium: S
+  fallbackStepBroad: S
+  fallbackStepSearchless: S
+  fallbackQueryLight: Q
+  fallbackQueryMedium: Q
+  fallbackQueryBroad: Q
+  fallbackQuerySearchless: Q
+}): ListTravelFallbackCandidate<S, Q> | null {
+  if (!isEmpty) return null
+
+  const candidates: Array<ListTravelFallbackCandidate<S, Q>> = [
+    { step: fallbackStepLight, query: fallbackQueryLight },
+    { step: fallbackStepMedium, query: fallbackQueryMedium },
+    { step: fallbackStepBroad, query: fallbackQueryBroad },
+    { step: fallbackStepSearchless, query: fallbackQuerySearchless },
+  ]
+
+  return candidates.find((candidate) => candidate.step && candidate.query.data.length > 0) ?? null
+}
+
 export function getListTravelActiveFiltersCount(filter: Record<string, any>, debSearch: string) {
   let count = 0
   const filterKeys = [

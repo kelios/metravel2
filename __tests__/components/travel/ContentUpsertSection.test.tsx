@@ -1,6 +1,20 @@
-import React, { Suspense } from 'react'
-import { Text } from 'react-native'
+import React from 'react'
 import { render } from '@testing-library/react-native'
+
+// Make React.lazy render synchronously: instead of suspending on the dynamic
+// import, eagerly require the (mocked) module and render its default export.
+// Avoids RNTL's awkward unmount-on-suspend behaviour for the lazy ArticleEditor.
+jest.mock('react', () => {
+  const actual = jest.requireActual('react')
+  return {
+    ...actual,
+    lazy: () => (props: any) => {
+      const mod = require('@/components/article/ArticleEditor')
+      const Comp = mod && mod.default ? mod.default : mod
+      return actual.createElement(Comp, props)
+    },
+  }
+})
 
 import ContentUpsertSection from '@/components/travel/ContentUpsertSection'
 import type { TravelFormData } from '@/types/types'
@@ -108,12 +122,10 @@ const baseFormData: TravelFormData = {
 
 const renderSection = (override: Partial<TravelFormData> = {}) =>
   render(
-    <Suspense fallback={<Text>loading…</Text>}>
-      <ContentUpsertSection
-        formData={{ ...baseFormData, ...override }}
-        setFormData={jest.fn()}
-      />
-    </Suspense>,
+    <ContentUpsertSection
+      formData={{ ...baseFormData, ...override }}
+      setFormData={jest.fn()}
+    />,
   )
 
 describe('ContentUpsertSection — derived display logic', () => {
@@ -174,26 +186,22 @@ describe('ContentUpsertSection — derived display logic', () => {
 
   it('hides the progress block when showProgress is false', () => {
     const { queryByText } = render(
-      <Suspense fallback={<Text>loading…</Text>}>
-        <ContentUpsertSection
-          formData={baseFormData}
-          setFormData={jest.fn()}
-          showProgress={false}
-        />
-      </Suspense>,
+      <ContentUpsertSection
+        formData={baseFormData}
+        setFormData={jest.fn()}
+        showProgress={false}
+      />,
     )
     expect(queryByText('Прогресс заполнения')).toBeNull()
   })
 
   it('renders only the requested fields when visibleFields is constrained', () => {
     const { getByText, queryByText } = render(
-      <Suspense fallback={<Text>loading…</Text>}>
-        <ContentUpsertSection
-          formData={baseFormData}
-          setFormData={jest.fn()}
-          visibleFields={['name']}
-        />
-      </Suspense>,
+      <ContentUpsertSection
+        formData={baseFormData}
+        setFormData={jest.fn()}
+        visibleFields={['name']}
+      />,
     )
     expect(getByText('Название')).toBeTruthy()
     expect(queryByText('Плюсы')).toBeNull()
