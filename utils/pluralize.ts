@@ -45,3 +45,17 @@ export function getLocationLabel(count: number): string {
   if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return 'локации';
   return 'локаций';
 }
+
+/**
+ * Универсальное склонение: возвращает одну из трёх форм по числу.
+ * one — для 1, 21, 31… ; few — для 2-4, 22-24… ; many — для 0, 5-20, 11-14…
+ */
+export function pluralizeRu(count: number, one: string, few: string, many: string): string {
+  const abs = Math.abs(count);
+  const lastTwo = abs % 100;
+  const last = abs % 10;
+  if (lastTwo >= 11 && lastTwo <= 14) return many;
+  if (last === 1) return one;
+  if (last >= 2 && last <= 4) return few;
+  return many;
+}
