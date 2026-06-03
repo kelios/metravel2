@@ -69,6 +69,13 @@
       "runtimeArgs": [".claude/prod-server.js", "8091", "dist", "http://192.168.50.36"],
       "port": 8091,
       "autoPort": false
+    },
+    {
+      "name": "Dist Prod 8093",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [".claude/prod-server.js", "8093", "dist", "https://metravel.by"],
+      "port": 8093,
+      "autoPort": false
     }
   ]
 }

@@ -8,6 +8,7 @@ import { deduplicateTravels, normalizeApiResponse } from '@/components/listTrave
 import { buildFacetCounts, buildTravelFilterGroups } from '@/components/listTravel/utils/filterGroups';
 import { fetchAllCountries, fetchAllFiltersOptimized } from '@/api/miscOptimized';
 import { fetchTravelFacets } from '@/api/travelListQueries';
+import { queryKeys } from '@/api/queryKeys';
 import { queryConfigs } from '@/utils/reactQueryConfig';
 import type { Travel } from '@/types/types';
 import type { FilterOptions } from '@/components/listTravel/utils/listTravelTypes';
@@ -71,14 +72,14 @@ function pickDefaultCountryIds(countries: unknown): number[] {
 
 export function useRoulette() {
   const { data: rawOptions, isLoading: filtersLoading } = useQuery({
-    queryKey: ['filter-options'],
-    queryFn: ({ signal } = {} as any) => fetchAllFiltersOptimized({ signal }),
+    queryKey: queryKeys.filterOptions(),
+    queryFn: ({ signal }) => fetchAllFiltersOptimized({ signal }),
     ...queryConfigs.static,
   });
 
   const { data: allCountries } = useQuery({
-    queryKey: ['all-countries'],
-    queryFn: ({ signal } = {} as any) => fetchAllCountries({ signal }),
+    queryKey: queryKeys.allCountries(),
+    queryFn: ({ signal }) => fetchAllCountries({ signal }),
     ...queryConfigs.static,
   });
 

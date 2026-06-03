@@ -208,8 +208,8 @@ function ListTravelBase() {
 
     /* Filters options - оптимизированный запрос с кэшированием */
     const { data: rawOptions, isLoading: filterOptionsLoading } = useQuery({
-        queryKey: ["filter-options"],
-        queryFn: ({ signal } = {} as any) => fetchAllFiltersOptimized({ signal }),
+        queryKey: queryKeys.filterOptions(),
+        queryFn: ({ signal }) => fetchAllFiltersOptimized({ signal }),
         enabled: shouldFetchFilterOptions,
         staleTime: 10 * 60 * 1000,
     });
@@ -271,8 +271,8 @@ function ListTravelBase() {
     const {
       data: facetsData,
     } = useQuery({
-      queryKey: ['travel-facets', debSearch, queryParams],
-      queryFn: ({ signal } = {} as any) => fetchTravelFacets(debSearch, queryParams, { signal }),
+      queryKey: queryKeys.travelFacets(debSearch, queryParams),
+      queryFn: ({ signal }) => fetchTravelFacets(debSearch, queryParams, { signal }),
       enabled: shouldFetchFilterOptions && !!options,
       staleTime: 30 * 1000,
     });

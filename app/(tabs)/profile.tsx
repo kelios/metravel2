@@ -6,8 +6,6 @@ import {
   Platform,
   ScrollView,
   RefreshControl,
-  type ViewStyle,
-  type DimensionValue,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
@@ -15,24 +13,19 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
-import { ProfileHeader } from '@/components/profile/ProfileHeader';
-import { ProfileCompleteness } from '@/components/profile/ProfileCompleteness';
-import { ProfileTabs, type ProfileTabKey } from '@/components/profile/ProfileTabs';
-import { ProfileQuickActions } from '@/components/profile/ProfileQuickActions';
-import { PersonalStatusSummary } from '@/components/profile/PersonalStatusSummary';
+import { type ProfileTabKey } from '@/components/profile/ProfileTabs';
 import {
-  ProfileTravelEngagementSummary,
   type ProfileTravelEngagementMetricKey,
 } from '@/components/profile/ProfileTravelEngagementSection'
 import EmptyState from '@/components/ui/EmptyState';
 import { isTravelListItem, normalizeToTravel } from '@/components/profile/travelNormalize';
 import { useMyTravels } from '@/hooks/useMyTravels';
-import Button from '@/components/ui/Button';
 import type { Travel } from '@/types/types';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
-import { calculateColumns } from '@/components/listTravel/utils/listTravelHelpers';
-import { BREAKPOINTS } from '@/components/listTravel/utils/listTravelConstants';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
+import { useProfileGrid } from './useProfileGrid';
+import { ProfileHeaderSection } from './ProfileHeaderSection';
+import { ProfileTravelGrid } from './ProfileTravelGrid';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { buildLoginHref } from '@/utils/authNavigation';
@@ -72,52 +65,26 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { isPhone, isLargePhone, isTablet, isDesktop, isPortrait, width } = useResponsive();
 
-  const isDesktopWeb = Platform.OS === 'web' && isDesktop;
-
   const maxContentWidth = 1280;
 
-  const effectiveWidth = Math.max(0, width || 0);
-  const contentWidth = Platform.OS === 'web'
-    ? Math.min(effectiveWidth, maxContentWidth)
-    : effectiveWidth;
-
-  const isMobileDevice = isPhone || isLargePhone || (isTablet && isPortrait);
-  const isCardsSingleColumn = contentWidth < BREAKPOINTS.MOBILE;
-
-  const gapSize = useMemo(() => {
-    if (contentWidth < BREAKPOINTS.XS) return 6;
-    if (contentWidth < BREAKPOINTS.SM) return 8;
-    if (contentWidth < BREAKPOINTS.MOBILE) return 10;
-    if (contentWidth < BREAKPOINTS.TABLET) return 12;
-    if (contentWidth < BREAKPOINTS.DESKTOP) return 14;
-    return 16;
-  }, [contentWidth]);
-
-  const contentPadding = useMemo(() => {
-    if (contentWidth < BREAKPOINTS.XS) return 12;
-    if (contentWidth < BREAKPOINTS.SM) return 8;
-    if (contentWidth < BREAKPOINTS.MOBILE) return 10;
-    if (contentWidth < BREAKPOINTS.TABLET) return 12;
-    if (contentWidth < BREAKPOINTS.DESKTOP) return 12;
-    if (contentWidth < BREAKPOINTS.DESKTOP_LARGE) return 16;
-    return 20;
-  }, [contentWidth]);
-
-  const gridColumns = useMemo(() => {
-    if (isCardsSingleColumn) return 1;
-    const orientation = isPortrait ? 'portrait' : 'landscape';
-    if (isMobileDevice) return calculateColumns(contentWidth, orientation);
-    return calculateColumns(contentWidth, 'landscape');
-  }, [contentWidth, isCardsSingleColumn, isMobileDevice, isPortrait]);
-
-  const contentPaddingBottom = useMemo(() => {
-    if (Platform.OS === 'web') {
-      const dockVisible = isPhone || isLargePhone || isTablet;
-      return (dockVisible ? 56 : 0) + 32;
-    }
-
-    return Math.max(32, (insets.bottom || 0) + 16);
-  }, [insets.bottom, isLargePhone, isPhone, isTablet]);
+  const {
+    isDesktopWeb,
+    isMobileDevice,
+    isCardsSingleColumn,
+    gapSize,
+    contentPadding,
+    gridColumns,
+    contentPaddingBottom,
+  } = useProfileGrid({
+    width,
+    isPhone,
+    isLargePhone,
+    isTablet,
+    isDesktop,
+    isPortrait,
+    insets,
+    maxContentWidth,
+  });
 
   const { profile, setProfile, isLoading: profileLoading, fullName } = useUserProfile();
   const { pickAndUpload, isUploading: avatarUploading } = useAvatarUpload({
@@ -344,15 +311,6 @@ export default function ProfileScreen() {
     setActiveTab(tab);
   }, []);
 
-  const rows = useMemo(() => {
-    const cols = Math.max(1, (isCardsSingleColumn ? 1 : gridColumns) || 1);
-    const result: Travel[][] = [];
-    for (let i = 0; i < currentData.length; i += cols) {
-      result.push(currentData.slice(i, i + cols));
-    }
-    return result;
-  }, [currentData, gridColumns, isCardsSingleColumn]);
-
   const emptyStateProps = useMemo(() => {
     if (activeTravelMetric) {
       const copy = {
@@ -473,88 +431,36 @@ export default function ProfileScreen() {
 
   const showClearButton = (activeTab === 'favorites' || activeTab === 'history') && currentData.length > 0;
 
+  const handleOpenCalendar = useCallback(() => router.push('/calendar' as any), [router]);
+
   const Header = useMemo(
     () => (
-      <View style={[styles.headerComponent, styles.fullRow]}>
-        {profileLoading ? (
-          <View style={styles.skeletonWrap}>
-            {/* Cover skeleton — matches new gradient hero (148px) */}
-            <SkeletonLoader width="100%" height={148} borderRadius={0} />
-            {/* Avatar skeleton overlapping cover (124 + 4*2 ring) */}
-            <View style={styles.skeletonAvatarRow}>
-              <SkeletonLoader width={132} height={132} borderRadius={66} />
-            </View>
-            {/* Name + email centered */}
-            <View style={styles.skeletonCenterText}>
-              <SkeletonLoader width={200} height={26} borderRadius={4} />
-              <SkeletonLoader width={220} height={14} borderRadius={4} />
-            </View>
-            {/* Edit button */}
-            <View style={styles.skeletonCenterText}>
-              <SkeletonLoader width={150} height={40} borderRadius={20} />
-            </View>
-            {/* Engagement metrics card */}
-            <View style={styles.skeletonStatsRow}>
-              <SkeletonLoader width="100%" height={180} borderRadius={16} />
-            </View>
-            {/* Personal status card */}
-            <View style={styles.skeletonStatsRow}>
-              <SkeletonLoader width="100%" height={150} borderRadius={20} />
-            </View>
-          </View>
-        ) : (
-          <>
-            <ProfileHeader
-              user={userProp}
-              profile={profile}
-              onEdit={handleEdit}
-              onLogout={handleLogout}
-              onAvatarUpload={pickAndUpload}
-              avatarUploading={avatarUploading}
-            />
-            <ProfileTravelEngagementSummary
-              summary={authoredTravelEngagementSummary}
-              travelsCount={stats.travelsCount}
-              loadedTravelsCount={profileTravels.length}
-              isLoading={travelsLoading}
-              mode="author"
-              activeMetric={activeTravelMetric}
-              onMetricPress={handleTravelMetricPress}
-              summaryScope={authoredTravelEngagementScope}
-            />
-            <PersonalStatusSummary
-              visited={personalTravelStatusSummary.visited}
-              wishlist={personalTravelStatusSummary.wishlist}
-              planned={personalTravelStatusSummary.planned}
-              formatTripsCount={formatTripsCount}
-              onOpenCalendar={() => router.push('/calendar' as any)}
-            />
-            <ProfileCompleteness
-              user={userProp}
-              profile={profile}
-              travelsCount={stats.travelsCount}
-            />
-            <ProfileQuickActions onPress={handleQuickAction} />
-            <ProfileTabs
-              activeTab={activeTab}
-              onChangeTab={handleProfileTabChange}
-              counts={tabCounts}
-            />
-          </>
-        )}
-        {showClearButton ? (
-          <View style={styles.tabActions}>
-            <View style={styles.tabActionsRow}>
-              <Button
-                label="Очистить"
-                onPress={handleClearActiveTab}
-                variant="danger"
-                size="sm"
-              />
-            </View>
-          </View>
-        ) : null}
-      </View>
+      <ProfileHeaderSection
+        styles={styles}
+        profileLoading={profileLoading}
+        userProp={userProp}
+        profile={profile}
+        handleEdit={handleEdit}
+        handleLogout={handleLogout}
+        pickAndUpload={pickAndUpload}
+        avatarUploading={avatarUploading}
+        authoredTravelEngagementSummary={authoredTravelEngagementSummary}
+        travelsCount={stats.travelsCount}
+        loadedTravelsCount={profileTravels.length}
+        travelsLoading={travelsLoading}
+        activeTravelMetric={activeTravelMetric}
+        handleTravelMetricPress={handleTravelMetricPress}
+        authoredTravelEngagementScope={authoredTravelEngagementScope}
+        personalTravelStatusSummary={personalTravelStatusSummary}
+        formatTripsCount={formatTripsCount}
+        onOpenCalendar={handleOpenCalendar}
+        handleQuickAction={handleQuickAction}
+        activeTab={activeTab}
+        handleProfileTabChange={handleProfileTabChange}
+        tabCounts={tabCounts}
+        showClearButton={showClearButton}
+        handleClearActiveTab={handleClearActiveTab}
+      />
     ),
     [
       styles,
@@ -575,13 +481,11 @@ export default function ProfileScreen() {
       handleClearActiveTab,
       handleProfileTabChange,
       handleTravelMetricPress,
-      router,
+      handleOpenCalendar,
       travelsLoading,
       profileTravels.length,
       authoredTravelEngagementScope,
-      personalTravelStatusSummary.planned,
-      personalTravelStatusSummary.visited,
-      personalTravelStatusSummary.wishlist,
+      personalTravelStatusSummary,
       formatTripsCount,
     ]
   );
@@ -601,14 +505,6 @@ export default function ProfileScreen() {
   ), [isMobileDevice, userId, isSuperuser, activeTab, handleDeleteMyTravel, removingTravelId, width]);
 
   const scrollViewStyle = useMemo(() => ({ flex: 1 } as const), []);
-
-  const singleColStyle = useMemo(() => ({
-    width: '100%', maxWidth: '100%', minWidth: 0, flexBasis: '100%',
-  } as ViewStyle), []);
-
-  const placeholderBaseStyle = useMemo(() => ({
-    flexGrow: 0, flexShrink: 0, minWidth: 0, opacity: 0, pointerEvents: 'none' as const,
-  }), []);
 
   const ListSkeleton = useMemo(() => (
     <View style={styles.skeletonListWrap}>
@@ -675,70 +571,20 @@ export default function ProfileScreen() {
                 <EmptyState {...emptyStateProps} />
               </View>
             ) : (
-              rows.map((rowItems, rowIndex) => {
-                const cols = Math.max(1, (isCardsSingleColumn ? 1 : gridColumns) || 1);
-                const missingSlots = Math.max(0, cols - rowItems.length);
-                const calcWidth =
-                  cols > 1
-                    ? `calc((100% - ${(cols - 1) * gapSize}px) / ${cols})`
-                    : '100%';
-
-                return (
-                  <View key={`row-${rowIndex}`}>
-                    <View style={styles.cardsRow}>
-                      {rowItems.map((travel, itemIndex) => {
-                        const rowItemStyle: ViewStyle | undefined = isCardsSingleColumn
-                          ? singleColStyle
-                          : {
-                              flexGrow: 0,
-                              flexShrink: 0,
-                              flexBasis: calcWidth as DimensionValue,
-                              width: calcWidth as DimensionValue,
-                              maxWidth: calcWidth as DimensionValue,
-                              minWidth: 0,
-                            };
-
-                        return (
-                          <View
-                            key={String(travel.id)}
-                            style={rowItemStyle}
-                          >
-                            <RenderTravelItem
-                              item={travel}
-                              index={rowIndex * cols + itemIndex}
-                              isMobile={isMobileDevice}
-                              isFirst={rowIndex === 0 && itemIndex === 0}
-                              currentUserId={userId}
-                              isSuperuser={isSuperuser}
-                              onDeletePress={activeTab === 'travels' ? handleDeleteMyTravel : undefined}
-                              viewportWidth={width}
-                               isDeleting={removingTravelId === travel.id}
-                            />
-                          </View>
-                        );
-                      })}
-
-                      {!isCardsSingleColumn && missingSlots > 0
-                        ? Array.from({ length: missingSlots }).map((_, placeholderIndex) => {
-                            const placeholderStyle: ViewStyle = {
-                              ...placeholderBaseStyle,
-                              flexBasis: calcWidth as DimensionValue,
-                              width: calcWidth as DimensionValue,
-                              maxWidth: calcWidth as DimensionValue,
-                            };
-                            return (
-                              <View
-                                key={`placeholder-${rowIndex}-${placeholderIndex}`}
-                                style={placeholderStyle}
-                              />
-                            );
-                          })
-                        : null}
-                    </View>
-                    {rowIndex < rows.length - 1 ? <View style={styles.rowSeparator} /> : null}
-                  </View>
-                );
-              })
+              <ProfileTravelGrid
+                currentData={currentData}
+                styles={styles}
+                isCardsSingleColumn={isCardsSingleColumn}
+                gridColumns={gridColumns}
+                gapSize={gapSize}
+                isMobileDevice={isMobileDevice}
+                userId={userId}
+                isSuperuser={isSuperuser}
+                activeTab={activeTab}
+                handleDeleteMyTravel={handleDeleteMyTravel}
+                width={width}
+                removingTravelId={removingTravelId}
+              />
             )
           )}
           {activeTab === 'travels' && travelsLoadingMore ? (

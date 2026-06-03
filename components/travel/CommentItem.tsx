@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import type { TravelComment } from '../../types/comments';
 import { useAuth } from '../../context/AuthContext';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
@@ -22,6 +23,7 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [showActions, setShowActions] = useState(false);
+  const [confirmVisible, setConfirmVisible] = useState(false);
 
   const likeComment = useLikeComment();
   const unlikeComment = useUnlikeComment();
@@ -46,25 +48,13 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
     }
   };
 
-  const confirmDelete = (onConfirm: () => void) => {
-    if (Platform.OS === 'web') {
-      const ok = typeof window !== 'undefined' && typeof window.confirm === 'function'
-        ? window.confirm('Вы уверены, что хотите удалить комментарий?')
-        : true;
-      if (ok) onConfirm();
-      return;
-    }
-
-    Alert.alert('Удалить комментарий?', 'Вы уверены, что хотите удалить комментарий?', [
-      { text: 'Отмена', style: 'cancel' },
-      { text: 'Удалить', style: 'destructive', onPress: onConfirm },
-    ]);
+  const handleDelete = () => {
+    setConfirmVisible(true);
   };
 
-  const handleDelete = () => {
-    confirmDelete(() => {
-      deleteComment.mutate(comment.id);
-    });
+  const handleConfirmDelete = () => {
+    deleteComment.mutate(comment.id);
+    setConfirmVisible(false);
   };
 
   const formattedDate = (() => {
@@ -121,6 +111,7 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
               testID="comment-actions-edit"
             >
               <Feather name="edit-2" size={18} color={colors.primary} />
+              <Text style={styles.actionLabel}>Изменить</Text>
             </Pressable>
           )}
           {canDelete && (
@@ -142,9 +133,9 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
               ) : (
                 <>
                   <Feather name="trash-2" size={18} color={colors.danger} />
-                  {showsAdminDeleteLabel && (
-                    <Text style={styles.deleteAdminLabel}>Удалить (Админ)</Text>
-                  )}
+                  <Text style={showsAdminDeleteLabel ? styles.deleteAdminLabel : styles.deleteLabel}>
+                    {showsAdminDeleteLabel ? 'Удалить (Админ)' : 'Удалить'}
+                  </Text>
                 </>
               )}
             </Pressable>
@@ -174,7 +165,7 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
           </Pressable>
         )}
 
-        {!isAuthenticated && comment.likes_count > 0 && (
+        {!isAuthenticated && (
           <Pressable
             onPress={requireAuth}
             style={styles.footerButton}
@@ -182,7 +173,9 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
             accessibilityLabel="Войдите, чтобы оценить комментарий"
           >
             <Feather name="heart" size={16} color={colors.textMuted} />
-            <Text style={styles.footerText}>{comment.likes_count}</Text>
+            {comment.likes_count > 0 && (
+              <Text style={styles.footerText}>{comment.likes_count}</Text>
+            )}
           </Pressable>
         )}
 
@@ -200,6 +193,18 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
 
       </View>
       </View>
+
+      <ConfirmDialog
+        visible={confirmVisible}
+        onClose={() => setConfirmVisible(false)}
+        onConfirm={handleConfirmDelete}
+        title="Удалить комментарий?"
+        message="Вы уверены, что хотите удалить комментарий? Это действие необратимо."
+        confirmText="Удалить"
+        cancelText="Отмена"
+        confirmTestID="comment-delete-confirm"
+        cancelTestID="comment-delete-cancel"
+      />
     </View>
   );
 }
@@ -301,6 +306,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         transition: 'all 0.15s ease',
       } as any,
     }),
+  },
+  actionLabel: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: DESIGN_TOKENS.typography.weights.semibold,
+  },
+  deleteLabel: {
+    color: colors.danger,
+    fontSize: 13,
+    fontWeight: DESIGN_TOKENS.typography.weights.semibold,
   },
   deleteAdminLabel: {
     color: colors.danger,

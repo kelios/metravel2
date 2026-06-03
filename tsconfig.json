@@ -27,7 +27,7 @@
     ],
 
     // ✅ алиас @ на корень репо
-    "ignoreDeprecations": "6.0",
+    "ignoreDeprecations": "5.0",
     "baseUrl": ".",
     "paths": {
       "@/*": ["*"]

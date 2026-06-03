@@ -225,6 +225,13 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   );
 
   const resultsText = useMemo(() => getModernFiltersResultsText(resultsCount), [resultsCount]);
+  const orderedOptionsByGroup = useMemo(() => {
+    const map: Record<string, ReturnType<typeof getOrderedModernFilterOptions>> = {};
+    for (const group of groupsWithoutSort) {
+      map[group.key] = getOrderedModernFilterOptions(group, selectedFilters);
+    }
+    return map;
+  }, [groupsWithoutSort, selectedFilters]);
   const handleDismissFilters = useCallback(() => {
     blurActiveWebElement();
     onClose?.();
@@ -438,7 +445,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
             selectedCount,
             selectedNames,
             selectedSet,
-          } = getOrderedModernFilterOptions(group, selectedFilters);
+          } = orderedOptionsByGroup[group.key];
 
           return (
             <View

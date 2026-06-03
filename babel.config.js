@@ -22,7 +22,7 @@ module.exports = function (api) {
                 extensions: ['.ts', '.tsx', '.js', '.jsx', '.json']
             }],
             isProduction && ['transform-remove-console', {
-                exclude: ['error', 'warn', 'info']
+                exclude: ['error']
             }],
             'react-native-reanimated/plugin',
         ].filter(Boolean),

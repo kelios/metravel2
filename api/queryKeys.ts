@@ -8,6 +8,10 @@ export const queryKeys = {
   travelsOfMonth: () => ['travels-of-month'] as const,
   filters: () => ['filters'] as const,
   countries: () => ['countries'] as const,
+  filterOptions: () => ['filter-options'] as const,
+  allCountries: () => ['all-countries'] as const,
+  travelFacets: (search: string, params: Record<string, unknown>) =>
+    ['travel-facets', search, params] as const,
   articles: (params: { page: number; itemsPerPage: number; user_id?: string }) =>
     ['articles', params] as const,
   addressSearch: (query: string) => ['address-search', query] as const,

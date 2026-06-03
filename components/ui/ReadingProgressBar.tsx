@@ -65,10 +65,9 @@ function ReadingProgressBar({
         style={[
           styles.progressBar,
           {
-            width: progressAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: ['0%', '100%'],
-            }),
+            // Animate scaleX (compositor-only) instead of width% to avoid
+            // forcing layout/reflow on every scroll frame. progressAnim is 0..1.
+            transform: [{ scaleX: progressAnim }],
           },
         ]}
       />
@@ -94,10 +93,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   progressBar: {
     height: '100%',
+    width: '100%',
     backgroundColor: colors.primary,
+    transformOrigin: 'left center',
     ...Platform.select({
       web: {
-        transition: 'width 0.15s ease-out',
+        transition: 'transform 0.15s ease-out',
+        willChange: 'transform',
       },
     }),
   },
