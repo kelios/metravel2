@@ -86,7 +86,7 @@ export default function PublicUserProfileScreen() {
   const { isMobile, isDesktop, width } = useResponsive();
 
   const authorTravelsQuery = useQuery<{ data: Travel[]; total: number }>({
-    queryKey: ['user-travels', userId],
+    queryKey: queryKeys.userTravels(userId),
     queryFn: () => fetchTravels(0, AUTHOR_TRAVELS_LIMIT, '', { user_id: userId }),
     enabled: !!userId,
     staleTime: 5 * 60 * 1000,

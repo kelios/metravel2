@@ -34,6 +34,7 @@ export const queryKeys = {
   addressSearch: (query: string) => ['address-search', query] as const,
   mySubscriptions: () => ['my-subscriptions'] as const,
   mySubscribers: () => ['my-subscribers'] as const,
+  userTravels: (userId: string | number | null | undefined) => ['user-travels', userId] as const,
   userProfile: (id: string | number | null | undefined, suffix?: unknown) =>
     (suffix === undefined
       ? (['user-profile', id] as const)
