@@ -15,8 +15,6 @@ interface NetInfoModuleLike {
   addEventListener: (listener: (state: NetInfoStateLike) => void) => () => void;
 }
 
-let webReachabilityProbeId = 0;
-
 async function checkWebReachability(): Promise<boolean> {
   if (typeof window === 'undefined' || typeof fetch === 'undefined') {
     return false;
@@ -56,6 +54,11 @@ export function useNetworkStatus(): NetworkStatus {
   });
 
   useEffect(() => {
+    // Per-instance состояние: module-global probe-id шарился между инстансами хука
+    // и поздний инстанс инвалидировал legit-probe раннего. cancelled гасит async после unmount.
+    let cancelled = false;
+    let probeSeq = 0;
+
     // Для web используем нативный API
     if (Platform.OS === 'web') {
       if (typeof window === 'undefined' || !('navigator' in window)) {
@@ -63,6 +66,7 @@ export function useNetworkStatus(): NetworkStatus {
       }
 
       const applyStatus = (isOnline: boolean) => {
+        if (cancelled) return;
         setNetworkStatus({
           isConnected: isOnline,
           isInternetReachable: isOnline,
@@ -74,14 +78,14 @@ export function useNetworkStatus(): NetworkStatus {
         const isOnline = navigator.onLine;
 
         if (isOnline) {
-          webReachabilityProbeId += 1;
+          probeSeq += 1;
           applyStatus(true);
           return;
         }
 
-        const probeId = ++webReachabilityProbeId;
+        const probeId = ++probeSeq;
         void checkWebReachability().then((isReachable) => {
-          if (probeId !== webReachabilityProbeId) return;
+          if (cancelled || probeId !== probeSeq) return;
           applyStatus(isReachable);
         });
       };
@@ -94,6 +98,7 @@ export function useNetworkStatus(): NetworkStatus {
       window.addEventListener('offline', updateStatus);
 
       return () => {
+        cancelled = true;
         window.removeEventListener('online', updateStatus);
         window.removeEventListener('offline', updateStatus);
       };
@@ -105,6 +110,7 @@ export function useNetworkStatus(): NetworkStatus {
 
       // Устанавливаем начальное состояние
       NetInfo.fetch().then((state: NetInfoStateLike) => {
+        if (cancelled) return;
         setNetworkStatus({
           isConnected: state.isConnected ?? false,
           isInternetReachable: state.isInternetReachable ?? null,
@@ -114,6 +120,7 @@ export function useNetworkStatus(): NetworkStatus {
 
       // Подписываемся на изменения
       const unsubscribe = NetInfo.addEventListener((state: NetInfoStateLike) => {
+        if (cancelled) return;
         setNetworkStatus({
           isConnected: state.isConnected ?? false,
           isInternetReachable: state.isInternetReachable ?? null,
@@ -122,6 +129,7 @@ export function useNetworkStatus(): NetworkStatus {
       });
 
       return () => {
+        cancelled = true;
         unsubscribe();
       };
     } catch {

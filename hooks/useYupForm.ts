@@ -7,7 +7,7 @@
 // сама подтягивает yup динамически (см. utils/validation.ts).
 // Это удерживает yup вне initial-чанка __common.
 
-import { useState, useCallback, useRef, useMemo } from 'react'
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import type { AnyObject, ObjectSchema } from 'yup'
 
 type SchemaInput<T extends AnyObject> = ObjectSchema<T> | (() => Promise<ObjectSchema<T>>)
@@ -37,6 +37,15 @@ export function useYupForm<T extends AnyObject>({ initialValues, validationSchem
     const [isSubmitting, setIsSubmitting] = useState(false)
     const initialValuesRef = useRef(initialValues)
     const resolvedSchemaRef = useRef<ObjectSchema<T> | null>(null)
+    // Синхронный lock от двойного сабмита (isSubmitting-стейт ставится поздно, после await).
+    const submittingRef = useRef(false)
+    const mountedRef = useRef(true)
+    // Актуальный снимок values, чтобы submit/validate не работали с устаревшим замыканием.
+    const valuesRef = useRef(values)
+    useEffect(() => {
+        valuesRef.current = values
+    }, [values])
+    useEffect(() => () => { mountedRef.current = false }, [])
 
     const resolveSchema = useCallback(async (): Promise<ObjectSchema<T>> => {
         if (resolvedSchemaRef.current) return resolvedSchemaRef.current
@@ -65,11 +74,12 @@ export function useYupForm<T extends AnyObject>({ initialValues, validationSchem
         })
     }, [])
 
-    const validate = useCallback(async (): Promise<boolean> => {
+    const validate = useCallback(async (valuesToValidate?: T): Promise<boolean> => {
+        const target = valuesToValidate ?? valuesRef.current
         try {
             const schema = await resolveSchema()
-            await schema.validate(values, { abortEarly: false })
-            setErrors({})
+            await schema.validate(target, { abortEarly: false })
+            if (mountedRef.current) setErrors({})
             return true
         } catch (err: unknown) {
             const fieldErrors: Partial<Record<keyof T, string>> = {}
@@ -80,6 +90,7 @@ export function useYupForm<T extends AnyObject>({ initialValues, validationSchem
                     }
                 }
             }
+            if (!mountedRef.current) return false
             setErrors(fieldErrors)
             // Mark all fields as touched on submit attempt
             const allTouched: Partial<Record<keyof T, boolean>> = {}
@@ -89,7 +100,7 @@ export function useYupForm<T extends AnyObject>({ initialValues, validationSchem
             setTouched(allTouched)
             return false
         }
-    }, [resolveSchema, values])
+    }, [resolveSchema])
 
     const resetForm = useCallback(() => {
         setValues(initialValuesRef.current)
@@ -99,18 +110,28 @@ export function useYupForm<T extends AnyObject>({ initialValues, validationSchem
     }, [])
 
     const handleSubmit = useCallback(async () => {
-        if (isSubmitting) return
+        // Синхронный lock: блокирует двойной тап/Enter+клик до установки isSubmitting,
+        // которая иначе происходит уже после await validate().
+        if (submittingRef.current) return
+        submittingRef.current = true
 
-        const valid = await validate()
-        if (!valid) return
-
-        setIsSubmitting(true)
+        // Снимок актуальных values: и валидируем, и отправляем один и тот же набор,
+        // включая символы, набранные прямо перед сабмитом.
+        const snapshot = valuesRef.current
         try {
-            await onSubmit(values, { setSubmitting: setIsSubmitting, resetForm })
+            const valid = await validate(snapshot)
+            if (!valid) return
+
+            if (mountedRef.current) setIsSubmitting(true)
+            await onSubmit(snapshot, { setSubmitting: setIsSubmitting, resetForm })
         } catch {
-            setIsSubmitting(false)
+            // Ошибку показывает сам onSubmit-потребитель; флаг сбросим в finally.
+        } finally {
+            submittingRef.current = false
+            // На success-пути тоже сбрасываем (не залипаем, если onSubmit не вызвал setSubmitting).
+            if (mountedRef.current) setIsSubmitting(false)
         }
-    }, [isSubmitting, validate, values, onSubmit, resetForm])
+    }, [validate, onSubmit, resetForm])
 
     return useMemo(() => ({
         values,
