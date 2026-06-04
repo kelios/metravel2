@@ -11,12 +11,29 @@
 ## 🔍 Причины
 
 ### 1. **Permissions Policy Header**
-В `nginx.conf` установлено:
+В `nginx/nginx.conf` намеренно установлено:
 ```nginx
-Permissions-Policy "... unload=(self) ..."
+Permissions-Policy "... unload=() ..."
 ```
 
-Это означает что `unload` разрешён только для same-origin документов.
+`unload=()` полностью запрещает `unload`/`beforeunload` (даже same-origin). Это
+осознанное решение ради **bfcache** (back/forward cache): пока ни один
+unload-хендлер не зарегистрирован, страница кешируется и навигация назад/вперёд
+мгновенна. Цена — браузер логирует `[Violation] ... unload is not allowed`, когда
+*любой* скрипт пытается повесить unload.
+
+> ⚠️ Ранее в этой доке было указано `unload=(self)` — это неверно и расходилось с
+> фактической конфигурацией. Канонично именно `unload=()`.
+
+### 1a. **Сторонняя аналитика (основной источник violations в проде)**
+Yandex Metrika (`mc.yandex.ru/metrika/tag.js`, счётчик `62803912`) внутри вешает
+`beforeunload`/`unload` для отправки длительности сессии. При `unload=()` каждая
+такая попытка даёт `[Violation]` в консоли. Это **сторонний** код — мы не можем
+убрать его unload-хендлер, не отключив саму Metrika.
+
+**Решение (2026-06-05):** оставляем `unload=()`. Violations от Metrika —
+безвредные `[Violation]`-логи (не исключения, ничего не ломают), а bfcache важнее
+чистоты консоли. Наш собственный код unload не вешает (см. `beforeunloadGuard`).
 
 ### 2. **Iframe/Embed контексты**
 Если страница загружается в iframe, `unload` может быть заблокирован родительским документом.
@@ -226,7 +243,8 @@ it('should detect unload permission', () => {
 - ❌ Не используйте `unload` (deprecated)
 
 ### 3. **Production готовность**
-- Убедитесь что nginx.conf содержит `unload=(self)`
+- Убедитесь что nginx.conf содержит `unload=()` (полный запрет ради bfcache)
+- Residual `[Violation]` от сторонней аналитики (Yandex Metrika) — ожидаемы и безвредны
 - Проверьте CSP headers
 - Протестируйте в различных браузерах
 

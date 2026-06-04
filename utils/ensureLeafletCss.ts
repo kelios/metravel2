@@ -1,3 +1,20 @@
+// CDN fallbacks (pinned to the installed versions) for when the self-hosted
+// /vendor/*.css files are not served — e.g. prod returns the SPA 404 HTML for
+// /vendor/leaflet.css, so the browser refuses the stylesheet and Leaflet popups
+// render unstyled/mispositioned. CSP `style-src` already allows unpkg.com.
+const LEAFLET_CSS_CDN = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+const MARKERCLUSTER_CSS_CDN = 'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css'
+
+// Attaches an onerror handler that swaps the href to a CDN copy once, so a
+// missing/misserved self-hosted file degrades to the CDN instead of breaking the map.
+function withCdnFallback(link: HTMLLinkElement, cdnHref: string): void {
+  link.onerror = () => {
+    if (link.getAttribute('data-css-fallback') === 'cdn') return
+    link.setAttribute('data-css-fallback', 'cdn')
+    link.href = cdnHref
+  }
+}
+
 export function ensureLeafletCss(): boolean {
   if (typeof document === 'undefined') return false
 
@@ -15,6 +32,7 @@ export function ensureLeafletCss(): boolean {
     link.rel = 'stylesheet'
     link.href = '/vendor/leaflet.css'
     link.setAttribute('data-metravel-leaflet-css', 'self-hosted')
+    withCdnFallback(link, LEAFLET_CSS_CDN)
     document.head.appendChild(link)
 
     // Inject MarkerCluster CSS
@@ -39,6 +57,7 @@ function ensureMarkerClusterCss(): void {
     link.id = id
     link.rel = 'stylesheet'
     link.href = '/vendor/MarkerCluster.css'
+    withCdnFallback(link, MARKERCLUSTER_CSS_CDN)
     document.head.appendChild(link)
   }
 
