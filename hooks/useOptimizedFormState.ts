@@ -49,6 +49,8 @@ export function useOptimizedFormState<T extends object>(
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
+  const isSavingRef = useRef(false);
+  const initialDataRef = useRef<T>(initialData);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -59,24 +61,23 @@ export function useOptimizedFormState<T extends object>(
     };
   }, []);
 
-  // Validation functions are declared before usage to avoid TDZ issues
-  const validateField = useCallback((field: string) => {
-    // This would be injected with validation rules
-    // For now, just clear errors for the field
-    setState(prevState => ({
-      ...prevState,
-      errors: { ...prevState.errors, [field]: '' },
+  // Re-sync baseline when the caller provides a new initialData identity
+  useEffect(() => {
+    if (initialData === initialDataRef.current) return;
+    initialDataRef.current = initialData;
+    originalDataRef.current = initialData;
+    setState(prev => ({
+      ...prev,
+      isDirty: !isEqual(prev.data, initialData),
     }));
-  }, []);
+  }, [initialData]);
 
-  const validateAll = useCallback(() => {
-    // Validate all fields and update errors
-    setState(prevState => ({
-      ...prevState,
-      errors: {}, // Reset errors
-      isValid: true, // Would be calculated based on validation
-    }));
-  }, []);
+  // Validation functions are declared before usage to avoid TDZ issues.
+  // Real validation is provided by useOptimizedValidation; these are no-ops
+  // so they never clobber errors set via setFieldError.
+  const validateField = useCallback((_field: string) => {}, []);
+
+  const validateAll = useCallback(() => {}, []);
 
   // Optimized field update with minimal re-renders
   const updateField = useCallback(<K extends keyof T>(
@@ -135,15 +136,16 @@ export function useOptimizedFormState<T extends object>(
       clearTimeout(timeoutRef.current);
     }
 
-    onStart?.();
-
-    timeoutRef.current = setTimeout(async () => {
+    const id = setTimeout(async () => {
       if (!mountedRef.current) return;
+
+      onStart?.();
+      isSavingRef.current = true;
 
       try {
         setState(prev => ({ ...prev, isSubmitting: true }));
         const savedData = await onSave(state.data);
-        
+
         if (mountedRef.current) {
           originalDataRef.current = savedData;
           setState(prev => ({
@@ -158,14 +160,15 @@ export function useOptimizedFormState<T extends object>(
           setState(prev => ({ ...prev, isSubmitting: false }));
           onError?.(error);
         }
+      } finally {
+        isSavingRef.current = false;
+        timeoutRef.current = null;
       }
     }, debounce);
 
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
+    timeoutRef.current = id;
+
+    return () => clearTimeout(id);
   }, [state.data, state.isDirty, debounce, onSave, onSuccess, onError, onStart]);
 
   // Manual save
@@ -173,6 +176,17 @@ export function useOptimizedFormState<T extends object>(
     if (!onSave) {
       throw new Error('No onSave function provided');
     }
+
+    // Cancel any scheduled autosave so we don't double-save.
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    if (isSavingRef.current) {
+      throw new Error('Save already in flight');
+    }
+    isSavingRef.current = true;
 
     setState(prev => ({ ...prev, isSubmitting: true }));
 
@@ -196,6 +210,8 @@ export function useOptimizedFormState<T extends object>(
         onError?.(error);
       }
       throw error;
+    } finally {
+      isSavingRef.current = false;
     }
   }, [onSave, state.data, onSuccess, onError]);
 

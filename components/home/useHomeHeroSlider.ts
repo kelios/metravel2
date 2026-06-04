@@ -54,21 +54,40 @@ export const shouldDisableHomeHeroSliderBlur = (
   maxTouchPoints = 0,
 ): boolean => isIOSSafariUserAgent(userAgent, maxTouchPoints)
 
-const preloadWebImage = async (uri: string): Promise<boolean> => {
-  if (!uri || Platform.OS !== 'web') return false
+type PreloadWebImageHandle = {
+  promise: Promise<boolean>
+  cancel: () => void
+}
+
+const preloadWebImage = (uri: string): PreloadWebImageHandle => {
+  if (!uri || Platform.OS !== 'web') {
+    return { promise: Promise.resolve(false), cancel: () => {} }
+  }
   if (typeof window === 'undefined' || typeof window.Image === 'undefined') {
-    return false
+    return { promise: Promise.resolve(false), cancel: () => {} }
   }
 
-  return new Promise((resolve) => {
-    const image = new window.Image()
-    let settled = false
+  const image = new window.Image()
+  let settled = false
+  let timeoutId: ReturnType<typeof setTimeout> | null = null
+  let resolvePromise: (result: boolean) => void = () => {}
+
+  const cleanup = () => {
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId)
+      timeoutId = null
+    }
+    image.onload = null
+    image.onerror = null
+  }
+
+  const promise = new Promise<boolean>((resolve) => {
+    resolvePromise = resolve
 
     const settle = (result: boolean) => {
       if (settled) return
       settled = true
-      image.onload = null
-      image.onerror = null
+      cleanup()
       resolve(result)
     }
 
@@ -82,8 +101,18 @@ const preloadWebImage = async (uri: string): Promise<boolean> => {
       return
     }
 
-    setTimeout(() => settle(false), 1000)
+    timeoutId = setTimeout(() => settle(false), 1000)
   })
+
+  const cancel = () => {
+    if (settled) return
+    settled = true
+    cleanup()
+    image.src = ''
+    resolvePromise(false)
+  }
+
+  return { promise, cancel }
 }
 
 type UseHomeHeroSliderParams<TSlide> = {
@@ -113,6 +142,9 @@ export const useHomeHeroSlider = <TSlide>({
   const previousVisibleSlideRef = useRef(0)
   const totalSlides = slides.length
 
+  const loadedSlidesRef = useRef(loadedSlides)
+  loadedSlidesRef.current = loadedSlides
+
   const markSlideAsLoaded = useCallback((slideIndex: number) => {
     setLoadedSlides((prev) => {
       if (prev.has(slideIndex)) return prev
@@ -129,10 +161,13 @@ export const useHomeHeroSlider = <TSlide>({
       return
     }
 
+    if (totalSlides === 0) return
+
     let cancelled = false
+    const preloadHandles: PreloadWebImageHandle[] = []
 
     const preloadSlide = async (slideIndex: number) => {
-      if (loadedSlides.has(slideIndex)) return
+      if (loadedSlidesRef.current.has(slideIndex)) return
 
       const remoteUri = buildHomeHeroSlidePreloadUrl(
         getSlideSource(slides[slideIndex]),
@@ -145,7 +180,9 @@ export const useHomeHeroSlider = <TSlide>({
         return
       }
 
-      const preloadSucceeded = await preloadWebImage(remoteUri)
+      const handle = preloadWebImage(remoteUri)
+      preloadHandles.push(handle)
+      const preloadSucceeded = await handle.promise
       if (!cancelled && preloadSucceeded) {
         markSlideAsLoaded(slideIndex)
       }
@@ -157,17 +194,27 @@ export const useHomeHeroSlider = <TSlide>({
 
     return () => {
       cancelled = true
+      preloadHandles.forEach((handle) => handle.cancel())
     }
   }, [
     activeSlide,
     getSlideSource,
-    loadedSlides,
     markSlideAsLoaded,
     sliderHeight,
     sliderMediaWidth,
     slides,
     totalSlides,
   ])
+
+  useEffect(() => {
+    if (totalSlides === 0) return
+
+    if (activeSlide >= totalSlides) setActiveSlide(0)
+    if (visibleSlide >= totalSlides) setVisibleSlide(0)
+    setFadingSlide((current) =>
+      current !== null && current >= totalSlides ? null : current,
+    )
+  }, [activeSlide, totalSlides, visibleSlide])
 
   useEffect(() => {
     if (loadedSlides.has(activeSlide)) {
@@ -199,7 +246,7 @@ export const useHomeHeroSlider = <TSlide>({
   }, [visibleSlide])
 
   useEffect(() => {
-    if (!showSideSlider || prefersReducedMotion) return
+    if (!showSideSlider || prefersReducedMotion || totalSlides === 0) return
 
     const interval = setInterval(() => {
       setActiveSlide((prev) => (prev + 1) % totalSlides)
@@ -241,11 +288,15 @@ export const useHomeHeroSlider = <TSlide>({
   }, [prefersReducedMotion, showSideSlider, waveBreath])
 
   const handlePrevSlide = useCallback(() => {
-    setActiveSlide((prev) => (prev - 1 + totalSlides) % totalSlides)
+    setActiveSlide((prev) =>
+      totalSlides === 0 ? 0 : (prev - 1 + totalSlides) % totalSlides,
+    )
   }, [totalSlides])
 
   const handleNextSlide = useCallback(() => {
-    setActiveSlide((prev) => (prev + 1) % totalSlides)
+    setActiveSlide((prev) =>
+      totalSlides === 0 ? 0 : (prev + 1) % totalSlides,
+    )
   }, [totalSlides])
 
   const renderedSlideIndices = useMemo(() => {

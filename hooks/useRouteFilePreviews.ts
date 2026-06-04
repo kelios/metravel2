@@ -148,6 +148,7 @@ export function useRouteFilePreviews({
               .toLowerCase()
               .replace(/^\./, '')
             const downloaded = await downloadTravelRouteFileBlob(travelId, file.id)
+            if (!active) return [] as RoutePreviewItem[]
             const previews = parseRouteFilePreviews(downloaded.text, ext)
             const validPreviews = previews.filter((preview) => (preview?.linePoints?.length ?? 0) >= 2)
             if (validPreviews.length === 0) return [] as RoutePreviewItem[]

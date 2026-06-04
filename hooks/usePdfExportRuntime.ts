@@ -35,9 +35,12 @@ const DEFAULT_MAX_RETRIES = 2;
 
 async function getBookHtmlExportService(): Promise<BookHtmlExportService> {
   if (!bookHtmlExportServicePromise) {
-    bookHtmlExportServicePromise = import('@/services/book/BookHtmlExportService').then(
-      (mod) => new mod.BookHtmlExportService(),
-    );
+    bookHtmlExportServicePromise = import('@/services/book/BookHtmlExportService')
+      .then((mod) => new mod.BookHtmlExportService())
+      .catch((e) => {
+        bookHtmlExportServicePromise = null;
+        throw e;
+      });
   }
 
   return bookHtmlExportServicePromise;
@@ -45,7 +48,10 @@ async function getBookHtmlExportService(): Promise<BookHtmlExportService> {
 
 async function getBookPreviewModule() {
   if (!bookPreviewWindowModulePromise) {
-    bookPreviewWindowModulePromise = import('@/utils/openBookPreviewWindow');
+    bookPreviewWindowModulePromise = import('@/utils/openBookPreviewWindow').catch((e) => {
+      bookPreviewWindowModulePromise = null;
+      throw e;
+    });
   }
   return bookPreviewWindowModulePromise;
 }
@@ -115,14 +121,14 @@ async function loadDetailedTravels(
     const batchResults = await Promise.all(
       batch.map(async (travel) => {
       const cacheKey = travel.id ?? travel.slug ?? travel.url;
-      const cachedTravel = cacheKey ? travelCacheRef.current[cacheKey] : undefined;
+      const cachedTravel = cacheKey != null ? travelCacheRef.current[cacheKey] : undefined;
 
       if (cachedTravel && !needsDetails(cachedTravel, settings)) {
         return mergeTravelData(travel, cachedTravel);
       }
 
       if (!needsDetails(travel, settings)) {
-        if (cacheKey) {
+        if (cacheKey != null) {
           travelCacheRef.current[cacheKey] = travel;
         }
         return travel;
@@ -142,7 +148,7 @@ async function loadDetailedTravels(
           }
 
           const merged = mergeTravelData(travel, detailed);
-          if (cacheKey) {
+          if (cacheKey != null) {
             travelCacheRef.current[cacheKey] = merged;
           }
           return merged;
@@ -189,19 +195,19 @@ export async function runPdfExport({
     return;
   }
 
-  const htmlService = await getBookHtmlExportService();
-
-  if (!isMountedRef.current) {
-    Alert.alert('Ошибка', 'Предпросмотр книги недоступен');
-    return;
-  }
-
   setIsGenerating(true);
   setError(null);
 
   const startTime = Date.now();
 
   try {
+    const htmlService = await getBookHtmlExportService();
+
+    if (!isMountedRef.current) {
+      Alert.alert('Ошибка', 'Предпросмотр книги недоступен');
+      return;
+    }
+
     updateProgress(ExportStage.VALIDATING, 2, 'Проверка данных...', ['Проверка путешествий']);
 
     const travelsForExport = await loadDetailedTravels(selected, settings, config, travelCacheRef, updateProgress);

@@ -158,18 +158,21 @@ export const useElevation = (
       try {
         const url = `https://api.open-meteo.com/v1/elevation?latitude=${latitudes}&longitude=${longitudes}`;
         const res = await fetch(url, { signal: abortController.signal });
+        if (cancelled) return;
         if (res.status === 429) {
           elevationNextAllowedAtMs = Date.now() + ELEVATION_429_COOLDOWN_MS;
           return;
         }
         if (!res.ok) return;
         const data = await res.json().catch(() => null);
+        if (cancelled) return;
         const elevations = (data as any)?.elevation;
         if (!Array.isArray(elevations) || elevations.length < 2) return;
-        if (cancelled) return;
 
         const stats = computeElevationGainLoss(elevations.map((x: any) => Number(x)));
+        // Cache even if stale; but only emit to the (possibly unmounted) callback when current.
         elevationCacheSet(cacheKey, stats);
+        if (cancelled) return;
         try {
           onResultRef.current(stats.gain, stats.loss);
         } catch {

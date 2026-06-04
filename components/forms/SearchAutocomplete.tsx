@@ -201,10 +201,10 @@ function SearchAutocomplete({
 
   // Прокрутка к выбранному элементу
   useEffect(() => {
-    if (selectedIndex >= 0 && listRef.current) {
+    if (selectedIndex >= 0 && selectedIndex < suggestions.length && listRef.current) {
       listRef.current.scrollToIndex({ index: selectedIndex, animated: true });
     }
-  }, [selectedIndex]);
+  }, [selectedIndex, suggestions.length]);
 
   if (suggestions.length === 0) {
     return null;
@@ -265,7 +265,7 @@ function SearchAutocomplete({
           ref={listRef}
           data={suggestions}
           renderItem={renderItem}
-          keyExtractor={(item: Suggestion, index: number) => `${item.text}-${index}`}
+          keyExtractor={(item: Suggestion) => `${item.type}-${item.text}`}
           {...({ estimatedItemSize: 44 } as any)}
           keyboardShouldPersistTaps="handled"
           style={styles.list}

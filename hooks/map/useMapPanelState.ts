@@ -162,6 +162,9 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
 
   useEffect(() => {
     if (isMobile) return;
+    // Skip clamping/persisting while the panel is collapsed — its width isn't
+    // user-visible or adjustable, so don't overwrite the stored value.
+    if (isDesktopCollapsed) return;
     if (Math.abs(desktopPanelWidth - effectiveDesktopPanelWidth) < 1) return;
     setDesktopPanelWidth(effectiveDesktopPanelWidth);
     schedulePersistPanelWidth(effectiveDesktopPanelWidth);
@@ -170,6 +173,7 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
     desktopPanelWidth,
     dispatchMapResize,
     effectiveDesktopPanelWidth,
+    isDesktopCollapsed,
     isMobile,
     schedulePersistPanelWidth,
   ]);
@@ -192,28 +196,31 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
     if (isFocused) return;
 
-    const active = document.activeElement as HTMLElement | null;
-    if (active && typeof active.blur === 'function') {
-      active.blur();
-    }
+    const id = requestAnimationFrame(() => {
+      const active = document.activeElement as HTMLElement | null;
+      if (active && active !== document.body && typeof active.blur === 'function') {
+        active.blur();
+      }
+    });
+
+    return () => cancelAnimationFrame(id);
   }, [isFocused]);
 
   // Блокировка скролла body на mobile при открытой панели
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
-    if (!isMobile) return;
+    if (!isMobile || !isPanelVisible) return;
 
     const body = document.body;
     const prevOverflow = body.style.overflow;
-
-    if (isPanelVisible) {
-      body.style.overflow = 'hidden';
-    } else {
-      body.style.overflow = prevOverflow || '';
-    }
+    body.style.overflow = 'hidden';
 
     return () => {
-      body.style.overflow = prevOverflow || '';
+      // Restore only if our lock is still in effect — avoids clobbering an
+      // overflow:hidden set by a concurrent modal while the panel was open.
+      if (body.style.overflow === 'hidden') {
+        body.style.overflow = prevOverflow || '';
+      }
     };
   }, [isMobile, isPanelVisible]);
 

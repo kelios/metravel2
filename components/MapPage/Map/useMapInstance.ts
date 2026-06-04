@@ -91,6 +91,23 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
         } catch {
           // noop
         }
+
+        try {
+          (overpassControllerToStop as any)?.stop?.();
+          (poiControllerToStop as any)?.stop?.();
+          (routesControllerToStop as any)?.stop?.();
+          (wfsControllerToStop as any)?.stop?.();
+        } catch {
+          // noop
+        }
+
+        // Drop ad-hoc controller references so we don't retain stopped
+        // controllers across re-initializations.
+        (leafletControlRef as any).overpassController = undefined;
+        (leafletControlRef as any).poiController = undefined;
+        (leafletControlRef as any).routesController = undefined;
+        (leafletControlRef as any).wfsController = undefined;
+        (leafletControlRef as any).overlayControllers = undefined;
       } catch {
         // noop
       }

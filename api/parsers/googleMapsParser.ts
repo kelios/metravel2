@@ -200,6 +200,7 @@ export class GoogleMapsParser {
 
     const [lng, lat] = first.trim().split(',').map(Number);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
 
     const name = String(input.name ?? '').trim() || 'Без названия';
     const description = (input.description ?? undefined) ? String(input.description).trim() : undefined;

@@ -19,6 +19,16 @@ const normalizeAvatar = (raw: unknown): string | null => {
     return str;
 };
 
+// Roll back credentials persisted during an in-flight login that lost the
+// epoch race against a logout. Prevents stale tokens lingering on disk and
+// silently re-authenticating on next launch.
+const rollbackPersistedCredentials = async (): Promise<void> => {
+    await Promise.all([
+        removeSecureItems(['userToken', 'refreshToken']),
+        removeStorageBatch(['userName', 'isSuperuser', 'userId', 'userAvatar']),
+    ]).catch(() => undefined);
+};
+
 export interface AuthState {
     isAuthenticated: boolean;
     username: string;
@@ -182,7 +192,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 }
             }
 
-            if (epochAtStart !== authEpoch) return false;
+            if (epochAtStart !== authEpoch) {
+                await rollbackPersistedCredentials();
+                return false;
+            }
 
             const normalizedFirstName = String(profile?.first_name ?? '').trim();
             const displayName = normalizedFirstName || userData.name?.trim() || userData.email;
@@ -202,7 +215,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 await removeStorageBatch(['userAvatar']);
             }
 
-            if (epochAtStart !== authEpoch) return false;
+            if (epochAtStart !== authEpoch) {
+                await rollbackPersistedCredentials();
+                return false;
+            }
 
             set((s) => ({
                 isAuthenticated: true,
@@ -247,7 +263,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 }
             }
 
-            if (epochAtStart !== authEpoch) return false;
+            if (epochAtStart !== authEpoch) {
+                await rollbackPersistedCredentials();
+                return false;
+            }
 
             const normalizedFirstName = String(profile?.first_name ?? '').trim();
             const displayName = normalizedFirstName || userData.name?.trim() || userData.email;
@@ -267,7 +286,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 await removeStorageBatch(['userAvatar']);
             }
 
-            if (epochAtStart !== authEpoch) return false;
+            if (epochAtStart !== authEpoch) {
+                await rollbackPersistedCredentials();
+                return false;
+            }
 
             set((s) => ({
                 isAuthenticated: true,

@@ -67,19 +67,24 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
   });
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const checkedDraftKeyRef = useRef<string | null>(null);
+  const comparedDraftKeyRef = useRef<string | null>(null);
+  const prevDraftKeyRef = useRef<string | null>(null);
   const pendingDraftDataRef = useRef<TravelFormData | null>(null);
   const draftKey = `${DRAFT_STORAGE_KEY}_${isNew ? 'new' : travelId}`;
 
   // Check for existing draft on mount
   useEffect(() => {
     if (!enabled) return;
-    if (checkedDraftKeyRef.current === draftKey) return;
-    checkedDraftKeyRef.current = draftKey;
+    // Once we've performed the identity comparison against non-empty currentData
+    // for this key, there's nothing left to re-check.
+    if (comparedDraftKeyRef.current === draftKey) return;
+
+    let cancelled = false;
 
     const checkForDraft = async () => {
       try {
         const storedDraft = await getStorageItem(draftKey);
+        if (cancelled) return;
         if (storedDraft) {
           const parsed = JSON.parse(storedDraft);
           if (parsed && parsed.data && parsed.timestamp) {
@@ -89,17 +94,20 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
             if (age < maxAge) {
               // If the stored draft is identical to current data, it isn't a recoverable draft.
               // This can happen when we saved drafts during initial load in older versions.
-              if (
-                currentData &&
-                isEqual(stripUndefinedDeep(parsed.data), stripUndefinedDeep(currentData))
-              ) {
-                await removeStorageItem(draftKey);
-                setState({
-                  hasPendingDraft: false,
-                  draftTimestamp: null,
-                  isRecovering: false,
-                });
-                return;
+              // currentData arrives asynchronously (React Query), so only mark the comparison
+              // as done once we actually have it.
+              if (currentData) {
+                comparedDraftKeyRef.current = draftKey;
+                if (isEqual(stripUndefinedDeep(parsed.data), stripUndefinedDeep(currentData))) {
+                  await removeStorageItem(draftKey);
+                  if (cancelled) return;
+                  setState({
+                    hasPendingDraft: false,
+                    draftTimestamp: null,
+                    isRecovering: false,
+                  });
+                  return;
+                }
               }
               setState({
                 hasPendingDraft: true,
@@ -113,11 +121,15 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
           }
         }
       } catch (error) {
-        console.warn('Failed to check for draft:', error);
+        if (!cancelled) console.warn('Failed to check for draft:', error);
       }
     };
 
     checkForDraft();
+
+    return () => {
+      cancelled = true;
+    };
   }, [draftKey, enabled, currentData]);
 
   // Save draft with debouncing
@@ -186,7 +198,7 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
       const storedDraft = await getStorageItem(draftKey);
       if (storedDraft) {
         const parsed = JSON.parse(storedDraft);
-        if (parsed && parsed.data) {
+        if (parsed && parsed.data && parsed.timestamp) {
           setState({
             hasPendingDraft: false,
             draftTimestamp: null,
@@ -233,6 +245,20 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
     } catch (error) {
       console.warn('Failed to clear draft:', error);
     }
+  }, [draftKey]);
+
+  // When the draft key changes (e.g. 'new' -> travelId after first save),
+  // flush the pending debounce timer for the old key so it doesn't write an
+  // orphaned draft under the previous '..._new' key.
+  useEffect(() => {
+    if (prevDraftKeyRef.current !== null && prevDraftKeyRef.current !== draftKey) {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+      pendingDraftDataRef.current = null;
+    }
+    prevDraftKeyRef.current = draftKey;
   }, [draftKey]);
 
   // Cleanup on unmount

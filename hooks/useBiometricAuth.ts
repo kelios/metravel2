@@ -3,7 +3,7 @@
 // Provides fingerprint/face unlock after first successful login.
 // On web — all methods are no-op.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { getSecureItem, setSecureItem, removeSecureItem } from '@/utils/secureStorage';
 
@@ -69,6 +69,16 @@ export function useBiometricAuth(): UseBiometricAuthReturn {
     supportedTypes: [],
   });
 
+  const mountedRef = useRef(true);
+  const authInFlightRef = useRef(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   // Initial check — hardware + enrollment + saved preference
   useEffect(() => {
     if (Platform.OS === 'web' || !LocalAuth) {
@@ -109,6 +119,8 @@ export function useBiometricAuth(): UseBiometricAuthReturn {
 
   const enable = useCallback(async () => {
     if (Platform.OS === 'web' || !LocalAuth) return;
+    if (authInFlightRef.current) return;
+    authInFlightRef.current = true;
 
     try {
       // Verify biometric before enabling (ensure user can actually use it)
@@ -120,10 +132,14 @@ export function useBiometricAuth(): UseBiometricAuthReturn {
 
       if (result.success) {
         await setSecureItem(BIOMETRIC_ENABLED_KEY, 'true');
-        setState((prev) => ({ ...prev, isEnabled: true }));
+        if (mountedRef.current) {
+          setState((prev) => ({ ...prev, isEnabled: true }));
+        }
       }
     } catch {
       // Authentication failed or cancelled
+    } finally {
+      authInFlightRef.current = false;
     }
   }, []);
 
@@ -132,7 +148,9 @@ export function useBiometricAuth(): UseBiometricAuthReturn {
 
     try {
       await removeSecureItem(BIOMETRIC_ENABLED_KEY);
-      setState((prev) => ({ ...prev, isEnabled: false }));
+      if (mountedRef.current) {
+        setState((prev) => ({ ...prev, isEnabled: false }));
+      }
     } catch {
       // noop
     }
@@ -142,6 +160,8 @@ export function useBiometricAuth(): UseBiometricAuthReturn {
     promptMessage = 'Войдите с помощью биометрии',
   ): Promise<boolean> => {
     if (Platform.OS === 'web' || !LocalAuth) return false;
+    if (authInFlightRef.current) return false;
+    authInFlightRef.current = true;
 
     try {
       const result = await LocalAuth.authenticateAsync({
@@ -153,6 +173,8 @@ export function useBiometricAuth(): UseBiometricAuthReturn {
       return Boolean(result.success);
     } catch {
       return false;
+    } finally {
+      authInFlightRef.current = false;
     }
   }, []);
 

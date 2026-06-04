@@ -65,6 +65,8 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
   const blobUrlsRef = useRef<Set<string>>(new Set());
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevOldImageRef = useRef<string | null | undefined>(undefined);
+  const mountedRef = useRef(true);
+  const uploadingRef = useRef(false);
 
   const hasValidImage = Boolean(previewUrl || imageUri);
   const currentDisplayUrl = previewUrl ?? imageUri ?? '';
@@ -102,10 +104,11 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
   const uploadPendingIfPossible = useCallback(async () => {
     const normalizedId = (idTravel ?? '').toString();
     if (!normalizedId || normalizedId === 'null' || normalizedId === 'undefined') return;
-    if (!pendingUploadRef.current || loading) return;
+    if (!pendingUploadRef.current || uploadingRef.current) return;
 
     const file = pendingUploadRef.current;
     pendingUploadRef.current = null;
+    uploadingRef.current = true;
 
     try {
       setLoading(true); setError(null); setUploadMessage(null);
@@ -123,6 +126,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
       const uploadedUrlRaw = (response?.url || response?.data?.url || response?.path || response?.file_url) as string | undefined;
       const uploadedUrl = uploadedUrlRaw ? normalizeImageUrl(uploadedUrlRaw) : null;
 
+      if (!mountedRef.current) return;
       if (uploadedUrl) {
         setImageUri(uploadedUrl); setPreviewUrl(null);
         setFallbackImageUrl(lastPreviewUrl || uploadedUrlRaw || uploadedUrl);
@@ -133,9 +137,10 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
     } catch {
       pendingUploadRef.current = file;
     } finally {
-      setLoading(false);
+      uploadingRef.current = false;
+      if (mountedRef.current) setLoading(false);
     }
-  }, [collection, idTravel, lastPreviewUrl, loading, onUpload]);
+  }, [collection, idTravel, lastPreviewUrl, onUpload]);
 
   // Auto-upload pending
   useEffect(() => { void uploadPendingIfPossible(); }, [uploadPendingIfPossible]);
@@ -144,6 +149,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
   useEffect(() => {
     const currentBlobUrls = blobUrlsRef.current;
     return () => {
+      mountedRef.current = false;
       if (remoteRetryTimerRef.current) { clearTimeout(remoteRetryTimerRef.current); remoteRetryTimerRef.current = null; }
       if (progressIntervalRef.current) { clearInterval(progressIntervalRef.current); progressIntervalRef.current = null; }
       currentBlobUrls.forEach((url: string) => { try { URL.revokeObjectURL(url); } catch { /* noop */ } });
@@ -158,10 +164,13 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
     const delayMs = delays[Math.min(remoteRetryAttempt, delays.length - 1)];
     remoteRetryTimerRef.current = setTimeout(() => {
       remoteRetryTimerRef.current = null;
-      setRemoteRetryAttempt((prev) => prev + 1);
-      const base = url.replace(/([?&])__retry=\d+(&)?/g, '$1').replace(/[?&]$/, '');
-      const glue = base.includes('?') ? '&' : '?';
-      setImageUri(`${base}${glue}__retry=${remoteRetryAttempt + 1}`);
+      setRemoteRetryAttempt((prev) => {
+        const nextAttempt = prev + 1;
+        const base = url.replace(/([?&])__retry=\d+(&)?/g, '$1').replace(/[?&]$/, '');
+        const glue = base.includes('?') ? '&' : '?';
+        setImageUri(`${base}${glue}__retry=${nextAttempt}`);
+        return nextAttempt;
+      });
       setPreviewUrl(null);
     }, delayMs);
     return true;
@@ -223,6 +232,9 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
 
       let previewCandidate: string;
       if (Platform.OS === 'web' && uploadableFile instanceof File) {
+        blobUrlsRef.current.forEach((url) => {
+          if (url !== previewUrl) { try { URL.revokeObjectURL(url); } catch { /* noop */ } blobUrlsRef.current.delete(url); }
+        });
         previewCandidate = URL.createObjectURL(uploadableFile);
         blobUrlsRef.current.add(previewCandidate);
       } else {
@@ -259,6 +271,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
 
       const response = await uploadImage(formData) as Record<string, unknown> & { data?: Record<string, unknown> };
       if (progressIntervalRef.current) { clearInterval(progressIntervalRef.current); progressIntervalRef.current = null; }
+      if (!mountedRef.current) return;
       setUploadProgress(100);
 
       const uploadedUrlRaw = (response?.url || response?.data?.url || response?.path || response?.file_url) as string | undefined;
@@ -266,7 +279,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
 
       if (uploadedUrl) {
         setImageUri(uploadedUrl); setPreviewUrl(null);
-        setFallbackImageUrl(lastPreviewUrl || uploadedUrlRaw || uploadedUrl);
+        setFallbackImageUrl(previewCandidate || uploadedUrlRaw || uploadedUrl);
         setHasTriedFallback(false);
         setUploadMessage('Фотография успешно загружена');
         onUpload?.(uploadedUrl); setError(null);
@@ -279,11 +292,12 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
       }
     } catch (err) {
       console.error('Ошибка при загрузке:', err);
-      setError('Произошла ошибка при загрузке'); setPreviewUrl(null);
+      if (mountedRef.current) { setError('Произошла ошибка при загрузке'); setPreviewUrl(null); }
     } finally {
-      setLoading(false); setUploadProgress(0);
+      if (progressIntervalRef.current) { clearInterval(progressIntervalRef.current); progressIntervalRef.current = null; }
+      if (mountedRef.current) { setLoading(false); setUploadProgress(0); }
     }
-  }, [collection, idTravel, lastPreviewUrl, onUpload, validateFile]);
+  }, [collection, idTravel, previewUrl, onUpload, validateFile]);
 
   // Image error/load handlers for web
   const handleImageLoadCheck = useCallback((imgEl: HTMLImageElement) => {

@@ -93,6 +93,7 @@ export const usePointsManualForm = ({
   const [manualError, setManualError] = useState<string | null>(null);
 
   const manualNameTouchedRef = useRef(false);
+  const geocodeSeq = useRef(0);
 
   useEffect(() => {
     manualNameTouchedRef.current = manualNameTouched;
@@ -105,6 +106,7 @@ export const usePointsManualForm = ({
   }, [manualAutoName, manualNameTouched, showManualAdd]);
 
   const resetManualForm = useCallback(() => {
+    geocodeSeq.current += 1;
     setManualName('');
     setManualNameTouched(false);
     setManualAutoName('');
@@ -150,11 +152,17 @@ export const usePointsManualForm = ({
       const item = (point ?? {}) as PointLike;
       if (!item) return;
 
+      const id = Number(item.id);
+      if (!Number.isFinite(id)) {
+        setManualError('Невозможно открыть точку: некорректный идентификатор');
+        return;
+      }
+
       blurActiveElementForModal();
       setShowActions(false);
       resetManualForm();
 
-      setEditingPointId(Number(item.id));
+      setEditingPointId(id);
       setManualName(String(item.name ?? ''));
       setManualNameTouched(true);
       setManualAutoName('');
@@ -184,6 +192,17 @@ export const usePointsManualForm = ({
 
   const handleMapPress = useCallback(
     (coords: Coords) => {
+      if (
+        !Number.isFinite(coords.lat) ||
+        !Number.isFinite(coords.lng) ||
+        coords.lat < -90 ||
+        coords.lat > 90 ||
+        coords.lng < -180 ||
+        coords.lng > 180
+      ) {
+        return;
+      }
+
       blurActiveElementForModal();
       setShowActions(false);
       resetManualForm();
@@ -193,8 +212,11 @@ export const usePointsManualForm = ({
       setManualName('Новая точка');
       setShowManualAdd(true);
 
+      const reqId = ++geocodeSeq.current;
+
       void (async () => {
         const geocodeData = await reverseGeocode(coords.lat, coords.lng);
+        if (reqId !== geocodeSeq.current) return;
         if (!geocodeData) return;
 
         const addr = buildAddressFromGeocode(geocodeData, { lat: coords.lat, lng: coords.lng });
@@ -239,7 +261,7 @@ export const usePointsManualForm = ({
         status: manualStatus,
       };
 
-      if (editingPointId) {
+      if (editingPointId != null) {
         const updated = await userPointsApi.updatePoint(editingPointId, payload);
         queryClient.setQueryData(queryKeys.userPointsAll(), (prev: unknown) => {
           const arr = Array.isArray(prev) ? prev : [];

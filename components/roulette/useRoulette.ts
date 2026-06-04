@@ -185,15 +185,18 @@ export function useRoulette() {
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<Travel[]>([]);
   const spinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
 
   useEffect(
     () => () => {
+      mountedRef.current = false;
       if (spinTimerRef.current) clearTimeout(spinTimerRef.current);
     },
     [],
   );
 
   const handleSpin = useCallback(async () => {
+    if (spinning) return;
     if (spinTimerRef.current) clearTimeout(spinTimerRef.current);
     setSpinning(true);
 
@@ -209,6 +212,8 @@ export function useRoulette() {
       // оставляем уже загруженные travels
     }
 
+    if (!mountedRef.current) return;
+
     if (pool.length === 0) {
       setResult([]);
       setSpinning(false);
@@ -216,11 +221,13 @@ export function useRoulette() {
     }
 
     const next = shuffle(pool).slice(0, RESULT_SIZE);
+    if (spinTimerRef.current) clearTimeout(spinTimerRef.current);
     spinTimerRef.current = setTimeout(() => {
+      if (!mountedRef.current) return;
       setResult(next);
       setSpinning(false);
     }, SPIN_DURATION_MS);
-  }, [travels, refetch]);
+  }, [spinning, travels, refetch]);
 
   const handleClearAll = useCallback(() => {
     resetFilters();

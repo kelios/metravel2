@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useWindowDimensions } from 'react-native';
 import {
   useSharedValue,
@@ -17,23 +17,38 @@ export function usePanelController(isMobile: boolean = false) {
     const { width: windowWidth } = useWindowDimensions();
     const [isPanelVisible, setPanelVisible] = useState(!isMobile);
     const progress = useSharedValue(isMobile ? 0 : 1);
+    const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const clearHideTimer = useCallback(() => {
+        if (hideTimerRef.current != null) {
+            clearTimeout(hideTimerRef.current);
+            hideTimerRef.current = null;
+        }
+    }, []);
 
     const openPanel = useCallback(() => {
+        clearHideTimer();
         setPanelVisible(true);
         progress.value = withTiming(1, {
             duration: PANEL_ANIMATION_DURATION,
             easing: Easing.out(Easing.exp),
         });
-    }, [progress]);
+    }, [clearHideTimer, progress]);
 
     const closePanel = useCallback(() => {
+        clearHideTimer();
         progress.value = withTiming(0, {
             duration: PANEL_ANIMATION_DURATION,
             easing: Easing.in(Easing.exp),
         });
         // Hide panel after animation completes
-        setTimeout(() => setPanelVisible(false), PANEL_ANIMATION_DURATION);
-    }, [progress]);
+        hideTimerRef.current = setTimeout(() => {
+            hideTimerRef.current = null;
+            setPanelVisible(false);
+        }, PANEL_ANIMATION_DURATION);
+    }, [clearHideTimer, progress]);
+
+    useEffect(() => clearHideTimer, [clearHideTimer]);
 
     const closedTranslateX = isMobile ? windowWidth : 16;
 

@@ -85,15 +85,20 @@ export const useViewHistoryStore = create<ViewHistoryState>((set, get) => ({
             viewedAt: Date.now(),
         };
 
-        let newHistory = get().viewHistory.filter(
-            (h) => !(h.id === historyItem.id && h.type === historyItem.type)
-        );
-        newHistory = [historyItem, ...newHistory].slice(0, MAX_HISTORY_ITEMS);
+        let newHistory: ViewHistoryItem[] = [];
+        set((s) => {
+            newHistory = [
+                historyItem,
+                ...s.viewHistory.filter(
+                    (h) => !(h.id === historyItem.id && h.type === historyItem.type)
+                ),
+            ].slice(0, MAX_HISTORY_ITEMS);
+            return { viewHistory: newHistory };
+        });
 
         try {
             const key = userId ? `${VIEW_HISTORY_KEY}_${userId}` : VIEW_HISTORY_KEY;
             await AsyncStorage.setItem(key, JSON.stringify(newHistory));
-            set({ viewHistory: newHistory });
         } catch (error) {
             devError('Ошибка сохранения истории:', error);
         }
@@ -157,7 +162,10 @@ export const useViewHistoryStore = create<ViewHistoryState>((set, get) => ({
                 title: t.name || 'Без названия',
                 url: t.slug ? `/travels/${t.slug}` : (t.url ? String(t.url).split('?')[0].split('#')[0] : `/travels/${t.id}`),
                 imageUrl: t.travel_image_thumb_url,
-                viewedAt: t.updated_at ? new Date(t.updated_at).getTime() : Date.now(),
+                viewedAt: ((): number => {
+                    const t0 = t.updated_at ? new Date(t.updated_at).getTime() : NaN;
+                    return Number.isFinite(t0) ? t0 : Date.now();
+                })(),
                 country: t.countryName ?? undefined,
             }));
 

@@ -101,7 +101,7 @@ export function useStepChangeTransition(currentStep: number, config: StepTransit
 
       prevStepRef.current = currentStep;
     }
-  }, [currentStep, fadeAnim, mergedConfig]);
+  }, [currentStep, fadeAnim, mergedConfig.duration, mergedConfig.useNativeDriver]);
 
   return useMemo(() => ({
     fadeAnim,
@@ -114,8 +114,7 @@ export function useStepChangeTransition(currentStep: number, config: StepTransit
 /**
  * Hook для анимации прогресс-бара
  */
-export function useProgressBarAnimation(progress: number, config: StepTransitionConfig = {}) {
-  const mergedConfig = useMemo(() => ({ ...DEFAULT_CONFIG, ...config }), [config]);
+export function useProgressBarAnimation(progress: number, _config: StepTransitionConfig = {}) {
   const progressAnim = useRef(new Animated.Value(progress)).current;
 
   useEffect(() => {
@@ -125,7 +124,7 @@ export function useProgressBarAnimation(progress: number, config: StepTransition
       tension: 40,
       useNativeDriver: false, // width не поддерживается с native driver
     }).start();
-  }, [progress, progressAnim, mergedConfig]);
+  }, [progress, progressAnim]);
 
   return useMemo(() => ({
     progressAnim,
@@ -163,7 +162,7 @@ export function useMilestoneAnimation(isActive: boolean, isPassed: boolean, conf
       duration: mergedConfig.duration!,
       useNativeDriver: mergedConfig.useNativeDriver!,
     }).start();
-  }, [isActive, isPassed, scaleAnim, opacityAnim, mergedConfig]);
+  }, [isActive, isPassed, scaleAnim, opacityAnim, mergedConfig.duration, mergedConfig.useNativeDriver]);
 
   return useMemo(() => ({
     scaleAnim,
@@ -186,7 +185,7 @@ export function useTipAnimation(visible: boolean, delay: number = 0, config: Ste
 
   useEffect(() => {
     if (visible) {
-      setTimeout(() => {
+      const id = setTimeout(() => {
         Animated.parallel([
           Animated.timing(fadeAnim, {
             toValue: 1,
@@ -200,10 +199,13 @@ export function useTipAnimation(visible: boolean, delay: number = 0, config: Ste
           }),
         ]).start();
       }, delay);
+
+      return () => clearTimeout(id);
     } else {
       fadeAnim.setValue(0);
       slideAnim.setValue(-10);
     }
+    return undefined;
   }, [visible, delay, fadeAnim, slideAnim, mergedConfig.duration, mergedConfig.useNativeDriver]);
 
   return useMemo(() => ({

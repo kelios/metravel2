@@ -65,6 +65,7 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
 
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const onFinalTextRef = useRef<((text: string) => void) | null>(null);
+  const runningRef = useRef(false);
 
   const bindFinalTextHandler = useCallback((handler: (text: string) => void) => {
     onFinalTextRef.current = handler;
@@ -75,8 +76,6 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
     const recognition = new ctor();
     recognitionRef.current = recognition;
 
-    recognition.lang = lang;
-    recognition.continuous = continuous;
     recognition.interimResults = true;
 
     recognition.onresult = (event: SpeechRecognitionEventLike) => {
@@ -106,12 +105,14 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
     };
 
     recognition.onend = () => {
+      runningRef.current = false;
       setIsListening(false);
       setInterimText('');
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEventLike) => {
       const message = typeof event.error === 'string' ? event.error : 'Ошибка распознавания речи';
+      runningRef.current = false;
       setError(message);
       setIsListening(false);
     };
@@ -125,19 +126,35 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
       } catch {
         // noop
       } finally {
+        runningRef.current = false;
         recognitionRef.current = null;
       }
     };
-  }, [ctor, lang, continuous]);
+  }, [ctor]);
+
+  useEffect(() => {
+    const recognition = recognitionRef.current;
+    if (!recognition) return;
+    recognition.lang = lang;
+    recognition.continuous = continuous;
+  }, [lang, continuous]);
 
   const start = useCallback(() => {
     if (!recognitionRef.current) return;
+    if (runningRef.current) return;
+    if (__DEV__ && !onFinalTextRef.current) {
+      console.warn(
+        'useWebSpeechDictation: bindFinalTextHandler не вызван до start() — финальный текст будет потерян',
+      );
+    }
     setError(null);
     setInterimText('');
     try {
       recognitionRef.current.start();
+      runningRef.current = true;
       setIsListening(true);
     } catch (e: unknown) {
+      runningRef.current = false;
       setError(getErrorMessage(e, 'Не удалось запустить диктовку'));
       setIsListening(false);
     }
@@ -150,6 +167,7 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
     } catch {
       // noop
     } finally {
+      runningRef.current = false;
       setIsListening(false);
       setInterimText('');
     }

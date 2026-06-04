@@ -39,7 +39,15 @@ export function CommentForm({
   const [text, setText] = useState('');
   const [localSubmitPending, setLocalSubmitPending] = useState(false);
   const submitInFlightRef = useRef(false);
+  const mountedRef = useRef(true);
   const submitting = isSubmitting || localSubmitPending;
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (editComment) {
@@ -49,7 +57,10 @@ export function CommentForm({
 
     // When switching to reply mode (or back to normal), start from a clean input.
     setText('');
-  }, [editComment, replyTo]);
+    // Намеренно зависим от стабильных id, а не от identity объектов editComment/replyTo:
+    // новая ссылка после рефетча списка не должна затирать черновик пользователя.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editComment?.id, replyTo?.id]);
 
   const handleSubmit = async () => {
     const trimmedText = text.trim();
@@ -61,11 +72,15 @@ export function CommentForm({
       setLocalSubmitPending(true);
       try {
         await result;
-        setText('');
+        if (mountedRef.current) {
+          setText('');
+        }
       } catch {
         // Keep the draft text in place so the user can retry.
       } finally {
-        setLocalSubmitPending(false);
+        if (mountedRef.current) {
+          setLocalSubmitPending(false);
+        }
         submitInFlightRef.current = false;
       }
     } else {

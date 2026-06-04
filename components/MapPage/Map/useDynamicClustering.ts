@@ -158,6 +158,7 @@ export function useDynamicClustering(
   const {
     threshold = 25,
     expandZoom = 14,
+    gridSize: gridSizeOverride,
   } = options;
 
   const shouldCluster = points.length > threshold;
@@ -165,8 +166,8 @@ export function useDynamicClustering(
   const shouldRenderClusters = shouldCluster && !expandClusters;
 
   const gridSize = useMemo(
-    () => getGridSizeForZoom(mapZoom),
-    [mapZoom]
+    () => gridSizeOverride ?? getGridSizeForZoom(mapZoom),
+    [gridSizeOverride, mapZoom]
   );
 
   const clusters = useMemo<ClusterItem[]>(() => {
@@ -226,7 +227,7 @@ export function useClusteringStats(
     }
 
     const averageClusterSize = totalClusteredPoints / clusters.length;
-    const reductionRatio = (1 - clusters.length / totalPoints) * 100;
+    const reductionRatio = totalPoints > 0 ? (1 - clusters.length / totalPoints) * 100 : 0;
 
     return {
       totalPoints,

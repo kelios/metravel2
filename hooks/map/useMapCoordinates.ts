@@ -9,6 +9,22 @@ export interface Coordinates {
 
 export const DEFAULT_COORDINATES: Coordinates = { latitude: 53.9006, longitude: 27.559 };
 const WEB_LAST_COORDS_KEY = 'metravel:lastKnownCoords';
+const NATIVE_LOCATION_TIMEOUT_MS = 12000;
+
+class LocationTimeoutError extends Error {
+  constructor() {
+    super('Location request timed out');
+    this.name = 'LocationTimeoutError';
+  }
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new LocationTimeoutError()), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer)) as Promise<T>;
+}
 let expoLocationModulePromise: Promise<typeof import('expo-location')> | null = null;
 
 async function loadExpoLocation() {
@@ -105,6 +121,10 @@ export function useMapCoordinates() {
       };
 
       const handleError = () => {
+        if (signal?.aborted) {
+          resolve();
+          return;
+        }
         const cached = readWebCachedCoordinates();
         if (cached) {
           setCoordinates(cached);
@@ -133,7 +153,10 @@ export function useMapCoordinates() {
       }
 
       const Location = await loadExpoLocation();
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      const { status } = await withTimeout(
+        Location.requestForegroundPermissionsAsync(),
+        NATIVE_LOCATION_TIMEOUT_MS,
+      );
 
       if (signal?.aborted) return;
 
@@ -147,9 +170,12 @@ export function useMapCoordinates() {
         return;
       }
 
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+      const location = await withTimeout(
+        Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        }),
+        NATIVE_LOCATION_TIMEOUT_MS,
+      );
 
       if (signal?.aborted) return;
 

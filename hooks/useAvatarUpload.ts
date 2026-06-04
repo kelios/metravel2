@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '@/context/AuthContext';
@@ -38,6 +38,24 @@ export function useAvatarUpload(options?: UseAvatarUploadOptions) {
     const [avatarPreviewUrl, setAvatarPreviewUrl] = useState('');
     const [isUploading, setIsUploading] = useState(false);
     const webFileInputRef = useRef<WebFileInputLike | null>(null);
+    const mountedRef = useRef(true);
+    const uploadingRef = useRef(false);
+    const objectUrlRef = useRef<string | null>(null);
+
+    const revokeObjectUrl = useCallback(() => {
+        if (objectUrlRef.current && typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+            URL.revokeObjectURL(objectUrlRef.current);
+        }
+        objectUrlRef.current = null;
+    }, []);
+
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
+            revokeObjectUrl();
+        };
+    }, [revokeObjectUrl]);
 
     const syncAvatar = useCallback(
         (avatarRaw: unknown) => {
@@ -98,12 +116,14 @@ export function useAvatarUpload(options?: UseAvatarUploadOptions) {
         if (!file) return;
         setAvatarFile(file);
         try {
+            revokeObjectUrl();
             const url = URL.createObjectURL(file);
+            objectUrlRef.current = url;
             setAvatarPreviewUrl(url);
         } catch {
             setAvatarPreviewUrl('');
         }
-    }, []);
+    }, [revokeObjectUrl]);
 
     const uploadAvatar = useCallback(async (fileOverride?: UploadUserProfileAvatarFile) => {
         const fileToUpload = fileOverride || avatarFile;
@@ -114,9 +134,13 @@ export function useAvatarUpload(options?: UseAvatarUploadOptions) {
             return null;
         }
 
+        if (uploadingRef.current) return null;
+        uploadingRef.current = true;
         setIsUploading(true);
         try {
             const saved = await uploadUserProfileAvatarFile(userId, fileToUpload);
+            if (!mountedRef.current) return saved;
+            revokeObjectUrl();
             setAvatarPreviewUrl(saved.avatar || avatarPreviewUrl);
             setAvatarFile(null);
             syncAvatar(saved.avatar);
@@ -125,19 +149,21 @@ export function useAvatarUpload(options?: UseAvatarUploadOptions) {
             options?.onSuccess?.(saved);
             return saved;
         } catch (error) {
+            if (!mountedRef.current) return null;
             const message = error instanceof ApiError ? error.message : 'Не удалось обновить аватар';
             showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
             return null;
         } finally {
-            setIsUploading(false);
+            uploadingRef.current = false;
+            if (mountedRef.current) setIsUploading(false);
         }
-    }, [avatarFile, avatarPreviewUrl, options, syncAvatar, triggerProfileRefresh, userId]);
+    }, [avatarFile, avatarPreviewUrl, options, revokeObjectUrl, syncAvatar, triggerProfileRefresh, userId]);
 
     /**
      * Quick upload: pick + immediately upload (used by profile page).
      */
     const pickAndUpload = useCallback(async () => {
-        if (isUploading) return;
+        if (isUploading || uploadingRef.current) return;
         try {
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -162,6 +188,7 @@ export function useAvatarUpload(options?: UseAvatarUploadOptions) {
                 await uploadAvatar(file);
             }
         } catch (e) {
+            if (!mountedRef.current) return;
             console.error(e);
             showToast({ type: 'error', text1: 'Ошибка', text2: 'Не удалось выбрать изображение' });
             setIsUploading(false);

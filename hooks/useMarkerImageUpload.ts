@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { uploadImage } from '@/api/misc'
 import { fetchTravel } from '@/api/travelsApi'
 import { TravelFormData, MarkerData } from '@/types/types'
@@ -25,6 +25,14 @@ type UploadImageResponse = Record<string, unknown> & {
   file_url?: unknown
 }
 
+const revokePreviewUrl = (url: string): void => {
+  if (!/^blob:/i.test(url)) return
+  const revoke = (
+    globalThis as { URL?: { revokeObjectURL?: (u: string) => void } }
+  ).URL?.revokeObjectURL
+  if (typeof revoke === 'function') revoke(url)
+}
+
 const extractUploadUrl = (response: UploadImageResponse): string => {
   const nestedData = isRecord(response.data) ? response.data : null
   const uploadedUrlRaw =
@@ -46,9 +54,18 @@ export function useMarkerImageUpload({
   const markerUploadStateRef = useRef(
     new Map<string, { inFlight: boolean; attempts: number }>(),
   )
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
 
   const applyUploadedMarkerImage = useCallback(
     (markerId: string, blobUrl: string, uploadedUrl: string) => {
+      if (!mountedRef.current) return
       const currentMarkers = Array.isArray(formDataRef.current.coordsMeTravel)
         ? (formDataRef.current.coordsMeTravel as MarkerData[])
         : []
@@ -170,6 +187,7 @@ export function useMarkerImageUpload({
             }
 
             removePendingImageFile(imageUrl)
+            revokePreviewUrl(imageUrl)
             applyUploadedMarkerImage(String(markerId), imageUrl, uploadedUrl)
           } catch {
             // Keep pending file for the next successful save/retry path.

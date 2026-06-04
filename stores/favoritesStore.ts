@@ -12,6 +12,8 @@ const SERVER_FAVORITES_CACHE_KEY = 'metravel_favorites_server';
 const getFavoritesApi = async () => import('@/api/travelsFavorites');
 const getUserApi = async () => import('@/api/user');
 
+const inFlightKeys = new Set<string>();
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -93,15 +95,14 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
         }
 
         const inflightKey = `${item.type}:${String(item.id)}`;
-        const inFlight = get()._inFlight;
-        if (inFlight.has(inflightKey)) return;
+        if (inFlightKeys.has(inflightKey)) return;
 
-        inFlight.add(inflightKey);
+        inFlightKeys.add(inflightKey);
 
         if (userId && item.type === 'travel') {
             const existing = get().favorites.find((f) => f.id === item.id && f.type === item.type);
             if (existing) {
-                inFlight.delete(inflightKey);
+                inFlightKeys.delete(inflightKey);
                 return;
             }
 
@@ -114,11 +115,11 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
                 await get().refreshFromServer(userId);
             } catch (error) {
                 set((s) => ({ favorites: s.favorites.filter((f) => !(f.id === item.id && f.type === item.type)) }));
-                inFlight.delete(inflightKey);
+                inFlightKeys.delete(inflightKey);
                 throw error;
             }
 
-            inFlight.delete(inflightKey);
+            inFlightKeys.delete(inflightKey);
             return;
         }
 
@@ -127,7 +128,10 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
         }
 
         const existingFavorite = get().favorites.find((f) => f.id === item.id && f.type === item.type);
-        if (existingFavorite) return;
+        if (existingFavorite) {
+            inFlightKeys.delete(inflightKey);
+            return;
+        }
 
         const newFavorite: FavoriteItem = { ...item, addedAt: Date.now() };
         const newFavorites = [...get().favorites, newFavorite];
@@ -147,7 +151,7 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
             }
             throw error;
         } finally {
-            inFlight.delete(inflightKey);
+            inFlightKeys.delete(inflightKey);
         }
     },
 
@@ -157,10 +161,9 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
         }
 
         const inflightKey = `${type}:${String(id)}`;
-        const inFlight = get()._inFlight;
-        if (inFlight.has(inflightKey)) return;
+        if (inFlightKeys.has(inflightKey)) return;
 
-        inFlight.add(inflightKey);
+        inFlightKeys.add(inflightKey);
 
         if (userId) {
             const before = get().favorites;
@@ -174,11 +177,11 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
                 await get().refreshFromServer(userId);
             } catch (error) {
                 set({ favorites: before });
-                inFlight.delete(inflightKey);
+                inFlightKeys.delete(inflightKey);
                 throw error;
             }
 
-            inFlight.delete(inflightKey);
+            inFlightKeys.delete(inflightKey);
             return;
         }
 
@@ -186,12 +189,11 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
             console.warn(`Suspicious favorite ID detected on remove: ${id} (looks like HTTP error code), продолжим удаление`);
         }
 
-        const newFavorites = get().favorites.filter((f) => !(f.id === id && f.type === type));
-
         try {
             const key = userId ? `${FAVORITES_KEY}_${userId}` : FAVORITES_KEY;
+            const newFavorites = get().favorites.filter((f) => !(f.id === id && f.type === type));
             await AsyncStorage.setItem(key, JSON.stringify(newFavorites));
-            set({ favorites: newFavorites });
+            set((s) => ({ favorites: s.favorites.filter((f) => !(f.id === id && f.type === type)) }));
 
             if (Platform.OS === 'web') {
                 await showToast({ type: 'info', text1: 'Удалено из избранного', text2: 'Удалено с этого устройства' });
@@ -200,7 +202,7 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
             console.error('Ошибка удаления из избранного:', error);
             throw error;
         } finally {
-            inFlight.delete(inflightKey);
+            inFlightKeys.delete(inflightKey);
         }
     },
 
@@ -259,14 +261,14 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
                 title: t.name || 'Без названия',
                 url: t.slug ? `/travels/${t.slug}` : (t.url ? String(t.url).split('?')[0].split('#')[0] : `/travels/${t.id}`),
                 imageUrl: t.travel_image_thumb_url,
-                addedAt: t.updated_at ? new Date(t.updated_at).getTime() : Date.now(),
+                addedAt: (() => {
+                    const t0 = t.updated_at ? new Date(t.updated_at).getTime() : NaN;
+                    return Number.isFinite(t0) ? t0 : Date.now();
+                })(),
                 country: t.countryName ?? undefined,
             }));
 
-            set((s) => {
-                if (userFavorites.length === 0 && s.favorites.length > 0) return s;
-                return { favorites: userFavorites };
-            });
+            set({ favorites: userFavorites });
             await AsyncStorage.setItem(`${SERVER_FAVORITES_CACHE_KEY}_${userId}`, JSON.stringify(userFavorites));
         } catch (error) {
             devError('Ошибка обновления избранного с сервера:', error);

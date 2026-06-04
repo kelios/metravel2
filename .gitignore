@@ -143,3 +143,6 @@ ehthumbs.db
 # Sentry (if used)
 sentry.properties
 .sentryclirc
+
+# scratch/debug content (not part of app)
+travel-drafts/

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {Image, StyleSheet, TextInput, View, Platform, Text} from 'react-native'
 import Button from '@/components/ui/Button'
 import {useNavigation} from '@react-navigation/native'
@@ -26,11 +26,22 @@ export default function SetPassword() {
     const isFocused = useIsFocused();
     const { setNewPassword } = useAuth();
     const [msg, setMsg] = useState<{ text: string; error: boolean }>({ text: '', error: false });
+    const [done, setDone] = useState(false);
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
+    const navTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const routeParams = route.params as { password_reset_token?: string } || {};
     const { password_reset_token } = routeParams;
+    const hasToken = Boolean(password_reset_token);
+
+    useEffect(() => {
+        return () => {
+            if (navTimeoutRef.current) {
+                clearTimeout(navTimeoutRef.current);
+            }
+        };
+    }, []);
 
     const handleResetPassword = async (
         values: SetPasswordFormValues,
@@ -39,8 +50,9 @@ export default function SetPassword() {
         try {
             const success = await setNewPassword(password_reset_token as string, values.password);
             if (success) {
+                setDone(true);
                 setMsg({ text: 'Пароль успешно изменен', error: false });
-                setTimeout(() => {
+                navTimeoutRef.current = setTimeout(() => {
                     navigation.navigate('login' as never);
                 }, 1500);
             } else {
@@ -85,6 +97,11 @@ export default function SetPassword() {
                 />
             </View>
             <View style={styles.card}>
+                    {!hasToken && (
+                        <Text style={[styles.message, styles.err]}>
+                            Ссылка недействительна или устарела
+                        </Text>
+                    )}
                     {msg.text !== '' && (
                         <Text style={[styles.message, msg.error ? styles.err : styles.ok]}>
                             {msg.text}
@@ -134,9 +151,9 @@ export default function SetPassword() {
                                 </FormFieldWithValidation>
 
                                 <Button
-                                    label={isSubmitting ? 'Изменение...' : 'Сменить пароль'}
+                                    label={done ? 'Готово' : isSubmitting ? 'Изменение...' : 'Сменить пароль'}
                                     onPress={() => handleSubmit()}
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || done || !hasToken}
                                     variant="primary"
                                     size="lg"
                                     style={styles.applyButton}

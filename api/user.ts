@@ -22,7 +22,7 @@ export type UserProfileDto = {
     vk: string;
     email_notify_comments: boolean;
     email_notify_messages: boolean;
-    avatar: string;
+    avatar: string | null;
     user: number;
 };
 
@@ -86,16 +86,23 @@ export const normalizeAvatar = (raw: unknown): string | null => {
     return str;
 };
 
+const normalizeProfile = (profile: UserProfileDto): UserProfileDto => ({
+    ...profile,
+    avatar: normalizeAvatar(profile.avatar),
+});
+
 // NOTE: apiClient.baseURL already includes `/api`, so endpoints here must be without it
 export const fetchUserProfile = async (userId: string | number): Promise<UserProfileDto> => {
-    return apiClient.get<UserProfileDto>(`/user/${userId}/profile/`, LONG_TIMEOUT);
+    const res = await apiClient.get<UserProfileDto>(`/user/${userId}/profile/`, LONG_TIMEOUT);
+    return normalizeProfile(res);
 };
 
 export const updateUserProfile = async (
     userId: string | number,
     payload: UpdateUserProfilePayload
 ): Promise<UserProfileDto> => {
-    return apiClient.put<UserProfileDto>(`/user/${userId}/profile/update/`, payload);
+    const res = await apiClient.put<UserProfileDto>(`/user/${userId}/profile/update/`, payload);
+    return normalizeProfile(res);
 };
 
 export const deleteCurrentUserAccount = async (): Promise<null> => {
@@ -106,11 +113,12 @@ export const uploadUserProfileAvatar = async (
     userId: string | number,
     avatar: string
 ): Promise<UserProfileDto> => {
-    return apiClient.put<UserProfileDto>(`/user/${userId}/profile/avatar-upload/`, { avatar });
+    const res = await apiClient.put<UserProfileDto>(`/user/${userId}/profile/avatar-upload/`, { avatar });
+    return normalizeProfile(res);
 };
 
 export type UploadUserProfileAvatarFile =
-    | File
+    | Blob
     | {
           uri: string;
           name: string;
@@ -122,23 +130,27 @@ export const uploadUserProfileAvatarFile = async (
     file: UploadUserProfileAvatarFile
 ): Promise<UserProfileDto> => {
     const formData = new FormData();
-    if (typeof File !== 'undefined' && file instanceof File) {
-        formData.append('avatar', file);
-    } else {
+    if (typeof Blob !== 'undefined' && file instanceof Blob) {
+        const filename = file instanceof File ? file.name : 'avatar.jpg';
+        formData.append('avatar', file, filename);
+    } else if (file && typeof (file as { uri?: unknown }).uri === 'string') {
         const f = file as { uri: string; name: string; type: string };
         formData.append('avatar', {
             uri: f.uri,
             name: f.name,
             type: f.type,
         } as unknown as Blob);
+    } else {
+        throw new Error('uploadUserProfileAvatarFile: unsupported file payload');
     }
 
     // apiClient.baseURL уже содержит /api, поэтому здесь без /api в начале
-    return apiClient.uploadFormData<UserProfileDto>(
+    const res = await apiClient.uploadFormData<UserProfileDto>(
         `/user/${userId}/profile/avatar-upload/`,
         formData,
         'PUT'
     );
+    return normalizeProfile(res);
 };
 
 type MaybePaginated<T> =
@@ -164,6 +176,12 @@ const unwrapList = <T>(payload: MaybePaginated<T>): T[] => {
     }
 
     if (Array.isArray(rec.results)) return rec.results as T[];
+
+    if (__DEV__) {
+        console.warn('[unwrapList] non-empty payload did not match any known list shape', {
+            keys: Object.keys(rec),
+        });
+    }
     return [];
 };
 
