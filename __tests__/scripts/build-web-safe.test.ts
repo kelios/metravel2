@@ -13,8 +13,16 @@ describe('build-web-safe helpers', () => {
   const projectRoot = process.cwd()
 
   afterEach(() => {
-    const tempRoot = path.join(projectRoot, '.tmp', 'expo-export')
-    fs.rmSync(tempRoot, { recursive: true, force: true })
+    // Удаляем ТОЛЬКО созданную этим тестом детерминированную папку (run-123-456),
+    // не трогая .tmp/expo-export целиком: туда параллельно может писать реальный
+    // build/preview-процесс (его metro-cache), и рекурсивный rmSync всего дерева
+    // гонится с конкурентной записью → ENOTEMPTY (флака).
+    const ownDir = path.join(projectRoot, '.tmp', 'expo-export', 'run-123-456')
+    try {
+      fs.rmSync(ownDir, { recursive: true, force: true })
+    } catch {
+      // best-effort cleanup
+    }
   })
 
   it('detects Expo clear-cache flags', () => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   normalizeAvatar,
   updateUserProfile,
@@ -34,9 +34,29 @@ export function useSettingsProfileForm({
   const [emailNotifyComments, setEmailNotifyComments] = useState(false);
   const [emailNotifyMessages, setEmailNotifyMessages] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
+  const mountedRef = useRef(true);
+  // Монотонный счётчик сохранений: после await коммитит только последнее,
+  // чтобы поздний ответ saveProfile/saveEmailNotifications не затирал другую секцию.
+  const saveSeqRef = useRef(0);
+  // «Грязное» состояние и актуальные значения тоглов — для чтения из эффекта/хендлеров
+  // без перезапуска эффекта на каждое нажатие.
+  const hasUnsavedChangesRef = useRef(false);
+  const emailNotifyCommentsRef = useRef(false);
+  const emailNotifyMessagesRef = useRef(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   useEffect(() => {
     if (!profile) return;
+    // Аватар не редактируется в текстовых полях — синхронизируем всегда.
+    setAvatarPreviewUrl(profile.avatar || '');
+    // Не затираем поля, которые пользователь отредактировал, но не сохранил:
+    // загрузка аватара на этом же экране триггерит refresh профиля и иначе
+    // сбросила бы несохранённый ввод.
+    if (hasUnsavedChangesRef.current) return;
     setFirstName(normalizeAvatar(profile.first_name) ?? '');
     setLastName(normalizeAvatar(profile.last_name) ?? '');
     setYoutube(profile.youtube || '');
@@ -45,7 +65,6 @@ export function useSettingsProfileForm({
     setVk(profile.vk || '');
     setEmailNotifyComments(Boolean(profile.email_notify_comments));
     setEmailNotifyMessages(Boolean(profile.email_notify_messages));
-    setAvatarPreviewUrl(profile.avatar || '');
   }, [profile, setAvatarPreviewUrl]);
 
   const derivedDisplayName = useMemo(() => {
@@ -70,8 +89,15 @@ export function useSettingsProfileForm({
     );
   }, [emailNotifyComments, emailNotifyMessages, firstName, instagram, lastName, profile, twitter, vk, youtube]);
 
+  // Render-phase «latest»-снимки: эффект/хендлеры читают актуальные значения без
+  // повторного запуска эффекта на каждое нажатие.
+  hasUnsavedChangesRef.current = hasUnsavedChanges;
+  emailNotifyCommentsRef.current = emailNotifyComments;
+  emailNotifyMessagesRef.current = emailNotifyMessages;
+
   const saveProfile = useCallback(async () => {
     if (!userId) return;
+    const seq = ++saveSeqRef.current;
     setProfileSaving(true);
     try {
       const payload: UpdateUserProfilePayload = {
@@ -85,13 +111,17 @@ export function useSettingsProfileForm({
         email_notify_messages: emailNotifyMessages,
       };
       const saved = await updateUserProfile(userId, payload);
+      // Вытеснено более новым сохранением или unmount — не коммитим (иначе устаревший
+      // ответ затрёт другую секцию).
+      if (!mountedRef.current || seq !== saveSeqRef.current) return;
       setProfile(saved);
       showToast({ type: 'success', text1: 'Профиль обновлён', visibilityTime: 3000 });
     } catch (error) {
+      if (!mountedRef.current || seq !== saveSeqRef.current) return;
       const message = error instanceof ApiError ? error.message : 'Не удалось обновить профиль';
       showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
     } finally {
-      setProfileSaving(false);
+      if (mountedRef.current && seq === saveSeqRef.current) setProfileSaving(false);
     }
   }, [emailNotifyComments, emailNotifyMessages, firstName, instagram, lastName, setProfile, twitter, userId, vk, youtube]);
 
@@ -100,21 +130,24 @@ export function useSettingsProfileForm({
       if (!userId) return;
       setEmailNotifyComments(nextComments);
       setEmailNotifyMessages(nextMessages);
+      const seq = ++saveSeqRef.current;
       setProfileSaving(true);
       try {
         const saved = await updateUserProfile(userId, {
           email_notify_comments: nextComments,
           email_notify_messages: nextMessages,
         });
+        if (!mountedRef.current || seq !== saveSeqRef.current) return;
         setProfile(saved);
         showToast({ type: 'success', text1: 'Настройки уведомлений сохранены', visibilityTime: 2000 });
       } catch (error) {
+        if (!mountedRef.current || seq !== saveSeqRef.current) return;
         setEmailNotifyComments(Boolean(profile?.email_notify_comments));
         setEmailNotifyMessages(Boolean(profile?.email_notify_messages));
         const message = error instanceof ApiError ? error.message : 'Не удалось обновить настройки уведомлений';
         showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
       } finally {
-        setProfileSaving(false);
+        if (mountedRef.current && seq === saveSeqRef.current) setProfileSaving(false);
       }
     },
     [profile?.email_notify_comments, profile?.email_notify_messages, setProfile, userId],
@@ -122,16 +155,17 @@ export function useSettingsProfileForm({
 
   const handleEmailNotifyCommentsChange = useCallback(
     (nextValue: boolean) => {
-      void saveEmailNotifications(nextValue, emailNotifyMessages);
+      // Берём актуальное значение соседнего тогла из ref (а не из stale-замыкания).
+      void saveEmailNotifications(nextValue, emailNotifyMessagesRef.current);
     },
-    [emailNotifyMessages, saveEmailNotifications],
+    [saveEmailNotifications],
   );
 
   const handleEmailNotifyMessagesChange = useCallback(
     (nextValue: boolean) => {
-      void saveEmailNotifications(emailNotifyComments, nextValue);
+      void saveEmailNotifications(emailNotifyCommentsRef.current, nextValue);
     },
-    [emailNotifyComments, saveEmailNotifications],
+    [saveEmailNotifications],
   );
 
   return {

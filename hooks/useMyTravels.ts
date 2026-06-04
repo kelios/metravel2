@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { deleteTravel, fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelsApi';
 import type { Travel } from '@/types/types';
 import { normalizeToTravel } from '@/components/profile/travelNormalize';
@@ -104,6 +104,15 @@ export function useMyTravels({ userId, perPage, onTotalChange }: UseMyTravelsArg
   const [totalCount, setTotalCount] = useState(0)
   const [hasMore, setHasMore] = useState(false);
   const deleteInFlightRef = useRef<number | null>(null)
+  const mountedRef = useRef(true)
+  // Монотонный счётчик: и load, и loadMore инкрементят его. После await коммитит
+  // только последний запрос — поздний loadMore не затирает свежий результат load
+  // (например onRefresh во время подгрузки следующей страницы).
+  const requestSeqRef = useRef(0)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
 
   const load = useCallback(async () => {
     const uid = userId;
@@ -118,10 +127,13 @@ export function useMyTravels({ userId, perPage, onTotalChange }: UseMyTravelsArg
       setEngagementSummary(null)
       return;
     }
+    const seq = ++requestSeqRef.current;
     setIsLoading(true);
     setIsLoadingMore(false);
     try {
       const payload = await fetchMyTravels({ user_id: uid, page: 1, perPage });
+      // Запрос вытеснен более новым load/loadMore или хук размонтирован — не коммитим.
+      if (!mountedRef.current || seq !== requestSeqRef.current) return;
       const { items, total, engagementSummary: nextEngagementSummary } = unwrapMyTravelsPayload(payload);
       const normalized = items.map(normalizeToTravel);
       const effectiveTotal = total || normalized.length;
@@ -133,6 +145,7 @@ export function useMyTravels({ userId, perPage, onTotalChange }: UseMyTravelsArg
       setHasMore(normalized.length < effectiveTotal && items.length > 0);
       onTotalChange?.(effectiveTotal);
     } catch {
+      if (!mountedRef.current || seq !== requestSeqRef.current) return;
       setMyTravels([]);
       setEngagementSummary(null)
       setPage(1);
@@ -140,7 +153,7 @@ export function useMyTravels({ userId, perPage, onTotalChange }: UseMyTravelsArg
       setHasMore(false);
       onTotalChange?.(0);
     } finally {
-      setIsLoading(false);
+      if (mountedRef.current && seq === requestSeqRef.current) setIsLoading(false);
     }
   }, [userId, perPage, onTotalChange]);
 
@@ -151,9 +164,13 @@ export function useMyTravels({ userId, perPage, onTotalChange }: UseMyTravelsArg
     if (myTravels.length === 0) return;
 
     const nextPage = page + 1;
+    const seq = ++requestSeqRef.current;
     setIsLoadingMore(true);
     try {
       const payload = await fetchMyTravels({ user_id: uid, page: nextPage, perPage });
+      // Вытеснен более новым load (onRefresh) / loadMore или unmount — не коммитим,
+      // иначе устаревший merged затрёт свежую страницу 1.
+      if (!mountedRef.current || seq !== requestSeqRef.current) return;
       const { items, total, engagementSummary: nextEngagementSummary } = unwrapMyTravelsPayload(payload);
       const normalized = items.map(normalizeToTravel);
 
@@ -169,9 +186,10 @@ export function useMyTravels({ userId, perPage, onTotalChange }: UseMyTravelsArg
       setHasMore(merged.length < effectiveTotal && items.length > 0);
       onTotalChange?.(effectiveTotal);
     } catch {
+      if (!mountedRef.current || seq !== requestSeqRef.current) return;
       setHasMore(false);
     } finally {
-      setIsLoadingMore(false);
+      if (mountedRef.current && seq === requestSeqRef.current) setIsLoadingMore(false);
     }
   }, [userId, perPage, page, isLoading, isLoadingMore, hasMore, myTravels, onTotalChange]);
 
@@ -219,10 +237,12 @@ export function useMyTravels({ userId, perPage, onTotalChange }: UseMyTravelsArg
           })
           await load()
         } else {
-          setMyTravels(myTravels)
-          setEngagementSummary(engagementSummary)
-          setTotalCount(totalCount)
-          onTotalChange?.(totalCount)
+          if (mountedRef.current) {
+            setMyTravels(myTravels)
+            setEngagementSummary(engagementSummary)
+            setTotalCount(totalCount)
+            onTotalChange?.(totalCount)
+          }
           void showToastMessage({
             type: 'error',
             text1: deleteCopy.title,
@@ -233,7 +253,7 @@ export function useMyTravels({ userId, perPage, onTotalChange }: UseMyTravelsArg
         }
       } finally {
         deleteInFlightRef.current = null
-        setRemovingTravelId(null)
+        if (mountedRef.current) setRemovingTravelId(null)
       }
     },
     [engagementSummary, load, myTravels, onTotalChange, totalCount],

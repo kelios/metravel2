@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Pressable, Platform, Image, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -29,6 +29,17 @@ import type { Travel } from '@/types/types';
 const AUTHOR_TRAVELS_LIMIT = 12;
 const AUTHOR_CARD_BLURHASH = 'LEHL6nWB2yk8pyo0adR*.7kCMdnj';
 
+// Русская плюрализация: [одна, две-четыре, пять+]. Корректно для 0 (→ many),
+// 11-14 (→ many) и 22-24 (→ few), в отличие от наивного `n < 5`.
+const pluralizeRu = (n: number, forms: [string, string, string]): string => {
+  const abs = Math.abs(n) % 100;
+  const tail = abs % 10;
+  if (abs > 10 && abs < 20) return forms[2];
+  if (tail === 1) return forms[0];
+  if (tail >= 2 && tail <= 4) return forms[1];
+  return forms[2];
+};
+
 export default function PublicUserProfileScreen() {
   const router = useRouter();
   const isFocused = useIsFocused();
@@ -47,6 +58,11 @@ export default function PublicUserProfileScreen() {
     enabled: !!userId,
   });
   const [avatarError, setAvatarError] = useState(false);
+  // Expo Router переиспользует инстанс при смене param — сбрасываем флаг ошибки
+  // аватара, иначе 404 предыдущего профиля скрывал бы валидный аватар нового.
+  useEffect(() => {
+    setAvatarError(false);
+  }, [userId, profile?.avatar]);
 
   const socials = useMemo(
     () =>
@@ -62,7 +78,12 @@ export default function PublicUserProfileScreen() {
   );
 
   const { isAuthenticated, userId: currentUserId } = useAuth();
-  const isOwnProfile = currentUserId != null && userId != null && String(currentUserId) === String(userId);
+  // userId уже нормализован (Number→String); нормализуем currentUserId симметрично,
+  // иначе разное форматирование (ведущие нули и т.п.) ломает own-profile UI.
+  const isOwnProfile =
+    currentUserId != null &&
+    userId != null &&
+    String(Number(currentUserId)) === userId;
 
   const subscriptionsQuery = useQuery<UserProfileDto[]>({
     queryKey: queryKeys.mySubscriptions(),
@@ -196,7 +217,7 @@ export default function PublicUserProfileScreen() {
                   {subscribersCount !== null && (
                     <Text style={styles.countText}>
                       <Text style={styles.countNumber}>{subscribersCount}</Text>
-                      {' '}{subscribersCount === 1 ? 'подписчик' : subscribersCount < 5 ? 'подписчика' : 'подписчиков'}
+                      {' '}{pluralizeRu(subscribersCount, ['подписчик', 'подписчика', 'подписчиков'])}
                     </Text>
                   )}
                   {subscribersCount !== null && subscriptionsCount !== null && (
@@ -205,7 +226,7 @@ export default function PublicUserProfileScreen() {
                   {subscriptionsCount !== null && (
                     <Text style={styles.countText}>
                       <Text style={styles.countNumber}>{subscriptionsCount}</Text>
-                      {' '}{subscriptionsCount === 1 ? 'подписка' : subscriptionsCount < 5 ? 'подписки' : 'подписок'}
+                      {' '}{pluralizeRu(subscriptionsCount, ['подписка', 'подписки', 'подписок'])}
                     </Text>
                   )}
                 </Pressable>

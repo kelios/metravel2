@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import {
     fetchUserProfile,
@@ -18,6 +18,11 @@ export function useUserProfile() {
 
     const [profile, setProfile] = useState<UserProfileDto | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const mountedRef = useRef(true);
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => { mountedRef.current = false; };
+    }, []);
 
     const syncAvatar = useCallback(
         (avatarRaw: unknown) => {
@@ -37,9 +42,12 @@ export function useUserProfile() {
         setIsLoading(true);
         try {
             const data = await fetchUserProfile(userId);
+            // Уход с экрана/логаут во время fetch — не трогаем state размонтированного хука.
+            if (!mountedRef.current) return;
             setProfile(data);
             syncAvatar(data.avatar);
         } catch (error) {
+            if (!mountedRef.current) return;
             const message =
                 error instanceof ApiError
                     ? error.message
@@ -51,7 +59,7 @@ export function useUserProfile() {
                 visibilityTime: 4000,
             });
         } finally {
-            setIsLoading(false);
+            if (mountedRef.current) setIsLoading(false);
         }
     }, [syncAvatar, userId]);
 
