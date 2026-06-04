@@ -385,24 +385,32 @@ function TravelListItem({
     </View>
   )
 
+  const adminIconSize = isMobile ? 13 : 14
+
   const leftTopSlot = canEdit ? (
-    <View style={styles.adminActionsContainer} testID="admin-actions">
+    <View
+      style={[
+        styles.adminActionsContainer,
+        isMobile && styles.adminActionsContainerMobile,
+      ]}
+      testID="admin-actions"
+    >
       <CardActionPressable
         accessibilityLabel="Редактировать"
         title="Редактировать"
         onPress={handleEdit}
-        style={styles.adminBtn}
+        style={[styles.adminBtn, isMobile && styles.adminBtnMobile]}
         disabled={isDeleting}
         accessibilityState={{ disabled: isDeleting }}
       >
-        <Feather name="edit-2" size={14} color={colors.text} />
+        <Feather name="edit-2" size={adminIconSize} color={colors.text} />
       </CardActionPressable>
-      <View style={styles.adminDivider} />
+      <View style={[styles.adminDivider, isMobile && styles.adminDividerMobile]} />
       <CardActionPressable
         accessibilityLabel={isDeleting ? 'Маршрут удаляется' : 'Удалить'}
         title={isDeleting ? 'Удаляется…' : 'Удалить'}
         onPress={handleDelete}
-        style={styles.adminBtn}
+        style={[styles.adminBtn, isMobile && styles.adminBtnMobile]}
         testID="delete-button"
         disabled={isDeleting}
         accessibilityState={{ disabled: isDeleting, busy: isDeleting }}
@@ -410,7 +418,7 @@ function TravelListItem({
         {isDeleting ? (
           <ActivityIndicator size="small" color={colors.danger} />
         ) : (
-          <Feather name="trash-2" size={14} color={colors.danger} />
+          <Feather name="trash-2" size={adminIconSize} color={colors.danger} />
         )}
       </CardActionPressable>
     </View>

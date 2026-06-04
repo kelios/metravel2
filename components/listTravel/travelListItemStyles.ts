@@ -137,6 +137,14 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
         : {}),
     },
 
+    adminActionsContainerMobile: {
+      top: 8,
+      left: 8,
+      gap: 2,
+      paddingHorizontal: 5,
+      paddingVertical: 4,
+    },
+
     adminBtn: {
       paddingHorizontal: DESIGN_TOKENS.spacing.xs,
       paddingVertical: DESIGN_TOKENS.spacing.xs * 0.25,
@@ -146,10 +154,21 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
     },
 
+    adminBtnMobile: {
+      minWidth: 30,
+      minHeight: 30,
+      paddingHorizontal: 5,
+      paddingVertical: 5,
+    },
+
     adminDivider: {
       width: 1,
       height: 16,
       backgroundColor: colors.border,
+    },
+
+    adminDividerMobile: {
+      height: 14,
     },
 
     favoriteButtonContainer: {

@@ -1,5 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/context/AuthContext';
 import { FavoritesProvider } from '@/context/FavoritesProvider';
@@ -150,5 +151,18 @@ describe('TravelListItem media props on web', () => {
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     expect(props).toBeTruthy();
     expect(props.mediaProps?.revealOnLoadOnly).toBe(false);
+  });
+
+  it('uses compact owner controls on mobile web cards', () => {
+    renderItem({ currentUserId: '42', isMobile: true });
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    const leftTopSlot = props?.leftTopSlot;
+    expect(leftTopSlot).toBeTruthy();
+
+    const adminStyle = StyleSheet.flatten(leftTopSlot.props.style);
+    expect(adminStyle.top).toBe(8);
+    expect(adminStyle.left).toBe(8);
+    expect(adminStyle.paddingHorizontal).toBe(5);
   });
 });
