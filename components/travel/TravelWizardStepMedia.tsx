@@ -85,7 +85,7 @@ const getProgressPercent = (progress: number) => {
     return Math.round(boundedProgress * 100);
 };
 
-const getCoverResetKey = (coverUrl: string | null) => (coverUrl ? `cover:${coverUrl}` : 'cover:none');
+const getCoverResetKey = (resetToken: number) => `cover:${resetToken}`;
 
 const getGallerySignature = (items: unknown) => {
     if (!Array.isArray(items)) return '';
@@ -166,6 +166,7 @@ function useMediaAnchorScroll(focusAnchorId?: string | null, onAnchorHandled?: (
 function useCoverDeletion(travelId: string | null | undefined, setFormData: TravelWizardStepMediaProps['setFormData']) {
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [isCoverDeleted, setCoverDeleted] = useState(false);
+    const [coverResetToken, setCoverResetToken] = useState(0);
     const hardDeletedRef = useRef(false);
     const isDeletingRef = useRef(false);
     const mountedRef = useRef(true);
@@ -189,6 +190,7 @@ function useCoverDeletion(travelId: string | null | undefined, setFormData: Trav
         if (!travelId) {
             hardDeletedRef.current = true;
             setCoverDeleted(true);
+            setCoverResetToken((prev) => prev + 1);
             clearCoverUrls();
             return;
         }
@@ -223,6 +225,7 @@ function useCoverDeletion(travelId: string | null | undefined, setFormData: Trav
             hardDeletedRef.current = true;
             if (mountedRef.current) {
                 setCoverDeleted(true);
+                setCoverResetToken((prev) => prev + 1);
                 clearCoverUrls();
             }
         } catch {
@@ -242,6 +245,7 @@ function useCoverDeletion(travelId: string | null | undefined, setFormData: Trav
     return {
         isCoverDeleted,
         isDeleteDialogOpen,
+        coverResetToken,
         requestDeleteCover,
         closeDeleteDialog,
         confirmDeleteCover,
@@ -454,6 +458,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
     const {
         isCoverDeleted,
         isDeleteDialogOpen,
+        coverResetToken,
         requestDeleteCover,
         closeDeleteDialog,
         confirmDeleteCover,
@@ -472,7 +477,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
         [coverFullUrl, coverSmallUrl, isCoverDeleted, oldCoverFullUrl, oldCoverSmallUrl],
     );
 
-    const coverResetKey = useMemo(() => getCoverResetKey(coverUrl), [coverUrl]);
+    const coverResetKey = useMemo(() => getCoverResetKey(coverResetToken), [coverResetToken]);
 
     const handleCoverChange = useCallback(
         (url: string | null) => {

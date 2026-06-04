@@ -1,6 +1,6 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useState } from 'react';
 import { Platform, Text } from 'react-native';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import TravelWizardStepMedia from '@/components/travel/TravelWizardStepMedia';
 import type { TravelFormData } from '@/types/types';
@@ -15,20 +15,47 @@ jest.mock('@/api/misc', () => {
   };
 });
 
-// Mock heavy components to avoid Animated warnings in tests
+// Spy that counts how many times the uploader is mounted (a remount === lost upload state).
+const mockMountSpy = jest.fn();
+
+// Mock heavy components to avoid Animated warnings in tests.
+// The stub mirrors the real uploader contract: it calls onPreviewChange/onUpload
+// (the callbacks that drive the cover URL) so we can assert the parent does NOT
+// remount it mid-upload.
 jest.mock('@/components/travel/PhotoUploadWithPreview', () => {
+  const ReactMock = require('react');
   const { Text, View, Pressable } = require('react-native');
-  return ({ collection, idTravel, oldImage, onRequestRemove }: any) => (
-    <View testID="image-upload-stub">
-      <Text>{`${collection}:${idTravel}`}</Text>
-      {oldImage ? <Text>{`old:${oldImage}`}</Text> : null}
-      {oldImage && typeof onRequestRemove === 'function' ? (
-        <Pressable onPress={onRequestRemove} accessibilityRole="button">
-          <Text>Удалить обложку</Text>
+  return ({ collection, idTravel, oldImage, onUpload, onPreviewChange, onRequestRemove }: any) => {
+    ReactMock.useEffect(() => {
+      mockMountSpy();
+    }, []);
+    return (
+      <View testID="image-upload-stub">
+        <Text>{`${collection}:${idTravel}`}</Text>
+        {oldImage ? <Text>{`old:${oldImage}`}</Text> : null}
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => onPreviewChange?.('blob:local-preview')}
+        >
+          <Text>sim-preview</Text>
         </Pressable>
-      ) : null}
-    </View>
-  );
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            onPreviewChange?.('https://cdn.example.com/server.webp');
+            onUpload?.('https://cdn.example.com/server.webp');
+          }}
+        >
+          <Text>sim-upload</Text>
+        </Pressable>
+        {oldImage && typeof onRequestRemove === 'function' ? (
+          <Pressable onPress={onRequestRemove} accessibilityRole="button">
+            <Text>Удалить обложку</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    );
+  };
 });
 
 jest.mock('@/components/travel/TravelWizardHeader', () => {
@@ -83,6 +110,29 @@ const baseFormData: TravelFormData = {
   moderation: false,
 };
 
+// Stateful host: wires a real setFormData so uploader callbacks update the cover
+// URL and re-render the wizard, exactly like the live screen.
+const StatefulStep: React.FC<{ initialForm?: any; travelDataOld?: any }> = ({
+  initialForm = {},
+  travelDataOld = null,
+}) => {
+  const [form, setForm] = useState<TravelFormData>({ ...baseFormData, ...initialForm } as TravelFormData);
+  return (
+    <Suspense fallback={<Text testID="fallback">loading…</Text>}>
+      <TravelWizardStepMedia
+        currentStep={3}
+        totalSteps={6}
+        formData={form}
+        setFormData={setForm as any}
+        travelDataOld={travelDataOld}
+        onManualSave={jest.fn()}
+        onBack={jest.fn()}
+        onNext={jest.fn()}
+      />
+    </Suspense>
+  );
+};
+
 describe('TravelWizardStepMedia', () => {
   const originalPlatform = Platform.OS;
 
@@ -92,6 +142,11 @@ describe('TravelWizardStepMedia', () => {
 
   afterAll(() => {
     Object.defineProperty(Platform, 'OS', { value: originalPlatform });
+  });
+
+  beforeEach(() => {
+    mockMountSpy.mockClear();
+    mockDeleteTravelMainImage.mockReset();
   });
 
   const renderStep = (formOverride: any = {}) =>
@@ -184,5 +239,53 @@ describe('TravelWizardStepMedia', () => {
       expect(queryByText('old:/some/cover.webp')).toBeNull();
       expect(queryByText('old:/old/cover.webp')).toBeNull();
     });
+  });
+
+  it('does not remount the uploader while a photo is being uploaded (preview is preserved)', async () => {
+    const { getByText } = render(<StatefulStep initialForm={{ id: '777' }} />);
+
+    await waitFor(() => expect(getByText('travelMainImage:777')).toBeTruthy());
+    expect(mockMountSpy).toHaveBeenCalledTimes(1);
+
+    // Local preview (blob) appears first — must not remount the uploader.
+    act(() => {
+      fireEvent.press(getByText('sim-preview'));
+    });
+    // Server URL arrives after a successful upload — must not remount either.
+    act(() => {
+      fireEvent.press(getByText('sim-upload'));
+    });
+
+    // Regression: with the cover-URL-derived key the uploader remounted on every
+    // URL change, killing the in-flight upload so the preview never appeared.
+    await waitFor(() => {
+      expect(getByText('old:https://cdn.example.com/server.webp')).toBeTruthy();
+    });
+    expect(mockMountSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('remounts the uploader after the cover is deleted', async () => {
+    mockDeleteTravelMainImage.mockResolvedValueOnce({ status: 204 } as any);
+
+    const { getByText } = render(
+      <StatefulStep
+        initialForm={{
+          id: '42',
+          travel_image_thumb_small_url: '/some/cover.webp',
+          travel_image_thumb_url: '/some/cover.webp',
+        }}
+      />,
+    );
+
+    await waitFor(() => expect(getByText('old:/some/cover.webp')).toBeTruthy());
+    expect(mockMountSpy).toHaveBeenCalledTimes(1);
+
+    fireEvent.press(getByText('Удалить обложку'));
+    await waitFor(() => expect(getByText('УДАЛИТЬ')).toBeTruthy());
+    fireEvent.press(getByText('УДАЛИТЬ'));
+
+    await waitFor(() => expect(mockDeleteTravelMainImage).toHaveBeenCalledWith('42'));
+    // Deletion must reset the uploader via a key change (fresh mount).
+    await waitFor(() => expect(mockMountSpy.mock.calls.length).toBeGreaterThanOrEqual(2));
   });
 });
