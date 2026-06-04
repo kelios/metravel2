@@ -3,6 +3,7 @@ import { ScrollViewStyleReset } from 'expo-router/html';
 import React from 'react';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { getAnalyticsInlineScript } from '@/utils/analyticsInlineScript';
+import { stringifyJsonLd } from '@/utils/jsonLd';
 import { buildCriticalCSS } from '@/utils/criticalCSSBuilder';
 import { getRootVisibilityGateCss, getTravelRouteClassScript } from '@/utils/htmlShell';
 export { getAnalyticsInlineScript };
@@ -224,7 +225,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: stringifyJsonLd({
             '@context': 'https://schema.org',
             '@graph': [
               {

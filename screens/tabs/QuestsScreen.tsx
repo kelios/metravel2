@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
+import { stringifyJsonLd } from '@/utils/jsonLd';
 import { haversineKm } from '@/utils/geo';
 import { useIsFocused } from '@react-navigation/native';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -448,7 +449,7 @@ export default function QuestsScreen() {
             <script
                 key="quests-structured-data"
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(questsStructuredData) }}
+                dangerouslySetInnerHTML={{ __html: stringifyJsonLd(questsStructuredData) }}
             />
         ),
         [questsStructuredData]

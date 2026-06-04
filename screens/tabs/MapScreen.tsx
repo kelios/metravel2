@@ -11,6 +11,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { getUserFriendlyNetworkError } from '@/utils/networkErrorHandler'
+import { stringifyJsonLd } from '@/utils/jsonLd'
 import ErrorDisplay from '@/components/ui/ErrorDisplay'
 import { useMapScreenController } from '@/hooks/useMapScreenController'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
@@ -238,7 +239,7 @@ export default function MapScreen() {
       <script
         key="map-structured-data"
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(mapStructuredData) }}
+        dangerouslySetInnerHTML={{ __html: stringifyJsonLd(mapStructuredData) }}
       />
     )
   }, [isWeb, mapStructuredData])

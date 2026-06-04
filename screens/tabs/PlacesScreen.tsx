@@ -23,6 +23,7 @@ import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { Menu } from '@/ui/paper'
 import { useThemedColors } from '@/hooks/useTheme'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
+import { stringifyJsonLd } from '@/utils/jsonLd'
 import {
   filterCatalogPlaces,
   groupCatalogPlaces,
@@ -173,7 +174,7 @@ export default function PlacesScreen() {
       <script
         key="places-itemlist"
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+        dangerouslySetInnerHTML={{ __html: stringifyJsonLd(data) }}
       />
     )
   }, [filteredPlaces.length, isFocused, seoHeading, seoPlaces])

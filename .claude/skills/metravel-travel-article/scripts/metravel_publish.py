@@ -289,38 +289,62 @@ def _put_with_desc(d, new_desc):
       "number_days":None,"number_peoples":None,"budget":None}
     return req("PUT","/travels/upsert/",payload)
 
-def desc_images(tid, n=4):
-    """Вставить n фото из галереи статьи в текст описания (между разделами). Идемпотентно."""
+def _norm_url(u):
+    if not u: return None
+    if u.startswith("http://"): u="https://"+u[7:]
+    elif u.startswith("/"): u="https://metravel.by"+u
+    return u
+
+def _tokens(s):
+    return set(w for w in re.findall(r"[A-Za-zА-Яа-яёЁ]{4,}", (s or "").lower()))
+
+def desc_images(tid, n=6):
+    """Вставить в текст описания ФОТО К ТОЧКАМ (релевантные месту, не дублируют галерею).
+    Где заголовок совпадает с названием точки — её фото; остальные распределяются по порядку. Идемпотентно."""
     _,t=req("GET",f"/travels/{tid}/"); d=json.loads(t); d=d.get("data",d)
     if not d.get("name"): print(f"  {tid}: нет данных"); return
-    gal=[]
-    for g in (d.get("gallery") or []):
-        u=g.get("url") if isinstance(g,dict) else g
-        if not u: continue
-        if u.startswith("http://"): u="https://"+u[7:]
-        elif u.startswith("/"): u="https://metravel.by"+u
-        gal.append(u)
-    if len(gal)<2: print(f"  {tid}: мало фото в галерее ({len(gal)})"); return
-    desc=d.get("description","") or ""
-    desc=re.sub(r'<p class="mt-img">.*?</p>','',desc)            # убрать прежние вставки (идемпотентность)
-    n=min(n,len(gal)); step=max(1,len(gal)//n); pics=gal[::step][:n]
+    # фото к точкам (только реальные, не плейсхолдер address-image/)
+    pts=[]
+    for a in (d.get("travelAddress") or []):
+        u=a.get("travelImageThumbUrl") or ""
+        if u and not u.rstrip("/").endswith("address-image"):
+            pts.append((a.get("address") or "", _norm_url(u)))
+    desc=re.sub(r'<p class="mt-img">.*?</p>','', d.get("description","") or "")  # убрать прежние вставки
+    if not pts:
+        # запасной вариант: если фото к точкам нет — берём из галереи
+        gal=[_norm_url(g.get("url") if isinstance(g,dict) else g) for g in (d.get("gallery") or [])]
+        gal=[u for u in gal if u]
+        pts=[("",u) for u in gal[::max(1,len(gal)//n)][:n]]
+        if not pts: print(f"  {tid}: нет фото"); return
     fig=lambda u:f'<p class="mt-img"><img src="{u}" alt="" style="max-width:100%;height:auto;border-radius:10px"></p>'
-    parts=re.split(r'(</h2>)', desc)
-    out=[]; pi=0
-    for seg in parts:
-        out.append(seg)
-        if seg=='</h2>' and pi<len(pics): out.append(fig(pics[pi])); pi+=1
-    new_desc="".join(out)
-    if pi==0:                                                    # нет h2 — вставим после первых абзацев
-        ps=re.split(r'(</p>)', new_desc); out=[];
+    # заголовки h2/h3 по порядку
+    heads=[(m.group(1), m.end()) for m in re.finditer(r"<h[23]>(.*?)</h[23]>", desc)]
+    used=set(); placement={}   # pos -> url
+    # 1) сопоставление по названию
+    for text,pos in heads:
+        ht=_tokens(text); best=None
+        for i,(addr,url) in enumerate(pts):
+            if i in used: continue
+            if ht & _tokens(addr): best=i; break
+        if best is not None: placement[pos]=pts[best][1]; used.add(best)
+    # 2) оставшиеся точки — в заголовки без фото, по порядку
+    rem=[i for i in range(len(pts)) if i not in used]
+    for text,pos in heads:
+        if pos in placement or not rem: continue
+        placement[pos]=pts[rem.pop(0)][1]; used.add(0)  # noqa
+    # собрать с вставками по позициям (с конца, чтобы не сбить индексы)
+    nd=desc
+    for pos in sorted(placement, reverse=True):
+        nd=nd[:pos]+fig(placement[pos])+nd[pos:]
+    if not heads:  # нет заголовков — после первых абзацев
+        ps=re.split(r'(</p>)', nd); out=[]; k=0
+        urls=[u for _,u in pts]
         for seg in ps:
             out.append(seg)
-            if seg=='</p>' and pi<len(pics): out.append(fig(pics[pi])); pi+=1
-        new_desc="".join(out)
-    elif pi<len(pics):
-        new_desc+="".join(fig(p) for p in pics[pi:])
-    st,_=_put_with_desc(d,new_desc)
-    print(f"  [{st}] desc_images {tid}: вставлено {pi} фото")
+            if seg=='</p>' and k<min(n,len(urls)): out.append(fig(urls[k])); k+=1
+        nd="".join(out)
+    st,_=_put_with_desc(d,nd)
+    print(f"  [{st}] desc_images {tid}: вставлено {len(placement) or 0} фото (к точкам), точек с фото {len(pts)}")
     return st
 
 # ---------------- photos ----------------
@@ -374,7 +398,22 @@ def photos(tid, folders, gallery=10, cover=True, points=True, cover_file=None):
     if cover_file:
         print("  cover", *upload_image(cover_file,"travelMainImage",tid))
     elif cover and sel:
-        print("  cover", *upload_image(sel[0],"travelMainImage",tid))
+        # эвристика: кадр ближе всего к ПЕРВОЙ точке (главная достопримечательность), а не «первый по порядку».
+        # ВНИМАНИЕ: это лишь черновик обложки — автор ОБЯЗАН визуально проверить и при необходимости заменить (cover).
+        cov=sel[0]
+        try:
+            _,t=req("GET",f"/travels/{tid}/"); dd=json.loads(t); dd=dd.get("data",dd)
+            a0=(dd.get("travelAddress") or [None])[0]
+            mm=re.match(r"\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)", (a0 or {}).get("coord") or "") if a0 else None
+            if mm:
+                pt=(float(mm.group(1)),float(mm.group(2))); bd=1e18
+                for g in sel:
+                    la,lo=_exif(g)
+                    if la is None: continue
+                    dist=_hav(pt,(la,lo))
+                    if dist<bd: bd=dist; cov=g
+        except Exception: pass
+        print("  cover(черновик, проверь визуально!)", *upload_image(cov,"travelMainImage",tid))
     for i,g in enumerate(sel):
         c,_=upload_image(g,"gallery",tid); print(f"  gallery {i+1}/{len(sel)} [{c}]")
     if points:

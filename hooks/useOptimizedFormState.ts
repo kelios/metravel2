@@ -138,6 +138,9 @@ export function useOptimizedFormState<T extends object>(
 
     const id = setTimeout(async () => {
       if (!mountedRef.current) return;
+      // Ручной save() уже в полёте — не запускаем параллельный autosave.
+      // isDirty остаётся true, поэтому следующий цикл перепланирует сохранение.
+      if (isSavingRef.current) return;
 
       onStart?.();
       isSavingRef.current = true;

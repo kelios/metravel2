@@ -1,10 +1,10 @@
 # TASK-20260520-001: Image Server Resize Params And Cache Headers
 
-Status: Backlog
+Status: Partially fixed - backend follow-up required
 Owner: Backend
 Support: Frontend Developer, Tester, Reviewer
 Created: 2026-05-20
-Updated: 2026-05-20
+Updated: 2026-06-04
 
 ## Goal
 
@@ -31,9 +31,9 @@ for w in 320 480 720 1200; do
 done
 ```
 
-All tested responses are currently `403920b`. Alternative conversion names such as `-detail.jpg`, `-thumb_400.jpg`, `-medium.jpg`, `-mobile.jpg`, and `-responsive_320.jpg` return `404`; only `detail_hd` exists.
+Original 2026-05-20 evidence: all tested responses were `403920b`. Alternative conversion names such as `-detail.jpg`, `-thumb_400.jpg`, `-medium.jpg`, `-mobile.jpg`, and `-responsive_320.jpg` returned `404`; only `detail_hd` existed. Current 2026-06-04 status is improved but still not fully within the byte-budget acceptance criteria; see the progress log below.
 
-Current response headers also include conflicting duplicates:
+Original response headers also included conflicting duplicates:
 
 ```text
 cache-control: public, max-age=31536000, immutable
@@ -134,13 +134,14 @@ Post-deploy performance check:
 ## Progress Log
 
 - 2026-05-20: Created from reported production image API behavior and mobile LCP profiling.
+- 2026-06-04: Re-verified against production `metravel.by`. Resize/content negotiation and headers are partly fixed: `w=480&q=55` returns WebP `51,362b`, `w=720&q=55` returns WebP `112,680b`, `w=1200&q=55` returns WebP `241,698b`; response has a single `Cache-Control: public, max-age=31536000, immutable` and `Vary: Accept`. The task stays active because the target WebP budget for `w=1200` (`<=220KB`) is still missed, and post-deploy PSI/LCP validation is not recorded.
 
 ## Results
 
 Changed files:
 
-Validation evidence:
+Validation evidence: 2026-06-04 production HEAD probes for `w=480`, `w=720`, `w=1200` with `Accept: image/webp,image/*,*/*`.
 
 Reviewer findings:
 
-Blockers:
+Blockers: backend image encoder/quality tuning still needed for the `w=1200` byte budget; PSI/Lighthouse mobile LCP validation still pending after final backend tuning.

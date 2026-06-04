@@ -2,6 +2,7 @@ import React from 'react'
 import Head from 'expo-router/head'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
+import { stringifyJsonLd } from '@/utils/jsonLd'
 
 type TravelDetailsSeoBlockProps = {
   backgroundColor: string
@@ -43,7 +44,7 @@ export default function TravelDetailsSeoBlock({
             id="travel-article-jsonld"
             type="application/ld+json"
             dangerouslySetInnerHTML={{
-              __html: JSON.stringify(jsonLd),
+              __html: stringifyJsonLd(jsonLd),
             }}
           />
         </Head>

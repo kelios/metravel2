@@ -292,6 +292,10 @@ export const useTravelStatusStore = create<TravelStatusState>((set, get) => ({
         .map(normalizeServerStatusEntry)
         .filter((item): item is TravelStatusEntry => item !== null)
 
+      // Пользователь сменился (logout/смена аккаунта) пока шёл серверный фетч —
+      // не затираем актуальные записи устаревшим ответом.
+      if (get()._userId !== userId) return
+
       set({ entries: serverEntries, _userId: userId })
       await persistEntries(serverEntries, userId)
     } catch (error) {

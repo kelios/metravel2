@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useQuestBundle, useQuestProgressSync } from '@/hooks/useQuestsApi';
 import { useThemedColors } from '@/hooks/useTheme';
 import { createQuestDetailStructuredData } from '@/utils/discoverySeo';
+import { stringifyJsonLd } from '@/utils/jsonLd';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 
 import type { QuestWizardProps } from '@/components/quests/QuestWizard';
@@ -364,7 +365,7 @@ export default function QuestByIdScreen() {
       <script
         key="quest-structured-data"
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        dangerouslySetInnerHTML={{ __html: stringifyJsonLd(structuredData) }}
       />
     );
   }, [bundle, canonical, cityId, questId, seo.description, seo.title]);

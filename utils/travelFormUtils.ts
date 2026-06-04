@@ -374,7 +374,9 @@ export function checkTravelEditAccess(
   const travelUserId = travel.userIds || travel.user?.id?.toString() || '';
   const currentUserIdStr = userId?.toString() || '';
   
-  const isOwner = travelUserId === currentUserIdStr;
+  // Пустой идентификатор владельца не делает владельцем: иначе у анонима
+  // ('' === '') открылся бы доступ к путешествию с отсутствующим userIds/user.id.
+  const isOwner = travelUserId !== '' && travelUserId === currentUserIdStr;
   return isOwner || isSuperAdmin;
 }
 
