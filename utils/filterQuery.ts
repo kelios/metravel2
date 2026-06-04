@@ -114,6 +114,9 @@ export const buildTravelQueryParams = (
   const params: Record<string, any> = { ...normalized }
   const moderationValue = normalized.moderation !== undefined ? normalized.moderation : filter.moderation
   const publishValue = normalized.publish !== undefined ? normalized.publish : filter.publish
+  const draftsOnly = filter.draftsOnly === true || normalized.draftsOnly === true
+
+  delete params.draftsOnly
 
   if (!(isMeTravel || isExport)) {
     const hasExplicitModeration = 'moderation' in normalized || 'moderation' in filter
@@ -154,8 +157,14 @@ export const buildTravelQueryParams = (
   }
 
   if (isMeTravel) {
-    delete params.publish
-    delete params.moderation
+    if (draftsOnly) {
+      params.publish = 0
+      params.moderation = 0
+      params.includeDrafts = true
+    } else {
+      delete params.publish
+      delete params.moderation
+    }
   }
 
   return sortObjectKeys(params)

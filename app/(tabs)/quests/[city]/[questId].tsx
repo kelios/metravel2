@@ -130,13 +130,13 @@ const patchQuestHead = (seo: QuestSeoModel, canonical: string) => {
   upsertCanonical(canonical);
 };
 
-const useQuestHeadSync = (isFocused: boolean, seo: QuestSeoModel, canonical: string) => {
+const useQuestHeadSync = (enabled: boolean, seo: QuestSeoModel, canonical: string) => {
   useEffect(() => {
-    if (!isFocused || Platform.OS !== 'web' || typeof document === 'undefined') return undefined;
+    if (!enabled || Platform.OS !== 'web' || typeof document === 'undefined') return undefined;
 
     const timers = HEAD_PATCH_DELAYS_MS.map((delay) => setTimeout(() => patchQuestHead(seo, canonical), delay));
     return () => timers.forEach(clearTimeout);
-  }, [canonical, isFocused, seo]);
+  }, [canonical, enabled, seo]);
 };
 
 const Icon = ({ name, color, size = 18 }: { name: IconName; color: string; size?: number }) => (
@@ -373,7 +373,9 @@ export default function QuestByIdScreen() {
     void resetProgress();
   }, [resetProgress]);
 
-  useQuestHeadSync(isFocused, seo, canonical);
+  // Императивный патч head — только для успешной страницы квеста. На gate/loading/error
+  // ветках свой InstantSEO (со своим robots/canonical), и отложенный патч его перетирал.
+  useQuestHeadSync(isFocused && isAuthenticated && !isLoading && Boolean(bundle), seo, canonical);
 
   if (!isAuthenticated) {
     return <AuthGateState canonical={canonical} colors={colors} isFocused={isFocused} questId={questId} styles={styles} />;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Image, Dimensions } from 'react-native';
 import { Button, Card } from '@/ui/paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -21,28 +21,46 @@ export default function AccountConfirmation() {
     const { hash } = useLocalSearchParams(); // ✅ заменили useRoute
     const router = useRouter();              // ✅ заменили useNavigation
     const { setIsAuthenticated } = useAuth();
+    const confirmedHashRef = useRef<string | null>(null);
 
     useEffect(() => {
+        const hashStr = Array.isArray(hash) ? hash[0] : hash;
+        if (!hashStr) {
+            // Нет/невалидный hash — не оставляем бесконечный спиннер.
+            setError('Ссылка подтверждения недействительна или устарела.');
+            setLoading(false);
+            return;
+        }
+        // Токен подтверждения одноразовый: не вызываем confirmAccount повторно
+        // (StrictMode double-invoke / нестабильный router в deps).
+        if (confirmedHashRef.current === hashStr) return;
+        confirmedHashRef.current = hashStr;
+
+        let active = true;
         const confirm = async () => {
             try {
-                const response = await confirmAccount(hash as string);
+                const response = await confirmAccount(hashStr);
+                if (!active) return;
                 if (response.userToken) {
                     setIsAuthenticated(true);
                     router.replace('/'); // ✅ переходим на главную
                 } else {
-                    setError('Не удалось подтвердить учетную запись. ' + (response as any)?.non_field_errors?.[0]);
+                    setError('Не удалось подтвердить учетную запись. ' + ((response as any)?.non_field_errors?.[0] ?? ''));
                 }
             } catch (err: any) {
-                setError('Произошла ошибка при подтверждении учетной записи. ' + err.message);
+                if (!active) return;
+                setError('Произошла ошибка при подтверждении учетной записи. ' + (err?.message ?? ''));
             } finally {
-                setLoading(false);
+                if (active) setLoading(false);
             }
         };
 
-        if (hash) {
-            confirm();
-        }
-    }, [hash, router, setIsAuthenticated]);
+        confirm();
+        return () => { active = false; };
+        // router/setIsAuthenticated намеренно вне deps: эффект должен выполниться
+        // один раз на hash, иначе одноразовый токен будет израсходован повторно.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hash]);
 
     return (
         <View style={styles.container}>

@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { FlashList } from '@shopify/flash-list'
 
 import { UserPointsMap } from '@/components/UserPoints/UserPointsMap'
+import { PointsListWebLazyScroll } from '@/components/UserPoints/PointsListWebLazyScroll'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import FiltersPanelMapSettings from '@/components/MapPage/FiltersPanelMapSettings'
@@ -327,33 +328,44 @@ export const PointsListGrid: React.FC<{
     [listExtraData, showingRecommendations, recommendedRoutes]
   )
 
+  const renderPointListItem = React.useCallback(
+    ({ item }: { item: any }) => {
+      const routeInfo = recommendedRoutes?.[Number(item?.id)]
+      return (
+        <View style={localStyles.pointsListItem}>
+          {renderItem({ item })}
+          {showingRecommendations && routeInfo ? (
+            <View style={localStyles.routeInfo}>
+              <RNText style={localStyles.routeInfoText}>
+                {routeInfo.distance} км · ~{routeInfo.duration} мин
+              </RNText>
+            </View>
+          ) : null}
+        </View>
+      )
+    },
+    [
+      localStyles.pointsListItem,
+      localStyles.routeInfo,
+      localStyles.routeInfoText,
+      recommendedRoutes,
+      renderItem,
+      showingRecommendations,
+    ]
+  )
+
   const renderListPanel = React.useCallback(
     () => (
       isWeb ? (
-        <ScrollView
-          key={listKey ?? 'userpoints-list'}
-          style={localStyles.rightPanelScroll}
-          contentContainerStyle={[localStyles.rightPanelContent, localStyles.pointsList] as any}
-          testID="userpoints-panel-content-list"
-          showsVerticalScrollIndicator={true}
-        >
-          {renderListHeader()}
-          {filteredPoints.map((item: any, index: number) => {
-            const routeInfo = recommendedRoutes?.[Number(item?.id)]
-            return (
-              <View key={String(item?.id ?? `idx-${index}`)} style={localStyles.pointsListItem}>
-                {renderItem({ item })}
-                {showingRecommendations && routeInfo ? (
-                  <View style={localStyles.routeInfo}>
-                    <RNText style={localStyles.routeInfoText}>
-                      {routeInfo.distance} км · ~{routeInfo.duration} мин
-                    </RNText>
-                  </View>
-                ) : null}
-              </View>
-            )
-          })}
-        </ScrollView>
+        <PointsListWebLazyScroll
+          filteredPoints={filteredPoints}
+          isLoading={isLoading}
+          listKey={listKey}
+          localStyles={localStyles}
+          renderEmpty={renderEmpty}
+          renderListHeader={renderListHeader}
+          renderPointListItem={renderPointListItem}
+        />
       ) : (
         <FlashList
           key={listKey ?? 'userpoints-list'}
@@ -364,21 +376,7 @@ export const PointsListGrid: React.FC<{
           keyExtractor={(item, index) => String((item as any)?.id ?? `idx-${index}`)}
           {...({ estimatedItemSize: 120 } as any)}
           testID="userpoints-panel-content-list"
-          renderItem={({ item }) => {
-            const routeInfo = recommendedRoutes?.[Number((item as any)?.id)]
-            return (
-              <View style={localStyles.pointsListItem}>
-                {renderItem({ item })}
-                {showingRecommendations && routeInfo ? (
-                  <View style={localStyles.routeInfo}>
-                    <RNText style={localStyles.routeInfoText}>
-                      {routeInfo.distance} км · ~{routeInfo.duration} мин
-                    </RNText>
-                  </View>
-                ) : null}
-              </View>
-            )
-          }}
+          renderItem={renderPointListItem}
           ListHeaderComponent={renderListHeader()}
           showsVerticalScrollIndicator={true}
           drawDistance={600}
@@ -387,19 +385,14 @@ export const PointsListGrid: React.FC<{
     ),
     [
       filteredPoints,
+      isLoading,
       isWeb,
       listFlashExtraData,
       listKey,
-      localStyles.pointsList,
-      localStyles.pointsListItem,
-      localStyles.rightPanelContent,
-      localStyles.rightPanelScroll,
-      localStyles.routeInfo,
-      localStyles.routeInfoText,
-      recommendedRoutes,
-      renderItem,
+      localStyles,
+      renderEmpty,
+      renderPointListItem,
       renderListHeader,
-      showingRecommendations,
     ]
   )
   
@@ -736,6 +729,13 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
   },
   pointsListItem: {
     marginBottom: 12,
+  },
+  listProgressText: {
+    marginTop: 4,
+    marginBottom: 12,
+    textAlign: 'center',
+    fontSize: 12,
+    color: colors.textMuted,
   },
   recommendationsHeader: {
     flexDirection: 'row',

@@ -5,9 +5,9 @@ import {
   ActivityIndicator,
   Platform,
   ScrollView,
-  RefreshControl,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  type LayoutChangeEvent,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -144,6 +144,22 @@ export default function ProfileScreen() {
     const threshold = layoutMeasurement.height * 0.5;
 
     if (distanceFromEnd < threshold) {
+      handleListEndReached();
+    }
+  }, [activeTab, handleListEndReached]);
+
+  // Web: scroll-событие не возникает, если контент не заполняет вьюпорт. На широком
+  // экране с малым числом путешествий (но hasMore) пользователь застрял бы на странице 1.
+  // Авто-догружаем по onContentSizeChange, пока контент короче вьюпорта и есть hasMore.
+  const webViewportHeightRef = useRef(0);
+  const handleWebLayout = useCallback((event: LayoutChangeEvent) => {
+    webViewportHeightRef.current = event.nativeEvent.layout.height;
+  }, []);
+  const handleWebContentSizeChange = useCallback((_contentWidth: number, contentHeight: number) => {
+    if (activeTab !== 'travels') return;
+    const viewport = webViewportHeightRef.current;
+    if (viewport > 0 && contentHeight <= viewport + 4) {
+      // handleListEndReached сам гардит hasMore/loading/throttle.
       handleListEndReached();
     }
   }, [activeTab, handleListEndReached]);
@@ -558,11 +574,8 @@ export default function ProfileScreen() {
           contentContainerStyle={[styles.listContent, { paddingBottom: contentPaddingBottom }]}
           onScroll={handleWebScroll}
           scrollEventThrottle={32}
-          refreshControl={
-            Platform.OS !== 'web' ? (
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            ) : undefined
-          }
+          onLayout={handleWebLayout}
+          onContentSizeChange={handleWebContentSizeChange}
         >
           {Header}
           {isTravelsTabLoading ? ListSkeleton : (

@@ -702,6 +702,7 @@ function ListTravelBase() {
         onSelect,
         total: displayedTotal,
         isSuper,
+        isMeTravel,
         setSearch,
         resetFilters,
         isVisible: !usesOverlaySidebar || showFilters,

@@ -59,19 +59,24 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     card: {
       backgroundColor: colors.surface,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      padding: 14,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      padding: 12,
       marginBottom: (Platform.OS === 'web') ? 8 : 10,
       borderWidth: 1,
       borderColor: colors.borderLight,
       width: '100%',
       maxWidth: '100%',
       overflow: 'hidden' as const,
+      ...((Platform.OS === 'web')
+        ? ({
+            boxShadow: colors.boxShadows?.light,
+          } as any)
+        : {}),
     },
     cardRow: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      marginBottom: (Platform.OS === 'web') ? DESIGN_TOKENS.spacing.xs : DESIGN_TOKENS.spacing.sm,
+      marginBottom: 0,
     },
     avatarWrap: {
       marginRight: DESIGN_TOKENS.spacing.sm,
@@ -80,9 +85,9 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       ...((Platform.OS === 'web') ? ({ position: 'relative' as any }) : {}),
     },
     avatar: {
-      width: (Platform.OS === 'web') ? 44 : 50,
-      height: (Platform.OS === 'web') ? 44 : 50,
-      borderRadius: (Platform.OS === 'web') ? 22 : 25,
+      width: (Platform.OS === 'web') ? 40 : 48,
+      height: (Platform.OS === 'web') ? 40 : 48,
+      borderRadius: (Platform.OS === 'web') ? 20 : 24,
       borderWidth: 1,
       borderColor: colors.borderLight,
     },
@@ -99,18 +104,18 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     actionsRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: DESIGN_TOKENS.spacing.xs,
+      gap: 6,
       marginLeft: 'auto',
       flexShrink: 0,
       alignSelf: 'center',
     },
     actionBtn: {
-      width: (Platform.OS === 'web') ? 40 : 42,
-      height: (Platform.OS === 'web') ? 40 : 42,
-      borderRadius: 12,
+      width: (Platform.OS === 'web') ? 34 : 40,
+      height: (Platform.OS === 'web') ? 34 : 40,
+      borderRadius: 10,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: colors.surfaceMuted,
+      backgroundColor: colors.backgroundSecondary,
       borderWidth: 1,
       borderColor: colors.borderLight,
       ...((Platform.OS === 'web')
@@ -131,18 +136,16 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       fontSize: 15,
       fontWeight: '700',
       color: colors.text,
-      fontFamily: 'Georgia',
       flexShrink: 1,
       lineHeight: (Platform.OS === 'web') ? 19 : 20,
-      letterSpacing: -0.2,
     },
     userNamePrimary: { fontWeight: '800', color: colors.text },
     metaRow: {
       flexDirection: 'row',
       alignItems: 'center',
       flexWrap: 'nowrap',
-      columnGap: 10,
-      marginTop: 6,
+      columnGap: 8,
+      marginTop: 5,
     },
     metaPill: {
       flexDirection: 'row',
@@ -154,7 +157,6 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     metaText: {
       fontSize: (Platform.OS === 'web') ? 12 : 13,
       color: colors.textMuted,
-      fontFamily: 'Georgia',
       fontWeight: '500',
       lineHeight: (Platform.OS === 'web') ? 18 : 20,
       flexShrink: 1,
@@ -234,16 +236,20 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
           } as any)
         : {}),
     },
-    allTravelsWrap: { marginTop: DESIGN_TOKENS.spacing.xs, alignSelf: 'flex-start' },
+    allTravelsWrap: { marginTop: 8, alignSelf: 'stretch' },
     allTravelsButton: {
-      alignSelf: 'flex-start',
+      alignSelf: 'stretch',
       borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: 'transparent',
+      backgroundColor: colors.primarySoft,
       borderColor: colors.borderLight,
+      minHeight: 34,
+      paddingVertical: 4,
+      paddingHorizontal: 12,
     },
     allTravelsButtonLabel: {
       color: colors.primary,
-      fontWeight: '600',
+      fontWeight: '700',
+      fontSize: 13,
       textAlign: 'center',
     },
     closeBar: {

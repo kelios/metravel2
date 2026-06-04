@@ -190,6 +190,8 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
     const progressIdRef = useRef<number | null>(null);
     const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const pendingDataRef = useRef<PendingQuestProgressData | null>(null);
+    const isAuthenticatedRef = useRef(isAuthenticated);
+    isAuthenticatedRef.current = isAuthenticated;
 
     // Загрузка прогресса при маунте
     useEffect(() => {
@@ -246,10 +248,29 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         }
     }, [isAuthenticated]);
 
-    // Flush on unmount
+    // Flush pending save on unmount — иначе изменение, сделанное за <2 сек до ухода
+    // со страницы, теряется (debounce-таймер просто очищался). Делаем state-free
+    // запрос, чтобы не дёргать setState на размонтированном компоненте.
     useEffect(() => {
         return () => {
-            if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+            if (debounceTimerRef.current) {
+                clearTimeout(debounceTimerRef.current);
+                debounceTimerRef.current = null;
+            }
+            const data = pendingDataRef.current;
+            if (!data || !isAuthenticatedRef.current || !progressIdRef.current) return;
+            pendingDataRef.current = null;
+            void apiUpdateProgress(progressIdRef.current, {
+                current_index: data.currentIndex,
+                unlocked_index: data.unlockedIndex,
+                answers: data.answers,
+                attempts: data.attempts,
+                hints: data.hints,
+                show_map: data.showMap,
+                completed: data.completed,
+            }).catch((err) => {
+                console.warn('Could not flush quest progress on unmount:', err);
+            });
         };
     }, []);
 

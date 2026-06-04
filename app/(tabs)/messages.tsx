@@ -35,6 +35,9 @@ export default function MessagesScreen() {
     const [initialLoading, setInitialLoading] = useState(false);
     const [showPicker, setShowPicker] = useState(false);
     const userDismissedDeepLink = useRef(false);
+    const handledUserDeepLink = useRef<string | null>(null);
+    const pendingUserDeepLink = useRef<string | null>(null);
+    const handledThreadDeepLink = useRef<string | null>(null);
 
     const canFetch = authReady && isAuthenticated;
     const {
@@ -95,10 +98,15 @@ export default function MessagesScreen() {
     useEffect(() => {
         if (!params.userId || !isAuthenticated || !authReady) return;
         if (userDismissedDeepLink.current) return;
+        // Обрабатываем диплинк один раз на значение userId — иначе эффект
+        // перезапускается на каждый poll threads и переоткрывает диалог.
+        if (handledUserDeepLink.current === params.userId) return;
+        if (pendingUserDeepLink.current === params.userId) return;
         const targetUserId = Number(params.userId);
         if (isNaN(targetUserId)) return;
 
         let cancelled = false;
+        pendingUserDeepLink.current = params.userId;
         setInitialLoading(true);
 
         (async () => {
@@ -129,6 +137,7 @@ export default function MessagesScreen() {
                         unread_count: 0,
                     });
                 }
+                handledUserDeepLink.current = params.userId ?? null;
             } catch (e) {
                 devError('MessagesScreen: fetchThreadByUser error:', e);
                 // Still open a virtual thread so user can send
@@ -139,21 +148,34 @@ export default function MessagesScreen() {
                     last_message_created_at: null,
                     unread_count: 0,
                 });
+                handledUserDeepLink.current = params.userId ?? null;
             } finally {
+                if (pendingUserDeepLink.current === params.userId) {
+                    pendingUserDeepLink.current = null;
+                }
                 if (!cancelled) setInitialLoading(false);
             }
         })();
 
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+            if (pendingUserDeepLink.current === params.userId) {
+                pendingUserDeepLink.current = null;
+            }
+        };
     }, [params.userId, isAuthenticated, authReady, userId, threads]);
 
     // Диплинк: открыть конкретный диалог по ID
     useEffect(() => {
         if (!params.threadId || !isAuthenticated || !authReady) return;
+        // Один раз на значение threadId. Ждём, пока threads загрузятся (тогда find
+        // найдёт диалог), но не зацикливаем refreshThreads → новый threads → refresh.
+        if (handledThreadDeepLink.current === params.threadId) return;
         const tid = Number(params.threadId);
         if (isNaN(tid)) return;
         const found = threads.find((t) => t.id === tid);
         if (found) {
+            handledThreadDeepLink.current = params.threadId;
             setSelectedThread(found);
             if (found.id >= 0) {
                 setThreadUnreadCount(found.id, 0);

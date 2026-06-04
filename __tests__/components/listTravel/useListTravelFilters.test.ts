@@ -142,6 +142,21 @@ describe('useListTravelFilters', () => {
     expect(resultMeTravel.current.queryParams.moderation).toBeUndefined();
   });
 
+  it('builds draft query params for "Мои путешествия" when draftsOnly is selected', () => {
+    const { result } = setup({ isMeTravel: true, userId: '42' });
+
+    act(() => {
+      result.current.onSelect('draftsOnly', true);
+    });
+
+    expect(result.current.queryParams).toEqual({
+      includeDrafts: true,
+      moderation: 0,
+      publish: 0,
+      user_id: '42',
+    });
+  });
+
   describe('initialFilter', () => {
     it('uses INITIAL_FILTER (empty) when initialFilter is not provided', () => {
       const { result } = setup();

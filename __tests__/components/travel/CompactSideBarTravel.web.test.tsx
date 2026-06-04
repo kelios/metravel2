@@ -249,14 +249,31 @@ describe('CompactSideBarTravel - Web', () => {
 
       // Проверяем что карточка имеет компактный padding
       const styles = StyleSheet.flatten(card.props.style);
-      expect(styles.padding).toBeLessThanOrEqual(14);
+      expect(styles.padding).toBeLessThanOrEqual(12);
     });
 
-    it('аватарка должна быть 52px', () => {
+    it('аватарка должна быть компактной на desktop web', () => {
       const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...defaultProps} />);
 
       const avatar = UNSAFE_getAllByProps({ 'data-sidebar-avatar': true })[0];
       expect(avatar).toBeTruthy();
+      const media = avatar.findByProps({ alt: 'Юлия' });
+      const styles = StyleSheet.flatten(media.props.style) || {};
+      expect(styles.width).toBeLessThanOrEqual(40);
+      expect(styles.height).toBeLessThanOrEqual(40);
+    });
+
+    it('действия автора должны быть компактнее стандартной кнопки', () => {
+      const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...defaultProps} />);
+
+      const actionButton = UNSAFE_getAllByProps({ 'data-action-btn': true })[0];
+      const resolvedStyle =
+        typeof actionButton.props.style === 'function'
+          ? actionButton.props.style({ pressed: false, hovered: false })
+          : actionButton.props.style;
+      const styles = StyleSheet.flatten(resolvedStyle) || {};
+      expect(styles.width).toBeLessThanOrEqual(34);
+      expect(styles.height).toBeLessThanOrEqual(34);
     });
 
     it('пункты меню должны иметь компактные отступы', () => {

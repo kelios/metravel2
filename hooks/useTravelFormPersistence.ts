@@ -519,6 +519,10 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         showToast('Сохранено');
         return savedData;
       } catch (error) {
+        // Сохранение не удалось — пользователь остаётся на странице, поэтому снова
+        // разрешаем тосты автосейва (иначе после неудачной публикации/модерации
+        // последующие ошибки автосейва станут «немыми» до конца сессии).
+        suppressAutosaveErrorToastRef.current = false;
         if ((error as Error)?.message === 'Request aborted') {
           throw error;
         }

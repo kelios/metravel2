@@ -206,6 +206,20 @@ describe('viewHistoryStore', () => {
 
       expect(useViewHistoryStore.getState().viewHistory).toHaveLength(1);
     });
+
+    it('persists adopted history (not empty) to cache when server returns empty', async () => {
+      const kept = { ...makeItem(1), viewedAt: 100 };
+      useViewHistoryStore.setState({ viewHistory: [kept] });
+      fetchUserHistory.mockResolvedValue([]);
+
+      await act(() => useViewHistoryStore.getState().refreshFromServer('42'));
+
+      // Кеш должен совпадать с тем, что осталось в памяти, а не с пустым ответом.
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        'metravel_view_history_server_42',
+        JSON.stringify([kept]),
+      );
+    });
   });
 
   describe('ensureServerData', () => {

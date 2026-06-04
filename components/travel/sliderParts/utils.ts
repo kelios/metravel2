@@ -107,15 +107,15 @@ export const buildUriWeb = (
     const maxWidth = isFirst
       ? isMobileWidth
         ? 720
-        : 720
+        : SLIDER_MAX_WIDTH.desktop
       : isMobileWidth
         ? SLIDER_MAX_WIDTH.mobile
         : SLIDER_MAX_WIDTH.desktop;
     const targetWidth = isFirst ? maxWidth : Math.min(containerWidth, maxWidth);
     const quality = isFirst
       ? isMobileWidth
-        ? 35
-        : 45
+        ? 72
+        : 82
       : isMobileWidth
         ? 78
         : 78;

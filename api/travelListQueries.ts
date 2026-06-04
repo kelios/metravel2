@@ -80,7 +80,7 @@ export const fetchTravelFacets = async (
         }
 
         const handledKeys = new Set<string>([
-            ...arrayFields, 'year', 'moderation', 'publish', 'sort', 'sortBy', 'sortOrder', 'ordering',
+            ...arrayFields, 'year', 'moderation', 'publish', 'includeDrafts', 'sort', 'sortBy', 'sortOrder', 'ordering',
         ]);
         Object.entries(urlParams || {}).forEach(([key, value]) => {
             if (handledKeys.has(key)) return;
@@ -159,10 +159,16 @@ export const fetchTravels = async (
         const sortQuery = extractSortQueryParams(urlParams || {});
 
         const isUserScoped = urlParams?.user_id !== undefined && urlParams?.user_id !== null;
+        const includeDraftsRequested = urlParams?.includeDrafts === true || urlParams?.includeDrafts === 'true';
         const allowDrafts =
             isUserScoped &&
-            urlParams?.publish === undefined &&
-            urlParams?.moderation === undefined;
+            (
+                includeDraftsRequested ||
+                (
+                    urlParams?.publish === undefined &&
+                    urlParams?.moderation === undefined
+                )
+            );
 
         if (isUserScoped) {
             if (urlParams?.moderation !== undefined) whereObject.moderation = urlParams.moderation;
@@ -185,7 +191,7 @@ export const fetchTravels = async (
         }
 
         const handledKeys = new Set<string>([
-            ...arrayFields, 'year', 'moderation', 'publish', 'sort', 'sortBy', 'sortOrder', 'ordering',
+            ...arrayFields, 'year', 'moderation', 'publish', 'includeDrafts', 'sort', 'sortBy', 'sortOrder', 'ordering',
         ]);
         Object.entries(urlParams || {}).forEach(([key, value]) => {
             if (handledKeys.has(key)) return;

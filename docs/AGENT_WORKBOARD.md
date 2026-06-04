@@ -527,7 +527,11 @@ Findings:
 - Root cause confirmed: `components/UserPoints/PointsList.tsx:57` sets `defaultPerPage = Platform.OS === 'web' ? 5000 : 200` — the large fetch is intentional so the points MAP shows all of the user's markers at once. Simply lowering `perPage` would drop map markers (regression), so this is NOT a safe quick-fix.
 - Expected: keep loading all points for the map, but virtualize / lazily render the accompanying list so the DOM does not hold all rows at once.
 - Owner: `travel-expert`/`refactor-surgeon` — the real fix is list virtualization, coupled with the existing `TD-014` split of `PointsList.tsx` (909 LOC). Promote to a `PERF-*` item rather than a standalone patch.
-- Status: open; deferred to `TD-014` / `PERF-*` (not a contained quick-fix).
+- Fix 2026-06-04: kept the `perPage=5000` fetch/map dataset intact, but bounded the web side-list DOM with lazy incremental rendering. Changed files: `components/UserPoints/PointsListGrid.tsx`, new `components/UserPoints/PointsListWebLazyScroll.tsx`, `__tests__/components/UserPoints/PointsListGrid.test.tsx`.
+- Validation: `npm run test:run -- __tests__/app/userpoints.test.tsx __tests__/components/UserPoints` (9 suites / 41 tests), `npm run typecheck -- --pretty false`, eslint for touched userpoints files, `npm run guard:file-complexity:changed`, `npm run check:image-architecture`, `npm run guard:external-links`.
+- Browser verification: rebuilt local production web export with e2e API proxy on `127.0.0.1:8097` and ran authenticated Playwright smoke for `/userpoints`; API returned points, `loginWall=false`, map present, list present, initial point cards `80` while total list tab showed `2671`, `document.body.innerText` dropped to `8328`, `overflowX=false`, `consoleErrorCount=0`, `pageErrorCount=0`, no error boundary. Screenshot: `.codex-temp/browser/userpoints-d007-playwright.png`.
+- Reviewer pass: focused diff review found no blockers; residual risk is limited to future UX tuning of the lazy-scroll threshold.
+- Status: fixed.
 
 ### D-008 Wizard step-2 validation copy has plural-agreement error
 

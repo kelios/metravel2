@@ -135,6 +135,9 @@ interface ModernFiltersProps {
   showModeration?: boolean;
   moderationValue?: number | undefined;
   onToggleModeration?: () => void;
+  showDraftsOnly?: boolean;
+  draftsOnlyValue?: boolean;
+  onToggleDraftsOnly?: () => void;
   onApply?: () => void;
   onClose?: () => void;
 }
@@ -152,6 +155,9 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   showModeration,
   moderationValue,
   onToggleModeration,
+  showDraftsOnly,
+  draftsOnlyValue,
+  onToggleDraftsOnly,
   onApply,
   onClose,
 }) => {
@@ -356,6 +362,34 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
 
         {/* Moderation (admin) */}
         <View style={styles.extraFilters}>
+          {showDraftsOnly && onToggleDraftsOnly && (
+            <Pressable
+              onPress={onToggleDraftsOnly}
+              style={({ hovered, pressed }) => [
+                styles.moderationRow,
+                draftsOnlyValue && styles.moderationRowSelected,
+                (hovered || pressed) && styles.moderationRowPressed,
+              ]}
+              accessibilityRole="checkbox"
+              accessibilityLabel="Показать черновики"
+              accessibilityState={{ checked: !!draftsOnlyValue }}
+              {...(Platform.OS === 'web'
+                ? ({
+                    title: 'Показывать только черновики автора',
+                  } as any)
+                : null)}
+            >
+              <FilterCheckbox checked={!!draftsOnlyValue} checkboxStyle={styles.checkbox} checkboxCheckedStyle={styles.checkboxChecked} checkColor={colors.textOnPrimary} />
+              <Text
+                style={[
+                  styles.moderationLabel,
+                  draftsOnlyValue && styles.moderationLabelSelected,
+                ]}
+              >
+                Показать черновики
+              </Text>
+            </Pressable>
+          )}
           {showModeration && onToggleModeration && (
             <Pressable
               onPress={onToggleModeration}

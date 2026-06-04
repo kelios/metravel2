@@ -100,14 +100,14 @@ function OptimizedLCPHeroInner({
     img.id,
   );
   const ratio = img.width && img.height ? img.width / img.height : 16 / 9;
-  const lcpMaxWidth = 720;
-  const lcpWidths = isMobile ? [320, 480, 640, 720] : [480, 720];
+  const lcpMaxWidth = isMobile ? 720 : 1280;
+  const lcpWidths = isMobile ? [320, 480, 640, 720] : [720, 960, 1280];
   const targetWidth = lcpMaxWidth;
 
   const responsive = buildResponsiveImageProps(baseSrc, {
     maxWidth: targetWidth,
     widths: lcpWidths,
-    quality: isMobile ? 35 : 45,
+    quality: isMobile ? 72 : 82,
     format: 'auto',
     fit: 'contain',
     sizes: isMobile ? '100vw' : '(max-width: 1024px) 92vw, 720px',

@@ -248,6 +248,24 @@ describe('ModernFilters Component', () => {
     expect(screen.getByText('Только на модерации')).toBeTruthy();
   });
 
+  it('shows drafts filter for author travels', () => {
+    renderWithProviders(
+      <ModernFilters
+        filterGroups={mockFilterGroups}
+        selectedFilters={{}}
+        onFilterChange={mockOnFilterChange}
+        onClearAll={mockOnClearAll}
+        resultsCount={10}
+        showDraftsOnly={true}
+        draftsOnlyValue={true}
+        onToggleDraftsOnly={mockOnToggleModeration}
+      />
+    );
+
+    expect(screen.getByText('Показать черновики')).toBeTruthy();
+    expect(screen.getByLabelText('Показать черновики').props.accessibilityState).toEqual({ checked: true });
+  });
+
   it('moves selected object option to top of the group list', () => {
     const objectGroup = [
       {

@@ -20,6 +20,7 @@ type ListTravelLayoutProps = {
     | 'onSelect'
     | 'total'
     | 'isSuper'
+    | 'isMeTravel'
     | 'setSearch'
     | 'resetFilters'
     | 'isVisible'

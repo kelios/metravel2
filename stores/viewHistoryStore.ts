@@ -169,11 +169,19 @@ export const useViewHistoryStore = create<ViewHistoryState>((set, get) => ({
                 country: t.countryName ?? undefined,
             }));
 
+            // Пустой ответ сервера при непустой локальной истории трактуем как
+            // ненадёжный и сохраняем текущие данные. Кеш должен совпадать с тем,
+            // что реально приняли, иначе на следующем старте loadServerCached
+            // прочитает [] и потеряет сохранённую гардом историю.
+            let adopted = userHistory;
             set((s) => {
-                if (userHistory.length === 0 && s.viewHistory.length > 0) return s;
+                if (userHistory.length === 0 && s.viewHistory.length > 0) {
+                    adopted = s.viewHistory;
+                    return s;
+                }
                 return { viewHistory: userHistory };
             });
-            await AsyncStorage.setItem(`${SERVER_HISTORY_CACHE_KEY}_${userId}`, JSON.stringify(userHistory));
+            await AsyncStorage.setItem(`${SERVER_HISTORY_CACHE_KEY}_${userId}`, JSON.stringify(adopted));
         } catch (error) {
             devError('Ошибка обновления истории с сервера:', error);
         }

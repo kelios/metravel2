@@ -57,6 +57,10 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   const initialLoadKeyRef = useRef<string | null>(null);
   const pendingBaselineRef = useRef<TravelFormData | null>(null);
   const didInvalidateAfterCreateRef = useRef(false);
+  // Каждый вызов loadTravelData увеличивает epoch. Если loadKey меняется (например,
+  // userId приходит после authReady и запускается повторная загрузка), более старый
+  // fetchTravel не должен затирать state/hasAccess, выставленные более новой загрузкой.
+  const loadRequestIdRef = useRef(0);
   // ✅ FIX: Выносим updateBaseline в ref чтобы избежать stale closure
   const updateBaselineRef = useRef<((data: TravelFormData) => void) | null>(null);
 
@@ -123,12 +127,16 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
   const loadTravelData = useCallback(
     async (id: string) => {
+      const requestId = ++loadRequestIdRef.current;
       try {
         setLoadError(null);
         const travelData = await fetchTravel(Number(id));
 
         // Поздний ответ после ухода со страницы не должен дёргать state/reset формы.
         if (!mountedRef.current) return;
+        // Более новая загрузка (например, после прихода userId) уже выставила state —
+        // устаревший ответ не должен его перетирать (в т.ч. сбрасывать hasAccess).
+        if (requestId !== loadRequestIdRef.current) return;
 
         if (!isNew && travelData) {
           const canEdit = checkTravelEditAccess(travelData, userId, isSuperAdmin);
@@ -167,6 +175,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         // ✅ FIX: Используем ref для updateBaseline чтобы избежать stale closure и race condition
         updateBaselineRef.current?.(finalData);
       } catch (error) {
+        // Устаревшая/вытесненная загрузка не должна навигировать или менять state.
+        if (!mountedRef.current || requestId !== loadRequestIdRef.current) return;
         const apiError = error instanceof ApiError ? error : null;
         const status = apiError?.status ?? -1;
         const message =

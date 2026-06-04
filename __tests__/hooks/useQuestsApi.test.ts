@@ -315,6 +315,39 @@ describe('useQuestsApi hooks', () => {
       expect(mockUpdateProgress).not.toHaveBeenCalled();
     });
 
+    it('flushes a pending debounced save on unmount instead of dropping it', async () => {
+      mockFetchOrCreateProgress.mockResolvedValueOnce(API_PROGRESS);
+      mockUpdateProgress.mockResolvedValueOnce(API_PROGRESS);
+
+      const { result, unmount } = renderHook(() =>
+        useQuestProgressSync('krakow-dragon', true),
+      );
+
+      await waitFor(() => expect(result.current.progressLoading).toBe(false));
+
+      act(() => {
+        result.current.saveProgress({
+          currentIndex: 3,
+          unlockedIndex: 4,
+          answers: { 'step-2': 'ответ' },
+          attempts: { 'step-2': 1 },
+          hints: {},
+          showMap: false,
+        });
+      });
+
+      // Unmount before the 2s debounce fires — change must still be persisted.
+      expect(mockUpdateProgress).not.toHaveBeenCalled();
+      unmount();
+
+      expect(mockUpdateProgress).toHaveBeenCalledWith(42, expect.objectContaining({
+        current_index: 3,
+        unlocked_index: 4,
+        answers: { 'step-2': 'ответ' },
+        show_map: false,
+      }));
+    });
+
     it('resetProgress calls deleteProgress for authenticated user with progress', async () => {
       mockFetchOrCreateProgress.mockResolvedValueOnce(API_PROGRESS);
       mockDeleteProgress.mockResolvedValueOnce(undefined);

@@ -7,6 +7,7 @@ export interface FilterState {
   year?: string;
   sort?: string;
   moderation?: number; // 0 - на модерации, 1 - прошедшие модерацию, undefined - по умолчанию (1)
+  draftsOnly?: boolean;
   countries?: number[];
   categories?: Array<string | number>;
   categoryTravelAddress?: number[];
@@ -33,4 +34,3 @@ export interface FilterOptions {
     sortOrder?: 'asc' | 'desc';
   }>;
 }
-

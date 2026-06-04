@@ -233,6 +233,7 @@ export const AuthorBlock = memo(function AuthorBlock({
                 variant="outline"
                 size="sm"
                 icon={<Feather name="arrow-right" size={14} color={colors.primary} />}
+                iconPosition="right"
                 accessibilityLabel="Все путешествия автора"
                 style={styles.allTravelsButton}
                 labelStyle={styles.allTravelsButtonLabel}

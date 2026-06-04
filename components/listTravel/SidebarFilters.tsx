@@ -12,6 +12,7 @@ interface SidebarFiltersProps {
   onSelect: (groupKey: string, value: any) => void
   total: number
   isSuper: boolean
+  isMeTravel?: boolean
   setSearch: (value: string) => void
   resetFilters: () => void
   isVisible?: boolean
@@ -28,6 +29,7 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
     onSelect,
     total,
     isSuper,
+    isMeTravel = false,
     setSearch,
     resetFilters,
     isVisible = true,
@@ -70,6 +72,10 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
       onSelect('moderation', next)
     }, [filter.moderation, onSelect])
 
+    const handleToggleDraftsOnly = useCallback(() => {
+      onSelect('draftsOnly', filter.draftsOnly ? undefined : true)
+    }, [filter.draftsOnly, onSelect])
+
     // На native скрываем фильтры на мобильных, на web скрываем только если явно выключены
     if (Platform.OS !== 'web' && isMobile) {
       return null
@@ -94,6 +100,9 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
           showModeration={isSuper}
           moderationValue={filter.moderation}
           onToggleModeration={handleToggleModeration}
+          showDraftsOnly={isMeTravel}
+          draftsOnlyValue={filter.draftsOnly === true}
+          onToggleDraftsOnly={handleToggleDraftsOnly}
           onClose={onClose}
         />
       </View>

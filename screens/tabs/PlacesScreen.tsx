@@ -59,6 +59,8 @@ export default function PlacesScreen() {
   const styles = useMemo(() => createStyles(colors, isCompact, isWide), [colors, isCompact, isWide])
   const [query, setQuery] = useState('')
   const deferredQuery = useDeferredValue(query)
+  const [categoryQuery, setCategoryQuery] = useState('')
+  const deferredCategoryQuery = useDeferredValue(categoryQuery)
   const [selectedCategories, setSelectedCategories] = useState<string[]>(() =>
     parseCategoryParam(params.category),
   )
@@ -91,14 +93,20 @@ export default function PlacesScreen() {
   const categoryGroups = useMemo(
     () => {
       const selectedSet = new Set(selectedCategories)
-      return groupCatalogPlaces(placesForCategoryCounts).sort((a, b) => {
-        const aSelected = selectedSet.has(a.category)
-        const bSelected = selectedSet.has(b.category)
-        if (aSelected !== bSelected) return aSelected ? -1 : 1
-        return 0
-      })
+      const normalizedCategoryQuery = deferredCategoryQuery.trim().toLowerCase()
+      return groupCatalogPlaces(placesForCategoryCounts)
+        .filter((group) => {
+          if (!normalizedCategoryQuery) return true
+          return group.category.toLowerCase().includes(normalizedCategoryQuery)
+        })
+        .sort((a, b) => {
+          const aSelected = selectedSet.has(a.category)
+          const bSelected = selectedSet.has(b.category)
+          if (aSelected !== bSelected) return aSelected ? -1 : 1
+          return 0
+        })
     },
-    [placesForCategoryCounts, selectedCategories],
+    [deferredCategoryQuery, placesForCategoryCounts, selectedCategories],
   )
   const collectionCards = useMemo(
     () => INTERESTING_CATEGORY_COLLECTIONS.map((collection) => ({
@@ -264,9 +272,11 @@ export default function PlacesScreen() {
 
   const hasActiveFilters = selectedCategories.length > 0 || !!selectedCountry || !!query
   const selectedCategoryCount = selectedCategories.length
+  const hasCategorySearch = deferredCategoryQuery.trim().length > 0
 
   const resetAll = useCallback(() => {
     setQuery('')
+    setCategoryQuery('')
     handleClearCategories()
     handleSelectCountry(null)
   }, [handleClearCategories, handleSelectCountry])
@@ -524,67 +534,100 @@ export default function PlacesScreen() {
                   </View>
                 ) : null}
               </View>
-              <View style={styles.collectionSection}>
-                <Text style={styles.hintText}>Интересные подборки</Text>
-                <View style={styles.collectionList}>
-                  {collectionCards.map((collection) => {
-                    const selected = isSameCategorySet(selectedCategories, collection.categories)
-                    return (
-                      <View
-                        key={collection.id}
-                        style={[
-                          styles.featuredCard,
-                          selected && styles.featuredCardActive,
-                        ]}
-                      >
-                        <Pressable
-                          onPress={() => selectCategoryCollection(collection)}
-                          accessibilityRole="button"
-                          accessibilityState={{ selected }}
-                          accessibilityLabel={`Подборка: ${collection.title}`}
-                          style={({ pressed }) => [
-                            styles.featuredSelectArea,
-                            pressed && PRESSED_OPACITY,
+              <View style={styles.categorySearchBox}>
+                <Feather
+                  name="search"
+                  size={15}
+                  color={colors.textMuted}
+                  style={styles.categorySearchIcon}
+                />
+                <TextInput
+                  value={categoryQuery}
+                  onChangeText={setCategoryQuery}
+                  placeholder="Найти категорию..."
+                  placeholderTextColor={colors.textMuted}
+                  style={styles.categorySearchInput}
+                  returnKeyType="search"
+                  accessibilityLabel="Поиск категории"
+                  testID="places-category-search-input"
+                />
+                {categoryQuery ? (
+                  <Pressable
+                    onPress={() => setCategoryQuery('')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Очистить поиск категории"
+                    hitSlop={10}
+                    style={({ pressed }) => [styles.categorySearchClear, pressed && PRESSED_OPACITY]}
+                  >
+                    <Feather name="x" size={14} color={colors.textMuted} />
+                  </Pressable>
+                ) : null}
+              </View>
+              {!hasCategorySearch ? (
+                <View style={styles.collectionSection}>
+                  <Text style={styles.hintText}>Интересные подборки</Text>
+                  <View style={styles.collectionList}>
+                    {collectionCards.map((collection) => {
+                      const selected = isSameCategorySet(selectedCategories, collection.categories)
+                      return (
+                        <View
+                          key={collection.id}
+                          style={[
+                            styles.featuredCard,
+                            selected && styles.featuredCardActive,
                           ]}
                         >
-                          <View style={styles.featuredIconWrap}>
-                            <Feather name={collection.icon} size={14} color={colors.primaryText} />
-                          </View>
-                          <View style={styles.featuredTextBlock}>
-                            <Text style={styles.featuredLabel}>
-                              {collection.hint}
-                            </Text>
-                            <Text style={styles.featuredName} numberOfLines={2}>
-                              {collection.title}
-                            </Text>
-                          </View>
-                          {/* Reserve the count slot from first paint so the count
-                              appearing after load does not narrow the text block and
-                              re-wrap featuredName, which caused cascading CLS on /places. */}
-                          <View style={styles.featuredCountSlot}>
-                            {showLoadedCounts ? (
-                              <Text style={styles.featuredCount}>{collection.count}</Text>
-                            ) : null}
-                          </View>
-                        </Pressable>
-                        {selected ? (
                           <Pressable
-                            onPress={handleClearCategories}
+                            onPress={() => selectCategoryCollection(collection)}
                             accessibilityRole="button"
-                            accessibilityLabel={`Очистить подборку ${collection.title}`}
-                            hitSlop={10}
-                            style={({ pressed }) => [styles.featuredClear, pressed && PRESSED_OPACITY]}
+                            accessibilityState={{ selected }}
+                            accessibilityLabel={`Подборка: ${collection.title}`}
+                            style={({ pressed }) => [
+                              styles.featuredSelectArea,
+                              pressed && PRESSED_OPACITY,
+                            ]}
                           >
-                            <Feather name="x" size={14} color={colors.primaryText} />
+                            <View style={styles.featuredIconWrap}>
+                              <Feather name={collection.icon} size={14} color={colors.primaryText} />
+                            </View>
+                            <View style={styles.featuredTextBlock}>
+                              <Text style={styles.featuredLabel}>
+                                {collection.hint}
+                              </Text>
+                              <Text style={styles.featuredName} numberOfLines={2}>
+                                {collection.title}
+                              </Text>
+                            </View>
+                            {/* Reserve the count slot from first paint so the count
+                                appearing after load does not narrow the text block and
+                                re-wrap featuredName, which caused cascading CLS on /places. */}
+                            <View style={styles.featuredCountSlot}>
+                              {showLoadedCounts ? (
+                                <Text style={styles.featuredCount}>{collection.count}</Text>
+                              ) : null}
+                            </View>
                           </Pressable>
-                        ) : null}
-                      </View>
-                    )
-                  })}
+                          {selected ? (
+                            <Pressable
+                              onPress={handleClearCategories}
+                              accessibilityRole="button"
+                              accessibilityLabel={`Очистить подборку ${collection.title}`}
+                              hitSlop={10}
+                              style={({ pressed }) => [styles.featuredClear, pressed && PRESSED_OPACITY]}
+                            >
+                              <Feather name="x" size={14} color={colors.primaryText} />
+                            </Pressable>
+                          ) : null}
+                        </View>
+                      )
+                    })}
+                  </View>
                 </View>
-              </View>
+              ) : null}
 
-              <Text style={styles.hintText}>Или выберите категории вручную</Text>
+              <Text style={styles.hintText}>
+                {hasCategorySearch ? 'Найденные категории' : 'Или выберите категории вручную'}
+              </Text>
               <View style={styles.chipRow}>
                 <Chip
                   label="Все категории"
@@ -592,6 +635,7 @@ export default function PlacesScreen() {
                   selected={selectedCategories.length === 0}
                   onPress={handleClearCategories}
                   style={styles.filterChipCompact}
+                  testID="places-category-chip-all"
                 />
                 {categoryGroups.map((group) => (
                   <Chip
@@ -601,8 +645,16 @@ export default function PlacesScreen() {
                     selected={selectedCategories.includes(group.category)}
                     onPress={() => handleToggleCategory(group.category)}
                     style={styles.filterChipCompact}
+                    testID={`places-category-chip-${group.category}`}
                   />
                 ))}
+                {categoryGroups.length === 0 && deferredCategoryQuery.trim() ? (
+                  <View style={styles.categorySearchEmpty} testID="places-category-search-empty">
+                    <Text style={styles.categorySearchEmptyText}>
+                      Категории не найдены
+                    </Text>
+                  </View>
+                ) : null}
               </View>
               {!isCompact && hasActiveFilters ? (
                 <Pressable

@@ -12,4 +12,8 @@ export interface FilterGroup {
   icon?: string;
 }
 
-export type FilterState = Record<string, string[]> & { year?: string | number; moderation?: number };
+export type FilterState = Record<string, string[]> & {
+  year?: string | number;
+  moderation?: number;
+  draftsOnly?: boolean;
+};

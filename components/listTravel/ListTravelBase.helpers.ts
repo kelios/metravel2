@@ -326,6 +326,14 @@ export const buildActiveConditionChips = ({
     })
   }
 
+  if (filter.draftsOnly === true) {
+    chips.push({
+      key: 'draftsOnly',
+      label: 'Черновики',
+      onRemove: () => onSelect('draftsOnly', undefined),
+    })
+  }
+
   return chips
 }
 

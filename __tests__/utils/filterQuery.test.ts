@@ -29,6 +29,20 @@ describe('buildTravelQueryParams', () => {
     expect(params).toEqual({ user_id: '42' })
   })
 
+  it('adds draft status filters for personal draft mode', () => {
+    const params = buildTravelQueryParams(
+      { draftsOnly: true },
+      { isMeTravel: true, userId: '42' },
+    )
+
+    expect(params).toEqual({
+      includeDrafts: true,
+      moderation: 0,
+      publish: 0,
+      user_id: '42',
+    })
+  })
+
   it('forces Belarus filter for travelsby page', () => {
     const params = buildTravelQueryParams(
       { countries: [1, 2, 4] },

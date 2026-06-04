@@ -65,6 +65,12 @@ function ContactScreen() {
 
   const emailRef = useRef<TextInput | null>(null)
   const messageRef = useRef<TextInput | null>(null)
+  const sendingRef = useRef(false)
+  const mountedRef = useRef(true)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
 
   const isEmailValid = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
 
@@ -78,6 +84,9 @@ function ContactScreen() {
   }, [])
 
   const handleSubmit = useCallback(async () => {
+    // Синхронный guard от двойной отправки: Enter-путь (handleWebKeyPress) минует
+    // disabled-кнопку, а sending-стейт ставится поздно (async).
+    if (sendingRef.current) return
     setTouched({ name: true, email: true, message: true, agree: true })
     if (hp.trim()) return
 
@@ -95,10 +104,13 @@ function ContactScreen() {
     }
 
     try {
+      sendingRef.current = true
       setSending(true)
       const result = await sendFeedback(name.trim(), email.trim(), message.trim())
-      setResp({ text: result, error: false })
-      clearForm()
+      if (mountedRef.current) {
+        setResp({ text: result, error: false })
+        clearForm()
+      }
       showToast({
         type: 'success',
         text1: 'Сообщение отправлено',
@@ -106,7 +118,9 @@ function ContactScreen() {
         visibilityTime: 4000,
       })
     } catch (error: any) {
-      setResp({ text: error?.message || 'Не удалось отправить сообщение.', error: true })
+      if (mountedRef.current) {
+        setResp({ text: error?.message || 'Не удалось отправить сообщение.', error: true })
+      }
       showToast({
         type: 'error',
         text1: 'Ошибка отправки',
@@ -114,7 +128,8 @@ function ContactScreen() {
         visibilityTime: 4000,
       })
     } finally {
-      setSending(false)
+      sendingRef.current = false
+      if (mountedRef.current) setSending(false)
     }
   }, [agree, clearForm, email, hp, message, name])
 

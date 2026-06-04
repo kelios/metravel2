@@ -50,7 +50,72 @@ CAT = {"Поход":2,"Хайкинг":21,"Треккинг":22,"Тур выхо
        "Веломаршрут":24,"Велопоход":7,"Food":3,"Фестиваль/концерт":14}
 COUNTRY = {"Польша":160,"Словакия":184,"Чехия":215,"Австрия":20,"Беларусь":3,
            "Испания":87,"Португалия":161,"Хорватия":212,"Германия":65,
-           "Италия":88,"Франция":209,"Нидерланды":139,"Швейцария":217}
+           "Италия":88,"Франция":209,"Нидерланды":139,"Швейцария":217,
+           "Венгрия":50,"Венгрии":50}
+
+# ---- категории ДЛЯ ТОЧЕК (point types). У каждой точки должна быть категория. ----
+PCAT = [  # (подстрока в нижнем регистре, id) — специфичное раньше общего
+ ("руины замка",115),("руины дворца",118),("руины церкви",120),("руины усадьб",116),
+ ("руины мельниц",117),("руины мост",119),("руины",114),
+ ("замок",43),("крепост",61),("дворец",33),("усадьб",136),
+ ("костёл",150),("косте",150),("собор",127),("церков",142),("храм",141),("монастыр",74),("часовн",150),
+ ("скансен",77),("музей под откр",77),("музей",76),
+ ("ботанич",192),("парк развлеч",92),("аттракцион",92),("зоопарк",46),
+ ("национальн парк",79),("природн парк",79),("заповедн",79),("парк",90),("сад",123),
+ ("пещер",97),("водопад",20),
+ ("озер",84),("плесо",84),("пруд",84),("водохран",21),("залив",18),("море",18),
+ ("река",110),("канал",51),("набереж",110),("пляж",101),("болото",15),
+ ("остров",86),("полуостров",183),("клиф",126),("скал",126),("долин",37),("ущель",37),
+ ("вершин",26),("гора",26),("пик ",26),("щит",26),("холм",140),("перевал",26),("поляна",26),
+ ("канатн",186),("фуникул",186),("гондол",186),("колесо обозр",204),
+ ("термаль",193),("курорт",193),("спа",193),("бювет",193),("источник",193),("здруй",193),("zdrój",193),
+ ("ратуш",107),("площад",187),("рынок",187),("rynek",187),("фонтан",152),("памятник",89),
+ ("маяк",68),("бункер",17),
+ ("радиоб",11),("радиост",11),("башня",11),("вежа",200),("водонапорн",157),("мельниц",19),("ветр",19),
+ ("мост",75),("виадук",196),("акведук",1),
+ ("старый город",156),("древний город",156),("город",184),("деревн",171),("село",171),("хутор",171),
+ ("лес",67),("тропа",147),("эко",147),("вокзал",23),("станц",23),("аэропорт",8),("парковк",91),
+]
+_ADDR_CATS=None
+def _addr_cats():
+    """Полный справочник категорий точек {name_lower: id}, отсортированный по длине имени (длинные раньше)."""
+    global _ADDR_CATS
+    if _ADDR_CATS is None:
+        try:
+            import urllib.parse
+            _,t=req("GET","/travels/facets/?where="+urllib.parse.quote(json.dumps({"publish":1,"moderation":1})))
+            items=json.loads(t).get("facets",{}).get("categoryTravelAddress",[])
+            pairs=[(str(x.get("name","")).strip().lower(), x.get("id")) for x in items if x.get("name") and x.get("id")]
+            _ADDR_CATS=sorted(pairs, key=lambda p:-len(p[0]))
+        except Exception:
+            _ADDR_CATS=[]
+    return _ADDR_CATS
+
+def point_categories(name):
+    s=(name or "").lower(); ids=[]
+    for sub,cid in PCAT:                      # приоритетные ключи
+        if sub in s and cid not in ids:
+            ids.append(cid)
+            if len(ids)>=2: break
+    if len(ids)<2:                             # дополняем по полному справочнику
+        for nm,cid in _addr_cats():
+            if len(nm)>=4 and nm in s and cid not in ids:
+                ids.append(cid)
+                if len(ids)>=2: break
+    return ids or [184]   # 184=Город — крайний случай (точка всегда с категорией)
+
+# ---- убрать «технические» фразы (нельзя выдавать, что данные из фото/GPS) ----
+def strip_meta(html):
+    if not html: return html
+    for p in [r"[^.>]*\bGPS\b[^.<]*\.?", r"[^.>]*\bEXIF\b[^.<]*\.?",
+              r"[^.>]*по\s+точкам\s+съёмки[^.<]*\.?", r"[^.>]*по\s+аэрокадрам[^.<]*\.?",
+              r"[^.>]*по\s+координатам\s+фотограф[^.<]*\.?", r"[^.>]*из\s+кластер[^.<]*\.?",
+              r"\(нижняя оценка[^)]*\)", r"_+\s*", ]:
+        html=re.sub(p,"",html,flags=re.I)
+    html=re.sub(r"\(\s*[,.;]?\s*\)","",html)
+    html=re.sub(r"<p>\s*[:.;]?\s*</p>","",html)
+    html=re.sub(r"\s{2,}"," ",html)
+    return html.strip()
 
 # ---------------- markdown -> travel ----------------
 def parse_md(path):
@@ -138,9 +203,9 @@ def _template():
 
 def upsert(path, existing_id=None, year="2024"):
     title, body, countries, cats, points = parse_md(path)
-    html = md_to_html(body)
+    html = strip_meta(md_to_html(body))
     c = countries[0] if countries else 160
-    markers=[{"id":None,"lat":la,"lng":ln,"address":nm,"country":c,"categories":[],"image":None} for (nm,la,ln) in points]
+    markers=[{"id":None,"lat":la,"lng":ln,"address":nm,"country":c,"categories":point_categories(nm),"image":None} for (nm,la,ln) in points]
     # preserve existing point ids on update (match by nearest coord) so photos survive
     if existing_id:
         try:
@@ -176,6 +241,87 @@ def upsert(path, existing_id=None, year="2024"):
     print(f"[{st}] upsert id={nid} pts={len(markers)} cats={cats} ctry={countries} :: {title[:50]}")
     if st>=400: print("   ERR:", txt[:300])
     return nid
+
+def recat(tid):
+    """Дозаполнить категории всех точек статьи + почистить технические фразы. Точки/фото сохраняются (id preserved)."""
+    _,t=req("GET",f"/travels/{tid}/"); d=json.loads(t); d=d.get("data",d)
+    if not d.get("name"): print(f"  {tid}: skip (нет данных)"); return
+    cs=d.get("countries") or [160]; c=cs[0] if cs else 160
+    markers=[]
+    for a in (d.get("travelAddress") or []):
+        mm=re.match(r"\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)", a.get("coord") or "")
+        if not mm: continue
+        markers.append({"id":a.get("id"),"lat":float(mm.group(1)),"lng":float(mm.group(2)),
+            "address":a.get("address") or "", "country":c,
+            "categories":point_categories(a.get("address")), "image":None})
+    desc=strip_meta(d.get("description") or "")
+    payload={"id":tid,"name":d.get("name"),"description":desc,"year":str(d.get("year") or "2025"),
+      "categories":d.get("categories") or [20],"countries":cs,
+      "coordsMeTravel":markers,"travelAddress":[],"gallery":[],
+      "transports":[],"month":[],"complexity":[],"companions":[],"over_nights_stay":[],
+      "thumbs200ForCollectionArr":[],"travelImageThumbUrlArr":[],"travelImageAddress":[],
+      "minus":"__draft_placeholder__","plus":"__draft_placeholder__",
+      "recommendation":"__draft_placeholder__","youtube_link":"__draft_placeholder__",
+      "publish":False,"moderation":False,"visa":False,
+      "number_days":None,"number_peoples":None,"budget":None}
+    st,txt=req("PUT","/travels/upsert/",payload)
+    print(f"  [{st}] recat {tid}: точек {len(markers)} (с категориями), desc {len(desc)}")
+    return st
+
+def _put_with_desc(d, new_desc):
+    """PUT статьи с новым описанием, сохраняя точки (с категориями), галерею, обложку, страны."""
+    tid=d.get("id"); cs=d.get("countries") or [160]; c=cs[0] if cs else 160
+    markers=[]
+    for a in (d.get("travelAddress") or []):
+        mm=re.match(r"\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)", a.get("coord") or "")
+        if not mm: continue
+        markers.append({"id":a.get("id"),"lat":float(mm.group(1)),"lng":float(mm.group(2)),
+            "address":a.get("address") or "", "country":c,
+            "categories":point_categories(a.get("address")), "image":None})
+    payload={"id":tid,"name":d.get("name"),"description":new_desc,"year":str(d.get("year") or "2025"),
+      "categories":d.get("categories") or [20],"countries":cs,
+      "coordsMeTravel":markers,"travelAddress":[],"gallery":[],
+      "transports":[],"month":[],"complexity":[],"companions":[],"over_nights_stay":[],
+      "thumbs200ForCollectionArr":[],"travelImageThumbUrlArr":[],"travelImageAddress":[],
+      "minus":"__draft_placeholder__","plus":"__draft_placeholder__",
+      "recommendation":"__draft_placeholder__","youtube_link":"__draft_placeholder__",
+      "publish":False,"moderation":False,"visa":False,
+      "number_days":None,"number_peoples":None,"budget":None}
+    return req("PUT","/travels/upsert/",payload)
+
+def desc_images(tid, n=4):
+    """Вставить n фото из галереи статьи в текст описания (между разделами). Идемпотентно."""
+    _,t=req("GET",f"/travels/{tid}/"); d=json.loads(t); d=d.get("data",d)
+    if not d.get("name"): print(f"  {tid}: нет данных"); return
+    gal=[]
+    for g in (d.get("gallery") or []):
+        u=g.get("url") if isinstance(g,dict) else g
+        if not u: continue
+        if u.startswith("http://"): u="https://"+u[7:]
+        elif u.startswith("/"): u="https://metravel.by"+u
+        gal.append(u)
+    if len(gal)<2: print(f"  {tid}: мало фото в галерее ({len(gal)})"); return
+    desc=d.get("description","") or ""
+    desc=re.sub(r'<p class="mt-img">.*?</p>','',desc)            # убрать прежние вставки (идемпотентность)
+    n=min(n,len(gal)); step=max(1,len(gal)//n); pics=gal[::step][:n]
+    fig=lambda u:f'<p class="mt-img"><img src="{u}" alt="" style="max-width:100%;height:auto;border-radius:10px"></p>'
+    parts=re.split(r'(</h2>)', desc)
+    out=[]; pi=0
+    for seg in parts:
+        out.append(seg)
+        if seg=='</h2>' and pi<len(pics): out.append(fig(pics[pi])); pi+=1
+    new_desc="".join(out)
+    if pi==0:                                                    # нет h2 — вставим после первых абзацев
+        ps=re.split(r'(</p>)', new_desc); out=[];
+        for seg in ps:
+            out.append(seg)
+            if seg=='</p>' and pi<len(pics): out.append(fig(pics[pi])); pi+=1
+        new_desc="".join(out)
+    elif pi<len(pics):
+        new_desc+="".join(fig(p) for p in pics[pi:])
+    st,_=_put_with_desc(d,new_desc)
+    print(f"  [{st}] desc_images {tid}: вставлено {pi} фото")
+    return st
 
 # ---------------- photos ----------------
 TMP="/tmp/mt_up"; os.makedirs(TMP, exist_ok=True); MAXDIM=1600
@@ -260,6 +406,12 @@ def main():
         if "--id" in a: eid=int(a[a.index("--id")+1])
         if "--year" in a: year=a[a.index("--year")+1]
         upsert(path, eid, year)
+    elif cmd=="recat":
+        for x in a[1:]:
+            if x.isdigit(): recat(int(x))
+    elif cmd=="descimg":
+        for x in a[1:]:
+            if x.isdigit(): desc_images(int(x))
     elif cmd=="cover":
         print(*upload_image(a[2],"travelMainImage",int(a[1])))
     elif cmd=="photos":
