@@ -136,6 +136,7 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
                         styles.favoriteButtonHitArea,
                         { cursor: isPending ? 'wait' : 'pointer' } as any,
                     ]}
+                    data-card-action="true"
                     data-testid="favorite-button"
                 />
             </WebView>

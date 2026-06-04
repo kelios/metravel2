@@ -59,6 +59,13 @@ const stopWebCardEvent = (e?: any) => {
   e?.nativeEvent?.stopImmediatePropagation?.()
 }
 
+const stopWebCardPropagation = (e?: any) => {
+  if (Platform.OS !== 'web') return
+  e?.stopPropagation?.()
+  e?.nativeEvent?.stopPropagation?.()
+  e?.nativeEvent?.stopImmediatePropagation?.()
+}
+
 export default function TravelStatusButton({
   travelId,
   travelTitle,
@@ -525,12 +532,12 @@ export default function TravelStatusButton({
               title: 'Управление статусом путешествия',
               'data-card-action': 'true',
               onClick: handleMainPress,
-              onMouseDown: stopWebCardEvent,
-              onMouseUp: stopWebCardEvent,
-              onPointerDown: stopWebCardEvent,
-              onPointerUp: stopWebCardEvent,
-              onTouchStart: stopWebCardEvent,
-              onTouchEnd: stopWebCardEvent,
+              onMouseDown: stopWebCardPropagation,
+              onMouseUp: stopWebCardPropagation,
+              onPointerDown: stopWebCardPropagation,
+              onPointerUp: stopWebCardPropagation,
+              onTouchStart: stopWebCardPropagation,
+              onTouchEnd: stopWebCardPropagation,
               onKeyDown: (e: any) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   handleMainPress(e)

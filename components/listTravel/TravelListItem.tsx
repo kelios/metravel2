@@ -358,6 +358,7 @@ function TravelListItem({
     <View
       style={[styles.favoriteButtonContainer, POINTER_EVENTS_BOX_NONE, { flexDirection: 'column', gap: 6 }]}
       {...(IS_WEB && {
+        'data-card-action': 'true',
         onClick: stopEvent,
         onMouseDown: (e: any) => e.stopPropagation(),
       })}

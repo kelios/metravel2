@@ -314,6 +314,26 @@ describe('TravelStatusButton — compact режим', () => {
     expect(requireAuth).toHaveBeenCalledTimes(1)
   })
 
+  it('на mobile web не отменяет touchstart, чтобы браузер сгенерировал click по кнопке', () => {
+    Platform.OS = 'web'
+    const touchEvent = {
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+      nativeEvent: {
+        stopPropagation: jest.fn(),
+        stopImmediatePropagation: jest.fn(),
+      },
+    }
+
+    render(<TravelStatusButton {...baseProps} compact />)
+    fireEvent(screen.getByLabelText('Добавить в план'), 'touchStart', touchEvent)
+
+    expect(touchEvent.preventDefault).not.toHaveBeenCalled()
+    expect(touchEvent.stopPropagation).toHaveBeenCalledTimes(1)
+    expect(touchEvent.nativeEvent.stopPropagation).toHaveBeenCalledTimes(1)
+    expect(touchEvent.nativeEvent.stopImmediatePropagation).toHaveBeenCalledTimes(1)
+  })
+
   it('открывает тот же модал у авторизованного пользователя', () => {
     useAuth.mockReturnValue(makeAuthMock(true, '5'))
     render(<TravelStatusButton {...baseProps} compact />)

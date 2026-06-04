@@ -1,9 +1,12 @@
 import { test, expect } from './fixtures';
+import { ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth';
 import { preacceptCookies, tid } from './helpers/navigation';
 
 test.describe('Travel points -> map popup', () => {
   test('clicking point card opens map popup without navigation', async ({ page }) => {
     await preacceptCookies(page);
+    await mockFakeAuthApis(page);
+    await ensureAuthedStorageFallback(page);
 
     const slug = 'e2e-points-map-popup';
     const image =
@@ -80,6 +83,21 @@ test.describe('Travel points -> map popup', () => {
 
     await page.route('**/api/travels/by-slug/**', routeHandler);
     await page.route('**/travels/by-slug/**', routeHandler);
+    const createdUserPoints: any[] = [];
+    await page.route('**/api/user-points/**', async (route: any) => {
+      const request = route.request();
+      if (request.method() !== 'POST') {
+        await route.continue();
+        return;
+      }
+      const payload = request.postDataJSON?.() ?? {};
+      createdUserPoints.push(payload);
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({ id: 123456, ...payload }),
+      });
+    });
 
     await page.goto(`/travels/${slug}`, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector(tid('travel-details-page'), { timeout: 20_000 });
@@ -179,6 +197,32 @@ test.describe('Travel points -> map popup', () => {
       });
       return;
     }
+
+    const saveAction = leafletPopup.getByRole('button', { name: 'Сохранить', exact: true }).first();
+    const saveVisible = await saveAction
+      .waitFor({ state: 'visible', timeout: 5_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!saveVisible) {
+      test.info().annotations.push({
+        type: 'note',
+        description: 'Leaflet popup save action is not visible in this environment; skipping save assertion.',
+      });
+      return;
+    }
+
+    await saveAction.click();
+
+    await expect
+      .poll(() => createdUserPoints.length, { timeout: 10_000 })
+      .toBe(1);
+    expect(createdUserPoints[0]).toEqual(
+      expect.objectContaining({
+        name: 'Гомель',
+        latitude: 52.4238936,
+        longitude: 31.0131698,
+      }),
+    );
 
     // Optional: if the app exposes the Leaflet instance, verify it exists (best-effort).
     await page

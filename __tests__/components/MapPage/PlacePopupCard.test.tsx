@@ -362,6 +362,51 @@ describe('PlacePopupCard', () => {
     expect(onOpenGoogleMaps).toHaveBeenCalledTimes(1);
   });
 
+  it('runs the add-point handler when the save action is pressed', () => {
+    const onAddPoint = jest.fn();
+    let tree: any;
+
+    renderer.act(() => {
+      tree = renderer.create(
+        <PlacePopupCard
+          colors={mockColors as any}
+          title="Test point"
+          coord="53.9, 27.56"
+          onAddPoint={onAddPoint}
+        />
+      );
+    });
+
+    const saveAction = tree.root.findByProps({ accessibilityLabel: 'Сохранить' });
+
+    renderer.act(() => {
+      saveAction.props.onPress();
+    });
+
+    expect(onAddPoint).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables the save action when addDisabled is true', () => {
+    const onAddPoint = jest.fn();
+    let tree: any;
+
+    renderer.act(() => {
+      tree = renderer.create(
+        <PlacePopupCard
+          colors={mockColors as any}
+          title="Test point"
+          coord="53.9, 27.56"
+          onAddPoint={onAddPoint}
+          addDisabled
+        />
+      );
+    });
+
+    const saveAction = tree.root.findByProps({ accessibilityLabel: 'Сохранить' });
+
+    expect(saveAction.props.disabled).toBe(true);
+  });
+
   it('opens the page through the popup handler when the inline page link is clicked', () => {
     const onOpenArticle = jest.fn();
     const stopPropagation = jest.fn();

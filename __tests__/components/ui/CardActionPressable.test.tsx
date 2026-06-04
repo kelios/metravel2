@@ -87,6 +87,34 @@ describe('CardActionPressable', () => {
     expect(nativeStopImmediatePropagation).toHaveBeenCalledTimes(1)
   })
 
+  it('does not prevent default on early web touch events so mobile browsers can emit click', () => {
+    ;(Platform as any).OS = 'web'
+    const preventDefault = jest.fn()
+    const stopPropagation = jest.fn()
+    const nativeStopPropagation = jest.fn()
+    const nativeStopImmediatePropagation = jest.fn()
+
+    const { getByLabelText } = render(
+      <CardActionPressable accessibilityLabel="Сохранить" onPress={jest.fn()}>
+        <Text>Save</Text>
+      </CardActionPressable>
+    )
+
+    fireEvent(getByLabelText('Сохранить'), 'touchStart', {
+      preventDefault,
+      stopPropagation,
+      nativeEvent: {
+        stopPropagation: nativeStopPropagation,
+        stopImmediatePropagation: nativeStopImmediatePropagation,
+      },
+    })
+
+    expect(preventDefault).not.toHaveBeenCalled()
+    expect(stopPropagation).toHaveBeenCalledTimes(1)
+    expect(nativeStopPropagation).toHaveBeenCalledTimes(1)
+    expect(nativeStopImmediatePropagation).toHaveBeenCalledTimes(1)
+  })
+
   it('supports an explicit web click fallback for Leaflet popup actions', () => {
     ;(Platform as any).OS = 'web'
     const onPress = jest.fn()
