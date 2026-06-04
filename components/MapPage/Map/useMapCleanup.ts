@@ -80,6 +80,11 @@ export const useMapCleanup = () => {
         const container = (containerElRef.current as any) || (document.getElementById(containerId) as any);
         if (!container) return;
 
+        // Guard against a stale/foreign element: containerElRef may point at a node
+        // reused by another instance. Wiping innerHTML there would destroy a live
+        // map's panes (the mount effect has the same protection for the target node).
+        if (container.id !== containerId) return;
+
         // Do NOT call container._leaflet_map.remove() — react-leaflet handles
         // its own cleanup, and our leafletFix.ts patch makes that safe.
         try { delete container._leaflet_map; } catch { /* noop */ }
