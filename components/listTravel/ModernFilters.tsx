@@ -263,7 +263,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
               </>
             )}
             {!!resultsText && (
-              <View style={styles.headerCountChip}>
+              <View style={styles.headerCountChip} testID="filters-results-chip">
                 <Text style={styles.headerCountChipText} numberOfLines={1}>{resultsText}</Text>
               </View>
             )}
@@ -548,7 +548,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
 
       {/* Apply / Reset Buttons (Mobile: native + web-narrow) — sticky footer вне ScrollView */}
       {showsStickyFooter && (
-        <View style={styles.applyButtonContainer}>
+        <View style={styles.applyButtonContainer} testID="filters-apply-footer">
           {activeFiltersCount > 0 && (
             <Pressable
               style={({ hovered, pressed }) => [
@@ -563,6 +563,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
             </Pressable>
           )}
           <Pressable
+            testID="filters-apply-button"
             style={({ hovered, pressed }) => [
               styles.applyButton,
               (hovered || pressed) && styles.applyButtonPressed,

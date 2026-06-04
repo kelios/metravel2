@@ -5,6 +5,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
+import { useResponsive } from '@/hooks/useResponsive'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import {
   hasAnyTravelEngagementStats,
@@ -41,17 +42,17 @@ const DEFAULT_AUTHOR_METRICS: MetricDefinition[] = AUTHOR_METRICS.filter(
   (metric) => metric.key !== 'visitedCount'
 )
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
+const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boolean) =>
   StyleSheet.create({
     section: {
-      marginHorizontal: DESIGN_TOKENS.spacing.md,
+      marginHorizontal: isCompact ? DESIGN_TOKENS.spacing.sm : DESIGN_TOKENS.spacing.md,
       marginBottom: DESIGN_TOKENS.spacing.md,
-      padding: DESIGN_TOKENS.spacing.md,
+      padding: isCompact ? DESIGN_TOKENS.spacing.sm : DESIGN_TOKENS.spacing.md,
       borderRadius: DESIGN_TOKENS.radii.lg,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.borderLight,
-      gap: DESIGN_TOKENS.spacing.md,
+      gap: isCompact ? DESIGN_TOKENS.spacing.sm : DESIGN_TOKENS.spacing.md,
     },
     sectionHeader: {
       gap: DESIGN_TOKENS.spacing.xxs,
@@ -72,12 +73,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     sectionTitle: {
       ...DESIGN_TOKENS.typography.scale.h3,
+      ...(isCompact ? { fontSize: 20, lineHeight: 26 } : null),
       color: colors.text,
     },
     sectionDescription: {
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      fontSize: isCompact ? DESIGN_TOKENS.typography.sizes.xs : DESIGN_TOKENS.typography.sizes.sm,
       color: colors.textMuted,
-      lineHeight: 20,
+      lineHeight: isCompact ? 18 : 20,
     },
     sectionMetaRow: {
       flexDirection: 'row',
@@ -104,10 +106,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     metricCard: {
       flexGrow: 1,
-      flexBasis: 160,
-      minHeight: 88,
+      flexBasis: isCompact ? 104 : 160,
+      minHeight: isCompact ? 78 : 88,
       paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-      paddingVertical: DESIGN_TOKENS.spacing.sm,
+      paddingVertical: isCompact ? 8 : DESIGN_TOKENS.spacing.sm,
       borderRadius: DESIGN_TOKENS.radii.md,
       backgroundColor: colors.backgroundSecondary,
       borderWidth: 1,
@@ -135,6 +137,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     metricValue: {
       ...DESIGN_TOKENS.typography.scale.h2,
+      ...(isCompact ? { fontSize: 24, lineHeight: 28 } : null),
       color: colors.text,
     },
     metricLabel: {
@@ -145,7 +148,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     metricHelper: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       color: colors.textMuted,
-      lineHeight: 16,
+      lineHeight: isCompact ? 14 : 16,
     },
     loadingGrid: {
       flexDirection: 'row',
@@ -173,7 +176,9 @@ export function ProfileTravelEngagementSummary({
   summaryScope?: 'all' | 'loaded'
 }) {
   const colors = useThemedColors()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const { isMobile, width } = useResponsive()
+  const isCompact = isMobile || width < 640
+  const styles = useMemo(() => createStyles(colors, isCompact), [colors, isCompact])
   const isAvailable = hasAnyTravelEngagementStats(summary)
   const isCalendarMode = mode === 'calendar'
   const metrics = useMemo(() => {
@@ -276,7 +281,7 @@ export function ProfileTravelEngagementSummary({
               </View>
               <Text style={styles.metricValue}>{formatMetricValue(summary?.[metric.key])}</Text>
               <Text style={styles.metricLabel}>{metric.label}</Text>
-              <Text style={styles.metricHelper}>{metric.helper}</Text>
+              {!isCompact ? <Text style={styles.metricHelper}>{metric.helper}</Text> : null}
             </Pressable>
           ))}
         </View>

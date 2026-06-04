@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import { ThemeProvider } from '@/hooks/useTheme';
 import ModernFilters from '@/components/listTravel/ModernFilters';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -183,6 +184,45 @@ describe('ModernFilters Component', () => {
     const flattened = Object.assign({}, ...styles.filter(Boolean));
 
     expect(flattened.fontSize).toBeGreaterThanOrEqual(16);
+  });
+
+  it('keeps mobile web filter chrome compact', () => {
+    renderWithProviders(
+      <ModernFilters
+        filterGroups={mockFilterGroups}
+        selectedFilters={{}}
+        onFilterChange={mockOnFilterChange}
+        onClearAll={mockOnClearAll}
+        resultsCount={330}
+        year={2026}
+        onYearChange={mockOnYearChange}
+        onClose={jest.fn()}
+      />
+    );
+
+    const toggleAll = screen.getByTestId('toggle-all-groups');
+    const toggleStyle = StyleSheet.flatten(toggleAll.props.style);
+    expect(toggleStyle.height).toBe(40);
+    expect(toggleStyle.minWidth).toBe(40);
+
+    expect(screen.getByText('330 путешествий')).toBeTruthy();
+    const resultsChip = screen.getByTestId('filters-results-chip');
+    const resultsChipStyle = StyleSheet.flatten(resultsChip.props.style);
+    expect(resultsChipStyle.flexShrink).toBe(0);
+
+    const footer = screen.getByTestId('filters-apply-footer');
+    const footerStyle = StyleSheet.flatten(footer.props.style);
+    expect(footerStyle.paddingTop).toBe(8);
+    expect(footerStyle.marginTop).toBe(4);
+
+    const applyButton = screen.getByTestId('filters-apply-button');
+    const applyStyle = StyleSheet.flatten(applyButton.props.style);
+    expect(applyStyle.paddingVertical).toBe(12);
+
+    const yearInput = screen.getByDisplayValue('2026');
+    const yearStyle = StyleSheet.flatten(yearInput.props.style);
+    expect(yearStyle.maxWidth).toBe(112);
+    expect(yearStyle.minHeight).toBe(38);
   });
 
   it('shows moderation toggle for superuser', () => {

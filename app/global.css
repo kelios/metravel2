@@ -370,7 +370,7 @@ select:focus-visible {
   [data-testid="home-hero"] [role="link"],
   [data-testid="home-how-it-works"] [role="button"],
   [data-testid="home-faq"] [role="button"],
-  [data-testid*="travel-card"] {
+  [data-testid="home-hero"] [data-testid*="travel-card"] {
     touch-action: pan-y !important;
   }
 }

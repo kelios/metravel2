@@ -255,7 +255,12 @@ export default function SubscriptionsScreen() {
         description="Ваши подписки и подписчики"
         canonical={buildCanonicalUrl('/subscriptions')} robots="noindex, nofollow"
       />
-      <ScrollView style={webTouchScrollStyle} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={webTouchScrollStyle}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         {headerBlock}
         {renderTabBar()}
         {activeTab === 'subscriptions' ? renderSubscriptionsTab() : renderSubscribersTab()}
@@ -267,18 +272,21 @@ export default function SubscriptionsScreen() {
 const createPageStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    scrollContent: { paddingBottom: 32 },
-    header: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
+    scrollContent: {
+      paddingTop: 8,
+      paddingBottom: Platform.OS === 'web' ? 120 : 32,
+    },
+    header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 6 },
     headerRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 },
     headerTitleBlock: { flex: 1 },
     title: { fontSize: 20, fontWeight: '700', color: colors.text },
     subtitle: { marginTop: 4, fontSize: 13, color: colors.textMuted },
     loadingWrap: { padding: 16, alignItems: 'center', justifyContent: 'center', flex: 1 },
     tabBar: {
-      flexDirection: 'row', marginHorizontal: 16, marginBottom: 12,
+      flexDirection: 'row', marginHorizontal: 16, marginBottom: 10,
       borderRadius: DESIGN_TOKENS.radii.md, backgroundColor: colors.mutedBackground, padding: 4,
     },
-    tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: DESIGN_TOKENS.radii.sm },
+    tab: { flex: 1, paddingVertical: 9, alignItems: 'center', borderRadius: DESIGN_TOKENS.radii.sm },
     tabActive: {
       backgroundColor: colors.surface,
       ...(Platform.OS === 'web' ? WEB_CARD_SHADOW_STYLE : Platform.OS === 'android' ? { elevation: 1 } : {}),
@@ -287,7 +295,7 @@ const createPageStyles = (colors: ReturnType<typeof useThemedColors>) =>
     tabTextActive: { color: colors.primary },
     searchContainer: {
       flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginBottom: 8,
-      paddingHorizontal: DESIGN_TOKENS.spacing.md, paddingVertical: DESIGN_TOKENS.spacing.xs,
+      paddingHorizontal: DESIGN_TOKENS.spacing.md, paddingVertical: 6,
       borderWidth: 1, borderRadius: DESIGN_TOKENS.radii.lg, gap: DESIGN_TOKENS.spacing.xs,
     },
     searchInput: {

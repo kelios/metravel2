@@ -7,7 +7,7 @@ export const createSortStyles = (ctx: StylesCtx) => {
 
   return {
     sortSection: {
-      marginBottom: spacing.sm,
+      marginBottom: spacing.xs,
       borderRadius: MENU_RADIUS,
       borderWidth: 0,
       borderColor: 'transparent',
@@ -18,9 +18,9 @@ export const createSortStyles = (ctx: StylesCtx) => {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      minHeight: 48,
-      paddingVertical: 9,
-      paddingHorizontal: spacing.md,
+      minHeight: 42,
+      paddingVertical: 7,
+      paddingHorizontal: spacing.sm,
       backgroundColor: colors.surface,
       borderRadius: CONTROL_RADIUS,
       borderWidth: 1,
@@ -50,8 +50,8 @@ export const createSortStyles = (ctx: StylesCtx) => {
       flex: 1,
     },
     sortDropdownIcon: {
-      width: 28,
-      height: 28,
+      width: 26,
+      height: 26,
       borderRadius: CONTROL_RADIUS,
       alignItems: 'center',
       justifyContent: 'center',
@@ -75,8 +75,8 @@ export const createSortStyles = (ctx: StylesCtx) => {
       fontWeight: typography.weights.semibold as any,
     },
     sortDropdownChevron: {
-      width: 24,
-      height: 24,
+      width: 22,
+      height: 22,
       alignItems: 'center',
       justifyContent: 'center',
     },

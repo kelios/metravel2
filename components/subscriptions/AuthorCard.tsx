@@ -12,6 +12,7 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
 
 const WEB_HORIZONTAL_SCROLL_STYLE = {
@@ -34,7 +35,9 @@ interface AuthorCardProps {
 
 function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProfile }: AuthorCardProps) {
   const colors = useThemedColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { isMobile, width } = useResponsive();
+  const isCompact = isMobile || width < 640;
+  const styles = useMemo(() => createStyles(colors, isCompact), [colors, isCompact]);
   const { profile, travels, travelsTotal, isLoadingTravels } = author;
   const [avatarError, setAvatarError] = useState(false);
 
@@ -124,7 +127,10 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
         <Text style={styles.noTravels}>Нет опубликованных путешествий</Text>
       ) : (
         <ScrollView
+          testID="subscription-travels-rail"
           horizontal
+          nestedScrollEnabled
+          directionalLockEnabled
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.travelsScroll}
           {...Platform.select({ web: { style: WEB_HORIZONTAL_SCROLL_STYLE } })}
@@ -144,6 +150,8 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
                   onPress={() => onOpenTravel(travelUrl)}
                   layout="grid"
                   style={styles.travelCard}
+                  contentMinHeight={isCompact ? 58 : undefined}
+                  imageHeight={isCompact ? 112 : undefined}
                   webTouchAction="pan-x pan-y"
                 />
               </View>
@@ -167,17 +175,32 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
   );
 }
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
+const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boolean) =>
   StyleSheet.create({
     section: {
-      marginHorizontal: 16, marginBottom: 16, backgroundColor: colors.surface,
-      borderRadius: DESIGN_TOKENS.radii.lg, borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+      marginHorizontal: isCompact ? 10 : 16,
+      marginBottom: isCompact ? 10 : 16,
+      backgroundColor: colors.surface,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
       ...(Platform.OS === 'web' ? WEB_CARD_SHADOW_STYLE : Platform.OS === 'android' ? { elevation: 2 } : {}),
     },
-    authorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, gap: 12 },
-    authorInfo: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 },
+    authorRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: isCompact ? 12 : 14,
+      paddingVertical: isCompact ? 10 : 14,
+      gap: isCompact ? 8 : 12,
+    },
+    authorInfo: { flexDirection: 'row', alignItems: 'center', gap: isCompact ? 8 : 10, flex: 1, minWidth: 0 },
     avatar: {
-      width: 48, height: 48, borderRadius: 24, backgroundColor: colors.primaryLight,
+      width: isCompact ? 42 : 48,
+      height: isCompact ? 42 : 48,
+      borderRadius: isCompact ? 21 : 24,
+      backgroundColor: colors.primaryLight,
       justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: colors.primary, overflow: 'hidden',
     },
     avatarImage: { width: '100%', height: '100%', resizeMode: 'cover' },
@@ -185,31 +208,39 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       fontSize: 16, fontWeight: '700' as const, color: colors.primary, letterSpacing: 0.5,
     },
     authorTextBlock: { flex: 1, minWidth: 0 },
-    authorName: { fontSize: 16, fontWeight: '700', color: colors.text },
+    authorName: { fontSize: isCompact ? 15 : 16, fontWeight: '700', color: colors.text },
     authorSub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
-    authorActions: { flexDirection: 'row', gap: 8 },
+    authorActions: { flexDirection: 'row', gap: isCompact ? 6 : 8 },
     actionButton: {
-      width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primaryLight,
+      width: isCompact ? 38 : 40,
+      height: isCompact ? 38 : 40,
+      borderRadius: isCompact ? 19 : 20,
+      backgroundColor: colors.primaryLight,
       alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.primaryAlpha30,
       ...(Platform.OS === 'web' ? WEB_CURSOR_POINTER_STYLE : {}),
     },
     actionButtonDanger: {
-      width: 40, height: 40, borderRadius: 20, backgroundColor: colors.dangerLight,
+      width: isCompact ? 38 : 40,
+      height: isCompact ? 38 : 40,
+      borderRadius: isCompact ? 19 : 20,
+      backgroundColor: colors.dangerLight,
       alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.danger,
       ...(Platform.OS === 'web' ? WEB_CURSOR_POINTER_STYLE : {}),
     },
     travelsLoading: { paddingHorizontal: 14, paddingBottom: 14 },
     noTravels: { paddingHorizontal: 14, paddingBottom: 14, fontSize: 13, color: colors.textMuted, fontStyle: 'italic' },
     travelsScroll: {
-      paddingHorizontal: 14,
-      paddingBottom: 14,
-      gap: 12,
+      paddingHorizontal: isCompact ? 12 : 14,
+      paddingBottom: isCompact ? 12 : 14,
+      gap: isCompact ? 10 : 12,
       ...(Platform.OS === 'web' ? ({ minWidth: 'max-content' } as any) : {}),
     },
-    travelCardWrap: { width: 240 },
+    travelCardWrap: { width: isCompact ? 168 : 240 },
     travelCard: { width: '100%' },
     showMoreCard: {
-      width: 120, borderRadius: DESIGN_TOKENS.radii.md, backgroundColor: colors.primarySoft,
+      width: isCompact ? 96 : 120,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: colors.primarySoft,
       alignItems: 'center', justifyContent: 'center', gap: 8,
       ...(Platform.OS === 'web' ? WEB_CURSOR_POINTER_STYLE : {}),
     },

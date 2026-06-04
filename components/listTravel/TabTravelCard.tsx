@@ -32,6 +32,7 @@ type Props = {
   style?: StyleProp<ViewStyle>;
   layout?: 'horizontal' | 'grid';
   contentMinHeight?: number;
+  imageHeight?: number;
   mediaFit?: 'contain' | 'cover';
   webTouchAction?: string;
 };
@@ -44,6 +45,7 @@ function TabTravelCard({
   style,
   layout = 'horizontal',
   contentMinHeight,
+  imageHeight,
   mediaFit = 'contain',
   webTouchAction,
 }: Props) {
@@ -103,7 +105,7 @@ function TabTravelCard({
       heroTitleOverlay={false}
       contentSlot={contentSlot}
       width={layout === 'grid' ? undefined : (isMobile ? MOBILE_CARD_WIDTH : (tabCardTemplate.container as any)?.width)}
-      imageHeight={Platform.OS === 'web' ? 168 : 150}
+      imageHeight={typeof imageHeight === 'number' ? imageHeight : Platform.OS === 'web' ? 168 : 150}
       testID={resolvedTestID}
       style={[layout === 'grid' ? styles.containerGrid : styles.container, style]}
       webTouchAction={resolvedWebTouchAction}

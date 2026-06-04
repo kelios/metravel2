@@ -7,10 +7,10 @@ export const createFooterStyles = (ctx: StylesCtx) => {
 
   return {
     applyButtonContainer: {
-      marginTop: spacing.sm,
-      paddingTop: spacing.md,
-      paddingHorizontal: spacing.xs,
-      paddingBottom: spacing.md,
+      marginTop: 4,
+      paddingTop: 8,
+      paddingHorizontal: 0,
+      paddingBottom: 8,
       borderTopWidth: 1,
       borderTopColor: colors.borderLight,
       backgroundColor: colors.surface,
@@ -19,8 +19,7 @@ export const createFooterStyles = (ctx: StylesCtx) => {
           gap: spacing.xs,
           position: 'sticky' as any,
           bottom: 0,
-          paddingBottom: `calc(${spacing.md}px + env(safe-area-inset-bottom))` as any,
-          boxShadow: ((colors.boxShadows as any)?.light ?? DESIGN_TOKENS.shadows.light) as any,
+          paddingBottom: `calc(8px + env(safe-area-inset-bottom))` as any,
         } as any,
       }),
     },
@@ -44,7 +43,7 @@ export const createFooterStyles = (ctx: StylesCtx) => {
     },
     applyButton: {
       backgroundColor: colors.primary,
-      paddingVertical: spacing.md,
+      paddingVertical: 12,
       borderRadius: PILL_RADIUS,
       alignItems: 'center',
       overflow: 'hidden',
@@ -71,7 +70,7 @@ export const createFooterStyles = (ctx: StylesCtx) => {
       }),
     },
     applyButtonText: {
-      fontSize: typography.sizes.md,
+      fontSize: typography.sizes.sm,
       fontWeight: typography.weights.bold as any,
       color: colors.textOnPrimary,
       letterSpacing: 0,

@@ -1,5 +1,87 @@
 import { test, expect } from './fixtures';
 import { preacceptCookies, gotoWithRetry } from './helpers/navigation';
+import { ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth';
+
+async function setupFakeSubscriptionsPage(page: import('@playwright/test').Page) {
+  await ensureAuthedStorageFallback(page);
+  await mockFakeAuthApis(page);
+
+  await page.route('**/api/user/subscriptions/**', (route) => {
+    if (route.request().method() !== 'GET') return route.continue();
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        results: [
+          {
+            id: 42,
+            user: 42,
+            first_name: 'Siarhey',
+            last_name: '',
+            avatar: null,
+          },
+          {
+            id: 43,
+            user: 43,
+            first_name: 'Anna',
+            last_name: 'Nowak',
+            avatar: null,
+          },
+          {
+            id: 44,
+            user: 44,
+            first_name: 'Ivan',
+            last_name: 'Test',
+            avatar: null,
+          },
+        ],
+      }),
+    });
+  });
+
+  await page.route('**/api/user/subscribers/**', (route) => {
+    if (route.request().method() !== 'GET') return route.continue();
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ results: [] }),
+    });
+  });
+
+  await page.route('**/api/travels/**', (route) => {
+    if (route.request().method() !== 'GET') return route.continue();
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        count: 3,
+        results: [
+          {
+            id: 101,
+            slug: 'plane-trip',
+            name: 'Краков. Полёт на планере',
+            countryName: 'Польша',
+            travel_image_thumb_url: '',
+          },
+          {
+            id: 102,
+            slug: 'exam-trip',
+            name: 'Экзамен по маршруту',
+            countryName: 'Литва',
+            travel_image_thumb_url: '',
+          },
+          {
+            id: 103,
+            slug: 'third-trip',
+            name: 'Третий маршрут',
+            countryName: 'Беларусь',
+            travel_image_thumb_url: '',
+          },
+        ],
+      }),
+    });
+  });
+}
 
 test.describe('Subscriptions @smoke', () => {
   test('unauthenticated user sees login prompt on /subscriptions', async ({ page }) => {
@@ -182,6 +264,66 @@ test.describe('Subscriptions @smoke', () => {
       });
       return;
     }
+  });
+
+  test('mobile subscriptions rail supports horizontal scroll without blocking page scroll', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupFakeSubscriptionsPage(page);
+    await preacceptCookies(page);
+    await gotoWithRetry(page, '/subscriptions');
+
+    await expect(page.getByText('Siarhey')).toBeVisible({ timeout: 20_000 });
+    const rail = page.getByTestId('subscription-travels-rail').first();
+    await expect(rail).toBeVisible();
+
+    const metrics = await rail.evaluate((node) => {
+      const el = node as HTMLElement;
+      const firstCard = el.querySelector('[data-testid*="tab-travel-card"]') as HTMLElement | null;
+      let scrollParent: HTMLElement | null = el.parentElement;
+      while (scrollParent && scrollParent !== document.body) {
+        if (scrollParent.scrollHeight > scrollParent.clientHeight + 1) break;
+        scrollParent = scrollParent.parentElement;
+      }
+      return {
+        railClientWidth: el.clientWidth,
+        railScrollWidth: el.scrollWidth,
+        railOverflowX: window.getComputedStyle(el).overflowX,
+        railTouchAction: window.getComputedStyle(el).touchAction,
+        firstCardTouchAction: firstCard ? window.getComputedStyle(firstCard).touchAction : null,
+        verticalScrollable: Boolean(scrollParent && scrollParent !== document.body),
+      };
+    });
+
+    expect(metrics.railScrollWidth).toBeGreaterThan(metrics.railClientWidth);
+    expect(metrics.railOverflowX).toMatch(/auto|scroll/);
+    expect(metrics.railTouchAction).toContain('pan-x');
+    expect(metrics.firstCardTouchAction).not.toBe('pan-y');
+    expect(metrics.verticalScrollable).toBeTruthy();
+
+    await rail.evaluate((node) => {
+      let scrollParent: HTMLElement | null = (node as HTMLElement).parentElement;
+      while (scrollParent && scrollParent !== document.body) {
+        if (scrollParent.scrollHeight > scrollParent.clientHeight + 1) {
+          scrollParent.scrollTop = 260;
+          return;
+        }
+        scrollParent = scrollParent.parentElement;
+      }
+    });
+    await expect
+      .poll(
+        () =>
+          rail.evaluate((node) => {
+            let scrollParent: HTMLElement | null = (node as HTMLElement).parentElement;
+            while (scrollParent && scrollParent !== document.body) {
+              if (scrollParent.scrollHeight > scrollParent.clientHeight + 1) return scrollParent.scrollTop;
+              scrollParent = scrollParent.parentElement;
+            }
+            return 0;
+          }),
+        { timeout: 5_000 },
+      )
+      .toBeGreaterThan(0);
   });
 
   test('subscriptions page is accessible from account menu', async ({ page }) => {

@@ -1,5 +1,4 @@
 import { Platform } from 'react-native'
-import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { StylesCtx } from './tokens'
 
 export const createToolbarStyles = (ctx: StylesCtx) => {
@@ -7,8 +6,8 @@ export const createToolbarStyles = (ctx: StylesCtx) => {
 
   return {
     toggleAllButton: {
-      width: DESIGN_TOKENS.touchTarget.minWidth,
-      height: DESIGN_TOKENS.touchTarget.minHeight,
+      width: 40,
+      height: 40,
       padding: 0,
       borderRadius: PILL_RADIUS,
       alignItems: 'center',
@@ -25,8 +24,8 @@ export const createToolbarStyles = (ctx: StylesCtx) => {
     },
     toggleAllButtonWide: {
       width: 'auto',
-      minWidth: DESIGN_TOKENS.touchTarget.minWidth,
-      paddingHorizontal: spacing.md,
+      minWidth: 40,
+      paddingHorizontal: spacing.sm,
     },
     toggleAllButtonPressed: {
       backgroundColor: colors.brandSoft,
@@ -43,13 +42,13 @@ export const createToolbarStyles = (ctx: StylesCtx) => {
       fontWeight: typography.weights.semibold as any,
     },
     clearButton: {
-      minHeight: 40,
+      minHeight: 36,
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.xs,
       justifyContent: 'center',
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 6,
       borderRadius: PILL_RADIUS,
       backgroundColor: colors.surface,
       borderWidth: 1,

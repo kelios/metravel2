@@ -17,7 +17,7 @@ export const createGroupStyles = (ctx: StylesCtx) => {
       }),
     },
     scrollContent: {
-      paddingBottom: spacing.sm,
+      paddingBottom: spacing.xs,
     },
     filterGroup: {
       marginBottom: spacing.xxs,
@@ -31,8 +31,8 @@ export const createGroupStyles = (ctx: StylesCtx) => {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingVertical: spacing.xxs,
-      minHeight: 48,
+      paddingVertical: 0,
+      minHeight: 42,
       ...Platform.select({
         web: {
           cursor: 'pointer' as any,
@@ -47,8 +47,8 @@ export const createGroupStyles = (ctx: StylesCtx) => {
       minWidth: 0,
     },
     groupHeaderButton: {
-      minHeight: 48,
-      paddingVertical: spacing.sm,
+      minHeight: 42,
+      paddingVertical: 7,
       paddingHorizontal: spacing.sm,
       borderRadius: CONTROL_RADIUS,
       borderWidth: 1,
@@ -75,7 +75,7 @@ export const createGroupStyles = (ctx: StylesCtx) => {
       marginLeft: spacing.xs,
     },
     groupTitle: {
-      fontSize: typography.sizes.md,
+      fontSize: typography.sizes.sm,
       fontWeight: typography.weights.bold as any,
       color: colors.text,
       letterSpacing: -0.2,

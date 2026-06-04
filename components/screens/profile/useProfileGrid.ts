@@ -64,7 +64,7 @@ export function useProfileGrid({
   const contentPaddingBottom = useMemo(() => {
     if (Platform.OS === 'web') {
       const dockVisible = isPhone || isLargePhone || isTablet;
-      return (dockVisible ? 56 : 0) + 32;
+      return (dockVisible ? 96 : 0) + 32;
     }
 
     return Math.max(32, (insets.bottom || 0) + 16);

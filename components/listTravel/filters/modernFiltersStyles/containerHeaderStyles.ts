@@ -73,6 +73,9 @@ export const createContainerHeaderStyles = (ctx: StylesCtx) => {
       display: 'flex' as any,
       flexDirection: 'column' as any,
       overflowY: 'hidden' as any,
+      paddingHorizontal: 12,
+      paddingTop: 10,
+      paddingBottom: 0,
     },
     containerCompact: {
       padding: spacing.md,
@@ -86,12 +89,12 @@ export const createContainerHeaderStyles = (ctx: StylesCtx) => {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: spacing.md,
+      marginBottom: spacing.sm,
       gap: spacing.sm,
     },
     headerStacked: {
-      flexDirection: 'column',
-      alignItems: 'stretch',
+      flexDirection: 'row',
+      alignItems: 'center',
     },
     headerTitle: {
       fontSize: typography.sizes.md,
@@ -106,7 +109,7 @@ export const createContainerHeaderStyles = (ctx: StylesCtx) => {
       backgroundColor: colors.brandSoft,
       borderWidth: 1,
       borderColor: colors.brandAlpha30,
-      flexShrink: 1,
+      flexShrink: 0,
       maxWidth: '100%',
       alignSelf: 'flex-start',
       ...Platform.select({
@@ -129,7 +132,8 @@ export const createContainerHeaderStyles = (ctx: StylesCtx) => {
       minWidth: 0,
     },
     headerLeftStacked: {
-      flex: 0,
+      flex: 1,
+      minWidth: 0,
     },
     iconSlot16: {
       width: 16,
@@ -152,12 +156,13 @@ export const createContainerHeaderStyles = (ctx: StylesCtx) => {
       flexShrink: 0,
     },
     headerRightStacked: {
-      width: '100%',
-      justifyContent: 'space-between',
+      width: 'auto',
+      justifyContent: 'flex-end',
+      flexShrink: 0,
     },
     closeButton: {
-      width: DESIGN_TOKENS.touchTarget.minWidth,
-      height: DESIGN_TOKENS.touchTarget.minHeight,
+      width: 40,
+      height: 40,
       padding: 0,
       borderRadius: PILL_RADIUS,
       alignItems: 'center',
@@ -185,9 +190,8 @@ export const createContainerHeaderStyles = (ctx: StylesCtx) => {
         web: {
           position: 'sticky' as any,
           top: 0,
-          paddingTop: spacing.xs,
+          paddingTop: 0,
           paddingBottom: spacing.xs,
-          boxShadow: ((colors.boxShadows as any)?.light ?? DESIGN_TOKENS.shadows.light) as any,
         } as any,
       }),
     },
