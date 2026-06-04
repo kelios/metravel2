@@ -351,7 +351,7 @@ export const deleteImage = async (imageId: string) => {
   }
 
   try {
-    return await apiClient.delete<unknown>(`/gallery/${imageId}/`, DEFAULT_TIMEOUT);
+    return await apiClient.delete<unknown>(`/gallery/${encodeURIComponent(imageId)}/`, DEFAULT_TIMEOUT);
   } catch (error) {
     // Preserve previous behavior: non-204 is treated as "Ошибка удаления изображения"
     if (typeof ApiError === 'function' && error instanceof ApiError) {

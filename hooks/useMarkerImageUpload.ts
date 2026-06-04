@@ -174,6 +174,7 @@ export function useMarkerImageUpload({
             attempts: state.attempts + 1,
           })
 
+          let succeeded = false
           try {
             const formData = new FormData()
             formData.append('file', file)
@@ -189,13 +190,19 @@ export function useMarkerImageUpload({
             removePendingImageFile(imageUrl)
             revokePreviewUrl(imageUrl)
             applyUploadedMarkerImage(String(markerId), imageUrl, uploadedUrl)
+            succeeded = true
           } catch {
             // Keep pending file for the next successful save/retry path.
           } finally {
-            markerUploadStateRef.current.set(imageUrl, {
-              inFlight: false,
-              attempts: state.attempts + 1,
-            })
+            if (succeeded) {
+              // blob-URL ревокнут и больше не встретится — не копим мёртвые записи в Map.
+              markerUploadStateRef.current.delete(imageUrl)
+            } else {
+              markerUploadStateRef.current.set(imageUrl, {
+                inFlight: false,
+                attempts: state.attempts + 1,
+              })
+            }
           }
         }),
       )

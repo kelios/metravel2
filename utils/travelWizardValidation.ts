@@ -375,11 +375,9 @@ export function getStepProgress(step: number, formData: TravelFormData): number 
   let filledCount = 0;
   for (const fieldName of allFields) {
     const value = (formData as unknown as UnknownRecord)[fieldName];
-    const isEmpty =
-      value === null ||
-      value === undefined ||
-      value === '' ||
-      (Array.isArray(value) && value.length === 0);
+    // Используем те же правила пустоты, что и валидация шага: для html-полей
+    // пустота считается по видимому тексту (<p></p> не «заполнено»).
+    const isEmpty = isEmptyForRules(value, rules.fields?.[fieldName]);
 
     if (!isEmpty) {
       filledCount++;
