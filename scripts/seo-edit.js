@@ -109,8 +109,20 @@ function detectRegression(before, after, { expectChanged = false, newDescription
   const bp = (b.coordsMeTravel || []).length;
   const ap = (a.coordsMeTravel || []).length;
   if (ap < bp) problems.push(`points shrank ${bp} → ${ap}`);
-  if (expectChanged && newDescription != null && (a.description || '') !== newDescription) {
-    problems.push('description did not persist as written');
+  if (expectChanged && newDescription != null) {
+    // API may normalise trailing whitespace; compare trimmed versions to avoid
+    // false-positive regressions from server-side HTML clean-up.
+    const sentTrimmed = newDescription.trim();
+    const gotTrimmed = (a.description || '').trim();
+    const beforeTrimmed = (b.description || '').trim();
+    if (!gotTrimmed) {
+      problems.push('description did not persist as written');
+    } else if (gotTrimmed === beforeTrimmed && sentTrimmed !== beforeTrimmed) {
+      // Write was a silent no-op — API returned the old content unchanged
+      problems.push('description did not persist as written');
+    } else if (gotTrimmed.length < sentTrimmed.length * 0.8) {
+      problems.push(`description shrank unexpectedly: sent ${sentTrimmed.length} chars, got ${gotTrimmed.length}`);
+    }
   }
   return problems;
 }

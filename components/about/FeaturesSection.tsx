@@ -51,7 +51,9 @@ export const FeaturesSection: React.FC<Props> = ({ isWide }) => {
           <View style={styles.featureList}>
             {currentFeatures.map((item) => (
               <View key={item} style={styles.featureItem}>
-                <Text style={styles.featureCheck}>✓</Text>
+                <View style={styles.featureMark}>
+                  <Feather name="check" size={14} color={colors.success} />
+                </View>
                 <Text style={styles.featureText}>{item}</Text>
               </View>
             ))}
@@ -66,7 +68,9 @@ export const FeaturesSection: React.FC<Props> = ({ isWide }) => {
           <View style={styles.featureList}>
             {roadmapFeatures.map((item) => (
               <View key={item} style={styles.featureItem}>
-                <Text style={styles.featureComing}>→</Text>
+                <View style={styles.featureMark}>
+                  <Feather name="arrow-right" size={14} color={colors.primary} />
+                </View>
                 <Text style={styles.featureText}>{item}</Text>
               </View>
             ))}

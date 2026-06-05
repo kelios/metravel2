@@ -23,6 +23,7 @@ import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useVisibleCardCount } from '@/hooks/useVisibleCardCount';
 import { createTabCardTemplate } from './recommendationsCardTemplate';
 import TabTravelCard from './TabTravelCard';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -70,6 +71,8 @@ interface RecommendationsTabsProps {
 }
 
 const ARROW_ICON_STYLE = { marginLeft: 6 } as const;
+const PREVIEW_CARD_WIDTH = 208;
+const PREVIEW_CARD_GAP = 16;
 
 type TabStyles = ReturnType<typeof createRecommendationsTabsStyles>;
 
@@ -327,6 +330,17 @@ const RecommendationsTabs = memo(
       () => (activeTab === 'favorites' || activeTab === 'history' ? `recommendations-${activeTab}-rail` : undefined),
       [activeTab]
     );
+    const activeCollectionCount = activeTab === 'favorites'
+      ? favorites.length
+      : activeTab === 'history'
+        ? viewHistory.length
+        : 0;
+    const collectionPreview = useVisibleCardCount({
+      itemCount: activeCollectionCount,
+      itemWidth: PREVIEW_CARD_WIDTH,
+      gap: PREVIEW_CARD_GAP,
+      max: 8,
+    });
 
     const renderCardCollection = (
       items: CollectionItem[],
@@ -357,15 +371,27 @@ const RecommendationsTabs = memo(
         );
       }
 
+      if (Platform.OS === 'web') {
+        const previewItems = items.slice(0, collectionPreview.visibleCount);
+        return (
+          <View
+            testID={activeRailTestID}
+            style={styles.previewRow}
+            onLayout={collectionPreview.onLayout}
+          >
+            {previewItems.map(cardFactory)}
+          </View>
+        );
+      }
+
       return (
         <ScrollView
           testID={activeRailTestID}
           horizontal
-          showsHorizontalScrollIndicator={Platform.OS === 'web'}
-          style={[styles.horizontalList, Platform.OS === 'web' ? styles.webHorizontalScroll : null]}
-          contentContainerStyle={Platform.OS === 'web' ? styles.webHorizontalScrollContent : styles.horizontalListContent}
+          showsHorizontalScrollIndicator={false}
+          style={styles.horizontalList}
+          contentContainerStyle={styles.horizontalListContent}
           bounces={false}
-          {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
         >
           {items.map(cardFactory)}
         </ScrollView>

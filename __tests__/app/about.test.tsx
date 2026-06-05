@@ -72,7 +72,7 @@ describe('AboutScreen', () => {
     const { getByText } = render(<AboutScreen />);
 
     expect(getByText('MeTravel.by')).toBeTruthy();
-    expect(getByText('Путешествуй вдохновлённо')).toBeTruthy();
+    expect(getByText('Путешествия, которые хочется повторить')).toBeTruthy();
     expect(getByText('Функции и возможности')).toBeTruthy();
     expect(getByText('Доступно сейчас')).toBeTruthy();
     expect(getByText('В разработке')).toBeTruthy();

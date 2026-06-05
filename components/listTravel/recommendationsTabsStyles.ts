@@ -128,6 +128,14 @@ export const createRecommendationsTabsStyles = (
   errorContainer: { padding: 32, alignItems: 'center', justifyContent: 'center' },
   errorText: { marginTop: 12, fontSize: 15, color: colors.textMuted, textAlign: 'center' },
   horizontalList: { marginBottom: 8 },
+  previewRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    paddingHorizontal: 4,
+    paddingBottom: 6,
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
   webHorizontalScroll: {
     ...(Platform.select({ web: { overflowX: 'auto', overflowY: 'hidden', overscrollBehaviorX: 'contain', width: '100%', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' } as any, default: {} }) as any),
   },

@@ -1,7 +1,9 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useAboutStyles } from './aboutStyles';
+import { useThemedColors } from '@/hooks/useTheme';
 
 type Props = {
   youtubeThumb: string;
@@ -10,6 +12,7 @@ type Props = {
 
 export const VideoCard: React.FC<Props> = ({ youtubeThumb, onOpenYoutube }) => {
   const styles = useAboutStyles();
+  const colors = useThemedColors();
   return (
     <View style={styles.videoCard}>
       <View style={styles.videoCardHeader}>
@@ -36,9 +39,7 @@ export const VideoCard: React.FC<Props> = ({ youtubeThumb, onOpenYoutube }) => {
           style={styles.videoThumb}
         />
         <View style={styles.playBadge}>
-          <View style={styles.playIconContainer}>
-            <Text style={styles.playIcon}>▶</Text>
-          </View>
+          <Feather name="play" size={28} color={colors.textOnPrimary} />
         </View>
       </Pressable>
       <View style={styles.videoCardFooter}>

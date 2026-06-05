@@ -11,9 +11,12 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
+import { useVisibleCardCount } from '@/hooks/useVisibleCardCount';
 
 const COLLAPSED_KEY = 'personalization_collapsed';
 const ARROW_ICON_STYLE = { marginLeft: 6 } as const;
+const PREVIEW_CARD_WIDTH = 208;
+const PREVIEW_CARD_GAP = 16;
 
 interface PersonalizedRecommendationsProps {
     forceVisible?: boolean;
@@ -99,35 +102,31 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
 
     // ВАЖНО: все хуки должны быть вызваны до условных возвратов
     const handleItemPress = useCallback((url: string) => {
-        if (Platform.OS === 'web') {
-            window.location.href = url;
-        } else {
-            router.push(url as any);
-        }
+        router.push(url as any);
     }, [router]);
 
     const handleLoginPress = useCallback(() => {
         router.push(buildLoginHref({ intent: 'recommendations' }) as any);
     }, [router]);
 
-    const handleHorizontalWheel = useCallback((e: any) => {
-        if (Platform.OS !== 'web') return;
-
-        const deltaY = Number(e?.deltaY ?? 0);
-        const deltaX = Number(e?.deltaX ?? 0);
-
-        if (!deltaY || Math.abs(deltaY) <= Math.abs(deltaX)) return;
-
-        const target = e?.currentTarget as any;
-        const el = target?._nativeNode || target?._domNode || target;
-        if (!el || typeof (el as any).scrollLeft !== 'number') return;
-
-        const maxScrollLeft = (el.scrollWidth ?? 0) - (el.clientWidth ?? 0);
-        if (maxScrollLeft <= 0) return;
-
-        e.preventDefault?.();
-        (el as any).scrollLeft += deltaY;
-    }, []);
+    const favoritesPreview = useVisibleCardCount({
+        itemCount: favorites.length,
+        itemWidth: PREVIEW_CARD_WIDTH,
+        gap: PREVIEW_CARD_GAP,
+        max: 8,
+    });
+    const historyPreview = useVisibleCardCount({
+        itemCount: viewHistory.length,
+        itemWidth: PREVIEW_CARD_WIDTH,
+        gap: PREVIEW_CARD_GAP,
+        max: 8,
+    });
+    const recommendationsPreview = useVisibleCardCount({
+        itemCount: recommendations.length,
+        itemWidth: PREVIEW_CARD_WIDTH,
+        gap: PREVIEW_CARD_GAP,
+        max: 8,
+    });
 
     const renderItem = useCallback((item: typeof recommendations[0]) => {
         return (
@@ -148,6 +147,20 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
 
     const hasFavorites = !onlyRecommendations && favorites && favorites.length > 0;
     const hasHistory = !onlyRecommendations && viewHistory && viewHistory.length > 0;
+    const renderSectionTitle = useCallback((title: string, href: string, label = 'Смотреть все') => (
+        <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{title}</Text>
+            <Pressable
+                onPress={() => router.push(href as any)}
+                style={styles.sectionLink}
+                accessibilityRole="button"
+                accessibilityLabel={label}
+            >
+                <Text style={styles.sectionLinkText}>{label}</Text>
+                <Feather name="arrow-right" size={14} color={colors.primary} />
+            </Pressable>
+        </View>
+    ), [colors.primary, router, styles.sectionHeader, styles.sectionLink, styles.sectionLinkText, styles.sectionTitle]);
 
     // Условные возвраты после всех хуков
     if (!isInitialized) return null;
@@ -281,90 +294,117 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
 
             {hasFavorites && (
                 <View style={styles.section} testID="personalized-favorites-section">
-                    <Text style={styles.sectionTitle}>Избранное</Text>
+                    {renderSectionTitle('Избранное', '/favorites', 'Смотреть все избранное')}
                     {isMobileWeb ? (
                         <View style={styles.mobileWebStack} testID="personalized-favorites-stack">
-                            {favorites.map(item => (
+                            {favorites.slice(0, 2).map(item => (
                                 <View key={`${(item as any).type}-${item.id}`} style={styles.mobileWebStackItem}>
                                     {renderItem(item as any)}
                                 </View>
                             ))}
                         </View>
                     ) : (
-                        <ScrollView
+                        Platform.OS === 'web' ? (
+                        <View
                             testID="personalized-favorites-rail"
-                            horizontal
-                            showsHorizontalScrollIndicator={Platform.OS === 'web'}
-                            nestedScrollEnabled
-                            scrollEnabled={true}
-                            style={styles.webHorizontalScroll}
-                            contentContainerStyle={styles.scrollContent}
-                            removeClippedSubviews={Platform.OS !== "web"}
-                            decelerationRate="fast"
-                            {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
+                            style={styles.previewRow}
+                            onLayout={favoritesPreview.onLayout}
                         >
-                            {favorites.map(item => renderItem(item as any))}
-                        </ScrollView>
+                            {favorites.slice(0, favoritesPreview.visibleCount).map(item => renderItem(item as any))}
+                        </View>
+                        ) : (
+                            <ScrollView
+                                testID="personalized-favorites-rail"
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                nestedScrollEnabled
+                                scrollEnabled={true}
+                                style={styles.webHorizontalScroll}
+                                contentContainerStyle={styles.scrollContent}
+                                removeClippedSubviews
+                                decelerationRate="fast"
+                            >
+                                {favorites.map(item => renderItem(item as any))}
+                            </ScrollView>
+                        )
                     )}
                 </View>
             )}
 
             {hasHistory && (
                 <View style={styles.section} testID="personalized-history-section">
-                    <Text style={styles.sectionTitle}>Недавно просмотрено</Text>
+                    {renderSectionTitle('Недавно просмотрено', '/history', 'Смотреть всю историю')}
                     {isMobileWeb ? (
                         <View style={styles.mobileWebStack} testID="personalized-history-stack">
-                            {viewHistory.map(item => (
+                            {viewHistory.slice(0, 2).map(item => (
                                 <View key={`${(item as any).type}-${item.id}-${(item as any).viewedAt ?? ''}`} style={styles.mobileWebStackItem}>
                                     {renderItem(item as any)}
                                 </View>
                             ))}
                         </View>
                     ) : (
-                        <ScrollView
+                        Platform.OS === 'web' ? (
+                        <View
                             testID="personalized-history-rail"
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            nestedScrollEnabled
-                            scrollEnabled={true}
-                            style={styles.webHorizontalScroll}
-                            contentContainerStyle={styles.scrollContent}
-                            removeClippedSubviews={Platform.OS !== "web"}
-                            decelerationRate="fast"
-                            {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
+                            style={styles.previewRow}
+                            onLayout={historyPreview.onLayout}
                         >
-                            {viewHistory.map(item => renderItem(item as any))}
-                        </ScrollView>
+                            {viewHistory.slice(0, historyPreview.visibleCount).map(item => renderItem(item as any))}
+                        </View>
+                        ) : (
+                            <ScrollView
+                                testID="personalized-history-rail"
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                nestedScrollEnabled
+                                scrollEnabled={true}
+                                style={styles.webHorizontalScroll}
+                                contentContainerStyle={styles.scrollContent}
+                                removeClippedSubviews
+                                decelerationRate="fast"
+                            >
+                                {viewHistory.map(item => renderItem(item as any))}
+                            </ScrollView>
+                        )
                     )}
                 </View>
             )}
 
             {recommendations.length > 0 && (
                 <View style={styles.section} testID="personalized-recommendations-list-section">
-                    <Text style={styles.sectionTitle}>Рекомендации</Text>
+                    {renderSectionTitle('Рекомендации', '/search', 'Все маршруты')}
                     {isMobileWeb ? (
                         <View style={styles.mobileWebStack} testID="personalized-recommendations-stack">
-                            {recommendations.map(item => (
+                            {recommendations.slice(0, 2).map(item => (
                                 <View key={`${item.type}-${item.id}`} style={styles.mobileWebStackItem}>
                                     {renderItem(item)}
                                 </View>
                             ))}
                         </View>
                     ) : (
-                        <ScrollView
+                        Platform.OS === 'web' ? (
+                        <View
                             testID="personalized-recommendations-rail"
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            nestedScrollEnabled
-                            scrollEnabled={true}
-                            style={styles.webHorizontalScroll}
-                            contentContainerStyle={styles.scrollContent}
-                            removeClippedSubviews={Platform.OS !== "web"}
-                            decelerationRate="fast"
-                            {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
+                            style={styles.previewRow}
+                            onLayout={recommendationsPreview.onLayout}
                         >
-                            {recommendations.map(item => renderItem(item))}
-                        </ScrollView>
+                            {recommendations.slice(0, recommendationsPreview.visibleCount).map(item => renderItem(item))}
+                        </View>
+                        ) : (
+                            <ScrollView
+                                testID="personalized-recommendations-rail"
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                nestedScrollEnabled
+                                scrollEnabled={true}
+                                style={styles.webHorizontalScroll}
+                                contentContainerStyle={styles.scrollContent}
+                                removeClippedSubviews
+                                decelerationRate="fast"
+                            >
+                                {recommendations.map(item => renderItem(item))}
+                            </ScrollView>
+                        )
                     )}
                 </View>
             )}
@@ -444,7 +484,39 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontSize: 14,
         fontWeight: '600',
         color: colors.text,
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
         marginBottom: 8,
+    },
+    sectionLink: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: DESIGN_TOKENS.radii.sm,
+        ...Platform.select({
+            web: {
+                cursor: 'pointer',
+            } as any,
+            default: {},
+        }),
+    },
+    sectionLinkText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: colors.primary,
+    },
+    previewRow: {
+        flexDirection: 'row',
+        alignItems: 'stretch',
+        paddingHorizontal: 4,
+        paddingVertical: 4,
+        overflow: 'hidden',
     },
     countBadge: {
         backgroundColor: colors.dangerLight,

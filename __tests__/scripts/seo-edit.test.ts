@@ -134,6 +134,20 @@ describe('detectRegression', () => {
       'description did not persist as written'
     );
   });
+
+  it('tolerates server-side trailing-whitespace normalisation (no false positive)', () => {
+    const sent = '<p>new long enriched body</p>';
+    const after = { ...before, description: `${sent}\n  ` };
+    expect(detectRegression(before, after, { expectChanged: true, newDescription: sent })).toEqual([]);
+  });
+
+  it('flags an unexpectedly shrunken description (server dropped most content)', () => {
+    const sent = '<p>' + 'enriched '.repeat(40) + '</p>'; // ~360 chars
+    const after = { ...before, description: '<p>tiny</p>' };
+    expect(detectRegression(before, after, { expectChanged: true, newDescription: sent })).toEqual(
+      expect.arrayContaining([expect.stringContaining('description shrank unexpectedly')])
+    );
+  });
 });
 
 describe('backupFileName', () => {

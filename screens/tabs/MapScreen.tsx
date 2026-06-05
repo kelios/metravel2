@@ -171,6 +171,7 @@ export default function MapScreen() {
 
   useEffect(() => {
     if (!isWeb || typeof document === 'undefined') return
+    if (!isMobile) return
     const previousOverflowY = document.body.style.overflowY
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -179,7 +180,7 @@ export default function MapScreen() {
       document.body.style.overflow = previousOverflow
       document.body.style.overflowY = previousOverflowY
     }
-  }, [isWeb])
+  }, [isMobile, isWeb])
 
   useEffect(() => {
     if (!geoError && geoBannerDismissed) setGeoBannerDismissed(false)
@@ -392,6 +393,10 @@ export default function MapScreen() {
     rightPanelTab === 'travels' ? 'travels' : currentMode === 'route' ? 'route' : 'search'
 
   const shouldShowFloatingRadiusPill = Boolean(currentRadius && !isWeb)
+  const showMapProgress =
+    isDebouncingFilters ||
+    (loading && !travelsData.length) ||
+    (isFetching && !isPlaceholderData && !travelsData.length)
 
   const onFilterChange = filtersPanelProps?.contextValue?.onFilterChange
   const onOverlayToggle = filtersPanelProps?.contextValue?.onOverlayToggle
@@ -404,8 +409,7 @@ export default function MapScreen() {
         themedColors={themedColors}
         isWeb={isWeb}
         isMobile={isMobile}
-        isFetching={isFetching}
-        isDebouncingFilters={isDebouncingFilters}
+        showProgress={showMapProgress}
         mapReady={mapReady}
         mapPanelProps={mapPanelProps}
         travelsData={travelsData}
@@ -423,12 +427,11 @@ export default function MapScreen() {
       />
     ),
     [
-      isFetching,
-      isDebouncingFilters,
       isMobile,
       isWeb,
       mapPanelProps,
       mapReady,
+      showMapProgress,
       travelsData,
       quickFilters,
       mapQuickActionButtons,

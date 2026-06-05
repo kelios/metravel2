@@ -96,4 +96,20 @@ describe('RootWebDeferredChrome', () => {
     expect(getByTestId('runtime-effects')).toBeTruthy()
   })
 
+  it('keeps the desktop map footer available', async () => {
+    const { getByTestId } = render(
+      <RootWebDeferredChrome
+        isMobile={false}
+        pathname="/map"
+        showFooter
+        isTravelPerformanceRoute={false}
+        setDockHeight={jest.fn()}
+      />
+    )
+
+    await waitFor(() => {
+      expect(getByTestId('footer')).toBeTruthy()
+    })
+  })
+
 })

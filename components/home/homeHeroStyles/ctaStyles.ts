@@ -272,14 +272,46 @@ export const createCtaStyles = (ctx: HeroStyleContext) => {
 
     // -- Popular section (mobile) --
     popularSection: { marginTop: isMobile ? 32 : 40, width: '100%' },
+    popularTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+      marginBottom: 18,
+    },
     popularTitle: {
       fontSize: 13,
       fontWeight: '600',
       color: colors.textMuted,
-      marginBottom: 18,
       textTransform: 'uppercase',
       letterSpacing: 1.6,
       ...Platform.select({ web: { fontFamily: sansSerif } as any }),
+    },
+    popularSeeAll: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+        } as any,
+      }),
+    },
+    popularSeeAllText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.primary,
+      ...Platform.select({ web: { fontFamily: sansSerif } as any }),
+    },
+    popularPreviewRow: {
+      flexDirection: 'row',
+      alignItems: 'stretch',
+      gap: 16,
+      overflow: 'hidden',
+      width: '100%',
+      paddingBottom: 4,
     },
     popularScrollContent: {
       flexDirection: 'row',

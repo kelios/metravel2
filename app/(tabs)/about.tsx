@@ -203,7 +203,7 @@ function AboutAndContactScreen() {
 
                   <CategoriesShowcase isWide={isWide} />
 
-                  <View style={[isWide ? styles.twoColumns : styles.oneColumn, { marginTop: 40 }]}>
+                  <View style={[isWide ? styles.twoColumns : styles.oneColumn, { marginTop: 24 }]}>
                     <AboutIntroCard
                       email={EMAIL}
                       onSendMail={sendMail}
@@ -267,7 +267,7 @@ function AboutAndContactScreen() {
                     onSubmitEditingMessage={() => messageRef.current?.focus()}
                   />
                   <SocialSection onOpenInstagram={() => openUrl('https://instagram.com/metravelby')} />
-                  <ContributionBanner variant="about" />
+                  <ContributionBanner variant="about" density="compact" />
                 </View>
               </View>
             </View>

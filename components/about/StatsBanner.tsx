@@ -1,8 +1,10 @@
 import React from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus';
+import { useThemedColors } from '@/hooks/useTheme';
 
 type FeatherName = React.ComponentProps<typeof Feather>['name'];
 
@@ -19,14 +21,11 @@ const ITEMS: Array<{ icon: FeatherName; value: string; label: string; href: stri
 
 export const StatsBanner: React.FC<Props> = ({ isWide }) => {
   const router = useRouter();
+  const colors = useThemedColors();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   return (
     <View style={[styles.wrap, isWide ? styles.wrapWide : styles.wrapNarrow]}>
-      <LinearGradient
-        colors={['#2B6FA0', '#5BA8D6']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
       {ITEMS.map((item) => (
         <Pressable
           key={item.label}
@@ -38,10 +37,11 @@ export const StatsBanner: React.FC<Props> = ({ isWide }) => {
             isWide ? styles.cellWide : styles.cellNarrow,
             hovered && styles.cellHover,
             pressed && styles.cellPressed,
+            globalFocusStyles.focusable,
           ]}
         >
           <View style={styles.iconBadge}>
-            <Feather name={item.icon} size={22} color="#ffffff" />
+            <Feather name={item.icon} size={19} color={colors.primary} />
           </View>
           <Text style={styles.value}>{item.value}</Text>
           <Text style={styles.label}>{item.label}</Text>
@@ -51,39 +51,42 @@ export const StatsBanner: React.FC<Props> = ({ isWide }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   wrap: {
-    marginTop: 32,
-    borderRadius: 20,
+    marginTop: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.lg,
     overflow: 'hidden',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    padding: 8,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     ...Platform.select({
-      web: { boxShadow: '0 12px 28px rgba(43,111,160,0.3)' },
+      web: { boxShadow: colors.boxShadows.card },
       ios: {
-        shadowColor: '#2B6FA0',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.3,
-        shadowRadius: 16,
+        shadowColor: colors.text,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 14,
       },
-      android: { elevation: 5 },
+      android: { elevation: 3 },
     }),
   },
-  wrapWide: { padding: 12 },
-  wrapNarrow: { padding: 8 },
+  wrapWide: { padding: DESIGN_TOKENS.spacing.xs },
+  wrapNarrow: { padding: DESIGN_TOKENS.spacing.xs },
   cell: {
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 14,
+    padding: DESIGN_TOKENS.spacing.md,
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+    borderRadius: DESIGN_TOKENS.radii.md,
+    gap: DESIGN_TOKENS.spacing.xxs,
     ...Platform.select({
       web: { cursor: 'pointer', transition: 'background-color 0.2s ease, transform 0.2s ease' } as any,
       default: {},
     }),
   },
   cellHover: Platform.select({
-    web: { backgroundColor: 'rgba(255,255,255,0.12)', transform: [{ translateY: -2 }] } as any,
+    web: { backgroundColor: colors.primarySoft, transform: [{ translateY: -1 }] } as any,
     default: {},
   }) as any,
   cellPressed: {
@@ -97,29 +100,23 @@ const styles = StyleSheet.create({
     width: '50%',
   },
   iconBadge: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    width: 38,
+    height: 38,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    backgroundColor: colors.primarySoft,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.28)',
+    borderColor: colors.primaryAlpha30,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   value: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#ffffff',
-    letterSpacing: -0.3,
-    marginBottom: 4,
+    ...DESIGN_TOKENS.typography.scale.h3,
+    color: colors.text,
   },
   label: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.92)',
-    textAlign: 'center',
-    lineHeight: 18,
-    fontWeight: '500',
+    ...DESIGN_TOKENS.typography.scale.bodySmall,
+    color: colors.textMuted,
   },
 });
 

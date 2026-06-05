@@ -69,7 +69,7 @@ export const AboutIntroCard: React.FC<Props> = ({
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         style={({ pressed }) => [styles.emailButton, pressed && styles.emailButtonPressed]}
       >
-        <Text style={styles.emailIcon}>✉</Text>
+        <Feather name="mail" size={18} color={colors.primary} />
         <Text style={styles.emailText}>{email}</Text>
       </Pressable>
 

@@ -56,10 +56,6 @@ export default function RootWebDeferredChrome({
   const [showConsentBanner, setShowConsentBanner] = useState(false)
   const [showSkipLinks, setShowSkipLinks] = useState(false)
   const [showServiceWorkerCleanup, setShowServiceWorkerCleanup] = useState(false)
-  const isDesktopMapRoute =
-    !isMobile &&
-    typeof pathname === 'string' &&
-    (pathname === '/map' || pathname.startsWith('/map/'))
 
   useEffect(() => {
     setShowRuntimeEffects(true)
@@ -190,7 +186,7 @@ export default function RootWebDeferredChrome({
         </React.Suspense>
       )}
 
-      {showFooter && showFooterChrome && !isDesktopMapRoute && (
+      {showFooter && showFooterChrome && (
         <React.Suspense
           fallback={
             isMobile ? <View style={{ height: WEB_FOOTER_RESERVE_HEIGHT, width: '100%' }} /> : null

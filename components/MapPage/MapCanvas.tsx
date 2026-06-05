@@ -38,8 +38,7 @@ type MapCanvasProps = {
   themedColors: any
   isWeb: boolean
   isMobile: boolean
-  isFetching: boolean
-  isDebouncingFilters: boolean
+  showProgress: boolean
   mapReady: boolean
   mapPanelProps: any
   travelsData: any[]
@@ -61,8 +60,7 @@ export function MapCanvas({
   themedColors,
   isWeb,
   isMobile,
-  isFetching,
-  isDebouncingFilters,
+  showProgress,
   mapReady,
   mapPanelProps,
   travelsData,
@@ -80,7 +78,7 @@ export function MapCanvas({
 }: MapCanvasProps) {
   return (
     <View style={styles.mapArea}>
-      <MapLoadingBar visible={isFetching || isDebouncingFilters} />
+      <MapLoadingBar visible={showProgress} />
       {isWeb && !isMobile && (
         <Suspense fallback={null}>
           <LazyMapQuickFilters

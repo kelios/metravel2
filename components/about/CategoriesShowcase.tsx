@@ -1,9 +1,10 @@
 import React from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus';
 
 type FeatherName = React.ComponentProps<typeof Feather>['name'];
 
@@ -17,7 +18,6 @@ type Category = {
   icon: FeatherName;
   title: string;
   desc: string;
-  colors: [string, string];
   route: string;
   filters?: FilterParams;
 };
@@ -27,7 +27,6 @@ const CATEGORIES: Category[] = [
     icon: 'shield',
     title: 'Замки и крепости',
     desc: 'Несвиж, Мир, Лида и легенды веков',
-    colors: ['#A48A5F', '#6E5230'],
     route: '/search',
     filters: { categoryTravelAddress: [33, 43] },
   },
@@ -35,7 +34,6 @@ const CATEGORIES: Category[] = [
     icon: 'droplet',
     title: 'Озёра и реки',
     desc: 'Браславы, Нарочь, тихие лесные плёсы',
-    colors: ['#5BA8D6', '#1F5C8A'],
     route: '/search',
     filters: { categoryTravelAddress: [84, 110, 113, 193] },
   },
@@ -43,7 +41,6 @@ const CATEGORIES: Category[] = [
     icon: 'feather',
     title: 'Природа и парки',
     desc: 'Беловежская пуща, заказники, тропы',
-    colors: ['#7BB07A', '#2F6B4E'],
     route: '/search',
     filters: { categories: [21, 22, 2] },
   },
@@ -51,7 +48,6 @@ const CATEGORIES: Category[] = [
     icon: 'smile',
     title: 'Парки и развлечения',
     desc: 'Парки развлечений, зоопарки, арены и семейный отдых',
-    colors: ['#FF7E7E', '#C03A4A'],
     route: '/search',
     filters: { categoryTravelAddress: [92, 35, 46, 185, 204] },
   },
@@ -59,7 +55,6 @@ const CATEGORIES: Category[] = [
     icon: 'layers',
     title: 'Города и архитектура',
     desc: 'Минск, Гродно, Витебск — гулять и любоваться',
-    colors: ['#B59CD9', '#5B3F8C'],
     route: '/search',
     filters: { categories: [19, 20] },
   },
@@ -67,7 +62,6 @@ const CATEGORIES: Category[] = [
     icon: 'image',
     title: 'Музеи и арт',
     desc: 'Музеи, скансены и усадьбы для культурных прогулок',
-    colors: ['#F4B860', '#A86A1F'],
     route: '/search',
     filters: { categoryTravelAddress: [76, 77, 136] },
   },
@@ -75,7 +69,6 @@ const CATEGORIES: Category[] = [
     icon: 'coffee',
     title: 'Гастрономия',
     desc: 'Кафе, рестораны, бары, пивоварни и винодельни',
-    colors: ['#E6A972', '#8E5728'],
     route: '/search',
     filters: { categoryTravelAddress: [50, 109, 10, 98, 172, 198] },
   },
@@ -83,7 +76,6 @@ const CATEGORIES: Category[] = [
     icon: 'map',
     title: 'Готовые маршруты',
     desc: 'На день, выходные, машиной и пешком',
-    colors: ['#5DBDB1', '#1F6F66'],
     route: '/search',
   },
 ];
@@ -105,10 +97,11 @@ const buildHref = (route: string, filters?: FilterParams): string => {
 
 export const CategoriesShowcase: React.FC<Props> = ({ isWide }) => {
   const colors = useThemedColors();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
 
   return (
-    <View style={[styles.wrap, { borderTopColor: colors.borderAccent }]}>
+    <View style={styles.wrap}>
       <View style={styles.header}>
         <Text style={[styles.eyebrow, { color: colors.primary }]}>Что вы найдёте на сайте</Text>
         <Text style={[styles.title, { color: colors.text }]}>Идеи для любого настроения</Text>
@@ -131,24 +124,20 @@ export const CategoriesShowcase: React.FC<Props> = ({ isWide }) => {
                 isWide ? styles.cardWide : styles.cardNarrow,
                 hovered && styles.cardHover,
                 pressed && styles.cardPressed,
+                globalFocusStyles.focusable,
               ]}
             >
-              <LinearGradient
-                colors={cat.colors}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.card}
-              >
+              <View style={styles.card}>
                 <View style={styles.iconBadge}>
-                  <Feather name={cat.icon} size={22} color="#ffffff" />
+                  <Feather name={cat.icon} size={20} color={colors.primary} />
                 </View>
                 <Text style={styles.cardTitle}>{cat.title}</Text>
                 <Text style={styles.cardDesc}>{cat.desc}</Text>
                 <View style={styles.cardCta}>
                   <Text style={styles.cardCtaText}>Смотреть</Text>
-                  <Feather name="arrow-right" size={12} color="#ffffff" />
+                  <Feather name="arrow-right" size={12} color={colors.primary} />
                 </View>
-              </LinearGradient>
+              </View>
             </Pressable>
           );
         })}
@@ -157,64 +146,64 @@ export const CategoriesShowcase: React.FC<Props> = ({ isWide }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   wrap: {
-    marginTop: 48,
-    paddingTop: 32,
-    borderTopWidth: 2,
+    marginTop: DESIGN_TOKENS.spacing.xl,
+    paddingTop: DESIGN_TOKENS.spacing.xl,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderAccent,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: DESIGN_TOKENS.spacing.lg,
   },
   eyebrow: {
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 2,
+    ...DESIGN_TOKENS.typography.scale.label,
     textTransform: 'uppercase',
-    marginBottom: 8,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    letterSpacing: -0.4,
+    ...DESIGN_TOKENS.typography.scale.h2,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   subtitle: {
-    fontSize: 16,
+    ...DESIGN_TOKENS.typography.scale.body,
     textAlign: 'center',
     maxWidth: 600,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
+    gap: DESIGN_TOKENS.spacing.sm,
   },
   gridWide: { justifyContent: 'flex-start' },
   gridNarrow: { justifyContent: 'space-between' },
   cardOuter: {
-    borderRadius: 18,
+    borderRadius: DESIGN_TOKENS.radii.lg,
     overflow: 'hidden',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     ...Platform.select({
       web: {
-        boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+        boxShadow: colors.boxShadows.card,
         cursor: 'pointer',
         transition: 'transform 0.2s ease, box-shadow 0.2s ease',
       } as any,
       ios: {
-        shadowColor: '#000',
+        shadowColor: colors.text,
         shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.15,
-        shadowRadius: 16,
+        shadowOpacity: 0.08,
+        shadowRadius: 14,
       },
-      android: { elevation: 4 },
+      android: { elevation: 3 },
     }),
   },
   cardHover: Platform.select({
     web: {
-      transform: [{ translateY: -3 }],
-      boxShadow: '0 12px 32px rgba(0,0,0,0.18)',
+      transform: [{ translateY: -2 }],
+      boxShadow: colors.boxShadows.hover,
     } as any,
     default: {},
   }) as any,
@@ -233,51 +222,50 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   card: {
-    padding: 18,
-    minHeight: 170,
-    borderRadius: 18,
+    padding: DESIGN_TOKENS.spacing.md,
+    minHeight: 142,
+    borderRadius: DESIGN_TOKENS.radii.lg,
     justifyContent: 'flex-end',
+    gap: DESIGN_TOKENS.spacing.xs,
+    ...Platform.select({
+      web: {
+        backgroundImage: `linear-gradient(180deg, ${colors.surface} 0%, ${colors.backgroundSecondary} 100%)`,
+      },
+    }),
   },
   iconBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    width: 40,
+    height: 40,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    backgroundColor: colors.primarySoft,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: colors.primaryAlpha30,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   cardTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#ffffff',
-    marginBottom: 4,
-    letterSpacing: -0.2,
+    ...DESIGN_TOKENS.typography.scale.h3,
+    color: colors.text,
   },
   cardDesc: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.92)',
-    lineHeight: 18,
-    fontWeight: '500',
-    marginBottom: 12,
+    ...DESIGN_TOKENS.typography.scale.bodySmall,
+    color: colors.textMuted,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   cardCta: {
     alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    gap: DESIGN_TOKENS.spacing.xxs,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: DESIGN_TOKENS.spacing.xxs,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    backgroundColor: colors.primarySoft,
   },
   cardCtaText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#ffffff',
-    letterSpacing: 0.3,
+    ...DESIGN_TOKENS.typography.scale.caption,
+    color: colors.primaryText,
   },
 });
 

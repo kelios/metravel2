@@ -1,179 +1,62 @@
-import React, { useState } from 'react';
-import { LayoutChangeEvent, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Defs as RawDefs, Ellipse, LinearGradient as SvgGrad, Path, Rect, Stop } from 'react-native-svg';
-import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import Feather from '@expo/vector-icons/Feather';
 
-const Defs = RawDefs as unknown as React.FC<{ children?: React.ReactNode }>;
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus';
+import { useThemedColors } from '@/hooks/useTheme';
 
 type Props = {
   isWide: boolean;
 };
 
-const Cloud: React.FC<{ x: number; y: number; scale?: number; opacity?: number }> = ({ x, y, scale = 1, opacity = 0.95 }) => (
-  <View
-    pointerEvents="none"
-    style={{
-      position: 'absolute',
-      left: x,
-      top: y,
-      transform: [{ scale }],
-      opacity,
-    }}
-  >
-    <Svg width={120} height={50} viewBox="0 0 120 50">
-      <Path
-        d="M20 35 Q5 35 5 22 Q5 10 20 12 Q22 0 38 4 Q50 -4 60 8 Q72 0 82 8 Q98 4 100 18 Q115 18 115 30 Q115 42 100 42 L20 42 Q10 42 20 35 Z"
-        fill="#ffffff"
-      />
-    </Svg>
-  </View>
-);
+const PILL_ITEMS = [
+  { icon: 'map-pin', label: 'реальные маршруты' },
+  { icon: 'camera', label: 'живые фото' },
+  { icon: 'users', label: 'сообщество' },
+] as const;
 
 export const HeroBanner: React.FC<Props> = ({ isWide }) => {
   const router = useRouter();
-  const [width, setWidth] = useState(0);
-  const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
-
-  const mountainsW = width || (isWide ? 900 : 340);
-  const mountainsH = Math.round(mountainsW / (800 / 220));
-  const minTitleSpace = isWide ? 280 : 240;
-  const height = Math.max(isWide ? 420 : 380, mountainsH + minTitleSpace * 0.6);
+  const colors = useThemedColors();
+  const styles = React.useMemo(() => createStyles(colors, isWide), [colors, isWide]);
 
   return (
-    <View onLayout={onLayout} style={[styles.wrap, { height, borderRadius: 24 }]}>
-      <LinearGradient
-        colors={['#67B5F5', '#9DD2F7', '#E8F4FD']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-
-      {/* Sun */}
-      <View style={[styles.sun, { right: isWide ? 80 : 32, top: 36 }]}>
-        <Svg width={90} height={90} viewBox="0 0 90 90">
-          <Defs>
-            <SvgGrad id="sun" x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0" stopColor="#FFE27A" />
-              <Stop offset="1" stopColor="#FFB347" />
-            </SvgGrad>
-          </Defs>
-          <Circle cx={45} cy={45} r={28} fill="url(#sun)" />
-          <Circle cx={45} cy={45} r={40} fill="#FFE27A" opacity={0.18} />
-        </Svg>
-      </View>
-
-      {/* Clouds */}
-      <Cloud x={isWide ? 40 : 16} y={40} scale={1.1} />
-      <Cloud x={isWide ? 280 : 140} y={20} scale={0.85} opacity={0.85} />
-      <Cloud x={isWide ? 180 : 80} y={90} scale={0.75} opacity={0.75} />
-      <Cloud x={isWide ? 520 : 220} y={60} scale={0.95} opacity={0.9} />
-
-      {/* Mountains + castle + lake at bottom */}
-      <View
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: mountainsH,
-          overflow: 'hidden',
-        }}
-        pointerEvents="none"
-      >
-        <Svg width={mountainsW} height={mountainsH} viewBox="0 0 800 220">
-          <Defs>
-            <SvgGrad id="mtn1" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor="#7BB07A" />
-              <Stop offset="1" stopColor="#4F8F6E" />
-            </SvgGrad>
-            <SvgGrad id="mtn2" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor="#A8C8B0" />
-              <Stop offset="1" stopColor="#7BAE93" />
-            </SvgGrad>
-            <SvgGrad id="lake" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor="#5BA8D6" />
-              <Stop offset="1" stopColor="#2B6FA0" />
-            </SvgGrad>
-            <SvgGrad id="castle" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor="#D7C5A0" />
-              <Stop offset="1" stopColor="#A48A5F" />
-            </SvgGrad>
-          </Defs>
-
-          {/* far mountains */}
-          <Path d="M0 130 L80 80 L160 110 L240 60 L340 100 L420 70 L520 110 L620 80 L720 120 L800 90 L800 220 L0 220 Z" fill="url(#mtn2)" opacity={0.85} />
-          {/* near mountains */}
-          <Path d="M0 170 L60 130 L140 160 L220 110 L300 150 L380 120 L460 160 L540 130 L640 165 L740 135 L800 160 L800 220 L0 220 Z" fill="url(#mtn1)" />
-
-          {/* Castle on hill */}
-          <Path d="M540 145 L640 145 L640 170 L540 170 Z" fill="url(#castle)" />
-          {/* towers */}
-          <Rect x={540} y={120} width={18} height={50} fill="url(#castle)" />
-          <Rect x={622} y={120} width={18} height={50} fill="url(#castle)" />
-          <Rect x={576} y={108} width={28} height={62} fill="url(#castle)" />
-          {/* tower tops (crenellations) */}
-          <Path d="M540 120 L545 115 L550 120 L555 115 L560 120 Z" fill="#8C6F44" />
-          <Path d="M622 120 L627 115 L632 120 L637 115 L640 120 Z" fill="#8C6F44" />
-          {/* roof */}
-          <Path d="M576 108 L590 92 L604 108 Z" fill="#B0464A" />
-          {/* flag */}
-          <Rect x={589} y={78} width={2} height={16} fill="#5C3A1E" />
-          <Path d="M591 78 L600 82 L591 86 Z" fill="#E55353" />
-          {/* windows */}
-          <Rect x={585} y={130} width={6} height={10} fill="#3E2E1B" />
-          <Rect x={595} y={130} width={6} height={10} fill="#3E2E1B" />
-          <Rect x={547} y={138} width={4} height={8} fill="#3E2E1B" />
-          <Rect x={629} y={138} width={4} height={8} fill="#3E2E1B" />
-
-          {/* Lake */}
-          <Path d="M0 195 L800 195 L800 220 L0 220 Z" fill="url(#lake)" />
-          {/* lake highlights */}
-          <Ellipse cx={120} cy={205} rx={40} ry={2} fill="#ffffff" opacity={0.4} />
-          <Ellipse cx={300} cy={210} rx={60} ry={2} fill="#ffffff" opacity={0.3} />
-          <Ellipse cx={520} cy={205} rx={50} ry={2} fill="#ffffff" opacity={0.35} />
-          <Ellipse cx={700} cy={212} rx={45} ry={2} fill="#ffffff" opacity={0.3} />
-
-          {/* Trees */}
-          <Path d="M80 178 L92 150 L104 178 Z" fill="#2F6B4E" />
-          <Path d="M105 182 L115 158 L125 182 Z" fill="#3E7A5C" />
-          <Path d="M380 180 L394 152 L408 180 Z" fill="#2F6B4E" />
-          <Path d="M720 182 L732 156 L744 182 Z" fill="#3E7A5C" />
-        </Svg>
-      </View>
-
-      {/* Title overlay */}
-      <View style={[styles.titleWrap, isWide ? styles.titleWrapWide : styles.titleWrapNarrow]}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>MeTravel.by</Text>
+    <View style={styles.wrap}>
+      <View style={styles.copy}>
+        <View style={styles.kickerRow}>
+          <Feather name="compass" size={14} color={colors.primary} />
+          <Text style={styles.kicker}>MeTravel.by</Text>
         </View>
-        <Text
-          style={[
-            styles.title,
-            { fontSize: isWide ? 44 : 26 },
-            Platform.OS === 'web' ? ({ textShadow: '0 2px 8px rgba(0,0,0,0.25)' } as any) : null,
-          ]}
-          numberOfLines={2}
-          adjustsFontSizeToFit
-        >
-          Путешествуй вдохновлённо
+        <Text style={styles.title}>Путешествия, которые хочется повторить</Text>
+        <Text style={styles.subtitle}>
+          Платформа с маршрутами, местами и историями от людей, которые уже были там и готовы поделиться опытом.
         </Text>
-        <Text style={[styles.subtitle, { fontSize: isWide ? 17 : 13 }]} numberOfLines={3}>
-          Замки, озёра, природа и парки — реальные маршруты от живых людей
-        </Text>
+
+        <View style={styles.pills}>
+          {PILL_ITEMS.map((item) => (
+            <View key={item.label} style={styles.pill}>
+              <Feather name={item.icon} size={13} color={colors.primaryText} />
+              <Text style={styles.pillText}>{item.label}</Text>
+            </View>
+          ))}
+        </View>
 
         <View style={styles.ctaRow}>
           <Pressable
             onPress={() => router.push('/search' as any)}
             accessibilityRole="link"
-            accessibilityLabel="Смотреть все маршруты"
+            accessibilityLabel="Смотреть маршруты"
             style={({ pressed, hovered }: any) => [
               styles.ctaPrimary,
-              hovered && styles.ctaPrimaryHover,
+              hovered && Platform.OS === 'web' && styles.ctaHover,
               pressed && styles.ctaPressed,
+              globalFocusStyles.focusable,
             ]}
           >
-            <Text style={styles.ctaPrimaryText}>Смотреть маршруты →</Text>
+            <Text style={styles.ctaPrimaryText}>Смотреть маршруты</Text>
+            <Feather name="arrow-right" size={16} color={colors.textOnPrimary} />
           </Pressable>
           <Pressable
             onPress={() => router.push('/map' as any)}
@@ -181,143 +64,261 @@ export const HeroBanner: React.FC<Props> = ({ isWide }) => {
             accessibilityLabel="Открыть карту"
             style={({ pressed, hovered }: any) => [
               styles.ctaSecondary,
-              hovered && styles.ctaSecondaryHover,
+              hovered && Platform.OS === 'web' && styles.ctaSecondaryHover,
               pressed && styles.ctaPressed,
+              globalFocusStyles.focusable,
             ]}
           >
+            <Feather name="map" size={16} color={colors.primary} />
             <Text style={styles.ctaSecondaryText}>Открыть карту</Text>
           </Pressable>
+        </View>
+      </View>
+
+      <View style={styles.visual} pointerEvents="none">
+        <View style={styles.visualHeader}>
+          <View style={styles.visualDot} />
+          <Text style={styles.visualLabel}>маршрут выходного дня</Text>
+        </View>
+        <View style={styles.routeCard}>
+          <View style={styles.routeLine} />
+          {['Старт', 'Место', 'Вид'].map((label, index) => (
+            <View key={label} style={[styles.routePoint, index === 2 && styles.routePointActive]}>
+              <View style={styles.pointIcon}>
+                <Feather
+                  name={index === 0 ? 'flag' : index === 1 ? 'map-pin' : 'camera'}
+                  size={14}
+                  color={index === 2 ? colors.textOnPrimary : colors.primary}
+                />
+              </View>
+              <Text style={styles.pointLabel}>{label}</Text>
+            </View>
+          ))}
+        </View>
+        <View style={styles.visualFooter}>
+          <Feather name="heart" size={15} color={colors.brand} />
+          <Text style={styles.visualFooterText}>сохраняйте идеи и добавляйте свои</Text>
         </View>
       </View>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  wrap: {
-    width: '100%',
-    overflow: 'hidden',
-    marginBottom: 28,
-    backgroundColor: '#9DD2F7',
-    ...Platform.select({
-      web: { boxShadow: '0 18px 40px rgba(43,111,160,0.25)' },
-      ios: {
-        shadowColor: '#2B6FA0',
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.25,
-        shadowRadius: 24,
-      },
-      android: { elevation: 6 },
-    }),
-  },
-  sun: {
-    position: 'absolute',
-  },
-  titleWrap: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    paddingHorizontal: 28,
-  },
-  titleWrapWide: {
-    top: 70,
-    paddingHorizontal: 56,
-  },
-  titleWrapNarrow: {
-    top: 36,
-    paddingHorizontal: 20,
-  },
-  badge: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.85)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginBottom: 12,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1,
-    color: '#2B6FA0',
-  },
-  title: {
-    fontWeight: '800',
-    color: '#ffffff',
-    letterSpacing: -0.6,
-    marginBottom: 8,
-    maxWidth: 560,
-  },
-  subtitle: {
-    color: '#ffffff',
-    fontWeight: '500',
-    maxWidth: 520,
-    ...Platform.select({
-      web: { textShadow: '0 1px 4px rgba(0,0,0,0.2)' } as any,
-    }),
-  },
-  ctaRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 16,
-  },
-  ctaPrimary: {
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 999,
-    backgroundColor: '#ffffff',
-    ...Platform.select({
-      web: {
-        boxShadow: '0 6px 18px rgba(0,0,0,0.18)',
-        cursor: 'pointer',
-        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-      } as any,
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-      },
-      android: { elevation: 3 },
-    }),
-  },
-  ctaPrimaryHover: Platform.select({
-    web: { transform: [{ translateY: -2 }], boxShadow: '0 10px 22px rgba(0,0,0,0.22)' } as any,
-    default: {},
-  }) as any,
-  ctaPrimaryText: {
-    color: '#1F5C8A',
-    fontWeight: '800',
-    fontSize: 14,
-    letterSpacing: 0.2,
-  },
-  ctaSecondary: {
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.7)',
-    ...Platform.select({
-      web: { cursor: 'pointer', transition: 'background-color 0.2s ease' } as any,
-      default: {},
-    }),
-  },
-  ctaSecondaryHover: Platform.select({
-    web: { backgroundColor: 'rgba(255,255,255,0.32)' } as any,
-    default: {},
-  }) as any,
-  ctaSecondaryText: {
-    color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 14,
-    letterSpacing: 0.2,
-  },
-  ctaPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.97 }],
-  },
-});
+const createStyles = (colors: ReturnType<typeof useThemedColors>, isWide: boolean) =>
+  StyleSheet.create({
+    wrap: {
+      width: '100%',
+      borderRadius: DESIGN_TOKENS.radii.xl,
+      borderWidth: 1,
+      borderColor: colors.borderAccent,
+      backgroundColor: colors.surface,
+      padding: isWide ? DESIGN_TOKENS.spacing.xl : DESIGN_TOKENS.spacing.lg,
+      flexDirection: isWide ? 'row' : 'column',
+      alignItems: isWide ? 'center' : 'stretch',
+      gap: isWide ? DESIGN_TOKENS.spacing.xl : DESIGN_TOKENS.spacing.lg,
+      marginBottom: DESIGN_TOKENS.spacing.lg,
+      overflow: 'hidden',
+      ...Platform.select({
+        web: {
+          boxShadow: colors.boxShadows.card,
+          backgroundImage: `linear-gradient(135deg, ${colors.surface} 0%, ${colors.primarySoft} 58%, ${colors.brandSoft} 100%)`,
+        },
+      }),
+    },
+    copy: {
+      flex: isWide ? 1.1 : undefined,
+      minWidth: 0,
+      gap: DESIGN_TOKENS.spacing.sm,
+    },
+    kickerRow: {
+      alignSelf: 'flex-start',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+      paddingVertical: DESIGN_TOKENS.spacing.xs,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.primarySoft,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
+    },
+    kicker: {
+      ...DESIGN_TOKENS.typography.scale.label,
+      color: colors.primaryText,
+      textTransform: 'uppercase',
+    },
+    title: {
+      fontSize: isWide ? 34 : 25,
+      lineHeight: isWide ? 40 : 31,
+      fontWeight: '800',
+      color: colors.text,
+      maxWidth: 680,
+    },
+    subtitle: {
+      ...DESIGN_TOKENS.typography.scale.body,
+      color: colors.textMuted,
+      maxWidth: 620,
+    },
+    pills: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: DESIGN_TOKENS.spacing.xs,
+      marginTop: DESIGN_TOKENS.spacing.xs,
+    },
+    pill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xxs,
+      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+      paddingVertical: 7,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    pillText: {
+      ...DESIGN_TOKENS.typography.scale.caption,
+      color: colors.text,
+    },
+    ctaRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: DESIGN_TOKENS.spacing.sm,
+      marginTop: DESIGN_TOKENS.spacing.sm,
+    },
+    ctaPrimary: {
+      minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+      paddingVertical: DESIGN_TOKENS.spacing.sm,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.primary,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+      ...Platform.select({
+        web: {
+          boxShadow: colors.boxShadows.medium,
+          cursor: 'pointer',
+          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        } as any,
+      }),
+    },
+    ctaSecondary: {
+      minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+      paddingVertical: DESIGN_TOKENS.spacing.sm,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderAccent,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+      ...Platform.select({
+        web: { cursor: 'pointer', transition: 'background-color 0.2s ease, transform 0.2s ease' } as any,
+      }),
+    },
+    ctaHover: {
+      transform: [{ translateY: -1 }],
+      ...Platform.select({ web: { boxShadow: colors.boxShadows.hover } as any }),
+    },
+    ctaSecondaryHover: {
+      backgroundColor: colors.primarySoft,
+      transform: [{ translateY: -1 }],
+    },
+    ctaPressed: {
+      opacity: 0.88,
+      transform: [{ scale: 0.98 }],
+    },
+    ctaPrimaryText: {
+      ...DESIGN_TOKENS.typography.scale.bodyStrong,
+      color: colors.textOnPrimary,
+    },
+    ctaSecondaryText: {
+      ...DESIGN_TOKENS.typography.scale.bodyStrong,
+      color: colors.primaryText,
+    },
+    visual: {
+      flex: isWide ? 0.9 : undefined,
+      minHeight: isWide ? 250 : 220,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: DESIGN_TOKENS.spacing.lg,
+      justifyContent: 'space-between',
+      ...Platform.select({
+        web: { boxShadow: colors.boxShadows.light },
+      }),
+    },
+    visualHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    visualDot: {
+      width: 8,
+      height: 8,
+      borderRadius: DESIGN_TOKENS.radii.full,
+      backgroundColor: colors.brand,
+    },
+    visualLabel: {
+      ...DESIGN_TOKENS.typography.scale.caption,
+      color: colors.textMuted,
+      textTransform: 'uppercase',
+    },
+    routeCard: {
+      position: 'relative',
+      gap: DESIGN_TOKENS.spacing.md,
+      paddingVertical: DESIGN_TOKENS.spacing.md,
+    },
+    routeLine: {
+      position: 'absolute',
+      left: 19,
+      top: DESIGN_TOKENS.spacing.lg,
+      bottom: DESIGN_TOKENS.spacing.lg,
+      width: 2,
+      backgroundColor: colors.borderAccent,
+    },
+    routePoint: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.sm,
+      padding: DESIGN_TOKENS.spacing.sm,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: colors.backgroundSecondary,
+    },
+    routePointActive: {
+      backgroundColor: colors.primarySoft,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
+    },
+    pointIcon: {
+      width: 28,
+      height: 28,
+      borderRadius: DESIGN_TOKENS.radii.full,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    pointLabel: {
+      ...DESIGN_TOKENS.typography.scale.bodyStrong,
+      color: colors.text,
+    },
+    visualFooter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    visualFooterText: {
+      ...DESIGN_TOKENS.typography.scale.bodySmall,
+      color: colors.textMuted,
+      flex: 1,
+    },
+  });
 
 export default HeroBanner;

@@ -9,11 +9,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useVisibleCardCount } from '@/hooks/useVisibleCardCount';
 import { queryConfigs } from '@/utils/reactQueryConfig';
 import { queryKeys } from '@/api/queryKeys';
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
 
 const COLLAPSED_KEY = 'weekly_highlights_collapsed';
+const PREVIEW_CARD_WIDTH = 208;
+const PREVIEW_CARD_GAP = 12;
+const IS_WEB = Platform.OS === 'web';
 
 interface WeeklyHighlightsProps {
     forceVisible?: boolean;
@@ -111,36 +115,21 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                 country: t.countryName,
             }));
     }, [popularValues, viewHistory]);
+    const preview = useVisibleCardCount({
+        itemCount: highlights.length,
+        itemWidth: PREVIEW_CARD_WIDTH,
+        gap: PREVIEW_CARD_GAP,
+        max: 5,
+    });
 
     // ВАЖНО: все хуки должны быть вызваны до условных возвратов
     const handleItemPress = useCallback((url: string) => {
-        if (Platform.OS === 'web') {
-            window.location.href = url;
-        } else {
-            router.push(url as any);
-        }
+        router.push(url as any);
     }, [router]);
 
-    const handleHorizontalWheel = useCallback((e: any) => {
-        if (Platform.OS !== 'web') return;
-
-        const deltaY = Number(e?.deltaY ?? 0);
-        const deltaX = Number(e?.deltaX ?? 0);
-
-        if (!deltaY || Math.abs(deltaY) <= Math.abs(deltaX)) return;
-
-        const target = e?.currentTarget as any;
-        const el = target?._nativeNode || target?._domNode || target;
-        if (!el || typeof (el as any).scrollLeft !== 'number') return;
-
-        const maxScrollLeft = (el.scrollWidth ?? 0) - (el.clientWidth ?? 0);
-        if (maxScrollLeft <= 0) return;
-
-        if (e?.cancelable && typeof e?.preventDefault === 'function') {
-            e.preventDefault();
-        }
-        (el as any).scrollLeft += deltaY;
-    }, []);
+    const handleOpenAll = useCallback(() => {
+        router.push('/search' as any);
+    }, [router]);
 
     // Условный возврат после всех хуков
     if (highlights.length === 0) return null;
@@ -185,13 +174,22 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                                 <Text style={[styles.badgeText, { color: colors.primary }]}>Выбор месяца</Text>
                             </View>
                         </View>
+                        <Pressable
+                            onPress={handleOpenAll}
+                            style={styles.seeAllButton}
+                            accessibilityRole="link"
+                            accessibilityLabel="Смотреть все маршруты"
+                        >
+                            <Text style={[styles.seeAllText, { color: colors.primary }]}>Все</Text>
+                            <Feather name="arrow-right" size={14} color={colors.primary} />
+                        </Pressable>
                     </View>
                     <Text style={[styles.subtitle, { color: colors.textMuted }]}>Самые популярные маршруты этого месяца</Text>
                 </>
             )}
             {isMobileWeb ? (
                 <View style={styles.mobileWebStack} testID="weekly-highlights-stack">
-                    {highlights.map((item) => (
+                    {highlights.slice(0, 2).map((item) => (
                         <View key={item.id} style={styles.mobileWebStackItem}>
                             <TabTravelCard
                                 item={{
@@ -214,7 +212,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                 </View>
             ) : isMobile ? (
                 <View style={styles.mobileGrid} testID="weekly-highlights-grid">
-                    {highlights.map((item) => (
+                    {highlights.slice(0, 4).map((item) => (
                         <View key={item.id} style={styles.mobileGridItem}>
                             <TabTravelCard
                                 item={{
@@ -235,6 +233,31 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                         </View>
                     ))}
                 </View>
+            ) : IS_WEB ? (
+                <View
+                    testID="weekly-highlights-rail"
+                    style={styles.previewRow}
+                    onLayout={preview.onLayout}
+                >
+                    {highlights.slice(0, preview.visibleCount).map((item) => (
+                        <TabTravelCard
+                            key={item.id}
+                            item={{
+                                id: item.id,
+                                title: item.title,
+                                imageUrl: item.imageUrl,
+                                city: null,
+                                country: item.country ?? null,
+                            }}
+                            badge={{
+                                icon: 'trending-up',
+                                backgroundColor: colors.surface,
+                                iconColor: colors.primary,
+                            }}
+                            onPress={() => handleItemPress(item.url)}
+                        />
+                    ))}
+                </View>
             ) : (
                 <ScrollView
                     testID="weekly-highlights-rail"
@@ -245,18 +268,6 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                     decelerationRate="fast"
                     scrollEnabled={true}
                     nestedScrollEnabled={true}
-                    style={Platform.select({
-                        web: {
-                            overflowX: 'auto',
-                            overflowY: 'hidden',
-                            overscrollBehaviorX: 'contain',
-                            width: '100%',
-                            WebkitOverflowScrolling: 'touch',
-                            touchAction: 'pan-x',
-                        } as any,
-                        default: {},
-                    })}
-                    {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
                 >
                     {highlights.map((item) => (
                         <TabTravelCard
@@ -326,6 +337,22 @@ const styles = StyleSheet.create({
         fontWeight: '600', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше жирность
         letterSpacing: -0.1,
     },
+    seeAllButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        ...Platform.select({
+            web: {
+                cursor: 'pointer',
+            },
+        }),
+    },
+    seeAllText: {
+        fontSize: 12,
+        fontWeight: '700',
+    },
     badgeContainer: {
         borderRadius: 8,
         paddingHorizontal: 8,
@@ -383,7 +410,14 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 6,
         gap: 12,
-        ...(Platform.OS === 'web' ? ({ minWidth: 'max-content' } as any) : {}),
+    },
+    previewRow: {
+        flexDirection: 'row',
+        alignItems: 'stretch',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        gap: PREVIEW_CARD_GAP,
+        overflow: 'hidden',
     },
     mobileGrid: {
         flexDirection: 'row',

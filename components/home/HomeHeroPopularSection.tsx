@@ -3,6 +3,7 @@ import { Platform, Pressable, ScrollView, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
+import { useVisibleCardCount } from '@/hooks/useVisibleCardCount'
 import type { ThemedColors } from '@/hooks/useTheme'
 
 type BookImage = {
@@ -45,6 +46,8 @@ const webHorizontalScrollStyle =
         overscrollBehaviorX: 'contain',
       } as const)
     : undefined
+
+const POPULAR_CARD_GAP = 16
 
 function FeaturedRouteCard({
   colors,
@@ -182,6 +185,11 @@ export default function HomeHeroPopularSection({
 }: HomeHeroPopularSectionProps) {
   const featuredImage = bookImages[0]
   const popularItems = useMobileGrid ? bookImages.slice(1, 5) : bookImages.slice(1)
+  const popularPreview = useVisibleCardCount({
+    itemCount: popularItems.length,
+    itemWidth: popularCardWidth,
+    gap: POPULAR_CARD_GAP,
+  })
 
   return (
     <View style={styles.popularSection}>
@@ -193,13 +201,26 @@ export default function HomeHeroPopularSection({
         onOpenArticle={onOpenArticle}
         styles={styles}
       />
-      <Text
-        style={styles.popularTitle}
-        accessibilityRole="header"
-        {...({ 'aria-level': 2 } as any)}
-      >
-        Популярные маршруты
-      </Text>
+      <View style={styles.popularTitleRow}>
+        <Text
+          style={styles.popularTitle}
+          accessibilityRole="header"
+          {...({ 'aria-level': 2 } as any)}
+        >
+          Популярные маршруты
+        </Text>
+        {!useMobileGrid && (
+          <Pressable
+            onPress={() => onOpenArticle('/search')}
+            style={styles.popularSeeAll}
+            accessibilityRole="link"
+            accessibilityLabel="Смотреть все популярные маршруты"
+          >
+            <Text style={styles.popularSeeAllText}>Все</Text>
+            <Feather name="arrow-right" size={14} color={colors.primary} />
+          </Pressable>
+        )}
+      </View>
       {useMobileGrid ? (
         <View style={styles.popularGrid}>
           {popularItems.map((image) => (
@@ -211,6 +232,19 @@ export default function HomeHeroPopularSection({
               height={popularCardHeight}
               onOpenArticle={onOpenArticle}
               useGridLayout
+            />
+          ))}
+        </View>
+      ) : isWeb ? (
+        <View style={styles.popularPreviewRow} onLayout={popularPreview.onLayout}>
+          {popularItems.slice(0, popularPreview.visibleCount).map((image) => (
+            <PopularRouteCard
+              key={image.title}
+              image={image}
+              styles={styles}
+              width={popularCardWidth}
+              height={popularCardHeight}
+              onOpenArticle={onOpenArticle}
             />
           ))}
         </View>

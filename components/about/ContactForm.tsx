@@ -1,5 +1,6 @@
 import React from 'react';
 import { ActivityIndicator, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useAboutStyles } from './aboutStyles';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -177,7 +178,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
         accessibilityLabel="Согласен на обработку персональных данных"
       >
         <View style={[styles.checkbox, agree && styles.checkboxChecked]}>
-          {agree ? <Text style={styles.checkboxMark}>✓</Text> : null}
+          {agree ? <Feather name="check" size={15} color={colors.textOnPrimary} /> : null}
         </View>
         <Text style={[styles.agreeLabel, invalidAgree && styles.fieldErr]}>
           Согласен(на) на обработку персональных данных

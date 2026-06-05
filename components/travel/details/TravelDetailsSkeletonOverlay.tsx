@@ -17,7 +17,10 @@ export default function TravelDetailsSkeletonOverlay({
       style={{
         position: 'absolute',
         inset: 0,
-        zIndex: skeletonPhase === 'hidden' ? -1 : 50,
+        // Only sit on top while fully opaque (loading). The moment data is
+        // ready (fading/hidden) drop behind the real content so a
+        // half-transparent skeleton can never overlap the text underneath.
+        zIndex: skeletonPhase === 'loading' ? 50 : -1,
         opacity: skeletonPhase === 'loading' ? 1 : 0,
         visibility: skeletonPhase === 'hidden' ? 'hidden' : 'visible',
         transition: 'opacity 200ms ease-out',

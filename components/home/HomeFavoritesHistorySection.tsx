@@ -1,21 +1,22 @@
-import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react'
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
+import React, { memo, useCallback, useEffect, useMemo } from 'react'
+import { Platform, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useRouter } from 'expo-router'
-import { FlashList } from '@shopify/flash-list'
 
 import { useAuth } from '@/context/AuthContext'
 import { useFavorites } from '@/context/FavoritesContext'
 import TabTravelCard from '@/components/listTravel/TabTravelCard'
 import { ResponsiveContainer } from '@/components/layout'
 import { useResponsive } from '@/hooks/useResponsive'
+import { useVisibleCardCount } from '@/hooks/useVisibleCardCount'
 import { useTheme, useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import Button from '@/components/ui/Button'
 import { createSectionStyles } from '@/components/home/homeInspirationStyles'
 
-const IS_WEB = Platform.OS === 'web'
 const MAX_ITEMS_PER_SHELF = 10
+const DESKTOP_CARD_WIDTH = 208
+const DESKTOP_CARD_GAP = 16
 
 type TravelLikeItem = {
   id: string | number
@@ -68,30 +69,6 @@ function toCardItem(item: TravelLikeItem) {
     city: item.city ?? null,
     country: item.country ?? (item as any).countryName ?? null,
   }
-}
-
-function shouldHandleHorizontalWheelForElement(e: any, el: any) {
-  if (!IS_WEB) return false
-  if (!el || typeof el.scrollLeft !== 'number') return false
-
-  const deltaY = Number(e?.deltaY ?? 0)
-  const deltaX = Number(e?.deltaX ?? 0)
-  if (!deltaY || Math.abs(deltaY) <= Math.abs(deltaX)) return false
-
-  const maxScrollLeft = (el.scrollWidth ?? 0) - (el.clientWidth ?? 0)
-  if (maxScrollLeft <= 0) return false
-
-  const isAtLeft = (el.scrollLeft ?? 0) <= 0
-  const isAtRight = (el.scrollLeft ?? 0) >= maxScrollLeft
-  if ((isAtLeft && deltaY < 0) || (isAtRight && deltaY > 0)) return false
-  return true
-}
-
-function handleHorizontalWheelForElement(e: any, el: any, prevent: boolean) {
-  if (!shouldHandleHorizontalWheelForElement(e, el)) return
-  const deltaY = Number(e?.deltaY ?? 0)
-  if (prevent && e?.cancelable) e.preventDefault?.()
-  el.scrollLeft += deltaY
 }
 
 function SectionHeader({
@@ -147,42 +124,6 @@ function SectionHeader({
   )
 }
 
-function useHorizontalWheelBridge(
-  scrollRef: React.MutableRefObject<any>,
-  isMobile: boolean,
-  itemCount: number,
-) {
-  useEffect(() => {
-    if (!IS_WEB || isMobile) return
-    const target = scrollRef.current as any
-    const el = target?._nativeNode || target?._domNode || target
-    if (!el || typeof el.addEventListener !== 'function') return
-
-    let usingActive = false
-
-    const onWheelActive = (e: any) => handleHorizontalWheelForElement(e, el, true)
-
-    const onWheelPassive = (e: any) => {
-      handleHorizontalWheelForElement(e, el, false)
-      if (
-        !usingActive &&
-        e?.cancelable &&
-        shouldHandleHorizontalWheelForElement(e, el)
-      ) {
-        usingActive = true
-        el.removeEventListener('wheel', onWheelPassive)
-        el.addEventListener('wheel', onWheelActive, { passive: false } as any)
-      }
-    }
-
-    el.addEventListener('wheel', onWheelPassive, { passive: true } as any)
-    return () => {
-      el.removeEventListener('wheel', onWheelPassive)
-      el.removeEventListener('wheel', onWheelActive)
-    }
-  }, [isMobile, scrollRef, itemCount])
-}
-
 function HorizontalCards({
   data,
   badge,
@@ -201,7 +142,13 @@ function HorizontalCards({
   styles: Styles
 }) {
   const { isDark } = useTheme()
-  const scrollRef = useRef<any>(null)
+  const { onLayout, visibleCount } = useVisibleCardCount({
+    itemCount: data.length,
+    itemWidth: DESKTOP_CARD_WIDTH,
+    gap: DESKTOP_CARD_GAP,
+    max: MAX_ITEMS_PER_SHELF,
+  })
+  const previewData = isMobile ? data.slice(0, 2) : data.slice(0, visibleCount)
 
   const historyBadge = useMemo(
     () =>
@@ -215,28 +162,15 @@ function HorizontalCards({
     [badge?.icon, colors.overlay, colors.text, colors.textOnDark, isDark],
   )
 
-  const renderFlashItem = useCallback(
-    ({ item }: { item: TravelLikeItem }) => (
-      <TabTravelCard
-        item={toCardItem(item)}
-        badge={historyBadge}
-        onPress={() => onPressItem(item.url)}
-      />
-    ),
-    [historyBadge, onPressItem],
-  )
-
   const keyExtractor = useCallback(
     (item: TravelLikeItem) => `${String(item.id)}-${item.url}`,
     [],
   )
 
-  useHorizontalWheelBridge(scrollRef, isMobile, data.length)
-
   if (isMobile) {
     return (
       <View testID={testID} style={styles.mobileCardStack}>
-        {data.map((item) => (
+        {previewData.map((item) => (
           <View key={keyExtractor(item)} style={styles.mobileCardStackItem}>
             <TabTravelCard
               item={toCardItem(item)}
@@ -250,47 +184,21 @@ function HorizontalCards({
     )
   }
 
-  if (IS_WEB) {
-    return (
-      <ScrollView
-        testID={testID}
-        ref={scrollRef}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.horizontalList}
-        contentContainerStyle={styles.horizontalListContent}
-      >
-        {data.map((item) => (
-          <TabTravelCard
-            key={keyExtractor(item)}
-            item={toCardItem(item)}
-            badge={historyBadge}
-            onPress={() => onPressItem(item.url)}
-          />
-        ))}
-      </ScrollView>
-    )
-  }
-
   return (
-    <FlashList
+    <View
       testID={testID}
-      horizontal
-      data={data}
-      renderItem={renderFlashItem}
-      keyExtractor={keyExtractor}
-      {...({ estimatedItemSize: 220 } as any)}
-      showsHorizontalScrollIndicator={false}
-      style={styles.horizontalList}
-      contentContainerStyle={styles.horizontalListContent}
-      scrollEventThrottle={16}
-      nestedScrollEnabled={Platform.OS === 'android'}
-      directionalLockEnabled={Platform.OS === 'ios'}
-      keyboardShouldPersistTaps="handled"
-      bounces={Platform.OS === 'ios'}
-      decelerationRate={Platform.OS === 'ios' ? 'fast' : 0.98}
-      drawDistance={800}
-    />
+      style={styles.previewRow}
+      onLayout={onLayout}
+    >
+      {previewData.map((item) => (
+        <TabTravelCard
+          key={keyExtractor(item)}
+          item={toCardItem(item)}
+          badge={historyBadge}
+          onPress={() => onPressItem(item.url)}
+        />
+      ))}
+    </View>
   )
 }
 
@@ -508,22 +416,13 @@ const createStyles = (
     },
     metaPillValue: { fontSize: 13, fontWeight: '800', color: colors.text },
     metaPillLabel: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
-    horizontalList: {
+    previewRow: {
       width: '100%',
-      ...Platform.select({
-        web: {
-          overflowX: 'auto',
-          overflowY: 'hidden',
-          overscrollBehaviorX: 'contain',
-          WebkitOverflowScrolling: 'touch',
-        } as any,
-      }),
-    },
-    horizontalListContent: {
       paddingTop: 8,
       paddingBottom: 4,
       flexDirection: 'row',
-      ...Platform.select({ web: { minWidth: 'max-content' } as any }),
+      alignItems: 'stretch',
+      overflow: 'hidden',
     },
     mobileCardStack: { width: '100%', gap: 14, paddingTop: 8, paddingBottom: 4 },
     mobileCardStackItem: { width: '100%', minWidth: 0 },

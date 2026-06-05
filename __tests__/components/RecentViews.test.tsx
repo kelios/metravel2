@@ -239,26 +239,27 @@ describe('RecentViews', () => {
     });
   });
 
-  it('should use ScrollView on web for horizontal list to prevent image reloading', async () => {
+  it('uses a clipped preview row on web instead of a horizontal ScrollView', async () => {
     (Platform.OS as any) = 'web';
 
     const mockTravels = [createTravel({ id: 1 }), createTravel({ id: 2, title: 'Travel 2' })];
     const utils = render(<RecentViews initialTravels={mockTravels} />);
 
     const { ScrollView } = require('react-native');
-    const scrollView = await waitFor(() => utils.UNSAFE_getByType(ScrollView));
-    expect(scrollView.props.horizontal).toBe(true);
+    await waitFor(() => {
+      expect(utils.getByTestId('recent-views-list')).toBeTruthy();
+      expect(utils.UNSAFE_queryByType(ScrollView)).toBeNull();
+    });
   });
 
-  it('uses pan-x pan-y on web cards inside the horizontal recent views rail', async () => {
+  it('shows a web link to the full history page', async () => {
     (Platform.OS as any) = 'web';
 
     const mockTravels = [createTravel({ id: 1 }), createTravel({ id: 2, title: 'Travel 2' })];
-    render(<RecentViews initialTravels={mockTravels} />);
+    const { getByLabelText } = render(<RecentViews initialTravels={mockTravels} />);
 
     await waitFor(() => {
-      const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0];
-      expect(props?.webTouchAction).toBe('pan-x pan-y');
+      expect(getByLabelText('Смотреть всю историю просмотров')).toBeTruthy();
     });
   });
 });

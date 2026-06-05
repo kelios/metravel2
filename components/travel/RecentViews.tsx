@@ -3,12 +3,13 @@
 // ✅ РЕДИЗАЙН: Поддержка темной темы с useThemedColors
 
 import React, { useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, Platform, Pressable, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useVisibleCardCount } from '@/hooks/useVisibleCardCount';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import FavoriteButton from '@/components/travel/FavoriteButton';
 import { useRouter } from 'expo-router';
@@ -25,24 +26,8 @@ interface RecentViewsProps {
 
 const spacing = DESIGN_TOKENS.spacing;
 const STORAGE_KEY = 'metravel_recent_views';
-
-function handleHorizontalWheel(e: any) {
-  if (Platform.OS !== 'web') return;
-
-  const deltaY = Number(e?.deltaY ?? 0);
-  const deltaX = Number(e?.deltaX ?? 0);
-  if (!deltaY || Math.abs(deltaY) <= Math.abs(deltaX)) return;
-
-  const target = e?.currentTarget as any;
-  const el = target?._nativeNode || target?._domNode || target;
-  if (!el || typeof (el as any).scrollLeft !== 'number') return;
-
-  const maxScrollLeft = (el.scrollWidth ?? 0) - (el.clientWidth ?? 0);
-  if (maxScrollLeft <= 0) return;
-
-  e.preventDefault?.();
-  (el as any).scrollLeft += deltaY;
-}
+const CARD_WIDTH = 200;
+const CARD_GAP = spacing.sm;
 
 function RecentViews({
   maxItems = 6,
@@ -55,6 +40,12 @@ function RecentViews({
   const colors = useThemedColors();
 
   const cardStyle = useMemo(() => ({ height: '100%' as const, backgroundColor: colors.surface }), [colors.surface]);
+  const preview = useVisibleCardCount({
+    itemCount: recentTravels.length,
+    itemWidth: CARD_WIDTH,
+    gap: CARD_GAP,
+    max: maxItems,
+  });
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -96,19 +87,42 @@ function RecentViews({
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       color: colors.textMuted,
     },
+    previewRow: {
+      flexDirection: 'row',
+      alignItems: 'stretch',
+      paddingHorizontal: spacing.sm,
+      paddingBottom: spacing.xs,
+      gap: spacing.sm,
+      overflow: 'hidden',
+    },
     listContent: {
       paddingHorizontal: spacing.sm,
       gap: spacing.sm,
-      ...Platform.select({
-        web: {
-          minWidth: 'max-content',
-          overscrollBehaviorX: 'contain',
-        } as any,
-        default: {},
-      }),
     },
     cardWrapper: {
-      width: 200,
+      width: CARD_WIDTH,
+    },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    seeAllButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+      paddingHorizontal: spacing.xs,
+      paddingVertical: spacing.xs,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+        },
+      }),
+    },
+    seeAllText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      fontWeight: '600',
+      color: colors.primary,
     },
     compactContainer: {
       padding: spacing.sm,
@@ -221,31 +235,35 @@ function RecentViews({
           <Feather name="clock" size={16} color={colors.primary} />
           <Text style={styles.title}>Недавние просмотры</Text>
         </View>
-        <Pressable
-          onPress={handleClear}
-          style={styles.clearButton}
-          accessibilityLabel="Очистить историю просмотров"
-          accessibilityRole="button"
-          {...Platform.select({
-            web: {
-              cursor: 'pointer',
-            },
-          })}
-        >
-          <Feather name="trash-2" size={14} color={colors.textMuted} />
-          <Text style={styles.clearButtonText}>Очистить</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable
+            onPress={() => router.push('/history' as any)}
+            style={styles.seeAllButton}
+            accessibilityLabel="Смотреть всю историю просмотров"
+            accessibilityRole="link"
+          >
+            <Text style={styles.seeAllText}>Все</Text>
+            <Feather name="arrow-right" size={14} color={colors.primary} />
+          </Pressable>
+          <Pressable
+            onPress={handleClear}
+            style={styles.clearButton}
+            accessibilityLabel="Очистить историю просмотров"
+            accessibilityRole="button"
+          >
+            <Feather name="trash-2" size={14} color={colors.textMuted} />
+            <Text style={styles.clearButtonText}>Очистить</Text>
+          </Pressable>
+        </View>
       </View>
 
       {Platform.OS === 'web' ? (
-        <ScrollView
+        <View
           testID="recent-views-list"
-          horizontal
-          showsHorizontalScrollIndicator
-          contentContainerStyle={styles.listContent}
-          {...({ onWheel: handleHorizontalWheel } as any)}
+          style={styles.previewRow}
+          onLayout={preview.onLayout}
         >
-          {recentTravels.map((item) => {
+          {recentTravels.slice(0, preview.visibleCount).map((item) => {
             const countries = item.countryName?.split(',').map((c: string) => c.trim()).filter(Boolean) || [];
             return (
               <View key={String(item.id)} style={styles.cardWrapper}>
@@ -268,12 +286,11 @@ function RecentViews({
                   }
                   imageHeight={200}
                   style={cardStyle}
-                  webTouchAction="pan-x pan-y"
                 />
               </View>
             );
           })}
-        </ScrollView>
+        </View>
       ) : (
         <FlashList
           testID="recent-views-list"
