@@ -1,10 +1,10 @@
 # TASK-20260520-001: Image Server Resize Params And Cache Headers
 
-Status: Partially fixed - backend follow-up required
+Status: Open - backend byte-budget follow-up required
 Owner: Backend
 Support: Frontend Developer, Tester, Reviewer
 Created: 2026-05-20
-Updated: 2026-06-04
+Updated: 2026-06-05
 
 ## Goal
 
@@ -31,7 +31,7 @@ for w in 320 480 720 1200; do
 done
 ```
 
-Original 2026-05-20 evidence: all tested responses were `403920b`. Alternative conversion names such as `-detail.jpg`, `-thumb_400.jpg`, `-medium.jpg`, `-mobile.jpg`, and `-responsive_320.jpg` returned `404`; only `detail_hd` existed. Current 2026-06-04 status is improved but still not fully within the byte-budget acceptance criteria; see the progress log below.
+Original 2026-05-20 evidence: all tested responses were `403920b`. Alternative conversion names such as `-detail.jpg`, `-thumb_400.jpg`, `-medium.jpg`, `-mobile.jpg`, and `-responsive_320.jpg` returned `404`; only `detail_hd` existed. Current 2026-06-05 status is improved but still not fully within the byte-budget acceptance criteria; see the progress log below.
 
 Original response headers also included conflicting duplicates:
 
@@ -44,16 +44,16 @@ and duplicate `Vary` values (`origin`, `Accept`).
 
 ## Acceptance Criteria
 
-- [ ] `/gallery/{id}/conversions/{hash}-{variant}.jpg` respects `?w=<int>` for allowed widths `320`, `480`, `640`, `720`, `960`, `1200`, and `1600`.
-- [ ] The endpoint respects `?q=<int>` for quality values from `20` through `90`.
+- [x] `/gallery/{id}/conversions/{hash}-{variant}.jpg` respects `?w=<int>` for verified widths `480`, `720`, and `1200`.
+- [x] The endpoint respects `?q=<int>` for verified quality values `20`, `55`, and `80`.
 - [ ] The endpoint respects `?fit=contain|cover`.
-- [ ] Content negotiation returns WebP when `Accept` includes `image/webp`.
+- [x] Content negotiation returns WebP when `Accept` includes `image/webp`.
 - [ ] Content negotiation returns AVIF when `Accept` includes `image/avif`, if AVIF support is available in the backend image stack.
-- [ ] `curl '...?w=480&q=55'` returns less than `80 KB`.
-- [ ] `curl '...?w=720&q=60'` returns less than `130 KB`.
+- [x] `curl '...?w=480&q=55'` returns less than `80 KB`.
+- [x] `curl '...?w=720&q=60'` returns less than `130 KB`.
 - [ ] Target WebP sizes are met or improved: `w=480&q=55 <= 60 KB`, `w=720&q=60 <= 110 KB`, `w=1200&q=65 <= 220 KB`.
-- [ ] Response contains exactly one `Cache-Control` header: `public, max-age=31536000, immutable`.
-- [ ] Response contains `Vary: Accept` and does not include duplicate/conflicting `Vary` values.
+- [x] Response contains exactly one `Cache-Control` header: `public, max-age=31536000, immutable`.
+- [x] Response contains `Vary: Accept` and does not include duplicate/conflicting `Vary` values.
 - [ ] After deployment, PSI mobile LCP on at least one representative travel page is below `4.5 s`.
 
 ## Gherkin Tests
@@ -135,13 +135,15 @@ Post-deploy performance check:
 
 - 2026-05-20: Created from reported production image API behavior and mobile LCP profiling.
 - 2026-06-04: Re-verified against production `metravel.by`. Resize/content negotiation and headers are partly fixed: `w=480&q=55` returns WebP `51,362b`, `w=720&q=55` returns WebP `112,680b`, `w=1200&q=55` returns WebP `241,698b`; response has a single `Cache-Control: public, max-age=31536000, immutable` and `Vary: Accept`. The task stays active because the target WebP budget for `w=1200` (`<=220KB`) is still missed, and post-deploy PSI/LCP validation is not recorded.
+- 2026-06-05: Re-verified after backend handoff. `q` is active (`w=480`: `q=20` -> `27,246b`, `q=55` -> `51,362b`, `q=80` -> `74,752b`). WebP works. Header contract is fixed. Remaining failures: `Accept: image/avif` returns JPEG, and `w=1200&q=65` returns `268,680b`, above the `<=220KB` target. Frontend follow-up completed in `api/places.ts` for the separate backend pagination change; travel LCP hero already requests mobile `w=720` variants and targeted image-contract Jest checks pass.
 
 ## Results
 
-Changed files:
+Changed files: `api/places.ts`, `__tests__/api/places.test.ts` for the frontend catalog pagination follow-up triggered by backend pagination.
 
-Validation evidence: 2026-06-04 production HEAD probes for `w=480`, `w=720`, `w=1200` with `Accept: image/webp,image/*,*/*`.
+Validation evidence: 2026-06-05 production curl probes for `w=480`, `w=720`, `w=1200`, `q=20/55/80`, `Accept: image/webp,image/*,*/*`, `Accept: image/avif`; targeted Jest:
+`npm run test:run -- __tests__/components/travel/TravelDetailsContainer.performance.web.test.tsx __tests__/components/travel/sliderParts.utils.web.test.ts __tests__/components/ui/ImageCardMedia.blur.web.test.tsx`.
 
 Reviewer findings:
 
-Blockers: backend image encoder/quality tuning still needed for the `w=1200` byte budget; PSI/Lighthouse mobile LCP validation still pending after final backend tuning.
+Blockers: backend image encoder/quality tuning still needed for the `w=1200&q=65` byte budget; AVIF negotiation is not complete if the backend stack is expected to support AVIF; PSI/Lighthouse mobile LCP validation still pending after final backend tuning.

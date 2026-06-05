@@ -32,6 +32,7 @@ import {
     openQuestMap,
     type QuestMapApp,
 } from './questWizardHelpers';
+import { exportQuestOfflineMap, getQuestOfflineMapPoints } from './questOfflineMapExport';
 
 import { useThemedColors } from '@/hooks/useTheme';
 import { useQuestWizardResponsiveModel } from './hooks/useQuestWizardResponsiveModel';
@@ -236,6 +237,19 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         void generatePrintableQuest({ title, steps, intro, coverUrl, questUrl });
     }, [coverUrl, intro, steps, title]);
 
+    const offlineMapPointsCount = useMemo(() => getQuestOfflineMapPoints(steps).length, [steps]);
+
+    const handleOfflineMapDownload = useCallback(() => {
+        void (async () => {
+            try {
+                const exported = await exportQuestOfflineMap({ title, steps });
+                notifyQuest(exported ? 'Файл с точками квеста готов' : 'В квесте нет точек для карты');
+            } catch {
+                notifyQuest('Не удалось подготовить точки для офлайн-карты');
+            }
+        })();
+    }, [steps, title]);
+
     const mainContent = (
         <View style={useWideExcursionsSidebar && city && Platform.OS === 'web' ? styles.pageRow : undefined}>
             {/* Левая колонка: шаги + карта + финал */}
@@ -353,6 +367,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 city={city}
                                 onReset={resetQuest}
                                 onPrintDownload={handlePrintDownload}
+                                onOfflineMapDownload={handleOfflineMapDownload}
+                                offlineMapPointsCount={offlineMapPointsCount}
                             />
 
                             <ScrollView
@@ -388,6 +404,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 compactNav={compactNav}
                                 onReset={resetQuest}
                                 onPrintDownload={handlePrintDownload}
+                                onOfflineMapDownload={handleOfflineMapDownload}
+                                offlineMapPointsCount={offlineMapPointsCount}
                             />
 
                             {/* Контент */}

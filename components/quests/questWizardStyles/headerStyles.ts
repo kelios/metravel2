@@ -63,6 +63,23 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
             } as any,
         }),
     },
+    offlineMapButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        paddingHorizontal: SPACING.sm,
+        paddingVertical: 6,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+        backgroundColor: colors.backgroundSecondary,
+        ...Platform.select({
+            web: {
+                cursor: 'pointer',
+                transition: 'border-color 0.15s ease',
+            } as any,
+        }),
+    },
     resetText: { color: colors.textMuted, fontWeight: '600', fontSize: 12 },
     toggleText: { color: colors.primaryDark, fontWeight: '600', fontSize: 14 },
 

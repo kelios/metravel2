@@ -43,6 +43,8 @@ type QuestCompactSidebarProps = NavigationSharedProps & {
   city?: QuestCityLike
   onReset: () => void
   onPrintDownload: () => void
+  onOfflineMapDownload: () => void
+  offlineMapPointsCount: number
 }
 
 type QuestHeaderPanelProps = NavigationSharedProps & {
@@ -55,6 +57,8 @@ type QuestHeaderPanelProps = NavigationSharedProps & {
   compactNav: boolean
   onReset: () => void
   onPrintDownload: () => void
+  onOfflineMapDownload: () => void
+  offlineMapPointsCount: number
 }
 
 function ActiveScrollNav({
@@ -137,6 +141,8 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
     city,
     onReset,
     onPrintDownload,
+    onOfflineMapDownload,
+    offlineMapPointsCount,
   } = props
 
   return (
@@ -152,6 +158,16 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
             accessibilityLabel="Скачать печатную версию квеста"
           >
             <Feather name="download" size={16} color={colors.textMuted} />
+          </Pressable>
+          <Pressable
+            onPress={onOfflineMapDownload}
+            style={styles.compactIconButton}
+            hitSlop={6}
+            disabled={offlineMapPointsCount === 0}
+            accessibilityRole="button"
+            accessibilityLabel={`Скачать ${offlineMapPointsCount} точек квеста для офлайн-карты`}
+          >
+            <Feather name="map" size={16} color={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted} />
           </Pressable>
           <Pressable
             onPress={onReset}
@@ -245,6 +261,8 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
     compactNav,
     onReset,
     onPrintDownload,
+    onOfflineMapDownload,
+    offlineMapPointsCount,
   } = props
 
   const wideDesktop = screenW >= 1100
@@ -267,6 +285,17 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
               <Feather name="download" size={16} color={colors.textMuted} />
             </Pressable>
           )}
+          <Pressable
+            onPress={onOfflineMapDownload}
+            style={styles.offlineMapButton}
+            hitSlop={6}
+            disabled={offlineMapPointsCount === 0}
+            accessibilityRole="button"
+            accessibilityLabel={`Скачать ${offlineMapPointsCount} точек квеста для офлайн-карты`}
+          >
+            <Feather name="map" size={14} color={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted} />
+            {!isMobile && <Text style={styles.resetText}>Офлайн-карта</Text>}
+          </Pressable>
           <Pressable
             onPress={onReset}
             style={styles.resetButton}

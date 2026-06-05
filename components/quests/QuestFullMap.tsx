@@ -14,6 +14,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { buildQuestOfflineMapGpx } from './questOfflineMapExport';
 
 type StepPoint = { lat: number; lng: number; title?: string };
 
@@ -52,18 +53,6 @@ function numberIcon(L: any, n: number | string, colors: ThemedColors, active = f
     </div>`;
     const half = size / 2;
     return L.divIcon({ className: 'qmark', html, iconSize: [size, size], iconAnchor: [half, half] });
-}
-
-function buildGPX(pts: StepPoint[]) {
-    const trkpts = pts
-        .map(p => `<trkpt lat="${p.lat.toFixed(6)}" lon="${p.lng.toFixed(6)}"></trkpt>`)
-        .join('\n');
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx creator="MeTravel" version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
-<trk><name>Маршрут квеста</name><trkseg>
-${trkpts}
-</trkseg></trk>
-</gpx>`;
 }
 
 function buildGeoJSON(pts: StepPoint[]) {
@@ -259,15 +248,15 @@ function QuestFullMap({
                 return;
             }
 
-            const gpxContent = buildGPX(points);
+            const gpxFile = buildQuestOfflineMapGpx({ title, steps: points });
             const cacheDir = (FileSystem as any).cacheDirectory ?? (FileSystem.Paths.cache as any).uri;
-            const fileUri = `${cacheDir}${title.replace(/\s+/g, '_')}.gpx`;
+            const fileUri = `${cacheDir}${gpxFile.filename}`;
 
-            await FileSystem.writeAsStringAsync(fileUri, gpxContent);
+            await FileSystem.writeAsStringAsync(fileUri, gpxFile.content);
 
             if (await Sharing.isAvailableAsync()) {
                 await Sharing.shareAsync(fileUri, {
-                    mimeType: 'application/gpx+xml',
+                    mimeType: gpxFile.mimeType,
                     dialogTitle: 'Поделиться маршрутом',
                 });
             }
@@ -315,8 +304,10 @@ function QuestFullMap({
         }
     };
 
-    const exportGPX = () =>
-        downloadText(`${title.replace(/\s+/g, '_')}.gpx`, buildGPX(points), 'application/gpx+xml');
+    const exportGPX = () => {
+        const file = buildQuestOfflineMapGpx({ title, steps: points });
+        downloadText(file.filename, file.content, file.mimeType);
+    };
     const exportGeoJSON = () =>
         downloadText(`${title.replace(/\s+/g, '_')}.geojson`, buildGeoJSON(points), 'application/geo+json');
 
