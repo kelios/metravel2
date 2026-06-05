@@ -31,7 +31,8 @@ const http = require('http');
 const TITLE_MAX = 60; // chars rendered before Google/Yandex clip the SERP title
 const TITLE_MIN = 25; // shorter titles usually lack a searchable keyword phrase
 const THIN_WORDS = 400; // below this a travel reads as a thin photo dump
-const DESC_MIN = 80; // a usable meta description is ~80–160 chars
+const LEAD_CHARS = 160; // the SERP snippet = first ~160 chars of the description body
+const KEYWORD_MIN_LEN = 4; // title words this long+ count as topical keywords
 
 // ---------------------------------------------------------------------------
 // Pure analysis (exported for tests)
@@ -73,13 +74,29 @@ function analyzeTitle(name) {
   };
 }
 
-function analyzeMeta(metaDescription) {
-  const value = String(metaDescription || '').trim();
+function titleKeywords(name) {
+  const words = stripHtmlToText(name).toLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
+  return words.filter((w) => w.length >= KEYWORD_MIN_LEN);
+}
+
+/**
+ * The SERP snippet is built from the first ~160 chars of the description body
+ * (scripts/generate-seo-pages.js → buildTravelSeoDescription), NOT from any
+ * meta_description field (which the frontend ignores). A lead is "weak" when
+ * that opening shares no keyword with the title — i.e. the snippet does not
+ * even mention what the page is about (a personal hook like "Очередное
+ * обещание собаке…").
+ */
+function analyzeLead(name, descriptionHtml) {
+  const lead = stripHtmlToText(descriptionHtml).slice(0, LEAD_CHARS).toLowerCase();
+  const keywords = titleKeywords(name);
+  const matched = keywords.filter((k) => lead.includes(k));
   return {
-    value,
-    length: value.length,
-    missing: value.length === 0,
-    tooShort: value.length > 0 && value.length < DESC_MIN,
+    lead,
+    empty: lead.length === 0,
+    keywords,
+    matched,
+    weak: lead.length === 0 || (keywords.length > 0 && matched.length === 0),
   };
 }
 
@@ -110,14 +127,13 @@ function analyzeContent(descriptionHtml, minWords = THIN_WORDS) {
 function auditTravel(listItem, detail = {}, opts = {}) {
   const minWords = opts.minWords || THIN_WORDS;
   const titleA = analyzeTitle(listItem.name);
-  const metaA = analyzeMeta(detail.meta_description);
+  const leadA = analyzeLead(listItem.name, detail.description);
   const contentA = analyzeContent(detail.description, minWords);
 
   const issues = [];
   if (titleA.tooLong) issues.push('title-too-long');
   if (titleA.tooShort) issues.push('title-too-short');
-  if (metaA.missing) issues.push('meta-missing');
-  else if (metaA.tooShort) issues.push('meta-too-short');
+  if (leadA.weak) issues.push('weak-lead');
   if (contentA.thin) issues.push('thin-content');
   if (contentA.noHeadings) issues.push('no-headings');
   if (contentA.noInternalLinks) issues.push('no-internal-links');
@@ -139,7 +155,7 @@ function auditTravel(listItem, detail = {}, opts = {}) {
     words: contentA.words,
     headings: contentA.headings,
     internalLinks: contentA.internalLinks,
-    metaPresent: !metaA.missing,
+    weakLead: leadA.weak,
     issues,
     priority,
   };
@@ -151,7 +167,7 @@ function summarizeAudit(rows) {
     total: rows.length,
     titleTooLong: 0,
     titleTooShort: 0,
-    metaMissing: 0,
+    weakLead: 0,
     thinContent: 0,
     noHeadings: 0,
     noInternalLinks: 0,
@@ -161,7 +177,7 @@ function summarizeAudit(rows) {
     if (r.issues.length === 0) counts.clean++;
     if (r.issues.includes('title-too-long')) counts.titleTooLong++;
     if (r.issues.includes('title-too-short')) counts.titleTooShort++;
-    if (r.issues.includes('meta-missing')) counts.metaMissing++;
+    if (r.issues.includes('weak-lead')) counts.weakLead++;
     if (r.issues.includes('thin-content')) counts.thinContent++;
     if (r.issues.includes('no-headings')) counts.noHeadings++;
     if (r.issues.includes('no-internal-links')) counts.noInternalLinks++;
@@ -259,7 +275,7 @@ async function main() {
   console.log('\n=== Summary ===');
   console.log(`  total: ${counts.total} | clean: ${counts.clean}`);
   console.log(`  title>60: ${counts.titleTooLong} | title<25: ${counts.titleTooShort}`);
-  console.log(`  meta missing: ${counts.metaMissing}`);
+  console.log(`  weak lead (snippet off-topic): ${counts.weakLead}`);
   console.log(`  thin (<${minWords} words): ${counts.thinContent}`);
   console.log(`  no headings: ${counts.noHeadings} | no internal links: ${counts.noInternalLinks}`);
 
@@ -286,14 +302,15 @@ if (typeof module !== 'undefined' && module.exports) {
     stripHtmlToText,
     countWords,
     analyzeTitle,
-    analyzeMeta,
+    titleKeywords,
+    analyzeLead,
     analyzeContent,
     auditTravel,
     summarizeAudit,
     TITLE_MAX,
     TITLE_MIN,
     THIN_WORDS,
-    DESC_MIN,
+    LEAD_CHARS,
   };
 }
 

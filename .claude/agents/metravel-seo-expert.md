@@ -32,12 +32,15 @@ model: sonnet
 Рабочий цикл:
 1. **Аудит**: `node scripts/seo-audit.js --user-id <ID> --json /tmp/seo-report.json`.
    Возьми worklist по `priority` (трафик × число проблем).
-2. **Улучшение по статье**: `GET /api/travels/{id}/` → дополни блоки под её issues
-   (thin/no-headings → история+легенды+практика; no-internal-links → ссылки на
-   соседние `/travels/{slug}`; title-too-long → сократи name ≤60; meta-missing →
-   meta_description 80–160 симв.). Применяй через
-   `.claude/skills/metravel-travel-article/scripts/metravel_publish.py`
-   (`_put_with_desc`). Секреты не логируй.
+2. **Улучшение по статье**: `GET /api/travels/{id}/` → проверь факты веб-поиском →
+   подготовь lead (в начало, под `weak-lead` = будущий сниппет) и blocks (в конец:
+   история+легенды+практика+`<a href="/travels/{slug}">` под thin/no-headings/
+   no-internal-links). Применяй ТОЛЬКО безопасным апдейтером:
+   `python3 scripts/seo_apply.py --id <ID> --prepend-file lead.html --append-file blocks.html`
+   (сперва `--dry-run`). Он эхом сохраняет publish/галерею/точки и проверяет откат.
+   НЕ используй `metravel_publish.py` на живых статьях (снимет с публикации).
+   `meta_description` фронтенд игнорит — сниппет идёт из начала тела, поэтому чинь
+   ЛИД, а не поле. Заголовки (`name`) не меняй — это ломает slug/URL. Секреты не логируй.
 3. **Pillar-статьи** для кластеров (Беларусь, Краков/Татры, парки) — через скилл
    `metravel-travel-article`.
 4. **Проверка**: повторный `seo:audit` (проблемы ушли) +

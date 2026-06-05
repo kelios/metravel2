@@ -8,7 +8,8 @@ const {
   stripHtmlToText,
   countWords,
   analyzeTitle,
-  analyzeMeta,
+  titleKeywords,
+  analyzeLead,
   analyzeContent,
   auditTravel,
   summarizeAudit,
@@ -38,8 +39,7 @@ describe('stripHtmlToText / countWords', () => {
 
 describe('analyzeTitle', () => {
   it('flags titles longer than the SERP limit', () => {
-    const long = 'А'.repeat(TITLE_MAX + 5);
-    const r = analyzeTitle(long);
+    const r = analyzeTitle('А'.repeat(TITLE_MAX + 5));
     expect(r.tooLong).toBe(true);
     expect(r.tooShort).toBe(false);
   });
@@ -68,23 +68,36 @@ describe('analyzeTitle', () => {
   });
 });
 
-describe('analyzeMeta', () => {
-  it('flags missing meta description', () => {
-    expect(analyzeMeta(null).missing).toBe(true);
-    expect(analyzeMeta('').missing).toBe(true);
-    expect(analyzeMeta('   ').missing).toBe(true);
+describe('titleKeywords', () => {
+  it('keeps words >= 4 letters, drops short ones', () => {
+    expect(titleKeywords('Озеро Глубокое в Беларуси')).toEqual(['озеро', 'глубокое', 'беларуси']);
+  });
+});
+
+describe('analyzeLead (SERP snippet = first 160 chars of body)', () => {
+  it('flags a lead that shares no keyword with the title', () => {
+    const r = analyzeLead('Озеро Глубокое в Беларуси', '<p>Очередное обещание собаке свозить её гулять.</p>');
+    expect(r.weak).toBe(true);
+    expect(r.matched).toEqual([]);
   });
 
-  it('flags too-short meta description', () => {
-    const r = analyzeMeta('Коротко');
-    expect(r.missing).toBe(false);
-    expect(r.tooShort).toBe(true);
+  it('accepts a lead that mentions the subject', () => {
+    const r = analyzeLead(
+      'Озеро Глубокое в Беларуси',
+      '<p>Озеро Глубокое под Полоцком — самое прозрачное в Беларуси.</p>'
+    );
+    expect(r.weak).toBe(false);
+    expect(r.matched.length).toBeGreaterThan(0);
   });
 
-  it('accepts a full-length meta description', () => {
-    const r = analyzeMeta('А'.repeat(120));
-    expect(r.missing).toBe(false);
-    expect(r.tooShort).toBe(false);
+  it('flags an empty description as a weak lead', () => {
+    expect(analyzeLead('Любой заголовок', '').weak).toBe(true);
+  });
+
+  it('only inspects the first 160 chars', () => {
+    const filler = 'текст '.repeat(40); // > 160 chars, no keyword
+    const r = analyzeLead('Озеро Глубокое', `<p>${filler} Глубокое</p>`);
+    expect(r.weak).toBe(true);
   });
 });
 
@@ -129,29 +142,29 @@ describe('analyzeContent', () => {
 
 describe('auditTravel', () => {
   const richDetail = {
-    meta_description: 'А'.repeat(120),
-    description: '<h2>История</h2><p>' + 'слово '.repeat(450) +
-      '</p><a href="/travels/x">см.</a>',
+    description:
+      '<p>Озеро Глубокое под Полоцком — самое прозрачное в Беларуси.</p>' +
+      '<h2>История</h2><p>' + 'слово '.repeat(450) + '</p><a href="/travels/x">см.</a>',
   };
 
   it('returns no issues for a well-optimized travel', () => {
     const r = auditTravel(
-      { id: 1, name: 'Что посмотреть в Ошмянах: костёлы и маршрут', countUnicIpView: 100 },
+      { id: 1, name: 'Озеро Глубокое: самое прозрачное в Беларуси', countUnicIpView: 100 },
       richDetail
     );
     expect(r.issues).toEqual([]);
-    expect(r.metaPresent).toBe(true);
+    expect(r.weakLead).toBe(false);
   });
 
-  it('collects all problem types for a thin meta-less travel', () => {
+  it('collects all problem types for a thin off-topic travel', () => {
     const r = auditTravel(
       { id: 2, name: 'Гора', countUnicIpView: 5000 },
-      { meta_description: '', description: '<p>мало текста тут</p>' }
+      { description: '<p>Очередное обещание собаке гулять</p>' }
     );
     expect(r.issues).toEqual(
       expect.arrayContaining([
         'title-too-short',
-        'meta-missing',
+        'weak-lead',
         'thin-content',
         'no-headings',
         'no-internal-links',
@@ -160,16 +173,16 @@ describe('auditTravel', () => {
   });
 
   it('weights priority higher for high-traffic pages with the same issues', () => {
-    const base = { meta_description: '', description: '<p>short</p>' };
-    const lowTraffic = auditTravel({ id: 3, name: 'Гора', countUnicIpView: 10 }, base);
-    const highTraffic = auditTravel({ id: 4, name: 'Гора', countUnicIpView: 5000 }, base);
-    expect(highTraffic.priority).toBeGreaterThan(lowTraffic.priority);
+    const base = { description: '<p>короткий текст не по теме</p>' };
+    const low = auditTravel({ id: 3, name: 'Гора', countUnicIpView: 10 }, base);
+    const high = auditTravel({ id: 4, name: 'Гора', countUnicIpView: 5000 }, base);
+    expect(high.priority).toBeGreaterThan(low.priority);
   });
 
   it('degrades gracefully when detail fetch failed (empty object)', () => {
-    const r = auditTravel({ id: 5, name: 'Озеро Глубокое и его окрестности', countUnicIpView: 0 }, {});
+    const r = auditTravel({ id: 5, name: 'Озеро Глубокое и окрестности', countUnicIpView: 0 }, {});
     expect(r.issues).toEqual(
-      expect.arrayContaining(['meta-missing', 'thin-content', 'no-headings', 'no-internal-links'])
+      expect.arrayContaining(['weak-lead', 'thin-content', 'no-headings', 'no-internal-links'])
     );
     expect(r.words).toBe(0);
   });
@@ -178,18 +191,22 @@ describe('auditTravel', () => {
 describe('summarizeAudit', () => {
   const rows = [
     auditTravel(
-      { id: 1, name: 'Что посмотреть в Ошмянах: костёлы и маршрут', countUnicIpView: 100 },
-      { meta_description: 'А'.repeat(120), description: '<h2>h</h2><p>' + 'w '.repeat(450) + '</p><a href="/travels/x">l</a>' }
+      { id: 1, name: 'Озеро Глубокое: самое прозрачное в Беларуси', countUnicIpView: 100 },
+      {
+        description:
+          '<p>Озеро Глубокое под Полоцком — самое прозрачное в Беларуси.</p>' +
+          '<h2>h</h2><p>' + 'слово '.repeat(450) + '</p><a href="/travels/x">l</a>',
+      }
     ),
-    auditTravel({ id: 2, name: 'Гора', countUnicIpView: 3000 }, { meta_description: '', description: '<p>thin</p>' }),
-    auditTravel({ id: 3, name: 'Озеро', countUnicIpView: 50 }, { meta_description: '', description: '<p>thin</p>' }),
+    auditTravel({ id: 2, name: 'Гора', countUnicIpView: 3000 }, { description: '<p>не по теме</p>' }),
+    auditTravel({ id: 3, name: 'Озеро', countUnicIpView: 50 }, { description: '<p>не по теме</p>' }),
   ];
 
   it('counts each problem category and clean pages', () => {
     const { counts } = summarizeAudit(rows);
     expect(counts.total).toBe(3);
     expect(counts.clean).toBe(1);
-    expect(counts.metaMissing).toBe(2);
+    expect(counts.weakLead).toBe(2);
     expect(counts.thinContent).toBe(2);
     expect(counts.titleTooShort).toBe(2);
   });
@@ -199,7 +216,6 @@ describe('summarizeAudit', () => {
     expect(worklist).toHaveLength(2);
     expect(worklist.every((r: { issues: string[] }) => r.issues.length > 0)).toBe(true);
     expect(worklist[0].priority).toBeGreaterThanOrEqual(worklist[1].priority);
-    // highest-traffic problem page ranks first
-    expect(worklist[0].id).toBe(2);
+    expect(worklist[0].id).toBe(2); // highest-traffic problem page first
   });
 });
