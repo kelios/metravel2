@@ -90,6 +90,14 @@ describe('analyzeLead (SERP snippet = first 160 chars of body)', () => {
     expect(r.matched.length).toBeGreaterThan(0);
   });
 
+  it('matches inflected forms via stem (title «Ошмянах» vs lead «Ошмяны»)', () => {
+    const r = analyzeLead(
+      'Что посмотреть в Ошмянах: костёлы и синагога',
+      '<p>Ошмяны — небольшой городок на западе Беларуси с костёлами и синагогой.</p>'
+    );
+    expect(r.weak).toBe(false);
+  });
+
   it('flags an empty description as a weak lead', () => {
     expect(analyzeLead('Любой заголовок', '').weak).toBe(true);
   });

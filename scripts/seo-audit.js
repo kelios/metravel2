@@ -33,6 +33,7 @@ const TITLE_MIN = 25; // shorter titles usually lack a searchable keyword phrase
 const THIN_WORDS = 400; // below this a travel reads as a thin photo dump
 const LEAD_CHARS = 160; // the SERP snippet = first ~160 chars of the description body
 const KEYWORD_MIN_LEN = 4; // title words this long+ count as topical keywords
+const KEYWORD_STEM_LEN = 5; // compare keywords on this-long stem to absorb inflection
 
 // ---------------------------------------------------------------------------
 // Pure analysis (exported for tests)
@@ -80,17 +81,27 @@ function titleKeywords(name) {
 }
 
 /**
+ * Russian is heavily inflected, so the title form ("Ошмянах") and the lead form
+ * ("Ошмяны") rarely match byte-for-byte. We compare on a stem — the first
+ * KEYWORD_STEM_LEN chars (or the whole word if shorter) — so morphological
+ * variants of the same root count as a match and don't churn weak-lead.
+ */
+function keywordStem(word) {
+  return String(word).slice(0, Math.min(word.length, KEYWORD_STEM_LEN));
+}
+
+/**
  * The SERP snippet is built from the first ~160 chars of the description body
  * (scripts/generate-seo-pages.js → buildTravelSeoDescription), NOT from any
  * meta_description field (which the frontend ignores). A lead is "weak" when
- * that opening shares no keyword with the title — i.e. the snippet does not
- * even mention what the page is about (a personal hook like "Очередное
+ * that opening shares no keyword STEM with the title — i.e. the snippet does
+ * not even mention what the page is about (a personal hook like "Очередное
  * обещание собаке…").
  */
 function analyzeLead(name, descriptionHtml) {
   const lead = stripHtmlToText(descriptionHtml).slice(0, LEAD_CHARS).toLowerCase();
   const keywords = titleKeywords(name);
-  const matched = keywords.filter((k) => lead.includes(k));
+  const matched = keywords.filter((k) => lead.includes(keywordStem(k)));
   return {
     lead,
     empty: lead.length === 0,
@@ -303,6 +314,7 @@ if (typeof module !== 'undefined' && module.exports) {
     countWords,
     analyzeTitle,
     titleKeywords,
+    keywordStem,
     analyzeLead,
     analyzeContent,
     auditTravel,

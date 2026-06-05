@@ -72,9 +72,9 @@ describe('seo utils', () => {
     });
 
     it('DEFAULT_OG_IMAGE_PATH resolves to existing asset', () => {
-      expect(DEFAULT_OG_IMAGE_PATH).toBe('/og-default.png');
+      expect(DEFAULT_OG_IMAGE_PATH).toBe('/assets/icons/logo_yellow_512x512.png');
       expect(buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)).toBe(
-        'https://metravel.by/og-default.png',
+        'https://metravel.by/assets/icons/logo_yellow_512x512.png',
       );
     });
 
