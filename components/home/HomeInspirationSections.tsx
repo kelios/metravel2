@@ -314,14 +314,14 @@ function HomeInspirationSections() {
               <View style={styles.quickFiltersHeaderLeft}>
                 <View style={styles.quickFiltersBadge}>
                   <Feather name="sliders" size={13} color={colors.primary} />
-                  <Text style={styles.quickFiltersBadgeText}>Умный подбор</Text>
+                  <Text style={styles.quickFiltersBadgeText}>Подбор по фильтрам</Text>
                 </View>
                 <Text style={styles.quickFiltersTitle}>
-                  Подберите поездку{' '}
-                  <Text style={styles.quickFiltersTitleAccent}>под свой ритм</Text>
+                  Выберите поездку{' '}
+                  <Text style={styles.quickFiltersTitleAccent}>по своим параметрам</Text>
                 </Text>
                 <Text style={styles.quickFiltersSubtitle}>
-                  Комбинируйте формат, сезон и расстояние — мы соберём идеальный маршрут
+                  Формат, сезон, ночлег и расстояние — нажмите, чтобы открыть подходящие маршруты
                 </Text>
               </View>
               <Button

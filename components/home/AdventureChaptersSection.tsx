@@ -160,7 +160,7 @@ function ChapterCard({ item, index, styles, colors }: ChapterCardProps) {
         <View
           style={[styles.chapterLabel, isHovered && styles.chapterLabelHovered]}
         >
-          <Text style={styles.chapterLabelText}>Глава {index + 1}</Text>
+          <Text style={styles.chapterLabelText}>№ {index + 1}</Text>
         </View>
 
         {/* Favorite button — top right */}
@@ -423,13 +423,13 @@ function AdventureChaptersSection() {
         {/* ── Section header ── */}
         <View style={styles.header}>
           <View style={styles.labelPill}>
-            <Feather name="book-open" size={12} color={colors.primaryText} />
-            <Text style={styles.labelPillText}>Популярные главы</Text>
+            <Feather name="trending-up" size={12} color={colors.primaryText} />
+            <Text style={styles.labelPillText}>Популярное</Text>
           </View>
 
-          <Text style={styles.heroTitle}>Главы путешествий,</Text>
+          <Text style={styles.heroTitle}>Маршруты,</Text>
           <Text style={styles.heroTitleAccent}>
-            которые выбирают чаще всего
+            которые открывают чаще всего
           </Text>
           <Text style={styles.heroSubtitle}>{SECTION_SUBTITLE}</Text>
         </View>

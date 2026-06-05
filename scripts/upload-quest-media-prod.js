@@ -51,6 +51,10 @@ async function fetchBundle(questId) {
 
 const QUEST_MEDIA = [
     {
+        quest_id: 'warsaw-syrenka', assetsDir: 'warsawSyrenka', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
         quest_id: 'krakow-dragon', assetsDir: 'krakowDragon', cover: 'cover.png',
         stepImages: { '1-rynek': '1.png', '2-mariacki': '2.png', '3-sukiennice': '3.png', '4-barbakan': '4.png', '5-kazimierz': '5.png', '6-wawel': '6.png', '7-smocza-jama': '7.png' },
         finaleVideo: 'krakowDragon.mp4',

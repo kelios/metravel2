@@ -5,6 +5,7 @@ import Feather from '@expo/vector-icons/Feather'
 import Button from '@/components/ui/Button'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import type { ThemedColors } from '@/hooks/useTheme'
+import HomeHeroSearchBar from './HomeHeroSearchBar'
 import type { QuickFilterParams } from './homeHeroShared'
 
 type MoodCard = {
@@ -58,6 +59,8 @@ type HomeHeroBookLayoutProps = {
   onQuickFilterPress: (label: string, filters?: QuickFilterParams, route?: string) => void
   onOpenArticle: (href?: string | null) => void
   onOpenSearch: () => void
+  onSearchSubmit: (query: string) => void
+  isMobile: boolean
   pendingAction: string | null
   onPrevSlide: () => void
   onNextSlide: () => void
@@ -513,6 +516,8 @@ export default function HomeHeroBookLayout({
   onQuickFilterPress,
   onOpenArticle,
   onOpenSearch,
+  onSearchSubmit,
+  isMobile,
   pendingAction,
   onPrevSlide,
   onNextSlide,
@@ -541,7 +546,7 @@ export default function HomeHeroBookLayout({
               <View>
                 {showChapterHeader && (
                   <View style={styles.chapterHeader}>
-                    <Text style={styles.chapterLabel}>Глава 01</Text>
+                    <Text style={styles.chapterLabel}>Идеи путешествий</Text>
                     <View style={styles.chapterDivider} />
                   </View>
                 )}
@@ -576,6 +581,14 @@ export default function HomeHeroBookLayout({
                   styles={styles}
                 />
               )}
+
+              <View style={{ marginTop: 16, marginBottom: 12 }}>
+                <HomeHeroSearchBar
+                  colors={colors}
+                  isMobile={isMobile}
+                  onSubmit={onSearchSubmit}
+                />
+              </View>
 
               <View testID="home-hero-cta-row" style={styles.buttonsContainer}>
                 <Button

@@ -66,10 +66,10 @@ export const createHeroShellStyles = (ctx: HeroStyleContext) => {
               aspectRatio: '1040 / 765',
               maxHeight: `calc(100vh - ${desktopBookViewportReserve}px)`,
               maxWidth: isUltraWideBook
-                ? 1780
+                ? 1520
                 : isLargeDesktopBook
-                  ? 1600
-                  : 1400,
+                  ? 1360
+                  : 1200,
               marginLeft: 'auto',
               marginRight: 'auto',
               overflow: 'hidden',

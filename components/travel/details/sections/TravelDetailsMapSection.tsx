@@ -9,6 +9,7 @@ import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { useTravelDetailsMapSectionContentModel } from '../hooks/useTravelDetailsMapSectionContentModel'
 import { useTravelDetailsMapSectionModel } from '../hooks/useTravelDetailsMapSectionModel'
 import ExcursionsSection from './ExcursionsSection'
+import QuestForCitySection from './QuestForCitySection'
 import TravelRouteMapBlock from './TravelRouteMapBlock'
 import TravelWeatherBlock from './TravelWeatherBlock'
 import TravelPointsBlock from './TravelPointsBlock'
@@ -76,6 +77,8 @@ export const TravelDetailsMapSection: React.FC<{
         styles={styles}
         shouldForceRenderExcursions={shouldForceRenderExcursions}
       />
+
+      <QuestForCitySection travel={travel} styles={styles} />
 
       <View
         ref={setMapSectionRef}

@@ -68,7 +68,7 @@ function getEstimatedBookWrapperWidth(viewportWidth: number) {
   if (viewportWidth <= 0) return 0
 
   const maxBookWidth =
-    viewportWidth >= 2560 ? 1780 : viewportWidth >= 1920 ? 1600 : 1400
+    viewportWidth >= 2560 ? 1520 : viewportWidth >= 1920 ? 1360 : 1200
 
   return Math.max(
     0,
@@ -232,6 +232,15 @@ const HomeHero = memo(function HomeHero({
     router.push('/search' as any)
   }, [router, showNavigationFeedback])
 
+  const handleSearchSubmit = useCallback(
+    (rawQuery: string) => {
+      const query = rawQuery.trim()
+      queueAnalyticsEvent('HomeClick_HeroSearch', { hasQuery: query.length > 0 })
+      router.push((query ? `/search?search=${encodeURIComponent(query)}` : '/search') as any)
+    },
+    [router],
+  )
+
   const handleQuickFilterPress = useCallback(
     (label: string, filters?: QuickFilterParams, route: string = '/search') => {
       showNavigationFeedback(`filter:${label}`)
@@ -290,10 +299,10 @@ const HomeHero = memo(function HomeHero({
   )
 
   const heroSubtitle = isMobile
-    ? 'Готовые маршруты с фото и GPS-треками.'
+    ? 'Реальные маршруты по Беларуси и Европе — с фото и GPS-треками.'
     : showSideSlider && bookHeight > 0 && bookHeight < COMPACT_BOOK_MAX_HEIGHT
-      ? 'Готовые маршруты, заметки и GPS-треки.'
-      : 'Готовые маршруты, заметки и личная книга путешествий.'
+      ? 'Реальные маршруты по Беларуси и Европе — с фото, заметками и GPS-треками.'
+      : 'Реальные маршруты по Беларуси и Европе от тех, кто там был — с фото, заметками и GPS-треками.'
 
   return (
     <View testID="home-hero" style={styles.container}>
@@ -326,6 +335,8 @@ const HomeHero = memo(function HomeHero({
             onQuickFilterPress={handleQuickFilterPress}
             onOpenArticle={handleOpenArticle}
             onOpenSearch={handleOpenSearch}
+            onSearchSubmit={handleSearchSubmit}
+            isMobile={isMobile}
             pendingAction={pendingAction}
             onPrevSlide={handlePrevSlide}
             onNextSlide={handleNextSlide}

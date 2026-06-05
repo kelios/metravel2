@@ -188,7 +188,7 @@ export function createQuestCatalogStructuredData({
     breadcrumbId
   );
 
-  const items = quests.slice(0, 12).map((quest) => {
+  const items = quests.slice(0, 50).map((quest) => {
     const lat = toFiniteNumber(quest.lat);
     const lng = toFiniteNumber(quest.lng);
     const questUrl = quest.cityId && quest.id ? `${SITE_URL}/quests/${quest.cityId}/${quest.id}` : null;

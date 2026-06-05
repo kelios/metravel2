@@ -28,12 +28,12 @@ const WEB_SCROLL_STYLE = IS_WEB
     } as any)
   : undefined
 
+const HomeStartHereSection = lazy(() => import('./HomeStartHereSection'))
 const HomeHowItWorks = lazy(() => import('./HomeHowItWorks'))
 const HomeFAQSection = lazy(() => import('./HomeFAQSection'))
 const HomeInspirationSections = lazy(() => import('./HomeInspirationSections'))
-const HomeFavoritesHistorySection = lazy(() => import('./HomeFavoritesHistorySection'))
-const HomeRandomRoutesSection = lazy(() => import('./HomeRandomRoutesSection'))
 const HomeWeekendRoutesSection = lazy(() => import('./HomeWeekendRoutesSection'))
+const HomeQuestsPromoSection = lazy(() => import('./HomeQuestsPromoSection'))
 const HomeBottomCtaSection = lazy(() => import('./HomeBottomCtaSection'))
 
 type PageSectionProps = {
@@ -297,8 +297,20 @@ function Home() {
         travelsCountLoading={isAuthenticated && travelsCountLoading}
       />
 
-      <DeferredSection marginTop={gap.hero} container={{}} fallback={<SectionSkeleton />}>
-        <HomeRandomRoutesSection />
+      <DeferredSection marginTop={gap.hero} fallback={<SectionSkeleton />}>
+        <HomeStartHereSection />
+      </DeferredSection>
+
+      <DeferredSection marginTop={gap.weekends} container={{}} fallback={<SectionSkeleton />}>
+        <HomeWeekendRoutesSection />
+      </DeferredSection>
+
+      <DeferredSection marginTop={gap.sections} fallback={null}>
+        <HomeQuestsPromoSection />
+      </DeferredSection>
+
+      <DeferredSection marginTop={gap.sections} fallback={<SectionSkeleton />}>
+        <HomeInspirationSections />
       </DeferredSection>
 
       <DeferredSection
@@ -309,18 +321,6 @@ function Home() {
         }
       >
         <HomeHowItWorks />
-      </DeferredSection>
-
-      <DeferredSection marginTop={gap.weekends} container={{}} fallback={<SectionSkeleton />}>
-        <HomeWeekendRoutesSection />
-      </DeferredSection>
-
-      <DeferredSection marginTop={gap.history} fallback={<SectionSkeleton />}>
-        <HomeFavoritesHistorySection />
-      </DeferredSection>
-
-      <DeferredSection marginTop={gap.sections} fallback={<SectionSkeleton />}>
-        <HomeInspirationSections />
       </DeferredSection>
 
       <DeferredSection

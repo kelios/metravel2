@@ -36,12 +36,6 @@ jest.mock('@/components/home/HomeFinalCTA', () => {
   };
 });
 
-jest.mock('@/components/home/HomeFavoritesHistorySection', () => {
-  return function MockHomeFavoritesHistorySection() {
-    return null;
-  };
-});
-
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 const mockUseIsFocused = useIsFocused as jest.MockedFunction<typeof useIsFocused>;
 const mockFetchMyTravels = fetchMyTravels as jest.MockedFunction<typeof fetchMyTravels>;

@@ -55,7 +55,7 @@ describe('HomeInspirationSections', () => {
   it('renders quick filter section', () => {
     const { getByText } = render(<HomeInspirationSections />);
 
-    expect(getByText('Подберите поездку под свой ритм')).toBeTruthy();
+    expect(getByText('Выберите поездку по своим параметрам')).toBeTruthy();
   });
 
   describe('Quick filter chips — FILTER_GROUPS', () => {

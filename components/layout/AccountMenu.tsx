@@ -53,6 +53,7 @@ const STATIC_NAV_LINKS: MenuLinkItem[] = [
     icon: item.icon,
   })),
   { key: 'nav-favorites', title: 'Избранное', path: '/favorites', icon: 'heart' },
+  { key: 'nav-history', title: 'История просмотров', path: '/history', icon: 'clock' },
   { key: 'nav-about', title: 'О сайте', path: '/about', icon: 'info' },
 ]
 
