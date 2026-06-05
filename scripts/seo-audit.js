@@ -270,10 +270,14 @@ async function main() {
   if (limit) list = list.slice(0, limit);
   console.log(`📦 ${list.length} published travels`);
 
-  // 2. Fetch detail (description + meta_description) for each
+  // 2. Fetch detail (description + meta_description) for each.
+  // Cache-buster: the CDN can serve a stale body right after a write, which
+  // would make the audit re-pick an already-fixed article. A unique query
+  // param forces a fresh response so batch selection reflects live state.
+  const cb = Date.now();
   const details = await batchAsync(list, 10, async (t) => {
     try {
-      return await fetchJson(`${API_BASE}/api/travels/${t.id}/`);
+      return await fetchJson(`${API_BASE}/api/travels/${t.id}/?_cb=${cb}-${t.id}`);
     } catch {
       return {};
     }
