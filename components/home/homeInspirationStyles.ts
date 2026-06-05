@@ -352,96 +352,82 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
 
 export const createSectionsStyles = (colors: Colors, isMobile: boolean) => StyleSheet.create({
   band: {
-    paddingVertical: isMobile ? 36 : 88, backgroundColor: colors.background, width: '100%', alignSelf: 'stretch',
+    paddingVertical: isMobile ? 28 : 56, backgroundColor: colors.background, width: '100%', alignSelf: 'stretch',
     ...Platform.select({ web: {
-      backgroundImage: [
-        `radial-gradient(ellipse 75% 45% at 50% 0%, ${colors.primarySoft} 0%, transparent 58%)`,
-        `linear-gradient(180deg, ${colors.backgroundSecondary} 0%, ${colors.background} 100%)`,
-      ].join(', '),
-      backgroundRepeat: 'no-repeat',
+      backgroundImage: 'none',
     } }),
   },
-  bandMobile: { paddingVertical: 32 },
-  container: { gap: 64, width: '100%', alignSelf: 'stretch' },
-  containerMobile: { gap: 28 },
+  bandMobile: { paddingVertical: 24 },
+  container: { gap: 44, width: '100%', alignSelf: 'stretch' },
+  containerMobile: { gap: 24 },
 
   // ── Outer section card ────────────────────────────────────────────────────
   quickFiltersSection: {
-    width: '100%', borderRadius: DESIGN_TOKENS.radii.xl, borderWidth: 1, borderColor: colors.borderLight,
-    backgroundColor: colors.surface,
-    paddingHorizontal: isMobile ? 20 : 48, paddingTop: isMobile ? 28 : 52, paddingBottom: isMobile ? 28 : 52,
-    gap: isMobile ? 24 : 40, overflow: 'hidden',
+    width: '100%',
+    backgroundColor: colors.background,
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    gap: isMobile ? 18 : 26,
+    overflow: 'visible',
     ...Platform.select({ web: {
-      boxShadow: '0 6px 32px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04)',
-      backgroundImage: `linear-gradient(145deg, ${colors.surface} 0%, ${colors.backgroundSecondary} 100%)`,
-      backgroundRepeat: 'no-repeat',
+      boxShadow: 'none',
+      backgroundImage: 'none',
     } }),
   },
 
   // ── Decorative background accent blobs ───────────────────────────────────
   quickFiltersAccentBlob1: {
-    position: 'absolute', top: -80, right: -60, width: 300, height: 200,
-    borderRadius: DESIGN_TOKENS.radii.full, backgroundColor: colors.primarySoft, opacity: 0.38,
-    ...Platform.select({ web: { filter: 'blur(52px)', pointerEvents: 'none' } as any }),
+    display: 'none',
   },
   quickFiltersAccentBlob2: {
-    position: 'absolute', bottom: -60, left: -40, width: 200, height: 160,
-    borderRadius: DESIGN_TOKENS.radii.full, backgroundColor: colors.successSoft, opacity: 0.22,
-    ...Platform.select({ web: { filter: 'blur(44px)', pointerEvents: 'none' } as any }),
+    display: 'none',
   },
 
   // ── Header row ────────────────────────────────────────────────────────────
   quickFiltersHeader: {
     flexDirection: isMobile ? 'column' : 'row',
-    alignItems: isMobile ? 'flex-start' : 'flex-end',
+    alignItems: isMobile ? 'flex-start' : 'center',
     justifyContent: 'space-between',
-    gap: isMobile ? 16 : 28,
+    gap: isMobile ? 14 : 24,
   },
-  quickFiltersHeaderLeft: { gap: 10, flex: 1, minWidth: 0 },
+  quickFiltersHeaderLeft: { gap: 8, flex: 1, minWidth: 0 },
 
   quickFiltersBadge: {
     alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6,
     borderWidth: 1, borderColor: colors.primaryAlpha30, borderRadius: DESIGN_TOKENS.radii.pill,
     backgroundColor: colors.primarySoft, paddingHorizontal: 13, paddingVertical: 6,
-    ...Platform.select({ web: { boxShadow: `0 1px 6px ${colors.primary}14` } }),
+    ...Platform.select({ web: { boxShadow: 'none' } }),
   },
   quickFiltersBadgeText: { color: colors.primaryText, fontSize: 10, lineHeight: 14, fontWeight: '700', letterSpacing: 0.9, textTransform: 'uppercase' },
 
   quickFiltersTitle: {
     color: colors.text,
-    fontSize: isMobile ? 28 : 44,
-    lineHeight: isMobile ? 34 : 52,
+    fontSize: isMobile ? 24 : 34,
+    lineHeight: isMobile ? 30 : 42,
     fontWeight: '800',
-    letterSpacing: isMobile ? -0.8 : -1.4,
+    letterSpacing: 0,
   },
   quickFiltersTitleAccent: {
     color: colors.primary,
-    ...Platform.select({
-      web: {
-        backgroundImage: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.brand ?? colors.primary} 100%)`,
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        backgroundClip: 'text',
-      } as any,
-    }),
   },
-  quickFiltersSubtitle: { color: colors.textMuted, fontSize: isMobile ? 15 : 17, lineHeight: isMobile ? 23 : 26, maxWidth: 560, letterSpacing: 0.1 },
+  quickFiltersSubtitle: { color: colors.textMuted, fontSize: isMobile ? 14 : 16, lineHeight: isMobile ? 21 : 24, maxWidth: 560, letterSpacing: 0 },
 
   quickFiltersArticlesButton: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     borderRadius: DESIGN_TOKENS.radii.pill, borderWidth: 0,
     backgroundColor: colors.primary,
-    paddingHorizontal: isMobile ? 22 : 28, paddingVertical: isMobile ? 13 : 15,
+    paddingHorizontal: isMobile ? 18 : 22, paddingVertical: isMobile ? 11 : 13,
     flexShrink: 0, alignSelf: isMobile ? 'flex-start' : 'auto',
     ...Platform.select({ web: {
       transition: 'transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease',
       whiteSpace: 'nowrap',
-      boxShadow: `0 8px 24px ${colors.primary}33, 0 2px 6px ${colors.primary}1A`,
+      boxShadow: `0 2px 8px ${colors.primary}24`,
     } as any }),
   },
   quickFiltersArticlesButtonHover: {
     backgroundColor: colors.primary,
-    ...Platform.select({ web: { transform: 'translateY(-2px) scale(1.02)', boxShadow: `0 14px 36px ${colors.primary}4D` } }),
+    ...Platform.select({ web: { transform: 'translateY(-1px)', boxShadow: `0 6px 16px ${colors.primary}2E` } }),
   },
   quickFiltersArticlesText: { color: '#ffffff', fontSize: 15, lineHeight: 20, fontWeight: '700', letterSpacing: 0.2 },
 
@@ -449,7 +435,7 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
   quickFiltersGrid: {
     flexDirection: isMobile ? 'column' : 'row',
     flexWrap: isMobile ? 'nowrap' : 'wrap',
-    gap: isMobile ? 12 : 16,
+    gap: isMobile ? 10 : 12,
     ...Platform.select({
       web: !isMobile
         ? ({
@@ -463,15 +449,15 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
 
   // Each filter group is now a card
   filterGroupCard: {
-    borderRadius: 20, borderWidth: 1, borderColor: colors.borderLight,
+    borderRadius: 12, borderWidth: 1, borderColor: colors.borderLight,
     backgroundColor: colors.surface,
-    paddingHorizontal: isMobile ? 18 : 22, paddingVertical: isMobile ? 18 : 22,
-    gap: isMobile ? 14 : 16,
+    paddingHorizontal: isMobile ? 16 : 18, paddingVertical: isMobile ? 16 : 18,
+    gap: isMobile ? 12 : 14,
     flexBasis: isMobile ? 'auto' : '47%',
     flexGrow: 1,
     ...Platform.select({ web: {
-      boxShadow: '0 4px 18px rgba(15, 23, 42, 0.05), 0 1px 4px rgba(15, 23, 42, 0.03)',
-      transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, border-color 0.25s ease',
+      boxShadow: '0 1px 5px rgba(15, 23, 42, 0.035)',
+      transition: 'box-shadow 0.18s ease, border-color 0.18s ease',
       gridColumn: 'span 2',
     } as any }),
   },
@@ -484,15 +470,18 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
   }) as any,
   filterGroupCardHover: {
     borderColor: colors.primary,
-    ...Platform.select({ web: { boxShadow: `0 8px 28px rgba(0,0,0,0.09), 0 3px 8px ${colors.primary}16`, transform: 'translateY(-2px)' } }),
+    ...Platform.select({ web: { boxShadow: `0 3px 12px ${colors.primary}14` } }),
   },
 
-  filterGroupCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  filterGroupCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   filterGroupIconWrap: {
-    width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
-    ...Platform.select({ web: { boxShadow: '0 4px 12px rgba(0,0,0,0.12)' } }),
+    width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.primaryAlpha30,
+    backgroundColor: colors.primarySoft,
   },
-  filterGroupTitleText: { color: colors.text, fontSize: isMobile ? 15 : 16, fontWeight: '800', letterSpacing: -0.2, flexShrink: 1 },
+  filterGroupIconColor: { color: colors.primary },
+  filterGroupTitleText: { color: colors.text, fontSize: isMobile ? 15 : 16, fontWeight: '700', letterSpacing: 0, flexShrink: 1 },
 
   chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: isMobile ? 8 : 8 },
   chipsWrapMobile: { width: '100%' },
@@ -500,11 +489,19 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
   chip: {
     borderRadius: DESIGN_TOKENS.radii.pill, borderWidth: 1, borderColor: colors.borderLight,
     backgroundColor: colors.surface,
-    paddingHorizontal: isMobile ? 14 : 14, paddingVertical: isMobile ? 8 : 9,
+    paddingHorizontal: isMobile ? 13 : 14, paddingVertical: isMobile ? 7 : 8,
     ...Platform.select({ web: {
       cursor: 'pointer',
-      transition: 'transform 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease',
+      transition: 'background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease',
     } }),
+  },
+  chipHover: {
+    borderColor: colors.primaryAlpha30,
+    backgroundColor: colors.primarySoft,
+  },
+  chipSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary,
   },
   chipMobile: {
     flexGrow: 0,

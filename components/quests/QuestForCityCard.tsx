@@ -1,10 +1,13 @@
 import React, { useMemo } from 'react'
 import { Platform, StyleSheet, Text, View } from 'react-native'
 import { Link } from 'expo-router'
+import Feather from '@expo/vector-icons/Feather'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import type { QuestMeta } from '@/utils/questAdapters'
+
+const CARD_MEDIA_SIZE = 132
 
 const DIFFICULTY_LABEL: Record<string, string> = {
   easy: 'Легко',
@@ -35,6 +38,7 @@ export function QuestForCityCard({ quest, eyebrow = 'Городской квес
 
   const cityLabel = quest.cityName ? `по городу ${quest.cityName}` : 'по этому городу'
   const cardStyle = StyleSheet.flatten([styles.card, style])
+  const coverUri = typeof quest.cover === 'string' ? quest.cover.trim() : ''
 
   return (
     <Link
@@ -44,20 +48,26 @@ export function QuestForCityCard({ quest, eyebrow = 'Городской квес
     >
       <View style={styles.media}>
         <ImageCardMedia
-          source={quest.cover ? { uri: String(quest.cover) } : null}
+          source={coverUri ? { uri: coverUri } : null}
+          width={CARD_MEDIA_SIZE}
+          height={CARD_MEDIA_SIZE}
           fit="contain"
           blurBackground
           allowCriticalWebBlur
           blurRadius={16}
+          loading="eager"
           alt={`Обложка квеста ${quest.title}`}
           style={styles.image}
         />
       </View>
 
       <View style={styles.body}>
-        <Text style={styles.eyebrow} numberOfLines={1}>
-          {`⚑ ${eyebrow}`}
-        </Text>
+        <View style={styles.eyebrowRow}>
+          <Feather name="flag" size={12} color={colors.primary ?? '#f5842c'} />
+          <Text style={styles.eyebrow} numberOfLines={1}>
+            {eyebrow}
+          </Text>
+        </View>
         <Text
           style={styles.title}
           numberOfLines={2}
@@ -87,11 +97,16 @@ function createStyles(colors: ThemedColors) {
       ...(Platform.OS === 'web' ? { cursor: 'pointer' } : null),
     },
     media: {
-      width: 132,
-      minHeight: 132,
+      width: CARD_MEDIA_SIZE,
+      height: CARD_MEDIA_SIZE,
       backgroundColor: colors.border ?? 'rgba(0,0,0,0.06)',
     },
     image: { width: '100%', height: '100%' },
+    eyebrowRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
     body: {
       flex: 1,
       paddingVertical: 14,

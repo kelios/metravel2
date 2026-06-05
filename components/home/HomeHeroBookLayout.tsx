@@ -38,6 +38,7 @@ type HomeHeroBookLayoutProps = {
   isWeb: boolean
   isNarrowLayout: boolean
   isTabletLayout: boolean
+  bookHeight: number
   showSideSlider: boolean
   width: number
   sliderHeight: number
@@ -495,6 +496,7 @@ export default function HomeHeroBookLayout({
   isWeb,
   isNarrowLayout,
   isTabletLayout,
+  bookHeight,
   showSideSlider,
   width,
   sliderHeight,
@@ -525,7 +527,7 @@ export default function HomeHeroBookLayout({
 }: HomeHeroBookLayoutProps) {
   const withBookFrame = isWeb && showSideSlider
   const showChapterHeader = showSideSlider && !isNarrowLayout
-  const showPageNotes = showSideSlider && !isNarrowLayout
+  const showPageNotes = showSideSlider && !isNarrowLayout && bookHeight >= 720
 
   return (
     <View style={styles.heroShell}>
@@ -582,35 +584,35 @@ export default function HomeHeroBookLayout({
                 />
               )}
 
-              <View style={{ marginTop: 16, marginBottom: 12 }}>
+              <View style={styles.heroControls}>
                 <HomeHeroSearchBar
                   colors={colors}
                   isMobile={isMobile}
                   onSubmit={onSearchSubmit}
                 />
-              </View>
 
-              <View testID="home-hero-cta-row" style={styles.buttonsContainer}>
-                <Button
-                  onPress={onOpenSearch}
-                  label="Смотреть маршруты"
-                  loading={pendingAction === 'search'}
-                  variant="primary"
-                  size="md"
-                  fullWidth={useStackedCtas}
-                  icon={
-                    <Feather
-                      name="compass"
-                      size={16}
-                      color={colors.textOnPrimary}
-                    />
-                  }
-                  style={[styles.primaryButton, styles.singleCtaButton]}
-                  labelStyle={styles.primaryButtonText}
-                  hoverStyle={styles.primaryButtonHover}
-                  pressedStyle={styles.primaryButtonHover}
-                  accessibilityLabel="Смотреть маршруты"
-                />
+                <View testID="home-hero-cta-row" style={styles.buttonsContainer}>
+                  <Button
+                    onPress={onOpenSearch}
+                    label="Смотреть маршруты"
+                    loading={pendingAction === 'search'}
+                    variant="primary"
+                    size="md"
+                    fullWidth={useStackedCtas}
+                    icon={
+                      <Feather
+                        name="compass"
+                        size={16}
+                        color={colors.textOnPrimary}
+                      />
+                    }
+                    style={[styles.primaryButton, styles.singleCtaButton]}
+                    labelStyle={styles.primaryButtonText}
+                    hoverStyle={styles.primaryButtonHover}
+                    pressedStyle={styles.primaryButtonHover}
+                    accessibilityLabel="Смотреть маршруты"
+                  />
+                </View>
               </View>
             </View>
 

@@ -210,7 +210,13 @@ function getArg(args, name, fallback) {
 function fetchJson(url) {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith('https') ? https : http;
-    const opts = { timeout: 30000 };
+    // Some CDNs key the cache on the path only and ignore the `?_cb=` query, so
+    // a just-edited article can read stale. No-cache headers force a fresh body
+    // and keep batch selection accurate (no re-picking already-fixed articles).
+    const opts = {
+      timeout: 30000,
+      headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+    };
     if (mod === https) opts.rejectUnauthorized = false;
     const req = mod.get(url, opts, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {

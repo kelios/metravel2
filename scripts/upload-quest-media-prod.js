@@ -8,7 +8,7 @@
  *   PATCH /api/quest-finales/{id}/ → video (file)
  *
  * NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/upload-quest-media-prod.js \
- *   --api-url=https://metravel.by --token=YOUR_TOKEN
+ *   --api-url=https://metravel.by --token=YOUR_TOKEN --quest-id=warsaw-syrenka
  */
 
 const fs = require('fs');
@@ -18,8 +18,10 @@ const args = process.argv.slice(2);
 const isDryRun = args.includes('--dry-run');
 const apiUrlArg = args.find(a => a.startsWith('--api-url='));
 const tokenArg = args.find(a => a.startsWith('--token='));
+const questIdArg = args.find(a => a.startsWith('--quest-id='));
 const API_BASE = apiUrlArg ? apiUrlArg.split('=')[1] : 'https://metravel.by';
 const TOKEN = tokenArg ? tokenArg.split('=').slice(1).join('=') : null;
+const ONLY_QUEST_ID = questIdArg ? questIdArg.split('=').slice(1).join('=').trim() : null;
 
 const ASSETS_DIR = path.resolve(__dirname, '..', 'assets', 'quests');
 
@@ -79,7 +81,15 @@ const QUEST_MEDIA = [
 async function main() {
     console.log(`🚀 Upload quest media → ${API_BASE} (${isDryRun ? 'DRY RUN' : 'LIVE'})\n`);
 
-    for (const qm of QUEST_MEDIA) {
+    const selectedQuestMedia = ONLY_QUEST_ID
+        ? QUEST_MEDIA.filter(qm => qm.quest_id === ONLY_QUEST_ID)
+        : QUEST_MEDIA;
+
+    if (ONLY_QUEST_ID && selectedQuestMedia.length === 0) {
+        throw new Error(`Unknown quest id: ${ONLY_QUEST_ID}`);
+    }
+
+    for (const qm of selectedQuestMedia) {
         const dir = path.join(ASSETS_DIR, qm.assetsDir);
         console.log(`\n📋 ${qm.quest_id}`);
 

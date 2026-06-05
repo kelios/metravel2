@@ -3,7 +3,12 @@
  * The asset intentionally has no typography: quest cards render text in UI. */
 const fs = require('fs');
 const path = require('path');
-const { Resvg } = require('@resvg/resvg-js');
+let Resvg = null;
+try {
+  ({ Resvg } = require('@resvg/resvg-js'));
+} catch {
+  Resvg = null;
+}
 
 const W = 1536;
 const H = 1024;
@@ -87,9 +92,9 @@ function mermaid() {
       <circle cx="-2" cy="-132" r="27" fill="url(#mermaidFill)"/>
       <path d="M-24,-142 C-66,-112 -58,-52 -30,-22 C-38,-72 -28,-112 8,-144 Z" fill="url(#mermaidFill)" opacity="0.88"/>
       <path d="M14,-126 C48,-102 52,-62 32,-30 C30,-72 24,-102 -2,-130 Z" fill="url(#mermaidFill)" opacity="0.88"/>
-      <path d="M12,-100 C58,-132 78,-184 92,-238" stroke="#f5d48a" stroke-width="12" stroke-linecap="round"/>
-      <path d="M88,-246 L102,-246 L98,-144 L84,-144 Z" fill="#f5d48a"/>
-      <path d="M72,-154 L112,-154" stroke="#f5d48a" stroke-width="8" stroke-linecap="round"/>
+      <path d="M12,-100 C34,-128 50,-150 62,-168" stroke="#f5d48a" stroke-width="12" stroke-linecap="round"/>
+      <path d="M58,-272 L72,-272 L68,-166 L62,-150 L56,-166 Z" fill="#f5d48a"/>
+      <path d="M42,-166 L88,-166" stroke="#f5d48a" stroke-width="8" stroke-linecap="round"/>
       <path d="M-24,-92 C-72,-82 -100,-50 -110,-6" stroke="#f5d48a" stroke-width="12" stroke-linecap="round"/>
       <path d="M-122,-6 C-114,-42 -72,-52 -54,-18 C-64,26 -106,34 -122,-6 Z" fill="url(#shieldFill)" stroke="#f5d48a" stroke-width="6"/>
       <path d="M-92,-38 L-92,22 M-118,-8 L-66,-8" stroke="#f5d48a" stroke-width="4" opacity="0.72"/>
@@ -211,11 +216,39 @@ const outDir = path.resolve(__dirname, '..', 'assets', 'quests', 'warsawSyrenka'
 fs.mkdirSync(outDir, { recursive: true });
 const outPath = path.join(outDir, 'cover.png');
 
-const resvg = new Resvg(svg, {
-  fitTo: { mode: 'width', value: W },
-  background: '#071719',
-});
+async function renderWithPlaywright() {
+  const { chromium } = require('playwright');
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
+    const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    await page.setContent(
+      `<!doctype html><html><head><style>html,body{margin:0;width:${W}px;height:${H}px;background:#071719;overflow:hidden}img{display:block;width:${W}px;height:${H}px}</style></head><body><img src="${dataUrl}" alt=""></body></html>`,
+      { waitUntil: 'load' },
+    );
+    return await page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: W, height: H } });
+  } finally {
+    await browser.close();
+  }
+}
 
-const png = resvg.render().asPng();
-fs.writeFileSync(outPath, png);
-console.log('written', outPath, `${(png.length / 1024).toFixed(0)}KB`);
+async function main() {
+  let png;
+  if (Resvg) {
+    const resvg = new Resvg(svg, {
+      fitTo: { mode: 'width', value: W },
+      background: '#071719',
+    });
+    png = resvg.render().asPng();
+  } else {
+    png = await renderWithPlaywright();
+  }
+
+  fs.writeFileSync(outPath, png);
+  console.log('written', outPath, `${(png.length / 1024).toFixed(0)}KB`);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

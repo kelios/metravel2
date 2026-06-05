@@ -31,7 +31,7 @@ export const createCtaStyles = (ctx: HeroStyleContext) => {
       width: '100%',
       flexWrap: 'nowrap',
       flexShrink: 0,
-      marginTop: isMobile ? 8 : showSideSlider ? 12 : 12,
+      marginTop: isMobile ? 8 : showSideSlider ? 0 : 12,
       ...Platform.select({
         web: showSideSlider
           ? ({

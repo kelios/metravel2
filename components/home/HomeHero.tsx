@@ -314,6 +314,7 @@ const HomeHero = memo(function HomeHero({
             isWeb={IS_WEB}
             isNarrowLayout={isNarrowLayout}
             isTabletLayout={isTabletLayout}
+            bookHeight={bookHeight}
             showSideSlider={showSideSlider}
             width={width}
             sliderHeight={sliderHeight}

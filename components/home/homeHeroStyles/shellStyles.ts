@@ -153,8 +153,8 @@ export const createHeroShellStyles = (ctx: HeroStyleContext) => {
               paddingBottom: leftPagePaddingBottom,
               boxSizing: 'border-box',
               overflow: 'hidden',
-              display: 'grid',
-              gridTemplateRows: 'auto 1fr auto',
+              display: 'flex',
+              flexDirection: 'column',
               alignSelf: 'stretch',
               height: '100%',
               maxHeight: '100%',
@@ -173,7 +173,6 @@ export const createHeroShellStyles = (ctx: HeroStyleContext) => {
       }),
     },
     leftPageFrame: {
-      // Kept for testID and structure — zero extra padding, grid already on heroSection
       width: '100%',
       flex: 1,
       minHeight: 0,
@@ -182,7 +181,25 @@ export const createHeroShellStyles = (ctx: HeroStyleContext) => {
       ...Platform.select({
         web: showSideSlider
           ? ({
-              display: 'contents', // grid passthrough — children participate in heroSection's grid
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'flex-start',
+              maxHeight: '100%',
+            } as any)
+          : {},
+      }),
+    },
+    heroControls: {
+      width: '100%',
+      flexShrink: 0,
+      marginTop: showSideSlider ? (ctx.isCompactBookLayout ? 12 : 16) : 16,
+      marginBottom: showSideSlider ? 0 : 12,
+      gap: showSideSlider ? (ctx.isCompactBookLayout ? 10 : 12) : 12,
+      ...Platform.select({
+        web: showSideSlider
+          ? ({
+              display: 'flex',
+              flexDirection: 'column',
             } as any)
           : {},
       }),
