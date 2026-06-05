@@ -527,7 +527,7 @@ export default function HomeHeroBookLayout({
 }: HomeHeroBookLayoutProps) {
   const withBookFrame = isWeb && showSideSlider
   const showChapterHeader = showSideSlider && !isNarrowLayout
-  const showPageNotes = showSideSlider && !isNarrowLayout && bookHeight >= 720
+  const showPageNotes = showSideSlider && !isNarrowLayout && bookHeight >= 780
 
   return (
     <View style={styles.heroShell}>

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
-import { Platform, StyleSheet, Text, View } from 'react-native'
-import { Link } from 'expo-router'
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { useRouter } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
@@ -27,6 +27,7 @@ type Props = {
  * Ведёт на /quests/{cityId}/{quest_id}.
  */
 export function QuestForCityCard({ quest, eyebrow = 'Городской квест-маршрут', style }: Props) {
+  const router = useRouter()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
 
@@ -37,13 +38,17 @@ export function QuestForCityCard({ quest, eyebrow = 'Городской квес
   if (quest.difficulty && DIFFICULTY_LABEL[quest.difficulty]) meta.push(DIFFICULTY_LABEL[quest.difficulty])
 
   const cityLabel = quest.cityName ? `по городу ${quest.cityName}` : 'по этому городу'
-  const cardStyle = StyleSheet.flatten([styles.card, style])
   const coverUri = typeof quest.cover === 'string' ? quest.cover.trim() : ''
 
   return (
-    <Link
-      href={href as any}
-      style={cardStyle}
+    <Pressable
+      onPress={() => router.push(href as any)}
+      style={({ pressed, hovered }: any) => [
+        styles.card,
+        style,
+        (pressed || hovered) && styles.cardHover,
+      ]}
+      accessibilityRole="link"
       accessibilityLabel={`Пройти квест: ${quest.title}`}
     >
       <View style={styles.media}>
@@ -81,7 +86,7 @@ export function QuestForCityCard({ quest, eyebrow = 'Городской квес
           <Text style={styles.ctaText}>{`Пройти квест ${cityLabel} →`}</Text>
         </View>
       </View>
-    </Link>
+    </Pressable>
   )
 }
 
@@ -89,16 +94,30 @@ function createStyles(colors: ThemedColors) {
   return StyleSheet.create({
     card: {
       flexDirection: 'row',
+      alignItems: 'stretch',
+      minHeight: CARD_MEDIA_SIZE,
       borderRadius: 16,
       overflow: 'hidden',
       backgroundColor: colors.surface ?? '#fff',
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border ?? 'rgba(0,0,0,0.08)',
-      ...(Platform.OS === 'web' ? { cursor: 'pointer' } : null),
+      ...(Platform.OS === 'web'
+        ? {
+            cursor: 'pointer',
+            transition: 'border-color 0.18s ease, box-shadow 0.18s ease',
+          }
+        : null),
+    },
+    cardHover: {
+      borderColor: colors.primaryAlpha30 ?? colors.primary ?? 'rgba(0,0,0,0.12)',
+      ...Platform.select({
+        web: { boxShadow: '0 3px 12px rgba(15, 23, 42, 0.06)' } as any,
+      }),
     },
     media: {
       width: CARD_MEDIA_SIZE,
       height: CARD_MEDIA_SIZE,
+      flexShrink: 0,
       backgroundColor: colors.border ?? 'rgba(0,0,0,0.06)',
     },
     image: { width: '100%', height: '100%' },
@@ -109,6 +128,7 @@ function createStyles(colors: ThemedColors) {
     },
     body: {
       flex: 1,
+      minWidth: 0,
       paddingVertical: 14,
       paddingHorizontal: 16,
       justifyContent: 'center',

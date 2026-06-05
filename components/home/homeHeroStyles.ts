@@ -43,10 +43,10 @@ export const createHomeHeroStyles = ({
   // Book occupies ~90vw capped at 1400px. Left page ≈ 54% of that ≈ 27vw.
   // Title: fluid 24px → 42px across 1280–2560px viewport range
   const desktopBookTitleSize = hasBookLayout
-    ? `clamp(24px, ${isNarrowDesktopBook ? '2.1vw' : isUltraWideBook ? '2.8vw' : isLargeDesktopBook ? '2.5vw' : '2.3vw'}, ${isNarrowDesktopBook ? 36 : isUltraWideBook ? 74 : isLargeDesktopBook ? 62 : 42}px)`
+    ? `clamp(24px, ${isNarrowDesktopBook ? '1.9vw' : isUltraWideBook ? '2.8vw' : isLargeDesktopBook ? '2.4vw' : '2.1vw'}, ${isNarrowDesktopBook ? 32 : isUltraWideBook ? 74 : isLargeDesktopBook ? 58 : 38}px)`
     : '54px'
   const desktopBookTitleLineHeight = hasBookLayout
-    ? `clamp(30px, ${isNarrowDesktopBook ? '2.6vw' : isUltraWideBook ? '3.4vw' : isLargeDesktopBook ? '3.1vw' : '2.9vw'}, ${isNarrowDesktopBook ? 40 : isUltraWideBook ? 82 : isLargeDesktopBook ? 68 : 50}px)`
+    ? `clamp(29px, ${isNarrowDesktopBook ? '2.35vw' : isUltraWideBook ? '3.4vw' : isLargeDesktopBook ? '3vw' : '2.65vw'}, ${isNarrowDesktopBook ? 36 : isUltraWideBook ? 82 : isLargeDesktopBook ? 64 : 44}px)`
     : '64px'
   const desktopBookSubtitleSize = hasBookLayout
     ? `clamp(12px, ${isNarrowDesktopBook ? '0.85vw' : isUltraWideBook ? '1.1vw' : isLargeDesktopBook ? '0.95vw' : '0.9vw'}, ${isNarrowDesktopBook ? 13 : isUltraWideBook ? 22 : isLargeDesktopBook ? 18 : 14}px)`
@@ -78,7 +78,9 @@ export const createHomeHeroStyles = ({
       ? '8%'
       : isLargeDesktopBook
         ? '8.5%'
-        : '9%'
+        : isNarrowDesktopBook
+          ? '7.5%'
+          : '8%'
     : 48
   const leftPageWidth = showSideSlider
     ? isNarrowDesktopBook
