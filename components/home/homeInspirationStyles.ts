@@ -411,13 +411,13 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
   quickFiltersTitleAccent: {
     color: colors.primary,
   },
-  quickFiltersSubtitle: { color: colors.textMuted, fontSize: isMobile ? 14 : 16, lineHeight: isMobile ? 21 : 24, maxWidth: 560, letterSpacing: 0 },
+  quickFiltersSubtitle: { color: colors.textMuted, fontSize: isMobile ? 14 : 16, lineHeight: isMobile ? 21 : 24, maxWidth: 640, letterSpacing: 0 },
 
   quickFiltersArticlesButton: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     borderRadius: DESIGN_TOKENS.radii.pill, borderWidth: 0,
     backgroundColor: colors.primary,
-    paddingHorizontal: isMobile ? 18 : 22, paddingVertical: isMobile ? 11 : 13,
+    paddingHorizontal: isMobile ? 18 : 20, paddingVertical: isMobile ? 11 : 12,
     flexShrink: 0, alignSelf: isMobile ? 'flex-start' : 'auto',
     ...Platform.select({ web: {
       transition: 'transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease',
@@ -440,7 +440,7 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
       web: !isMobile
         ? ({
             display: 'grid',
-            gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+            gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
             alignItems: 'stretch',
           } as any)
         : null,
@@ -455,10 +455,10 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
     gap: isMobile ? 12 : 14,
     flexBasis: isMobile ? 'auto' : '47%',
     flexGrow: 1,
+    minHeight: isMobile ? 0 : 178,
     ...Platform.select({ web: {
       boxShadow: '0 1px 5px rgba(15, 23, 42, 0.035)',
       transition: 'box-shadow 0.18s ease, border-color 0.18s ease',
-      gridColumn: 'span 2',
     } as any }),
   },
   // Last row: items 4 & 5 span 3 cols each → centered look
@@ -473,7 +473,7 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
     ...Platform.select({ web: { boxShadow: `0 3px 12px ${colors.primary}14` } }),
   },
 
-  filterGroupCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  filterGroupCardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   filterGroupIconWrap: {
     width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
     borderWidth: 1,
@@ -481,9 +481,11 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
     backgroundColor: colors.primarySoft,
   },
   filterGroupIconColor: { color: colors.primary },
-  filterGroupTitleText: { color: colors.text, fontSize: isMobile ? 15 : 16, fontWeight: '700', letterSpacing: 0, flexShrink: 1 },
+  filterGroupTitleBlock: { flex: 1, minWidth: 0, gap: 3 },
+  filterGroupTitleText: { color: colors.text, fontSize: isMobile ? 16 : 17, lineHeight: isMobile ? 21 : 22, fontWeight: '700', letterSpacing: 0, flexShrink: 1 },
+  filterGroupDescriptionText: { color: colors.textMuted, fontSize: isMobile ? 13 : 14, lineHeight: isMobile ? 18 : 19 },
 
-  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: isMobile ? 8 : 8 },
+  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: isMobile ? 8 : 8, marginTop: 'auto' },
   chipsWrapMobile: { width: '100%' },
 
   chip: {

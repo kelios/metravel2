@@ -47,71 +47,54 @@ type FilterChip = {
 
 type FilterGroup = {
   title: string
+  description: string
   icon: string
   chips: FilterChip[]
 }
 
 const FILTER_GROUPS: FilterGroup[] = [
   {
-    title: 'Тип маршрута',
-    icon: 'compass',
-    chips: [
-      { label: 'Поход / хайкинг', filters: { categories: [2, 21] } },
-      { label: 'Город', filters: { categories: [19, 20] } },
-      { label: 'Треккинг', filters: { categories: [22] } },
-      { label: 'Велопоход', filters: { categories: [7] } },
-      { label: 'Автопутешествие', filters: { categories: [6] } },
-    ],
-  },
-  {
-    title: 'Ночлег',
-    icon: 'moon',
+    title: 'На выходные',
+    description: 'Маршруты без долгого планирования',
+    icon: 'calendar',
     chips: [
       { label: 'Без ночлега', filters: { over_nights_stay: [8] }, route: '/search' },
-      { label: 'Палатка', filters: { over_nights_stay: [1] }, route: '/search' },
-      { label: 'Гостиница', filters: { over_nights_stay: [2] }, route: '/search' },
-      { label: 'Квартира / дом', filters: { over_nights_stay: [3, 4] }, route: '/search' },
-    ],
-  },
-  {
-    title: 'Сезон',
-    icon: 'sun',
-    chips: [
-      { label: 'Весна', filters: { month: [3, 4, 5] }, route: '/search' },
+      { label: 'До 100 км', filters: { radius: 100 }, route: '/map' },
       { label: 'Лето', filters: { month: [6, 7, 8] }, route: '/search' },
-      { label: 'Осень', filters: { month: [9, 10, 11] }, route: '/search' },
-      { label: 'Зима', filters: { month: [12, 1, 2] }, route: '/search' },
     ],
   },
   {
-    title: 'Что посмотреть',
-    icon: 'eye',
-    chips: [
-      { label: 'Озеро', filters: { categoryTravelAddress: [84] }, route: '/search' },
-      { label: 'Гора', filters: { categoryTravelAddress: [26] }, route: '/search' },
-      { label: 'Водопад', filters: { categoryTravelAddress: [20] }, route: '/search' },
-      { label: 'Замок', filters: { categoryTravelAddress: [43] }, route: '/search' },
-    ],
-  },
-  {
-    title: 'Расстояние на карте',
+    title: 'Рядом на карте',
+    description: 'Идеи поблизости, если хочется уехать сегодня',
     icon: 'map-pin',
     chips: [
       { label: 'До 30 км', filters: { radius: 30 }, route: '/map' },
       { label: 'До 60 км', filters: { radius: 60 }, route: '/map' },
-      { label: 'До 100 км', filters: { radius: 100 }, route: '/map' },
-      { label: 'До 200 км', filters: { radius: 200 }, route: '/map' },
+    ],
+  },
+  {
+    title: 'Природа',
+    description: 'Озера, горы и водопады в готовых маршрутах',
+    icon: 'image',
+    chips: [
+      { label: 'Озеро', filters: { categoryTravelAddress: [84] }, route: '/search' },
+      { label: 'Гора', filters: { categoryTravelAddress: [26] }, route: '/search' },
+      { label: 'Водопад', filters: { categoryTravelAddress: [20] }, route: '/search' },
+    ],
+  },
+  {
+    title: 'Город и квесты',
+    description: 'Прогулки, легенды и короткие городские маршруты',
+    icon: 'flag',
+    chips: [
+      { label: 'Город', filters: { categories: [19, 20] }, route: '/search' },
+      { label: 'Квесты', route: '/quests' },
+      { label: 'Замок', filters: { categoryTravelAddress: [43] }, route: '/search' },
     ],
   },
 ]
 
 type Styles = ReturnType<typeof createSectionsStyles>
-
-function getCardPositionStyle(styles: Styles, idx: number) {
-  if (idx === 3) return styles.filterGroupCardLastRowFirst
-  if (idx === 4) return styles.filterGroupCardLastRowSecond
-  return undefined
-}
 
 function FilterGroupCard({
   group,
@@ -120,7 +103,6 @@ function FilterGroupCard({
   onChipPress,
   styles,
   isMobile,
-  extraStyle,
 }: {
   group: FilterGroup
   selectedChip: string | null
@@ -128,13 +110,12 @@ function FilterGroupCard({
   onChipPress: (label: string, filters?: QuickFilterParams, route?: string) => void
   styles: Styles
   isMobile: boolean
-  extraStyle?: any
 }) {
   const [hovered, setHovered] = useState(false)
 
   return (
     <View
-      style={[styles.filterGroupCard, extraStyle, hovered && styles.filterGroupCardHover]}
+      style={[styles.filterGroupCard, hovered && styles.filterGroupCardHover]}
       {...(IS_WEB
         ? ({
             onMouseEnter: () => setHovered(true),
@@ -146,7 +127,10 @@ function FilterGroupCard({
         <View style={styles.filterGroupIconWrap}>
           <Feather name={group.icon as any} size={16} color={styles.filterGroupIconColor.color} />
         </View>
-        <Text style={styles.filterGroupTitleText}>{group.title}</Text>
+        <View style={styles.filterGroupTitleBlock}>
+          <Text style={styles.filterGroupTitleText}>{group.title}</Text>
+          <Text style={styles.filterGroupDescriptionText}>{group.description}</Text>
+        </View>
       </View>
       <View style={[styles.chipsWrap, isMobile && styles.chipsWrapMobile]}>
         {group.chips.map((chip) => {
@@ -156,7 +140,7 @@ function FilterGroupCard({
             <Pressable
               key={chip.label}
               onPress={() => onChipPress(chip.label, chip.filters, chip.route)}
-              disabled={isPending}
+                disabled={isPending}
               style={({ pressed, hovered: chipHovered }) => [
                 styles.chip,
                 isMobile && styles.chipMobile,
@@ -165,7 +149,7 @@ function FilterGroupCard({
                 isPending && styles.chipSelected,
               ]}
               accessibilityRole="button"
-              accessibilityLabel={`Фильтр ${chip.label}`}
+              accessibilityLabel={`Подбор ${chip.label}`}
               accessibilityState={{ selected: isSelected, busy: isPending, disabled: isPending }}
             >
               <Text style={[styles.chipText, (isSelected || isPending) && styles.chipTextSelected]}>
@@ -232,17 +216,17 @@ function HomeInspirationSections() {
               <View style={styles.quickFiltersHeaderLeft}>
                 <View style={styles.quickFiltersBadge}>
                   <Feather name="sliders" size={13} color={colors.primary} />
-                  <Text style={styles.quickFiltersBadgeText}>Подбор по фильтрам</Text>
+                  <Text style={styles.quickFiltersBadgeText}>Быстрый подбор</Text>
                 </View>
                 <Text style={styles.quickFiltersTitle}>
-                  Выберите поездку по своим параметрам
+                  Найдите маршрут под свой день
                 </Text>
                 <Text style={styles.quickFiltersSubtitle}>
-                  Формат, сезон, ночлег и расстояние — нажмите, чтобы открыть подходящие маршруты
+                  Выберите готовый сценарий — Metravel откроет подходящие поездки, квесты или карту рядом.
                 </Text>
               </View>
               <Button
-                label="Смотреть все маршруты"
+                label="Все маршруты"
                 onPress={handleOpenArticles}
                 loading={openingAllRoutes}
                 icon={<Feather name="arrow-right" size={16} color="#ffffff" />}
@@ -256,7 +240,7 @@ function HomeInspirationSections() {
             </View>
 
             <View style={styles.quickFiltersGrid}>
-              {FILTER_GROUPS.map((group, idx) => (
+              {FILTER_GROUPS.map((group) => (
                 <FilterGroupCard
                   key={group.title}
                   group={group}
@@ -265,7 +249,6 @@ function HomeInspirationSections() {
                   onChipPress={handleFilterPress}
                   styles={styles}
                   isMobile={isMobile}
-                  extraStyle={getCardPositionStyle(styles, idx)}
                 />
               ))}
             </View>
