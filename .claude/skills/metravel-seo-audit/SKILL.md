@@ -75,15 +75,19 @@ node scripts/seo-audit.js --user-id 1 --limit 50 --min-words 500
      добраться, билеты/часы «актуально на <год>, уточняйте», маршрут в цифрах),
      **Что рядом** — 2–4 ссылки `<a href="/travels/{slug}">…</a>` на соседние
      статьи автора (slug бери из `seo:audit --json`).
-4. Применяй БЕЗОПАСНЫМ апдейтером (эхом сохраняет publish/moderation/галерею/
-   точки/plus/minus, меняет только текст; встроенная проверка отката):
+4. Применяй БЕЗОПАСНЫМ редактором `scripts/seo-edit.js` (`npm run seo:edit`).
+   Он эхом сохраняет publish/moderation/галерею/точки/plus/minus, меняет только
+   текст, делает **бэкап** перед записью, после записи **верифицирует** и при
+   регрессии **авто-откатывается**:
    ```bash
-   python3 scripts/seo_apply.py --id <ID> --prepend-file lead.html --append-file blocks.html --dry-run
-   python3 scripts/seo_apply.py --id <ID> --prepend-file lead.html --append-file blocks.html
+   node scripts/seo-edit.js --id <ID> --prepend-file lead.html --append-file blocks.html --dry-run
+   node scripts/seo-edit.js --id <ID> --prepend-file lead.html --append-file blocks.html [--meta "…"]
+   node scripts/seo-edit.js --restore <ID>   # откатить из последнего бэкапа
    ```
+   Бэкапы — `scripts/.seo-backups/` (в .gitignore). Токен — `~/.metravel_token`,
+   секреты не логируй.
    НЕ используй `metravel_publish.py`/`_put_with_desc` на живых статьях — он
    снимает их с публикации (`publish=False`) и шлёт draft-placeholder'ы.
-   Токен — `~/.metravel_token`, секреты не логируй.
    `title-too-long` (смена `name`) меняет slug и ломает URL — НЕ трогай заголовки
    в этом потоке без отдельного редиректа.
 
@@ -99,7 +103,8 @@ node scripts/seo-audit.js --user-id 1 --limit 50 --min-words 500
 
 - `npm run seo:audit -- --limit <N>` повторно — проблемы по обновлённым статьям
   должны уйти.
-- `npx jest __tests__/scripts/seo-audit.test.ts` — зелёные тесты аудита.
+- `npx jest __tests__/scripts/seo-audit.test.ts __tests__/scripts/seo-edit.test.ts`
+  — зелёные тесты аудита и редактора.
 - После релиза статичные страницы `dist/prod/travels/{slug}.html` обязаны нести
   свой `<title>`, `meta description`, `og:image` и текст в HTML (генерит
   `npm run seo:generate-pages`); проверь `npm run test:seo:prod`.

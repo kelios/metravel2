@@ -146,3 +146,6 @@ sentry.properties
 
 # scratch/debug content (not part of app)
 travel-drafts/
+
+# seo-edit.js article backups (local rollback snapshots)
+scripts/.seo-backups/

@@ -69,6 +69,7 @@
     "serve:prod": "node .claude/prod-server.js 8081",
     "seo:generate-pages": "node scripts/generate-seo-pages.js --dist dist/prod",
     "seo:audit": "node scripts/seo-audit.js --user-id 1",
+    "seo:edit": "node scripts/seo-edit.js",
     "fetch:lasy-data": "node scripts/fetch-lasy-wfs-data.js",
     "analyze:bundle": "node scripts/analyze-bundle.js",
     "guard:bundle-budget": "node scripts/guard-bundle-budget.js",

@@ -35,9 +35,10 @@ model: sonnet
 2. **Улучшение по статье**: `GET /api/travels/{id}/` → проверь факты веб-поиском →
    подготовь lead (в начало, под `weak-lead` = будущий сниппет) и blocks (в конец:
    история+легенды+практика+`<a href="/travels/{slug}">` под thin/no-headings/
-   no-internal-links). Применяй ТОЛЬКО безопасным апдейтером:
-   `python3 scripts/seo_apply.py --id <ID> --prepend-file lead.html --append-file blocks.html`
-   (сперва `--dry-run`). Он эхом сохраняет publish/галерею/точки и проверяет откат.
+   no-internal-links). Применяй ТОЛЬКО безопасным редактором:
+   `node scripts/seo-edit.js --id <ID> --prepend-file lead.html --append-file blocks.html`
+   (сперва `--dry-run`). Он делает бэкап, эхом сохраняет publish/галерею/точки,
+   верифицирует и авто-откатывается при регрессии; откат вручную — `--restore <ID>`.
    НЕ используй `metravel_publish.py` на живых статьях (снимет с публикации).
    `meta_description` фронтенд игнорит — сниппет идёт из начала тела, поэтому чинь
    ЛИД, а не поле. Заголовки (`name`) не меняй — это ломает slug/URL. Секреты не логируй.
