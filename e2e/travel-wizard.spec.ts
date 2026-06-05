@@ -285,25 +285,50 @@ const ensureCanCreateTravel = async (page: Page): Promise<boolean> => {
   return true;
 };
 
-const openWizardActionMenu = async (page: Page) => {
-  const trigger = page
-    .getByTestId('travel-wizard-more')
-    .or(page.getByRole('button', { name: /Открыть меню действий/i }))
-    .first();
-  await expect(trigger).toBeVisible({ timeout: 15_000 });
-  const expanded = await trigger.getAttribute('aria-expanded').catch(() => null);
-  if (expanded !== 'true') {
-    await trigger.click();
+const dismissDraftRecoveryDialog = async (page: Page) => {
+  // Autosave can write a draft mid-test; if the wizard remounts under load the
+  // recovery dialog reappears and its overlay intercepts header clicks.
+  const dialogButton = page.getByLabel('Открыть сохранённую версию').first();
+  if (await dialogButton.isVisible().catch(() => false)) {
+    await dialogButton.click().catch(() => null);
+    await dialogButton.waitFor({ state: 'hidden', timeout: 5_000 }).catch(() => null);
   }
 };
 
+// Under heavy parallel load the wizard can remount and resurface the draft-recovery
+// dialog whose full-screen overlay intercepts clicks. Auto-dismiss it whenever it
+// appears so it never blocks an interaction (any click, milestone, menu, etc.).
+const installDraftRecoveryAutoDismiss = async (page: Page) => {
+  await page.addLocatorHandler(
+    page.getByLabel('Открыть сохранённую версию'),
+    async (locator) => {
+      await locator.click({ timeout: 5_000 }).catch(() => null);
+    },
+    { noWaitAfter: true }
+  );
+};
+
+const openWizardActionMenu = async (page: Page) => {
+  // Label toggles between "Открыть"/"Закрыть меню действий", so match both.
+  const trigger = page
+    .getByTestId('travel-wizard-more')
+    .or(page.getByRole('button', { name: /меню действий/i }))
+    .first();
+  await expect(trigger).toBeVisible({ timeout: 15_000 });
+  await dismissDraftRecoveryDialog(page);
+  await trigger.click({ timeout: 5_000 }).catch(() => null);
+};
+
 const clickWizardMenuAction = async (page: Page, testId: string, name: RegExp) => {
-  let action = page.getByTestId(testId).or(page.getByRole('menuitem', { name })).first();
-  if (!(await action.isVisible().catch(() => false))) {
-    await openWizardActionMenu(page);
-    action = page.getByTestId(testId).or(page.getByRole('menuitem', { name })).first();
-  }
-  await expect(action).toBeVisible({ timeout: 15_000 });
+  const action = page.getByTestId(testId).or(page.getByRole('menuitem', { name })).first();
+  // Signal-based retry: a transient draft-recovery overlay can swallow the open
+  // click under load, so keep opening the menu until the action is visible.
+  await expect(async () => {
+    if (!(await action.isVisible().catch(() => false))) {
+      await openWizardActionMenu(page);
+    }
+    await expect(action).toBeVisible({ timeout: 3_000 });
+  }).toPass({ timeout: 20_000 });
   await action.click();
 };
 
@@ -636,6 +661,7 @@ test.describe('Создание путешествия - Полный flow', () 
         // ignore
       }
     });
+    await installDraftRecoveryAutoDismiss(page);
     await maybeMockTravelUpsert(page);
     await maybeMockTravelFilters(page);
     await maybeMockNominatimSearch(page);
@@ -1412,6 +1438,7 @@ test.describe('Валидация и ошибки', () => {
       isSuperuser: 'false',
     });
 
+    await installDraftRecoveryAutoDismiss(page);
     await maybeMockTravelUpsert(page);
     await maybeMockTravelFilters(page);
     await maybeMockNominatimSearch(page);
@@ -1537,6 +1564,7 @@ test.describe('Регрессии: web стабильность wizard', () => {
         // ignore
       }
     });
+    await installDraftRecoveryAutoDismiss(page);
     await maybeMockTravelUpsert(page);
     await maybeMockTravelFilters(page);
     await maybeMockNominatimSearch(page);

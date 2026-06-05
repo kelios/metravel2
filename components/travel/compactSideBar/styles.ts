@@ -247,7 +247,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       paddingHorizontal: 12,
     },
     allTravelsButtonLabel: {
-      color: colors.primary,
+      color: colors.primaryText,
       fontWeight: '700',
       fontSize: 13,
       textAlign: 'center',

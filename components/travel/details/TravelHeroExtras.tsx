@@ -24,8 +24,8 @@ export const TravelHeroExtras: React.FC<{
     <>
       <View
         testID="travel-details-quick-facts"
-        accessibilityRole="none"
-        accessibilityLabel="Краткие факты"
+        role="group"
+        aria-label="Краткие факты"
         style={[
           styles.sectionContainer,
           styles.contentStable,
