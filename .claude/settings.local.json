@@ -50,7 +50,8 @@
       "Bash(curl -sS -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8082/search --max-time 60)",
       "Bash(curl -s -m 240 -o /dev/null -w \"bundle HTTP %{http_code} in %{time_total}s\\\\n\" \"http://localhost:8081/index.bundle?platform=web&dev=true\")",
       "Bash(curl -s -m 200 -o /dev/null -w \"HTTP %{http_code} %{time_total}s\\\\n\" \"http://localhost:8081/\")",
-      "Bash(curl -s -m 200 -o /dev/null -w \"HTTP %{http_code} %{time_total}s\\\\n\" \"http://localhost:8081/profile\")"
+      "Bash(curl -s -m 200 -o /dev/null -w \"HTTP %{http_code} %{time_total}s\\\\n\" \"http://localhost:8081/profile\")",
+      "Bash(curl -s \"https://metravel.by/api/quests/\" -H \"Accept: application/json\" --max-time 30)"
     ]
   }
 }

@@ -1,6 +1,7 @@
 import type { BookSettings } from '@/components/export/BookSettingsModal'
 import type { TravelForBook } from '@/types/pdf-export'
 
+import { getAtlasPageCount, shouldRenderAtlas } from './atlasPages'
 import { getTocPageCount, TOC_ITEMS_PER_PAGE } from './bookData'
 import type { NormalizedLocation, TravelSectionMeta } from './types'
 
@@ -16,6 +17,7 @@ type AssembleBookPagesArgs = {
     totalCount: number,
     startIndex: number,
   ) => string
+  renderAtlasPages: (meta: TravelSectionMeta[], startPageNumber: number) => string[]
   renderSeparatorPage: (
     travel: TravelForBook,
     travelIndex: number,
@@ -44,6 +46,7 @@ export async function assembleBookPages({
   settings,
   sortedTravels,
   renderTocPage,
+  renderAtlasPages,
   renderSeparatorPage,
   renderTravelPhotoPage,
   renderTravelContentPage,
@@ -53,7 +56,10 @@ export async function assembleBookPages({
   renderFinalPage,
 }: AssembleBookPagesArgs): Promise<string[]> {
   const pages: string[] = [coverPage]
-  let currentPage = settings.includeToc ? 2 + getTocPageCount(meta.length) : 2
+  const atlasEnabled = shouldRenderAtlas(meta, settings.includeMap)
+  const atlasPageCount = atlasEnabled ? getAtlasPageCount(meta) : 0
+  let currentPage =
+    (settings.includeToc ? 2 + getTocPageCount(meta.length) : 2) + atlasPageCount
 
   if (settings.includeToc) {
     const totalCount = meta.length
@@ -63,6 +69,12 @@ export async function assembleBookPages({
       const end = start + TOC_ITEMS_PER_PAGE
       pages.push(renderTocPage(meta.slice(start, end), 2 + pageIndex, totalCount, start))
     }
+  }
+
+  if (atlasEnabled) {
+    const atlasStartPage = settings.includeToc ? 2 + getTocPageCount(meta.length) : 2
+    const atlasPages = renderAtlasPages(meta, atlasStartPage)
+    pages.push(...atlasPages)
   }
 
   const useSeparators = meta.length >= 3

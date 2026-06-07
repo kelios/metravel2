@@ -45,7 +45,7 @@ describe('Footer', () => {
     const { getByTestId } = render(<Footer />)
     expect(getByTestId('footer-item-home')).toBeTruthy()
     expect(getByTestId('footer-item-map')).toBeTruthy()
-    expect(getByTestId('footer-item-places')).toBeTruthy()
+    expect(getByTestId('footer-item-quests')).toBeTruthy()
     expect(getByTestId('footer-item-favorites')).toBeTruthy()
     expect(getByTestId('footer-item-more')).toBeTruthy()
   })

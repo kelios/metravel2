@@ -21,6 +21,7 @@ settings.json
 .env.preprod
 .env.prod
 .env.e2e
+.env*.example
 .expo
 .expo-shared/
 .idea
@@ -94,6 +95,7 @@ build/
 .swc/
 .turbo/
 .parcel-cache/
+.cache/
 /playwright-screenshots/
 nginx/ssl/
 /nginx/ssl/fullchain.pem

@@ -22,6 +22,7 @@ import {
 } from './bookData';
 import type { NormalizedLocation, TravelSectionMeta } from './types';
 
+import { renderAtlasPages as runtimeRenderAtlasPages } from './atlasPages';
 import { assembleBookPages } from './pdfPageAssembly';
 import { renderChecklistPageSection, renderTocPageSection } from './pdfSectionRenderers';
 import {
@@ -172,6 +173,8 @@ export class EnhancedPdfGeneratorBase {
       sortedTravels,
       renderTocPage: (tocMeta, pageNumber, totalCount, startIndex) =>
         this.renderTocPage(tocMeta, pageNumber, totalCount, startIndex),
+      renderAtlasPages: (atlasMeta, startPageNumber) =>
+        this.renderAtlasPages(atlasMeta, startPageNumber, settings),
       renderSeparatorPage: (travel, travelIndex, totalTravels) =>
         this.renderSeparatorPage(travel, travelIndex, totalTravels),
       renderTravelPhotoPage: (travel, pageNumber) => this.renderTravelPhotoPage(travel, pageNumber),
@@ -357,6 +360,24 @@ export class EnhancedPdfGeneratorBase {
 
   private calculateRouteDistanceFromPreview(preview: import('@/types/travelRoutes').ParsedRoutePreview): number {
     return sharedCalculateRouteDistanceFromPreview(preview);
+  }
+
+  /**
+   * Рендерит страницы «Атласа путешествий»: глобальная карта со всеми точками книги
+   * + указатель «точки → страницы».
+   */
+  private renderAtlasPages(
+    meta: TravelSectionMeta[],
+    startPageNumber: number,
+    settings: BookSettings,
+  ): string[] {
+    return runtimeRenderAtlasPages({
+      meta,
+      theme: this.theme,
+      bookTitle: settings.title || 'MeTravel',
+      startPageNumber,
+      escapeHtml: (value) => this.escapeHtml(value),
+    });
   }
 
   /**

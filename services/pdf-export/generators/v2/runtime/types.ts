@@ -17,4 +17,6 @@ export interface TravelSectionMeta {
   hasMap: boolean;
   locations: NormalizedLocation[];
   startPage: number;
+  // Страница карты внутри travel-секции (для атласа/указателя точек). undefined, если карта не включена.
+  mapPage?: number;
 }

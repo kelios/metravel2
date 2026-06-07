@@ -1,4 +1,5 @@
 import {
+  googleAuthApi,
   loginApi,
   registration,
   resetPasswordLinkApi,
@@ -76,6 +77,57 @@ describe('src/api/auth.ts auth/password API', () => {
 
       expect(result).toBeNull();
       expect(devError).toHaveBeenCalled();
+    });
+  });
+
+  describe('googleAuthApi', () => {
+    it('отправляет trimmed id_token и возвращает данные пользователя', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true, status: 200 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        token: 'google-token',
+        refresh: 'refresh-token',
+        name: 'Google User',
+        email: 'google@example.com',
+        id: 7,
+        is_superuser: false,
+      } as any);
+
+      const result = await googleAuthApi('  google-id-token  ');
+
+      expect(result).toMatchObject({ token: 'google-token', id: 7 });
+      expect(fetchWithTimeout).toHaveBeenCalledWith(
+        expect.stringContaining('/user/google-login/'),
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ id_token: 'google-id-token' }),
+        }),
+        expect.any(Number),
+      );
+    });
+
+    it('показывает сообщение backend при ошибке Google авторизации', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 400 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ detail: 'Google token expired' } as any);
+
+      const result = await googleAuthApi('expired-token');
+
+      expect(result).toBeNull();
+      expect(devError).toHaveBeenCalled();
+    });
+
+    it('использует понятный fallback для пустого 401 от Google endpoint', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 401 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({} as any);
+
+      const result = await googleAuthApi('invalid-token');
+
+      expect(result).toBeNull();
+      expect(devError).toHaveBeenCalledWith(
+        'Google auth error:',
+        expect.objectContaining({
+          message: 'Google не подтвердил аккаунт. Попробуйте выбрать аккаунт ещё раз.',
+        }),
+      );
     });
   });
 

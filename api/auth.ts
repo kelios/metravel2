@@ -39,6 +39,38 @@ const SENDPASSWORD = `${URLAPI}/user/sendpassword/`;
 const GOOGLE_LOGIN = `${URLAPI}/user/google-login/`;
 const PUSH_TOKEN = `${URLAPI}/user/push-token/`;
 
+type GoogleAuthResponse = {
+    token?: string;
+    refresh?: string;
+    name?: string;
+    email?: string;
+    id?: string | number;
+    is_superuser?: boolean;
+    detail?: string;
+    error?: string;
+    message?: string;
+    non_field_errors?: string[];
+    id_token?: string[];
+};
+
+const getGoogleAuthErrorMessage = (payload: Partial<GoogleAuthResponse>, status: number): string => {
+    const directMessage = payload.detail || payload.error || payload.message;
+    if (directMessage) return directMessage;
+    if (Array.isArray(payload.non_field_errors) && payload.non_field_errors[0]) {
+        return payload.non_field_errors[0];
+    }
+    if (Array.isArray(payload.id_token) && payload.id_token[0]) {
+        return payload.id_token[0];
+    }
+    if (status === 401 || status === 403) {
+        return 'Google не подтвердил аккаунт. Попробуйте выбрать аккаунт ещё раз.';
+    }
+    if (status >= 500) {
+        return 'Сервис Google-входа временно недоступен. Попробуйте позже.';
+    }
+    return 'Не удалось войти через Google.';
+};
+
 export const loginApi = async (email: string, password: string): Promise<{
     token: string;
     refresh?: string;
@@ -333,12 +365,17 @@ export const googleAuthApi = async (idToken: string): Promise<{
     is_superuser: boolean;
 } | null> => {
     try {
+        const trimmedToken = String(idToken || '').trim();
+        if (!trimmedToken) {
+            throw new Error('Не удалось получить id_token от Google');
+        }
+
         const response = await retry(
             async () => {
                 return await fetchWithTimeout(GOOGLE_LOGIN, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id_token: idToken }),
+                    body: JSON.stringify({ id_token: trimmedToken }),
                 }, DEFAULT_TIMEOUT);
             },
             {
@@ -350,18 +387,11 @@ export const googleAuthApi = async (idToken: string): Promise<{
             }
         );
 
-        if (!response.ok) {
-            throw new Error('Ошибка авторизации через Google');
-        }
+        const json = await safeJsonParse<GoogleAuthResponse>(response, {});
 
-        const json = await safeJsonParse<{
-            token?: string;
-            refresh?: string;
-            name?: string;
-            email?: string;
-            id?: string | number;
-            is_superuser?: boolean;
-        }>(response, {});
+        if (!response.ok) {
+            throw new Error(getGoogleAuthErrorMessage(json, response.status));
+        }
 
         if (json.token) return json as {
             token: string;
@@ -371,7 +401,7 @@ export const googleAuthApi = async (idToken: string): Promise<{
             id: string | number;
             is_superuser: boolean;
         };
-        return null;
+        throw new Error('Сервер не вернул токен авторизации Google.');
     } catch (error: unknown) {
         devError('Google auth error:', error);
         const message = getUserFriendlyError(error);

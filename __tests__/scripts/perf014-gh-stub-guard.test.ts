@@ -43,7 +43,7 @@ describe('PERF-014 gesture-handler web stub — metro.config resolver', () => {
   it('resolves react-native-gesture-handler to the web stub by default on web', () => {
     delete process.env.DISABLE_GH_STUB
     const r = resolveRequest(ctx, 'react-native-gesture-handler', 'web')
-    expect(r.filePath.endsWith(STUB_REL)).toBe(true)
+    expect(r.filePath.replace(/\\/g, '/').endsWith(STUB_REL)).toBe(true)
   })
 
   it('falls through to the real module on web when DISABLE_GH_STUB=1', () => {

@@ -51,6 +51,14 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
     const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
     const [isGoogleButtonRendered, setIsGoogleButtonRendered] = useState(false);
     const buttonContainerRef = useRef<HTMLDivElement | null>(null);
+    const onSuccessRef = useRef(onSuccess);
+    const onErrorRef = useRef(onError);
+
+    useEffect(() => {
+        onSuccessRef.current = onSuccess;
+        onErrorRef.current = onError;
+    });
+
     const googleClientId = String(process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '').trim();
     const hasClientId = googleClientId.length > 0;
     const googleAvailability = useMemo(() => {
@@ -86,27 +94,35 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
 
     useEffect(() => {
         if (!hasClientId) {
-            onError?.('Google Sign-In не настроен: отсутствует EXPO_PUBLIC_GOOGLE_CLIENT_ID');
+            onErrorRef.current?.('Google Sign-In не настроен: отсутствует EXPO_PUBLIC_GOOGLE_CLIENT_ID');
             return;
         }
         if (!googleAvailability.enabled) return;
 
+        let cancelled = false;
+        const markLoaded = () => {
+            if (!cancelled) setIsGoogleLoaded(true);
+        };
+        const handleScriptError = () => {
+            if (!cancelled) onErrorRef.current?.('Не удалось загрузить Google Sign-In');
+        };
+        let attachedScript: HTMLScriptElement | null = null;
+
         const loadGoogleScript = () => {
             if (window.google?.accounts?.id) {
-                setIsGoogleLoaded(true);
+                markLoaded();
                 return;
             }
 
             const existingScript = document.getElementById(GOOGLE_GSI_SCRIPT_ID) as HTMLScriptElement | null;
             if (existingScript) {
                 if (window.google?.accounts?.id) {
-                    setIsGoogleLoaded(true);
+                    markLoaded();
                     return;
                 }
-                existingScript.addEventListener('load', () => setIsGoogleLoaded(true), { once: true });
-                existingScript.addEventListener('error', () => {
-                    onError?.('Не удалось загрузить Google Sign-In');
-                }, { once: true });
+                attachedScript = existingScript;
+                existingScript.addEventListener('load', markLoaded, { once: true });
+                existingScript.addEventListener('error', handleScriptError, { once: true });
                 return;
             }
 
@@ -115,17 +131,22 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
             script.src = 'https://accounts.google.com/gsi/client';
             script.async = true;
             script.defer = true;
-            script.onload = () => {
-                setIsGoogleLoaded(true);
-            };
-            script.onerror = () => {
-                onError?.('Не удалось загрузить Google Sign-In');
-            };
+            attachedScript = script;
+            script.addEventListener('load', markLoaded, { once: true });
+            script.addEventListener('error', handleScriptError, { once: true });
             document.head.appendChild(script);
         };
 
         loadGoogleScript();
-    }, [hasClientId, googleAvailability.enabled, onError]);
+
+        return () => {
+            cancelled = true;
+            if (attachedScript) {
+                attachedScript.removeEventListener('load', markLoaded);
+                attachedScript.removeEventListener('error', handleScriptError);
+            }
+        };
+    }, [hasClientId, googleAvailability.enabled]);
 
     useEffect(() => {
         if (!googleAvailability.enabled) return;
@@ -139,9 +160,9 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
                 use_fedcm_for_prompt: true,
                 callback: (response) => {
                     if (response.credential) {
-                        onSuccess(response.credential);
+                        onSuccessRef.current(response.credential);
                     } else {
-                        onError?.('Не удалось получить данные от Google');
+                        onErrorRef.current?.('Не удалось получить данные от Google');
                     }
                 },
             });
@@ -149,9 +170,9 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
             if (__DEV__) {
                 console.error('Google Sign-In initialization error:', error);
             }
-            onError?.('Ошибка инициализации Google Sign-In');
+            onErrorRef.current?.('Ошибка инициализации Google Sign-In');
         }
-    }, [googleAvailability.enabled, googleClientId, hasClientId, isGoogleLoaded, onSuccess, onError]);
+    }, [googleAvailability.enabled, googleClientId, hasClientId, isGoogleLoaded]);
 
     useEffect(() => {
         if (!googleAvailability.enabled) return;
@@ -174,9 +195,9 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
             if (__DEV__) {
                 console.error('Google Sign-In button render error:', error);
             }
-            onError?.('Ошибка отображения кнопки Google Sign-In');
+            onErrorRef.current?.('Ошибка отображения кнопки Google Sign-In');
         }
-    }, [googleAvailability.enabled, hasClientId, isGoogleButtonRendered, isGoogleLoaded, onError]);
+    }, [googleAvailability.enabled, hasClientId, isGoogleButtonRendered, isGoogleLoaded]);
 
     return (
         <View

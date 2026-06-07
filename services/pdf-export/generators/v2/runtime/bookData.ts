@@ -3,6 +3,7 @@ import type { TravelForBook } from '@/types/pdf-export';
 import type { GalleryLayout } from '@/types/pdf-gallery';
 import type { PdfThemeConfig } from '../../../themes/PdfThemeConfig';
 import { buildSafeImageUrl } from '../../../utils/htmlUtils';
+import { getAtlasPageCount, shouldRenderAtlas } from './atlasPages';
 import type { NormalizedLocation, TravelSectionMeta } from './types';
 
 export const TOC_ITEMS_PER_PAGE = 7;
@@ -76,11 +77,17 @@ export function buildTravelMeta(params: {
   ) => number;
 }): TravelSectionMeta[] {
   const { travels, settings, getGalleryPhotosPerPage } = params;
-  const meta: TravelSectionMeta[] = [];
-  let currentPage = settings.includeToc ? 2 + getTocPageCount(travels.length) : 2;
   const useSeparators = travels.length >= 3;
 
-  travels.forEach((travel, index) => {
+  // 1) Предварительный pass: вычисляем hasMap/locations, чтобы понять,
+  //    нужен ли атлас и сколько страниц он займёт.
+  const preview: Array<{
+    travel: TravelForBook;
+    locations: NormalizedLocation[];
+    hasGallery: boolean;
+    hasMap: boolean;
+    galleryPageCount: number;
+  }> = travels.map((travel) => {
     const locations = normalizeLocations(travel);
     const galleryPhotos = (travel.gallery || [])
       .map((item) => {
@@ -103,23 +110,48 @@ export function buildTravelMeta(params: {
         )
       : 0;
     const hasMap = Boolean(settings.includeMap && locations.length);
+    return { travel, locations, hasGallery, hasMap, galleryPageCount };
+  });
 
-    // Separator page для 2+ путешествия при 3+ путешествиях в книге
+  // Лёгкий "виртуальный" meta для расчёта количества атласа
+  const virtualMeta: TravelSectionMeta[] = preview.map((p) => ({
+    travel: p.travel,
+    hasGallery: p.hasGallery,
+    hasMap: p.hasMap,
+    locations: p.locations,
+    startPage: 0,
+  }));
+  const atlasPageCount = shouldRenderAtlas(virtualMeta, settings.includeMap)
+    ? getAtlasPageCount(virtualMeta)
+    : 0;
+
+  // 2) Основной pass: считаем фактическую нумерацию с учётом атласа
+  const meta: TravelSectionMeta[] = [];
+  let currentPage =
+    (settings.includeToc ? 2 + getTocPageCount(travels.length) : 2) + atlasPageCount;
+
+  preview.forEach((p, index) => {
     if (useSeparators && index > 0) {
       currentPage += 1;
     }
 
+    const startPage = currentPage;
+    const mapPageNumber = p.hasMap
+      ? startPage + 2 + (p.hasGallery ? p.galleryPageCount : 0)
+      : undefined;
+
     meta.push({
-      travel,
-      hasGallery,
-      hasMap,
-      locations,
-      startPage: currentPage,
+      travel: p.travel,
+      hasGallery: p.hasGallery,
+      hasMap: p.hasMap,
+      locations: p.locations,
+      startPage,
+      mapPage: mapPageNumber,
     });
 
     currentPage += 2; // photo page + content page
-    if (hasGallery) currentPage += galleryPageCount;
-    if (hasMap) currentPage += getMapPageCount(locations.length);
+    if (p.hasGallery) currentPage += p.galleryPageCount;
+    if (p.hasMap) currentPage += getMapPageCount(p.locations.length);
   });
 
   return meta;
