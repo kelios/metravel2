@@ -90,6 +90,9 @@ export default function RouteElevationProfile({
     null,
   )
   const isCompactLayout = width > 0 && width < 520
+  // Row layout for the point cards only once we know the container is wide
+  // enough to fit them side by side. Defaults to stacked while width is 0.
+  const isWideLayout = width >= 520
 
   const profileData = useMemo(() => {
     const samples = Array.isArray(preview?.elevationProfile)
@@ -699,7 +702,7 @@ export default function RouteElevationProfile({
                 <View
                   style={[
                     styles.pointCardsGrid,
-                    isCompactLayout && styles.pointCardsGridCompact,
+                    isWideLayout && styles.pointCardsGridWide,
                   ]}
                 >
                   {pointCards.map((point) => (
@@ -707,7 +710,7 @@ export default function RouteElevationProfile({
                       key={point.key}
                       style={[
                         styles.pointCard,
-                        isCompactLayout && styles.pointCardCompact,
+                        isWideLayout && styles.pointCardWide,
                       ]}
                     >
                       <View style={styles.pointCardHeader}>

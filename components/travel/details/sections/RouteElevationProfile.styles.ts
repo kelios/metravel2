@@ -212,27 +212,32 @@ export const createRouteElevationProfileStyles = (colors: ThemedColors) =>
       marginHorizontal: DESIGN_TOKENS.spacing.sm,
       gap: DESIGN_TOKENS.spacing.xs,
     },
+    // Stacked column is the safe default: it never overflows on narrow screens
+    // or during hydration (before the container width is measured). The row
+    // layout is opted into only once we know the container is wide enough.
     pointCardsGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
+      flexDirection: 'column',
       gap: DESIGN_TOKENS.spacing.xs,
     },
-    pointCardsGridCompact: {
-      flexDirection: 'column',
+    pointCardsGridWide: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
     },
     pointCard: {
-      minWidth: 150,
-      flex: 1,
+      width: '100%',
+      minWidth: 0,
       borderRadius: DESIGN_TOKENS.radii.sm,
       borderWidth: 1,
       borderColor: colors.borderLight,
       backgroundColor: colors.surface,
-      padding: DESIGN_TOKENS.spacing.sm,
-    },
-    pointCardCompact: {
-      minWidth: 0,
-      flexBasis: '100%',
+      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
       paddingVertical: DESIGN_TOKENS.spacing.xs,
+    },
+    pointCardWide: {
+      width: 'auto',
+      minWidth: 150,
+      flex: 1,
+      paddingVertical: DESIGN_TOKENS.spacing.sm,
     },
     pointCardHeader: {
       flexDirection: 'row',

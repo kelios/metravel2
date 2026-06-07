@@ -135,12 +135,18 @@ export default function TravelDetailsCriticalShell({
     () => [
       styles.scrollContent,
       isMobile
-        ? {
-            paddingBottom: Math.max(
-              DESIGN_TOKENS.spacing.xxl,
-              (insets.bottom || 0) + 112,
-            ),
-          }
+        ? Platform.OS === 'web'
+          ? {
+              // Reserve the bottom dock height plus the sticky action bar so the
+              // last rows (CTA card) never sit behind the fixed chrome on mobile web.
+              paddingBottom: 'calc(var(--mt-dock-h, 0px) + 96px)' as any,
+            }
+          : {
+              paddingBottom: Math.max(
+                DESIGN_TOKENS.spacing.xxl,
+                (insets.bottom || 0) + 112,
+              ),
+            }
         : null,
     ],
     [styles.scrollContent, isMobile, insets.bottom]
