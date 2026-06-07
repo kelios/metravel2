@@ -93,6 +93,76 @@ export function findQuestForLocation(
   return best ? best.quest : null
 }
 
+export type QuestForLocationMatch = {
+  quest: QuestMeta
+  score: number
+  /** Минимальное расстояние от точек travel до квеста в км; Infinity, если координат нет. */
+  distanceKm: number
+}
+
+/**
+ * Возвращает все квесты, подходящие под локацию (по тем же правилам, что и
+ * findQuestForLocation), отсортированные по убыванию score, затем по дистанции.
+ * Используется для блока «Квесты по этому городу и рядом» на travel-странице.
+ */
+export function findQuestsNearLocation(
+  quests: QuestMeta[],
+  query: LocationQuery,
+  opts?: { limit?: number },
+): QuestForLocationMatch[] {
+  if (!Array.isArray(quests) || quests.length === 0) return []
+
+  const qCity = query.cityName ? normalize(query.cityName) : ''
+  const qCountry = query.countryName ? normalize(query.countryName) : ''
+  const qCode = (query.countryCode || '').toLowerCase().trim()
+
+  const matches: QuestForLocationMatch[] = []
+
+  for (const quest of quests) {
+    const cCity = quest.cityName ? normalize(quest.cityName) : ''
+    const cCountry = quest.countryName ? normalize(quest.countryName) : ''
+    const cCode = (quest.countryCode || '').toLowerCase().trim()
+
+    if (qCode && cCode && qCode !== cCode) continue
+    if (!qCode || !cCode) {
+      if (qCountry && cCountry && qCountry !== cCountry) {
+        const near = minDistanceKm(query.coords, quest.lat, quest.lng) < 15
+        if (!near) continue
+      }
+    }
+
+    let score = 0
+    if (qCity && cCity) {
+      if (qCity === cCity) score += 100
+      else if (cCity.includes(qCity) || qCity.includes(cCity)) score += 55
+    }
+
+    const dist = minDistanceKm(query.coords, quest.lat, quest.lng)
+    if (dist < 8) score += 60
+    else if (dist < 20) score += 40
+    else if (dist < 50) score += 20
+
+    if ((qCountry && cCountry && qCountry === cCountry) || (qCode && cCode && qCode === cCode)) {
+      score += 15
+    }
+
+    if (score < 55) continue
+
+    matches.push({ quest, score, distanceKm: dist })
+  }
+
+  matches.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score
+    return a.distanceKm - b.distanceKm
+  })
+
+  const limit = opts?.limit
+  if (typeof limit === 'number' && limit > 0 && matches.length > limit) {
+    return matches.slice(0, limit)
+  }
+  return matches
+}
+
 /** Парсит координаты точек travel (coord: "lat,lng") в массив {lat,lng}. */
 export function parseTravelCoords(
   points: Array<{ coord?: string | null } | null | undefined> | undefined | null,
