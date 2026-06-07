@@ -52,23 +52,27 @@ function createIsolatedExpoTempDir(projectRoot, now = Date.now(), pid = process.
   return tempDir;
 }
 
-function hasEntryBundle(buildDir) {
+// Signature = sorted "name:size" list of every .js chunk currently on disk.
+// Returns null if entry-*.js is missing or any chunk is 0 bytes.
+// Used to detect when Metro has stopped writing new files (stable signature
+// across consecutive polls), so we don't SIGTERM expo while a late chunk is
+// still flushing — that ships a 0-byte chunk and produces "ReferenceError:
+// __d is not defined → white screen" on prod.
+function getJsBundleSignature(buildDir) {
   const webDir = path.join(buildDir, '_expo', 'static', 'js', 'web');
   try {
-    const files = fs.readdirSync(webDir);
-    const jsFiles = files.filter((file) => file.endsWith('.js'));
-    if (!jsFiles.some((file) => file.startsWith('entry-'))) return false;
-    // expo export writes chunks in parallel — entry-*.js can appear before
-    // __expo-metro-runtime-*.js (and other split chunks) finish flushing.
-    // Killing expo while any required chunk is still 0 bytes ships a broken
-    // build (ReferenceError: __d is not defined → white screen).
-    for (const file of jsFiles) {
+    const files = fs.readdirSync(webDir).filter((file) => file.endsWith('.js'));
+    if (!files.some((file) => file.startsWith('entry-'))) return null;
+    const sorted = [...files].sort();
+    const parts = [];
+    for (const file of sorted) {
       const stat = fs.statSync(path.join(webDir, file));
-      if (stat.size === 0) return false;
+      if (stat.size === 0) return null;
+      parts.push(`${file}:${stat.size}`);
     }
-    return true;
+    return parts.join('|');
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -78,17 +82,6 @@ function fileExists(filePath) {
   } catch {
     return false;
   }
-}
-
-function resolveReadyDir() {
-  const candidates = [outputDir];
-
-  return (
-    candidates.find((candidateDir) => {
-      const candidateIndex = path.join(candidateDir, 'index.html');
-      return fileExists(candidateIndex) && hasEntryBundle(candidateDir);
-    }) || null
-  );
 }
 
 function main() {
@@ -138,30 +131,63 @@ function main() {
 
   let exportReady = false;
   let terminatedByUs = false;
-  let readyDir = null;
+  let lastSignature = null;
+  let stableTicks = 0;
+  // 4 consecutive identical signatures (~1s of stability at 250ms poll) before
+  // we trust that Metro has actually stopped writing. A single stable poll is
+  // not enough: Metro writes split chunks in parallel, and a new chunk file
+  // can appear *after* the first ready-detected tick. Without this debounce,
+  // the SIGTERM grace period (500ms) races chunk creation and ships a 0-byte
+  // file → "ReferenceError: __d is not defined" → white screen on prod.
+  const REQUIRED_STABLE_TICKS = 4;
 
   const readinessTimer = setInterval(() => {
     if (exportReady) return;
 
-    readyDir = resolveReadyDir();
+    const candidateIndex = path.join(outputDir, 'index.html');
+    const signature = fileExists(candidateIndex)
+      ? getJsBundleSignature(outputDir)
+      : null;
 
-    if (readyDir) {
-      exportReady = true;
-
-      // Expo export can hang after writing artifacts; stop it once export is ready.
-      setTimeout(() => {
-        if (child.exitCode == null) {
-          terminatedByUs = true;
-          child.kill('SIGTERM');
-
-          setTimeout(() => {
-            if (child.exitCode == null) {
-              child.kill('SIGKILL');
-            }
-          }, 2000);
-        }
-      }, 500);
+    if (!signature) {
+      lastSignature = null;
+      stableTicks = 0;
+      return;
     }
+
+    if (signature === lastSignature) {
+      stableTicks += 1;
+    } else {
+      lastSignature = signature;
+      stableTicks = 1;
+    }
+
+    if (stableTicks < REQUIRED_STABLE_TICKS) return;
+
+    // Re-verify right before committing — a chunk could have appeared on this
+    // very tick after the readdir snapshot was taken.
+    const finalSignature = getJsBundleSignature(outputDir);
+    if (finalSignature !== lastSignature) {
+      lastSignature = finalSignature;
+      stableTicks = finalSignature ? 1 : 0;
+      return;
+    }
+
+    exportReady = true;
+
+    // Expo export can hang after writing artifacts; stop it once export is ready.
+    setTimeout(() => {
+      if (child.exitCode == null) {
+        terminatedByUs = true;
+        child.kill('SIGTERM');
+
+        setTimeout(() => {
+          if (child.exitCode == null) {
+            child.kill('SIGKILL');
+          }
+        }, 2000);
+      }
+    }, 500);
   }, 250);
 
   child.on('error', (error) => {

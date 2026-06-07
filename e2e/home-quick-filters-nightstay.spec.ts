@@ -4,21 +4,21 @@ import { preacceptCookies } from './helpers/navigation';
 test.use({ viewport: { width: 1600, height: 1200 } });
 
 test.describe('@smoke Home quick filters', () => {
-  test('палатка navigates to search and applies ночлег filter', async ({ page }) => {
+  test('Без ночлега navigates to search and applies ночлег filter', async ({ page }) => {
     await preacceptCookies(page);
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
 
     // Quick filters block.
-    await page.getByText('Подберите поездку под свой ритм', { exact: true }).waitFor({ timeout: 30_000 });
+    await page.getByText('Найдите маршрут под свой день', { exact: true }).waitFor({ timeout: 30_000 });
 
-    const палаткаChip = page.getByText('Палатка', { exact: true }).first();
-    await палаткаChip.waitFor({ state: 'attached', timeout: 30_000 });
-    await палаткаChip.click({ force: true });
+    const nightsChip = page.getByRole('button', { name: 'Подбор Без ночлега' }).first();
+    await nightsChip.waitFor({ state: 'attached', timeout: 30_000 });
+    await nightsChip.click({ force: true });
 
     await expect(page).toHaveURL(/\/search\?/);
     // URL param key may appear as "over_nights_stay" or "over__nights__stay" depending on router serialization.
-    await expect(page).toHaveURL(/over(_|__)nights(_|__)stay=1/);
+    await expect(page).toHaveURL(/over(_|__)nights(_|__)stay=8/);
 
     // Wait for the skeleton layer to disappear before checking the interactive filters UI.
     const searchSkeleton = page.getByTestId('search-skeleton');

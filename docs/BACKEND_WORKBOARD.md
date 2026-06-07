@@ -1,6 +1,6 @@
 # Backend workboard
 
-Last verified: 2026-06-05.
+Last verified: 2026-06-07.
 
 Scope: active issues that still require changes in the **backend service** (separate repo / separate service, not this Expo frontend monorepo). Closed items are archived below so the backend team can read the top table as the current queue.
 
@@ -19,6 +19,7 @@ Rule: a frontend mitigation is load-bearing until a backend fix is verified and 
 | BE-015 / TASK-20260605-005 | Collection endpoints return 404 instead of `200` + empty list | P3 | Still reproduces. Probe 2026-06-05: `GET /api/travels/563/near/` -> `404`; `GET /api/travels/391/near/` -> `200`. | FE swallows the 404 as `[]` (`api/map.ts`). | For valid resources with no rows return `200` + `[]`/`{results:[]}`; reserve `404` for non-existent resources. |
 | BE-016 / TASK-20260605-007 | Profile avatar URL fresh reproduction | P3 | Needs fresh repro. Earlier prod browser evidence showed an avatar 404 with doubled `/avatar/.../avatar/`; direct 2026-06-05 re-check could not verify old user id because `/api/user/82/profile/` returned `404`, and current `torun` travel payload exposes `userName` but no numeric author id. | `useAvatarUri` caches failed avatar URLs for the session and renders fallback. | Backend/tester should probe a current known account with an uploaded avatar and fix URL generation/storage if raw avatar still returns 404. |
 | BE-017 / TASK-20260605-006 | Quests absent from `sitemap.xml` | P2 | Still reproduces in prod. Probe 2026-06-05: `GET https://metravel.by/sitemap.xml` -> `200`, 388 `<loc>` entries, 0 quest URLs. | Frontend owns quest pages/meta/internal links, but canonical sitemap is backend-owned. | Add `/quests` and published `/quests/{city_id}/{quest_id}` URLs to backend sitemap generator. |
+| BE-018 / TASK-20260607-008 | Comment `user_name` is frozen to `auth_user`, ignores renamed `Profile` | P2 | Still reproduces in prod. Probe 2026-06-07 with editor token (user_id=120, profile id=86): `PUT /api/user/120/profile/update/` with `{"first_name":"Редакция","last_name":"metravel"}` -> `200`; subsequent `POST /api/travel-comments/` -> `201` with `"user_name":"Sergey Savran"`. OpenAPI confirms `TravelComment.user_name` is `readOnly` and no `auth_user` write endpoint is documented. | Frontend mass-augment script (`scripts/seo-mass-augment.js`) prefixes editor comments with `"От редакции metravel:"` so the editorial voice opens the text even though the byline reads the old name. | Render `TravelComment.user_name` from the related `Profile.first_name`/`last_name` (with `auth_user` fallback when Profile names are empty), so a profile rename takes effect for both new and existing comments. See `tasks/008-comment-username-from-profile.md`. |
 
 ## Closed / Verified Archive
 

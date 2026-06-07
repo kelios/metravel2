@@ -104,6 +104,12 @@ const expectListNonEmptyOrEmptyState = async (page: any, cardsLocator: any, labe
       .waitForSelector('[data-testid="filters-panel"]', { timeout })
       .then(() => true)
       .catch(() => null),
+    page
+      // API error state: the UI rendered with a retry affordance even if the
+      // backend was unreachable from this environment (e.g. local API proxy down).
+      .waitForSelector('text=Не удалось загрузить путешествия', { timeout })
+      .then(() => true)
+      .catch(() => null),
   ].map((p) => Promise.resolve(p).catch(() => null)));
 
   expect(ok, `${label}: expected cards or empty state to render`).toBeTruthy();

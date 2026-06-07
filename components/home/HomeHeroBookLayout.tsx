@@ -589,6 +589,7 @@ export default function HomeHeroBookLayout({
                   colors={colors}
                   isMobile={isMobile}
                   onSubmit={onSearchSubmit}
+                  useBookPaperColors={withBookFrame}
                 />
 
                 <View testID="home-hero-cta-row" style={styles.buttonsContainer}>

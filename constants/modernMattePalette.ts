@@ -24,6 +24,14 @@ export const MODERN_MATTE_PALETTE = {
   surface: '#ffffff', // Чистый белый для карточек
   surfaceElevated: '#ffffff', // Для модалок и всплывающих окон
   surfaceMuted: 'rgba(255, 255, 255, 0.75)', // Полупрозрачные поверхности
+
+  bookPageSurface: '#fffdf8',
+  bookPageSurfaceMuted: '#f7f1e7',
+  bookPageText: '#3a332b',
+  bookPageTextMuted: '#6f665c',
+  bookPageTextSubtle: '#8a7d70',
+  bookPageBorder: 'rgba(120, 96, 62, 0.18)',
+  bookPageGold: 'rgba(180, 150, 80, 0.35)',
   
   // ==========================================
   // ТЕКСТ (высококонтрастный, но мягкий)
@@ -203,6 +211,14 @@ export const MODERN_MATTE_PALETTE_DARK = {
   surface: '#2a2a2a', // Темная поверхность для карточек
   surfaceElevated: '#323232', // Для модалок и всплывающих окон
   surfaceMuted: 'rgba(42, 42, 42, 0.75)', // Полупрозрачные поверхности
+
+  bookPageSurface: '#fffdf8',
+  bookPageSurfaceMuted: '#f7f1e7',
+  bookPageText: '#3a332b',
+  bookPageTextMuted: '#6f665c',
+  bookPageTextSubtle: '#8a7d70',
+  bookPageBorder: 'rgba(120, 96, 62, 0.18)',
+  bookPageGold: 'rgba(180, 150, 80, 0.35)',
 
   // ==========================================
   // ТЕКСТ (высококонтрастный, мягкий)

@@ -124,7 +124,7 @@ const ToggleableMapSection = ({
                                         <Feather name="map" size={24} color={colors.textMuted} />
                                     </View>
                                 ) : (
-                                    <ActivityIndicator color={colors.primary} />
+                                    <ActivityIndicator color={colors.primary} accessibilityLabel="Загрузка карты маршрута" />
                                 )}
                             </View>
                         ) : (

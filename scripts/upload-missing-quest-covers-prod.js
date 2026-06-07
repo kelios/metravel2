@@ -32,6 +32,16 @@ const QUEST_COVERS = [
   { quest_id: 'vitebsk-chagall', assetsDir: 'vitebskChagall', cover: 'cover.png' },
   { quest_id: 'mogilev-stargazer', assetsDir: 'mogilevStargazer', cover: 'cover.png' },
   { quest_id: 'lida-castle', assetsDir: 'lidaCastle', cover: 'cover.png' },
+  { quest_id: 'mir-castle', assetsDir: 'mirCastle', cover: 'cover.png' },
+  { quest_id: 'nesvizh-radziwill', assetsDir: 'nesvizhRadziwill', cover: 'cover.png' },
+  { quest_id: 'polotsk-ancient', assetsDir: 'polotskAncient', cover: 'cover.png' },
+  { quest_id: 'gomel-palace', assetsDir: 'gomelPalace', cover: 'cover.png' },
+  { quest_id: 'kossovo-ruzhany-palaces', assetsDir: 'kossovoRuzhanyPalaces', cover: 'cover.png' },
+  { quest_id: 'wroclaw-gnomes', assetsDir: 'wroclawGnomes', cover: 'cover.png' },
+  { quest_id: 'gdansk-amber', assetsDir: 'gdanskAmber', cover: 'cover.png' },
+  { quest_id: 'poznan-goats', assetsDir: 'poznanGoats', cover: 'cover.png' },
+  { quest_id: 'torun-copernicus', assetsDir: 'torunCopernicus', cover: 'cover.png' },
+  { quest_id: 'lublin-old-town', assetsDir: 'lublinOldTown', cover: 'cover.png' },
 ];
 
 function getMime(filePath) {

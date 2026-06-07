@@ -151,3 +151,13 @@ travel-drafts/
 
 # seo-edit.js article backups (local rollback snapshots)
 scripts/.seo-backups/
+
+# Local scratch caches/reports from one-off SEO/quest/workflow scripts
+scripts/.seo-*/
+scripts/.seo-*.json
+scripts/.fix-*/
+scripts/.workflows/
+
+# Ad-hoc tmp dumps at repo root
+/tmp_*.json
+/tmp_*.txt

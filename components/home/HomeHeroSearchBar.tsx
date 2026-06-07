@@ -2,17 +2,33 @@ import React, { memo, useCallback, useState } from 'react'
 import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
 
 type HomeHeroSearchBarProps = {
   colors: ThemedColors
   isMobile: boolean
   onSubmit: (query: string) => void
+  useBookPaperColors?: boolean
 }
 
-function HomeHeroSearchBar({ colors, isMobile, onSubmit }: HomeHeroSearchBarProps) {
+function HomeHeroSearchBar({
+  colors,
+  isMobile,
+  onSubmit,
+  useBookPaperColors = false,
+}: HomeHeroSearchBarProps) {
   const [value, setValue] = useState('')
-  const styles = React.useMemo(() => createStyles(colors, isMobile), [colors, isMobile])
+  const styles = React.useMemo(
+    () => createStyles(colors, isMobile, useBookPaperColors),
+    [colors, isMobile, useBookPaperColors],
+  )
+  const inputTextColor = useBookPaperColors
+    ? DESIGN_TOKENS.colors.bookPageText
+    : colors.text
+  const inputMutedColor = useBookPaperColors
+    ? DESIGN_TOKENS.colors.bookPageTextMuted
+    : colors.textMuted
 
   const handleSubmit = useCallback(() => {
     onSubmit(value)
@@ -21,15 +37,15 @@ function HomeHeroSearchBar({ colors, isMobile, onSubmit }: HomeHeroSearchBarProp
   return (
     <View style={styles.wrap}>
       <View style={styles.field}>
-        <Feather name="search" size={18} color={colors.textMuted} />
+        <Feather name="search" size={18} color={inputMutedColor} />
         <TextInput
           value={value}
           onChangeText={setValue}
           onSubmitEditing={handleSubmit}
           placeholder="Куда хотите поехать? Город, озеро, замок…"
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={inputMutedColor}
           returnKeyType="search"
-          style={styles.input}
+          style={[styles.input, { color: inputTextColor }]}
           accessibilityLabel="Поиск маршрутов"
           {...(Platform.OS === 'web' ? ({ enterKeyHint: 'search' } as any) : {})}
         />
@@ -49,7 +65,11 @@ function HomeHeroSearchBar({ colors, isMobile, onSubmit }: HomeHeroSearchBarProp
   )
 }
 
-const createStyles = (colors: ThemedColors, isMobile: boolean) =>
+const createStyles = (
+  colors: ThemedColors,
+  isMobile: boolean,
+  useBookPaperColors: boolean,
+) =>
   StyleSheet.create({
     wrap: { flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%' },
     field: {
@@ -61,13 +81,16 @@ const createStyles = (colors: ThemedColors, isMobile: boolean) =>
       paddingHorizontal: 14,
       borderRadius: 12,
       borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surface,
+      borderColor: useBookPaperColors
+        ? DESIGN_TOKENS.colors.bookPageBorder
+        : colors.border,
+      backgroundColor: useBookPaperColors
+        ? DESIGN_TOKENS.colors.bookPageSurface
+        : colors.surface,
     },
     input: {
       flex: 1,
       fontSize: isMobile ? 14 : 15,
-      color: colors.text,
       ...Platform.select({ web: { outlineStyle: 'none' } as any, default: {} }),
     },
     button: {

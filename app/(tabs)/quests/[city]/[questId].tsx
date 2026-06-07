@@ -324,10 +324,13 @@ export default function QuestByIdScreen() {
   const canonical = useMemo(() => buildCanonicalUrl(`/quests/${cityId}/${questId}`), [cityId, questId]);
 
   const { isAuthenticated } = useAuth();
-  const { bundle, loading: isQuestLoading, error: bundleError, refetch } = useQuestBundle(questId || undefined);
+  const shouldLoadQuest = isFocused && Boolean(questId);
+  const { bundle, loading: isQuestLoading, error: bundleError, refetch } = useQuestBundle(
+    shouldLoadQuest ? questId : undefined,
+  );
   const { progress: backendProgress, progressLoading, saveProgress, resetProgress } = useQuestProgressSync(
-    questId || undefined,
-    isAuthenticated,
+    shouldLoadQuest ? questId : undefined,
+    isFocused && isAuthenticated,
   );
 
   const isLoading = isQuestLoading || (isAuthenticated && progressLoading);

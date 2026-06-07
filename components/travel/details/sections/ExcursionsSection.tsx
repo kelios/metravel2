@@ -17,7 +17,7 @@ const Fallback = () => {
   const styles = useTravelDetailsStyles()
   return (
     <View style={styles.fallback}>
-      <ActivityIndicator size="small" />
+      <ActivityIndicator size="small" accessibilityLabel="Загрузка экскурсий" />
     </View>
   )
 }

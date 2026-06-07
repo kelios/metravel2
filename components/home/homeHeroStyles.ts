@@ -107,14 +107,28 @@ export const createHomeHeroStyles = ({
     : 110
 
   const warmBg = DESIGN_TOKENS.colors.background
-  const warmBgSoft = DESIGN_TOKENS.colors.backgroundSecondary
-  const cardSurface = DESIGN_TOKENS.colors.surface
-  const warmBorder = DESIGN_TOKENS.colors.borderAccent
+  const warmBgSoft = hasBookLayout
+    ? DESIGN_TOKENS.colors.bookPageSurfaceMuted
+    : DESIGN_TOKENS.colors.backgroundSecondary
+  const cardSurface = hasBookLayout
+    ? DESIGN_TOKENS.colors.bookPageSurface
+    : DESIGN_TOKENS.colors.surface
+  const warmBorder = hasBookLayout
+    ? DESIGN_TOKENS.colors.bookPageBorder
+    : DESIGN_TOKENS.colors.borderAccent
   const warmShadow = 'rgba(58, 58, 58, 0.12)'
-  const warmGold = DESIGN_TOKENS.colors.warningAlpha40
-  const inkStrong = DESIGN_TOKENS.colors.text
-  const inkMuted = DESIGN_TOKENS.colors.textMuted
-  const inkSubtle = DESIGN_TOKENS.colors.textSubtle
+  const warmGold = hasBookLayout
+    ? DESIGN_TOKENS.colors.bookPageGold
+    : DESIGN_TOKENS.colors.warningAlpha40
+  const inkStrong = hasBookLayout
+    ? DESIGN_TOKENS.colors.bookPageText
+    : DESIGN_TOKENS.colors.text
+  const inkMuted = hasBookLayout
+    ? DESIGN_TOKENS.colors.bookPageTextMuted
+    : DESIGN_TOKENS.colors.textMuted
+  const inkSubtle = hasBookLayout
+    ? DESIGN_TOKENS.colors.bookPageTextSubtle
+    : DESIGN_TOKENS.colors.textSubtle
   const serif = 'Georgia, "Times New Roman", serif'
   const sansSerif =
     '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif'

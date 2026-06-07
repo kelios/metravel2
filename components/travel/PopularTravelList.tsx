@@ -319,7 +319,7 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
     if (isLoading) {
       return (
         <View style={styles.loadingContainer} onLayout={onLayout}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} accessibilityLabel="Загрузка популярных маршрутов" />
           <Text style={styles.loadingText}>Загрузка популярных маршрутов…</Text>
         </View>
       );

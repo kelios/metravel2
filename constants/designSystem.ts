@@ -158,6 +158,28 @@ export const DESIGN_TOKENS = {
       'surfaceElevated',
       MODERN_MATTE_PALETTE.surfaceElevated,
     ),
+    bookPageSurface: colorVar(
+      'bookPageSurface',
+      MODERN_MATTE_PALETTE.bookPageSurface,
+    ),
+    bookPageSurfaceMuted: colorVar(
+      'bookPageSurfaceMuted',
+      MODERN_MATTE_PALETTE.bookPageSurfaceMuted,
+    ),
+    bookPageText: colorVar('bookPageText', MODERN_MATTE_PALETTE.bookPageText),
+    bookPageTextMuted: colorVar(
+      'bookPageTextMuted',
+      MODERN_MATTE_PALETTE.bookPageTextMuted,
+    ),
+    bookPageTextSubtle: colorVar(
+      'bookPageTextSubtle',
+      MODERN_MATTE_PALETTE.bookPageTextSubtle,
+    ),
+    bookPageBorder: colorVar(
+      'bookPageBorder',
+      MODERN_MATTE_PALETTE.bookPageBorder,
+    ),
+    bookPageGold: colorVar('bookPageGold', MODERN_MATTE_PALETTE.bookPageGold),
     card: colorVar('card', MODERN_MATTE_PALETTE.surface),
     cardMuted: colorVar('cardMuted', MODERN_MATTE_PALETTE.backgroundSecondary),
     dockBackground: colorVar(

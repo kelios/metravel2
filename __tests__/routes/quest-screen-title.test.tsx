@@ -7,6 +7,25 @@ import { act } from 'react-test-renderer'
 import { render } from '@testing-library/react-native'
 
 const mockUseIsFocused = jest.fn(() => true)
+const mockUseQuestBundle = jest.fn(() => ({
+  bundle: {
+    title: 'Quest title',
+    storageKey: 'minsk-cmok',
+    steps: [],
+    finale: null,
+    intro: null,
+    city: '4',
+  },
+  loading: false,
+  error: null,
+  refetch: jest.fn(),
+}))
+const mockUseQuestProgressSync = jest.fn(() => ({
+  progress: null,
+  progressLoading: false,
+  saveProgress: jest.fn(),
+  resetProgress: jest.fn(),
+}))
 
 jest.mock('@react-navigation/native', () => ({
   useIsFocused: () => mockUseIsFocused(),
@@ -35,7 +54,9 @@ jest.mock('@/hooks/useTheme', () => ({
 }))
 
 jest.mock('@/hooks/useQuestsApi', () => ({
-  useQuestBundle: () => ({
+  useQuestBundle: (...args: any[]) => {
+    mockUseQuestBundle(...args)
+    return ({
     bundle: {
       title: 'Тайна Свислочского Цмока: Легенда оживает',
       storageKey: 'minsk-cmok',
@@ -47,13 +68,17 @@ jest.mock('@/hooks/useQuestsApi', () => ({
     loading: false,
     error: null,
     refetch: jest.fn(),
-  }),
-  useQuestProgressSync: () => ({
+    })
+  },
+  useQuestProgressSync: (...args: any[]) => {
+    mockUseQuestProgressSync(...args)
+    return ({
     progress: null,
     progressLoading: false,
     saveProgress: jest.fn(),
     resetProgress: jest.fn(),
-  }),
+    })
+  },
 }))
 
 jest.mock('@/context/AuthContext', () => ({
@@ -74,6 +99,8 @@ describe('Quest screen title sync', () => {
   beforeEach(() => {
     jest.useFakeTimers()
     mockUseIsFocused.mockReturnValue(true)
+    mockUseQuestBundle.mockClear()
+    mockUseQuestProgressSync.mockClear()
     document.title = 'Energylandia - польский Диснейленд.'
     document.head.innerHTML = [
       '<meta name="description" content="old desc">',
@@ -111,5 +138,15 @@ describe('Quest screen title sync', () => {
     expect(
       document.querySelector('link[rel="canonical"]')?.getAttribute('href')
     ).toBe('https://metravel.by/quests/4/minsk-cmok')
+  })
+
+  it('does not load quest data or progress while the quest screen is not focused', () => {
+    mockUseIsFocused.mockReturnValue(false)
+    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+
+    render(<QuestScreen />)
+
+    expect(mockUseQuestBundle).toHaveBeenCalledWith(undefined)
+    expect(mockUseQuestProgressSync).toHaveBeenCalledWith(undefined, false)
   })
 })
