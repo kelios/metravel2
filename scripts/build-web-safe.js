@@ -56,7 +56,17 @@ function hasEntryBundle(buildDir) {
   const webDir = path.join(buildDir, '_expo', 'static', 'js', 'web');
   try {
     const files = fs.readdirSync(webDir);
-    return files.some((file) => file.startsWith('entry-') && file.endsWith('.js'));
+    const jsFiles = files.filter((file) => file.endsWith('.js'));
+    if (!jsFiles.some((file) => file.startsWith('entry-'))) return false;
+    // expo export writes chunks in parallel — entry-*.js can appear before
+    // __expo-metro-runtime-*.js (and other split chunks) finish flushing.
+    // Killing expo while any required chunk is still 0 bytes ships a broken
+    // build (ReferenceError: __d is not defined → white screen).
+    for (const file of jsFiles) {
+      const stat = fs.statSync(path.join(webDir, file));
+      if (stat.size === 0) return false;
+    }
+    return true;
   } catch {
     return false;
   }
