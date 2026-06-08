@@ -201,15 +201,23 @@ describe('ssg-skeletons', () => {
   });
 
   describe('buildTravelSkeletonHtml (FE-IDX-1)', () => {
-    it('renders a visible h1 and article body when description is provided', () => {
+    it('renders a visible title and article body when description is provided', () => {
       const html = buildTravelSkeletonHtml({
         name: 'Тестовый маршрут',
         descriptionHtml: '<p>Подробное описание маршрута.</p><h2>Как добраться</h2><p>На машине.</p>',
       });
-      expect(html).toContain('<h1 class="ssg-travel-h1">Тестовый маршрут</h1>');
+      expect(html).toContain('<div class="ssg-travel-h1">Тестовый маршрут</div>');
       expect(html).toContain('<div class="ssg-travel-article">');
       expect(html).toContain('Подробное описание маршрута.');
       expect(html).toContain('<h2>Как добраться</h2>');
+    });
+
+    it('does NOT emit any <h1> in the skeleton (single-H1 invariant lives in #root)', () => {
+      const html = buildTravelSkeletonHtml({
+        name: 'Маршрут',
+        descriptionHtml: '<p>текст</p><h2>раздел</h2><h1>лишний</h1>',
+      });
+      expect(html).not.toMatch(/<h1[\s>]/i);
     });
 
     it('falls back to placeholder bars when description is empty', () => {

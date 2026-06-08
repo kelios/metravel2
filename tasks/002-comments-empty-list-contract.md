@@ -1,10 +1,12 @@
 # TASK-20260605-002: Comments Empty List Contract
 
-Status: Backlog
+Status: Done (verified 2026-06-08)
 Owner: Backend
 Support: Frontend Developer, Tester, Reviewer
 Created: 2026-06-05
-Updated: 2026-06-05
+Updated: 2026-06-08
+
+> Verified fixed 2026-06-08 via a 60-id prod sweep: all `200`; 55/60 valid travels with zero comments return `200 []`; `400` only for malformed/nonexistent `travel_id`. FE 400->empty guard kept as defensive-only. Archived as BE-002 in `docs/BACKEND_WORKBOARD.md`.
 
 ## Goal
 

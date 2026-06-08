@@ -1,10 +1,12 @@
 # TASK-20260605-006: Include Quests In Sitemap
 
-Status: Backlog
+Status: Done (verified 2026-06-08)
 Owner: Backend
 Support: SEO Engineer, Frontend Developer, Tester, Reviewer
 Created: 2026-06-05
-Updated: 2026-06-05
+Updated: 2026-06-08
+
+> Verified fixed 2026-06-08: prod `GET https://metravel.by/sitemap.xml` -> `200`, 415 `<loc>` entries (was 388), 26 `/quests` URLs (was 0). Moved to archive in `docs/BACKEND_WORKBOARD.md` (BE-017).
 
 ## Goal
 

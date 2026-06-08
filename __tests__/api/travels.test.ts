@@ -1234,6 +1234,37 @@ describe('src/api/travelsApi.ts', () => {
       await expect(fetchTravelsNear(1, {} as any)).rejects.toBe(abortError);
     });
 
+    // BE-015 verified-fixed contract (prod re-probe 2026-06-08): a valid travel
+    // with no near-list returns `200` + `[]`, and `404` is reserved for a
+    // non-existent travel id. These lock the new backend behaviour so the
+    // 404->[] guard is no longer load-bearing (see docs/BACKEND_WORKBOARD.md).
+    it('fetchTravelsNear возвращает [] при 200 с пустым списком (валидный travel без соседей)', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce([] as any);
+
+      const result = await fetchTravelsNear(391);
+
+      expect(result).toEqual([]);
+    });
+
+    it('fetchTravelsNear возвращает данные при 200 с непустым списком', async () => {
+      const rows = [{ id: 637, name: 'Near travel', lat: 53.9, lng: 27.56 }];
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce(rows as any);
+
+      const result = await fetchTravelsNear(563);
+
+      expect(result).toEqual(rows);
+    });
+
+    it('fetchTravelsNear возвращает [] при 404 (несуществующий travel)', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 404, statusText: 'Not Found' } as any);
+
+      const result = await fetchTravelsNear(99999999);
+
+      expect(result).toEqual([]);
+    });
+
     it('fetchTravelsPopular возвращает пустой объект при ошибке', async () => {
       mockedFetchWithTimeout.mockRejectedValueOnce(new Error('network'));
 

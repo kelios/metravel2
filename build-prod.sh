@@ -127,6 +127,31 @@ build_env "$ENV"
 echo "Генерация SEO-страниц..."
 node scripts/generate-seo-pages.js --dist "dist/$ENV" --api https://metravel.by
 
+# FE-IDX-1: убедиться, что тело статьи реально инжектировано в статику.
+# Без этого Googlebot видит пустой скелетон → "просканирована, но не проиндексирована".
+echo "Проверка: тело статей в статике (FE-IDX-1)..."
+BODY_PAGES=$( { grep -rl "ssg-travel-article" "dist/$ENV/travels" 2>/dev/null || true; } | wc -l | tr -d ' ')
+if [[ "${BODY_PAGES:-0}" -lt 1 ]]; then
+  echo "❌ Ни одна travel-страница не содержит тело статьи (ssg-travel-article) — FE-IDX-1 сломан, прерываю деплой."
+  exit 1
+fi
+echo "✅ Тело статьи инжектировано в $BODY_PAGES travel-страниц"
+
+# Инвариант: ровно один <h1> на travel-странице (пост-деплой проверка это требует).
+echo "Проверка: ровно один <h1> на travel-страницу (выборка)..."
+mapfile -t H1_SAMPLE < <(find "dist/$ENV/travels" -name "index.html" 2>/dev/null | head -20)
+BAD_H1=0
+for f in "${H1_SAMPLE[@]:-}"; do
+  [[ -f "$f" ]] || continue
+  n=$( { grep -o "<h1[ >]" "$f" 2>/dev/null || true; } | wc -l | tr -d ' ')
+  if [[ "$n" != "1" ]]; then echo "  ✗ $f: <h1> = $n"; BAD_H1=1; fi
+done
+if [[ "$BAD_H1" == "1" ]]; then
+  echo "❌ Нарушен инвариант: на travel-странице должен быть ровно один <h1>. Прерываю деплой."
+  exit 1
+fi
+echo "✅ Ровно один <h1> на странице"
+
 echo "Проверка SEO-артефактов..."
 node scripts/verify-static-travel-seo.js --dist "dist/$ENV" --api https://metravel.by
 
@@ -146,6 +171,15 @@ node scripts/add-cache-bust-meta.js "dist/$ENV"
 if [[ "$DEPLOY" == "1" ]]; then
   echo "старт деплоя ..."
   deploy_prod "$ENV"
+
+  if [[ "$ENV" == "prod" ]]; then
+    echo "⏳ Жду перезапуск app/nginx..."
+    sleep 8
+    echo "Пост-деплой проверка SEO на проде..."
+    # Не валит билд (деплой уже выполнен) — только сигнализирует о замечаниях.
+    node scripts/post-deploy-seo-check.js --url https://metravel.by --limit 30 \
+      || echo "⚠️  Пост-деплой SEO-проверка нашла замечания — посмотри: npm run test:seo:postdeploy:verbose"
+  fi
 fi
 
 echo "🎉 Сборка завершена успешно!"

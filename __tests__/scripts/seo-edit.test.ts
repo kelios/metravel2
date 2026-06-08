@@ -29,6 +29,59 @@ describe('composeDescription', () => {
     expect(composeDescription('<p>same</p>', {})).toBe('<p>same</p>');
     expect(composeDescription('<p>same</p>')).toBe('<p>same</p>');
   });
+
+  it('does not treat an unrelated body paragraph as a duplicate lead', () => {
+    // body opens with real prose unrelated to the lead → lead is prepended, body kept
+    const body = '<p>Найдя на карте водоём в жаркий день, мы поехали смотреть.</p>';
+    const out = composeDescription(body, { prepend: '<p>Карьер Закшувек в Кракове — затопленный карьер с лазурной водой.</p>' });
+    expect(out).toContain('Карьер Закшувек');
+    expect(out).toContain('Найдя на карте водоём');
+  });
+
+  it('replaces an existing near-duplicate lead instead of stacking a second one', () => {
+    // a prior pass already prepended a definitional lead; re-running with a fresh
+    // (paraphrased) lead must NOT leave two intro paragraphs (the "double lead" bug)
+    const already =
+      '<p>Карьер Закшувек в Кракове — затопленный известняковый карьер с лазурной водой, бывшая промзона у Вавеля.</p>\n' +
+      '<p>Найдя на карте водоём в жаркий день, мы поехали смотреть.</p>';
+    const freshLead =
+      '<p>Карьер Закшувек (Zakrzówek) в Кракове — затопленный известняковый карьер с бирюзовой водой, вход бесплатный.</p>';
+    const out = composeDescription(already, { prepend: freshLead });
+    // exactly one definitional "Карьер Закшувек … карьер" intro survives
+    expect(out.match(/затопленный известняковый карьер/g)).toHaveLength(1);
+    expect(out.startsWith(freshLead)).toBe(true);
+    expect(out).toContain('Найдя на карте водоём');
+  });
+
+  it('is idempotent when the exact same lead is prepended twice', () => {
+    const lead = '<p>Озеро Глубокое под Полоцком — самое прозрачное озеро Беларуси.</p>';
+    const body = '<p>Мы приехали сюда летом и остались в восторге.</p>';
+    const once = composeDescription(body, { prepend: lead });
+    const twice = composeDescription(once, { prepend: lead });
+    expect(twice).toBe(once);
+  });
+});
+
+describe('leadIsDuplicate', () => {
+  const { leadIsDuplicate } = editor;
+
+  it('matches two paraphrased definitional leads about the same object', () => {
+    expect(
+      leadIsDuplicate(
+        '<p>Карьер Закшувек в Кракове — затопленный известняковый карьер с лазурной водой.</p>',
+        '<p>Карьер Закшувек (Zakrzówek) в Кракове — затопленный известняковый карьер с бирюзовой водой.</p>'
+      )
+    ).toBe(true);
+  });
+
+  it('does not match unrelated paragraphs', () => {
+    expect(
+      leadIsDuplicate(
+        '<p>Карьер Закшувек в Кракове — затопленный известняковый карьер.</p>',
+        '<p>Местные жители жарят шашлыки и встречают закаты над городом.</p>'
+      )
+    ).toBe(false);
+  });
 });
 
 describe('buildUpsertPayload', () => {

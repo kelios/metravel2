@@ -370,8 +370,12 @@ function buildTravelSkeletonHtml({ heroPreload, name, descriptionHtml, related }
   // crawlers see substantive, indexable content (not just placeholder bars).
   // The shell is a sibling before #root and is torn down on hydration, so this
   // is visible-but-transient: no duplicate UX, no #root flex-layout conflict.
+  // Visible pre-hydration title. NOT an <h1>: the single semantic <h1> stays the
+  // out-of-flow one injected into #root by injectHiddenH1 (so raw HTML keeps
+  // exactly one H1 — post-deploy SEO check enforces travel.h1.count === 1).
+  // Styled identically via the .ssg-travel-h1 class.
   const titleText = String(name || '').trim();
-  const titleBlock = titleText ? `<h1 class="ssg-travel-h1">${escapeHtmlAttr(titleText)}</h1>` : '';
+  const titleBlock = titleText ? `<div class="ssg-travel-h1">${escapeHtmlAttr(titleText)}</div>` : '';
   const articleHtml = sanitizeArticleBodyHtml(descriptionHtml);
   const contentBlock = articleHtml
     ? `<div class="ssg-travel-article">${articleHtml}</div>`

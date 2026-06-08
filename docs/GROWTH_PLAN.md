@@ -54,9 +54,9 @@
 | ID | Приоритет | Задача | Файлы / где | Definition of Done |
 |---|---|---|---|---|
 | **FE-1** | 🔴 P0 | Снять реальный Lighthouse по прод-URL и закрыть фактические LCP-проблемы | `npm run lighthouse:produrl:travel:mobile`, `components/travel/details/*` | LCP < 2.5 с на мобайле по полевым данным |
-| **FE-2** | 🔴 P0 | Belkraj оставляем; ДОБАВИТЬ параллельные партнёрские каналы (см. раздел 7) | `components/belkraj/*`, новый `components/affiliate/*` | Подключены Travelpayouts (Tripster экскурсии + Ostrovok/Sutochno отели), контекстно к точкам маршрута |
-| **FE-3** | 🔴 P0 | Трекинг конверсий партнёрки + ключевых действий | `utils/analytics.ts`, виджет | События: показ виджета, клик, регистрация, PDF-экспорт, добавление места |
-| **FE-2b** | 🟠 P1 | Не грузить тяжёлые виджеты выше скролла (LCP) — lazy/виртуализация | `components/affiliate/*`, `components/belkraj/*` | Партнёрские блоки не бьют по LCP (см. FE-1) |
+| **FE-2** | 🟡 в работе | Belkraj оставляем; ДОБАВИТЬ параллельные партнёрские каналы (см. раздел 7). **Код готов** (`components/affiliate/*`, блок «Полезное в поездку» на travel-details, контекстно по городу). Рендерится только когда задан env-маркер+шаблоны → ждём **OWN-9** (ID/deep-link из дашборда Travelpayouts) | `components/affiliate/*` | ✅ компонент + конфиг; ⏳ env от владельца |
+| **FE-3** | 🟡 частично | Трекинг конверсий. **Готово:** события партнёрки `Affiliate_Impression`/`Affiliate_Click` (program/travelId/city). Регистрация — `AuthSuccess` (было). ⏳ осталось: PDF-экспорт, добавление места | `utils/analytics.ts`, `components/affiliate/*` | Партнёрские события + регистрация трекаются |
+| **FE-2b** | ✅ done | Не грузить тяжёлые виджеты выше скролла (LCP) — lazy. Affiliate-блок: `React.lazy` + web-only + ниже карты, текстовые карточки (без iframe), impression по IntersectionObserver | `components/affiliate/*` | Партнёрский блок не бьёт по LCP |
 | **FE-4** | 🟠 P1 | SEO-докрутка статей на позициях 5–15 (мета, H1, объём, внутр. ссылки) | skill `metravel-seo-audit`, `scripts/seo-audit.js` | Топ-20 «пограничных» запросов обработаны |
 | **FE-5** | 🟠 P1 | Форма подписки на email (ненавязчивый блок) | новый компонент рядом с `ContributionBanner` | Форма шлёт в `BE-3`, есть на статьях и главной |
 | **FE-6** | 🟡 P2 | Sponsored-маркер на карте + буст в `/search` | `components/MapPage/*`, листинг | Метка «реклама», отдельный стиль, sort-boost по `is_sponsored` |

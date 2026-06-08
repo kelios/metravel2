@@ -1,10 +1,12 @@
 # TASK-20260605-005: Near Travels Empty List Contract
 
-Status: Backlog
+Status: Done (verified 2026-06-08)
 Owner: Backend
 Support: Frontend Developer, Tester, Reviewer
 Created: 2026-06-05
-Updated: 2026-06-05
+Updated: 2026-06-08
+
+> Verified fixed 2026-06-08 via a 60-id prod sweep: all `200`; 8/60 valid travels with zero neighbours return `200 []`; `404` only for non-existent travel. FE 404->`[]` guard kept as defensive-only; new `fetchTravelsNear` regression tests in `__tests__/api/travels.test.ts` lock the contract. Archived as BE-015 in `docs/BACKEND_WORKBOARD.md`.
 
 ## Goal
 

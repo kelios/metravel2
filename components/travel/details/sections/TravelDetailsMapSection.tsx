@@ -8,6 +8,7 @@ import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { useTravelDetailsMapSectionContentModel } from '../hooks/useTravelDetailsMapSectionContentModel'
 import { useTravelDetailsMapSectionModel } from '../hooks/useTravelDetailsMapSectionModel'
+import AffiliateSection from './AffiliateSection'
 import ExcursionsSection from './ExcursionsSection'
 import QuestForCitySection from './QuestForCitySection'
 import TravelRouteMapBlock from './TravelRouteMapBlock'
@@ -77,6 +78,8 @@ export const TravelDetailsMapSection: React.FC<{
         styles={styles}
         shouldForceRenderExcursions={shouldForceRenderExcursions}
       />
+
+      <AffiliateSection travel={travel} styles={styles} />
 
       <QuestForCitySection travel={travel} styles={styles} />
 

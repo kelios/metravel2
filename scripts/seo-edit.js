@@ -39,13 +39,68 @@ const DEFAULT_BACKUP_DIR = path.join(__dirname, '.seo-backups');
 // Pure core (exported for tests)
 // ---------------------------------------------------------------------------
 
-/** Build the new description body from the original + lead/append/replace parts. */
+/** Plain-text, lowercased, punctuation-stripped form for shingle comparison. */
+function normalizeLeadText(s) {
+  return String(s || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .toLowerCase()
+    .replace(/[«»"'(),.:;—–-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Contiguous 3-word shingles of the normalized text (tokens ≥3 chars). */
+function leadShingles(text) {
+  const toks = normalizeLeadText(text).split(' ').filter((w) => w.length >= 3);
+  const out = new Set();
+  for (let i = 0; i + 3 <= toks.length; i++) out.add(toks.slice(i, i + 3).join(' '));
+  return out;
+}
+
+/**
+ * True when two lead paragraphs are "the same intro" — they share ≥2 literal
+ * 3-word phrases. Enough to catch a re-generated definitional lead that diverges
+ * only in epithets/details (бирюзовой↔лазурной, a Polish name in parens), without
+ * firing on an unrelated body paragraph that merely names the same place once.
+ */
+function leadIsDuplicate(a, b) {
+  const A = leadShingles(a);
+  const B = leadShingles(b);
+  if (A.size < 2 || B.size < 2) return false;
+  let shared = 0;
+  for (const s of A) if (B.has(s)) shared++;
+  return shared >= 2;
+}
+
+/** Split off the first top-level <p>…</p>; returns { first, rest } or null. */
+function splitLeadingParagraph(html) {
+  const m = /^\s*(<p\b[^>]*>[\s\S]*?<\/p>)/i.exec(html);
+  if (!m) return null;
+  return { first: m[1], rest: html.slice(m.index + m[0].length) };
+}
+
+/**
+ * Build the new description body from the original + lead/append/replace parts.
+ *
+ * Idempotent prepend: if the body already opens with a near-duplicate lead (a
+ * prior SEO pass already prepended one), the existing lead is REPLACED rather
+ * than stacked. This is what prevents the "double lead" regression — re-running
+ * `--prepend-file` on an article that already has an SEO intro no longer leaves
+ * two definitional paragraphs at the top.
+ */
 function composeDescription(oldDesc, { prepend = '', append = '', replace = null } = {}) {
   if (replace != null) return String(replace);
   let out = String(oldDesc || '');
   const lead = String(prepend || '').trim();
   const tail = String(append || '').trim();
-  if (lead) out = `${lead}\n${out.replace(/^\s+/, '')}`;
+  if (lead) {
+    const trimmed = out.replace(/^\s+/, '');
+    const existing = splitLeadingParagraph(trimmed);
+    const incoming = (splitLeadingParagraph(lead) || {}).first || lead;
+    out = existing && leadIsDuplicate(existing.first, incoming) ? existing.rest : trimmed;
+    out = `${lead}\n${out.replace(/^\s+/, '')}`;
+  }
   if (tail) out = `${out.replace(/\s+$/, '')}\n${tail}`;
   return out;
 }
@@ -286,6 +341,7 @@ if (typeof module !== 'undefined' && module.exports) {
     detectRegression,
     backupFileName,
     latestBackup,
+    leadIsDuplicate,
     SENTINEL,
   };
 }
