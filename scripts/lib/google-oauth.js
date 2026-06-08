@@ -116,7 +116,9 @@ async function runLoginFlow(scopes) {
       } catch (e) {
         try {
           res.end('Внутренняя ошибка.')
-        } catch (_) {}
+        } catch {
+          // response already closed — ignore
+        }
         server.close()
         reject(e)
       }

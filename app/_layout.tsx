@@ -43,9 +43,10 @@ const RootWebDeferredChromeLazy = safeLazy(
   () => import('@/components/layout/RootWebDeferredChrome'),
   'RootWebDeferredChrome'
 );
-import { DESIGN_TOKENS } from "@/constants/designSystem"; 
+import { DESIGN_TOKENS } from "@/constants/designSystem";
 import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";
 import { patchWebShadowStyles } from "@/utils/patchWebShadowStyles";
+import { installChunkErrorReloadHandler } from "@/utils/chunkReload";
 import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
 import { shouldRunRuntimeConfigDiagnostics } from '@/utils/runtimeConfigDiagnostics';
 
@@ -57,6 +58,10 @@ if (__DEV__) {
 if (Platform.OS === 'web') {
   require('./global.css');
   patchWebShadowStyles();
+  // Recover from blank pages when navigating after a new deploy: asyncRoutes
+  // splits every web route into a hashed chunk, and a stale client requesting a
+  // now-missing chunk would otherwise hang on a blank screen.
+  installChunkErrorReloadHandler();
 }
 
 // useLayoutEffect warning is suppressed by the inline script in +html.tsx

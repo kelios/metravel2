@@ -224,6 +224,7 @@ describe('useTravelDetails', () => {
 
     (global as any).window = {
       __metravelTravelPreloadScriptLoaded: true,
+      __metravelTravelPreloadTargetPath: '/travels/awesome-trip',
       __metravelTravelPreloadPending: true,
       __metravelTravelPreloadPromise: new Promise<void>((resolve) => {
         resolveBootstrap = resolve;
@@ -276,6 +277,34 @@ describe('useTravelDetails', () => {
 
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
+  });
+
+  it('does not block on a stale preload from another page during SPA navigation', async () => {
+    (Platform.OS as any) = 'web';
+
+    // Globals left over from an earlier direct load of a DIFFERENT travel.
+    // __metravelTravelPreloadScriptLoaded is sticky-true and the bootstrap
+    // promise never resolves for the travel we're navigating to now. The query
+    // must fetch immediately instead of blocking on that stale promise.
+    (global as any).window = {
+      __metravelTravelPreloadScriptLoaded: true,
+      __metravelTravelPreloadTargetPath: '/travels/first-loaded-trip',
+      __metravelTravelPreloadPending: true,
+      __metravelTravelPreloadPromise: new Promise<void>(() => {
+        /* never resolves */
+      }),
+      location: { pathname: '/travels/second-trip' },
+    };
+
+    useLocalSearchParams.mockReturnValue({ param: 'second-trip' });
+    (fetchTravelBySlug as jest.Mock).mockResolvedValue({ slug: 'second-trip', from: 'network' });
+
+    renderHook(() => useTravelDetails());
+
+    const data = await capturedQueryFn!();
+
+    expect(fetchTravelBySlug).toHaveBeenCalledWith('second-trip', { signal: undefined });
+    expect(data).toEqual({ slug: 'second-trip', from: 'network' });
   });
 
   it('falls back to fetchTravelBySlug when preload has identity but misses detail fields', async () => {

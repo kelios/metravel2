@@ -438,7 +438,12 @@ const createStyles = (
     ...Platform.select({
       web: {
         maxHeight: 64,
-        backdropFilter: "blur(14px)",
+        // Static frost on mobile (this dock is mobile-only — `if (!isMobile) return null`).
+        // A translucent background reads as frosted glass but, unlike a live
+        // `backdrop-filter: blur()`, costs nothing per scroll frame — the live blur had
+        // to re-rasterize the content scrolling behind this fixed bar every frame, which
+        // tanked scroll performance on mobile GPUs.
+        backgroundColor: colors.surfaceMuted,
         boxShadow: DESIGN_TOKENS.shadows.medium,
         // Prevent iOS long-press from selecting label text when the user
         // accidentally holds a dock tab instead of tapping it.

@@ -1,6 +1,9 @@
 import React, { Suspense } from 'react'
-const TravelDetailsPostLcpRuntimeLazy = React.lazy(() =>
-  import('@/components/travel/details/TravelDetailsPostLcpRuntime'),
+import { lazyWithRetry } from '@/utils/chunkReload'
+
+const TravelDetailsPostLcpRuntimeLazy = lazyWithRetry(
+  () => import('@/components/travel/details/TravelDetailsPostLcpRuntime'),
+  { name: 'TravelDetailsPostLcpRuntime' },
 )
 
 type TravelDetailsDeferredRuntimeSlotProps = {

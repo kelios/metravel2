@@ -137,6 +137,9 @@ const getTravelHeroPreloadScript = () => String.raw`
     if (window.__metravelTravelPreload && window.__metravelTravelPreload.data) return;
     if (window.__metravelTravelPreloadScriptLoaded) return;
     window.__metravelTravelPreloadScriptLoaded = true;
+    // Record the URL this preload targets so SPA navigations to a *different*
+    // travel don't block on this (initial-page-only) preload promise.
+    try { window.__metravelTravelPreloadTargetPath = path; } catch (_e) {}
     window.__METRAVEL_API_URL__ = '';
     var s = document.createElement('script');
     s.src = ${JSON.stringify(TRAVEL_HERO_PRELOAD_SCRIPT_SRC)};

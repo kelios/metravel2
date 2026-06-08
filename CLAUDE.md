@@ -191,6 +191,16 @@ service-account JSON) в чат.** Вместо этого:
    (см. `shouldShowWebImageImmediately` в `components/ui/ImageCardMedia.tsx`). Featured- и
    popular-карточки обязаны вести себя одинаково по reveal; различаться можно только
    `quality`/`loading`/`fetchPriority`, но не моментом показа sharp-кадра.
+6. **`backdrop-filter: blur()` на фиксированных/sticky барах**: блюр (эффект матового
+   стекла) НЕ отключать — это часть дизайна. Но «живой» `backdrop-filter` поверх
+   скроллящегося контента заставляет браузер пересчитывать блюр на КАЖДОМ кадре скролла
+   и убивает производительность скролла на мобильных GPU. Поэтому на **мобильном** вместо
+   живого блюра использовать **статичный «фрост»** — полупрозрачный фон `colors.surfaceMuted`
+   (`rgba(255,255,255,0.75)` / dark `rgba(42,42,42,0.75)`): выглядит как матовое стекло, но
+   без пересчёта блюра. Живой `backdrop-filter` оставлять только на **десктопных**
+   элементах (боковое меню, hero), где нет мобильного GPU-ограничения. Применено в
+   `components/layout/BottomDock.tsx` (dock — mobile-only) и
+   `components/travel/details/TravelStickyActions.tsx` (бар действий — mobile-only).
 
 ---
 

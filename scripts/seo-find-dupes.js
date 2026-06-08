@@ -99,8 +99,23 @@ function paragraphs(html) {
   return out;
 }
 
-function normalize(t) {
+// Raw collapse for EXACT-dup keying: two paragraphs are exact dups only if their
+// literal text matches — keep URLs so "История (link_X)" ≠ "История (link_Y)".
+function collapse(t) {
   return t.toLowerCase().replace(/[«»"'(),.:;—–-]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// URL-stripped normalize for SHINGLE/near-dup comparison only — author pastes raw
+// links as visible text ("Подробнее https://…", "booking.com/…"), and shared URL
+// fragments would otherwise count as repeated phrases between two different
+// objects that merely both link to wikipedia/booking.
+function normalize(t) {
+  return collapse(
+    t
+      .replace(/https?:\/\/\S+/g, ' ')
+      .replace(/\b[a-z0-9-]+\.(?:by|com|pl|org|ru|net|gov|de|info)\b\S*/gi, ' ')
+      .replace(/\bподробнее\b/gi, ' ')
+  );
 }
 
 function words(t) {
@@ -146,10 +161,11 @@ function detect(detail) {
   const ps = paragraphs(html).filter((p) => p.text.length >= 40);
   const findings = [];
 
-  // 1. exact duplicates
+  // 1. exact duplicates (literal text match — URLs kept, so links to different
+  //    objects don't collapse together)
   const seen = new Map();
   for (const p of ps) {
-    const key = normalize(p.text);
+    const key = collapse(p.text);
     if (seen.has(key)) {
       findings.push({ type: 'exact-dup', a: seen.get(key).idx, b: p.idx, sample: p.text.slice(0, 120) });
     } else seen.set(key, p);
@@ -179,7 +195,47 @@ function detect(detail) {
     }
   }
 
+  // 3. whole-body repetition — the same information restated in two different
+  //    BODY blocks (e.g. an appended <h2>История</h2> repeating a fact already
+  //    told inline above). Excludes the intentional schema.org FAQ section so we
+  //    flag reader-facing repetition, not FAQ summaries. This is the "блоки
+  //    повторяют одну и ту же информацию" signal.
+  const faqStart = html.indexOf('data-faq');
+  const inFaq = (p) => faqStart !== -1 && p.htmlOffset > faqStart;
+  const body = ps.filter((p) => !inFaq(p) && p.text.length >= 60);
+  for (let i = 0; i < body.length; i++) {
+    for (let j = i + 1; j < body.length; j++) {
+      // skip pairs already reported (exact/double-lead/near-dup)
+      if (findings.some((f) => (f.a === body[i].idx && f.b === body[j].idx))) continue;
+      const sh = sharedShingles(body[i].text, body[j].text);
+      const sim = jaccard(body[i].text, body[j].text);
+      if (sh.n >= 3 || sim >= 0.45) {
+        findings.push({
+          type: 'body-repeat',
+          a: body[i].idx, b: body[j].idx, sim: Number(sim.toFixed(2)), sharedPhrases: sh.n,
+          phrases: sh.samples,
+          sampleA: body[i].text.slice(0, 110),
+          sampleB: body[j].text.slice(0, 110),
+        });
+      }
+    }
+  }
+
   return findings;
+}
+
+// Lightweight structural snapshot — used to flag articles whose SEO blocks were
+// appended at the end (likely out-of-order / disconnected from their photos)
+// rather than woven into the narrative.
+function structure(detail) {
+  const html = detail.description || '';
+  const h2 = (html.match(/<h2\b/gi) || []).length;
+  const h3 = (html.match(/<h3\b/gi) || []).length;
+  const hasFaq = html.includes('data-faq');
+  const hasNearby = /Что рядом/i.test(html);
+  // trailing appended SEO sections = h2 blocks that sit after the main prose
+  const tailMarkers = (html.match(/<h2[^>]*>\s*(История|Как добраться|Практическ|Маршрут в цифрах|Что посмотреть|Легенд)/gi) || []).length;
+  return { h2, h3, hasFaq, hasNearby, tailMarkers, len: html.length };
 }
 
 async function main() {
@@ -195,8 +251,10 @@ async function main() {
       const detail = await getTravel(t.id);
       const findings = detect(detail);
       if (findings.length) {
-        report.push({ id: t.id, slug: detail.slug, name: detail.name, findings });
-        console.log(`  ⚠ #${String(t.id).padEnd(5)} ${findings.map((f) => f.type).join(',')}  ${(detail.name || '').slice(0, 55)}`);
+        const bodyRepeats = findings.filter((f) => f.type === 'body-repeat').length;
+        report.push({ id: t.id, slug: detail.slug, name: detail.name, structure: structure(detail), bodyRepeats, findings });
+        const tags = [...new Set(findings.map((f) => f.type))].join(',');
+        console.log(`  ⚠ #${String(t.id).padEnd(5)} br=${bodyRepeats} ${tags.padEnd(34)} ${(detail.name || '').slice(0, 50)}`);
       }
     } catch (e) {
       console.error(`  ❌ #${t.id} ${e.message}`);
@@ -204,8 +262,12 @@ async function main() {
     if (n % 40 === 0) await new Promise((r) => setTimeout(r, 400));
   }
 
+  // worst offenders first: most body-level repetition, then total findings
+  report.sort((a, b) => (b.bodyRepeats - a.bodyRepeats) || (b.findings.length - a.findings.length));
+
   fs.writeFileSync(REPORT, JSON.stringify({ runAt: new Date().toISOString(), userId: USER_ID, total: list.length, affected: report.length, report }, null, 2));
-  console.log(`\n${report.length}/${list.length} articles with duplicates → ${path.relative(process.cwd(), REPORT)}`);
+  const withBodyRepeat = report.filter((r) => r.bodyRepeats > 0).length;
+  console.log(`\n${report.length}/${list.length} articles flagged (${withBodyRepeat} with body-level repetition) → ${path.relative(process.cwd(), REPORT)}`);
 }
 
 main().catch((e) => { console.error('FATAL', e); process.exit(1); });

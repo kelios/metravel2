@@ -34,7 +34,30 @@ type TravelPreloadWindow = Window & typeof globalThis & {
   __metravelTravelPreloadScriptLoaded?: boolean;
   __metravelTravelPreloadPending?: boolean;
   __metravelTravelPreloadPromise?: Promise<unknown>;
+  __metravelTravelPreloadTargetPath?: string;
 };
+
+// The inline preload bootstrap (app/+html.tsx) runs once, only for the initial
+// document URL, and records the path it targeted in __metravelTravelPreloadTargetPath.
+// SPA navigations never re-run it, so this global keeps pointing at the first
+// page — which is exactly how we tell "initial direct load of this travel" apart
+// from "in-app navigation to a different travel" (where no preload is in flight).
+function isInitialPreloadTarget(normalizedSlug: string, isId: boolean, idNum: number): boolean {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return false;
+  const targetPath = (window as TravelPreloadWindow).__metravelTravelPreloadTargetPath;
+  if (typeof targetPath !== 'string' || !targetPath) return false;
+  const match = targetPath.match(/^\/travels\/([^/?#]+)/);
+  if (!match) return false;
+  let segment = match[1];
+  if (/%[0-9A-Fa-f]{2}/.test(segment)) {
+    try {
+      segment = decodeURIComponent(segment);
+    } catch {
+      // keep raw segment on malformed encoding
+    }
+  }
+  return isId ? String(segment) === String(idNum) : segment === normalizedSlug;
+}
 
 function hasLikelyStrippedEmbeddedMedia(description: string): boolean {
   const raw = String(description || '');
@@ -155,6 +178,19 @@ async function waitForTravelPreload(slug: string, isId: boolean, idNum: number):
 
   const immediate = consumeForQuery();
   if (immediate) return immediate;
+
+  // On a client-side SPA navigation the preload bootstrap (app/+html.tsx) never
+  // re-runs — it only ever targets the initial document URL, and the global
+  // __metravelTravelPreloadScriptLoaded flag stays sticky-true after that first
+  // load. That defeats the bail-out below (it requires !scriptLoaded), so every
+  // in-app navigation used to block on the *stale* preload promise from the
+  // first page. On slow networks that dead time ate into the request timeout and
+  // surfaced as a stuck/blank or "не удалось загрузить" article page. If the slug
+  // we're resolving now isn't the initially preloaded one, there is nothing to
+  // wait for — fetch immediately.
+  if (!isInitialPreloadTarget(slug, isId, idNum)) {
+    return undefined;
+  }
 
   let scriptLoaded = Boolean(win.__metravelTravelPreloadScriptLoaded);
   // The preload script is appended only during the initial direct load of a

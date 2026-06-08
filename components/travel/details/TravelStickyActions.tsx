@@ -243,8 +243,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       ...Platform.select({
         web: {
           boxShadow: '0 4px 24px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.06)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
+          // Static frost on mobile (this bar is mobile-only). A translucent background
+          // keeps the frosted-glass look without a live `backdrop-filter: blur()`, which
+          // re-rasterized the scrolling content behind this fixed bar on every frame and
+          // caused the mobile scroll jank.
+          backgroundColor: colors.surfaceMuted,
         } as any,
         default: {
           shadowColor: colors.text,
