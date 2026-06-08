@@ -2,7 +2,7 @@
 
 Status: Done (verified 2026-06-08)
 Owner: Backend
-Support: SEO Engineer, Frontend Developer, Tester, Reviewer
+Support: SEO Engineer, Frontend Developer, Tester, Reviewer, Releaser
 Created: 2026-06-05
 Updated: 2026-06-08
 
@@ -15,6 +15,11 @@ Include the quests catalog and published quest detail URLs in the production `si
 ## Context
 
 Probe on 2026-06-05: `GET https://metravel.by/sitemap.xml` returned `200` with 388 `<loc>` entries and `0` quest URLs. The sitemap is backend-owned; the frontend can provide page metadata and internal links, but cannot add quest URLs to the served canonical sitemap.
+
+Source task:
+
+- Source id: BE-017
+- Source path: docs/BACKEND_WORKBOARD.md
 
 ## Acceptance Criteria
 
@@ -59,6 +64,14 @@ Support agents: SEO Engineer for verification; Frontend developer for route/meta
 curl -sS https://metravel.by/sitemap.xml | grep -E "/quests($|/)"
 ```
 
+## Release Checklist
+
+- [ ] Changed files are listed in `## Results`.
+- [ ] New files created by this task are identified.
+- [ ] Generated/cache/secret/local files are excluded.
+- [ ] Task-scope files are staged when the user asks to prepare git.
+- [ ] Skipped files and release blockers are recorded.
+
 ## Progress Log
 
 - 2026-06-05: Created after production sitemap still contained zero quest URLs.
@@ -70,5 +83,7 @@ Changed files:
 Validation evidence: 2026-06-05 production sitemap probe.
 
 Reviewer findings:
+
+Release notes:
 
 Blockers:

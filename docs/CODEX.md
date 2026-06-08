@@ -38,7 +38,7 @@
 | --- | --- | --- |
 | Feature, bugfix, refactor | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, профильный feature-doc при наличии | переиспользование существующих компонентов, hooks, utils; минимальный diff |
 | Hooks / logic extraction | `AGENTS.md`, `docs/RULES.md`, `docs/DEVELOPMENT.md`, профильный feature-doc, ближайшие существующие hooks | выносить focused hook без лишней абстракции, сохранять client/server state boundaries, не добавлять новые `any` |
-| Backend task planning | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `tasks/000-template.md` | новые задачи для бэка оформляй отдельными файлами в `tasks/` только по шаблону `000-template.md` |
+| Backend task planning | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `tasks/README.md`, `tasks/000-template.md` | новые задачи оформляй отдельными файлами в `tasks/` строго по шаблону `000-template.md` и правилам `tasks/README.md`; используй агент `task-author` / команду `/task-new` |
 | Видимый UI, media, icons, tokens | всё из feature-контекста + `$metravel-ui-guardrails` | проверка в браузере на web, screenshot, отсутствие новых console errors |
 | External links | `docs/RULES.md`, `docs/TESTING.md`, `utils/externalLinks.ts` | никаких direct `window.open(...)` и `Linking.openURL(...)` вне chokepoint |
 | Test running | `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, профильный feature-doc при наличии | выбрать самый узкий надёжный test command, не оставлять `.skip`, после фикса rerun обязателен |
@@ -143,7 +143,7 @@ Skills:
 - Tests: `__tests__/` for Jest, `e2e/` for Playwright.
 - Governance scripts: `scripts/`, command details in `docs/TESTING.md`.
 - Feature maps: `docs/features/`.
-- Backend task template: `tasks/000-template.md`; новые задачи для бэка создавай в `tasks/` по этому шаблону.
+- Task format: `tasks/README.md` (правила) + `tasks/000-template.md` (шаблон); новые задачи создавай в `tasks/` по ним — агент `task-author`, команда `/task-new`.
 
 ## Кодировка документации
 

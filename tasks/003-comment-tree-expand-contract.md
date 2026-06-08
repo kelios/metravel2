@@ -2,9 +2,9 @@
 
 Status: Backlog
 Owner: Backend
-Support: Frontend Developer, Tester, Reviewer
+Support: Frontend Developer, Tester, Reviewer, Releaser
 Created: 2026-06-05
-Updated: 2026-06-05
+Updated: 2026-06-08
 
 ## Goal
 
@@ -13,6 +13,11 @@ Return the full travel comment tree in one request, or expose a documented expan
 ## Context
 
 Probe on 2026-06-05: `GET /api/travel-comments/?travel_id=733` returned `200` with 4 comments, including comments with `sub_thread > 0`. The frontend still has to fetch sub-threads separately to assemble the conversation.
+
+Source task:
+
+- Source id:
+- Source path: 2026-06-05 e2e backend probe (`GET /api/travel-comments/?travel_id=733`)
 
 ## Acceptance Criteria
 
@@ -57,6 +62,14 @@ Support agents: Frontend developer for API adapter cleanup; Tester for nested-co
 curl -sS "https://metravel.by/api/travel-comments/?travel_id=733&expand=sub_threads"
 ```
 
+## Release Checklist
+
+- [ ] Changed files are listed in `## Results`.
+- [ ] New files created by this task are identified.
+- [ ] Generated/cache/secret/local files are excluded.
+- [ ] Task-scope files are staged when the user asks to prepare git.
+- [ ] Skipped files and release blockers are recorded.
+
 ## Progress Log
 
 - 2026-06-05: Created after verification showed sub-thread IDs are still returned without embedded replies.
@@ -68,5 +81,7 @@ Changed files:
 Validation evidence: 2026-06-05 e2e backend probe.
 
 Reviewer findings:
+
+Release notes:
 
 Blockers:

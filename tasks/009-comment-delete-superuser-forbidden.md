@@ -2,7 +2,7 @@
 
 Status: Backlog
 Owner: Backend
-Support: Frontend Developer, Tester, Reviewer
+Support: Frontend Developer, Tester, Reviewer, Releaser
 Created: 2026-06-08
 Updated: 2026-06-08
 
@@ -31,6 +31,11 @@ Related files (frontend, for reference only — no change required):
 - `api/comments.ts` — `deleteComment` → `DELETE /travel-comments/{id}/`.
 - `components/travel/CommentItem.tsx` — `canDelete = (isAuthor || isSuperuser)`.
 - `e2e/travel-comments.spec.ts` — "Admin users → should be able to delete any comment" asserts a `204` for an admin DELETE, but runs against a Playwright route mock, so it does not catch the real-backend 403.
+
+Source task:
+
+- Source id:
+- Source path: 2026-06-08 prod repro (owner/superuser `DELETE /api/travel-comments/3/` -> 403); mocked-only coverage gap in `e2e/travel-comments.spec.ts`
 
 ## Acceptance Criteria
 
@@ -80,6 +85,14 @@ Support agents: Frontend Developer (confirm no FE change needed), Tester (add re
 - Re-run the repro from Context: superuser `DELETE /api/travel-comments/{id}/` of another user's comment must return `204`.
 - Confirm non-author non-superuser still gets `403`.
 
+## Release Checklist
+
+- [ ] Changed files are listed in `## Results`.
+- [ ] New files created by this task are identified.
+- [ ] Generated/cache/secret/local files are excluded.
+- [ ] Task-scope files are staged when the user asks to prepare git.
+- [ ] Skipped files and release blockers are recorded.
+
 ## Progress Log
 
 - 2026-06-08: Created. Reproduced on prod (metravel.by) — owner/superuser DELETE of comment id=3 returns 403 with `Allow: …DELETE…`. Root cause is backend object-level permission missing a superuser override; frontend verified correct (sends Token, derives admin affordance from backend `is_superuser`, toasts on failure).
@@ -91,5 +104,7 @@ Changed files:
 Validation evidence:
 
 Reviewer findings:
+
+Release notes:
 
 Blockers:

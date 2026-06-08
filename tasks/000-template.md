@@ -2,7 +2,7 @@
 
 Status: Backlog
 Owner: Manager
-Support: Developer, Tester, Reviewer
+Support: Developer, Tester, Reviewer, Releaser
 Created: YYYY-MM-DD
 Updated: YYYY-MM-DD
 
@@ -13,6 +13,11 @@ Describe the desired outcome in one or two sentences.
 ## Context
 
 Relevant background, user request, links, files, or constraints.
+
+Source task:
+
+- Source id:
+- Source path:
 
 ## Acceptance Criteria
 
@@ -48,6 +53,14 @@ Support agents:
 
 Commands or manual checks to run.
 
+## Release Checklist
+
+- [ ] Changed files are listed in `## Results`.
+- [ ] New files created by this task are identified.
+- [ ] Generated/cache/secret/local files are excluded.
+- [ ] Task-scope files are staged when the user asks to prepare git.
+- [ ] Skipped files and release blockers are recorded.
+
 ## Progress Log
 
 - YYYY-MM-DD: Created.
@@ -59,5 +72,7 @@ Changed files:
 Validation evidence:
 
 Reviewer findings:
+
+Release notes:
 
 Blockers:

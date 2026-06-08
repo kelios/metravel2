@@ -2,7 +2,7 @@
 
 Status: Done (verified 2026-06-08)
 Owner: Backend
-Support: Frontend Developer, Tester, Reviewer
+Support: Frontend Developer, Tester, Reviewer, Releaser
 Created: 2026-06-05
 Updated: 2026-06-08
 
@@ -20,6 +20,11 @@ Probe on 2026-06-05:
 - `GET /api/travels/391/near/` -> `200` with nearby rows.
 
 The frontend currently swallows `404` as `[]` in `api/map.ts`.
+
+Source task:
+
+- Source id: BE-015
+- Source path: docs/BACKEND_WORKBOARD.md
 
 ## Acceptance Criteria
 
@@ -64,6 +69,14 @@ Support agents: Frontend developer for adapter cleanup; Tester for valid-empty a
 curl -sS -i "https://metravel.by/api/travels/563/near/"
 ```
 
+## Release Checklist
+
+- [ ] Changed files are listed in `## Results`.
+- [ ] New files created by this task are identified.
+- [ ] Generated/cache/secret/local files are excluded.
+- [ ] Task-scope files are staged when the user asks to prepare git.
+- [ ] Skipped files and release blockers are recorded.
+
 ## Progress Log
 
 - 2026-06-05: Created after verification still reproduced `404` for valid travel `563`.
@@ -75,5 +88,7 @@ Changed files:
 Validation evidence: 2026-06-05 e2e backend probe.
 
 Reviewer findings:
+
+Release notes:
 
 Blockers:

@@ -2,9 +2,9 @@
 
 Status: Backlog
 Owner: Backend
-Support: Frontend Developer, Tester, Reviewer
+Support: Frontend Developer, Tester, Reviewer, Releaser
 Created: 2026-06-07
-Updated: 2026-06-07
+Updated: 2026-06-08
 
 ## Goal
 
@@ -28,6 +28,11 @@ Related files (frontend):
 - `api/comments.ts` — comment list/create.
 - `types/comments.ts` — TravelComment type includes `user_name?: string`.
 - `api/user.ts` — `updateUserProfile` calls `/user/{id}/profile/update/`.
+
+Source task:
+
+- Source id:
+- Source path: SEO mass-augment editor byline (`scripts/seo-mass-augment.js`) + 2026-06-07 prod probe (editor token, user_id=120)
 
 ## Acceptance Criteria
 
@@ -73,6 +78,14 @@ Support agents: Frontend Developer (verify no regression in comment rendering), 
 - Probe sequence from this task's Context section (steps 1-3) must show step 2/3 returning the renamed value.
 - Add a backend test asserting Profile-first behaviour with both rename and empty-Profile cases.
 
+## Release Checklist
+
+- [ ] Changed files are listed in `## Results`.
+- [ ] New files created by this task are identified.
+- [ ] Generated/cache/secret/local files are excluded.
+- [ ] Task-scope files are staged when the user asks to prepare git.
+- [ ] Skipped files and release blockers are recorded.
+
 ## Progress Log
 
 - 2026-06-07: Created. Reproduced on prod with editor token; soft-prefix workaround applied on frontend mass-augment script (`scripts/seo-mass-augment.js`) to compensate while this is open.
@@ -84,5 +97,7 @@ Changed files:
 Validation evidence:
 
 Reviewer findings:
+
+Release notes:
 
 Blockers:

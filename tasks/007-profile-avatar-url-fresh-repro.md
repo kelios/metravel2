@@ -2,9 +2,9 @@
 
 Status: Backlog
 Owner: Backend
-Support: Frontend Developer, Tester, Reviewer
+Support: Frontend Developer, Tester, Reviewer, Releaser
 Created: 2026-06-05
-Updated: 2026-06-05
+Updated: 2026-06-08
 
 ## Goal
 
@@ -15,6 +15,11 @@ Verify whether profile avatar URLs still point to missing files and fix backend 
 Earlier production browser evidence on 2026-06-05 showed a profile avatar URL with a suspicious doubled path segment (`/avatar/profile/<id>/avatar/<file>.webp`) returning `404`. A later direct probe could not re-check the same user because `/api/user/82/profile/` returned `404`, and the travel payload no longer exposed a numeric author id. This needs a fresh backend-side reproduction using a known account with an uploaded avatar.
 
 Frontend mitigation: `useAvatarUri` caches failed avatar URLs for the browser session and falls back after the first failed URL.
+
+Source task:
+
+- Source id:
+- Source path: 2026-06-05 production browser evidence (avatar `404`, doubled path segment)
 
 ## Acceptance Criteria
 
@@ -60,6 +65,14 @@ curl -sS -i "https://metravel.by/api/user/<id>/profile/"
 curl -sS -I "https://metravel.by/avatar/profile/<id>/<file>.webp"
 ```
 
+## Release Checklist
+
+- [ ] Changed files are listed in `## Results`.
+- [ ] New files created by this task are identified.
+- [ ] Generated/cache/secret/local files are excluded.
+- [ ] Task-scope files are staged when the user asks to prepare git.
+- [ ] Skipped files and release blockers are recorded.
+
 ## Progress Log
 
 - 2026-06-05: Created because old production avatar evidence could not be treated as closed or current without a fresh user fixture.
@@ -71,5 +84,7 @@ Changed files:
 Validation evidence: 2026-06-05 direct re-check could not verify old user id (`/api/user/82/profile/` returned `404`).
 
 Reviewer findings:
+
+Release notes:
 
 Blockers:

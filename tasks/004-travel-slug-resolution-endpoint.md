@@ -2,9 +2,9 @@
 
 Status: Backlog
 Owner: Backend
-Support: Frontend Developer, Tester, Reviewer
+Support: Frontend Developer, Tester, Reviewer, Releaser
 Created: 2026-06-05
-Updated: 2026-06-05
+Updated: 2026-06-08
 
 ## Goal
 
@@ -13,6 +13,11 @@ Provide a stable slug-resolution contract so the frontend does not brute-force t
 ## Context
 
 Probe on 2026-06-05: `GET /api/travels/resolve-slug/?slug=definitely-not-existing-slug` returns `404` because the endpoint does not exist. The frontend fallback still runs multiple search variants across pages in `api/travelDetailsQueries.ts`.
+
+Source task:
+
+- Source id:
+- Source path: 2026-06-05 e2e backend probe (`GET /api/travels/resolve-slug/`)
 
 ## Acceptance Criteria
 
@@ -56,6 +61,14 @@ Support agents: Frontend developer for fallback simplification; Tester for old/c
 curl -sS -i "https://metravel.by/api/travels/resolve-slug/?slug=<old-slug>"
 ```
 
+## Release Checklist
+
+- [ ] Changed files are listed in `## Results`.
+- [ ] New files created by this task are identified.
+- [ ] Generated/cache/secret/local files are excluded.
+- [ ] Task-scope files are staged when the user asks to prepare git.
+- [ ] Skipped files and release blockers are recorded.
+
 ## Progress Log
 
 - 2026-06-05: Created after backend handoff verification still found no resolver endpoint.
@@ -67,5 +80,7 @@ Changed files:
 Validation evidence: 2026-06-05 e2e backend probe.
 
 Reviewer findings:
+
+Release notes:
 
 Blockers:

@@ -2,9 +2,9 @@
 
 Status: Open - backend byte-budget follow-up required
 Owner: Backend
-Support: Frontend Developer, Tester, Reviewer
+Support: Frontend Developer, Tester, Reviewer, Releaser
 Created: 2026-05-20
-Updated: 2026-06-05
+Updated: 2026-06-08
 
 ## Goal
 
@@ -41,6 +41,11 @@ cache-control: public, max-age=3600, must-revalidate
 ```
 
 and duplicate `Vary` values (`origin`, `Accept`).
+
+Source task:
+
+- Source id:
+- Source path: production image API + mobile LCP profiling (PSI/Lighthouse, Moto G Power slow 4G)
 
 ## Acceptance Criteria
 
@@ -131,6 +136,14 @@ Post-deploy performance check:
 
 - PSI or Lighthouse mobile on a representative travel page must show LCP below `4.5 s`.
 
+## Release Checklist
+
+- [ ] Changed files are listed in `## Results`.
+- [ ] New files created by this task are identified.
+- [ ] Generated/cache/secret/local files are excluded.
+- [ ] Task-scope files are staged when the user asks to prepare git.
+- [ ] Skipped files and release blockers are recorded.
+
 ## Progress Log
 
 - 2026-05-20: Created from reported production image API behavior and mobile LCP profiling.
@@ -145,5 +158,7 @@ Validation evidence: 2026-06-05 production curl probes for `w=480`, `w=720`, `w=
 `npm run test:run -- __tests__/components/travel/TravelDetailsContainer.performance.web.test.tsx __tests__/components/travel/sliderParts.utils.web.test.ts __tests__/components/ui/ImageCardMedia.blur.web.test.tsx`.
 
 Reviewer findings:
+
+Release notes:
 
 Blockers: backend image encoder/quality tuning still needed for the `w=1200&q=65` byte budget; AVIF negotiation is not complete if the backend stack is expected to support AVIF; PSI/Lighthouse mobile LCP validation still pending after final backend tuning.

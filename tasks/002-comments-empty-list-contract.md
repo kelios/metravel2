@@ -2,7 +2,7 @@
 
 Status: Done (verified 2026-06-08)
 Owner: Backend
-Support: Frontend Developer, Tester, Reviewer
+Support: Frontend Developer, Tester, Reviewer, Releaser
 Created: 2026-06-05
 Updated: 2026-06-08
 
@@ -20,6 +20,11 @@ Production/e2e backend probe on 2026-06-05:
 - `GET /api/travel-comments/?travel_id=563` -> `400` with a validation-shaped body.
 
 The frontend currently handles this as an empty state, but `400` should be reserved for malformed `travel_id`, not a valid travel with zero comments.
+
+Source task:
+
+- Source id: BE-002
+- Source path: docs/BACKEND_WORKBOARD.md
 
 ## Acceptance Criteria
 
@@ -66,6 +71,14 @@ Support agents: Frontend developer for removing the mitigation after verificatio
 curl -sS -i "https://metravel.by/api/travel-comments/?travel_id=563"
 ```
 
+## Release Checklist
+
+- [ ] Changed files are listed in `## Results`.
+- [ ] New files created by this task are identified.
+- [ ] Generated/cache/secret/local files are excluded.
+- [ ] Task-scope files are staged when the user asks to prepare git.
+- [ ] Skipped files and release blockers are recorded.
+
 ## Progress Log
 
 - 2026-06-05: Created after backend handoff verification still reproduced `400` for travel `563`.
@@ -77,5 +90,7 @@ Changed files:
 Validation evidence: 2026-06-05 e2e backend probe.
 
 Reviewer findings:
+
+Release notes:
 
 Blockers:
