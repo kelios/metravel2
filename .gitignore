@@ -168,3 +168,4 @@ scripts/.tmp-*
 
 # Index-status кэш (не коммитим)
 scripts/.index-cache/
+/dump/
