@@ -6,7 +6,6 @@ import { Text } from '@/ui/paper'
 import type { Travel } from '@/types/types'
 import { useThemedColors } from '@/hooks/useTheme'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
-import Button from '@/components/ui/Button'
 import SubscribeButton from '@/components/ui/SubscribeButton'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import TravelPdfExportControl from '@/components/travel/TravelPdfExportControl'
@@ -30,7 +29,6 @@ type AuthorBlockProps = {
   onOpenProfile: () => void
   onEdit: () => void
   onWrite: () => void
-  onUserTravels: () => void
 }
 
 export const AuthorBlock = memo(function AuthorBlock({
@@ -49,7 +47,6 @@ export const AuthorBlock = memo(function AuthorBlock({
   onOpenProfile,
   onEdit,
   onWrite,
-  onUserTravels,
 }: AuthorBlockProps) {
   const showSubscribeAndWrite = !isOwn && !!authorUserId
   const displayName = userName || 'Пользователь'
@@ -224,24 +221,6 @@ export const AuthorBlock = memo(function AuthorBlock({
               )}
             </View>
           )}
-
-          {userName ? (
-            <View style={styles.allTravelsWrap}>
-              <Button
-                label="Все путешествия автора"
-                onPress={onUserTravels}
-                variant="outline"
-                size="sm"
-                icon={<Feather name="arrow-right" size={14} color={colors.primary} />}
-                iconPosition="right"
-                accessibilityLabel="Все путешествия автора"
-                style={styles.allTravelsButton}
-                labelStyle={styles.allTravelsButtonLabel}
-                labelNumberOfLines={1}
-                {...webOnly({ testID: 'open-author-travels' } as any)}
-              />
-            </View>
-          ) : null}
         </View>
       </View>
     </View>

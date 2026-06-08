@@ -106,10 +106,10 @@ export const createHomeHeroStyles = ({
           : '18%'
     : 110
 
-  const warmBg = DESIGN_TOKENS.colors.background
+  const warmBg = colors.background
   const warmBgSoft = hasBookLayout
     ? DESIGN_TOKENS.colors.bookPageSurfaceMuted
-    : DESIGN_TOKENS.colors.backgroundSecondary
+    : colors.backgroundSecondary
   const cardSurface = hasBookLayout
     ? DESIGN_TOKENS.colors.bookPageSurface
     : DESIGN_TOKENS.colors.surface

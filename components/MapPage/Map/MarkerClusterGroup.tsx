@@ -212,8 +212,6 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
 
       try {
         const bounds = clusterLayer.getBounds()
-        if (!bounds?.isValid?.()) return
-
         const container =
           typeof map.getContainer === 'function' ? map.getContainer() : null
         const fitBoundsOptions = getClusterZoomFitBoundsOptions({
@@ -224,6 +222,42 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
             container?.clientHeight ??
             (typeof window !== 'undefined' ? window.innerHeight : undefined),
         })
+
+        const ne = bounds?.getNorthEast?.()
+        const sw = bounds?.getSouthWest?.()
+        const isDegenerate =
+          !bounds?.isValid?.() || (ne && sw && ne.equals?.(sw))
+
+        // Если все точки кластера в одной координате — fitBounds не разведёт их,
+        // нужен явный spiderfy (плагин не зовёт его сам, т.к. zoomToBoundsOnClick=false).
+        if (isDegenerate) {
+          if (typeof clusterLayer.spiderfy === 'function') {
+            clusterLayer.spiderfy()
+          }
+          return
+        }
+
+        const maxZoom =
+          typeof fitBoundsOptions.maxZoom === 'number'
+            ? fitBoundsOptions.maxZoom
+            : (map.getMaxZoom?.() ?? CLUSTER_DISABLE_ZOOM)
+        const targetZoom =
+          typeof map.getBoundsZoom === 'function'
+            ? map.getBoundsZoom(bounds, false)
+            : null
+        const currentZoom = map.getZoom?.() ?? 0
+
+        // Если зумить уже некуда (упёрлись в maxZoom, а точки всё ещё в одном
+        // кластере) — делаем spiderfy, иначе маркеры визуально не появятся.
+        if (
+          targetZoom != null &&
+          targetZoom >= maxZoom &&
+          currentZoom >= maxZoom &&
+          typeof clusterLayer.spiderfy === 'function'
+        ) {
+          clusterLayer.spiderfy()
+          return
+        }
 
         map.fitBounds(bounds, fitBoundsOptions as any)
       } catch {

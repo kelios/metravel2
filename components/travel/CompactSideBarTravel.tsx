@@ -199,10 +199,6 @@ function CompactSideBarTravel({
     if (authorUserId) goInternal(`/user/${authorUserId}`)
   }, [authorUserId, goInternal])
 
-  const handleUserTravels = useCallback(() => {
-    if (authorUserId) goInternal(`/search?user_id=${encodeURIComponent(authorUserId)}`)
-  }, [authorUserId, goInternal])
-
   const handleWriteToAuthor = useCallback(() => {
     if (authorUserId) goInternal(`/messages?userId=${encodeURIComponent(authorUserId)}`)
   }, [authorUserId, goInternal])
@@ -307,7 +303,6 @@ function CompactSideBarTravel({
             onOpenProfile={handleOpenAuthorProfile}
             onEdit={handleEdit}
             onWrite={handleWriteToAuthor}
-            onUserTravels={handleUserTravels}
           />
 
           {navLinks.map((link, index) => (

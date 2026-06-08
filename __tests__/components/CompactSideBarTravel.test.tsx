@@ -334,21 +334,6 @@ describe('CompactSideBarTravel', () => {
     expect(getByText(/1[\s\u00A0\u202F]234/)).toBeTruthy();
   });
 
-  it('opens author travels search with user_id param', () => {
-    const travel = createMockTravel({
-      userId: '555',
-      userName: 'Test User',
-    } as any);
-
-    const { getByText } = render(
-      <CompactSideBarTravel {...defaultProps} travel={travel} />
-    );
-
-    fireEvent.press(getByText('Все путешествия автора'));
-
-    expect(mockPush).toHaveBeenCalledWith('/search?user_id=555');
-  });
-
   it('should render WeatherWidget', () => {
     const { getByTestId } = render(
       <CompactSideBarTravel {...defaultProps} />

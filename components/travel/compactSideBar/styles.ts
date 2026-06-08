@@ -236,22 +236,6 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
           } as any)
         : {}),
     },
-    allTravelsWrap: { marginTop: 8, alignSelf: 'stretch' },
-    allTravelsButton: {
-      alignSelf: 'stretch',
-      borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: colors.primarySoft,
-      borderColor: colors.borderLight,
-      minHeight: 34,
-      paddingVertical: 4,
-      paddingHorizontal: 12,
-    },
-    allTravelsButtonLabel: {
-      color: colors.primaryText,
-      fontWeight: '700',
-      fontSize: 13,
-      textAlign: 'center',
-    },
     closeBar: {
       position: 'absolute',
       bottom: 0,

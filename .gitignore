@@ -1,4 +1,7 @@
 /node_modules/
+/.secrets/
+*.gcp.json
+gcp-service-account*.json
 /dist/
 /dist-stub/
 /.prod-build-tmp/

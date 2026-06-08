@@ -232,18 +232,11 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     minHeight: 40,
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
     justifyContent: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.borderLight,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.borderLight,
-    ...Platform.select({
-      web: {
-        boxShadow: ((colors.boxShadows as any)?.light ?? DESIGN_TOKENS.shadows.light) as any,
-        backdropFilter: 'blur(12px) saturate(1.05)' as any,
-        WebkitBackdropFilter: 'blur(12px) saturate(1.05)' as any,
-      } as any,
-    }),
   },
   containerMobile: {
     minHeight: 52,

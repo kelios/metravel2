@@ -53,7 +53,7 @@ export const getStyles = (
             minWidth: 0,
             alignItems: 'stretch',
             isolation: 'isolate',
-            backgroundColor: isMobile ? themedColors.background : themedColors.backgroundSecondary,
+            backgroundColor: themedColors.background,
           } as any)
         : null),
     },
