@@ -164,3 +164,6 @@ scripts/.workflows/
 # Ad-hoc tmp dumps at repo root
 /tmp_*.json
 /tmp_*.txt
+
+# Index-status кэш (не коммитим)
+scripts/.index-cache/

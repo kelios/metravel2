@@ -879,6 +879,55 @@ function writeFileSafe(filePath, content) {
 }
 
 // ---------------------------------------------------------------------------
+// Related-travels index (FE-IDX-3): crawlable internal links between travels.
+// ---------------------------------------------------------------------------
+function travelPublicPath(t) {
+  const key = (t && (t.slug || (t.id != null ? String(t.id) : ''))) || '';
+  return key ? `/travels/${key}` : '';
+}
+
+function buildRelatedIndex(travels) {
+  const byCountry = new Map();
+  const all = [];
+  for (const t of travels) {
+    const p = travelPublicPath(t);
+    const name = String(t.name || '').trim();
+    if (!p || !name) continue;
+    const country = String(t.countryName || '').trim();
+    const entry = { path: p, name, country };
+    all.push(entry);
+    if (!byCountry.has(country)) byCountry.set(country, []);
+    byCountry.get(country).push(entry);
+  }
+  return { byCountry, all };
+}
+
+function pickRelatedTravels(travel, index, limit = 6) {
+  const selfPath = travelPublicPath(travel);
+  const country = String(travel?.countryName || '').trim();
+  const seen = new Set([selfPath]);
+  const out = [];
+  const add = (e) => {
+    if (out.length >= limit || !e || seen.has(e.path)) return;
+    seen.add(e.path);
+    out.push({ path: e.path, name: e.name });
+  };
+  if (country && index.byCountry.has(country)) {
+    for (const e of index.byCountry.get(country)) add(e);
+  }
+  // Fill remaining from the global list, rotated by id so different pages link
+  // to different sets (spreads internal link equity instead of one hub).
+  const all = index.all;
+  if (all.length) {
+    const offset = Math.abs(Number(travel?.id) || selfPath.length) % all.length;
+    for (let i = 0; i < all.length && out.length < limit; i++) {
+      add(all[(offset + i) % all.length]);
+    }
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
 // Static pages definitions
 // ---------------------------------------------------------------------------
 const STATIC_PAGES = [
@@ -1144,9 +1193,14 @@ async function main() {
     const detailMap = new Map();
     travelsWithId.forEach((t, i) => detailMap.set(t.id, details[i]));
 
+    // FE-IDX-3: build the related-travels index once for crawlable internal links.
+    const relatedIndex = buildRelatedIndex(travels);
+
     console.log(`\n�📝 Generating ${travels.length} travel pages...`);
     let generated = 0;
     let skipped = 0;
+    let emptyNameCount = 0;
+    let withBodyCount = 0;
 
     for (const travel of travels) {
       const slug = travel.slug || '';
@@ -1228,10 +1282,18 @@ async function main() {
         bootstrapTravel,
         routeKey
       );
+      if (!name) emptyNameCount++;
+      if (detail.description && detail.description.trim()) withBodyCount++;
+
       const htmlWithSkeleton = injectSkeletonShell(
         htmlWithTravelBootstrap,
         `/travels/${routeKey}`,
-        { heroPreload: travelHeroPreload, name }
+        {
+          heroPreload: travelHeroPreload,
+          name,
+          descriptionHtml: detail.description,
+          related: pickRelatedTravels(travel, relatedIndex, 6),
+        }
       );
       const finalTravelHtml = injectHiddenH1(htmlWithSkeleton, name || routeKey);
 
@@ -1246,6 +1308,15 @@ async function main() {
 
     totalPages += generated;
     console.log(`  ✅ Generated: ${generated}, Skipped: ${skipped}`);
+    console.log(`  📝 With crawlable body text: ${withBodyCount}/${generated}`);
+    if (emptyNameCount > 0) {
+      // FE-IDX-2: a page with an empty name falls back to the generic
+      // "Путешествие | Metravel" title — surface it instead of failing silently.
+      console.warn(`  ⚠️  ${emptyNameCount} travel(s) have an empty name → generic title fallback. Fix the source data.`);
+    }
+    if (generated > 0 && withBodyCount / generated < 0.8) {
+      console.warn(`  ⚠️  Only ${Math.round((withBodyCount / generated) * 100)}% of pages have body text — check the detail API/description field.`);
+    }
   }
 
   // --- 3. Article pages ---

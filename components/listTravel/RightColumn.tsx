@@ -10,7 +10,6 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
   StyleProp,
-  useWindowDimensions,
 } from 'react-native'
 import { FlashList } from '@shopify/flash-list'
 import Feather from '@expo/vector-icons/Feather'
@@ -232,8 +231,11 @@ const RightColumn: React.FC<RightColumnProps> = (
       })
     }, [scheduleAfterLayout, scrollToRecommendations])
 
-    const windowWidth = useWindowDimensions().width
-    const isWebMobile = Platform.OS === 'web' && (isMobile || windowWidth <= 420)
+    // isMobile (single-column, width < tablet breakpoint) already covers the old
+    // `windowWidth <= 420` case, so we avoid useWindowDimensions() — it would
+    // subscribe this list container to mobile address-bar height changes and
+    // re-render the whole FlashList on every scroll frame (scroll jank).
+    const isWebMobile = isWeb && isMobile
     const showRecommendations = isRecommendationsVisible
 
     useEffect(() => {

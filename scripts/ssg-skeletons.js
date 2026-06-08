@@ -80,6 +80,21 @@ function buildSkeletonCSS() {
 .ssg-travel-meta{height:16px;width:40%;border-radius:6px;margin:0 0 24px}
 .ssg-travel-line{height:14px;border-radius:4px;margin-bottom:10px}
 .ssg-travel-line.w90{width:90%}.ssg-travel-line.w75{width:75%}.ssg-travel-line.w60{width:60%}
+.ssg-travel-h1{margin:0 0 14px;font:700 28px/1.25 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text};letter-spacing:-0.02em;max-width:760px}
+@media(min-width:768px){.ssg-travel-h1{font-size:34px}}
+.ssg-travel-article{max-width:760px;font:400 16px/1.65 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text}}
+.ssg-travel-article p{margin:0 0 16px}
+.ssg-travel-article h2{margin:28px 0 12px;font:700 22px/1.3 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;letter-spacing:-0.01em;color:${COLORS.light.text}}
+.ssg-travel-article h3{margin:22px 0 10px;font:700 18px/1.35 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text}}
+.ssg-travel-article ul,.ssg-travel-article ol{margin:0 0 16px;padding-left:22px}
+.ssg-travel-article li{margin:0 0 6px}
+.ssg-travel-article a{color:#1f6feb;text-decoration:underline}
+.ssg-travel-article blockquote{margin:0 0 16px;padding-left:14px;border-left:3px solid ${COLORS.light.border};color:${COLORS.light.textMuted}}
+.ssg-travel-related{max-width:760px;margin:32px 0 8px;padding-top:20px;border-top:1px solid ${COLORS.light.border}}
+.ssg-travel-related h2{margin:0 0 12px;font:700 20px/1.3 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text}}
+.ssg-travel-related ul{margin:0;padding-left:20px;font:400 16px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+.ssg-travel-related li{margin:0 0 8px}
+.ssg-travel-related a{color:#1f6feb;text-decoration:underline}
 .ssg-pulse{animation:ssg-shimmer 1.5s ease-in-out infinite}
 @keyframes ssg-shimmer{0%,100%{background:${COLORS.light.shimmerFrom}}50%{background:${COLORS.light.shimmerTo}}}
 html[data-theme="dark"] #ssg-skeleton{color:${COLORS.dark.text}}
@@ -93,6 +108,14 @@ html[data-theme="dark"] .ssg-card{background:${COLORS.dark.surface};border-color
 html[data-theme="dark"] .ssg-sidebar{background:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
 html[data-theme="dark"] .ssg-search-bar{background:${COLORS.dark.surface};border-color:${COLORS.dark.border};color:${COLORS.dark.textMuted}}
 html[data-theme="dark"] .ssg-travel-hero{background:${COLORS.dark.bgSecondary}}
+html[data-theme="dark"] .ssg-travel-h1{color:${COLORS.dark.text}}
+html[data-theme="dark"] .ssg-travel-article{color:${COLORS.dark.text}}
+html[data-theme="dark"] .ssg-travel-article h2,html[data-theme="dark"] .ssg-travel-article h3{color:${COLORS.dark.text}}
+html[data-theme="dark"] .ssg-travel-article a{color:#5aa7ff}
+html[data-theme="dark"] .ssg-travel-article blockquote{border-color:${COLORS.dark.border};color:${COLORS.dark.textMuted}}
+html[data-theme="dark"] .ssg-travel-related{border-color:${COLORS.dark.border}}
+html[data-theme="dark"] .ssg-travel-related h2{color:${COLORS.dark.text}}
+html[data-theme="dark"] .ssg-travel-related a{color:#5aa7ff}
 html[data-theme="dark"] .ssg-pulse{animation-name:ssg-shimmer-dark}
 @keyframes ssg-shimmer-dark{0%,100%{background:${COLORS.dark.shimmerFrom}}50%{background:${COLORS.dark.shimmerTo}}}
 #ssg-skeleton{transition:opacity .2s ease-out}
@@ -205,6 +228,85 @@ function escapeHtmlAttr(str) {
     .replace(/>/g, '&gt;');
 }
 
+// Tags kept (with their text) when sanitizing the article body for crawlers.
+const SSG_ALLOWED_TAGS = new Set([
+  'p', 'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'strong', 'b', 'em', 'i', 'br', 'blockquote', 'a',
+]);
+
+/** Truncate sanitized HTML at a block boundary so no tag is cut mid-way. */
+function clampHtmlAtBlock(html, max) {
+  if (html.length <= max) return html;
+  const slice = html.slice(0, max);
+  const boundary = Math.max(
+    slice.lastIndexOf('</p>'),
+    slice.lastIndexOf('</li>'),
+    slice.lastIndexOf('</h2>'),
+    slice.lastIndexOf('</h3>'),
+    slice.lastIndexOf('</h4>'),
+    slice.lastIndexOf('</blockquote>')
+  );
+  if (boundary > 0) {
+    const gt = html.indexOf('>', boundary);
+    if (gt > 0) return html.slice(0, gt + 1);
+  }
+  const lastGt = slice.lastIndexOf('>');
+  return lastGt > 0 ? html.slice(0, lastGt + 1) : '';
+}
+
+/**
+ * Sanitize a travel's stored description HTML into a compact, crawler-safe
+ * fragment: drops scripts/styles/media, keeps semantic text tags, strips all
+ * attributes (except safe <a href>), and clamps length. External links get
+ * rel="nofollow noopener"; internal (site-relative / metravel.by) links stay
+ * followable so internal link equity flows (helps indexing & crawl depth).
+ */
+function sanitizeArticleBodyHtml(rawHtml, maxChars = 9000) {
+  let html = String(rawHtml || '');
+  if (!html.trim()) return '';
+
+  // 1. Remove dangerous and heavy blocks together with their content.
+  html = html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<picture[\s\S]*?<\/picture>/gi, '')
+    .replace(/<video[\s\S]*?<\/video>/gi, '')
+    .replace(/<img[^>]*>/gi, '')
+    .replace(/<source[^>]*>/gi, '');
+
+  // 2. Whitelist tags; drop everything else but keep its inner text.
+  html = html.replace(/<(\/?)([a-zA-Z0-9]+)((?:[^>"']|"[^"]*"|'[^']*')*)>/g, (m, slash, tag, attrs) => {
+    const t = tag.toLowerCase();
+    if (!SSG_ALLOWED_TAGS.has(t)) return '';
+    if (t === 'br') return '<br/>';
+    if (slash) return `</${t}>`;
+    if (t === 'a') {
+      const hrefMatch = attrs.match(/\shref\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i);
+      let href = hrefMatch ? (hrefMatch[2] || hrefMatch[3] || hrefMatch[4] || '').trim() : '';
+      if (/^\s*(javascript:|data:|vbscript:)/i.test(href)) href = '';
+      // Keep only absolute http(s) or site-relative links; drop other relatives.
+      if (href && !/^https?:\/\//i.test(href) && !href.startsWith('/')) href = '';
+      if (!href) return '<a>';
+      const isInternal = href.startsWith('/') || /^https?:\/\/(www\.)?metravel\.by/i.test(href);
+      const rel = isInternal ? '' : ' rel="nofollow noopener"';
+      return `<a href="${escapeHtmlAttr(href)}"${rel}>`;
+    }
+    return `<${t}>`; // strip all attributes from other allowed tags
+  });
+
+  // 3. Collapse whitespace, drop empty blocks, trim.
+  html = html
+    .replace(/\s+/g, ' ')
+    .replace(/<p>\s*<\/p>/gi, '')
+    .replace(/<li>\s*<\/li>/gi, '')
+    .replace(/>\s+</g, '><')
+    .trim();
+
+  return clampHtmlAtBlock(html, maxChars);
+}
+
 
 /**
  * Build travel detail skeleton HTML with inline LCP <img>.
@@ -218,7 +320,18 @@ function escapeHtmlAttr(str) {
  * @param {object|null} opts.heroPreload - { mobile: { href, srcSet, sizes }, desktop: {...} }
  * @param {string} opts.name - Travel name (used as alt + visually-hidden h1)
  */
-function buildTravelSkeletonHtml({ heroPreload, name } = {}) {
+/** Build a crawlable "Похожие путешествия" internal-links block (FE-IDX-3). */
+function buildRelatedBlock(related) {
+  if (!Array.isArray(related) || related.length === 0) return '';
+  const items = related
+    .filter((r) => r && r.path && r.name)
+    .map((r) => `<li><a href="${escapeHtmlAttr(r.path)}">${escapeHtmlAttr(r.name)}</a></li>`)
+    .join('');
+  if (!items) return '';
+  return `<nav class="ssg-travel-related" aria-label="Похожие путешествия"><h2>Похожие путешествия</h2><ul>${items}</ul></nav>`;
+}
+
+function buildTravelSkeletonHtml({ heroPreload, name, descriptionHtml, related } = {}) {
   let heroImg = '';
   if (heroPreload?.mobile?.href || heroPreload?.desktop?.href) {
     const desktop = heroPreload.desktop || heroPreload.mobile;
@@ -253,18 +366,31 @@ function buildTravelSkeletonHtml({ heroPreload, name } = {}) {
     ? `<div class="ssg-travel-hero">${blurLayers}${heroImg}<div class="ssg-travel-hero-bg"></div></div>`
     : `<div class="ssg-travel-hero ssg-pulse"></div>`;
 
-  return `<div id="ssg-skeleton">
-<div class="ssg-bar"><div class="ssg-bar-logo">MeTravel</div></div>
-<div class="ssg-travel-spacer"></div>
-<div class="ssg-travel-wrap">
-${heroBlock}
-<div class="ssg-travel-title ssg-pulse"></div>
+  // FE-IDX-1: render the REAL article text into the pre-hydration shell so
+  // crawlers see substantive, indexable content (not just placeholder bars).
+  // The shell is a sibling before #root and is torn down on hydration, so this
+  // is visible-but-transient: no duplicate UX, no #root flex-layout conflict.
+  const titleText = String(name || '').trim();
+  const titleBlock = titleText ? `<h1 class="ssg-travel-h1">${escapeHtmlAttr(titleText)}</h1>` : '';
+  const articleHtml = sanitizeArticleBodyHtml(descriptionHtml);
+  const contentBlock = articleHtml
+    ? `<div class="ssg-travel-article">${articleHtml}</div>`
+    : `<div class="ssg-travel-title ssg-pulse"></div>
 <div class="ssg-travel-meta ssg-pulse"></div>
 <div class="ssg-travel-line w90 ssg-pulse"></div>
 <div class="ssg-travel-line w75 ssg-pulse"></div>
 <div class="ssg-travel-line w60 ssg-pulse"></div>
 <div class="ssg-travel-line w90 ssg-pulse"></div>
-<div class="ssg-travel-line w75 ssg-pulse"></div>
+<div class="ssg-travel-line w75 ssg-pulse"></div>`;
+
+  return `<div id="ssg-skeleton">
+<div class="ssg-bar"><div class="ssg-bar-logo">MeTravel</div></div>
+<div class="ssg-travel-spacer"></div>
+<div class="ssg-travel-wrap">
+${heroBlock}
+${titleBlock}
+${contentBlock}
+${buildRelatedBlock(related)}
 </div>
 ${buildRemovalScript()}
 </div>`;
@@ -308,6 +434,7 @@ module.exports = {
   buildTravelSkeletonHtml,
   injectSkeletonShell,
   buildRemovalScript,
+  sanitizeArticleBodyHtml,
   COLORS,
 };
 

@@ -5,8 +5,10 @@ const {
   buildSkeletonCSS,
   buildHomeSkeletonHtml,
   buildSearchSkeletonHtml,
+  buildTravelSkeletonHtml,
   injectSkeletonShell,
   buildRemovalScript,
+  sanitizeArticleBodyHtml,
   COLORS,
 } = require('../../scripts/ssg-skeletons');
 
@@ -144,6 +146,101 @@ describe('ssg-skeletons', () => {
       const script = buildRemovalScript();
       expect(script).toContain('ssg-skeleton');
       expect(script).toContain('ssg-skeleton-css');
+    });
+  });
+
+  describe('sanitizeArticleBodyHtml (FE-IDX-1)', () => {
+    it('returns empty string for empty/missing input', () => {
+      expect(sanitizeArticleBodyHtml('')).toBe('');
+      expect(sanitizeArticleBodyHtml(null)).toBe('');
+      expect(sanitizeArticleBodyHtml(undefined)).toBe('');
+    });
+
+    it('keeps semantic text tags (p, h2, ul, li)', () => {
+      const out = sanitizeArticleBodyHtml('<p>Текст</p><h2>Раздел</h2><ul><li>Пункт</li></ul>');
+      expect(out).toContain('<p>Текст</p>');
+      expect(out).toContain('<h2>Раздел</h2>');
+      expect(out).toContain('<li>Пункт</li>');
+    });
+
+    it('strips script, style, iframe and img entirely', () => {
+      const out = sanitizeArticleBodyHtml(
+        '<p>ok</p><script>alert(1)</script><style>x{}</style><iframe src="//e"></iframe><img src=x onerror=alert(1)>'
+      );
+      expect(out).toBe('<p>ok</p>');
+      expect(out).not.toMatch(/script|style|iframe|img/i);
+    });
+
+    it('removes on*-event handlers and javascript: hrefs', () => {
+      const out = sanitizeArticleBodyHtml('<a href="javascript:alert(1)" onclick="evil()">x</a>');
+      expect(out).not.toMatch(/javascript:/i);
+      expect(out).not.toMatch(/onclick/i);
+      expect(out).toBe('<a>x</a>');
+    });
+
+    it('marks external links nofollow but keeps internal links followable', () => {
+      const out = sanitizeArticleBodyHtml(
+        '<a href="https://evil.com">e</a><a href="/travels/foo">i</a>'
+      );
+      expect(out).toContain('<a href="https://evil.com" rel="nofollow noopener">e</a>');
+      expect(out).toContain('<a href="/travels/foo">i</a>');
+    });
+
+    it('strips attributes from non-anchor tags', () => {
+      const out = sanitizeArticleBodyHtml('<p class="x" style="color:red">t</p>');
+      expect(out).toBe('<p>t</p>');
+    });
+
+    it('clamps long content at a block boundary without cutting a tag', () => {
+      const long = '<p>' + 'a'.repeat(200) + '</p>';
+      const many = long.repeat(100); // ~20k chars
+      const out = sanitizeArticleBodyHtml(many, 1000);
+      expect(out.length).toBeLessThanOrEqual(1000);
+      expect(out.endsWith('</p>')).toBe(true);
+    });
+  });
+
+  describe('buildTravelSkeletonHtml (FE-IDX-1)', () => {
+    it('renders a visible h1 and article body when description is provided', () => {
+      const html = buildTravelSkeletonHtml({
+        name: 'Тестовый маршрут',
+        descriptionHtml: '<p>Подробное описание маршрута.</p><h2>Как добраться</h2><p>На машине.</p>',
+      });
+      expect(html).toContain('<h1 class="ssg-travel-h1">Тестовый маршрут</h1>');
+      expect(html).toContain('<div class="ssg-travel-article">');
+      expect(html).toContain('Подробное описание маршрута.');
+      expect(html).toContain('<h2>Как добраться</h2>');
+    });
+
+    it('falls back to placeholder bars when description is empty', () => {
+      const html = buildTravelSkeletonHtml({ name: 'Без текста', descriptionHtml: '' });
+      expect(html).toContain('ssg-travel-line');
+      expect(html).not.toContain('ssg-travel-article');
+    });
+
+    it('escapes the name in the h1', () => {
+      const html = buildTravelSkeletonHtml({ name: 'A <b> & "C"', descriptionHtml: '<p>x</p>' });
+      expect(html).toContain('A &lt;b&gt; &amp; &quot;C&quot;');
+    });
+
+    it('renders a crawlable related-travels block when related is provided (FE-IDX-3)', () => {
+      const html = buildTravelSkeletonHtml({
+        name: 'Маршрут',
+        descriptionHtml: '<p>x</p>',
+        related: [
+          { path: '/travels/a', name: 'Поездка A' },
+          { path: '/travels/b', name: 'Поездка B' },
+        ],
+      });
+      expect(html).toContain('ssg-travel-related');
+      expect(html).toContain('Похожие путешествия');
+      expect(html).toContain('<a href="/travels/a">Поездка A</a>');
+      expect(html).toContain('<a href="/travels/b">Поездка B</a>');
+    });
+
+    it('omits the related block when related is empty', () => {
+      const html = buildTravelSkeletonHtml({ name: 'Маршрут', descriptionHtml: '<p>x</p>', related: [] });
+      expect(html).not.toContain('ssg-travel-related');
     });
   });
 });

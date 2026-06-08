@@ -8,7 +8,7 @@ import Feather from '@expo/vector-icons/Feather';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import { useResponsive } from '@/hooks/useResponsive';
+import { useBreakpoints } from '@/hooks/useResponsive';
 import { optimizeImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
 import { hapticImpact } from '@/utils/haptics';
 // AND-16: Native spring animation on press
@@ -117,7 +117,7 @@ function UnifiedTravelCard({
   const [isFocused, setIsFocused] = useState(false);
   const isFeatured = visualVariant === 'featured';
   const enableWebHoverEffects = isWeb && webHoverScale;
-  const { isPhone, isLargePhone } = useResponsive();
+  const { isPhone, isLargePhone } = useBreakpoints();
   const isMobileDevice = isPhone || isLargePhone;
   const cardActionLabel = `Открыть маршрут «${title}»`;
   const mediaActionLabel = `Открыть фото маршрута «${title}»`;

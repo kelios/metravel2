@@ -144,7 +144,9 @@
     "validator:error-codes:docs:update": "node scripts/update-validator-error-codes-doc-table.js --file docs/TESTING.md",
     "validator:contracts:check": "jest --passWithNoTests --runInBand __tests__/scripts/validator-error-codes-centralization.test.ts __tests__/scripts/validator-error-codes-prefix-policy.test.ts __tests__/scripts/validator-error-codes-uniqueness.test.ts __tests__/scripts/validate-validator-error-codes-doc-table.test.ts __tests__/scripts/validate-validator-error-codes-policy.test.ts __tests__/scripts/validate-validator-contracts-summary.test.ts __tests__/scripts/summarize-validator-contracts-summary-validation.test.ts",
     "validator:contracts:summary": "node scripts/summarize-validator-contracts.js --json-output test-results/validator-contracts-summary.json",
-    "validator:contracts:summary:validate": "node scripts/validate-validator-contracts-summary.js --file test-results/validator-contracts-summary.json"
+    "validator:contracts:summary:validate": "node scripts/validate-validator-contracts-summary.js --file test-results/validator-contracts-summary.json",
+    "stats:index": "node scripts/index-status.js",
+    "stats:index:json": "node scripts/index-status.js --json --only-problems"
   },
   "dependencies": {
     "@babel/runtime": "7.29.2",

@@ -225,6 +225,58 @@ const subscribe = (onStoreChange: () => void) => {
 
 const getSnapshot = () => (_hydrated ? currentSnapshot : SSR_SNAPSHOT);
 
+// Width-only snapshot. Returns a primitive number so useSyncExternalStore
+// bails out of re-rendering when ONLY the height changes — exactly what the
+// mobile browser address bar does on every scroll frame as it collapses/expands.
+// Width-only consumers (breakpoints) stay still while the list scrolls.
+const getWidthSnapshot = () => (_hydrated ? currentSnapshot.width : 0);
+const getServerWidthSnapshot = () => 0;
+
+/**
+ * Width-only responsive subscription. Re-renders the consumer only when the
+ * viewport WIDTH changes, ignoring height-only fluctuations (mobile address bar).
+ * Use this on hot scroll paths (list cards, grid containers) instead of the full
+ * useResponsive() to avoid per-frame re-renders during mobile-web scroll.
+ */
+export function useResponsiveWidth(): number {
+  const width = useSyncExternalStore(subscribe, getWidthSnapshot, getServerWidthSnapshot);
+  if (Platform.OS === 'web' && width <= 0) {
+    const webWindowSnapshot = getWebWindowSnapshot();
+    if (webWindowSnapshot) return webWindowSnapshot.width;
+  }
+  return width;
+}
+
+/**
+ * Width-derived breakpoint flags backed by the width-only subscription.
+ * Drop-in for the width flags of useResponsive() on components that don't need
+ * height/orientation, so they don't re-render while the user scrolls on mobile web.
+ */
+export function useBreakpoints() {
+  const width = useResponsiveWidth();
+  return useMemo(() => {
+    const isSmallPhone = width < METRICS.breakpoints.phone;
+    const isPhone = width >= METRICS.breakpoints.phone && width < METRICS.breakpoints.largePhone;
+    const isLargePhone = width >= METRICS.breakpoints.largePhone && width < METRICS.breakpoints.tablet;
+    const isTablet = width >= METRICS.breakpoints.tablet && width < METRICS.breakpoints.largeTablet;
+    const isLargeTablet = width >= METRICS.breakpoints.largeTablet && width < METRICS.breakpoints.desktop;
+    const isDesktop = width >= METRICS.breakpoints.desktop;
+    const isLargeDesktop = width >= METRICS.breakpoints.largeDesktop;
+    const isMobile = width < METRICS.breakpoints.tablet;
+    return {
+      width,
+      isSmallPhone,
+      isPhone,
+      isLargePhone,
+      isTablet,
+      isLargeTablet,
+      isDesktop,
+      isLargeDesktop,
+      isMobile,
+    };
+  }, [width]);
+}
+
 /**
  * Enhanced responsive hook that provides screen size and orientation information
  * with TypeScript support and performance optimizations

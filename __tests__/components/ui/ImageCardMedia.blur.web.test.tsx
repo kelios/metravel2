@@ -210,6 +210,62 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(loadedMainImage.props.style?.opacity).toBe(1)
   })
 
+  it('keeps high-priority shared-blur cards hidden until decode on iPhone Safari', () => {
+    // Regression: the "Маршрут недели" featured card is the only card that sets
+    // priority="high", which used to bypass the iOS Safari decode-wait and paint
+    // a blurry progressive frame. It must now behave like the popular cards.
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+      configurable: true,
+    })
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      value: 5,
+      configurable: true,
+    })
+
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://example.com/cover_sorapiso.jpg"
+          width={358}
+          height={220}
+          blurBackground
+          fit="contain"
+          loading="eager"
+          priority="high"
+          allowCriticalWebBlur
+        />
+      )
+    })
+
+    const mainImage = tree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
+      if (node?.props?.['aria-hidden'] === true) return false
+      return String(node?.props?.style?.objectFit || '') === 'contain'
+    })[0]
+
+    expect(mainImage).toBeTruthy()
+    // Still requested eagerly with high fetch priority for LCP...
+    expect(mainImage.props.loading).toBe('eager')
+    expect(mainImage.props.fetchPriority).toBe('high')
+    // ...but hidden until the sharp decode lands (no blurry progressive frame).
+    expect(mainImage.props.style?.opacity).toBe(0)
+
+    renderer.act(() => {
+      mainImage.props.onLoad()
+    })
+
+    const loadedMainImage = tree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
+      if (node?.props?.['aria-hidden'] === true) return false
+      return String(node?.props?.style?.objectFit || '') === 'contain'
+    })[0]
+
+    expect(loadedMainImage.props.style?.opacity).toBe(1)
+  })
+
   it('keeps the main image visible on first frame for eager critical web media', () => {
     let tree: any
     renderer.act(() => {

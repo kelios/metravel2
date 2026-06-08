@@ -183,6 +183,14 @@ service-account JSON) в чат.** Вместо этого:
 2. **External links**: ESLint-гвард запрещает `Linking.openURL` напрямую
 3. **Сложность файлов**: `npm run guard:file-complexity` следит за размером файлов
 4. **Тесты исключены из coverage**: Map-компоненты, image upload, ArticleEditor, GalleryLayout
+5. **iOS Safari + `ImageCardMedia` (contain + `allowCriticalWebBlur`)**: НЕ показывать главное
+   изображение до завершения декода на iPhone/iPad Safari. WebKit рисует «размытый
+   прогрессивный кадр» у contain-карточек с общим blur, если открыть `<img>` до `onLoad`
+   (виднее всего на крупной карточке «Маршрут недели»). `priority="high"` НЕ должен
+   обходить эту защиту — он лишь задаёт `fetchPriority`, но reveal всё равно ждёт декод
+   (см. `shouldShowWebImageImmediately` в `components/ui/ImageCardMedia.tsx`). Featured- и
+   popular-карточки обязаны вести себя одинаково по reveal; различаться можно только
+   `quality`/`loading`/`fetchPriority`, но не моментом показа sharp-кадра.
 
 ---
 

@@ -338,10 +338,14 @@ function ImageCardMedia({
   const shouldShowWebImageImmediately = useMemo(() => {
     if (Platform.OS !== 'web') return showImmediately;
     if (revealOnLoadOnly) return showImmediately;
-    if (isSafariWeb && allowCriticalWebBlur && !preserveOptimizedWebSrc && priority !== 'high') {
+    if (isSafariWeb && allowCriticalWebBlur && !preserveOptimizedWebSrc) {
       // iPhone Safari tends to paint a visibly blurry progressive frame when
       // contain-mode shared-blur cards reveal the main image before onLoad.
-      // Keep the blurred surround visible, but wait for the sharp image decode.
+      // This hits the large high-priority "Маршрут недели" card hardest, so the
+      // wait MUST apply regardless of priority — `priority="high"` was the only
+      // prop that set this card apart from the popular cards and it was the thing
+      // defeating the protection. fetchPriority="high" still requests the image
+      // eagerly; we only defer the *reveal* until the sharp decode finishes.
       return showImmediately;
     }
     return showImmediately || resolvedLoading === 'eager' || priority === 'high';
