@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import type { ImportedPoint } from '@/types/userPoints';
 import { PointStatus } from '@/types/userPoints';
 import { showToast } from '@/utils/toast';
+import { queueAnalyticsEvent } from '@/utils/analytics';
 import { resolveCategoryIdsByNames as mapResolveCategoryIds } from '@/utils/userPointsCategories';
 import { getPointCategoryIds, getPointCategoryNames } from '@/utils/travelPointMeta';
 
@@ -130,6 +131,10 @@ export function usePointListAddPointModel({
       setAddingPointId(point.id);
       try {
         await userPointsApi.createPoint(payload);
+        queueAnalyticsEvent('Place_Added', {
+          source: 'travel_route',
+          travelName: travelName || undefined,
+        });
         void showToast({
           type: 'success',
           text1: 'Точка добавлена в «Мои точки»',

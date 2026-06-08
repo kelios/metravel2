@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { Travel } from '@/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import { ExportStage, ExportConfig } from '@/types/pdf-export';
+import { queueAnalyticsEvent } from '@/utils/analytics';
 
 /**
  * React hook для экспорта путешествий в PDF
@@ -67,6 +68,10 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
    */
   const openPrintBook = useCallback(
     async (settings: BookSettings): Promise<void> => {
+      queueAnalyticsEvent('PDF_Export', {
+        travelsCount: Array.isArray(selected) ? selected.length : 0,
+        template: settings?.template,
+      });
       const runtime = await loadRuntimeModule();
       await runtime.runPdfExport({
         selected,
