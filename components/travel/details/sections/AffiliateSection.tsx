@@ -3,7 +3,7 @@ import { ActivityIndicator, Platform, Text, View } from 'react-native'
 
 import type { Travel } from '@/types/types'
 
-import { isAffiliateEnabled } from '@/components/affiliate/affiliateConfig'
+import { getAffiliateOffers, isAffiliateEnabled } from '@/components/affiliate/affiliateConfig'
 import { getCountryCodeByCoords } from '@/utils/geoCountry'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 
@@ -51,6 +51,9 @@ export const AffiliateSection: React.FC<{
   // (cityName is empty in the data); same approach as BelkrajWidget.
   const countryCode = resolveCountryCode(travel)
   if (!countryCode && !city && !country) return null
+
+  // Don't render an orphan header when there are no offers to show.
+  if (getAffiliateOffers({ city, country, countryCode, travelId: travel.id }).length === 0) return null
 
   return (
     <Suspense fallback={<Fallback />}>

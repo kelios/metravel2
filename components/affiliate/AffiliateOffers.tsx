@@ -1,6 +1,5 @@
 import React, { useCallback, useMemo } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
-import Feather from '@expo/vector-icons/Feather'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
@@ -14,11 +13,6 @@ import {
 import { useAffiliateImpression } from './useAffiliateImpression'
 
 type Props = AffiliateOfferContext
-
-const OFFER_ICON: Record<AffiliateOffer['key'], keyof typeof Feather.glyphMap> = {
-  tours: 'compass',
-  hotels: 'home',
-}
 
 function AffiliateOffers({ city, country, countryCode, travelId }: Props) {
   const colors = useThemedColors()
@@ -60,9 +54,6 @@ function AffiliateOffers({ city, country, countryCode, travelId }: Props) {
     <View ref={impressionRef as any} style={styles.grid}>
       {offers.map((offer) => (
         <View key={offer.key} style={styles.card}>
-          <View style={styles.iconWrap}>
-            <Feather name={OFFER_ICON[offer.key]} size={18} color={colors.primary} />
-          </View>
           <View style={styles.cardBody}>
             <Text style={styles.cardTitle}>{offer.title}</Text>
             <Text style={styles.cardSubtitle}>{offer.subtitle}</Text>
@@ -98,17 +89,6 @@ const getStyles = (colors: ThemedColors) =>
       borderColor: colors.borderLight,
       backgroundColor: colors.surface,
       ...(Platform.OS === 'web' ? { boxShadow: '0 2px 8px rgba(0,0,0,0.06)' } : colors.shadows.light),
-    },
-    iconWrap: {
-      width: 40,
-      height: 40,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      backgroundColor: colors.primarySoft,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0,
     },
     cardBody: {
       flex: 1,
