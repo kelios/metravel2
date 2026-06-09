@@ -104,6 +104,21 @@ describe('CommentItem', () => {
       expect(screen.getByText('T')).toBeTruthy();
     });
 
+    it('should render avatar image when user_avatar is present', () => {
+      render(
+        <CommentItem comment={{ ...mockComment, user_avatar: 'https://metravel.by/avatar/profile/p.webp' }} />,
+        { wrapper }
+      );
+      expect(screen.getByTestId('comment-avatar-image')).toBeTruthy();
+      expect(screen.queryByText('T')).toBeNull();
+    });
+
+    it('should fall back to the letter monogram when user_avatar is empty', () => {
+      render(<CommentItem comment={{ ...mockComment, user_avatar: '' }} />, { wrapper });
+      expect(screen.queryByTestId('comment-avatar-image')).toBeNull();
+      expect(screen.getByText('T')).toBeTruthy();
+    });
+
     it('should render a relative date for a recent comment', () => {
       const recent = {
         ...mockComment,

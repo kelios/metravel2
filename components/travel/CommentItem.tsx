@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform, Image } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { optimizeImageUrl } from '@/utils/imageOptimization';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import type { TravelComment } from '../../types/comments';
 import { useAuth } from '../../context/AuthContext';
@@ -24,6 +25,7 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [showActions, setShowActions] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
 
   const likeComment = useLikeComment();
   const unlikeComment = useUnlikeComment();
@@ -73,9 +75,19 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
       <View style={styles.header}>
         <View style={styles.userInfo}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {comment.user_name?.[0]?.toUpperCase() || 'U'}
-            </Text>
+            {comment.user_avatar && !avatarError ? (
+              <Image
+                source={{ uri: optimizeImageUrl(comment.user_avatar, { width: 72, height: 72, quality: 70, format: 'auto', fit: 'cover' }) ?? comment.user_avatar }}
+                style={styles.avatarImage}
+                onError={() => setAvatarError(true)}
+                accessibilityIgnoresInvertColors
+                testID="comment-avatar-image"
+              />
+            ) : (
+              <Text style={styles.avatarText}>
+                {comment.user_name?.[0]?.toUpperCase() || 'U'}
+              </Text>
+            )}
           </View>
           <View>
             <Text style={styles.userName}>
@@ -252,6 +264,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: DESIGN_TOKENS.spacing.sm,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
   },
   avatarText: {
     color: colors.primary,

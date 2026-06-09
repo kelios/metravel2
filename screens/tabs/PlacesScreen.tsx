@@ -1,6 +1,7 @@
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import {
   FlatList,
+  type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   Platform,
@@ -71,6 +72,14 @@ export default function PlacesScreen() {
   const [visibleCount, setVisibleCount] = useState(PLACES_PAGE_SIZE)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [countryMenuVisible, setCountryMenuVisible] = useState(false)
+  // Height of the sticky topBar (web) so the sticky sidebar can sit just below it
+  // instead of being hidden behind it.
+  const [topBarHeight, setTopBarHeight] = useState(0)
+  const handleTopBarLayout = useCallback((event: LayoutChangeEvent) => {
+    if (Platform.OS !== 'web') return
+    const height = Number(event?.nativeEvent?.layout?.height ?? 0)
+    if (height > 0) setTopBarHeight((current) => (Math.abs(current - height) < 1 ? current : height))
+  }, [])
 
   const placesQuery = useQuery({
     queryKey: ['places-catalog'],
@@ -387,7 +396,7 @@ export default function PlacesScreen() {
 
   const pageChrome = (
     <>
-        <View style={styles.topBar}>
+        <View style={styles.topBar} onLayout={handleTopBarLayout}>
           <View style={styles.topBarMeta}>
             <View style={styles.heroTitleRow}>
               <Feather name="map-pin" size={18} color={colors.primary} />
@@ -526,7 +535,14 @@ export default function PlacesScreen() {
           ) : null}
 
           {(!isCompact || filtersOpen) ? (
-            <View style={styles.sidebar}>
+            <View
+              style={[
+                styles.sidebar,
+                Platform.OS === 'web' && !isCompact && topBarHeight > 0
+                  ? ({ top: topBarHeight, maxHeight: `calc(100vh - ${topBarHeight}px)` } as any)
+                  : null,
+              ]}
+            >
               <View style={styles.sidebarHeader}>
                 <Text style={styles.sectionTitle}>Категории</Text>
                 {selectedCategories.length > 0 ? (

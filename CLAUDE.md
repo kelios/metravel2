@@ -146,6 +146,14 @@ npm run release:check  # Полная проверка (lint + tests + build + a
 
 ## Бэкенд и окружение
 
+- **Бэкенд НЕ правим — только заводим задачи.** Бэкенд лежит в отдельном репозитории
+  `../metravel-backend` (D:\metravel\metravel-backend), владелец — Sergey/Codex. Мы (этот репо
+  и его агенты) бэкенд **читаем и диагностируем**, но НИКОГДА не редактируем его код (`.py`,
+  тесты, миграции, конфиги, деплой). Любая нужная правка бэка оформляется как **TASK-файл** в
+  `tasks/NNN-*.md` (по шаблону `tasks/000-template.md`, Owner: Backend) + строка в
+  `docs/BACKEND_WORKBOARD.md`. Если случайно изменил файл в `../metravel-backend` — откати
+  (`git checkout -- <file>`, не задев чужие незакоммиченные правки) и переоформи как задачу.
+  Профильный агент-диагност — `backend-expert` (read-only по бэку, на выходе только задача).
 - API базовый URL: `EXPO_PUBLIC_API_URL` (прод: `https://metravel.by`)
 - Авторизация: `Authorization: Token <token>`
 - Env-файлы: `.env`, `.env.dev`, `.env.prod`, `.env.e2e`, `.env.preprod`

@@ -50,6 +50,15 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     paddingBottom: isCompact ? DESIGN_TOKENS.spacing.md : DESIGN_TOKENS.spacing.lg,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.borderLight,
+    // Keep search + country selector reachable while the catalog scrolls (web):
+    // pin the bar to the top of the scroll viewport with an opaque background so
+    // cards never bleed through. zIndex sits above the sticky sidebar.
+    ...(Platform.OS === 'web' ? ({
+      position: 'sticky' as any,
+      top: 0,
+      zIndex: 30,
+      backgroundColor: colors.background,
+    } as any) : null),
   },
   topBarMeta: {
     minWidth: 0,
