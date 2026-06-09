@@ -106,9 +106,9 @@ deploy_prod() {
     mv static/dist.new static/dist
     rm -rf static/dist.old
     if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
-      docker compose restart app nginx
+      docker compose -f docker-compose-prod.app.yaml restart app nginx
     else
-      docker-compose restart app nginx
+      docker-compose -f docker-compose-prod.app.yaml restart nginx
     fi
     rm -rf dist
   "
