@@ -139,16 +139,34 @@ html[data-theme="dark"] .ssg-pulse{animation-name:ssg-shimmer-dark}
  * new, late LCP candidate that only paints after full hydration (>15s on
  * throttled mobile) — wrecking LCP.
  *
- * Fix: keep the SSG hero on screen until React's own hero image
+ * Fix (travel pages): keep the SSG hero on screen until React's own hero image
  * (#root img[data-lcp]) is actually loaded. The large full-bleed SSG hero
  * stays the largest contentful paint the whole time, so Chrome keeps the
  * early (~FCP) paint as the final LCP instead of resetting it to hydration
- * time. A safety net still tears the skeleton down if React mounted real
- * content but the hero never reports load, and leaves it in place (only
- * visible content) if React never mounted at all.
+ * time.
+ *
+ * Home/search skeletons have NO img[data-lcp] (their LCP is the hero TEXT block
+ * that paints at ~FCP and is already locked by then). For those, waiting on a
+ * non-existent hero image meant the skeleton lingered until the 20s safety net,
+ * covering the already-hydrated, interactive app for up to 20s. So for non-travel
+ * skeletons we tear down as soon as the app reports hydration+paint (the
+ * `app-hydrated` class set by RootWebDeferredChrome after a rAF) — the early text
+ * LCP is already captured, so this only removes a stale overlay.
+ *
+ * A 20s safety net still tears the skeleton down if React mounted real content
+ * but neither signal fired, and leaves it in place (only visible content) if
+ * React never mounted at all.
+ *
+ * Parse-order guard: this <script> lives INSIDE #ssg-skeleton, which is injected
+ * right after <body> — i.e. BEFORE <div id="root">. So at first execution #root
+ * is not parsed yet and getElementById('root') is null. We must NOT treat that as
+ * "orphan skeleton, remove it" (that bug made the skeleton self-destruct in ~30ms,
+ * before it could ever be the FCP/LCP paint). Instead, if #root is missing while
+ * the document is still loading, defer until DOMContentLoaded and re-check; only
+ * remove as an orphan if #root is still absent after the DOM is fully parsed.
  */
 function buildRemovalScript() {
-  return `<script>(function(){try{var s=document.getElementById('ssg-skeleton');if(!s)return;var r=document.getElementById('root');if(!r){s.remove();return}var done=false;function killCss(){var c=document.getElementById('ssg-skeleton-css');if(c&&c.parentNode)c.parentNode.removeChild(c)}function teardown(){if(done)return;done=true;try{s.classList.add('ssg-hiding')}catch(e){}setTimeout(function(){try{if(s.parentNode)s.parentNode.removeChild(s)}catch(e){}killCss()},300)}function heroReady(){var i=r.querySelector('img[data-lcp]');return !!(i&&i.complete&&i.naturalWidth>0)}function check(){if(done)return false;if(heroReady()){teardown();return true}return false}if(check())return;var o=new MutationObserver(function(){if(check()){o.disconnect()}});o.observe(r,{childList:true,subtree:true});var iv=setInterval(function(){if(done){clearInterval(iv);return}if(check()){clearInterval(iv);try{o.disconnect()}catch(e){}}},120);setTimeout(function(){try{o.disconnect()}catch(e){}clearInterval(iv);if(done)return;if(r.childNodes.length>0){teardown()}},20000)}catch(e){}})();</script>`;
+  return `<script>(function(){try{var s=document.getElementById('ssg-skeleton');if(!s)return;function begin(){if(s.__b)return;var r=document.getElementById('root');if(!r){if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',begin,{once:true});return}s.remove();return}s.__b=1;var travelSkel=!!s.querySelector('.ssg-travel-hero');var done=false;function killCss(){var c=document.getElementById('ssg-skeleton-css');if(c&&c.parentNode)c.parentNode.removeChild(c)}function teardown(){if(done)return;done=true;try{s.classList.add('ssg-hiding')}catch(e){}setTimeout(function(){try{if(s.parentNode)s.parentNode.removeChild(s)}catch(e){}killCss()},300)}function heroReady(){var i=r.querySelector('img[data-lcp]');return !!(i&&i.complete&&i.naturalWidth>0)}function appReady(){return !travelSkel&&document.documentElement.classList.contains('app-hydrated')}function check(){if(done)return false;if(heroReady()||appReady()){teardown();return true}return false}if(check())return;var o=new MutationObserver(function(){if(check()){o.disconnect()}});o.observe(r,{childList:true,subtree:true});var iv=setInterval(function(){if(done){clearInterval(iv);return}if(check()){clearInterval(iv);try{o.disconnect()}catch(e){}}},120);setTimeout(function(){try{o.disconnect()}catch(e){}clearInterval(iv);if(done)return;if(r.childNodes.length>0){teardown()}},20000)}begin()}catch(e){}})();</script>`;
 }
 
 function buildCards(count) {
