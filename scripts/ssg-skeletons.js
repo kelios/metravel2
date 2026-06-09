@@ -39,7 +39,7 @@ const COLORS = {
  */
 function buildSkeletonCSS() {
   return `<style id="ssg-skeleton-css">
-#ssg-skeleton{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;position:relative;z-index:1;color:${COLORS.light.text}}
+#ssg-skeleton{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;position:fixed;inset:0;z-index:99999;overflow:hidden;background:${COLORS.light.bg};color:${COLORS.light.text}}
 #ssg-skeleton *{box-sizing:border-box}
 .ssg-bar{width:100%;height:56px;background:${COLORS.light.surface};border-bottom:1px solid ${COLORS.light.border};display:flex;align-items:center;padding:0 16px}
 .ssg-bar-logo{font:700 20px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text};letter-spacing:-0.01em}
@@ -100,7 +100,7 @@ function buildSkeletonCSS() {
 .ssg-travel-related a{color:#1f6feb;text-decoration:underline}
 .ssg-pulse{animation:ssg-shimmer 1.5s ease-in-out infinite}
 @keyframes ssg-shimmer{0%,100%{background:${COLORS.light.shimmerFrom}}50%{background:${COLORS.light.shimmerTo}}}
-html[data-theme="dark"] #ssg-skeleton{color:${COLORS.dark.text}}
+html[data-theme="dark"] #ssg-skeleton{background:${COLORS.dark.bg};color:${COLORS.dark.text}}
 html[data-theme="dark"] .ssg-bar{background:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
 html[data-theme="dark"] .ssg-bar-logo{color:${COLORS.dark.text}}
 html[data-theme="dark"] .ssg-search-h1{color:${COLORS.dark.text}}
