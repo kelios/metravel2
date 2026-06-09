@@ -4,12 +4,12 @@
  * Travel rows have NO city in the data (cityName is empty across all of them) —
  * the only reliable location signal is the country, derived from the first map
  * point's coordinates (same approach as the Belkraj widget). So offers link to a
- * COUNTRY-level destination, built in code:
- *   - Ostrovok hotels → /hotel/<countrySlug>/  (Cyrillic ?q= and free text 404;
- *     the country page works and is relevant). Homepage fallback when the country
- *     is unknown/unmapped.
- *   - Tripster excursions → homepage (Tripster has no country pages, only cities,
- *     and we have no city), so it lands on the search home.
+ * COUNTRY-level destination, built in code from the ISO country code:
+ *   - Ostrovok hotels     → https://ostrovok.ru/hotel/<countrySlug>/
+ *   - Tripster excursions → https://experience.tripster.ru/experience/<countrySlug>/
+ * (Cyrillic / free-text / capitalized slugs 404; the lowercase country page works
+ * on both.) Each falls back to the partner homepage when the country is
+ * unknown/unmapped — never a 404.
  *
  * The owner pastes the tp.media wrapper (per-account marker + per-program
  * trs/p/campaign_id) into env with a `{url}` slot for the destination; the whole
@@ -47,11 +47,14 @@ export interface AffiliateOffer {
 }
 
 /**
- * ISO alpha-2 → Ostrovok country path slug. Only slugs verified to return 200 on
- * `https://ostrovok.ru/hotel/<slug>/` are listed; an unmapped country falls back
- * to the Ostrovok homepage (never a 404). Extend as new countries appear.
+ * ISO alpha-2 → lowercase English country slug, shared by both partners:
+ *   Ostrovok  `https://ostrovok.ru/hotel/<slug>/`
+ *   Tripster  `https://experience.tripster.ru/experience/<slug>/`
+ * Every slug here is verified to return 200 on BOTH; an unmapped country falls
+ * back to the partner homepage (never a 404). Slugs MUST stay lowercase —
+ * Tripster 404s on capitalized country names. Extend as new countries appear.
  */
-const OSTROVOK_COUNTRY_SLUG: Record<string, string> = {
+const COUNTRY_SLUG: Record<string, string> = {
   BY: 'belarus', PL: 'poland', RU: 'russia', UA: 'ukraine', AM: 'armenia',
   GE: 'georgia', TR: 'turkey', DE: 'germany', FR: 'france', IT: 'italy',
   ES: 'spain', SK: 'slovakia', HU: 'hungary', LT: 'lithuania', LV: 'latvia',
@@ -66,12 +69,17 @@ const TRIPSTER_HOME = 'https://experience.tripster.ru/'
 
 const clean = (value?: string | null): string => String(value ?? '').trim()
 
-const resolveCountryCode = (ctx: AffiliateOfferContext): string =>
-  clean(ctx.countryCode).toUpperCase()
+const resolveCountrySlug = (ctx: AffiliateOfferContext): string | undefined =>
+  COUNTRY_SLUG[clean(ctx.countryCode).toUpperCase()]
 
 const buildOstrovokUrl = (ctx: AffiliateOfferContext): string => {
-  const slug = OSTROVOK_COUNTRY_SLUG[resolveCountryCode(ctx)]
+  const slug = resolveCountrySlug(ctx)
   return slug ? `https://ostrovok.ru/hotel/${slug}/` : OSTROVOK_HOME
+}
+
+const buildTripsterUrl = (ctx: AffiliateOfferContext): string => {
+  const slug = resolveCountrySlug(ctx)
+  return slug ? `https://experience.tripster.ru/experience/${slug}/` : TRIPSTER_HOME
 }
 
 interface OfferPreset {
@@ -93,7 +101,7 @@ const OFFER_PRESETS: OfferPreset[] = [
       place ? `Авторские экскурсии и местные гиды — ${place}` : 'Авторские экскурсии и местные гиды',
     cta: 'Посмотреть экскурсии',
     templateEnv: () => process.env.EXPO_PUBLIC_AFFILIATE_TOURS_TEMPLATE,
-    buildDestinationUrl: () => TRIPSTER_HOME,
+    buildDestinationUrl: buildTripsterUrl,
   },
   {
     key: 'hotels',
