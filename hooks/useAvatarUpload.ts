@@ -177,14 +177,28 @@ export function useAvatarUpload(options?: UseAvatarUploadOptions) {
                 const asset = result.assets[0];
                 if (!userId) return;
 
-                // AND-15: Compress avatar before upload (512px square, quality 0.85)
-                const compressed = await compressAvatar(asset.uri);
-                const compressedUri = compressed.uri || asset.uri;
-                const file: UploadUserProfileAvatarFile = {
-                    uri: compressedUri,
-                    name: asset.fileName || 'avatar.jpg',
-                    type: asset.mimeType || 'image/jpeg',
-                };
+                let file: UploadUserProfileAvatarFile;
+                if (Platform.OS === 'web') {
+                    // На web RN-объект {uri,name,type} не годится: FormData сериализует его в
+                    // строку "[object Object]", и бэкенд отвечает 400 («not a file»).
+                    // fetch(blob:/data:) тоже отпадает — CSP connect-src не разрешает blob:.
+                    // expo-image-picker на web кладёт настоящий File в asset.file — берём его.
+                    const webFile = (asset as { file?: File }).file;
+                    if (!webFile) {
+                        showToast({ type: 'error', text1: 'Ошибка', text2: 'Не удалось прочитать файл изображения', visibilityTime: 3000 });
+                        return;
+                    }
+                    file = webFile;
+                } else {
+                    // AND-15: Compress avatar before upload (512px square, quality 0.85)
+                    const compressed = await compressAvatar(asset.uri);
+                    const compressedUri = compressed.uri || asset.uri;
+                    file = {
+                        uri: compressedUri,
+                        name: asset.fileName || 'avatar.jpg',
+                        type: asset.mimeType || 'image/jpeg',
+                    };
+                }
                 await uploadAvatar(file);
             }
         } catch (e) {
