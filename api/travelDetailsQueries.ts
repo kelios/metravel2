@@ -48,11 +48,18 @@ const runSharedGuestTravelRequest = async (
 
 const hasMinimumTravelIdentity = (travel: Travel | undefined): travel is Travel => {
     if (!travel) return false;
-    const hasIdentity =
-        (typeof travel.id === 'number' && Number.isFinite(travel.id) && travel.id > 0) ||
-        (typeof travel.slug === 'string' && travel.slug.trim().length > 0);
     const hasName = typeof travel.name === 'string' && travel.name.trim().length > 0;
-    return hasIdentity && hasName;
+    return hasAnyTravelIdentity(travel) && hasName;
+};
+
+// Lighter check than hasMinimumTravelIdentity: a payload with an id or slug is a
+// real travel even if minimal; a 301-followed HTML page parses into `{}` and fails.
+const hasAnyTravelIdentity = (travel: Travel | undefined): boolean => {
+    if (!travel) return false;
+    return (
+        (typeof travel.id === 'number' && Number.isFinite(travel.id) && travel.id > 0) ||
+        (typeof travel.slug === 'string' && travel.slug.trim().length > 0)
+    );
 };
 
 const consumeDirectApiWindowPreload = (
@@ -365,6 +372,27 @@ const findTravelBySlugFallbackWithDeadline = async (
     }
 };
 
+// BE-IDX-1: /travels/resolve-slug/ returns the canonical {id, slug} for an exact
+// slug AND for renamed slugs (backend keeps a slug-redirect history). It is exact
+// and cheap, so it runs before the fuzzy search fan-out below.
+const resolveTravelSlugId = async (
+    slug: string,
+    options?: { signal?: AbortSignal }
+): Promise<number | null> => {
+    try {
+        const response = await apiClient.get<{ id?: unknown; slug?: unknown; url?: unknown }>(
+            `/travels/resolve-slug/?slug=${encodeURIComponent(slug)}`,
+            LONG_TIMEOUT,
+            { ...(options ?? {}), skipAuth: true }
+        );
+        const id = Number(response?.id);
+        return Number.isFinite(id) && id > 0 ? id : null;
+    } catch (error: unknown) {
+        if (isAbortError(error)) throw error;
+        return null;
+    }
+};
+
 export const fetchTravel = async (
     id: number,
     options?: { signal?: AbortSignal }
@@ -475,54 +503,92 @@ export const fetchTravelBySlug = async (
         return null;
     };
 
+    const fetchTravelByResolvedSlug = async (requestOptions?: { signal?: AbortSignal }) => {
+        const resolvedId = await resolveTravelSlugId(slugCacheKey, requestOptions);
+        if (!resolvedId) return null;
+
+        const detailedTravel = await fetchTravel(resolvedId, requestOptions);
+        const normalized = normalizeTravelItem(detailedTravel);
+        if (!hasAnyTravelIdentity(normalized)) return null;
+
+        if (__DEV__) {
+            devWarn('Resolved travel via resolve-slug redirect history', {
+                requestedSlug: slug,
+                resolvedSlug: normalized.slug,
+                id: resolvedId,
+            });
+        }
+        return normalized;
+    };
+
     const fetchBySlugWithFallback = async (requestOptions?: { signal?: AbortSignal }) => {
+        let bySlugError: unknown = null;
         try {
-            return await fetchBySlug(requestOptions);
+            const travel = await fetchBySlug(requestOptions);
+            // A renamed slug makes /by-slug/ answer 301 to the SPA page URL; fetch
+            // follows it into HTML and the JSON parse yields an empty object. Treat
+            // that as a miss so the resolve-slug fallback below can recover.
+            if (hasAnyTravelIdentity(travel)) {
+                return travel;
+            }
         } catch (e: unknown) {
             if (isAbortError(e)) throw e;
 
             const status = getErrorStatus(e);
-            if (shouldUseSlugFallback(status)) {
-                const directVariantTravel = await fetchByDirectSlugVariant(requestOptions);
-                if (directVariantTravel) {
-                    if (__DEV__) {
-                        devWarn('Resolved travel by direct slug variant fallback', {
-                            requestedSlug: slug,
-                            resolvedSlug: directVariantTravel.slug,
-                            id: directVariantTravel.id,
-                        });
-                    }
-                    return directVariantTravel;
-                }
-
-                const fallbackTravel = await findTravelBySlugFallbackWithDeadline(slug, requestOptions);
-                if (fallbackTravel) {
-                    const fallbackTravelId = Number(fallbackTravel.id);
-                    if (Number.isFinite(fallbackTravelId) && fallbackTravelId > 0) {
-                        const detailedTravel = await fetchTravel(fallbackTravelId, requestOptions);
-                        if (__DEV__) {
-                            devWarn('Resolved travel by slug fallback via detail fetch', {
-                                requestedSlug: slug,
-                                resolvedSlug: fallbackTravel.slug,
-                                id: fallbackTravelId,
-                            });
-                        }
-                        return normalizeTravelItem(detailedTravel);
-                    }
-                    if (__DEV__) {
-                        devWarn('Resolved travel by slug fallback', {
-                            requestedSlug: slug,
-                            resolvedSlug: fallbackTravel.slug,
-                            id: fallbackTravel.id,
-                        });
-                    }
-                    return normalizeTravelItem(fallbackTravel);
-                }
+            if (!shouldUseSlugFallback(status)) {
+                devError('Error fetching Travel by slug:', e);
+                throw e;
             }
-
-            devError('Error fetching Travel by slug:', e);
-            throw e;
+            bySlugError = e;
         }
+
+        const resolvedTravel = await fetchTravelByResolvedSlug(requestOptions);
+        if (resolvedTravel) {
+            return resolvedTravel;
+        }
+
+        const directVariantTravel = await fetchByDirectSlugVariant(requestOptions);
+        if (directVariantTravel) {
+            if (__DEV__) {
+                devWarn('Resolved travel by direct slug variant fallback', {
+                    requestedSlug: slug,
+                    resolvedSlug: directVariantTravel.slug,
+                    id: directVariantTravel.id,
+                });
+            }
+            return directVariantTravel;
+        }
+
+        const fallbackTravel = await findTravelBySlugFallbackWithDeadline(slug, requestOptions);
+        if (fallbackTravel) {
+            const fallbackTravelId = Number(fallbackTravel.id);
+            if (Number.isFinite(fallbackTravelId) && fallbackTravelId > 0) {
+                const detailedTravel = await fetchTravel(fallbackTravelId, requestOptions);
+                if (__DEV__) {
+                    devWarn('Resolved travel by slug fallback via detail fetch', {
+                        requestedSlug: slug,
+                        resolvedSlug: fallbackTravel.slug,
+                        id: fallbackTravelId,
+                    });
+                }
+                return normalizeTravelItem(detailedTravel);
+            }
+            if (__DEV__) {
+                devWarn('Resolved travel by slug fallback', {
+                    requestedSlug: slug,
+                    resolvedSlug: fallbackTravel.slug,
+                    id: fallbackTravel.id,
+                });
+            }
+            return normalizeTravelItem(fallbackTravel);
+        }
+
+        const finalError = bySlugError ?? Object.assign(
+            new Error(`Travel not found by slug: ${slug}`),
+            { status: 404 }
+        );
+        devError('Error fetching Travel by slug:', finalError);
+        throw finalError;
     };
 
     if (!isAuthenticated) {
