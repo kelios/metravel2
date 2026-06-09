@@ -6,10 +6,12 @@
  * point's coordinates (same approach as the Belkraj widget). So offers link to a
  * COUNTRY-level destination, built in code from the ISO country code:
  *   - Ostrovok hotels     → https://ostrovok.ru/hotel/<countrySlug>/
- *   - Tripster excursions → https://experience.tripster.ru/experience/<countrySlug>/
- * (Cyrillic / free-text / capitalized slugs 404; the lowercase country page works
- * on both.) Each falls back to the partner homepage when the country is
- * unknown/unmapped — never a 404.
+ *   - Tripster excursions → https://experience.tripster.ru/destinations/<countrySlug>/
+ * Tripster countries live ONLY under /destinations/ (from their
+ * sitemap-countries.xml); /experience/<X>/ is for CITIES and silently renders an
+ * empty soft-404 shell (HTTP 200!) for non-city slugs — never link countries
+ * there. Each offer falls back to the partner homepage when the country is
+ * unknown/unmapped — never a dead page.
  *
  * The owner pastes the tp.media wrapper (per-account marker + per-program
  * trs/p/campaign_id) into env with a `{url}` slot for the destination; the whole
@@ -49,13 +51,14 @@ export interface AffiliateOffer {
 /**
  * ISO alpha-2 → lowercase English country slug, shared by both partners:
  *   Ostrovok  `https://ostrovok.ru/hotel/<slug>/`
- *   Tripster  `https://experience.tripster.ru/experience/<slug>/`
- * Every slug here is verified to return 200 on BOTH; an unmapped country falls
- * back to the partner homepage (never a 404). Slugs MUST stay lowercase —
- * Tripster 404s on capitalized country names. Extend as new countries appear.
+ *   Tripster  `https://experience.tripster.ru/destinations/<slug>/`
+ * Every slug is present in Tripster's sitemap-countries.xml AND serves a real
+ * Ostrovok country page; an unmapped country falls back to the partner homepage.
+ * Slugs MUST stay lowercase. UA is intentionally absent (no Tripster
+ * destination; Ostrovok geo-redirects it). Extend as new countries appear.
  */
 const COUNTRY_SLUG: Record<string, string> = {
-  BY: 'belarus', PL: 'poland', RU: 'russia', UA: 'ukraine', AM: 'armenia',
+  BY: 'belarus', PL: 'poland', RU: 'russia', AM: 'armenia',
   GE: 'georgia', TR: 'turkey', DE: 'germany', FR: 'france', IT: 'italy',
   ES: 'spain', SK: 'slovakia', HU: 'hungary', LT: 'lithuania', LV: 'latvia',
   AT: 'austria', CH: 'switzerland', NL: 'netherlands', PT: 'portugal',
@@ -79,7 +82,7 @@ const buildOstrovokUrl = (ctx: AffiliateOfferContext): string => {
 
 const buildTripsterUrl = (ctx: AffiliateOfferContext): string => {
   const slug = resolveCountrySlug(ctx)
-  return slug ? `https://experience.tripster.ru/experience/${slug}/` : TRIPSTER_HOME
+  return slug ? `https://experience.tripster.ru/destinations/${slug}/` : TRIPSTER_HOME
 }
 
 interface OfferPreset {

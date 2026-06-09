@@ -59,12 +59,14 @@ describe('affiliateConfig', () => {
     expect(offer.url).not.toContain(encodeURIComponent('/hotel/'))
   })
 
-  it('tours deep-links to the Tripster country page by ISO code', () => {
+  it('tours deep-links to the Tripster /destinations/ country page by ISO code', () => {
     process.env.EXPO_PUBLIC_TRAVELPAYOUTS_MARKER = '123456'
     process.env.EXPO_PUBLIC_AFFILIATE_TOURS_TEMPLATE = TOURS_TPL
     const [offer] = getAffiliateOffers({ countryCode: 'PL' })
     expect(offer.key).toBe('tours')
-    expect(offer.url).toContain(encodeURIComponent('https://experience.tripster.ru/experience/poland/'))
+    expect(offer.url).toContain(encodeURIComponent('https://experience.tripster.ru/destinations/poland/'))
+    // /experience/<country>/ is a soft-404 shell on Tripster — must never be used
+    expect(offer.url).not.toContain(encodeURIComponent('/experience/'))
   })
 
   it('tours falls back to the Tripster homepage for an unmapped country', () => {
@@ -72,7 +74,7 @@ describe('affiliateConfig', () => {
     process.env.EXPO_PUBLIC_AFFILIATE_TOURS_TEMPLATE = TOURS_TPL
     const [offer] = getAffiliateOffers({ countryCode: 'ZZ' })
     expect(offer.url).toContain(encodeURIComponent('https://experience.tripster.ru/'))
-    expect(offer.url).not.toContain(encodeURIComponent('/experience/'))
+    expect(offer.url).not.toContain(encodeURIComponent('/destinations/'))
   })
 
   it('still builds offers from a country name when no countryCode resolves', () => {
