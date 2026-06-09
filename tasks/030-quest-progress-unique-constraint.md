@@ -1,6 +1,6 @@
 # TASK-20260609-030: Add UniqueConstraint on QuestProgress (user, quest) and fix duplicate-create race
 
-Status: Backlog
+Status: Done (false-positive: UniqueConstraint already in migration 0001)
 Owner: Backend
 Support: Tester, Reviewer, Releaser
 Created: 2026-06-09

@@ -1,10 +1,10 @@
 # TASK-20260608-009: Superuser cannot DELETE another user's comment (403)
 
-Status: Backlog
+Status: Done (verified 2026-06-09)
 Owner: Backend
 Support: Frontend Developer, Tester, Reviewer, Releaser
 Created: 2026-06-08
-Updated: 2026-06-08
+Updated: 2026-06-09
 
 ## Goal
 

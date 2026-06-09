@@ -1,6 +1,6 @@
 # TASK-20260609-017: Filter unpublished articles from public queryset
 
-Status: Backlog
+Status: Done (verified 2026-06-09)
 Owner: Backend
 Support: Frontend Developer, Tester, Reviewer, Releaser
 Created: 2026-06-09
