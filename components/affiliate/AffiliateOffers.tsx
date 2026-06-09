@@ -13,13 +13,13 @@ import { useAffiliateImpression } from './useAffiliateImpression'
 
 type Props = AffiliateOfferContext
 
-function AffiliateOffers({ city, country, travelId }: Props) {
+function AffiliateOffers({ city, country, countryCode, travelId }: Props) {
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
 
   const offers = useMemo(
-    () => getAffiliateOffers({ city, country, travelId }),
-    [city, country, travelId],
+    () => getAffiliateOffers({ city, country, countryCode, travelId }),
+    [city, country, countryCode, travelId],
   )
 
   const trackImpression = useCallback(() => {

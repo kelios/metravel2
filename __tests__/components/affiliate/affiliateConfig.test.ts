@@ -1,7 +1,6 @@
 import {
   getAffiliateOffers,
   isAffiliateEnabled,
-  transliterate,
 } from '@/components/affiliate/affiliateConfig'
 
 const ENV_KEYS = [
@@ -9,6 +8,9 @@ const ENV_KEYS = [
   'EXPO_PUBLIC_AFFILIATE_TOURS_TEMPLATE',
   'EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE',
 ] as const
+
+const HOTELS_TPL = 'https://tp.media/r?marker=123456.{subid}&p=7038&trs=423278&u={url}'
+const TOURS_TPL = 'https://tp.media/r?marker=123456.{subid}&p=652&trs=423278&u={url}'
 
 describe('affiliateConfig', () => {
   const original: Record<string, string | undefined> = {}
@@ -28,64 +30,49 @@ describe('affiliateConfig', () => {
   })
 
   it('is disabled and yields no offers without a marker', () => {
-    process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE = 'https://tp.media/r?u={query}'
+    process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE = HOTELS_TPL
     expect(isAffiliateEnabled()).toBe(false)
-    expect(getAffiliateOffers({ city: 'Минск' })).toEqual([])
+    expect(getAffiliateOffers({ countryCode: 'BY' })).toEqual([])
   })
 
   it('returns only offers whose template is configured', () => {
     process.env.EXPO_PUBLIC_TRAVELPAYOUTS_MARKER = '123456'
-    process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE = 'https://tp.media/r?u={query}'
-    const offers = getAffiliateOffers({ city: 'Минск' })
+    process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE = HOTELS_TPL
+    const offers = getAffiliateOffers({ countryCode: 'BY' })
     expect(offers.map((o) => o.key)).toEqual(['hotels'])
   })
 
-  it('interpolates {query} (URL-encoded Cyrillic city) and {subid} for hotels', () => {
+  it('hotels deep-links to the Ostrovok country page by ISO code, with {subid}', () => {
     process.env.EXPO_PUBLIC_TRAVELPAYOUTS_MARKER = '123456'
-    process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE =
-      'https://tp.media/r?marker=123456.{subid}&u=https%3A%2F%2Fostrovok.ru%2Fhotel%2Fsearch%2F%3Fq%3D{query}'
-    const [offer] = getAffiliateOffers({ city: 'Минск', travelId: 384 })
+    process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE = HOTELS_TPL
+    const [offer] = getAffiliateOffers({ countryCode: 'PL', country: 'Польша', travelId: 384 })
     expect(offer.url).toContain('marker=123456.travel384')
-    expect(offer.url).toContain('q%3D' + encodeURIComponent('Минск'))
+    expect(offer.url).toContain(encodeURIComponent('https://ostrovok.ru/hotel/poland/'))
+    expect(offer.subtitle).toContain('Польша')
   })
 
-  it('transliterates the city to a Latin path slug for tours (Tripster)', () => {
+  it('hotels falls back to the Ostrovok homepage for an unmapped country', () => {
     process.env.EXPO_PUBLIC_TRAVELPAYOUTS_MARKER = '123456'
-    process.env.EXPO_PUBLIC_AFFILIATE_TOURS_TEMPLATE =
-      'https://tp.media/r?marker=123456.{subid}&u=https%3A%2F%2Fexperience.tripster.ru%2Fexperience%2F{query}%2F'
-    const [offer] = getAffiliateOffers({ city: 'Краков', travelId: 384 })
+    process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE = HOTELS_TPL
+    const [offer] = getAffiliateOffers({ countryCode: 'ZZ', country: 'Нигде' })
+    expect(offer.url).toContain(encodeURIComponent('https://ostrovok.ru/'))
+    expect(offer.url).not.toContain(encodeURIComponent('/hotel/'))
+  })
+
+  it('tours links to the Tripster homepage (no city in the data)', () => {
+    process.env.EXPO_PUBLIC_TRAVELPAYOUTS_MARKER = '123456'
+    process.env.EXPO_PUBLIC_AFFILIATE_TOURS_TEMPLATE = TOURS_TPL
+    const [offer] = getAffiliateOffers({ countryCode: 'PL' })
     expect(offer.key).toBe('tours')
-    // /experience/krakov/ — Cyrillic would 404 on Tripster
-    expect(offer.url).toContain('experience%2Fkrakov%2F')
-    expect(offer.url).not.toContain('%D0%9A') // no Cyrillic in the slug
+    expect(offer.url).toContain(encodeURIComponent('https://experience.tripster.ru/'))
   })
 
-  it('falls back to country when city is absent', () => {
+  it('still builds offers from a country name when no countryCode resolves', () => {
     process.env.EXPO_PUBLIC_TRAVELPAYOUTS_MARKER = '123456'
-    process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE = 'https://tp.media/r?u={query}'
+    process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE = HOTELS_TPL
     const [offer] = getAffiliateOffers({ country: 'Беларусь' })
-    expect(offer.url).toContain(encodeURIComponent('Беларусь'))
-  })
-
-  it('skips a {query} offer when no destination is resolvable', () => {
-    process.env.EXPO_PUBLIC_TRAVELPAYOUTS_MARKER = '123456'
-    process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE = 'https://tp.media/r?u={query}'
-    expect(getAffiliateOffers({})).toEqual([])
-  })
-})
-
-describe('transliterate', () => {
-  it.each([
-    ['Краков', 'krakov'],
-    ['Гродно', 'grodno'],
-    ['Минск', 'minsk'],
-    ['Закопане', 'zakopane'],
-    ['Щучин', 'shchuchin'],
-  ])('%s → %s', (input, expected) => {
-    expect(transliterate(input)).toBe(expected)
-  })
-
-  it('returns empty string for empty input', () => {
-    expect(transliterate('')).toBe('')
+    // no ISO code → homepage, but the offer still renders with the country in copy
+    expect(offer.url).toContain(encodeURIComponent('https://ostrovok.ru/'))
+    expect(offer.subtitle).toContain('Беларусь')
   })
 })

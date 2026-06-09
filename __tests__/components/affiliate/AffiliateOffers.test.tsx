@@ -28,9 +28,9 @@ describe('AffiliateOffers', () => {
     })
     process.env.EXPO_PUBLIC_TRAVELPAYOUTS_MARKER = '999999'
     process.env.EXPO_PUBLIC_AFFILIATE_TOURS_TEMPLATE =
-      'https://tp.media/r?marker=999999.{subid}&u=https%3A%2F%2Fexample.com%2Ftours%3Fq%3D{query}'
+      'https://tp.media/r?marker=999999.{subid}&u={url}'
     process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE =
-      'https://tp.media/r?marker=999999.{subid}&u=https%3A%2F%2Fexample.com%2Fhotels%3Fq%3D{query}'
+      'https://tp.media/r?marker=999999.{subid}&u={url}'
   })
 
   afterEach(() => {
@@ -54,17 +54,19 @@ describe('AffiliateOffers', () => {
   })
 
   it('tracks click and opens the interpolated affiliate URL', () => {
-    const { getByText } = render(<AffiliateOffers city="Минск" travelId={384} />)
-    fireEvent.press(getByText('Посмотреть экскурсии'))
+    const { getByText } = render(
+      <AffiliateOffers city="Минск" country="Беларусь" countryCode="BY" travelId={384} />,
+    )
+    fireEvent.press(getByText('Подобрать жильё'))
 
     expect(queueAnalyticsEvent).toHaveBeenCalledWith(
       'Affiliate_Click',
-      expect.objectContaining({ program: 'tours', travelId: '384', city: 'Минск' }),
+      expect.objectContaining({ program: 'hotels', travelId: '384', city: 'Минск' }),
     )
     const openMock = openExternalUrlInNewTab as jest.Mock
     const calledUrl = openMock.mock.calls[0][0] as string
     expect(calledUrl).toContain('marker=999999.travel384')
-    // tours (Tripster) transliterates the Cyrillic city to a Latin slug
-    expect(calledUrl).toContain('q%3Dminsk')
+    // hotels (Ostrovok) deep-links to the country page resolved from the ISO code
+    expect(calledUrl).toContain(encodeURIComponent('https://ostrovok.ru/hotel/belarus/'))
   })
 })
