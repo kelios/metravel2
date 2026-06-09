@@ -537,17 +537,20 @@ describe('travel hero preload helpers', () => {
     expect(preload).toBeTruthy();
     expect(preload.mobile.href).toContain('https://metravel.by/gallery/77/gallery/photo.JPG');
     expect(preload.mobile.href).toContain('w=720');
-    expect(preload.mobile.href).toContain('q=35');
+    expect(preload.mobile.href).toContain('q=72');
     expect(preload.mobile.href).toContain('v=991');
     expect(preload.mobile.href).not.toContain('dpr=');
     expect(preload.mobile.srcSet).toContain('w=320');
     expect(preload.mobile.srcSet).toContain('w=640');
     expect(preload.mobile.srcSet).toContain('w=720');
+    expect(preload.mobile.srcSet).toContain('q=72');
     expect(preload.mobile.sizes).toBe('100vw');
-    expect(preload.desktop.href).toContain('w=720');
-    expect(preload.desktop.href).toContain('q=45');
+    expect(preload.desktop.href).toContain('w=1280');
+    expect(preload.desktop.href).toContain('q=82');
     expect(preload.desktop.href).not.toContain('dpr=');
-    expect(preload.desktop.srcSet).toContain('w=480');
+    expect(preload.desktop.srcSet).toContain('w=960');
+    expect(preload.desktop.srcSet).toContain('w=1280');
+    expect(preload.desktop.srcSet).toContain('q=82');
     expect(preload.desktop.sizes).toBe('(max-width: 1024px) 92vw, 720px');
   });
 

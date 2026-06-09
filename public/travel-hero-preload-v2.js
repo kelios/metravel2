@@ -387,10 +387,12 @@
 
         function createPreloadLink() {
           var isMobile = (window.innerWidth || 0) < 768;
-          var quality = isMobile ? 35 : 45;
-
-          // Must match TravelDetailsOptimizedLCPHero.tsx exactly.
-          var widths = isMobile ? [320, 480, 640, 720] : [480, 720];
+          // Must match the image the LCP <img> actually requests, else this
+          // preload fetches a different file and is wasted.
+          // Source of truth: TravelDetailsOptimizedLCPHero.tsx (q72/q82) +
+          // sliderParts/utils.ts buildUriWeb (q72/q82 for the first slide).
+          var quality = isMobile ? 72 : 82;
+          var widths = isMobile ? [320, 480, 640, 720] : [720, 960, 1280];
 
           // Build srcSet entries to match buildResponsiveImageProps()
           var srcSetParts = [];

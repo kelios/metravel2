@@ -312,15 +312,21 @@ function buildTravelHeroPreloadData(travel, detail) {
   const source = pickTravelHeroImageSource(travel, detail);
   if (!source?.url) return null;
 
+  // IMPORTANT: these descriptors MUST match the image the LCP <img> actually
+  // requests, otherwise the preload downloads a different file and is wasted
+  // (the real LCP image then only starts after hydration → slow LCP).
+  // Source of truth: TravelDetailsOptimizedLCPHero.tsx (q72 mobile / q82 desktop,
+  // widths [320,480,640,720] mobile / [720,960,1280] desktop) and
+  // sliderParts/utils.ts buildUriWeb (same q72/q82 for the first slide).
   const mobileHref = buildOptimizedTravelImageUrl(source.url, {
     width: 720,
-    quality: 35,
+    quality: 72,
     updatedAt: source.updatedAt,
     id: source.id,
   });
   const desktopHref = buildOptimizedTravelImageUrl(source.url, {
-    width: 720,
-    quality: 45,
+    width: 1280,
+    quality: 82,
     updatedAt: source.updatedAt,
     id: source.id,
   });
@@ -332,7 +338,7 @@ function buildTravelHeroPreloadData(travel, detail) {
       ? {
           href: mobileHref,
           srcSet: buildTravelHeroSrcSet(source.url, [320, 480, 640, 720], {
-            quality: 35,
+            quality: 72,
             updatedAt: source.updatedAt,
             id: source.id,
           }),
@@ -342,8 +348,8 @@ function buildTravelHeroPreloadData(travel, detail) {
     desktop: desktopHref
       ? {
           href: desktopHref,
-          srcSet: buildTravelHeroSrcSet(source.url, [480, 720], {
-            quality: 45,
+          srcSet: buildTravelHeroSrcSet(source.url, [720, 960, 1280], {
+            quality: 82,
             updatedAt: source.updatedAt,
             id: source.id,
           }),
