@@ -49,10 +49,14 @@ export const commentsApi = {
     );
   },
 
-  getComments: async (threadId: number): Promise<TravelComment[]> => {
+  getComments: async (
+    threadId: number,
+    options?: { expandSubThreads?: boolean }
+  ): Promise<TravelComment[]> => {
     try {
+      const expand = options?.expandSubThreads ? '&expand=sub_threads' : '';
       return await apiClient.get<TravelComment[]>(
-        `/travel-comments/?thread_id=${threadId}`
+        `/travel-comments/?thread_id=${threadId}${expand}`
       );
     } catch (error) {
       const status = getErrorStatus(error);
@@ -69,10 +73,14 @@ export const commentsApi = {
     }
   },
 
-  getCommentsByTravel: async (travelId: number): Promise<TravelComment[]> => {
+  getCommentsByTravel: async (
+    travelId: number,
+    options?: { expandSubThreads?: boolean }
+  ): Promise<TravelComment[]> => {
     try {
+      const expand = options?.expandSubThreads ? '&expand=sub_threads' : '';
       return await apiClient.get<TravelComment[]>(
-        `/travel-comments/?travel_id=${travelId}`
+        `/travel-comments/?travel_id=${travelId}${expand}`
       );
     } catch (error) {
       const status = getErrorStatus(error);
@@ -103,28 +111,43 @@ export const commentsApi = {
       return [];
     }
 
+    // The backend uses a sub-thread model: a comment's `sub_thread` field
+    // points to a *thread* ID that contains its replies, NOT a parent comment
+    // ID.  Ask the backend to expand sub-threads server-side (BE-010), so the
+    // whole conversation arrives in a single request as a flat list.
     let rootComments: TravelComment[];
     if (typeof threadId === 'number' && threadId > 0) {
-      rootComments = await commentsApi.getComments(threadId);
+      rootComments = await commentsApi.getComments(threadId, { expandSubThreads: true });
     } else {
-      rootComments = await commentsApi.getCommentsByTravel(travelId);
+      rootComments = await commentsApi.getCommentsByTravel(travelId, { expandSubThreads: true });
     }
     if (!Array.isArray(rootComments) || rootComments.length === 0) {
       return [];
     }
 
-    // The backend uses a sub-thread model: a comment's `sub_thread` field
-    // points to a *thread* ID that contains its replies, NOT a parent comment
-    // ID.  We must fetch those sub-threads to display the full conversation.
-    const fetched = new Set<number>(typeof threadId === 'number' ? [threadId] : []);
-    const allComments = [...(rootComments || [])];
-    const queue: number[] = [];
+    const allComments = [...rootComments];
 
-    for (const c of (rootComments || [])) {
+    // Threads already materialized in the response. When the backend honoured
+    // `expand=sub_threads`, every reply (and thus its thread) is already here,
+    // so the BFS below finds nothing left to fetch and issues zero requests.
+    const fetched = new Set<number>(typeof threadId === 'number' ? [threadId] : []);
+    for (const c of rootComments) {
+      if (typeof c.thread === 'number' && c.thread > 0) {
+        fetched.add(c.thread);
+      }
+    }
+
+    // Fallback for older deployments that ignore `expand`: BFS the sub-threads
+    // that were referenced but not delivered.
+    const queue: number[] = [];
+    const enqueueMissingSubThread = (c: TravelComment): void => {
       if (typeof c.sub_thread === 'number' && c.sub_thread > 0 && !fetched.has(c.sub_thread)) {
         queue.push(c.sub_thread);
         fetched.add(c.sub_thread);
       }
+    };
+    for (const c of rootComments) {
+      enqueueMissingSubThread(c);
     }
 
     while (queue.length > 0) {
@@ -135,10 +158,7 @@ export const commentsApi = {
       for (const subComments of results) {
         for (const c of subComments) {
           allComments.push(c);
-          if (typeof c.sub_thread === 'number' && c.sub_thread > 0 && !fetched.has(c.sub_thread)) {
-            queue.push(c.sub_thread);
-            fetched.add(c.sub_thread);
-          }
+          enqueueMissingSubThread(c);
         }
       }
     }

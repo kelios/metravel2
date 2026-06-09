@@ -1,10 +1,10 @@
 # TASK-20260605-004: Travel Slug Resolution Endpoint
 
-Status: Backlog
+Status: Partially Done (endpoint shipped; old-slug resolution blocked on BE-IDX-1)
 Owner: Backend
 Support: Frontend Developer, Tester, Reviewer, Releaser
 Created: 2026-06-05
-Updated: 2026-06-08
+Updated: 2026-06-09
 
 ## Goal
 

@@ -1,10 +1,10 @@
 # TASK-20260605-003: Comment Tree Expand Contract
 
-Status: Backlog
+Status: Done (verified 2026-06-09)
 Owner: Backend
 Support: Frontend Developer, Tester, Reviewer, Releaser
 Created: 2026-06-05
-Updated: 2026-06-08
+Updated: 2026-06-09
 
 ## Goal
 
@@ -73,12 +73,15 @@ curl -sS "https://metravel.by/api/travel-comments/?travel_id=733&expand=sub_thre
 ## Progress Log
 
 - 2026-06-05: Created after verification showed sub-thread IDs are still returned without embedded replies.
+- 2026-06-09: Backend shipped `?expand=sub_threads` / `?depth=full` (`travel_comments/views.py:257-312`, `_expand_comments_flat`) — returns the whole comment tree as a flat list in one request. Prod re-probe confirmed the param is parsed and the response shape is unchanged (bare array, no pagination wrapper). Frontend simplification landed: `getTravelComments` now requests `expand=sub_threads` in the initial call and only BFS-fetches sub-threads on legacy deployments that ignore the param. Regression tests added in `__tests__/api/comments.test.ts` (single-request expand path + legacy BFS fallback).
 
 ## Results
 
 Changed files:
+- `api/comments.ts` — `getComments`/`getCommentsByTravel` accept `{ expandSubThreads }`; `getTravelComments` prefers the single server-expanded request and keeps the BFS as a legacy fallback.
+- `__tests__/api/comments.test.ts` — regression coverage for the expanded single-request path and the legacy BFS fallback.
 
-Validation evidence: 2026-06-05 e2e backend probe.
+Validation evidence: 2026-06-05 e2e backend probe; 2026-06-09 prod probe (`/api/travel-comments/?travel_id=384&expand=sub_threads` -> `200`, bare array, same shape as without `expand`); `npx jest __tests__/api/comments.test.ts` -> 26 passed.
 
 Reviewer findings:
 

@@ -1,10 +1,10 @@
 # TASK-20260607-008: Comment user_name should follow Profile, not auth_user
 
-Status: Backlog
+Status: Done (verified 2026-06-09)
 Owner: Backend
 Support: Frontend Developer, Tester, Reviewer, Releaser
 Created: 2026-06-07
-Updated: 2026-06-08
+Updated: 2026-06-09
 
 ## Goal
 

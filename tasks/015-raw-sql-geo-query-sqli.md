@@ -1,6 +1,6 @@
 # TASK-20260609-015: Replace raw SQL geo-query with GeoDjango ORM to eliminate SQLi pattern
 
-Status: Backlog
+Status: Done (verified 2026-06-09)
 Owner: Backend
 Support: Tester, Reviewer, Releaser
 Created: 2026-06-09

@@ -1,6 +1,6 @@
 # TASK-20260609-066: Comment serializer should return user_avatar
 
-Status: Backlog
+Status: Done (verified 2026-06-09)
 Owner: Backend
 Support: Developer (FE), Tester, Reviewer, Releaser
 Created: 2026-06-09

@@ -1,6 +1,6 @@
 # TASK-20260609-016: Fix IDOR in user history and favorites actions
 
-Status: Backlog
+Status: Done (verified 2026-06-09)
 Owner: Backend
 Support: Frontend Developer, Tester, Reviewer, Releaser
 Created: 2026-06-09

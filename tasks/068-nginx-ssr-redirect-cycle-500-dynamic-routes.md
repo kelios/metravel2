@@ -1,6 +1,6 @@
 # TASK-20260609-068: Fix nginx SSR redirect-cycle 500 on non-prerendered dynamic routes
 
-Status: Backlog
+Status: Done (verified 2026-06-09)
 Owner: Backend
 Support: Developer, Tester, Reviewer, Releaser
 Created: 2026-06-09

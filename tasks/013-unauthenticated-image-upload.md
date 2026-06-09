@@ -1,6 +1,6 @@
 # TASK-20260609-013: Secure the image upload endpoint against unauthenticated access
 
-Status: Backlog
+Status: Done (verified 2026-06-09)
 Owner: Backend
 Support: Frontend Developer, Tester, Reviewer, Releaser
 Created: 2026-06-09

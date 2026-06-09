@@ -1,6 +1,6 @@
 # TASK-20260609-014: Harden production Django settings (DEBUG, ALLOWED_HOSTS, SECRET_KEY)
 
-Status: Backlog
+Status: Done (verified 2026-06-09)
 Owner: Backend
 Support: Frontend Developer, Tester, Reviewer, Releaser
 Created: 2026-06-09

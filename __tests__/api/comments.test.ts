@@ -173,12 +173,12 @@ describe('Comments API', () => {
   });
 
   describe('getTravelComments', () => {
-    it('should prefer thread_id when provided', async () => {
+    it('should prefer thread_id when provided and ask the backend to expand sub-threads', async () => {
       mockedApiClient.get.mockResolvedValueOnce([]);
 
       await commentsApi.getTravelComments({ travelId: 123, threadId: 9 });
 
-      expect(mockedApiClient.get).toHaveBeenCalledWith('/travel-comments/?thread_id=9');
+      expect(mockedApiClient.get).toHaveBeenCalledWith('/travel-comments/?thread_id=9&expand=sub_threads');
     });
 
     it('should fallback to travel_id lookup when thread_id is missing', async () => {
@@ -187,10 +187,27 @@ describe('Comments API', () => {
       const result = await commentsApi.getTravelComments({ travelId: 123, threadId: null });
 
       expect(result).toEqual([]);
-      expect(mockedApiClient.get).toHaveBeenCalledWith('/travel-comments/?travel_id=123');
+      expect(mockedApiClient.get).toHaveBeenCalledWith('/travel-comments/?travel_id=123&expand=sub_threads');
     });
 
-    it('should recursively fetch sub-thread comments', async () => {
+    it('should return the full tree in one request when the backend expands sub-threads (BE-010)', async () => {
+      // Server-expanded response: root + its reply (thread=50) arrive together.
+      const expanded: TravelComment[] = [
+        { id: 1, thread: 9, sub_thread: 50, user: 1, text: 'Root', created_at: null, updated_at: null, likes_count: 0 },
+        { id: 2, thread: 50, sub_thread: null, user: 2, text: 'Reply', created_at: null, updated_at: null, likes_count: 0 },
+      ];
+
+      mockedApiClient.get.mockResolvedValueOnce(expanded);
+
+      const result = await commentsApi.getTravelComments({ travelId: 123, threadId: 9 });
+
+      // Only the single expand request — no client-side BFS follow-ups.
+      expect(mockedApiClient.get).toHaveBeenCalledTimes(1);
+      expect(mockedApiClient.get).toHaveBeenCalledWith('/travel-comments/?thread_id=9&expand=sub_threads');
+      expect(result.map((c: TravelComment) => c.text)).toEqual(['Root', 'Reply']);
+    });
+
+    it('should BFS-fetch sub-threads when the backend ignores expand (legacy deployment)', async () => {
       // Root comment has sub_thread=50 pointing to a sub-thread
       const rootComments: TravelComment[] = [
         {
@@ -206,19 +223,19 @@ describe('Comments API', () => {
       ];
 
       mockedApiClient.get
-        .mockResolvedValueOnce(rootComments)   // thread_id=9
+        .mockResolvedValueOnce(rootComments)   // thread_id=9&expand=sub_threads (ignored by legacy backend)
         .mockResolvedValueOnce(subThreadComments); // thread_id=50
 
       const result = await commentsApi.getTravelComments({ travelId: 123, threadId: 9 });
 
-      expect(mockedApiClient.get).toHaveBeenCalledWith('/travel-comments/?thread_id=9');
+      expect(mockedApiClient.get).toHaveBeenCalledWith('/travel-comments/?thread_id=9&expand=sub_threads');
       expect(mockedApiClient.get).toHaveBeenCalledWith('/travel-comments/?thread_id=50');
       expect(result).toHaveLength(2);
       expect(result[0].text).toBe('Root');
       expect(result[1].text).toBe('Reply');
     });
 
-    it('should handle nested sub-threads (reply to a reply)', async () => {
+    it('should handle nested sub-threads (reply to a reply) on a legacy backend', async () => {
       const root: TravelComment[] = [
         { id: 1, thread: 9, sub_thread: 50, user: 1, text: 'A', created_at: null, updated_at: null, likes_count: 0 },
       ];
