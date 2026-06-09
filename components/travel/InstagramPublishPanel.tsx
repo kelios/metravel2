@@ -37,7 +37,9 @@ type InstagramPublishPanelProps = {
   onDrop: (targetIndex: number) => void
   onDragEnd: () => void
   onCopyText: () => void
+  onConnect: () => void
   onPublish: () => void
+  isConnecting?: boolean
   isPublishing?: boolean
 }
 
@@ -179,7 +181,9 @@ export default function InstagramPublishPanel({
   onDrop,
   onDragEnd,
   onCopyText,
+  onConnect,
   onPublish,
+  isConnecting = false,
   isPublishing = false,
 }: InstagramPublishPanelProps) {
   return (
@@ -477,11 +481,31 @@ export default function InstagramPublishPanel({
         />
       </View>
 
+      <Text style={styles.adminHint}>
+        Перед первой публикацией один раз подключите аккаунт @metravelby через «Подключить
+        Instagram». После этого «Опубликовать» отправляет пост напрямую.
+      </Text>
+
+      <View style={styles.adminButtons}>
+        <Button
+          label="Подключить Instagram"
+          onPress={onConnect}
+          disabled={isConnecting || isPublishing}
+          loading={isConnecting}
+          icon={<Feather name="link" size={18} color={colors.textOnPrimary} />}
+          variant="secondary"
+          size="md"
+          style={styles.adminButton}
+          labelStyle={styles.adminButtonText}
+          accessibilityLabel="Подключить аккаунт Instagram"
+        />
+      </View>
+
       <View style={styles.adminButtons}>
         <Button
           label="Опубликовать в Instagram"
           onPress={onPublish}
-          disabled={isPublishing}
+          disabled={isPublishing || isConnecting}
           loading={isPublishing}
           icon={
             <Feather name="instagram" size={18} color={colors.textOnPrimary} />

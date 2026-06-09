@@ -27,23 +27,18 @@ jest.mock('expo-clipboard', () => ({
 jest.mock('@/utils/externalLinks', () => ({
   openExternalUrl: jest.fn().mockResolvedValue(true),
 }));
-jest.mock('@/utils/instagramOAuth', () => ({
-  buildInstagramOAuthUrl: jest.fn(() => 'https://www.facebook.com/v19.0/dialog/oauth?client_id=test-app'),
-  getInstagramOAuthResolution: jest.fn(() => ({
-    isConfigured: true,
-    reason: '',
-    config: {
-      appId: 'test-app',
-      authorizeUrl: 'https://www.facebook.com/v19.0/dialog/oauth',
-      redirectUri: 'https://api.metravel.by/auth/instagram/callback',
-      scopes: ['instagram_basic', 'instagram_content_publish', 'pages_read_engagement'],
-    },
-  })),
+jest.mock('@/api/instagramPublish', () => ({
+  publishTravelToInstagram: jest
+    .fn()
+    .mockResolvedValue({ status: 'ok', postUrl: 'https://www.instagram.com/p/TEST/' }),
+  fetchInstagramOAuthStartUrl: jest
+    .fn()
+    .mockResolvedValue('https://www.facebook.com/v19.0/dialog/oauth?client_id=test-app'),
 }));
 
 import { showToast } from '@/utils/toast';
 import { openExternalUrl } from '@/utils/externalLinks';
-import { buildInstagramOAuthUrl, getInstagramOAuthResolution } from '@/utils/instagramOAuth';
+import { publishTravelToInstagram, fetchInstagramOAuthStartUrl } from '@/api/instagramPublish';
 
 const baseFormData: TravelFormData = {
   id: '640',
@@ -251,7 +246,43 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     expect(queryByText('Опубликовать в Instagram')).toBeNull();
   });
 
-  it('opens Meta OAuth when superadmin presses publish to instagram', async () => {
+  it('opens Meta OAuth from the backend when superadmin presses connect', async () => {
+    const { getByText } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={{
+          ...baseFormData,
+          name: 'Минск и Несвиж',
+          countries: ['1'],
+          coordsMeTravel: [
+            { lat: 53.9, lng: 27.56, address: 'Минск', categories: [] },
+            { lat: 53.22, lng: 26.68, address: 'Несвиж', categories: [] },
+          ],
+        }}
+        countries={[{ country_id: '1', title_ru: 'Беларусь' }]}
+        setFormData={jest.fn()}
+        isSuperAdmin={true}
+        onManualSave={jest.fn()}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.press(getByText('Подключить Instagram'));
+    });
+
+    expect(fetchInstagramOAuthStartUrl).toHaveBeenCalled();
+    expect(openExternalUrl).toHaveBeenCalledWith('https://www.facebook.com/v19.0/dialog/oauth?client_id=test-app');
+    expect(showToast).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'error',
+      })
+    );
+  });
+
+  it('publishes to Instagram via the API when superadmin presses publish', async () => {
     const { getByText } = render(
       <TravelWizardStepPublish
         currentStep={6}
@@ -278,8 +309,14 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       fireEvent.press(getByText('Опубликовать в Instagram'));
     });
 
-    expect(buildInstagramOAuthUrl).toHaveBeenCalled();
-    expect(openExternalUrl).toHaveBeenCalledWith('https://www.facebook.com/v19.0/dialog/oauth?client_id=test-app');
+    expect(publishTravelToInstagram).toHaveBeenCalledWith(
+      expect.objectContaining({
+        travelId: 640,
+        accountKey: expect.any(String),
+        imageUrls: expect.arrayContaining(['https://example.com/gallery-1.jpg']),
+      })
+    );
+    expect(openExternalUrl).not.toHaveBeenCalled();
     expect(showToast).not.toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'error',
@@ -376,13 +413,8 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     expect(getAllByTestId('instagram-preview-image')).toHaveLength(2);
   });
 
-  it('shows config error when oauth is not configured', async () => {
-    ;(buildInstagramOAuthUrl as jest.Mock).mockReturnValueOnce(null)
-    ;(getInstagramOAuthResolution as jest.Mock).mockReturnValueOnce({
-      isConfigured: false,
-      reason: 'Укажите EXPO_PUBLIC_META_APP_ID для подключения Instagram через Meta OAuth.',
-      config: null,
-    })
+  it('shows config error when the backend has no OAuth url (not configured)', async () => {
+    ;(fetchInstagramOAuthStartUrl as jest.Mock).mockResolvedValueOnce('')
 
     const { getByText } = render(
       <TravelWizardStepPublish
@@ -404,14 +436,14 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     );
 
     await act(async () => {
-      fireEvent.press(getByText('Опубликовать в Instagram'));
+      fireEvent.press(getByText('Подключить Instagram'));
     });
 
     expect(openExternalUrl).not.toHaveBeenCalled();
     expect(showToast).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'error',
-        text1: 'Instagram OAuth не настроен',
+        text1: 'Instagram не настроен на сервере',
       })
     );
   });

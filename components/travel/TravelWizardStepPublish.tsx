@@ -32,9 +32,11 @@ import { useInstagramPublishDraft } from '@/components/travel/useInstagramPublis
 import {
     INSTAGRAM_CAPTION_MAX_LENGTH,
     INSTAGRAM_HASHTAG_MAX_COUNT,
+    parseInstagramHashtags,
+    getInstagramAccountOptions,
 } from '@/utils/instagramPublish';
 import { openExternalUrl } from '@/utils/externalLinks';
-import { buildInstagramOAuthUrl, getInstagramOAuthResolution } from '@/utils/instagramOAuth';
+import { publishTravelToInstagram, fetchInstagramOAuthStartUrl } from '@/api/instagramPublish';
 import { createStyles } from '@/components/travel/travelWizardStepPublish.styles';
 
 interface TravelWizardStepPublishProps {
@@ -146,8 +148,15 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const missingBannerScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const instagramPublishingRef = useRef(false);
     const [isPublishingInstagram, setIsPublishingInstagram] = useState(false);
+    const instagramConnectingRef = useRef(false);
+    const [isConnectingInstagram, setIsConnectingInstagram] = useState(false);
     const [primaryOverrideLabel, setPrimaryOverrideLabel] = useState<string | null>(null);
-    const instagramOAuthResolution = useMemo(() => getInstagramOAuthResolution(), []);
+    const instagramAccountKey = useMemo(
+        () =>
+            getInstagramAccountOptions(process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS)[0]?.key ||
+            'metravelby',
+        [],
+    );
 
     const {
         editableInstagramCaption,
@@ -507,18 +516,66 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         });
     }, [finalInstagramText]);
 
-    const handlePublishToInstagram = useCallback(async () => {
-        // Защита от двойного клика: повторный вызов во время открытия OAuth не должен
-        // открывать вторую вкладку.
-        if (instagramPublishingRef.current) return;
-
-        const oauthUrl = buildInstagramOAuthUrl();
-
-        if (!oauthUrl) {
+    // Подключение аккаунта: бэк сам отдаёт authUrl с корректным redirect и подписанным
+    // state (фронт НЕ строит OAuth-URL сам — старый /auth/instagram/callback не существует).
+    const handleConnectInstagram = useCallback(async () => {
+        if (instagramConnectingRef.current) return;
+        instagramConnectingRef.current = true;
+        setIsConnectingInstagram(true);
+        try {
+            const returnTo =
+                Platform.OS === 'web' && typeof window !== 'undefined'
+                    ? window.location?.href
+                    : undefined;
+            const authUrl = await fetchInstagramOAuthStartUrl(returnTo);
+            if (!authUrl) {
+                void showToastMessage({
+                    type: 'error',
+                    text1: 'Instagram не настроен на сервере',
+                    text2: 'Нужны ключи Meta на бэкенде (задача BE-066).',
+                });
+                return;
+            }
+            const opened = await openExternalUrl(authUrl);
+            if (!opened) {
+                void showToastMessage({
+                    type: 'error',
+                    text1: 'Не удалось открыть Meta OAuth',
+                    text2: 'Проверьте блокировку всплывающих окон и повторите.',
+                });
+            }
+        } catch (error) {
             void showToastMessage({
                 type: 'error',
-                text1: 'Instagram OAuth не настроен',
-                text2: instagramOAuthResolution.reason,
+                text1: 'Не удалось начать подключение Instagram',
+                text2: error instanceof Error ? error.message : 'Повторите попытку позже.',
+            });
+        } finally {
+            instagramConnectingRef.current = false;
+            setIsConnectingInstagram(false);
+        }
+    }, []);
+
+    const handlePublishToInstagram = useCallback(async () => {
+        // Защита от двойного клика.
+        if (instagramPublishingRef.current) return;
+
+        const travelId = Number(formData.id);
+        if (!Number.isFinite(travelId) || travelId <= 0) {
+            void showToastMessage({
+                type: 'error',
+                text1: 'Сначала сохраните путешествие',
+                text2: 'Публикация в Instagram доступна после сохранения.',
+            });
+            return;
+        }
+
+        const imageUrls = editableInstagramImages.filter(Boolean);
+        if (imageUrls.length === 0) {
+            void showToastMessage({
+                type: 'error',
+                text1: 'Нет фото для публикации',
+                text2: 'Добавьте хотя бы одно фото в галерею.',
             });
             return;
         }
@@ -526,20 +583,38 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         instagramPublishingRef.current = true;
         setIsPublishingInstagram(true);
         try {
-            const opened = await openExternalUrl(oauthUrl);
-            if (!opened) {
-                void showToastMessage({
-                    type: 'error',
-                    text1: 'Не удалось открыть Meta OAuth',
-                    text2: 'Проверьте настройки браузера и повторите попытку.',
-                });
-            }
+            const result = await publishTravelToInstagram({
+                travelId,
+                accountKey: instagramAccountKey,
+                caption: editableInstagramCaption.trim(),
+                hashtags: parseInstagramHashtags(editableInstagramHashtags),
+                imageUrls,
+            });
+            void showToastMessage({
+                type: 'success',
+                text1: 'Опубликовано в Instagram',
+                text2: result?.postUrl || undefined,
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            const notConnected = /\b401\b|\b403\b|config|connect|подключ|token|account/i.test(message);
+            void showToastMessage({
+                type: 'error',
+                text1: notConnected ? 'Аккаунт Instagram не подключён' : 'Не удалось опубликовать',
+                text2: notConnected
+                    ? 'Нажмите «Подключить Instagram», затем повторите публикацию.'
+                    : message,
+            });
         } finally {
             instagramPublishingRef.current = false;
             setIsPublishingInstagram(false);
         }
     }, [
-        instagramOAuthResolution.reason,
+        formData.id,
+        editableInstagramImages,
+        editableInstagramCaption,
+        editableInstagramHashtags,
+        instagramAccountKey,
     ]);
 
     return (
@@ -641,7 +716,9 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                             onDrop={handleInstagramDrop}
                             onDragEnd={handleInstagramDragEnd}
                             onCopyText={() => void handleCopyInstagramText()}
+                            onConnect={() => void handleConnectInstagram()}
                             onPublish={() => void handlePublishToInstagram()}
+                            isConnecting={isConnectingInstagram}
                             isPublishing={isPublishingInstagram}
                         />
                     )}

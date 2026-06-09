@@ -254,6 +254,24 @@ Read-only repro already captured by the diagnosing agent (prod, 2026-06-09):
 - 2026-06-09: Created from read-only backend diagnosis. Publish pipeline + OAuth views are
   implemented; the blocker is the redirect_uri mismatch (FE `/auth/instagram/callback` 404 vs
   backend `/api/travels/instagram-oauth/callback/`) plus unprovisioned Meta credentials.
+- 2026-06-09 (FE side fixed in metravel2): the frontend no longer builds its own OAuth URL.
+  The publish step now (a) calls `GET /api/travels/instagram-oauth/start/` to obtain the
+  authUrl ("Подключить Instagram" button), so the redirect_uri is fully owned by the backend,
+  and (b) calls `POST /api/travels/instagram-publish/` on "Опубликовать" (previously the button
+  only opened OAuth and never published). Files: `api/instagramPublish.ts`,
+  `components/travel/InstagramPublishPanel.tsx`, `components/travel/TravelWizardStepPublish.tsx`
+  (+ test). So the remaining work is purely backend creds + the finding below.
+- 2026-06-09 (CRITICAL finding for @metravelby): a valid Meta **user** token with full scopes
+  (`instagram_basic, instagram_content_publish, pages_show_list, business_management`) returns
+  **`/me/accounts` = [] (no Pages)**. The IG account @metravelby is **not linked to a Facebook
+  Page** that this admin manages. The backend OAuth callback resolves the IG business account
+  via `/me/accounts` → `instagram_business_account`, which will therefore find **nothing** and
+  store no `InstagramGraphAccount`. → Either (1) link @metravelby to a Facebook Page owned by
+  the admin's Business portfolio (then the existing flow works), OR (2) the backend must also
+  support the **Instagram API with Instagram Login** flow (`graph.instagram.com`, IGAA token,
+  no Page required). Decide with the owner before provisioning. App used for IG-Login on FE
+  read tooling: `metravelinstby` (App ID 3086350764868673), use case "Управление сообщениями
+  и контентом в Instagram".
 
 ## Results
 
