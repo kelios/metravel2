@@ -67,7 +67,7 @@ function AffiliateOffers({ city, country, travelId }: Props) {
           </Pressable>
         </View>
       ))}
-      <Text style={styles.disclosure}>Партнёрские предложения. Цена для вас не меняется.</Text>
+      <Text style={styles.disclosure}>Реклама · Партнёрские предложения. Цена для вас не меняется.</Text>
     </View>
   )
 }

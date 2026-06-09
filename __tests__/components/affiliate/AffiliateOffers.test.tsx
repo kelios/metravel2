@@ -64,6 +64,7 @@ describe('AffiliateOffers', () => {
     const openMock = openExternalUrlInNewTab as jest.Mock
     const calledUrl = openMock.mock.calls[0][0] as string
     expect(calledUrl).toContain('marker=999999.travel384')
-    expect(calledUrl).toContain('q%3D' + encodeURIComponent('Минск'))
+    // tours (Tripster) transliterates the Cyrillic city to a Latin slug
+    expect(calledUrl).toContain('q%3Dminsk')
   })
 })

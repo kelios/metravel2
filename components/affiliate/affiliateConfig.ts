@@ -44,7 +44,31 @@ interface OfferPreset {
   subtitle: (place: string) => string
   cta: string
   templateEnv: () => string | undefined
+  /**
+   * Transforms the destination label before it is encoded into `{query}`.
+   * Default is identity (Cyrillic kept as-is, e.g. Ostrovok `?q=Краков`).
+   * Tripster uses a Latin city slug in the PATH (`/experience/krakov/`) and
+   * 404s on Cyrillic, so it transliterates RU → Latin.
+   */
+  queryTransform?: (place: string) => string
 }
+
+const RU_TO_LATIN: Record<string, string> = {
+  а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i',
+  й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't',
+  у: 'u', ф: 'f', х: 'h', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'shch', ъ: '', ы: 'y',
+  ь: '', э: 'e', ю: 'yu', я: 'ya',
+}
+
+/** RU → Latin slug for path-based partners (Tripster). Empty in → empty out. */
+export const transliterate = (value: string): string =>
+  value
+    .toLowerCase()
+    .split('')
+    .map((ch) => (ch in RU_TO_LATIN ? RU_TO_LATIN[ch] : ch))
+    .join('')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
 
 const OFFER_PRESETS: OfferPreset[] = [
   {
@@ -54,6 +78,7 @@ const OFFER_PRESETS: OfferPreset[] = [
       place ? `Авторские экскурсии и местные гиды — ${place}` : 'Авторские экскурсии и местные гиды',
     cta: 'Посмотреть экскурсии',
     templateEnv: () => process.env.EXPO_PUBLIC_AFFILIATE_TOURS_TEMPLATE,
+    queryTransform: transliterate,
   },
   {
     key: 'hotels',
@@ -79,9 +104,13 @@ const resolveSubId = (ctx: AffiliateOfferContext): string => {
   return id ? `travel${id}` : 'travel'
 }
 
-const interpolateTemplate = (template: string, ctx: AffiliateOfferContext): string =>
+const interpolateTemplate = (
+  template: string,
+  ctx: AffiliateOfferContext,
+  queryTerm: string,
+): string =>
   template
-    .replace(/\{query\}/g, encodeURIComponent(resolvePlace(ctx)))
+    .replace(/\{query\}/g, encodeURIComponent(queryTerm))
     .replace(/\{subid\}/g, encodeURIComponent(resolveSubId(ctx)))
 
 /**
@@ -96,7 +125,11 @@ export const getAffiliateOffers = (ctx: AffiliateOfferContext): AffiliateOffer[]
   return OFFER_PRESETS.reduce<AffiliateOffer[]>((acc, preset) => {
     const template = clean(preset.templateEnv())
     if (!template) return acc
-    const url = interpolateTemplate(template, ctx)
+    const queryTerm = preset.queryTransform ? preset.queryTransform(place) : place
+    // A template with a {query} slot but no resolvable term would build a broken
+    // URL (e.g. Tripster `/experience//`), so skip the offer instead.
+    if (template.includes('{query}') && !queryTerm) return acc
+    const url = interpolateTemplate(template, ctx, queryTerm)
     if (!url) return acc
     acc.push({
       key: preset.key,
