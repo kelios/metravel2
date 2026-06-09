@@ -1,6 +1,8 @@
 import React, { useCallback, useMemo } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import Feather from '@expo/vector-icons/Feather'
 
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { queueAnalyticsEvent } from '@/utils/analytics'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
@@ -12,6 +14,11 @@ import {
 import { useAffiliateImpression } from './useAffiliateImpression'
 
 type Props = AffiliateOfferContext
+
+const OFFER_ICON: Record<AffiliateOffer['key'], keyof typeof Feather.glyphMap> = {
+  tours: 'compass',
+  hotels: 'home',
+}
 
 function AffiliateOffers({ city, country, countryCode, travelId }: Props) {
   const colors = useThemedColors()
@@ -53,6 +60,9 @@ function AffiliateOffers({ city, country, countryCode, travelId }: Props) {
     <View ref={impressionRef as any} style={styles.grid}>
       {offers.map((offer) => (
         <View key={offer.key} style={styles.card}>
+          <View style={styles.iconWrap}>
+            <Feather name={OFFER_ICON[offer.key]} size={18} color={colors.primary} />
+          </View>
           <View style={styles.cardBody}>
             <Text style={styles.cardTitle}>{offer.title}</Text>
             <Text style={styles.cardSubtitle}>{offer.subtitle}</Text>
@@ -75,39 +85,53 @@ function AffiliateOffers({ city, country, countryCode, travelId }: Props) {
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     grid: {
-      gap: 12,
+      gap: DESIGN_TOKENS.spacing.sm,
     },
     card: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
+      gap: DESIGN_TOKENS.spacing.md,
       flexWrap: 'wrap',
-      padding: 16,
-      borderRadius: 12,
+      padding: DESIGN_TOKENS.spacing.md,
+      borderRadius: DESIGN_TOKENS.radii.md,
       borderWidth: 1,
       borderColor: colors.borderLight,
       backgroundColor: colors.surface,
       ...(Platform.OS === 'web' ? { boxShadow: '0 2px 8px rgba(0,0,0,0.06)' } : colors.shadows.light),
     },
+    iconWrap: {
+      width: 40,
+      height: 40,
+      borderRadius: DESIGN_TOKENS.radii.sm,
+      backgroundColor: colors.primarySoft,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
     cardBody: {
       flex: 1,
-      minWidth: 180,
-      gap: 4,
+      minWidth: 160,
+      gap: DESIGN_TOKENS.spacing.xxs,
     },
     cardTitle: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
       color: colors.text,
     },
     cardSubtitle: {
-      fontSize: 13,
+      fontSize: Platform.select({ default: 13, web: 14 }),
       lineHeight: 18,
       color: colors.textMuted,
     },
     cta: {
-      paddingHorizontal: 18,
-      paddingVertical: 10,
-      borderRadius: 10,
+      minHeight: 44,
+      paddingHorizontal: DESIGN_TOKENS.spacing.md,
+      paddingVertical: DESIGN_TOKENS.spacing.sm,
+      borderRadius: DESIGN_TOKENS.radii.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
       backgroundColor: colors.primary,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer', transition: 'opacity 0.15s' } as any) : null),
     },
@@ -116,13 +140,13 @@ const getStyles = (colors: ThemedColors) =>
     },
     ctaText: {
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
       color: colors.textOnPrimary,
     },
     disclosure: {
       fontSize: 11,
       color: colors.textMuted,
-      marginTop: 2,
+      marginTop: DESIGN_TOKENS.spacing.xxs,
     },
   })
 
