@@ -43,10 +43,13 @@ function buildSkeletonCSS() {
 #ssg-skeleton *{box-sizing:border-box}
 .ssg-bar{width:100%;height:56px;background:${COLORS.light.surface};border-bottom:1px solid ${COLORS.light.border};display:flex;align-items:center;padding:0 16px}
 .ssg-bar-logo{font:700 20px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text};letter-spacing:-0.01em}
-.ssg-hero{max-width:1200px;margin:0 auto;padding:24px 16px;display:flex;flex-direction:column;gap:16px}
-.ssg-hero-title{width:60%;height:32px;border-radius:8px}
-.ssg-hero-sub{width:40%;height:20px;border-radius:6px}
-.ssg-hero-search{width:100%;height:48px;border-radius:12px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border}}
+.ssg-hero{max-width:1200px;margin:0 auto;padding:24px 16px 8px;display:flex;flex-direction:column;align-items:flex-start;gap:12px}
+.ssg-hero-title{margin:0;font:700 32px/40px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;letter-spacing:-0.8px;color:${COLORS.light.text};max-width:640px;text-align:left}
+.ssg-hero-title .ssg-accent{color:#f5842c;font-weight:800}
+@media(min-width:768px){.ssg-hero-title{font-size:36px;line-height:44px}}
+.ssg-hero-sub{margin:0;font:400 16px/24px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${COLORS.light.textMuted};max-width:520px;text-align:left}
+@media(min-width:768px){.ssg-hero-sub{font-size:17px;line-height:27px}}
+.ssg-hero-search{width:100%;max-width:640px;height:48px;border-radius:12px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border};margin-top:4px}
 .ssg-search-intro{max-width:1200px;margin:0 auto;padding:20px 16px 8px}
 .ssg-search-h1{margin:0 0 12px;font:700 28px/1.2 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text};letter-spacing:-0.02em;max-width:720px}
 @media(min-width:768px){.ssg-search-h1{font-size:36px}}
@@ -103,6 +106,9 @@ html[data-theme="dark"] .ssg-bar-logo{color:${COLORS.dark.text}}
 html[data-theme="dark"] .ssg-search-h1{color:${COLORS.dark.text}}
 html[data-theme="dark"] .ssg-search-lead{color:${COLORS.dark.textMuted}}
 html[data-theme="dark"] .ssg-sidebar-title{color:${COLORS.dark.text}}
+html[data-theme="dark"] .ssg-hero-title{color:${COLORS.dark.text}}
+html[data-theme="dark"] .ssg-hero-title .ssg-accent{color:#f0a060}
+html[data-theme="dark"] .ssg-hero-sub{color:${COLORS.dark.textMuted}}
 html[data-theme="dark"] .ssg-hero-search{background:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
 html[data-theme="dark"] .ssg-card{background:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
 html[data-theme="dark"] .ssg-sidebar{background:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
@@ -166,11 +172,17 @@ function buildSidebarLines(count) {
  * Build home page skeleton HTML.
  */
 function buildHomeSkeletonHtml() {
+  // Real hero text (not empty pulse bars) so Chrome's FCP fires on render and
+  // the LCP candidate is locked to this large title block BEFORE hydration.
+  // Without it the home LCP only fires after full hydration (>8s on throttled
+  // mobile). NOT an <h1>: the single semantic <h1> is the out-of-flow one in
+  // #root (index.tsx), so the raw HTML keeps exactly one H1. Mirrors the
+  // /search and /travels skeleton approach.
   return `<div id="ssg-skeleton">
 <div class="ssg-bar"><div class="ssg-bar-logo">MeTravel</div></div>
 <div class="ssg-hero">
-<div class="ssg-hero-title ssg-pulse"></div>
-<div class="ssg-hero-sub ssg-pulse"></div>
+<div class="ssg-hero-title">Куда поехать <span class="ssg-accent">в эти выходные?</span></div>
+<p class="ssg-hero-sub">Реальные маршруты по Беларуси и Европе — с фото и GPS-треками.</p>
 <div class="ssg-hero-search"></div>
 </div>
 <div class="ssg-cards">${buildCards(6)}</div>

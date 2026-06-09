@@ -30,6 +30,35 @@ tools: Read, Grep, Glob, Bash
 
 НЕ пиши свои rsync/scp-команды деплоя в обход этих скриптов.
 
+## Деплой С ЭТОЙ машины (Windows / git-bash) — особый случай
+
+На этой машине штатный `build-prod.sh prod` (с DEPLOY=1) **не отработает целиком**:
+- **`rsync` тут не работает** (конфликт MSYS2-рантаймов с Git-for-Windows) — шаг заливки падает.
+- **e2e/preflight-процессы затирают `dist/`** во время сборки (дерутся за каталог).
+
+Поэтому с этой машины деплой идёт через воспроизводимый враппер, который это обходит:
+
+```bash
+bash /d/metravel/ops/deploy-frontend.sh
+```
+
+Что он делает (это кодифицированный ручной деплой, который сработал 2026-06-09):
+1. pre-flight: ветка `main`, ssh до `metravel-prod` живой;
+2. **убивает конкурирующие** e2e/preflight/playwright/serve-web-build/build процессы
+   (`ops/kill-competing-builds.ps1`), НЕ трогая runtime сессии (JetBrains ACP);
+3. сборка `DEPLOY=0 bash ./build-prod.sh prod` (без сломанного rsync-шага);
+4. проверяет, что `dist/prod` **стабилен** (считает файлы дважды) и содержит ≥300 SEO-страниц;
+5. транспорт **tar+ssh** в staging `static/dist.new`, серверная проверка ≥300 страниц;
+6. **атомарный свап с бэкапом** (`static/dist.bak`) + overlay старых чанков + рестарт app+nginx;
+7. health-verify (home/api/travels=200, отдаётся новый chunk, travel-страница с телом и одним `<h1>`);
+8. **авто-откат** из `static/dist.bak` при любой неудаче health-check;
+9. пост-деплой SEO-проверка.
+
+Откат вручную: `ssh metravel-prod 'cd /home/sx3/metravel && mv static/dist static/dist.broken && mv static/dist.bak static/dist && docker compose -f docker-compose-prod.app.yaml restart nginx'`.
+
+**Регулярные релизы лучше делать с обычной машины** (где есть rsync) штатным `build-prod.sh prod`.
+Этот враппер — надёжный fallback именно с данной Windows-машины.
+
 ## Доступ (SSH)
 
 - Сервер: `sx3@178.172.137.129` (он же алиас `metravel-prod`), каталог `/home/sx3/metravel`.
