@@ -13,11 +13,15 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { Text } from '@/ui/paper'
 import type { Travel } from '@/types/types'
+// WeatherWidget is non-critical sidebar chrome and already rendered inside a
+// <Suspense fallback={<WidgetFallback/>}>. Load it lazily so its JS (weather
+// model + UI) is split out of the eager desktop bundle instead of bloating
+// __common and inflating hydration TBT on desktop.
+const WeatherWidget = React.lazy(() => import('@/components/home/WeatherWidget'))
 import {
   buildTravelSectionLinks,
   type TravelSectionLink,
 } from '@/components/travel/sectionLinks'
-import WeatherWidget from '@/components/home/WeatherWidget'
 import { METRICS } from '@/constants/layout'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useTheme, useThemedColors } from '@/hooks/useTheme'
