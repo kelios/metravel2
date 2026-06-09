@@ -2,7 +2,7 @@ import React, { useRef } from 'react'
 import { Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import type { ThemedColors } from '@/hooks/useTheme'
-import { DOCUMENT_NAV_ITEMS, PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation'
+import { DOCUMENT_NAV_ITEMS, PRIMARY_HEADER_NAV_ITEMS, SECONDARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation'
 import { buildLoginHref } from '@/utils/authNavigation'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
 import UnreadBadge from './UnreadBadge'
@@ -165,7 +165,10 @@ export default function CustomHeaderMobileMenu({
         },
       ]
 
-  const navigationItems: MenuActionItem[] = (PRIMARY_HEADER_NAV_ITEMS ?? []).map((item) => ({
+  const navigationItems: MenuActionItem[] = [
+    ...(PRIMARY_HEADER_NAV_ITEMS ?? []),
+    ...(SECONDARY_HEADER_NAV_ITEMS ?? []),
+  ].map((item) => ({
     key: item.path,
     label: item.label,
     icon: item.icon,

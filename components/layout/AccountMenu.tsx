@@ -19,7 +19,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useFavorites } from '@/context/FavoritesContext'
 import { useDeferredUnreadCount } from '@/hooks/useDeferredUnreadCount'
 import { useAvatarUri } from '@/hooks/useAvatarUri'
-import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation'
+import { PRIMARY_HEADER_NAV_ITEMS, SECONDARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation'
 import { routes } from '@/utils/routes'
 import { useThemedColors } from '@/hooks/useTheme'
 import { buildLoginHref } from '@/utils/authNavigation'
@@ -55,6 +55,12 @@ const STATIC_NAV_LINKS: MenuLinkItem[] = [
   { key: 'nav-favorites', title: 'Избранное', path: '/favorites', icon: 'heart' },
   { key: 'nav-history', title: 'История просмотров', path: '/history', icon: 'clock' },
   { key: 'nav-about', title: 'О сайте', path: '/about', icon: 'info' },
+  ...SECONDARY_HEADER_NAV_ITEMS.map((item) => ({
+    key: `nav-${item.path}`,
+    title: item.label,
+    path: item.path,
+    icon: item.icon,
+  })),
 ]
 
 const TRAVEL_ITEMS: MenuLinkItem[] = [

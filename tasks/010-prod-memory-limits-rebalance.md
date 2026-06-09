@@ -105,6 +105,17 @@ Primary owner: Backend (prod infra / docker-compose). Operator applies redeploy 
 host. Validation via `~/metravel-monitor/metrics.jsonl` (24 h) + `docker stats` + `dmesg/journalctl`
 OOM check.
 
+## Progress Log
+
+- 2026-06-09: The `app` `mem_limit: 700m → 900m` edit was applied **directly on the prod host**
+  (`sx3@178.172.137.129:/home/sx3/metravel/docker-compose-prod.app.yaml`) as an uncommitted
+  hot-edit — diverging the live file from git (`git diff` showed only `-mem_limit: 700m` /
+  `+mem_limit: 900m`). This violates the project rule (backend changes go through the owner's git,
+  not a prod hot-edit). **Reverted** the file on the server with `git checkout -- docker-compose-prod.app.yaml`
+  (live file is back in sync with git, `mem_limit: 700m`; running container not restarted, so no
+  runtime impact). The 700→900 change must be made **in the backend repo by the owner** under
+  this task and redeployed through the normal flow — not hot-edited on prod.
+
 ## Notes / follow-ups (not in scope here)
 
 - Long-term root-cause fix tracked separately: **pre-generate image variants at upload** and store
