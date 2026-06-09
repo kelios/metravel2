@@ -606,7 +606,7 @@ const RightColumn: React.FC<RightColumnProps> = (
           onEndReached={isWeb ? undefined : onEndReached}
           onEndReachedThreshold={onEndReachedThreshold}
           onScroll={isWeb ? webScrollHandler : undefined}
-          drawDistance={800}
+          drawDistance={isWeb ? 1600 : 800}
           contentContainerStyle={isWeb ? webContentContainerStyle : nativeContentContainerStyle}
           style={
             isWeb
@@ -621,7 +621,7 @@ const RightColumn: React.FC<RightColumnProps> = (
           }
           testID={isWeb ? 'right-column-scrollview' : 'right-column-flashlist'}
           scrollEventThrottle={isWeb ? 32 : 16}
-          removeClippedSubviews={true}
+          removeClippedSubviews={!isWeb}
           maxToRenderPerBatch={10}
           updateCellsBatchingPeriod={50}
           initialNumToRender={8}

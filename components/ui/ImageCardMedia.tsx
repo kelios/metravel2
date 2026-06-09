@@ -192,8 +192,14 @@ function ImageCardMedia({
   }, [height, currentImageIdentityKey]);
 
   const shouldPreserveProvidedOptimizedUrl = useCallback((uri: string): boolean => {
-    if (!allowCriticalWebBlur || !hasOptimizationParams(uri)) return false;
+    if (!hasOptimizationParams(uri)) return false;
+    // An explicitly preserved URL (e.g. slider's buildUriWeb output) is already the
+    // FINAL variant — honor it for EVERY slide state, not only the active/critical-blur
+    // one. Otherwise preloaded/neighbour slides re-optimize the src and emit a srcSet,
+    // so the browser downloads a second differently-sized variant of the same photo
+    // (the gallery double-fetch).
     if (preserveOptimizedWebSrc) return true;
+    if (!allowCriticalWebBlur) return false;
     // Keep all non-Safari browsers on the previous behavior.
     // iPhone Safari is the only browser where we need responsive srcSet restored.
     return !isSafariWeb;
