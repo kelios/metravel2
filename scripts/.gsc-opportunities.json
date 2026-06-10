@@ -1,0 +1,249 @@
+{
+  "source": "google-search-console",
+  "site": "sc-domain:metravel.by",
+  "period": {
+    "startDate": "2026-05-11",
+    "endDate": "2026-06-07",
+    "days": 28
+  },
+  "totals": {
+    "clicks": 482,
+    "impressions": 21288,
+    "ctr": 2.26,
+    "position": 8.7
+  },
+  "opportunities": [
+    {
+      "query": "закшувек",
+      "clicks": 6,
+      "impressions": 828,
+      "ctr": 0.72,
+      "position": 7.1
+    },
+    {
+      "query": "юцковские родники",
+      "clicks": 4,
+      "impressions": 551,
+      "ctr": 0.73,
+      "position": 8.9
+    },
+    {
+      "query": "польские мальдивы",
+      "clicks": 2,
+      "impressions": 493,
+      "ctr": 0.41,
+      "position": 9.4
+    },
+    {
+      "query": "усадьба козел-поклевских",
+      "clicks": 1,
+      "impressions": 339,
+      "ctr": 0.29,
+      "position": 10.3
+    },
+    {
+      "query": "усадьба бохвицей",
+      "clicks": 1,
+      "impressions": 310,
+      "ctr": 0.32,
+      "position": 9
+    },
+    {
+      "query": "смолевуд",
+      "clicks": 5,
+      "impressions": 284,
+      "ctr": 1.76,
+      "position": 9
+    },
+    {
+      "query": "лысая гора",
+      "clicks": 4,
+      "impressions": 282,
+      "ctr": 1.42,
+      "position": 7.5
+    },
+    {
+      "query": "пляж",
+      "clicks": 2,
+      "impressions": 271,
+      "ctr": 0.74,
+      "position": 7.5
+    },
+    {
+      "query": "любчанский замок",
+      "clicks": 1,
+      "impressions": 201,
+      "ctr": 0.5,
+      "position": 11
+    },
+    {
+      "query": "озеро глубокое",
+      "clicks": 15,
+      "impressions": 194,
+      "ctr": 7.73,
+      "position": 5.8
+    },
+    {
+      "query": "закшувек краков",
+      "clicks": 1,
+      "impressions": 157,
+      "ctr": 0.64,
+      "position": 8.5
+    },
+    {
+      "query": "озеро хотомля",
+      "clicks": 2,
+      "impressions": 152,
+      "ctr": 1.32,
+      "position": 11
+    },
+    {
+      "query": "усадьба ястржембских",
+      "clicks": 3,
+      "impressions": 142,
+      "ctr": 2.11,
+      "position": 6.6
+    },
+    {
+      "query": "бабья гура",
+      "clicks": 2,
+      "impressions": 137,
+      "ctr": 1.46,
+      "position": 6.7
+    },
+    {
+      "query": "польские мальдивы маршрут",
+      "clicks": 3,
+      "impressions": 103,
+      "ctr": 2.91,
+      "position": 5.2
+    },
+    {
+      "query": "павлиново усадьба",
+      "clicks": 5,
+      "impressions": 94,
+      "ctr": 5.32,
+      "position": 8.4
+    },
+    {
+      "query": "диснейленд в польше",
+      "clicks": 1,
+      "impressions": 93,
+      "ctr": 1.08,
+      "position": 4.5
+    },
+    {
+      "query": "ошмяны достопримечательности",
+      "clicks": 2,
+      "impressions": 85,
+      "ctr": 2.35,
+      "position": 7.4
+    },
+    {
+      "query": "козел поклевских",
+      "clicks": 1,
+      "impressions": 80,
+      "ctr": 1.25,
+      "position": 10.5
+    },
+    {
+      "query": "усадьба бохвицей в павлиново",
+      "clicks": 3,
+      "impressions": 76,
+      "ctr": 3.95,
+      "position": 7.4
+    }
+  ],
+  "topPages": [
+    {
+      "page": "https://metravel.by/travels/zabroshennyy-garnizon-dalniy-grodnenskaya-oblast-shchuchin-sekretnaya-chast",
+      "clicks": 36,
+      "impressions": 340,
+      "position": 4.2
+    },
+    {
+      "page": "https://metravel.by/travels/ozero-glubokoe-samoe-prozrachnoe-ozero-v-belarusi",
+      "clicks": 29,
+      "impressions": 691,
+      "position": 7.5
+    },
+    {
+      "page": "https://metravel.by/travels/park-grudek-v-iavozhno-polskie-maldivy-sredi-byvshego-karera",
+      "clicks": 22,
+      "impressions": 1398,
+      "position": 7.9
+    },
+    {
+      "page": "https://metravel.by/travels/plyazhi-nedaleko-ot-krakova",
+      "clicks": 22,
+      "impressions": 1000,
+      "position": 7.9
+    },
+    {
+      "page": "https://metravel.by/travels/usadba-panskogo-roda-mokrickih-makshickih-v-poselke-vysokoe",
+      "clicks": 17,
+      "impressions": 108,
+      "position": 4.3
+    },
+    {
+      "page": "https://metravel.by/travels/energylandia-polskiy-disneylend",
+      "clicks": 16,
+      "impressions": 895,
+      "position": 7.8
+    },
+    {
+      "page": "https://metravel.by/travels/lysaya-gora-342m",
+      "clicks": 16,
+      "impressions": 718,
+      "position": 7.3
+    },
+    {
+      "page": "https://metravel.by/travels/krakov-karer-zakshuvek",
+      "clicks": 15,
+      "impressions": 1669,
+      "position": 7.4
+    },
+    {
+      "page": "https://metravel.by/travels/smolevud-put-v-skazku",
+      "clicks": 13,
+      "impressions": 543,
+      "position": 8.7
+    },
+    {
+      "page": "https://metravel.by/travels/marshrut-na-odin-den-grodnenskie-forty-4-i-6",
+      "clicks": 12,
+      "impressions": 190,
+      "position": 7.6
+    },
+    {
+      "page": "https://metravel.by/travels/albaniya-vler-gorod-dvuh-morey",
+      "clicks": 11,
+      "impressions": 510,
+      "position": 8.2
+    },
+    {
+      "page": "https://metravel.by/travels/chto-posmotret-v-oshmyanah-kostel-franciskancev-1822-kostel-svyatogo-mihaila-arhangela-sinagoga-usadba-strugacha-1",
+      "clicks": 11,
+      "impressions": 438,
+      "position": 7.9
+    },
+    {
+      "page": "https://metravel.by/travels/sidorovichi",
+      "clicks": 11,
+      "impressions": 84,
+      "position": 3.7
+    },
+    {
+      "page": "https://metravel.by/travels/uiny-dvorca-i-ostatki-parka-gilzenov-i-shadurskih",
+      "clicks": 11,
+      "impressions": 149,
+      "position": 4.1
+    },
+    {
+      "page": "https://metravel.by/travels/belsko-byala-smotrovaya-bashnya-i-podem-na-tri-kopce",
+      "clicks": 10,
+      "impressions": 426,
+      "position": 7.6
+    }
+  ]
+}

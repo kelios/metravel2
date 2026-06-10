@@ -33,6 +33,14 @@ function haversineKm(a, b) {
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)))
 }
 
+// A post is a repost of someone else's content when it carries the Instagram
+// "#Repost @account" / "Regram" credit convention. These are NOT the owner's
+// own photos, so they must never be embedded into her articles.
+function isRepost(caption) {
+  const c = String(caption || '')
+  return /(^|[^\w])#?\s*repost\b/i.test(c) || /regram/i.test(c)
+}
+
 const STOP = new Set(
   'и в во на по за из от до для с со о об у к а но или это что как где беларусь belarus travel путешествие маршрут день один'.split(
     /\s+/
@@ -106,7 +114,9 @@ function main() {
     isListicle: a.points.length >= LISTICLE_POINTS,
   }))
 
-  const geoPosts = exp.posts.filter((p) => p.geo)
+  const allGeoPosts = exp.posts.filter((p) => p.geo)
+  const geoPosts = allGeoPosts.filter((p) => !isRepost(p.caption))
+  const skippedReposts = allGeoPosts.length - geoPosts.length
   const matches = []
   let matched = 0
 
@@ -146,6 +156,24 @@ function main() {
     })
   }
 
+  // The Instagram data export duplicates some posts, so the same post can match
+  // the same article several times. Collapse to one embed per (article, post),
+  // keeping the closest/most-confident occurrence.
+  const rank = { high: 0, medium: 1, low: 2 }
+  const bestByKey = new Map()
+  for (const mt of matches) {
+    const key = `${mt.articleId}|${mt.permalink || mt.ts}`
+    const prev = bestByKey.get(key)
+    if (!prev || rank[mt.confidence] < rank[prev.confidence] || (mt.confidence === prev.confidence && mt.distanceKm < prev.distanceKm)) {
+      bestByKey.set(key, mt)
+    }
+  }
+  const dedupedBefore = matches.length
+  matches.length = 0
+  matches.push(...bestByKey.values())
+  matched = matches.length
+  const removedDups = dedupedBefore - matched
+
   // Group by article.
   const byArticle = new Map()
   for (const m of matches) {
@@ -180,7 +208,9 @@ function main() {
   }
   fs.writeFileSync(path.join(DIR, 'matches.md'), lines.join('\n'))
 
-  console.log(`Matched ${matched}/${geoPosts.length} geo-posts across ${byArticle.size} articles.`)
+  console.log(`Skipped ${skippedReposts} reposts (#Repost/Regram — not owner's own photos).`)
+  console.log(`Removed ${removedDups} duplicate (article, post) pairs from the export.`)
+  console.log(`Matched ${matched} own posts across ${byArticle.size} articles.`)
   console.log(`  confidence: high ${conf.high} · medium ${conf.medium} · low ${conf.low}`)
   console.log(`  permalinks attached: ${matches.filter((m) => m.permalink).length}/${matched}`)
   console.log(`  → .cache/instagram/matches.md (review), matches.json`)

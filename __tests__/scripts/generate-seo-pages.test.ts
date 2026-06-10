@@ -9,6 +9,7 @@
 const {
   replaceOrInsert,
   injectMeta,
+  buildSeoTitle,
   escapeAttr,
   stripHtml,
   buildTravelSeoDescription,
@@ -736,5 +737,66 @@ describe('SEO tag count contract (regression guard)', () => {
     const result = injectMeta(MINIMAL_BASE, SAMPLE_META);
     const missing = REQUIRED_TAGS.filter(({ pattern }) => !pattern.test(result));
     expect(missing.map((t) => t.name)).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildSeoTitle — SERP <title> must stay <= 60 chars and clip on a word
+// boundary (FE-4). A mid-word clip like "…Нитосл…" reads as broken in search.
+// ---------------------------------------------------------------------------
+describe('buildSeoTitle', () => {
+  const SUFFIX = ' | Metravel';
+
+  it('appends the brand suffix to a short title untouched', () => {
+    expect(buildSeoTitle('Албания. Влёра')).toBe(`Албания. Влёра${SUFFIX}`);
+  });
+
+  it('returns the bare brand for an empty title', () => {
+    expect(buildSeoTitle('')).toBe('Metravel');
+    expect(buildSeoTitle(null)).toBe('Metravel');
+  });
+
+  it('keeps the full title at the 60-char boundary without clipping', () => {
+    // 49 visible chars + 11 suffix = 60 exactly.
+    const name = 'a'.repeat(49);
+    const out = buildSeoTitle(name);
+    expect(out).toBe(`${name}${SUFFIX}`);
+    expect(out.length).toBe(60);
+    expect(out).not.toContain('…');
+  });
+
+  it('clips an over-long title to <= 60 chars', () => {
+    const name = 'Маршрут на 1 день: экотропа Ельня и усадьбы Нитославичи и Бенюличи';
+    const out = buildSeoTitle(name);
+    expect(out.length).toBeLessThanOrEqual(60);
+    expect(out.endsWith(SUFFIX)).toBe(true);
+  });
+
+  it('clips on a word boundary, not mid-word', () => {
+    const name = 'Маршрут на 1 день: экотропа Ельня и усадьбы Нитославичи и Бенюличи';
+    const out = buildSeoTitle(name);
+    const visible = out.slice(0, out.length - SUFFIX.length); // drop suffix
+    expect(visible.endsWith('…')).toBe(true);
+    const beforeEllipsis = visible.slice(0, -1);
+    // The clipped stem is a prefix of the source words — no half-word fragment.
+    expect(name.startsWith(beforeEllipsis)).toBe(true);
+    expect(beforeEllipsis.endsWith(' ')).toBe(false);
+    // The kept text ends at a real word from the source.
+    const lastWord = beforeEllipsis.split(' ').pop();
+    expect(name.split(' ')).toContain(lastWord);
+  });
+
+  it('strips trailing punctuation before the ellipsis', () => {
+    const name = 'Что посмотреть в Ошмянах: Костел францисканцев, ратуша и старый центр';
+    const out = buildSeoTitle(name);
+    const visible = out.slice(0, out.length - SUFFIX.length);
+    expect(visible).not.toMatch(/[\s.,;:!?–—-]…$/u);
+  });
+
+  it('hard-clips when the leading word alone exceeds the budget', () => {
+    const name = `${'a'.repeat(80)} bcd`;
+    const out = buildSeoTitle(name);
+    expect(out.length).toBeLessThanOrEqual(60);
+    expect(out.endsWith(`…${SUFFIX}`)).toBe(true);
   });
 });

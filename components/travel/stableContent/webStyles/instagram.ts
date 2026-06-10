@@ -25,6 +25,10 @@ export const instagramStyles = (
   border: 1px solid ${colors.borderLight};
   background: ${colors.surfaceMuted};
   box-shadow: ${colors.boxShadows?.light || 'none'};
+  /* Не отрисовывать эмбеды вне вьюпорта: на статьях с десятками
+     Instagram-iframe это убирает многосекундный фриз главного потока при скролле */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 540px;
 }
 
 /* Instagram iframe - занимает всю ширину, пропорциональная высота */

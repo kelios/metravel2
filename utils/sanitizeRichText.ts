@@ -73,7 +73,7 @@ const allowedAttributes: sanitizeHtml.IOptions['allowedAttributes'] = {
     'decoding',
     'fetchpriority',
   ],
-  iframe: ['src', 'title', 'allow', 'allowfullscreen', 'frameborder', 'width', 'height'],
+  iframe: ['src', 'title', 'allow', 'allowfullscreen', 'frameborder', 'width', 'height', 'loading'],
   video: ['src', 'poster', 'controls', 'loop', 'autoplay', 'muted', 'playsinline', 'preload'],
   source: ['src', 'srcset', 'type', 'media'],
 }
@@ -402,6 +402,7 @@ function sanitizeRichTextInternal(
               'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
             allowfullscreen: 'true',
             frameborder: '0',
+            loading: 'lazy',
             ...(width ? { width } : {}),
             ...(height ? { height } : {}),
           },

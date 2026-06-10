@@ -55,10 +55,10 @@
 | **BE-3** | ❌ не сделано | `POST /api/subscribe` → **404**. Эндпоинта нет → **блокирует FE-5** (форма подписки). Передать бэкендеру. |
 | **BE-4** | ⏳ не подтверждено | Поля `is_sponsored`/`sponsor_until` в публичном API-payload не видны. Нужна проверка бэкендером (миграция + отдача поля). Блокирует FE-6. |
 | **BE-5, BE-6** | ⬜ не начато | Server-side (статистика автора, лог кликов виджетов) — проверить нельзя извне, ждут бэкендера. |
-| **BE-IDX-1** | ✅ код готов (2026-06-09) | Slug-redirect history на `origin/master` (`4df4938`+`380ebbd`): модель+миграция `0022`, `Travel.save()` пишет old→new, `by-slug` отвечает **301**, `resolve-slug` резолвит старые слаги. **Осталось:** деплой + миграция на проде. FE-фолбэк через `resolve-slug` уже встроен (`api/travelDetailsQueries.ts`). |
-| **BE-IDX-2** | 🔄 инструмент готов | `manage.py seo_audit` на `origin/master` (`fd6508f`): worklist JSON + `--apply` с куррированными именами (≤60 симв., 301 сохраняются). **Сам data-фикс не прогнан** — 158 мусорных строк на проде без изменений. Порядок: деплой BE-IDX-1 + FE resolve-slug → прогон. |
+| **BE-IDX-1** | ✅ задеплоено на прод (2026-06-10) | Slug-redirect history на проде: модель+миграция `0022` **применена**, `Travel.save()` пишет old→new, `by-slug` отвечает **301** на старый слаг, `resolve-slug` резолвит. **Пруф деплоя:** `by-slug/<unknown>/` и `resolve-slug?slug=<unknown>` → чистый **404** (не 500 ⇒ таблица `travel_slug_redirects` существует); `resolve-slug?slug=krakov-karer-zakshuvek` → `200`. Сам 301 проявится при первом переименовании (таблица редиректов пока пуста). FE-фолбэк через `resolve-slug` на проде (`3592f54c`). |
+| **BE-IDX-2** | 🟢 разблокировано, прогон ждёт | `manage.py seo_audit` готов (`fd6508f`). BE-IDX-1 задеплоен + FE resolve-slug на проде ⇒ безопасно запускать. **Сам data-фикс не прогнан** — 158 мусорных строк на проде без изменений. Прогон: `seo_audit --json` → курирование имён → `seo_audit --apply --input <file>` на проде (создаст 301-строки). |
 
-> **Чеклист бэкендеру (приоритет):** 1) `POST /api/subscribe` (BE-3) — разблокирует FE-5; 2) `is_sponsored`/`sponsor_until` (BE-4) — разблокирует FE-6; 3) ~~301-редиректы (BE-IDX-1)~~ код готов — задеплоить (+миграция `0022`), затем прогнать `seo_audit` data-фикс (BE-IDX-2).
+> **Чеклист бэкендеру (приоритет):** 1) `POST /api/subscribe` (BE-3) — разблокирует FE-5; 2) `is_sponsored`/`sponsor_until` (BE-4) — разблокирует FE-6; 3) ~~301-редиректы (BE-IDX-1)~~ ✅ задеплоено 2026-06-10 — **теперь прогнать `seo_audit` data-фикс (BE-IDX-2)** на проде.
 
 ---
 
@@ -67,10 +67,20 @@
 | ID | Приоритет | Задача | Файлы / где | Definition of Done |
 |---|---|---|---|---|
 | **FE-1** | 🔴 P0 | Снять реальный Lighthouse по прод-URL и закрыть фактические LCP-проблемы | `npm run lighthouse:produrl:travel:mobile`, `components/travel/details/*` | LCP < 2.5 с на мобайле по полевым данным |
+
+> **FE-1 диагностика (2026-06-10, Lighthouse 13.4, прод-URL `/travels/tropa-vedm-...`).** Mobile: **perf 44, LCP 10.6с, FCP 3.5с, TBT 649мс, CLS 0.029, SI 9.1с**. Desktop: perf 40, LCP 19.5с. Server-response-time **60мс** ⇒ бэк/TTFB не виноват (BE-1 подтверждён), узкое место — **вес и main-thread фронта**. Главные виновники (из отчёта):
+> 1. **JS-бандл ~970KB** — `__common-*.js` 724KB + `entry-*.js` 246KB ⇒ main-thread work **6.0с**, bootup **3.7с**, unused-JS **605KB** (savings ~3.6с). Главный рычаг LCP (paint ждёт гидратацию). Архитектурно (code-splitting / тримминг).
+> 2. **`/api/travels/<id>/routes/<rid>/download/` 339KB** — eager-fetch GPX-трека (`hooks/useRouteFilePreviews.ts:150`) для отрисовки линии на карте. Gated `canRenderHeavy`+`shouldRender`, но всё равно тянется в LCP-окне и ест полосу. Отложить до видимости карты / по кнопке.
+> 3. **`favicon.ico` 244KB** — должен быть <10KB (`public/`). Быстрый вес-вин (нужна явная правка public/).
+> 4. **Belkraj-логотип `tripvenue.com` 165KB** — сторонний, на первом экране. По FE-2b аффилиат-блок должен быть lazy/ниже карты — проверить, не рендерится ли старый Belkraj-блок eager.
+> 5. Total page weight **5.4MB** (тяжёлые description-изображения 247/232/105KB).
+> Отчёт: `lighthouse-report.produrl.mobile.json`. **Не начато по коду** — приоритет фиксов: #2 (eager GPX) и #4 (Belkraj eager) — дешёвые FE-вины; #1 (бандл) — крупный отдельный заход; #3 — нужен исходник фавикона.
 | **FE-2** | 🟡 в работе | Belkraj оставляем; ДОБАВИТЬ параллельные партнёрские каналы (см. раздел 7). **Код готов** (`components/affiliate/*`, блок «Полезное в поездку» на travel-details, контекстно по городу). Рендерится только когда задан env-маркер+шаблоны → ждём **OWN-9** (ID/deep-link из дашборда Travelpayouts) | `components/affiliate/*` | ✅ компонент + конфиг; ⏳ env от владельца |
 | **FE-3** | ✅ done | Трекинг конверсий. **Готово:** партнёрка `Affiliate_Impression`/`Affiliate_Click`; регистрация `AuthSuccess`; **PDF-экспорт** `PDF_Export` (`hooks/usePdfExport.ts`, при `openPrintBook`, с `travelsCount`+`template`); **добавление места** `Place_Added` (`components/travel/hooks/usePointListAddPointModel.ts`, после успешного `createPoint`). Все через `queueAnalyticsEvent` (неблокирующий, GA4+Metrika). | `utils/analytics.ts`, `hooks/usePdfExport.ts`, `components/travel/hooks/usePointListAddPointModel.ts` | ✅ партнёрка + регистрация + PDF + add-place трекаются |
 | **FE-2b** | ✅ done | Не грузить тяжёлые виджеты выше скролла (LCP) — lazy. Affiliate-блок: `React.lazy` + web-only + ниже карты, текстовые карточки (без iframe), impression по IntersectionObserver | `components/affiliate/*` | Партнёрский блок не бьёт по LCP |
-| **FE-4** | 🟠 P1 | SEO-докрутка статей на позициях 5–15 (мета, H1, объём, внутр. ссылки) | skill `metravel-seo-audit`, `scripts/seo-audit.js` | Топ-20 «пограничных» запросов обработаны |
+| **FE-4** | 🟠 в работе | SEO-докрутка статей на позициях 5–15 (мета, H1, объём, внутр. ссылки) | skill `metravel-seo-audit`, `scripts/seo-audit.js` | Топ-20 «пограничных» запросов обработаны |
+
+> **FE-4 статус (2026-06-10).** Аудит 294 статей (`seo:audit`): тело/H2/внутр.ссылки/мета — **0 проблем** (FE-IDX это закрыл). Единственная проблема — `<title>`: 158 длинных (>60, обрезались посреди слова) + 35 коротких. **FE-код сделан:** `buildSeoTitle` теперь обрезает по границе слова и чистит хвостовую пунктуацию (`scripts/generate-seo-pages.js:184`, тесты `__tests__/scripts/generate-seo-pages.test.ts`). Пример: `…усадьбы Нитосл…` → `…усадьбы… | Metravel` (≤60). **Остаток FE-4 = контент владельца:** 35 коротких/бедных ключами `name` в БД (напр. «Смолевуд. Путь в сказку.») надо обогатить гео/темой — это правка поля `name` (OWN/контент), не FE-код. GSC-список пограничных запросов выгружен: `scripts/.gsc-opportunities.json` (20 запросов, поз. 5.8–11). Ждёт деплоя SSG-правки (следующий прод-билд подхватит новый `<title>`).
 | **FE-5** | 🟠 P1 | Форма подписки на email (ненавязчивый блок) | новый компонент рядом с `ContributionBanner` | Форма шлёт в `BE-3`, есть на статьях и главной |
 | **FE-6** | 🟡 P2 | Sponsored-маркер на карте + буст в `/search` | `components/MapPage/*`, листинг | Метка «реклама», отдельный стиль, sort-boost по `is_sponsored` |
 | **FE-7** | 🟡 P2 | Кнопка «Поддержать проект» (Boosty/Telegram Stars) | `/about`, футер | Ведёт на платёжную страницу, событие в аналитику |
@@ -263,18 +273,18 @@ GSC «Индексирование страниц»: **422 в индексе / 4
 ### Статус FRONTEND-индексации — 2026-06-08
 | ID | Статус кода | Примечание |
 |---|---|---|
-| **FE-IDX-1** | ✅ код готов | `sanitizeArticleBodyHtml` + `contentBlock` инжектят реальное тело статьи (`<p>/<h2>/<ul>…`, до 9000 симв.) в скелетон до гидрации; генератор логирует `% with crawlable body text`. |
-| **FE-IDX-2** | ✅ код готов | Generic-фолбэк не маскируется: пустой `name` → `emptyNameCount` с warning в билд-логе (`scripts/generate-seo-pages.js:1312`). Источник пустых имён чинит бэкенд (BE-IDX-2). |
-| **FE-IDX-3** | ✅ код готов | `buildRelatedBlock` рендерит crawlable `<nav> Похожие путешествия` (до 6 внутр. ссылок) в сыром HTML. |
-| **FE-IDX-4** | ✅ закрыт иначе | Видимый заголовок краулер получает из `.ssg-travel-h1` div'а скелетона. Семантический `<h1>` намеренно оставлен вне потока (`injectHiddenH1`) — иначе RN Web flex сжимает страницу в узкую колонку. Ровно один `<h1>` в HTML (enforced пост-деплой проверкой). |
+| **FE-IDX-1** | ✅ на проде (2026-06-10) | `sanitizeArticleBodyHtml` + `contentBlock` инжектят реальное тело статьи в скелетон. Прод-проба `https://metravel.by/travels/krakov-karer-zakshuvek` → 41 `<p>` в сыром HTML. |
+| **FE-IDX-2** | ✅ на проде (2026-06-10) | Generic-фолбэк устранён: прод-`<title>` контентный, без «Путешествие \| Metravel». `emptyNameCount`-warning остаётся диагностикой; источник пустых имён чинит BE-IDX-2. |
+| **FE-IDX-3** | ✅ на проде (2026-06-10) | `buildRelatedBlock` рендерит crawlable `<nav> Похожие путешествия` — прод-проба находит блок в сыром HTML. |
+| **FE-IDX-4** | ✅ на проде (2026-06-10) | Видимый заголовок из `.ssg-travel-h1` div'а присутствует в прод-HTML; семантический `<h1>` намеренно вне потока (`injectHiddenH1`). |
 
-> ⚠️ **Прод ещё не отражает FE-IDX-1/2/3.** Проверка `curl https://metravel.by/travels/dominikana` (2026-06-08) → старый generic-заголовок «Путешествие \| Metravel», без SSG-тела/related. Код закоммичен (`99c44830`), но **требуется деплой** (`build:web:prod` → `seo:generate-pages`) — это **OWN-IDX-3**. До деплоя индексационный рычаг не работает.
+> ✅ **Прод отражает FE-IDX-1/2/3/4 (деплой `3592f54c`, OWN-IDX-3 выполнен 2026-06-10).** Проба `curl https://metravel.by/travels/krakov-karer-zakshuvek` → `ssg-travel-h1` div, `<nav> Похожие путешествия`, 41 body `<p>`, контентный `<title>`; health `200`. Индексационный рычаг (SSG-тело + перелинковка) активен. Дальше — OWN-IDX-1 (запросить индексирование приоритетных страниц).
 
 ### Задачи — BACKEND
 | ID | P | Задача | Готово, когда |
 |---|---|---|---|
-| **BE-IDX-1** | 🟠 P1 — ✅ код готов, ждёт деплоя | 301-редиректы (старый slug → новый) — чтобы можно было сократить раздутые заголовки/слаги без потери URL | Карта редиректов работает; смена name создаёт 301. Код на `origin/master` (`4df4938`), нужен деплой + миграция `0022` |
-| **BE-IDX-2** | 🟠 P1 — 🔄 инструмент готов | Data-фикс: найти и починить статьи с мусором в `name`/slug (префикс «Заголовок»/«zagolovok-», абсурдная длина) | Список выдан; name исправлены + 301. Команда `seo_audit` готова (`fd6508f`), прогон data-фикса не сделан |
+| **BE-IDX-1** | 🟢 P1 — ✅ задеплоено на прод (2026-06-10) | 301-редиректы (старый slug → новый) | Карта редиректов работает на проде; миграция `0022` применена, код live (пруф: clean 404 на `by-slug/<unknown>/` и `resolve-slug?slug=<unknown>`, не 500). 301 проявится при первом переименовании |
+| **BE-IDX-2** | 🟠 P1 — 🟢 разблокировано, прогон ждёт | Data-фикс: статьи с мусором в `name`/slug | BE-IDX-1 задеплоен + FE resolve-slug на проде ⇒ безопасно. Прогнать `seo_audit --json` → курирование → `--apply` на проде; renames создадут 301 |
 | **BE-IDX-3** | 🟡 P2 | sitemap.xml содержит все опубл. travel/article/quest с верным `lastmod`, без 404/301 (= BE-2) | GSC «обнаружено» совпадает с sitemap |
 
 ### Задачи — ВЛАДЕЛЕЦ (ручное, после деплоя)
@@ -282,7 +292,7 @@ GSC «Индексирование страниц»: **422 в индексе / 4
 |---|---|
 | **OWN-IDX-1** | После каждого деплоя: GSC → «Проверка URL» → «Запросить индексирование» для приоритетных непроиндексированных (агент даёт список, ~10–12/день) |
 | **OWN-IDX-2** | Решить по redirect-стратегии (BE-IDX-1) — одобрить сокращение слагов |
-| **OWN-IDX-3** | Деплоить прод после контент/билд-правок (`build:web:prod` → `seo:generate-pages`) |
+| **OWN-IDX-3** | ✅ **Выполнено 2026-06-10** (деплой `3592f54c`): прод задеплоен (`build:web:prod` → `seo:generate-pages`), 411 SEO-страниц, тело статьи + related-блок на проде, health 200. FE-IDX-1/2/3/4 live. (Повторять после каждой контент/билд-правки.) |
 
 ### Контент (агент `index-doctor`, scope = ТОЛЬКО user_id 1)
 Мониторинг: `npm run stats:index` / `stats:index:json` (`scripts/index-status.js`, GSC URL

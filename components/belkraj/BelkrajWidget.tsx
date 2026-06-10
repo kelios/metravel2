@@ -56,8 +56,13 @@ function BelkrajWidget({
                                       }: Props) {
     const expanded = false;
     const iframeRef = useRef<HTMLIFrameElement | null>(null);
+    const containerRef = useRef<HTMLDivElement | null>(null);
     const resizeSyncTimeoutsRef = useRef<number[]>([]);
     const reactId = useId();
+    // Defer the third-party iframe (belkraj.by → tripvenue, ~165 KB + widget JS)
+    // until the slot scrolls near the viewport. The Excursions section sits below
+    // the fold, so eager-mounting it competed for bandwidth during LCP (FE-1).
+    const [shouldLoad, setShouldLoad] = useState(false);
     const widgetId = useMemo(() => `metravel-${reactId.replace(/[:]/g, '')}`, [reactId]);
 
     const calculatedHeight = useMemo(() => getEstimatedWidgetHeight(cardsCount), [cardsCount]);
@@ -113,6 +118,27 @@ function BelkrajWidget({
     useEffect(() => {
         setMeasuredHeight(finalCollapsedHeight);
     }, [finalCollapsedHeight, iframeSrc]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || shouldLoad) return undefined;
+        const node = containerRef.current;
+        if (!node) return undefined;
+        if (typeof IntersectionObserver === 'undefined') {
+            setShouldLoad(true);
+            return undefined;
+        }
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries.some((entry) => entry.isIntersecting)) {
+                    setShouldLoad(true);
+                    observer.disconnect();
+                }
+            },
+            { rootMargin: '300px' },
+        );
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, [shouldLoad, iframeSrc]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return undefined;

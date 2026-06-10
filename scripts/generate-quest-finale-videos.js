@@ -1,0 +1,216 @@
+#!/usr/bin/env node
+/**
+ * Генерация финальных видео квестов (Ken Burns по обложке) + постеров.
+ *
+ * Видео: 1280x720, ~17s, 3 сегмента zoompan с xfade, текст «Квест пройден!»
+ * + название города, CC0-музыка (FreePD / Kevin MacLeod, public domain).
+ *
+ * Требования:
+ *   - ffmpeg (путь через env FFMPEG_PATH или в PATH)
+ *   - музыка в env MUSIC_DIR (Ancient Rite.mp3, City Sunshine.mp3, Inspiration.mp3)
+ *   - обложки в assets/quests/<dir>/cover.png (warsaw-syrenka скачивается с прода)
+ *
+ * Запуск:
+ *   FFMPEG_PATH=... MUSIC_DIR=... node scripts/generate-quest-finale-videos.js [--quest-id=...] [--posters-existing]
+ *
+ * Выход: assets/quests/<dir>/finale.mp4 + poster.jpg (каталог в .gitignore).
+ * --posters-existing: для 5 старых квестов с видео извлекает постер из прод-видео.
+ */
+
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const { spawnSync } = require('child_process');
+
+const FFMPEG = process.env.FFMPEG_PATH || 'ffmpeg';
+const MUSIC_DIR = process.env.MUSIC_DIR || 'D:/metravel/tools/music';
+const API_BASE = 'https://metravel.by';
+const ASSETS_DIR = path.resolve(__dirname, '..', 'assets', 'quests');
+
+const args = process.argv.slice(2);
+const questIdArg = args.find(a => a.startsWith('--quest-id='));
+const ONLY_QUEST_ID = questIdArg ? questIdArg.split('=')[1] : null;
+const POSTERS_EXISTING = args.includes('--posters-existing');
+
+const MOODS = {
+    castle: 'Ancient Rite.mp3',
+    city: 'City Sunshine.mp3',
+    epic: 'Inspiration.mp3',
+};
+
+// finaleId — проверенный маппинг quest_id -> id в /api/quest-finales/ (текст финала сверен 2026-06-10)
+const QUESTS = [
+    { questId: 'warsaw-syrenka', dir: 'warsawSyrenka', city: 'Варшава', mood: 'city', finaleId: 6 },
+    { questId: 'grodno-royal', dir: 'grodnoRoyal', city: 'Гродно', mood: 'castle', finaleId: 7 },
+    { questId: 'brest-fortress', dir: 'brestFortress', city: 'Брест', mood: 'epic', finaleId: 8 },
+    { questId: 'vitebsk-chagall', dir: 'vitebskChagall', city: 'Витебск', mood: 'city', finaleId: 9 },
+    { questId: 'mogilev-stargazer', dir: 'mogilevStargazer', city: 'Могилёв', mood: 'city', finaleId: 10 },
+    { questId: 'lida-castle', dir: 'lidaCastle', city: 'Лида', mood: 'castle', finaleId: 11 },
+    { questId: 'mir-castle', dir: 'mirCastle', city: 'Мир', mood: 'castle', finaleId: 12 },
+    { questId: 'nesvizh-radziwill', dir: 'nesvizhRadziwill', city: 'Несвиж', mood: 'castle', finaleId: 13 },
+    { questId: 'polotsk-ancient', dir: 'polotskAncient', city: 'Полоцк', mood: 'castle', finaleId: 14 },
+    { questId: 'gomel-palace', dir: 'gomelPalace', city: 'Гомель', mood: 'castle', finaleId: 15 },
+    { questId: 'kossovo-ruzhany-palaces', dir: 'kossovoRuzhanyPalaces', city: 'Коссово и Ружаны', mood: 'castle', finaleId: 16 },
+    { questId: 'wroclaw-gnomes', dir: 'wroclawGnomes', city: 'Вроцлав', mood: 'city', finaleId: 17 },
+    { questId: 'gdansk-amber', dir: 'gdanskAmber', city: 'Гданьск', mood: 'city', finaleId: 18 },
+    { questId: 'poznan-goats', dir: 'poznanGoats', city: 'Познань', mood: 'city', finaleId: 19 },
+    { questId: 'lublin-old-town', dir: 'lublinOldTown', city: 'Люблин', mood: 'city', finaleId: 20 },
+    { questId: 'torun-copernicus', dir: 'torunCopernicus', city: 'Торунь', mood: 'city', finaleId: 21 },
+    { questId: 'vilnius-old-town', dir: 'vilniusOldTown', city: 'Вильнюс', mood: 'city', finaleId: 22 },
+    { questId: 'trakai-castle', dir: 'trakaiCastle', city: 'Тракай', mood: 'castle', finaleId: 23 },
+    { questId: 'prague-old-town', dir: 'pragueOldTown', city: 'Прага', mood: 'city', finaleId: 24 },
+    { questId: 'lviv-old-town', dir: 'lvivOldTown', city: 'Львов', mood: 'city', finaleId: 25 },
+];
+
+// Старые квесты с готовым видео — нужен только постер (кадр из видео)
+const EXISTING_VIDEO_QUESTS = [
+    { questId: 'krakow-dragon', dir: 'krakowDragon', finaleId: 1 },
+    { questId: 'pakocim-voices', dir: 'pakocim', finaleId: 2 },
+    { questId: 'barkovshchina-spirits', dir: 'barkovshchina', finaleId: 3 },
+    { questId: 'minsk-cmok', dir: 'minskDragon', finaleId: 4 },
+    { questId: 'yerevan-ararat', dir: 'yerevanArarat', finaleId: 5 },
+];
+
+const FPS = 25;
+const SEG1 = 6.52, SEG2 = 6.52, SEG3 = 5.52, XFADE = 0.8;
+const DURATION = SEG1 + SEG2 + SEG3 - 2 * XFADE; // ~16.96s
+const FONT_BOLD = 'C\\:/Windows/Fonts/arialbd.ttf';
+const FONT_REG = 'C\\:/Windows/Fonts/arial.ttf';
+
+function run(cmdArgs, label) {
+    const r = spawnSync(FFMPEG, cmdArgs, { stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' });
+    if (r.status !== 0) {
+        throw new Error(`ffmpeg failed (${label}): ${(r.stderr || '').slice(-800)}`);
+    }
+}
+
+function writeTextFile(text) {
+    const f = path.join(os.tmpdir(), `qf-${Math.random().toString(36).slice(2)}.txt`);
+    fs.writeFileSync(f, text, 'utf8');
+    return f;
+}
+
+async function download(url, dest) {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`download ${r.status}: ${url.split('?')[0]}`);
+    fs.writeFileSync(dest, Buffer.from(await r.arrayBuffer()));
+}
+
+async function fetchBundle(questId) {
+    const r = await fetch(`${API_BASE}/api/quests/by-quest-id/${questId}/`);
+    if (!r.ok) throw new Error(`bundle ${questId}: HTTP ${r.status}`);
+    return r.json();
+}
+
+async function fetchCoverUrl(questId) {
+    const r = await fetch(`${API_BASE}/api/quests/`);
+    const list = await r.json();
+    const q = list.find(x => x.quest_id === questId);
+    if (!q || !q.cover_url) throw new Error(`no cover_url for ${questId}`);
+    return q.cover_url;
+}
+
+function generateVideo(coverPath, outPath, cityLabel, musicPath) {
+    const line1 = writeTextFile('Квест пройден!');
+    const line2 = writeTextFile(cityLabel);
+    const seg1f = Math.round(SEG1 * FPS), seg2f = Math.round(SEG2 * FPS), seg3f = Math.round(SEG3 * FPS);
+    const textStart = SEG1 + SEG2 - 2 * XFADE + 1; // после второго xfade
+    const filter = [
+        `[0:v]scale=2560:-2,setsar=1[base]`,
+        `[base]split=3[s1][s2][s3]`,
+        `[s1]zoompan=z='1+0.12*on/${seg1f}':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':d=${seg1f}:s=1280x720:fps=${FPS},trim=duration=${SEG1},setpts=PTS-STARTPTS[v1]`,
+        `[s2]zoompan=z=1.15:x='(iw-iw/zoom)*on/${seg2f}':y='(ih-ih/zoom)/2':d=${seg2f}:s=1280x720:fps=${FPS},trim=duration=${SEG2},setpts=PTS-STARTPTS[v2]`,
+        `[s3]zoompan=z='1.15-0.10*on/${seg3f}':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':d=${seg3f}:s=1280x720:fps=${FPS},trim=duration=${SEG3},setpts=PTS-STARTPTS[v3]`,
+        `[v1][v2]xfade=transition=fade:duration=${XFADE}:offset=${(SEG1 - XFADE).toFixed(2)}[x1]`,
+        `[x1][v3]xfade=transition=fade:duration=${XFADE}:offset=${(SEG1 + SEG2 - 2 * XFADE).toFixed(2)}[x2]`,
+        `[x2]drawbox=y=ih-230:h=230:color=black@0.0:t=fill:enable=0,` +
+            `drawtext=fontfile='${FONT_BOLD}':textfile='${line1.replace(/\\/g, '/').replace(/:/g, '\\:')}':fontsize=64:fontcolor=white:borderw=2:bordercolor=black@0.55:x=(w-text_w)/2:y=h-220:alpha='if(lt(t,${textStart}),0,min(1,(t-${textStart})/0.8))',` +
+            `drawtext=fontfile='${FONT_REG}':textfile='${line2.replace(/\\/g, '/').replace(/:/g, '\\:')}':fontsize=40:fontcolor=white:borderw=2:bordercolor=black@0.55:x=(w-text_w)/2:y=h-130:alpha='if(lt(t,${textStart + 0.4}),0,min(1,(t-${textStart + 0.4})/0.8))'[vout]`,
+        `[1:a]atrim=0:${DURATION.toFixed(2)},afade=t=in:d=1,afade=t=out:st=${(DURATION - 3).toFixed(2)}:d=3,volume=0.85[aout]`,
+    ].join(';');
+
+    run([
+        '-y', '-hide_banner', '-loglevel', 'error',
+        '-i', coverPath,
+        '-i', musicPath,
+        '-filter_complex', filter,
+        '-map', '[vout]', '-map', '[aout]',
+        '-t', DURATION.toFixed(2),
+        '-c:v', 'libx264', '-crf', '23', '-preset', 'medium', '-pix_fmt', 'yuv420p',
+        '-c:a', 'aac', '-b:a', '96k',
+        '-movflags', '+faststart',
+        outPath,
+    ], path.basename(outPath));
+
+    fs.unlinkSync(line1);
+    fs.unlinkSync(line2);
+}
+
+function generatePosterFromImage(coverPath, outPath) {
+    run([
+        '-y', '-hide_banner', '-loglevel', 'error',
+        '-i', coverPath,
+        '-vf', 'scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720',
+        '-frames:v', '1', '-q:v', '3',
+        outPath,
+    ], path.basename(outPath));
+}
+
+function generatePosterFromVideo(videoPath, outPath) {
+    run([
+        '-y', '-hide_banner', '-loglevel', 'error',
+        '-ss', '1', '-i', videoPath,
+        '-vf', 'scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720',
+        '-frames:v', '1', '-q:v', '3',
+        outPath,
+    ], path.basename(outPath));
+}
+
+function sizeMB(f) { return (fs.statSync(f).size / 1048576).toFixed(2); }
+
+async function main() {
+    if (POSTERS_EXISTING) {
+        console.log('🎞  Постеры для квестов с готовым видео\n');
+        for (const q of EXISTING_VIDEO_QUESTS) {
+            if (ONLY_QUEST_ID && q.questId !== ONLY_QUEST_ID) continue;
+            const dir = path.join(ASSETS_DIR, q.dir);
+            fs.mkdirSync(dir, { recursive: true });
+            const bundle = await fetchBundle(q.questId);
+            const videoUrl = bundle.finale && bundle.finale.video_url;
+            if (!videoUrl) { console.log(`⚠️  ${q.questId}: нет video_url`); continue; }
+            const tmpVideo = path.join(os.tmpdir(), `qf-${q.questId}.mp4`);
+            await download(videoUrl, tmpVideo);
+            const posterPath = path.join(dir, 'poster.jpg');
+            generatePosterFromVideo(tmpVideo, posterPath);
+            fs.unlinkSync(tmpVideo);
+            console.log(`✅ ${q.questId}: poster.jpg (${sizeMB(posterPath)} MB)`);
+        }
+        return;
+    }
+
+    console.log('🎬 Генерация финальных видео\n');
+    for (const q of QUESTS) {
+        if (ONLY_QUEST_ID && q.questId !== ONLY_QUEST_ID) continue;
+        const dir = path.join(ASSETS_DIR, q.dir);
+        fs.mkdirSync(dir, { recursive: true });
+        let coverPath = path.join(dir, 'cover.png');
+        if (!fs.existsSync(coverPath)) {
+            console.log(`⬇️  ${q.questId}: качаю обложку с прода`);
+            await download(await fetchCoverUrl(q.questId), coverPath);
+        }
+        const musicPath = path.join(MUSIC_DIR, MOODS[q.mood]);
+        if (!fs.existsSync(musicPath)) throw new Error(`нет музыки: ${musicPath}`);
+        const videoPath = path.join(dir, 'finale.mp4');
+        const posterPath = path.join(dir, 'poster.jpg');
+        generateVideo(coverPath, videoPath, q.city, musicPath);
+        generatePosterFromImage(coverPath, posterPath);
+        console.log(`✅ ${q.questId}: finale.mp4 (${sizeMB(videoPath)} MB) + poster.jpg (${sizeMB(posterPath)} MB)`);
+    }
+    console.log('\n✅ Готово');
+}
+
+if (require.main === module) {
+    main().catch(e => { console.error('Fatal:', e.message); process.exit(1); });
+}
+
+module.exports = { QUESTS, EXISTING_VIDEO_QUESTS, ASSETS_DIR };

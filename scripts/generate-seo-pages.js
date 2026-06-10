@@ -188,10 +188,19 @@ function buildSeoTitle(base, maxLength = SEO_TITLE_MAX_LENGTH) {
   if (!normalized) return 'Metravel';
 
   const maxBaseLength = Math.max(10, maxLength - SEO_TITLE_SUFFIX.length);
-  const clippedBase =
-    normalized.length > maxBaseLength
-      ? `${normalized.slice(0, maxBaseLength - 1).trimEnd()}…`
-      : normalized;
+  if (normalized.length <= maxBaseLength) {
+    return `${normalized}${SEO_TITLE_SUFFIX}`;
+  }
+
+  // Clip on a word boundary so the SERP title doesn't end mid-word
+  // ("…Нитосл…"). Reserve one char for the ellipsis, then back off to the last
+  // space — but only when that boundary keeps most of the budget; a long leading
+  // word would otherwise collapse the title, so below 60 % we hard-clip instead.
+  const hardLimit = maxBaseLength - 1;
+  const slice = normalized.slice(0, hardLimit);
+  const lastSpace = slice.lastIndexOf(' ');
+  const base2 = lastSpace >= Math.floor(hardLimit * 0.6) ? slice.slice(0, lastSpace) : slice;
+  const clippedBase = `${base2.replace(/[\s.,;:!?·–—-]+$/u, '')}…`;
 
   return `${clippedBase}${SEO_TITLE_SUFFIX}`;
 }
@@ -1435,6 +1444,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     replaceOrInsert,
     injectMeta,
+    buildSeoTitle,
     escapeAttr,
     stripHtml,
     clampDescriptionForAttr,
