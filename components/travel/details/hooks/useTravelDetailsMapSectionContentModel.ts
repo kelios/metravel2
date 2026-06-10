@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Platform } from 'react-native'
 
 import { useRouteFilePreviews } from '@/hooks/useRouteFilePreviews'
 import { useKeyPointLabels } from '@/hooks/useKeyPointLabels'
@@ -63,6 +64,16 @@ export function useTravelDetailsMapSectionContentModel({
       shouldForceRenderMap,
     })
 
+  // The route-file preview pulls the GPX/KML track (hundreds of KB) only to draw
+  // the polyline on the map. On web the map sits below the fold, so we wait for
+  // the section to approach the viewport before downloading — otherwise it
+  // competes for bandwidth during LCP (FE-1). Native renders eagerly as before.
+  const [mapNearViewport, setMapNearViewport] = useState(Platform.OS !== 'web')
+  const mapObserverRef = useRef<IntersectionObserver | null>(null)
+
+  const routePreviewShouldRender =
+    shouldRender && (mapNearViewport || mapOpened || shouldForceRenderMap)
+
   const {
     routePreviewItems,
     resetRoutePreviewItems,
@@ -71,7 +82,7 @@ export function useTravelDetailsMapSectionContentModel({
   } = useRouteFilePreviews({
     travelId: travel?.id,
     canRenderHeavy,
-    shouldRender,
+    shouldRender: routePreviewShouldRender,
     shouldForceRenderMap,
   })
 
@@ -95,9 +106,31 @@ export function useTravelDetailsMapSectionContentModel({
   const setMapSectionRef = useCallback(
     (node: any) => {
       ;(anchors.map as any).current = node
+
+      if (Platform.OS !== 'web') return
+      mapObserverRef.current?.disconnect()
+      mapObserverRef.current = null
+      if (!node || typeof IntersectionObserver === 'undefined') {
+        if (typeof IntersectionObserver === 'undefined') setMapNearViewport(true)
+        return
+      }
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) {
+            setMapNearViewport(true)
+            observer.disconnect()
+            mapObserverRef.current = null
+          }
+        },
+        { rootMargin: '400px' }
+      )
+      observer.observe(node as Element)
+      mapObserverRef.current = observer
     },
     [anchors.map]
   )
+
+  useEffect(() => () => mapObserverRef.current?.disconnect(), [])
 
   return {
     hasMapData,

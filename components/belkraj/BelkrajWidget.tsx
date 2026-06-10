@@ -206,6 +206,7 @@ function BelkrajWidget({
 
     return (
         <div
+            ref={containerRef}
             className={className ?? 'belkraj-slot'}
             style={{
                 borderRadius: 12,
@@ -219,27 +220,30 @@ function BelkrajWidget({
                     height: finalHeight,
                     maxHeight: finalHeight,
                     WebkitOverflowScrolling: 'touch',
-                } : null),
+                } : { height: finalHeight }),
             }}
         >
-            <iframe
-                ref={iframeRef}
-                src={iframeSrc}
-                title="Belkraj partner offers"
-                width="100%"
-                height={finalHeight}
-                scrolling={allowScroll ? 'yes' : 'no'}
-                frameBorder={0}
-                onLoad={handleIframeLoad}
-                style={{
-                    width: '100%',
-                    height: `${finalHeight}px`,
-                    display: 'block',
-                    border: 'none',
-                    pointerEvents: 'auto',
-                    ...(allowScroll ? { touchAction: 'pan-y' as const } : null),
-                }}
-            />
+            {shouldLoad ? (
+                <iframe
+                    ref={iframeRef}
+                    src={iframeSrc}
+                    title="Belkraj partner offers"
+                    width="100%"
+                    height={finalHeight}
+                    loading="lazy"
+                    scrolling={allowScroll ? 'yes' : 'no'}
+                    frameBorder={0}
+                    onLoad={handleIframeLoad}
+                    style={{
+                        width: '100%',
+                        height: `${finalHeight}px`,
+                        display: 'block',
+                        border: 'none',
+                        pointerEvents: 'auto',
+                        ...(allowScroll ? { touchAction: 'pan-y' as const } : null),
+                    }}
+                />
+            ) : null}
         </div>
     );
 }
