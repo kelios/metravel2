@@ -1,0 +1,145 @@
+{
+  "note": "Очередь AI-видео для финалов квестов (фаза 2). Генерация: chat.qwen.ai (Wan, image-to-video, ~4/день бесплатно). Первый кадр — assets/quests/<dir>/cover.png. После генерации: mp4 → assets/quests/<dir>/ai-raw.mp4, потом node scripts/postprocess-quest-ai-video.js --quest-id=... и node scripts/upload-quest-finales.js --quest-id=...; status: pending → generated → uploaded",
+  "queue": [
+    {
+      "questId": "prague-old-town",
+      "dir": "pragueOldTown",
+      "city": "Прага",
+      "status": "uploaded",
+      "prompt": "Animate this illustration of night Prague with the astronomical clock. The golden clock hands slowly move, the glowing rings pulse softly, stars twinkle in the night sky, windows of the dark skyline flicker warmly, a thin mist drifts over the rooftops. Slow gentle camera push-in toward the glowing clock. Magical fairytale mood, smooth subtle motion, no text changes."
+    },
+    {
+      "questId": "vilnius-old-town",
+      "dir": "vilniusOldTown",
+      "city": "Вильнюс",
+      "status": "uploaded",
+      "prompt": "Animate this illustration of Vilnius old town. Clouds drift slowly across the sky, candle-warm light flickers in the windows, birds glide far above the baroque church towers, tree leaves sway gently. Slow cinematic camera pan from left to right across the skyline. Cozy magical evening mood, smooth subtle motion."
+    },
+    {
+      "questId": "lviv-old-town",
+      "dir": "lvivOldTown",
+      "city": "Львов",
+      "status": "pending",
+      "prompt": "Animate this illustration of Lviv old town. Steam rises slowly from a coffee cup, warm lantern light flickers along the street, a stone lion statue slowly blinks and turns its head slightly, leaves drift in a light breeze. Slow camera push-in along the cobblestone street. Warm cozy fairytale mood, smooth subtle motion."
+    },
+    {
+      "questId": "warsaw-syrenka",
+      "dir": "warsawSyrenka",
+      "city": "Варшава",
+      "status": "pending",
+      "prompt": "Animate this illustration of Warsaw with the mermaid Syrenka. The mermaid's tail glimmers and slowly moves, ripples spread across the Vistula river water, her hair and the flag fabric flow in the wind, clouds drift over the old town skyline. Slow heroic camera push-in toward the mermaid. Legendary epic mood, smooth subtle motion."
+    },
+    {
+      "questId": "wroclaw-gnomes",
+      "dir": "wroclawGnomes",
+      "city": "Вроцлав",
+      "status": "pending",
+      "prompt": "Animate this illustration of Wroclaw with little bronze gnomes. The gnomes subtly come alive: one tips his hat, another waves slowly, lantern light flickers warmly, pigeons flutter over the market square rooftops. Slow camera dolly forward at street level toward the gnomes. Playful magical mood, smooth subtle motion."
+    },
+    {
+      "questId": "gdansk-amber",
+      "dir": "gdanskAmber",
+      "city": "Гданьск",
+      "status": "pending",
+      "prompt": "Animate this illustration of Gdansk harbor. Golden amber pieces glow and pulse softly, ship rigging and flags sway in the sea breeze, water of the Motlawa river ripples with warm reflections, seagulls glide across the sky. Slow cinematic camera pan along the waterfront. Golden Baltic legend mood, smooth subtle motion."
+    },
+    {
+      "questId": "trakai-castle",
+      "dir": "trakaiCastle",
+      "city": "Тракай",
+      "status": "pending",
+      "prompt": "Animate this illustration of Trakai island castle on the lake. The lake water shimmers and ripples gently, reflections of the red brick towers sway, clouds drift slowly, a small sailboat glides far away, torch light flickers on the castle walls. Slow camera push-in across the water toward the castle gate. Medieval legend mood, smooth subtle motion."
+    },
+    {
+      "questId": "poznan-goats",
+      "dir": "poznanGoats",
+      "city": "Познань",
+      "status": "pending",
+      "prompt": "Animate this illustration of Poznan town hall with the two mechanical goats. The two metal goats slowly butt heads above the clock, the clock hands move, pigeons take off from the renaissance facade, market stalls' awnings sway gently. Slow camera push-in toward the goats on the tower. Cheerful legend mood, smooth subtle motion."
+    },
+    {
+      "questId": "torun-copernicus",
+      "dir": "torunCopernicus",
+      "city": "Торунь",
+      "status": "pending",
+      "prompt": "Animate this illustration of night Torun, hometown of Copernicus. Stars and planets slowly rotate in the deep night sky, a comet glides across, warm light flickers in gothic brick windows, the river reflection shimmers. Slow camera tilt up from the old town to the starry sky. Astronomical wonder mood, smooth subtle motion."
+    },
+    {
+      "questId": "lublin-old-town",
+      "dir": "lublinOldTown",
+      "city": "Люблин",
+      "status": "pending",
+      "prompt": "Animate this illustration of Lublin old town gate. Warm lantern light flickers, mist drifts slowly through the medieval street, banners and fabric sway gently, birds cross the evening sky. Slow camera dolly forward through the gate into the old town. Crossroads-of-history mood, smooth subtle motion."
+    },
+    {
+      "questId": "grodno-royal",
+      "dir": "grodnoRoyal",
+      "city": "Гродно",
+      "status": "pending",
+      "prompt": "Animate this illustration of royal Grodno above the Neman river at night. The glowing golden crown constellations shimmer and pulse, their reflection ripples on the dark river water, moonlit clouds drift, castle windows flicker warmly. Slow majestic camera push-in toward the castle hill. Royal nocturne mood, smooth subtle motion."
+    },
+    {
+      "questId": "brest-fortress",
+      "dir": "brestFortress",
+      "city": "Брест",
+      "status": "pending",
+      "prompt": "Animate this illustration of Brest fortress memorial. The eternal flame burns and flickers steadily, mist drifts slowly over the fortress walls at dawn, light clouds move across the early morning sky, subtle light rays grow stronger. Very slow solemn camera push-in toward the monument. Solemn heroic memorial mood, smooth restrained motion."
+    },
+    {
+      "questId": "mir-castle",
+      "dir": "mirCastle",
+      "city": "Мир",
+      "status": "pending",
+      "prompt": "Animate this illustration of Mir castle. The pond water ripples gently with the castle reflection, clouds drift over the red brick towers, swans glide slowly on the water, tree branches sway lightly. Slow cinematic camera pan across the pond toward the castle. Medieval Belarusian legend mood, smooth subtle motion."
+    },
+    {
+      "questId": "nesvizh-radziwill",
+      "dir": "nesvizhRadziwill",
+      "city": "Несвиж",
+      "status": "pending",
+      "prompt": "Animate this illustration of Nesvizh palace of the Radziwill family. Candlelight flickers in the palace windows, the park pond shimmers with reflections, autumn leaves drift slowly in the air, a faint ghostly silhouette of the Black Lady glides along the gallery. Slow camera push-in along the alley toward the palace. Mysterious aristocratic mood, smooth subtle motion."
+    },
+    {
+      "questId": "lida-castle",
+      "dir": "lidaCastle",
+      "city": "Лида",
+      "status": "pending",
+      "prompt": "Animate this illustration of Lida castle of Gediminas. Torch flames flicker on the massive stone walls, banners wave slowly in the wind, clouds drift over the battlements, birds circle the towers. Slow camera dolly forward toward the castle gate. Medieval knight legend mood, smooth subtle motion."
+    },
+    {
+      "questId": "polotsk-ancient",
+      "dir": "polotskAncient",
+      "city": "Полоцк",
+      "status": "pending",
+      "prompt": "Animate this illustration of ancient Polotsk, cradle of Belarus. The Dvina river water flows gently with shimmering reflections, candle light glows in the cathedral windows, mist drifts over the riverbank at dusk, clouds move slowly. Slow camera push-in across the river toward Saint Sophia cathedral. Ancient chronicle mood, smooth subtle motion."
+    },
+    {
+      "questId": "vitebsk-chagall",
+      "dir": "vitebskChagall",
+      "city": "Витебск",
+      "status": "pending",
+      "prompt": "Animate this illustration of Chagall's Vitebsk. Dreamlike floating figures drift slowly above the rooftops like in a Chagall painting, stars twinkle, windows glow warmly, the Dvina river reflection shimmers. Slow floating camera rise above the town. Dreamy surreal art mood, smooth subtle motion."
+    },
+    {
+      "questId": "mogilev-stargazer",
+      "dir": "mogilevStargazer",
+      "city": "Могилёв",
+      "status": "pending",
+      "prompt": "Animate this illustration of Mogilev with the Stargazer. The starry sky slowly rotates around the zodiac circle, the stargazer's telescope glints, star constellations pulse softly, lantern light flickers on the square. Slow camera tilt up from the square to the rotating stars. Celestial wonder mood, smooth subtle motion."
+    },
+    {
+      "questId": "gomel-palace",
+      "dir": "gomelPalace",
+      "city": "Гомель",
+      "status": "pending",
+      "prompt": "Animate this illustration of Gomel palace above the Sozh river. The river water glistens and flows gently, fountain water sparkles in the park, leaves of old trees sway, clouds drift over the palace tower. Slow camera pan along the park alley toward the palace. Stately park evening mood, smooth subtle motion."
+    },
+    {
+      "questId": "kossovo-ruzhany-palaces",
+      "dir": "kossovoRuzhanyPalaces",
+      "city": "Коссово и Ружаны",
+      "status": "pending",
+      "prompt": "Animate this illustration of Kossovo and Ruzhany palaces. Mist drifts slowly between the palace towers, light glows and flickers in the gothic windows, clouds move over the ruins and restored walls, grass and trees sway gently. Slow majestic camera push-in toward the palace facade. Lost aristocratic grandeur mood, smooth subtle motion."
+    }
+  ]
+}

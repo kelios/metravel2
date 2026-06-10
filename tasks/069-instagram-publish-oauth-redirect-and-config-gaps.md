@@ -4,7 +4,7 @@ Status: Backlog
 Owner: Backend
 Support: Developer, Tester, Reviewer, Releaser
 Created: 2026-06-09
-Updated: 2026-06-09
+Updated: 2026-06-10
 
 ## Goal
 
@@ -272,6 +272,42 @@ Read-only repro already captured by the diagnosing agent (prod, 2026-06-09):
   no Page required). Decide with the owner before provisioning. App used for IG-Login on FE
   read tooling: `metravelinstby` (App ID 3086350764868673), use case "Управление сообщениями
   и контентом в Instagram".
+
+- 2026-06-10 (verified live; gaps 1, 3, 4 and the "no Page" finding are resolved — only env
+  provisioning remains):
+  - **Gap 1 (redirect mismatch) — RESOLVED.** FE env already sets
+    `EXPO_PUBLIC_INSTAGRAM_OAUTH_REDIRECT_URI=https://metravel.by/api/travels/instagram-oauth/callback/`
+    (Option A). Owner added that exact URL to the Meta app 2443100196153960 → Facebook Login →
+    "Valid OAuth Redirect URIs" (done via browser 2026-06-10, saved + persisted after reload).
+    Prod callback probe: `GET /api/travels/instagram-oauth/callback/` → **400** "requires code
+    and state" (not 404). Backend `INSTAGRAM_GRAPH_REDIRECT_URI` must be set to the same value.
+  - **The 2026-06-09 "@metravelby not linked to a Facebook Page" finding was WRONG / stale.**
+    Verified in Meta Business Suite settings (portfolio "Metravel"): @metravelby is a Business IG
+    account (ig_user_id **17841439584584656**) with **Connected assets → Facebook Page "MeTravel"
+    (Page ID 1061059240434100)**; Julia Savran has **Full access** to both the Page and the IG
+    account. So the Pages flow (`/me/accounts` → `instagram_business_account`) WILL resolve the
+    account once OAuth runs. The earlier empty `/me/accounts` was a token-scope artifact (missing
+    `business_management`), not a missing Page. **IGAA/Option-B is NOT needed.**
+  - **Gap 3 (token expiry) — partially done on origin/master.** `instagram_graph_service.py`
+    now has a pre-publish expiry check (`if account.token_expires_at and account.token_expires_at
+    <= timezone.now()`). A scheduled `refresh_instagram_token` is still nice-to-have but not a
+    blocker.
+  - **App Review / Live mode — NOT required.** App stays in Development mode; publishing targets
+    the owner's own @metravelby and Julia is an app admin, so Meta grants the scopes for her own
+    assets in dev mode.
+  - **ONLY remaining blocker = Gap 2 (env not provisioned). CONFIRMED live:**
+    `GET /api/travels/instagram-oauth/start/` under the owner's Token → **503**
+    "INSTAGRAM_GRAPH_APP_ID, INSTAGRAM_GRAPH_APP_SECRET and INSTAGRAM_GRAPH_REDIRECT_URI must be
+    configured." Backend owner sets these in prod env and redeploys, exact values:
+    ```
+    INSTAGRAM_GRAPH_APP_ID=2443100196153960
+    INSTAGRAM_GRAPH_APP_SECRET=<App Secret — Meta App 2443100196153960 → Settings → Basic → Show>
+    INSTAGRAM_GRAPH_REDIRECT_URI=https://metravel.by/api/travels/instagram-oauth/callback/
+    INSTAGRAM_GRAPH_TARGET_USERNAME=metravelby
+    ```
+    After deploy: superuser opens the wizard "Подключить Instagram" → completes Meta OAuth →
+    `InstagramGraphAccount` row is stored → publish works. Re-run the `start/` probe to confirm
+    200 `{authUrl}` (not 503).
 
 ## Results
 
