@@ -1173,6 +1173,7 @@ async function main() {
 
       let items = [];
       let total = 0;
+      let hasNext = false;
 
       if (Array.isArray(result)) {
         items = result;
@@ -1182,12 +1183,14 @@ async function main() {
         total = typeof result.total === 'number' ? result.total
               : typeof result.count === 'number' ? result.count
               : items.length;
+        // Use next_page_url/next from Laravel-style pagination if available
+        hasNext = !!(result.next_page_url || result.next);
       }
 
       travels = travels.concat(items);
       console.log(`  📦 Got ${items.length} items (total so far: ${travels.length}/${total})`);
 
-      hasMore = travels.length < total && items.length === perPage;
+      hasMore = hasNext || (travels.length < total && items.length > 0 && items.length === perPage);
       page++;
     }
   } catch (err) {
