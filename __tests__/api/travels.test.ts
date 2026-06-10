@@ -1310,7 +1310,7 @@ describe('src/api/travelsApi.ts', () => {
     // BE-015 verified-fixed contract (prod re-probe 2026-06-08): a valid travel
     // with no near-list returns `200` + `[]`, and `404` is reserved for a
     // non-existent travel id. These lock the new backend behaviour so the
-    // 404->[] guard is no longer load-bearing (see docs/BACKEND_WORKBOARD.md).
+    // 404->[] guard is no longer load-bearing (BE-015 verified-fixed; tracked on the MCP task board, area=back).
     it('fetchTravelsNear возвращает [] при 200 с пустым списком (валидный travel без соседей)', async () => {
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
       mockedSafeJsonParse.mockResolvedValueOnce([] as any);

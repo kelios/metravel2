@@ -7,8 +7,9 @@ Last updated: 2026-06-10.
 > пайплайну — skill `/ticket-flow`. Setup и миграция: `docs/TASK_BOARD_MCP.md`.
 > Эта страница — короткий журнал правил и открытого FE-бэклога, не дубль борда.
 
-Backend-очередь и доказательства закрытия бэкенд-задач — в `docs/BACKEND_WORKBOARD.md`
-(сверяет агент `backend-status-sync`).
+Backend-очередь и доказательства закрытия бэкенд-задач — на борде (`area=back`); статусы и
+верификацию (код `origin/master` + прод-пробы) ведёт агент `backend-status-sync` в комментариях
+тикетов. (Файл `docs/BACKEND_WORKBOARD.md` упразднён 2026-06-10, история в git.)
 
 ## Обязательные правила (load-bearing)
 
@@ -53,4 +54,4 @@ Perf-бэклог — `docs/PERF_HOME_LCP_BACKLOG.md`, `docs/PERF_SPEEDUP_PLAN.m
 
 Полный журнал закрытых задач (T-001…T-074, F-/D-/PERF-/TD-серии, спринты Travel QA /
 Performance Refactor и fictional-team roster) удалён при миграции на MCP-борд 2026-06-10 —
-история доступна в git. Закрытые бэкенд-задачи — в архиве `docs/BACKEND_WORKBOARD.md`.
+история доступна в git. Закрытые бэкенд-задачи — на борде (`area=back`, статус `done`).

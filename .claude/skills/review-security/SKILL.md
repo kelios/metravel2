@@ -10,8 +10,8 @@ description: >-
 # review-security
 
 Ревью **безопасности фронтенда**. Scope по умолчанию — весь репозиторий.
-Бэкенд не правим: дыры бэка → TASK-файл (`tasks/NNN-*.md`, Owner: Backend) +
-строка в `docs/BACKEND_WORKBOARD.md` (см. память: security-бэклог tasks/012-042).
+Бэкенд не правим: дыры бэка → тикет на общем MCP task board (`area=back`, через
+агент `ticket-board`; см. `docs/TASK_BOARD_MCP.md`).
 
 ## Поверхности атаки (углы поиска — делегируй `review-auditor` параллельно)
 

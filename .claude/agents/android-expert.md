@@ -33,7 +33,7 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 - Токен — через `utils/secureStorage.ts` (на native = `expo-secure-store`), не лезь в localStorage напрямую.
 - expo-image не импортировать напрямую — только через `ImageCardMedia`.
 - TS strict, новый `any` запрещён в `api/`/`hooks/`/`stores/`.
-- Бэкенд (push endpoint регистрации токена и т.п.) — **только TASK-файл** (`tasks/NNN-*.md`, Owner: Backend) + строка в `docs/BACKEND_WORKBOARD.md`, код бэка не править.
+- Бэкенд (push endpoint регистрации токена и т.п.) — **только тикет на общем MCP task board** (`area=back`, через агент `ticket-board`; см. `docs/TASK_BOARD_MCP.md`), код бэка не править.
 
 ## Верификация (обязательно)
 

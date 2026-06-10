@@ -27,7 +27,9 @@ React 19 + React Native 0.84 + Expo 55 (Expo Router, file-based) · web: RN Web 
 `eas.json`, `app.json`, `.github/workflows/`, `nginx/`, `plugins/`, `scripts/`, `public/robots.txt`, `public/sitemap.xml`, `entry.js`
 
 ## Бэкенд
-**НЕ правим — только заводим задачи.** Репо `../metravel-backend` (D:\metravel\metravel-backend), владелец — Sergey/Codex. Читаем и диагностируем, но НИКОГДА не редактируем его код (.py, тесты, миграции, конфиги, деплой). Нужная правка бэка = TASK-файл `tasks/NNN-*.md` (шаблон `tasks/000-template.md`, Owner: Backend) + строка в `docs/BACKEND_WORKBOARD.md`. Случайно изменил файл бэка — откати (`git checkout -- <file>`) и переоформи задачей. Диагност — агент `backend-expert` (read-only по бэку).
+**НЕ правим — только заводим задачи.** Репо `../metravel-backend` (D:\metravel\metravel-backend), владелец — Sergey/Codex. Читаем и диагностируем, но НИКОГДА не редактируем его код (.py, тесты, миграции, конфиги, деплой). Нужная правка бэка = тикет на общем MCP task board (`area=back`, через агент `ticket-board`; борд = единый источник правды, см. `docs/TASK_BOARD_MCP.md`). Случайно изменил файл бэка — откати (`git checkout -- <file>`) и переоформи тикетом. Диагност — агент `backend-expert` (read-only по бэку); статусы/доказательства закрытия сверяет `backend-status-sync` (пишет верификацию в комментарии тикетов борда).
+
+**FE-guard rule (load-bearing):** фронтовый костыль-митигейшн под бэкенд-баг (напр. `useAvatarUri` кэширует упавшие avatar-URL, `utils/secureStorage.ts` XOR-хранилище токена, `registerPushTokenApi` глотает ошибки) остаётся нагруженным, пока бэк-фикс не **верифицирован** (код на `origin/master` + наблюдаемое поведение на проде) И не покрыт **FE-regression-тестом** на новое поведение. До этого guard не удалять — максимум помечать `defensive-only`. Привязку «какой guard под каким тикетом» хранить в самом тикете борда.
 
 ## Окружение
 - API: `EXPO_PUBLIC_API_URL` (прод `https://metravel.by`), авторизация `Authorization: Token <token>`

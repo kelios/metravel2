@@ -63,8 +63,9 @@ secure-storage token, Nominatim→React Query) + 26 `back` (avatar repro, IG OAu
 остались только `000-template.md` (формат `description`) и `README.md`.
 
 Дальше задачи ведутся только на борде: новые — через `ticket-board` (`metravel_task_create`),
-прогон — `/ticket-flow`. Бэкенд-очередь и доказательства закрытия по-прежнему сверяет
-`backend-status-sync` → `docs/BACKEND_WORKBOARD.md` до полного переноса трекинга на борд.
+прогон — `/ticket-flow`. Бэкенд-очередь и доказательства закрытия сверяет `backend-status-sync`,
+записывая верификацию (код на `origin/master` + read-only прод-пробы) в комментарии тикетов
+борда (`area=back`). Файл `docs/BACKEND_WORKBOARD.md` упразднён 2026-06-10 — история в git.
 
 Повторный импорт не запускать (создаст дубликаты) — дедуп по префиксу заголовка `[TASK-…]`.
 
