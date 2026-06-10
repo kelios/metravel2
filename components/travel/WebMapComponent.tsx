@@ -9,6 +9,8 @@ import { showToastMessage } from '@/utils/toast';
 import { registerPendingImageFile, removePendingImageFile, getPendingImageFile } from '@/utils/pendingImageFiles';
 import { prepareWebImageFileForUpload } from '@/utils/webImageUpload';
 import { matchCountryId, buildAddressFromGeocode } from '@/utils/geocodeHelpers';
+import { fetchReverseGeocode } from '@/api/geoQueries';
+import { bigDataCloudReverse } from '@/api/external/bigdatacloud';
 import { buildLeafletPopupCss, createWebMapStyles } from '@/components/travel/WebMapComponent.styles';
 import WebMapMarkerPopup from '@/components/travel/WebMapMarkerPopup';
 import {
@@ -29,17 +31,12 @@ const reverseGeocode = async (latlng: any) => {
     // Этот шаг нужен и на web: точка из фото должна сначала получить адрес/страну,
     // затем сохраниться, и только после выдачи backend id можно грузить фото точки.
 
-    // 1. Nominatim с zoom=18 для максимальной детализации
+    // 1. Nominatim с zoom=18 для максимальной детализации (через слой React Query)
     try {
-        const nominatim = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&addressdetails=1&accept-language=ru&extratags=1&namedetails=1&zoom=18`
-        );
-        if (nominatim.ok) {
-            const data = await nominatim.json();
-            // Если есть конкретное название места, используем Nominatim
-            if (data?.name || data?.address?.name || data?.display_name) {
-                return data;
-            }
+        const data = await fetchReverseGeocode(Number(latlng.lat), Number(latlng.lng));
+        // Если есть конкретное название места, используем Nominatim
+        if (data) {
+            return data;
         }
     } catch (error) {
         console.warn('Nominatim geocoding failed:', error);
@@ -47,9 +44,7 @@ const reverseGeocode = async (latlng: any) => {
 
     // 2. BigDataCloud как fallback
     try {
-        const bigdata = await fetch(
-            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latlng.lat}&longitude=${latlng.lng}&localityLanguage=ru`
-        );
+        const bigdata = await bigDataCloudReverse(Number(latlng.lat), Number(latlng.lng), 'ru');
         if (bigdata.ok) {
             const data = await bigdata.json();
             return data;

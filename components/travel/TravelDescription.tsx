@@ -21,7 +21,10 @@ interface TravelDescriptionProps {
 
 /**
  * Оптимизированное описание путешествия:
- * - На web сразу монтируем HTML; медиа-оптимизация (LCP, CLS, lazy, YouTube lite) — в StableContent.
+ * - На web монтаж HTML откладываем на пару кадров + idle: синхронный mount большого
+ *   описания (десятки KB + Instagram-фасады) во время гидратации RN Web блокирует
+ *   появление hero/шапки и держит SSG-скелет видимым 10+ секунд на тяжёлых статьях.
+ *   Прероллится только скелет (в #root описания нет) → mismatch'а гидратации не будет.
  * - На native парсинг откладывается до конца взаимодействий (InteractionManager + 2s форсаж).
  */
 
@@ -51,21 +54,45 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
         return txt.length === 0;
     }, [htmlContent]);
 
-    // На web — сразу true, на native — откладываем
-    const [canParseHtml, setCanParseHtml] = useState(Platform.OS === "web");
+    // Монтаж тяжёлого HTML откладываем на обеих платформах, чтобы не блокировать
+    // первый интерактив (web: гидратация шелла/hero; native: взаимодействия).
+    const [canParseHtml, setCanParseHtml] = useState(false);
 
     useEffect(() => {
-        if (Platform.OS === "web") return;
-
         let cancelled = false;
-        const task = InteractionManager.runAfterInteractions(() => {
+        const reveal = () => {
             if (!cancelled) setCanParseHtml(true);
-        });
+        };
 
+        if (Platform.OS === "web") {
+            const w = typeof window !== "undefined" ? (window as any) : null;
+            let idleId: number | null = null;
+            // Два кадра: даём шеллу+hero отрисоваться и снять SSG-скелет, затем
+            // в idle монтируем описание. Форсаж 800ms — на случай занятого потока.
+            const rafOuter = w?.requestAnimationFrame
+                ? w.requestAnimationFrame(() => {
+                      w.requestAnimationFrame(() => {
+                          if (w.requestIdleCallback) {
+                              idleId = w.requestIdleCallback(reveal, { timeout: 600 });
+                          } else {
+                              reveal();
+                          }
+                      });
+                  })
+                : null;
+            const timeoutId = setTimeout(reveal, 800);
+
+            return () => {
+                cancelled = true;
+                if (rafOuter != null && w?.cancelAnimationFrame) w.cancelAnimationFrame(rafOuter);
+                if (idleId != null && w?.cancelIdleCallback) w.cancelIdleCallback(idleId);
+                clearTimeout(timeoutId);
+            };
+        }
+
+        const task = InteractionManager.runAfterInteractions(reveal);
         // Форсаж: если что-то пойдёт не так — смонтировать через 2s
-        const timeoutId = setTimeout(() => {
-            if (!cancelled) setCanParseHtml(true);
-        }, 2000);
+        const timeoutId = setTimeout(reveal, 2000);
 
         return () => {
             cancelled = true;
@@ -163,7 +190,9 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
           ) : canParseHtml ? (
             <StableContent html={htmlContent} contentWidth={contentWidth} fullWidth={noBox} />
           ) : (
-            <Text style={styles.placeholder}>Загружаем описание…</Text>
+            <View style={Platform.OS === "web" ? styles.webLazyContentFallback : undefined}>
+              <Text style={styles.placeholder}>Загружаем описание…</Text>
+            </View>
           )}
       </View>
     );

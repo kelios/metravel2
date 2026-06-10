@@ -33,6 +33,10 @@ const WebServiceWorkerCleanupLazy = safeLazy(
   () => import('@/components/layout/WebServiceWorkerCleanup'),
   'WebServiceWorkerCleanup'
 )
+const NewVersionPromptLazy = safeLazy(
+  () => import('@/components/layout/NewVersionPrompt'),
+  'NewVersionPrompt'
+)
 
 interface RootWebDeferredChromeProps {
   isMobile: boolean
@@ -177,6 +181,12 @@ export default function RootWebDeferredChrome({
       {showServiceWorkerCleanup && (
         <React.Suspense fallback={null}>
           <WebServiceWorkerCleanupLazy />
+        </React.Suspense>
+      )}
+
+      {showServiceWorkerCleanup && (
+        <React.Suspense fallback={null}>
+          <NewVersionPromptLazy />
         </React.Suspense>
       )}
 

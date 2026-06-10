@@ -32,6 +32,8 @@ export const queryKeys = {
   articles: (params: { page: number; itemsPerPage: number; user_id?: string }) =>
     ['articles', params] as const,
   addressSearch: (query: string) => ['address-search', query] as const,
+  locationSearch: (query: string) => ['location-search', query] as const,
+  reverseGeocode: (lat: number, lng: number) => ['reverse-geocode', lat, lng] as const,
   mySubscriptions: () => ['my-subscriptions'] as const,
   mySubscribers: () => ['my-subscribers'] as const,
   userTravels: (userId: string | number | null | undefined) => ['user-travels', userId] as const,

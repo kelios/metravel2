@@ -1,9 +1,20 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render as rtlRender, fireEvent, waitFor } from '@testing-library/react-native';
+import { createQueryWrapper } from '@/__tests__/helpers/testQueryClient';
 import TravelWizardStepRoute from '@/components/travel/TravelWizardStepRoute';
 import { EXIF_IMAGE_INPUT_ACCEPT } from '@/utils/exifGps';
 import { getPendingImageFile, removePendingImageFile } from '@/utils/pendingImageFiles';
 import { Platform } from 'react-native';
+
+// LocationSearchInput (внутри шага маршрута) использует React Query — оборачиваем рендер
+// в свежий QueryClientProvider на каждый вызов для изоляции кэша между тестами.
+const render = (
+    ui: React.ReactElement,
+    options?: Parameters<typeof rtlRender>[1],
+) => {
+    const { Wrapper } = createQueryWrapper();
+    return rtlRender(ui, { wrapper: Wrapper, ...options });
+};
 
 const ORIGINAL_PLATFORM_OS = Platform.OS;
 

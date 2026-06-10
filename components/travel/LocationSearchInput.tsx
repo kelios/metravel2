@@ -1,27 +1,14 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, Pressable, ActivityIndicator, ScrollView, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useLocationSearchQuery, type LocationSearchResult } from '@/api/geoQueries';
 
 const isWeb = Platform.OS === 'web' || typeof document !== 'undefined';
 
-interface SearchResult {
-    place_id: string;
-    display_name: string;
-    lat: string;
-    lon: string;
-    address?: {
-        country?: string;
-        country_code?: string;
-        city?: string;
-        town?: string;
-        village?: string;
-        state?: string;
-    };
-    type?: string;
-    importance?: number;
-}
+type SearchResult = LocationSearchResult;
 
 interface LocationSearchInputProps {
     onLocationSelect: (result: SearchResult) => void;
@@ -42,100 +29,35 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     const [query, setQuery] = useState('');
-    const [results, setResults] = useState<SearchResult[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
     const [showResults, setShowResults] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const debouncedQuery = useDebouncedValue(query, 500);
 
-    const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const abortControllerRef = useRef<AbortController | null>(null);
+    const {
+        data: results = [],
+        isFetching: isLoading,
+        isError,
+    } = useLocationSearchQuery({ query: debouncedQuery });
 
-    // Debounced search через Nominatim API
-    const searchLocation = useCallback(async (searchQuery: string) => {
-        if (searchQuery.trim().length < 3) {
-            setResults([]);
-            setShowResults(false);
-            return;
-        }
+    const error = isError ? 'Ошибка поиска. Попробуйте еще раз.' : null;
 
-        // Отменяем предыдущий запрос
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
-        }
-
-        const controller = new AbortController();
-        abortControllerRef.current = controller;
-        setIsLoading(true);
-        setError(null);
-
-        try {
-            // Nominatim Search API
-            const response = await fetch(
-                `https://nominatim.openstreetmap.org/search?` +
-                `format=json&` +
-                `q=${encodeURIComponent(searchQuery)}&` +
-                `limit=7&` +
-                `addressdetails=1&` +
-                `accept-language=ru`,
-                { signal: controller.signal }
-            );
-
-            if (!response.ok) {
-                throw new Error('Ошибка поиска');
-            }
-
-            const data: unknown = await response.json();
-            if (controller.signal.aborted) return;
-            const items = Array.isArray(data)
-                ? (data as SearchResult[]).filter(
-                      (item): item is SearchResult =>
-                          !!item && typeof item.display_name === 'string',
-                  )
-                : [];
-            setResults(items);
-            setShowResults(true);
-        } catch (err: any) {
-            if (err.name !== 'AbortError') {
-                console.error('Location search error:', err);
-                setError('Ошибка поиска. Попробуйте еще раз.');
-            }
-        } finally {
-            if (!controller.signal.aborted) setIsLoading(false);
-        }
-    }, []);
-
-    // Отменяем висящий запрос при размонтировании
-    useEffect(() => () => abortControllerRef.current?.abort(), []);
-
-    // Debounce для поиска
+    // Показываем выпадашку, как только пришёл задебаунсенный результат.
     useEffect(() => {
-        if (searchTimeoutRef.current) {
-            clearTimeout(searchTimeoutRef.current);
+        if (debouncedQuery.trim().length >= 3) {
+            setShowResults(true);
+        } else {
+            setShowResults(false);
         }
-
-        searchTimeoutRef.current = setTimeout(() => {
-            searchLocation(query);
-        }, 500);
-
-        return () => {
-            if (searchTimeoutRef.current) {
-                clearTimeout(searchTimeoutRef.current);
-            }
-        };
-    }, [query, searchLocation]);
+    }, [debouncedQuery]);
 
     const handleResultSelect = useCallback((result: SearchResult) => {
         onLocationSelect(result);
         setQuery('');
-        setResults([]);
         setShowResults(false);
     }, [onLocationSelect]);
 
     const handleClear = useCallback(() => {
         setQuery('');
-        setResults([]);
         setShowResults(false);
-        setError(null);
     }, []);
 
     // Форматирование адреса для отображения

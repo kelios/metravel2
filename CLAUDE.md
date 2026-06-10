@@ -48,5 +48,8 @@ React 19 + React Native 0.84 + Expo 55 (Expo Router, file-based) · web: RN Web 
 ## Skills
 Карта skills и сценариев — `docs/CODEX.md`. `$metravel-hook-builder` — вынос/упрощение focused hooks; `$metravel-quality-fixer` — полный прогон lint/Jest/Playwright до зелёного; `$metravel-code-reviewer` — review diff перед handoff.
 
+## Android / native
+Выпуск Android-приложения через EAS (облако, Windows-friendly; package `by.metravel.app`). Агенты: `android-expert` (нативный FE-код — Platform-ветвление, карта/expo-модули/push/secure-store, разбор крашей), `android-builder` (EAS-сборка `android:build:*` + submit в Google Play; `app.json`/`eas.json`/`scripts/` не правит без явного запроса). Скиллы: `android-release` (пошаговый регламент выпуска), `android-native-audit` (web-API без Platform-guard и web-only импорты в native-бандле).
+
 ## Стиль ответов
 Короткий план (2–5 пунктов) → изменения кода; без пересказа условия и trailing summary; ссылки `path/to/file.tsx:line`. Экономить контекст: поиск и массовое чтение файлов делегировать субагентам (Explore), не читать большие файлы целиком без необходимости.
