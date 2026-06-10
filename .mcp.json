@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "metravel-task-board": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "../metravel-backend",
+        "--frozen",
+        "python",
+        "-m",
+        "tools.mcp_server"
+      ],
+      "env": {
+        "METRAVEL_TASK_BOARD_BASE_URL": "https://metravel.by",
+        "METRAVEL_TASK_BOARD_API_TOKEN": "${METRAVEL_TASK_BOARD_API_TOKEN}"
+      }
+    }
+  }
+}
