@@ -247,6 +247,7 @@ export function useStableContentWebEffects({
     const mountEmbed = (facade: HTMLElement) => {
       if (facade.dataset.igMounted === '1') return
       facade.dataset.igMounted = '1'
+      io?.unobserve(facade)
       const src = facade.getAttribute('data-ig-embed')
       if (!src || !isAllowedEmbedSrc(src)) return
 
@@ -284,10 +285,9 @@ export function useStableContentWebEffects({
       io = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              mountEmbed(entry.target as HTMLElement)
-              io?.unobserve(entry.target)
-            }
+            // mountEmbed сам делает unobserve, чтобы не держать ссылку на
+            // detached-node после replaceWith (в т.ч. на пути прямого scan).
+            if (entry.isIntersecting) mountEmbed(entry.target as HTMLElement)
           })
         },
         { rootMargin: `${MARGIN}px 0px` }

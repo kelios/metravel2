@@ -247,7 +247,6 @@ const styles = StyleSheet.create({
     ...Platform.select({
       web: {
         boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
-        backdropFilter: 'blur(10px)',
       },
       ios: {
         shadowOpacity: 0.15,
@@ -263,6 +262,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     maxWidth: 560,
+    // Живой backdrop-filter только на десктопе: на мобильном fixed-баннере он
+    // жжёт GPU без эффекта (фон и так непрозрачный colors.surface). См. правило
+    // backdrop-blur в CLAUDE.md (BottomDock/TravelStickyActions).
+    ...Platform.select({ web: { backdropFilter: 'blur(10px)' as any } }),
   },
   containerMobile: {
     flexDirection: 'column',

@@ -238,6 +238,8 @@ export default function RegisterForm() {
                                                         onChangeText={handleChange('username')}
                                                         onBlur={handleBlur('username')}
                                                         autoCapitalize="none"
+                                                        autoComplete="username"
+                                                        textContentType="username"
                                                         returnKeyType="next"
                                                     />
                                                 </View>
@@ -273,6 +275,8 @@ export default function RegisterForm() {
                                                         onBlur={handleBlur('email')}
                                                         keyboardType="email-address"
                                                         autoCapitalize="none"
+                                                        autoComplete="email"
+                                                        textContentType="emailAddress"
                                                         returnKeyType="next"
                                                     />
                                                 </View>
@@ -308,6 +312,8 @@ export default function RegisterForm() {
                                                         onChangeText={handleChange('password')}
                                                         onBlur={handleBlur('password')}
                                                         secureTextEntry={!showPass}
+                                                        autoComplete="new-password"
+                                                        textContentType="newPassword"
                                                         returnKeyType="next"
                                                     />
                                                     <Pressable
@@ -391,6 +397,8 @@ export default function RegisterForm() {
                                                         onChangeText={handleChange('confirmPassword')}
                                                         onBlur={handleBlur('confirmPassword')}
                                                         secureTextEntry={!showPass}
+                                                        autoComplete="new-password"
+                                                        textContentType="newPassword"
                                                         returnKeyType="done"
                                                         onSubmitEditing={() => handleSubmit()}
                                                     />

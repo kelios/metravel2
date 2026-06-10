@@ -444,7 +444,15 @@ function TravelListItem({
         <View
           key="author"
           onClick={handleAuthorPress as any}
-          style={{ flexShrink: 1, minWidth: 0 }}
+          style={{
+            flexShrink: 1,
+            minWidth: 0,
+            // 44px touch target: расширяем зону нажатия, не меняя визуальный layout
+            paddingVertical: 13,
+            marginVertical: -13,
+            paddingHorizontal: 8,
+            marginHorizontal: -8,
+          }}
           {...(authorUserId
             ? ({
                 role: 'button',
@@ -461,6 +469,7 @@ function TravelListItem({
         <Pressable
           key="author"
           onPress={handleAuthorPress}
+          hitSlop={{ top: 13, bottom: 13, left: 8, right: 8 }}
           style={({ pressed }) => [
             { flexShrink: 1, minWidth: 0 },
             pressed && authorUserId ? { opacity: 0.85 } : null,

@@ -1,4 +1,5 @@
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { escapeHtml } from '@/utils/htmlUtils'
 
 type RichTextColors = {
   text: string
@@ -43,13 +44,7 @@ const normalizeUrlScheme = (value: string) => {
   return trimmed.startsWith('//') ? `https:${trimmed}` : trimmed
 }
 
-const encodeHtml = (value: string) =>
-  value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
+const encodeHtml = escapeHtml
 
 function normalizeInstagramUrl(rawUrl: string): string {
   const normalized = normalizeUrlScheme(decodeEntities(rawUrl))

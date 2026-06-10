@@ -55,6 +55,10 @@ export function optimizeImageUrl(
 
   if (/^data:/i.test(trimmedUrl) || /^blob:/i.test(trimmedUrl)) return originalUrl;
 
+  // Metro dev-server assets (`/assets?unstable_path=...`) обслуживаются только локальным
+  // бандлером — префикс публичного origin ломает их в dev/preview.
+  if (trimmedUrl.includes('unstable_path=')) return originalUrl;
+
   const cacheKey = `${trimmedUrl}|${options.width ?? ''}|${options.height ?? ''}|${options.quality ?? ''}|${options.format ?? ''}|${options.dpr ?? ''}|${options.fit ?? ''}|${options.blur ?? ''}`;
   const cached = optimizedUrlCache.get(cacheKey);
   if (cached) return cached;

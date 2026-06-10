@@ -265,6 +265,8 @@ export default function Login() {
                                                         onBlur={handleBlur('email')}
                                                         keyboardType="email-address"
                                                         autoCapitalize="none"
+                                                        autoComplete="email"
+                                                        textContentType="emailAddress"
                                                         placeholderTextColor={colors.textMuted}
                                                         returnKeyType="next"
                                                         blurOnSubmit={false}
@@ -292,6 +294,8 @@ export default function Login() {
                                                             onChangeText={handleChange('password')}
                                                             onBlur={handleBlur('password')}
                                                             secureTextEntry={!showPassword}
+                                                            autoComplete="current-password"
+                                                            textContentType="password"
                                                             placeholderTextColor={colors.textMuted}
                                                             returnKeyType="done"
                                                             onSubmitEditing={() => handleSubmit()}

@@ -68,6 +68,14 @@ const pageTranslations: Record<string, string> = {
   userpoints: 'Мои точки',
   messages: 'Сообщения',
   subscriptions: 'Подписки',
+  contact: 'Контакты',
+  places: 'Места',
+  articles: 'Статьи',
+  calendar: 'Календарь',
+  search: 'Поиск',
+  cookies: 'Файлы cookie',
+  privacy: 'Конфиденциальность',
+  register: 'Регистрация',
 };
 
 function normalizePathname(pathname: string | null | undefined) {

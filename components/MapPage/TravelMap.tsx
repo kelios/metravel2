@@ -6,190 +6,29 @@ import { useLeafletLoader } from '@/hooks/useLeafletLoader'
 import { useMapMarkers } from '@/hooks/useMapMarkers'
 import { attachOsmPoiOverlay } from '@/utils/mapWebOverlays/osmPoiOverlay'
 import { attachOsmCampingOverlay } from '@/utils/mapWebOverlays/osmCampingOverlay'
-import { useTheme, useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { useTheme, useThemedColors } from '@/hooks/useTheme'
 import MapMarkers from './Map/MapMarkers'
 import ClusterLayer from './Map/ClusterLayer'
+import RouteLineLayer from './Map/RouteLineLayer'
 import { createMapPopupComponent } from './Map/createMapPopupComponent'
 import { useLeafletIcons } from './Map/useLeafletIcons'
+import {
+  DEFAULT_CENTER,
+  calculatePopupPan,
+  extractTravelPoints,
+  filterValidLatLngs,
+  getPopupSize,
+  ignoreTravelMapRuntimeError,
+  isValidLatLng,
+  parseCoordString,
+} from './Map/travelMapGeometry'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { normalizePoint } from '@/components/map-core/types'
 import { queryKeys } from '@/api/queryKeys'
 
 const IS_WEB = Platform.OS === 'web'
-const DEFAULT_CENTER: [number, number] = [53.9006, 27.559] // Minsk
-const ROUTE_PANE_NAME = 'metravelRoutePane'
-const ROUTE_PANE_Z_INDEX = '450'
-const POPUP_PAN_MIN_DELTA = 6
-const POPUP_PAN_NARROW_X_THRESHOLD = 18
-const POPUP_PAN_NARROW_Y_THRESHOLD = 24
-const NARROW_MAP_WIDTH = 640
-const VERY_NARROW_MAP_WIDTH = 420
-const NARROW_VIEWPORT_WIDTH = 768
-const VERY_NARROW_VIEWPORT_WIDTH = 480
-
-function ignoreTravelMapRuntimeError() {
-  return
-}
 
 const NOOP = () => {}
-
-function isValidLatLng(lat: number, lng: number) {
-  return (
-    Number.isFinite(lat) &&
-    Number.isFinite(lng) &&
-    lat >= -90 &&
-    lat <= 90 &&
-    lng >= -180 &&
-    lng <= 180
-  )
-}
-
-function parseCoordString(raw: unknown): [number, number] | null {
-  const str = String(raw ?? '').trim()
-  if (!str) return null
-  const cleaned = str.replace(/;/g, ',').replace(/\s+/g, '')
-  const parts = cleaned.split(',')
-  if (parts.length !== 2) return null
-  const lat = parseFloat(parts[0])
-  const lng = parseFloat(parts[1])
-  return isValidLatLng(lat, lng) ? [lat, lng] : null
-}
-
-function filterValidLatLngs(coords: [number, number][]) {
-  return coords.filter(([lat, lng]) => isValidLatLng(lat, lng))
-}
-
-function extractTravelPoints(travelData: any[]): [number, number][] {
-  const out: [number, number][] = []
-  for (const point of travelData) {
-    const parsed = parseCoordString(point?.coord)
-    if (parsed) out.push(parsed)
-  }
-  return out
-}
-
-interface RouteLineLayerProps {
-  routeLineCoords: [number, number][]
-  routeColor?: string
-  colors: ThemedColors
-  useMap: () => any
-  L: any
-}
-
-const RouteLineLayer: React.FC<RouteLineLayerProps> = ({
-  routeLineCoords,
-  routeColor,
-  colors,
-  useMap,
-  L,
-}) => {
-  const map = useMap()
-  const polylineRef = useRef<any>(null)
-  const mountedRef = useRef(true)
-
-  useEffect(() => {
-    mountedRef.current = true
-    return () => {
-      mountedRef.current = false
-    }
-  }, [])
-
-  useEffect(() => {
-    const removeExisting = () => {
-      if (polylineRef.current && map) {
-        try {
-          map.removeLayer(polylineRef.current)
-        } catch {
-          ignoreTravelMapRuntimeError()
-        }
-        polylineRef.current = null
-      }
-    }
-
-    if (!map || !L || routeLineCoords.length < 2) {
-      removeExisting()
-      return
-    }
-
-    removeExisting()
-
-    let pane: HTMLElement | null = null
-    try {
-      pane = typeof map.getPane === 'function' ? map.getPane(ROUTE_PANE_NAME) : null
-      if (!pane && typeof map.createPane === 'function') {
-        pane = map.createPane(ROUTE_PANE_NAME)
-      }
-      if (pane?.style) {
-        pane.style.zIndex = ROUTE_PANE_Z_INDEX
-        pane.style.pointerEvents = 'none'
-      }
-    } catch {
-      ignoreTravelMapRuntimeError()
-    }
-
-    const latlngs = routeLineCoords
-      .filter(([lat, lng]) => isValidLatLng(lat, lng))
-      .map(([lat, lng]) => L.latLng(lat, lng))
-    if (latlngs.length < 2) return
-
-    const addPolyline = () => {
-      if (!mountedRef.current) return
-
-      const hasRoutePane = !!pane
-      const renderer =
-        typeof L.svg === 'function'
-          ? L.svg(hasRoutePane ? { pane: ROUTE_PANE_NAME } : undefined)
-          : undefined
-
-      const baseOpts = {
-        weight: 8,
-        opacity: 0.95,
-        lineJoin: 'round',
-        lineCap: 'round',
-        interactive: false,
-        renderer,
-        pane: hasRoutePane ? ROUTE_PANE_NAME : 'overlayPane',
-      }
-
-      const halo = L.polyline(latlngs, {
-        ...baseOpts,
-        color: colors.surface || DESIGN_TOKENS.colors.surface,
-        className: 'metravel-route-line-halo',
-      })
-
-      const line = L.polyline(latlngs, {
-        ...baseOpts,
-        weight: 5,
-        opacity: 1,
-        color: routeColor || colors.info || colors.primary || DESIGN_TOKENS.colors.primary,
-        className: 'metravel-route-line',
-      })
-
-      try {
-        const routeLayer = L.layerGroup([halo, line])
-        routeLayer.addTo(map)
-        line.bringToFront?.()
-        polylineRef.current = routeLayer
-      } catch (error) {
-        console.error('[TravelMap] RouteLineLayer: failed to add polyline', error)
-        try {
-          line.remove?.()
-        } catch {
-          ignoreTravelMapRuntimeError()
-        }
-      }
-    }
-
-    const timer = setTimeout(addPolyline, 10)
-
-    return () => {
-      clearTimeout(timer)
-      removeExisting()
-    }
-  }, [map, L, routeLineCoords, routeColor, colors.info, colors.primary, colors.surface])
-
-  return null
-}
 
 interface TravelMapProps {
   travelData: any[]
@@ -203,112 +42,6 @@ interface TravelMapProps {
   showRouteLine?: boolean
   routeLineCoords?: [number, number][]
   routeLines?: Array<{ coords: [number, number][]; color?: string }>
-}
-
-function calculatePopupPan(popupEl: HTMLElement, mapEl: HTMLElement) {
-  const mapRect = mapEl.getBoundingClientRect()
-  const popupRectAbs = popupEl.getBoundingClientRect()
-  const popupRect = {
-    left: popupRectAbs.left - mapRect.left,
-    top: popupRectAbs.top - mapRect.top,
-    right: popupRectAbs.right - mapRect.left,
-    bottom: popupRectAbs.bottom - mapRect.top,
-    width: popupRectAbs.width,
-    height: popupRectAbs.height,
-  }
-
-  const isNarrowMap = mapRect.width <= NARROW_MAP_WIDTH
-  const horizontalPadding =
-    mapRect.width <= VERY_NARROW_MAP_WIDTH ? 12 : isNarrowMap ? 16 : 24
-  const verticalPadding = isNarrowMap ? 18 : 24
-
-  const popupCenterX = popupRect.left + popupRect.width / 2
-  const popupCenterY = popupRect.top + popupRect.height / 2
-  const safeLeft = horizontalPadding
-  const safeRight = mapRect.width - horizontalPadding
-  const safeTop = verticalPadding
-  const safeBottom = mapRect.height - verticalPadding
-  const safeCenterX = (safeLeft + safeRight) / 2
-  const safeCenterY = (safeTop + safeBottom) / 2
-
-  const overflowLeft = horizontalPadding - popupRect.left
-  const overflowRight = popupRect.right - (mapRect.width - horizontalPadding)
-  const overflowTop = verticalPadding - popupRect.top
-  const overflowBottom = popupRect.bottom - safeBottom
-
-  let dx = 0
-  let dy = 0
-
-  if (overflowLeft > 0 && overflowRight > 0) dx = popupCenterX - safeCenterX
-  else if (overflowLeft > 0) dx = -overflowLeft
-  else if (overflowRight > 0) dx = overflowRight
-  else if (isNarrowMap) {
-    const deltaX = popupCenterX - safeCenterX
-    if (Math.abs(deltaX) > POPUP_PAN_NARROW_X_THRESHOLD) dx = deltaX
-  }
-
-  if (overflowTop > 0 && overflowBottom > 0) dy = popupCenterY - safeCenterY
-  else if (overflowTop > 0) dy = -overflowTop
-  else if (overflowBottom > 0) dy = overflowBottom
-  else if (isNarrowMap) {
-    const deltaY = popupCenterY - safeCenterY
-    if (Math.abs(deltaY) > POPUP_PAN_NARROW_Y_THRESHOLD) dy = deltaY
-  }
-
-  if (Math.abs(dx) < POPUP_PAN_MIN_DELTA) dx = 0
-  if (Math.abs(dy) < POPUP_PAN_MIN_DELTA) dy = 0
-  return { dx, dy }
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max)
-}
-
-function getPopupSize(viewportWidth: number, compact: boolean) {
-  const isNarrow = viewportWidth <= NARROW_VIEWPORT_WIDTH
-  const isVeryNarrow = viewportWidth <= VERY_NARROW_VIEWPORT_WIDTH
-
-  const maxWidth = compact
-    ? isVeryNarrow
-      ? clamp(viewportWidth - 20, 208, 236)
-      : isNarrow
-        ? clamp(viewportWidth - 28, 236, 284)
-        : clamp(viewportWidth - 32, 248, 300)
-    : isVeryNarrow
-      ? clamp(viewportWidth - 28, 240, 284)
-      : isNarrow
-        ? clamp(viewportWidth - 32, 264, 320)
-        : clamp(viewportWidth - 40, 300, 388)
-
-  const minWidth = compact
-    ? isVeryNarrow
-      ? clamp(maxWidth - 20, 188, 212)
-      : isNarrow
-        ? clamp(maxWidth - 32, 208, 236)
-        : clamp(maxWidth - 44, 220, 248)
-    : isVeryNarrow
-      ? 220
-      : isNarrow
-        ? clamp(maxWidth - 44, 228, 260)
-        : clamp(maxWidth - 72, 256, 308)
-
-  const autoPanPaddingTopLeft = compact
-    ? isVeryNarrow
-      ? [8, 56]
-      : [12, 72]
-    : isNarrow
-      ? [12, 72]
-      : [24, 140]
-
-  const autoPanPaddingBottomRight = compact
-    ? isVeryNarrow
-      ? [8, 104]
-      : [12, 72]
-    : isNarrow
-      ? [12, 72]
-      : [24, 140]
-
-  return { maxWidth, minWidth, autoPanPaddingTopLeft, autoPanPaddingBottomRight }
 }
 
 export const TravelMap: React.FC<TravelMapProps> = ({

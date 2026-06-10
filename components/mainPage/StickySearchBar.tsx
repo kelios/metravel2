@@ -521,6 +521,7 @@ function StickySearchBar({
         !active && hovered && Platform.OS === 'web' && styles.actionButtonHovered,
         globalFocusStyles.focusable,
       ]}
+      accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
       accessibilityState={selected === undefined ? undefined : { selected }}
@@ -579,13 +580,16 @@ function StickySearchBar({
             {...Platform.select({
               web: {
                 // @ts-ignore -- aria-label is a web-only ARIA attribute not in RN TextInput types
-                'aria-label': `Поиск путешествий. Нажмите ${shortcutLabel} для быстрого доступа`,
+                'aria-label': isMobile
+                  ? 'Поиск путешествий'
+                  : `Поиск путешествий. Нажмите ${shortcutLabel} для быстрого доступа`,
               },
             })}
           />
           {search.length > 0 && (
             <Pressable
               onPress={clearSearch}
+              accessibilityRole="button"
               accessibilityLabel="Очистить поиск"
               {...Platform.select({
                 web: {
@@ -677,6 +681,7 @@ function StickySearchBar({
               testID="clear-all-button"
               onPress={showClearAll ? onClearAll : undefined}
               disabled={!showClearAll}
+              accessibilityRole="button"
               {...Platform.select({
                 web: {
                   title: 'Сбросить условия',

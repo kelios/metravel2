@@ -93,6 +93,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
         onChangeText={onChangeHp}
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
+        autoComplete="off"
         placeholder="Do not fill"
       />
 
@@ -107,6 +108,8 @@ export const ContactForm: React.FC<ContactFormProps> = ({
         placeholderTextColor={colors.textMuted}
         value={name}
         onChangeText={onChangeName}
+        autoComplete="name"
+        textContentType="name"
         returnKeyType="next"
         onFocus={onFocusName}
         onBlur={onBlurName}
@@ -131,6 +134,8 @@ export const ContactForm: React.FC<ContactFormProps> = ({
         value={email}
         onChangeText={onChangeEmail}
         autoCapitalize="none"
+        autoComplete="email"
+        textContentType="emailAddress"
         keyboardType="email-address"
         returnKeyType="next"
         onFocus={onFocusEmail}
