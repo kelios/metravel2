@@ -149,6 +149,91 @@ describe('ssg-skeletons', () => {
     });
   });
 
+  describe('buildRemovalScript behavior (white-screen regression)', () => {
+    const scriptSource = buildRemovalScript()
+      .replace(/^<script>/, '')
+      .replace(/<\/script>$/, '');
+
+    const runScript = () => new Function(scriptSource)();
+
+    const setupDom = ({ travel = true, rootHtml = '<div>shell</div>' } = {}) => {
+      document.head.innerHTML = '<style id="ssg-skeleton-css"></style>';
+      document.body.innerHTML =
+        `<div id="ssg-skeleton">${travel ? '<div class="ssg-travel-hero"></div>' : ''}` +
+        `<div class="ssg-travel-article">Текст статьи, видимый до гидратации.</div></div>` +
+        `<div id="root">${rootHtml}</div>`;
+    };
+
+    const skeleton = () => document.getElementById('ssg-skeleton');
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      document.documentElement.classList.remove('app-hydrated');
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+      document.head.innerHTML = '';
+      document.body.innerHTML = '';
+    });
+
+    it('does NOT remove the skeleton at 20s when React never mounted (static shell in #root)', () => {
+      setupDom();
+      runScript();
+      jest.advanceTimersByTime(21000);
+      jest.advanceTimersByTime(1000);
+      expect(skeleton()).not.toBeNull();
+    });
+
+    it('keeps travel skeleton before 20s even when app-hydrated fires early (LCP guard)', () => {
+      setupDom();
+      runScript();
+      document.documentElement.classList.add('app-hydrated');
+      jest.advanceTimersByTime(10000);
+      expect(skeleton()).not.toBeNull();
+    });
+
+    it('removes travel skeleton after 20s once app-hydrated is set', () => {
+      setupDom();
+      runScript();
+      jest.advanceTimersByTime(21000);
+      expect(skeleton()).not.toBeNull();
+      document.documentElement.classList.add('app-hydrated');
+      jest.advanceTimersByTime(500); // interval tick + 300ms hide animation
+      expect(skeleton()).toBeNull();
+      expect(document.getElementById('ssg-skeleton-css')).toBeNull();
+    });
+
+    it('removes travel skeleton after 20s once React rendered its hero img[data-lcp]', () => {
+      setupDom();
+      runScript();
+      jest.advanceTimersByTime(21000);
+      const root = document.getElementById('root') as HTMLElement;
+      root.innerHTML = '<img data-lcp src="/hero.jpg">';
+      jest.advanceTimersByTime(500);
+      expect(skeleton()).toBeNull();
+    });
+
+    it('45s deep fallback removes skeleton when #root accumulated real text without signals', () => {
+      setupDom();
+      runScript();
+      jest.advanceTimersByTime(21000);
+      const root = document.getElementById('root') as HTMLElement;
+      root.innerHTML = `<div>${'Реальный контент страницы. '.repeat(20)}</div>`;
+      jest.advanceTimersByTime(24000);
+      jest.advanceTimersByTime(500);
+      expect(skeleton()).toBeNull();
+    });
+
+    it('45s deep fallback keeps skeleton over a dead static shell', () => {
+      setupDom({ rootHtml: '<div>Озеро Глубокое. Короткий статический шелл.</div>' });
+      runScript();
+      jest.advanceTimersByTime(46000);
+      jest.advanceTimersByTime(1000);
+      expect(skeleton()).not.toBeNull();
+    });
+  });
+
   describe('sanitizeArticleBodyHtml (FE-IDX-1)', () => {
     it('returns empty string for empty/missing input', () => {
       expect(sanitizeArticleBodyHtml('')).toBe('');

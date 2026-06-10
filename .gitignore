@@ -171,3 +171,8 @@ scripts/.tmp-*
 scripts/.index-cache/
 /dump/
 /.quest-audit/
+
+# Build-check artifacts (export-проверки web/android) и отладочные дампы
+/.chk-web/
+/.chk-android/
+/.tmp-article/

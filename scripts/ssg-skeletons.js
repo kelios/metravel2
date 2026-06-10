@@ -153,9 +153,19 @@ html[data-theme="dark"] .ssg-pulse{animation-name:ssg-shimmer-dark}
  * `app-hydrated` class set by RootWebDeferredChrome after a rAF) — the early text
  * LCP is already captured, so this only removes a stale overlay.
  *
- * A 20s safety net still tears the skeleton down if React mounted real content
- * but neither signal fired, and leaves it in place (only visible content) if
- * React never mounted at all.
+ * 20s safety net: by then LCP is long settled, so the only question is whether
+ * React actually mounted. The old check (`#root has childNodes`) could not tell:
+ * the static export ALWAYS prerenders a shell inside #root, so the skeleton —
+ * the only visible content on travel pages — was force-removed even when the JS
+ * bundle never loaded (stale deploy, flaky network), leaving a white screen.
+ * Now after 20s we tear down only on real mount signals: the `app-hydrated`
+ * class (allowed for travel skeletons too at this point) or an img[data-lcp]
+ * EXISTING in #root (React rendered the travel page; no need to wait for the
+ * image bytes anymore). If React never mounts, the skeleton stays — readable
+ * content instead of a blank page (the global chunk-reload handler does its own
+ * one-shot recovery in parallel). A 45s deep fallback covers "mounted but both
+ * signals missed": if #root accumulated real text (>200 chars; the dead static
+ * shell is ~60), the app is clearly rendering and the skeleton is torn down.
  *
  * Parse-order guard: this <script> lives INSIDE #ssg-skeleton, which is injected
  * right after <body> — i.e. BEFORE <div id="root">. So at first execution #root
@@ -166,7 +176,7 @@ html[data-theme="dark"] .ssg-pulse{animation-name:ssg-shimmer-dark}
  * remove as an orphan if #root is still absent after the DOM is fully parsed.
  */
 function buildRemovalScript() {
-  return `<script>(function(){try{var s=document.getElementById('ssg-skeleton');if(!s)return;function begin(){if(s.__b)return;var r=document.getElementById('root');if(!r){if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',begin,{once:true});return}s.remove();return}s.__b=1;var travelSkel=!!s.querySelector('.ssg-travel-hero');var done=false;function killCss(){var c=document.getElementById('ssg-skeleton-css');if(c&&c.parentNode)c.parentNode.removeChild(c)}function teardown(){if(done)return;done=true;try{s.classList.add('ssg-hiding')}catch(e){}setTimeout(function(){try{if(s.parentNode)s.parentNode.removeChild(s)}catch(e){}killCss()},300)}function heroReady(){var i=r.querySelector('img[data-lcp]');return !!(i&&i.complete&&i.naturalWidth>0)}function appReady(){return !travelSkel&&document.documentElement.classList.contains('app-hydrated')}function check(){if(done)return false;if(heroReady()||appReady()){teardown();return true}return false}if(check())return;var o=new MutationObserver(function(){if(check()){o.disconnect()}});o.observe(r,{childList:true,subtree:true});var iv=setInterval(function(){if(done){clearInterval(iv);return}if(check()){clearInterval(iv);try{o.disconnect()}catch(e){}}},120);setTimeout(function(){try{o.disconnect()}catch(e){}clearInterval(iv);if(done)return;if(r.childNodes.length>0){teardown()}},20000)}begin()}catch(e){}})();</script>`;
+  return `<script>(function(){try{var s=document.getElementById('ssg-skeleton');if(!s)return;function begin(){if(s.__b)return;var r=document.getElementById('root');if(!r){if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',begin,{once:true});return}s.remove();return}s.__b=1;var travelSkel=!!s.querySelector('.ssg-travel-hero');var done=false;var late=false;function killCss(){var c=document.getElementById('ssg-skeleton-css');if(c&&c.parentNode)c.parentNode.removeChild(c)}function teardown(){if(done)return;done=true;try{s.classList.add('ssg-hiding')}catch(e){}setTimeout(function(){try{if(s.parentNode)s.parentNode.removeChild(s)}catch(e){}killCss()},300)}function heroReady(){var i=r.querySelector('img[data-lcp]');return !!(i&&i.complete&&i.naturalWidth>0)}function appReady(){return (!travelSkel||late)&&document.documentElement.classList.contains('app-hydrated')}function lateHero(){return late&&!!r.querySelector('img[data-lcp]')}function check(){if(done)return false;if(heroReady()||appReady()||lateHero()){teardown();return true}return false}if(check())return;var o=new MutationObserver(function(){if(check()){o.disconnect()}});o.observe(r,{childList:true,subtree:true});var iv=setInterval(function(){if(done){clearInterval(iv);return}if(check()){clearInterval(iv);try{o.disconnect()}catch(e){}}},120);setTimeout(function(){late=true;check()},20000);setTimeout(function(){if(done)return;var t=(r.textContent||'').replace(/\\s+/g,' ').trim();if(t.length>200){teardown()}},45000)}begin()}catch(e){}})();</script>`;
 }
 
 function buildCards(count) {
