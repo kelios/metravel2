@@ -72,7 +72,8 @@ export const instagramStyles = (
 }
 
 /* Instagram facade — плейсхолдер до ленивого монтирования iframe.
-   Совпадает по размеру с эмбедом (4/5, max 430px), чтобы своп не давал CLS. */
+   Совпадает по размеру и рамке с .instagram-wrapper (4/5, max 430px, те же margin),
+   при монтировании facade заменяется wrapper'ом целиком — своп не даёт CLS. */
 .${cls} .ig-lite {
   width: min(100%, 430px);
   max-width: 430px;
@@ -86,12 +87,6 @@ export const instagramStyles = (
   display: flex;
   align-items: center;
   justify-content: center;
-}
-.${cls} .ig-lite.ig-lite--mounted {
-  aspect-ratio: auto;
-  display: block;
-  border: none;
-  background: ${colors.surface};
 }
 .${cls} .ig-lite__inner {
   padding: 18px;

@@ -55,9 +55,11 @@ const allowedAttributes: sanitizeHtml.IOptions['allowedAttributes'] = {
       'aria-hidden',
       'data-caption',
       'data-align',
-      'data-ig-embed',
     ]),
   ),
+  // data-ig-embed — только на div (Instagram-facade); src дополнительно
+  // валидируется на instagram.com при монтировании (useWebEffects).
+  div: ['data-ig-embed'],
   a: ['href', 'name', 'target', 'rel', 'title', 'class'],
   img: [
     'src',

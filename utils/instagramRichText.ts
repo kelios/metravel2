@@ -20,10 +20,9 @@ type InstagramTarget = {
   subtitle: string
 }
 
-type InstagramIframeStrategy = 'card' | 'facade' | 'preserve'
+type InstagramIframeStrategy = 'card' | 'facade'
 
 type ReplaceInstagramEmbedsOptions = {
-  replaceIframes?: boolean
   iframeStrategy?: InstagramIframeStrategy
 }
 
@@ -154,6 +153,8 @@ function buildInstagramEmbedSrc(canonicalUrl: string): string {
 export function buildInstagramFacadeHtml(rawUrl: string): string | null {
   const target = resolveInstagramTarget(rawUrl)
   if (!target) return null
+  // У stories нет /embed/-endpoint'а — ленивый iframe показал бы страницу ошибки.
+  if (target.kind === 'story') return buildInstagramCardHtml(rawUrl)
 
   const embedSrc = buildInstagramEmbedSrc(target.canonicalUrl)
 
@@ -210,15 +211,12 @@ export function replaceInstagramEmbedsWithCards(
   const initial = String(html || '')
   if (!initial.trim()) return initial
 
-  const strategy: InstagramIframeStrategy =
-    options.iframeStrategy ?? (options.replaceIframes === false ? 'preserve' : 'card')
+  const strategy: InstagramIframeStrategy = options.iframeStrategy ?? 'card'
 
-  let next = initial
-  if (strategy === 'card') {
-    next = replaceInstagramIframes(next, buildInstagramCardHtml)
-  } else if (strategy === 'facade') {
-    next = replaceInstagramIframes(next, buildInstagramFacadeHtml)
-  }
+  let next = replaceInstagramIframes(
+    initial,
+    strategy === 'facade' ? buildInstagramFacadeHtml : buildInstagramCardHtml,
+  )
   next = replaceInstagramBlockquotes(next)
   next = replaceStandaloneInstagramBlocks(next)
 

@@ -232,11 +232,23 @@ export function useStableContentWebEffects({
     if (Platform.OS !== 'web') return
     if (typeof window === 'undefined' || typeof document === 'undefined') return
 
+    const isAllowedEmbedSrc = (src: string) => {
+      try {
+        const url = new URL(src)
+        const host = url.hostname.toLowerCase()
+        // data-ig-embed приходит из пользовательского HTML — без проверки хоста
+        // это обход iframe-allowlist'а sanitizeRichText (произвольный iframe).
+        return url.protocol === 'https:' && (host === 'instagram.com' || host === 'www.instagram.com')
+      } catch {
+        return false
+      }
+    }
+
     const mountEmbed = (facade: HTMLElement) => {
       if (facade.dataset.igMounted === '1') return
-      const src = facade.getAttribute('data-ig-embed')
-      if (!src) return
       facade.dataset.igMounted = '1'
+      const src = facade.getAttribute('data-ig-embed')
+      if (!src || !isAllowedEmbedSrc(src)) return
 
       const wrapper = document.createElement('div')
       wrapper.className = 'instagram-wrapper'
@@ -253,8 +265,9 @@ export function useStableContentWebEffects({
       iframe.setAttribute('allowfullscreen', '')
 
       wrapper.appendChild(iframe)
-      facade.replaceChildren(wrapper)
-      facade.classList.add('ig-lite--mounted')
+      // replaceWith, а не вложение в facade: wrapper повторяет габариты facade
+      // (430px, рамка, те же margin), поэтому своп не сдвигает layout.
+      facade.replaceWith(wrapper)
     }
 
     const collectFacades = () =>
@@ -298,16 +311,27 @@ export function useStableContentWebEffects({
       })
     }
 
-    scan()
-    const rafId = window.requestAnimationFrame(scan)
-    const initialTimeoutId = setTimeout(scan, 1000)
-
-    const richTextContainer = document.querySelector(`.${WEB_RICH_TEXT_CLASS}`) || document.body
+    // Observer только на rich-text контейнер: подписка на document.body гоняла бы
+    // scan() (с forced layout) на каждую мутацию DOM во всём приложении.
     let mutationObserver: MutationObserver | null = null
-    if (richTextContainer) {
+    const attachObserver = () => {
+      if (mutationObserver) return
+      const richTextContainer = document.querySelector(`.${WEB_RICH_TEXT_CLASS}`)
+      if (!richTextContainer) return
       mutationObserver = new MutationObserver(() => scan())
       mutationObserver.observe(richTextContainer, { childList: true, subtree: true })
     }
+
+    scan()
+    attachObserver()
+    const rafId = window.requestAnimationFrame(() => {
+      attachObserver()
+      scan()
+    })
+    const initialTimeoutId = setTimeout(() => {
+      attachObserver()
+      scan()
+    }, 1000)
 
     return () => {
       window.cancelAnimationFrame(rafId)

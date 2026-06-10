@@ -158,7 +158,9 @@ describe('StableContent (web) link styles', () => {
       const iframe = container.querySelector('.travel-rich-text iframe[src*="instagram.com"]') as HTMLIFrameElement | null;
       expect(iframe).toBeTruthy();
       expect(container.querySelector('.travel-rich-text .rich-social-card--instagram')).toBeNull();
-      expect(iframe?.getAttribute('src')).toBe('https://www.instagram.com/p/CScU4bJI2Ud/embed/captioned/');
+      expect(iframe?.getAttribute('src')).toBe(
+        'https://www.instagram.com/p/CScU4bJI2Ud/embed/?omitscript=true&hidecaption=1'
+      );
     });
   });
 

@@ -146,7 +146,9 @@
     "validator:contracts:summary": "node scripts/summarize-validator-contracts.js --json-output test-results/validator-contracts-summary.json",
     "validator:contracts:summary:validate": "node scripts/validate-validator-contracts-summary.js --file test-results/validator-contracts-summary.json",
     "stats:index": "node scripts/index-status.js",
-    "stats:index:json": "node scripts/index-status.js --json --only-problems"
+    "stats:index:json": "node scripts/index-status.js --json --only-problems",
+    "indexnow": "node scripts/indexnow-submit.js",
+    "indexnow:dry": "node scripts/indexnow-submit.js --dry-run"
   },
   "dependencies": {
     "@babel/runtime": "7.29.2",

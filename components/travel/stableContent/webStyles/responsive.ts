@@ -155,7 +155,8 @@ export const responsiveStyles = (
     max-height: 240px;
   }
 .${cls} .instagram-wrapper,
-.${cls} .instagram-media {
+.${cls} .instagram-media,
+.${cls} .ig-lite {
   width: 100% !important;
   max-width: 100% !important;
 }
