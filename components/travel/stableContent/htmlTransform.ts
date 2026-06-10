@@ -343,10 +343,12 @@ const decorateRichImageFrames = (html: string) => {
 
 export const prepareStableContentHtml = (html: string) => {
   const normalizedEmbeds = normalizeArticleEditorHtmlForInput(html)
-  const shouldPreserveInstagramIframes =
-    Platform.OS === 'web' || typeof document !== 'undefined'
+  const isWeb = Platform.OS === 'web' || typeof document !== 'undefined'
+  // На web: вместо живого iframe (каждый тянет ~целый Instagram-рантайм, ~900KB/десятки
+  // запросов на статью) — лёгкий facade, настоящий iframe монтируется лениво при подходе
+  // к вьюпорту (useStableContentWebEffects). На native — статическая карточка-ссылка.
   const instagramSafeHtml = replaceInstagramEmbedsWithCards(normalizedEmbeds, {
-    replaceIframes: !shouldPreserveInstagramIframes,
+    iframeStrategy: isWeb ? 'facade' : 'card',
   })
   const safe = sanitizeRichText(instagramSafeHtml)
   const normalizedBase = replaceYouTubeIframes(normalizeImgTags(stripDangerousTags(safe)))

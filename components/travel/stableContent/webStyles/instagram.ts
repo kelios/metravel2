@@ -70,4 +70,58 @@ export const instagramStyles = (
   background: ${colors.surface} !important;
   padding: 0 !important;
 }
+
+/* Instagram facade — плейсхолдер до ленивого монтирования iframe.
+   Совпадает по размеру с эмбедом (4/5, max 430px), чтобы своп не давал CLS. */
+.${cls} .ig-lite {
+  width: min(100%, 430px);
+  max-width: 430px;
+  aspect-ratio: 4 / 5;
+  margin: ${DESIGN_TOKENS.spacing.md}px auto ${DESIGN_TOKENS.spacing.lg}px;
+  border-radius: 22px;
+  border: 1px solid ${colors.borderLight};
+  background: linear-gradient(180deg, ${colors.surface} 0%, ${colors.surfaceMuted} 100%);
+  box-shadow: ${colors.boxShadows?.light || 'none'};
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.${cls} .ig-lite.ig-lite--mounted {
+  aspect-ratio: auto;
+  display: block;
+  border: none;
+  background: ${colors.surface};
+}
+.${cls} .ig-lite__inner {
+  padding: 18px;
+  text-align: center;
+}
+.${cls} .ig-lite__eyebrow {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.35;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: ${colors.textMuted};
+}
+.${cls} .ig-lite__title {
+  display: inline-block;
+  margin: 0;
+  color: ${colors.primaryText || colors.primary || colors.text};
+  font-size: 18px;
+  line-height: 1.35;
+  font-weight: 600;
+  text-decoration: none;
+}
+.${cls} .ig-lite__title:hover,
+.${cls} .ig-lite__title:focus-visible {
+  text-decoration: underline;
+}
+.${cls} .ig-lite__hint {
+  margin: 10px 0 0;
+  color: ${colors.textMuted};
+  font-size: 13px;
+  line-height: 1.45;
+}
 `

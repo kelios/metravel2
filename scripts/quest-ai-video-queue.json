@@ -19,14 +19,14 @@
       "questId": "lviv-old-town",
       "dir": "lvivOldTown",
       "city": "Львов",
-      "status": "pending",
+      "status": "uploaded",
       "prompt": "Animate this illustration of Lviv old town. Steam rises slowly from a coffee cup, warm lantern light flickers along the street, a stone lion statue slowly blinks and turns its head slightly, leaves drift in a light breeze. Slow camera push-in along the cobblestone street. Warm cozy fairytale mood, smooth subtle motion."
     },
     {
       "questId": "warsaw-syrenka",
       "dir": "warsawSyrenka",
       "city": "Варшава",
-      "status": "pending",
+      "status": "uploaded",
       "prompt": "Animate this illustration of Warsaw with the mermaid Syrenka. The mermaid's tail glimmers and slowly moves, ripples spread across the Vistula river water, her hair and the flag fabric flow in the wind, clouds drift over the old town skyline. Slow heroic camera push-in toward the mermaid. Legendary epic mood, smooth subtle motion."
     },
     {

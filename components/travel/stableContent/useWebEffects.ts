@@ -226,104 +226,93 @@ export function useStableContentWebEffects({
     document.head.appendChild(style)
   }, [webRichTextStyles])
 
+  // Instagram facade → ленивое монтирование настоящего iframe при подходе к вьюпорту.
+  // Посты вне экрана (и весь Lighthouse-прогон без скролла) не тянут ~900KB рантайма.
   useEffect(() => {
     if (Platform.OS !== 'web') return
+    if (typeof window === 'undefined' || typeof document === 'undefined') return
 
-    let processing = false
-    let timeoutId: ReturnType<typeof setTimeout> | null = null
+    const mountEmbed = (facade: HTMLElement) => {
+      if (facade.dataset.igMounted === '1') return
+      const src = facade.getAttribute('data-ig-embed')
+      if (!src) return
+      facade.dataset.igMounted = '1'
 
-    const processInstagramEmbeds = () => {
-      if (processing) return
-      processing = true
+      const wrapper = document.createElement('div')
+      wrapper.className = 'instagram-wrapper'
 
-      try {
-        const richTextContainer = document.querySelector(`.${WEB_RICH_TEXT_CLASS}`)
-        if (!richTextContainer) {
-          processing = false
-          return
-        }
+      const iframe = document.createElement('iframe')
+      iframe.src = src
+      iframe.className = 'instagram-embed instagram-processed'
+      iframe.loading = 'lazy'
+      iframe.title = 'Instagram post'
+      iframe.setAttribute(
+        'allow',
+        'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+      )
+      iframe.setAttribute('allowfullscreen', '')
 
-        const instagramIframes = richTextContainer.querySelectorAll(
-          'iframe[src*="instagram.com"]:not(.instagram-processed), iframe.ql-video[src*="instagram.com"]:not(.instagram-processed)'
-        )
-
-        instagramIframes.forEach((iframe) => {
-          if (iframe.parentElement?.classList.contains('instagram-wrapper')) {
-            iframe.classList.add('instagram-processed')
-            return
-          }
-
-          const wrapper = document.createElement('div')
-          wrapper.className = 'instagram-wrapper'
-
-          iframe.parentNode?.insertBefore(wrapper, iframe)
-          wrapper.appendChild(iframe)
-          iframe.classList.add('instagram-embed', 'instagram-processed')
-        })
-
-        const instagramBlockquotes = richTextContainer.querySelectorAll(
-          'blockquote.instagram-media:not(.instagram-processed)'
-        )
-
-        instagramBlockquotes.forEach((blockquote) => {
-          blockquote.classList.add('instagram-wrapper', 'instagram-processed')
-        })
-      } catch (error) {
-        if (__DEV__) {
-          console.warn('[StableContent] Error processing Instagram embeds:', error)
-        }
-      } finally {
-        processing = false
-      }
+      wrapper.appendChild(iframe)
+      facade.replaceChildren(wrapper)
+      facade.classList.add('ig-lite--mounted')
     }
 
-    const debouncedProcess = () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-      }
-      timeoutId = setTimeout(() => {
-        processInstagramEmbeds()
-        timeoutId = null
-      }, 300)
+    const collectFacades = () =>
+      Array.from(
+        document.querySelectorAll<HTMLElement>(
+          `.${WEB_RICH_TEXT_CLASS} .ig-lite:not([data-ig-mounted="1"])`
+        )
+      )
+
+    const MARGIN = 600
+
+    let io: IntersectionObserver | null = null
+    if ('IntersectionObserver' in window) {
+      io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              mountEmbed(entry.target as HTMLElement)
+              io?.unobserve(entry.target)
+            }
+          })
+        },
+        { rootMargin: `${MARGIN}px 0px` }
+      )
     }
 
-    processInstagramEmbeds()
-
-    const observer = new MutationObserver((mutations) => {
-      const hasNewIframes = mutations.some((mutation) => {
-        return Array.from(mutation.addedNodes).some((node) => {
-          if (node.nodeType === Node.ELEMENT_NODE) {
-            const el = node as Element
-            return (
-              (el.tagName === 'IFRAME' &&
-                (el.getAttribute('src')?.includes('instagram.com') || el.classList.contains('ql-video'))) ||
-              el.querySelector?.('iframe[src*="instagram.com"]')
-            )
-          }
-          return false
-        })
+    // Facade уже в зоне видимости (±MARGIN) монтируем сразу по rect — это надёжнее,
+    // чем ждать первого колбэка IO, который в части движков не стреляет для
+    // элементов, попавших во вьюпорт ещё до observe.
+    const scan = () => {
+      const viewportH = window.innerHeight || document.documentElement.clientHeight || 0
+      collectFacades().forEach((facade) => {
+        const rect = facade.getBoundingClientRect()
+        if (rect.top < viewportH + MARGIN && rect.bottom > -MARGIN) {
+          mountEmbed(facade)
+        } else if (io) {
+          io.observe(facade)
+        } else {
+          mountEmbed(facade)
+        }
       })
+    }
 
-      if (hasNewIframes) {
-        debouncedProcess()
-      }
-    })
+    scan()
+    const rafId = window.requestAnimationFrame(scan)
+    const initialTimeoutId = setTimeout(scan, 1000)
 
-    const richTextContainer = document.querySelector(`.${WEB_RICH_TEXT_CLASS}`)
+    const richTextContainer = document.querySelector(`.${WEB_RICH_TEXT_CLASS}`) || document.body
+    let mutationObserver: MutationObserver | null = null
     if (richTextContainer) {
-      observer.observe(richTextContainer, {
-        childList: true,
-        subtree: true,
-      })
+      mutationObserver = new MutationObserver(() => scan())
+      mutationObserver.observe(richTextContainer, { childList: true, subtree: true })
     }
-
-    const initialTimeoutId = setTimeout(processInstagramEmbeds, 1000)
 
     return () => {
-      observer.disconnect()
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-      }
+      window.cancelAnimationFrame(rafId)
+      io?.disconnect()
+      mutationObserver?.disconnect()
       clearTimeout(initialTimeoutId)
     }
   }, [prepared])

@@ -55,6 +55,7 @@ const allowedAttributes: sanitizeHtml.IOptions['allowedAttributes'] = {
       'aria-hidden',
       'data-caption',
       'data-align',
+      'data-ig-embed',
     ]),
   ),
   a: ['href', 'name', 'target', 'rel', 'title', 'class'],

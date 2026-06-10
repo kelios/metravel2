@@ -20,8 +20,11 @@ type InstagramTarget = {
   subtitle: string
 }
 
+type InstagramIframeStrategy = 'card' | 'facade' | 'preserve'
+
 type ReplaceInstagramEmbedsOptions = {
   replaceIframes?: boolean
+  iframeStrategy?: InstagramIframeStrategy
 }
 
 const INSTAGRAM_URL_RE = /https?:\/\/(?:www\.)?instagram\.com\/[^\s"'<>]+/i
@@ -144,6 +147,27 @@ export function buildInstagramCardHtml(rawUrl: string): string | null {
   ].join('')
 }
 
+function buildInstagramEmbedSrc(canonicalUrl: string): string {
+  return `${canonicalUrl.replace(/\/$/, '')}/embed/?omitscript=true&hidecaption=1`
+}
+
+export function buildInstagramFacadeHtml(rawUrl: string): string | null {
+  const target = resolveInstagramTarget(rawUrl)
+  if (!target) return null
+
+  const embedSrc = buildInstagramEmbedSrc(target.canonicalUrl)
+
+  return [
+    `<div class="ig-lite" data-ig-embed="${encodeHtml(embedSrc)}">`,
+    '<div class="ig-lite__inner">',
+    '<div class="ig-lite__eyebrow">Instagram</div>',
+    `<a class="ig-lite__title" href="${encodeHtml(target.canonicalUrl)}" target="_blank" rel="noopener noreferrer nofollow">${target.title}</a>`,
+    '<div class="ig-lite__hint">Пост загрузится при прокрутке</div>',
+    '</div>',
+    '</div>',
+  ].join('')
+}
+
 function replaceStandaloneInstagramBlocks(html: string): string {
   return html.replace(
     /<(p|div)([^>]*)>\s*(?:<a\b[^>]*href=(['"])(https?:\/\/(?:www\.)?instagram\.com\/[^'"<>\s]+)\3[^>]*>[\s\S]*?<\/a>|(https?:\/\/(?:www\.)?instagram\.com\/[^\s<]+))\s*<\/\1>/gi,
@@ -154,12 +178,15 @@ function replaceStandaloneInstagramBlocks(html: string): string {
   )
 }
 
-function replaceInstagramIframes(html: string): string {
+function replaceInstagramIframes(
+  html: string,
+  build: (src: string) => string | null = buildInstagramCardHtml,
+): string {
   return html.replace(/<iframe\b([^>]*?)(?:\/>|>[\s\S]*?<\/iframe>)/gi, (full, rawAttrs = '') => {
     const attrs = String(rawAttrs || '')
     const src = attrs.match(/\ssrc=(['"])(.*?)\1/i)?.[2] ?? ''
-    const card = buildInstagramCardHtml(src)
-    return card ?? full
+    if (!/instagram\.com/i.test(src)) return full
+    return build(src) ?? full
   })
 }
 
@@ -183,9 +210,14 @@ export function replaceInstagramEmbedsWithCards(
   const initial = String(html || '')
   if (!initial.trim()) return initial
 
+  const strategy: InstagramIframeStrategy =
+    options.iframeStrategy ?? (options.replaceIframes === false ? 'preserve' : 'card')
+
   let next = initial
-  if (options.replaceIframes !== false) {
-    next = replaceInstagramIframes(next)
+  if (strategy === 'card') {
+    next = replaceInstagramIframes(next, buildInstagramCardHtml)
+  } else if (strategy === 'facade') {
+    next = replaceInstagramIframes(next, buildInstagramFacadeHtml)
   }
   next = replaceInstagramBlockquotes(next)
   next = replaceStandaloneInstagramBlocks(next)
