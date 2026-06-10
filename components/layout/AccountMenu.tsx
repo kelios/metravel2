@@ -27,6 +27,8 @@ import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 
 const IS_WEB = Platform.OS === 'web'
 
+const TASK_BOARD_URL = 'https://metravel.by/board'
+
 type AccountMenuProps = {
   initialOpenKey?: number
 }
@@ -158,7 +160,7 @@ function MenuLink({
 }
 
 function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
-  const { isAuthenticated, username, logout, userId, userAvatar, profileRefreshToken } = useAuth()
+  const { isAuthenticated, isSuperuser, username, logout, userId, userAvatar, profileRefreshToken } = useAuth()
   const { favorites } = useFavorites()
   const colors = useThemedColors()
 
@@ -225,6 +227,11 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
     if (userId) router.push(routes.user(userId))
   }, [userId])
 
+  const handleOpenTaskBoard = useCallback(() => {
+    closeMenu()
+    void openExternalUrlInNewTab(TASK_BOARD_URL, { windowFeatures: 'noopener' })
+  }, [closeMenu])
+
   const handleLogin = useCallback(
     () => navigate(buildLoginHref({ intent: 'menu' })),
     [navigate],
@@ -253,9 +260,19 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
       { key: 'subscriptions', title: 'Подписки', icon: 'users', path: '/subscriptions' },
       { key: 'export', title: 'Экспорт в PDF', icon: 'file-text', path: '/export' },
       { key: 'public-profile', title: 'Публичный профиль', icon: 'users', onPress: handleOpenPublicProfile },
+      ...(isSuperuser
+        ? [
+            {
+              key: 'task-board',
+              title: 'Борд задач',
+              icon: 'trello',
+              onPress: handleOpenTaskBoard,
+            } as MenuLinkItem,
+          ]
+        : []),
       { key: 'logout', title: 'Выход', icon: 'log-out', onPress: handleLogout },
     ],
-    [colors, handleLogout, handleOpenPublicProfile, unreadCount],
+    [colors, handleLogout, handleOpenPublicProfile, handleOpenTaskBoard, isSuperuser, unreadCount],
   )
 
   const profileItem = useMemo<MenuLinkItem>(
