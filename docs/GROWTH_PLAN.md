@@ -74,7 +74,15 @@
 > 3. **`favicon.ico` 244KB** — должен быть <10KB (`public/`). Быстрый вес-вин (нужна явная правка public/).
 > 4. **Belkraj-логотип `tripvenue.com` 165KB** — сторонний, на первом экране. По FE-2b аффилиат-блок должен быть lazy/ниже карты — проверить, не рендерится ли старый Belkraj-блок eager.
 > 5. Total page weight **5.4MB** (тяжёлые description-изображения 247/232/105KB).
-> Отчёт: `lighthouse-report.produrl.mobile.json`. **Не начато по коду** — приоритет фиксов: #2 (eager GPX) и #4 (Belkraj eager) — дешёвые FE-вины; #1 (бандл) — крупный отдельный заход; #3 — нужен исходник фавикона.
+> Отчёт: `lighthouse-report.produrl.mobile.json`. Приоритет фиксов: #2 (eager GPX) и #4 (Belkraj eager) — дешёвые FE-вины; #1 (бандл) — крупный отдельный заход; #3 — нужен исходник фавикона.
+>
+> **FE-1 итерация 1 — ЗАДЕПЛОЕНО 2026-06-10 (коммиты `fffd2cce`, `2a6ba15f`).** Сделаны 3 дешёвых вина:
+> - Belkraj-iframe (165KB+JS) → за IntersectionObserver + `loading="lazy"` (`components/belkraj/BelkrajWidget.tsx`).
+> - GPX-трек (339KB) → загрузка только при подходе карты к вьюпорту (`useTravelDetailsMapSectionContentModel.ts`); на web `canRenderHeavy` был `true` с первого кадра.
+> - `favicon.ico` 243KB → 2.7KB (PNG-in-ICO), подтверждено на проде (`Content-Length` 2724).
+> **Замер после (mobile, single-run):** perf **44→49**, FCP **3.5→3.0с**, TBT **649→497мс**, из начальной загрузки убрано **~747KB**. **Но LCP остался ~10–14с** (шумный single-run). Причина: `largest-contentful-paint-element` = **none**, LCP упирается в гидратацию — main-thread **5.5с**, bootup **3.6с**, unused-JS **592KB** (~3с). **Вывод: LCP <2.5с недостижим без фикса #1 (JS-бандл).**
+>
+> **FE-1 итерация 2 (NOT STARTED, крупный заход) — JS-бандл ~970KB.** `__common` 724KB + `entry` 246KB. Рычаги: tree-shake/тримминг unused-JS 592KB, route-level code-splitting, проверить тяжёлые либы в common-чанке (карты/charts/иконки), возможно сделать SSG-hero стабильным LCP-элементом, чтобы paint не ждал гидратацию. Требует анализа Metro-бандла (`npx expo export` + source-map-explorer / `react-native-bundle-visualizer`).
 | **FE-2** | 🟡 в работе | Belkraj оставляем; ДОБАВИТЬ параллельные партнёрские каналы (см. раздел 7). **Код готов** (`components/affiliate/*`, блок «Полезное в поездку» на travel-details, контекстно по городу). Рендерится только когда задан env-маркер+шаблоны → ждём **OWN-9** (ID/deep-link из дашборда Travelpayouts) | `components/affiliate/*` | ✅ компонент + конфиг; ⏳ env от владельца |
 | **FE-3** | ✅ done | Трекинг конверсий. **Готово:** партнёрка `Affiliate_Impression`/`Affiliate_Click`; регистрация `AuthSuccess`; **PDF-экспорт** `PDF_Export` (`hooks/usePdfExport.ts`, при `openPrintBook`, с `travelsCount`+`template`); **добавление места** `Place_Added` (`components/travel/hooks/usePointListAddPointModel.ts`, после успешного `createPoint`). Все через `queueAnalyticsEvent` (неблокирующий, GA4+Metrika). | `utils/analytics.ts`, `hooks/usePdfExport.ts`, `components/travel/hooks/usePointListAddPointModel.ts` | ✅ партнёрка + регистрация + PDF + add-place трекаются |
 | **FE-2b** | ✅ done | Не грузить тяжёлые виджеты выше скролла (LCP) — lazy. Affiliate-блок: `React.lazy` + web-only + ниже карты, текстовые карточки (без iframe), impression по IntersectionObserver | `components/affiliate/*` | Партнёрский блок не бьёт по LCP |
