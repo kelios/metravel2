@@ -53,25 +53,20 @@ curl -s -H "Authorization: Token $METRAVEL_TASK_BOARD_API_TOKEN" https://metrave
 Модель: `Task{title, description, status: backlog→todo→in_progress→review→done, area: front|back,
 reporter, assignee, blocked_by, sprint}`. Заголовок с префиксом источника `[FE-…]`/`[BE-…]`.
 
-## Миграция оставшихся локальных тикетов на борд
+## Миграция локальных тикетов на борд — ВЫПОЛНЕНО (2026-06-10)
 
-После setup один раз импортировать открытый бэклог:
+Открытый бэклог импортирован на борд (спринт #1 «Backlog migration 2026-06-10», статус
+`active`): **30 задач** в `backlog` — 4 `front` (slug-301 e2e опц., SPA new-version,
+secure-storage token, Nominatim→React Query) + 26 `back` (avatar repro, IG OAuth env, ротация
+токена, BE P3 perf/debt, архитектурный батч 053–065). `001` (image AVIF) не импортирован —
+фактически закрыт. Локальные `tasks/*.md` после импорта удалены (борд — источник правды),
+остались только `000-template.md` (формат `description`) и `README.md`.
 
-> «ticket-board: импортируй открытые `tasks/*.md` на борд (area: бэкенд-репо → `back`,
-> этот репо → `front`), задачи без активного спринта — в новый спринт».
+Дальше задачи ведутся только на борде: новые — через `ticket-board` (`metravel_task_create`),
+прогон — `/ticket-flow`. Бэкенд-очередь и доказательства закрытия по-прежнему сверяет
+`backend-status-sync` → `docs/BACKEND_WORKBOARD.md` до полного переноса трекинга на борд.
 
-Открытый бэклог на 2026-06-10 (после чистки закрытых):
-
-- **front:** `070` SPA new-version detection, `073` secure-storage token (XOR weak),
-  `074` Nominatim fetch → React Query, `004` slug old→301 e2e-регрессия (опц.).
-- **back (трекинг, реализация в бэк-репо):** `007` avatar repro (BE-016), `069` IG OAuth env
-  (BE-066, OWNER), `072` ротация утёкшего токена (BE-068, OWNER), `021/033/041/045-050/052`
-  (BE P3 — большинство имеют коммит в батче 2026-06-10, нужна доперепроверка), `053`–`065`
-  архитектурный батч (tech-debt). `001` (image AVIF) — фактически закрыт, импортировать не обязательно.
-
-После успешного импорта соответствующие `tasks/*.md` можно удалить (борд — источник правды).
-Бэкенд-очередь и доказательства по-прежнему сверяются агентом `backend-status-sync` и
-отражаются в `docs/BACKEND_WORKBOARD.md` до полного переноса трекинга на борд.
+Повторный импорт не запускать (создаст дубликаты) — дедуп по префиксу заголовка `[TASK-…]`.
 
 ## Безопасность
 
