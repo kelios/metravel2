@@ -1,240 +1,52 @@
-# CLAUDE.md — MeTravel Project Context
+# CLAUDE.md — MeTravel
 
-## Краткое описание
+Кросс-платформенное туристическое приложение (iOS/Android/Web). Это репо — только фронтенд. Бэкенд — отдельный сервис (см. раздел «Бэкенд»).
 
-MeTravel — кросс-платформенное туристическое приложение (iOS, Android, Web).
-Монорепо: только фронтенд (React Native + Expo). Бэкенд — отдельный сервис.
+## Стек
+React 19 + React Native 0.84 + Expo 55 (Expo Router, file-based) · web: RN Web + Metro · TanStack Query 5 (серверный стейт, `api/*/Queries.ts`) · Zustand 5 (`stores/`) · карты: Leaflet (web) / RN Maps (native) · Reanimated 4 · yup · TypeScript 5.7 strict · Jest 29 + Playwright 1.49 · ESLint 9 + Prettier 3 (no semicolons, single quotes) · yarn 1.22 · EAS Build.
 
----
-
-## Стек технологий
-
-| Слой | Технология |
-|------|-----------|
-| UI-фреймворк | React 19, React Native 0.84, Expo 55 |
-| Навигация | Expo Router 55 (file-based, как Next.js) |
-| Web | React Native Web + Metro bundler |
-| Серверный стейт | TanStack React Query 5 |
-| Клиентский стейт | Zustand 5 |
-| Карты (web) | Leaflet 1.9 + React Leaflet |
-| Карты (native) | React Native Maps + Apple Maps |
-| Анимации | React Native Reanimated 4 |
-| Формы/валидация | yup |
-| Типизация | TypeScript 5.7, strict mode |
-| Тесты (unit) | Jest 29 + @testing-library |
-| Тесты (e2e) | Playwright 1.49 |
-| Линтер | ESLint 9 (FlatConfig) |
-| Форматирование | Prettier 3 (no semicolons, single quotes) |
-| Билд | EAS Build (Expo Application Services) |
-| Пакетный менеджер | yarn 1.22 |
-
----
-
-## Структура проекта
-
-```
-app/              # Экраны (Expo Router, file-based routing)
-  (tabs)/         # Таб-навигация
-components/       # React-компоненты, организованы по фиче
-  ui/             # Переиспользуемые UI-компоненты (Image, Card и т.д.)
-  common/         # Общие компоненты
-  layout/         # Лейаут-компоненты
-  article/        # Компоненты для статей
-  travel/         # Компоненты для путешествий
-  map/            # Компоненты карт
-hooks/            # Кастомные React hooks
-utils/            # Утилиты и хелперы
-api/              # API-клиент и TanStack Query hooks
-stores/           # Zustand stores (8 stores)
-context/          # React Context (AuthContext, FavoritesContext и др.)
-assets/           # Изображения, шрифты, иконки
-constants/        # Константы приложения
-types/            # TypeScript типы
-styles/           # Глобальные CSS
-config/           # Конфигурационные файлы
-scripts/          # Build и dev скрипты
-docs/             # Документация проекта
-__tests__/        # Jest unit-тесты
-e2e/              # Playwright e2e-тесты
-plugins/          # Expo плагины
-public/           # Статика (robots.txt, sitemap.xml)
-```
-
----
+## Структура
+`app/` экраны (Expo Router, `(tabs)/` — табы) · `components/` по фиче (`ui/`, `common/`, `layout/`, `article/`, `travel/`, `map/`) · `hooks/` · `utils/` · `api/` · `stores/` · `context/` · `constants/` · `types/` · `config/` · `scripts/` · `docs/` · `__tests__/` · `e2e/` · `public/` (robots, sitemap).
 
 ## Команды
+- dev: `npm start` | `npm run web` | кэш: `npm run clean` / `reset`
+- build: `npm run build:web` (→ `dist/prod/`), `build:web:prod` (с SEO-страницами), `ios:build:prod` / `android:build:prod` (EAS)
+- тесты: `npm run test:run` (Jest, один прогон), `test:coverage`, `e2e` (Playwright), `test:smoke:critical`
+- качество: `npm run lint`, `typecheck`, `format`, `guard:external-links`, `check:image-architecture`, `guard:file-complexity`
+- релиз: `npm run release:check`
 
-### Разработка
-```bash
-npm start              # Expo dev server
-npm run web            # Web dev mode
-npm run ios            # iOS симулятор
-npm run android        # Android эмулятор
-npm run clean          # Очистка кэша
-npm run reset          # Полный сброс кэша
-```
-
-### Сборка
-```bash
-npm run build:web      # Продакшн-сборка для web → dist/prod/
-npm run build:web:prod # Полная сборка с SEO-страницами
-npm run ios:build:prod # iOS через EAS
-npm run android:build:prod # Android через EAS
-```
-
-### Тесты
-```bash
-npm run test           # Jest в watch-режиме
-npm run test:run       # Один прогон Jest
-npm run test:coverage  # Coverage report
-npm run e2e            # Playwright (headless)
-npm run e2e:headed     # Playwright с UI
-npm run test:smoke:critical # Smoke-тесты критических путей
-```
-
-### Качество кода
-```bash
-npm run lint           # ESLint
-npm run typecheck      # TypeScript проверка
-npm run format         # Prettier
-npm run guard:external-links  # Проверка прямых вызовов Linking.openURL
-npm run check:image-architecture # Проверка архитектуры изображений
-```
-
-### Релиз
-```bash
-npm run release:check  # Полная проверка (lint + tests + build + audit + e2e)
-```
-
----
-
-## Правила редактирования кода
-
-### Обязательно
-- Все изображения в фичевых компонентах — только через `components/ui/ImageCardMedia.tsx`
+## Правила кода
+- Изображения в фичевых компонентах — только через `components/ui/ImageCardMedia.tsx` (прямой импорт `expo-image` запрещён ESLint-гвардом)
 - Travel-карточки — только через `components/ui/UnifiedTravelCard.tsx`
-- Внешние ссылки — только через `@/utils/externalLinks.openExternalUrl`, **не** `Linking.openURL()`
-- Серверный стейт — TanStack React Query (файлы `api/*/Queries.ts`)
-- Клиентский стейт — Zustand (`stores/`)
-- Импорты через алиас `@/` (маппинг на корень проекта)
+- Внешние ссылки — только `@/utils/externalLinks.openExternalUrl`, не `Linking.openURL` (гвард)
+- Серверный стейт — React Query, клиентский — Zustand; импорты через алиас `@/`
+- TS strict; новый `any` запрещён в `api/`, `hooks/`, `stores/`; RN Web-совместимость для всех компонентов, используемых на web
+- НЕ добавлять: комментарии/docstrings к нетронутому коду, error handling невозможных сценариев, абстракции для одноразовых операций, backwards-compat костыли
 
-### Стиль кода
-- TypeScript strict, новый `any` запрещён в `api/`, `hooks/`, `stores/`
-- Prettier: no semicolons, single quotes, JSX brackets on same line
-- React Native Web совместимость для всех компонентов, используемых на web
+## Не трогать без явного запроса
+`eas.json`, `app.json`, `.github/workflows/`, `nginx/`, `plugins/`, `scripts/`, `public/robots.txt`, `public/sitemap.xml`, `entry.js`
 
-### Что не нужно делать
-- Не добавлять docstrings/комментарии к нетронутому коду
-- Не вводить error handling для невозможных сценариев
-- Не создавать абстракции для одноразовых операций
-- Не добавлять backwards-compatibility костыли
+## Бэкенд
+**НЕ правим — только заводим задачи.** Репо `../metravel-backend` (D:\metravel\metravel-backend), владелец — Sergey/Codex. Читаем и диагностируем, но НИКОГДА не редактируем его код (.py, тесты, миграции, конфиги, деплой). Нужная правка бэка = TASK-файл `tasks/NNN-*.md` (шаблон `tasks/000-template.md`, Owner: Backend) + строка в `docs/BACKEND_WORKBOARD.md`. Случайно изменил файл бэка — откати (`git checkout -- <file>`) и переоформи задачей. Диагност — агент `backend-expert` (read-only по бэку).
 
----
+## Окружение
+- API: `EXPO_PUBLIC_API_URL` (прод `https://metravel.by`), авторизация `Authorization: Token <token>`
+- Env-файлы: `.env`, `.env.dev`, `.env.prod`, `.env.e2e`, `.env.preprod`; локальный API: `EXPO_PUBLIC_IS_LOCAL_API=true`; routing-карты: `EXPO_PUBLIC_ORS_API_KEY`
+- Авторизованный QA: e2e-аккаунт из `.env.e2e` (`E2E_EMAIL`/`E2E_PASSWORD`) через программный логин (login API → Token) или Playwright auth setup; без ручного ввода пароля, без секретов в логах/скринах; только локально/preview, без деструктива
+- Всегда верифицировать самому (браузер/тесты) до сдачи — не отмечать «готово», пока проверка не прошла. Нестабильный dev-сервер — перезапускать и повторять; если проверить реально невозможно из-за внешнего блокера — явно `verify pending` с причиной
 
-## Что нельзя трогать без явного запроса
+## Секреты
+Никогда не просить пользователя вставлять секреты в чат. Вместо этого: указать путь к gitignored-файлу (`.secrets/<имя>.json`) или env-переменную — пользователь кладёт сам; перед использованием проверить `git check-ignore <path>`; код читает ключ из файла/env, не хардкодит; секрет, показанный в чате/закоммиченный = утёк → явно сказать и поставить задачу на ротацию; не логировать секреты. Текущие ключи: Google → `.secrets/gcp-service-account.json`, OAuth → `.secrets/google-oauth-*.json` (`npm run stats:gsc` / `stats:ga4`).
 
-- `eas.json` — конфиги EAS-билдов (iOS/Android сертификаты, треки дистрибуции)
-- `app.json` — bundle IDs, app version, Expo плагины
-- `.github/workflows/` — CI/CD пайплайны
-- `nginx/` — конфиги веб-сервера
-- `plugins/` — кастомные Expo плагины
-- `scripts/` — билд-скрипты и SEO-генераторы
-- `public/robots.txt`, `public/sitemap.xml` — SEO-конфиги
-- `entry.js` — точка входа приложения
+## Архитектурные правила (web-перформанс)
+1. **iOS Safari + `ImageCardMedia`** (contain + `allowCriticalWebBlur`): НЕ показывать главное изображение до завершения декода — WebKit рисует «размытый прогрессивный кадр», если открыть `<img>` до `onLoad`. `priority="high"` задаёт только `fetchPriority`, reveal всё равно ждёт декод (`shouldShowWebImageImmediately` в `ImageCardMedia.tsx`). Featured- и popular-карточки одинаковы по моменту показа sharp-кадра.
+2. **`backdrop-filter: blur()` на fixed/sticky барах**: блюр не отключать (часть дизайна), но живой backdrop-filter поверх скролла убивает мобильный GPU. На мобильном — статичный «фрост» `colors.surfaceMuted` (`rgba(255,255,255,0.75)` / dark `rgba(42,42,42,0.75)`); живой блюр — только на десктопных элементах. Применено: `components/layout/BottomDock.tsx`, `components/travel/details/TravelStickyActions.tsx`.
 
----
+## Git
+Только ветка `main`, без новых веток и без worktrees. Коммитить из основного каталога репозитория.
 
-## Бэкенд и окружение
+## Skills
+Карта skills и сценариев — `docs/CODEX.md`. `$metravel-hook-builder` — вынос/упрощение focused hooks; `$metravel-quality-fixer` — полный прогон lint/Jest/Playwright до зелёного; `$metravel-code-reviewer` — review diff перед handoff.
 
-- **Бэкенд НЕ правим — только заводим задачи.** Бэкенд лежит в отдельном репозитории
-  `../metravel-backend` (D:\metravel\metravel-backend), владелец — Sergey/Codex. Мы (этот репо
-  и его агенты) бэкенд **читаем и диагностируем**, но НИКОГДА не редактируем его код (`.py`,
-  тесты, миграции, конфиги, деплой). Любая нужная правка бэка оформляется как **TASK-файл** в
-  `tasks/NNN-*.md` (по шаблону `tasks/000-template.md`, Owner: Backend) + строка в
-  `docs/BACKEND_WORKBOARD.md`. Если случайно изменил файл в `../metravel-backend` — откати
-  (`git checkout -- <file>`, не задев чужие незакоммиченные правки) и переоформи как задачу.
-  Профильный агент-диагност — `backend-expert` (read-only по бэку, на выходе только задача).
-- API базовый URL: `EXPO_PUBLIC_API_URL` (прод: `https://metravel.by`)
-- Авторизация: `Authorization: Token <token>`
-- Env-файлы: `.env`, `.env.dev`, `.env.prod`, `.env.e2e`, `.env.preprod`
-- Локальный API: `EXPO_PUBLIC_IS_LOCAL_API=true`
-- Карты (routing): `EXPO_PUBLIC_ORS_API_KEY` (OpenRouteService, опционально)
-- Авторизованный QA: можно логиниться тестовым e2e-аккаунтом из `.env.e2e` (`E2E_EMAIL`/`E2E_PASSWORD`) через e2e-механизм (Playwright auth setup или программный логин: login API → `Authorization: Token`), без ручного ввода пароля в поля и без вывода секретов в логи/скрины. Только для локального/preview QA, без деструктивных действий.
-- Всегда проверять самому: агент сам верифицирует свои изменения (браузер/тесты) до сдачи — не перекладывать проверку на пользователя и не отмечать «готово/исправлено», пока верификация не завершена. Если preview/dev-сервер нестабилен (краши, медленный бандл, редиректы, таймауты API) — перезапускать, ждать, повторять до фактической проверки; нестабильность не повод пропускать верификацию. Если проверить реально невозможно из-за внешнего блокера — явно указать `verify pending` с конкретной причиной.
-
----
-
-## Секреты и ключи (правило обращения)
-
-**Никогда не проси пользователя вставлять секреты (приватные ключи, токены, пароли,
-service-account JSON) в чат.** Вместо этого:
-
-1. **Дай инструкцию, КУДА положить ключ самому** — точный путь к gitignored-файлу
-   (`.secrets/<имя>.json`) или имя env-переменной. Пользователь кладёт файл сам, в чат
-   не присылает.
-2. **Перед использованием убедись, что путь в `.gitignore`** (`git check-ignore <path>`).
-   Каталог `.secrets/`, `*.gcp.json`, `gcp-service-account*.json` уже игнорируются.
-3. **Код читает ключ из файла/env**, не хардкодит — замена/ротация ключа = просто заменить
-   файл, без правок кода (см. `scripts/lib/google-auth.js`).
-4. **Если секрет всё же был показан в чате** — он считается утёкшим: явно скажи это и
-   поставь задачу на ротацию (удалить старый, выпустить новый).
-5. **Не логируй секреты** (echo/cat ключа, печать токена). В выводе — только статусы.
-
-Текущие ключи: Google service-account → `.secrets/gcp-service-account.json`
-(скрипты `npm run stats:gsc` / `stats:ga4`).
-
----
-
-## Важные архитектурные правила
-
-1. **Image компоненты**: прямой импорт `expo-image` в фичевые компоненты запрещён ESLint-гвардом
-2. **External links**: ESLint-гвард запрещает `Linking.openURL` напрямую
-3. **Сложность файлов**: `npm run guard:file-complexity` следит за размером файлов
-4. **Тесты исключены из coverage**: Map-компоненты, image upload, ArticleEditor, GalleryLayout
-5. **iOS Safari + `ImageCardMedia` (contain + `allowCriticalWebBlur`)**: НЕ показывать главное
-   изображение до завершения декода на iPhone/iPad Safari. WebKit рисует «размытый
-   прогрессивный кадр» у contain-карточек с общим blur, если открыть `<img>` до `onLoad`
-   (виднее всего на крупной карточке «Маршрут недели»). `priority="high"` НЕ должен
-   обходить эту защиту — он лишь задаёт `fetchPriority`, но reveal всё равно ждёт декод
-   (см. `shouldShowWebImageImmediately` в `components/ui/ImageCardMedia.tsx`). Featured- и
-   popular-карточки обязаны вести себя одинаково по reveal; различаться можно только
-   `quality`/`loading`/`fetchPriority`, но не моментом показа sharp-кадра.
-6. **`backdrop-filter: blur()` на фиксированных/sticky барах**: блюр (эффект матового
-   стекла) НЕ отключать — это часть дизайна. Но «живой» `backdrop-filter` поверх
-   скроллящегося контента заставляет браузер пересчитывать блюр на КАЖДОМ кадре скролла
-   и убивает производительность скролла на мобильных GPU. Поэтому на **мобильном** вместо
-   живого блюра использовать **статичный «фрост»** — полупрозрачный фон `colors.surfaceMuted`
-   (`rgba(255,255,255,0.75)` / dark `rgba(42,42,42,0.75)`): выглядит как матовое стекло, но
-   без пересчёта блюра. Живой `backdrop-filter` оставлять только на **десктопных**
-   элементах (боковое меню, hero), где нет мобильного GPU-ограничения. Применено в
-   `components/layout/BottomDock.tsx` (dock — mobile-only) и
-   `components/travel/details/TravelStickyActions.tsx` (бар действий — mobile-only).
-
----
-
-## Git-правила
-
-- Работать только в ветке `main`
-- Не создавать новые ветки
-- Не использовать git worktrees
-- Все изменения вносить напрямую в `main` из `/Users/juliasavran/Sites/metravel2/metravel2`
-- Коммитить всегда из директории основного репозитория (не из worktree-пути)
-
----
-
-## Skills для агентского workflow
-
-- Полная карта skills и сценариев их выбора живёт в `docs/CODEX.md`.
-- `$metravel-hook-builder` — используй, когда задача в основном состоит в выносе или упрощении focused React hooks, cleanup hook-границ и сохранении текущих public contracts.
-- `$metravel-quality-fixer` — используй, когда задача состоит в полном прогоне lint/Jest/Playwright, исправлении найденных падений и повторной валидации до зелёного baseline.
-- `$metravel-code-reviewer` — используй для focused review diff'а перед handoff: поиск рисков, rule violations, validation gaps и residual risk.
-
----
-
-## Стиль ответов Claude в этом проекте
-
-1. Сначала короткий план (2-5 пунктов) — что и где меняется
-2. Затем изменения кода
-3. Без повторения условия задачи
-4. Без trailing summary ("итак, я сделал...")
-5. Ссылки на файлы в формате `path/to/file.tsx:line`
+## Стиль ответов
+Короткий план (2–5 пунктов) → изменения кода; без пересказа условия и trailing summary; ссылки `path/to/file.tsx:line`. Экономить контекст: поиск и массовое чтение файлов делегировать субагентам (Explore), не читать большие файлы целиком без необходимости.

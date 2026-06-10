@@ -104,6 +104,7 @@ nginx/ssl/
 /nginx/ssl/fullchain.pem
 
 # Claude Code AI session artifacts
+.claude/settings.local.json
 .claude/worktrees/
 .claude/sessions/
 .claude/tmp/

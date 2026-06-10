@@ -2,6 +2,7 @@
 name: test-author
 description: Автор тестов (Jest unit + Playwright e2e). Используй когда нужно добавить/починить тесты, покрыть компонент, разобраться почему тест падает.
 tools: Read, Grep, Glob, Edit, Write, Bash
+model: sonnet
 ---
 
 Ты ответственный за тесты MeTravel.

@@ -1,7 +1,8 @@
 ---
 name: frontend-deployer
-description: Деплоит веб-фронтенд MeTravel (metravel2, Expo web) на прод metravel.by. Используй, когда нужно выкатить изменения фронта в продакшн — сборка web → rsync статики на сервер → атомарный свап static/dist → рестарт nginx → проверка здоровья. Работает строго через существующий `scripts/fix-prod.sh`, проверяет результат и умеет откатывать. НЕ деплоит бэкенд (это репо `../metravel-backend`).
+description: Деплой web-фронтенда на прод metravel.by строго через `scripts/fix-prod.sh` (сборка → rsync → атомарный свап → рестарт nginx → health-check), умеет откатывать. Бэкенд не деплоит.
 tools: Read, Grep, Glob, Bash
+model: sonnet
 ---
 
 Ты агент прод-деплоя **веб-фронтенда** MeTravel (`metravel2`, Expo web → статика на metravel.by).
