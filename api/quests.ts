@@ -151,9 +151,36 @@ export type ApiQuestProgressCreate = {
 
 // ===================== API ФУНКЦИИ =====================
 
+type PaginatedEnvelope<T> = {
+    data?: T[];
+    results?: T[];
+    next_page_url?: string | null;
+    next?: string | null;
+};
+
+/** Бэкенд перевёл списочные эндпоинты на пагинацию ({data/results, next}) — разворачиваем конверт и дочитываем все страницы. */
+async function fetchAllPages<T>(path: string, maxPages = 20): Promise<T[]> {
+    const out: T[] = [];
+    let page = 1;
+    for (let i = 0; i < maxPages; i++) {
+        const url = page === 1 ? path : `${path}${path.includes('?') ? '&' : '?'}page=${page}`;
+        const res = await apiClient.get<T[] | PaginatedEnvelope<T>>(url);
+        if (Array.isArray(res)) {
+            out.push(...res);
+            break;
+        }
+        out.push(...(res?.data ?? res?.results ?? []));
+        const next = res?.next_page_url ?? res?.next ?? null;
+        const match = typeof next === 'string' ? next.match(/[?&]page=(\d+)/) : null;
+        if (!match) break;
+        page = Number(match[1]);
+    }
+    return out;
+}
+
 /** Получить список всех квестов (метаданные) */
 export async function fetchQuestsList(): Promise<ApiQuestMeta[]> {
-    return apiClient.get<ApiQuestMeta[]>('/quests/');
+    return fetchAllPages<ApiQuestMeta>('/quests/');
 }
 
 /** Получить квесты по городу */
@@ -176,7 +203,7 @@ export async function fetchQuestById(id: number): Promise<ApiQuestBundle> {
 
 /** Получить список городов с квестами */
 export async function fetchQuestCities(): Promise<ApiQuestCity[]> {
-    return apiClient.get<ApiQuestCity[]>('/quests/cities/');
+    return fetchAllPages<ApiQuestCity>('/quests/cities/');
 }
 
 // ---- Прогресс ----
