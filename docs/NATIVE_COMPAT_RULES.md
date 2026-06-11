@@ -90,6 +90,8 @@ skill `android-native-audit` (семантические).
 | Слой | Файл |
 |---|---|
 | Автостраж (CI) | `__tests__/config/native-compat-governance.test.ts` |
-| Агент-эксперт | `.claude/agents/android-expert.md` |
-| Скилл-аудит | `.claude/skills/android-native-audit/SKILL.md` |
+| Codex Android developer | `.codex/skills/metravel-android-developer/SKILL.md` |
+| Codex mobile tester | `.codex/skills/metravel-mobile-tester/SKILL.md` |
+| Legacy Claude агент-эксперт | `.claude/agents/android-expert.md` |
+| Legacy Claude скилл-аудит | `.claude/skills/android-native-audit/SKILL.md` |
 | Карта проекта | `CLAUDE.md` → «Android / native» |

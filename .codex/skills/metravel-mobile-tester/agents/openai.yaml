@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel Mobile Tester"
+  short_description: "Test mobile web and Android/native flows read-only."
+  default_prompt: "Use $metravel-mobile-tester to run read-only mobile QA for metravel across mobile web and Android/native surfaces, collect safe evidence, report bugs with reproduction steps, and route fixes to the right skill without printing secrets."
