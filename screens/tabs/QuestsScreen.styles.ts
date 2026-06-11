@@ -526,6 +526,15 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                     animationDuration: '0.2s',
                     animationTimingFunction: 'ease',
                 } as any,
+                // Native: position the backdrop explicitly — web-only styles above
+                // left the overlay zero-sized on iOS/Android, so the drawer never
+                // appeared visually (F-20).
+                default: {
+                    ...StyleSheet.absoluteFillObject,
+                    backgroundColor: colors.overlay,
+                    zIndex: 999,
+                    elevation: 8,
+                },
             }),
         },
         sidebarMobile: {
@@ -546,6 +555,18 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                     animationDuration: '0.25s',
                     animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
                 } as any,
+                default: {
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    bottom: 0,
+                    width: Math.min(340, Math.round(screenWidth * 0.88)),
+                    zIndex: 1000,
+                    elevation: 12,
+                    borderTopRightRadius: PANEL_RADIUS,
+                    borderBottomRightRadius: PANEL_RADIUS,
+                    overflow: 'hidden',
+                },
             }),
         },
 

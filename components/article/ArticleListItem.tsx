@@ -3,6 +3,7 @@ import React, { useCallback, useMemo } from 'react';
 import { View, Pressable, Dimensions, StyleSheet } from 'react-native';
 import { Article } from '@/types/types';
 import { Card, Title, Paragraph, Text } from '@/ui/paper';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { widthPercentageToDP as wp } from 'react-native-responsive-screen';
 import RenderHTML from 'react-native-render-html';
 import { router, type Href } from 'expo-router';
@@ -15,8 +16,7 @@ type ArticleListItemProps = {
 };
 
 const { width } = Dimensions.get('window');
-const DEFAULT_IMAGE =
-    'https://metravel.by/media/2014/J6LCVaIYULghPG2Hin0lu8m8U3ZKPMhIQvRiWgGM.jpg';
+const IMAGE_HEIGHT = width < 600 ? 340 : 500;
 
 const ArticleListItem: React.FC<ArticleListItemProps> = ({ article }) => {
   const { id, name, description, article_image_thumb_url, article_type } = article;
@@ -67,9 +67,12 @@ const ArticleListItem: React.FC<ArticleListItemProps> = ({ article }) => {
         >
           <Card style={styles.card}>
             <View style={styles.imageWrapper}>
-              <Card.Cover
-                  source={{ uri: article_image_thumb_url || DEFAULT_IMAGE }}
-                  style={styles.image}
+              <ImageCardMedia
+                  src={article_image_thumb_url || null}
+                  alt={name}
+                  height={IMAGE_HEIGHT}
+                  fit="cover"
+                  borderRadius={0}
               />
             </View>
             <Card.Content>
@@ -109,12 +112,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderTopLeftRadius: DESIGN_TOKENS.radii.md,
     borderTopRightRadius: DESIGN_TOKENS.radii.md,
     overflow: 'hidden',
-    alignItems: 'center',
-  },
-  image: {
-    aspectRatio: 1,
-    width: '100%',
-    height: width < 600 ? 340 : 500,
   },
   htmlText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,

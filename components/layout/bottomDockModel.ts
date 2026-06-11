@@ -5,6 +5,7 @@ type BottomDockFeatherIconName =
   | 'clock'
   | 'compass'
   | 'disc'
+  | 'file-text'
   | 'flag'
   | 'mail'
   | 'map'
@@ -56,6 +57,7 @@ export const BOTTOM_DOCK_MORE_MENU_SECTIONS: BottomDockMoreMenuSection[] = [
     items: [
       { key: 'search', label: 'Беларусь', accessibilityLabel: 'Беларусь', route: '/travelsby', iconName: 'flag' },
       { key: 'places', label: 'Места', accessibilityLabel: 'Места', route: '/places', iconName: 'map-pin' },
+      { key: 'articles', label: 'Статьи', accessibilityLabel: 'Статьи', route: '/articles', iconName: 'file-text' },
       { key: 'roulette', label: 'Случайный маршрут', accessibilityLabel: 'Случайный маршрут', route: '/roulette', iconName: 'shuffle' },
       { key: 'history', label: 'История просмотров', accessibilityLabel: 'История просмотров', route: '/history', iconName: 'clock' },
       { key: 'travel-new', label: 'Создать маршрут', accessibilityLabel: 'Создать маршрут', route: '/travel/new', iconName: 'plus-circle' },

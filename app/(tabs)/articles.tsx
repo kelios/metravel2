@@ -61,7 +61,7 @@ export default function TabOneScreen() {
   // ✅ ИСПРАВЛЕНИЕ: Обработка состояний загрузки и ошибок
   if (isLoading && !articles) {
     return (
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <View style={styles.container}>
           <View style={styles.content}>
             <View style={{ padding: 16 }}>
@@ -80,7 +80,7 @@ export default function TabOneScreen() {
 
   if (isError && !articles) {
     return (
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <View style={styles.container}>
           <View style={styles.content}>
             <ErrorDisplay
@@ -96,7 +96,7 @@ export default function TabOneScreen() {
 
   if (!articles || !articles.data || articles.data.length === 0) {
     return (
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <View style={styles.container}>
           <View style={styles.content}>
             <EmptyState
@@ -112,7 +112,7 @@ export default function TabOneScreen() {
   }
 
   return (
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         {isFocused && (
           <InstantSEO
             headKey="articles"
@@ -192,6 +192,10 @@ export default function TabOneScreen() {
 
 const getStyles = (colors: ReturnType<typeof useThemedColors>) => {
   return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
     container: {
       flex: 1,
       flexDirection: 'row',

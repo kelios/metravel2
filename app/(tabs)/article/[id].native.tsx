@@ -89,12 +89,16 @@ export default function ArticleDetails() {
   }, [numericId, normalizedSlug])
 
   if (isLoading) {
-    return <ActivityIndicator />
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+        <ActivityIndicator style={styles.loader} color={colors.primary} />
+      </SafeAreaView>
+    )
   }
 
   if (!article || errorMessage) {
     return (
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <ScrollView style={styles.container} contentContainerStyle={styles.centerContent}>
           <Title style={styles.errorTitle}>Статья не найдена</Title>
           <SafeHtml html={errorMessage || 'Проверьте ссылку на статью.'} />
@@ -104,7 +108,7 @@ export default function ArticleDetails() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
         <Stack.Screen options={{ headerTitle: article.name }} />
         {article.description && (
@@ -155,6 +159,13 @@ export default function ArticleDetails() {
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    loader: {
+      flex: 1,
+    },
     container: {
       flex: 1,
       backgroundColor: colors.background,

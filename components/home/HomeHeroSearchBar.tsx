@@ -42,7 +42,7 @@ function HomeHeroSearchBar({
           value={value}
           onChangeText={setValue}
           onSubmitEditing={handleSubmit}
-          placeholder="Куда хотите поехать? Город, озеро, замок…"
+          placeholder={Platform.OS === 'web' ? 'Куда хотите поехать? Город, озеро, замок…' : 'Куда хотите поехать?'}
           placeholderTextColor={inputMutedColor}
           returnKeyType="search"
           style={[styles.input, { color: inputTextColor }]}

@@ -154,7 +154,7 @@ export default function QuestsMapScreen() {
                     onPress={handleBack}
                     style={[styles.fabBack, { top: Math.max(12, insets.top + 4) }]}
                     accessibilityRole="button"
-                    accessibilityLabel="ÐÐ°Ð·Ð°Ð´"
+                    accessibilityLabel="Назад"
                 >
                     <Feather name="arrow-left" size={18} color={colors.text} />
                 </Pressable>

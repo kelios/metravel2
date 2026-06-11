@@ -1,5 +1,6 @@
 import { Platform, StyleSheet } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { MODERN_MATTE_PALETTE } from '@/constants/modernMattePalette'
 import type { useThemedColors } from '@/hooks/useTheme'
 
 export const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
@@ -305,7 +306,8 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
   imageBadgeText: {
     fontSize: 11,
     fontWeight: '600' as any,
-    color: colors.text,
+    // Пилюля всегда белая — текст всегда тёмный, иначе в тёмной теме белое-на-белом
+    color: MODERN_MATTE_PALETTE.text,
     letterSpacing: 0.3,
   },
 })

@@ -2,9 +2,10 @@ import { useMemo } from 'react';
 import { Platform } from 'react-native';
 import { useGlobalSearchParams, useLocalSearchParams, usePathname } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import type { Travel } from '@/types/types';
+import type { Article, Travel } from '@/types/types';
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
+import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/api/articles';
 import { consumePreloadedTravel } from '@/hooks/useTravelDetails';
 import { fetchQuestByQuestId, type ApiQuestBundle } from '@/api/quests';
 import { fetchUserProfile, type UserProfileDto } from '@/api/user';
@@ -225,6 +226,33 @@ export function useBreadcrumbModel(): BreadcrumbModel {
   });
   const questApiTitle = questApiData?.title || '';
 
+  // Article title from API (for header/breadcrumbs on /article/[id] pages — F-19)
+  const articleParamForBreadcrumb = useMemo(() => {
+    const p = resolvedPathname;
+    if (!p || !p.startsWith('/article/')) return null;
+    const parts = p.split('/').filter(Boolean);
+    return parts.length >= 2 ? normalizeSlugPart(parts[1]) : null;
+  }, [resolvedPathname]);
+
+  const articleIdForBreadcrumb = useMemo(
+    () => (articleParamForBreadcrumb ? extractArticleIdFromParam(articleParamForBreadcrumb) : null),
+    [articleParamForBreadcrumb],
+  );
+
+  const { data: articleData } = useQuery<Article | null>({
+    queryKey: queryKeys.article(articleIdForBreadcrumb ?? articleParamForBreadcrumb ?? undefined),
+    queryFn: ({ signal }) => {
+      if (!articleParamForBreadcrumb) return null;
+      return articleIdForBreadcrumb
+        ? fetchArticle(articleIdForBreadcrumb, { signal })
+        : fetchArticleBySlug(articleParamForBreadcrumb, { signal });
+    },
+    enabled: !!articleParamForBreadcrumb,
+    staleTime: 600_000,
+    gcTime: 10 * 60 * 1000,
+  });
+  const articleTitle = articleData?.name ? truncateLabel(String(articleData.name)) : '';
+
   // User profile name (for breadcrumbs on /user/[id] pages)
   const userIdForBreadcrumb = useMemo(() => {
     const p = resolvedPathname;
@@ -375,6 +403,24 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       };
     }
 
+    const isArticleDetails = parts[0] === 'article' && parts.length >= 2;
+    if (isArticleDetails) {
+      const currentLabel = articleTitle || 'Статья';
+      const items: BreadcrumbModelItem[] = [
+        { label: 'Статьи', path: '/articles' },
+        { label: currentLabel, path: p },
+      ];
+
+      return {
+        items,
+        depth: items.length + 1,
+        currentTitle: currentLabel,
+        pageContextTitle: 'Статьи',
+        backToPath: '/articles',
+        showBreadcrumbs: true,
+      };
+    }
+
     const isQuestDetails = p.startsWith('/quests/') && parts.length >= 3;
     if (isQuestDetails) {
       const questSlug = parts[2];
@@ -442,7 +488,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       backToPath,
       showBreadcrumbs: computed.length >= 1,
     };
-  }, [resolvedPathname, normalizedReturnToParam, travelData, travelSlug, questApiTitle, userProfileName]);
+  }, [resolvedPathname, normalizedReturnToParam, travelData, travelSlug, questApiTitle, userProfileName, articleTitle]);
 }
 
 export default useBreadcrumbModel;

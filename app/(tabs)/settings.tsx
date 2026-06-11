@@ -253,8 +253,8 @@ export default function SettingsScreen() {
                     <View style={styles.header}>
                         <View style={styles.headerRow}>
                             <View style={styles.headerTitleBlock}>
-                                <Text style={styles.title}>Настройки</Text>
-                                <Text style={styles.subtitle}>Профиль</Text>
+                                {/* На native заголовок «Настройки» уже есть в шапке экрана — не дублируем */}
+                                {Platform.OS === 'web' && <Text style={styles.title}>Настройки</Text>}
                             </View>
                             <Pressable
                                 style={[styles.backToProfileButton, globalFocusStyles.focusable]}

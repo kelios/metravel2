@@ -7,9 +7,9 @@ import { DESIGN_COLORS } from '@/constants/designSystem';
 import { openExternalUrl } from '@/utils/externalLinks';
 
 type Point = {
-  id: number;
-  lat: string;
-  lng: string;
+  id?: number | string;
+  lat?: string;
+  lng?: string;
   coord: string;
   address: string;
   travelImageThumbUrl: string;
@@ -30,7 +30,9 @@ type PaginatedResponse = {
 };
 
 type TravelPropsType = {
-  travelAddress: PaginatedResponse;
+  travelAddress?: PaginatedResponse;
+  /** Плоская форма, которую передают quests-экраны: { data: Point[] } */
+  data?: Point[];
 };
 
 interface Coordinates {
@@ -59,7 +61,11 @@ const withAlpha = (color: string, alpha: number) => {
 };
 
 const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) => {
-  const travelAddress = useMemo(() => travel?.travelAddress?.data || [], [travel?.travelAddress?.data]);
+  // MapPanel передаёт { travelAddress: { data } }, quests-экраны — { data } напрямую (F-21).
+  const travelAddress = useMemo(
+    () => travel?.travelAddress?.data ?? travel?.data ?? [],
+    [travel?.travelAddress?.data, travel?.data],
+  );
   const [localCoordinates, setLocalCoordinates] = useState<Coordinates | null>(propCoordinates);
   const [isLoading, setIsLoading] = useState(true);
   const themeColors = useThemedColors();
