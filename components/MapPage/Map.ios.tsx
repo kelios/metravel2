@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { useRouter } from 'expo-router';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { openExternalUrl } from '@/utils/externalLinks';
+import { normalizeRelatedTravelRoute } from '@/utils/relatedTravel';
 
 type Point = {
   id?: number | string;
@@ -61,6 +63,7 @@ const withAlpha = (color: string, alpha: number) => {
 };
 
 const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) => {
+  const router = useRouter();
   // MapPanel передаёт { travelAddress: { data } }, quests-экраны — { data } напрямую (F-21).
   const travelAddress = useMemo(
     () => travel?.travelAddress?.data ?? travel?.data ?? [],
@@ -85,32 +88,6 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
   );
   const markerColor = DESIGN_COLORS.mapPin;
   const markerShadowColor = themeColors.shadows.medium.shadowColor || themeColors.text;
-  const markerSvg = `
-    <svg width="32" height="48" viewBox="0 0 32 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="pinGlow" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="${themeColors.textOnDark}" stop-opacity="0.22" />
-          <stop offset="0.55" stop-color="${themeColors.textOnDark}" stop-opacity="0" />
-        </linearGradient>
-        <filter id="pinShadow" x="-30%" y="-10%" width="160%" height="160%" color-interpolation-filters="sRGB">
-          <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="${markerShadowColor}" flood-opacity="0.20" />
-        </filter>
-      </defs>
-
-      <g filter="url(#pinShadow)">
-        <circle cx="16" cy="15.5" r="12.5" fill="${markerColor}"/>
-        <circle cx="16" cy="15.5" r="12.5" fill="url(#pinGlow)"/>
-
-        <path d="M22 28.5C19.2 34.8 16 41.8 16 41.8C16 41.8 12.8 34.8 10 28.5H22Z" fill="${markerColor}"/>
-
-        <circle cx="16" cy="15.5" r="5.2" fill="${themeColors.textOnDark}" fill-opacity="0.96" />
-        <circle cx="16" cy="15.5" r="3.2" fill="${markerColor}" />
-        <rect x="12.5" y="7.2" width="7.8" height="3.8" rx="1.9" fill="${themeColors.textOnDark}" fill-opacity="0.35" transform="rotate(-18 12.5 7.2)" />
-      </g>
-    </svg>
-  `;
-  const markerSvgUrl = `data:image/svg+xml;utf8,${encodeURIComponent(markerSvg)}`;
-
   // HTML с улучшенными маркерами (поддержка фото в попапе)
   const htmlContent = `
     <!DOCTYPE html>
@@ -141,6 +118,35 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
         .popup-label { font-weight: 600; color: ${themeColors.text}; margin-top: 8px; margin-bottom: 4px; }
         .popup-label:first-of-type { margin-top: 0; }
         .popup-value { color: ${themeColors.textMuted}; font-size: 12px; margin-bottom: 4px; }
+        .metravel-marker { background: transparent; border: 0; }
+        .metravel-marker-pin {
+          width: 32px;
+          height: 48px;
+          position: relative;
+          transform: translateY(-2px);
+          filter: drop-shadow(0 6px 8px ${markerShadowColor});
+        }
+        .metravel-marker-pin::before {
+          content: "";
+          position: absolute;
+          left: 4px;
+          top: 0;
+          width: 24px;
+          height: 24px;
+          border-radius: 999px;
+          background: ${markerColor};
+          box-shadow: inset 0 0 0 5px ${themeColors.textOnDark};
+        }
+        .metravel-marker-pin::after {
+          content: "";
+          position: absolute;
+          left: 10px;
+          top: 20px;
+          width: 12px;
+          height: 18px;
+          background: ${markerColor};
+          clip-path: polygon(50% 100%, 0 0, 100% 0);
+        }
       </style>
     </head>
     <body>
@@ -168,9 +174,11 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
           }
         }
 
-        // Создаем иконку маркера
-        const markerIcon = L.icon({
-          iconUrl: '${markerSvgUrl}',
+        // Inline HTML marker works reliably in Android WebView, where SVG data-URI
+        // marker images can render as an invisible icon.
+        const markerIcon = L.divIcon({
+          className: 'metravel-marker',
+          html: '<div class="metravel-marker-pin" aria-hidden="true"></div>',
           iconSize: [32, 48],
           iconAnchor: [16, 48],
           popupAnchor: [0, -48]
@@ -201,6 +209,13 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
           
           const marker = L.marker([lat, lng], { icon: markerIcon }).addTo(map);
           marker.bindPopup(popupContent, { maxWidth: 200 });
+
+          marker.on('click', function() {
+            const directUrl = String(point.urlTravel || point.articleUrl || '').trim();
+            if (directUrl) {
+              sendOpenUrl(directUrl);
+            }
+          });
 
           marker.on('popupopen', function(e) {
             try {
@@ -256,6 +271,11 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
             if (parsed?.type !== 'OPEN_URL') return;
             const safeUrl = getSafeExternalUrl(parsed?.url, { allowRelative: true, baseUrl: getSiteBaseUrl() });
             if (!safeUrl) return;
+            const internalRoute = normalizeRelatedTravelRoute(safeUrl);
+            if (internalRoute) {
+              router.push(internalRoute as any);
+              return;
+            }
             await openExternalUrl(safeUrl, { allowRelative: true, baseUrl: getSiteBaseUrl() });
           } catch {
             // noop

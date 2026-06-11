@@ -63,6 +63,28 @@ describe('Map.ios Component', () => {
     expect(getWebViewHtml(rendered)).toContain("L.map('map')");
   });
 
+  it('should use inline div icons for Android WebView markers', () => {
+    const rendered = render(
+      <Map travel={mockTravel} coordinates={mockCoordinates} />
+    );
+
+    const html = getWebViewHtml(rendered);
+    expect(html).toContain('L.divIcon');
+    expect(html).toContain('metravel-marker-pin');
+    expect(html).not.toContain('data:image/svg+xml');
+  });
+
+  it('should send marker taps through the WebView bridge', () => {
+    const rendered = render(
+      <Map travel={mockTravel} coordinates={mockCoordinates} />
+    );
+
+    const html = getWebViewHtml(rendered);
+    expect(html).toContain("marker.on('click'");
+    expect(html).toContain('sendOpenUrl(directUrl)');
+    expect(html).toContain("point.urlTravel || point.articleUrl");
+  });
+
   it('should include all travel points in the map payload', () => {
     const rendered = render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
