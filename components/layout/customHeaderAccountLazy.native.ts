@@ -1,0 +1,5 @@
+import CustomHeaderDesktopAccountSection from './CustomHeaderDesktopAccountSection'
+import CustomHeaderMobileAccountSection from './CustomHeaderMobileAccountSection'
+
+export const CustomHeaderDesktopAccountSectionComp = CustomHeaderDesktopAccountSection
+export const CustomHeaderMobileAccountSectionComp = CustomHeaderMobileAccountSection

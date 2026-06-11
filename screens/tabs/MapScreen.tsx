@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Platform,
@@ -30,6 +30,12 @@ import {
   buildMapQuickActionButtons,
   buildActiveFilterItems,
 } from '@/screens/tabs/mapScreenHelpers'
+import {
+  ActiveFiltersBar,
+  MapMobileLayout,
+  MapOnboarding,
+  TravelListPanel,
+} from '@/screens/tabs/mapDeferred'
 
 const IS_WEB = Platform.OS === 'web'
 const CAN_PRELOAD_LEAFLET = IS_WEB && typeof window !== 'undefined'
@@ -65,15 +71,6 @@ if (CAN_PRELOAD_LEAFLET) {
     setTimeout(preloadLeafletRuntime, 300)
   }
 }
-
-const LazyMapOnboarding = lazy(() => import('@/components/MapPage/MapOnboarding'))
-const LazyTravelListPanel = lazy(() => import('@/components/MapPage/TravelListPanel'))
-const LazyMapMobileLayout = lazy(() =>
-  Promise.resolve(import('@/components/MapPage/MapMobileLayout')).then((mod) => ({ default: mod.MapMobileLayout })),
-)
-const LazyActiveFiltersBar = lazy(() =>
-  Promise.resolve(import('@/components/MapPage/ActiveFiltersBar')).then((mod) => ({ default: mod.ActiveFiltersBar })),
-)
 
 const MAP_PANEL_PLACEHOLDER = <MapPageSkeleton inline />
 
@@ -454,7 +451,7 @@ export default function MapScreen() {
       <View style={styles.container} {...ROOT_MAP_PROPS}>
         {seoBlock}
         <Suspense fallback={MAP_PANEL_PLACEHOLDER}>
-          <LazyMapMobileLayout
+          <MapMobileLayout
             mapComponent={mapComponent}
             travelsData={travelsData}
             hasMore={hasMore}
@@ -605,7 +602,7 @@ export default function MapScreen() {
             />
             {!isMobile && activePanelTab === 'search' && activeFilterItems.length > 0 && (
               <Suspense fallback={null}>
-                <LazyActiveFiltersBar
+                <ActiveFiltersBar
                   filters={activeFilterItems}
                   onRemoveFilter={handleRemoveActiveFilter}
                   onClearAll={handleClearAllFilters}
@@ -638,7 +635,7 @@ export default function MapScreen() {
                   style={{ flex: 1 }}
                 >
                   <Suspense fallback={<ActivityIndicator style={{ paddingVertical: 32 }} color={themedColors.primary} />}>
-                    <LazyTravelListPanel
+                    <TravelListPanel
                       travelsData={travelsData}
                       buildRouteTo={buildRouteTo}
                       isMobile={isMobile}
@@ -685,7 +682,7 @@ export default function MapScreen() {
 
       {shouldLoadOnboarding && (
         <Suspense fallback={null}>
-          <LazyMapOnboarding mobileWebCoachmark={isWeb && isMobile} />
+          <MapOnboarding mobileWebCoachmark={isWeb && isMobile} />
         </Suspense>
       )}
     </View>

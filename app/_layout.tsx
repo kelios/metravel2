@@ -4,50 +4,18 @@ import { SplashScreen, Stack, usePathname } from "expo-router";
 import AppProviders from "@/components/layout/AppProviders";
 import NativeAppRuntime from "@/components/layout/NativeAppRuntime";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import {
+  NativeFooterComponent,
+  ReactQueryDevtoolsComponent,
+  RootWebDeferredChromeComponent,
+  SyncIndicatorComponent,
+  ToastComponent,
+} from "@/components/layout/rootRuntimeComponents";
 
 /** ===== Helpers ===== */
 const isWeb = Platform.OS === "web";
 
-// Defensive lazy imports: fallback to empty component if module resolution fails
-const EmptyFallback = () => null;
-const safeLazy = <T extends React.ComponentType<any>>(
-  loader: () => Promise<{ default: T }>,
-  name?: string
-) => React.lazy(() =>
-  // Metro async-require may return a bare thenable (no .catch) for sync-available modules
-  Promise.resolve(loader()).catch((err) => {
-    if (__DEV__) console.error(`[safeLazy] Failed to load ${name || 'component'}:`, err);
-    return { default: EmptyFallback as unknown as T };
-  })
-);
-
-const SyncIndicatorLazy: React.LazyExoticComponent<React.ComponentType<any>> | null = !isWeb
-  ? safeLazy(
-      () => Promise.resolve(import('@/components/ui/SyncIndicator')).then(m => {
-        const Component = m.SyncIndicator ?? (m as any).default;
-        if (!Component) throw new Error('SyncIndicator export not found');
-        return { default: Component };
-      }),
-      'SyncIndicator'
-    )
-  : null;
-const ReactQueryDevtoolsLazy: any = __DEV__
-  ? safeLazy(
-      () => Promise.resolve(import('@tanstack/react-query-devtools')).then((m: any) => ({ default: m.ReactQueryDevtools })),
-      'ReactQueryDevtools'
-    )
-  : null;
-const ToastLazy: React.LazyExoticComponent<React.ComponentType<any>> | null = !isWeb
-  ? safeLazy(() => import('@/components/ui/ToastHost'), 'ToastHost')
-  : null;
-const RootWebDeferredChromeLazy = safeLazy(
-  () => import('@/components/layout/RootWebDeferredChrome'),
-  'RootWebDeferredChrome'
-);
 // На native нижний док (Footer → BottomDock) не входит в web-only chrome — рендерим отдельно
-const NativeFooterLazy: React.LazyExoticComponent<React.ComponentType<any>> | null = !isWeb
-  ? safeLazy(() => import('@/components/layout/Footer'), 'Footer')
-  : null;
 // ВНИМАНИЕ (verify pending, dev-client 2026-06-11): GestureHandlerRootView в корне на текущем
 // Android dev-client рендерится как ReactUnimplementedView (Fabric-дескриптор RNGH RootView
 // отсутствует в нативной сборке) → чёрный экран. До пересборки dev-client с проверенным RNGH
@@ -439,10 +407,8 @@ function ThemedContent({
                               )}
 
                               {/* AND-10: Индикатор синхронизации при восстановлении сети (native only) */}
-                              {!isWeb && SyncIndicatorLazy && (
-                                <React.Suspense fallback={null}>
-                                  <SyncIndicatorLazy />
-                                </React.Suspense>
+                              {!isWeb && SyncIndicatorComponent && (
+                                <SyncIndicatorComponent />
                               )}
 
                               <View style={[styles.content]}>
@@ -454,15 +420,15 @@ function ThemedContent({
                                   {bottomGutter}
                               </View>
 
-                              {Platform.OS === 'web' && __DEV__ && !isMobile && !isTravelRoute && !isMapRoute && ReactQueryDevtoolsLazy ? (
+                              {Platform.OS === 'web' && __DEV__ && !isMobile && !isTravelRoute && !isMapRoute && ReactQueryDevtoolsComponent ? (
                                 <React.Suspense fallback={null}>
-                                  <ReactQueryDevtoolsLazy initialIsOpen={false} />
+                                  <ReactQueryDevtoolsComponent initialIsOpen={false} />
                                 </React.Suspense>
                               ) : null}
 
-                              {isWeb && isMounted && showRootWebDeferredChrome && (
+                              {isWeb && isMounted && showRootWebDeferredChrome && RootWebDeferredChromeComponent && (
                                 <React.Suspense fallback={null}>
-                                  <RootWebDeferredChromeLazy
+                                  <RootWebDeferredChromeComponent
                                     isMobile={isMobile}
                                     pathname={pathname}
                                     showFooter={showFooter}
@@ -472,18 +438,13 @@ function ThemedContent({
                                 </React.Suspense>
                               )}
 
-                              {!isWeb && showFooter && NativeFooterLazy && (
-                                <React.Suspense fallback={null}>
-                                  {/* Док в потоке (position: relative) — bottomGutter не нужен, onDockHeight не передаём */}
-                                  <NativeFooterLazy />
-                                </React.Suspense>
+                              {!isWeb && showFooter && NativeFooterComponent && (
+                                <NativeFooterComponent />
                               )}
                         </RootContainerView>
             {/* ✅ FIX: Toast рендерится только на клиенте для избежания SSR warning */}
-            {!isWeb && isMounted && ToastLazy && (
-              <React.Suspense fallback={null}>
-                <ToastLazy />
-              </React.Suspense>
+            {!isWeb && isMounted && ToastComponent && (
+              <ToastComponent />
             )}
     </AppProviders>
   );

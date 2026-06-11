@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
 import { Image as ExpoImage, ImageContentFit } from 'expo-image';
-import type { ImageProps as ExpoImageProps } from 'expo-image';
+import type { ImageProps as ExpoImageProps, ImageSource } from 'expo-image';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
@@ -82,6 +82,11 @@ const tryForceJpgFormat = (uri: string): string | null => {
   } catch {
     return null;
   }
+};
+
+const resolveBlurhashPlaceholder = (placeholder?: string): ImageSource | undefined => {
+  const value = typeof placeholder === 'string' ? placeholder.trim() : '';
+  return value ? { blurhash: value } : undefined;
 };
 
 const buildApiPrefixedUrl = (value: string): string | null => {
@@ -362,6 +367,7 @@ function OptimizedImage({
 
   // Определяем приоритет загрузки
   const fetchPriority = priority === 'high' ? 'high' : priority === 'low' ? 'low' : 'auto';
+  const resolvedPlaceholder = useMemo(() => resolveBlurhashPlaceholder(placeholder), [placeholder]);
 
   const showFallback = !blurOnly && (!validSource || hasError || shouldDisableNetwork);
 
@@ -427,7 +433,7 @@ function OptimizedImage({
           recyclingKey={recyclingKey}
           source={activeSource as any}
           contentFit={contentFit}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           transition={transition}
           onLoad={handleLoad}
           onError={handleError}

@@ -3,6 +3,7 @@
 // Оптимизировано для Expo 54 и React 19
 
 import { QueryClient, DefaultOptions } from '@tanstack/react-query';
+import { Platform } from 'react-native';
 
 interface QueryClientRuntimeOptions {
   enableStaticPrefetch?: boolean;
@@ -82,7 +83,7 @@ export function createOptimizedQueryClient(
 
   // ✅ НОВОЕ: Настройка для React 19 - автоматический batching
   // React 19 автоматически батчит обновления, но мы можем оптимизировать дальше
-  if (typeof window !== 'undefined' && runtimeOptions?.enableStaticPrefetch !== false) {
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && runtimeOptions?.enableStaticPrefetch !== false) {
     // P5.1: Prefetch статических данных (фильтры, страны) при idle
     if ('requestIdleCallback' in window) {
       (window as any).requestIdleCallback(() => {

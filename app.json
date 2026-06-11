@@ -83,7 +83,7 @@
         {
           "asyncRoutes": {
             "web": true,
-            "default": "development"
+            "default": false
           }
         }
       ],

@@ -4,6 +4,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import MapErrorBoundary from './MapErrorBoundary';
 import { MapSkeleton } from '@/components/ui/SkeletonLoader';
+import Map from '@/components/MapPage/Map';
 import type { MapUiApi } from '@/types/mapUi';
 import type { ComponentType } from 'react';
 
@@ -89,6 +90,10 @@ const MapPanel: React.FC<MapPanelProps> = ({
     const [mapKeyVersion, setMapKeyVersion] = useState(0);
 
     const travelProp = useMemo(() => ({ data: travelsData }), [travelsData]);
+    const nativeTravelProp = useMemo(
+        () => ({ travelAddress: { data: travelsData } }),
+        [travelsData],
+    );
 
     // Safe coordinates with defaults - MUST be before any early returns
     const safeCoordinates = useMemo(() => {
@@ -105,7 +110,13 @@ const MapPanel: React.FC<MapPanelProps> = ({
     }, []);
 
     // Early returns - AFTER all hooks
-    if (!isWeb) return <Placeholder />;
+    if (!isWeb) {
+        return (
+            <View style={[styles.mapContainer, { backgroundColor: themeColors.surface }]}>
+                <Map travel={nativeTravelProp} coordinates={safeCoordinates} />
+            </View>
+        );
+    }
 
     return (
         <View style={[styles.mapContainer, { backgroundColor: themeColors.surface }]}>

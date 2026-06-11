@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import isEqual from 'fast-deep-equal';
+import { Platform } from 'react-native';
 
 interface UseImprovedAutoSaveOptions<T> {
   debounce?: number;
@@ -117,13 +118,13 @@ export function useImprovedAutoSave<T>(
       }
     };
 
-    if (typeof window !== 'undefined') {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.addEventListener('online', handleOnline);
       window.addEventListener('offline', handleOffline);
     }
 
     return () => {
-      if (typeof window !== 'undefined') {
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
         window.removeEventListener('online', handleOnline);
         window.removeEventListener('offline', handleOffline);
       }

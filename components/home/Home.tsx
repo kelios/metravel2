@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useState } from 'react'
+import React, { Suspense, memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { Platform, RefreshControl, ScrollView, StyleSheet, View } from 'react-native'
 import { useIsFocused } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -14,6 +14,15 @@ import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries'
 import { queryKeys } from '@/api/queryKeys'
 import { useHomeViewport } from './useHomeViewport'
 import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
+import {
+  HomeBottomCtaSection,
+  HomeFAQSection,
+  HomeHowItWorks,
+  HomeInspirationSections,
+  HomeQuestsPromoSection,
+  HomeStartHereSection,
+  HomeWeekendRoutesSection,
+} from './homeDeferredSections'
 
 const IS_WEB = Platform.OS === 'web'
 
@@ -27,14 +36,6 @@ const WEB_SCROLL_STYLE = IS_WEB
       overscrollBehaviorY: 'contain',
     } as any)
   : undefined
-
-const HomeStartHereSection = lazy(() => import('./HomeStartHereSection'))
-const HomeHowItWorks = lazy(() => import('./HomeHowItWorks'))
-const HomeFAQSection = lazy(() => import('./HomeFAQSection'))
-const HomeInspirationSections = lazy(() => import('./HomeInspirationSections'))
-const HomeWeekendRoutesSection = lazy(() => import('./HomeWeekendRoutesSection'))
-const HomeQuestsPromoSection = lazy(() => import('./HomeQuestsPromoSection'))
-const HomeBottomCtaSection = lazy(() => import('./HomeBottomCtaSection'))
 
 type PageSectionProps = {
   children: React.ReactNode

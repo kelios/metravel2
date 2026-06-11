@@ -33,6 +33,57 @@ Read first:
 - Do not print secrets from `.env*`, EAS, Google Play, or device logs.
 - Do not edit `app.json`, `eas.json`, `plugins/**`, or release scripts unless the user explicitly asks for build/config changes.
 
+## Bug Intake
+
+- Every real Android bug found during device QA must be created or updated on the shared task board in the active `Android Release` sprint before implementation continues.
+- Prefer the `ticket-board` MCP tools when available. If MCP is unavailable but `.secrets/metravel-task-board.env` exists, use the task board API without printing the token.
+- Use `area=front`, `status=todo`, `reporter=Codex Android QA`, and `assignee=metravel-android-developer` for newly confirmed Android frontend bugs unless the existing board conventions say otherwise.
+- Include device model, Android/API version, exact route, reproduction steps, `adb logcat`/Metro evidence, acceptance criteria, likely files, validation, and blockers.
+
+## Cable Dev-Client Smoke
+
+Use this flow for Android testing over USB. The project is worked on from both Windows and macOS, so keep commands portable and provide both variants when documenting a workflow.
+
+1. Find `adb`.
+   - Windows PowerShell: `where.exe adb`; fallback common local path: `D:\metravel\tools\platform-tools\adb.exe`.
+   - macOS/zsh: `which adb`; fallback common SDK path: `$HOME/Library/Android/sdk/platform-tools/adb`.
+2. Verify the phone.
+   - Windows: `& 'D:\metravel\tools\platform-tools\adb.exe' devices -l`
+   - macOS: `adb devices -l`
+   - If status is `unauthorized`, confirm the RSA debugging prompt on the phone.
+3. Start Metro for dev-client in LAN mode so it binds beyond IPv6 localhost.
+   - Windows PowerShell:
+     ```powershell
+     $env:Path = 'D:\metravel\tools\platform-tools;' + $env:Path
+     $env:REACT_NATIVE_PACKAGER_HOSTNAME = '<LAN_IP>'
+     npx expo start --dev-client --host lan
+     ```
+   - macOS/zsh:
+     ```bash
+     export REACT_NATIVE_PACKAGER_HOSTNAME=<LAN_IP>
+     npx expo start --dev-client --host lan
+     ```
+4. For USB cable testing, reverse Metro ports before launching:
+   ```bash
+   adb reverse --remove-all
+   adb reverse tcp:8081 tcp:8081
+   adb reverse tcp:8084 tcp:8084
+   adb reverse --list
+   ```
+5. Launch the installed development build with the project scheme:
+   ```bash
+   adb shell am force-stop by.metravel.app
+   adb shell am start -W -a android.intent.action.VIEW -d "myapp://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081" by.metravel.app
+   ```
+6. Capture health evidence without leaking secrets:
+   ```bash
+   adb logcat -c
+   adb logcat -d -v time | grep -E "FATAL EXCEPTION|ReactNativeJS|AndroidRuntime|JSApplicationIllegalArgumentException|DevLauncher"
+   adb shell uiautomator dump /sdcard/window.xml
+   adb exec-out cat /sdcard/window.xml
+   ```
+   In PowerShell, use `Select-String` instead of `grep`.
+
 ## Validation
 
 - Run the narrow native governance test when compatibility is touched:
