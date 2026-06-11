@@ -92,8 +92,9 @@ describe('Android Dependencies Tests', () => {
   });
 
   describe('Expo Modules', () => {
-    it('should have expo-av for media', () => {
-      expect(packageJson.dependencies['expo-av']).toBeDefined();
+    it('should have expo-video for media (expo-av was removed in SDK 56)', () => {
+      expect(packageJson.dependencies['expo-video']).toBeDefined();
+      expect(packageJson.dependencies['expo-av']).toBeUndefined();
     });
 
     it('should have expo-clipboard', () => {

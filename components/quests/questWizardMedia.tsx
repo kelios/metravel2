@@ -9,7 +9,9 @@ export const QuestFullMapLazy = lazy(() => import('@/components/quests/QuestFull
 export const getQuestClipboard = () => Promise.resolve(import('expo-clipboard'))
 
 export const NativeQuestVideoLazy = lazy(() =>
-  Promise.resolve(import('expo-av')).then((module) => ({
+  // expo-av был удалён из Expo SDK 56 (его native-модуль крашил регистрацию модулей);
+  // нативное видео финала квеста играем через expo-video.
+  Promise.resolve(import('expo-video')).then((module) => ({
     default: memo(function NativeQuestVideo(props: {
       source: any
       posterSource?: any
@@ -20,12 +22,29 @@ export const NativeQuestVideoLazy = lazy(() =>
       isLooping?: boolean
       onError?: () => void
     }) {
+      const uri = typeof props.source === 'string' ? props.source : props.source?.uri ?? null
+      const player = module.useVideoPlayer(uri, (p: any) => {
+        p.loop = !!props.isLooping
+        if (props.shouldPlay) p.play()
+      })
+
+      const { onError } = props
+      React.useEffect(() => {
+        if (!player || !onError) return
+        const sub = player.addListener('statusChange', (payload: any) => {
+          if (payload?.status === 'error') onError()
+        })
+        return () => sub?.remove?.()
+      }, [player, onError])
+
+      // VideoView типизирован пересечением web+native плееров — для кросс-платформенного вызова ослабляем тип
+      const VideoView = module.VideoView as unknown as React.ComponentType<any>
       return (
-        <module.Video
-          {...props}
-          resizeMode={module.ResizeMode.CONTAIN}
-          // @ts-ignore -- playsInline is a web-only video attribute not in expo-av Video types
-          playsInline
+        <VideoView
+          player={player}
+          style={props.style}
+          contentFit="contain"
+          nativeControls={props.useNativeControls !== false}
         />
       )
     }),
