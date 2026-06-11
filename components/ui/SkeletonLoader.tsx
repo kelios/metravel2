@@ -83,9 +83,12 @@ const NativeSkeletonPulse: React.FC<{ testID?: string; baseStyle: any[] }> = ({ 
     );
   }, [opacity]);
 
-  const pulseStyle = useAnimatedStyle!(() => ({
-    opacity: opacity.value,
-  }));
+  // 'worklet' обязателен: callee — локальная переменная с `!`, babel worklets-plugin
+  // не распознаёт такой вызов useAnimatedStyle по имени и без директивы не воркletизирует колбэк
+  const pulseStyle = useAnimatedStyle!(() => {
+    'worklet';
+    return { opacity: opacity.value };
+  });
 
   return (
     <Animated.View

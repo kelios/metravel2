@@ -14,7 +14,7 @@ const TravelDeferredRatingSection: React.FC<{ travel: Travel }> = memo(function 
   return (
     <View
       testID="travel-details-rating"
-      accessibilityRole={'region' as any}
+      role="region"
       accessibilityLabel="Рейтинг путешествия"
       style={[styles.sectionContainer, styles.contentStable]}
     >

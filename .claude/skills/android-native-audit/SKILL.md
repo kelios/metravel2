@@ -12,9 +12,21 @@ description: >-
 
 Системный поиск кода, который работает на web, но падает или ломается на
 native (Android/iOS). Цель — закрыть краши **до** dev-билда, а не ловить их на
-устройстве.
+устройстве. Полный кодекс правил — `docs/NATIVE_COMPAT_RULES.md`; механическую
+часть сторожит `__tests__/config/native-compat-governance.test.ts` (прогнать его —
+первый шаг аудита).
 
 ## Что ищем
+
+0. **Механика из governance-теста** (зомби expo-модули вне bundledNativeModules,
+   прямые `.then/.catch/.finally` на `import()`, react-native-web в babel без
+   платформенного гейта, `role="listitem"` без Platform-гейта) — просто прогнать
+   `npx jest __tests__/config/native-compat-governance.test.ts`.
+0a. **Postinstall-патчи node_modules** (`package.json → postinstall`): прочитать
+   каждый патч-скрипт — для какой версии писался, что делает с native. История:
+   no-op codegen-плагина валил New Architecture на старте.
+0b. **Web-роли a11y** сверх listitem: любые `role=`/`accessibilityRole=` значения,
+   которых нет в RN `AccessibilityRole`, на не-web View.
 
 1. **Web-API без guard** в общих (не-`.web`) файлах `components/`, `hooks/`,
    `utils/`, `stores/`, `context/`, `app/`:

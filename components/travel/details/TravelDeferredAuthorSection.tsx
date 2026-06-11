@@ -24,7 +24,7 @@ const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(function Mob
       {showAuthor && (
         <View
           testID="travel-details-author-mobile"
-          accessibilityRole={'region' as any}
+          role="region"
           accessibilityLabel="Автор маршрута"
           style={[styles.sectionContainer, styles.contentStable, styles.authorCardContainer]}
         >
@@ -38,7 +38,7 @@ const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(function Mob
 
       <View
         testID="travel-details-share-mobile"
-        accessibilityRole={'region' as any}
+        role="region"
         accessibilityLabel="Поделиться маршрутом"
         style={[styles.sectionContainer, styles.contentStable, styles.shareButtonsContainer]}
       >

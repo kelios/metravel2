@@ -44,6 +44,15 @@ const RootWebDeferredChromeLazy = safeLazy(
   () => import('@/components/layout/RootWebDeferredChrome'),
   'RootWebDeferredChrome'
 );
+// На native нижний док (Footer → BottomDock) не входит в web-only chrome — рендерим отдельно
+const NativeFooterLazy: React.LazyExoticComponent<React.ComponentType<any>> | null = !isWeb
+  ? safeLazy(() => import('@/components/layout/Footer'), 'Footer')
+  : null;
+// ВНИМАНИЕ (verify pending, dev-client 2026-06-11): GestureHandlerRootView в корне на текущем
+// Android dev-client рендерится как ReactUnimplementedView (Fabric-дескриптор RNGH RootView
+// отсутствует в нативной сборке) → чёрный экран. До пересборки dev-client с проверенным RNGH
+// корень остаётся обычным View; Gorhom-шит «Ещё» в BottomDock не монтируется (см. BottomDock).
+const RootContainerView: React.ComponentType<any> = View;
 import { DESIGN_TOKENS } from "@/constants/designSystem";
 import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";
 import { patchWebShadowStyles } from "@/utils/patchWebShadowStyles";
@@ -72,6 +81,15 @@ LogBox.ignoreLogs([
   'TouchableWithoutFeedback is deprecated. Please use Pressable.',
   'Image: style.tintColor is deprecated. Please use props.tintColor.',
 ]);
+
+// Upstream-артефакт expo-router asyncRoutes (native dev): asyncRequire пробует sync importAll
+// ДО fetch'а route-чанка ("try importing first"), guardedLoadModule репортит этот ожидаемый
+// промах как fatal через ErrorUtils → красный LogBox на каждый layout при старте. Чанк затем
+// догружается, маршруты работают. Прячем только из LogBox (в терминале Metro ошибки видны).
+// Правильный фикс — asyncRoutes: { web: true, default: false } в app.json (protected file).
+if (!isWeb) {
+  LogBox.ignoreLogs([/Requiring unknown module/]);
+}
 
 const useAppFonts: any = isWeb
   ? () => [true, null]
@@ -273,18 +291,26 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
           }
     );
 
+    // Старт не должен висеть на шрифтах: после таймаута показываем UI с системными глифами.
+    const [fontWaitExpired, setFontWaitExpired] = useState(isWeb);
+    useEffect(() => {
+      if (isWeb || fontsLoaded || fontError) return;
+      const t = setTimeout(() => setFontWaitExpired(true), 3000);
+      return () => clearTimeout(t);
+    }, [fontsLoaded, fontError]);
+
     // AND-06: Hide splash screen after fonts are loaded OR failed to load (native).
     // Gating on fontsLoaded alone hangs the start when fontError occurs
     // (fontsLoaded stays false), so the splash/spinner never hides.
     useEffect(() => {
-      if (!isWeb && (fontsLoaded || fontError)) {
+      if (!isWeb && (fontsLoaded || fontError || fontWaitExpired)) {
         SplashScreen.hideAsync().catch((error) => {
           if (__DEV__) {
             console.warn('[RootLayout] Ошибка hideAsync:', error);
           }
         });
       }
-    }, [fontsLoaded, fontError]);
+    }, [fontsLoaded, fontError, fontWaitExpired]);
 
     useEffect(() => {
       if (fontError && !isWeb) {
@@ -292,7 +318,7 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
       }
     }, [fontError]);
 
-    if (!fontsLoaded && !fontError && !isWeb) {
+    if (!fontsLoaded && !fontError && !isWeb && !fontWaitExpired) {
       return (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: loadingColors.background }}>
           <ActivityIndicator size="small" color={loadingColors.primary} />
@@ -403,7 +429,7 @@ function ThemedContent({
                               translucent
                             />
                           )}
-                          <View style={styles.container}>
+                          <RootContainerView style={styles.container}>
                               {showMapBackground && (
                                 <Image
                                   source={mapBackground}
@@ -445,7 +471,14 @@ function ThemedContent({
                                   />
                                 </React.Suspense>
                               )}
-                        </View>
+
+                              {!isWeb && showFooter && NativeFooterLazy && (
+                                <React.Suspense fallback={null}>
+                                  {/* Док в потоке (position: relative) — bottomGutter не нужен, onDockHeight не передаём */}
+                                  <NativeFooterLazy />
+                                </React.Suspense>
+                              )}
+                        </RootContainerView>
             {/* ✅ FIX: Toast рендерится только на клиенте для избежания SSR warning */}
             {!isWeb && isMounted && ToastLazy && (
               <React.Suspense fallback={null}>

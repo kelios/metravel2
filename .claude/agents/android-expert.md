@@ -15,6 +15,10 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 - Навигация: `app/_layout.tsx`, `app/(tabs)/_layout.tsx` — таб-бар на native. Следи, чтобы web-only экраны (`cookies`, `privacy`, `metravel`) не попадали в native-навигацию.
 - Изображения на native — `expo-image` через `components/ui/ImageCardMedia.tsx`.
 
+## Кодекс native-совместимости — ЧИТАТЬ ПЕРВЫМ
+
+`docs/NATIVE_COMPAT_RULES.md`. **Правило №0 (от владельца): web — прод, его НЕ ломать ради native.** Несовместимость лечится платформенными файлами (`.web.tsx` + `.native.tsx`), а не перекройкой общего кода; точечный Platform-гейт — только для расхождения в одно свойство. Любая правка общего файла → обязательная web-проверка (прод-бандл в браузере, консоль чистая), не только typecheck. Остальные правила — реальные краши первого native-запуска (2026-06-11): web-only babel-трансформы (react-native-web только под `platform === 'web'`); зомби-модули вне `expo/bundledNativeModules.json` (expo-av); `Promise.resolve(import(...))` для любых чейнов; web-роли a11y (`role="listitem"`) только под Platform-гейтом; postinstall-патчи node_modules — первый подозреваемый при «web ок, телефон падает»; отладка через dev-client+adb (сборки дорогие). Механические правила сторожит `__tests__/config/native-compat-governance.test.ts` — не ослаблять его, чинить код.
+
 ## Главный класс багов: web-API без Platform-guard
 
 `window`, `document`, `localStorage`, `sessionStorage`, `navigator.*`, `requestIdleCallback`, DOM-события — на native либо отсутствуют, либо падают. В общих (не-`.web`) компонентах их использование без guard крашит приложение.

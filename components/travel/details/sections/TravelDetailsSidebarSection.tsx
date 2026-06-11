@@ -99,7 +99,7 @@ export const TravelDetailsSidebarSection: React.FC<{
         <View
           style={[styles.sectionContainer, styles.navigationArrowsContainer]}
           accessibilityLabel="Навигация по похожим маршрутам"
-          accessibilityRole={'navigation' as any}
+          role="navigation"
         >
           <NavigationArrows currentTravel={travel} relatedTravels={relatedTravels} />
         </View>

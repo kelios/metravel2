@@ -23,6 +23,13 @@
       "autoPort": false
     },
     {
+      "name": "Expo Native 8084 NoLazy",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "set EXPO_NO_METRO_LAZY=1&& npx expo start --port 8084"],
+      "port": 8084,
+      "autoPort": false
+    },
+    {
       "name": "Expo Web Clear 8082",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["expo", "start", "--web", "--clear", "--port", "8082"],

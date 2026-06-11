@@ -75,9 +75,12 @@ function NativeProgressBar({
     widthPct.value = withTiming!(Math.min(1, Math.max(0, progress)), { duration: 300 });
   }, [progress, widthPct]);
 
-  const fillStyle = useAnimatedStyle!(() => ({
-    width: `${Math.round(widthPct.value * 100)}%`,
-  }));
+  // 'worklet' обязателен: callee — локальная переменная с `!`, babel worklets-plugin
+  // не распознаёт такой вызов useAnimatedStyle по имени и без директивы не воркletизирует колбэк
+  const fillStyle = useAnimatedStyle!(() => {
+    'worklet';
+    return { width: `${Math.round(widthPct.value * 100)}%` };
+  });
 
   return (
     <View style={styles.container} accessible accessibilityLabel={`Загрузка ${percent}%`} accessibilityRole="progressbar">

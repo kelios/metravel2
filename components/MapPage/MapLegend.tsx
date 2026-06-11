@@ -65,7 +65,7 @@ function MapLegend({ showRouteMode = false }: MapLegendProps) {
   return (
     <View
       style={[styles.container, isMobile && styles.containerMobile]}
-      accessibilityRole={'region' as any}
+      role="region"
       accessibilityLabel="Легенда карты"
     >
       <Pressable
@@ -85,7 +85,7 @@ function MapLegend({ showRouteMode = false }: MapLegendProps) {
             <View
               key={index}
               style={styles.item}
-              accessibilityRole={'listitem' as any}
+              {...(Platform.OS === 'web' ? ({ role: 'listitem' } as any) : {})}
               accessibilityLabel={`${item.label}: ${item.description}`}
             >
               <View style={[styles.iconContainer, { backgroundColor: item.background }]}>

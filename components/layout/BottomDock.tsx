@@ -38,6 +38,12 @@ if (Platform.OS !== 'web') {
   }
 }
 
+// verify pending (Android dev-client 2026-06-11): шит «Ещё» требует GestureHandlerRootView
+// в корне приложения, но RNGH RootView в текущей нативной сборке рендерится как
+// UnimplementedView (чёрный экран). Включить после пересборки dev-client с рабочим RNGH
+// и возврата GestureHandlerRootView в app/_layout.tsx.
+const NATIVE_MORE_SHEET_ENABLED = false;
+
 type BottomDockProps = {
   onDockHeight?: (h: number) => void;
 };
@@ -359,7 +365,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
           </View>
         </>
       )}
-      {Platform.OS !== 'web' && GorhomBottomSheet && (
+      {NATIVE_MORE_SHEET_ENABLED && Platform.OS !== 'web' && GorhomBottomSheet && (
         <GorhomBottomSheet
           ref={nativeSheetRef}
           index={-1}

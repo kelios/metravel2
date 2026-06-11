@@ -29,7 +29,9 @@ module.exports = function (api) {
             isProduction && ['transform-remove-console', {
                 exclude: ['error']
             }],
-            'react-native-reanimated/plugin',
+            // НЕ добавлять 'react-native-reanimated/plugin' вручную: babel-preset-expo (SDK 56)
+            // сам подключает react-native-worklets/plugin; дубль ломает воркletизацию на native
+            // ([Worklets] Tried to synchronously call a non-worklet function on the UI thread).
         ].filter(Boolean),
     };
 };

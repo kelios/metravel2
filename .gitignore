@@ -176,3 +176,7 @@ scripts/.index-cache/
 /.chk-web/
 /.chk-android/
 /.tmp-article/
+
+# Отладка native (adb-скриншоты, логи dev-серверов) — не коммитить
+.debug-shots/
+metro-*.log

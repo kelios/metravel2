@@ -52,7 +52,7 @@ export function TravelHeroQuickJumps({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.quickJumpScrollContent}
         style={styles.quickJumpScroll}
-        accessibilityRole={'navigation' as any}
+        role="navigation"
         accessibilityLabel="Быстрая навигация по разделам"
       >
         {chips}

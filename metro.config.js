@@ -1,4 +1,9 @@
 // @ts-nocheck
+// Windows + Node 24: Metro опускает дескрипторы тысячами параллельных open()
+// и валится с EMFILE посреди dev-сессии. graceful-fs ставит очередь повторов
+// вместо краша. Dev-only (metro.config не попадает в бандл).
+require('graceful-fs').gracefulify(require('fs'))
+
 // Node < 20 does not implement Array.prototype.toReversed/toSorted/etc.
 // Metro's config loader uses `toReversed()` in recent versions.
 if (!Array.prototype.toReversed) {

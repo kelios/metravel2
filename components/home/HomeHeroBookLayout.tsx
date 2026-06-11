@@ -393,7 +393,7 @@ function HeroSlider({
 
           <View
             style={styles.sliderNav}
-            accessibilityRole="group"
+            role="group"
             {...({ 'aria-label': 'Навигация по слайдам' } as any)}
           >
             <Pressable

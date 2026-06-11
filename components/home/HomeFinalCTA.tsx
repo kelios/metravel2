@@ -159,7 +159,7 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
 
           <View style={styles.featuresGrid} accessibilityRole="list">
             {CTA_FEATURES.map((feature) => (
-              <View key={feature.label} style={styles.featureCard} accessibilityRole={'listitem' as any}>
+              <View key={feature.label} style={styles.featureCard} {...(Platform.OS === 'web' ? ({ role: 'listitem' } as any) : {})}>
                 <View style={styles.featureIcon}>
                   <Feather
                     name={feature.icon as any}
@@ -205,7 +205,7 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
 
           <View style={styles.trustBadgesRow} accessibilityRole="list">
             {TRUST_BADGES.map((badge) => (
-              <View key={badge.label} style={styles.trustBadge} accessibilityRole={'listitem' as any}>
+              <View key={badge.label} style={styles.trustBadge} {...(Platform.OS === 'web' ? ({ role: 'listitem' } as any) : {})}>
                 <Feather
                   name={badge.icon as any}
                   size={13}
