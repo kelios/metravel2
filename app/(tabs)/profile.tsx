@@ -33,7 +33,7 @@ import { confirmAction } from '@/utils/confirmAction';
 import { webTouchScrollStyle } from '@/utils';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused } from 'expo-router';
 import { FlashList } from '@shopify/flash-list';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAvatarUpload } from '@/hooks/useAvatarUpload';

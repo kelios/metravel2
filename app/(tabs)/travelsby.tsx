@@ -3,7 +3,7 @@ import React, { Suspense, createElement, lazy, useEffect, useMemo, useState } fr
 import { Platform, StyleSheet, View, Text } from 'react-native';
 import { usePathname } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused } from 'expo-router';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 

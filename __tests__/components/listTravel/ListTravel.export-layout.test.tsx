@@ -35,9 +35,6 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({}),
   usePathname: () => '/export',
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
-}));
-
-jest.mock('@react-navigation/native', () => ({
   useRoute: () => ({ name: 'export' }),
 }));
 

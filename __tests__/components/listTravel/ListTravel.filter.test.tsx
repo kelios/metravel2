@@ -22,10 +22,6 @@ jest.mock('@/context/AuthContext', () => ({
     }),
 }));
 
-jest.mock('@react-navigation/native', () => ({
-    useRoute: () => ({ params: {} }),
-}));
-
 jest.mock('expo-router', () => ({
     useRouter: () => ({
         push: jest.fn(),
@@ -34,6 +30,7 @@ jest.mock('expo-router', () => ({
     }),
     useLocalSearchParams: () => ({}),
     usePathname: () => '/',
+    useRoute: () => ({ params: {} }),
 }));
 
 // Mock API

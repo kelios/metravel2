@@ -27,13 +27,10 @@ const mockUseQuestProgressSync = jest.fn(() => ({
   resetProgress: jest.fn(),
 }))
 
-jest.mock('@react-navigation/native', () => ({
-  useIsFocused: () => mockUseIsFocused(),
-}))
-
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ city: '4', questId: 'minsk-cmok' }),
   Link: ({ children }: { children: React.ReactNode }) => children,
+  useIsFocused: () => mockUseIsFocused(),
 }))
 
 jest.mock('@/components/seo/LazyInstantSEO', () => ({

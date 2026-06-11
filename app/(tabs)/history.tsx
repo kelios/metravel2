@@ -19,7 +19,7 @@ import { buildLoginHref } from '@/utils/authNavigation';
 import { webTouchScrollStyle } from '@/utils';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused } from 'expo-router';
 import { cleanTravelTitle } from '@/utils/cleanTravelTitle';
 import { formatRelativeTime } from '@/utils/relativeTime';
 import { pluralizeRu } from '@/utils/pluralize';

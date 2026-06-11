@@ -79,7 +79,7 @@ describe('guard-file-complexity-changed', () => {
   })
 
   it('treats already oversized tracked files as non-blocking legacy touches', () => {
-    const legacyOversizedFile = 'components/MapPage/TravelMap.tsx'
+    const legacyOversizedFile = 'services/pdf-export/generators/v2/runtime/atlasPages.ts'
     const baselineLoc = getGitTrackedFileLoc(legacyOversizedFile)
     expect(typeof baselineLoc).toBe('number')
     expect(Number(baselineLoc)).toBeGreaterThan(MAX_LOC)

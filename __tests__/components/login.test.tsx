@@ -15,6 +15,11 @@ jest.mock('expo-router', () => ({
   }),
   useLocalSearchParams: () => ({}),
   usePathname: () => '/login',
+  useNavigation: () => ({
+    reset: jest.fn(),
+    navigate: jest.fn(),
+  }),
+  useIsFocused: () => true,
 }));
 
 jest.mock('@react-navigation/native', () => {
@@ -22,11 +27,6 @@ jest.mock('@react-navigation/native', () => {
   return {
     ...actualNav,
     NavigationContainer: ({ children }: any) => <>{children}</>,
-    useNavigation: () => ({
-      reset: jest.fn(),
-      navigate: jest.fn(),
-    }),
-    useIsFocused: () => true,
   };
 });
 

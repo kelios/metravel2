@@ -39,10 +39,6 @@ jest.mock('@/components/travel/FavoriteButton', () => ({
 
 const mockRoute = { name: 'travels', params: {} } as any;
 
-jest.mock('@react-navigation/native', () => ({
-  useRoute: () => mockRoute,
-}));
-
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     push: jest.fn(),
@@ -51,6 +47,7 @@ jest.mock('expo-router', () => ({
   }),
   useLocalSearchParams: () => ({}),
   usePathname: () => '/',
+  useRoute: () => mockRoute,
 }));
 
 // Mock API

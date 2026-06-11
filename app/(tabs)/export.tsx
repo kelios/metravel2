@@ -1,7 +1,7 @@
 // app/export.tsx (или соответствующий путь)
 import { Suspense, lazy, useEffect, useMemo } from 'react';
 import { Text, View } from 'react-native';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused } from 'expo-router';
 import { usePathname, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 

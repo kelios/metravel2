@@ -63,21 +63,18 @@ jest.mock('@/components/ui/SkeletonLoader', () => {
   };
 });
 
-jest.mock('@react-navigation/native', () => ({
-  useRoute: () => ({
-    name: (global as any).__mockRouteName ?? 'travels',
-  }),
-  useNavigation: () => ({
-    navigate: jest.fn(),
-  }),
-}));
-
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ((global as any).__mockLocalSearchParams ?? {}),
   usePathname: () => ((global as any).__mockPathname ?? '/travels'),
   useRouter: () => ({
     push: jest.fn(),
     replace: jest.fn(),
+  }),
+  useRoute: () => ({
+    name: (global as any).__mockRouteName ?? 'travels',
+  }),
+  useNavigation: () => ({
+    navigate: jest.fn(),
   }),
 }));
 

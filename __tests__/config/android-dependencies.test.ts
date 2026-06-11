@@ -20,8 +20,8 @@ describe('Android Dependencies Tests', () => {
   });
 
   describe('Maps Dependencies', () => {
-    it('should have react-native-maps for Android', () => {
-      expect(packageJson.dependencies['react-native-maps']).toBeDefined();
+    it('should not have react-native-maps (native maps use WebView + Leaflet)', () => {
+      expect((packageJson.dependencies as Record<string, string>)['react-native-maps']).toBeUndefined();
     });
 
     it('should have expo-location', () => {
@@ -71,16 +71,11 @@ describe('Android Dependencies Tests', () => {
       expect(packageJson.dependencies['expo-router']).toBeDefined();
     });
 
-    it('should have @react-navigation/native', () => {
-      expect(packageJson.dependencies['@react-navigation/native']).toBeDefined();
-    });
-
-    it('should have @react-navigation/native-stack', () => {
-      expect(packageJson.dependencies['@react-navigation/native-stack']).toBeDefined();
-    });
-
-    it('should have @react-navigation/bottom-tabs', () => {
-      expect(packageJson.dependencies['@react-navigation/bottom-tabs']).toBeDefined();
+    it('should not have @react-navigation packages as direct dependencies (SDK 56 expo-router)', () => {
+      const deps = packageJson.dependencies as Record<string, string>;
+      expect(deps['@react-navigation/native']).toBeUndefined();
+      expect(deps['@react-navigation/native-stack']).toBeUndefined();
+      expect(deps['@react-navigation/bottom-tabs']).toBeUndefined();
     });
   });
 

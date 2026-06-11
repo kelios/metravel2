@@ -67,6 +67,8 @@ globalThis.expo.EventEmitter = globalThis.expo.EventEmitter || MockEventEmitter;
 globalThis.expo.NativeModule = globalThis.expo.NativeModule || MockNativeModule;
 globalThis.expo.SharedObject = globalThis.expo.SharedObject || MockSharedObject;
 globalThis.expo.NativeModulesProxy = globalThis.expo.NativeModulesProxy || {};
+// jest-expo@56 preset setup пишет ExpoFetchModule в globalThis.expo.modules
+globalThis.expo.modules = globalThis.expo.modules || {};
 
 defineStableGlobal('TextEncoderStream', globalThis.TextEncoderStream || MockTransformStream)
 defineStableGlobal('TextDecoderStream', globalThis.TextDecoderStream || MockTransformStream)

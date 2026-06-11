@@ -571,6 +571,23 @@ jest.mock('expo-router', () => {
     useLocalSearchParams: () => ({}),
     usePathname: () => '/',
     useSegments: () => [],
+    useIsFocused: () => true,
+    useFocusEffect: (cb: any) => {
+      const ReactLib = require('react')
+      ReactLib.useEffect(() => {
+        if (typeof cb === 'function') return cb()
+        return undefined
+      }, [cb])
+    },
+    useNavigation: () => ({
+      navigate: jest.fn(),
+      goBack: jest.fn(),
+      setOptions: jest.fn(),
+      addListener: jest.fn(() => jest.fn()),
+      isFocused: jest.fn(() => true),
+      canGoBack: jest.fn(() => false),
+    }),
+    useRoute: () => ({ key: 'mock-route', name: 'mock', params: {} }),
     Href: {} as any,
   }
 })
@@ -1083,7 +1100,7 @@ jest.mock('react-native-maps', () => {
     Callout: MockCallout,
     PROVIDER_GOOGLE: 'google',
   }
-})
+}, { virtual: true })
 
 jest.mock('react-native-reanimated', () => {
   const Reanimated = require('react-native-reanimated/mock');

@@ -2,7 +2,7 @@
 import { Suspense, lazy, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused } from 'expo-router';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { SafeAreaView } from 'react-native-safe-area-context';

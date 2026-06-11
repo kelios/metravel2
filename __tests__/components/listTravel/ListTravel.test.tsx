@@ -99,9 +99,6 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockRouterPush }),
   useLocalSearchParams: () => ({}),
   usePathname: () => '/',
-}));
-
-jest.mock('@react-navigation/native', () => ({
   useRoute: () => mockUseRoute(),
 }));
 

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {Image, StyleSheet, TextInput, View, Platform, Text} from 'react-native'
 import Button from '@/components/ui/Button'
-import {useNavigation} from '@react-navigation/native'
-import {useRoute} from "@react-navigation/core";
+import {useNavigation} from 'expo-router'
+import {useRoute} from 'expo-router';
 import {useAuth} from "@/context/AuthContext";
 import { useYupForm } from '@/hooks/useYupForm';
 import {setNewPasswordSchema} from '@/utils/validation';
@@ -10,7 +10,7 @@ import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation'
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { useThemedColors } from '@/hooks/useTheme';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 

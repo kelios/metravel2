@@ -21,8 +21,9 @@ class SharedObject {}
 
 const NativeModulesProxy = {};
 
-const requireNativeModule = () => ({});
-const requireOptionalNativeModule = () => ({});
+// jest-expo@56 setup кладёт стабы (например ExpoFetchModule) в globalThis.expo.modules
+const requireNativeModule = (name) => globalThis.expo?.modules?.[name] ?? {};
+const requireOptionalNativeModule = (name) => globalThis.expo?.modules?.[name] ?? {};
 
 module.exports = {
   // Used by jest-expo preset setup (expo-modules-core/src/polyfill/dangerous-internal)

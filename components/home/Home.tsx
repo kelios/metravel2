@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { Platform, RefreshControl, ScrollView, StyleSheet, View } from 'react-native'
-import { useIsFocused } from '@react-navigation/native'
+import { useIsFocused } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useAuth } from '@/context/AuthContext'

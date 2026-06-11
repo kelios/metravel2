@@ -14,15 +14,12 @@ import {
 
 jest.mock('@/context/AuthContext');
 
-jest.mock('@react-navigation/native', () => ({
-  useIsFocused: jest.fn().mockReturnValue(true),
-}));
-
 jest.setTimeout(15000);
 
 jest.mock('expo-router', () => ({
   useRouter: mockUseRouter,
   usePathname: jest.fn().mockReturnValue('/profile'),
+  useIsFocused: jest.fn().mockReturnValue(true),
 }));
 
 jest.mock('@/api/user', () => ({

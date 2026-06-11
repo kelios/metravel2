@@ -42,16 +42,8 @@ jest.mock('@/hooks/useDebouncedValue', () => ({
 jest.mock('expo-router', () => ({
   usePathname: () => '/map',
   useLocalSearchParams: () => ({}),
+  useIsFocused: () => true,
 }))
-
-// Мокаем useIsFocused, чтобы SEO-часть не отваливалась
-jest.mock('@react-navigation/native', () => {
-  const actual = jest.requireActual('@react-navigation/native')
-  return {
-    ...actual,
-    useIsFocused: () => true,
-  }
-})
 
 // Мокаем InstantSEO как no-op компонент
 jest.mock('@/components/seo/InstantSEO', () => {

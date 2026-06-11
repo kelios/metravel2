@@ -14,7 +14,7 @@ import {
 } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useIsFocused } from '@react-navigation/native'
+import { useIsFocused } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 
 import { fetchPlacesCatalog } from '@/api/places'

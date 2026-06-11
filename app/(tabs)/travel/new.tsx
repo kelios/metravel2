@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused } from 'expo-router';
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 
 const UpsertTravel = React.lazy(() => import('@/components/travel/UpsertTravel'));

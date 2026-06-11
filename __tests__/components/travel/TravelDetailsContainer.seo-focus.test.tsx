@@ -9,13 +9,10 @@ import { render } from '@testing-library/react-native'
 const mockSetOptions = jest.fn()
 const mockUseIsFocused = jest.fn(() => false)
 
-jest.mock('@react-navigation/native', () => ({
-  useIsFocused: () => mockUseIsFocused(),
-  useNavigation: () => ({ setOptions: mockSetOptions }),
-}))
-
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
+  useIsFocused: () => mockUseIsFocused(),
+  useNavigation: () => ({ setOptions: mockSetOptions }),
 }))
 
 jest.mock('expo-router/head', () => ({

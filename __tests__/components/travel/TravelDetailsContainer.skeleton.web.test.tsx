@@ -16,13 +16,10 @@ const mockPerformanceState = {
   postLcpRuntimeReady: false,
 }
 
-jest.mock('@react-navigation/native', () => ({
-  useIsFocused: () => true,
-  useNavigation: () => ({ setOptions: mockSetOptions }),
-}))
-
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
+  useIsFocused: () => true,
+  useNavigation: () => ({ setOptions: mockSetOptions }),
 }))
 
 jest.mock('expo-router/head', () => ({

@@ -7,7 +7,7 @@ import {
 import { showToastMessage } from '@/utils/toast'
 import { queryKeys } from '@/api/queryKeys'
 import { usePathname, useRouter } from 'expo-router'
-import { useRoute } from '@react-navigation/native'
+import { useRoute } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import RenderTravelItem from './RenderTravelItem'
 import ListTravelTopContent from './parts/ListTravelTopContent'

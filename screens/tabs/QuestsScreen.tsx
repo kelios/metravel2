@@ -12,7 +12,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { stringifyJsonLd } from '@/utils/jsonLd';
 import { haversineKm } from '@/utils/geo';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused } from 'expo-router';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useQuestCatalogResponsiveModel } from '@/hooks/useQuestCatalogResponsiveModel';
 import { useThemedColors } from '@/hooks/useTheme';

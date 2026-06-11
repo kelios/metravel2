@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import Button from '@/components/ui/Button';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused } from 'expo-router';
 import { Link, useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';

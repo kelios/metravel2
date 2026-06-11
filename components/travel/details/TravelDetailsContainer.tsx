@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import { Platform, useWindowDimensions } from 'react-native'
-import { useIsFocused, useNavigation } from '@react-navigation/native'
+import { useIsFocused, useNavigation } from 'expo-router'
 import { useRouter } from 'expo-router'
 
 import { METRICS } from '@/constants/layout'

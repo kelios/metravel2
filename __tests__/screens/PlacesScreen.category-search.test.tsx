@@ -14,15 +14,8 @@ jest.mock('expo-router', () => ({
     push: mockPush,
     setParams: mockSetParams,
   }),
+  useIsFocused: () => true,
 }))
-
-jest.mock('@react-navigation/native', () => {
-  const actual = jest.requireActual('@react-navigation/native')
-  return {
-    ...actual,
-    useIsFocused: () => true,
-  }
-})
 
 jest.mock('@/api/places', () => ({
   fetchPlacesCatalog: jest.fn(),

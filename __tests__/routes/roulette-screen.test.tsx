@@ -41,15 +41,8 @@ jest.mock('@tanstack/react-query', () => {
 
 jest.mock('expo-router', () => ({
   usePathname: () => '/roulette',
+  useIsFocused: () => true,
 }));
-
-jest.mock('@react-navigation/native', () => {
-  const actual = jest.requireActual('@react-navigation/native');
-  return {
-    ...actual,
-    useIsFocused: () => true,
-  };
-});
 
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native');

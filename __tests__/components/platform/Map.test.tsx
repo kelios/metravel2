@@ -21,7 +21,7 @@ jest.mock('react-native-maps', () => {
     Marker: View,
     Callout: View,
   };
-});
+}, { virtual: true });
 
 // Mock leaflet для web
 jest.mock('leaflet', () => ({

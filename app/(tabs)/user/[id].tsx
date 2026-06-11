@@ -10,7 +10,7 @@ import { openExternalUrl } from '@/utils/externalLinks';
 import { useUserProfileCached } from '@/hooks/useUserProfileCached';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { fetchMySubscriptions, fetchMySubscribers, type UserProfileDto } from '@/api/user';

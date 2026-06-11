@@ -1,7 +1,7 @@
 import React, { Suspense, useEffect } from 'react'
 import { Platform } from 'react-native'
 import { usePathname } from 'expo-router'
-import { useIsFocused } from '@react-navigation/native'
+import { useIsFocused } from 'expo-router'
 import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { ensureLeafletCss } from '@/utils/ensureLeafletCss'

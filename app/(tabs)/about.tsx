@@ -13,7 +13,7 @@ import { StatsBanner } from '@/components/about/StatsBanner';
 import { ContactForm } from '@/components/about/ContactForm';
 import { SocialSection } from '@/components/about/SocialSection';
 import { sendFeedback } from '@/api/misc';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused } from 'expo-router';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAboutStyles } from '@/components/about/aboutStyles';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';

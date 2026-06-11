@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, View, useWindowDimensions } from 'react-native';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused } from 'expo-router';
 import { usePanelController } from '@/hooks/usePanelController';
 import { METRICS } from '@/constants/layout';
 

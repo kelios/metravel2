@@ -9,17 +9,14 @@ import {
 import { createAuthValue } from '../helpers/mockContextValues';
 import ExportScreen from '@/app/(tabs)/export';
 import { useAuth } from '@/context/AuthContext';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused } from 'expo-router';
 
 jest.mock('@/context/AuthContext');
-
-jest.mock('@react-navigation/native', () => ({
-  useIsFocused: jest.fn(),
-}));
 
 jest.mock('expo-router', () => ({
   usePathname: () => '/export',
   useRouter: mockUseRouter,
+  useIsFocused: jest.fn(),
 }));
 
 jest.mock('@/utils/analytics', () => ({

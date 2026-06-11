@@ -7,15 +7,8 @@ jest.mock('expo-router', () => ({
   usePathname: jest.fn(() => '/'),
   useRouter: jest.fn(() => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() })),
   useLocalSearchParams: jest.fn(() => ({ param: 'test-slug' })),
+  useIsFocused: jest.fn(() => true),
 }))
-
-jest.mock('@react-navigation/native', () => {
-  const actual = jest.requireActual('@react-navigation/native')
-  return {
-    ...actual,
-    useIsFocused: jest.fn(() => true),
-  }
-})
 
 jest.mock('@/components/seo/InstantSEO', () => {
   const _React = require('react')

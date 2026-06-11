@@ -54,8 +54,8 @@ describe('Platform Compatibility Tests', () => {
       expect(packageJson.dependencies['react-native']).toBeDefined();
     });
 
-    it('should have react-native-maps for mobile', () => {
-      expect(packageJson.dependencies['react-native-maps']).toBeDefined();
+    it('should not have react-native-maps (native maps use WebView + Leaflet)', () => {
+      expect(packageJson.dependencies['react-native-maps']).toBeUndefined();
     });
 
     it('should have web maps alternative', () => {

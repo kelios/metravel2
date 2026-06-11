@@ -13,7 +13,7 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import Feather from '@expo/vector-icons/Feather';
 import { usePathname } from 'expo-router';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused } from 'expo-router';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import ModernFilters from '@/components/listTravel/ModernFilters';
