@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
+import Map from '@/components/MapPage/Map';
 import EmptyState from '@/components/ui/EmptyState';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -125,11 +126,11 @@ export default function QuestsContentPanel({
                             </View>
                         )}
 
-                        {dataLoaded && Platform.OS !== 'web' && (
+                        {dataLoaded && Platform.OS !== 'web' && mapPoints.length === 0 && (
                             <EmptyState
-                                icon="map"
-                                title="Карта доступна в веб-версии"
-                                description="Откройте страницу квестов в браузере, чтобы увидеть карту"
+                                icon="map-pin"
+                                title="Нет квестов для отображения на карте"
+                                description="Измените город или радиус, чтобы увидеть точки на карте"
                                 variant="empty"
                                 iconSize={48}
                             />
@@ -163,6 +164,25 @@ export default function QuestsContentPanel({
                                         onUserLocationChange={onMapUserLocationChange}
                                     />
                                 </Suspense>
+                            </View>
+                        )}
+
+                        {dataLoaded && Platform.OS !== 'web' && mapPoints.length > 0 && (
+                            <View style={styles.mapContainer}>
+                                <Map
+                                    travel={{ data: mapPoints as any }}
+                                    coordinates={mapCenter}
+                                    mode="radius"
+                                    radius={selectedCityId === nearbyId
+                                        ? (userLoc ? String(Math.max(nearbyRadiusKm, 5)) : '50')
+                                        : '30'}
+                                    routePoints={[]}
+                                    transportMode="foot"
+                                    onMapClick={() => {}}
+                                    setRouteDistance={() => {}}
+                                    setFullRouteCoords={() => {}}
+                                    onUserLocationChange={onMapUserLocationChange}
+                                />
                             </View>
                         )}
                     </View>

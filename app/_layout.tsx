@@ -225,7 +225,7 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
     ));
 
     /** === динамическая высота ДОКА футера (только иконки) === */
-    const [dockHeight, setDockHeight] = useState(0);
+    const [, setDockHeight] = useState(0);
     
     /** === SSR-safe Toast: рендерим только на клиенте === */
     const [isMounted, setIsMounted] = useState(false);
@@ -311,7 +311,6 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
             isMobile={isMobile}
             pathname={effectivePathname}
             currentColorScheme={colorScheme}
-            dockHeight={dockHeight}
             setDockHeight={setDockHeight}
             isMounted={isMounted}
             queryClient={queryClient}
@@ -328,7 +327,6 @@ function ThemedContent({
   isMobile,
   pathname,
   currentColorScheme,
-  dockHeight,
   setDockHeight,
   isMounted,
   queryClient,
@@ -338,7 +336,6 @@ function ThemedContent({
   isMobile: boolean;
   pathname?: string;
   currentColorScheme: 'light' | 'dark' | null | undefined;
-  dockHeight: number;
   setDockHeight: (h: number) => void;
   isMounted: boolean;
   queryClient: any;
@@ -375,10 +372,8 @@ function ThemedContent({
       return <View testID="bottom-gutter" style={{ height: WEB_FOOTER_RESERVE_HEIGHT }} />;
     }
 
-    if (dockHeight <= 0) return null;
-
-    return <View testID="bottom-gutter" style={{ height: dockHeight }} />;
-  }, [showFooter, isMobile, dockHeight]);
+    return null;
+  }, [showFooter, isMobile]);
 
   return (
     <AppProviders
