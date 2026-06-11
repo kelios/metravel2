@@ -427,7 +427,12 @@ export function useMapScreenController() {
       hideFooterReset: !isMobile,
     };
 
-    return { Component: FiltersProviderComponent, contextValue, props: contextValue, Panel: FiltersPanelComponent };
+    return {
+      Component: FiltersProviderComponent,
+      contextValue,
+      props: contextValue,
+      Panel: FiltersPanelComponent,
+    };
   }, [
     filters,
     filterValues,
