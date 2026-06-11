@@ -6,15 +6,13 @@ import { Button } from '@/ui/paper';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import {
-  buildTravelRouteDownloadPath,
   deleteTravelRouteFile,
   downloadTravelRouteFileBlob,
   listTravelRouteFiles,
   uploadTravelRouteFile,
 } from '@/api/travelRoutes';
 import type { ParsedRoutePoint, ParsedRoutePreview, TravelRouteFile } from '@/types/travelRoutes';
-import { downloadBlobOnWeb } from '@/utils/downloadUrlOnWeb';
-import { openExternalUrlInNewTab } from '@/utils/externalLinks';
+import { downloadTravelRouteFile } from '@/utils/travelRouteDownload';
 import { parseRouteFilePreview } from '@/utils/routeFileParser';
 
 type Props = {
@@ -208,31 +206,14 @@ export default function TravelRouteFilesPanel({
     async (file: TravelRouteFile) => {
       if (!travelId) return;
 
-      const filename =
-        file.original_name ||
-        `route-${file.id}.${resolveFileExt(file) || 'gpx'}`;
-
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        try {
-          const response = await downloadTravelRouteFileBlob(travelId, file.id);
-          const blob = new Blob([response.text], {
-            type: response.contentType || 'application/octet-stream',
-          });
-          const started = downloadBlobOnWeb(blob, response.filename || filename);
-          if (!started) {
-            setError('Не удалось скачать файл маршрута');
-          }
-        } catch {
+      try {
+        const started = await downloadTravelRouteFile(travelId, file);
+        if (!started) {
           setError('Не удалось скачать файл маршрута');
         }
-        return;
+      } catch {
+        setError('Не удалось скачать файл маршрута');
       }
-
-      const rawUrl = String(file.download_url ?? '').trim() || buildTravelRouteDownloadPath(travelId, file.id);
-      await openExternalUrlInNewTab(rawUrl, {
-        allowRelative: true,
-        baseUrl: (process.env.EXPO_PUBLIC_API_URL as string) || undefined,
-      });
     },
     [travelId],
   );

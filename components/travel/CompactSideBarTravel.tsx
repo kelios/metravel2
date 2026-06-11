@@ -26,12 +26,7 @@ import { METRICS } from '@/constants/layout'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useTheme, useThemedColors } from '@/hooks/useTheme'
 import { useUserProfileCached } from '@/hooks/useUserProfileCached'
-import {
-  buildTravelRouteDownloadPath,
-  downloadTravelRouteFileBlob,
-} from '@/api/travelRoutes'
-import { downloadBlobOnWeb } from '@/utils/downloadUrlOnWeb'
-import { openExternalUrlInNewTab } from '@/utils/externalLinks'
+import { downloadTravelRouteFile } from '@/utils/travelRouteDownload'
 import { useTravelRouteFiles } from '@/hooks/useTravelRouteFiles'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -220,27 +215,10 @@ function CompactSideBarTravel({
     }
     setIsRouteDownloading(true)
     try {
-      const ext = String(supportedRouteFile.ext || 'gpx').replace(/^\./, '')
-      const filename =
-        supportedRouteFile.original_name || `route-${supportedRouteFile.id}.${ext}`
-
-      if ((Platform.OS === 'web') && typeof window !== 'undefined') {
-        const response = await downloadTravelRouteFileBlob(travelId, supportedRouteFile.id)
-        const blob = new Blob([response.text], {
-          type: response.contentType || 'application/octet-stream',
-        })
-        if (!downloadBlobOnWeb(blob, response.filename || filename)) {
-          notifyUnavailable('Скачать маршрут')
-        }
-        return
+      const started = await downloadTravelRouteFile(travelId, supportedRouteFile)
+      if (!started) {
+        notifyUnavailable('Скачать маршрут')
       }
-      const url =
-        String(supportedRouteFile.download_url ?? '').trim() ||
-        buildTravelRouteDownloadPath(travelId, supportedRouteFile.id)
-      await openExternalUrlInNewTab(url, {
-        allowRelative: true,
-        baseUrl: (process.env.EXPO_PUBLIC_API_URL as string) || undefined,
-      })
     } catch {
       notifyUnavailable('Скачать маршрут')
     } finally {
