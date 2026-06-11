@@ -14,10 +14,6 @@ jest.mock('@/context/FavoritesContext', () => ({
   useFavorites: () => mockUseFavorites(),
 }));
 
-jest.mock('@react-navigation/native', () => ({
-  useIsFocused: () => true,
-}));
-
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => (global as any).__mockResponsive ?? { width: 390 },
 }));

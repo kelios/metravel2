@@ -6,10 +6,7 @@ import React from 'react';
 import { act } from 'react-test-renderer';
 import { render } from '@testing-library/react-native';
 
-jest.mock('@react-navigation/native', () => ({
-  useIsFocused: () => true,
-  useNavigation: () => ({ setOptions: jest.fn() }),
-}));
+// useIsFocused/useNavigation приходят из глобального мока expo-router (setup.ts)
 
 jest.mock('@/context/AuthContext', () => ({
   useAuth: () => ({

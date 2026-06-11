@@ -109,11 +109,14 @@ describe('Platform Compatibility Tests', () => {
       expect(appConfig.expo.icon).toContain('.png');
     });
 
-    it('should have splash screen', () => {
+    it('should have splash screen (expo-splash-screen plugin, SDK 56 schema)', () => {
       const appConfig = readAppConfig();
-      expect(appConfig.expo.splash).toBeDefined();
-      expect(appConfig.expo.splash.image).toBeDefined();
-      expect(appConfig.expo.splash.resizeMode).toBeDefined();
+      const splashPlugin = appConfig.expo.plugins.find(
+        (plugin: unknown) => Array.isArray(plugin) && plugin[0] === 'expo-splash-screen'
+      );
+      expect(splashPlugin).toBeDefined();
+      expect(splashPlugin[1].image).toBeDefined();
+      expect(splashPlugin[1].resizeMode).toBeDefined();
     });
 
     it('should have iOS specific icon', () => {

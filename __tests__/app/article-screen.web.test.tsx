@@ -14,9 +14,6 @@ jest.mock('expo-router', () => ({
     Screen: () => null,
   },
   useLocalSearchParams: () => mockUseLocalSearchParams(),
-}))
-
-jest.mock('@react-navigation/native', () => ({
   useIsFocused: () => mockUseIsFocused(),
 }))
 

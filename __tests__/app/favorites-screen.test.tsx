@@ -27,10 +27,6 @@ jest.mock('@/utils/authNavigation', () => ({
   buildLoginHref: jest.fn(() => '/login'),
 }));
 
-jest.mock('@react-navigation/native', () => ({
-  useIsFocused: () => true,
-}));
-
 jest.mock('@/utils/confirmAction', () => ({
   confirmAction: jest.fn(() => Promise.resolve(true)),
 }));

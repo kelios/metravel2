@@ -1,5 +1,4 @@
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { NavigationContainer } from '@react-navigation/native';
 import { TextInput } from 'react-native';
 import Login from '@/app/(tabs)/login';
 import { useAuth } from '@/context/AuthContext';
@@ -21,14 +20,6 @@ jest.mock('expo-router', () => ({
   }),
   useIsFocused: () => true,
 }));
-
-jest.mock('@react-navigation/native', () => {
-  const actualNav = jest.requireActual('@react-navigation/native');
-  return {
-    ...actualNav,
-    NavigationContainer: ({ children }: any) => <>{children}</>,
-  };
-});
 
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native');
@@ -103,11 +94,7 @@ const renderLogin = async (mockLogin?: jest.Mock, mockSendPassword?: jest.Mock) 
     isSuperuser: false,
   });
 
-  const utils = render(
-    <NavigationContainer>
-      <Login />
-    </NavigationContainer>
-  );
+  const utils = render(<Login />);
 
   // Login screen renders <ActivityIndicator> until the React.lazy LoginForm
   // chunk resolves. Under heavy parallel test load that dynamic import can take

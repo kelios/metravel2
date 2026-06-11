@@ -147,10 +147,13 @@ describe('Android Configuration Tests', () => {
       expect(appConfig.expo.icon).toContain('assets/images/icon.png');
     });
 
-    it('should have splash screen reference', () => {
+    it('should have splash screen reference (expo-splash-screen plugin, SDK 56 schema)', () => {
       const appConfig = readAppConfig();
-      expect(appConfig.expo.splash).toBeDefined();
-      expect(appConfig.expo.splash.image).toContain('assets/images/splash.png');
+      const splashPlugin = appConfig.expo.plugins.find(
+        (plugin: unknown) => Array.isArray(plugin) && plugin[0] === 'expo-splash-screen'
+      );
+      expect(splashPlugin).toBeDefined();
+      expect(splashPlugin[1].image).toContain('assets/images/splash.png');
     });
   });
 

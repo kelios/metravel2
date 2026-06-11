@@ -3,12 +3,10 @@ import { render } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Home from '@/components/home/Home';
 import { useAuth } from '@/context/AuthContext';
-import { useIsFocused } from '@react-navigation/native';
 import { fetchMyTravels } from '@/api/travelUserQueries';
 
 // Mock dependencies
 jest.mock('@/context/AuthContext');
-jest.mock('@react-navigation/native');
 jest.mock('@/api/travelUserQueries');
 jest.mock('@/utils/analytics', () => ({
   sendAnalyticsEvent: jest.fn(),
@@ -37,7 +35,6 @@ jest.mock('@/components/home/HomeFinalCTA', () => {
 });
 
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
-const mockUseIsFocused = useIsFocused as jest.MockedFunction<typeof useIsFocused>;
 const mockFetchMyTravels = fetchMyTravels as jest.MockedFunction<typeof fetchMyTravels>;
 
 describe('Home Component', () => {
@@ -51,7 +48,7 @@ describe('Home Component', () => {
     });
     // HERO-06: Мок fetchMyTravels для загрузки travelsCount
     mockFetchMyTravels.mockResolvedValue({ data: [], total: 0 } as any);
-    mockUseIsFocused.mockReturnValue(true);
+    // useIsFocused приходит из глобального мока expo-router (setup.ts) и возвращает true
     mockUseAuth.mockReturnValue({
       isAuthenticated: false,
       userId: null,

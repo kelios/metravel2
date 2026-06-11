@@ -227,7 +227,6 @@
     "@jest/test-sequencer": "30.3.0",
     "@playwright/test": "^1.60.0",
     "@react-native/jest-preset": "0.85.3",
-    "@react-navigation/native": "^7.1.33",
     "@tanstack/react-query-devtools": "5.100.11",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",

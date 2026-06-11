@@ -71,11 +71,15 @@ describe('Android Dependencies Tests', () => {
       expect(packageJson.dependencies['expo-router']).toBeDefined();
     });
 
-    it('should not have @react-navigation packages as direct dependencies (SDK 56 expo-router)', () => {
-      const deps = packageJson.dependencies as Record<string, string>;
-      expect(deps['@react-navigation/native']).toBeUndefined();
-      expect(deps['@react-navigation/native-stack']).toBeUndefined();
-      expect(deps['@react-navigation/bottom-tabs']).toBeUndefined();
+    it('should not have @react-navigation packages in any dependency section (SDK 56 expo-router)', () => {
+      const allDeps = {
+        ...(packageJson.dependencies as Record<string, string>),
+        ...(packageJson.devDependencies as Record<string, string>),
+        ...((packageJson as Record<string, unknown>).peerDependencies as Record<string, string> | undefined),
+        ...((packageJson as Record<string, unknown>).optionalDependencies as Record<string, string> | undefined),
+      };
+      const navPackages = Object.keys(allDeps).filter((name) => name.startsWith('@react-navigation/'));
+      expect(navPackages).toEqual([]);
     });
   });
 
