@@ -64,7 +64,10 @@ describe('Footer', () => {
   it('renders desktop footer groups', () => {
     const { Platform } = require('react-native')
     const prevOS = Platform.OS
-    ;(Platform as any).OS = 'web'
+    Object.defineProperty(Platform, 'OS', {
+      configurable: true,
+      value: 'web',
+    })
 
     try {
       ;(global as any).__mockResponsive = {
@@ -86,7 +89,8 @@ describe('Footer', () => {
         isBetween: () => false,
       }
 
-      const { getByTestId } = render(<Footer />)
+      const FooterDesktop = require('@/components/layout/FooterDesktop').default
+      const { getByTestId } = render(<FooterDesktop />)
       expect(getByTestId('footer-item-about')).toBeTruthy()
       expect(getByTestId('footer-item-privacy')).toBeTruthy()
       expect(getByTestId('footer-item-cookies')).toBeTruthy()
@@ -94,7 +98,10 @@ describe('Footer', () => {
       expect(getByTestId('footer-item-ig')).toBeTruthy()
       expect(getByTestId('footer-item-yt')).toBeTruthy()
     } finally {
-      ;(Platform as any).OS = prevOS
+      Object.defineProperty(Platform, 'OS', {
+        configurable: true,
+        value: prevOS,
+      })
     }
   })
 })

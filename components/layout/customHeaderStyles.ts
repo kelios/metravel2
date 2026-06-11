@@ -131,7 +131,7 @@ export const createCustomHeaderStyles = (colors: ThemedColors, isMobile: boolean
       paddingVertical: 6,
       paddingHorizontal: 10,
       borderRadius: 20,
-      maxWidth: 180,
+      maxWidth: 220,
       gap: 6,
       minHeight: 44,
       flexShrink: 1,
@@ -165,7 +165,8 @@ export const createCustomHeaderStyles = (colors: ThemedColors, isMobile: boolean
       fontSize: 16,
       color: colors.text,
       flexShrink: 1,
-      minWidth: 0,
+      minWidth: 48,
+      maxWidth: 140,
     },
     navItem: {
       flexDirection: 'row',

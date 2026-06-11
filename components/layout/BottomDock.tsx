@@ -462,9 +462,11 @@ const createStyles = (
   isCompactMobileWidth: boolean = false
 ) => StyleSheet.create({
   container: {
-    position: Platform.OS === "web" ? ("fixed" as any) : "relative",
+    position: Platform.OS === "web" ? ("fixed" as any) : "absolute",
     bottom: 0,
-    ...(Platform.OS === "web" ? ({ left: 0, right: 0, width: "100%" } as any) : null),
+    left: 0,
+    right: 0,
+    width: "100%",
     zIndex: 890,
   },
   containerOpen: {
