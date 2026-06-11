@@ -487,7 +487,7 @@ export default function QuestsScreen() {
                         accessibilityRole="button"
                         accessibilityLabel="Закрыть меню"
                     />
-                    <View style={[s.sidebar as ViewStyle, s.sidebarMobile as ViewStyle]}>
+                    <View style={s.sidebarMobile as ViewStyle}>
                         <QuestsSidebar
                             styles={s}
                             colors={colors}

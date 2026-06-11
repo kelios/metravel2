@@ -38,6 +38,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
 
         /* ---- Left Sidebar (Premium, atmospheric) ---- */
         sidebar: {
+            flex: 1,
             width: isMobileW ? '100%' : SIDEBAR_WIDTH,
             flexShrink: 0,
             flexDirection: 'column',
@@ -255,6 +256,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             alignItems: 'center',
             gap: spacing.xs,
             flex: 1,
+            minWidth: 0,
         },
         cityItemIcon: {
             width: cityIconSize,
@@ -278,6 +280,8 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             fontSize: typography.sizes.sm,
             fontWeight: '500',
             letterSpacing: -0.2,
+            flexShrink: 1,
+            minWidth: 0,
         },
         cityItemTextActive: {
             color: colors.brandDark,
@@ -292,6 +296,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             borderColor: colors.borderLight,
             minWidth: 24,
             alignItems: 'center',
+            marginLeft: spacing.xs,
         },
         cityItemCountActive: {
             backgroundColor: colors.brand,

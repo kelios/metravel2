@@ -1,11 +1,13 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 
 import QuestsContentPanel from '@/screens/tabs/QuestsContentPanel';
 
+let mockIsMobile = false;
+
 jest.mock('@/hooks/useResponsive', () => ({
-    useResponsive: () => ({ isMobile: false }),
+    useResponsive: () => ({ isMobile: mockIsMobile }),
 }));
 
 jest.mock('@expo/vector-icons/Feather', () => 'Feather');
@@ -34,6 +36,10 @@ describe('QuestsContentPanel', () => {
         warningSoft: '#fef3c7',
         warningDark: '#92400e',
     };
+
+    beforeEach(() => {
+        mockIsMobile = false;
+    });
 
     it('shows a geolocation-disabled banner and keeps the map visible with a wide radius fallback', () => {
         (Platform as { OS: string }).OS = 'web';
@@ -65,6 +71,7 @@ describe('QuestsContentPanel', () => {
                 radiiLg={24}
                 LazyQuestMap={LazyQuestMap}
                 onOpenFilterDrawer={() => {}}
+                onToggleViewMode={() => {}}
                 onMapUserLocationChange={() => {}}
             />
         );
@@ -78,5 +85,39 @@ describe('QuestsContentPanel', () => {
             }),
             undefined,
         );
+    });
+
+    it('opens the city drawer from the mobile city button', () => {
+        mockIsMobile = true;
+        (Platform as { OS: string }).OS = 'android';
+        const LazyQuestMap = jest.fn(() => null);
+        const onOpenFilterDrawer = jest.fn();
+
+        const { getByLabelText } = render(
+            <QuestsContentPanel
+                styles={styles}
+                colors={colors}
+                dataLoaded
+                viewMode="list"
+                selectedCityId="warsaw"
+                selectedCityName="Warsaw"
+                nearbyId="__nearby__"
+                nearbyRadiusKm={15}
+                questsAll={[]}
+                questCardWidth={320}
+                mapPoints={[]}
+                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
+                userLoc={null}
+                radiiLg={24}
+                LazyQuestMap={LazyQuestMap}
+                onOpenFilterDrawer={onOpenFilterDrawer}
+                onToggleViewMode={() => {}}
+                onMapUserLocationChange={() => {}}
+            />
+        );
+
+        fireEvent.press(getByLabelText('Выбрать город'));
+
+        expect(onOpenFilterDrawer).toHaveBeenCalledTimes(1);
     });
 });
