@@ -1,7 +1,7 @@
 // E5: Refactored — state/logic extracted to usePhotoUpload hook
 import React, { useMemo } from 'react';
 import { Platform, ActivityIndicator, Pressable, View, Text } from 'react-native';
-import * as ImagePicker from 'react-native-image-picker';
+import * as ImagePicker from 'expo-image-picker';
 import { useDropzone } from 'react-dropzone';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -23,31 +23,32 @@ interface PhotoUploadWithPreviewProps {
 
 export { chooseFallbackUrl };
 
-const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
-  collection, idTravel, oldImage, onUpload, onPreviewChange, onRequestRemove,
-  disabled = false, placeholder = 'Перетащите сюда изображение', maxSizeMB = 10,
+// useDropzone — web-only хук (DOM): выносим в отдельный компонент, чтобы на native
+// он не вызывался вовсе (вызов на Android валит рендер шага «Медиа» визарда).
+type WebDropzoneViewProps = {
+  disabled: boolean;
+  placeholder: string;
+  maxSizeMB: number;
+  colors: ReturnType<typeof useThemedColors>;
+  styles: any;
+  loading: boolean;
+  uploadProgress: number;
+  error: string | null;
+  uploadMessage: string | null;
+  hasValidImage: boolean;
+  currentDisplayUrl: string | undefined;
+  validateFile: (file: File) => string | null;
+  handleUploadImage: (file: any) => Promise<void>;
+  handleRemovePress: () => void;
+  handleImageLoadCheck: (img: HTMLImageElement) => void;
+  handleImageError: () => void;
+};
+
+const WebDropzoneView: React.FC<WebDropzoneViewProps> = ({
+  disabled, placeholder, maxSizeMB, colors, styles,
+  loading, uploadProgress, error, uploadMessage, hasValidImage, currentDisplayUrl,
+  validateFile, handleUploadImage, handleRemovePress, handleImageLoadCheck, handleImageError,
 }) => {
-  const colors = useThemedColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-
-  const {
-    loading, uploadProgress, error, uploadMessage,
-    hasValidImage, currentDisplayUrl,
-    handleUploadImage, handleRemovePress, validateFile,
-    handleImageLoadCheck, handleImageError,
-  } = usePhotoUpload({ collection, idTravel, oldImage, onUpload, onPreviewChange, onRequestRemove, disabled, maxSizeMB });
-
-  const pickImageFromGallery = async () => {
-    if (disabled) return;
-    if (Platform.OS === 'web') return;
-    ImagePicker.launchImageLibrary({ mediaType: 'photo', quality: 0.8 }, async (response) => {
-      if (response.didCancel || response.errorCode) return;
-      const asset = response.assets?.[0];
-      if (!asset?.uri) return;
-      await handleUploadImage({ uri: asset.uri, name: asset.fileName || 'photo.jpg', type: asset.type || 'image/jpeg' });
-    });
-  };
-
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: async (acceptedFiles, rejectedFiles) => {
       if (disabled) return;
@@ -71,64 +72,118 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     disabled,
   });
 
+  const { onBeforeInput, ...rootProps } = getRootProps();
+  void onBeforeInput;
+  return (
+    <View style={styles.container as any}>
+      <div {...rootProps} style={{
+        ...(styles.dropzone as any),
+        ...(isDragActive ? (styles.dropzoneActive as any) : {}),
+        ...(disabled ? (styles.dropzoneDisabled as any) : {}),
+      }}>
+        <input {...getInputProps()} />
+        {loading ? (
+          <View style={styles.loadingContainer as any}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            {uploadProgress > 0 && (
+              <View style={styles.progressContainer as any}>
+                <View style={[styles.progressBar as any, { width: `${uploadProgress}%` } as any] as any} />
+                <Text style={styles.progressText as any}>{uploadProgress}%</Text>
+              </View>
+            )}
+          </View>
+        ) : hasValidImage ? (
+          <View style={styles.previewContainer as any}>
+            <img src={currentDisplayUrl} alt="" aria-hidden referrerPolicy="no-referrer" style={styles.previewBlur as any} />
+            <img
+              src={currentDisplayUrl} alt="Предпросмотр" referrerPolicy="no-referrer"
+              style={styles.previewImage as any}
+              onLoad={(e) => handleImageLoadCheck(e.currentTarget as HTMLImageElement)}
+              onError={() => handleImageError()}
+            />
+            {!disabled && (
+              <Pressable style={styles.removeButton as any} onPress={handleRemovePress} accessibilityLabel="Удалить изображение">
+                <Feather name="x" size={18} color={colors.textOnPrimary} />
+              </Pressable>
+            )}
+          </View>
+        ) : (
+          <View style={styles.placeholderContainer as any}>
+            <Feather name="upload-cloud" size={40} color={colors.primary} />
+            <Text style={styles.placeholderText as any}>{placeholder}</Text>
+            <Text style={styles.placeholderSubtext as any}>или нажмите для выбора файла</Text>
+            <Text style={styles.placeholderHint as any}>Макс. размер: {maxSizeMB}MB</Text>
+          </View>
+        )}
+      </div>
+      {error && !currentDisplayUrl && (
+        <View style={styles.errorContainer as any}>
+          <Feather name="alert-circle" size={14} color={colors.danger} />
+          <Text style={styles.errorText as any}>{error}</Text>
+        </View>
+      )}
+      {uploadMessage && !error && (
+        <View style={styles.successContainer as any}>
+          <Feather name="check-circle" size={14} color={colors.success} />
+          <Text style={styles.successText as any}>{uploadMessage}</Text>
+        </View>
+      )}
+    </View>
+  );
+};
+
+const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
+  collection, idTravel, oldImage, onUpload, onPreviewChange, onRequestRemove,
+  disabled = false, placeholder = 'Перетащите сюда изображение', maxSizeMB = 10,
+}) => {
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const {
+    loading, uploadProgress, error, uploadMessage,
+    hasValidImage, currentDisplayUrl,
+    handleUploadImage, handleRemovePress, validateFile,
+    handleImageLoadCheck, handleImageError,
+  } = usePhotoUpload({ collection, idTravel, oldImage, onUpload, onPreviewChange, onRequestRemove, disabled, maxSizeMB });
+
+  const pickImageFromGallery = async () => {
+    if (disabled) return;
+    if (Platform.OS === 'web') return;
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+        exif: false,
+      });
+      if (result.canceled) return;
+      const asset = result.assets?.[0];
+      if (!asset?.uri) return;
+      await handleUploadImage({ uri: asset.uri, name: asset.fileName || 'photo.jpg', type: asset.mimeType || 'image/jpeg' });
+    } catch {
+      // Ошибка выбора отобразится через error-состояние usePhotoUpload при загрузке.
+    }
+  };
+
   if (Platform.OS === 'web') {
-    const { onBeforeInput, ...rootProps } = getRootProps();
-    void onBeforeInput;
     return (
-      <View style={styles.container as any}>
-        <div {...rootProps} style={{
-          ...(styles.dropzone as any),
-          ...(isDragActive ? (styles.dropzoneActive as any) : {}),
-          ...(disabled ? (styles.dropzoneDisabled as any) : {}),
-        }}>
-          <input {...getInputProps()} />
-          {loading ? (
-            <View style={styles.loadingContainer as any}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              {uploadProgress > 0 && (
-                <View style={styles.progressContainer as any}>
-                  <View style={[styles.progressBar as any, { width: `${uploadProgress}%` } as any] as any} />
-                  <Text style={styles.progressText as any}>{uploadProgress}%</Text>
-                </View>
-              )}
-            </View>
-          ) : hasValidImage ? (
-            <View style={styles.previewContainer as any}>
-              <img src={currentDisplayUrl} alt="" aria-hidden referrerPolicy="no-referrer" style={styles.previewBlur as any} />
-              <img
-                src={currentDisplayUrl} alt="Предпросмотр" referrerPolicy="no-referrer"
-                style={styles.previewImage as any}
-                onLoad={(e) => handleImageLoadCheck(e.currentTarget as HTMLImageElement)}
-                onError={() => handleImageError()}
-              />
-              {!disabled && (
-                <Pressable style={styles.removeButton as any} onPress={handleRemovePress} accessibilityLabel="Удалить изображение">
-                  <Feather name="x" size={18} color={colors.textOnPrimary} />
-                </Pressable>
-              )}
-            </View>
-          ) : (
-            <View style={styles.placeholderContainer as any}>
-              <Feather name="upload-cloud" size={40} color={colors.primary} />
-              <Text style={styles.placeholderText as any}>{placeholder}</Text>
-              <Text style={styles.placeholderSubtext as any}>или нажмите для выбора файла</Text>
-              <Text style={styles.placeholderHint as any}>Макс. размер: {maxSizeMB}MB</Text>
-            </View>
-          )}
-        </div>
-        {error && !currentDisplayUrl && (
-          <View style={styles.errorContainer as any}>
-            <Feather name="alert-circle" size={14} color={colors.danger} />
-            <Text style={styles.errorText as any}>{error}</Text>
-          </View>
-        )}
-        {uploadMessage && !error && (
-          <View style={styles.successContainer as any}>
-            <Feather name="check-circle" size={14} color={colors.success} />
-            <Text style={styles.successText as any}>{uploadMessage}</Text>
-          </View>
-        )}
-      </View>
+      <WebDropzoneView
+        disabled={disabled}
+        placeholder={placeholder}
+        maxSizeMB={maxSizeMB}
+        colors={colors}
+        styles={styles}
+        loading={loading}
+        uploadProgress={uploadProgress}
+        error={error}
+        uploadMessage={uploadMessage}
+        hasValidImage={hasValidImage}
+        currentDisplayUrl={currentDisplayUrl}
+        validateFile={validateFile}
+        handleUploadImage={handleUploadImage}
+        handleRemovePress={handleRemovePress}
+        handleImageLoadCheck={handleImageLoadCheck}
+        handleImageError={handleImageError}
+      />
     );
   }
 

@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Pressable,
   Platform,
+  Modal,
   LayoutChangeEvent,
   useWindowDimensions,
 } from "react-native";
@@ -365,6 +366,50 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
           </View>
         </>
       )}
+      {showMore && Platform.OS !== "web" && !(NATIVE_MORE_SHEET_ENABLED && GorhomBottomSheet) && (
+        <Modal
+          transparent
+          visible
+          animationType="slide"
+          onRequestClose={() => setShowMore(false)}
+        >
+          <View style={styles.nativeModalRoot}>
+            <Pressable
+              style={styles.nativeModalBackdrop}
+              onPress={() => setShowMore(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Закрыть меню"
+            />
+            <View style={styles.nativeModalSheet} testID="footer-more-sheet-native">
+              <View style={styles.sheetHandle} accessible={false} importantForAccessibility="no" />
+              <View style={styles.sheetHeader}>
+                <View style={styles.sheetHeaderCopy}>
+                  <Text style={styles.sheetEyebrow}>Быстрые действия</Text>
+                  <Text style={styles.sheetTitle}>Ещё</Text>
+                </View>
+                <Pressable
+                  onPress={() => setShowMore(false)}
+                  style={[styles.sheetCloseBtn, globalFocusStyles.focusable]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Закрыть"
+                >
+                  <Feather name="x" size={20} color={colors.textMuted} />
+                </Pressable>
+              </View>
+              <View style={styles.moreList}>
+                {BOTTOM_DOCK_MORE_MENU_SECTIONS.map((section, sectionIndex) => (
+                  <React.Fragment key={section.key}>
+                    {section.items
+                      .filter((item) => item.route !== '/privacy' && item.route !== '/cookies')
+                      .map((item) => renderMoreMenuItem(item, () => setShowMore(false)))}
+                    {sectionIndex < BOTTOM_DOCK_MORE_MENU_SECTIONS.length - 1 ? <View style={styles.moreDivider} /> : null}
+                  </React.Fragment>
+                ))}
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
       {NATIVE_MORE_SHEET_ENABLED && Platform.OS !== 'web' && GorhomBottomSheet && (
         <GorhomBottomSheet
           ref={nativeSheetRef}
@@ -553,6 +598,21 @@ const createStyles = (
   moreSheetHidden: {
     transform: 'translateY(100%)',
   } as any,
+  nativeModalRoot: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: colors.overlay,
+  },
+  nativeModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  nativeModalSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: PANEL_RADIUS,
+    borderTopRightRadius: PANEL_RADIUS,
+    padding: 16,
+    paddingBottom: safeBottomPadding + 16,
+  },
   sheetHandle: {
     width: 40,
     height: 4,

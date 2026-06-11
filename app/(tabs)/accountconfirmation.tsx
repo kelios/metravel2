@@ -82,7 +82,7 @@ export default function AccountConfirmation() {
                     {loading ? (
                         <ActivityIndicator size="large" color={colors.primary} />
                     ) : error ? (
-                        <>
+                        <View>
                             <Text style={styles.errorText}>{error}</Text>
                             <Button
                                 mode="contained"
@@ -92,7 +92,7 @@ export default function AccountConfirmation() {
                             >
                                 На главную
                             </Button>
-                        </>
+                        </View>
                     ) : (
                         <Text style={styles.successText}>Учетная запись успешно подтверждена!</Text>
                     )}
@@ -107,6 +107,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: colors.background,
     },
     backgroundImage: {
         width: '100%',
@@ -116,7 +117,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         left: 0,
     },
     contentContainer: {
-        width: '50%',
+        width: '90%',
+        maxWidth: 480,
         position: 'absolute',
         top: '30%',
         alignItems: 'center',
