@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { TravelMap } from '@/components/MapPage/TravelMap';
+import { TravelMap } from '@/components/MapPage/TravelMap.web';
 
 jest.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({

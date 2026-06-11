@@ -79,17 +79,19 @@ function getEstimatedBookWrapperWidth(viewportWidth: number) {
 
 const getBookSlideSource = (slide: (typeof BOOK_IMAGES)[number]) => slide.source
 
-function getInternalHrefPath(href: string) {
+// Hermes' built-in URL is not spec-compliant (no react-native-url-polyfill),
+// so parse host/path by string/regex for identical behavior on web and native.
+export function getInternalHrefPath(href: string) {
   const trimmedHref = href.trim()
   if (trimmedHref.startsWith('/')) return trimmedHref
 
-  try {
-    const parsed = new URL(trimmedHref)
-    if (!INTERNAL_HOSTS.has(parsed.hostname)) return null
-    return `${parsed.pathname}${parsed.search}${parsed.hash}` || '/'
-  } catch {
-    return null
-  }
+  const match = /^https?:\/\/([^/?#]+)([/?#][^]*)?$/i.exec(trimmedHref)
+  if (!match) return null
+
+  const host = match[1].toLowerCase().replace(/:\d+$/, '')
+  if (!INTERNAL_HOSTS.has(host)) return null
+
+  return match[2] || '/'
 }
 
 const HomeHero = memo(function HomeHero({

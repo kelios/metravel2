@@ -116,6 +116,14 @@ export const createCustomHeaderStyles = (colors: ThemedColors, isMobile: boolean
       flexShrink: 0,
       justifyContent: 'flex-end',
     },
+    rightSectionMobile: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      flex: 1,
+      minWidth: 0,
+      justifyContent: 'flex-end',
+    },
     mobileUserPill: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -126,8 +134,8 @@ export const createCustomHeaderStyles = (colors: ThemedColors, isMobile: boolean
       maxWidth: 180,
       gap: 6,
       minHeight: 44,
-      minWidth: 96,
       flexShrink: 1,
+      minWidth: 0,
     },
     mobileUserPillPlaceholder: {
       flexDirection: 'row',
@@ -158,7 +166,6 @@ export const createCustomHeaderStyles = (colors: ThemedColors, isMobile: boolean
       color: colors.text,
       flexShrink: 1,
       minWidth: 0,
-      maxWidth: 112,
     },
     navItem: {
       flexDirection: 'row',

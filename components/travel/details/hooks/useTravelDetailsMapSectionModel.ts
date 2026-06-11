@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Alert, Platform } from 'react-native'
+import * as FileSystem from 'expo-file-system'
+import * as Sharing from 'expo-sharing'
 
 import { METRICS } from '@/constants/layout'
 import type { TravelRouteFile } from '@/types/travelRoutes'
 import type { Travel } from '@/types/types'
-import { buildTravelRouteDownloadPath, downloadTravelRouteFileBlob } from '@/api/travelRoutes'
+import { downloadTravelRouteFileBlob } from '@/api/travelRoutes'
 import { downloadBlobOnWeb } from '@/utils/downloadUrlOnWeb'
-import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { useTravelDetailsMapSectionHintsModel } from './useTravelDetailsMapSectionHintsModel'
 
 function getTravelDetailsMapSectionFlags(params: {
@@ -128,14 +129,28 @@ export function useTravelDetailsMapSectionModel({
         return
       }
 
-      const rawUrl =
-        String(file.download_url ?? '').trim() ||
-        buildTravelRouteDownloadPath(travel.id, file.id)
+      const response = await downloadTravelRouteFileBlob(travel.id, file.id)
 
-      await openExternalUrlInNewTab(rawUrl, {
-        allowRelative: true,
-        baseUrl: (process.env.EXPO_PUBLIC_API_URL as string) || undefined,
-      })
+      const cacheDir =
+        (FileSystem as { cacheDirectory?: string }).cacheDirectory ??
+        String((FileSystem as any).Paths?.cache?.uri ?? '')
+
+      if (!cacheDir) {
+        notifyDownloadUnavailable()
+        return
+      }
+
+      const uri = `${cacheDir}${response.filename || filename}`
+      await FileSystem.writeAsStringAsync(uri, response.text)
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: response.contentType || 'application/octet-stream',
+          dialogTitle: 'Сохранить файл маршрута',
+        })
+      } else {
+        notifyDownloadUnavailable()
+      }
     } catch {
       notifyDownloadUnavailable()
     } finally {

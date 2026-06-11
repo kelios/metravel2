@@ -57,6 +57,7 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
         justifyContent: 'center',
         minWidth: 44,
         minHeight: 44,
+        flexShrink: 0,
     },
     logo: { 
         width: 32, 

@@ -26,5 +26,5 @@ export default function CustomHeaderAccountSection({
     </Suspense>
   )
 
-  return isMobile ? <View style={styles.rightSection}>{content}</View> : <>{content}</>
+  return isMobile ? <View style={styles.rightSectionMobile}>{content}</View> : <>{content}</>
 }
