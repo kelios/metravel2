@@ -71,6 +71,7 @@ const MapMobileSheetBodyInner: React.FC<MapMobileSheetBodyProps> = ({
         transportMode={transportMode}
         onToggleFavorite={onToggleFavorite}
         favorites={favorites}
+        useBottomSheetScrollable
         compactPreview={sheetState === 'quarter'}
         onExpandList={onOpenList}
         onClosePanel={onBackToMap}

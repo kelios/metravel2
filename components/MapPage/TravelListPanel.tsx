@@ -4,6 +4,7 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
   Platform,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -11,6 +12,7 @@ import {
   View,
 } from 'react-native'
 import { FlashList } from '@shopify/flash-list'
+import { BottomSheetFlatList } from '@gorhom/bottom-sheet'
 
 import { Text } from '@/ui/paper'
 import AddressListItem from './AddressListItem'
@@ -92,6 +94,17 @@ type Props = {
   transportMode?: 'car' | 'bike' | 'foot'
   onToggleFavorite?: (id: string | number) => void
   favorites?: Set<string | number>
+  useBottomSheetScrollable?: boolean
+}
+
+const getTravelItemTitle = (item: any): string =>
+  String(item?.address || item?.name || item?.title || 'Место')
+
+const getTravelItemSubtitle = (item: any): string => {
+  const category = item?.categoryName || item?.category || item?.typeName
+  if (category) return String(category)
+  if (item?.coord) return String(item.coord)
+  return 'Место рядом'
 }
 
 const getTravelItemId = (item: any): string | number | undefined =>
@@ -168,6 +181,7 @@ const TravelListPanel: React.FC<Props> = ({
   transportMode = 'car',
   onToggleFavorite,
   favorites = EMPTY_FAVORITES,
+  useBottomSheetScrollable = false,
   onClosePanel,
   onOpenFilters,
   onResetFilters,
@@ -204,6 +218,32 @@ const TravelListPanel: React.FC<Props> = ({
 
       const onHidePress =
         onHideTravel && canUseItemId ? () => onHideTravel(itemId) : undefined
+
+      if (!IS_WEB && isMobile && compactPreview) {
+        return (
+          <Pressable
+            onPress={() => buildRouteTo(item)}
+            style={({ pressed }) => [
+              styles.compactPreviewCard,
+              pressed && styles.compactPreviewCardPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`Открыть место: ${getTravelItemTitle(item)}`}
+          >
+            <View style={styles.compactPreviewIcon}>
+              <Text style={styles.compactPreviewIconText}>⌖</Text>
+            </View>
+            <View style={styles.compactPreviewText}>
+              <Text style={styles.compactPreviewTitle} numberOfLines={1}>
+                {getTravelItemTitle(item)}
+              </Text>
+              <Text style={styles.compactPreviewSubtitle} numberOfLines={1}>
+                {getTravelItemSubtitle(item)}
+              </Text>
+            </View>
+          </Pressable>
+        )
+      }
 
       // Native mobile: favorite is handled by the swipe gesture, so the card
       // itself must NOT render a favorite button (avoids a duplicate action).
@@ -278,11 +318,13 @@ const TravelListPanel: React.FC<Props> = ({
     },
     [
       isMobile,
+      compactPreview,
       buildRouteTo,
       onHideTravel,
       userLocation,
       transportMode,
       screenWidth,
+      styles,
       onToggleFavorite,
       favorites,
       addFavorite,
@@ -379,6 +421,7 @@ const TravelListPanel: React.FC<Props> = ({
 
   const listHeader = useMemo(() => {
     if (!isMobile || !travelsData.length) return null
+    if (compactPreview) return null
 
     const hintText = buildTravelListSummaryHint({
       travelsCount: travelsData.length,
@@ -479,13 +522,16 @@ const TravelListPanel: React.FC<Props> = ({
     )
   }
 
+  const NativeListComponent = useBottomSheetScrollable ? BottomSheetFlatList : FlashList
+
   return (
-    <FlashList
+    <NativeListComponent
       data={visibleTravelsData}
       keyExtractor={getTravelItemKey}
       renderItem={renderItem}
+      style={styles.nativeList}
       contentContainerStyle={styles.list}
-      {...({ estimatedItemSize: isMobile ? 100 : 120 } as any)}
+      {...(useBottomSheetScrollable ? null : ({ estimatedItemSize: isMobile ? 100 : 120 } as any))}
       onEndReachedThreshold={compactPreview ? undefined : 0.5}
       onEndReached={compactPreview ? undefined : onLoadMore && hasMore ? onLoadMore : undefined}
       ListHeaderComponent={listHeader}
@@ -615,6 +661,57 @@ const getStyles = (colors: ThemedColors) =>
       ...(IS_WEB
         ? ({ scrollbarWidth: 'thin', scrollbarColor: `${colors.border} transparent` } as any)
         : null),
+    },
+    nativeList: {
+      flex: 1,
+      minHeight: 0,
+      width: '100%',
+    },
+    compactPreviewCard: {
+      width: '100%',
+      minHeight: 76,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginBottom: 8,
+      borderRadius: 14,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.surface,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    compactPreviewCardPressed: {
+      opacity: 0.85,
+    },
+    compactPreviewIcon: {
+      width: 42,
+      height: 42,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.backgroundSecondary,
+    },
+    compactPreviewIconText: {
+      color: colors.primary,
+      fontSize: 20,
+      fontWeight: '800',
+    },
+    compactPreviewText: {
+      flex: 1,
+      minWidth: 0,
+    },
+    compactPreviewTitle: {
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: '800',
+      lineHeight: 20,
+    },
+    compactPreviewSubtitle: {
+      color: colors.textMuted,
+      fontSize: 12,
+      lineHeight: 16,
+      marginTop: 2,
     },
     loader: { paddingVertical: 16, alignItems: 'center' },
     endText: {

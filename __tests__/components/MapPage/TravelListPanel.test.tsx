@@ -175,7 +175,7 @@ describe('TravelListPanel (right list on map page)', () => {
   });
 
   it('keeps the mobile list header free of legacy filter and map buttons', () => {
-    const { getByTestId, queryByTestId } = render(
+    const { getByText, queryByTestId } = render(
       <TravelListPanel
         travelsData={travelsData}
         buildRouteTo={jest.fn()}
@@ -188,7 +188,8 @@ describe('TravelListPanel (right list on map page)', () => {
       />
     );
 
-    expect(getByTestId('address-item-1')).toBeTruthy();
+    expect(getByText('Place 1')).toBeTruthy();
+    expect(queryByTestId('travel-list-mobile-summary')).toBeNull();
     expect(queryByTestId('travel-list-expand-all')).toBeNull();
     expect(queryByTestId('travel-list-open-filters')).toBeNull();
     expect(queryByTestId('travel-list-back-to-map')).toBeNull();

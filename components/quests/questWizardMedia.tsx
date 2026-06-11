@@ -1,10 +1,11 @@
 import React, { lazy, memo } from 'react'
 
+import QuestFullMapLazy from '@/components/quests/QuestFullMapLazy'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 
 export const BelkrajWidgetLazy = lazy(() => import('@/components/belkraj/BelkrajWidget'))
 
-export const QuestFullMapLazy = lazy(() => import('@/components/quests/QuestFullMap'))
+export { QuestFullMapLazy }
 
 export const getQuestClipboard = () => Promise.resolve(import('expo-clipboard'))
 
