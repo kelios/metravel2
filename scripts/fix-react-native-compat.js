@@ -1,5 +1,16 @@
 #!/usr/bin/env node
 
+// Compatibility shims for react-native 0.85.x.
+//
+// History: under Expo SDK 55 this script also replaced RN codegen entrypoints
+// (Modal/Switch/VirtualView native components) and no-op'ed
+// @react-native/babel-plugin-codegen, because SDK 55's Babel pipeline could
+// not transform RN 0.85 codegen. Under Expo SDK 56 those hacks are not only
+// unnecessary — they break the native (Android/iOS) runtime at startup, since
+// the New Architecture requires real codegen. Web never used native codegen,
+// which is why the breakage only showed on device. Only the harmless
+// StyleSheet.absoluteFillObject alias (removed in RN 0.85) is kept.
+
 const fs = require('fs')
 const path = require('path')
 
@@ -14,16 +25,6 @@ const patchFile = (filePath, transform) => {
   if (!next || next === previous) return false
 
   fs.writeFileSync(filePath, next, 'utf8')
-  return true
-}
-
-const replaceFile = (filePath, content) => {
-  if (!fs.existsSync(filePath)) return false
-
-  const previous = fs.readFileSync(filePath, 'utf8')
-  if (previous === content) return false
-
-  fs.writeFileSync(filePath, content, 'utf8')
   return true
 }
 
@@ -45,55 +46,6 @@ const styleSheetTypesPath = path.join(
   'StyleSheet.d.ts'
 )
 
-const modalNativeComponentPath = path.join(
-  projectRoot,
-  'node_modules',
-  'react-native',
-  'Libraries',
-  'Modal',
-  'RCTModalHostViewNativeComponent.js'
-)
-
-const androidSwitchNativeComponentPath = path.join(
-  projectRoot,
-  'node_modules',
-  'react-native',
-  'Libraries',
-  'Components',
-  'Switch',
-  'AndroidSwitchNativeComponent.js'
-)
-
-const virtualViewExperimentalNativeComponentPath = path.join(
-  projectRoot,
-  'node_modules',
-  'react-native',
-  'src',
-  'private',
-  'components',
-  'virtualview',
-  'VirtualViewExperimentalNativeComponent.js'
-)
-
-const virtualViewNativeComponentPath = path.join(
-  projectRoot,
-  'node_modules',
-  'react-native',
-  'src',
-  'private',
-  'components',
-  'virtualview',
-  'VirtualViewNativeComponent.js'
-)
-
-const codegenPluginPath = path.join(
-  projectRoot,
-  'node_modules',
-  '@react-native',
-  'babel-plugin-codegen',
-  'index.js'
-)
-
 const runtimePatched = patchFile(styleSheetExportsPath, (source) => {
   if (source.includes('absoluteFillObject: absoluteFill')) return source
 
@@ -112,103 +64,6 @@ const typesPatched = patchFile(styleSheetTypesPath, (source) => {
   )
 })
 
-const modalPatched = replaceFile(
-  modalNativeComponentPath,
-  `/**
- * Compatibility shim for Expo 55 + React Native 0.85.x.
- * Falls back to requireNativeComponent instead of codegen entrypoints
- * that Expo 55's Babel pipeline cannot currently transform.
- */
-
-'use strict'
-
-import requireNativeComponent from '../ReactNative/requireNativeComponent'
-
-export default requireNativeComponent('RCTModalHostView')
-`
-)
-
-const switchPatched = replaceFile(
-  androidSwitchNativeComponentPath,
-  `/**
- * Compatibility shim for Expo 55 + React Native 0.85.x.
- * Falls back to requireNativeComponent instead of codegen entrypoints
- * that Expo 55's Babel pipeline cannot currently transform.
- */
-
-'use strict'
-
-import requireNativeComponent from '../../ReactNative/requireNativeComponent'
-
-export default requireNativeComponent('AndroidSwitch')
-`
-)
-
-const virtualViewPatched = replaceFile(
-  virtualViewExperimentalNativeComponentPath,
-  `/**
- * Compatibility shim for Expo 55 + React Native 0.85.x.
- * Falls back to requireNativeComponent instead of codegen entrypoints
- * that Expo 55's Babel pipeline cannot currently transform.
- */
-
-'use strict'
-
-import requireNativeComponent from '../../../../Libraries/ReactNative/requireNativeComponent'
-
-export default requireNativeComponent('VirtualViewExperimental')
-`
-)
-
-const virtualViewBasePatched = replaceFile(
-  virtualViewNativeComponentPath,
-  `/**
- * Compatibility shim for Expo 55 + React Native 0.85.x.
- * Falls back to requireNativeComponent instead of codegen entrypoints
- * that Expo 55's Babel pipeline cannot currently transform.
- */
-
-'use strict'
-
-import requireNativeComponent from '../../../../Libraries/ReactNative/requireNativeComponent'
-
-export default requireNativeComponent('VirtualView')
-`
-)
-
-const codegenPluginPatched = replaceFile(
-  codegenPluginPath,
-  `/**
- * Compatibility shim for Expo 55 + React Native 0.85.x.
- * Expo 55's Babel pipeline cannot safely run RN 0.85 codegen transforms,
- * so we intentionally disable the transform until the Expo/RN upgrade wave.
- */
-
-'use strict'
-
-const reactNativeCodegenCompatPlugin = () => ({
-  name: '@react-native/babel-plugin-codegen-compat-noop',
-  visitor: {},
-})
-
-module.exports = reactNativeCodegenCompatPlugin
-module.exports.default = reactNativeCodegenCompatPlugin
-`
-)
-
-if (
-  runtimePatched ||
-  typesPatched ||
-  modalPatched ||
-  switchPatched ||
-  virtualViewPatched ||
-  virtualViewBasePatched ||
-  codegenPluginPatched
-) {
+if (runtimePatched || typesPatched) {
   console.log('✓ Patched react-native compatibility shims')
 }
-
-
-
-
-
