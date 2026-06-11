@@ -14,7 +14,8 @@ const safeLazy = <T extends React.ComponentType<any>>(
   loader: () => Promise<{ default: T }>,
   name?: string
 ) => React.lazy(() =>
-  loader().catch((err) => {
+  // Metro async-require may return a bare thenable (no .catch) for sync-available modules
+  Promise.resolve(loader()).catch((err) => {
     if (__DEV__) console.error(`[safeLazy] Failed to load ${name || 'component'}:`, err);
     return { default: EmptyFallback as unknown as T };
   })

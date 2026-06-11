@@ -20,7 +20,8 @@ const safeLazy = (
   name?: string
 ) =>
   React.lazy(() =>
-    loader()
+    // Metro async-require may return a bare thenable (no .catch) for sync-available modules
+    Promise.resolve(loader())
       .then((mod) => ({ default: mod.default ?? mod.FavoritesProvider ?? EmptyFallback }))
       .catch((err) => {
         if (__DEV__) console.error(`[safeLazy] Failed to load ${name || 'component'}:`, err);

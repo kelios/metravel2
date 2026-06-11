@@ -35,7 +35,7 @@ const DEFAULT_MAX_RETRIES = 2;
 
 async function getBookHtmlExportService(): Promise<BookHtmlExportService> {
   if (!bookHtmlExportServicePromise) {
-    bookHtmlExportServicePromise = import('@/services/book/BookHtmlExportService')
+    bookHtmlExportServicePromise = Promise.resolve(import('@/services/book/BookHtmlExportService'))
       .then((mod) => new mod.BookHtmlExportService())
       .catch((e) => {
         bookHtmlExportServicePromise = null;
@@ -48,7 +48,7 @@ async function getBookHtmlExportService(): Promise<BookHtmlExportService> {
 
 async function getBookPreviewModule() {
   if (!bookPreviewWindowModulePromise) {
-    bookPreviewWindowModulePromise = import('@/utils/openBookPreviewWindow').catch((e) => {
+    bookPreviewWindowModulePromise = Promise.resolve(import('@/utils/openBookPreviewWindow')).catch((e) => {
       bookPreviewWindowModulePromise = null;
       throw e;
     });

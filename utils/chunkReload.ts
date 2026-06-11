@@ -121,7 +121,8 @@ export function importWithRetry<T>(
   const { retries = 2, retryDelayMs = 350, name } = options
 
   const attempt = (remaining: number): Promise<T> =>
-    factory().catch((error: unknown) => {
+    // Metro async-require may return a bare thenable (no .catch) for sync-available modules
+    Promise.resolve(factory()).catch((error: unknown) => {
       const chunkError = isChunkLoadError(error)
       if (remaining > 0) {
         return new Promise<T>((resolve) => {

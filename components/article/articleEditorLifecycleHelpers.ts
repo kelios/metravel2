@@ -21,7 +21,7 @@ export const requestArticleEditorQuillLoad = ({
   setShouldLoadQuill: (value: boolean) => void
 }) => {
   if (loadModule) {
-    void loadModule().catch(() => null)
+    void Promise.resolve(loadModule()).catch(() => null)
   }
   if (shouldLoadQuill) return
   setShouldLoadQuill(true)
