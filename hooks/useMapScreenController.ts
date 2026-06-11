@@ -1,4 +1,5 @@
-import { lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
 import { useRouteStore } from '@/stores/routeStore';
@@ -12,15 +13,13 @@ import { useMapFilters } from '@/hooks/map/useMapFilters';
 import { useMapDataController } from '@/hooks/map/useMapDataController';
 import { useMapUIController } from '@/hooks/map/useMapUIController';
 import { useRouteController } from '@/hooks/map/useRouteController';
+import {
+  FiltersPanelComponent,
+  FiltersProviderComponent,
+  preloadMapFiltersPanel,
+} from '@/hooks/map/mapFiltersPanelLoader';
 
 // Lazy-load filters panel components — only needed when the user opens the filters drawer
-const loadFiltersPanelModule = () => Promise.resolve(import('@/components/MapPage/FiltersPanel'));
-const loadFiltersProviderModule = () =>
-  Promise.resolve(import('@/context/MapFiltersContext')).then((m) => ({ default: m.FiltersProvider }));
-
-const LazyFiltersPanel = lazy(loadFiltersPanelModule);
-const LazyFiltersProvider = lazy(loadFiltersProviderModule);
-
 /**
  * Главный контроллер экрана карты (facade pattern).
  * Объединяет специализированные контроллеры и предоставляет единый API для компонента.
@@ -108,8 +107,7 @@ export function useMapScreenController() {
   useEffect(() => {
     if (!isMobile) return;
 
-    void loadFiltersPanelModule();
-    void loadFiltersProviderModule();
+    void preloadMapFiltersPanel();
   }, [isMobile]);
 
   // Route Controller
@@ -304,7 +302,7 @@ export function useMapScreenController() {
   const mapPanelCoordinates = useMemo(() => {
     const source = queryCoordinates ?? coordinates;
     if (!source || !Number.isFinite(source.latitude) || !Number.isFinite(source.longitude)) {
-      if (typeof window !== 'undefined') {
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
         try {
           const raw = window.localStorage.getItem('metravel:lastKnownCoords');
           if (raw) {
@@ -429,7 +427,7 @@ export function useMapScreenController() {
       hideFooterReset: !isMobile,
     };
 
-    return { Component: LazyFiltersProvider, contextValue, props: contextValue, Panel: LazyFiltersPanel };
+    return { Component: FiltersProviderComponent, contextValue, props: contextValue, Panel: FiltersPanelComponent };
   }, [
     filters,
     filterValues,

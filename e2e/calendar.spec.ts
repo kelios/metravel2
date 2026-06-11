@@ -57,24 +57,24 @@ test.describe('Calendar @smoke', () => {
     await preacceptCookies(page);
     await gotoWithRetry(page, CALENDAR_URL);
 
-    const authPromptVisible = await page
-      .getByText(/Войдите в аккаунт/i)
-      .first()
-      .isVisible()
-      .catch(() => false);
+    // All three tabs should be visible
+    const wasTab = page.getByRole('button', { name: /Был/i });
+    const plannedTab = page.getByRole('button', { name: /Планирую/i });
+    const wishlistTab = page.getByRole('button', { name: /Хочу/i });
 
-    if (authPromptVisible) {
+    const authPrompt = page.getByText(/Войдите в аккаунт/i).first();
+    const reachedState = await Promise.race([
+      wasTab.first().waitFor({ state: 'visible', timeout: 15_000 }).then(() => 'tabs' as const).catch(() => null),
+      authPrompt.waitFor({ state: 'visible', timeout: 15_000 }).then(() => 'auth' as const).catch(() => null),
+    ]);
+
+    if (reachedState === 'auth') {
       test.info().annotations.push({
         type: 'note',
         description: 'Calendar page is showing auth prompt in current env; skipping tabs assertion',
       });
       return;
     }
-
-    // All three tabs should be visible
-    const wasTab = page.getByRole('button', { name: /Был/i });
-    const plannedTab = page.getByRole('button', { name: /Планирую/i });
-    const wishlistTab = page.getByRole('button', { name: /Хочу/i });
 
     await Promise.all([
       wasTab.first().waitFor({ state: 'visible', timeout: 15_000 }),

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Platform } from 'react-native';
 import { logError, logMessage } from '@/utils/logger';
+import { loadExpoLocation } from '@/hooks/map/expoLocationLoader';
 
 export interface Coordinates {
   latitude: number;
@@ -25,15 +26,6 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   });
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer)) as Promise<T>;
 }
-let expoLocationModulePromise: Promise<typeof import('expo-location')> | null = null;
-
-async function loadExpoLocation() {
-  if (!expoLocationModulePromise) {
-    expoLocationModulePromise = Promise.resolve(import('expo-location'));
-  }
-  return expoLocationModulePromise;
-}
-
 function isValidCoordinate(lat: number, lng: number): boolean {
   return (
     Number.isFinite(lat) &&

@@ -1,5 +1,7 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import type { RoutePoint, RouteData, TransportMode } from '@/types/route';
 import type { LatLng } from '@/types/coordinates';
 import { RouteValidator } from '@/utils/routeValidator';
@@ -215,6 +217,12 @@ export const useRouteStore = create<RouteState>()(
     }),
     {
       name: 'route-storage',
+      storage: createJSONStorage(() => {
+        if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+          return localStorage;
+        }
+        return AsyncStorage;
+      }),
       partialize: (state) => ({
         mode: state.mode,
         transportMode: state.transportMode,

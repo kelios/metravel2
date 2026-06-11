@@ -240,7 +240,7 @@ describe('MapScreen (map tab)', () => {
   })
 
   it('renders map placeholder and filters panel shell', async () => {
-    const { queryByTestId, getByTestId, getByText } = renderWithClient()
+    const { queryByTestId, getByTestId } = renderWithClient()
 
     // On web mapReady=true from the start, so overlay should NOT be present.
     // Data loading is indicated by MapLoadingBar (thin progress bar), not by the full overlay.
@@ -254,7 +254,7 @@ describe('MapScreen (map tab)', () => {
       expect(getByTestId('map-panel-tab-search')).toBeTruthy()
       expect(getByTestId('map-panel-tab-route')).toBeTruthy()
       expect(getByTestId('map-reset-filters-button')).toBeTruthy()
-      expect(getByText('Загрузка фильтров…')).toBeTruthy()
+      expect(getByTestId('filters-panel')).toBeTruthy()
     })
   })
 
