@@ -1,9 +1,8 @@
 import React from 'react'
 import { render } from '@testing-library/react-native'
+
 import MapPanel from '@/components/MapPage/MapPanel'
 
-
-// Небольшой помощник для "плоского" снапшота без стилей
 const simplify = (node: any): any => {
   if (!node) return null
   if (typeof node === 'string' || typeof node === 'number') return node
@@ -14,8 +13,8 @@ const simplify = (node: any): any => {
   }
 }
 
-describe('MapPanel snapshot (fallback on non-web)', () => {
-  it('renders placeholder when not on web and matches snapshot', () => {
+describe('MapPanel native map rendering', () => {
+  it('renders the native map container instead of the browser-only placeholder', () => {
     const tree = render(
       <MapPanel
         travelsData={[]}
@@ -25,18 +24,27 @@ describe('MapPanel snapshot (fallback on non-web)', () => {
       />
     ).toJSON()
 
+    expect(JSON.stringify(tree)).not.toContain('Карта доступна только в браузере')
     expect(simplify(tree)).toMatchInlineSnapshot(`
       {
         "children": [
           {
-            "children": null,
-            "type": "ActivityIndicator",
-          },
-          {
             "children": [
-              "Карта доступна только в браузере",
+              {
+                "children": [
+                  {
+                    "children": null,
+                    "type": "ActivityIndicator",
+                  },
+                ],
+                "type": "View",
+              },
+              {
+                "children": null,
+                "type": "View",
+              },
             ],
-            "type": "Text",
+            "type": "View",
           },
         ],
         "type": "View",
