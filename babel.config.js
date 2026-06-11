@@ -1,9 +1,12 @@
 // .babelrc.js
 module.exports = function (api) {
     const env = api.env();
-    api.cache(() => env);
+    // Metro передаёт платформу через caller; web-only трансформы нельзя применять к native-бандлу
+    const platform = api.caller((caller) => caller?.platform);
+    api.cache(() => `${env}:${platform}`);
     const isProduction = env === 'production';
     const isTest = env === 'test';
+    const isWeb = platform === 'web';
 
     return {
         presets: [
@@ -13,7 +16,9 @@ module.exports = function (api) {
         ],
         plugins: [
             '@babel/plugin-transform-export-namespace-from',
-            !isTest && 'react-native-web',
+            // react-native-web переписывает импорты RN на web-реализацию — ТОЛЬКО для web,
+            // в native-бандле это убивает рантайм (TurboModuleRegistry/EventEmitter = undefined)
+            !isTest && isWeb && 'react-native-web',
             isTest && 'babel-plugin-dynamic-import-node',
             !isTest && ['module-resolver', {
                 alias: {
