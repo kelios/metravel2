@@ -11,7 +11,7 @@ const PRESSED_OPACITY_06 = { opacity: 0.6 } as const
 const MAP_PANEL_PLACEHOLDER = <MapPageSkeleton inline />
 
 const LazyMapQuickFilters = lazy(() =>
-  import('@/components/MapPage/MapQuickFilters').then((mod) => ({ default: mod.MapQuickFilters })),
+  Promise.resolve(import('@/components/MapPage/MapQuickFilters')).then((mod) => ({ default: mod.MapQuickFilters })),
 )
 
 type QuickFiltersData = {

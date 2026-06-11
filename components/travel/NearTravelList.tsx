@@ -31,7 +31,7 @@ import SegmentedControl from '@/components/MapPage/SegmentedControl';
 
 // ✅ ОПТИМИЗАЦИЯ: Lazy import для map-компонента (тяжёлый, Leaflet внутри)
 const MapClientSideComponent = React.lazy(() =>
-  import('@/components/MapPage/TravelMap').then((module) => ({ default: module.TravelMap }))
+  Promise.resolve(import('@/components/MapPage/TravelMap')).then((module) => ({ default: module.TravelMap }))
 );
 
 type Segment = 'list' | 'map';

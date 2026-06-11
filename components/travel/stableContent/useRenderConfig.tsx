@@ -14,7 +14,7 @@ type LightboxImage = { src: string; alt: string }
 type IframeModelType = typeof import('@native-html/iframe-plugin')['iframeModel']
 
 const LazyInstagram = React.lazy<React.ComponentType<LazyInstagramProps>>(() =>
-  import('@/components/iframe/InstagramEmbed').then((m: any) => ({ default: m.default }))
+  Promise.resolve(import('@/components/iframe/InstagramEmbed')).then((m: any) => ({ default: m.default }))
 )
 
 type UseStableContentRenderConfigInput = {

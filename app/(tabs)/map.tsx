@@ -22,7 +22,7 @@ const WEB_SR_ONLY_STYLE = {
 
 // Start loading the MapScreen chunk immediately (module-level) so it downloads in parallel
 // with hydration instead of waiting for Suspense to discover it.
-const mapScreenImport = import('@/screens/tabs/MapScreen')
+const mapScreenImport = Promise.resolve(import('@/screens/tabs/MapScreen'))
 const MapScreenImpl = React.lazy(() => mapScreenImport)
 
 // Fire-and-forget CSS injection on module load — no hydration gate needed.

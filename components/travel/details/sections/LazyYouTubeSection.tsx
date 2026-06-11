@@ -19,7 +19,7 @@ const WebViewComponent =
   Platform.OS === 'web'
     ? (() => null) as React.ComponentType<any>
     : withLazy(() =>
-        import('react-native-webview').then((m: any) => ({
+        Promise.resolve(import('react-native-webview')).then((m: any) => ({
           default: m.default ?? m.WebView,
         }))
       );

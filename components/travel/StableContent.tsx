@@ -21,10 +21,10 @@ type FullscreenGalleryProps = {
 };
 
 const LazyRenderHTML = React.lazy(() =>
-  import("react-native-render-html").then((m: any) => ({ default: m.default as React.ComponentType<any> }))
+  Promise.resolve(import("react-native-render-html")).then((m: any) => ({ default: m.default as React.ComponentType<any> }))
 );
 const LazyFullscreenGallery = React.lazy<React.ComponentType<FullscreenGalleryProps>>(() =>
-  import("@/components/travel/FullscreenGallery").then((m: any) => ({ default: m.default }))
+  Promise.resolve(import("@/components/travel/FullscreenGallery")).then((m: any) => ({ default: m.default }))
 );
 
 interface StableContentProps {
@@ -69,7 +69,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
   useEffect(() => {
     let cancelled = false;
     if (hasIframe(prepared)) {
-      import("@native-html/iframe-plugin")
+      Promise.resolve(import("@native-html/iframe-plugin"))
         .then((m) => !cancelled && setIframeModel(m.iframeModel))
         .catch(() => setIframeModel(null));
     } else setIframeModel(null);

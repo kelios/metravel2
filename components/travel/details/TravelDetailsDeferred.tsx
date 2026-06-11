@@ -17,22 +17,22 @@ import TravelDeferredAuthorSection from './TravelDeferredAuthorSection'
 import TravelDeferredRatingSection from './TravelDeferredRatingSection'
 
 const CommentsSectionLazy = withLazy(() =>
-  import('@/components/travel/CommentsSection').then((module) => ({
+  Promise.resolve(import('@/components/travel/CommentsSection')).then((module) => ({
     default: module.CommentsSection,
   })),
 )
 const TravelDetailsSidebarSectionLazy = withLazy(() =>
-  import('./sections/TravelDetailsSidebarSection').then((module) => ({
+  Promise.resolve(import('./sections/TravelDetailsSidebarSection')).then((module) => ({
     default: module.TravelDetailsSidebarSection,
   })),
 )
 const TravelDetailsFooterSectionLazy = withLazy(() =>
-  import('./sections/TravelDetailsFooterSection').then((module) => ({
+  Promise.resolve(import('./sections/TravelDetailsFooterSection')).then((module) => ({
     default: module.TravelDetailsFooterSection,
   })),
 )
 const TravelDetailsMapSectionLazy = withLazy(() =>
-  import('./sections/TravelDetailsMapSection').then((module) => ({
+  Promise.resolve(import('./sections/TravelDetailsMapSection')).then((module) => ({
     default: module.TravelDetailsMapSection ?? module.default,
   })),
 )

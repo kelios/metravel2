@@ -12,7 +12,7 @@ type YupModule = typeof import('yup')
 let yupPromise: Promise<YupModule> | null = null
 const getYup = (): Promise<YupModule> => {
     if (!yupPromise) {
-        yupPromise = import('yup')
+        yupPromise = Promise.resolve(import('yup'))
     }
     return yupPromise
 }

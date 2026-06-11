@@ -12,7 +12,7 @@ import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { useTravelRouteMapBlockModel } from '../hooks/useTravelRouteMapBlockModel'
 
 const TravelMap = React.lazy(() =>
-  import('@/components/MapPage/TravelMap').then((m) => ({ default: m.TravelMap })),
+  Promise.resolve(import('@/components/MapPage/TravelMap')).then((m) => ({ default: m.TravelMap })),
 )
 
 // Elevation profile pulls react-native-svg + chart logic (~700 LOC) and only

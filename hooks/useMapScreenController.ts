@@ -14,9 +14,9 @@ import { useMapUIController } from '@/hooks/map/useMapUIController';
 import { useRouteController } from '@/hooks/map/useRouteController';
 
 // Lazy-load filters panel components — only needed when the user opens the filters drawer
-const loadFiltersPanelModule = () => import('@/components/MapPage/FiltersPanel');
+const loadFiltersPanelModule = () => Promise.resolve(import('@/components/MapPage/FiltersPanel'));
 const loadFiltersProviderModule = () =>
-  import('@/context/MapFiltersContext').then((m) => ({ default: m.FiltersProvider }));
+  Promise.resolve(import('@/context/MapFiltersContext')).then((m) => ({ default: m.FiltersProvider }));
 
 const LazyFiltersPanel = lazy(loadFiltersPanelModule);
 const LazyFiltersProvider = lazy(loadFiltersProviderModule);

@@ -86,7 +86,7 @@ export function createOptimizedQueryClient(
     // P5.1: Prefetch статических данных (фильтры, страны) при idle
     if ('requestIdleCallback' in window) {
       (window as any).requestIdleCallback(() => {
-        import('@/utils/queryClientStaticPrefetch')
+        Promise.resolve(import('@/utils/queryClientStaticPrefetch'))
           .then(({ runStaticQueryClientPrefetch }) => {
             runStaticQueryClientPrefetch(client);
           })

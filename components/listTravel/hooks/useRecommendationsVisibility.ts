@@ -6,7 +6,7 @@ let nativeAsyncStorageModulePromise: Promise<typeof import('@react-native-async-
 
 const getNativeAsyncStorageModule = async () => {
   if (!nativeAsyncStorageModulePromise) {
-    nativeAsyncStorageModulePromise = import('@react-native-async-storage/async-storage');
+    nativeAsyncStorageModulePromise = Promise.resolve(import('@react-native-async-storage/async-storage'));
   }
   return nativeAsyncStorageModulePromise;
 };

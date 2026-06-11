@@ -18,7 +18,7 @@ let toastModulePromise: Promise<NativeToastModule> | null = null;
 export async function showToast(payload: ToastPayload): Promise<void> {
   try {
     if (!toastModulePromise) {
-      toastModulePromise = import('react-native-toast-message') as Promise<NativeToastModule>;
+      toastModulePromise = Promise.resolve(import('react-native-toast-message')) as Promise<NativeToastModule>;
     }
     const mod = await toastModulePromise;
     const Toast = mod.default ?? mod;

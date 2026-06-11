@@ -24,7 +24,7 @@ export function getInitialDeferredSectionsComponent() {
 
 export async function loadDeferredSectionsComponent(): Promise<DeferredSectionsComponentType> {
   if (!deferredSectionsLoader) {
-    deferredSectionsLoader = import('@/components/travel/details/TravelDetailsDeferred').then(
+    deferredSectionsLoader = Promise.resolve(import('@/components/travel/details/TravelDetailsDeferred')).then(
       (m) => m.TravelDeferredSections,
     )
   }

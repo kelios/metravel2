@@ -58,7 +58,7 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
 
   const loadRuntimeModule = useCallback(() => {
     if (!runtimeModuleRef.current) {
-      runtimeModuleRef.current = import('@/hooks/usePdfExportRuntime');
+      runtimeModuleRef.current = Promise.resolve(import('@/hooks/usePdfExportRuntime'));
     }
     return runtimeModuleRef.current;
   }, []);

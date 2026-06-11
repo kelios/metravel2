@@ -58,7 +58,7 @@ function useNativeOfflineTravelCache(
 
     let isCancelled = false
 
-    void import('@/hooks/useOfflineTravelCache')
+    void Promise.resolve(import('@/hooks/useOfflineTravelCache'))
       .then((module) => {
         if (!isCancelled) return module.cacheTravelOffline(travel.id, travel, true)
         return undefined

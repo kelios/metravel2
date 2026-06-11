@@ -36,7 +36,7 @@ let bookPreviewWindowModulePromise: Promise<BookPreviewWindowModule> | null = nu
 
 function loadBookPreviewWindowModule(): Promise<BookPreviewWindowModule> {
     if (!bookPreviewWindowModulePromise) {
-        bookPreviewWindowModulePromise = import('@/utils/openBookPreviewWindow');
+        bookPreviewWindowModulePromise = Promise.resolve(import('@/utils/openBookPreviewWindow'));
     }
 
     return bookPreviewWindowModulePromise;

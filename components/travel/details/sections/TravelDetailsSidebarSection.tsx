@@ -15,13 +15,13 @@ const SIDEBAR_CONTENT_MARGIN_STYLE = { marginTop: 8 } as const
 const LIST_FALLBACK_STYLE = { minHeight: 220 } as const
 
 const NearTravelListLazy = withLazy(() =>
-  import('@/components/travel/NearTravelList').then((module) => ({
+  Promise.resolve(import('@/components/travel/NearTravelList')).then((module) => ({
     default: module.default,
   })),
 )
 
 const PopularTravelListLazy = withLazy(() =>
-  import('@/components/travel/PopularTravelList').then((module) => ({
+  Promise.resolve(import('@/components/travel/PopularTravelList')).then((module) => ({
     default: module.default,
   })),
 )

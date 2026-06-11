@@ -18,12 +18,12 @@ import {
 } from './TravelDetailsOptimizedLCPHero'
 
 const FavoriteToggleLazy = React.lazy(() =>
-  import('./TravelHeroFavoriteToggle').then((m) => ({
+  Promise.resolve(import('./TravelHeroFavoriteToggle')).then((m) => ({
     default: m.TravelHeroFavoriteToggle ?? m.default,
   })),
 )
 const ExtrasLazy = React.lazy(() =>
-  import('./TravelHeroExtras').then((m) => ({
+  Promise.resolve(import('./TravelHeroExtras')).then((m) => ({
     default: m.TravelHeroExtras ?? m.default,
   })),
 )

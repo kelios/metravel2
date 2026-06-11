@@ -23,7 +23,7 @@ const safeLazy = <T extends React.ComponentType<any>>(
 
 const SyncIndicatorLazy: React.LazyExoticComponent<React.ComponentType<any>> | null = !isWeb
   ? safeLazy(
-      () => import('@/components/ui/SyncIndicator').then(m => {
+      () => Promise.resolve(import('@/components/ui/SyncIndicator')).then(m => {
         const Component = m.SyncIndicator ?? (m as any).default;
         if (!Component) throw new Error('SyncIndicator export not found');
         return { default: Component };
@@ -33,7 +33,7 @@ const SyncIndicatorLazy: React.LazyExoticComponent<React.ComponentType<any>> | n
   : null;
 const ReactQueryDevtoolsLazy: any = __DEV__
   ? safeLazy(
-      () => import('@tanstack/react-query-devtools').then((m: any) => ({ default: m.ReactQueryDevtools })),
+      () => Promise.resolve(import('@tanstack/react-query-devtools')).then((m: any) => ({ default: m.ReactQueryDevtools })),
       'ReactQueryDevtools'
     )
   : null;
@@ -94,7 +94,7 @@ export default function RootLayout() {
           hostname: isWeb && typeof window !== 'undefined' ? window.location?.hostname : null,
           pathname: isWeb && typeof window !== 'undefined' ? window.location?.pathname : null,
         })) return;
-        void import('@/utils/runtimeConfigDiagnostics')
+        void Promise.resolve(import('@/utils/runtimeConfigDiagnostics'))
           .then(async ({ getRuntimeConfigDiagnostics }) => {
             const diagnostics = getRuntimeConfigDiagnostics();
             if (diagnostics.length === 0) return;

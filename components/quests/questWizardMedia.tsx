@@ -6,10 +6,10 @@ export const BelkrajWidgetLazy = lazy(() => import('@/components/belkraj/Belkraj
 
 export const QuestFullMapLazy = lazy(() => import('@/components/quests/QuestFullMap'))
 
-export const getQuestClipboard = () => import('expo-clipboard')
+export const getQuestClipboard = () => Promise.resolve(import('expo-clipboard'))
 
 export const NativeQuestVideoLazy = lazy(() =>
-  import('expo-av').then((module) => ({
+  Promise.resolve(import('expo-av')).then((module) => ({
     default: memo(function NativeQuestVideo(props: {
       source: any
       posterSource?: any

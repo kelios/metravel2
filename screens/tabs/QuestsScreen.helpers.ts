@@ -21,7 +21,7 @@ let expoLocationModulePromise: Promise<typeof import('expo-location')> | null = 
 
 export async function loadExpoLocation() {
     if (!expoLocationModulePromise) {
-        expoLocationModulePromise = import('expo-location');
+        expoLocationModulePromise = Promise.resolve(import('expo-location'));
     }
     return expoLocationModulePromise;
 }

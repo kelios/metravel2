@@ -7,7 +7,7 @@ import { devWarn } from '@/utils/logger'
 import { rIC } from '@/utils/rIC'
 
 const NON_TRAVEL_PERFORMANCE_INIT_DELAY_MS = 1000
-const preloadTravelHeroSliderRuntime = () => import('@/components/travel/Slider.web')
+const preloadTravelHeroSliderRuntime = () => Promise.resolve(import('@/components/travel/Slider.web'))
 
 type IdleCapableWindow = Window & {
   requestIdleCallback?: (

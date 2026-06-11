@@ -4,7 +4,7 @@ import { Platform, View } from 'react-native'
 import { withLazy } from './TravelDetailsLazy'
 
 const LazyFeather = withLazy(() =>
-  import('@expo/vector-icons/Feather').then((m: any) => ({
+  Promise.resolve(import('@expo/vector-icons/Feather')).then((m: any) => ({
     default: m.Feather || m.default || m,
   }))
 )

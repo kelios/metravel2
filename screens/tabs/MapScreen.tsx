@@ -45,7 +45,7 @@ const PRESSED_OPACITY_085 = { opacity: 0.85 } as const
 const POINTER_EVENTS_NONE = { pointerEvents: 'none' } as const
 
 function preloadLeafletRuntime() {
-  import('@/utils/loadLeafletRuntime')
+  Promise.resolve(import('@/utils/loadLeafletRuntime'))
     .then((m) => m.loadLeafletRuntime())
     .catch((error) => {
       devWarn('[MapScreen] Failed to preload Leaflet runtime', error)
@@ -69,10 +69,10 @@ if (CAN_PRELOAD_LEAFLET) {
 const LazyMapOnboarding = lazy(() => import('@/components/MapPage/MapOnboarding'))
 const LazyTravelListPanel = lazy(() => import('@/components/MapPage/TravelListPanel'))
 const LazyMapMobileLayout = lazy(() =>
-  import('@/components/MapPage/MapMobileLayout').then((mod) => ({ default: mod.MapMobileLayout })),
+  Promise.resolve(import('@/components/MapPage/MapMobileLayout')).then((mod) => ({ default: mod.MapMobileLayout })),
 )
 const LazyActiveFiltersBar = lazy(() =>
-  import('@/components/MapPage/ActiveFiltersBar').then((mod) => ({ default: mod.ActiveFiltersBar })),
+  Promise.resolve(import('@/components/MapPage/ActiveFiltersBar')).then((mod) => ({ default: mod.ActiveFiltersBar })),
 )
 
 const MAP_PANEL_PLACEHOLDER = <MapPageSkeleton inline />

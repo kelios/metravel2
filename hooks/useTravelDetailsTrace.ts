@@ -85,7 +85,7 @@ export function useTravelDetailsTrace({
     let cleanup: (() => void) | null = null
     let cancelled = false
 
-    void import('@/hooks/travelDetailsLayoutTrace')
+    void Promise.resolve(import('@/hooks/travelDetailsLayoutTrace'))
       .then((mod) => {
         if (!cancelled) cleanup = mod.startTravelDetailsLayoutTrace(tdTrace)
       })

@@ -14,7 +14,7 @@ let mapImageGeneratorModulePromise: Promise<MapImageGeneratorModule> | null = nu
 
 function loadMapImageGenerator(): Promise<MapImageGeneratorModule> {
   if (!mapImageGeneratorModulePromise) {
-    mapImageGeneratorModulePromise = import('@/utils/mapImageGenerator');
+    mapImageGeneratorModulePromise = Promise.resolve(import('@/utils/mapImageGenerator'));
   }
   return mapImageGeneratorModulePromise;
 }

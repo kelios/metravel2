@@ -15,11 +15,11 @@ import type { QuestWizardProps } from '@/components/quests/QuestWizard';
 import type { FrontendQuestBundle } from '@/utils/questAdapters';
 
 const FeatherIcon = React.lazy<React.ComponentType<{ name: IconName; size: number; color: string }>>(() =>
-  import('@expo/vector-icons/Feather').then((module: any) => ({ default: module.Feather || module.default })),
+  Promise.resolve(import('@expo/vector-icons/Feather')).then((module: any) => ({ default: module.Feather || module.default })),
 );
 
 const QuestWizard = React.lazy<React.ComponentType<QuestWizardProps>>(() =>
-  import('@/components/quests/QuestWizard').then((module: any) => ({ default: module.QuestWizard || module.default })),
+  Promise.resolve(import('@/components/quests/QuestWizard')).then((module: any) => ({ default: module.QuestWizard || module.default })),
 );
 
 type Colors = ReturnType<typeof useThemedColors>;

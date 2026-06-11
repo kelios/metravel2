@@ -88,7 +88,7 @@ const EMPTY_EDITOR_PRELOAD_DELAY_MS = 900;
 // Важно: грузим в отдельном модуле, чтобы Quill не попадал в initial chunk
 const loadQuillEditorModule =
     isWeb && win
-        ? () => import('@/components/article/QuillEditor.web')
+        ? () => Promise.resolve(import('@/components/article/QuillEditor.web'))
         : null;
 
 const QuillEditor =

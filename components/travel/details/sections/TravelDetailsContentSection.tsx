@@ -12,7 +12,7 @@ import { safeGetYoutubeId } from '@/utils/travelMedia'
 import { useTravelDetailsContentSectionModel } from '../hooks/useTravelDetailsContentSectionModel'
 
 const LazyYouTubeSection = React.lazy(() =>
-  import('./LazyYouTubeSection').then((module) => ({ default: module.LazyYouTube })),
+  Promise.resolve(import('./LazyYouTubeSection')).then((module) => ({ default: module.LazyYouTube })),
 )
 
 const SECTION_CONTENT_MARGIN_STYLE = { marginTop: 12 } as const

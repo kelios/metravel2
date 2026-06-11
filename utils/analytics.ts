@@ -254,7 +254,7 @@ export const queueAnalyticsEvent = (eventName: string, eventParams: Record<strin
     }
 
     const run = () => {
-        import('@/utils/analytics')
+        Promise.resolve(import('@/utils/analytics'))
             .then((m) => m.sendAnalyticsEvent(eventName, eventParams))
             .catch(() => {
                 // noop

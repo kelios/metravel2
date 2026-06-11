@@ -14,7 +14,7 @@ import type {
 import type { DocumentPickerAsset } from 'expo-document-picker';
 
 // JSZip is loaded dynamically to avoid pulling ~90 KiB into the initial bundle
-const getJSZip = () => import('jszip').then((m) => m.default ?? m);
+const getJSZip = () => Promise.resolve(import('jszip')).then((m) => m.default ?? m);
 
 type FileInput = File | DocumentPickerAsset;
 

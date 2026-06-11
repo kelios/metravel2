@@ -16,7 +16,7 @@ import { withLazy } from '../TravelDetailsLazy'
 import { Icon } from '../TravelDetailsIcons'
 
 const WebViewComponent = withLazy<React.ComponentType<any>>(() =>
-  import('react-native-webview').then((m: any) => ({
+  Promise.resolve(import('react-native-webview')).then((m: any) => ({
     default: (m.default ?? m.WebView) as React.ComponentType<any>,
   }))
 )

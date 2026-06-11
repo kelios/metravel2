@@ -17,7 +17,7 @@ const safeLazy = <T extends React.ComponentType<any>>(
 const SkipLinksLazy = safeLazy(() => import('@/components/layout/SkipLinks'), 'SkipLinks')
 const NetworkStatusLazy = safeLazy(
   () =>
-    import('@/components/ui/NetworkStatus').then((m) => {
+    Promise.resolve(import('@/components/ui/NetworkStatus')).then((m) => {
       const Component = m.NetworkStatus ?? (m as any).default
       if (!Component) throw new Error('NetworkStatus export not found')
       return { default: Component }
@@ -76,7 +76,7 @@ export default function RootWebDeferredChrome({
       if (consentCheckRevealed) return
       consentCheckRevealed = true
 
-      void import('@/utils/consent')
+      void Promise.resolve(import('@/utils/consent'))
         .then(({ readConsent }) => {
           if (readConsent()) return
           setShowConsentBanner(true)
