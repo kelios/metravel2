@@ -18,16 +18,17 @@ Read first:
 
 Default feature flow:
 
-1. Project Analyst: use `$metravel-project-analyst` for broad or unclear scope to map structure, validation, risks, and next agents.
-2. Business Analyst: produce a concise feature brief and acceptance criteria.
-3. System Architect: map the brief to existing code, constraints, risk, and validation.
-4. Designer: use `$metravel-ui-guardrails` for visible UI states and web/mobile behavior.
-5. Android Developer: use `$metravel-android-developer` for Android/native implementation, crashes, platform files, or Expo native modules.
-6. Programmer: use `$metravel-feature-builder` to implement the smallest sufficient diff.
-7. Mobile Tester: use `$metravel-mobile-tester` for mobile web or Android/native QA evidence and retest.
-8. QA Agent: use `$metravel-qa-agent` to test broader flows and create structured bug reports.
-9. Reviewer: use `$metravel-system-architect` in review mode to check the diff, tests, and rule compliance.
-10. DevOps Agent: use `$metravel-devops-agent` only when the user explicitly asks to deploy, build, release, or verify a deployment.
+1. Codex Orchestrator: use `$metravel-codex-orchestrator` for task triage, skill selection, role prompt pattern, validation plan, and handoff rules when scope is broad or multi-step.
+2. Project Analyst: use `$metravel-project-analyst` for broad or unclear scope to map structure, validation, risks, and next agents.
+3. Business Analyst: produce a concise feature brief and acceptance criteria.
+4. System Architect: map the brief to existing code, constraints, risk, and validation.
+5. Designer: use `$metravel-ui-guardrails` for visible UI states and web/mobile behavior.
+6. Android Developer: use `$metravel-android-developer` for Android/native implementation, crashes, platform files, or Expo native modules.
+7. Programmer: use `$metravel-feature-builder` to implement the smallest sufficient diff.
+8. Mobile Tester: use `$metravel-mobile-tester` for mobile web or Android/native QA evidence and retest.
+9. QA Agent: use `$metravel-qa-agent` to test broader flows and create structured bug reports.
+10. Reviewer: use `$metravel-system-architect` in review mode to check the diff, tests, and rule compliance.
+11. DevOps Agent: use `$metravel-devops-agent` only when the user explicitly asks to deploy, build, release, or verify a deployment.
 
 Default bug loop:
 
@@ -41,6 +42,7 @@ Default bug loop:
 ## Control Rules
 
 - Do not let exploratory QA or analyst roles edit code.
+- Use Codex Orchestrator only to choose and sequence work; route implementation to the relevant specialist skill.
 - Use Project Analyst only for read-only discovery unless the user explicitly asks to update docs or code after the analysis.
 - Keep Mobile Tester read-only unless the user explicitly asks to update tests.
 - Do not let Android Developer change mobile release/build configs without explicit user approval.
@@ -56,6 +58,7 @@ Default bug loop:
 Each role should return one compact artifact:
 
 - Business Analyst: `Feature Brief`
+- Codex Orchestrator: `Codex Route`
 - Project Analyst: `Project Analysis`
 - System Architect: `Technical Design`
 - Designer: `UI Contract`
