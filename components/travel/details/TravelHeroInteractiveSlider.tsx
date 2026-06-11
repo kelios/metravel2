@@ -1,11 +1,12 @@
 import React, { Suspense } from 'react';
 import { Platform, View } from 'react-native';
+import FullscreenGalleryDirect from '@/components/travel/FullscreenGallery';
 
 type GalleryImage = Record<string, any>;
 
 const getFullscreenGallery = () =>
   Platform.OS !== 'web'
-    ? React.lazy(() => import('@/components/travel/FullscreenGallery'))
+    ? FullscreenGalleryDirect
     : (() => null);
 
 const getSliderComponent = (): React.ComponentType<any> =>

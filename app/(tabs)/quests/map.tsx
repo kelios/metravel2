@@ -17,6 +17,7 @@ import { useIsFocused } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { createMapStructuredData } from '@/utils/discoverySeo';
+import Map from '@/components/MapPage/Map';
 
 const LazyMap = React.lazy(() => import('@/components/MapPage/Map.web'));
 
@@ -134,6 +135,32 @@ export default function QuestsMapScreen() {
         ),
         [structuredData]
     );
+
+    if (!isWeb && !questsLoading && travel.data.length > 0) {
+        return (
+            <View style={{ flex: 1 }}>
+                <Map
+                    travel={travel}
+                    coordinates={questsCenter}
+                    mode="radius"
+                    radius="2000"
+                    routePoints={[]}
+                    transportMode="foot"
+                    onMapClick={() => {}}
+                    setRouteDistance={() => {}}
+                    setFullRouteCoords={() => {}}
+                />
+                <Pressable
+                    onPress={handleBack}
+                    style={[styles.fabBack, { top: Math.max(12, insets.top + 4) }]}
+                    accessibilityRole="button"
+                    accessibilityLabel="ÐÐ°Ð·Ð°Ð´"
+                >
+                    <Feather name="arrow-left" size={18} color={colors.text} />
+                </Pressable>
+            </View>
+        );
+    }
 
     if (!isWeb) {
         return (

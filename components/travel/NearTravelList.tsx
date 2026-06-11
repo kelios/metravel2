@@ -28,11 +28,13 @@ import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
 import { useNearTravelData } from '@/hooks/useNearTravelData';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
+import { TravelMap } from '@/components/MapPage/TravelMap';
 
 // ✅ ОПТИМИЗАЦИЯ: Lazy import для map-компонента (тяжёлый, Leaflet внутри)
 const MapClientSideComponent = React.lazy(() =>
   Promise.resolve(import('@/components/MapPage/TravelMap')).then((module) => ({ default: module.TravelMap }))
 );
+const MapComponent = Platform.OS === 'web' ? MapClientSideComponent : TravelMap;
 
 type Segment = 'list' | 'map';
 
@@ -145,7 +147,7 @@ const MapContainer = memo(({
 
   return (
     <React.Suspense fallback={<ActivityIndicator size="small" color={colors.primary} accessibilityLabel="Загрузка карты" />}>
-      <MapClientSideComponent
+      <MapComponent
         travelData={points}
         compact
         height={height}

@@ -4,6 +4,7 @@ import { Platform } from 'react-native'
 import { useRouter } from 'expo-router'
 import HomeHero from '@/components/home/HomeHero'
 import { queueAnalyticsEvent } from '@/utils/analytics'
+import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks'
 
 const mockImageCardMedia = jest.fn((props: any) => {
   const React = require('react')
@@ -27,6 +28,10 @@ jest.mock('expo-router', () => ({
   useRouter: jest.fn(),
 }))
 jest.mock('@/utils/analytics')
+jest.mock('@/utils/externalLinks', () => ({
+  openExternalUrl: jest.fn(),
+  openExternalUrlInNewTab: jest.fn(),
+}))
 jest.mock('@/components/ui/ImageCardMedia', () => ({
   __esModule: true,
   default: (props: any) => mockImageCardMedia(props),
@@ -115,6 +120,18 @@ describe('HomeHero Component', () => {
       expect(mockQueueAnalyticsEvent).toHaveBeenCalledWith(
         'HomeClick_OpenSearch',
       )
+    })
+
+    it('keeps metravel book cover links inside app navigation', () => {
+      const { getByLabelText } = render(<HomeHero />)
+
+      fireEvent.press(getByLabelText(/Открыть маршрут недели: Озеро Сорапис/))
+
+      expect(mockPush).toHaveBeenCalledWith(
+        '/travels/ozero-sorapis-krugovoi-marshrut-215-217-kak-doiti-chto-zhdat-po-puti-i-chto-posmotret-riadom?returnTo=%2Fsearch',
+      )
+      expect(openExternalUrl).not.toHaveBeenCalled()
+      expect(openExternalUrlInNewTab).not.toHaveBeenCalled()
     })
   })
 

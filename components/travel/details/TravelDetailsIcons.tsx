@@ -1,5 +1,6 @@
 import React, { Suspense } from 'react'
 import { Platform, View } from 'react-native'
+import Feather from '@expo/vector-icons/Feather'
 
 import { withLazy } from './TravelDetailsLazy'
 
@@ -8,6 +9,7 @@ const LazyFeather = withLazy(() =>
     default: m.Feather || m.default || m,
   }))
 )
+const FeatherIcon = Platform.OS === 'web' ? LazyFeather : Feather
 
 const mapIconName = (name: string): string => {
   // Keep existing MaterialIcons-ish names in the app code, but render Feather to avoid loading MaterialIcons.ttf.
@@ -77,15 +79,13 @@ export const Icon: React.FC<
 
   if (Platform.OS !== 'web') {
     return (
-      <Suspense fallback={<View style={{ width: size, height: size }} />}>
-        <LazyFeather
-          name={mappedName}
-          size={size}
-          color={iconColor}
-          strokeWidth={1.8}
-          {...(rest as any)}
-        />
-      </Suspense>
+      <FeatherIcon
+        name={mappedName as any}
+        size={size}
+        color={iconColor}
+        strokeWidth={1.8}
+        {...(rest as any)}
+      />
     )
   }
 

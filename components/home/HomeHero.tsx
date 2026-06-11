@@ -40,6 +40,7 @@ const SLIDER_MEDIA_WIDTH_NARROW = 480
 const SLIDER_MEDIA_WIDTH_WIDE = 500
 const SLIDER_DESKTOP_BREAKPOINT = 1480
 const NAV_FEEDBACK_MS = 700
+const INTERNAL_HOSTS = new Set(['metravel.by', 'www.metravel.by'])
 
 interface HomeHeroProps {
   travelsCount?: number
@@ -77,6 +78,19 @@ function getEstimatedBookWrapperWidth(viewportWidth: number) {
 }
 
 const getBookSlideSource = (slide: (typeof BOOK_IMAGES)[number]) => slide.source
+
+function getInternalHrefPath(href: string) {
+  const trimmedHref = href.trim()
+  if (trimmedHref.startsWith('/')) return trimmedHref
+
+  try {
+    const parsed = new URL(trimmedHref)
+    if (!INTERNAL_HOSTS.has(parsed.hostname)) return null
+    return `${parsed.pathname}${parsed.search}${parsed.hash}` || '/'
+  } catch {
+    return null
+  }
+}
 
 const HomeHero = memo(function HomeHero({
   travelsCount = 0,
@@ -258,6 +272,11 @@ const HomeHero = memo(function HomeHero({
         return
       }
       queueAnalyticsEvent('HomeClick_BookCover', { href })
+      const internalPath = getInternalHrefPath(href)
+      if (internalPath) {
+        router.push(internalPath as any)
+        return
+      }
       if (IS_WEB) openExternalUrlInNewTab(href)
       else openExternalUrl(href)
     },

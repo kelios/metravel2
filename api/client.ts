@@ -4,6 +4,7 @@
 // ✅ FIX-003: Исправлена race condition при обновлении токена
 
 import { devError } from '@/utils/logger';
+import { Platform } from 'react-native';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { setSecureItem, getSecureItem, removeSecureItems } from '@/utils/secureStorage';
 import {
@@ -456,9 +457,14 @@ class ApiClient {
                 );
             }
 
-            const blob = await resp.blob();
             const contentType = resp.headers.get('content-type') ?? undefined;
             const filename = parseDownloadFilename(resp.headers.get('content-disposition'));
+            const blob =
+                Platform.OS === 'web'
+                    ? await resp.blob()
+                    : ({
+                        text: () => resp.text(),
+                      } as Blob);
             return { blob, contentType, filename };
         };
 

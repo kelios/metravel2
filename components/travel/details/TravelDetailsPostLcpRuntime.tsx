@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 
 import { useThemedColors } from '@/hooks/useTheme';
 import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
@@ -8,6 +8,7 @@ import type { TravelSectionLink } from '@/components/travel/sectionLinks';
 import ScrollToTopButton from '@/components/ui/ScrollToTopButton';
 import ReadingProgressBar from '@/components/ui/ReadingProgressBar';
 import TravelSectionsSheet from '@/components/travel/TravelSectionsSheet';
+import TravelStickyActions from './TravelStickyActions';
 
 import type { AnchorsMap } from './TravelDetailsTypes';
 import { getTravelDetailsShellStyles } from './TravelDetailsShellStyles';
@@ -43,6 +44,7 @@ type TravelDetailsPostLcpRuntimeProps = {
 
 const PLACEHOLDER_STYLE = { flex: 1 } as const;
 const TravelStickyActionsLazy = React.lazy(() => import('./TravelStickyActions'));
+const TravelStickyActionsComponent = Platform.OS === 'web' ? TravelStickyActionsLazy : TravelStickyActions;
 
 export default function TravelDetailsPostLcpRuntime({
   travel,
@@ -153,7 +155,7 @@ export default function TravelDetailsPostLcpRuntime({
 
       {showStickyActions && (
         <Suspense fallback={null}>
-          <TravelStickyActionsLazy
+          <TravelStickyActionsComponent
             travel={travel}
             scrollY={scrollY}
             scrollToComments={scrollToComments}

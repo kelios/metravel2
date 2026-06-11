@@ -17,6 +17,8 @@ export default function TravelDetailsAccessibilityChrome({
   announcementPriority,
   showSkipToContentLink,
 }: TravelDetailsAccessibilityChromeProps) {
+  if (Platform.OS !== 'web') return null
+
   return (
     <>
       {showSkipToContentLink ? (

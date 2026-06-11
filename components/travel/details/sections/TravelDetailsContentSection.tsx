@@ -10,10 +10,12 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import TravelDescription from '@/components/travel/TravelDescription'
 import { safeGetYoutubeId } from '@/utils/travelMedia'
 import { useTravelDetailsContentSectionModel } from '../hooks/useTravelDetailsContentSectionModel'
+import { LazyYouTube } from './LazyYouTubeSection'
 
 const LazyYouTubeSection = React.lazy(() =>
   Promise.resolve(import('./LazyYouTubeSection')).then((module) => ({ default: module.LazyYouTube })),
 )
+const YouTubeSectionComponent = Platform.OS === 'web' ? LazyYouTubeSection : LazyYouTube
 
 const SECTION_CONTENT_MARGIN_STYLE = { marginTop: 12 } as const
 const WEB_SR_ONLY_HEADING_STYLE = {
@@ -134,7 +136,7 @@ export const TravelDetailsContentSection: React.FC<{
           <View style={SECTION_CONTENT_MARGIN_STYLE}>
             {shouldLoadVideo ? (
               <Suspense fallback={<View style={VIDEO_PLACEHOLDER_STYLE} />}>
-                <LazyYouTubeSection url={travel.youtube_link} />
+                <YouTubeSectionComponent url={travel.youtube_link} />
               </Suspense>
             ) : (
               <View style={VIDEO_PLACEHOLDER_STYLE} />

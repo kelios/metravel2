@@ -6,6 +6,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { hasIframe, prepareStableContentHtml } from '@/components/travel/stableContent/htmlTransform';
 import { useStableContentRenderConfig } from '@/components/travel/stableContent/useRenderConfig';
 import { useStableContentWebEffects } from '@/components/travel/stableContent/useWebEffects';
+import RenderHTMLDirect from "react-native-render-html";
+import FullscreenGalleryDirect from "@/components/travel/FullscreenGallery";
 import {
   getWebRichTextStyles,
   WEB_RICH_TEXT_CLASS,
@@ -26,6 +28,8 @@ const LazyRenderHTML = React.lazy(() =>
 const LazyFullscreenGallery = React.lazy<React.ComponentType<FullscreenGalleryProps>>(() =>
   Promise.resolve(import("@/components/travel/FullscreenGallery")).then((m: any) => ({ default: m.default }))
 );
+const RenderHTMLComponent = Platform.OS === 'web' ? LazyRenderHTML : RenderHTMLDirect;
+const FullscreenGalleryComponent = Platform.OS === 'web' ? LazyFullscreenGallery : FullscreenGalleryDirect;
 
 interface StableContentProps {
   html: string;
@@ -182,14 +186,14 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
     <>
       <View style={isWeb ? [styles.htmlWrapper, styles.htmlWrapperWeb] : styles.htmlWrapper}>
         <Suspense fallback={null}>
-          <LazyRenderHTML
+          <RenderHTMLComponent
             key={prepared.length}
             source={{ html: prepared }}
             contentWidth={contentWidth}
             customHTMLElementModels={customHTMLElementModels}
             renderers={renderers}
             defaultTextProps={{ selectable: !isWeb }}
-            onLinkPress={handleLinkPress}
+            renderersProps={{ a: { onPress: handleLinkPress } } as any}
             baseStyle={baseStyle as any}
             tagsStyles={tagsStyles as any}
             ignoredDomTags={['script', 'style']}
@@ -198,7 +202,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
       </View>
       {!isWeb && lightboxImage ? (
         <Suspense fallback={null}>
-          <LazyFullscreenGallery
+          <FullscreenGalleryComponent
             visible={Boolean(lightboxImage)}
             images={[{ url: lightboxImage.src }]}
             initialIndex={0}

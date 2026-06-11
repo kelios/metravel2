@@ -101,7 +101,7 @@ export default function QuestCard({
         >
             {Platform.OS !== 'web' && (
                 <Pressable
-                    style={StyleSheet.absoluteFill}
+                    style={[StyleSheet.absoluteFill, { zIndex: 20 }]}
                     onPress={handlePress}
                     accessibilityRole="button"
                     accessibilityLabel={`Начать приключение: ${quest.title}`}

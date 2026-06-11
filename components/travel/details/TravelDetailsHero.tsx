@@ -16,6 +16,9 @@ import {
   OptimizedLCPHero,
   OVERLAY_TRANSITION_MS,
 } from './TravelDetailsOptimizedLCPHero'
+import { TravelHeroFavoriteToggle } from './TravelHeroFavoriteToggle'
+import TravelHeroExtras from './TravelHeroExtras'
+import TravelHeroInteractiveSlider from './TravelHeroInteractiveSlider'
 
 const FavoriteToggleLazy = React.lazy(() =>
   Promise.resolve(import('./TravelHeroFavoriteToggle')).then((m) => ({
@@ -30,6 +33,9 @@ const ExtrasLazy = React.lazy(() =>
 const InteractiveSliderLazy = React.lazy(() =>
   import('./TravelHeroInteractiveSlider'),
 )
+const FavoriteToggleComponent = Platform.OS === 'web' ? FavoriteToggleLazy : TravelHeroFavoriteToggle
+const ExtrasComponent = Platform.OS === 'web' ? ExtrasLazy : TravelHeroExtras
+const InteractiveSliderComponent = Platform.OS === 'web' ? InteractiveSliderLazy : TravelHeroInteractiveSlider
 
 const ABSOLUTE_FILL = {
   position: 'absolute',
@@ -190,7 +196,7 @@ function TravelHeroSectionInner({
               {mountSliderUnderOverlay && (
                 <View style={sliderUnderOverlayStyle} collapsable={false} {...(sliderUnderOverlayWebProps || {})}>
                   <Suspense fallback={null}>
-                    <InteractiveSliderLazy
+                    <InteractiveSliderComponent
                       visible
                       galleryImages={heroSliderImages}
                       isMobile={isMobile}
@@ -219,7 +225,7 @@ function TravelHeroSectionInner({
             </>
           ) : (
             <Suspense fallback={null}>
-              <InteractiveSliderLazy
+              <InteractiveSliderComponent
                 visible
                 galleryImages={heroSliderImages}
                 isMobile={isMobile}
@@ -237,7 +243,7 @@ function TravelHeroSectionInner({
 
           {showFavoriteToggle && (
             <Suspense fallback={null}>
-              <FavoriteToggleLazy travel={travel} isMobile={isMobile} />
+              <FavoriteToggleComponent travel={travel} isMobile={isMobile} />
             </Suspense>
           )}
         </View>
@@ -313,7 +319,7 @@ function ExtrasSlot({
 
   return (
     <Suspense fallback={skeleton}>
-      <ExtrasLazy
+      <ExtrasComponent
         travel={travel}
         isMobile={isMobile}
         sectionLinks={sectionLinks}

@@ -20,6 +20,7 @@ import TravelDetailsSeoBlock from '@/components/travel/details/TravelDetailsSeoB
 import { useTravelDetailsContainerViewModel } from '@/components/travel/details/hooks/useTravelDetailsContainerViewModel'
 import { useTravelDetailsHeadSync } from '@/components/travel/details/hooks/useTravelDetailsHeadSync'
 import type { Travel } from '@/types/types'
+import { cacheTravelOffline } from '@/hooks/useOfflineTravelCache'
 
 const SKELETON_FALLBACK = <TravelDetailsLoadingFallback />
 
@@ -58,12 +59,7 @@ function useNativeOfflineTravelCache(
 
     let isCancelled = false
 
-    void Promise.resolve(import('@/hooks/useOfflineTravelCache'))
-      .then((module) => {
-        if (!isCancelled) return module.cacheTravelOffline(travel.id, travel, true)
-        return undefined
-      })
-      .catch(() => undefined)
+    if (!isCancelled) void cacheTravelOffline(travel.id, travel, true)
 
     return () => {
       isCancelled = true
