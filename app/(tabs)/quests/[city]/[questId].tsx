@@ -2,7 +2,9 @@ import React, { Suspense, useCallback, useEffect, useMemo } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { useIsFocused } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 
+import { QuestWizard as QuestWizardDirect } from '@/components/quests/QuestWizard';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useAuth } from '@/context/AuthContext';
 import { useQuestBundle, useQuestProgressSync } from '@/hooks/useQuestsApi';
@@ -14,13 +16,15 @@ import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/uti
 import type { QuestWizardProps } from '@/components/quests/QuestWizard';
 import type { FrontendQuestBundle } from '@/utils/questAdapters';
 
-const FeatherIcon = React.lazy<React.ComponentType<{ name: IconName; size: number; color: string }>>(() =>
+const FeatherIconLazy = React.lazy<React.ComponentType<{ name: IconName; size: number; color: string }>>(() =>
   Promise.resolve(import('@expo/vector-icons/Feather')).then((module: any) => ({ default: module.Feather || module.default })),
 );
 
 const QuestWizard = React.lazy<React.ComponentType<QuestWizardProps>>(() =>
   Promise.resolve(import('@/components/quests/QuestWizard')).then((module: any) => ({ default: module.QuestWizard || module.default })),
 );
+const QuestWizardComponent = Platform.OS === 'web' ? QuestWizard : QuestWizardDirect;
+const FeatherIcon = Platform.OS === 'web' ? FeatherIconLazy : Feather;
 
 type Colors = ReturnType<typeof useThemedColors>;
 type IconName = 'alert-circle' | 'arrow-left' | 'lock' | 'log-in' | 'refresh-cw';
@@ -141,9 +145,13 @@ const useQuestHeadSync = (enabled: boolean, seo: QuestSeoModel, canonical: strin
 };
 
 const Icon = ({ name, color, size = 18 }: { name: IconName; color: string; size?: number }) => (
-  <Suspense fallback={null}>
+  Platform.OS === 'web' ? (
+    <Suspense fallback={null}>
+      <FeatherIcon name={name} size={size} color={color} />
+    </Suspense>
+  ) : (
     <FeatherIcon name={name} size={size} color={color} />
-  </Suspense>
+  )
 );
 
 const CenteredPage = ({ children, styles }: { children: React.ReactNode; styles: ReturnType<typeof createStyles> }) => (
@@ -407,8 +415,24 @@ export default function QuestByIdScreen() {
         />
       ) : null}
       {Platform.OS === 'web' ? <h1 style={hiddenWebHeadingStyle as any}>{seo.title}</h1> : null}
-      <Suspense fallback={<View style={styles.wizardFallback}><ActivityIndicator color={colors.primary} /></View>}>
-        <QuestWizard
+      {Platform.OS === 'web' ? (
+        <Suspense fallback={<View style={styles.wizardFallback}><ActivityIndicator color={colors.primary} /></View>}>
+          <QuestWizardComponent
+            title={bundle.title}
+            steps={bundle.steps}
+            finale={bundle.finale}
+            intro={bundle.intro}
+            storageKey={bundle.storageKey}
+            city={bundle.city}
+            coverUrl={bundle.coverUrl}
+            onProgressChange={saveProgress}
+            onProgressReset={handleProgressReset}
+            initialProgress={initialProgress}
+            onFinaleVideoRetry={refetch}
+          />
+        </Suspense>
+      ) : (
+        <QuestWizardComponent
           title={bundle.title}
           steps={bundle.steps}
           finale={bundle.finale}
@@ -421,7 +445,7 @@ export default function QuestByIdScreen() {
           initialProgress={initialProgress}
           onFinaleVideoRetry={refetch}
         />
-      </Suspense>
+      )}
     </View>
   );
 }
