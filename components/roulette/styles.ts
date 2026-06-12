@@ -294,9 +294,9 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
   },
   mobileRouletteCompassButton: {
     position: 'absolute',
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 112,
+    height: 112,
+    borderRadius: 56,
     backgroundColor: colors.surface,
     borderWidth: 2,
     borderColor: colors.borderLight,
@@ -311,6 +311,7 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
   rouletteCompassButtonTitle: {
+    alignSelf: 'stretch',
     fontSize: 11,
     fontWeight: '700',
     color: colors.text,
@@ -318,6 +319,7 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
     marginBottom: 2,
   },
   rouletteCompassButtonSubtitle: {
+    alignSelf: 'stretch',
     fontSize: 10,
     color: colors.textMuted,
     textAlign: 'center',

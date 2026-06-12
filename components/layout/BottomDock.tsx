@@ -677,6 +677,7 @@ const createStyles = (
     marginRight: 12,
   } as any,
   moreItemText: {
+    flex: 1,
     fontSize: 15,
     color: colors.text,
   },

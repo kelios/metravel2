@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Image } from 'react-native';
 import { Button, Card } from '@/ui/paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { confirmAccount } from '@/api/auth';
@@ -8,8 +8,6 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useIsFocused } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
-
-const { height } = Dimensions.get('window');
 
 export default function AccountConfirmation() {
     const [loading, setLoading] = useState(true);
@@ -76,7 +74,9 @@ export default function AccountConfirmation() {
             <Image
                 source={require('@/assets/images/media/slider/about.jpg')}
                 style={styles.backgroundImage}
+                resizeMode="cover"
             />
+            <View style={styles.backgroundScrim} />
             <View style={styles.contentContainer}>
                 <Card style={styles.card}>
                     {loading ? (
@@ -111,10 +111,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     backgroundImage: {
         width: '100%',
-        height: height * 0.5,
+        height: '100%',
         position: 'absolute',
         top: 0,
         left: 0,
+    },
+    backgroundScrim: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.45)',
     },
     contentContainer: {
         width: '90%',

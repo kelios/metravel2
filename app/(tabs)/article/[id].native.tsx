@@ -91,6 +91,7 @@ export default function ArticleDetails() {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+        <Stack.Screen options={{ headerTitle: 'Статья' }} />
         <ActivityIndicator style={styles.loader} color={colors.primary} />
       </SafeAreaView>
     )
@@ -99,6 +100,7 @@ export default function ArticleDetails() {
   if (!article || errorMessage) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+        <Stack.Screen options={{ headerTitle: 'Статья не найдена' }} />
         <ScrollView style={styles.container} contentContainerStyle={styles.centerContent}>
           <Title style={styles.errorTitle}>Статья не найдена</Title>
           <SafeHtml html={errorMessage || 'Проверьте ссылку на статью.'} />
