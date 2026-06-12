@@ -531,7 +531,7 @@ export default function ProfileScreen() {
 
   if (!authReady) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
         <View style={styles.centered}>
           <ActivityIndicator color={colors.primary} />
         </View>
@@ -541,7 +541,7 @@ export default function ProfileScreen() {
 
   if (!isAuthenticated) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
         <EmptyState
           icon="user"
           title="Войдите в аккаунт"
@@ -558,7 +558,7 @@ export default function ProfileScreen() {
   const isTravelsTabLoading = activeTab === 'travels' && travelsLoading;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       {isFocused && (
         <InstantSEO
           headKey="profile"
