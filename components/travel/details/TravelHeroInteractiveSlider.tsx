@@ -75,10 +75,7 @@ export default function TravelHeroInteractiveSlider({
             aspectRatio={aspectRatio}
             contentAspectRatio={aspectRatio}
             fillContainer
-            // На native hero заполняем кадр (cover) — без размытых полей и
-            // смещённой вниз картинки (letterbox-contain выглядел сломанным).
-            // На web оставляем contain (текущий проверенный UX/LCP).
-            fit={Platform.OS === 'web' ? 'contain' : 'cover'}
+            fit="contain"
             onFirstImageLoad={onFirstImageLoad}
             firstImagePreloaded={firstImagePreloaded}
             onImagePress={onImagePress}
