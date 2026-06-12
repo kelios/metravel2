@@ -273,10 +273,12 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
 
   if (!isMobile) return null;
 
-  const Container = Platform.OS === "ios" || Platform.OS === "android" ? SafeAreaView : View;
+  const isNativeContainer = Platform.OS === "ios" || Platform.OS === "android";
+  const Container = isNativeContainer ? SafeAreaView : View;
+  const containerProps = isNativeContainer ? ({ edges: ['left', 'right'] } as any) : {};
 
   return (
-    <Container style={[styles.container, showMore && styles.containerOpen]}>
+    <Container style={[styles.container, showMore && styles.containerOpen]} {...containerProps}>
       <View
         style={[
           styles.dockWrapper,
