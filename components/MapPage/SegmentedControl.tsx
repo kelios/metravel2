@@ -209,9 +209,11 @@ const getStyles = (
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: compact ? (dense ? 4 : 6) : 4,
+    // compact+dense: ужимаем gap/паддинги, чтобы «Маршрут» помещался целиком
+    // на узких Android-раскладках (иначе ellipsize → «Марш…»).
+    gap: compact ? (dense ? 3 : 6) : 4,
     paddingVertical: compact ? (dense ? 7 : 8) : 8,
-    paddingHorizontal: compact ? (dense ? 8 : 12) : 8,
+    paddingHorizontal: compact ? (dense ? 4 : 12) : 8,
     borderRadius: dense ? 5 : 6,
     minWidth: compact ? (dense ? 0 : 72) : 0,
     minHeight: compact ? (dense ? 36 : 40) : 40,

@@ -215,7 +215,10 @@ const Map: React.FC<TravelProps> = ({
       <div id="map"></div>
       <script>
         const userCenter = [${centerLat}, ${centerLng}];
-        const map = L.map('map').setView(userCenter, 10);
+        // zoomControl: false — встроенные кнопки +/− Leaflet (верхний левый угол)
+        // перекрывали номерной/стартовый маркер маршрута. Зум доступен через
+        // плавающие нативные контролы (__metravelMapZoomIn/Out).
+        const map = L.map('map', { zoomControl: false }).setView(userCenter, 10);
 
         window.__metravelMapZoomIn = function() {
           try { map.zoomIn(); } catch (e) {}
@@ -343,7 +346,7 @@ const Map: React.FC<TravelProps> = ({
           bounds.extend(start);
           bounds.extend(end);
           try {
-            map.fitBounds(routeLine.getBounds(), { padding: [60, 60] });
+            map.fitBounds(routeLine.getBounds(), { padding: [70, 70] });
           } catch (e) {}
         }
 

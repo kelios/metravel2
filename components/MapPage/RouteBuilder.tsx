@@ -98,7 +98,7 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
 
       {!startAddress && (
         <Text style={styles.hint} testID="route-hint-start">
-          Кликните на карте или введите адрес старта
+          Коснитесь карты или введите адрес старта
         </Text>
       )}
       {Boolean(startAddress) && !endAddress && (

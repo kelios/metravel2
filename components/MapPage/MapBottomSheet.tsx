@@ -12,7 +12,7 @@ import React, {
   useRef,
   useState,
 } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import BottomSheet, {
   BottomSheetBackdrop,
   BottomSheetScrollView,
@@ -144,6 +144,11 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         bottomInset={bottomInset}
         onChange={handleSheetChanges}
         backdropComponent={renderBackdrop}
+        // Android: при самоскроллящемся контенте (таб «Места», plain FlatList)
+        // контент-pan шторки перехватывает все вертикальные свайпы и список
+        // не скроллится (gorhom v5 + reanimated 4, new arch). Шторку таскаем
+        // только за хэндл; iOS-координация не тронута.
+        enableContentPanningGesture={scrollableContent || Platform.OS !== 'android'}
         enablePanDownToClose
         handleIndicatorStyle={styles.indicator}
         backgroundStyle={styles.background}

@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 
 import Button from '@/components/ui/Button';
 import { useThemedColors } from '@/hooks/useTheme';
+import { getPlaceLabel } from '@/utils/pluralize';
 
 interface FiltersPanelFooterProps {
   styles: any;
@@ -42,7 +43,7 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
   const showMobileRadiusFooter = isMobile && mode === 'radius';
   const canOpenList = typeof onOpenList === 'function' && totalPoints > 0;
   const mobileOpenListLabel = totalPoints > 0
-    ? `Список мест · ${totalPoints}`
+    ? `Список · ${totalPoints} ${getPlaceLabel(totalPoints)}`
     : 'Список мест'
 
   const routeHelperText = React.useMemo(() => {

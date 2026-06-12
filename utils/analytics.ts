@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { readConsent } from '@/utils/consent';
+import { devWarn } from '@/utils/logger';
 
 const MEASUREMENT_ID = process.env.EXPO_PUBLIC_GOOGLE_GA4;
 const API_SECRET = process.env.EXPO_PUBLIC_GOOGLE_API_SECRET;
@@ -220,12 +221,16 @@ export const sendAnalyticsEvent = async (
         });
 
         if (!res.ok) {
-            console.error(`GA4 Error [${res.status}]:`, await res.text());
+            // Не используем console.error: на native LogBox показывает это тостом,
+            // а сбой отправки аналитики не должен прерывать UX. Лог только в dev.
+            devWarn(`GA4 Error [${res.status}]:`, await res.text());
         } else {
             // GA event sent successfully
         }
     } catch (error) {
-        console.error('GA4 Fetch Error:', error);
+        // Офлайн / сетевой сбой при отправке аналитики — ожидаемо, не ошибка приложения.
+        // console.error всплывал бы LogBox-тостом поверх карты с кэш-тайлами.
+        devWarn('GA4 Fetch Error:', error);
     }
 };
 

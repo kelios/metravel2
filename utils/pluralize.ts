@@ -46,6 +46,17 @@ export function getLocationLabel(count: number): string {
   return 'локаций';
 }
 
+export function getPlaceLabel(count: number): string {
+  if (count % 10 === 1 && count % 100 !== 11) return 'место';
+  if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return 'места';
+  return 'мест';
+}
+
+/** «3 места», «1 место», «5 мест» — число + склонённое существительное. */
+export function formatPlaces(count: number): string {
+  return `${count} ${getPlaceLabel(count)}`;
+}
+
 /**
  * Универсальное склонение: возвращает одну из трёх форм по числу.
  * one — для 1, 21, 31… ; few — для 2-4, 22-24… ; many — для 0, 5-20, 11-14…

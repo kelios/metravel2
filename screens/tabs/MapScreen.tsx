@@ -19,6 +19,7 @@ import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import { useRouteStore } from '@/stores/routeStore'
 import { MapCanvas } from '@/components/MapPage/MapCanvas'
+import { MapOfflineIndicator } from '@/components/MapPage/MapOfflineIndicator'
 import MapPanelHeader from '@/components/MapPage/MapPanelHeader'
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig'
 import { MAP_SEO_TITLE, MAP_SEO_DESCRIPTION } from '@/constants/mapSeo'
@@ -473,6 +474,16 @@ export default function MapScreen() {
             quickActionButtons={mapQuickActionButtons}
           />
         </Suspense>
+
+        <MapOfflineIndicator visible={!isConnected} />
+
+        {/* Онбординг монтируется и на мобильном: иначе restartMapOnboarding()
+            (кнопка «?») не имеет зарегистрированного _restartCb и ничего не показывает. */}
+        {shouldLoadOnboarding && (
+          <Suspense fallback={null}>
+            <MapOnboarding mobileWebCoachmark={isWeb && isMobile} />
+          </Suspense>
+        )}
       </View>
     )
   }
@@ -674,6 +685,8 @@ export default function MapScreen() {
           <Feather name="sliders" size={22} color={themedColors.textOnPrimary} />
         </Pressable>
       )}
+
+      <MapOfflineIndicator visible={!isConnected} />
 
       {!mapReady && (
         <View style={[styles.loadingOverlay, POINTER_EVENTS_NONE]} testID="map-loading-overlay">

@@ -5,6 +5,7 @@ import Feather from '@expo/vector-icons/Feather'
 import type { ThemedColors } from '@/hooks/useTheme'
 import { restartMapOnboarding } from '@/components/MapPage/MapOnboarding'
 import { showFiltersResetToast } from '@/utils/mapToasts'
+import { formatPlaces } from '@/utils/pluralize'
 
 type PanelTab = 'search' | 'route' | 'travels'
 
@@ -132,7 +133,7 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
           activeTab={activeTab}
           icon="list"
           label="Места"
-          accessibilityLabel={`Список мест (${travelsCount})`}
+          accessibilityLabel={`Список: ${formatPlaces(travelsCount)}`}
           onPress={selectTravelsTab}
           themedColors={themedColors}
           styles={styles}

@@ -8,6 +8,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 
 import { buildClusterIconHtml } from './mapMarkerStyles'
 import MarkerPopup from './MarkerPopup'
+import { formatPlaces } from '@/utils/pluralize'
 
 interface ClusterLayerProps {
   L?: any
@@ -283,7 +284,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
 
         const thumbItem = cluster.items.find((p) => p.travelImageThumbUrl)
         const icon = clusterIcon(cluster.count, thumbItem?.travelImageThumbUrl)
-        const clusterAccessibleName = `Кластер: ${cluster.count} мест`
+        const clusterAccessibleName = `Кластер: ${formatPlaces(cluster.count)}`
         return (
           <Marker
             key={`cluster-${cluster.key}`}
@@ -332,7 +333,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
             <Popup>
               <View style={{ gap: 6, maxWidth: 260 }}>
                 <Text style={{ fontWeight: '800' }}>
-                  {cluster.count} мест поблизости
+                  {formatPlaces(cluster.count)} поблизости
                 </Text>
                 <Text style={{ color: colors.textMuted, fontSize: 12 }}>
                   Нажмите, чтобы приблизить и раскрыть маркеры

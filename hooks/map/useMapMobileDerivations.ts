@@ -4,6 +4,8 @@
  */
 import { useMemo } from 'react'
 
+import { formatPlaces } from '@/utils/pluralize'
+
 type FiltersMode = 'radius' | 'route' | undefined
 
 interface FiltersContextShape {
@@ -125,11 +127,11 @@ export function useMapMobileDerivations(
         return 'Маршрут готов, можно открыть список мест'
       return routePointsCount > 0
         ? `Выбрано ${routePointsCount} из 2 точек`
-        : 'Выберите старт и финиш кликом по карте'
+        : 'Отметьте на карте старт и финиш'
     }
 
     const parts = [
-      `${travelsData.length > 999 ? '999+' : travelsData.length} мест`,
+      travelsData.length > 999 ? '999+ мест' : formatPlaces(travelsData.length),
       `${activeRadius} км`,
     ]
 

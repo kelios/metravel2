@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react'
 import {
+  FlatList,
   Image,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -522,7 +523,15 @@ const TravelListPanel: React.FC<Props> = ({
     )
   }
 
-  const NativeListComponent = useBottomSheetScrollable ? BottomSheetFlatList : FlashList
+  // Android: координация scrollable↔sheet в gorhom v5 + reanimated 4 (new arch)
+  // не отдаёт жест списку — контент-pan шторки съедает все вертикальные свайпы
+  // (handle-drag работает, список мёртв). Шторка для таба «Места» отключает
+  // content panning (MapBottomSheet), а список рендерится обычным FlatList.
+  const NativeListComponent = useBottomSheetScrollable
+    ? Platform.OS === 'android'
+      ? FlatList
+      : BottomSheetFlatList
+    : FlashList
 
   return (
     <NativeListComponent

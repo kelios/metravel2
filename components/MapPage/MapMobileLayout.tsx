@@ -5,6 +5,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler'
 
 import { useThemedColors } from '@/hooks/useTheme'
 import { LAYOUT } from '@/constants/layout'
+import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import { useMapMobileDerivations } from '@/hooks/map/useMapMobileDerivations'
@@ -187,6 +188,15 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const handleCloseSheet = useCallback(() => {
     bottomSheetRef.current?.snapToCollapsed()
   }, [])
+
+  // Android back: первый Back закрывает раскрытую шторку (временную поверхность),
+  // и только если она уже свёрнута — отдаём back роутеру (уход с экрана карты).
+  const dismissOpenSheet = useCallback((): boolean => {
+    if (sheetStateRef.current === 'collapsed') return false
+    bottomSheetRef.current?.snapToCollapsed()
+    return true
+  }, [])
+  useAndroidBackHandler(dismissOpenSheet)
 
   const handleOpenSearch = useCallback(() => {
     setFiltersMode?.('radius')

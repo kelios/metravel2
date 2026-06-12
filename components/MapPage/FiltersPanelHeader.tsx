@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import IconButton from '@/components/ui/IconButton';
 import type { ThemedColors } from '@/hooks/useTheme';
+import { formatPlaces } from '@/utils/pluralize';
 
 interface FiltersPanelHeaderProps {
   colors: ThemedColors;
@@ -15,16 +16,6 @@ interface FiltersPanelHeaderProps {
   onClose: () => void;
   onModeChange: (nextMode: 'radius' | 'route') => void;
 }
-
-const getPlacesLabel = (count: number) => {
-  const absCount = Math.abs(count);
-  const mod10 = absCount % 10;
-  const mod100 = absCount % 100;
-
-  if (mod10 === 1 && mod100 !== 11) return `${count} место`;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} места`;
-  return `${count} мест`;
-};
 
 const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
   colors,
@@ -38,8 +29,8 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
 }) => {
   const summary =
     mode === 'radius'
-      ? `${getPlacesLabel(totalPoints)} · радиус ${radiusValue || '60'} км`
-      : 'Старт и финиш можно выбрать кликом по карте';
+      ? `${formatPlaces(totalPoints)} · радиус ${radiusValue || '60'} км`
+      : 'Отметьте на карте старт и финиш';
   const helper =
     mode === 'radius'
       ? ''
@@ -47,8 +38,8 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
   const showCompactDetails = !isMobile;
   const compactSummary =
     mode === 'radius'
-      ? `${getPlacesLabel(totalPoints)} · ${radiusValue || '60'} км`
-      : 'Старт и финиш выбираются на карте';
+      ? `${formatPlaces(totalPoints)} · ${radiusValue || '60'} км`
+      : 'Старт и финиш — на карте';
 
   return (
     <View style={styles.stickyTop} testID="filters-panel-header">

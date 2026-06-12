@@ -9,6 +9,7 @@ import SegmentedControl from '@/components/MapPage/SegmentedControl'
 import { restartMapOnboarding } from '@/components/MapPage/MapOnboarding'
 import type { getMapMobileLayoutStyles } from '@/components/MapPage/MapMobileLayout.styles'
 import type { ThemedColors } from '@/hooks/useTheme'
+import { formatPlaces } from '@/utils/pluralize'
 
 type UiTab = 'search' | 'route' | 'list'
 type SheetState = 'collapsed' | 'quarter' | 'half' | 'full'
@@ -116,7 +117,7 @@ const MapMobileSheetToolbarInner: React.FC<MapMobileSheetToolbarProps> = ({
             testID="map-panel-expand-list"
             onPress={onOpenList}
             accessibilityRole="button"
-            accessibilityLabel={`Показать все ${travelsData.length} мест`}
+            accessibilityLabel={`Показать все: ${formatPlaces(travelsData.length)}`}
             hitSlop={6}
             style={({ pressed }) => [
               styles.sheetShowResultsButton,
