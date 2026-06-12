@@ -198,7 +198,7 @@ export default function SettingsScreen() {
 
     if (!authReady) {
         return (
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 <ScrollView style={webTouchScrollStyle} contentContainerStyle={styles.scrollContent}>
                     <View style={styles.pageContainer}>
                         <View style={styles.header}>
@@ -223,7 +223,7 @@ export default function SettingsScreen() {
 
     if (!isAuthenticated) {
         return (
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 <EmptyState
                     icon="settings"
                     title="Войдите в аккаунт"
@@ -238,7 +238,7 @@ export default function SettingsScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
             {isFocused && (
                 <InstantSEO
                     headKey="settings"

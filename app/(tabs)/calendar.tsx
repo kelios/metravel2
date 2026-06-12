@@ -253,7 +253,7 @@ export default function CalendarScreen() {
 
   if (!isAuthenticated) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
         {seoBlock}
         <EmptyState
           icon="calendar"
@@ -272,7 +272,7 @@ export default function CalendarScreen() {
   const emptyConfig = EMPTY_STATE[activeTab]
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       {seoBlock}
       <ProfileCollectionHeader title="Мой календарь" onBackPress={handleBackToProfile} />
 

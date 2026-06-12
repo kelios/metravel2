@@ -52,9 +52,9 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
         marginTop: DESIGN_TOKENS.spacing.xs,
     },
     titleRowMobile: {
+        // Заголовок слева (flex:1), меню «…» справа на той же строке —
+        // не отдельной висящей строкой (см. QA F-15 «одинокий элемент …»).
         alignItems: 'flex-start',
-        flexDirection: 'column',
-        gap: DESIGN_TOKENS.spacing.xs,
     },
     titleActionsRow: {
         flexDirection: 'row',

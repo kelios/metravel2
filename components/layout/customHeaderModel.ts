@@ -49,11 +49,17 @@ const TOP_LEVEL_PATHS_NO_CONTEXT_BAR = new Set<string>([
 ])
 
 export const shouldShowHeaderContextBar = (pathname: string, isMobile: boolean) => {
-  if (Platform.OS !== 'web') return true
-
   const isTravelDetailRoute = pathname.startsWith('/travels/')
   const isMapRoute = pathname === '/map' || pathname.startsWith('/map/')
   const isUserPointsRoute = pathname === '/userpoints'
+  // /travel/new и /travel/{id} — визард с собственной шапкой (TravelWizardHeader).
+  // Глобальный контекст-бар дублирует её навигацию и оставляет пустую полосу.
+  const isTravelUpsertRoute = pathname.startsWith('/travel/')
+
+  if (Platform.OS !== 'web') {
+    if (isTravelUpsertRoute) return false
+    return true
+  }
 
   if (isMobile) {
     if (isUserPointsRoute || isTravelDetailRoute) return true
