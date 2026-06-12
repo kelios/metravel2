@@ -5,7 +5,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useThemedColors } from '@/hooks/useTheme';
+import { useTheme, useThemedColors } from '@/hooks/useTheme';
 
 interface GoogleSignInButtonProps {
     onSuccess: (credential: string) => void;
@@ -47,9 +47,9 @@ const LOOPBACK_WEB_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 
 export default function GoogleSignInButton({ onSuccess, onError, disabled }: GoogleSignInButtonProps) {
     const colors = useThemedColors();
+    const { isDark } = useTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
     const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
-    const [isGoogleButtonRendered, setIsGoogleButtonRendered] = useState(false);
     const buttonContainerRef = useRef<HTMLDivElement | null>(null);
     const onSuccessRef = useRef(onSuccess);
     const onErrorRef = useRef(onError);
@@ -177,27 +177,26 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
     useEffect(() => {
         if (!googleAvailability.enabled) return;
         if (!isGoogleLoaded || !window.google || !hasClientId) return;
-        if (!buttonContainerRef.current || isGoogleButtonRendered) return;
+        if (!buttonContainerRef.current) return;
 
         try {
             buttonContainerRef.current.innerHTML = '';
             window.google.accounts.id.renderButton(buttonContainerRef.current, {
                 type: 'standard',
-                theme: 'outline',
+                theme: isDark ? 'filled_black' : 'outline',
                 size: 'large',
                 text: 'signin_with',
                 shape: 'rectangular',
-                logo_alignment: 'left',
+                logo_alignment: 'center',
                 width: 300,
             });
-            setIsGoogleButtonRendered(true);
         } catch (error) {
             if (__DEV__) {
                 console.error('Google Sign-In button render error:', error);
             }
             onErrorRef.current?.('Ошибка отображения кнопки Google Sign-In');
         }
-    }, [googleAvailability.enabled, hasClientId, isGoogleButtonRendered, isGoogleLoaded]);
+    }, [googleAvailability.enabled, hasClientId, isDark, isGoogleLoaded]);
 
     return (
         <View
@@ -223,7 +222,8 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
                 style={{
                     width: '100%',
                     minHeight: 44,
-                    display: isGoogleLoaded && !shouldShowFallback ? 'block' : 'none',
+                    display: isGoogleLoaded && !shouldShowFallback ? 'flex' : 'none',
+                    justifyContent: 'center',
                     pointerEvents: disabled ? 'none' : 'auto',
                     opacity: disabled ? 0.6 : 1,
                 }}
@@ -234,7 +234,7 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     button: {
-        backgroundColor: colors.background,
+        backgroundColor: 'transparent',
         borderRadius: DESIGN_TOKENS.radii.lg,
         minHeight: 44,
         alignItems: 'center',
