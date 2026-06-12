@@ -121,7 +121,9 @@ export const MapChipPopover: React.FC<MapChipPopoverProps> = ({
                 <Feather name="x" size={18} color={colors.textMuted} />
               </Pressable>
             </View>
-            <View style={styles.sheetContent}>{children}</View>
+            <View style={styles.sheetContent} testID="map-chip-popover-sheet-content">
+              {children}
+            </View>
           </View>
         </Pressable>
       </View>
@@ -165,7 +167,9 @@ export const MapChipPopover: React.FC<MapChipPopoverProps> = ({
                 <Feather name="x" size={18} color={colors.textMuted} />
               </Pressable>
             </View>
-            <View style={styles.sheetContent}>{children}</View>
+            <View style={styles.sheetContent} testID="map-chip-popover-sheet-content">
+              {children}
+            </View>
           </Pressable>
         </Pressable>
       </Modal>
@@ -325,10 +329,18 @@ const getStyles = (colors: ThemedColors): Styles =>
       backgroundColor: colors.borderLight,
       marginBottom: 8,
     },
-    sheetContent: {
-      flex: 1,
-      minHeight: 0,
-    },
+    // Native: НЕ flex:1 — flexBasis:0 внутри контейнера с maxHeight (без height)
+    // схлопывает контент модала в 0px (Android F-05: пресеты радиуса/категории
+    // невидимы). Контент сайзится по содержимому и ужимается под maxHeight.
+    sheetContent:
+      Platform.OS === 'web'
+        ? {
+            flex: 1,
+            minHeight: 0,
+          }
+        : {
+            flexShrink: 1,
+          },
     closeButton: {
       width: 36,
       height: 36,

@@ -28,4 +28,21 @@ describe('MapChipPopover', () => {
 
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  it('sizes native sheet content to its children instead of collapsing to zero height', () => {
+    // Android F-05: flex:1 (flexBasis 0) внутри контейнера с maxHeight без
+    // height схлопывал контент модала (пресеты радиуса/категории) в 0px.
+    const { getByTestId } = render(
+      <MapChipPopover visible={true} onClose={jest.fn()}>
+        <RN.Text>Пресеты радиуса</RN.Text>
+      </MapChipPopover>,
+    )
+
+    const content = getByTestId('map-chip-popover-sheet-content')
+    const style = RN.StyleSheet.flatten(content.props.style)
+
+    expect(style.flex).toBeUndefined()
+    expect(style.flexBasis).toBeUndefined()
+    expect(style.flexShrink).toBe(1)
+  })
 })

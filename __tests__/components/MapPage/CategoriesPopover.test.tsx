@@ -99,4 +99,20 @@ describe('CategoriesPopover', () => {
     expect(onApply).toHaveBeenCalledWith([])
     expect(onClose).toHaveBeenCalled()
   })
+
+  it('sizes the native category list to content instead of collapsing (flex-basis 0)', () => {
+    // Android F-05: root/scroll с flex:1 внутри auto-height модала MapChipPopover
+    // схлопывали список категорий в 0px — на native размер должен идти от контента.
+    const { ScrollView, StyleSheet } = require('react-native')
+
+    const { UNSAFE_getByType } = render(<CategoriesPopover {...baseProps} />)
+
+    const scroll = UNSAFE_getByType(ScrollView)
+    const style = StyleSheet.flatten(scroll.props.style)
+
+    expect(style.flex).toBeUndefined()
+    expect(style.flexBasis).toBeUndefined()
+    expect(style.flexShrink).toBe(1)
+    expect(style.maxHeight).toBe(420)
+  })
 })

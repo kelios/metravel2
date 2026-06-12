@@ -357,10 +357,17 @@ export const CategoriesPopover: React.FC<CategoriesPopoverProps> = ({
 
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
-    root: {
-      flex: 1,
-      minHeight: 0,
-    },
+    // Native: flex:1 (flexBasis 0) внутри auto-height модала MapChipPopover
+    // схлопывает контент в 0px (Android F-05) — сайзимся по содержимому.
+    root:
+      Platform.OS === 'web'
+        ? {
+            flex: 1,
+            minHeight: 0,
+          }
+        : {
+            flexShrink: 1,
+          },
     header: {
       paddingHorizontal: 16,
       paddingTop: 14,
@@ -445,10 +452,16 @@ const getStyles = (colors: ThemedColors) =>
     searchClearPressed: {
       opacity: 0.6,
     },
-    scroll: {
-      flex: 1,
-      minHeight: 0,
-    },
+    scroll:
+      Platform.OS === 'web'
+        ? {
+            flex: 1,
+            minHeight: 0,
+          }
+        : {
+            flexShrink: 1,
+            maxHeight: 420,
+          },
     list: {
       paddingHorizontal: 10,
       paddingBottom: 18,

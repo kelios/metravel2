@@ -105,6 +105,32 @@ describe('MapQuickFilters', () => {
     expect(getByLabelText('Что посмотреть: Все')).toBeTruthy()
   })
 
+  it('opens the radius popover from the quick chip and applies a preset', () => {
+    const onChangeRadius = jest.fn()
+    const { getByLabelText, getByTestId, queryByTestId } = render(
+      <MapQuickFilters
+        iconOnly={true}
+        radiusValue="60 км"
+        radiusOptions={[
+          { id: '60', name: '60' },
+          { id: '120', name: '120' },
+        ]}
+        radiusSelected="60"
+        onChangeRadius={onChangeRadius}
+      />,
+    )
+
+    expect(queryByTestId('map-quick-filters-radius-popover')).toBeNull()
+
+    fireEvent.press(getByLabelText('Радиус: 60 км'))
+    expect(getByTestId('map-quick-filters-radius-popover')).toBeTruthy()
+
+    fireEvent.press(getByLabelText('120 километров'))
+
+    expect(onChangeRadius).toHaveBeenCalledWith('120')
+    expect(queryByTestId('map-quick-filters-radius-popover')).toBeNull()
+  })
+
   it('renders compact icon-only controls without text labels', () => {
     const { getByLabelText, queryByText } = render(
       <MapQuickFilters
