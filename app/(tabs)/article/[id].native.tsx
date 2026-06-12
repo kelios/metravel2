@@ -16,6 +16,7 @@ import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/a
 import { SafeHtml } from '@/components/article/SafeHtml'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
+import { handleRichTextLinkPress } from '@/utils/internalLinks'
 
 export default function ArticleDetails() {
   const { width } = useResponsive()
@@ -135,6 +136,10 @@ export default function ArticleDetails() {
                         webViewProps: {
                           allowsFullScreen: true,
                         },
+                      },
+                      a: {
+                        // Внутренние ссылки открываем в приложении, внешние — в браузере
+                        onPress: (_event: any, href: string) => handleRichTextLinkPress(href),
                       },
                     }}
                     tagsStyles={{

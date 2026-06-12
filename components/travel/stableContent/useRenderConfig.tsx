@@ -6,6 +6,7 @@ import CustomImageRenderer from '@/components/ui/CustomImageRenderer'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import { openExternalUrl } from '@/utils/externalLinks'
+import { handleRichTextLinkPress } from '@/utils/internalLinks'
 
 import { isInstagramEmbedUrl, isYouTubeEmbedUrl } from './htmlTransform'
 
@@ -186,19 +187,10 @@ export function useStableContentRenderConfig({
 
   const customHTMLElementModels = useMemo(() => (iframeModel ? { iframe: iframeModel } : undefined), [iframeModel])
 
+  // Внутренние ссылки (metravel.by / относительные) открываем внутри приложения,
+  // внешние — во внешнем браузере (см. handleRichTextLinkPress).
   const handleLinkPress = (_: any, href?: string) => {
-    if (!href) return
-    if (/^https?:\/\//i.test(href)) {
-      void openExternalUrl(href, {
-        onError: (error) => {
-          if (__DEV__) {
-            console.warn('[StableContent] Не удалось открыть URL:', error)
-          }
-        },
-      })
-    } else if (href.startsWith('/') && Platform.OS === 'web') {
-      window.location.assign(href)
-    }
+    handleRichTextLinkPress(href)
   }
 
   return {
