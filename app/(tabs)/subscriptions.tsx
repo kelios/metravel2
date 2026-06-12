@@ -85,7 +85,7 @@ export default function SubscriptionsScreen() {
 
   if (!authReady) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
         {headerBlock}
         <View style={styles.loadingWrap}>
           {Array.from({ length: 2 }).map((_, i) => (
@@ -98,7 +98,7 @@ export default function SubscriptionsScreen() {
 
   if (!isAuthenticated) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
         <EmptyState
           icon="users"
           title="Войдите в аккаунт"
@@ -116,7 +116,7 @@ export default function SubscriptionsScreen() {
 
   if (isActiveLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
         {headerBlock}
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -249,7 +249,7 @@ export default function SubscriptionsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       <InstantSEO
         headKey="subscriptions" title="Подписки | Metravel"
         description="Ваши подписки и подписчики"

@@ -366,7 +366,7 @@ export default function HistoryScreen() {
 
     if (!authReady) {
         return (
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 <ProfileCollectionHeader title="История" subtitle={getHistorySubtitle(0)} onBackPress={handleBackToProfile} />
                 <View style={styles.gridContent}>
                     {Array.from({ length: numColumns > 1 ? numColumns * 2 : 3 }).map((_, index) => (
@@ -381,7 +381,7 @@ export default function HistoryScreen() {
 
     if (!isAuthenticated) {
         return (
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 <EmptyState
                     icon="clock"
                     title="Войдите в аккаунт"
@@ -397,7 +397,7 @@ export default function HistoryScreen() {
 
     if (isLoading) {
         return (
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 <ProfileCollectionHeader title="История" subtitle={getHistorySubtitle(data.length)} onBackPress={handleBackToProfile} />
                 <View style={styles.gridContent}>
                     {Array.from({ length: numColumns > 1 ? numColumns * 2 : 3 }).map((_, index) => (
@@ -412,7 +412,7 @@ export default function HistoryScreen() {
 
     if (data.length === 0) {
         return (
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 <EmptyState
                     icon="clock"
                     title="Ты ещё не открывал маршруты"
@@ -432,7 +432,7 @@ export default function HistoryScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
             {isFocused && (
                 <InstantSEO
                     headKey="history"

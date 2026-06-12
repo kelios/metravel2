@@ -137,7 +137,7 @@ export default function PublicUserProfileScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
         <View style={styles.loader}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -147,7 +147,7 @@ export default function PublicUserProfileScreen() {
 
   if (!userId || error || !profile) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
         <View style={styles.errorWrap}>
           <Text style={styles.errorTitle}>Профиль недоступен</Text>
           <Text style={styles.errorText}>{!userId ? 'Некорректный id пользователя' : (error as any)?.message || String(error || 'Не удалось загрузить данные профиля')}</Text>
@@ -167,7 +167,7 @@ export default function PublicUserProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       {isFocused && (
         <InstantSEO
           headKey={`user-${userId}`}

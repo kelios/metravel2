@@ -150,7 +150,7 @@ export default function FavoritesScreen() {
 
     if (!authReady) {
         return (
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 {seoBlock}
                 <View style={styles.listContent}>
                     {Array.from({ length: 3 }).map((_, index) => (
@@ -165,7 +165,7 @@ export default function FavoritesScreen() {
 
     if (!isAuthenticated) {
         return (
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 {seoBlock}
                 <EmptyState
                     icon="heart"
@@ -182,7 +182,7 @@ export default function FavoritesScreen() {
 
     if (isLoading) {
         return (
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 {seoBlock}
                 <ProfileCollectionHeader title="Избранное" onBackPress={handleBackToProfile} />
                 <View style={styles.listContent}>
@@ -198,7 +198,7 @@ export default function FavoritesScreen() {
 
     if (data.length === 0) {
         return (
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 {seoBlock}
                 <EmptyState
                     icon="heart"
@@ -219,7 +219,7 @@ export default function FavoritesScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
             {seoBlock}
             <ProfileCollectionHeader
                 title="Избранное"

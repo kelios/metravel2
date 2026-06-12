@@ -386,7 +386,7 @@ export function CalendarSkeleton({ styles, showHeader, seoBlock, onBackPress }: 
   onBackPress: () => void
 }) {
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       {seoBlock}
       {showHeader && <ProfileCollectionHeader title="Мой календарь" onBackPress={onBackPress} />}
       <View style={styles.skeletonWrap}>

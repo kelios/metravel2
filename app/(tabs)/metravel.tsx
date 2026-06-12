@@ -29,7 +29,7 @@ export default function MeTravelScreen() {
                 robots="noindex, nofollow"
             />
             )}
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 <Suspense
                     fallback={
                         <View style={styles.loading}>
