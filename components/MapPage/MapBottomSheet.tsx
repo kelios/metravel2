@@ -10,9 +10,10 @@ import React, {
   useImperativeHandle,
   useMemo,
   useRef,
+  useState,
 } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet'
+import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet'
 
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
@@ -70,8 +71,11 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
       [closeSheet, snapToIndex],
     )
 
+    const [isFullySnapped, setIsFullySnapped] = useState(false)
+
     const handleSheetChanges = useCallback(
       (index: number) => {
+        setIsFullySnapped(index === SNAP_INDEX_FULL)
         if (!onStateChange) return
         if (index < 0) {
           onStateChange('collapsed')
@@ -83,6 +87,8 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
       [onStateChange],
     )
 
+    // Pressable монтируется только на FULL-снапе: постоянный absoluteFill-оверлей
+    // перехватывает все касания карты (pan/zoom/маркеры) на Android.
     const renderBackdrop = useCallback(
       (props: any) => (
         <View
@@ -96,19 +102,21 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
             opacity={0.5}
             pressBehavior="none"
           />
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={() => {
-              const dt = Date.now() - lastProgrammaticOpenTsRef.current
-              if (dt < OPEN_DEBOUNCE_MS) return
-              bottomSheetRef.current?.snapToIndex(SNAP_INDEX_QUARTER)
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Закрыть панель карты"
-          />
+          {isFullySnapped && (
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => {
+                const dt = Date.now() - lastProgrammaticOpenTsRef.current
+                if (dt < OPEN_DEBOUNCE_MS) return
+                bottomSheetRef.current?.snapToIndex(SNAP_INDEX_QUARTER)
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Закрыть панель карты"
+            />
+          )}
         </View>
       ),
-      [],
+      [isFullySnapped],
     )
 
     const hasHeaderText = !!(title || subtitle)
@@ -141,11 +149,12 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           </View>
         )}
 
-        <BottomSheetView
-          style={[styles.contentContainer, { paddingBottom: contentBottomPadding }]}
+        <BottomSheetScrollView
+          contentContainerStyle={[styles.contentContainer, { paddingBottom: contentBottomPadding }]}
+          keyboardShouldPersistTaps="handled"
         >
           {children}
-        </BottomSheetView>
+        </BottomSheetScrollView>
       </BottomSheet>
     )
   },
@@ -198,6 +207,6 @@ const getStyles = (colors: ThemedColors) =>
     contentContainer: {
       paddingHorizontal: 16,
       paddingBottom: 40,
-      flex: 1,
+      flexGrow: 1,
     },
   })

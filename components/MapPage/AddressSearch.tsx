@@ -238,7 +238,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
       {showResults && results.length > 0 && (
         <View
           style={styles.resultsContainer}
-          accessibilityRole={('listbox' as any)}
+          accessibilityRole={Platform.OS === 'web' ? ('listbox' as any) : 'list'}
           accessibilityLabel="Результаты поиска адреса"
         >
           <FlatList
@@ -251,7 +251,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
                   pressed && styles.resultItemPressed,
                 ]}
                 onPress={() => handleSelectResult(item)}
-                accessibilityRole={('option' as any)}
+                accessibilityRole={Platform.OS === 'web' ? ('option' as any) : 'button'}
                 accessibilityLabel={item.display_name}
               >
                 <MapIcon name="place" size={18} color={colors.primary} />

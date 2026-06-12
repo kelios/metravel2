@@ -18,6 +18,8 @@ jest.mock('@gorhom/bottom-sheet', () => {
     BottomSheetBackdrop: (props: any) => React.createElement(View, props),
     BottomSheetView: ({ children, ...props }: any) =>
       React.createElement(View, props, children),
+    BottomSheetScrollView: ({ children, ...props }: any) =>
+      React.createElement(View, props, children),
   }
 })
 
