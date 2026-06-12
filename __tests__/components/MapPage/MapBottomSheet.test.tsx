@@ -48,13 +48,17 @@ describe('MapBottomSheet', () => {
   })
 
   it('can render static content without wrapping virtualized lists in a scroll view', () => {
-    render(
+    const { getByTestId } = render(
       <MapBottomSheet scrollableContent={false}>
         <View testID="sheet-content" />
       </MapBottomSheet>,
     )
 
-    expect(mockBottomSheetView).toHaveBeenCalled()
+    expect(getByTestId('sheet-content')).toBeTruthy()
     expect(mockBottomSheetScrollView).not.toHaveBeenCalled()
+    // Регрессия Android: BottomSheetView меряет детей и растёт под контент
+    // (layout h == content h) — вложенный BottomSheetFlatList не скроллится.
+    // Статичная ветка должна рендерить плоский View с flex:1.
+    expect(mockBottomSheetView).not.toHaveBeenCalled()
   })
 })
