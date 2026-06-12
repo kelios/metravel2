@@ -42,6 +42,11 @@ interface MapBottomSheetProps {
   subtitle?: string
   peekContent?: React.ReactNode
   bottomInset?: number
+  /**
+   * Native-only: переключает BottomSheetScrollView/BottomSheetView.
+   * На web шторка скроллится собственным контейнером — проп игнорируется.
+   */
+  scrollableContent?: boolean
   onStateChange?: (state: SheetState) => void
 }
 

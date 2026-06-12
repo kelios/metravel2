@@ -355,6 +355,8 @@ export function useRouteController(
       }
 
       if (targetCoords) {
+        // Списки мест могут отдавать name/title сверх базового TravelCoords.
+        const labels = item as TravelCoords & { name?: string; title?: string };
         try {
           setMode('route');
           routeStore.clearRoute();
@@ -363,7 +365,12 @@ export function useRouteController(
           }
           addPoint(
             targetCoords,
-            String(item.address || item.name || item.title || CoordinateConverter.formatCoordinates(targetCoords)),
+            String(
+              item.address ||
+                labels.name ||
+                labels.title ||
+                CoordinateConverter.formatCoordinates(targetCoords),
+            ),
           );
         } catch {
           // noop
