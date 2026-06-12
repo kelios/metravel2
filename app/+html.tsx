@@ -154,6 +154,43 @@ const getTravelHeroPreloadScript = () => String.raw`
 })();
 `;
 
+// Storage hardening: iOS Safari with "Block All Cookies" / strong tracking
+// prevention throws SecurityError on accessing window.localStorage, and Private
+// mode throws QuotaExceededError on setItem. Many call sites across the app read
+// storage synchronously during render (theme, consent, list visibility, map),
+// and an unguarded throw crashes the whole React tree — travels/articles pages
+// render blank and login fails. This runs BEFORE the bundle and swaps a broken
+// storage object for an in-memory shim so all downstream code never throws.
+const getStorageHardeningScript = () => String.raw`
+(function(){
+  try {
+    if (typeof window === 'undefined') return;
+    function makeShim(){
+      var store = Object.create(null);
+      return {
+        getItem: function(k){ k = String(k); return Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null; },
+        setItem: function(k, v){ store[String(k)] = String(v); },
+        removeItem: function(k){ delete store[String(k)]; },
+        clear: function(){ store = Object.create(null); },
+        key: function(i){ var ks = Object.keys(store); return (i >= 0 && i < ks.length) ? ks[i] : null; },
+        get length(){ return Object.keys(store).length; }
+      };
+    }
+    ['localStorage','sessionStorage'].forEach(function(name){
+      var broken = false;
+      try {
+        var s = window[name];
+        if (!s) { broken = true; }
+        else { var p = '__ms_probe__'; s.setItem(p, '1'); s.removeItem(p); }
+      } catch (_e) { broken = true; }
+      if (broken) {
+        try { Object.defineProperty(window, name, { configurable: true, value: makeShim() }); } catch (_e2) {}
+      }
+    });
+  } catch (_e) {}
+})();
+`;
+
 const getLegacyParamRedirectScript = () => String.raw`
 (function(){
   try {
@@ -202,6 +239,13 @@ export default function Root({ children }: { children: React.ReactNode }) {
           for SPA-only routes. A static <title> would NOT be deduped by Expo export and
           produced a duplicate <title> tag on every page. */}
       <meta name="description" content={DEFAULT_DESCRIPTION} />
+
+      {/* Storage hardening: neutralize throwing localStorage/sessionStorage
+          (iOS Safari block-all-cookies / private mode) BEFORE any other script
+          or the React bundle reads storage. Must stay first in <head>. */}
+      <script
+        dangerouslySetInnerHTML={{ __html: getStorageHardeningScript() }}
+      />
 
       {/* Legacy URL guard: /?param=<id|slug> -> /travels/<id|slug> */}
       <script
