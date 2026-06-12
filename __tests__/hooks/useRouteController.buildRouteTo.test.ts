@@ -3,6 +3,9 @@ import { act, renderHook } from '@testing-library/react-native'
 const mockRequestCollapse = jest.fn()
 const mockFocusOnCoord = jest.fn()
 const mockOpenPopupForCoord = jest.fn()
+const mockSetMode = jest.fn()
+const mockClearRoute = jest.fn()
+const mockAddPoint = jest.fn()
 
 let mockBottomSheetState: 'collapsed' | 'quarter' | 'half' | 'full' = 'half'
 
@@ -18,7 +21,7 @@ jest.mock('@/stores/bottomSheetStore', () => ({
 jest.mock('@/hooks/useRouteStoreAdapter', () => ({
   useRouteStoreAdapter: () => ({
     mode: 'radius',
-    setMode: jest.fn(),
+    setMode: mockSetMode,
     transportMode: 'car',
     setTransportMode: jest.fn(),
     routePoints: [],
@@ -42,11 +45,11 @@ jest.mock('@/hooks/useRouteStoreAdapter', () => ({
     error: null,
     setBuilding: jest.fn(),
     setError: jest.fn(),
-    addPoint: jest.fn(),
+    addPoint: mockAddPoint,
     updatePoint: jest.fn(),
     removePoint: jest.fn(),
     swapStartEnd: jest.fn(),
-    clearRoute: jest.fn(),
+    clearRoute: mockClearRoute,
   }),
 }))
 
@@ -75,6 +78,9 @@ describe('useRouteController.buildRouteTo', () => {
     mockRequestCollapse.mockClear()
     mockFocusOnCoord.mockClear()
     mockOpenPopupForCoord.mockClear()
+    mockSetMode.mockClear()
+    mockClearRoute.mockClear()
+    mockAddPoint.mockClear()
   })
 
   afterEach(() => {
@@ -109,6 +115,38 @@ describe('useRouteController.buildRouteTo', () => {
     expect(mockOpenPopupForCoord).toHaveBeenCalledWith('50.0619474,19.9368564')
     expect(mockOpenPopupForCoord).toHaveBeenCalledWith('50.0619474, 19.9368564')
     expect(mockOpenPopupForCoord).toHaveBeenCalledWith('50.061947,19.936856')
+  })
+
+  it('switches to route mode and creates start/end points from origin to swiped place', () => {
+    const { result } = renderHook(() =>
+      useRouteController({
+        originCoordinates: { latitude: 53.9, longitude: 27.5667 },
+        mapUiApi: {
+          focusOnCoord: mockFocusOnCoord,
+          openPopupForCoord: mockOpenPopupForCoord,
+        } as any,
+      })
+    )
+
+    act(() => {
+      result.current.buildRouteTo({
+        coord: '50.0619474, 19.9368564',
+        address: 'Krakow place',
+      } as any)
+    })
+
+    expect(mockSetMode).toHaveBeenCalledWith('route')
+    expect(mockClearRoute).toHaveBeenCalledTimes(1)
+    expect(mockAddPoint).toHaveBeenNthCalledWith(
+      1,
+      { lat: 53.9, lng: 27.5667 },
+      'Мое местоположение',
+    )
+    expect(mockAddPoint).toHaveBeenNthCalledWith(
+      2,
+      { lat: 50.0619474, lng: 19.9368564 },
+      'Krakow place',
+    )
   })
 
   it('does not request collapse when the bottom sheet is already collapsed', () => {

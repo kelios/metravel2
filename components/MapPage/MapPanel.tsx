@@ -113,7 +113,14 @@ const MapPanel: React.FC<MapPanelProps> = ({
     if (!isWeb) {
         return (
             <View style={[styles.mapContainer, { backgroundColor: themeColors.surface }]}>
-                <Map travel={nativeTravelProp} coordinates={safeCoordinates} />
+                <Map
+                    travel={nativeTravelProp}
+                    coordinates={safeCoordinates}
+                    routePoints={routePoints}
+                    fullRouteCoords={fullRouteCoords}
+                    mode={mode}
+                    onMapUiApiReady={onMapUiApiReady}
+                />
             </View>
         );
     }

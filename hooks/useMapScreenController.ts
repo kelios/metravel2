@@ -111,7 +111,10 @@ export function useMapScreenController() {
   }, [isMobile]);
 
   // Route Controller
-  const routeController = useRouteController({ mapUiApi });
+  const routeController = useRouteController({
+    mapUiApi,
+    originCoordinates: userLocation ?? coordinates,
+  });
   const {
     mode,
     setMode,

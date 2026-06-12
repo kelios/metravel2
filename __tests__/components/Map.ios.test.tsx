@@ -85,6 +85,50 @@ describe('Map.ios Component', () => {
     expect(html).toContain("point.urlTravel || point.articleUrl");
   });
 
+  it('should expose native map controls through the WebView bridge', () => {
+    const onMapUiApiReady = jest.fn();
+    const rendered = render(
+      <Map
+        travel={mockTravel}
+        coordinates={mockCoordinates}
+        onMapUiApiReady={onMapUiApiReady}
+      />
+    );
+
+    const html = getWebViewHtml(rendered);
+    expect(html).toContain('window.__metravelMapZoomIn');
+    expect(html).toContain('window.__metravelMapZoomOut');
+    expect(html).toContain('window.__metravelMapCenterOnUser');
+    expect(onMapUiApiReady).toHaveBeenCalledWith(
+      expect.objectContaining({
+        zoomIn: expect.any(Function),
+        zoomOut: expect.any(Function),
+        centerOnUser: expect.any(Function),
+      }),
+    );
+  });
+
+  it('should render route polyline payload in route mode', () => {
+    const rendered = render(
+      <Map
+        travel={mockTravel}
+        coordinates={mockCoordinates}
+        mode="route"
+        routePoints={[
+          [27.5667, 53.9],
+          [19.9368564, 50.0619474],
+        ]}
+      />
+    );
+
+    const html = getWebViewHtml(rendered);
+    expect(html).toContain('const routeMode = "route"');
+    expect(html).toContain('const routePoints = [[53.9,27.5667],[50.0619474,19.9368564]]');
+    expect(html).toContain('L.polyline(routePoints');
+    expect(html).toContain('L.circleMarker(start');
+    expect(html).toContain('map.fitBounds(routeLine.getBounds()');
+  });
+
   it('should include all travel points in the map payload', () => {
     const rendered = render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
@@ -114,7 +158,8 @@ describe('Map.ios Component', () => {
       <Map travel={mockTravel} coordinates={null} />
     );
     
-    expect(getWebViewHtml(rendered)).toContain('setView([53.8828449, 27.7273595], 10)');
+    expect(getWebViewHtml(rendered)).toContain('const userCenter = [53.8828449, 27.7273595]');
+    expect(getWebViewHtml(rendered)).toContain('setView(userCenter, 10)');
   });
 
   it('should parse coordinates correctly', () => {

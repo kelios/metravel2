@@ -20,6 +20,10 @@ interface UseRouteControllerOptions {
    * Map UI API for controlling map view and popups
    */
   mapUiApi: MapUiApi | null;
+  /**
+   * Current user/search origin used when building a route from a nearby card.
+   */
+  originCoordinates?: { latitude: number; longitude: number } | null;
 }
 
 interface UseRouteControllerResult {
@@ -193,7 +197,7 @@ interface UseRouteControllerResult {
 export function useRouteController(
   options: UseRouteControllerOptions
 ): UseRouteControllerResult {
-  const { mapUiApi } = options;
+  const { mapUiApi, originCoordinates } = options;
 
   // Route store
   const routeStore = useRouteStoreAdapter();
@@ -327,6 +331,13 @@ export function useRouteController(
       const parsed = CoordinateConverter.fromLooseString(cleanedCoordStr);
       // Keep the focus string normalized for stable zooming.
       const coordStr = parsed ? CoordinateConverter.toString(parsed) : cleanedCoordStr;
+      const targetCoords = parsed ? { lat: parsed.lat, lng: parsed.lng } : null;
+      const originCoords =
+        originCoordinates &&
+        Number.isFinite(originCoordinates.latitude) &&
+        Number.isFinite(originCoordinates.longitude)
+          ? { lat: originCoordinates.latitude, lng: originCoordinates.longitude }
+          : null;
 
       // Popup matching can be sensitive to exact string keys (e.g. full precision).
       // Try a small set of candidates in a stable order.
@@ -338,6 +349,22 @@ export function useRouteController(
       if (shouldCollapseBottomSheet) {
         try {
           bottomSheetStore.requestCollapse();
+        } catch {
+          // noop
+        }
+      }
+
+      if (targetCoords) {
+        try {
+          setMode('route');
+          routeStore.clearRoute();
+          if (originCoords) {
+            addPoint(originCoords, 'Мое местоположение');
+          }
+          addPoint(
+            targetCoords,
+            String(item.address || item.name || item.title || CoordinateConverter.formatCoordinates(targetCoords)),
+          );
         } catch {
           // noop
         }
@@ -366,7 +393,7 @@ export function useRouteController(
         // noop
       }
     },
-    [mapUiApi]
+    [addPoint, mapUiApi, originCoordinates, routeStore, setMode]
   );
 
   return useMemo(() => ({

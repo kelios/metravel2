@@ -51,4 +51,26 @@ describe('MapPanel native map rendering', () => {
       }
     `)
   })
+
+  it('wires native map UI API to the WebView map implementation', () => {
+    const onMapUiApiReady = jest.fn()
+
+    render(
+      <MapPanel
+        travelsData={[]}
+        coordinates={{ latitude: 0, longitude: 0 }}
+        setRouteDistance={jest.fn()}
+        setFullRouteCoords={jest.fn()}
+        onMapUiApiReady={onMapUiApiReady}
+      />,
+    )
+
+    expect(onMapUiApiReady).toHaveBeenCalledWith(
+      expect.objectContaining({
+        zoomIn: expect.any(Function),
+        zoomOut: expect.any(Function),
+        centerOnUser: expect.any(Function),
+      }),
+    )
+  })
 })

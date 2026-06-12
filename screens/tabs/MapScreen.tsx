@@ -457,6 +457,7 @@ export default function MapScreen() {
             hasMore={hasMore}
             onLoadMore={onLoadMore}
             onRefresh={refetchMapData}
+            isLoading={loading || isFetching}
             isRefreshing={isFetching && isPlaceholderData}
             coordinates={coordinates}
             transportMode={transportMode}

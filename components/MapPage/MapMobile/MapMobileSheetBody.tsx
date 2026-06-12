@@ -17,6 +17,7 @@ export interface MapMobileSheetBodyProps {
   hasMore?: boolean
   onLoadMore?: () => void
   onRefresh?: () => void
+  isLoading?: boolean
   isRefreshing?: boolean
   coordinates: { latitude: number; longitude: number } | null
   transportMode: 'car' | 'bike' | 'foot'
@@ -41,6 +42,7 @@ const MapMobileSheetBodyInner: React.FC<MapMobileSheetBodyProps> = ({
   hasMore,
   onLoadMore,
   onRefresh,
+  isLoading,
   isRefreshing,
   coordinates,
   transportMode,
@@ -65,6 +67,7 @@ const MapMobileSheetBodyInner: React.FC<MapMobileSheetBodyProps> = ({
         hasMore={hasMore}
         onLoadMore={onLoadMore}
         onRefresh={onRefresh}
+        isLoading={isLoading}
         isRefreshing={isRefreshing}
         currentRadiusKm={filtersContextProps?.filterValue?.radius ?? null}
         userLocation={coordinates}

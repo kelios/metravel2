@@ -13,7 +13,11 @@ import React, {
   useState,
 } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet'
+import BottomSheet, {
+  BottomSheetBackdrop,
+  BottomSheetScrollView,
+  BottomSheetView,
+} from '@gorhom/bottom-sheet'
 
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
@@ -32,6 +36,7 @@ interface MapBottomSheetProps {
   subtitle?: string
   peekContent?: React.ReactNode
   bottomInset?: number
+  scrollableContent?: boolean
   onStateChange?: (state: SheetState) => void
 }
 
@@ -44,7 +49,15 @@ export interface MapBottomSheetRef {
 }
 
 const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
-  ({ children, title, subtitle, peekContent: _peekContent, bottomInset = 0, onStateChange }, ref) => {
+  ({
+    children,
+    title,
+    subtitle,
+    peekContent: _peekContent,
+    bottomInset = 0,
+    scrollableContent = true,
+    onStateChange,
+  }, ref) => {
     const colors = useThemedColors()
     const styles = useMemo(() => getStyles(colors), [colors])
     const bottomSheetRef = useRef<BottomSheet>(null)
@@ -149,12 +162,20 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           </View>
         )}
 
-        <BottomSheetScrollView
-          contentContainerStyle={[styles.contentContainer, { paddingBottom: contentBottomPadding }]}
-          keyboardShouldPersistTaps="handled"
-        >
-          {children}
-        </BottomSheetScrollView>
+        {scrollableContent ? (
+          <BottomSheetScrollView
+            contentContainerStyle={[styles.contentContainer, { paddingBottom: contentBottomPadding }]}
+            keyboardShouldPersistTaps="handled"
+          >
+            {children}
+          </BottomSheetScrollView>
+        ) : (
+          <BottomSheetView
+            style={[styles.contentContainer, styles.staticContentContainer, { paddingBottom: contentBottomPadding }]}
+          >
+            {children}
+          </BottomSheetView>
+        )}
       </BottomSheet>
     )
   },
@@ -208,5 +229,9 @@ const getStyles = (colors: ThemedColors) =>
       paddingHorizontal: 16,
       paddingBottom: 40,
       flexGrow: 1,
+    },
+    staticContentContainer: {
+      flex: 1,
+      minHeight: 0,
     },
   })

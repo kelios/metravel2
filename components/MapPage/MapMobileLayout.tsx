@@ -4,6 +4,7 @@ import { usePathname } from 'expo-router'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 
 import { useThemedColors } from '@/hooks/useTheme'
+import { LAYOUT } from '@/constants/layout'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import { useMapMobileDerivations } from '@/hooks/map/useMapMobileDerivations'
@@ -24,6 +25,7 @@ interface MapMobileLayoutProps {
   hasMore?: boolean
   onLoadMore?: () => void
   onRefresh?: () => void
+  isLoading?: boolean
   isRefreshing?: boolean
   coordinates: { latitude: number; longitude: number } | null
   transportMode: 'car' | 'bike' | 'foot'
@@ -51,6 +53,7 @@ const PHONE_COMPACT_ACTIONS_MAX_WIDTH = 520
 const PHONE_STACKED_TOOLBAR_MAX_WIDTH = 360
 const WEB_MOBILE_BOTTOM_DOCK_INSET = 104
 const WEB_MOBILE_CONSENT_BANNER_INSET = 112
+const NATIVE_MOBILE_BOTTOM_DOCK_INSET = (LAYOUT?.tabBarHeight ?? 56) + 16
 
 export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   mapComponent,
@@ -58,6 +61,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   hasMore,
   onLoadMore,
   onRefresh,
+  isLoading,
   isRefreshing,
   coordinates,
   transportMode,
@@ -228,7 +232,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const bottomSheetInset = IS_WEB
     ? WEB_MOBILE_BOTTOM_DOCK_INSET +
       (consentBannerVisible ? WEB_MOBILE_CONSENT_BANNER_INSET : 0)
-    : 0
+    : NATIVE_MOBILE_BOTTOM_DOCK_INSET
 
   const filtersLoadingFallback = useMemo(
     () => (
@@ -275,6 +279,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           hasMore={hasMore}
           onLoadMore={onLoadMore}
           onRefresh={onRefresh}
+          isLoading={isLoading}
           isRefreshing={isRefreshing}
           coordinates={coordinates}
           transportMode={transportMode}
@@ -330,6 +335,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         peekContent={null}
         onStateChange={handleSheetStateChange}
         bottomInset={bottomSheetInset}
+        scrollableContent={uiTab !== 'list'}
       >
         {sheetContent}
       </MapBottomSheet>

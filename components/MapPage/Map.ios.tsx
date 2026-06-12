@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useRouter } from 'expo-router';
@@ -45,6 +45,14 @@ interface Coordinates {
 interface TravelProps {
   travel: TravelPropsType;
   coordinates: Coordinates | null;
+  routePoints?: [number, number][];
+  fullRouteCoords?: [number, number][];
+  mode?: 'radius' | 'route';
+  onMapUiApiReady?: (api: {
+    zoomIn: () => void;
+    zoomOut: () => void;
+    centerOnUser: () => void;
+  } | null) => void;
 }
 
 const withAlpha = (color: string, alpha: number) => {
@@ -62,8 +70,25 @@ const withAlpha = (color: string, alpha: number) => {
   return color;
 };
 
-const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) => {
+const normalizeRoutePoint = (point: unknown): [number, number] | null => {
+  if (!Array.isArray(point) || point.length < 2) return null;
+  const lng = Number(point[0]);
+  const lat = Number(point[1]);
+  if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
+  if (Math.abs(lng) > 180 || Math.abs(lat) > 90) return null;
+  return [lat, lng];
+};
+
+const Map: React.FC<TravelProps> = ({
+  travel,
+  coordinates: propCoordinates,
+  routePoints = [],
+  fullRouteCoords = [],
+  mode = 'radius',
+  onMapUiApiReady,
+}) => {
   const router = useRouter();
+  const webViewRef = useRef<WebView>(null);
   // MapPanel передаёт { travelAddress: { data } }, quests-экраны — { data } напрямую (F-21).
   const travelAddress = useMemo(
     () => travel?.travelAddress?.data ?? travel?.data ?? [],
@@ -80,6 +105,16 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
     }
   }, [localCoordinates]);
 
+  useEffect(() => {
+    if (!propCoordinates) return;
+    if (!Number.isFinite(propCoordinates.latitude) || !Number.isFinite(propCoordinates.longitude)) return;
+    setLocalCoordinates((current) =>
+      current?.latitude === propCoordinates.latitude && current?.longitude === propCoordinates.longitude
+        ? current
+        : propCoordinates,
+    );
+  }, [propCoordinates]);
+
   const centerLat = localCoordinates?.latitude ?? 53.8828449;
   const centerLng = localCoordinates?.longitude ?? 27.7273595;
   const loaderOverlay = useMemo(
@@ -88,6 +123,33 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
   );
   const markerColor = DESIGN_COLORS.mapPin;
   const markerShadowColor = themeColors.shadows.medium.shadowColor || themeColors.text;
+  const routeLatLngs = useMemo(
+    () => (fullRouteCoords.length >= 2 ? fullRouteCoords : routePoints)
+      .map(normalizeRoutePoint)
+      .filter((point): point is [number, number] => Boolean(point)),
+    [fullRouteCoords, routePoints],
+  );
+
+  const injectMapCommand = useCallback((script: string) => {
+    try {
+      webViewRef.current?.injectJavaScript?.(`${script}; true;`);
+    } catch {
+      // noop
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!onMapUiApiReady) return undefined;
+
+    onMapUiApiReady({
+      zoomIn: () => injectMapCommand('window.__metravelMapZoomIn && window.__metravelMapZoomIn()'),
+      zoomOut: () => injectMapCommand('window.__metravelMapZoomOut && window.__metravelMapZoomOut()'),
+      centerOnUser: () => injectMapCommand('window.__metravelMapCenterOnUser && window.__metravelMapCenterOnUser()'),
+    });
+
+    return () => onMapUiApiReady(null);
+  }, [injectMapCommand, onMapUiApiReady]);
+
   // HTML с улучшенными маркерами (поддержка фото в попапе)
   const htmlContent = `
     <!DOCTYPE html>
@@ -152,7 +214,18 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
     <body>
       <div id="map"></div>
       <script>
-        const map = L.map('map').setView([${centerLat}, ${centerLng}], 10);
+        const userCenter = [${centerLat}, ${centerLng}];
+        const map = L.map('map').setView(userCenter, 10);
+
+        window.__metravelMapZoomIn = function() {
+          try { map.zoomIn(); } catch (e) {}
+        };
+        window.__metravelMapZoomOut = function() {
+          try { map.zoomOut(); } catch (e) {}
+        };
+        window.__metravelMapCenterOnUser = function() {
+          try { map.setView(userCenter, Math.max(map.getZoom ? map.getZoom() : 10, 13)); } catch (e) {}
+        };
         
         // OpenStreetMap (бесплатно!)
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -161,6 +234,8 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
         }).addTo(map);
 
         const points = ${JSON.stringify(travelAddress)};
+        const routePoints = ${JSON.stringify(routeLatLngs)};
+        const routeMode = ${JSON.stringify(mode)};
         const bounds = L.latLngBounds();
 
         function sendOpenUrl(rawUrl) {
@@ -241,7 +316,38 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
           bounds.extend([lat, lng]);
         });
 
-        if (bounds.isValid()) {
+        if (routeMode === 'route' && routePoints.length >= 2) {
+          const routeLine = L.polyline(routePoints, {
+            color: ${JSON.stringify(themeColors.primary)},
+            weight: 5,
+            opacity: 0.9,
+            lineCap: 'round',
+            lineJoin: 'round'
+          }).addTo(map);
+          const start = routePoints[0];
+          const end = routePoints[routePoints.length - 1];
+          L.circleMarker(start, {
+            radius: 8,
+            color: ${JSON.stringify(themeColors.surface)},
+            weight: 3,
+            fillColor: ${JSON.stringify(themeColors.success || themeColors.primary)},
+            fillOpacity: 1
+          }).addTo(map);
+          L.circleMarker(end, {
+            radius: 8,
+            color: ${JSON.stringify(themeColors.surface)},
+            weight: 3,
+            fillColor: ${JSON.stringify(themeColors.primary)},
+            fillOpacity: 1
+          }).addTo(map);
+          bounds.extend(start);
+          bounds.extend(end);
+          try {
+            map.fitBounds(routeLine.getBounds(), { padding: [60, 60] });
+          } catch (e) {}
+        }
+
+        if (routeMode !== 'route' && bounds.isValid()) {
           map.fitBounds(bounds, { padding: [50, 50] });
         }
       </script>
@@ -257,6 +363,7 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
         </View>
       )}
       <WebView
+        ref={webViewRef}
         source={{ html: htmlContent }}
         style={styles.map}
         javaScriptEnabled={true}
