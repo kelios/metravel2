@@ -114,67 +114,89 @@ export default function CookieSettingsScreen() {
         />
       )}
       <ScrollView style={webTouchScrollStyle} contentContainerStyle={styles.container}>
-        <Text style={styles.heading}>Настройки cookies и аналитики</Text>
-        <Text style={styles.paragraph}>
-          На этом экране вы можете изменить свой выбор относительно использования аналитических инструментов
-          (например, Яндекс.Метрика и Google Analytics 4). Технически необходимые файлы используются всегда для
-          корректной работы сайта.
-        </Text>
+        {isWeb ? (
+          <>
+            <Text style={styles.heading}>Настройки cookies и аналитики</Text>
+            <Text style={styles.paragraph}>
+              На этом экране вы можете изменить свой выбор относительно использования аналитических инструментов
+              (например, Яндекс.Метрика и Google Analytics 4). Технически необходимые файлы используются всегда для
+              корректной работы сайта.
+            </Text>
 
-        <View style={styles.block}>
-          <Text style={styles.subheading}>Обязательные файлы</Text>
-          <Text style={styles.paragraph}>
-            Обязательные cookies и локальное хранилище используются для входа в аккаунт, сохранения настроек интерфейса
-            и обеспечения безопасности. Они включены всегда и не могут быть отключены, так как без них сайт работать не
-            будет.
-          </Text>
-        </View>
+            <View style={styles.block}>
+              <Text style={styles.subheading}>Обязательные файлы</Text>
+              <Text style={styles.paragraph}>
+                Обязательные cookies и локальное хранилище используются для входа в аккаунт, сохранения настроек интерфейса
+                и обеспечения безопасности. Они включены всегда и не могут быть отключены, так как без них сайт работать не
+                будет.
+              </Text>
+            </View>
 
-        <View style={styles.block}>
-          <Text style={styles.subheading}>Аналитические инструменты</Text>
-          <Text style={styles.paragraph}>
-            Аналитика помогает лучше понимать, какие материалы и разделы сайта интересны пользователям, и развивать
-            проект. Вы можете разрешить или запретить использование аналитики в любое время.
-          </Text>
+            <View style={styles.block}>
+              <Text style={styles.subheading}>Аналитические инструменты</Text>
+              <Text style={styles.paragraph}>
+                Аналитика помогает лучше понимать, какие материалы и разделы сайта интересны пользователям, и развивать
+                проект. Вы можете разрешить или запретить использование аналитики в любое время.
+              </Text>
 
-          <View style={styles.optionGroup}>
-            <Pressable
-              style={[styles.option, analyticsAllowed === false && styles.optionSelected]}
-              onPress={() => setAnalyticsAllowed(false)}
-            >
-              <View style={styles.radioOuter}>
-                {analyticsAllowed === false && <View style={styles.radioInner} />}
+              <View style={styles.optionGroup}>
+                <Pressable
+                  style={[styles.option, analyticsAllowed === false && styles.optionSelected]}
+                  onPress={() => setAnalyticsAllowed(false)}
+                >
+                  <View style={styles.radioOuter}>
+                    {analyticsAllowed === false && <View style={styles.radioInner} />}
+                  </View>
+                  <View style={styles.optionTextWrap}>
+                    <Text style={styles.optionTitle}>Только необходимые</Text>
+                    <Text style={styles.optionDescription}>
+                      Аналитические инструменты отключены. Используются только технически необходимые файлы.
+                    </Text>
+                  </View>
+                </Pressable>
+
+                <Pressable
+                  style={[styles.option, analyticsAllowed === true && styles.optionSelected]}
+                  onPress={() => setAnalyticsAllowed(true)}
+                >
+                  <View style={styles.radioOuter}>
+                    {analyticsAllowed === true && <View style={styles.radioInner} />}
+                  </View>
+                  <View style={styles.optionTextWrap}>
+                    <Text style={styles.optionTitle}>Необходимые и аналитические</Text>
+                    <Text style={styles.optionDescription}>
+                      Разрешить использование Яндекс.Метрики и Google Analytics 4 для сбора обезличенной статистики.
+                    </Text>
+                  </View>
+                </Pressable>
               </View>
-              <View style={styles.optionTextWrap}>
-                <Text style={styles.optionTitle}>Только необходимые</Text>
-                <Text style={styles.optionDescription}>
-                  Аналитические инструменты отключены. Используются только технически необходимые файлы.
-                </Text>
-              </View>
+            </View>
+
+            <Pressable style={styles.saveButton} onPress={handleSave} disabled={analyticsAllowed === null}>
+              <Text style={styles.saveButtonText}>Сохранить настройки</Text>
             </Pressable>
 
-            <Pressable
-              style={[styles.option, analyticsAllowed === true && styles.optionSelected]}
-              onPress={() => setAnalyticsAllowed(true)}
-            >
-              <View style={styles.radioOuter}>
-                {analyticsAllowed === true && <View style={styles.radioInner} />}
-              </View>
-              <View style={styles.optionTextWrap}>
-                <Text style={styles.optionTitle}>Необходимые и аналитические</Text>
-                <Text style={styles.optionDescription}>
-                  Разрешить использование Яндекс.Метрики и Google Analytics 4 для сбора обезличенной статистики.
-                </Text>
-              </View>
-            </Pressable>
-          </View>
-        </View>
+            {saved && <Text style={styles.savedText}>Настройки сохранены.</Text>}
+          </>
+        ) : (
+          <>
+            <Text style={styles.heading}>Конфиденциальность и аналитика</Text>
+            <Text style={styles.paragraph}>
+              В мобильном приложении MeTravel не используются файлы cookie и веб-аналитика
+              (Яндекс.Метрика, Google Analytics) — они относятся только к сайту metravel.by.
+              Управлять настройками cookies можно в веб-версии сайта.
+            </Text>
 
-        <Pressable style={styles.saveButton} onPress={handleSave} disabled={analyticsAllowed === null}>
-          <Text style={styles.saveButtonText}>Сохранить настройки</Text>
-        </Pressable>
-
-        {saved && <Text style={styles.savedText}>Настройки сохранены.</Text>}
+            <View style={styles.block}>
+              <Text style={styles.subheading}>Какие данные использует приложение</Text>
+              <Text style={styles.paragraph}>
+                Локально на устройстве хранятся только данные, необходимые для работы приложения:
+                авторизация в аккаунте, настройки интерфейса и сохранённые материалы. Они не передаются
+                в аналитические сервисы.
+              </Text>
+            </View>
+          </>
+        )}
 
         <Pressable style={styles.link} onPress={() => router.push('/privacy' as any)}>
           <Text style={styles.linkText}>Подробнее о том, как мы обрабатываем данные — в Политике конфиденциальности.</Text>

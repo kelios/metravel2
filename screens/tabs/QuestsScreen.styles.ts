@@ -770,6 +770,19 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                     opacity: 0,
                     transition: 'all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                 } as any,
+                // На native нет hover: центрируем кружок в верхней части обложки
+                // (web-only transform translate тут не работает), чтобы он не
+                // налезал на заголовок внизу карточки.
+                default: {
+                    top: '30%',
+                    marginLeft: -28,
+                    marginTop: -28,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 8,
+                    elevation: 4,
+                },
             }),
         },
         questCardPlayIconVisible: {

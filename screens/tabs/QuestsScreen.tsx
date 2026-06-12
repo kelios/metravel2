@@ -20,7 +20,6 @@ import { useQuestsList, useQuestCities } from '@/hooks/useQuestsApi';
 import QuestsContentPanel from './QuestsContentPanel';
 import QuestsSidebar from './QuestsSidebar';
 import type { City, NearbyCity, QuestMeta } from './questsShared';
-import { resolveInitialQuestCitySelection } from './questLocationSelection';
 import { createQuestCatalogStructuredData } from '@/utils/discoverySeo';
 import { getStyles } from './QuestsScreen.styles';
 import {
@@ -41,7 +40,9 @@ const LazyQuestMap = React.lazy(() => import('@/components/MapPage/Map.web'));
 
 export default function QuestsScreen() {
     const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
-    const [selectedCityHydrated, setSelectedCityHydrated] = useState(false);
+    // true только когда пользователь сам выбрал «Рядом» — тогда включаем
+    // геолокацию и фильтрацию по радиусу. По умолчанию «Рядом» = все квесты.
+    const [nearbyExplicit, setNearbyExplicit] = useState(false);
     const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
     const [nearbyRadiusKm, setNearbyRadiusKm] = useState<number>(DEFAULT_NEARBY_RADIUS_KM);
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
@@ -84,14 +85,13 @@ export default function QuestsScreen() {
                 setSelectedCityId(saved || null);
             } catch {
                 setSelectedCityId(null);
-            } finally {
-                setSelectedCityHydrated(true);
             }
         })();
     }, []);
 
     const handleSelectCity = useCallback(async (id: string) => {
         setSelectedCityId(id);
+        setNearbyExplicit(id === NEARBY_ID);
         if (isMobile) setFilterDrawerOpen(false);
         try {
             await AsyncStorage.setItem(STORAGE_SELECTED_CITY, id);
@@ -116,82 +116,17 @@ export default function QuestsScreen() {
         }
     }, []);
 
-    // Auto-detect nearest city by geolocation on first load (if no saved city)
-    const [geoAutoDetectDone, setGeoAutoDetectDone] = useState(false);
-    useEffect(() => {
-        if (!dataLoaded || !selectedCityHydrated || !CITIES.length || geoAutoDetectDone) return;
-        
-        let cancelled = false;
-        (async () => {
-            try {
-                const Location = await loadExpoLocation();
-                // Check if we already have permission (don't prompt on first load)
-                const { status } = await Location.getForegroundPermissionsAsync();
-                if (status !== 'granted' || cancelled) {
-                    if (!cancelled) {
-                        const nextCityId = resolveInitialQuestCitySelection({
-                            cities: CITIES,
-                            selectedCityId,
-                            userLoc: null,
-                            nearbyId: NEARBY_ID,
-                        });
-                        setGeoAutoDetectDone(true);
-                        if (nextCityId && nextCityId !== selectedCityId) {
-                            void handleSelectCity(nextCityId);
-                        }
-                    }
-                    return;
-                }
-                
-                // Get current position
-                const pos = await Location.getCurrentPositionAsync({
-                    accuracy: Location.LocationAccuracy.Balanced,
-                });
-                if (cancelled) return;
-                
-                const userLat = pos.coords.latitude;
-                const userLng = pos.coords.longitude;
-
-                if (!cancelled) {
-                    const detectedUserLoc = { lat: userLat, lng: userLng };
-                    const nextCityId = resolveInitialQuestCitySelection({
-                        cities: CITIES,
-                        selectedCityId,
-                        userLoc: detectedUserLoc,
-                        nearbyId: NEARBY_ID,
-                    });
-                    setUserLoc(detectedUserLoc);
-                    setGeoAutoDetectDone(true);
-                    if (nextCityId && nextCityId !== selectedCityId) {
-                        void handleSelectCity(nextCityId);
-                    }
-                }
-            } catch {
-                if (!cancelled) {
-                    const nextCityId = resolveInitialQuestCitySelection({
-                        cities: CITIES,
-                        selectedCityId,
-                        userLoc: null,
-                        nearbyId: NEARBY_ID,
-                    });
-                    setGeoAutoDetectDone(true);
-                    if (nextCityId && nextCityId !== selectedCityId) {
-                        void handleSelectCity(nextCityId);
-                    }
-                }
-            }
-        })();
-        return () => { cancelled = true; };
-    }, [CITIES, dataLoaded, geoAutoDetectDone, handleSelectCity, selectedCityHydrated, selectedCityId]);
-
-    // Auto-select first city if current is invalid
+    // Без сохранённого/валидного выбора показываем «Все квесты» (мягкий дефолт
+    // «Рядом» без геолокации = весь каталог), а не ближайший по гео единственный
+    // город (иначе по умолчанию виден лишь 1 город из многих — баг F-09).
+    // Гео-фильтрация по радиусу включается только при ЯВНОМ выборе «Рядом».
     useEffect(() => {
         if (!dataLoaded || !CITIES.length) return;
         const validIds = new Set(CITIES.map((c) => c.id));
         const isValid = selectedCityId === NEARBY_ID || (selectedCityId ? validIds.has(selectedCityId) : false);
         if (isValid) return;
-        void handleSelectCity(CITIES[0]?.id ?? '');
-    }, [CITIES, dataLoaded, handleSelectCity, selectedCityId]);
+        setSelectedCityId(NEARBY_ID);
+    }, [CITIES, dataLoaded, selectedCityId]);
 
     // Nearby radius persistence
     useEffect(() => {
@@ -203,11 +138,11 @@ export default function QuestsScreen() {
         })();
     }, []);
 
-    // Geolocation only when Nearby is selected
+    // Geolocation only when Nearby is explicitly chosen, or on the map view.
     useEffect(() => {
         let cancelled = false;
         (async () => {
-            if (selectedCityId !== NEARBY_ID && viewMode !== 'map') return;
+            if (!(selectedCityId === NEARBY_ID && nearbyExplicit) && viewMode !== 'map') return;
             try {
                 const Location = await loadExpoLocation();
                 const { status } = await Location.requestForegroundPermissionsAsync();
@@ -219,7 +154,7 @@ export default function QuestsScreen() {
             } catch (error) { console.warn('Error requesting nearby location', error); }
         })();
         return () => { cancelled = true; };
-    }, [selectedCityId, viewMode]);
+    }, [selectedCityId, viewMode, nearbyExplicit]);
 
     // ── Derived data ──
     const citiesWithNearby: (City | NearbyCity)[] = useMemo(
@@ -311,7 +246,9 @@ export default function QuestsScreen() {
     const questsAll: (QuestMeta & { _distanceKm?: number })[] = useMemo(() => {
         if (!selectedCityId || !dataLoaded) return [];
         if (selectedCityId === NEARBY_ID) {
-            if (!userLoc) {
+            // Радиусную фильтрацию применяем только при явном выборе «Рядом»;
+            // мягкий дефолт «Рядом» показывает весь каталог.
+            if (!userLoc || !nearbyExplicit) {
                 return ALL_QUESTS.map((q) => ({ ...q }));
             }
             return ALL_QUESTS
@@ -320,7 +257,7 @@ export default function QuestsScreen() {
                 .sort((a, b) => a._distanceKm! - b._distanceKm!);
         }
         return (CITY_QUESTS[selectedCityId] || []).map((q) => ({ ...q }));
-    }, [selectedCityId, userLoc, nearbyRadiusKm, ALL_QUESTS, CITY_QUESTS, dataLoaded]);
+    }, [selectedCityId, userLoc, nearbyRadiusKm, ALL_QUESTS, CITY_QUESTS, dataLoaded, nearbyExplicit]);
 
     const catalogModel = useQuestCatalogResponsiveModel(questsAll.length);
     const questCardWidth = catalogModel.cardWidth;

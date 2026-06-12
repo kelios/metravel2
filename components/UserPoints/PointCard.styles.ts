@@ -148,6 +148,19 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
     gap: 6,
     marginTop: 8,
   },
+  noPhotoMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  noPhotoColorDot: {
+    width: 10,
+    height: 10,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   badge: {
     backgroundColor: colors.backgroundTertiary,
     paddingHorizontal: 10,

@@ -10,11 +10,12 @@ jest.mock('expo-clipboard', () => ({
 
 jest.mock('@/components/ui/UnifiedTravelCard', () => ({
   __esModule: true,
-  default: ({ contentSlot, containerOverlaySlot, testID }: any) => {
+  default: ({ contentSlot, containerOverlaySlot, testID, imageHeight }: any) => {
     const React = require('react');
-    const { View } = require('react-native');
+    const { View, Text } = require('react-native');
     return (
       <View testID={testID ?? 'mock-unified-travel-card'}>
+        <Text testID="media-image-height">{String(imageHeight)}</Text>
         {containerOverlaySlot}
         {contentSlot}
       </View>
@@ -153,6 +154,20 @@ describe('PointCard', () => {
     const pointWithoutAddress = { ...mockPoint, address: undefined };
     render(<PointCard point={pointWithoutAddress} />);
     expect(screen.getByText('Test Restaurant')).toBeTruthy();
+  });
+
+  it('should not reserve an empty image area when point has no photo (F-05)', () => {
+    render(<PointCard point={mockPoint} />);
+    // mockPoint has no photo -> media area collapsed (imageHeight 0), no blank box
+    expect(screen.getByTestId('media-image-height').props.children).toBe('0');
+    // category still readable inline in content
+    expect(screen.getByText('Ресторан')).toBeTruthy();
+  });
+
+  it('should render the image area when point has a photo', () => {
+    const pointWithPhoto = { ...mockPoint, photo: 'https://example.com/p.jpg' } as any;
+    render(<PointCard point={pointWithPhoto} />);
+    expect(screen.getByTestId('media-image-height').props.children).toBe('140');
   });
 
   it('should display correct color indicator', () => {

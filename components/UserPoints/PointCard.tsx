@@ -411,6 +411,19 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         </View>
       ) : null}
 
+      {/* Без фото категорию/цвет показываем инлайн темо-зависимым чипом —
+          вместо нечитаемой пилюли поверх пустого изображения. */}
+      {!photoUrl && (categoryLabel || (point.color && String(point.color).trim())) ? (
+        <View style={styles.noPhotoMetaRow}>
+          <View testID="color-indicator" style={[styles.noPhotoColorDot, { backgroundColor: markerColor }]} />
+          {categoryLabel ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText} numberOfLines={1}>{categoryLabel}</Text>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+
       <View style={[styles.headerRow, isNarrowLayout ? styles.headerRowNarrow : null]}>
         <View style={[styles.headerMain, isNarrowLayout ? styles.headerMainNarrow : null]}>
           <Text style={styles.name} numberOfLines={2}>
@@ -547,10 +560,11 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
       title={point.name}
       imageUrl={photoUrl}
       onPress={handleCardPress}
-      imageHeight={layout === 'grid' ? 160 : 140}
+      // Без фото не резервируем пустую область изображения (imageHeight 0 скрывает её).
+      imageHeight={photoUrl ? (layout === 'grid' ? 160 : 140) : 0}
       mediaFit="contain"
       contentSlot={contentSlot}
-      containerOverlaySlot={mediaOverlay}
+      containerOverlaySlot={photoUrl ? mediaOverlay : undefined}
       contentContainerStyle={styles.contentContainer}
       style={[
         styles.container,
