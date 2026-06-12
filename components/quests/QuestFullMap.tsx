@@ -12,7 +12,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import * as MediaLibrary from 'expo-media-library';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { buildQuestOfflineMapGpx } from './questOfflineMapExport';
 
@@ -229,6 +228,10 @@ function QuestFullMap({
                 return;
             }
 
+            // expo-media-library — native-only: lazy require внутри native-ветки
+            // (после web-return выше), иначе top-level import инициализирует
+            // ExpoMediaLibraryNext и валит web-бандл в рантайме.
+            const MediaLibrary = require('expo-media-library') as typeof import('expo-media-library');
             const { status } = await MediaLibrary.requestPermissionsAsync();
             if (status !== 'granted') {
                 Alert.alert('Требуется разрешение', 'Разрешите доступ к галерее для сохранения изображения');
