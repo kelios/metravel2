@@ -63,8 +63,17 @@ async function processDirectory(dir) {
   
   for (const entry of entries) {
     const fullPath = path.join(dir, entry);
-    const stats = await stat(fullPath);
-    
+    let stats;
+    try {
+      stats = await stat(fullPath);
+    } catch (err) {
+      // Skip entries that readdir lists but stat cannot resolve (dangling
+      // symlink / vanished file / flat-vs-dir name collision for a slug).
+      // One anomalous entry must not abort the whole build.
+      console.warn(`⚠️  Skipping unreadable entry: ${fullPath} (${err.code || err.message})`);
+      continue;
+    }
+
     if (stats.isDirectory()) {
       const subResults = await processDirectory(fullPath);
       results.push(...subResults);
