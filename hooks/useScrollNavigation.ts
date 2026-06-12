@@ -4,7 +4,7 @@
  */
 
 import { useMemo, useRef, useCallback } from 'react';
-import { View, ScrollView, Platform, findNodeHandle } from 'react-native';
+import { View, ScrollView, Platform } from 'react-native';
 import React from 'react';
 
 type RecordUnknown = Record<string, unknown>;
@@ -318,26 +318,36 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
       }
 
       const anchor = anchors[key];
-      const scrollTarget = scrollRef.current;
-      let scrollHandle: unknown = null;
-      if (scrollTarget) {
+      const scrollTarget = scrollRef.current as
+        | (ScrollView & { getNativeScrollRef?: () => unknown })
+        | null;
+      // New Architecture (Fabric): measureLayout требует ref на нативный
+      // компонент, а не числовой node handle (findNodeHandle бросает
+      // "ref.measureLayout must be called with a ref to a native component").
+      // ScrollView.getNativeScrollRef() возвращает нативный ref контейнера —
+      // это и есть корректный относительный узел для measureLayout.
+      const relativeRef: unknown =
+        (typeof scrollTarget?.getNativeScrollRef === 'function'
+          ? scrollTarget.getNativeScrollRef()
+          : null) ?? scrollTarget;
+      const anchorNode = anchor?.current as
+        | (View & { measureLayout?: (...args: unknown[]) => void })
+        | null;
+      if (anchorNode && relativeRef && typeof anchorNode.measureLayout === 'function') {
         try {
-          scrollHandle = findNodeHandle(scrollTarget);
-        } catch {
-          scrollHandle = scrollTarget;
+          anchorNode.measureLayout(
+            relativeRef as never,
+            (_x: number, y: number) => {
+              scrollRef.current?.scrollTo({ y, animated: true });
+            },
+            () => {
+              // Fallback: если measureLayout не сработал, логируем предупреждение
+              console.warn(`Could not measure layout for section: ${key}`);
+            }
+          );
+        } catch (err) {
+          console.warn(`measureLayout failed for section: ${key}`, err);
         }
-      }
-      if (anchor?.current && scrollHandle != null) {
-        anchor.current.measureLayout(
-          scrollHandle as never,
-          (_x, y) => {
-            scrollRef.current?.scrollTo({ y, animated: true });
-          },
-          () => {
-            // Fallback: если measureLayout не сработал, логируем предупреждение
-            console.warn(`Could not measure layout for section: ${key}`);
-          }
-        );
       }
     },
     [anchors]

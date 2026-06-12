@@ -49,6 +49,30 @@ describe('useScrollNavigation', () => {
     expect(fakeScrollRef.current.scrollTo).toHaveBeenCalledWith({ y: 120, animated: true });
   });
 
+  it('measureLayout uses native scroll ref, not a node-handle number (Android-bug 95)', () => {
+    const { result } = renderHook(() => useScrollNavigation());
+
+    const nativeScrollRef = { __nativeScrollRef: true };
+    const getNativeScrollRef = jest.fn(() => nativeScrollRef);
+    ;(result.current as any).scrollRef.current = {
+      scrollTo: jest.fn(),
+      getNativeScrollRef,
+    };
+
+    const measureLayout = jest.fn((_relativeTo, onSuccess) => onSuccess(0, 200));
+    ;(result.current as any).anchors['description'] = { current: { measureLayout } };
+
+    act(() => {
+      result.current.scrollTo('description');
+    });
+
+    expect(getNativeScrollRef).toHaveBeenCalled();
+    const relativeArg = measureLayout.mock.calls[0][0];
+    // Fabric требует ref на нативный компонент, а не числовой node handle
+    expect(relativeArg).toBe(nativeScrollRef);
+    expect(typeof relativeArg).not.toBe('number');
+  });
+
   it('does nothing when anchor or scrollRef is missing', () => {
     const { result } = renderHook(() => useScrollNavigation());
 
