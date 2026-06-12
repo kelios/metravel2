@@ -2,7 +2,6 @@
 import React, { useMemo } from 'react';
 import { Platform, ActivityIndicator, Pressable, View, Text } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useDropzone } from 'react-dropzone';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
@@ -49,6 +48,10 @@ const WebDropzoneView: React.FC<WebDropzoneViewProps> = ({
   loading, uploadProgress, error, uploadMessage, hasValidImage, currentDisplayUrl,
   validateFile, handleUploadImage, handleRemovePress, handleImageLoadCheck, handleImageError,
 }) => {
+  // react-dropzone — DOM-only пакет: require лениво внутри web-only компонента,
+  // чтобы он не вычислялся в native-рантайме (на Android top-level import валит
+  // рендер шага «Медиа» визарда — F-24). WebDropzoneView рендерится только на web.
+  const { useDropzone } = require('react-dropzone') as typeof import('react-dropzone');
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: async (acceptedFiles, rejectedFiles) => {
       if (disabled) return;
