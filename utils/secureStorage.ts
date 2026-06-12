@@ -17,6 +17,26 @@ const ENCRYPTION_KEY = 'metravel_encryption_key_v1'; // В production долже
 // that silently fails authentication on the backend.
 const ENCRYPTED_PREFIX = 'enc1:';
 
+// In-memory fallback for web environments where localStorage is unavailable:
+// iOS Safari Private mode throws QuotaExceededError on setItem, and "Block All
+// Cookies" makes even accessing window.localStorage throw a SecurityError.
+// Without this, a storage-write failure turns a successful backend login into a
+// "wrong password" error (login() catches the throw and returns false). The token
+// must stay readable for the session so authenticated requests keep working —
+// it just won't survive a page reload, which is acceptable in private mode.
+const webMemoryStore = new Map<string, string>();
+
+// Accessing window.localStorage can itself throw (SecurityError) when cookies are
+// blocked, so the property read must be guarded — not just the setItem call.
+function getWebLocalStorage(): Storage | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Простое шифрование для web (XOR шифрование - не для production безопасности, но лучше чем открытый текст)
  * В production рекомендуется использовать Web Crypto API или библиотеку типа crypto-js
@@ -70,15 +90,21 @@ function simpleDecrypt(encrypted: string, key: string): string {
 export async function setSecureItem(key: string, value: string): Promise<void> {
   try {
     if (Platform.OS === 'web') {
-      // Для web используем localStorage с шифрованием (доступно во всех вкладках текущего домена)
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const encrypted = simpleEncrypt(value, ENCRYPTION_KEY);
-        window.localStorage.setItem(`${STORAGE_PREFIX}${key}`, encrypted);
-      } else {
-        // Fallback на AsyncStorage с шифрованием
-        const encrypted = simpleEncrypt(value, ENCRYPTION_KEY);
-        await AsyncStorage.setItem(`${STORAGE_PREFIX}${key}`, encrypted);
+      const fullKey = `${STORAGE_PREFIX}${key}`;
+      const encrypted = simpleEncrypt(value, ENCRYPTION_KEY);
+      const ls = getWebLocalStorage();
+      if (ls) {
+        try {
+          ls.setItem(fullKey, encrypted);
+          // Persisted successfully — drop any stale memory copy.
+          webMemoryStore.delete(fullKey);
+          return;
+        } catch {
+          // iOS Safari Private mode: localStorage write blocked. Fall through to
+          // the in-memory store instead of failing the auth flow.
+        }
       }
+      webMemoryStore.set(fullKey, encrypted);
     } else {
       // Для native используем SecureStore
       try {
@@ -106,34 +132,32 @@ export async function setSecureItem(key: string, value: string): Promise<void> {
 export async function getSecureItem(key: string): Promise<string | null> {
   try {
     if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const encrypted = window.localStorage.getItem(`${STORAGE_PREFIX}${key}`);
-        if (!encrypted) return null;
-        const decrypted = simpleDecrypt(encrypted, ENCRYPTION_KEY);
-        if (!decrypted) return null;
-        // Re-encrypt legacy plaintext values so future reads use the safe path.
-        if (!encrypted.startsWith(ENCRYPTED_PREFIX) && typeof btoa === 'function') {
-          try {
-            const reEncrypted = simpleEncrypt(decrypted, ENCRYPTION_KEY);
-            window.localStorage.setItem(`${STORAGE_PREFIX}${key}`, reEncrypted);
-          } catch { /* best-effort migration */ }
+      const fullKey = `${STORAGE_PREFIX}${key}`;
+      const ls = getWebLocalStorage();
+      let encrypted: string | null = null;
+      if (ls) {
+        try {
+          encrypted = ls.getItem(fullKey);
+        } catch {
+          encrypted = null;
         }
-        return decrypted;
-      } else {
-        // Fallback на AsyncStorage
-        const encrypted = await AsyncStorage.getItem(`${STORAGE_PREFIX}${key}`);
-        if (!encrypted) return null;
-        const decrypted = simpleDecrypt(encrypted, ENCRYPTION_KEY);
-        if (!decrypted) return null;
-        // Re-encrypt legacy plaintext values
-        if (!encrypted.startsWith(ENCRYPTED_PREFIX)) {
-          try {
-            const reEncrypted = simpleEncrypt(decrypted, ENCRYPTION_KEY);
-            await AsyncStorage.setItem(`${STORAGE_PREFIX}${key}`, reEncrypted);
-          } catch { /* best-effort migration */ }
-        }
-        return decrypted;
       }
+      // Fall back to the in-memory store for values written while persistent
+      // storage was unavailable (iOS private mode).
+      if (encrypted == null) {
+        encrypted = webMemoryStore.get(fullKey) ?? null;
+      }
+      if (!encrypted) return null;
+      const decrypted = simpleDecrypt(encrypted, ENCRYPTION_KEY);
+      if (!decrypted) return null;
+      // Re-encrypt legacy plaintext values so future reads use the safe path.
+      if (ls && !encrypted.startsWith(ENCRYPTED_PREFIX) && typeof btoa === 'function') {
+        try {
+          const reEncrypted = simpleEncrypt(decrypted, ENCRYPTION_KEY);
+          ls.setItem(fullKey, reEncrypted);
+        } catch { /* best-effort migration */ }
+      }
+      return decrypted;
     } else {
       // Для native используем SecureStore
       try {
@@ -161,10 +185,13 @@ export async function getSecureItem(key: string): Promise<string | null> {
 export async function removeSecureItem(key: string): Promise<void> {
   try {
     if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.removeItem(`${STORAGE_PREFIX}${key}`);
-      } else {
-        await AsyncStorage.removeItem(`${STORAGE_PREFIX}${key}`);
+      const fullKey = `${STORAGE_PREFIX}${key}`;
+      webMemoryStore.delete(fullKey);
+      const ls = getWebLocalStorage();
+      if (ls) {
+        try {
+          ls.removeItem(fullKey);
+        } catch { /* private mode: nothing persisted to remove */ }
       }
     } else {
       try {

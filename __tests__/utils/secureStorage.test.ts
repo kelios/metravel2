@@ -85,18 +85,41 @@ describe('secureStorage (web)', () => {
     expect(AsyncStorage.getItem).not.toHaveBeenCalled()
   })
 
-  it('falls back to AsyncStorage when localStorage is not available', async () => {
+  it('falls back to in-memory store when localStorage is not available', async () => {
     ;(global.window as any).localStorage = undefined
 
     await setSecureItem('token', 'value')
+    // No AsyncStorage write on web — value is kept in the per-session memory store.
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled()
 
-    expect(AsyncStorage.setItem).toHaveBeenCalled()
-
-    ;(AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(
-      (AsyncStorage.setItem as jest.Mock).mock.calls[0][1],
-    )
     const value = await getSecureItem('token')
     expect(value).toBe('value')
+  })
+
+  it('does not throw and keeps token readable when setItem throws (iOS private mode)', async () => {
+    ;(global.window as any).localStorage.setItem = jest.fn(() => {
+      throw new DOMException('QuotaExceededError', 'QuotaExceededError')
+    })
+
+    await expect(setSecureItem('userToken', 'tok-123')).resolves.toBeUndefined()
+
+    // getItem still returns null (nothing persisted), so the read must fall back
+    // to the in-memory copy written during the failed setItem.
+    const value = await getSecureItem('userToken')
+    expect(value).toBe('tok-123')
+  })
+
+  it('does not throw when accessing localStorage throws (block-all-cookies)', async () => {
+    Object.defineProperty(global.window as any, 'localStorage', {
+      configurable: true,
+      get() {
+        throw new DOMException('The operation is insecure.', 'SecurityError')
+      },
+    })
+
+    await expect(setSecureItem('userToken', 'tok-456')).resolves.toBeUndefined()
+    const value = await getSecureItem('userToken')
+    expect(value).toBe('tok-456')
   })
 
   it('removes item from sessionStorage', async () => {

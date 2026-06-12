@@ -265,10 +265,10 @@ export const MODERN_MATTE_PALETTE_DARK = {
   warningLight: '#33302a',
   warningSoft: 'rgba(197, 184, 154, 0.12)',
 
-  danger: '#c8a0a0', // Светлый приглушенный розовый
+  danger: '#e0a8a8', // Светлый приглушенный розовый (ярче для читаемости на тёмном)
   dangerDark: '#b89090',
   dangerLight: '#332a2a',
-  dangerSoft: 'rgba(200, 160, 160, 0.12)',
+  dangerSoft: 'rgba(200, 160, 160, 0.2)',
 
   info: '#9ab5c8', // Светлый серо-голубой
   infoDark: '#8aa5b8',

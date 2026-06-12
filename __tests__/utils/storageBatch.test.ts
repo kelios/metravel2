@@ -1,3 +1,4 @@
+import { Platform } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
   getStorageBatch,
@@ -79,6 +80,32 @@ describe('storageBatch utils', () => {
       await expect(setStorageBatch([['a', '1']])).rejects.toBe(error)
 
       consoleError.mockRestore()
+    })
+  })
+
+  describe('web fallback (iOS private mode)', () => {
+    const originalPlatformOS = Platform.OS
+
+    beforeEach(() => {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
+    })
+
+    afterEach(() => {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatformOS })
+    })
+
+    it('does not throw and keeps values readable when multiSet fails', async () => {
+      mockedStorage.multiSet.mockRejectedValueOnce(new DOMException('Quota', 'QuotaExceededError'))
+
+      await expect(setStorageBatch([['userName', 'Alice'], ['userId', '7']])).resolves.toBeUndefined()
+
+      // multiGet returns null (nothing persisted) — read must fall back to memory.
+      mockedStorage.multiGet.mockResolvedValueOnce([
+        ['userName', null],
+        ['userId', null],
+      ])
+      const result = await getStorageBatch(['userName', 'userId'])
+      expect(result).toEqual({ userName: 'Alice', userId: '7' })
     })
   })
 
