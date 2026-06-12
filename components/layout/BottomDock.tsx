@@ -17,6 +17,7 @@ import { useThemedColors } from "@/hooks/useTheme";
 import { globalFocusStyles } from "@/styles/globalFocus";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useAndroidBackHandler } from "@/hooks/useAndroidBackHandler";
+import { useBottomSheetStore } from "@/stores/bottomSheetStore";
 import { hapticSelection } from "@/utils/haptics";
 import BelarusOutlineIcon from './BelarusOutlineIcon';
 import {
@@ -145,13 +146,28 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
   const safeBottomPadding = Platform.OS === 'web' ? 0 : Math.max(0, insets.bottom);
 
   const handleDismissSheet = useCallbackReact(() => {
-    if (!showMore) return false;
-    setShowMore(false);
-    if (Platform.OS !== 'web' && nativeSheetRef.current) {
-      nativeSheetRef.current.close();
+    if (showMore) {
+      setShowMore(false);
+      if (Platform.OS !== 'web' && nativeSheetRef.current) {
+        nativeSheetRef.current.close();
+      }
+      return true;
     }
-    return true;
-  }, [showMore]);
+    // BottomDock — единственный (последним зарегистрированный) глобальный
+    // back-handler, поэтому именно он первым получает Back. На экране карты
+    // первый Back должен СВЕРНУТЬ открытую шторку карты, а не уводить с экрана.
+    if (Platform.OS !== 'web') {
+      const onMap = pathname === '/map' || String(pathname).startsWith('/map/');
+      if (onMap) {
+        const sheetState = useBottomSheetStore.getState().state;
+        if (sheetState !== 'collapsed') {
+          useBottomSheetStore.getState().requestCollapse();
+          return true;
+        }
+      }
+    }
+    return false;
+  }, [showMore, pathname]);
   useAndroidBackHandler(handleDismissSheet);
 
   const styles = useMemo(

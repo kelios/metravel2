@@ -83,10 +83,14 @@ export interface MessageCreatePayload {
 
 export interface MessagingUser {
     id: number;
-    first_name: string | null;
-    last_name: string | null;
+    // Бэк (ProfileSlimSerializer) отдаёт уже собранное имя:
+    // first_name + last_name, а если профиль пустой — имя с регистрации (User.name).
+    name?: string | null;
     avatar: string | null;
-    user: number | null;
+    // legacy/defensive: старый контракт мог присылать раздельные поля
+    first_name?: string | null;
+    last_name?: string | null;
+    user?: number | null;
     youtube?: string | null;
     instagram?: string | null;
     twitter?: string | null;
@@ -94,8 +98,11 @@ export interface MessagingUser {
 }
 
 export function getMessagingUserDisplayName(u: MessagingUser): string {
-    const parts = [u.first_name, u.last_name].filter(Boolean);
-    return parts.length > 0 ? parts.join(' ') : 'Пользователь';
+    const name = u.name?.trim();
+    if (name) return name;
+    const parts = [u.first_name, u.last_name].map((p) => p?.trim()).filter(Boolean);
+    if (parts.length > 0) return parts.join(' ');
+    return 'Пользователь';
 }
 
 export function getMessagingUserId(u: MessagingUser): number {

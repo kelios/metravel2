@@ -12,11 +12,10 @@ import React, {
   useRef,
   useState,
 } from 'react'
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import BottomSheet, {
   BottomSheetBackdrop,
   BottomSheetScrollView,
-  BottomSheetView,
 } from '@gorhom/bottom-sheet'
 
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
@@ -144,11 +143,6 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         bottomInset={bottomInset}
         onChange={handleSheetChanges}
         backdropComponent={renderBackdrop}
-        // Android: при самоскроллящемся контенте (таб «Места», plain FlatList)
-        // контент-pan шторки перехватывает все вертикальные свайпы и список
-        // не скроллится (gorhom v5 + reanimated 4, new arch). Шторку таскаем
-        // только за хэндл; iOS-координация не тронута.
-        enableContentPanningGesture={scrollableContent || Platform.OS !== 'android'}
         enablePanDownToClose
         handleIndicatorStyle={styles.indicator}
         backgroundStyle={styles.background}
@@ -175,11 +169,14 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
             {children}
           </BottomSheetScrollView>
         ) : (
-          <BottomSheetView
+          // Не BottomSheetView: он меряет детей и растёт под контент
+          // (layout h == content h), из-за чего вложенный список считает,
+          // что скроллить нечего. Плоский View с flex:1 ограничен высотой шторки.
+          <View
             style={[styles.contentContainer, styles.staticContentContainer, { paddingBottom: contentBottomPadding }]}
           >
             {children}
-          </BottomSheetView>
+          </View>
         )}
       </BottomSheet>
     )

@@ -5,7 +5,6 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler'
 
 import { useThemedColors } from '@/hooks/useTheme'
 import { LAYOUT } from '@/constants/layout'
-import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import { useMapMobileDerivations } from '@/hooks/map/useMapMobileDerivations'
@@ -127,12 +126,17 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     [setBottomSheetState],
   )
 
-  // Initial collapse on mount
+  // Initial collapse on mount + reset shared store on unmount, чтобы залипшее
+  // 'full' не заставляло глобальный back-handler (BottomDock) глотать Back на
+  // других экранах.
   useEffect(() => {
     sheetStateRef.current = 'collapsed'
     setSheetState('collapsed')
     setBottomSheetState('collapsed')
     bottomSheetRef.current?.snapToCollapsed()
+    return () => {
+      setBottomSheetState('collapsed')
+    }
   }, [setBottomSheetState])
 
   useEffect(() => {
@@ -188,15 +192,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const handleCloseSheet = useCallback(() => {
     bottomSheetRef.current?.snapToCollapsed()
   }, [])
-
-  // Android back: первый Back закрывает раскрытую шторку (временную поверхность),
-  // и только если она уже свёрнута — отдаём back роутеру (уход с экрана карты).
-  const dismissOpenSheet = useCallback((): boolean => {
-    if (sheetStateRef.current === 'collapsed') return false
-    bottomSheetRef.current?.snapToCollapsed()
-    return true
-  }, [])
-  useAndroidBackHandler(dismissOpenSheet)
 
   const handleOpenSearch = useCallback(() => {
     setFiltersMode?.('radius')

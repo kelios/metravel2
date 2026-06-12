@@ -302,18 +302,23 @@ describe('Messages API', () => {
     });
 
     describe('getMessagingUserDisplayName', () => {
-        it('should return full name', () => {
+        it('should use backend name field (profile name or registration name)', () => {
+            const user: MessagingUser = { id: 1, name: 'Иван Петров', avatar: null };
+            expect(getMessagingUserDisplayName(user)).toBe('Иван Петров');
+        });
+
+        it('should use name even when legacy first/last are empty', () => {
+            const user: MessagingUser = { id: 1, name: 'registr_login', first_name: null, last_name: null, avatar: null };
+            expect(getMessagingUserDisplayName(user)).toBe('registr_login');
+        });
+
+        it('should fall back to legacy full name when name is absent', () => {
             const user: MessagingUser = { id: 1, first_name: 'John', last_name: 'Doe', avatar: null, user: null };
             expect(getMessagingUserDisplayName(user)).toBe('John Doe');
         });
 
-        it('should return first name only', () => {
-            const user: MessagingUser = { id: 1, first_name: 'John', last_name: null, avatar: null, user: null };
-            expect(getMessagingUserDisplayName(user)).toBe('John');
-        });
-
-        it('should return fallback when no name', () => {
-            const user: MessagingUser = { id: 1, first_name: null, last_name: null, avatar: null, user: null };
+        it('should return fallback when no name at all', () => {
+            const user: MessagingUser = { id: 1, name: '', first_name: null, last_name: null, avatar: null, user: null };
             expect(getMessagingUserDisplayName(user)).toBe('Пользователь');
         });
     });
