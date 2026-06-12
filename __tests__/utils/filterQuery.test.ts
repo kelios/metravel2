@@ -20,13 +20,13 @@ describe('buildTravelQueryParams', () => {
     expect(params.countries).toEqual([3, 20])
   })
 
-  it('removes publish/moderation overrides for personal areas', () => {
+  it('shows only published travels by default for personal /metravel area (F-14)', () => {
     const params = buildTravelQueryParams(
       {},
       { isMeTravel: true, userId: '42' },
     )
 
-    expect(params).toEqual({ user_id: '42' })
+    expect(params).toEqual({ moderation: 1, publish: 1, user_id: '42' })
   })
 
   it('adds draft status filters for personal draft mode', () => {

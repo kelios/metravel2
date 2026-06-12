@@ -162,8 +162,10 @@ export const buildTravelQueryParams = (
       params.moderation = 0
       params.includeDrafts = true
     } else {
-      delete params.publish
-      delete params.moderation
+      // F-14: основной список /metravel показывает только опубликованные маршруты
+      // (как счётчик в профиле). Черновики — через тогл «Черновики» (draftsOnly).
+      params.publish = 1
+      params.moderation = 1
     }
   }
 

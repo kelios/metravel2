@@ -475,7 +475,8 @@ export default function MapScreen() {
           />
         </Suspense>
 
-        <MapOfflineIndicator visible={!isConnected} />
+        {/* topInset уводит плашку ниже верхнего ряда плавающих контролов карты */}
+        <MapOfflineIndicator visible={!isConnected} topInset={56} />
 
         {/* Онбординг монтируется и на мобильном: иначе restartMapOnboarding()
             (кнопка «?») не имеет зарегистрированного _restartCb и ничего не показывает. */}

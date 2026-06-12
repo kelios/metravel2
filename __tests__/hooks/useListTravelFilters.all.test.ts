@@ -479,8 +479,9 @@ describe('useListTravelFilters - All Filters', () => {
       });
 
       expect(result.current.queryParams.user_id).toBe('123');
-      expect(result.current.queryParams.moderation).toBeUndefined();
-      expect(result.current.queryParams.publish).toBeUndefined();
+      // F-14: /metravel по умолчанию показывает только опубликованные
+      expect(result.current.queryParams.moderation).toBe(1);
+      expect(result.current.queryParams.publish).toBe(1);
     });
 
     it('should handle isTravelBy context', () => {

@@ -137,9 +137,9 @@ describe('useListTravelFilters', () => {
 
     const { result: resultMeTravel } = setup({ isMeTravel: true, userId: '42' });
     expect(resultMeTravel.current.queryParams.user_id).toBe('42');
-    // Для metravel не должны форситься publish/moderation
-    expect(resultMeTravel.current.queryParams.publish).toBeUndefined();
-    expect(resultMeTravel.current.queryParams.moderation).toBeUndefined();
+    // F-14: для metravel по умолчанию показываем только опубликованные (как счётчик в профиле)
+    expect(resultMeTravel.current.queryParams.publish).toBe(1);
+    expect(resultMeTravel.current.queryParams.moderation).toBe(1);
   });
 
   it('builds draft query params for "Мои путешествия" when draftsOnly is selected', () => {

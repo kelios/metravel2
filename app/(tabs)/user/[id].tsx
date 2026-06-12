@@ -108,7 +108,9 @@ export default function PublicUserProfileScreen() {
 
   const authorTravelsQuery = useQuery<{ data: Travel[]; total: number }>({
     queryKey: queryKeys.userTravels(userId),
-    queryFn: () => fetchTravels(0, AUTHOR_TRAVELS_LIMIT, '', { user_id: userId }),
+    // F-14: публичная страница автора показывает только опубликованные маршруты
+    // (как счётчик в профиле), без черновиков.
+    queryFn: () => fetchTravels(0, AUTHOR_TRAVELS_LIMIT, '', { user_id: userId, publish: 1, moderation: 1 }),
     enabled: !!userId,
     staleTime: 5 * 60 * 1000,
     retry: (fc, err) => !(err instanceof ApiError && (err.status === 401 || err.status === 403)) && fc < 2,
