@@ -520,6 +520,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
           blurBackground={blurBackground}
           isActive={index === currentIndex}
           imageProps={imageProps}
+          fit={fit}
           onFirstImageLoad={onFirstImageLoad}
           onImagePress={onImagePress}
           firstImagePreloaded={firstImagePreloaded}
@@ -528,7 +529,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
         />
       );
     },
-    [uriMap, containerW, containerH, images.length, styles, blurBackground, currentIndex, imageProps, onFirstImageLoad, onImagePress, firstImagePreloaded, preloadCount, contentAspectRatio, aspectRatio]
+    [uriMap, containerW, containerH, images.length, styles, blurBackground, currentIndex, imageProps, fit, onFirstImageLoad, onImagePress, firstImagePreloaded, preloadCount, contentAspectRatio, aspectRatio]
   );
 
   if (!images.length) return null;
@@ -578,6 +579,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
                     blurBackground={blurBackground}
                     isActive={index === currentIndex}
                     imageProps={imageProps}
+                    fit={fit}
                     onFirstImageLoad={onFirstImageLoad}
                     onImagePress={onImagePress}
                     firstImagePreloaded={firstImagePreloaded}
