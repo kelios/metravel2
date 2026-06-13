@@ -90,17 +90,18 @@ function useHeroMediaModel(
       return Math.round(winH * HERO_HEIGHT.webViewportCapRatio)
     }
 
+    // Native mobile: track the photo's natural aspect height so the contained
+    // image fills the hero edge-to-edge. Inflating to a viewport ratio (the old
+    // max(arHeight, viewportPreferred)) made the hero taller than a landscape
+    // photo, leaving letterbox bars above/below it that read as a black gap on
+    // Android (the blur backdrop doesn't paint there natively).
     const arHeight = resolvedWidth
       ? Math.round(resolvedWidth / aspectRatio)
       : Math.round(winH * HERO_HEIGHT.mobileViewportRatio)
-    const viewportPreferredHeight = Math.round(winH * HERO_HEIGHT.mobileViewportRatio)
 
     return Math.max(
       HERO_HEIGHT.mobileMin,
-      Math.min(
-        Math.max(arHeight, viewportPreferredHeight),
-        HERO_HEIGHT.mobileMaxHeight,
-      ),
+      Math.min(arHeight, HERO_HEIGHT.mobileMaxHeight),
     )
   }, [winH, resolvedWidth, aspectRatio, isMobile])
 

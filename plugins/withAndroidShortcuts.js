@@ -24,7 +24,7 @@ const SHORTCUTS_XML = `<?xml version="1.0" encoding="utf-8"?>
             android:action="android.intent.action.VIEW"
             android:targetPackage="by.metravel.app"
             android:targetClass="by.metravel.app.MainActivity"
-            android:data="myapp:///search" />
+            android:data="metravel:///search" />
         <categories android:name="android.shortcut.conversation" />
     </shortcut>
     <shortcut
@@ -37,7 +37,7 @@ const SHORTCUTS_XML = `<?xml version="1.0" encoding="utf-8"?>
             android:action="android.intent.action.VIEW"
             android:targetPackage="by.metravel.app"
             android:targetClass="by.metravel.app.MainActivity"
-            android:data="myapp:///map" />
+            android:data="metravel:///map" />
         <categories android:name="android.shortcut.conversation" />
     </shortcut>
     <shortcut
@@ -50,7 +50,7 @@ const SHORTCUTS_XML = `<?xml version="1.0" encoding="utf-8"?>
             android:action="android.intent.action.VIEW"
             android:targetPackage="by.metravel.app"
             android:targetClass="by.metravel.app.MainActivity"
-            android:data="myapp:///favorites" />
+            android:data="metravel:///favorites" />
         <categories android:name="android.shortcut.conversation" />
     </shortcut>
 </shortcuts>`;

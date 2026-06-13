@@ -73,7 +73,8 @@ Use this flow for Android testing over USB. The project is worked on from both W
 5. Launch the installed development build with the project scheme:
    ```bash
    adb shell am force-stop by.metravel.app
-   adb shell am start -W -a android.intent.action.VIEW -d "myapp://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081" by.metravel.app
+   adb shell am start -W -a android.intent.action.VIEW -d "metravel://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081" by.metravel.app
+   # scheme — `metravel` (app.json) с 2026-06-13; для dev-build, собранного до этой даты, используй `myapp://expo-development-client/...`
    ```
 6. Capture health evidence without leaking secrets:
    ```bash

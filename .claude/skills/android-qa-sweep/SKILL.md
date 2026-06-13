@@ -16,7 +16,7 @@ description: Полный QA-обход Android-приложения MeTravel н
 `powershell -NoProfile -Command "[Console]::OutputEncoding=[Text.Encoding]::UTF8; . D:/metravel/metravel2/artifacts/android-qa/qa.ps1; Nav 'about' 6; Shot '20-about'"`
 
 - `Shot "имя" [delay]` — screencap → pull → авто-даунскейл до 1900px (НЕ редиректить вывод adb через `>` — PowerShell портит бинарники).
-- `Nav "route" [delay]` — deeplink `myapp://<route>` (scheme из app.json — `myapp`, не `metravel`).
+- `Nav "route" [delay]` — deeplink `metravel://<route>` (scheme из app.json — `metravel` с 2026-06-13; сборки до этой даты использовали `myapp`, для них подставляй `myapp://`).
 - `Tap x y`, `Swipe x1 y1 x2 y2 [ms]`, `Back`, `TypeText "латиница"` (кириллицу adb не вводит).
 - `Clickables "имя"` — uiautomator-дамп кликабельных с bounds. **Координаты тапов брать ТОЛЬКО из дампа** (скрины даунскейлены — координаты с них врут). Mojibake в выводе лечит `[Console]::OutputEncoding=UTF8`.
 - Логи JS-ошибок: `adb logcat -d -s ReactNativeJS:E` — стектрейсы крашей и warnings с component stack.
