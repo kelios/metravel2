@@ -153,6 +153,9 @@ function QuestFullMap({
           return marker;
         });
 
+        window.__qmZoomIn = function () { try { map.zoomIn(); } catch (e) {} };
+        window.__qmZoomOut = function () { try { map.zoomOut(); } catch (e) {} };
+
         window.setActiveStep = function (activeIndex) {
           grouped.forEach(function (gp, i) {
             var active = activeIndex != null && gp.indexes.indexOf(activeIndex + 1) !== -1;
@@ -180,6 +183,11 @@ function QuestFullMap({
             `window.setActiveStep && window.setActiveStep(${activeStepIndex ?? 'null'}); true;`
         );
     }, [activeStepIndex, isLoading]);
+
+    const handleZoom = (direction: 'in' | 'out') => {
+        const fn = direction === 'in' ? '__qmZoomIn' : '__qmZoomOut';
+        webViewRef.current?.injectJavaScript(`window.${fn} && window.${fn}(); true;`);
+    };
 
     const shareAsGPX = async () => {
         try {
@@ -297,6 +305,24 @@ function QuestFullMap({
                     scrollEnabled
                     pinchZoomEnabled
                 />
+                <View style={styles.zoomControls} pointerEvents="box-none">
+                    <TouchableOpacity
+                        style={styles.zoomButton}
+                        onPress={() => handleZoom('in')}
+                        accessibilityRole="button"
+                        accessibilityLabel="Приблизить карту"
+                    >
+                        <Text style={styles.zoomButtonText}>+</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.zoomButton}
+                        onPress={() => handleZoom('out')}
+                        accessibilityRole="button"
+                        accessibilityLabel="Отдалить карту"
+                    >
+                        <Text style={styles.zoomButtonText}>−</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <View style={styles.touchHints}>
@@ -350,6 +376,33 @@ const createStyles = (colors: ThemedColors) =>
         },
         map: {
             flex: 1,
+        },
+        zoomControls: {
+            position: 'absolute',
+            right: 12,
+            bottom: 12,
+            gap: 8,
+        },
+        zoomButton: {
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: colors.surface,
+            borderWidth: 1,
+            borderColor: colors.border,
+            alignItems: 'center',
+            justifyContent: 'center',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 4,
+            elevation: 3,
+        },
+        zoomButtonText: {
+            fontSize: 24,
+            lineHeight: 26,
+            fontWeight: '700',
+            color: colors.text,
         },
         loader: {
             ...StyleSheet.absoluteFillObject,
