@@ -55,6 +55,9 @@ interface TravelProps {
   } | null) => void;
 }
 
+const DEFAULT_LAT = 53.8828449;
+const DEFAULT_LNG = 27.7273595;
+
 const withAlpha = (color: string, alpha: number) => {
   if (!color || color.startsWith('rgba') || color.startsWith('rgb')) {
     return color;
@@ -79,6 +82,15 @@ const normalizeRoutePoint = (point: unknown): [number, number] | null => {
   return [lat, lng];
 };
 
+// Данные шлём в WebView через injectJavaScript, а не через перезагрузку source.html:
+// на Android смена source.html не всегда триггерит reload, и инлайн JSON может
+// оборвать <script> неэкранированными символами. U+2028/U+2029 — валидны в JSON,
+// но являются терминаторами строки в JS, поэтому их экранируем для inject.
+const LINE_SEPARATOR = new RegExp(String.fromCharCode(0x2028), 'g');
+const PARAGRAPH_SEPARATOR = new RegExp(String.fromCharCode(0x2029), 'g');
+const serializeForInjection = (value: unknown): string =>
+  JSON.stringify(value).replace(LINE_SEPARATOR, '\\u2028').replace(PARAGRAPH_SEPARATOR, '\\u2029');
+
 const Map: React.FC<TravelProps> = ({
   travel,
   coordinates: propCoordinates,
@@ -89,6 +101,7 @@ const Map: React.FC<TravelProps> = ({
 }) => {
   const router = useRouter();
   const webViewRef = useRef<WebView>(null);
+  const isReadyRef = useRef(false);
   // MapPanel передаёт { travelAddress: { data } }, quests-экраны — { data } напрямую (F-21).
   const travelAddress = useMemo(
     () => travel?.travelAddress?.data ?? travel?.data ?? [],
@@ -101,7 +114,7 @@ const Map: React.FC<TravelProps> = ({
 
   useEffect(() => {
     if (!localCoordinates) {
-      setLocalCoordinates({ latitude: 53.8828449, longitude: 27.7273595 });
+      setLocalCoordinates({ latitude: DEFAULT_LAT, longitude: DEFAULT_LNG });
     }
   }, [localCoordinates]);
 
@@ -115,8 +128,8 @@ const Map: React.FC<TravelProps> = ({
     );
   }, [propCoordinates]);
 
-  const centerLat = localCoordinates?.latitude ?? 53.8828449;
-  const centerLng = localCoordinates?.longitude ?? 27.7273595;
+  const centerLat = localCoordinates?.latitude ?? DEFAULT_LAT;
+  const centerLng = localCoordinates?.longitude ?? DEFAULT_LNG;
   const loaderOverlay = useMemo(
     () => withAlpha(themeColors.surface, 0.8),
     [themeColors.surface]
@@ -150,8 +163,45 @@ const Map: React.FC<TravelProps> = ({
     return () => onMapUiApiReady(null);
   }, [injectMapCommand, onMapUiApiReady]);
 
-  // HTML с улучшенными маркерами (поддержка фото в попапе)
-  const htmlContent = `
+  // Полезная нагрузка для WebView: точки/маршрут/режим/центр. Меняется по приходу
+  // данных, но HTML при этом НЕ пересобирается — маркеры дорисовываются injectJavaScript.
+  const mapPayload = useMemo(
+    () => ({
+      points: travelAddress,
+      routePoints: routeLatLngs,
+      mode,
+      center: { lat: centerLat, lng: centerLng },
+    }),
+    [travelAddress, routeLatLngs, mode, centerLat, centerLng],
+  );
+
+  const pushPayload = useCallback(() => {
+    if (!isReadyRef.current) return;
+    injectMapCommand(
+      `window.__metravelRenderPoints && window.__metravelRenderPoints(${serializeForInjection(mapPayload)})`,
+    );
+  }, [injectMapCommand, mapPayload]);
+
+  // Ref на последний pushPayload — чтобы обработчики onLoadEnd/onMessage слали
+  // актуальные данные без устаревшего замыкания.
+  const pushPayloadRef = useRef(pushPayload);
+  pushPayloadRef.current = pushPayload;
+
+  // Перерисовать маркеры при любом изменении данных (если WebView уже готов).
+  useEffect(() => {
+    pushPayload();
+  }, [pushPayload]);
+
+  const handleReady = useCallback(() => {
+    isReadyRef.current = true;
+    pushPayloadRef.current();
+  }, []);
+
+  // Статичный HTML-каркас: карта + функция window.__metravelRenderPoints.
+  // Мемоизирован по теме — стабилен между обновлениями данных, поэтому WebView
+  // не перезагружается при каждом приходе точек.
+  const htmlContent = useMemo(
+    () => `
     <!DOCTYPE html>
     <html>
     <head>
@@ -165,11 +215,11 @@ const Map: React.FC<TravelProps> = ({
         #map { width: 100%; height: 100%; }
         .leaflet-popup-content-wrapper { background-color: ${themeColors.surface}; border-radius: 8px; padding: 0; }
         .leaflet-popup-content { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto; }
-        .popup-image { 
-          width: 200px; 
-          height: 150px; 
-          object-fit: cover; 
-          border-radius: 8px 8px 0 0; 
+        .popup-image {
+          width: 200px;
+          height: 150px;
+          object-fit: cover;
+          border-radius: 8px 8px 0 0;
           display: block;
         }
         .popup-image-link {
@@ -214,11 +264,11 @@ const Map: React.FC<TravelProps> = ({
     <body>
       <div id="map"></div>
       <script>
-        const userCenter = [${centerLat}, ${centerLng}];
         // zoomControl: false — встроенные кнопки +/− Leaflet (верхний левый угол)
         // перекрывали номерной/стартовый маркер маршрута. Зум доступен через
         // плавающие нативные контролы (__metravelMapZoomIn/Out).
-        const map = L.map('map', { zoomControl: false }).setView(userCenter, 10);
+        const map = L.map('map', { zoomControl: false }).setView([${DEFAULT_LAT}, ${DEFAULT_LNG}], 10);
+        map.__userCenter = [${DEFAULT_LAT}, ${DEFAULT_LNG}];
 
         window.__metravelMapZoomIn = function() {
           try { map.zoomIn(); } catch (e) {}
@@ -227,19 +277,27 @@ const Map: React.FC<TravelProps> = ({
           try { map.zoomOut(); } catch (e) {}
         };
         window.__metravelMapCenterOnUser = function() {
-          try { map.setView(userCenter, Math.max(map.getZoom ? map.getZoom() : 10, 13)); } catch (e) {}
+          try { map.setView(map.__userCenter, Math.max(map.getZoom ? map.getZoom() : 10, 13)); } catch (e) {}
         };
-        
+
         // OpenStreetMap (бесплатно!)
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap',
           maxZoom: 19
         }).addTo(map);
 
-        const points = ${JSON.stringify(travelAddress)};
-        const routePoints = ${JSON.stringify(routeLatLngs)};
-        const routeMode = ${JSON.stringify(mode)};
-        const bounds = L.latLngBounds();
+        const markersLayer = L.layerGroup().addTo(map);
+        const routeLayer = L.layerGroup().addTo(map);
+
+        // Inline HTML marker works reliably in Android WebView, where SVG data-URI
+        // marker images can render as an invisible icon.
+        const markerIcon = L.divIcon({
+          className: 'metravel-marker',
+          html: '<div class="metravel-marker-pin" aria-hidden="true"></div>',
+          iconSize: [32, 48],
+          iconAnchor: [16, 48],
+          popupAnchor: [0, -48]
+        });
 
         function sendOpenUrl(rawUrl) {
           try {
@@ -252,111 +310,129 @@ const Map: React.FC<TravelProps> = ({
           }
         }
 
-        // Inline HTML marker works reliably in Android WebView, where SVG data-URI
-        // marker images can render as an invisible icon.
-        const markerIcon = L.divIcon({
-          className: 'metravel-marker',
-          html: '<div class="metravel-marker-pin" aria-hidden="true"></div>',
-          iconSize: [32, 48],
-          iconAnchor: [16, 48],
-          popupAnchor: [0, -48]
-        });
+        const ROUTE_COLOR = ${JSON.stringify(themeColors.primary)};
+        const ROUTE_SURFACE = ${JSON.stringify(themeColors.surface)};
+        const ROUTE_START = ${JSON.stringify(themeColors.success || themeColors.primary)};
 
-        points.forEach((point, index) => {
-          if (!point.coord) return;
-          const [lat, lng] = point.coord.split(',').map(Number);
-          
-          let popupContent = '';
-          if (point.travelImageThumbUrl) {
-            const link = (point.articleUrl || point.urlTravel || '');
-            popupContent += '<a href="#" class="popup-image-link" data-open-url="' + String(link).replace(/"/g, '&quot;') + '">' +
-              '<img src="' + point.travelImageThumbUrl + '" class="popup-image" alt="' + (point.address || 'Image') + '" />' +
-            '</a>';
-          }
-          
-          popupContent += '<div class="popup-text">';
-          popupContent += '<div class="popup-label">Адрес:</div>';
-          popupContent += '<div class="popup-value">' + (point.address || 'Не указан') + '</div>';
-          
-          popupContent += '<div class="popup-label">Координаты:</div>';
-          popupContent += '<div class="popup-value">' + point.coord + '</div>';
-          
-          popupContent += '<div class="popup-label">Категория:</div>';
-          popupContent += '<div class="popup-value">' + (point.categoryName || 'Не указана') + '</div>';
-          popupContent += '</div>';
-          
-          const marker = L.marker([lat, lng], { icon: markerIcon }).addTo(map);
-          marker.bindPopup(popupContent, { maxWidth: 200 });
-
-          marker.on('click', function() {
-            const directUrl = String(point.urlTravel || point.articleUrl || '').trim();
-            if (directUrl) {
-              sendOpenUrl(directUrl);
+        window.__metravelRenderPoints = function(payload) {
+          try {
+            const data = payload || {};
+            const points = Array.isArray(data.points) ? data.points : [];
+            const routePoints = Array.isArray(data.routePoints) ? data.routePoints : [];
+            const routeMode = data.mode || 'radius';
+            if (data.center && isFinite(data.center.lat) && isFinite(data.center.lng)) {
+              map.__userCenter = [data.center.lat, data.center.lng];
             }
-          });
 
-          marker.on('popupopen', function(e) {
-            try {
-              const popupEl = e && e.popup ? e.popup.getElement() : null;
-              if (!popupEl) return;
-              const linkEl = popupEl.querySelector('.popup-image-link');
-              if (!linkEl) return;
-              linkEl.addEventListener('click', function(ev) {
+            markersLayer.clearLayers();
+            routeLayer.clearLayers();
+            const bounds = L.latLngBounds();
+
+            points.forEach(function(point) {
+              if (!point || !point.coord) return;
+              const parts = String(point.coord).split(',').map(Number);
+              const lat = parts[0];
+              const lng = parts[1];
+              if (!isFinite(lat) || !isFinite(lng)) return;
+
+              let popupContent = '';
+              if (point.travelImageThumbUrl) {
+                const link = (point.articleUrl || point.urlTravel || '');
+                popupContent += '<a href="#" class="popup-image-link" data-open-url="' + String(link).replace(/"/g, '&quot;') + '">' +
+                  '<img src="' + point.travelImageThumbUrl + '" class="popup-image" alt="' + (point.address || 'Image') + '" />' +
+                '</a>';
+              }
+
+              popupContent += '<div class="popup-text">';
+              popupContent += '<div class="popup-label">Адрес:</div>';
+              popupContent += '<div class="popup-value">' + (point.address || 'Не указан') + '</div>';
+              popupContent += '<div class="popup-label">Координаты:</div>';
+              popupContent += '<div class="popup-value">' + point.coord + '</div>';
+              popupContent += '<div class="popup-label">Категория:</div>';
+              popupContent += '<div class="popup-value">' + (point.categoryName || 'Не указана') + '</div>';
+              popupContent += '</div>';
+
+              const marker = L.marker([lat, lng], { icon: markerIcon }).addTo(markersLayer);
+              marker.bindPopup(popupContent, { maxWidth: 200 });
+
+              marker.on('click', function() {
+                const directUrl = String(point.urlTravel || point.articleUrl || '').trim();
+                if (directUrl) {
+                  sendOpenUrl(directUrl);
+                }
+              });
+
+              marker.on('popupopen', function(e) {
                 try {
-                  ev.preventDefault();
-                  const url = (linkEl.getAttribute('data-open-url') || '').trim();
-                  if (!url) return;
-                  sendOpenUrl(url);
+                  const popupEl = e && e.popup ? e.popup.getElement() : null;
+                  if (!popupEl) return;
+                  const linkEl = popupEl.querySelector('.popup-image-link');
+                  if (!linkEl) return;
+                  linkEl.addEventListener('click', function(ev) {
+                    try {
+                      ev.preventDefault();
+                      const url = (linkEl.getAttribute('data-open-url') || '').trim();
+                      if (!url) return;
+                      sendOpenUrl(url);
+                    } catch {
+                      // noop
+                    }
+                  }, { once: true });
                 } catch {
                   // noop
                 }
-              }, { once: true });
-            } catch {
-              // noop
+              });
+
+              bounds.extend([lat, lng]);
+            });
+
+            if (routeMode === 'route' && routePoints.length >= 2) {
+              const routeLine = L.polyline(routePoints, {
+                color: ROUTE_COLOR,
+                weight: 5,
+                opacity: 0.9,
+                lineCap: 'round',
+                lineJoin: 'round'
+              }).addTo(routeLayer);
+              const start = routePoints[0];
+              const end = routePoints[routePoints.length - 1];
+              L.circleMarker(start, {
+                radius: 8,
+                color: ROUTE_SURFACE,
+                weight: 3,
+                fillColor: ROUTE_START,
+                fillOpacity: 1
+              }).addTo(routeLayer);
+              L.circleMarker(end, {
+                radius: 8,
+                color: ROUTE_SURFACE,
+                weight: 3,
+                fillColor: ROUTE_COLOR,
+                fillOpacity: 1
+              }).addTo(routeLayer);
+              bounds.extend(start);
+              bounds.extend(end);
+              try {
+                map.fitBounds(routeLine.getBounds(), { padding: [70, 70] });
+              } catch (e) {}
+            } else if (bounds.isValid()) {
+              map.fitBounds(bounds, { padding: [50, 50] });
+            } else if (map.__userCenter) {
+              map.setView(map.__userCenter, map.getZoom ? map.getZoom() : 10);
             }
-          });
-
-          bounds.extend([lat, lng]);
-        });
-
-        if (routeMode === 'route' && routePoints.length >= 2) {
-          const routeLine = L.polyline(routePoints, {
-            color: ${JSON.stringify(themeColors.primary)},
-            weight: 5,
-            opacity: 0.9,
-            lineCap: 'round',
-            lineJoin: 'round'
-          }).addTo(map);
-          const start = routePoints[0];
-          const end = routePoints[routePoints.length - 1];
-          L.circleMarker(start, {
-            radius: 8,
-            color: ${JSON.stringify(themeColors.surface)},
-            weight: 3,
-            fillColor: ${JSON.stringify(themeColors.success || themeColors.primary)},
-            fillOpacity: 1
-          }).addTo(map);
-          L.circleMarker(end, {
-            radius: 8,
-            color: ${JSON.stringify(themeColors.surface)},
-            weight: 3,
-            fillColor: ${JSON.stringify(themeColors.primary)},
-            fillOpacity: 1
-          }).addTo(map);
-          bounds.extend(start);
-          bounds.extend(end);
-          try {
-            map.fitBounds(routeLine.getBounds(), { padding: [70, 70] });
           } catch (e) {}
-        }
+        };
 
-        if (routeMode !== 'route' && bounds.isValid()) {
-          map.fitBounds(bounds, { padding: [50, 50] });
+        // Сообщаем RN, что каркас готов и функция рендера определена.
+        if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'READY' }));
         }
       </script>
     </body>
     </html>
-  `;
+  `,
+    [themeColors, markerColor, markerShadowColor],
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.surface }]}>
@@ -372,12 +448,19 @@ const Map: React.FC<TravelProps> = ({
         javaScriptEnabled={true}
         domStorageEnabled={true}
         startInLoadingState={true}
-        onLoadEnd={() => setIsLoading(false)}
+        onLoadEnd={() => {
+          setIsLoading(false);
+          handleReady();
+        }}
         onMessage={async (event) => {
           const raw = String(event?.nativeEvent?.data ?? '');
           if (!raw) return;
           try {
             const parsed = JSON.parse(raw);
+            if (parsed?.type === 'READY') {
+              handleReady();
+              return;
+            }
             if (parsed?.type !== 'OPEN_URL') return;
             const safeUrl = getSafeExternalUrl(parsed?.url, { allowRelative: true, baseUrl: getSiteBaseUrl() });
             if (!safeUrl) return;
