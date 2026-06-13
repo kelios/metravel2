@@ -178,13 +178,15 @@ SearchCardsSkeleton.displayName = 'SearchCardsSkeleton'
 
 export const SearchPageSkeleton = memo(() => {
   const colors = useThemedColors()
-  const { width: responsiveWidth } = useResponsive()
-  const viewportWidth =
-    Platform.OS === 'web' && typeof window !== 'undefined' ? window.innerWidth : responsiveWidth
+  // Берём ширину из useResponsive (hydration-safe: SSR и первый клиентский
+  // рендер дают width=0, после гидрации — реальную). Прямое чтение window.innerWidth
+  // здесь ломало бы первый рендер и давало React #418 на /search.
+  const { width: viewportWidth } = useResponsive()
 
-  const isMobile = viewportWidth < BREAKPOINTS.TABLET
+  const isUnknownWebWidth = Platform.OS === 'web' && viewportWidth === 0
+  const isMobile = !isUnknownWebWidth && viewportWidth < BREAKPOINTS.TABLET
   const isTablet = viewportWidth >= BREAKPOINTS.TABLET && viewportWidth < BREAKPOINTS.DESKTOP
-  const isDesktop = viewportWidth >= BREAKPOINTS.DESKTOP
+  const isDesktop = isUnknownWebWidth || viewportWidth >= BREAKPOINTS.DESKTOP
   const columns = isMobile ? 1 : isTablet ? 2 : 3
   const cardCount = isMobile ? 4 : isTablet ? 6 : 9
 

@@ -1,6 +1,7 @@
 // components/belkraj/BelkrajWidget.tsx
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { getCountryCodeByCoords } from '@/utils/geoCountry';
+import { useResponsiveWidth } from '@/hooks/useResponsive';
 
 interface TravelAddress {
     id: number;
@@ -23,12 +24,14 @@ type Props = {
 const BELKRAJ_ORIGIN = 'https://belkraj.by';
 const MIN_WIDGET_HEIGHT = 320;
 
-const getEstimatedWidgetHeight = (cardsCount: number) => {
-    if (typeof window === 'undefined') {
+// width приходит из useResponsiveWidth (hydration-safe): на сервере и до конца
+// гидрации он 0 → возвращаем стабильный fallback 980, совпадающий с SSR-HTML.
+// После гидрации width становится реальным и высота пересчитывается.
+const getEstimatedWidgetHeight = (cardsCount: number, width: number) => {
+    if (!width || width <= 0) {
         return 980;
     }
 
-    const width = window.innerWidth;
     const columns = width <= 470 ? 1 : width <= 700 ? 2 : 3;
     const visibleCards = width > 470 && width <= 700
         ? cardsCount - Math.floor(cardsCount / 3)
@@ -65,7 +68,11 @@ function BelkrajWidget({
     const [shouldLoad, setShouldLoad] = useState(false);
     const widgetId = useMemo(() => `metravel-${reactId.replace(/[:]/g, '')}`, [reactId]);
 
-    const calculatedHeight = useMemo(() => getEstimatedWidgetHeight(cardsCount), [cardsCount]);
+    const responsiveWidth = useResponsiveWidth();
+    const calculatedHeight = useMemo(
+        () => getEstimatedWidgetHeight(cardsCount, responsiveWidth),
+        [cardsCount, responsiveWidth],
+    );
     const finalCollapsedHeight = collapsedHeight ?? calculatedHeight;
     const [measuredHeight, setMeasuredHeight] = useState(finalCollapsedHeight);
 

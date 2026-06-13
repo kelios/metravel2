@@ -13,6 +13,12 @@ import TravelPdfExportControl from '@/components/travel/TravelPdfExportControl'
 import { attachWebTitle, webOnly } from '../helpers'
 import { createStyles } from '../styles'
 
+// Детерминированное форматирование тысяч. toLocaleString('ru-RU') может давать
+// разный разделитель (U+00A0 в Node ICU vs U+202F в браузере) → расхождение
+// текста при гидрации и React #418. Группируем неразрывным пробелом сами.
+const formatViews = (n: number) =>
+  String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+
 type AuthorBlockProps = {
   styles: ReturnType<typeof createStyles>
   colors: ReturnType<typeof useThemedColors>
@@ -205,9 +211,9 @@ export const AuthorBlock = memo(function AuthorBlock({
                 <View
                   style={styles.metaPill}
                   accessibilityRole={(Platform.OS === 'web') ? undefined : 'text'}
-                  accessibilityLabel={`${views.toLocaleString('ru-RU')} просмотров`}
+                  accessibilityLabel={`${formatViews(views)} просмотров`}
                   {...webOnly({
-                    'aria-label': `${views.toLocaleString('ru-RU')} просмотров`,
+                    'aria-label': `${formatViews(views)} просмотров`,
                   } as any)}
                 >
                   <Feather name="eye" size={14} color={mutedText} />
@@ -215,7 +221,7 @@ export const AuthorBlock = memo(function AuthorBlock({
                     style={[styles.metaText, { color: mutedText }]}
                     numberOfLines={1}
                   >
-                    {views.toLocaleString('ru-RU')}
+                    {formatViews(views)}
                   </Text>
                 </View>
               )}

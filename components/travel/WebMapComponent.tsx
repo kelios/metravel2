@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo, useId } from 'react';
 import Feather from '@expo/vector-icons/Feather';
 import MarkersListComponent from '@/components/map/MarkersListComponent';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -114,13 +114,16 @@ const WebMapComponent = ({
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
     const [isExpanded, setIsExpanded] = useState(false);
-    const [isWideLayout, setIsWideLayout] = useState(() => {
-        if (typeof window === 'undefined') return false;
-        return window.innerWidth >= 1024;
-    });
+    // Стартуем с детерминированного значения (как на сервере, где window нет),
+    // иначе первый клиентский рендер разойдётся с SSR-HTML → React #418.
+    // Реальную раскладку выставляет useEffect ниже сразу после маунта.
+    const [isWideLayout, setIsWideLayout] = useState(false);
     const rootRef = useRef<HTMLDivElement | null>(null);
     const mapRef = useRef<any>(null);
-    const mapInstanceKeyRef = useRef<string>(`leaflet-map-${Math.random().toString(36).slice(2)}`);
+    // useId детерминирован между SSR и клиентом — Math.random() здесь давал разный
+    // key на сервере и клиенте, ломая гидрацию контейнера карты.
+    const reactId = useId();
+    const mapInstanceKeyRef = useRef<string>(`leaflet-map-${reactId.replace(/:/g, '')}`);
     const [mapCreatedNonce, setMapCreatedNonce] = useState(0);
 
     useEffect(() => {
@@ -303,6 +306,7 @@ const WebMapComponent = ({
             setIsWideLayout(window.innerWidth >= 1024);
         };
 
+        handleResize();
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
