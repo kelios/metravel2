@@ -5,6 +5,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import MapErrorBoundary from './MapErrorBoundary';
 import { MapSkeleton } from '@/components/ui/SkeletonLoader';
 import Map from '@/components/MapPage/Map';
+import MapRouteEngine from '@/components/MapPage/MapRouteEngine';
 import type { MapUiApi } from '@/types/mapUi';
 import type { ComponentType } from 'react';
 
@@ -113,6 +114,18 @@ const MapPanel: React.FC<MapPanelProps> = ({
     if (!isWeb) {
         return (
             <View style={[styles.mapContainer, { backgroundColor: themeColors.surface }]}>
+                {mode === 'route' && (
+                    <MapRouteEngine
+                        routePoints={routePoints}
+                        transportMode={transportMode}
+                        setRouteDistance={setRouteDistance}
+                        setRouteDuration={setRouteDuration}
+                        setFullRouteCoords={setFullRouteCoords}
+                        setRouteElevationStats={setRouteElevationStats}
+                        setRoutingLoading={setRoutingLoading}
+                        setRoutingError={setRoutingError}
+                    />
+                )}
                 <Map
                     travel={nativeTravelProp}
                     coordinates={safeCoordinates}
