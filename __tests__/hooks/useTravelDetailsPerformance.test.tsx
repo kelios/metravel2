@@ -192,6 +192,63 @@ describe('useTravelDetailsPerformance', () => {
     expect(result.current.postLcpRuntimeReady).toBe(true)
   })
 
+  it('resets web gates during render on a cache-hit travel swap (isLoading stays false)', async () => {
+    const firstTravel = {
+      id: 1,
+      name: 'First travel',
+      gallery: [{ id: 'hero-1', url: 'https://example.com/a.jpg' }],
+    } as any
+    const secondTravel = {
+      id: 2,
+      name: 'Second travel',
+      gallery: [{ id: 'hero-2', url: 'https://example.com/b.jpg' }],
+    } as any
+
+    const { result, rerender } = renderHook(
+      ({ travel }) =>
+        useTravelDetailsPerformance({ travel, isMobile: false, isLoading: false }),
+      { initialProps: { travel: firstTravel } }
+    )
+
+    // Bring the first travel's gates fully open (simulating the previous page).
+    await act(async () => {
+      result.current.setLcpLoaded(true)
+    })
+    await act(async () => {
+      await Promise.resolve()
+      jest.advanceTimersByTime(500)
+      await Promise.resolve()
+    })
+
+    expect(result.current.lcpLoaded).toBe(true)
+    expect(result.current.postLcpRuntimeReady).toBe(true)
+    expect(result.current.heroEnhancersReady).toBe(true)
+
+    // SPA cache-hit navigation: same hook instance, isLoading never flips true.
+    act(() => {
+      rerender({ travel: secondTravel })
+    })
+
+    // First render of the new travel must NOT carry the heavy gates over.
+    expect(result.current.lcpLoaded).toBe(false)
+    expect(result.current.postLcpRuntimeReady).toBe(false)
+    expect(result.current.heroEnhancersReady).toBe(false)
+    expect(result.current.sliderReady).toBe(false)
+
+    // Then the idle effects re-reveal the chrome progressively.
+    await act(async () => {
+      result.current.setLcpLoaded(true)
+    })
+    await act(async () => {
+      await Promise.resolve()
+      jest.advanceTimersByTime(500)
+      await Promise.resolve()
+    })
+
+    expect(result.current.heroEnhancersReady).toBe(true)
+    expect(result.current.postLcpRuntimeReady).toBe(true)
+  })
+
   it('reveals hero enhancers before post-LCP runtime in the idle-first sequence', async () => {
     const { result } = renderHook(() =>
       useTravelDetailsPerformance({
