@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
-import { Platform, useWindowDimensions } from 'react-native'
+import { Platform } from 'react-native'
 import { useIsFocused, useNavigation } from 'expo-router'
 import { useRouter } from 'expo-router'
 
+import { useResponsive } from '@/hooks/useResponsive'
 import { METRICS } from '@/constants/layout'
 import { useAccessibilityAnnounce } from '@/hooks/useAccessibilityAnnounce'
 import { useSkeletonPhase } from '@/hooks/useSkeletonPhase'
@@ -101,7 +102,9 @@ function useTravelSeoElement({
 }
 
 export default function TravelDetailsContainer() {
-  const { width: screenWidth } = useWindowDimensions()
+  // useResponsive is hydration-safe: width=0 during SSR and first client render,
+  // matching the SSG snapshot (Node.js window undefined → Dimensions=0).
+  const { width: screenWidth } = useResponsive()
   const isMobile = screenWidth < METRICS.breakpoints.tablet
   const isFocused = useIsFocused()
   const navigation = useNavigation()
