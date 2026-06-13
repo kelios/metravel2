@@ -47,6 +47,32 @@ npm run build:web:prod
 DEPLOY=0 ./build-prod.sh prod
 ```
 
+### Prod deploy from this Windows/Codex machine
+
+On this workstation, the deploy step of `./build-prod.sh prod` is not reliable because the local
+Git-for-Windows/MSYS2 `rsync` transport fails. Do not keep retrying that command for production
+deploys from `D:\metravel\metravel2`.
+
+Use the ops wrapper instead:
+
+```bash
+bash /d/metravel/ops/deploy-frontend.sh
+```
+
+The wrapper is the documented fallback for this machine. It verifies branch `main` and SSH access,
+stops competing build/e2e processes, runs `DEPLOY=0 bash ./build-prod.sh prod`, checks `dist/prod`,
+uploads the build with `tar+ssh`, atomically swaps `static/dist` on `metravel-prod`, overlays old
+Expo chunks, restarts `app` and `nginx`, runs health checks, and rolls back automatically from
+`static/dist.bak` if health verification fails.
+
+Manual rollback command if the wrapper reports a broken deploy:
+
+```bash
+ssh metravel-prod 'cd /home/sx3/metravel && mv static/dist static/dist.broken && mv static/dist.bak static/dist && docker compose -f docker-compose-prod.app.yaml restart nginx'
+```
+
+Regular releases from a machine with working `rsync` may still use `./build-prod.sh prod`.
+
 ## Post-deploy SEO check
 
 Run after production deploy against the real URL:

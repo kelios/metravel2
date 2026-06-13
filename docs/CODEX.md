@@ -160,6 +160,20 @@ Skills:
 
 Для e2e-авторизации используй `.env.e2e`, если значения уже заданы, и никогда не выводи секреты.
 
+### Deploy commands for Codex
+
+- Production deploys require an explicit user request and `$metravel-devops-agent`.
+- On a normal machine with working `rsync`, use `./build-prod.sh prod`.
+- On this Windows/Codex machine, do not use `./build-prod.sh prod` as the final deploy command; its
+  local `rsync` step is known to fail. Use:
+
+```bash
+bash /d/metravel/ops/deploy-frontend.sh
+```
+
+This wrapper still uses the canonical build/guards through `DEPLOY=0 bash ./build-prod.sh prod`, then
+deploys with `tar+ssh`, performs an atomic server swap, verifies health, and rolls back on failure.
+
 ## Быстрая карта поиска
 
 - Routes/pages: `app/`, `screens/`.

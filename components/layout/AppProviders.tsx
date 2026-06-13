@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from '@/context/AuthContext';
 import { AuthContext, createAuthFallbackValue } from '@/context/authContextBase';
 import { FavoritesContext, createFavoritesFallbackValue } from '@/context/FavoritesContext';
+import { FavoritesProvider } from '@/context/FavoritesProvider';
 import ThemedPaperProvider from '@/components/ui/ThemedPaperProvider';
 
 interface AppProvidersProps {
@@ -29,17 +31,6 @@ const safeLazy = (
       })
   );
 
-const FavoritesProviderLazy = safeLazy(
-  () => import('@/context/FavoritesProvider'),
-  'FavoritesProvider'
-);
-const AuthProviderLazy = safeLazy(
-  () =>
-    Promise.resolve(import('@/context/AuthContext')).then((mod) => ({
-      default: (mod.AuthProvider ?? EmptyFallback) as React.ComponentType<any>,
-    })),
-  'AuthProvider'
-);
 const AppProvidersDeferredRuntimeLazy = safeLazy(
   () => import('@/components/layout/AppProvidersDeferredRuntime'),
   'AppProvidersDeferredRuntime'
@@ -158,17 +149,13 @@ export default function AppProviders({
   );
 
   const favoritesContent = favoritesReady ? (
-    <React.Suspense fallback={<FavoritesContext.Provider value={fallbackFavorites}>{content}</FavoritesContext.Provider>}>
-      <FavoritesProviderLazy>{content}</FavoritesProviderLazy>
-    </React.Suspense>
+    <FavoritesProvider>{content}</FavoritesProvider>
   ) : (
     <FavoritesContext.Provider value={fallbackFavorites}>{content}</FavoritesContext.Provider>
   );
 
   const authContent = authProviderReady ? (
-    <React.Suspense fallback={<AuthContext.Provider value={fallbackAuth}>{favoritesContent}</AuthContext.Provider>}>
-      <AuthProviderLazy>{favoritesContent}</AuthProviderLazy>
-    </React.Suspense>
+    <AuthProvider>{favoritesContent}</AuthProvider>
   ) : (
     <AuthContext.Provider value={fallbackAuth}>{favoritesContent}</AuthContext.Provider>
   );

@@ -38,6 +38,7 @@ const parseArgs = (argv) => {
 
 const LINTABLE_FILE_PATTERN = /\.(js|jsx|ts|tsx|mjs|cjs)$/
 const ESLINT_CACHE_LOCATION = 'node_modules/.cache/eslint/check-fast/.eslintcache'
+const ESLINT_BIN_PATH = path.resolve(process.cwd(), 'node_modules/eslint/bin/eslint.js')
 const MINIMATCH_OPTIONS = Object.freeze({ dot: true })
 const eslintConfig = require(path.resolve(process.cwd(), 'eslint.config.js'))
 const ESLINT_IGNORE_PATTERNS = Array.isArray(eslintConfig?.[0]?.ignores)
@@ -120,7 +121,7 @@ const getLintTargets = (changedFiles) => {
 
 const buildEslintArgs = (lintTargets) => {
   return [
-    'eslint',
+    ESLINT_BIN_PATH,
     '--cache',
     '--cache-location',
     ESLINT_CACHE_LOCATION,
@@ -134,16 +135,18 @@ const resolveCommand = (command) => {
     return command
   }
 
+  if (command === 'node') return process.execPath
   if (command === 'npm') return 'npm.cmd'
   if (command === 'npx') return 'npx.cmd'
   return command
 }
 
-const runCommand = (command, args) => {
+const runCommand = (command, args, options = {}) => {
+  const shell = options.shell ?? process.platform === 'win32'
   const result = spawnSync(resolveCommand(command), args, {
     encoding: 'utf8',
     stdio: 'inherit',
-    shell: process.platform === 'win32',
+    shell,
   })
   return result.status ?? 1
 }
@@ -247,7 +250,7 @@ const main = () => {
       return
     }
 
-    const eslintStatus = runCommand('npx', buildEslintArgs(result.lintTargets))
+    const eslintStatus = runCommand('node', buildEslintArgs(result.lintTargets), { shell: false })
     if (eslintStatus !== 0) {
       process.exit(eslintStatus)
     }
@@ -273,6 +276,7 @@ module.exports = {
   getLintTargets,
   buildEslintArgs,
   ESLINT_CACHE_LOCATION,
+  ESLINT_BIN_PATH,
   isIgnoredLintTarget,
   runFastScopeChecks,
 }

@@ -16,5 +16,13 @@ export const handleHeaderNavPress = (
     return
   }
 
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const target = new URL(path, window.location.origin)
+    if (target.pathname !== window.location.pathname || target.search !== window.location.search) {
+      window.location.assign(target.pathname + target.search + target.hash)
+      return
+    }
+  }
+
   router.push(path as any)
 }

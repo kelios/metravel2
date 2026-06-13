@@ -6,6 +6,7 @@ const {
   getLintTargets,
   buildEslintArgs,
   ESLINT_CACHE_LOCATION,
+  ESLINT_BIN_PATH,
   MINIMATCH_OPTIONS,
   normalizeForMatching,
   matchesIgnorePattern,
@@ -61,7 +62,7 @@ describe('run-fast-scope-checks', () => {
       'scripts/run-fast-scope-checks.js',
       'components/Button.tsx',
     ])).toEqual([
-      'eslint',
+      ESLINT_BIN_PATH,
       '--cache',
       '--cache-location',
       ESLINT_CACHE_LOCATION,

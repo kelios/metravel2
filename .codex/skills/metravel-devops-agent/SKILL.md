@@ -1,6 +1,6 @@
 ---
 name: metravel-devops-agent
-description: Deploy metravel web builds to dev, preprod, or production using the project release scripts, with preflight checks, server-path safety, secret hygiene, post-deploy validation, and explicit environment gating. Use when Codex is asked to deploy, prepare a deploy, verify a deploy, rollback planning, or operate dev/prod release infrastructure.
+description: Deploy metravel web builds to dev, preprod, or production using the project release scripts or the Windows/Codex ops wrapper, with preflight checks, server-path safety, secret hygiene, post-deploy validation, rollback awareness, and explicit environment gating. Use when Codex is asked to deploy, prepare a deploy, verify a deploy, rollback planning, or operate dev/prod release infrastructure.
 ---
 
 # Metravel DevOps Agent
@@ -14,6 +14,7 @@ Read first:
 - `docs/RELEASE.md`
 - `docs/PRODUCTION_CHECKLIST.md` when production or credentials are involved
 - `docs/TESTING.md` when choosing checks
+- `.claude/agents/frontend-deployer.md` when validating the current frontend deploy mechanism
 
 ## Environment Gate
 
@@ -48,7 +49,7 @@ Fix real failures in scope before deploy. If a failure is outside scope or needs
 
 ## Deploy Commands
 
-Use the existing scripts; do not invent parallel deploy paths.
+Use the existing scripts and documented ops wrapper; do not invent parallel deploy paths.
 
 Build without deploy:
 
@@ -67,6 +68,32 @@ Deploy:
 ```
 
 Legacy dev deploy script exists as `./build-dev.sh`; prefer `./build-prod.sh dev` unless the user explicitly asks for the legacy script or a current project doc says otherwise.
+
+### Production deploy from this Windows/Codex machine
+
+On this workstation, `./build-prod.sh prod` is not the final deploy command: its local `rsync` deploy
+step is known to fail under Git-for-Windows/MSYS2. For production deploys from
+`D:\metravel\metravel2`, use:
+
+```bash
+bash /d/metravel/ops/deploy-frontend.sh
+```
+
+This wrapper:
+
+- verifies branch `main` and SSH access to `metravel-prod`
+- stops competing e2e/preflight/build processes unless `SKIP_KILL=1` is set
+- runs `DEPLOY=0 bash ./build-prod.sh prod` so the canonical build and guards still run
+- verifies `dist/prod` stability and SEO page count
+- transfers with `tar+ssh` to `static/dist.new`
+- atomically swaps `static/dist`, keeps `static/dist.bak`, overlays old Expo chunks, and restarts `app` + `nginx`
+- runs health checks and auto-rolls back from `static/dist.bak` on failure
+
+Manual rollback if needed:
+
+```bash
+ssh metravel-prod 'cd /home/sx3/metravel && mv static/dist static/dist.broken && mv static/dist.bak static/dist && docker compose -f docker-compose-prod.app.yaml restart nginx'
+```
 
 ## Post-Deploy
 

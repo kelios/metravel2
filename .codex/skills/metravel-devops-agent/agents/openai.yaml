@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel DevOps Agent"
-  short_description: "Deploy metravel to dev, preprod, or prod safely."
-  default_prompt: "Use $metravel-devops-agent to prepare, run, and verify a metravel deploy for the requested environment, preserving secrets, server-path safety, and release validation rules."
+  short_description: "Deploy metravel to dev, preprod, or prod safely, including the Windows/Codex frontend wrapper."
+  default_prompt: "Use $metravel-devops-agent to prepare, run, and verify a metravel deploy for the requested environment, preserving secrets, server-path safety, release validation rules, and the documented Windows/Codex production deploy wrapper when working from this machine."

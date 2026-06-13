@@ -69,6 +69,19 @@ npm run build:web:prod
 DEPLOY=0 ./build-prod.sh prod
 ```
 
+Production deploy command depends on the machine:
+
+```bash
+# Normal machine with working rsync:
+./build-prod.sh prod
+
+# This Windows/Codex machine:
+bash /d/metravel/ops/deploy-frontend.sh
+```
+
+The Windows/Codex wrapper builds with `DEPLOY=0`, uploads via `tar+ssh`, performs an atomic swap,
+restarts `app` and `nginx`, verifies health, and auto-rolls back on failed health checks.
+
 ---
 
 ## 📊 Post-Release Monitoring
