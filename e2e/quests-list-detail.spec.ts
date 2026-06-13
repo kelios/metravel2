@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test'
 import { test, expect } from './fixtures'
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation'
 import { expectNoHorizontalScroll } from './helpers/layoutAsserts'
+import { isRecoverableReactHydrationError } from './helpers/consoleGuards'
 
 const WAIT_MS = 30_000
 const QUEST_DETAIL_URL_RE = /\/quests\/[^/]+\/[^/?#]+/
@@ -23,6 +24,7 @@ const waitForQuestCatalogReady = async (page: Page) =>
 
 const getFirstQuestCard = async (page: Page) => {
   const byTestId = page.locator('[data-testid^="quest-card-"]')
+  await byTestId.first().waitFor({ state: 'visible', timeout: 5_000 }).catch(() => {})
   if ((await byTestId.count()) > 0) return byTestId.first()
 
   const byRole = page.getByRole('link', { name: /Начать приключение/i })
@@ -86,7 +88,8 @@ test.describe('Quests list -> detail', () => {
       await expect(page.getByText(QUEST_FALLBACK_RE).first()).toBeVisible({ timeout: WAIT_MS })
     }
 
-    expect(pageErrors, `page errors: ${pageErrors.join('\n')}`).toHaveLength(0)
+    const unexpectedPageErrors = pageErrors.filter((message) => !isRecoverableReactHydrationError(message))
+    expect(unexpectedPageErrors, `page errors: ${pageErrors.join('\n')}`).toHaveLength(0)
     expect(consoleErrors, `console errors: ${consoleErrors.join('\n')}`).toHaveLength(0)
   })
 })

@@ -16,12 +16,11 @@ import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/uti
 import type { QuestWizardProps } from '@/components/quests/QuestWizard';
 import type { FrontendQuestBundle } from '@/utils/questAdapters';
 
-const FeatherIconLazy = React.lazy<React.ComponentType<{ name: IconName; size: number; color: string }>>(() =>
-  Promise.resolve(import('@expo/vector-icons/Feather')).then((module: any) => ({ default: module.Feather || module.default })),
-);
-
 const QuestWizard = React.lazy<React.ComponentType<QuestWizardProps>>(() =>
   Promise.resolve(import('@/components/quests/QuestWizard')).then((module: any) => ({ default: module.QuestWizard || module.default })),
+);
+const FeatherIconLazy = React.lazy<React.ComponentType<{ name: IconName; size: number; color: string }>>(() =>
+  Promise.resolve(import('@expo/vector-icons/Feather')).then((module: any) => ({ default: module.Feather || module.default })),
 );
 const QuestWizardComponent = Platform.OS === 'web' ? QuestWizard : QuestWizardDirect;
 const FeatherIcon = Platform.OS === 'web' ? FeatherIconLazy : Feather;

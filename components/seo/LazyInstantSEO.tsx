@@ -44,7 +44,9 @@ function StaticHead({
   useEffect(() => {
     if (typeof document === 'undefined' || !robots) return;
     const upsertMeta = (name: string, content: string) => {
-      let el = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
+      const nodes = Array.from(document.querySelectorAll(`meta[name="${name}"]`)) as HTMLMetaElement[];
+      nodes.slice(1).forEach((node) => node.parentNode?.removeChild(node));
+      let el = nodes[0] ?? null;
       if (!el) {
         el = document.createElement('meta');
         el.setAttribute('name', name);

@@ -1,5 +1,3 @@
-import React from 'react';
+import QuestsScreen from './QuestsScreen';
 
-const QuestsScreenRoute = React.lazy(() => import('./QuestsScreen'));
-
-export default QuestsScreenRoute;
+export default QuestsScreen;

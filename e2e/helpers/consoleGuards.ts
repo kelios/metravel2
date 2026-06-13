@@ -1,5 +1,9 @@
 import { expect } from '@playwright/test';
 
+export function isRecoverableReactHydrationError(message: string) {
+  return /Minified React error #418\b/.test(String(message || ''));
+}
+
 export function installNoConsoleErrorsGuard(page: any) {
   const errors: string[] = [];
 

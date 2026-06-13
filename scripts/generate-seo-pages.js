@@ -893,6 +893,29 @@ function writeFileSafe(filePath, content) {
   fs.writeFileSync(filePath, content, 'utf8');
 }
 
+function readStaticRouteHtml(route, fallbackHtml) {
+  if (route === '/') return fallbackHtml;
+
+  const routePath = String(route || '').replace(/^\/+/, '');
+  if (!routePath) return fallbackHtml;
+
+  const candidates = [
+    path.join(DIST_DIR, `${routePath}.html`),
+    path.join(DIST_DIR, routePath, 'index.html'),
+  ];
+
+  for (const candidate of candidates) {
+    if (!fs.existsSync(candidate)) continue;
+    try {
+      return fs.readFileSync(candidate, 'utf8');
+    } catch {
+      // Fall through to the next candidate/fallback.
+    }
+  }
+
+  return fallbackHtml;
+}
+
 // ---------------------------------------------------------------------------
 // Related-travels index (FE-IDX-3): crawlable internal links between travels.
 // ---------------------------------------------------------------------------
@@ -1128,7 +1151,8 @@ async function main() {
   console.log('📄 Generating static pages...');
   for (const page of STATIC_PAGES) {
     const canonical = `${SITE_URL}${page.route === '/' ? '/' : page.route}`;
-    let html = injectMeta(baseHtml, {
+    const routeBaseHtml = readStaticRouteHtml(page.route, baseHtml);
+    let html = injectMeta(routeBaseHtml, {
       title: page.title,
       description: page.description,
       canonical,

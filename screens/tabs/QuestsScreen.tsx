@@ -74,7 +74,14 @@ export default function QuestsScreen() {
 
     const isFocused = useIsFocused();
     const colors = useThemedColors();
-    const { width, height, isMobile } = useResponsive();
+    const responsive = useResponsive();
+    const [layoutHydrated, setLayoutHydrated] = useState(Platform.OS !== 'web');
+    useEffect(() => {
+        setLayoutHydrated(true);
+    }, []);
+    const width = layoutHydrated ? responsive.width : 0;
+    const height = layoutHydrated ? responsive.height : 0;
+    const isMobile = layoutHydrated ? responsive.isMobile : true;
     const s = useMemo(() => getStyles(colors, width, height), [colors, width, height]);
 
     // ── Persistent city selection ──
@@ -486,6 +493,7 @@ export default function QuestsScreen() {
                 userLoc={userLoc}
                 radiiLg={radii.lg}
                 LazyQuestMap={LazyQuestMap}
+                isMobile={isMobile}
                 onOpenFilterDrawer={() => setFilterDrawerOpen(true)}
                 onToggleViewMode={() => handleSetViewMode(viewMode === 'map' ? 'list' : 'map')}
                 onMapUserLocationChange={handleMapUserLocationChange}

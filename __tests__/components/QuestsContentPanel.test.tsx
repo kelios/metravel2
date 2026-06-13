@@ -70,6 +70,7 @@ describe('QuestsContentPanel', () => {
                 userLoc={null}
                 radiiLg={24}
                 LazyQuestMap={LazyQuestMap}
+                isMobile={false}
                 onOpenFilterDrawer={() => {}}
                 onToggleViewMode={() => {}}
                 onMapUserLocationChange={() => {}}
@@ -110,6 +111,7 @@ describe('QuestsContentPanel', () => {
                 userLoc={null}
                 radiiLg={24}
                 LazyQuestMap={LazyQuestMap}
+                isMobile
                 onOpenFilterDrawer={onOpenFilterDrawer}
                 onToggleViewMode={() => {}}
                 onMapUserLocationChange={() => {}}

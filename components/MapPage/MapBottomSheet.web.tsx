@@ -28,6 +28,7 @@ const OPEN_DEBOUNCE_MS = 250
 const SHORT_VIEWPORT_BREAKPOINT_PX = 700
 const SNAP_RATIOS_TALL: readonly [number, number, number] = [0.25, 0.55, 1]
 const SNAP_RATIOS_SHORT: readonly [number, number, number] = [0.3, 0.62, 1]
+const MOBILE_WEB_TOP_RESERVE = LAYOUT.headerHeight * 2
 
 const STATE_TO_INDEX: Record<SheetState, SheetIndex> = {
   collapsed: -1,
@@ -94,7 +95,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     const isFullScreen = sheetIndex === 2
     const hiddenWhenCollapsed = isCollapsed && !peekContent
     const contentBottomPadding = isCollapsed ? 12 + bottomInset : 12
-    const fullScreenTopInset = LAYOUT.headerHeight
+    const fullScreenTopInset = MOBILE_WEB_TOP_RESERVE
     const snapRatios =
       windowHeight < SHORT_VIEWPORT_BREAKPOINT_PX ? SNAP_RATIOS_SHORT : SNAP_RATIOS_TALL
 

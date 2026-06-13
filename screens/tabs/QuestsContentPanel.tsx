@@ -12,7 +12,6 @@ import Feather from '@expo/vector-icons/Feather';
 import Map from '@/components/MapPage/Map';
 import EmptyState from '@/components/ui/EmptyState';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
-import { useResponsive } from '@/hooks/useResponsive';
 
 import QuestCard from './QuestCard';
 import { pluralizeQuest, type QuestMeta } from './questsShared';
@@ -43,6 +42,7 @@ type QuestsContentPanelProps = {
     userLoc: { lat: number; lng: number } | null;
     radiiLg: number;
     LazyQuestMap: any;
+    isMobile: boolean;
     onOpenFilterDrawer: () => void;
     onToggleViewMode: () => void;
     onMapUserLocationChange: (loc: { latitude: number; longitude: number } | null) => void;
@@ -64,11 +64,11 @@ export default function QuestsContentPanel({
     userLoc,
     radiiLg,
     LazyQuestMap,
+    isMobile,
     onOpenFilterDrawer,
     onToggleViewMode,
     onMapUserLocationChange,
 }: QuestsContentPanelProps) {
-    const { isMobile } = useResponsive();
     return (
         <ScrollView
             style={styles.content}

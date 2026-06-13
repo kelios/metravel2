@@ -180,7 +180,7 @@ const subscribe = (onStoreChange: () => void) => {
   // setTimeout(0) fires after React finishes hydrating the current tree.
   if (!_hydrated && !_hydrationScheduled && Platform.OS === 'web') {
     _hydrationScheduled = true;
-    setTimeout(() => {
+    const scheduleHydrated = () => {
       _hydrated = true;
       // Ensure currentSnapshot reflects real window dimensions
       const webSnap = getWebWindowSnapshot();
@@ -199,7 +199,14 @@ const subscribe = (onStoreChange: () => void) => {
           // noop
         }
       });
-    }, 0);
+    };
+    setTimeout(() => {
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => requestAnimationFrame(scheduleHydrated));
+      } else {
+        scheduleHydrated();
+      }
+    }, 50);
   }
 
   // Do not notify synchronously during hydration — the snapshot hasn't
@@ -240,7 +247,7 @@ const getServerWidthSnapshot = () => 0;
  */
 export function useResponsiveWidth(): number {
   const width = useSyncExternalStore(subscribe, getWidthSnapshot, getServerWidthSnapshot);
-  if (Platform.OS === 'web' && width <= 0) {
+  if (Platform.OS === 'web' && _hydrated && width <= 0) {
     const webWindowSnapshot = getWebWindowSnapshot();
     if (webWindowSnapshot) return webWindowSnapshot.width;
   }
@@ -300,11 +307,11 @@ export function useResponsive(): ResponsiveState {
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const webWindowSnapshot = getWebWindowSnapshot();
   const width =
-    Platform.OS === 'web' && snapshot.width <= 0 && webWindowSnapshot
+    Platform.OS === 'web' && _hydrated && snapshot.width <= 0 && webWindowSnapshot
       ? webWindowSnapshot.width
       : snapshot.width;
   const height =
-    Platform.OS === 'web' && snapshot.height <= 0 && webWindowSnapshot
+    Platform.OS === 'web' && _hydrated && snapshot.height <= 0 && webWindowSnapshot
       ? webWindowSnapshot.height
       : snapshot.height;
   const isHydrated =

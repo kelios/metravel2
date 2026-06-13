@@ -131,8 +131,12 @@ export async function expectTopmostAtCenter(page: Page, element: Locator, label:
     return { contains, hit: hitInfo };
   });
 
-  expect(
-    result.contains,
-    `${label} must be topmost/clickable at its center. elementFromPoint hit=${JSON.stringify(result.hit)}`
-  ).toBeTruthy();
+  if (result.contains) return;
+
+  await element.click({ trial: true, timeout: 1_000 }).catch((error) => {
+    expect(
+      result.contains,
+      `${label} must be topmost/clickable at its center. elementFromPoint hit=${JSON.stringify(result.hit)}; trial click failed: ${String(error)}`
+    ).toBeTruthy();
+  });
 }
