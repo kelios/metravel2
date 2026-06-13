@@ -1,7 +1,8 @@
 import React, { Suspense, useCallback, useMemo, useRef } from 'react'
-import { View, useWindowDimensions } from 'react-native'
+import { View } from 'react-native'
 import { usePathname } from 'expo-router'
 
+import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import useBreadcrumbModel from '@/hooks/useBreadcrumbModel'
 
@@ -11,7 +12,6 @@ import {
   HeaderContextBarLazy,
 } from './customHeaderLazy'
 import {
-  getEffectiveHeaderWidth,
   getHeaderActivePath,
   getIsHeaderMobile,
   shouldShowHeaderContextBar,
@@ -35,10 +35,11 @@ type CustomHeaderProps = {
 function CustomHeader({ onHeightChange }: CustomHeaderProps) {
   const colors = useThemedColors()
   const pathname = usePathname()
-  const { width } = useWindowDimensions()
-
-  const effectiveWebWidth = getEffectiveHeaderWidth(width)
-  const isMobile = getIsHeaderMobile(width, effectiveWebWidth)
+  // useResponsive returns width=0 during SSR and first client render,
+  // matching the server snapshot → prevents hydration mismatch in Suspense fallback.
+  // After hydration it switches to real window.innerWidth via useSyncExternalStore.
+  const { width } = useResponsive()
+  const isMobile = getIsHeaderMobile(width, width)
   const activePath = getHeaderActivePath(pathname)
   const showHeaderContextBar = shouldShowHeaderContextBar(pathname, isMobile)
 

@@ -47,6 +47,11 @@ jest.mock('../../components/layout/HeaderContextBar', () => {
     return () => React.createElement(View, { testID: 'mock-header-context-bar' });
 });
 
+jest.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () => (global as any).__mockResponsive ?? { width: 1024, height: 768, isPhone: false, isLargePhone: false, isTablet: false, isDesktop: true, isMobile: false, isHydrated: true },
+  useResponsiveWidth: () => (global as any).__mockResponsive?.width ?? 1024,
+}));
+
 // Моки для expo-router
 jest.mock('expo-router', () => ({
     usePathname: jest.fn(),
@@ -209,6 +214,11 @@ describe('CustomHeader', () => {
     describe('Mobile menu modal', () => {
         beforeEach(() => {
             dimensionsSpy.mockReturnValue({ width: 390, height: 844, scale: 1, fontScale: 1 } as ReactNative.ScaledSize);
+            (global as any).__mockResponsive = { width: 390, height: 844, isPhone: true, isLargePhone: false, isTablet: false, isDesktop: false, isMobile: true, isHydrated: true };
+        });
+
+        afterEach(() => {
+            (global as any).__mockResponsive = undefined;
         });
 
         it('opens and closes mobile menu modal', () => {
