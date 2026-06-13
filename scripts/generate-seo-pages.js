@@ -377,6 +377,73 @@ function escapeAttr(str) {
     .replace(/>/g, '&gt;');
 }
 
+// ---------------------------------------------------------------------------
+// Slug 301 redirects
+// ---------------------------------------------------------------------------
+
+/** Normalize a slug for comparison / path use (no leading slash, trimmed). */
+function normalizeSlug(value) {
+  return String(value || '').trim().replace(/^\/+/, '').replace(/^travels\//, '').replace(/\/+$/, '');
+}
+
+/**
+ * Read and validate the slug-redirect manifest. Returns a deduped array of
+ * `{ from, to }` (both bare slugs). Bad/empty/self-referential entries are
+ * dropped. Missing file → []. The on-disk shape is `{ redirects: [...] }`.
+ */
+function loadRedirectManifest(filePath) {
+  let raw;
+  try {
+    raw = fs.readFileSync(filePath, 'utf8');
+  } catch {
+    return [];
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    console.warn(`  ⚠️  Could not parse redirect manifest ${filePath}: ${e.message}`);
+    return [];
+  }
+  const list = Array.isArray(parsed) ? parsed : Array.isArray(parsed.redirects) ? parsed.redirects : [];
+  const seen = new Set();
+  const out = [];
+  for (const entry of list) {
+    const from = normalizeSlug(entry && entry.from);
+    const to = normalizeSlug(entry && entry.to);
+    if (!from || !to || from === to || seen.has(from)) continue;
+    seen.add(from);
+    out.push({ from, to });
+  }
+  return out;
+}
+
+/**
+ * Build a soft-301 redirect stub for an old travel slug. nginx serves it via
+ * `try_files $uri.html` (200), but rel=canonical + a zero-delay meta refresh +
+ * JS replace make Google treat it as a permanent redirect and consolidate
+ * ranking signals onto the new URL.
+ */
+function buildRedirectStubHtml(toSlug) {
+  const target = `${SITE_URL}/travels/${normalizeSlug(toSlug)}`;
+  const safe = escapeAttr(target);
+  return `<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Страница переехала | Metravel</title>
+<link rel="canonical" href="${safe}"/>
+<meta http-equiv="refresh" content="0; url=${safe}"/>
+<script>location.replace(${JSON.stringify(target)});</script>
+</head>
+<body>
+<p>Страница переехала: <a href="${safe}">${safe}</a></p>
+</body>
+</html>
+`;
+}
+
 /** Run async tasks with limited concurrency. */
 async function batchAsync(items, concurrency, fn) {
   const results = new Array(items.length);
@@ -1146,6 +1213,7 @@ async function main() {
     : baseHtml;
 
   let totalPages = 0;
+  const liveSlugs = new Set();
 
   // --- 1. Static pages ---
   console.log('📄 Generating static pages...');
@@ -1254,6 +1322,7 @@ async function main() {
       }
 
       const routeKey = slug || String(id);
+      liveSlugs.add(normalizeSlug(routeKey));
       const name = travel.name || '';
       const title = buildSeoTitle(name || 'Путешествие');
 
@@ -1461,6 +1530,31 @@ async function main() {
     }
   }
 
+  // --- 5. Slug 301 redirect stubs ---
+  // For every old→new slug pair, emit a soft-301 stub at the old slug's path so
+  // a renamed travel keeps its ranking instead of falling through to the generic
+  // SPA shell (a soft-404). Skip any `from` that collides with a live travel.
+  const manifestPath = path.resolve(getArg('redirects', path.join(__dirname, 'seo-redirects.json')));
+  const redirects = loadRedirectManifest(manifestPath);
+  if (redirects.length) {
+    console.log(`\n🔁 Generating slug redirects (${redirects.length})...`);
+    let redirected = 0;
+    let clashes = 0;
+    for (const { from, to } of redirects) {
+      if (liveSlugs.has(from)) {
+        clashes++;
+        console.warn(`  ⚠️  Skipped redirect ${from} → ${to}: a live travel uses slug "${from}"`);
+        continue;
+      }
+      const stub = buildRedirectStubHtml(to);
+      writeFileSafe(path.join(DIST_DIR, 'travels', `${from}.html`), stub);
+      writeFileSafe(path.join(DIST_DIR, 'travels', from, 'index.html'), stub);
+      redirected++;
+    }
+    totalPages += redirected;
+    console.log(`  ✅ Redirect stubs: ${redirected}${clashes ? ` (skipped ${clashes} live-slug clash)` : ''}`);
+  }
+
   console.log(`\n🎉 Done! Generated ${totalPages} SEO pages in ${DIST_DIR}`);
 }
 
@@ -1488,6 +1582,9 @@ if (typeof module !== 'undefined' && module.exports) {
     injectJsonLd,
     buildTravelArticleJsonLd,
     injectBreadcrumbJsonLd,
+    normalizeSlug,
+    loadRedirectManifest,
+    buildRedirectStubHtml,
   };
 }
 

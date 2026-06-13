@@ -1,0 +1,85 @@
+{
+  "_comment": "Slug 301-redirect manifest for /travels/. generate-seo-pages.js emits a soft-301 stub (canonical + meta-refresh) at dist/prod/travels/{from}.html for each entry, so old URLs keep their ranking when a title (and therefore slug) changes. Append {from,to} whenever a travel slug changes; never reuse a live slug as `from`.",
+  "redirects": [
+    {
+      "from": "forty-krakova",
+      "to": "forty-krakova-avstriiskie-ukrepleniia-xix-veka"
+    },
+    {
+      "from": "smolevud-put-v-skazku",
+      "to": "smolevud-naturnaia-ploshchadka-belarusfilma-pod-minskom"
+    },
+    {
+      "from": "krakov-karer-zakshuvek",
+      "to": "zakshuvek-biriuzovyi-karer-dlia-kupaniia-v-krakove"
+    },
+    {
+      "from": "morskoe-oko-v-mae",
+      "to": "morskoe-oko-v-mae-ozero-v-tatrakh-polsha"
+    },
+    {
+      "from": "torun",
+      "to": "torun-staryi-gorod-i-muzei-prianika-polsha"
+    },
+    {
+      "from": "baranya-gora",
+      "to": "barania-gora-istok-visly-v-beskidakh-polsha"
+    },
+    {
+      "from": "zamok-lipovec",
+      "to": "zamok-lipovets-ruiny-i-skansen-pod-krakovom"
+    },
+    {
+      "from": "gora",
+      "to": "gora-turbach-1310-m-pokhod-v-gortse-polsha"
+    },
+    {
+      "from": "marshrut-na-1-den-ekotropa-elnia-i-usadby-nitoslavskikh-i-shadurskikh",
+      "to": "ekotropa-elnia-i-usadby-za-den-belarus"
+    },
+    {
+      "from": "chto-posmotret-v-oshmyanah-kostel-franciskancev-1822-kostel-svyatogo-mihaila-arhangela-sinagoga-usadba-strugacha-1",
+      "to": "chto-posmotret-v-oshmianakh-kostely-sinagoga-usadba"
+    },
+    {
+      "from": "belarus-progulka-k-ozeru-hotomlya-i-poiski-ozer-ovsishcheskoe-srednee-i-pustoe-1",
+      "to": "ozero-khotomle-i-ozera-ovsishcheskoe-srednee-belarus"
+    },
+    {
+      "from": "belarus-velomarshrut-30km-ot-chasovni-1809-v-d-golynka-do-usadebnogo-doma-novickih-v-soveykah",
+      "to": "velomarshrut-k-usadbe-novitskikh-v-soveikakh"
+    },
+    {
+      "from": "marshrut-na-odin-den-v-grodnenskuyu-oblast-usadba-grobovskih-usadba-svyatopolk-chetvertinskih-usadebno-parkovyy-kompleks-laskovichey-usadba-hodkevichey",
+      "to": "usadby-grodnenshchiny-grobovskikh-i-khodkevichei"
+    },
+    {
+      "from": "marshrut-na-odin-den-dvorcovo-parkovyy-kompleks-slacvinskih-memorialnyy-kompleks-partizanskoy-brigady-razgrom-usadebnyy-dom-potockih-1",
+      "to": "dvorets-slotvinskikh-i-usadba-pototskikh-za-den"
+    },
+    {
+      "from": "marshrut-vykhodnogo-dnia-mogilev-usadba-tolstykh-v-grudinovke-bykhovskii-zamok-i-krinitsy-zakharenka",
+      "to": "mogilev-usadba-tolstykh-i-bykhovskii-zamok"
+    },
+    {
+      "from": "marshrut-na-odin-den-v-bonifaciev-les-na-mertvoe-chernoe-i-goluboe-ozero",
+      "to": "bonifatsevskii-les-mertvoe-chernoe-goluboe-ozera"
+    },
+    {
+      "from": "marshrut-na-odin-den-grodnenskie-forty-4-i-6",
+      "to": "grodnenskie-forty-no4-i-no6-peshchery-i-skaly"
+    },
+    {
+      "from": "zatorland",
+      "to": "zatorland-krupneishii-park-dinozavrov-v-evrope"
+    },
+    {
+      "from": "park-grudek-v-iavozhno-polskie-maldivy-sredi-byvshego-karera",
+      "to": "park-grudek-v-iavozhno-polskie-maldivy"
+    },
+    {
+      "from": "velomarshrut-na-1-den-logoisk-ruiny-dvortsa-tyshkevichei-i-rodnik-sviatogo-iuriia-1",
+      "to": "logoisk-dvorets-tyshkevichei-i-rodnik-sviatogo-iuriia"
+    }
+  ]
+}

@@ -21,7 +21,14 @@ const {
   injectHiddenH1,
   injectJsonLd,
   buildTravelArticleJsonLd,
+  normalizeSlug,
+  loadRedirectManifest,
+  buildRedirectStubHtml,
 } = require('@/scripts/generate-seo-pages');
+
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
 // ---------------------------------------------------------------------------
 // Minimal base HTML that mimics Expo static export output (NO OG/canonical)
@@ -798,5 +805,72 @@ describe('buildSeoTitle', () => {
     const out = buildSeoTitle(name);
     expect(out.length).toBeLessThanOrEqual(60);
     expect(out.endsWith(`…${SUFFIX}`)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Slug 301 redirects (FE-only soft-301 stubs)
+// ---------------------------------------------------------------------------
+describe('slug redirects', () => {
+  describe('normalizeSlug', () => {
+    it('strips leading slash, travels/ prefix and trailing slash', () => {
+      expect(normalizeSlug('/travels/foo-bar/')).toBe('foo-bar');
+      expect(normalizeSlug('  baz  ')).toBe('baz');
+      expect(normalizeSlug(undefined)).toBe('');
+    });
+  });
+
+  describe('buildRedirectStubHtml', () => {
+    const html = buildRedirectStubHtml('new-slug');
+    it('points canonical, meta refresh and JS at the new absolute URL', () => {
+      expect(html).toContain('<link rel="canonical" href="https://metravel.by/travels/new-slug"/>');
+      expect(html).toContain('content="0; url=https://metravel.by/travels/new-slug"');
+      expect(html).toContain('location.replace("https://metravel.by/travels/new-slug")');
+    });
+    it('does NOT noindex the old URL (let canonical/refresh consolidate)', () => {
+      expect(html).not.toMatch(/noindex/i);
+    });
+    it('normalizes a slug passed with prefix/slashes', () => {
+      expect(buildRedirectStubHtml('/travels/x/')).toContain('/travels/x"');
+    });
+  });
+
+  describe('loadRedirectManifest', () => {
+    let dir: string;
+    beforeAll(() => {
+      dir = fs.mkdtempSync(path.join(os.tmpdir(), 'seo-redir-'));
+    });
+    const write = (name: string, data: unknown) => {
+      const p = path.join(dir, name);
+      fs.writeFileSync(p, typeof data === 'string' ? data : JSON.stringify(data), 'utf8');
+      return p;
+    };
+
+    it('returns [] for a missing file', () => {
+      expect(loadRedirectManifest(path.join(dir, 'nope.json'))).toEqual([]);
+    });
+    it('returns [] and warns on invalid JSON', () => {
+      expect(loadRedirectManifest(write('bad.json', '{not json'))).toEqual([]);
+    });
+    it('reads the { redirects: [...] } shape and normalizes slugs', () => {
+      const p = write('ok.json', { redirects: [{ from: '/travels/old/', to: 'new' }] });
+      expect(loadRedirectManifest(p)).toEqual([{ from: 'old', to: 'new' }]);
+    });
+    it('drops self-referential, empty and duplicate `from` entries', () => {
+      const p = write('dirty.json', {
+        redirects: [
+          { from: 'a', to: 'a' },
+          { from: '', to: 'b' },
+          { from: 'c', to: '' },
+          { from: 'd', to: 'd2' },
+          { from: 'd', to: 'd3' },
+        ],
+      });
+      expect(loadRedirectManifest(p)).toEqual([{ from: 'd', to: 'd2' }]);
+    });
+    it('accepts a bare-array manifest too', () => {
+      const p = write('arr.json', [{ from: 'x', to: 'y' }]);
+      expect(loadRedirectManifest(p)).toEqual([{ from: 'x', to: 'y' }]);
+    });
   });
 });
