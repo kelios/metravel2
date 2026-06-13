@@ -523,25 +523,33 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
   const renderItemNative = useCallback(
     ({ item, index }: { item: SliderImage; index: number }) => {
       const uri = uriMap[index] ?? item.url;
+      // Fabric fix: wrap each slide in a View with explicit page dimensions.
+      // Without this intermediate sized container, off-screen-mounted slides in
+      // the horizontal paging FlatList don't receive a correct layout pass when
+      // they scroll into view — the ExpoImage decodes (onLoad fires, bitmap is in
+      // memory) but paints nothing, leaving slides 2+ blank/black on Android.
+      // The explicit-size wrapper forces a full shadow-node layout commit per cell.
       return (
-        <Slide
-          item={item}
-          index={index}
-          uri={uri}
-          containerW={containerW}
-          slideHeight={effectiveContainerH}
-          imagesLength={images.length}
-          styles={styles}
-          blurBackground={blurBackground}
-          isActive={index === currentIndex}
-          imageProps={imageProps}
-          fit={fit}
-          onFirstImageLoad={onFirstImageLoad}
-          onImagePress={onImagePress}
-          firstImagePreloaded={firstImagePreloaded}
-          preloadPriority={Math.abs(index - currentIndex) <= Math.max(1, preloadCount)}
-          contentAspectRatio={contentAspectRatio ?? aspectRatio}
-        />
+        <View style={{ width: containerW, height: effectiveContainerH }}>
+          <Slide
+            item={item}
+            index={index}
+            uri={uri}
+            containerW={containerW}
+            slideHeight={effectiveContainerH}
+            imagesLength={images.length}
+            styles={styles}
+            blurBackground={blurBackground}
+            isActive={index === currentIndex}
+            imageProps={imageProps}
+            fit={fit}
+            onFirstImageLoad={onFirstImageLoad}
+            onImagePress={onImagePress}
+            firstImagePreloaded={firstImagePreloaded}
+            preloadPriority={Math.abs(index - currentIndex) <= Math.max(1, preloadCount)}
+            contentAspectRatio={contentAspectRatio ?? aspectRatio}
+          />
+        </View>
       );
     },
     [uriMap, containerW, effectiveContainerH, images.length, styles, blurBackground, currentIndex, imageProps, fit, onFirstImageLoad, onImagePress, firstImagePreloaded, preloadCount, contentAspectRatio, aspectRatio]
