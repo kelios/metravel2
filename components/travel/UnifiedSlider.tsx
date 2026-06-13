@@ -631,7 +631,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
           getItemLayout={getItemLayout}
           bounces={false}
           decelerationRate={Platform.OS === 'ios' ? 'fast' : 0.98}
-          removeClippedSubviews={Platform.OS === 'ios'}
+          removeClippedSubviews={true}
           updateCellsBatchingPeriod={isTestEnv ? 0 : 50}
           initialScrollIndex={isTestEnv ? undefined : indexRef.current || 0}
           onScrollBeginDrag={() => {

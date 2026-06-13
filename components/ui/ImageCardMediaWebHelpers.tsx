@@ -108,14 +108,29 @@ export const WebMainImage = memo(function WebMainImage({
   showImmediately = false,
 }: WebMainImageProps) {
   const imgRef = useRef<HTMLImageElement>(null);
+  const loadReportedRef = useRef(false);
   const handleLoad = useCallback(() => {
+    if (loadReportedRef.current) return;
+    loadReportedRef.current = true;
     const resolvedSrc = imgRef.current?.currentSrc || src;
     onLoad?.(resolvedSrc);
   }, [onLoad, src]);
 
+  // A new source must be able to report its own load again.
+  useEffect(() => {
+    loadReportedRef.current = false;
+  }, [src]);
+
+  // Synthesize onLoad for images that are already done at mount. The browser does
+  // NOT fire a real <img> onLoad for a cache-hit image that completed before React
+  // attached the handler. This must ALSO run when `loaded` was initialised true
+  // from the module cache (the same image was rendered on the previous screen):
+  // otherwise the parent's onLoad — which drives the first-image / LCP callback
+  // chain — never fires, and the travel-details skeleton overlay covers the page
+  // until a 6s safety timeout, an intermittent blank screen on client navigation.
   useEffect(() => {
     const img = imgRef.current;
-    if (img && img.complete && img.naturalWidth > 0 && !loaded) {
+    if (loaded || (img && img.complete && img.naturalWidth > 0)) {
       handleLoad();
     }
   }, [src, loaded, handleLoad]);

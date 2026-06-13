@@ -583,6 +583,51 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(blurLayers[0].props.style?.filter).toBe('saturate(1.08)')
   })
 
+  it('still reports onLoad on a cache-hit mount so the LCP gate releases', () => {
+    // Regression: navigating into a travel whose hero image was already rendered
+    // on the previous screen initialises webLoaded=true from the module cache.
+    // WebMainImage must still fire onLoad in that case, otherwise the first-image
+    // callback (which releases the travel-details skeleton overlay) never runs and
+    // the page stays blank behind the skeleton until a 6s safety timeout.
+    const src = 'https://example.com/photo-cache-hit.jpg'
+
+    // First mount + load primes loadedWebImageBaseCache for this base src.
+    let firstTree: any
+    renderer.act(() => {
+      firstTree = renderer.create(
+        <ImageCardMedia src={src} height={200} blurBackground fit="contain" />
+      )
+    })
+    const firstMainImage = firstTree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
+      if (node?.props?.['aria-hidden'] === true) return false
+      if (typeof node?.props?.onLoad !== 'function') return false
+      return String(node?.props?.style?.objectFit || '') === 'contain'
+    })[0]
+    renderer.act(() => {
+      firstMainImage.props.onLoad()
+    })
+    renderer.act(() => {
+      firstTree!.unmount()
+    })
+
+    // Second mount of the same base image: webLoaded inits true (cache hit).
+    const onLoad = jest.fn()
+    let secondTree: any
+    renderer.act(() => {
+      secondTree = renderer.create(
+        <ImageCardMedia src={`${src}?w=480&q=60`} height={200} blurBackground fit="contain" onLoad={onLoad} />
+      )
+    })
+
+    // onLoad must fire even though no real <img> load event occurs for a cached image.
+    expect(onLoad).toHaveBeenCalled()
+
+    renderer.act(() => {
+      secondTree!.unmount()
+    })
+  })
+
   it('keeps a previously loaded web image visible after remount', () => {
     const src = 'https://example.com/photo-remount.jpg'
 
