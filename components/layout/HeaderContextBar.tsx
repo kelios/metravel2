@@ -78,8 +78,7 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
   const pathname = usePathname();
   const colors = useThemedColors();
   const { isPhone, isLargePhone, width } = useResponsive();
-  const isJestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
-  const isMobile = resolveHeaderContextBarIsMobile({ width, isPhone, isLargePhone, isJestEnv });
+  const isMobile = resolveHeaderContextBarIsMobile({ width, isPhone, isLargePhone });
   const requestOpen = useTravelSectionsStore((s) => s.requestOpen);
   const requestToggleMapPanel = useMapPanelStore((s) => s.requestToggle);
 

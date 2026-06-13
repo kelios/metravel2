@@ -256,18 +256,11 @@ export function buildListTravelInitialFilter(params: SearchParams) {
 }
 
 export function getListTravelViewportState(params: ResponsiveParams): ViewportState {
-  const effectiveResponsiveWidth =
-    Platform.OS === 'web' && !params.isTestEnv && typeof window !== 'undefined'
-      ? window.innerWidth
-      : params.rawWidth
-  const effectiveResponsiveHeight =
-    Platform.OS === 'web' && !params.isTestEnv && typeof window !== 'undefined'
-      ? window.innerHeight
-      : 0
-  const resolvedIsPortrait =
-    Platform.OS === 'web' && !params.isTestEnv && typeof window !== 'undefined'
-      ? effectiveResponsiveHeight > effectiveResponsiveWidth
-      : params.isPortrait
+  // rawWidth уже из useResponsive (hydration-safe): SSR и первый клиентский рендер дают 0,
+  // после гидрации — реальную ширину. Прямое чтение window.innerWidth здесь давало
+  // расхождение SSR→клиент и React error #418.
+  const effectiveResponsiveWidth = params.rawWidth
+  const resolvedIsPortrait = params.isPortrait
   const isMobileDevice =
     Platform.OS === 'web'
       ? effectiveResponsiveWidth < BREAKPOINTS.TABLET

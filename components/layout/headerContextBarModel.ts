@@ -7,22 +7,17 @@ type ResolveIsMobileArgs = {
   width: number;
   isPhone: boolean;
   isLargePhone: boolean;
-  isJestEnv: boolean;
 };
 
 export function resolveHeaderContextBarIsMobile({
   width,
   isPhone,
   isLargePhone,
-  isJestEnv,
 }: ResolveIsMobileArgs): boolean {
-  const effectiveWidth =
-    Platform.OS === 'web' && !isJestEnv && typeof window !== 'undefined'
-      ? window.innerWidth
-      : width;
-
+  // width уже из useResponsive (hydration-safe: SSR и первый клиентский рендер дают 0).
+  // Прямое чтение window.innerWidth здесь давало расхождение SSR→клиент (React #418).
   return Platform.OS === 'web'
-    ? effectiveWidth < METRICS.breakpoints.tablet
+    ? width < METRICS.breakpoints.tablet
     : isPhone || isLargePhone;
 }
 

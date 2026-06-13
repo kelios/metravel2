@@ -5,13 +5,10 @@ import { METRICS } from '@/constants/layout'
 export const isHeaderTestEnv =
   typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined
 
-export const getEffectiveHeaderWidth = (width: number) => {
-  if (Platform.OS !== 'web') return width
-  if (!isHeaderTestEnv && typeof window !== 'undefined' && window.innerWidth > 0) {
-    return window.innerWidth
-  }
-  return width
-}
+// Возвращаем width как есть — caller уже использует useWindowDimensions/useResponsive,
+// которые hydration-safe (SSR + первый клиентский рендер возвращают одинаковый результат).
+// Прямое чтение window.innerWidth здесь давало расхождение SSR→клиент и React error #418.
+export const getEffectiveHeaderWidth = (width: number) => width
 
 export const getIsHeaderMobile = (width: number, effectiveWebWidth: number) => {
   if (Platform.OS === 'web') {

@@ -431,9 +431,7 @@ function StickySearchBar({
 }: StickySearchBarProps) {
   const colors = useThemedColors();
   const { isPhone, isLargePhone, width } = useResponsive();
-  const isJestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
   const { isMac, isMobile } = getStickySearchViewportState({
-    isJestEnv,
     isLargePhone,
     isPhone,
     width,

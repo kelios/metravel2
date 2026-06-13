@@ -8,16 +8,12 @@ export interface QuickFilterChip {
 }
 
 export function getStickySearchViewportState(params: {
-  isJestEnv: boolean;
   isLargePhone: boolean;
   isPhone: boolean;
   width: number;
 }) {
-  const effectiveWidth =
-    Platform.OS === 'web' && !params.isJestEnv && typeof window !== 'undefined'
-      ? window.innerWidth
-      : params.width;
-
+  // width уже из useResponsive (hydration-safe): SSR и первый клиентский рендер дают 0.
+  // Прямое чтение window.innerWidth давало расхождение SSR→клиент и React error #418.
   return {
     isMac:
       Platform.OS === 'web' &&
@@ -27,7 +23,7 @@ export function getStickySearchViewportState(params: {
     // On compact web widths the sidebar is hidden, so the filter button must be visible.
     isMobile:
       Platform.OS === 'web'
-        ? effectiveWidth < BREAKPOINTS.DESKTOP
+        ? params.width < BREAKPOINTS.DESKTOP
         : params.isPhone || params.isLargePhone,
   };
 }
