@@ -1,6 +1,7 @@
 // Оптимизированный FavoriteButton для списков
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Platform, Pressable, View } from 'react-native';
+import { StyleSheet, Platform, Pressable, View, useWindowDimensions } from 'react-native';
+import { METRICS } from '@/constants/layout';
 import Feather from '@expo/vector-icons/Feather';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
@@ -40,7 +41,9 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
     const inFlightRef = useRef(false);
     const isFav = optimisticFav ?? serverIsFav;
     const colors = useThemedColors();
-    const styles = useMemo(() => getStyles(colors), [colors]);
+    const { width } = useWindowDimensions();
+    const isMobileWeb = Platform.OS === 'web' && width < METRICS.breakpoints.tablet;
+    const styles = useMemo(() => getStyles(colors, isMobileWeb), [colors, isMobileWeb]);
 
     useEffect(() => {
         if (!inFlightRef.current) {
@@ -164,7 +167,7 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
     );
 });
 
-const getStyles = (_colors: ThemedColors) => StyleSheet.create({
+const getStyles = (_colors: ThemedColors, isMobileWeb: boolean) => StyleSheet.create({
     favoriteButtonWrapper: {
         position: 'relative',
         alignSelf: 'flex-start',
@@ -172,10 +175,12 @@ const getStyles = (_colors: ThemedColors) => StyleSheet.create({
     favoriteButton: {
         padding: 8,
         borderRadius: 999,
-        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        // Mobile web: static frost (opaque-ish bg) instead of a live backdrop-filter, which
+        // re-rasterizes scrolling list content behind each card and tanks mobile GPU.
+        backgroundColor: isMobileWeb ? 'rgba(0, 0, 0, 0.6)' : 'rgba(0, 0, 0, 0.4)',
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.3)',
-        ...(Platform.OS === 'web'
+        ...(Platform.OS === 'web' && !isMobileWeb
             ? { backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' } as any
             : {}),
     },

@@ -6,6 +6,21 @@ import { TRAVEL_CARD_MAX_WIDTH } from './utils/listTravelConstants';
 // Alias для более короткой записи
 const designTokens = DESIGN_TOKENS;
 
+// Live `backdrop-filter: blur()` over scrolling list cards tanks the mobile GPU (frost rule,
+// CLAUDE.md). On mobile web we use a static frosted background; the live blur stays desktop-only.
+const isMobileWebViewport =
+  Platform.OS === 'web' &&
+  typeof window !== 'undefined' &&
+  (window.innerWidth || 0) > 0 &&
+  (window.innerWidth || 0) < METRICS.breakpoints.tablet;
+
+const liveBlur = (radius: number) =>
+  isMobileWebViewport
+    ? {}
+    : { backdropFilter: `blur(${radius}px)`, WebkitBackdropFilter: `blur(${radius}px)` };
+
+const FROST_LIGHT = 'rgba(255, 255, 255, 0.75)';
+
 // Создаем отдельные стили для web и native с правильными типами
 const webStyles: any = {
   card: {
@@ -34,8 +49,8 @@ const webStyles: any = {
     },
   },
   favoriteButton: {
-    backdropFilter: "blur(12px)",
-    WebkitBackdropFilter: "blur(12px)",
+    ...liveBlur(12),
+    ...(isMobileWebViewport ? { backgroundColor: FROST_LIGHT } : {}),
     // ✅ A5.2: Упрощенная тень
     boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
     transition: "transform 0.2s ease-out, box-shadow 0.2s ease-out",
@@ -50,8 +65,8 @@ const webStyles: any = {
     },
   },
   adminActionsContainer: {
-    backdropFilter: 'blur(12px)',
-    WebkitBackdropFilter: 'blur(12px)',
+    ...liveBlur(12),
+    ...(isMobileWebViewport ? { backgroundColor: FROST_LIGHT } : {}),
     // ✅ A5.2: Упрощенная тень
     boxShadow: '0 4px 8px rgba(15,23,42,0.1)',
     transition: "transform 0.2s ease-out",
@@ -70,8 +85,8 @@ const webStyles: any = {
   infoBadge: {
     // ✅ A5.2: Упрощенная тень
     boxShadow: "0 2px 6px rgba(0,0,0,0.08)",
-    backdropFilter: "blur(8px)",
-    WebkitBackdropFilter: "blur(8px)",
+    ...liveBlur(8),
+    ...(isMobileWebViewport ? { backgroundColor: FROST_LIGHT } : {}),
     transition: "transform 0.2s ease-out",
     ":hover": {
       transform: "scale(1.03)",

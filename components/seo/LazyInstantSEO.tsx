@@ -54,7 +54,17 @@ function StaticHead({
       }
       el.setAttribute('content', content);
     };
-    upsertMeta('robots', robots);
+    const syncRobots = () => upsertMeta('robots', robots);
+    syncRobots();
+
+    const observer = new MutationObserver(syncRobots);
+    observer.observe(document.head, { childList: true });
+    const timeout = window.setTimeout(() => observer.disconnect(), 5000);
+
+    return () => {
+      window.clearTimeout(timeout);
+      observer.disconnect();
+    };
   }, [robots]);
 
   useEffect(() => {

@@ -166,7 +166,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
         }
 
         // Native: file:// (and in some cases content://) via expo-file-system
-        return await FileSystem.readAsStringAsync(safeUri, { encoding: 'utf8' as any });
+        return await FileSystem.readAsStringAsync(safeUri, { encoding: FileSystem.EncodingType.UTF8 });
     }, []);
 
     const importDescriptionText = useCallback(async () => {

@@ -1,9 +1,11 @@
 import React, { useCallback, useMemo } from 'react'
-import { Platform } from 'react-native'
+import { Platform, useWindowDimensions } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import type { LatLng } from '@/types/coordinates'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+
+const MOBILE_LAYOUT_MAX_WIDTH = 767
 
 interface MapControlsProps {
   userLocation: LatLng | null
@@ -18,15 +20,21 @@ const MOBILE_WEB_TOP_GAP = 16
 const MOBILE_WEB_SIDE_GAP = 16
 const CONTROL_GROUP_GAP = 10
 
-const getButtonStyle = (colors: ThemedColors): React.CSSProperties => ({
+const getButtonStyle = (colors: ThemedColors, isMobile: boolean): React.CSSProperties => ({
   width: '44px',
   height: '44px',
   borderRadius: '18px',
-  backgroundColor: colors.surfaceElevated,
+  // На мобильном живой backdrop-filter поверх карты убивает GPU — статичный фрост
+  // (colors.surfaceMuted), живой блюр только на десктопе (см. CLAUDE.md).
+  backgroundColor: isMobile ? colors.surfaceMuted : colors.surfaceElevated,
   border: `1px solid ${colors.border}`,
   boxShadow: '0 8px 22px rgba(15,23,42,0.14), 0 2px 6px rgba(15,23,42,0.07)',
-  backdropFilter: 'blur(18px) saturate(1.2)',
-  WebkitBackdropFilter: 'blur(18px) saturate(1.2)',
+  ...(isMobile
+    ? {}
+    : {
+        backdropFilter: 'blur(18px) saturate(1.2)',
+        WebkitBackdropFilter: 'blur(18px) saturate(1.2)',
+      }),
   cursor: 'pointer',
   display: 'flex',
   alignItems: 'center',
@@ -44,29 +52,32 @@ const MapControlButton: React.FC<{
   icon: React.ComponentProps<typeof Feather>['name']
   iconSize?: number
   colors: ThemedColors
-}> = ({ onClick, title, ariaLabel, icon, iconSize = 22, colors }) => {
-  const style = useMemo(() => getButtonStyle(colors), [colors])
+  isMobile: boolean
+}> = ({ onClick, title, ariaLabel, icon, iconSize = 22, colors, isMobile }) => {
+  const style = useMemo(() => getButtonStyle(colors, isMobile), [colors, isMobile])
 
   const handleMouseEnter = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
+      if (isMobile) return
       e.currentTarget.style.backgroundColor = colors.surface
       e.currentTarget.style.borderColor = colors.primary
       e.currentTarget.style.transform = 'translateY(-1px)'
       e.currentTarget.style.boxShadow =
         '0 10px 22px rgba(15,23,42,0.18), 0 2px 8px rgba(15,23,42,0.08)'
     },
-    [colors.primary, colors.surface],
+    [colors.primary, colors.surface, isMobile],
   )
 
   const handleMouseLeave = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
+      if (isMobile) return
       e.currentTarget.style.backgroundColor = colors.surfaceElevated
       e.currentTarget.style.borderColor = colors.border
       e.currentTarget.style.transform = 'translateY(0)'
       e.currentTarget.style.boxShadow =
         '0 8px 18px rgba(15,23,42,0.16), 0 1px 4px rgba(15,23,42,0.08)'
     },
-    [colors.border, colors.surfaceElevated],
+    [colors.border, colors.surfaceElevated, isMobile],
   )
 
   return (
@@ -92,6 +103,8 @@ const MapControls: React.FC<MapControlsProps> = ({
   bottomOffset: _bottomOffset,
 }) => {
   const colors = useThemedColors()
+  const { width } = useWindowDimensions()
+  const isMobile = width <= MOBILE_LAYOUT_MAX_WIDTH
   const shouldAlignLeft = alignLeft
 
   const controlsStyle = useMemo(
@@ -143,6 +156,7 @@ const MapControls: React.FC<MapControlsProps> = ({
         }
         icon="crosshair"
         colors={colors}
+        isMobile={isMobile}
       />
       {(onZoomIn || onZoomOut) && (
         <div style={zoomGroupStyle}>
@@ -154,6 +168,7 @@ const MapControls: React.FC<MapControlsProps> = ({
               icon="plus"
               iconSize={20}
               colors={colors}
+              isMobile={isMobile}
             />
           )}
           {onZoomOut && (
@@ -164,6 +179,7 @@ const MapControls: React.FC<MapControlsProps> = ({
               icon="minus"
               iconSize={20}
               colors={colors}
+              isMobile={isMobile}
             />
           )}
         </div>

@@ -314,6 +314,17 @@ const Map: React.FC<TravelProps> = ({
         const ROUTE_SURFACE = ${JSON.stringify(themeColors.surface)};
         const ROUTE_START = ${JSON.stringify(themeColors.success || themeColors.primary)};
 
+        // Экранируем значения точек перед вставкой в HTML popup: поля приходят с бэка
+        // и могут содержать <, >, ", ' и & — без эскейпа это XSS в WebView (#113).
+        function escapeHtml(value) {
+          return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+        }
+
         window.__metravelRenderPoints = function(payload) {
           try {
             const data = payload || {};
@@ -338,18 +349,18 @@ const Map: React.FC<TravelProps> = ({
               let popupContent = '';
               if (point.travelImageThumbUrl) {
                 const link = (point.articleUrl || point.urlTravel || '');
-                popupContent += '<a href="#" class="popup-image-link" data-open-url="' + String(link).replace(/"/g, '&quot;') + '">' +
-                  '<img src="' + point.travelImageThumbUrl + '" class="popup-image" alt="' + (point.address || 'Image') + '" />' +
+                popupContent += '<a href="#" class="popup-image-link" data-open-url="' + escapeHtml(link) + '">' +
+                  '<img src="' + escapeHtml(point.travelImageThumbUrl) + '" class="popup-image" alt="' + escapeHtml(point.address || 'Image') + '" />' +
                 '</a>';
               }
 
               popupContent += '<div class="popup-text">';
               popupContent += '<div class="popup-label">Адрес:</div>';
-              popupContent += '<div class="popup-value">' + (point.address || 'Не указан') + '</div>';
+              popupContent += '<div class="popup-value">' + escapeHtml(point.address || 'Не указан') + '</div>';
               popupContent += '<div class="popup-label">Координаты:</div>';
-              popupContent += '<div class="popup-value">' + point.coord + '</div>';
+              popupContent += '<div class="popup-value">' + escapeHtml(point.coord) + '</div>';
               popupContent += '<div class="popup-label">Категория:</div>';
-              popupContent += '<div class="popup-value">' + (point.categoryName || 'Не указана') + '</div>';
+              popupContent += '<div class="popup-value">' + escapeHtml(point.categoryName || 'Не указана') + '</div>';
               popupContent += '</div>';
 
               const marker = L.marker([lat, lng], { icon: markerIcon }).addTo(markersLayer);

@@ -1,12 +1,11 @@
 const fs = require('fs')
 const path = require('path')
-const { runNodeCli, makeTempDir, writeTextFile } = require('./cli-test-utils')
+const { runCli, runNodeCli, makeTempDir, writeTextFile } = require('./cli-test-utils')
 const {
   MAX_LOC,
   parseArgs,
   isScannedFile,
   getScannedChangedFiles,
-  getGitTrackedFileLoc,
   scanChangedFiles,
 } = require('@/scripts/guard-file-complexity-changed')
 
@@ -79,19 +78,37 @@ describe('guard-file-complexity-changed', () => {
   })
 
   it('treats already oversized tracked files as non-blocking legacy touches', () => {
-    const legacyOversizedFile = 'services/pdf-export/generators/v2/runtime/atlasPages.ts'
-    const baselineLoc = getGitTrackedFileLoc(legacyOversizedFile)
-    expect(typeof baselineLoc).toBe('number')
-    expect(Number(baselineLoc)).toBeGreaterThan(MAX_LOC)
+    const dir = makeTempDir('guard-file-complexity-changed-legacy-')
+    const oldCwd = process.cwd()
+    const legacyOversizedFile = 'services/legacy.ts'
+    const git = (...gitArgs) =>
+      runCli('git', gitArgs, { cwd: dir })
+    try {
+      process.chdir(dir)
 
-    const report = scanChangedFiles([legacyOversizedFile])
-    expect(report.violations).toEqual([])
-    expect(report.legacyOversizedTouched).toEqual([
-      expect.objectContaining({
-        file: legacyOversizedFile,
-        baselineLoc,
-      }),
-    ])
+      git('init', '-q')
+      git('config', 'user.email', 'test@example.com')
+      git('config', 'user.name', 'Test')
+
+      const oversizedContent = `${Array.from({ length: MAX_LOC + 10 }, () => 'x').join('\n')}\n`
+      writeTextFile(path.join(dir, legacyOversizedFile), oversizedContent)
+      git('add', '-A')
+      git('commit', '-q', '-m', 'legacy oversized baseline')
+
+      const baselineLoc = MAX_LOC + 11
+
+      const report = scanChangedFiles([legacyOversizedFile])
+      expect(report.violations).toEqual([])
+      expect(report.legacyOversizedTouched).toEqual([
+        expect.objectContaining({
+          file: legacyOversizedFile,
+          baselineLoc,
+        }),
+      ])
+    } finally {
+      process.chdir(oldCwd)
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
   })
 
   it('emits dry-run json payload', () => {

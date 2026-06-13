@@ -150,9 +150,20 @@ const appendInlineStyle = (attrs: string, declaration: string) => {
   return attrs.replace(styleMatch[0], `style="${merged}"`)
 }
 
+const escapeHtmlAttr = (value: string) =>
+  String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+
 const buildRichImageBackdropDeclaration = (src: string) => {
-  const safeSrc = String(src || '').trim().replace(/\\/g, '\\\\').replace(/'/g, "\\'")
-  return safeSrc ? `--travel-rich-image:url('${safeSrc}')` : ''
+  // CSS-escape for the url('...') context, then HTML-escape so the declaration is safe to
+  // place inside a style="..." attribute without breaking out of the attribute or the tag.
+  const cssSafe = String(src || '').trim().replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+  if (!cssSafe) return ''
+  return escapeHtmlAttr(`--travel-rich-image:url('${cssSafe}')`)
 }
 
 const normalizeImgTags = (html: string): string => {
@@ -180,7 +191,7 @@ const normalizeImgTags = (html: string): string => {
 
     let out = tag.replace(styleMatch ? styleMatch[0] : '', '').replace(/>$/, ` style="${ensured}">`)
     out = out
-      .replace(/\bsrc="[^"]*"/i, optimizedSrc ? `src="${optimizedSrc.replace(/"/g, '&quot;')}"` : '')
+      .replace(/\bsrc="[^"]*"/i, optimizedSrc ? `src="${escapeHtmlAttr(optimizedSrc)}"` : '')
       .replace(/\bsrcset="[^"]*"/i, '')
       .replace(/\bsizes="[^"]*"/i, '')
       .replace(/\bwidth="[^"]*"/i, '')

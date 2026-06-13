@@ -143,6 +143,12 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       gap: 2,
       paddingHorizontal: 5,
       paddingVertical: 4,
+      // Mobile web: kill the live backdrop-filter (frost rule, CLAUDE.md). The translucent
+      // surfaceMuted background already gives the frosted-glass look without re-rasterizing
+      // the scrolling list behind each card every frame.
+      ...(Platform.OS === 'web'
+        ? ({ backdropFilter: 'none', WebkitBackdropFilter: 'none' } as any)
+        : {}),
     },
 
     adminBtn: {

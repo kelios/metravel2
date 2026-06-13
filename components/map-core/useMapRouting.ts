@@ -1,6 +1,6 @@
 // components/map-core/useMapRouting.ts
 // C4.2: Unified routing hook — combines useRouting + RoutingMachine sync + useElevation
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouting } from '@/components/MapPage/useRouting';
 import { useElevation } from './useElevation';
 import { showRouteBuiltToast, showRouteErrorToast } from '@/utils/mapToasts';
@@ -70,13 +70,14 @@ export function useMapRouting(
     return `${coords.length}:${fmt(first?.[0])},${fmt(first?.[1])}:${fmt(last?.[0])},${fmt(last?.[1])}`;
   }, [routingState.coords]);
 
-  // Elevation
-  const elevationGainRef = useRef<number | null>(null);
-  const elevationLossRef = useRef<number | null>(null);
+  // Elevation: храним в state (а не ref), чтобы приход высот ПОСЛЕ построения
+  // маршрута пересоздавал result и доставлял свежие gain/loss через onRouteChange (#121).
+  const [elevationGain, setElevationGain] = useState<number | null>(null);
+  const [elevationLoss, setElevationLoss] = useState<number | null>(null);
 
   const handleElevationResult = useCallback((gain: number | null, loss: number | null) => {
-    elevationGainRef.current = gain;
-    elevationLossRef.current = loss;
+    setElevationGain(gain);
+    setElevationLoss(loss);
   }, []);
 
   useElevation(
@@ -96,9 +97,9 @@ export function useMapRouting(
     distance: routingState.distance,
     duration: routingState.duration,
     coords: routingState.coords,
-    elevationGain: elevationGainRef.current,
-    elevationLoss: elevationLossRef.current,
-  }), [routingState.loading, routingState.error, routingState.distance, routingState.duration, routingState.coords]);
+    elevationGain,
+    elevationLoss,
+  }), [routingState.loading, routingState.error, routingState.distance, routingState.duration, routingState.coords, elevationGain, elevationLoss]);
 
   // Sync to parent & show toasts
   const prevStateRef = useRef<string>('');
@@ -120,7 +121,7 @@ export function useMapRouting(
       return;
     }
 
-    const stateKey = `${result.loading}|${result.error}|${result.distance}|${result.duration}|${coordsKey}`;
+    const stateKey = `${result.loading}|${result.error}|${result.distance}|${result.duration}|${coordsKey}|${result.elevationGain}|${result.elevationLoss}`;
     if (stateKey === prevStateRef.current) return;
     prevStateRef.current = stateKey;
 
@@ -137,7 +138,7 @@ export function useMapRouting(
     onRouteChange?.(result);
     // result is derived from the listed primitives; onRouteChange omitted intentionally as a stable parent callback
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasTwoPoints, result.loading, result.error, result.distance, result.duration, coordsKey]);
+  }, [hasTwoPoints, result.loading, result.error, result.distance, result.duration, coordsKey, result.elevationGain, result.elevationLoss]);
 
   return result;
 }

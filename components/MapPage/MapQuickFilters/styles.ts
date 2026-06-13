@@ -120,18 +120,25 @@ export const getStyles = (
       minHeight: options.isVeryNarrow ? 36 : options.isNarrow ? 38 : 40,
       minWidth: options.isNarrow ? 0 : DESKTOP_RADIUS_CLUSTER_MIN_WIDTH,
       borderRadius: CONTROL_RADIUS,
-      backgroundColor: IS_WEB ? colors.surfaceElevated : colors.surface,
+      backgroundColor: IS_WEB
+        ? options.isNarrow
+          ? colors.surfaceMuted
+          : colors.surfaceElevated
+        : colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
       paddingLeft: options.isVeryNarrow ? 6 : 8,
       paddingRight: 4,
-      ...(IS_WEB
+      // Живой блюр только на десктопе; на мобильном статичный фрост (GPU), см. CLAUDE.md.
+      ...(IS_WEB && !options.isNarrow
         ? ({
             backdropFilter: 'blur(20px) saturate(1.12)',
             WebkitBackdropFilter: 'blur(20px) saturate(1.12)',
             boxShadow: colors.boxShadows.medium,
           } as any)
-        : colors.shadows.light),
+        : IS_WEB
+          ? null
+          : colors.shadows.light),
     },
     radiusActionsGroup: {
       flexDirection: 'row',
@@ -182,10 +189,15 @@ export const getStyles = (
       paddingHorizontal: options.isVeryNarrow ? 10 : 12,
       paddingVertical: 4,
       borderRadius: CONTROL_RADIUS,
-      backgroundColor: IS_WEB ? colors.surfaceElevated : colors.surface,
+      backgroundColor: IS_WEB
+        ? options.isNarrow
+          ? colors.surfaceMuted
+          : colors.surfaceElevated
+        : colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
-      ...(IS_WEB
+      // Живой блюр только на десктопе; на мобильном статичный фрост (GPU), см. CLAUDE.md.
+      ...(IS_WEB && !options.isNarrow
         ? ({
             backdropFilter: 'blur(20px) saturate(1.12)',
             WebkitBackdropFilter: 'blur(20px) saturate(1.12)',
@@ -193,7 +205,12 @@ export const getStyles = (
             cursor: 'pointer',
             transition: 'transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease',
           } as any)
-        : colors.shadows.light),
+        : IS_WEB
+          ? ({
+              cursor: 'pointer',
+              transition: 'transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease',
+            } as any)
+          : colors.shadows.light),
     },
     fieldPressed: {
       opacity: 0.85,
@@ -207,17 +224,24 @@ export const getStyles = (
       borderRadius: CONTROL_RADIUS,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: IS_WEB ? colors.surfaceElevated : colors.surface,
+      backgroundColor: IS_WEB
+        ? options.isNarrow
+          ? colors.surfaceMuted
+          : colors.surfaceElevated
+        : colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
-      ...(IS_WEB
+      // Живой блюр только на десктопе; на мобильном статичный фрост (GPU), см. CLAUDE.md.
+      ...(IS_WEB && !options.isNarrow
         ? ({
             backdropFilter: 'blur(18px) saturate(1.08)',
             WebkitBackdropFilter: 'blur(18px) saturate(1.08)',
             boxShadow: colors.boxShadows.medium,
             cursor: 'pointer',
           } as any)
-        : colors.shadows.light),
+        : IS_WEB
+          ? ({ cursor: 'pointer' } as any)
+          : colors.shadows.light),
     },
     iconTextButton: {
       minWidth: options.isVeryNarrow ? 54 : options.isNarrow ? 60 : 66,
@@ -228,17 +252,24 @@ export const getStyles = (
       borderRadius: CONTROL_RADIUS,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: IS_WEB ? colors.surfaceElevated : colors.surface,
+      backgroundColor: IS_WEB
+        ? options.isNarrow
+          ? colors.surfaceMuted
+          : colors.surfaceElevated
+        : colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
-      ...(IS_WEB
+      // Живой блюр только на десктопе; на мобильном статичный фрост (GPU), см. CLAUDE.md.
+      ...(IS_WEB && !options.isNarrow
         ? ({
             backdropFilter: 'blur(18px) saturate(1.08)',
             WebkitBackdropFilter: 'blur(18px) saturate(1.08)',
             boxShadow: colors.boxShadows.medium,
             cursor: 'pointer',
           } as any)
-        : colors.shadows.light),
+        : IS_WEB
+          ? ({ cursor: 'pointer' } as any)
+          : colors.shadows.light),
     },
     iconTextButtonText: {
       maxWidth: '100%',

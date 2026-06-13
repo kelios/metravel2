@@ -7,7 +7,12 @@
  */
 
 import { test, expect } from './fixtures';
-import { preacceptCookies, navigateToFirstTravel, openFallbackTravelDetails } from './helpers/navigation';
+import {
+  FALLBACK_TRAVEL_SLUG,
+  preacceptCookies,
+  navigateToFirstTravel,
+  openFallbackTravelDetails,
+} from './helpers/navigation';
 
 test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
   /**
@@ -436,8 +441,9 @@ test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
     test('should show retry button on error', async ({ page }) => {
       await preacceptCookies(page);
       await page.route('**/api/travels/by-slug/**', (route: any) => route.abort('failed'));
+      await page.route('**/travels/by-slug/**', (route: any) => route.abort('failed'));
 
-      await page.goto('/travels/kostel-svyatogo-antoniya-paduanskogo', { waitUntil: 'domcontentloaded' });
+      await page.goto(`/travels/${FALLBACK_TRAVEL_SLUG}`, { waitUntil: 'domcontentloaded' });
 
       await expect(
         page.locator('text=/Не удалось загрузить путешествие|ошибка загрузки/i').first()

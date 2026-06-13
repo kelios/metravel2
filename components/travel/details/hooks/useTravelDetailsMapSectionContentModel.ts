@@ -100,6 +100,10 @@ export function useTravelDetailsMapSectionContentModel({
   useEffect(() => {
     resetRoutePreviewItems()
     resetKeyPointLabels()
+    // On web the viewport gate is sticky once the map scrolls into view. An SPA
+    // navigation reuses this hook instance, so reset it per travel — otherwise the
+    // next travel mounts the heavy Leaflet map immediately, bypassing scroll-into-view.
+    if (Platform.OS === 'web') setMapNearViewport(false)
   }, [travel.id, travel.slug, resetRoutePreviewItems, resetKeyPointLabels])
 
   const hasMapData = useMemo(

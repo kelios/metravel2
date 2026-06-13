@@ -251,24 +251,24 @@ export const Menu: React.FC<MenuProps> & { Item: React.FC<MenuItemProps> } = ({
         <Portal>
           <View style={styles.menuOverlay} accessibilityRole="menu" testID="web-menu-overlay">
             <Pressable style={styles.menuBackdrop} onPress={onDismiss} />
-            <View
-              style={[
-                styles.menuPanel,
-                panelPosition
-                  ? ({
-                      top: panelPosition.top,
-                      left: panelPosition.left,
-                      width: panelPosition.width,
-                      maxHeight: panelPosition.maxHeight,
-                      overflowY: 'auto',
-                    } as any)
-                  : null,
-                contentStyle,
-              ] as any}
-              testID="web-menu-panel"
-            >
-              {children}
-            </View>
+            {panelPosition ? (
+              <View
+                style={[
+                  styles.menuPanel,
+                  {
+                    top: panelPosition.top,
+                    left: panelPosition.left,
+                    width: panelPosition.width,
+                    maxHeight: panelPosition.maxHeight,
+                    overflowY: 'auto',
+                  } as any,
+                  contentStyle,
+                ] as any}
+                testID="web-menu-panel"
+              >
+                {children}
+              </View>
+            ) : null}
           </View>
         </Portal>
       ) : null}

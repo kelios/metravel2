@@ -315,6 +315,14 @@ function injectAutoHeadingAnchors(html: string): string {
   })
 }
 
+function mergeNoopenerRel(rel?: unknown): string {
+  const tokens = typeof rel === 'string' ? rel.trim().split(/\s+/).filter(Boolean) : []
+  const seen = new Set(tokens.map((t) => t.toLowerCase()))
+  if (!seen.has('noopener')) tokens.push('noopener')
+  if (!seen.has('noreferrer')) tokens.push('noreferrer')
+  return tokens.join(' ')
+}
+
 export function sanitizeRichText(html?: string | null): string {
   return sanitizeRichTextInternal(html, { preferConfiguredFirstPartyOrigin: true })
 }
@@ -365,9 +373,12 @@ function sanitizeRichTextInternal(
         if (attribs.class) result.class = attribs.class
         if (href) {
           result.href = href
-          result.rel = attribs.rel || 'noopener noreferrer'
-          if (!isHashLink && attribs.target === '_blank') {
+          const opensNewTab = !isHashLink && attribs.target === '_blank'
+          if (opensNewTab) {
             result.target = '_blank'
+            result.rel = mergeNoopenerRel(attribs.rel)
+          } else {
+            result.rel = typeof attribs.rel === 'string' && attribs.rel.trim() ? attribs.rel : 'noopener noreferrer'
           }
         }
         if (attribs.title) result.title = attribs.title

@@ -13,10 +13,19 @@ export const runNodeCli = (
   args: string[],
   env: Record<string, string> = {},
 ): CliRunResult => {
+  return runCli(process.execPath, args, { env });
+};
+
+export const runCli = (
+  command: string,
+  args: string[],
+  options: { cwd?: string; env?: Record<string, string> } = {},
+): CliRunResult => {
   try {
-    const stdout = execFileSync(process.execPath, args, {
+    const stdout = execFileSync(command, args, {
       encoding: 'utf8',
-      env: { ...process.env, ...env },
+      cwd: options.cwd,
+      env: { ...process.env, ...(options.env ?? {}) },
     });
     return {
       status: 0,

@@ -43,11 +43,18 @@ function ReadingProgressBar({
         }
         
         const progress = Math.min(Math.max(value / scrollableHeight, 0), 1);
-        Animated.timing(progressAnim, {
-          toValue: progress,
-          duration: 100,
-          useNativeDriver: false,
-        }).start();
+        // On web the CSS `transition: transform` already smooths the bar, so
+        // set the value directly and avoid a second JS-driven Animated.timing
+        // running on every scroll frame. Native keeps the timing animation.
+        if (Platform.OS === 'web') {
+          progressAnim.setValue(progress);
+        } else {
+          Animated.timing(progressAnim, {
+            toValue: progress,
+            duration: 100,
+            useNativeDriver: false,
+          }).start();
+        }
       });
     });
 

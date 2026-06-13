@@ -86,6 +86,26 @@ describe('sanitizeRichText', () => {
     expect(sanitized).toContain('<h2 id="bedkowska">3. Бендковская долина / Dolina Będkowska</h2>')
   })
 
+  it('forces noopener noreferrer on target=_blank links even when author sets a weaker rel', () => {
+    const html = '<a href="https://example.com" target="_blank" rel="opener">x</a>'
+
+    const sanitized = sanitizeRichText(html)
+
+    expect(sanitized).toContain('target="_blank"')
+    expect(sanitized).toMatch(/rel="[^"]*\bnoopener\b[^"]*"/)
+    expect(sanitized).toMatch(/rel="[^"]*\bnoreferrer\b[^"]*"/)
+  })
+
+  it('merges noopener noreferrer into an existing author rel on target=_blank', () => {
+    const html = '<a href="https://example.com" target="_blank" rel="nofollow">x</a>'
+
+    const sanitized = sanitizeRichText(html)
+
+    expect(sanitized).toContain('nofollow')
+    expect(sanitized).toMatch(/rel="[^"]*\bnoopener\b[^"]*"/)
+    expect(sanitized).toMatch(/rel="[^"]*\bnoreferrer\b[^"]*"/)
+  })
+
   it('upgrades insecure first-party media urls to https', () => {
     const html = [
       '<p><img src="http://metravel.by/travel-description-image/548/description/a06feb1a8ba0433db10535734e618ebc.PNG.webp"></p>',

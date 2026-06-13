@@ -6,7 +6,7 @@
  */
 
 import { test, expect } from './fixtures'
-import { preacceptCookies, navigateToFirstTravel } from './helpers/navigation'
+import { preacceptCookies, navigateToFirstTravel, openFallbackTravelDetails } from './helpers/navigation'
 
 /** Mock tile requests with 1×1 transparent PNG to speed up tests */
 async function installTileMock(page: import('@playwright/test').Page) {
@@ -23,9 +23,16 @@ async function installTileMock(page: import('@playwright/test').Page) {
 
 /** Scroll the travel detail page down to the map section and wait for markers */
 async function scrollToMapAndWaitForMarkers(page: import('@playwright/test').Page) {
-  const mapTab = page.getByRole('tab', { name: /Карта/i }).first()
+  const detailsRoot = page.locator('[data-testid="travel-details-page"], [testID="travel-details-page"]').first()
+  const mapTab = detailsRoot.getByRole('tab', { name: /Карта/i }).first()
   if (await mapTab.isVisible().catch(() => false)) {
     await mapTab.click().catch(() => null)
+  }
+  const mapNavButton = detailsRoot
+    .getByRole('button', { name: /Карта маршрута|разделу Карта/i })
+    .first()
+  if (await mapNavButton.isVisible().catch(() => false)) {
+    await mapNavButton.click().catch(() => null)
   }
 
   const mapSection = page.locator('[data-testid="travel-details-map"], [testID="travel-details-map"]').first()
@@ -126,8 +133,8 @@ test.describe('Travel detail page — map popup close @smoke', () => {
       await preacceptCookies(page)
       await installTileMock(page)
 
-      // Navigate to a real travel detail page
-      const navigated = await navigateToFirstTravel(page)
+      // Navigate to a stable travel detail page with deterministic map markers.
+      const navigated = await openFallbackTravelDetails(page)
       expect(navigated, 'No travel cards available').toBe(true)
 
       // Scroll down to the map section
@@ -138,27 +145,19 @@ test.describe('Travel detail page — map popup close @smoke', () => {
       const marker = page.locator('.leaflet-marker-icon').first()
       await tapMobileMarker(marker, page)
 
-      // On mobile (390px < 560px), fullscreen overlay should appear via portal
-      const closeBtn = page.locator('button[aria-label="Закрыть"]')
-      await expect(closeBtn).toBeVisible({ timeout: 10_000 })
-
-      // Verify the fullscreen overlay is actually covering the screen
+      // On mobile web, the card is promoted to a fullscreen overlay portal.
       const overlay = page.locator(
-        'body > div[style*="position: fixed"][style*="z-index: 99990"][style*="inset"]',
+        'body > div[style*="position: fixed"][style*="z-index: 99990"]',
       )
-      await expect(overlay).toBeVisible({ timeout: 5_000 })
+      await expect(overlay).toBeVisible({ timeout: 10_000 })
+      const closeBtn = overlay.locator('button[aria-label="Закрыть"]')
+      await expect(closeBtn).toBeVisible({ timeout: 5_000 })
 
       // Close the popup via the close button
       await closeBtn.click()
 
-      // The fullscreen overlay should disappear
+      // The fullscreen overlay should disappear.
       await expect(overlay).not.toBeVisible({ timeout: 5_000 })
-
-      // No stuck fullscreen overlays on the page
-      const stuckOverlays = page.locator(
-        'body > div[style*="position: fixed"][style*="inset: 0"]',
-      )
-      await expect(stuckOverlays).toHaveCount(0, { timeout: 3_000 })
 
       // Verify the map is still interactive after closing. Re-open a different
       // marker because Leaflet keeps the just-closed marker in an internal
@@ -167,7 +166,8 @@ test.describe('Travel detail page — map popup close @smoke', () => {
         ? page.locator('.leaflet-marker-icon').nth(1)
         : marker
       await tapMobileMarker(reopenMarker, page)
-      await expect(closeBtn).toBeVisible({ timeout: 10_000 })
+      await expect(overlay).toBeVisible({ timeout: 10_000 })
+      await expect(closeBtn).toBeVisible({ timeout: 5_000 })
 
       // Close again to confirm repeatability
       await closeBtn.click()
@@ -220,7 +220,7 @@ test.describe('Travel detail page — map popup close @smoke', () => {
       await preacceptCookies(page)
       await installTileMock(page)
 
-      const navigated = await navigateToFirstTravel(page)
+      const navigated = await openFallbackTravelDetails(page)
       expect(navigated, 'No travel cards available').toBe(true)
 
       const hasMarkers = await scrollToMapAndWaitForMarkers(page)
@@ -236,16 +236,17 @@ test.describe('Travel detail page — map popup close @smoke', () => {
         // Scroll marker into view
         await tapMobileMarker(m, page)
 
-        const closeBtn = page.locator('button[aria-label="Закрыть"]')
+        const overlay = page.locator(
+          'body > div[style*="position: fixed"][style*="z-index: 99990"]',
+        )
+        await expect(overlay).toBeVisible({ timeout: 10_000 })
+        const closeBtn = overlay.locator('button[aria-label="Закрыть"]')
         await expect(closeBtn).toBeVisible({ timeout: 10_000 })
 
         await closeBtn.click()
 
-        // Verify overlay is gone
-        const fixedOverlays = page.locator(
-          'body > div[style*="position: fixed"][style*="inset: 0"]',
-        )
-        await expect(fixedOverlays).toHaveCount(0, { timeout: 5_000 })
+        // Verify the fullscreen overlay is gone.
+        await expect(overlay).not.toBeVisible({ timeout: 5_000 })
       }
 
       // Final sanity: no orphan portals left

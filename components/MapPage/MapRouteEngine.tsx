@@ -5,7 +5,7 @@
 // Этот компонент монтируется ТОЛЬКО в native-ветке MapPanel, считает геометрию
 // маршрута через общий useMapRouting и прокидывает её в стор теми же сеттерами,
 // что и web-ветка. Ничего не рендерит.
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useMapRouting, type UseMapRoutingResult } from '@/components/map-core';
 import type { TransportMode } from '@/components/map-core/types';
 
@@ -57,6 +57,23 @@ const MapRouteEngine: React.FC<MapRouteEngineProps> = ({
     },
     handleRouteChange,
   );
+
+  // На размонтировании (route -> radius / закрытие) сбрасываем route-стейт в сторе,
+  // иначе fullRouteCoords/routeDistance/elevation остаются от прошлого маршрута (#122).
+  const resetRef = useRef({
+    setFullRouteCoords,
+    setRouteDistance,
+    setRouteElevationStats,
+  });
+  resetRef.current = { setFullRouteCoords, setRouteDistance, setRouteElevationStats };
+
+  useEffect(() => {
+    return () => {
+      resetRef.current.setFullRouteCoords([]);
+      resetRef.current.setRouteDistance(0);
+      resetRef.current.setRouteElevationStats?.(null, null);
+    };
+  }, []);
 
   return null;
 };

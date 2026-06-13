@@ -99,8 +99,14 @@ export const getStyles = (
               boxShadow: isMobile
                 ? themedColors.boxShadows.medium
                 : themedColors.boxShadows.card,
-              backdropFilter: 'blur(20px) saturate(1.05)',
-              WebkitBackdropFilter: 'blur(20px) saturate(1.05)',
+              // На мобильном живой backdrop-filter поверх скролла убивает GPU —
+              // используем статичный фрост (см. CLAUDE.md), блюр только на десктопе.
+              ...(isMobile
+                ? { backgroundColor: themedColors.surfaceMuted }
+                : {
+                    backdropFilter: 'blur(20px) saturate(1.05)',
+                    WebkitBackdropFilter: 'blur(20px) saturate(1.05)',
+                  }),
               borderTopLeftRadius: isMobile ? 18 : PANEL_RADIUS,
               borderTopRightRadius: isMobile ? 18 : PANEL_RADIUS,
               borderBottomLeftRadius: isMobile ? 0 : PANEL_RADIUS,
@@ -153,9 +159,14 @@ export const getStyles = (
         minHeight: isMobile ? 48 : undefined,
         ...(Platform.OS === 'web'
           ? ({
-              backgroundColor: isMobile ? themedColors.surfaceAlpha40 : themedColors.surface,
-              backdropFilter: 'blur(20px) saturate(1.05)',
-              WebkitBackdropFilter: 'blur(20px) saturate(1.05)',
+              backgroundColor: isMobile ? themedColors.surfaceMuted : themedColors.surface,
+              // Статичный фрост на мобильном вместо живого блюра (GPU), см. CLAUDE.md.
+              ...(isMobile
+                ? null
+                : {
+                    backdropFilter: 'blur(20px) saturate(1.05)',
+                    WebkitBackdropFilter: 'blur(20px) saturate(1.05)',
+                  }),
               boxShadow: '0 1px 0 rgba(15,23,42,0.06)',
             } as any)
           : null),
