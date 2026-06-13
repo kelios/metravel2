@@ -67,6 +67,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
     mobileHeightPercent,
     onImagePress,
     firstImagePreloaded,
+    fillContainer = false,
   } = props;
 
   const sliderInstanceId = useId();
@@ -121,6 +122,17 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
   // that attach listeners re-run after the node mounts (deps don't otherwise
   // change between initial render and node availability).
   const [nodeReady, setNodeReady] = useState(false);
+
+  // Measured parent height — used when fillContainer is set so native slides
+  // match the (clipped) hero height instead of the aspect-ratio-driven containerH.
+  const [measuredH, setMeasuredH] = useState(0);
+
+  // When the slider should fill its parent (e.g. the travel hero, which clips to a
+  // fixed heroHeight), use the measured parent height for slides so the photo isn't
+  // taller than the visible area and pushed toward the bottom. Native-only; web uses
+  // a separate Slider.web implementation, so this never alters web layout.
+  const fillNative = fillContainer && !isWeb;
+  const effectiveContainerH = fillNative && measuredH > 0 ? measuredH : containerH;
 
   // Shared value for animated dots (native only)
   const x = useSharedValue(0);
@@ -275,10 +287,13 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
   // Layout handler
   const onLayout = useCallback(
     (e: LayoutChangeEvent) => {
-      const w = e.nativeEvent.layout.width;
+      const { width: w, height: h } = e.nativeEvent.layout;
       setContainerWidth(w);
+      if (fillNative && h > 0) {
+        setMeasuredH((prev) => (Math.abs(prev - h) > 1 ? h : prev));
+      }
     },
-    [setContainerWidth]
+    [setContainerWidth, fillNative]
   );
 
   // Animated scroll handler (native only)
@@ -514,7 +529,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
           index={index}
           uri={uri}
           containerW={containerW}
-          slideHeight={containerH}
+          slideHeight={effectiveContainerH}
           imagesLength={images.length}
           styles={styles}
           blurBackground={blurBackground}
@@ -529,7 +544,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
         />
       );
     },
-    [uriMap, containerW, containerH, images.length, styles, blurBackground, currentIndex, imageProps, fit, onFirstImageLoad, onImagePress, firstImagePreloaded, preloadCount, contentAspectRatio, aspectRatio]
+    [uriMap, containerW, effectiveContainerH, images.length, styles, blurBackground, currentIndex, imageProps, fit, onFirstImageLoad, onImagePress, firstImagePreloaded, preloadCount, contentAspectRatio, aspectRatio]
   );
 
   if (!images.length) return null;
@@ -616,7 +631,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
           getItemLayout={getItemLayout}
           bounces={false}
           decelerationRate={Platform.OS === 'ios' ? 'fast' : 0.98}
-          removeClippedSubviews={true}
+          removeClippedSubviews={Platform.OS === 'ios'}
           updateCellsBatchingPeriod={isTestEnv ? 0 : 50}
           initialScrollIndex={isTestEnv ? undefined : indexRef.current || 0}
           onScrollBeginDrag={() => {
@@ -633,7 +648,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
   };
 
   return (
-    <View style={styles.sliderStack} testID="slider-stack">
+    <View style={[styles.sliderStack, fillNative && { flex: 1, alignSelf: 'stretch' }]} testID="slider-stack">
       <View
         ref={wrapperRef}
         testID="slider-wrapper"
@@ -642,7 +657,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
         onLayout={onLayout}
         style={[
           styles.wrapper,
-          { height: containerH },
+          fillNative ? { flex: 1, width: '100%' } : { height: containerH },
           isMobile && styles.wrapperMobile,
           isTablet && styles.wrapperTablet,
           isWeb && !fullBleed
