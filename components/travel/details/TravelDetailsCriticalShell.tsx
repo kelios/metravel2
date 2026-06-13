@@ -180,7 +180,7 @@ export default function TravelDetailsCriticalShell({
       aria-label={mainAriaLabel}
       style={wrapperStyle}
     >
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <View style={mainContainerStyle}>
           {showSkeletonOverlay && (
             <TravelDetailsSkeletonOverlay
