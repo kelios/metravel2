@@ -75,6 +75,14 @@ const getHeaderVariant = (pathname: string): HeaderVariant => {
     return hasBar ? 'desktop-bar' : 'desktop-nobar';
 };
 
+// SSR/первый-рендер вариант: НЕ читаем window/sessionStorage, иначе статический
+// HTML (всегда desktop) не совпадёт с первым клиентским рендером → hydration mismatch (#418).
+// Реальный вариант/высоту подтягивает useEffect после маунта.
+const getStaticHeaderVariant = (pathname: string): HeaderVariant => {
+    const hasBar = shouldShowHeaderContextBar(pathname || '/', false);
+    return hasBar ? 'desktop-bar' : 'desktop-nobar';
+};
+
 const readCachedHeaderHeight = (variant: HeaderVariant): number => {
     const fallback = HEADER_HEIGHT_FALLBACK[variant];
     if (Platform.OS !== 'web' || typeof window === 'undefined') return fallback;
@@ -90,16 +98,15 @@ const readCachedHeaderHeight = (variant: HeaderVariant): number => {
 
 const Header = React.memo(function Header() {
     const pathname = usePathname() || '/';
-    const [, setVariant] = useState<HeaderVariant>(() => getHeaderVariant(pathname));
-    const [measuredHeight, setMeasuredHeight] = useState<number>(() => readCachedHeaderHeight(getHeaderVariant(pathname)));
+    const [, setVariant] = useState<HeaderVariant>(() => getStaticHeaderVariant(pathname));
+    const [measuredHeight, setMeasuredHeight] = useState<number>(
+        () => HEADER_HEIGHT_FALLBACK[getStaticHeaderVariant(pathname)],
+    );
 
     useEffect(() => {
         const next = getHeaderVariant(pathname);
-        setVariant((prev) => {
-            if (prev === next) return prev;
-            setMeasuredHeight(readCachedHeaderHeight(next));
-            return next;
-        });
+        setVariant(next);
+        setMeasuredHeight(readCachedHeaderHeight(next));
     }, [pathname]);
 
     useEffect(() => {
