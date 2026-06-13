@@ -14,15 +14,23 @@ type RoutePreviewItem = {
 
 function getTravelDetailsMapSectionContentFlags(params: {
   canRenderHeavy: boolean
+  mapNearViewport: boolean
   mapOpened: boolean
   shouldForceRenderMap: boolean
 }) {
   const shouldRender = params.canRenderHeavy
 
+  // The Leaflet map is the heaviest mount on the page. On web, gate it behind
+  // scroll-into-view so an SPA navigation paints the gallery/description first and the map
+  // builds only when it approaches the viewport. Force/opened paths (point click, nav-to-map,
+  // PDF/print via `shouldForceRenderMap`) bypass the viewport gate so they still mount eagerly.
   return {
     isLoading: false,
     shouldRender,
-    shouldRenderMapContent: shouldRender || params.shouldForceRenderMap || params.mapOpened,
+    shouldRenderMapContent:
+      (shouldRender && params.mapNearViewport) ||
+      params.shouldForceRenderMap ||
+      params.mapOpened,
   }
 }
 
@@ -57,19 +65,20 @@ export function useTravelDetailsMapSectionContentModel({
   shouldForceRenderMap,
   travel,
 }: UseTravelDetailsMapSectionContentModelArgs) {
-  const { isLoading, shouldRender, shouldRenderMapContent } =
-    getTravelDetailsMapSectionContentFlags({
-      canRenderHeavy,
-      mapOpened,
-      shouldForceRenderMap,
-    })
-
   // The route-file preview pulls the GPX/KML track (hundreds of KB) only to draw
   // the polyline on the map. On web the map sits below the fold, so we wait for
   // the section to approach the viewport before downloading — otherwise it
   // competes for bandwidth during LCP (FE-1). Native renders eagerly as before.
   const [mapNearViewport, setMapNearViewport] = useState(Platform.OS !== 'web')
   const mapObserverRef = useRef<IntersectionObserver | null>(null)
+
+  const { isLoading, shouldRender, shouldRenderMapContent } =
+    getTravelDetailsMapSectionContentFlags({
+      canRenderHeavy,
+      mapNearViewport,
+      mapOpened,
+      shouldForceRenderMap,
+    })
 
   const routePreviewShouldRender =
     shouldRender && (mapNearViewport || mapOpened || shouldForceRenderMap)

@@ -6,6 +6,7 @@ type RoutePreviewItem = {
 
 export function getTravelDetailsMapSectionContentFlags(params: {
   canRenderHeavy: boolean
+  mapNearViewport: boolean
   mapOpened: boolean
   shouldForceRenderMap: boolean
 }) {
@@ -14,7 +15,10 @@ export function getTravelDetailsMapSectionContentFlags(params: {
   return {
     isLoading: false,
     shouldRender,
-    shouldRenderMapContent: shouldRender || params.shouldForceRenderMap || params.mapOpened,
+    shouldRenderMapContent:
+      (shouldRender && params.mapNearViewport) ||
+      params.shouldForceRenderMap ||
+      params.mapOpened,
   }
 }
 

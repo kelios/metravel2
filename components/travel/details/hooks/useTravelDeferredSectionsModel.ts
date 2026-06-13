@@ -4,6 +4,53 @@ import { InteractionManager, Platform } from 'react-native'
 import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
 import { useTdTrace } from '@/hooks/useTdTrace'
 
+type IdleCapableWindow = Window & {
+  requestIdleCallback?: (
+    callback: IdleRequestCallback,
+    options?: IdleRequestOptions,
+  ) => number
+  cancelIdleCallback?: (handle: number) => void
+}
+
+function runWhenBrowserIdle(callback: () => void, fallbackMs = 250): () => void {
+  if (typeof window === 'undefined') {
+    callback()
+    return () => {}
+  }
+
+  const idleWindow = window as IdleCapableWindow
+  let cancelled = false
+  let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+    if (!cancelled) callback()
+  }, fallbackMs)
+  let idleId: number | null = null
+
+  if (typeof idleWindow.requestIdleCallback === 'function') {
+    idleId = idleWindow.requestIdleCallback(
+      () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+          timeoutId = null
+        }
+        if (!cancelled) callback()
+      },
+      { timeout: fallbackMs },
+    )
+  }
+
+  return () => {
+    cancelled = true
+    if (timeoutId) clearTimeout(timeoutId)
+    if (idleId !== null && typeof idleWindow.cancelIdleCallback === 'function') {
+      try {
+        idleWindow.cancelIdleCallback(idleId)
+      } catch {
+        // noop
+      }
+    }
+  }
+}
+
 const TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS = {
   author: {
     fallbackDelay: 500,
@@ -73,7 +120,17 @@ function useDeferredProgressiveSection(
 export function useTravelDeferredSectionsModel({
   travelId,
 }: UseTravelDeferredSectionsModelArgs) {
-  const [canRenderHeavy, setCanRenderHeavy] = useState(Platform.OS === 'web')
+  // On web the heavy travel tree (incl. the Leaflet map) must not mount in the same
+  // synchronous commit as an SPA navigation, or the main thread freezes and the skeleton
+  // overlay stays up (white screen). Start `false` on web and flip to `true` on browser idle,
+  // and reset to `false` during render whenever travelId changes so a cached SPA swap behaves
+  // like a fresh mount. Native keeps its eager `true` + InteractionManager behaviour below.
+  const [canRenderHeavy, setCanRenderHeavy] = useState(Platform.OS !== 'web')
+  const [prevTravelId, setPrevTravelId] = useState(travelId)
+  if (travelId !== prevTravelId) {
+    setPrevTravelId(travelId)
+    if (Platform.OS === 'web') setCanRenderHeavy(false)
+  }
   const tdTrace = useTdTrace()
 
   const { shouldLoad: shouldLoadMap, setElementRef: setMapRef } = useDeferredProgressiveSection(
@@ -111,6 +168,13 @@ export function useTravelDeferredSectionsModel({
     const task = InteractionManager.runAfterInteractions(() => setCanRenderHeavy(true))
     return () => task.cancel()
   }, [])
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    if (canRenderHeavy) return
+    const cleanup = runWhenBrowserIdle(() => setCanRenderHeavy(true), 250)
+    return cleanup
+  }, [canRenderHeavy, travelId])
 
   useEffect(() => {
     if (canRenderHeavy) tdTrace('deferred:heavy:enabled')

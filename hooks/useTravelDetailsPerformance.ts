@@ -94,6 +94,25 @@ export function useTravelDetailsPerformance({
     Platform.OS !== 'web',
   )
 
+  // On web SPA navigation between two cached travels the container is not remounted
+  // (no `key` on travelId) and `isLoading` never flips true→false, so the deferred-chrome
+  // gates below would carry over `true` from the previous travel and mount the whole heavy
+  // tree (incl. the Leaflet map) synchronously in the navigation commit — freezing the main
+  // thread and leaving the skeleton overlay up (white screen). Reset the web gates during
+  // render when travelId changes (the "adjust state during render" pattern) so the new travel
+  // behaves like a fresh mount and the idle effects below re-reveal the chrome progressively.
+  // Native is left untouched (gates start `true` there).
+  const [prevTravelId, setPrevTravelId] = useState(travelId)
+  if (travelId !== prevTravelId) {
+    setPrevTravelId(travelId)
+    if (Platform.OS === 'web') {
+      setLcpLoaded(false)
+      setSliderReady(false)
+      setHeroEnhancersReady(false)
+      setPostLcpRuntimeReady(false)
+    }
+  }
+
   useEffect(() => {
     if (Platform.OS !== 'web') return
     if (!lcpLoaded) return
