@@ -116,18 +116,22 @@ export function useTravelDetailsPerformance({
   }, [deferAllowed, lcpLoaded, travelId])
 
   // Safety net: the first-screen gate (`lcpLoaded`) is normally released by the hero
-  // image's load/error callback. If neither ever fires (stalled request, an Image
-  // implementation that skips events for an already-complete cached image, etc.) the
-  // skeleton overlay would otherwise cover the page forever. Force the gate open after
-  // a generous delay so content always renders. No-op on the happy path where the hero
-  // resolves in well under the timeout.
+  // image's load/error callback. On client-side (SPA) navigation that callback is
+  // unreliable — a browser-cached hero image can finish before React attaches the
+  // handler so no load event ever fires (this happens routinely when arriving from a
+  // card that already rendered the same image). The skeleton overlay then covers the
+  // already-painted content, which reads as a blank/white first screen on navigation.
+  // Cap that window tightly: the overlay only exists to mask hero load, and the real
+  // hero renders its own progressive/placeholder state underneath, so force the gate
+  // open quickly. The happy path (onLoad / cache-hit synth) still releases instantly
+  // well under this timeout.
   useEffect(() => {
     if (Platform.OS !== 'web') return
     if (isLoading || travelId == null || !hasHeroMedia || lcpLoaded) return
 
     const timeoutId = setTimeout(() => {
       setLcpLoaded(true)
-    }, 6000)
+    }, 1200)
 
     return () => clearTimeout(timeoutId)
   }, [hasHeroMedia, isLoading, lcpLoaded, travelId])
