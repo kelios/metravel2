@@ -668,6 +668,10 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
           fillNative ? { flex: 1, width: '100%' } : { height: containerH },
           isMobile && styles.wrapperMobile,
           isTablet && styles.wrapperTablet,
+          // When filling the hero container, the parent owns the vertical
+          // spacing/height — the mobile/tablet marginVertical would otherwise
+          // show as an empty gap above (and below) the photo.
+          fillNative && { marginVertical: 0 },
           isWeb && !fullBleed
             ? ({
                 maxWidth: isMobile
