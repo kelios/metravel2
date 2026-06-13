@@ -1,5 +1,5 @@
 import React, { memo, useCallback } from 'react'
-import { Platform, StyleProp, View, ViewStyle } from 'react-native'
+import { Modal, Platform, Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native'
 import ModernFilters from './ModernFilters'
 import type { FilterState as ModernFilterState } from './ModernFilters'
 import type { FilterState } from './utils/listTravelTypes'
@@ -76,9 +76,48 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
       onSelect('draftsOnly', filter.draftsOnly ? undefined : true)
     }, [filter.draftsOnly, onSelect])
 
-    // На native скрываем фильтры на мобильных, на web скрываем только если явно выключены
+    const filtersElement = (
+      <ModernFilters
+        filterGroups={filterGroups}
+        selectedFilters={filter as unknown as ModernFilterState}
+        onFilterChange={handleFilterChange}
+        onClearAll={handleClearAll}
+        resultsCount={total}
+        isLoading={isLoading}
+        year={filter.year}
+        onYearChange={handleYearChange}
+        showModeration={isSuper}
+        moderationValue={filter.moderation}
+        onToggleModeration={handleToggleModeration}
+        showDraftsOnly={isMeTravel}
+        draftsOnlyValue={filter.draftsOnly === true}
+        onToggleDraftsOnly={handleToggleDraftsOnly}
+        onClose={onClose}
+      />
+    )
+
+    // На native мобильных панель фильтров — bottom-sheet в RN Modal (ModernFilters уже
+    // содержит native sticky-футер «Показать результаты» и крестик, оба зовут onClose).
     if (Platform.OS !== 'web' && isMobile) {
-      return null
+      return (
+        <Modal
+          visible={isVisible}
+          transparent
+          animationType="slide"
+          statusBarTranslucent
+          onRequestClose={onClose}
+        >
+          <View style={overlayStyles.root}>
+            <Pressable
+              style={overlayStyles.backdrop}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Закрыть фильтры"
+            />
+            <View style={overlayStyles.sheet}>{filtersElement}</View>
+          </View>
+        </Modal>
+      )
     }
 
     // На web-mobile при скрытой панели ничего не рендерим, чтобы избежать лишнего DOM и CLS.
@@ -86,28 +125,23 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
       return null
     }
 
-    return (
-      <View style={containerStyle}>
-        <ModernFilters
-          filterGroups={filterGroups}
-          selectedFilters={filter as unknown as ModernFilterState}
-          onFilterChange={handleFilterChange}
-          onClearAll={handleClearAll}
-          resultsCount={total}
-          isLoading={isLoading}
-          year={filter.year}
-          onYearChange={handleYearChange}
-          showModeration={isSuper}
-          moderationValue={filter.moderation}
-          onToggleModeration={handleToggleModeration}
-          showDraftsOnly={isMeTravel}
-          draftsOnlyValue={filter.draftsOnly === true}
-          onToggleDraftsOnly={handleToggleDraftsOnly}
-          onClose={onClose}
-        />
-      </View>
-    )
+    return <View style={containerStyle}>{filtersElement}</View>
   }
 )
+
+const overlayStyles = StyleSheet.create({
+  root: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  sheet: {
+    height: '88%',
+    overflow: 'hidden',
+  },
+})
 
 export default SidebarFilters
