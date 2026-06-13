@@ -1,13 +1,37 @@
 // __tests__/components/Map.ios.test.tsx
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { act, render } from '@testing-library/react-native';
 import { View } from 'react-native';
+
+const mockInjectJavaScript = jest.fn();
+
+jest.mock('react-native-webview', () => {
+  const React = require('react');
+  const RN = require('react-native');
+
+  const WebView = React.forwardRef((props: any, ref: any) => {
+    React.useImperativeHandle(ref, () => ({
+      injectJavaScript: mockInjectJavaScript,
+    }));
+    return React.createElement(RN.View, props);
+  });
+
+  return {
+    __esModule: true,
+    WebView,
+    default: WebView,
+  };
+});
 
 describe('Map.ios Component', () => {
   let Map: any;
 
   beforeAll(async () => {
     Map = (await import('@/components/MapPage/Map.ios')).default;
+  });
+
+  beforeEach(() => {
+    mockInjectJavaScript.mockClear();
   });
 
   const mockTravel = {
@@ -41,11 +65,25 @@ describe('Map.ios Component', () => {
   };
 
   const getWebViewHtml = (rendered: ReturnType<typeof render>) => {
+    const webView = getWebView(rendered);
+    return webView.props.source.html as string;
+  };
+
+  const getWebView = (rendered: ReturnType<typeof render>) => {
     const webView = rendered.UNSAFE_getAllByType(View).find(
       (node) => typeof node.props?.source?.html === 'string'
     );
     expect(webView).toBeTruthy();
-    return webView?.props.source.html as string;
+    return webView!;
+  };
+
+  const getInjectedPayloadScript = (rendered: ReturnType<typeof render>) => {
+    const webView = getWebView(rendered);
+    act(() => {
+      webView.props.onLoadEnd();
+    });
+    expect(mockInjectJavaScript).toHaveBeenCalled();
+    return mockInjectJavaScript.mock.calls.at(-1)?.[0] as string;
   };
 
   it('should render without crashing', () => {
@@ -60,7 +98,7 @@ describe('Map.ios Component', () => {
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     
-    expect(getWebViewHtml(rendered)).toContain("L.map('map')");
+    expect(getWebViewHtml(rendered)).toContain("L.map('map', { zoomControl: false })");
   });
 
   it('should use inline div icons for Android WebView markers', () => {
@@ -121,9 +159,10 @@ describe('Map.ios Component', () => {
       />
     );
 
+    const injectedScript = getInjectedPayloadScript(rendered);
+    expect(injectedScript).toContain('"mode":"route"');
+    expect(injectedScript).toContain('"routePoints":[[53.9,27.5667],[50.0619474,19.9368564]]');
     const html = getWebViewHtml(rendered);
-    expect(html).toContain('const routeMode = "route"');
-    expect(html).toContain('const routePoints = [[53.9,27.5667],[50.0619474,19.9368564]]');
     expect(html).toContain('L.polyline(routePoints');
     expect(html).toContain('L.circleMarker(start');
     expect(html).toContain('map.fitBounds(routeLine.getBounds()');
@@ -134,9 +173,9 @@ describe('Map.ios Component', () => {
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     
-    const html = getWebViewHtml(rendered);
-    expect(html).toContain('"id":1');
-    expect(html).toContain('"id":2');
+    const injectedScript = getInjectedPayloadScript(rendered);
+    expect(injectedScript).toContain('"id":1');
+    expect(injectedScript).toContain('"id":2');
   });
 
   it('should handle empty travel data', () => {
@@ -150,7 +189,7 @@ describe('Map.ios Component', () => {
       <Map travel={emptyTravel} coordinates={mockCoordinates} />
     );
     
-    expect(getWebViewHtml(rendered)).toContain('const points = []');
+    expect(getInjectedPayloadScript(rendered)).toContain('"points":[]');
   });
 
   it('should use default coordinates when not provided', () => {
@@ -158,8 +197,9 @@ describe('Map.ios Component', () => {
       <Map travel={mockTravel} coordinates={null} />
     );
     
-    expect(getWebViewHtml(rendered)).toContain('const userCenter = [53.8828449, 27.7273595]');
-    expect(getWebViewHtml(rendered)).toContain('setView(userCenter, 10)');
+    const injectedScript = getInjectedPayloadScript(rendered);
+    expect(getWebViewHtml(rendered)).toContain('setView([53.8828449, 27.7273595], 10)');
+    expect(injectedScript).toContain('"center":{"lat":53.8828449,"lng":27.7273595}');
   });
 
   it('should parse coordinates correctly', () => {
@@ -167,7 +207,7 @@ describe('Map.ios Component', () => {
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     
-    expect(getWebViewHtml(rendered)).toContain("point.coord.split(',').map(Number)");
+    expect(getWebViewHtml(rendered)).toContain("String(point.coord).split(',').map(Number)");
   });
 
   it('should render callout with point information', () => {
@@ -186,7 +226,7 @@ describe('Map.ios Component', () => {
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     
-    expect(getWebViewHtml(rendered)).toContain('Test Address, Minsk');
+    expect(getInjectedPayloadScript(rendered)).toContain('Test Address, Minsk');
   });
 
   it('should display point category in callout', () => {
@@ -194,7 +234,7 @@ describe('Map.ios Component', () => {
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     
-    expect(getWebViewHtml(rendered)).toContain('Attraction');
+    expect(getInjectedPayloadScript(rendered)).toContain('Attraction');
   });
 
   it('should handle missing image gracefully', () => {
@@ -211,6 +251,6 @@ describe('Map.ios Component', () => {
       <Map travel={travelWithoutImage} coordinates={mockCoordinates} />
     );
     
-    expect(getWebViewHtml(rendered)).toContain('"travelImageThumbUrl":""');
+    expect(getInjectedPayloadScript(rendered)).toContain('"travelImageThumbUrl":""');
   });
 });

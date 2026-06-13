@@ -1,9 +1,16 @@
 import { createOptimizedQueryClient } from '@/utils/reactQueryConfig';
+import { Platform } from 'react-native';
 
 describe('createOptimizedQueryClient', () => {
   const originalRequestIdleCallback = (window as any).requestIdleCallback;
+  const originalPlatformOS = Platform.OS;
+
+  beforeEach(() => {
+    Platform.OS = 'web';
+  });
 
   afterEach(() => {
+    Platform.OS = originalPlatformOS;
     if (originalRequestIdleCallback === undefined) {
       delete (window as any).requestIdleCallback;
     } else {
