@@ -438,7 +438,8 @@ function buildRedirectStubHtml(toSlug) {
 <script>location.replace(${JSON.stringify(target)});</script>
 </head>
 <body>
-<p>Страница переехала: <a href="${safe}">${safe}</a></p>
+<h1>Страница переехала</h1>
+<p>Новый адрес: <a href="${safe}">${safe}</a></p>
 </body>
 </html>
 `;
