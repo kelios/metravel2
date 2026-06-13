@@ -210,6 +210,20 @@ function OptimizedLCPHeroInner({
     onLoad?.();
   }, [onLoad, srcWithRetry]);
 
+  // On client-side (SPA) navigation between travels the same hero instance is
+  // reused (it has no `key`), so per-image state survives the swap. Left as-is,
+  // `didNotifyLoadRef` stays `true` from the previous travel and short-circuits
+  // `notifyReady` — the new hero's onLoad/cache-hit never releases the LCP gate,
+  // and the skeleton overlay hangs over already-painted content (white screen).
+  // Reset the load-notify guard and the per-image error/fallback state whenever
+  // the underlying image changes so the new hero behaves like a fresh mount.
+  useEffect(() => {
+    didNotifyLoadRef.current = false;
+    setOverrideSrc(null);
+    setDidTryApiPrefix(false);
+    setLoadError(false);
+  }, [baseSrc]);
+
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const el = imgRef.current;

@@ -138,6 +138,11 @@ export default function TravelDetailsContainer() {
   const skeletonPhase = useSkeletonPhase({
     isDataReady: Boolean(travel),
     isVisualReady: isFirstScreenReady || isWebAutomation,
+    // Backstop the fragile hero-onLoad gate: once data is ready, never let the
+    // overlay mask already-painted content for longer than this. The hero keeps
+    // its own fixed-height neutral placeholder underneath, so an early lift
+    // reveals a stable layout (no CLS) rather than a white screen on SPA nav.
+    visualReadyFallbackMs: 500,
   })
 
   useTravelDetailsTrace({
