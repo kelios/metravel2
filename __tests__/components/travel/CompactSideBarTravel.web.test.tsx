@@ -263,7 +263,7 @@ describe('CompactSideBarTravel - Web', () => {
       expect(styles.height).toBeLessThanOrEqual(40);
     });
 
-    it('действия автора должны быть компактнее стандартной кнопки', () => {
+    it('действия автора имеют доступный touch-target (44px)', () => {
       const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...defaultProps} />);
 
       const actionButton = UNSAFE_getAllByProps({ 'data-action-btn': true })[0];
@@ -272,8 +272,8 @@ describe('CompactSideBarTravel - Web', () => {
           ? actionButton.props.style({ pressed: false, hovered: false })
           : actionButton.props.style;
       const styles = StyleSheet.flatten(resolvedStyle) || {};
-      expect(styles.width).toBeLessThanOrEqual(34);
-      expect(styles.height).toBeLessThanOrEqual(34);
+      expect(styles.width).toBe(44);
+      expect(styles.height).toBe(44);
     });
 
     it('пункты меню должны иметь компактные отступы', () => {
