@@ -429,7 +429,7 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
     backgroundColor: colors.primary,
     ...Platform.select({ web: { transform: 'translateY(-1px)', boxShadow: `0 6px 16px ${colors.primary}2E` } }),
   },
-  quickFiltersArticlesText: { color: '#ffffff', fontSize: 15, lineHeight: 20, fontWeight: '700', letterSpacing: 0.2 },
+  quickFiltersArticlesText: { color: colors.textOnPrimary, fontSize: 15, lineHeight: 20, fontWeight: '700', letterSpacing: 0.2 },
 
   // ── Filter cards grid ─────────────────────────────────────────────────────
   quickFiltersGrid: {
@@ -491,7 +491,7 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
   chip: {
     borderRadius: DESIGN_TOKENS.radii.pill, borderWidth: 1, borderColor: colors.borderLight,
     backgroundColor: colors.surface,
-    paddingHorizontal: isMobile ? 13 : 14, paddingVertical: isMobile ? 7 : 8,
+    paddingHorizontal: isMobile ? 13 : 14, paddingVertical: isMobile ? 10 : 8,
     ...Platform.select({ web: {
       cursor: 'pointer',
       transition: 'background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease',
@@ -511,5 +511,5 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
     maxWidth: '100%',
   },
   chipText: { color: colors.text, fontSize: isMobile ? 13 : 14, lineHeight: isMobile ? 18 : 20, fontWeight: '600' },
-  chipTextSelected: { color: '#ffffff', fontWeight: '700' },
+  chipTextSelected: { color: colors.textOnPrimary, fontWeight: '700' },
 });

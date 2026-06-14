@@ -64,13 +64,23 @@ function StartTileCard({
       ]}
     >
       <View style={[styles.iconWrap, { backgroundColor: `${tile.accent}1A` }]}>
-        <Feather name={tile.icon as any} size={22} color={tile.accent} />
+        <Feather
+          name={tile.icon as any}
+          size={22}
+          color={tile.accent}
+          {...({ 'aria-hidden': true, focusable: false } as any)}
+        />
       </View>
       <Text style={styles.tileTitle}>{tile.title}</Text>
       <Text style={styles.tileSubtitle}>{tile.subtitle}</Text>
       <View style={styles.tileArrow}>
         <Text style={[styles.tileArrowText, { color: tile.accent }]}>Открыть</Text>
-        <Feather name="arrow-right" size={15} color={tile.accent} />
+        <Feather
+          name="arrow-right"
+          size={15}
+          color={tile.accent}
+          {...({ 'aria-hidden': true, focusable: false } as any)}
+        />
       </View>
     </Pressable>
   )

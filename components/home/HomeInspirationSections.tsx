@@ -13,6 +13,9 @@ import { createSectionsStyles } from './homeInspirationStyles'
 
 const IS_WEB = Platform.OS === 'web'
 const NAV_FEEDBACK_MS = 700
+// Extend the touch area of the quick-filter chips so the effective hit target
+// clears 44px on phones without inflating the visual chip height.
+const CHIP_HIT_SLOP = { top: 8, bottom: 8, left: 4, right: 4 } as const
 
 type QuickFilterValue = string | number | Array<string | number>
 type QuickFilterParams = Record<string, QuickFilterValue | undefined>
@@ -140,7 +143,8 @@ function FilterGroupCard({
             <Pressable
               key={chip.label}
               onPress={() => onChipPress(chip.label, chip.filters, chip.route)}
-                disabled={isPending}
+              hitSlop={CHIP_HIT_SLOP}
+              disabled={isPending}
               style={({ pressed, hovered: chipHovered }) => [
                 styles.chip,
                 isMobile && styles.chipMobile,
@@ -229,7 +233,7 @@ function HomeInspirationSections() {
                 label="Все маршруты"
                 onPress={handleOpenArticles}
                 loading={openingAllRoutes}
-                icon={<Feather name="arrow-right" size={16} color="#ffffff" />}
+                icon={<Feather name="arrow-right" size={16} color={colors.textOnPrimary} />}
                 iconPosition="right"
                 variant="primary"
                 style={styles.quickFiltersArticlesButton}

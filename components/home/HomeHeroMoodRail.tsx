@@ -42,7 +42,7 @@ const renderMoodChip = (
       Platform.OS === 'web' && focused && {
         outlineWidth: 2,
         outlineStyle: 'solid',
-        outlineColor: (colors as any).primary ?? '#7a9d8f',
+        outlineColor: colors.primary,
         outlineOffset: 2,
       },
     ]}

@@ -30,6 +30,7 @@ type HomeHeroPopularSectionProps = {
 type PopularCardProps = {
   image: BookImage
   styles: any
+  colors: ThemedColors
   width?: number | string
   height: number
   onOpenArticle: (href?: string | null) => void
@@ -118,6 +119,7 @@ function FeaturedRouteCard({
 function PopularRouteCard({
   image,
   styles,
+  colors,
   width,
   height,
   onOpenArticle,
@@ -135,7 +137,7 @@ function PopularRouteCard({
         Platform.OS === 'web' && focused && {
           outlineWidth: 2,
           outlineStyle: 'solid',
-          outlineColor: '#7a9d8f',
+          outlineColor: colors.primary,
           outlineOffset: 2,
         },
       ]}
@@ -213,6 +215,7 @@ export default function HomeHeroPopularSection({
           <Pressable
             onPress={() => onOpenArticle('/search')}
             style={styles.popularSeeAll}
+            hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
             accessibilityRole="link"
             accessibilityLabel="Смотреть все популярные маршруты"
           >
@@ -228,6 +231,7 @@ export default function HomeHeroPopularSection({
               key={image.title}
               image={image}
               styles={styles}
+              colors={colors}
               width={popularCardWidth}
               height={popularCardHeight}
               onOpenArticle={onOpenArticle}
@@ -242,6 +246,7 @@ export default function HomeHeroPopularSection({
               key={image.title}
               image={image}
               styles={styles}
+              colors={colors}
               width={popularCardWidth}
               height={popularCardHeight}
               onOpenArticle={onOpenArticle}
@@ -262,6 +267,7 @@ export default function HomeHeroPopularSection({
               key={image.title}
               image={image}
               styles={styles}
+              colors={colors}
               width={popularCardWidth}
               height={popularCardHeight}
               onOpenArticle={onOpenArticle}
