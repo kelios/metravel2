@@ -70,11 +70,18 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
   const comparedDraftKeyRef = useRef<string | null>(null);
   const prevDraftKeyRef = useRef<string | null>(null);
   const pendingDraftDataRef = useRef<TravelFormData | null>(null);
-  const draftKey = `${DRAFT_STORAGE_KEY}_${isNew ? 'new' : travelId}`;
+  // For an existing travel the id arrives asynchronously; until it resolves we
+  // must not build a `..._null` key (it would orphan the draft under a wrong key).
+  const draftKey = isNew
+    ? `${DRAFT_STORAGE_KEY}_new`
+    : travelId != null
+      ? `${DRAFT_STORAGE_KEY}_${travelId}`
+      : null;
 
   // Check for existing draft on mount
   useEffect(() => {
     if (!enabled) return;
+    if (!draftKey) return;
     // Once we've performed the identity comparison against non-empty currentData
     // for this key, there's nothing left to re-check.
     if (comparedDraftKeyRef.current === draftKey) return;
@@ -134,7 +141,7 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
 
   // Save draft with debouncing
   const saveDraft = useCallback((data: TravelFormData) => {
-    if (!enabled) return;
+    if (!enabled || !draftKey) return;
     pendingDraftDataRef.current = data;
 
     // Clear previous timer
@@ -156,7 +163,7 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
   }, [draftKey, enabled]);
 
   const flushDraft = useCallback(async () => {
-    if (!enabled) return;
+    if (!enabled || !draftKey) return;
     if (Platform.OS !== 'web') return;
     if (!pendingDraftDataRef.current) return;
 
@@ -190,7 +197,7 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
 
   // Recover draft
   const recoverDraft = useCallback(async (): Promise<TravelFormData | null> => {
-    if (!enabled || !state.hasPendingDraft) return null;
+    if (!enabled || !draftKey || !state.hasPendingDraft) return null;
 
     setState(prev => ({ ...prev, isRecovering: true }));
 
@@ -217,6 +224,7 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
 
   // Dismiss draft without recovering
   const dismissDraft = useCallback(async () => {
+    if (!draftKey) return;
     try {
       await removeStorageItem(draftKey);
       setState({
@@ -233,8 +241,10 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
   const clearDraft = useCallback(async () => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
     }
     pendingDraftDataRef.current = null;
+    if (!draftKey) return;
     try {
       await removeStorageItem(draftKey);
       setState({
