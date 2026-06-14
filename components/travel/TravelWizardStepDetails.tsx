@@ -150,6 +150,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                     title={stepMeta?.title ?? 'Детали маршрута'}
                     subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
                     progressPercent={progressPercent}
+                    errorCount={validation.errors.length}
                     warningCount={validation.warnings.length}
                     autosaveBadge={autosaveBadge}
                     onPrimary={onNext}

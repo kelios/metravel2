@@ -293,6 +293,28 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
         color: colors.textMuted,
         fontWeight: '500',
     },
+    progressStatusGroup: {
+        flex: 1,
+        minWidth: 0,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: DESIGN_TOKENS.spacing.xs,
+        flexWrap: 'wrap',
+    },
+    progressErrorBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+        minHeight: 20,
+        borderRadius: DESIGN_TOKENS.radii.pill,
+        backgroundColor: colors.dangerSoft,
+    },
+    progressErrorText: {
+        fontSize: 11,
+        color: colors.danger,
+        fontWeight: '700',
+    },
     belowProgressRow: {
         marginTop: DESIGN_TOKENS.spacing.xs,
         flexDirection: 'row',

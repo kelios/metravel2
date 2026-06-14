@@ -349,29 +349,6 @@ function TravelWizardStepRoute({
     })
   }, [setManualPhotoCoordinates, setManualPhotoPreview])
 
-  const handleCountriesFilterChange = useCallback((value: string | number | Array<string | number>) => {
-    const previousIds = toStringIds(selectedCountryIds)
-    const nextIds = toStringIds(Array.isArray(value) ? value : [value])
-    const addedIds = nextIds.filter((id) => !previousIds.includes(id))
-    const removedIds = previousIds.filter((id) => !nextIds.includes(id))
-
-    addedIds.forEach(onCountrySelect)
-
-    if (removedIds.length) {
-      const removedSet = new Set(removedIds)
-      const filteredMarkers = (markers || []).filter((marker: any) => {
-        if (marker?.country == null) return true
-        return !removedSet.has(String(marker.country))
-      })
-
-      if (filteredMarkers.length !== (markers || []).length) {
-        updateMarkers(filteredMarkers)
-      }
-    }
-
-    removedIds.forEach(onCountryDeselect)
-  }, [markers, onCountryDeselect, onCountrySelect, selectedCountryIds, updateMarkers])
-
   return (
     <SafeAreaView style={styles.safeContainer}>
       <KeyboardAvoidingView
@@ -385,6 +362,7 @@ function TravelWizardStepRoute({
           title={stepMeta?.title ?? DEFAULT_TITLE}
           subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
           progressPercent={progressPercent}
+          errorCount={validation.errors.length}
           warningCount={validation.warnings.length}
           autosaveBadge={autosaveBadge}
           onPrimary={onNext}
@@ -466,7 +444,6 @@ function TravelWizardStepRoute({
                     isFiltersLoading={isFiltersLoading}
                     selectedCountryIds={selectedCountryIds}
                     styles={styles}
-                    onChange={handleCountriesFilterChange}
                   />
                   {!isFiltersLoading && (
                     <Text style={styles.countriesHint}>

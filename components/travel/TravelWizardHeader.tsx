@@ -12,6 +12,7 @@ type TravelWizardHeaderProps = {
     title: string;
     subtitle: string;
     progressPercent: number;
+    errorCount?: number;
     warningCount?: number;
     onWarningsPress?: () => void;
     autosaveBadge?: string;
@@ -43,6 +44,13 @@ const WIZARD_STEP_LABELS = [
 ];
 
 const getStepLabel = (step: number) => WIZARD_STEP_LABELS[step - 1] ?? `шаг ${step}`;
+const getErrorWord = (count: number) => {
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'ошибка';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'ошибки';
+    return 'ошибок';
+};
 
 const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
     canGoBack = false,
@@ -50,6 +58,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
     title,
     subtitle,
     progressPercent,
+    errorCount = 0,
     warningCount,
     onWarningsPress,
     autosaveBadge,
@@ -75,12 +84,21 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
     const isMobile = isPhone || isLargePhone;
     const clamped = Math.min(Math.max(progressPercent, 0), 100);
     
-    // ✅ УЛУЧШЕНИЕ: Динамический цвет прогресс-бара на основе процента
+    // Keep progress neutral; validation errors are announced and shown separately.
     const progressColor = useMemo(() => {
-        if (clamped < 33) return colors.danger;
-        if (clamped < 67) return colors.warning;
-        return colors.success;
-    }, [clamped, colors]);
+        if (clamped >= 100) return colors.success;
+        return colors.primary;
+    }, [clamped, colors.primary, colors.success]);
+    const hasErrors = errorCount > 0;
+    const progressA11yLabel = useMemo(() => {
+        const stepText = currentStep && totalSteps ? `Шаг ${currentStep} из ${totalSteps}` : 'Прогресс заполнения';
+        const statusText = hasErrors
+            ? `${errorCount} ${getErrorWord(errorCount)}`
+            : clamped >= 100
+                ? 'заполнен'
+                : 'в процессе заполнения';
+        return `${stepText}: ${statusText}, ${clamped}%`;
+    }, [clamped, currentStep, errorCount, hasErrors, totalSteps]);
 
     const [isTipOpen, setIsTipOpen] = useState(false);
     const hasTip = !!tipBody && tipBody.trim().length > 0;
@@ -251,14 +269,43 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                 {subtitle}
             </Text>
 
-            <View style={styles.progressBarTrack}>
+            <View
+                style={styles.progressBarTrack}
+                accessibilityRole="progressbar"
+                accessibilityLabel={progressA11yLabel}
+                accessibilityValue={{
+                    min: 0,
+                    max: 100,
+                    now: clamped,
+                    text: progressA11yLabel,
+                }}
+                {...(Platform.OS === 'web'
+                    ? ({
+                        'aria-valuemin': 0,
+                        'aria-valuemax': 100,
+                        'aria-valuenow': clamped,
+                        'aria-valuetext': progressA11yLabel,
+                    } as any)
+                    : null)}
+                testID="travel-wizard-progress"
+            >
                 <View style={[styles.progressBarFill, { width: `${clamped}%`, backgroundColor: progressColor }]} />
             </View>
 
             <View style={[styles.progressMetaRow, styles.progressMetaRowInline]}>
-                <Text style={styles.progressMetaText} numberOfLines={1}>
-                    Шаг {currentStep ?? 1}/{totalSteps ?? 1} • {clamped}%
-                </Text>
+                <View style={styles.progressStatusGroup}>
+                    <Text style={styles.progressMetaText} numberOfLines={1}>
+                        Шаг {currentStep ?? 1}/{totalSteps ?? 1} • {clamped}%
+                    </Text>
+                    {hasErrors ? (
+                        <View style={styles.progressErrorBadge}>
+                            <Feather name="alert-circle" size={12} color={colors.danger} />
+                            <Text style={styles.progressErrorText} numberOfLines={1}>
+                                Ошибки: {errorCount}
+                            </Text>
+                        </View>
+                    ) : null}
+                </View>
                 {autosaveBadge ? (
                     <Text
                         style={styles.autosaveBadgeText}

@@ -168,6 +168,41 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
     fontSize: DESIGN_TOKENS.typography.sizes.xs,
     color: colors.textMuted,
   },
+  countrySummary: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: DESIGN_TOKENS.radii.sm,
+    backgroundColor: colors.surfaceElevated,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
+  },
+  countrySummaryLabel: {
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    color: colors.textMuted,
+    fontWeight: '600',
+    marginBottom: DESIGN_TOKENS.spacing.xs,
+  },
+  countrySummaryChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: DESIGN_TOKENS.spacing.xs,
+  },
+  countrySummaryChip: {
+    borderRadius: DESIGN_TOKENS.radii.full,
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: DESIGN_TOKENS.spacing.xxs,
+  },
+  countrySummaryChipText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: colors.primaryText,
+    fontWeight: '600',
+  },
+  countrySummaryEmpty: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: colors.textMuted,
+  },
   filtersSkeleton: {
     marginTop: 4,
     paddingVertical: 4,

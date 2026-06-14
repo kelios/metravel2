@@ -7,6 +7,7 @@ import {
   validateStep,
   getStepProgress,
   isReadyForModeration,
+  validateReadyForModeration,
   getQualityScore,
   STEP_VALIDATION_RULES,
 } from '@/utils/travelWizardValidation';
@@ -279,6 +280,34 @@ describe('travelWizardValidation', () => {
       expect(result.ready).toBe(true);
       expect(result.missingFields.length).toBe(0);
     });
+
+    it('should reject moderation when description is empty', () => {
+      const formData: Partial<TravelFormData> = {
+        name: 'Valid Travel Name',
+        description: '<p><br></p>',
+        coordsMeTravel: [{ lat: 50, lng: 30, country: 1, address: 'Test', categories: [], image: '', id: 1 }],
+        countries: ['1'],
+        categories: ['1'],
+      };
+
+      const result = validateReadyForModeration(formData as TravelFormData);
+      expect(result.isValid).toBe(false);
+      expect(result.missingFields).toContain('description');
+    });
+
+    it('should reject moderation when categories are empty', () => {
+      const formData: Partial<TravelFormData> = {
+        name: 'Valid Travel Name',
+        description: 'A'.repeat(60),
+        coordsMeTravel: [{ lat: 50, lng: 30, country: 1, address: 'Test', categories: [], image: '', id: 1 }],
+        countries: ['1'],
+        categories: [],
+      };
+
+      const result = validateReadyForModeration(formData as TravelFormData);
+      expect(result.isValid).toBe(false);
+      expect(result.missingFields).toContain('categories');
+    });
   });
 
   describe('getQualityScore', () => {
@@ -314,6 +343,18 @@ describe('travelWizardValidation', () => {
       const result = getQualityScore(formData as TravelFormData);
       expect(result.level).toBe('good');
       expect(result.score).toBeGreaterThanOrEqual(60);
+    });
+
+    it('should count rich-text description by visible text length', () => {
+      const formData: Partial<TravelFormData> = {
+        name: 'Valid Travel Name',
+        description: '<p>текст</p>',
+      };
+
+      const result = getQualityScore(formData as TravelFormData);
+
+      expect(result.score).toBe(10);
+      expect(result.score).toBeLessThan(25);
     });
 
     it('should return excellent score for complete data', () => {

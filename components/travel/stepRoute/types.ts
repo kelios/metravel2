@@ -68,7 +68,6 @@ export interface CountriesFieldProps {
   isFiltersLoading?: boolean;
   selectedCountryIds: string[];
   styles: Styles;
-  onChange: (value: string | number | Array<string | number>) => void;
 }
 
 export interface RouteMapCardProps {

@@ -10,6 +10,7 @@ import { apiClient } from '@/api/client';
 import { ApiError } from '@/api/client';
 import { Platform } from 'react-native';
 import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
+import { validateReadyForModeration } from '@/utils/travelWizardValidation';
 
 const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
 const rawApiUrl = resolveApiBaseUrl({
@@ -110,6 +111,15 @@ export const saveFormData = async (
         throw new Error(`Поле ${field} должно быть массивом`);
       }
     });
+
+    if (!isDraft) {
+      const moderationValidation = validateReadyForModeration(data);
+      if (!moderationValidation.isValid) {
+        throw new Error(
+          `Заполните обязательные поля для модерации: ${moderationValidation.missingFields.join(', ')}`
+        );
+      }
+    }
 
     const sanitizeStringField = (value: unknown, maxLen: number) => {
       if (typeof value !== 'string') return value;

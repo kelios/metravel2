@@ -173,6 +173,7 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                     title={stepMeta?.title ?? 'Доп. параметры'}
                     subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
                     progressPercent={progressPercent}
+                    errorCount={validation.errors.length}
                     warningCount={validation.warnings.length}
                     autosaveBadge={autosaveBadge}
                     onPrimary={onNext}

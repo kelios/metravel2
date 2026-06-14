@@ -194,6 +194,42 @@ describe('api/misc', () => {
     await expect(saveFormData(payload)).rejects.toThrow('Название обязательно для заполнения')
   })
 
+  it('saveFormData rejects publish payload when description is empty', async () => {
+    mockGetSecureItem.mockResolvedValue('token')
+
+    const payload = {
+      ...baseForm,
+      name: 'Valid travel name',
+      description: '<p><br></p>',
+      coordsMeTravel: [{ lat: 50, lng: 30, country: 1, address: 'Test', categories: [], image: '', id: 1 }],
+      countries: ['1'],
+      categories: ['1'],
+      publish: true,
+      moderation: false,
+    } as any
+
+    await expect(saveFormData(payload)).rejects.toThrow('description')
+    expect(mockApiClientRequest).not.toHaveBeenCalled()
+  })
+
+  it('saveFormData rejects publish payload when categories are empty', async () => {
+    mockGetSecureItem.mockResolvedValue('token')
+
+    const payload = {
+      ...baseForm,
+      name: 'Valid travel name',
+      description: 'A'.repeat(60),
+      coordsMeTravel: [{ lat: 50, lng: 30, country: 1, address: 'Test', categories: [], image: '', id: 1 }],
+      countries: ['1'],
+      categories: [],
+      publish: true,
+      moderation: false,
+    } as any
+
+    await expect(saveFormData(payload)).rejects.toThrow('categories')
+    expect(mockApiClientRequest).not.toHaveBeenCalled()
+  })
+
   it('uploadImage validates file and requires token', async () => {
     mockGetSecureItem.mockResolvedValue(null)
     await expect(uploadImage(new FormData())).rejects.toThrow('Пользователь не авторизован')

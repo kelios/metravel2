@@ -390,15 +390,27 @@ export function getStepProgress(step: number, formData: TravelFormData): number 
 /**
  * Проверка готовности к публикации (все критичные поля заполнены)
  */
+export function validateReadyForModeration(formData: TravelFormData): {
+  isValid: boolean;
+  missingFields: string[];
+} {
+  const validation = validateStep(6, formData);
+
+  return {
+    isValid: validation.isValid,
+    missingFields: validation.errors.map(e => e.field),
+  };
+}
+
 export function isReadyForModeration(formData: TravelFormData): {
   ready: boolean;
   missingFields: string[];
 } {
-  const validation = validateStep(6, formData);
-  
+  const validation = validateReadyForModeration(formData);
+
   return {
     ready: validation.isValid,
-    missingFields: validation.errors.map(e => e.field),
+    missingFields: validation.missingFields,
   };
 }
 
@@ -412,10 +424,14 @@ export function getQualityScore(formData: TravelFormData): {
 } {
   let score = 0;
   const suggestions: string[] = [];
+  const descriptionText = formData.description ? htmlToPlainText(formData.description) : '';
+  const plusText = formData.plus ? htmlToPlainText(formData.plus) : '';
+  const minusText = formData.minus ? htmlToPlainText(formData.minus) : '';
+  const recommendationText = formData.recommendation ? htmlToPlainText(formData.recommendation) : '';
 
   // Базовые поля (40 баллов)
   if (formData.name && formData.name.length >= 10) score += 10;
-  if (formData.description && formData.description.length >= 100) score += 15;
+  if (descriptionText.length >= 100) score += 15;
   if (formData.coordsMeTravel && formData.coordsMeTravel.length >= 3) score += 15;
   else if (formData.coordsMeTravel && formData.coordsMeTravel.length >= 1) score += 10;
 
@@ -434,13 +450,13 @@ export function getQualityScore(formData: TravelFormData): {
   if (hasVideo) score += 5;
 
   // Детали (20 баллов)
-  if (formData.plus && formData.plus.length >= 50) score += 7;
+  if (plusText.length >= 50) score += 7;
   else suggestions.push('Опишите плюсы путешествия');
 
-  if (formData.minus && formData.minus.length >= 50) score += 7;
+  if (minusText.length >= 50) score += 7;
   else suggestions.push('Опишите минусы путешествия');
 
-  if (formData.recommendation && formData.recommendation.length >= 50) score += 6;
+  if (recommendationText.length >= 50) score += 6;
   else suggestions.push('Добавьте рекомендации');
 
   // Параметры (10 баллов)

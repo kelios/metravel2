@@ -193,13 +193,15 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
             expect(getByText('Точек: 0')).toBeTruthy();
         });
 
-        it('countries multiselect is read-only (disabled): countries are derived from markers only', () => {
-            render(<TravelWizardStepRoute {...defaultProps} />);
+        it('countries field is a read-only summary derived from markers only', () => {
+            const { getByTestId, getByText } = render(
+                <TravelWizardStepRoute {...defaultProps} selectedCountryIds={['1']} />
+            );
 
-            const calls: any[] = mockMultiSelectField.mock.calls.map((c: any[]) => c[0]);
-            const countriesCall = calls.find((props: any) => props?.label === 'Страны маршрута') as any;
-            expect(countriesCall).toBeTruthy();
-            expect(Boolean(countriesCall.disabled)).toBe(true);
+            expect(getByTestId('travel-wizard.step-route.countries')).toBeTruthy();
+            expect(getByText('Страны маршрута')).toBeTruthy();
+            expect(getByText('Франция')).toBeTruthy();
+            expect(mockMultiSelectField).not.toHaveBeenCalled();
         });
     });
 

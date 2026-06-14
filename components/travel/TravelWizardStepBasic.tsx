@@ -191,6 +191,7 @@ function TravelWizardStepBasic({
           title={stepMeta?.title ?? DEFAULT_TITLE}
           subtitle={stepMeta?.subtitle ?? DEFAULT_SUBTITLE}
           progressPercent={progressPercent}
+          errorCount={validation.errors.length}
           warningCount={validation.warnings.length}
           autosaveBadge={autosaveBadge}
           onPrimary={onGoNext}

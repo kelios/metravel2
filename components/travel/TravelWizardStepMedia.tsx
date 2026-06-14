@@ -563,6 +563,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                     title={stepMeta?.title ?? 'Медиа путешествия'}
                     subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
                     progressPercent={getProgressPercent(progress)}
+                    errorCount={validation.errors.length}
                     warningCount={validation.warnings.length}
                     autosaveBadge={autosaveBadge}
                     onPrimary={onNext}
