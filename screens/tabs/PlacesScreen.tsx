@@ -52,14 +52,16 @@ import { createStyles } from './PlacesScreen.styles'
 
 export default function PlacesScreen() {
   const router = useRouter()
-  const params = useLocalSearchParams<{ category?: string; country?: string }>()
+  const params = useLocalSearchParams<{ category?: string; country?: string; q?: string }>()
   const isFocused = useIsFocused()
   const colors = useThemedColors()
   const { width } = useWindowDimensions()
   const isCompact = width < 760
   const isWide = width >= 1100
   const styles = useMemo(() => createStyles(colors, isCompact, isWide), [colors, isCompact, isWide])
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(() =>
+    typeof params.q === 'string' ? params.q : '',
+  )
   const deferredQuery = useDeferredValue(query)
   const [categoryQuery, setCategoryQuery] = useState('')
   const deferredCategoryQuery = useDeferredValue(categoryQuery)
@@ -192,6 +194,11 @@ export default function PlacesScreen() {
     router.setParams(categories.length > 0 ? { category: categories.join(',') } : { category: '' })
   }, [router])
 
+  const handleQueryChange = useCallback((next: string) => {
+    setQuery(next)
+    router.setParams(next ? { q: next } : { q: '' })
+  }, [router])
+
   // Sync URL params → state when ?category/?country change without a remount
   // (e.g. in-app navigation to /places?category=...). Guarded on value equality
   // so it never loops with the syncCategoryParams/handleSelectCountry setParams calls.
@@ -207,6 +214,11 @@ export default function PlacesScreen() {
       typeof params.country === 'string' && params.country.trim() ? params.country.trim() : null
     setSelectedCountry((current) => (current === nextCountry ? current : nextCountry))
   }, [params.country])
+
+  useEffect(() => {
+    const nextQuery = typeof params.q === 'string' ? params.q : ''
+    setQuery((current) => (current === nextQuery ? current : nextQuery))
+  }, [params.q])
 
   useEffect(() => {
     setVisibleCount(PLACES_PAGE_SIZE)
@@ -285,11 +297,11 @@ export default function PlacesScreen() {
   const hasCategorySearch = deferredCategoryQuery.trim().length > 0
 
   const resetAll = useCallback(() => {
-    setQuery('')
+    handleQueryChange('')
     setCategoryQuery('')
     handleClearCategories()
     handleSelectCountry(null)
-  }, [handleClearCategories, handleSelectCountry])
+  }, [handleQueryChange, handleClearCategories, handleSelectCountry])
 
   const resultsStatus: 'loading' | 'error' | 'empty' | 'list' = placesQuery.isLoading
     ? 'loading'
@@ -416,7 +428,7 @@ export default function PlacesScreen() {
               <Feather name="search" size={18} color={colors.textMuted} style={styles.searchIcon} />
               <TextInput
                 value={query}
-                onChangeText={setQuery}
+                onChangeText={handleQueryChange}
                 placeholder="Поиск по названию или адресу..."
                 placeholderTextColor={colors.textMuted}
                 style={styles.searchInput}
@@ -425,7 +437,7 @@ export default function PlacesScreen() {
               />
               {query ? (
                 <Pressable
-                  onPress={() => setQuery('')}
+                  onPress={() => handleQueryChange('')}
                   accessibilityRole="button"
                   accessibilityLabel="Очистить поиск"
                   hitSlop={10}
