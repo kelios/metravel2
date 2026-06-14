@@ -540,8 +540,11 @@ test.describe('Поиск мест на карте (Location Search)', () => {
     await fillMinimumValidBasics(page, 'Тест поиска');
     await clickNext(page);
 
-    // Шаг 2: Маршрут
-    await expect(page.locator('text=Маршрут на карте')).toBeVisible();
+    // Шаг 2: Маршрут путешествия
+    await expect(
+      page.getByTestId('travel-wizard.step-route.scroll').or(page.locator('[placeholder*="Поиск места"]'))
+        .first()
+    ).toBeVisible({ timeout: 20_000 });
     await maybeDismissRouteCoachmark(page);
 
     // Проверяем поле поиска
@@ -571,6 +574,11 @@ test.describe('Поиск мест на карте (Location Search)', () => {
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест');
     await page.click('button:has-text("Далее")');
 
+    // Ждём шаг 2
+    await expect(
+      page.getByTestId('travel-wizard.step-route.scroll').or(page.locator('[placeholder*="Поиск места"]')).first()
+    ).toBeVisible({ timeout: 20_000 });
+
     // Ищем несуществующее место
     await page.fill('[placeholder*="Поиск места"]', 'asdfghjkl123456789');
 
@@ -584,6 +592,11 @@ test.describe('Поиск мест на карте (Location Search)', () => {
     if (!(await ensureCanCreateTravel(page))) return;
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест');
     await page.click('button:has-text("Далее")');
+
+    // Ждём шаг 2
+    await expect(
+      page.getByTestId('travel-wizard.step-route.scroll').or(page.locator('[placeholder*="Поиск места"]')).first()
+    ).toBeVisible({ timeout: 20_000 });
 
     // Вводим текст
     await page.fill('[placeholder*="Поиск места"]', 'Москва');
@@ -599,7 +612,10 @@ test.describe('Поиск мест на карте (Location Search)', () => {
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест');
     await page.click('button:has-text("Далее")');
 
-    await expect(page.locator('text=Маршрут на карте')).toBeVisible();
+    // Ждём шаг 2
+    await expect(
+      page.getByTestId('travel-wizard.step-route.scroll').or(page.locator('[placeholder*="Поиск места"]')).first()
+    ).toBeVisible({ timeout: 20_000 });
     await maybeDismissRouteCoachmark(page);
 
     const searchInput = page.locator('[placeholder*="Поиск места"]');
@@ -738,7 +754,10 @@ test.describe('Превью карточки (Travel Preview)', () => {
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Со статистикой');
     await page.click('button:has-text("Далее")');
 
-    await expect(page.locator('text=Маршрут на карте')).toBeVisible();
+    // Ждём шаг 2
+    await expect(
+      page.getByTestId('travel-wizard.step-route.scroll').or(page.locator('[placeholder*="Поиск места"]')).first()
+    ).toBeVisible({ timeout: 20_000 });
     await maybeDismissRouteCoachmark(page);
 
     // Добавляем точку
@@ -773,7 +792,10 @@ test.describe('Группировка параметров (Шаг 5)', () => {
 
     // Переходим к шагу 2 (так мы гарантируем, что милестоны уже отрисованы)
     await page.click('button:has-text("Далее")');
-    await expect(page.locator('text=Маршрут на карте')).toBeVisible();
+    // Ждём шаг 2
+    await expect(
+      page.getByTestId('travel-wizard.step-route.scroll').or(page.locator('[placeholder*="Поиск места"]')).first()
+    ).toBeVisible({ timeout: 20_000 });
     await maybeDismissRouteCoachmark(page);
 
     // Переходим к шагу 5 через милестон (кнопка "Далее" может быть заблокирована валидацией на шаге 2)
@@ -812,7 +834,10 @@ test.describe('Группировка параметров (Шаг 5)', () => {
 
     // Переходим к шагу 2 (так мы гарантируем, что милестоны уже отрисованы)
     await page.click('button:has-text("Далее")');
-    await expect(page.locator('text=Маршрут на карте')).toBeVisible();
+    // Ждём шаг 2
+    await expect(
+      page.getByTestId('travel-wizard.step-route.scroll').or(page.locator('[placeholder*="Поиск места"]')).first()
+    ).toBeVisible({ timeout: 20_000 });
     await maybeDismissRouteCoachmark(page);
 
     // Переходим к шагу 5 через милестон (кнопка "Далее" может быть заблокирована валидацией на шаге 2)

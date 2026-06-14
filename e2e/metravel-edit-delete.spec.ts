@@ -37,8 +37,8 @@ const basePayload = {
   number_peoples: '2',
   number_days: '3',
   visa: false,
-  publish: false,
-  moderation: false,
+  publish: true,
+  moderation: true,
 };
 
 function pickOwnerId(raw: unknown): string {
