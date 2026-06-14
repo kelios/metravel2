@@ -264,7 +264,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       justifyContent: 'center',
       gap: 3,
       paddingVertical: 6,
-      minHeight: Platform.OS === 'android' ? 48 : 44, // AND-26: M3 touch target
+      minHeight: Platform.select({ web: 44, android: 48, default: 44 }), // AND-26: M3 touch target
       borderRadius: DESIGN_TOKENS.radii.sm,
     },
     label: {

@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe';
+import { useThemedColors } from '@/hooks/useTheme';
 import type { Travel } from '@/types/types';
 import type { TravelSectionLink } from '@/components/travel/sectionLinks';
 import {
@@ -19,16 +20,15 @@ import type { AnchorsMap } from './TravelDetailsTypes';
 import TravelDetailsSkeletonOverlay from './TravelDetailsSkeletonOverlay';
 import TravelDetailsHeroDeferredColumn from './TravelDetailsHeroDeferredColumn';
 
-const WEB_SR_ONLY_HEADING_STYLE = {
-  position: 'absolute',
-  width: 1,
-  height: 1,
-  padding: 0,
-  margin: -1,
-  overflow: 'hidden',
-  clip: 'rect(0,0,0,0)',
-  whiteSpace: 'nowrap',
-  borderWidth: 0,
+// Visible semantic <h1> rendered at the top of the content shell. It occupies
+// the same position/typography as the pre-hydration `.ssg-travel-h1` div (which
+// the SSG removal script tears down on hydration), so the page keeps exactly one
+// visible heading without a flash of duplicated text.
+const WEB_VISIBLE_HEADING_STYLE = {
+  margin: '0 0 14px',
+  font: "700 28px/1.25 'Georgia', 'Times New Roman', 'Inter', serif",
+  letterSpacing: '-0.02em',
+  maxWidth: 760,
 } as const;
 
 type TravelDetailsCriticalShellProps = {
@@ -91,6 +91,7 @@ export default function TravelDetailsCriticalShell({
   mainAriaLabel,
 }: TravelDetailsCriticalShellProps) {
   const insets = useSafeAreaInsetsSafe();
+  const colors = useThemedColors();
   const showDesktopSidebar = shouldShowTravelDetailsDesktopSidebar(isMobile, screenWidth);
   const showSkeletonOverlay = shouldShowTravelDetailsSkeletonOverlay(travel);
 
@@ -134,7 +135,9 @@ export default function TravelDetailsCriticalShell({
   const scrollContentStyle = useMemo(
     () => [
       styles.scrollContent,
-      isMobile
+      // Web already reserves the bottom dock via `--mt-dock-h` in scrollContent;
+      // only native needs an explicit reserve for safe-area + the sticky bar.
+      isMobile && Platform.OS !== 'web'
         ? {
             paddingBottom: Math.max(
               DESIGN_TOKENS.spacing.xxl,
@@ -208,7 +211,9 @@ export default function TravelDetailsCriticalShell({
                 collapsable={false}
               >
                 {Platform.OS === 'web' && travel ? (
-                  <h1 style={WEB_SR_ONLY_HEADING_STYLE as any}>{travel.name}</h1>
+                  <h1 style={{ ...WEB_VISIBLE_HEADING_STYLE, color: colors.text } as any}>
+                    {travel.name}
+                  </h1>
                 ) : null}
                 {travel && showDesktopSidebar ? (
                   <View style={desktopLayoutStyle} collapsable={false}>

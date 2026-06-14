@@ -4,14 +4,15 @@ import { Platform, Text, View } from 'react-native'
 import QuestForCityCard from '@/components/quests/QuestForCityCard'
 import { useQuestsForLocation } from '@/hooks/useQuestForLocation'
 import { parseTravelCoords, type LocationQuery } from '@/utils/questForLocation'
+import { NEARBY_QUEST_THRESHOLD_KM, SAME_CITY_THRESHOLD_KM } from '@/constants/nearby'
 import type { Travel } from '@/types/types'
 
 const CARD_LIST_STYLE = { marginTop: 12, gap: 12 } as const
 const MAX_QUESTS = 6
 
 function buildEyebrow(distanceKm: number, cityName?: string): string | undefined {
-  if (Number.isFinite(distanceKm) && distanceKm < 1.5) return 'В этом городе'
-  if (Number.isFinite(distanceKm) && distanceKm < 50) {
+  if (Number.isFinite(distanceKm) && distanceKm < SAME_CITY_THRESHOLD_KM) return 'В этом городе'
+  if (Number.isFinite(distanceKm) && distanceKm < NEARBY_QUEST_THRESHOLD_KM) {
     const rounded = distanceKm < 10 ? distanceKm.toFixed(1) : Math.round(distanceKm)
     return cityName ? `~${rounded} км · ${cityName}` : `~${rounded} км рядом`
   }

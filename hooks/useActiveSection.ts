@@ -122,9 +122,10 @@ export function useActiveSection(
     })();
 
     const computeAndSetActive = () => {
-      // Robust scrollspy for long sections:
-      // Determine active section by comparing each section's top edge to the header offset.
-      // Pick the last section whose top is above (or near) the header.
+      // Single-metric scrollspy: the active section is the one whose vertical
+      // range [top, bottom] crosses a fixed reading line near the top of the
+      // viewport. Hysteresis keeps the current section active while it still
+      // crosses the line, preventing flicker between adjacent sections.
       const viewportTop = safeHeaderOffset;
       const TOP_BUFFER_PX = 24;
 
@@ -165,85 +166,41 @@ export function useActiveSection(
 
       if (!measured.length) return;
 
+      // Reading line: a horizontal line under the sticky header used as the
+      // single source of truth for "what the user is currently reading".
       const headerLine = viewportTop + TOP_BUFFER_PX;
 
-      try {
-        const descEl = (cache.get('description') && doc.contains(cache.get('description')!))
-          ? cache.get('description')!
-          : doc.querySelector('[data-section-key="description"]') as HTMLElement | null;
-        if (descEl) cache.set('description', descEl);
-        if (descEl && typeof descEl.getBoundingClientRect === 'function') {
-          const rect = descEl.getBoundingClientRect();
-          const relTop = rootRect ? rect.top - rootRect.top : rect.top;
-          const relBottom = rootRect ? rect.bottom - rootRect.top : rect.bottom;
-          const rootHeight = rootRect?.height ?? (typeof window !== 'undefined' ? window.innerHeight : 0);
-
-          if (isTestEnv && relBottom > 0 && (rootHeight ? relTop < rootHeight : true)) {
-            if (activeSectionRef.current !== 'description') {
-              setActiveSection('description');
-            }
-            return;
-          }
-          if (relTop >= headerLine - 80 && relTop <= headerLine + 240) {
-            if (activeSectionRef.current !== 'description') {
-              setActiveSection('description');
-            }
-            return;
-          }
-        }
-      } catch {
-        void 0;
-      }
-
-      // Sort by top position (document order in viewport)
+      // Sort by top position (document order in viewport).
       measured.sort((a, b) => a.top - b.top);
 
-      // Prefer the section that actually spans the header line.
-      const NEAR_TOP_BELOW_PX = 220;
-      const NEAR_TOP_ABOVE_PX = 60;
-      const nearTop = measured
-        .filter((s) => s.top >= headerLine - NEAR_TOP_ABOVE_PX && s.top <= headerLine + NEAR_TOP_BELOW_PX)
-        .sort((a, b) => Math.abs(a.top - headerLine) - Math.abs(b.top - headerLine));
-      const nextSectionNearTop = nearTop.find(
-        (s) => s.top >= headerLine + 48 && s.top <= headerLine + 180
-      );
-      const spanning = measured.filter((s) => s.top <= headerLine && s.bottom > headerLine);
+      const crosses = (s: { top: number; bottom: number }) =>
+        s.top <= headerLine && s.bottom > headerLine;
 
-      const visibleCandidates = measured.filter((s) => s.bottom > 0);
-      const firstBelowHeader = visibleCandidates
-        .filter((s) => s.top >= headerLine)
-        .slice()
-        .sort((a, b) => a.top - b.top);
-
-      let nextActive: string | null = null;
-
-      // Priority order:
-      // 1) Next section whose top is comfortably near the reading line
-      // 2) Section that spans the header line (the section currently being read)
-      // 3) Section whose top is near the header line
-      // 4) First section that starts below the header line
-      if (nextSectionNearTop) {
-        nextActive = nextSectionNearTop.key;
-      } else if (spanning.length) {
-        // If multiple span (rare), prefer the one with the greatest top (closest to header).
-        spanning.sort((a, b) => b.top - a.top);
-        nextActive = spanning[0].key;
-      } else if (nearTop.length) {
-        nextActive = nearTop[0].key;
-      } else if (firstBelowHeader.length) {
-        nextActive = firstBelowHeader[0].key;
-      } else {
-        // Otherwise choose the first section below the header line.
-        const below = measured.find((s) => s.top > headerLine);
-        nextActive = below ? below.key : measured[measured.length - 1].key;
+      // Hysteresis: if the current section still crosses the reading line, keep it.
+      const current = measured.find((s) => s.key === activeSectionRef.current);
+      if (current && crosses(current)) {
+        return;
       }
 
-      // Small priority: prefer video over description when both are near the top.
-      if (nextActive === 'description') {
-        const video = measured.find((s) => s.key === 'video');
-        const desc = measured.find((s) => s.key === 'description');
-        if (video && desc && Math.abs(video.top - desc.top) < 150 && video.top <= viewportTop + 150) {
-          nextActive = 'video';
+      // Otherwise pick the section that crosses the reading line. When multiple
+      // cross (overlapping/nested), prefer the one whose top is closest to the line.
+      const crossing = measured.filter(crosses);
+
+      let nextActive: string | null = null;
+      if (crossing.length) {
+        crossing.sort((a, b) => b.top - a.top);
+        nextActive = crossing[0].key;
+      } else {
+        // No section crosses the line (e.g. between sections or at the very top).
+        // Prefer the last section that starts above the line but is still partially
+        // on screen; if everything above has scrolled off the top, fall back to the
+        // first section that is below the line.
+        const above = measured.filter((s) => s.top <= headerLine && s.bottom > 0);
+        if (above.length) {
+          nextActive = above[above.length - 1].key;
+        } else {
+          const below = measured.filter((s) => s.bottom > 0);
+          nextActive = below.length ? below[0].key : measured[0].key;
         }
       }
 

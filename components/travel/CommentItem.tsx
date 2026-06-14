@@ -163,6 +163,7 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
           <Pressable
             onPress={handleLikeToggle}
             style={styles.footerButton}
+            hitSlop={8}
             disabled={likeComment.isPending || unlikeComment.isPending}
             accessibilityLabel={isLiked ? 'Убрать лайк' : 'Поставить лайк'}
             testID="comment-like"
@@ -184,6 +185,7 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
           <Pressable
             onPress={requireAuth}
             style={styles.footerButton}
+            hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="Войдите, чтобы оценить комментарий"
           >
@@ -198,6 +200,7 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
           <Pressable
             onPress={() => onReply(comment)}
             style={styles.footerButton}
+            hitSlop={8}
             accessibilityLabel="Ответить на комментарий"
             testID="comment-reply"
           >
@@ -289,6 +292,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   moreButton: {
     padding: DESIGN_TOKENS.spacing.xxs,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: DESIGN_TOKENS.radii.sm,
     ...Platform.select({
       web: {
@@ -354,6 +361,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
+    minHeight: Platform.select({ default: 44, android: 48 }),
     paddingVertical: 4,
     paddingHorizontal: 2,
     ...Platform.select({

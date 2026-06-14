@@ -47,6 +47,17 @@ export const createTravelDetailsLayoutStyles = (colors: ThemedColors) => ({
     } as any,
     default: {},
   }),
+  // Optional sections (excursions/quests widgets) may resolve to empty. Reserve a
+  // much smaller intrinsic size so an empty result does not leave a tall blank box
+  // and trigger CLS once the real (small or zero) height is known.
+  webOptionalDeferredSection: Platform.select({
+    web: {
+      contentVisibility: 'auto',
+      contain: 'layout style paint',
+      containIntrinsicSize: '720px 160px',
+    } as any,
+    default: {},
+  }),
 
   // ✅ РЕДИЗАЙН: Адаптивное боковое меню
   sideMenuBase: {

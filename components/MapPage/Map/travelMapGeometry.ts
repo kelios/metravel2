@@ -52,6 +52,47 @@ export function extractTravelPoints(travelData: any[]): [number, number][] {
   return out
 }
 
+export interface InitialView {
+  center: [number, number]
+  zoom: number
+}
+
+// Грубая (без Leaflet) оценка центра/зума по набору точек — чтобы ПЕРВЫЙ кадр карты
+// уже показывал все маркеры в рамке, не дожидаясь асинхронного fitBounds.
+// Точную подгонку всё равно делает map.fitBounds после whenReady.
+export function computeInitialView(
+  points: [number, number][],
+  fallbackCenter: [number, number],
+  singlePointZoom: number,
+): InitialView {
+  if (points.length === 0) return { center: fallbackCenter, zoom: singlePointZoom }
+  if (points.length === 1) return { center: points[0], zoom: singlePointZoom }
+
+  let minLat = points[0][0]
+  let maxLat = points[0][0]
+  let minLng = points[0][1]
+  let maxLng = points[0][1]
+  for (const [lat, lng] of points) {
+    if (lat < minLat) minLat = lat
+    if (lat > maxLat) maxLat = lat
+    if (lng < minLng) minLng = lng
+    if (lng > maxLng) maxLng = lng
+  }
+
+  const center: [number, number] = [(minLat + maxLat) / 2, (minLng + maxLng) / 2]
+
+  const latSpan = Math.max(maxLat - minLat, 1e-6)
+  // Долготный спан корректируем на широту: 1° долготы у́же 1° широты.
+  const lngSpan = Math.max((maxLng - minLng) * Math.cos((center[0] * Math.PI) / 180), 1e-6)
+  const span = Math.max(latSpan, lngSpan)
+
+  // Земля ~360° долготы на zoom 0; на каждый зум спан делится надвое.
+  // Добавляем запас (паддинг ~15%), чтобы маркеры не липли к краям.
+  const zoom = Math.log2(360 / (span * 1.3))
+  const clampedZoom = Math.max(2, Math.min(15, Math.floor(zoom)))
+  return { center, zoom: clampedZoom }
+}
+
 export function calculatePopupPan(popupEl: HTMLElement, mapEl: HTMLElement) {
   const mapRect = mapEl.getBoundingClientRect()
   const popupRectAbs = popupEl.getBoundingClientRect()

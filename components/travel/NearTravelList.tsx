@@ -24,6 +24,7 @@ import TravelTmlRound from '@/components/travel/TravelTmlRound';
 import TravelListItem from '@/components/listTravel/TravelListItem';
 import { METRICS } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { NEARBY_TRAVELS_SUBTITLE } from '@/constants/nearby';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
 import { useNearTravelData } from '@/hooks/useNearTravelData';
@@ -549,12 +550,17 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
     }
 
     if (!isLoading && travelsNear.length === 0) {
+      // Embedded on the detail page: collapse the section when there is simply
+      // nothing nearby, instead of reserving a tall empty placeholder.
+      if (embedded) {
+        return null;
+      }
       return (
         <View style={embedded ? styles.embeddedSection : styles.section} onLayout={onLayout}>
           {showHeader && (
             <View style={styles.header}>
               <Title style={styles.title}>Рядом можно посмотреть</Title>
-              <Text style={styles.subtitle}>Маршруты в радиусе ~60 км</Text>
+              <Text style={styles.subtitle}>{NEARBY_TRAVELS_SUBTITLE}</Text>
             </View>
           )}
           <View style={{ alignItems: 'center', paddingVertical: DESIGN_TOKENS.spacing.xl }}>

@@ -12,6 +12,7 @@ import NavigationArrows from '@/components/travel/NavigationArrows'
 import { useTravelDetailsSidebarSectionModel } from '../hooks/useTravelDetailsSidebarSectionModel'
 import NearTravelList from '@/components/travel/NearTravelList'
 import PopularTravelList from '@/components/travel/PopularTravelList'
+import { NEARBY_TRAVELS_SUBTITLE } from '@/constants/nearby'
 
 const SIDEBAR_CONTENT_MARGIN_STYLE = { marginTop: 8 } as const
 const LIST_FALLBACK_STYLE = { minHeight: 220 } as const
@@ -82,7 +83,7 @@ export const TravelDetailsSidebarSection: React.FC<{
             aria-level={2 as any}
           >Рядом можно посмотреть</Text>
         </View>
-        <Text style={styles.sectionSubtitle}>Маршруты в радиусе ~60 км</Text>
+        <Text style={styles.sectionSubtitle}>{NEARBY_TRAVELS_SUBTITLE}</Text>
         <View style={SIDEBAR_CONTENT_MARGIN_STYLE}>
           {hasValidTravelId && (
             <View testID="travel-details-near-loaded">

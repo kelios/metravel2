@@ -228,9 +228,19 @@ const PaginationDots = memo(function PaginationDots({
   }, [currentIndex, total, styles])
 
   if (total < 2) return null
+  const showNumericIndicator = total > MAX_VISIBLE_DOTS
   return (
     <View style={[styles.dots, isMobile && styles.dotsMobile, POINTER_EVENTS_NONE]}>
-      <View style={styles.dotsContainer}>{dots}</View>
+      <View style={styles.dotsRow}>
+        <View style={styles.dotsContainer}>{dots}</View>
+        {showNumericIndicator ? (
+          <View style={styles.dotsCounter}>
+            <Text style={styles.dotsCounterText}>
+              {currentIndex + 1}/{total}
+            </Text>
+          </View>
+        ) : null}
+      </View>
     </View>
   )
 })

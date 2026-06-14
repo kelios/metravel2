@@ -95,7 +95,16 @@ export const TravelPointsBlock: React.FC<{
         >Координаты мест</Text>
         {canExportPoints ? (
           <View style={styles.pointsExportWrap}>
-            <View style={styles.pointsExportActions}>
+            <View
+              style={styles.pointsExportActions}
+              {...(Platform.OS === 'web'
+                ? ({
+                    role: 'group',
+                    'aria-label': 'Экспорт точек маршрута',
+                    'aria-describedby': 'travel-points-export-hint',
+                  } as any)
+                : {})}
+            >
               <Button
                 label="GPX"
                 size="sm"
@@ -130,7 +139,13 @@ export const TravelPointsBlock: React.FC<{
                 labelStyle={styles.pointsExportButtonText}
               />
             </View>
-            <Text style={styles.pointsExportHint}>KML — Organic Maps / MAPS.ME, GPX — навигаторы</Text>
+            <Text
+              style={styles.pointsExportHint}
+              nativeID="travel-points-export-hint"
+              {...(Platform.OS === 'web'
+                ? ({ id: 'travel-points-export-hint' } as any)
+                : {})}
+            >KML — Organic Maps / MAPS.ME, GPX — навигаторы</Text>
           </View>
         ) : null}
       </View>

@@ -15,12 +15,11 @@ import { useLeafletIcons } from './Map/useLeafletIcons'
 import {
   DEFAULT_CENTER,
   calculatePopupPan,
+  computeInitialView,
   extractTravelPoints,
   filterValidLatLngs,
   getPopupSize,
   ignoreTravelMapRuntimeError,
-  isValidLatLng,
-  parseCoordString,
 } from './Map/travelMapGeometry'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { normalizePoint } from '@/components/map-core/types'
@@ -114,20 +113,28 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 
   const customIcons = useLeafletIcons(L)
 
-  const center = useMemo<[number, number]>(() => {
+  // Все точки маршрута (линии + маркеры) — для подгонки рамки и расчёта стартового вида.
+  const allMapPoints = useMemo<[number, number][]>(() => {
+    const points: [number, number][] = []
     if (Array.isArray(routeLinesProp) && routeLinesProp.length > 0) {
-      const first = routeLinesProp[0]?.coords?.[0]
-      if (Array.isArray(first) && isValidLatLng(first[0], first[1])) {
-        return [first[0], first[1]]
+      for (const line of routeLinesProp) {
+        if (Array.isArray(line?.coords)) points.push(...filterValidLatLngs(line.coords))
       }
     }
     if (Array.isArray(routeLineCoordsProp) && routeLineCoordsProp.length > 0) {
-      const [lat, lng] = routeLineCoordsProp[0]
-      if (isValidLatLng(lat, lng)) return [lat, lng]
+      points.push(...filterValidLatLngs(routeLineCoordsProp))
     }
-    if (safeTravelData.length === 0) return DEFAULT_CENTER
-    return parseCoordString(safeTravelData[0]?.coord) ?? DEFAULT_CENTER
+    points.push(...extractTravelPoints(safeTravelData))
+    return points
   }, [safeTravelData, routeLineCoordsProp, routeLinesProp])
+
+  // Стартовый center/zoom считаем из bounds всех точек ДО первого рендера, чтобы
+  // первый кадр уже показывал все маркеры в рамке (а не отдалённый zoom 11 по первой точке).
+  const initialView = useMemo(
+    () => computeInitialView(allMapPoints, DEFAULT_CENTER, initialZoom),
+    [allMapPoints, initialZoom],
+  )
+  const center = initialView.center
 
   const hintCenter = useMemo(() => ({ lat: center[0], lng: center[1] }), [center])
 
@@ -316,37 +323,35 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     return () => clearTimeout(timer)
   }, [mapReady])
 
-  useEffect(() => {
-    if (!mapReady || !mapRef.current || !L) return
+  // Синхронная подгонка карты под рамку всех точек. Вызывается из whenReady (первый кадр),
+  // при смене данных и при resizeTrigger (раскрытие секции/ресайз) — без setTimeout(300),
+  // чтобы маркеры не оставались вне вьюпорта.
+  const fitToBounds = useCallback(() => {
     const map = mapRef.current
-
-    const points: [number, number][] = []
-    if (Array.isArray(routeLinesProp) && routeLinesProp.length > 0) {
-      for (const line of routeLinesProp) {
-        if (Array.isArray(line?.coords)) {
-          points.push(...filterValidLatLngs(line.coords))
-        }
+    if (!map || !L || typeof map.fitBounds !== 'function') return
+    if (allMapPoints.length === 0) return
+    try {
+      if (allMapPoints.length === 1) {
+        // Единственная точка — fitBounds дал бы нулевую рамку; центрируем с разумным зумом.
+        map.setView(L.latLng(allMapPoints[0][0], allMapPoints[0][1]), initialZoom, {
+          animate: false,
+        })
+        return
       }
+      const leafletPoints = allMapPoints.map(([lat, lng]) => L.latLng(lat, lng))
+      const bounds = L.latLngBounds(leafletPoints)
+      map.fitBounds(bounds.pad(0.15), { animate: false, maxZoom: 15 })
+    } catch {
+      ignoreTravelMapRuntimeError()
     }
-    if (Array.isArray(routeLineCoordsProp) && routeLineCoordsProp.length > 0) {
-      points.push(...filterValidLatLngs(routeLineCoordsProp))
-    }
-    points.push(...extractTravelPoints(safeTravelData))
-    if (points.length === 0) return
+  }, [L, allMapPoints, initialZoom])
 
-    const timer = setTimeout(() => {
-      try {
-        if (typeof map.fitBounds !== 'function') return
-        const leafletPoints = points.map(([lat, lng]) => L.latLng(lat, lng))
-        const bounds = L.latLngBounds(leafletPoints)
-        map.fitBounds(bounds.pad(0.15), { animate: false, maxZoom: 15 })
-      } catch {
-        ignoreTravelMapRuntimeError()
-      }
-    }, 300)
-
-    return () => clearTimeout(timer)
-  }, [mapReady, L, safeTravelData, routeLineCoordsProp, routeLinesProp])
+  useEffect(() => {
+    if (!mapReady) return
+    // resizeTrigger в зависимостях: после ресайза/повторного раскрытия секции
+    // карта перецентрируется на bounds (invalidateSize-эффект уже пересчитал размер).
+    fitToBounds()
+  }, [mapReady, fitToBounds, resizeTrigger])
 
   useEffect(() => {
     if (!IS_WEB || !mapReady || !mapRef.current || !L) return
@@ -445,7 +450,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     >
       <MapContainer
         center={center}
-        zoom={initialZoom}
+        zoom={initialView.zoom}
         style={{ width: '100%', height: '100%', minHeight: mapHeight }}
         zoomControl
         scrollWheelZoom
@@ -460,10 +465,15 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           // если mapRef ещё не установлен, откладываем флаг на кадр, иначе эффекты по
           // mapReady тихо выйдут на `!mapRef.current` и не перезапустятся (карта без fitBounds).
           if (mapRef.current) {
+            // Подгоняем рамку синхронно на первом кадре, чтобы маркеры сразу были видны.
+            fitToBounds()
             setMapReady(true)
           } else if (typeof requestAnimationFrame !== 'undefined') {
             requestAnimationFrame(() => {
-              if (mountedRef.current && mapRef.current) setMapReady(true)
+              if (mountedRef.current && mapRef.current) {
+                fitToBounds()
+                setMapReady(true)
+              }
             })
           } else {
             setMapReady(true)

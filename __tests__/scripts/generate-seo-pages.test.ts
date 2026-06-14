@@ -27,8 +27,8 @@ const {
 } = require('@/scripts/generate-seo-pages');
 
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
+const { makeTempDir } = require('./cli-test-utils');
 
 // ---------------------------------------------------------------------------
 // Minimal base HTML that mimics Expo static export output (NO OG/canonical)
@@ -838,7 +838,7 @@ describe('slug redirects', () => {
   describe('loadRedirectManifest', () => {
     let dir: string;
     beforeAll(() => {
-      dir = fs.mkdtempSync(path.join(os.tmpdir(), 'seo-redir-'));
+      dir = makeTempDir('seo-redir-');
     });
     const write = (name: string, data: unknown) => {
       const p = path.join(dir, name);

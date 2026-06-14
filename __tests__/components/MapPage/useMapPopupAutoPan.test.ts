@@ -11,7 +11,7 @@ describe('useMapPopupAutoPan', () => {
     disconnected: boolean
     observe: jest.Mock
     disconnect: jest.Mock
-    trigger: () => void
+    trigger: (contentRect?: { width: number; height: number }) => void
   }> = []
 
   beforeEach(() => {
@@ -37,9 +37,12 @@ describe('useMapPopupAutoPan', () => {
           disconnected: false,
           observe: this.observe,
           disconnect: this.disconnect,
-          trigger: () => {
+          trigger: (contentRect?: { width: number; height: number }) => {
             if (this.disconnected) return
-            this.callback([], this as unknown as ResizeObserver)
+            const entries = contentRect
+              ? ([{ contentRect }] as unknown as ResizeObserverEntry[])
+              : []
+            this.callback(entries, this as unknown as ResizeObserver)
           },
         })
       }
@@ -197,10 +200,22 @@ describe('useMapPopupAutoPan', () => {
 
     panBy.mockClear()
 
-    // First synchronous ResizeObserver invocation right after observe() must
-    // be ignored to avoid duplicating the initial pan.
+    // The first ResizeObserver callback reports a real size (differs from the
+    // initial 0x0 baseline), so it schedules a debounced re-pan — genuine late
+    // image growth landing in this first callback is no longer dropped (this
+    // replaced the old "always ignore the first synchronous callback" guard).
     act(() => {
-      resizeObserverInstances[0]?.trigger()
+      resizeObserverInstances[0]?.trigger({ width: 200, height: 300 })
+      jest.advanceTimersByTime(120)
+    })
+    expect(panBy).toHaveBeenCalledWith([0, -47], { animate: true, duration: 0.2 })
+
+    panBy.mockClear()
+
+    // A subsequent callback reporting the SAME size is skipped (no debounce
+    // scheduled, no redundant re-pan).
+    act(() => {
+      resizeObserverInstances[0]?.trigger({ width: 200, height: 300 })
       jest.advanceTimersByTime(120)
     })
     expect(panBy).not.toHaveBeenCalled()
@@ -211,8 +226,10 @@ describe('useMapPopupAutoPan', () => {
 
     popupTop = 88
 
+    // A real size change (height grows) well after the first second still
+    // schedules a debounced re-pan so late image decode can re-center.
     act(() => {
-      resizeObserverInstances[0]?.trigger()
+      resizeObserverInstances[0]?.trigger({ width: 200, height: 360 })
       jest.advanceTimersByTime(120)
     })
 
@@ -223,6 +240,11 @@ describe('useMapPopupAutoPan', () => {
     const panBy = jest.fn()
     const on = jest.fn()
     const off = jest.fn()
+
+    // Map spans the full browser viewport, so the viewport clamp matches the
+    // map's safe-right edge and the test exercises pure safe-area overflow.
+    const originalInnerWidth = window.innerWidth
+    Object.defineProperty(window, 'innerWidth', { value: 1280, configurable: true })
 
     const mapEl = {
       getBoundingClientRect: () => ({
@@ -273,12 +295,22 @@ describe('useMapPopupAutoPan', () => {
 
     // safeRight = 1280 - 24 = 1256, popup.right = 1300 → overflowRight = 44.
     expect(panBy).toHaveBeenCalledWith([44, 0], { animate: true, duration: 0.2 })
+
+    Object.defineProperty(window, 'innerWidth', {
+      value: originalInnerWidth,
+      configurable: true,
+    })
   })
 
   it('does not pan desktop popup when it fits inside the safe area', () => {
     const panBy = jest.fn()
     const on = jest.fn()
     const off = jest.fn()
+
+    // Map spans the full browser viewport so the viewport clamp coincides with
+    // the map safe-right edge; popup.right = 1220 fits within 1256.
+    const originalInnerWidth = window.innerWidth
+    Object.defineProperty(window, 'innerWidth', { value: 1280, configurable: true })
 
     const mapEl = {
       getBoundingClientRect: () => ({
@@ -327,5 +359,10 @@ describe('useMapPopupAutoPan', () => {
     })
 
     expect(panBy).not.toHaveBeenCalled()
+
+    Object.defineProperty(window, 'innerWidth', {
+      value: originalInnerWidth,
+      configurable: true,
+    })
   })
 })

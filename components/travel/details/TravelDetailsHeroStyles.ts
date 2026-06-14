@@ -72,7 +72,7 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       alignItems: 'center',
       minHeight: Platform.select({
         default: 44,
-        web: 38,
+        web: 44,
       }),
       paddingVertical: Platform.select({
         default: 10,

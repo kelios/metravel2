@@ -86,7 +86,7 @@ describe('useActiveSection', () => {
     expect(result.current.activeSection).toBe('section-1')
   })
 
-  it('prefers the next section when its heading is comfortably near the reading line', () => {
+  it('keeps the section crossing the reading line active until the next one crosses it', () => {
     const anchors = {
       'section-1': { current: null },
       'section-2': { current: null },
@@ -94,12 +94,22 @@ describe('useActiveSection', () => {
 
     const { result } = renderHook(() => useActiveSection(anchors, 0))
 
-    // headerLine = 24. section-1 still spans it, but section-2 has been
-    // scrolled into a natural heading position and should drive nav highlight.
+    // headerLine = 24. section-1 crosses it; section-2 starts below and does not
+    // cross yet — the single reading-line metric keeps section-1 active.
     const s1 = document.getElementById('section-1') as any
     const s2 = document.getElementById('section-2') as any
     s1.getBoundingClientRect = jest.fn(() => ({ top: -140, bottom: 120, height: 260 } as any))
     s2.getBoundingClientRect = jest.fn(() => ({ top: 96, bottom: 360, height: 264 } as any))
+
+    act(() => {
+      lastObserverCallback?.([], null as any)
+    })
+
+    expect(result.current.activeSection).toBe('section-1')
+
+    // Once section-2 crosses the reading line, it takes over.
+    s1.getBoundingClientRect = jest.fn(() => ({ top: -300, bottom: 10, height: 310 } as any))
+    s2.getBoundingClientRect = jest.fn(() => ({ top: 10, bottom: 360, height: 350 } as any))
 
     act(() => {
       lastObserverCallback?.([], null as any)

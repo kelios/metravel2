@@ -110,8 +110,8 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       alignSelf: 'center',
     },
     actionBtn: {
-      width: (Platform.OS === 'web') ? 34 : 40,
-      height: (Platform.OS === 'web') ? 34 : 40,
+      width: 44,
+      height: 44,
       borderRadius: 10,
       alignItems: 'center',
       justifyContent: 'center',

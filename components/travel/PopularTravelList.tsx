@@ -325,6 +325,12 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
       );
     }
 
+    // Embedded on the detail page: an empty (non-error) result must not occupy a
+    // tall error-like box — collapse the section entirely instead.
+    if (embedded && !hasError && popularList.length === 0) {
+      return null;
+    }
+
     if (hasError || popularList.length === 0) {
       return (
         <View style={styles.loadingContainer} onLayout={onLayout}>
