@@ -276,34 +276,6 @@ export const createSliderStyles = (colors: Record<string, any>) =>
       borderRadius: 1.5,
       opacity: 0.3,
     },
-    dotsRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    dotsCounter: {
-      marginLeft: 8,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 10,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      ...Platform.select({
-        web: {
-          backdropFilter: 'blur(20px) saturate(1.8)',
-          WebkitBackdropFilter: 'blur(20px) saturate(1.8)',
-        },
-      }),
-    },
-    dotsCounterText: {
-      color: colors.textOnDark,
-      fontSize: 11,
-      fontWeight: '700' as any,
-      fontFamily: Platform.OS === 'web' ? 'system-ui, -apple-system, sans-serif' : undefined,
-      letterSpacing: 0.3,
-      textShadowColor: 'rgba(0,0,0,0.5)',
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 2,
-    },
     counter: {
       position: 'absolute',
       top: 14,
