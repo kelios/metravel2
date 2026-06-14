@@ -89,6 +89,51 @@ describe('useQuestWizardProgress', () => {
     expect(result.current.allCompleted).toBe(false)
   })
 
+  it('does not revert the user step when initialProgress identity changes (save echo)', async () => {
+    // Бэкенд-эхо: после debounced-сейва setProgress пересоздаёт initialProgress
+    // в роуте через useMemo. Новый identity не должен пере-сеять состояние и
+    // откатывать продвинутый игроком шаг.
+    const makeInitial = () => ({
+      currentIndex: 1,
+      unlockedIndex: 1,
+      answers: { 'step-1': 'dragon' },
+      attempts: {},
+      hints: {},
+      showMap: true,
+    })
+
+    const { result, rerender } = renderHook(
+      ({ initialProgress }) =>
+        useQuestWizardProgress({
+          allSteps,
+          steps: questSteps,
+          storageKey: 'quest_progress_echo',
+          initialProgress,
+        }),
+      { initialProps: { initialProgress: makeInitial() } }
+    )
+
+    await waitFor(() => {
+      expect(result.current.currentIndex).toBe(1)
+    })
+
+    // Игрок отвечает на step-2 и продвигается дальше.
+    act(() => {
+      result.current.setAnswers((prev) => ({ ...prev, 'step-2': 'castle' }))
+      result.current.setCurrentIndex(2)
+    })
+    expect(result.current.currentIndex).toBe(2)
+
+    // Эхо: тот же storageKey, новый объект initialProgress (стейл current_index=1).
+    rerender({ initialProgress: makeInitial() })
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // Шаг игрока сохранён, не откатан к серверному значению.
+    expect(result.current.currentIndex).toBe(2)
+    expect(result.current.answers['step-2']).toBe('castle')
+  })
+
   it('resets persisted progress and state', async () => {
     await AsyncStorage.setItem('quest_progress_reset', JSON.stringify({
       index: 2,

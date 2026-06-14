@@ -57,12 +57,25 @@ export function useQuestWizardProgress({
   const [hints, setHints] = useState<Record<string, boolean>>({})
   const [showMap, setShowMap] = useState(true)
   const suppressSave = useRef(false)
+  // Какой storageKey уже засеян бэкенд-прогрессом. initialProgress пересоздаётся
+  // в роуте через useMemo на каждое setProgress (эхо нашего же debounced-сейва),
+  // поэтому без этого гейта load-эффект перезапускался на каждое эхо: ставил
+  // suppressSave=true и откатывал currentIndex/answers к серверным значениям —
+  // отсюда «тап по ответу иногда игнорируется и возвращает на тот же шаг».
+  const backendSeededKey = useRef<string | null>(null)
 
   useEffect(() => {
     const loadProgress = async () => {
       try {
         suppressSave.current = true
         if (initialProgress) {
+          // Применяем бэкенд-прогресс один раз на квест. Последующие изменения
+          // identity initialProgress — это эхо собственных сейвов, не новые данные.
+          if (backendSeededKey.current === storageKey) {
+            suppressSave.current = false
+            return
+          }
+          backendSeededKey.current = storageKey
           setCurrentIndex(initialProgress.currentIndex ?? 0)
           setUnlockedIndex(initialProgress.unlockedIndex ?? 0)
           setAnswers(initialProgress.answers ?? {})
@@ -79,6 +92,8 @@ export function useQuestWizardProgress({
             showMap: initialProgress.showMap !== undefined ? initialProgress.showMap : true,
           })).catch(() => {})
         } else {
+          // Бэкенд-прогресс ещё не загружен — даём ему засеять состояние, когда придёт.
+          backendSeededKey.current = null
           const saved = await AsyncStorage.getItem(storageKey)
           if (saved) {
             const { safeJsonParseString } = require('@/utils/safeJsonParse')
