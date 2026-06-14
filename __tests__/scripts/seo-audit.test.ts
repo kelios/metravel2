@@ -187,12 +187,31 @@ describe('auditTravel', () => {
     expect(high.priority).toBeGreaterThan(low.priority);
   });
 
-  it('degrades gracefully when detail fetch failed (empty object)', () => {
+  it('flags content issues for a genuinely empty body (fetched, no description)', () => {
     const r = auditTravel({ id: 5, name: 'Озеро Глубокое и окрестности', countUnicIpView: 0 }, {});
     expect(r.issues).toEqual(
       expect.arrayContaining(['weak-lead', 'thin-content', 'no-headings', 'no-internal-links'])
     );
     expect(r.words).toBe(0);
+  });
+
+  it('does NOT flag content issues when the detail fetch failed (avoids false thin/weak)', () => {
+    const r = auditTravel(
+      { id: 6, name: 'Усадьба Тышкевичей и заброшенный санаторий', countUnicIpView: 1321, slug: 's' },
+      { __fetchFailed: true },
+    );
+    expect(r.issues).not.toContain('weak-lead');
+    expect(r.issues).not.toContain('thin-content');
+    expect(r.issues).not.toContain('no-headings');
+    expect(r.issues).not.toContain('no-internal-links');
+    expect(r.detailFetchFailed).toBe(true);
+    expect(r.words).toBeNull();
+  });
+
+  it('still flags a too-long title even when the detail fetch failed', () => {
+    const longName = 'Маршрут на один день: ' + 'усадьба '.repeat(8);
+    const r = auditTravel({ id: 7, name: longName, countUnicIpView: 0 }, { __fetchFailed: true });
+    expect(r.issues).toContain('title-too-long');
   });
 });
 

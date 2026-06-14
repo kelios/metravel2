@@ -137,6 +137,7 @@ function analyzeContent(descriptionHtml, minWords = THIN_WORDS) {
  */
 function auditTravel(listItem, detail = {}, opts = {}) {
   const minWords = opts.minWords || THIN_WORDS;
+  const detailUnavailable = !detail || detail.__fetchFailed === true;
   const titleA = analyzeTitle(listItem.name);
   const leadA = analyzeLead(listItem.name, detail.description);
   const contentA = analyzeContent(detail.description, minWords);
@@ -144,10 +145,15 @@ function auditTravel(listItem, detail = {}, opts = {}) {
   const issues = [];
   if (titleA.tooLong) issues.push('title-too-long');
   if (titleA.tooShort) issues.push('title-too-short');
-  if (leadA.weak) issues.push('weak-lead');
-  if (contentA.thin) issues.push('thin-content');
-  if (contentA.noHeadings) issues.push('no-headings');
-  if (contentA.noInternalLinks) issues.push('no-internal-links');
+  // Content/lead checks need the body. When the detail fetch failed we have no
+  // body — flagging weak-lead/thin/no-headings/no-internal-links would be a
+  // false positive, so skip them (title checks come from the list payload).
+  if (!detailUnavailable) {
+    if (leadA.weak) issues.push('weak-lead');
+    if (contentA.thin) issues.push('thin-content');
+    if (contentA.noHeadings) issues.push('no-headings');
+    if (contentA.noInternalLinks) issues.push('no-internal-links');
+  }
 
   const views = Number(listItem.countUnicIpView) || 0;
   // Priority = how much ranking upside the fixes unlock. Pages that already
@@ -163,10 +169,11 @@ function auditTravel(listItem, detail = {}, opts = {}) {
     country: listItem.countryName || '',
     views,
     titleLength: titleA.length,
-    words: contentA.words,
-    headings: contentA.headings,
-    internalLinks: contentA.internalLinks,
-    weakLead: leadA.weak,
+    words: detailUnavailable ? null : contentA.words,
+    headings: detailUnavailable ? null : contentA.headings,
+    internalLinks: detailUnavailable ? null : contentA.internalLinks,
+    weakLead: detailUnavailable ? null : leadA.weak,
+    detailFetchFailed: detailUnavailable,
     issues,
     priority,
   };
@@ -235,6 +242,21 @@ function fetchJson(url) {
   });
 }
 
+/** fetchJson with a few retries — a transient failure must NOT masquerade as a
+ *  thin/empty body (that produced false weak-lead/thin/no-headings flags). */
+async function fetchJsonRetry(url, attempts = 3, backoffMs = 400) {
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fetchJson(url);
+    } catch (e) {
+      lastErr = e;
+      if (i < attempts - 1) await new Promise((r) => setTimeout(r, backoffMs * (i + 1)));
+    }
+  }
+  throw lastErr;
+}
+
 async function batchAsync(items, concurrency, fn) {
   const results = new Array(items.length);
   let idx = 0;
@@ -281,13 +303,17 @@ async function main() {
   // would make the audit re-pick an already-fixed article. A unique query
   // param forces a fresh response so batch selection reflects live state.
   const cb = Date.now();
-  const details = await batchAsync(list, 10, async (t) => {
+  const details = await batchAsync(list, 6, async (t) => {
     try {
-      return await fetchJson(`${API_BASE}/api/travels/${t.id}/?_cb=${cb}-${t.id}`);
+      return await fetchJsonRetry(`${API_BASE}/api/travels/${t.id}/?_cb=${cb}-${t.id}`);
     } catch {
-      return {};
+      return { __fetchFailed: true };
     }
   });
+  const failedCount = details.filter((d) => d && d.__fetchFailed).length;
+  if (failedCount) {
+    console.warn(`  ⚠️  detail fetch failed for ${failedCount} travel(s) after retries — content checks skipped for them (NOT counted as thin)`);
+  }
 
   // 3. Audit + summarize
   const rows = list.map((t, i) => auditTravel(t, details[i] || {}, { minWords }));
