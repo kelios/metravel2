@@ -1,6 +1,12 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
+
+let mockResponsiveState = {
+  isPhone: false,
+  isLargePhone: false,
+};
 
 jest.mock('@/hooks/useTheme', () => ({
   useThemedColors: () => ({
@@ -21,13 +27,17 @@ jest.mock('@/hooks/useTheme', () => ({
 }));
 
 jest.mock('@/hooks/useResponsive', () => ({
-  useResponsive: () => ({
-    isPhone: false,
-    isLargePhone: false,
-  }),
+  useResponsive: () => mockResponsiveState,
 }));
 
 describe('TravelWizardHeader', () => {
+  beforeEach(() => {
+    mockResponsiveState = {
+      isPhone: false,
+      isLargePhone: false,
+    };
+  });
+
   it('announces progress status and exposes errors without relying only on color', () => {
     const { getByTestId, getByText } = render(
       <TravelWizardHeader
@@ -50,5 +60,35 @@ describe('TravelWizardHeader', () => {
       text: 'Шаг 2 из 6: 2 ошибки, 34%',
     });
     expect(getByText('Ошибки: 2')).toBeTruthy();
+  });
+
+  it('keeps the mobile more menu trigger at a 44px touch target', () => {
+    mockResponsiveState = {
+      isPhone: true,
+      isLargePhone: false,
+    };
+
+    const { getByTestId } = render(
+      <TravelWizardHeader
+        title="Маршрут"
+        subtitle="Шаг 2 из 6"
+        progressPercent={34}
+        currentStep={2}
+        totalSteps={6}
+        onSave={jest.fn()}
+      />
+    );
+
+    const moreButton = getByTestId('travel-wizard-more');
+    const styleValue =
+      typeof moreButton.props.style === 'function'
+        ? moreButton.props.style({ pressed: false, hovered: false, focused: false })
+        : moreButton.props.style;
+    const flattened = StyleSheet.flatten(styleValue);
+
+    expect(flattened.width).toBeGreaterThanOrEqual(44);
+    expect(flattened.height).toBeGreaterThanOrEqual(44);
+    expect(flattened.minWidth).toBeGreaterThanOrEqual(44);
+    expect(flattened.minHeight).toBeGreaterThanOrEqual(44);
   });
 });

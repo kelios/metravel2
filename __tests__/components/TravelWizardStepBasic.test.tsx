@@ -26,6 +26,15 @@ jest.mock('@/utils/contextualTips', () => ({
     getContextualTips: () => [],
 }));
 
+let mockResponsiveState = {
+    isPhone: false,
+    isLargePhone: false,
+};
+
+jest.mock('@/hooks/useResponsive', () => ({
+    useResponsive: () => mockResponsiveState,
+}));
+
 // Lightweight component mocks to avoid animations/timers
 jest.mock('@/components/travel/TravelWizardHeader', () => (props: any) => {
     const { Text, View, Pressable } = require('react-native');
@@ -64,6 +73,15 @@ jest.mock('@/components/travel/ValidationFeedback', () => ({
             <View>
                 <Text>errors:{props.errorCount}</Text>
                 <Text>warnings:{props.warningCount}</Text>
+            </View>
+        );
+    },
+    CollapsibleValidationSummary: (props: any) => {
+        const { View, Text } = require('react-native');
+        return (
+            <View>
+                <Text>collapsible-errors:{props.errorCount}</Text>
+                <Text>collapsible-warnings:{props.warningCount}</Text>
             </View>
         );
     },
@@ -197,6 +215,10 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        mockResponsiveState = {
+            isPhone: false,
+            isLargePhone: false,
+        };
         (useRouter as jest.Mock).mockReturnValue(mockRouter);
     });
 
@@ -388,6 +410,49 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
             fireEvent.press(nextButton);
 
             expect(defaultProps.onGoNext).toHaveBeenCalled();
+        });
+    });
+
+    describe('✅ Сводка ошибок', () => {
+        it('должен сохранить desktop summary после submit-attempt', () => {
+            const { getByText, queryByText } = render(
+                <TravelWizardStepBasic
+                    {...defaultProps}
+                    stepErrors={['Название путешествия обязательно для заполнения']}
+                />
+            );
+
+            expect(getByText('errors:2')).toBeTruthy();
+            expect(queryByText('collapsible-errors:2')).toBeNull();
+        });
+
+        it('должен показать collapsible mobile summary после submit-attempt', () => {
+            mockResponsiveState = {
+                isPhone: true,
+                isLargePhone: false,
+            };
+
+            const { getByText, queryByText } = render(
+                <TravelWizardStepBasic
+                    {...defaultProps}
+                    stepErrors={['Название путешествия обязательно для заполнения']}
+                />
+            );
+
+            expect(getByText('collapsible-errors:2')).toBeTruthy();
+            expect(queryByText('errors:2')).toBeNull();
+        });
+
+        it('не должен показывать mobile summary до submit-attempt', () => {
+            mockResponsiveState = {
+                isPhone: true,
+                isLargePhone: false,
+            };
+
+            const { queryByText } = render(<TravelWizardStepBasic {...defaultProps} />);
+
+            expect(queryByText('collapsible-errors:2')).toBeNull();
+            expect(queryByText('errors:2')).toBeNull();
         });
     });
 

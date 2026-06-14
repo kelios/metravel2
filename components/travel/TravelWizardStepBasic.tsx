@@ -7,7 +7,7 @@ import { Snackbar } from '@/ui/paper';
 import ContentUpsertSection from '@/components/travel/ContentUpsertSection';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { ValidatedTextInput } from '@/components/travel/ValidatedTextInput';
-import { ValidationSummary } from '@/components/travel/ValidationFeedback';
+import { CollapsibleValidationSummary, ValidationSummary } from '@/components/travel/ValidationFeedback';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useStepTransition } from '@/hooks/useStepTransition';
@@ -129,8 +129,12 @@ function TravelWizardStepBasic({
   );
   const contextualTipsBody = useMemo(() => formatContextualTips(formData), [formData]);
 
-  const shouldShowValidationSummary =
-    !isCompactLayout && (stepErrors.length > 0 || (hasEditedForm && validation.errors.length > 0));
+  const hasValidationErrors = validation.errors.length > 0;
+  const hasSubmitAttemptErrors = stepErrors.length > 0;
+  const shouldShowDesktopValidationSummary =
+    !isCompactLayout && (hasSubmitAttemptErrors || (hasEditedForm && hasValidationErrors));
+  const shouldShowMobileValidationSummary =
+    isCompactLayout && hasSubmitAttemptErrors && hasValidationErrors;
 
   const setEditedFormData = useCallback<React.Dispatch<React.SetStateAction<TravelFormData>>>(
     (nextFormData) => {
@@ -208,14 +212,27 @@ function TravelWizardStepBasic({
           onOpenPublic={onOpenPublic}
         />
 
-        {shouldShowValidationSummary && (
-          <View style={styles.validationSummaryWrapper}>
-            <ValidationSummary
-              errorCount={validation.errors.length}
-              warningCount={validation.warnings.length}
-              errorMessages={validationMessages.errorMessages}
-              warningMessages={validationMessages.warningMessages}
-            />
+        {(shouldShowDesktopValidationSummary || shouldShowMobileValidationSummary) && (
+          <View
+            style={styles.validationSummaryWrapper}
+            accessibilityLiveRegion="polite"
+            {...(Platform.OS === 'web' ? ({ 'aria-live': 'polite' } as any) : null)}
+          >
+            {shouldShowMobileValidationSummary ? (
+              <CollapsibleValidationSummary
+                errorCount={validation.errors.length}
+                warningCount={validation.warnings.length}
+                errorMessages={validationMessages.errorMessages}
+                warningMessages={validationMessages.warningMessages}
+              />
+            ) : (
+              <ValidationSummary
+                errorCount={validation.errors.length}
+                warningCount={validation.warnings.length}
+                errorMessages={validationMessages.errorMessages}
+                warningMessages={validationMessages.warningMessages}
+              />
+            )}
           </View>
         )}
 

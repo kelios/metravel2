@@ -1,9 +1,15 @@
 import React from 'react';
-import { Platform, Image } from 'react-native';
+import { Platform, Image, StyleSheet } from 'react-native';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { QueryClientContext } from '@tanstack/react-query';
 
 import ImageGalleryComponent from '@/components/travel/ImageGalleryComponent.web';
+import {
+  GALLERY_MOBILE_STATIC_FROST_MEDIA,
+  createGalleryStyles,
+  createMobileWebStaticFrostStyle,
+} from '@/components/travel/gallery/styles';
+import { MODERN_MATTE_PALETTE, MODERN_MATTE_SHADOWS, MODERN_MATTE_BOX_SHADOWS } from '@/constants/modernMattePalette';
 
 jest.mock('@/components/ui/OptimizedImage', () => {
   const React = require('react');
@@ -395,6 +401,44 @@ describe('ImageGalleryComponent.web', () => {
       const last = onChange.mock.calls[onChange.mock.calls.length - 1][0] as Array<{ id?: string; url: string }>;
       expect(last.map((item) => item.id)).toEqual(['2', '1', '3']);
     });
+  });
+
+  it('keeps gallery move controls at 44px and adds a contrast backdrop', () => {
+    const styles = createGalleryStyles({
+      ...MODERN_MATTE_PALETTE,
+      shadows: MODERN_MATTE_SHADOWS,
+      boxShadows: MODERN_MATTE_BOX_SHADOWS,
+    } as any);
+    const moveControls = StyleSheet.flatten(styles.moveControls);
+    const moveButton = StyleSheet.flatten(styles.moveButton);
+
+    expect(moveControls.backgroundColor).toBe(MODERN_MATTE_PALETTE.overlay);
+    expect(moveControls.padding).toBeGreaterThan(0);
+    expect(moveButton.width).toBeGreaterThanOrEqual(44);
+    expect(moveButton.height).toBeGreaterThanOrEqual(44);
+    expect(moveButton.minWidth).toBeGreaterThanOrEqual(44);
+    expect(moveButton.minHeight).toBeGreaterThanOrEqual(44);
+    expect(moveButton.borderWidth).toBeGreaterThanOrEqual(2);
+  });
+
+  it('uses static frost for gallery buttons on mobile web while preserving desktop blur', () => {
+    const moveMobileOverride = createMobileWebStaticFrostStyle(MODERN_MATTE_PALETTE.surfaceMuted);
+    const deleteMobileOverride = createMobileWebStaticFrostStyle(MODERN_MATTE_PALETTE.danger);
+
+    expect(moveMobileOverride[GALLERY_MOBILE_STATIC_FROST_MEDIA]).toEqual(
+      expect.objectContaining({
+        backgroundColor: MODERN_MATTE_PALETTE.surfaceMuted,
+        backdropFilter: 'none',
+        WebkitBackdropFilter: 'none',
+      }),
+    );
+    expect(deleteMobileOverride[GALLERY_MOBILE_STATIC_FROST_MEDIA]).toEqual(
+      expect.objectContaining({
+        backgroundColor: MODERN_MATTE_PALETTE.danger,
+        backdropFilter: 'none',
+        WebkitBackdropFilter: 'none',
+      }),
+    );
   });
 
   it('invalidates the travel detail cache after persisted reorder', async () => {

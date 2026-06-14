@@ -3,6 +3,18 @@ import { Platform, StyleSheet } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { useThemedColors } from '@/hooks/useTheme'
 
+export const GALLERY_MOBILE_STATIC_FROST_MEDIA = '@media (max-width: 767px)'
+
+export function createMobileWebStaticFrostStyle(backgroundColor: string) {
+  return {
+    [GALLERY_MOBILE_STATIC_FROST_MEDIA]: {
+      backgroundColor,
+      backdropFilter: 'none',
+      WebkitBackdropFilter: 'none',
+    },
+  }
+}
+
 export const createGalleryStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
     container: {
@@ -103,6 +115,7 @@ export const createGalleryStyles = (colors: ReturnType<typeof useThemedColors>) 
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
           transition: 'all 0.2s ease',
+          ...createMobileWebStaticFrostStyle(colors.danger),
           ':hover': {
             transform: 'scale(1.1)',
             backgroundColor: colors.dangerDark,
@@ -127,17 +140,22 @@ export const createGalleryStyles = (colors: ReturnType<typeof useThemedColors>) 
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
+      padding: 2,
+      borderRadius: 26,
+      backgroundColor: colors.overlay,
       zIndex: 9998,
       elevation: 9998,
     },
     moveButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 44,
+      height: 44,
+      minWidth: 44,
+      minHeight: 44,
+      borderRadius: 22,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.overlay,
-      borderWidth: 1,
+      borderWidth: 2,
       borderColor: colors.textOnDark,
       ...Platform.select({
         web: {
@@ -145,6 +163,7 @@ export const createGalleryStyles = (colors: ReturnType<typeof useThemedColors>) 
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
           transition: 'all 0.2s ease',
+          ...createMobileWebStaticFrostStyle(colors.surfaceMuted),
           ':hover': {
             transform: 'scale(1.05)',
           },

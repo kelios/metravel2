@@ -477,6 +477,7 @@ export const CollapsibleValidationSummary: React.FC<ValidationSummaryProps> = ({
         accessibilityRole="button"
         accessibilityState={{ expanded }}
         accessibilityLabel={`${summaryParts.join(', ')}. ${expanded ? 'Свернуть' : 'Развернуть'}`}
+        {...(Platform.OS === 'web' ? ({ 'aria-expanded': expanded } as any) : null)}
       >
         <Feather
           name={errorCount > 0 ? 'alert-circle' : 'info'}

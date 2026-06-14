@@ -85,6 +85,7 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
         justifyContent: 'center',
         width: 44,
         height: 44,
+        minWidth: 44,
         minHeight: 44,
         borderRadius: DESIGN_TOKENS.radii.pill,
         position: 'relative',
@@ -92,8 +93,9 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
         borderWidth: 0,
     },
     iconButtonMobile: {
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
+        minWidth: 44,
         minHeight: 44,
     },
     iconButtonActive: {
