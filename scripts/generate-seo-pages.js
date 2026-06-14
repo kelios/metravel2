@@ -955,6 +955,107 @@ function buildTravelArticleJsonLd({ title, description, canonical, image, travel
   return payload;
 }
 
+// ---------------------------------------------------------------------------
+// Quests (городские квест-маршруты): prerender detail pages + crawlable index.
+// Sitemap самих квестов отдаёт бэкенд (BE-017); здесь даём индексируемую мету,
+// JSON-LD и перелинковку, чтобы Googlebot находил /quests/{city}/{quest} даже
+// без записи в sitemap.
+// ---------------------------------------------------------------------------
+function questRouteKey(quest) {
+  const questId = String(quest?.quest_id ?? quest?.id ?? '').trim();
+  const cityId = String(quest?.city_id ?? quest?.cityId ?? '').trim();
+  if (!questId || !cityId) return null;
+  return { cityId, questId, path: `/quests/${cityId}/${questId}` };
+}
+
+function buildQuestSeoDescription(quest) {
+  const title = String(quest?.title || 'Городской квест').trim();
+  const city = String(quest?.city_name || quest?.cityName || '').trim();
+  const points = Number(quest?.points) || 0;
+  const durationMin = Number(quest?.duration_min) || 0;
+
+  const parts = [];
+  parts.push(city ? `${title} — пеший квест-маршрут по городу ${city}` : `${title} — пеший квест-маршрут`);
+  if (points > 0) parts.push(`${points} ${pluralizeRu(points, 'точка', 'точки', 'точек')}`);
+  if (durationMin > 0) {
+    const hours = Math.floor(durationMin / 60);
+    const mins = durationMin % 60;
+    const duration = hours > 0 ? (mins > 0 ? `${hours} ч ${mins} мин` : `${hours} ч`) : `${mins} мин`;
+    parts.push(`≈${duration}`);
+  }
+  parts.push('загадки, легенды и финал — прямо со смартфона');
+  return clampDescriptionForAttr(parts.join(' · '));
+}
+
+function pluralizeRu(n, one, few, many) {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return few;
+  return many;
+}
+
+function buildQuestJsonLd({ title, description, canonical, image, quest }) {
+  if (!title || !canonical) return null;
+  const payload = {
+    '@context': 'https://schema.org',
+    '@type': 'TouristTrip',
+    name: String(title).trim(),
+    description: String(description || '').trim(),
+    url: canonical,
+    mainEntityOfPage: canonical,
+    inLanguage: 'ru',
+    touristType: 'Городской квест, пеший маршрут',
+    provider: {
+      '@type': 'Organization',
+      name: 'MeTravel',
+      url: SITE_URL,
+    },
+  };
+  if (image) payload.image = [image];
+  const city = String(quest?.city_name || quest?.cityName || '').trim();
+  if (city) {
+    payload.location = { '@type': 'City', name: city };
+  }
+  return payload;
+}
+
+/** Скрытый, но crawlable список ссылок на все квесты — для обнаружения без sitemap. */
+function injectQuestLinksIndex(baseHtml, quests) {
+  const links = quests
+    .map((quest) => {
+      const route = questRouteKey(quest);
+      if (!route) return '';
+      const label = String(quest.title || 'Квест').trim();
+      return `<li><a href="${escapeAttr(route.path)}">${escapeAttr(label)}</a></li>`;
+    })
+    .filter(Boolean)
+    .join('');
+  if (!links) return baseHtml;
+
+  const navStyle = [
+    'position:absolute',
+    'width:1px',
+    'height:1px',
+    'padding:0',
+    'margin:-1px',
+    'overflow:hidden',
+    'clip:rect(0,0,0,0)',
+    'clip-path:inset(50%)',
+    'white-space:nowrap',
+    'border:0',
+  ].join(';');
+  const nav = `<nav data-ssg-quest-index="true" aria-label="Все квесты" style="${navStyle}"><ul>${links}</ul></nav>`;
+
+  if (/<nav[^>]*data-ssg-quest-index="true"[^>]*>[\s\S]*?<\/nav>/i.test(baseHtml)) {
+    return baseHtml.replace(/<nav[^>]*data-ssg-quest-index="true"[^>]*>[\s\S]*?<\/nav>/i, nav);
+  }
+  if (/<div\s+id="root"[^>]*>/i.test(baseHtml)) {
+    return baseHtml.replace(/<div(\s+id="root"[^>]*)>/i, `<div$1>${nav}`);
+  }
+  return baseHtml.replace(/<body([^>]*)>/i, `<body$1>${nav}`);
+}
+
 /** Write file, creating directories as needed. */
 function writeFileSafe(filePath, content) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -1018,16 +1119,23 @@ function pickRelatedTravels(travel, index, limit = 6) {
     seen.add(e.path);
     out.push({ path: e.path, name: e.name });
   };
+  // Rotate within the same-country list by id so all country articles get
+  // a chance to appear in each other's related blocks (not just the first N).
+  const offset = Math.abs(Number(travel?.id) || selfPath.length);
   if (country && index.byCountry.has(country)) {
-    for (const e of index.byCountry.get(country)) add(e);
+    const countryList = index.byCountry.get(country);
+    const co = countryList.length ? offset % countryList.length : 0;
+    for (let i = 0; i < countryList.length && out.length < limit; i++) {
+      add(countryList[(co + i) % countryList.length]);
+    }
   }
   // Fill remaining from the global list, rotated by id so different pages link
   // to different sets (spreads internal link equity instead of one hub).
   const all = index.all;
   if (all.length) {
-    const offset = Math.abs(Number(travel?.id) || selfPath.length) % all.length;
+    const go = offset % all.length;
     for (let i = 0; i < all.length && out.length < limit; i++) {
-      add(all[(offset + i) % all.length]);
+      add(all[(go + i) % all.length]);
     }
   }
   return out;
@@ -1431,6 +1539,79 @@ async function main() {
     }
   }
 
+  // --- 2b. Quest pages ---
+  console.log('\n🧩 Fetching quests from API...');
+  let quests = [];
+  try {
+    const result = await fetchJson(`${API_BASE}/api/quests/`);
+    quests = extractCollectionItems(result).filter((q) => questRouteKey(q));
+    console.log(`  📦 Got ${quests.length} quests`);
+  } catch (err) {
+    console.error('❌ Failed to fetch quests:', err.message);
+    console.error('   Quest pages will not be generated.');
+  }
+
+  if (quests.length > 0) {
+    const questTemplatePath = path.join(DIST_DIR, 'quests', '[city]', '[questId].html');
+    const questBaseHtml = fs.existsSync(questTemplatePath)
+      ? fs.readFileSync(questTemplatePath, 'utf8')
+      : baseHtml;
+
+    console.log(`\n🧩 Generating ${quests.length} quest pages...`);
+    let questGenerated = 0;
+    for (const quest of quests) {
+      const route = questRouteKey(quest);
+      if (!route) continue;
+
+      const name = String(quest.title || 'Городской квест').trim();
+      const title = buildSeoTitle(name);
+      const description = buildQuestSeoDescription(quest);
+      const canonical = `${SITE_URL}${route.path}`;
+      const cover = String(quest.cover_url || quest.coverUrl || '').trim();
+      const image = cover ? toAbsoluteUrl(cover) : OG_IMAGE;
+
+      let html = injectMeta(questBaseHtml, {
+        title,
+        description,
+        canonical,
+        image,
+        ogType: 'article',
+      });
+
+      html = injectBreadcrumbJsonLd(html, {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Главная', item: `${SITE_URL}/` },
+          { '@type': 'ListItem', position: 2, name: 'Квесты', item: `${SITE_URL}/quests` },
+          { '@type': 'ListItem', position: 3, name, item: canonical },
+        ],
+      });
+
+      html = injectJsonLd(html, buildQuestJsonLd({ title, description, canonical, image, quest }), 'quest');
+      html = injectHiddenH1(html, name);
+
+      writeFileSafe(path.join(DIST_DIR, 'quests', route.cityId, `${route.questId}.html`), html);
+      writeFileSafe(path.join(DIST_DIR, 'quests', route.cityId, route.questId, 'index.html'), html);
+      questGenerated++;
+    }
+
+    // Crawlable index of all quests on the /quests listing page so Googlebot can
+    // reach detail pages via internal links (sitemap is backend-owned, BE-017).
+    const questsListVariants = [
+      path.join(DIST_DIR, 'quests.html'),
+      path.join(DIST_DIR, 'quests', 'index.html'),
+    ];
+    for (const variant of questsListVariants) {
+      if (!fs.existsSync(variant)) continue;
+      const listHtml = injectQuestLinksIndex(fs.readFileSync(variant, 'utf8'), quests);
+      writeFileSafe(variant, listHtml);
+    }
+
+    totalPages += questGenerated;
+    console.log(`  ✅ Generated: ${questGenerated} quest pages + crawlable index`);
+  }
+
   // --- 3. Article pages ---
   console.log('\n📰 Fetching articles from API...');
   let articles = [];
@@ -1586,6 +1767,10 @@ if (typeof module !== 'undefined' && module.exports) {
     normalizeSlug,
     loadRedirectManifest,
     buildRedirectStubHtml,
+    questRouteKey,
+    buildQuestSeoDescription,
+    buildQuestJsonLd,
+    injectQuestLinksIndex,
   };
 }
 

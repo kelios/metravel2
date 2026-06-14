@@ -269,6 +269,15 @@ const PlaceListCard: React.FC<Props> = ({
       webHoverScale={false}
       webTouchAction={webTouchAction}
       rightTopSlot={relatedTravelActions}
+      rightTopSlotScrim
+      mediaPlaceholderSlot={
+        <View style={styles.mediaPlaceholder}>
+          <Feather name="map-pin" size={26} color={colors.textMuted} />
+          <Text style={styles.mediaPlaceholderText} numberOfLines={1}>
+            {categoryLabel || 'Без фото'}
+          </Text>
+        </View>
+      }
       contentSlot={
         <View style={styles.content}>
           {showTitleInContent && (
@@ -459,6 +468,19 @@ const createStyles = (
       paddingHorizontal: padX,
       paddingTop: padY,
       paddingBottom: padY,
+    },
+    mediaPlaceholder: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingHorizontal: 16,
+    },
+    mediaPlaceholderText: {
+      fontSize: 12,
+      fontWeight: '600',
+      letterSpacing: 0.2,
+      color: colors.textMuted,
+      maxWidth: 180,
     },
     content: {
       gap: stackGap,

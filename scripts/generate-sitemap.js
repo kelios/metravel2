@@ -153,6 +153,44 @@ function buildTravelEntries(travels) {
   return entries;
 }
 
+function buildQuestEntries(quests) {
+  const seen = new Set();
+  const entries = [];
+
+  // /quests listing page itself.
+  const listLoc = toAbsoluteUrl('/quests');
+  seen.add(listLoc);
+  entries.push({ loc: listLoc });
+
+  for (const quest of quests) {
+    if (!quest) continue;
+    const questId = String(quest.quest_id || quest.id || '').trim();
+    const cityId = String(quest.city_id || quest.cityId || '').trim();
+    if (!questId || !cityId) continue;
+
+    const loc = toAbsoluteUrl(`/quests/${cityId}/${questId}`);
+    if (seen.has(loc)) continue;
+    seen.add(loc);
+
+    entries.push({
+      loc,
+      lastmod: toIsoDate(quest.updated_at || quest.updatedAt || quest.created_at || quest.createdAt),
+    });
+  }
+
+  return entries;
+}
+
+async function fetchAllQuests() {
+  try {
+    const payload = await fetchJson(`${API_BASE}/api/quests/`);
+    return extractItems(payload);
+  } catch (error) {
+    console.warn(`[generate-sitemap] Failed to fetch quests: ${error.message}`);
+    return [];
+  }
+}
+
 async function fetchAllPublishedTravels() {
   const collected = [];
   let page = 1;
@@ -189,8 +227,12 @@ function writeSitemap(distDir, xml) {
 }
 
 async function main() {
-  const travels = await fetchAllPublishedTravels();
-  const entries = [...buildStaticEntries(), ...buildTravelEntries(travels)];
+  const [travels, quests] = await Promise.all([fetchAllPublishedTravels(), fetchAllQuests()]);
+  const entries = [
+    ...buildStaticEntries(),
+    ...buildQuestEntries(quests),
+    ...buildTravelEntries(travels),
+  ];
   const xml = buildSitemapXml(entries);
   const target = writeSitemap(DIST_DIR, xml);
   console.log(`[generate-sitemap] Wrote ${entries.length} URLs to ${target}`);
@@ -202,6 +244,7 @@ if (typeof module !== 'undefined' && module.exports) {
     buildSitemapXml,
     buildStaticEntries,
     buildTravelEntries,
+    buildQuestEntries,
     buildUrlEntry,
     escapeXml,
     extractItems,

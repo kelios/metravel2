@@ -15,6 +15,21 @@ const DIFFICULTY_LABEL: Record<string, string> = {
   hard: 'Сложно',
 }
 
+function formatPoints(points: number): string {
+  const mod10 = points % 10
+  const mod100 = points % 100
+  if (mod10 === 1 && mod100 !== 11) return `${points} точка`
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return `${points} точки`
+  return `${points} точек`
+}
+
+function formatDuration(durationMin: number): string {
+  if (durationMin < 60) return `~${durationMin} мин`
+  const hours = durationMin / 60
+  const rounded = Number.isInteger(hours) ? hours : hours.toFixed(1)
+  return `~${rounded} ч`
+}
+
 type Props = {
   quest: QuestMeta
   /** Надзаголовок над названием квеста */
@@ -32,10 +47,16 @@ export function QuestForCityCard({ quest, eyebrow = 'Городской квес
   const styles = useMemo(() => createStyles(colors), [colors])
 
   const href = `/quests/${quest.cityId}/${quest.id}`
-  const meta: string[] = []
-  if (quest.points) meta.push(`${quest.points} точек`)
-  if (quest.durationMin) meta.push(`~${Math.round(quest.durationMin / 60)} ч`)
-  if (quest.difficulty && DIFFICULTY_LABEL[quest.difficulty]) meta.push(DIFFICULTY_LABEL[quest.difficulty])
+  const chips: { key: string; icon: keyof typeof Feather.glyphMap; label: string }[] = []
+  if (quest.points) chips.push({ key: 'points', icon: 'map-pin', label: formatPoints(quest.points) })
+  if (quest.durationMin)
+    chips.push({ key: 'duration', icon: 'clock', label: formatDuration(quest.durationMin) })
+  if (quest.difficulty && DIFFICULTY_LABEL[quest.difficulty])
+    chips.push({
+      key: 'difficulty',
+      icon: 'bar-chart-2',
+      label: DIFFICULTY_LABEL[quest.difficulty],
+    })
 
   const cityLabel = quest.cityName ? `по городу ${quest.cityName}` : 'по этому городу'
   const coverUri = typeof quest.cover === 'string' ? quest.cover.trim() : ''
@@ -81,9 +102,23 @@ export function QuestForCityCard({ quest, eyebrow = 'Городской квес
         >
           {quest.title}
         </Text>
-        {meta.length > 0 && <Text style={styles.meta}>{meta.join('  ·  ')}</Text>}
+        {chips.length > 0 && (
+          <View style={styles.chipRow}>
+            {chips.map((chip) => (
+              <View key={chip.key} style={styles.chip}>
+                <Feather name={chip.icon} size={12} color={colors.primary ?? '#f5842c'} />
+                <Text style={styles.chipText} numberOfLines={1}>
+                  {chip.label}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
         <View style={styles.cta}>
-          <Text style={styles.ctaText}>{`Пройти квест ${cityLabel} →`}</Text>
+          <Text style={styles.ctaText} numberOfLines={1}>
+            {`Пройти квест ${cityLabel}`}
+          </Text>
+          <Feather name="arrow-right" size={15} color={colors.primaryText ?? '#fff'} />
         </View>
       </View>
     </Pressable>
@@ -98,9 +133,11 @@ function createStyles(colors: ThemedColors) {
       minHeight: CARD_MEDIA_SIZE,
       borderRadius: 16,
       overflow: 'hidden',
-      backgroundColor: colors.surface ?? '#fff',
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.border ?? 'rgba(0,0,0,0.08)',
+      backgroundColor: colors.primarySoft ?? colors.surface ?? '#fff',
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30 ?? colors.border ?? 'rgba(0,0,0,0.08)',
+      borderLeftWidth: 4,
+      borderLeftColor: colors.primary ?? '#f5842c',
       ...(Platform.OS === 'web'
         ? {
             cursor: 'pointer',
@@ -109,9 +146,9 @@ function createStyles(colors: ThemedColors) {
         : null),
     },
     cardHover: {
-      borderColor: colors.primaryAlpha30 ?? colors.primary ?? 'rgba(0,0,0,0.12)',
+      borderColor: colors.primaryAlpha40 ?? colors.primary ?? 'rgba(0,0,0,0.12)',
       ...Platform.select({
-        web: { boxShadow: '0 3px 12px rgba(15, 23, 42, 0.06)' } as any,
+        web: { boxShadow: '0 6px 18px rgba(15, 23, 42, 0.1)' } as any,
       }),
     },
     media: {
@@ -147,17 +184,43 @@ function createStyles(colors: ThemedColors) {
       color: colors.text ?? '#1a1a1a',
       lineHeight: 22,
     },
-    meta: {
-      fontSize: 13,
-      color: colors.textMuted ?? '#6b7280',
+    chipRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      marginTop: 2,
+    },
+    chip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingVertical: 3,
+      paddingHorizontal: 8,
+      borderRadius: 999,
+      backgroundColor: colors.surface ?? '#fff',
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.primaryAlpha30 ?? colors.border ?? 'rgba(0,0,0,0.08)',
+    },
+    chipText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.text ?? '#1a1a1a',
     },
     cta: {
-      marginTop: 6,
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      gap: 6,
+      marginTop: 8,
+      paddingVertical: 7,
+      paddingHorizontal: 14,
+      borderRadius: 999,
+      backgroundColor: colors.primary ?? '#f5842c',
     },
     ctaText: {
       fontSize: 14,
-      fontWeight: '600',
-      color: colors.primary ?? '#f5842c',
+      fontWeight: '700',
+      color: colors.primaryText ?? '#fff',
     },
   })
 }

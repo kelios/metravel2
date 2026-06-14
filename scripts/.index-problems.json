@@ -1,0 +1,666 @@
+{
+  "source": "gsc-url-inspection",
+  "site": "sc-domain:metravel.by",
+  "userId": "1",
+  "checkedAt": "2026-06-14T15:00:04.129Z",
+  "total": 294,
+  "indexed": 229,
+  "notIndexed": 65,
+  "byCoverageState": {
+    "Страница отправлена и проиндексирована": 229,
+    "URL неизвестен Google": 51,
+    "Страница просканирована, но пока не проиндексирована": 14
+  },
+  "problems": [
+    {
+      "id": 628,
+      "name": "Пешком по Алебастровому берегу Нормандии: 6 дней от Дьепа до Этрета по тропе GR21",
+      "url": "https://metravel.by/travels/peshkom-po-alebastrovomu-beregu-normandii-6-dnei-ot-depa-do-etreta-po-trope-gr21",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 540,
+      "name": "Озеро Сорапис: круговой маршрут 215 → 217, как дойти, что ждать по пути и что посмотреть рядом",
+      "url": "https://metravel.by/travels/ozero-sorapis-krugovoi-marshrut-215-217-kak-doiti-chto-zhdat-po-puti-i-chto-posmotret-riadom",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 539,
+      "name": "Замок Хохостервиц, Зальцбург и Брно | Финал путешествия по Европе",
+      "url": "https://metravel.by/travels/zamok-khokhostervits-zaltsburg-i-brno-final-puteshestviia-po-evrope",
+      "coverageState": "Страница просканирована, но пока не проиндексирована",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ALLOWED",
+      "lastCrawlTime": "2026-04-09T11:36:53Z",
+      "googleCanonical": "https://metravel.by/travels/zamok-khokhostervits-zaltsburg-i-brno-final-puteshestviia-po-evrope"
+    },
+    {
+      "id": 536,
+      "name": "Tre Cime di Lavaredo | Круговой маршрут 10 км: описание и виды",
+      "url": "https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km-opisanie-i-vidy",
+      "coverageState": "Страница просканирована, но пока не проиндексирована",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ALLOWED",
+      "lastCrawlTime": "2026-05-17T15:17:09Z",
+      "googleCanonical": "https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km-opisanie-i-vidy"
+    },
+    {
+      "id": 531,
+      "name": "Музыкальный фестиваль Balaton Sound: 3 дня музыки, солнца и озера",
+      "url": "https://metravel.by/travels/muzykalnyi-festival-balaton-sound-3-dnia-muzyki-solntsa-i-ozera",
+      "coverageState": "Страница просканирована, но пока не проиндексирована",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ALLOWED",
+      "lastCrawlTime": "2026-02-10T21:05:02Z",
+      "googleCanonical": null
+    },
+    {
+      "id": 527,
+      "name": "Макарска: отдых у моря и дорога домой через Карловац и Вену",
+      "url": "https://metravel.by/travels/makarska-otdykh-u-moria-i-doroga-domoi-cherez-karlovats-i-venu",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 525,
+      "name": "Национальный парк Крка в Хорватии: как добраться, что посмотреть и почему осень — лучшее время для поездки",
+      "url": "https://metravel.by/travels/natsionalnyi-park-krka-v-khorvatii-kak-dobratsia-chto-posmotret-i-pochemu-osen-luchshee-vremia-dlia-poezdki",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 522,
+      "name": "Огулин и каньон Камачник: что посмотреть в центре Хорватии",
+      "url": "https://metravel.by/travels/ogulin-i-kanon-kamachnik-chto-posmotret-v-tsentre-khorvatii",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 521,
+      "name": "Загреб за один день: как добраться, что посмотреть, где поесть",
+      "url": "https://metravel.by/travels/zagreb-za-odin-den-kak-dobratsia-chto-posmotret-gde-poest",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 520,
+      "name": "Слунь и Растоке — скрытая жемчужина на пути к Плитвицам",
+      "url": "https://metravel.by/travels/slun-i-rastoke-skrytaia-zhemchuzhina-na-puti-k-plitvitsam",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 518,
+      "name": "Плитвицкие озера в Хорватии: как туда добраться, что посмотреть, маршруты, легенды и мой личный опыт.",
+      "url": "https://metravel.by/travels/plitvitskie-ozera-v-khorvatii-kak-tuda-dobratsia-chto-posmotret-marshruty-legendy-i-moi-lichnyi-opyt",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 515,
+      "name": "Идеальный уикенд в Париже: Версаль, Мулен Руж и сокровища Аньера",
+      "url": "https://metravel.by/travels/idealnyi-uikend-v-parizhe-versal-mulen-ruzh-i-sokrovishcha-anera",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 514,
+      "name": "Как поехать в Парижский Диснейленд: наш опыт, цены, маршруты и советы",
+      "url": "https://metravel.by/travels/kak-poekhat-v-parizhskii-disneilend-nash-opyt-tseny-marshruty-i-sovety",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 500,
+      "name": "Где покататься на коньках, лыжах и сноуборде в Кракове и его окрестностях",
+      "url": "https://metravel.by/travels/gde-pokatatsia-na-konkakh-lyzhakh-i-snouborde-v-krakove-i-ego-okrestnostiakh",
+      "coverageState": "Страница просканирована, но пока не проиндексирована",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ALLOWED",
+      "lastCrawlTime": "2026-04-08T22:01:13Z",
+      "googleCanonical": "https://metravel.by/travels/gde-pokatatsia-na-konkakh-lyzhakh-i-snouborde-v-krakove-i-ego-okrestnostiakh"
+    },
+    {
+      "id": 498,
+      "name": "Модынь - одна из самых высоких вершин Бескидов (1029)",
+      "url": "https://metravel.by/travels/modyn-odna-iz-samykh-vysokikh-vershin-beskidov-1029",
+      "coverageState": "Страница просканирована, но пока не проиндексирована",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ALLOWED",
+      "lastCrawlTime": "2026-04-26T10:45:27Z",
+      "googleCanonical": "https://metravel.by/travels/modyn-odna-iz-samykh-vysokikh-vershin-beskidov-1029"
+    },
+    {
+      "id": 493,
+      "name": "Замок Ксёнж в Польше: история, как добраться, что посмотреть, тайны, легенды и подземелья",
+      "url": "https://metravel.by/travels/zamok-ksenzh-v-polshe-istoriia-kak-dobratsia-chto-posmotret-tainy-legendy-i-podzemelia",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 492,
+      "name": "Leskowiec (922 м): лёгкий маршрут в Бескидах из Rzyki, как подняться, что посмотреть и где отдохнуть",
+      "url": "https://metravel.by/travels/leskowiec-922-m-legkii-marshrut-v-beskidakh-iz-rzyki-kak-podniatsia-chto-posmotret-i-gde-otdokhnut",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 490,
+      "name": "Экскурсия на Маврикии: Порт-Луи, ботанический сад, пляж с черепахами",
+      "url": "https://metravel.by/travels/ekskursiia-na-mavrikii-port-lui-botanicheskii-sad-pliazh-s-cherepakhami",
+      "coverageState": "Страница просканирована, но пока не проиндексирована",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ALLOWED",
+      "lastCrawlTime": "2026-04-05T00:18:04Z",
+      "googleCanonical": "https://metravel.by/travels/ekskursiia-na-mavrikii-port-lui-botanicheskii-sad-pliazh-s-cherepakhami"
+    },
+    {
+      "id": 475,
+      "name": "Уединённый отдых в Польше: домик на острове в Габриельне, звёздное небо и природа",
+      "url": "https://metravel.by/travels/uedinennyi-otdykh-v-polshe-domik-na-ostrove-v-gabrielne-zvezdnoe-nebo-i-priroda",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 466,
+      "name": "Маршрут по Долине Костелиска: Смречинский пруд, пещеры и Хала Орнак",
+      "url": "https://metravel.by/travels/marshrut-po-doline-kosteliska-smrechinskii-prud-peshchery-i-khala-ornak",
+      "coverageState": "Страница просканирована, но пока не проиндексирована",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ALLOWED",
+      "lastCrawlTime": "2026-02-27T12:08:09Z",
+      "googleCanonical": "https://metravel.by/travels/marshrut-po-doline-kosteliska-smrechinskii-prud-peshchery-i-khala-ornak"
+    },
+    {
+      "id": 464,
+      "name": "Маршрут выходного дня: велопоездка в Могиланы и лесной резерват Козьи Каты",
+      "url": "https://metravel.by/travels/marshrut-vykhodnogo-dnia-velopoezdka-v-mogilany-i-lesnoi-rezervat-kozi-katy",
+      "coverageState": "Страница просканирована, но пока не проиндексирована",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ALLOWED",
+      "lastCrawlTime": "2026-02-22T21:05:51Z",
+      "googleCanonical": "https://metravel.by/travels/marshrut-vykhodnogo-dnia-velopoezdka-v-mogilany-i-lesnoi-rezervat-kozi-katy"
+    },
+    {
+      "id": 461,
+      "name": "Три Короны в Пенинских горах: маршрут из Sromowce Niżne, который стоит пройти хотя бы раз",
+      "url": "https://metravel.by/travels/tri-korony-v-peninskikh-gorakh-marshrut-iz-sromowce-nizne-kotoryi-stoit-proiti-khotia-by-raz",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 457,
+      "name": "Обсерватория имени Тадеуша Банахевича на гору Любомир (904 м)",
+      "url": "https://metravel.by/travels/observatoriya-imeni-tadeusha-banahevicha-na-goru-lyubomire",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 451,
+      "name": "Гора Турбач (1310 м): поход в Горце, Польша",
+      "url": "https://metravel.by/travels/gora-turbach-1310-m-pokhod-v-gortse-polsha",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 445,
+      "name": "Заповедник Могелица и смотровая вежа (1171м)",
+      "url": "https://metravel.by/travels/zapovednik-mogelica-i-smotrovaya-vezha-1171m",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 442,
+      "name": "Парк Грудек в Явожно: «польские Мальдивы»",
+      "url": "https://metravel.by/travels/park-grudek-v-iavozhno-polskie-maldivy",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 436,
+      "name": "Баранья гора: исток Вислы в Бескидах, Польша",
+      "url": "https://metravel.by/travels/barania-gora-istok-visly-v-beskidakh-polsha",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 435,
+      "name": "Форты Кракова: австрийские укрепления XIX века",
+      "url": "https://metravel.by/travels/forty-krakova-avstriiskie-ukrepleniia-xix-veka",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 387,
+      "name": "ZatorLand: крупнейший парк динозавров в Европе",
+      "url": "https://metravel.by/travels/zatorland-krupneishii-park-dinozavrov-v-evrope",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 384,
+      "name": "Закшувек: бирюзовый карьер для купания в Кракове",
+      "url": "https://metravel.by/travels/zakshuvek-biriuzovyi-karer-dlia-kupaniia-v-krakove",
+      "coverageState": "Страница просканирована, но пока не проиндексирована",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ALLOWED",
+      "lastCrawlTime": "2026-06-14T08:10:45Z",
+      "googleCanonical": null
+    },
+    {
+      "id": 369,
+      "name": "Торунь: старый город и музей пряника, Польша",
+      "url": "https://metravel.by/travels/torun-staryi-gorod-i-muzei-prianika-polsha",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 362,
+      "name": "Морское око в мае: озеро в Татрах, Польша",
+      "url": "https://metravel.by/travels/morskoe-oko-v-mae-ozero-v-tatrakh-polsha",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 310,
+      "name": "Прогулка в Зелёне: тропа бобров и ветряная мельница в 5 км от цивилизации",
+      "url": "https://metravel.by/travels/progulka-v-zelene-tropa-bobrov-i-vetrianaia-melnitsa-v-5-km-ot-tsivilizatsii",
+      "coverageState": "Страница просканирована, но пока не проиндексирована",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ALLOWED",
+      "lastCrawlTime": "2026-02-21T21:39:42Z",
+      "googleCanonical": "https://metravel.by/travels/progulka-v-zelene-tropa-bobrov-i-vetrianaia-melnitsa-v-5-km-ot-tsivilizatsii"
+    },
+    {
+      "id": 300,
+      "name": "Соколиные горы и замки поблизости — маршрут с легендами и пещерами",
+      "url": "https://metravel.by/travels/sokolinye-gory-i-zamki-poblizosti-marshrut-s-legendami-i-peshcherami",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 297,
+      "name": "Что посмотреть рядом с Краковом: замок Тэнчин, шахта Величка и соляной замок за один день",
+      "url": "https://metravel.by/travels/chto-posmotret-riadom-s-krakovom-zamok-tenchin-shakhta-velichka-i-solianoi-zamok-za-odin-den",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 290,
+      "name": "Замок Немодлин и дворец Копице: два самых атмосферных заброшенных места в Опольском воеводстве",
+      "url": "https://metravel.by/travels/zamok-nemodlin-i-dvorets-kopitse-dva-samykh-atmosfernykh-zabroshennykh-mesta-v-opolskom-voevodstve",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 283,
+      "name": "Дворец Габриэля Ташицкого - Блендовские болота.",
+      "url": "https://metravel.by/travels/blendovskie-bolota",
+      "coverageState": "Страница просканирована, но пока не проиндексирована",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ALLOWED",
+      "lastCrawlTime": "2026-05-26T17:55:05Z",
+      "googleCanonical": "https://metravel.by/travels/blendovskie-bolota"
+    },
+    {
+      "id": 280,
+      "name": "Замок Липовец: руины и скансен под Краковом",
+      "url": "https://metravel.by/travels/zamok-lipovets-ruiny-i-skansen-pod-krakovom",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 268,
+      "name": "Замок Остренжник.",
+      "url": "https://metravel.by/travels/zamok-onstrenzhnik",
+      "coverageState": "Страница просканирована, но пока не проиндексирована",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ALLOWED",
+      "lastCrawlTime": "2026-06-13T23:40:51Z",
+      "googleCanonical": "https://metravel.by/travels/zamok-onstrenzhnik"
+    },
+    {
+      "id": 254,
+      "name": "Маршрут выходного дня из Минска: Осиповичская ГЭС, Свислочь и Свислочско-Березинский заповедник",
+      "url": "https://metravel.by/travels/marshrut-vykhodnogo-dnia-iz-minska-osipovichskaia-ges-svisloch-i-svislochsko-berezinskii-zapovednik",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 252,
+      "name": "Что посмотреть в Ошмянах: костёлы, синагога, усадьба",
+      "url": "https://metravel.by/travels/chto-posmotret-v-oshmianakh-kostely-sinagoga-usadba",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 245,
+      "name": "Калининград зимой: личный опыт поездки, история города и главные места",
+      "url": "https://metravel.by/travels/kaliningrad-zimoi-lichnyi-opyt-poezdki-istoriia-goroda-i-glavnye-mesta",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 243,
+      "name": "Дворец Слотвинских и усадьба Потоцких за день",
+      "url": "https://metravel.by/travels/dvorets-slotvinskikh-i-usadba-pototskikh-za-den",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 236,
+      "name": "Озеро Хотомле и озёра Овсищеское, Среднее: Беларусь",
+      "url": "https://metravel.by/travels/ozero-khotomle-i-ozera-ovsishcheskoe-srednee-belarus",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 230,
+      "name": "Бонифацевский лес: Мёртвое, Чёрное, Голубое озёра",
+      "url": "https://metravel.by/travels/bonifatsevskii-les-mertvoe-chernoe-goluboe-ozera",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 228,
+      "name": "Гродненские форты №4 и №6: пещеры и скалы",
+      "url": "https://metravel.by/travels/grodnenskie-forty-no4-i-no6-peshchery-i-skaly",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 227,
+      "name": "Поездка выходного дня из Минска: заброшенный лагерь «Зорька», родник на Днепре и купель Пантелеймона",
+      "url": "https://metravel.by/travels/poezdka-vykhodnogo-dnia-iz-minska-zabroshennyi-lager-zorka-rodnik-na-dnepre-i-kupel-panteleimona",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 219,
+      "name": "Веломаршрут к усадьбе Новицких в Совейках",
+      "url": "https://metravel.by/travels/velomarshrut-k-usadbe-novitskikh-v-soveikakh",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 203,
+      "name": "Экотропа Ельня и усадьбы за день, Беларусь",
+      "url": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 199,
+      "name": "Почтовая станция 1840 года в Витебской области: заброшенное место с историей, легендами и атмосферой прошлого",
+      "url": "https://metravel.by/travels/pochtovaia-stantsiia-1840-goda-v-vitebskoi-oblasti-zabroshennoe-mesto-s-istoriei-legendami-i-atmosferoi-proshlogo",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 196,
+      "name": "Веломаршрут по Беларуси на один день: Кревский замок, Гольшаны, старые усадьбы и заброшенный парк",
+      "url": "https://metravel.by/travels/velomarshrut-po-belarusi-na-odin-den-krevskii-zamok-golshany-starye-usadby-i-zabroshennyi-park",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 188,
+      "name": "Усадьбы Гродненщины: Гробовских и Ходкевичей",
+      "url": "https://metravel.by/travels/usadby-grodnenshchiny-grobovskikh-i-khodkevichei",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 187,
+      "name": "Могилёв, усадьба Толстых и Быховский замок",
+      "url": "https://metravel.by/travels/mogilev-usadba-tolstykh-i-bykhovskii-zamok",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 186,
+      "name": "Смолевуд: натурная площадка Беларусьфильма под Минском",
+      "url": "https://metravel.by/travels/smolevud-naturnaia-ploshchadka-belarusfilma-pod-minskom",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 180,
+      "name": "Парк Станьково под Минском: история усадьбы Чапских, что посмотреть, легенды и как добраться",
+      "url": "https://metravel.by/travels/park-stankovo-pod-minskom-istoriia-usadby-chapskikh-chto-posmotret-legendy-i-kak-dobratsia",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 178,
+      "name": "Путешествие в Польшу на 4 дня: маршрут Минск - Сувалки - Эльблонг - Гданьск - Леба",
+      "url": "https://metravel.by/travels/puteshestvie-v-polshu-na-4-dnia-marshrut-minsk-suvalki-elblong-gdansk-leba",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 176,
+      "name": "Логойск: дворец Тышкевичей и родник Святого Юрия",
+      "url": "https://metravel.by/travels/logoisk-dvorets-tyshkevichei-i-rodnik-sviatogo-iuriia",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 166,
+      "name": "Берлин и Познань за 2 дня: что посмотреть, как добраться и интересные факты о главных достопримечательностях Европы в 2026 году",
+      "url": "https://metravel.by/travels/berlin-i-poznan-za-2-dnia-chto-posmotret-kak-dobratsia-i-interesnye-fakty-o-glavnykh-dostoprimechatelnostiakh-evropy-v-2026-godu",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 157,
+      "name": "Зимний Дрезден и Баштай: архитектура, музеи и виды без туристов",
+      "url": "https://metravel.by/travels/zimnii-drezden-i-bashtai-arkhitektura-muzei-i-vidy-bez-turistov",
+      "coverageState": "Страница просканирована, но пока не проиндексирована",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ALLOWED",
+      "lastCrawlTime": "2026-04-03T12:51:14Z",
+      "googleCanonical": "https://metravel.by/travels/zimnii-drezden-i-bashtai-arkhitektura-muzei-i-vidy-bez-turistov"
+    },
+    {
+      "id": 156,
+      "name": "Гальштат зимой: соляная шахта, панорамы и снег по колено",
+      "url": "https://metravel.by/travels/galshtat-zimoi-solianaia-shakhta-panoramy-i-sneg-po-koleno",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 148,
+      "name": "Усадьба Гатовских в Красном Береге: судьбы, войны и память",
+      "url": "https://metravel.by/travels/usadba-gatovskikh-v-krasnom-berege-sudby-voiny-i-pamiat",
+      "coverageState": "Страница просканирована, но пока не проиндексирована",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ALLOWED",
+      "lastCrawlTime": "2026-05-27T06:20:19Z",
+      "googleCanonical": "https://metravel.by/travels/usadba-gatovskikh-v-krasnom-berege-sudby-voiny-i-pamiat"
+    },
+    {
+      "id": 145,
+      "name": "Дворец Монюшко-Ваньковичей в Смиловичах: история, легенды и как добраться",
+      "url": "https://metravel.by/travels/dvorets-moniushko-vankovichei-v-smilovichakh-istoriia-legendy-i-kak-dobratsia",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 141,
+      "name": "Беница. Заброшенные подземелья, старинный храм и место, которое сложно забыть",
+      "url": "https://metravel.by/travels/benitsa-zabroshennye-podzemelia-starinnyi-khram-i-mesto-kotoroe-slozhno-zabyt",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 133,
+      "name": "Река Ислочь: отдых с собакой, прогулки и красивые места Беларуси",
+      "url": "https://metravel.by/travels/reka-isloch-otdykh-s-sobakoi-progulki-i-krasivye-mesta-belarusi",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    },
+    {
+      "id": 132,
+      "name": "Припять в Дорошевичах: Царь-дуб, лучшие места у реки и отдых с палатками в Гомельской области",
+      "url": "https://metravel.by/travels/pripiat-v-doroshevichakh-tsar-dub-luchshie-mesta-u-reki-i-otdykh-s-palatkami-v-gomelskoi-oblasti",
+      "coverageState": "URL неизвестен Google",
+      "verdict": "NEUTRAL",
+      "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+      "lastCrawlTime": null,
+      "googleCanonical": null
+    }
+  ]
+}

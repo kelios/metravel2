@@ -52,10 +52,13 @@ export const PlaceCard = React.memo(function PlaceCard({
         <View style={styles.cardMediaScrim} />
         {/* Press target is a sibling overlay (not a wrapper) so the favorite /
             status buttons in cardTravelActions are never nested inside a button. */}
+        {/* Tappable for sighted users, but hidden from the a11y tree: the explicit
+            «На карте» button below is the single announced map action (was 3 dupes). */}
         <Pressable
           onPress={() => onOpenMap(place)}
-          accessibilityRole="button"
-          accessibilityLabel={`Открыть ${place.title} на карте`}
+          accessible={false}
+          importantForAccessibility="no-hide-descendants"
+          focusable={false}
           style={({ pressed }) => [styles.cardMediaPressLayer, pressed && styles.cardPressed]}
         />
         {relatedTravelUrl ? (
@@ -77,13 +80,18 @@ export const PlaceCard = React.memo(function PlaceCard({
       </View>
 
       <View style={styles.cardBody}>
+        {/* Title opens the map for sighted users; announced as a heading, not a
+            third duplicate «на карте» button. */}
         <Pressable
           onPress={() => onOpenMap(place)}
-          accessibilityRole="button"
-          accessibilityLabel={`Открыть ${place.title} на карте`}
+          accessible={false}
           style={({ pressed }) => [styles.cardTitlePressable, pressed && PRESSED_OPACITY]}
         >
-          <Text style={styles.cardTitle} numberOfLines={2}>
+          <Text
+            style={styles.cardTitle}
+            numberOfLines={2}
+            accessibilityRole="header"
+          >
             {place.title}
           </Text>
         </Pressable>

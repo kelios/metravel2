@@ -38,7 +38,7 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
   // useResponsive returns width=0 during SSR and first client render,
   // matching the server snapshot → prevents hydration mismatch in Suspense fallback.
   // After hydration it switches to real window.innerWidth via useSyncExternalStore.
-  const { width } = useResponsive()
+  const { width, isHydrated } = useResponsive()
   const isMobile = getIsHeaderMobile(width, width)
   const activePath = getHeaderActivePath(pathname)
   const showHeaderContextBar = shouldShowHeaderContextBar(pathname, isMobile)
@@ -103,13 +103,22 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
             </Suspense>
           )}
 
-          <Suspense fallback={isMobile ? <View style={styles.rightSection} /> : null}>
-            <CustomHeaderAccountSectionComp
-              activePath={activePath}
-              isMobile={isMobile}
-              styles={styles}
-            />
-          </Suspense>
+          {/* Account section is auth-specific (no SSR/SEO value). Render only the
+              empty placeholder during prerender + first client render — mounting the
+              lazy section on the server emits an errored Suspense boundary (<!--$!-->)
+              that throws React #419 on hydration. isHydrated is false on the server and
+              first client render, true after hydration (and always true on native). */}
+          {isHydrated ? (
+            <Suspense fallback={isMobile ? <View style={styles.rightSection} /> : null}>
+              <CustomHeaderAccountSectionComp
+                activePath={activePath}
+                isMobile={isMobile}
+                styles={styles}
+              />
+            </Suspense>
+          ) : isMobile ? (
+            <View style={styles.rightSection} />
+          ) : null}
         </View>
 
         {showHeaderContextBar && (

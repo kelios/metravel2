@@ -50,10 +50,11 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     paddingBottom: isCompact ? DESIGN_TOKENS.spacing.md : DESIGN_TOKENS.spacing.lg,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.borderLight,
-    // Keep search + country selector reachable while the catalog scrolls (web):
-    // pin the bar to the top of the scroll viewport with an opaque background so
-    // cards never bleed through. zIndex sits above the sticky sidebar.
-    ...(Platform.OS === 'web' ? ({
+    // Keep search + country selector reachable while the catalog scrolls (web).
+    // Desktop only: the stacked mobile bar (title + hint + search + country) is
+    // ~190px tall and a sticky version ate ~30% of the phone viewport while
+    // scrolling, so on compact widths it scrolls away with the content.
+    ...(Platform.OS === 'web' && !isCompact ? ({
       position: 'sticky' as any,
       top: 0,
       zIndex: 30,
@@ -193,9 +194,11 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     ...DESIGN_TOKENS.typography.scale.h3,
   },
   filterChipCompact: {
-    paddingVertical: 5,
+    // Keep chips visually compact but never below the 44px touch target:
+    // the override previously shrank Chip's own minHeight to 30 (too small to tap).
+    paddingVertical: 8,
     paddingHorizontal: 11,
-    minHeight: 30,
+    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
     borderRadius: DESIGN_TOKENS.radii.full,
   },
   chipRow: {

@@ -124,6 +124,56 @@ const isJunkPlaceLabel = (value: string): boolean => {
 const isCoordinatePair = (value: string): boolean =>
   /^[-+]?\d{1,3}([.,]\d+)?\s*[,;]\s*[-+]?\d{1,3}([.,]\d+)?$/.test(value.trim())
 
+// NB: JS \b word boundaries don't work around Cyrillic, so these use plain
+// lowercase string checks instead of \b-anchored regexes.
+
+// Administrative-unit tails ("…сельский Совет", "…район", "…область") read as
+// bureaucratic noise in a card title — keep them in the address line, not the name.
+const ADMIN_UNIT_SUBSTRINGS = [
+  'сельсовет',
+  'сельский совет',
+  'поселковый совет',
+  'городской совет',
+  'с/с',
+  'район',
+  'область',
+  'обл.',
+] as const
+const isAdminUnitLabel = (value: string): boolean => {
+  const v = value.trim().toLowerCase()
+  return ADMIN_UNIT_SUBSTRINGS.some((token) => v.includes(token))
+}
+
+// "улица Мира", "пер. Садовый" — a street is a worse title than the locality that
+// follows it, so we skip it when a better part exists.
+const STREET_PREFIXES = [
+  'улица',
+  'ул',
+  'переулок',
+  'пер',
+  'проспект',
+  'просп',
+  'пр-т',
+  'шоссе',
+  'тракт',
+  'бульвар',
+  'бул',
+  'набережная',
+  'наб',
+  'площадь',
+  'пл',
+  'проезд',
+  'тупик',
+  'микрорайон',
+  'мкр',
+] as const
+const isStreetLabel = (value: string): boolean => {
+  const v = value.trim().toLowerCase()
+  return STREET_PREFIXES.some(
+    (p) => v === p || v.startsWith(`${p} `) || v.startsWith(`${p}.`),
+  )
+}
+
 const getPlaceTitle = (place: TravelCoords): string => {
   const maybeName = normalizeText((place as TravelCoords & { name?: unknown }).name)
   if (maybeName && !isJunkPlaceLabel(maybeName) && !isCoordinatePair(maybeName)) return maybeName
@@ -135,10 +185,15 @@ const getPlaceTitle = (place: TravelCoords): string => {
     .split(',')
     .map((part) => part.trim())
     .filter(Boolean)
-  // Skip leading house-number / distance segments, keep the first 2 meaningful
-  // parts (e.g. street + locality) for a readable, sortable title.
+  // Drop house-number / distance segments, then street and administrative-unit
+  // segments (they read as noise in a title — «улица …», «… сельский Совет»),
+  // keeping the first 2 remaining parts (e.g. point name + locality).
   const meaningful = parts.filter((part) => !isJunkPlaceLabel(part))
-  const picked = meaningful.slice(0, 2).join(', ')
+  const cleaned = meaningful.filter(
+    (part) => !isStreetLabel(part) && !isAdminUnitLabel(part),
+  )
+  const pool = cleaned.length > 0 ? cleaned : meaningful
+  const picked = pool.slice(0, 2).join(', ')
   if (picked) return picked
 
   const category = getPrimaryCategory(place.categoryName)

@@ -405,22 +405,26 @@ function TravelListItem({
       >
         <Feather name="edit-2" size={adminIconSize} color={colors.text} />
       </CardActionPressable>
-      <View style={[styles.adminDivider, isMobile && styles.adminDividerMobile]} />
-      <CardActionPressable
-        accessibilityLabel={isDeleting ? 'Маршрут удаляется' : 'Удалить'}
-        title={isDeleting ? 'Удаляется…' : 'Удалить'}
-        onPress={handleDelete}
-        style={[styles.adminBtn, isMobile && styles.adminBtnMobile]}
-        testID="delete-button"
-        disabled={isDeleting}
-        accessibilityState={{ disabled: isDeleting, busy: isDeleting }}
-      >
-        {isDeleting ? (
-          <ActivityIndicator size="small" color={colors.danger} />
-        ) : (
-          <Feather name="trash-2" size={adminIconSize} color={colors.danger} />
-        )}
-      </CardActionPressable>
+      {typeof onDeletePress === 'function' ? (
+        <>
+          <View style={[styles.adminDivider, isMobile && styles.adminDividerMobile]} />
+          <CardActionPressable
+            accessibilityLabel={isDeleting ? 'Маршрут удаляется' : 'Удалить'}
+            title={isDeleting ? 'Удаляется…' : 'Удалить'}
+            onPress={handleDelete}
+            style={[styles.adminBtn, isMobile && styles.adminBtnMobile]}
+            testID="delete-button"
+            disabled={isDeleting}
+            accessibilityState={{ disabled: isDeleting, busy: isDeleting }}
+          >
+            {isDeleting ? (
+              <ActivityIndicator size="small" color={colors.danger} />
+            ) : (
+              <Feather name="trash-2" size={adminIconSize} color={colors.danger} />
+            )}
+          </CardActionPressable>
+        </>
+      ) : null}
     </View>
   ) : null
 

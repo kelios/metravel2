@@ -104,8 +104,16 @@ export function useMapPopupAutoPan({
         } else {
           // Desktop/web: pan only when popup overflows the safe area, so opening
           // a popup near the center doesn't visibly jump the map.
+          // Учитываем не только границы карты, но и реальный край окна браузера —
+          // при широкой карте у правого края экрана popup может выходить за вьюпорт
+          // (обрезаются CTA/адрес). Берём более строгую из двух правых границ.
+          const viewportRightInMap =
+            typeof window !== 'undefined'
+              ? window.innerWidth - mapRect.left - safeArea.horizontalPadding
+              : safeRight
+          const effectiveSafeRight = Math.min(safeRight, viewportRightInMap)
           const overflowLeft = safeLeft - popupRect.left
-          const overflowRight = popupRect.right - safeRight
+          const overflowRight = popupRect.right - effectiveSafeRight
           if (overflowLeft > 0 && overflowRight > 0) {
             dx = popupCenterX - safeCenterX
           } else if (overflowLeft > 0) {
@@ -147,9 +155,14 @@ export function useMapPopupAutoPan({
 
     let resizeObserver: ResizeObserver | null = null
     let resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null
-    // Игнорируем первый синхронный вызов ResizeObserver, который происходит
-    // сразу после observe() и дублирует начальный pan.
-    let resizeObserverInitialized = false
+    // Запоминаем последний наблюдённый размер popup. Раньше первый колбэк
+    // ResizeObserver безусловно игнорировался как «синхронный дубль начального
+    // pan», но из-за этого терялся реальный рост карточки (split-layout/декод
+    // фото на desktop происходит одним скачком в этом же первом колбэке) — popup
+    // успевал «вырасти» вправо и обрезался за краем вьюпорта. Теперь пропускаем
+    // только колбэки без фактического изменения размеров.
+    let lastObservedWidth = 0
+    let lastObservedHeight = 0
     const cleanup = () => {
       if (rafId) {
         cancelAnimationFrame(rafId)
@@ -165,10 +178,14 @@ export function useMapPopupAutoPan({
     }
 
     if (typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(() => {
-        if (!resizeObserverInitialized) {
-          resizeObserverInitialized = true
-          return
+      resizeObserver = new ResizeObserver((entries) => {
+        const rect = entries[0]?.contentRect
+        if (rect) {
+          const w = Math.round(rect.width)
+          const h = Math.round(rect.height)
+          if (w === lastObservedWidth && h === lastObservedHeight) return
+          lastObservedWidth = w
+          lastObservedHeight = h
         }
         if (resizeDebounceTimer) {
           clearTimeout(resizeDebounceTimer)

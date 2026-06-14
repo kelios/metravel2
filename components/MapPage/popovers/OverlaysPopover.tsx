@@ -348,6 +348,7 @@ const getStyles = (colors: ThemedColors) =>
     },
     rowLabel: {
       flex: 1,
+      minWidth: 0,
       fontSize: 15,
       fontWeight: '700',
       color: colors.text,
@@ -366,6 +367,8 @@ const getStyles = (colors: ThemedColors) =>
     },
     badge: {
       minWidth: 34,
+      flexShrink: 0,
+      marginTop: 1,
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: PILL_RADIUS,

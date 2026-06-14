@@ -341,7 +341,12 @@ const AddressListItem: React.FC<Props> = ({
             onError={() => setImgLoaded(true)}
           />
         ) : (
-          <View style={styles.noImageFallback} />
+          <View style={styles.noImageFallback}>
+            <Feather name="map-pin" size={28} color={colors.textMuted} />
+            <Text style={styles.noImageFallbackText} numberOfLines={1}>
+              {categories[0] || 'Без фото'}
+            </Text>
+          </View>
         )}
 
         {!imgLoaded && (
@@ -521,6 +526,17 @@ const getStyles = (colors: ThemedColors) =>
       backgroundColor: colors.backgroundTertiary,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingHorizontal: 16,
+    },
+    noImageFallbackText: {
+      fontSize: 12,
+      fontWeight: '600',
+      letterSpacing: 0.2,
+      color: colors.textMuted,
+      maxWidth: '90%',
     },
     loader: {
       ...StyleSheet.absoluteFillObject,

@@ -467,6 +467,21 @@ select:focus-visible {
   }
 }
 
+/*
+ * Cookie consent banner vs. Leaflet bottom controls (desktop).
+ * The floating consent banner is bottom-anchored and overlaps Leaflet's
+ * bottom-right attribution + zoom/scale controls. When the banner is exposed
+ * (body[data-consent-banner-open]) we lift the bottom Leaflet controls above it
+ * using --mt-consent-h (set by ConsentBanner). Scoped to desktop where the
+ * mobile dock rule above doesn't already shift them clear.
+ */
+@media (min-width: 1024px) {
+  body[data-consent-banner-open='true']:has([data-testid="map-screen-root"]) .leaflet-bottom {
+    bottom: var(--mt-consent-h, 0px);
+    transition: bottom 0.2s ease;
+  }
+}
+
 /* Extra SSR/hydration safety: if RN-web styles aren't attached yet, enforce dock layout by wrapper */
 [data-testid="footer-dock-wrapper"],
 [data-testid="footer-dock-measure"] {

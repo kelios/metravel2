@@ -79,9 +79,9 @@ export const TravelDetailsMapSection: React.FC<{
         shouldForceRenderExcursions={shouldForceRenderExcursions}
       />
 
-      <AffiliateSection travel={travel} styles={styles} />
-
       <QuestForCitySection travel={travel} styles={styles} />
+
+      <AffiliateSection travel={travel} styles={styles} />
 
       <View
         ref={setMapSectionRef}

@@ -694,10 +694,12 @@ export default function PlacesScreen() {
                 <Text style={styles.resultsMeta}>
                   {placesQuery.isLoading
                     ? 'Загружаем подборку...'
-                    : `${filteredPlaces.length} ${getPlacesCountLabel(filteredPlaces.length)}`}
+                    : hasActiveFilters && filteredPlaces.length < allPlaces.length
+                      ? `${filteredPlaces.length} из ${allPlaces.length} ${getPlacesCountLabel(allPlaces.length)}`
+                      : `${filteredPlaces.length} ${getPlacesCountLabel(filteredPlaces.length)}`}
                 </Text>
               </View>
-              {selectedCategories.length > 0 && !isCompact ? (
+              {selectedCategories.length > 0 ? (
                 <Button
                   label="Все места"
                   variant="outline"

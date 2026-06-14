@@ -41,6 +41,10 @@ export function useSettingsProfileForm({
   // «Грязное» состояние и актуальные значения тоглов — для чтения из эффекта/хендлеров
   // без перезапуска эффекта на каждое нажатие.
   const hasUnsavedChangesRef = useRef(false);
+  // Форма уже гидрирована из профиля хотя бы раз. Без этого флага первичная
+  // загрузка блокировалась guard'ом hasUnsavedChanges: пустая форма «грязная»
+  // относительно непустого профиля ещё до гидрации.
+  const hydratedRef = useRef(false);
   const emailNotifyCommentsRef = useRef(false);
   const emailNotifyMessagesRef = useRef(false);
 
@@ -55,8 +59,9 @@ export function useSettingsProfileForm({
     setAvatarPreviewUrl(profile.avatar || '');
     // Не затираем поля, которые пользователь отредактировал, но не сохранил:
     // загрузка аватара на этом же экране триггерит refresh профиля и иначе
-    // сбросила бы несохранённый ввод.
-    if (hasUnsavedChangesRef.current) return;
+    // сбросила бы несохранённый ввод. Но первичную гидрацию пропускать нельзя —
+    // до неё пустая форма всегда «грязная» относительно непустого профиля.
+    if (hydratedRef.current && hasUnsavedChangesRef.current) return;
     setFirstName(normalizeAvatar(profile.first_name) ?? '');
     setLastName(normalizeAvatar(profile.last_name) ?? '');
     setYoutube(profile.youtube || '');
@@ -65,6 +70,7 @@ export function useSettingsProfileForm({
     setVk(profile.vk || '');
     setEmailNotifyComments(Boolean(profile.email_notify_comments));
     setEmailNotifyMessages(Boolean(profile.email_notify_messages));
+    hydratedRef.current = true;
   }, [profile, setAvatarPreviewUrl]);
 
   const derivedDisplayName = useMemo(() => {

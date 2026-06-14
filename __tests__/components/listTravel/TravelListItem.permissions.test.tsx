@@ -66,7 +66,11 @@ describe('TravelListItem permissions', () => {
   });
 
   it('shows edit/delete buttons for owner user', () => {
-    const { getByLabelText } = renderItem({ currentUserId: '42', isSuperuser: false });
+    const { getByLabelText } = renderItem({
+      currentUserId: '42',
+      isSuperuser: false,
+      onDeletePress: jest.fn(),
+    });
 
     expect(getByLabelText('Редактировать')).toBeTruthy();
     expect(getByLabelText('Удалить')).toBeTruthy();
@@ -79,6 +83,7 @@ describe('TravelListItem permissions', () => {
       currentUserId: '42',
       isSuperuser: false,
       isMetravel: false,
+      onDeletePress: jest.fn(),
     });
 
     expect(getByLabelText('Редактировать')).toBeTruthy();
@@ -104,9 +109,35 @@ describe('TravelListItem permissions', () => {
       travel,
       currentUserId: '42',
       isSuperuser: true,
+      onDeletePress: jest.fn(),
     });
 
     expect(getByLabelText('Редактировать')).toBeTruthy();
     expect(getByLabelText('Удалить')).toBeTruthy();
+  });
+
+  it('hides delete button (keeps edit) when onDeletePress is not provided', () => {
+    const { getByLabelText, queryByLabelText, queryByTestId } = renderItem({
+      currentUserId: '42',
+      isSuperuser: false,
+      onDeletePress: undefined,
+    });
+
+    expect(getByLabelText('Редактировать')).toBeTruthy();
+    expect(queryByLabelText('Удалить')).toBeNull();
+    expect(queryByTestId('delete-button')).toBeNull();
+  });
+
+  it('hides delete button for superuser when onDeletePress is not provided', () => {
+    const travel: Travel = { ...baseTravel, userIds: '100' } as any;
+    const { getByLabelText, queryByTestId } = renderItem({
+      travel,
+      currentUserId: '42',
+      isSuperuser: true,
+      onDeletePress: undefined,
+    });
+
+    expect(getByLabelText('Редактировать')).toBeTruthy();
+    expect(queryByTestId('delete-button')).toBeNull();
   });
 });

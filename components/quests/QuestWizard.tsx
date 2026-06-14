@@ -61,6 +61,8 @@ export type QuestWizardProps = {
     };
     /** Web: обновить бандл (и signed video URL) перед повторной попыткой проигрывания */
     onFinaleVideoRetry?: () => void;
+    /** Доп. блок под экскурсиями (напр. «Путешествия по этому городу») */
+    relatedTravelsSlot?: React.ReactNode;
 };
 
 // ===================== ТЕМА =====================
@@ -72,7 +74,7 @@ const useQuestWizardTheme = (isMobile: boolean, screenW: number) => {
     return { colors, styles };
 };
 // ===================== ОСНОВНОЙ КОМПОНЕНТ =====================
-export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry }: QuestWizardProps) {
+export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot }: QuestWizardProps) {
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
 
     const wizardModel = useQuestWizardResponsiveModel();
@@ -307,6 +309,9 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                         title={title}
                     />
                 )}
+
+                {/* Путешествия по этому городу — обратная перелинковка квест → travel */}
+                {!showFinaleOnly && relatedTravelsSlot}
 
                 {/* Финал — доступен всегда; видео — когда всё пройдено */}
                 {showFinaleOnly && (

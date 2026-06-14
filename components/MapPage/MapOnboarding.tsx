@@ -17,7 +17,8 @@ const TOOLTIP_GAP_PX = 12
 const FALLBACK_VIEWPORT_WIDTH = 800
 const FALLBACK_VIEWPORT_HEIGHT = 600
 const TOOLTIP_MAX_WIDTH = 320
-const TOOLTIP_LEFT_MIN = 8
+const TOOLTIP_SIDE_MARGIN = 12
+const TOOLTIP_LEFT_MIN = TOOLTIP_SIDE_MARGIN
 const MOBILE_WEB_ONBOARDING_MAX_WIDTH = 767
 
 let _restartCb: (() => void) | null = null
@@ -151,24 +152,32 @@ function getTargetRect(testID: string | undefined): Rect | null {
   return { top: r.top, left: r.left, width: r.width, height: r.height }
 }
 
+/**
+ * Ширина коачмарка, гарантированно вписанная в текущий вьюпорт с боковыми
+ * отступами. На узких экранах (390px) фиксированный maxWidth 340 + absolute
+ * left приводил к выходу карточки и кнопки «Готово» за правый край.
+ */
+function getTooltipWidth() {
+  return Math.min(TOOLTIP_MAX_WIDTH, getViewportWidth() - TOOLTIP_SIDE_MARGIN * 2)
+}
+
 function tooltipPosition(
   rect: Rect | null,
   placement: TooltipPosition,
 ): { top?: number; left?: number; bottom?: number; right?: number } {
   if (!rect) return {}
+  const tooltipWidth = getTooltipWidth()
+  const maxLeft = Math.max(TOOLTIP_LEFT_MIN, getViewportWidth() - tooltipWidth - TOOLTIP_SIDE_MARGIN)
   switch (placement) {
     case 'bottom':
       return {
         top: rect.top + rect.height + TOOLTIP_GAP_PX,
-        left: Math.max(
-          TOOLTIP_LEFT_MIN,
-          Math.min(rect.left, getViewportWidth() - TOOLTIP_MAX_WIDTH),
-        ),
+        left: Math.max(TOOLTIP_LEFT_MIN, Math.min(rect.left, maxLeft)),
       }
     case 'top':
       return {
         bottom: getViewportHeight() - rect.top + TOOLTIP_GAP_PX,
-        left: Math.max(TOOLTIP_LEFT_MIN, rect.left),
+        left: Math.max(TOOLTIP_LEFT_MIN, Math.min(rect.left, maxLeft)),
       }
     case 'left':
       return {
@@ -267,6 +276,10 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
   const step = steps[currentStep]
   const isLastStep = currentStep === steps.length - 1
   const pos = tooltipPosition(targetRect, step.placement)
+  // Когда карточка позиционируется абсолютно (привязана к таргету), задаём явную
+  // ширину, вписанную во вьюпорт, иначе width:'90%' резолвится от overlay (всё
+  // окно) и absolute-left уводит правый край за экран на мобильном.
+  const cardWidthStyle = targetRect ? ({ width: getTooltipWidth(), maxWidth: getTooltipWidth() } as const) : null
 
   return (
     <View style={[styles.overlay, { pointerEvents: 'auto' }]}>
@@ -294,7 +307,7 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
       )}
 
       <View
-        style={[styles.card, targetRect ? ({ position: 'absolute', ...pos } as any) : null]}
+        style={[styles.card, targetRect ? ({ position: 'absolute', ...pos, ...cardWidthStyle } as any) : null]}
       >
         {targetRect && step.placement === 'bottom' && <View style={styles.arrowUp} />}
 
@@ -395,11 +408,17 @@ const getStyles = (colors: ThemedColors) =>
     },
     title: { fontSize: 16, fontWeight: '700', color: colors.text, flex: 1 },
     description: { fontSize: 14, lineHeight: 20, color: colors.textMuted, marginBottom: 12 },
-    footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    stepsIndicator: { flexDirection: 'row', gap: 4 },
+    footer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    stepsIndicator: { flexDirection: 'row', gap: 4, flexShrink: 0 },
     stepDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border },
     stepDotActive: { backgroundColor: colors.primary, width: 16 },
-    actions: { flexDirection: 'row', gap: 8 },
+    actions: { flexDirection: 'row', gap: 8, flexShrink: 0 },
   })
 
 export default React.memo(MapOnboarding)

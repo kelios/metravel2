@@ -46,6 +46,18 @@ type Props = {
   badge?: UnifiedTravelCardBadge;
   leftTopSlot?: ReactNode;
   rightTopSlot?: ReactNode;
+  /**
+   * When the card has no image, a neutral grey placeholder is shown. Pass a slot
+   * (category icon + label etc.) so the empty media area reads as intentional
+   * instead of a broken/empty block.
+   */
+  mediaPlaceholderSlot?: ReactNode;
+  /**
+   * Render a subtle contrast scrim behind the rightTopSlot action buttons so
+   * grey-on-grey controls (favourite/save) stay legible over a light/empty
+   * media area.
+   */
+  rightTopSlotScrim?: boolean;
   bottomLeftSlot?: ReactNode;
   bottomRightSlot?: ReactNode;
   containerOverlaySlot?: ReactNode;
@@ -93,6 +105,8 @@ function UnifiedTravelCard({
   badge,
   leftTopSlot,
   rightTopSlot,
+  mediaPlaceholderSlot,
+  rightTopSlotScrim = false,
   bottomLeftSlot,
   bottomRightSlot,
   containerOverlaySlot,
@@ -337,6 +351,16 @@ function UnifiedTravelCard({
           right: 10,
           zIndex: 10,
         },
+        rightTopSlotScrim: {
+          padding: 4,
+          borderRadius: DESIGN_TOKENS.radii.pill,
+          backgroundColor: colors.surface,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: colors.borderLight,
+          ...Platform.select({
+            web: { boxShadow: '0 2px 8px rgba(15,23,42,0.16)' as any },
+          }),
+        },
         leftTopSlot: {
           position: 'absolute',
           top: 10,
@@ -517,7 +541,11 @@ function UnifiedTravelCard({
           {...(process.env.NODE_ENV === 'test'
             ? {}
             : ({ accessibilityElementsHidden: true, 'aria-hidden': true } as any))}
-        />
+        >
+          {mediaPlaceholderSlot ?? (
+            <Feather name="image" size={28} color={colors.textMuted} />
+          )}
+        </View>
       )}
 
       {onMediaPress ? (
@@ -584,7 +612,16 @@ function UnifiedTravelCard({
         </View>
       ) : null}
       {leftTopSlot ? <View style={styles.leftTopSlot}>{leftTopSlot}</View> : null}
-      {rightTopSlot ? <View style={styles.rightTopSlot}>{rightTopSlot}</View> : null}
+      {rightTopSlot ? (
+        <View
+          style={[
+            styles.rightTopSlot,
+            rightTopSlotScrim && (!optimizedImageUrl || imageFailed) ? styles.rightTopSlotScrim : null,
+          ]}
+        >
+          {rightTopSlot}
+        </View>
+      ) : null}
       {badge ? (
         <View style={[styles.badge, { backgroundColor: badge.backgroundColor }]}>
           <Feather name={badge.icon as any} size={14} color={badge.iconColor} />

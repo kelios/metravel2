@@ -7,6 +7,7 @@ const {
   buildSitemapXml,
   buildStaticEntries,
   buildTravelEntries,
+  buildQuestEntries,
   escapeXml,
   extractItems,
   extractTotal,
@@ -61,6 +62,22 @@ describe('generate-sitemap helpers', () => {
         loc: 'https://metravel.by/travels/42',
         lastmod: '2026-04-09T09:00:00.000Z',
       },
+    ]);
+  });
+
+  it('builds quest entries with the listing page, dedupe and skips incomplete quests', () => {
+    const entries = buildQuestEntries([
+      { quest_id: 'krakow-dragon', city_id: '1', updated_at: '2026-04-10T11:22:33.000Z' },
+      { quest_id: 'krakow-dragon', city_id: '1' },
+      { quest_id: 'warsaw-syrenka', city_id: '10', created_at: '2026-04-09T09:00:00.000Z' },
+      { quest_id: '', city_id: '5' },
+      { city_id: '7' },
+    ]);
+
+    expect(entries).toEqual([
+      { loc: 'https://metravel.by/quests' },
+      { loc: 'https://metravel.by/quests/1/krakow-dragon', lastmod: '2026-04-10T11:22:33.000Z' },
+      { loc: 'https://metravel.by/quests/10/warsaw-syrenka', lastmod: '2026-04-09T09:00:00.000Z' },
     ]);
   });
 

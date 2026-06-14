@@ -50,4 +50,37 @@ describe('placesCatalog', () => {
 
     expect(place.title).toBe('Башня замка, Смольяны')
   })
+
+  it('drops street segments from address-derived titles', () => {
+    const [place] = normalizeCatalogPlaces([
+      makePlace({
+        address: 'Архірэйскі палац, улица Архиерейский Вал Канисского',
+        categoryName: 'Дворец',
+      }),
+    ])
+
+    expect(place.title).toBe('Архірэйскі палац')
+  })
+
+  it('drops administrative-unit tails from address-derived titles', () => {
+    const [place] = normalizeCatalogPlaces([
+      makePlace({
+        address: 'Большое Ситно, Малоситнянский сельский Совет',
+        categoryName: 'Озеро',
+      }),
+    ])
+
+    expect(place.title).toBe('Большое Ситно')
+  })
+
+  it('prefers the locality when the address starts with a street', () => {
+    const [place] = normalizeCatalogPlaces([
+      makePlace({
+        address: 'улица Мира, Дятлово',
+        categoryName: 'Парк',
+      }),
+    ])
+
+    expect(place.title).toBe('Дятлово')
+  })
 })
