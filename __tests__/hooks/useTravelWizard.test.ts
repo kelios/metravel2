@@ -55,7 +55,7 @@ describe('useTravelWizard step persistence', () => {
   it('restores currentStep from persisted JSON payload', async () => {
     await AsyncStorage.setItem(
       stepKey,
-      JSON.stringify({ step: 4, timestamp: Date.now() }),
+      JSON.stringify({ step: 4, timestamp: Date.now(), schemaVersion: 1 }),
     );
 
     const { result } = renderHook(() =>
@@ -78,7 +78,7 @@ describe('useTravelWizard step persistence', () => {
     const ttlMs = 1000;
     await AsyncStorage.setItem(
       stepKey,
-      JSON.stringify({ step: 5, timestamp: Date.now() - ttlMs - 1 }),
+      JSON.stringify({ step: 5, timestamp: Date.now() - ttlMs - 1, schemaVersion: 1 }),
     );
 
     const { result } = renderHook(() =>
@@ -89,6 +89,29 @@ describe('useTravelWizard step persistence', () => {
         onSave: jest.fn(async () => ({ publish: false, moderation: false })),
         stepStorageKey: stepKey,
         stepStorageTtlMs: ttlMs,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.currentStep).toBe(1);
+    });
+
+    expect(AsyncStorage.removeItem).toHaveBeenCalledWith(stepKey);
+  });
+
+  it('falls back to step 1 and clears storage when schemaVersion is missing/incompatible', async () => {
+    await AsyncStorage.setItem(
+      stepKey,
+      JSON.stringify({ step: 5, timestamp: Date.now(), schemaVersion: 0 }),
+    );
+
+    const { result } = renderHook(() =>
+      useTravelWizard({
+        totalSteps: 6,
+        hasUnsavedChanges: false,
+        canSave: true,
+        onSave: jest.fn(async () => ({ publish: false, moderation: false })),
+        stepStorageKey: stepKey,
       }),
     );
 
@@ -120,7 +143,7 @@ describe('useTravelWizard step persistence', () => {
   it('clears persisted step on finish only when save result indicates publish/moderation', async () => {
     await AsyncStorage.setItem(
       stepKey,
-      JSON.stringify({ step: 6, timestamp: Date.now() }),
+      JSON.stringify({ step: 6, timestamp: Date.now(), schemaVersion: 1 }),
     );
 
     const onSave = jest.fn(async () => ({ publish: true, moderation: false }));
@@ -146,7 +169,7 @@ describe('useTravelWizard step persistence', () => {
   it('does not clear persisted step on finish when save result is draft', async () => {
     await AsyncStorage.setItem(
       stepKey,
-      JSON.stringify({ step: 6, timestamp: Date.now() }),
+      JSON.stringify({ step: 6, timestamp: Date.now(), schemaVersion: 1 }),
     );
 
     const onSave = jest.fn(async () => ({ publish: false, moderation: false }));

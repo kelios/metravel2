@@ -116,8 +116,12 @@ const stepStorage = {
 
 type ParsedStep = { step: number | null; expired: boolean };
 
+// Версия схемы сохранённого шага. Меняем при несовместимом изменении формата —
+// устаревшие записи откатываются к шагу 1.
+const STEP_SCHEMA_VERSION = 1;
+
 // Чистый разбор сохранённого значения шага.
-// Поддерживает JSON {step,timestamp} с TTL и legacy-формат (числовая строка).
+// Поддерживает JSON {step,timestamp,schemaVersion} с TTL и legacy-формат (числовая строка).
 function parseStoredStep(
   raw: string,
   normalize: (value: unknown) => number,
@@ -134,7 +138,11 @@ function parseStoredStep(
     return { step: normalize(raw), expired: false };
   }
 
-  const obj = parsed as { step?: unknown; timestamp?: unknown };
+  const obj = parsed as { step?: unknown; timestamp?: unknown; schemaVersion?: unknown };
+  if (obj.schemaVersion !== STEP_SCHEMA_VERSION) {
+    return { step: null, expired: true };
+  }
+
   const ts = typeof obj.timestamp === 'number' ? obj.timestamp : Number(obj.timestamp);
   if (!Number.isFinite(ts) || Date.now() - ts > ttlMs) {
     return { step: null, expired: true };
@@ -203,6 +211,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     const payload = JSON.stringify({
       step: normalizeStep(step),
       timestamp: Date.now(),
+      schemaVersion: STEP_SCHEMA_VERSION,
     });
     try {
       await stepStorage.write(stepStorageKey, payload);

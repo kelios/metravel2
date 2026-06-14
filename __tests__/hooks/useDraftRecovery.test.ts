@@ -207,6 +207,90 @@ describe('useDraftRecovery', () => {
     expect(localStorage.getItem(draftKey)).toBeNull();
   });
 
+  it('uses a stable `_new` key for a new travel (never `_null`)', async () => {
+    jest.useFakeTimers();
+    const { result } = renderHook(() =>
+      useDraftRecovery({
+        travelId: null,
+        isNew: true,
+        enabled: true,
+        currentData: { name: 'server' } as any,
+      })
+    );
+
+    act(() => {
+      result.current.saveDraft({ name: 'draft' } as any);
+    });
+    act(() => {
+      jest.advanceTimersByTime(2100);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(await AsyncStorage.getItem('metravel_travel_draft_new')).toBeTruthy();
+    expect(await AsyncStorage.getItem('metravel_travel_draft_null')).toBeNull();
+  });
+
+  it('does not write a draft while travelId is unresolved for an existing travel', async () => {
+    jest.useFakeTimers();
+    const { result } = renderHook(() =>
+      useDraftRecovery({
+        travelId: null,
+        isNew: false,
+        enabled: true,
+        currentData: { name: 'server' } as any,
+      })
+    );
+
+    act(() => {
+      result.current.saveDraft({ name: 'draft' } as any);
+    });
+    act(() => {
+      jest.advanceTimersByTime(2100);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+    expect(await AsyncStorage.getItem('metravel_travel_draft_null')).toBeNull();
+  });
+
+  it('clearDraft cancels a pending autosave debounce so no orphan draft is written', async () => {
+    jest.useFakeTimers();
+    const { result } = renderHook(() =>
+      useDraftRecovery({
+        travelId,
+        isNew: false,
+        enabled: true,
+        currentData: { name: 'server' } as any,
+      })
+    );
+
+    act(() => {
+      result.current.saveDraft({ name: 'pending' } as any);
+    });
+
+    // Clear before the debounce fires (simulates autosave succeeding mid-debounce).
+    await act(async () => {
+      await result.current.clearDraft();
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(2100);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+    expect(await AsyncStorage.getItem(draftKey)).toBeNull();
+  });
+
   it('flushes the latest pending draft on web pagehide', async () => {
     setPlatformOs('web');
 
