@@ -140,6 +140,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
     fontWeight: '600',
   },
   manualPointInput: {
+    minHeight: 44,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: DESIGN_TOKENS.radii.sm,

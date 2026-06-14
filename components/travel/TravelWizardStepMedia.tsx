@@ -28,6 +28,11 @@ import { showToastMessage } from '@/utils/toast';
 import { validateStep } from '@/utils/travelWizardValidation';
 
 const MEDIA_COVER_ANCHOR_ID = 'travelwizard-media-cover';
+const COVER_ADVICE_ITEMS = [
+    'Лучший формат: горизонтальный 16:9 (минимум 1200×675px)',
+    'Избегайте коллажей и текста на изображении',
+    'Используйте качественные фотографии с хорошим освещением',
+];
 
 interface TravelWizardStepMediaProps {
     currentStep: number;
@@ -304,11 +309,17 @@ const CoverAdviceCard = React.memo(function CoverAdviceCard({ styles, primaryCol
             </View>
             <View style={styles.tipContent}>
                 <Text style={styles.tipTitle}>Совет по обложке</Text>
-                <Text style={styles.tipBody}>
-                    • Лучший формат: горизонтальный 16:9 (минимум 1200×675px){'\n'}
-                    • Избегайте коллажей и текста на изображении{'\n'}
-                    • Используйте качественные фотографии с хорошим освещением
-                </Text>
+                <View style={styles.tipList} {...(Platform.OS === 'web' ? ({ role: 'list' } as any) : {})}>
+                    {COVER_ADVICE_ITEMS.map((item) => (
+                        <Text
+                            key={item}
+                            style={styles.tipBody}
+                            {...(Platform.OS === 'web' ? ({ role: 'listitem' } as any) : {})}
+                        >
+                            {`• ${item}`}
+                        </Text>
+                    ))}
+                </View>
                 <Text style={styles.tipStats}>Путешествия с обложкой получают в 3 раза больше просмотров</Text>
             </View>
         </View>
@@ -720,6 +731,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
         color: colors.text,
         lineHeight: 18,
+    },
+    tipList: {
         marginBottom: 6,
     },
     tipStats: {

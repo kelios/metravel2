@@ -177,6 +177,14 @@ describe('TravelWizardStepMedia', () => {
     expect(getByText(/превью будет сохранено/i)).toBeTruthy();
   });
 
+  it('renders cover advice as separate list items', async () => {
+    const { getByText } = renderStep({ id: '999' });
+
+    expect(getByText('• Лучший формат: горизонтальный 16:9 (минимум 1200×675px)').props.role).toBe('listitem');
+    expect(getByText('• Избегайте коллажей и текста на изображении').props.role).toBe('listitem');
+    expect(getByText('• Используйте качественные фотографии с хорошим освещением').props.role).toBe('listitem');
+  });
+
   it('renders gallery with normalized images and correct collection', async () => {
     const gallery = [
       'https://example.com/legacy.jpg',
