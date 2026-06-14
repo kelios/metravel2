@@ -183,7 +183,7 @@ describe('useTravelWizard beforeunload guard (web)', () => {
     setPlatformOs('web');
   });
 
-  it('disables beforeunload on web even when hasUnsavedChanges=true', () => {
+  it('enables beforeunload on web when hasUnsavedChanges=true', () => {
     const { useBeforeUnload } = require('@/utils/beforeunloadGuard');
 
     renderHook(() =>
@@ -197,7 +197,7 @@ describe('useTravelWizard beforeunload guard (web)', () => {
 
     expect(useBeforeUnload).toHaveBeenCalledWith(
       expect.any(Function),
-      false
+      true
     );
   });
 

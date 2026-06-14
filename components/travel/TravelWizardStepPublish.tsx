@@ -151,6 +151,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const instagramConnectingRef = useRef(false);
     const [isConnectingInstagram, setIsConnectingInstagram] = useState(false);
     const [primaryOverrideLabel, setPrimaryOverrideLabel] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
     const instagramAccountKey = useMemo(
         () =>
             getInstagramAccountOptions(process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS)[0]?.key ||
@@ -234,6 +235,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const handleSaveDraft = async () => {
         // ✅ FIX: Предотвращаем одновременные операции
         if (!startAction()) return;
+        setIsSaving(true);
         const previousForm = formData;
 
         try {
@@ -283,6 +285,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 });
             }
         } finally {
+            setIsSaving(false);
             finishAction();
         }
     };
@@ -317,6 +320,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         }
 
         setMissingForModeration([]);
+        setIsSaving(true);
         const previousForm = formData;
         const nextForm = {
             ...formData,
@@ -338,6 +342,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     text1: 'Не удалось отправить',
                     text2: 'Сохранение не удалось. Проверьте интернет и попробуйте ещё раз.',
                 });
+                setIsSaving(false);
                 return;
             }
 
@@ -633,15 +638,17 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     autosaveBadge={autosaveBadge}
                     onPrimary={handlePrimaryAction}
                     primaryLabel={
-                        primaryOverrideLabel ??
-                        (pendingModeration
-                            ? 'Отправлено на модерацию'
-                            : status === 'draft'
-                            ? 'Сохранить и выйти'
-                            : 'Отправить на модерацию')
+                        isSaving
+                            ? 'Сохранение…'
+                            : primaryOverrideLabel ??
+                              (pendingModeration
+                                  ? 'Отправлено на модерацию'
+                                  : status === 'draft'
+                                  ? 'Сохранить и выйти'
+                                  : 'Отправить на модерацию')
                     }
                     primaryTestID="primary-button"
-                    primaryDisabled={pendingModeration}
+                    primaryDisabled={pendingModeration || isSaving}
                     tipTitle={stepMeta?.tipTitle}
                     tipBody={stepMeta?.tipBody}
                     currentStep={currentStep}

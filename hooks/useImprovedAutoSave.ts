@@ -84,6 +84,7 @@ export function useImprovedAutoSave<T>(
   const latestDataRef = useRef<T>(data);
   const isOnlineRef = useRef<boolean>(true);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const onlineResaveRef = useRef<(() => void) | null>(null);
 
   // Cleanup function
   const cleanup = useCallback(() => {
@@ -109,6 +110,9 @@ export function useImprovedAutoSave<T>(
       if (mountedRef.current) {
         setState(prev => ({ ...prev, isOnline: true }));
       }
+      // Вернулись в онлайн — если автосейв откладывался из-за оффлайна и есть
+      // несохранённые изменения, перепланируем сохранение.
+      onlineResaveRef.current?.();
     };
     const handleOffline = () => {
       isOnlineRef.current = false;
@@ -259,6 +263,32 @@ export function useImprovedAutoSave<T>(
       throw saveError;
     }
   }, [onSave, onSuccess, onError, enableRetry, maxRetries, retryDelay, enabled]);
+
+  // Перепланирование автосейва после возврата в онлайн: если за время оффлайна
+  // накопились несохранённые изменения, дебаунсим обычное сохранение (без дублей —
+  // если уже запланирован debounce/retry, ничего не делаем).
+  useEffect(() => {
+    onlineResaveRef.current = () => {
+      if (!enabled) return;
+      if (!mountedRef.current) return;
+      if (isEqual(latestDataRef.current, lastSavedDataRef.current)) return;
+      if (timeoutRef.current || retryTimeoutRef.current) return;
+
+      timeoutRef.current = setTimeout(() => {
+        timeoutRef.current = null;
+        if (!mountedRef.current) return;
+        if (!isOnlineRef.current) return;
+        if (isEqual(latestDataRef.current, lastSavedDataRef.current)) return;
+        onStart?.();
+        performSave(latestDataRef.current).catch(() => {
+          // Ошибка уже отражена в состоянии через performSave.
+        });
+      }, debounce);
+    };
+    return () => {
+      onlineResaveRef.current = null;
+    };
+  }, [enabled, debounce, onStart, performSave]);
 
   // Упрощённый безопасный автосейв:
   // срабатывает, только если данные реально отличаются от последнего успешно сохранённого

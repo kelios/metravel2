@@ -332,8 +332,11 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     [formState]
   );
 
+  const getFormData = useCallback(() => formDataRef.current, []);
+
   return useMemo(() => ({
     formData: formState.data,
+    getFormData,
     setFormData,
     markers,
     setMarkers: handleMarkersUpdate,
@@ -350,6 +353,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     retryLoad,
   }), [
     formState,
+    getFormData,
     setFormData,
     markers,
     handleMarkersUpdate,

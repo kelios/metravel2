@@ -15,6 +15,7 @@ interface TextInputComponentProps {
     multiline?: boolean;
     numberOfLines?: number;
     disabled?: boolean; // ✅ ИСПРАВЛЕНИЕ: Добавлена поддержка disabled состояния
+    accessibilityLabel?: string;
 }
 
 const TextInputComponent: React.FC<TextInputComponentProps> = ({
@@ -29,6 +30,7 @@ const TextInputComponent: React.FC<TextInputComponentProps> = ({
                                                                    multiline = false,
                                                                numberOfLines = 1,
                                                                disabled = false, // ✅ ИСПРАВЛЕНИЕ
+                                                               accessibilityLabel,
                                                            }) => {
     const colors = useThemedColors();
     const [isFocused, setIsFocused] = useState(false);
@@ -135,6 +137,7 @@ const TextInputComponent: React.FC<TextInputComponentProps> = ({
                 ]}
                 value={value}
                 onChangeText={onChange}
+                accessibilityLabel={accessibilityLabel ?? label}
                 placeholder={placeholder || (label ? `Введите ${label.toLowerCase()}` : '')}
                 placeholderTextColor={colors.textMuted}
                 secureTextEntry={secureTextEntry}

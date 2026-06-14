@@ -10,7 +10,7 @@ import {
     View,
     findNodeHandle,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { deleteTravelMainImage } from '@/api/misc';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -443,7 +443,15 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
     onOpenPublic,
 }) => {
     const colors = useThemedColors();
+    const insets = useSafeAreaInsets();
     const styles = useMemo(() => createStyles(colors), [colors]);
+    // На native нижний таб-бар (BottomDock) — фиксированный оверлей высотой
+    // tabBarHeight + safe-area-inset-bottom, поэтому к статическому отступу
+    // добавляем реальный inset, иначе CTA «Загрузить фото» уходит под док.
+    const contentBottomPadding = useMemo(
+        () => (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl + (Platform.OS === 'web' ? 0 : insets.bottom),
+        [insets.bottom],
+    );
     const { isPhone, isLargePhone } = useResponsive();
     const { scrollRef, coverAnchorRef } = useMediaAnchorScroll(focusAnchorId, onAnchorHandled);
 
@@ -568,7 +576,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                 <ScrollView
                     ref={scrollRef}
                     style={styles.content}
-                    contentContainerStyle={styles.contentContainer}
+                    contentContainerStyle={[styles.contentContainer, { paddingBottom: contentBottomPadding }]}
                     keyboardShouldPersistTaps="handled"
                 >
                     <View style={styles.contentInner}>
@@ -626,7 +634,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     contentContainer: {
         paddingHorizontal: 8,
-        paddingBottom: (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl,
+        // paddingBottom задаётся динамически (tabBarHeight + safe-area-inset-bottom)
+        // через contentBottomPadding в contentContainerStyle ScrollView.
         paddingTop: DESIGN_TOKENS.spacing.sm,
         alignItems: 'center',
     },

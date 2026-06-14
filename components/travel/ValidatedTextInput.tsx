@@ -102,6 +102,7 @@ export const ValidatedTextInput: React.FC<ValidatedTextInputProps> = ({
 
       <TextInputComponent
         label=""
+        accessibilityLabel={required ? `${label}, обязательное` : label}
         value={value}
         onChange={onChange}
         multiline={multiline}

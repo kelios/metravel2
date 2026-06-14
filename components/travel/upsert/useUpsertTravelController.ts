@@ -90,7 +90,7 @@ export function useUpsertTravelController(): UpsertTravelController {
   });
 
   const { saveDraft, clearDraft, recoverDraft } = draft;
-  const { setFormData, handleManualSave } = form;
+  const { setFormData, handleManualSave, getFormData } = form;
 
   const saveAndClearDraft = useCallback<ManualSave>(
     async (dataOverride) => {
@@ -116,6 +116,7 @@ export function useUpsertTravelController(): UpsertTravelController {
     hasUnsavedChanges: form.autosave.hasUnsavedChanges,
     canSave: form.autosave.canSave,
     onSave: handleWizardSave,
+    getFormData,
     stepStorageKey,
   });
 

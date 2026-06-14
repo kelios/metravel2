@@ -103,10 +103,23 @@ jest.mock('@/hooks/useImprovedAutoSave', () => ({
 jest.mock('@/components/travel/TravelWizardStepBasic', () => {
   const { View, Text, TouchableOpacity } = require('react-native');
   return function MockStepBasic(props: any) {
+    const seedAndGoNext = () => {
+      // Step gate validates the current step before navigating. Seed valid
+      // required fields for steps 1 and 2 so the wizard lets us advance.
+      props.setFormData((prev: any) => ({
+        ...prev,
+        name: 'Тестовое путешествие',
+        description:
+          'Подробное описание тестового путешествия длиной более пятидесяти символов для прохождения валидации.',
+        coordsMeTravel: [{ lat: 53.9, lng: 27.56, address: 'Минск' }],
+        countries: ['3'],
+      }));
+      props.onGoNext();
+    };
     return (
       <View>
         <Text>Step1</Text>
-        <TouchableOpacity testID="next-1" onPress={props.onGoNext}>
+        <TouchableOpacity testID="next-1" onPress={seedAndGoNext}>
           <Text>Next</Text>
         </TouchableOpacity>
       </View>

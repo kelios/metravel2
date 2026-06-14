@@ -4,6 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useNavigation } from 'expo-router';
 import { trackWizardEvent } from '@/utils/analytics';
 import type { ValidationError, ModerationIssue } from '@/utils/formValidation';
+import { validateStep } from '@/utils/travelWizardValidation';
+import type { TravelFormData } from '@/types/types';
 import { showToastMessage } from '@/utils/toast';
 import { getErrorMessage } from '@/utils/errorHelpers';
 import { useBeforeUnload } from '@/utils/beforeunloadGuard';
@@ -85,6 +87,7 @@ interface UseTravelWizardOptions {
   hasUnsavedChanges: boolean;
   canSave: boolean;
   onSave: () => Promise<WizardSaveResult>;
+  getFormData?: () => TravelFormData | null | undefined;
   stepStorageKey?: string;
   stepStorageTtlMs?: number;
 }
@@ -146,6 +149,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     hasUnsavedChanges,
     canSave,
     onSave,
+    getFormData,
     stepStorageKey,
     stepStorageTtlMs = 7 * 24 * 60 * 60 * 1000,
   } = options;
@@ -164,6 +168,8 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
   const exitGuardPromptVisibleRef = useRef(false);
   const hasRestoredRef = useRef(false);
   const isLeavingRef = useRef(false);
+  const getFormDataRef = useRef(getFormData);
+  getFormDataRef.current = getFormData;
 
   const normalizeStep = useCallback(
     (value: unknown) => {
@@ -256,10 +262,27 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
   );
 
   const handleNext = useCallback(() => {
-    if (currentStep < totalSteps) {
-      trackWizardEvent('wizard_step_next', { step: currentStep });
-      setCurrentStep(prev => prev + 1);
+    if (currentStep >= totalSteps) return;
+
+    const formData = getFormDataRef.current?.();
+    if (formData) {
+      const { errors } = validateStep(currentStep, formData);
+      if (errors.length > 0) {
+        setStep1SubmitErrors(errors);
+        const firstAnchor = errors.find(e => e.anchorId)?.anchorId;
+        pendingIssueNavRef.current = { step: currentStep, anchorId: firstAnchor };
+        setFocusAnchorId(firstAnchor ?? null);
+        trackWizardEvent('wizard_step_next_blocked', {
+          step: currentStep,
+          errors: errors.length,
+        });
+        return;
+      }
     }
+
+    setStep1SubmitErrors([]);
+    trackWizardEvent('wizard_step_next', { step: currentStep });
+    setCurrentStep(prev => prev + 1);
   }, [currentStep, totalSteps]);
 
   const handleBack = useCallback(() => {
@@ -382,7 +405,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
       e.preventDefault();
       e.returnValue = '';
     },
-    Platform.OS !== 'web' && hasUnsavedChanges
+    Platform.OS === 'web' && hasUnsavedChanges
   );
 
   useEffect(() => {
