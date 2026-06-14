@@ -26,6 +26,7 @@ import { webTouchScrollStyle } from '@/utils'
 import { buildCanonicalUrl } from '@/utils/seo'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { getDateFieldForTravelStatus } from '@/utils/travelStatusCalendarDisplay'
+import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler'
 
 import { createCalendarStyles } from '@/components/screens/calendar/calendarScreen.styles'
 import {
@@ -238,6 +239,18 @@ export default function CalendarScreen() {
     await removeStatus(dateEditor.item.id, userId)
     handleCloseDateEditor()
   }, [dateEditor, handleCloseDateEditor, removeStatus, userId])
+
+  // Android: при открытом редакторе даты Back сначала закрывает его; иначе
+  // возвращает на предыдущий экран (Профиль), а не сбрасывает Tab-навигатор.
+  useAndroidBackHandler(
+    useCallback(() => {
+      if (dateEditor) {
+        handleCloseDateEditor()
+        return true
+      }
+      return false
+    }, [dateEditor, handleCloseDateEditor])
+  )
 
   const handleLogin = useCallback(() => {
     router.push(buildLoginHref({ redirect: '/calendar', intent: 'calendar' }) as any)

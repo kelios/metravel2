@@ -8,6 +8,7 @@ import { useRouter, type Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSubscriptionsData, type SubscriptionTab } from '@/hooks/useSubscriptionsData';
+import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler';
 import AuthorCard from '@/components/subscriptions/AuthorCard';
 import SubscriberCard from '@/components/subscriptions/SubscriberCard';
 import EmptyState from '@/components/ui/EmptyState';
@@ -28,6 +29,9 @@ const WEB_CARD_SHADOW_STYLE: WebEnhancedViewStyle = { boxShadow: DESIGN_TOKENS.s
 const WEB_TEXT_OUTLINE_NONE_STYLE = { outlineStyle: 'none' } as WebEnhancedTextStyle;
 
 export default function SubscriptionsScreen() {
+  // Android: hardware Back возвращает на предыдущий экран (Профиль), а не
+  // сбрасывает Tab-навигатор на главную. Хук гейтит по Platform.OS === 'android'.
+  useAndroidBackHandler();
   const router = useRouter();
   const pushRoute = useCallback((href: string) => { router.push(href as Href); }, [router]);
   useResponsive();

@@ -12,7 +12,8 @@ const mockRemoveStatus = jest.fn(() => Promise.resolve())
 let mockEntries: TravelStatusEntry[] = []
 
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: mockPush }),
+  useRouter: () => ({ push: mockPush, back: jest.fn(), canGoBack: jest.fn(() => true) }),
+  usePathname: jest.fn(() => '/calendar'),
 }))
 
 jest.mock('@/context/AuthContext', () => ({

@@ -27,8 +27,12 @@ import { useAvatarUpload } from '@/hooks/useAvatarUpload';
 import { useBiometricAuth } from '@/hooks/useBiometricAuth';
 import { webTouchScrollStyle } from '@/utils';
 import { createSettingsStyles } from '@/components/screens/settings/settings.styles';
+import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler';
 
 export default function SettingsScreen() {
+    // Android: hardware Back возвращает на предыдущий экран (Профиль), а не
+    // сбрасывает Tab-навигатор на главную. Хук гейтит по Platform.OS === 'android'.
+    useAndroidBackHandler();
     const router = useRouter();
     const isFocused = useIsFocused();
     const { isAuthenticated, authReady, logout, username, userId } = useAuth();

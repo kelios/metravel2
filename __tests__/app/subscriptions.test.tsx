@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import { mockPush, mockUseRouter, resetExpoRouterMocks } from '../helpers/expoRouterMock';
+import { mockPush, mockUseRouter, mockUsePathname, resetExpoRouterMocks } from '../helpers/expoRouterMock';
 import { createQueryWrapper } from '../helpers/testQueryClient';
 import { createAuthValue } from '../helpers/mockContextValues';
 import {
@@ -42,6 +42,7 @@ jest.mock('@/utils/toast', () => ({
 
 jest.mock('expo-router', () => ({
     useRouter: mockUseRouter,
+    usePathname: mockUsePathname,
 }));
 
 import SubscriptionsScreen from '@/app/(tabs)/subscriptions';

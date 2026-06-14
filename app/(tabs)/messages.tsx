@@ -18,6 +18,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { devError } from '@/utils/logger';
+import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler';
 
 const InstantSEO = React.lazy(() => import('@/components/seo/LazyInstantSEO'));
 
@@ -207,6 +208,23 @@ export default function MessagesScreen() {
     const handlePickerClose = useCallback(() => {
         setShowPicker(false);
     }, []);
+
+    // Android: hardware Back сначала закрывает открытый picker/тред (как кнопка
+    // «назад» внутри экрана), и только если ничего не открыто — возвращает на
+    // предыдущий экран (Профиль). На web/iOS хук — no-op (гейт по Platform.OS).
+    useAndroidBackHandler(
+        useCallback(() => {
+            if (showPicker) {
+                handlePickerClose();
+                return true;
+            }
+            if (selectedThread) {
+                handleBack();
+                return true;
+            }
+            return false;
+        }, [showPicker, selectedThread, handlePickerClose, handleBack])
+    );
 
     const handlePickUser = useCallback(
         async (targetUserId: number) => {

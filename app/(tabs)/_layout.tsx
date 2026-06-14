@@ -166,6 +166,11 @@ export default function TabLayout() {
         <>
             <Tabs
                 tabBar={() => null}
+                // Android hardware Back и router.back() должны возвращать на
+                // предыдущий активный таб (напр. Профиль → Настройки → Back → Профиль),
+                // а не сбрасывать на первый таб (index). Выход с главной всё ещё
+                // обрабатывает useAndroidBackHandler (двойной тап) до этого поведения.
+                backBehavior="history"
                 screenOptions={{
                     tabBarStyle: tabBarHiddenStyle,
                     header: () => <Header />, // кастомный заголовок

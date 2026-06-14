@@ -7,6 +7,8 @@ jest.mock('expo-router', () => ({
   router: {
     push: jest.fn(),
   },
+  useRouter: jest.fn(() => ({ push: jest.fn(), back: jest.fn(), canGoBack: jest.fn(() => true) })),
+  usePathname: jest.fn(() => '/userpoints'),
 }));
 
 jest.mock('@/components/UserPoints/PointsList', () => ({
