@@ -1,4 +1,4 @@
-import React, { memo, Suspense, lazy, useCallback, useEffect, useMemo, useRef } from 'react'
+import React, { memo, Suspense, useCallback, useEffect, useMemo, useRef } from 'react'
 import {
   ActivityIndicator,
   Platform,
@@ -9,7 +9,6 @@ import {
   LayoutChangeEvent,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  StyleProp,
 } from 'react-native'
 import { FlashList } from '@shopify/flash-list'
 import Feather from '@expo/vector-icons/Feather'
@@ -17,56 +16,24 @@ import Feather from '@expo/vector-icons/Feather'
 import StickySearchBar from '@/components/mainPage/StickySearchBar'
 import EmptyState from '@/components/ui/EmptyState'
 import ContributionBanner from '@/components/common/ContributionBanner'
-import { SkeletonLoader, TravelCardSkeleton } from '@/components/ui/SkeletonLoader'
-import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { Travel } from '@/types/types'
 import {
   areRightColumnPropsEqual,
   buildTravelRows,
-  getRightColumnColumns,
   getRightColumnHeaderMinHeight,
-  getRightColumnWebRowBaseStyle,
   RECOMMENDATIONS_TOTAL_HEIGHT,
   TOP_SCROLL_PADDING,
 } from '@/components/listTravel/rightColumnModel'
-
-const isWeb = Platform.OS === 'web';
-
-// Lazy load RecommendationsTabs with proper error boundary
-const RecommendationsTabs = lazy(async () => {
-  try {
-    return await import('./RecommendationsTabs')
-  } catch {
-    return {
-      default: memo((_props: { forceVisible?: boolean; onVisibilityChange?: (visible: boolean) => void }) => (
-        <View style={{ padding: 16, alignItems: 'center' }}>
-          <Text>Не удалось загрузить рекомендации</Text>
-        </View>
-      )),
-    } as unknown as typeof import('./RecommendationsTabs')
-  }
-})
-
-// Simple placeholder for loading state (must match the reserved header height)
-const RecommendationsPlaceholder = () => (
-  <View
-    style={{
-      height: RECOMMENDATIONS_TOTAL_HEIGHT,
-      padding: 16,
-      alignItems: 'center',
-      justifyContent: 'center',
-    }}
-  >
-    <ActivityIndicator size="small" />
-  </View>
-)
-
-const FallbackTravelCardSkeleton = () => (
-  <SkeletonLoader width="100%" height={320} borderRadius={16} />
-)
-
-const TravelCardSkeletonComponent = TravelCardSkeleton ?? FallbackTravelCardSkeleton
+import {
+  RecommendationsPlaceholder,
+  RecommendationsTabs,
+  TravelCardSkeletonComponent,
+} from '@/components/listTravel/RightColumn.parts'
+import {
+  isWeb,
+  useRightColumnStyles,
+} from '@/components/listTravel/useRightColumnStyles'
 
 interface RightColumnProps {
   search: string
@@ -248,37 +215,27 @@ const RightColumn: React.FC<RightColumnProps> = (
       })
     }, [scheduleAfterLayout, scrollToRecommendations, showRecommendations])
 
-    const cardsWrapperStyle = useMemo<StyleProp<ViewStyle>>(() => {
-      const resetPadding = {
-        flex: 1,
-        minHeight: 0,
-        paddingHorizontal: 0,
-        paddingTop: Platform.OS === 'web' ? 0 : 12,
-        ...(Platform.OS === 'web'
-          ? ({
-              // Important: keep this wrapper non-scrolling so FlashList's internal
-              // ScrollView is the only scroll container on web, otherwise its onScroll
-              // won't fire and infinite scroll won't fetch next pages.
-              overflow: 'hidden',
-              overflowY: 'hidden',
-              overflowX: 'hidden',
-              // Only reserve scrollbar gutter on desktop to prevent layout shift;
-              // on mobile web scrollbars are overlay so this wastes ~15px.
-              ...(isWebMobile ? {} : { scrollbarGutter: 'stable' }),
-            } as any)
-          : null),
-      }
-
-      if (Array.isArray(cardsContainerStyle)) {
-        return [...cardsContainerStyle, resetPadding]
-      }
-
-      if (cardsContainerStyle) {
-        return [cardsContainerStyle, resetPadding]
-      }
-
-      return resetPadding
-    }, [cardsContainerStyle, isWebMobile])
+    const {
+      cardsWrapperStyle,
+      webContentContainerStyle,
+      nativeContentContainerStyle,
+      paddingHorizontalStyle,
+      recommendationsSkeletonStyle,
+      activeConditionChipStyles,
+      rowLayout,
+      skeletonGridStyle,
+      skeletonCardWrapperStyle,
+    } = useRightColumnStyles({
+      colors,
+      cardSpacing,
+      contentPadding,
+      gridColumns,
+      isMobile,
+      isExport,
+      isWebMobile,
+      cardsContainerStyle,
+      cardsGridStyle,
+    })
 
     const rows = useMemo(() => buildTravelRows(travels, gridColumns, isMobile), [travels, gridColumns, isMobile])
 
@@ -286,35 +243,6 @@ const RightColumn: React.FC<RightColumnProps> = (
     const RowSeparator = useCallback(() => {
       return <View style={rowSeparatorStyle} />
     }, [rowSeparatorStyle])
-
-    const webContentContainerStyle = useMemo(() => ({
-      paddingHorizontal: contentPadding,
-      // Keep a small gap below the search chrome on web so the first card
-      // doesn't visually tuck under the header shadow or clip its top actions.
-      paddingTop: 8,
-      // Reserve whichever bottom overlay is taller: the bottom dock or the consent banner
-      // (set by ConsentBanner via --mt-consent-h). max() avoids cards hiding under the banner.
-      paddingBottom: isMobile
-        ? (`calc(max(var(--mt-dock-h, 0px), var(--mt-consent-h, 0px)) + 8px)` as any)
-        : (`calc(max(var(--mt-consent-h, 0px), 28px) + 8px)` as any),
-    }), [isMobile, contentPadding])
-
-    const nativeContentContainerStyle = useMemo(() => ({
-      paddingHorizontal: contentPadding,
-      paddingTop: 8,
-      paddingBottom: 28,
-    }), [contentPadding])
-
-    const paddingHorizontalStyle = useMemo(() => ({ paddingHorizontal: contentPadding }), [contentPadding])
-    const recommendationsSkeletonStyle = useMemo(
-      () => ({
-        height: RECOMMENDATIONS_TOTAL_HEIGHT,
-        marginBottom: 24,
-        overflow: 'hidden' as const,
-        paddingHorizontal: contentPadding,
-      }),
-      [contentPadding]
-    )
 
     // Web: infinite scroll via onScroll instead of FlashList's onEndReached
     const webScrollHandler = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -342,113 +270,6 @@ const RightColumn: React.FC<RightColumnProps> = (
       })
       return nodes.length ? nodes : null
     }, [topContent])
-
-    const activeConditionChipStyles = useMemo(
-      () => ({
-        wrapper: {
-          flexDirection: 'row' as const,
-          flexWrap: 'wrap' as const,
-          gap: DESIGN_TOKENS.spacing.xs,
-          paddingTop: DESIGN_TOKENS.spacing.sm,
-          paddingBottom: DESIGN_TOKENS.spacing.xxs,
-        },
-        chip: {
-          minHeight: 34,
-          maxWidth: isMobile ? '100%' : 280,
-          flexDirection: 'row' as const,
-          alignItems: 'center' as const,
-          gap: DESIGN_TOKENS.spacing.xs,
-          paddingHorizontal: 12,
-          paddingVertical: 7,
-          borderRadius: DESIGN_TOKENS.radii.pill,
-          borderWidth: 1,
-          borderColor: colors.border,
-          backgroundColor: colors.surface,
-          ...(Platform.OS === 'web'
-            ? ({
-                cursor: 'pointer',
-                transition: 'border-color 0.18s ease, background-color 0.18s ease',
-              } as any)
-            : null),
-        },
-        chipText: {
-          flexShrink: 1,
-          color: colors.text,
-          fontSize: 13,
-          fontWeight: '600' as const,
-        },
-      }),
-      [colors.border, colors.surface, colors.text, isMobile],
-    )
-
-    // Инварианты строки зависят только от сетки/размеров, а не от конкретной
-    // строки — считаем один раз на рендер, а не на каждую из N строк.
-    const rowLayout = useMemo(() => {
-      const cols = getRightColumnColumns(gridColumns, isMobile)
-      const calcWidth =
-        cols > 1 ? `calc((100% - ${(cols - 1) * cardSpacing}px) / ${cols})` : '100%'
-
-      const rowStyle = [
-        cardsGridStyle,
-        (Platform.OS === 'web'
-          ? (getRightColumnWebRowBaseStyle({ cardSpacing, isExport, isMobile }) as any)
-          : ({
-              flexWrap: 'nowrap',
-              width: '100%',
-              maxWidth: '100%',
-              minWidth: 0,
-            } as any)),
-      ]
-
-      const itemWrapperStyle = [
-        (Platform.OS === 'web'
-          ? (isMobile
-              ? ({
-                  flex: 1,
-                  width: '100%',
-                  maxWidth: '100%',
-                  minWidth: 0,
-                  flexBasis: '100%',
-                } as any)
-              : ({
-                  // Equal column widths on web (prevents last-row stretching and uneven widths)
-                  flexGrow: 0,
-                  flexShrink: 0,
-                  flexBasis: calcWidth,
-                  width: calcWidth,
-                  maxWidth: calcWidth,
-                  minWidth: 0,
-                  alignSelf: 'stretch',
-                } as any))
-          : ({
-              flex: 1,
-              width: '100%',
-              maxWidth: '100%',
-            } as any)) as ViewStyle,
-        Platform.OS === 'web'
-          ? null
-          : {
-              paddingHorizontal: cardSpacing / 2,
-              paddingBottom: cardSpacing,
-            },
-      ]
-
-      const placeholderStyle = [
-        ({
-          flexGrow: 0,
-          flexShrink: 0,
-          flexBasis: calcWidth,
-          width: calcWidth,
-          maxWidth: calcWidth,
-          minWidth: 0,
-          opacity: 0,
-          pointerEvents: 'none',
-          paddingHorizontal: cardSpacing / 2,
-        } as any) as ViewStyle,
-      ]
-
-      return { cols, rowStyle, itemWrapperStyle, placeholderStyle }
-    }, [cardsGridStyle, cardSpacing, gridColumns, isMobile, isExport])
 
     const renderRow = useCallback((item: { item: Travel[]; index: number }) => {
         const { item: rowItems, index: rowIndex } = item;
@@ -531,32 +352,6 @@ const RightColumn: React.FC<RightColumnProps> = (
       if (isMobile) return 4
       return Math.max(gridColumns * 2, 6)
     }, [gridColumns, isMobile])
-    const skeletonCardWidth = useMemo(() => {
-      if (Platform.OS !== 'web') return '100%'
-      const columns = Math.max(gridColumns, 1)
-      if (isMobile || columns === 1) return '100%'
-      return `calc((100% - ${(columns - 1) * cardSpacing}px) / ${columns})`
-    }, [cardSpacing, gridColumns, isMobile])
-    const skeletonGridStyle = useMemo(
-      () => ({
-        flexDirection: 'row' as const,
-        flexWrap: 'wrap' as const,
-        gap: cardSpacing,
-        paddingHorizontal: contentPadding,
-        paddingTop: 8,
-        paddingBottom: 24,
-      }),
-      [cardSpacing, contentPadding]
-    )
-    const skeletonCardWrapperStyle = useMemo<StyleProp<ViewStyle>>(
-      () => ({
-        width: skeletonCardWidth as any,
-        ...(Platform.OS === 'web'
-          ? ({ flexGrow: 0, flexShrink: 0, flexBasis: skeletonCardWidth as any } as const)
-          : null),
-      }),
-      [skeletonCardWidth]
-    )
 
     // Always render the search bar, even on mobile
 
