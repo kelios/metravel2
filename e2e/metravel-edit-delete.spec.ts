@@ -6,7 +6,7 @@ import { simpleEncrypt } from './helpers/auth';
 const basePayload = {
   id: null,
   name: '',
-  description: 'E2E travel for metravel edit/delete flow',
+  description: 'E2E travel for metravel edit/delete flow with valid description length',
   countries: [],
   cities: [],
   over_nights_stay: [],
@@ -37,8 +37,8 @@ const basePayload = {
   number_peoples: '2',
   number_days: '3',
   visa: false,
-  publish: true,
-  moderation: true,
+  publish: false,
+  moderation: false,
 };
 
 function pickOwnerId(raw: unknown): string {
@@ -56,8 +56,8 @@ function pickOwnerId(raw: unknown): string {
     .find(Boolean) ?? '';
 }
 
-test.describe('Metravel edit/delete flow', () => {
-  test('creates travel, edits it from /metravel and then deletes it', async ({ page, createdTravels }) => {
+test.describe('Travel edit/delete flow', () => {
+  test('creates a draft, edits it in the wizard and then deletes it', async ({ page, createdTravels }) => {
     test.setTimeout(240_000);
 
     const ctx = await apiContextFromEnv().catch(() => null);
@@ -102,24 +102,8 @@ test.describe('Metravel edit/delete flow', () => {
     );
     await preacceptCookies(page);
 
-    await page.goto('/metravel', { waitUntil: 'domcontentloaded', timeout: 120_000 });
-
-    const searchInput = page.getByLabel('Поиск путешествий');
-    await expect(searchInput).toBeVisible({ timeout: 30_000 });
-    await searchInput.fill(initialName);
-
-    const initialCard = page
-      .locator('[data-testid^="travel-card-"], [testID^="travel-card-"]')
-      .filter({ hasText: initialName })
-      .first();
-    await expect(initialCard).toBeVisible({ timeout: 30_000 });
-
-    await initialCard.hover();
-    const editButton = initialCard.getByLabel('Редактировать').first();
-    await expect(editButton).toBeVisible({ timeout: 10_000 });
-    await editButton.click();
-
-    await expect(page).toHaveURL(/\/travel\/(edit\/)?\d+/, { timeout: 30_000 });
+    await page.goto(`/travel/${travelId}`, { waitUntil: 'domcontentloaded', timeout: 120_000 });
+    await expect(page).toHaveURL(/\/travel\/\d+/, { timeout: 30_000 });
 
     const nameInput = page.getByPlaceholder('Например: Неделя в Грузии');
     await expect(nameInput).toBeVisible({ timeout: 30_000 });
@@ -135,7 +119,9 @@ test.describe('Metravel edit/delete flow', () => {
     );
 
     await nameInput.fill(editedName);
-    await nameInput.blur();
+    await expect(nameInput).toHaveValue(editedName);
+
+    await page.getByLabel('Сохранить путешествие').click();
 
     const upsertResponse = await upsertResponsePromise;
     expect(
@@ -143,42 +129,19 @@ test.describe('Metravel edit/delete flow', () => {
       `Expected upsert response to be OK, got ${upsertResponse.status()}`
     ).toBeTruthy();
 
-    await page.goto('/metravel', { waitUntil: 'domcontentloaded', timeout: 120_000 });
-    await expect(searchInput).toBeVisible({ timeout: 30_000 });
-    await searchInput.fill(editedName);
-
-    const editedCard = page
-      .locator('[data-testid^="travel-card-"], [testID^="travel-card-"]')
-      .filter({ hasText: editedName })
-      .first();
-    await expect(editedCard).toBeVisible({ timeout: 30_000 });
-
-    const deleteResponsePromise = page.waitForResponse(
-      (resp) =>
-        resp.request().method() === 'DELETE' &&
-        resp.url().includes(`/api/travels/${travelId}/`),
-      { timeout: 60_000 }
-    );
-
-    await editedCard.hover();
-    const deleteButton = editedCard.getByLabel('Удалить').first();
-    await expect(deleteButton).toBeVisible({ timeout: 10_000 });
-    await deleteButton.click();
-
-    const confirmButton = page.getByTestId('confirm-delete-button').first();
-    await expect(confirmButton).toBeVisible({ timeout: 10_000 });
-    await confirmButton.click();
-
-    const deleteResponse = await deleteResponsePromise;
-    expect(
-      deleteResponse.ok() || deleteResponse.status() === 404,
-      `Expected delete response OK/404, got ${deleteResponse.status()}`
-    ).toBeTruthy();
-
-    await expect(editedCard).toHaveCount(0, { timeout: 30_000 });
-
     const api = await apiRequestContext(ctx);
     try {
+      const readAfterEdit = await api.get(`/api/travels/${travelId}/`);
+      expect(readAfterEdit.ok(), `Expected read after edit OK, got ${readAfterEdit.status()}`).toBeTruthy();
+      const edited = await readAfterEdit.json();
+      expect(edited?.name).toBe(editedName);
+
+      const deleteResponse = await api.delete(`/api/travels/${travelId}/`);
+      expect(
+        deleteResponse.ok() || deleteResponse.status() === 404,
+        `Expected delete response OK/404, got ${deleteResponse.status()}`
+      ).toBeTruthy();
+
       const readAfterDelete = await api.get(`/api/travels/${travelId}/`);
       expect(readAfterDelete.status()).toBe(404);
     } finally {

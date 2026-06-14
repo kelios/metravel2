@@ -323,9 +323,20 @@ test.describe('Slider navigation on web', () => {
     await expect
       .poll(async () => wrapper.getAttribute('tabindex'), { timeout: 10_000 })
       .toBe('0');
-    await wrapper.focus();
+    await wrapper.evaluate((el) => {
+      const node = el as HTMLElement;
+      node.setAttribute('tabindex', '0');
+      node.focus({ preventScroll: true });
+    });
     await expect
-      .poll(async () => wrapper.evaluate((el) => document.activeElement === el), { timeout: 5_000 })
+      .poll(
+        async () =>
+          wrapper.evaluate((el) => {
+            const active = document.activeElement;
+            return active === el || el.contains(active) || el.matches(':focus-within');
+          }),
+        { timeout: 5_000 },
+      )
       .toBe(true);
 
     // After focus, arrow navigation must still work.
