@@ -277,7 +277,7 @@ const createStyles = (colors: ThemedColors, isMobile: boolean) =>
       fontWeight: '700',
       color: colors.primaryText,
       letterSpacing: 0.8,
-      textTransform: 'capitalize',
+      textTransform: 'uppercase',
     },
     statusPills: {
       flexDirection: 'row',

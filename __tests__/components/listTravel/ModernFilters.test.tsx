@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { ThemeProvider } from '@/hooks/useTheme';
 import ModernFilters from '@/components/listTravel/ModernFilters';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -203,7 +203,8 @@ describe('ModernFilters Component', () => {
     const toggleAll = screen.getByTestId('toggle-all-groups');
     const toggleStyle = StyleSheet.flatten(toggleAll.props.style);
     expect(toggleStyle.height).toBe(40);
-    expect(toggleStyle.minWidth).toBe(40);
+    // Icon-only on native — fixed 40×40 square, not the wide text variant (F-39).
+    expect(toggleStyle.width).toBe(40);
 
     expect(screen.getByText('330 путешествий')).toBeTruthy();
     const resultsChip = screen.getByTestId('filters-results-chip');
@@ -223,6 +224,37 @@ describe('ModernFilters Component', () => {
     const yearStyle = StyleSheet.flatten(yearInput.props.style);
     expect(yearStyle.maxWidth).toBe(112);
     expect(yearStyle.minHeight).toBe(38);
+  });
+
+  it('renders the expand/collapse toggle icon-only on native (F-39)', () => {
+    const originalOS = Platform.OS;
+    Platform.OS = 'android';
+    try {
+      renderWithProviders(
+        <ModernFilters
+          filterGroups={mockFilterGroups}
+          selectedFilters={{}}
+          onFilterChange={mockOnFilterChange}
+          onClearAll={mockOnClearAll}
+          resultsCount={385}
+          onClose={jest.fn()}
+        />
+      );
+
+      // Toggle button still present, but icon-only — no «Развернуть/Свернуть» label
+      // widening headerRight over the results chip.
+      expect(screen.getByTestId('toggle-all-groups')).toBeTruthy();
+      expect(screen.queryByText('Развернуть')).toBeNull();
+      expect(screen.queryByText('Свернуть')).toBeNull();
+
+      // Chip stays non-shrinking — the F-39 fix frees space via the toggle, not by
+      // compressing the chip (contract preserved).
+      const resultsChip = screen.getByTestId('filters-results-chip');
+      const resultsChipStyle = StyleSheet.flatten(resultsChip.props.style);
+      expect(resultsChipStyle.flexShrink).toBe(0);
+    } finally {
+      Platform.OS = originalOS;
+    }
   });
 
   it('shows moderation toggle for superuser', () => {

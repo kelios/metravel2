@@ -221,7 +221,9 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   const activeFiltersCount = useMemo(() => getModernFiltersActiveCount(selectedFilters), [selectedFilters]);
   const { groupsWithoutSort, sortGroup } = useMemo(() => splitModernFilterGroups(filterGroups), [filterGroups]);
   const useStackedHeader = Platform.OS === 'web' && isNarrowWeb;
-  const showToggleAllLabel = Platform.OS !== 'web' || isNarrowWeb;
+  // Icon-only toggle on native: the «Развернуть/Свернуть» label widens headerRight and
+  // overlaps the results chip on Android (F-39). Keep the label only on narrow web.
+  const showToggleAllLabel = Platform.OS === 'web' && isNarrowWeb;
 
   const allGroupKeys = useMemo(() => groupsWithoutSort.map((g) => g.key), [groupsWithoutSort]);
 

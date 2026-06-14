@@ -103,6 +103,7 @@ export const createExtraFiltersStyles = (ctx: StylesCtx) => {
       borderColor: colors.borderLight,
     },
     moderationLabel: {
+      flex: 1,
       fontSize: typography.sizes.sm,
       color: colors.textSecondary,
     },
