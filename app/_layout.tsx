@@ -27,6 +27,7 @@ import { patchWebShadowStyles } from "@/utils/patchWebShadowStyles";
 import { installChunkErrorReloadHandler } from "@/utils/chunkReload";
 import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
 import { shouldRunRuntimeConfigDiagnostics } from '@/utils/runtimeConfigDiagnostics';
+import { useAriaHiddenFocusGuard } from "@/hooks/useAriaHiddenFocusGuard";
 
 if (__DEV__) {
   require("@expo/metro-runtime");
@@ -72,6 +73,9 @@ if (!isWeb) {
 }
 
 export default function RootLayout() {
+    // Web-only: снимает фокус с элементов, попавших под aria-hidden (см. хук).
+    useAriaHiddenFocusGuard();
+
     useEffect(() => {
         if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') return;
         if (!shouldRunRuntimeConfigDiagnostics({

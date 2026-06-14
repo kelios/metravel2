@@ -20,6 +20,7 @@ import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import { CollapsibleValidationSummary, ValidationSummary } from '@/components/travel/ValidationFeedback';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { LAYOUT } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import type { Travel, TravelFormData } from '@/types/types';
@@ -625,7 +626,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     contentContainer: {
         paddingHorizontal: 8,
-        paddingBottom: DESIGN_TOKENS.spacing.xl,
+        paddingBottom: (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl,
         paddingTop: DESIGN_TOKENS.spacing.sm,
         alignItems: 'center',
     },
