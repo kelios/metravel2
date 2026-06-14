@@ -3,12 +3,15 @@ import { findNodeHandle, Platform, ScrollView, UIManager, View } from 'react-nat
 
 import {
   EMPTY_MANUAL_POINT,
-  MAP_COACHMARK_STORAGE_KEY,
   parseCoordsPair,
   revokeManualPreview,
   ROUTE_COUNTRIES_ANCHOR_ID,
   ROUTE_MARKERS_ANCHOR_ID,
 } from './helpers'
+import {
+  isRouteCoachmarkDismissed,
+  persistRouteCoachmarkDismissed,
+} from './coachmarkStorage'
 import type { ManualPointState } from './types'
 
 export function useLatestRef<T>(value: T) {
@@ -80,32 +83,31 @@ export function useRouteCoachmark(hasPoints: boolean) {
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
+    let isActive = true
+
     if (hasPoints) {
       setIsVisible(false)
-      return
+      return () => {
+        isActive = false
+      }
     }
 
-    if (typeof window === 'undefined') {
-      setIsVisible(true)
-      return
-    }
+    void isRouteCoachmarkDismissed()
+      .then((isDismissed) => {
+        if (isActive) setIsVisible(!isDismissed)
+      })
+      .catch(() => {
+        if (isActive) setIsVisible(true)
+      })
 
-    try {
-      setIsVisible(window.localStorage.getItem(MAP_COACHMARK_STORAGE_KEY) !== '1')
-    } catch {
-      setIsVisible(true)
+    return () => {
+      isActive = false
     }
   }, [hasPoints])
 
   const dismiss = useCallback(() => {
     setIsVisible(false)
-    if (typeof window === 'undefined') return
-
-    try {
-      window.localStorage.setItem(MAP_COACHMARK_STORAGE_KEY, '1')
-    } catch {
-      // ignore
-    }
+    void persistRouteCoachmarkDismissed().catch(() => undefined)
   }, [])
 
   return { isVisible, dismiss }

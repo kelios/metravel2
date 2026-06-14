@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
+import { queryKeys } from '@/api/queryKeys'
 import { fetchTravels } from '@/api/travelsQueries'
 import { queryConfigs } from '@/utils/reactQueryConfig'
 import {
@@ -27,7 +28,7 @@ export function useTravelsForQuest(
   const enabled = (opts?.enabled ?? true) && searchTerm.length > 0
 
   const { data, isLoading } = useQuery<Travel[]>({
-    queryKey: ['travels-for-quest', searchTerm],
+    queryKey: queryKeys.travelsForQuest(searchTerm),
     enabled,
     queryFn: async ({ signal }) => {
       const result = await fetchTravels(0, FETCH_PAGE_SIZE, searchTerm, {}, { signal })

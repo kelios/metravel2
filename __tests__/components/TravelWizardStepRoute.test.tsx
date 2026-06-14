@@ -448,15 +448,15 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
     });
 
     describe('✅ Coachmark (подсказка)', () => {
-        it('должен показать подсказку если нет точек', () => {
-            const { getByText } = render(
+        it('должен показать подсказку если нет точек', async () => {
+            const { findByText } = render(
                 <TravelWizardStepRoute
                     {...defaultProps}
                     markers={[]}
                 />
             );
 
-            expect(getByText('Как добавить первую точку')).toBeTruthy();
+            expect(await findByText('Как добавить первую точку')).toBeTruthy();
         });
 
         it('НЕ должен показать подсказку если есть точки', () => {
