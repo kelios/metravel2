@@ -29,6 +29,11 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         /* ---- Root Layout (Two-column, Premium) ---- */
         root: {
             flex: 1,
+            // Без minHeight:0 в column-flex (mobile web) дочерний ScrollView
+            // получает flex-basis от высоты КОНТЕНТА, а не от вьюпорта, поэтому
+            // внутренний скролл-контейнер «думает», что прокручивать нечего
+            // (scrollTop застревает на 0), хотя scrollHeight в разы больше.
+            minHeight: 0,
             backgroundColor: colors.background,
             flexDirection: isMobileW ? 'column' : 'row',
             ...Platform.select({
@@ -368,10 +373,15 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         /* ---- Right Content (Premium, atmospheric) ---- */
         content: {
             flex: 1,
+            // minHeight:0 нужен, чтобы flex-ребёнок мог сжаться ниже своей
+            // контентной высоты и отдать прокрутку внутреннему overflow:auto.
+            minHeight: 0,
             backgroundColor: colors.background,
             ...Platform.select({
                 web: {
+                    flexBasis: 0,
                     overflowY: 'auto',
+                    overscrollBehavior: 'contain',
                     scrollBehavior: 'smooth',
                 } as any,
             }),
@@ -418,6 +428,11 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         contentBody: {
             padding: isMobileW ? spacing.md : spacing.lg,
             paddingTop: isMobileW ? spacing.sm : spacing.md,
+            // Нижний инсет под фиксированный BottomDock (mobile web, ~64px),
+            // чтобы последний квест был полностью виден над доком.
+            paddingBottom: isMobileW
+                ? (Platform.OS === 'web' ? 64 + spacing.xl : spacing.xl)
+                : spacing.lg,
         },
         mapSection: {
             width: '100%',
