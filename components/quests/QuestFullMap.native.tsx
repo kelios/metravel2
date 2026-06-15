@@ -166,11 +166,28 @@ function QuestFullMap({
           }
         };
 
-        if (routePoints.length > 0) {
-          var bounds = L.latLngBounds(routePoints).pad(0.15);
-          map.fitBounds(bounds, { animate: false });
-        } else {
-          map.setView([53.9, 27.56], 10);
+        // Подгонка границ. На Android WebView контейнер карты в момент выполнения
+        // скрипта нередко имеет нулевую высоту (карта ниже сгиба / внутри Suspense),
+        // поэтому одиночный fitBounds оставляет карту на zoom 0 (вид всего мира).
+        // Повторяем fit после invalidateSize, пока контейнер не получит размер.
+        function fitToRoute() {
+          try {
+            if (routePoints.length === 0) { map.setView([53.9, 27.56], 10); return; }
+            map.invalidateSize();
+            var size = map.getSize();
+            if (!size || size.x === 0 || size.y === 0) return false;
+            var bounds = L.latLngBounds(routePoints).pad(0.15);
+            map.fitBounds(bounds, { animate: false });
+            return true;
+          } catch (e) { return false; }
+        }
+
+        if (!fitToRoute()) {
+          var fitTries = 0;
+          var fitTimer = setInterval(function () {
+            fitTries += 1;
+            if (fitToRoute() || fitTries > 20) clearInterval(fitTimer);
+          }, 150);
         }
       </script>
     </body>

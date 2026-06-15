@@ -132,6 +132,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                     routePoints={routePoints}
                     fullRouteCoords={fullRouteCoords}
                     mode={mode}
+                    onMapClick={onMapClick}
                     onMapUiApiReady={onMapUiApiReady}
                 />
             </View>
