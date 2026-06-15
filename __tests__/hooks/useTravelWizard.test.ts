@@ -45,11 +45,25 @@ describe('useTravelWizard step persistence', () => {
     });
   };
 
+  let originalPlatformOs: string;
+  let originalEnvFlag: string | undefined;
+
   beforeEach(async () => {
     jest.clearAllMocks();
+    originalPlatformOs = Platform.OS;
+    originalEnvFlag = process.env.JEST_ENABLE_WIZARD_PERSISTENCE;
     process.env.JEST_ENABLE_WIZARD_PERSISTENCE = '1';
     setPlatformOs('ios');
     await AsyncStorage.clear();
+  });
+
+  afterEach(() => {
+    setPlatformOs(originalPlatformOs);
+    if (originalEnvFlag === undefined) {
+      delete process.env.JEST_ENABLE_WIZARD_PERSISTENCE;
+    } else {
+      process.env.JEST_ENABLE_WIZARD_PERSISTENCE = originalEnvFlag;
+    }
   });
 
   it('restores currentStep from persisted JSON payload', async () => {
@@ -201,9 +215,16 @@ describe('useTravelWizard beforeunload guard (web)', () => {
     });
   };
 
+  let originalPlatformOs: string;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    originalPlatformOs = Platform.OS;
     setPlatformOs('web');
+  });
+
+  afterEach(() => {
+    setPlatformOs(originalPlatformOs);
   });
 
   it('enables beforeunload on web when hasUnsavedChanges=true', () => {

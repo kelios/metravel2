@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
+import { buildCanonicalUrl, buildOgImageUrl, QUESTS_OG_IMAGE_PATH } from '@/utils/seo';
 import { stringifyJsonLd } from '@/utils/jsonLd';
 import { haversineKm } from '@/utils/geo';
 import { useIsFocused } from 'expo-router';
@@ -409,7 +409,7 @@ export default function QuestsScreen() {
                     description={descText}
                     canonical={buildCanonicalUrl('/quests')}
                     ogType="website"
-                    image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
+                    image={buildOgImageUrl(QUESTS_OG_IMAGE_PATH)}
                     additionalTags={questsSeoTags}
                 />
             )}

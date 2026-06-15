@@ -189,6 +189,19 @@ describe('UpsertTravel step 5 filters race regression', () => {
       userId: '42',
       authReady: true,
     };
+    // Provide safe defaults so components that call these before the test body
+    // sets per-test implementations don't receive undefined from a cleared mock.
+    mockFetchAllCountries.mockResolvedValue([]);
+    mockFetchFilters.mockResolvedValue({
+      categories: [],
+      categoryTravelAddress: [],
+      transports: [],
+      companions: [],
+      complexity: [],
+      month: [],
+      over_nights_stay: [],
+      countries: [],
+    });
   });
 
   const advanceToStep5Fast = async (utils: ReturnType<typeof render>) => {

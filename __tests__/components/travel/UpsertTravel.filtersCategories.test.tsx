@@ -179,6 +179,8 @@ describe('UpsertTravel categories filters integration', () => {
       userId: '42',
       authReady: true,
     };
+    // Restore default after jest.clearAllMocks() wipes the module-level implementation.
+    mockFetchAllCountries.mockResolvedValue([]);
   });
 
   const advanceToStep5 = async (utils: ReturnType<typeof render>) => {

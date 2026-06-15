@@ -8,11 +8,15 @@ import ErrorDisplay from '@/components/ui/ErrorDisplay'
 import Home from '@/components/home/Home'
 import { HomePageSkeleton } from '@/components/home/HomePageSkeleton'
 import { useThemedColors } from '@/hooks/useTheme'
-import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
+import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo'
 
 const SEO_TITLE = 'Идеи поездок на выходные и книга путешествий | Metravel'
 const SEO_DESCRIPTION =
   'Подбирайте маршруты по расстоянию и формату отдыха, сохраняйте поездки с фото и заметками и собирайте личную книгу путешествий в PDF.'
+// Тематическое hero-изображение для соцсетей (1200×630) вместо generic-логотипа.
+const HOME_OG_IMAGE_PATH = '/og-home.jpg'
+const HOME_OG_IMAGE_WIDTH = 1200
+const HOME_OG_IMAGE_HEIGHT = 630
 const TRANSITION_MS = 200
 const IS_WEB = Platform.OS === 'web'
 
@@ -23,7 +27,10 @@ function renderHomeSeo(canonical: string) {
       title={SEO_TITLE}
       description={SEO_DESCRIPTION}
       canonical={canonical}
-      image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
+      image={buildOgImageUrl(HOME_OG_IMAGE_PATH)}
+      imageWidth={HOME_OG_IMAGE_WIDTH}
+      imageHeight={HOME_OG_IMAGE_HEIGHT}
+      imageAlt="Metravel — идеи путешествий на выходные"
       ogType="website"
     />
   )
@@ -104,7 +111,10 @@ function HomeScreen() {
     <>
       {shouldRenderSeo && renderHomeSeo(canonical)}
       <View style={styles.container}>
-        {IS_WEB && React.createElement('h1', { style: styles.srOnly as any }, SEO_TITLE)}
+        {/* Single semantic <h1> is the visible hero title in HomeHeroBookLayout
+            (aria-level=1). This sr-only line carries the longer SEO phrasing for
+            screen readers/crawlers as an <h2> to avoid a duplicate <h1>. */}
+        {IS_WEB && React.createElement('h2', { style: styles.srOnly as any }, SEO_TITLE)}
 
         <ErrorBoundary
           key={errorBoundaryRetryKey}
