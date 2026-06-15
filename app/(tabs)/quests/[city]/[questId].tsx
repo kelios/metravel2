@@ -510,6 +510,8 @@ export default function QuestByIdScreen() {
             initialProgress={initialProgress}
             onFinaleVideoRetry={refetch}
             relatedTravelsSlot={relatedTravelsSlot}
+            questId={questId}
+            cityId={cityId}
           />
         </Suspense>
       ) : (
@@ -526,6 +528,8 @@ export default function QuestByIdScreen() {
           initialProgress={initialProgress}
           onFinaleVideoRetry={refetch}
           relatedTravelsSlot={relatedTravelsSlot}
+          questId={questId}
+          cityId={cityId}
         />
       )}
     </View>

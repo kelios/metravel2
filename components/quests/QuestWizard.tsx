@@ -24,6 +24,7 @@ import {
 } from './questWizardSections';
 import { QuestStepCard } from './questWizardStepCard';
 import { useQuestWizardProgress } from './useQuestWizardProgress';
+import { useQuestReminder } from './useQuestReminder';
 import {
     confirmQuestAsync,
     copyQuestCoords,
@@ -63,6 +64,9 @@ export type QuestWizardProps = {
     onFinaleVideoRetry?: () => void;
     /** Доп. блок под экскурсиями (напр. «Путешествия по этому городу») */
     relatedTravelsSlot?: React.ReactNode;
+    /** Native: id города/квеста для deep-link локального напоминания о незавершённом квесте */
+    questId?: string;
+    cityId?: string;
 };
 
 // ===================== ТЕМА =====================
@@ -74,7 +78,7 @@ const useQuestWizardTheme = (isMobile: boolean, screenW: number) => {
     return { colors, styles };
 };
 // ===================== ОСНОВНОЙ КОМПОНЕНТ =====================
-export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot }: QuestWizardProps) {
+export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, questId, cityId }: QuestWizardProps) {
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
 
     const wizardModel = useQuestWizardResponsiveModel();
@@ -111,6 +115,15 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         onProgressChange,
         onProgressReset,
     });
+    useQuestReminder({
+        questId,
+        cityId,
+        title,
+        completedCount: completedSteps.length,
+        totalCount: steps.length,
+        allCompleted,
+    });
+
     const [showFinaleOnly, setShowFinaleOnly] = useState(false);
     const [desktopNavExpanded, setDesktopNavExpanded] = useState(false);
     const [desktopHasOrganic, setDesktopHasOrganic] = useState(false);

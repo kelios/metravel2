@@ -178,7 +178,8 @@ export function addNotificationReceivedListener(handler: NotificationHandler): C
 }
 
 /**
- * Subscribe to notification tap events (user tapped notification from tray).
+ * Subscribe to notification tap events (user tapped notification from tray)
+ * while the app is already running (warm — foreground or background).
  * Returns cleanup function.
  */
 export function addNotificationResponseListener(handler: NotificationResponseHandler): CleanupFn {
@@ -191,6 +192,25 @@ export function addNotificationResponseListener(handler: NotificationResponseHan
   });
 
   return () => subscription.remove();
+}
+
+/**
+ * Read the notification (if any) whose tap launched the app from a cold start.
+ * The warm listener (`addNotificationResponseListener`) never fires for that tap
+ * because the app wasn't running yet — this covers the cold-start case.
+ * Returns the notification `data` payload, or null if the app was opened normally.
+ */
+export async function getInitialNotificationData(): Promise<Record<string, unknown> | null> {
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return null;
+
+  try {
+    const response = await Notifications.getLastNotificationResponseAsync();
+    if (!response) return null;
+    return (response.notification.request.content.data ?? {}) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
 }
 
 // --- Badge ---
@@ -206,6 +226,94 @@ export async function clearBadge(): Promise<void> {
     await Notifications.setBadgeCountAsync(0);
   } catch {
     // silently ignore
+  }
+}
+
+// --- Local quest reminders (best-effort) ---
+
+/** Seconds after which an abandoned quest reminder fires (24h). */
+const QUEST_REMINDER_DELAY_SECONDS = 24 * 60 * 60;
+
+/** Stable notification identifier per quest so we can cancel/reschedule. */
+function questReminderId(questId: string): string {
+  return `quest-reminder-${questId}`;
+}
+
+/**
+ * Ensure notification permission for local reminders. Unlike push, this does
+ * not register a token — it only checks/asks the OS permission. Best-effort:
+ * returns false (silently) if denied or unavailable.
+ */
+async function ensureLocalNotificationPermission(
+  Notifications: NonNullable<typeof NotificationsModule>,
+): Promise<boolean> {
+  try {
+    const { status: existing } = await Notifications.getPermissionsAsync();
+    if (existing === 'granted') return true;
+    const { status } = await Notifications.requestPermissionsAsync();
+    return status === 'granted';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Schedule a one-shot local reminder for an unfinished quest (~24h later).
+ * Replaces any existing reminder for the same quest (cancel-then-schedule),
+ * so it never spams. Tapping routes to the quest via `data.url` deep link.
+ * No-op on web or when permission is not granted.
+ */
+export async function scheduleQuestReminder(
+  questId: string,
+  title: string,
+  step: number,
+  total: number,
+  deepLinkUrl: string,
+): Promise<void> {
+  if (Platform.OS === 'web') return;
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return;
+
+  try {
+    const granted = await ensureLocalNotificationPermission(Notifications);
+    if (!granted) return;
+
+    // Avoid duplicates — drop any prior reminder for this quest first.
+    await Notifications.cancelScheduledNotificationAsync(questReminderId(questId)).catch(() => {});
+
+    await Notifications.scheduleNotificationAsync({
+      identifier: questReminderId(questId),
+      content: {
+        title: 'Продолжите приключение',
+        body: `Вы остановились на шаге ${step}/${total} в квесте «${title}». Продолжите прохождение!`,
+        data: { url: `/quests/${deepLinkUrl}` },
+        ...(Platform.OS === 'android' ? { channelId: 'recommendations' } : {}),
+      },
+      trigger: {
+        // SECONDS trigger — fires once after the delay.
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds: QUEST_REMINDER_DELAY_SECONDS,
+        repeats: false,
+      },
+    });
+  } catch (error: unknown) {
+    devError('[Notifications] Failed to schedule quest reminder:', error);
+  }
+}
+
+/**
+ * Cancel a previously scheduled quest reminder (on completion or re-entry).
+ * No-op on web. Safe to call even if none is scheduled.
+ */
+export async function cancelQuestReminder(questId: string): Promise<void> {
+  if (Platform.OS === 'web') return;
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return;
+
+  try {
+    await Notifications.cancelScheduledNotificationAsync(questReminderId(questId));
+  } catch {
+    // No matching scheduled notification — ignore.
   }
 }
 

@@ -4,13 +4,14 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useRootNavigationState } from 'expo-router';
 import {
   setupNotificationChannels,
   registerForPushNotifications,
   setForegroundNotificationHandler,
   addNotificationReceivedListener,
   addNotificationResponseListener,
+  getInitialNotificationData,
   clearBadge,
   extractDeepLinkFromNotification,
   NotificationPayload,
@@ -41,9 +42,17 @@ export function usePushNotifications(
 ): UsePushNotificationsResult {
   const { onTokenReceived, onNotificationReceived, autoRequest = false } = options;
   const router = useRouter();
+  const rootNavigationState = useRootNavigationState();
+  const isNavigationReady = Boolean(rootNavigationState?.key);
   const [pushToken, setPushToken] = useState<string | null>(null);
   const isInitialized = useRef(false);
   const isSupported = true;
+
+  // Deep link captured before the navigation tree was mounted (cold start, or a
+  // warm tap that landed before the root navigator key existed). Routed once ready.
+  const pendingDeepLinkRef = useRef<string | null>(null);
+  const routerRef = useRef(router);
+  routerRef.current = router;
 
   const onTokenRef = useRef(onTokenReceived);
   onTokenRef.current = onTokenReceived;
@@ -65,6 +74,24 @@ export function usePushNotifications(
     }
   }, []);
 
+  // Route to a notification deep link. If the navigation tree is not mounted yet
+  // (cold start), stash it and let the readiness effect flush it. Use router.push
+  // (not navigate) — device-verified that navigate() resolves the dynamic nested
+  // /quests/[city]/[questId] path to the /quests index, whereas push() lands on the
+  // detail (matching the in-app card navigation in QuestForCityCard).
+  const routeDeepLink = useCallback((deepLink: string) => {
+    if (!isNavigationReady) {
+      pendingDeepLinkRef.current = deepLink;
+      return;
+    }
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- deep link URL is dynamic
+      routerRef.current.push(deepLink as any);
+    } catch {
+      // Invalid route — ignore
+    }
+  }, [isNavigationReady]);
+
   useEffect(() => {
     if (isInitialized.current) return;
     isInitialized.current = true;
@@ -76,16 +103,18 @@ export function usePushNotifications(
       onNotificationRef.current?.(payload);
     });
 
+    // Warm tap (app already running, foreground or background).
     const removeResponse = addNotificationResponseListener((data) => {
       const deepLink = extractDeepLinkFromNotification(data);
-      if (deepLink) {
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- deep link URL is dynamic
-          router.push(deepLink as any);
-        } catch {
-          // Invalid route — ignore
-        }
-      }
+      if (deepLink) routeDeepLink(deepLink);
+    });
+
+    // Cold start: the app was launched by tapping a notification, so the warm
+    // listener above never fires for it. Pull the launch notification once.
+    void getInitialNotificationData().then((data) => {
+      if (!data) return;
+      const deepLink = extractDeepLinkFromNotification(data);
+      if (deepLink) routeDeepLink(deepLink);
     });
 
     if (autoRequest) {
@@ -96,7 +125,21 @@ export function usePushNotifications(
       removeReceived();
       removeResponse();
     };
-  }, [autoRequest, requestPermission, router]);
+  }, [autoRequest, requestPermission, routeDeepLink]);
+
+  // Flush a deep link captured before the navigation tree was ready.
+  useEffect(() => {
+    if (!isNavigationReady) return;
+    const pending = pendingDeepLinkRef.current;
+    if (!pending) return;
+    pendingDeepLinkRef.current = null;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- deep link URL is dynamic
+      routerRef.current.navigate(pending as any);
+    } catch {
+      // Invalid route — ignore
+    }
+  }, [isNavigationReady]);
 
   useEffect(() => {
     const handleAppStateChange = (nextState: AppStateStatus) => {
