@@ -76,4 +76,16 @@ describe('TravelDetailsCriticalShell single H1 (web)', () => {
     expect(document.querySelectorAll('h1[data-ssg-travel-h1]').length).toBe(0)
     expect(document.querySelectorAll('h1').length).toBe(1)
   })
+
+  it('removes the visible .ssg-travel-h1 skeleton placeholder on mount', () => {
+    const ssg = document.createElement('div')
+    ssg.className = 'ssg-travel-h1'
+    ssg.textContent = 'Тропа ведьм'
+    document.body.insertBefore(ssg, document.body.firstChild)
+    expect(document.querySelectorAll('.ssg-travel-h1').length).toBe(1)
+
+    renderShell()
+
+    expect(document.querySelectorAll('.ssg-travel-h1').length).toBe(0)
+  })
 })

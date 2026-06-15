@@ -26,9 +26,9 @@ import TravelDetailsHeroDeferredColumn from './TravelDetailsHeroDeferredColumn';
 // never reconciles it away and it would survive as a duplicate <h1>. We drop it
 // on mount (see effect below) so the page keeps exactly one semantic heading.
 const WEB_VISIBLE_HEADING_STYLE = {
-  margin: '0 0 14px',
-  font: "700 28px/1.25 'Georgia', 'Times New Roman', 'Inter', serif",
-  letterSpacing: '-0.02em',
+  margin: '0 0 16px',
+  font: "700 26px/1.3 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif",
+  letterSpacing: '-0.01em',
   maxWidth: 760,
 } as const;
 
@@ -94,13 +94,15 @@ export default function TravelDetailsCriticalShell({
   const insets = useSafeAreaInsetsSafe();
   const colors = useThemedColors();
 
-  // Remove the SSG-injected sr-only <h1 data-ssg-travel-h1>. It is added to #root
-  // after the static export, so React never owns it during hydration and it would
-  // otherwise persist alongside the visible React <h1>, leaving two H1s in the DOM.
+  // Drop the SSG-injected title nodes once the real React <h1> has mounted:
+  //  - the sr-only `<h1 data-ssg-travel-h1>` added to #root after the static export
+  //    (React never owns it during hydration, so it would survive as a second H1);
+  //  - the visible `.ssg-travel-h1` skeleton placeholder, which no longer overlaps
+  //    the React heading and would otherwise linger/flash as a duplicate title.
   useEffect(() => {
     if (Platform.OS !== 'web' || !travel) return;
-    const ssgH1 = document.querySelector('h1[data-ssg-travel-h1]');
-    if (ssgH1?.parentNode) ssgH1.parentNode.removeChild(ssgH1);
+    const stale = document.querySelectorAll('h1[data-ssg-travel-h1], .ssg-travel-h1');
+    stale.forEach((node) => node.parentNode?.removeChild(node));
   }, [travel]);
   const showDesktopSidebar = shouldShowTravelDetailsDesktopSidebar(isMobile, screenWidth);
   const showSkeletonOverlay = shouldShowTravelDetailsSkeletonOverlay(travel);
