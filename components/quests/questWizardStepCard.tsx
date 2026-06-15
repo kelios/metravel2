@@ -16,6 +16,7 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import { hapticNotification } from '@/utils/haptics'
 
+import QuestPointNavigator from './QuestPointNavigator'
 import { copyQuestCoords, detectQuestMapApps, openQuestMap } from './questWizardHelpers'
 
 const SHOULD_USE_NATIVE_DRIVER = false
@@ -202,6 +203,12 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
     [step.image],
   )
 
+  const hasValidCoords =
+    Number.isFinite(step.lat) &&
+    Number.isFinite(step.lng) &&
+    !(step.lat === 0 && step.lng === 0)
+  const showPointNavigator = step.id !== 'intro' && !isPassed && hasValidCoords
+
   const handleCheck = useCallback(() => {
     const trimmed = value.trim()
     if (step.id === 'intro') {
@@ -255,6 +262,9 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
             <Text style={[styles.location, { flexShrink: 1 }]} numberOfLines={2}>{step.location}</Text>
             <Feather name="external-link" size={12} color={colors.brandText} />
           </Pressable>
+          {showPointNavigator && (
+            <QuestPointNavigator targetLat={step.lat} targetLng={step.lng} colors={colors} />
+          )}
         </View>
         {isPassed && (<View style={styles.completedBadge}><Text style={styles.completedText}>✓</Text></View>)}
       </View>
