@@ -7,6 +7,9 @@ export const DEFAULT_OG_IMAGE_PATH = '/assets/icons/logo_yellow_512x512.png';
 /** Thematic 1200×630 cover for the /quests catalog (Open Graph). */
 export const QUESTS_OG_IMAGE_PATH = '/og/quests.jpg';
 
+/** Branded 1200×630 cover for the /map page (Open Graph). */
+export const MAP_OG_IMAGE_PATH = '/og-map.png';
+
 /**
  * Returns normalized site base URL without trailing slash.
  * Uses EXPO_PUBLIC_SITE_URL from environment or defaults to production URL.

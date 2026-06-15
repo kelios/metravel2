@@ -23,7 +23,7 @@ import { MapOfflineIndicator } from '@/components/MapPage/MapOfflineIndicator'
 import MapPanelHeader from '@/components/MapPage/MapPanelHeader'
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig'
 import { MAP_SEO_TITLE, MAP_SEO_DESCRIPTION } from '@/constants/mapSeo'
-import { buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
+import { buildOgImageUrl, MAP_OG_IMAGE_PATH } from '@/utils/seo'
 import { createMapStructuredData } from '@/utils/discoverySeo'
 import { devWarn } from '@/utils/logger'
 import {
@@ -251,7 +251,9 @@ export default function MapScreen() {
         title={MAP_SEO_TITLE}
         description={MAP_SEO_DESCRIPTION}
         canonical={canonical}
-        image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
+        image={buildOgImageUrl(MAP_OG_IMAGE_PATH)}
+        imageWidth={1200}
+        imageHeight={630}
         additionalTags={mapSeoTags}
       />
     )

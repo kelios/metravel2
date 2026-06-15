@@ -4,7 +4,7 @@ import { useIsFocused } from 'expo-router'
 import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { ensureLeafletCss } from '@/utils/ensureLeafletCss'
-import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
+import { buildCanonicalUrl, buildOgImageUrl, MAP_OG_IMAGE_PATH } from '@/utils/seo'
 import { MAP_SEO_TITLE, MAP_SEO_DESCRIPTION } from '@/constants/mapSeo'
 
 const WEB_SR_ONLY_STYLE = {
@@ -30,7 +30,7 @@ export default function MapScreen() {
   const title = MAP_SEO_TITLE
   const description = MAP_SEO_DESCRIPTION
   const canonical = buildCanonicalUrl(pathname || '/map')
-  const ogImage = buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)
+  const ogImage = buildOgImageUrl(MAP_OG_IMAGE_PATH)
 
   useEffect(() => {
     ensureLeafletCss()
@@ -43,6 +43,8 @@ export default function MapScreen() {
       description={description}
       canonical={canonical}
       image={ogImage}
+      imageWidth={1200}
+      imageHeight={630}
       ogType="website"
     />
   ) : null
