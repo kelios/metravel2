@@ -7,7 +7,6 @@ import {
   Pressable,
   Text,
   TextInput,
-  Vibration,
   View,
 } from 'react-native'
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler'
@@ -15,6 +14,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { globalFocusStyles } from '@/styles/globalFocus'
+import { hapticNotification } from '@/utils/haptics'
 
 import { copyQuestCoords, detectQuestMapApps, openQuestMap } from './questWizardHelpers'
 
@@ -211,7 +211,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
     if (!trimmed) {
       setError('Введите ответ')
       shake()
-      Vibration.vibrate(50)
+      hapticNotification('warning')
       return
     }
     const normalized = step.inputType === 'number'
@@ -220,7 +220,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
     const ok = step.answer(normalized)
     if (ok) {
       setError('')
-      Vibration.vibrate(60)
+      hapticNotification('success')
       triggerFlip()
       setTimeout(() => {
         onSubmit(trimmed)
@@ -230,7 +230,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
       setError('Неверный ответ')
       onWrongAttempt()
       shake()
-      Vibration.vibrate(200)
+      hapticNotification('error')
     }
   }, [onSubmit, onWrongAttempt, shake, step, triggerFlip, value])
 
