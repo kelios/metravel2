@@ -5,7 +5,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe';
-import { useThemedColors } from '@/hooks/useTheme';
 import type { Travel } from '@/types/types';
 import type { TravelSectionLink } from '@/components/travel/sectionLinks';
 import {
@@ -20,16 +19,22 @@ import type { AnchorsMap } from './TravelDetailsTypes';
 import TravelDetailsSkeletonOverlay from './TravelDetailsSkeletonOverlay';
 import TravelDetailsHeroDeferredColumn from './TravelDetailsHeroDeferredColumn';
 
-// Visible semantic <h1> rendered at the top of the content shell. The SSG step
-// injects its own sr-only `<h1 data-ssg-travel-h1>` as the first child of #root
-// for crawlers; that node is added after the static export, so React hydration
-// never reconciles it away and it would survive as a duplicate <h1>. We drop it
-// on mount (see effect below) so the page keeps exactly one semantic heading.
-const WEB_VISIBLE_HEADING_STYLE = {
-  margin: '0 0 16px',
-  font: "700 26px/1.3 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif",
-  letterSpacing: '-0.01em',
-  maxWidth: 760,
+// Semantic <h1> kept sr-only: it gives the page its single SEO heading
+// (the travel name) without rendering a visible title block at the top — the
+// gallery is the first visible element by design. The SSG step also injects its
+// own sr-only `<h1 data-ssg-travel-h1>` plus a visible `.ssg-travel-h1`
+// placeholder; both are torn down on mount (see effect below) so the page keeps
+// exactly one (hidden) heading and no lingering visible title.
+const WEB_SR_ONLY_HEADING_STYLE = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: 'hidden',
+  clip: 'rect(0,0,0,0)',
+  whiteSpace: 'nowrap',
+  borderWidth: 0,
 } as const;
 
 type TravelDetailsCriticalShellProps = {
@@ -92,7 +97,6 @@ export default function TravelDetailsCriticalShell({
   mainAriaLabel,
 }: TravelDetailsCriticalShellProps) {
   const insets = useSafeAreaInsetsSafe();
-  const colors = useThemedColors();
 
   // Drop the SSG-injected title nodes once the real React <h1> has mounted:
   //  - the sr-only `<h1 data-ssg-travel-h1>` added to #root after the static export
@@ -223,9 +227,7 @@ export default function TravelDetailsCriticalShell({
                 collapsable={false}
               >
                 {Platform.OS === 'web' && travel ? (
-                  <h1 style={{ ...WEB_VISIBLE_HEADING_STYLE, color: colors.text } as any}>
-                    {travel.name}
-                  </h1>
+                  <h1 style={WEB_SR_ONLY_HEADING_STYLE as any}>{travel.name}</h1>
                 ) : null}
                 {travel && showDesktopSidebar ? (
                   <View style={desktopLayoutStyle} collapsable={false}>
