@@ -45,6 +45,38 @@ describe('routeFileParser', () => {
     expect(distanceKm).toBeGreaterThan(0);
   });
 
+  it('does not count teleport legs (recording gaps) into total distance', () => {
+    const linePoints = [
+      { coord: '52.1000,23.7000' },
+      { coord: '52.1010,23.7010' },
+      { coord: '54.0000,27.0000' },
+      { coord: '54.0010,27.0010' },
+    ];
+    const distanceKm = calculateRouteDistanceKm(linePoints);
+
+    expect(distanceKm).toBeLessThan(1);
+  });
+
+  it('marks gapBefore on elevation samples after a teleport so ascent skips it', () => {
+    const gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx>
+  <trk>
+    <trkseg>
+      <trkpt lat="52.1000" lon="23.7000"><ele>100</ele></trkpt>
+      <trkpt lat="52.1010" lon="23.7010"><ele>110</ele></trkpt>
+      <trkpt lat="54.0000" lon="27.0000"><ele>900</ele></trkpt>
+      <trkpt lat="54.0010" lon="27.0010"><ele>905</ele></trkpt>
+    </trkseg>
+  </trk>
+</gpx>`;
+
+    const parsed = parseRouteFilePreview(gpx, 'gpx');
+    expect(parsed.elevationProfile).toHaveLength(4);
+    expect(parsed.elevationProfile[2].gapBefore).toBe(true);
+    expect(parsed.elevationProfile[0].gapBefore).toBeUndefined();
+    expect(parsed.elevationProfile[3].gapBefore).toBeUndefined();
+  });
+
   it('splits GPX with multiple tracks into separate previews', () => {
     const gpx = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">

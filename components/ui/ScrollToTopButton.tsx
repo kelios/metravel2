@@ -11,6 +11,9 @@ interface ScrollToTopButtonProps {
   scrollY?: Animated.Value
   threshold?: number
   forceVisible?: boolean
+  // Extra space added to the bottom offset so the button can clear an overlay
+  // (e.g. the travel-details sticky action bar). Defaults to 0 — no change elsewhere.
+  bottomOffset?: number
 }
 
 function ScrollToTopButton({
@@ -19,6 +22,7 @@ function ScrollToTopButton({
   scrollY,
   threshold = 300,
   forceVisible,
+  bottomOffset = 0,
 }: ScrollToTopButtonProps) {
   const colors = useThemedColors()
   const shouldUseNativeDriver = false
@@ -27,7 +31,7 @@ function ScrollToTopButton({
       StyleSheet.create({
         container: {
           position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute',
-          bottom: Platform.select({ web: 96, default: 80 }),
+          bottom: (Platform.select({ web: 96, default: 80 }) ?? 80) + bottomOffset,
           right: Platform.select({ web: 24, default: 16 }),
           zIndex: 1000,
         },
@@ -54,7 +58,7 @@ function ScrollToTopButton({
               : colors.shadows.medium),
         },
       }),
-    [colors],
+    [colors, bottomOffset],
   )
   const [isVisible, setIsVisible] = useState(false)
   const fadeAnim = useRef(new Animated.Value(0)).current

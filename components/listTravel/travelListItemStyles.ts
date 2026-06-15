@@ -207,6 +207,36 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       minWidth: 0,
     },
 
+    // Instagram-style action bar под фото (native only)
+    nativeActionBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 4,
+      marginBottom: 4,
+    },
+
+    nativeActionBarLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+
+    nativeActionBtn: {
+      minWidth: 44,
+      minHeight: 44,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+
+    nativeCardTitle: {
+      fontSize: DESIGN_TOKENS.typography.sizes.lg,
+      fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+      lineHeight: 22,
+      color: colors.text,
+      marginBottom: 4,
+    },
+
     // Современная типографика
     title: {
       fontSize: DESIGN_TOKENS.typography.sizes.lg,

@@ -180,7 +180,7 @@ export const createCommentsSectionStyles = (colors: ThemedColors) =>
       marginTop: DESIGN_TOKENS.spacing.xs,
     },
     emptyActionButtonText: {
-      color: colors.primaryText,
+      color: colors.textOnPrimary,
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       fontWeight: DESIGN_TOKENS.typography.weights.semibold,
     },

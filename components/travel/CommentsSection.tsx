@@ -157,7 +157,7 @@ export function CommentsSection({
                     accessibilityRole="button"
                     accessibilityLabel="Войти, чтобы оставить первый комментарий"
                   >
-                    <Feather name="log-in" size={16} color={colors.primaryText} />
+                    <Feather name="log-in" size={16} color={colors.textOnPrimary} />
                     <Text style={styles.emptyActionButtonText}>Войти и написать комментарий</Text>
                   </Pressable>
                 )}

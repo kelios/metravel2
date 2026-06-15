@@ -2,6 +2,7 @@ import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { Platform, View } from 'react-native';
 
 import { useThemedColors } from '@/hooks/useTheme';
+import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe';
 import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
 import type { Travel } from '@/types/types';
 import type { TravelSectionLink } from '@/components/travel/sectionLinks';
@@ -64,6 +65,7 @@ export default function TravelDetailsPostLcpRuntime({
   scrollToComments,
 }: TravelDetailsPostLcpRuntimeProps) {
   const themedColors = useThemedColors();
+  const insets = useSafeAreaInsetsSafe();
   const styles = useMemo(() => getTravelDetailsShellStyles(themedColors), [themedColors]);
   const [DeferredSectionsComponent, setDeferredSectionsComponent] =
     useState<DeferredSectionsComponentType | null>(() => getInitialDeferredSectionsComponent());
@@ -125,6 +127,8 @@ export default function TravelDetailsPostLcpRuntime({
   });
   const showScrollToTop = shouldShowTravelScrollToTop(criticalChromeReady);
   const showStickyActions = shouldShowTravelStickyActions(isMobile);
+  const scrollToTopBottomOffset =
+    showStickyActions && Platform.OS !== 'web' ? insets.bottom + 56 : 0;
 
   return (
     <>
@@ -150,7 +154,12 @@ export default function TravelDetailsPostLcpRuntime({
       {deferredSectionsContent}
 
       {showScrollToTop && (
-        <ScrollToTopButton scrollViewRef={scrollViewRef} scrollY={scrollY} threshold={300} />
+        <ScrollToTopButton
+          scrollViewRef={scrollViewRef}
+          scrollY={scrollY}
+          threshold={300}
+          bottomOffset={scrollToTopBottomOffset}
+        />
       )}
 
       {showStickyActions && (

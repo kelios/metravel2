@@ -90,6 +90,13 @@
       "runtimeArgs": [".claude/prod-server.js", "8093", "dist", "https://metravel.by"],
       "port": 8093,
       "autoPort": false
+    },
+    {
+      "name": "Prod Static 4602",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [".claude/prod-server.js", "4602", "dist/prod", "https://metravel.by"],
+      "port": 4602,
+      "autoPort": false
     }
   ]
 }

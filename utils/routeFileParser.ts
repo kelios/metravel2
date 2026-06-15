@@ -2,6 +2,14 @@ import type { ParsedRoutePoint, ParsedRoutePreview, RouteElevationSample } from 
 
 const EARTH_RADIUS_M = 6371000;
 
+// Consecutive track points farther apart than this are treated as a recording
+// gap / teleport (e.g. separate <trkseg> stitched into one line) rather than a
+// real leg. Counting them inflates distance and elevation gain (the Модынь GPX
+// renders 410 km / +10213 m for what is a short walk), so the leg is skipped.
+// Kept high so sparse-but-legitimate route waypoints are not dropped — only
+// cross-region jumps between stitched segments are filtered out.
+const MAX_LEG_METERS = 20000;
+
 const toCoord = (lat: number, lng: number): string | null => {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
@@ -45,7 +53,10 @@ export const calculateRouteDistanceKm = (linePoints: ParsedRoutePoint[]): number
   for (let i = 1; i < linePoints.length; i += 1) {
     const currentCoord = parseCoordPair(linePoints[i].coord);
     if (currentCoord && prevCoord) {
-      totalDistanceM += distanceMeters(prevCoord, currentCoord);
+      const legMeters = distanceMeters(prevCoord, currentCoord);
+      if (legMeters <= MAX_LEG_METERS) {
+        totalDistanceM += legMeters;
+      }
     }
     prevCoord = currentCoord;
   }
@@ -59,12 +70,18 @@ const buildElevationProfile = (linePoints: ParsedRoutePoint[]): RouteElevationSa
   let totalDistanceM = 0;
   let prevCoord = parseCoordPair(linePoints[0].coord);
   const profile: RouteElevationSample[] = [];
+  let pendingGap = false;
 
   for (let i = 0; i < linePoints.length; i += 1) {
     const current = linePoints[i];
     const currentCoord = parseCoordPair(current.coord);
     if (currentCoord && prevCoord) {
-      totalDistanceM += distanceMeters(prevCoord, currentCoord);
+      const legMeters = distanceMeters(prevCoord, currentCoord);
+      if (legMeters <= MAX_LEG_METERS) {
+        totalDistanceM += legMeters;
+      } else {
+        pendingGap = true;
+      }
     }
     prevCoord = currentCoord;
 
@@ -72,7 +89,9 @@ const buildElevationProfile = (linePoints: ParsedRoutePoint[]): RouteElevationSa
       profile.push({
         distanceKm: totalDistanceM / 1000,
         elevationM: Number(current.elevation),
+        ...(pendingGap ? { gapBefore: true } : {}),
       });
+      pendingGap = false;
     }
   }
 

@@ -19,6 +19,8 @@ export interface ParsedRoutePoint {
 export interface RouteElevationSample {
   distanceKm: number;
   elevationM: number;
+  /** Marks a recording gap / teleport before this sample; ascent/descent must not accumulate across it. */
+  gapBefore?: boolean;
 }
 
 export interface ParsedRoutePreview {

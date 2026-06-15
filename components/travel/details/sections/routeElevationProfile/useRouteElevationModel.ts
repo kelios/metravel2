@@ -87,7 +87,7 @@ export function useRouteElevationModel({
         maxElevation = e
         peakSample = s
       }
-      if (i > 0) {
+      if (i > 0 && !s.gapBefore) {
         const delta = e - samples[i - 1].elevationM
         if (delta > 0) ascent += delta
         else if (delta < 0) descent += -delta

@@ -16,7 +16,9 @@ import {
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
+import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { LAYOUT } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
@@ -41,6 +43,7 @@ function TravelStickyActions({
   scrollToComments,
 }: TravelStickyActionsProps) {
   const colors = useThemedColors();
+  const insets = useSafeAreaInsets();
   const { addFavorite, removeFavorite, isFavorite } = useFavorites();
   const { isAuthenticated } = useAuth();
   const { requireAuth } = useRequireAuth({});
@@ -152,12 +155,20 @@ function TravelStickyActions({
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
+  // Native: lift the bar above the bottom tab dock (dock height + safe-area inset),
+  // mirroring ConsentBanner. Web keeps its CSS-var driven padding from styles.container.
+  const nativeBottomPadding = useMemo(
+    () => (insets?.bottom || 0) + (LAYOUT?.tabBarHeight ?? 56) + 8,
+    [insets?.bottom],
+  );
+
   if (!visible && !isShown.current) return null;
 
   return (
     <RNAnimated.View
       style={[
         styles.container,
+        Platform.OS !== 'web' ? { paddingBottom: nativeBottomPadding } : null,
         { transform: [{ translateY }], pointerEvents: 'box-none' },
       ]}
     >
