@@ -130,10 +130,6 @@ export default function RouteElevationProfile({
     [],
   )
 
-  if (!metrics) {
-    return null
-  }
-
   return (
     <View
       testID="route-elevation-profile"

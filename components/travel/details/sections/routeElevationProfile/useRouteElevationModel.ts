@@ -413,7 +413,6 @@ export function useRouteElevationModel({
     polylinePoints: chartGeometry.polylinePoints,
     areaPath: chartGeometry.areaPath,
     yAxisGuides: chartGeometry.yAxisGuides,
-    locationLabels,
     keyPoints,
     activePoint,
     tooltipText,
