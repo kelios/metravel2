@@ -48,6 +48,7 @@ interface TravelProps {
   routePoints?: [number, number][];
   fullRouteCoords?: [number, number][];
   mode?: 'radius' | 'route';
+  onMapClick?: (lng: number, lat: number) => void;
   onMapUiApiReady?: (api: {
     zoomIn: () => void;
     zoomOut: () => void;
@@ -97,6 +98,7 @@ const Map: React.FC<TravelProps> = ({
   routePoints = [],
   fullRouteCoords = [],
   mode = 'radius',
+  onMapClick,
   onMapUiApiReady,
 }) => {
   const router = useRouter();
@@ -269,6 +271,20 @@ const Map: React.FC<TravelProps> = ({
         // плавающие нативные контролы (__metravelMapZoomIn/Out).
         const map = L.map('map', { zoomControl: false }).setView([${DEFAULT_LAT}, ${DEFAULT_LNG}], 10);
         map.__userCenter = [${DEFAULT_LAT}, ${DEFAULT_LNG}];
+        // Текущий режим карты ('radius' | 'route'); обновляется при каждом рендере точек.
+        // В route-режиме тап по карте отправляется в RN для добавления точки маршрута (#111).
+        window.__metravelMapMode = 'radius';
+        map.on('click', function(e) {
+          try {
+            if (window.__metravelMapMode !== 'route') return;
+            if (!e || !e.latlng) return;
+            if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'MAP_CLICK', lat: e.latlng.lat, lng: e.latlng.lng
+              }));
+            }
+          } catch (err) {}
+        });
 
         window.__metravelMapZoomIn = function() {
           try { map.zoomIn(); } catch (e) {}
@@ -331,6 +347,7 @@ const Map: React.FC<TravelProps> = ({
             const points = Array.isArray(data.points) ? data.points : [];
             const routePoints = Array.isArray(data.routePoints) ? data.routePoints : [];
             const routeMode = data.mode || 'radius';
+            window.__metravelMapMode = routeMode;
             if (data.center && isFinite(data.center.lat) && isFinite(data.center.lng)) {
               map.__userCenter = [data.center.lat, data.center.lng];
             }
@@ -470,6 +487,14 @@ const Map: React.FC<TravelProps> = ({
             const parsed = JSON.parse(raw);
             if (parsed?.type === 'READY') {
               handleReady();
+              return;
+            }
+            if (parsed?.type === 'MAP_CLICK') {
+              const lat = Number(parsed?.lat);
+              const lng = Number(parsed?.lng);
+              if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                onMapClick?.(lng, lat);
+              }
               return;
             }
             if (parsed?.type !== 'OPEN_URL') return;

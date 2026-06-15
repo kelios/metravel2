@@ -36,10 +36,8 @@ import {
     scheduleFullscreenRefresh,
 } from './articleEditorLifecycleHelpers';
 import {
+    buildArticleEditorModalCallbacks,
     buildArticleEditorToolbarActions,
-    cancelLinkEditorModal,
-    confirmAnchorEditorModal,
-    confirmLinkEditorModal,
     openAnchorEditorModal,
 } from './articleEditorUiHelpers';
 import {
@@ -719,6 +717,23 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         />
     );
 
+    const modalCallbacks = buildArticleEditorModalCallbacks({
+        setAnchorModalVisible,
+        setLinkModalVisible,
+        tmpStoredRange,
+        tmpStoredLinkQuill,
+        getEditor: () => quillRef.current?.getEditor?.(),
+        showHtml,
+        anchorValue,
+        linkValue,
+        html,
+        htmlSelectionRef,
+        setHtmlForcedSelection: (selection) => setHtmlForcedSelection(selection),
+        fireChange,
+        insertAnchor,
+        applyLinkToSelection,
+    });
+
     const body = (
         <ArticleEditorBody
             colors={colors}
@@ -740,40 +755,15 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             anchorInputRef={anchorInputRef}
             setAnchorValue={setAnchorValue}
             focusAnchorInput={focusAnchorInput}
-            onAnchorCancel={() => setAnchorModalVisible(false)}
-            onAnchorConfirm={() => {
-                confirmAnchorEditorModal({
-                    setAnchorModalVisible,
-                    tmpStoredRange,
-                    getEditor: () => quillRef.current?.getEditor?.(),
-                    showHtml,
-                    anchorValue,
-                    html,
-                    htmlSelectionRef,
-                    setHtmlForcedSelection: (selection) => setHtmlForcedSelection(selection),
-                    fireChange,
-                    insertAnchor,
-                });
-            }}
+            onAnchorCancel={modalCallbacks.onAnchorCancel}
+            onAnchorConfirm={modalCallbacks.onAnchorConfirm}
             linkModalVisible={linkModalVisible}
             linkValue={linkValue}
             linkInputRef={linkInputRef}
             setLinkValue={setLinkValue}
             focusLinkInput={focusLinkInput}
-            onLinkCancel={() => {
-                cancelLinkEditorModal({
-                    setLinkModalVisible,
-                    tmpStoredRange,
-                    tmpStoredLinkQuill,
-                });
-            }}
-            onLinkConfirm={() => {
-                confirmLinkEditorModal({
-                    setLinkModalVisible,
-                    linkValue,
-                    applyLinkToSelection,
-                });
-            }}
+            onLinkCancel={modalCallbacks.onLinkCancel}
+            onLinkConfirm={modalCallbacks.onLinkConfirm}
         />
     );
 

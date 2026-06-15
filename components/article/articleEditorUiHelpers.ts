@@ -84,6 +84,68 @@ export const buildArticleEditorToolbarActions = ({
   return actions
 }
 
+export const buildArticleEditorModalCallbacks = ({
+  setAnchorModalVisible,
+  setLinkModalVisible,
+  tmpStoredRange,
+  tmpStoredLinkQuill,
+  getEditor,
+  showHtml,
+  anchorValue,
+  linkValue,
+  html,
+  htmlSelectionRef,
+  setHtmlForcedSelection,
+  fireChange,
+  insertAnchor,
+  applyLinkToSelection,
+}: {
+  setAnchorModalVisible: (visible: boolean) => void
+  setLinkModalVisible: (visible: boolean) => void
+  tmpStoredRange: { current: EditorSelection | null }
+  tmpStoredLinkQuill: { current: any }
+  getEditor: () => any
+  showHtml: boolean
+  anchorValue: string
+  linkValue: string
+  html: string
+  htmlSelectionRef: { current: HtmlSelection }
+  setHtmlForcedSelection: (selection: HtmlSelection) => void
+  fireChange: (value: string) => void
+  insertAnchor: (value: string) => void
+  applyLinkToSelection: (value: string) => void
+}) => ({
+  onAnchorCancel: () => setAnchorModalVisible(false),
+  onAnchorConfirm: () => {
+    confirmAnchorEditorModal({
+      setAnchorModalVisible,
+      tmpStoredRange,
+      getEditor,
+      showHtml,
+      anchorValue,
+      html,
+      htmlSelectionRef,
+      setHtmlForcedSelection,
+      fireChange,
+      insertAnchor,
+    })
+  },
+  onLinkCancel: () => {
+    cancelLinkEditorModal({
+      setLinkModalVisible,
+      tmpStoredRange,
+      tmpStoredLinkQuill,
+    })
+  },
+  onLinkConfirm: () => {
+    confirmLinkEditorModal({
+      setLinkModalVisible,
+      linkValue,
+      applyLinkToSelection,
+    })
+  },
+})
+
 export const openAnchorEditorModal = ({
   rememberSelectionFromEditor,
   setAnchorValue,
