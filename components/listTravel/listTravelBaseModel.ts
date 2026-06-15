@@ -28,6 +28,38 @@ export function getSearchCardImageHeight(effectiveWidth: number): number {
   return 300
 }
 
+export type ListDensityMode = 'comfortable' | 'compact'
+
+/**
+ * Compact density packs more cards per viewport: single-column mobile layouts
+ * switch to a 2-up grid and multi-column layouts gain one extra column. Image
+ * height is reduced so each card takes less vertical room.
+ */
+export function applyListDensity(
+  base: {
+    gridColumns: number
+    isCardsSingleColumn: boolean
+    imageHeight: number
+  },
+  density: ListDensityMode,
+): { gridColumns: number; isCardsSingleColumn: boolean; imageHeight: number } {
+  if (density !== 'compact') return base
+
+  if (base.isCardsSingleColumn) {
+    return {
+      gridColumns: 2,
+      isCardsSingleColumn: false,
+      imageHeight: Math.max(140, Math.round(base.imageHeight * 0.62)),
+    }
+  }
+
+  return {
+    gridColumns: Math.min(base.gridColumns + 1, 4),
+    isCardsSingleColumn: false,
+    imageHeight: Math.max(150, Math.round(base.imageHeight * 0.78)),
+  }
+}
+
 export function getSearchCardWidth({
   effectiveWidth,
   gapSize,

@@ -79,3 +79,24 @@ export const buildSortingOptions = (sortings: Array<{ id?: unknown; name?: unkno
       name: getSortingLabel(sorting.id, sorting.name),
     }));
 };
+
+/**
+ * Visible sortings the backend always exposes, mirrored client-side so the
+ * header sort control can render before the (lazily-fetched) filter options
+ * query resolves — e.g. on mobile where filters load only when the overlay opens.
+ */
+const DEFAULT_SORTING_IDS = [
+  'newest',
+  'oldest',
+  'popular_desc',
+  'popular_asc',
+  'created_desc',
+  'created_asc',
+  'name_asc',
+  'name_desc',
+  'year_desc',
+  'year_asc',
+];
+
+export const getDefaultSortingOptions = () =>
+  buildSortingOptions(DEFAULT_SORTING_IDS.map((id) => ({ id })));

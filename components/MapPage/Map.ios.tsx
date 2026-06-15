@@ -326,7 +326,7 @@ const Map: React.FC<TravelProps> = ({
           }
         }
 
-        const ROUTE_COLOR = ${JSON.stringify(themeColors.primary)};
+        const ROUTE_COLOR = ${JSON.stringify(DESIGN_COLORS.routeLine)};
         const ROUTE_SURFACE = ${JSON.stringify(themeColors.surface)};
         const ROUTE_START = ${JSON.stringify(themeColors.success || themeColors.primary)};
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import type { LatLng } from '@/types/coordinates';
 import { useThemedColors } from '@/hooks/useTheme';
+import { DESIGN_COLORS } from '@/constants/designSystem';
 
 interface MapRouteProps {
   map: any;
@@ -18,7 +19,7 @@ const MapRoute: React.FC<MapRouteProps> = ({
   disableFitBounds,
 }) => {
   const layerRef = useRef<any>(null);
-  const { primary, danger } = useThemedColors();
+  const { danger } = useThemedColors();
 
   useEffect(() => {
     if (!map || typeof window === 'undefined') return;
@@ -86,7 +87,7 @@ const MapRoute: React.FC<MapRouteProps> = ({
 
       const renderer = typeof leaflet.svg === 'function' && hasRoutePane ? leaflet.svg({ pane: paneName }) : undefined;
 
-      const mainColor = isOptimal ? primary : danger;
+      const mainColor = isOptimal ? DESIGN_COLORS.routeLine : danger;
       const dashArray = isOptimal ? null : '10, 10';
 
       const outlineColor =
@@ -208,7 +209,7 @@ const MapRoute: React.FC<MapRouteProps> = ({
         layerRef.current = null;
       }
     };
-  }, [map, leafletFromProps, routeCoordinates, isOptimal, primary, danger, disableFitBounds]);
+  }, [map, leafletFromProps, routeCoordinates, isOptimal, danger, disableFitBounds]);
 
   return null;
 };

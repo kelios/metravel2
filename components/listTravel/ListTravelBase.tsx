@@ -38,7 +38,10 @@ import {
 import type { ActiveConditionChip } from './ListTravelBase.helpers'
 import { useRecommendationsVisibility } from './hooks/useRecommendationsVisibility'
 import { createListTravelBaseStyles } from './ListTravelBase.styles'
+import { useListViewStore } from '@/stores/listViewStore'
+import { buildSortingOptions, getDefaultSortingOptions } from './utils/sortings'
 import {
+  applyListDensity,
   buildCardsGridDynamicStyle,
   buildListTravelFallbackSteps,
   buildListTravelSearchPendingState,
@@ -98,8 +101,6 @@ function ListTravelBase() {
     const usesOverlaySidebar = viewportState.usesOverlaySidebar;
     const sidebarWidth = viewportState.sidebarWidth;
     const styles = useMemo(() => createListTravelBaseStyles(colors, sidebarWidth), [colors, sidebarWidth]);
-    // Cards layout rule: on mobile widths we always render a single column.
-    const isCardsSingleColumn = viewportState.isCardsSingleColumn;
     const gapSize = viewportState.gapSize;
 
     const cardsGridDynamicStyle = useMemo(
@@ -108,7 +109,33 @@ function ListTravelBase() {
     );
 
     const contentPadding = viewportState.contentPadding;
-    const gridColumns = viewportState.gridColumns;
+
+    // VIEW-DENSITY: client-side persisted density toggle (comfortable | compact).
+    const density = useListViewStore((s) => s.density);
+    const setDensity = useListViewStore((s) => s.setDensity);
+
+    const baseSearchCardImageHeight = useMemo(
+      () => getSearchCardImageHeight(viewportState.effectiveWidth),
+      [viewportState.effectiveWidth]
+    );
+
+    const densityLayout = useMemo(
+      () =>
+        applyListDensity(
+          {
+            gridColumns: viewportState.gridColumns,
+            isCardsSingleColumn: viewportState.isCardsSingleColumn,
+            imageHeight: baseSearchCardImageHeight,
+          },
+          density
+        ),
+      [baseSearchCardImageHeight, density, viewportState.gridColumns, viewportState.isCardsSingleColumn]
+    );
+
+    // Cards layout rule: on mobile widths we render a single column unless the
+    // user opts into the compact (multi-column) density.
+    const isCardsSingleColumn = densityLayout.isCardsSingleColumn;
+    const gridColumns = densityLayout.gridColumns;
 
     const {
         isRecommendationsVisible,
@@ -387,10 +414,7 @@ function ListTravelBase() {
     // Keep mobile/tablet geometry tighter to avoid overgrowing the feed.
     // Use effectiveWidth (content area after sidebar) for correct sizing.
     const effectiveWidth = viewportState.effectiveWidth;
-    const searchCardImageHeight = useMemo(
-      () => getSearchCardImageHeight(effectiveWidth),
-      [effectiveWidth]
-    );
+    const searchCardImageHeight = densityLayout.imageHeight;
 
     const searchCardWidth = useMemo(
       () => getSearchCardWidth({ effectiveWidth, gapSize, gridColumns, contentPadding }),
@@ -443,6 +467,23 @@ function ListTravelBase() {
 
     const handleCloseFilters = useCallback(() => setShowFilters(false), []);
     const handleOpenFilters = useCallback(() => setShowFilters(true), []);
+
+    /* SORT: header control reuses the backend-provided sortings list and the
+       existing filter.sort query path (no extra request). */
+    const sortOptions = useMemo(
+      () => {
+        const fromApi = buildSortingOptions(options?.sortings ?? []);
+        return fromApi.length ? fromApi : getDefaultSortingOptions();
+      },
+      [options?.sortings]
+    );
+    const sortValue = typeof filter.sort === 'string' ? filter.sort : '';
+    const handleSortChange = useCallback(
+      (id: string) => {
+        onSelect('sort', sortValue === id ? '' : id);
+      },
+      [onSelect, sortValue]
+    );
 
     const activeConditionChips = useMemo<ActiveConditionChip[]>(() => {
       return buildActiveConditionChips({
@@ -743,6 +784,12 @@ function ListTravelBase() {
         renderItem: renderTravelListItem,
         listRef: flatListRef as any,
         isExport,
+        sortOptions,
+        sortValue,
+        onSortChange: handleSortChange,
+        density,
+        onDensityChange: setDensity,
+        showDensityToggle: true,
         testID: 'travels-list',
       }}
     />

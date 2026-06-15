@@ -115,7 +115,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   const mapHeight = height || (compact ? 400 : 600)
   const mapBorderRadius = compact ? 12 : 16
   const loaderOverlay = useMemo(() => withAlpha(colors.surface, 0.8), [colors.surface])
-  const routeColor = colors.primary || DESIGN_COLORS.mapPin
+  const routeColor = DESIGN_COLORS.routeLine
   const markerColor = DESIGN_COLORS.mapPin
 
   const markerSvg = `

@@ -57,6 +57,9 @@ type RightColumnComparableProps = {
   topContent?: unknown
   total: number
   travels: Travel[]
+  sortValue?: string
+  density?: string
+  showDensityToggle?: boolean
 }
 
 export function areRightColumnPropsEqual(
@@ -85,7 +88,10 @@ export function areRightColumnPropsEqual(
     prev.isRecommendationsVisible === next.isRecommendationsVisible &&
     prev.getEmptyStateMessage === next.getEmptyStateMessage &&
     prev.onEndReached === next.onEndReached &&
-    prev.refetch === next.refetch
+    prev.refetch === next.refetch &&
+    prev.sortValue === next.sortValue &&
+    prev.density === next.density &&
+    prev.showDensityToggle === next.showDensityToggle
   )
 }
 

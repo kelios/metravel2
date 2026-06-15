@@ -1,8 +1,9 @@
-import React, { memo, Suspense, useCallback, useEffect, useMemo, useRef } from 'react'
+import React, { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Platform,
   Pressable,
+  RefreshControl,
   View,
   ViewStyle,
   Text,
@@ -13,6 +14,7 @@ import {
 import { FlashList } from '@shopify/flash-list'
 import Feather from '@expo/vector-icons/Feather'
 
+import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import StickySearchBar from '@/components/mainPage/StickySearchBar'
 import EmptyState from '@/components/ui/EmptyState'
 import ContributionBanner from '@/components/common/ContributionBanner'
@@ -30,6 +32,10 @@ import {
   RecommendationsTabs,
   TravelCardSkeletonComponent,
 } from '@/components/listTravel/RightColumn.parts'
+import ListCatalogToolbar, {
+  type ListSortOption,
+} from '@/components/listTravel/ListCatalogToolbar'
+import type { ListDensity } from '@/stores/listViewStore'
 import {
   isWeb,
   useRightColumnStyles,
@@ -80,6 +86,12 @@ interface RightColumnProps {
   testID?: string
   listRef?: React.RefObject<any>
   isExport?: boolean
+  sortOptions?: ListSortOption[]
+  sortValue?: string
+  onSortChange?: (id: string) => void
+  density?: ListDensity
+  onDensityChange?: (density: ListDensity) => void
+  showDensityToggle?: boolean
 }
 
 const RightColumn: React.FC<RightColumnProps> = (
@@ -117,8 +129,32 @@ const RightColumn: React.FC<RightColumnProps> = (
      testID,
      listRef: externalListRef,
      isExport = false,
+     sortOptions = [],
+     sortValue = '',
+     onSortChange,
+     density = 'comfortable',
+     onDensityChange,
+     showDensityToggle = false,
    }) => {
     const colors = useThemedColors()
+
+    // Native pull-to-refresh + offline awareness. Web keeps its existing infinite
+    // scroll / error UX untouched (no RefreshControl, no NetInfo gating).
+    const { isConnected } = useNetworkStatus()
+    const isOffline = !isWeb && !isConnected
+    const [isRefreshing, setIsRefreshing] = useState(false)
+    const handleRefresh = useCallback(() => {
+      if (isWeb) return
+      setIsRefreshing(true)
+      try {
+        refetch()
+      } finally {
+        // refetch() is fire-and-forget here (void return); drop the spinner shortly
+        // after so it doesn't hang if the query resolves from cache instantly.
+        setTimeout(() => setIsRefreshing(false), 600)
+      }
+    }, [refetch])
+
     const localListRef = useRef<any>(null)
     const listRef = externalListRef ?? localListRef
     const recommendationsOffsetRef = useRef<number | null>(null)
@@ -401,6 +437,16 @@ const RightColumn: React.FC<RightColumnProps> = (
           onEndReached={isWeb ? undefined : onEndReached}
           onEndReachedThreshold={onEndReachedThreshold}
           onScroll={isWeb ? webScrollHandler : undefined}
+          refreshControl={
+            isWeb ? undefined : (
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={handleRefresh}
+                tintColor={colors.primary}
+                colors={[colors.primary]}
+              />
+            )
+          }
           drawDistance={isWeb ? 1600 : 800}
           contentContainerStyle={isWeb ? webContentContainerStyle : nativeContentContainerStyle}
           style={
@@ -431,6 +477,9 @@ const RightColumn: React.FC<RightColumnProps> = (
       isError,
       isExport,
       isMobile,
+      isRefreshing,
+      handleRefresh,
+      colors.primary,
       listRef,
       nativeContentContainerStyle,
       onEndReached,
@@ -467,6 +516,18 @@ const RightColumn: React.FC<RightColumnProps> = (
             onClearAll={onClearAll ?? (() => setSearch(''))}
           />
         </View>
+
+        {!isExport && (sortOptions.length > 0 || (showDensityToggle && onDensityChange)) ? (
+          <ListCatalogToolbar
+            sortOptions={sortOptions}
+            sortValue={sortValue}
+            onSortChange={onSortChange ?? (() => {})}
+            density={density}
+            onDensityChange={onDensityChange ?? (() => {})}
+            showDensityToggle={showDensityToggle && !!onDensityChange}
+            contentPadding={contentPadding}
+          />
+        ) : null}
 
         {topContentNodes ? (
           <View style={paddingHorizontalStyle}>{topContentNodes}</View>
@@ -513,19 +574,33 @@ const RightColumn: React.FC<RightColumnProps> = (
             </View>
           )}
 
-          {/* Error */}
+          {/* Error — на native при отсутствии сети показываем отдельный
+              «нет подключения», а не общий сбой загрузки. */}
           {isError && !showInitialLoading && (
             <View style={paddingHorizontalStyle}>
-              <EmptyState
-                icon="alert-circle"
-                title="Ошибка загрузки"
-                description="Не удалось загрузить путешествия."
-                variant="error"
-                action={{
-                  label: 'Повторить',
-                  onPress: () => refetch(),
-                }}
-              />
+              {isOffline ? (
+                <EmptyState
+                  icon="wifi-off"
+                  title="Нет подключения"
+                  description="Проверьте интернет-соединение и попробуйте снова."
+                  variant="error"
+                  action={{
+                    label: 'Повторить',
+                    onPress: () => refetch(),
+                  }}
+                />
+              ) : (
+                <EmptyState
+                  icon="alert-circle"
+                  title="Ошибка загрузки"
+                  description="Не удалось загрузить путешествия."
+                  variant="error"
+                  action={{
+                    label: 'Повторить',
+                    onPress: () => refetch(),
+                  }}
+                />
+              )}
             </View>
           )}
 

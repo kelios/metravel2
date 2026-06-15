@@ -303,11 +303,16 @@ function TravelListItem({
 
   const hasAuthorMeta = !hideAuthor && authorDisplayName !== ''
   const hasRating = travel.rating != null && travel.rating > 0
+  const travelYear = useMemo(() => {
+    const raw = Number(String(travel.year ?? '').trim())
+    return Number.isFinite(raw) && raw > 1900 && raw < 2200 ? raw : null
+  }, [travel.year])
   const hasContentInfo =
     hasAuthorMeta ||
     countries.length > 0 ||
     views > 0 ||
     hasRating ||
+    travelYear != null ||
     hasEngagementStats ||
     popularityFlags.isPopular ||
     popularityFlags.isNew ||
@@ -506,6 +511,12 @@ function TravelListItem({
     <View style={styles.metaRow}>
       <View style={styles.metaInfoTopRow}>{topRowItems}</View>
       <View style={styles.metaBadgesRow}>
+        {travelYear != null && (
+          <View style={styles.metaYear} testID="year-meta">
+            <Feather name="calendar" size={VIEW_ICON_SIZE} color={colors.textMuted} />
+            <Text style={styles.metaYearText}>{travelYear}</Text>
+          </View>
+        )}
         {hasEngagementStats && (
           <TravelListItemEngagementMetrics
             engagementStats={engagementStats}

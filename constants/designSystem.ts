@@ -14,6 +14,9 @@ export const DESIGN_COLORS = {
   // Used for persistence / payloads where CSS vars must not leak.
   travelPoint: '#ff922b',
   mapPin: '#ff8a00',
+  // Route polyline color — vivid navigation blue, high contrast over OSM tiles
+  // (green parks / grey roads), readable on light & dark themes with white halo.
+  routeLine: '#2563eb',
 
   // Web shell / critical CSS fallbacks (must be plain values).
   themeColorLight: '#ffffff',

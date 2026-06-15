@@ -1,4 +1,31 @@
-import { buildListTravelFallbackSteps } from '@/components/listTravel/listTravelBaseModel'
+import {
+  applyListDensity,
+  buildListTravelFallbackSteps,
+} from '@/components/listTravel/listTravelBaseModel'
+
+describe('applyListDensity', () => {
+  const base = { gridColumns: 3, isCardsSingleColumn: false, imageHeight: 300 }
+
+  it('returns the base layout unchanged for comfortable density', () => {
+    expect(applyListDensity(base, 'comfortable')).toEqual(base)
+  })
+
+  it('switches single-column mobile to a 2-up compact grid', () => {
+    const result = applyListDensity(
+      { gridColumns: 1, isCardsSingleColumn: true, imageHeight: 220 },
+      'compact',
+    )
+    expect(result.gridColumns).toBe(2)
+    expect(result.isCardsSingleColumn).toBe(false)
+    expect(result.imageHeight).toBeLessThan(220)
+  })
+
+  it('adds one column (capped at 4) and shrinks media on multi-column compact', () => {
+    expect(applyListDensity(base, 'compact').gridColumns).toBe(4)
+    expect(applyListDensity({ ...base, gridColumns: 4 }, 'compact').gridColumns).toBe(4)
+    expect(applyListDensity(base, 'compact').imageHeight).toBeLessThan(base.imageHeight)
+  })
+})
 
 describe('buildListTravelFallbackSteps', () => {
   it('builds progressively broader fallback steps for narrow filters', () => {

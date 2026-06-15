@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { DESIGN_COLORS } from '@/constants/designSystem';
 import { buildQuestOfflineMapGpx } from './questOfflineMapExport';
 
 type StepPoint = { lat: number; lng: number; title?: string };
@@ -496,7 +497,7 @@ function QuestFullMap({
                     {/* Линия по исходным точкам, чтобы сохранить порядок маршрута */}
                     <Polyline
                         positions={points.map(p => [p.lat, p.lng])}
-                        pathOptions={{ color: colors.primary, weight: 4 }}
+                        pathOptions={{ color: DESIGN_COLORS.routeLine, weight: 4 }}
                     />
 
                     {/* Маркеры по сгруппированным координатам */}

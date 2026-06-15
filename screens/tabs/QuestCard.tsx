@@ -12,19 +12,12 @@ import { pluralizePoints, type QuestMeta } from './questsShared';
 
 const loadedQuestImageCache = new Set<string>();
 
-const QUEST_CATEGORIES = [
-    'Городская легенда',
-    'Тайны истории',
-    'Мистическое приключение',
-    'Загадки прошлого',
-    'Секреты города',
-];
-
 const getDifficultyInfo = (difficulty?: 'easy' | 'medium' | 'hard') => {
     switch (difficulty) {
         case 'easy': return { label: 'Легко', color: 'rgba(129, 199, 132, 0.9)' };
+        case 'medium': return { label: 'Средне', color: 'rgba(255, 213, 79, 0.9)' };
         case 'hard': return { label: 'Сложно', color: 'rgba(239, 154, 154, 0.9)' };
-        default: return { label: 'Средне', color: 'rgba(255, 213, 79, 0.9)' };
+        default: return null;
     }
 };
 
@@ -49,8 +42,7 @@ export default function QuestCard({
 
     const durationText = quest.durationMin ? `${Math.round((quest.durationMin ?? 60) / 5) * 5} мин` : '1–2 ч';
     const pointsText = pluralizePoints(quest.points ?? 0);
-    const categoryIndex = quest.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % QUEST_CATEGORIES.length;
-    const categoryLabel = QUEST_CATEGORIES[categoryIndex];
+    const categoryLabel = quest.cityName || quest.countryName || null;
     const difficultyInfo = getDifficultyInfo(quest.difficulty);
     const distanceText = nearby && typeof quest._distanceKm === 'number'
         ? quest._distanceKm < 1
@@ -142,10 +134,12 @@ export default function QuestCard({
                     </View>
                 )}
 
-                <View style={styles.questCardDifficultyBadge}>
-                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: difficultyInfo.color }} />
-                    <Text style={styles.questCardDifficultyText}>{difficultyInfo.label}</Text>
-                </View>
+                {difficultyInfo && (
+                    <View style={styles.questCardDifficultyBadge}>
+                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: difficultyInfo.color }} />
+                        <Text style={styles.questCardDifficultyText}>{difficultyInfo.label}</Text>
+                    </View>
+                )}
 
                 <View
                     style={[
@@ -158,7 +152,7 @@ export default function QuestCard({
                 </View>
 
                 <View style={[styles.questCardContent, { pointerEvents: 'none' }]}>
-                    <Text style={styles.questCardCategory}>{categoryLabel}</Text>
+                    {categoryLabel && <Text style={styles.questCardCategory}>{categoryLabel}</Text>}
                     <Text style={styles.questCardTitle} numberOfLines={2}>
                         {quest.title}
                     </Text>

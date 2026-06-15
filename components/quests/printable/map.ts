@@ -128,7 +128,7 @@ export function buildPrintableMapSvg(points: PrintableMapPoint[]): string {
             </defs>
             <rect x="0" y="0" width="${MAP_VIEWBOX_WIDTH}" height="${MAP_VIEWBOX_HEIGHT}" fill="url(#mapBgGradient)"></rect>
             <rect x="0" y="0" width="${MAP_VIEWBOX_WIDTH}" height="${MAP_VIEWBOX_HEIGHT}" fill="url(#mapGrid)" opacity="0.9"></rect>
-            <polyline points="${routePath}" fill="none" stroke="${PRINT_COLORS.brand}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"></polyline>
+            <polyline points="${routePath}" fill="none" stroke="${PRINT_COLORS.routeLine}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"></polyline>
             <polyline points="${routePath}" fill="none" stroke="${PRINT_COLORS.white}" stroke-width="1.2" stroke-dasharray="3 6" opacity="0.72"></polyline>
             ${markers}
         </svg>

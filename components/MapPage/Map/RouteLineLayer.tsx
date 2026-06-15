@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react'
 
-import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
 
 import {
@@ -103,7 +103,7 @@ const RouteLineLayer: React.FC<RouteLineLayerProps> = ({
         ...baseOpts,
         weight: 5,
         opacity: 1,
-        color: routeColor || colors.info || colors.primary || DESIGN_TOKENS.colors.primary,
+        color: routeColor || DESIGN_COLORS.routeLine,
         className: 'metravel-route-line',
       })
 

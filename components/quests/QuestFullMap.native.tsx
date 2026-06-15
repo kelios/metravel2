@@ -16,6 +16,7 @@ import { WebView } from 'react-native-webview';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { DESIGN_COLORS } from '@/constants/designSystem';
 import { buildQuestOfflineMapGpx } from './questOfflineMapExport';
 
 type StepPoint = { lat: number; lng: number; title?: string };
@@ -127,10 +128,11 @@ function QuestFullMap({
             warningDark: colors.warningDark,
             text: colors.text,
             textOnPrimary: colors.textOnPrimary,
+            routeLine: DESIGN_COLORS.routeLine,
         })};
 
         if (routePoints.length > 1) {
-          L.polyline(routePoints, { color: theme.primary, weight: 4 }).addTo(map);
+          L.polyline(routePoints, { color: theme.routeLine, weight: 4 }).addTo(map);
         }
 
         function iconFor(label, active) {

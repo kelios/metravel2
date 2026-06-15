@@ -7,7 +7,7 @@
 // arrow rotation is pushed straight onto an Animated.Value (no React re-render per tick).
 
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { Animated, Easing, Pressable, Text, View } from 'react-native'
+import { Animated, Easing, Linking, Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { hapticNotification } from '@/utils/haptics'
@@ -236,27 +236,54 @@ function QuestPointNavigatorImpl({ targetLat, targetLng, colors }: QuestPointNav
   const success = colors?.success ?? '#2e9e5b'
 
   if (perm === 'denied') {
-    // Permission refused: stay quiet, don't nag the user mid-quest.
-    return null
-  }
-
-  if (perm === 'prompt' || perm === 'unknown') {
+    // Permission refused: don't nag with the system dialog again (it won't show),
+    // but keep a soft path to re-enable via OS settings instead of vanishing.
     return (
       <Pressable
-        onPress={enable}
-        hitSlop={6}
+        onPress={() => {
+          Linking.openSettings().catch(() => {})
+        }}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         accessibilityRole="button"
-        accessibilityLabel="Показать направление к точке"
+        accessibilityLabel="Включить доступ к геолокации в настройках"
         style={{
           flexDirection: 'row',
           alignItems: 'center',
           gap: 4,
           alignSelf: 'flex-start',
           marginTop: 4,
+          minHeight: 44,
+        }}
+      >
+        <Feather name="settings" size={13} color={muted} />
+        <Text style={{ color: muted, fontSize: 12 }}>Включить геолокацию в настройках</Text>
+      </Pressable>
+    )
+  }
+
+  if (perm === 'prompt' || perm === 'unknown') {
+    // Pre-permission priming: explain the benefit BEFORE the OS dialog so the user
+    // grants location knowingly (and a denial here is far less likely than tapping
+    // a bare "allow location" system prompt with no context).
+    return (
+      <Pressable
+        onPress={enable}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        accessibilityRole="button"
+        accessibilityLabel="Показать стрелку и расстояние до точки квеста"
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 4,
+          alignSelf: 'flex-start',
+          marginTop: 4,
+          minHeight: 44,
         }}
       >
         <Feather name="compass" size={13} color={muted} />
-        <Text style={{ color: muted, fontSize: 12 }}>Показать направление</Text>
+        <Text style={{ color: muted, fontSize: 12 }}>
+          Показать стрелку и расстояние до точки
+        </Text>
       </Pressable>
     )
   }

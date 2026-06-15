@@ -153,7 +153,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
           <Pressable
             onPress={onPrintDownload}
             style={styles.compactIconButton}
-            hitSlop={6}
+            hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Скачать печатную версию квеста"
           >
@@ -162,7 +162,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
           <Pressable
             onPress={onOfflineMapDownload}
             style={styles.compactIconButton}
-            hitSlop={6}
+            hitSlop={12}
             disabled={offlineMapPointsCount === 0}
             accessibilityRole="button"
             accessibilityLabel={`Скачать ${offlineMapPointsCount} точек квеста для офлайн-карты`}
@@ -172,7 +172,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
           <Pressable
             onPress={onReset}
             style={styles.resetButton}
-            hitSlop={6}
+            hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Сбросить прогресс"
           >
@@ -280,7 +280,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
             <Pressable
               onPress={onPrintDownload}
               style={styles.compactIconButton}
-              hitSlop={6}
+              hitSlop={12}
               accessibilityRole="button"
               accessibilityLabel="Скачать печатную версию квеста"
             >
@@ -290,7 +290,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           <Pressable
             onPress={onOfflineMapDownload}
             style={styles.offlineMapButton}
-            hitSlop={6}
+            hitSlop={12}
             disabled={offlineMapPointsCount === 0}
             accessibilityRole="button"
             accessibilityLabel={`Скачать ${offlineMapPointsCount} точек квеста для офлайн-карты`}
@@ -301,7 +301,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           <Pressable
             onPress={onReset}
             style={styles.resetButton}
-            hitSlop={6}
+            hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Сбросить прогресс"
           >

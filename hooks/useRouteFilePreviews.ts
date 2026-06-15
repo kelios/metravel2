@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Platform } from 'react-native'
 
+import { DESIGN_COLORS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useTravelRouteFiles } from '@/hooks/useTravelRouteFiles'
 import { downloadTravelRouteFileBlob } from '@/api/travelRoutes'
@@ -78,7 +79,7 @@ export function useRouteFilePreviews({
 
   const routeColorPalette = useMemo(
     () => [
-      colors.primary,
+      DESIGN_COLORS.routeLine,
       colors.info,
       colors.success,
       colors.warning,

@@ -194,8 +194,8 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
     [step.answer],
   )
   const isPassed = !!savedAnswer && step.id !== 'intro'
-  const showHintAfter = 2
-  const hintUnlocked = hintVisible || attempts >= showHintAfter
+  const hintSuggestedAfter = 1
+  const hintSuggested = hintVisible || attempts >= hintSuggestedAfter
   const hasMapPaneContent = showLocationControls || (showMap && !!step.image)
   const hasLocationContent = isPassed || hasMapPaneContent
   const imageSource = useMemo(
@@ -307,19 +307,19 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
                   </View>
                 )}
                 <View style={styles.inlineActions}>
-                  {step.hint && hintUnlocked && (
+                  {step.hint && (
                     <Pressable onPress={onToggleHint} hitSlop={8} accessibilityRole="button" accessibilityLabel={hintVisible ? 'Скрыть подсказку' : 'Показать подсказку'}>
                       <Text style={styles.linkText}>{hintVisible ? 'Скрыть подсказку' : 'Подсказка'}</Text>
                     </Pressable>
                   )}
-                  {step.hint && hintUnlocked && (<Text style={styles.linkSeparator}>·</Text>)}
+                  {step.hint && (<Text style={styles.linkSeparator}>·</Text>)}
                   <Pressable onPress={onSkip} hitSlop={8} accessibilityRole="button" accessibilityLabel="Пропустить шаг">
                     <Text style={styles.linkText}>Пропустить</Text>
                   </Pressable>
                 </View>
-                {step.hint && !hintUnlocked && (
+                {step.hint && !hintVisible && hintSuggested && (
                   <Text style={styles.hintPrompt}>
-                    Подсказка откроется после {showHintAfter} неверных попыток (осталось {showHintAfter - attempts})
+                    Застряли? Откройте подсказку выше.
                   </Text>
                 )}
               </>

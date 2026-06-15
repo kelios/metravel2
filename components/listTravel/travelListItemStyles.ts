@@ -418,6 +418,21 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       color: Platform.OS === 'web' ? 'rgb(22, 163, 74)' : colors.textSecondary,
     },
 
+    metaYear: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      flexShrink: 0,
+    },
+
+    metaYearText: {
+      fontSize: META_TEXT_FONT_SIZE,
+      lineHeight: META_TEXT_LINE_HEIGHT,
+      color: colors.textMuted,
+      fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+      fontVariant: ['tabular-nums'] as any,
+    },
+
     // Inline теги стран (без pill-фона)
     tags: {
       flexDirection: 'row',

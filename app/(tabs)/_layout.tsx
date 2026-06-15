@@ -161,6 +161,11 @@ export default function TabLayout() {
       Platform.OS === 'web'
         ? { title: '', href: undefined, lazy: true }
         : { ...HIDDEN, lazy: false, freezeOnBlur: false };
+    // На native нижний док (BottomDock) использует «Профиль» как ключевую вкладку
+    // → роут /profile должен быть адресуем (href: undefined), иначе router.push
+    // в доке не сработает. На web профиль остаётся вне линкинга таб-навигатора
+    // (href: null), как и было — поведение web не меняем.
+    const profileOptions = Platform.OS === 'web' ? HIDDEN_NOHREF : HIDDEN;
 
     return (
         <>
@@ -208,7 +213,7 @@ export default function TabLayout() {
                 <Tabs.Screen name="travel/new" options={HIDDEN} />
                 <Tabs.Screen name="travel/[id]" options={HIDDEN} />
                 <Tabs.Screen name="metravel" options={HIDDEN_NOHREF} />
-                <Tabs.Screen name="profile" options={HIDDEN_NOHREF} />
+                <Tabs.Screen name="profile" options={profileOptions} />
                 <Tabs.Screen name="accountconfirmation" options={HIDDEN_NOHREF} />
             </Tabs>
             <GlobalScrollToTop />

@@ -8,6 +8,7 @@ export const MAP_IMAGE_ZOOM = 13;
 
 export const PRINT_COLORS = {
   brand: '#1a6b8a',
+  routeLine: '#2563eb',
   brandDark: '#0f4c62',
   brandMid: '#2480a4',
   brandLight: '#3a9bbf',
