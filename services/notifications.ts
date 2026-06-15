@@ -244,7 +244,7 @@ function questReminderId(questId: string): string {
  * not register a token — it only checks/asks the OS permission. Best-effort:
  * returns false (silently) if denied or unavailable.
  */
-async function ensureLocalNotificationPermission(
+export async function ensureLocalNotificationPermission(
   Notifications: NonNullable<typeof NotificationsModule>,
 ): Promise<boolean> {
   try {
@@ -254,6 +254,50 @@ async function ensureLocalNotificationPermission(
     return status === 'granted';
   } catch {
     return false;
+  }
+}
+
+/**
+ * Re-export of the lazily-loaded expo-notifications module so background tasks
+ * (e.g. geofencing) can present notifications through the same guarded loader.
+ * Returns null on web or when the module isn't in the bundle.
+ */
+export function getNotifications(): typeof NotificationsModule {
+  return getNotificationsModule();
+}
+
+/**
+ * Present an instant local notification (no schedule delay). Best-effort:
+ * requests permission, no-op on web / missing module / permission denied.
+ * Used by quest geofencing on region ENTER. `data.url` deep-links to the quest.
+ */
+export async function presentLocalQuestNotification(
+  identifier: string,
+  title: string,
+  body: string,
+  deepLinkUrl: string,
+): Promise<void> {
+  if (Platform.OS === 'web') return;
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return;
+
+  try {
+    const granted = await ensureLocalNotificationPermission(Notifications);
+    if (!granted) return;
+
+    await Notifications.scheduleNotificationAsync({
+      identifier,
+      content: {
+        title,
+        body,
+        data: { url: `/quests/${deepLinkUrl}` },
+        ...(Platform.OS === 'android' ? { channelId: 'recommendations' } : {}),
+      },
+      // null trigger → present immediately.
+      trigger: null,
+    });
+  } catch (error: unknown) {
+    devError('[Notifications] Failed to present local notification:', error);
   }
 }
 

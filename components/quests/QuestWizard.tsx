@@ -25,6 +25,7 @@ import {
 import { QuestStepCard } from './questWizardStepCard';
 import { useQuestWizardProgress } from './useQuestWizardProgress';
 import { useQuestReminder } from './useQuestReminder';
+import { useQuestGeofence } from './useQuestGeofence';
 import {
     confirmQuestAsync,
     copyQuestCoords,
@@ -121,6 +122,14 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         title,
         completedCount: completedSteps.length,
         totalCount: steps.length,
+        allCompleted,
+    });
+    useQuestGeofence({
+        questId,
+        cityId,
+        title,
+        steps,
+        answers,
         allCompleted,
     });
 
