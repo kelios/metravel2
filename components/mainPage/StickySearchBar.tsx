@@ -1,7 +1,7 @@
 // StickySearchBar.tsx
 // ✅ НОВЫЙ КОМПОНЕНТ: Sticky поисковая строка с быстрыми действиями
 
-import { useState, useRef, useEffect, memo, useMemo, type ComponentProps, type ReactNode } from 'react';
+import { useState, useRef, useEffect, useCallback, memo, useMemo, type ComponentProps, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   View,
@@ -18,6 +18,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getTravelLabel } from '@/utils/pluralize';
 import Chip from '@/components/ui/Chip';
+import { useSearchHistoryStore } from '@/stores/searchHistoryStore';
 import {
   getStickySearchShortcutLabel,
   getStickySearchUiState,
@@ -411,6 +412,71 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     borderRadius: 999,
     backgroundColor: colors.primary,
   },
+  historyPanel: {
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    gap: 2,
+  },
+  historyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.xs,
+    paddingBottom: spacing.xxs,
+  },
+  historyHeaderText: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    color: colors.textMuted,
+  },
+  historyClearAll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minHeight: 44,
+    paddingHorizontal: spacing.xs,
+    justifyContent: 'center',
+    ...Platform.select({ web: { cursor: 'pointer' } as any }),
+  },
+  historyClearAllText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  historyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 44,
+    borderRadius: radii.sm,
+    ...Platform.select({ web: { cursor: 'pointer' } as any }),
+  },
+  historyRowMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.xs,
+    minWidth: 0,
+  },
+  historyRowText: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.text,
+  },
+  historyRemove: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({ web: { cursor: 'pointer' } as any }),
+  },
 }), [colors]);
 
 function StickySearchBar({
@@ -438,6 +504,34 @@ function StickySearchBar({
   });
   const inputRef = useRef<TextInput>(null);
   const [isFocused, setIsFocused] = useState(false);
+
+  const history = useSearchHistoryStore((s) => s.history);
+  const loadHistory = useSearchHistoryStore((s) => s.load);
+  const addQuery = useSearchHistoryStore((s) => s.addQuery);
+  const removeQuery = useSearchHistoryStore((s) => s.removeQuery);
+  const clearHistory = useSearchHistoryStore((s) => s.clearHistory);
+
+  useEffect(() => {
+    void loadHistory();
+  }, [loadHistory]);
+
+  const commitToHistory = useCallback(() => {
+    const trimmed = search.trim();
+    if (trimmed) void addQuery(trimmed);
+  }, [addQuery, search]);
+
+  const applyHistoryQuery = useCallback(
+    (query: string) => {
+      onSearchChange(query);
+      void addQuery(query);
+      inputRef.current?.blur();
+      setIsFocused(false);
+    },
+    [addQuery, onSearchChange],
+  );
+
+  const showHistory = isFocused && search.trim().length === 0 && history.length > 0;
+
   const searchIconSize = isMobile ? 16 : 18;
   const actionIconSize = isMobile ? 18 : 20;
   const filterIconSize = isMobile ? 14 : 16;
@@ -569,7 +663,11 @@ function StickySearchBar({
             value={search}
             onChangeText={onSearchChange}
             onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
+            onBlur={() => {
+              commitToHistory();
+              setIsFocused(false);
+            }}
+            onSubmitEditing={commitToHistory}
             placeholder={placeholder}
             placeholderTextColor={colors.textMuted}
             style={[styles.input, isMobile && styles.inputMobile]}
@@ -715,6 +813,56 @@ function StickySearchBar({
               {activeFiltersCount} {activeFiltersCount === 1 ? 'условие' : activeFiltersCount < 5 ? 'условия' : 'условий'}
             </Text>
           ) : null}
+        </View>
+      ) : null}
+      {showHistory ? (
+        <View
+          style={styles.historyPanel}
+          testID="search-history-panel"
+          accessibilityRole={Platform.OS === 'web' ? undefined : ('menu' as any)}
+          accessibilityLabel="Недавние запросы"
+        >
+          <View style={styles.historyHeader}>
+            <Text style={styles.historyHeaderText}>Недавние запросы</Text>
+            <Pressable
+              testID="search-history-clear-all"
+              onPressIn={() => void clearHistory()}
+              accessibilityRole="button"
+              accessibilityLabel="Очистить историю поиска"
+              {...Platform.select({ web: { title: 'Очистить историю' } as any })}
+              style={styles.historyClearAll}
+            >
+              <Feather name="trash-2" size={13} color={colors.textSecondary} />
+              <Text style={styles.historyClearAllText}>Очистить</Text>
+            </Pressable>
+          </View>
+          {history.map((query) => (
+            <View key={query} style={styles.historyRow}>
+              <Pressable
+                testID={`search-history-item-${query}`}
+                onPressIn={() => applyHistoryQuery(query)}
+                accessibilityRole="button"
+                accessibilityLabel={`Найти: ${query}`}
+                {...Platform.select({ web: { title: query } as any })}
+                style={styles.historyRowMain}
+              >
+                <Feather name="clock" size={14} color={colors.textMuted} />
+                <Text style={styles.historyRowText} numberOfLines={1}>
+                  {query}
+                </Text>
+              </Pressable>
+              <Pressable
+                testID={`search-history-remove-${query}`}
+                onPressIn={() => void removeQuery(query)}
+                accessibilityRole="button"
+                accessibilityLabel={`Удалить из истории: ${query}`}
+                {...Platform.select({ web: { title: 'Удалить' } as any })}
+                style={styles.historyRemove}
+              >
+                <Feather name="x" size={14} color={colors.textMuted} />
+              </Pressable>
+            </View>
+          ))}
         </View>
       ) : null}
       </View>
