@@ -10,7 +10,6 @@ import React, {
 import {
     View,
     Modal,
-    Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
@@ -61,6 +60,7 @@ import {
 } from './ArticleEditor.web.parts';
 import { buildArticleEditorQuillModules } from './ArticleEditor.web.modules';
 import {
+    attachEditorFocusOutFlush,
     attachEditorKeyboardShortcuts,
     blurActiveEditorElement,
     emitDebouncedParentChange,
@@ -70,27 +70,23 @@ import {
     getSafeEditorHtmlFrom,
     openArticleEditorPreview,
     runAutosaveEffect,
+    runEnsureQuillContentEffect,
     runInitialForceSyncEffect,
+    runPendingDroppedImageEffect,
+    runRestoreStoredRangeEffect,
     suppressFindDomNodeWarning,
 } from './ArticleEditor.web.effects';
 import {
     attachEditorSurfaceHandlers,
     attachFullscreenSurfaceDnd,
 } from './ArticleEditor.web.surfaceEffects';
-
-const isWeb = Platform.OS === 'web';
-const win = isWeb && typeof window !== 'undefined' ? window : undefined;
-const isTestEnv =
-    typeof process !== 'undefined' &&
-    (process as any)?.env &&
-    ((process as any).env.NODE_ENV === 'test' || (process as any).env.JEST_WORKER_ID !== undefined);
-const EMPTY_EDITOR_PRELOAD_DELAY_MS = 900;
-
-// Важно: грузим в отдельном модуле, чтобы Quill не попадал в initial chunk
-const loadQuillEditorModule =
-    isWeb && win
-        ? () => Promise.resolve(import('@/components/article/QuillEditor.web'))
-        : null;
+import {
+    EMPTY_EDITOR_PRELOAD_DELAY_MS,
+    isTestEnv,
+    isWeb,
+    loadQuillEditorModule,
+    win,
+} from './ArticleEditor.web.runtime';
 
 const QuillEditor =
     isWeb && win
@@ -376,16 +372,12 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     // target control's click handler, so formData is up to date before navigation
     // validates the step.
     useEffect(() => {
-        if (!isWeb || !win) return;
-        const viewport = editorViewportRef.current as HTMLElement | undefined;
-        if (!viewport || typeof viewport.addEventListener !== 'function') return;
-        const handleFocusOut = () => {
-            debouncedParentChangeRaw.flush();
-        };
-        viewport.addEventListener('focusout', handleFocusOut);
-        return () => {
-            viewport.removeEventListener('focusout', handleFocusOut);
-        };
+        return attachEditorFocusOutFlush({
+            isWeb,
+            windowObject: win,
+            getViewport: () => editorViewportRef.current as HTMLElement | undefined,
+            flush: () => debouncedParentChangeRaw.flush(),
+        });
     }, [debouncedParentChangeRaw, quillMountKey, shouldLoadQuill, showHtml]);
 
     const focusQuill = useCallback(() => {
@@ -485,17 +477,12 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }, [requestQuillLoad, shouldLoadQuill, uploadAndInsert]);
 
     useEffect(() => {
-        if (!shouldLoadQuill) return;
-        if (!pendingDroppedImageRef.current) return;
-        if (processingPendingDroppedImageRef.current) return;
-        if (!quillRef.current?.getEditor?.()) return;
-
-        const file = pendingDroppedImageRef.current;
-        pendingDroppedImageRef.current = null;
-        processingPendingDroppedImageRef.current = true;
-
-        void uploadAndInsert(file).finally(() => {
-            processingPendingDroppedImageRef.current = false;
+        runPendingDroppedImageEffect({
+            shouldLoadQuill,
+            getEditor: () => quillRef.current?.getEditor?.(),
+            pendingDroppedImageRef,
+            processingPendingDroppedImageRef,
+            uploadAndInsert,
         });
     }, [quillMountKey, shouldLoadQuill, uploadAndInsert]);
 
@@ -599,18 +586,12 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }, [rememberSelectionFromEditor]);
 
     useEffect(() => {
-        if (fullscreen || showHtml) return;
-        if (!tmpStoredRange.current) return;
-
-        const editor = quillRef.current?.getEditor?.();
-        if (!editor || typeof editor.setSelection !== 'function') return;
-
-        try {
-            editor.setSelection(tmpStoredRange.current as any, 'silent');
-            tmpStoredRange.current = null;
-        } catch {
-            // noop
-        }
+        runRestoreStoredRangeEffect({
+            fullscreen,
+            showHtml,
+            getEditor: () => quillRef.current?.getEditor?.(),
+            tmpStoredRange,
+        });
     }, [fullscreen, showHtml]);
 
     const ensureQuillContent = useCallback(() => {
@@ -634,25 +615,13 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     );
 
     useEffect(() => {
-        if (!isWeb || !win) return;
-        if (showHtml) return;
-        if (!shouldLoadQuill) return;
-
-        const raf = (win as any)?.requestAnimationFrame?.(() => {
-            try {
-                ensureQuillContent();
-            } catch {
-                // noop
-            }
-        }) ?? 0;
-
-        return () => {
-            try {
-                (win as any)?.cancelAnimationFrame?.(raf);
-            } catch {
-                // noop
-            }
-        };
+        return runEnsureQuillContentEffect({
+            isWeb,
+            windowObject: win,
+            showHtml,
+            shouldLoadQuill,
+            ensureQuillContent,
+        });
     }, [ensureQuillContent, shouldLoadQuill, showHtml]);
 
     useLayoutEffect(() => {

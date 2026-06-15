@@ -305,6 +305,115 @@ export function runInitialForceSyncEffect({
   }
 }
 
+export function attachEditorFocusOutFlush({
+  isWeb,
+  windowObject,
+  getViewport,
+  flush,
+}: {
+  isWeb: boolean
+  windowObject: (Window & typeof globalThis) | undefined
+  getViewport: () => HTMLElement | undefined
+  flush: () => void
+}): (() => void) | undefined {
+  if (!isWeb || !windowObject) return
+  const viewport = getViewport()
+  if (!viewport || typeof viewport.addEventListener !== 'function') return
+  const handleFocusOut = () => {
+    flush()
+  }
+  viewport.addEventListener('focusout', handleFocusOut)
+  return () => {
+    viewport.removeEventListener('focusout', handleFocusOut)
+  }
+}
+
+export function runPendingDroppedImageEffect({
+  shouldLoadQuill,
+  getEditor,
+  pendingDroppedImageRef,
+  processingPendingDroppedImageRef,
+  uploadAndInsert,
+}: {
+  shouldLoadQuill: boolean
+  getEditor: () => any
+  pendingDroppedImageRef: { current: File | null }
+  processingPendingDroppedImageRef: { current: boolean }
+  uploadAndInsert: (file: File) => Promise<void>
+}): void {
+  if (!shouldLoadQuill) return
+  if (!pendingDroppedImageRef.current) return
+  if (processingPendingDroppedImageRef.current) return
+  if (!getEditor()) return
+
+  const file = pendingDroppedImageRef.current
+  pendingDroppedImageRef.current = null
+  processingPendingDroppedImageRef.current = true
+
+  void uploadAndInsert(file).finally(() => {
+    processingPendingDroppedImageRef.current = false
+  })
+}
+
+export function runRestoreStoredRangeEffect({
+  fullscreen,
+  showHtml,
+  getEditor,
+  tmpStoredRange,
+}: {
+  fullscreen: boolean
+  showHtml: boolean
+  getEditor: () => any
+  tmpStoredRange: { current: { index: number; length: number } | null }
+}): void {
+  if (fullscreen || showHtml) return
+  if (!tmpStoredRange.current) return
+
+  const editor = getEditor()
+  if (!editor || typeof editor.setSelection !== 'function') return
+
+  try {
+    editor.setSelection(tmpStoredRange.current as any, 'silent')
+    tmpStoredRange.current = null
+  } catch {
+    // noop
+  }
+}
+
+export function runEnsureQuillContentEffect({
+  isWeb,
+  windowObject,
+  showHtml,
+  shouldLoadQuill,
+  ensureQuillContent,
+}: {
+  isWeb: boolean
+  windowObject: (Window & typeof globalThis) | undefined
+  showHtml: boolean
+  shouldLoadQuill: boolean
+  ensureQuillContent: () => void
+}): (() => void) | undefined {
+  if (!isWeb || !windowObject) return
+  if (showHtml) return
+  if (!shouldLoadQuill) return
+
+  const raf = (windowObject as any)?.requestAnimationFrame?.(() => {
+    try {
+      ensureQuillContent()
+    } catch {
+      // noop
+    }
+  }) ?? 0
+
+  return () => {
+    try {
+      (windowObject as any)?.cancelAnimationFrame?.(raf)
+    } catch {
+      // noop
+    }
+  }
+}
+
 export function runAutosaveEffect({
   html,
   onAutosave,

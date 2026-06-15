@@ -38,7 +38,8 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
 
         /* ---- Left Sidebar (Premium, atmospheric) ---- */
         sidebar: {
-            flex: 1,
+            flexGrow: isMobileW ? 1 : 0,
+            flexBasis: isMobileW ? 'auto' : SIDEBAR_WIDTH,
             width: isMobileW ? '100%' : SIDEBAR_WIDTH,
             flexShrink: 0,
             flexDirection: 'column',
