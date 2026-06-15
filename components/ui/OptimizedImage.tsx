@@ -109,6 +109,13 @@ interface OptimizedImageProps {
   source: { uri: string } | number;
   contentFit?: ImageContentFit;
   blurBackground?: boolean;
+  /**
+   * Native-only: smaller image variant used for the blurred backdrop layer so
+   * Glide decodes a downscaled bitmap (and applies the blur transform on far
+   * fewer pixels) instead of re-decoding the full-resolution photo a second
+   * time. Falls back to the main source when omitted.
+   */
+  blurSource?: { uri: string };
   blurBackgroundRadius?: number;
   blurOnly?: boolean;
   aspectRatio?: number;
@@ -167,6 +174,7 @@ function OptimizedImage({
   source,
   contentFit = 'cover',
   blurBackground = false,
+  blurSource,
   blurBackgroundRadius = 16,
   blurOnly = false,
   aspectRatio,
@@ -406,7 +414,7 @@ function OptimizedImage({
       {shouldRenderBlurBackground && (
         <>
           <ExpoImage
-            source={activeSource as any}
+            source={(blurSource ?? activeSource) as any}
             contentFit="cover"
             transition={0}
             style={StyleSheet.absoluteFill}

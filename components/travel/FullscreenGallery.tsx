@@ -28,6 +28,8 @@ interface FullscreenGalleryProps {
   onClose: () => void;
 }
 
+type GalleryImage = { url: string; thumbUrl?: string };
+
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 /**
@@ -43,7 +45,31 @@ export default function FullscreenGallery({
 }: FullscreenGalleryProps) {
   const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
-  const flatListRef = useRef<FlatList>(null);
+  const flatListRef = useRef<FlatList<GalleryImage>>(null);
+
+  // Seamless infinite loop: with more than one image, render a clone of the last
+  // image before the first and a clone of the first after the last. A swipe past
+  // either edge lands on a clone and is silently recentered onto the matching real
+  // slide. Raw indices live in [0, n+1]; real indices live in [0, n-1].
+  const loopEnabled = images.length > 1;
+  const data = useMemo<GalleryImage[]>(() => {
+    if (!loopEnabled) return images;
+    return [images[images.length - 1], ...images, images[0]];
+  }, [images, loopEnabled]);
+
+  const toRealIndex = useCallback(
+    (rawIndex: number) => {
+      if (!loopEnabled) return rawIndex;
+      const n = images.length;
+      return ((rawIndex - 1) % n + n) % n;
+    },
+    [loopEnabled, images.length],
+  );
+
+  const toRawIndex = useCallback(
+    (realIndex: number) => (loopEnabled ? realIndex + 1 : realIndex),
+    [loopEnabled],
+  );
 
   // Reset index when gallery opens
   useEffect(() => {
@@ -76,10 +102,10 @@ export default function FullscreenGallery({
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       if (viewableItems.length > 0 && viewableItems[0].index != null) {
-        setCurrentIndex(viewableItems[0].index);
+        setCurrentIndex(toRealIndex(viewableItems[0].index));
       }
     },
-    [],
+    [toRealIndex],
   );
 
   const viewabilityConfig = useMemo(
@@ -87,8 +113,24 @@ export default function FullscreenGallery({
     [],
   );
 
+  const onMomentumScrollEnd = useCallback(
+    (e: { nativeEvent: { contentOffset: { x: number } } }) => {
+      if (!loopEnabled) return;
+      const rawIndex = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+      const n = images.length;
+      if (rawIndex <= 0) {
+        flatListRef.current?.scrollToOffset({ offset: n * SCREEN_WIDTH, animated: false });
+        setCurrentIndex(n - 1);
+      } else if (rawIndex >= n + 1) {
+        flatListRef.current?.scrollToOffset({ offset: SCREEN_WIDTH, animated: false });
+        setCurrentIndex(0);
+      }
+    },
+    [loopEnabled, images.length],
+  );
+
   const renderItem = useCallback(
-    ({ item }: { item: { url: string; thumbUrl?: string } }) => (
+    ({ item }: { item: GalleryImage }) => (
       <View style={styles.slideContainer}>
         <ImageCardMedia
           src={item.url}
@@ -116,6 +158,16 @@ export default function FullscreenGallery({
     [],
   );
 
+  const onScrollToIndexFailed = useCallback(
+    (info: { index: number; averageItemLength: number }) => {
+      flatListRef.current?.scrollToOffset({
+        offset: info.index * (SCREEN_WIDTH || info.averageItemLength),
+        animated: false,
+      });
+    },
+    [],
+  );
+
   // Web: don't render (all hooks already called above)
   if (Platform.OS === 'web') return null;
 
@@ -133,15 +185,17 @@ export default function FullscreenGallery({
         {/* Image gallery */}
         <FlatList
           ref={flatListRef}
-          data={images}
+          data={data}
           renderItem={renderItem}
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
-          initialScrollIndex={initialIndex}
+          initialScrollIndex={toRawIndex(initialIndex)}
           getItemLayout={getItemLayout}
+          onScrollToIndexFailed={onScrollToIndexFailed}
           onViewableItemsChanged={onViewableItemsChanged}
           viewabilityConfig={viewabilityConfig}
+          onMomentumScrollEnd={onMomentumScrollEnd}
           keyExtractor={(_, i) => String(i)}
           bounces={false}
           decelerationRate="fast"

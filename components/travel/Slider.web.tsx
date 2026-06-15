@@ -429,8 +429,12 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     } as any
   }, [fullBleed, isMobile, isTablet])
 
+  // touch-action MUST include pan-x or the engine routes the horizontal gesture
+  // to scrolling and fires pointercancel before the JS drag resolves — that left
+  // the mobile slider unswipeable. `manipulation` (pan-x + pan-y + pinch-zoom)
+  // keeps vertical page scroll and pinch-zoom while letting the drag through.
   const viewportTouchAction = useMemo(
-    () => ({ touchAction: isMobile ? 'pan-y pinch-zoom' : 'pan-x' } as any),
+    () => ({ touchAction: isMobile ? 'manipulation' : 'pan-x' } as any),
     [isMobile],
   )
 

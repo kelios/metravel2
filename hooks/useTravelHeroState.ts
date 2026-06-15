@@ -7,6 +7,7 @@ import {
 } from 'react'
 import { Platform, useWindowDimensions } from 'react-native'
 
+import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe'
 import { useTdTrace } from '@/hooks/useTdTrace'
 import type { Travel } from '@/types/types'
 
@@ -49,6 +50,7 @@ function useHeroMediaModel(
   allowSliderUpgrade: boolean,
 ) {
   const { height: winH } = useWindowDimensions()
+  const insets = useSafeAreaInsets()
   const tdTrace = useTdTrace()
   const [heroContainerWidth, setHeroContainerWidth] = useState<number | null>(
     null,
@@ -90,14 +92,17 @@ function useHeroMediaModel(
       return Math.round(winH * HERO_HEIGHT.webViewportCapRatio)
     }
 
-    // Native mobile: фиксируем слайдер на 70% высоты экрана (Instagram-стиль).
+    // Native mobile: слайдер занимает 70% ВИДИМОЙ высоты (между системными
+    // барами). Под edge-to-edge winH включает status/navigation bar, поэтому
+    // считаем от winH - insets, иначе 0.7*winH визуально выходит больше 70%.
     // Letterbox-поля у landscape-фото заполняет blur-подложка слайда
     // (OptimizedImage рендерит cover+blur копию на native), чёрных полос нет.
+    const visibleH = Math.max(0, winH - insets.top - insets.bottom)
     return Math.max(
       HERO_HEIGHT.mobileMin,
-      Math.round(winH * HERO_HEIGHT.nativeMobileViewportRatio),
+      Math.round(visibleH * HERO_HEIGHT.nativeMobileViewportRatio),
     )
-  }, [winH, isMobile])
+  }, [winH, insets.top, insets.bottom, isMobile])
 
   const heroAlt = travel?.name
     ? `Фотография маршрута «${travel.name}»`

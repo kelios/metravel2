@@ -33,6 +33,8 @@ type Props = {
   borderRadius?: number;
   fit?: 'contain' | 'cover';
   blurBackground?: boolean;
+  /** Native-only: downscaled source for the blurred backdrop layer (cheaper decode). */
+  blurSrc?: string | null;
   blurRadius?: number;
   blurOnly?: boolean;
   quality?: number;
@@ -79,6 +81,7 @@ function ImageCardMedia({
   borderRadius = 12,
   fit = 'contain',
   blurBackground = true,
+  blurSrc,
   blurRadius = 16,
   blurOnly = false,
   quality = 60,
@@ -595,6 +598,9 @@ function ImageCardMedia({
             recyclingKey={recyclingKey}
             contentFit={contentFit}
             blurBackground={Platform.OS === 'web' ? false : blurBackground}
+            blurSource={
+              Platform.OS !== 'web' && blurSrc ? { uri: blurSrc } : undefined
+            }
             blurBackgroundRadius={blurRadius}
             blurOnly={blurOnly}
               borderRadius={borderRadius}

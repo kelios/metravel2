@@ -157,7 +157,7 @@ export const WebMainImage = memo(function WebMainImage({
         borderRadius,
         display: 'block',
         opacity: showImmediately || loaded ? 1 : 0,
-        transition: hasBlurBehind && !showImmediately ? 'opacity 0.2s ease' : 'none',
+        transition: hasBlurBehind && !showImmediately ? 'opacity 0.15s ease-in' : 'none',
         willChange: hasBlurBehind && !showImmediately ? 'opacity' : 'auto',
         contain: 'layout',
       }}

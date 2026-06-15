@@ -1,6 +1,7 @@
-import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, TouchableOpacity, View } from 'react-native';
 import ImageCardMedia, { isIOSSafariUserAgent } from '@/components/ui/ImageCardMedia';
+import { optimizeImageUrl } from '@/utils/imageOptimization';
 import type { SliderImage } from './types';
 import { injectSliderGlobalStyles } from './globalStyles';
 
@@ -162,6 +163,19 @@ const Slide = memo(function Slide({
 
   const mainFit: 'cover' | 'contain' = fit;
   const shouldBlur = blurBackground && (isActive || prepareBlur);
+  // Native-only: feed the blurred backdrop a small (~360px) variant so Glide
+  // decodes a downscaled bitmap and runs the blur transform on far fewer pixels
+  // than the full-resolution photo, instead of decoding the large 70%-height
+  // image a second time. The result is blurred anyway, so detail is irrelevant.
+  const nativeBlurSrc = useMemo(() => {
+    if (Platform.OS === 'web') return null;
+    if (!shouldBlur || !resolvedUri) return null;
+    return optimizeImageUrl(resolvedUri, {
+      width: 360,
+      quality: 35,
+      fit: 'cover',
+    }) ?? resolvedUri;
+  }, [shouldBlur, resolvedUri]);
   const effectiveBlurBackground = shouldBlur;
   const effectiveAllowCriticalWebBlur = shouldBlur && Platform.OS === 'web';
   const shouldRevealOnLoadOnly = isSliderSafari && effectiveAllowCriticalWebBlur;
@@ -314,6 +328,7 @@ const Slide = memo(function Slide({
             height={slideHeightPx}
             fit={mainFit}
             blurBackground={effectiveBlurBackground}
+            blurSrc={nativeBlurSrc}
             blurRadius={12}
             priority={mainPriority as any}
             prefetch={Platform.OS === 'web' ? shouldPreloadAhead : false}

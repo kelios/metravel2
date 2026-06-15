@@ -125,6 +125,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
   const shakeAnim = useRef(new Animated.Value(0)).current
 
   const flip = useRef(new Animated.Value(0)).current
+  const [isFlipping, setIsFlipping] = useState(false)
   const rotation = useMemo(
     () => flip.interpolate({ inputRange: [0, 0.5, 1], outputRange: ['0deg', '180deg', '360deg'] }),
     [flip],
@@ -132,7 +133,11 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
 
   const triggerFlip = useCallback(() => {
     flip.setValue(0)
-    Animated.timing(flip, { toValue: 1, duration: 600, useNativeDriver: SHOULD_USE_NATIVE_DRIVER }).start(() => flip.setValue(0))
+    setIsFlipping(true)
+    Animated.timing(flip, { toValue: 1, duration: 600, useNativeDriver: SHOULD_USE_NATIVE_DRIVER }).start(() => {
+      flip.setValue(0)
+      setIsFlipping(false)
+    })
   }, [flip])
 
   useEffect(() => {
@@ -242,7 +247,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
   }, [onSubmit, onWrongAttempt, shake, step, triggerFlip, value])
 
   return (
-    <Animated.View style={[styles.card, { transform: [{ perspective: 800 }, { rotateY: rotation }] }]}>
+    <Animated.View style={[styles.card, isFlipping && { transform: [{ perspective: 800 }, { rotateY: rotation }] }]}>
       <View style={styles.cardHeader}>
         {step.id !== 'intro' && (
           <View style={[styles.stepNumber, isPassed && styles.stepNumberCompleted]}>

@@ -134,6 +134,33 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
   const fillNative = fillContainer && !isWeb;
   const effectiveContainerH = fillNative && measuredH > 0 ? measuredH : containerH;
 
+  // Seamless infinite loop (native only). When there is more than one image we
+  // render a clone of the last image before the first and a clone of the first
+  // after the last, so a swipe past either edge lands on a clone and is then
+  // silently recentered onto the matching real slide. Raw indices live in
+  // [0, n+1]; real indices live in [0, n-1]. Web keeps its own implementation.
+  const loopEnabled = !isWeb && !isTestEnv && images.length > 1;
+  const loopData = useMemo<SliderImage[]>(() => {
+    if (!loopEnabled) return images;
+    const first = images[0];
+    const last = images[images.length - 1];
+    return [last, ...images, first];
+  }, [images, loopEnabled]);
+
+  const toRealIndex = useCallback(
+    (rawIndex: number) => {
+      if (!loopEnabled) return rawIndex;
+      const n = images.length;
+      return ((rawIndex - 1) % n + n) % n;
+    },
+    [loopEnabled, images.length]
+  );
+
+  const toRawIndex = useCallback(
+    (realIndex: number) => (loopEnabled ? realIndex + 1 : realIndex),
+    [loopEnabled]
+  );
+
   // Shared value for animated dots (native only)
   const x = useSharedValue(0);
 
@@ -254,13 +281,13 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
         }
       } else {
         listRef.current?.scrollToOffset({
-          offset: wrapped * containerW,
+          offset: toRawIndex(wrapped) * containerW,
           animated,
         });
         setActiveIndex(wrapped);
       }
     },
-    [containerW, containerWRef, getScrollNode, images.length, reduceMotion, setActiveIndex, indexRef]
+    [containerW, containerWRef, getScrollNode, images.length, reduceMotion, setActiveIndex, indexRef, toRawIndex]
   );
 
   // Expose methods via ref
@@ -307,9 +334,28 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
   const onMomentumScrollEnd = useCallback(
     (e: any) => {
       const offsetX = e?.nativeEvent?.contentOffset?.x ?? 0;
+      if (loopEnabled) {
+        const liveWidth = containerWRef.current || containerW || 1;
+        const rawIndex = Math.round(offsetX / liveWidth);
+        const n = images.length;
+        if (rawIndex <= 0) {
+          // Clone of the last image — jump to the real last slide.
+          listRef.current?.scrollToOffset({ offset: n * liveWidth, animated: false });
+          setActiveIndex(n - 1);
+          return;
+        }
+        if (rawIndex >= n + 1) {
+          // Clone of the first image — jump to the real first slide.
+          listRef.current?.scrollToOffset({ offset: liveWidth, animated: false });
+          setActiveIndex(0);
+          return;
+        }
+        setActiveIndex(toRealIndex(rawIndex));
+        return;
+      }
       setActiveIndexFromOffset(offsetX);
     },
-    [setActiveIndexFromOffset]
+    [setActiveIndexFromOffset, loopEnabled, containerWRef, containerW, images.length, setActiveIndex, toRealIndex]
   );
 
   // Web scroll handler
@@ -486,7 +532,9 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
     (it: SliderImage, index: number) =>
       isWeb
         ? `${String(it.id)}|${String(it.updated_at ?? '')}|${String(it.url)}|${index}`
-        : String(it.id),
+        : // Native loop clones repeat ids (last/first appear twice), so key by the
+          // raw position to keep every cell uniquely identified.
+          `${String(it.id)}|${index}`,
     []
   );
 
@@ -500,16 +548,28 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
     [containerW]
   );
 
+  // Loop clones can be unmounted when scrollToIndex is requested; fall back to a
+  // direct offset scroll so the recenter jump never throws.
+  const onScrollToIndexFailed = useCallback(
+    (info: { index: number; averageItemLength: number }) => {
+      const liveWidth = containerWRef.current || containerW || info.averageItemLength || 1;
+      listRef.current?.scrollToOffset({ offset: info.index * liveWidth, animated: false });
+    },
+    [containerW, containerWRef]
+  );
+
   // Viewability (native only)
   const setActiveIndexRef = useRef(setActiveIndex);
   setActiveIndexRef.current = setActiveIndex;
+  const toRealIndexRef = useRef(toRealIndex);
+  toRealIndexRef.current = toRealIndex;
 
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: Array<{ index: number | null }> }) => {
       const first = viewableItems.find((v) => v.index != null);
       if (first && typeof first.index === 'number') {
-        const idx = first.index;
-        if (indexRef.current !== idx) setActiveIndexRef.current(idx);
+        const realIdx = toRealIndexRef.current(first.index);
+        if (indexRef.current !== realIdx) setActiveIndexRef.current(realIdx);
       }
     }
   ).current;
@@ -527,7 +587,10 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
   // renderItem for visible cells, and Slide's memo comparator reacts to `isActive`.
   const renderItemNative = useCallback(
     ({ item, index }: { item: SliderImage; index: number }) => {
-      const uri = uriMap[index] ?? item.url;
+      // `index` is the raw FlatList position (includes loop clones). Map to the
+      // real index for URI lookup, active state and neighbor preloading.
+      const realIndex = toRealIndex(index);
+      const uri = uriMap[realIndex] ?? item.url;
       const activeIdx = indexRef.current;
       // Fabric fix: wrap each slide in a View with explicit page dimensions.
       // Without this intermediate sized container, off-screen-mounted slides in
@@ -539,26 +602,27 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
         <View style={{ width: containerW, height: effectiveContainerH }}>
           <Slide
             item={item}
-            index={index}
+            index={realIndex}
             uri={uri}
             containerW={containerW}
             slideHeight={effectiveContainerH}
             imagesLength={images.length}
             styles={styles}
             blurBackground={blurBackground}
-            isActive={index === activeIdx}
+            isActive={realIndex === activeIdx}
             imageProps={imageProps}
             fit={fit}
             onFirstImageLoad={onFirstImageLoad}
             onImagePress={onImagePress}
             firstImagePreloaded={firstImagePreloaded}
-            preloadPriority={Math.abs(index - activeIdx) <= Math.max(1, preloadCount)}
+            preloadPriority={Math.abs(realIndex - activeIdx) <= Math.max(1, preloadCount)}
+            prepareBlur={Math.abs(realIndex - activeIdx) <= 1}
             contentAspectRatio={contentAspectRatio ?? aspectRatio}
           />
         </View>
       );
     },
-    [uriMap, containerW, effectiveContainerH, images.length, styles, blurBackground, indexRef, imageProps, fit, onFirstImageLoad, onImagePress, firstImagePreloaded, preloadCount, contentAspectRatio, aspectRatio]
+    [toRealIndex, uriMap, containerW, effectiveContainerH, images.length, styles, blurBackground, indexRef, imageProps, fit, onFirstImageLoad, onImagePress, firstImagePreloaded, preloadCount, contentAspectRatio, aspectRatio]
   );
 
   if (!images.length) return null;
@@ -613,6 +677,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
                     onImagePress={onImagePress}
                     firstImagePreloaded={firstImagePreloaded}
                     preloadPriority={Math.abs(index - currentIndex) <= Math.max(1, preloadCount)}
+                    prepareBlur={Math.abs(index - currentIndex) <= 1}
                     contentAspectRatio={contentAspectRatio ?? aspectRatio}
                   />
                 </View>
@@ -628,7 +693,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
       <View style={[styles.clip, isMobile && styles.clipMobile]}>
         <Animated.FlatList
           ref={listRef}
-          data={images}
+          data={loopData}
           keyExtractor={keyExtractor}
           horizontal
           pagingEnabled
@@ -637,9 +702,9 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
           scrollEventThrottle={16}
           renderItem={renderItemNative}
           extraData={currentIndex}
-          initialNumToRender={isTestEnv ? images.length : 2}
-          windowSize={isTestEnv ? images.length : isMobile ? 3 : 5}
-          maxToRenderPerBatch={isTestEnv ? images.length : 3}
+          initialNumToRender={isTestEnv ? loopData.length : 2}
+          windowSize={isTestEnv ? loopData.length : isMobile ? 3 : 5}
+          maxToRenderPerBatch={isTestEnv ? loopData.length : 3}
           disableVirtualization={isTestEnv}
           maintainVisibleContentPosition={Platform.OS === 'ios' ? undefined : { minIndexForVisible: 0 }}
           disableIntervalMomentum
@@ -648,7 +713,8 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
           decelerationRate={Platform.OS === 'ios' ? 'fast' : 0.98}
           removeClippedSubviews={true}
           updateCellsBatchingPeriod={isTestEnv ? 0 : 50}
-          initialScrollIndex={isTestEnv ? undefined : indexRef.current || 0}
+          initialScrollIndex={isTestEnv ? undefined : toRawIndex(indexRef.current || 0)}
+          onScrollToIndexFailed={onScrollToIndexFailed}
           onScrollBeginDrag={() => {
             pauseAutoplay();
             dismissSwipeHint();

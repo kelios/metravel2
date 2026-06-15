@@ -36,9 +36,12 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             minHeight: 0,
             backgroundColor: colors.background,
             flexDirection: isMobileW ? 'column' : 'row',
-            ...Platform.select({
-                web: isMobileW ? {} : { minHeight: '100vh' } as any,
-            }),
+            // На десктоп-вебе НЕ ставим minHeight:100vh: root живёт во flex-
+            // родителе высотой (вьюпорт − navbar), а 100vh перекрывает клип
+            // overflow:hidden оболочки приложения, и низ скролл-колонки content
+            // (с последним рядом карточек) уходит за границу клипа. flex:1 +
+            // minHeight:0 заполняют родителя ровно по высоте → скролл доходит
+            // до конца. На мобильном вебе скроллит сама страница (body).
         },
 
         /* ---- Left Sidebar (Premium, atmospheric) ---- */
