@@ -25,6 +25,7 @@ const HERO_HEIGHT = {
   mobileMin: 260,
   mobileViewportRatio: 0.56,
   mobileMaxHeight: 420,
+  nativeMobileViewportRatio: 0.7,
   webMobileViewportRatio: 0.56,
   webMobileMaxHeight: 520,
   webViewportCapRatio: 0.7,
@@ -47,7 +48,7 @@ function useHeroMediaModel(
   onFirstImageLoad: () => void,
   allowSliderUpgrade: boolean,
 ) {
-  const { width: winW, height: winH } = useWindowDimensions()
+  const { height: winH } = useWindowDimensions()
   const tdTrace = useTdTrace()
   const [heroContainerWidth, setHeroContainerWidth] = useState<number | null>(
     null,
@@ -72,7 +73,6 @@ function useHeroMediaModel(
     (firstImg?.width && firstImg?.height
       ? firstImg.width / firstImg.height
       : undefined) || 16 / 9
-  const resolvedWidth = heroContainerWidth ?? winW
   const heroHeight = useMemo(() => {
     if (Platform.OS === 'web') {
       if (isMobile) {
@@ -90,20 +90,14 @@ function useHeroMediaModel(
       return Math.round(winH * HERO_HEIGHT.webViewportCapRatio)
     }
 
-    // Native mobile: track the photo's natural aspect height so the contained
-    // image fills the hero edge-to-edge. Inflating to a viewport ratio (the old
-    // max(arHeight, viewportPreferred)) made the hero taller than a landscape
-    // photo, leaving letterbox bars above/below it that read as a black gap on
-    // Android (the blur backdrop doesn't paint there natively).
-    const arHeight = resolvedWidth
-      ? Math.round(resolvedWidth / aspectRatio)
-      : Math.round(winH * HERO_HEIGHT.mobileViewportRatio)
-
+    // Native mobile: фиксируем слайдер на 70% высоты экрана (Instagram-стиль).
+    // Letterbox-поля у landscape-фото заполняет blur-подложка слайда
+    // (OptimizedImage рендерит cover+blur копию на native), чёрных полос нет.
     return Math.max(
       HERO_HEIGHT.mobileMin,
-      Math.min(arHeight, HERO_HEIGHT.mobileMaxHeight),
+      Math.round(winH * HERO_HEIGHT.nativeMobileViewportRatio),
     )
-  }, [winH, resolvedWidth, aspectRatio, isMobile])
+  }, [winH, isMobile])
 
   const heroAlt = travel?.name
     ? `Фотография маршрута «${travel.name}»`

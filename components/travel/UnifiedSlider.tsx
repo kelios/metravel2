@@ -519,10 +519,16 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
     minimumViewTime: 80,
   }).current;
 
-  // Render item for native FlatList
+  // Render item for native FlatList.
+  // NOTE: deps intentionally exclude `currentIndex`. Reading it through
+  // `indexRef.current` keeps the renderItem identity stable across swipes, so the
+  // FlatList does not re-create every mounted cell on each page change. The active
+  // slide still re-renders because `extraData={currentIndex}` on the list re-runs
+  // renderItem for visible cells, and Slide's memo comparator reacts to `isActive`.
   const renderItemNative = useCallback(
     ({ item, index }: { item: SliderImage; index: number }) => {
       const uri = uriMap[index] ?? item.url;
+      const activeIdx = indexRef.current;
       // Fabric fix: wrap each slide in a View with explicit page dimensions.
       // Without this intermediate sized container, off-screen-mounted slides in
       // the horizontal paging FlatList don't receive a correct layout pass when
@@ -540,19 +546,19 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
             imagesLength={images.length}
             styles={styles}
             blurBackground={blurBackground}
-            isActive={index === currentIndex}
+            isActive={index === activeIdx}
             imageProps={imageProps}
             fit={fit}
             onFirstImageLoad={onFirstImageLoad}
             onImagePress={onImagePress}
             firstImagePreloaded={firstImagePreloaded}
-            preloadPriority={Math.abs(index - currentIndex) <= Math.max(1, preloadCount)}
+            preloadPriority={Math.abs(index - activeIdx) <= Math.max(1, preloadCount)}
             contentAspectRatio={contentAspectRatio ?? aspectRatio}
           />
         </View>
       );
     },
-    [uriMap, containerW, effectiveContainerH, images.length, styles, blurBackground, currentIndex, imageProps, fit, onFirstImageLoad, onImagePress, firstImagePreloaded, preloadCount, contentAspectRatio, aspectRatio]
+    [uriMap, containerW, effectiveContainerH, images.length, styles, blurBackground, indexRef, imageProps, fit, onFirstImageLoad, onImagePress, firstImagePreloaded, preloadCount, contentAspectRatio, aspectRatio]
   );
 
   if (!images.length) return null;
@@ -630,8 +636,9 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
           onScroll={onScroll}
           scrollEventThrottle={16}
           renderItem={renderItemNative}
+          extraData={currentIndex}
           initialNumToRender={isTestEnv ? images.length : 2}
-          windowSize={isTestEnv ? images.length : 5}
+          windowSize={isTestEnv ? images.length : isMobile ? 3 : 5}
           maxToRenderPerBatch={isTestEnv ? images.length : 3}
           disableVirtualization={isTestEnv}
           maintainVisibleContentPosition={Platform.OS === 'ios' ? undefined : { minIndexForVisible: 0 }}
