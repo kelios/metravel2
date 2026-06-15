@@ -5,7 +5,7 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
     header: {
         backgroundColor: colors.surface,
         paddingHorizontal: isMobile ? SPACING.md : SPACING.lg,
-        paddingTop: isMobile ? SPACING.sm : SPACING.sm,
+        paddingTop: isMobile ? SPACING.xs : SPACING.sm,
         paddingBottom: isMobile ? SPACING.xs : SPACING.xs,
         borderBottomWidth: 0,
         ...Platform.select({
@@ -27,7 +27,7 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
     },
     headerRowMobile: {
         alignItems: 'center',
-        marginBottom: SPACING.xs,
+        marginBottom: 0,
     },
     headerIdentity: {
         flex: 1,

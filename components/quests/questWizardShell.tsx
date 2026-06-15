@@ -271,7 +271,9 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
     <View style={styles.header}>
       <View style={[styles.headerRow, isMobile && styles.headerRowMobile]}>
         <View style={styles.headerIdentity}>
-          <Text style={[styles.title, isMobile && styles.titleMobile]} numberOfLines={1}>{title}</Text>
+          {!isMobile && (
+            <Text style={styles.title} numberOfLines={1}>{title}</Text>
+          )}
         </View>
         <View style={styles.headerActionRow}>
           {Platform.OS === 'web' && (

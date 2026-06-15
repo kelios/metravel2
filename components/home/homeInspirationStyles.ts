@@ -112,20 +112,20 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
     textTransform: 'uppercase',
   },
   heroTitle: {
-    fontSize: isMobile ? 30 : 52,
+    fontSize: isMobile ? 28 : 40,
     fontWeight: '800',
     color: colors.text,
     textAlign: 'center',
-    letterSpacing: isMobile ? -0.8 : -1.5,
-    lineHeight: isMobile ? 36 : 60,
+    letterSpacing: isMobile ? -0.7 : -1.2,
+    lineHeight: isMobile ? 34 : 48,
   },
   heroTitleAccent: {
-    fontSize: isMobile ? 30 : 52,
+    fontSize: isMobile ? 28 : 40,
     fontWeight: '800',
     color: colors.brand,
     textAlign: 'center',
-    letterSpacing: isMobile ? -0.8 : -1.5,
-    lineHeight: isMobile ? 36 : 60,
+    letterSpacing: isMobile ? -0.7 : -1.2,
+    lineHeight: isMobile ? 34 : 48,
     ...Platform.select({
       web: {
         backgroundImage: `linear-gradient(135deg, ${colors.brand} 0%, ${colors.primary} 100%)`,

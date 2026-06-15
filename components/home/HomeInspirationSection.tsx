@@ -51,11 +51,6 @@ const SECTION_BADGES: Record<string, string> = {
   'home-popular-travels': 'Популярное',
 }
 
-const SECTION_META: Record<string, string> = {
-  'home-travels-of-month': '1-2 дня',
-  'home-popular-travels': 'По интересу',
-}
-
 function extractItems(data: any): any[] {
   if (Array.isArray(data)) return data
   if (data?.data && Array.isArray(data.data)) return data.data
@@ -125,26 +120,6 @@ function buildEmptyPillTextStyle(colors: ThemedColors) {
   }
 }
 
-function buildMetaPillStyle(colors: ThemedColors) {
-  return {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: DESIGN_TOKENS.radii.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  } as const
-}
-
-function buildMetaPillTextStyle(colors: ThemedColors) {
-  return {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: '600' as const,
-    letterSpacing: 0.1,
-  }
-}
-
 export function HomeInspirationSection({
   title,
   titleAccent,
@@ -203,7 +178,6 @@ export function HomeInspirationSection({
     subtitle: 'Попробуйте открыть каталог маршрутов.',
   }
   const sectionBadge = SECTION_BADGES[queryKey]
-  const sectionMeta = SECTION_META[queryKey]
 
   const styles = useMemo(() => createSectionStyles(colors, isMobile), [colors, isMobile])
   const isDesktopEditorial = IS_WEB && !isMobile
@@ -302,11 +276,6 @@ export function HomeInspirationSection({
             {titleAccent && <Text style={styles.heroTitleAccent}>{titleAccent}</Text>}
           </View>
           {subtitle && <Text style={styles.heroSubtitle}>{subtitle}</Text>}
-          {sectionMeta && (
-            <View style={buildMetaPillStyle(colors)}>
-              <Text style={buildMetaPillTextStyle(colors)}>{sectionMeta}</Text>
-            </View>
-          )}
         </View>
 
         {travelsList.length === 0 ? (

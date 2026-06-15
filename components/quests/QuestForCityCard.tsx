@@ -70,7 +70,7 @@ export function QuestForCityCard({ quest, eyebrow = 'Городской квес
         (pressed || hovered) && styles.cardHover,
       ]}
       accessibilityRole="link"
-      accessibilityLabel={`Пройти квест: ${quest.title}`}
+      accessibilityLabel={`Пройти квест ${cityLabel}: ${quest.title}`}
     >
       <View style={styles.media}>
         <ImageCardMedia
@@ -88,12 +88,9 @@ export function QuestForCityCard({ quest, eyebrow = 'Городской квес
       </View>
 
       <View style={styles.body}>
-        <View style={styles.eyebrowRow}>
-          <Feather name="flag" size={12} color={colors.primary ?? '#f5842c'} />
-          <Text style={styles.eyebrow} numberOfLines={1}>
-            {eyebrow}
-          </Text>
-        </View>
+        <Text style={styles.eyebrow} numberOfLines={1}>
+          {eyebrow}
+        </Text>
         <Text
           style={styles.title}
           numberOfLines={2}
@@ -104,22 +101,23 @@ export function QuestForCityCard({ quest, eyebrow = 'Городской квес
         </Text>
         {chips.length > 0 && (
           <View style={styles.chipRow}>
-            {chips.map((chip) => (
-              <View key={chip.key} style={styles.chip}>
-                <Feather name={chip.icon} size={12} color={colors.primary ?? '#f5842c'} />
-                <Text style={styles.chipText} numberOfLines={1}>
-                  {chip.label}
-                </Text>
-              </View>
+            {chips.map((chip, i) => (
+              <React.Fragment key={chip.key}>
+                {i > 0 && <View style={styles.dot} />}
+                <View style={styles.chip}>
+                  <Feather name={chip.icon} size={13} color={colors.textMuted ?? '#6b7280'} />
+                  <Text style={styles.chipText} numberOfLines={1}>
+                    {chip.label}
+                  </Text>
+                </View>
+              </React.Fragment>
             ))}
           </View>
         )}
-        <View style={styles.cta}>
-          <Text style={styles.ctaText} numberOfLines={1}>
-            {`Пройти квест ${cityLabel}`}
-          </Text>
-          <Feather name="arrow-right" size={15} color={colors.primaryText ?? '#fff'} />
-        </View>
+      </View>
+
+      <View style={styles.arrow}>
+        <Feather name="arrow-right" size={18} color={colors.primary ?? '#f5842c'} />
       </View>
     </Pressable>
   )
@@ -129,98 +127,90 @@ function createStyles(colors: ThemedColors) {
   return StyleSheet.create({
     card: {
       flexDirection: 'row',
-      alignItems: 'stretch',
-      minHeight: CARD_MEDIA_SIZE,
-      borderRadius: 16,
+      alignItems: 'center',
+      padding: 10,
+      gap: 14,
+      borderRadius: 18,
       overflow: 'hidden',
-      backgroundColor: colors.primarySoft ?? colors.surface ?? '#fff',
+      backgroundColor: colors.surface ?? '#fff',
       borderWidth: 1,
-      borderColor: colors.primaryAlpha30 ?? colors.border ?? 'rgba(0,0,0,0.08)',
-      borderLeftWidth: 4,
-      borderLeftColor: colors.primary ?? '#f5842c',
+      borderColor: colors.border ?? 'rgba(0,0,0,0.07)',
       ...(Platform.OS === 'web'
         ? {
             cursor: 'pointer',
-            transition: 'border-color 0.18s ease, box-shadow 0.18s ease',
+            transition: 'border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease',
           }
         : null),
     },
     cardHover: {
-      borderColor: colors.primaryAlpha40 ?? colors.primary ?? 'rgba(0,0,0,0.12)',
+      borderColor: colors.primaryAlpha30 ?? 'rgba(245,132,44,0.30)',
       ...Platform.select({
-        web: { boxShadow: '0 6px 18px rgba(15, 23, 42, 0.1)' } as any,
+        web: {
+          boxShadow: '0 10px 28px rgba(15, 23, 42, 0.12)',
+          transform: 'translateY(-2px)',
+        } as any,
       }),
     },
     media: {
       width: CARD_MEDIA_SIZE,
       height: CARD_MEDIA_SIZE,
       flexShrink: 0,
-      backgroundColor: colors.border ?? 'rgba(0,0,0,0.06)',
+      borderRadius: 12,
+      overflow: 'hidden',
+      backgroundColor: colors.surfaceMuted ?? colors.border ?? 'rgba(0,0,0,0.06)',
     },
     image: { width: '100%', height: '100%' },
-    eyebrowRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-    },
     body: {
       flex: 1,
       minWidth: 0,
-      paddingVertical: 14,
-      paddingHorizontal: 16,
       justifyContent: 'center',
-      gap: 4,
+      gap: 6,
     },
     eyebrow: {
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '700',
-      letterSpacing: 1,
+      letterSpacing: 0.6,
       textTransform: 'uppercase',
-      color: colors.primary ?? '#f5842c',
+      color: colors.textMuted ?? '#6b7280',
     },
     title: {
-      fontSize: 17,
+      fontSize: 18,
       fontWeight: '700',
       color: colors.text ?? '#1a1a1a',
-      lineHeight: 22,
+      lineHeight: 23,
     },
     chipRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 6,
+      alignItems: 'center',
+      gap: 8,
       marginTop: 2,
     },
     chip: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
-      paddingVertical: 3,
-      paddingHorizontal: 8,
-      borderRadius: 999,
-      backgroundColor: colors.surface ?? '#fff',
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.primaryAlpha30 ?? colors.border ?? 'rgba(0,0,0,0.08)',
+      gap: 5,
     },
     chipText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: colors.text ?? '#1a1a1a',
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.textMuted ?? '#6b7280',
     },
-    cta: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      alignSelf: 'flex-start',
-      gap: 6,
-      marginTop: 8,
-      paddingVertical: 7,
-      paddingHorizontal: 14,
+    dot: {
+      width: 3,
+      height: 3,
       borderRadius: 999,
-      backgroundColor: colors.primary ?? '#f5842c',
+      backgroundColor: colors.textMuted ?? '#9ca3af',
+      opacity: 0.6,
     },
-    ctaText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: colors.primaryText ?? '#fff',
+    arrow: {
+      width: 40,
+      height: 40,
+      flexShrink: 0,
+      borderRadius: 999,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primarySoft ?? 'rgba(245,132,44,0.10)',
     },
   })
 }

@@ -36,10 +36,6 @@ function HomeQuestsPromoSection() {
     <View style={[styles.band, isMobile && styles.bandMobile]}>
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={styles.header}>
-          <View style={styles.badge}>
-            <Feather name="map" size={13} color={colors.primary} />
-            <Text style={styles.badgeText}>Городские квесты</Text>
-          </View>
           <View
             style={styles.titleWrap}
             accessibilityRole="header"
@@ -94,24 +90,6 @@ function createStyles(colors: ThemedColors, isMobile: boolean) {
       alignItems: 'center',
       gap: isMobile ? 6 : 10,
       marginBottom: isMobile ? 20 : 32,
-    },
-    badge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 999,
-      backgroundColor: colors.primarySoft ?? 'rgba(245,132,44,0.10)',
-      borderWidth: 1,
-      borderColor: colors.primaryAlpha30 ?? 'rgba(245,132,44,0.30)',
-    },
-    badgeText: {
-      color: colors.primaryText ?? colors.primary ?? '#f5842c',
-      fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 0.8,
-      textTransform: 'uppercase',
     },
     titleWrap: {
       alignItems: 'center',

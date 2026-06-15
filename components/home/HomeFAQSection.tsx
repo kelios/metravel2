@@ -23,12 +23,6 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 type FaqItem = { q: string; a: string }
 
-const FAQ_HIGHLIGHTS = [
-  'Маршруты можно смотреть без регистрации',
-  'Личные поездки остаются приватными',
-  'PDF готовится за пару минут',
-] as const
-
 const FAQ_ITEMS: readonly FaqItem[] = [
   {
     q: 'Это бесплатно?',
@@ -160,13 +154,6 @@ function HomeFAQSection() {
             Всё, что нужно знать
           </Text>
           <Text style={styles.subtitle}>Ответы на самые частые вопросы о сервисе</Text>
-          <View style={styles.highlightsRow}>
-            {FAQ_HIGHLIGHTS.map((highlight) => (
-              <View key={highlight} style={styles.highlightPill}>
-                <Text style={styles.highlightPillText}>{highlight}</Text>
-              </View>
-            ))}
-          </View>
         </View>
 
         <View style={styles.inner}>
@@ -241,29 +228,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: bool
       color: colors.textMuted,
       textAlign: 'center',
       maxWidth: 440,
-      letterSpacing: 0.1,
-    },
-    highlightsRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'center',
-      gap: 10,
-      marginTop: 6,
-      maxWidth: 760,
-    },
-    highlightPill: {
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      ...Platform.select({ web: { boxShadow: DESIGN_TOKENS.shadows.light as any } }),
-    },
-    highlightPillText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.text,
       letterSpacing: 0.1,
     },
     list: { gap: isMobile ? 8 : 10 },

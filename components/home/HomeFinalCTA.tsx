@@ -24,22 +24,10 @@ const TRUST_BADGES = [
   { icon: 'zap', label: 'Мгновенно' },
 ] as const
 
-const CTA_FEATURES = [
-  { icon: 'bookmark', label: 'Сохраняйте идеи в один список' },
-  { icon: 'file-text', label: 'Собирайте PDF без ручной вёрстки' },
-  { icon: 'send', label: 'Делитесь книгой одной ссылкой' },
-] as const
-
 function getCtaState(isAuthenticated: boolean, travelsCount: number): CtaState {
   if (!isAuthenticated) return 'guest'
   if (travelsCount === 0) return 'empty'
   return 'started'
-}
-
-function pluralizeTravels(count: number) {
-  if (count === 1) return 'поездка в книге'
-  if (count < 5) return 'поездки в книге'
-  return 'поездок в книге'
 }
 
 const CTA_COPY: Record<CtaState, { eyebrow: string; button: string; subtitle: string }> = {
@@ -63,21 +51,6 @@ const CTA_COPY: Record<CtaState, { eyebrow: string; button: string; subtitle: st
   },
 }
 
-function getStatusPills(state: CtaState, travelsCount: number): string[] {
-  switch (state) {
-    case 'guest':
-      return ['Без оплаты', 'Регистрация за минуту', 'PDF после первых поездок']
-    case 'empty':
-      return ['Начните с одной поездки', 'Фото и заметки внутри', 'Экспорт готов позже']
-    case 'started':
-      return [
-        `${travelsCount} ${pluralizeTravels(travelsCount)}`,
-        'Добавляйте новые главы',
-        'Экспорт в PDF готов',
-      ]
-  }
-}
-
 function getNextPath(state: CtaState) {
   if (state === 'guest') return buildLoginHref({ redirect: '/', intent: 'create-book' })
   if (state === 'empty') return '/travel/new'
@@ -93,10 +66,6 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
 
   const ctaState = getCtaState(isAuthenticated, travelsCount)
   const copy = CTA_COPY[ctaState]
-  const statusPills = useMemo(
-    () => getStatusPills(ctaState, travelsCount),
-    [ctaState, travelsCount],
-  )
 
   const handleAction = () => {
     sendAnalyticsEvent('HomeClick_FinalCTA')
@@ -148,30 +117,6 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
           </View>
 
           <Text style={styles.subtitle}>{copy.subtitle}</Text>
-
-          <View style={styles.statusPills}>
-            {statusPills.map((item) => (
-              <View key={item} style={styles.statusPill}>
-                <Text style={styles.statusPillText}>{item}</Text>
-              </View>
-            ))}
-          </View>
-
-          <View style={styles.featuresGrid} accessibilityRole="list">
-            {CTA_FEATURES.map((feature) => (
-              <View key={feature.label} style={styles.featureCard} {...(Platform.OS === 'web' ? ({ role: 'listitem' } as any) : {})}>
-                <View style={styles.featureIcon}>
-                  <Feather
-                    name={feature.icon as any}
-                    size={16}
-                    color={colors.primary}
-                    {...({ 'aria-hidden': true, focusable: false } as any)}
-                  />
-                </View>
-                <Text style={styles.featureText}>{feature.label}</Text>
-              </View>
-            ))}
-          </View>
 
           <View style={styles.buttonsContainer}>
             <Button
@@ -279,28 +224,6 @@ const createStyles = (colors: ThemedColors, isMobile: boolean) =>
       letterSpacing: 0.8,
       textTransform: 'uppercase',
     },
-    statusPills: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'center',
-      gap: 10,
-      maxWidth: 620,
-    },
-    statusPill: {
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      ...Platform.select({ web: { boxShadow: DESIGN_TOKENS.shadows.light as any } }),
-    },
-    statusPillText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.text,
-      letterSpacing: 0.1,
-    },
     iconWrap: {
       width: isMobile ? 64 : 76,
       height: isMobile ? 64 : 76,
@@ -317,20 +240,20 @@ const createStyles = (colors: ThemedColors, isMobile: boolean) =>
     },
     titleRow: { alignItems: 'center', gap: 2 },
     title: {
-      fontSize: isMobile ? 28 : 48,
+      fontSize: isMobile ? 26 : 38,
       fontWeight: '800',
       color: colors.text,
       textAlign: 'center',
-      letterSpacing: -1.4,
-      lineHeight: isMobile ? 34 : 58,
+      letterSpacing: -1.1,
+      lineHeight: isMobile ? 32 : 46,
     },
     titleAccent: {
-      fontSize: isMobile ? 28 : 48,
+      fontSize: isMobile ? 26 : 38,
       fontWeight: '800',
       color: colors.primary,
       textAlign: 'center',
-      letterSpacing: -1.4,
-      lineHeight: isMobile ? 34 : 58,
+      letterSpacing: -1.1,
+      lineHeight: isMobile ? 32 : 46,
     },
     subtitle: {
       fontSize: isMobile ? 14 : 17,
@@ -340,48 +263,6 @@ const createStyles = (colors: ThemedColors, isMobile: boolean) =>
       maxWidth: 560,
       fontWeight: '400',
       letterSpacing: 0.1,
-    },
-    featuresGrid: {
-      width: '100%',
-      flexDirection: isMobile ? 'column' : 'row',
-      gap: 12,
-    },
-    featureCard: {
-      flex: 1,
-      minHeight: isMobile ? 68 : 88,
-      borderRadius: DESIGN_TOKENS.radii.lg,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.surface,
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: 12,
-      ...Platform.select({
-        web: {
-          boxShadow: '0 4px 18px rgba(0,0,0,0.05)',
-          backgroundImage: `linear-gradient(180deg, ${colors.surface} 0%, ${colors.backgroundSecondary} 100%)`,
-        },
-      }),
-    },
-    featureIcon: {
-      width: 34,
-      height: 34,
-      borderRadius: DESIGN_TOKENS.radii.full,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.primarySoft,
-      borderWidth: 1,
-      borderColor: colors.primaryAlpha30,
-      flexShrink: 0,
-    },
-    featureText: {
-      flex: 1,
-      fontSize: 13,
-      lineHeight: 19,
-      fontWeight: '600',
-      color: colors.text,
     },
     buttonsContainer: {
       flexDirection: isMobile ? 'column' : 'row',

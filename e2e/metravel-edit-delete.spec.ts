@@ -118,7 +118,13 @@ test.describe('Travel edit/delete flow', () => {
       { timeout: 60_000 }
     );
 
-    await nameInput.fill(editedName);
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await nameInput.click({ force: true });
+      await nameInput.press('ControlOrMeta+A');
+      await nameInput.press('Backspace');
+      await nameInput.type(editedName);
+      if ((await nameInput.inputValue()) === editedName) break;
+    }
     await expect(nameInput).toHaveValue(editedName);
 
     await page.getByLabel('Сохранить путешествие').click();

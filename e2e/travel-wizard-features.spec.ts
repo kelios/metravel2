@@ -537,8 +537,9 @@ test.describe('Поиск мест на карте (Location Search)', () => {
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
 
-    await fillMinimumValidBasics(page, 'Тест поиска');
-    await clickNext(page);
+    await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест поиска');
+    // Используем milestone для перехода на шаг 2 (не зависит от валидации описания)
+    await page.click('[aria-label^="Перейти к шагу 2"]');
 
     // Шаг 2: Маршрут путешествия
     await expect(
@@ -571,8 +572,8 @@ test.describe('Поиск мест на карте (Location Search)', () => {
     await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
-    await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест');
-    await page.click('button:has-text("Далее")');
+    await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест пустого поиска');
+    await page.click('[aria-label^="Перейти к шагу 2"]');
 
     // Ждём шаг 2
     await expect(
@@ -590,8 +591,8 @@ test.describe('Поиск мест на карте (Location Search)', () => {
     await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
-    await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест');
-    await page.click('button:has-text("Далее")');
+    await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест индикатора загрузки');
+    await page.click('[aria-label^="Перейти к шагу 2"]');
 
     // Ждём шаг 2
     await expect(
@@ -609,8 +610,8 @@ test.describe('Поиск мест на карте (Location Search)', () => {
     await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
-    await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест');
-    await page.click('button:has-text("Далее")');
+    await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест очистки поиска');
+    await page.click('[aria-label^="Перейти к шагу 2"]');
 
     // Ждём шаг 2
     await expect(
@@ -636,8 +637,13 @@ test.describe('Поиск мест на карте (Location Search)', () => {
     await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
-    await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест');
-    await page.click('button:has-text("Далее")');
+    await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест дебаунса');
+    await page.click('[aria-label^="Перейти к шагу 2"]');
+
+    // Ждём шаг 2
+    await expect(
+      page.getByTestId('travel-wizard.step-route.scroll').or(page.locator('[placeholder*="Поиск места"]')).first()
+    ).toBeVisible({ timeout: 20_000 });
 
     // Быстро вводим текст
     await page.type('[placeholder*="Поиск места"]', 'Тбилиси', { delay: 50 });
@@ -752,7 +758,7 @@ test.describe('Превью карточки (Travel Preview)', () => {
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Со статистикой');
-    await page.click('button:has-text("Далее")');
+    await page.click('[aria-label^="Перейти к шагу 2"]');
 
     // Ждём шаг 2
     await expect(
@@ -790,8 +796,8 @@ test.describe('Группировка параметров (Шаг 5)', () => {
     if (!(await ensureCanCreateTravel(page))) return;
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест группировки');
 
-    // Переходим к шагу 2 (так мы гарантируем, что милестоны уже отрисованы)
-    await page.click('button:has-text("Далее")');
+    // Переходим к шагу 2 через milestone (не зависит от валидации описания)
+    await page.click('[aria-label^="Перейти к шагу 2"]');
     // Ждём шаг 2
     await expect(
       page.getByTestId('travel-wizard.step-route.scroll').or(page.locator('[placeholder*="Поиск места"]')).first()
@@ -830,10 +836,10 @@ test.describe('Группировка параметров (Шаг 5)', () => {
     await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
-    await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест счетчика');
+    await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест счетчика полей');
 
-    // Переходим к шагу 2 (так мы гарантируем, что милестоны уже отрисованы)
-    await page.click('button:has-text("Далее")');
+    // Переходим к шагу 2 через milestone (не зависит от валидации описания)
+    await page.click('[aria-label^="Перейти к шагу 2"]');
     // Ждём шаг 2
     await expect(
       page.getByTestId('travel-wizard.step-route.scroll').or(page.locator('[placeholder*="Поиск места"]')).first()

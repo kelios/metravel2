@@ -350,8 +350,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
-            <SafeAreaView style={styles.container}>
-                <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+                <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
                     {compactDesktopLayout ? (
                         <View style={styles.compactShell}>
                             <QuestCompactSidebar

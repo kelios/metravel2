@@ -37,12 +37,6 @@ const STEPS = [
   },
 ] as const
 
-const VALUE_PILLS = [
-  'Без сложной подготовки',
-  'PDF за пару кликов',
-  'Подходит для спонтанных выездов',
-] as const
-
 const GUEST_ALLOWED_TARGETS = new Set(['/search', '/travelsby', '/map', '/roulette'])
 
 type Step = (typeof STEPS)[number]
@@ -189,13 +183,6 @@ function HomeHowItWorks() {
           <Text style={styles.subtitle}>
             Выберите поездку, добавьте заметки и откройте всё снова, когда это понадобится
           </Text>
-          <View style={styles.valuePills}>
-            {VALUE_PILLS.map((pill) => (
-              <View key={pill} style={styles.valuePill}>
-                <Text style={styles.valuePillText}>{pill}</Text>
-              </View>
-            ))}
-          </View>
         </View>
 
         <View style={styles.stepsContainer}>
@@ -263,12 +250,12 @@ const createStyles = (colors: ThemedColors, isMobile: boolean) =>
       color: colors.textMuted,
     },
     title: {
-      fontSize: isMobile ? 28 : 46,
+      fontSize: isMobile ? 26 : 38,
       fontWeight: '800',
       color: colors.text,
       textAlign: 'center',
-      letterSpacing: isMobile ? -0.7 : -1.4,
-      lineHeight: isMobile ? 34 : 56,
+      letterSpacing: isMobile ? -0.6 : -1.1,
+      lineHeight: isMobile ? 32 : 46,
     },
     subtitle: {
       fontSize: isMobile ? 15 : 18,
@@ -277,27 +264,6 @@ const createStyles = (colors: ThemedColors, isMobile: boolean) =>
       lineHeight: isMobile ? 23 : 28,
       maxWidth: 520,
       letterSpacing: 0.2,
-    },
-    valuePills: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'center',
-      gap: 10,
-      maxWidth: 760,
-    },
-    valuePill: {
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-    },
-    valuePillText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.text,
-      letterSpacing: 0.1,
     },
     stepsContainer: {
       flexDirection: isMobile ? 'column' : 'row',

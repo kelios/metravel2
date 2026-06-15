@@ -225,7 +225,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
       setTimeout(() => {
         onSubmit(trimmed)
         Keyboard.dismiss()
-      }, 520)
+      }, 200)
     } else {
       setError('Неверный ответ')
       onWrongAttempt()

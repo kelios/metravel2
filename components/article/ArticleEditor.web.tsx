@@ -21,6 +21,7 @@ import { sanitizeArticleEditorHtml } from '@/utils/articleEditorSanitize';
 import {
     ARTICLE_EDITOR_CHANGE_DEBOUNCE_MS,
     ARTICLE_EDITOR_DEFAULT_AUTOSAVE_DELAY,
+    normalizeArticleEditorHtmlForOutput,
 } from './articleEditorConfig';
 import {
     handleSurfaceFileDrop as handleEditorSurfaceFileDrop,
@@ -370,6 +371,23 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         fireChangeRef.current = fireChange;
     }, [fireChange]);
 
+    // Commit any pending debounced change to the parent the moment focus leaves
+    // the editor (e.g. clicking "Далее"). focusout fires synchronously before the
+    // target control's click handler, so formData is up to date before navigation
+    // validates the step.
+    useEffect(() => {
+        if (!isWeb || !win) return;
+        const viewport = editorViewportRef.current as HTMLElement | undefined;
+        if (!viewport || typeof viewport.addEventListener !== 'function') return;
+        const handleFocusOut = () => {
+            debouncedParentChangeRaw.flush();
+        };
+        viewport.addEventListener('focusout', handleFocusOut);
+        return () => {
+            viewport.removeEventListener('focusout', handleFocusOut);
+        };
+    }, [debouncedParentChangeRaw, quillMountKey, shouldLoadQuill, showHtml]);
+
     const focusQuill = useCallback(() => {
         focusQuillEditor({
             isWeb,
@@ -379,7 +397,23 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }, [showHtml]);
 
     const getSafeEditorHtml = useCallback(() => {
-        return getSafeEditorHtmlFrom(() => quillRef.current?.getEditor?.());
+        const fromQuillRef = getSafeEditorHtmlFrom(() => quillRef.current?.getEditor?.());
+        if (fromQuillRef.trim().length > 0) return fromQuillRef;
+
+        try {
+            const viewport = editorViewportRef.current as HTMLElement | undefined;
+            const rootFromViewport = viewport?.querySelector?.('.ql-editor') as HTMLElement | null | undefined;
+            const rootFromDocument = isWeb && typeof document !== 'undefined'
+                ? document.querySelector('[data-editor-surface="article-editor"] .ql-editor') as HTMLElement | null
+                : null;
+            const root = rootFromViewport ?? rootFromDocument;
+            const fromDom = normalizeArticleEditorHtmlForOutput(String(root?.innerHTML ?? ''));
+            if (fromDom.trim().length > 0) return fromDom;
+        } catch {
+            // noop
+        }
+
+        return fromQuillRef;
     }, []);
 
     const getCurrentHtml = useCallback(() => {
@@ -544,12 +578,12 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             rememberSelection: rememberSelectionFromEditor,
             showHtml,
             getEditorHtml: getSafeEditorHtml,
-            html,
+            html: htmlRef.current,
             fireChange,
             requestQuillLoad,
             setShowHtml,
         });
-    }, [fireChange, getSafeEditorHtml, html, rememberSelectionFromEditor, requestQuillLoad, showHtml]);
+    }, [fireChange, getSafeEditorHtml, rememberSelectionFromEditor, requestQuillLoad, showHtml]);
 
     const toggleFullscreen = useCallback(() => {
         rememberSelectionFromEditor();

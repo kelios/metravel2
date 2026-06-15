@@ -91,6 +91,12 @@ export function QuestStepDot({
   small = false,
 }: StepDotProps) {
   const smallOverride = small ? { width: 28, height: 28, borderRadius: 14, marginRight: 4 } : undefined
+  // Визуальный размер точки 26–28dp. hitSlop расширяет область нажатия до ~44–48dp:
+  // по вертикали соседей нет — даём 12dp; по горизонтали зазор между точками 3–4dp,
+  // поэтому ограничиваем 9dp, чтобы хит-зоны соседей не перекрывались чрезмерно.
+  const dotHitSlop = small
+    ? { top: 12, bottom: 12, left: 10, right: 10 }
+    : { top: 12, bottom: 12, left: 9, right: 9 }
   return (
     <Pressable
       onPress={onPress}
@@ -102,7 +108,7 @@ export function QuestStepDot({
         !unlocked && styles.stepDotMiniLocked,
         smallOverride,
       ]}
-      hitSlop={small ? 12 : 10}
+      hitSlop={dotHitSlop}
     >
       {isIntro ? (
         <Feather

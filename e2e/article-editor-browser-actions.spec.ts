@@ -120,8 +120,7 @@ async function ensureEditorLoaded(page: Page) {
 async function typeInEditor(page: Page, text: string) {
   const editor = await ensureEditorLoaded(page);
   await editor.click({ force: true });
-  await page.keyboard.press('ControlOrMeta+A').catch(() => null);
-  await page.keyboard.type(text, { delay: 15 });
+  await editor.fill(text);
   await expect.poll(async () => ((await editor.textContent()) || '').trim(), { timeout: 10_000 }).toContain(text);
   return editor;
 }
@@ -147,6 +146,17 @@ async function clickQuillToolbarButton(page: Page, selector: string) {
   await button.evaluate((node: HTMLElement) => node.click());
 }
 
+async function pressVisibleButton(button: ReturnType<Page['getByRole']>) {
+  await expect(button).toBeVisible({ timeout: 10_000 });
+
+  try {
+    await button.click({ force: true });
+    return;
+  } catch {
+    await button.evaluate((node: HTMLElement) => node.click());
+  }
+}
+
 test.describe('ArticleEditor browser actions', () => {
   test.beforeEach(async ({ page }) => {
     await openWizard(page);
@@ -157,12 +167,16 @@ test.describe('ArticleEditor browser actions', () => {
     const text = 'Smoke editor text for html and fullscreen';
     await typeInEditor(page, text);
 
-    const htmlToggle = page.getByRole('button', { name: /показать html-код/i }).first();
-    await htmlToggle.click({ force: true });
-    await expect(page.getByRole('button', { name: /скрыть html-код/i }).first()).toBeVisible({ timeout: 10_000 });
+    const htmlToggle = page.getByRole('button', { name: /показать html-код/i }).last();
+    await pressVisibleButton(htmlToggle);
+    const htmlTextarea = page.locator('textarea').last();
+    if (!(await htmlTextarea.isVisible({ timeout: 1_000 }).catch(() => false))) {
+      await htmlToggle.evaluate((node: HTMLElement) => node.click());
+    }
+    await expect(htmlTextarea).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole('button', { name: /скрыть html-код/i }).last()).toBeVisible({ timeout: 10_000 });
 
-    const richTextToggle = page.getByRole('button', { name: /скрыть html-код/i }).first();
-    await richTextToggle.click({ force: true });
+    await pressVisibleButton(page.getByRole('button', { name: /скрыть html-код/i }).last());
 
     const editor = page.locator('.ql-editor').first();
     await expect(editor).toBeVisible({ timeout: 10_000 });
@@ -181,8 +195,7 @@ test.describe('ArticleEditor browser actions', () => {
   test('opens anchor modal and confirms insertion flow', async ({ page }) => {
     await typeInEditor(page, 'Anchor content');
 
-    const anchorButton = page.getByRole('button', { name: 'Вставить якорь' }).first();
-    await anchorButton.click({ force: true });
+    await pressVisibleButton(page.getByRole('button', { name: 'Вставить якорь' }).last());
 
     const anchorInput = page.getByPlaceholder('day-3').first();
     await expect(anchorInput).toBeVisible({ timeout: 10_000 });

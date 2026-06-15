@@ -1453,9 +1453,11 @@ test.describe('Валидация и ошибки', () => {
     // Не заполняем название, пытаемся перейти дальше
     await clickNext(page);
 
-    // Приложение может перейти на следующий шаг, но обязано показать ошибки по незаполненным полям.
+    // Приложение остается на первом шаге и показывает ошибки по незаполненным обязательным полям.
     await expect(page.locator('text=/\\d+ (ошибка|ошибки)/i')).toBeVisible();
-    await expect(page.locator('text=Маршрут на карте')).toBeVisible();
+    await expect(page.getByText('Название путешествия обязательно для заполнения')).toBeVisible();
+    await expect(page.getByText('Описание обязательно для заполнения')).toBeVisible();
+    await expect(page.getByPlaceholder('Например: Неделя в Грузии')).toBeVisible();
   });
 
   test('должен показать предупреждения на шаге публикации', async ({ page }) => {
