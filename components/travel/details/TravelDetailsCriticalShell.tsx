@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Animated, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -20,10 +20,11 @@ import type { AnchorsMap } from './TravelDetailsTypes';
 import TravelDetailsSkeletonOverlay from './TravelDetailsSkeletonOverlay';
 import TravelDetailsHeroDeferredColumn from './TravelDetailsHeroDeferredColumn';
 
-// Visible semantic <h1> rendered at the top of the content shell. It occupies
-// the same position/typography as the pre-hydration `.ssg-travel-h1` div (which
-// the SSG removal script tears down on hydration), so the page keeps exactly one
-// visible heading without a flash of duplicated text.
+// Visible semantic <h1> rendered at the top of the content shell. The SSG step
+// injects its own sr-only `<h1 data-ssg-travel-h1>` as the first child of #root
+// for crawlers; that node is added after the static export, so React hydration
+// never reconciles it away and it would survive as a duplicate <h1>. We drop it
+// on mount (see effect below) so the page keeps exactly one semantic heading.
 const WEB_VISIBLE_HEADING_STYLE = {
   margin: '0 0 14px',
   font: "700 28px/1.25 'Georgia', 'Times New Roman', 'Inter', serif",
@@ -92,6 +93,15 @@ export default function TravelDetailsCriticalShell({
 }: TravelDetailsCriticalShellProps) {
   const insets = useSafeAreaInsetsSafe();
   const colors = useThemedColors();
+
+  // Remove the SSG-injected sr-only <h1 data-ssg-travel-h1>. It is added to #root
+  // after the static export, so React never owns it during hydration and it would
+  // otherwise persist alongside the visible React <h1>, leaving two H1s in the DOM.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !travel) return;
+    const ssgH1 = document.querySelector('h1[data-ssg-travel-h1]');
+    if (ssgH1?.parentNode) ssgH1.parentNode.removeChild(ssgH1);
+  }, [travel]);
   const showDesktopSidebar = shouldShowTravelDetailsDesktopSidebar(isMobile, screenWidth);
   const showSkeletonOverlay = shouldShowTravelDetailsSkeletonOverlay(travel);
 
