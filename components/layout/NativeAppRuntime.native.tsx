@@ -3,6 +3,7 @@ import { Platform, useColorScheme } from 'react-native';
 
 import { useThemedColors } from '@/hooks/useTheme';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import BiometricGate from '@/components/layout/BiometricGate';
 
 export default function NativeAppRuntime() {
   const colors = useThemedColors();
@@ -25,5 +26,5 @@ export default function NativeAppRuntime() {
     autoRequest: false,
   });
 
-  return null;
+  return <BiometricGate />;
 }
