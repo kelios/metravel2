@@ -1334,7 +1334,7 @@ async function main() {
       title: page.title,
       description: page.description,
       canonical,
-      image: OG_IMAGE,
+      image: page.image ?? OG_IMAGE,
       robots: page.robots,
     });
 
