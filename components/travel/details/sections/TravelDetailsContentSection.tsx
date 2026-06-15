@@ -92,7 +92,7 @@ export const TravelDetailsContentSection: React.FC<{
           {...(Platform.OS === 'web' ? { 'data-section-key': 'description' } : {})}
         >
           <CollapsibleSection
-            title="Описание маршрута"
+            title={travel.name}
             initiallyOpen
             forceOpen={forceOpenKey === 'description'}
             iconName="menu-book"
