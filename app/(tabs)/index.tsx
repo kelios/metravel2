@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Animated, Platform, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Animated, Platform, StyleSheet, Text, View } from 'react-native'
 import { usePathname } from 'expo-router'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
@@ -125,6 +125,7 @@ function HomeScreen() {
                 testID="home-skeleton-layer"
               >
                 <HomePageSkeleton />
+                {!IS_WEB && <SlowLoadHint colors={colors} />}
               </View>
             )}
 
@@ -160,6 +161,54 @@ function ContentLayer({
   }
   return <Animated.View style={[style, { opacity: fadeAnim ?? 1 }]}>{children}</Animated.View>
 }
+
+// Native-only: if the home skeleton stays up longer than SLOW_LOAD_MS, surface a
+// gentle "Загружаем…" hint so a slow device doesn't feel frozen. The component is
+// only mounted while the skeleton layer is shown, so the timer is torn down as
+// soon as content becomes ready.
+const SLOW_LOAD_MS = 4500
+
+const SlowLoadHint = React.memo<{ colors: ReturnType<typeof useThemedColors> }>(({ colors }) => {
+  const [show, setShow] = useState(false)
+  useEffect(() => {
+    const id = setTimeout(() => setShow(true), SLOW_LOAD_MS)
+    return () => clearTimeout(id)
+  }, [])
+
+  if (!show) return null
+
+  return (
+    <View style={slowLoadStyles.wrap} pointerEvents="none">
+      <View style={[slowLoadStyles.pill, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <ActivityIndicator size="small" color={colors.primary} />
+        <Text style={[slowLoadStyles.text, { color: colors.textMuted }]}>Загружаем…</Text>
+      </View>
+    </View>
+  )
+})
+SlowLoadHint.displayName = 'SlowLoadHint'
+
+const slowLoadStyles = StyleSheet.create({
+  wrap: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 120,
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  text: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+})
 
 const HomeWithReadyCallback = React.memo<{ onReady: () => void }>(({ onReady }) => {
   const hasSignaled = useRef(false)

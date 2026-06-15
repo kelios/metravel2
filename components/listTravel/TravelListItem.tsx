@@ -128,6 +128,7 @@ function TravelListItem({
     id,
     slug,
     travel_image_thumb_url: thumbUrl,
+    travel_image_thumb_small_url: thumbSmallUrl,
     name,
     countryName = '',
     userName,
@@ -589,6 +590,8 @@ function TravelListItem({
       webTouchAction={webTouchAction ?? (selectable ? 'manipulation' : undefined)}
       mediaProps={{
         placeholderBlurhash: PLACEHOLDER_BLURHASH,
+        placeholderSrc:
+          thumbSmallUrl && !isLikelyWatermarked(thumbSmallUrl) ? thumbSmallUrl : null,
         blurBackground: true,
         allowCriticalWebBlur: IS_WEB,
         revealOnLoadOnly: isMobileSafariFirstCard,

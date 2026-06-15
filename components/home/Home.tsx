@@ -8,6 +8,7 @@ import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { useThemedColors } from '@/hooks/useTheme'
 import { ResponsiveContainer, ResponsiveStack } from '@/components/layout'
 import HomeHero from './HomeHero'
+import HomeQuickActions from './HomeQuickActions'
 import { queueAnalyticsEvent } from '@/utils/analytics'
 import { hapticImpact } from '@/utils/haptics'
 import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries'
@@ -298,6 +299,12 @@ function Home() {
         travelsCountLoading={isAuthenticated && travelsCountLoading}
       />
 
+      {!IS_WEB && (
+        <View style={styles.quickActions}>
+          <HomeQuickActions />
+        </View>
+      )}
+
       <DeferredSection marginTop={gap.hero} fallback={<SectionSkeleton />}>
         <HomeStartHereSection />
       </DeferredSection>
@@ -341,6 +348,7 @@ function Home() {
 const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: boolean) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
+    quickActions: { marginTop: isMobile ? 16 : 20 },
     contentContainer: {
       flexGrow: 1,
       // On web also reserve the floating cookie banner height (ConsentBanner publishes

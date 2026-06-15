@@ -30,7 +30,7 @@ export const buildQuestOfflineMapGpx = ({ title, steps }: QuestOfflineMapExportO
 
   const file = buildGpx({
     name: title,
-    description: 'Точки квеста Metravel для импорта в офлайн-карту.',
+    description: 'Точки квеста Metravel (GPX) для импорта в офлайн-карты (Organic Maps, Maps.me).',
     track: points.map((point) => [point.lng, point.lat]),
     waypoints: points.map((point, index) => ({
       name: point.title || point.location || `Точка ${index + 1}`,
@@ -66,7 +66,7 @@ export async function exportQuestOfflineMap(options: QuestOfflineMapExportOption
   await FileSystem.writeAsStringAsync(fileUri, file.content);
   await Sharing.shareAsync(fileUri, {
     mimeType: file.mimeType,
-    dialogTitle: 'Сохранить точки в офлайн-карту',
+    dialogTitle: 'Открыть точки квеста (GPX) в офлайн-картах',
     UTI: 'public.xml',
   });
 

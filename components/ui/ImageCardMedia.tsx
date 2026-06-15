@@ -38,6 +38,13 @@ type Props = {
   quality?: number;
   overlayColor?: string;
   placeholderBlurhash?: string;
+  /**
+   * Low-quality preview URL (e.g. a small thumbnail) shown immediately, blurred,
+   * while the main image is still loading. Gives catalog cards a colored preview
+   * instead of an empty grey block during lazy fetch. Does NOT change when the
+   * sharp main image is revealed — reveal still waits for the main decode.
+   */
+  placeholderSrc?: string | null;
   priority?: Priority;
   loading?: 'lazy' | 'eager';
   prefetch?: boolean;
@@ -77,6 +84,7 @@ function ImageCardMedia({
   quality = 60,
   overlayColor,
   placeholderBlurhash,
+  placeholderSrc,
   priority = 'normal',
   loading = 'lazy',
   prefetch = false,
@@ -382,6 +390,33 @@ function ImageCardMedia({
     if (!webMainSrc) return false;
     return !shouldRevealWebMedia;
   }, [blurOnly, shouldRevealWebMedia, webMainSrc]);
+
+  // Low-quality preview shown immediately (blurred) while the main image loads,
+  // so a catalog card reads as "loading" with the photo's colors instead of an
+  // empty grey block. Independent of the sharp reveal gate.
+  const webPlaceholderSrc = useMemo(() => {
+    if (Platform.OS !== 'web') return null;
+    const raw = typeof placeholderSrc === 'string' ? placeholderSrc.trim() : '';
+    if (!raw) return null;
+    if (raw === webMainSrc) return null;
+    if (isRootRelativeUrl(raw)) return raw;
+    return (
+      optimizeImageUrl(raw, {
+        width: 64,
+        height: 64,
+        quality: 28,
+        format: 'jpg',
+        fit: 'cover',
+      }) ?? raw
+    );
+  }, [placeholderSrc, webMainSrc]);
+
+  const shouldRenderWebPlaceholder = useMemo(() => {
+    if (Platform.OS !== 'web') return false;
+    if (blurOnly) return false;
+    if (!webPlaceholderSrc) return false;
+    return !shouldRevealWebMedia;
+  }, [blurOnly, shouldRevealWebMedia, webPlaceholderSrc]);
   const webMediaInstanceKey = useMemo(() => {
     if (recyclingKey) return recyclingKey;
     if (currentImageIdentityKey) return currentImageIdentityKey;
@@ -504,6 +539,31 @@ function ImageCardMedia({
               useCssBackdrop={allowCriticalWebBlur && !revealOnLoadOnly}
               visible={shouldShowWebBlurBackdrop}
               contentBox={webBackdropContentBox}
+            />
+          ) : null}
+          {shouldRenderWebPlaceholder && webPlaceholderSrc ? (
+            <img
+              key={`placeholder-${webMediaInstanceKey}`}
+              aria-hidden="true"
+              src={webPlaceholderSrc}
+              alt=""
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                objectPosition: 'center',
+                borderRadius: resolvedBorderRadius,
+                filter: 'blur(12px) saturate(1.05)',
+                transform: 'scale(1.08)',
+                zIndex: 0,
+                display: 'block',
+                pointerEvents: 'none',
+              }}
+              decoding="async"
+              // @ts-ignore -- fetchPriority is a valid img attribute not in React DOM typings yet
+              fetchPriority="low"
             />
           ) : null}
           {Platform.OS === 'web' && !isJest && !blurOnly && webMainSrc ? (

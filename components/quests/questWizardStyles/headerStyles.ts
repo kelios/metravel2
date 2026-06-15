@@ -81,6 +81,12 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
         }),
     },
     resetText: { color: colors.textMuted, fontWeight: '600', fontSize: 12 },
+    exportHint: {
+        color: colors.textMuted,
+        fontSize: 12,
+        lineHeight: 16,
+        marginTop: 6,
+    },
     toggleText: { color: colors.primaryDark, fontWeight: '600', fontSize: 14 },
 
     progressContainer: { marginBottom: SPACING.xs },

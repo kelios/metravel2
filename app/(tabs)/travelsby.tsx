@@ -1,17 +1,21 @@
 // app/travelsby/index.tsx
 import React, { Suspense, createElement, useEffect, useMemo, useState } from 'react';
 import { Platform, StyleSheet, View, Text } from 'react-native';
-import { usePathname } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useIsFocused } from 'expo-router';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useAuth } from '@/context/AuthContext';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
+import FloatingActionButton from '@/components/ui/FloatingActionButton';
 import ListTravel from '@/components/listTravel/ListTravelRoute';
 
 export default function TravelsByScreen() {
     const pathname = usePathname();
+    const router = useRouter();
     const isFocused = useIsFocused();
     const colors = useThemedColors();
+    const { isAuthenticated } = useAuth();
     const styles = useMemo(() => createStyles(colors), [colors]);
     const [canRenderList, setCanRenderList] = useState(Platform.OS !== 'web');
 
@@ -64,6 +68,15 @@ export default function TravelsByScreen() {
                     </Suspense>
                 ) : (
                     <View style={styles.loadingShell} testID="travelsby-shell-placeholder" />
+                )}
+
+                {isAuthenticated && Platform.OS !== 'web' && (
+                    <FloatingActionButton
+                        icon="plus"
+                        label="Создать маршрут"
+                        onPress={() => router.push('/travel/new' as any)}
+                        testID="fab-create-travel"
+                    />
                 )}
             </View>
         </>

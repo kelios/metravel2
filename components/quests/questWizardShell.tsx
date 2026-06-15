@@ -165,9 +165,9 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
             hitSlop={12}
             disabled={offlineMapPointsCount === 0}
             accessibilityRole="button"
-            accessibilityLabel={`Скачать ${offlineMapPointsCount} точек квеста для офлайн-карты`}
+            accessibilityLabel={`Экспортировать ${offlineMapPointsCount} точек квеста (GPX)`}
           >
-            <Feather name="map" size={16} color={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted} />
+            <Feather name="share" size={16} color={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted} />
           </Pressable>
           <Pressable
             onPress={onReset}
@@ -293,10 +293,10 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
             hitSlop={12}
             disabled={offlineMapPointsCount === 0}
             accessibilityRole="button"
-            accessibilityLabel={`Скачать ${offlineMapPointsCount} точек квеста для офлайн-карты`}
+            accessibilityLabel={`Экспортировать ${offlineMapPointsCount} точек квеста (GPX) для офлайн-карт`}
           >
-            <Feather name="map" size={14} color={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted} />
-            {!isMobile && <Text style={styles.resetText}>Офлайн-карта</Text>}
+            <Feather name="share" size={14} color={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted} />
+            {!isMobile && <Text style={styles.resetText}>Экспорт точек (GPX)</Text>}
           </Pressable>
           <Pressable
             onPress={onReset}
@@ -310,6 +310,14 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           </Pressable>
         </View>
       </View>
+
+      {!isMobile && offlineMapPointsCount > 0 && (
+        <Text style={styles.exportHint}>
+          {Platform.OS === 'web'
+            ? 'Скачается GPX-файл с точками — откройте его в офлайн-картах (Organic Maps, Maps.me).'
+            : 'Откроется системное «Поделиться» с GPX-файлом — сохраните его в офлайн-картах (Organic Maps, Maps.me).'}
+        </Text>
+      )}
 
       <QuestProgressSummary
         styles={styles}
