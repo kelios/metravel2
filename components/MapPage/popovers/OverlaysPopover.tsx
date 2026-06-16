@@ -12,7 +12,23 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 interface OverlayOption {
   id: string
   title: string
+  category?: string
+  subtitle?: string
+  badge?: string
 }
+
+/** Порядок секций в списке оверлеев. */
+const CATEGORY_ORDER = [
+  'Подложки',
+  'Маршруты',
+  'Природа',
+  'Достопримечательности',
+  'Сервисы',
+  'Польша',
+  'Погода',
+] as const
+
+const FALLBACK_CATEGORY = 'Другое'
 
 interface OverlaysPopoverProps {
   options: ReadonlyArray<OverlayOption>
@@ -63,6 +79,16 @@ const OVERLAY_COPY: Record<
 }
 
 const normalizeOverlayCopy = (option: OverlayOption) => {
+  // Предпочитаем copy из самой опции (config-driven), затем словарь, затем
+  // эвристику из title. Так новые слои не требуют правок OVERLAY_COPY.
+  if (option.subtitle || option.badge) {
+    return {
+      title: option.title,
+      subtitle: option.subtitle,
+      badge: option.badge,
+    }
+  }
+
   const predefined = OVERLAY_COPY[option.id]
   if (predefined) return predefined
 
@@ -98,6 +124,31 @@ export const OverlaysPopover: React.FC<OverlaysPopoverProps> = ({
       })),
     [options],
   )
+
+  // Группировка по category с фиксированным порядком секций.
+  const sections = useMemo(() => {
+    const byCategory = new Map<string, typeof rows>()
+    for (const row of rows) {
+      const category = row.category && row.category.trim() ? row.category : FALLBACK_CATEGORY
+      const bucket = byCategory.get(category)
+      if (bucket) bucket.push(row)
+      else byCategory.set(category, [row])
+    }
+
+    const ordered: Array<{ category: string; items: typeof rows }> = []
+    for (const category of CATEGORY_ORDER) {
+      const items = byCategory.get(category)
+      if (items && items.length) {
+        ordered.push({ category, items })
+        byCategory.delete(category)
+      }
+    }
+    // Остальные категории (включая FALLBACK) — в конец, в порядке появления.
+    for (const [category, items] of byCategory) {
+      if (items.length) ordered.push({ category, items })
+    }
+    return ordered
+  }, [rows])
 
   const enabledCount = useMemo(
     () => rows.filter((option) => Boolean(enabledOverlays[option.id])).length,
@@ -141,78 +192,83 @@ export const OverlaysPopover: React.FC<OverlaysPopoverProps> = ({
         {rows.length === 0 ? (
           <Text style={styles.empty}>Нет доступных слоёв карты</Text>
         ) : (
-          rows.map((option) => {
-            const enabled = Boolean(enabledOverlays[option.id])
+          sections.map((section) => (
+            <View key={section.category} style={styles.section}>
+              <Text style={styles.sectionTitle}>{section.category}</Text>
+              {section.items.map((option) => {
+                const enabled = Boolean(enabledOverlays[option.id])
 
-            return (
-              <Pressable
-                key={option.id}
-                accessibilityRole="switch"
-                accessibilityLabel={option.copy.title}
-                accessibilityHint={
-                  option.copy.subtitle ? `${option.copy.subtitle}` : undefined
-                }
-                accessibilityState={{ checked: enabled }}
-                onPress={() => onToggle(option.id, !enabled)}
-                style={({ pressed }) => [
-                  styles.row,
-                  enabled && styles.rowSelected,
-                  pressed && styles.rowPressed,
-                ]}
-                testID={`overlays-popover-row-${option.id}`}
-              >
-                <View
-                  style={[
-                    styles.checkbox,
-                    enabled && {
-                      borderColor: colors.primary,
-                      backgroundColor: colors.primary,
-                    },
-                  ]}
-                >
-                  {enabled ? (
-                    <Feather name="check" size={12} color={colors.textOnPrimary} />
-                  ) : null}
-                </View>
-
-                <View style={styles.rowContent}>
-                  <View style={styles.rowMain}>
-                    <Text
-                      style={[styles.rowLabel, enabled && styles.rowLabelSelected]}
-                      numberOfLines={2}
+                return (
+                  <Pressable
+                    key={option.id}
+                    accessibilityRole="switch"
+                    accessibilityLabel={option.copy.title}
+                    accessibilityHint={
+                      option.copy.subtitle ? `${option.copy.subtitle}` : undefined
+                    }
+                    accessibilityState={{ checked: enabled }}
+                    onPress={() => onToggle(option.id, !enabled)}
+                    style={({ pressed }) => [
+                      styles.row,
+                      enabled && styles.rowSelected,
+                      pressed && styles.rowPressed,
+                    ]}
+                    testID={`overlays-popover-row-${option.id}`}
+                  >
+                    <View
+                      style={[
+                        styles.checkbox,
+                        enabled && {
+                          borderColor: colors.primary,
+                          backgroundColor: colors.primary,
+                        },
+                      ]}
                     >
-                      {option.copy.title}
-                    </Text>
+                      {enabled ? (
+                        <Feather name="check" size={12} color={colors.textOnPrimary} />
+                      ) : null}
+                    </View>
 
-                    {option.copy.badge ? (
-                      <View style={[styles.badge, enabled && styles.badgeSelected]}>
+                    <View style={styles.rowContent}>
+                      <View style={styles.rowMain}>
+                        <Text
+                          style={[styles.rowLabel, enabled && styles.rowLabelSelected]}
+                          numberOfLines={2}
+                        >
+                          {option.copy.title}
+                        </Text>
+
+                        {option.copy.badge ? (
+                          <View style={[styles.badge, enabled && styles.badgeSelected]}>
+                            <Text
+                              style={[
+                                styles.badgeText,
+                                enabled && styles.badgeTextSelected,
+                              ]}
+                            >
+                              {option.copy.badge}
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
+
+                      {option.copy.subtitle ? (
                         <Text
                           style={[
-                            styles.badgeText,
-                            enabled && styles.badgeTextSelected,
+                            styles.rowSubtitle,
+                            enabled && styles.rowSubtitleSelected,
                           ]}
+                          numberOfLines={2}
                         >
-                          {option.copy.badge}
+                          {option.copy.subtitle}
                         </Text>
-                      </View>
-                    ) : null}
-                  </View>
-
-                  {option.copy.subtitle ? (
-                    <Text
-                      style={[
-                        styles.rowSubtitle,
-                        enabled && styles.rowSubtitleSelected,
-                      ]}
-                      numberOfLines={2}
-                    >
-                      {option.copy.subtitle}
-                    </Text>
-                  ) : null}
-                </View>
-              </Pressable>
-            )
-          })
+                      ) : null}
+                    </View>
+                  </Pressable>
+                )
+              })}
+            </View>
+          ))
         )}
       </ScrollView>
 
@@ -304,6 +360,19 @@ const getStyles = (colors: ThemedColors) =>
       textAlign: 'center',
       color: colors.textMuted,
       fontSize: 13,
+    },
+    section: {
+      marginBottom: 6,
+    },
+    sectionTitle: {
+      paddingHorizontal: 2,
+      paddingTop: 8,
+      paddingBottom: 8,
+      fontSize: 12,
+      fontWeight: '800',
+      letterSpacing: 0.4,
+      textTransform: 'uppercase',
+      color: colors.textMuted,
     },
     row: {
       flexDirection: 'row',

@@ -1,12 +1,13 @@
 // useMapInstance.ts - Hook for managing map instance and layers
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
-import { WEB_MAP_BASE_LAYERS, WEB_MAP_OVERLAY_LAYERS } from '@/config/mapWebLayers';
+import { WEB_MAP_BASE_LAYERS, getActiveOverlayLayers } from '@/config/mapWebLayers';
 import { createLeafletLayer } from '@/utils/mapWebLayers';
 import { attachOsmCampingOverlay } from '@/utils/mapWebOverlays/osmCampingOverlay';
 import { attachLasyZanocujWfsOverlay } from '@/utils/mapWebOverlays/lasyZanocujWfsOverlay';
 import { attachOsmPoiOverlay } from '@/utils/mapWebOverlays/osmPoiOverlay';
 import { attachOsmRoutesOverlay } from '@/utils/mapWebOverlays/osmRoutesOverlay';
+import { attachOsmFeaturesOverlay } from '@/utils/mapWebOverlays/osmFeaturesOverlay';
 
 interface UseMapInstanceProps {
   map: any;
@@ -179,8 +180,11 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
 
       const overlays: Record<string, any> = {};
 
+      // Активные слои (отфильтрованы по requiresEnv — слои без ключа скрыты).
+      const overlayDefs = getActiveOverlayLayers();
+
       // Setup Overpass layer (camping sites)
-      const overpassDef = WEB_MAP_OVERLAY_LAYERS.find((d) => d.kind === 'osm-overpass-camping');
+      const overpassDef = overlayDefs.find((d) => d.kind === 'osm-overpass-camping');
       let overpassController: ReturnType<typeof attachOsmCampingOverlay> | null = null;
       if (overpassDef) {
         try {
@@ -199,7 +203,7 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
       }
 
       // Setup Overpass layer (POI)
-      const poiDef = WEB_MAP_OVERLAY_LAYERS.find((d) => d.kind === 'osm-overpass-poi');
+      const poiDef = overlayDefs.find((d) => d.kind === 'osm-overpass-poi');
       let poiController: ReturnType<typeof attachOsmPoiOverlay> | null = null;
       if (poiDef) {
         try {
@@ -216,7 +220,7 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
       }
 
       // Setup Overpass layer (routes)
-      const routesDef = WEB_MAP_OVERLAY_LAYERS.find((d) => d.kind === 'osm-overpass-routes');
+      const routesDef = overlayDefs.find((d) => d.kind === 'osm-overpass-routes');
       let routesController: ReturnType<typeof attachOsmRoutesOverlay> | null = null;
       if (routesDef) {
         try {
@@ -232,8 +236,29 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
         }
       }
 
+      // Setup generic Overpass feature overlays (nature/sights/service).
+      overlayDefs
+        .filter((d) => d.kind === 'osm-overpass-features')
+        .forEach((def) => {
+          try {
+            const featuresController = attachOsmFeaturesOverlay(L, map, {
+              filters: def.overpassFilters ?? [],
+              color: def.markerColor,
+              minZoom: def.minZoom,
+              layerId: def.id,
+              maxAreaKm2: 2500,
+              debounceMs: 700,
+            });
+            leafletOverlayLayersRef.current.set(def.id, featuresController.layer);
+            overlays[def.title] = featuresController.layer;
+            controllers.set(def.id, featuresController);
+          } catch (e) {
+            console.warn(`[useMapInstance] Failed to create features overlay ${def.id}:`, e);
+          }
+        });
+
       // Setup WFS layer (Zanocuj w lesie)
-      const wfsDef = WEB_MAP_OVERLAY_LAYERS.find((d) => d.kind === 'wfs-geojson');
+      const wfsDef = overlayDefs.find((d) => d.kind === 'wfs-geojson');
       let wfsController: ReturnType<typeof attachLasyZanocujWfsOverlay> | null = null;
       if (wfsDef) {
         try {
@@ -251,11 +276,12 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
       }
 
       // Setup other overlay layers (exclude kinds that have dedicated controllers)
-      WEB_MAP_OVERLAY_LAYERS
+      overlayDefs
         .filter((d) =>
           d.kind !== 'osm-overpass-camping' &&
           d.kind !== 'osm-overpass-poi' &&
           d.kind !== 'osm-overpass-routes' &&
+          d.kind !== 'osm-overpass-features' &&
           d.kind !== 'wfs-geojson'
         )
         .forEach((def) => {
@@ -290,7 +316,7 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
       }
 
       // Add default enabled overlays
-      WEB_MAP_OVERLAY_LAYERS.filter((d) => d.defaultEnabled).forEach((def) => {
+      overlayDefs.filter((d) => d.defaultEnabled).forEach((def) => {
         const layer = leafletOverlayLayersRef.current.get(def.id);
         if (layer) {
           try {

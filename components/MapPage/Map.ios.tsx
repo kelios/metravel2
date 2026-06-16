@@ -8,7 +8,7 @@ import { DESIGN_COLORS } from '@/constants/designSystem';
 import { MODERN_MATTE_PALETTE } from '@/constants/modernMattePalette';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { resolveInternalTravelRoute } from '@/utils/relatedTravel';
-import { WEB_MAP_OVERLAY_LAYERS } from '@/config/mapWebLayers';
+import { getActiveOverlayLayers } from '@/config/mapWebLayers';
 
 // Overpass endpoint mirrors utils/overpass/fetchOverpass.ts. Inlined as a plain
 // string because the overlay engine runs INSIDE the WebView and has no access to
@@ -16,17 +16,23 @@ import { WEB_MAP_OVERLAY_LAYERS } from '@/config/mapWebLayers';
 const OVERPASS_ENDPOINT =
   process.env.EXPO_PUBLIC_OVERPASS_ENDPOINT || 'https://overpass-api.de/api/interpreter';
 
-// Сериализуемая форма слоёв-оверлеев для WebView. id совпадает с
-// WEB_MAP_OVERLAY_LAYERS, поэтому тот же mapUiApi.setOverlayEnabled(id, enabled)
+// Сериализуемая форма слоёв-оверлеев для WebView. id совпадает с активными слоями
+// конфигурации, поэтому тот же mapUiApi.setOverlayEnabled(id, enabled)
 // из useMapScreenController рисует слой и на native (web — через useMapApi,
 // native — через инъекцию в Leaflet здесь). wfs-geojson на native бьёт по
 // абсолютному upstream-URL: relative-прокси/static-файл web-хоста в WebView
-// недоступны.
-const NATIVE_OVERLAY_LAYERS = WEB_MAP_OVERLAY_LAYERS.map((layer) => ({
+// недоступны. getActiveOverlayLayers уже отфильтровал слои по requiresEnv и
+// подставил OWM-ключ в url, поэтому слой без ключа сюда не попадёт.
+const NATIVE_OVERLAY_LAYERS = getActiveOverlayLayers().map((layer) => ({
   id: layer.id,
   kind: layer.kind,
   url: layer.url,
   opacity: layer.opacity ?? 1,
+  minZoom: layer.minZoom ?? 0,
+  maxZoom: layer.maxZoom ?? 19,
+  zIndex: layer.zIndex ?? 400,
+  markerColor: layer.markerColor ?? '',
+  overpassFilters: Array.isArray(layer.overpassFilters) ? layer.overpassFilters : [],
   wfsTypeName: layer.wfsParams?.typeName ?? '',
   wfsVersion: layer.wfsParams?.version ?? '2.0.0',
   wfsSrs: layer.wfsParams?.srsName ?? 'EPSG:4326',
@@ -683,10 +689,20 @@ const Map: React.FC<TravelProps> = ({
           return r(b.south) + '|' + r(b.west) + '|' + r(b.north) + '|' + r(b.east);
         }
 
-        function makeBboxController(layerGroup, buildQuery, renderFn, debounceMs) {
+        function makeBboxController(layerGroup, buildQuery, renderFn, debounceMs, opts) {
           var timer = null, lastKey = null, busy = false, ctrl = null, on = false;
+          var minZoom = (opts && isFinite(opts.minZoom)) ? opts.minZoom : 0;
+          var logId = (opts && opts.logId) ? opts.logId : 'overlay';
           function load() {
             if (busy || !on) return;
+            // minZoom-гейт: ниже порога Overpass-запрос пропускаем (с логом).
+            var z = (typeof map.getZoom === 'function') ? Number(map.getZoom()) : NaN;
+            if (isFinite(z) && z < minZoom) {
+              try { console.warn('[Map.ios overlay:' + logId + '] Skipped load: zoom ' + z + ' < minZoom ' + minZoom); } catch (e) {}
+              try { layerGroup.clearLayers(); } catch (e) {}
+              lastKey = null;
+              return;
+            }
             var b = overlayBBox();
             if (!b) return;
             var key = bboxKey(b);
@@ -747,6 +763,25 @@ const Map: React.FC<TravelProps> = ({
             ');out center tags;';
         }
 
+        // Универсальный features-QL по фильтрам из конфигурации (зеркалит
+        // buildOsmFeaturesOverpassQL). Каждый фильтр key/value(+regex) → строки
+        // по типам элементов, объединённые ИЛИ. out center tags → точки.
+        function overpassFeaturesQL(b, filters) {
+          var box = b.south + ',' + b.west + ',' + b.north + ',' + b.east;
+          var lines = [];
+          var list = Array.isArray(filters) ? filters : [];
+          for (var i = 0; i < list.length; i++) {
+            var f = list[i];
+            if (!f || !f.key || !f.value) continue;
+            var selector = f.regex ? ('["' + f.key + '"~"' + f.value + '"]') : ('["' + f.key + '"="' + f.value + '"]');
+            var els = (Array.isArray(f.elements) && f.elements.length) ? f.elements : ['node', 'way'];
+            for (var j = 0; j < els.length; j++) {
+              lines.push(els[j] + selector + '(' + box + ');');
+            }
+          }
+          return '[out:json][timeout:25];(' + lines.join('') + ');out center tags;';
+        }
+
         function overpassRoutesQL(b) {
           return '[out:json][timeout:25];(' +
             'relation["type"="route"]["route"~"^(hiking|bicycle)$"](' + b.south + ',' + b.west + ',' + b.north + ',' + b.east + ');' +
@@ -768,6 +803,27 @@ const Map: React.FC<TravelProps> = ({
               radius: 6, color: ROUTE_SURFACE, weight: 2, fillColor: color, fillOpacity: 0.95
             });
             m.bindPopup('<div class="popup-text"><div class="popup-title">' + escapeHtml(title) + '</div></div>', { maxWidth: 240 });
+            m.addTo(layerGroup);
+          }
+        }
+
+        // Features-слой: точки с попапом name/ele (высота, если есть).
+        function renderOverpassFeatures(layerGroup, data, color) {
+          layerGroup.clearLayers();
+          var els = (data && Array.isArray(data.elements)) ? data.elements : [];
+          for (var i = 0; i < els.length; i++) {
+            var el = els[i];
+            var lat = (el.type === 'node') ? el.lat : (el.center && el.center.lat);
+            var lng = (el.type === 'node') ? el.lon : (el.center && el.center.lon);
+            if (!isFinite(lat) || !isFinite(lng)) continue;
+            var tags = el.tags || {};
+            var title = tags['name:ru'] || tags.name || tags['name:en'] || tags.tourism || tags.natural || tags.historic || tags.amenity || tags.railway || 'Точка OSM';
+            var eleNum = tags.ele != null ? Number(tags.ele) : NaN;
+            var eleLine = isFinite(eleNum) ? ('<div style="margin-top:4px;font-size:12px;color:#888">Высота: ' + Math.round(eleNum) + ' м</div>') : '';
+            var m = L.circleMarker([lat, lng], {
+              radius: 6, color: ROUTE_SURFACE, weight: 2, fillColor: (color || '#ff9f0a'), fillOpacity: 0.95
+            });
+            m.bindPopup('<div class="popup-text"><div class="popup-title">' + escapeHtml(title) + '</div>' + eleLine + '</div>', { maxWidth: 260 });
             m.addTo(layerGroup);
           }
         }
@@ -820,22 +876,29 @@ const Map: React.FC<TravelProps> = ({
 
         function buildOverlay(def) {
           if (def.kind === 'tile') {
-            return { layer: L.tileLayer(def.url, { opacity: def.opacity, maxZoom: 19 }), controller: null };
+            var tile = L.tileLayer(def.url, { opacity: def.opacity, maxZoom: def.maxZoom || 19, zIndex: def.zIndex });
+            try { if (def.zIndex != null && typeof tile.setZIndex === 'function') tile.setZIndex(def.zIndex); } catch (e) {}
+            return { layer: tile, controller: null };
           }
           var group = L.layerGroup();
           var controller = null;
           if (def.kind === 'osm-overpass-camping') {
             controller = makeBboxController(group, function(b) { return overpassUrl(overpassCampingQL(b)); },
-              function(g, d) { renderOverpassPoints(g, d, '#34c759'); }, 650);
+              function(g, d) { renderOverpassPoints(g, d, '#34c759'); }, 650, { minZoom: def.minZoom, logId: def.id });
           } else if (def.kind === 'osm-overpass-poi') {
             controller = makeBboxController(group, function(b) { return overpassUrl(overpassPoiQL(b)); },
-              function(g, d) { renderOverpassPoints(g, d, '#ff9f0a'); }, 650);
+              function(g, d) { renderOverpassPoints(g, d, '#ff9f0a'); }, 650, { minZoom: def.minZoom, logId: def.id });
           } else if (def.kind === 'osm-overpass-routes') {
             controller = makeBboxController(group, function(b) { return overpassUrl(overpassRoutesQL(b)); },
-              function(g, d) { renderOverpassRoutes(g, d); }, 700);
+              function(g, d) { renderOverpassRoutes(g, d); }, 700, { minZoom: def.minZoom, logId: def.id });
+          } else if (def.kind === 'osm-overpass-features') {
+            var filters = def.overpassFilters;
+            var color = def.markerColor;
+            controller = makeBboxController(group, function(b) { return overpassUrl(overpassFeaturesQL(b, filters)); },
+              function(g, d) { renderOverpassFeatures(g, d, color); }, 700, { minZoom: def.minZoom, logId: def.id });
           } else if (def.kind === 'wfs-geojson') {
             controller = makeBboxController(group, function(b) { return wfsUrl(def, b); },
-              function(g, d) { renderWfsGeoJson(g, d); }, 700);
+              function(g, d) { renderWfsGeoJson(g, d); }, 700, { minZoom: def.minZoom, logId: def.id });
           }
           return { layer: group, controller: controller };
         }

@@ -7,7 +7,7 @@ import IconButton from '@/components/ui/IconButton'
 import { Toggle } from '@/components/ui/Toggle'
 import CollapsibleSection from '@/components/MapPage/CollapsibleSection'
 import MapIcon from './MapIcon'
-import { WEB_MAP_BASE_LAYERS, WEB_MAP_OVERLAY_LAYERS } from '@/config/mapWebLayers'
+import { WEB_MAP_BASE_LAYERS, getActiveOverlayLayers } from '@/config/mapWebLayers'
 import type { ThemedColors } from '@/hooks/useTheme'
 import type { MapUiApi } from '@/types/mapUi'
 
@@ -36,7 +36,13 @@ interface FiltersPanelMapSettingsProps {
   isMobile: boolean
   mode: 'radius' | 'route'
   mapUiApi?: MapUiApi | null
-  overlayOptions?: Array<{ id: string; title: string }>
+  overlayOptions?: Array<{
+    id: string
+    title: string
+    category?: string
+    subtitle?: string
+    badge?: string
+  }>
   enabledOverlays?: Record<string, boolean>
   onOverlayToggle?: (id: string, enabled: boolean) => void
   onResetOverlays?: () => void
@@ -75,7 +81,7 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
   const [localEnabledOverlays, setLocalEnabledOverlays] = useState<Record<string, boolean>>(
     () => {
       const initial: Record<string, boolean> = {}
-      for (const overlay of WEB_MAP_OVERLAY_LAYERS) {
+      for (const overlay of getActiveOverlayLayers()) {
         initial[overlay.id] = Boolean(overlay.defaultEnabled)
       }
       return initial
@@ -96,7 +102,7 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
 
   const availableOverlays = useMemo(() => {
     if (Array.isArray(overlayOptions) && overlayOptions.length > 0) return overlayOptions
-    return WEB_MAP_OVERLAY_LAYERS.filter(
+    return getActiveOverlayLayers().filter(
       (overlay) => overlay.kind.startsWith('osm-overpass-') || Boolean(overlay.url),
     )
   }, [overlayOptions])
@@ -153,7 +159,7 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
   useEffect(() => {
     if (usesControlledOverlays || !mapUiApi) return
     try {
-      for (const overlay of WEB_MAP_OVERLAY_LAYERS) {
+      for (const overlay of getActiveOverlayLayers()) {
         mapUiApi.setOverlayEnabled(overlay.id, Boolean(localEnabledOverlays[overlay.id]))
       }
     } catch {

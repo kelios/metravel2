@@ -5,7 +5,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useRouteStore } from '@/stores/routeStore';
 import type { MapUiApi } from '@/types/mapUi';
 import type { TravelCoords } from '@/types/types';
-import { WEB_MAP_OVERLAY_LAYERS } from '@/config/mapWebLayers';
+import { getActiveOverlayLayers } from '@/config/mapWebLayers';
 
 // Модульные хуки для карты
 import { useMapCoordinates } from '@/hooks/map/useMapCoordinates';
@@ -186,19 +186,23 @@ export function useMapScreenController() {
     isDebouncingFilters,
   } = dataController;
 
+  const activeOverlayLayers = useMemo(() => getActiveOverlayLayers(), []);
   const overlayOptions = useMemo(
     () =>
-      WEB_MAP_OVERLAY_LAYERS
+      activeOverlayLayers
         .filter((layer) => layer.kind.startsWith('osm-overpass-') || Boolean(layer.url))
         .map((layer) => ({
           id: layer.id,
           title: layer.title,
+          category: layer.category,
+          subtitle: layer.subtitle,
+          badge: layer.badge,
         })),
-    [],
+    [activeOverlayLayers],
   );
   const [enabledOverlays, setEnabledOverlays] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
-    WEB_MAP_OVERLAY_LAYERS.forEach((layer) => {
+    getActiveOverlayLayers().forEach((layer) => {
       initial[layer.id] = Boolean(layer.defaultEnabled);
     });
     return initial;
@@ -214,12 +218,12 @@ export function useMapScreenController() {
   const resetOverlays = useCallback(() => {
     setEnabledOverlays(() => {
       const next: Record<string, boolean> = {};
-      WEB_MAP_OVERLAY_LAYERS.forEach((layer) => {
+      activeOverlayLayers.forEach((layer) => {
         next[layer.id] = Boolean(layer.defaultEnabled);
       });
       return next;
     });
-  }, []);
+  }, [activeOverlayLayers]);
 
   const controlledOverlayIds = useMemo(
     () => overlayOptions.map((layer) => layer.id),

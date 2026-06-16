@@ -103,6 +103,43 @@ ${parts.join('\n\n')}
 out center tags;`;
 };
 
+export type OverpassFeatureFilterInput = {
+  key: string;
+  value: string;
+  regex?: boolean;
+  elements?: Array<'node' | 'way' | 'relation'>;
+};
+
+/**
+ * Универсальный Overpass-запрос по списку фильтров (key/value, regex, типы
+ * элементов). Каждый фильтр разворачивается в строки для каждого OSM-типа,
+ * объединённые по ИЛИ. Возвращает `out center tags;` для рендера точечных
+ * маркеров (node → lat/lon, way/relation → center).
+ */
+export const buildOsmFeaturesOverpassQL = (
+  bbox: BBox,
+  filters: OverpassFeatureFilterInput[],
+): string => {
+  const b = normalizeBBox(bbox);
+  const box = `${b.south},${b.west},${b.north},${b.east}`;
+
+  const lines: string[] = [];
+  for (const f of Array.isArray(filters) ? filters : []) {
+    if (!f || !f.key || !f.value) continue;
+    const selector = f.regex ? `["${f.key}"~"${f.value}"]` : `["${f.key}"="${f.value}"]`;
+    const elements = Array.isArray(f.elements) && f.elements.length ? f.elements : ['node', 'way'];
+    for (const el of elements) {
+      lines.push(`  ${el}${selector}(${box});`);
+    }
+  }
+
+  return `[out:json][timeout:25];
+(
+${lines.join('\n')}
+);
+out center tags;`;
+};
+
 export const buildOsmRoutesOverpassQL = (bbox: BBox) => {
   const b = normalizeBBox(bbox);
 
