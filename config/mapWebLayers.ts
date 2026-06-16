@@ -78,6 +78,58 @@ export interface WebMapLayerDefinition {
   defaultEnabled?: boolean;
 }
 
+/**
+ * Порядок секций при группировке оверлеев по category в UI
+ * (OverlaysPopover и FiltersPanelMapSettings используют один и тот же порядок).
+ */
+export const OVERLAY_CATEGORY_ORDER = [
+  'Подложки',
+  'Маршруты',
+  'Природа',
+  'Достопримечательности',
+  'Сервисы',
+  'Польша',
+  'Погода',
+] as const;
+
+/** Категория для оверлеев без заданной category (попадают в конец списка). */
+export const OVERLAY_FALLBACK_CATEGORY = 'Другое';
+
+interface OverlayCategorizable {
+  id: string;
+  category?: string;
+}
+
+/**
+ * Группирует оверлеи по category в фиксированном порядке OVERLAY_CATEGORY_ORDER.
+ * Неизвестные категории (включая отсутствующую) уходят в конец в порядке появления.
+ */
+export const groupOverlaysByCategory = <T extends OverlayCategorizable>(
+  items: ReadonlyArray<T>,
+): Array<{ category: string; items: T[] }> => {
+  const byCategory = new Map<string, T[]>();
+  for (const item of items) {
+    const category =
+      item.category && item.category.trim() ? item.category : OVERLAY_FALLBACK_CATEGORY;
+    const bucket = byCategory.get(category);
+    if (bucket) bucket.push(item);
+    else byCategory.set(category, [item]);
+  }
+
+  const ordered: Array<{ category: string; items: T[] }> = [];
+  for (const category of OVERLAY_CATEGORY_ORDER) {
+    const bucket = byCategory.get(category);
+    if (bucket && bucket.length) {
+      ordered.push({ category, items: bucket });
+      byCategory.delete(category);
+    }
+  }
+  for (const [category, bucket] of byCategory) {
+    if (bucket.length) ordered.push({ category, items: bucket });
+  }
+  return ordered;
+};
+
 const OWM_API_KEY_ENV = 'EXPO_PUBLIC_OWM_API_KEY';
 
 /**
@@ -138,13 +190,13 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
     id: 'overlay-hillshade',
     title: 'Рельеф (отмывка)',
     kind: 'tile',
-    url: 'https://tiles.waymarkedtrails.org/hillshading/{z}/{x}/{y}.png',
-    attribution: '© waymarkedtrails.org, SRTM | Hillshading',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Источник: Esri, USGS, NOAA | World Hillshade',
     category: 'Подложки',
     subtitle: 'Полупрозрачная отмывка рельефа',
-    badge: 'Hillshade',
-    opacity: 0.55,
-    maxZoom: 18,
+    badge: 'Esri',
+    opacity: 0.45,
+    maxZoom: 19,
     zIndex: 230,
     defaultEnabled: false,
   },

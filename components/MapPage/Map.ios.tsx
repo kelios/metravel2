@@ -996,7 +996,6 @@ const Map: React.FC<TravelProps> = ({
           }
         }}
         scrollEnabled={true}
-        pinchZoomEnabled={true}
       />
     </View>
   );

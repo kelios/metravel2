@@ -7,6 +7,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import Button from '@/components/ui/Button'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { groupOverlaysByCategory } from '@/config/mapWebLayers'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
 interface OverlayOption {
@@ -16,19 +17,6 @@ interface OverlayOption {
   subtitle?: string
   badge?: string
 }
-
-/** Порядок секций в списке оверлеев. */
-const CATEGORY_ORDER = [
-  'Подложки',
-  'Маршруты',
-  'Природа',
-  'Достопримечательности',
-  'Сервисы',
-  'Польша',
-  'Погода',
-] as const
-
-const FALLBACK_CATEGORY = 'Другое'
 
 interface OverlaysPopoverProps {
   options: ReadonlyArray<OverlayOption>
@@ -126,29 +114,7 @@ export const OverlaysPopover: React.FC<OverlaysPopoverProps> = ({
   )
 
   // Группировка по category с фиксированным порядком секций.
-  const sections = useMemo(() => {
-    const byCategory = new Map<string, typeof rows>()
-    for (const row of rows) {
-      const category = row.category && row.category.trim() ? row.category : FALLBACK_CATEGORY
-      const bucket = byCategory.get(category)
-      if (bucket) bucket.push(row)
-      else byCategory.set(category, [row])
-    }
-
-    const ordered: Array<{ category: string; items: typeof rows }> = []
-    for (const category of CATEGORY_ORDER) {
-      const items = byCategory.get(category)
-      if (items && items.length) {
-        ordered.push({ category, items })
-        byCategory.delete(category)
-      }
-    }
-    // Остальные категории (включая FALLBACK) — в конец, в порядке появления.
-    for (const [category, items] of byCategory) {
-      if (items.length) ordered.push({ category, items })
-    }
-    return ordered
-  }, [rows])
+  const sections = useMemo(() => groupOverlaysByCategory(rows), [rows])
 
   const enabledCount = useMemo(
     () => rows.filter((option) => Boolean(enabledOverlays[option.id])).length,

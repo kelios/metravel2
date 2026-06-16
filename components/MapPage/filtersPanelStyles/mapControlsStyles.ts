@@ -30,6 +30,16 @@ export const getMapControlsStyles = ({ colors }: FiltersPanelStyleContext) =>
       gap: 5,
       marginTop: 5,
     },
+    mapOverlaySection: {
+      marginTop: 10,
+    },
+    mapOverlaySectionTitle: {
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 0.4,
+      textTransform: 'uppercase',
+      color: colors.textMuted,
+    },
     mapToggleRow: {
       flexDirection: 'row',
       alignItems: 'center',

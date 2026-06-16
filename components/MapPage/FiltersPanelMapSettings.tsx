@@ -7,7 +7,11 @@ import IconButton from '@/components/ui/IconButton'
 import { Toggle } from '@/components/ui/Toggle'
 import CollapsibleSection from '@/components/MapPage/CollapsibleSection'
 import MapIcon from './MapIcon'
-import { WEB_MAP_BASE_LAYERS, getActiveOverlayLayers } from '@/config/mapWebLayers'
+import {
+  WEB_MAP_BASE_LAYERS,
+  getActiveOverlayLayers,
+  groupOverlaysByCategory,
+} from '@/config/mapWebLayers'
 import type { ThemedColors } from '@/hooks/useTheme'
 import type { MapUiApi } from '@/types/mapUi'
 
@@ -106,6 +110,11 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
       (overlay) => overlay.kind.startsWith('osm-overpass-') || Boolean(overlay.url),
     )
   }, [overlayOptions])
+
+  const overlaySections = useMemo(
+    () => groupOverlaysByCategory(availableOverlays),
+    [availableOverlays],
+  )
 
   const usesControlledOverlays =
     typeof onOverlayToggle === 'function' && Boolean(controlledEnabledOverlays)
@@ -236,36 +245,41 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
         <>
           <View style={styles.mapLayersSection}>
             <Text style={styles.mapLayersLabel}>Оверлеи</Text>
-            <View style={styles.mapToggleList}>
-              {availableOverlays.map((overlay) => {
-                const enabled = Boolean(resolvedEnabledOverlays[overlay.id])
-                const toggle = () => {
-                  if (!mapUiApi) return
-                  updateOverlayEnabled(overlay.id, !enabled)
-                }
-                return (
-                  <Pressable
-                    key={overlay.id}
-                    testID={`map-overlay-${overlay.id}`}
-                    disabled={!mapUiApi}
-                    onPress={toggle}
-                    accessibilityRole="switch"
-                    accessibilityLabel={overlay.title}
-                    accessibilityState={{ checked: enabled, disabled: !mapUiApi }}
-                    style={({ pressed }) => [
-                      styles.mapToggleRow,
-                      pressed && mapUiApi && styles.mapToggleRowPressed,
-                      !mapUiApi && styles.mapToggleRowDisabled,
-                    ]}
-                  >
-                    <Text style={styles.mapToggleText} numberOfLines={2}>
-                      {overlay.title}
-                    </Text>
-                    <Toggle value={enabled} onValueChange={toggle} disabled={!mapUiApi} />
-                  </Pressable>
-                )
-              })}
-            </View>
+            {overlaySections.map((section) => (
+              <View key={section.category} style={styles.mapOverlaySection}>
+                <Text style={styles.mapOverlaySectionTitle}>{section.category}</Text>
+                <View style={styles.mapToggleList}>
+                  {section.items.map((overlay) => {
+                    const enabled = Boolean(resolvedEnabledOverlays[overlay.id])
+                    const toggle = () => {
+                      if (!mapUiApi) return
+                      updateOverlayEnabled(overlay.id, !enabled)
+                    }
+                    return (
+                      <Pressable
+                        key={overlay.id}
+                        testID={`map-overlay-${overlay.id}`}
+                        disabled={!mapUiApi}
+                        onPress={toggle}
+                        accessibilityRole="switch"
+                        accessibilityLabel={overlay.title}
+                        accessibilityState={{ checked: enabled, disabled: !mapUiApi }}
+                        style={({ pressed }) => [
+                          styles.mapToggleRow,
+                          pressed && mapUiApi && styles.mapToggleRowPressed,
+                          !mapUiApi && styles.mapToggleRowDisabled,
+                        ]}
+                      >
+                        <Text style={styles.mapToggleText} numberOfLines={2}>
+                          {overlay.title}
+                        </Text>
+                        <Toggle value={enabled} onValueChange={toggle} disabled={!mapUiApi} />
+                      </Pressable>
+                    )
+                  })}
+                </View>
+              </View>
+            ))}
           </View>
 
           {showOsmCategoriesPanel && (
