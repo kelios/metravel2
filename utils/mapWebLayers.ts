@@ -4,6 +4,12 @@ import { clampOpacity } from '@/utils/routeExport/normalize';
 export const createLeafletLayer = (L: any, def: WebMapLayerDefinition) => {
   if (!L) return null;
 
+  if (def.kind === 'weather-temp-labels') {
+    // Управляется отдельным контроллером attachWeatherTempLabelsOverlay
+    // (нужен доступ к map bounds/events и async загрузка).
+    return null;
+  }
+
   if (
     def.kind === 'osm-overpass-camping' ||
     def.kind === 'osm-overpass-poi' ||

@@ -5,6 +5,7 @@ export type WebMapLayerKind =
   | 'osm-overpass-poi'
   | 'osm-overpass-routes'
   | 'osm-overpass-features'
+  | 'weather-temp-labels'
   | 'wfs-geojson';
 
 /** Категория для группировки оверлеев по секциям в UI. */
@@ -450,7 +451,7 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
     subtitle: 'OpenWeatherMap: облачность',
     badge: 'OWM',
     requiresEnv: OWM_API_KEY_ENV,
-    opacity: 0.6,
+    opacity: 0.85,
     maxZoom: 19,
     zIndex: 540,
     defaultEnabled: false,
@@ -465,7 +466,7 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
     subtitle: 'OpenWeatherMap: осадки',
     badge: 'OWM',
     requiresEnv: OWM_API_KEY_ENV,
-    opacity: 0.65,
+    opacity: 0.9,
     maxZoom: 19,
     zIndex: 541,
     defaultEnabled: false,
@@ -480,9 +481,24 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
     subtitle: 'OpenWeatherMap: температура',
     badge: 'OWM',
     requiresEnv: OWM_API_KEY_ENV,
-    opacity: 0.55,
+    opacity: 0.8,
     maxZoom: 19,
     zIndex: 542,
+    defaultEnabled: false,
+  },
+  {
+    id: 'weather-temp-labels',
+    title: 'Температура °C (подписи)',
+    kind: 'weather-temp-labels',
+    url: '',
+    attribution: 'Weather data © OpenWeatherMap',
+    category: 'Погода',
+    subtitle: 'OpenWeatherMap: числовая температура по городам',
+    badge: 'OWM',
+    requiresEnv: OWM_API_KEY_ENV,
+    opacity: 1,
+    minZoom: 6,
+    zIndex: 560,
     defaultEnabled: false,
   },
 

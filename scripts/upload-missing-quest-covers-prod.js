@@ -37,6 +37,13 @@ const QUEST_COVERS = [
   { quest_id: 'polotsk-ancient', assetsDir: 'polotskAncient', cover: 'cover.png' },
   { quest_id: 'gomel-palace', assetsDir: 'gomelPalace', cover: 'cover.png' },
   { quest_id: 'kossovo-ruzhany-palaces', assetsDir: 'kossovoRuzhanyPalaces', cover: 'cover.png' },
+  { quest_id: 'minsk-loshitsa', assetsDir: 'minskLoshitsa', cover: 'cover.png' },
+  { quest_id: 'minsk-traktorny', assetsDir: 'minskTraktorny', cover: 'cover.png' },
+  { quest_id: 'minsk-dvoriki', assetsDir: 'minskDvoriki', cover: 'cover.png' },
+  { quest_id: 'minsk-cipher', assetsDir: 'minskCipher', cover: 'cover.png' },
+  { quest_id: 'krakow-kazimierz', assetsDir: 'krakowKazimierz', cover: 'cover.png' },
+  { quest_id: 'krakow-podgorze', assetsDir: 'krakowPodgorze', cover: 'cover.png' },
+  { quest_id: 'krakow-nowahuta', assetsDir: 'krakowNowaHuta', cover: 'cover.png' },
   { quest_id: 'wroclaw-gnomes', assetsDir: 'wroclawGnomes', cover: 'cover.png' },
   { quest_id: 'gdansk-amber', assetsDir: 'gdanskAmber', cover: 'cover.png' },
   { quest_id: 'poznan-goats', assetsDir: 'poznanGoats', cover: 'cover.png' },
@@ -63,15 +70,22 @@ function authHeaders() {
 }
 
 async function fetchQuestCatalog() {
-  const response = await fetch(`${API_BASE}/api/quests/`, {
-    headers: authHeaders(),
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`GET quest catalog: HTTP ${response.status}: ${text.substring(0, 200)}`);
+  const quests = [];
+  let url = `${API_BASE}/api/quests/`;
+  for (let guard = 0; guard < 50 && url; guard += 1) {
+    const response = await fetch(url, {
+      headers: authHeaders(),
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`GET quest catalog: HTTP ${response.status}: ${text.substring(0, 200)}`);
+    }
+    const payload = await response.json();
+    const pageQuests = Array.isArray(payload) ? payload : payload.results || payload.data || [];
+    quests.push(...pageQuests);
+    const next = Array.isArray(payload) ? null : payload.next_page_url || payload.next || null;
+    url = next ? new URL(next, API_BASE).toString() : null;
   }
-  const payload = await response.json();
-  const quests = Array.isArray(payload) ? payload : payload.results || payload.data || [];
   return new Map(quests.map((quest) => [quest.quest_id, quest]));
 }
 

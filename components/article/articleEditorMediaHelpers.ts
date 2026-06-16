@@ -2,6 +2,7 @@ import { Alert } from 'react-native'
 
 import { uploadImage } from '@/api/misc'
 import { normalizeMediaUrl } from '@/utils/mediaUrl'
+import { prepareWebImageFileForUpload } from '@/utils/webImageUpload'
 import {
   buildInstagramEmbedHtmlFromUrl,
   buildYoutubeEmbedHtmlFromUrl,
@@ -157,11 +158,15 @@ export const uploadImageAndInsert = async ({
 
   try {
     setIsImageUploading(true)
+    const uploadFile = await prepareWebImageFileForUpload(file)
     const form = new FormData()
-    form.append('file', file)
+    form.append('file', uploadFile)
     form.append('collection', 'description')
     if (idTravel) form.append('id', String(idTravel))
-    const [res, imageDimensions] = await Promise.all([uploadImage(form), readDimensions(file)])
+    const [res, imageDimensions] = await Promise.all([
+      uploadImage(form),
+      readDimensions(uploadFile),
+    ])
     if (__DEV__) {
       console.info('[ArticleEditor] upload response', res)
     }

@@ -8,6 +8,7 @@ import { attachLasyZanocujWfsOverlay } from '@/utils/mapWebOverlays/lasyZanocujW
 import { attachOsmPoiOverlay } from '@/utils/mapWebOverlays/osmPoiOverlay';
 import { attachOsmRoutesOverlay } from '@/utils/mapWebOverlays/osmRoutesOverlay';
 import { attachOsmFeaturesOverlay } from '@/utils/mapWebOverlays/osmFeaturesOverlay';
+import { attachWeatherTempLabelsOverlay } from '@/utils/mapWebOverlays/weatherTempLabelsOverlay';
 
 interface UseMapInstanceProps {
   map: any;
@@ -257,6 +258,23 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
           }
         });
 
+      // Setup weather temperature labels overlay (OWM box/city, numeric °C)
+      const tempLabelsDef = overlayDefs.find((d) => d.kind === 'weather-temp-labels');
+      if (tempLabelsDef) {
+        try {
+          const tempLabelsController = attachWeatherTempLabelsOverlay(L, map, {
+            maxAreaKm2: 90000,
+            debounceMs: 600,
+            maxLabels: 50,
+          });
+          leafletOverlayLayersRef.current.set(tempLabelsDef.id, tempLabelsController.layer);
+          overlays[tempLabelsDef.title] = tempLabelsController.layer;
+          controllers.set(tempLabelsDef.id, tempLabelsController);
+        } catch (e) {
+          console.warn('[useMapInstance] Failed to create weather temp labels overlay:', e);
+        }
+      }
+
       // Setup WFS layer (Zanocuj w lesie)
       const wfsDef = overlayDefs.find((d) => d.kind === 'wfs-geojson');
       let wfsController: ReturnType<typeof attachLasyZanocujWfsOverlay> | null = null;
@@ -282,6 +300,7 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
           d.kind !== 'osm-overpass-poi' &&
           d.kind !== 'osm-overpass-routes' &&
           d.kind !== 'osm-overpass-features' &&
+          d.kind !== 'weather-temp-labels' &&
           d.kind !== 'wfs-geojson'
         )
         .forEach((def) => {

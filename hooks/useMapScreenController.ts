@@ -190,7 +190,12 @@ export function useMapScreenController() {
   const overlayOptions = useMemo(
     () =>
       activeOverlayLayers
-        .filter((layer) => layer.kind.startsWith('osm-overpass-') || Boolean(layer.url))
+        .filter(
+          (layer) =>
+            layer.kind.startsWith('osm-overpass-') ||
+            layer.kind === 'weather-temp-labels' ||
+            Boolean(layer.url),
+        )
         .map((layer) => ({
           id: layer.id,
           title: layer.title,

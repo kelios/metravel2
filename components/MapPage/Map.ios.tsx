@@ -23,7 +23,10 @@ const OVERPASS_ENDPOINT =
 // абсолютному upstream-URL: relative-прокси/static-файл web-хоста в WebView
 // недоступны. getActiveOverlayLayers уже отфильтровал слои по requiresEnv и
 // подставил OWM-ключ в url, поэтому слой без ключа сюда не попадёт.
-const NATIVE_OVERLAY_LAYERS = getActiveOverlayLayers().map((layer) => ({
+const NATIVE_OVERLAY_LAYERS = getActiveOverlayLayers()
+  // weather-temp-labels — web-only (OWM box/city + Leaflet divIcon labels).
+  .filter((layer) => layer.kind !== 'weather-temp-labels')
+  .map((layer) => ({
   id: layer.id,
   kind: layer.kind,
   url: layer.url,

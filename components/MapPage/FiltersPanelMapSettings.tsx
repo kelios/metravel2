@@ -107,7 +107,10 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
   const availableOverlays = useMemo(() => {
     if (Array.isArray(overlayOptions) && overlayOptions.length > 0) return overlayOptions
     return getActiveOverlayLayers().filter(
-      (overlay) => overlay.kind.startsWith('osm-overpass-') || Boolean(overlay.url),
+      (overlay) =>
+        overlay.kind.startsWith('osm-overpass-') ||
+        overlay.kind === 'weather-temp-labels' ||
+        Boolean(overlay.url),
     )
   }, [overlayOptions])
 
