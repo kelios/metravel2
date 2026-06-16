@@ -47,6 +47,12 @@ export interface WebMapLayerDefinition {
   subtitle?: string;
   /** Бейдж-метка (источник данных) в UI. */
   badge?: string;
+  /**
+   * Имя взаимоисключающей группы. Слои с одинаковым `exclusiveGroup`
+   * ведут себя как radio: включение одного выключает остальные в группе.
+   * Слои без группы независимы (обычный чекбокс).
+   */
+  exclusiveGroup?: string;
   /** Overpass-фильтры для kind 'osm-overpass-features'. */
   overpassFilters?: OverpassFeatureFilter[];
   /** Цвет маркера для kind 'osm-overpass-features'. */
@@ -451,6 +457,7 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
     subtitle: 'OpenWeatherMap: облачность',
     badge: 'OWM',
     requiresEnv: OWM_API_KEY_ENV,
+    exclusiveGroup: 'weather-heatmap',
     opacity: 0.85,
     maxZoom: 19,
     zIndex: 540,
@@ -466,6 +473,7 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
     subtitle: 'OpenWeatherMap: осадки',
     badge: 'OWM',
     requiresEnv: OWM_API_KEY_ENV,
+    exclusiveGroup: 'weather-heatmap',
     opacity: 0.9,
     maxZoom: 19,
     zIndex: 541,
@@ -481,6 +489,7 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
     subtitle: 'OpenWeatherMap: температура',
     badge: 'OWM',
     requiresEnv: OWM_API_KEY_ENV,
+    exclusiveGroup: 'weather-heatmap',
     opacity: 0.8,
     maxZoom: 19,
     zIndex: 542,
@@ -493,7 +502,7 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
     url: '',
     attribution: 'Weather data © OpenWeatherMap',
     category: 'Погода',
-    subtitle: 'OpenWeatherMap: числовая температура по городам',
+    subtitle: 'OpenWeatherMap: числовая температура по видимой области',
     badge: 'OWM',
     requiresEnv: OWM_API_KEY_ENV,
     opacity: 1,
@@ -541,6 +550,23 @@ const resolveLayerUrl = (layer: WebMapLayerDefinition): WebMapLayerDefinition =>
     return { ...layer, url: layer.url.replace('{owmApiKey}', getOwmApiKey()) };
   }
   return layer;
+};
+
+/** id heatmap-слоя температуры (заливка). */
+export const WEATHER_TEMP_LAYER_ID = 'weather-temp';
+/** id слоя числовых подписей °C (живёт независимо от heatmap-группы). */
+export const WEATHER_TEMP_LABELS_LAYER_ID = 'weather-temp-labels';
+
+/**
+ * Возвращает id всех слоёв из той же exclusiveGroup, что и заданный слой
+ * (исключая сам слой). Пусто, если слой без группы или не найден.
+ */
+export const getExclusiveGroupSiblings = (id: string): string[] => {
+  const target = WEB_MAP_OVERLAY_LAYERS.find((l) => l.id === id);
+  if (!target?.exclusiveGroup) return [];
+  return WEB_MAP_OVERLAY_LAYERS.filter(
+    (l) => l.exclusiveGroup === target.exclusiveGroup && l.id !== id,
+  ).map((l) => l.id);
 };
 
 export const getActiveOverlayLayers = (): WebMapLayerDefinition[] =>

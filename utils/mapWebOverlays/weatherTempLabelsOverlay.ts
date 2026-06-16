@@ -1,40 +1,46 @@
 import type { BBox } from '@/utils/overpass';
-import { bboxAreaKm2 } from '@/utils/overpass';
 import { getOwmApiKey } from '@/config/mapWebLayers';
 
 type LeafletMap = any;
 
 export type WeatherTempLabelsOverlayOptions = {
-  /** Защитный лимит площади bbox (км²); больше — bbox сжимается к центру. */
-  maxAreaKm2?: number;
   /** Дебаунс на moveend/zoomend. */
   debounceMs?: number;
-  /** Максимум подписей на карте (OWM cnt, максимум по API ~50). */
+  /** Максимум подписей на карте. */
   maxLabels?: number;
+  /** Размер сетки выборки: число колонок и строк. */
+  gridCols?: number;
+  gridRows?: number;
 };
 
 const defaultOpts: Required<WeatherTempLabelsOverlayOptions> = {
-  maxAreaKm2: 90000, // ~300x300 км — OWM box/city покрывает крупные области
   debounceMs: 600,
-  maxLabels: 50,
+  maxLabels: 12,
+  gridCols: 4,
+  gridRows: 3,
 };
 
-interface OwmBoxCity {
-  id: number;
-  name: string;
-  coord: { lat: number; lon: number };
-  main: { temp: number };
+/** Ответ бесплатного OWM /data/2.5/weather?lat&lon. */
+interface OwmCurrentWeather {
+  name?: string;
+  coord?: { lat?: number; lon?: number };
+  main?: { temp?: number };
 }
 
-interface OwmBoxResponse {
-  list?: OwmBoxCity[];
+interface WeatherPoint {
+  lat: number;
+  lon: number;
+  temp: number;
+  name: string;
 }
 
 const formatTemp = (temp: number): string => {
   if (!Number.isFinite(temp)) return '';
   const rounded = Math.round(temp);
-  const sign = rounded > 0 ? '+' : '';
-  return `${sign}${rounded}°`;
+  const sign = rounded > 0 ? '+' : rounded < 0 ? '−' : '';
+  // Для отрицательных используем минус U+2212; Math.round(-0) -> 0, знак не ставим.
+  const abs = Math.abs(rounded);
+  return `${sign}${abs}°`;
 };
 
 /** Цвет подписи по температуре (тёплый/холодный) для читаемости поверх heat-map. */
@@ -57,7 +63,7 @@ export const attachWeatherTempLabelsOverlay = (
   const layerGroup = L.layerGroup();
 
   let abort: AbortController | null = null;
-  let timer: any = null;
+  let timer: ReturnType<typeof setTimeout> | null = null;
   let lastKey: string | null = null;
   let isLoading = false;
   let nextAllowedAt = 0;
@@ -85,27 +91,37 @@ export const attachWeatherTempLabelsOverlay = (
     }
   };
 
-  const shrinkBBoxToMaxArea = (bbox: BBox, maxAreaKm2: number): BBox => {
-    const area = bboxAreaKm2(bbox);
-    if (!(area > maxAreaKm2)) return bbox;
-
-    const factor = Math.sqrt(maxAreaKm2 / area);
-    const centerLat = (bbox.north + bbox.south) / 2;
-    const centerLng = (bbox.east + bbox.west) / 2;
-    const halfLat = Math.abs(bbox.north - bbox.south) / 2;
-    const halfLng = Math.abs(bbox.east - bbox.west) / 2;
-
-    return {
-      south: centerLat - halfLat * factor,
-      west: centerLng - halfLng * factor,
-      north: centerLat + halfLat * factor,
-      east: centerLng + halfLng * factor,
-    };
-  };
-
   const keyFromBBox = (bbox: BBox, zoom: number) => {
     const r = (n: number) => Math.round(n * 100) / 100;
     return `${r(bbox.south)}|${r(bbox.west)}|${r(bbox.north)}|${r(bbox.east)}|${zoom}`;
+  };
+
+  /**
+   * Узлы сетки выборки по видимым bounds: равномерно cols×rows с инсетом от краёв,
+   * чтобы подписи не лезли за экран.
+   */
+  const gridPoints = (bbox: BBox): Array<{ lat: number; lon: number }> => {
+    const cols = Math.max(1, Math.floor(options.gridCols));
+    const rows = Math.max(1, Math.floor(options.gridRows));
+
+    const insetLat = (bbox.north - bbox.south) * 0.12;
+    const insetLon = (bbox.east - bbox.west) * 0.12;
+    const south = bbox.south + insetLat;
+    const north = bbox.north - insetLat;
+    const west = bbox.west + insetLon;
+    const east = bbox.east - insetLon;
+
+    const points: Array<{ lat: number; lon: number }> = [];
+    for (let ri = 0; ri < rows; ri += 1) {
+      const tLat = rows === 1 ? 0.5 : ri / (rows - 1);
+      const lat = south + (north - south) * tLat;
+      for (let ci = 0; ci < cols; ci += 1) {
+        const tLon = cols === 1 ? 0.5 : ci / (cols - 1);
+        const lon = west + (east - west) * tLon;
+        if (Number.isFinite(lat) && Number.isFinite(lon)) points.push({ lat, lon });
+      }
+    }
+    return points;
   };
 
   const makeIcon = (text: string, color: string) => {
@@ -133,21 +149,16 @@ export const attachWeatherTempLabelsOverlay = (
     });
   };
 
-  const renderCities = (cities: OwmBoxCity[]) => {
+  const renderPoints = (points: WeatherPoint[]) => {
     layerGroup.clearLayers();
 
-    for (const c of cities) {
-      const lat = c?.coord?.lat;
-      const lon = c?.coord?.lon;
-      const temp = c?.main?.temp;
-      if (!Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(temp)) continue;
-
-      const text = formatTemp(temp);
+    for (const p of points) {
+      const text = formatTemp(p.temp);
       if (!text) continue;
 
       try {
-        const marker = L.marker([lat, lon], {
-          icon: makeIcon(text, tempColor(temp)),
+        const marker = L.marker([p.lat, p.lon], {
+          icon: makeIcon(text, tempColor(p.temp)),
           interactive: false,
           keyboard: false,
         });
@@ -157,6 +168,41 @@ export const attachWeatherTempLabelsOverlay = (
         // Пропускаем некорректные координаты — на основную карту не влияет.
       }
     }
+  };
+
+  /** Дедуп по name (если есть) либо по округлённым координатам ответа. */
+  const dedupKey = (p: WeatherPoint): string => {
+    if (p.name) return `n:${p.name.toLowerCase()}`;
+    const r = (n: number) => Math.round(n * 50) / 50;
+    return `c:${r(p.lat)}|${r(p.lon)}`;
+  };
+
+  const fetchPoint = async (
+    lat: number,
+    lon: number,
+    apiKey: string,
+    signal: AbortSignal,
+  ): Promise<WeatherPoint | null> => {
+    const url =
+      `https://api.openweathermap.org/data/2.5/weather` +
+      `?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}&units=metric&appid=${encodeURIComponent(apiKey)}`;
+
+    const res = await fetch(url, { signal });
+    if (!res.ok) {
+      throw new Error(`OWM weather ${res.status}`);
+    }
+    const data = (await res.json()) as OwmCurrentWeather;
+    const rLat = data?.coord?.lat;
+    const rLon = data?.coord?.lon;
+    const temp = data?.main?.temp;
+    if (!Number.isFinite(rLat) || !Number.isFinite(rLon) || !Number.isFinite(temp)) return null;
+
+    return {
+      lat: rLat as number,
+      lon: rLon as number,
+      temp: temp as number,
+      name: typeof data?.name === 'string' ? data.name : '',
+    };
   };
 
   const load = async () => {
@@ -169,11 +215,10 @@ export const attachWeatherTempLabelsOverlay = (
     const now = Date.now();
     if (now < nextAllowedAt) return;
 
-    const rawBBox = makeBBox();
-    if (!rawBBox) return;
+    const bbox = makeBBox();
+    if (!bbox) return;
 
     const zoom = Math.round(Number(map.getZoom?.() ?? 7));
-    const bbox = shrinkBBoxToMaxArea(rawBBox, options.maxAreaKm2);
 
     const key = keyFromBBox(bbox, zoom);
     if (key === lastKey) return;
@@ -181,39 +226,56 @@ export const attachWeatherTempLabelsOverlay = (
 
     abort?.abort();
     abort = new AbortController();
+    const signal = abort.signal;
     isLoading = true;
 
     try {
-      // OWM box/city: bbox={lonLeft},{latBottom},{lonRight},{latTop},{zoom}
-      const bboxParam = [bbox.west, bbox.south, bbox.east, bbox.north, zoom].join(',');
-      const url =
-        `https://api.openweathermap.org/data/2.5/box/city` +
-        `?bbox=${bboxParam}&units=metric&appid=${encodeURIComponent(apiKey)}`;
+      const nodes = gridPoints(bbox);
+      const results = await Promise.all(
+        nodes.map((n) =>
+          fetchPoint(n.lat, n.lon, apiKey, signal).catch((e: unknown) => {
+            if (e instanceof Error && e.name === 'AbortError') throw e;
+            const msg = e instanceof Error ? e.message : String(e);
+            // 401/403 — нет доступа к ключу/эндпоинту: тихий выход, не спамим.
+            if (msg.includes('401') || msg.includes('403') || msg.includes('429')) throw e;
+            return null;
+          }),
+        ),
+      );
 
-      const res = await fetch(url, { signal: abort.signal });
-      if (!res.ok) {
-        throw new Error(`OWM box/city ${res.status}`);
+      const seen = new Set<string>();
+      const points: WeatherPoint[] = [];
+      for (const p of results) {
+        if (!p) continue;
+        const k = dedupKey(p);
+        if (seen.has(k)) continue;
+        seen.add(k);
+        points.push(p);
+        if (points.length >= options.maxLabels) break;
       }
-      const data = (await res.json()) as OwmBoxResponse;
-      const cities = Array.isArray(data?.list) ? data.list.slice(0, options.maxLabels) : [];
-      renderCities(cities);
+
+      renderPoints(points);
 
       backoffMs = 0;
       nextAllowedAt = Date.now() + 800;
-    } catch (e: any) {
-      if (e?.name === 'AbortError') return;
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === 'AbortError') return;
 
-      const msg = String(e?.message || '').toLowerCase();
+      const msg = (e instanceof Error ? e.message : String(e)).toLowerCase();
       const isRateLimited = msg.includes('429') || msg.includes('too many requests');
+      const isAuth = msg.includes('401') || msg.includes('403');
       if (isRateLimited) {
         backoffMs = backoffMs ? Math.min(backoffMs * 2, 30000) : 2000;
         nextAllowedAt = Date.now() + backoffMs;
+      } else if (isAuth) {
+        // Ключ без доступа: длинная пауза, чтобы не молотить впустую.
+        nextAllowedAt = Date.now() + 60000;
       } else {
         nextAllowedAt = Date.now() + 1500;
       }
-      // Сбрасываем ключ, чтобы повторить тот же bbox после бэкоффа.
+      // Сбрасываем ключ, чтобы повторить тот же bbox после паузы.
       lastKey = null;
-      console.warn('[Weather Temp Labels] Failed to load OWM data:', e?.message || e);
+      console.warn('[Weather Temp Labels] Failed to load OWM data:', msg);
     } finally {
       isLoading = false;
     }

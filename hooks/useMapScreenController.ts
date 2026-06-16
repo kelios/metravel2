@@ -5,7 +5,12 @@ import { useLocalSearchParams } from 'expo-router';
 import { useRouteStore } from '@/stores/routeStore';
 import type { MapUiApi } from '@/types/mapUi';
 import type { TravelCoords } from '@/types/types';
-import { getActiveOverlayLayers } from '@/config/mapWebLayers';
+import {
+  getActiveOverlayLayers,
+  getExclusiveGroupSiblings,
+  WEATHER_TEMP_LAYER_ID,
+  WEATHER_TEMP_LABELS_LAYER_ID,
+} from '@/config/mapWebLayers';
 
 // Модульные хуки для карты
 import { useMapCoordinates } from '@/hooks/map/useMapCoordinates';
@@ -216,7 +221,24 @@ export function useMapScreenController() {
   const handleOverlayToggle = useCallback((id: string, enabled: boolean) => {
     setEnabledOverlays((prev) => {
       if (prev[id] === enabled) return prev;
-      return { ...prev, [id]: enabled };
+      const next = { ...prev, [id]: enabled };
+
+      // Radio-поведение внутри exclusiveGroup: включение одного слоя
+      // выключает остальные слои той же группы (три погодных heatmap-тайла).
+      if (enabled) {
+        for (const siblingId of getExclusiveGroupSiblings(id)) {
+          if (next[siblingId]) next[siblingId] = false;
+        }
+      }
+
+      // Связка «Температура» ↔ числовые подписи °C: подписи не входят в
+      // heatmap-группу, но следуют за заливкой температуры, чтобы пользователь
+      // сразу видел реальные градусы числами.
+      if (id === WEATHER_TEMP_LAYER_ID) {
+        next[WEATHER_TEMP_LABELS_LAYER_ID] = enabled;
+      }
+
+      return next;
     });
   }, []);
 

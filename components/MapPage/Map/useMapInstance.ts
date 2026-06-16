@@ -258,14 +258,15 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
           }
         });
 
-      // Setup weather temperature labels overlay (OWM box/city, numeric °C)
+      // Setup weather temperature labels overlay (OWM /data/2.5/weather grid, numeric °C)
       const tempLabelsDef = overlayDefs.find((d) => d.kind === 'weather-temp-labels');
       if (tempLabelsDef) {
         try {
           const tempLabelsController = attachWeatherTempLabelsOverlay(L, map, {
-            maxAreaKm2: 90000,
             debounceMs: 600,
-            maxLabels: 50,
+            maxLabels: 12,
+            gridCols: 4,
+            gridRows: 3,
           });
           leafletOverlayLayersRef.current.set(tempLabelsDef.id, tempLabelsController.layer);
           overlays[tempLabelsDef.title] = tempLabelsController.layer;
