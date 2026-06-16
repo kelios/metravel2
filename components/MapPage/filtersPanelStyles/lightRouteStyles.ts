@@ -8,7 +8,7 @@ import {
 export const getLightRouteStyles = ({ colors, isMobile }: FiltersPanelStyleContext) =>
   ({
     lightStepBlock: {
-      paddingVertical: isMobile ? 12 : 14,
+      paddingVertical: isMobile ? 10 : 12,
       paddingHorizontal: 0,
       gap: isMobile ? 8 : 10,
       borderBottomWidth: StyleSheet.hairlineWidth,
@@ -21,15 +21,15 @@ export const getLightRouteStyles = ({ colors, isMobile }: FiltersPanelStyleConte
       marginBottom: 2,
     },
     lightStepNumber: {
-      width: 22,
-      height: 22,
+      width: 20,
+      height: 20,
       borderRadius: PILL_RADIUS,
-      backgroundColor: colors.primary,
-      color: colors.textOnPrimary,
+      backgroundColor: colors.primarySoft,
+      color: colors.primary,
       fontSize: 11,
       fontWeight: '700',
       textAlign: 'center',
-      lineHeight: 22,
+      lineHeight: 20,
       overflow: 'hidden',
     },
     lightStepTitle: {

@@ -10,7 +10,7 @@ import {
 export const getStatusStyles = ({ colors, isMobile, bottomDockReserve }: FiltersPanelStyleContext) =>
   ({
     contentContainer: {
-      paddingBottom: isMobile ? 10 : 64 + bottomDockReserve,
+      paddingBottom: isMobile ? 10 : 24 + bottomDockReserve,
       paddingTop: isMobile ? 4 : 2,
       paddingHorizontal: isMobile ? 8 : 4,
       flexGrow: 1,

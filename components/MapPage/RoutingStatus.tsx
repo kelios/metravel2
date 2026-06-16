@@ -11,6 +11,7 @@ import {
 import Feather from '@expo/vector-icons/Feather'
 
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import MapIcon from './MapIcon'
 
 type TransportMode = 'car' | 'bike' | 'foot'
 
@@ -31,12 +32,6 @@ const TRANSPORT_SPEED_KMH: Record<TransportMode, number> = {
   car: 60,
   bike: 20,
   foot: 5,
-}
-
-const MODE_ICON: Record<TransportMode, React.ComponentProps<typeof Feather>['name']> = {
-  bike: 'activity',
-  foot: 'navigation',
-  car: 'navigation-2',
 }
 
 const PROGRESS_ANIM_DURATION_MS = 3000
@@ -202,9 +197,15 @@ function RoutingStatus({
   return (
     <View style={[styles.container, styles.successContainer, compact && styles.successContainerCompact]}>
       <View style={styles.successHeader}>
-        <Feather
-          name={MODE_ICON[transportMode]}
-          size={compact ? 14 : 16}
+        <MapIcon
+          name={
+            transportMode === 'car'
+              ? 'directions-car'
+              : transportMode === 'bike'
+                ? 'directions-bike'
+                : 'directions-walk'
+          }
+          size={compact ? 16 : 18}
           color={colors.success}
         />
         <Text style={styles.successTitle}>
@@ -215,7 +216,7 @@ function RoutingStatus({
       </View>
       <View style={styles.miniCardGrid}>
         <MiniCard
-          icon="map"
+          icon="navigation"
           iconColor={colors.primary}
           value={formatDistance(distance)}
           label={compact ? 'Дистанция' : 'Расстояние'}

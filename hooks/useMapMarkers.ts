@@ -114,7 +114,7 @@ export function useMapMarkers(options: UseMapMarkersOptions): UseMapMarkersResul
 
   // Marker opacity (reduced in route mode to emphasize route)
   const markerOpacity = useMemo(() => {
-    return mode === 'route' ? 0.45 : 1;
+    return mode === 'route' ? 0.7 : 1;
   }, [mode]);
 
   // Total markers count

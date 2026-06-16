@@ -661,7 +661,14 @@ function TravelListItem({
         revealOnLoadOnly: isMobileSafariFirstCard,
         recyclingKey: travelKey,
         priority: IS_WEB ? (isFirst ? 'high' : 'low') : 'normal',
-        loading: IS_WEB ? (isFirst ? 'eager' : 'lazy') : 'lazy',
+        // Eager on web so FlashList's mounted-ahead cells (~700px before the
+        // viewport) start fetching before they scroll in — otherwise lazy <img>
+        // defers until visible and the card shows the blurred placeholder first,
+        // then snaps to the sharp photo (the "фон, потом картинка" flash on scroll).
+        // priority stays 'low' for non-first cards, so fetchPriority is 'auto' and
+        // these don't compete with the LCP image; the Safari decode-gated reveal
+        // is unaffected (it never keyed off loading).
+        loading: IS_WEB ? 'eager' : 'lazy',
         prefetch: IS_WEB ? isFirst : false,
       }}
       {...nativeCardProps}

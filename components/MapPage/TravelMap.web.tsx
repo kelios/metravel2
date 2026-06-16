@@ -29,6 +29,25 @@ const IS_WEB = Platform.OS === 'web'
 
 const NOOP = () => {}
 
+// Встроенная (compact) travel-карта не должна перехватывать скролл страницы:
+// колесо зумит только с зажатым Ctrl/Cmd, обычный скролл уходит странице.
+function CtrlWheelZoom({ useMap }: { useMap: () => any }) {
+  const map = useMap()
+  useEffect(() => {
+    if (!map?.scrollWheelZoom) return
+    map.scrollWheelZoom.disable()
+    const el = map.getContainer?.()
+    if (!el) return
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) map.scrollWheelZoom.enable()
+      else map.scrollWheelZoom.disable()
+    }
+    el.addEventListener('wheel', onWheel, { passive: true })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [map])
+  return null
+}
+
 interface TravelMapProps {
   travelData: any[]
   highlightedPoint?: { coord: string; key: string }
@@ -453,7 +472,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         zoom={initialView.zoom}
         style={{ width: '100%', height: '100%', minHeight: mapHeight }}
         zoomControl
-        scrollWheelZoom
+        scrollWheelZoom={!compact}
         dragging
         ref={(map: any) => {
           if (!mountedRef.current) return
@@ -485,6 +504,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           attribution="&copy; OpenStreetMap contributors"
           crossOrigin="anonymous"
         />
+
+        {compact && rl.useMap && <CtrlWheelZoom useMap={rl.useMap} />}
 
         {showRouteLine &&
           rl.useMap &&

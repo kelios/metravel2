@@ -84,6 +84,7 @@ function estimateDurationSeconds(meters: number, mode: TransportMode) {
 interface FiltersPanelRouteSectionProps {
   colors: ThemedColors
   styles: any
+  isMobile?: boolean
   mode: 'radius' | 'route'
   transportMode: TransportMode
   setTransportMode: (m: TransportMode) => void
@@ -107,6 +108,7 @@ interface FiltersPanelRouteSectionProps {
 const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
   colors,
   styles,
+  isMobile = false,
   mode,
   transportMode,
   setTransportMode,
@@ -163,7 +165,7 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
         <View style={styles.lightStepHeader}>
           <Text style={styles.lightStepNumber}>1</Text>
           <Text style={styles.lightStepTitle}>Транспорт</Text>
-          <Text style={styles.lightStepBadge}>{selectedTransportLabel}</Text>
+          {isMobile && <Text style={styles.lightStepBadge}>{selectedTransportLabel}</Text>}
         </View>
         <SegmentedControl
           options={TRANSPORT_MODES}
@@ -175,7 +177,7 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
           noOuterMargins
           role="button"
           tone="subtle"
-          iconOnly
+          iconOnly={isMobile}
         />
       </View>
 

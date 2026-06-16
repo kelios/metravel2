@@ -198,7 +198,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
                       <Tooltip
                         direction="top"
                         offset={[0, -10]}
-                        opacity={0.95}
+                        opacity={1}
                         className="metravel-marker-tooltip"
                       >
                         {item.address.length > TOOLTIP_MAX_LEN

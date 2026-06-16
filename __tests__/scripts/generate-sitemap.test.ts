@@ -81,6 +81,23 @@ describe('generate-sitemap helpers', () => {
     ]);
   });
 
+  it('keeps quest URLs in the assembled sitemap (BE-017 regression)', () => {
+    // Mirror main()'s composition order: static + quests + travels.
+    const entries = [
+      ...buildStaticEntries(),
+      ...buildQuestEntries([
+        { quest_id: 'krakow-dragon', city_id: '1', updated_at: '2026-04-10T11:22:33.000Z' },
+        { quest_id: 'warsaw-syrenka', city_id: '10' },
+      ]),
+      ...buildTravelEntries([{ slug: 'first-route' }]),
+    ];
+    const xml = buildSitemapXml(entries);
+
+    expect(xml).toContain('<loc>https://metravel.by/quests</loc>');
+    expect(xml).toContain('<loc>https://metravel.by/quests/1/krakow-dragon</loc>');
+    expect(xml).toContain('<loc>https://metravel.by/quests/10/warsaw-syrenka</loc>');
+  });
+
   it('builds valid sitemap XML with escaped entities', () => {
     const xml = buildSitemapXml([
       { loc: 'https://metravel.by/' },

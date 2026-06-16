@@ -193,6 +193,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
           <FiltersPanelRouteSection
             colors={colors}
             styles={styles}
+            isMobile={isMobile}
             mode={mode}
             transportMode={transportMode}
             setTransportMode={setTransportMode}
