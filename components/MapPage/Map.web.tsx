@@ -37,6 +37,7 @@ import {
   normalizeLngLatWithHint as normalizeLngLatWithHintHelper,
 } from './Map/mapWebGeometry'
 import { queryKeys } from '@/api/queryKeys'
+import { isFallbackMinskCenter } from './Map/fallbackCenter'
 
 type ReactLeafletNS = typeof import('react-leaflet')
 
@@ -49,19 +50,8 @@ const DEFAULT_MAX_ZOOM = 18
 const MARKER_ZOOM_TARGET = 14
 const MARKER_REOPEN_TIMEOUT_MS = 500
 const FALLBACK_COORDINATES = { latitude: 53.8828449, longitude: 27.7273595 }
-const MINSK_FALLBACK_POINTS: Array<[number, number]> = [
-  [53.9006, 27.559],
-  [53.8828449, 27.7273595],
-]
-const MINSK_TOLERANCE = 0.02
 
 type Props = MapProps
-
-function isFallbackMinskCenter(lat: number, lng: number) {
-  return MINSK_FALLBACK_POINTS.some(
-    ([fLat, fLng]) => Math.abs(lat - fLat) < MINSK_TOLERANCE && Math.abs(lng - fLng) < MINSK_TOLERANCE,
-  )
-}
 
 function safeInvoke(fn: (() => void) | undefined) {
   if (!fn) return

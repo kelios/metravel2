@@ -8,6 +8,7 @@ import Map from '@/components/MapPage/Map';
 import MapRouteEngine from '@/components/MapPage/MapRouteEngine';
 import type { MapUiApi } from '@/types/mapUi';
 import type { ComponentType } from 'react';
+import { isFallbackMinskCenter } from './Map/fallbackCenter';
 
 type LatLng = { latitude: number; longitude: number };
 
@@ -104,6 +105,18 @@ const MapPanel: React.FC<MapPanelProps> = ({
         return coordinates;
     }, [coordinates]);
 
+    // Реальная гео пользователя для нативного маркера «вы здесь». coordinates на
+    // native приходит из useMapCoordinates и при denied/timeout = дефолтный Минск,
+    // поэтому отсекаем fallback-центр тем же предикатом, что и web (общий util).
+    // null → синяя точка не рисуется.
+    const nativeUserLocation = useMemo<LatLng | null>(() => {
+        if (!coordinates) return null;
+        const { latitude, longitude } = coordinates;
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+        if (isFallbackMinskCenter(latitude, longitude)) return null;
+        return { latitude, longitude };
+    }, [coordinates]);
+
     // ✅ ИСПРАВЛЕНИЕ: Функция для обработки ошибок и регенерации ключа карты
     const handleMapError = useCallback(() => {
         console.warn('[MapPanel] Map error occurred, regenerating map key...');
@@ -129,6 +142,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                 <Map
                     travel={nativeTravelProp}
                     coordinates={safeCoordinates}
+                    userLocation={nativeUserLocation}
                     routePoints={routePoints}
                     fullRouteCoords={fullRouteCoords}
                     mode={mode}

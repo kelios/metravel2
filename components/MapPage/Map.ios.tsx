@@ -5,8 +5,33 @@ import { useRouter } from 'expo-router';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
 import { DESIGN_COLORS } from '@/constants/designSystem';
+import { MODERN_MATTE_PALETTE } from '@/constants/modernMattePalette';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { resolveInternalTravelRoute } from '@/utils/relatedTravel';
+import { WEB_MAP_OVERLAY_LAYERS } from '@/config/mapWebLayers';
+
+// Overpass endpoint mirrors utils/overpass/fetchOverpass.ts. Inlined as a plain
+// string because the overlay engine runs INSIDE the WebView and has no access to
+// the RN module graph (those overlays живут только в web Leaflet через useMapApi).
+const OVERPASS_ENDPOINT =
+  process.env.EXPO_PUBLIC_OVERPASS_ENDPOINT || 'https://overpass-api.de/api/interpreter';
+
+// Сериализуемая форма слоёв-оверлеев для WebView. id совпадает с
+// WEB_MAP_OVERLAY_LAYERS, поэтому тот же mapUiApi.setOverlayEnabled(id, enabled)
+// из useMapScreenController рисует слой и на native (web — через useMapApi,
+// native — через инъекцию в Leaflet здесь). wfs-geojson на native бьёт по
+// абсолютному upstream-URL: relative-прокси/static-файл web-хоста в WebView
+// недоступны.
+const NATIVE_OVERLAY_LAYERS = WEB_MAP_OVERLAY_LAYERS.map((layer) => ({
+  id: layer.id,
+  kind: layer.kind,
+  url: layer.url,
+  opacity: layer.opacity ?? 1,
+  wfsTypeName: layer.wfsParams?.typeName ?? '',
+  wfsVersion: layer.wfsParams?.version ?? '2.0.0',
+  wfsSrs: layer.wfsParams?.srsName ?? 'EPSG:4326',
+  wfsBboxOrder: layer.wfsParams?.bboxOrder ?? 'lonlat',
+}));
 
 type Point = {
   id?: number | string;
@@ -45,6 +70,12 @@ interface Coordinates {
 interface TravelProps {
   travel: TravelPropsType;
   coordinates: Coordinates | null;
+  /**
+   * Реальная геолокация пользователя для маркера «вы здесь». null когда гео
+   * недоступна или это fallback-Минск — тогда синяя точка НЕ рисуется.
+   * Отделено от coordinates (которые могут быть дефолтным центром).
+   */
+  userLocation?: Coordinates | null;
   routePoints?: [number, number][];
   fullRouteCoords?: [number, number][];
   mode?: 'radius' | 'route';
@@ -53,6 +84,7 @@ interface TravelProps {
     zoomIn: () => void;
     zoomOut: () => void;
     centerOnUser: () => void;
+    setOverlayEnabled: (id: string, enabled: boolean) => void;
   } | null) => void;
 }
 
@@ -92,9 +124,12 @@ const PARAGRAPH_SEPARATOR = new RegExp(String.fromCharCode(0x2029), 'g');
 const serializeForInjection = (value: unknown): string =>
   JSON.stringify(value).replace(LINE_SEPARATOR, '\\u2028').replace(PARAGRAPH_SEPARATOR, '\\u2029');
 
+const USER_LOCATION_COLOR = MODERN_MATTE_PALETTE.accent;
+
 const Map: React.FC<TravelProps> = ({
   travel,
   coordinates: propCoordinates,
+  userLocation = null,
   routePoints = [],
   fullRouteCoords = [],
   mode = 'radius',
@@ -153,6 +188,20 @@ const Map: React.FC<TravelProps> = ({
     }
   }, []);
 
+  // Состояние включённых оверлеев. Храним в ref, чтобы переприменить их после
+  // reload WebView (handleReady) — иначе при пересборке HTML слой пропал бы.
+  const enabledOverlaysRef = useRef<Record<string, boolean>>({});
+
+  const setOverlayEnabled = useCallback(
+    (id: string, enabled: boolean) => {
+      enabledOverlaysRef.current[id] = enabled;
+      injectMapCommand(
+        `window.__metravelSetOverlay && window.__metravelSetOverlay(${JSON.stringify(id)}, ${enabled ? 'true' : 'false'})`,
+      );
+    },
+    [injectMapCommand],
+  );
+
   useEffect(() => {
     if (!onMapUiApiReady) return undefined;
 
@@ -160,10 +209,11 @@ const Map: React.FC<TravelProps> = ({
       zoomIn: () => injectMapCommand('window.__metravelMapZoomIn && window.__metravelMapZoomIn()'),
       zoomOut: () => injectMapCommand('window.__metravelMapZoomOut && window.__metravelMapZoomOut()'),
       centerOnUser: () => injectMapCommand('window.__metravelMapCenterOnUser && window.__metravelMapCenterOnUser()'),
+      setOverlayEnabled,
     });
 
     return () => onMapUiApiReady(null);
-  }, [injectMapCommand, onMapUiApiReady]);
+  }, [injectMapCommand, onMapUiApiReady, setOverlayEnabled]);
 
   // Полезная нагрузка для WebView: точки/маршрут/режим/центр. Меняется по приходу
   // данных, но HTML при этом НЕ пересобирается — маркеры дорисовываются injectJavaScript.
@@ -184,20 +234,59 @@ const Map: React.FC<TravelProps> = ({
     );
   }, [injectMapCommand, mapPayload]);
 
-  // Ref на последний pushPayload — чтобы обработчики onLoadEnd/onMessage слали
+  // Реальная гео пользователя для маркера «вы здесь». null когда координаты
+  // невалидны — синяя точка тогда не рисуется (fallback-Минск отсекается в
+  // MapPanel до прокидывания пропа).
+  const userLat = userLocation?.latitude;
+  const userLng = userLocation?.longitude;
+  const userLocationLatLng = useMemo(() => {
+    if (userLat == null || userLng == null) return null;
+    if (!Number.isFinite(userLat) || !Number.isFinite(userLng)) return null;
+    if (Math.abs(userLat) > 90 || Math.abs(userLng) > 180) return null;
+    return { lat: userLat, lng: userLng };
+  }, [userLat, userLng]);
+
+  const pushUserLocation = useCallback(() => {
+    if (!isReadyRef.current) return;
+    if (userLocationLatLng) {
+      injectMapCommand(
+        `window.__metravelRenderUserLocation && window.__metravelRenderUserLocation(${userLocationLatLng.lat}, ${userLocationLatLng.lng})`,
+      );
+    } else {
+      injectMapCommand('window.__metravelClearUserLocation && window.__metravelClearUserLocation()');
+    }
+  }, [injectMapCommand, userLocationLatLng]);
+
+  // Ref на последние push-функции — чтобы обработчики onLoadEnd/onMessage слали
   // актуальные данные без устаревшего замыкания.
   const pushPayloadRef = useRef(pushPayload);
   pushPayloadRef.current = pushPayload;
+  const pushUserLocationRef = useRef(pushUserLocation);
+  pushUserLocationRef.current = pushUserLocation;
 
   // Перерисовать маркеры при любом изменении данных (если WebView уже готов).
   useEffect(() => {
     pushPayload();
   }, [pushPayload]);
 
+  // Перерисовать/очистить маркер пользователя при изменении гео.
+  useEffect(() => {
+    pushUserLocation();
+  }, [pushUserLocation]);
+
   const handleReady = useCallback(() => {
     isReadyRef.current = true;
     pushPayloadRef.current();
-  }, []);
+    pushUserLocationRef.current();
+    // Переприменяем включённые оверлеи после (ре)загрузки WebView.
+    const enabled = enabledOverlaysRef.current;
+    Object.keys(enabled).forEach((id) => {
+      if (!enabled[id]) return;
+      injectMapCommand(
+        `window.__metravelSetOverlay && window.__metravelSetOverlay(${JSON.stringify(id)}, true)`,
+      );
+    });
+  }, [injectMapCommand]);
 
   // Статичный HTML-каркас: карта + функция window.__metravelRenderPoints.
   // Мемоизирован по теме — стабилен между обновлениями данных, поэтому WebView
@@ -333,8 +422,14 @@ const Map: React.FC<TravelProps> = ({
         window.__metravelMapZoomOut = function() {
           try { map.zoomOut(); } catch (e) {}
         };
+        // Центрируем на реальной точке пользователя, если она есть
+        // (__metravelRenderUserLocation её выставляет), иначе на дефолтном центре.
+        map.__realUserLocation = null;
         window.__metravelMapCenterOnUser = function() {
-          try { map.setView(map.__userCenter, Math.max(map.getZoom ? map.getZoom() : 10, 13)); } catch (e) {}
+          try {
+            const target = map.__realUserLocation || map.__userCenter;
+            map.setView(target, Math.max(map.getZoom ? map.getZoom() : 10, 13));
+          } catch (e) {}
         };
 
         // OpenStreetMap (бесплатно!)
@@ -345,6 +440,47 @@ const Map: React.FC<TravelProps> = ({
 
         const markersLayer = L.layerGroup().addTo(map);
         const routeLayer = L.layerGroup().addTo(map);
+        // Отдельный слой для маркера «вы здесь». НЕ чистится в __metravelRenderPoints
+        // (где clearLayers зовётся только для markersLayer/routeLayer), поэтому синяя
+        // точка не мигает при ре-рендере travel-маркеров. Добавлен последним —
+        // лежит поверх travel-маркеров.
+        const userLayer = L.layerGroup().addTo(map);
+
+        const USER_LOCATION_COLOR = ${JSON.stringify(USER_LOCATION_COLOR)};
+        const USER_LOCATION_RING = ${JSON.stringify(themeColors.textOnDark)};
+
+        // Рисует синюю точку пользователя (accent-цвет, как на web) + полупрозрачный
+        // accuracy-круг под ней. Перед отрисовкой чистит userLayer, чтобы точка не
+        // дублировалась при обновлении гео.
+        window.__metravelRenderUserLocation = function(lat, lng) {
+          try {
+            if (!isFinite(lat) || !isFinite(lng)) return;
+            map.__realUserLocation = [lat, lng];
+            userLayer.clearLayers();
+            L.circle([lat, lng], {
+              radius: 60,
+              color: USER_LOCATION_COLOR,
+              weight: 1,
+              opacity: 0.4,
+              fillColor: USER_LOCATION_COLOR,
+              fillOpacity: 0.12,
+              interactive: false
+            }).addTo(userLayer);
+            const dot = L.circleMarker([lat, lng], {
+              radius: 8,
+              color: USER_LOCATION_RING,
+              weight: 3,
+              fillColor: USER_LOCATION_COLOR,
+              fillOpacity: 1
+            }).addTo(userLayer);
+            dot.bindPopup('Вы здесь');
+            try { dot.bringToFront(); } catch (e) {}
+          } catch (e) {}
+        };
+
+        window.__metravelClearUserLocation = function() {
+          try { userLayer.clearLayers(); map.__realUserLocation = null; } catch (e) {}
+        };
 
         // Inline HTML marker works reliably in Android WebView, where SVG data-URI
         // marker images can render as an invisible icon.
@@ -428,6 +564,26 @@ const Map: React.FC<TravelProps> = ({
               popupContent += '</div>';
               popupContent += '</div>';
 
+              // Зона кемпинга: рисуем полупрозрачный круг ПОД маркером для точек,
+              // у которых categoryName содержит 'Кемпинг' или 'Лагерь'. Бэкенд не
+              // отдаёт полигон-геометрию, поэтому зона — L.circle фиксированного
+              // радиуса 250м (визуальная зона, НЕ search radius). Круг добавляется
+              // в markersLayer, который чистится в начале __metravelRenderPoints,
+              // поэтому зоны не накапливаются при ре-рендере точек.
+              const categoryName = String(point.categoryName || '');
+              const isCamping = categoryName.indexOf('Кемпинг') !== -1 || categoryName.indexOf('Лагерь') !== -1;
+              if (isCamping) {
+                L.circle([lat, lng], {
+                  radius: 250,
+                  color: '#2e7d32',
+                  weight: 2,
+                  opacity: 0.8,
+                  fillColor: '#4caf50',
+                  fillOpacity: 0.18,
+                  interactive: false
+                }).addTo(markersLayer);
+              }
+
               const marker = L.marker([lat, lng], { icon: markerIcon }).addTo(markersLayer);
               // bindPopup сам открывает popup по тапу на маркер; отдельный click→OPEN_URL
               // уводил на travel сразу и popup-карточка никогда не показывалась (#…).
@@ -494,6 +650,216 @@ const Map: React.FC<TravelProps> = ({
               map.fitBounds(bounds, { padding: [50, 50] });
             } else if (map.__userCenter) {
               map.setView(map.__userCenter, map.getZoom ? map.getZoom() : 10);
+            }
+          } catch (e) {}
+        };
+
+        // ───────────────────────── Оверлеи (web-parity) ─────────────────────────
+        // На web эти слои рисует useMapApi (Overpass/WFS/tile). На native повторяем
+        // тот же контракт mapUiApi.setOverlayEnabled(id, enabled) — но рендерим
+        // внутри WebView. Overpass/WFS — bbox-driven с дебаунсом по moveend.
+        var OVERLAY_DEFS = ${serializeForInjection(NATIVE_OVERLAY_LAYERS)};
+        var OVERPASS_ENDPOINT = ${JSON.stringify(OVERPASS_ENDPOINT)};
+        var overlayLayers = {};      // id -> L.layerGroup/L.tileLayer
+        var overlayControllers = {}; // id -> { start, stop } для bbox-driven слоёв
+        var overlayEnabled = {};     // id -> bool
+
+        function overlayBBox() {
+          try {
+            var b = map.getBounds();
+            var sw = b.getSouthWest();
+            var ne = b.getNorthEast();
+            // Ограничиваем площадь, чтобы Overpass/WFS не падали на «весь мир».
+            var south = Math.min(sw.lat, ne.lat);
+            var north = Math.max(sw.lat, ne.lat);
+            var west = Math.min(sw.lng, ne.lng);
+            var east = Math.max(sw.lng, ne.lng);
+            return { south: south, west: west, north: north, east: east };
+          } catch (e) { return null; }
+        }
+
+        function bboxKey(b) {
+          var r = function(n) { return Math.round(n * 100) / 100; };
+          return r(b.south) + '|' + r(b.west) + '|' + r(b.north) + '|' + r(b.east);
+        }
+
+        function makeBboxController(layerGroup, buildQuery, renderFn, debounceMs) {
+          var timer = null, lastKey = null, busy = false, ctrl = null, on = false;
+          function load() {
+            if (busy || !on) return;
+            var b = overlayBBox();
+            if (!b) return;
+            var key = bboxKey(b);
+            if (key === lastKey) return;
+            lastKey = key;
+            if (ctrl) { try { ctrl.abort(); } catch (e) {} }
+            ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+            busy = true;
+            var url = buildQuery(b);
+            var opts = ctrl ? { signal: ctrl.signal } : {};
+            fetch(url, opts)
+              .then(function(res) { return res.ok ? res.json() : null; })
+              .then(function(data) { if (data && on) { try { renderFn(layerGroup, data, b); } catch (e) {} } })
+              .catch(function() {})
+              .then(function() { busy = false; });
+          }
+          function schedule() { if (timer) clearTimeout(timer); timer = setTimeout(load, debounceMs || 650); }
+          function onMove() { schedule(); }
+          return {
+            start: function() { on = true; lastKey = null; map.on('moveend', onMove); schedule(); },
+            stop: function() {
+              on = false;
+              map.off('moveend', onMove);
+              if (ctrl) { try { ctrl.abort(); } catch (e) {} }
+              if (timer) clearTimeout(timer);
+              lastKey = null;
+              try { layerGroup.clearLayers(); } catch (e) {}
+            }
+          };
+        }
+
+        function overpassUrl(ql) {
+          return OVERPASS_ENDPOINT + '?data=' + encodeURIComponent(ql);
+        }
+
+        function overpassCampingQL(b) {
+          return '[out:json][timeout:25];(' +
+            'way["amenity"="shelter"](' + b.south + ',' + b.west + ',' + b.north + ',' + b.east + ');' +
+            'node["amenity"="shelter"](' + b.south + ',' + b.west + ',' + b.north + ',' + b.east + ');' +
+            'way["tourism"="wilderness_hut"](' + b.south + ',' + b.west + ',' + b.north + ',' + b.east + ');' +
+            'node["tourism"="wilderness_hut"](' + b.south + ',' + b.west + ',' + b.north + ',' + b.east + ');' +
+            'way["tourism"="camp_pitch"](' + b.south + ',' + b.west + ',' + b.north + ',' + b.east + ');' +
+            'node["tourism"="camp_pitch"](' + b.south + ',' + b.west + ',' + b.north + ',' + b.east + ');' +
+            'relation["tourism"="camp_site"](' + b.south + ',' + b.west + ',' + b.north + ',' + b.east + ');' +
+            'way["tourism"="camp_site"](' + b.south + ',' + b.west + ',' + b.north + ',' + b.east + ');' +
+            'node["tourism"="camp_site"](' + b.south + ',' + b.west + ',' + b.north + ',' + b.east + ');' +
+            ');out center tags;';
+        }
+
+        function overpassPoiQL(b) {
+          return '[out:json][timeout:25];(' +
+            'node["tourism"~"^(attraction|museum|viewpoint|zoo|theme_park)$"](' + b.south + ',' + b.west + ',' + b.north + ',' + b.east + ');' +
+            'way["tourism"~"^(attraction|museum|viewpoint|zoo|theme_park)$"](' + b.south + ',' + b.west + ',' + b.north + ',' + b.east + ');' +
+            'node["historic"~"^(castle|manor|fort|ruins|archaeological_site|monument|memorial)$"](' + b.south + ',' + b.west + ',' + b.north + ',' + b.east + ');' +
+            'way["historic"~"^(castle|manor|fort|ruins|archaeological_site|monument|memorial)$"](' + b.south + ',' + b.west + ',' + b.north + ',' + b.east + ');' +
+            'node["amenity"="place_of_worship"](' + b.south + ',' + b.west + ',' + b.north + ',' + b.east + ');' +
+            'way["amenity"="place_of_worship"](' + b.south + ',' + b.west + ',' + b.north + ',' + b.east + ');' +
+            ');out center tags;';
+        }
+
+        function overpassRoutesQL(b) {
+          return '[out:json][timeout:25];(' +
+            'relation["type"="route"]["route"~"^(hiking|bicycle)$"](' + b.south + ',' + b.west + ',' + b.north + ',' + b.east + ');' +
+            ');(._;>;);out geom tags;';
+        }
+
+        // Overpass node/way с center → точечные маркеры.
+        function renderOverpassPoints(layerGroup, data, color) {
+          layerGroup.clearLayers();
+          var els = (data && Array.isArray(data.elements)) ? data.elements : [];
+          for (var i = 0; i < els.length; i++) {
+            var el = els[i];
+            var lat = (el.type === 'node') ? el.lat : (el.center && el.center.lat);
+            var lng = (el.type === 'node') ? el.lon : (el.center && el.center.lon);
+            if (!isFinite(lat) || !isFinite(lng)) continue;
+            var tags = el.tags || {};
+            var title = tags.name || tags['name:ru'] || tags.tourism || tags.historic || tags.amenity || 'Точка OSM';
+            var m = L.circleMarker([lat, lng], {
+              radius: 6, color: ROUTE_SURFACE, weight: 2, fillColor: color, fillOpacity: 0.95
+            });
+            m.bindPopup('<div class="popup-text"><div class="popup-title">' + escapeHtml(title) + '</div></div>', { maxWidth: 240 });
+            m.addTo(layerGroup);
+          }
+        }
+
+        // Overpass relation route с out geom → полилинии по way-сегментам.
+        function renderOverpassRoutes(layerGroup, data) {
+          layerGroup.clearLayers();
+          var els = (data && Array.isArray(data.elements)) ? data.elements : [];
+          for (var i = 0; i < els.length; i++) {
+            var el = els[i];
+            if (el.type !== 'way' || !Array.isArray(el.geometry)) continue;
+            var pts = [];
+            for (var j = 0; j < el.geometry.length; j++) {
+              var g = el.geometry[j];
+              if (g && isFinite(g.lat) && isFinite(g.lon)) pts.push([g.lat, g.lon]);
+            }
+            if (pts.length >= 2) {
+              L.polyline(pts, { color: '#1f7a1f', weight: 3, opacity: 0.85 }).addTo(layerGroup);
+            }
+          }
+        }
+
+        // WFS GeoJSON (Польша: места палаток). Бьём по абсолютному upstream-URL.
+        function wfsUrl(def, b) {
+          var sep = def.url.indexOf('?') !== -1 ? '&' : '?';
+          var bboxVal = (def.wfsBboxOrder === 'latlon')
+            ? (b.south + ',' + b.west + ',' + b.north + ',' + b.east)
+            : (b.west + ',' + b.south + ',' + b.east + ',' + b.north);
+          var p = 'service=WFS&request=GetFeature&version=' + encodeURIComponent(def.wfsVersion) +
+            '&typeNames=' + encodeURIComponent(def.wfsTypeName) +
+            '&outputFormat=GEOJSON&srsName=' + encodeURIComponent(def.wfsSrs) +
+            '&bbox=' + encodeURIComponent(bboxVal);
+          return def.url + sep + p;
+        }
+
+        function renderWfsGeoJson(layerGroup, data) {
+          layerGroup.clearLayers();
+          if (!data || data.type !== 'FeatureCollection') return;
+          L.geoJSON(data, {
+            style: function() {
+              return { color: 'rgb(31,122,31)', weight: 2, fillColor: 'rgb(52,199,89)', fillOpacity: 0.25, opacity: 0.9 };
+            },
+            onEachFeature: function(feature, layer) {
+              var props = (feature && feature.properties) || {};
+              var name = props.name || props.Name || props.NAZWA || props.nazwa || 'Zanocuj w lesie';
+              try { layer.bindPopup('<div class="popup-text"><div class="popup-title">' + escapeHtml(String(name)) + '</div></div>'); } catch (e) {}
+            }
+          }).addTo(layerGroup);
+        }
+
+        function buildOverlay(def) {
+          if (def.kind === 'tile') {
+            return { layer: L.tileLayer(def.url, { opacity: def.opacity, maxZoom: 19 }), controller: null };
+          }
+          var group = L.layerGroup();
+          var controller = null;
+          if (def.kind === 'osm-overpass-camping') {
+            controller = makeBboxController(group, function(b) { return overpassUrl(overpassCampingQL(b)); },
+              function(g, d) { renderOverpassPoints(g, d, '#34c759'); }, 650);
+          } else if (def.kind === 'osm-overpass-poi') {
+            controller = makeBboxController(group, function(b) { return overpassUrl(overpassPoiQL(b)); },
+              function(g, d) { renderOverpassPoints(g, d, '#ff9f0a'); }, 650);
+          } else if (def.kind === 'osm-overpass-routes') {
+            controller = makeBboxController(group, function(b) { return overpassUrl(overpassRoutesQL(b)); },
+              function(g, d) { renderOverpassRoutes(g, d); }, 700);
+          } else if (def.kind === 'wfs-geojson') {
+            controller = makeBboxController(group, function(b) { return wfsUrl(def, b); },
+              function(g, d) { renderWfsGeoJson(g, d); }, 700);
+          }
+          return { layer: group, controller: controller };
+        }
+
+        // Контракт совпадает с web (useMapApi.setOverlayEnabled): тогл по id.
+        window.__metravelSetOverlay = function(id, enabled) {
+          try {
+            var def = null;
+            for (var i = 0; i < OVERLAY_DEFS.length; i++) { if (OVERLAY_DEFS[i].id === id) { def = OVERLAY_DEFS[i]; break; } }
+            if (!def) return;
+            overlayEnabled[id] = !!enabled;
+            if (!overlayLayers[id]) {
+              var built = buildOverlay(def);
+              overlayLayers[id] = built.layer;
+              overlayControllers[id] = built.controller;
+            }
+            var layer = overlayLayers[id];
+            var ctrl = overlayControllers[id];
+            if (enabled) {
+              if (!map.hasLayer(layer)) layer.addTo(map);
+              if (ctrl) ctrl.start();
+            } else {
+              if (ctrl) ctrl.stop();
+              if (map.hasLayer(layer)) map.removeLayer(layer);
             }
           } catch (e) {}
         };
