@@ -106,7 +106,7 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
     wfsParams: {
       typeName:
         process.env.EXPO_PUBLIC_LASY_WFS_TYPENAME ||
-        'WFS_BDL_mapa_turystyczna:Program_Zanocuj_w_lesie',
+        'WFS_BDL_mapa_turystyczna:Obszar_programu_Zanocuj_w_lesie',
       version: process.env.EXPO_PUBLIC_LASY_WFS_VERSION || '2.0.0',
       outputFormat: process.env.EXPO_PUBLIC_LASY_WFS_OUTPUT || 'GEOJSON',
       srsName: process.env.EXPO_PUBLIC_LASY_WFS_SRS || 'EPSG:4326',

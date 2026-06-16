@@ -884,7 +884,13 @@ const Map: React.FC<TravelProps> = ({
       )}
       <WebView
         ref={webViewRef}
-        source={{ html: htmlContent }}
+        // baseUrl даёт WebView реальный https-origin. Без него source={{html}}
+        // грузится как about:blank c origin 'null', и браузерный CORS-слой режет
+        // ВСЕ fetch к Overpass/WFS (ночёвки, POI, маршруты-сообщества, польские
+        // палатки): Overpass отдаёт ACAO '*' и WFS отражает Origin — но только при
+        // непустом Origin. Тайлы (Waymarked, OSM) грузятся как <img> и CORS не
+        // затрагивает, поэтому маршруты-треки рисовались и без baseUrl.
+        source={{ html: htmlContent, baseUrl: 'https://metravel.by/' }}
         style={styles.map}
         javaScriptEnabled={true}
         domStorageEnabled={true}
