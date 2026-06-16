@@ -6,7 +6,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { openExternalUrl } from '@/utils/externalLinks';
-import { normalizeRelatedTravelRoute } from '@/utils/relatedTravel';
+import { resolveInternalTravelRoute } from '@/utils/relatedTravel';
 
 type Point = {
   id?: number | string;
@@ -228,10 +228,51 @@ const Map: React.FC<TravelProps> = ({
           display: block;
           text-decoration: none;
         }
-        .popup-text { padding: 12px; font-size: 13px; line-height: 1.5; }
-        .popup-label { font-weight: 600; color: ${themeColors.text}; margin-top: 8px; margin-bottom: 4px; }
-        .popup-label:first-of-type { margin-top: 0; }
-        .popup-value { color: ${themeColors.textMuted}; font-size: 12px; margin-bottom: 4px; }
+        .popup-text { padding: 12px; font-size: 13px; line-height: 1.45; }
+        .popup-title {
+          font-weight: 700;
+          color: ${themeColors.text};
+          font-size: 14px;
+          line-height: 1.35;
+          margin-bottom: 8px;
+        }
+        .popup-chip {
+          display: inline-block;
+          padding: 4px 10px;
+          border-radius: 999px;
+          background: ${withAlpha(themeColors.primary, 0.12)};
+          color: ${themeColors.primary};
+          font-size: 11px;
+          font-weight: 600;
+          line-height: 1.2;
+          margin-bottom: 10px;
+        }
+        .popup-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .popup-action {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 44px;
+          padding: 0 12px;
+          border-radius: 10px;
+          font-size: 13px;
+          font-weight: 600;
+          text-decoration: none;
+          cursor: pointer;
+          -webkit-tap-highlight-color: transparent;
+        }
+        .popup-action-primary {
+          background: ${themeColors.primary};
+          color: ${themeColors.textOnDark};
+        }
+        .popup-action-secondary {
+          background: ${withAlpha(themeColors.primary, 0.12)};
+          color: ${themeColors.primary};
+        }
         .metravel-marker { background: transparent; border: 0; }
         .metravel-marker-pin {
           width: 32px;
@@ -371,41 +412,47 @@ const Map: React.FC<TravelProps> = ({
                 '</a>';
               }
 
+              const travelLink = String(point.urlTravel || point.articleUrl || '').trim();
+              const directionsUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + lat + ',' + lng;
+
               popupContent += '<div class="popup-text">';
-              popupContent += '<div class="popup-label">Адрес:</div>';
-              popupContent += '<div class="popup-value">' + escapeHtml(point.address || 'Не указан') + '</div>';
-              popupContent += '<div class="popup-label">Координаты:</div>';
-              popupContent += '<div class="popup-value">' + escapeHtml(point.coord) + '</div>';
-              popupContent += '<div class="popup-label">Категория:</div>';
-              popupContent += '<div class="popup-value">' + escapeHtml(point.categoryName || 'Не указана') + '</div>';
+              popupContent += '<div class="popup-title">' + escapeHtml(point.address || 'Место на карте') + '</div>';
+              if (point.categoryName) {
+                popupContent += '<span class="popup-chip">' + escapeHtml(point.categoryName) + '</span>';
+              }
+              popupContent += '<div class="popup-actions">';
+              if (travelLink) {
+                popupContent += '<a href="#" class="popup-action popup-action-primary" data-open-url="' + escapeHtml(travelLink) + '">Подробнее</a>';
+              }
+              popupContent += '<a href="#" class="popup-action popup-action-secondary" data-open-url="' + escapeHtml(directionsUrl) + '">Маршрут</a>';
+              popupContent += '</div>';
               popupContent += '</div>';
 
               const marker = L.marker([lat, lng], { icon: markerIcon }).addTo(markersLayer);
+              // bindPopup сам открывает popup по тапу на маркер; отдельный click→OPEN_URL
+              // уводил на travel сразу и popup-карточка никогда не показывалась (#…).
+              // Навигация на travel идёт только по кнопке «Подробнее» внутри popup.
               marker.bindPopup(popupContent, { maxWidth: 200 });
-
-              marker.on('click', function() {
-                const directUrl = String(point.urlTravel || point.articleUrl || '').trim();
-                if (directUrl) {
-                  sendOpenUrl(directUrl);
-                }
-              });
 
               marker.on('popupopen', function(e) {
                 try {
                   const popupEl = e && e.popup ? e.popup.getElement() : null;
                   if (!popupEl) return;
-                  const linkEl = popupEl.querySelector('.popup-image-link');
-                  if (!linkEl) return;
-                  linkEl.addEventListener('click', function(ev) {
-                    try {
-                      ev.preventDefault();
-                      const url = (linkEl.getAttribute('data-open-url') || '').trim();
-                      if (!url) return;
-                      sendOpenUrl(url);
-                    } catch {
-                      // noop
-                    }
-                  }, { once: true });
+                  const linkEls = popupEl.querySelectorAll('[data-open-url]');
+                  for (let i = 0; i < linkEls.length; i++) {
+                    (function(linkEl) {
+                      linkEl.addEventListener('click', function(ev) {
+                        try {
+                          ev.preventDefault();
+                          const url = (linkEl.getAttribute('data-open-url') || '').trim();
+                          if (!url) return;
+                          sendOpenUrl(url);
+                        } catch {
+                          // noop
+                        }
+                      });
+                    })(linkEls[i]);
+                  }
                 } catch {
                   // noop
                 }
@@ -500,7 +547,10 @@ const Map: React.FC<TravelProps> = ({
             if (parsed?.type !== 'OPEN_URL') return;
             const safeUrl = getSafeExternalUrl(parsed?.url, { allowRelative: true, baseUrl: getSiteBaseUrl() });
             if (!safeUrl) return;
-            const internalRoute = normalizeRelatedTravelRoute(safeUrl);
+            // Travel marker links arrive as absolute URLs against the API host
+            // (on local/dev API that host is NOT metravel.by), so route by path
+            // regardless of host instead of leaking them to the external browser.
+            const internalRoute = resolveInternalTravelRoute(safeUrl);
             if (internalRoute) {
               router.push(internalRoute as any);
               return;

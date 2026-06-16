@@ -22,6 +22,33 @@ export const normalizeRelatedTravelRoute = (rawUrl: string | null | undefined): 
   }
 }
 
+/**
+ * Resolve an internal app route for a travel link regardless of host.
+ *
+ * Marker/popup URLs come from the backend and are built against the API host,
+ * which on dev/local API is NOT metravel.by (e.g. http://192.168.50.36/travel/...).
+ * `normalizeRelatedTravelRoute` rejects foreign hosts, so on native such links
+ * would otherwise leak to the external browser. For `/travel(s)/...` paths we
+ * only care about the path + query, so we accept any host and return the
+ * in-app route for expo-router navigation.
+ */
+export const resolveInternalTravelRoute = (rawUrl: string | null | undefined): string | null => {
+  const trimmed = typeof rawUrl === 'string' ? rawUrl.trim() : ''
+  if (!trimmed) return null
+
+  const sameHostRoute = normalizeRelatedTravelRoute(trimmed)
+  if (sameHostRoute) return sameHostRoute
+
+  try {
+    const parsed = new URL(trimmed, getSiteBaseUrl())
+    const routeRoot = parsed.pathname.split('/').filter(Boolean)[0]
+    if (routeRoot !== 'travel' && routeRoot !== 'travels') return null
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`
+  } catch {
+    return null
+  }
+}
+
 export const resolveRelatedTravelRef = (rawUrl: string | null | undefined): RelatedTravelRef | null => {
   const route = normalizeRelatedTravelRoute(rawUrl)
   if (!route) return null
