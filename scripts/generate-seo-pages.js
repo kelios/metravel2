@@ -1545,8 +1545,16 @@ async function main() {
   console.log('\n🧩 Fetching quests from API...');
   let quests = [];
   try {
-    const result = await fetchJson(`${API_BASE}/api/quests/`);
-    quests = extractCollectionItems(result).filter((q) => questRouteKey(q));
+    let nextUrl = `${API_BASE}/api/quests/`;
+    let page = 1;
+    while (nextUrl && page <= 50) {
+      console.log(`  📡 Fetching quests page ${page}...`);
+      const result = await fetchJson(nextUrl);
+      const items = extractCollectionItems(result).filter((q) => questRouteKey(q));
+      quests = quests.concat(items);
+      nextUrl = (result && typeof result === 'object' && (result.next_page_url || result.next)) || null;
+      page++;
+    }
     console.log(`  📦 Got ${quests.length} quests`);
   } catch (err) {
     console.error('❌ Failed to fetch quests:', err.message);
