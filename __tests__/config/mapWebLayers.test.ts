@@ -1,5 +1,11 @@
 import type { WebMapLayerDefinition } from '../../config/mapWebLayers';
-import { WEB_MAP_BASE_LAYERS, WEB_MAP_OVERLAY_LAYERS } from '../../config/mapWebLayers';
+import {
+  WEB_MAP_BASE_LAYERS,
+  WEB_MAP_OVERLAY_LAYERS,
+  getExclusiveGroupSiblings,
+  WEATHER_TEMP_LAYER_ID,
+  WEATHER_TEMP_LABELS_LAYER_ID,
+} from '../../config/mapWebLayers';
 
 describe('WEB_MAP_OVERLAY_LAYERS (waymarked trails)', () => {
   it('includes Waymarked Trails overlays for hiking and cycling', () => {
@@ -76,5 +82,51 @@ describe('mapWebLayers invariants', () => {
       expect(typeof layer.wfsParams?.typeName).toBe('string');
       expect(layer.wfsParams?.typeName?.trim().length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('getExclusiveGroupSiblings', () => {
+  it('экспортируемые константы совпадают с реальными id в конфиге', () => {
+    expect(WEATHER_TEMP_LAYER_ID).toBe('weather-temp');
+    expect(WEATHER_TEMP_LABELS_LAYER_ID).toBe('weather-temp-labels');
+    expect(WEB_MAP_OVERLAY_LAYERS.some((l) => l.id === WEATHER_TEMP_LAYER_ID)).toBe(true);
+    expect(WEB_MAP_OVERLAY_LAYERS.some((l) => l.id === WEATHER_TEMP_LABELS_LAYER_ID)).toBe(true);
+  });
+
+  it('для weather-temp возвращает weather-clouds и weather-precip (в любом порядке)', () => {
+    const siblings = getExclusiveGroupSiblings('weather-temp');
+    expect(siblings).toHaveLength(2);
+    expect(siblings).toContain('weather-clouds');
+    expect(siblings).toContain('weather-precip');
+    // сам слой не должен быть среди братьев
+    expect(siblings).not.toContain('weather-temp');
+  });
+
+  it('для weather-clouds возвращает weather-temp и weather-precip', () => {
+    const siblings = getExclusiveGroupSiblings('weather-clouds');
+    expect(siblings).toHaveLength(2);
+    expect(siblings).toContain('weather-temp');
+    expect(siblings).toContain('weather-precip');
+  });
+
+  it('для weather-precip возвращает weather-temp и weather-clouds', () => {
+    const siblings = getExclusiveGroupSiblings('weather-precip');
+    expect(siblings).toHaveLength(2);
+    expect(siblings).toContain('weather-temp');
+    expect(siblings).toContain('weather-clouds');
+  });
+
+  it('для слоя без exclusiveGroup возвращает пустой массив', () => {
+    // nature-water не имеет exclusiveGroup
+    expect(getExclusiveGroupSiblings('nature-water')).toEqual([]);
+  });
+
+  it('для weather-temp-labels (не в группе) возвращает пустой массив', () => {
+    // подписи °C намеренно НЕ входят в heatmap-группу
+    expect(getExclusiveGroupSiblings('weather-temp-labels')).toEqual([]);
+  });
+
+  it('для несуществующего id возвращает пустой массив', () => {
+    expect(getExclusiveGroupSiblings('nonexistent-layer-xyz')).toEqual([]);
   });
 });

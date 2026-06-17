@@ -5,6 +5,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton'
 import MapPanel from '@/components/MapPage/MapPanel'
 import { MapLoadingBar } from '@/components/MapPage/MapLoadingBar'
+import WeatherLegend from '@/components/MapPage/WeatherLegend'
 
 const PRESSED_OPACITY_06 = { opacity: 0.6 } as const
 
@@ -105,6 +106,9 @@ export function MapCanvas({
         <MapPanel {...mapPanelProps} hideFloatingControls={isMobile} />
       ) : (
         MAP_PANEL_PLACEHOLDER
+      )}
+      {isWeb && (
+        <WeatherLegend enabledOverlays={quickFilters.enabledOverlays} />
       )}
       {shouldShowFloatingRadiusPill && (
         <Pressable

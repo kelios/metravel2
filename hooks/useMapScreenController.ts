@@ -236,6 +236,12 @@ export function useMapScreenController() {
       // сразу видел реальные градусы числами.
       if (id === WEATHER_TEMP_LAYER_ID) {
         next[WEATHER_TEMP_LABELS_LAYER_ID] = enabled;
+      } else if (prev[WEATHER_TEMP_LAYER_ID] && next[WEATHER_TEMP_LAYER_ID] === false) {
+        // Температура выключилась косвенно (включили другой heatmap той же группы) —
+        // убираем «осиротевшие» °C-подписи, чтобы числа температуры не висели
+        // поверх карты осадков/облачности. Кейс «подписи отдельно без заливки»
+        // (temp и так был выключен) при этом не трогаем.
+        next[WEATHER_TEMP_LABELS_LAYER_ID] = false;
       }
 
       return next;
