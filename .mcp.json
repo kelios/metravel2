@@ -1,19 +1,13 @@
 {
   "mcpServers": {
     "metravel-task-board": {
-      "command": "uv",
+      "command": "sh",
       "args": [
-        "run",
-        "--directory",
-        "../metravel-backend",
-        "--frozen",
-        "python",
-        "-m",
-        "tools.mcp_server"
+        "-c",
+        "set -a; . /Users/juliasavran/Sites/metravel2/metravel2/.secrets/metravel-task-board.env; set +a; exec python3 -m tools.mcp_server"
       ],
       "env": {
-        "METRAVEL_TASK_BOARD_BASE_URL": "https://metravel.by",
-        "METRAVEL_TASK_BOARD_API_TOKEN": "${METRAVEL_TASK_BOARD_API_TOKEN}"
+        "PYTHONPATH": "/Users/juliasavran/Sites/metravel2/metravel-backend"
       }
     }
   }
