@@ -9,6 +9,7 @@ import type { LatLng } from '@/types/coordinates';
 import type { MapMode } from './types';
 import { isValidCoordinate } from '@/utils/coordinateValidator';
 import { useThemedColors } from '@/hooks/useTheme';
+import { getOsmTileUrl, OSM_PROXY_ATTRIBUTION, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers';
 
 const isTestEnv =
   typeof process !== 'undefined' &&
@@ -120,8 +121,9 @@ export const MapLayers: React.FC<MapLayersProps> = React.memo(({
       {/* Base tile layer */}
       {shouldRenderBaseTileLayer ? (
         <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution="&copy; OpenStreetMap contributors"
+          url={getOsmTileUrl()}
+          attribution={OSM_PROXY_ATTRIBUTION}
+          maxZoom={OSM_PROXY_MAX_ZOOM}
         />
       ) : null}
 

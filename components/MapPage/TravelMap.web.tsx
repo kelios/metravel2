@@ -24,6 +24,7 @@ import {
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { normalizePoint } from '@/components/map-core/types'
 import { queryKeys } from '@/api/queryKeys'
+import { getOsmTileUrl, OSM_PROXY_ATTRIBUTION, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers'
 
 const IS_WEB = Platform.OS === 'web'
 
@@ -500,8 +501,9 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         }}
       >
         <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution="&copy; OpenStreetMap contributors"
+          url={getOsmTileUrl()}
+          attribution={OSM_PROXY_ATTRIBUTION}
+          maxZoom={OSM_PROXY_MAX_ZOOM}
           crossOrigin="anonymous"
         />
 

@@ -575,14 +575,62 @@ export const getActiveOverlayLayers = (): WebMapLayerDefinition[] =>
     return Boolean(readEnv(layer.requiresEnv));
   }).map(resolveLayerUrl);
 
+/**
+ * Same-origin путь до OSM tile-прокси бэкенда (#156). Использовать прямой
+ * tile.openstreetmap.org на web запрещено (OSM Tile Usage Policy). Без `{s}`:
+ * прокси не использует субдомены, поэтому в Leaflet НЕ задаём `subdomains`.
+ */
+export const OSM_PROXY_TILE_PATH = '/proxy/tiles/osm/{z}/{x}/{y}.png';
+export const OSM_PROXY_ATTRIBUTION = '&copy; OpenStreetMap contributors';
+export const OSM_PROXY_MAX_ZOOM = 19;
+
+/**
+ * Origin, от которого резолвится прокси-путь.
+ * - Прод (web на metravel.by): относительный путь резолвится same-origin — возвращаем как есть.
+ * - Dev/preview (localhost / Metro): у локального сервера нет `/proxy/tiles`,
+ *   поэтому собираем абсолютный URL на публичный origin из EXPO_PUBLIC_API_URL.
+ */
+const getOsmProxyOrigin = (): string | null => {
+  try {
+    const raw = String(process.env.EXPO_PUBLIC_API_URL || '').trim();
+    if (!raw) return null;
+    const base = raw.replace(/\/api\/?$/i, '');
+    const parsed = new URL(base);
+    const host = parsed.hostname.toLowerCase();
+    // Локальный/LAN backend тайл-прокси не отдаёт — оставляем относительный путь
+    // (на web он резолвится от window.origin), либо абсолютный публичный.
+    if (host === 'localhost' || host === '127.0.0.1' || host === '::1') return null;
+    return parsed.origin || null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Итоговый tile-URL базового OSM-слоя на web.
+ * На localhost/Metro собираем абсолютный публичный URL (origin metravel.by),
+ * иначе same-origin путь резолвится сам.
+ */
+export const getOsmTileUrl = (): string => {
+  if (typeof window !== 'undefined') {
+    const host = String(window.location?.hostname || '').toLowerCase();
+    const isLocalHost = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+    if (isLocalHost) {
+      const origin = getOsmProxyOrigin();
+      if (origin) return `${origin}${OSM_PROXY_TILE_PATH}`;
+    }
+  }
+  return OSM_PROXY_TILE_PATH;
+};
+
 export const WEB_MAP_BASE_LAYERS: WebMapLayerDefinition[] = [
   {
     id: 'osm',
     title: 'OpenStreetMap',
     kind: 'tile',
-    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; OpenStreetMap contributors',
-    maxZoom: 19,
+    url: getOsmTileUrl(),
+    attribution: OSM_PROXY_ATTRIBUTION,
+    maxZoom: OSM_PROXY_MAX_ZOOM,
     defaultEnabled: true,
   },
 ];
