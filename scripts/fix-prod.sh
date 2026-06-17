@@ -12,6 +12,11 @@ SITE_URL="${SITE_URL:-https://metravel.by}"
 ENV="${ENV:-prod}"
 FORCE_REBUILD="${FORCE_REBUILD:-1}"
 
+# Health-check curls MUST be bounded: under `set -e` a hung/slow request (no
+# timeout) silently aborts an otherwise-successful deploy. Bound + retry so a
+# transient blip does not fail the release.
+HC_CURL=(curl --max-time 20 --connect-timeout 10 --retry 2 --retry-delay 2)
+
 echo "FIX-PROD: safe web redeploy"
 echo "server=$SERVER"
 echo "remote_dir=$REMOTE_DIR"
@@ -40,11 +45,16 @@ if [ ! -d "dist/$ENV/_expo/static/js/web" ]; then
   exit 1
 fi
 
-chunk_count="$(ls "dist/$ENV/_expo/static/js/web/" | wc -l | tr -d ' ')"
+chunk_count="$(find "dist/$ENV/_expo/static/js/web/" -maxdepth 1 -type f | wc -l | tr -d ' ')"
 echo "Local build ready: $chunk_count web chunks"
 
 echo "Uploading build payload to server..."
-rsync -avzhe "ssh" --delete ./dist/ "$SERVER:$REMOTE_DIR/dist/"
+# Never ship build-orchestration dotdirs: build-web-prod.js stages into
+# dist/.prod-staging and writes dist/.prod-build.lock. With --delete a leftover
+# staging/lock from an aborted run would otherwise be pushed to prod.
+rsync -avzhe "ssh" --delete \
+  --exclude='/.prod-staging' --exclude='/.prod-build.lock' --exclude='/.tmp' \
+  ./dist/ "$SERVER:$REMOTE_DIR/dist/"
 rsync -avzhe "ssh" --delete ./assets/icons/ "$SERVER:$REMOTE_DIR/icons/"
 rsync -avzhe "ssh" --delete ./assets/images/ "$SERVER:$REMOTE_DIR/images/"
 
@@ -88,7 +98,7 @@ if [ -z "$entry_chunk" ]; then
   exit 1
 fi
 
-entry_status="$(curl -sI "$SITE_URL/_expo/static/js/web/$entry_chunk" | head -1 | awk '{print $2}')"
+entry_status="$("${HC_CURL[@]}" -sI "$SITE_URL/_expo/static/js/web/$entry_chunk" | head -1 | awk '{print $2}')"
 if [ "$entry_status" != "200" ]; then
   echo "ERROR: entry chunk is not available: $entry_chunk (status=$entry_status)"
   exit 1
@@ -100,7 +110,7 @@ echo "Validating runtime chunk linkage..."
 tmp_html="$(mktemp)"
 tmp_index="$(mktemp)"
 tmp_header="$(mktemp)"
-curl -sS "$SITE_URL/" > "$tmp_html"
+"${HC_CURL[@]}" -sS "$SITE_URL/" > "$tmp_html"
 served_index_chunk="$(grep -oE '_expo/static/js/web/index-[a-f0-9]+\.js' "$tmp_html" | head -1)"
 if [ -z "$served_index_chunk" ]; then
   echo "ERROR: cannot detect served index chunk from $SITE_URL/"
@@ -108,7 +118,7 @@ if [ -z "$served_index_chunk" ]; then
   exit 1
 fi
 
-curl -sS "$SITE_URL/$served_index_chunk" > "$tmp_index"
+"${HC_CURL[@]}" -sS "$SITE_URL/$served_index_chunk" > "$tmp_index"
 # Header chunk naming/bundling has changed over time (CustomHeader -> HeaderContextBar,
 # and it may now be inlined into the index chunk instead of code-split). Match any
 # *Header* chunk resiliently. If none is referenced, the header is not a separate chunk
@@ -121,7 +131,7 @@ if [ -z "$served_header_chunk" ]; then
   exit 0
 fi
 
-curl -sS "$SITE_URL/$served_header_chunk" > "$tmp_header"
+"${HC_CURL[@]}" -sS "$SITE_URL/$served_header_chunk" > "$tmp_header"
 if grep -qE "\.useFilters\)\(\)" "$tmp_header"; then
   echo "ERROR: served header chunk still contains direct .useFilters() call:"
   echo "  $served_header_chunk"

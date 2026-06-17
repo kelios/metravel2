@@ -123,7 +123,16 @@ const main = () => {
       }
     }
 
-    const checks = CHECKS.map((check) => ({
+    // Headless/CI environments without a browser+ports hang the Playwright
+    // e2e step. Allow opting out of just the e2e check (env-gated) so the
+    // pre-push hook stays usable headless; default behavior is unchanged.
+    const skipE2e = process.env.PREFLIGHT_SKIP_E2E === '1'
+    const activeChecks = CHECKS.filter((check) => !(skipE2e && check.name === 'e2e-changed'))
+    if (skipE2e && args.output !== 'json') {
+      console.log('preflight-checks: PREFLIGHT_SKIP_E2E=1 — skipping e2e-changed (headless)')
+    }
+
+    const checks = activeChecks.map((check) => ({
       ...check,
       result: runCheck({
         scriptPath: check.scriptPath,
