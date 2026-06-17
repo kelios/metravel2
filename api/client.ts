@@ -6,6 +6,7 @@
 import { devError } from '@/utils/logger';
 import { Platform } from 'react-native';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
+import { getCsrfHeader } from '@/utils/csrf';
 import { setSecureItem, getSecureItem, removeSecureItems } from '@/utils/secureStorage';
 import {
     API_BASE_URL,
@@ -172,6 +173,9 @@ class ApiClient {
         return {
             ...(includeDefaults ? this.defaultHeaders : {}),
             ...(token ? { Authorization: `Token ${token}` } : {}),
+            // FE-mitigation: Django/DRF требует X-CSRFToken на unsafe-методах при
+            // наличии session-cookie, иначе 403. Безвреден на GET. См. utils/csrf.ts.
+            ...getCsrfHeader(),
             ...extra,
         };
     }

@@ -12,6 +12,7 @@ import { getUserFriendlyError } from '@/utils/userFriendlyErrors';
 import { retry, isRetryableError } from '@/utils/retry';
 import { getSecureItem, setSecureItem, removeSecureItems } from '@/utils/secureStorage';
 import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
+import { getCsrfHeader } from '@/utils/csrf';
 
 const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
 const rawApiUrl = resolveApiBaseUrl({
@@ -95,7 +96,7 @@ export const loginApi = async (email: string, password: string): Promise<{
             async () => {
                 const res = await fetchWithTimeout(LOGIN, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
                     body: JSON.stringify({ email: trimmedEmail, password }),
                 }, DEFAULT_TIMEOUT);
                 // Проверяем статус ВНУТРИ retry: статус в сообщении позволяет shouldRetry
@@ -157,6 +158,7 @@ export const logoutApi = async () => {
             headers: {
                 Authorization: `Token ${token}`,
                 'Content-Type': 'application/json',
+                ...getCsrfHeader(),
             },
         }, DEFAULT_TIMEOUT);
 
@@ -183,7 +185,7 @@ export const sendPasswordApi = async (email: string) => {
     try {
         const response = await fetchWithTimeout(SENDPASSWORD, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
             body: JSON.stringify({ email }),
         }, DEFAULT_TIMEOUT);
 
@@ -216,7 +218,7 @@ export const resetPasswordLinkApi = async (email: string) => {
     try {
         const response = await fetchWithTimeout(RESETPASSWORDLINK, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
             body: JSON.stringify({ email: sanitizedEmail }),
         }, DEFAULT_TIMEOUT);
 
@@ -245,7 +247,7 @@ export const setNewPasswordApi = async (password_reset_token: string, password: 
 
         const response = await fetchWithTimeout(SETNEWPASSWORD, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
             body: JSON.stringify({ password, password_reset_token }),
         }, DEFAULT_TIMEOUT);
 
@@ -283,7 +285,7 @@ export const registration = async (values: FormValues): Promise<string | { ok: b
             async () => {
                 return await fetchWithTimeout(REGISTER, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
                     body: JSON.stringify(values),
                 }, DEFAULT_TIMEOUT);
             },
@@ -332,7 +334,7 @@ export const confirmAccount = async (hash: string) => {
     try {
         const response = await fetchWithTimeout(CONFIRM_REGISTER, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
             body: JSON.stringify({ hash }),
         }, DEFAULT_TIMEOUT);
 
@@ -374,7 +376,7 @@ export const googleAuthApi = async (idToken: string): Promise<{
             async () => {
                 return await fetchWithTimeout(GOOGLE_LOGIN, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
                     body: JSON.stringify({ id_token: trimmedToken }),
                 }, DEFAULT_TIMEOUT);
             },
@@ -425,6 +427,7 @@ export const registerPushTokenApi = async (pushToken: string): Promise<boolean> 
             headers: {
                 Authorization: `Token ${token}`,
                 'Content-Type': 'application/json',
+                ...getCsrfHeader(),
             },
             body: JSON.stringify({
                 push_token: pushToken,
