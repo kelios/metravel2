@@ -41,21 +41,48 @@ function normalizeIdentityValue(value: unknown): string | null {
   return null;
 }
 
+function getPointCoordKey(travel: MapTravelIdentityCandidate): string | null {
+  const coord = normalizeIdentityValue(travel?.coord);
+  if (coord) return coord;
+
+  const lat = normalizeIdentityValue((travel as { lat?: unknown })?.lat);
+  const lng = normalizeIdentityValue((travel as { lng?: unknown })?.lng);
+  if (lat && lng) return `${lat},${lng}`;
+
+  return null;
+}
+
 export function getMapTravelIdentity(travel: MapTravelIdentityCandidate): string | null {
-  const candidates: Array<[string, unknown]> = [
+  // Сильные идентификаторы записи путешествия — если они есть, дедупим по ним.
+  const strongCandidates: Array<[string, unknown]> = [
     ['id', travel?.id],
     ['_id', travel?._id],
     ['uid', travel?.uid],
     ['slug', travel?.slug],
+  ];
+
+  for (const [source, value] of strongCandidates) {
+    const normalized = normalizeIdentityValue(value);
+    if (normalized) {
+      return `${source}:${normalized}`;
+    }
+  }
+
+  // Point-payload карты: у точек нет своего id, идентичность путешествия —
+  // urlTravel/url. Чтобы РАЗНЫЕ точки одного путешествия не схлопывались,
+  // добавляем координату в композит (urlTravel|coord). Точный дубль точки
+  // (тот же urlTravel + те же координаты) по-прежнему убирается.
+  const urlCandidates: Array<[string, unknown]> = [
     ['urlTravel', travel?.urlTravel],
     ['url', travel?.url],
     ['articleUrl', travel?.articleUrl],
   ];
 
-  for (const [source, value] of candidates) {
+  for (const [source, value] of urlCandidates) {
     const normalized = normalizeIdentityValue(value);
     if (normalized) {
-      return `${source}:${normalized}`;
+      const coordKey = getPointCoordKey(travel);
+      return coordKey ? `${source}:${normalized}@${coordKey}` : `${source}:${normalized}`;
     }
   }
 

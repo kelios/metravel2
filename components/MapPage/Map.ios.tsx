@@ -8,7 +8,11 @@ import { DESIGN_COLORS } from '@/constants/designSystem';
 import { MODERN_MATTE_PALETTE } from '@/constants/modernMattePalette';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { resolveInternalTravelRoute } from '@/utils/relatedTravel';
-import { getActiveOverlayLayers } from '@/config/mapWebLayers';
+import {
+  getActiveOverlayLayers,
+  getOsmNativeTileUrl,
+  OSM_PROXY_MAX_ZOOM,
+} from '@/config/mapWebLayers';
 
 // Overpass endpoint mirrors utils/overpass/fetchOverpass.ts. Inlined as a plain
 // string because the overlay engine runs INSIDE the WebView and has no access to
@@ -441,10 +445,11 @@ const Map: React.FC<TravelProps> = ({
           } catch (e) {}
         };
 
-        // OpenStreetMap (бесплатно!)
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // Базовый OSM-слой через бэкенд-прокси (#202): абсолютный https-URL,
+        // т.к. на native нет same-origin. Без {s}-субдоменов (прокси их не использует).
+        L.tileLayer('${getOsmNativeTileUrl()}', {
           attribution: '© OpenStreetMap',
-          maxZoom: 19
+          maxZoom: ${OSM_PROXY_MAX_ZOOM}
         }).addTo(map);
 
         const markersLayer = L.layerGroup().addTo(map);

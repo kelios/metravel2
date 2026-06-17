@@ -623,6 +623,18 @@ export const getOsmTileUrl = (): string => {
   return OSM_PROXY_TILE_PATH;
 };
 
+/**
+ * Абсолютный tile-URL базового OSM-слоя для native (Leaflet-в-WebView, #202).
+ * На native нет same-origin: WebView грузит inline-HTML, поэтому относительный
+ * путь `/proxy/tiles/...` некуда резолвить — нужен абсолютный https-URL на
+ * публичный origin. Берём origin из EXPO_PUBLIC_API_URL (как на web в dev),
+ * с фолбэком на прод-домен, чтобы native никогда не отдал относительный путь.
+ */
+export const getOsmNativeTileUrl = (): string => {
+  const origin = getOsmProxyOrigin() || 'https://metravel.by';
+  return `${origin}${OSM_PROXY_TILE_PATH}`;
+};
+
 export const WEB_MAP_BASE_LAYERS: WebMapLayerDefinition[] = [
   {
     id: 'osm',

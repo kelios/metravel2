@@ -494,6 +494,7 @@ const AddressListItem: React.FC<Props> = ({
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create<Record<string, any>>({
     card: {
+      alignSelf: 'stretch',
       marginVertical: 12,
       marginHorizontal: 8,
       borderRadius: 24,

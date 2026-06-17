@@ -18,6 +18,7 @@ import * as Sharing from 'expo-sharing';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { buildQuestOfflineMapGpx } from './questOfflineMapExport';
+import { getOsmNativeTileUrl, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers';
 
 type StepPoint = { lat: number; lng: number; title?: string };
 
@@ -114,9 +115,9 @@ function QuestFullMap({
       <div id="map"></div>
       <script>
         var map = L.map('map', { zoomControl: false });
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        L.tileLayer('${getOsmNativeTileUrl()}', {
           attribution: '© OpenStreetMap',
-          maxZoom: 19
+          maxZoom: ${OSM_PROXY_MAX_ZOOM}
         }).addTo(map);
 
         var routePoints = ${safeJson(points.map(p => [p.lat, p.lng]))};

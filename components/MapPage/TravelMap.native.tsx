@@ -15,6 +15,7 @@ import {
   isValidLatLng,
   parseCoordString,
 } from './Map/travelMapGeometry'
+import { getOsmNativeTileUrl, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers'
 
 interface TravelMapProps {
   travelData: any[]
@@ -161,9 +162,9 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       <div id="map"></div>
       <script>
         const map = L.map('map', { zoomControl: true }).setView([${center[0]}, ${center[1]}], ${initialZoom});
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        L.tileLayer('${getOsmNativeTileUrl()}', {
           attribution: '© OpenStreetMap',
-          maxZoom: 19
+          maxZoom: ${OSM_PROXY_MAX_ZOOM}
         }).addTo(map);
 
         const points = ${points};

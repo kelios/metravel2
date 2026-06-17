@@ -189,13 +189,6 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
                     selected={selected}
                     onPress={() => safeOnFilterChange('radius', option.id)}
                     testID={`radius-option-${option.id}`}
-                    icon={
-                      <Feather
-                        name="radio"
-                        size={12}
-                        color={selected ? colors.primaryText : colors.primary}
-                      />
-                    }
                     style={styles.radiusOptionChip}
                   />
                 )

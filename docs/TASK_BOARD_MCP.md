@@ -20,21 +20,46 @@ Claude Code (этот репо) ──MCP stdio──► metravel-task-board ser
 
 ## Setup (владелец, один раз)
 
-1. **Установить `uv`** — менеджер запуска Python-сервера: https://docs.astral.sh/uv/
-   (проверка: `uv --version`).
-2. **Подтянуть бэк-репо** — `task_board` и MCP-сервер живут на `origin/master`:
-   в `../metravel-backend` выполнить `git pull` (и зависимости через `uv sync`, если нужно).
-3. **Выпустить staff-токен** — залогиниться staff/admin-пользователем, скопировать его
-   DRF-токен (строка в `authtoken_token`). **Токен в чат не вставлять.**
-4. **Положить токен** в gitignored-файл `.secrets/metravel-task-board.env` (поле
-   `METRAVEL_TASK_BOARD_API_TOKEN=`), затем перед запуском Claude Code в этом репо:
+MCP-сервер `tools/mcp_server` — на **чистой стандартной библиотеке Python** (urllib/json/
+subprocess), без Django/GDAL/сторонних пакетов. Поэтому `uv` и сборка бэкенд-окружения
+**не нужны** — запускаем системным `python3` с `PYTHONPATH` на бэк-репо.
+
+1. **Подтянуть бэк-репо** — `task_board` и MCP-сервер живут на `origin/master`. Локальные
+   правки в `../metravel-backend` всегда мусор → приводить дерево к origin:
    ```bash
-   source .secrets/metravel-task-board.env && export METRAVEL_TASK_BOARD_API_TOKEN
+   git -C ../metravel-backend fetch origin master && git -C ../metravel-backend reset --hard origin/master
    ```
-   или задать `METRAVEL_TASK_BOARD_API_TOKEN` как пользовательскую/системную переменную
-   окружения (`.mcp.json` подставляет `${METRAVEL_TASK_BOARD_API_TOKEN}` из окружения).
-5. **Перезапустить Claude Code** — MCP-сервер `metravel-task-board` поднимется автоматически.
-   Проверка: попросить агента `ticket-board` показать борд (`metravel_task_board`).
+   После этого появляется `../metravel-backend/tools/mcp_server/`.
+2. **Выпустить staff-токен** — залогиниться staff/admin-пользователем, скопировать его
+   DRF-токен (строка в `authtoken_token`). **Токен в чат не вставлять.**
+3. **Положить токен** в gitignored-файл `.secrets/metravel-task-board.env`
+   (`METRAVEL_TASK_BOARD_API_TOKEN=…`, `METRAVEL_TASK_BOARD_BASE_URL=https://metravel.by`).
+   Экспортировать в шелл НЕ нужно — `.mcp.json` сам сорсит этот файл при старте сервера
+   (источник правды = файл, не env шелла; это убирает рассинхрон «старый токен в окружении»).
+4. **Перезапустить Claude Code** — MCP-сервер `metravel-task-board` поднимется автоматически
+   из `.mcp.json`. Проверка: `metravel_tasks_list` или попросить агента `ticket-board`
+   показать борд (`metravel_task_board`).
+
+Рабочий `.mcp.json` (macOS, абсолютные пути — поправить под свою машину):
+```json
+{
+  "mcpServers": {
+    "metravel-task-board": {
+      "command": "sh",
+      "args": ["-c", "set -a; . /ABS/PATH/metravel2/.secrets/metravel-task-board.env; set +a; exec python3 -m tools.mcp_server"],
+      "env": { "PYTHONPATH": "/ABS/PATH/metravel-backend" }
+    }
+  }
+}
+```
+
+**Troubleshooting:**
+- `Failed to build gdal` / зависает на сборке → используется старый `uv run --frozen`-конфиг;
+  заменить на `python3`-вариант выше (серверу зависимости бэка не нужны).
+- `HTTP 401 Invalid token` при живом MCP → до сервера долетает не тот токен. Проверить файл:
+  `. .secrets/metravel-task-board.env && curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Token $METRAVEL_TASK_BOARD_API_TOKEN" https://metravel.by/api/tasks/?limit=1` (ждём 200).
+- Инструменты `mcp__metravel-task-board__*` не появились → конфиг читается при старте,
+  перезапустить Claude Code из каталога репо.
 
 Проверка без MCP (read-only, токен из окружения; токен не печатать):
 ```bash
