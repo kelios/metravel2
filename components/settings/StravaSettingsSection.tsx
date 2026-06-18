@@ -143,19 +143,23 @@ export default function StravaSettingsSection() {
   }>();
   const handledCallbackRef = useRef('');
   const status = strava.status;
+  const isStatusInitialLoading = strava.statusQuery.isLoading && !status;
   const statusKind = status?.status ?? 'not_connected';
+  const statusLabel = isStatusInitialLoading ? 'Проверяем статус…' : STATUS_LABELS[statusKind];
   const athleteName = getAthleteName(status?.athlete);
   const statusIcon =
-    statusKind === 'connected'
-      ? 'check-circle'
-      : statusKind === 'rate_limited'
-        ? 'clock'
-        : statusKind === 'backend_config_error'
-          ? 'tool'
-          : statusKind === 'missing_scope'
-            ? 'alert-triangle'
-            : 'link';
-  const connectDisabled = strava.isConnecting || statusKind === 'backend_config_error';
+    isStatusInitialLoading
+      ? 'clock'
+      : statusKind === 'connected'
+        ? 'check-circle'
+        : statusKind === 'rate_limited'
+          ? 'clock'
+          : statusKind === 'backend_config_error'
+            ? 'tool'
+            : statusKind === 'missing_scope'
+              ? 'alert-triangle'
+              : 'link';
+  const connectDisabled = isStatusInitialLoading || strava.isConnecting || statusKind === 'backend_config_error';
   const showActivities = strava.canLoadActivities;
   const selectedActivity = strava.selectedActivity;
 
@@ -209,7 +213,7 @@ export default function StravaSettingsSection() {
         <View style={styles.statusBox}>
           <View style={styles.statusRow}>
             <Feather name={statusIcon} size={17} color={statusKind === 'connected' ? colors.success : colors.textMuted} />
-            <Text style={styles.statusText}>{STATUS_LABELS[statusKind]}</Text>
+            <Text style={styles.statusText}>{statusLabel}</Text>
             {strava.statusQuery.isFetching ? <ActivityIndicator size="small" color={colors.primary} /> : null}
           </View>
           {athleteName ? <Text style={styles.statusMeta}>Атлет: {athleteName}</Text> : null}

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
@@ -39,6 +39,16 @@ const buildActivitiesQuery = (
 const getErrorMessage = (error: unknown, fallback: string): string =>
   error instanceof ApiError ? error.message : fallback;
 
+export const mergeStravaActivities = (
+  previous: StravaActivitySummary[],
+  next: StravaActivitySummary[],
+): StravaActivitySummary[] => {
+  const byId = new Map<string, StravaActivitySummary>();
+  for (const item of previous) byId.set(item.id, item);
+  for (const item of next) byId.set(item.id, item);
+  return Array.from(byId.values());
+};
+
 export function useStravaIntegration() {
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
@@ -49,6 +59,7 @@ export function useStravaIntegration() {
   });
   const [page, setPage] = useState(1);
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
+  const [activityItems, setActivityItems] = useState<StravaActivitySummary[]>([]);
 
   const activitiesQueryParams = useMemo(
     () => buildActivitiesQuery(filters, page),
@@ -108,6 +119,15 @@ export function useStravaIntegration() {
     }
   }, [queryClient, selectedActivityId]);
 
+  useEffect(() => {
+    if (!activitiesQuery.data) return;
+    setActivityItems((previous) =>
+      page === 1
+        ? activitiesQuery.data.data
+        : mergeStravaActivities(previous, activitiesQuery.data.data),
+    );
+  }, [activitiesQuery.data, page]);
+
   const connectMutation = useMutation({
     mutationFn: startStravaConnect,
     onSuccess: async ({ authUrl }) => {
@@ -136,6 +156,7 @@ export function useStravaIntegration() {
     onSuccess: (response) => {
       setSelectedActivityId(null);
       setPage(1);
+      setActivityItems([]);
       invalidateStrava();
       showToast({
         type: 'success',
@@ -160,6 +181,7 @@ export function useStravaIntegration() {
     setFilters((prev) => ({ ...prev, ...next }));
     setPage(1);
     setSelectedActivityId(null);
+    setActivityItems([]);
   }, []);
 
   const loadNextPage = useCallback(() => {
@@ -168,15 +190,10 @@ export function useStravaIntegration() {
     }
   }, [activitiesQuery.data?.hasMore, activitiesQuery.isFetching]);
 
-  const activities = useMemo<StravaActivitySummary[]>(
-    () => activitiesQuery.data?.data ?? [],
-    [activitiesQuery.data?.data],
-  );
-
   return {
     status,
     statusQuery,
-    activities,
+    activities: activityItems,
     activitiesQuery,
     selectedActivity: selectedActivityQuery.data ?? null,
     selectedActivityQuery,

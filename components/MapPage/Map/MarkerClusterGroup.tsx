@@ -41,6 +41,12 @@ interface MarkerClusterGroupProps {
   Tooltip?: React.ComponentType<any>
   /** Popup auto-pan settings */
   popupProps?: Record<string, unknown>
+  /**
+   * #207 — mobile-web: surface the point as a bottom card instead of the anchored
+   * Leaflet popup. When true, single markers are not bound to a popup (no flicker
+   * over the bottom card) and no popup portal is rendered.
+   */
+  suppressLeafletPopupOnSelect?: boolean
   /** Callback on marker click */
   onMarkerClick?: (
     point: Point,
@@ -96,6 +102,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
   Popup: _Popup,
   Tooltip: _Tooltip,
   popupProps,
+  suppressLeafletPopupOnSelect = false,
   onMarkerClick,
   onMarkerInstance,
   hintCenter,
@@ -321,57 +328,62 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
         title: point.address || '',
       })
 
-      // Popup with point info
-      const popupContainer = document.createElement('div')
-      popupContainer.className = 'metravel-cluster-popup-root'
-      popupContainer.setAttribute('data-point-id', String(point.id ?? ''))
+      // #207 — mobile-web: do not bind a Leaflet popup. Leaflet auto-opens a bound
+      // popup on marker click, which briefly flickers over the bottom card before
+      // handleMarkerZoom closes it. Skipping the bind removes the flicker entirely.
+      if (!suppressLeafletPopupOnSelect) {
+        // Popup with point info
+        const popupContainer = document.createElement('div')
+        popupContainer.className = 'metravel-cluster-popup-root'
+        popupContainer.setAttribute('data-point-id', String(point.id ?? ''))
 
-      const { popupOptions: rawPopupOptions } =
-        splitPopupProps(popupPropsRef.current)
-      const popupOptions: any = {
-        maxWidth: rawPopupOptions.maxWidth ?? 320,
-        minWidth: rawPopupOptions.minWidth ?? 200,
-        autoPan: rawPopupOptions.autoPan ?? true,
-        closeButton: rawPopupOptions.closeButton ?? true,
-      }
-      if (rawPopupOptions.keepInView !== undefined) {
-        popupOptions.keepInView = rawPopupOptions.keepInView
-      }
-      if (typeof rawPopupOptions.className === 'string' && rawPopupOptions.className.trim()) {
-        popupOptions.className = rawPopupOptions.className.trim()
-      }
-      if (rawPopupOptions.autoPanPadding) {
-        popupOptions.autoPanPadding = rawPopupOptions.autoPanPadding
-      }
-      if (rawPopupOptions.autoPanPaddingTopLeft) {
-        popupOptions.autoPanPaddingTopLeft = rawPopupOptions.autoPanPaddingTopLeft
-      }
-      if (rawPopupOptions.autoPanPaddingBottomRight) {
-        popupOptions.autoPanPaddingBottomRight =
-          rawPopupOptions.autoPanPaddingBottomRight
-      }
+        const { popupOptions: rawPopupOptions } =
+          splitPopupProps(popupPropsRef.current)
+        const popupOptions: any = {
+          maxWidth: rawPopupOptions.maxWidth ?? 320,
+          minWidth: rawPopupOptions.minWidth ?? 200,
+          autoPan: rawPopupOptions.autoPan ?? true,
+          closeButton: rawPopupOptions.closeButton ?? true,
+        }
+        if (rawPopupOptions.keepInView !== undefined) {
+          popupOptions.keepInView = rawPopupOptions.keepInView
+        }
+        if (typeof rawPopupOptions.className === 'string' && rawPopupOptions.className.trim()) {
+          popupOptions.className = rawPopupOptions.className.trim()
+        }
+        if (rawPopupOptions.autoPanPadding) {
+          popupOptions.autoPanPadding = rawPopupOptions.autoPanPadding
+        }
+        if (rawPopupOptions.autoPanPaddingTopLeft) {
+          popupOptions.autoPanPaddingTopLeft = rawPopupOptions.autoPanPaddingTopLeft
+        }
+        if (rawPopupOptions.autoPanPaddingBottomRight) {
+          popupOptions.autoPanPaddingBottomRight =
+            rawPopupOptions.autoPanPaddingBottomRight
+        }
 
-      marker.bindPopup(popupContainer, popupOptions)
+        marker.bindPopup(popupContainer, popupOptions)
 
-      marker.on('popupopen', (event: any) => {
-        splitPopupProps(popupPropsRef.current).popupEventHandlers.popupopen?.(event)
-        setOpenPopups((prev) => {
-          if (prev.get(key)?.container === popupContainer) return prev
-          const next = new Map(prev)
-          next.set(key, { point, container: popupContainer })
-          return next
+        marker.on('popupopen', (event: any) => {
+          splitPopupProps(popupPropsRef.current).popupEventHandlers.popupopen?.(event)
+          setOpenPopups((prev) => {
+            if (prev.get(key)?.container === popupContainer) return prev
+            const next = new Map(prev)
+            next.set(key, { point, container: popupContainer })
+            return next
+          })
         })
-      })
 
-      marker.on('popupclose', (event: any) => {
-        splitPopupProps(popupPropsRef.current).popupEventHandlers.popupclose?.(event)
-        setOpenPopups((prev) => {
-          if (!prev.has(key)) return prev
-          const next = new Map(prev)
-          next.delete(key)
-          return next
+        marker.on('popupclose', (event: any) => {
+          splitPopupProps(popupPropsRef.current).popupEventHandlers.popupclose?.(event)
+          setOpenPopups((prev) => {
+            if (!prev.has(key)) return prev
+            const next = new Map(prev)
+            next.delete(key)
+            return next
+          })
         })
-      })
+      }
 
       // Tooltip
       if (point.address) {
@@ -447,6 +459,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
     markerIcon,
     markerOpacity,
     PopupContent,
+    suppressLeafletPopupOnSelect,
     groupVersion,
   ])
 

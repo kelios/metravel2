@@ -672,6 +672,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
         PopupComponent={PopupComponent}
         popupAutoPanPadding={popupAutoPanPadding}
         handleMarkerZoom={handleMarkerZoom}
+        suppressLeafletPopupOnSelect={suppressLeafletPopupOnSelect}
         markerByCoordRef={markerByCoordRef}
         travelMarkerOpacity={travelMarkerOpacity}
       />
