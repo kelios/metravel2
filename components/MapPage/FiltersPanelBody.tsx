@@ -153,6 +153,40 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
   const showMobileQuickRow = isMobile && mode === 'radius' && mobileQuickChips.length > 0
   const showRecommendations = mode === 'radius' && userLocation && onPlaceSelect
 
+  // #212 — секция «Управление картой» (слои/оверлеи: спутник, топо, рельеф, погода,
+  // маршруты, природа). На десктопе её выносим наверх (сразу под блок фильтров),
+  // чтобы слои были обнаружимы без прокрутки через весь контент панели; на мобиле
+  // расположение не меняем — там слои доступны отдельной кнопкой.
+  const mapToolsSection = (
+    <View style={styles.sectionCard} testID="filters-block-map-tools">
+      <CollapsibleSection
+        title="Управление картой"
+        icon="sliders"
+        defaultOpen={false}
+        tone="flat"
+      >
+        <FiltersPanelMapSettings
+          colors={colors}
+          styles={styles}
+          isMobile={isMobile}
+          mode={mode}
+          mapUiApi={mapUiApi}
+          overlayOptions={overlayOptions}
+          enabledOverlays={enabledOverlays}
+          onOverlayToggle={onOverlayToggle}
+          onResetOverlays={onResetOverlays}
+          totalPoints={totalPoints}
+          hasFilters={hasFilters}
+          canBuildRoute={canBuildRoute}
+          onReset={onReset}
+          hideReset={isMobile}
+          onOpenList={onOpenList}
+          withContainer={false}
+        />
+      </CollapsibleSection>
+    </View>
+  )
+
   return (
     <ScrollView
       testID="filters-panel-scroll"
@@ -216,6 +250,9 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
         )}
       </View>
 
+      {/* #212 — на десктопе слои сразу под фильтрами (до empty-state/рекомендаций). */}
+      {!isMobile && mapToolsSection}
+
       {noPointsInRadius && (
         <View style={styles.noPointsToast} testID="filters-empty-state">
           <Text style={styles.noPointsTitle}>Ничего не нашлось</Text>
@@ -246,28 +283,8 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
         </View>
       )}
 
-      <View style={styles.sectionCard} testID="filters-block-map-tools">
-        <CollapsibleSection title="Управление картой" icon="sliders" defaultOpen={false} tone="flat">
-          <FiltersPanelMapSettings
-            colors={colors}
-            styles={styles}
-            isMobile={isMobile}
-            mode={mode}
-            mapUiApi={mapUiApi}
-            overlayOptions={overlayOptions}
-            enabledOverlays={enabledOverlays}
-            onOverlayToggle={onOverlayToggle}
-            onResetOverlays={onResetOverlays}
-            totalPoints={totalPoints}
-            hasFilters={hasFilters}
-            canBuildRoute={canBuildRoute}
-            onReset={onReset}
-            hideReset={isMobile}
-            onOpenList={onOpenList}
-            withContainer={false}
-          />
-        </CollapsibleSection>
-      </View>
+      {/* #212 — на мобиле раздел остаётся внизу (слои там доступны и отдельной кнопкой). */}
+      {isMobile && mapToolsSection}
 
       {showRecommendations && (
         <View style={styles.sectionCard} testID="filters-block-recommendations">

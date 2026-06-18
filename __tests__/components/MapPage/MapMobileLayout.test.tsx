@@ -60,18 +60,13 @@ jest.mock('@/components/MapPage/SegmentedControl', () => {
   }
 })
 
-jest.mock('@/components/MapPage/MapQuickFilters', () => {
-  const { View } = require('react-native')
-  return {
-    MapQuickFilters: () => <View testID="mock-map-quick-filters" />,
-  }
-})
-
 describe('MapMobileLayout', () => {
   beforeEach(() => {
     mockTravelListPanel.mockClear()
     mockMapBottomSheet.mockClear()
     useMapPanelStore.setState({
+      commandNonce: 0,
+      command: { kind: 'open', tab: 'filters' },
       openNonce: 0,
       requestedTab: 'filters',
       toggleNonce: 0,
@@ -93,9 +88,9 @@ describe('MapMobileLayout', () => {
     )
 
     await act(async () => {
-      useMapPanelStore.setState((state) => ({
-        openNonce: state.openNonce + 1,
-        requestedTab: 'filters',
+      useMapPanelStore.setState((s) => ({
+        commandNonce: s.commandNonce + 1,
+        command: { kind: 'open', tab: 'filters' },
       }))
     })
 
@@ -167,7 +162,10 @@ describe('MapMobileLayout', () => {
     expect(mockMapBottomSheet.mock.calls.at(-1)?.[0]?.scrollableContent).toBe(false)
 
     await act(async () => {
-      useMapPanelStore.getState().requestOpen('filters')
+      useMapPanelStore.setState((s) => ({
+        commandNonce: s.commandNonce + 1,
+        command: { kind: 'open', tab: 'filters' },
+      }))
     })
 
     await waitFor(() => {

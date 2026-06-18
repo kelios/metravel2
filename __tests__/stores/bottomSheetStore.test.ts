@@ -5,17 +5,7 @@ describe('bottomSheetStore', () => {
     useBottomSheetStore.setState({
       state: 'collapsed',
       heightPx: 0,
-      collapseNonce: 0,
     });
-  });
-
-  it('increments collapseNonce when collapse is requested', () => {
-    const initial = useBottomSheetStore.getState().collapseNonce;
-
-    useBottomSheetStore.getState().requestCollapse();
-    useBottomSheetStore.getState().requestCollapse();
-
-    expect(useBottomSheetStore.getState().collapseNonce).toBe(initial + 2);
   });
 
   it('uses actual sheet height when calculating mobile-safe offsets', () => {

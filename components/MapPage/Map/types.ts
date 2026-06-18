@@ -24,6 +24,18 @@ export interface MapProps {
   onMapUiApiReady?: (api: MapUiApi | null) => void;
   onUserLocationChange?: (loc: Coordinates | null) => void;
   hideFloatingControls?: boolean;
+  /**
+   * #207 — mobile-web: fired when a single (non-cluster) marker is tapped, so the
+   * caller can show a bottom card instead of the anchored Leaflet popup.
+   */
+  onMarkerSelect?: (point: Point) => void;
+  /** #207 — fired on an empty-map tap so the caller can dismiss the bottom card. */
+  onMapBackgroundTap?: () => void;
+  /**
+   * When true, a single-marker tap pans/zooms to the point but does NOT open the
+   * Leaflet popup (the caller renders a bottom card via onMarkerSelect instead).
+   */
+  suppressLeafletPopupOnSelect?: boolean;
 }
 
 export interface ClusterData {

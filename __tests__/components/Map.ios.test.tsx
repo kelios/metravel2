@@ -112,14 +112,16 @@ describe('Map.ios Component', () => {
     expect(html).not.toContain('data:image/svg+xml');
   });
 
-  it('should send marker taps through the WebView bridge', () => {
+  it('should send popup actions through the WebView bridge', () => {
     const rendered = render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
 
     const html = getWebViewHtml(rendered);
-    expect(html).toContain("marker.on('click'");
-    expect(html).toContain('sendOpenUrl(directUrl)');
+    expect(html).toContain('marker.bindPopup(popupContent');
+    expect(html).toContain("marker.on('popupopen'");
+    expect(html).toContain('data-open-url');
+    expect(html).toContain('sendOpenUrl(url)');
     expect(html).toContain("point.urlTravel || point.articleUrl");
   });
 
@@ -216,9 +218,10 @@ describe('Map.ios Component', () => {
     );
     
     const html = getWebViewHtml(rendered);
-    expect(html).toContain('Адрес:');
-    expect(html).toContain('Координаты:');
-    expect(html).toContain('Категория:');
+    expect(html).toContain('popup-title');
+    expect(html).toContain('popup-chip');
+    expect(html).toContain('Подробнее');
+    expect(html).toContain('Маршрут');
   });
 
   it('should display point address in callout', () => {

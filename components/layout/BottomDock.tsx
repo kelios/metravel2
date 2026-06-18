@@ -18,6 +18,7 @@ import { globalFocusStyles } from "@/styles/globalFocus";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useAndroidBackHandler } from "@/hooks/useAndroidBackHandler";
 import { useBottomSheetStore } from "@/stores/bottomSheetStore";
+import { useMapPanelStore } from "@/stores/mapPanelStore";
 import { hapticSelection } from "@/utils/haptics";
 import BelarusOutlineIcon from './BelarusOutlineIcon';
 import {
@@ -161,7 +162,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
       if (onMap) {
         const sheetState = useBottomSheetStore.getState().state;
         if (sheetState !== 'collapsed') {
-          useBottomSheetStore.getState().requestCollapse();
+          useMapPanelStore.getState().requestCollapse();
           return true;
         }
       }

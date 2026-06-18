@@ -133,12 +133,12 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
 
             {mobileAction === 'map-panel' ? (
               <ActionButton
-                accessibilityLabel="Открыть или закрыть панель"
+                accessibilityLabel="Найти места рядом — открыть или закрыть панель"
                 onPress={requestToggleMapPanel}
                 style={styles.mobileSectionsButton}
                 testID="map-panel-open"
               >
-                <Feather name="menu" size={18} color={colors.textMuted} />
+                <Feather name="search" size={18} color={colors.textMuted} />
               </ActionButton>
             ) : mobileAction === 'travel-sections' ? (
               <ActionButton

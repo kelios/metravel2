@@ -12,11 +12,10 @@ type PopupSafeArea = {
   bottomPadding: number
 }
 
-// Высота верхнего glass-бара над картой (MapQuickFilters):
-// top: 16 + minHeight: 40 (≤430: 38, ≤360: 36) + небольшой запас на тень/safe-area.
-// Используется как topPadding, чтобы popup не оказался под чипами «Радиус / Что
-// посмотреть / Оверлеи» после автоцентрирования Leaflet и кастомного re-pan.
-const TOP_QUICK_FILTERS_BAR_HEIGHT = 116
+// Верхний запас под плавающие контролы зума/локации в углу карты (MapControls):
+// top: 16 + кнопка 44 + небольшой запас на тень/safe-area. Используется как
+// topPadding, чтобы popup после автоцентрирования не прижимался к верхней кромке.
+const TOP_QUICK_FILTERS_BAR_HEIGHT = 76
 
 const getPopupSafeArea = ({
   mapWidth,

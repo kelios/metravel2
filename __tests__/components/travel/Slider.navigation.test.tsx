@@ -532,7 +532,7 @@ describe('Slider display correctness', () => {
     expect(tree!.root.findByProps({ testID: 'slider-image-0' })).toBeTruthy()
   })
 
-  it('uses manipulation touch-action on mobile web slides so horizontal swipe is not stolen by scroll', async () => {
+  it('keeps horizontal swipe routed to JS on mobile web slides', async () => {
     Object.assign(viewportMock, {
       width: 390,
       height: 844,
@@ -564,7 +564,7 @@ describe('Slider display correctness', () => {
       ? Object.assign({}, ...viewport.props.style.filter(Boolean))
       : viewport.props.style
 
-    expect(style.touchAction).toBe('manipulation')
+    expect(style.touchAction).toBe('pan-y pinch-zoom')
   })
 
   it('shows visible arrows on mobile web when explicitly enabled', async () => {

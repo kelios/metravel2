@@ -19,11 +19,15 @@ async function installTileMock(page: import('@playwright/test').Page) {
   await page.route('**://*.basemaps.cartocdn.com/**', fulfill)
   await page.route('**://tile.openstreetmap.org/**', fulfill)
   await page.route('**://*.tile.openstreetmap.org/**', fulfill)
+  await page.route('**/proxy/tiles/osm/**', fulfill)
 }
 
 /** Scroll the travel detail page down to the map section and wait for markers */
 async function scrollToMapAndWaitForMarkers(page: import('@playwright/test').Page) {
   const detailsRoot = page.locator('[data-testid="travel-details-page"], [testID="travel-details-page"]').first()
+  await page.evaluate(() => {
+    window.dispatchEvent(new CustomEvent('open-section', { detail: { key: 'map' } }))
+  }).catch(() => null)
   const mapTab = detailsRoot.getByRole('tab', { name: /Карта/i }).first()
   if (await mapTab.isVisible().catch(() => false)) {
     await mapTab.click().catch(() => null)
@@ -38,10 +42,16 @@ async function scrollToMapAndWaitForMarkers(page: import('@playwright/test').Pag
   const mapSection = page.locator('[data-testid="travel-details-map"], [testID="travel-details-map"]').first()
   const scrollContainer = page.locator('[data-testid="travel-details-scroll"], [testID="travel-details-scroll"]').first()
 
-  // Scroll until the map container or a Leaflet marker appears
-  for (let i = 0; i < 15; i++) {
+  // Scroll until the map container or a Leaflet marker appears. Under long
+  // serial shard runs, the deferred Leaflet chunk can take longer to hydrate.
+  for (let i = 0; i < 35; i++) {
     const markerCount = await page.locator('.leaflet-marker-icon').count()
     if (markerCount > 0) return true
+    if (i % 5 === 0) {
+      await page.evaluate(() => {
+        window.dispatchEvent(new CustomEvent('open-section', { detail: { key: 'map' } }))
+      }).catch(() => null)
+    }
 
     if (await mapSection.isVisible().catch(() => false)) {
       await mapSection.scrollIntoViewIfNeeded().catch(() => null)
@@ -56,6 +66,10 @@ async function scrollToMapAndWaitForMarkers(page: import('@playwright/test').Pag
     } else {
       await page.evaluate(() => window.scrollBy(0, 600))
     }
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('scroll'))
+      window.dispatchEvent(new Event('resize'))
+    }).catch(() => null)
     await page.waitForTimeout(500)
   }
 
@@ -126,6 +140,7 @@ test.describe('Travel detail page — map popup close @smoke', () => {
       userAgent:
         'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
       storageState: 'e2e/.auth/storageState.json',
+      serviceWorkers: 'block',
     })
     const page = await context.newPage()
 
@@ -213,6 +228,7 @@ test.describe('Travel detail page — map popup close @smoke', () => {
       userAgent:
         'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
       storageState: 'e2e/.auth/storageState.json',
+      serviceWorkers: 'block',
     })
     const page = await context.newPage()
 

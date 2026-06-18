@@ -10,7 +10,10 @@ const MOBILE_PANEL_ENTRY_SELECTOR = [
   '[testID="map-panel-open"]',
   '[data-testid="map-peek-expand"]',
   '[testID="map-peek-expand"]',
+  '[data-testid="map-mobile-open-list"]',
+  '[testID="map-mobile-open-list"]',
   'button[aria-label="Открыть панель со списком"]',
+  'button[aria-label^="Показать список"]',
 ].join(', ')
 
 const MOCK_POINTS = [
@@ -62,6 +65,7 @@ async function installTileMock(page: any) {
   await page.route('**://*.tile.openstreetmap.de/**', routeTile)
   await page.route('**://tile.waymarkedtrails.org/**', routeTile)
   await page.route('**://*.tile.waymarkedtrails.org/**', routeTile)
+  await page.route('**/proxy/tiles/osm/**', routeTile)
 }
 
 async function installMapApiMocks(page: any) {
@@ -169,7 +173,7 @@ async function gotoMobileMap(page: any) {
 }
 
 async function openMobilePanel(page: any) {
-  const closeButton = page.getByTestId('map-panel-close')
+  const closeButton = page.getByTestId('map-mobile-sheet-close')
   if (await closeButton.isVisible().catch(() => false)) {
     return
   }
@@ -184,7 +188,7 @@ async function openMobilePanel(page: any) {
 
     const isOpened =
       (await closeButton.isVisible().catch(() => false)) ||
-      (await page.getByTestId('segmented-list').isVisible().catch(() => false))
+      (await page.getByTestId('travel-list-mobile-summary').isVisible().catch(() => false))
     if (isOpened) return
 
     await entry.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined)
@@ -192,56 +196,20 @@ async function openMobilePanel(page: any) {
 
     const isOpenedAfterDomClick =
       (await closeButton.isVisible().catch(() => false)) ||
-      (await page.getByTestId('segmented-list').isVisible().catch(() => false))
+      (await page.getByTestId('travel-list-mobile-summary').isVisible().catch(() => false))
     if (isOpenedAfterDomClick) return
   }
 
   await expect(closeButton).toBeVisible({ timeout: 30_000 })
-  await expect(page.getByTestId('segmented-list')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByTestId('travel-list-mobile-summary')).toBeVisible({ timeout: 30_000 })
 }
 
 function mobileLayout(page: any) {
   return page.locator('[data-testid="map-mobile-layout"], [testID="map-mobile-layout"]').first()
 }
 
-async function activateMobileTab(
-  page: any,
-  key: 'search' | 'route' | 'list',
-) {
-  const tab = page.getByTestId(`segmented-${key}`)
-  await expect(tab).toBeVisible({ timeout: 15_000 })
-
-  for (let attempt = 0; attempt < 3; attempt++) {
-    await tab.click({ force: true }).catch(() => undefined)
-    await page.waitForTimeout(150)
-
-    const activatedAfterClick =
-      (await tab.getAttribute('aria-checked').catch(() => null)) === 'true'
-    if (activatedAfterClick) return
-
-    await tab.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined)
-    await page.waitForTimeout(150)
-
-    const activatedAfterDomClick =
-      (await tab.getAttribute('aria-checked').catch(() => null)) === 'true'
-    if (activatedAfterDomClick) return
-
-    await tab.focus().catch(() => undefined)
-    await page.keyboard.press('Enter').catch(() => undefined)
-    await page.waitForTimeout(150)
-
-    const activatedAfterKeyboard =
-      (await tab.getAttribute('aria-checked').catch(() => null)) === 'true'
-    if (activatedAfterKeyboard) return
-  }
-
-  await expect(tab).toHaveAttribute('aria-checked', 'true', {
-    timeout: 15_000,
-  })
-}
-
 test.describe('@smoke mobile map panel content', () => {
-  test('mobile sheet renders real content for list, radius and route tabs', async ({
+  test('mobile sheet renders real content for list and radius filters', async ({
     page,
   }) => {
     test.setTimeout(240_000)
@@ -257,15 +225,12 @@ test.describe('@smoke mobile map panel content', () => {
     await test.step('Open mobile map panel and verify shared toolbar', async () => {
       await openMobilePanel(page)
 
-      await expect(page.getByTestId('segmented-search')).toBeVisible()
-      await expect(page.getByTestId('segmented-route')).toBeVisible()
-      await expect(page.getByTestId('segmented-list')).toBeVisible()
-      await expect(page.getByTestId('map-panel-close')).toBeVisible()
+      await expect(page.getByRole('dialog', { name: 'Панель карты' })).toBeVisible()
+      await expect(page.getByTestId('travel-list-mobile-summary')).toBeVisible()
+      await expect(page.getByTestId('map-mobile-sheet-close')).toBeVisible()
     })
 
     await test.step('List tab is not empty and shows cards', async () => {
-      await activateMobileTab(page, 'list')
-
       await expect(page.getByTestId('travel-list-mobile-summary')).toBeVisible({
         timeout: 20_000,
       })
@@ -278,7 +243,7 @@ test.describe('@smoke mobile map panel content', () => {
     })
 
     await test.step('Radius tab shows filters body instead of a blank sheet', async () => {
-      await activateMobileTab(page, 'search')
+      await page.getByTestId('travel-list-open-filters').click({ force: true })
 
       const layout = mobileLayout(page)
       const filtersScroll = layout
@@ -309,49 +274,8 @@ test.describe('@smoke mobile map panel content', () => {
       })
     })
 
-    await test.step('Route tab shows builder and reacts to start/finish input', async () => {
-      await activateMobileTab(page, 'route')
-
-      const startInput = page.getByPlaceholder('Старт')
-      const finishInput = page.getByPlaceholder('Финиш')
-      const buildButton = page.getByTestId('filters-build-route-button')
-
-      await expect(page.getByTestId('route-builder')).toBeVisible({
-        timeout: 20_000,
-      })
-      await expect(page.getByTestId('route-empty-state')).toBeVisible({
-        timeout: 20_000,
-      })
-      await expect(page.getByTestId('route-hint-start')).toBeVisible({
-        timeout: 20_000,
-      })
-      await expect(startInput).toBeVisible({ timeout: 20_000 })
-      await expect(finishInput).toBeVisible({ timeout: 20_000 })
-      await expect(buildButton).toBeVisible({ timeout: 20_000 })
-
-      await startInput.fill('53.9006, 27.5590')
-      await startInput.press('Enter')
-      await startInput.press('Tab')
-
-      await expect(page.getByTestId('route-hint-end')).toBeVisible({
-        timeout: 20_000,
-      })
-
-      await finishInput.fill('53.9106, 27.5690')
-      await finishInput.press('Enter')
-      await finishInput.press('Tab')
-
-      await expect(page.getByTestId('route-empty-state')).toBeHidden({
-        timeout: 20_000,
-      })
-      await expect(page.getByTestId('route-hint-end')).toBeHidden({
-        timeout: 20_000,
-      })
-      await expect(buildButton).toBeEnabled({ timeout: 20_000 })
-    })
-
-    await test.step('Panel still switches back to list after route flow', async () => {
-      await activateMobileTab(page, 'list')
+    await test.step('Panel switches back to list from filters', async () => {
+      await page.getByTestId('filters-open-list-button').click({ force: true })
       await expect(page.getByTestId('travel-list-mobile-summary')).toBeVisible({
         timeout: 20_000,
       })

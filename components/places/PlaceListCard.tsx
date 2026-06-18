@@ -55,6 +55,10 @@ type Props = {
   relatedTravelUrl?: string | null;
   relatedTravelCountry?: string | null;
   relatedTravelCity?: string | null;
+  // Fallback favorite (used for cards without a related travel so EVERY card
+  // shows the same top-right favorite affordance).
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
 };
 
 const MapActionChip = React.memo(function MapActionChip({
@@ -219,6 +223,8 @@ const PlaceListCard: React.FC<Props> = ({
   relatedTravelUrl,
   relatedTravelCountry,
   relatedTravelCity,
+  isFavorite = false,
+  onToggleFavorite,
 }) => {
   const colors = useThemedColors();
   const showTitleInContent = titleLayout === 'content';
@@ -251,6 +257,24 @@ const PlaceListCard: React.FC<Props> = ({
       fallbackCountry={relatedTravelCountry}
       fallbackCity={relatedTravelCity}
     />
+  ) : onToggleFavorite ? (
+    // Cards without a related travel still expose the same top-right favorite
+    // affordance so the whole list reads as one card pattern.
+    <CardActionPressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: isFavorite }}
+      accessibilityLabel={isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
+      onPress={onToggleFavorite}
+      title={isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
+      style={({ pressed }) => [styles.fallbackFavButton, pressed && styles.iconBtnPressed]}
+    >
+      <Feather
+        name="heart"
+        size={18}
+        color={isFavorite ? colors.danger : colors.textOnDark}
+        {...(!isFavorite ? ({ style: { opacity: 0.85 } } as any) : null)}
+      />
+    </CardActionPressable>
   ) : null
 
   return (
@@ -580,6 +604,15 @@ const createStyles = (
     iconBtnPressed: {
       opacity: 0.65,
       ...Platform.select({ web: { transform: 'scale(0.97)' as any } }),
+    },
+    fallbackFavButton: {
+      alignSelf: 'flex-start',
+      padding: 8,
+      borderRadius: 999,
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.3)',
+      ...Platform.select({ web: { cursor: 'pointer' as any } }),
     },
     iconBtnDisabled: {
       opacity: 0.45,

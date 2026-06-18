@@ -69,45 +69,10 @@ const mobilePanelEntrySelector =
     '[data-testid="map-panel-open"]',
     '[testID="map-panel-open"]',
     'button[aria-label="Открыть панель со списком"]',
+    'button[aria-label^="Показать список"]',
   ].join(', ');
 
 const getMobilePanelEntry = (page: any) => page.locator(mobilePanelEntrySelector).first();
-
-const activateMobileTab = async (
-  page: any,
-  key: 'search' | 'route' | 'list',
-) => {
-  const tab = page.getByTestId(`segmented-${key}`);
-  await expect(tab).toBeVisible({ timeout: 15_000 });
-
-  for (let attempt = 0; attempt < 3; attempt++) {
-    await tab.click({ force: true }).catch(() => undefined);
-    await page.waitForTimeout(150);
-
-    const activatedAfterClick =
-      (await tab.getAttribute('aria-checked').catch(() => null)) === 'true';
-    if (activatedAfterClick) return;
-
-    await tab.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
-    await page.waitForTimeout(150);
-
-    const activatedAfterDomClick =
-      (await tab.getAttribute('aria-checked').catch(() => null)) === 'true';
-    if (activatedAfterDomClick) return;
-
-    await tab.focus().catch(() => undefined);
-    await page.keyboard.press('Enter').catch(() => undefined);
-    await page.waitForTimeout(150);
-
-    const activatedAfterKeyboard =
-      (await tab.getAttribute('aria-checked').catch(() => null)) === 'true';
-    if (activatedAfterKeyboard) return;
-  }
-
-  await expect(tab).toHaveAttribute('aria-checked', 'true', {
-    timeout: 15_000,
-  });
-};
 
 const maybeRecoverFromMapErrorScreen = async (page: any) => {
   const errorTitle = page.getByText('Что-то пошло не так', { exact: true });
@@ -275,9 +240,11 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(page.getByTestId('map-leaflet-wrapper')).toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 60_000 });
 
-    await expect(page.getByTestId('map-panel-tab-search')).toBeVisible();
-    await expect(page.getByTestId('map-panel-tab-route')).toBeVisible();
-    await expect(page.getByLabel('Оверлеи: Выкл')).toBeVisible();
+    await expect(page.getByRole('tablist', { name: 'Панель карты' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: /Список/ })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Построение маршрута' })).toBeVisible();
+    await expect(page.getByRole('searchbox', { name: 'Поиск мест на карте' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Управление картой/ })).toBeVisible();
   });
 
   test('desktop: sightseeing categories stay visible in panel and quick filters when filters API uses localized fields', async ({ page }) => {
@@ -689,7 +656,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     ]);
   });
 
-  test('desktop: applying category filter updates markers and sends where.categories', async ({ page }) => {
+  test('desktop: applying category filter updates markers and sends category filters', async ({ page }) => {
     await gotoMapWithRecovery(page);
 
     await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 60_000 });
@@ -707,20 +674,10 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
       await categoriesHeader.click({ force: true }).catch(() => null);
     }
 
-    // Prefer clicking by label text (more stable for RN-web), fallback to raw inputs.
-    const candidateLabel = page
-      .getByTestId('filters-panel')
-      .locator('label, button')
-      .filter({ hasText: /.+/ })
-      .first();
-    const candidateInput = page
-      .getByTestId('filters-panel')
-      .locator('input[type="checkbox"], input[type="radio"], [role="checkbox"], [role="radio"]')
-      .first();
-
-    const canClickLabel = await candidateLabel.isVisible({ timeout: 5_000 }).catch(() => false);
-    const canClickInput = await candidateInput.isVisible({ timeout: 2_000 }).catch(() => false);
-    if (!canClickLabel && !canClickInput) return;
+    const panel = page.getByTestId('filters-panel');
+    const categoryOption = panel.locator('button').filter({ hasText: /\(\d+\)/ }).first();
+    const categoryOptionVisible = await categoryOption.isVisible({ timeout: 5_000 }).catch(() => false);
+    if (!categoryOptionVisible) return;
 
     // Some builds refetch instantly on filter change, others wait until radius/viewport changes.
     // We treat both as valid: always assert the UI can toggle a filter, and if a request happens
@@ -737,7 +694,10 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
             const where = u.searchParams.get('where');
             if (!where) return false;
             const parsed = JSON.parse(where);
-            return Array.isArray(parsed?.categories) && parsed.categories.length > 0;
+            return (
+              (Array.isArray(parsed?.categories) && parsed.categories.length > 0) ||
+              (Array.isArray(parsed?.categoryTravelAddress) && parsed.categoryTravelAddress.length > 0)
+            );
           } catch {
             return false;
           }
@@ -746,36 +706,10 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
       )
       .catch(() => null);
 
-    if (canClickLabel) {
-      await candidateLabel.click({ force: true });
-    } else {
-      await candidateInput.click({ force: true });
-    }
-
-    // Basic UI confirmation: filter should become checked/selected if it's an input.
-    if (canClickInput) {
-      await expect
-        .poll(async () => {
-          try {
-            const el = await candidateInput.elementHandle();
-            if (!el) return null;
-            const role = await el.getAttribute('role');
-            if (role === 'checkbox' || role === 'radio') {
-              return el.getAttribute('aria-checked');
-            }
-            const type = await el.getAttribute('type');
-            if (type === 'checkbox' || type === 'radio') {
-              return el.isChecked();
-            }
-            return null;
-          } catch {
-            return null;
-          }
-        }, {
-          timeout: 5_000,
-        })
-        .not.toBeNull();
-    }
+    await categoryOption.click({ force: true });
+    await expect(page.getByRole('button', { name: /^Убрать фильтр:/ }).first()).toBeVisible({
+      timeout: 5_000,
+    });
 
     await maybeResponsePromise;
 
@@ -1205,8 +1139,9 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(toggle).toBeVisible({ timeout: 20_000 });
     await toggle.click();
 
-    // Menu toggle should open the panel with the list/filters segmented control.
-    await expect(page.getByTestId('segmented-list')).toBeVisible({ timeout: 20_000 });
+    // Menu toggle should open the current mobile bottom sheet with the list content.
+    await expect(page.getByRole('dialog', { name: 'Панель карты' })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('travel-list-mobile-summary')).toBeVisible({ timeout: 20_000 });
 
     // Закрытие через крестик (если доступен) либо повторный toggle кнопкой меню
     // Close via the header menu button (toggle).
@@ -1221,7 +1156,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(toggle).toBeVisible({ timeout: 20_000 });
     await toggle.click();
 
-    const close = page.getByTestId('map-panel-close');
+    const close = page.getByTestId('map-mobile-sheet-close');
     await expect(close).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId('travel-list-mobile-summary')).toBeVisible({ timeout: 20_000 });
 
@@ -1243,7 +1178,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await toggle.click();
 
     // Закрываем панель повторным нажатием на кнопку меню (toggle).
-    const close = page.getByTestId('map-panel-close');
+    const close = page.getByTestId('map-mobile-sheet-close');
     await expect(close).toBeVisible({ timeout: 20_000 });
     // header-context-bar is a sticky element that can overlap the close button
     // at mobile viewport widths; bypass the intercept check since we already
@@ -1254,26 +1189,26 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
       .poll(
         async () => {
           const closeVisible = await page
-            .getByTestId('map-panel-close')
+            .getByTestId('map-mobile-sheet-close')
             .isVisible()
             .catch(() => false)
 
           if (closeVisible) {
             await page
-              .getByTestId('map-panel-close')
+              .getByTestId('map-mobile-sheet-close')
               .click({ force: true })
               .catch(() => null)
           }
 
-          const segmentedVisible = await page
-            .getByTestId('segmented-list')
+          const sheetVisible = await page
+            .getByRole('dialog', { name: 'Панель карты' })
             .isVisible()
             .catch(() => false)
           const compactVisible = await getMobilePanelEntry(page)
             .isVisible()
             .catch(() => false)
 
-          return !closeVisible && !segmentedVisible && compactVisible
+          return !closeVisible && !sheetVisible && compactVisible
         },
         { timeout: 20_000 },
       )
@@ -1291,25 +1226,17 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     // Regression: RN-web Pressable can emit double events; panel should not open then immediately close.
     await toggle.dblclick();
 
-    const panel = page.getByTestId('filters-panel');
-    const opened = await panel.isVisible({ timeout: 20_000 }).catch(() => false);
-    if (!opened) {
-      // On mobile, panel can open with the list tab by default. Radius/route toggle is only
-      // shown inside the filters tab, so for this regression we assert the always-present
-      // list/filters segmented control is visible.
-      await expect(page.getByTestId('segmented-list')).toBeVisible({ timeout: 20_000 });
-    }
+    const sheet = page.getByRole('dialog', { name: 'Панель карты' });
+    await expect(sheet).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('travel-list-mobile-summary')).toBeVisible({ timeout: 20_000 });
 
     // Give the UI a moment: if there is flicker, it would have collapsed by now.
     await page.waitForFunction(() => true, null, { timeout: 500 }).catch(() => null);
-    if (opened) {
-      await expect(panel).toBeVisible();
-    } else {
-      await expect(page.getByTestId('segmented-list')).toBeVisible();
-    }
+    await expect(sheet).toBeVisible();
+    await expect(page.getByTestId('travel-list-mobile-summary')).toBeVisible();
   });
 
-  test('mobile: list/filters toggle is visible when panel is open', async ({ page }) => {
+  test('mobile: filters button opens filters when panel is open', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 720 });
 
     await gotoMapWithRecovery(page);
@@ -1319,32 +1246,16 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(toggle).toBeVisible({ timeout: 20_000 });
     await toggle.click();
 
-    // Wait for panel to open - check for list/search toggle which should always be visible
-    const listToggle = page.getByTestId('segmented-list');
-    const filtersToggle = page.getByTestId('segmented-search');
-
-    await expect(listToggle).toBeVisible({ timeout: 20_000 });
-    await expect(filtersToggle).toBeVisible({ timeout: 10_000 });
-
     const listSummary = page.getByTestId('travel-list-mobile-summary');
-    const listOpenedFirst = await listSummary.isVisible({ timeout: 2_000 }).catch(() => false);
+    await expect(listSummary).toBeVisible({ timeout: 20_000 });
 
-    await activateMobileTab(page, 'search');
-
-    await expect(page.getByTestId('map-mobile-tab-transition')).toBeHidden({ timeout: 10_000 });
+    await page.getByTestId('travel-list-open-filters').click({ force: true });
     await page.getByTestId('map-mobile-filters-loading').waitFor({ state: 'hidden', timeout: 10_000 }).catch(() => null);
 
     // Verify the filters view is active in the mobile sheet.
     // The current mobile contract shows the filters body immediately,
     // while compact context chips appear only when there are real search/category refinements.
     await expect(page.getByTestId('filters-block-main')).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByTestId('map-mobile-toolbar-summary')).toBeVisible({ timeout: 10_000 });
-
-    if (listOpenedFirst) {
-      await expect(listSummary).toBeHidden({ timeout: 10_000 });
-    }
-
-    await expect(listToggle).toBeVisible();
-    await expect(filtersToggle).toBeVisible();
+    await expect(page.getByTestId('filters-open-list-button')).toBeVisible({ timeout: 10_000 });
   });
 });

@@ -39,26 +39,34 @@ jest.mock('@/hooks/map/useMapFilters', () => ({
   }),
 }))
 
-jest.mock('@/hooks/map/useMapUIController', () => ({
-  useMapUIController: () => ({
+jest.mock('@/hooks/map/useMapPanelState', () => ({
+  useMapResponsive: () => ({ isMobile: false, width: 1280 }),
+  useMapPanelState: () => ({
     isFocused: true,
-    isMobile: false,
     mapReady: true,
     rightPanelTab: 'list',
     rightPanelVisible: true,
+    isDesktopCollapsed: false,
+    desktopPanelWidth: 384,
     selectFiltersTab: jest.fn(),
     selectTravelsTab: jest.fn(),
     openRightPanel: jest.fn(),
     closeRightPanel: jest.fn(),
+    toggleDesktopCollapse: jest.fn(),
+    onResizePanelWidth: jest.fn(),
     panelStyle: {},
     overlayStyle: {},
     filtersTabRef: { current: null },
     panelRef: { current: null },
-    styles: {},
-    themedColors: {},
-    canonical: 'http://localhost',
-    openNonce: 0,
   }),
+}))
+
+jest.mock('@/hooks/useSafeAreaInsetsSafe', () => ({
+  useSafeAreaInsetsSafe: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}))
+
+jest.mock('@/utils/seo', () => ({
+  buildCanonicalUrl: () => 'http://localhost/map',
 }))
 
 jest.mock('@/hooks/map/useMapDataController', () => ({

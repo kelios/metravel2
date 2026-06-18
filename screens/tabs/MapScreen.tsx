@@ -1,26 +1,13 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  ActivityIndicator,
-  Platform,
-  Pressable,
-  Text,
-  View,
-} from 'react-native'
-import Animated from 'react-native-reanimated'
-import Feather from '@expo/vector-icons/Feather'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Platform } from 'react-native'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
-import { getUserFriendlyNetworkError } from '@/utils/networkErrorHandler'
 import { stringifyJsonLd } from '@/utils/jsonLd'
-import ErrorDisplay from '@/components/ui/ErrorDisplay'
 import { useMapScreenController } from '@/hooks/useMapScreenController'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
-import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import { useRouteStore } from '@/stores/routeStore'
 import { MapCanvas } from '@/components/MapPage/MapCanvas'
-import { MapOfflineIndicator } from '@/components/MapPage/MapOfflineIndicator'
-import MapPanelHeader from '@/components/MapPage/MapPanelHeader'
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig'
 import { MAP_SEO_TITLE, MAP_SEO_DESCRIPTION } from '@/constants/mapSeo'
 import { buildOgImageUrl, MAP_OG_IMAGE_PATH } from '@/utils/seo'
@@ -28,28 +15,19 @@ import { createMapStructuredData } from '@/utils/discoverySeo'
 import { devWarn } from '@/utils/logger'
 import {
   buildQuickFiltersData,
-  buildMapQuickActionButtons,
   buildActiveFilterItems,
 } from '@/screens/tabs/mapScreenHelpers'
-import {
-  ActiveFiltersBar,
-  MapMobileLayout,
-  MapOnboarding,
-  TravelListPanel,
-} from '@/screens/tabs/mapDeferred'
+import { MapScreenMobile } from '@/components/MapPage/MapScreenParts/MapScreenMobile'
+import { MapScreenError } from '@/components/MapPage/MapScreenParts/MapScreenError'
+import { MapScreenDesktop } from '@/components/MapPage/MapScreenParts/MapScreenDesktop'
 
 const IS_WEB = Platform.OS === 'web'
 const CAN_PRELOAD_LEAFLET = IS_WEB && typeof window !== 'undefined'
 const MAP_STRUCTURED_DATA_ENTRY_LIMIT = 12
-const BADGE_COUNT_CAP = 999
 const RADIUS_EXPAND_MAX_KM = 500
 const RADIUS_EXPAND_DEFAULT = 30
 const ONBOARDING_DEFER_MS = 600
 const ONBOARDING_IDLE_TIMEOUT = 1000
-
-const PRESSED_OPACITY_07 = { opacity: 0.7 } as const
-const PRESSED_OPACITY_085 = { opacity: 0.85 } as const
-const POINTER_EVENTS_NONE = { pointerEvents: 'none' } as const
 
 function preloadLeafletRuntime() {
   Promise.resolve(import('@/utils/loadLeafletRuntime'))
@@ -71,51 +49,6 @@ if (CAN_PRELOAD_LEAFLET) {
   } else {
     setTimeout(preloadLeafletRuntime, 300)
   }
-}
-
-const MAP_PANEL_PLACEHOLDER = <MapPageSkeleton inline />
-
-const ROOT_MAP_PROPS = IS_WEB
-  ? ({ testID: 'map-screen-root', 'data-testid': 'map-screen-root', 'data-active': 'true' } as any)
-  : ({ testID: 'map-screen-root' } as any)
-
-function CollapsedIconButton({
-  icon,
-  label,
-  title,
-  onPress,
-  styles,
-  iconColor,
-  badge,
-  badgeStyles,
-}: {
-  icon: 'search' | 'navigation' | 'list'
-  label: string
-  title: string
-  onPress: () => void
-  styles: any
-  iconColor: string
-  badge?: number
-  badgeStyles?: { container: any; text: any }
-}) {
-  return (
-    <Pressable
-      style={({ pressed }) => [styles.collapsedIconBtn, pressed && PRESSED_OPACITY_07]}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      {...({ title } as any)}
-    >
-      <Feather name={icon} size={18} color={iconColor} />
-      {badge != null && badge > 0 && badgeStyles && (
-        <View style={badgeStyles.container}>
-          <Text style={badgeStyles.text}>
-            {badge > BADGE_COUNT_CAP ? `${BADGE_COUNT_CAP}+` : badge}
-          </Text>
-        </View>
-      )}
-    </Pressable>
-  )
 }
 
 export default function MapScreen() {
@@ -141,6 +74,9 @@ export default function MapScreen() {
     panelStyle,
     overlayStyle,
     filtersPanelProps,
+    filtersValuesSlice,
+    overlaySlice,
+    routingSlice,
     travelsData,
     loading,
     isFetching,
@@ -154,12 +90,13 @@ export default function MapScreen() {
     invalidateTravelsQuery,
     buildRouteTo,
     centerOnUser,
-    zoomIn,
-    zoomOut,
     panelRef,
     geoError,
     coordinates,
     transportMode,
+    selectedPlace,
+    clearSelectedPlace,
+    selectedPlaceUserLocation,
   } = useMapScreenController()
 
   const [geoBannerDismissed, setGeoBannerDismissed] = useState(false)
@@ -301,45 +238,35 @@ export default function MapScreen() {
     [],
   )
 
-  const openNonce = useMapPanelStore((s) => s.openNonce)
-  const requestedOpenTab = useMapPanelStore((s) => s.requestedTab)
+  const commandNonce = useMapPanelStore((s) => s.commandNonce)
+  const command = useMapPanelStore((s) => s.command)
 
   const openRightPanelRef = useRef(openRightPanel)
   useEffect(() => {
     openRightPanelRef.current = openRightPanel
   }, [openRightPanel])
 
+  // Desktop panel only reacts to `open` commands (toggle/collapse are mobile-sheet only).
   useEffect(() => {
-    if (!openNonce) return
-    if (requestedOpenTab === 'list') selectTravelsTab()
+    if (!commandNonce) return
+    if (command.kind !== 'open') return
+    if (command.tab === 'list') selectTravelsTab()
     else selectFiltersTab()
     openRightPanelRef.current()
-  }, [openNonce, requestedOpenTab, selectFiltersTab, selectTravelsTab])
+  }, [commandNonce, command, selectFiltersTab, selectTravelsTab])
 
-  const filtersCtx = filtersPanelProps?.contextValue
-  const currentRadius = filtersCtx?.filterValue?.radius ?? ''
-  // Depend on the individual context slices buildQuickFiltersData reads (each
-  // keeps a stable identity), not the whole filtersPanelProps object which is
-  // rebuilt on every routing-state change.
+  const currentRadius = filtersValuesSlice?.filterValue?.radius ?? ''
+  // Depend on the stable slices buildQuickFiltersData reads (each keeps its own
+  // identity), not the whole filtersPanelProps object which is rebuilt on every
+  // routing-state change.
   const quickFilters = useMemo(
     () => buildQuickFiltersData(filtersPanelProps, currentRadius),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      filtersCtx?.filterValue,
-      filtersCtx?.filters,
-      filtersCtx?.overlayOptions,
-      filtersCtx?.enabledOverlays,
-      currentRadius,
-    ],
-  )
-
-  const mapQuickActionButtons = useMemo(
-    () => buildMapQuickActionButtons(centerOnUser, zoomIn, zoomOut),
-    [centerOnUser, zoomIn, zoomOut],
+    [filtersValuesSlice, overlaySlice, currentRadius],
   )
 
   const currentTransport = transportMode ?? 'car'
-  const currentMode = filtersPanelProps?.contextValue?.mode
+  const currentMode = routingSlice?.mode
   const activeFilterItems = useMemo(
     () => buildActiveFilterItems(quickFilters.selected, currentRadius, currentMode, currentTransport),
     [quickFilters.selected, currentRadius, currentMode, currentTransport],
@@ -347,37 +274,36 @@ export default function MapScreen() {
 
   const handleRemoveActiveFilter = useCallback(
     (key: string) => {
-      const ctx = filtersPanelProps?.contextValue
-      const onChange = ctx?.onFilterChange
+      const onChange = filtersValuesSlice?.onFilterChange
       if (!onChange) return
       if (key.startsWith('cat:')) {
         const catName = key.slice(4)
-        const current: string[] = ctx?.filterValue?.categoryTravelAddress ?? []
+        const current: string[] = filtersValuesSlice?.filterValue?.categoryTravelAddress ?? []
         onChange('categoryTravelAddress', current.filter((c: string) => c !== catName))
       } else if (key === 'radius') {
         onChange('radius', String(DEFAULT_RADIUS_KM))
       } else if (key === 'transport') {
-        ctx?.setTransportMode?.('car')
+        routingSlice?.setTransportMode?.('car')
       }
     },
-    [filtersPanelProps?.contextValue],
+    [filtersValuesSlice, routingSlice],
   )
 
   const handleClearAllFilters = useCallback(() => {
-    filtersPanelProps?.contextValue?.resetFilters?.()
-  }, [filtersPanelProps?.contextValue])
+    filtersValuesSlice?.resetFilters?.()
+  }, [filtersValuesSlice])
 
   const requestOpenBottomSheet = useMapPanelStore((s) => s.requestOpen)
 
   const handleExpandRadius = useCallback(() => {
-    const onChange = filtersPanelProps?.contextValue?.onFilterChange
+    const onChange = filtersValuesSlice?.onFilterChange
     if (!onChange) return
-    const current = Number(filtersPanelProps?.contextValue?.filterValue?.radius) || RADIUS_EXPAND_DEFAULT
+    const current = Number(filtersValuesSlice?.filterValue?.radius) || RADIUS_EXPAND_DEFAULT
     onChange('radius', String(Math.min(current * 2, RADIUS_EXPAND_MAX_KM)))
-  }, [filtersPanelProps?.contextValue])
+  }, [filtersValuesSlice])
 
-  const resetFiltersForPanel = filtersPanelProps?.contextValue?.resetFilters
-  const setPanelMode = filtersPanelProps?.contextValue?.setMode
+  const resetFiltersForPanel = filtersValuesSlice?.resetFilters
+  const setPanelMode = routingSlice?.setMode
 
   const handleSelectSearchTab = useCallback(() => {
     useRouteStore.getState().clearRouteAndSetMode('radius')
@@ -398,9 +324,7 @@ export default function MapScreen() {
     (loading && !travelsData.length) ||
     (isFetching && !isPlaceholderData && !travelsData.length)
 
-  const onFilterChange = filtersPanelProps?.contextValue?.onFilterChange
-  const onOverlayToggle = filtersPanelProps?.contextValue?.onOverlayToggle
-  const onResetOverlays = filtersPanelProps?.contextValue?.onResetOverlays
+  const enabledOverlays = quickFilters.enabledOverlays
 
   const mapComponent = useMemo(
     () => (
@@ -412,14 +336,9 @@ export default function MapScreen() {
         showProgress={showMapProgress}
         mapReady={mapReady}
         mapPanelProps={mapPanelProps}
-        travelsData={travelsData}
-        quickFilters={quickFilters}
-        mapQuickActionButtons={mapQuickActionButtons}
+        enabledOverlays={enabledOverlays}
         currentRadius={currentRadius}
         shouldShowFloatingRadiusPill={shouldShowFloatingRadiusPill}
-        onFilterChange={onFilterChange}
-        onOverlayToggle={onOverlayToggle}
-        onResetOverlays={onResetOverlays}
         showGeoBanner={showGeoBanner}
         dismissGeoBanner={dismissGeoBanner}
         handleSelectSearchTab={handleSelectSearchTab}
@@ -432,14 +351,9 @@ export default function MapScreen() {
       mapPanelProps,
       mapReady,
       showMapProgress,
-      travelsData,
-      quickFilters,
-      mapQuickActionButtons,
+      enabledOverlays,
       currentRadius,
       shouldShowFloatingRadiusPill,
-      onFilterChange,
-      onOverlayToggle,
-      onResetOverlays,
       styles,
       showGeoBanner,
       dismissGeoBanner,
@@ -451,257 +365,94 @@ export default function MapScreen() {
 
   if (isMobile) {
     return (
-      <View style={styles.container} {...ROOT_MAP_PROPS}>
-        {seoBlock}
-        <Suspense fallback={MAP_PANEL_PLACEHOLDER}>
-          <MapMobileLayout
-            mapComponent={mapComponent}
-            travelsData={travelsData}
-            hasMore={hasMore}
-            onLoadMore={onLoadMore}
-            onRefresh={refetchMapData}
-            isLoading={loading || isFetching}
-            isRefreshing={isFetching && isPlaceholderData}
-            coordinates={coordinates}
-            transportMode={transportMode}
-            buildRouteTo={buildRouteTo}
-            onCenterOnUser={centerOnUser}
-            onOpenFilters={() => {
-              handleSelectSearchTab()
-              requestOpenBottomSheet('filters')
-            }}
-            filtersPanelProps={filtersPanelProps}
-            onResetFilters={handleClearAllFilters}
-            onExpandRadius={handleExpandRadius}
-            quickActionButtons={mapQuickActionButtons}
-          />
-        </Suspense>
-
-        {/* topInset уводит плашку ниже верхнего ряда плавающих контролов карты */}
-        <MapOfflineIndicator visible={!isConnected} topInset={56} />
-
-        {/* Онбординг монтируется и на мобильном: иначе restartMapOnboarding()
-            (кнопка «?») не имеет зарегистрированного _restartCb и ничего не показывает. */}
-        {shouldLoadOnboarding && (
-          <Suspense fallback={null}>
-            <MapOnboarding mobileWebCoachmark={isWeb && isMobile} />
-          </Suspense>
-        )}
-      </View>
+      <MapScreenMobile
+        styles={styles}
+        seoBlock={seoBlock}
+        mapComponent={mapComponent}
+        travelsData={travelsData}
+        hasMore={hasMore}
+        onLoadMore={onLoadMore}
+        refetchMapData={refetchMapData}
+        loading={loading}
+        isFetching={isFetching}
+        isPlaceholderData={isPlaceholderData}
+        coordinates={coordinates}
+        transportMode={transportMode}
+        buildRouteTo={buildRouteTo}
+        centerOnUser={centerOnUser}
+        handleSelectSearchTab={handleSelectSearchTab}
+        requestOpenBottomSheet={requestOpenBottomSheet}
+        filtersPanelProps={filtersPanelProps}
+        handleClearAllFilters={handleClearAllFilters}
+        handleExpandRadius={handleExpandRadius}
+        isConnected={isConnected}
+        shouldLoadOnboarding={shouldLoadOnboarding}
+        isWeb={isWeb}
+        isMobile={isMobile}
+        selectedPlace={selectedPlace}
+        clearSelectedPlace={clearSelectedPlace}
+        selectedPlaceUserLocation={selectedPlaceUserLocation}
+      />
     )
   }
 
   if (mapError) {
-    const friendly = getUserFriendlyNetworkError(mapErrorDetails || mapError)
-    const friendlyMessage = (friendly as any)?.message ?? String(friendly || '')
-    const offlineMessage =
-      'Нет подключения к интернету. Карта загрузится автоматически, как только соединение восстановится.'
-    const effectiveMessage = !isConnected
-      ? offlineMessage
-      : friendlyMessage || 'Проверьте соединение и попробуйте ещё раз'
     return (
-      <View style={styles.container} {...ROOT_MAP_PROPS}>
-        {seoBlock}
-        <ErrorDisplay
-          title={!isConnected ? 'Нет подключения' : 'Не удалось загрузить карту'}
-          message={effectiveMessage}
-          isNetworkError={!isConnected}
-          onRetry={() => {
-            invalidateTravelsQuery()
-            refetchMapData()
-          }}
-        />
-      </View>
+      <MapScreenError
+        styles={styles}
+        seoBlock={seoBlock}
+        mapError={mapError}
+        mapErrorDetails={mapErrorDetails}
+        isConnected={isConnected}
+        invalidateTravelsQuery={invalidateTravelsQuery}
+        refetchMapData={refetchMapData}
+      />
     )
   }
 
-  const showDesktopCollapsedStrip = !isMobile && isDesktopCollapsed && isWeb
-  const showDesktopExpandedPanel = !showDesktopCollapsedStrip
-
   return (
-    <View style={styles.container} {...ROOT_MAP_PROPS}>
-      {seoBlock}
-
-      <View style={styles.mapContainer}>
-        {showDesktopCollapsedStrip && (
-          <View testID="map-panel-collapsed" style={styles.collapsedPanel}>
-            <Pressable
-              testID="map-panel-expand-button"
-              hitSlop={8}
-              style={({ pressed }) => [styles.collapseToggle, pressed && PRESSED_OPACITY_07]}
-              onPress={toggleDesktopCollapse}
-              accessibilityRole="button"
-              accessibilityLabel="Развернуть панель"
-              {...({ title: 'Развернуть панель' } as any)}
-            >
-              <Feather name="chevron-right" size={18} color={themedColors.text} />
-            </Pressable>
-            <CollapsedIconButton
-              icon="search"
-              label="Поиск"
-              title="Поиск мест"
-              onPress={() => {
-                toggleDesktopCollapse()
-                handleSelectSearchTab()
-              }}
-              styles={styles}
-              iconColor={themedColors.textMuted}
-            />
-            <CollapsedIconButton
-              icon="navigation"
-              label="Построение маршрута"
-              title="Построить маршрут"
-              onPress={() => {
-                toggleDesktopCollapse()
-                handleSelectRouteTab()
-              }}
-              styles={styles}
-              iconColor={themedColors.textMuted}
-            />
-            <CollapsedIconButton
-              icon="list"
-              label={`Список точек (${travelsData.length})`}
-              title={`Список мест (${travelsData.length})`}
-              onPress={() => {
-                toggleDesktopCollapse()
-                selectTravelsTab()
-              }}
-              styles={styles}
-              iconColor={themedColors.textMuted}
-              badge={travelsData.length}
-              badgeStyles={{ container: styles.collapsedBadge, text: styles.collapsedBadgeText }}
-            />
-          </View>
-        )}
-
-        {showDesktopExpandedPanel && (
-          <Animated.View
-            ref={panelRef}
-            style={[
-              styles.rightPanel,
-              panelStyle,
-              !isMobile && isWeb ? { width: desktopPanelWidth } : null,
-            ]}
-          >
-            {!isMobile && isWeb && (
-              <View
-                testID="map-panel-resize-handle"
-                style={styles.resizeHandle}
-                onStartShouldSetResponder={() => true}
-                {...({ onMouseDown: handleResizeMouseDown } as any)}
-              />
-            )}
-            {!isMobile && isWeb && (
-              <Pressable
-                testID="map-panel-collapse-button"
-                hitSlop={8}
-                style={({ pressed }) => [styles.collapseToggleInPanel, pressed && PRESSED_OPACITY_07]}
-                onPress={toggleDesktopCollapse}
-                accessibilityRole="button"
-                accessibilityLabel="Свернуть панель"
-              >
-                <Feather name="chevron-left" size={16} color={themedColors.textMuted} />
-              </Pressable>
-            )}
-            <MapPanelHeader
-              isMobile={isMobile}
-              activeTab={activePanelTab}
-              travelsCount={travelsData.length}
-              themedColors={themedColors}
-              styles={styles}
-              selectSearchTab={handleSelectSearchTab}
-              selectRouteTab={handleSelectRouteTab}
-              selectTravelsTab={selectTravelsTab}
-              closeRightPanel={closeRightPanel}
-              resetFilters={resetFiltersForPanel}
-            />
-            {!isMobile && activePanelTab === 'search' && activeFilterItems.length > 0 && (
-              <Suspense fallback={null}>
-                <ActiveFiltersBar
-                  filters={activeFilterItems}
-                  onRemoveFilter={handleRemoveActiveFilter}
-                  onClearAll={handleClearAllFilters}
-                />
-              </Suspense>
-            )}
-            <View style={styles.panelContent}>
-              {rightPanelTab === 'filters' ? (
-                filtersPanelProps?.Component ? (
-                  <Suspense
-                    fallback={
-                      <View style={styles.panelPlaceholder}>
-                        <Text style={styles.panelPlaceholderText}>Загрузка фильтров…</Text>
-                      </View>
-                    }
-                  >
-                    <filtersPanelProps.Component {...filtersPanelProps.contextValue}>
-                      <filtersPanelProps.Panel hideTopControls hideFooterReset={!isMobile} />
-                    </filtersPanelProps.Component>
-                  </Suspense>
-                ) : (
-                  <View style={styles.panelPlaceholder}>
-                    <Text style={styles.panelPlaceholderText}>Загрузка фильтров…</Text>
-                  </View>
-                )
-              ) : (
-                <View
-                  testID="map-travels-tab"
-                  {...(isWeb ? ({ 'data-testid': 'map-travels-tab' } as any) : null)}
-                  style={{ flex: 1 }}
-                >
-                  <Suspense fallback={<ActivityIndicator style={{ paddingVertical: 32 }} color={themedColors.primary} />}>
-                    <TravelListPanel
-                      travelsData={travelsData}
-                      buildRouteTo={buildRouteTo}
-                      isMobile={isMobile}
-                      isLoading={loading || isFetching}
-                      hasMore={hasMore}
-                      onLoadMore={onLoadMore}
-                      isRefreshing={isFetching && isPlaceholderData}
-                      onRefresh={refetchMapData}
-                       currentRadiusKm={currentRadius}
-                      userLocation={coordinates}
-                      transportMode={transportMode}
-                      onResetFilters={handleClearAllFilters}
-                      onExpandRadius={handleExpandRadius}
-                    />
-                  </Suspense>
-                </View>
-              )}
-            </View>
-          </Animated.View>
-        )}
-
-        {mapComponent}
-        {rightPanelVisible && isMobile && (
-          <Animated.View style={[styles.overlay, overlayStyle]} />
-        )}
-      </View>
-
-      {!isWeb && (
-        <Pressable
-          style={({ pressed }) => [styles.fab, pressed && PRESSED_OPACITY_085]}
-          onPress={openRightPanel}
-          accessibilityRole="button"
-          accessibilityLabel="Фильтры и список мест"
-        >
-          <Feather name="sliders" size={22} color={themedColors.textOnPrimary} />
-        </Pressable>
-      )}
-
-      <MapOfflineIndicator visible={!isConnected} />
-
-      {!mapReady && (
-        <View style={[styles.loadingOverlay, POINTER_EVENTS_NONE]} testID="map-loading-overlay">
-          <ActivityIndicator color={themedColors.primary} accessibilityLabel="Загрузка карты" />
-        </View>
-      )}
-
-      {shouldLoadOnboarding && (
-        <Suspense fallback={null}>
-          <MapOnboarding mobileWebCoachmark={isWeb && isMobile} />
-        </Suspense>
-      )}
-    </View>
+    <MapScreenDesktop
+      styles={styles}
+      themedColors={themedColors}
+      seoBlock={seoBlock}
+      mapComponent={mapComponent}
+      isWeb={isWeb}
+      isMobile={isMobile}
+      isDesktopCollapsed={isDesktopCollapsed}
+      desktopPanelWidth={desktopPanelWidth}
+      rightPanelTab={rightPanelTab}
+      rightPanelVisible={rightPanelVisible}
+      activePanelTab={activePanelTab}
+      panelRef={panelRef}
+      panelStyle={panelStyle}
+      overlayStyle={overlayStyle}
+      toggleDesktopCollapse={toggleDesktopCollapse}
+      handleSelectSearchTab={handleSelectSearchTab}
+      handleSelectRouteTab={handleSelectRouteTab}
+      selectTravelsTab={selectTravelsTab}
+      closeRightPanel={closeRightPanel}
+      openRightPanel={openRightPanel}
+      handleResizeMouseDown={handleResizeMouseDown}
+      resetFiltersForPanel={resetFiltersForPanel}
+      filtersPanelProps={filtersPanelProps}
+      activeFilterItems={activeFilterItems}
+      handleRemoveActiveFilter={handleRemoveActiveFilter}
+      handleClearAllFilters={handleClearAllFilters}
+      handleExpandRadius={handleExpandRadius}
+      travelsData={travelsData}
+      loading={loading}
+      isFetching={isFetching}
+      isPlaceholderData={isPlaceholderData}
+      hasMore={hasMore}
+      onLoadMore={onLoadMore}
+      refetchMapData={refetchMapData}
+      buildRouteTo={buildRouteTo}
+      currentRadius={currentRadius}
+      coordinates={coordinates}
+      transportMode={transportMode}
+      isConnected={isConnected}
+      mapReady={mapReady}
+      shouldLoadOnboarding={shouldLoadOnboarding}
+    />
   )
 }

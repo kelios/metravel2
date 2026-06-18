@@ -52,33 +52,57 @@ const stripCountryFromCategoryString = (raw: unknown, address?: string | null) =
   return filtered.join(', ');
 };
 
+/**
+ * Splits a comma-separated address into trimmed, non-empty segments and removes
+ * duplicate tokens (case/accent-insensitive). Reverse-geocoded addresses often
+ * repeat a place name in two languages or list the same district twice, e.g.
+ * «Wawel, Podzamcze, Old Town, Stare Miasto, Old Town, Краков, …». We keep the
+ * first occurrence and drop any later repeat (not just consecutive ones).
+ */
+const dedupeAddressSegments = (rawAddress: string): string[] => {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of rawAddress.split(',').map((p) => p.trim())) {
+    if (!part) continue;
+    const key = part.toLocaleLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(part);
+  }
+  return out;
+};
+
+// Segments that are pure postal codes / house numbers — not a meaningful name.
+const isNoiseSegment = (segment: string) => /^[\d\s-]+$/.test(segment);
+
 const buildPopupTitleParts = (point: Point): { title: string; subtitle?: string } => {
   const rawName = String((point as any)?.name ?? '').trim();
   const rawAddress = String(point.address ?? '').trim();
 
-  if (rawName && rawAddress && rawName.localeCompare(rawAddress, undefined, { sensitivity: 'accent' }) !== 0) {
-    return { title: rawName, subtitle: rawAddress };
+  const addressSegments = rawAddress ? dedupeAddressSegments(rawAddress) : [];
+  const dedupedAddress = addressSegments.join(', ');
+
+  // Explicit name that differs from the address → use it as the title and show
+  // the (deduped) full address as the secondary line.
+  if (rawName && dedupedAddress && rawName.localeCompare(dedupedAddress, undefined, { sensitivity: 'accent' }) !== 0) {
+    return { title: rawName, subtitle: dedupedAddress };
   }
 
   if (rawName) {
     return { title: rawName };
   }
 
-  if (!rawAddress) {
+  if (addressSegments.length === 0) {
     return { title: 'Точка маршрута' };
   }
 
-  const [head, ...tail] = rawAddress
-    .split(',')
-    .map((part) => part.trim())
-    .filter(Boolean);
+  // No name: take the first meaningful segment as the title (skipping pure
+  // numeric noise like postal codes), keep the rest as the secondary address.
+  const headIndex = addressSegments.findIndex((s) => !isNoiseSegment(s));
+  const title = headIndex >= 0 ? addressSegments[headIndex]! : addressSegments[0]!;
+  const subtitle = addressSegments.filter((_, i) => i !== headIndex).join(', ').trim();
 
-  if (!head) {
-    return { title: rawAddress };
-  }
-
-  const subtitle = tail.join(', ').trim();
-  return subtitle ? { title: head, subtitle } : { title: head };
+  return subtitle ? { title, subtitle } : { title };
 };
 
 export const createMapPopupComponent = ({

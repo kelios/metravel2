@@ -127,7 +127,6 @@ describe('TravelMap (web)', () => {
           { coord: '53.9, 27.56' },
           { coord: '53.91, 27.57' },
         ]}
-        compact
         height={400}
       />
     );

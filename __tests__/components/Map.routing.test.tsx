@@ -71,7 +71,7 @@ describe('Map Routing Display Tests', () => {
 
     // Transport mode is shown via icon in header, not as separate card
     expect(getByText('Маршрут построен')).toBeTruthy();
-    expect(getByTestId('feather-activity')).toBeTruthy(); // bike icon
+    expect(getByTestId('mci-bike')).toBeTruthy(); // bike icon
   });
 
   it('should display correct time estimate for car', () => {

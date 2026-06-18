@@ -213,7 +213,13 @@ describe('MapScreen (map tab)', () => {
     const RN = require('react-native');
     const api = require('@/api/map');
     (RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 1024, height: 768 });
-    useMapPanelStore.setState({ openNonce: 0 })
+    useMapPanelStore.setState({
+      commandNonce: 0,
+      command: { kind: 'open', tab: 'filters' },
+      openNonce: 0,
+      requestedTab: 'filters',
+      toggleNonce: 0,
+    })
     mockFetchTravelsForMap.mockReset();
     mockFetchTravelsForMap.mockResolvedValue(defaultTravelsForMapResponse);
     mockFetchFiltersMap.mockReset();
@@ -251,88 +257,22 @@ describe('MapScreen (map tab)', () => {
     })
 
     await waitFor(() => {
-      expect(getByTestId('map-panel-tab-search')).toBeTruthy()
+      // На desktop фильтры — кнопка-иконка, а сегмент сводится к 2 вкладкам.
+      expect(getByTestId('map-filters-button')).toBeTruthy()
       expect(getByTestId('map-panel-tab-route')).toBeTruthy()
+      expect(getByTestId('map-panel-tab-travels')).toBeTruthy()
       expect(getByTestId('map-reset-filters-button')).toBeTruthy()
       expect(getByTestId('filters-panel')).toBeTruthy()
     })
   })
 
-  it('shows the sightseeing quick filter after map categories load', async () => {
-    const { getByLabelText } = renderWithClient()
-
-    await waitFor(() => {
-      expect(mockFetchTravelsForMap).toHaveBeenCalled()
-    })
-
-    await waitFor(() => {
-      expect(getByLabelText('Что посмотреть: Все')).toBeTruthy()
-    })
-  })
-
-  it('falls back to categories from map points when filterformap returns no sightseeing options', async () => {
-    const api = require('@/api/map')
-
-    mockFetchFiltersMap.mockResolvedValue({
-      categories: [],
-      categoryTravelAddress: [],
-    })
-    api.fetchFiltersMap.mockResolvedValue({
-      categories: [],
-      categoryTravelAddress: [],
-    })
-    mockFetchTravelsForMap.mockResolvedValue({
-      a: {
-        id: 1,
-        categoryName: 'Замок',
-        coord: '53.95,27.60',
-        lat: '53.95',
-        lng: '27.60',
-        travelImageThumbUrl: '',
-        urlTravel: '',
-      },
-      b: {
-        id: 2,
-        categoryName: 'Болото, Замок',
-        coord: '53.92,27.55',
-        lat: '53.92',
-        lng: '27.55',
-        travelImageThumbUrl: '',
-        urlTravel: '',
-      },
-    })
-
-    const { getByLabelText } = renderWithClient()
-
-    await waitFor(() => {
-      expect(mockFetchTravelsForMap).toHaveBeenCalled()
-    })
-
-    await waitFor(() => {
-      expect(getByLabelText('Что посмотреть: Все')).toBeTruthy()
-    })
-  })
-
-  it('shows overlays quick filter on the map header', async () => {
-    const { getByLabelText } = renderWithClient()
-
-    await waitFor(() => {
-      expect(mockFetchTravelsForMap).toHaveBeenCalled()
-    })
-
-    await waitFor(() => {
-      expect(getByLabelText('Оверлеи: Выкл')).toBeTruthy()
-    })
-  })
-
   it('does not render a separate floating radius pill on desktop web', async () => {
-    const { getByTestId, queryByTestId } = renderWithClient()
+    const { queryByTestId } = renderWithClient()
 
     await waitFor(() => {
       expect(mockFetchTravelsForMap).toHaveBeenCalled()
     })
 
-    expect(getByTestId('map-quick-filters')).toBeTruthy()
     expect(queryByTestId('map-radius-pill')).toBeNull()
   })
 
@@ -360,7 +300,7 @@ describe('MapScreen (map tab)', () => {
     })
 
     await waitFor(() => {
-      expect(getByTestId('map-panel-tab-search')).toBeTruthy()
+      expect(getByTestId('map-filters-button')).toBeTruthy()
       expect(getByTestId('map-panel-tab-route')).toBeTruthy()
       expect(getByTestId('map-panel-tab-travels')).toBeTruthy()
     })
@@ -369,8 +309,8 @@ describe('MapScreen (map tab)', () => {
     const resetButton = getByLabelText('Сбросить фильтры')
     expect(resetButton).toBeTruthy()
 
-    // Панель на desktop не должна скрываться, вкладки остаются доступны
-    expect(getByTestId('map-panel-tab-search')).toBeTruthy()
+    // Панель на desktop не должна скрываться, вкладки/фильтры остаются доступны
+    expect(getByTestId('map-filters-button')).toBeTruthy()
     expect(getByTestId('map-panel-tab-route')).toBeTruthy()
     expect(getByTestId('map-panel-tab-travels')).toBeTruthy()
 
@@ -378,7 +318,7 @@ describe('MapScreen (map tab)', () => {
     act(() => {
       fireEvent.press(resetButton)
     })
-    expect(queryByTestId('map-panel-tab-search')).toBeTruthy()
+    expect(queryByTestId('map-filters-button')).toBeTruthy()
     expect(queryByTestId('map-panel-tab-route')).toBeTruthy()
     expect(queryByTestId('map-panel-tab-travels')).toBeTruthy()
   })
@@ -435,10 +375,10 @@ describe('MapScreen (map tab)', () => {
     });
 
     await waitFor(() => {
-      expect(getByTestId('map-panel-tab-search')).toBeTruthy();
+      expect(getByTestId('map-filters-button')).toBeTruthy();
     });
 
-    fireEvent.press(getByTestId('map-panel-tab-search'));
+    fireEvent.press(getByTestId('map-filters-button'));
 
     await waitFor(() => {
       expect(useRouteStore.getState().mode).toBe('radius');

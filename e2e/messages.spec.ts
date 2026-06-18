@@ -275,8 +275,12 @@ test.describe('Messages — Thread List', () => {
       return;
     }
 
-    // Type a search query
-    await searchInput.fill('Мария');
+    // Type a search query through keyboard events; React Native Web TextInput can
+    // miss a synthetic fill update under long serial shard runs.
+    await searchInput.click();
+    await searchInput.fill('');
+    await searchInput.pressSequentially('Мария');
+    await expect(searchInput).toHaveValue('Мария');
     await page.waitForTimeout(500);
 
     // Maria's thread should still be visible

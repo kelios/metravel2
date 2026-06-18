@@ -1,6 +1,7 @@
 import React, { useMemo, useRef } from 'react'
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
 
+import { getMapPointKey } from '@/hooks/map/useMapTravels'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { getDistanceInfo } from '@/utils/distanceCalculator'
 import { parseCoordinateString } from '@/utils/coordinates'
@@ -26,19 +27,6 @@ interface Props {
   radiusKm?: number
   isLoading?: boolean
 }
-
-const getPlaceCardKey = (place: any): string =>
-  String(
-    place?.id ??
-      place?._id ??
-      place?.slug ??
-      place?.url ??
-      place?.urlTravel ??
-      place?.coord ??
-      place?.address ??
-      place?.name ??
-      JSON.stringify(place ?? {}),
-  )
 
 const SkeletonCard: React.FC<{ styles: ReturnType<typeof getStyles> }> = ({ styles }) => (
   <View style={styles.skeletonCard}>
@@ -122,7 +110,7 @@ export const QuickRecommendations: React.FC<Props> = React.memo(
 
     if (!topPlaces.length) return null
 
-    const cards = topPlaces.map((place) => {
+    const cards = topPlaces.map((place, index) => {
       const thumbUrl = place.travelImageThumbUrl || place.travel_image_thumb_url || null
       const categoryName =
         typeof place.categoryName === 'string' ? place.categoryName.split(',')[0].trim() : ''
@@ -132,7 +120,7 @@ export const QuickRecommendations: React.FC<Props> = React.memo(
       ]
       return (
         <PlaceListCard
-          key={getPlaceCardKey(place)}
+          key={getMapPointKey(place, index)}
           title={place.address || 'Место'}
           imageUrl={thumbUrl}
           categoryLabel={categoryName || undefined}

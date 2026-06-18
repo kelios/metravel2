@@ -21,13 +21,21 @@ interface UseMapTravelsParams {
   isFocused: boolean;
 }
 
-type MapTravelIdentityCandidate = Partial<TravelCoords> & {
+// Минимальная структурная форма, которую читают identity/key-функции.
+// Намеренно НЕ завязана на TravelCoords целиком: разные потребители (точки
+// карты в MapMarkers/ClusterLayer) имеют свой Point-тип с другим categoryName,
+// а ключ-функции эти поля не трогают — нужны только идентификаторы и координата.
+type MapTravelIdentityCandidate = {
   id?: string | number;
   _id?: string | number;
   uid?: string | number;
   slug?: string;
   url?: string;
   articleUrl?: string;
+  urlTravel?: string;
+  coord?: string | null;
+  lat?: unknown;
+  lng?: unknown;
 };
 
 function normalizeIdentityValue(value: unknown): string | null {
@@ -41,7 +49,7 @@ function normalizeIdentityValue(value: unknown): string | null {
   return null;
 }
 
-function getPointCoordKey(travel: MapTravelIdentityCandidate): string | null {
+export function getPointCoordKey(travel: MapTravelIdentityCandidate): string | null {
   const coord = normalizeIdentityValue(travel?.coord);
   if (coord) return coord;
 
@@ -87,6 +95,33 @@ export function getMapTravelIdentity(travel: MapTravelIdentityCandidate): string
   }
 
   return null;
+}
+
+/**
+ * КАНОНИЧЕСКИЙ стабильный ключ/идентичность точки карты для React-рендера.
+ * Единственная функция-источник ключей для ВСЕХ потребителей (маркеры,
+ * кластеры, список мест, рекомендации) — раньше каждый собирал ключ вручную
+ * (`travel-${id}-${coord}-${index}` и т.п.), что давало 4 несовместимых
+ * формата.
+ *
+ * Консистентна с getMapTravelIdentity. После перехода дедупа на (urlTravel@coord)
+ * одно путешествие может давать несколько точек с разными координатами — ключ
+ * по travel-уровню (id/urlTravel) приводил к дублям React-ключей. Берём identity
+ * (она уже coord-уникальна для point-payload), а в хвост всегда добавляем index —
+ * это гарантирует уникальность даже для двух точек строго в одной координате
+ * одного путешествия и для записей без какой-либо идентичности.
+ */
+export function getMapPointKey(
+  travel: MapTravelIdentityCandidate,
+  index: number
+): string {
+  const identity = getMapTravelIdentity(travel);
+  if (identity) return `${identity}#${index}`;
+
+  const coordKey = getPointCoordKey(travel);
+  if (coordKey) return `coord:${coordKey}#${index}`;
+
+  return `idx:${index}`;
 }
 
 export function dedupeMapTravels(travels: TravelCoords[]): TravelCoords[] {

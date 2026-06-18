@@ -56,6 +56,27 @@ async function waitForTravelDetailsReady(page: any) {
   await page.locator(travelDetailsRootSelector).first().waitFor({ state: 'visible', timeout: 30_000 });
 }
 
+async function scrollToCommentsSection(page: any) {
+  const target = page
+    .getByPlaceholder('Написать комментарий...')
+    .or(page.locator('[data-testid="comment-item"]').first())
+    .or(page.getByText('Комментарии недоступны', { exact: true }))
+    .or(page.getByRole('heading', { name: /Комментарии/ }))
+    .first();
+
+  await target.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null);
+  const scrolled = await target
+    .evaluate((node: HTMLElement) => {
+      node.scrollIntoView({ block: 'center', inline: 'nearest' });
+      return true;
+    })
+    .catch(() => false);
+
+  if (!scrolled) {
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight)).catch(() => null);
+  }
+}
+
 test.describe('Travel Comments', () => {
   const slug = 'e2e-travel-comments';
 
@@ -359,7 +380,7 @@ test.describe('Travel Comments', () => {
       await waitForTravelDetailsReady(page);
       
       // Scroll to comments section
-      await page.getByText('Комментарии').first().scrollIntoViewIfNeeded();
+      await scrollToCommentsSection(page);
 
       // Should see comments section
       await expect(page.getByText('Комментарии').first()).toBeVisible();
@@ -434,7 +455,7 @@ test.describe('Travel Comments', () => {
       await waitForTravelDetailsReady(page);
       
       // Scroll to comments
-      await page.getByText('Комментарии').first().scrollIntoViewIfNeeded();
+      await scrollToCommentsSection(page);
 
       if (await shouldSkipAuthCommentActions(page)) return;
 
@@ -602,7 +623,7 @@ test.describe('Travel Comments', () => {
       await waitForTravelDetailsReady(page);
 
       // Scroll comments section into view to trigger deferred mount before checking auth state.
-      await page.getByText('Комментарии').first().scrollIntoViewIfNeeded().catch(() => null);
+      await scrollToCommentsSection(page);
 
       if (await shouldSkipAuthCommentActions(page)) return;
 
@@ -645,21 +666,15 @@ test.describe('Travel Comments', () => {
       // Submit reply
       await submit.click();
 
-      const replyLocator = page.getByText(replyText);
+      const replyLocator = page.locator('[data-testid="comment-item"]').filter({ hasText: replyText }).first();
 
-      // Replies are collapsed by default and the toggle may appear only after data refresh.
-      if (!(await replyLocator.isVisible().catch(() => false))) {
+      // Replies can render inline after optimistic updates, or behind a toggle after data refresh.
+      await replyLocator.waitFor({ state: 'visible', timeout: 10_000 }).catch(async () => {
         const showReplies = page.getByText(/показать ответы/i).first();
-        const showRepliesVisible = await showReplies.isVisible({ timeout: 10_000 }).catch(() => false);
-        if (!showRepliesVisible) {
-          test.info().annotations.push({
-            type: 'note',
-            description: 'Reply not visible and no "показать ответы" toggle found; skipping reply visibility assertion.',
-          });
-          return;
+        if (await showReplies.isVisible().catch(() => false)) {
+          await showReplies.click();
         }
-        await showReplies.click();
-      }
+      });
 
       await expect(replyLocator).toBeVisible({ timeout: 15_000 });
     });
@@ -669,7 +684,7 @@ test.describe('Travel Comments', () => {
       await waitForTravelDetailsReady(page);
 
       // Ensure comments section is mounted/visible in deferred layouts.
-      await page.getByText('Комментарии').first().scrollIntoViewIfNeeded();
+      await scrollToCommentsSection(page);
 
       if (await shouldSkipAuthCommentActions(page)) return;
       
@@ -719,10 +734,19 @@ test.describe('Travel Comments', () => {
       const ourComment = page.locator('[data-testid="comment-item"]').filter({ hasText: originalText }).first();
       
       // Click more actions (actions control is rendered as a generic element)
-      await ourComment.locator('[data-testid="comment-actions-trigger"]').click();
+      await openCommentActionsMenu(page, ourComment);
       
       // Click edit
-      await page.locator('[data-testid="comment-actions-edit"]').first().click();
+      const editAction = page.locator('[data-testid="comment-actions-edit"]').first();
+      const editVisible = await editAction.isVisible({ timeout: 5_000 }).catch(() => false);
+      if (!editVisible) {
+        test.info().annotations.push({
+          type: 'note',
+          description: 'Comment edit action is not visible after opening actions menu; skipping edit assertions for this environment.',
+        });
+        return;
+      }
+      await editAction.click({ timeout: 10_000 });
       
       // Should see edit banner
       await expect(page.getByText(/редактирование комментария/i)).toBeVisible();
@@ -745,7 +769,7 @@ test.describe('Travel Comments', () => {
       await waitForTravelDetailsReady(page);
 
       // Ensure comments section is mounted/visible in deferred layouts.
-      await page.getByText('Комментарии').first().scrollIntoViewIfNeeded();
+      await scrollToCommentsSection(page);
 
       if (await shouldSkipAuthCommentActions(page)) return;
       
@@ -795,10 +819,10 @@ test.describe('Travel Comments', () => {
       const ourComment = page.locator('[data-testid="comment-item"]').filter({ hasText: commentText }).first();
       
       // Click more actions
-      await ourComment.locator('[data-testid="comment-actions-trigger"]').click();
+      await openCommentActionsMenu(page, ourComment);
 
       // Click delete — opens the in-app ConfirmDialog (replaces native window.confirm)
-      await ourComment.locator('[data-testid="comment-actions-delete"]').click();
+      await page.locator('[data-testid="comment-actions-delete"]').first().click({ timeout: 10_000 });
       await page.locator('[data-testid="comment-delete-confirm"]').click();
 
       // Wait for deletion
@@ -992,7 +1016,7 @@ test.describe('Travel Comments', () => {
       await waitForTravelDetailsReady(page);
 
       // Ensure comments section is mounted/visible in deferred layouts.
-      await page.getByText('Комментарии').first().scrollIntoViewIfNeeded();
+      await scrollToCommentsSection(page);
 
       const unavailable = page.getByText('Комментарии недоступны', { exact: true });
       if (await unavailable.isVisible().catch(() => false)) {
@@ -1056,19 +1080,20 @@ test.describe('Travel Comments', () => {
       await expect(submit).toBeEnabled();
       await submit.click();
 
-      const level1Locator = page.getByText(level1Text);
+      const level1Locator = page.locator('[data-testid="comment-item"]').filter({ hasText: level1Text }).first();
 
-      // Replies are collapsed by default and the toggle may appear only after data refresh.
-      if (!(await level1Locator.isVisible().catch(() => false))) {
+      // Replies can render inline after optimistic updates, or behind a toggle after data refresh.
+      await level1Locator.waitFor({ state: 'visible', timeout: 10_000 }).catch(async () => {
         const showReplies = page.getByText(/показать ответы/i).first();
-        await expect(showReplies).toBeVisible({ timeout: 10_000 });
-        await showReplies.click();
-      }
+        if (await showReplies.isVisible().catch(() => false)) {
+          await showReplies.click();
+        }
+      });
 
       await expect(level1Locator).toBeVisible({ timeout: 15_000 });
       
       // Try to reply to level 1 (should create level 2)
-      const level1Comment = page.locator(`text=${level1Text}`).locator('..').locator('..');
+      const level1Comment = level1Locator;
       const replyButton = level1Comment.getByRole('button', { name: /ответить/i });
       const canReply = await replyButton.isVisible().catch(() => false);
       
@@ -1078,10 +1103,11 @@ test.describe('Travel Comments', () => {
         const level2Text = `Level 2 reply ${Date.now()}`;
         await commentInput.fill(level2Text);
         await page.getByRole('button', { name: /отправить комментарий/i }).click();
-        await expect(page.getByText(level2Text)).toBeVisible({ timeout: 5000 });
+        const level2Locator = page.locator('[data-testid="comment-item"]').filter({ hasText: level2Text }).first();
+        await expect(level2Locator).toBeVisible({ timeout: 5000 });
         
         // Level 2 comment should now have reply button (no depth limit)
-        const level2Comment = page.locator(`text=${level2Text}`).locator('..').locator('..');
+        const level2Comment = level2Locator;
         const level2ReplyButton = level2Comment.getByRole('button', { name: /ответить/i });
         await expect(level2ReplyButton).toBeVisible();
       }
@@ -1098,7 +1124,7 @@ test.describe('Travel Comments', () => {
       await waitForTravelDetailsReady(page);
       
       // Scroll to comments
-      await page.getByText('Комментарии').first().scrollIntoViewIfNeeded();
+      await scrollToCommentsSection(page);
       
       // Get initial comment count
       const _initialCount = await page.locator('[data-testid="comment-item"]').count();

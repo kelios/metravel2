@@ -9,6 +9,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { buildClusterIconHtml } from './mapMarkerStyles'
 import MarkerPopup from './MarkerPopup'
 import { formatPlaces } from '@/utils/pluralize'
+import { getMapPointKey } from '@/hooks/map/useMapTravels'
 
 interface ClusterLayerProps {
   L?: any
@@ -158,9 +159,9 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
                 if (!ll) return null
                 if (!Number.isFinite(ll[0]) || !Number.isFinite(ll[1]))
                   return null
-                const markerKey = item.id
-                  ? `cluster-expanded-${cluster.key}-${item.id}`
-                  : `cluster-expanded-${cluster.key}-${item.coord.replace(/,/g, '-')}-${itemIdx}`
+                // Единый ключ точки, заскоупленный кластером (cluster.key уже
+                // уникален, поэтому коллизий между кластерами нет).
+                const markerKey = `cluster-expanded-${cluster.key}-${getMapPointKey(item, itemIdx)}`
 
                 const accessibleName =
                   item.address || item.categoryName || 'Точка на карте'
@@ -226,9 +227,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
           if (!ll) return null
           if (!Number.isFinite(ll[0]) || !Number.isFinite(ll[1])) return null
 
-          const singleKey = item.id
-            ? `cluster-single-${cluster.key}-${item.id}`
-            : `cluster-single-${cluster.key}-${item.coord.replace(/,/g, '-')}`
+          const singleKey = `cluster-single-${cluster.key}-${getMapPointKey(item, 0)}`
 
           const accessibleName =
             item.address || item.categoryName || 'Точка на карте'

@@ -8,6 +8,7 @@ import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter';
 import { useRouteStore } from '@/stores/routeStore';
 import { useBottomSheetStore } from '@/stores/bottomSheetStore';
+import { useMapPanelStore } from '@/stores/mapPanelStore';
 import { logMessage } from '@/utils/logger';
 import { showRoutePointAddedToast } from '@/utils/mapToasts';
 import type { MapUiApi } from '@/types/mapUi';
@@ -348,7 +349,7 @@ export function useRouteController(
 
       if (shouldCollapseBottomSheet) {
         try {
-          bottomSheetStore.requestCollapse();
+          useMapPanelStore.getState().requestCollapse();
         } catch {
           // noop
         }

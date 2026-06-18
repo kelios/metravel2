@@ -1,29 +1,17 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import type { ThemedColors } from '@/hooks/useTheme';
-import ImageCardMedia, { isIOSSafariUserAgent } from '@/components/ui/ImageCardMedia';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import RelatedTravelActionStack from '@/components/travel/RelatedTravelActionStack'
-import {
-  COMPACT_IMAGE_MAX_HEIGHT_BY_BREAKPOINT,
-  COMPACT_POPUP_MAX_WIDTH_BY_BREAKPOINT,
-  IMAGE_ASPECT,
-  IMAGE_MAX_HEIGHT_BY_BREAKPOINT,
-  POPUP_MAX_WIDTH_BY_BREAKPOINT,
-  POPUP_TOOLTIPS,
-  SPLIT_LAYOUT_IMAGE_ASPECT,
-  SPLIT_LAYOUT_MIN_POPUP_WIDTH,
-  SPLIT_LAYOUT_MIN_VIEWPORT,
-  getBreakpoint,
-} from './constants';
+import { POPUP_TOOLTIPS } from './constants';
 import FullscreenImageViewer from './FullscreenImageViewer';
 import FullscreenPopupOverlay from './FullscreenPopupOverlay';
-import { getStyles } from './styles';
-import {
-  getNavigationActionVisual,
-  NAVIGATION_ACTION_LABELS,
-} from '@/components/navigation/navigationActionMeta';
+import { stopWebPopupEvent } from './domEvents';
+import { usePopupDomGuard } from './usePopupDomGuard';
+import { usePopupLayout } from './usePopupLayout';
+import { usePopupActions } from './usePopupActions';
 
 type Props = {
   title: string;
@@ -71,48 +59,6 @@ type Props = {
   };
 };
 
-const stopWebPopupEvent = (event?: any) => {
-  if (Platform.OS !== 'web') return;
-  try {
-    event?.stopPropagation?.();
-    event?.nativeEvent?.stopPropagation?.();
-    event?.nativeEvent?.stopImmediatePropagation?.();
-  } catch {
-    // noop
-  }
-};
-
-const POPUP_DOM_EVENTS = [
-  'dblclick',
-  'contextmenu',
-  'mousedown',
-  'mouseup',
-  'pointerdown',
-  'pointerup',
-  'touchstart',
-  'touchmove',
-  'touchend',
-  'wheel',
-] as const;
-
-const isCardActionEvent = (event: Event): boolean => {
-  if (Platform.OS !== 'web') return false;
-  const target = event.target as Element | null;
-  return Boolean(target?.closest?.('[data-card-action="true"]'));
-};
-
-const getPopupEventNodes = (node: any): EventTarget[] => {
-  if (Platform.OS !== 'web' || !node?.addEventListener) return [];
-  return [node];
-};
-
-const isInternalArticleHref = (pathname: string) => (
-  pathname.startsWith('/travel/') ||
-  pathname.startsWith('/travels/') ||
-  pathname.startsWith('/article/') ||
-  pathname.startsWith('/articles/')
-);
-
 const PlacePopupCard: React.FC<Props> = ({
   title,
   subtitle: _subtitle,
@@ -147,173 +93,50 @@ const PlacePopupCard: React.FC<Props> = ({
   colors,
   primaryActionOverride,
 }) => {
-  const cardRootRef = useRef<any>(null);
-  const popupGuardCleanupRef = useRef<(() => void) | null>(null);
-  // Callback ref: навешивает/снимает guard'ы всплытия при КАЖДОЙ смене host-узла.
-  // useEffect([]) этого не делал — при свопе layout-ветки (overlay ↔ cardBody по ширине)
-  // или позднем монтировании узла listeners оставались на устаревшем/отсутствующем узле.
-  const setCardRootNode = useCallback((node: any) => {
-    cardRootRef.current = node;
-    if (popupGuardCleanupRef.current) {
-      popupGuardCleanupRef.current();
-      popupGuardCleanupRef.current = null;
-    }
-    if (Platform.OS !== 'web') return;
-    const nodes = getPopupEventNodes(node);
-    if (!nodes.length) return;
-
-    const stopEvent = (event: Event) => {
-      event.stopPropagation();
-      if (isCardActionEvent(event)) return;
-      (event as any).stopImmediatePropagation?.();
-    };
-
-    nodes.forEach((n) => {
-      POPUP_DOM_EVENTS.forEach((eventName) => {
-        (n as any).addEventListener(eventName, stopEvent);
-      });
-    });
-
-    popupGuardCleanupRef.current = () => {
-      nodes.forEach((n) => {
-        POPUP_DOM_EVENTS.forEach((eventName) => {
-          (n as any).removeEventListener(eventName, stopEvent);
-        });
-      });
-    };
-  }, []);
+  const setCardRootNode = usePopupDomGuard();
   const [fullscreenVisible, setFullscreenVisible] = useState(false);
-  const revealPopupImageOnLoadOnly = useMemo(() => {
-    if (Platform.OS !== 'web' || typeof navigator === 'undefined') return false;
-    return isIOSSafariUserAgent(
-      String(navigator.userAgent || ''),
-      typeof navigator.maxTouchPoints === 'number' ? navigator.maxTouchPoints : 0,
-    );
-  }, []);
-  const hasCoord = !!coord;
-  const hasArticle = typeof onOpenArticle === 'function';
-  const normalizedArticleHref = useMemo(() => {
-    const rawHref = String(articleHref ?? '').trim();
-    if (!rawHref) return null;
-    if (isInternalArticleHref(rawHref)) return rawHref;
 
-    if (/^https?:\/\//i.test(rawHref)) {
-      try {
-        const parsed = new URL(rawHref);
-        if (isInternalArticleHref(parsed.pathname)) {
-          return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-        }
-      } catch {
-        return null;
-      }
-    }
+  const {
+    revealPopupImageOnLoadOnly,
+    bp,
+    compactLabel,
+    useFullscreenMobileOverlay,
+    useCompactLayout,
+    maxPopupWidth,
+    useSplitLayout,
+    styles,
+  } = usePopupLayout({
+    colors,
+    width,
+    imageUrl,
+    addLabel,
+    compactLayout,
+    fullscreenOnMobile,
+  });
 
-    return null;
-  }, [articleHref]);
-  const hasDrivingInfo =
-    typeof drivingDistanceMeters === 'number' &&
-    Number.isFinite(drivingDistanceMeters) &&
-    typeof drivingDurationSeconds === 'number' &&
-    Number.isFinite(drivingDurationSeconds);
-
-  const drivingText = React.useMemo(() => {
-    if (!hasDrivingInfo) return null;
-    const km = drivingDistanceMeters! / 1000;
-    const mins = Math.max(1, Math.round(drivingDurationSeconds! / 60));
-    const kmLabel = km >= 10 ? `${Math.round(km)} км` : `${km.toFixed(1)} км`;
-    return `${kmLabel} · ${mins} мин`;
-  }, [drivingDistanceMeters, drivingDurationSeconds, hasDrivingInfo]);
-
-  const primaryAction = useMemo(() => {
-    if (primaryActionOverride) {
-      return {
-        label: primaryActionOverride.label,
-        icon: primaryActionOverride.icon,
-        onPress: primaryActionOverride.onPress,
-        tooltip: primaryActionOverride.tooltip ?? primaryActionOverride.label,
-        accessibilityLabel: primaryActionOverride.accessibilityLabel ?? primaryActionOverride.label,
-      };
-    }
-    if (onBuildRoute) {
-      return {
-        label: 'Маршрут сюда',
-        icon: 'corner-up-right' as const,
-        onPress: onBuildRoute,
-        tooltip: POPUP_TOOLTIPS.buildRoute,
-        accessibilityLabel: 'Построить маршрут сюда',
-      };
-    }
-
-    if (hasArticle) {
-      return {
-        label: 'Открыть страницу',
-        icon: 'arrow-right' as const,
-        onPress: onOpenArticle!,
-        tooltip: POPUP_TOOLTIPS.openArticle,
-        accessibilityLabel: 'Открыть статью о точке',
-      };
-    }
-
-    if (hasCoord && onOpenGoogleMaps) {
-      return {
-        label: 'Google Maps',
-        icon: 'map' as const,
-        onPress: onOpenGoogleMaps,
-        tooltip: POPUP_TOOLTIPS.openGoogleMaps,
-        accessibilityLabel: 'Открыть точку в Google Maps',
-      };
-    }
-
-    return null;
-  }, [hasArticle, hasCoord, onBuildRoute, onOpenArticle, onOpenGoogleMaps, primaryActionOverride]);
-
-  const saveActionVisual = useMemo(
-    () => getNavigationActionVisual('save', colors),
-    [colors],
-  );
-
-  const { width: viewportWidth } = useWindowDimensions();
-  const bp = getBreakpoint(viewportWidth);
-  const isNarrow = bp === 'narrow';
-  const compactLabel = isNarrow ? 'Сохранить' : addLabel;
-  const viewportGutter = bp === 'narrow' ? 24 : bp === 'compact' ? 32 : 48;
-  const useFullscreenMobileOverlay = Platform.OS === 'web' && fullscreenOnMobile && viewportWidth <= 560;
-  const useCompactLayout = compactLayout || (viewportWidth <= 420 && !useFullscreenMobileOverlay);
-  const safeViewportWidth = Math.max(220, viewportWidth - viewportGutter);
-  const popupWidthCap = useFullscreenMobileOverlay
-    ? Math.min(480, safeViewportWidth)
-    : useCompactLayout
-      ? COMPACT_POPUP_MAX_WIDTH_BY_BREAKPOINT[bp]
-      : POPUP_MAX_WIDTH_BY_BREAKPOINT[bp];
-  const imageHeightCap = useFullscreenMobileOverlay
-    ? 220
-    : useCompactLayout
-    ? COMPACT_IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp]
-    : IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp];
-  const maxPopupWidth = Math.min(width, popupWidthCap, safeViewportWidth);
-  const useSplitLayout =
-    Boolean(imageUrl) &&
-    !useFullscreenMobileOverlay &&
-    !useCompactLayout &&
-    viewportWidth >= SPLIT_LAYOUT_MIN_VIEWPORT &&
-    maxPopupWidth >= SPLIT_LAYOUT_MIN_POPUP_WIDTH;
-  const heroWidth = useSplitLayout
-    ? Math.max(100, Math.min(118, Math.round(maxPopupWidth * 0.34)))
-    : maxPopupWidth;
-  const heroHeight = useSplitLayout
-    ? Math.max(100, Math.min(118, Math.round(heroWidth / SPLIT_LAYOUT_IMAGE_ASPECT)))
-    : Math.max(
-        1,
-        Math.min(
-          imageHeightCap,
-          Math.round(heroWidth / IMAGE_ASPECT[bp])
-        )
-      );
-
-  const styles = useMemo(
-    () => getStyles(colors, bp, heroWidth, heroHeight, useCompactLayout, useSplitLayout),
-    [colors, bp, heroWidth, heroHeight, useCompactLayout, useSplitLayout],
-  );
+  const {
+    hasCoord,
+    normalizedArticleHref,
+    hasDrivingInfo,
+    drivingText,
+    primaryAction,
+    saveActionVisual,
+    secondaryActions,
+  } = usePopupActions({
+    colors,
+    coord,
+    articleHref,
+    drivingDistanceMeters,
+    drivingDurationSeconds,
+    onOpenArticle,
+    onOpenGoogleMaps,
+    onOpenOrganicMaps,
+    onOpenWaze,
+    onOpenYandexNavi,
+    onShareTelegram,
+    onBuildRoute,
+    primaryActionOverride,
+  });
 
   const handleOpenFullscreen = useCallback((event?: any) => {
     stopWebPopupEvent(event);
@@ -401,109 +224,6 @@ const PlacePopupCard: React.FC<Props> = ({
     styles,
     title,
     useCompactLayout,
-  ]);
-
-  const secondaryActions = useMemo(() => {
-    const items: Array<{
-      key: string;
-      accessibilityLabel: string;
-      label: string;
-      icon: React.ComponentProps<typeof Feather>['name'];
-      iconColor: string;
-      tintBg: string;
-      onPress: () => void;
-      title: string;
-    }> = [];
-
-    if (hasCoord && onOpenGoogleMaps && primaryAction?.onPress !== onOpenGoogleMaps) {
-      items.push({
-        key: 'google',
-        accessibilityLabel: 'Google Maps',
-        label: NAVIGATION_ACTION_LABELS.google,
-        ...getNavigationActionVisual('google', colors),
-        onPress: onOpenGoogleMaps,
-        title: POPUP_TOOLTIPS.openGoogleMaps,
-      });
-    }
-
-    if (hasCoord && onOpenOrganicMaps) {
-      items.push({
-        key: 'organic',
-        accessibilityLabel: 'Organic Maps',
-        label: NAVIGATION_ACTION_LABELS.organic,
-        ...getNavigationActionVisual('organic', colors),
-        onPress: onOpenOrganicMaps,
-        title: POPUP_TOOLTIPS.openOrganicMaps,
-      });
-    }
-
-    // Skip the "Статья" chip on web when the inline "Открыть страницу" link is rendered
-    // (avoids duplicating the same destination right above the action grid).
-    const inlineArticleLinkVisible = Platform.OS === 'web' && !!normalizedArticleHref && primaryAction?.onPress !== onOpenArticle;
-    if (
-      hasArticle &&
-      primaryAction?.onPress !== onOpenArticle &&
-      onOpenArticle &&
-      !inlineArticleLinkVisible
-    ) {
-      items.push({
-        key: 'article',
-        accessibilityLabel: 'Открыть статью',
-        label: 'Статья',
-        icon: 'book-open',
-        iconColor: colors.primary,
-        tintBg: colors.primarySoft,
-        onPress: onOpenArticle,
-        title: POPUP_TOOLTIPS.openArticle,
-      });
-    }
-
-    if (hasCoord && onOpenWaze) {
-      items.push({
-        key: 'waze',
-        accessibilityLabel: 'Waze',
-        label: NAVIGATION_ACTION_LABELS.waze,
-        ...getNavigationActionVisual('waze', colors),
-        onPress: onOpenWaze,
-        title: POPUP_TOOLTIPS.openWaze,
-      });
-    }
-
-    if (hasCoord && onOpenYandexNavi) {
-      items.push({
-        key: 'yandex',
-        accessibilityLabel: 'Яндекс Навигатор',
-        label: NAVIGATION_ACTION_LABELS.yandex,
-        ...getNavigationActionVisual('yandex', colors),
-        onPress: onOpenYandexNavi,
-        title: POPUP_TOOLTIPS.openYandexNavi,
-      });
-    }
-
-    if (hasCoord && onShareTelegram) {
-      items.push({
-        key: 'telegram',
-        accessibilityLabel: 'Поделиться',
-        label: NAVIGATION_ACTION_LABELS.telegram,
-        ...getNavigationActionVisual('telegram', colors),
-        onPress: onShareTelegram,
-        title: POPUP_TOOLTIPS.shareTelegram,
-      });
-    }
-
-    return items;
-  }, [
-    colors,
-    hasArticle,
-    hasCoord,
-    normalizedArticleHref,
-    onOpenGoogleMaps,
-    onOpenOrganicMaps,
-    onOpenArticle,
-    onOpenWaze,
-    onOpenYandexNavi,
-    onShareTelegram,
-    primaryAction,
   ]);
 
   const footerSlot = useMemo(() => (

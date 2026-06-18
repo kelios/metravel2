@@ -102,32 +102,28 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
   }, [selectSearchTab, resetFilters])
 
   const showDesktopActions = Platform.OS === 'web' && !isMobile
+  // На desktop фильтры — это кнопка-иконка в ряду действий, а не вкладка.
+  // Сегмент сводится к двум вкладкам: «Места» и «Маршрут». Фильтры открыты,
+  // когда не выбрана ни одна из вкладок (activeTab === 'search').
+  const filtersActive = activeTab === 'search'
 
   return (
     <View style={styles.tabsContainer}>
       {isMobile && <View style={styles.dragHandle} />}
 
       <View style={styles.tabsSegment} accessibilityRole="tablist" aria-label="Панель карты">
-        <TabButton
-          tab="search"
-          activeTab={activeTab}
-          icon="search"
-          label="Поиск"
-          accessibilityLabel="Поиск"
-          onPress={selectSearchTab}
-          themedColors={themedColors}
-          styles={styles}
-        />
-        <TabButton
-          tab="route"
-          activeTab={activeTab}
-          icon="navigation"
-          label="Маршрут"
-          accessibilityLabel="Построение маршрута"
-          onPress={selectRouteTab}
-          themedColors={themedColors}
-          styles={styles}
-        />
+        {isMobile && (
+          <TabButton
+            tab="search"
+            activeTab={activeTab}
+            icon="search"
+            label="Поиск"
+            accessibilityLabel="Поиск"
+            onPress={selectSearchTab}
+            themedColors={themedColors}
+            styles={styles}
+          />
+        )}
         <TabButton
           tab="travels"
           activeTab={activeTab}
@@ -139,10 +135,42 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
           styles={styles}
           badge={travelsCount}
         />
+        <TabButton
+          tab="route"
+          activeTab={activeTab}
+          icon="navigation"
+          label="Маршрут"
+          accessibilityLabel="Построение маршрута"
+          onPress={selectRouteTab}
+          themedColors={themedColors}
+          styles={styles}
+        />
       </View>
 
       {showDesktopActions ? (
         <View style={styles.panelHeaderActions}>
+          <Pressable
+            testID="map-filters-button"
+            {...({ 'data-testid': 'map-filters-button' } as any)}
+            style={({ pressed }) => [
+              styles.resetButton,
+              styles.resetButtonCompact,
+              filtersActive && styles.tabActive,
+              pressed && PRESSED_OPACITY_07,
+            ]}
+            onPress={selectSearchTab}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityState={{ selected: filtersActive }}
+            accessibilityLabel="Фильтры"
+            {...({ title: 'Фильтры' } as any)}
+          >
+            <Feather
+              name="sliders"
+              size={14}
+              color={filtersActive ? themedColors.textInverse : themedColors.textMuted}
+            />
+          </Pressable>
           <Pressable
             testID="map-help-button"
             style={({ pressed }) => [

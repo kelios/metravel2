@@ -164,7 +164,6 @@ describe('FiltersPanel inline options', () => {
       onFilterChange,
     })
 
-    expect(getByTestId('radius-presets-scroll')).toBeTruthy()
     expect(getByTestId('radius-presets')).toBeTruthy()
 
     fireEvent.press(getByTestId('radius-option-100'))

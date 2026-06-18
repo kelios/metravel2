@@ -20,10 +20,6 @@ interface BottomSheetStore {
   /** Установить высоту Bottom Sheet */
   setHeightPx: (height: number) => void;
 
-  /** Сигнал на сворачивание Bottom Sheet из внешних слоев карты */
-  collapseNonce: number;
-  requestCollapse: () => void;
-
   /** Получить рекомендуемый отступ снизу для контролов карты */
   getControlsBottomOffset: () => number;
 }
@@ -56,13 +52,10 @@ export const getBottomSheetControlsOffset = (
 export const useBottomSheetStore = create<BottomSheetStore>((set, get) => ({
   state: 'collapsed',
   heightPx: 0,
-  collapseNonce: 0,
 
   setState: (state) => set({ state }),
 
   setHeightPx: (height) => set({ heightPx: height }),
-
-  requestCollapse: () => set((s) => ({ collapseNonce: s.collapseNonce + 1 })),
 
   getControlsBottomOffset: () => {
     const { state, heightPx } = get();

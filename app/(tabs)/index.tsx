@@ -111,9 +111,9 @@ function HomeScreen() {
     <>
       {shouldRenderSeo && renderHomeSeo(canonical)}
       <View style={styles.container}>
-        {/* Single semantic <h1> is the visible hero title in HomeHeroBookLayout
-            (aria-level=1). This sr-only line carries the longer SEO phrasing for
-            screen readers/crawlers as an <h2> to avoid a duplicate <h1>. */}
+        {/* The single level-1 semantic heading is the visible hero title in
+            HomeHeroBookLayout. This sr-only line carries the longer SEO phrasing
+            for screen readers/crawlers as a level-2 heading to avoid duplicates. */}
         {IS_WEB && React.createElement('h2', { style: styles.srOnly as any }, SEO_TITLE)}
 
         <ErrorBoundary

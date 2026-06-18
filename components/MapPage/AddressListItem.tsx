@@ -238,6 +238,8 @@ const AddressListItem: React.FC<Props> = ({
           relatedTravelUrl={urlTravel}
         relatedTravelCountry={typeof travelRecord.countryName === 'string' ? travelRecord.countryName : undefined}
         relatedTravelCity={typeof travelRecord.cityName === 'string' ? travelRecord.cityName : undefined}
+        isFavorite={isFavorite}
+        onToggleFavorite={onToggleFavorite}
         coord={coord}
         badges={badges}
         onCardPress={handleMainPress}

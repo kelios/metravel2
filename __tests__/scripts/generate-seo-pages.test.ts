@@ -850,7 +850,10 @@ describe('slug redirects', () => {
       expect(loadRedirectManifest(path.join(dir, 'nope.json'))).toEqual([]);
     });
     it('returns [] and warns on invalid JSON', () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
       expect(loadRedirectManifest(write('bad.json', '{not json'))).toEqual([]);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Could not parse redirect manifest'));
+      warnSpy.mockRestore();
     });
     it('reads the { redirects: [...] } shape and normalizes slugs', () => {
       const p = write('ok.json', { redirects: [{ from: '/travels/old/', to: 'new' }] });

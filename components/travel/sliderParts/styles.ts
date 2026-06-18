@@ -61,33 +61,6 @@ export const createSliderStyles = (colors: Record<string, any>) =>
           WebkitScrollSnapPointsX: 'repeat(100%)',
         } as any)
       : {},
-    // Mobile-specific: instant snap without smooth scroll for Instagram-like feel
-    scrollSnapMobile: Platform.OS === 'web'
-      ? ({
-          scrollSnapType: 'x mandatory',
-          WebkitOverflowScrolling: 'touch',
-          willChange: 'scroll-position',
-          touchAction: 'pan-y pinch-zoom',
-          overflowX: 'auto',
-          overflowY: 'hidden',
-          overscrollBehaviorX: 'contain',
-          WebkitScrollSnapPointsX: 'repeat(100%)',
-        } as any)
-      : {},
-    // Desktop: smooth scroll for polished feel
-    scrollSnapDesktop: Platform.OS === 'web'
-      ? ({
-          scrollSnapType: 'x mandatory',
-          WebkitOverflowScrolling: 'touch',
-          willChange: 'scroll-position',
-          touchAction: 'pan-x pan-y',
-          overflowX: 'auto',
-          overflowY: 'hidden',
-          overscrollBehaviorX: 'contain',
-          scrollBehavior: 'smooth',
-          WebkitScrollSnapPointsX: 'repeat(100%)',
-        } as any)
-      : {},
     scrollContent: {
       flexDirection: 'row',
     },
@@ -112,9 +85,6 @@ export const createSliderStyles = (colors: Record<string, any>) =>
       position: 'relative',
       backgroundColor: 'transparent',
       overflow: 'hidden',
-    },
-    slidePlaceholder: {
-      backgroundColor: colors.backgroundTertiary || DESIGN_TOKENS.colors.backgroundTertiary,
     },
     slideSnap: Platform.OS === 'web'
       ? ({ 
@@ -190,34 +160,6 @@ export const createSliderStyles = (colors: Record<string, any>) =>
     },
     arrowIcon: {
       opacity: 0.95,
-    },
-    edgeScrimLeft: {
-      position: 'absolute',
-      top: 0,
-      bottom: 0,
-      left: 0,
-      width: 140,
-      zIndex: 20,
-      ...(Platform.OS === 'web'
-        ? ({
-            backgroundImage:
-              'linear-gradient(to right, rgba(0,0,0,0.45), rgba(0,0,0,0))',
-          } as any)
-        : null),
-    },
-    edgeScrimRight: {
-      position: 'absolute',
-      top: 0,
-      bottom: 0,
-      right: 0,
-      width: 140,
-      zIndex: 20,
-      ...(Platform.OS === 'web'
-        ? ({
-            backgroundImage:
-              'linear-gradient(to left, rgba(0,0,0,0.45), rgba(0,0,0,0))',
-          } as any)
-        : null),
     },
     dots: {
       position: 'absolute',

@@ -1,5 +1,5 @@
 // FiltersPanel.tsx
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Platform, UIManager } from 'react-native';
 import FiltersPanelFooter from '@/components/MapPage/FiltersPanelFooter';
 import FiltersPanelHeader from '@/components/MapPage/FiltersPanelHeader';
@@ -104,6 +104,13 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
     onRouteHintDismiss,
   });
 
+  // #213 — «Сбросить фильтры» должен сбрасывать и оверлеи карты (спутник/погода/…),
+  // иначе включённый Esri-слой остаётся поверх дефолтного OSM после сброса.
+  const handleResetAll = useCallback(() => {
+    safeResetFilters();
+    onResetOverlays?.();
+  }, [safeResetFilters, onResetOverlays]);
+
   return (
     <View style={styles.card} testID="filters-panel">
       {/* ✅ УЛУЧШЕНИЕ: Компактный header */}
@@ -137,7 +144,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         hasFilters={hasActiveFilters}
         canBuildRoute={canBuildRoute}
         onFilterChange={onFilterChange}
-        onReset={safeResetFilters}
+        onReset={handleResetAll}
         onOpenList={onOpenList}
         transportMode={transportMode}
         setTransportMode={setTransportMode}
@@ -171,7 +178,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           routingLoading={routingLoading}
           ctaLabel={ctaLabel}
           hideFooterReset={hideFooterReset}
-          onReset={safeResetFilters}
+          onReset={handleResetAll}
           onBuildRoute={onBuildRoute}
           totalPoints={totalPoints}
           onOpenList={onOpenList}

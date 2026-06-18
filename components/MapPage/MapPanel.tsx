@@ -42,6 +42,9 @@ interface MapPanelProps {
     onMapUiApiReady?: (api: MapUiApi | null) => void;
     onUserLocationChange?: ((loc: LatLng | null) => void) | undefined;
     hideFloatingControls?: boolean;
+    onMarkerSelect?: (point: any) => void;
+    onMapBackgroundTap?: () => void;
+    suppressLeafletPopupOnSelect?: boolean;
 }
 
 /** Плейсхолдер для нативных платформ или во время загрузки карты */
@@ -84,6 +87,9 @@ const MapPanel: React.FC<MapPanelProps> = ({
                                                onMapUiApiReady,
                                                onUserLocationChange,
                                                hideFloatingControls = false,
+                                               onMarkerSelect,
+                                               onMapBackgroundTap,
+                                               suppressLeafletPopupOnSelect = false,
 	                                           }) => {
 	    const isWeb = Platform.OS === 'web';
     const themeColors = useThemedColors();
@@ -178,6 +184,9 @@ const MapPanel: React.FC<MapPanelProps> = ({
                       onMapUiApiReady={onMapUiApiReady}
                       onUserLocationChange={onUserLocationChange}
                       hideFloatingControls={hideFloatingControls}
+                      onMarkerSelect={onMarkerSelect}
+                      onMapBackgroundTap={onMapBackgroundTap}
+                      suppressLeafletPopupOnSelect={suppressLeafletPopupOnSelect}
                   />
                 </Suspense>
             </MapErrorBoundary>

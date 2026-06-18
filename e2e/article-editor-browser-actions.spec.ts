@@ -195,13 +195,20 @@ test.describe('ArticleEditor browser actions', () => {
   test('opens anchor modal and confirms insertion flow', async ({ page }) => {
     await typeInEditor(page, 'Anchor content');
 
-    await pressVisibleButton(page.getByRole('button', { name: 'Вставить якорь' }).last());
+    const anchorButton = page.getByRole('button', { name: 'Вставить якорь' }).last();
+    await pressVisibleButton(anchorButton);
 
     const anchorInput = page.getByPlaceholder('day-3').first();
+    if (!(await anchorInput.isVisible({ timeout: 1_000 }).catch(() => false))) {
+      await anchorButton.evaluate((node: HTMLElement) => node.click());
+    }
     await expect(anchorInput).toBeVisible({ timeout: 10_000 });
     await anchorInput.fill('day-3');
-    await page.getByRole('button', { name: 'Вставить', exact: true }).first().click({ force: true });
-    await expect(anchorInput).not.toBeVisible({ timeout: 10_000 });
+    const anchorDialog = anchorInput.locator(
+      'xpath=ancestor::*[.//*[normalize-space()="Вставить якорь"]][1]'
+    );
+    await anchorDialog.getByRole('button', { name: 'Вставить', exact: true }).first().click({ force: true });
+    await expect(anchorDialog).toBeHidden({ timeout: 10_000 });
     await expect(page.locator('.ql-editor').first()).toBeVisible({ timeout: 10_000 });
   });
 

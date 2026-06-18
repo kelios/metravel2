@@ -162,8 +162,6 @@ describe('TravelHeroSection mobile image fit', () => {
     expect(sliderContainer).toBeTruthy()
     const flattenedStyle = StyleSheet.flatten(sliderContainer.props.style)
     const viewport = useWindowDimensions()
-    expect(flattenedStyle.height).toBe(
-      Math.min(420, Math.max(260, Math.round(viewport.height * 0.56))),
-    )
+    expect(flattenedStyle.height).toBe(Math.max(260, Math.round(viewport.height * 0.7)))
   })
 })

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react'
-import { ScrollView, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import MapSearchInput from '@/components/MapPage/MapSearchInput'
@@ -7,7 +7,7 @@ import Chip from '@/components/ui/Chip'
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig'
 import type { ThemedColors } from '@/hooks/useTheme'
 
-import { CATEGORY_ICONS } from './MapQuickFilters'
+import { CATEGORY_ICONS } from './mapCategoryIcons'
 
 type CategoryOption = string | { id?: string | number; name?: string; value?: string }
 
@@ -173,28 +173,41 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
           {!isMobile && (
             <Text style={styles.sectionHint}>Как далеко искать места вокруг</Text>
           )}
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            style={styles.radiusOptionsScroll}
-            contentContainerStyle={styles.radiusOptionsScrollContent}
-            testID="radius-presets-scroll"
+          <View
+            style={styles.radiusSegmentTrack}
+            testID="radius-presets"
+            accessibilityRole="radiogroup"
           >
-            <View style={styles.radiusOptionsWrap} testID="radius-presets">
-              {radiusOptions.map((option) => {
-                const selected = String(option.id) === String(radiusSummaryValue)
-                return (
-                  <Chip
-                    key={String(option.id)}
-                    label={getRadiusLabel(option.name || option.id)}
-                    selected={selected}
-                    onPress={() => safeOnFilterChange('radius', option.id)}
-                    testID={`radius-option-${option.id}`}
-                    style={styles.radiusOptionChip}
-                  />
-                )
-              })}
-            </View>
-          </ScrollView>
+            {radiusOptions.map((option) => {
+              const selected = String(option.id) === String(radiusSummaryValue)
+              const label = getRadiusLabel(option.name || option.id)
+              return (
+                <Pressable
+                  key={String(option.id)}
+                  onPress={() => safeOnFilterChange('radius', option.id)}
+                  testID={`radius-option-${option.id}`}
+                  accessibilityRole="radio"
+                  accessibilityLabel={label}
+                  accessibilityState={{ selected }}
+                  style={({ pressed }) => [
+                    styles.radiusSegment,
+                    selected && styles.radiusSegmentSelected,
+                    pressed && !selected && styles.radiusSegmentPressed,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.radiusSegmentText,
+                      selected && styles.radiusSegmentTextSelected,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {label}
+                  </Text>
+                </Pressable>
+              )
+            })}
+          </View>
         </View>
       )}
 
@@ -221,7 +234,10 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
                   selected={selected}
                   onPress={() => handleCategoryToggle(category.value)}
                   testID={`category-option-${index}`}
-                  style={styles.filterSelectionChip}
+                  style={[
+                    styles.filterSelectionChip,
+                    selected && styles.filterSelectionChipSelected,
+                  ]}
                   icon={
                     iconName ? (
                       <Feather

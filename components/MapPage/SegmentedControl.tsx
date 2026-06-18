@@ -21,10 +21,13 @@ function getSegmentIconColor(
   active: boolean,
   isHovered: boolean,
 ): string {
-  if (tone === 'subtle') {
-    return active || isHovered ? colors.primaryText : colors.textMuted;
-  }
+  // Активный сегмент — сплошная primary-заливка (единый стиль «выбрано» с
+  // radius-сегментами), поэтому иконка/текст на нём — textOnPrimary в обоих
+  // тонах.
   if (active) return colors.textOnPrimary;
+  if (tone === 'subtle') {
+    return isHovered ? colors.primaryText : colors.textMuted;
+  }
   return isHovered ? colors.primary : colors.text;
 }
 
@@ -194,13 +197,9 @@ const getStyles = (
     top: compact && dense ? 1 : 2,
     bottom: compact && dense ? 1 : 2,
     borderRadius: compact && dense ? 5 : 6,
-    backgroundColor: tone === 'subtle' ? colors.primarySoft : colors.primary,
-    ...(tone === 'subtle'
-      ? {
-          borderWidth: 1,
-          borderColor: colors.primary,
-        }
-      : null),
+    // Единый стиль активного сегмента в обоих тонах: сплошная primary-заливка
+    // (как у radius-сегментов), без outline-варианта.
+    backgroundColor: colors.primary,
     ...(Platform.OS === 'web' ? ({ transition: 'left 0.2s ease' } as any) : null),
   },
   segment: {
@@ -216,7 +215,7 @@ const getStyles = (
     paddingHorizontal: compact ? (dense ? 4 : 12) : 8,
     borderRadius: dense ? 5 : 6,
     minWidth: compact ? (dense ? 0 : 72) : 0,
-    minHeight: compact ? (dense ? 36 : 40) : 40,
+    minHeight: compact ? (dense ? 40 : 44) : 44,
     backgroundColor: 'transparent',
     zIndex: 1,
   },
@@ -233,10 +232,14 @@ const getStyles = (
     fontSize: compact && dense ? 12 : 13,
     fontWeight: '600',
     color: colors.textMuted,
-    flexShrink: 1,
+    // Без flexShrink текст сообщает полную интринзик-ширину: равноширокие
+    // flex:1 сегменты подстраиваются под самую длинную подпись («Маршрут»)
+    // и не усекаются многоточием на узких Android-раскладках.
+    flexShrink: 0,
+    textAlign: 'center',
   },
   segmentTextActive: {
-    color: tone === 'subtle' ? colors.primaryText : colors.textOnPrimary,
+    color: colors.textOnPrimary,
     fontWeight: '700',
   },
   segmentTextHover: {
@@ -259,7 +262,9 @@ const getStyles = (
       : null),
   },
   badgeActive: {
-    backgroundColor: tone === 'subtle' ? colors.primarySoft : 'rgba(255, 255, 255, 0.25)',
+    // Активный сегмент — сплошная primary-заливка в обоих тонах, поэтому бейдж
+    // на нём всегда полупрозрачно-белый с контрастным текстом.
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
   },
   badgeText: {
     fontSize: compact && dense ? 10 : 11,
@@ -267,7 +272,7 @@ const getStyles = (
     color: colors.text,
   },
   badgeTextActive: {
-    color: tone === 'subtle' ? colors.primaryText : colors.textOnPrimary,
+    color: colors.textOnPrimary,
   },
 });
 

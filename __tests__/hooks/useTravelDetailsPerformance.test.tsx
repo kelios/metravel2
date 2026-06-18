@@ -216,7 +216,11 @@ describe('useTravelDetailsPerformance', () => {
     })
     await act(async () => {
       await Promise.resolve()
+    })
+    act(() => {
       jest.advanceTimersByTime(500)
+    })
+    await act(async () => {
       await Promise.resolve()
     })
 
@@ -241,7 +245,11 @@ describe('useTravelDetailsPerformance', () => {
     })
     await act(async () => {
       await Promise.resolve()
+    })
+    act(() => {
       jest.advanceTimersByTime(500)
+    })
+    await act(async () => {
       await Promise.resolve()
     })
 

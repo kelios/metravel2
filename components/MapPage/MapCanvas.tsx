@@ -1,4 +1,3 @@
-import { Suspense, lazy } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -11,29 +10,6 @@ const PRESSED_OPACITY_06 = { opacity: 0.6 } as const
 
 const MAP_PANEL_PLACEHOLDER = <MapPageSkeleton inline />
 
-const LazyMapQuickFilters = lazy(() =>
-  Promise.resolve(import('@/components/MapPage/MapQuickFilters')).then((mod) => ({ default: mod.MapQuickFilters })),
-)
-
-type QuickFiltersData = {
-  selected: string[]
-  radiusOptions: any
-  categoryOptions: any
-  overlayOptions: any
-  enabledOverlays: any
-  categoriesValue: string
-  radiusValue: string
-  overlaysValue: string
-}
-
-type QuickActionButton = {
-  key: string
-  label: string
-  icon: 'crosshair' | 'plus' | 'minus'
-  onPress: () => void
-  testID: string
-}
-
 type MapCanvasProps = {
   styles: any
   themedColors: any
@@ -42,14 +18,9 @@ type MapCanvasProps = {
   showProgress: boolean
   mapReady: boolean
   mapPanelProps: any
-  travelsData: any[]
-  quickFilters: QuickFiltersData
-  mapQuickActionButtons: QuickActionButton[]
+  enabledOverlays?: Record<string, boolean> | null
   currentRadius: any
   shouldShowFloatingRadiusPill: boolean
-  onFilterChange?: (key: string, value: any) => void
-  onOverlayToggle?: (id: string, enabled: boolean) => void
-  onResetOverlays?: () => void
   showGeoBanner: boolean
   dismissGeoBanner: () => void
   handleSelectSearchTab: () => void
@@ -64,14 +35,9 @@ export function MapCanvas({
   showProgress,
   mapReady,
   mapPanelProps,
-  travelsData,
-  quickFilters,
-  mapQuickActionButtons,
+  enabledOverlays,
   currentRadius,
   shouldShowFloatingRadiusPill,
-  onFilterChange,
-  onOverlayToggle,
-  onResetOverlays,
   showGeoBanner,
   dismissGeoBanner,
   handleSelectSearchTab,
@@ -80,35 +46,13 @@ export function MapCanvas({
   return (
     <View style={styles.mapArea}>
       <MapLoadingBar visible={showProgress} />
-      {isWeb && !isMobile && (
-        <Suspense fallback={null}>
-          <LazyMapQuickFilters
-            extraActions={mapQuickActionButtons}
-            extraActionsPosition="inside-radius"
-            radiusValue={quickFilters.radiusValue}
-            categoriesValue={quickFilters.categoriesValue}
-            overlaysValue={quickFilters.overlaysValue}
-            radiusOptions={quickFilters.radiusOptions}
-            radiusSelected={currentRadius}
-            onChangeRadius={(next) => onFilterChange?.('radius', next)}
-            categoriesOptions={quickFilters.categoryOptions}
-            categoriesSelected={quickFilters.selected}
-            onChangeCategories={(next) => onFilterChange?.('categoryTravelAddress', next)}
-            overlayOptions={quickFilters.overlayOptions}
-            enabledOverlays={quickFilters.enabledOverlays}
-            onChangeOverlay={(id, enabled) => onOverlayToggle?.(id, enabled)}
-            onResetOverlays={onResetOverlays}
-            travelsData={travelsData}
-          />
-        </Suspense>
-      )}
       {mapReady ? (
         <MapPanel {...mapPanelProps} hideFloatingControls={isMobile} />
       ) : (
         MAP_PANEL_PLACEHOLDER
       )}
       {isWeb && (
-        <WeatherLegend enabledOverlays={quickFilters.enabledOverlays} />
+        <WeatherLegend enabledOverlays={enabledOverlays} />
       )}
       {shouldShowFloatingRadiusPill && (
         <Pressable

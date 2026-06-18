@@ -43,38 +43,6 @@ export function buildQuickFiltersData(
   }
 }
 
-type QuickActionButton = {
-  key: string
-  label: string
-  icon: 'crosshair' | 'plus' | 'minus'
-  onPress: () => void
-  testID: string
-}
-
-export function buildMapQuickActionButtons(
-  centerOnUser: () => void,
-  zoomIn: () => void,
-  zoomOut: () => void,
-): QuickActionButton[] {
-  return [
-    {
-      key: 'locate',
-      label: 'Мое местоположение',
-      icon: 'crosshair',
-      onPress: centerOnUser,
-      testID: 'map-center-user-inline',
-    },
-    { key: 'zoom-in', label: 'Приблизить', icon: 'plus', onPress: zoomIn, testID: 'map-zoom-in-inline' },
-    {
-      key: 'zoom-out',
-      label: 'Отдалить',
-      icon: 'minus',
-      onPress: zoomOut,
-      testID: 'map-zoom-out-inline',
-    },
-  ]
-}
-
 export function buildActiveFilterItems(
   selectedCategories: string[],
   currentRadius: string | number | undefined,

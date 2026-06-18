@@ -8,6 +8,7 @@ import { isValidCoordinate } from '@/utils/coordinateValidator'
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig'
 import { createMapPopupComponent } from './Map/createMapPopupComponent'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
+import { useMapPanelStore } from '@/stores/mapPanelStore'
 import { resolveRoutingApiKey } from '@/utils/routingApiKey'
 import type { MapMode, MapProps, Point } from './Map/types'
 import { strToLatLng } from './Map/utils'
@@ -44,7 +45,6 @@ type ReactLeafletNS = typeof import('react-leaflet')
 const ORS_API_KEY = resolveRoutingApiKey()
 const IS_WEB = Platform.OS === 'web'
 const COMPACT_POPUP_MAX_WIDTH = 560
-const FLOATING_CONTROLS_MAX_WIDTH = 767
 const DEFAULT_ZOOM = 11
 const DEFAULT_MAX_ZOOM = 18
 const MARKER_ZOOM_TARGET = 14
@@ -69,13 +69,6 @@ function ignoreOptionalMapRuntimeError() {
 function getViewportWidth(): number | null {
   if (typeof window === 'undefined' || !Number.isFinite(window.innerWidth)) return null
   return window.innerWidth
-}
-
-function getEffectiveWidth(mapPaneWidth: number): number | null {
-  const viewport = getViewportWidth()
-  if (mapPaneWidth > 0 && viewport !== null) return Math.min(mapPaneWidth, viewport)
-  if (mapPaneWidth > 0) return mapPaneWidth
-  return viewport
 }
 
 const MapControlsReactive: React.FC<
@@ -121,6 +114,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
     radius,
     onUserLocationChange,
     hideFloatingControls = false,
+    onMarkerSelect,
+    onMapBackgroundTap,
+    suppressLeafletPopupOnSelect = false,
   } = props
 
   const { L, RL: rl, loading: leafletLoading, error: leafletError, ready: leafletReady } =
@@ -146,7 +142,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const styles = useMemo(() => getStyles(colors), [colors])
   const popupBottomOffset = useBottomSheetStore((s) => s.getControlsBottomOffset())
   const bottomSheetState = useBottomSheetStore((s) => s.state)
-  const requestBottomSheetCollapse = useBottomSheetStore((s) => s.requestCollapse)
+  const requestBottomSheetCollapse = useMapPanelStore((s) => s.requestCollapse)
 
   useEffect(() => {
     if (IS_WEB) return
@@ -294,6 +290,29 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
       if (focusPlan.shouldCollapseSheet) requestBottomSheetCollapse()
 
+      // #207 — mobile-web: surface the point as a bottom card instead of the
+      // anchored Leaflet popup. We still pan/zoom toward the point (below) so the
+      // marker is not hidden behind the card, but never call openPopup().
+      if (suppressLeafletPopupOnSelect) {
+        onMarkerSelect?.(point)
+        // Close any popup that another path might have opened.
+        safeInvoke(() => map?.closePopup?.())
+        if (focusPlan.shouldSkipZoom) return
+        try {
+          if (typeof map.flyTo === 'function') {
+            map.flyTo([coords.lat, coords.lng], focusPlan.targetZoom, {
+              animate: true,
+              duration: 0.35,
+            } as any)
+          } else if (typeof map.setView === 'function') {
+            map.setView([coords.lat, coords.lng], focusPlan.targetZoom, { animate: true } as any)
+          }
+        } catch {
+          ignoreOptionalMapRuntimeError()
+        }
+        return
+      }
+
       if (clickedMarker) {
         safeInvoke(() => clickedMarker.openPopup?.())
         return
@@ -348,7 +367,13 @@ const MapPageComponent: React.FC<Props> = (props) => {
         ignoreOptionalMapRuntimeError()
       }
     },
-    [bottomSheetState, mapZoom, requestBottomSheetCollapse],
+    [
+      bottomSheetState,
+      mapZoom,
+      onMarkerSelect,
+      requestBottomSheetCollapse,
+      suppressLeafletPopupOnSelect,
+    ],
   )
 
   const handleZoomIn = useCallback(() => safeInvoke(() => mapRef.current?.zoomIn?.()), [])
@@ -400,6 +425,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   const handleMapClick = useCallback(
     (e: any) => {
+      // #207 — tapping the empty map dismisses the mobile place card.
+      onMapBackgroundTap?.()
       if (mode !== 'route') return
       try {
         const { lat, lng } = e.latlng
@@ -408,7 +435,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
         ignoreOptionalMapRuntimeError()
       }
     },
-    [mode, onMapClick],
+    [mode, onMapClick, onMapBackgroundTap],
   )
 
   const safeCenter = useMemo<[number, number]>(() => getSafeCenter(coordinates), [coordinates])
@@ -487,11 +514,11 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return viewport !== null && viewport <= COMPACT_POPUP_MAX_WIDTH
   }, [mapPaneWidth])
 
-  const shouldShowFloatingMapControls = useMemo(() => {
-    if (hideFloatingControls) return false
-    const effective = getEffectiveWidth(mapPaneWidth)
-    return effective === null ? true : effective <= FLOATING_CONTROLS_MAX_WIDTH
-  }, [hideFloatingControls, mapPaneWidth])
+  // Zoom/locate floating controls. Раньше скрывались на широком десктопе, т.к.
+  // те же действия дублировались в плавающем баре MapQuickFilters. После выпила
+  // дубль-системы фильтров (этап 2) бар удалён — контролы нужны на любой ширине,
+  // кроме мобильного (там их рендерит MapMobileLayout, hideFloatingControls=true).
+  const shouldShowFloatingMapControls = !hideFloatingControls
 
   const { popupAutoPanPadding } = useMapPopupAutoPan({
     mapRef,

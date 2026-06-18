@@ -14,11 +14,18 @@ jest.mock('@/components/travel/details/TravelDetailsSkeletonOverlay', () => () =
 jest.mock('@/components/travel/details/TravelDetailsHeroDeferredColumn', () => () => null)
 
 describe('TravelDetailsCriticalShell single H1 (web)', () => {
+  let consoleErrorSpy: jest.SpyInstance
+
   beforeEach(() => {
     const RN = require('react-native')
     RN.Platform.OS = 'web'
     RN.Platform.select = (obj: any) => obj.web ?? obj.default
     document.body.innerHTML = ''
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore()
   })
 
   function renderShell() {

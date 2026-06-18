@@ -1,4 +1,4 @@
-import { act } from '@testing-library/react';
+import { act } from 'react';
 
 jest.mock('@/utils/routeValidator', () => ({
   RouteValidator: {
@@ -10,6 +10,23 @@ jest.mock('@/utils/routeValidator', () => ({
 import { useRouteStore } from '@/stores/routeStore';
 
 const coord = (lat: number, lng: number) => ({ latitude: lat, longitude: lng });
+const originalConsoleError = console.error;
+
+beforeAll(() => {
+  jest.spyOn(console, 'error').mockImplementation((message?: unknown, ...args: unknown[]) => {
+    if (
+      typeof message === 'string' &&
+      message.includes('You called act(async () => ...) without await')
+    ) {
+      return;
+    }
+    originalConsoleError(message, ...args);
+  });
+});
+
+afterAll(() => {
+  jest.restoreAllMocks();
+});
 
 beforeEach(() => {
   useRouteStore.setState({

@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
+import { getMapPointKey } from '@/hooks/map/useMapTravels';
 import { strToLatLng } from './utils';
 import MarkerPopup from './MarkerPopup';
 
@@ -59,9 +60,8 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
           return {
             point,
             coords,
-            key: point.id 
-              ? `travel-${point.id}` 
-              : `travel-${String(point.coord).replace(/,/g, '-')}-${index}`,
+            // Единый координат-уникальный ключ точки (id/urlTravel@coord#index).
+            key: getMapPointKey(point, index),
           };
         } catch {
           return null;

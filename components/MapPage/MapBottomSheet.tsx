@@ -17,8 +17,10 @@ import BottomSheet, {
   BottomSheetBackdrop,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 
 type SheetState = 'collapsed' | 'quarter' | 'half' | 'full'
 
@@ -59,6 +61,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
   }, ref) => {
     const colors = useThemedColors()
     const styles = useMemo(() => getStyles(colors), [colors])
+    const insets = useSafeAreaInsets()
     const bottomSheetRef = useRef<BottomSheet>(null)
     const lastProgrammaticOpenTsRef = useRef(0)
 
@@ -132,7 +135,10 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     )
 
     const hasHeaderText = !!(title || subtitle)
-    const contentBottomPadding = CONTENT_BOTTOM_PADDING + bottomInset
+    // bottomInset уже учитывает глобальный таб-бар; добавляем системную
+    // навигацию (gesture-bar/кнопки), чтобы нижние карточки не заезжали под неё.
+    const contentBottomPadding =
+      CONTENT_BOTTOM_PADDING + bottomInset + insets.bottom
 
     return (
       <BottomSheet
@@ -144,6 +150,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         onChange={handleSheetChanges}
         backdropComponent={renderBackdrop}
         enablePanDownToClose
+        handleStyle={styles.handle}
         handleIndicatorStyle={styles.indicator}
         backgroundStyle={styles.background}
         style={styles.sheet}
@@ -189,19 +196,38 @@ export default MapBottomSheet
 
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
-    sheet: { ...(colors.shadows?.light ?? {}) },
+    sheet: {
+      // Лёгкая тень сверху над картой (native; web-шторка отдельный файл).
+      shadowColor: DESIGN_TOKENS.colors.text,
+      shadowOffset: { width: 0, height: -2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      elevation: 16,
+    },
     background: {
       backgroundColor: colors.surface,
-      borderTopLeftRadius: 18,
-      borderTopRightRadius: 18,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      // Нижние углы приклеены к низу экрана.
+      borderBottomLeftRadius: 0,
+      borderBottomRightRadius: 0,
       borderTopWidth: 1,
       borderTopColor: colors.borderLight,
     },
+    // Хэндл-обёртка над таб-полосой: воздух сверху/снизу, чтобы хваталка
+    // не прижималась к сегмент-табам и читалась как отдельный элемент.
+    handle: {
+      paddingTop: 10,
+      paddingBottom: 8,
+      alignItems: 'center',
+    },
     indicator: {
-      backgroundColor: colors.borderLight,
-      width: 24,
-      height: 2,
-      borderRadius: 2,
+      // borderStrong контрастирует с surface и в светлой, и в тёмной теме
+      // (colors.border сливался с белым фоном на Android).
+      backgroundColor: colors.borderStrong,
+      width: 40,
+      height: 5,
+      borderRadius: 3,
     },
     header: {
       flexDirection: 'row',

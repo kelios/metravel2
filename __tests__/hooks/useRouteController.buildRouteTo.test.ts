@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react-native'
 
 const mockRequestCollapse = jest.fn()
+const mockRequestPanelCollapse = jest.fn()
 const mockFocusOnCoord = jest.fn()
 const mockOpenPopupForCoord = jest.fn()
 const mockSetMode = jest.fn()
@@ -14,6 +15,14 @@ jest.mock('@/stores/bottomSheetStore', () => ({
     getState: () => ({
       state: mockBottomSheetState,
       requestCollapse: mockRequestCollapse,
+    }),
+  },
+}))
+
+jest.mock('@/stores/mapPanelStore', () => ({
+  useMapPanelStore: {
+    getState: () => ({
+      requestCollapse: mockRequestPanelCollapse,
     }),
   },
 }))
@@ -76,6 +85,7 @@ describe('useRouteController.buildRouteTo', () => {
     jest.useFakeTimers()
     mockBottomSheetState = 'half'
     mockRequestCollapse.mockClear()
+    mockRequestPanelCollapse.mockClear()
     mockFocusOnCoord.mockClear()
     mockOpenPopupForCoord.mockClear()
     mockSetMode.mockClear()
@@ -101,7 +111,7 @@ describe('useRouteController.buildRouteTo', () => {
       result.current.buildRouteTo({ coord: '50.0619474, 19.9368564' } as any)
     })
 
-    expect(mockRequestCollapse).toHaveBeenCalledTimes(1)
+    expect(mockRequestPanelCollapse).toHaveBeenCalledTimes(1)
     expect(mockFocusOnCoord).toHaveBeenCalledWith('50.061947,19.936856', { zoom: 14 })
 
     act(() => {

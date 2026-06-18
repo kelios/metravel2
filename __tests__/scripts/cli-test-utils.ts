@@ -26,6 +26,7 @@ export const runCli = (
       encoding: 'utf8',
       cwd: options.cwd,
       env: { ...process.env, ...(options.env ?? {}) },
+      stdio: 'pipe',
     });
     return {
       status: 0,

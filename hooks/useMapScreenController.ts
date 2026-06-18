@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, usePathname } from 'expo-router';
 
 import { useRouteStore } from '@/stores/routeStore';
+import type { Point as MapPoint } from '@/components/MapPage/Map/types';
 import type { MapUiApi } from '@/types/mapUi';
 import type { TravelCoords } from '@/types/types';
 import {
@@ -11,12 +12,16 @@ import {
   WEATHER_TEMP_LAYER_ID,
   WEATHER_TEMP_LABELS_LAYER_ID,
 } from '@/config/mapWebLayers';
+import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe';
+import { useThemedColors } from '@/hooks/useTheme';
+import { getStyles } from '@/screens/tabs/map.styles';
+import { buildCanonicalUrl } from '@/utils/seo';
 
 // Модульные хуки для карты
 import { useMapCoordinates } from '@/hooks/map/useMapCoordinates';
 import { useMapFilters } from '@/hooks/map/useMapFilters';
 import { useMapDataController } from '@/hooks/map/useMapDataController';
-import { useMapUIController } from '@/hooks/map/useMapUIController';
+import { useMapPanelState, useMapResponsive } from '@/hooks/map/useMapPanelState';
 import { useRouteController } from '@/hooks/map/useRouteController';
 import {
   FiltersPanelComponent,
@@ -57,6 +62,17 @@ export function useMapScreenController() {
     []
   );
 
+  // #207 — mobile bottom card for a tapped single marker (maps.me-style).
+  // On mobile-web the Leaflet popup over the marker is suppressed and the
+  // selected point is surfaced as a bottom card rendered by MapMobileLayout.
+  const [selectedPlace, setSelectedPlace] = useState<MapPoint | null>(null);
+  const handleMarkerSelect = useCallback((point: MapPoint | null) => {
+    setSelectedPlace(point ?? null);
+  }, []);
+  const clearSelectedPlace = useCallback(() => {
+    setSelectedPlace(null);
+  }, []);
+
   // URL params → initial filter values
   const params = useLocalSearchParams<{ categories?: string; radius?: string; lat?: string; lng?: string }>();
   const initialCategories = useMemo(
@@ -85,11 +101,15 @@ export function useMapScreenController() {
     resetFilters: resetFiltersBase,
   } = useMapFilters({ initialCategories, initialRadius });
 
-  // UI Controller
-  const uiController = useMapUIController();
+  // UI: responsive + panel state + theming + SEO (inlined from former useMapUIController)
+  const pathname = usePathname();
+  const insets = useSafeAreaInsets();
+  const themedColors = useThemedColors();
+
+  const { isMobile } = useMapResponsive();
+
   const {
     isFocused,
-    isMobile,
     mapReady,
     rightPanelTab,
     rightPanelVisible,
@@ -104,10 +124,14 @@ export function useMapScreenController() {
     panelStyle,
     overlayStyle,
     panelRef,
-    themedColors,
-    styles,
-    canonical,
-  } = uiController;
+  } = useMapPanelState({ isMobile });
+
+  const canonical = buildCanonicalUrl(pathname || '/map');
+
+  const styles = useMemo(
+    () => getStyles(isMobile, insets.top, themedColors),
+    [isMobile, insets.top, themedColors]
+  );
 
   useEffect(() => {
     if (!isMobile) return;
@@ -305,13 +329,16 @@ export function useMapScreenController() {
       }));
   }, [allTravelsData, filters.categoryTravelAddress]);
 
-  // Reset filters and route
+  // Reset filters, route and map overlays.
+  // #213 — сброс должен возвращать карту к дефолтным слоям: гасим включённые
+  // оверлеи (спутник/погода/природа), иначе Esri-слой остаётся поверх OSM.
   const resetFilters = useCallback(() => {
     resetFiltersBase();
+    resetOverlays();
     // Atomic: clear route + set mode in one store update to avoid intermediate
     // render where mode='route' but fullRouteCoords=[] (disables travel query).
     useRouteStore.getState().clearRouteAndSetMode('radius');
-  }, [resetFiltersBase]);
+  }, [resetFiltersBase, resetOverlays]);
 
   // Center on user location
   const centerOnUser = useCallback(() => {
@@ -321,6 +348,29 @@ export function useMapScreenController() {
       // noop
     }
   }, [mapUiApi]);
+
+  // #211 — не терять контекст карты при возврате в режим «Места» (radius).
+  // Режим «Маршрут» уводит вьюпорт к общереспубликанскому виду (fit по маршруту).
+  // При возврате в radius рецентрируем карту на пользователя, чтобы запрос точек
+  // шёл вокруг него, а не вокруг уехавшего вью — иначе пользователь падает в
+  // пустое состояние «Ничего не нашлось». Фильтры (радиус/категории) при этом
+  // не трогаем — они остаются на месте.
+  const prevModeRef = useRef(mode);
+  useEffect(() => {
+    const prev = prevModeRef.current;
+    prevModeRef.current = mode;
+    if (prev === 'route' && mode === 'radius') {
+      // Рецентрируем только если знаем реальное местоположение пользователя;
+      // иначе оставляем текущий вид (URL-координаты / последний центр радиуса).
+      if (userLocation) {
+        try {
+          mapUiApi?.centerOnUser?.();
+        } catch {
+          // noop
+        }
+      }
+    }
+  }, [mode, mapUiApi, userLocation]);
 
   const zoomIn = useCallback(() => {
     try {
@@ -383,6 +433,11 @@ export function useMapScreenController() {
       onMapClick: handleMapClick,
       onMapUiApiReady: handleMapUiApiReady,
       onUserLocationChange: handleUserLocationChange,
+      // #207 — on mobile-web a marker tap surfaces a bottom card instead of the
+      // Leaflet popup; desktop keeps the anchored popup behaviour.
+      onMarkerSelect: isMobile ? handleMarkerSelect : undefined,
+      onMapBackgroundTap: isMobile ? clearSelectedPlace : undefined,
+      suppressLeafletPopupOnSelect: isMobile,
     }),
     [
       travelsData,
@@ -402,35 +457,67 @@ export function useMapScreenController() {
       handleMapClick,
       handleMapUiApiReady,
       handleUserLocationChange,
+      isMobile,
+      handleMarkerSelect,
+      clearSelectedPlace,
     ]
   );
 
-  // Filters panel props (now using FiltersProvider pattern)
-  const filtersPanelProps = useMemo(() => {
-    // Context value for FiltersProvider
-    const contextValue = {
-      filters: {
-        categories: filters.categories
-          .filter((c) => c && c.name)
-          .map((c) => ({
-            id: c.id,
-            name: String(c.name || '').trim(),
-          }))
-          .filter((c) => c.name),
-        categoryTravelAddress: resolvedCategoryTravelAddressOptions,
-        radius: filters.radius.map((r) => ({ id: r.id, name: r.name })),
-        address: filters.address,
-      },
+  // Filters panel props (FiltersProvider pattern).
+  //
+  // Stabilization: the FiltersProvider needs a single flat context object, but
+  // rebuilding that whole object on every routing-state change cascaded invalidations
+  // (mapComponent, mobile layout, helpers). We split it into independent memoized
+  // slices with narrow deps — changing one slice (e.g. route metrics) no longer
+  // reconstructs the others (filter values / overlay / list-actions). The final
+  // flat `contextValue` is composed from those stable slices.
+
+  // Slice 1 — filter option lists + selected values (changes only on filter edits).
+  const filterOptionsSlice = useMemo(
+    () => ({
+      categories: filters.categories
+        .filter((c) => c && c.name)
+        .map((c) => ({ id: c.id, name: String(c.name || '').trim() }))
+        .filter((c) => c.name),
+      categoryTravelAddress: resolvedCategoryTravelAddressOptions,
+      radius: filters.radius.map((r) => ({ id: r.id, name: r.name })),
+      address: filters.address,
+    }),
+    [filters.categories, filters.radius, filters.address, resolvedCategoryTravelAddressOptions]
+  );
+
+  const filtersValuesSlice = useMemo(
+    () => ({
+      filters: filterOptionsSlice,
       filterValue: filterValues,
       onFilterChange: handleFilterChangeForPanel,
       resetFilters,
+    }),
+    [filterOptionsSlice, filterValues, handleFilterChangeForPanel, resetFilters]
+  );
+
+  // Slice 2 — overlay layer state (changes only on overlay toggles).
+  const overlaySlice = useMemo(
+    () => ({
       overlayOptions,
       enabledOverlays,
       onOverlayToggle: handleOverlayToggle,
       onResetOverlays: resetOverlays,
-      travelsData: allTravelsData,
-      filteredTravelsData: travelsData,
-      isMobile,
+    }),
+    [overlayOptions, enabledOverlays, handleOverlayToggle, resetOverlays]
+  );
+
+  const onBuildRoute = useCallback(() => {
+    try {
+      useRouteStore.getState().forceRebuild();
+    } catch {
+      // noop
+    }
+  }, []);
+
+  // Slice 3 — routing state + actions (changes on route building / mode switches).
+  const routingSlice = useMemo(
+    () => ({
       mode,
       setMode,
       transportMode,
@@ -450,13 +537,37 @@ export function useMapScreenController() {
       onAddressClear: handleAddressClear,
       routingLoading,
       routingError,
-      onBuildRoute: () => {
-        try {
-          useRouteStore.getState().forceRebuild();
-        } catch {
-          // noop
-        }
-      },
+      onBuildRoute,
+    }),
+    [
+      mode,
+      setMode,
+      transportMode,
+      setTransportMode,
+      startAddress,
+      endAddress,
+      routeDistance,
+      routeDuration,
+      routeElevationGain,
+      routeElevationLoss,
+      routeStorePoints,
+      onRemoveRoutePoint,
+      handleClearRoute,
+      swapStartEnd,
+      handleAddressSelect,
+      handleAddressClear,
+      routingLoading,
+      routingError,
+      onBuildRoute,
+    ]
+  );
+
+  // Slice 4 — list/data + map-api + panel actions (changes on data refresh / api ready).
+  const listActionsSlice = useMemo(
+    () => ({
+      travelsData: allTravelsData,
+      filteredTravelsData: travelsData,
+      isMobile,
       mapUiApi,
       closeMenu: closeRightPanel,
       userLocation: queryCoordinates,
@@ -465,6 +576,25 @@ export function useMapScreenController() {
       hideTopControls: false,
       hideFooterCta: false,
       hideFooterReset: !isMobile,
+    }),
+    [
+      allTravelsData,
+      travelsData,
+      isMobile,
+      mapUiApi,
+      closeRightPanel,
+      queryCoordinates,
+      buildRouteToStable,
+      selectTravelsTab,
+    ]
+  );
+
+  const filtersPanelProps = useMemo(() => {
+    const contextValue = {
+      ...filtersValuesSlice,
+      ...overlaySlice,
+      ...routingSlice,
+      ...listActionsSlice,
     };
 
     return {
@@ -473,43 +603,7 @@ export function useMapScreenController() {
       props: contextValue,
       Panel: FiltersPanelComponent,
     };
-  }, [
-    filters,
-    filterValues,
-    handleFilterChangeForPanel,
-    resetFilters,
-    overlayOptions,
-    enabledOverlays,
-    handleOverlayToggle,
-    resetOverlays,
-    allTravelsData,
-    resolvedCategoryTravelAddressOptions,
-    travelsData,
-    isMobile,
-    mode,
-    setMode,
-    transportMode,
-    setTransportMode,
-    startAddress,
-    endAddress,
-    routeDistance,
-    routeDuration,
-    routeElevationGain,
-    routeElevationLoss,
-    routeStorePoints,
-    onRemoveRoutePoint,
-    handleClearRoute,
-    swapStartEnd,
-    handleAddressSelect,
-    handleAddressClear,
-    routingLoading,
-    routingError,
-    mapUiApi,
-    closeRightPanel,
-    queryCoordinates,
-    buildRouteToStable,
-    selectTravelsTab,
-  ]);
+  }, [filtersValuesSlice, overlaySlice, routingSlice, listActionsSlice]);
 
   return useMemo(() => ({
     // SEO
@@ -541,6 +635,11 @@ export function useMapScreenController() {
 
     // Filters
     filtersPanelProps,
+    // Stable slices for narrow subscriptions in the screen (avoid depending on
+    // the rebuilt flat contextValue).
+    filtersValuesSlice,
+    overlaySlice,
+    routingSlice,
 
     // Travels data
     travelsData,
@@ -573,6 +672,11 @@ export function useMapScreenController() {
     // Additional data for mobile layout
     coordinates,
     transportMode,
+
+    // #207 — selected single marker for the mobile bottom card.
+    selectedPlace,
+    clearSelectedPlace,
+    selectedPlaceUserLocation: userLocation,
   }), [
     canonical,
     isFocused,
@@ -594,6 +698,9 @@ export function useMapScreenController() {
     panelStyle,
     overlayStyle,
     filtersPanelProps,
+    filtersValuesSlice,
+    overlaySlice,
+    routingSlice,
     travelsData,
     allTravelsData,
     loading,
@@ -616,5 +723,7 @@ export function useMapScreenController() {
     userLocation,
     coordinates,
     transportMode,
+    selectedPlace,
+    clearSelectedPlace,
   ]);
 }

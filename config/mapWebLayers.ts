@@ -41,7 +41,7 @@ export interface WebMapLayerDefinition {
   /** XYZ template for tile layers OR base URL for WMS */
   url: string;
   attribution?: string;
-  /** Категория для секционной группировки в OverlaysPopover. */
+  /** Категория для секционной группировки в FiltersPanelMapSettings. */
   category?: WebMapLayerCategory;
   /** Короткое описание под заголовком в UI. */
   subtitle?: string;
@@ -87,7 +87,7 @@ export interface WebMapLayerDefinition {
 
 /**
  * Порядок секций при группировке оверлеев по category в UI
- * (OverlaysPopover и FiltersPanelMapSettings используют один и тот же порядок).
+ * (FiltersPanelMapSettings).
  */
 export const OVERLAY_CATEGORY_ORDER = [
   'Подложки',

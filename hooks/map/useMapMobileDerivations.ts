@@ -27,6 +27,12 @@ interface FiltersContextShape {
   [key: string]: unknown
 }
 
+export interface MapMobileCategoryChip {
+  id: string
+  name: string
+  selected: boolean
+}
+
 export interface MapMobileDerivations {
   quickRadiusValue: string
   quickCategoriesValue: string
@@ -44,13 +50,20 @@ export interface MapMobileDerivations {
   routePointsCount: number
   filterToolbarSummary: string
   panelTabsOptions: Array<{ key: string; label: string; icon?: string }>
+  /** Chips for the top overlay: selected categories first, then a few popular. */
+  topCategoryChips: MapMobileCategoryChip[]
+  /** True when more categories exist than shown in the chips row. */
+  hasMoreCategories: boolean
 }
+
+/** How many category chips to surface in the top overlay before "Ещё…". */
+const TOP_CATEGORY_CHIP_LIMIT = 8
 
 export function useMapMobileDerivations(
   filtersContextProps: FiltersContextShape | undefined | null,
   filtersMode: FiltersMode,
   travelsData: ReadonlyArray<unknown>,
-  isVeryNarrow: boolean,
+  isNarrow: boolean,
 ): MapMobileDerivations {
   const canBuildRoute = useMemo(() => {
     if (filtersMode !== 'route') return false
@@ -130,9 +143,10 @@ export function useMapMobileDerivations(
         : 'Отметьте на карте старт и финиш'
     }
 
+    // Радиус намеренно НЕ дублируем в сводке: он уже показан отдельным
+    // тап-чипом «N км» в ряду чипов и (на native) плавающей пилюлей на карте.
     const parts = [
       travelsData.length > 999 ? '999+ мест' : formatPlaces(travelsData.length),
-      `${activeRadius} км`,
     ]
 
     if (selectedCategories.length === 1) {
@@ -143,7 +157,6 @@ export function useMapMobileDerivations(
 
     return parts.join(' · ')
   }, [
-    activeRadius,
     canBuildRoute,
     filtersMode,
     routeDistance,
@@ -153,21 +166,49 @@ export function useMapMobileDerivations(
     travelsData.length,
   ])
 
+  // Top-overlay chips: selected categories first (so the active filter is always
+  // visible), then fill up to the limit with the remaining options.
+  const topCategoryChips = useMemo<MapMobileCategoryChip[]>(() => {
+    const options = (quickCategoryOptions as ReadonlyArray<{ id: unknown; name: unknown }>) ?? []
+    const selectedSet = new Set(quickFilterSelected.map((v) => String(v)))
+
+    const normalized = options
+      .map((opt) => ({
+        id: String(opt?.id ?? '').trim(),
+        name: String(opt?.name ?? '').trim(),
+      }))
+      .filter((opt) => opt.id && opt.name)
+
+    const selected = normalized
+      .filter((opt) => selectedSet.has(opt.id))
+      .map((opt) => ({ ...opt, selected: true }))
+
+    const rest = normalized
+      .filter((opt) => !selectedSet.has(opt.id))
+      .map((opt) => ({ ...opt, selected: false }))
+
+    return [...selected, ...rest].slice(0, TOP_CATEGORY_CHIP_LIMIT)
+  }, [quickCategoryOptions, quickFilterSelected])
+
+  const hasMoreCategories = useMemo(() => {
+    const total = Array.isArray(quickCategoryOptions)
+      ? quickCategoryOptions.length
+      : 0
+    return total > topCategoryChips.length
+  }, [quickCategoryOptions, topCategoryChips.length])
+
+  // Stage 1: only two tabs — Места и Маршрут. Фильтры/поиск открываются
+  // отдельной кнопкой-иконкой, а не вкладкой (решает усечение «Маршрут»).
   const panelTabsOptions = useMemo(
     () => [
-      {
-        key: 'search',
-        label: 'Поиск',
-        icon: isVeryNarrow ? undefined : 'search',
-      },
+      { key: 'list', label: 'Места', icon: isNarrow ? undefined : 'list' },
       {
         key: 'route',
         label: 'Маршрут',
-        icon: isVeryNarrow ? undefined : 'alt-route',
+        icon: isNarrow ? undefined : 'alt-route',
       },
-      { key: 'list', label: 'Места', icon: isVeryNarrow ? undefined : 'list' },
     ],
-    [isVeryNarrow],
+    [isNarrow],
   )
 
   return {
@@ -187,5 +228,7 @@ export function useMapMobileDerivations(
     routePointsCount,
     filterToolbarSummary,
     panelTabsOptions,
+    topCategoryChips,
+    hasMoreCategories,
   }
 }

@@ -139,27 +139,56 @@ export const getChipsStyles = ({ colors, isMobile }: FiltersPanelStyleContext) =
     radiusOptionsScrollContent: {
       paddingHorizontal: 0,
     },
-    radiusOptionsWrap: {
+    radiusSegmentTrack: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
       alignItems: 'stretch',
-      gap: 6,
+      marginTop: 4,
+      padding: 3,
+      borderRadius: PILL_RADIUS,
+      backgroundColor: colors.surfaceAlpha40,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+      overflow: 'hidden',
     },
-    radiusOptionChip: {
+    radiusSegment: {
       flexGrow: 1,
       flexShrink: 1,
       flexBasis: 0,
-      minWidth: 60,
+      minWidth: 56,
       minHeight: 36,
-      paddingHorizontal: 10,
+      paddingHorizontal: 8,
       paddingVertical: 6,
       borderRadius: PILL_RADIUS,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: colors.surface,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
-      gap: 0,
+      backgroundColor: 'transparent',
+      ...(Platform.OS === 'web'
+        ? ({
+            transition: 'background-color 0.18s ease',
+            cursor: 'pointer',
+          } as any)
+        : null),
+    },
+    radiusSegmentSelected: {
+      backgroundColor: colors.primary,
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: colors.boxShadows.light,
+          } as any)
+        : null),
+    },
+    radiusSegmentPressed: {
+      opacity: 0.85,
+    },
+    radiusSegmentText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textMuted,
+      textAlign: 'center',
+    },
+    radiusSegmentTextSelected: {
+      color: colors.textOnPrimary,
+      fontWeight: '800',
     },
     radiusSelectionHint: {
       marginTop: 10,
@@ -191,8 +220,17 @@ export const getChipsStyles = ({ colors, isMobile }: FiltersPanelStyleContext) =
       paddingVertical: 6,
       borderRadius: PILL_RADIUS,
       backgroundColor: colors.surfaceAlpha40,
-      borderWidth: StyleSheet.hairlineWidth,
+      borderWidth: 1,
       borderColor: colors.borderLight,
+    },
+    filterSelectionChipSelected: {
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.primary,
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: colors.boxShadows.light,
+          } as any)
+        : null),
     },
     filterSelectionChipText: {
       maxWidth: 180,
