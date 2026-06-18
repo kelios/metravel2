@@ -32,6 +32,10 @@ interface OverlayOption {
 interface MapMobileLayersPopoverProps {
   colors: ThemedColors
   top: number
+  /** Card right-edge offset. Desktop floating icon anchors the card to itself. */
+  right?: number
+  /** Card max width. Desktop uses a slightly wider card than mobile. */
+  maxWidth?: number
   mapUiApi?: MapUiApi | null
   overlayOptions?: ReadonlyArray<OverlayOption>
   enabledOverlays?: Record<string, boolean>
@@ -43,6 +47,8 @@ interface MapMobileLayersPopoverProps {
 const MapMobileLayersPopoverInner: React.FC<MapMobileLayersPopoverProps> = ({
   colors,
   top,
+  right,
+  maxWidth,
   mapUiApi,
   overlayOptions,
   enabledOverlays,
@@ -60,6 +66,8 @@ const MapMobileLayersPopoverInner: React.FC<MapMobileLayersPopoverProps> = ({
     <MapMobilePopover
       colors={colors}
       top={top}
+      right={right}
+      maxWidth={maxWidth}
       onRequestClose={onRequestClose}
       testID="map-mobile-layers-popover"
     >

@@ -1,13 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useMemo } from 'react'
 import { Platform, ScrollView, Text, View } from 'react-native'
 
-import { useMapPanelStore } from '@/stores/mapPanelStore'
-
 import { QuickRecommendations } from '@/components/MapPage/QuickRecommendations'
-import FiltersPanelMapSettings from '@/components/MapPage/FiltersPanelMapSettings'
 import FiltersPanelRadiusSection from '@/components/MapPage/FiltersPanelRadiusSection'
 import FiltersPanelRouteSection from '@/components/MapPage/FiltersPanelRouteSection'
-import CollapsibleSection from '@/components/MapPage/CollapsibleSection'
 import Button from '@/components/ui/Button'
 import { getCategoryName, type CategoryOption } from '@/components/MapPage/categoryName'
 import type { RoutePoint } from '@/types/route'
@@ -77,19 +73,12 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
   filters,
   filterValue,
   travelsData,
-  overlayOptions,
-  enabledOverlays,
-  onOverlayToggle,
-  onResetOverlays,
-  mapUiApi,
   isMobile,
   totalPoints,
   isBusy,
   hasFilters,
-  canBuildRoute,
   onFilterChange,
   onReset,
-  onOpenList,
   transportMode,
   setTransportMode,
   startAddress,
@@ -117,46 +106,6 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
         .filter(Boolean),
     [filterValue.categoryTravelAddress],
   )
-
-  // Deep-link from the map top overlay "Слои" icon: expand + scroll to the
-  // "Слои и настройки карты" section. The store carries a monotonic nonce plus a
-  // latched `pendingLayersOpen` flag (mirrors search-focus): the nonce handles a
-  // body that is already mounted when the icon is tapped; the latch handles the
-  // body mounting AFTER the tap (sheet switching list→filters). Both feed a local
-  // strictly-incrementing `layersOpenSignal` so CollapsibleSection — which only
-  // reacts to a strict increment past its mount value — reliably expands.
-  const layersOpenNonce = useMapPanelStore((s) => s.layersOpenNonce)
-  const pendingLayersOpen = useMapPanelStore((s) => s.pendingLayersOpen)
-  const consumeLayersOpen = useMapPanelStore((s) => s.consumeLayersOpen)
-  const scrollRef = useRef<ScrollView>(null)
-  const layersOffsetRef = useRef(0)
-  const [layersOpenSignal, setLayersOpenSignal] = useState(0)
-
-  const scrollToLayers = () => {
-    scrollRef.current?.scrollTo({ y: Math.max(0, layersOffsetRef.current - 8), animated: true })
-  }
-
-  const triggerLayersOpen = () => {
-    setLayersOpenSignal((n) => n + 1)
-    setTimeout(scrollToLayers, 60)
-  }
-
-  // Nonce path: fires when the icon is tapped while the body is already mounted.
-  const lastLayersNonceRef = useRef(layersOpenNonce)
-  useEffect(() => {
-    if (layersOpenNonce === lastLayersNonceRef.current) return
-    lastLayersNonceRef.current = layersOpenNonce
-    triggerLayersOpen()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layersOpenNonce])
-
-  // Latch path: fires when the body mounts with a pending request already set.
-  useEffect(() => {
-    if (!pendingLayersOpen) return
-    triggerLayersOpen()
-    consumeLayersOpen()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingLayersOpen])
 
   const nextRadiusOption = useMemo(() => {
     const radiusOptions = Array.isArray(filters.radius) ? filters.radius : []
@@ -191,50 +140,8 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
   const showMobileQuickRow = isMobile && mode === 'radius' && mobileQuickChips.length > 0
   const showRecommendations = mode === 'radius' && userLocation && onPlaceSelect
 
-  // #212 — секция «Управление картой» (слои/оверлеи: спутник, топо, рельеф, погода,
-  // маршруты, природа). На десктопе её выносим наверх (сразу под блок фильтров),
-  // чтобы слои были обнаружимы без прокрутки через весь контент панели; на мобиле
-  // расположение не меняем — там слои доступны отдельной кнопкой.
-  const mapToolsSection = (
-    <View
-      style={styles.sectionCard}
-      testID="filters-block-map-tools"
-      onLayout={(e) => {
-        layersOffsetRef.current = e.nativeEvent.layout.y
-      }}
-    >
-      <CollapsibleSection
-        title="Слои и настройки карты"
-        icon="layers"
-        defaultOpen={false}
-        tone="flat"
-        openSignal={layersOpenSignal}
-      >
-        <FiltersPanelMapSettings
-          colors={colors}
-          styles={styles}
-          isMobile={isMobile}
-          mode={mode}
-          mapUiApi={mapUiApi}
-          overlayOptions={overlayOptions}
-          enabledOverlays={enabledOverlays}
-          onOverlayToggle={onOverlayToggle}
-          onResetOverlays={onResetOverlays}
-          totalPoints={totalPoints}
-          hasFilters={hasFilters}
-          canBuildRoute={canBuildRoute}
-          onReset={onReset}
-          hideReset={isMobile}
-          onOpenList={onOpenList}
-          withContainer={false}
-        />
-      </CollapsibleSection>
-    </View>
-  )
-
   return (
     <ScrollView
-      ref={scrollRef}
       testID="filters-panel-scroll"
       style={styles.content}
       showsVerticalScrollIndicator={Platform.OS !== 'web'}
@@ -296,9 +203,6 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
         )}
       </View>
 
-      {/* #212 — на десктопе слои сразу под фильтрами (до empty-state/рекомендаций). */}
-      {!isMobile && mapToolsSection}
-
       {showEmptyState && (
         <View style={styles.noPointsToast} testID="filters-empty-state">
           <Text style={styles.noPointsTitle}>Ничего не нашлось</Text>
@@ -329,9 +233,10 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
         </View>
       )}
 
-      {/* На мобиле «Слои и настройки карты» вынесены в компактный поповер
-          верхнего тулбара карты — в шите их не дублируем. На десктопе секция
-          уже отрендерена выше (сразу под фильтрами). */}
+      {/* Слои/настройки карты в панель не встраиваем ни на мобиле, ни на десктопе:
+          они доступны через плавающую иконку «Слои» на самой карте (мобильный
+          верхний тулбар / десктопный floating-control), чтобы не дублировать
+          контролы оверлеев в двух местах. */}
 
       {showRecommendations && (
         <View style={styles.sectionCard} testID="filters-block-recommendations">

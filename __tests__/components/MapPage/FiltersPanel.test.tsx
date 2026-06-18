@@ -1,7 +1,8 @@
 import React from 'react'
 import { render, fireEvent, waitFor, within } from '@testing-library/react-native'
 import FiltersPanel from '@/components/MapPage/FiltersPanel'
-import { ThemeProvider } from '@/hooks/useTheme'
+import { MapMobileLayersPopover } from '@/components/MapPage/MapMobile/MapMobileLayersPopover'
+import { getThemedColors, ThemeProvider } from '@/hooks/useTheme'
 import { FiltersProvider } from '@/context/MapFiltersContext'
 import type { RoutePoint } from '@/types/route'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -387,28 +388,43 @@ describe('FiltersPanel', () => {
     expect(carTabEnabledPressable?.props.accessibilityState?.disabled).toBe(false)
   })
 
+})
+
+// Слои/настройки карты вынесены из левой панели в плавающую иконку «Слои» на
+// карте (десктоп) и в верхний тулбар (мобиле). Единый хост контролов слоёв —
+// MapMobileLayersPopover, поэтому wiring оверлеев/mapUiApi проверяем на нём.
+describe('Map layers controls (MapMobileLayersPopover)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  const makeMapUiApi = () => ({
+    zoomIn: jest.fn(),
+    zoomOut: jest.fn(),
+    centerOnUser: jest.fn(),
+    fitToResults: jest.fn(),
+    exportGpx: jest.fn(),
+    exportKml: jest.fn(),
+    setBaseLayer: jest.fn(),
+    setOverlayEnabled: jest.fn(),
+    capabilities: { canCenterOnUser: true, canFitToResults: true, canExportRoute: false },
+  })
+
+  const renderLayersPopover = (mapUiApi: any) =>
+    render(
+      <ThemeProvider>
+        <MapMobileLayersPopover
+          colors={getThemedColors(false)}
+          top={68}
+          mapUiApi={mapUiApi}
+          onRequestClose={jest.fn()}
+        />
+      </ThemeProvider>,
+    )
+
   it('keeps only fit-to-results action in map settings to avoid duplicated map controls', async () => {
-    const mapUiApi = {
-      zoomIn: jest.fn(),
-      zoomOut: jest.fn(),
-      centerOnUser: jest.fn(),
-      fitToResults: jest.fn(),
-      exportGpx: jest.fn(),
-      exportKml: jest.fn(),
-      setBaseLayer: jest.fn(),
-      setOverlayEnabled: jest.fn(),
-      capabilities: { canCenterOnUser: true, canFitToResults: true, canExportRoute: false },
-    }
-
-    const { getByTestId, getByLabelText, queryByLabelText } = renderWithTheme(<FiltersPanel />, {
-      ...defaultProps,
-      mapUiApi: mapUiApi as any,
-    })
-
-    const collapsible = getByTestId('collapsible-Слои и настройки карты')
-    if (collapsible.props.accessibilityState?.expanded === false) {
-      fireEvent.press(collapsible)
-    }
+    const mapUiApi = makeMapUiApi()
+    const { getByLabelText, queryByLabelText } = renderLayersPopover(mapUiApi)
 
     await waitFor(() => {
       expect(getByLabelText('Показать все результаты на карте')).toBeTruthy()
@@ -422,27 +438,8 @@ describe('FiltersPanel', () => {
   })
 
   it('renders Waymarked Trails overlays and toggles them via mapUiApi', async () => {
-    const mapUiApi = {
-      zoomIn: jest.fn(),
-      zoomOut: jest.fn(),
-      centerOnUser: jest.fn(),
-      fitToResults: jest.fn(),
-      exportGpx: jest.fn(),
-      exportKml: jest.fn(),
-      setBaseLayer: jest.fn(),
-      setOverlayEnabled: jest.fn(),
-      capabilities: { canCenterOnUser: true, canFitToResults: true, canExportRoute: false },
-    }
-
-    const { getByTestId } = renderWithTheme(<FiltersPanel />, {
-      ...defaultProps,
-      mapUiApi: mapUiApi as any,
-    })
-
-    const collapsible = getByTestId('collapsible-Слои и настройки карты')
-    if (collapsible.props.accessibilityState?.expanded === false) {
-      fireEvent.press(collapsible)
-    }
+    const mapUiApi = makeMapUiApi()
+    const { getByTestId } = renderLayersPopover(mapUiApi)
 
     await waitFor(() => {
       expect(getByTestId('map-overlay-waymarked-hiking')).toBeTruthy()

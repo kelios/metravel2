@@ -1,10 +1,13 @@
-import React, { Suspense } from 'react'
+import React, { Suspense, useCallback, useState } from 'react'
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import Animated from 'react-native-reanimated'
 import Feather from '@expo/vector-icons/Feather'
 
 import { MapOfflineIndicator } from '@/components/MapPage/MapOfflineIndicator'
 import MapPanelHeader from '@/components/MapPage/MapPanelHeader'
+import { MapMobileLayersPopover } from '@/components/MapPage/MapMobile/MapMobileLayersPopover'
+import type { ThemedColors } from '@/hooks/useTheme'
+import type { MapUiApi } from '@/types/mapUi'
 import {
   ActiveFiltersBar,
   MapOnboarding,
@@ -264,14 +267,29 @@ export function MapScreenDesktopChrome({
   )
 }
 
+interface DesktopOverlayOption {
+  id: string
+  title: string
+  category?: string
+}
+
 type MapScreenDesktopOverlaysProps = {
   styles: any
   themedColors: any
   isWeb: boolean
+  /** Desktop-web only: the left panel is hidden on mobile, so this is always false there. */
+  isMobile: boolean
   openRightPanel: () => void
   isConnected: boolean
   mapReady: boolean
   shouldLoadOnboarding: boolean
+  // Layers floating-control state — same controlled overlay source the filters
+  // panel/mobile toolbar use (filtersPanelProps.contextValue). No duplicated logic.
+  mapUiApi?: MapUiApi | null
+  overlayOptions?: ReadonlyArray<DesktopOverlayOption>
+  enabledOverlays?: Record<string, boolean>
+  onOverlayToggle?: (id: string, enabled: boolean) => void
+  onResetOverlays?: () => void
 }
 
 /**
@@ -283,11 +301,25 @@ export function MapScreenDesktopOverlays({
   styles,
   themedColors,
   isWeb,
+  isMobile,
   openRightPanel,
   isConnected,
   mapReady,
   shouldLoadOnboarding,
+  mapUiApi,
+  overlayOptions,
+  enabledOverlays,
+  onOverlayToggle,
+  onResetOverlays,
 }: MapScreenDesktopOverlaysProps) {
+  // Desktop-web «Слои» floating control: layers live on the map (Google-Maps
+  // style), no longer inside the left filters panel. Mobile keeps its own icon
+  // toolbar + popover, so this branch is desktop-web only.
+  const showDesktopLayersControl = isWeb && !isMobile
+  const [layersOpen, setLayersOpen] = useState(false)
+  const toggleLayers = useCallback(() => setLayersOpen((v) => !v), [])
+  const closeLayers = useCallback(() => setLayersOpen(false), [])
+
   return (
     <>
       {!isWeb && (
@@ -299,6 +331,41 @@ export function MapScreenDesktopOverlays({
         >
           <Feather name="sliders" size={22} color={themedColors.textOnPrimary} />
         </Pressable>
+      )}
+
+      {showDesktopLayersControl && (
+        <>
+          <Pressable
+            testID="map-desktop-layers-button"
+            onPress={toggleLayers}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: layersOpen }}
+            accessibilityLabel="Слои и настройки карты"
+            hitSlop={6}
+            style={({ pressed }) => [
+              styles.desktopLayersFab,
+              layersOpen && styles.desktopLayersFabActive,
+              pressed && PRESSED_OPACITY_085,
+            ]}
+          >
+            <Feather name="layers" size={20} color={themedColors.text} />
+          </Pressable>
+
+          {layersOpen && (
+            <MapMobileLayersPopover
+              colors={themedColors as ThemedColors}
+              top={16 + 44 + 8}
+              right={16}
+              maxWidth={320}
+              mapUiApi={mapUiApi}
+              overlayOptions={overlayOptions}
+              enabledOverlays={enabledOverlays}
+              onOverlayToggle={onOverlayToggle}
+              onResetOverlays={onResetOverlays}
+              onRequestClose={closeLayers}
+            />
+          )}
+        </>
       )}
 
       <MapOfflineIndicator visible={!isConnected} />

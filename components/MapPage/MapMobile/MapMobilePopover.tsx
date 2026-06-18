@@ -23,6 +23,14 @@ interface MapMobilePopoverProps {
   colors: ThemedColors
   /** Absolute top offset (safe-area + toolbar height + small gap). */
   top: number
+  /**
+   * Right edge offset of the card. Defaults to the mobile FAB-rail value (12).
+   * The desktop floating «Слои» icon passes its own offset so the popover anchors
+   * to that icon instead of the mobile toolbar.
+   */
+  right?: number
+  /** Card max width. Defaults to 280 (mobile). Desktop uses a slightly wider card. */
+  maxWidth?: number
   onRequestClose: () => void
   children: React.ReactNode
   testID?: string
@@ -43,6 +51,8 @@ const shadowNative = {
 const MapMobilePopoverInner: React.FC<MapMobilePopoverProps> = ({
   colors,
   top,
+  right = 12,
+  maxWidth = 280,
   onRequestClose,
   children,
   testID,
@@ -67,6 +77,8 @@ const MapMobilePopoverInner: React.FC<MapMobilePopoverProps> = ({
           styles.card,
           {
             top,
+            right,
+            maxWidth,
             backgroundColor: colors.surface,
             borderColor: colors.borderLight,
           },
@@ -83,8 +95,6 @@ const MapMobilePopoverInner: React.FC<MapMobilePopoverProps> = ({
 const styles = StyleSheet.create({
   card: {
     position: 'absolute',
-    right: 12,
-    maxWidth: 280,
     minWidth: 200,
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,

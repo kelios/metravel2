@@ -326,6 +326,34 @@ export const getStyles = (
         backgroundColor: themedColors.overlay,
         zIndex: 1002,
       },
+      // Desktop-web floating «Слои» control: a Google-Maps-style round button
+      // pinned to the top-right of the map area (NOT over the left panel). Frost
+      // surface + shadow, matching the other floating map controls.
+      desktopLayersFab: {
+        position: 'absolute',
+        top: 16,
+        right: 16,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: themedColors.surfaceMuted,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: themedColors.borderLight,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1001,
+        ...(Platform.OS === 'web'
+          ? ({
+              cursor: 'pointer',
+              boxShadow: '0 4px 16px rgba(15,23,42,0.18), 0 1px 4px rgba(0,0,0,0.08)',
+              transition: 'background-color 0.15s ease',
+            } as any)
+          : shadowMedium),
+      },
+      desktopLayersFabActive: {
+        backgroundColor: themedColors.surface,
+        borderColor: themedColors.primary,
+      },
       panelPlaceholder: {
         flex: 1,
         justifyContent: 'center',

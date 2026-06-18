@@ -476,10 +476,16 @@ export default function MapScreen() {
       styles={styles}
       themedColors={themedColors}
       isWeb={isWeb}
+      isMobile={isMobile}
       openRightPanel={openRightPanel}
       isConnected={isConnected}
       mapReady={mapReady}
       shouldLoadOnboarding={shouldLoadOnboarding}
+      mapUiApi={filtersPanelProps?.contextValue?.mapUiApi ?? null}
+      overlayOptions={quickFilters.overlayOptions}
+      enabledOverlays={enabledOverlays}
+      onOverlayToggle={filtersPanelProps?.contextValue?.onOverlayToggle}
+      onResetOverlays={filtersPanelProps?.contextValue?.onResetOverlays}
     />
   )
 
