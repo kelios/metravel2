@@ -3,7 +3,6 @@ import { Pressable, Text, View } from 'react-native'
 
 import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
-import IconButton from '@/components/ui/IconButton'
 import { Toggle } from '@/components/ui/Toggle'
 import CollapsibleSection from '@/components/MapPage/CollapsibleSection'
 import MapIcon from './MapIcon'
@@ -187,12 +186,14 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
   const body = (
     <>
       <View style={styles.mapControlsRow}>
-        <IconButton
-          label="Показать все результаты на карте"
+        <Button
+          label="Показать всё на карте"
           icon={<MapIcon name="zoom-out-map" size={18} color={colors.text} />}
           onPress={() => safeMapUiCall(mapUiApi?.fitToResults)}
           disabled={!mapUiApi || !canFitToResults}
+          accessibilityLabel="Показать все результаты на карте"
           size="sm"
+          variant="secondary"
         />
       </View>
 
@@ -247,9 +248,14 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
       {resolvedShowOverlays && (
         <>
           <View style={styles.mapLayersSection}>
-            <Text style={styles.mapLayersLabel}>Оверлеи</Text>
-            {overlaySections.map((section) => (
-              <View key={section.category} style={styles.mapOverlaySection}>
+            {overlaySections.map((section, index) => (
+              <View
+                key={section.category}
+                style={[
+                  styles.mapOverlaySection,
+                  index === 0 && styles.mapOverlaySectionFirst,
+                ]}
+              >
                 <Text style={styles.mapOverlaySectionTitle}>{section.category}</Text>
                 <View style={styles.mapToggleList}>
                   {section.items.map((overlay) => {

@@ -33,6 +33,9 @@ export const getMapControlsStyles = ({ colors }: FiltersPanelStyleContext) =>
     mapOverlaySection: {
       marginTop: 10,
     },
+    mapOverlaySectionFirst: {
+      marginTop: 0,
+    },
     mapOverlaySectionTitle: {
       fontSize: 11,
       fontWeight: '800',

@@ -59,6 +59,8 @@ const MapMobileRadiusPopoverInner: React.FC<MapMobileRadiusPopoverProps> = ({
     <MapMobilePopover
       colors={colors}
       top={top}
+      minWidth={150}
+      maxWidth={200}
       onRequestClose={onRequestClose}
       testID="map-mobile-radius-popover"
     >

@@ -657,7 +657,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
             )}
 
             {viewMode === 'list' ? (
-              embedded && Platform.OS === 'web' ? (
+              embedded ? (
                 <View style={styles.mobileListContent}>
                   {displayedTravels.map((item) => (
                     <View key={`travel-${item.id}`} style={styles.travelItem}>

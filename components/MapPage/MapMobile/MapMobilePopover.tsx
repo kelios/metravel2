@@ -31,6 +31,8 @@ interface MapMobilePopoverProps {
   right?: number
   /** Card max width. Defaults to 280 (mobile). Desktop uses a slightly wider card. */
   maxWidth?: number
+  /** Card min width. Defaults to 200. Compact popovers (radius) pass a smaller value. */
+  minWidth?: number
   onRequestClose: () => void
   children: React.ReactNode
   testID?: string
@@ -53,6 +55,7 @@ const MapMobilePopoverInner: React.FC<MapMobilePopoverProps> = ({
   top,
   right = 12,
   maxWidth = 280,
+  minWidth = 200,
   onRequestClose,
   children,
   testID,
@@ -79,6 +82,7 @@ const MapMobilePopoverInner: React.FC<MapMobilePopoverProps> = ({
             top,
             right,
             maxWidth,
+            minWidth,
             backgroundColor: colors.surface,
             borderColor: colors.borderLight,
           },
@@ -95,7 +99,6 @@ const MapMobilePopoverInner: React.FC<MapMobilePopoverProps> = ({
 const styles = StyleSheet.create({
   card: {
     position: 'absolute',
-    minWidth: 200,
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
     paddingVertical: 8,
