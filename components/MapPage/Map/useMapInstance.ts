@@ -8,7 +8,7 @@ import {
   getThemedBaseMaxZoom,
   CARTO_DARK_SUBDOMAINS,
 } from '@/config/mapWebLayers';
-import { createLeafletLayer } from '@/utils/mapWebLayers';
+import { createLeafletLayer, attachTileRetry } from '@/utils/mapWebLayers';
 import { attachOsmCampingOverlay } from '@/utils/mapWebOverlays/osmCampingOverlay';
 import { attachLasyZanocujWfsOverlay } from '@/utils/mapWebOverlays/lasyZanocujWfsOverlay';
 import { attachOsmPoiOverlay } from '@/utils/mapWebOverlays/osmPoiOverlay';
@@ -29,11 +29,13 @@ interface UseMapInstanceProps {
  */
 const createThemedBaseLayer = (L: any, isDark: boolean) => {
   if (!L) return null;
-  return L.tileLayer(getThemedBaseTileUrl(isDark), {
-    attribution: getThemedBaseAttribution(isDark),
-    maxZoom: getThemedBaseMaxZoom(isDark),
-    ...(isDark ? { subdomains: CARTO_DARK_SUBDOMAINS } : null),
-  });
+  return attachTileRetry(
+    L.tileLayer(getThemedBaseTileUrl(isDark), {
+      attribution: getThemedBaseAttribution(isDark),
+      maxZoom: getThemedBaseMaxZoom(isDark),
+      ...(isDark ? { subdomains: CARTO_DARK_SUBDOMAINS } : null),
+    }),
+  );
 };
 
 export function useMapInstance({ map, L, isDark = false }: UseMapInstanceProps) {

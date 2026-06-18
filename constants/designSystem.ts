@@ -17,6 +17,7 @@ export const DESIGN_COLORS = {
   // Route polyline color — vivid navigation blue, high contrast over OSM tiles
   // (green parks / grey roads), readable on light & dark themes with white halo.
   routeLine: '#2563eb',
+  strava: '#fc4c02',
 
   // Web shell / critical CSS fallbacks (must be plain values).
   themeColorLight: '#ffffff',
@@ -140,6 +141,7 @@ export const DESIGN_TOKENS = {
     transparent: colorVar('transparent', MODERN_MATTE_PALETTE.transparent),
     travelPoint: colorVar('travelPoint', DESIGN_COLORS.travelPoint),
     mapPin: colorVar('mapPin', DESIGN_COLORS.mapPin),
+    strava: colorVar('strava', DESIGN_COLORS.strava),
     // Фоны (матовые, теплые)
     background: colorVar('background', MODERN_MATTE_PALETTE.background),
     backgroundSecondary: colorVar(
@@ -810,6 +812,12 @@ export function getThemedColors(isDark: boolean) {
       'infoSoft',
       MODERN_MATTE_PALETTE.infoSoft,
       MODERN_MATTE_PALETTE_DARK.infoSoft,
+      isDark,
+    ),
+    strava: themedColor(
+      'strava',
+      DESIGN_COLORS.strava,
+      DESIGN_COLORS.strava,
       isDark,
     ),
 

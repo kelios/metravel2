@@ -1,6 +1,50 @@
 import type { WebMapLayerDefinition } from '@/config/mapWebLayers';
 import { clampOpacity } from '@/utils/routeExport/normalize';
 
+interface TileRetryOptions {
+  /** Максимум повторов на тайл (по умолчанию 3). */
+  maxRetries?: number;
+  /** Базовая задержка в мс; реальная = baseDelay * attempt (по умолчанию 500). */
+  baseDelay?: number;
+}
+
+/**
+ * Авто-retry упавших тайлов Leaflet. Прокси/upstream OSM под burst'ом
+ * (холодный прыжок на дальний регион) изредка роняет часть тайлов — немедленный
+ * повтор того же URL отдаёт 200. Leaflet сам не повторяет, поэтому подписываемся
+ * на 'tileerror' и перезапрашиваем тайл с cache-buster'ом, форсируя свежий запрос.
+ * Web-only по факту использования (createLeafletLayer / useMapInstance — web-пути).
+ */
+export const attachTileRetry = (layer: any, opts?: TileRetryOptions) => {
+  if (!layer || typeof layer.on !== 'function') return layer;
+
+  const maxRetries = opts?.maxRetries ?? 3;
+  const baseDelay = opts?.baseDelay ?? 500;
+
+  layer.on('tileerror', (event: any) => {
+    const tile: HTMLImageElement | undefined = event?.tile;
+    if (!tile) return;
+
+    const attempt = Number(tile.getAttribute('data-tile-retry') ?? '0') || 0;
+    if (attempt >= maxRetries) return;
+
+    const nextAttempt = attempt + 1;
+    tile.setAttribute('data-tile-retry', String(nextAttempt));
+
+    const baseUrl = (tile.src || '').replace(/([?&])_retry=\d+(&|$)/, (_m, p1: string, p2: string) =>
+      p2 === '&' ? p1 : '',
+    );
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    const nextUrl = `${baseUrl}${separator}_retry=${nextAttempt}`;
+
+    setTimeout(() => {
+      tile.src = nextUrl;
+    }, baseDelay * nextAttempt);
+  });
+
+  return layer;
+};
+
 export const createLeafletLayer = (L: any, def: WebMapLayerDefinition) => {
   if (!L) return null;
 
@@ -39,7 +83,7 @@ export const createLeafletLayer = (L: any, def: WebMapLayerDefinition) => {
         : null),
     });
     if (def.zIndex != null && typeof layer.setZIndex === 'function') layer.setZIndex(def.zIndex);
-    return layer;
+    return attachTileRetry(layer);
   }
 
   if (def.kind === 'wms') {
@@ -54,7 +98,7 @@ export const createLeafletLayer = (L: any, def: WebMapLayerDefinition) => {
       attribution: def.attribution,
     });
     if (def.zIndex != null && typeof layer.setZIndex === 'function') layer.setZIndex(def.zIndex);
-    return layer;
+    return attachTileRetry(layer);
   }
 
   return null;

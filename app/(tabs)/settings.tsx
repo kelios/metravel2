@@ -28,6 +28,7 @@ import { useBiometricAuth } from '@/hooks/useBiometricAuth';
 import { webTouchScrollStyle } from '@/utils';
 import { createSettingsStyles } from '@/components/screens/settings/settings.styles';
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler';
+import StravaSettingsSection from '@/components/settings/StravaSettingsSection';
 
 export default function SettingsScreen() {
     // Android: hardware Back возвращает на предыдущий экран (Профиль), а не
@@ -546,6 +547,8 @@ export default function SettingsScreen() {
                             </View>
                         </>
                     ) : null}
+
+                    <StravaSettingsSection />
 
                     <Text style={styles.sectionTitle}>Сообщения</Text>
 
