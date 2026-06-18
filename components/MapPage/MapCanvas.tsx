@@ -26,6 +26,8 @@ type MapCanvasProps = {
   dismissGeoBanner: () => void
   handleSelectSearchTab: () => void
   openRightPanel: () => void
+  canSearchThisArea?: boolean
+  onSearchThisArea?: () => void
 }
 
 export function MapCanvas({
@@ -43,10 +45,30 @@ export function MapCanvas({
   dismissGeoBanner,
   handleSelectSearchTab,
   openRightPanel,
+  canSearchThisArea,
+  onSearchThisArea,
 }: MapCanvasProps) {
   return (
     <View style={styles.mapArea}>
       <MapLoadingBar visible={showProgress} />
+      {isWeb && !isMobile && canSearchThisArea && !!onSearchThisArea && (
+        <Pressable
+          style={({ pressed }) => [
+            styles.desktopSearchAreaButton,
+            pressed && { opacity: 0.9 },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Искать в этой области"
+          testID="map-search-this-area-desktop"
+          onPress={onSearchThisArea}
+          hitSlop={8}
+        >
+          <Feather name="refresh-cw" size={15} color={themedColors.textOnPrimary} />
+          <Text style={styles.desktopSearchAreaButtonText} numberOfLines={1}>
+            Искать в этой области
+          </Text>
+        </Pressable>
+      )}
       {mapReady ? (
         <MapPanel {...mapPanelProps} hideFloatingControls={isMobile} />
       ) : (

@@ -373,6 +373,8 @@ export default function MapScreen() {
         dismissGeoBanner={dismissGeoBanner}
         handleSelectSearchTab={handleSelectSearchTab}
         openRightPanel={openRightPanel}
+        canSearchThisArea={canSearchThisArea}
+        onSearchThisArea={handleSearchThisArea}
       />
     ),
     [
@@ -390,6 +392,8 @@ export default function MapScreen() {
       themedColors,
       handleSelectSearchTab,
       openRightPanel,
+      canSearchThisArea,
+      handleSearchThisArea,
     ],
   )
 

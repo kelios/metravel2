@@ -106,7 +106,13 @@ export function useWebVirtualization({ itemKeys, hasMore, onLoadMore }: UseWebVi
       | ((cb: () => void) => number)
     const caf = (globalThis as any)?.cancelAnimationFrame as undefined | ((id: number) => void)
     syncFromNode()
-    if (typeof raf !== 'function') return
+    // Catch-up ПОСЛЕ height-transition контейнера (200ms): rAF-цикл укладывается
+    // в ~64ms и завершается ещё до конца анимации высоты шторки, поэтому, если
+    // ResizeObserver не доставит финальный размер, окно остаётся посчитанным
+    // против переходной высоты. Таймауты добивают финальный реальный размер.
+    const timers = [120, 260, 420].map((ms) => setTimeout(syncFromNode, ms))
+    const clearTimers = () => timers.forEach((t) => clearTimeout(t))
+    if (typeof raf !== 'function') return clearTimers
     const ids: number[] = []
     let count = 0
     const tick = () => {
@@ -116,6 +122,7 @@ export function useWebVirtualization({ itemKeys, hasMore, onLoadMore }: UseWebVi
     }
     ids.push(raf(tick))
     return () => {
+      clearTimers()
       if (typeof caf === 'function') ids.forEach((id) => caf(id))
     }
   }, [syncFromNode, itemKeys.length])
@@ -158,7 +165,13 @@ export function useWebVirtualization({ itemKeys, hasMore, onLoadMore }: UseWebVi
     () =>
       computeVirtualWindowVariable(
         webScrollY,
-        webViewportH || WEB_DEFAULT_VIEWPORT_HEIGHT,
+        // Floor the viewport with the default rather than `|| default`: при первом
+        // открытии шторки контейнер ещё анимирует высоту (height-transition 200ms),
+        // и ранний ResizeObserver/onLayout может зафиксировать крошечную переходную
+        // высоту (напр. 40px) ДО финального размера. С `||` такое ненулевое значение
+        // схлопывало окно до 1 карточки, и тело выглядело пустым до ручного скролла.
+        // Floor гарантирует начальный батч минимум на ~два экрана.
+        Math.max(webViewportH, WEB_DEFAULT_VIEWPORT_HEIGHT),
         itemKeys.length,
         (i) =>
           itemHeightsRef.current.get(itemKeys[i]) ?? WEB_ESTIMATED_ITEM_HEIGHT_PX,

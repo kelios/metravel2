@@ -399,6 +399,35 @@ export const getStyles = (
         fontWeight: '700',
         lineHeight: 12,
       },
+      // Desktop-web «Искать в этой области» pill: centered at the top of the map
+      // area, Google-Maps-style. Appears only after the map is panned away from
+      // the search anchor (controller-driven canSearchThisArea).
+      desktopSearchAreaButton: {
+        position: 'absolute',
+        top: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingHorizontal: 16,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: themedColors.primary,
+        zIndex: 1001,
+        ...(Platform.OS === 'web'
+          ? ({
+              left: '50%',
+              transform: [{ translateX: '-50%' }],
+              cursor: 'pointer',
+              boxShadow: '0 4px 16px rgba(15,23,42,0.18), 0 1px 4px rgba(0,0,0,0.08)',
+              transition: 'background-color 0.15s ease',
+            } as any)
+          : { alignSelf: 'center', ...shadowMedium }),
+      },
+      desktopSearchAreaButtonText: {
+        color: themedColors.textOnPrimary,
+        fontSize: 13,
+        fontWeight: '600',
+      },
       panelPlaceholder: {
         flex: 1,
         justifyContent: 'center',
