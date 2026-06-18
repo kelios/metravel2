@@ -1,10 +1,10 @@
-import React, { useCallback, useMemo } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import MapSearchInput from '@/components/MapPage/MapSearchInput'
 import Chip from '@/components/ui/Chip'
-import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig'
+import { DEFAULT_RADIUS_KM, formatRadiusLabel } from '@/constants/mapConfig'
 import type { ThemedColors } from '@/hooks/useTheme'
 
 import { CATEGORY_ICONS } from './mapCategoryIcons'
@@ -18,12 +18,6 @@ function getCategoryName(category: CategoryOption): string {
     if (typeof category.value === 'string') return category.value.trim()
   }
   return ''
-}
-
-function getRadiusLabel(rawValue: string | number | undefined): string {
-  const value = String(rawValue ?? '').trim()
-  if (!value) return ''
-  return /км$/i.test(value) ? value : `${value} км`
 }
 
 interface FiltersPanelRadiusSectionProps {
@@ -103,6 +97,8 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
       )
   }, [filters.categoryTravelAddress, travelCategoriesCount])
 
+  const [categoriesExpanded, setCategoriesExpanded] = useState(false)
+
   const selectedCategoryValues = useMemo(
     () =>
       Array.isArray(filterValue.categoryTravelAddress)
@@ -114,8 +110,33 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
   )
 
   const selectedCategoriesCount = selectedCategoryValues.length
+
+  const orderedCategories = useMemo(() => {
+    const selectedSet = new Set(selectedCategoryValues)
+    const selected = categoryOptions.filter((category) => selectedSet.has(category.value))
+    const unselected = categoryOptions
+      .filter((category) => !selectedSet.has(category.value))
+      .sort((left, right) => {
+        if (right.count !== left.count) return right.count - left.count
+        return left.value.localeCompare(right.value, 'ru')
+      })
+    return { selected, unselected }
+  }, [categoryOptions, selectedCategoryValues])
+
+  const COLLAPSED_UNSELECTED_LIMIT = 8
+  const hiddenUnselectedCount = Math.max(
+    0,
+    orderedCategories.unselected.length - COLLAPSED_UNSELECTED_LIMIT,
+  )
+  const canCollapse = hiddenUnselectedCount > 0
+  const visibleUnselected =
+    canCollapse && !categoriesExpanded
+      ? orderedCategories.unselected.slice(0, COLLAPSED_UNSELECTED_LIMIT)
+      : orderedCategories.unselected
+  const visibleCategories = [...orderedCategories.selected, ...visibleUnselected]
+
   const radiusSummaryValue = filterValue.radius || DEFAULT_RADIUS_KM
-  const radiusSummaryText = getRadiusLabel(radiusSummaryValue)
+  const radiusSummaryText = formatRadiusLabel(radiusSummaryValue)
   const searchQueryValue = String(filterValue.searchQuery || '')
 
   const handleSearchChange = useCallback(
@@ -141,7 +162,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
     if (!current) return base
     if (base.some((option) => String(option.id) === current)) return base
 
-    const next = [...base, { id: current, name: getRadiusLabel(current) }]
+    const next = [...base, { id: current, name: formatRadiusLabel(current) }]
     next.sort((a, b) => {
       const aValue = Number(String(a.id).replace(/\D/g, '')) || 0
       const bValue = Number(String(b.id).replace(/\D/g, '')) || 0
@@ -180,7 +201,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
           >
             {radiusOptions.map((option) => {
               const selected = String(option.id) === String(radiusSummaryValue)
-              const label = getRadiusLabel(option.name || option.id)
+              const label = formatRadiusLabel(option.name || option.id)
               return (
                 <Pressable
                   key={String(option.id)}
@@ -188,7 +209,10 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
                   testID={`radius-option-${option.id}`}
                   accessibilityRole="radio"
                   accessibilityLabel={label}
-                  accessibilityState={{ selected }}
+                  // role=radio ждёт aria-checked; accessibilityState.checked не
+                  // маппится в aria в RN Web (Expo 55) — дублируем прямым aria-checked.
+                  accessibilityState={{ checked: selected }}
+                  aria-checked={selected}
                   style={({ pressed }) => [
                     styles.radiusSegment,
                     selected && styles.radiusSegmentSelected,
@@ -222,35 +246,61 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
         {!isMobile && <Text style={styles.sectionHint}>Уточните тип мест</Text>}
 
         {categoryOptions.length > 0 ? (
-          <View style={styles.filterSelectionChips} testID="category-options">
-            {categoryOptions.map((category, index) => {
-              const selected = selectedCategoryValues.includes(category.value)
-              const iconName = CATEGORY_ICONS[category.value]
-              return (
-                <Chip
-                  key={String(category.id)}
-                  label={category.value}
-                  count={category.count}
-                  selected={selected}
-                  onPress={() => handleCategoryToggle(category.value)}
-                  testID={`category-option-${index}`}
-                  style={[
-                    styles.filterSelectionChip,
-                    selected && styles.filterSelectionChipSelected,
-                  ]}
-                  icon={
-                    iconName ? (
-                      <Feather
-                        name={iconName}
-                        size={12}
-                        color={selected ? colors.primaryText : colors.primary}
-                      />
-                    ) : undefined
-                  }
+          <>
+            <View style={styles.filterSelectionChips} testID="category-options">
+              {visibleCategories.map((category, index) => {
+                const selected = selectedCategoryValues.includes(category.value)
+                const iconName = CATEGORY_ICONS[category.value]
+                return (
+                  <Chip
+                    key={String(category.id)}
+                    label={category.value}
+                    count={category.count}
+                    selected={selected}
+                    onPress={() => handleCategoryToggle(category.value)}
+                    testID={`category-option-${index}`}
+                    style={[
+                      styles.filterSelectionChip,
+                      selected && styles.filterSelectionChipSelected,
+                    ]}
+                    icon={
+                      iconName ? (
+                        <Feather
+                          name={iconName}
+                          size={12}
+                          color={selected ? colors.primaryText : colors.primary}
+                        />
+                      ) : undefined
+                    }
+                  />
+                )
+              })}
+            </View>
+            {canCollapse && (
+              <Pressable
+                onPress={() => setCategoriesExpanded((prev) => !prev)}
+                testID="category-options-toggle"
+                accessibilityRole="button"
+                accessibilityLabel={
+                  categoriesExpanded
+                    ? 'Свернуть список категорий'
+                    : `Показать ещё ${hiddenUnselectedCount} категорий`
+                }
+                style={styles.categoriesToggle}
+              >
+                <Feather
+                  name={categoriesExpanded ? 'chevron-up' : 'chevron-down'}
+                  size={14}
+                  color={colors.primary}
                 />
-              )
-            })}
-          </View>
+                <Text style={styles.categoriesToggleText}>
+                  {categoriesExpanded
+                    ? 'Свернуть'
+                    : `Показать ещё (${hiddenUnselectedCount})`}
+                </Text>
+              </Pressable>
+            )}
+          </>
         ) : (
           <Text style={styles.sectionHint}>Нет доступных категорий в текущем радиусе</Text>
         )}

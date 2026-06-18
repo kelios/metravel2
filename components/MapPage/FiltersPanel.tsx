@@ -74,6 +74,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
     userLocation,
     onPlaceSelect,
     onOpenList,
+    isBusy,
   } = useFiltersContext();
   const {
     colors,
@@ -141,6 +142,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         mapUiApi={mapUiApi}
         isMobile={isMobile}
         totalPoints={totalPoints}
+        isBusy={isBusy}
         hasFilters={hasActiveFilters}
         canBuildRoute={canBuildRoute}
         onFilterChange={onFilterChange}

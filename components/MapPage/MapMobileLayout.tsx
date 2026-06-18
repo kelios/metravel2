@@ -7,6 +7,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe'
 import { LAYOUT } from '@/constants/layout'
+import { formatRadiusLabel } from '@/constants/mapConfig'
 import { formatPlaces } from '@/utils/pluralize'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
@@ -282,7 +283,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   )
 
   const radiusChipLabel = useMemo(
-    () => (activeRadius ? `${activeRadius} км` : 'Радиус'),
+    () => formatRadiusLabel(activeRadius),
     [activeRadius],
   )
 

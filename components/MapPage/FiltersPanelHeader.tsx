@@ -5,6 +5,7 @@ import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import IconButton from '@/components/ui/IconButton';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { formatPlaces } from '@/utils/pluralize';
+import { DEFAULT_RADIUS_KM, formatRadiusLabel } from '@/constants/mapConfig';
 
 interface FiltersPanelHeaderProps {
   colors: ThemedColors;
@@ -29,7 +30,7 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
 }) => {
   const summary =
     mode === 'radius'
-      ? `${formatPlaces(totalPoints)} · радиус ${radiusValue || '60'} км`
+      ? `${formatPlaces(totalPoints)} · радиус ${formatRadiusLabel(radiusValue || DEFAULT_RADIUS_KM)}`
       : 'Отметьте на карте старт и финиш';
   const helper =
     mode === 'radius'
@@ -38,7 +39,7 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
   const showCompactDetails = !isMobile;
   const compactSummary =
     mode === 'radius'
-      ? `${formatPlaces(totalPoints)} · ${radiusValue || '60'} км`
+      ? `${formatPlaces(totalPoints)} · ${formatRadiusLabel(radiusValue || DEFAULT_RADIUS_KM)}`
       : 'Старт и финиш — на карте';
 
   return (

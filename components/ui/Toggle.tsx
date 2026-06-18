@@ -7,16 +7,35 @@ interface ToggleProps {
   onValueChange: (value: boolean) => void;
   disabled?: boolean;
   style?: ViewStyle;
+  /**
+   * Если Toggle вложен в строку, которая сама несёт role="switch"
+   * (см. FiltersPanelMapSettings), делаем его презентационным, чтобы не было
+   * вложенных switch (a11y-антипаттерн): без role и без aria-checked.
+   */
+  presentational?: boolean;
 }
 
-export const Toggle: React.FC<ToggleProps> = ({ 
-  value, 
-  onValueChange, 
+export const Toggle: React.FC<ToggleProps> = ({
+  value,
+  onValueChange,
   disabled = false,
-  style 
+  style,
+  presentational = false,
 }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  // RN Web прокидывает aria-* напрямую в DOM, в отличие от accessibilityState
+  // (checked НЕ маппится в aria-checked в react-native-web Expo 55).
+  const ariaProps = presentational
+    ? ({ 'aria-hidden': true, accessibilityElementsHidden: true } as any)
+    : ({
+        accessibilityRole: 'switch',
+        accessibilityState: { checked: value, disabled },
+        accessibilityLabel: value ? 'Включено' : 'Выключено',
+        'aria-checked': value,
+        'aria-disabled': disabled || undefined,
+      } as any);
 
   return (
     <Pressable
@@ -30,9 +49,8 @@ export const Toggle: React.FC<ToggleProps> = ({
         if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
         if (!disabled) onValueChange(!value);
       }}
-      accessibilityRole="switch"
-      accessibilityState={{ checked: value, disabled }}
-      accessibilityLabel={value ? 'Включено' : 'Выключено'}
+      focusable={!presentational}
+      {...ariaProps}
     >
       <View 
         style={[

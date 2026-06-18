@@ -51,6 +51,7 @@ interface FiltersPanelBodyProps {
   mapUiApi?: MapUiApi | null
   isMobile: boolean
   totalPoints: number
+  isBusy?: boolean
   hasFilters: boolean
   canBuildRoute: boolean
   onFilterChange: (field: string, value: any) => void
@@ -91,6 +92,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
   mapUiApi,
   isMobile,
   totalPoints,
+  isBusy,
   hasFilters,
   canBuildRoute,
   onFilterChange,
@@ -134,6 +136,9 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
   }, [filterValue.radius, filters.radius])
 
   const noPointsInRadius = mode === 'radius' && totalPoints === 0
+  // #211 — empty-state показываем только когда запрос завершён: иначе «Ничего не
+  // нашлось» мигает во время рефетча/дебаунса (смена вкладок, режимов, первый фетч).
+  const showEmptyState = noPointsInRadius && !isBusy
 
   const mobileQuickChips = useMemo(() => {
     if (!isMobile || mode !== 'radius') return []
@@ -160,8 +165,8 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
   const mapToolsSection = (
     <View style={styles.sectionCard} testID="filters-block-map-tools">
       <CollapsibleSection
-        title="Управление картой"
-        icon="sliders"
+        title="Слои и настройки карты"
+        icon="layers"
         defaultOpen={false}
         tone="flat"
       >
@@ -253,7 +258,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
       {/* #212 — на десктопе слои сразу под фильтрами (до empty-state/рекомендаций). */}
       {!isMobile && mapToolsSection}
 
-      {noPointsInRadius && (
+      {showEmptyState && (
         <View style={styles.noPointsToast} testID="filters-empty-state">
           <Text style={styles.noPointsTitle}>Ничего не нашлось</Text>
           <Text style={styles.noPointsSubtitle}>

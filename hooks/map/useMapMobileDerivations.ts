@@ -5,6 +5,7 @@
 import { useMemo } from 'react'
 
 import { formatPlaces } from '@/utils/pluralize'
+import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig'
 
 type FiltersMode = 'radius' | 'route' | undefined
 
@@ -79,7 +80,7 @@ export function useMapMobileDerivations(
   const routePointsCount = Array.isArray(filtersContextProps?.routePoints)
     ? filtersContextProps!.routePoints!.length
     : 0
-  const activeRadius = filtersContextProps?.filterValue?.radius || '60'
+  const activeRadius = filtersContextProps?.filterValue?.radius || String(DEFAULT_RADIUS_KM)
 
   const quickFilterSelected = useMemo<string[]>(
     () =>

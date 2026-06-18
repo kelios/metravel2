@@ -54,6 +54,17 @@ class MapErrorBoundary extends Component<Props, State> {
     }
   }
 
+  componentDidUpdate(_prevProps: Props, prevState: State) {
+    // #217 — once the map subtree renders cleanly again after a recovery, give
+    // the budget back. Otherwise a desktop→mobile→desktop cycle (each flip
+    // remounts the Leaflet container and can throw "reused by another instance")
+    // permanently exhausts the lifetime budget of 2, leaving the third flip's
+    // error uncaught → blank map with 0 tiles until a full page reload.
+    if (prevState.hasError && !this.state.hasError) {
+      this._autoRetryCount = 0;
+    }
+  }
+
   /** Check if the error is a Metro module resolution failure (unrecoverable without reload). */
   private isModuleError(error: Error | null): boolean {
     const msg = String(error?.message ?? '');

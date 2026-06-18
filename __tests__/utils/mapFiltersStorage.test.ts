@@ -4,6 +4,7 @@ import {
   sanitizeMapFilterValues,
   type StorageLike,
 } from '@/utils/mapFiltersStorage';
+import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 
 describe('mapFiltersStorage', () => {
   const createStorage = (initial: Record<string, string> = {}): StorageLike & { data: Record<string, string> } => {
@@ -21,9 +22,9 @@ describe('mapFiltersStorage', () => {
   };
 
   it('sanitizeMapFilterValues returns defaults for invalid input', () => {
-    expect(sanitizeMapFilterValues(null)).toEqual({ categories: [], categoryTravelAddress: [], radius: '60', address: '', transportMode: 'car', lastMode: 'radius' });
-    expect(sanitizeMapFilterValues([])).toEqual({ categories: [], categoryTravelAddress: [], radius: '60', address: '', transportMode: 'car', lastMode: 'radius' });
-    expect(sanitizeMapFilterValues('x')).toEqual({ categories: [], categoryTravelAddress: [], radius: '60', address: '', transportMode: 'car', lastMode: 'radius' });
+    expect(sanitizeMapFilterValues(null)).toEqual({ categories: [], categoryTravelAddress: [], radius: String(DEFAULT_RADIUS_KM), address: '', transportMode: 'car', lastMode: 'radius' });
+    expect(sanitizeMapFilterValues([])).toEqual({ categories: [], categoryTravelAddress: [], radius: String(DEFAULT_RADIUS_KM), address: '', transportMode: 'car', lastMode: 'radius' });
+    expect(sanitizeMapFilterValues('x')).toEqual({ categories: [], categoryTravelAddress: [], radius: String(DEFAULT_RADIUS_KM), address: '', transportMode: 'car', lastMode: 'radius' });
   });
 
   it('sanitizeMapFilterValues validates and trims fields', () => {
@@ -85,7 +86,7 @@ describe('mapFiltersStorage', () => {
   it('loadMapFilterValues clears corrupted JSON', () => {
     const storage = createStorage({ 'map-filters': '{bad json' });
 
-    expect(loadMapFilterValues(storage)).toEqual({ categories: [], categoryTravelAddress: [], radius: '60', address: '', transportMode: 'car', lastMode: 'radius' });
+    expect(loadMapFilterValues(storage)).toEqual({ categories: [], categoryTravelAddress: [], radius: String(DEFAULT_RADIUS_KM), address: '', transportMode: 'car', lastMode: 'radius' });
     expect(storage.getItem('map-filters')).toBeNull();
   });
 

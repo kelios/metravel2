@@ -267,6 +267,8 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
                         accessibilityRole="switch"
                         accessibilityLabel={overlay.title}
                         accessibilityState={{ checked: enabled, disabled: !mapUiApi }}
+                        aria-checked={enabled}
+                        aria-disabled={!mapUiApi || undefined}
                         style={({ pressed }) => [
                           styles.mapToggleRow,
                           pressed && mapUiApi && styles.mapToggleRowPressed,
@@ -276,7 +278,12 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
                         <Text style={styles.mapToggleText} numberOfLines={2}>
                           {overlay.title}
                         </Text>
-                        <Toggle value={enabled} onValueChange={toggle} disabled={!mapUiApi} />
+                        <Toggle
+                          value={enabled}
+                          onValueChange={toggle}
+                          disabled={!mapUiApi}
+                          presentational
+                        />
                       </Pressable>
                     )
                   })}
@@ -301,6 +308,8 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
                       accessibilityRole="switch"
                       accessibilityLabel={category}
                       accessibilityState={{ checked: enabled, disabled: !mapUiApi }}
+                      aria-checked={enabled}
+                      aria-disabled={!mapUiApi || undefined}
                       style={({ pressed }) => [
                         styles.mapToggleRow,
                         pressed && mapUiApi && styles.mapToggleRowPressed,
@@ -310,7 +319,12 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
                       <Text style={styles.mapToggleText} numberOfLines={1}>
                         {category}
                       </Text>
-                      <Toggle value={enabled} onValueChange={onToggle} disabled={!mapUiApi} />
+                      <Toggle
+                        value={enabled}
+                        onValueChange={onToggle}
+                        disabled={!mapUiApi}
+                        presentational
+                      />
                     </Pressable>
                   )
                 })}

@@ -573,6 +573,10 @@ export function useMapScreenController() {
       userLocation: queryCoordinates,
       onPlaceSelect: buildRouteToStable,
       onOpenList: selectTravelsTab,
+      // #211 — карта/список грузятся или фильтры дебаунсятся: не показывать
+      // empty-state «Ничего не нашлось», пока идёт запрос (иначе мигает при
+      // смене вкладок/режимов и при первичной загрузке).
+      isBusy: loading || isFetching || isDebouncingFilters,
       hideTopControls: false,
       hideFooterCta: false,
       hideFooterReset: !isMobile,
@@ -586,6 +590,9 @@ export function useMapScreenController() {
       queryCoordinates,
       buildRouteToStable,
       selectTravelsTab,
+      loading,
+      isFetching,
+      isDebouncingFilters,
     ]
   );
 

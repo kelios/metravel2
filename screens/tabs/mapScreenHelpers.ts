@@ -1,4 +1,4 @@
-import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig'
+import { DEFAULT_RADIUS_KM, formatRadiusLabel } from '@/constants/mapConfig'
 
 export const TRANSPORT_LABELS: Record<string, string> = { bike: 'Велосипед', foot: 'Пешком' }
 
@@ -23,7 +23,7 @@ export function buildQuickFiltersData(
         ? selected[0]
         : `${selected.length} выбрано`
 
-  const radiusValue = currentRadius ? `${currentRadius} км` : `${DEFAULT_RADIUS_KM} км`
+  const radiusValue = formatRadiusLabel(currentRadius || DEFAULT_RADIUS_KM)
 
   const enabledCount = overlayOptions.filter((option: { id: string }) =>
     Boolean(enabledOverlays?.[option.id]),
@@ -51,8 +51,7 @@ export function buildActiveFilterItems(
 ): { key: string; label: string }[] {
   const items: { key: string; label: string }[] = []
   selectedCategories.forEach((cat: string) => items.push({ key: `cat:${cat}`, label: cat }))
-  const radiusVal = currentRadius || String(DEFAULT_RADIUS_KM)
-  items.push({ key: 'radius', label: `${radiusVal} км` })
+  items.push({ key: 'radius', label: formatRadiusLabel(currentRadius || DEFAULT_RADIUS_KM) })
   if (currentMode === 'route' && currentTransport !== 'car') {
     items.push({
       key: 'transport',

@@ -223,10 +223,20 @@ export const useRouteStore = create<RouteState>()(
         }
         return AsyncStorage;
       }),
+      // #211 — НЕ персистим mode: карта всегда открывается в режиме «места» (radius),
+      // иначе вернувшийся после построения маршрута пользователь попадает в route-режим
+      // с отключённым radius-запросом и видит пустую карту до ручного переключения.
+      // transportMode и points сохраняем — построенный маршрут не теряется.
       partialize: (state) => ({
-        mode: state.mode,
         transportMode: state.transportMode,
         points: state.points,
+      }),
+      // Форсим mode='radius' при рехидрации, чтобы и у существующих пользователей
+      // со старым persisted mode='route' карта открывалась в режиме «места».
+      merge: (persisted, current) => ({
+        ...current,
+        ...(persisted as Partial<RouteState>),
+        mode: 'radius' as const,
       }),
     }
   )

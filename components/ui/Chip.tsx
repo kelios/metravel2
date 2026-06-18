@@ -89,6 +89,9 @@ function Chip({ label, selected = false, count, icon, onPress, testID, disabled 
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ selected, disabled }}
+      // Чип — toggle-кнопка: aria-pressed корректно озвучивает выбор. accessibilityState
+      // не маппится в aria в RN Web (Expo 55), поэтому дублируем прямым aria-pressed.
+      aria-pressed={selected}
       onPress={onPress}
       disabled={disabled}
       testID={testID}

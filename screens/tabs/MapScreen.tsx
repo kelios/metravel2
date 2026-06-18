@@ -315,6 +315,17 @@ export default function MapScreen() {
     selectFiltersTab()
   }, [setPanelMode, selectFiltersTab])
 
+  // #211 — «Список точек» показывает места ВОКРУГ (radius-концепция). Если в эту
+  // вкладку попали из route-режима (например, кликнув список после «Маршрут»),
+  // запрос точек остаётся route-режимным и без построенного маршрута возвращает 0
+  // → пользователь видит пустой «Ничего не нашлось». Переводим в radius, чтобы
+  // список отражал ближайшие места. Маршрут сохраняется (setMode не очищает точки).
+  useEffect(() => {
+    if (rightPanelTab === 'travels' && currentMode === 'route') {
+      setPanelMode?.('radius')
+    }
+  }, [rightPanelTab, currentMode, setPanelMode])
+
   const activePanelTab: 'search' | 'route' | 'travels' =
     rightPanelTab === 'travels' ? 'travels' : currentMode === 'route' ? 'route' : 'search'
 

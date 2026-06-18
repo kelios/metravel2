@@ -1,3 +1,5 @@
+import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
+
 export interface MapFilterValues {
   categories: string[];
   categoryTravelAddress: string[];
@@ -24,7 +26,7 @@ export function sanitizeMapFilterValues(input: unknown): MapFilterValues {
   const fallback: MapFilterValues = {
     categories: [],
     categoryTravelAddress: [],
-    radius: '60',
+    radius: String(DEFAULT_RADIUS_KM),
     address: '',
     transportMode: 'car',
     lastMode: 'radius'
@@ -53,7 +55,7 @@ export function sanitizeMapFilterValues(input: unknown): MapFilterValues {
   const categoryTravelAddress = sanitizeNamedList(unsafe.categoryTravelAddress);
 
   const radius =
-    typeof unsafe.radius === 'string' && /^\d+$/.test(unsafe.radius) ? unsafe.radius : '60';
+    typeof unsafe.radius === 'string' && /^\d+$/.test(unsafe.radius) ? unsafe.radius : String(DEFAULT_RADIUS_KM);
 
   const address =
     typeof unsafe.address === 'string' && unsafe.address.length < MAX_ADDRESS_LENGTH
@@ -87,7 +89,7 @@ export function loadMapFilterValues(storage: StorageLike): MapFilterValues {
       return {
         categories: [],
         categoryTravelAddress: [],
-        radius: '60',
+        radius: String(DEFAULT_RADIUS_KM),
         address: '',
         transportMode: 'car',
         lastMode: 'radius',
@@ -105,7 +107,7 @@ export function loadMapFilterValues(storage: StorageLike): MapFilterValues {
     return {
       categories: [],
       categoryTravelAddress: [],
-      radius: '60',
+      radius: String(DEFAULT_RADIUS_KM),
       address: '',
       transportMode: 'car',
       lastMode: 'radius'

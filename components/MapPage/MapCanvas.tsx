@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
+import { formatRadiusLabel } from '@/constants/mapConfig'
 import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton'
 import MapPanel from '@/components/MapPage/MapPanel'
 import { MapLoadingBar } from '@/components/MapPage/MapLoadingBar'
@@ -67,7 +68,7 @@ export function MapCanvas({
           hitSlop={8}
         >
           <Feather name="radio" size={12} color={themedColors.primary} />
-          <Text style={styles.radiusPillText}>{currentRadius} км</Text>
+          <Text style={styles.radiusPillText}>{formatRadiusLabel(currentRadius)}</Text>
           <Feather name="chevron-down" size={11} color={themedColors.textMuted} />
         </Pressable>
       )}

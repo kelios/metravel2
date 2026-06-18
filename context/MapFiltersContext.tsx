@@ -39,6 +39,8 @@ export interface FiltersContextValue {
   // Data
   travelsData: { categoryName?: string }[];
   filteredTravelsData?: { categoryName?: string }[];
+  // #211 — карта/список грузятся или фильтры дебаунсятся (для гейта empty-state).
+  isBusy?: boolean;
 
   // UI
   isMobile: boolean;
@@ -128,6 +130,10 @@ export function FiltersProvider({ children, ...contextValue }: FiltersProviderPr
     contextValue.filterValue,
     contextValue.onFilterChange,
     contextValue.resetFilters,
+    contextValue.overlayOptions,
+    contextValue.enabledOverlays,
+    contextValue.onOverlayToggle,
+    contextValue.onResetOverlays,
     contextValue.travelsData,
     contextValue.filteredTravelsData,
     contextValue.isMobile,

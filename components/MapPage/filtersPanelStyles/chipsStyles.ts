@@ -238,4 +238,18 @@ export const getChipsStyles = ({ colors, isMobile }: FiltersPanelStyleContext) =
       fontWeight: '700',
       color: colors.text,
     },
+    categoriesToggle: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      alignSelf: 'flex-start',
+      marginTop: 8,
+      paddingVertical: 4,
+      paddingHorizontal: 2,
+    },
+    categoriesToggleText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.primary,
+    },
   }) as const

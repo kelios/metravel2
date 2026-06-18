@@ -907,16 +907,17 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       const props = {
         ...defaultProps,
         mode: 'radius' as const,
-        // radius не передаем, должен использоваться дефолт 60км -> 60000м
+        // radius не передаем — должен использоваться дефолт DEFAULT_RADIUS_KM (в метрах)
       }
 
       renderWithProviders(<MapPageComponent {...props} />)
       await act(async () => {})
 
       // Проверяем радиус через пропсы, сохранённые в моке Circle
+      const { DEFAULT_RADIUS_KM } = require('@/constants/mapConfig')
       const circleProps = (globalThis as any).lastCircleProps
       expect(circleProps).toBeDefined()
-      expect(circleProps.radius).toBe(60000)
+      expect(circleProps.radius).toBe(DEFAULT_RADIUS_KM * 1000)
     })
 
     it('uses provided radius prop (in km) and converts it to meters', async () => {
