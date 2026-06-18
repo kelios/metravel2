@@ -1,5 +1,5 @@
-import React, { useMemo, useRef } from 'react'
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
+import React, { useMemo } from 'react'
+import { Platform, StyleSheet, Text, View } from 'react-native'
 
 import { getMapPointKey } from '@/hooks/map/useMapTravels'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
@@ -56,7 +56,6 @@ export const QuickRecommendations: React.FC<Props> = React.memo(
   }) => {
     const colors = useThemedColors()
     const styles = useMemo(() => getStyles(colors), [colors])
-    const scrollRef = useRef<ScrollView | null>(null)
 
     const topPlaces = useMemo(() => {
       if (!userLocation || !places.length) return []
@@ -101,7 +100,7 @@ export const QuickRecommendations: React.FC<Props> = React.memo(
             <MapIcon name="star" size={20} color={colors.primary} />
             <Text style={styles.title}>Популярное рядом</Text>
           </View>
-          <View style={styles.webCards}>
+          <View style={styles.cardStack}>
             <SkeletonCard styles={styles} />
             <SkeletonCard styles={styles} />
           </View>
@@ -137,7 +136,7 @@ export const QuickRecommendations: React.FC<Props> = React.memo(
           imageHeight={IS_WEB ? 156 : 148}
           titleLayout="content"
           titleNumberOfLines={3}
-          style={[styles.card, IS_WEB && styles.cardWeb]}
+          style={styles.card}
         />
       )
     })
@@ -148,21 +147,7 @@ export const QuickRecommendations: React.FC<Props> = React.memo(
           <MapIcon name="star" size={20} color={colors.primary} />
           <Text style={styles.title}>Популярное рядом</Text>
         </View>
-        {IS_WEB ? (
-          <View style={styles.webCards}>{cards}</View>
-        ) : (
-          <ScrollView
-            ref={scrollRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            nestedScrollEnabled
-            scrollEnabled
-            style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-          >
-            {cards}
-          </ScrollView>
-        )}
+        <View style={styles.cardStack}>{cards}</View>
       </View>
     )
   },
@@ -184,23 +169,13 @@ const getStyles = (colors: ThemedColors) =>
       color: colors.text,
       letterSpacing: -0.3,
     },
-    webCards: { paddingHorizontal: 8, gap: 12 },
-    scrollContent: { paddingHorizontal: 8, gap: 12 },
-    scroll: {
-      ...Platform.select({
-        web: {
-          overflowX: 'auto',
-          overflowY: 'hidden',
-          WebkitOverflowScrolling: 'touch',
-          overscrollBehaviorX: 'contain',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-          touchAction: 'pan-x pan-y',
-        } as any,
-      }),
-    },
+    // Recommendation cards stack vertically and stretch to the section width
+    // on BOTH platforms, so the featured/«Популярное рядом» card matches the
+    // full-width «Места рядом» list cards (no narrow centered first card).
+    cardStack: { paddingHorizontal: 8, gap: 12 },
     card: {
-      width: 220,
+      width: '100%',
+      alignSelf: 'stretch',
       backgroundColor: colors.surface,
       borderRadius: 16,
       overflow: 'hidden',
@@ -208,7 +183,6 @@ const getStyles = (colors: ThemedColors) =>
       borderWidth: 1,
       borderColor: colors.border,
     },
-    cardWeb: { width: '100%' },
     skeletonCard: {
       width: '100%',
       backgroundColor: colors.surface,

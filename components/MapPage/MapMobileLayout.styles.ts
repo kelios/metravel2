@@ -424,87 +424,18 @@ export const getMapMobileLayoutStyles = (
       flexShrink: 0,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
-    // FAB локации поверх карты (maps.me-style, всегда виден).
-    locateFab: {
-      position: 'absolute' as const,
-      right: options.isNarrow ? 12 : 14,
-      bottom: Platform.OS === 'web'
-        ? (`calc(${options.isNarrow ? 88 : 96}px + env(safe-area-inset-bottom))` as any)
-        : options.isNarrow
-          ? 88
-          : 96,
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-      backgroundColor: colors.surface,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
-      zIndex: 1400,
-      ...(Platform.OS === 'web'
-        ? ({
-            boxShadow: '0 4px 12px rgba(15,23,42,0.12)',
-            cursor: 'pointer',
-          } as any)
-        : {
-            shadowColor: DESIGN_TOKENS.colors.text,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.12,
-            shadowRadius: 6,
-            elevation: 4,
-          }),
-    },
-    // «Списком · N» — центрированная кнопка снизу (maps.me-style вход в список).
-    listButton: {
-      position: 'absolute' as const,
-      alignSelf: 'center' as const,
-      bottom: Platform.OS === 'web'
-        ? (`calc(${options.isNarrow ? 88 : 96}px + env(safe-area-inset-bottom))` as any)
-        : options.isNarrow
-          ? 88
-          : 96,
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-      gap: 6,
-      height: 44,
-      paddingHorizontal: 18,
-      borderRadius: 22,
-      backgroundColor: colors.primary,
-      zIndex: 1400,
-      ...(Platform.OS === 'web'
-        ? ({
-            boxShadow: '0 4px 14px rgba(15,23,42,0.20)',
-            cursor: 'pointer',
-          } as any)
-        : {
-            shadowColor: DESIGN_TOKENS.colors.text,
-            shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: 0.18,
-            shadowRadius: 8,
-            elevation: 5,
-          }),
-    },
-    listButtonText: {
-      fontSize: 14,
-      fontWeight: '800' as const,
-      color: colors.textOnPrimary,
-      letterSpacing: 0.1,
-    },
     // F-49 — «Искать в этой области» — pill по центру СНИЗУ (Google/Organic
-    // Maps): над «Списком · N» и нижним доком, по центру. listButton сидит на
-    // bottom 88/96 + safe-area (высота 44), его верх ~132/140 + safe-area —
-    // ставим pill ещё выше с зазором, чтобы они не перекрывались, а locateFab
-    // (справа) остаётся сбоку и не пересекается с центрированным pill.
+    // Maps). Локация и список переехали в верхний icon-toolbar, поэтому снизу
+    // остаётся только этот pill — держим его на комфортной высоте над нижним
+    // доком/safe-area.
     searchAreaButton: {
       position: 'absolute' as const,
       alignSelf: 'center' as const,
       bottom: Platform.OS === 'web'
-        ? (`calc(${options.isNarrow ? 144 : 152}px + env(safe-area-inset-bottom))` as any)
+        ? (`calc(${options.isNarrow ? 96 : 104}px + env(safe-area-inset-bottom))` as any)
         : options.isNarrow
-          ? 144
-          : 152,
+          ? 96
+          : 104,
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,

@@ -6,7 +6,6 @@ import Feather from '@expo/vector-icons/Feather'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe'
 import { LAYOUT } from '@/constants/layout'
-import { formatRadiusLabel } from '@/constants/mapConfig'
 import { formatPlaces } from '@/utils/pluralize'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
@@ -18,7 +17,7 @@ import { MapMobileSheetBody } from './MapMobile/MapMobileSheetBody'
 import { MapMobileTopOverlay } from './MapMobile/MapMobileTopOverlay'
 import MapPlaceBottomCard from './MapPlaceBottomCard'
 
-type SheetState = 'collapsed' | 'quarter' | 'half' | 'full'
+type SheetState = 'collapsed' | 'quarter' | 'half' | 'seventy' | 'full'
 // Что показываем в шторке, когда она открыта (по запросу пользователя).
 type SheetContentKind = 'list' | 'filters' | 'route'
 type FiltersMode = 'radius' | 'route'
@@ -95,6 +94,8 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   // Контент шторки = list (по умолчанию) | filters (поиск/радиус/категории) | route.
   const [sheetContent, setSheetContent] = useState<SheetContentKind>('list')
+  // Какой компактный поповер верхнего тулбара открыт (радиус/слои) — или ни один.
+  const [activePopover, setActivePopover] = useState<'radius' | 'layers' | null>(null)
   const sheetStateRef = useRef<SheetState>('collapsed')
   const [sheetState, setSheetState] = useState<SheetState>('collapsed')
 
@@ -111,7 +112,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   const commandNonce = useMapPanelStore((s) => s.commandNonce)
   const command = useMapPanelStore((s) => s.command)
-  const requestSearchFocus = useMapPanelStore((s) => s.requestSearchFocus)
 
   const setBottomSheetState = useBottomSheetStore((s) => s.setState)
 
@@ -120,9 +120,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const filtersMode: FiltersMode | undefined = filtersContextProps?.mode
   const setFiltersMode: ((m: FiltersMode) => void) | undefined =
     filtersContextProps?.setMode
-  const onFilterChange:
-    | ((field: string, value: unknown) => void)
-    | undefined = filtersContextProps?.onFilterChange
 
   const handleSheetStateChange = useCallback(
     (state: SheetState) => {
@@ -152,23 +149,33 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     bottomSheetRef.current?.snapToHalf()
   }, [clearSelectedPlace])
 
-  // Все on-demand шторки (список/фильтры/маршрут) открываются на ОДНОЙ высоте
-  // (half) — единый предсказуемый размер окна; пользователь тянет вверх до full.
+  // Иконки верхнего overlay (радиус/слои/фильтры) открывают шит фильтров на ~70%
+  // высоты экрана — единый предсказуемый размер окна; пользователь тянет вверх до
+  // full. Автофокус поля поиска по тапу НЕ запрашиваем: поиск теперь внутри
+  // «Фильтров», клавиатура поднимается только при ручном тапе по полю
+  // (keyboard-avoidance сохранён в самом шите).
   const openFiltersSheet = useCallback(() => {
+    setActivePopover(null)
     clearSelectedPlace?.()
     setFiltersMode?.('radius')
     setSheetContent('filters')
-    bottomSheetRef.current?.snapToHalf()
+    bottomSheetRef.current?.snapToSeventy()
     onOpenFilters()
   }, [onOpenFilters, setFiltersMode, clearSelectedPlace])
 
-  // Тап по строке «Искать места»: открываем шит фильтров И сразу просим поле
-  // поиска по названию сфокусироваться (открыть клавиатуру), чтобы поиск был в
-  // один тап с вводом, а не вслепую через два шага.
-  const openSearchSheet = useCallback(() => {
-    openFiltersSheet()
-    requestSearchFocus()
-  }, [openFiltersSheet, requestSearchFocus])
+  const closePopover = useCallback(() => setActivePopover(null), [])
+
+  // Радиус/Слои теперь компактные поповеры под иконкой (не шит на 70%): тогглим
+  // локальный state; повторный тап по той же иконке закрывает поповер.
+  const toggleRadiusPopover = useCallback(() => {
+    clearSelectedPlace?.()
+    setActivePopover((prev) => (prev === 'radius' ? null : 'radius'))
+  }, [clearSelectedPlace])
+
+  const toggleLayersPopover = useCallback(() => {
+    clearSelectedPlace?.()
+    setActivePopover((prev) => (prev === 'layers' ? null : 'layers'))
+  }, [clearSelectedPlace])
 
   const openRouteSheet = useCallback(() => {
     clearSelectedPlace?.()
@@ -266,48 +273,47 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     isNarrow,
   )
 
-  const {
-    filterToolbarSummary,
-    activeRadius,
-    topCategoryChips,
-    hasMoreCategories,
-    selectedCategories,
-  } = derivations
+  const { activeRadius, quickRadiusOptions, quickOverlayOptions, quickEnabledOverlays } =
+    derivations
 
-  // Мгновенный toggle категории прямо с чипа верхнего overlay.
-  const handleToggleCategory = useCallback(
+  // Бейдж на кнопке радиуса — короткое число (напр. «50»), без единиц.
+  const radiusBadge = useMemo(() => {
+    const n = Number(activeRadius)
+    return Number.isFinite(n) && n > 0 ? String(n) : ''
+  }, [activeRadius])
+
+  // Бейдж на кнопке «Список» — количество мест рядом (cap 999+).
+  const listBadge = useMemo(() => {
+    const n = travelsData.length
+    if (!n) return ''
+    return n > 999 ? '999+' : String(n)
+  }, [travelsData.length])
+
+  // Радиус-поповер и слои-поповер переиспользуют ту же модель, что и шит:
+  // onFilterChange('radius', id) и контролируемое состояние оверлеев из контекста.
+  const onFilterChange = filtersContextProps?.onFilterChange as
+    | ((field: string, value: unknown) => void)
+    | undefined
+  const handleRadiusSelect = useCallback(
     (id: string) => {
-      if (!onFilterChange) return
-      const current = Array.isArray(
-        filtersContextProps?.filterValue?.categoryTravelAddress,
-      )
-        ? (filtersContextProps!.filterValue!
-            .categoryTravelAddress as unknown[]).map((v) => String(v))
-        : []
-      const exists = current.includes(id)
-      const next = exists
-        ? current.filter((v) => v !== id)
-        : [...current, id]
-      onFilterChange('categoryTravelAddress', next)
+      onFilterChange?.('radius', id)
     },
-    [onFilterChange, filtersContextProps],
+    [onFilterChange],
   )
-
-  const radiusChipLabel = useMemo(
-    () => formatRadiusLabel(activeRadius),
-    [activeRadius],
-  )
-
-  const searchSummary = useMemo(() => {
-    if (selectedCategories.length > 0) return filterToolbarSummary
-    return 'Искать места'
-  }, [filterToolbarSummary, selectedCategories.length])
+  const onOverlayToggle = filtersContextProps?.onOverlayToggle as
+    | ((id: string, enabled: boolean) => void)
+    | undefined
+  const onResetOverlays = filtersContextProps?.onResetOverlays as (() => void) | undefined
+  const mapUiApi = filtersContextProps?.mapUiApi ?? null
 
   // #207 — when a marker is selected, collapse the on-demand sheet so the bottom
   // card is not covered. Opening any sheet (list/filters/route) clears the card.
   const hasSelectedPlace = !!selectedPlace
   useEffect(() => {
-    if (hasSelectedPlace) bottomSheetRef.current?.snapToCollapsed()
+    if (hasSelectedPlace) {
+      bottomSheetRef.current?.snapToCollapsed()
+      setActivePopover(null)
+    }
   }, [hasSelectedPlace])
 
   const handleClearSelectedPlace = useCallback(() => {
@@ -319,8 +325,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   // плавающие контролы на контент).
   const showSearchAreaButton =
     !!canSearchThisArea && !!onSearchThisArea && sheetState !== 'full' && !hasSelectedPlace
-
-  const isCollapsed = sheetState === 'collapsed'
 
   const bottomSheetInset = IS_WEB
     ? WEB_MOBILE_BOTTOM_DOCK_INSET +
@@ -426,14 +430,23 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           <MapMobileTopOverlay
             colors={colors}
             topInset={insets.top}
-            searchSummary={searchSummary}
-            radiusLabel={radiusChipLabel}
-            categoryChips={topCategoryChips}
-            hasMoreCategories={hasMoreCategories}
-            onOpenSearch={openSearchSheet}
+            radiusBadge={radiusBadge}
+            activePopover={activePopover}
+            onToggleRadius={toggleRadiusPopover}
+            onToggleLayers={toggleLayersPopover}
+            onClosePopover={closePopover}
             onOpenFilters={openFiltersSheet}
-            onOpenRadius={openFiltersSheet}
-            onToggleCategory={handleToggleCategory}
+            onCenterOnUser={onCenterOnUser}
+            onOpenList={openList}
+            listBadge={listBadge}
+            radiusOptions={quickRadiusOptions}
+            radiusValue={activeRadius}
+            onRadiusSelect={handleRadiusSelect}
+            mapUiApi={mapUiApi}
+            overlayOptions={quickOverlayOptions}
+            enabledOverlays={quickEnabledOverlays}
+            onOverlayToggle={onOverlayToggle}
+            onResetOverlays={onResetOverlays}
           />
         )}
 
@@ -458,36 +471,9 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           </Pressable>
         )}
 
-        {/* Locate FAB справа снизу. */}
-        <Pressable
-          testID="map-center-user-quick"
-          onPress={onCenterOnUser}
-          accessibilityRole="button"
-          accessibilityLabel="Показать мое местоположение"
-          style={({ pressed }) => [styles.locateFab, pressed && { opacity: 0.8 }]}
-        >
-          <Feather name="crosshair" size={20} color={colors.primary} />
-        </Pressable>
-
-        {/* «Списком · N» — единственный вход в список. Виден, когда шторка
-            свёрнута и не открыта карточка места. */}
-        {isCollapsed && !hasSelectedPlace && (
-          <Pressable
-            testID="map-mobile-open-list"
-            onPress={openList}
-            accessibilityRole="button"
-            accessibilityLabel={`Показать список — ${formatPlaces(travelsData.length)}`}
-            style={({ pressed }) => [
-              styles.listButton,
-              pressed && { opacity: 0.9 },
-            ]}
-          >
-            <Feather name="list" size={16} color={colors.textOnPrimary} />
-            <RNText style={styles.listButtonText} numberOfLines={1}>
-              Списком · {travelsData.length > 999 ? '999+' : travelsData.length}
-            </RNText>
-          </Pressable>
-        )}
+        {/* Локация и «Список · N» перенесены в верхний icon-toolbar
+            (MapMobileTopOverlay): нижний FAB локации и нижняя кнопка списка
+            больше не рендерятся. «Искать в этой области» остаётся снизу. */}
 
         {/* #207 — maps.me-style bottom card for a tapped single marker. */}
         {hasSelectedPlace && (

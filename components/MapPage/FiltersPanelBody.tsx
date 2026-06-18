@@ -1,5 +1,7 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Platform, ScrollView, Text, View } from 'react-native'
+
+import { useMapPanelStore } from '@/stores/mapPanelStore'
 
 import { QuickRecommendations } from '@/components/MapPage/QuickRecommendations'
 import FiltersPanelMapSettings from '@/components/MapPage/FiltersPanelMapSettings'
@@ -116,6 +118,46 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
     [filterValue.categoryTravelAddress],
   )
 
+  // Deep-link from the map top overlay "Слои" icon: expand + scroll to the
+  // "Слои и настройки карты" section. The store carries a monotonic nonce plus a
+  // latched `pendingLayersOpen` flag (mirrors search-focus): the nonce handles a
+  // body that is already mounted when the icon is tapped; the latch handles the
+  // body mounting AFTER the tap (sheet switching list→filters). Both feed a local
+  // strictly-incrementing `layersOpenSignal` so CollapsibleSection — which only
+  // reacts to a strict increment past its mount value — reliably expands.
+  const layersOpenNonce = useMapPanelStore((s) => s.layersOpenNonce)
+  const pendingLayersOpen = useMapPanelStore((s) => s.pendingLayersOpen)
+  const consumeLayersOpen = useMapPanelStore((s) => s.consumeLayersOpen)
+  const scrollRef = useRef<ScrollView>(null)
+  const layersOffsetRef = useRef(0)
+  const [layersOpenSignal, setLayersOpenSignal] = useState(0)
+
+  const scrollToLayers = () => {
+    scrollRef.current?.scrollTo({ y: Math.max(0, layersOffsetRef.current - 8), animated: true })
+  }
+
+  const triggerLayersOpen = () => {
+    setLayersOpenSignal((n) => n + 1)
+    setTimeout(scrollToLayers, 60)
+  }
+
+  // Nonce path: fires when the icon is tapped while the body is already mounted.
+  const lastLayersNonceRef = useRef(layersOpenNonce)
+  useEffect(() => {
+    if (layersOpenNonce === lastLayersNonceRef.current) return
+    lastLayersNonceRef.current = layersOpenNonce
+    triggerLayersOpen()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layersOpenNonce])
+
+  // Latch path: fires when the body mounts with a pending request already set.
+  useEffect(() => {
+    if (!pendingLayersOpen) return
+    triggerLayersOpen()
+    consumeLayersOpen()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingLayersOpen])
+
   const nextRadiusOption = useMemo(() => {
     const radiusOptions = Array.isArray(filters.radius) ? filters.radius : []
     const idx = radiusOptions.findIndex(
@@ -154,12 +196,19 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
   // чтобы слои были обнаружимы без прокрутки через весь контент панели; на мобиле
   // расположение не меняем — там слои доступны отдельной кнопкой.
   const mapToolsSection = (
-    <View style={styles.sectionCard} testID="filters-block-map-tools">
+    <View
+      style={styles.sectionCard}
+      testID="filters-block-map-tools"
+      onLayout={(e) => {
+        layersOffsetRef.current = e.nativeEvent.layout.y
+      }}
+    >
       <CollapsibleSection
         title="Слои и настройки карты"
         icon="layers"
         defaultOpen={false}
         tone="flat"
+        openSignal={layersOpenSignal}
       >
         <FiltersPanelMapSettings
           colors={colors}
@@ -185,6 +234,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
 
   return (
     <ScrollView
+      ref={scrollRef}
       testID="filters-panel-scroll"
       style={styles.content}
       showsVerticalScrollIndicator={Platform.OS !== 'web'}
@@ -279,8 +329,9 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
         </View>
       )}
 
-      {/* #212 — на мобиле раздел остаётся внизу (слои там доступны и отдельной кнопкой). */}
-      {isMobile && mapToolsSection}
+      {/* На мобиле «Слои и настройки карты» вынесены в компактный поповер
+          верхнего тулбара карты — в шите их не дублируем. На десктопе секция
+          уже отрендерена выше (сразу под фильтрами). */}
 
       {showRecommendations && (
         <View style={styles.sectionCard} testID="filters-block-recommendations">

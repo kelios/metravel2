@@ -5,7 +5,12 @@
 
 import { create } from 'zustand';
 
-export type BottomSheetState = 'collapsed' | 'quarter' | 'half' | 'full';
+export type BottomSheetState =
+  | 'collapsed'
+  | 'quarter'
+  | 'half'
+  | 'seventy'
+  | 'full';
 
 interface BottomSheetStore {
   /** Текущее состояние Bottom Sheet */
@@ -40,6 +45,10 @@ export const getBottomSheetControlsOffset = (
 
   if (state === 'half') {
     return Math.max(safeHeight + 16, 220);
+  }
+
+  if (state === 'seventy') {
+    return Math.max(safeHeight + 16, 320);
   }
 
   if (state === 'full') {

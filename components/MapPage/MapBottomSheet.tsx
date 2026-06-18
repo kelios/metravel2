@@ -22,13 +22,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 
-type SheetState = 'collapsed' | 'quarter' | 'half' | 'full'
+type SheetState = 'collapsed' | 'quarter' | 'half' | 'seventy' | 'full'
 
 const OPEN_DEBOUNCE_MS = 250
-const NATIVE_SNAP_POINTS = ['30%', '58%', '86%']
+// 70% snap (index 2) is the size all three top-overlay icons open the sheet to:
+// big enough to show search + categories + layers, без перехода в full.
+const NATIVE_SNAP_POINTS = ['30%', '58%', '70%', '86%']
 const SNAP_INDEX_QUARTER = 0
 const SNAP_INDEX_HALF = 1
-const SNAP_INDEX_FULL = 2
+const SNAP_INDEX_SEVENTY = 2
+const SNAP_INDEX_FULL = 3
 const CONTENT_BOTTOM_PADDING = 40
 
 interface MapBottomSheetProps {
@@ -45,6 +48,7 @@ export interface MapBottomSheetRef {
   snapToCollapsed: () => void
   snapToQuarter: () => void
   snapToHalf: () => void
+  snapToSeventy: () => void
   snapToFull: () => void
   close: () => void
 }
@@ -80,6 +84,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         snapToCollapsed: closeSheet,
         snapToQuarter: () => snapToIndex(SNAP_INDEX_QUARTER),
         snapToHalf: () => snapToIndex(SNAP_INDEX_HALF),
+        snapToSeventy: () => snapToIndex(SNAP_INDEX_SEVENTY),
         snapToFull: () => snapToIndex(SNAP_INDEX_FULL),
         close: closeSheet,
       }),
@@ -96,7 +101,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           onStateChange('collapsed')
           return
         }
-        const states: SheetState[] = ['quarter', 'half', 'full']
+        const states: SheetState[] = ['quarter', 'half', 'seventy', 'full']
         onStateChange(states[index] ?? 'collapsed')
       },
       [onStateChange],
@@ -123,7 +128,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           >
             <BottomSheetBackdrop
               {...props}
-              disappearsOnIndex={SNAP_INDEX_HALF}
+              disappearsOnIndex={SNAP_INDEX_SEVENTY}
               appearsOnIndex={SNAP_INDEX_FULL}
               opacity={0.5}
               pressBehavior="none"

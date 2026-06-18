@@ -1,5 +1,5 @@
 // components/MapPage/CollapsibleSection.tsx
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native'
 import Animated, {
   useAnimatedStyle,
@@ -19,6 +19,13 @@ interface CollapsibleSectionProps {
   accessibilityLabel?: string
   icon?: string
   tone?: 'default' | 'flat'
+  /**
+   * Monotonic counter — whenever it increments the section force-expands.
+   * Used to deep-link to a section (e.g. tapping the "Слои" icon in the map
+   * top overlay expands "Слои и настройки карты"). The user can still collapse
+   * it again afterwards; only a new increment re-opens it.
+   */
+  openSignal?: number
 }
 
 const SPRING = DESIGN_TOKENS.springs.snappy
@@ -31,11 +38,27 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   accessibilityLabel,
   icon,
   tone = 'default',
+  openSignal,
 }) => {
   const [open, setOpen] = useState(defaultOpen)
   const rotation = useSharedValue(defaultOpen ? 180 : 0)
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors, tone), [colors, tone])
+
+  // Force-expand when `openSignal` strictly increments (deep-link from outside).
+  // The ref seeds with the value present at mount so the INITIAL render never
+  // auto-opens — only a later bump does. (A section that mounts after the signal
+  // already fired is handled by the caller's latched `pending*` flag re-firing
+  // the request, mirroring the search-focus latch pattern.)
+  const lastOpenSignalRef = useRef(openSignal)
+  useEffect(() => {
+    if (openSignal === undefined) return
+    if (openSignal === lastOpenSignalRef.current) return
+    lastOpenSignalRef.current = openSignal
+    setOpen(true)
+    rotation.value = withSpring(180, SPRING)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openSignal])
 
   const safeChildren = useMemo(
     () =>

@@ -28,6 +28,7 @@ import {
   LIST_BOTTOM_PADDING,
   PLACE_COUNT_BADGE_CAP,
 } from './TravelListPanel/helpers'
+import { getWebCardWidth } from './AddressListItem/utils'
 
 export { buildTravelListSummaryHint }
 
@@ -144,6 +145,19 @@ const TravelListPanel: React.FC<Props> = ({
     return null
   }, [compactPreview, hasMore, isLoading, skeletonCards, styles.endText])
 
+  // Карточки списка имеют детерминированную ширину: на web — getWebCardWidth
+  // (capped, центрируется), на native растягиваются на всю ширину минус
+  // marginHorizontal:8. Шапку «Места рядом» приводим к ТОЙ ЖЕ ширине, иначе
+  // полноширинная шапка выглядела как первая карточка иной ширины, чем
+  // последующие (узкие, центрированные) карточки.
+  const headerWidthStyle = useMemo(
+    () =>
+      IS_WEB
+        ? { width: getWebCardWidth(screenWidth), alignSelf: 'center' as const }
+        : { marginHorizontal: 8 },
+    [screenWidth],
+  )
+
   const listHeader = useMemo(() => {
     if (!isMobile || !travelsData.length) return null
     if (compactPreview) return null
@@ -159,7 +173,7 @@ const TravelListPanel: React.FC<Props> = ({
     return (
       <View
         pointerEvents={IS_WEB ? 'box-none' : 'auto'}
-        style={styles.listHeaderCard}
+        style={[styles.listHeaderCard, headerWidthStyle]}
         testID="travel-list-mobile-summary"
       >
         <View pointerEvents="none" style={styles.listHeaderTitleRow}>
@@ -196,7 +210,7 @@ const TravelListPanel: React.FC<Props> = ({
         )}
       </View>
     )
-  }, [compactPreview, currentRadiusKm, isMobile, onOpenFilters, styles, themeColors, travelsData.length])
+  }, [compactPreview, currentRadiusKm, headerWidthStyle, isMobile, onOpenFilters, styles, themeColors, travelsData.length])
 
   const refreshControl = useMemo(
     () =>

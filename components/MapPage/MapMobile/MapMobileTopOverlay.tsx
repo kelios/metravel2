@@ -1,97 +1,95 @@
 /**
- * MapMobileTopOverlay — maps.me-style persistent overlay on top of the map.
+ * MapMobileTopOverlay — compact icon toolbar floating on top of the map.
  *
- * Renders:
- *  - a search bar placeholder ("Искать места") that opens the filters/search sheet
- *  - a filters icon button (sliders) opening the full FiltersPanel
- *  - a horizontally scrollable row of chips: radius chip first, then category
- *    chips (selected highlighted). Tapping a category chip toggles it instantly.
+ * Renders a single row of round icon buttons (FAB-style, pinned to the right
+ * edge), left→right:
+ *  - ≡ Фильтры (sliders) — tap → opens the filters sheet (search + categories).
+ *  - ◎ Радиус (target) — with a small badge showing the current radius value.
+ *    Tap → toggles a compact radius popover anchored under the icon (NOT the
+ *    sheet). Tapping a value applies it instantly and closes the popover.
+ *  - ⧉ Слои (layers) — tap → toggles a compact layers popover under the icon
+ *    (NOT the sheet) with base-layer + overlay toggles.
+ *  - ⌖ Локация (crosshair) — tap → recenters the map on the user.
+ *  - ≣ Список (list) — with a count badge. Tap → opens the «Места рядом» list.
+ *
+ * The radius/layers popovers are mobile-only inline actions, so those quick
+ * controls no longer need to open the 70% sheet. The sheet now hosts only
+ * place-name search + categories.
  *
  * No persistent panel — this overlay floats above a full-screen map.
  */
-import React, { useCallback } from 'react'
-import {
-  Platform,
-  Pressable,
-  ScrollView,
-  Text as RNText,
-  View,
-} from 'react-native'
+import React from 'react'
+import { Platform, Pressable, Text as RNText, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import type { ThemedColors } from '@/hooks/useTheme'
+import type { MapUiApi } from '@/types/mapUi'
 import { getMapMobileTopOverlayStyles } from './MapMobileTopOverlay.styles'
+import { MapMobileRadiusPopover } from './MapMobileRadiusPopover'
+import { MapMobileLayersPopover } from './MapMobileLayersPopover'
 
-export interface CategoryChip {
-  id: string
-  name: string
-  selected: boolean
-}
+type ActivePopover = 'radius' | 'layers' | null
+
+const BUTTON_SIZE = 44
 
 interface MapMobileTopOverlayProps {
   colors: ThemedColors
   topInset: number
-  searchSummary: string
-  radiusLabel: string
-  categoryChips: ReadonlyArray<CategoryChip>
-  hasMoreCategories: boolean
-  onOpenSearch: () => void
+  /** Short radius value shown as a badge on the radius button (e.g. "50"). */
+  radiusBadge: string
+  /** Which inline popover is currently open (radius/layers) — or null. */
+  activePopover: ActivePopover
+  onToggleRadius: () => void
+  onToggleLayers: () => void
+  onClosePopover: () => void
   onOpenFilters: () => void
-  onOpenRadius: () => void
-  onToggleCategory: (id: string) => void
+  /** Recenter the map on the user's location. */
+  onCenterOnUser: () => void
+  /** Open the «Места рядом» list sheet. */
+  onOpenList: () => void
+  /** Count of nearby places shown as a badge on the list button (e.g. "12"). */
+  listBadge: string
+  // Radius popover data (same source as FiltersPanelRadiusSection).
+  radiusOptions: ReadonlyArray<{ id: string; name: string }>
+  radiusValue: string
+  onRadiusSelect: (id: string) => void
+  // Layers popover data (same controlled overlay state as the filters sheet).
+  mapUiApi?: MapUiApi | null
+  overlayOptions?: ReadonlyArray<{ id: string; title: string; category?: string }>
+  enabledOverlays?: Record<string, boolean>
+  onOverlayToggle?: (id: string, enabled: boolean) => void
+  onResetOverlays?: () => void
 }
 
 const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   colors,
   topInset,
-  searchSummary,
-  radiusLabel,
-  categoryChips,
-  hasMoreCategories,
-  onOpenSearch,
+  radiusBadge,
+  activePopover,
+  onToggleRadius,
+  onToggleLayers,
+  onClosePopover,
   onOpenFilters,
-  onOpenRadius,
-  onToggleCategory,
+  onCenterOnUser,
+  onOpenList,
+  listBadge,
+  radiusOptions,
+  radiusValue,
+  onRadiusSelect,
+  mapUiApi,
+  overlayOptions,
+  enabledOverlays,
+  onOverlayToggle,
+  onResetOverlays,
 }) => {
   const styles = getMapMobileTopOverlayStyles(colors)
 
   // R-1 — глобальной шапки на табе карты больше нет, поэтому overlay сам отвечает
   // за отступ под статус-бар/нотч. Берём safe-area top, но держим небольшой пол,
-  // чтобы строка поиска не прилипала к самому краю там, где safe-area == 0
-  // (web-mobile, Android без нотча).
+  // чтобы кнопки не прилипали к самому краю там, где safe-area == 0.
   const resolvedTopPadding = Math.max(topInset, 8) + 8
-
-  const renderCategory = useCallback(
-    (chip: CategoryChip) => (
-      <Pressable
-        key={chip.id}
-        testID={`map-chip-category-${chip.id}`}
-        onPress={() => onToggleCategory(chip.id)}
-        accessibilityRole="button"
-        accessibilityState={{ selected: chip.selected }}
-        accessibilityLabel={`Категория ${chip.name}${chip.selected ? ', выбрана' : ''}`}
-        style={({ pressed }) => [
-          styles.chip,
-          chip.selected && styles.chipSelected,
-          pressed && { opacity: 0.8 },
-        ]}
-      >
-        <RNText
-          numberOfLines={1}
-          style={[styles.chipText, chip.selected && styles.chipTextSelected]}
-        >
-          {chip.name}
-        </RNText>
-      </Pressable>
-    ),
-    [
-      onToggleCategory,
-      styles.chip,
-      styles.chipSelected,
-      styles.chipText,
-      styles.chipTextSelected,
-    ],
-  )
+  // Поповеры открываются прямо под рядом иконок: верх иконок + высота кнопки + зазор.
+  const popoverTop = resolvedTopPadding + BUTTON_SIZE + 8
 
   return (
     <View
@@ -99,76 +97,110 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
       style={[styles.root, { paddingTop: resolvedTopPadding }]}
       testID="map-mobile-top-overlay"
     >
-      <View style={styles.searchRow} pointerEvents="auto">
-        <Pressable
-          testID="map-mobile-search"
-          onPress={onOpenSearch}
-          accessibilityRole="button"
-          accessibilityLabel="Искать места"
-          style={({ pressed }) => [styles.searchBar, pressed && { opacity: 0.9 }]}
-        >
-          <Feather name="search" size={18} color={colors.textMuted} />
-          <RNText style={styles.searchText} numberOfLines={1}>
-            {searchSummary || 'Искать места'}
-          </RNText>
-        </Pressable>
+      <View style={styles.toolbar} pointerEvents="auto">
         <Pressable
           testID="map-mobile-filters-button"
           onPress={onOpenFilters}
           accessibilityRole="button"
           accessibilityLabel="Открыть фильтры"
           hitSlop={6}
-          style={({ pressed }) => [
-            styles.filtersButton,
-            pressed && { opacity: 0.85 },
-          ]}
+          style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
         >
           <Feather name="sliders" size={20} color={colors.text} />
         </Pressable>
-      </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.chipsContent}
-        style={styles.chipsScroll}
-        pointerEvents="auto"
-        testID="map-mobile-chips"
-      >
         <Pressable
-          testID="map-chip-radius"
-          onPress={onOpenRadius}
+          testID="map-mobile-radius-button"
+          onPress={onToggleRadius}
           accessibilityRole="button"
-          accessibilityLabel={`Радиус ${radiusLabel}`}
+          accessibilityState={{ expanded: activePopover === 'radius' }}
+          accessibilityLabel={`Радиус${radiusBadge ? ` ${radiusBadge}` : ''}`}
+          hitSlop={6}
           style={({ pressed }) => [
-            styles.chip,
-            styles.chipRadius,
-            pressed && { opacity: 0.8 },
+            styles.iconButton,
+            activePopover === 'radius' && styles.iconButtonActive,
+            pressed && styles.iconButtonPressed,
           ]}
         >
-          <Feather name="target" size={13} color={colors.primary} />
-          <RNText style={[styles.chipText, styles.chipRadiusText]} numberOfLines={1}>
-            {radiusLabel}
-          </RNText>
+          <Feather name="target" size={20} color={colors.text} />
+          {!!radiusBadge && (
+            <View style={styles.badge} pointerEvents="none">
+              <RNText style={styles.badgeText} numberOfLines={1}>
+                {radiusBadge}
+              </RNText>
+            </View>
+          )}
         </Pressable>
 
-        {categoryChips.map(renderCategory)}
+        <Pressable
+          testID="map-mobile-layers-button"
+          onPress={onToggleLayers}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: activePopover === 'layers' }}
+          accessibilityLabel="Слои и настройки карты"
+          hitSlop={6}
+          style={({ pressed }) => [
+            styles.iconButton,
+            activePopover === 'layers' && styles.iconButtonActive,
+            pressed && styles.iconButtonPressed,
+          ]}
+        >
+          <Feather name="layers" size={20} color={colors.text} />
+        </Pressable>
 
-        {hasMoreCategories && (
-          <Pressable
-            testID="map-chip-more"
-            onPress={onOpenFilters}
-            accessibilityRole="button"
-            accessibilityLabel="Все категории"
-            style={({ pressed }) => [styles.chip, pressed && { opacity: 0.8 }]}
-          >
-            <RNText style={styles.chipText} numberOfLines={1}>
-              Ещё…
-            </RNText>
-          </Pressable>
-        )}
-      </ScrollView>
+        <Pressable
+          testID="map-center-user-quick"
+          onPress={onCenterOnUser}
+          accessibilityRole="button"
+          accessibilityLabel="Показать мое местоположение"
+          hitSlop={6}
+          style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
+        >
+          <Feather name="crosshair" size={20} color={colors.primary} />
+        </Pressable>
+
+        <Pressable
+          testID="map-mobile-open-list"
+          onPress={onOpenList}
+          accessibilityRole="button"
+          accessibilityLabel={`Показать список рядом${listBadge ? ` — ${listBadge}` : ''}`}
+          hitSlop={6}
+          style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
+        >
+          <Feather name="list" size={20} color={colors.text} />
+          {!!listBadge && (
+            <View style={styles.badge} pointerEvents="none">
+              <RNText style={styles.badgeText} numberOfLines={1}>
+                {listBadge}
+              </RNText>
+            </View>
+          )}
+        </Pressable>
+      </View>
+
+      {activePopover === 'radius' && (
+        <MapMobileRadiusPopover
+          colors={colors}
+          top={popoverTop}
+          options={radiusOptions}
+          currentValue={radiusValue}
+          onSelect={onRadiusSelect}
+          onRequestClose={onClosePopover}
+        />
+      )}
+
+      {activePopover === 'layers' && (
+        <MapMobileLayersPopover
+          colors={colors}
+          top={popoverTop}
+          mapUiApi={mapUiApi}
+          overlayOptions={overlayOptions}
+          enabledOverlays={enabledOverlays}
+          onOverlayToggle={onOverlayToggle}
+          onResetOverlays={onResetOverlays}
+          onRequestClose={onClosePopover}
+        />
+      )}
     </View>
   )
 }

@@ -3,8 +3,7 @@ import { Platform, StyleSheet } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
 
-const RADIUS = 12
-const PILL = DESIGN_TOKENS.radii.pill
+const BUTTON_SIZE = 44
 
 const shadowWeb = {
   boxShadow: '0 2px 10px rgba(15,23,42,0.12)',
@@ -27,93 +26,51 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       right: 0,
       zIndex: 1500,
       paddingHorizontal: 12,
-      gap: 8,
+      // Прижимаем компактную панель из иконок к правому краю (FAB-стиль).
+      alignItems: 'flex-end',
     },
-    searchRow: {
+    toolbar: {
       flexDirection: 'row',
       alignItems: 'center',
+      // 5 кнопок по 44px + 4 зазора по 8 + горизонтальные паддинги root (12×2)
+      // = 284px — помещается даже на 320px-экране в один ряд без переноса.
       gap: 8,
     },
-    searchBar: {
-      flex: 1,
-      minWidth: 0,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      minHeight: 48,
-      paddingHorizontal: 14,
-      borderRadius: RADIUS,
-      // Статичный «фрост» вместо живого blur (правило проекта).
-      backgroundColor: colors.surface,
-      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
-      ...(Platform.OS === 'web' ? shadowWeb : shadowNative),
-    },
-    searchText: {
-      flex: 1,
-      minWidth: 0,
-      fontSize: 15,
-      fontWeight: '600' as const,
-      color: colors.textMuted,
-    },
-    filtersButton: {
-      width: 48,
-      height: 48,
-      borderRadius: RADIUS,
+    iconButton: {
+      width: BUTTON_SIZE,
+      height: BUTTON_SIZE,
+      borderRadius: BUTTON_SIZE / 2,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
+      // Статичный «фрост»-фон (правило проекта: без живого blur на мобиле).
       backgroundColor: colors.surface,
-      flexShrink: 0,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
       ...(Platform.OS === 'web' ? shadowWeb : shadowNative),
     },
-    chipsScroll: {
-      flexGrow: 0,
-      ...(Platform.OS === 'web' ? ({ overflow: 'visible' } as any) : null),
+    iconButtonPressed: {
+      opacity: 0.85,
     },
-    chipsContent: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingRight: 12,
-      paddingVertical: 2,
+    iconButtonActive: {
+      backgroundColor: colors.primarySoft,
     },
-    chip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-      minHeight: 36,
-      paddingHorizontal: 14,
-      borderRadius: PILL,
-      backgroundColor: colors.surface,
-      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
-      ...(Platform.OS === 'web'
-        ? ({ boxShadow: '0 1px 6px rgba(15,23,42,0.10)' } as any)
-        : {
-            shadowColor: DESIGN_TOKENS.colors.text,
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.1,
-            shadowRadius: 3,
-            elevation: 2,
-          }),
-    },
-    chipRadius: {
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.primary,
-    },
-    chipRadiusText: {
-      color: colors.primary,
-      fontWeight: '700' as const,
-    },
-    chipSelected: {
+    badge: {
+      position: 'absolute' as const,
+      top: -4,
+      right: -4,
+      minWidth: 20,
+      height: 18,
+      paddingHorizontal: 4,
+      borderRadius: 9,
       backgroundColor: colors.primary,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      borderWidth: 1.5,
+      borderColor: colors.surface,
     },
-    chipText: {
-      fontSize: 13,
-      fontWeight: '600' as const,
-      color: colors.text,
-      maxWidth: 160,
-    },
-    chipTextSelected: {
+    badgeText: {
+      fontSize: 10,
+      lineHeight: 12,
+      fontWeight: '700' as const,
       color: colors.textOnPrimary,
     },
   })

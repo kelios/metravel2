@@ -7,7 +7,7 @@ import React, { Suspense } from 'react'
 import TravelListPanel from '@/components/MapPage/TravelListPanel'
 
 type UiTab = 'search' | 'route' | 'list'
-type SheetState = 'collapsed' | 'quarter' | 'half' | 'full'
+type SheetState = 'collapsed' | 'quarter' | 'half' | 'seventy' | 'full'
 
 export interface MapMobileSheetBodyProps {
   uiTab: UiTab

@@ -173,7 +173,9 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
         />
       </View>
 
-      {radiusOptions.length > 0 && (
+      {/* На мобиле радиус вынесен в компактный поповер верхнего тулбара карты —
+          здесь его не дублируем. На десктопе блок радиуса остаётся в панели. */}
+      {!isMobile && radiusOptions.length > 0 && (
         <View style={styles.lightStepBlock}>
           <View style={styles.lightStepHeader}>
             <Feather name="radio" size={16} color={colors.primary} />

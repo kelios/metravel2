@@ -45,6 +45,22 @@ interface MapPanelState {
    */
   pendingSearchFocus: boolean;
 
+  /**
+   * Monotonic counter bumped when the user taps the "Слои" icon in the top
+   * overlay. The "Слои и настройки карты" CollapsibleSection inside the filters
+   * sheet watches it to auto-expand and reveal the map layers controls.
+   */
+  layersOpenNonce: number;
+
+  /**
+   * Latched intent mirroring `pendingSearchFocus`: true between the tap on the
+   * "Слои" icon and the moment the layers section mounts + opens. Survives the
+   * filters body being mounted fresh (sheet switching list→filters mounts it
+   * AFTER the nonce already bumped), so the section can detect a pending request
+   * on its first mount. Cleared via `consumeLayersOpen`.
+   */
+  pendingLayersOpen: boolean;
+
   /** Open the panel to the given tab (default: filters). */
   requestOpen: (tab?: MapPanelRequestedTab) => void;
   /** Toggle the mobile sheet open/collapsed. */
@@ -55,6 +71,10 @@ interface MapPanelState {
   requestSearchFocus: () => void;
   /** Clear the latched focus intent after the input has grabbed focus. */
   consumeSearchFocus: () => void;
+  /** Ask the filters sheet to expand the "Слои и настройки карты" section. */
+  requestLayersOpen: () => void;
+  /** Clear the latched layers-open intent after the section has expanded. */
+  consumeLayersOpen: () => void;
 
   // --- Backwards-compatible selectors (derived from the unified stream) ---
   /** @deprecated read `commandNonce` + `command.kind === 'open'` instead. */
@@ -75,6 +95,8 @@ export const useMapPanelStore = create<MapPanelState>((set) => ({
   command: { kind: 'open', tab: 'filters' },
   searchFocusNonce: 0,
   pendingSearchFocus: false,
+  layersOpenNonce: 0,
+  pendingLayersOpen: false,
 
   openNonce: 0,
   requestedTab: 'filters',
@@ -124,4 +146,13 @@ export const useMapPanelStore = create<MapPanelState>((set) => ({
 
   consumeSearchFocus: () =>
     set((s) => (s.pendingSearchFocus ? { pendingSearchFocus: false } : s)),
+
+  requestLayersOpen: () =>
+    set((s) => ({
+      layersOpenNonce: s.layersOpenNonce + 1,
+      pendingLayersOpen: true,
+    })),
+
+  consumeLayersOpen: () =>
+    set((s) => (s.pendingLayersOpen ? { pendingLayersOpen: false } : s)),
 }));

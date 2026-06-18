@@ -21,20 +21,22 @@ import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import { LAYOUT } from '@/constants/layout'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 
-type SheetState = 'collapsed' | 'quarter' | 'half' | 'full'
-type SheetIndex = -1 | 0 | 1 | 2
+type SheetState = 'collapsed' | 'quarter' | 'half' | 'seventy' | 'full'
+type SheetIndex = -1 | 0 | 1 | 2 | 3
 
 const OPEN_DEBOUNCE_MS = 250
 const SHORT_VIEWPORT_BREAKPOINT_PX = 700
-const SNAP_RATIOS_TALL: readonly [number, number, number] = [0.25, 0.55, 1]
-const SNAP_RATIOS_SHORT: readonly [number, number, number] = [0.3, 0.62, 1]
+// [quarter, half, seventy, full]; full=1 (полный экран минус верхний резерв).
+const SNAP_RATIOS_TALL: readonly [number, number, number, number] = [0.25, 0.55, 0.7, 1]
+const SNAP_RATIOS_SHORT: readonly [number, number, number, number] = [0.3, 0.62, 0.72, 1]
 const MOBILE_WEB_TOP_RESERVE = LAYOUT.headerHeight * 2
 
 const STATE_TO_INDEX: Record<SheetState, SheetIndex> = {
   collapsed: -1,
   quarter: 0,
   half: 1,
-  full: 2,
+  seventy: 2,
+  full: 3,
 }
 
 interface MapBottomSheetProps {
@@ -55,6 +57,7 @@ export interface MapBottomSheetRef {
   snapToCollapsed: () => void
   snapToQuarter: () => void
   snapToHalf: () => void
+  snapToSeventy: () => void
   snapToFull: () => void
   close: () => void
 }
@@ -85,6 +88,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         snapToCollapsed: () => snapTo('collapsed'),
         snapToQuarter: () => snapTo('quarter'),
         snapToHalf: () => snapTo('half'),
+        snapToSeventy: () => snapTo('seventy'),
         snapToFull: () => snapTo('full'),
         close: () => snapTo('collapsed'),
       }),
@@ -92,7 +96,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     )
 
     const isCollapsed = sheetIndex < 0
-    const isFullScreen = sheetIndex === 2
+    const isFullScreen = sheetIndex === STATE_TO_INDEX.full
     const hiddenWhenCollapsed = isCollapsed && !peekContent
     const contentBottomPadding = isCollapsed ? 12 + bottomInset : 12
     const fullScreenTopInset = MOBILE_WEB_TOP_RESERVE
@@ -103,7 +107,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
       ? 0
       : isFullScreen
         ? Math.max(0, windowHeight - fullScreenTopInset - bottomInset)
-        : Math.round(windowHeight * (snapRatios[sheetIndex as 0 | 1] ?? 0.55))
+        : Math.round(windowHeight * (snapRatios[sheetIndex as 0 | 1 | 2] ?? 0.55))
 
     const webRefCallback = useCallback((node: View | null) => {
       webDomRef.current = node as unknown as HTMLElement | null

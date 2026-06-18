@@ -85,7 +85,7 @@ export const getMarkerFocusPlan = ({
 }: {
   currentZoom: number
   maxZoom: number
-  bottomSheetState: 'collapsed' | 'quarter' | 'half' | 'full'
+  bottomSheetState: 'collapsed' | 'quarter' | 'half' | 'seventy' | 'full'
 }) => {
   const safeCurrentZoom = Number.isFinite(currentZoom) ? currentZoom : DEFAULT_ZOOM
   const safeMaxZoom = Number.isFinite(maxZoom) ? maxZoom : DEFAULT_MAX_ZOOM
