@@ -17,6 +17,8 @@ type DistanceInfo = {
 
 type Props = {
   address?: string
+  title?: string
+  subtitle?: string
   coord?: string
   imgUri?: string | null
   categories: string[]
@@ -52,6 +54,8 @@ type Props = {
 
 const AddressListItemNative: React.FC<Props> = ({
   address,
+  title,
+  subtitle,
   coord,
   imgUri,
   categories,
@@ -168,7 +172,7 @@ const AddressListItemNative: React.FC<Props> = ({
           style={styles.mainPressable}
           onPress={handleMainPress}
           accessibilityRole="button"
-          accessibilityLabel={address || 'Место'}
+          accessibilityLabel={title || address || 'Место'}
           android_ripple={{ color: colors.overlayLight }}
           onLongPress={copyCoords}
         >
@@ -216,9 +220,14 @@ const AddressListItemNative: React.FC<Props> = ({
 
         {showOverlays && (
           <View style={overlayStyle}>
-            {!!address && (
+            {!!(title || address) && (
               <Text style={titleStyle} numberOfLines={2}>
-                {address}
+                {title || address}
+              </Text>
+            )}
+            {!!subtitle && (
+              <Text style={coordStyle} numberOfLines={1}>
+                {subtitle}
               </Text>
             )}
             {distanceInfo && (

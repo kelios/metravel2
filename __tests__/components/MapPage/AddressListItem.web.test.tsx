@@ -148,9 +148,13 @@ describe('AddressListItem (web right panel)', () => {
     expect((meta as any).props.children).toContain('Category 1');
 
     expect(mockPlaceListCard).toHaveBeenCalled();
+    // #224 — the card title is the clean POI/first-segment name («Kraków»), and
+    // the rest of the reverse-geocoded address («Poland») moves to the secondary
+    // badges line instead of being shown raw as the title.
     expect(mockPlaceListCard).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: baseTravel.address,
+        title: 'Kraków',
+        badges: expect.arrayContaining(['Poland']),
         categoryLabel: baseTravel.categoryName,
       }),
     );

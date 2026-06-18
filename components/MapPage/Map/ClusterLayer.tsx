@@ -10,6 +10,7 @@ import { buildClusterIconHtml } from './mapMarkerStyles'
 import MarkerPopup from './MarkerPopup'
 import { formatPlaces } from '@/utils/pluralize'
 import { getMapPointKey } from '@/hooks/map/useMapTravels'
+import { buildPlaceTitleParts } from './placeTitle'
 
 interface ClusterLayerProps {
   L?: any
@@ -344,7 +345,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
                     style={{ fontSize: 12 }}
                   >
                     {p.categoryName ? `${p.categoryName}: ` : ''}
-                    {p.address || 'Без названия'}
+                    {buildPlaceTitleParts(p).title}
                   </Text>
                 ))}
                 {cluster.items.length > 6 && (

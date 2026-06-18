@@ -96,9 +96,25 @@ const readCachedHeaderHeight = (variant: HeaderVariant): number => {
     return fallback;
 };
 
+// R-1 — на табе карты прячем глобальную шапку на мобильном (native + web-mobile):
+// собственная строка поиска карты («Искать места») должна быть верхним элементом,
+// как в Google/Organic Maps. Глобальная шапка дублировала поиск и занимала полосу.
+// На desktop-web шапку оставляем: там нет нижнего дока, и nav-бар нужен.
+const MAP_HEADER_MOBILE_BREAKPOINT = HEADER_MOBILE_BREAKPOINT;
+const isMapRoute = (pathname: string) => pathname === '/map' || pathname.startsWith('/map/');
+const shouldHideHeaderForMap = (pathname: string): boolean => {
+    if (!isMapRoute(pathname)) return false;
+    if (Platform.OS !== 'web') return true;
+    if (typeof window === 'undefined') return false; // SSR/desktop snapshot keeps header (no CLS for mobile-only hide)
+    return window.innerWidth < MAP_HEADER_MOBILE_BREAKPOINT;
+};
+
 const Header = React.memo(function Header() {
     const pathname = usePathname() || '/';
     const [, setVariant] = useState<HeaderVariant>(() => getStaticHeaderVariant(pathname));
+    // Mobile-only: re-evaluate header suppression on resize/route so the map tab
+    // drops the global header bar once we know the viewport is mobile.
+    const [hideForMap, setHideForMap] = useState<boolean>(() => shouldHideHeaderForMap(pathname));
     const [measuredHeight, setMeasuredHeight] = useState<number>(
         () => HEADER_HEIGHT_FALLBACK[getStaticHeaderVariant(pathname)],
     );
@@ -107,6 +123,7 @@ const Header = React.memo(function Header() {
         const next = getHeaderVariant(pathname);
         setVariant(next);
         setMeasuredHeight(readCachedHeaderHeight(next));
+        setHideForMap(shouldHideHeaderForMap(pathname));
     }, [pathname]);
 
     useEffect(() => {
@@ -117,6 +134,10 @@ const Header = React.memo(function Header() {
                 if (prev === next) return prev;
                 setMeasuredHeight(readCachedHeaderHeight(next));
                 return next;
+            });
+            setHideForMap((prev) => {
+                const nextHide = shouldHideHeaderForMap(pathname);
+                return prev === nextHide ? prev : nextHide;
             });
         };
         window.addEventListener('resize', onResize);
@@ -135,6 +156,10 @@ const Header = React.memo(function Header() {
             }
         }
     }, [pathname]);
+
+    // R-1 — на табе карты (мобильный) шапки нет вовсе: ни самой шапки, ни
+    // зарезервированной высоты-обёртки, иначе сверху осталась бы пустая «дырка».
+    if (hideForMap) return null;
 
     if (Platform.OS === 'web') {
         return (

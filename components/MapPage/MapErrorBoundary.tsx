@@ -55,11 +55,12 @@ class MapErrorBoundary extends Component<Props, State> {
   }
 
   componentDidUpdate(_prevProps: Props, prevState: State) {
-    // #217 — once the map subtree renders cleanly again after a recovery, give
-    // the budget back. Otherwise a desktop→mobile→desktop cycle (each flip
-    // remounts the Leaflet container and can throw "reused by another instance")
-    // permanently exhausts the lifetime budget of 2, leaving the third flip's
-    // error uncaught → blank map with 0 tiles until a full page reload.
+    // #217 — defensive backstop. The structural fix (MapScreenShell keeps the
+    // Leaflet node at one stable tree position across breakpoint flips) removes
+    // the remount that used to throw "reused by another instance", so this path
+    // should rarely fire now. It stays as a safety net: once the map subtree
+    // renders cleanly again after a recovery, give the retry budget back so a
+    // future recoverable error is never left uncaught → blank map.
     if (prevState.hasError && !this.state.hasError) {
       this._autoRetryCount = 0;
     }

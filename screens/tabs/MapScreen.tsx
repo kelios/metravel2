@@ -19,7 +19,11 @@ import {
 } from '@/screens/tabs/mapScreenHelpers'
 import { MapScreenMobile } from '@/components/MapPage/MapScreenParts/MapScreenMobile'
 import { MapScreenError } from '@/components/MapPage/MapScreenParts/MapScreenError'
-import { MapScreenDesktop } from '@/components/MapPage/MapScreenParts/MapScreenDesktop'
+import {
+  MapScreenDesktopChrome,
+  MapScreenDesktopOverlays,
+} from '@/components/MapPage/MapScreenParts/MapScreenDesktop'
+import { MapScreenShell } from '@/components/MapPage/MapScreenParts/MapScreenShell'
 
 const IS_WEB = Platform.OS === 'web'
 const CAN_PRELOAD_LEAFLET = IS_WEB && typeof window !== 'undefined'
@@ -90,6 +94,8 @@ export default function MapScreen() {
     invalidateTravelsQuery,
     buildRouteTo,
     centerOnUser,
+    canSearchThisArea,
+    handleSearchThisArea,
     panelRef,
     geoError,
     coordinates,
@@ -329,7 +335,9 @@ export default function MapScreen() {
   const activePanelTab: 'search' | 'route' | 'travels' =
     rightPanelTab === 'travels' ? 'travels' : currentMode === 'route' ? 'route' : 'search'
 
-  const shouldShowFloatingRadiusPill = Boolean(currentRadius && !isWeb)
+  // На мобиле радиус уже показан чипом «Радиус N км» в верхнем overlay — плавающая
+  // пилюля дублировала его и занимала отдельную строку (F-50). Прячем её на мобиле.
+  const shouldShowFloatingRadiusPill = Boolean(currentRadius && !isWeb && !isMobile)
   const showMapProgress =
     isDebouncingFilters ||
     (loading && !travelsData.length) ||
@@ -374,40 +382,10 @@ export default function MapScreen() {
     ],
   )
 
-  if (isMobile) {
-    return (
-      <MapScreenMobile
-        styles={styles}
-        seoBlock={seoBlock}
-        mapComponent={mapComponent}
-        travelsData={travelsData}
-        hasMore={hasMore}
-        onLoadMore={onLoadMore}
-        refetchMapData={refetchMapData}
-        loading={loading}
-        isFetching={isFetching}
-        isPlaceholderData={isPlaceholderData}
-        coordinates={coordinates}
-        transportMode={transportMode}
-        buildRouteTo={buildRouteTo}
-        centerOnUser={centerOnUser}
-        handleSelectSearchTab={handleSelectSearchTab}
-        requestOpenBottomSheet={requestOpenBottomSheet}
-        filtersPanelProps={filtersPanelProps}
-        handleClearAllFilters={handleClearAllFilters}
-        handleExpandRadius={handleExpandRadius}
-        isConnected={isConnected}
-        shouldLoadOnboarding={shouldLoadOnboarding}
-        isWeb={isWeb}
-        isMobile={isMobile}
-        selectedPlace={selectedPlace}
-        clearSelectedPlace={clearSelectedPlace}
-        selectedPlaceUserLocation={selectedPlaceUserLocation}
-      />
-    )
-  }
-
-  if (mapError) {
+  // Desktop data-fetch error replaces the whole screen (separate from the
+  // breakpoint-flip path — it is not part of the remount oscillation). Mobile
+  // keeps the map + chrome and surfaces errors inline.
+  if (mapError && !isMobile) {
     return (
       <MapScreenError
         styles={styles}
@@ -421,12 +399,38 @@ export default function MapScreen() {
     )
   }
 
-  return (
-    <MapScreenDesktop
+  const chrome = isMobile ? (
+    <MapScreenMobile
+      travelsData={travelsData}
+      hasMore={hasMore}
+      onLoadMore={onLoadMore}
+      refetchMapData={refetchMapData}
+      loading={loading}
+      isFetching={isFetching}
+      isPlaceholderData={isPlaceholderData}
+      coordinates={coordinates}
+      transportMode={transportMode}
+      buildRouteTo={buildRouteTo}
+      centerOnUser={centerOnUser}
+      canSearchThisArea={canSearchThisArea}
+      onSearchThisArea={handleSearchThisArea}
+      handleSelectSearchTab={handleSelectSearchTab}
+      requestOpenBottomSheet={requestOpenBottomSheet}
+      filtersPanelProps={filtersPanelProps}
+      handleClearAllFilters={handleClearAllFilters}
+      handleExpandRadius={handleExpandRadius}
+      isConnected={isConnected}
+      shouldLoadOnboarding={shouldLoadOnboarding}
+      isWeb={isWeb}
+      isMobile={isMobile}
+      selectedPlace={selectedPlace}
+      clearSelectedPlace={clearSelectedPlace}
+      selectedPlaceUserLocation={selectedPlaceUserLocation}
+    />
+  ) : (
+    <MapScreenDesktopChrome
       styles={styles}
       themedColors={themedColors}
-      seoBlock={seoBlock}
-      mapComponent={mapComponent}
       isWeb={isWeb}
       isMobile={isMobile}
       isDesktopCollapsed={isDesktopCollapsed}
@@ -464,6 +468,29 @@ export default function MapScreen() {
       isConnected={isConnected}
       mapReady={mapReady}
       shouldLoadOnboarding={shouldLoadOnboarding}
+    />
+  )
+
+  const overlays = isMobile ? null : (
+    <MapScreenDesktopOverlays
+      styles={styles}
+      themedColors={themedColors}
+      isWeb={isWeb}
+      openRightPanel={openRightPanel}
+      isConnected={isConnected}
+      mapReady={mapReady}
+      shouldLoadOnboarding={shouldLoadOnboarding}
+    />
+  )
+
+  return (
+    <MapScreenShell
+      styles={styles}
+      seoBlock={seoBlock}
+      mapComponent={mapComponent}
+      chrome={chrome}
+      overlays={overlays}
+      isMobile={isMobile}
     />
   )
 }

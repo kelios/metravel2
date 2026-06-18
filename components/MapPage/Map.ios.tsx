@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useRouter } from 'expo-router';
-import { useThemedColors } from '@/hooks/useTheme';
+import { useThemedColors, useTheme } from '@/hooks/useTheme';
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { MODERN_MATTE_PALETTE } from '@/constants/modernMattePalette';
@@ -10,8 +10,10 @@ import { openExternalUrl } from '@/utils/externalLinks';
 import { resolveInternalTravelRoute } from '@/utils/relatedTravel';
 import {
   getActiveOverlayLayers,
-  getOsmNativeTileUrl,
-  OSM_PROXY_MAX_ZOOM,
+  getThemedNativeBaseTileUrl,
+  getThemedBaseMaxZoom,
+  getThemedBaseAttribution,
+  CARTO_DARK_SUBDOMAINS,
 } from '@/config/mapWebLayers';
 
 // Overpass endpoint mirrors utils/overpass/fetchOverpass.ts. Inlined as a plain
@@ -93,6 +95,17 @@ interface TravelProps {
   fullRouteCoords?: [number, number][];
   mode?: 'radius' | 'route';
   onMapClick?: (lng: number, lat: number) => void;
+  /**
+   * F-46 — фич-парити с mobile-web: тап по travel-маркеру отдаёт выбранную точку
+   * в RN, чтобы экран показал нижнюю карточку (MapPlaceBottomCard) вместо/вместе
+   * с Leaflet-попапом. Точка ищется по индексу в переданном массиве points.
+   */
+  onMarkerSelect?: (point: Point) => void;
+  /**
+   * F-49 — fired (debounced) on map pan/zoom end with the new center, so the
+   * screen can offer a Google-Maps-style "Search this area" action.
+   */
+  onMapMove?: (center: Coordinates) => void;
   onMapUiApiReady?: (api: {
     zoomIn: () => void;
     zoomOut: () => void;
@@ -147,6 +160,8 @@ const Map: React.FC<TravelProps> = ({
   fullRouteCoords = [],
   mode = 'radius',
   onMapClick,
+  onMarkerSelect,
+  onMapMove,
   onMapUiApiReady,
 }) => {
   const router = useRouter();
@@ -160,6 +175,8 @@ const Map: React.FC<TravelProps> = ({
   const [localCoordinates, setLocalCoordinates] = useState<Coordinates | null>(propCoordinates);
   const [isLoading, setIsLoading] = useState(true);
   const themeColors = useThemedColors();
+  // Тёмная тема UI → тёмная подложка карты (CARTO dark). F-52 / #229.
+  const { isDark } = useTheme();
   const { getSiteBaseUrl } = require('@/utils/seo');
 
   useEffect(() => {
@@ -276,6 +293,9 @@ const Map: React.FC<TravelProps> = ({
   pushPayloadRef.current = pushPayload;
   const pushUserLocationRef = useRef(pushUserLocation);
   pushUserLocationRef.current = pushUserLocation;
+  // F-49 — always-fresh onMapMove for the WebView message handler.
+  const onMapMoveRef = useRef(onMapMove);
+  onMapMoveRef.current = onMapMove;
 
   // Перерисовать маркеры при любом изменении данных (если WebView уже готов).
   useEffect(() => {
@@ -429,6 +449,35 @@ const Map: React.FC<TravelProps> = ({
           } catch (err) {}
         });
 
+        // F-49 — сообщаем RN центр карты (с дебаунсом) после панорамирования/зума,
+        // чтобы экран мог предложить «Искать в этой области». Не шлём, если центр
+        // почти не сдвинулся относительно последнего отправленного (jitter-гард).
+        var __metravelMoveTimer = null;
+        var __metravelLastSentCenter = null;
+        function __metravelEmitMapMove() {
+          try {
+            var c = map.getCenter ? map.getCenter() : null;
+            if (!c || !isFinite(c.lat) || !isFinite(c.lng)) return;
+            if (__metravelLastSentCenter &&
+                Math.abs(__metravelLastSentCenter.lat - c.lat) < 0.0001 &&
+                Math.abs(__metravelLastSentCenter.lng - c.lng) < 0.0001) {
+              return;
+            }
+            __metravelLastSentCenter = { lat: c.lat, lng: c.lng };
+            if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'MAP_MOVED', lat: c.lat, lng: c.lng
+              }));
+            }
+          } catch (e) {}
+        }
+        map.on('moveend', function() {
+          try {
+            if (__metravelMoveTimer) clearTimeout(__metravelMoveTimer);
+            __metravelMoveTimer = setTimeout(__metravelEmitMapMove, 300);
+          } catch (e) {}
+        });
+
         window.__metravelMapZoomIn = function() {
           try { map.zoomIn(); } catch (e) {}
         };
@@ -445,11 +494,14 @@ const Map: React.FC<TravelProps> = ({
           } catch (e) {}
         };
 
-        // Базовый OSM-слой через бэкенд-прокси (#202): абсолютный https-URL,
-        // т.к. на native нет same-origin. Без {s}-субдоменов (прокси их не использует).
-        L.tileLayer('${getOsmNativeTileUrl()}', {
-          attribution: '© OpenStreetMap',
-          maxZoom: ${OSM_PROXY_MAX_ZOOM}
+        // Базовая подложка по теме (#229): светлая — OSM-прокси (без {s}),
+        // тёмная — CARTO dark (субдомены a/b/c/d). На native нет same-origin,
+        // поэтому URL абсолютный. Смена темы пересобирает HTML → WebView reload.
+        L.tileLayer(${JSON.stringify(getThemedNativeBaseTileUrl(isDark))}, {
+          attribution: ${JSON.stringify(getThemedBaseAttribution(isDark))},
+          maxZoom: ${getThemedBaseMaxZoom(isDark)}${
+            isDark ? `,\n          subdomains: ${JSON.stringify(CARTO_DARK_SUBDOMAINS)}` : ''
+          }
         }).addTo(map);
 
         const markersLayer = L.layerGroup().addTo(map);
@@ -547,7 +599,7 @@ const Map: React.FC<TravelProps> = ({
             routeLayer.clearLayers();
             const bounds = L.latLngBounds();
 
-            points.forEach(function(point) {
+            points.forEach(function(point, pointIndex) {
               if (!point || !point.coord) return;
               const parts = String(point.coord).split(',').map(Number);
               const lat = parts[0];
@@ -603,6 +655,19 @@ const Map: React.FC<TravelProps> = ({
               // уводил на travel сразу и popup-карточка никогда не показывалась (#…).
               // Навигация на travel идёт только по кнопке «Подробнее» внутри popup.
               marker.bindPopup(popupContent, { maxWidth: 200 });
+
+              // F-46 — отдаём выбор маркера в RN, чтобы экран показал нижнюю
+              // карточку места (MapPlaceBottomCard). Шлём индекс точки в текущем
+              // массиве points; RN маппит его на ту же точку travelAddress.
+              marker.on('click', function() {
+                try {
+                  if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({
+                      type: 'SELECT_PLACE', index: pointIndex
+                    }));
+                  }
+                } catch (err) {}
+              });
 
               marker.on('popupopen', function(e) {
                 try {
@@ -943,7 +1008,7 @@ const Map: React.FC<TravelProps> = ({
     </body>
     </html>
   `,
-    [themeColors, markerColor, markerShadowColor],
+    [themeColors, markerColor, markerShadowColor, isDark],
   );
 
   return (
@@ -984,6 +1049,26 @@ const Map: React.FC<TravelProps> = ({
               const lng = Number(parsed?.lng);
               if (Number.isFinite(lat) && Number.isFinite(lng)) {
                 onMapClick?.(lng, lat);
+              }
+              return;
+            }
+            if (parsed?.type === 'MAP_MOVED') {
+              // F-49 — новый центр карты после панорамирования/зума.
+              const lat = Number(parsed?.lat);
+              const lng = Number(parsed?.lng);
+              if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                onMapMoveRef.current?.({ latitude: lat, longitude: lng });
+              }
+              return;
+            }
+            if (parsed?.type === 'SELECT_PLACE') {
+              // F-46 — индекс точки в массиве, отправленном в WebView
+              // (window.__metravelRenderPoints), маппится на ту же точку
+              // travelAddress на RN-стороне.
+              const index = Number(parsed?.index);
+              if (Number.isInteger(index) && index >= 0 && index < travelAddress.length) {
+                const point = travelAddress[index];
+                if (point) onMarkerSelect?.(point);
               }
               return;
             }

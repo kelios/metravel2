@@ -23,6 +23,11 @@ export interface MapProps {
   radius?: string;
   onMapUiApiReady?: (api: MapUiApi | null) => void;
   onUserLocationChange?: (loc: Coordinates | null) => void;
+  /**
+   * F-49 — fired (debounced) on map pan/zoom end with the new map center, so the
+   * caller can offer a Google-Maps-style "Search this area" action.
+   */
+  onMapMove?: (center: Coordinates) => void;
   hideFloatingControls?: boolean;
   /**
    * #207 — mobile-web: fired when a single (non-cluster) marker is tapped, so the

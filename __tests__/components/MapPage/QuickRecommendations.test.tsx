@@ -81,14 +81,17 @@ describe('QuickRecommendations', () => {
       />,
     );
 
-    expect(screen.getByTestId('place-card-Башня, Старый город')).toBeTruthy();
+    // F-47: the card shows the clean POI title (first meaningful address
+    // segment), with the remaining address moved into the secondary line.
+    expect(screen.getByTestId('place-card-Башня')).toBeTruthy();
 
     const firstCallProps = mockPlaceListCard.mock.calls[0]?.[0];
     expect(firstCallProps).toEqual(
       expect.objectContaining({
+        title: 'Башня',
         titleLayout: 'content',
         titleNumberOfLines: 3,
-        badges: ['12 км', 'Пешком 18 мин'],
+        badges: ['Старый город', '12 км', 'Пешком 18 мин'],
       }),
     );
     expect(firstCallProps.imageHeight).toBeGreaterThanOrEqual(148);

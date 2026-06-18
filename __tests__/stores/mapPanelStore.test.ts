@@ -91,4 +91,38 @@ describe('mapPanelStore throttle', () => {
     useMapPanelStore.getState().requestCollapse();
     expect(useMapPanelStore.getState().commandNonce).toBe(2);
   });
+
+  it('bumps searchFocusNonce on every requestSearchFocus (#225 autofocus signal)', async () => {
+    const { useMapPanelStore } = await import('@/stores/mapPanelStore');
+
+    expect(useMapPanelStore.getState().searchFocusNonce).toBe(0);
+
+    // Not throttled: each tap on «Искать места» must reliably re-focus the input.
+    useMapPanelStore.getState().requestSearchFocus();
+    useMapPanelStore.getState().requestSearchFocus();
+    expect(useMapPanelStore.getState().searchFocusNonce).toBe(2);
+  });
+
+  it('latches pendingSearchFocus so a freshly-mounted input can grab focus (#225)', async () => {
+    const { useMapPanelStore } = await import('@/stores/mapPanelStore');
+
+    expect(useMapPanelStore.getState().pendingSearchFocus).toBe(false);
+
+    // Tap «Искать места» — sheet switches list→filters and mounts the input AFTER
+    // the nonce already bumped, so the latch (not the nonce) carries the intent.
+    useMapPanelStore.getState().requestSearchFocus();
+    expect(useMapPanelStore.getState().pendingSearchFocus).toBe(true);
+
+    // The input clears the latch once it has grabbed focus.
+    useMapPanelStore.getState().consumeSearchFocus();
+    expect(useMapPanelStore.getState().pendingSearchFocus).toBe(false);
+  });
+
+  it('consumeSearchFocus is a no-op when nothing is pending (#225)', async () => {
+    const { useMapPanelStore } = await import('@/stores/mapPanelStore');
+
+    const before = useMapPanelStore.getState();
+    before.consumeSearchFocus();
+    expect(useMapPanelStore.getState().pendingSearchFocus).toBe(false);
+  });
 });

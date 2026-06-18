@@ -7,6 +7,7 @@ import { getDistanceInfo } from '@/utils/distanceCalculator'
 import { parseCoordinateString } from '@/utils/coordinates'
 import MapIcon from './MapIcon'
 import PlaceListCard from '@/components/places/PlaceListCard'
+import { buildPlaceTitleParts } from '@/components/MapPage/Map/placeTitle'
 
 const IS_WEB = Platform.OS === 'web'
 const DEFAULT_MAX_ITEMS = 3
@@ -114,14 +115,18 @@ export const QuickRecommendations: React.FC<Props> = React.memo(
       const thumbUrl = place.travelImageThumbUrl || place.travel_image_thumb_url || null
       const categoryName =
         typeof place.categoryName === 'string' ? place.categoryName.split(',')[0].trim() : ''
-      const badges = [
+      // Clean POI title + secondary address line, shared with the popup and the
+      // «Места рядом» list cards (buildPlaceTitleParts) so titles never diverge.
+      const { title: placeTitle, subtitle: placeSubtitle } = buildPlaceTitleParts(place)
+      const distanceBadges = [
         place.distanceText,
         `${TRANSPORT_LABEL[transportMode]} ${place.travelTimeText}`,
       ]
+      const badges = placeSubtitle ? [placeSubtitle, ...distanceBadges] : distanceBadges
       return (
         <PlaceListCard
           key={getMapPointKey(place, index)}
-          title={place.address || 'Место'}
+          title={placeTitle}
           imageUrl={thumbUrl}
           categoryLabel={categoryName || undefined}
           relatedTravelUrl={place.urlTravel}

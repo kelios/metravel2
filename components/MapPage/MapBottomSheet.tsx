@@ -102,22 +102,32 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
       [onStateChange],
     )
 
-    // Pressable монтируется только на FULL-снапе: постоянный absoluteFill-оверлей
-    // перехватывает все касания карты (pan/zoom/маркеры) на Android.
+    // Backdrop + dismiss-Pressable монтируются ТОЛЬКО на FULL-снапе.
+    //
+    // Регрессия #217 (Android touch-dead): BottomSheetBackdrop от @gorhom рендерит
+    // absoluteFill-`Animated.View` со СВОИМ `pointerEvents` (init = 'auto', т.к.
+    // enableTouchThrough=false по умолчанию). При свёрнутой/half-шторке его узел
+    // [0,461][1080,2410] лежал прозрачным слоем поверх всей карты и съедал pan/zoom/
+    // тапы по маркерам — `box-none` на нашей обёртке это НЕ чинит, т.к. ребёнок сам
+    // ставит 'auto'. Дим всё равно появляется только на full (appearsOnIndex=FULL),
+    // поэтому ниже full backdrop не нужен вовсе — не монтируем его => касания над
+    // свёрнутой шторкой проходят к карте, а собственные жесты шторки (drag/handle,
+    // pan по контенту) живут в BottomSheetBody/Handle и не затронуты.
     const renderBackdrop = useCallback(
-      (props: any) => (
-        <View
-          testID="map-panel-overlay"
-          style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}
-        >
-          <BottomSheetBackdrop
-            {...props}
-            disappearsOnIndex={SNAP_INDEX_HALF}
-            appearsOnIndex={SNAP_INDEX_FULL}
-            opacity={0.5}
-            pressBehavior="none"
-          />
-          {isFullySnapped && (
+      (props: any) => {
+        if (!isFullySnapped) return null
+        return (
+          <View
+            testID="map-panel-overlay"
+            style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}
+          >
+            <BottomSheetBackdrop
+              {...props}
+              disappearsOnIndex={SNAP_INDEX_HALF}
+              appearsOnIndex={SNAP_INDEX_FULL}
+              opacity={0.5}
+              pressBehavior="none"
+            />
             <Pressable
               style={StyleSheet.absoluteFill}
               onPress={() => {
@@ -128,9 +138,9 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
               accessibilityRole="button"
               accessibilityLabel="Закрыть панель карты"
             />
-          )}
-        </View>
-      ),
+          </View>
+        )
+      },
       [isFullySnapped],
     )
 
@@ -149,6 +159,14 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         bottomInset={bottomInset}
         onChange={handleSheetChanges}
         backdropComponent={renderBackdrop}
+        // Keyboard-avoidance for BottomSheetTextInput (place-name search): on
+        // focus the sheet pans up so the input + results sit above the keyboard
+        // instead of being hidden behind it (blind typing on Android). `extend`
+        // grows the sheet to the top snap so the results list stays visible;
+        // `adjustResize` lets Android resize the sheet rather than overlap it.
+        keyboardBehavior="extend"
+        keyboardBlurBehavior="restore"
+        android_keyboardInputMode="adjustResize"
         enablePanDownToClose
         handleStyle={styles.handle}
         handleIndicatorStyle={styles.indicator}

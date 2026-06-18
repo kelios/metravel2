@@ -635,6 +635,36 @@ export const getOsmNativeTileUrl = (): string => {
   return `${origin}${OSM_PROXY_TILE_PATH}`;
 };
 
+/**
+ * Тёмная подложка для тёмной темы UI (F-52 / #229). CARTO «dark_all» —
+ * бесплатный OSM-совместимый стиль без обязательного API-ключа. Субдомены
+ * a/b/c/d (`{s}`); ретина `{r}` подставляет '@2x' на HiDPI (Leaflet это умеет
+ * нативно). Светлая подложка остаётся через бэкенд-OSM-прокси как раньше.
+ */
+export const CARTO_DARK_TILE_URL =
+  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+export const CARTO_DARK_SUBDOMAINS = 'abcd';
+export const CARTO_DARK_ATTRIBUTION = '&copy; OpenStreetMap contributors &copy; CARTO';
+export const CARTO_DARK_MAX_ZOOM = 20;
+
+/**
+ * Базовая подложка в зависимости от темы приложения. Тёмная тема → CARTO dark,
+ * светлая → OSM-прокси. Используется и на web (useMapInstance), и на native
+ * (Map.ios.tsx) — одна точка истины для выбора подложки по теме.
+ */
+export const getThemedBaseTileUrl = (isDark: boolean): string =>
+  isDark ? CARTO_DARK_TILE_URL : getOsmTileUrl();
+
+/** Native-вариант: тёмная подложка не зависит от same-origin, URL абсолютный. */
+export const getThemedNativeBaseTileUrl = (isDark: boolean): string =>
+  isDark ? CARTO_DARK_TILE_URL : getOsmNativeTileUrl();
+
+export const getThemedBaseAttribution = (isDark: boolean): string =>
+  isDark ? CARTO_DARK_ATTRIBUTION : OSM_PROXY_ATTRIBUTION;
+
+export const getThemedBaseMaxZoom = (isDark: boolean): number =>
+  isDark ? CARTO_DARK_MAX_ZOOM : OSM_PROXY_MAX_ZOOM;
+
 export const WEB_MAP_BASE_LAYERS: WebMapLayerDefinition[] = [
   {
     id: 'osm',

@@ -237,7 +237,7 @@ export default function CustomHeaderMobileAccountSection({
               {...menuProps}
               themeToggleNode={
                 <Suspense fallback={null}>
-                  <ThemeToggleLazy compact layout="vertical" showLabels />
+                  <ThemeToggleLazy compact layout="horizontal" showLabels />
                 </Suspense>
               }
             />

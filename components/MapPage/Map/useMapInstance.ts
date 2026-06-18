@@ -1,7 +1,13 @@
 // useMapInstance.ts - Hook for managing map instance and layers
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
-import { WEB_MAP_BASE_LAYERS, getActiveOverlayLayers } from '@/config/mapWebLayers';
+import {
+  getActiveOverlayLayers,
+  getThemedBaseTileUrl,
+  getThemedBaseAttribution,
+  getThemedBaseMaxZoom,
+  CARTO_DARK_SUBDOMAINS,
+} from '@/config/mapWebLayers';
 import { createLeafletLayer } from '@/utils/mapWebLayers';
 import { attachOsmCampingOverlay } from '@/utils/mapWebOverlays/osmCampingOverlay';
 import { attachLasyZanocujWfsOverlay } from '@/utils/mapWebOverlays/lasyZanocujWfsOverlay';
@@ -13,13 +19,32 @@ import { attachWeatherTempLabelsOverlay } from '@/utils/mapWebOverlays/weatherTe
 interface UseMapInstanceProps {
   map: any;
   L: any;
+  /** Тёмная тема приложения → тёмная подложка (CARTO dark). F-52 / #229. */
+  isDark?: boolean;
 }
 
-export function useMapInstance({ map, L }: UseMapInstanceProps) {
+/**
+ * Создаёт базовый tile-слой подложки по теме. Светлая — OSM-прокси (без {s}),
+ * тёмная — CARTO dark (субдомены a/b/c/d, ретина {r}).
+ */
+const createThemedBaseLayer = (L: any, isDark: boolean) => {
+  if (!L) return null;
+  return L.tileLayer(getThemedBaseTileUrl(isDark), {
+    attribution: getThemedBaseAttribution(isDark),
+    maxZoom: getThemedBaseMaxZoom(isDark),
+    ...(isDark ? { subdomains: CARTO_DARK_SUBDOMAINS } : null),
+  });
+};
+
+export function useMapInstance({ map, L, isDark = false }: UseMapInstanceProps) {
   const leafletBaseLayerRef = useRef<any>(null);
   const leafletOverlayLayersRef = useRef<Map<string, any>>(new Map());
   const leafletControlRef = useRef<any>(null);
   const hasInitializedLayersRef = useRef(false);
+  // Текущая тема подложки в ref — чтобы layer-setup (зависит от [map, L])
+  // и theme-swap-эффект (зависит от isDark) не конфликтовали.
+  const isDarkRef = useRef(isDark);
+  isDarkRef.current = isDark;
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -170,13 +195,10 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
         // noop
       }
 
-      // Setup base layer
-      const baseDef = WEB_MAP_BASE_LAYERS.find((l) => l.defaultEnabled) || WEB_MAP_BASE_LAYERS[0];
-      if (baseDef) {
-        const baseLayer = createLeafletLayer(L, baseDef);
-        if (baseLayer) {
-          leafletBaseLayerRef.current = baseLayer;
-        }
+      // Setup base layer (тема-aware: тёмная подложка для тёмной темы #229).
+      const baseLayer = createThemedBaseLayer(L, isDarkRef.current);
+      if (baseLayer) {
+        leafletBaseLayerRef.current = baseLayer;
       }
 
       const overlays: Record<string, any> = {};
@@ -399,6 +421,36 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
       cleanup();
     };
   }, [map, L]);
+
+  // Смена темы приложения → меняем базовую подложку на месте (без пересборки
+  // всех слоёв: overlay/маршрут/радиус остаются). Светлая ↔ тёмная (CARTO).
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (!map || !L) return;
+    if (typeof map.addLayer !== 'function') return;
+    // До первичной инициализации слоёв base создаётся уже с актуальной темой.
+    if (!hasInitializedLayersRef.current) return;
+
+    try {
+      const newLayer = createThemedBaseLayer(L, isDark);
+      if (!newLayer) return;
+
+      const current = leafletBaseLayerRef.current;
+      if (current && map.hasLayer?.(current)) {
+        map.removeLayer(current);
+      }
+      leafletBaseLayerRef.current = newLayer;
+      // Подложка должна лежать под оверлеями/маршрутом — добавляем и опускаем вниз.
+      newLayer.addTo(map);
+      try {
+        newLayer.bringToBack?.();
+      } catch {
+        // noop
+      }
+    } catch {
+      // noop
+    }
+  }, [isDark, map, L]);
 
   return {
     leafletBaseLayerRef,

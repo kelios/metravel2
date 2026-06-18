@@ -14,6 +14,8 @@ import {
   buildYandexNaviUrl,
 } from '@/components/MapPage/Map/mapLinks'
 
+import { buildPlaceTitleParts } from '@/components/MapPage/Map/placeTitle'
+
 import AddressListItemNative from './AddressListItemNative'
 import AddressListItemWeb from './AddressListItemWeb'
 import { isWebPlatform, type Props } from './constants'
@@ -34,6 +36,14 @@ const AddressListItem: React.FC<Props> = ({
   screenWidth,
 }) => {
   const { address, coord, travelImageThumbUrl, articleUrl, urlTravel } = travel
+
+  // Reverse-geocoded points arrive with a raw address as their label. Derive a
+  // clean title (POI name / first meaningful segment) + secondary address line,
+  // reusing the same logic the marker popup uses so the two paths never diverge.
+  const placeTitle = useMemo(
+    () => buildPlaceTitleParts({ name: (travel as Record<string, unknown>).name, address }),
+    [travel, address],
+  )
 
   const [imgLoaded, setImgLoaded] = useState(false)
   const [hovered, setHovered] = useState(false)
@@ -143,6 +153,8 @@ const AddressListItem: React.FC<Props> = ({
       <AddressListItemWeb
         travel={travel}
         address={address}
+        title={placeTitle.title}
+        subtitle={placeTitle.subtitle}
         coord={coord}
         imgUri={imgUri}
         categories={categories}
@@ -171,6 +183,8 @@ const AddressListItem: React.FC<Props> = ({
   return (
     <AddressListItemNative
       address={address}
+      title={placeTitle.title}
+      subtitle={placeTitle.subtitle}
       coord={coord}
       imgUri={imgUri}
       categories={categories}

@@ -33,6 +33,7 @@
 - `$metravel-code-reviewer` - focused code review diff'а, поиск рисков, rule violations, validation gaps и остаточных проблем перед handoff.
 - `$metravel-devops-agent` - подготовка, запуск и проверка deploy на dev/preprod/prod с preflight, secret hygiene и post-deploy validation.
 - `$metravel-docs-maintainer` - обновление `docs/`, `AGENTS.md`, `.codex/skills` и правил для Codex.
+- `$metravel-article-editor-agent` - редактирование статей через API, HTML/SEO тела статьи, generated images, publish/unpublish и проверка результата без вывода токенов.
 - `$metravel-codex-orchestrator` - верхний workflow для Codex: triage, выбор skills/агентов, промты ролей, план проверок и финальный self-check.
 - `$metravel-agent-workflow` - координация ролей business analyst, system architect, designer, programmer, QA, reviewer и DevOps.
 - `$metravel-project-analyst` - read-only анализ структуры проекта, активных фич, рисков, проверок и handoff к профильным агентам.

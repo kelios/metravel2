@@ -1,6 +1,7 @@
 import { Platform } from 'react-native'
 
 import { getMapPointKey } from '@/hooks/map/useMapTravels'
+import { buildPlaceTitleParts } from '@/components/MapPage/Map/placeTitle'
 
 export const IS_WEB = Platform.OS === 'web'
 export const WEB_LIST_OVERSCAN_ITEMS = 5
@@ -53,8 +54,12 @@ export function buildTravelListSummaryHint({
   return `${placesCountLabel} ${placesWord} рядом. Нажмите на карточку, чтобы сфокусировать карту.`
 }
 
-export const getTravelItemTitle = (item: any): string =>
-  String(item?.address || item?.name || item?.title || 'Место')
+// Clean POI title for the compact preview card, shared with the popup and the
+// «Места рядом» list cards (buildPlaceTitleParts) so titles never diverge.
+export const getTravelItemTitle = (item: any): string => {
+  const { title } = buildPlaceTitleParts({ name: item?.name ?? item?.title, address: item?.address })
+  return title
+}
 
 export const getTravelItemSubtitle = (item: any): string => {
   const category = item?.categoryName || item?.category || item?.typeName

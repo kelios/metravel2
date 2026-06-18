@@ -169,6 +169,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
           onChange={handleSearchChange}
           placeholder="Найти место по названию..."
           resultsCount={searchQueryValue ? travelsData.length : undefined}
+          autoFocusOnSignal={isMobile}
         />
       </View>
 

@@ -16,7 +16,6 @@ import useBreadcrumbModelDefault, {
 } from '@/hooks/useBreadcrumbModel';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useTravelSectionsStore } from '@/stores/travelSectionsStore';
-import { useMapPanelStore } from '@/stores/mapPanelStore';
 import BreadcrumbsJsonLd from '@/components/seo/BreadcrumbsJsonLd';
 import {
   resolveHeaderContextBarAction,
@@ -80,7 +79,6 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
   const { isPhone, isLargePhone, width } = useResponsive();
   const isMobile = resolveHeaderContextBarIsMobile({ width, isPhone, isLargePhone });
   const requestOpen = useTravelSectionsStore((s) => s.requestOpen);
-  const requestToggleMapPanel = useMapPanelStore((s) => s.requestToggle);
 
   const model = useBreadcrumbModelSafe();
 
@@ -131,16 +129,11 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
               </Text>
             </View>
 
-            {mobileAction === 'map-panel' ? (
-              <ActionButton
-                accessibilityLabel="Найти места рядом — открыть или закрыть панель"
-                onPress={requestToggleMapPanel}
-                style={styles.mobileSectionsButton}
-                testID="map-panel-open"
-              >
-                <Feather name="search" size={18} color={colors.textMuted} />
-              </ActionButton>
-            ) : mobileAction === 'travel-sections' ? (
+            {/* #228 — на карте больше НЕ показываем кнопку «Найти места рядом»:
+                она дублировала нижний вход «Списком · N» (оба открывали один и
+                тот же шит списка). Единственный вход в список — нижняя кнопка в
+                MapMobileLayout. Шапка карты остаётся (назад + заголовок). */}
+            {mobileAction === 'travel-sections' ? (
               <ActionButton
                 accessibilityLabel="Открыть секции"
                 onPress={requestOpen}

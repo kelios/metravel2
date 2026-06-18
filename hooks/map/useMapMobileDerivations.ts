@@ -167,28 +167,21 @@ export function useMapMobileDerivations(
     travelsData.length,
   ])
 
-  // Top-overlay chips: selected categories first (so the active filter is always
-  // visible), then fill up to the limit with the remaining options.
+  // Top-overlay chips: STABLE order — chips keep their position regardless of
+  // selection (#230). Reordering selected-first made the row "jump" and made it
+  // hard to re-tap a chip to toggle it off. Selection is shown by highlight only.
   const topCategoryChips = useMemo<MapMobileCategoryChip[]>(() => {
     const options = (quickCategoryOptions as ReadonlyArray<{ id: unknown; name: unknown }>) ?? []
     const selectedSet = new Set(quickFilterSelected.map((v) => String(v)))
 
-    const normalized = options
+    return options
       .map((opt) => ({
         id: String(opt?.id ?? '').trim(),
         name: String(opt?.name ?? '').trim(),
       }))
       .filter((opt) => opt.id && opt.name)
-
-    const selected = normalized
-      .filter((opt) => selectedSet.has(opt.id))
-      .map((opt) => ({ ...opt, selected: true }))
-
-    const rest = normalized
-      .filter((opt) => !selectedSet.has(opt.id))
-      .map((opt) => ({ ...opt, selected: false }))
-
-    return [...selected, ...rest].slice(0, TOP_CATEGORY_CHIP_LIMIT)
+      .slice(0, TOP_CATEGORY_CHIP_LIMIT)
+      .map((opt) => ({ ...opt, selected: selectedSet.has(opt.id) }))
   }, [quickCategoryOptions, quickFilterSelected])
 
   const hasMoreCategories = useMemo(() => {

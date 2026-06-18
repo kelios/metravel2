@@ -57,6 +57,23 @@ export const getStyles = (
           } as any)
         : null),
     },
+      // #217 — stable host that always wraps the map node so the mobile↔desktop
+      // breakpoint flip never re-parents (remounts) Leaflet. On desktop it is the
+      // flex sibling to the right of the panel; on mobile it is the full-bleed
+      // background under the absolute overlays + bottom sheet.
+      mapHost: {
+        flex: 1,
+        position: 'relative',
+        minWidth: 0,
+        minHeight: 0,
+        ...(Platform.OS === 'web'
+          ? ({
+              display: 'flex',
+              height: '100%',
+              minHeight: 0,
+            } as any)
+          : null),
+      },
       mapArea: {
         flex: 1,
         minHeight: isMobile ? 260 : 500,

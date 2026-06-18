@@ -21,6 +21,8 @@ type DistanceInfo = {
 type Props = {
   travel: TravelCoords
   address?: string
+  title?: string
+  subtitle?: string
   coord?: string
   imgUri?: string | null
   categories: string[]
@@ -47,6 +49,8 @@ type Props = {
 const AddressListItemWeb: React.FC<Props> = ({
   travel,
   address,
+  title,
+  subtitle,
   coord,
   imgUri,
   categories,
@@ -70,14 +74,17 @@ const AddressListItemWeb: React.FC<Props> = ({
   webCardWidth,
 }) => {
   const categoryLabel = categories.join(', ')
-  const badges = distanceInfo
+  const distanceBadges = distanceInfo
     ? [distanceInfo.distanceText, `${TRANSPORT_LABELS[transportMode]} ${distanceInfo.travelTimeText}`]
     : []
+  // Secondary address line (POI titles separate the clean name from the full
+  // reverse-geocoded address) renders above the distance badges.
+  const badges = subtitle ? [subtitle, ...distanceBadges] : distanceBadges
   const travelRecord = travel as Record<string, unknown>
 
   return (
     <PlaceListCard
-      title={address ?? ''}
+      title={title ?? address ?? ''}
       imageUrl={imgUri}
       categoryLabel={categoryLabel || undefined}
         relatedTravelUrl={urlTravel}

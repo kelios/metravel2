@@ -160,7 +160,7 @@ describe('HeaderContextBar', () => {
     expect(mockPush).toHaveBeenCalledWith('/');
   });
 
-  it('should show map panel open button on mobile /map', () => {
+  it('should not render the map panel open button on mobile /map (#228 — duplicate of bottom list entry)', () => {
     (usePathname as jest.Mock).mockReturnValue('/map');
     (global as any).__mockResponsive = {
       width: 390,
@@ -189,12 +189,12 @@ describe('HeaderContextBar', () => {
       items: [],
     });
 
-    const { getByTestId, queryByTestId } = renderWithClient(<HeaderContextBar />);
-    expect(getByTestId('map-panel-open')).toBeTruthy();
+    const { queryByTestId } = renderWithClient(<HeaderContextBar />);
+    // #228 — entry into the "places nearby" list lives only on the bottom
+    // "Списком · N" button now; the header no longer duplicates it.
+    expect(queryByTestId('map-panel-open')).toBeNull();
     expect(queryByTestId('mobile-sections-open')).toBeNull();
-
-    fireEvent.press(getByTestId('map-panel-open'));
-    expect(mockRequestToggleMapPanel).toHaveBeenCalled();
+    expect(mockRequestToggleMapPanel).not.toHaveBeenCalled();
   });
 
   it('should not render sections menu button on mobile non-travel pages', () => {

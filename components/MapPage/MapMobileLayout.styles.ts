@@ -29,13 +29,26 @@ export const getMapMobileLayoutStyles = (
           } as any)
         : null),
     },
+    // #217 — overlay layout sits on top of the shared (stable) map host. The
+    // background is transparent so the map shows through, and there is no
+    // overflow clipping that would hide the bottom sheet.
+    overlayRoot: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'transparent',
+      ...(Platform.OS === 'web'
+        ? ({
+            overflow: 'visible',
+          } as any)
+        : null),
+    },
     mapContainer: {
       flex: 1,
       minHeight: 240,
       ...(Platform.OS === 'web'
         ? ({
-            overflow: 'hidden',
+            overflow: 'visible',
             position: 'relative',
+            backgroundColor: 'transparent',
           } as any)
         : null),
     },
@@ -476,6 +489,47 @@ export const getMapMobileLayoutStyles = (
     listButtonText: {
       fontSize: 14,
       fontWeight: '800' as const,
+      color: colors.textOnPrimary,
+      letterSpacing: 0.1,
+    },
+    // F-49 — «Искать в этой области» — pill по центру СНИЗУ (Google/Organic
+    // Maps): над «Списком · N» и нижним доком, по центру. listButton сидит на
+    // bottom 88/96 + safe-area (высота 44), его верх ~132/140 + safe-area —
+    // ставим pill ещё выше с зазором, чтобы они не перекрывались, а locateFab
+    // (справа) остаётся сбоку и не пересекается с центрированным pill.
+    searchAreaButton: {
+      position: 'absolute' as const,
+      alignSelf: 'center' as const,
+      bottom: Platform.OS === 'web'
+        ? (`calc(${options.isNarrow ? 144 : 152}px + env(safe-area-inset-bottom))` as any)
+        : options.isNarrow
+          ? 144
+          : 152,
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      gap: 7,
+      height: 40,
+      paddingHorizontal: 16,
+      borderRadius: 20,
+      backgroundColor: colors.primary,
+      zIndex: 1450,
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: '0 4px 14px rgba(15,23,42,0.20)',
+            cursor: 'pointer',
+          } as any)
+        : {
+            shadowColor: DESIGN_TOKENS.colors.text,
+            shadowOffset: { width: 0, height: 3 },
+            shadowOpacity: 0.18,
+            shadowRadius: 8,
+            elevation: 5,
+          }),
+    },
+    searchAreaButtonText: {
+      fontSize: 13,
+      fontWeight: '700' as const,
       color: colors.textOnPrimary,
       letterSpacing: 0.1,
     },

@@ -40,6 +40,25 @@ const parseUrlCoordinate = (value: unknown): number | null => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+// F-49 — approximate great-circle distance in km between two lat/lng points.
+// Used only to decide whether the map center moved far enough from the active
+// query anchor to surface the "Search this area" affordance, so a cheap
+// haversine is plenty (no need for the full CoordinateConverter on this path).
+const EARTH_RADIUS_KM = 6371;
+const distanceKm = (
+  a: { latitude: number; longitude: number },
+  b: { latitude: number; longitude: number },
+): number => {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(b.latitude - a.latitude);
+  const dLng = toRad(b.longitude - a.longitude);
+  const lat1 = toRad(a.latitude);
+  const lat2 = toRad(b.latitude);
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+  return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
+};
+
 export function useMapScreenController() {
   // Map API reference
   const [mapUiApi, setMapUiApi] = useState<MapUiApi | null>(null);
@@ -61,6 +80,23 @@ export function useMapScreenController() {
     },
     []
   );
+
+  // F-49 — "Search this area" (Google/Organic-Maps style).
+  // searchAreaCenter — explicit anchor chosen by tapping the floating button;
+  // when set it takes priority over userLocation as the nearby-query anchor.
+  // mapCenter — the latest center reported by the map on pan/zoom (debounced),
+  // used only to decide whether the affordance should appear.
+  const [searchAreaCenter, setSearchAreaCenter] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [mapCenter, setMapCenter] = useState<{ latitude: number; longitude: number } | null>(
+    null
+  );
+  const handleMapMove = useCallback((center: { latitude: number; longitude: number }) => {
+    if (!Number.isFinite(center.latitude) || !Number.isFinite(center.longitude)) return;
+    setMapCenter({ latitude: center.latitude, longitude: center.longitude });
+  }, []);
 
   // #207 — mobile bottom card for a tapped single marker (maps.me-style).
   // On mobile-web the Leaflet popup over the marker is suppressed and the
@@ -186,9 +222,44 @@ export function useMapScreenController() {
   }, []);
 
   // Data Controller
+  // F-49 — an explicit "Search this area" pick (searchAreaCenter) wins over every
+  // implicit anchor, including the initial URL coordinates: tapping the button is a
+  // deliberate "search HERE now" intent. With no explicit pick we keep the prior
+  // precedence (URL deep-link → real user location → resolved/default center).
   const queryCoordinates = useMemo(() => {
-    return urlCoordinates ?? userLocation ?? coordinates;
-  }, [urlCoordinates, userLocation, coordinates]);
+    return searchAreaCenter ?? urlCoordinates ?? userLocation ?? coordinates;
+  }, [searchAreaCenter, urlCoordinates, userLocation, coordinates]);
+
+  // The active anchor the nearby query currently revolves around (mirrors
+  // queryCoordinates' precedence minus the explicit pick), used as the reference
+  // point for the "moved far enough" check below.
+  const activeAnchor = useMemo(
+    () => urlCoordinates ?? userLocation ?? coordinates,
+    [urlCoordinates, userLocation, coordinates],
+  );
+
+  // F-49 — threshold for "significant move": the map center must drift away from
+  // the *current* query anchor by more than ~30% of the active search radius
+  // (clamped to a 1.5–25 km sane band so tiny/huge radii still feel right). Below
+  // that the existing results already cover the viewport, so we hide the button.
+  const canSearchThisArea = useMemo(() => {
+    if (mode !== 'radius') return false;
+    if (!mapCenter) return false;
+    const anchor = searchAreaCenter ?? activeAnchor;
+    if (!anchor || !Number.isFinite(anchor.latitude) || !Number.isFinite(anchor.longitude)) {
+      return false;
+    }
+    const radiusKm = Number(filterValues.radius) || 30;
+    const thresholdKm = Math.min(25, Math.max(1.5, radiusKm * 0.3));
+    return distanceKm(anchor, mapCenter) > thresholdKm;
+  }, [mode, mapCenter, searchAreaCenter, activeAnchor, filterValues.radius]);
+
+  const handleSearchThisArea = useCallback(() => {
+    setMapCenter((center) => {
+      if (center) setSearchAreaCenter({ latitude: center.latitude, longitude: center.longitude });
+      return center;
+    });
+  }, []);
 
   const dataController = useMapDataController({
     coordinates: queryCoordinates,
@@ -335,6 +406,8 @@ export function useMapScreenController() {
   const resetFilters = useCallback(() => {
     resetFiltersBase();
     resetOverlays();
+    // F-49 — a full reset drops the explicit "search this area" anchor too.
+    setSearchAreaCenter(null);
     // Atomic: clear route + set mode in one store update to avoid intermediate
     // render where mode='route' but fullRouteCoords=[] (disables travel query).
     useRouteStore.getState().clearRouteAndSetMode('radius');
@@ -342,6 +415,9 @@ export function useMapScreenController() {
 
   // Center on user location
   const centerOnUser = useCallback(() => {
+    // F-49 — returning to the GPS anchor clears the explicit "search this area"
+    // pick so the nearby query revolves around the user again.
+    setSearchAreaCenter(null);
     try {
       mapUiApi?.centerOnUser?.();
     } catch {
@@ -433,6 +509,8 @@ export function useMapScreenController() {
       onMapClick: handleMapClick,
       onMapUiApiReady: handleMapUiApiReady,
       onUserLocationChange: handleUserLocationChange,
+      // F-49 — report map center on pan/zoom so we can offer "Search this area".
+      onMapMove: handleMapMove,
       // #207 — on mobile-web a marker tap surfaces a bottom card instead of the
       // Leaflet popup; desktop keeps the anchored popup behaviour.
       onMarkerSelect: isMobile ? handleMarkerSelect : undefined,
@@ -457,6 +535,7 @@ export function useMapScreenController() {
       handleMapClick,
       handleMapUiApiReady,
       handleUserLocationChange,
+      handleMapMove,
       isMobile,
       handleMarkerSelect,
       clearSelectedPlace,
@@ -669,6 +748,10 @@ export function useMapScreenController() {
     zoomIn,
     zoomOut,
 
+    // F-49 — "Search this area"
+    canSearchThisArea,
+    handleSearchThisArea,
+
     // Refs
     panelRef,
 
@@ -725,6 +808,8 @@ export function useMapScreenController() {
     centerOnUser,
     zoomIn,
     zoomOut,
+    canSearchThisArea,
+    handleSearchThisArea,
     panelRef,
     geoError,
     userLocation,

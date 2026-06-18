@@ -113,6 +113,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     setRoutingError,
     radius,
     onUserLocationChange,
+    onMapMove,
     hideFloatingControls = false,
     onMarkerSelect,
     onMapBackgroundTap,
@@ -399,6 +400,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const { leafletBaseLayerRef, leafletOverlayLayersRef, leafletControlRef } = useMapInstance({
     map: mapInstance,
     L,
+    isDark: themeContextValue.isDark,
   })
 
   // Expose marker index for MapUiApi.openPopupForCoord
@@ -421,7 +423,59 @@ const MapPageComponent: React.FC<Props> = (props) => {
     leafletOverlayLayersRef,
     leafletControlRef,
     onRequestUserLocationFocus: centerOnUserLocation,
+    isDark: themeContextValue.isDark,
   })
+
+  // F-49 — report the map center (debounced) on pan/zoom end so the controller
+  // can offer "Search this area". We skip near-identical centers to avoid churn.
+  const onMapMoveRef = useRef(onMapMove)
+  useEffect(() => {
+    onMapMoveRef.current = onMapMove
+  }, [onMapMove])
+
+  useEffect(() => {
+    if (!IS_WEB) return
+    const map = mapInstance
+    if (!map || typeof map.on !== 'function') return
+
+    let timer: ReturnType<typeof setTimeout> | null = null
+    let lastSent: { lat: number; lng: number } | null = null
+
+    const emit = () => {
+      try {
+        const center = map.getCenter?.()
+        const lat = Number(center?.lat)
+        const lng = Number(center?.lng)
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
+        if (
+          lastSent &&
+          Math.abs(lastSent.lat - lat) < COORD_EPSILON &&
+          Math.abs(lastSent.lng - lng) < COORD_EPSILON
+        ) {
+          return
+        }
+        lastSent = { lat, lng }
+        onMapMoveRef.current?.({ latitude: lat, longitude: lng })
+      } catch {
+        ignoreOptionalMapRuntimeError()
+      }
+    }
+
+    const onMoveEnd = () => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(emit, 300)
+    }
+
+    map.on('moveend', onMoveEnd)
+    return () => {
+      if (timer) clearTimeout(timer)
+      try {
+        map.off?.('moveend', onMoveEnd)
+      } catch {
+        ignoreOptionalMapRuntimeError()
+      }
+    }
+  }, [mapInstance])
 
   const handleMapClick = useCallback(
     (e: any) => {

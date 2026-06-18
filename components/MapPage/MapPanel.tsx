@@ -41,6 +41,7 @@ interface MapPanelProps {
     radius?: string; // Радиус поиска в км
     onMapUiApiReady?: (api: MapUiApi | null) => void;
     onUserLocationChange?: ((loc: LatLng | null) => void) | undefined;
+    onMapMove?: (center: LatLng) => void;
     hideFloatingControls?: boolean;
     onMarkerSelect?: (point: any) => void;
     onMapBackgroundTap?: () => void;
@@ -86,6 +87,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                                                radius,
                                                onMapUiApiReady,
                                                onUserLocationChange,
+                                               onMapMove,
                                                hideFloatingControls = false,
                                                onMarkerSelect,
                                                onMapBackgroundTap,
@@ -153,6 +155,8 @@ const MapPanel: React.FC<MapPanelProps> = ({
                     fullRouteCoords={fullRouteCoords}
                     mode={mode}
                     onMapClick={onMapClick}
+                    onMarkerSelect={onMarkerSelect}
+                    onMapMove={onMapMove}
                     onMapUiApiReady={onMapUiApiReady}
                 />
             </View>
@@ -183,6 +187,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                       radius={radius}
                       onMapUiApiReady={onMapUiApiReady}
                       onUserLocationChange={onUserLocationChange}
+                      onMapMove={onMapMove}
                       hideFloatingControls={hideFloatingControls}
                       onMarkerSelect={onMarkerSelect}
                       onMapBackgroundTap={onMapBackgroundTap}

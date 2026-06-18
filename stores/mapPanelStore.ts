@@ -28,12 +28,33 @@ interface MapPanelState {
   /** The most recently accepted command. */
   command: MapPanelCommand;
 
+  /**
+   * Monotonic counter bumped when the user opens the sheet via the "Искать
+   * места" search row. The place-name search input watches it to grab focus
+   * (open the keyboard) immediately, so search is a single tap, not two.
+   */
+  searchFocusNonce: number;
+
+  /**
+   * Latched intent: true between the moment the user taps the search row and
+   * the moment the search input actually grabs focus. Unlike the nonce, this
+   * survives the input being mounted fresh (sheet switching list→filters mounts
+   * MapSearchInput AFTER the nonce already bumped), so the input can detect a
+   * pending focus request on its very first mount and open the keyboard. The
+   * input clears it via `consumeSearchFocus` once it has focused.
+   */
+  pendingSearchFocus: boolean;
+
   /** Open the panel to the given tab (default: filters). */
   requestOpen: (tab?: MapPanelRequestedTab) => void;
   /** Toggle the mobile sheet open/collapsed. */
   requestToggle: () => void;
   /** Force-collapse the mobile sheet. */
   requestCollapse: () => void;
+  /** Ask the place-name search input to focus (open keyboard). */
+  requestSearchFocus: () => void;
+  /** Clear the latched focus intent after the input has grabbed focus. */
+  consumeSearchFocus: () => void;
 
   // --- Backwards-compatible selectors (derived from the unified stream) ---
   /** @deprecated read `commandNonce` + `command.kind === 'open'` instead. */
@@ -52,6 +73,8 @@ const THROTTLE_MS = 300;
 export const useMapPanelStore = create<MapPanelState>((set) => ({
   commandNonce: 0,
   command: { kind: 'open', tab: 'filters' },
+  searchFocusNonce: 0,
+  pendingSearchFocus: false,
 
   openNonce: 0,
   requestedTab: 'filters',
@@ -92,4 +115,13 @@ export const useMapPanelStore = create<MapPanelState>((set) => ({
         command: { kind: 'collapse', tab: s.command.tab },
       };
     }),
+
+  requestSearchFocus: () =>
+    set((s) => ({
+      searchFocusNonce: s.searchFocusNonce + 1,
+      pendingSearchFocus: true,
+    })),
+
+  consumeSearchFocus: () =>
+    set((s) => (s.pendingSearchFocus ? { pendingSearchFocus: false } : s)),
 }));

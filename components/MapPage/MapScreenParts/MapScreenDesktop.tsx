@@ -16,14 +16,11 @@ import {
   POINTER_EVENTS_NONE,
   PRESSED_OPACITY_07,
   PRESSED_OPACITY_085,
-  ROOT_MAP_PROPS,
 } from './shared'
 
 type MapScreenDesktopProps = {
   styles: any
   themedColors: any
-  seoBlock: React.ReactNode
-  mapComponent: React.ReactNode
   isWeb: boolean
   isMobile: boolean
   isDesktopCollapsed: boolean
@@ -63,11 +60,15 @@ type MapScreenDesktopProps = {
   shouldLoadOnboarding: boolean
 }
 
-export function MapScreenDesktop({
+/**
+ * Desktop chrome: the left panel (or its collapsed strip) plus the in-map
+ * overlay used while the mobile-style sheet animates. Rendered as a flex
+ * sibling BEFORE the stable map host (see MapScreenShell) so the map node is
+ * never re-parented on a breakpoint flip. #217.
+ */
+export function MapScreenDesktopChrome({
   styles,
   themedColors,
-  seoBlock,
-  mapComponent,
   isWeb,
   isMobile,
   isDesktopCollapsed,
@@ -83,7 +84,6 @@ export function MapScreenDesktop({
   handleSelectRouteTab,
   selectTravelsTab,
   closeRightPanel,
-  openRightPanel,
   handleResizeMouseDown,
   resetFiltersForPanel,
   filtersPanelProps,
@@ -102,173 +102,194 @@ export function MapScreenDesktop({
   currentRadius,
   coordinates,
   transportMode,
-  isConnected,
-  mapReady,
-  shouldLoadOnboarding,
 }: MapScreenDesktopProps) {
   const showDesktopCollapsedStrip = !isMobile && isDesktopCollapsed && isWeb
   const showDesktopExpandedPanel = !showDesktopCollapsedStrip
 
   return (
-    <View style={styles.container} {...ROOT_MAP_PROPS}>
-      {seoBlock}
+    <>
+      {showDesktopCollapsedStrip && (
+        <View testID="map-panel-collapsed" style={styles.collapsedPanel}>
+          <Pressable
+            testID="map-panel-expand-button"
+            hitSlop={8}
+            style={({ pressed }) => [styles.collapseToggle, pressed && PRESSED_OPACITY_07]}
+            onPress={toggleDesktopCollapse}
+            accessibilityRole="button"
+            accessibilityLabel="Развернуть панель"
+            {...({ title: 'Развернуть панель' } as any)}
+          >
+            <Feather name="chevron-right" size={18} color={themedColors.text} />
+          </Pressable>
+          <CollapsedIconButton
+            icon="list"
+            label={`Список точек (${travelsData.length})`}
+            title={`Список мест (${travelsData.length})`}
+            onPress={() => {
+              toggleDesktopCollapse()
+              selectTravelsTab()
+            }}
+            styles={styles}
+            iconColor={themedColors.textMuted}
+            badge={travelsData.length}
+            badgeStyles={{ container: styles.collapsedBadge, text: styles.collapsedBadgeText }}
+          />
+          <CollapsedIconButton
+            icon="navigation"
+            label="Построение маршрута"
+            title="Построить маршрут"
+            onPress={() => {
+              toggleDesktopCollapse()
+              handleSelectRouteTab()
+            }}
+            styles={styles}
+            iconColor={themedColors.textMuted}
+          />
+          <CollapsedIconButton
+            icon="sliders"
+            label="Фильтры"
+            title="Фильтры"
+            onPress={() => {
+              toggleDesktopCollapse()
+              handleSelectSearchTab()
+            }}
+            styles={styles}
+            iconColor={themedColors.textMuted}
+          />
+        </View>
+      )}
 
-      <View style={styles.mapContainer}>
-        {showDesktopCollapsedStrip && (
-          <View testID="map-panel-collapsed" style={styles.collapsedPanel}>
+      {showDesktopExpandedPanel && (
+        <Animated.View
+          ref={panelRef}
+          style={[
+            styles.rightPanel,
+            panelStyle,
+            !isMobile && isWeb ? { width: desktopPanelWidth } : null,
+          ]}
+        >
+          {!isMobile && isWeb && (
+            <View
+              testID="map-panel-resize-handle"
+              style={styles.resizeHandle}
+              onStartShouldSetResponder={() => true}
+              {...({ onMouseDown: handleResizeMouseDown } as any)}
+            />
+          )}
+          {!isMobile && isWeb && (
             <Pressable
-              testID="map-panel-expand-button"
+              testID="map-panel-collapse-button"
               hitSlop={8}
-              style={({ pressed }) => [styles.collapseToggle, pressed && PRESSED_OPACITY_07]}
+              style={({ pressed }) => [styles.collapseToggleInPanel, pressed && PRESSED_OPACITY_07]}
               onPress={toggleDesktopCollapse}
               accessibilityRole="button"
-              accessibilityLabel="Развернуть панель"
-              {...({ title: 'Развернуть панель' } as any)}
+              accessibilityLabel="Свернуть панель"
             >
-              <Feather name="chevron-right" size={18} color={themedColors.text} />
+              <Feather name="chevron-left" size={16} color={themedColors.textMuted} />
             </Pressable>
-            <CollapsedIconButton
-              icon="list"
-              label={`Список точек (${travelsData.length})`}
-              title={`Список мест (${travelsData.length})`}
-              onPress={() => {
-                toggleDesktopCollapse()
-                selectTravelsTab()
-              }}
-              styles={styles}
-              iconColor={themedColors.textMuted}
-              badge={travelsData.length}
-              badgeStyles={{ container: styles.collapsedBadge, text: styles.collapsedBadgeText }}
-            />
-            <CollapsedIconButton
-              icon="navigation"
-              label="Построение маршрута"
-              title="Построить маршрут"
-              onPress={() => {
-                toggleDesktopCollapse()
-                handleSelectRouteTab()
-              }}
-              styles={styles}
-              iconColor={themedColors.textMuted}
-            />
-            <CollapsedIconButton
-              icon="sliders"
-              label="Фильтры"
-              title="Фильтры"
-              onPress={() => {
-                toggleDesktopCollapse()
-                handleSelectSearchTab()
-              }}
-              styles={styles}
-              iconColor={themedColors.textMuted}
-            />
-          </View>
-        )}
-
-        {showDesktopExpandedPanel && (
-          <Animated.View
-            ref={panelRef}
-            style={[
-              styles.rightPanel,
-              panelStyle,
-              !isMobile && isWeb ? { width: desktopPanelWidth } : null,
-            ]}
-          >
-            {!isMobile && isWeb && (
-              <View
-                testID="map-panel-resize-handle"
-                style={styles.resizeHandle}
-                onStartShouldSetResponder={() => true}
-                {...({ onMouseDown: handleResizeMouseDown } as any)}
+          )}
+          <MapPanelHeader
+            isMobile={isMobile}
+            activeTab={activePanelTab}
+            travelsCount={travelsData.length}
+            themedColors={themedColors}
+            styles={styles}
+            selectSearchTab={handleSelectSearchTab}
+            selectRouteTab={handleSelectRouteTab}
+            selectTravelsTab={selectTravelsTab}
+            closeRightPanel={closeRightPanel}
+            resetFilters={resetFiltersForPanel}
+          />
+          {!isMobile && activePanelTab === 'search' && activeFilterItems.length > 0 && (
+            <Suspense fallback={null}>
+              <ActiveFiltersBar
+                filters={activeFilterItems}
+                onRemoveFilter={handleRemoveActiveFilter}
+                onClearAll={handleClearAllFilters}
               />
-            )}
-            {!isMobile && isWeb && (
-              <Pressable
-                testID="map-panel-collapse-button"
-                hitSlop={8}
-                style={({ pressed }) => [styles.collapseToggleInPanel, pressed && PRESSED_OPACITY_07]}
-                onPress={toggleDesktopCollapse}
-                accessibilityRole="button"
-                accessibilityLabel="Свернуть панель"
-              >
-                <Feather name="chevron-left" size={16} color={themedColors.textMuted} />
-              </Pressable>
-            )}
-            <MapPanelHeader
-              isMobile={isMobile}
-              activeTab={activePanelTab}
-              travelsCount={travelsData.length}
-              themedColors={themedColors}
-              styles={styles}
-              selectSearchTab={handleSelectSearchTab}
-              selectRouteTab={handleSelectRouteTab}
-              selectTravelsTab={selectTravelsTab}
-              closeRightPanel={closeRightPanel}
-              resetFilters={resetFiltersForPanel}
-            />
-            {!isMobile && activePanelTab === 'search' && activeFilterItems.length > 0 && (
-              <Suspense fallback={null}>
-                <ActiveFiltersBar
-                  filters={activeFilterItems}
-                  onRemoveFilter={handleRemoveActiveFilter}
-                  onClearAll={handleClearAllFilters}
-                />
-              </Suspense>
-            )}
-            <View style={styles.panelContent}>
-              {rightPanelTab === 'filters' ? (
-                filtersPanelProps?.Component ? (
-                  <Suspense
-                    fallback={
-                      <View style={styles.panelPlaceholder}>
-                        <Text style={styles.panelPlaceholderText}>Загрузка фильтров…</Text>
-                      </View>
-                    }
-                  >
-                    <filtersPanelProps.Component {...filtersPanelProps.contextValue}>
-                      <filtersPanelProps.Panel hideTopControls hideFooterReset={!isMobile} />
-                    </filtersPanelProps.Component>
-                  </Suspense>
-                ) : (
-                  <View style={styles.panelPlaceholder}>
-                    <Text style={styles.panelPlaceholderText}>Загрузка фильтров…</Text>
-                  </View>
-                )
-              ) : (
-                <View
-                  testID="map-travels-tab"
-                  {...(isWeb ? ({ 'data-testid': 'map-travels-tab' } as any) : null)}
-                  style={{ flex: 1 }}
+            </Suspense>
+          )}
+          <View style={styles.panelContent}>
+            {rightPanelTab === 'filters' ? (
+              filtersPanelProps?.Component ? (
+                <Suspense
+                  fallback={
+                    <View style={styles.panelPlaceholder}>
+                      <Text style={styles.panelPlaceholderText}>Загрузка фильтров…</Text>
+                    </View>
+                  }
                 >
-                  <Suspense fallback={<ActivityIndicator style={{ paddingVertical: 32 }} color={themedColors.primary} />}>
-                    <TravelListPanel
-                      travelsData={travelsData}
-                      buildRouteTo={buildRouteTo}
-                      isMobile={isMobile}
-                      isLoading={loading || isFetching}
-                      hasMore={hasMore}
-                      onLoadMore={onLoadMore}
-                      isRefreshing={isFetching && isPlaceholderData}
-                      onRefresh={refetchMapData}
-                       currentRadiusKm={currentRadius}
-                      userLocation={coordinates}
-                      transportMode={transportMode}
-                      onResetFilters={handleClearAllFilters}
-                      onExpandRadius={handleExpandRadius}
-                    />
-                  </Suspense>
+                  <filtersPanelProps.Component {...filtersPanelProps.contextValue}>
+                    <filtersPanelProps.Panel hideTopControls hideFooterReset={!isMobile} />
+                  </filtersPanelProps.Component>
+                </Suspense>
+              ) : (
+                <View style={styles.panelPlaceholder}>
+                  <Text style={styles.panelPlaceholderText}>Загрузка фильтров…</Text>
                 </View>
-              )}
-            </View>
-          </Animated.View>
-        )}
+              )
+            ) : (
+              <View
+                testID="map-travels-tab"
+                {...(isWeb ? ({ 'data-testid': 'map-travels-tab' } as any) : null)}
+                style={{ flex: 1 }}
+              >
+                <Suspense fallback={<ActivityIndicator style={{ paddingVertical: 32 }} color={themedColors.primary} />}>
+                  <TravelListPanel
+                    travelsData={travelsData}
+                    buildRouteTo={buildRouteTo}
+                    isMobile={isMobile}
+                    isLoading={loading || isFetching}
+                    hasMore={hasMore}
+                    onLoadMore={onLoadMore}
+                    isRefreshing={isFetching && isPlaceholderData}
+                    onRefresh={refetchMapData}
+                     currentRadiusKm={currentRadius}
+                    userLocation={coordinates}
+                    transportMode={transportMode}
+                    onResetFilters={handleClearAllFilters}
+                    onExpandRadius={handleExpandRadius}
+                  />
+                </Suspense>
+              </View>
+            )}
+          </View>
+        </Animated.View>
+      )}
 
-        {mapComponent}
-        {rightPanelVisible && isMobile && (
-          <Animated.View style={[styles.overlay, overlayStyle]} />
-        )}
-      </View>
+      {rightPanelVisible && isMobile && (
+        <Animated.View style={[styles.overlay, overlayStyle]} />
+      )}
+    </>
+  )
+}
 
+type MapScreenDesktopOverlaysProps = {
+  styles: any
+  themedColors: any
+  isWeb: boolean
+  openRightPanel: () => void
+  isConnected: boolean
+  mapReady: boolean
+  shouldLoadOnboarding: boolean
+}
+
+/**
+ * Desktop overlays that live OUTSIDE the map container (FAB, offline indicator,
+ * loading overlay, onboarding). Rendered by the shell as breakpoint shared
+ * chrome so they do not affect the map host position.
+ */
+export function MapScreenDesktopOverlays({
+  styles,
+  themedColors,
+  isWeb,
+  openRightPanel,
+  isConnected,
+  mapReady,
+  shouldLoadOnboarding,
+}: MapScreenDesktopOverlaysProps) {
+  return (
+    <>
       {!isWeb && (
         <Pressable
           style={({ pressed }) => [styles.fab, pressed && PRESSED_OPACITY_085]}
@@ -290,9 +311,10 @@ export function MapScreenDesktop({
 
       {shouldLoadOnboarding && (
         <Suspense fallback={null}>
-          <MapOnboarding mobileWebCoachmark={isWeb && isMobile} />
+          {/* Desktop branch: coachmark is mobile-web only, so always false here. */}
+          <MapOnboarding mobileWebCoachmark={false} />
         </Suspense>
       )}
-    </View>
+    </>
   )
 }

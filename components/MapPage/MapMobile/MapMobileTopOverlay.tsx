@@ -55,6 +55,12 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
 }) => {
   const styles = getMapMobileTopOverlayStyles(colors)
 
+  // R-1 — глобальной шапки на табе карты больше нет, поэтому overlay сам отвечает
+  // за отступ под статус-бар/нотч. Берём safe-area top, но держим небольшой пол,
+  // чтобы строка поиска не прилипала к самому краю там, где safe-area == 0
+  // (web-mobile, Android без нотча).
+  const resolvedTopPadding = Math.max(topInset, 8) + 8
+
   const renderCategory = useCallback(
     (chip: CategoryChip) => (
       <Pressable
@@ -90,7 +96,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   return (
     <View
       pointerEvents="box-none"
-      style={[styles.root, { paddingTop: topInset + 8 }]}
+      style={[styles.root, { paddingTop: resolvedTopPadding }]}
       testID="map-mobile-top-overlay"
     >
       <View style={styles.searchRow} pointerEvents="auto">

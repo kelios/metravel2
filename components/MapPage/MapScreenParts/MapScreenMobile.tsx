@@ -1,15 +1,11 @@
 import React, { Suspense } from 'react'
-import { View } from 'react-native'
 
 import { MapOfflineIndicator } from '@/components/MapPage/MapOfflineIndicator'
 import { MapMobileLayout, MapOnboarding } from '@/screens/tabs/mapDeferred'
 
-import { MAP_PANEL_PLACEHOLDER, ROOT_MAP_PROPS } from './shared'
+import { MAP_PANEL_PLACEHOLDER } from './shared'
 
 type MapScreenMobileProps = {
-  styles: any
-  seoBlock: React.ReactNode
-  mapComponent: React.ReactNode
   travelsData: any[]
   hasMore: boolean
   onLoadMore?: () => void
@@ -21,6 +17,8 @@ type MapScreenMobileProps = {
   transportMode: any
   buildRouteTo: (item: any) => void
   centerOnUser: () => void
+  canSearchThisArea?: boolean
+  onSearchThisArea?: () => void
   handleSelectSearchTab: () => void
   requestOpenBottomSheet: (tab: any) => void
   filtersPanelProps: any
@@ -35,10 +33,12 @@ type MapScreenMobileProps = {
   selectedPlaceUserLocation?: { latitude: number; longitude: number } | null
 }
 
+/**
+ * Mobile chrome: the maps.me-style top overlay + bottom sheet + FABs, rendered
+ * as an absolute overlay ON TOP of the stable map host (see MapScreenShell). The
+ * map node is never rendered here, so a breakpoint flip cannot remount it. #217.
+ */
 export function MapScreenMobile({
-  styles,
-  seoBlock,
-  mapComponent,
   travelsData,
   hasMore,
   onLoadMore,
@@ -50,6 +50,8 @@ export function MapScreenMobile({
   transportMode,
   buildRouteTo,
   centerOnUser,
+  canSearchThisArea,
+  onSearchThisArea,
   handleSelectSearchTab,
   requestOpenBottomSheet,
   filtersPanelProps,
@@ -64,11 +66,9 @@ export function MapScreenMobile({
   selectedPlaceUserLocation,
 }: MapScreenMobileProps) {
   return (
-    <View style={styles.container} {...ROOT_MAP_PROPS}>
-      {seoBlock}
+    <>
       <Suspense fallback={MAP_PANEL_PLACEHOLDER}>
         <MapMobileLayout
-          mapComponent={mapComponent}
           travelsData={travelsData}
           hasMore={hasMore}
           onLoadMore={onLoadMore}
@@ -79,6 +79,8 @@ export function MapScreenMobile({
           transportMode={transportMode}
           buildRouteTo={buildRouteTo}
           onCenterOnUser={centerOnUser}
+          canSearchThisArea={canSearchThisArea}
+          onSearchThisArea={onSearchThisArea}
           onOpenFilters={() => {
             handleSelectSearchTab()
             requestOpenBottomSheet('filters')
@@ -102,6 +104,6 @@ export function MapScreenMobile({
           <MapOnboarding mobileWebCoachmark={isWeb && isMobile} />
         </Suspense>
       )}
-    </View>
+    </>
   )
 }

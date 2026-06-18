@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Platform, Pressable, Text as RNText, useWindowDimensions, View } from 'react-native'
 import { usePathname } from 'expo-router'
-import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import Feather from '@expo/vector-icons/Feather'
 
 import { useThemedColors } from '@/hooks/useTheme'
@@ -25,7 +24,6 @@ type SheetContentKind = 'list' | 'filters' | 'route'
 type FiltersMode = 'radius' | 'route'
 
 interface MapMobileLayoutProps {
-  mapComponent: React.ReactNode
   travelsData: any[]
   hasMore?: boolean
   onLoadMore?: () => void
@@ -36,6 +34,9 @@ interface MapMobileLayoutProps {
   transportMode: 'car' | 'bike' | 'foot'
   buildRouteTo: (item: any) => void
   onCenterOnUser: () => void
+  // F-49 — Google-Maps-style "Search this area" affordance.
+  canSearchThisArea?: boolean
+  onSearchThisArea?: () => void
   onOpenFilters: () => void
   filtersPanelProps: any
   onToggleFavorite?: (id: string | number) => void
@@ -57,7 +58,6 @@ const WEB_MOBILE_CONSENT_BANNER_INSET = 112
 const NATIVE_MOBILE_BOTTOM_DOCK_INSET = (LAYOUT?.tabBarHeight ?? 56) + 16
 
 export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
-  mapComponent,
   travelsData,
   hasMore,
   onLoadMore,
@@ -68,6 +68,8 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   transportMode,
   buildRouteTo,
   onCenterOnUser,
+  canSearchThisArea,
+  onSearchThisArea,
   onOpenFilters,
   filtersPanelProps,
   onToggleFavorite,
@@ -109,6 +111,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   const commandNonce = useMapPanelStore((s) => s.commandNonce)
   const command = useMapPanelStore((s) => s.command)
+  const requestSearchFocus = useMapPanelStore((s) => s.requestSearchFocus)
 
   const setBottomSheetState = useBottomSheetStore((s) => s.setState)
 
@@ -158,6 +161,14 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     bottomSheetRef.current?.snapToHalf()
     onOpenFilters()
   }, [onOpenFilters, setFiltersMode, clearSelectedPlace])
+
+  // Тап по строке «Искать места»: открываем шит фильтров И сразу просим поле
+  // поиска по названию сфокусироваться (открыть клавиатуру), чтобы поиск был в
+  // один тап с вводом, а не вслепую через два шага.
+  const openSearchSheet = useCallback(() => {
+    openFiltersSheet()
+    requestSearchFocus()
+  }, [openFiltersSheet, requestSearchFocus])
 
   const openRouteSheet = useCallback(() => {
     clearSelectedPlace?.()
@@ -303,6 +314,12 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     clearSelectedPlace?.()
   }, [clearSelectedPlace])
 
+  // F-49 — "Искать в этой области" видна только когда есть значимый сдвиг карты,
+  // шторка не раскрыта на full и не открыта карточка места (чтобы не наслаивать
+  // плавающие контролы на контент).
+  const showSearchAreaButton =
+    !!canSearchThisArea && !!onSearchThisArea && sheetState !== 'full' && !hasSelectedPlace
+
   const isCollapsed = sheetState === 'collapsed'
 
   const bottomSheetInset = IS_WEB
@@ -383,14 +400,26 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   )
 
   return (
-    <GestureHandlerRootView
-      style={styles.container}
+    // #217 — the map node itself lives in the shared MapScreenShell (stable tree
+    // position). This layout is an absolute overlay ON TOP of that map host: it
+    // owns the maps.me-style chrome + bottom sheet, but never the map, so a
+    // mobile↔desktop flip cannot unmount/remount Leaflet. `box-none` lets pan/
+    // zoom reach the map underneath wherever there is no chrome.
+    //
+    // #217 (gesture layer) — this root is a PLAIN box-none View, NOT a
+    // GestureHandlerRootView. The single RNGH root now lives in MapScreenShell as
+    // an ancestor of BOTH this overlay and the map host, so empty-area touches
+    // fall through this box-none overlay to the map sibling underneath (which is
+    // inside the same gesture orchestrator). A GestureHandlerRootView here would
+    // be an absoluteFill ReactViewGroup over the map and would swallow the
+    // ACTION_DOWN before it reached the WebView sibling below.
+    <View
+      style={[styles.container, styles.overlayRoot]}
       testID="map-mobile-layout"
+      {...({ pointerEvents: 'box-none' } as any)}
       {...(isActiveWebRoute ? ({ 'data-active': 'true' } as any) : null)}
     >
-      <View style={styles.mapContainer}>
-        {mapComponent}
-
+      <View style={styles.mapContainer} {...({ pointerEvents: 'box-none' } as any)}>
         {/* maps.me-style верхний overlay: поиск + фильтры + чипы. Всегда виден,
             пока шторка не открыта на full (чтобы не накладываться на контент). */}
         {sheetState !== 'full' && (
@@ -401,11 +430,32 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             radiusLabel={radiusChipLabel}
             categoryChips={topCategoryChips}
             hasMoreCategories={hasMoreCategories}
-            onOpenSearch={openFiltersSheet}
+            onOpenSearch={openSearchSheet}
             onOpenFilters={openFiltersSheet}
             onOpenRadius={openFiltersSheet}
             onToggleCategory={handleToggleCategory}
           />
+        )}
+
+        {/* F-49 — «Искать в этой области» по центру СНИЗУ, над кнопкой «Списком»
+            и нижним доком (как в Google/Organic Maps). Появляется при значимом
+            сдвиге карты от текущего якоря. */}
+        {showSearchAreaButton && (
+          <Pressable
+            testID="map-search-this-area"
+            onPress={onSearchThisArea}
+            accessibilityRole="button"
+            accessibilityLabel="Искать в этой области"
+            style={({ pressed }) => [
+              styles.searchAreaButton,
+              pressed && { opacity: 0.9 },
+            ]}
+          >
+            <Feather name="refresh-cw" size={15} color={colors.textOnPrimary} />
+            <RNText style={styles.searchAreaButtonText} numberOfLines={1}>
+              Искать в этой области
+            </RNText>
+          </Pressable>
         )}
 
         {/* Locate FAB справа снизу. */}
@@ -458,6 +508,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       >
         {sheetContentNode}
       </MapBottomSheet>
-    </GestureHandlerRootView>
+    </View>
   )
 }

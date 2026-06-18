@@ -132,9 +132,10 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
 
   const mobileQuickChips = useMemo(() => {
     if (!isMobile || mode !== 'radius') return []
+    // #232 — чип «Поиск: <запрос>» НЕ добавляем: он дублировал содержимое
+    // самого поля поиска (FiltersPanelRadiusSection). Оставляем только сводку
+    // категорий, которой нет во входе поиска.
     const chips: string[] = []
-    const searchQuery = String(filterValue.searchQuery || '').trim()
-    if (searchQuery) chips.push(`Поиск: ${searchQuery}`)
     if (selectedCategoryNames.length > 0) {
       chips.push(
         selectedCategoryNames.length === 1
@@ -143,7 +144,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
       )
     }
     return chips.slice(0, MOBILE_QUICK_CHIPS_LIMIT)
-  }, [filterValue.searchQuery, isMobile, mode, selectedCategoryNames])
+  }, [isMobile, mode, selectedCategoryNames])
 
   const showMobileQuickRow = isMobile && mode === 'radius' && mobileQuickChips.length > 0
   const showRecommendations = mode === 'radius' && userLocation && onPlaceSelect

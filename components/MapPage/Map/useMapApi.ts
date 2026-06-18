@@ -5,7 +5,13 @@ import { CoordinateConverter } from '@/utils/coordinateConverter';
 import type { MapUiApi } from '@/types/mapUi';
 import type { LatLng } from '@/types/coordinates';
 import { buildGpx, buildKml, downloadTextFileWeb } from '@/utils/routeExport';
-import { WEB_MAP_BASE_LAYERS } from '@/config/mapWebLayers';
+import {
+  WEB_MAP_BASE_LAYERS,
+  getThemedBaseTileUrl,
+  getThemedBaseAttribution,
+  getThemedBaseMaxZoom,
+  CARTO_DARK_SUBDOMAINS,
+} from '@/config/mapWebLayers';
 import { createLeafletLayer } from '@/utils/mapWebLayers';
 import type { OsmPoiCategory } from '@/utils/overpass';
 
@@ -30,6 +36,8 @@ interface UseMapApiProps {
   leafletOverlayLayersRef: React.MutableRefObject<Map<string, any>>;
   leafletControlRef: React.MutableRefObject<any>;
   onRequestUserLocationFocus?: () => void | Promise<void>;
+  /** Тёмная тема UI → тёмная подложка при смене base layer (#229). */
+  isDark?: boolean;
 }
 
 export function useMapApi({
@@ -43,7 +51,11 @@ export function useMapApi({
   leafletOverlayLayersRef,
   leafletControlRef,
   onRequestUserLocationFocus,
+  isDark = false,
 }: UseMapApiProps) {
+  // Тема в ref: setBaseLayer читает её в момент вызова, а не пересоздаёт api.
+  const isDarkRef = useRef(isDark);
+  isDarkRef.current = isDark;
   const pendingOverlayTogglesRef = useRef<Map<string, boolean>>(new Map());
   const pendingOverlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingOverlayAttemptsRef = useRef(0);
@@ -334,7 +346,18 @@ export function useMapApi({
         try {
           const def = WEB_MAP_BASE_LAYERS.find((d) => d.id === id);
           if (!def) return;
-          const newLayer = createLeafletLayer(L, def);
+          // Дефолтная OSM-подложка — тема-aware (#229): в тёмной теме отдаём
+          // CARTO dark вместо светлого OSM, чтобы FiltersPanel.setBaseLayer('osm')
+          // не перекрывал тёмную подложку из useMapInstance.
+          const dark = isDarkRef.current;
+          const newLayer =
+            def.defaultEnabled && dark
+              ? (L as any).tileLayer(getThemedBaseTileUrl(true), {
+                  attribution: getThemedBaseAttribution(true),
+                  maxZoom: getThemedBaseMaxZoom(true),
+                  subdomains: CARTO_DARK_SUBDOMAINS,
+                })
+              : createLeafletLayer(L, def);
           if (!newLayer) return;
 
           const current = leafletBaseLayerRef.current;
