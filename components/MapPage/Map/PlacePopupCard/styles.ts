@@ -15,6 +15,7 @@ export const getStyles = (
   heroHeight: number,
   compactLayout: boolean,
   splitLayout: boolean,
+  bottomCardLayout = false,
 ) => {
   const sp = SPACING[bp];
   const fs = FONT_SIZES[bp];
@@ -69,6 +70,22 @@ export const getStyles = (
       top: compactLayout ? 10 : 12,
       left: compactLayout ? 10 : 12,
       zIndex: 6,
+    },
+    relatedTravelScrim: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: 76,
+      height: 116,
+      zIndex: 5,
+      borderBottomRightRadius: 28,
+      backgroundColor: 'rgba(15,23,42,0.32)',
+      ...(Platform.OS === 'web'
+        ? ({
+            background:
+              'linear-gradient(135deg, rgba(15,23,42,0.46) 0%, rgba(15,23,42,0.22) 55%, rgba(15,23,42,0) 100%)',
+          } as any)
+        : null),
     },
     topSectionSplit: {
       flexDirection: 'row',
@@ -171,6 +188,7 @@ export const getStyles = (
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight ?? colors.border,
+      ...(bottomCardLayout ? { flexShrink: 0, alignSelf: 'flex-start' } : null),
     },
     titleText: {
       fontSize: splitLayout ? fs.title + 1 : fs.title,
@@ -228,6 +246,9 @@ export const getStyles = (
     categoryText: {
       fontSize: compactLayout ? fs.small - 1 : fs.small,
       color: colors.textMuted,
+      // Bottom card has room — let the category label size to its content and stop
+      // it from being squeezed to «Зам…» by neighbouring meta badges.
+      ...(bottomCardLayout ? { flexShrink: 0 } : null),
     },
     smallText: {
       fontSize: compactLayout ? fs.small - 1 : fs.small,
@@ -252,9 +273,11 @@ export const getStyles = (
       borderColor: colors.borderLight ?? colors.border,
     },
     coordText: {
-      fontSize: compactLayout ? fs.small : splitLayout ? fs.coord - 1 : fs.coord,
-      fontWeight: '500',
-      color: colors.text,
+      // Coordinates are secondary metadata in the bottom card — keep them small and
+      // muted so they don't compete with the address line above.
+      fontSize: bottomCardLayout ? fs.coord - 1 : compactLayout ? fs.small : splitLayout ? fs.coord - 1 : fs.coord,
+      fontWeight: bottomCardLayout ? '400' : '500',
+      color: bottomCardLayout ? colors.textMuted : colors.text,
       flex: 1,
       minWidth: 0,
       fontFamily:

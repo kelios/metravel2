@@ -102,6 +102,7 @@ const PlacePopupCard: React.FC<Props> = ({
     compactLabel,
     useFullscreenMobileOverlay,
     useCompactLayout,
+    isBottomCardLayout,
     maxPopupWidth,
     useSplitLayout,
     styles,
@@ -138,6 +139,33 @@ const PlacePopupCard: React.FC<Props> = ({
     primaryActionOverride,
   });
 
+  // The reverse-geocoded subtitle is a long, mixed-language OSM chain
+  // («Podzamcze, Old Town, Stare Miasto, Краков, Малопольское…») that the 2-line
+  // clamp chops mid-word. In the bottom card we keep only the most informative
+  // tail segments (locality + region/country) so the line ends on a clean
+  // boundary. Desktop popup / nearby list keep the full subtitle untouched.
+  const displaySubtitle = useMemo(() => {
+    if (!_subtitle || !isBottomCardLayout) return _subtitle;
+    const segments = _subtitle.split(',').map((s) => s.trim()).filter(Boolean);
+    if (segments.length <= 3) return _subtitle;
+    return segments.slice(-3).join(', ');
+  }, [_subtitle, isBottomCardLayout]);
+
+  // In the mobile bottom card the coordinates are secondary metadata, so show a
+  // shorter ~5-decimal value (50.05470, 19.93488) instead of the raw 7-decimal
+  // string. Copy still uses the full original `coord` (handled in the factory),
+  // so precision is preserved on paste.
+  const displayCoord = useMemo(() => {
+    if (!coord) return coord;
+    if (!isBottomCardLayout) return coord;
+    const parts = coord.replace(/;/g, ',').split(',').map((v) => v.trim());
+    if (parts.length < 2) return coord;
+    const lat = Number(parts[0]);
+    const lng = Number(parts[1]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return coord;
+    return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  }, [coord, isBottomCardLayout]);
+
   const handleOpenFullscreen = useCallback((event?: any) => {
     stopWebPopupEvent(event);
     event?.preventDefault?.();
@@ -158,9 +186,9 @@ const PlacePopupCard: React.FC<Props> = ({
         {title}
       </Text>
 
-      {!!_subtitle && (
+      {!!displaySubtitle && (
         <Text style={styles.subtitleText} numberOfLines={useCompactLayout ? 2 : 1}>
-          {_subtitle}
+          {displaySubtitle}
         </Text>
       )}
 
@@ -190,7 +218,14 @@ const PlacePopupCard: React.FC<Props> = ({
         {!!categoryLabel && (
           <View style={styles.metaBadge}>
             <Feather name="tag" size={12} color={colors.textMuted} />
-            <Text style={styles.categoryText} numberOfLines={1}>
+            {/* In the bottom card the category badge sits on its own full-width row,
+                so a single-line clamp would shrink the Text to its widest unbreakable
+                fragment and chop «Замок» → «Зам…». Drop the clamp there and let the
+                short category label size to its content. Desktop popup keeps 1 line. */}
+            <Text
+              style={styles.categoryText}
+              numberOfLines={isBottomCardLayout ? undefined : 1}
+            >
               {categoryLabel}
             </Text>
           </View>
@@ -211,12 +246,13 @@ const PlacePopupCard: React.FC<Props> = ({
       </View>
     </View>
   ), [
-    _subtitle,
+    displaySubtitle,
     bp,
     categoryLabel,
     colors.textMuted,
     drivingText,
     hasDrivingInfo,
+    isBottomCardLayout,
     isDrivingLoading,
     normalizedArticleHref,
     onOpenArticle,
@@ -237,7 +273,7 @@ const PlacePopupCard: React.FC<Props> = ({
           style={styles.coordRow}
         >
           <Feather name="map-pin" size={13} color={colors.textMuted} style={{ flexShrink: 0 } as any} />
-          <Text style={styles.coordText} numberOfLines={1} selectable>{coord}</Text>
+          <Text style={styles.coordText} numberOfLines={1} selectable>{displayCoord}</Text>
           {onCopyCoord && <Feather name="copy" size={13} color={colors.textMuted} style={{ flexShrink: 0 } as any} />}
         </CardActionPressable>
       )}
@@ -316,7 +352,7 @@ const PlacePopupCard: React.FC<Props> = ({
     addTooltip,
     colors.textMuted,
     compactLabel,
-    coord,
+    displayCoord,
     hasCoord,
     isAdding,
     onAddPoint,
@@ -331,7 +367,7 @@ const PlacePopupCard: React.FC<Props> = ({
   const cardBody = (
     <View
       ref={setCardRootNode}
-      style={[styles.container, { maxWidth: maxPopupWidth }]}
+      style={[styles.container, isBottomCardLayout ? null : { maxWidth: maxPopupWidth }]}
       {...(Platform.OS === 'web'
         ? ({
             onClick: stopWebPopupEvent,
@@ -345,6 +381,15 @@ const PlacePopupCard: React.FC<Props> = ({
         : null)}
     >
       <View style={styles.popupCard}>
+        {relatedTravelUrl && isBottomCardLayout ? (
+          // Soft scrim so the semi-transparent ♥/＋ buttons stay readable over busy
+          // photos in the mobile bottom card (scoped — desktop popup unchanged).
+          <View
+            pointerEvents="none"
+            style={styles.relatedTravelScrim}
+            {...(Platform.OS === 'web' ? ({ 'aria-hidden': 'true' } as any) : null)}
+          />
+        ) : null}
         {relatedTravelUrl ? (
           <View style={styles.relatedTravelActions} pointerEvents="box-none">
             <RelatedTravelActionStack

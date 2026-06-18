@@ -48,19 +48,32 @@ export function usePopupLayout({
   const compactLabel = isNarrow ? 'Сохранить' : addLabel;
   const viewportGutter = bp === 'narrow' ? 24 : bp === 'compact' ? 32 : 48;
   const useFullscreenMobileOverlay = Platform.OS === 'web' && fullscreenOnMobile && viewportWidth <= 560;
+  // Mobile bottom-card surface (MapPlaceBottomCard): compact content WITHOUT the
+  // popup's own fullscreen overlay. Unlike the desktop Leaflet popup, this card is
+  // a full-width sheet, so its content must fill the parent instead of being capped
+  // to the narrow Leaflet-popup width. Detected here so the desktop popup (which
+  // pairs compactLayout with fullscreenOnMobile) keeps its narrow cap untouched.
+  const isBottomCardLayout = compactLayout && !fullscreenOnMobile;
   const useCompactLayout = compactLayout || (viewportWidth <= 420 && !useFullscreenMobileOverlay);
   const safeViewportWidth = Math.max(220, viewportWidth - viewportGutter);
   const popupWidthCap = useFullscreenMobileOverlay
     ? Math.min(480, safeViewportWidth)
-    : useCompactLayout
-      ? COMPACT_POPUP_MAX_WIDTH_BY_BREAKPOINT[bp]
-      : POPUP_MAX_WIDTH_BY_BREAKPOINT[bp];
+    : isBottomCardLayout
+      ? safeViewportWidth
+      : useCompactLayout
+        ? COMPACT_POPUP_MAX_WIDTH_BY_BREAKPOINT[bp]
+        : POPUP_MAX_WIDTH_BY_BREAKPOINT[bp];
   const imageHeightCap = useFullscreenMobileOverlay
     ? 220
     : useCompactLayout
     ? COMPACT_IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp]
     : IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp];
-  const maxPopupWidth = Math.min(width, popupWidthCap, safeViewportWidth);
+  // For the bottom card the parent (<=560px sheet) controls the real width via
+  // `width: 100%`; don't clamp to the static `width` prop (default 352) which would
+  // re-introduce the narrow content. The image height cap still applies below.
+  const maxPopupWidth = isBottomCardLayout
+    ? safeViewportWidth
+    : Math.min(width, popupWidthCap, safeViewportWidth);
   const useSplitLayout =
     Boolean(imageUrl) &&
     !useFullscreenMobileOverlay &&
@@ -81,8 +94,8 @@ export function usePopupLayout({
       );
 
   const styles = useMemo(
-    () => getStyles(colors, bp, heroWidth, heroHeight, useCompactLayout, useSplitLayout),
-    [colors, bp, heroWidth, heroHeight, useCompactLayout, useSplitLayout],
+    () => getStyles(colors, bp, heroWidth, heroHeight, useCompactLayout, useSplitLayout, isBottomCardLayout),
+    [colors, bp, heroWidth, heroHeight, useCompactLayout, useSplitLayout, isBottomCardLayout],
   );
 
   return {
@@ -91,6 +104,7 @@ export function usePopupLayout({
     compactLabel,
     useFullscreenMobileOverlay,
     useCompactLayout,
+    isBottomCardLayout,
     maxPopupWidth,
     useSplitLayout,
     styles,
