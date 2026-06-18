@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
+import { CLUSTER_DISABLE_ZOOM } from '@/components/MapPage/Map/clusterFitBounds';
 import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter';
 import { useRouteStore } from '@/stores/routeStore';
 import { useBottomSheetStore } from '@/stores/bottomSheetStore';
@@ -172,6 +173,35 @@ interface UseRouteControllerResult {
    * Build route to specific travel item
    */
   buildRouteTo: (item: TravelCoords) => void;
+
+  /**
+   * Focus the map on a travel item (center + open popup) without switching mode
+   */
+  focusPlace: (item: TravelCoords) => void;
+}
+
+type FocusTarget = {
+  coordStr: string;
+  popupCoordCandidates: string[];
+  targetCoords: { lat: number; lng: number } | null;
+};
+
+function resolveFocusTarget(item: TravelCoords): FocusTarget | null {
+  if (!item?.coord) return null;
+  const rawCoordStr = String(item.coord);
+  const cleanedCoordStr = rawCoordStr.replace(/;/g, ',').replace(/\s+/g, '');
+  const parsed = CoordinateConverter.fromLooseString(cleanedCoordStr);
+  // Keep the focus string normalized for stable zooming.
+  const coordStr = parsed ? CoordinateConverter.toString(parsed) : cleanedCoordStr;
+  const targetCoords = parsed ? { lat: parsed.lat, lng: parsed.lng } : null;
+
+  // Popup matching can be sensitive to exact string keys (e.g. full precision).
+  // Try a small set of candidates in a stable order.
+  const popupCoordCandidates = Array.from(
+    new Set([cleanedCoordStr, rawCoordStr, coordStr].filter(Boolean))
+  );
+
+  return { coordStr, popupCoordCandidates, targetCoords };
 }
 
 /**
@@ -324,15 +354,11 @@ export function useRouteController(
   // Build route to travel item
   const buildRouteTo = useCallback(
     (item: TravelCoords) => {
-      if (!item?.coord) return;
+      const target = resolveFocusTarget(item);
+      if (!target) return;
+      const { coordStr, popupCoordCandidates, targetCoords } = target;
       const bottomSheetStore = useBottomSheetStore.getState();
       const shouldCollapseBottomSheet = bottomSheetStore.state !== 'collapsed';
-      const rawCoordStr = String(item.coord);
-      const cleanedCoordStr = rawCoordStr.replace(/;/g, ',').replace(/\s+/g, '');
-      const parsed = CoordinateConverter.fromLooseString(cleanedCoordStr);
-      // Keep the focus string normalized for stable zooming.
-      const coordStr = parsed ? CoordinateConverter.toString(parsed) : cleanedCoordStr;
-      const targetCoords = parsed ? { lat: parsed.lat, lng: parsed.lng } : null;
       const originCoords =
         originCoordinates &&
         Number.isFinite(originCoordinates.latitude) &&
@@ -340,11 +366,6 @@ export function useRouteController(
           ? { lat: originCoordinates.latitude, lng: originCoordinates.longitude }
           : null;
 
-      // Popup matching can be sensitive to exact string keys (e.g. full precision).
-      // Try a small set of candidates in a stable order.
-      const popupCoordCandidates = Array.from(
-        new Set([cleanedCoordStr, rawCoordStr, coordStr].filter(Boolean))
-      );
       const popupOpenDelayMs = shouldCollapseBottomSheet ? 520 : 420;
 
       if (shouldCollapseBottomSheet) {
@@ -404,6 +425,54 @@ export function useRouteController(
     [addPoint, mapUiApi, originCoordinates, routeStore, setMode]
   );
 
+  // Focus the map on a travel item WITHOUT switching mode or touching the route.
+  // Used by list-card taps: in radius mode building a route would clear the
+  // nearby results (enabledRoute=false) and the target marker would vanish, so
+  // the popup could never open. Here we only center + open the popup.
+  const focusPlace = useCallback(
+    (item: TravelCoords) => {
+      const target = resolveFocusTarget(item);
+      if (!target) return;
+      const { coordStr, popupCoordCandidates } = target;
+      const bottomSheetStore = useBottomSheetStore.getState();
+      const shouldCollapseBottomSheet = bottomSheetStore.state !== 'collapsed';
+      const popupOpenDelayMs = shouldCollapseBottomSheet ? 520 : 420;
+
+      if (shouldCollapseBottomSheet) {
+        try {
+          useMapPanelStore.getState().requestCollapse();
+        } catch {
+          // noop
+        }
+      }
+
+      try {
+        // Зум фокуса >= CLUSTER_DISABLE_ZOOM, чтобы маркер вышел из кластера и
+        // попап реально открылся (кластеризация отключается только на zoom >= 16).
+        mapUiApi?.focusOnCoord?.(coordStr, { zoom: CLUSTER_DISABLE_ZOOM });
+      } catch {
+        // noop
+      }
+
+      try {
+        if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
+        popupTimerRef.current = setTimeout(() => {
+          popupTimerRef.current = null;
+          for (const candidate of popupCoordCandidates) {
+            try {
+              mapUiApi?.openPopupForCoord?.(candidate);
+            } catch {
+              // noop
+            }
+          }
+        }, popupOpenDelayMs);
+      } catch {
+        // noop
+      }
+    },
+    [mapUiApi]
+  );
+
   return useMemo(() => ({
     mode,
     setMode,
@@ -434,6 +503,7 @@ export function useRouteController(
     setRoutingError: setError,
     handleMapClick,
     buildRouteTo,
+    focusPlace,
   }), [
     mode,
     setMode,
@@ -464,5 +534,6 @@ export function useRouteController(
     setError,
     handleMapClick,
     buildRouteTo,
+    focusPlace,
   ]);
 }

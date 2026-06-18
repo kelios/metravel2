@@ -35,6 +35,8 @@ export { buildTravelListSummaryHint }
 type Props = {
   travelsData: any[]
   buildRouteTo: (item: any) => void
+  onSelectPlace?: (item: any) => void
+  totalCount?: number
   onHideTravel?: (id: string | number) => void
   isMobile?: boolean
   isLoading?: boolean
@@ -59,6 +61,8 @@ type Props = {
 const TravelListPanel: React.FC<Props> = ({
   travelsData,
   buildRouteTo,
+  onSelectPlace,
+  totalCount,
   onHideTravel,
   isMobile = false,
   isLoading = false,
@@ -100,6 +104,7 @@ const TravelListPanel: React.FC<Props> = ({
     isMobile,
     compactPreview,
     buildRouteTo,
+    onSelectPlace,
     onHideTravel,
     userLocation,
     transportMode,
@@ -162,11 +167,12 @@ const TravelListPanel: React.FC<Props> = ({
     if (!isMobile || !travelsData.length) return null
     if (compactPreview) return null
 
+    const displayCount = totalCount ?? travelsData.length
     const placesCountLabel =
-      travelsData.length > PLACE_COUNT_BADGE_CAP
+      displayCount > PLACE_COUNT_BADGE_CAP
         ? `${PLACE_COUNT_BADGE_CAP}+`
-        : String(travelsData.length)
-    const placesWord = getPlacesLabel(travelsData.length)
+        : String(displayCount)
+    const placesWord = getPlacesLabel(displayCount)
     const hasRadiusContext =
       currentRadiusKm != null && String(currentRadiusKm).trim() !== ''
 
@@ -210,7 +216,7 @@ const TravelListPanel: React.FC<Props> = ({
         )}
       </View>
     )
-  }, [compactPreview, currentRadiusKm, headerWidthStyle, isMobile, onOpenFilters, styles, themeColors, travelsData.length])
+  }, [compactPreview, currentRadiusKm, headerWidthStyle, isMobile, onOpenFilters, styles, themeColors, totalCount, travelsData.length])
 
   const refreshControl = useMemo(
     () =>

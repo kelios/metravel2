@@ -93,6 +93,8 @@ export default function MapScreen() {
     refetchMapData,
     invalidateTravelsQuery,
     buildRouteTo,
+    focusPlace,
+    travelsCount,
     centerOnUser,
     canSearchThisArea,
     handleSearchThisArea,
@@ -420,6 +422,8 @@ export default function MapScreen() {
       coordinates={coordinates}
       transportMode={transportMode}
       buildRouteTo={buildRouteTo}
+      focusPlace={focusPlace}
+      travelsCount={travelsCount}
       centerOnUser={centerOnUser}
       canSearchThisArea={canSearchThisArea}
       onSearchThisArea={handleSearchThisArea}
@@ -471,6 +475,8 @@ export default function MapScreen() {
       onLoadMore={onLoadMore}
       refetchMapData={refetchMapData}
       buildRouteTo={buildRouteTo}
+      focusPlace={focusPlace}
+      travelsCount={travelsCount}
       currentRadius={currentRadius}
       coordinates={coordinates}
       transportMode={transportMode}

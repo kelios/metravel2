@@ -269,6 +269,11 @@ function UnifiedTravelCard({
           // CARD-01: Используем единый токен высоты изображения вместо hardcoded
           height: isWeb ? DESIGN_TOKENS.cardImageHeights.medium : DESIGN_TOKENS.cardImageHeights.medium - 20,
           position: 'relative',
+          // Native Fabric: an ExpoImage child with contentFit reports an intrinsic
+          // aspect ratio that can override this fixed height; clip + flexShrink:0
+          // keep the media box at exactly `height` instead of the photo's ratio.
+          overflow: 'hidden',
+          flexShrink: 0,
           backgroundColor: colors.backgroundSecondary,
         },
         imageContainerInset: {
@@ -501,7 +506,7 @@ function UnifiedTravelCard({
       key="media"
       style={[
         styles.imageContainer,
-        typeof imageHeight === 'number' ? { height: imageHeight } : null,
+        typeof imageHeight === 'number' ? { height: imageHeight, maxHeight: imageHeight } : null,
         imageHeight === 0 && { display: 'none' },
         insetMedia ? styles.imageContainerInset : null,
       ]}

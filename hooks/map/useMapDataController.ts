@@ -62,6 +62,11 @@ interface UseMapDataControllerResult {
   travelsData: TravelCoords[];
 
   /**
+   * Total number of places reported by the backend (not the loaded page length)
+   */
+  total: number;
+
+  /**
    * Is loading initial data
    */
   loading: boolean;
@@ -164,6 +169,7 @@ export function useMapDataController(
   const {
     allTravelsData,
     filteredTravelsData: travelsData,
+    total,
     isLoading: loading,
     isFetching,
     isPlaceholderData,
@@ -192,6 +198,7 @@ export function useMapDataController(
   return useMemo(() => ({
     allTravelsData,
     travelsData,
+    total,
     loading,
     isFetching,
     isPlaceholderData,
@@ -206,6 +213,7 @@ export function useMapDataController(
   }), [
     allTravelsData,
     travelsData,
+    total,
     loading,
     isFetching,
     isPlaceholderData,

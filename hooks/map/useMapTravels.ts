@@ -459,6 +459,19 @@ export function useMapTravels({
     return dedupeMapTravels(rawTravelsData);
   }, [rawTravelsData]);
 
+  // Общее число мест по бэкенду (а не длина загруженной страницы). Бэкенд отдаёт
+  // total в первой странице — счётчик в UI должен показывать его, иначе при
+  // смене радиуса (50/100/200) число залипает на размере страницы (30).
+  const total = useMemo(() => {
+    if (queryParams.mode === 'radius') {
+      if (!enabledRadius) return 0;
+      const t = radiusQuery.data?.pages?.[0]?.total;
+      return typeof t === 'number' ? t : allTravelsData.length;
+    }
+    if (!enabledRoute) return 0;
+    return allTravelsData.length;
+  }, [queryParams.mode, enabledRadius, enabledRoute, radiusQuery.data?.pages, allTravelsData]);
+
   // Фильтруем только по категориям на клиенте (радиус уже применен на бэкенде)
   const filteredTravelsData = useMemo(() => {
     const byCategories = filterTravelsByCategories(
@@ -472,6 +485,7 @@ export function useMapTravels({
   return useMemo(() => ({
     allTravelsData,
     filteredTravelsData,
+    total,
     isLoading,
     isFetching,
     isPlaceholderData,
@@ -484,6 +498,7 @@ export function useMapTravels({
   }), [
     allTravelsData,
     filteredTravelsData,
+    total,
     isLoading,
     isFetching,
     isPlaceholderData,

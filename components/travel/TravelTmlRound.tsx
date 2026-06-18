@@ -169,16 +169,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 
     // ✅ УЛУЧШЕНИЕ: Современная матовая карточка без границ, только тени
     card: {
-        alignItems: "center",
         borderRadius: DESIGN_TOKENS.radii.md,
         backgroundColor: colors.surface,
         width: '100%',
-        height: '100%',
         borderWidth: 1,
         borderColor: colors.borderLight,
         overflow: 'hidden',
         ...Platform.select({
             web: {
+                alignItems: "center" as any,
+                height: '100%' as any,
                 cursor: "pointer" as any,
                 transition: 'border-color 0.2s ease' as any,
             },

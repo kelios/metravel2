@@ -596,6 +596,7 @@ function ImageCardMedia({
                 : resolvedSource
             }
             recyclingKey={recyclingKey}
+            height={typeof height === 'number' ? height : undefined}
             contentFit={contentFit}
             blurBackground={Platform.OS === 'web' ? false : blurBackground}
             blurSource={

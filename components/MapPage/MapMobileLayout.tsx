@@ -32,6 +32,8 @@ interface MapMobileLayoutProps {
   coordinates: { latitude: number; longitude: number } | null
   transportMode: 'car' | 'bike' | 'foot'
   buildRouteTo: (item: any) => void
+  focusPlace?: (item: any) => void
+  totalCount?: number
   onCenterOnUser: () => void
   // F-49 — Google-Maps-style "Search this area" affordance.
   canSearchThisArea?: boolean
@@ -66,6 +68,8 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   coordinates,
   transportMode,
   buildRouteTo,
+  focusPlace,
+  totalCount,
   onCenterOnUser,
   canSearchThisArea,
   onSearchThisArea,
@@ -282,12 +286,14 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     return Number.isFinite(n) && n > 0 ? String(n) : ''
   }, [activeRadius])
 
-  // Бейдж на кнопке «Список» — количество мест рядом (cap 999+).
+  // Бейдж на кнопке «Список» — количество мест рядом (cap 999+). Показываем
+  // общее число (totalCount) от бэкенда, а не длину загруженной страницы.
+  const displayCount = totalCount ?? travelsData.length
   const listBadge = useMemo(() => {
-    const n = travelsData.length
+    const n = displayCount
     if (!n) return ''
     return n > 999 ? '999+' : String(n)
-  }, [travelsData.length])
+  }, [displayCount])
 
   // Радиус-поповер и слои-поповер переиспользуют ту же модель, что и шит:
   // onFilterChange('radius', id) и контролируемое состояние оверлеев из контекста.
@@ -354,7 +360,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       <View style={styles.sheetSheetHeader}>
         <RNText style={styles.sheetSheetTitle} numberOfLines={1}>
           {sheetContent === 'list'
-            ? formatPlaces(travelsData.length)
+            ? formatPlaces(displayCount)
             : sheetContent === 'route'
               ? 'Маршрут'
               : 'Фильтры и поиск'}
@@ -380,6 +386,8 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           sheetState={sheetState}
           travelsData={travelsData}
           buildRouteTo={buildRouteTo}
+          onSelectPlace={focusPlace}
+          totalCount={totalCount}
           hasMore={hasMore}
           onLoadMore={onLoadMore}
           onRefresh={onRefresh}

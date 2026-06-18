@@ -60,6 +60,15 @@ const QUESTS = [
     { questId: 'trakai-castle', dir: 'trakaiCastle', city: 'Тракай', mood: 'castle', finaleId: 23 },
     { questId: 'prague-old-town', dir: 'pragueOldTown', city: 'Прага', mood: 'city', finaleId: 24 },
     { questId: 'lviv-old-town', dir: 'lvivOldTown', city: 'Львов', mood: 'city', finaleId: 25 },
+    // finaleId == числовой id квеста (finale создаётся OneToOne вместе с квестом).
+    // Перед заливкой сверь: GET /api/quests/by-quest-id/<id>/ → finale.video_url ещё null.
+    { questId: 'minsk-loshitsa', dir: 'minskLoshitsa', city: 'Минск', mood: 'city', finaleId: 26 },
+    { questId: 'minsk-traktorny', dir: 'minskTraktorny', city: 'Минск', mood: 'city', finaleId: 27 },
+    { questId: 'minsk-dvoriki', dir: 'minskDvoriki', city: 'Минск', mood: 'city', finaleId: 28 },
+    { questId: 'krakow-kazimierz', dir: 'krakowKazimierz', city: 'Краков', mood: 'city', finaleId: 29 },
+    { questId: 'krakow-podgorze', dir: 'krakowPodgorze', city: 'Краков', mood: 'city', finaleId: 30 },
+    { questId: 'krakow-nowahuta', dir: 'krakowNowaHuta', city: 'Краков', mood: 'city', finaleId: 31 },
+    { questId: 'minsk-cipher', dir: 'minskCipher', city: 'Минск', mood: 'city', finaleId: 32 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
@@ -74,8 +83,10 @@ const EXISTING_VIDEO_QUESTS = [
 const FPS = 25;
 const SEG1 = 6.52, SEG2 = 6.52, SEG3 = 5.52, XFADE = 0.8;
 const DURATION = SEG1 + SEG2 + SEG3 - 2 * XFADE; // ~16.96s
-const FONT_BOLD = 'C\\:/Windows/Fonts/arialbd.ttf';
-const FONT_REG = 'C\\:/Windows/Fonts/arial.ttf';
+// Шрифты переопределяемы через env (кроссплатформенно). Дефолт — Windows.
+// macOS: FONT_BOLD_PATH='/System/Library/Fonts/Supplemental/Arial Bold.ttf'
+const FONT_BOLD = process.env.FONT_BOLD_PATH || 'C\\:/Windows/Fonts/arialbd.ttf';
+const FONT_REG = process.env.FONT_REG_PATH || 'C\\:/Windows/Fonts/arial.ttf';
 
 function run(cmdArgs, label) {
     const r = spawnSync(FFMPEG, cmdArgs, { stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' });

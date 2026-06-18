@@ -14,6 +14,8 @@ export interface MapMobileSheetBodyProps {
   sheetState: SheetState
   travelsData: any[]
   buildRouteTo: (item: any) => void
+  onSelectPlace?: (item: any) => void
+  totalCount?: number
   hasMore?: boolean
   onLoadMore?: () => void
   onRefresh?: () => void
@@ -39,6 +41,8 @@ const MapMobileSheetBodyInner: React.FC<MapMobileSheetBodyProps> = ({
   sheetState,
   travelsData,
   buildRouteTo,
+  onSelectPlace,
+  totalCount,
   hasMore,
   onLoadMore,
   onRefresh,
@@ -63,6 +67,8 @@ const MapMobileSheetBodyInner: React.FC<MapMobileSheetBodyProps> = ({
       <TravelListPanel
         travelsData={travelsData}
         buildRouteTo={buildRouteTo}
+        onSelectPlace={onSelectPlace}
+        totalCount={totalCount}
         isMobile={true}
         hasMore={hasMore}
         onLoadMore={onLoadMore}

@@ -56,6 +56,8 @@ type MapScreenDesktopProps = {
   onLoadMore?: () => void
   refetchMapData: () => void
   buildRouteTo: (item: any) => void
+  focusPlace?: (item: any) => void
+  travelsCount: number
   currentRadius: string | number
   coordinates: any
   transportMode: any
@@ -103,6 +105,8 @@ export function MapScreenDesktopChrome({
   onLoadMore,
   refetchMapData,
   buildRouteTo,
+  focusPlace,
+  travelsCount,
   currentRadius,
   coordinates,
   transportMode,
@@ -127,15 +131,15 @@ export function MapScreenDesktopChrome({
           </Pressable>
           <CollapsedIconButton
             icon="list"
-            label={`Список точек (${travelsData.length})`}
-            title={`Список мест (${travelsData.length})`}
+            label={`Список точек (${travelsCount})`}
+            title={`Список мест (${travelsCount})`}
             onPress={() => {
               toggleDesktopCollapse()
               selectTravelsTab()
             }}
             styles={styles}
             iconColor={themedColors.textMuted}
-            badge={travelsData.length}
+            badge={travelsCount}
             badgeStyles={{ container: styles.collapsedBadge, text: styles.collapsedBadgeText }}
           />
           <CollapsedIconButton
@@ -195,7 +199,7 @@ export function MapScreenDesktopChrome({
           <MapPanelHeader
             isMobile={isMobile}
             activeTab={activePanelTab}
-            travelsCount={travelsData.length}
+            travelsCount={travelsCount}
             themedColors={themedColors}
             styles={styles}
             selectSearchTab={handleSelectSearchTab}
@@ -242,6 +246,7 @@ export function MapScreenDesktopChrome({
                   <TravelListPanel
                     travelsData={travelsData}
                     buildRouteTo={buildRouteTo}
+                    onSelectPlace={focusPlace}
                     isMobile={isMobile}
                     isLoading={loading || isFetching}
                     hasMore={hasMore}

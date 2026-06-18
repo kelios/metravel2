@@ -450,6 +450,10 @@ function OptimizedImage({
             {
               borderRadius,
             },
+            // Native Fabric: a percentage-only height lets ExpoImage's contentFit
+            // impose the bitmap's intrinsic aspect ratio, inflating fixed-height
+            // cards. A definite numeric height pins the media to the layout box.
+            Platform.OS !== 'web' && typeof height === 'number' ? { height } : null,
             Platform.OS === 'web' && ({ objectPosition: 'center' } as any),
           ]}
           // Web-specific optimizations

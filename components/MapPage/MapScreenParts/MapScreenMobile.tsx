@@ -16,6 +16,8 @@ type MapScreenMobileProps = {
   coordinates: any
   transportMode: any
   buildRouteTo: (item: any) => void
+  focusPlace?: (item: any) => void
+  travelsCount: number
   centerOnUser: () => void
   canSearchThisArea?: boolean
   onSearchThisArea?: () => void
@@ -49,6 +51,8 @@ export function MapScreenMobile({
   coordinates,
   transportMode,
   buildRouteTo,
+  focusPlace,
+  travelsCount,
   centerOnUser,
   canSearchThisArea,
   onSearchThisArea,
@@ -78,6 +82,8 @@ export function MapScreenMobile({
           coordinates={coordinates}
           transportMode={transportMode}
           buildRouteTo={buildRouteTo}
+          focusPlace={focusPlace}
+          totalCount={travelsCount}
           onCenterOnUser={centerOnUser}
           canSearchThisArea={canSearchThisArea}
           onSearchThisArea={onSearchThisArea}

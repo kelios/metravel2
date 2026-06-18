@@ -21,6 +21,7 @@ type UseTravelItemRendererArgs = {
   isMobile: boolean
   compactPreview: boolean
   buildRouteTo: (item: any) => void
+  onSelectPlace?: (item: any) => void
   onHideTravel?: (id: string | number) => void
   userLocation?: { latitude: number; longitude: number } | null
   transportMode: 'car' | 'bike' | 'foot'
@@ -34,6 +35,7 @@ export function useTravelItemRenderer({
   isMobile,
   compactPreview,
   buildRouteTo,
+  onSelectPlace,
   onHideTravel,
   userLocation,
   transportMode,
@@ -56,7 +58,7 @@ export function useTravelItemRenderer({
       if (!IS_WEB && isMobile && compactPreview) {
         return (
           <Pressable
-            onPress={() => buildRouteTo(item)}
+            onPress={() => (onSelectPlace ?? buildRouteTo)(item)}
             style={({ pressed }) => [
               styles.compactPreviewCard,
               pressed && styles.compactPreviewCardPressed,
@@ -95,7 +97,7 @@ export function useTravelItemRenderer({
             <AddressListItem
               travel={item}
               isMobile={isMobile}
-              onPress={() => buildRouteTo(item)}
+              onPress={() => (onSelectPlace ?? buildRouteTo)(item)}
               onHidePress={onHidePress}
               userLocation={userLocation}
               transportMode={transportMode}
@@ -140,7 +142,7 @@ export function useTravelItemRenderer({
         <AddressListItem
           travel={item}
           isMobile={isMobile}
-          onPress={() => buildRouteTo(item)}
+          onPress={() => (onSelectPlace ?? buildRouteTo)(item)}
           onHidePress={onHidePress}
           userLocation={userLocation}
           transportMode={transportMode}
@@ -154,6 +156,7 @@ export function useTravelItemRenderer({
       isMobile,
       compactPreview,
       buildRouteTo,
+      onSelectPlace,
       onHideTravel,
       userLocation,
       transportMode,

@@ -210,6 +210,7 @@ export function useMapScreenController() {
     setRoutingError,
     handleMapClick,
     buildRouteTo,
+    focusPlace,
   } = routeController;
 
   // buildRouteTo depends on mapUiApi; mapUiApi is typically attached after first render.
@@ -219,6 +220,12 @@ export function useMapScreenController() {
 
   const buildRouteToStable = useCallback((item: TravelCoords) => {
     return buildRouteToRef.current?.(item);
+  }, []);
+
+  const focusPlaceRef = useRef(focusPlace);
+  focusPlaceRef.current = focusPlace;
+  const focusPlaceStable = useCallback((item: TravelCoords) => {
+    return focusPlaceRef.current?.(item);
   }, []);
 
   // Data Controller
@@ -273,6 +280,7 @@ export function useMapScreenController() {
   const {
     allTravelsData,
     travelsData,
+    total,
     loading,
     isFetching,
     isPlaceholderData,
@@ -285,6 +293,14 @@ export function useMapScreenController() {
     isFetchingNextPage,
     isDebouncingFilters,
   } = dataController;
+
+  // Счётчик мест в боковом меню: показываем общее число (backend total), а не
+  // длину загруженной страницы. Текстовый поиск — чисто клиентский фильтр, для
+  // него показываем длину отфильтрованного списка.
+  const hasTextSearch = Boolean(filterValues.searchQuery && filterValues.searchQuery.trim());
+  const travelsCount = hasTextSearch
+    ? travelsData.length
+    : Math.max(total ?? 0, travelsData.length);
 
   const activeOverlayLayers = useMemo(() => getActiveOverlayLayers(), []);
   const overlayOptions = useMemo(
@@ -651,6 +667,7 @@ export function useMapScreenController() {
       closeMenu: closeRightPanel,
       userLocation: queryCoordinates,
       onPlaceSelect: buildRouteToStable,
+      onPlaceFocus: focusPlaceStable,
       onOpenList: selectTravelsTab,
       // #211 — карта/список грузятся или фильтры дебаунсятся: не показывать
       // empty-state «Ничего не нашлось», пока идёт запрос (иначе мигает при
@@ -668,6 +685,7 @@ export function useMapScreenController() {
       closeRightPanel,
       queryCoordinates,
       buildRouteToStable,
+      focusPlaceStable,
       selectTravelsTab,
       loading,
       isFetching,
@@ -730,6 +748,7 @@ export function useMapScreenController() {
     // Travels data
     travelsData,
     allTravelsData,
+    travelsCount,
     loading,
     isFetching,
     isPlaceholderData,
@@ -744,6 +763,7 @@ export function useMapScreenController() {
 
     // Route actions
     buildRouteTo: buildRouteToStable,
+    focusPlace: focusPlaceStable,
     centerOnUser,
     zoomIn,
     zoomOut,
@@ -793,6 +813,7 @@ export function useMapScreenController() {
     routingSlice,
     travelsData,
     allTravelsData,
+    travelsCount,
     loading,
     isFetching,
     isPlaceholderData,
@@ -805,6 +826,7 @@ export function useMapScreenController() {
     onLoadMore,
     isFetchingNextPage,
     buildRouteToStable,
+    focusPlaceStable,
     centerOnUser,
     zoomIn,
     zoomOut,
