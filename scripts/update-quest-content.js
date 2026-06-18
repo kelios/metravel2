@@ -97,10 +97,27 @@ async function main() {
         await apiPatch(`/api/quest-steps/${target.id}/`, stepPayload(s));
         console.log(`  ✅ step ${s.step_id} (id=${target.id})`);
     }
-    // finale (finaleId == quest db id)
+    // finale: pk финала НЕ равен pk квеста (FK quest->finale не отдаётся API).
+    // Резолвим реальный pk по совпадению ТЕКУЩЕГО текста финала, затем PATCH + verify.
     if (data.finale && data.finale.text) {
-        await apiPatch(`/api/quest-finales/${bundle.id}/`, { text: data.finale.text });
-        console.log(`  ✅ finale (id=${bundle.id})`);
+        const curText = (bundle.finale && bundle.finale.text || '').trim();
+        if (!curText) { console.warn('  ⚠️ у квеста нет текущего финала — pk не резолвится, пропуск'); }
+        else {
+            let pk = null;
+            for (let i = 1; i <= 60 && pk == null; i++) {
+                try { const f = await apiGet(`/api/quest-finales/${i}/`); if ((f.text || '').trim() === curText) pk = i; }
+                catch { /* 404 — пропуск */ }
+            }
+            if (pk == null) { console.warn('  ⚠️ не нашёл pk финала по тексту, пропуск finale'); }
+            else {
+                await apiPatch(`/api/quest-finales/${pk}/`, { text: data.finale.text });
+                if (!isDryRun) {
+                    const v = await apiGet(`/api/quests/by-quest-id/${encodeURIComponent(QUEST_ID)}/`);
+                    const ok = ((v.finale && v.finale.text || '').trim() === data.finale.text.trim());
+                    console.log(`  ${ok ? '✅' : '❌'} finale (pk=${pk})${ok ? '' : ' — текст не применился к нужному квесту!'}`);
+                } else console.log(`  [DRY] finale → pk=${pk}`);
+            }
+        }
     }
     console.log('\n✅ Done');
 }

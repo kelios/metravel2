@@ -141,7 +141,11 @@ echo "✅ Тело статьи инжектировано в $BODY_PAGES travel
 
 # Инвариант: ровно один <h1> на travel-странице (пост-деплой проверка это требует).
 echo "Проверка: ровно один <h1> на travel-страницу (выборка)..."
-mapfile -t H1_SAMPLE < <(find "dist/$ENV/travels" -name "index.html" 2>/dev/null | head -20)
+# mapfile отсутствует в bash 3.2 (macOS) — наполняем массив через while-read + process substitution.
+H1_SAMPLE=()
+while IFS= read -r _h1_line; do
+  H1_SAMPLE+=("$_h1_line")
+done < <(find "dist/$ENV/travels" -name "index.html" 2>/dev/null | head -20)
 BAD_H1=0
 for f in "${H1_SAMPLE[@]:-}"; do
   [[ -f "$f" ]] || continue
