@@ -7,6 +7,7 @@ import FiltersPanelRadiusSection from '@/components/MapPage/FiltersPanelRadiusSe
 import FiltersPanelRouteSection from '@/components/MapPage/FiltersPanelRouteSection'
 import CollapsibleSection from '@/components/MapPage/CollapsibleSection'
 import Button from '@/components/ui/Button'
+import { getCategoryName, type CategoryOption } from '@/components/MapPage/categoryName'
 import type { RoutePoint } from '@/types/route'
 import type { LatLng } from '@/types/coordinates'
 import type { ThemedColors } from '@/hooks/useTheme'
@@ -14,17 +15,6 @@ import type { MapUiApi } from '@/types/mapUi'
 
 const MOBILE_QUICK_CHIPS_LIMIT = 2
 const RECOMMENDATIONS_MAX_ITEMS = 3
-
-type CategoryOption = string | { id?: string | number; name?: string; value?: string }
-
-function getCategoryName(category: CategoryOption): string {
-  if (typeof category === 'string') return category.trim()
-  if (category && typeof category === 'object') {
-    if (typeof category.value === 'string') return category.value.trim()
-    if (typeof category.name === 'string') return category.name.trim()
-  }
-  return ''
-}
 
 interface FiltersPanelBodyProps {
   colors: ThemedColors

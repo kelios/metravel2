@@ -8,17 +8,7 @@ import { DEFAULT_RADIUS_KM, formatRadiusLabel } from '@/constants/mapConfig'
 import type { ThemedColors } from '@/hooks/useTheme'
 
 import { CATEGORY_ICONS } from './mapCategoryIcons'
-
-type CategoryOption = string | { id?: string | number; name?: string; value?: string }
-
-function getCategoryName(category: CategoryOption): string {
-  if (typeof category === 'string') return category.trim()
-  if (category && typeof category === 'object') {
-    if (typeof category.name === 'string') return category.name.trim()
-    if (typeof category.value === 'string') return category.value.trim()
-  }
-  return ''
-}
+import { getCategoryName, type CategoryOption } from '@/components/MapPage/categoryName'
 
 interface FiltersPanelRadiusSectionProps {
   colors: ThemedColors
