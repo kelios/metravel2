@@ -160,10 +160,11 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
 export default memo(TravelTmlRound);
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
-    container: { 
+    container: {
         width: '100%',
         height: CARD_HEIGHT,
         padding: 0,
+        overflow: 'hidden',
     },
 
     // ✅ УЛУЧШЕНИЕ: Современная матовая карточка без границ, только тени

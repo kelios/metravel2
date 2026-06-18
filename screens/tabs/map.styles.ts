@@ -354,6 +354,51 @@ export const getStyles = (
         backgroundColor: themedColors.surface,
         borderColor: themedColors.primary,
       },
+      // Desktop-web floating «Радиус» control: sits in the same top-right cluster
+      // as the layers FAB, immediately to its left (44 button + 8 gap).
+      desktopRadiusFab: {
+        position: 'absolute',
+        top: 16,
+        right: 16 + 44 + 8,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: themedColors.surfaceMuted,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: themedColors.borderLight,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1001,
+        ...(Platform.OS === 'web'
+          ? ({
+              cursor: 'pointer',
+              boxShadow: '0 4px 16px rgba(15,23,42,0.18), 0 1px 4px rgba(0,0,0,0.08)',
+              transition: 'background-color 0.15s ease',
+            } as any)
+          : shadowMedium),
+      },
+      desktopRadiusFabActive: {
+        backgroundColor: themedColors.surface,
+        borderColor: themedColors.primary,
+      },
+      desktopRadiusFabBadge: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        minWidth: 18,
+        height: 18,
+        paddingHorizontal: 4,
+        borderRadius: 9,
+        backgroundColor: themedColors.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+      },
+      desktopRadiusFabBadgeText: {
+        color: themedColors.textOnPrimary,
+        fontSize: 10,
+        fontWeight: '700',
+        lineHeight: 12,
+      },
       panelPlaceholder: {
         flex: 1,
         justifyContent: 'center',

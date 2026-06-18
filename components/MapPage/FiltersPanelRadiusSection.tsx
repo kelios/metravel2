@@ -4,7 +4,6 @@ import Feather from '@expo/vector-icons/Feather'
 
 import MapSearchInput from '@/components/MapPage/MapSearchInput'
 import Chip from '@/components/ui/Chip'
-import { DEFAULT_RADIUS_KM, formatRadiusLabel } from '@/constants/mapConfig'
 import type { ThemedColors } from '@/hooks/useTheme'
 
 import { CATEGORY_ICONS } from './mapCategoryIcons'
@@ -125,8 +124,6 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
       : orderedCategories.unselected
   const visibleCategories = [...orderedCategories.selected, ...visibleUnselected]
 
-  const radiusSummaryValue = filterValue.radius || DEFAULT_RADIUS_KM
-  const radiusSummaryText = formatRadiusLabel(radiusSummaryValue)
   const searchQueryValue = String(filterValue.searchQuery || '')
 
   const handleSearchChange = useCallback(
@@ -144,23 +141,6 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
     [safeOnFilterChange, selectedCategoryValues],
   )
 
-  const radiusOptions = useMemo(() => {
-    const base = (Array.isArray(filters.radius) ? filters.radius : []).filter(
-      (option) => option?.id,
-    )
-    const current = String(radiusSummaryValue || '').trim()
-    if (!current) return base
-    if (base.some((option) => String(option.id) === current)) return base
-
-    const next = [...base, { id: current, name: formatRadiusLabel(current) }]
-    next.sort((a, b) => {
-      const aValue = Number(String(a.id).replace(/\D/g, '')) || 0
-      const bValue = Number(String(b.id).replace(/\D/g, '')) || 0
-      return aValue - bValue
-    })
-    return next
-  }, [filters.radius, radiusSummaryValue])
-
   return (
     <>
       <View style={styles.lightStepBlock}>
@@ -173,60 +153,8 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
         />
       </View>
 
-      {/* На мобиле радиус вынесен в компактный поповер верхнего тулбара карты —
-          здесь его не дублируем. На десктопе блок радиуса остаётся в панели. */}
-      {!isMobile && radiusOptions.length > 0 && (
-        <View style={styles.lightStepBlock}>
-          <View style={styles.lightStepHeader}>
-            <Feather name="radio" size={16} color={colors.primary} />
-            <Text style={styles.lightStepTitle}>Радиус поиска</Text>
-            {!!radiusSummaryText && (
-              <Text style={styles.lightStepBadge}>{radiusSummaryText}</Text>
-            )}
-          </View>
-          {!isMobile && (
-            <Text style={styles.sectionHint}>Как далеко искать места вокруг</Text>
-          )}
-          <View
-            style={styles.radiusSegmentTrack}
-            testID="radius-presets"
-            accessibilityRole="radiogroup"
-          >
-            {radiusOptions.map((option) => {
-              const selected = String(option.id) === String(radiusSummaryValue)
-              const label = formatRadiusLabel(option.name || option.id)
-              return (
-                <Pressable
-                  key={String(option.id)}
-                  onPress={() => safeOnFilterChange('radius', option.id)}
-                  testID={`radius-option-${option.id}`}
-                  accessibilityRole="radio"
-                  accessibilityLabel={label}
-                  // role=radio ждёт aria-checked; accessibilityState.checked не
-                  // маппится в aria в RN Web (Expo 55) — дублируем прямым aria-checked.
-                  accessibilityState={{ checked: selected }}
-                  aria-checked={selected}
-                  style={({ pressed }) => [
-                    styles.radiusSegment,
-                    selected && styles.radiusSegmentSelected,
-                    pressed && !selected && styles.radiusSegmentPressed,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.radiusSegmentText,
-                      selected && styles.radiusSegmentTextSelected,
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {label}
-                  </Text>
-                </Pressable>
-              )
-            })}
-          </View>
-        </View>
-      )}
+      {/* Радиус вынесен в плавающую иконку на карте (десктоп) и в верхний тулбар
+          (мобайл) — пресеты радиуса здесь больше не дублируем. */}
 
       <View style={styles.lightStepBlock}>
         <View style={styles.lightStepHeader}>

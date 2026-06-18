@@ -56,15 +56,23 @@ export const getCardStyles = ({ colors, isMobile, panelWidth }: FiltersPanelStyl
       borderBottomWidth: isMobile ? StyleSheet.hairlineWidth : 0,
       borderBottomColor: isMobile ? colors.border : 'transparent',
       ...(Platform.OS === 'web'
-        ? ({
-            position: 'sticky',
-            top: 0,
-            zIndex: 5,
-            backgroundColor: isMobile ? colors.surfaceAlpha40 : colors.surface,
-            backdropFilter: 'blur(18px)',
-            WebkitBackdropFilter: 'blur(18px)',
-            paddingTop: isMobile ? 10 : 4,
-          } as any)
+        ? isMobile
+          ? ({
+              position: 'sticky',
+              top: 0,
+              zIndex: 5,
+              backgroundColor: colors.surfaceMuted,
+              paddingTop: 10,
+            } as any)
+          : ({
+              position: 'sticky',
+              top: 0,
+              zIndex: 5,
+              backgroundColor: colors.surface,
+              backdropFilter: 'blur(18px)',
+              WebkitBackdropFilter: 'blur(18px)',
+              paddingTop: 4,
+            } as any)
         : null),
     },
     compactMetaRow: {

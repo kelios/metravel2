@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+
+const MOBILE_LAYOUT_MAX_WIDTH = 767
 
 interface WeatherLegendProps {
   enabledOverlays?: Record<string, boolean> | null
@@ -79,7 +81,9 @@ const buildGradient = (stops: ScaleStop[]): string =>
 
 function WeatherLegend({ enabledOverlays }: WeatherLegendProps) {
   const colors = useThemedColors()
-  const styles = useMemo(() => getStyles(colors), [colors])
+  const { width } = useWindowDimensions()
+  const isMobile = width <= MOBILE_LAYOUT_MAX_WIDTH
+  const styles = useMemo(() => getStyles(colors, isMobile), [colors, isMobile])
 
   const scale = useMemo(() => resolveScale(enabledOverlays), [enabledOverlays])
   const gradient = useMemo(
@@ -113,7 +117,7 @@ function WeatherLegend({ enabledOverlays }: WeatherLegendProps) {
   )
 }
 
-const getStyles = (colors: ThemedColors) =>
+const getStyles = (colors: ThemedColors, isMobile: boolean) =>
   StyleSheet.create({
     container: {
       position: 'absolute',
@@ -128,7 +132,10 @@ const getStyles = (colors: ThemedColors) =>
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
       gap: 6,
-      ...({ pointerEvents: 'none', backdropFilter: 'blur(8px)' } as any),
+      ...({
+        pointerEvents: 'none',
+        ...(isMobile ? {} : { backdropFilter: 'blur(8px)' }),
+      } as any),
     },
     title: {
       fontSize: 12,

@@ -80,7 +80,7 @@ const MapMobileLayersPopoverInner: React.FC<MapMobileLayersPopoverProps> = ({
           onPress={onRequestClose}
           accessibilityRole="button"
           accessibilityLabel="Закрыть"
-          hitSlop={8}
+          hitSlop={13}
           style={({ pressed }) => [pressed && { opacity: 0.6 }]}
         >
           <Feather name="x" size={18} color={colors.textMuted} />

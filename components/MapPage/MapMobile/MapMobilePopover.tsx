@@ -17,6 +17,7 @@
 import React from 'react'
 import { Platform, Pressable, StyleSheet, View } from 'react-native'
 
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
 
 interface MapMobilePopoverProps {
@@ -43,7 +44,7 @@ const shadowWeb = {
 } as const
 
 const shadowNative = {
-  shadowColor: '#0f172a',
+  shadowColor: DESIGN_TOKENS.colors.text,
   shadowOffset: { width: 0, height: 6 },
   shadowOpacity: 0.18,
   shadowRadius: 14,

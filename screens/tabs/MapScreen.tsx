@@ -308,6 +308,15 @@ export default function MapScreen() {
     onChange('radius', String(Math.min(current * 2, RADIUS_EXPAND_MAX_KM)))
   }, [filtersValuesSlice])
 
+  // Desktop-web radius FAB reuses the same controlled source as the filters
+  // panel — onFilterChange('radius', id). No duplicated radius logic.
+  const handleDesktopRadiusSelect = useCallback(
+    (id: string) => {
+      filtersValuesSlice?.onFilterChange?.('radius', id)
+    },
+    [filtersValuesSlice],
+  )
+
   const resetFiltersForPanel = filtersValuesSlice?.resetFilters
   const setPanelMode = routingSlice?.setMode
 
@@ -486,6 +495,9 @@ export default function MapScreen() {
       enabledOverlays={enabledOverlays}
       onOverlayToggle={filtersPanelProps?.contextValue?.onOverlayToggle}
       onResetOverlays={filtersPanelProps?.contextValue?.onResetOverlays}
+      radiusOptions={quickFilters.radiusOptions}
+      radiusValue={currentRadius}
+      onRadiusSelect={handleDesktopRadiusSelect}
     />
   )
 

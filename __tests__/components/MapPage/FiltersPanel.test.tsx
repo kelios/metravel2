@@ -244,11 +244,9 @@ describe('FiltersPanel', () => {
     expect(onOpenList).not.toHaveBeenCalled()
   })
 
-  it('renders radius presets in the panel and updates the selected radius', () => {
-    const onFilterChange = jest.fn()
-    const { getByTestId } = renderWithTheme(<FiltersPanel />, {
+  it('no longer renders radius presets in the panel (radius moved to the on-map control)', () => {
+    const { queryByTestId } = renderWithTheme(<FiltersPanel />, {
       ...defaultProps,
-      onFilterChange,
       filters: {
         ...mockFilters,
         radius: [
@@ -259,14 +257,12 @@ describe('FiltersPanel', () => {
       },
     })
 
-    expect(getByTestId('radius-presets')).toBeTruthy()
-    fireEvent.press(getByTestId('radius-option-100'))
-
-    expect(onFilterChange).toHaveBeenCalledWith('radius', '100')
+    expect(queryByTestId('radius-presets')).toBeNull()
+    expect(queryByTestId('radius-option-100')).toBeNull()
   })
 
   it('does not render the old radius summary block after choosing categories', () => {
-    const { queryByTestId, getAllByText } = renderWithTheme(<FiltersPanel />, {
+    const { queryByTestId } = renderWithTheme(<FiltersPanel />, {
       ...defaultProps,
       travelsData: [
         { categoryName: 'Музеи', name: 'Несвижский замок', address: 'Несвиж' },
@@ -280,7 +276,7 @@ describe('FiltersPanel', () => {
     })
 
     expect(queryByTestId('radius-selection-summary')).toBeNull()
-    expect(getAllByText('100 км').length).toBeGreaterThan(0)
+    expect(queryByTestId('radius-presets')).toBeNull()
   })
 
   it('makes the empty-state CTA explicit about increasing radius', () => {

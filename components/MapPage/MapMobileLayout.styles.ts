@@ -144,13 +144,11 @@ export const getMapMobileLayoutStyles = (
       justifyContent: 'center' as const,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
-      backgroundColor: colors.surfaceAlpha40,
+      backgroundColor: colors.surface,
       flexShrink: 0,
       marginHorizontal: 0,
       ...(Platform.OS === 'web'
         ? ({
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
             boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
             cursor: 'pointer',
             transition: 'all 0.15s ease',

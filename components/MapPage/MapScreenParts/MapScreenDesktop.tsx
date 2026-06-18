@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useState } from 'react'
+import React, { Suspense, useCallback, useMemo, useState } from 'react'
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import Animated from 'react-native-reanimated'
 import Feather from '@expo/vector-icons/Feather'
@@ -6,6 +6,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { MapOfflineIndicator } from '@/components/MapPage/MapOfflineIndicator'
 import MapPanelHeader from '@/components/MapPage/MapPanelHeader'
 import { MapMobileLayersPopover } from '@/components/MapPage/MapMobile/MapMobileLayersPopover'
+import { MapMobileRadiusPopover } from '@/components/MapPage/MapMobile/MapMobileRadiusPopover'
 import type { ThemedColors } from '@/hooks/useTheme'
 import type { MapUiApi } from '@/types/mapUi'
 import {
@@ -290,6 +291,11 @@ type MapScreenDesktopOverlaysProps = {
   enabledOverlays?: Record<string, boolean>
   onOverlayToggle?: (id: string, enabled: boolean) => void
   onResetOverlays?: () => void
+  // Radius floating-control state — same controlled source as the filters panel
+  // (filterValue.radius + onFilterChange('radius', id)). No duplicated logic.
+  radiusOptions?: ReadonlyArray<{ id: string; name: string }>
+  radiusValue?: string | number
+  onRadiusSelect?: (id: string) => void
 }
 
 /**
@@ -311,14 +317,35 @@ export function MapScreenDesktopOverlays({
   enabledOverlays,
   onOverlayToggle,
   onResetOverlays,
+  radiusOptions,
+  radiusValue,
+  onRadiusSelect,
 }: MapScreenDesktopOverlaysProps) {
   // Desktop-web «Слои» floating control: layers live on the map (Google-Maps
   // style), no longer inside the left filters panel. Mobile keeps its own icon
   // toolbar + popover, so this branch is desktop-web only.
   const showDesktopLayersControl = isWeb && !isMobile
   const [layersOpen, setLayersOpen] = useState(false)
-  const toggleLayers = useCallback(() => setLayersOpen((v) => !v), [])
+  const toggleLayers = useCallback(() => {
+    setLayersOpen((v) => !v)
+    setRadiusOpen(false)
+  }, [])
   const closeLayers = useCallback(() => setLayersOpen(false), [])
+
+  // Desktop-web «Радиус» floating control: same on-map cluster as «Слои» (sits
+  // immediately to its left). Reuses the controlled radius source from the
+  // filters panel; no duplicated radius logic.
+  const [radiusOpen, setRadiusOpen] = useState(false)
+  const toggleRadius = useCallback(() => {
+    setRadiusOpen((v) => !v)
+    setLayersOpen(false)
+  }, [])
+  const closeRadius = useCallback(() => setRadiusOpen(false), [])
+  const resolvedRadiusValue = String(radiusValue ?? '')
+  const radiusBadge = useMemo(() => {
+    const n = Number(resolvedRadiusValue)
+    return Number.isFinite(n) && n > 0 ? String(n) : ''
+  }, [resolvedRadiusValue])
 
   return (
     <>
@@ -335,6 +362,43 @@ export function MapScreenDesktopOverlays({
 
       {showDesktopLayersControl && (
         <>
+          <Pressable
+            testID="map-desktop-radius-button"
+            onPress={toggleRadius}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: radiusOpen }}
+            accessibilityLabel={`Радиус${radiusBadge ? ` ${radiusBadge}` : ''}`}
+            hitSlop={6}
+            style={({ pressed }) => [
+              styles.desktopRadiusFab,
+              radiusOpen && styles.desktopRadiusFabActive,
+              pressed && PRESSED_OPACITY_085,
+            ]}
+          >
+            <Feather name="target" size={20} color={themedColors.text} />
+            {!!radiusBadge && (
+              <View style={styles.desktopRadiusFabBadge} pointerEvents="none">
+                <Text style={styles.desktopRadiusFabBadgeText} numberOfLines={1}>
+                  {radiusBadge}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+
+          {radiusOpen && (
+            <MapMobileRadiusPopover
+              colors={themedColors as ThemedColors}
+              top={16 + 44 + 8}
+              right={16 + 44 + 8}
+              minWidth={150}
+              maxWidth={200}
+              options={radiusOptions ?? []}
+              currentValue={resolvedRadiusValue}
+              onSelect={(id) => onRadiusSelect?.(id)}
+              onRequestClose={closeRadius}
+            />
+          )}
+
           <Pressable
             testID="map-desktop-layers-button"
             onPress={toggleLayers}
