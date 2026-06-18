@@ -113,7 +113,7 @@ export function useStravaIntegration() {
 
   const invalidateStrava = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.stravaStatus() });
-    void queryClient.invalidateQueries({ queryKey: ['strava', 'activities'] });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.stravaActivitiesRoot() });
     if (selectedActivityId) {
       void queryClient.invalidateQueries({ queryKey: queryKeys.stravaActivity(selectedActivityId) });
     }

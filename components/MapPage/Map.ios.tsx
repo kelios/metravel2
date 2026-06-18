@@ -339,17 +339,6 @@ const Map: React.FC<TravelProps> = ({
         #map { width: 100%; height: 100%; }
         .leaflet-popup-content-wrapper { background-color: ${themeColors.surface}; border-radius: 8px; padding: 0; }
         .leaflet-popup-content { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto; }
-        .popup-image {
-          width: 200px;
-          height: 150px;
-          object-fit: cover;
-          border-radius: 8px 8px 0 0;
-          display: block;
-        }
-        .popup-image-link {
-          display: block;
-          text-decoration: none;
-        }
         .popup-text { padding: 12px; font-size: 13px; line-height: 1.45; }
         .popup-title {
           font-weight: 700;
@@ -357,43 +346,6 @@ const Map: React.FC<TravelProps> = ({
           font-size: 14px;
           line-height: 1.35;
           margin-bottom: 8px;
-        }
-        .popup-chip {
-          display: inline-block;
-          padding: 4px 10px;
-          border-radius: 999px;
-          background: ${withAlpha(themeColors.primary, 0.12)};
-          color: ${themeColors.primary};
-          font-size: 11px;
-          font-weight: 600;
-          line-height: 1.2;
-          margin-bottom: 10px;
-        }
-        .popup-actions {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        .popup-action {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 44px;
-          padding: 0 12px;
-          border-radius: 10px;
-          font-size: 13px;
-          font-weight: 600;
-          text-decoration: none;
-          cursor: pointer;
-          -webkit-tap-highlight-color: transparent;
-        }
-        .popup-action-primary {
-          background: ${themeColors.primary};
-          color: ${themeColors.textOnDark};
-        }
-        .popup-action-secondary {
-          background: ${withAlpha(themeColors.primary, 0.12)};
-          color: ${themeColors.primary};
         }
         .metravel-marker { background: transparent; border: 0; }
         .metravel-marker-pin {
@@ -558,17 +510,6 @@ const Map: React.FC<TravelProps> = ({
           popupAnchor: [0, -48]
         });
 
-        function sendOpenUrl(rawUrl) {
-          try {
-            if (!rawUrl) return;
-            if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'OPEN_URL', url: rawUrl }));
-            }
-          } catch {
-            // noop
-          }
-        }
-
         const ROUTE_COLOR = ${JSON.stringify(DESIGN_COLORS.routeLine)};
         const ROUTE_SURFACE = ${JSON.stringify(themeColors.surface)};
         const ROUTE_START = ${JSON.stringify(themeColors.success || themeColors.primary)};
@@ -606,30 +547,6 @@ const Map: React.FC<TravelProps> = ({
               const lng = parts[1];
               if (!isFinite(lat) || !isFinite(lng)) return;
 
-              let popupContent = '';
-              if (point.travelImageThumbUrl) {
-                const link = (point.articleUrl || point.urlTravel || '');
-                popupContent += '<a href="#" class="popup-image-link" data-open-url="' + escapeHtml(link) + '">' +
-                  '<img src="' + escapeHtml(point.travelImageThumbUrl) + '" class="popup-image" alt="' + escapeHtml(point.address || 'Image') + '" />' +
-                '</a>';
-              }
-
-              const travelLink = String(point.urlTravel || point.articleUrl || '').trim();
-              const directionsUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + lat + ',' + lng;
-
-              popupContent += '<div class="popup-text">';
-              popupContent += '<div class="popup-title">' + escapeHtml(point.address || 'Место на карте') + '</div>';
-              if (point.categoryName) {
-                popupContent += '<span class="popup-chip">' + escapeHtml(point.categoryName) + '</span>';
-              }
-              popupContent += '<div class="popup-actions">';
-              if (travelLink) {
-                popupContent += '<a href="#" class="popup-action popup-action-primary" data-open-url="' + escapeHtml(travelLink) + '">Подробнее</a>';
-              }
-              popupContent += '<a href="#" class="popup-action popup-action-secondary" data-open-url="' + escapeHtml(directionsUrl) + '">Маршрут</a>';
-              popupContent += '</div>';
-              popupContent += '</div>';
-
               // Зона кемпинга: рисуем полупрозрачный круг ПОД маркером для точек,
               // у которых categoryName содержит 'Кемпинг' или 'Лагерь'. Бэкенд не
               // отдаёт полигон-геометрию, поэтому зона — L.circle фиксированного
@@ -651,14 +568,12 @@ const Map: React.FC<TravelProps> = ({
               }
 
               const marker = L.marker([lat, lng], { icon: markerIcon }).addTo(markersLayer);
-              // bindPopup сам открывает popup по тапу на маркер; отдельный click→OPEN_URL
-              // уводил на travel сразу и popup-карточка никогда не показывалась (#…).
-              // Навигация на travel идёт только по кнопке «Подробнее» внутри popup.
-              marker.bindPopup(popupContent, { maxWidth: 200 });
 
-              // F-46 — отдаём выбор маркера в RN, чтобы экран показал нижнюю
-              // карточку места (MapPlaceBottomCard). Шлём индекс точки в текущем
-              // массиве points; RN маппит его на ту же точку travelAddress.
+              // F-46 — на native НЕ открываем Leaflet-попап (зеркало web-фикса):
+              // тап по маркеру только отдаёт выбор в RN, экран показывает нижнюю
+              // карточку места (MapPlaceBottomCard), где есть вся навигация попапа.
+              // Шлём индекс точки в текущем массиве points; RN маппит его на ту же
+              // точку travelAddress.
               marker.on('click', function() {
                 try {
                   if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
@@ -667,30 +582,6 @@ const Map: React.FC<TravelProps> = ({
                     }));
                   }
                 } catch (err) {}
-              });
-
-              marker.on('popupopen', function(e) {
-                try {
-                  const popupEl = e && e.popup ? e.popup.getElement() : null;
-                  if (!popupEl) return;
-                  const linkEls = popupEl.querySelectorAll('[data-open-url]');
-                  for (let i = 0; i < linkEls.length; i++) {
-                    (function(linkEl) {
-                      linkEl.addEventListener('click', function(ev) {
-                        try {
-                          ev.preventDefault();
-                          const url = (linkEl.getAttribute('data-open-url') || '').trim();
-                          if (!url) return;
-                          sendOpenUrl(url);
-                        } catch {
-                          // noop
-                        }
-                      });
-                    })(linkEls[i]);
-                  }
-                } catch {
-                  // noop
-                }
               });
 
               bounds.extend([lat, lng]);

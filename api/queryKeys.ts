@@ -47,6 +47,7 @@ export const queryKeys = {
     ['articleRating', articleId, isAuthenticated] as const,
   article: (articleIdOrSlug: number | string | undefined) => ['article', articleIdOrSlug] as const,
   stravaStatus: () => ['strava', 'status'] as const,
+  stravaActivitiesRoot: () => ['strava', 'activities'] as const,
   stravaActivities: (params: Record<string, unknown>) => ['strava', 'activities', params] as const,
   stravaActivity: (activityId: string | number | null | undefined) =>
     ['strava', 'activity', activityId] as const,

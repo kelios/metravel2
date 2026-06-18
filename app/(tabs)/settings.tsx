@@ -30,6 +30,9 @@ import { createSettingsStyles } from '@/components/screens/settings/settings.sty
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler';
 import StravaSettingsSection from '@/components/settings/StravaSettingsSection';
 
+// Keep the Strava implementation for a future backend rollout, but hide the settings UI for now.
+const STRAVA_SETTINGS_ENABLED = false;
+
 export default function SettingsScreen() {
     // Android: hardware Back возвращает на предыдущий экран (Профиль), а не
     // сбрасывает Tab-навигатор на главную. Хук гейтит по Platform.OS === 'android'.
@@ -548,7 +551,7 @@ export default function SettingsScreen() {
                         </>
                     ) : null}
 
-                    <StravaSettingsSection />
+                    {STRAVA_SETTINGS_ENABLED ? <StravaSettingsSection /> : null}
 
                     <Text style={styles.sectionTitle}>Сообщения</Text>
 
