@@ -192,14 +192,13 @@ export class RuntimeGalleryRenderer {
 
               const collageHero = layout === 'collage' && index === 0
               const collageSpan = collageHero ? 'grid-column: span 2; grid-row: span 2;' : ''
-              const resolvedHeight =
-                collageHero
-                  ? pagePhotos.length <= 3
-                    ? '190mm'
-                    : pagePhotos.length <= 5
-                      ? '180mm'
-                      : '168mm'
-                  : imageHeight
+              // Featured-ячейка коллажа охватывает grid-row: span 2, поэтому её высота
+              // должна равняться двум рядам вторичных ячеек плюс разделяющий gap
+              // (featured = 2×rowH + gap). Вычисляем от того же cardHeightMm, чтобы ряды
+              // featured и secondary совпадали и коллаж точно помещался в printable-высоту
+              // без среза нижнего ряда через overflow:hidden (#300).
+              const collageHeroHeightMm = cardHeightMm * 2 + gapMm
+              const resolvedHeight = collageHero ? `${collageHeroHeightMm}mm` : imageHeight
               const isSingle = pagePhotos.length === 1
               const imgHeightStyle = `height: ${isSingle ? singleImageHeight : resolvedHeight};`
 

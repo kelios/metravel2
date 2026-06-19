@@ -177,8 +177,22 @@ describe('EnhancedPdfGenerator helpers', () => {
 
     expect(galleryHtml).toContain('grid-template-columns: repeat(3, 1fr)')
     expect(galleryHtml).toContain('grid-column: span 2; grid-row: span 2;')
-    expect(galleryHtml).toContain('height: 180mm;')
-    expect(galleryHtml).toContain('height: 110mm;')
+
+    // Геометрия коллажа выводится из единой печатной высоты (#300): featured
+    // охватывает grid-row: span 2, поэтому его высота = 2×secondary + gap, иначе
+    // ряды featured/secondary не бьются и нижний ряд срезается overflow:hidden.
+    // minimal-тема: pagePadding 25mm, gallerySpacing normal → gap 6mm.
+    // available = 285 − 25*2 − 14(runningHeader) − 16(galleryHeader) − 4(safety) = 201mm
+    // secondary = floor((201 − 6)/2) = 97mm; featured = 97*2 + 6 = 200mm.
+    const gapMm = 6
+    const secondaryHeightMm = Math.floor((201 - gapMm) / 2)
+    const featuredHeightMm = secondaryHeightMm * 2 + gapMm
+    expect(secondaryHeightMm).toBe(97)
+    expect(featuredHeightMm).toBe(200)
+    expect(galleryHtml).toContain(`height: ${featuredHeightMm}mm;`)
+    expect(galleryHtml).toContain(`height: ${secondaryHeightMm}mm;`)
+    // Инвариант: featured ровно покрывает два ряда вторичных ячеек + gap.
+    expect(featuredHeightMm).toBe(secondaryHeightMm * 2 + gapMm)
   })
 
   it('builds inline gallery and safe URLs', () => {

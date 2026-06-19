@@ -121,6 +121,18 @@ pdf-lib НЕТ** — не добавляй их, генератор отдаёт
 - Карта/атлас: `runtime/atlasPages.ts` + `runtime/atlas/`, `renderers/MapPageRenderer.ts`.
 - Сортировка: `runtime/bookData.ts` (`sortTravels`).
 
+### Порядок разделов книги — осознанно фиксированный (#305 BOOK-Q7)
+Порядок сборки страниц зашит в `runtime/pdfPageAssembly.ts`: обложка → TOC → атлас →
+[на каждый travel: separator (если ≥3 путешествий) → фото → контент → галерея → карта] →
+чек-лист → финал. Это намеренный нарратив-поток (обложка-крючок → оглавление → рассказ →
+визуальный ряд → карта-справка → сборы → финал), а не случайность — поэтому
+переупорядочивание разделов НЕ вынесено в настройки (настройка без UI = мёртвый конфиг).
+Гибко управляется именно ВКЛЮЧЕНИЕ разделов, и оно работает: `includeToc` /
+`includeGallery` / `includeMap` / `includeChecklists`
+(`hasGallery = includeGallery && photos.length`, `hasMap = includeMap && locations.length` —
+`runtime/bookData.ts:98,112`; `includeToc`/`includeChecklists` — `pdfPageAssembly.ts:64,112`).
+Полноценный reorder + UI заводить ТОЛЬКО по явному запросу владельца отдельным тикетом.
+
 ### Починить превью/печать
 - Превью-окно и preload-скрипт картинок: `BookHtmlExportService.ts`
   (`enhanceHtmlForPrintPreview`) + `utils/openBookPreviewWindow.ts`.
