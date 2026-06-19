@@ -6,6 +6,7 @@ import type { TravelForBook } from '@/types/pdf-export';
 import type { GalleryLayout, CaptionPosition } from '@/types/pdf-gallery';
 import { getThemeConfig, type PdfThemeName } from '../../../themes/PdfThemeConfig';
 import { DEFAULT_FREE_PDF_THEME, isPremiumThemeName } from '../../../themes/themeTiers';
+import { downgradeNonPremiumSettings } from '../../../premiumSettingsGate';
 import type { ContentParser, ParsedContentBlock } from '../../../parsers/ContentParser';
 import type { BlockRenderer } from '../../../renderers/BlockRenderer';
 import type { TravelQuote } from '../../../quotes/travelQuotes';
@@ -160,12 +161,17 @@ export class EnhancedPdfGeneratorBase {
     const isPremium = options.isPremium !== false;
     this.applyPremiumThemeGate(isPremium);
 
+    // Авторитетный даунгрейд премиум-настроек на этапе генерации: UI-гейт может
+    // быть обойдён (напр. suggestGalleryLayout авто-вернёт slideshow/collage).
+    // downgradeNonPremiumSettings не мутирует входной settings (#298 / FE-8).
+    const gatedSettings = downgradeNonPremiumSettings(settings, isPremium);
+
     await this.ensureParser();
     await this.ensureBlockRenderer();
-    this.currentSettings = settings;
+    this.currentSettings = gatedSettings;
     this.initRenderers(); // reinit with updated settings
 
-    const sortedTravels = this.sortTravels(travels, settings.sortOrder);
+    const sortedTravels = this.sortTravels(travels, gatedSettings.sortOrder);
     if (!this.selectedQuotes) {
       const coverQuote = pickRandomQuote();
       const finalQuote = pickRandomQuote(coverQuote);
@@ -176,14 +182,14 @@ export class EnhancedPdfGeneratorBase {
     const qrCodes = await this.generateQRCodes(sortedTravels);
 
     // Собираем метаданные для оглавления
-    const meta = this.buildTravelMeta(sortedTravels, settings);
-    
+    const meta = this.buildTravelMeta(sortedTravels, gatedSettings);
+
     // Обложка с улучшенным дизайном
     const coverQuote = this.selectedQuotes?.cover;
     const coverGenerator = new CoverPageGenerator(undefined, coverQuote);
     const coverPage = await coverGenerator.generate({
       travels: sortedTravels,
-      settings,
+      settings: gatedSettings,
       theme: this.theme,
       pageNumber: 1,
     });
@@ -191,12 +197,12 @@ export class EnhancedPdfGeneratorBase {
       coverPage,
       meta,
       qrCodes,
-      settings,
+      settings: gatedSettings,
       sortedTravels,
       renderTocPage: (tocMeta, pageNumber, totalCount, startIndex) =>
         this.renderTocPage(tocMeta, pageNumber, totalCount, startIndex),
       renderAtlasPages: (atlasMeta, startPageNumber) =>
-        this.renderAtlasPages(atlasMeta, startPageNumber, settings),
+        this.renderAtlasPages(atlasMeta, startPageNumber, gatedSettings),
       renderSeparatorPage: (travel, travelIndex, totalTravels) =>
         this.renderSeparatorPage(travel, travelIndex, totalTravels),
       renderTravelPhotoPage: (travel, pageNumber) => this.renderTravelPhotoPage(travel, pageNumber),
@@ -210,7 +216,7 @@ export class EnhancedPdfGeneratorBase {
     });
 
     // Собираем HTML
-    return this.buildHtmlDocument(pages, settings, isPremium);
+    return this.buildHtmlDocument(pages, gatedSettings, isPremium);
   }
 
   /**

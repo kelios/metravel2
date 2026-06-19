@@ -5,7 +5,6 @@ import {
   isPremiumCoverType,
   isPremiumGalleryLayout,
   isPremiumCaptionPosition,
-  isPremiumPhotoPageLayout,
   gallerySettingNeedsPremium,
 } from '@/components/export/BookSettingsModal.premium'
 
@@ -41,10 +40,8 @@ describe('BookSettingsModal premium gate (#298)', () => {
       expect(isPremiumCaptionPosition('none')).toBe(false)
     })
 
-    it('full-bleed фото-страница — премиум', () => {
-      expect(isPremiumPhotoPageLayout('full-bleed')).toBe(true)
-      expect(isPremiumPhotoPageLayout('framed')).toBe(false)
-      expect(isPremiumPhotoPageLayout('split')).toBe(false)
+    it('full-bleed фото-страница — НЕ премиум (базовая раскладка)', () => {
+      expect(gallerySettingNeedsPremium({ photoPageLayout: 'full-bleed' })).toBe(false)
     })
   })
 
@@ -52,7 +49,6 @@ describe('BookSettingsModal premium gate (#298)', () => {
     it('true для любой премиум-правки галереи', () => {
       expect(gallerySettingNeedsPremium({ galleryLayout: 'collage' })).toBe(true)
       expect(gallerySettingNeedsPremium({ captionPosition: 'overlay' })).toBe(true)
-      expect(gallerySettingNeedsPremium({ photoPageLayout: 'full-bleed' })).toBe(true)
     })
 
     it('false для бесплатных правок', () => {
