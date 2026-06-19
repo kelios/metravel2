@@ -2,6 +2,7 @@ import type { InfiniteData, QueryClient } from '@tanstack/react-query'
 import type { Travel } from '@/types/types'
 import { queryKeys } from '@/api/queryKeys'
 import type { FilterOptions, FilterState } from './utils/listTravelTypes'
+import { getSortingLabel } from './utils/sortings'
 
 type TravelListPage = {
   data?: Travel[]
@@ -298,10 +299,13 @@ export const buildActiveConditionChips = ({
 
   const sortValue = typeof filter.sort === 'string' ? filter.sort.trim() : ''
   if (sortValue) {
-    const sortLabel =
-      options?.sortings?.find((item) => item.id === sortValue)?.name ||
-      SORT_LABEL_FALLBACKS[sortValue] ||
-      sortValue
+    // Prefer the localized Russian label (SORTING_NAME_MAP) over the backend's
+    // `name`, which can come through in English ("Newest first" / "Most viewed").
+    const backendSortName = options?.sortings?.find((item) => item.id === sortValue)?.name
+    const sortLabel = getSortingLabel(
+      sortValue,
+      SORT_LABEL_FALLBACKS[sortValue] || backendSortName || sortValue,
+    )
     chips.push({
       key: 'sort',
       label: `Сортировка: ${sortLabel}`,
