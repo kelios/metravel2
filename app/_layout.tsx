@@ -378,13 +378,16 @@ function ThemedContent({
 
   const bottomGutter = useMemo(() => {
     if (!showFooter || !isMobile) return null;
+    // The map screen owns its bottom dock inset internally so Leaflet can fill
+    // the whole mobile viewport behind the fixed tab bar.
+    if (isMapRoute) return null;
 
     if (Platform.OS === 'web') {
       return <View testID="bottom-gutter" style={{ height: WEB_FOOTER_RESERVE_HEIGHT }} />;
     }
 
     return null;
-  }, [showFooter, isMobile]);
+  }, [showFooter, isMobile, isMapRoute]);
 
   return (
     <AppProviders

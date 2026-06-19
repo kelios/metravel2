@@ -27,21 +27,21 @@ interface UseMapInstanceProps {
  * Создаёт базовый tile-слой подложки по теме. Светлая — OSM-прокси (без {s}),
  * тёмная — CARTO dark (субдомены a/b/c/d, ретина {r}).
  *
- * Светлый OSM-прокси отдаёт только @1x (retina @2x нет — 404), поэтому на
- * HiDPI-экранах (iPhone DPR 2–3, in-app браузеры Threads/Instagram) плитки
- * растягиваются и выглядят мягкими/бледными. detectRetina заставляет Leaflet
- * грузить плитки следующего зума и показывать их в половинном размере → резко,
- * без изменения источника. Тёмной теме это не нужно: CARTO уже отдаёт {r}-@2x
- * того же зума (без потери уровня зума), поэтому detectRetina только для светлой.
+ * Светлый OSM-прокси отдаёт только @1x. Не включаем Leaflet detectRetina:
+ * на HiDPI-экранах он запрашивает следующий zoom и режет тайлы до 128px,
+ * что резко увеличивает нагрузку на прокси и даёт "шахматку" при первичном
+ * auto-fit карты. Тёмная CARTO-подложка остаётся с ретина-шаблоном {r}.
  */
+export const getThemedBaseLayerOptions = (isDark: boolean) => ({
+  attribution: getThemedBaseAttribution(isDark),
+  maxZoom: getThemedBaseMaxZoom(isDark),
+  ...(isDark ? { subdomains: CARTO_DARK_SUBDOMAINS } : null),
+});
+
 const createThemedBaseLayer = (L: any, isDark: boolean) => {
   if (!L) return null;
   return attachTileRetry(
-    L.tileLayer(getThemedBaseTileUrl(isDark), {
-      attribution: getThemedBaseAttribution(isDark),
-      maxZoom: getThemedBaseMaxZoom(isDark),
-      ...(isDark ? { subdomains: CARTO_DARK_SUBDOMAINS } : { detectRetina: true }),
-    }),
+    L.tileLayer(getThemedBaseTileUrl(isDark), getThemedBaseLayerOptions(isDark)),
   );
 };
 
