@@ -101,6 +101,29 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
 
   const paddingBottom = (bottomInset || 0) + (insets?.bottom ?? 0) + 12
 
+  // On web, close via a NATIVE DOM handler instead of relying solely on RN-Web's
+  // `onPress`. RN-Web synthesises `onPress` through its responder system over
+  // pointer events; on the mobile bottom sheet the grabber hosts a swipe
+  // responder and the hero popup is a separate responder subtree underneath, and
+  // the responder hand-off can swallow the button's `pointerup` so `onPress`
+  // never fires — the card stays mounted and freezes the lower ~82% of the map.
+  // `onPointerDown` stops propagation so the sheet's swipe responder can't claim
+  // the gesture; `onPointerUp` closes deterministically on touch + mouse. We do
+  // NOT also wire `onClick` (it would double-fire after pointerup). `onPress`
+  // stays for native. RN-Web passes these unknown props straight to the host
+  // <div>, so this runs before/independently of the responder race.
+  const webCloseHandlers = IS_WEB
+    ? ({
+        onPointerDown: (e: any) => {
+          e?.stopPropagation?.()
+        },
+        onPointerUp: (e: any) => {
+          e?.stopPropagation?.()
+          onClose()
+        },
+      } as any)
+    : null
+
   const closeButton = (
     // Rendered after the body so it paints on top of the edge-to-edge hero
     // photo (RN has no zIndex across siblings without elevation); dark pill
@@ -116,6 +139,7 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
         isFullscreenWeb && styles.closeButtonFullscreen,
         pressed && { opacity: 0.7 },
       ]}
+      {...(webCloseHandlers ?? {})}
     >
       <Feather name="x" size={18} color="#fff" />
     </Pressable>

@@ -495,6 +495,16 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     paddingHorizontal: DESIGN_TOKENS.spacing.lg,
     paddingBottom: DESIGN_TOKENS.spacing.md,
   },
+  // In the native virtual list each card is the only child of a column-direction
+  // wrapper, so the grid `card` style (flexBasis '100%' + flexShrink 1, sized for
+  // a row-wrap grid) resolves its basis against the main axis = height and
+  // collapses the card to zero height. Reset the flex to a plain full-width block.
+  virtualCard: {
+    width: '100%',
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: 'auto',
+  },
 
   // ─── Card ───
   card: {

@@ -322,6 +322,7 @@ export default function PlacesScreen() {
           colors={colors}
           onOpenMap={openOnMap}
           onOpenTravel={openTravel}
+          containerStyle={styles.virtualCard}
         />
       </View>
     ),

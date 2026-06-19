@@ -1,5 +1,13 @@
 import React from 'react'
-import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native'
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  type StyleProp,
+  Text,
+  View,
+  type ViewStyle,
+} from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
@@ -18,18 +26,20 @@ export const PlaceCard = React.memo(function PlaceCard({
   colors,
   onOpenMap,
   onOpenTravel,
+  containerStyle,
 }: {
   place: CatalogPlace
   styles: PlacesStyles
   colors: ThemedColors
   onOpenMap: (place: CatalogPlace) => void
   onOpenTravel: (place: CatalogPlace) => void
+  containerStyle?: StyleProp<ViewStyle>
 }) {
   const imageUrl = place.imageUrl || place.travelImageThumbUrl || null
   const relatedTravelUrl = normalizeRelatedTravelRoute(place.urlTravel)
 
   return (
-    <View style={[styles.card, styles.cardInner]}>
+    <View style={[styles.card, styles.cardInner, containerStyle]}>
       <View style={styles.cardMediaWrap}>
         {imageUrl ? (
           <ImageCardMedia
