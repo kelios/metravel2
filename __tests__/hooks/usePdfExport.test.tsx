@@ -315,7 +315,8 @@ describe('usePdfExport', () => {
           showCaptions: true,
           captionPosition: 'bottom',
           gallerySpacing: 'normal',
-        })
+        }),
+        expect.objectContaining({ isPremium: true }),
       );
       expect(mockOpenBookPreviewWindow).toHaveBeenCalledTimes(1);
 
@@ -357,6 +358,7 @@ describe('usePdfExport', () => {
           }),
         ],
         expect.any(Object),
+        expect.objectContaining({ isPremium: true }),
       );
     });
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Image, Platform, StatusBar as RNStatusBar, StyleSheet, View, LogBox, useColorScheme, useWindowDimensions } from "react-native";
 import { SplashScreen, Stack, usePathname } from "expo-router";
 import AppProviders from "@/components/layout/AppProviders";
@@ -28,6 +28,7 @@ import { installChunkErrorReloadHandler } from "@/utils/chunkReload";
 import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
 import { shouldRunRuntimeConfigDiagnostics } from '@/utils/runtimeConfigDiagnostics';
 import { useAriaHiddenFocusGuard } from "@/hooks/useAriaHiddenFocusGuard";
+import { setToastDockInset } from "@/utils/toast";
 
 if (__DEV__) {
   require("@expo/metro-runtime");
@@ -229,7 +230,13 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
     ));
 
     /** === динамическая высота ДОКА футера (только иконки) === */
-    const [, setDockHeight] = useState(0);
+    const [, setDockHeightState] = useState(0);
+    // Feed the real dock height to the toast module so bottom toasts clear the
+    // tab bar exactly (the bug: «Добавлено в план» toast rendered under the dock).
+    const setDockHeight = useCallback((h: number) => {
+        setDockHeightState(h);
+        setToastDockInset(h);
+    }, []);
     
     /** === SSR-safe Toast: рендерим только на клиенте === */
     const [isMounted, setIsMounted] = useState(false);

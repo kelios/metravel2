@@ -57,6 +57,10 @@ function getFilterGroupCollapse(page: any) {
   return page.getByRole('button', { name: COLLAPSE_GROUP_RE }).first();
 }
 
+function getSortTrigger(page: any, name: RegExp = /Сортировка:/i) {
+  return page.getByRole('button', { name }).first();
+}
+
 async function reloadTravelsList(page: any) {
   await gotoWithRetry(page, getTravelsListPath());
   await waitForMainListRender(page);
@@ -87,7 +91,7 @@ async function ensureInteractiveFiltersReady(page: any) {
     await ensureListReadyForFilters(page);
 
     const hasGroupToggle = await getFilterGroupToggle(page).isVisible().catch(() => false);
-    const hasSortTrigger = await page.getByRole('button', { name: /Сортировка:/i }).isVisible().catch(() => false);
+    const hasSortTrigger = await getSortTrigger(page).isVisible().catch(() => false);
 
     if (hasGroupToggle && hasSortTrigger) {
       return;
@@ -104,7 +108,7 @@ async function ensureFiltersPanelVisible(page: any) {
   }
 
   const toggleAllButton = page.getByTestId('toggle-all-groups').first();
-  const sortTrigger = page.getByRole('button', { name: /Сортировка:/i }).first();
+  const sortTrigger = getSortTrigger(page);
   if (
     (await toggleAllButton.isVisible().catch(() => false)) ||
     (await sortTrigger.isVisible().catch(() => false))
@@ -153,7 +157,7 @@ async function hasLoadedResultsShell(page: any) {
 
 async function openSortDropdown(page: any): Promise<any | null> {
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const sortDropdown = page.getByRole('button', { name: /Сортировка:/i });
+    const sortDropdown = getSortTrigger(page);
     await expect(sortDropdown).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     await sortDropdown.click();
 
@@ -249,7 +253,7 @@ test.describe('@smoke Filters and Sorting UX', () => {
 
   test('sort dropdown shows current selection and expands on click', async ({ page }) => {
     // Verify sort dropdown trigger is visible with current selection
-    const sortDropdown = page.getByRole('button', { name: /Сортировка:/i });
+    const sortDropdown = getSortTrigger(page);
     await expect(sortDropdown).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     
     // Should show default selection
@@ -286,7 +290,7 @@ test.describe('@smoke Filters and Sorting UX', () => {
     await page.waitForTimeout(DEBOUNCE_MS);
     
     // Dropdown should close and show new selection
-    const updatedDropdown = page.getByRole('button', { name: /Сортировка:.*Популярные/i });
+    const updatedDropdown = getSortTrigger(page, /Сортировка:.*Популярные/i);
     await expect(updatedDropdown).toBeVisible({ timeout: 5000 });
     
     // Sort options should be hidden (dropdown closed)
@@ -313,12 +317,12 @@ test.describe('@smoke Filters and Sorting UX', () => {
 
   test('sort dropdown trigger shows hover state on desktop', async ({ page, isMobile }) => {
     if (isMobile) {
-      const sortDropdown = page.getByRole('button', { name: /Сортировка:/i });
+      const sortDropdown = getSortTrigger(page);
       await expect(sortDropdown).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
       return;
     }
 
-    const sortDropdown = page.getByRole('button', { name: /Сортировка:/i });
+    const sortDropdown = getSortTrigger(page);
     await expect(sortDropdown).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     
     // Get initial background color

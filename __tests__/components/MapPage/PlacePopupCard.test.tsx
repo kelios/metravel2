@@ -310,7 +310,7 @@ describe('PlacePopupCard', () => {
     fullscreenSpy.mockRestore();
   });
 
-  it('renders permanent text labels alongside icons for web action chips', () => {
+  it('renders the fallback Google action and expands secondary navigation chips', () => {
     let tree: any;
 
     renderer.act(() => {
@@ -319,7 +319,6 @@ describe('PlacePopupCard', () => {
           colors={mockColors as any}
           title="Test point"
           coord="53.9, 27.56"
-          onOpenArticle={jest.fn()}
           onOpenGoogleMaps={jest.fn()}
           onOpenOrganicMaps={jest.fn()}
           onAddPoint={jest.fn()}
@@ -330,11 +329,18 @@ describe('PlacePopupCard', () => {
     const findLabel = (label: string) =>
       tree.root.findAll((node: any) => node.props?.children === label);
 
-    expect(findLabel('Google').length).toBeGreaterThan(0);
-    expect(findLabel('Organic').length).toBeGreaterThan(0);
+    expect(findLabel('Google Maps').length).toBeGreaterThan(0);
+    expect(findLabel('Organic').length).toBe(0);
 
-    const googleAction = tree.root.findByProps({ accessibilityLabel: 'Google Maps' });
+    const googleAction = tree.root.findByProps({ accessibilityLabel: 'Открыть точку в Google Maps' });
     expect(googleAction).toBeTruthy();
+
+    const moreAction = tree.root.findByProps({ accessibilityLabel: 'Показать способы навигации' });
+    renderer.act(() => {
+      moreAction.props.onPress();
+    });
+
+    expect(findLabel('Organic').length).toBeGreaterThan(0);
   });
 
   it('runs the Google navigation handler when the popup action is pressed', () => {
@@ -347,13 +353,12 @@ describe('PlacePopupCard', () => {
           colors={mockColors as any}
           title="Test point"
           coord="53.9, 27.56"
-          onOpenArticle={jest.fn()}
           onOpenGoogleMaps={onOpenGoogleMaps}
         />
       );
     });
 
-    const googleAction = tree.root.findByProps({ accessibilityLabel: 'Google Maps' });
+    const googleAction = tree.root.findByProps({ accessibilityLabel: 'Открыть точку в Google Maps' });
 
     renderer.act(() => {
       googleAction.props.onPress();
@@ -407,10 +412,8 @@ describe('PlacePopupCard', () => {
     expect(saveAction.props.disabled).toBe(true);
   });
 
-  it('opens the page through the popup handler when the inline page link is clicked', () => {
+  it('opens the page through the popup handler when the page action is pressed', () => {
     const onOpenArticle = jest.fn();
-    const stopPropagation = jest.fn();
-    const preventDefault = jest.fn();
     let tree: any;
 
     renderer.act(() => {
@@ -426,19 +429,16 @@ describe('PlacePopupCard', () => {
       );
     });
 
-    const link = tree.root.findByType('a');
-    expect(link.props.href).toBe('/travels/test-route');
+    const linkAction = tree.root.findByProps({ accessibilityLabel: 'Открыть статью' });
 
     renderer.act(() => {
-      link.props.onClick({ preventDefault, stopPropagation });
+      linkAction.props.onPress();
     });
 
-    expect(stopPropagation).toHaveBeenCalled();
-    expect(preventDefault).toHaveBeenCalled();
     expect(onOpenArticle).toHaveBeenCalledTimes(1);
   });
 
-  it('renders an inline page link for article routes', () => {
+  it('renders a page action for article routes', () => {
     let tree: any;
 
     renderer.act(() => {
@@ -454,8 +454,10 @@ describe('PlacePopupCard', () => {
       );
     });
 
-    const link = tree.root.findByType('a');
-    expect(link.props.href).toBe('/article/test-post');
-    expect(link.props.children).toBe('Открыть страницу');
+    const articleAction = tree.root.findByProps({ accessibilityLabel: 'Открыть статью' });
+    expect(articleAction).toBeTruthy();
+    expect(
+      tree.root.findAll((node: any) => node.props?.children === 'Страница').length,
+    ).toBeGreaterThan(0);
   });
 });

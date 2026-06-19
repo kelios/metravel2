@@ -13,6 +13,7 @@ import {
 } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useRouter } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
@@ -26,6 +27,11 @@ const SEND_COOLDOWN_MS = 300
 const MAX_MESSAGE_LENGTH = 2000
 const IS_WEB = Platform.OS === 'web'
 const IS_IOS = Platform.OS === 'ios'
+// Height of the global mobile tab bar (BottomDock) content, mirrors
+// MOBILE_DOCK_HEIGHT_WEB in BottomDock. The dock is an absolute overlay pinned to
+// the screen bottom, so the chat composer must reserve this much (+ safe-area)
+// or the message input renders hidden underneath it.
+const DOCK_CONTENT_HEIGHT = 56
 
 type ChatListItem =
   | { type: 'message'; data: Message }
@@ -119,6 +125,11 @@ function ChatView({
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const router = useRouter()
+  const insets = useSafeAreaInsets()
+  // On native the chat fills the screen while the global tab bar overlays the
+  // bottom; reserve its height so the input clears it. Web positions its footer
+  // separately, so no reserve there.
+  const composerBottomInset = IS_WEB ? 0 : DOCK_CONTENT_HEIGHT + insets.bottom
 
   const [text, setText] = useState('')
   const lastSentAtRef = useRef(0)
@@ -230,6 +241,7 @@ function ChatView({
         onKeyPress={handleKeyPress}
         canSend={canSend}
         sending={sending}
+        bottomInset={composerBottomInset}
       />
     </KeyboardAvoidingView>
   )
@@ -326,6 +338,7 @@ function ChatComposer({
   onKeyPress,
   canSend,
   sending,
+  bottomInset,
 }: {
   styles: Styles
   colors: ThemedColors
@@ -335,6 +348,7 @@ function ChatComposer({
   onKeyPress: (e: any) => void
   canSend: boolean
   sending: boolean
+  bottomInset: number
 }) {
   const sendButtonStyle = useCallback(
     ({ pressed }: { pressed: boolean }) => [
@@ -346,7 +360,7 @@ function ChatComposer({
   )
 
   return (
-    <View style={styles.inputContainer}>
+    <View style={[styles.inputContainer, bottomInset > 0 && { paddingBottom: bottomInset }]}>
       <TextInput
         style={styles.input}
         value={text}

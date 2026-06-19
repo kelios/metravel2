@@ -112,17 +112,32 @@ describe('Map.ios Component', () => {
     expect(html).not.toContain('data:image/svg+xml');
   });
 
-  it('should send popup actions through the WebView bridge', () => {
+  it('should send marker selection through the WebView bridge', () => {
     const rendered = render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
 
     const html = getWebViewHtml(rendered);
-    expect(html).toContain('marker.bindPopup(popupContent');
-    expect(html).toContain("marker.on('popupopen'");
-    expect(html).toContain('data-open-url');
-    expect(html).toContain('sendOpenUrl(url)');
-    expect(html).toContain("point.urlTravel || point.articleUrl");
+    expect(html).toContain("marker.on('click'");
+    expect(html).toContain("type: 'SELECT_PLACE'");
+    expect(html).toContain('index: pointIndex');
+    expect(html).not.toContain('marker.bindPopup(popupContent');
+  });
+
+  it('should route marker selection messages to onMarkerSelect', () => {
+    const onMarkerSelect = jest.fn();
+    const rendered = render(
+      <Map travel={mockTravel} coordinates={mockCoordinates} onMarkerSelect={onMarkerSelect} />
+    );
+
+    const webView = getWebView(rendered);
+    act(() => {
+      webView.props.onMessage({
+        nativeEvent: { data: JSON.stringify({ type: 'SELECT_PLACE', index: 1 }) },
+      });
+    });
+
+    expect(onMarkerSelect).toHaveBeenCalledWith(mockTravel.travelAddress.data[1]);
   });
 
   it('should expose native map controls through the WebView bridge', () => {
@@ -212,16 +227,16 @@ describe('Map.ios Component', () => {
     expect(getWebViewHtml(rendered)).toContain("String(point.coord).split(',').map(Number)");
   });
 
-  it('should render callout with point information', () => {
+  it('should not render travel marker callouts inside the native WebView', () => {
     const rendered = render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     
     const html = getWebViewHtml(rendered);
-    expect(html).toContain('popup-title');
-    expect(html).toContain('popup-chip');
-    expect(html).toContain('Подробнее');
-    expect(html).toContain('Маршрут');
+    expect(html).not.toContain('popup-chip');
+    expect(html).not.toContain('Подробнее');
+    expect(html).not.toContain('Маршрут');
+    expect(html).toContain("type: 'SELECT_PLACE'");
   });
 
   it('should display point address in callout', () => {

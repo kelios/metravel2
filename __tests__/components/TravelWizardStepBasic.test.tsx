@@ -287,11 +287,11 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
             fireEvent.press(quickDraftButton);
 
             await waitFor(() => {
-                expect(Toast.show).toHaveBeenCalledWith({
+                expect(Toast.show).toHaveBeenCalledWith(expect.objectContaining({
                     type: 'error',
                     text1: 'Заполните название',
                     text2: 'Минимум 3 символа для сохранения черновика',
-                });
+                }));
             });
 
             expect(defaultProps.onManualSave).not.toHaveBeenCalled();
@@ -310,11 +310,11 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
             fireEvent.press(quickDraftButton);
 
             await waitFor(() => {
-                expect(Toast.show).toHaveBeenCalledWith({
+                expect(Toast.show).toHaveBeenCalledWith(expect.objectContaining({
                     type: 'error',
                     text1: 'Заполните название',
                     text2: 'Минимум 3 символа для сохранения черновика',
-                });
+                }));
             });
         });
 
@@ -341,11 +341,11 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
             });
 
             await waitFor(() => {
-                expect(Toast.show).toHaveBeenCalledWith({
+                expect(Toast.show).toHaveBeenCalledWith(expect.objectContaining({
                     type: 'success',
                     text1: 'Черновик сохранен',
                     text2: 'Вы можете вернуться к нему позже',
-                });
+                }));
             });
         });
 
@@ -391,11 +391,11 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
             fireEvent.press(quickDraftButton);
 
             await waitFor(() => {
-                expect(Toast.show).toHaveBeenCalledWith({
+                expect(Toast.show).toHaveBeenCalledWith(expect.objectContaining({
                     type: 'error',
                     text1: 'Ошибка сохранения',
                     text2: 'Попробуйте еще раз',
-                });
+                }));
             });
 
             expect(mockRouter.push).not.toHaveBeenCalled();

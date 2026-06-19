@@ -29,6 +29,7 @@ export interface UseSliderCoreOptions {
 export interface UseSliderCoreResult {
   containerW: number;
   containerH: number;
+  hasMeasuredWidth: boolean;
   currentIndex: number;
   reduceMotion: boolean;
   showSwipeHint: boolean;
@@ -82,6 +83,7 @@ export function useSliderCore(options: UseSliderCoreOptions): UseSliderCoreResul
   const isWeb = Platform.OS === 'web';
 
   const [containerW, setContainerWState] = useState(winW);
+  const [hasMeasuredWidth, setHasMeasuredWidth] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [showSwipeHint, setShowSwipeHint] = useState(images.length > 1);
@@ -186,6 +188,7 @@ export function useSliderCore(options: UseSliderCoreOptions): UseSliderCoreResul
     if (!hasInitialMeasurement.current) {
       hasInitialMeasurement.current = true;
       setContainerWState(w);
+      setHasMeasuredWidth(true);
       return;
     }
 
@@ -346,6 +349,7 @@ export function useSliderCore(options: UseSliderCoreOptions): UseSliderCoreResul
   return {
     containerW,
     containerH,
+    hasMeasuredWidth,
     currentIndex,
     reduceMotion,
     showSwipeHint,

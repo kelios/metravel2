@@ -179,7 +179,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
     expect(lastProps.controlsVisible).toBe(true)
   })
 
-  it('keeps the interactive web slider visually hidden until the LCP overlay handoff finishes', async () => {
+  it('keeps the web slider visually hidden but swipe-ready until the LCP overlay handoff finishes', async () => {
     const travel: any = {
       id: 7,
       name: 'Hidden until handoff travel',
@@ -243,7 +243,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
     expect(hiddenWrapper).toBeTruthy()
     expect(hiddenWrapper.props.style).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ opacity: 0, pointerEvents: 'none' }),
+        expect.objectContaining({ opacity: 0, pointerEvents: 'auto' }),
       ]),
     )
 

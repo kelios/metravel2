@@ -45,9 +45,9 @@ export default function TravelHeroInteractiveSlider({
     <View style={ABSOLUTE_FILL_STYLE} collapsable={false}>
       <Slider
         images={galleryImages as any}
-        showArrows={!isMobile}
+        showArrows
         controlsVisible={controlsVisible}
-        hideArrowsOnMobile
+        hideArrowsOnMobile={false}
         showDots={isMobile}
         autoPlay={false}
         preloadCount={preloadCount}

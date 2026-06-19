@@ -209,6 +209,11 @@ const PlacePopupCard: React.FC<Props> = ({
     () => secondaryActions.filter((action) => action.key !== 'article'),
     [secondaryActions],
   );
+  const renderFallbackPrimaryAction =
+    !primaryActionOverride &&
+    !!primaryAction &&
+    !onBuildRoute &&
+    !(!!articleHref && !!onOpenArticle);
 
   const topInfoSlot = useMemo(() => (
     <View style={styles.infoSection}>
@@ -305,6 +310,24 @@ const PlacePopupCard: React.FC<Props> = ({
         ) : (
           <>
             <View style={styles.iconActionRow}>
+              {renderFallbackPrimaryAction && primaryAction && (
+                <CardActionPressable
+                  accessibilityLabel={primaryAction.accessibilityLabel}
+                  onPress={primaryAction.onPress}
+                  title={primaryAction.tooltip}
+                  testID="popup-primary-action"
+                  enableWebClickFallback
+                  style={({ pressed }) => [styles.iconActionBtn, pressed && styles.iconActionBtnPressed]}
+                >
+                  <View style={[styles.iconActionBubble, styles.iconActionBubblePrimary]}>
+                    <Feather name={primaryAction.icon} size={19} color={colors.textOnPrimary ?? colors.textOnDark} />
+                  </View>
+                  <View style={styles.iconActionLabelRow}>
+                    <Text style={styles.iconActionLabel} numberOfLines={1}>{primaryAction.label}</Text>
+                  </View>
+                </CardActionPressable>
+              )}
+
               {onBuildRoute && (
                 <CardActionPressable
                   accessibilityLabel="Построить маршрут сюда"
@@ -430,6 +453,7 @@ const PlacePopupCard: React.FC<Props> = ({
     onOpenArticle,
     primaryAction,
     primaryActionOverride,
+    renderFallbackPrimaryAction,
     saveActionVisual,
     styles,
     toggleNav,

@@ -22,6 +22,7 @@ async function installTileMock(page: any) {
   await page.route('**://*.tile.openstreetmap.de/**', routeTile);
   await page.route('**://tile.waymarkedtrails.org/**', routeTile);
   await page.route('**://*.tile.waymarkedtrails.org/**', routeTile);
+  await page.route('**/proxy/tiles/osm/**', routeTile);
 }
 
 function buildMockMapPoints(options: {

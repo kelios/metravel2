@@ -7,10 +7,24 @@ export type ToastPayload = {
   bottomOffset?: number;
 };
 
-// The bottom tab bar (BottomDock) is pinned to the bottom (~56px + safe-area
-// inset). The library's default bottomOffset of 40 places bottom toasts under
-// the dock, hiding them. Lift bottom toasts above the dock by default.
-const DEFAULT_BOTTOM_OFFSET = 100;
+// The bottom tab bar (BottomDock) is pinned to the bottom and its real height
+// (content + safe-area inset) varies by device — on tall gesture-nav phones it
+// is ~100-110px. The library's default bottomOffset of 40 places bottom toasts
+// under the dock, hiding them. We lift bottom toasts above the measured dock
+// height; until it is reported, a generous fallback clears most devices.
+const DEFAULT_BOTTOM_OFFSET = 120;
+const TOAST_DOCK_GAP = 12;
+
+let measuredDockHeight = 0;
+
+/** Reported by the BottomDock layout so toasts can clear the tab bar exactly. */
+export function setToastDockInset(height: number): void {
+  measuredDockHeight = Number.isFinite(height) && height > 0 ? height : 0;
+}
+
+function resolveBottomOffset(): number {
+  return measuredDockHeight > 0 ? measuredDockHeight + TOAST_DOCK_GAP : DEFAULT_BOTTOM_OFFSET;
+}
 
 type NativeToastModule = {
   default?: {
@@ -32,7 +46,7 @@ export async function showToast(payload: ToastPayload): Promise<void> {
       const isBottom = (payload.position ?? 'bottom') === 'bottom';
       Toast.show(
         isBottom && payload.bottomOffset === undefined
-          ? { ...payload, bottomOffset: DEFAULT_BOTTOM_OFFSET }
+          ? { ...payload, bottomOffset: resolveBottomOffset() }
           : payload,
       );
     }

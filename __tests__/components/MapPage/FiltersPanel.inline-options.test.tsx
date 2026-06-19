@@ -157,16 +157,16 @@ describe('FiltersPanel inline options', () => {
     expect(onFilterChange).toHaveBeenCalledWith('categoryTravelAddress', [])
   })
 
-  it('keeps radius presets visible and updates the selected radius', () => {
+  it('offers the next radius from the empty state without duplicating radius presets', () => {
     const onFilterChange = jest.fn()
-    const { getByTestId } = renderWithTheme(<FiltersPanel />, {
+    const { getByLabelText, queryByTestId } = renderWithTheme(<FiltersPanel />, {
       ...defaultProps,
       onFilterChange,
     })
 
-    expect(getByTestId('radius-presets')).toBeTruthy()
+    expect(queryByTestId('radius-presets')).toBeNull()
 
-    fireEvent.press(getByTestId('radius-option-100'))
+    fireEvent.press(getByLabelText('Увеличить радиус до 100 километров'))
     expect(onFilterChange).toHaveBeenCalledWith('radius', '100')
   })
 })

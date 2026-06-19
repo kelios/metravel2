@@ -259,9 +259,9 @@ test.describe('@smoke mobile map panel content', () => {
       ).toBeVisible({
         timeout: 20_000,
       })
-      await expect(layout.locator('[data-testid="radius-presets"], [testID="radius-presets"]').first()).toBeVisible({
-        timeout: 20_000,
-      })
+      await expect(
+        layout.locator('[data-testid="category-options"], [testID="category-options"]').first(),
+      ).toBeVisible({ timeout: 20_000 })
       await expect(
         layout.locator('[data-testid="filters-panel-footer"], [testID="filters-panel-footer"]').first(),
       ).toBeVisible({

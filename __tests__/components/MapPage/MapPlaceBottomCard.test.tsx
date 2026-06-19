@@ -54,7 +54,7 @@ describe('MapPlaceBottomCard', () => {
     require('react-native').useWindowDimensions = originalUseWindowDimensions
   })
 
-  it('renders a fullscreen scrollable sheet on mobile web so every element stays reachable', () => {
+  it('renders a bounded bottom sheet on mobile web so the map stays visible', () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }))
 
     let tree: any
@@ -64,8 +64,10 @@ describe('MapPlaceBottomCard', () => {
       )
     })
 
-    // Fullscreen layer uses a ScrollView so tall photo-dominant content is reachable.
-    expect(tree.root.findByProps({ testID: 'map-place-bottom-card-scroll' })).toBeTruthy()
+    // The mobile web card is now a bounded maps.me-style sheet; the popup content
+    // owns its split scrolling region instead of this wrapper adding a ScrollView.
+    expect(tree.root.findByProps({ testID: 'map-place-bottom-card' })).toBeTruthy()
+    expect(tree.root.findAllByProps({ testID: 'map-place-bottom-card-scroll' }).length).toBe(0)
     // Close button is present and reachable.
     const close = tree.root.findByProps({ testID: 'map-place-bottom-card-close' })
     expect(close).toBeTruthy()

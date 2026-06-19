@@ -13,6 +13,9 @@ import { isIOSWebKit } from '@/components/ui/ImageCardMediaWebHelpers';
 // the touch drag from raw touch events with `{ passive: false }` and claim the
 // horizontal gesture on the very first dominant move.
 const IOS_AXIS_THRESHOLD_PX = 4;
+export const IOS_TOUCH_START_OPTIONS = { passive: true, capture: true } as const;
+export const IOS_TOUCH_MOVE_OPTIONS = { passive: false, capture: true } as const;
+export const IOS_TOUCH_END_OPTIONS = { passive: true, capture: true } as const;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -387,10 +390,10 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
       viewportNode.addEventListener('lostpointercapture', handleLostPointerCapture, {
         passive: true,
       } as any);
-      viewportNode.addEventListener('touchstart', beginTouch, { passive: true, capture: true });
-      viewportNode.addEventListener('touchmove', moveTouch, { passive: false, capture: true });
-      viewportNode.addEventListener('touchend', endTouch, { passive: true });
-      viewportNode.addEventListener('touchcancel', endTouch, { passive: true });
+      viewportNode.addEventListener('touchstart', beginTouch, IOS_TOUCH_START_OPTIONS);
+      viewportNode.addEventListener('touchmove', moveTouch, IOS_TOUCH_MOVE_OPTIONS);
+      viewportNode.addEventListener('touchend', endTouch, IOS_TOUCH_END_OPTIONS);
+      viewportNode.addEventListener('touchcancel', endTouch, IOS_TOUCH_END_OPTIONS);
     } else {
       viewportNode.addEventListener('pointerdown', beginPointer, { passive: true });
       viewportNode.addEventListener('pointermove', movePointer, { passive: false });
@@ -407,14 +410,26 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
       viewportNode.removeEventListener('pointermove', movePointer as EventListener);
       viewportNode.removeEventListener('pointerup', endPointer as EventListener);
       viewportNode.removeEventListener('pointercancel', endPointer as EventListener);
-      viewportNode.removeEventListener('touchstart', beginTouch as EventListener, {
-        capture: true,
-      });
-      viewportNode.removeEventListener('touchmove', moveTouch as EventListener, {
-        capture: true,
-      });
-      viewportNode.removeEventListener('touchend', endTouch as EventListener);
-      viewportNode.removeEventListener('touchcancel', endTouch as EventListener);
+      viewportNode.removeEventListener(
+        'touchstart',
+        beginTouch as EventListener,
+        IOS_TOUCH_START_OPTIONS,
+      );
+      viewportNode.removeEventListener(
+        'touchmove',
+        moveTouch as EventListener,
+        IOS_TOUCH_MOVE_OPTIONS,
+      );
+      viewportNode.removeEventListener(
+        'touchend',
+        endTouch as EventListener,
+        IOS_TOUCH_END_OPTIONS,
+      );
+      viewportNode.removeEventListener(
+        'touchcancel',
+        endTouch as EventListener,
+        IOS_TOUCH_END_OPTIONS,
+      );
       viewportNode.removeEventListener(
         'lostpointercapture',
         handleLostPointerCapture as EventListener,

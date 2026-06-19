@@ -30,6 +30,13 @@ import { injectSliderSnapStyles } from './sliderParts/snapStyleInjection';
 import { findSliderNode } from './sliderParts/domNodes';
 import SliderOverlays from './sliderParts/SliderOverlays';
 import Slide from './sliderParts/Slide';
+import {
+  buildNativeLoopData,
+  getNativeLoopPageOffset,
+  shouldEnableNativeLoop,
+  toNativeLoopRawIndex,
+  toNativeLoopRealIndex,
+} from './sliderParts/nativeLoop';
 
 // Re-export types for consumers
 export type { SliderImage, SliderProps, SliderRef } from './sliderParts/types';
@@ -92,6 +99,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
   const {
     containerW,
     containerH,
+    hasMeasuredWidth,
     currentIndex,
     reduceMotion,
     indexRef,
@@ -117,6 +125,9 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
   const isDraggingRef = useRef(false);
   const dragStartXRef = useRef(0);
   const dragScrollLeftRef = useRef(0);
+  const nativeInitialLoopAlignmentDoneRef = useRef(false);
+  const nativeInitialLoopAlignmentFrameRef = useRef<number | null>(null);
+  const nativeLoopImagesLengthRef = useRef(images.length);
 
   // Flips to true once the web ScrollView DOM node is available, so effects
   // that attach listeners re-run after the node mounts (deps don't otherwise
@@ -139,25 +150,24 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
   // after the last, so a swipe past either edge lands on a clone and is then
   // silently recentered onto the matching real slide. Raw indices live in
   // [0, n+1]; real indices live in [0, n-1]. Web keeps its own implementation.
-  const loopEnabled = !isWeb && !isTestEnv && images.length > 1;
+  const loopEnabled = shouldEnableNativeLoop({
+    isWeb,
+    isTestEnv,
+    imagesLength: images.length,
+  });
   const loopData = useMemo<SliderImage[]>(() => {
-    if (!loopEnabled) return images;
-    const first = images[0];
-    const last = images[images.length - 1];
-    return [last, ...images, first];
+    return buildNativeLoopData(images, loopEnabled);
   }, [images, loopEnabled]);
 
   const toRealIndex = useCallback(
     (rawIndex: number) => {
-      if (!loopEnabled) return rawIndex;
-      const n = images.length;
-      return ((rawIndex - 1) % n + n) % n;
+      return toNativeLoopRealIndex(rawIndex, images.length, loopEnabled);
     },
     [loopEnabled, images.length]
   );
 
   const toRawIndex = useCallback(
-    (realIndex: number) => (loopEnabled ? realIndex + 1 : realIndex),
+    (realIndex: number) => toNativeLoopRawIndex(realIndex, loopEnabled),
     [loopEnabled]
   );
 
@@ -319,9 +329,50 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
       if (fillNative && h > 0) {
         setMeasuredH((prev) => (Math.abs(prev - h) > 1 ? h : prev));
       }
+      if (!loopEnabled || nativeInitialLoopAlignmentDoneRef.current || w <= 0) return;
+      nativeInitialLoopAlignmentDoneRef.current = true;
+      if (
+        nativeInitialLoopAlignmentFrameRef.current != null &&
+        typeof cancelAnimationFrame === 'function'
+      ) {
+        cancelAnimationFrame(nativeInitialLoopAlignmentFrameRef.current);
+      }
+      const align = () => {
+        const liveWidth = containerWRef.current || w;
+        listRef.current?.scrollToOffset({
+          offset: getNativeLoopPageOffset({
+            realIndex: indexRef.current,
+            pageWidth: liveWidth,
+            loopEnabled,
+          }),
+          animated: false,
+        });
+      };
+      if (typeof requestAnimationFrame === 'function') {
+        nativeInitialLoopAlignmentFrameRef.current = requestAnimationFrame(align);
+      } else {
+        align();
+      }
     },
-    [setContainerWidth, fillNative]
+    [setContainerWidth, fillNative, loopEnabled, containerWRef, indexRef]
   );
+
+  useEffect(() => {
+    if (nativeLoopImagesLengthRef.current === images.length) return;
+    nativeLoopImagesLengthRef.current = images.length;
+    nativeInitialLoopAlignmentDoneRef.current = false;
+  }, [images.length]);
+
+  useEffect(() => {
+    return () => {
+      if (
+        nativeInitialLoopAlignmentFrameRef.current != null &&
+        typeof cancelAnimationFrame === 'function'
+      ) {
+        cancelAnimationFrame(nativeInitialLoopAlignmentFrameRef.current);
+      }
+    };
+  }, []);
 
   // Animated scroll handler (native only)
   const onScroll = useAnimatedScrollHandler({
@@ -686,6 +737,21 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
           </ScrollView>
         </View>
       );
+    }
+
+    // Native: gate the FlatList until the real container width is measured.
+    // getItemLayout, initialScrollIndex and the initial loop page offset are all
+    // derived from containerW; on the very first synchronous render containerW
+    // still equals the window width, while the actual list content width is
+    // window − 2px (the 1px border on each side of the hero's sliderContainer).
+    // Rendering the list before measurement makes paging snap to the window step
+    // while the content steps by window−2, so the first frame shows the next
+    // slide bleeding in on the right until a manual swipe. Waiting for the first
+    // onLayout measurement (always accepted by setContainerWidth) keeps every
+    // offset computation consistent from the first painted frame. Web has its own
+    // ScrollView branch and DOM-based width sync, so it is unaffected.
+    if (!isTestEnv && !hasMeasuredWidth) {
+      return <View style={[styles.clip, isMobile && styles.clipMobile]} />;
     }
 
     // Native: use Animated.FlatList
