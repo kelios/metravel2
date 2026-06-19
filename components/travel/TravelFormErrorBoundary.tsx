@@ -9,6 +9,7 @@ interface Props {
   children: ReactNode;
   fallback?: ReactNode;
   onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+  onRetry?: () => void;
 }
 
 interface State {
@@ -61,6 +62,7 @@ class TravelFormErrorBoundary extends Component<Props, State> {
       error: null,
       errorInfo: null,
     });
+    this.props.onRetry?.();
   };
 
   render() {

@@ -207,8 +207,14 @@ function sanitizeForJson(value: unknown, state?: SanitizeState): unknown {
     return undefined;
   }
 
-  // Фильтруем события/функции/символы/бигинты
-  if (typeof value === 'function' || value instanceof Event) {
+  // Фильтруем события/функции/символы/бигинты.
+  // `Event` — web-only глобал: на React Native он не определён, поэтому без
+  // typeof-гварда `value instanceof Event` бросает ReferenceError и роняет
+  // сохранение формы путешествия (см. HTMLElement/Node выше).
+  if (
+    typeof value === 'function' ||
+    (typeof Event !== 'undefined' && value instanceof Event)
+  ) {
     currentState.visiting.delete(value);
     return undefined;
   }

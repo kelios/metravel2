@@ -1,8 +1,13 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useCallback, useState } from 'react';
 import { useIsFocused } from 'expo-router';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
-const UpsertTravel = React.lazy(() => Promise.resolve(import('@/components/travel/UpsertTravel')));
+import TravelFormErrorBoundary from '@/components/travel/TravelFormErrorBoundary';
+
+type LazyUpsertTravel = React.LazyExoticComponent<React.ComponentType>;
+
+const createLazyUpsertTravel = (): LazyUpsertTravel =>
+  React.lazy(() => Promise.resolve(import('@/components/travel/UpsertTravel')));
 
 const LoadingFallback = () => (
   <View style={styles.loadingContainer}>
@@ -13,12 +18,22 @@ const LoadingFallback = () => (
 
 export default function UpsertTravelRoute() {
   const isFocused = useIsFocused();
+  const [retryKey, setRetryKey] = useState(0);
+  const [UpsertTravel, setUpsertTravel] = useState<LazyUpsertTravel>(createLazyUpsertTravel);
+
+  const handleRetry = useCallback(() => {
+    setUpsertTravel(createLazyUpsertTravel());
+    setRetryKey((value) => value + 1);
+  }, []);
+
   if (!isFocused) return null;
 
   return (
-    <Suspense fallback={<LoadingFallback />}>
-      <UpsertTravel />
-    </Suspense>
+    <TravelFormErrorBoundary key={retryKey} onRetry={handleRetry}>
+      <Suspense fallback={<LoadingFallback />}>
+        <UpsertTravel />
+      </Suspense>
+    </TravelFormErrorBoundary>
   );
 }
 
