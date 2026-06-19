@@ -166,8 +166,14 @@ export const hasKnownListArrays = (payload: unknown): boolean => {
     return Array.isArray(source.results) || Array.isArray(source.data) || Array.isArray(source.items);
 };
 
-export const isAbortError = (error: unknown): error is { name: string } =>
-    !!error && typeof error === 'object' && (error as { name?: unknown }).name === 'AbortError';
+export const isAbortError = (error: unknown): error is { name: string } => {
+    if (!error || typeof error !== 'object') return false;
+    const { name, message } = error as { name?: unknown; message?: unknown };
+    if (name === 'AbortError') return true;
+    // React Native's fetch reports a cancelled request as a generic error whose
+    // message reads "Fetch request has been canceled" rather than name AbortError.
+    return typeof message === 'string' && /\b(abort|cancel)(l?ed)?\b/i.test(message);
+};
 
 export const applyPublishModeration = (
     target: Record<string, unknown>,
