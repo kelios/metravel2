@@ -32,6 +32,12 @@ const HERO_HEIGHT = {
   webViewportCapRatio: 0.7,
 } as const
 
+// Бэкстоп: если первый слайд под-оверлея не дёрнул onLoad (картинка уже в кэше
+// браузера → <img onLoad> может не выстрелить), принудительно снимаем оверлей,
+// иначе слайдер навсегда остаётся pointerEvents:none + opacity:0 (мёртвый свайп).
+// Картинка слайда = та же, что LCP-оверлей (уже декодирована) → без вспышки.
+const OVERLAY_FALLBACK_UNMOUNT_MS = 1200
+
 const normalizeGalleryImage = (
   item: unknown,
   fallbackId: number,
@@ -164,6 +170,23 @@ function useHeroMediaModel(
     setOverlayUnmounted(false)
     return
   }, [allowSliderUpgrade, webHeroLoaded, sliderImageReady])
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    if (!webHeroLoaded || !allowSliderUpgrade) return
+    if (sliderImageReady || overlayUnmounted) return
+    const timer = setTimeout(() => {
+      setSliderImageReady(true)
+      tdTrace('hero:sliderImgLoad:fallback')
+    }, OVERLAY_FALLBACK_UNMOUNT_MS)
+    return () => clearTimeout(timer)
+  }, [
+    webHeroLoaded,
+    allowSliderUpgrade,
+    sliderImageReady,
+    overlayUnmounted,
+    tdTrace,
+  ])
 
   useEffect(() => {
     if (Platform.OS === 'web' && webHeroLoaded) tdTrace('hero:webHeroLoaded')

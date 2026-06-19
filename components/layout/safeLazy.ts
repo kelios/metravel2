@@ -10,12 +10,6 @@ type SafeLazyOptions = {
 }
 
 /**
- * React.lazy wrapper hardened against the Metro async-require quirk: `import()` may return a bare
- * thenable without `.catch` for sync-available modules, and may transiently reject during hydration,
- * leaving the lazy section blank. `Promise.resolve` normalizes the thenable; optional `retries`
- * recover from transient rejects; a final `fallback` keeps the tree from throwing.
- */
-/**
  * Builds a loader that resolves to the module, retrying transient rejects and finally resolving to a
  * fallback module instead of rejecting — so the consuming `React.lazy`/Suspense never throws.
  * Exported for unit testing the resilience logic without the flaky `React.lazy` + test-renderer path.
@@ -38,6 +32,12 @@ export const createResilientLoader = <T extends React.ComponentType<any>>(
   return () => attempt(retries)
 }
 
+/**
+ * React.lazy wrapper hardened against the Metro async-require quirk: `import()` may return a bare
+ * thenable without `.catch` for sync-available modules, and may transiently reject during hydration,
+ * leaving the lazy section blank. `Promise.resolve` normalizes the thenable; optional `retries`
+ * recover from transient rejects; a final `fallback` keeps the tree from throwing.
+ */
 export const safeLazy = <T extends React.ComponentType<any>>(
   loader: () => Promise<{ default: T }>,
   name?: string,

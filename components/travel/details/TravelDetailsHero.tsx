@@ -127,7 +127,10 @@ function TravelHeroSectionInner({
       ABSOLUTE_FILL,
       {
         opacity: overlayUnmounted ? 1 : 0,
-        pointerEvents: (overlayUnmounted ? 'auto' : 'none') as 'auto' | 'none',
+        // pointerEvents всегда 'auto': под-оверлейный слайдер должен принимать
+        // touch/свайп даже до снятия оверлея (оверлей сверху сам pointerEvents:'none').
+        // Без этого pointer-events:none на дереве слайдера убивает свайп пальцем.
+        pointerEvents: 'auto' as const,
         ...(isWeb ? null : { transition: `opacity ${OVERLAY_TRANSITION_MS}ms ease` }),
       },
     ],
