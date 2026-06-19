@@ -389,6 +389,52 @@ export function useMapWebLayoutEffects({
     }
   }, [mapContainerId, mapInstance, mapRef])
 
+  // Self-healing for in-app browsers (Threads/Instagram WebView on iOS) where the
+  // toolbar settles the layout AFTER Leaflet caches its size, but NO resize /
+  // visualViewport / ResizeObserver event fires to trigger re-measure. The
+  // zero-size guard above only catches size <= 0; here we catch the "non-zero but
+  // STALE" case: Leaflet's cached getSize() smaller than the real container =>
+  // tiles render for the small area and the rest stays grey. An event-independent
+  // bounded cascade compares cached size to the actual box and forces invalidate
+  // on mismatch, so the map heals itself without any user interaction.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined' || typeof document === 'undefined') return
+    if (!mapRef.current) return
+
+    let cancelled = false
+    const timers: Array<ReturnType<typeof setTimeout>> = []
+
+    const healIfStale = () => {
+      if (cancelled) return
+      const map = mapRef.current
+      if (!map) return
+      const element = document.getElementById(mapContainerId)
+      if (!element) return
+      try {
+        const cached = typeof map.getSize === 'function' ? map.getSize() : null
+        const rect = element.getBoundingClientRect()
+        if (!cached || rect.width <= 0 || rect.height <= 0) return
+        // >2px mismatch on either axis means Leaflet's panes are sized to a stale
+        // viewport. Re-measure so missing tiles load across the full container.
+        if (Math.abs(cached.x - rect.width) > 2 || Math.abs(cached.y - rect.height) > 2) {
+          map.invalidateSize?.({ animate: false, pan: false } as any)
+        }
+      } catch {
+        // noop
+      }
+    }
+
+    // Spread across the window in which an in-app browser's chrome settles.
+    for (const delay of [150, 400, 900, 1600, 2800]) {
+      timers.push(setTimeout(() => requestAnimationFrame(healIfStale), delay))
+    }
+
+    return () => {
+      cancelled = true
+      for (const t of timers) clearTimeout(t)
+    }
+  }, [mapContainerId, mapInstance, mapRef])
+
   useEffect(() => {
     if (Platform.OS !== 'web') return
     if (!canRenderMap) return
