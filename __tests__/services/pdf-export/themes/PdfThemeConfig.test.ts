@@ -63,7 +63,8 @@ describe('PdfThemeConfig - Новые темы', () => {
 
     it('должна использовать serif шрифты', () => {
       expect(sepiaTheme.typography.headingFont).toContain('Merriweather');
-      expect(sepiaTheme.typography.bodyFont).toContain('Crimson Text');
+      // PT Serif вместо Crimson Text: у Crimson Text нет кириллицы (#302 BOOK-Q4).
+      expect(sepiaTheme.typography.bodyFont).toContain('PT Serif');
     });
   });
 

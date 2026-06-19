@@ -58,7 +58,7 @@ export const oceanTheme: PdfThemeConfig = {
   },
 
   typography: {
-    headingFont: "'DM Sans', system-ui, -apple-system, sans-serif",
+    headingFont: "'Manrope', system-ui, -apple-system, sans-serif",
     bodyFont: "'Source Sans 3', system-ui, -apple-system, sans-serif",
     monoFont: "'JetBrains Mono', monospace",
 

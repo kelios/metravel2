@@ -59,7 +59,7 @@ export const retroTheme: PdfThemeConfig = {
 
   typography: {
     headingFont: "'Playfair Display', Georgia, serif",
-    bodyFont: "'Libre Baskerville', Georgia, serif",
+    bodyFont: "'PT Serif', Georgia, serif",
     monoFont: "'Courier New', monospace",
 
     h1: { size: '36pt', weight: 800, lineHeight: 1.15, marginBottom: '18pt' },

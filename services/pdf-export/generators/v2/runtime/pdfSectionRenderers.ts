@@ -51,7 +51,6 @@ export function renderTocPageSection(args: {
 }): string {
   const {
     meta,
-    pageNumber,
     totalCount,
     startIndex,
     theme,
@@ -165,19 +164,6 @@ export function renderTocPageSection(args: {
           letter-spacing: 0.06em;
           font-weight: 600;
         ">METRAVEL.BY</span>
-        <span style="
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 22px;
-          height: 22px;
-          border-radius: 6px;
-          background: ${colors.accentSoft};
-          color: ${colors.accentStrong};
-          font-size: 8pt;
-          font-weight: 700;
-          font-family: ${typography.headingFont};
-        " data-page-num>${pageNumber}</span>
       </div>
     </section>
   `
@@ -203,13 +189,16 @@ function buildTocRow(
   const days = formatDays(travel.number_days)
   const metaLine = [country, year, days].filter(Boolean).join(' \u2022 ')
   const thumbUrl = buildSafeImageUrl(travel.travel_image_thumb_url || travel.travel_image_url)
+  const anchorHref = `#travel-section-${escapeHtml(String(travel.id))}`
 
   return `
-    <div style="
+    <a href="${anchorHref}" style="
       display: flex;
       align-items: center;
       gap: 14px;
       padding: ${use2Col ? '10px 0' : '14px 0'};
+      text-decoration: none;
+      color: inherit;
       ${!isLast ? `border-bottom: 1px solid ${colors.borderLight || colors.border};` : ''}
     ">
       <span style="
@@ -275,26 +264,14 @@ function buildTocRow(
       </div>
 
       <div style="
-        flex: 0 1 auto;
+        flex: 1 1 auto;
         border-bottom: 1px dotted ${colors.border};
         min-width: 12px;
         height: 1px;
         margin-bottom: 5px;
         align-self: flex-end;
       "></div>
-
-      <div style="
-        font-size: ${use2Col ? '14pt' : '16pt'};
-        font-weight: 800;
-        color: ${colors.accent};
-        font-family: ${typography.headingFont};
-        min-width: 20px;
-        text-align: right;
-        flex-shrink: 0;
-        letter-spacing: -0.02em;
-        line-height: 1;
-      " data-toc-page>${item.startPage}</div>
-    </div>
+    </a>
   `
 }
 

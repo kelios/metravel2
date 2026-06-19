@@ -58,7 +58,7 @@ export const tropicalTheme: PdfThemeConfig = {
   },
 
   typography: {
-    headingFont: "'Poppins', system-ui, -apple-system, sans-serif",
+    headingFont: "'Manrope', system-ui, -apple-system, sans-serif",
     bodyFont: "'Nunito', system-ui, -apple-system, sans-serif",
     monoFont: "'JetBrains Mono', monospace",
 

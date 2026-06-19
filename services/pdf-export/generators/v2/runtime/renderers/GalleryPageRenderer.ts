@@ -24,9 +24,17 @@ export class RuntimeGalleryRenderer {
     const gapMm = this.getGalleryGapMm(gallerySpacing)
     const pagePaddingMm = this.parseMm(spacing.pagePadding, 25)
     const runningHeaderMm = 14
+    // Реальная высота печатной страницы: 297mm − 12mm нижняя полоса под нативный
+    // номер страницы (@page @bottom-center, #299). Бюджет контента считаем именно
+    // от неё, вычитая отступы, running-header и высокий заголовок «Фотогалерея» на
+    // первой странице. Иначе сетка фото получает завышенный бюджет и нижний ряд
+    // срезается через overflow:hidden (#300).
+    const printablePageHeightMm = 285
+    const galleryHeaderMm = 16
+    const safetyMm = 4
     const availableContentHeightMm = Math.max(
-      170,
-      297 - pagePaddingMm * 2 - runningHeaderMm
+      150,
+      printablePageHeightMm - pagePaddingMm * 2 - runningHeaderMm - galleryHeaderMm - safetyMm
     )
 
     const photosPerPage = this.getGalleryPhotosPerPage(layout, photos.length)

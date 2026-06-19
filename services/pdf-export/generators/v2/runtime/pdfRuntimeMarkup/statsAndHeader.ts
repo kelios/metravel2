@@ -87,7 +87,6 @@ export function buildPdfStatsMiniCard({
 
 export function buildPdfRunningHeader({
   travelName,
-  pageNumber,
   theme,
   escapeHtml,
 }: BuildRunningHeaderParams): string {
@@ -150,20 +149,6 @@ export function buildPdfRunningHeader({
           opacity: 0.65;
           font-weight: 600;
         ">MeTravel.by</span>
-        <span style="
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 22px;
-          height: 22px;
-          border-radius: 6px;
-          background: ${colors.accentSoft};
-          color: ${colors.accentStrong};
-          font-size: 8pt;
-          font-weight: 700;
-          font-family: ${typography.headingFont};
-          line-height: 1;
-        " data-page-num>${pageNumber}</span>
       </div>
     </div>
   `

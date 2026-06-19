@@ -250,14 +250,25 @@ describe('EnhancedPdfGenerator helpers', () => {
     expect(html).toContain('final-route-line')
     expect(html).not.toContain('>metravel.by</div>')
     expect(html).toContain('<thead><tr><td>')
-    expect(html).toContain('cpn-marker-badge')
+
+    // Нативная нумерация: печатный @page-counter, без JS-пагинации и фейковых бейджей
+    expect(html).toContain('@bottom-center')
+    expect(html).toContain('content: counter(page)')
+    expect(html).not.toContain('cpn-marker-badge')
+    expect(html).not.toContain('__recalcPageNumbers')
+    expect(html).not.toContain('__syncContentPageBadges')
+    expect(html).not.toContain('data-page-num')
+    expect(html).not.toContain('data-toc-page')
+    // TOC-пункты — кликабельные якоря на секции путешествий с совпадающими id
+    expect(html).toContain('href="#travel-section-1"')
+    expect(html).toContain('id="travel-section-1"')
 
     expect(html).toContain('hyphens: auto')
     expect(html).toContain('word-break: break-word')
     expect(html).toContain('overflow-wrap: anywhere')
   })
 
-  it('splits toc across multiple pages and keeps travel page numbers aligned', async () => {
+  it('splits toc across multiple pages and links every entry to its travel section', async () => {
     ;(generator as any).selectedQuotes = undefined
     const travels = Array.from({ length: 10 }, (_, index) => ({
       ...travelA,
@@ -276,10 +287,16 @@ describe('EnhancedPdfGenerator helpers', () => {
 
     const tocMatches = html.match(/class="pdf-page toc-page"/g) || []
     expect(tocMatches).toHaveLength(2)
-    expect((html.match(/>01</g) || [])).toHaveLength(1)
-    expect((html.match(/>05</g) || [])).toHaveLength(1)
-    expect((html.match(/>06</g) || [])).toHaveLength(1)
-    expect((html.match(/>10</g) || []).length).toBeGreaterThanOrEqual(1)
+
+    // Каждый TOC-пункт — якорь на секцию путешествия, и у каждой секции есть совпадающий id
+    for (let id = 1; id <= 10; id++) {
+      expect(html).toContain(`href="#travel-section-${id}"`)
+      expect(html).toContain(`id="travel-section-${id}"`)
+    }
+
+    // Никаких JS-проставленных номеров страниц в TOC
+    expect(html).not.toContain('data-toc-page')
+    expect(html).not.toContain('data-page-num')
   })
 
   it('falls back to MeTravel title and hides cover <h1> when settings.title is empty', async () => {

@@ -101,7 +101,7 @@ describe('BookHtmlExportService', () => {
 
     expect(mockValidate).toHaveBeenCalledWith([baseTravel])
     expect(mockTransform).toHaveBeenCalled()
-    expect(mockGenerate).toHaveBeenCalledWith(travelForBook, settings)
+    expect(mockGenerate).toHaveBeenCalledWith(travelForBook, settings, { isPremium: true })
     expect(html).toContain('print-toolbar')
     expect(html).toContain('@media print')
   })

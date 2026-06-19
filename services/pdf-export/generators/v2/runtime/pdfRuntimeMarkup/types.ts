@@ -52,7 +52,7 @@ export type BuildStatsMiniCardParams = {
 
 export type BuildRunningHeaderParams = {
   travelName: string
-  pageNumber: number
+  pageNumber?: number
   theme: RuntimeTheme
   escapeHtml: (value: string | null | undefined) => string
 }

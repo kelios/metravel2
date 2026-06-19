@@ -62,7 +62,7 @@ export const sepiaTheme: PdfThemeConfig = {
   typography: {
     // Те же газетные шрифты для единообразия
     headingFont: "'Merriweather', 'Georgia', serif",
-    bodyFont: "'Crimson Text', 'Georgia', 'Times New Roman', serif",
+    bodyFont: "'PT Serif', 'Georgia', 'Times New Roman', serif",
     monoFont: "'Courier New', monospace",
 
     // Идентичная газетная типографика

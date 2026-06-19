@@ -59,7 +59,7 @@ export const illustratedTheme: PdfThemeConfig = {
   },
   
   typography: {
-    headingFont: "'Quicksand', 'Comfortaa', system-ui, sans-serif",
+    headingFont: "'Comfortaa', 'Quicksand', system-ui, sans-serif",
     bodyFont: "'Nunito', 'Open Sans', system-ui, sans-serif",
     monoFont: "'Courier New', monospace",
     

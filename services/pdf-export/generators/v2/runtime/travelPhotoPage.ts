@@ -267,24 +267,8 @@ export function renderTravelPhotoPageMarkup(args: {
   }
 
   return `
-      <section class="pdf-page travel-photo-page" style="padding: ${spacing.pagePadding};">
+      <section id="travel-section-${escapeHtml(String(travel.id))}" class="pdf-page travel-photo-page" style="padding: ${spacing.pagePadding};">
         ${content}
-        <div style="
-          position: absolute;
-          bottom: 15mm;
-          right: 25mm;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 22px;
-          height: 22px;
-          border-radius: 6px;
-          background: ${colors.accentSoft};
-          color: ${colors.accentStrong};
-          font-size: 8pt;
-          font-weight: 700;
-          font-family: ${typography.headingFont};
-        " data-page-num>${pageNumber}</div>
       </section>
     `
 }

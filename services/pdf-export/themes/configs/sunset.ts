@@ -58,7 +58,7 @@ export const sunsetTheme: PdfThemeConfig = {
   },
 
   typography: {
-    headingFont: "'Outfit', system-ui, -apple-system, sans-serif",
+    headingFont: "'Jost', system-ui, -apple-system, sans-serif",
     bodyFont: "'Nunito', system-ui, -apple-system, sans-serif",
     monoFont: "'JetBrains Mono', monospace",
 

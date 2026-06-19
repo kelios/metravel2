@@ -58,7 +58,7 @@ export const modernTheme: PdfThemeConfig = {
   },
   
   typography: {
-    headingFont: "'Poppins', system-ui, -apple-system, sans-serif",
+    headingFont: "'Manrope', system-ui, -apple-system, sans-serif",
     bodyFont: "'Inter', system-ui, -apple-system, sans-serif",
     monoFont: "'JetBrains Mono', monospace",
     

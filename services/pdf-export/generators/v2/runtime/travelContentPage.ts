@@ -68,7 +68,6 @@ export function renderTravelContentPageMarkup(args: {
 }): string {
   const {
     travel,
-    pageNumber,
     theme,
     qrCode = '',
     variant,
@@ -599,20 +598,6 @@ export function renderTravelContentPageMarkup(args: {
             ${onlineSection}
           </td></tr></tbody>
         </table>
-        ${
-          variant === 'standalone'
-            ? `
-        <div style="
-          position: absolute;
-          bottom: 15mm;
-          right: 25mm;
-          font-size: ${typography.caption.size};
-          color: ${colors.textMuted};
-          font-weight: 500;
-          font-family: ${typography.bodyFont};
-        " data-page-num>${pageNumber}</div>`
-            : ''
-        }
       </section>
     `
 }

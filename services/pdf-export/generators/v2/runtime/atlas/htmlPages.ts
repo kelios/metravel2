@@ -16,7 +16,6 @@ function pluralRu(n: number, forms: [string, string, string]): string {
 export function renderAtlasMapPage({
   entries,
   theme,
-  pageNumber,
   totalAtlasPages,
   bookTitle,
   escapeHtml,
@@ -250,19 +249,6 @@ export function renderAtlasMapPage({
           letter-spacing: 0.06em;
           font-weight: 600;
         ">METRAVEL.BY · АТЛАС 1 / ${totalAtlasPages}</span>
-        <span style="
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 22px;
-          height: 22px;
-          border-radius: 6px;
-          background: ${colors.accentSoft};
-          color: ${colors.accentStrong};
-          font-size: 8pt;
-          font-weight: 700;
-          font-family: ${typography.headingFont};
-        " data-page-num>${pageNumber}</span>
       </div>
     </section>
   `
@@ -271,7 +257,6 @@ export function renderAtlasMapPage({
 export function renderAtlasIndexPage({
   pageEntries,
   theme,
-  pageNumber,
   pageIndex,
   totalAtlasPages,
   totalPoints,
@@ -517,19 +502,6 @@ export function renderAtlasIndexPage({
           letter-spacing: 0.06em;
           font-weight: 600;
         ">METRAVEL.BY · АТЛАС ${pageIndex + 2} / ${totalAtlasPages}</span>
-        <span style="
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 22px;
-          height: 22px;
-          border-radius: 6px;
-          background: ${colors.accentSoft};
-          color: ${colors.accentStrong};
-          font-size: 8pt;
-          font-weight: 700;
-          font-family: ${typography.headingFont};
-        " data-page-num>${pageNumber}</span>
       </div>
     </section>
   `

@@ -235,14 +235,6 @@ export class RuntimeFinalRenderer {
           </div>
           <div>© ${new Date().getFullYear()}</div>
         </div>
-        <div style="
-          position: absolute;
-          bottom: 15mm;
-          right: 25mm;
-          font-size: ${typography.caption.size};
-          opacity: 0.6;
-          font-family: ${typography.bodyFont};
-        " data-page-num>${pageNumber}</div>
       </section>
     `
   }

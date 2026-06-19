@@ -1,5 +1,11 @@
 import type { BuildHtmlDocumentParams } from './types'
 
+// Узкая нижняя полоса печатной страницы под нативный номер (@page @bottom-center).
+// Печатная высота фиксированных страниц уменьшается на эту величину, чтобы каждая
+// .pdf-page по-прежнему занимала ровно один физический лист A4.
+const PAGE_FOOTER_BAND = '12mm'
+const PRINT_PAGE_HEIGHT = 'calc(297mm - 12mm)'
+
 export function buildPdfHtmlDocument({
   pages,
   settings,
@@ -44,7 +50,15 @@ export function buildPdfHtmlDocument({
   const styles = `
       @page {
         size: A4;
-        margin: 0;
+        margin: 0 0 ${PAGE_FOOTER_BAND} 0;
+        @bottom-center {
+          content: counter(page);
+          font-family: ${typography.bodyFont};
+          font-size: 8pt;
+          font-weight: 600;
+          letter-spacing: 0.06em;
+          color: ${colors.textMuted};
+        }
       }
       html, body {
         width: 100%;
@@ -194,9 +208,6 @@ export function buildPdfHtmlDocument({
         object-fit: contain;
         border-radius: 6pt;
       }
-      .cpn-marker-badge {
-        display: none !important;
-      }
       @media print {
         html, body {
           background: ${colors.background};
@@ -213,7 +224,7 @@ export function buildPdfHtmlDocument({
           box-shadow: none;
           margin: 0;
           width: 210mm;
-          min-height: 297mm;
+          min-height: ${PRINT_PAGE_HEIGHT};
           border-radius: 0;
           overflow: visible;
         }
@@ -225,8 +236,8 @@ export function buildPdfHtmlDocument({
         .pdf-page.toc-page,
         .pdf-page.final-page,
         .pdf-page.checklist-page {
-          height: 297mm;
-          max-height: 297mm;
+          height: ${PRINT_PAGE_HEIGHT};
+          max-height: ${PRINT_PAGE_HEIGHT};
           overflow: hidden;
         }
         .pdf-page.travel-content-page {
@@ -269,12 +280,6 @@ export function buildPdfHtmlDocument({
         .content-layout { border-collapse: collapse; }
         .content-layout thead { display: table-header-group; }
         .content-layout td { border: none; }
-        .cpn-marker-badge {
-          display: inline-flex !important;
-          position: absolute;
-          pointer-events: none;
-          z-index: 20;
-        }
         img {
           image-rendering: -webkit-optimize-contrast;
           image-rendering: crisp-edges;
@@ -317,148 +322,12 @@ export function buildPdfHtmlDocument({
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@400;600;700;800&family=Open+Sans:wght@400;500;600;700&family=Lora:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Comfortaa:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Inter:wght@400;500;600;700;800&family=Jost:wght@400;500;600;700&family=Libre+Franklin:wght@400;600;700;800&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Manrope:wght@400;500;600;700;800&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;600;700;800&family=Nunito:wght@400;500;600;700;800&family=Open+Sans:wght@400;500;600;700&family=Oswald:wght@400;500;600;700&family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Roboto:wght@400;500;700&family=Source+Sans+3:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
   
   <style>${styles}</style>
 </head>
 <body>
   ${pages.join('\n')}${watermarkHtml}
-  <script>
-  window.__recalcPageNumbers = function() {
-    var PAGE_H = 297 * (96 / 25.4);
-    var getContentSectionMetrics = function(section) {
-      var table = section.querySelector('.content-layout');
-      var thead = table ? table.querySelector('thead') : null;
-      var repeatHeaderH = thead ? (thead.getBoundingClientRect().height || thead.offsetHeight || 0) : 0;
-      var rawHeight = section.scrollHeight || section.offsetHeight || PAGE_H;
-      var continuationBodyH = Math.max(1, PAGE_H - repeatHeaderH);
-      var extraHeight = Math.max(0, rawHeight - PAGE_H);
-      var continuationPages = extraHeight > 0 ? Math.ceil((extraHeight - 2) / continuationBodyH) : 0;
-
-      return {
-        rawHeight: rawHeight,
-        repeatHeaderH: repeatHeaderH,
-        continuationBodyH: continuationBodyH,
-        nPages: 1 + continuationPages,
-      };
-    };
-    var sections = document.querySelectorAll('.pdf-page');
-    if (!sections.length) return;
-
-    var realPage = [];
-    var cur = 1;
-    for (var i = 0; i < sections.length; i++) {
-      realPage.push(cur);
-      var cls = sections[i].className || '';
-      if (cls.indexOf('travel-content-page') !== -1) {
-        cur += getContentSectionMetrics(sections[i]).nPages;
-      } else {
-        cur += 1;
-      }
-    }
-
-    for (var i = 0; i < sections.length; i++) {
-      var nums = sections[i].querySelectorAll('[data-page-num]');
-      for (var j = 0; j < nums.length; j++) {
-        nums[j].textContent = String(realPage[i]);
-      }
-    }
-
-    var photoSections = [];
-    for (var i = 0; i < sections.length; i++) {
-      if ((sections[i].className || '').indexOf('travel-photo-page') !== -1) {
-        photoSections.push(realPage[i]);
-      }
-    }
-    var tocNums = document.querySelectorAll('[data-toc-page]');
-    for (var t = 0; t < Math.min(tocNums.length, photoSections.length); t++) {
-      tocNums[t].textContent = String(photoSections[t]);
-    }
-
-    try {
-      var el = document.getElementById('print-status');
-      if (el) el.textContent = (el.textContent || '') + ' \u2022 \u0441\u0442\u0440: ' + (cur - 1);
-    } catch (e) {}
-  };
-
-  window.__syncContentPageBadges = function(forPrint) {
-    var PAGE_H = 297 * (96 / 25.4);
-    var getContentSectionMetrics = function(section) {
-      var table = section.querySelector('.content-layout');
-      var thead = table ? table.querySelector('thead') : null;
-      var repeatHeaderH = thead ? (thead.getBoundingClientRect().height || thead.offsetHeight || 0) : 0;
-      var rawHeight = section.scrollHeight || section.offsetHeight || PAGE_H;
-      var continuationBodyH = Math.max(1, PAGE_H - repeatHeaderH);
-      var extraHeight = Math.max(0, rawHeight - PAGE_H);
-      var continuationPages = extraHeight > 0 ? Math.ceil((extraHeight - 2) / continuationBodyH) : 0;
-
-      return {
-        continuationBodyH: continuationBodyH,
-        nPages: 1 + continuationPages,
-      };
-    };
-    var sections = document.querySelectorAll('.pdf-page.travel-content-page');
-    if (!sections.length) return;
-
-    for (var i = 0; i < sections.length; i++) {
-      var section = sections[i];
-      var oldMarkers = section.querySelectorAll('.cpn-marker-badge');
-      for (var om = oldMarkers.length - 1; om >= 0; om--) {
-        oldMarkers[om].parentNode.removeChild(oldMarkers[om]);
-      }
-
-      var existingBadge = section.querySelector('[data-page-num]');
-      if (!existingBadge) continue;
-      existingBadge.style.visibility = forPrint ? 'hidden' : '';
-      if (!forPrint) continue;
-
-      var sectionPage = Number(existingBadge.textContent || 0) || 0;
-      var metrics = getContentSectionMetrics(section);
-      var badgeRect = existingBadge.getBoundingClientRect();
-      var sectionRect = section.getBoundingClientRect();
-      var badgeTopInSection = badgeRect.top - sectionRect.top;
-      var badgeLeft = badgeRect.left - sectionRect.left;
-      var badgeWidth = badgeRect.width || existingBadge.offsetWidth || 22;
-      var badgeHeight = badgeRect.height || existingBadge.offsetHeight || 22;
-      var badgeStyles = window.getComputedStyle(existingBadge);
-
-      for (var p = 0; p < metrics.nPages; p++) {
-        var marker = document.createElement('div');
-        marker.className = 'cpn-marker-badge';
-        marker.style.top = Math.round(p * PAGE_H + badgeTopInSection) + 'px';
-        marker.style.left = Math.round(badgeLeft) + 'px';
-        marker.style.width = Math.round(badgeWidth) + 'px';
-        marker.style.height = Math.round(badgeHeight) + 'px';
-        marker.style.display = 'inline-flex';
-        marker.style.alignItems = 'center';
-        marker.style.justifyContent = 'center';
-        marker.style.borderRadius = badgeStyles.borderRadius || '6px';
-        marker.style.background = badgeStyles.backgroundColor || '#f0f0f0';
-        marker.style.color = badgeStyles.color || '#333';
-        marker.style.fontSize = badgeStyles.fontSize || '8pt';
-        marker.style.fontWeight = badgeStyles.fontWeight || '700';
-        marker.style.fontFamily = badgeStyles.fontFamily || 'sans-serif';
-        marker.style.lineHeight = '1';
-        marker.textContent = String(sectionPage + p);
-        section.appendChild(marker);
-      }
-    }
-  };
-
-  window.addEventListener('load', function() {
-    setTimeout(function() {
-      window.__recalcPageNumbers();
-      window.__syncContentPageBadges(false);
-    }, 300);
-  });
-  window.addEventListener('beforeprint', function() {
-    window.__recalcPageNumbers();
-    window.__syncContentPageBadges(true);
-  });
-  window.addEventListener('afterprint', function() {
-    window.__syncContentPageBadges(false);
-  });
-  </script>
 </body>
 </html>
     `

@@ -90,8 +90,9 @@ describe('Travel atlas (global map + index)', () => {
     expect(pages[0]).toContain('Грузия 2024')
     expect(pages[0]).toContain('Армения 2024')
     expect(pages[0]).toContain('Турция 2025')
-    // Page number marker
-    expect(pages[0]).toMatch(/data-page-num[^>]*>\s*4\s*</)
+    // Нативная нумерация: JS-бейдж номера страницы удалён, остаётся текстовый колонтитул
+    expect(pages[0]).not.toContain('data-page-num')
+    expect(pages[0]).toContain('АТЛАС 1 /')
 
     // Index page (second)
     expect(pages[1]).toContain('atlas-index-page')

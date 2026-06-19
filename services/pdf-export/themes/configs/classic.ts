@@ -58,8 +58,8 @@ export const classicTheme: PdfThemeConfig = {
   },
   
   typography: {
-    headingFont: "'Crimson Text', Georgia, 'Times New Roman', serif",
-    bodyFont: "'Crimson Text', Georgia, 'Times New Roman', serif",
+    headingFont: "'PT Serif', Georgia, 'Times New Roman', serif",
+    bodyFont: "'PT Serif', Georgia, 'Times New Roman', serif",
     monoFont: "'Courier New', monospace",
     
     h1: { size: '34pt', weight: 700, lineHeight: 1.3, marginBottom: '18pt' },

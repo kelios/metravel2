@@ -59,7 +59,7 @@ export const travelMagazineTheme: PdfThemeConfig = {
   
   typography: {
     headingFont: "'Playfair Display', Georgia, serif",
-    bodyFont: "'Lato', system-ui, sans-serif",
+    bodyFont: "'Open Sans', system-ui, sans-serif",
     monoFont: "'Courier New', monospace",
     
     h1: { size: '36pt', weight: 800, lineHeight: 1.1, marginBottom: '18pt' },
