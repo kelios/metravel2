@@ -224,8 +224,12 @@ export const getStyles = (
       ...(Platform.OS === 'web'
         ? ({
             cursor: 'pointer',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
+            // Mobile (compact) drops the live backdrop blur — it recomposites the
+            // map region on close (jank, CLAUDE.md arch #2). The static dark frost
+            // (rgba(15,23,42,0.58)) keeps the icon legible. Desktop keeps blur.
+            ...(compactLayout
+              ? null
+              : { backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }),
             transition: 'background-color 0.15s ease, transform 0.15s ease',
           } as any)
         : null),

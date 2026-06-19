@@ -79,6 +79,19 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
     [colors, themeContextValue, queryClient, isFullscreenWeb],
   )
 
+  // On the mobile sheet the close button wires BOTH RN-Web `onPress` and a native
+  // `onPointerUp` (the responder race can swallow either one). On touch both can
+  // fire → double `clearSelectedPlace`. `closedRef` guarantees a single onClose
+  // per gesture. It resets on unmount with the component, so reopening works.
+  const closedRef = useRef(false)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+  const handleClose = useRef(() => {
+    if (closedRef.current) return
+    closedRef.current = true
+    onCloseRef.current()
+  }).current
+
   // Web swipe-down-to-close on the grabber/header.
   const dragStartYRef = useRef<number | null>(null)
   const webSwipeHandlers = useMemo(() => {
@@ -92,10 +105,10 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
         dragStartYRef.current = null
         if (start == null) return
         const dy = (e?.clientY ?? start) - start
-        if (dy > SWIPE_CLOSE_THRESHOLD_PX) onClose()
+        if (dy > SWIPE_CLOSE_THRESHOLD_PX) handleClose()
       },
     } as any
-  }, [onClose])
+  }, [handleClose])
 
   if (!point) return null
 
@@ -119,7 +132,7 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
         },
         onPointerUp: (e: any) => {
           e?.stopPropagation?.()
-          onClose()
+          handleClose()
         },
       } as any)
     : null
@@ -130,7 +143,7 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
     // + white glyph keeps it visible on any image.
     <Pressable
       testID="map-place-bottom-card-close"
-      onPress={onClose}
+      onPress={handleClose}
       accessibilityRole="button"
       accessibilityLabel="Закрыть карточку места"
       hitSlop={10}
@@ -166,7 +179,7 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
           <View style={styles.handleZone} {...(webSwipeHandlers ?? {})}>
             <View style={styles.grabber} />
           </View>
-          <PopupComponent point={point} closePopup={onClose} />
+          <PopupComponent point={point} closePopup={handleClose} />
           {closeButton}
         </View>
       </View>
@@ -185,7 +198,7 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
         </View>
 
         <View style={styles.body}>
-          <PopupComponent point={point} closePopup={onClose} />
+          <PopupComponent point={point} closePopup={handleClose} />
         </View>
 
         {closeButton}
@@ -308,13 +321,14 @@ const getStyles = (colors: ThemedColors) =>
       height: 44,
       borderRadius: 22,
       right: 12,
+      // Mobile web: a live backdrop-filter blur here forces a GPU recomposite of
+      // the map region when the sheet unmounts (jank on close, CLAUDE.md arch #2).
+      // Use a static opaque frost instead — ✕ stays legible on any photo.
       backgroundColor: 'rgba(0,0,0,0.6)',
       ...(IS_WEB
         ? ({
             top: 12,
             zIndex: 10,
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
           } as any)
         : null),
     },

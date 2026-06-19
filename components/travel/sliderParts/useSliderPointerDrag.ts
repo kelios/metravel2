@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { clamp } from './utils';
+import { clamp, resolveSwipeTargetIndex } from './utils';
 import { getTouchGestureAxis } from './useWebScrollInteraction';
 import { getDomNode } from './useSliderTrack';
 import { isIOSWebKit } from '@/components/ui/ImageCardMediaWebHelpers';
@@ -234,7 +234,11 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
 
       const now = performance.now();
       const dt = Math.max(1, now - drag.lastTs);
-      drag.velocity = (event.clientX - drag.lastX) / dt;
+      const instant = (event.clientX - drag.lastX) / dt;
+      // EMA-smooth velocity so a stale/missing final touchmove before release
+      // (common on iOS Safari) still preserves the flick momentum.
+      drag.velocity =
+        drag.velocity === 0 ? instant : drag.velocity * 0.6 + instant * 0.4;
       drag.lastX = event.clientX;
       drag.lastTs = now;
     };
@@ -245,10 +249,13 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
       if (event && drag.pointerId !== event.pointerId) return;
 
       const width = containerWRef.current || renderedSlideWidth || 1;
-      const projectedOffset =
-        visualOffsetRef.current +
-        drag.velocity * Math.min(220, Math.max(120, width * 0.28));
-      const targetIndex = clamp(Math.round(-projectedOffset / width), 0, maxIndex);
+      const targetIndex = resolveSwipeTargetIndex({
+        currentIndex: indexRef.current,
+        visualOffset: visualOffsetRef.current,
+        velocity: drag.velocity,
+        width,
+        maxIndex,
+      });
       const draggedHorizontally = drag.axis === 'x' && drag.hasMoved;
 
       resetDrag();
@@ -336,7 +343,11 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
 
       const now = performance.now();
       const dt = Math.max(1, now - drag.lastTs);
-      drag.velocity = (touch.clientX - drag.lastX) / dt;
+      const instant = (touch.clientX - drag.lastX) / dt;
+      // EMA-smooth velocity so a stale/missing final touchmove before release
+      // (common on iOS Safari) still preserves the flick momentum.
+      drag.velocity =
+        drag.velocity === 0 ? instant : drag.velocity * 0.6 + instant * 0.4;
       drag.lastX = touch.clientX;
       drag.lastTs = now;
     };
@@ -346,10 +357,13 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
       if (drag.pointerId !== TOUCH_POINTER_ID) return;
 
       const width = containerWRef.current || renderedSlideWidth || 1;
-      const projectedOffset =
-        visualOffsetRef.current +
-        drag.velocity * Math.min(220, Math.max(120, width * 0.28));
-      const targetIndex = clamp(Math.round(-projectedOffset / width), 0, maxIndex);
+      const targetIndex = resolveSwipeTargetIndex({
+        currentIndex: indexRef.current,
+        visualOffset: visualOffsetRef.current,
+        velocity: drag.velocity,
+        width,
+        maxIndex,
+      });
       const draggedHorizontally = drag.axis === 'x' && drag.hasMoved;
 
       dragStateRef.current = initialDragState();

@@ -538,8 +538,12 @@ const PlacePopupCard: React.FC<Props> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
+                // Live backdrop blur recomposites the map region on close (jank on
+                // mobile, CLAUDE.md arch #2). Desktop only; the static dark frost
+                // (rgba(15,23,42,0.58)) keeps the icon legible on mobile.
+                ...(useCompactLayout
+                  ? null
+                  : { backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }),
                 transform: pressed ? 'scale(0.94)' : hovered ? 'scale(1.06)' : 'scale(1)',
                 transition: 'background-color 0.15s ease, transform 0.15s ease',
               }}

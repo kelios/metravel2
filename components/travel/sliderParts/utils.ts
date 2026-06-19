@@ -27,6 +27,75 @@ export const clamp = (v: number, min: number, max: number) =>
 export const clampInt = (v: number, min: number, max: number) =>
   Math.max(min, Math.min(max, Math.round(v)));
 
+/**
+ * Fraction of the slide width a finger drag must cover (without a flick) to
+ * advance one slide. Standard carousels use ~25-33%; 30% feels natural on touch.
+ */
+export const SWIPE_DISTANCE_THRESHOLD_RATIO = 0.3;
+
+/**
+ * Minimum |velocity| (px/ms) that counts as a flick regardless of distance.
+ * Tuned for touch: a deliberate flick easily clears this while a slow drag stays
+ * below it, so a gentle hold-and-release snaps back.
+ */
+export const SWIPE_FLICK_VELOCITY = 0.3;
+
+export interface ResolveSwipeTargetParams {
+  currentIndex: number;
+  /** Live track offset at release (negative = scrolled forward). */
+  visualOffset: number;
+  /** Drag velocity in px/ms (negative = moving left / towards next slide). */
+  velocity: number;
+  /** Measured slide width (same width snapOffsetForIndex uses). */
+  width: number;
+  maxIndex: number;
+}
+
+/**
+ * Resolve which slide a horizontal swipe should land on.
+ *
+ * The target is anchored to the CURRENT index ±1 (one swipe = at most one slide)
+ * instead of an absolute round across the whole track, so a swipe never snaps
+ * back to the current slide unless the gesture was genuinely small.
+ *
+ * A swipe advances when EITHER the drag covered more than
+ * `SWIPE_DISTANCE_THRESHOLD_RATIO` of a slide OR the release velocity is a flick
+ * (`|velocity| >= SWIPE_FLICK_VELOCITY`) in the matching direction.
+ */
+export const resolveSwipeTargetIndex = ({
+  currentIndex,
+  visualOffset,
+  velocity,
+  width,
+  maxIndex,
+}: ResolveSwipeTargetParams): number => {
+  const safeWidth = width > 0 ? width : 1;
+  // Offset of the current slide's resting position (negative).
+  const currentOffset = -clamp(currentIndex, 0, maxIndex) * safeWidth;
+  // How far we dragged from the current slide. Positive = towards previous
+  // (finger moved right), negative = towards next (finger moved left).
+  const dragDelta = visualOffset - currentOffset;
+  const distanceRatio = Math.abs(dragDelta) / safeWidth;
+
+  const isFlick = Math.abs(velocity) >= SWIPE_FLICK_VELOCITY;
+  const passedDistance = distanceRatio >= SWIPE_DISTANCE_THRESHOLD_RATIO;
+
+  if (!isFlick && !passedDistance) {
+    return clampInt(currentIndex, 0, maxIndex);
+  }
+
+  // Determine direction. A flick wins on its own sign; otherwise the drag sign.
+  const direction = isFlick
+    ? velocity < 0
+      ? 1
+      : -1
+    : dragDelta < 0
+      ? 1
+      : -1;
+
+  return clampInt(currentIndex + direction, 0, maxIndex);
+};
+
 export interface SliderViewportFlags {
   isMobile: boolean;
   isTablet: boolean;

@@ -93,6 +93,12 @@ export function useSliderTrack(options: UseSliderTrackOptions): UseSliderTrackRe
         return;
       }
       if (!withTransition && previousRoundedOffset === roundedOffset) {
+        // Even when the transform is unchanged, make sure no leftover transition
+        // from a prior animated snap remains active — otherwise the first frames
+        // of a drag fight that transition and the slide visibly jitters.
+        if (trackNode.style.transition !== 'none') {
+          trackNode.style.transition = 'none';
+        }
         return;
       }
       visualOffsetRef.current = offset;
