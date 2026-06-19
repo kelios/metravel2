@@ -6,7 +6,6 @@ import {
   getThemedBaseTileUrl,
   getThemedBaseAttribution,
   getThemedBaseMaxZoom,
-  CARTO_DARK_SUBDOMAINS,
 } from '@/config/mapWebLayers';
 import { createLeafletLayer, attachTileRetry } from '@/utils/mapWebLayers';
 import { attachOsmCampingOverlay } from '@/utils/mapWebOverlays/osmCampingOverlay';
@@ -19,41 +18,37 @@ import { attachWeatherTempLabelsOverlay } from '@/utils/mapWebOverlays/weatherTe
 interface UseMapInstanceProps {
   map: any;
   L: any;
-  /** Тёмная тема приложения → тёмная подложка (CARTO dark). F-52 / #229. */
+  /**
+   * Тёмная тема приложения. Базовая подложка карты на неё больше НЕ реагирует
+   * (карта всегда обычная/светлая по требованию пользователя); проп оставлен
+   * для обратной совместимости вызова.
+   */
   isDark?: boolean;
 }
 
 /**
- * Создаёт базовый tile-слой подложки по теме. Светлая — OSM-прокси (без {s}),
- * тёмная — CARTO dark (субдомены a/b/c/d, ретина {r}).
+ * Опции базового tile-слоя подложки. Подложка всегда светлая (OSM-прокси, без
+ * {s}), независимо от темы приложения.
  *
- * Светлый OSM-прокси отдаёт только @1x. Не включаем Leaflet detectRetina:
- * на HiDPI-экранах он запрашивает следующий zoom и режет тайлы до 128px,
- * что резко увеличивает нагрузку на прокси и даёт "шахматку" при первичном
- * auto-fit карты. Тёмная CARTO-подложка остаётся с ретина-шаблоном {r}.
+ * OSM-прокси отдаёт только @1x. Не включаем Leaflet detectRetina: на HiDPI он
+ * запрашивает следующий zoom и режет тайлы до 128px, что резко увеличивает
+ * нагрузку на прокси и даёт "шахматку" при первичном auto-fit карты.
  */
-export const getThemedBaseLayerOptions = (isDark: boolean) => ({
-  attribution: getThemedBaseAttribution(isDark),
-  maxZoom: getThemedBaseMaxZoom(isDark),
-  ...(isDark ? { subdomains: CARTO_DARK_SUBDOMAINS } : null),
+export const getThemedBaseLayerOptions = () => ({
+  attribution: getThemedBaseAttribution(),
+  maxZoom: getThemedBaseMaxZoom(),
 });
 
-const createThemedBaseLayer = (L: any, isDark: boolean) => {
+const createThemedBaseLayer = (L: any) => {
   if (!L) return null;
-  return attachTileRetry(
-    L.tileLayer(getThemedBaseTileUrl(isDark), getThemedBaseLayerOptions(isDark)),
-  );
+  return attachTileRetry(L.tileLayer(getThemedBaseTileUrl(), getThemedBaseLayerOptions()));
 };
 
-export function useMapInstance({ map, L, isDark = false }: UseMapInstanceProps) {
+export function useMapInstance({ map, L }: UseMapInstanceProps) {
   const leafletBaseLayerRef = useRef<any>(null);
   const leafletOverlayLayersRef = useRef<Map<string, any>>(new Map());
   const leafletControlRef = useRef<any>(null);
   const hasInitializedLayersRef = useRef(false);
-  // Текущая тема подложки в ref — чтобы layer-setup (зависит от [map, L])
-  // и theme-swap-эффект (зависит от isDark) не конфликтовали.
-  const isDarkRef = useRef(isDark);
-  isDarkRef.current = isDark;
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -204,8 +199,8 @@ export function useMapInstance({ map, L, isDark = false }: UseMapInstanceProps) 
         // noop
       }
 
-      // Setup base layer (тема-aware: тёмная подложка для тёмной темы #229).
-      const baseLayer = createThemedBaseLayer(L, isDarkRef.current);
+      // Setup base layer (всегда светлая OSM-подложка, независимо от темы UI).
+      const baseLayer = createThemedBaseLayer(L);
       if (baseLayer) {
         leafletBaseLayerRef.current = baseLayer;
       }
@@ -431,35 +426,8 @@ export function useMapInstance({ map, L, isDark = false }: UseMapInstanceProps) 
     };
   }, [map, L]);
 
-  // Смена темы приложения → меняем базовую подложку на месте (без пересборки
-  // всех слоёв: overlay/маршрут/радиус остаются). Светлая ↔ тёмная (CARTO).
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (!map || !L) return;
-    if (typeof map.addLayer !== 'function') return;
-    // До первичной инициализации слоёв base создаётся уже с актуальной темой.
-    if (!hasInitializedLayersRef.current) return;
-
-    try {
-      const newLayer = createThemedBaseLayer(L, isDark);
-      if (!newLayer) return;
-
-      const current = leafletBaseLayerRef.current;
-      if (current && map.hasLayer?.(current)) {
-        map.removeLayer(current);
-      }
-      leafletBaseLayerRef.current = newLayer;
-      // Подложка должна лежать под оверлеями/маршрутом — добавляем и опускаем вниз.
-      newLayer.addTo(map);
-      try {
-        newLayer.bringToBack?.();
-      } catch {
-        // noop
-      }
-    } catch {
-      // noop
-    }
-  }, [isDark, map, L]);
+  // Базовая подложка карты всегда светлая (OSM-прокси) и не реагирует на смену
+  // темы приложения — отдельный theme-swap-эффект для подложки больше не нужен.
 
   return {
     leafletBaseLayerRef,
