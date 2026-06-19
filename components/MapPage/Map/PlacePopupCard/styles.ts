@@ -309,15 +309,17 @@ export const getStyles = (
       flexDirection: 'row',
       flexWrap: 'wrap',
       alignItems: 'flex-start',
-      justifyContent: 'flex-start',
-      gap: splitLayout ? 6 : compactLayout ? 6 : 8,
+      // Bottom card: spread the 6 action chips evenly across one row so «Сохранить»
+      // does not wrap onto its own line and steal vertical space from the photo.
+      justifyContent: bottomCardLayout ? 'space-between' : 'flex-start',
+      gap: bottomCardLayout ? 2 : splitLayout ? 6 : compactLayout ? 6 : 8,
     },
     chipActionBtn: {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'flex-start',
       gap: bottomCardLayout ? 3 : 4,
-      width: bottomCardLayout ? 58 : compactLayout ? 64 : 68,
+      width: bottomCardLayout ? 56 : compactLayout ? 64 : 68,
       paddingVertical: bottomCardLayout ? 2 : 4,
       paddingHorizontal: 2,
       borderRadius: DESIGN_TOKENS.radii.md,

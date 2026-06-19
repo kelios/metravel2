@@ -67,15 +67,15 @@ export const COMPACT_IMAGE_MAX_HEIGHT_BY_BREAKPOINT: Record<BreakpointKey, numbe
 // (~70% of the card). It spans the full sheet width, so its height is capped here
 // much taller than the narrow Leaflet-popup compact cap above. Still contain+blur.
 export const BOTTOM_CARD_IMAGE_MAX_HEIGHT_BY_BREAKPOINT: Record<BreakpointKey, number> = {
-  narrow: 280,
-  compact: 300,
-  default: 320,
+  narrow: 408,
+  compact: 428,
+  default: 448,
 };
 
 export const BOTTOM_CARD_IMAGE_ASPECT: Record<BreakpointKey, number> = {
-  narrow: 1.1,
-  compact: 1.15,
-  default: 1.2,
+  narrow: 0.92,
+  compact: 0.98,
+  default: 1.05,
 };
 
 export const SPLIT_LAYOUT_MIN_VIEWPORT = 860;

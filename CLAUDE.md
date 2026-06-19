@@ -18,6 +18,7 @@ React 19 + React Native 0.84 + Expo 55 (Expo Router, file-based) · web: RN Web 
 ## Правила кода
 - Изображения в фичевых компонентах — только через `components/ui/ImageCardMedia.tsx` (прямой импорт `expo-image` запрещён ESLint-гвардом)
 - Travel-карточки — только через `components/ui/UnifiedTravelCard.tsx`
+- **Фото — доминанта карточки:** в любой полноразмерной карточке с изображением (travel/место/статья/hero) фото — главный элемент и должно занимать ~70% высоты карточки; фото не перекрывать значимо (оверлеи ♥/＋/развернуть/закрыть/бейджи/scrim — только в углах или узкой зоной, не затемнять кадр). Увеличивать именно высоту/пропорцию фото-блока, НЕ менять `contain`+blur на `cover`. Исключения — компактные mini/utility/list-итемы (напр. `QuestForCityCard`, `SelectedTravelOrderCard`), где фото намеренно второстепенно
 - Внешние ссылки — только `@/utils/externalLinks.openExternalUrl`, не `Linking.openURL` (гвард)
 - Серверный стейт — React Query, клиентский — Zustand; импорты через алиас `@/`
 - TS strict; новый `any` запрещён в `api/`, `hooks/`, `stores/`; RN Web-совместимость для всех компонентов, используемых на web
