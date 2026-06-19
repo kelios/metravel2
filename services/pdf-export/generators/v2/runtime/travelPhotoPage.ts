@@ -2,6 +2,32 @@ import type { BookSettings } from '@/components/export/BookSettingsModal'
 import type { TravelForBook } from '@/types/pdf-export'
 import type { PdfThemeConfig } from '../../../themes/PdfThemeConfig'
 
+// ─────────────────────────────────────────────────────────────────────────────
+// BOOK-Q6 — Единый визуальный язык раскладки фото (роль фото → fit)
+// Единственный источник правды по правилу CLAUDE.md «фото-доминанта,
+// не менять contain+blur на cover, оверлеи только в углах».
+//
+//   Роль фото                                  │ fit
+//   ───────────────────────────────────────────┼──────────────────────────────
+//   hero / full-bleed travel-фото-страница      │ contain + blur-backdrop
+//     (этот файл, все layout'ы)                 │   (кадр НЕ резать)
+//   grid-галерея / collage                      │ contain + blur-backdrop
+//     (GalleryPageRenderer / legacyGallery)     │   (#300/#303)
+//   inline-контент фото                         │ contain + blur-backdrop
+//     (pdfRuntimeMarkup/inlineGallery)          │   (#303)
+//   ───────────────────────────────────────────┼──────────────────────────────
+//   ИСКЛЮЧЕНИЯ (намеренно, мелкие / utility — не «кадр-доминанта»):
+//   thumbnail точки маршрута (~80px)            │ cover  (locationCards.ts)
+//   thumbnail в TOC, иконки                     │ cover
+//   титульная обложка книги                     │ cover  (coverPage.ts) — это
+//     (scrim + заголовок, НЕ контентное фото)   │   титульный лист, full-bleed
+//     scrim — узкий градиент сверху/снизу,      │   cover оставлен намеренно,
+//     не плотная заливка центра кадра           │   чтобы не было леттербокса
+//
+// Все contain+blur строятся через единый buildContainImage (shared-source
+// blur-фон из DOM с первого кадра) — не изобретать локальные варианты.
+// ─────────────────────────────────────────────────────────────────────────────
+
 type TravelPhotoLayout = NonNullable<BookSettings['photoPageLayout']> | 'full-bleed'
 
 export function renderTravelPhotoPageMarkup(args: {
@@ -18,7 +44,6 @@ export function renderTravelPhotoPageMarkup(args: {
     height: string,
     opts?: { onerrorBg?: string; extraStyle?: string }
   ) => string
-  getImageFilterStyle: () => string
 }): string {
   const {
     travel,
@@ -29,7 +54,6 @@ export function renderTravelPhotoPageMarkup(args: {
     escapeHtml,
     formatDays,
     buildContainImage,
-    getImageFilterStyle,
   } = args
 
   const { colors, typography, spacing } = theme
@@ -169,6 +193,9 @@ export function renderTravelPhotoPageMarkup(args: {
         </div>
       `
   } else {
+    // full-bleed hero: contain + blur-backdrop (BOOK-Q6) — кадр НЕ резать.
+    // buildContainImage сам строит shared-source blur-фон (cover, blur) +
+    // основное фото (contain) из DOM с первого кадра.
     content = `
         <div style="
           border-radius: ${theme.blocks.borderRadius};
@@ -178,23 +205,13 @@ export function renderTravelPhotoPageMarkup(args: {
           height: 100%;
           min-height: 235mm;
         ">
-          <img src="${escapeHtml(coverImage)}" alt="${escapeHtml(travel.name)}"
-            style="
-              width: 100%;
-              height: 100%;
-              min-height: 235mm;
-              display: block;
-              object-fit: cover;
-              object-position: center;
-              ${getImageFilterStyle()}
-            "
-            onerror="this.style.display='none'; this.parentElement.style.background='linear-gradient(180deg, ${colors.accentLight} 0%, ${colors.accentSoft} 100%)';" />
+          ${buildContainImage(coverImage, escapeHtml(travel.name), '100%', { onerrorBg: `linear-gradient(180deg, ${colors.accentLight} 0%, ${colors.accentSoft} 100%)` })}
           <div style="
             position: absolute;
             top: 0; right: 0; bottom: 0; left: 0;
             background:
-              linear-gradient(180deg, rgba(15,23,42,0.04) 0%, rgba(15,23,42,0.18) 100%),
-              linear-gradient(180deg, rgba(255,255,255,0.0) 48%, rgba(15,23,42,0.22) 100%);
+              linear-gradient(180deg, rgba(15,23,42,0.0) 0%, rgba(15,23,42,0.0) 62%, rgba(15,23,42,0.18) 100%);
+            pointer-events: none;
           "></div>
           <div style="
             position: absolute;

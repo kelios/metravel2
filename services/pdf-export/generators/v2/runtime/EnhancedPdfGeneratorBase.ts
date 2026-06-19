@@ -296,7 +296,6 @@ export class EnhancedPdfGeneratorBase {
       escapeHtml: (value) => this.escapeHtml(value),
       formatDays: (days) => this.formatDays(days),
       buildContainImage: (src, alt, height, opts) => this.buildContainImage(src, alt, height, opts),
-      getImageFilterStyle: () => this.getImageFilterStyle(),
     });
   }
 
