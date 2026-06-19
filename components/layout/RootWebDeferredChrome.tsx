@@ -1,18 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { View } from 'react-native'
 
-const EmptyFallback = () => null
-const safeLazy = <T extends React.ComponentType<any>>(
-  loader: () => Promise<{ default: T }>,
-  name?: string
-) =>
-  React.lazy(() =>
-    // Metro async-require may return a bare thenable (no .catch) for sync-available modules
-    Promise.resolve(loader()).catch((err) => {
-      if (__DEV__) console.error(`[safeLazy] Failed to load ${name || 'component'}:`, err)
-      return { default: EmptyFallback as unknown as T }
-    })
-  )
+import { safeLazy } from '@/components/layout/safeLazy'
 
 const SkipLinksLazy = safeLazy(() => import('@/components/layout/SkipLinks'), 'SkipLinks')
 const NetworkStatusLazy = safeLazy(
