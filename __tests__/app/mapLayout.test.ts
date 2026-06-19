@@ -1,7 +1,7 @@
 import { Platform, StyleSheet } from 'react-native';
 
 import { getStyles } from '@/screens/tabs/map.styles';
-import { METRICS } from '@/constants/layout';
+import { LAYOUT, METRICS } from '@/constants/layout';
 
 describe('map layout header offset', () => {
   const originalOS = Platform.OS;
@@ -60,6 +60,7 @@ describe('map layout header offset', () => {
     expect(styles.rightPanel.maxWidth).toBe(METRICS.baseUnit * 45 + 40);
     // gap between map and panel on desktop
     expect(styles.mapContainer.columnGap).toBe(METRICS.spacing.m);
+    expect(styles.container.height).toBe('calc(var(--metravel-map-vh, 100svh) - 88px)');
   });
 
   it('does not add header offset on web for mobile layout', () => {
@@ -72,5 +73,8 @@ describe('map layout header offset', () => {
     // Math.max(10, insetTop + 2) = Math.max(10, 14) = 14
     expect(styles.tabsContainer.paddingTop).toBe(Math.max(10, insetTop + 2));
     expect(styles.container.paddingTop ?? 0).toBe(0);
+    expect(styles.container.height).toBe(
+      `calc(var(--metravel-map-vh, 100svh) - ${LAYOUT.tabBarHeight}px)`,
+    );
   });
 });

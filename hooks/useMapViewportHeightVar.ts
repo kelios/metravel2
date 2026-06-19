@@ -9,10 +9,10 @@ import { Platform } from 'react-native'
  * incorrectly — frequently to 0 — which collapses the Leaflet container to no
  * height and the map renders as a grey box. Safari resolves `dvh` correctly, so
  * the bug only reproduces inside the in-app browser. The screen container reads
- * `calc(var(--metravel-map-vh, 100svh) - 88px)`: when this hook has run the JS
- * measurement wins everywhere; otherwise it degrades to `100svh` (the stable
- * SMALL viewport, far more reliable than `dvh` in WebViews) and finally to the
- * desktop/Safari behaviour where the units are correct anyway.
+ * this var with a breakpoint-specific chrome reserve: when this hook has run the
+ * JS measurement wins everywhere; otherwise it degrades to `100svh` (the stable
+ * SMALL viewport, far more reliable than `dvh` in WebViews). The map screen
+ * subtracts only the chrome it actually needs for the current breakpoint.
  */
 export const MAP_VIEWPORT_HEIGHT_CSS_VAR = '--metravel-map-vh'
 

@@ -22,6 +22,9 @@ export const getStyles = (
 ) => {
   const shadowMedium = themedColors.shadows.medium;
   const shadowHeavy = themedColors.shadows.heavy;
+  const webViewportReservedHeight = isMobile
+    ? WEB_MOBILE_FOOTER_RESERVE_HEIGHT
+    : WEB_HEADER_RESERVED_HEIGHT;
 
   return StyleSheet.create({
     container: {
@@ -34,8 +37,8 @@ export const getStyles = (
             //   2. 100svh — stable SMALL viewport fallback before the JS var is
             //      set; more reliable than `dvh` in WebViews and equal to the
             //      visible area on Safari/desktop.
-            height: `calc(var(--metravel-map-vh, 100svh) - ${WEB_HEADER_RESERVED_HEIGHT}px)`,
-            maxHeight: `calc(var(--metravel-map-vh, 100svh) - ${WEB_HEADER_RESERVED_HEIGHT}px)`,
+            height: `calc(var(--metravel-map-vh, 100svh) - ${webViewportReservedHeight}px)`,
+            maxHeight: `calc(var(--metravel-map-vh, 100svh) - ${webViewportReservedHeight}px)`,
             minHeight: 0,
             overflow: 'hidden',
           } as any)
