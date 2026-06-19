@@ -691,26 +691,50 @@ class ApiClient {
     ): Promise<T> {
         const token = await this.getAccessToken();
 
-        // If no progress callback, use standard fetch
-        if (!onProgress) {
-            return this._uploadViaFetch<T>(endpoint, formData, token, method, timeout);
+        // На native глобальный fetch — это expo/winter fetch, который собирает
+        // multipart-тело в JS и НЕ поддерживает RN-части вида { uri, name, type }
+        // (бросает "Unsupported FormDataPart implementation"). Нативный XHR умеет
+        // отдавать такие части через FormData.getParts(), поэтому любые загрузки
+        // на устройстве идём через XHR. На web остаёмся на fetch (File/Blob + CSRF).
+        if (onProgress || Platform.OS !== 'web') {
+            return this._uploadViaXhr<T>(endpoint, formData, token, method, timeout, onProgress);
         }
 
-        // Use XMLHttpRequest for progress tracking
+        return this._uploadViaFetch<T>(endpoint, formData, token, method, timeout);
+    }
+
+    /**
+     * Internal: upload via XMLHttpRequest.
+     * На native корректно сериализует RN-части { uri, name, type } через нативный
+     * сетевой слой. Поддерживает опциональный onProgress.
+     */
+    private _uploadViaXhr<T>(
+        endpoint: string,
+        formData: FormData,
+        token: string | null,
+        method: string,
+        timeout: number,
+        onProgress?: (percent: number) => void
+    ): Promise<T> {
         return new Promise<T>((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             xhr.open(method, `${this.baseURL}${endpoint}`);
 
-            if (token) {
-                xhr.setRequestHeader('Authorization', `Token ${token}`);
+            const headers = this.authHeaders(token);
+            for (const [headerKey, headerValue] of Object.entries(headers)) {
+                if (typeof headerValue === 'string') {
+                    xhr.setRequestHeader(headerKey, headerValue);
+                }
             }
             xhr.timeout = timeout;
 
-            xhr.upload.onprogress = (event) => {
-                if (event.lengthComputable && onProgress) {
-                    onProgress(event.loaded / event.total);
-                }
-            };
+            if (onProgress) {
+                xhr.upload.onprogress = (event) => {
+                    if (event.lengthComputable) {
+                        onProgress(event.loaded / event.total);
+                    }
+                };
+            }
 
             xhr.onload = () => {
                 if (xhr.status >= 200 && xhr.status < 300) {
@@ -720,14 +744,16 @@ class ApiClient {
                     } catch {
                         resolve(xhr.responseText as unknown as T);
                     }
-                } else if (xhr.status === 401 && token) {
-                    // Retry with refreshed token (no progress on retry)
+                } else if (xhr.status === 401 && token && !isE2E) {
+                    // Retry with refreshed token via XHR (no progress on retry)
                     this.refreshAccessToken()
-                        .then((newToken) => this._uploadViaFetch<T>(endpoint, formData, newToken, method, timeout))
+                        .then((newToken) =>
+                            this._uploadViaXhr<T>(endpoint, formData, newToken, method, timeout)
+                        )
                         .then(resolve)
                         .catch(reject);
                 } else if (this.isTransientUploadStatus(xhr.status)) {
-                    this._uploadViaFetch<T>(endpoint, formData, token, method, timeout)
+                    this._uploadViaXhr<T>(endpoint, formData, token, method, timeout)
                         .then(resolve)
                         .catch(reject);
                 } else {
@@ -742,7 +768,7 @@ class ApiClient {
         });
     }
 
-    /** Internal: upload via fetch (no progress) */
+    /** Internal: upload via fetch (no progress). Web only — на native fetch не умеет { uri }-части. */
     private async _uploadViaFetch<T>(
         endpoint: string,
         formData: FormData,
