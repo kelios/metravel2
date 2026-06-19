@@ -1628,7 +1628,9 @@ async function main() {
         description,
         canonical,
         image,
-        ogType: 'article',
+        // Квест — не статья/путешествие: og:type=website (как ждёт
+        // post-deploy-seo-check). 'article' тут было копипастой из travel-блока.
+        ogType: 'website',
       });
 
       html = injectBreadcrumbJsonLd(html, {
