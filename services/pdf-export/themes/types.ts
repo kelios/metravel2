@@ -22,7 +22,9 @@ export type PdfThemeName =
   | 'sunset'
   | 'nordic'
   | 'retro'
-  | 'tropical';
+  | 'tropical'
+  | 'editorial-luxe'
+  | 'watercolor';
 
 /**
  * Конфигурация темы оформления PDF

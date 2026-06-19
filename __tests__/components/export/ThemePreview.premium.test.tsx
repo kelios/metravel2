@@ -87,6 +87,23 @@ describe('ThemePreview paywall (#296)', () => {
       expect(queryAllByText('lock')).toHaveLength(0);
     });
 
+    it('renders the new premium themes in the catalog (#295)', () => {
+      const { getByText } = render(<ThemePreview {...baseProps} />);
+      expect(getByText('Люкс-журнал')).toBeTruthy();
+      expect(getByText('Акварель')).toBeTruthy();
+    });
+
+    it.each(['editorial-luxe', 'watercolor'] as const)(
+      'selects new premium theme %s without paywall',
+      (themeId) => {
+        const label = themeId === 'editorial-luxe' ? 'Люкс-журнал' : 'Акварель';
+        const { getByText } = render(<ThemePreview {...baseProps} />);
+        fireEvent.press(getByText(label).parent!.parent!);
+        expect(onThemeSelect).toHaveBeenCalledWith(themeId);
+        expect(mockTrackPaywallView).not.toHaveBeenCalled();
+      },
+    );
+
     it('selects premium themes directly without paywall', () => {
       const { getByText } = render(<ThemePreview {...baseProps} />);
 

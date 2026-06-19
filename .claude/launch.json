@@ -97,6 +97,13 @@
       "runtimeArgs": [".claude/prod-server.js", "4602", "dist/prod", "https://metravel.by"],
       "port": 4602,
       "autoPort": false
+    },
+    {
+      "name": "PDF Preview Static",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [".claude/prod-server.js", "4610", ".tmp-pdf-preview"],
+      "port": 4610,
+      "autoPort": false
     }
   ]
 }

@@ -176,6 +176,7 @@ scripts/.index-cache/
 /.chk-web/
 /.chk-android/
 /.tmp-article/
+/.tmp-pdf-preview/
 
 # Отладка native (adb-скриншоты, логи dev-серверов) — не коммитить
 .debug-shots/

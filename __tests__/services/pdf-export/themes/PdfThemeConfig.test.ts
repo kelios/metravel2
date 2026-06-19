@@ -226,9 +226,9 @@ describe('PdfThemeConfig - Новые темы', () => {
   });
 
   describe('Реестр тем PDF_THEMES', () => {
-    it('должен содержать все 18 тем', () => {
+    it('должен содержать все 20 тем', () => {
       const themeCount = Object.keys(PDF_THEMES).length;
-      expect(themeCount).toBe(18);
+      expect(themeCount).toBe(20);
     });
 
     it('должен содержать все новые темы', () => {

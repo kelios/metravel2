@@ -11,8 +11,13 @@ import type { BookPreset } from '@/types/pdf-presets';
 import { METRICS } from '@/constants/layout';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useTheme } from '@/hooks/useTheme';
+import { usePdfPremium } from '@/hooks/usePdfPremium';
 import { showToast } from '@/utils/toast';
 import type { BookSettings, ChecklistSection } from './BookSettingsModal.types';
+import {
+  gallerySettingNeedsPremium,
+  isPremiumCoverType,
+} from './BookSettingsModal.premium';
 import { DEFAULT_CHECKLIST_SELECTION } from './BookSettingsModal.constants';
 import {
   buildInitialSettings,
@@ -48,6 +53,7 @@ export default function BookSettingsModal({
   mode: _mode = 'save',
 }: BookSettingsModalProps) {
   const { isDark } = useTheme();
+  const { isPremium, requireUnlock, trackPaywallView } = usePdfPremium();
   const themed = resolveThemed(isDark);
   const MODAL_COLORS = buildModalColors(themed);
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -171,6 +177,33 @@ export default function BookSettingsModal({
     setSettings((prev) => ({ ...prev, ...updates }));
     setHasUnsavedChanges(true);
   }, []);
+
+  // Гейт галерейных правок: журнальные раскладки / overlay-подписи / full-bleed
+  // доступны только в премиуме (#298). Не-премиум значения проходят как обычно.
+  const handleGalleryChange = useCallback(
+    (updates: Partial<BookSettings>) => {
+      if (!isPremium && gallerySettingNeedsPremium(updates)) {
+        trackPaywallView('gallery-premium');
+        requireUnlock('gallery-premium');
+        return;
+      }
+      handleSettingsChange(updates);
+    },
+    [isPremium, trackPaywallView, requireUnlock, handleSettingsChange],
+  );
+
+  // Гейт типа обложки: «Свое изображение» (custom) — премиум (#298).
+  const handleCoverTypeChange = useCallback(
+    (coverType: BookSettings['coverType']) => {
+      if (!isPremium && isPremiumCoverType(coverType)) {
+        trackPaywallView('cover-custom');
+        requireUnlock('cover-custom');
+        return;
+      }
+      handleSettingsChange({ coverType });
+    },
+    [isPremium, trackPaywallView, requireUnlock, handleSettingsChange],
+  );
 
   const checklistSections = settings.checklistSections || [];
 
@@ -502,7 +535,7 @@ export default function BookSettingsModal({
               <>
                 <GalleryLayoutSelector
                   selectedLayout={settings.galleryLayout || 'grid'}
-                  onLayoutSelect={(layout) => handleSettingsChange({ galleryLayout: layout })}
+                  onLayoutSelect={(layout) => handleGalleryChange({ galleryLayout: layout })}
                   columns={settings.galleryColumns}
                   onColumnsChange={(cols) => handleSettingsChange({ galleryColumns: cols })}
                   photosPerPage={settings.galleryPhotosPerPage}
@@ -512,7 +545,7 @@ export default function BookSettingsModal({
                   showCaptions={settings.showCaptions}
                   onShowCaptionsChange={(show) => handleSettingsChange({ showCaptions: show })}
                   captionPosition={settings.captionPosition}
-                  onCaptionPositionChange={(pos) => handleSettingsChange({ captionPosition: pos })}
+                  onCaptionPositionChange={(pos) => handleGalleryChange({ captionPosition: pos })}
                   spacing={settings.gallerySpacing}
                   onSpacingChange={(sp) => handleSettingsChange({ gallerySpacing: sp })}
                 />
@@ -659,7 +692,7 @@ export default function BookSettingsModal({
                   </label>
                   <select
                     value={settings.coverType}
-                    onChange={(e) => handleSettingsChange({ coverType: e.target.value as any })}
+                    onChange={(e) => handleCoverTypeChange(e.target.value as BookSettings['coverType'])}
                     style={{
                       width: '100%',
                       padding: '12px 14px',
@@ -689,7 +722,9 @@ export default function BookSettingsModal({
                     <option value="auto">Автоматическая (лучшее фото)</option>
                     <option value="first-photo">Первое фото первого путешествия</option>
                     <option value="gradient">Градиент</option>
-                    <option value="custom">Свое изображение</option>
+                    <option value="custom">
+                      {isPremium ? 'Свое изображение' : 'Свое изображение (премиум)'}
+                    </option>
                   </select>
                 </div>
               </>

@@ -20,6 +20,8 @@ import { sunsetTheme } from './configs/sunset'
 import { nordicTheme } from './configs/nordic'
 import { retroTheme } from './configs/retro'
 import { tropicalTheme } from './configs/tropical'
+import { editorialLuxeTheme } from './configs/editorialLuxe'
+import { watercolorTheme } from './configs/watercolor'
 
 export type { PdfThemeName, PdfThemeConfig } from './types'
 
@@ -42,6 +44,8 @@ export {
   nordicTheme,
   retroTheme,
   tropicalTheme,
+  editorialLuxeTheme,
+  watercolorTheme,
 }
 
 /**
@@ -66,6 +70,8 @@ export const PDF_THEMES: Record<PdfThemeName, PdfThemeConfig> = {
   nordic: nordicTheme,
   retro: retroTheme,
   tropical: tropicalTheme,
+  'editorial-luxe': editorialLuxeTheme,
+  watercolor: watercolorTheme,
 }
 
 /**

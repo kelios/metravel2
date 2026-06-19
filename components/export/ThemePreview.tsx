@@ -25,7 +25,9 @@ export type PdfThemeName =
   | 'sunset'
   | 'nordic'
   | 'retro'
-  | 'tropical';
+  | 'tropical'
+  | 'editorial-luxe'
+  | 'watercolor';
 
 interface ThemeInfo {
   id: PdfThemeName;
@@ -313,6 +315,38 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
     },
     preview: {
       headerFont: 'Poppins',
+      bodyFont: 'Nunito',
+      style: 'playful',
+    },
+  },
+  'editorial-luxe': {
+    id: 'editorial-luxe',
+    name: 'Люкс-журнал',
+    description: 'Засечная типографика и золотой акцент',
+    colors: {
+      primary: 'rgb(33, 29, 24)',
+      secondary: 'rgb(74, 68, 60)',
+      accent: 'rgb(176, 141, 87)',
+      background: 'rgb(246, 241, 231)',
+    },
+    preview: {
+      headerFont: 'Cormorant Garamond',
+      bodyFont: 'Source Serif 4',
+      style: 'elegant',
+    },
+  },
+  watercolor: {
+    id: 'watercolor',
+    name: 'Акварель',
+    description: 'Пастельные тона и дружелюбные заголовки',
+    colors: {
+      primary: 'rgb(58, 64, 70)',
+      secondary: 'rgb(92, 101, 109)',
+      accent: 'rgb(90, 154, 160)',
+      background: 'rgb(251, 249, 244)',
+    },
+    preview: {
+      headerFont: 'Caveat',
       bodyFont: 'Nunito',
       style: 'playful',
     },

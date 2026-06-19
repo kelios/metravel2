@@ -33,6 +33,8 @@ export const PDF_THEME_TIERS: Record<PdfThemeName, PdfThemeTier> = {
   nordic: 'premium',
   retro: 'premium',
   tropical: 'premium',
+  'editorial-luxe': 'premium',
+  watercolor: 'premium',
 }
 
 export function getThemeTier(name: PdfThemeName): PdfThemeTier {
