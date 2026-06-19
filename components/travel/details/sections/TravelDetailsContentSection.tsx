@@ -176,16 +176,6 @@ export const TravelDetailsContentSection: React.FC<{
                 >
                   {section.label}
                 </Text>
-                {section.charCount > 0 && (
-                  <Text
-                    style={[
-                      styles.mobileInsightChipBadge,
-                      mobileInsightKey === section.key && styles.mobileInsightChipBadgeActive,
-                    ]}
-                  >
-                    {section.charCount > 999 ? `${Math.round(section.charCount / 100) / 10}k` : section.charCount}
-                  </Text>
-                )}
               </Pressable>
             ))}
           </View>

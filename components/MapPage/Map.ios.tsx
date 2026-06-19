@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useRouter } from 'expo-router';
-import { useThemedColors, useTheme } from '@/hooks/useTheme';
+import { useThemedColors } from '@/hooks/useTheme';
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { MODERN_MATTE_PALETTE } from '@/constants/modernMattePalette';
@@ -13,7 +13,6 @@ import {
   getThemedNativeBaseTileUrl,
   getThemedBaseMaxZoom,
   getThemedBaseAttribution,
-  CARTO_DARK_SUBDOMAINS,
 } from '@/config/mapWebLayers';
 
 // Overpass endpoint mirrors utils/overpass/fetchOverpass.ts. Inlined as a plain
@@ -175,8 +174,6 @@ const Map: React.FC<TravelProps> = ({
   const [localCoordinates, setLocalCoordinates] = useState<Coordinates | null>(propCoordinates);
   const [isLoading, setIsLoading] = useState(true);
   const themeColors = useThemedColors();
-  // Тёмная тема UI → тёмная подложка карты (CARTO dark). F-52 / #229.
-  const { isDark } = useTheme();
   const { getSiteBaseUrl } = require('@/utils/seo');
 
   useEffect(() => {
@@ -446,14 +443,12 @@ const Map: React.FC<TravelProps> = ({
           } catch (e) {}
         };
 
-        // Базовая подложка по теме (#229): светлая — OSM-прокси (без {s}),
-        // тёмная — CARTO dark (субдомены a/b/c/d). На native нет same-origin,
-        // поэтому URL абсолютный. Смена темы пересобирает HTML → WebView reload.
-        L.tileLayer(${JSON.stringify(getThemedNativeBaseTileUrl(isDark))}, {
-          attribution: ${JSON.stringify(getThemedBaseAttribution(isDark))},
-          maxZoom: ${getThemedBaseMaxZoom(isDark)}${
-            isDark ? `,\n          subdomains: ${JSON.stringify(CARTO_DARK_SUBDOMAINS)}` : ''
-          }
+        // Базовая подложка всегда светлая (OSM-прокси, без {s}), независимо от
+        // темы приложения — обычный цвет карты. На native нет same-origin,
+        // поэтому URL абсолютный. Тёмными остаются только панели/контролы/маркеры.
+        L.tileLayer(${JSON.stringify(getThemedNativeBaseTileUrl())}, {
+          attribution: ${JSON.stringify(getThemedBaseAttribution())},
+          maxZoom: ${getThemedBaseMaxZoom()}
         }).addTo(map);
 
         const markersLayer = L.layerGroup().addTo(map);
@@ -899,7 +894,7 @@ const Map: React.FC<TravelProps> = ({
     </body>
     </html>
   `,
-    [themeColors, markerColor, markerShadowColor, isDark],
+    [themeColors, markerColor, markerShadowColor],
   );
 
   return (

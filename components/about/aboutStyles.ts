@@ -68,6 +68,8 @@ export const getAboutStyles = (colors: ThemedColors) => StyleSheet.create({
   },
   oneColumn: { flexDirection: 'column', gap: DESIGN_TOKENS.spacing.md },
   column: { flex: 1 },
+  columnMain: { flex: 1.5, minWidth: 0 },
+  columnSide: { flex: 1, minWidth: 0 },
   infoCard: {
     backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.lg,

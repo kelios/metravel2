@@ -204,19 +204,21 @@ function AboutAndContactScreen() {
                   <CategoriesShowcase isWide={isWide} />
 
                   <View style={[isWide ? styles.twoColumns : styles.oneColumn, { marginTop: 24 }]}>
-                    <AboutIntroCard
-                      email={EMAIL}
-                      onSendMail={sendMail}
-                      onOpenUrl={openUrl}
-                      onOpenPrivacy={() => router.push('/privacy' as any)}
-                      onOpenCookies={() => router.push('/cookies' as any)}
-                      socialLinks={SOCIAL_LINKS}
-                      versionInfo={{
-                        appVersion: String(appVersion),
-                        ...(Platform.OS === 'web' ? { webBuildVersion } : {}),
-                      }}
-                    />
-                    <View style={[isWide ? styles.column : null, !isWide && styles.videoColumnMobile]}>
+                    <View style={isWide ? styles.columnMain : null}>
+                      <AboutIntroCard
+                        email={EMAIL}
+                        onSendMail={sendMail}
+                        onOpenUrl={openUrl}
+                        onOpenPrivacy={() => router.push('/privacy' as any)}
+                        onOpenCookies={() => router.push('/cookies' as any)}
+                        socialLinks={SOCIAL_LINKS}
+                        versionInfo={{
+                          appVersion: String(appVersion),
+                          ...(Platform.OS === 'web' ? { webBuildVersion } : {}),
+                        }}
+                      />
+                    </View>
+                    <View style={[isWide ? styles.columnSide : null, !isWide && styles.videoColumnMobile]}>
                       <VideoCard youtubeThumb={YT_THUMB} onOpenYoutube={openYoutube} />
                     </View>
                   </View>

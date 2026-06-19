@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
 import type { Travel } from '@/types/types'
-import { stripHtmlTags } from '@/components/travel/utils/travelHelpers'
 
 export type InsightKey = 'recommendation' | 'plus' | 'minus'
 
@@ -37,20 +36,17 @@ export function useTravelDetailsContentSectionModel({
         hasRecommendation && {
           key: 'recommendation' as InsightKey,
           label: 'Советы',
-          charCount: stripHtmlTags(travel.recommendation).length,
         },
         hasPlus && {
           key: 'plus' as InsightKey,
           label: 'Понравилось',
-          charCount: stripHtmlTags(travel.plus).length,
         },
         hasMinus && {
           key: 'minus' as InsightKey,
           label: 'Не зашло',
-          charCount: stripHtmlTags(travel.minus).length,
         },
-      ].filter(Boolean) as Array<{ key: InsightKey; label: string; charCount: number }>,
-    [hasRecommendation, hasPlus, hasMinus, travel.recommendation, travel.plus, travel.minus]
+      ].filter(Boolean) as Array<{ key: InsightKey; label: string }>,
+    [hasRecommendation, hasPlus, hasMinus]
   )
 
   const readingTimeLabel = useMemo(() => {

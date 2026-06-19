@@ -356,8 +356,10 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     )
   }
 
-  it('keeps the web base map on light OSM tiles unless dark theme is explicitly selected', () => {
-    expect(shouldUseDarkMapTiles('dark')).toBe(true)
+  it('keeps the web base map on light OSM tiles for every theme', () => {
+    // Базовая подложка карты больше не зависит от темы приложения: пользователь
+    // хочет обычный (светлый) цвет карты даже в тёмной теме UI.
+    expect(shouldUseDarkMapTiles('dark')).toBe(false)
     expect(shouldUseDarkMapTiles('auto')).toBe(false)
     expect(shouldUseDarkMapTiles('light')).toBe(false)
     expect(shouldUseDarkMapTiles(undefined)).toBe(false)

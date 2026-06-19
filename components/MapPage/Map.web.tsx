@@ -53,7 +53,12 @@ const FALLBACK_COORDINATES = { latitude: 53.8828449, longitude: 27.7273595 }
 
 type Props = MapProps
 
-export const shouldUseDarkMapTiles = (theme: string | null | undefined) => theme === 'dark'
+/**
+ * Базовая подложка карты всегда светлая (обычный цвет), независимо от темы
+ * приложения — по требованию пользователя. Хелпер сохранён для совместимости и
+ * всегда возвращает false; тёмными остаются только панели/контролы/маркеры.
+ */
+export const shouldUseDarkMapTiles = (_theme?: string | null) => false
 
 function safeInvoke(fn: (() => void) | undefined) {
   if (!fn) return
@@ -399,11 +404,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
   }, [errors?.routing])
 
   const customIcons = useLeafletIcons(L)
-  const useDarkMapTiles = shouldUseDarkMapTiles(themeContextValue.theme)
+  // Базовая подложка карты всегда светлая (обычный цвет), даже в тёмной теме UI.
   const { leafletBaseLayerRef, leafletOverlayLayersRef, leafletControlRef } = useMapInstance({
     map: mapInstance,
     L,
-    isDark: useDarkMapTiles,
   })
 
   // Expose marker index for MapUiApi.openPopupForCoord
@@ -426,7 +430,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
     leafletOverlayLayersRef,
     leafletControlRef,
     onRequestUserLocationFocus: centerOnUserLocation,
-    isDark: useDarkMapTiles,
   })
 
   // F-49 — report the map center (debounced) on pan/zoom end so the controller

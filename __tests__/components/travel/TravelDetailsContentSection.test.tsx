@@ -30,8 +30,6 @@ jest.mock('@/components/travel/details/TravelDetailsStyles', () => ({
     mobileInsightChipActive: {},
     mobileInsightChipText: {},
     mobileInsightChipTextActive: {},
-    mobileInsightChipBadge: {},
-    mobileInsightChipBadgeActive: {},
   }),
 }))
 

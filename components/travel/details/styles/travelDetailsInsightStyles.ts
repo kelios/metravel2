@@ -46,18 +46,4 @@ export const createTravelDetailsInsightStyles = (colors: ThemedColors) => ({
     color: colors.text,
     fontWeight: '600',
   },
-  mobileInsightChipBadge: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: colors.textMuted,
-    backgroundColor: colors.backgroundSecondary,
-    borderRadius: 8,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    overflow: 'hidden' as const,
-  },
-  mobileInsightChipBadgeActive: {
-    color: colors.text,
-    backgroundColor: colors.primarySoft,
-  },
 }) as const
