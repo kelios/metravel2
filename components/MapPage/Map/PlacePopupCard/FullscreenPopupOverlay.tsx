@@ -148,11 +148,12 @@ const FullscreenPopupOverlay: React.FC<{
             width: 44,
             height: 44,
             borderRadius: DESIGN_TOKENS.radii.full,
-            border: 'none',
-            backgroundColor: 'rgba(0,0,0,0.4)',
+            border: '1.5px solid rgba(255,255,255,0.85)',
+            backgroundColor: 'rgba(0,0,0,0.6)',
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
-            color: colors.textOnDark,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.45)',
+            color: '#fff',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -161,7 +162,7 @@ const FullscreenPopupOverlay: React.FC<{
             touchAction: 'manipulation',
           }}
         >
-          <Feather name="x" size={22} color={colors.textOnDark} />
+          <Feather name="x" size={22} color="#fff" />
         </button>
 
         {/* Expand image button */}

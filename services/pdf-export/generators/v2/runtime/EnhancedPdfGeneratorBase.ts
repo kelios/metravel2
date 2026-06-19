@@ -5,6 +5,7 @@ import type { BookSettings } from '@/components/export/BookSettingsModal';
 import type { TravelForBook } from '@/types/pdf-export';
 import type { GalleryLayout, CaptionPosition } from '@/types/pdf-gallery';
 import { getThemeConfig, type PdfThemeName } from '../../../themes/PdfThemeConfig';
+import { DEFAULT_FREE_PDF_THEME, isPremiumThemeName } from '../../../themes/themeTiers';
 import type { ContentParser, ParsedContentBlock } from '../../../parsers/ContentParser';
 import type { BlockRenderer } from '../../../renderers/BlockRenderer';
 import type { TravelQuote } from '../../../quotes/travelQuotes';
@@ -132,12 +133,33 @@ export class EnhancedPdfGeneratorBase {
   }
 
   /**
+   * Гейт премиум-темы: при !isPremium премиум-тема мягко даунгрейдится на free,
+   * чтобы генерация не падала. UI и так не даёт выбрать премиум не-премиуму —
+   * это страховка (#297). Перенастраивает theme/themeName на месте.
+   */
+  private applyPremiumThemeGate(isPremium: boolean): void {
+    if (isPremium) return;
+    if (!isPremiumThemeName(this.themeName)) return;
+
+    const requested = this.themeName;
+    this.themeName = DEFAULT_FREE_PDF_THEME;
+    this.theme = getThemeConfig(DEFAULT_FREE_PDF_THEME);
+    console.warn(
+      `[pdf-export] Премиум-тема "${requested}" недоступна без премиума — фолбэк на "${DEFAULT_FREE_PDF_THEME}"`
+    );
+  }
+
+  /**
    * Генерирует HTML для PDF книги
    */
   async generate(
     travels: TravelForBook[],
-    settings: BookSettings
+    settings: BookSettings,
+    options: { isPremium?: boolean } = {}
   ): Promise<string> {
+    const isPremium = options.isPremium !== false;
+    this.applyPremiumThemeGate(isPremium);
+
     await this.ensureParser();
     await this.ensureBlockRenderer();
     this.currentSettings = settings;
@@ -188,7 +210,7 @@ export class EnhancedPdfGeneratorBase {
     });
 
     // Собираем HTML
-    return this.buildHtmlDocument(pages, settings);
+    return this.buildHtmlDocument(pages, settings, isPremium);
   }
 
   /**
@@ -403,11 +425,12 @@ export class EnhancedPdfGeneratorBase {
   /**
    * Собирает HTML документ
    */
-  private buildHtmlDocument(pages: string[], settings: BookSettings): string {
+  private buildHtmlDocument(pages: string[], settings: BookSettings, isPremium: boolean): string {
     return buildPdfHtmlDocument({
       pages,
       settings,
       theme: this.theme,
+      isPremium,
       escapeHtml: (value) => this.escapeHtml(value),
     });
   }

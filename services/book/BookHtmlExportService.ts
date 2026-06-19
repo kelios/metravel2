@@ -5,6 +5,10 @@ import type { TravelForBook } from '@/types/pdf-export';
 import type { TravelDataTransformer } from '@/services/pdf-export/TravelDataTransformer';
 import type { EnhancedPdfGenerator } from '@/services/pdf-export/generators/EnhancedPdfGenerator';
 
+export interface BookHtmlExportOptions {
+  isPremium: boolean;
+}
+
 export class BookHtmlExportService {
   private dataTransformer: TravelDataTransformer | null = null;
 
@@ -14,7 +18,8 @@ export class BookHtmlExportService {
 
   async generateTravelsHtml(
     travels: Travel[],
-    settings: BookSettings
+    settings: BookSettings,
+    options: BookHtmlExportOptions = { isPremium: true }
   ): Promise<string> {
     if (Platform.OS !== 'web') {
       throw new Error('Book HTML preview is only available on web');
@@ -24,7 +29,7 @@ export class BookHtmlExportService {
     transformer.validate(travels);
     const travelsForBook = transformer.transform(travels);
 
-    const html = await this.generateHtmlFromTravelsForBook(travelsForBook, settings);
+    const html = await this.generateHtmlFromTravelsForBook(travelsForBook, settings, options);
 
     if (!html || html.trim().length === 0) {
       throw new Error('Сгенерированный HTML книги пуст');
@@ -41,10 +46,11 @@ export class BookHtmlExportService {
 
   private async generateHtmlFromTravelsForBook(
     travelsForBook: TravelForBook[],
-    settings: BookSettings
+    settings: BookSettings,
+    options: BookHtmlExportOptions
   ): Promise<string> {
     const generator = await this.getGenerator(settings.template);
-    return await generator.generate(travelsForBook, settings);
+    return await generator.generate(travelsForBook, settings, options);
   }
 
   private async getTransformer(): Promise<TravelDataTransformer> {

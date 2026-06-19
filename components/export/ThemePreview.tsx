@@ -1,10 +1,12 @@
 // components/export/ThemePreview.tsx
 // Компонент для предпросмотра тем PDF с миниатюрами
 
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, Platform, Modal } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
+import { usePdfPremium } from '@/hooks/usePdfPremium';
+import { isPremiumTheme } from '@/services/pdf-export/themes/themeTiers';
 
 export type PdfThemeName =
   | 'minimal'
@@ -331,11 +333,23 @@ export default function ThemePreview({
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const themes = Object.values(THEME_CATALOG);
+  const { isPremium, requireUnlock, trackPaywallView } = usePdfPremium();
+  const [paywallTheme, setPaywallTheme] = useState<ThemeInfo | null>(null);
+
+  const handleSelect = (theme: ThemeInfo) => {
+    const locked = !isPremium && isPremiumTheme(theme.id);
+    if (locked) {
+      trackPaywallView(theme.id);
+      setPaywallTheme(theme);
+      return;
+    }
+    onThemeSelect(theme.id);
+  };
 
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Выберите тему оформления</Text>
-      <ScrollView 
+      <ScrollView
         horizontal={compact}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={compact ? styles.horizontalScroll : styles.gridContainer}
@@ -345,25 +359,78 @@ export default function ThemePreview({
             key={theme.id}
             theme={theme}
             isSelected={selectedTheme === theme.id}
-            onSelect={() => onThemeSelect(theme.id)}
+            isLocked={!isPremium && isPremiumTheme(theme.id)}
+            onSelect={() => handleSelect(theme)}
             compact={compact}
             styles={styles}
           />
         ))}
       </ScrollView>
+
+      <PaywallSheet
+        theme={paywallTheme}
+        styles={styles}
+        onClose={() => setPaywallTheme(null)}
+        onUnlock={(name) => {
+          requireUnlock(name);
+          setPaywallTheme(null);
+        }}
+      />
     </View>
+  );
+}
+
+interface PaywallSheetProps {
+  theme: ThemeInfo | null;
+  styles: ReturnType<typeof createStyles>;
+  onClose: () => void;
+  onUnlock: (name: PdfThemeName) => void;
+}
+
+function PaywallSheet({ theme, styles, onClose, onUnlock }: PaywallSheetProps) {
+  return (
+    <Modal
+      visible={theme !== null}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <Pressable style={styles.paywallBackdrop} onPress={onClose}>
+        <Pressable style={styles.paywallCard} onPress={() => {}}>
+          <View style={styles.paywallIcon}>
+            <Feather name="lock" size={22} color={styles.paywallIconGlyph.color} />
+          </View>
+          <Text style={styles.paywallTitle}>Премиум-шаблон</Text>
+          <Text style={styles.paywallSubtitle}>
+            {theme
+              ? `Тема «${theme.name}» доступна в премиум-версии книги.`
+              : 'Эта тема доступна в премиум-версии книги.'}
+          </Text>
+          <Pressable
+            style={styles.paywallCta}
+            onPress={() => theme && onUnlock(theme.id)}
+          >
+            <Text style={styles.paywallCtaText}>Открыть премиум</Text>
+          </Pressable>
+          <Pressable style={styles.paywallDismiss} onPress={onClose}>
+            <Text style={styles.paywallDismissText}>Не сейчас</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
 interface ThemeCardProps {
   theme: ThemeInfo;
   isSelected: boolean;
+  isLocked: boolean;
   onSelect: () => void;
   compact: boolean;
   styles: ReturnType<typeof createStyles>;
 }
 
-function ThemeCard({ theme, isSelected, onSelect, compact, styles }: ThemeCardProps) {
+function ThemeCard({ theme, isSelected, isLocked, onSelect, compact, styles }: ThemeCardProps) {
   return (
     <Pressable
       style={[
@@ -431,9 +498,16 @@ function ThemeCard({ theme, isSelected, onSelect, compact, styles }: ThemeCardPr
       </View>
 
       {/* Индикатор выбора */}
-      {isSelected && (
+      {isSelected && !isLocked && (
         <View style={styles.selectedBadge}>
           <Feather name="check" size={16} color={styles.selectedBadgeText.color} />
+        </View>
+      )}
+
+      {/* Замок премиум-темы */}
+      {isLocked && (
+        <View style={styles.lockBadge}>
+          <Feather name="lock" size={14} color={styles.lockBadgeGlyph.color} />
         </View>
       )}
     </Pressable>
@@ -570,5 +644,89 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     color: colors.textOnPrimary,
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  lockBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: colors.boxShadows.medium } as any)
+      : { ...colors.shadows.medium }),
+  },
+  lockBadgeGlyph: {
+    color: colors.textMuted,
+  },
+  paywallBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  paywallCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: colors.boxShadows.heavy } as any)
+      : { ...colors.shadows.hover }),
+  },
+  paywallIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.surfaceMuted ?? colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  paywallIconGlyph: {
+    color: colors.primary,
+  },
+  paywallTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  paywallSubtitle: {
+    fontSize: 14,
+    color: colors.textMuted,
+    lineHeight: 20,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  paywallCta: {
+    alignSelf: 'stretch',
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  paywallCtaText: {
+    color: colors.textOnPrimary,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  paywallDismiss: {
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  paywallDismissText: {
+    color: colors.textTertiary,
+    fontSize: 13,
   },
 });

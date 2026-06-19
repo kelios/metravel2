@@ -14,6 +14,8 @@ export type BuildHtmlDocumentParams = {
   pages: string[]
   settings: BookSettings
   theme: RuntimeTheme
+  /** При false добавляется деликатный водяной знак «Создано на metravel.by» (#297). */
+  isPremium?: boolean
   escapeHtml: (value: string | null | undefined) => string
 }
 

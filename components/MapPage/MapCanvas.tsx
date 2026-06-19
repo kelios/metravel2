@@ -1,4 +1,5 @@
-import { Pressable, Text, View } from 'react-native'
+import { useEffect } from 'react'
+import { Platform, Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { formatRadiusLabel } from '@/constants/mapConfig'
@@ -10,6 +11,34 @@ import WeatherLegend from '@/components/MapPage/WeatherLegend'
 const PRESSED_OPACITY_06 = { opacity: 0.6 } as const
 
 const MAP_PANEL_PLACEHOLDER = <MapPageSkeleton inline />
+
+// Fix 1: «Искать в этой области» (zIndex 1001) paints over the open Leaflet place
+// popup (popup pane ~700), covering its title/actions. The button and the Leaflet
+// container share the `mapArea` ancestor, so a single `:has()` rule hides the button
+// while any popup is open. Injected once, web-only; scoped via the `[data-map-area]`
+// marker + the button's stable testID.
+const MAP_POPUP_CSS_ID = 'metravel-map-search-area-hide-on-popup'
+const MAP_POPUP_CSS =
+  // Fix 1: hide the search-area button while a popup is open.
+  '[data-map-area="true"]:has(.leaflet-popup) [data-testid="map-search-this-area-desktop"]' +
+  '{display:none !important;}' +
+  // Fix 3 (desktop popup): cap the popup content height with an internal scroll so
+  // expanding «Ещё» scrolls the caption/actions INSIDE the popup instead of growing
+  // it off-screen (the map no longer re-pans vertically — see useMapPopupAutoPan).
+  '.metravel-place-popup .leaflet-popup-content{max-height:calc(100dvh - 120px) !important;' +
+  'overflow-y:auto !important;-webkit-overflow-scrolling:touch !important;' +
+  'overscroll-behavior:contain !important;}'
+
+function useMapPopupCss() {
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return
+    if (document.getElementById(MAP_POPUP_CSS_ID)) return
+    const style = document.createElement('style')
+    style.id = MAP_POPUP_CSS_ID
+    style.textContent = MAP_POPUP_CSS
+    document.head.appendChild(style)
+  }, [])
+}
 
 type MapCanvasProps = {
   styles: any
@@ -48,8 +77,12 @@ export function MapCanvas({
   canSearchThisArea,
   onSearchThisArea,
 }: MapCanvasProps) {
+  useMapPopupCss()
   return (
-    <View style={styles.mapArea}>
+    <View
+      style={styles.mapArea}
+      {...(Platform.OS === 'web' ? ({ dataSet: { mapArea: 'true' } } as any) : null)}
+    >
       <MapLoadingBar visible={showProgress} />
       {isWeb && !isMobile && canSearchThisArea && !!onSearchThisArea && (
         <Pressable

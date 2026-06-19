@@ -43,6 +43,22 @@ type Props = {
   imageHeight?: number;
   compactLayout?: boolean;
   fullscreenOnMobile?: boolean;
+  /**
+   * Mobile bottom-sheet split (web): render a FIXED hero photo header with the
+   * caption/actions in a separate scrollable region below, so expanding «Ещё»
+   * scrolls the text UNDER a still photo (the photo never jerks). Used by
+   * `MapPlaceBottomCard`; desktop Leaflet popup / native keep the stacked layout.
+   */
+  bottomSheetSplit?: boolean;
+  /**
+   * Desktop Leaflet popup split (web): same FIXED hero photo header + scrollable
+   * caption/actions as `bottomSheetSplit`, but the popup has NO fixed outer height
+   * (content-driven, capped by CSS max-height). So the hero keeps its NATURAL height
+   * (`flexShrink:0`) instead of a percentage — only the lower region scrolls when
+   * «Ещё» expands, the photo stays pinned, and the popup box stays capped so Leaflet
+   * never re-pans. Used by the desktop MapPage popup; mobile uses `bottomSheetSplit`.
+   */
+  popupSplit?: boolean;
   onClose?: () => void;
   colors: ThemedColors;
   /**
@@ -89,12 +105,15 @@ const PlacePopupCard: React.FC<Props> = ({
   imageHeight: _imageHeight = 56,
   compactLayout = false,
   fullscreenOnMobile = false,
+  bottomSheetSplit = false,
+  popupSplit = false,
   onClose,
   colors,
   primaryActionOverride,
 }) => {
   const setCardRootNode = usePopupDomGuard();
   const [fullscreenVisible, setFullscreenVisible] = useState(false);
+  const [navExpanded, setNavExpanded] = useState(false);
 
   const {
     revealPopupImageOnLoadOnly,
@@ -117,7 +136,6 @@ const PlacePopupCard: React.FC<Props> = ({
 
   const {
     hasCoord,
-    normalizedArticleHref,
     hasDrivingInfo,
     drivingText,
     primaryAction,
@@ -178,7 +196,19 @@ const PlacePopupCard: React.FC<Props> = ({
 
   useEffect(() => {
     setFullscreenVisible(false);
+    setNavExpanded(false);
   }, [imageUrl]);
+
+  const toggleNav = useCallback(() => {
+    setNavExpanded((prev) => !prev);
+  }, []);
+
+  // The «Ещё» panel is navigation/share only — the article opens via its own round
+  // icon in the action row, so keep it out of the collapsible list.
+  const navActions = useMemo(
+    () => secondaryActions.filter((action) => action.key !== 'article'),
+    [secondaryActions],
+  );
 
   const topInfoSlot = useMemo(() => (
     <View style={styles.infoSection}>
@@ -190,28 +220,6 @@ const PlacePopupCard: React.FC<Props> = ({
         <Text style={styles.subtitleText} numberOfLines={useCompactLayout ? 2 : 1}>
           {displaySubtitle}
         </Text>
-      )}
-
-      {normalizedArticleHref && Platform.OS === 'web' && primaryAction?.onPress !== onOpenArticle && (
-        <View
-          style={styles.inlineLinkRow}
-          {...({
-            'data-card-action': 'true',
-          } as any)}
-        >
-          <a
-            href={normalizedArticleHref}
-            onClick={(event) => {
-              stopWebPopupEvent(event);
-              event.preventDefault();
-              onOpenArticle?.();
-            }}
-            style={styles.inlineLink as any}
-            aria-label="Открыть страницу точки"
-          >
-            Открыть страницу
-          </a>
-        </View>
       )}
 
       <View style={styles.metaRow}>
@@ -255,9 +263,6 @@ const PlacePopupCard: React.FC<Props> = ({
     hasDrivingInfo,
     isBottomCardLayout,
     isDrivingLoading,
-    normalizedArticleHref,
-    onOpenArticle,
-    primaryAction,
     styles,
     title,
     useCompactLayout,
@@ -280,7 +285,9 @@ const PlacePopupCard: React.FC<Props> = ({
       )}
 
       <View style={styles.actionsStack}>
-        {primaryAction && (
+        {primaryActionOverride && primaryAction ? (
+          // Feature popups (e.g. quest «Начать квест») keep the prominent CTA button;
+          // they don't expose the route/article/save/nav action set below.
           <CardActionPressable
             accessibilityLabel={primaryAction.accessibilityLabel}
             onPress={primaryAction.onPress}
@@ -293,77 +300,368 @@ const PlacePopupCard: React.FC<Props> = ({
             ]}
           >
             <Feather name={primaryAction.icon} size={15} color={colors.textOnPrimary ?? colors.textOnDark} />
-            <Text style={styles.primaryActionText}>{primaryAction.label}</Text>
+            <Text style={styles.primaryActionText} numberOfLines={1}>{primaryAction.label}</Text>
           </CardActionPressable>
+        ) : (
+          <>
+            <View style={styles.iconActionRow}>
+              {onBuildRoute && (
+                <CardActionPressable
+                  accessibilityLabel="Построить маршрут сюда"
+                  onPress={onBuildRoute}
+                  title={POPUP_TOOLTIPS.buildRoute}
+                  testID="popup-primary-action"
+                  enableWebClickFallback
+                  style={({ pressed }) => [styles.iconActionBtn, pressed && styles.iconActionBtnPressed]}
+                >
+                  <View style={[styles.iconActionBubble, styles.iconActionBubblePrimary]}>
+                    <Feather name="corner-up-right" size={20} color={colors.textOnPrimary ?? colors.textOnDark} />
+                  </View>
+                  <View style={styles.iconActionLabelRow}>
+                    <Text style={styles.iconActionLabel} numberOfLines={1}>Маршрут</Text>
+                  </View>
+                </CardActionPressable>
+              )}
+
+              {!!articleHref && !!onOpenArticle && (
+                <CardActionPressable
+                  accessibilityLabel="Открыть статью"
+                  onPress={onOpenArticle}
+                  title={POPUP_TOOLTIPS.openArticle}
+                  enableWebClickFallback
+                  style={({ pressed }) => [styles.iconActionBtn, pressed && styles.iconActionBtnPressed]}
+                >
+                  <View style={styles.iconActionBubble}>
+                    <Feather name="book-open" size={19} color={colors.primary} />
+                  </View>
+                  <View style={styles.iconActionLabelRow}>
+                    <Text style={styles.iconActionLabel} numberOfLines={1}>Страница</Text>
+                  </View>
+                </CardActionPressable>
+              )}
+
+              {onAddPoint && (
+                <CardActionPressable
+                  accessibilityLabel={compactLabel}
+                  onPress={() => void onAddPoint()}
+                  disabled={addDisabled || isAdding}
+                  title={addTooltip ?? compactLabel}
+                  enableWebClickFallback
+                  style={({ pressed }) => [
+                    styles.iconActionBtn,
+                    (addDisabled || isAdding) && styles.addBtnDisabled,
+                    pressed && styles.iconActionBtnPressed,
+                  ]}
+                >
+                  <View style={styles.iconActionBubble}>
+                    {isAdding ? (
+                      <ActivityIndicator size="small" color={saveActionVisual.iconColor} />
+                    ) : (
+                      <Feather name={saveActionVisual.icon} size={19} color={saveActionVisual.iconColor} />
+                    )}
+                  </View>
+                  <View style={styles.iconActionLabelRow}>
+                    <Text style={styles.iconActionLabel} numberOfLines={1}>{compactLabel}</Text>
+                  </View>
+                </CardActionPressable>
+              )}
+
+              {navActions.length > 0 && (
+                <CardActionPressable
+                  accessibilityLabel={navExpanded ? 'Скрыть способы навигации' : 'Показать способы навигации'}
+                  accessibilityState={{ expanded: navExpanded }}
+                  onPress={toggleNav}
+                  title={POPUP_TOOLTIPS.moreNavigation}
+                  enableWebClickFallback
+                  style={({ pressed }) => [styles.iconActionBtn, pressed && styles.iconActionBtnPressed]}
+                >
+                  <View style={[styles.iconActionBubble, navExpanded && styles.iconActionBubbleActive]}>
+                    <Feather name="navigation" size={19} color={colors.text} />
+                  </View>
+                  <View style={styles.iconActionLabelRow}>
+                    <Text style={styles.iconActionLabel} numberOfLines={1}>Ещё</Text>
+                    <Feather name={navExpanded ? 'chevron-up' : 'chevron-down'} size={13} color={colors.textMuted} />
+                  </View>
+                </CardActionPressable>
+              )}
+            </View>
+
+            {navExpanded && navActions.length > 0 && (
+              <View style={styles.navGrid}>
+                {navActions.map((action) => (
+                  <CardActionPressable
+                    key={action.key}
+                    accessibilityLabel={action.accessibilityLabel}
+                    onPress={action.onPress}
+                    title={action.title}
+                    enableWebClickFallback
+                    style={({ pressed }) => [styles.navGridItem, pressed && styles.iconActionBtnPressed]}
+                  >
+                    <View style={[styles.iconActionBubble, { backgroundColor: action.tintBg, borderColor: action.tintBg }]}>
+                      <Feather name={action.icon} size={19} color={action.iconColor} />
+                    </View>
+                    <Text style={styles.iconActionLabel} numberOfLines={1}>
+                      {action.label}
+                    </Text>
+                  </CardActionPressable>
+                ))}
+              </View>
+            )}
+          </>
         )}
-
-        <View style={styles.secondaryActionsRow}>
-          {secondaryActions.map((action) => (
-            <CardActionPressable
-              key={action.key}
-              accessibilityLabel={action.accessibilityLabel}
-              onPress={action.onPress}
-              title={action.title}
-              enableWebClickFallback
-              style={({ pressed }) => [
-                styles.chipActionBtn,
-                pressed && styles.chipActionBtnPressed,
-              ]}
-            >
-              <View style={[styles.chipIconBubble, { backgroundColor: action.tintBg }]}>
-                <Feather name={action.icon} size={16} color={action.iconColor} />
-              </View>
-              <Text style={styles.chipActionText} numberOfLines={1}>
-                {action.label}
-              </Text>
-            </CardActionPressable>
-          ))}
-
-          {onAddPoint && (
-            <CardActionPressable
-              accessibilityLabel={compactLabel}
-              onPress={() => void onAddPoint()}
-              disabled={addDisabled || isAdding}
-              title={addTooltip ?? compactLabel}
-              enableWebClickFallback
-              style={({ pressed }) => [
-                styles.chipActionBtn,
-                (addDisabled || isAdding) && styles.addBtnDisabled,
-                pressed && styles.chipActionBtnPressed,
-              ]}
-            >
-              <View style={[styles.chipIconBubble, { backgroundColor: saveActionVisual.tintBg }]}>
-                {isAdding ? (
-                  <ActivityIndicator size="small" color={saveActionVisual.iconColor} />
-                ) : (
-                  <Feather name={saveActionVisual.icon} size={16} color={saveActionVisual.iconColor} />
-                )}
-              </View>
-              <Text style={styles.chipActionText} numberOfLines={1}>
-                {compactLabel}
-              </Text>
-            </CardActionPressable>
-          )}
-        </View>
       </View>
     </View>
   ), [
-    secondaryActions,
+    navActions,
     addDisabled,
     addTooltip,
+    articleHref,
+    colors.primary,
+    colors.text,
     colors.textMuted,
     compactLabel,
     displayCoord,
     hasCoord,
     isAdding,
+    navExpanded,
     onAddPoint,
+    onBuildRoute,
     onCopyCoord,
+    onOpenArticle,
     primaryAction,
+    primaryActionOverride,
     saveActionVisual,
     styles,
+    toggleNav,
     colors.textOnDark,
     colors.textOnPrimary,
   ]);
+
+  const relatedTravelOverlays = relatedTravelUrl ? (
+    <>
+      {isBottomCardLayout ? (
+        // Soft scrim so the semi-transparent ♥/＋ buttons stay readable over busy
+        // photos in the mobile bottom card (scoped — desktop popup unchanged).
+        <View
+          pointerEvents="none"
+          style={styles.relatedTravelScrim}
+          {...(Platform.OS === 'web' ? ({ 'aria-hidden': 'true' } as any) : null)}
+        />
+      ) : null}
+      <View style={styles.relatedTravelActions} pointerEvents="box-none">
+        <RelatedTravelActionStack
+          relatedTravelUrl={relatedTravelUrl}
+          fallbackTitle={title}
+          fallbackImageUrl={imageUrl}
+          fallbackCountry={relatedTravelCountry}
+          fallbackCity={relatedTravelCity}
+        />
+      </View>
+    </>
+  ) : null;
+
+  const heroImage = imageUrl ? (
+    <Pressable
+      onPress={handleOpenFullscreen}
+      onMouseDown={stopWebPopupEvent as any}
+      onPointerDown={stopWebPopupEvent as any}
+      onTouchStart={stopWebPopupEvent as any}
+      accessibilityRole="button"
+      accessibilityLabel="Открыть фото на весь экран"
+      {...(Platform.OS === 'web'
+        ? ({
+            'data-card-action': 'true',
+            title: POPUP_TOOLTIPS.openPhoto,
+            onMouseDownCapture: handleOpenFullscreen,
+            onPointerDownCapture: handleOpenFullscreen,
+            onClickCapture: handleOpenFullscreen,
+            onTouchStartCapture: stopWebPopupEvent,
+            onTouchEndCapture: handleOpenFullscreen,
+          } as any)
+        : null)}
+      style={({ pressed, hovered }: any) => [
+        styles.imageContainer,
+        useSplitLayout && styles.imageContainerSplit,
+        // Bottom-sheet split: fill the fixed hero header (62% of the sheet) instead
+        // of the card's own fixed photo height, so the photo never jerks/leaves a gap.
+        // Desktop popup split: hero container has a fixed natural height — fill it.
+        (bottomSheetSplit || popupSplit) && Platform.OS === 'web' ? styles.imageContainerFill : null,
+        hovered && styles.imageContainerHovered,
+        pressed && styles.imageContainerPressed,
+      ]}
+    >
+      {({ pressed, hovered }: any) => (
+        <>
+          <ImageCardMedia
+            src={imageUrl}
+            alt={title}
+            fit="contain"
+            blurBackground
+            allowCriticalWebBlur
+            revealOnLoadOnly={revealPopupImageOnLoadOnly}
+            priority="high"
+            loading="eager"
+            optimizeWeb={false}
+            style={StyleSheet.absoluteFill}
+          />
+          {Platform.OS === 'web' ? (
+            <span
+              data-card-action="true"
+              aria-hidden="true"
+              title={POPUP_TOOLTIPS.openPhoto}
+              onMouseDownCapture={handleOpenFullscreen}
+              onPointerDownCapture={handleOpenFullscreen}
+              onClickCapture={handleOpenFullscreen}
+              onTouchStartCapture={stopWebPopupEvent as any}
+              onTouchEndCapture={handleOpenFullscreen}
+              onClick={handleOpenFullscreen}
+              onMouseDown={stopWebPopupEvent as any}
+              onPointerDown={stopWebPopupEvent as any}
+              onTouchStart={stopWebPopupEvent as any}
+              onTouchEnd={handleOpenFullscreen}
+              style={{
+                position: 'absolute',
+                bottom: useCompactLayout ? 8 : 10,
+                right: useCompactLayout ? 8 : 10,
+                width: useCompactLayout ? 30 : 34,
+                height: useCompactLayout ? 30 : 34,
+                borderRadius: 9999,
+                border: 'none',
+                padding: 0,
+                backgroundColor: pressed
+                  ? 'rgba(15,23,42,0.85)'
+                  : hovered
+                    ? 'rgba(15,23,42,0.78)'
+                    : 'rgba(15,23,42,0.58)',
+                color: colors.textOnDark,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                transform: pressed ? 'scale(0.94)' : hovered ? 'scale(1.06)' : 'scale(1)',
+                transition: 'background-color 0.15s ease, transform 0.15s ease',
+              }}
+            >
+              <Feather name="maximize-2" size={16} color={colors.textOnDark} />
+            </span>
+          ) : (
+            <View
+              pointerEvents="none"
+              style={[
+                styles.imageExpandButton,
+                hovered && styles.imageExpandButtonHovered,
+                pressed && styles.imageExpandButtonPressed,
+              ]}
+            >
+              <Feather name="maximize-2" size={16} color={colors.textOnDark} />
+            </View>
+          )}
+        </>
+      )}
+    </Pressable>
+  ) : null;
+
+  // Mobile bottom-sheet split (web): FIXED hero header + scrollable caption/actions.
+  // The photo stays pinned while the text scrolls beneath it, so expanding «Ещё»
+  // never jerks the photo. The hero keeps contain+blur (ImageCardMedia) intact.
+  if (bottomSheetSplit && Platform.OS === 'web') {
+    return (
+      <>
+        <View
+          ref={setCardRootNode}
+          style={styles.splitRoot}
+          {...({
+            onClick: stopWebPopupEvent,
+            onMouseDown: stopWebPopupEvent,
+            onMouseUp: stopWebPopupEvent,
+            onPointerDown: stopWebPopupEvent,
+            onPointerUp: stopWebPopupEvent,
+            onTouchStart: stopWebPopupEvent,
+            onTouchEnd: stopWebPopupEvent,
+          } as any)}
+        >
+          <View style={styles.splitHero}>
+            {relatedTravelOverlays}
+            {heroImage}
+          </View>
+          <View
+            style={styles.splitScroll}
+            {...({ 'data-card-action': 'true' } as any)}
+          >
+            <View style={styles.splitContentPadding}>
+              {topInfoSlot}
+            </View>
+            <View style={styles.footerContainer}>
+              {footerSlot}
+            </View>
+          </View>
+        </View>
+
+        {imageUrl && (
+          <FullscreenImageViewer
+            imageUrl={imageUrl}
+            alt={title || 'Point image'}
+            visible={fullscreenVisible}
+            onClose={handleCloseFullscreen}
+            colors={colors}
+          />
+        )}
+      </>
+    );
+  }
+
+  // Desktop Leaflet popup split (web): FIXED natural-height hero + scrollable
+  // caption/actions. The popup box is height-capped by CSS (max-height), so expanding
+  // «Ещё» scrolls only the body UNDER a pinned photo — the popup never grows off-screen
+  // and Leaflet never re-pans. Only used when there's a photo to pin; image-less popups
+  // fall through to the stacked layout below. Hero keeps contain+blur (ImageCardMedia).
+  if (popupSplit && imageUrl && !useFullscreenMobileOverlay && Platform.OS === 'web') {
+    return (
+      <>
+        <View
+          ref={setCardRootNode}
+          style={[styles.popupSplitRoot, { maxWidth: maxPopupWidth }]}
+          {...({
+            onClick: stopWebPopupEvent,
+            onMouseDown: stopWebPopupEvent,
+            onMouseUp: stopWebPopupEvent,
+            onPointerDown: stopWebPopupEvent,
+            onPointerUp: stopWebPopupEvent,
+            onTouchStart: stopWebPopupEvent,
+            onTouchEnd: stopWebPopupEvent,
+          } as any)}
+        >
+          <View style={styles.popupSplitHero}>
+            {relatedTravelOverlays}
+            {heroImage}
+          </View>
+          <View
+            style={styles.popupSplitScroll}
+            {...({ 'data-card-action': 'true' } as any)}
+          >
+            <View style={styles.splitContentPadding}>
+              {topInfoSlot}
+            </View>
+            <View style={styles.footerContainer}>
+              {footerSlot}
+            </View>
+          </View>
+        </View>
+
+        {imageUrl && (
+          <FullscreenImageViewer
+            imageUrl={imageUrl}
+            alt={title || 'Point image'}
+            visible={fullscreenVisible}
+            onClose={handleCloseFullscreen}
+            colors={colors}
+          />
+        )}
+      </>
+    );
+  }
 
   const cardBody = (
     <View
@@ -382,125 +680,9 @@ const PlacePopupCard: React.FC<Props> = ({
         : null)}
     >
       <View style={styles.popupCard}>
-        {relatedTravelUrl && isBottomCardLayout ? (
-          // Soft scrim so the semi-transparent ♥/＋ buttons stay readable over busy
-          // photos in the mobile bottom card (scoped — desktop popup unchanged).
-          <View
-            pointerEvents="none"
-            style={styles.relatedTravelScrim}
-            {...(Platform.OS === 'web' ? ({ 'aria-hidden': 'true' } as any) : null)}
-          />
-        ) : null}
-        {relatedTravelUrl ? (
-          <View style={styles.relatedTravelActions} pointerEvents="box-none">
-            <RelatedTravelActionStack
-              relatedTravelUrl={relatedTravelUrl}
-              fallbackTitle={title}
-              fallbackImageUrl={imageUrl}
-              fallbackCountry={relatedTravelCountry}
-              fallbackCity={relatedTravelCity}
-            />
-          </View>
-        ) : null}
+        {relatedTravelOverlays}
         <View style={[styles.topSection, useSplitLayout && styles.topSectionSplit]}>
-          {imageUrl && (
-            <Pressable
-              onPress={handleOpenFullscreen}
-              onMouseDown={stopWebPopupEvent as any}
-              onPointerDown={stopWebPopupEvent as any}
-              onTouchStart={stopWebPopupEvent as any}
-              accessibilityRole="button"
-              accessibilityLabel="Открыть фото на весь экран"
-              {...(Platform.OS === 'web'
-                ? ({
-                    'data-card-action': 'true',
-                    title: POPUP_TOOLTIPS.openPhoto,
-                    onMouseDownCapture: handleOpenFullscreen,
-                    onPointerDownCapture: handleOpenFullscreen,
-                    onClickCapture: handleOpenFullscreen,
-                    onTouchStartCapture: stopWebPopupEvent,
-                    onTouchEndCapture: handleOpenFullscreen,
-                  } as any)
-                : null)}
-              style={({ pressed, hovered }: any) => [
-                styles.imageContainer,
-                useSplitLayout && styles.imageContainerSplit,
-                hovered && styles.imageContainerHovered,
-                pressed && styles.imageContainerPressed,
-              ]}
-            >
-              {({ pressed, hovered }: any) => (
-                <>
-                  <ImageCardMedia
-                    src={imageUrl}
-                    alt={title}
-                    fit="contain"
-                    blurBackground
-                    allowCriticalWebBlur
-                    revealOnLoadOnly={revealPopupImageOnLoadOnly}
-                    priority="high"
-                    loading="eager"
-                    optimizeWeb={false}
-                    style={StyleSheet.absoluteFill}
-                  />
-                  {Platform.OS === 'web' ? (
-                    <span
-                      data-card-action="true"
-                      aria-hidden="true"
-                      title={POPUP_TOOLTIPS.openPhoto}
-                      onMouseDownCapture={handleOpenFullscreen}
-                      onPointerDownCapture={handleOpenFullscreen}
-                      onClickCapture={handleOpenFullscreen}
-                      onTouchStartCapture={stopWebPopupEvent as any}
-                      onTouchEndCapture={handleOpenFullscreen}
-                      onClick={handleOpenFullscreen}
-                      onMouseDown={stopWebPopupEvent as any}
-                      onPointerDown={stopWebPopupEvent as any}
-                      onTouchStart={stopWebPopupEvent as any}
-                      onTouchEnd={handleOpenFullscreen}
-                      style={{
-                        position: 'absolute',
-                        bottom: useCompactLayout ? 8 : 10,
-                        right: useCompactLayout ? 8 : 10,
-                        width: useCompactLayout ? 30 : 34,
-                        height: useCompactLayout ? 30 : 34,
-                        borderRadius: 9999,
-                        border: 'none',
-                        padding: 0,
-                        backgroundColor: pressed
-                          ? 'rgba(15,23,42,0.85)'
-                          : hovered
-                            ? 'rgba(15,23,42,0.78)'
-                            : 'rgba(15,23,42,0.58)',
-                        color: colors.textOnDark,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backdropFilter: 'blur(8px)',
-                        WebkitBackdropFilter: 'blur(8px)',
-                        transform: pressed ? 'scale(0.94)' : hovered ? 'scale(1.06)' : 'scale(1)',
-                        transition: 'background-color 0.15s ease, transform 0.15s ease',
-                      }}
-                    >
-                      <Feather name="maximize-2" size={16} color={colors.textOnDark} />
-                    </span>
-                  ) : (
-                    <View
-                      pointerEvents="none"
-                      style={[
-                        styles.imageExpandButton,
-                        hovered && styles.imageExpandButtonHovered,
-                        pressed && styles.imageExpandButtonPressed,
-                      ]}
-                    >
-                      <Feather name="maximize-2" size={16} color={colors.textOnDark} />
-                    </View>
-                  )}
-                </>
-              )}
-            </Pressable>
-          )}
+          {heroImage}
 
           <View style={[styles.contentContainer, useSplitLayout && styles.contentContainerSplit]}>
             {topInfoSlot}

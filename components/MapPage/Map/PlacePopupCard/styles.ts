@@ -42,6 +42,86 @@ export const getStyles = (
       minWidth: 0,
       alignSelf: 'stretch',
     },
+    // Mobile bottom-sheet split (web only): the card fills the parent sheet as a
+    // flex column — a FIXED hero on top and a scrollable caption/actions region
+    // below. The photo stays pinned; expanding «Ещё» only scrolls the body.
+    splitRoot: {
+      width: '100%',
+      flex: 1,
+      minHeight: 0,
+      backgroundColor: colors.surface,
+      ...(Platform.OS === 'web' ? ({ display: 'flex', flexDirection: 'column' } as any) : null),
+    },
+    splitHero: {
+      width: '100%',
+      position: 'relative',
+      backgroundColor: colors.backgroundSecondary ?? colors.surface,
+      overflow: 'hidden',
+      // Photo is the dominant element (~62% of the sheet) and never scrolls.
+      ...(Platform.OS === 'web'
+        ? ({ flex: '0 0 62%', maxHeight: '62%', minHeight: '46%' } as any)
+        : null),
+    },
+    // Desktop Leaflet popup split: unlike the mobile sheet, the popup has NO fixed
+    // outer height (content-driven, capped by CSS max-height). So the hero keeps its
+    // NATURAL height and never shrinks — only the caption/actions body scrolls.
+    popupSplitRoot: {
+      width: '100%',
+      minHeight: 0,
+      backgroundColor: colors.surface,
+      ...(Platform.OS === 'web'
+        ? ({
+            display: 'flex',
+            flexDirection: 'column',
+            // Fill the (CSS-capped) `.leaflet-popup-content` flex column so the inner
+            // body can claim the leftover height and scroll under the fixed hero.
+            flex: '1 1 auto',
+            maxHeight: '100%',
+          } as any)
+        : null),
+    },
+    popupSplitHero: {
+      width: '100%',
+      position: 'relative',
+      height: heroHeight > 0 ? heroHeight : undefined,
+      backgroundColor: colors.backgroundSecondary ?? colors.surface,
+      overflow: 'hidden',
+      ...(Platform.OS === 'web' ? ({ flexShrink: 0 } as any) : null),
+    },
+    splitScroll: {
+      width: '100%',
+      ...(Platform.OS === 'web'
+        ? ({
+            flex: '1 1 auto',
+            minHeight: 0,
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            overscrollBehavior: 'contain',
+          } as any)
+        : null),
+    },
+    // Desktop Leaflet popup scroll body. The popup `.leaflet-popup-content` has only
+    // a `max-height` (no definite height), so a `flex:1` child can't resolve a bounded
+    // height to scroll within — it would grow and get clipped. Give the body an explicit
+    // max-height of (content cap − fixed hero height) so ONLY this region scrolls while
+    // the photo stays pinned. The cap mirrors the CSS in utils/ensureLeafletCss.ts.
+    popupSplitScroll: {
+      width: '100%',
+      ...(Platform.OS === 'web'
+        ? ({
+            flexShrink: 1,
+            minHeight: 0,
+            maxHeight: `calc(min(660px, 100dvh - 160px) - ${heroHeight > 0 ? heroHeight : 248}px)`,
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            overscrollBehavior: 'contain',
+          } as any)
+        : null),
+    },
+    splitContentPadding: {
+      paddingHorizontal: horizontalPadding,
+      paddingTop: 12,
+    },
     popupCard: {
       width: '100%',
       backgroundColor: colors.surface,
@@ -107,6 +187,14 @@ export const getStyles = (
       // hero image is clickable to open the fullscreen viewer (do not gate it
       // behind hover state — touch users never hover).
       ...(Platform.OS === 'web' ? ({ cursor: 'zoom-in' } as any) : null),
+    },
+    // Bottom-sheet split (web): the hero fills its fixed 62% header instead of using
+    // the card's own fixed photo height, so it stays pinned and gap-free while the
+    // caption/actions scroll beneath it. ImageCardMedia keeps contain+blur.
+    imageContainerFill: {
+      ...(Platform.OS === 'web'
+        ? ({ width: '100%', height: '100%', minHeight: 0, flex: 1 } as any)
+        : null),
     },
     imageContainerSplit: {
       width: heroWidth,
@@ -228,31 +316,6 @@ export const getStyles = (
           } as any)
         : null),
     },
-    inlineLinkRow: {
-      alignItems: 'flex-start',
-    },
-    inlineLink: {
-      color: colors.primaryDark ?? colors.primary,
-      fontSize: compactLayout ? fs.small : fs.small + 1,
-      fontWeight: '800',
-      textDecorationLine: 'none',
-      paddingHorizontal: compactLayout ? 10 : 12,
-      paddingVertical: compactLayout ? 6 : 7,
-      borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: colors.primarySoft ?? colors.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: colors.primaryAlpha30 ?? colors.borderLight,
-      ...(Platform.OS === 'web'
-        ? ({
-          cursor: 'pointer',
-          display: 'inline-flex',
-          alignItems: 'center',
-          minHeight: compactLayout ? 30 : 34,
-          lineHeight: 1.2,
-          transition: 'background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease',
-        } as any)
-        : null),
-    },
     categoryText: {
       fontSize: compactLayout ? fs.small - 1 : fs.small,
       color: colors.textMuted,
@@ -299,51 +362,80 @@ export const getStyles = (
     actionsStack: {
       gap: bottomCardLayout ? 8 : splitLayout ? 8 : 10,
     },
+    iconActionRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: 4,
+      paddingHorizontal: 2,
+    },
+    iconActionBtn: {
+      flex: 1,
+      flexBasis: 0,
+      alignItems: 'center',
+      gap: 6,
+      paddingVertical: 2,
+      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+    },
+    iconActionBubble: {
+      width: compactLayout ? 44 : 46,
+      height: compactLayout ? 44 : 46,
+      borderRadius: DESIGN_TOKENS.radii.full,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.backgroundSecondary ?? colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight ?? colors.border,
+      ...(Platform.OS === 'web'
+        ? ({ transition: 'background-color 0.15s ease, transform 0.15s ease, border-color 0.15s ease' } as any)
+        : null),
+    },
+    iconActionBubblePrimary: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    iconActionBubbleActive: {
+      backgroundColor: colors.primarySoft ?? colors.backgroundSecondary,
+      borderColor: colors.primaryAlpha30 ?? colors.primarySoft ?? colors.borderLight,
+    },
+    iconActionBtnPressed: {
+      opacity: 0.7,
+      transform: [{ scale: 0.94 }],
+    },
+    iconActionLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+    },
+    iconActionLabel: {
+      fontSize: compactLayout ? 11 : 12,
+      lineHeight: (compactLayout ? 11 : 12) * 1.2,
+      fontWeight: '600',
+      color: colors.text,
+      textAlign: 'center',
+    },
+    navGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'flex-start',
+      rowGap: 8,
+      marginTop: 2,
+      paddingTop: 8,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.borderLight ?? colors.border,
+    },
+    navGridItem: {
+      width: '25%',
+      alignItems: 'center',
+      gap: 6,
+      paddingVertical: 2,
+      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+    },
     actionSummaryText: {
       fontSize: compactLayout ? fs.small - 1 : fs.small,
       lineHeight: (compactLayout ? fs.small - 1 : fs.small) * 1.35,
       color: colors.textMuted,
       fontWeight: '500',
-    },
-    secondaryActionsRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      alignItems: 'flex-start',
-      // Bottom card: spread the 6 action chips evenly across one row so «Сохранить»
-      // does not wrap onto its own line and steal vertical space from the photo.
-      justifyContent: bottomCardLayout ? 'space-between' : 'flex-start',
-      gap: bottomCardLayout ? 2 : splitLayout ? 6 : compactLayout ? 6 : 8,
-    },
-    chipActionBtn: {
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'flex-start',
-      gap: bottomCardLayout ? 3 : 4,
-      width: bottomCardLayout ? 56 : compactLayout ? 64 : 68,
-      paddingVertical: bottomCardLayout ? 2 : 4,
-      paddingHorizontal: 2,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      ...(Platform.OS === 'web'
-        ? ({ cursor: 'pointer', transition: 'background-color 0.15s ease, transform 0.15s ease' } as any)
-        : null),
-    },
-    chipActionBtnPressed: {
-      opacity: 0.7,
-      transform: [{ scale: 0.95 }],
-    },
-    chipIconBubble: {
-      width: bottomCardLayout ? 38 : compactLayout ? 34 : 38,
-      height: bottomCardLayout ? 38 : compactLayout ? 34 : 38,
-      borderRadius: DESIGN_TOKENS.radii.full,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    chipActionText: {
-      fontSize: compactLayout ? 10 : 11,
-      lineHeight: (compactLayout ? 10 : 11) * 1.25,
-      fontWeight: '600',
-      color: colors.text,
-      textAlign: 'center',
     },
     hoverActionWrap: {
       position: 'relative',

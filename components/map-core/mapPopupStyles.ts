@@ -26,14 +26,23 @@ ${cssScope} .leaflet-popup-content-wrapper {
   border-radius: ${DESIGN_TOKENS.radii.xl}px !important;
   box-shadow: none !important;
   border: 0 !important;
-  max-height: 460px !important;
+  /* Let the (compact) card define its own height; auto-pan keeps it in view.
+     The viewport-relative cap only kicks in for pathologically tall content,
+     so the normal popup (incl. the expanded «Ещё» grid) never scrolls. */
+  max-height: calc(100vh - 36px) !important;
   overflow: hidden !important;
 }
 ${cssScope} .leaflet-popup-content {
   margin: 0 !important;
   color: ${colors.text} !important;
-  max-height: 440px !important;
-  overflow-y: auto !important;
+  /* Non-scrolling flex column capped by max-height: the inner split body
+     (.splitScroll) carries the scroll, so expanding «Ещё» scrolls only the
+     caption/actions UNDER the fixed hero photo. The popup box stays capped, so
+     Leaflet doesn't re-pan. Stacked / image-less popups stay short under the cap. */
+  max-height: calc(100vh - 48px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
   width: min(var(--metravel-popup-content-max-width, 352px), calc(100vw - 48px)) !important;
   max-width: min(var(--metravel-popup-content-max-width, 352px), calc(100vw - 48px)) !important;
   border-radius: ${DESIGN_TOKENS.radii.xl}px !important;
@@ -66,12 +75,14 @@ ${cssScope} .leaflet-popup-close-button:hover {
     max-width: 92vw !important;
   }
   ${cssScope} .leaflet-popup-content-wrapper {
-    max-height: 66vh !important;
+    /* Let the card grow so the expanded «Ещё» list shows in full; Leaflet auto-pans
+       it into view. Inner scroll only kicks in for very tall content on tiny screens. */
+    max-height: 88vh !important;
   }
   ${cssScope} .leaflet-popup-content {
     width: min(var(--metravel-popup-content-max-width, 320px), calc(100vw - 32px)) !important;
     max-width: min(var(--metravel-popup-content-max-width, 320px), calc(100vw - 32px)) !important;
-    max-height: 66vh !important;
+    max-height: 86vh !important;
     margin: 0 !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
@@ -82,13 +93,15 @@ ${cssScope} .leaflet-popup-close-button:hover {
     max-width: calc(100vw - 12px) !important;
   }
   ${cssScope} .leaflet-popup-content-wrapper {
-    max-height: 62vh !important;
+    max-height: 86vh !important;
   }
   ${cssScope} .leaflet-popup-content {
     width: min(var(--metravel-popup-content-max-width, 286px), calc(100vw - 20px)) !important;
     max-width: min(var(--metravel-popup-content-max-width, 286px), calc(100vw - 20px)) !important;
-    max-height: 62vh !important;
+    max-height: 84vh !important;
     margin: 0 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
   }
 }
 @media (max-width: 560px) {

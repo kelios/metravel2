@@ -7,6 +7,7 @@ import { ExportStage } from '@/types/pdf-export';
 import type { ExportConfig } from '@/types/pdf-export';
 import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 import type { BookHtmlExportService } from '@/services/book/BookHtmlExportService';
+import { activePdfEntitlementSource } from '@/services/pdf-export/entitlement/PdfEntitlementSource';
 
 type UpdateProgress = (
   stage: ExportStage,
@@ -216,6 +217,8 @@ export async function runPdfExport({
       return;
     }
 
+    const isPremium = activePdfEntitlementSource.getIsPremium();
+
     updateProgress(ExportStage.VALIDATING, 5, 'Данные проверены', ['Проверка путешествий ✓']);
     updateProgress(ExportStage.TRANSFORMING, 7, 'Подготовка контента...', [
       'Нормализация данных',
@@ -227,7 +230,7 @@ export async function runPdfExport({
       `Путешествия (0/${travelsForExport.length})`,
     ]);
 
-    const html = await htmlService.generateTravelsHtml(travelsForExport, settings);
+    const html = await htmlService.generateTravelsHtml(travelsForExport, settings, { isPremium });
 
     updateProgress(ExportStage.GENERATING_HTML, 30, 'Страницы сгенерированы', [
       'Обложка ✓',

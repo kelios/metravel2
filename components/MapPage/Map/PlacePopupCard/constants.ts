@@ -10,6 +10,7 @@ export const POPUP_TOOLTIPS = {
   shareTelegram: 'Поделиться точкой в Telegram',
   openArticle: 'Открыть статью по точке',
   buildRoute: 'Построить маршрут сюда',
+  moreNavigation: 'Открыть в навигаторе или поделиться',
 } as const;
 
 export const escapeCssUrlString = (value: string): string =>

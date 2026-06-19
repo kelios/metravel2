@@ -28,6 +28,10 @@ interface CreatePopupComponentArgs {
   userLocationRef?: React.MutableRefObject<{ lat: number; lng: number } | null | undefined>;
   compactLayout?: boolean;
   fullscreenOnMobile?: boolean;
+  /** Web mobile bottom-sheet split: fixed hero photo + scrollable caption/actions. */
+  bottomSheetSplit?: boolean;
+  /** Web desktop popup split: fixed natural-height hero photo + scrollable body. */
+  popupSplit?: boolean;
   invalidateUserPoints?: () => void;
   colors: ThemedColors;
   themeContextValue: ThemeContextType;
@@ -38,6 +42,8 @@ export const createMapPopupComponent = ({
   userLocationRef,
   compactLayout = false,
   fullscreenOnMobile = false,
+  bottomSheetSplit = false,
+  popupSplit = false,
   invalidateUserPoints,
   colors,
   themeContextValue,
@@ -372,6 +378,8 @@ export const createMapPopupComponent = ({
           isAdding={isAdding}
           compactLayout={compactLayout}
           fullscreenOnMobile={fullscreenOnMobile}
+          bottomSheetSplit={bottomSheetSplit}
+          popupSplit={popupSplit}
           onClose={handlePress}
         />
       </ThemeContext.Provider>

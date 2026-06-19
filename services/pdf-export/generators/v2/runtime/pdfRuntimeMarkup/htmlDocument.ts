@@ -4,9 +4,42 @@ export function buildPdfHtmlDocument({
   pages,
   settings,
   theme,
+  isPremium = true,
   escapeHtml,
 }: BuildHtmlDocumentParams): string {
   const { colors, typography } = theme
+
+  // Водяной знак для free-тиров (#297). Деликатная полоска в правом нижнем углу,
+  // не перекрывает кадр значимо; на каждой печатной странице (position: fixed).
+  const watermarkLabel = escapeHtml('Создано на metravel.by')
+  const watermarkHtml = isPremium
+    ? ''
+    : `\n  <div class="metravel-watermark" aria-hidden="true">${watermarkLabel}</div>`
+  const watermarkStyles = isPremium
+    ? ''
+    : `
+      .metravel-watermark {
+        position: fixed;
+        right: 6mm;
+        bottom: 4mm;
+        z-index: 30;
+        padding: 1.5mm 3mm;
+        font-family: ${typography.bodyFont};
+        font-size: 7pt;
+        letter-spacing: 0.3pt;
+        color: ${colors.textMuted};
+        background: rgba(255, 255, 255, 0.62);
+        border-radius: 3pt;
+        pointer-events: none;
+        opacity: 0.85;
+      }
+      @media print {
+        .metravel-watermark {
+          position: fixed;
+          right: 6mm;
+          bottom: 4mm;
+        }
+      }`
 
   const styles = `
       @page {
@@ -268,6 +301,7 @@ export function buildPdfHtmlDocument({
           backdrop-filter: none !important;
         }
       }
+      ${watermarkStyles}
     `
 
   return `
@@ -288,7 +322,7 @@ export function buildPdfHtmlDocument({
   <style>${styles}</style>
 </head>
 <body>
-  ${pages.join('\n')}
+  ${pages.join('\n')}${watermarkHtml}
   <script>
   window.__recalcPageNumbers = function() {
     var PAGE_H = 297 * (96 / 25.4);

@@ -594,6 +594,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
       themeContextValue,
       compactLayout: useCompactPopupLayout,
       fullscreenOnMobile: useCompactPopupLayout,
+      // Desktop (non-compact) popup: pin the photo as a fixed header and scroll only
+      // the caption/actions/«Ещё» grid beneath it (the popup box stays CSS-capped, so
+      // expanding «Ещё» never grows it off-screen / re-pans the map).
+      popupSplit: !useCompactPopupLayout,
       userLocationRef: userLocationLatLngRef,
       invalidateUserPoints: () => {
         void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() })

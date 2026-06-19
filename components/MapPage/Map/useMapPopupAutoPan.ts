@@ -62,7 +62,13 @@ export function useMapPopupAutoPan({
     const mapEl: HTMLElement | null = map?.getContainer ? map.getContainer() : null
     if (!popupEl || !mapEl || typeof window === 'undefined') return
 
-    const run = () => {
+    // `horizontalOnly` is set for ResizeObserver-driven re-pans: the popup growing
+    // taller (e.g. expanding the «Ещё» nav grid) must NOT re-pan the map vertically
+    // — that visibly jerks the photo. The popup has an internal max-height + scroll
+    // (mapPopupStyles), so tall content scrolls inside. We still correct HORIZONTAL
+    // overflow on resize (desktop split-layout/photo decode grows the popup width in
+    // one jump and would otherwise clip its right edge past the viewport).
+    const run = (horizontalOnly = false) => {
       try {
         const mapRect = mapEl.getBoundingClientRect()
         const popupRectAbs = popupEl.getBoundingClientRect()
@@ -130,6 +136,7 @@ export function useMapPopupAutoPan({
           }
         }
 
+        if (horizontalOnly) dy = 0
         if (Math.abs(dx) < 8) dx = 0
         if (Math.abs(dy) < 8) dy = 0
         if (!dx && !dy) return
@@ -141,15 +148,16 @@ export function useMapPopupAutoPan({
     }
 
     let rafId = 0
-    const scheduleRun = () => {
+    const scheduleRun = (horizontalOnly = false) => {
       if (rafId) {
         cancelAnimationFrame(rafId)
       }
       rafId = requestAnimationFrame(() => {
-        rafId = requestAnimationFrame(run)
+        rafId = requestAnimationFrame(() => run(horizontalOnly))
       })
     }
 
+    // Initial open: pan freely on both axes to bring the point + card into view.
     scheduleRun()
 
     let resizeObserver: ResizeObserver | null = null
@@ -191,7 +199,9 @@ export function useMapPopupAutoPan({
         }
         resizeDebounceTimer = setTimeout(() => {
           resizeDebounceTimer = null
-          scheduleRun()
+          // Resize re-pan corrects horizontal clipping only — never re-pan
+          // vertically, so expanding «Ещё» scrolls the text under a still photo.
+          scheduleRun(true)
         }, 80)
       })
       resizeObserver.observe(popupEl)

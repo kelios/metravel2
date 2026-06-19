@@ -24,7 +24,11 @@ export const getMapMobileLayoutStyles = (
       ...(Platform.OS === 'web'
         ? ({
             height: '100%',
-            maxHeight: '100vh',
+            // iOS Safari: `100vh` is the LARGE viewport (taller than the visible
+            // area under the dynamic toolbar), which pushes the bottom-anchored
+            // search pill + Leaflet attribution up into the middle. `100dvh`
+            // tracks the visible viewport so bottom controls stay at the bottom.
+            maxHeight: '100dvh',
             overflow: 'hidden',
           } as any)
         : null),

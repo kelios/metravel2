@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react'
-import { Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native'
+import { Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -43,11 +43,10 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
   const insets = useSafeAreaInsets()
   const queryClient = useQueryClient()
   const { width: viewportWidth } = useWindowDimensions()
-  // On mobile web the tall, photo-dominant card frequently exceeds the viewport
-  // height: pinned to bottom:0 with no scroll it overflows above the screen, so
-  // the ♥/＋ buttons + title (and the close button) become unreachable. Promote
-  // it to a real fullscreen, scrollable sheet there. Desktop popup / native keep
-  // the compact bottom-sheet.
+  // On mobile web the card uses a BOUNDED bottom sheet (maps.me-style): the map
+  // stays visible above it, the photo is a fixed hero, and the caption/actions
+  // scroll beneath it so every element stays reachable and the photo never jerks
+  // when «Ещё» expands. Desktop popup / native keep the compact bottom-sheet.
   const isFullscreenWeb = IS_WEB && viewportWidth <= 560
   const styles = useMemo(() => getStyles(colors), [colors])
 
@@ -69,12 +68,15 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
         // The bottom card IS the surface; do not also render the popup's own
         // fullscreen mobile overlay (that would double up the chrome).
         fullscreenOnMobile: false,
+        // Mobile web sheet: fixed hero photo + scrollable caption/actions so the
+        // photo never jerks when «Ещё» expands (the text scrolls under it).
+        bottomSheetSplit: isFullscreenWeb,
         userLocationRef,
         invalidateUserPoints: () => {
           void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() })
         },
       }),
-    [colors, themeContextValue, queryClient],
+    [colors, themeContextValue, queryClient, isFullscreenWeb],
   )
 
   // Web swipe-down-to-close on the grabber/header.
@@ -119,31 +121,28 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
     </Pressable>
   )
 
-  // Mobile web: fullscreen, scrollable sheet so every element (♥/＋, title,
-  // address, actions, close) stays on-screen and tappable regardless of photo
-  // height. The card itself is the interactive surface — the box-none root lets
-  // empty areas fall through, but the fullscreen card covers the whole viewport.
+  // Mobile web: a BOUNDED bottom sheet (maps.me-style) anchored to the bottom so the
+  // map stays visible above it. The sheet hosts the split layout (fixed hero photo +
+  // scrollable caption/actions) so every element stays reachable and the photo never
+  // jerks when «Ещё» expands. Sits above the global bottom dock.
   if (isFullscreenWeb) {
     return (
       <View
-        style={styles.fullscreenRoot}
+        style={styles.sheetRoot}
         testID="map-place-bottom-card"
-        {...({ pointerEvents: 'auto' } as any)}
+        pointerEvents="box-none"
       >
-        <View style={styles.fullscreenCard}>
-          <ScrollView
-            testID="map-place-bottom-card-scroll"
-            style={styles.fullscreenScroll}
-            contentContainerStyle={[
-              styles.fullscreenScrollContent,
-              { paddingBottom: (insets?.bottom ?? 0) + 24 },
-            ]}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            {...({ 'data-card-action': 'true' } as any)}
-          >
-            <PopupComponent point={point} closePopup={onClose} />
-          </ScrollView>
+        <View
+          style={[
+            styles.sheetCard,
+            { paddingBottom: (bottomInset || 0) + (insets?.bottom ?? 0) },
+          ]}
+          {...({ pointerEvents: 'auto' } as any)}
+        >
+          <View style={styles.handleZone} {...(webSwipeHandlers ?? {})}>
+            <View style={styles.grabber} />
+          </View>
+          <PopupComponent point={point} closePopup={onClose} />
           {closeButton}
         </View>
       </View>
@@ -183,37 +182,42 @@ const getStyles = (colors: ThemedColors) =>
       paddingHorizontal: 8,
       ...(IS_WEB ? ({ zIndex: 1200 } as any) : null),
     },
-    // Mobile web fullscreen sheet: a fixed full-viewport layer above the map and
-    // the global bottom dock. Web-only (guarded by isFullscreenWeb at the call site).
-    fullscreenRoot: {
+    // Mobile web BOUNDED bottom sheet (maps.me-style): anchored to the visible
+    // viewport bottom so the map shows above it. Web-only (guarded by isFullscreenWeb).
+    sheetRoot: {
       ...(IS_WEB
         ? ({
             position: 'fixed',
-            top: 0,
             left: 0,
             right: 0,
+            // Anchor to the VISIBLE (`dvh`) viewport bottom so iOS Safari's dynamic
+            // toolbar doesn't push the card under the fold.
             bottom: 0,
             zIndex: 5000,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'flex-end',
           } as any)
         : null),
     },
-    fullscreenCard: {
-      flex: 1,
+    sheetCard: {
       width: '100%',
-      height: '100%',
       backgroundColor: colors.surface,
       position: 'relative',
       overflow: 'hidden',
-    },
-    fullscreenScroll: {
-      flex: 1,
-      width: '100%',
-      ...(IS_WEB ? ({ WebkitOverflowScrolling: 'touch' } as any) : null),
-    },
-    fullscreenScrollContent: {
-      // The hero photo runs edge-to-edge; PlacePopupCard's own contentContainer /
-      // footerContainer carry the horizontal padding for the caption + actions.
-      flexGrow: 1,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      // Bounded height: the photo is dominant but the map stays visible above the
+      // sheet. The split layout inside flexes to fill this box (hero + scroll body).
+      ...(IS_WEB
+        ? ({
+            display: 'flex',
+            flexDirection: 'column',
+            height: 'min(82dvh, 720px)',
+            maxHeight: '82dvh',
+            boxShadow: '0 -8px 28px rgba(15,23,42,0.22)',
+          } as any)
+        : null),
     },
     card: {
       width: '100%',
@@ -259,20 +263,31 @@ const getStyles = (colors: ThemedColors) =>
       borderRadius: 16,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: 'rgba(15,23,42,0.55)',
-      ...(IS_WEB ? ({ zIndex: 5 } as any) : { elevation: 6 }),
+      // Dark pill + bright ring + shadow keeps ✕ legible on any photo (light or dark).
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      borderWidth: 1.5,
+      borderColor: 'rgba(255,255,255,0.85)',
+      ...(IS_WEB
+        ? ({ zIndex: 5, boxShadow: '0 2px 8px rgba(0,0,0,0.45)' } as any)
+        : {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.45,
+            shadowRadius: 6,
+            elevation: 6,
+          }),
     },
     closeButtonFullscreen: {
-      // Larger tap target + clear of the notch/safe area; sits above the scroll
-      // region so it is always reachable on the fullscreen mobile-web sheet.
+      // Larger tap target on the bounded bottom sheet; overlays the hero's top-right
+      // corner. The sheet no longer touches the top safe area, so a plain inset is fine.
       width: 44,
       height: 44,
       borderRadius: 22,
       right: 12,
-      backgroundColor: 'rgba(15,23,42,0.6)',
+      backgroundColor: 'rgba(0,0,0,0.6)',
       ...(IS_WEB
         ? ({
-            top: 'max(12px, env(safe-area-inset-top, 12px))' as any,
+            top: 12,
             zIndex: 10,
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',

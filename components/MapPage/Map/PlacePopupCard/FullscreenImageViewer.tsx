@@ -34,10 +34,17 @@ export const fullscreenStyles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.85)',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.45,
+    shadowRadius: 6,
+    elevation: 6,
   },
 });
 
@@ -147,16 +154,17 @@ const FullscreenImageViewer: React.FC<{
             width: 44,
             height: 44,
             borderRadius: DESIGN_TOKENS.radii.full,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            border: 'none',
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            border: '1.5px solid rgba(255,255,255,0.85)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.45)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: colors.textOnDark,
+            color: '#fff',
           }}
         >
-          <Feather name="x" size={24} color={colors.textOnDark} />
+          <Feather name="x" size={24} color="#fff" />
         </button>
       </div>
     );

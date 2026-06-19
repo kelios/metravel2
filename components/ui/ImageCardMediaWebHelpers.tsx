@@ -72,6 +72,21 @@ export const isIOSSafariWeb = (): boolean => {
   return isIOSSafariUserAgent(userAgent, maxTouchPoints);
 };
 
+// Any iOS device — including Chrome/Firefox/etc. on iOS, which are all WebKit
+// under the hood and share the same pointer-event-shim behaviour where a late
+// preventDefault on a synthesized pointermove is ignored. Gestures driven from
+// raw touch events must use this, not the Safari-only check above.
+export const isIOSWebKit = (): boolean => {
+  if (typeof navigator === 'undefined') return false;
+
+  const userAgent = String(navigator.userAgent || '');
+  const maxTouchPoints = typeof navigator.maxTouchPoints === 'number' ? navigator.maxTouchPoints : 0;
+  return (
+    /iPad|iPhone|iPod/i.test(userAgent) ||
+    (/Macintosh/i.test(userAgent) && maxTouchPoints > 1)
+  );
+};
+
 type WebMainImageProps = {
   src: string;
   alt: string;
