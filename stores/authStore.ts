@@ -37,6 +37,8 @@ export interface AuthState {
     userAvatar: string | null;
     authReady: boolean;
     profileRefreshToken: number;
+    // Серверный premium-флаг для PDF-paywall (BE #293). Не персистится — берём свежим из профиля.
+    isPremium: boolean;
 }
 
 interface AuthActions {
@@ -65,6 +67,7 @@ export const INITIAL_AUTH_STATE: AuthState = {
     userAvatar: null,
     authReady: false,
     profileRefreshToken: 0,
+    isPremium: false,
 };
 
 // Epoch counter to guard against races where an in-flight auth check
@@ -93,6 +96,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             isSuperuser: false,
             userAvatar: null,
             authReady: true,
+            isPremium: false,
         });
         Promise.resolve(removeStorageBatch(['userName', 'isSuperuser', 'userId', 'userAvatar'])).catch(() => undefined);
     },
@@ -115,6 +119,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                     username: '',
                     isSuperuser: false,
                     userAvatar: null,
+                    isPremium: false,
                 });
                 return;
             }
@@ -127,14 +132,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 username: storageData.userName || '',
                 isSuperuser: storageData.isSuperuser === 'true',
                 userAvatar: restoredAvatar,
+                isPremium: false,
             });
 
-            // Always fetch profile in background to ensure avatar is up-to-date
+            // Always fetch profile in background to ensure avatar + premium flag are up-to-date
             if (storageData.userId) {
                 getUserApi()
                     .then(({ fetchUserProfile }) => fetchUserProfile(storageData.userId!))
                     .then((profile) => {
                         if (epochAtStart !== authEpoch) return;
+                        set({ isPremium: profile?.is_premium ?? false });
                         const avatar = normalizeAvatar(profile?.avatar);
                         if (avatar) {
                             set((s) => ({
@@ -228,6 +235,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 userAvatar: avatar,
                 authReady: true,
                 profileRefreshToken: s.profileRefreshToken + 1,
+                isPremium: profile?.is_premium ?? false,
             }));
 
             return true;
@@ -299,6 +307,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 userAvatar: avatar,
                 authReady: true,
                 profileRefreshToken: s.profileRefreshToken + 1,
+                isPremium: profile?.is_premium ?? false,
             }));
 
             return true;

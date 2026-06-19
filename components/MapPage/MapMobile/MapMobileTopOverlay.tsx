@@ -1,16 +1,9 @@
 /**
  * MapMobileTopOverlay — compact icon toolbar floating on top of the map.
  *
- * Renders a single row of round icon buttons (FAB-style, pinned to the right
- * edge), left→right:
- *  - ≡ Фильтры (sliders) — tap → opens the filters sheet (search + categories).
- *  - ◎ Радиус (target) — with a small badge showing the current radius value.
- *    Tap → toggles a compact radius popover anchored under the icon (NOT the
- *    sheet). Tapping a value applies it instantly and closes the popover.
- *  - ⧉ Слои (layers) — tap → toggles a compact layers popover under the icon
- *    (NOT the sheet) with base-layer + overlay toggles.
- *  - ⌖ Локация (crosshair) — tap → recenters the map on the user.
- *  - ≣ Список (list) — with a count badge. Tap → opens the «Места рядом» list.
+ * Renders a left location button plus a right-side row of round icon buttons:
+ *  - left: ⌖ Локация (crosshair) — tap → recenters the map on the user.
+ *  - right: ≡ Фильтры, ◎ Радиус, ⧉ Слои, ≣ Список.
  *
  * The radius/layers popovers are mobile-only inline actions, so those quick
  * controls no longer need to open the 70% sheet. The sheet now hosts only
@@ -97,6 +90,17 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
       style={[styles.root, { paddingTop: resolvedTopPadding }]}
       testID="map-mobile-top-overlay"
     >
+      <Pressable
+        testID="map-center-user-quick"
+        onPress={onCenterOnUser}
+        accessibilityRole="button"
+        accessibilityLabel="Показать мое местоположение"
+        hitSlop={6}
+        style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
+      >
+        <Feather name="crosshair" size={20} color={colors.primary} />
+      </Pressable>
+
       <View style={styles.toolbar} pointerEvents="auto">
         <Pressable
           testID="map-mobile-filters-button"
@@ -146,17 +150,6 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
           ]}
         >
           <Feather name="layers" size={20} color={colors.text} />
-        </Pressable>
-
-        <Pressable
-          testID="map-center-user-quick"
-          onPress={onCenterOnUser}
-          accessibilityRole="button"
-          accessibilityLabel="Показать мое местоположение"
-          hitSlop={6}
-          style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
-        >
-          <Feather name="crosshair" size={20} color={colors.primary} />
         </Pressable>
 
         <Pressable

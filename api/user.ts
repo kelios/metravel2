@@ -24,6 +24,9 @@ export type UserProfileDto = {
     email_notify_messages: boolean;
     avatar: string | null;
     user: number;
+    // Серверный premium-флаг для PDF-paywall: (опубликовано ≥ N путешествий) ИЛИ ручной флаг (BE #293).
+    // Читаем только это поле; premium_manually_enabled бэк отдаёт публично, на него не завязываемся.
+    is_premium?: boolean;
 };
 
 export type UpdateUserProfilePayload = Partial<

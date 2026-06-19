@@ -59,7 +59,11 @@ export class TravelDataTransformer {
         monthName: travel.monthName || null,
         number_days: travel.number_days || null,
         travel_image_thumb_url: this.buildSafeImageUrl(travel.travel_image_thumb_url),
-        travel_image_url: travel.travel_image_url ? this.buildSafeImageUrl(travel.travel_image_url) : undefined,
+        // PDF — печать: предпочитаем print-grade обложку (≥2500px), fallback на обычную (BE #307)
+        travel_image_url:
+          travel.travel_image_print_url || travel.travel_image_url
+            ? this.buildSafeImageUrl(travel.travel_image_print_url || travel.travel_image_url)
+            : undefined,
         gallery: this.transformGallery(travel.gallery),
         travelAddress: this.transformAddresses(travel.travelAddress),
         youtube_link: travel.youtube_link || null,
@@ -223,7 +227,10 @@ export class TravelDataTransformer {
         return url && typeof url === 'string' && url.trim().length > 0;
       })
       .map((g: any) => ({
-        url: this.buildSafeImageUrl(typeof g === 'string' ? g : (g.url || g)),
+        // PDF — печать: предпочитаем print-grade фото (≥2500px), fallback на обычное (BE #307)
+        url: this.buildSafeImageUrl(
+          typeof g === 'string' ? g : (g.print_url || g.url || g)
+        ),
         id: typeof g === 'string' ? undefined : (g.id || g.url),
         updated_at: typeof g === 'string' ? undefined : g.updated_at,
       }));

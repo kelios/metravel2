@@ -1,9 +1,10 @@
 // hooks/usePdfPremium.ts
 // Хук доступа к премиум-PDF: статус + аналитика paywall (FE-8.2 / #294)
 
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 
 import { activePdfEntitlementSource } from '@/services/pdf-export/entitlement/PdfEntitlementSource'
+import { useAuthStore } from '@/stores/authStore'
 import { queueAnalyticsEvent } from '@/utils/analytics'
 
 interface UsePdfPremiumResult {
@@ -13,8 +14,9 @@ interface UsePdfPremiumResult {
 }
 
 export function usePdfPremium(): UsePdfPremiumResult {
-  // Источник синхронный; читаем один раз при инициализации хука.
-  const [isPremium] = useState<boolean>(() => activePdfEntitlementSource.getIsPremium())
+  // Реактивно: при гейте OFF стаб всегда true; при ON следим за authStore.isPremium
+  // (профиль грузится в фоне после логина). Селектор ре-выполняется на любое изменение стора.
+  const isPremium = useAuthStore(() => activePdfEntitlementSource.getIsPremium())
 
   const requireUnlock = useCallback((context?: string) => {
     queueAnalyticsEvent('Premium_Unlock_Click', { context })

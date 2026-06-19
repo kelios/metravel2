@@ -12,6 +12,7 @@ export const createAuthFallbackValue = (): AuthStore =>
     userAvatar: null,
     authReady: false,
     profileRefreshToken: 0,
+    isPremium: false,
     setIsAuthenticated: () => {},
     setUsername: () => {},
     setIsSuperuser: () => {},

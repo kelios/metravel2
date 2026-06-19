@@ -454,10 +454,6 @@ select:focus-visible {
     --mt-dock-h: calc(56px + env(safe-area-inset-bottom, 0px));
   }
 
-  body:has([data-testid="map-screen-root"]) .leaflet-bottom.leaflet-right {
-    bottom: calc(var(--mt-dock-h) + 8px) !important;
-  }
-
   body:has([data-testid="map-screen-root"]) .leaflet-control-attribution {
     max-width: calc(100vw - 32px);
     border-radius: 12px;

@@ -108,6 +108,9 @@ export default function MessagesScreen() {
 
         let cancelled = false;
         pendingUserDeepLink.current = params.userId;
+        // Opening a chat with a specific user (e.g. «Написать автору») must show the
+        // conversation, not a leftover «Новый диалог» recipient picker.
+        setShowPicker(false);
         setInitialLoading(true);
 
         (async () => {

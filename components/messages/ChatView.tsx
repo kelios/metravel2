@@ -1,8 +1,9 @@
-import React, { memo, useCallback, useMemo, useRef, useState } from 'react'
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -126,10 +127,30 @@ function ChatView({
   const styles = useMemo(() => createStyles(colors), [colors])
   const router = useRouter()
   const insets = useSafeAreaInsets()
-  // On native the chat fills the screen while the global tab bar overlays the
-  // bottom; reserve its height so the input clears it. Web positions its footer
-  // separately, so no reserve there.
-  const composerBottomInset = IS_WEB ? 0 : DOCK_CONTENT_HEIGHT + insets.bottom
+  // Track the keyboard so the composer reserves the tab-bar height only at rest.
+  // When the keyboard is open the dock is hidden behind it, so reserving its
+  // height would push the input up off-screen — drop the reserve to keep the
+  // input sitting just above the keyboard.
+  const [keyboardShown, setKeyboardShown] = useState(false)
+  useEffect(() => {
+    if (IS_WEB) return
+    const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardShown(true))
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardShown(false))
+    return () => {
+      show.remove()
+      hide.remove()
+    }
+  }, [])
+  // On native the chat fills the screen while the global tab bar (BottomDock) is
+  // an absolute overlay pinned to the window bottom. With adjustResize the window
+  // shrinks under the keyboard, so the dock floats up to the new bottom — directly
+  // over the composer. We therefore always reserve the dock's content height so the
+  // input clears it. The safe-area (home indicator) is only added at rest: while the
+  // keyboard is open the gesture bar is covered, so adding insets.bottom would push
+  // the input needlessly higher. Web positions its footer separately → no reserve.
+  const composerBottomInset = IS_WEB
+    ? 0
+    : DOCK_CONTENT_HEIGHT + (keyboardShown ? 0 : insets.bottom)
 
   const [text, setText] = useState('')
   const lastSentAtRef = useRef(0)
@@ -194,7 +215,11 @@ function ChatView({
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={IS_IOS ? 'padding' : 'height'}
+      // Android uses adjustResize (app.json softwareKeyboardLayoutMode: 'resize'):
+      // the window already shrinks under the keyboard, so KAV must do NOTHING here —
+      // a second 'height'/'padding' resize double-shrinks the layout and pushes the
+      // composer off-screen. iOS does not auto-resize, so it keeps 'padding' + offset.
+      behavior={IS_IOS ? 'padding' : undefined}
       keyboardVerticalOffset={IS_IOS ? 90 : 0}
     >
       <ChatHeader

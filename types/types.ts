@@ -2,6 +2,8 @@
 export type GalleryItem = string | {
     id: number;
     url: string;
+    // Print-grade вариант (≥2500px) для PDF-книги; для старых фото бэк отдаёт == url (BE #307)
+    print_url?: string;
     updated_at?: string;
 }
 
@@ -21,6 +23,8 @@ export type Travel = {
     name: string
     travel_image_thumb_url: string
     travel_image_thumb_small_url: string
+    // Print-grade обложка (≥2500px) для PDF-книги; fallback на thumb если бэк не отдал (BE #307)
+    travel_image_print_url?: string
     url: string
     youtube_link: string
     userName: string

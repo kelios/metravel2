@@ -26,14 +26,15 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       right: 0,
       zIndex: 1500,
       paddingHorizontal: 12,
-      // Прижимаем компактную панель из иконок к правому краю (FAB-стиль).
-      alignItems: 'flex-end',
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
     },
     toolbar: {
       flexDirection: 'row',
       alignItems: 'center',
-      // 5 кнопок по 44px + 4 зазора по 8 + горизонтальные паддинги root (12×2)
-      // = 284px — помещается даже на 320px-экране в один ряд без переноса.
+      // Правая группа: 4 кнопки по 44px + 3 зазора по 8 = 200px.
+      // Локация вынесена в левый край root, поэтому ряд не перегружает 320px.
       gap: 8,
     },
     iconButton: {
