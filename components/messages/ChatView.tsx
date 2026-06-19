@@ -127,30 +127,32 @@ function ChatView({
   const styles = useMemo(() => createStyles(colors), [colors])
   const router = useRouter()
   const insets = useSafeAreaInsets()
-  // Track the keyboard so the composer reserves the tab-bar height only at rest.
-  // When the keyboard is open the dock is hidden behind it, so reserving its
-  // height would push the input up off-screen — drop the reserve to keep the
-  // input sitting just above the keyboard.
-  const [keyboardShown, setKeyboardShown] = useState(false)
+  // Capture the keyboard height to lift the composer above it. This app's RN root
+  // does NOT shrink under the keyboard (confirmed on device: with adjustResize the
+  // input still rendered behind the keyboard), so KeyboardAvoidingView can't be
+  // relied on — we translate the composer up by the real keyboard height instead.
+  const [keyboardHeight, setKeyboardHeight] = useState(0)
   useEffect(() => {
     if (IS_WEB) return
-    const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardShown(true))
-    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardShown(false))
+    const show = Keyboard.addListener('keyboardDidShow', (e) =>
+      setKeyboardHeight(e.endCoordinates?.height ?? 0),
+    )
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0))
     return () => {
       show.remove()
       hide.remove()
     }
   }, [])
-  // On native the chat fills the screen while the global tab bar (BottomDock) is
-  // an absolute overlay pinned to the window bottom. With adjustResize the window
-  // shrinks under the keyboard, so the dock floats up to the new bottom — directly
-  // over the composer. We therefore always reserve the dock's content height so the
-  // input clears it. The safe-area (home indicator) is only added at rest: while the
-  // keyboard is open the gesture bar is covered, so adding insets.bottom would push
-  // the input needlessly higher. Web positions its footer separately → no reserve.
+  // At rest the global tab bar (BottomDock, an absolute overlay) covers the bottom,
+  // so reserve its height + home-indicator inset. On Android (no working KAV here)
+  // lift the composer above the keyboard by its real height while it is open; iOS
+  // uses KeyboardAvoidingView behavior='padding' so it must NOT add that height.
+  // Web positions its footer separately → no reserve.
   const composerBottomInset = IS_WEB
     ? 0
-    : DOCK_CONTENT_HEIGHT + (keyboardShown ? 0 : insets.bottom)
+    : !IS_IOS && keyboardHeight > 0
+      ? keyboardHeight + DESIGN_TOKENS.spacing.xs
+      : DOCK_CONTENT_HEIGHT + insets.bottom
 
   const [text, setText] = useState('')
   const lastSentAtRef = useRef(0)

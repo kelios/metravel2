@@ -528,7 +528,6 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
     validPoints,
     markerIcon,
     markerOpacity,
-    PopupContent,
     suppressLeafletPopupOnSelect,
     groupVersion,
   ])

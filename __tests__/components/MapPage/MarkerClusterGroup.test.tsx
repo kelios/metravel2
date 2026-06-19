@@ -247,4 +247,129 @@ describe('MarkerClusterGroup', () => {
     expect(popupTree.props.closePopup).toEqual(expect.any(Function))
     expect(popupContainer?.className).toBe('metravel-cluster-popup-root')
   })
+
+  it('does not bind or open Leaflet popup when mobile bottom-card mode suppresses popups', () => {
+    const markerHandlers = new Map<string, (event: any) => void>()
+    const marker = {} as TestMarker
+    marker.bindPopup = jest.fn()
+    marker.bindTooltip = jest.fn()
+    marker.openPopup = jest.fn()
+    marker.on = jest.fn((eventName: string, handler: (event: any) => void): TestMarker => {
+      markerHandlers.set(eventName, handler)
+      return marker
+    })
+    const group = {
+      addLayers: jest.fn(),
+      addLayer: jest.fn(),
+      clearLayers: jest.fn(),
+      on: jest.fn(),
+      off: jest.fn(),
+    }
+    const map = {
+      addLayer: jest.fn(),
+      removeLayer: jest.fn(),
+    }
+    const L = {
+      markerClusterGroup: jest.fn(() => group),
+      marker: jest.fn(() => marker),
+      divIcon: jest.fn(),
+    }
+    const onMarkerClick = jest.fn()
+
+    renderWithClient(
+      <MarkerClusterGroup
+        L={L}
+        useMap={() => map}
+        points={[
+          {
+            id: 1,
+            coord: '53.9,27.56',
+            address: 'Минск',
+          } as any,
+        ]}
+        markerIcon={{}}
+        PopupContent={() => null}
+        Popup={() => null}
+        suppressLeafletPopupOnSelect
+        onMarkerClick={onMarkerClick}
+      />,
+    )
+
+    expect(marker.bindPopup).not.toHaveBeenCalled()
+
+    markerHandlers.get('click')?.({
+      originalEvent: { stopPropagation: jest.fn() },
+      target: marker,
+    })
+
+    expect(marker.openPopup).not.toHaveBeenCalled()
+    expect(onMarkerClick).toHaveBeenCalledTimes(1)
+    expect(mockCreatePortal).not.toHaveBeenCalled()
+  })
+
+  it('keeps Leaflet markers mounted when only popup React content changes', () => {
+    const marker = {} as TestMarker
+    marker.bindPopup = jest.fn()
+    marker.bindTooltip = jest.fn()
+    marker.on = jest.fn((): TestMarker => marker)
+    const group = {
+      addLayers: jest.fn(),
+      addLayer: jest.fn(),
+      clearLayers: jest.fn(),
+      on: jest.fn(),
+      off: jest.fn(),
+    }
+    const map = {
+      addLayer: jest.fn(),
+      removeLayer: jest.fn(),
+      closePopup: jest.fn(),
+    }
+    const L = {
+      markerClusterGroup: jest.fn(() => group),
+      marker: jest.fn(() => marker),
+      divIcon: jest.fn(),
+    }
+    const points = [
+      {
+        id: 1,
+        coord: '53.9,27.56',
+        address: 'Минск',
+      } as any,
+    ]
+    const markerIcon = {}
+    const FirstPopupContent = () => null
+    const SecondPopupContent = () => null
+
+    const { queryClient, rerender } = renderWithClient(
+      <MarkerClusterGroup
+        L={L}
+        useMap={() => map}
+        points={points}
+        markerIcon={markerIcon}
+        PopupContent={FirstPopupContent}
+        Popup={() => null}
+      />,
+    )
+
+    const clearLayersCalls = group.clearLayers.mock.calls.length
+    const addLayersCalls = group.addLayers.mock.calls.length
+    expect(clearLayersCalls).toBeGreaterThan(0)
+    expect(addLayersCalls).toBeGreaterThan(0)
+
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <MarkerClusterGroup
+          L={L}
+          useMap={() => map}
+          points={points}
+          markerIcon={markerIcon}
+          PopupContent={SecondPopupContent}
+          Popup={() => null}
+        />
+      </QueryClientProvider>,
+    )
+
+    expect(group.clearLayers).toHaveBeenCalledTimes(clearLayersCalls)
+    expect(group.addLayers).toHaveBeenCalledTimes(addLayersCalls)
+  })
 })
