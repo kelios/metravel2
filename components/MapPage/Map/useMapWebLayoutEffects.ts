@@ -172,6 +172,48 @@ export function useMapWebLayoutEffects({
     }
   }, [mapContainerId, mapInstance, mapRef])
 
+  // In-app browsers (Threads/Instagram WebView on iOS) collapse/expand a native
+  // toolbar that changes the visual viewport WITHOUT firing window 'resize' or
+  // resizing the map DOM element (height is dvh-pinned and lags). Leaflet then
+  // keeps tiles sized to the stale viewport => grey gaps. visualViewport is the
+  // only reliable signal here, so re-run invalidateSize on its resize/scroll.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    if (typeof window === 'undefined') return
+    const vv = window.visualViewport
+    if (!vv || !mapRef.current) return
+
+    const map = mapRef.current
+    let rafId: number | null = null
+    const onViewportChange = () => {
+      if (rafId != null) cancelAnimationFrame(rafId)
+      rafId = requestAnimationFrame(() => {
+        try {
+          map.invalidateSize?.({ animate: false } as any)
+        } catch {
+          // noop
+        }
+      })
+    }
+
+    try {
+      vv.addEventListener('resize', onViewportChange)
+      vv.addEventListener('scroll', onViewportChange)
+    } catch {
+      // noop
+    }
+
+    return () => {
+      try {
+        vv.removeEventListener('resize', onViewportChange)
+        vv.removeEventListener('scroll', onViewportChange)
+      } catch {
+        // noop
+      }
+      if (rafId != null) cancelAnimationFrame(rafId)
+    }
+  }, [mapRef, mapInstance])
+
   useEffect(() => {
     if (Platform.OS !== 'web') return
     if (typeof window === 'undefined' || typeof document === 'undefined') return
