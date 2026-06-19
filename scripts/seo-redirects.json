@@ -1,5 +1,5 @@
 {
-  "_comment": "Slug 301-redirect manifest for /travels/. generate-seo-pages.js emits a soft-301 stub (canonical + meta-refresh) at dist/prod/travels/{from}.html for each entry, so old URLs keep their ranking when a title (and therefore slug) changes. Append {from,to} whenever a travel slug changes; never reuse a live slug as `from`.",
+  "_comment": "Slug redirect manifest for /travels/. generate-seo-pages.js emits a noindex redirect stub (canonical + meta-refresh + JS replace) at dist/prod/travels/{from}.html for each entry because the static nginx try_files path serves these files with HTTP 200. Append {from,to} whenever a travel slug changes; never reuse a live slug as `from`.",
   "redirects": [
     {
       "from": "forty-krakova",

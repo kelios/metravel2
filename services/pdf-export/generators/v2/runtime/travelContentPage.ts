@@ -104,6 +104,10 @@ export function renderTravelContentPageMarkup(args: {
       margin-bottom: ${spacing.elementSpacing};
       padding-bottom: 8px;
       position: relative;
+      break-after: avoid;
+      page-break-after: avoid;
+      break-inside: avoid;
+      page-break-inside: avoid;
     ">
       <span style="
         display: inline-flex;
@@ -206,7 +210,7 @@ export function renderTravelContentPageMarkup(args: {
     recommendationBlocks.length > 0
       ? `
           ${divider}
-          <div style="margin-bottom: ${spacing.sectionSpacing}; break-inside: avoid; page-break-inside: avoid;">
+          <div style="margin-bottom: ${spacing.sectionSpacing}; break-inside: auto; page-break-inside: auto;">
             ${
               variant === 'runtime'
                 ? buildSectionHeader('bulb', colors.infoBlock.icon, colors.infoBlock.background, 'Рекомендации')
@@ -249,8 +253,8 @@ export function renderTravelContentPageMarkup(args: {
             grid-template-columns: 1fr 1fr;
             gap: ${spacing.elementSpacing};
             margin-top: ${spacing.blockSpacing};
-            break-inside: avoid;
-            page-break-inside: avoid;
+            break-inside: auto;
+            page-break-inside: auto;
           ">
             ${plusBlocks.length > 0 ? `
               <div style="

@@ -24,6 +24,7 @@ const {
   normalizeSlug,
   loadRedirectManifest,
   buildRedirectStubHtml,
+  patchNoindexFallbackTemplate,
 } = require('@/scripts/generate-seo-pages');
 
 const fs = require('fs');
@@ -809,7 +810,7 @@ describe('buildSeoTitle', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Slug 301 redirects (FE-only soft-301 stubs)
+// Slug redirects (static noindex redirect stubs)
 // ---------------------------------------------------------------------------
 describe('slug redirects', () => {
   describe('normalizeSlug', () => {
@@ -827,8 +828,8 @@ describe('slug redirects', () => {
       expect(html).toContain('content="0; url=https://metravel.by/travels/new-slug"');
       expect(html).toContain('location.replace("https://metravel.by/travels/new-slug")');
     });
-    it('does NOT noindex the old URL (let canonical/refresh consolidate)', () => {
-      expect(html).not.toMatch(/noindex/i);
+    it('noindexes the old URL while keeping links followable', () => {
+      expect(html).toContain('<meta name="robots" content="noindex, follow"/>');
     });
     it('normalizes a slug passed with prefix/slashes', () => {
       expect(buildRedirectStubHtml('/travels/x/')).toContain('/travels/x"');
@@ -875,5 +876,39 @@ describe('slug redirects', () => {
       const p = write('arr.json', [{ from: 'x', to: 'y' }]);
       expect(loadRedirectManifest(p)).toEqual([{ from: 'x', to: 'y' }]);
     });
+  });
+});
+
+describe('patchNoindexFallbackTemplate', () => {
+  it('removes literal template canonical and adds noindex fallback meta', () => {
+    const html = patchNoindexFallbackTemplate(
+      [
+        '<html><head>',
+        '<title data-rh="true">Путешествие | Metravel</title>',
+        '<meta data-rh="true" name="description" content="Найди место для путешествия и поделись своим опытом."/>',
+        '<link data-rh="true" rel="canonical" href="https://metravel.by/quests/[city]/[questId]"/>',
+        '</head><body><div id="root"></div></body></html>',
+      ].join(''),
+      {
+        title: 'Квест не найден | Metravel',
+        description: 'Этот квест не найден или больше недоступен.',
+      },
+    );
+
+    expect(html).toContain('<title data-rh="true">Квест не найден | Metravel</title>');
+    expect(html).toContain('content="Этот квест не найден или больше недоступен."');
+    expect(html).toContain('<meta data-rh="true" name="robots" content="noindex, follow"/>');
+    expect(html).not.toContain('rel="canonical"');
+    expect(html).not.toContain('[city]');
+    expect(html).not.toContain('[questId]');
+  });
+
+  it('deduplicates existing robots meta', () => {
+    const html = patchNoindexFallbackTemplate(
+      '<html><head><meta name="robots" content="index, follow"/><meta name="robots" content="noindex"/></head></html>',
+    );
+
+    expect((html.match(/name="robots"/g) || []).length).toBe(1);
+    expect(html).toContain('content="noindex, follow"');
   });
 });

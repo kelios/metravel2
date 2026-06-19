@@ -161,7 +161,7 @@ export function buildPdfHtmlDocument({
         width: 100%;
         height: auto;
         max-height: 180pt;
-        object-fit: cover;
+        object-fit: contain;
         border-radius: 6pt;
       }
       .img-grid {
@@ -179,7 +179,7 @@ export function buildPdfHtmlDocument({
         width: 100%;
         height: auto;
         max-height: 120pt;
-        object-fit: cover;
+        object-fit: contain;
         border-radius: 4pt;
       }
       .img-single-wide {
@@ -258,7 +258,8 @@ export function buildPdfHtmlDocument({
           page-break-inside: avoid;
         }
         .travel-content-page img {
-          max-height: 240mm;
+          max-height: ${PRINT_PAGE_HEIGHT};
+          object-fit: contain;
           break-inside: avoid;
           page-break-inside: avoid;
         }
@@ -270,8 +271,7 @@ export function buildPdfHtmlDocument({
         .travel-content-page .img-float-left {
           break-inside: avoid;
           page-break-inside: avoid;
-          max-height: 260mm;
-          overflow: hidden;
+          max-height: ${PRINT_PAGE_HEIGHT};
         }
         .travel-content-page .travel-online-card {
           break-inside: avoid;

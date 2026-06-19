@@ -318,6 +318,8 @@ export class BlockRenderer {
         overflow-wrap: anywhere;
         word-break: break-word;
         hyphens: auto;
+        break-inside: avoid;
+        page-break-inside: avoid;
       ">${this.escapeHtml(item)}</li>
     `
       )
@@ -327,7 +329,8 @@ export class BlockRenderer {
       <${tag} style="
         margin-bottom: ${this.theme.spacing.blockSpacing};
         padding-left: 1.5em;
-        page-break-inside: avoid;
+        break-inside: auto;
+        page-break-inside: auto;
       ">${itemsHtml}</${tag}>
     `;
   }
@@ -469,6 +472,7 @@ export class BlockRenderer {
         background: ${config.background};
         border-left: 4px solid ${config.border};
         border-radius: ${this.theme.blocks.borderRadius};
+        break-inside: avoid;
         page-break-inside: avoid;
         box-shadow: ${this.theme.blocks.shadow};
       ">

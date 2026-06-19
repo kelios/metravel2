@@ -419,10 +419,10 @@ function loadRedirectManifest(filePath) {
 }
 
 /**
- * Build a soft-301 redirect stub for an old travel slug. nginx serves it via
- * `try_files $uri.html` (200), but rel=canonical + a zero-delay meta refresh +
- * JS replace make Google treat it as a permanent redirect and consolidate
- * ranking signals onto the new URL.
+ * Build a crawl-safe redirect stub for an old travel slug. nginx serves static
+ * route files via `try_files $uri.html` (200), so the stub cannot be a real HTTP
+ * 301 by itself. Keep canonical + refresh for users/link discovery, and add
+ * noindex so Google does not keep reporting the old slug as an indexable 200.
  */
 function buildRedirectStubHtml(toSlug) {
   const target = `${SITE_URL}/travels/${normalizeSlug(toSlug)}`;
@@ -434,6 +434,7 @@ function buildRedirectStubHtml(toSlug) {
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Страница переехала | Metravel</title>
 <link rel="canonical" href="${safe}"/>
+<meta name="robots" content="noindex, follow"/>
 <meta http-equiv="refresh" content="0; url=${safe}"/>
 <script>location.replace(${JSON.stringify(target)});</script>
 </head>
@@ -772,6 +773,39 @@ function injectMeta(baseHtml, { title, description, canonical, image, ogType = '
       `<meta data-rh="true" name="robots" content="${escapeAttr(robots)}"/>`
     );
   }
+
+  return html;
+}
+
+function patchNoindexFallbackTemplate(baseHtml, { title, description } = {}) {
+  let html = baseHtml;
+
+  // Template files like travels/[param].html and quests/[city]/[questId].html
+  // are served only when there is no generated per-route HTML. Raw crawlers see
+  // the template before React resolves the route, so do not leave indexable
+  // generic titles or literal [param]/[questId] canonicals in place.
+  html = html.replace(/<link[^>]*rel="canonical"[^>]*\/?>\n?/gi, '');
+
+  if (title) {
+    html = html.replace(
+      /<title[^>]*>.*?<\/title>/i,
+      `<title data-rh="true">${escapeAttr(title)}</title>`
+    );
+  }
+
+  if (description) {
+    html = replaceOrInsert(
+      html,
+      /<meta[^>]*name="description"[^>]*\/?>/i,
+      `<meta data-rh="true" name="description" content="${escapeAttr(description)}"/>`
+    );
+  }
+
+  html = replaceOrInsert(
+    html,
+    /<meta[^>]*name="robots"[^>]*\/?>/i,
+    '<meta data-rh="true" name="robots" content="noindex, follow"/>'
+  );
 
   return html;
 }
@@ -1220,6 +1254,14 @@ const STATIC_PAGES = [
     robots: 'noindex, nofollow',
   },
   {
+    route: '/register',
+    canonicalRoute: '/registration',
+    title: 'Регистрация в Metravel: аккаунт и маршруты | Metravel',
+    description:
+      'Создайте аккаунт Metravel, чтобы публиковать маршруты, сохранять идеи поездок, подписываться на авторов и вести личную книгу путешествий.',
+    robots: 'noindex, nofollow',
+  },
+  {
     route: '/accountconfirmation',
     title: 'Подтверждение аккаунта | Metravel',
     description: 'Подтверждение учётной записи Metravel.',
@@ -1329,7 +1371,8 @@ async function main() {
   // --- 1. Static pages ---
   console.log('📄 Generating static pages...');
   for (const page of STATIC_PAGES) {
-    const canonical = `${SITE_URL}${page.route === '/' ? '/' : page.route}`;
+    const canonicalRoute = page.canonicalRoute || page.route;
+    const canonical = `${SITE_URL}${canonicalRoute === '/' ? '/' : canonicalRoute}`;
     const routeBaseHtml = readStaticRouteHtml(page.route, baseHtml);
     let html = injectMeta(routeBaseHtml, {
       title: page.title,
@@ -1699,26 +1742,43 @@ async function main() {
 
   // --- 4. Patch [param].html / [id].html fallback templates ---
   // These files are served by nginx when no per-slug HTML exists.
-  // They must NOT contain a hardcoded canonical pointing to the homepage —
-  // the inline JS in +html.tsx sets the correct canonical at runtime.
+  // They must not be indexable generic shells. Generated per-slug/per-id HTML
+  // above remains indexable; only unresolved fallbacks get noindex.
   const fallbackTemplates = [
-    path.join(DIST_DIR, 'travels', '[param].html'),
-    path.join(DIST_DIR, 'article', '[id].html'),
-    path.join(DIST_DIR, 'user', '[id].html'),
+    {
+      file: path.join(DIST_DIR, 'travels', '[param].html'),
+      title: 'Путешествие не найдено | Metravel',
+      description: 'Эта страница путешествия не найдена или больше недоступна.',
+    },
+    {
+      file: path.join(DIST_DIR, 'article', '[id].html'),
+      title: 'Статья не найдена | Metravel',
+      description: 'Эта статья не найдена или больше недоступна.',
+    },
+    {
+      file: path.join(DIST_DIR, 'user', '[id].html'),
+      title: 'Профиль не найден | Metravel',
+      description: 'Этот профиль не найден или больше недоступен.',
+    },
+    {
+      file: path.join(DIST_DIR, 'quests', '[city]', '[questId].html'),
+      title: 'Квест не найден | Metravel',
+      description: 'Этот квест не найден или больше недоступен.',
+    },
   ];
   for (const tmpl of fallbackTemplates) {
-    if (!fs.existsSync(tmpl)) continue;
+    const filePath = tmpl.file;
+    if (!fs.existsSync(filePath)) continue;
     try {
-      let tmplHtml = fs.readFileSync(tmpl, 'utf8');
-      // Remove any hardcoded <link rel="canonical"> — the inline JS handles it.
+      let tmplHtml = fs.readFileSync(filePath, 'utf8');
       const before = tmplHtml;
-      tmplHtml = tmplHtml.replace(/<link[^>]*rel="canonical"[^>]*\/?>\n?/gi, '');
+      tmplHtml = patchNoindexFallbackTemplate(tmplHtml, tmpl);
       if (tmplHtml !== before) {
-        fs.writeFileSync(tmpl, tmplHtml, 'utf8');
-        console.log(`  🔧 Stripped canonical from fallback: ${path.relative(DIST_DIR, tmpl)}`);
+        fs.writeFileSync(filePath, tmplHtml, 'utf8');
+        console.log(`  🔧 Noindexed fallback template: ${path.relative(DIST_DIR, filePath)}`);
       }
     } catch (err) {
-      console.warn(`  ⚠️  Could not patch fallback template ${tmpl}: ${err.message}`);
+      console.warn(`  ⚠️  Could not patch fallback template ${filePath}: ${err.message}`);
     }
   }
 
@@ -1781,6 +1841,7 @@ if (typeof module !== 'undefined' && module.exports) {
     buildQuestSeoDescription,
     buildQuestJsonLd,
     injectQuestLinksIndex,
+    patchNoindexFallbackTemplate,
   };
 }
 
