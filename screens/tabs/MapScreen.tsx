@@ -4,6 +4,7 @@ import { Platform } from 'react-native'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { stringifyJsonLd } from '@/utils/jsonLd'
 import { useMapScreenController } from '@/hooks/useMapScreenController'
+import { useMapViewportHeightVar } from '@/hooks/useMapViewportHeightVar'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import { useRouteStore } from '@/stores/routeStore'
@@ -57,6 +58,10 @@ if (CAN_PRELOAD_LEAFLET) {
 
 export default function MapScreen() {
   const isWeb = Platform.OS === 'web'
+  // Web-only: keep --metravel-map-vh in sync with the real visible viewport so
+  // the map container has a reliable height in in-app WebViews where `dvh` is
+  // broken (Instagram/Threads grey-map bug). No-op on native.
+  useMapViewportHeightVar()
   const {
     canonical,
     isFocused,

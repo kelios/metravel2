@@ -28,8 +28,14 @@ export const getStyles = (
       flex: 1,
       ...(Platform.OS === 'web'
         ? ({
-            height: `calc(100dvh - ${WEB_HEADER_RESERVED_HEIGHT}px)`,
-            maxHeight: `calc(100dvh - ${WEB_HEADER_RESERVED_HEIGHT}px)`,
+            // Height resolution order (see hooks/useMapViewportHeightVar.ts):
+            //   1. --metravel-map-vh — JS-measured visible viewport (reliable in
+            //      in-app WebViews where `dvh` collapses to 0 -> grey map).
+            //   2. 100svh — stable SMALL viewport fallback before the JS var is
+            //      set; more reliable than `dvh` in WebViews and equal to the
+            //      visible area on Safari/desktop.
+            height: `calc(var(--metravel-map-vh, 100svh) - ${WEB_HEADER_RESERVED_HEIGHT}px)`,
+            maxHeight: `calc(var(--metravel-map-vh, 100svh) - ${WEB_HEADER_RESERVED_HEIGHT}px)`,
             minHeight: 0,
             overflow: 'hidden',
           } as any)

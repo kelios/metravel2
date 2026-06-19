@@ -329,7 +329,9 @@ const renderWithProviders = (ui: any) => {
   }
 }
 
-MapPageComponent = require('@/components/MapPage/Map.web').default
+const mapWebModule = require('@/components/MapPage/Map.web')
+MapPageComponent = mapWebModule.default
+const { shouldUseDarkMapTiles } = mapWebModule
 
 afterAll(() => {
   RN.Platform.OS = originalPlatformOS
@@ -353,6 +355,13 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       (m: any) => (m as any)?.props?.['data-icon-class'] === 'user-location-marker'
     )
   }
+
+  it('keeps the web base map on light OSM tiles unless dark theme is explicitly selected', () => {
+    expect(shouldUseDarkMapTiles('dark')).toBe(true)
+    expect(shouldUseDarkMapTiles('auto')).toBe(false)
+    expect(shouldUseDarkMapTiles('light')).toBe(false)
+    expect(shouldUseDarkMapTiles(undefined)).toBe(false)
+  })
 
   beforeEach(() => {
     jest.clearAllMocks()

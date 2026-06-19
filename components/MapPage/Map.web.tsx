@@ -53,6 +53,8 @@ const FALLBACK_COORDINATES = { latitude: 53.8828449, longitude: 27.7273595 }
 
 type Props = MapProps
 
+export const shouldUseDarkMapTiles = (theme: string | null | undefined) => theme === 'dark'
+
 function safeInvoke(fn: (() => void) | undefined) {
   if (!fn) return
   try {
@@ -397,10 +399,11 @@ const MapPageComponent: React.FC<Props> = (props) => {
   }, [errors?.routing])
 
   const customIcons = useLeafletIcons(L)
+  const useDarkMapTiles = shouldUseDarkMapTiles(themeContextValue.theme)
   const { leafletBaseLayerRef, leafletOverlayLayersRef, leafletControlRef } = useMapInstance({
     map: mapInstance,
     L,
-    isDark: themeContextValue.isDark,
+    isDark: useDarkMapTiles,
   })
 
   // Expose marker index for MapUiApi.openPopupForCoord
@@ -423,7 +426,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     leafletOverlayLayersRef,
     leafletControlRef,
     onRequestUserLocationFocus: centerOnUserLocation,
-    isDark: themeContextValue.isDark,
+    isDark: useDarkMapTiles,
   })
 
   // F-49 — report the map center (debounced) on pan/zoom end so the controller

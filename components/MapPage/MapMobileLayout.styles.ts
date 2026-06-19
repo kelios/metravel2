@@ -26,9 +26,13 @@ export const getMapMobileLayoutStyles = (
             height: '100%',
             // iOS Safari: `100vh` is the LARGE viewport (taller than the visible
             // area under the dynamic toolbar), which pushes the bottom-anchored
-            // search pill + Leaflet attribution up into the middle. `100dvh`
-            // tracks the visible viewport so bottom controls stay at the bottom.
-            maxHeight: '100dvh',
+            // search pill + Leaflet attribution up into the middle. Clamp to the
+            // JS-measured visible viewport (--metravel-map-vh, see
+            // hooks/useMapViewportHeightVar.ts) so bottom controls stay at the
+            // bottom AND in-app WebViews (where `dvh` collapses to 0) don't pin
+            // the layout to zero height. `100svh` is the pre-measurement
+            // fallback (stable small viewport, reliable in WebViews).
+            maxHeight: 'var(--metravel-map-vh, 100svh)',
             overflow: 'hidden',
           } as any)
         : null),
