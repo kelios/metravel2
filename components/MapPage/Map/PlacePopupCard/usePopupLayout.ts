@@ -5,6 +5,8 @@ import { isIOSSafariUserAgent } from '@/components/ui/ImageCardMedia';
 import type { ThemedColors } from '@/hooks/useTheme';
 
 import {
+  BOTTOM_CARD_IMAGE_ASPECT,
+  BOTTOM_CARD_IMAGE_MAX_HEIGHT_BY_BREAKPOINT,
   COMPACT_IMAGE_MAX_HEIGHT_BY_BREAKPOINT,
   COMPACT_POPUP_MAX_WIDTH_BY_BREAKPOINT,
   IMAGE_ASPECT,
@@ -65,9 +67,11 @@ export function usePopupLayout({
         : POPUP_MAX_WIDTH_BY_BREAKPOINT[bp];
   const imageHeightCap = useFullscreenMobileOverlay
     ? 220
-    : useCompactLayout
-    ? COMPACT_IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp]
-    : IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp];
+    : isBottomCardLayout
+      ? BOTTOM_CARD_IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp]
+      : useCompactLayout
+        ? COMPACT_IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp]
+        : IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp];
   // For the bottom card the parent (<=560px sheet) controls the real width via
   // `width: 100%`; don't clamp to the static `width` prop (default 352) which would
   // re-introduce the narrow content. The image height cap still applies below.
@@ -89,7 +93,7 @@ export function usePopupLayout({
         1,
         Math.min(
           imageHeightCap,
-          Math.round(heroWidth / IMAGE_ASPECT[bp])
+          Math.round(heroWidth / (isBottomCardLayout ? BOTTOM_CARD_IMAGE_ASPECT[bp] : IMAGE_ASPECT[bp]))
         )
       );
 

@@ -52,15 +52,30 @@ export const COMPACT_POPUP_MAX_WIDTH_BY_BREAKPOINT: Record<BreakpointKey, number
 };
 
 export const IMAGE_MAX_HEIGHT_BY_BREAKPOINT: Record<BreakpointKey, number> = {
-  narrow: 144,
-  compact: 172,
-  default: 196,
+  narrow: 188,
+  compact: 220,
+  default: 248,
 };
 
 export const COMPACT_IMAGE_MAX_HEIGHT_BY_BREAKPOINT: Record<BreakpointKey, number> = {
   narrow: 96,
   compact: 112,
   default: 120,
+};
+
+// Mobile bottom card (maps.me-style sheet): the photo is the dominant element
+// (~70% of the card). It spans the full sheet width, so its height is capped here
+// much taller than the narrow Leaflet-popup compact cap above. Still contain+blur.
+export const BOTTOM_CARD_IMAGE_MAX_HEIGHT_BY_BREAKPOINT: Record<BreakpointKey, number> = {
+  narrow: 280,
+  compact: 300,
+  default: 320,
+};
+
+export const BOTTOM_CARD_IMAGE_ASPECT: Record<BreakpointKey, number> = {
+  narrow: 1.1,
+  compact: 1.15,
+  default: 1.2,
 };
 
 export const SPLIT_LAYOUT_MIN_VIEWPORT = 860;

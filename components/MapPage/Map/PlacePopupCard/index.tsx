@@ -218,15 +218,16 @@ const PlacePopupCard: React.FC<Props> = ({
         {!!categoryLabel && (
           <View style={styles.metaBadge}>
             <Feather name="tag" size={12} color={colors.textMuted} />
-            {/* In the bottom card the category badge sits on its own full-width row,
-                so a single-line clamp would shrink the Text to its widest unbreakable
-                fragment and chop «Замок» → «Зам…». Drop the clamp there and let the
-                short category label size to its content. Desktop popup keeps 1 line. */}
+            {/* Bottom card (native): RN Android rounds a tightly-hugged <Text> line
+                width down and clips the trailing glyph («Замок» → «Замо»). Appending a
+                thin space widens the measured line just enough for «к» to paint; the
+                badge still hugs the visible label. Web/desktop popup are untouched. */}
             <Text
               style={styles.categoryText}
               numberOfLines={isBottomCardLayout ? undefined : 1}
             >
               {categoryLabel}
+              {isBottomCardLayout && Platform.OS !== 'web' ? ' ' : ''}
             </Text>
           </View>
         )}

@@ -180,7 +180,9 @@ const getStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surfaceMuted,
     },
     body: {
-      paddingHorizontal: 8,
-      paddingBottom: 8,
+      // Photo runs edge-to-edge: the popup card's own contentContainer/footerContainer
+      // carry the horizontal padding for the caption/actions below the hero.
+      paddingHorizontal: 0,
+      paddingBottom: 4,
     },
   })

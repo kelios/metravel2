@@ -62,8 +62,10 @@ export const getStyles = (
     },
     topSection: {
       width: '100%',
-      paddingTop: splitLayout ? 0 : topPadding,
-      paddingHorizontal: splitLayout ? 0 : horizontalPadding,
+      // Bottom card: photo runs edge-to-edge and flush to the top so it reads as the
+      // dominant hero; the text/meta block keeps its horizontal padding below.
+      paddingTop: splitLayout || bottomCardLayout ? 0 : topPadding,
+      paddingHorizontal: splitLayout || bottomCardLayout ? 0 : horizontalPadding,
     },
     relatedTravelActions: {
       position: 'absolute',
@@ -72,18 +74,20 @@ export const getStyles = (
       zIndex: 6,
     },
     relatedTravelScrim: {
+      // Scoped to the ♥/＋ button corner only (not the whole hero): a small, soft
+      // gradient just for icon contrast so the dominant photo stays unobscured.
       position: 'absolute',
       top: 0,
       left: 0,
-      width: 76,
-      height: 116,
+      width: 60,
+      height: 100,
       zIndex: 5,
-      borderBottomRightRadius: 28,
-      backgroundColor: 'rgba(15,23,42,0.32)',
+      borderBottomRightRadius: 24,
+      backgroundColor: 'rgba(15,23,42,0.18)',
       ...(Platform.OS === 'web'
         ? ({
             background:
-              'linear-gradient(135deg, rgba(15,23,42,0.46) 0%, rgba(15,23,42,0.22) 55%, rgba(15,23,42,0) 100%)',
+              'linear-gradient(135deg, rgba(15,23,42,0.32) 0%, rgba(15,23,42,0.12) 55%, rgba(15,23,42,0) 100%)',
           } as any)
         : null),
     },
@@ -147,8 +151,12 @@ export const getStyles = (
       transform: [{ scale: 0.94 }],
     },
     contentContainer: {
-      paddingHorizontal: splitLayout ? horizontalPadding + 2 : 2,
-      paddingTop: splitLayout ? topPadding + 2 : 14,
+      // Bottom card: photo is edge-to-edge (topSection drops its padding), so the
+      // caption block restores its own horizontal padding here.
+      paddingHorizontal: splitLayout ? horizontalPadding + 2 : bottomCardLayout ? horizontalPadding : 2,
+      // Bottom card: tighten the gap between the (now dominant) photo and the title
+      // so the content block reads as a compact caption under the hero.
+      paddingTop: splitLayout ? topPadding + 2 : bottomCardLayout ? 8 : 14,
       paddingBottom: 0,
     },
     contentContainerSplit: {
@@ -162,14 +170,14 @@ export const getStyles = (
     },
     footerContainer: {
       paddingHorizontal: horizontalPadding,
-      paddingTop: splitLayout ? 10 : 14,
-      paddingBottom: bottomPadding,
+      paddingTop: splitLayout ? 10 : bottomCardLayout ? 8 : 14,
+      paddingBottom: bottomCardLayout ? Math.max(8, bottomPadding - 2) : bottomPadding,
     },
     footerStack: {
-      gap: splitLayout ? 10 : compactLayout ? compactSp.sectionGap : sp.sectionGap,
+      gap: bottomCardLayout ? 8 : splitLayout ? 10 : compactLayout ? compactSp.sectionGap : sp.sectionGap,
     },
     infoSection: {
-      gap: compactLayout ? 6 : splitLayout ? 6 : bp === 'narrow' ? 8 : 10,
+      gap: bottomCardLayout ? 5 : compactLayout ? 6 : splitLayout ? 6 : bp === 'narrow' ? 8 : 10,
     },
     metaRow: {
       flexDirection: 'row',
@@ -188,7 +196,9 @@ export const getStyles = (
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight ?? colors.border,
-      ...(bottomCardLayout ? { flexShrink: 0, alignSelf: 'flex-start' } : null),
+      // Bottom card: badge hugs its content and stays inside the full-width sheet.
+      // (The trailing-glyph clip itself is fixed at the call site — see index.tsx.)
+      ...(bottomCardLayout ? ({ maxWidth: '100%' } as const) : null),
     },
     titleText: {
       fontSize: splitLayout ? fs.title + 1 : fs.title,
@@ -246,8 +256,9 @@ export const getStyles = (
     categoryText: {
       fontSize: compactLayout ? fs.small - 1 : fs.small,
       color: colors.textMuted,
-      // Bottom card has room — let the category label size to its content and stop
-      // it from being squeezed to «Зам…» by neighbouring meta badges.
+      // Bottom card: keep the label from being shrunk by the row. The trailing-glyph
+      // clip («Замок» → «Замо») is an RN-Android text-width-rounding bug worked around
+      // at the call site (trailing hair space widens the measured line so «к» paints).
       ...(bottomCardLayout ? { flexShrink: 0 } : null),
     },
     smallText: {
@@ -264,9 +275,9 @@ export const getStyles = (
       flexDirection: 'row',
       alignItems: 'center',
       gap: compactLayout ? 5 : 6,
-      minHeight: compactLayout ? compactSp.coordMinHeight : splitLayout ? 32 : 36,
+      minHeight: bottomCardLayout ? 28 : compactLayout ? compactSp.coordMinHeight : splitLayout ? 32 : 36,
       paddingHorizontal: compactLayout ? 10 : splitLayout ? 10 : 12,
-      paddingVertical: compactLayout ? 5 : 6,
+      paddingVertical: bottomCardLayout ? 4 : compactLayout ? 5 : 6,
       borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
@@ -286,7 +297,7 @@ export const getStyles = (
           : undefined,
     },
     actionsStack: {
-      gap: splitLayout ? 8 : 10,
+      gap: bottomCardLayout ? 8 : splitLayout ? 8 : 10,
     },
     actionSummaryText: {
       fontSize: compactLayout ? fs.small - 1 : fs.small,
@@ -305,9 +316,9 @@ export const getStyles = (
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'flex-start',
-      gap: 4,
-      width: compactLayout ? 64 : 68,
-      paddingVertical: 4,
+      gap: bottomCardLayout ? 3 : 4,
+      width: bottomCardLayout ? 58 : compactLayout ? 64 : 68,
+      paddingVertical: bottomCardLayout ? 2 : 4,
       paddingHorizontal: 2,
       borderRadius: DESIGN_TOKENS.radii.md,
       ...(Platform.OS === 'web'
@@ -319,8 +330,8 @@ export const getStyles = (
       transform: [{ scale: 0.95 }],
     },
     chipIconBubble: {
-      width: compactLayout ? 34 : 38,
-      height: compactLayout ? 34 : 38,
+      width: bottomCardLayout ? 38 : compactLayout ? 34 : 38,
+      height: bottomCardLayout ? 38 : compactLayout ? 34 : 38,
       borderRadius: DESIGN_TOKENS.radii.full,
       alignItems: 'center',
       justifyContent: 'center',
@@ -393,8 +404,8 @@ export const getStyles = (
       justifyContent: 'center',
       gap: 6,
       width: '100%',
-      minHeight: compactLayout ? compactSp.addBtnMinHeight : splitLayout ? 40 : 46,
-      paddingVertical: compactLayout ? 6 : 9,
+      minHeight: bottomCardLayout ? 42 : compactLayout ? compactSp.addBtnMinHeight : splitLayout ? 40 : 46,
+      paddingVertical: bottomCardLayout ? 8 : compactLayout ? 6 : 9,
       paddingHorizontal: compactLayout ? sp.btnPadH : splitLayout ? 14 : sp.btnPadH,
       borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.primary,
