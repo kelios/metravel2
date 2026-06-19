@@ -16,6 +16,7 @@ async function installTileMock(page: any) {
   await page.route('**://*.basemaps.cartocdn.com/**', fulfill)
   await page.route('**://tile.openstreetmap.org/**', fulfill)
   await page.route('**://*.tile.openstreetmap.org/**', fulfill)
+  await page.route('**/proxy/tiles/osm/**', fulfill)
 }
 
 async function gotoMapWithRecovery(page: any) {

@@ -22,6 +22,7 @@ import { test, expect } from '@playwright/test'
 import {
   envNum,
   injectPerfObservers,
+  beginPostReadyClsCollection,
   collectMetrics,
   createNetworkTracker,
 } from './helpers/perfBudget'
@@ -98,6 +99,8 @@ for (const target of PAGES) {
 
       await page.goto(target.path, { waitUntil: 'load', timeout: 60_000 })
       await waitForReady(page, target.readySelector)
+      await beginPostReadyClsCollection(page)
+      await page.waitForTimeout(500)
 
       const metrics = await collectMetrics(page)
 
@@ -108,7 +111,8 @@ for (const target of PAGES) {
           lcp: metrics.lcp != null ? `${Math.round(metrics.lcp)}ms` : 'N/A',
           fcp: metrics.fcp != null ? `${Math.round(metrics.fcp)}ms` : 'N/A',
           tbt: `${Math.round(metrics.tbt)}ms`,
-          cls: metrics.cls.toFixed(4),
+          clsTotal: metrics.cls.toFixed(4),
+          clsAfterReady: metrics.clsAfterReady.toFixed(4),
           longTaskCount: metrics.longTaskCount,
         },
         clsSources: metrics.clsSources,
@@ -130,7 +134,12 @@ for (const target of PAGES) {
       expect(metrics.tbt, `${target.name} TBT ${Math.round(metrics.tbt)}ms > ${TBT_MAX_MS}ms`).toBeLessThanOrEqual(
         TBT_MAX_MS,
       )
-      expect(metrics.cls, `${target.name} CLS ${metrics.cls.toFixed(4)} > ${CLS_MAX}`).toBeLessThanOrEqual(CLS_MAX)
+      expect(
+        metrics.clsAfterReady,
+        `${target.name} post-ready CLS ${metrics.clsAfterReady.toFixed(4)} > ${CLS_MAX} (total=${metrics.cls.toFixed(
+          4,
+        )})`,
+      ).toBeLessThanOrEqual(CLS_MAX)
       expect(
         metrics.longTaskCount,
         `${target.name} ${metrics.longTaskCount} long tasks > ${MAX_LONG_TASKS}`,

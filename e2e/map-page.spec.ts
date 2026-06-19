@@ -245,7 +245,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(page.getByRole('tab', { name: /Список/ })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Построение маршрута' })).toBeVisible();
     await expect(page.getByRole('searchbox', { name: 'Поиск мест на карте' })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Управление картой/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Слои и настройки карты' })).toBeVisible();
   });
 
   test('desktop: sightseeing categories stay visible in panel and quick filters when filters API uses localized fields', async ({ page }) => {

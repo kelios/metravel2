@@ -2,6 +2,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
+function clearColorEnv() {
+  if (Object.prototype.hasOwnProperty.call(process.env, 'NO_COLOR')) {
+    delete process.env.NO_COLOR;
+  }
+  if (Object.prototype.hasOwnProperty.call(process.env, 'FORCE_COLOR')) {
+    delete process.env.FORCE_COLOR;
+  }
+}
+
 function applyEnvFile(filePath: string) {
   if (!fs.existsSync(filePath)) return;
   const raw = fs.readFileSync(filePath, 'utf8');
@@ -30,6 +39,7 @@ const rootDir = process.cwd();
 applyEnvFile(path.join(rootDir, '.env.e2e'));
 applyEnvFile(path.join(rootDir, '.env.dev'));
 applyEnvFile(path.join(rootDir, '.env'));
+clearColorEnv();
 
 // Используем отдельный порт для e2e, чтобы не конфликтовать с локальной разработкой.
 // NOTE: prefer 127.0.0.1 over localhost to avoid IPv6 (::1) vs IPv4 binding mismatches on some systems.
@@ -37,12 +47,6 @@ const E2E_WEB_PORT = Number(process.env.E2E_WEB_PORT || '8085');
 const baseURL = process.env.BASE_URL || `http://127.0.0.1:${E2E_WEB_PORT}`;
 const USE_EXISTING_SERVER = process.env.E2E_NO_WEBSERVER === '1' && !!process.env.BASE_URL;
 const webServerEnv = { ...process.env } as Record<string, string | undefined>;
-if (Object.prototype.hasOwnProperty.call(webServerEnv, 'NO_COLOR')) {
-  delete webServerEnv.NO_COLOR;
-}
-if (Object.prototype.hasOwnProperty.call(webServerEnv, 'FORCE_COLOR')) {
-  delete webServerEnv.FORCE_COLOR;
-}
 
 // For local E2E we hardcode dev API by default to avoid env drift.
 // Override with E2E_API_URL or switch to real API by setting E2E_USE_REAL_API=1.

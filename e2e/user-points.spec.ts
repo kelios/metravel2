@@ -117,6 +117,7 @@ test.describe('User points', () => {
     await page.route('**://*.tile.openstreetmap.org/**', routeTile);
     await page.route('**://*.tile.openstreetmap.fr/**', routeTile);
     await page.route('**://*.tile.openstreetmap.de/**', routeTile);
+    await page.route('**/proxy/tiles/osm/**', routeTile);
   }
 
   async function installNominatimMock(page: any, result?: { lat: number; lon: number; display_name?: string }) {

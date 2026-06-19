@@ -6,10 +6,31 @@
 import { test, expect } from './fixtures';
 import { preacceptCookies } from './helpers/navigation';
 
+async function installTileMock(page: any) {
+  const pngBase64 =
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO8m2p8AAAAASUVORK5CYII=';
+  const png = Buffer.from(pngBase64, 'base64');
+
+  const routeTile = async (route: any) => {
+    return route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      body: png,
+    });
+  };
+
+  await page.route('**://tile.openstreetmap.org/**', routeTile);
+  await page.route('**://*.tile.openstreetmap.org/**', routeTile);
+  await page.route('**://*.tile.openstreetmap.fr/**', routeTile);
+  await page.route('**://*.tile.openstreetmap.de/**', routeTile);
+  await page.route('**/proxy/tiles/osm/**', routeTile);
+}
+
 test.describe('Map Page Route Line Visibility - Visual Test', () => {
   test('линия маршрута должна быть ВИДИМА на карте (с детальной проверкой)', async ({ page }) => {
     test.setTimeout(240_000);
     await preacceptCookies(page);
+    await installTileMock(page);
 
     // Слушаем все логи консоли
     const consoleLogs: { type: string; text: string }[] = [];

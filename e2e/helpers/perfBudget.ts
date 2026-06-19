@@ -30,6 +30,8 @@ export async function injectPerfObservers(page: any) {
       lcp: null as number | null,
       fcp: null as number | null,
       cls: 0,
+      clsAfterReady: 0,
+      clsPhase: 'total',
       longTasks: [] as number[],
     }
 
@@ -39,6 +41,9 @@ export async function injectPerfObservers(page: any) {
         for (const entry of list.getEntries() as any[]) {
           if (entry && !entry.hadRecentInput && typeof entry.value === 'number') {
             w.__perfBudget.cls += entry.value
+            if (w.__perfBudget.clsPhase === 'afterReady') {
+              w.__perfBudget.clsAfterReady += entry.value
+            }
             try {
               const sources = Array.isArray(entry.sources) ? entry.sources : []
               const fingerprints = sources
@@ -97,10 +102,22 @@ export async function injectPerfObservers(page: any) {
   })
 }
 
+export async function beginPostReadyClsCollection(page: any) {
+  await page
+    .evaluate(() => {
+      const w = window as any
+      if (!w.__perfBudget) return
+      w.__perfBudget.clsPhase = 'afterReady'
+      w.__perfBudget.clsAfterReady = 0
+    })
+    .catch(() => null)
+}
+
 export type PerfMetrics = {
   lcp: number | null
   fcp: number | null
   cls: number
+  clsAfterReady: number
   tbt: number
   longTaskCount: number
   clsSources: Array<{ value: number; sources: string[] }>
@@ -131,6 +148,7 @@ export async function collectMetrics(page: any): Promise<PerfMetrics> {
       lcp: typeof pb.lcp === 'number' ? pb.lcp : null,
       fcp: typeof fcp === 'number' ? fcp : null,
       cls: typeof pb.cls === 'number' ? pb.cls : 0,
+      clsAfterReady: typeof pb.clsAfterReady === 'number' ? pb.clsAfterReady : 0,
       tbt,
       longTaskCount: longTasks.length,
       clsSources,

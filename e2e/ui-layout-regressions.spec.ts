@@ -288,12 +288,25 @@ test.describe('@perf UI layout regression guards (overlap/cutoff/viewport)', () 
 
       // Use stable testIDs from CustomHeader mobile menu.
       const burger = page.locator('[data-testid="mobile-menu-open"]:visible').first();
+      const accountMenu = page.locator('[data-testid="account-menu-anchor"]:visible').first();
+      await expect
+        .poll(
+          async () => {
+            if (await burger.isVisible().catch(() => false)) return 'burger';
+            if (await accountMenu.isVisible().catch(() => false)) return 'account';
+            return 'none';
+          },
+          {
+            message: 'mobile or account menu trigger should appear after header hydration',
+            timeout: 30_000,
+          },
+        )
+        .not.toBe('none');
       const hasMobileBurger = await burger.isVisible().catch(() => false);
 
       // Tablet can render desktop header variant depending on responsive breakpoints.
       // In that case validate menu behavior via the desktop account menu trigger.
       if (!hasMobileBurger) {
-        const accountMenu = page.locator('[data-testid="account-menu-anchor"]:visible').first();
         await expect(accountMenu).toBeVisible({ timeout: 30_000 });
         await accountMenu.hover().catch(() => null);
         await accountMenu.click();
