@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react'
-import { Platform, Pressable, StyleSheet, View } from 'react-native'
+import { Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -42,6 +42,13 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
   const themeContextValue = useTheme()
   const insets = useSafeAreaInsets()
   const queryClient = useQueryClient()
+  const { width: viewportWidth } = useWindowDimensions()
+  // On mobile web the tall, photo-dominant card frequently exceeds the viewport
+  // height: pinned to bottom:0 with no scroll it overflows above the screen, so
+  // the ♥/＋ buttons + title (and the close button) become unreachable. Promote
+  // it to a real fullscreen, scrollable sheet there. Desktop popup / native keep
+  // the compact bottom-sheet.
+  const isFullscreenWeb = IS_WEB && viewportWidth <= 560
   const styles = useMemo(() => getStyles(colors), [colors])
 
   // createMapPopupComponent reads userLocation from a ref so the factory identity
@@ -92,6 +99,57 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
 
   const paddingBottom = (bottomInset || 0) + (insets?.bottom ?? 0) + 12
 
+  const closeButton = (
+    // Rendered after the body so it paints on top of the edge-to-edge hero
+    // photo (RN has no zIndex across siblings without elevation); dark pill
+    // + white glyph keeps it visible on any image.
+    <Pressable
+      testID="map-place-bottom-card-close"
+      onPress={onClose}
+      accessibilityRole="button"
+      accessibilityLabel="Закрыть карточку места"
+      hitSlop={10}
+      style={({ pressed }) => [
+        styles.closeButton,
+        isFullscreenWeb && styles.closeButtonFullscreen,
+        pressed && { opacity: 0.7 },
+      ]}
+    >
+      <Feather name="x" size={18} color="#fff" />
+    </Pressable>
+  )
+
+  // Mobile web: fullscreen, scrollable sheet so every element (♥/＋, title,
+  // address, actions, close) stays on-screen and tappable regardless of photo
+  // height. The card itself is the interactive surface — the box-none root lets
+  // empty areas fall through, but the fullscreen card covers the whole viewport.
+  if (isFullscreenWeb) {
+    return (
+      <View
+        style={styles.fullscreenRoot}
+        testID="map-place-bottom-card"
+        {...({ pointerEvents: 'auto' } as any)}
+      >
+        <View style={styles.fullscreenCard}>
+          <ScrollView
+            testID="map-place-bottom-card-scroll"
+            style={styles.fullscreenScroll}
+            contentContainerStyle={[
+              styles.fullscreenScrollContent,
+              { paddingBottom: (insets?.bottom ?? 0) + 24 },
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            {...({ 'data-card-action': 'true' } as any)}
+          >
+            <PopupComponent point={point} closePopup={onClose} />
+          </ScrollView>
+          {closeButton}
+        </View>
+      </View>
+    )
+  }
+
   return (
     <View
       style={[styles.root, { paddingBottom }]}
@@ -101,21 +159,13 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
       <View style={styles.card}>
         <View style={styles.handleZone} {...(webSwipeHandlers ?? {})}>
           <View style={styles.grabber} />
-          <Pressable
-            testID="map-place-bottom-card-close"
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel="Закрыть карточку места"
-            hitSlop={10}
-            style={({ pressed }) => [styles.closeButton, pressed && { opacity: 0.7 }]}
-          >
-            <Feather name="x" size={18} color={colors.text} />
-          </Pressable>
         </View>
 
         <View style={styles.body}>
           <PopupComponent point={point} closePopup={onClose} />
         </View>
+
+        {closeButton}
       </View>
     </View>
   )
@@ -132,6 +182,38 @@ const getStyles = (colors: ThemedColors) =>
       bottom: 0,
       paddingHorizontal: 8,
       ...(IS_WEB ? ({ zIndex: 1200 } as any) : null),
+    },
+    // Mobile web fullscreen sheet: a fixed full-viewport layer above the map and
+    // the global bottom dock. Web-only (guarded by isFullscreenWeb at the call site).
+    fullscreenRoot: {
+      ...(IS_WEB
+        ? ({
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 5000,
+          } as any)
+        : null),
+    },
+    fullscreenCard: {
+      flex: 1,
+      width: '100%',
+      height: '100%',
+      backgroundColor: colors.surface,
+      position: 'relative',
+      overflow: 'hidden',
+    },
+    fullscreenScroll: {
+      flex: 1,
+      width: '100%',
+      ...(IS_WEB ? ({ WebkitOverflowScrolling: 'touch' } as any) : null),
+    },
+    fullscreenScrollContent: {
+      // The hero photo runs edge-to-edge; PlacePopupCard's own contentContainer /
+      // footerContainer carry the horizontal padding for the caption + actions.
+      flexGrow: 1,
     },
     card: {
       width: '100%',
@@ -171,13 +253,31 @@ const getStyles = (colors: ThemedColors) =>
     closeButton: {
       position: 'absolute',
       right: 8,
-      top: 4,
-      width: 30,
-      height: 30,
-      borderRadius: 15,
+      top: 8,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: colors.surfaceMuted,
+      backgroundColor: 'rgba(15,23,42,0.55)',
+      ...(IS_WEB ? ({ zIndex: 5 } as any) : { elevation: 6 }),
+    },
+    closeButtonFullscreen: {
+      // Larger tap target + clear of the notch/safe area; sits above the scroll
+      // region so it is always reachable on the fullscreen mobile-web sheet.
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      right: 12,
+      backgroundColor: 'rgba(15,23,42,0.6)',
+      ...(IS_WEB
+        ? ({
+            top: 'max(12px, env(safe-area-inset-top, 12px))' as any,
+            zIndex: 10,
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+          } as any)
+        : null),
     },
     body: {
       // Photo runs edge-to-edge: the popup card's own contentContainer/footerContainer
