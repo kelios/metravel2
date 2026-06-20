@@ -5,9 +5,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '@/context/AuthContext';
-import { useQueryClient } from '@tanstack/react-query';
-import { userPointsApi } from '@/api/userPoints';
-import { queryKeys } from '@/api/queryKeys';
+import { useSavedPointToggle } from '@/hooks/map/useSavedPointToggle';
 import { PointStatus } from '@/types/userPoints';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { openExternalUrlInNewTab, openExternalUrl } from '@/utils/externalLinks';
@@ -76,10 +74,18 @@ export const stripCountryFromCategoryString = (raw: string | null | undefined, a
 export function useAddressListItemActions(travel: TravelCoords) {
   const { address, categoryName, coord, travelImageThumbUrl, articleUrl, urlTravel } = travel;
   const [isAddingPoint, setIsAddingPoint] = useState(false);
-  const [pointAdded, setPointAdded] = useState(false);
 
   const { isAuthenticated, authReady } = useAuth();
-  const queryClient = useQueryClient();
+
+  // #334 — saved-state shared with «Мои точки» через кэш userPointsAll, матч по
+  // координате (у POI нет user-point id). Даёт настоящий toggle без дублей и
+  // переживает ремоунт карточки (раньше pointAdded был локальным и сбрасывался).
+  const toggleCoord = useMemo(() => {
+    const lat = Number(travel.lat);
+    const lng = Number(travel.lng);
+    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+  }, [travel.lat, travel.lng]);
+  const { isSaved, removeSaved, createPoint } = useSavedPointToggle({ coord: toggleCoord });
 
   const rawCategoryName = useMemo(() => {
     if (categoryName) return String(categoryName);
@@ -152,21 +158,22 @@ export function useAddressListItemActions(travel: TravelCoords) {
     if (articleUrl) tags.articleUrl = articleUrl;
     if (Object.keys(tags).length > 0) payload.tags = tags;
 
-    if (pointAdded) { void showToast({ type: 'info', text1: 'Точка уже добавлена', position: 'bottom' }); return; }
     setIsAddingPoint(true);
     try {
-      await userPointsApi.createPoint(payload);
-      setPointAdded(true);
+      if (isSaved) {
+        await removeSaved();
+        void showToast({ type: 'info', text1: 'Точка убрана из «Мои точки»', position: 'bottom' });
+        return;
+      }
+      await createPoint(payload);
       void showToast({ type: 'success', text1: 'Точка добавлена в «Мои точки»', position: 'bottom' });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() });
-      setTimeout(() => setPointAdded(false), 1000);
     } catch {
       void showToast({ type: 'error', text1: 'Не удалось сохранить точку', position: 'bottom' });
     } finally { setIsAddingPoint(false); }
-  }, [address, articleUrl, authReady, rawCategoryName, isAddingPoint, isAuthenticated, pointAdded, queryClient, travel.lat, travel.lng, travelImageThumbUrl, urlTravel]);
+  }, [address, articleUrl, authReady, rawCategoryName, isAddingPoint, isAuthenticated, isSaved, removeSaved, createPoint, travel.lat, travel.lng, travelImageThumbUrl, urlTravel]);
 
   return {
-    rawCategoryName, categories, isAddingPoint, pointAdded, isAuthenticated, authReady,
+    rawCategoryName, categories, isAddingPoint, pointAdded: isSaved, isAuthenticated, authReady,
     copyCoords, openTelegram, openMap, openArticle, handleAddPoint,
   };
 }

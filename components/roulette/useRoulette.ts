@@ -17,6 +17,9 @@ type FilterGroup = Parameters<typeof ModernFilters>[0]['filterGroups'][number];
 
 const RESULT_SIZE = 3;
 const SPIN_DURATION_MS = 900;
+// Failsafe: если refetch случайных путешествий зависнет (сеть/ретраи), не держим
+// кнопку «Подбираем…» вечно — по таймауту откатываемся на уже загруженные travels.
+const REFETCH_TIMEOUT_MS = 8000;
 
 const STRING_ARRAY_FIELDS = [
   'categories',
@@ -201,15 +204,25 @@ export function useRoulette() {
     setSpinning(true);
 
     let pool: Travel[] = travels || [];
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     try {
-      const { data } = await refetch();
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(
+          () => reject(new Error('roulette-refetch-timeout')),
+          REFETCH_TIMEOUT_MS,
+        );
+      });
+      const { data } = await Promise.race([refetch(), timeoutPromise]);
       const pages = (data as { pages?: unknown[] } | undefined)?.pages || [];
       if (pages.length > 0) {
         const items = pages.flatMap((page) => normalizeApiResponse(page).items || []);
         pool = deduplicateTravels(items as Travel[]);
       }
     } catch {
-      // оставляем уже загруженные travels
+      // таймаут или сетевая ошибка — оставляем уже загруженные travels,
+      // спин всё равно завершится (spinning сбросится ниже).
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
     }
 
     if (!mountedRef.current) return;

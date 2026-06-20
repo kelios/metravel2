@@ -54,6 +54,10 @@ export const getMapControlsStyles = ({ colors }: FiltersPanelStyleContext) =>
       backgroundColor: colors.surfaceAlpha40,
       borderWidth: 1,
       borderColor: colors.borderLight,
+      // Вся строка — тап-таргет (Pressable c onPress=toggle, #339). На web даём
+      // курсор-указатель на всей строке (включая лейбл), иначе кликабельной
+      // визуально выглядит только сам свитч справа.
+      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as object) : null),
     },
     mapToggleRowPressed: {
       backgroundColor: colors.surfaceMuted ?? colors.backgroundSecondary,

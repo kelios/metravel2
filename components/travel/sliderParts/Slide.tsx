@@ -304,8 +304,11 @@ const Slide = memo(function Slide({
         />
       ) : (
         <>
-          {/* ✅ OPTIMIZATION: Show subtle skeleton with pulse animation */}
-          {shouldRenderLoadingPlaceholder && (
+          {/* Web-only loading skeleton (pulse). On native the opaque near-white block masked
+              expo-image's own blurhash placeholder, leaving a white rectangle for several seconds
+              before decode (#337). Native now lets the neutral blurhash placeholder show through —
+              the sharp reveal still waits for expo-image's own load. */}
+          {shouldRenderLoadingPlaceholder && Platform.OS === 'web' && (
             <View
               style={[
                 {
@@ -314,9 +317,7 @@ const Slide = memo(function Slide({
                   zIndex: 2,
                   pointerEvents: 'none',
                   backgroundColor: 'rgba(240, 240, 240, 0.6)',
-                  ...(Platform.OS === 'web' ? {
-                    animation: 'sliderPulse 1.5s ease-in-out infinite',
-                  } : {})
+                  animation: 'sliderPulse 1.5s ease-in-out infinite',
                 } as any,
               ]}
             />

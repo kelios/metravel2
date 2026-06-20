@@ -37,6 +37,12 @@ type Props = {
   onBuildRoute?: () => void;
   addDisabled?: boolean;
   isAdding?: boolean;
+  /**
+   * #334 — the point is already in the user's «Мои точки» collection. Drives the
+   * toggle visual (check + «Сохранено») and the tap-to-remove tooltip; the actual
+   * remove is wired by the caller via `onAddPoint`.
+   */
+  isSaved?: boolean;
   addLabel?: string;
   addTooltip?: string;
   width?: number;
@@ -99,6 +105,7 @@ const PlacePopupCard: React.FC<Props> = ({
   onBuildRoute,
   addDisabled = false,
   isAdding = false,
+  isSaved = false,
   addLabel = 'Сохранить',
   addTooltip,
   width = 352,
@@ -366,6 +373,8 @@ const PlacePopupCard: React.FC<Props> = ({
               {onAddPoint && (
                 <CardActionPressable
                   accessibilityLabel={compactLabel}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: isSaved, disabled: addDisabled || isAdding }}
                   onPress={() => void onAddPoint()}
                   disabled={addDisabled || isAdding}
                   title={addTooltip ?? compactLabel}
@@ -376,11 +385,23 @@ const PlacePopupCard: React.FC<Props> = ({
                     pressed && styles.iconActionBtnPressed,
                   ]}
                 >
-                  <View style={styles.iconActionBubble}>
+                  <View
+                    style={[
+                      styles.iconActionBubble,
+                      isSaved && { backgroundColor: colors.successSoft, borderColor: colors.successSoft },
+                    ]}
+                  >
                     {isAdding ? (
-                      <ActivityIndicator size="small" color={saveActionVisual.iconColor} />
+                      <ActivityIndicator
+                        size="small"
+                        color={isSaved ? colors.successDark : saveActionVisual.iconColor}
+                      />
                     ) : (
-                      <Feather name={saveActionVisual.icon} size={19} color={saveActionVisual.iconColor} />
+                      <Feather
+                        name={isSaved ? 'check' : saveActionVisual.icon}
+                        size={19}
+                        color={isSaved ? colors.successDark : saveActionVisual.iconColor}
+                      />
                     )}
                   </View>
                   <View style={styles.iconActionLabelRow}>
@@ -443,9 +464,12 @@ const PlacePopupCard: React.FC<Props> = ({
     colors.text,
     colors.textMuted,
     compactLabel,
+    colors.successDark,
+    colors.successSoft,
     displayCoord,
     hasCoord,
     isAdding,
+    isSaved,
     navExpanded,
     onAddPoint,
     onBuildRoute,

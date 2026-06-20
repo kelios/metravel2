@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { getTravelLabel } from '@/utils/pluralize'
 import type { ListDensity } from '@/stores/listViewStore'
 
 export type ListSortOption = { id: string; name: string }
@@ -17,6 +18,12 @@ interface ListCatalogToolbarProps {
   /** Hide the density toggle on single-column layouts where it would force a 2-col grid. */
   showDensityToggle?: boolean
   contentPadding?: number
+  /**
+   * On mobile the results count is surfaced inline here (leading the sort row) instead of in a
+   * standalone sticky row above, keeping the pinned header height within the 20% budget (#336).
+   */
+  resultsCount?: number
+  showResultsCount?: boolean
 }
 
 const spacing = DESIGN_TOKENS.spacing
@@ -31,19 +38,28 @@ function ListCatalogToolbar({
   onDensityChange,
   showDensityToggle = true,
   contentPadding = 0,
+  resultsCount,
+  showResultsCount = false,
 }: ListCatalogToolbarProps) {
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
 
   const activeSort = (sortValue || '').trim() || DEFAULT_SORT_ID
+  const countVisible = showResultsCount && typeof resultsCount === 'number'
 
-  if (!sortOptions.length && !showDensityToggle) return null
+  if (!sortOptions.length && !showDensityToggle && !countVisible) return null
 
   return (
     <View
       style={[styles.container, { paddingHorizontal: contentPadding }]}
       accessibilityRole={Platform.OS === 'web' ? undefined : 'toolbar'}
     >
+      {countVisible ? (
+        <Text style={styles.countText} numberOfLines={1} testID="toolbar-results-count">
+          {resultsCount} {getTravelLabel(resultsCount as number)}
+        </Text>
+      ) : null}
+
       {sortOptions.length > 0 ? (
         <ScrollView
           horizontal
@@ -154,6 +170,13 @@ const getStyles = (colors: ThemedColors) =>
       fontSize: 12,
       fontWeight: '600',
       color: colors.textMuted,
+    },
+    countText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.textSecondary,
+      flexShrink: 0,
+      marginRight: spacing.xs,
     },
     chip: {
       paddingHorizontal: spacing.sm,

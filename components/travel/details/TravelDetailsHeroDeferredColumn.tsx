@@ -1,5 +1,4 @@
 import React, { memo } from 'react'
-import { View } from 'react-native'
 
 import type { Travel } from '@/types/types'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
@@ -65,19 +64,21 @@ const TravelDetailsPrimaryColumn = memo(function TravelDetailsPrimaryColumn({
 }: Omit<TravelDetailsHeroDeferredColumnProps, 'deferredContent'>) {
   return (
     <>
-      <View collapsable={false}>
-        <TravelHeroSection
-          travel={travel}
-          anchors={anchors}
-          isMobile={isMobile}
-          renderSlider
-          onFirstImageLoad={onFirstImageLoad}
-          sectionLinks={sectionLinks}
-          onQuickJump={onQuickJump}
-          deferExtras={deferHeroExtras}
-          activeKey={activeKey}
-        />
-      </View>
+      {/* No wrapping View here: on web a wrapper div (RNW default overflow:hidden) becomes the
+          containing block for the sticky sub-nav inside the hero, clipping it to the hero block so
+          it scrolls away with the gallery (#341). Keeping the hero + content sections as direct
+          fragment siblings lets `position: sticky` pin across the whole article. */}
+      <TravelHeroSection
+        travel={travel}
+        anchors={anchors}
+        isMobile={isMobile}
+        renderSlider
+        onFirstImageLoad={onFirstImageLoad}
+        sectionLinks={sectionLinks}
+        onQuickJump={onQuickJump}
+        deferExtras={deferHeroExtras}
+        activeKey={activeKey}
+      />
 
       <TravelDetailsContentSection
         travel={travel}

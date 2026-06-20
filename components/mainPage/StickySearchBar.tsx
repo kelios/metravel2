@@ -550,9 +550,11 @@ function StickySearchBar({
     resultsCount,
     search,
   });
+  // The results count is surfaced in the catalog toolbar's sort row on mobile (#336), so the
+  // sticky search bar only keeps the transient pending state + active-filters indicator here to
+  // hold the pinned header height within budget.
   const showMobileSummary =
-    isMobile &&
-    (showPendingState || resultsCount !== undefined || activeFiltersCount !== undefined);
+    isMobile && (showPendingState || (activeFiltersCount != null && activeFiltersCount > 0));
 
   // Keyboard shortcut для фокуса (Ctrl+K / Cmd+K)
   useEffect(() => {
@@ -803,10 +805,6 @@ function StickySearchBar({
         <View style={styles.mobileSummaryRow}>
           {showPendingState ? (
             <Text style={styles.mobileSummaryText}>Ищем...</Text>
-          ) : resultsCount !== undefined ? (
-            <Text style={styles.mobileSummaryText}>
-              {resultsCount} {getTravelLabel(resultsCount)}
-            </Text>
           ) : null}
           {activeFiltersCount != null && activeFiltersCount > 0 ? (
             <Text style={[styles.mobileSummaryText, styles.mobileSummaryMuted]}>

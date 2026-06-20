@@ -526,6 +526,8 @@ const RightColumn: React.FC<RightColumnProps> = (
             onDensityChange={onDensityChange ?? (() => {})}
             showDensityToggle={showDensityToggle && !!onDensityChange}
             contentPadding={contentPadding}
+            resultsCount={isError ? undefined : total}
+            showResultsCount={isMobile && !isSearchPending}
           />
         ) : null}
 

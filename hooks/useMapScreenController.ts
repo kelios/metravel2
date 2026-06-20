@@ -295,10 +295,16 @@ export function useMapScreenController() {
   } = dataController;
 
   // Счётчик мест в боковом меню: показываем общее число (backend total), а не
-  // длину загруженной страницы. Текстовый поиск — чисто клиентский фильтр, для
-  // него показываем длину отфильтрованного списка.
+  // длину загруженной страницы. Текстовый поиск и фильтр категорий — чисто
+  // клиентские фильтры (см. filterTravelsByCategories/BySearchQuery в
+  // useMapTravels), их backend total не учитывает. Поэтому при активном клиентском
+  // фильтре показываем длину уже отфильтрованного набора (то же множество, что
+  // отрисовано маркерами и в списке «Места рядом»), иначе бейдж расходится с
+  // картой (#335).
   const hasTextSearch = Boolean(filterValues.searchQuery && filterValues.searchQuery.trim());
-  const travelsCount = hasTextSearch
+  const hasCategoryFilter = Array.isArray(filterValues.categoryTravelAddress)
+    && filterValues.categoryTravelAddress.length > 0;
+  const travelsCount = hasTextSearch || hasCategoryFilter
     ? travelsData.length
     : Math.max(total ?? 0, travelsData.length);
 

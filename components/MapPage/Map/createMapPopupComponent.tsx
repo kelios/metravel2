@@ -4,8 +4,8 @@ import PlacePopupCard from './PlacePopupCard';
 import type { Point } from './types';
 import { buildGoogleMapsUrl, buildOrganicMapsUrl, buildTelegramShareUrl, buildWazeUrl, buildYandexNaviUrl } from './mapLinks';
 import { showToast } from '@/utils/toast';
-import { userPointsApi } from '@/api/userPoints';
 import { PointStatus } from '@/types/userPoints';
+import { useSavedPointToggle } from '@/hooks/map/useSavedPointToggle';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { getSiteBaseUrl } from '@/utils/seo';
@@ -142,6 +142,14 @@ export const createMapPopupComponent = ({
       return { lat, lng };
     }, [coord]);
 
+    // #334 — saved-state for the «Сохранить место» button. Reads the user's
+    // collection (shared `userPointsAll` cache) and matches by coordinates so the
+    // button shows «Сохранено» and a second tap removes the point (toggle).
+    const { isSaved, removeSaved, createPoint } = useSavedPointToggle({
+      coord: normalizedCoord,
+      enabled: isAuthenticated,
+    });
+
     useEffect(() => {
       if (!normalizedCoord) return;
       const uLat = typeof userLat === 'number' ? userLat : null;
@@ -234,6 +242,23 @@ export const createMapPopupComponent = ({
         void showToast({ type: 'info', text1: 'Не удалось распознать координаты', position: 'bottom' });
         return;
       }
+
+      // #334 — toggle: если точка уже в коллекции пользователя, второй тап её
+      // убирает (un-save), а не плодит дубль.
+      if (isSaved) {
+        setIsAdding(true);
+        try {
+          await removeSaved();
+          void showToast({ type: 'success', text1: 'Точка убрана из моих точек', position: 'bottom' });
+          invalidateUserPoints?.();
+        } catch {
+          void showToast({ type: 'error', text1: 'Не удалось убрать точку', position: 'bottom' });
+        } finally {
+          setIsAdding(false);
+        }
+        return;
+      }
+
       const categoryNameString = categoryLabel || undefined;
 
       const payload: Partial<{ [key: string]: any }> = {
@@ -268,10 +293,11 @@ export const createMapPopupComponent = ({
 
       setIsAdding(true);
       try {
-        await userPointsApi.createPoint(payload);
+        await createPoint(payload);
         void showToast({ type: 'success', text1: 'Точка добавлена в мои точки', position: 'bottom' });
         invalidateUserPoints?.();
-        handlePress();
+        // Не закрываем попап: пользователь должен увидеть, что кнопка стала
+        // «Сохранено», чтобы понять про un-save (toggle, #334).
       } catch {
         void showToast({ type: 'error', text1: 'Не удалось сохранить точку', position: 'bottom' });
       } finally {
@@ -281,10 +307,12 @@ export const createMapPopupComponent = ({
       authReady,
       isAuthenticated,
       isAdding,
+      isSaved,
+      removeSaved,
+      createPoint,
       categoryLabel,
       normalizedCoord,
       point,
-      handlePress,
     ]);
 
     const questMeta = point.questMeta;
@@ -366,6 +394,8 @@ export const createMapPopupComponent = ({
               : undefined
           }
           addDisabled={!authReady || !normalizedCoord || isAdding}
+          isSaved={isQuest ? false : isSaved}
+          addLabel={!isQuest && isSaved ? 'Сохранено' : 'Сохранить'}
           addTooltip={
             !authReady
               ? 'Загрузка…'
@@ -373,7 +403,9 @@ export const createMapPopupComponent = ({
                 ? 'Войдите, чтобы сохранить точку'
                 : !normalizedCoord
                   ? 'Координаты точки недоступны'
-                  : 'Сохранить в мои точки'
+                  : isSaved
+                    ? 'Убрать из моих точек'
+                    : 'Сохранить в мои точки'
           }
           isAdding={isAdding}
           compactLayout={compactLayout}
