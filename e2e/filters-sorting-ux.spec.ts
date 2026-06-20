@@ -236,6 +236,89 @@ async function getVisibleFilterCheckbox(page: any): Promise<any | null> {
   return option;
 }
 
+function getGroupClearButton(page: any) {
+  return page.getByRole('button', { name: /Очистить \d+ выбранных/i }).first();
+}
+
+function getCheckboxByLabel(page: any, label: string) {
+  return page.getByRole('checkbox', { name: label, exact: true }).first();
+}
+
+async function isCheckboxSelected(page: any, label: string) {
+  const value = await getCheckboxByLabel(page, label).getAttribute('aria-checked').catch(() => null);
+  return value === 'true';
+}
+
+async function clearActiveFilters(page: any) {
+  const resetCandidates = [
+    page.getByRole('button', { name: /^Очистить все фильтры$/ }).first(),
+    page.locator('[data-testid="clear-all-button"], [testID="clear-all-button"]').first(),
+    page.getByRole('button', { name: /^Сбросить все фильтры и поиск$/ }).first(),
+    page.getByRole('button', { name: /^Сбросить условия$/ }).first(),
+    page.locator('[aria-label^="Очистить все фильтры"]').last(),
+  ];
+
+  for (const candidate of resetCandidates) {
+    if (!(await candidate.count().catch(() => 0))) {
+      continue;
+    }
+
+    if (!(await candidate.isVisible().catch(() => false))) {
+      continue;
+    }
+
+    await candidate.click({ force: true });
+    await page.waitForTimeout(DEBOUNCE_MS);
+    await waitForListResultsSignal(page).catch(() => {});
+    return;
+  }
+}
+
+async function selectFilterWithVisibleGroupClear(page: any): Promise<string | null> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const filterOption = await getVisibleFilterCheckbox(page);
+    if (!filterOption) {
+      return null;
+    }
+
+    const label = String((await filterOption.getAttribute('aria-label')) || '');
+    if (!label) {
+      await reloadTravelsList(page);
+      await ensureInteractiveFiltersReady(page);
+      await ensureFiltersPanelVisible(page);
+      continue;
+    }
+
+    if (!(await isCheckboxSelected(page, label))) {
+      await filterOption.click({ force: true });
+    }
+
+    const selected = await expect
+      .poll(async () => isCheckboxSelected(page, label), { timeout: 5_000 })
+      .toBe(true)
+      .then(() => true)
+      .catch(() => false);
+    const hasGroupClear = await getGroupClearButton(page).isVisible().catch(() => false);
+
+    if (selected && hasGroupClear) {
+      return label;
+    }
+
+    await clearActiveFilters(page);
+    await reloadTravelsList(page);
+    await ensureInteractiveFiltersReady(page);
+    await ensureFiltersPanelVisible(page);
+  }
+
+  throw new Error('Selected filter did not expose a visible group clear button.');
+}
+
+async function expectCheckboxNotSelected(page: any, label: string) {
+  await expect
+    .poll(async () => isCheckboxSelected(page, label), { timeout: 5_000 })
+    .toBe(false);
+}
+
 async function expectEmptyFilterShell(page: any) {
   await waitForListResultsSignal(page);
   const hasValidFallbackShell = (await hasEmptyResultsShell(page)) || (await hasLoadedResultsShell(page));
@@ -249,6 +332,7 @@ test.describe('@smoke Filters and Sorting UX', () => {
 
     await ensureInteractiveFiltersReady(page);
     await ensureFiltersPanelVisible(page);
+    await clearActiveFilters(page);
   });
 
   test('sort dropdown shows current selection and expands on click', async ({ page }) => {
@@ -365,42 +449,32 @@ test.describe('@smoke Filters and Sorting UX', () => {
   });
 
   test('group clear button appears when filters are selected', async ({ page }) => {
-    // Select a filter option (checkbox in the expanded group)
-    const filterOption = await getVisibleFilterCheckbox(page);
-    if (!filterOption) {
+    const selectedLabel = await selectFilterWithVisibleGroupClear(page);
+    if (!selectedLabel) {
       await expectEmptyFilterShell(page);
       return;
     }
 
-    await filterOption.click();
-    await page.waitForTimeout(DEBOUNCE_MS);
-    await waitForListResultsSignal(page).catch(() => {});
-
     // Clear button should appear — use longer timeout to allow for list re-render
-    const clearButton = page.getByRole('button', { name: /Очистить \d+ выбранных/i });
+    const clearButton = getGroupClearButton(page);
     await expect(clearButton).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
   });
 
   test('group clear button clears only that group', async ({ page }) => {
-    // Select a filter
-    const filterOption = await getVisibleFilterCheckbox(page);
-    if (!filterOption) {
+    const selectedLabel = await selectFilterWithVisibleGroupClear(page);
+    if (!selectedLabel) {
       await expectEmptyFilterShell(page);
       return;
     }
-    
-    await filterOption.click();
-    await page.waitForTimeout(DEBOUNCE_MS + 400);
 
     // Click group clear button
-    const groupClearButton = page.getByRole('button', { name: /Очистить \d+ выбранных/i }).first();
+    const groupClearButton = getGroupClearButton(page);
     await expect(groupClearButton).toBeVisible({ timeout: 10000 });
     await groupClearButton.click({ force: true });
     await page.waitForTimeout(DEBOUNCE_MS);
     
     // Filter should be unchecked
-    const isChecked = await filterOption.getAttribute('aria-checked');
-    expect(isChecked).toBe('false');
+    await expectCheckboxNotSelected(page, selectedLabel);
   });
 
   test('filter options have hover state on desktop', async ({ page, isMobile }) => {
@@ -467,31 +541,23 @@ test.describe('@smoke Filters and Sorting UX', () => {
   });
 
   test('selected filters show count badge', async ({ page }) => {
-    // Select a filter
-    const filterOption = await getVisibleFilterCheckbox(page);
-    if (!filterOption) {
+    const selectedLabel = await selectFilterWithVisibleGroupClear(page);
+    if (!selectedLabel) {
       await expectEmptyFilterShell(page);
       return;
     }
     
-    await filterOption.click();
-    await page.waitForTimeout(DEBOUNCE_MS);
-    
     // Group-level clear control should appear when at least one option is selected
-    const groupClearButton = page.getByRole('button', { name: /Очистить \d+ выбранных/i }).first();
+    const groupClearButton = getGroupClearButton(page);
     await expect(groupClearButton).toBeVisible({ timeout: 5000 });
   });
 
   test('clear all button clears all filters', async ({ page }) => {
-    // Expand and select a filter
-    const filterOption = await getVisibleFilterCheckbox(page);
-    if (!filterOption) {
+    const selectedLabel = await selectFilterWithVisibleGroupClear(page);
+    if (!selectedLabel) {
       await expectEmptyFilterShell(page);
       return;
     }
-    
-    await filterOption.click();
-    await page.waitForTimeout(DEBOUNCE_MS);
     
     // Prefer the primary visible "clear all" control instead of the first matching
     // overlay header button, which can be partially covered by adjacent chrome.
@@ -525,8 +591,7 @@ test.describe('@smoke Filters and Sorting UX', () => {
     await page.waitForTimeout(DEBOUNCE_MS);
     
     // Filter should be unchecked
-    const isChecked = await filterOption.getAttribute('aria-checked');
-    expect(isChecked).toBe('false');
+    await expectCheckboxNotSelected(page, selectedLabel);
   });
 
   test('accessibility: all interactive elements have proper roles', async ({ page }) => {
