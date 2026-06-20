@@ -32,11 +32,27 @@ Risks:
 Open questions:
 ```
 
+When the brief will become a FE/BE board task, also draft the mandatory task-board contract
+from `docs/TASK_BOARD_MCP.md`:
+
+```md
+## Task Contract
+
+Scope:
+User-visible result:
+Data/API contract:
+Dependencies:
+Fallback/mock policy:
+Validation:
+Done gate:
+```
+
 ## Rules
 
 - Do not write implementation code.
 - Prefer measurable acceptance criteria over broad intent.
 - Keep non-goals explicit so engineering does not overbuild.
 - Mention user-facing web/mobile differences when they affect scope.
+- For FE/BE dependencies, name the required board ids or the concrete endpoint/field/event that must unblock the work.
 - Flag external-link, authentication, media, SEO, moderation, or admin implications when present.
 - If a requirement conflicts with project rules, call out the conflict and propose the closest compliant behavior.

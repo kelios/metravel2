@@ -78,6 +78,46 @@ curl -s -H "Authorization: Token $METRAVEL_TASK_BOARD_API_TOKEN" https://metrave
 Модель: `Task{title, description, status: backlog→todo→in_progress→review→done, area: front|back,
 reporter, assignee, blocked_by, sprint}`. Заголовок с префиксом источника `[FE-…]`/`[BE-…]`.
 
+### Правило: у каждой FE/BE задачи есть контракт (обязательно)
+
+**Любая новая задача `area=front` или `area=back` должна содержать в `description` блок
+`Task Contract`.** Без него задачу нельзя считать готовой к старту (`todo`) и нельзя закрывать
+в `done`, даже если код или соседняя задача уже помечены готовыми.
+
+Минимальный шаблон:
+
+```md
+## Task Contract
+
+Scope:
+User-visible result:
+Data/API contract:
+Dependencies:
+Fallback/mock policy:
+Validation:
+Done gate:
+```
+
+Заполняй поля проверяемыми фактами:
+
+- `Scope` — что именно входит в задачу и что явно не входит.
+- `User-visible result` — наблюдаемое поведение на web/mobile/admin/API.
+- `Data/API contract` — для BE: endpoint, method, auth, request/response shape, migrations/seed;
+  для FE: какие endpoints/fields/events потребляются и какие UI states должны появиться.
+- `Dependencies` — board id связанных FE/BE задач; если FE ждёт BE, укажи конкретный BE id и
+  endpoint, который должен разблокировать FE.
+- `Fallback/mock policy` — разрешены ли mock/dev fallback; если разрешены, они не заменяют
+  runtime-проверку реального контракта, если AC требует интеграцию с BE.
+- `Validation` — конкретные команды и runtime-пробы (`curl`, browser flow, e2e/Jest, dev/prod URL).
+- `Done gate` — условия закрытия: код + тесты + runtime evidence. Для BE, который разблокирует
+  FE, `done` требует smoke-пробу deploy target (`dev`/`prod`) по контрактным endpoints. Для FE,
+  зависящего от BE, `done` требует browser/API evidence против того же target; зелёные unit-тесты
+  и mock fallback сами по себе недостаточны.
+
+Если при ревью FE-задачи связанная BE-задача стоит в `done`, но контрактный endpoint/field/event
+на dev/prod не подтверждается, FE-задачу не двигать в `done`: оставить `review`/`blocked_by`,
+дописать evidence и открыть/переоткрыть blocker на BE или deploy/routing.
+
 ### Правило: у каждой задачи — спринт (обязательно)
 
 **Каждая задача на борде должна быть привязана к спринту.** Без спринта задача невидима в

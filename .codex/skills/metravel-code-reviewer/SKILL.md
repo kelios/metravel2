@@ -25,6 +25,7 @@ Residual risk:
 ## What to check
 
 - Correctness against the stated task and existing product contract
+- FE/BE board tasks include and satisfy the mandatory `Task Contract` from `docs/TASK_BOARD_MCP.md`
 - Reuse of existing components, hooks, utils, and query/store boundaries
 - Project-rule compliance: external links, design tokens, images, no skipped tests, no new `any` in `api/`, `hooks/`, `stores/`
 - Validation adequacy: the narrowest reliable checks were run and rerun after fixes
@@ -36,5 +37,5 @@ Residual risk:
 - Prefer concrete findings over broad style commentary.
 - Flag missing tests or missing browser/e2e verification when the change needs them.
 - If a review issue is actually outside scope, say why and state the next verification step.
+- Do not approve `done` when a dependent runtime contract is unverified, even if related tasks are already marked done on the board.
 - Do not approve reload hacks, cache-busting workarounds, direct `window.open(...)`, or other policy regressions.
-

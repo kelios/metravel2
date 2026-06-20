@@ -35,6 +35,22 @@ Feature: Short feature name
     Then the expected outcome is observable
 ```
 
+## Task Contract
+
+Scope:
+
+User-visible result:
+
+Data/API contract:
+
+Dependencies:
+
+Fallback/mock policy:
+
+Validation:
+
+Done gate:
+
 ## Assignment
 
 Primary owner:

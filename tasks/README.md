@@ -7,7 +7,7 @@
 > (импортируется на борд, затем файлы удаляются) и канонический **шаблон описания**.
 
 Каждый локальный тикет — markdown-файл по шаблону `tasks/000-template.md`. Этот же формат
-(Goal / Context / Acceptance Criteria / Gherkin) идёт в поле `description` задачи на борде.
+(Goal / Context / Acceptance Criteria / Gherkin / Task Contract) идёт в поле `description` задачи на борде.
 **Не выдумывай свою структуру** — копируй шаблон. Черновик оформляет агент `task-author`
 (команда `/task-new`), затем `ticket-board` заводит его на борд.
 
@@ -45,13 +45,16 @@ Updated: 2026-06-08
    блок `Source task:` (`Source id` / `Source path`); нет источника — поля пустые, блок не удалять.
 3. **## Acceptance Criteria** — чеклист `- [ ]` проверяемых критериев (наблюдаемые факты).
 4. **## Gherkin Tests** — `Feature/Scenario` с `Given/When/Then` о поведении.
-5. **## Assignment** — `Primary owner:` и `Support agents:` (маппинг ролей → агенты, таблица ниже).
-6. **## Likely Files Or Areas** — файлы/модули/эндпоинты (для бэка — логические области).
-7. **## Plan** — нумерованные шаги.
-8. **## Validation** — конкретные команды/проверки (`npm run …`, `curl …`, шаги в браузере).
-9. **## Release Checklist** — чеклист готовности; шаблонные пункты не удалять.
-10. **## Progress Log** — хронология `- YYYY-MM-DD: …`; первая строка `Created.`.
-11. **## Results** — `Changed files:` / `Validation evidence:` / `Reviewer findings:` /
+5. **## Task Contract** — обязательный контракт FE/BE-задачи: `Scope`, `User-visible result`,
+   `Data/API contract`, `Dependencies`, `Fallback/mock policy`, `Validation`, `Done gate`.
+   Подробное правило и Done gate — в `docs/TASK_BOARD_MCP.md`.
+6. **## Assignment** — `Primary owner:` и `Support agents:` (маппинг ролей → агенты, таблица ниже).
+7. **## Likely Files Or Areas** — файлы/модули/эндпоинты (для бэка — логические области).
+8. **## Plan** — нумерованные шаги.
+9. **## Validation** — конкретные команды/проверки (`npm run …`, `curl …`, шаги в браузере).
+10. **## Release Checklist** — чеклист готовности; шаблонные пункты не удалять.
+11. **## Progress Log** — хронология `- YYYY-MM-DD: …`; первая строка `Created.`.
+12. **## Results** — `Changed files:` / `Validation evidence:` / `Reviewer findings:` /
     `Release notes:` / `Blockers:`.
 
 ---
@@ -79,4 +82,5 @@ Updated: 2026-06-08
 - Шаблон — контракт: не добавляй/не удаляй секции, заполняй существующие.
 - Факты, а не догадки: probe-результаты, реальные URL/коды, реальные пути.
 - Acceptance Criteria и Gherkin должны быть проверяемы — без них задача не готова к старту.
+- FE/BE-задачи без заполненного `Task Contract` не готовы к старту и не закрываются в `Done`.
 - См. `docs/TASK_BOARD_MCP.md` (борд/MCP), `docs/CODEX.md` (планирование).

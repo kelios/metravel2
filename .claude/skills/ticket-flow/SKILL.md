@@ -42,8 +42,9 @@ description: >-
    - id → `metravel_task_get`.
    - `next` → верхний `area=front`, `status=todo`.
    - свободное описание → дедуп, затем `metravel_task_create` (`area=front`, `reporter=frontend`,
-     заголовок `[FE-…] …`, `description` с Goal/Context/AC). При нехватке проверяемых AC —
-     ОДИН компактный уточняющий вопрос пользователю, не выдумывай критерии.
+     заголовок `[FE-…] …`, `description` с Goal/Context/AC и обязательным `Task Contract`
+     из `docs/TASK_BOARD_MCP.md`). При нехватке проверяемых AC или контракта — ОДИН
+     компактный уточняющий вопрос пользователю, не выдумывай критерии.
 3. **In progress.** `ticket-board`: `status=in_progress`, `assignee=<агент-исполнитель>`.
    Делегируй реализацию профильному FE-агенту из таблицы. Соблюдай контракты CLAUDE.md
    (ImageCardMedia, UnifiedTravelCard, externalLinks, React Query/Zustand, TS strict).
@@ -58,6 +59,9 @@ description: >-
    review + локальной верификации, пометь «deploy pending».
 7. **Закрытие.** `ticket-board` дописывает в `description`: changed files, validation, reviewer,
    release-note. Если задача порождает новую (бэкенд-правка) — заведи её на борде `area=back`.
+   Перед `done` сверяй `Done gate` из `Task Contract`: FE-задача с BE-зависимостью закрывается
+   только после browser/API evidence против target env; BE-задача, разблокирующая FE, закрывается
+   только после deploy-target smoke-пробы контрактного endpoint/field/event.
 
 ## Правила
 
@@ -65,6 +69,9 @@ description: >-
   от реальности.
 - «Готово» только с доказательством (changed files + тест/браузер + review). До этого максимум
   `review`/`in_progress` с пометкой «verification pending».
+- Статус другой задачи на борде не является доказательством сам по себе. Если BE помечен `done`,
+  но FE runtime-проба получает 404/не тот field/event, FE остаётся `review`/`blocked_by`, а
+  `ticket-board` дописывает blocker evidence.
 - Один тикет — один активный исполнитель. Не запускай конфликтующие правки одного файла.
 - Не печатай секреты/токены. Деплой — только по явному target, не по умолчанию.
 

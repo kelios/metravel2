@@ -37,6 +37,9 @@ model: sonnet
      но блок сохрани.
    - **Acceptance Criteria** — проверяемые `- [ ]` критерии (наблюдаемые факты).
    - **Gherkin Tests** — `Feature/Scenario` с `Given/When/Then` о поведении.
+   - **Task Contract** — обязательный контракт FE/BE задачи: `Scope`, `User-visible result`,
+     `Data/API contract`, `Dependencies`, `Fallback/mock policy`, `Validation`, `Done gate`
+     по правилу `docs/TASK_BOARD_MCP.md`.
    - **Assignment** — `Primary owner` и `Support agents` (маппинг ролей на реальных
      агентов проекта — таблица в `README.md`).
    - **Likely Files Or Areas** — файлы/модули/эндпоинты (для бэкенда — логические области).
@@ -45,7 +48,8 @@ model: sonnet
    - **Release Checklist** — оставь шаблонные пункты как `- [ ]`.
    - **Progress Log** — первая строка `- YYYY-MM-DD: Created.`.
    - **Results** — пустые поля-заголовки (`Changed files:` и т.д.).
-6. **Не оставляй задачу без Acceptance Criteria и Gherkin** — без них она не готова к старту.
+6. **Не оставляй задачу без Acceptance Criteria, Gherkin и Task Contract** — без них она не
+   готова к старту.
 
 ## Обновление существующей задачи
 

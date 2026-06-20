@@ -15,12 +15,14 @@ Read `docs/RULES.md`, `docs/README.md`, and the task triage section in `docs/COD
 Implement the smallest change that solves the task.
 
 - Before editing, run `git status --short` and keep unrelated user changes separate.
+- If the work comes from a FE/BE board task, read its `Task Contract` first. If the contract is missing or does not define scope, Data/API contract, dependencies, validation, and Done gate, stop implementation and send it back to refinement.
 - Put temporary screenshots, traces, logs, JSON reports, and other debug output only under ignored local folders such as `.codex-temp/` or `.codex-debug/`; remove stale or unnecessary debug artifacts before handoff.
 - Reuse existing components, hooks, helpers, and utilities before creating new ones.
 - Keep functions and components local, readable, and easy to remove or extend later.
 - Remove clearly dead code in the touched area when it is safe to do so.
 - Fix every real issue found in the touched area or validation output before handoff: failing tests, runtime errors, broken UI states, invalid external-link usage, dead imports, and obvious regressions.
 - If a found issue is outside scope, requires unavailable server/secret access, or needs a risky migration, record it as a blocker with the concrete risk and next verification instead of ignoring it.
+- For FE depending on BE, do not call the task done from mocks or unit tests alone; verify the runtime endpoint/field/event from the task contract on the target environment or leave a blocker.
 - Do not change server paths, SSL paths, or deployment targets unless they were explicitly verified on the server.
 
 Follow these repo-specific rules while building features:

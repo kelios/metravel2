@@ -40,6 +40,10 @@ model: sonnet
   `[TASK-YYYYMMDD-NNN] …`. Перед созданием дедуплицируй: `metravel_tasks_list(query="<источник>")`.
 - **Доказательства** дописывай в `description` (changed files, validation, ответы probe,
   reviewer-вердикт) — это журнал, не перезаписывай прошлое.
+- **Task Contract обязателен** для каждой задачи `area=front` или `area=back`. Перед
+  созданием, переводом в `todo` или закрытием в `done` проверь, что `description` содержит:
+  `Scope`, `User-visible result`, `Data/API contract`, `Dependencies`, `Fallback/mock policy`,
+  `Validation`, `Done gate`. Если блока нет или он пустой — не двигай задачу дальше refinement.
 
 ## Жизненный цикл (handoff, как на бэке)
 
@@ -52,8 +56,11 @@ model: sonnet
 
 - **Показать борд:** `metravel_task_board` → краткая сводка по колонкам (front/back раздельно).
 - **Завести тикет:** дедуп → `metravel_task_create` с `area`, `reporter`, нужным спринтом,
-  заголовком-префиксом и заполненным `description` (Goal/Context/AC). Верни id.
+  заголовком-префиксом и заполненным `description` (Goal/Context/AC + обязательный
+  `Task Contract` из `docs/TASK_BOARD_MCP.md`). Верни id.
 - **Обновить статус:** `metravel_task_update(id, status=…, assignee=…)` + дописать evidence.
+  В `done` двигай только если evidence закрывает `Done gate`; для FE/BE зависимостей проверь
+  runtime endpoint/field/event на целевом окружении, а не только статус соседней задачи.
 - **Импорт локальных TASK-файлов** (`tasks/NNN-*.md`): для каждого открытого файла дедуп по
   заголовку → создать задачу на борде с `area` (back для бэкенд-репо, front для этого репо),
   перенести Goal/Context/AC в `description`, проставить `reporter=frontend`. Отчитайся

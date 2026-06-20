@@ -27,6 +27,7 @@ Affected files/modules:
 Data/API impact:
 UI impact:
 External-link impact:
+Task Contract:
 Risks:
 Implementation steps:
 Validation plan:
@@ -49,6 +50,7 @@ Residual risk:
 
 - Prefer reuse of existing components, hooks, services, and utilities.
 - Keep implementation steps small enough for one programmer pass.
+- For FE/BE board work, require the `Task Contract` from `docs/TASK_BOARD_MCP.md`; incomplete scope, Data/API contract, dependencies, validation, or Done gate is a design blocker.
 - Treat direct external-link usage, hardcoded component hex colors, skipped tests, dead imports, and broken UI states as review findings.
 - Require browser verification for visible web UI changes.
 - Require `npm run guard:external-links` or `npm run governance:verify` when external navigation changes.
