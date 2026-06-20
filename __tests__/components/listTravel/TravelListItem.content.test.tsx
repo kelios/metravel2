@@ -151,6 +151,33 @@ describe('TravelListItem content & metadata', () => {
     expect(getByLabelText('Планируют: 3')).toBeTruthy();
   });
 
+  it('renders author rank badge only when rank data exists', () => {
+    const { getByTestId, getByText, rerender, queryByTestId } = renderItem({
+      authorRank: { level: 5, title: 'Эксперт' },
+    } as any);
+
+    expect(getByTestId('author-rank-meta')).toBeTruthy();
+    expect(getByText('5')).toBeTruthy();
+    expect(getByText('Эксперт')).toBeTruthy();
+
+    const queryClient = createTestClient();
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <FavoritesProvider>
+            <TravelListItem
+              travel={baseTravel}
+              currentUserId={null}
+              isSuperuser={false}
+              isMobile={false}
+            />
+          </FavoritesProvider>
+        </AuthProvider>
+      </QueryClientProvider>,
+    );
+    expect(queryByTestId('author-rank-meta')).toBeNull();
+  });
+
   it('renders countries list with up to 2 countries joined inline', () => {
     const { getByText, queryByText } = renderItem({ countryName: 'USA, France, Germany' } as any);
     expect(getByText('USA, France')).toBeTruthy();

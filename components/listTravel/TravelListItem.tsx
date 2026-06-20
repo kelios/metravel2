@@ -213,6 +213,14 @@ function TravelListItem({
 
   const engagementStats = travel.engagementStats
   const hasEngagementStats = hasAnyTravelEngagementStats(engagementStats)
+  const authorRank = useMemo(() => {
+    const rank = travel.authorRank ?? (travel as any).author_rank
+    if (!rank || typeof rank !== 'object') return null
+    const level = Number((rank as any).level)
+    const rankTitle = typeof (rank as any).title === 'string' ? (rank as any).title.trim() : ''
+    if (!Number.isFinite(level) || level <= 0 || !rankTitle) return null
+    return { level: Math.trunc(level), title: rankTitle }
+  }, [travel])
 
   const effectiveWidth =
     typeof cardWidth === 'number'
@@ -324,6 +332,7 @@ function TravelListItem({
     hasRating ||
     travelYear != null ||
     hasEngagementStats ||
+    authorRank != null ||
     popularityFlags.isPopular ||
     popularityFlags.isNew ||
     petFriendly
@@ -587,6 +596,20 @@ function TravelListItem({
             iconColor={colors.textMuted}
           />
         )}
+        {authorRank ? (
+          <View
+            style={styles.authorRankBadge}
+            testID="author-rank-meta"
+            accessibilityLabel={`Ранг автора: уровень ${authorRank.level}, ${authorRank.title}`}
+            {...(IS_WEB ? ({ title: `Уровень ${authorRank.level}: ${authorRank.title}` } as any) : null)}
+          >
+            <Feather name="award" size={BADGE_ICON_SIZE} color={colors.primary} />
+            <Text style={styles.authorRankLevelText}>{authorRank.level}</Text>
+            <Text style={styles.authorRankTitleText} numberOfLines={1}>
+              {authorRank.title}
+            </Text>
+          </View>
+        ) : null}
         {hasRating && (
           <View style={styles.metaRating} testID="rating-meta">
             <Text style={styles.metaRatingStar}>★</Text>

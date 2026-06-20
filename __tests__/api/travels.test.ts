@@ -94,6 +94,17 @@ describe('src/api/travelsApi.ts', () => {
       expect(travel.name).toBe('Трек в Хохоловской долине');
     });
 
+    it('normalizes backend author_rank for travel card metadata', () => {
+      const { normalizeTravelItem } = loadTravelsApi();
+      const travel = normalizeTravelItem({
+        id: '646',
+        slug: 'minsk-trip',
+        author_rank: { level: 5, title: 'Эксперт' },
+      } as any);
+
+      expect(travel.authorRank).toEqual({ level: 5, title: 'Эксперт' });
+    });
+
     it('normalizes gallery urls and keeps existing user id unchanged', () => {
       const { normalizeTravelItem } = loadTravelsApi();
       const travel = normalizeTravelItem({

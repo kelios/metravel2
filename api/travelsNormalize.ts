@@ -203,6 +203,14 @@ export const normalizeTravelItem = (input: unknown): Travel => {
     if (typeof t.userName === 'undefined' && typeof t.user_name !== 'undefined') {
         out.userName = String(t.user_name ?? '');
     }
+    if (typeof t.authorRank === 'undefined' && typeof t.author_rank !== 'undefined') {
+        const rank = asRecord(t.author_rank);
+        const level = Number(rank.level);
+        const title = typeof rank.title === 'string' ? rank.title.trim() : '';
+        out.authorRank = Number.isFinite(level) && level > 0 && title
+            ? { level, title }
+            : null;
+    }
     if (typeof t.cityName === 'undefined' && typeof t.city_name !== 'undefined') {
         out.cityName = String(t.city_name ?? '');
     }

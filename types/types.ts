@@ -28,6 +28,10 @@ export type Travel = {
     url: string
     youtube_link: string
     userName: string
+    authorRank?: {
+        level: number
+        title: string
+    } | null
     description: string
     recommendation: string
     plus: string
