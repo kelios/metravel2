@@ -150,4 +150,32 @@ describe('fetchTravelsForMap where encoding', () => {
     expect(first.imageUrl).toContain('/travel-image/123/full.jpg');
     expect(first.travelImageThumbUrl).toContain('/travel-image/123/conversions/file-thumb_200.webp');
   });
+
+  test('preserves landscape address image URL separately from thumb', async () => {
+    mockFetchWithTimeout.mockResolvedValueOnce(
+      createResponseMock({
+        data: [
+          {
+            id: 4,
+            coord: '53.9,27.56',
+            travel_image_thumb_url: '/address-image/123/conversions/file-thumb_200.webp',
+            travelImageLandscapeUrl: '/address-image/123/conversions/file-landscape_600x200.webp',
+          },
+        ],
+      })
+    );
+
+    const result = await fetchTravelsForMap(
+      0,
+      20,
+      { lat: 53.9, lng: 27.56, radius: 60 },
+      { throwOnError: true }
+    );
+
+    const first = (result as any)[0];
+    expect(first).toBeTruthy();
+    expect(first.travelImageLandscapeUrl).toContain('/address-image/123/conversions/file-landscape_600x200.webp');
+    expect(first.travelImageThumbUrl).toContain('/address-image/123/conversions/file-thumb_200.webp');
+    expect(first.imageUrl).toContain('/address-image/123/conversions/file-thumb_200.webp');
+  });
 });

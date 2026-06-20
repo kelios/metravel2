@@ -4,9 +4,12 @@ import Feather from '@expo/vector-icons/Feather';
 import { router } from 'expo-router';
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import UserAvatar from '@/components/layout/UserAvatar';
 import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
+
+import { pluralizeRu } from '@/utils/pluralize';
 
 import { pluralizePoints, type QuestMeta } from './questsShared';
 
@@ -135,6 +138,13 @@ export default function QuestCard({
                     </View>
                 )}
 
+                {quest.isCompletedByMe && (
+                    <View style={[styles.questCardCompletedBadge, distanceText ? { top: 44 } : null]}>
+                        <Feather name="check-circle" size={12} color={colors.textOnDark} />
+                        <Text style={styles.questCardCompletedText}>Пройден</Text>
+                    </View>
+                )}
+
                 {difficultyInfo && (
                     <View style={styles.questCardDifficultyBadge}>
                         <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: difficultyInfo.color }} />
@@ -166,7 +176,38 @@ export default function QuestCard({
                             <Feather name="clock" size={13} color="rgba(255,255,255,0.9)" />
                             <Text style={styles.questCardMetaText}>{durationText}</Text>
                         </View>
+                        {quest.ratingCount > 0 && (
+                            <View
+                                style={styles.questCardMetaItem}
+                                testID={`quest-card-rating-${quest.id}`}
+                            >
+                                <Feather name="star" size={13} color="rgba(255,255,255,0.95)" />
+                                <Text style={styles.questCardMetaText}>
+                                    {(quest.ratingAvg ?? 0).toFixed(1)} ({quest.ratingCount})
+                                </Text>
+                            </View>
+                        )}
+                        {quest.completionsCount > 0 && (
+                            <View
+                                style={styles.questCardMetaItem}
+                                testID={`quest-card-completions-${quest.id}`}
+                            >
+                                <Feather name="check-circle" size={13} color="rgba(255,255,255,0.9)" />
+                                <Text style={styles.questCardMetaText}>
+                                    Пройдено {quest.completionsCount} {pluralizeRu(quest.completionsCount, 'раз', 'раза', 'раз')}
+                                </Text>
+                            </View>
+                        )}
                     </View>
+
+                    {quest.firstCompleter && (
+                        <View style={styles.questCardPioneerRow}>
+                            <UserAvatar uri={quest.firstCompleter.avatar} size="sm" />
+                            <Text style={styles.questCardPioneerText} numberOfLines={1}>
+                                Первым прошёл: {quest.firstCompleter.name}
+                            </Text>
+                        </View>
+                    )}
                 </View>
             </View>
         </View>

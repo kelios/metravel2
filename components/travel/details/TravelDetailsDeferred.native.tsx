@@ -93,7 +93,11 @@ export const TravelDeferredSections: React.FC<{
           )}
         </View>
       ) : (
-        <View ref={setAuthorSectionRef} collapsable={false} />
+        <View ref={setAuthorSectionRef} collapsable={false}>
+          {shouldLoadAuthorSection ? (
+            <TravelDeferredAuthorSection travel={travel} isMobile={isMobile} />
+          ) : null}
+        </View>
       )}
 
       <View ref={setRatingRef} collapsable={false}>

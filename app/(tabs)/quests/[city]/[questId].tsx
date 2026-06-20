@@ -7,9 +7,15 @@ import { Feather } from '@expo/vector-icons';
 import { QuestWizard as QuestWizardDirect } from '@/components/quests/QuestWizard';
 import TravelsForQuestSection from '@/components/quests/TravelsForQuestSection';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import UserAvatar from '@/components/layout/UserAvatar';
+import StarRating from '@/components/ui/StarRating';
+import QuestCompletionBadge from '@/components/quests/QuestCompletionBadge';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useAuth } from '@/context/AuthContext';
 import { useQuestBundle, useQuestProgressSync } from '@/hooks/useQuestsApi';
+import { useQuestRatingMeta } from '@/hooks/useQuestRatingMeta';
+import { useQuestCompletionMeta } from '@/hooks/useQuestCompletionMeta';
+import { useQuestPioneerMeta } from '@/hooks/useQuestPioneerMeta';
 import { useThemedColors } from '@/hooks/useTheme';
 import { createQuestDetailStructuredData } from '@/utils/discoverySeo';
 import { stringifyJsonLd } from '@/utils/jsonLd';
@@ -291,6 +297,9 @@ const QuestPreview = ({
   seoImage,
   structuredDataTags,
   relatedTravelsSlot,
+  ratingSlot,
+  completionSlot,
+  pioneerSlot,
   isFocused,
   colors,
   styles,
@@ -301,6 +310,9 @@ const QuestPreview = ({
   seoImage: string;
   structuredDataTags: React.ReactNode;
   relatedTravelsSlot: React.ReactNode;
+  ratingSlot: React.ReactNode;
+  completionSlot: React.ReactNode;
+  pioneerSlot: React.ReactNode;
   isFocused: boolean;
   colors: Colors;
   styles: ReturnType<typeof createStyles>;
@@ -337,6 +349,9 @@ const QuestPreview = ({
 
       <View style={styles.previewBody}>
         <Text style={styles.previewTitle}>{bundle.title}</Text>
+        {pioneerSlot}
+        {ratingSlot}
+        {completionSlot ? <View style={styles.previewCompletion}>{completionSlot}</View> : null}
         <View style={styles.previewMetaRow}>
           {cityName ? <Text style={styles.previewMeta}>{cityName}</Text> : null}
           <Text style={styles.previewMeta}>{pluralPoints(bundle.steps.length)}</Text>
@@ -391,6 +406,45 @@ export default function QuestByIdScreen() {
     shouldLoadQuest ? questId : undefined,
     isFocused && isAuthenticated,
   );
+  const ratingMeta = useQuestRatingMeta(shouldLoadQuest ? questId : undefined, bundle?.id);
+  const ratingSlot = useMemo(() => {
+    if (ratingMeta.ratingCount === 0) return null;
+    return (
+      <StarRating
+        rating={ratingMeta.ratingAvg}
+        ratingCount={ratingMeta.ratingCount}
+        size="small"
+        showValue
+        showCount
+        testID="quest-detail-rating"
+      />
+    );
+  }, [ratingMeta.ratingAvg, ratingMeta.ratingCount]);
+
+  const completionMeta = useQuestCompletionMeta(shouldLoadQuest ? questId : undefined, bundle?.id);
+  const completionSlot = useMemo(() => {
+    if (!completionMeta.isCompletedByMe && completionMeta.completionsCount <= 0) return null;
+    return (
+      <QuestCompletionBadge
+        isCompleted={completionMeta.isCompletedByMe}
+        completionsCount={completionMeta.completionsCount}
+        variant="detail"
+      />
+    );
+  }, [completionMeta.isCompletedByMe, completionMeta.completionsCount]);
+
+  const pioneer = useQuestPioneerMeta(shouldLoadQuest ? questId : undefined, bundle?.id);
+  const pioneerSlot = useMemo(() => {
+    if (!pioneer) return null;
+    return (
+      <View style={styles.pioneerRow}>
+        <UserAvatar uri={pioneer.avatar} size="md" />
+        <Text style={styles.pioneerText}>
+          Первопроходец: <Text style={styles.pioneerName}>{pioneer.name}</Text>
+        </Text>
+      </View>
+    );
+  }, [pioneer, styles.pioneerRow, styles.pioneerText, styles.pioneerName]);
 
   const isLoading = isQuestLoading || (isAuthenticated && progressLoading);
   const seo = useMemo(() => getQuestSeo(bundle, questId, isLoading), [bundle, isLoading, questId]);
@@ -474,6 +528,9 @@ export default function QuestByIdScreen() {
         seoImage={seoImage}
         structuredDataTags={structuredDataTags}
         relatedTravelsSlot={relatedTravelsSlot}
+        ratingSlot={ratingSlot}
+        completionSlot={completionSlot}
+        pioneerSlot={pioneerSlot}
         isFocused={isFocused}
         colors={colors}
         styles={styles}
@@ -510,6 +567,7 @@ export default function QuestByIdScreen() {
             initialProgress={initialProgress}
             onFinaleVideoRetry={refetch}
             relatedTravelsSlot={relatedTravelsSlot}
+            ratingSlot={ratingSlot}
             questId={questId}
             cityId={cityId}
             questNumericId={bundle.id}
@@ -615,6 +673,23 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     color: colors.text,
     fontSize: 24,
     fontWeight: '900',
+  },
+  previewCompletion: {
+    marginTop: 4,
+  },
+  pioneerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  pioneerText: {
+    flexShrink: 1,
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
+  pioneerName: {
+    color: colors.text,
+    fontWeight: '800',
   },
   previewMetaRow: {
     flexDirection: 'row',

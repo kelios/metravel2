@@ -176,6 +176,18 @@
       ],
       "port": 8083,
       "autoPort": false
+    },
+    {
+      "name": "Mock Static 8094",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        ".claude/prod-server.js",
+        "8094",
+        "/tmp/dist-mock",
+        "https://metravel.by"
+      ],
+      "port": 8094,
+      "autoPort": false
     }
   ]
 }

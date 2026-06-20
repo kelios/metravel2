@@ -35,7 +35,7 @@ export const PlaceCard = React.memo(function PlaceCard({
   onOpenTravel: (place: CatalogPlace) => void
   containerStyle?: StyleProp<ViewStyle>
 }) {
-  const imageUrl = place.imageUrl || place.travelImageThumbUrl || null
+  const imageUrl = place.travelImageLandscapeUrl || place.imageUrl || place.travelImageThumbUrl || null
   const relatedTravelUrl = normalizeRelatedTravelRoute(place.urlTravel)
 
   return (

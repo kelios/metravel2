@@ -21,7 +21,7 @@ describe('handleHeaderNavPress', () => {
     jest.clearAllMocks()
   })
 
-  it('uses document navigation for web internal header routes', () => {
+  it('uses SPA navigation for web internal header routes', () => {
     const assign = jest.fn()
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
     Object.defineProperty(window, 'location', {
@@ -38,8 +38,8 @@ describe('handleHeaderNavPress', () => {
 
     handleHeaderNavPress(router, '/roulette')
 
-    expect(assign).toHaveBeenCalledWith('/roulette')
-    expect(router.push).not.toHaveBeenCalled()
+    expect(assign).not.toHaveBeenCalled()
+    expect(router.push).toHaveBeenCalledWith('/roulette')
   })
 
   it('keeps router push for current web route', () => {

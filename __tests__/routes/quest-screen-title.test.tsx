@@ -78,6 +78,18 @@ jest.mock('@/hooks/useQuestsApi', () => ({
   },
 }))
 
+jest.mock('@/hooks/useQuestRatingMeta', () => ({
+  useQuestRatingMeta: () => ({ ratingAvg: null, ratingCount: 0, userRating: null }),
+}))
+
+jest.mock('@/hooks/useQuestCompletionMeta', () => ({
+  useQuestCompletionMeta: () => ({ isCompletedByMe: false, completionsCount: 0 }),
+}))
+
+jest.mock('@/hooks/useQuestPioneerMeta', () => ({
+  useQuestPioneerMeta: () => null,
+}))
+
 jest.mock('@/context/AuthContext', () => ({
   useAuth: () => ({ isAuthenticated: true }),
 }))

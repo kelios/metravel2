@@ -154,6 +154,12 @@ const normalizeTravelCoordsItem = (raw: unknown) => {
       t.thumb ??
       travelImageUrl
   );
+  const travelImageLandscapeUrl = normalizeImageUrl(
+    t.travelImageLandscapeUrl ??
+      t.travel_image_landscape_url ??
+      t.imageLandscapeUrl ??
+      t.image_landscape_url
+  );
 
   const urlTravel = normalizeString(t.urlTravel ?? t.url_travel ?? t.url, '');
   const articleUrl = normalizeString(t.articleUrl ?? t.article_url, '') || undefined;
@@ -166,6 +172,7 @@ const normalizeTravelCoordsItem = (raw: unknown) => {
     lat,
     lng,
     travelImageThumbUrl,
+    travelImageLandscapeUrl,
     imageUrl: travelImageUrl || travelImageThumbUrl,
     urlTravel,
     articleUrl,

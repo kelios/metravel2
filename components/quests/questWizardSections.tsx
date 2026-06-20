@@ -2,7 +2,12 @@ import React, { Suspense } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
+import { BadgeUnlockToast } from '@/components/achievements'
 import { useThemedColors } from '@/hooks/useTheme'
+import { useQuestCompletionMeta } from '@/hooks/useQuestCompletionMeta'
+import { pluralizeRu } from '@/utils/pluralize'
+import QuestPioneerBlock from './QuestPioneerBlock'
+import QuestRatingBlock from './QuestRatingBlock'
 import QuestReviewSection from './QuestReviewSection'
 
 import {
@@ -224,6 +229,24 @@ export function QuestCompactExcursions({
   )
 }
 
+function QuestFinaleCompletionLine({
+  styles,
+  questId,
+  questNumericId,
+}: {
+  styles: any
+  questId: string
+  questNumericId?: number
+}) {
+  const { completionsCount } = useQuestCompletionMeta(questId, questNumericId)
+  if (completionsCount <= 0) return null
+  return (
+    <Text style={[styles.completionText, { opacity: 0.85 }]}>
+      Пройдено {completionsCount} {pluralizeRu(completionsCount, 'раз', 'раза', 'раз')} (включая вас)
+    </Text>
+  )
+}
+
 export function QuestFinalePanel({
   colors: _colors,
   styles,
@@ -264,6 +287,13 @@ export function QuestFinalePanel({
       {allCompleted ? (
         <>
           <Text style={styles.completionTitle}>Квест завершен!</Text>
+
+          {questId ? (
+            <>
+              <QuestPioneerBlock questId={questId} questNumericId={questNumericId} />
+              <BadgeUnlockToast />
+            </>
+          ) : null}
 
           {finale.video && (
             <View
@@ -329,6 +359,18 @@ export function QuestFinalePanel({
           )}
 
           <Text style={styles.completionText}>{finale.text}</Text>
+
+          {questId ? (
+            <QuestFinaleCompletionLine
+              styles={styles}
+              questId={questId}
+              questNumericId={questNumericId}
+            />
+          ) : null}
+
+          {questId ? (
+            <QuestRatingBlock questId={questId} questNumericId={questNumericId} />
+          ) : null}
 
           {questId ? (
             <QuestReviewSection questId={questId} questNumericId={questNumericId} />

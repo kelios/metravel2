@@ -59,8 +59,13 @@ const applyOptimistic = (
     })
   }
 
+  // Snapshot list caches BEFORE mutating them, otherwise rollback would restore
+  // the already-optimistic value instead of the original.
   const previousLists: Array<[readonly unknown[], unknown]> = []
-  queryClient.setQueriesData<unknown>({ queryKey: queryKeys.quests() }, (current) => {
+  for (const [key, data] of queryClient.getQueriesData<unknown>({ queryKey: queryKeys.quests() })) {
+    previousLists.push([key, data])
+  }
+  queryClient.setQueriesData<unknown>({ queryKey: queryKeys.quests() }, (current: unknown) => {
     if (!Array.isArray(current)) return current
     let changed = false
     const next = current.map((item) => {
@@ -70,9 +75,6 @@ const applyOptimistic = (
     })
     return changed ? next : current
   })
-  for (const [key, data] of queryClient.getQueriesData<unknown>({ queryKey: queryKeys.quests() })) {
-    previousLists.push([key, data])
-  }
 
   queryClient.setQueryData(queryKeys.questRating(questId), rating)
 

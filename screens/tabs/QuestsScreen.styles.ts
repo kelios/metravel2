@@ -727,6 +727,18 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             borderRadius: 1.5,
             backgroundColor: 'rgba(255,255,255,0.35)',
         },
+        questCardPioneerRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            marginTop: spacing.xs,
+        },
+        questCardPioneerText: {
+            flexShrink: 1,
+            color: 'rgba(255,255,255,0.95)',
+            fontSize: 12,
+            fontWeight: '600',
+        },
         questCardBadge: {
             position: 'absolute',
             top: spacing.sm,
@@ -746,6 +758,30 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             }),
         },
         questCardBadgeText: {
+            color: colors.textOnDark,
+            fontSize: badgeFontSize,
+            fontWeight: '600',
+        },
+        questCardCompletedBadge: {
+            position: 'absolute',
+            top: spacing.sm,
+            left: spacing.sm,
+            backgroundColor: 'rgba(46, 125, 50, 0.92)',
+            paddingHorizontal: spacing.sm,
+            paddingVertical: 4,
+            borderRadius: radii.full,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            zIndex: 5,
+            ...Platform.select({
+                web: {
+                    backdropFilter: 'blur(6px)',
+                    boxShadow: '0 2px 8px rgba(46, 125, 50, 0.35)',
+                } as any,
+            }),
+        },
+        questCardCompletedText: {
             color: colors.textOnDark,
             fontSize: badgeFontSize,
             fontWeight: '600',

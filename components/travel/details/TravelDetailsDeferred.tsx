@@ -105,7 +105,7 @@ export const TravelDeferredSections: React.FC<{
 
   return (
     <>
-      {/* Author details: on mobile — full card + share; on desktop — null (sidebar has author). */}
+      {/* Author details: on mobile — full card + share; on desktop — peer badges only (author lives in sidebar). */}
       {isMobile ? (
         <View
           ref={setAuthorSectionRef}
@@ -118,7 +118,11 @@ export const TravelDeferredSections: React.FC<{
           )}
         </View>
       ) : (
-        <View ref={setAuthorSectionRef} collapsable={false} />
+        <View ref={setAuthorSectionRef} collapsable={false}>
+          {shouldLoadAuthor ? (
+            <TravelDeferredAuthorSection travel={travel} isMobile={isMobile} />
+          ) : null}
+        </View>
       )}
 
       {/* Рейтинг и интерактивные блоки остаются после контентного слоя. */}

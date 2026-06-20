@@ -20,6 +20,7 @@
 - [x] [map](./map.md) — карта, попапы, роутинг
 - [x] [places](./places.md) — каталог отдельных точек, фильтры, карта, связь с путешествиями
 - [x] [user](./user.md) — профиль, collections, calendar statuses, author stats
+- [ ] [social-trips-gamification-roadmap](./social-trips-gamification-roadmap.md) — product backlog: геймификация, совместные поездки, trust, privacy
 - [ ] quests — мастер квестов, печать
 - [ ] article — редактор статей
 - [ ] export — PDF/print pipeline

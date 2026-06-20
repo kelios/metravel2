@@ -71,11 +71,29 @@ export type ApiQuestMeta = {
 };
 
 /**
+ * DEV-only мок прохождений (#363): пока бэк не отдаёт реальные
+ * is_completed_by_me/completions_count на проде, в DEV подсовываем
+ * детерминированные значения по id квеста, чтобы увидеть визуал бейджа.
+ * В прод-сборке (__DEV__===false) выключен.
+ */
+const QUEST_COMPLETION_MOCK = true;
+
+function withQuestCompletionMock(meta: ApiQuestMeta): ApiQuestMeta {
+    if (!__DEV__ || !QUEST_COMPLETION_MOCK) return meta;
+    if (meta.is_completed_by_me || meta.completions_count > 0) return meta;
+    return {
+        ...meta,
+        is_completed_by_me: meta.id % 2 === 0,
+        completions_count: (meta.id % 7) + 1,
+    };
+}
+
+/**
  * Бэкенд может не отдавать поля рейтинга/прохождений (старая схема) —
  * проставляем безопасные дефолты, чтобы UI и адаптеры не падали.
  */
 export function withQuestMetaDefaults(meta: ApiQuestMeta): ApiQuestMeta {
-    return {
+    return withQuestCompletionMock({
         ...meta,
         rating_avg: meta.rating_avg ?? null,
         rating_count: meta.rating_count ?? 0,
@@ -83,7 +101,7 @@ export function withQuestMetaDefaults(meta: ApiQuestMeta): ApiQuestMeta {
         completions_count: meta.completions_count ?? 0,
         is_completed_by_me: meta.is_completed_by_me ?? false,
         first_completer: meta.first_completer ?? null,
-    };
+    });
 }
 
 /** Полный бандл квеста */

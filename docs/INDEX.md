@@ -27,6 +27,7 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 - `docs/features/README.md` — шаблон и план карт фич
 - `docs/features/places.md` — каталог отдельных точек `/places`
 - `docs/features/user.md` — профиль, collections, calendar statuses, author stats
+- `docs/features/social-trips-gamification-roadmap.md` — product backlog для геймификации, совместных поездок, trust и privacy
 
 ## Governance templates
 

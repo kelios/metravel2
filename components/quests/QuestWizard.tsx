@@ -65,6 +65,8 @@ export type QuestWizardProps = {
     onFinaleVideoRetry?: () => void;
     /** Доп. блок под экскурсиями (напр. «Путешествия по этому городу») */
     relatedTravelsSlot?: React.ReactNode;
+    /** Readonly-рейтинг квеста под заголовком в шапке */
+    ratingSlot?: React.ReactNode;
     /** Native: id города/квеста для deep-link локального напоминания о незавершённом квесте */
     questId?: string;
     cityId?: string;
@@ -81,7 +83,7 @@ const useQuestWizardTheme = (isMobile: boolean, screenW: number) => {
     return { colors, styles };
 };
 // ===================== ОСНОВНОЙ КОМПОНЕНТ =====================
-export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, questId, cityId, questNumericId }: QuestWizardProps) {
+export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, ratingSlot, questId, cityId, questNumericId }: QuestWizardProps) {
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
 
     const wizardModel = useQuestWizardResponsiveModel();
@@ -400,6 +402,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 onPrintDownload={handlePrintDownload}
                                 onOfflineMapDownload={handleOfflineMapDownload}
                                 offlineMapPointsCount={offlineMapPointsCount}
+                                ratingSlot={ratingSlot}
                             />
 
                             <ScrollView
@@ -437,6 +440,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 onPrintDownload={handlePrintDownload}
                                 onOfflineMapDownload={handleOfflineMapDownload}
                                 offlineMapPointsCount={offlineMapPointsCount}
+                                ratingSlot={ratingSlot}
                             />
 
                             {/* Контент */}

@@ -45,6 +45,7 @@ type QuestCompactSidebarProps = NavigationSharedProps & {
   onPrintDownload: () => void
   onOfflineMapDownload: () => void
   offlineMapPointsCount: number
+  ratingSlot?: React.ReactNode
 }
 
 type QuestHeaderPanelProps = NavigationSharedProps & {
@@ -59,6 +60,7 @@ type QuestHeaderPanelProps = NavigationSharedProps & {
   onPrintDownload: () => void
   onOfflineMapDownload: () => void
   offlineMapPointsCount: number
+  ratingSlot?: React.ReactNode
 }
 
 function ActiveScrollNav({
@@ -143,12 +145,14 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
     onPrintDownload,
     onOfflineMapDownload,
     offlineMapPointsCount,
+    ratingSlot,
   } = props
 
   return (
     <View style={styles.compactSidebar}>
       <View style={styles.compactSidebarHeader}>
         <Text style={styles.compactSidebarTitle} numberOfLines={2}>{title}</Text>
+        {ratingSlot ?? null}
         <View style={styles.compactSidebarActions}>
           <Pressable
             onPress={onPrintDownload}
@@ -263,6 +267,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
     onPrintDownload,
     onOfflineMapDownload,
     offlineMapPointsCount,
+    ratingSlot,
   } = props
 
   const wideDesktop = screenW >= 1100
@@ -274,6 +279,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           {!isMobile && (
             <Text style={styles.title} numberOfLines={1}>{title}</Text>
           )}
+          {!isMobile && ratingSlot ? ratingSlot : null}
         </View>
         <View style={styles.headerActionRow}>
           {Platform.OS === 'web' && (
