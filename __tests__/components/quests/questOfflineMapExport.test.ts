@@ -14,7 +14,9 @@ describe('questOfflineMapExport', () => {
   it('builds GPX with waypoints and route track for offline map import', () => {
     const file = buildQuestOfflineMapGpx({ title: 'Минский квест', steps });
 
-    expect(file.filename).toBe('quest-offline-map.gpx');
+    // Filename is transliterated Cyrillic→Latin so the title doesn't collapse
+    // to the generic fallback; GPX <name> keeps the original Cyrillic title.
+    expect(file.filename).toBe('minskiy-kvest.gpx');
     expect(file.mimeType).toBe('application/gpx+xml');
     expect(file.content).toContain('<name>Минский квест</name>');
     expect(file.content).toContain('<wpt lat="53.9023" lon="27.5619">');
@@ -23,5 +25,11 @@ describe('questOfflineMapExport', () => {
     expect(file.content).toContain('<trkpt lat="53.9023" lon="27.5619"></trkpt>');
     expect(file.content).toContain('<trkpt lat="53.9041" lon="27.5556"></trkpt>');
     expect(file.content).not.toContain('Без координат');
+  });
+
+  it('falls back to a generic filename when the title has no latinizable chars', () => {
+    const file = buildQuestOfflineMapGpx({ title: '«»—', steps });
+
+    expect(file.filename).toBe('quest-offline-map.gpx');
   });
 });

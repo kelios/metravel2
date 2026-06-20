@@ -39,16 +39,8 @@ export const createShellStyles = (colors: QuestColors, isMobile: boolean, _scree
     compactSidebarActions: {
         flexDirection: 'row',
         alignItems: 'center',
+        flexWrap: 'wrap',
         gap: SPACING.xs,
-    },
-    compactIconButton: {
-        width: 34,
-        height: 34,
-        borderRadius: 999,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: colors.backgroundSecondary,
-        ...Platform.select({ web: { cursor: 'pointer' } as any }),
     },
     compactSidebarTitle: {
         flex: 1,

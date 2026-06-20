@@ -44,6 +44,7 @@ type QuestCompactSidebarProps = NavigationSharedProps & {
   onReset: () => void
   onPrintDownload: () => void
   onOfflineMapDownload: () => void
+  onOfflineMapOpenInApp: () => void
   offlineMapPointsCount: number
   ratingSlot?: React.ReactNode
 }
@@ -59,6 +60,7 @@ type QuestHeaderPanelProps = NavigationSharedProps & {
   onReset: () => void
   onPrintDownload: () => void
   onOfflineMapDownload: () => void
+  onOfflineMapOpenInApp: () => void
   offlineMapPointsCount: number
   ratingSlot?: React.ReactNode
 }
@@ -144,6 +146,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
     onReset,
     onPrintDownload,
     onOfflineMapDownload,
+    onOfflineMapOpenInApp,
     offlineMapPointsCount,
     ratingSlot,
   } = props
@@ -156,22 +159,32 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
         <View style={styles.compactSidebarActions}>
           <Pressable
             onPress={onPrintDownload}
-            style={styles.compactIconButton}
-            hitSlop={12}
+            style={styles.actionLabelButton}
             accessibilityRole="button"
-            accessibilityLabel="Скачать печатную версию квеста"
+            accessibilityLabel="Печать квеста"
           >
-            <Feather name="download" size={16} color={colors.textMuted} />
+            <Feather name="download" size={15} color={colors.textMuted} />
+            <Text style={styles.actionLabelText}>Печать</Text>
           </Pressable>
           <Pressable
             onPress={onOfflineMapDownload}
-            style={styles.compactIconButton}
-            hitSlop={12}
+            style={styles.actionLabelButton}
             disabled={offlineMapPointsCount === 0}
             accessibilityRole="button"
-            accessibilityLabel={`Экспортировать ${offlineMapPointsCount} точек квеста (GPX)`}
+            accessibilityLabel={`Скачать GPX с ${offlineMapPointsCount} точками квеста`}
           >
-            <Feather name="share" size={16} color={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted} />
+            <Feather name="download" size={15} color={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted} />
+            <Text style={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}>Скачать GPX</Text>
+          </Pressable>
+          <Pressable
+            onPress={onOfflineMapOpenInApp}
+            style={styles.actionLabelButton}
+            disabled={offlineMapPointsCount === 0}
+            accessibilityRole="button"
+            accessibilityLabel="Открыть точки квеста в приложении карт"
+          >
+            <Feather name="external-link" size={15} color={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted} />
+            <Text style={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}>Открыть в приложении</Text>
           </Pressable>
           <Pressable
             onPress={onReset}
@@ -266,6 +279,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
     onReset,
     onPrintDownload,
     onOfflineMapDownload,
+    onOfflineMapOpenInApp,
     offlineMapPointsCount,
     ratingSlot,
   } = props
@@ -285,24 +299,33 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           {Platform.OS === 'web' && (
             <Pressable
               onPress={onPrintDownload}
-              style={styles.compactIconButton}
-              hitSlop={12}
+              style={styles.actionLabelButton}
               accessibilityRole="button"
-              accessibilityLabel="Скачать печатную версию квеста"
+              accessibilityLabel="Печать квеста"
             >
-              <Feather name="download" size={16} color={colors.textMuted} />
+              <Feather name="download" size={15} color={colors.textMuted} />
+              <Text style={styles.actionLabelText}>Печать</Text>
             </Pressable>
           )}
           <Pressable
             onPress={onOfflineMapDownload}
-            style={styles.offlineMapButton}
-            hitSlop={12}
+            style={styles.actionLabelButton}
             disabled={offlineMapPointsCount === 0}
             accessibilityRole="button"
-            accessibilityLabel={`Экспортировать ${offlineMapPointsCount} точек квеста (GPX) для офлайн-карт`}
+            accessibilityLabel={`Скачать GPX с ${offlineMapPointsCount} точками квеста`}
           >
-            <Feather name="share" size={14} color={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted} />
-            {!isMobile && <Text style={styles.resetText}>Экспорт точек (GPX)</Text>}
+            <Feather name="download" size={15} color={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted} />
+            <Text style={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}>Скачать GPX</Text>
+          </Pressable>
+          <Pressable
+            onPress={onOfflineMapOpenInApp}
+            style={styles.actionLabelButton}
+            disabled={offlineMapPointsCount === 0}
+            accessibilityRole="button"
+            accessibilityLabel="Открыть точки квеста в приложении карт"
+          >
+            <Feather name="external-link" size={15} color={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted} />
+            <Text style={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}>Открыть в приложении</Text>
           </Pressable>
           <Pressable
             onPress={onReset}

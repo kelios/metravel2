@@ -58,11 +58,27 @@ export const normalizeWaypoints = (waypoints: unknown, opts?: { precision?: numb
     .filter(Boolean) as { name?: string; description?: string; coordinates: LngLat }[];
 };
 
+const TRANSLIT_MAP: Record<string, string> = {
+  а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z',
+  и: 'i', й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r',
+  с: 's', т: 't', у: 'u', ф: 'f', х: 'h', ц: 'ts', ч: 'ch', ш: 'sh',
+  щ: 'sch', ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
+};
+
+export const transliterate = (ru: string): string =>
+  ru.replace(/[а-яё]/gi, (char) => {
+    const lower = char.toLowerCase();
+    const mapped = TRANSLIT_MAP[lower] ?? char;
+    if (char === lower) return mapped;
+    return mapped.charAt(0).toUpperCase() + mapped.slice(1);
+  });
+
 export const safeFileBaseName = (name: string) => {
   const trimmed = (name || '').trim();
   const base = trimmed || 'metravel-route';
-  // Conservative filename sanitizer
-  return base
+  // Conservative filename sanitizer with Cyrillic→Latin transliteration so
+  // Russian titles don't collapse to the empty fallback.
+  return transliterate(base)
     .replace(/\s+/g, '-')
     .replace(/[^a-zA-Z0-9._-]/g, '')
     .slice(0, 80) || 'metravel-route';

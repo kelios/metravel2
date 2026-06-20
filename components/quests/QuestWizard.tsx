@@ -34,7 +34,7 @@ import {
     openQuestMap,
     type QuestMapApp,
 } from './questWizardHelpers';
-import { exportQuestOfflineMap, getQuestOfflineMapPoints } from './questOfflineMapExport';
+import { exportQuestOfflineMap, getQuestOfflineMapPoints, openQuestOfflineMapInApp } from './questOfflineMapExport';
 
 import { useThemedColors } from '@/hooks/useTheme';
 import { useQuestWizardResponsiveModel } from './hooks/useQuestWizardResponsiveModel';
@@ -278,6 +278,17 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         })();
     }, [steps, title]);
 
+    const handleOfflineMapOpenInApp = useCallback(() => {
+        void (async () => {
+            try {
+                const opened = await openQuestOfflineMapInApp({ title, steps });
+                if (!opened) notifyQuest('В квесте нет точек для карты');
+            } catch {
+                notifyQuest('Не удалось открыть точки в приложении карт');
+            }
+        })();
+    }, [steps, title]);
+
     const mainContent = (
         <View style={useWideExcursionsSidebar && city && Platform.OS === 'web' ? styles.pageRow : undefined}>
             {/* Левая колонка: шаги + карта + финал */}
@@ -401,6 +412,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 onReset={resetQuest}
                                 onPrintDownload={handlePrintDownload}
                                 onOfflineMapDownload={handleOfflineMapDownload}
+                                onOfflineMapOpenInApp={handleOfflineMapOpenInApp}
                                 offlineMapPointsCount={offlineMapPointsCount}
                                 ratingSlot={ratingSlot}
                             />
@@ -439,6 +451,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 onReset={resetQuest}
                                 onPrintDownload={handlePrintDownload}
                                 onOfflineMapDownload={handleOfflineMapDownload}
+                                onOfflineMapOpenInApp={handleOfflineMapOpenInApp}
                                 offlineMapPointsCount={offlineMapPointsCount}
                                 ratingSlot={ratingSlot}
                             />

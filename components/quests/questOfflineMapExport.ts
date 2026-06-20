@@ -3,6 +3,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
 import { buildGpx, downloadTextFileWeb } from '@/utils/routeExport';
+import { transliterate } from '@/utils/routeExport/normalize';
 
 import type { QuestStep } from './types';
 
@@ -21,7 +22,7 @@ export const getQuestOfflineMapPoints = (steps: QuestOfflineMapPoint[]) =>
 
 export const buildQuestOfflineMapGpx = ({ title, steps }: QuestOfflineMapExportOptions) => {
   const points = getQuestOfflineMapPoints(steps);
-  const fileBase = title
+  const fileBase = transliterate(title)
     .trim()
     .toLowerCase()
     .replace(/\s+/g, '-')
@@ -67,8 +68,44 @@ export async function exportQuestOfflineMap(options: QuestOfflineMapExportOption
   await Sharing.shareAsync(fileUri, {
     mimeType: file.mimeType,
     dialogTitle: 'Открыть точки квеста (GPX) в офлайн-картах',
-    UTI: 'public.xml',
+    UTI: 'com.topografix.gpx',
   });
 
+  return true;
+}
+
+type WebShareNavigator = Navigator & {
+  share?: (data: { files?: File[]; title?: string; text?: string }) => Promise<void>;
+  canShare?: (data: { files?: File[] }) => boolean;
+};
+
+export async function openQuestOfflineMapInApp(options: QuestOfflineMapExportOptions): Promise<boolean> {
+  const points = getQuestOfflineMapPoints(options.steps);
+  if (points.length === 0) return false;
+
+  const file = buildQuestOfflineMapGpx(options);
+
+  if (Platform.OS !== 'web') {
+    return exportQuestOfflineMap(options);
+  }
+
+  if (typeof navigator !== 'undefined' && typeof File !== 'undefined') {
+    const nav = navigator as WebShareNavigator;
+    const shareFile = new File([file.content], file.filename, { type: file.mimeType });
+    if (nav.canShare?.({ files: [shareFile] }) && nav.share) {
+      try {
+        await nav.share({
+          files: [shareFile],
+          title: 'Точки квеста (GPX)',
+          text: 'Откройте файл в офлайн-картах (Organic Maps, Maps.me).',
+        });
+        return true;
+      } catch {
+        // Пользователь отменил шеринг или системное «Поделиться» недоступно — падаем на скачивание.
+      }
+    }
+  }
+
+  downloadTextFileWeb(file);
   return true;
 }

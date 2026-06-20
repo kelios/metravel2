@@ -63,12 +63,12 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
             } as any,
         }),
     },
-    offlineMapButton: {
+    actionLabelButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 5,
+        gap: 6,
         paddingHorizontal: SPACING.sm,
-        paddingVertical: 6,
+        minHeight: 44,
         borderRadius: 999,
         borderWidth: 1,
         borderColor: colors.borderLight,
@@ -80,6 +80,7 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
             } as any,
         }),
     },
+    actionLabelText: { color: colors.textMuted, fontWeight: '600', fontSize: 13 },
     resetText: { color: colors.textMuted, fontWeight: '600', fontSize: 12 },
     exportHint: {
         color: colors.textMuted,
@@ -126,6 +127,8 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
     headerActionRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        flexWrap: 'wrap',
+        justifyContent: 'flex-end',
         gap: SPACING.xs,
     },
 } as const);
