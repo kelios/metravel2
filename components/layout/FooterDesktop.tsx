@@ -290,6 +290,10 @@ function FooterDesktop({ testID }: FooterDesktopProps) {
     { key: 'about', label: 'О сайте', route: '/about' as any },
     { key: 'privacy', label: 'Политика', route: '/privacy' as any },
     { key: 'cookies', label: 'Cookies', route: '/cookies' as any },
+    { key: 'terms', label: 'Соглашение', route: '/terms' as any },
+    { key: 'disclaimer', label: 'Отказ от ответственности', route: '/disclaimer' as any },
+    { key: 'community-rules', label: 'Правила сообщества', route: '/community-rules' as any },
+    { key: 'trip-rules', label: 'Правила поездок', route: '/trip-rules' as any },
   ]
 
   const social: LinkItem[] = [

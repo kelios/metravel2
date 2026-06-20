@@ -8,3 +8,12 @@ export { default as BadgeUnlockToast } from '@/components/achievements/BadgeUnlo
 export { default as PeerBadgeReceivedRow } from '@/components/achievements/PeerBadgeReceivedRow';
 export { default as PeerBadgeGiveButton } from '@/components/achievements/PeerBadgeGiveButton';
 export { default as PeerBadgePickerSheet } from '@/components/achievements/PeerBadgePickerSheet';
+export { default as ProgressionLineBar } from '@/components/achievements/ProgressionLineBar';
+export { default as ActivityProgressionSection } from '@/components/achievements/ActivityProgressionSection';
+export { default as PlaceFirstBadgeCard } from '@/components/achievements/PlaceFirstBadgeCard';
+export { default as PlaceFirstBadgesSection } from '@/components/achievements/PlaceFirstBadgesSection';
+export { default as PlaceFirstBadgeToast } from '@/components/achievements/PlaceFirstBadgeToast';
+export { default as CharacterProfileCard } from '@/components/achievements/CharacterProfileCard';
+export { default as CharacterPathChoice } from '@/components/achievements/CharacterPathChoice';
+export { default as GamificationOnboarding } from '@/components/achievements/GamificationOnboarding';
+export { default as GamificationProfileBlock } from '@/components/achievements/GamificationProfileBlock';

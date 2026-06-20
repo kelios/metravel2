@@ -18,6 +18,7 @@ type TravelDetailsHeroDeferredColumnProps = {
   sectionLinks: TravelSectionLink[]
   travel: Travel
   activeKey?: string
+  suppressHeroQuickJumps?: boolean
 }
 
 export default function TravelDetailsHeroDeferredColumn({
@@ -31,6 +32,7 @@ export default function TravelDetailsHeroDeferredColumn({
   sectionLinks,
   travel,
   activeKey,
+  suppressHeroQuickJumps,
 }: TravelDetailsHeroDeferredColumnProps) {
   return (
     <>
@@ -44,10 +46,64 @@ export default function TravelDetailsHeroDeferredColumn({
         onQuickJump={onQuickJump}
         sectionLinks={sectionLinks}
         activeKey={activeKey}
+        suppressHeroQuickJumps={suppressHeroQuickJumps}
       />
 
       {deferredContent}
     </>
+  )
+}
+
+// Hero block in isolation — used by the native sticky layout (CriticalShell) so the
+// sub-nav can be a direct ScrollView child between the hero and the content sections.
+export function TravelDetailsHeroBlock({
+  anchors,
+  deferHeroExtras,
+  isMobile,
+  onFirstImageLoad,
+  onQuickJump,
+  sectionLinks,
+  travel,
+  activeKey,
+  suppressHeroQuickJumps,
+}: Omit<
+  TravelDetailsHeroDeferredColumnProps,
+  'deferredContent' | 'forceOpenKey'
+>) {
+  return (
+    <TravelHeroSection
+      travel={travel}
+      anchors={anchors}
+      isMobile={isMobile}
+      renderSlider
+      onFirstImageLoad={onFirstImageLoad}
+      sectionLinks={sectionLinks}
+      onQuickJump={onQuickJump}
+      deferExtras={deferHeroExtras}
+      activeKey={activeKey}
+      suppressQuickJumps={suppressHeroQuickJumps}
+    />
+  )
+}
+
+// Content sections (description / video / insights) without the hero — paired with
+// TravelDetailsHeroBlock by the native sticky layout.
+export function TravelDetailsContentBlock({
+  anchors,
+  forceOpenKey,
+  isMobile,
+  travel,
+}: Pick<
+  TravelDetailsHeroDeferredColumnProps,
+  'anchors' | 'forceOpenKey' | 'isMobile' | 'travel'
+>) {
+  return (
+    <TravelDetailsContentSection
+      travel={travel}
+      isMobile={isMobile}
+      anchors={anchors}
+      forceOpenKey={forceOpenKey}
+    />
   )
 }
 
@@ -61,6 +117,7 @@ const TravelDetailsPrimaryColumn = memo(function TravelDetailsPrimaryColumn({
   sectionLinks,
   travel,
   activeKey,
+  suppressHeroQuickJumps,
 }: Omit<TravelDetailsHeroDeferredColumnProps, 'deferredContent'>) {
   return (
     <>
@@ -68,19 +125,19 @@ const TravelDetailsPrimaryColumn = memo(function TravelDetailsPrimaryColumn({
           containing block for the sticky sub-nav inside the hero, clipping it to the hero block so
           it scrolls away with the gallery (#341). Keeping the hero + content sections as direct
           fragment siblings lets `position: sticky` pin across the whole article. */}
-      <TravelHeroSection
+      <TravelDetailsHeroBlock
         travel={travel}
         anchors={anchors}
+        deferHeroExtras={deferHeroExtras}
         isMobile={isMobile}
-        renderSlider
         onFirstImageLoad={onFirstImageLoad}
-        sectionLinks={sectionLinks}
         onQuickJump={onQuickJump}
-        deferExtras={deferHeroExtras}
+        sectionLinks={sectionLinks}
         activeKey={activeKey}
+        suppressHeroQuickJumps={suppressHeroQuickJumps}
       />
 
-      <TravelDetailsContentSection
+      <TravelDetailsContentBlock
         travel={travel}
         isMobile={isMobile}
         anchors={anchors}

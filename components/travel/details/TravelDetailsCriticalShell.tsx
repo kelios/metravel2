@@ -17,7 +17,11 @@ import {
 
 import type { AnchorsMap } from './TravelDetailsTypes';
 import TravelDetailsSkeletonOverlay from './TravelDetailsSkeletonOverlay';
-import TravelDetailsHeroDeferredColumn from './TravelDetailsHeroDeferredColumn';
+import TravelDetailsHeroDeferredColumn, {
+  TravelDetailsContentBlock,
+  TravelDetailsHeroBlock,
+} from './TravelDetailsHeroDeferredColumn';
+import TravelHeroStickyNavNative from './TravelHeroStickyNavNative';
 
 // Semantic <h1> kept sr-only: it gives the page its single SEO heading
 // (the travel name) without rendering a visible title block at the top — the
@@ -25,6 +29,10 @@ import TravelDetailsHeroDeferredColumn from './TravelDetailsHeroDeferredColumn';
 // own sr-only `<h1 data-ssg-travel-h1>` plus a visible `.ssg-travel-h1`
 // placeholder; both are torn down on mount (see effect below) so the page keeps
 // exactly one (hidden) heading and no lingering visible title.
+// Sub-nav sits at index 1 of the native sticky ScrollView children
+// (hero, sub-nav, content).
+const STICKY_NAV_INDICES = [1];
+
 const WEB_SR_ONLY_HEADING_STYLE = {
   position: 'absolute',
   width: 1,
@@ -175,6 +183,14 @@ export default function TravelDetailsCriticalShell({
     [styles.contentWrapper, contentHorizontalPadding]
   );
 
+  // Native (iOS/Android) has no `position: sticky`; the sub-nav is pinned via the
+  // ScrollView's `stickyHeaderIndices`, which only works on a DIRECT child. On
+  // mobile-native single-column layout we therefore hoist the sub-nav out of the
+  // hero and render hero / sticky-nav / content as three direct ScrollView
+  // children. Web and desktop keep the existing nested CSS-sticky column (#341).
+  const useNativeStickyNav =
+    !!travel && isMobile && Platform.OS !== 'web' && !showDesktopSidebar;
+
   const contentColumn = travel ? (
     <TravelDetailsHeroDeferredColumn
       travel={travel}
@@ -189,6 +205,41 @@ export default function TravelDetailsCriticalShell({
       activeKey={activeSection ?? undefined}
     />
   ) : null;
+
+  const nativeStickyChildren =
+    useNativeStickyNav && travel
+      ? [
+          <View key="hero" style={contentWrapperStyle} collapsable={false}>
+            <TravelDetailsHeroBlock
+              travel={travel}
+              anchors={anchors}
+              isMobile={isMobile}
+              deferHeroExtras={deferHeroExtras}
+              onFirstImageLoad={onFirstImageLoad}
+              onQuickJump={onQuickJump}
+              sectionLinks={sectionLinks}
+              activeKey={activeSection ?? undefined}
+              suppressHeroQuickJumps
+            />
+          </View>,
+          <TravelHeroStickyNavNative
+            key="sticky-nav"
+            sectionLinks={sectionLinks}
+            onQuickJump={onQuickJump}
+            contentHorizontalPadding={contentHorizontalPadding}
+            activeKey={activeSection ?? undefined}
+          />,
+          <View key="content" style={contentWrapperStyle} collapsable={false}>
+            <TravelDetailsContentBlock
+              travel={travel}
+              isMobile={isMobile}
+              anchors={anchors}
+              forceOpenKey={forceOpenKey}
+            />
+            {deferredContent}
+          </View>,
+        ]
+      : null;
 
   return (
     <View
@@ -218,46 +269,51 @@ export default function TravelDetailsCriticalShell({
             scrollEventThrottle={Platform.OS === 'web' ? 64 : 48}
             style={scrollViewStyle}
             nestedScrollEnabled
+            stickyHeaderIndices={useNativeStickyNav ? STICKY_NAV_INDICES : undefined}
             onContentSizeChange={handleContentSizeChange}
             onLayout={handleLayout}
           >
-            <View style={styles.contentOuter} collapsable={false}>
-              <View
-                style={contentWrapperStyle}
-                collapsable={false}
-              >
-                {Platform.OS === 'web' && travel ? (
-                  <h1 style={WEB_SR_ONLY_HEADING_STYLE as any}>{travel.name}</h1>
-                ) : null}
-                {travel && showDesktopSidebar ? (
-                  <View style={desktopLayoutStyle} collapsable={false}>
-                    <View style={desktopSidebarContainerStyle}>
-                      <Animated.View
-                        testID="travel-details-side-menu"
-                        {...(Platform.OS === 'web' ? ({ 'data-testid': 'travel-details-side-menu' } as any) : null)}
-                        style={desktopSidebarAnimatedStyle}
-                      >
-                        <CompactSideBarTravel
-                          travel={travel}
-                          isMobile={isMobile}
-                          refs={anchors}
-                          links={sectionLinks}
-                          closeMenu={closeMenu}
-                          onNavigate={onNavigate}
-                          activeSection={activeSection ?? undefined}
-                        />
-                      </Animated.View>
-                    </View>
+            {useNativeStickyNav ? (
+              nativeStickyChildren
+            ) : (
+              <View style={styles.contentOuter} collapsable={false}>
+                <View
+                  style={contentWrapperStyle}
+                  collapsable={false}
+                >
+                  {Platform.OS === 'web' && travel ? (
+                    <h1 style={WEB_SR_ONLY_HEADING_STYLE as any}>{travel.name}</h1>
+                  ) : null}
+                  {travel && showDesktopSidebar ? (
+                    <View style={desktopLayoutStyle} collapsable={false}>
+                      <View style={desktopSidebarContainerStyle}>
+                        <Animated.View
+                          testID="travel-details-side-menu"
+                          {...(Platform.OS === 'web' ? ({ 'data-testid': 'travel-details-side-menu' } as any) : null)}
+                          style={desktopSidebarAnimatedStyle}
+                        >
+                          <CompactSideBarTravel
+                            travel={travel}
+                            isMobile={isMobile}
+                            refs={anchors}
+                            links={sectionLinks}
+                            closeMenu={closeMenu}
+                            onNavigate={onNavigate}
+                            activeSection={activeSection ?? undefined}
+                          />
+                        </Animated.View>
+                      </View>
 
-                    <View style={desktopContentColumnStyle} collapsable={false}>
-                      {contentColumn}
+                      <View style={desktopContentColumnStyle} collapsable={false}>
+                        {contentColumn}
+                      </View>
                     </View>
-                  </View>
-                ) : travel ? (
-                  contentColumn
-                ) : null}
+                  ) : travel ? (
+                    contentColumn
+                  ) : null}
+                </View>
               </View>
-            </View>
+            )}
           </ScrollView>
         </View>
       </SafeAreaView>

@@ -61,6 +61,10 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   // userId приходит после authReady и запускается повторная загрузка), более старый
   // fetchTravel не должен затирать state/hasAccess, выставленные более новой загрузкой.
   const loadRequestIdRef = useRef(0);
+  // Id, который сервер присвоил во время создания НОВОГО travel в этой же сессии.
+  // Когда контроллер прокинет его в URL (F-09), `isNew` станет false, а `travelId`
+  // получит это значение — повторная серверная загрузка не нужна, форма уже актуальна.
+  const createdIdRef = useRef<number | null>(null);
   // ✅ FIX: Выносим updateBaseline в ref чтобы избежать stale closure
   const updateBaselineRef = useRef<((data: TravelFormData) => void) | null>(null);
 
@@ -72,7 +76,16 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
   useEffect(() => {
     formDataRef.current = formState.data;
-  }, [formState.data]);
+    // Запоминаем id, присвоенный сервером при создании нового travel, пока URL
+    // ещё в режиме "new" — по нему load-эффект пропустит лишнюю перезагрузку,
+    // когда контроллер прокинет id в URL.
+    if (isNew && createdIdRef.current == null) {
+      const assignedId = normalizeTravelId(formState.data.id);
+      if (assignedId != null) {
+        createdIdRef.current = assignedId;
+      }
+    }
+  }, [formState.data, isNew]);
 
   useEffect(() => {
     const pending = pendingBaselineRef.current;
@@ -273,6 +286,18 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     // Смена ключа при появлении userId перезапускает загрузку и выдаёт доступ к своему travel.
     const loadKey = `${String(travelId ?? 'new')}|${userId ?? ''}|${isSuperAdmin ? '1' : '0'}`;
     if (initialLoadKeyRef.current === loadKey) return;
+
+    // When a NEW travel gets its server id reflected in the URL (F-09), `travelId`
+    // switches from null to the just-created id. The form already holds the saved
+    // data, so re-fetching would flash the skeleton and reset in-progress edits.
+    // Mark the key as consumed without a destructive reload.
+    if (!isNew && travelId && createdIdRef.current === normalizeTravelId(travelId)) {
+      initialLoadKeyRef.current = loadKey;
+      setHasAccess(true);
+      setIsInitialLoading(false);
+      return;
+    }
+
     initialLoadKeyRef.current = loadKey;
 
     if (!isNew && travelId) {

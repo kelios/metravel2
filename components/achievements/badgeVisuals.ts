@@ -45,6 +45,7 @@ const SLUG_ICON_HINTS: Array<[RegExp, FeatherName]> = [
   [/auto|car|авто/i, 'map'],
   [/water|вод|анкор/i, 'anchor'],
   [/city|urban|город/i, 'map-pin'],
+  [/place|место|первооткрыват|discover/i, 'map-pin'],
   [/quest|квест/i, 'flag'],
   [/like|лайк|favorite/i, 'heart'],
   [/subscrib|подпис/i, 'users'],

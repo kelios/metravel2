@@ -5,6 +5,7 @@ import { useIsFocused } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 
 import { QuestWizard as QuestWizardDirect } from '@/components/quests/QuestWizard';
+import QuestConsentGate from '@/components/quests/QuestConsentGate';
 import TravelsForQuestSection from '@/components/quests/TravelsForQuestSection';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import UserAvatar from '@/components/layout/UserAvatar';
@@ -17,6 +18,8 @@ import { useQuestRatingMeta } from '@/hooks/useQuestRatingMeta';
 import { useQuestCompletionMeta } from '@/hooks/useQuestCompletionMeta';
 import { useQuestPioneerMeta } from '@/hooks/useQuestPioneerMeta';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useActionConsent } from '@/hooks/useActionConsent';
+import { CONSENT_TYPES } from '@/utils/actionConsent';
 import { createQuestDetailStructuredData } from '@/utils/discoverySeo';
 import { stringifyJsonLd } from '@/utils/jsonLd';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
@@ -503,6 +506,8 @@ export default function QuestByIdScreen() {
     );
   }, [bundle]);
 
+  const questConsent = useActionConsent(CONSENT_TYPES.QUEST_START);
+
   const handleProgressReset = useCallback(() => {
     void resetProgress();
   }, [resetProgress]);
@@ -535,6 +540,30 @@ export default function QuestByIdScreen() {
         colors={colors}
         styles={styles}
       />
+    );
+  }
+
+  if (questConsent.hydrated && !questConsent.granted) {
+    return (
+      <View style={styles.page}>
+        {isFocused ? (
+          <InstantSEO
+            headKey={seo.headKey}
+            title={seo.title}
+            description={seo.description}
+            canonical={canonical}
+            ogType={seo.ogType}
+            image={seoImage}
+            additionalTags={structuredDataTags}
+          />
+        ) : null}
+        {Platform.OS === 'web' ? <h1 style={hiddenWebHeadingStyle as any}>{seo.title}</h1> : null}
+        <QuestConsentGate
+          title={bundle.title}
+          coverUrl={bundle.coverUrl}
+          onAccept={questConsent.grant}
+        />
+      </View>
     );
   }
 

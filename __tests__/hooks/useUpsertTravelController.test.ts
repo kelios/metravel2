@@ -2,8 +2,11 @@ import { renderHook } from '@testing-library/react-native';
 
 import { useUpsertTravelController } from '@/components/travel/upsert/useUpsertTravelController';
 
+const mockSetParams = jest.fn();
+
 jest.mock('expo-router', () => ({
   useLocalSearchParams: jest.fn(),
+  useRouter: jest.fn(() => ({ setParams: mockSetParams })),
 }));
 
 jest.mock('@/context/AuthContext', () => ({
@@ -232,6 +235,56 @@ describe('useUpsertTravelController', () => {
     expect(saveDraft).toHaveBeenCalledWith(formData);
   });
 
+  it('does not persist a draft right after an autosave succeeds (F-09 P2)', () => {
+    const saveDraft = jest.fn();
+    mockUseDraftRecovery.mockReturnValue({
+      hasPendingDraft: false,
+      draftTimestamp: null,
+      isRecovering: false,
+      recoverDraft: jest.fn(async () => null),
+      dismissDraft: jest.fn(async () => undefined),
+      saveDraft,
+      clearDraft: jest.fn(async () => undefined),
+    });
+
+    // Dirty + interacted, but the autosave just succeeded: the data is on the
+    // server, so re-persisting a draft would create a false recovery prompt.
+    mockUseTravelFormData.mockReturnValue({
+      ...baseForm,
+      formState: { isDirty: true },
+      hasUserInteracted: true,
+      formData: { id: 1, countries: [], categories: [] },
+      autosave: { ...baseForm.autosave, status: 'saved' },
+    });
+
+    renderHook(() => useUpsertTravelController());
+    expect(saveDraft).not.toHaveBeenCalled();
+  });
+
+  it('does not persist a draft while an autosave is in flight', () => {
+    const saveDraft = jest.fn();
+    mockUseDraftRecovery.mockReturnValue({
+      hasPendingDraft: false,
+      draftTimestamp: null,
+      isRecovering: false,
+      recoverDraft: jest.fn(async () => null),
+      dismissDraft: jest.fn(async () => undefined),
+      saveDraft,
+      clearDraft: jest.fn(async () => undefined),
+    });
+
+    mockUseTravelFormData.mockReturnValue({
+      ...baseForm,
+      formState: { isDirty: true },
+      hasUserInteracted: true,
+      formData: { id: 1, countries: [], categories: [] },
+      autosave: { ...baseForm.autosave, status: 'saving' },
+    });
+
+    renderHook(() => useUpsertTravelController());
+    expect(saveDraft).not.toHaveBeenCalled();
+  });
+
   it('clears local draft after manual save to prevent draft popup after reload', async () => {
     const clearDraft = jest.fn(async () => undefined);
     const saveDraft = jest.fn();
@@ -261,5 +314,44 @@ describe('useUpsertTravelController', () => {
 
     expect(handleManualSave).toHaveBeenCalledTimes(1);
     expect(clearDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it('reflects the server id in the URL after the first save of a new travel (F-09)', () => {
+    mockUseLocalSearchParams.mockReturnValue({ id: undefined });
+    mockUseTravelFormData.mockReturnValue({
+      ...baseForm,
+      formData: { id: 456, countries: [], categories: [] },
+    });
+
+    renderHook(() => useUpsertTravelController());
+
+    expect(mockSetParams).toHaveBeenCalledTimes(1);
+    expect(mockSetParams).toHaveBeenCalledWith({ id: '456' });
+  });
+
+  it('does not push id into the URL when editing an existing travel', () => {
+    mockUseLocalSearchParams.mockReturnValue({ id: '456' });
+    mockUseTravelFormData.mockReturnValue({
+      ...baseForm,
+      formData: { id: 456, countries: [], categories: [] },
+    });
+
+    renderHook(() => useUpsertTravelController());
+
+    expect(mockSetParams).not.toHaveBeenCalled();
+  });
+
+  it('reflects the created id only once across re-renders', () => {
+    mockUseLocalSearchParams.mockReturnValue({ id: undefined });
+    mockUseTravelFormData.mockReturnValue({
+      ...baseForm,
+      formData: { id: 456, countries: [], categories: [] },
+    });
+
+    const { rerender } = renderHook(() => useUpsertTravelController());
+    rerender({});
+    rerender({});
+
+    expect(mockSetParams).toHaveBeenCalledTimes(1);
   });
 });

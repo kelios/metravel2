@@ -34,15 +34,16 @@ function QuestReviewSection({ questNumericId, testID = 'quest-review-section' }:
   const alreadyReviewed = !!review && !isSubmitted
   const showSuccess = isSubmitted || alreadyReviewed
 
-  const hasContent = rating > 0 || liked.trim().length > 0 || disliked.trim().length > 0
+  // Оценка обязательна (BE: rating 1..5, NOT NULL). Тексты — опциональны.
+  const canSubmit = effectiveRating > 0
 
   const handleSubmit = () => {
     if (!isAuthenticated) {
       requireAuth()
       return
     }
-    if (!questNumericId || !hasContent || isSubmitting) return
-    submit({ rating, liked: liked.trim(), disliked: disliked.trim() })
+    if (!questNumericId || !canSubmit || isSubmitting) return
+    submit({ rating: effectiveRating, liked: liked.trim(), disliked: disliked.trim() })
   }
 
   if (showSuccess) {
@@ -110,8 +111,8 @@ function QuestReviewSection({ questNumericId, testID = 'quest-review-section' }:
 
       <Pressable
         onPress={handleSubmit}
-        disabled={!hasContent || isSubmitting}
-        style={[styles.submitButton, (!hasContent || isSubmitting) && styles.submitButtonDisabled]}
+        disabled={!canSubmit || isSubmitting}
+        style={[styles.submitButton, (!canSubmit || isSubmitting) && styles.submitButtonDisabled]}
         accessibilityRole="button"
         accessibilityLabel="Отправить отзыв"
         testID={`${testID}-submit`}

@@ -291,6 +291,104 @@ describe('useDraftRecovery', () => {
     expect(await AsyncStorage.getItem(draftKey)).toBeNull();
   });
 
+  it('drops the old-key draft when isNew flips to false and id appears (F-09 P2)', async () => {
+    // Simulate a NEW travel that autosaved: a draft exists under `_new`, then the
+    // server id is reflected in the URL so the key transitions to `_<id>`.
+    await AsyncStorage.setItem(
+      'metravel_travel_draft_new',
+      JSON.stringify({ data: { name: 'draft-while-new' }, timestamp: Date.now() - 1_000 })
+    );
+
+    const { result, rerender } = renderHook(
+      (props: { travelId: string | null; isNew: boolean }) =>
+        useDraftRecovery({
+          travelId: props.travelId,
+          isNew: props.isNew,
+          enabled: true,
+          currentData: { name: 'server' } as any,
+        }),
+      {
+        initialProps: { travelId: null as string | null, isNew: true },
+      }
+    );
+
+    // The new travel got id 777; controller pushes it into the URL.
+    rerender({ travelId: '777', isNew: false });
+
+    await waitFor(() => {
+      // The old `_new` draft must be gone so it cannot resurface under `_777`.
+      expect(AsyncStorage.removeItem).toHaveBeenCalledWith('metravel_travel_draft_new');
+    });
+
+    expect(await AsyncStorage.getItem('metravel_travel_draft_new')).toBeNull();
+
+    // No false recovery prompt under the new key.
+    await waitFor(() => {
+      expect(result.current.hasPendingDraft).toBe(false);
+    });
+    expect(await AsyncStorage.getItem('metravel_travel_draft_777')).toBeNull();
+  });
+
+  it('still recovers a genuine draft saved after the id-transition (legit recovery preserved)', async () => {
+    jest.useFakeTimers();
+    const { result, rerender, unmount } = renderHook(
+      (props: { travelId: string | null; isNew: boolean; currentData: any }) =>
+        useDraftRecovery({
+          travelId: props.travelId,
+          isNew: props.isNew,
+          enabled: true,
+          currentData: props.currentData,
+        }),
+      {
+        initialProps: {
+          travelId: null as string | null,
+          isNew: true,
+          currentData: { name: 'server' },
+        },
+      }
+    );
+
+    // Transition to the saved travel's id.
+    rerender({ travelId: '888', isNew: false, currentData: { name: 'server' } });
+
+    // User edits AFTER the save and walks away before the next autosave: a real
+    // draft is persisted under `_888` and must remain recoverable.
+    act(() => {
+      result.current.saveDraft({ name: 'edited-after-save' } as any);
+    });
+    act(() => {
+      jest.advanceTimersByTime(2100);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const stored888 = await AsyncStorage.getItem('metravel_travel_draft_888');
+    expect(stored888).toBeTruthy();
+    expect(JSON.parse(stored888 as string).data).toEqual({ name: 'edited-after-save' });
+
+    jest.useRealTimers();
+    unmount();
+
+    // Simulate a page reload: a fresh hook instance for the same `_888` key with
+    // server data that differs from the persisted draft must show the prompt.
+    expect(await AsyncStorage.getItem('metravel_travel_draft_888')).toBeTruthy();
+
+    const reloaded = renderHook(() =>
+      useDraftRecovery({
+        travelId: '888',
+        isNew: false,
+        enabled: true,
+        currentData: { name: 'server-after-reload' } as any,
+      })
+    );
+
+    await waitFor(() => {
+      expect(reloaded.result.current.hasPendingDraft).toBe(true);
+    });
+  });
+
   it('flushes the latest pending draft on web pagehide', async () => {
     setPlatformOs('web');
 

@@ -43,6 +43,10 @@ const TOP_LEVEL_PATHS_NO_CONTEXT_BAR = new Set<string>([
   '/about',
   '/privacy',
   '/cookies',
+  '/terms',
+  '/disclaimer',
+  '/community-rules',
+  '/trip-rules',
 ])
 
 export const shouldShowHeaderContextBar = (pathname: string, isMobile: boolean) => {

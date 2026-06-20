@@ -6,7 +6,6 @@ import Feather from '@expo/vector-icons/Feather';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
-import { openExternalUrl } from '@/utils/externalLinks';
 import { useUserProfileCached } from '@/hooks/useUserProfileCached';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext';
@@ -23,7 +22,10 @@ import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { fetchTravels } from '@/api/travelListQueries';
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
+import ProtectedContacts from '@/components/profile/ProtectedContacts';
 import UserAchievementsSection from '@/components/achievements/UserAchievementsSection';
+import GamificationProfileBlock from '@/components/achievements/GamificationProfileBlock';
+import SafetyNotice from '@/components/ui/SafetyNotice';
 import PeerBadgeGiveButton from '@/components/achievements/PeerBadgeGiveButton';
 import { useUserAchievements } from '@/hooks/useAchievementsApi';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -244,21 +246,16 @@ export default function PublicUserProfileScreen() {
             </View>
           </View>
 
-          {socials.length > 0 && (
-            <View style={styles.socialsRow}>
-              {socials.map((s) => (
-                <Pressable
-                  key={s.key}
-                  style={[styles.socialChip, globalFocusStyles.focusable]}
-                  onPress={() => openExternalUrl(String(s.value))}
-                  accessibilityRole="link"
-                  accessibilityLabel={`Открыть ${s.label}`}
-                  {...Platform.select({ web: { cursor: 'pointer' } })}
-                >
-                  <Text style={styles.socialChipText}>{s.label}</Text>
-                </Pressable>
-              ))}
-            </View>
+          <ProtectedContacts
+            socials={socials.map((s) => ({ key: s.key, label: s.label, value: String(s.value) }))}
+            isOwnProfile={isOwnProfile}
+            contactsHidden={profile?.contacts_hidden}
+            contactAccess={profile?.contact_access}
+            targetUserId={userId}
+          />
+
+          {!isOwnProfile && socials.length > 0 && (
+            <SafetyNotice storageKey="profile-contact-exchange" style={styles.safetyNotice} />
           )}
 
           <View style={styles.actionsRow}>
@@ -303,6 +300,10 @@ export default function PublicUserProfileScreen() {
 
         {userId ? (
           <UserAchievementsSection userId={userId} style={styles.achievementsSection} />
+        ) : null}
+
+        {userId ? (
+          <GamificationProfileBlock userId={userId} style={styles.achievementsSection} />
         ) : null}
 
         <View style={styles.travelsSection}>
@@ -467,22 +468,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontSize: 13,
     color: colors.textMuted,
   },
-  socialsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+  safetyNotice: {
     marginBottom: 14,
-  },
-  socialChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: colors.primarySoft,
-  },
-  socialChipText: {
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: '700',
   },
   actionsRow: {
     flexDirection: 'row',

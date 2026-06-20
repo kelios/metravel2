@@ -20,6 +20,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import MessageBubble from '@/components/messages/MessageBubble'
 import IconButton from '@/components/ui/IconButton'
+import SafetyNotice from '@/components/ui/SafetyNotice'
 import type { Message } from '@/api/messages'
 import { routes } from '@/utils/routes'
 import { optimizeImageUrl } from '@/utils/imageOptimization'
@@ -235,6 +236,8 @@ function ChatView({
         onOpenProfile={handleOpenProfile}
         onDeleteThread={onDeleteThread}
       />
+
+      <SafetyNotice storageKey="messages-contact-exchange" style={styles.safetyNotice} />
 
       {loading && messages.length === 0 ? (
         <View style={styles.center}>
@@ -460,6 +463,10 @@ const createStyles = (colors: ThemedColors) =>
       color: colors.text,
     },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    safetyNotice: {
+      marginHorizontal: DESIGN_TOKENS.spacing.md,
+      marginTop: DESIGN_TOKENS.spacing.sm,
+    },
     messagesList: { paddingVertical: DESIGN_TOKENS.spacing.sm },
     emptyChat: {
       alignItems: 'center',

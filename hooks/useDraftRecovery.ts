@@ -259,14 +259,19 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
 
   // When the draft key changes (e.g. 'new' -> travelId after first save),
   // flush the pending debounce timer for the old key so it doesn't write an
-  // orphaned draft under the previous '..._new' key.
+  // orphaned draft under the previous '..._new' key, and drop any draft already
+  // stored under that old key. The id-sync only happens after the server has the
+  // data (F-09), so a draft left under the previous key would surface as a false
+  // recovery prompt on reload under the new '..._<id>' key.
   useEffect(() => {
-    if (prevDraftKeyRef.current !== null && prevDraftKeyRef.current !== draftKey) {
+    const prevKey = prevDraftKeyRef.current;
+    if (prevKey !== null && prevKey !== draftKey) {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
       }
       pendingDraftDataRef.current = null;
+      void removeStorageItem(prevKey);
     }
     prevDraftKeyRef.current = draftKey;
   }, [draftKey]);

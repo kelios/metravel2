@@ -16,7 +16,8 @@ export const TravelHeroExtras: React.FC<{
   sectionLinks: TravelSectionLink[]
   onQuickJump: (key: string) => void
   activeKey?: string
-}> = ({ travel, isMobile, sectionLinks, onQuickJump, activeKey }) => {
+  suppressQuickJumps?: boolean
+}> = ({ travel, isMobile, sectionLinks, onQuickJump, activeKey, suppressQuickJumps }) => {
   const styles = useTravelDetailsHeroStyles()
   const { quickJumpLinks, showQuickJumps } = useTravelHeroExtrasModel(sectionLinks)
 
@@ -44,7 +45,7 @@ export const TravelHeroExtras: React.FC<{
         />
       </View>
 
-      {showQuickJumps && quickJumpLinks.length > 0 && (
+      {!suppressQuickJumps && showQuickJumps && quickJumpLinks.length > 0 && (
         <View
           style={[
             styles.sectionContainer,

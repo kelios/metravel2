@@ -258,6 +258,50 @@ describe('useTravelFormData', () => {
     expect(sentPayload.moderation).toBe(false);
   });
 
+  it('does not re-fetch from server when the created id is reflected in the URL (F-09)', async () => {
+    (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload, id: 999 }));
+
+    const initialProps = {
+      travelId: null as string | null,
+      isNew: true,
+      userId: '42',
+      isSuperAdmin: false,
+      isAuthenticated: true,
+      authReady: true,
+    };
+
+    const { result, rerender } = renderHook((props) => useTravelFormData(props), {
+      initialProps,
+      wrapper: createWrapper(),
+      concurrentRoot: false,
+    });
+
+    await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
+
+    act(() => {
+      result.current.setFormData({
+        ...(result.current.formData as any),
+        name: 'New travel name',
+        description: 'Long enough description to keep the save deterministic in tests.',
+      });
+    });
+
+    await act(async () => {
+      await result.current.handleManualSave();
+    });
+
+    expect(result.current.formData.id).toBe(999);
+
+    // Controller reflects the created id in the URL -> isNew=false, travelId='999'.
+    rerender({ ...initialProps, isNew: false, travelId: '999' });
+
+    await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
+
+    expect(fetchTravel).not.toHaveBeenCalled();
+    expect(result.current.hasAccess).toBe(true);
+    expect(result.current.formData.name).toBe('New travel name');
+  });
+
   it('invalidates my travels queries after first successful create', async () => {
     (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload, id: 817 }));
 

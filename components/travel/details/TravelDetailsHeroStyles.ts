@@ -43,6 +43,19 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
           } as any)
         : {}),
     },
+    quickJumpStickyNativeBar: {
+      width: '100%',
+      backgroundColor: colors.background,
+      paddingTop: DESIGN_TOKENS.spacing.xs,
+      paddingBottom: DESIGN_TOKENS.spacing.xs,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderLight,
+    },
+    quickJumpStickyNativeInner: {
+      marginTop: 0,
+      marginBottom: 0,
+      width: '100%',
+    },
     quickJumpScrollWrap: {
       position: 'relative' as any,
       width: '100%',

@@ -3,6 +3,7 @@ import { View, useWindowDimensions } from 'react-native'
 
 import type { Travel } from '@/types/types'
 
+import DataFreshnessNotice from '@/components/legal/DataFreshnessNotice'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
@@ -72,6 +73,8 @@ export const TravelDetailsMapSection: React.FC<{
 
   return (
     <>
+      <DataFreshnessNotice style={{ marginBottom: 12 }} />
+
       <ExcursionsSection
         travel={travel}
         anchors={anchors}

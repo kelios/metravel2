@@ -27,6 +27,11 @@ export type UserProfileDto = {
     // Серверный premium-флаг для PDF-paywall: (опубликовано ≥ N путешествий) ИЛИ ручной флаг (BE #293).
     // Читаем только это поле; premium_manually_enabled бэк отдаёт публично, на него не завязываемся.
     is_premium?: boolean;
+    // Sprint 18 / BE-contact-protection: бэк помечает профиль, чьи контакты скрыты до одобрения,
+    // и уровень доступа текущего зрителя. Поля опциональны — пока BE не выставит contacts_hidden=true,
+    // FE-гейт неактивен и контакты показываются как раньше (graceful degradation).
+    contacts_hidden?: boolean;
+    contact_access?: 'granted' | 'pending' | 'none';
 };
 
 export type UpdateUserProfilePayload = Partial<

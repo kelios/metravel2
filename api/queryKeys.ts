@@ -63,4 +63,15 @@ export const queryKeys = {
   achievementsPeerCatalog: () => ['achievements', 'peer-catalog'] as const,
   achievementsTravelPeer: (travelId: string | number | null | undefined) =>
     ['achievements', 'travel-peer', travelId] as const,
+  gamificationPlaceBadgesMe: () => ['gamification', 'place-badges', 'me'] as const,
+  gamificationPlaceBadgesUser: (userId: string | number | null | undefined) =>
+    ['gamification', 'place-badges', 'user', userId] as const,
+  gamificationProgressMe: () => ['gamification', 'progress', 'me'] as const,
+  gamificationProgressUser: (userId: string | number | null | undefined) =>
+    ['gamification', 'progress', 'user', userId] as const,
+  gamificationCharacterMe: () => ['gamification', 'character', 'me'] as const,
+  gamificationCharacterUser: (userId: string | number | null | undefined) =>
+    ['gamification', 'character', 'user', userId] as const,
+  privacySettings: () => ['privacy', 'settings'] as const,
+  securityJournal: () => ['security', 'journal'] as const,
 } as const;

@@ -232,6 +232,10 @@ export default function TabLayout() {
                 {/* полностью скрытые из линкинга */}
                 <Tabs.Screen name="about" options={HIDDEN} />
                 <Tabs.Screen name="privacy" options={HIDDEN} />
+                <Tabs.Screen name="disclaimer" options={HIDDEN} />
+                <Tabs.Screen name="terms" options={HIDDEN} />
+                <Tabs.Screen name="community-rules" options={HIDDEN} />
+                <Tabs.Screen name="trip-rules" options={HIDDEN} />
                 <Tabs.Screen name="login" options={HIDDEN_NOHREF} />
                 <Tabs.Screen name="registration" options={HIDDEN_NOHREF} />
                 <Tabs.Screen name="set-password" options={HIDDEN_NOHREF} />

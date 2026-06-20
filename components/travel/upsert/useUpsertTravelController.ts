@@ -1,5 +1,5 @@
-import { useMemo, useEffect, useCallback } from 'react';
-import { useLocalSearchParams } from 'expo-router';
+import { useMemo, useEffect, useCallback, useRef } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { useAuth } from '@/context/AuthContext';
 import { useTravelFilters } from '@/hooks/useTravelFilters';
@@ -7,6 +7,7 @@ import { useTravelFormData } from '@/hooks/useTravelFormData';
 import { useTravelWizard } from '@/hooks/useTravelWizard';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useDraftRecovery } from '@/hooks/useDraftRecovery';
+import { normalizeTravelId } from '@/utils/travelFormUtils';
 
 type ManualSave = ReturnType<typeof useTravelFormData>['handleManualSave'];
 
@@ -59,6 +60,7 @@ const AUTOSAVE_BADGES: Record<string, string | undefined> = {
 
 export function useUpsertTravelController(): UpsertTravelController {
   const { id } = useLocalSearchParams();
+  const router = useRouter();
   const { userId, isAuthenticated, isSuperuser, authReady, logout } = useAuth();
   const colors = useThemedColors();
 
@@ -126,18 +128,43 @@ export function useUpsertTravelController(): UpsertTravelController {
   });
 
   // Persist a draft while the user edits an unsaved form.
+  // Skip while a save is in flight or has just succeeded: at that point the data
+  // already lives on the server, so re-persisting a draft (especially right after
+  // a NEW travel's id-sync flips the draft key from `_new` to `_<id>`) would
+  // resurrect a false "unsaved changes" recovery prompt on reload (F-09 / P2).
   useEffect(() => {
     if (!form.formData) return;
     if (!form.formState?.isDirty) return;
     if (!form.hasUserInteracted) return;
+    if (form.autosave.status === 'saving' || form.autosave.status === 'saved') return;
     saveDraft(form.formData);
-  }, [form.formData, form.formState?.isDirty, form.hasUserInteracted, saveDraft]);
+  }, [
+    form.formData,
+    form.formState?.isDirty,
+    form.hasUserInteracted,
+    form.autosave.status,
+    saveDraft,
+  ]);
 
   // Drop the draft once an autosave succeeds.
   useEffect(() => {
     if (form.autosave.status !== 'saved') return;
     clearDraft();
   }, [form.autosave.status, clearDraft]);
+
+  // After the first successful autosave of a NEW travel the server assigns an id.
+  // Reflect it in the URL once, so re-entering this in-progress create flow loads
+  // the saved server data instead of an empty form (F-09). Guarded to run a single
+  // time and only while the URL still has no id, to avoid navigation loops.
+  const didSyncCreatedIdRef = useRef(false);
+  useEffect(() => {
+    if (!isNew) return;
+    if (didSyncCreatedIdRef.current) return;
+    const createdId = normalizeTravelId(form.formData?.id);
+    if (createdId == null) return;
+    didSyncCreatedIdRef.current = true;
+    router.setParams({ id: String(createdId) });
+  }, [isNew, form.formData?.id, router]);
 
   const recoverAndApplyDraft = useCallback(async () => {
     const recoveredData = await recoverDraft();

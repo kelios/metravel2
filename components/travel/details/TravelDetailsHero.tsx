@@ -55,6 +55,7 @@ type Props = {
   onQuickJump: (key: string) => void
   deferExtras?: boolean
   activeKey?: string
+  suppressQuickJumps?: boolean
 }
 
 function TravelHeroSectionInner({
@@ -67,6 +68,7 @@ function TravelHeroSectionInner({
   onQuickJump,
   deferExtras = false,
   activeKey,
+  suppressQuickJumps = false,
 }: Props) {
   const styles = useTravelDetailsHeroStyles()
 
@@ -108,7 +110,7 @@ function TravelHeroSectionInner({
   })
 
   const { quickJumpLinks, showQuickJumps } = useTravelHeroExtrasModel(sectionLinks)
-  const willRenderQuickJumps = showQuickJumps && quickJumpLinks.length > 0
+  const willRenderQuickJumps = !suppressQuickJumps && showQuickJumps && quickJumpLinks.length > 0
   const showFavoriteToggle = !deferExtras && (!(Platform.OS === 'web') || extrasReady)
 
   const heroContainerStyle = useMemo(
@@ -175,6 +177,7 @@ function TravelHeroSectionInner({
       sectionLinks={sectionLinks}
       onQuickJump={onQuickJump}
       activeKey={activeKey}
+      suppressQuickJumps={suppressQuickJumps}
     />
   }
 
@@ -262,6 +265,7 @@ function TravelHeroSectionInner({
         sectionLinks={sectionLinks}
         onQuickJump={onQuickJump}
         activeKey={activeKey}
+        suppressQuickJumps={suppressQuickJumps}
       />
     </>
   )
@@ -277,6 +281,7 @@ type ExtrasSlotProps = {
   sectionLinks: TravelSectionLink[]
   onQuickJump: (key: string) => void
   activeKey?: string
+  suppressQuickJumps?: boolean
 }
 
 function ExtrasSlot({
@@ -289,6 +294,7 @@ function ExtrasSlot({
   sectionLinks,
   onQuickJump,
   activeKey,
+  suppressQuickJumps,
 }: ExtrasSlotProps) {
   const skeleton = (
     <>
@@ -328,6 +334,7 @@ function ExtrasSlot({
         sectionLinks={sectionLinks}
         onQuickJump={onQuickJump}
         activeKey={activeKey}
+        suppressQuickJumps={suppressQuickJumps}
       />
     </Suspense>
   )

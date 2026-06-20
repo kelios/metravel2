@@ -30,6 +30,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import AchievementsSection from '@/components/achievements/AchievementsSection';
 import BadgeUnlockToast from '@/components/achievements/BadgeUnlockToast';
+import GamificationProfileBlock from '@/components/achievements/GamificationProfileBlock';
+import PlaceFirstBadgeToast from '@/components/achievements/PlaceFirstBadgeToast';
 import { useResponsive } from '@/hooks/useResponsive';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { confirmAction } from '@/utils/confirmAction';
@@ -56,6 +58,7 @@ import {
 const profileScreenAchievementsWrap = {
   marginTop: DESIGN_TOKENS.spacing.xs,
   marginBottom: DESIGN_TOKENS.spacing.md,
+  gap: DESIGN_TOKENS.spacing.md,
 } as const;
 
 export default function ProfileScreen() {
@@ -520,6 +523,7 @@ export default function ProfileScreen() {
         {Header}
         <View style={profileScreenAchievementsWrap}>
           <AchievementsSection />
+          <GamificationProfileBlock />
         </View>
       </>
     ),
@@ -658,6 +662,7 @@ export default function ProfileScreen() {
         />
       )}
       <BadgeUnlockToast />
+      <PlaceFirstBadgeToast />
     </SafeAreaView>
   );
 }

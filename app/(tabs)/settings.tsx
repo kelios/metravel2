@@ -29,6 +29,7 @@ import { webTouchScrollStyle } from '@/utils';
 import { createSettingsStyles } from '@/components/screens/settings/settings.styles';
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler';
 import StravaSettingsSection from '@/components/settings/StravaSettingsSection';
+import DataOwnershipSection from '@/components/settings/DataOwnershipSection';
 
 // Keep the Strava implementation for a future backend rollout, but hide the settings UI for now.
 const STRAVA_SETTINGS_ENABLED = false;
@@ -569,6 +570,48 @@ export default function SettingsScreen() {
                             <View style={styles.cardText}>
                                 <Text style={styles.cardTitle}>Личные сообщения</Text>
                                 <Text style={styles.cardMeta}>Переписка с авторами путешествий</Text>
+                            </View>
+                            <Feather name="chevron-right" size={18} color={colors.textMuted} />
+                        </View>
+                    </Pressable>
+
+                    <Text style={styles.sectionTitle}>Приватность и данные</Text>
+
+                    <Pressable
+                        style={[styles.card, globalFocusStyles.focusable]}
+                        onPress={() => router.push('/privacy-settings' as any)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Настройки приватности"
+                        {...Platform.select({ web: { cursor: 'pointer' } })}
+                    >
+                        <View style={styles.cardRow}>
+                            <View style={styles.cardIcon}>
+                                <Feather name="eye" size={18} color={colors.primary} />
+                            </View>
+                            <View style={styles.cardText}>
+                                <Text style={styles.cardTitle}>Настройки приватности</Text>
+                                <Text style={styles.cardMeta}>Кто видит ваши путешествия, маршруты и контакты</Text>
+                            </View>
+                            <Feather name="chevron-right" size={18} color={colors.textMuted} />
+                        </View>
+                    </Pressable>
+
+                    <DataOwnershipSection />
+
+                    <Pressable
+                        style={[styles.card, globalFocusStyles.focusable]}
+                        onPress={() => router.push('/security-journal' as any)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Журнал безопасности"
+                        {...Platform.select({ web: { cursor: 'pointer' } })}
+                    >
+                        <View style={styles.cardRow}>
+                            <View style={styles.cardIcon}>
+                                <Feather name="shield" size={18} color={colors.primary} />
+                            </View>
+                            <View style={styles.cardText}>
+                                <Text style={styles.cardTitle}>Журнал безопасности</Text>
+                                <Text style={styles.cardMeta}>История входов и действий с аккаунтом</Text>
                             </View>
                             <Feather name="chevron-right" size={18} color={colors.textMuted} />
                         </View>

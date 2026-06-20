@@ -1,6 +1,7 @@
 import type { Href } from 'expo-router'
 
 type BottomDockFeatherIconName =
+  | 'alert-triangle'
   | 'book-open'
   | 'clock'
   | 'compass'
@@ -17,6 +18,7 @@ type BottomDockFeatherIconName =
   | 'shuffle'
   | 'target'
   | 'user'
+  | 'users'
 
 export type BottomDockIconName = BottomDockFeatherIconName | 'belarus-outline'
 
@@ -70,6 +72,10 @@ export const BOTTOM_DOCK_MORE_MENU_SECTIONS: BottomDockMoreMenuSection[] = [
     items: [
       { key: 'privacy', label: 'Политика конфиденциальности', accessibilityLabel: 'Политика конфиденциальности', route: '/privacy', iconName: 'shield', muted: true },
       { key: 'cookies', label: 'Настройки cookies', accessibilityLabel: 'Настройки cookies', route: '/cookies', iconName: 'settings', muted: true },
+      { key: 'terms', label: 'Пользовательское соглашение', accessibilityLabel: 'Пользовательское соглашение', route: '/terms', iconName: 'file-text', muted: true },
+      { key: 'disclaimer', label: 'Отказ от ответственности', accessibilityLabel: 'Отказ от ответственности', route: '/disclaimer', iconName: 'alert-triangle', muted: true },
+      { key: 'community-rules', label: 'Правила сообщества', accessibilityLabel: 'Правила сообщества', route: '/community-rules', iconName: 'users', muted: true },
+      { key: 'trip-rules', label: 'Правила участия в поездках', accessibilityLabel: 'Правила участия в поездках', route: '/trip-rules', iconName: 'map', muted: true },
       { key: 'about', label: 'Связаться с нами', accessibilityLabel: 'Связаться с нами', route: '/about', iconName: 'mail', muted: true },
     ],
   },
