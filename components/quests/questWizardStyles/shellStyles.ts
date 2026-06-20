@@ -33,10 +33,12 @@ export const createShellStyles = (colors: QuestColors, isMobile: boolean, _scree
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
+        flexWrap: 'wrap',
         gap: SPACING.xs,
         marginBottom: SPACING.sm,
     },
     compactSidebarActions: {
+        flexBasis: '100%',
         flexDirection: 'row',
         alignItems: 'center',
         flexWrap: 'wrap',

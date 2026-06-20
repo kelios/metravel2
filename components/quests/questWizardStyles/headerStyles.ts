@@ -125,6 +125,8 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
     },
 
     headerActionRow: {
+        flex: 1,
+        minWidth: 0,
         flexDirection: 'row',
         alignItems: 'center',
         flexWrap: 'wrap',
