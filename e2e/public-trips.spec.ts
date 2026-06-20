@@ -89,17 +89,17 @@ const APPLICATIONS = [
 ];
 
 async function mockTripApis(page: import('@playwright/test').Page) {
-  await page.route('**/api/trips/public/9003/applications/**', (route) =>
-    route.fulfill({ json: APPLICATIONS }),
-  );
-  await page.route('**/api/trips/public/9003/**', (route) =>
-    route.fulfill({ json: CATALOG[1] }),
+  await page.route('**/api/trips/public/**', (route) =>
+    route.fulfill({ json: CATALOG }),
   );
   await page.route('**/api/trips/public/9001/**', (route) =>
     route.fulfill({ json: CATALOG[0] }),
   );
-  await page.route('**/api/trips/public/**', (route) =>
-    route.fulfill({ json: CATALOG }),
+  await page.route('**/api/trips/public/9003/**', (route) =>
+    route.fulfill({ json: CATALOG[1] }),
+  );
+  await page.route('**/api/trips/public/9003/applications/**', (route) =>
+    route.fulfill({ json: APPLICATIONS }),
   );
   await page.route('**/api/trips/applications/**', (route) =>
     route.fulfill({ json: { granted: true } }),
