@@ -20,6 +20,8 @@ export const queryKeys = {
     ['export-my-travels-count', userId] as const,
   travelUserRating: (travelId: number | undefined) =>
     ['travelUserRating', travelId] as const,
+  questUserReview: (questId: number | undefined) =>
+    ['questUserReview', questId] as const,
   homePopularTravels: () => ['home-popular-travels'] as const,
   rouletteTravelFacets: (params: Record<string, unknown>) =>
     ['roulette-travel-facets', params] as const,

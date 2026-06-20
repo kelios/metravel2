@@ -49,6 +49,7 @@ export type QuestMeta = {
 
 /** Тип бандла для фронтенда (совместим с QuestWizardProps) */
 export type FrontendQuestBundle = {
+    id: number;
     title: string;
     steps: QuestStep[];
     finale: QuestFinale;
@@ -270,6 +271,7 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
     }
 
     return {
+        id: apiBundle.id,
         title: apiBundle.title,
         steps,
         finale: adaptFinale(apiBundle.finale),

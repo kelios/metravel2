@@ -512,6 +512,7 @@ export default function QuestByIdScreen() {
             relatedTravelsSlot={relatedTravelsSlot}
             questId={questId}
             cityId={cityId}
+            questNumericId={bundle.id}
           />
         </Suspense>
       ) : (
@@ -530,6 +531,7 @@ export default function QuestByIdScreen() {
           relatedTravelsSlot={relatedTravelsSlot}
           questId={questId}
           cityId={cityId}
+          questNumericId={bundle.id}
         />
       )}
     </View>

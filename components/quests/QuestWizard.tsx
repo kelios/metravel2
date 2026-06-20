@@ -68,6 +68,8 @@ export type QuestWizardProps = {
     /** Native: id города/квеста для deep-link локального напоминания о незавершённом квесте */
     questId?: string;
     cityId?: string;
+    /** Числовой PK квеста (для отзыва после прохождения) */
+    questNumericId?: number;
 };
 
 // ===================== ТЕМА =====================
@@ -79,7 +81,7 @@ const useQuestWizardTheme = (isMobile: boolean, screenW: number) => {
     return { colors, styles };
 };
 // ===================== ОСНОВНОЙ КОМПОНЕНТ =====================
-export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, questId, cityId }: QuestWizardProps) {
+export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, questId, cityId, questNumericId }: QuestWizardProps) {
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
 
     const wizardModel = useQuestWizardResponsiveModel();
@@ -353,6 +355,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                         handleVideoRetry={handleVideoRetry}
                         setVideoOk={setVideoOk}
                         onContinue={() => setShowFinaleOnly(false)}
+                        questId={questId}
+                        questNumericId={questNumericId}
                     />
                 )}
 

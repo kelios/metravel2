@@ -3,6 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { useThemedColors } from '@/hooks/useTheme'
+import QuestReviewSection from './QuestReviewSection'
 
 import {
   BelkrajWidgetLazy,
@@ -239,6 +240,8 @@ export function QuestFinalePanel({
   handleVideoRetry,
   setVideoOk,
   onContinue,
+  questId,
+  questNumericId,
 }: SharedProps & {
   finale: FinaleLike
   allCompleted: boolean
@@ -253,6 +256,8 @@ export function QuestFinalePanel({
   handleVideoRetry: () => void
   setVideoOk: React.Dispatch<React.SetStateAction<boolean>>
   onContinue?: () => void
+  questId?: string
+  questNumericId?: number
 }) {
   return (
     <View style={styles.completionScreen}>
@@ -324,6 +329,10 @@ export function QuestFinalePanel({
           )}
 
           <Text style={styles.completionText}>{finale.text}</Text>
+
+          {questId ? (
+            <QuestReviewSection questId={questId} questNumericId={questNumericId} />
+          ) : null}
         </>
       ) : (
         <>
