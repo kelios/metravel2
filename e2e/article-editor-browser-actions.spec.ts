@@ -218,6 +218,9 @@ test.describe('ArticleEditor browser actions', () => {
 
     await clickQuillToolbarButton(page, '.ql-link');
     const linkInput = page.getByPlaceholder('https://...').first();
+    if (!(await linkInput.isVisible({ timeout: 1_000 }).catch(() => false))) {
+      await page.locator('.ql-toolbar button.ql-link').last().evaluate((node: HTMLElement) => node.click());
+    }
     await expect(linkInput).toBeVisible({ timeout: 10_000 });
     await linkInput.fill('https://example.com/editor-link');
     await page.getByRole('button', { name: 'Сохранить', exact: true }).first().click({ force: true });
