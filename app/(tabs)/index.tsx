@@ -55,17 +55,22 @@ function HomeScreen() {
     if (IS_WEB) setHydrated(true)
   }, [])
 
-  // After hydration, check the real browser URL. Avoid relying on router
-  // pathname: it can briefly report '/' while navigating to /travels/*.
+  // After hydration, check the real browser URL. We still prefer
+  // window.location over the router pathname (which can briefly report '/'
+  // while navigating to /travels/*), but `pathname` MUST stay in the dep array:
+  // it makes this memo re-evaluate on every route change. Without it the memo
+  // is computed once and, if it happens to run while the URL is not yet '/'
+  // (e.g. during the /login → '/' transition right after login), it locks to
+  // `false` and the home tab renders nothing forever (white screen after login).
   const isHomePath = useMemo(() => {
     if (!IS_WEB) return true
     if (!hydrated) return false
-    if (typeof window !== 'undefined') {
-      const loc = String(window.location?.pathname ?? '').trim()
-      if (loc === '' || loc === '/' || loc === '/index') return true
-    }
-    return false
-  }, [hydrated])
+    const loc =
+      typeof window !== 'undefined'
+        ? String(window.location?.pathname ?? '').trim()
+        : normalizePath(pathname)
+    return loc === '' || loc === '/' || loc === '/index'
+  }, [hydrated, pathname])
 
   const canonical = useMemo(() => buildCanonicalUrl(normalizePath(pathname)), [pathname])
 
