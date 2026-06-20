@@ -102,6 +102,11 @@ description: >-
    `scripts/migrate-warsaw-quest.js`. Квест создаётся со `status=1`.
 4. **Dry-run** — прогони миграцию в режиме проверки, убедись что данные читаются
    и маппятся, нет ошибок.
+4a. **Гео-сверка точек (до заливки).** Прогони
+   `node scripts/quest-geocheck.js --source-file=scripts/<city>-quest-data.js --quest-id=<quest_id>`
+   и разбери WARN/FAIL: каждая точка должна стоять на объекте из `story`/`task`,
+   а не на парковке/остановке/дороге (см. скилл `metravel-quest-geocheck`).
+   Исправь `lat/lng/mapsUrl` в data-файле и перепрогони до 0 реальных проблем.
 5. **Залей на прод:**
    `NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/migrate-<city>-quest.js --api-url=https://metravel.by`
    (токен из `~/.metravel_token` или `--token=`).

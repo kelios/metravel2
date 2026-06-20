@@ -409,12 +409,14 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                 web: isMobileW
                     ? ({
                           // Шапка липнет к верху скролл-колонки. Живой backdrop-blur
-                          // на мобильном убивает GPU — статичный «фрост»
-                          // (CLAUDE.md правило #2).
+                          // на мобильном убивает GPU (CLAUDE.md правило #2), поэтому
+                          // фон ДОЛЖЕН быть непрозрачным (colors.surface): без блюра
+                          // полупрозрачный «фрост» просвечивает прокручиваемые
+                          // карточки и шапка наезжает на контент.
                           position: 'sticky',
                           top: 0,
                           zIndex: 10,
-                          backgroundColor: colors.surfaceMuted,
+                          backgroundColor: colors.surface,
                       } as any)
                     : ({
                           position: 'sticky',

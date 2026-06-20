@@ -64,7 +64,6 @@ export type ApiQuestMeta = {
     cover_url: string | null;
     rating_avg: number | null;
     rating_count: number;
-    user_rating: 1 | 2 | 3 | 4 | 5 | null;
     completions_count: number;
     is_completed_by_me: boolean;
     first_completer: { id: number; name: string; avatar: string | null } | null;
@@ -97,7 +96,6 @@ export function withQuestMetaDefaults(meta: ApiQuestMeta): ApiQuestMeta {
         ...meta,
         rating_avg: meta.rating_avg ?? null,
         rating_count: meta.rating_count ?? 0,
-        user_rating: meta.user_rating ?? null,
         completions_count: meta.completions_count ?? 0,
         is_completed_by_me: meta.is_completed_by_me ?? false,
         first_completer: meta.first_completer ?? null,

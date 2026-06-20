@@ -47,7 +47,6 @@ export type QuestMeta = {
     cover?: any;
     ratingAvg: number | null;
     ratingCount: number;
-    userRating: 1 | 2 | 3 | 4 | 5 | null;
     completionsCount: number;
     isCompletedByMe: boolean;
     firstCompleter: { id: number; name: string; avatar: string | null } | null;
@@ -313,7 +312,6 @@ export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
         cover: fixMediaUrl(apiMeta.cover_url),
         ratingAvg: apiMeta.rating_avg ?? null,
         ratingCount: apiMeta.rating_count ?? 0,
-        userRating: apiMeta.user_rating ?? null,
         completionsCount: apiMeta.completions_count ?? 0,
         isCompletedByMe: apiMeta.is_completed_by_me ?? false,
         firstCompleter: apiMeta.first_completer ?? null,

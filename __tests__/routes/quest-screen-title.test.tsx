@@ -79,7 +79,7 @@ jest.mock('@/hooks/useQuestsApi', () => ({
 }))
 
 jest.mock('@/hooks/useQuestRatingMeta', () => ({
-  useQuestRatingMeta: () => ({ ratingAvg: null, ratingCount: 0, userRating: null }),
+  useQuestRatingMeta: () => ({ ratingAvg: null, ratingCount: 0 }),
 }))
 
 jest.mock('@/hooks/useQuestCompletionMeta', () => ({

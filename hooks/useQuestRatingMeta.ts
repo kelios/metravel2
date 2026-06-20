@@ -11,10 +11,9 @@ import { queryKeys } from '@/api/queryKeys'
 export type QuestRatingMeta = {
   ratingAvg: number | null
   ratingCount: number
-  userRating: 1 | 2 | 3 | 4 | 5 | null
 }
 
-const EMPTY: QuestRatingMeta = { ratingAvg: null, ratingCount: 0, userRating: null }
+const EMPTY: QuestRatingMeta = { ratingAvg: null, ratingCount: 0 }
 
 export function useQuestRatingMeta(
   questId: string | undefined,
@@ -45,7 +44,6 @@ export function useQuestRatingMeta(
   return {
     ratingAvg: meta.rating_avg ?? null,
     ratingCount: meta.rating_count ?? 0,
-    userRating: meta.user_rating ?? null,
   }
 }
 

@@ -117,11 +117,25 @@ async function fetchQuestBundles(apiUrl, questId) {
     return [await fetchJson(`${base}/api/quests/by-quest-id/${encodeURIComponent(questId)}/`)];
   }
 
-  const list = await fetchJson(`${base}/api/quests/`);
+  // The list endpoint is paginated: { data | results, next_page_url }. Walk
+  // every page and collect quest_ids before expanding each bundle.
+  const ids = [];
+  let url = `${base}/api/quests/`;
+  const seen = new Set();
+  while (url && !seen.has(url)) {
+    seen.add(url);
+    const page = await fetchJson(url);
+    const rows = Array.isArray(page) ? page : page.data || page.results || [];
+    for (const quest of rows) {
+      if (quest?.quest_id) ids.push(quest.quest_id);
+    }
+    const next = Array.isArray(page) ? null : page.next_page_url || page.next || null;
+    url = next ? (next.startsWith('http') ? next : `${base}${next}`) : null;
+  }
+
   const bundles = [];
-  for (const quest of list) {
-    if (!quest?.quest_id) continue;
-    bundles.push(await fetchJson(`${base}/api/quests/by-quest-id/${encodeURIComponent(quest.quest_id)}/`));
+  for (const id of ids) {
+    bundles.push(await fetchJson(`${base}/api/quests/by-quest-id/${encodeURIComponent(id)}/`));
   }
   return bundles;
 }
