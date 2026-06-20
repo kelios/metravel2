@@ -2,6 +2,7 @@ import { apiClient, ApiError } from '@/api/client';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { getSecureItem, setSecureItem, removeSecureItems } from '@/utils/secureStorage';
 import { devError } from '@/utils/logger';
+import { Platform } from 'react-native';
 
 jest.mock('@/utils/fetchWithTimeout', () => ({
   fetchWithTimeout: jest.fn(),
@@ -20,6 +21,7 @@ jest.mock('@/utils/logger', () => ({
 const mockedFetchWithTimeout = fetchWithTimeout as jest.MockedFunction<typeof fetchWithTimeout>;
 const mockedGetSecureItem = getSecureItem as jest.MockedFunction<typeof getSecureItem>;
 const mockedRemoveSecureItems = removeSecureItems as jest.MockedFunction<typeof removeSecureItems>;
+const originalPlatformOS = Platform.OS;
 
 // эмулируем navigator для web-веток
 Object.defineProperty(global, 'navigator', {
@@ -30,8 +32,13 @@ Object.defineProperty(global, 'navigator', {
 describe('src/api/client.ts apiClient', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    Platform.OS = 'web' as typeof Platform.OS;
     (navigator as any).onLine = true;
     mockedRemoveSecureItems.mockResolvedValue(undefined);
+  });
+
+  afterAll(() => {
+    Platform.OS = originalPlatformOS;
   });
 
   it('успешно делает GET запрос c токеном', async () => {

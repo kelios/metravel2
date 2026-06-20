@@ -1,4 +1,4 @@
-import { memo, Suspense, useMemo } from 'react'
+import { memo, Suspense, useEffect, useMemo, useState } from 'react'
 import { StyleSheet, View, Platform } from 'react-native'
 import { usePathname, useRouter } from 'expo-router'
 import { useIsFocused } from 'expo-router'
@@ -25,6 +25,12 @@ function SearchScreen() {
   const isFocused = useIsFocused()
   const colors = useThemedColors()
   const { isAuthenticated } = useAuth()
+  const [canRenderList, setCanRenderList] = useState(Platform.OS !== 'web')
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    setCanRenderList(true)
+  }, [])
 
   const styles = useMemo(
     () =>
@@ -83,9 +89,13 @@ function SearchScreen() {
             </View>
           }
         >
-          <Suspense fallback={<SearchPageSkeleton />}>
-            <ListTravel />
-          </Suspense>
+          {canRenderList ? (
+            <Suspense fallback={<SearchPageSkeleton />}>
+              <ListTravel />
+            </Suspense>
+          ) : (
+            <SearchPageSkeleton />
+          )}
         </ErrorBoundary>
 
         {isAuthenticated && Platform.OS !== 'web' && (

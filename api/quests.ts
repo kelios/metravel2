@@ -62,7 +62,29 @@ export type ApiQuestMeta = {
     tags: Record<string, unknown> | null;
     pet_friendly: boolean;
     cover_url: string | null;
+    rating_avg: number | null;
+    rating_count: number;
+    user_rating: 1 | 2 | 3 | 4 | 5 | null;
+    completions_count: number;
+    is_completed_by_me: boolean;
+    first_completer: { id: number; name: string; avatar: string | null } | null;
 };
+
+/**
+ * Бэкенд может не отдавать поля рейтинга/прохождений (старая схема) —
+ * проставляем безопасные дефолты, чтобы UI и адаптеры не падали.
+ */
+export function withQuestMetaDefaults(meta: ApiQuestMeta): ApiQuestMeta {
+    return {
+        ...meta,
+        rating_avg: meta.rating_avg ?? null,
+        rating_count: meta.rating_count ?? 0,
+        user_rating: meta.user_rating ?? null,
+        completions_count: meta.completions_count ?? 0,
+        is_completed_by_me: meta.is_completed_by_me ?? false,
+        first_completer: meta.first_completer ?? null,
+    };
+}
 
 /** Полный бандл квеста */
 export type ApiQuestBundle = {
@@ -180,7 +202,8 @@ async function fetchAllPages<T>(path: string, maxPages = 20): Promise<T[]> {
 
 /** Получить список всех квестов (метаданные) */
 export async function fetchQuestsList(): Promise<ApiQuestMeta[]> {
-    return fetchAllPages<ApiQuestMeta>('/quests/');
+    const list = await fetchAllPages<ApiQuestMeta>('/quests/');
+    return list.map(withQuestMetaDefaults);
 }
 
 /** Получить квесты по городу */
