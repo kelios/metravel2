@@ -80,7 +80,7 @@ const createStyles = (colors: ThemedColors) =>
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: 14,
-      backgroundColor: colors.card,
+      backgroundColor: colors.surface,
       padding: 14,
       gap: 6,
     },
