@@ -1,8 +1,7 @@
 // hooks/useQuestRatingMeta.ts
 // Источник рейтинга для детальной страницы и финала квеста.
 // Бандл квеста не несёт rating-полей — берём их из списка квестов и
-// засеваем кеши queryKeys.quests()/questDetail, на которые опирается
-// оптимистика useRateQuestMutation.
+// засеваем кеши queryKeys.quests()/questDetail.
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 

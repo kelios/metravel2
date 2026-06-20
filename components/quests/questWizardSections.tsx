@@ -7,7 +7,6 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { useQuestCompletionMeta } from '@/hooks/useQuestCompletionMeta'
 import { pluralizeRu } from '@/utils/pluralize'
 import QuestPioneerBlock from './QuestPioneerBlock'
-import QuestRatingBlock from './QuestRatingBlock'
 import QuestReviewSection from './QuestReviewSection'
 
 import {
@@ -366,10 +365,6 @@ export function QuestFinalePanel({
               questId={questId}
               questNumericId={questNumericId}
             />
-          ) : null}
-
-          {questId ? (
-            <QuestRatingBlock questId={questId} questNumericId={questNumericId} />
           ) : null}
 
           {questId ? (
