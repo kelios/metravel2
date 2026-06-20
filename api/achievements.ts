@@ -55,6 +55,9 @@ export interface UserRank {
   currentLevelMinPoints: number;
   nextLevelMinPoints: number | null;
   nextLevelTitle: string | null;
+  /** true — достигнут максимальный уровень; false при null-порогах = пороги неизвестны
+   * (публичный эндпоинт не отдаёт rank_levels). */
+  isMaxLevel: boolean;
 }
 
 export interface MyAchievements {
@@ -71,15 +74,23 @@ export interface PublicAchievements {
 
 // ── Сырые DTO бэкенда (snake_case DRF) ──────────────────────────────────────
 
+interface BadgeCategoryDto {
+  id?: number;
+  slug?: string | null;
+  name?: string | null;
+  order?: number | null;
+  icon?: string | null;
+}
+
 interface BadgeDto {
   id: number;
   slug: string;
   name: string;
   description?: string | null;
-  category_slug?: string | null;
-  category_name?: string | null;
+  category?: BadgeCategoryDto | null;
   tier?: string | null;
   image_url?: string | null;
+  image_status?: string | null;
   points?: number | null;
   is_secret?: boolean | null;
   order?: number | null;
@@ -92,30 +103,35 @@ interface UserBadgeDto {
 
 interface BadgeProgressDto {
   badge: BadgeDto;
-  current: number;
-  threshold: number;
+  current?: number | null;
+  threshold?: number | null;
 }
 
-interface UserRankDto {
+interface RankSummaryDto {
   level?: number | null;
   title?: string | null;
   total_points?: number | null;
   badges_count?: number | null;
-  current_level_min_points?: number | null;
-  next_level_min_points?: number | null;
-  next_level_title?: string | null;
+  recomputed_at?: string | null;
+}
+
+interface RankLevelDto {
+  level: number;
+  title: string;
+  min_points: number;
 }
 
 interface MyAchievementsDto {
-  rank: UserRankDto;
-  earned: UserBadgeDto[];
-  locked: BadgeProgressDto[];
+  rank: RankSummaryDto;
+  rank_levels?: RankLevelDto[];
+  earned_badges: UserBadgeDto[];
+  progress: BadgeProgressDto[];
   recently_earned?: UserBadgeDto[];
 }
 
 interface PublicAchievementsDto {
-  rank: UserRankDto;
-  earned: UserBadgeDto[];
+  rank: RankSummaryDto;
+  earned_badges: UserBadgeDto[];
 }
 
 // ── Мапперы DTO → домен ─────────────────────────────────────────────────────
@@ -137,10 +153,11 @@ const mapBadge = (dto: BadgeDto): Badge => ({
   slug: dto.slug,
   name: dto.name,
   description: dto.description ?? '',
-  categorySlug: dto.category_slug ?? 'other',
-  categoryName: dto.category_name ?? 'Достижения',
+  categorySlug: dto.category?.slug ?? 'other',
+  categoryName: dto.category?.name ?? 'Достижения',
   tier: normalizeTier(dto.tier),
-  imageUrl: dto.image_url ?? null,
+  // Бэк отдаёт '' когда картинки нет — нормализуем в null (BadgeMedal рисует фолбэк).
+  imageUrl: dto.image_url ? dto.image_url : null,
   points: dto.points ?? 0,
   isSecret: Boolean(dto.is_secret),
   order: dto.order ?? dto.id,
@@ -157,26 +174,50 @@ const mapProgress = (dto: BadgeProgressDto): BadgeProgress => ({
   threshold: dto.threshold ?? 0,
 });
 
-const mapRank = (dto: UserRankDto): UserRank => ({
-  level: dto.level ?? 1,
-  title: dto.title ?? 'Новичок',
-  totalPoints: dto.total_points ?? 0,
-  badgesCount: dto.badges_count ?? 0,
-  currentLevelMinPoints: dto.current_level_min_points ?? 0,
-  nextLevelMinPoints: dto.next_level_min_points ?? null,
-  nextLevelTitle: dto.next_level_title ?? null,
-});
+// Бэк отдаёт rank БЕЗ порогов уровней (level/title/total_points/badges_count) +
+// отдельный список rank_levels (только в /me/). Пороги к текущему/следующему уровню
+// и флаг максимума вычисляем здесь. Без rank_levels (публичный эндпоинт) пороги
+// остаются null, isMaxLevel=false — RankBar показывает уровень без XP-полосы.
+const mapRank = (dto: RankSummaryDto, levels?: RankLevelDto[]): UserRank => {
+  const totalPoints = dto.total_points ?? 0;
+  let currentLevelMinPoints = 0;
+  let nextLevelMinPoints: number | null = null;
+  let nextLevelTitle: string | null = null;
+  let isMaxLevel = false;
+
+  if (levels && levels.length > 0) {
+    const sorted = [...levels].sort((a, b) => a.min_points - b.min_points);
+    const reached = sorted.filter((l) => l.min_points <= totalPoints);
+    const current = reached.length > 0 ? reached[reached.length - 1] : sorted[0];
+    const next = sorted.find((l) => l.min_points > totalPoints) ?? null;
+    currentLevelMinPoints = current?.min_points ?? 0;
+    nextLevelMinPoints = next ? next.min_points : null;
+    nextLevelTitle = next ? next.title : null;
+    isMaxLevel = next === null;
+  }
+
+  return {
+    level: dto.level ?? 1,
+    title: dto.title ?? 'Новичок',
+    totalPoints,
+    badgesCount: dto.badges_count ?? 0,
+    currentLevelMinPoints,
+    nextLevelMinPoints,
+    nextLevelTitle,
+    isMaxLevel,
+  };
+};
 
 const mapMy = (dto: MyAchievementsDto): MyAchievements => ({
-  rank: mapRank(dto.rank),
-  earned: (dto.earned ?? []).map(mapUserBadge),
-  locked: (dto.locked ?? []).map(mapProgress),
+  rank: mapRank(dto.rank, dto.rank_levels),
+  earned: (dto.earned_badges ?? []).map(mapUserBadge),
+  locked: (dto.progress ?? []).map(mapProgress),
   recentlyEarned: (dto.recently_earned ?? []).map(mapUserBadge),
 });
 
 const mapPublic = (dto: PublicAchievementsDto): PublicAchievements => ({
   rank: mapRank(dto.rank),
-  earned: (dto.earned ?? []).map(mapUserBadge),
+  earned: (dto.earned_badges ?? []).map(mapUserBadge),
 });
 
 // ── Мок-фолбэк (до готовности BE-A4) ────────────────────────────────────────
