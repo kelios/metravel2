@@ -111,6 +111,7 @@ export default function QuestCard({
                         alt={quest.title}
                         fit="cover"
                         blurBackground
+                        allowCriticalWebBlur
                         style={StyleSheet.absoluteFill}
                         loading="lazy"
                         priority="normal"
