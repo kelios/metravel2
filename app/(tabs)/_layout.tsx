@@ -227,6 +227,9 @@ export default function TabLayout() {
                 <Tabs.Screen name="quests/index" options={HIDDEN} />
                 <Tabs.Screen name="quests/map" options={HIDDEN} />
                 <Tabs.Screen name="quests/[city]/[questId]" options={HIDDEN} />
+                <Tabs.Screen name="trips/index" options={HIDDEN} />
+                <Tabs.Screen name="trips/my" options={HIDDEN} />
+                <Tabs.Screen name="trips/[tripId]" options={HIDDEN} />
                 <Tabs.Screen name="user/[id]" options={HIDDEN} />
 
                 {/* полностью скрытые из линкинга */}

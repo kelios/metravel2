@@ -73,4 +73,12 @@ export const queryKeys = {
     ['gamification', 'character', 'user', userId] as const,
   privacySettings: () => ['privacy', 'settings'] as const,
   securityJournal: () => ['security', 'journal'] as const,
+  publicTrips: (filters: Record<string, unknown>) => ['public-trips', filters] as const,
+  publicTripsAll: () => ['public-trips'] as const,
+  publicTrip: (tripId: string | number | null | undefined) =>
+    ['public-trip', tripId] as const,
+  tripMyApplications: () => ['trip-applications', 'me'] as const,
+  tripApplications: (tripId: string | number | null | undefined) =>
+    ['trip-applications', 'trip', tripId] as const,
+  tripNotifications: () => ['trip-notifications'] as const,
 } as const;
