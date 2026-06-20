@@ -168,9 +168,11 @@ test.describe('Draft recovery popup', () => {
       expect(hasDraftKey, `Expected draft key ${draftKey} to exist in localStorage`).toBeTruthy();
 
       // Draft recovery modal should appear on open.
+      // Title from DraftRecoveryDialog.tsx line 67: 'Есть несохранённые изменения'
+      // a11y label: accessibilityLabel="Найден локальный черновик" (accessibilityRole="alert")
       // In some environments the editor route can still redirect (e.g., access checks); in that case
       // don't fail the whole suite with a long timeout.
-      const draftTitle = page.getByText('Найден черновик', { exact: true });
+      const draftTitle = page.getByText('Есть несохранённые изменения', { exact: true });
       const homeHeadline = page.getByText('Пиши о своих путешествиях', { exact: true });
       const loginTitle = page.getByText('Войти', { exact: true });
       const noAccess = page.getByText('Нет доступа', { exact: true });
@@ -216,18 +218,14 @@ test.describe('Draft recovery popup', () => {
         return;
       }
 
-      await draftTitle.waitFor({ state: 'visible', timeout: 15_000 }).catch(() => null);
-      if (!(await draftTitle.isVisible().catch(() => false))) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Draft dialog did not appear in time; skipping strict assertion for this environment',
-        });
-        return;
-      }
+      // Hard assert: if we are on the editor with a seeded draft, the dialog MUST appear.
+      await draftTitle.waitFor({ state: 'visible', timeout: 15_000 });
+      await expect(draftTitle).toBeVisible();
 
       // Dismiss and continue with clean slate.
-      await page.getByRole('button', { name: 'Начать заново' }).click({ timeout: 20_000 });
-      await expect(page.getByText('Найден черновик', { exact: true })).toHaveCount(0);
+      // Button label from DraftRecoveryDialog.tsx: 'Открыть сохранённую' (onDiscard path)
+      await page.getByRole('button', { name: 'Открыть сохранённую' }).click({ timeout: 20_000 });
+      await expect(page.getByText('Есть несохранённые изменения', { exact: true })).toHaveCount(0);
 
       // Edit a field to trigger autosave + draft save in the background.
       const nameCandidates = [
@@ -264,10 +262,37 @@ test.describe('Draft recovery popup', () => {
       await page.waitForTimeout(8_000);
 
       // Popup must not reappear due to autosave.
-      await expect(page.getByText('Найден черновик', { exact: true })).toHaveCount(0);
+      await expect(page.getByText('Есть несохранённые изменения', { exact: true })).toHaveCount(0);
 
-      // Manual save should clear the local draft. Click the save action in the header.
-      await page.getByRole('button', { name: /^Сохранить$/, exact: true }).click({ timeout: 20_000 });
+      // Manual save should clear the local draft.
+      // 'Сохранить' lives inside the "⋯" header menu (TravelWizardHeader.tsx),
+      // and also appears as 'Сохранить путешествие' in the Quill editor toolbar.
+      // Try both: open the more-menu first, then fall back to the toolbar button.
+      const moreMenuBtn = page.getByRole('button', { name: /Открыть меню действий/i })
+      const saveInMenu = page.getByRole('menuitem', { name: /^Сохранить$/i }).or(
+        page.getByRole('button', { name: /^Сохранить$/i })
+      ).first()
+      const saveInToolbar = page.getByRole('button', { name: /Сохранить путешествие/i })
+
+      const moreVisible = await moreMenuBtn.isVisible().catch(() => false)
+      if (moreVisible) {
+        await moreMenuBtn.click({ timeout: 10_000 })
+        const menuSave = page.getByText('Сохранить', { exact: true })
+        const toolbarSave = saveInToolbar
+        await Promise.race([
+          menuSave.waitFor({ state: 'visible', timeout: 8_000 }).catch(() => null),
+          toolbarSave.waitFor({ state: 'visible', timeout: 8_000 }).catch(() => null),
+        ])
+        if (await menuSave.isVisible().catch(() => false)) {
+          await menuSave.click({ timeout: 10_000 })
+        } else if (await toolbarSave.isVisible().catch(() => false)) {
+          await toolbarSave.click({ timeout: 10_000 })
+        } else {
+          await saveInMenu.click({ timeout: 10_000 })
+        }
+      } else {
+        await saveInToolbar.click({ timeout: 20_000 })
+      }
 
       // Ensure no beforeunload warning blocks reload after save.
       const dialogs: string[] = [];
@@ -278,7 +303,7 @@ test.describe('Draft recovery popup', () => {
 
       // Immediately reload: this reproduces the real user behavior (click save -> reload right away).
       await page.reload({ waitUntil: 'domcontentloaded' });
-      await expect(page.getByText('Найден черновик', { exact: true })).toHaveCount(0);
+      await expect(page.getByText('Есть несохранённые изменения', { exact: true })).toHaveCount(0);
 
       expect(dialogs, 'Reload after save should not trigger a dialog (beforeunload)').toEqual([]);
     } finally {

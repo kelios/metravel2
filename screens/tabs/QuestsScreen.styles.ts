@@ -381,12 +381,17 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             minHeight: 0,
             backgroundColor: colors.background,
             ...Platform.select({
-                web: {
+                web: ({
+                    // Оболочка приложения на вебе — это контейнер фикс. высоты с
+                    // overflow:hidden (body НЕ скроллит), поэтому колонка контента
+                    // должна прокручиваться сама и на мобильном, и на десктопе.
+                    // flexBasis:0 + flex:1 + minHeight:0 (на .content) дают колонке
+                    // высоту родителя, а overflowY:auto — внутренний скролл.
                     flexBasis: 0,
                     overflowY: 'auto',
                     overscrollBehavior: 'contain',
                     scrollBehavior: 'smooth',
-                } as any,
+                } as any),
             }),
         },
         contentHeader: {
@@ -401,14 +406,24 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             borderBottomColor: colors.borderLight,
             backgroundColor: colors.background,
             ...Platform.select({
-                web: {
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 10,
-                    backdropFilter: 'blur(16px)',
-                    WebkitBackdropFilter: 'blur(16px)',
-                    backgroundColor: colors.surface,
-                } as any,
+                web: isMobileW
+                    ? ({
+                          // Шапка липнет к верху скролл-колонки. Живой backdrop-blur
+                          // на мобильном убивает GPU — статичный «фрост»
+                          // (CLAUDE.md правило #2).
+                          position: 'sticky',
+                          top: 0,
+                          zIndex: 10,
+                          backgroundColor: colors.surfaceMuted,
+                      } as any)
+                    : ({
+                          position: 'sticky',
+                          top: 0,
+                          zIndex: 10,
+                          backdropFilter: 'blur(16px)',
+                          WebkitBackdropFilter: 'blur(16px)',
+                          backgroundColor: colors.surface,
+                      } as any),
             }),
         },
         contentTitle: {

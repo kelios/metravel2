@@ -69,12 +69,8 @@ export default function QuestsContentPanel({
     onToggleViewMode,
     onMapUserLocationChange,
 }: QuestsContentPanelProps) {
-    return (
-        <ScrollView
-            style={styles.content}
-            contentContainerStyle={{ flexGrow: 1 }}
-            showsVerticalScrollIndicator={false}
-        >
+    const inner = (
+        <>
             <View style={styles.contentHeader}>
                 <View style={styles.contentTitleBlock}>
                     <Text style={styles.contentTitle} numberOfLines={2}>
@@ -235,6 +231,16 @@ export default function QuestsContentPanel({
                     </>
                 )}
             </View>
+        </>
+    );
+
+    return (
+        <ScrollView
+            style={styles.content}
+            contentContainerStyle={{ flexGrow: 1 }}
+            showsVerticalScrollIndicator={false}
+        >
+            {inner}
         </ScrollView>
     );
 }
