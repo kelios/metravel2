@@ -311,7 +311,12 @@ export default function PlacesScreen() {
         ? 'empty'
         : 'list'
 
-  const useVirtualList = Platform.OS !== 'web' && isCompact && resultsStatus === 'list'
+  // Native + compact gets a sticky compact filter bar (search + Категории + Сбросить)
+  // pinned above the scroll area, so filters never scroll out of reach. The full
+  // stacked topBar (title/hint/search/country) is suppressed in pageChrome on this
+  // path to avoid duplicating the search/filter controls. Web/desktop is untouched.
+  const nativeCompact = Platform.OS !== 'web' && isCompact
+  const useVirtualList = nativeCompact && resultsStatus === 'list'
 
   const renderVirtualCard = useCallback(
     ({ item }: { item: CatalogPlace }) => (
@@ -409,6 +414,7 @@ export default function PlacesScreen() {
 
   const pageChrome = (
     <>
+        {nativeCompact ? null : (
         <View style={styles.topBar} onLayout={handleTopBarLayout}>
           <View style={styles.topBarMeta}>
             <View style={styles.heroTitleRow}>
@@ -509,11 +515,13 @@ export default function PlacesScreen() {
             </Menu>
           </View>
         </View>
+        )}
 
         {/* ─── Main layout ─── */}
         <View style={styles.layout}>
-          {/* Sidebar / collapsible filter */}
-          {isCompact ? (
+          {/* Sidebar / collapsible filter. On native compact this lives in the
+              sticky fixed bar instead, so the in-flow mobileFilterBar is omitted. */}
+          {isCompact && !nativeCompact ? (
             <View style={styles.mobileFilterBar}>
               <Pressable
                 onPress={() => setFiltersOpen((v) => !v)}
@@ -728,6 +736,75 @@ export default function PlacesScreen() {
     </>
   )
 
+  // Native compact: compact sticky bar pinned above the scroll area so search +
+  // category filter are always reachable. Kept ≤~20% of the viewport: single
+  // search row + a filter/reset row, no large title (the big resultsTitle stays
+  // in the scrollable pageChrome).
+  const compactFixedBar = nativeCompact ? (
+    <View style={styles.compactBar}>
+      <View style={styles.searchBox}>
+        <Feather name="search" size={18} color={colors.textMuted} style={styles.searchIcon} />
+        <TextInput
+          value={query}
+          onChangeText={handleQueryChange}
+          placeholder="Поиск места..."
+          placeholderTextColor={colors.textMuted}
+          style={styles.searchInput}
+          returnKeyType="search"
+          accessibilityLabel="Найти место"
+        />
+        {query ? (
+          <Pressable
+            onPress={() => handleQueryChange('')}
+            accessibilityRole="button"
+            accessibilityLabel="Очистить поиск"
+            hitSlop={10}
+            style={({ pressed }) => [styles.searchClear, pressed && PRESSED_OPACITY]}
+          >
+            <Feather name="x" size={16} color={colors.textMuted} />
+          </Pressable>
+        ) : null}
+      </View>
+      <View style={styles.compactBarRow}>
+        <Pressable
+          onPress={() => setFiltersOpen((v) => !v)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: filtersOpen }}
+          style={({ pressed }) => [
+            styles.compactFilterToggle,
+            selectedCategoryCount > 0 && styles.compactFilterToggleActive,
+            pressed && PRESSED_OPACITY,
+          ]}
+        >
+          <Feather name="sliders" size={16} color={selectedCategoryCount > 0 ? colors.primary : colors.text} />
+          <Text style={[styles.mobileFilterToggleText, selectedCategoryCount > 0 && styles.mobileFilterToggleTextActive]}>
+            Категории
+          </Text>
+          {selectedCategoryCount > 0 ? (
+            <View style={styles.filterBadge}>
+              <Text style={styles.filterBadgeText}>{selectedCategoryCount}</Text>
+            </View>
+          ) : null}
+          <Feather
+            name={filtersOpen ? 'chevron-up' : 'chevron-down'}
+            size={16}
+            color={colors.textMuted}
+          />
+        </Pressable>
+        {hasActiveFilters ? (
+          <Pressable
+            onPress={resetAll}
+            accessibilityRole="button"
+            accessibilityLabel="Сбросить фильтры"
+            style={({ pressed }) => [styles.resetBtn, pressed && PRESSED_OPACITY]}
+          >
+            <Text style={styles.resetBtnText}>Сбросить</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    </View>
+  ) : null
+
   return (
     <View style={styles.screen}>
       {Platform.OS === 'web' && isFocused ? (
@@ -744,6 +821,7 @@ export default function PlacesScreen() {
       {Platform.OS === 'web'
         ? React.createElement('h1', { style: styles.srOnly as any }, seoHeading)
         : null}
+      {compactFixedBar}
       {useVirtualList ? (
         <FlatList
           style={styles.scroll}

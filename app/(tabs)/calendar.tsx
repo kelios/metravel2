@@ -289,16 +289,6 @@ export default function CalendarScreen() {
       {seoBlock}
       <ProfileCollectionHeader title="Мой календарь" onBackPress={handleBackToProfile} />
 
-      <View style={styles.introCard}>
-        <View style={styles.introBadge}>
-          <Text style={styles.introBadgeText}>Только мои статусы</Text>
-        </View>
-        <Text style={styles.introTitle}>Где я был, что хочу и что планирую</Text>
-        <Text style={styles.introDescription}>
-          Этот экран не показывает общую статистику по маршрутам автора. Здесь только ваши личные отметки по поездкам.
-        </Text>
-      </View>
-
       <CalendarTabs
         activeTab={activeTab}
         counts={tabCounts}

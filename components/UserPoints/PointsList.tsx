@@ -2,7 +2,6 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Platform,
   View,
-  Text,
   useWindowDimensions,
 } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
@@ -32,6 +31,7 @@ import { PointsListActionsModal } from './PointsListActionsModal'
 import { PointsListBulkModals } from './PointsListBulkModals'
 import { PointsListManualModal } from './PointsListManualModal'
 import { PointsListBulkMapBar } from './PointsListBulkMapBar'
+import EmptyState from '@/components/ui/EmptyState'
 
 const DEFAULT_POINT_COLORS: string[] = [
   'red',
@@ -335,10 +335,16 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const renderEmpty = useCallback(() => {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>Нет точек</Text>
+        <EmptyState
+          icon="map-pin"
+          variant="empty"
+          title="У вас пока нет точек"
+          description="Сохраняйте интересные места на карте или добавьте свою точку вручную."
+          action={{ label: 'Добавить точку', onPress: openManualAdd }}
+        />
       </View>
     );
-  }, [styles.emptyContainer, styles.emptyText]);
+  }, [styles.emptyContainer, openManualAdd]);
 
 	  return (
 	    <View style={styles.container}>

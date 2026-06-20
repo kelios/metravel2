@@ -378,6 +378,7 @@ export const PointsListGrid: React.FC<{
           testID="userpoints-panel-content-list"
           renderItem={renderPointListItem}
           ListHeaderComponent={renderListHeader()}
+          ListEmptyComponent={!isLoading ? renderEmpty : null}
           showsVerticalScrollIndicator={true}
           drawDistance={600}
         />

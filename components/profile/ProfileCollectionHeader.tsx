@@ -35,14 +35,14 @@ export default function ProfileCollectionHeader({
       StyleSheet.create({
         header: {
           paddingHorizontal: 16,
-          paddingTop: 12,
-          paddingBottom: 8,
+          paddingTop: 8,
+          paddingBottom: 6,
         },
         headerRow: {
           flexDirection: isPhone ? 'column' : 'row',
           alignItems: isPhone ? 'stretch' : 'flex-end',
           justifyContent: 'space-between',
-          gap: 12,
+          gap: 8,
         },
         headerTitleBlock: {
           flexGrow: 1,
@@ -56,7 +56,7 @@ export default function ProfileCollectionHeader({
           gap: 12,
         },
         title: {
-          fontSize: 20,
+          fontSize: 18,
           fontWeight: '700',
           color: colors.text,
         },

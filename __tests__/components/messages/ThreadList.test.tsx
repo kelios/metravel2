@@ -115,4 +115,28 @@ describe('ThreadList', () => {
 
         expect(getByLabelText('Удалить диалог с Иван Петров')).toBeTruthy();
     });
+
+    // Regression (prod bug: list showed generic «Пользователь»): ThreadList has NO
+    // way to resolve a name on its own — it relies entirely on participantNames.
+    // The screen MUST populate that map for thread peers that are not in the
+    // available-users list (it now merges resolved profiles). This test documents
+    // the contract: a missing entry falls back to «Пользователь», so the gap is
+    // never the component's to hide — it must be filled by the screen.
+    it('falls back to «Пользователь» only when the name map lacks the peer', () => {
+        const { getByText, queryByText } = render(
+            <ThreadList
+                {...defaultProps}
+                threads={[mockThreads[0]]}
+                participantNames={new Map()}
+            />
+        );
+        expect(getByText('Пользователь')).toBeTruthy();
+        expect(queryByText('Иван Петров')).toBeNull();
+
+        // With the name provided (как теперь делает экран через mergedNames) — реальное имя.
+        const { getByText: getByText2 } = render(
+            <ThreadList {...defaultProps} threads={[mockThreads[0]]} />
+        );
+        expect(getByText2('Иван Петров')).toBeTruthy();
+    });
 });

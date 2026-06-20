@@ -21,6 +21,7 @@ import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import UIButton from '@/components/ui/Button';
 import type { Travel } from '@/types/types';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useRouletteLogic } from '@/components/roulette/useRoulette';
 import { createStyles } from '@/components/roulette/styles';
@@ -144,6 +145,10 @@ export default function RouletteScreen() {
   // клиентский рендер совпали. После маунта — обычная адаптивная логика.
   const layoutIsMobile = isPhone || isLargePhone;
   const isMobile = Platform.OS === 'web' && !isMounted ? false : layoutIsMobile;
+  const insets = useSafeAreaInsets();
+  // Clear the global bottom tab bar (BottomDock, absolute overlay ~56px + safe
+  // area) so the last result card isn't hidden behind the footer on native.
+  const resultsBottomInset = Platform.OS === 'web' ? 0 : 56 + insets.bottom + 16;
 
   const {
     filter,
@@ -422,7 +427,11 @@ export default function RouletteScreen() {
                       keyExtractor={(item) => String(item.id)}
                       key="cols-1"
                       numColumns={1}
-                      contentContainerStyle={[styles.cardsGrid, isMobile && styles.cardsGridMobile]}
+                      contentContainerStyle={[
+                        styles.cardsGrid,
+                        isMobile && styles.cardsGridMobile,
+                        resultsBottomInset > 0 && { paddingBottom: resultsBottomInset },
+                      ]}
                       {...({ estimatedItemSize: 420 } as any)}
                       renderItem={({ item, index }) => (
                         <View style={styles.cardWrapper}>
@@ -452,7 +461,7 @@ export default function RouletteScreen() {
 
       {isMobile && (
         <Modal visible={showFilters} animationType="slide" onRequestClose={closeFilters}>
-          <View style={styles.filtersModalShell}>
+          <View style={[styles.filtersModalShell, { paddingTop: insets.top }]}>
             <FiltersPanel
               filter={filter}
               filterGroups={filterGroups}

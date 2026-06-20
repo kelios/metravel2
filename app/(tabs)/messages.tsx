@@ -82,54 +82,86 @@ export default function MessagesScreen() {
         return selectedThread.participants.find((id) => id !== currentUserIdNum) ?? null;
     }, [selectedThread, userId]);
 
-    // Resolved profile for a chat opened by user id (e.g. «Написать автору»): such
-    // a thread is virtual and the peer is not in the available-users list, so the
-    // header would otherwise fall back to the generic «Пользователь».
-    const [resolvedPeer, setResolvedPeer] = useState<{
-        id: number;
-        name: string;
-        avatar: string | null;
-    } | null>(null);
+    // Peers (thread participants + the open chat peer) are often NOT in the
+    // available-users list, so both the thread LIST and the chat header would fall
+    // back to the generic «Пользователь». Resolve their profiles by id and merge.
+    const [resolvedPeers, setResolvedPeers] = useState<
+        Map<number, { name: string; avatar: string | null }>
+    >(() => new Map());
 
-    const otherUserName = useMemo(() => {
-        if (otherUserId != null && participantNames.has(otherUserId)) {
-            return participantNames.get(otherUserId)!;
+    const peerIdsToResolve = useMemo(() => {
+        const ids = new Set<number>();
+        const me = Number(userId);
+        for (const t of threads) {
+            for (const pid of t.participants) {
+                if (pid !== me) ids.add(pid);
+            }
         }
-        if (otherUserId != null && resolvedPeer?.id === otherUserId && resolvedPeer.name) {
-            return resolvedPeer.name;
-        }
-        return 'Пользователь';
-    }, [otherUserId, participantNames, resolvedPeer]);
+        if (otherUserId != null) ids.add(otherUserId);
+        return Array.from(ids).filter((id) => !participantNames.has(id) && !resolvedPeers.has(id));
+    }, [threads, otherUserId, userId, participantNames, resolvedPeers]);
 
-    const otherUserAvatar = useMemo(() => {
-        if (otherUserId != null && participantAvatars.has(otherUserId)) {
-            return participantAvatars.get(otherUserId) ?? null;
-        }
-        if (otherUserId != null && resolvedPeer?.id === otherUserId) {
-            return resolvedPeer.avatar;
-        }
-        return null;
-    }, [otherUserId, participantAvatars, resolvedPeer]);
-
-    // When the peer isn't in the available-users list (virtual thread from
-    // «Написать автору», or a thread whose participant wasn't fetched), the header
-    // and list would show the generic «Пользователь». Resolve the profile by id.
     useEffect(() => {
-        if (otherUserId == null) return;
-        if (participantNames.has(otherUserId)) return;
-        if (resolvedPeer?.id === otherUserId) return;
+        if (peerIdsToResolve.length === 0) return;
         let cancelled = false;
-        void fetchUserProfile(otherUserId)
-            .then((p) => {
-                if (cancelled) return;
-                const name = [p.first_name, p.last_name].filter(Boolean).join(' ').trim();
-                setResolvedPeer({ id: otherUserId, name, avatar: p.avatar ?? null });
-            })
-            .catch(() => undefined);
+        void Promise.all(
+            peerIdsToResolve.map(async (id) => {
+                try {
+                    const p = await fetchUserProfile(id);
+                    const name = [p.first_name, p.last_name].filter(Boolean).join(' ').trim();
+                    return [id, { name, avatar: p.avatar ?? null }] as const;
+                } catch {
+                    return null;
+                }
+            }),
+        ).then((entries) => {
+            if (cancelled) return;
+            const valid = entries.filter(Boolean) as Array<
+                readonly [number, { name: string; avatar: string | null }]
+            >;
+            if (valid.length === 0) return;
+            setResolvedPeers((prev) => {
+                const next = new Map(prev);
+                for (const [id, info] of valid) next.set(id, info);
+                return next;
+            });
+        });
         return () => {
             cancelled = true;
         };
-    }, [otherUserId, participantNames, resolvedPeer]);
+    }, [peerIdsToResolve]);
+
+    // Names/avatars enriched with resolved peer profiles — used by BOTH the thread
+    // list and the open chat header so neither shows the generic «Пользователь».
+    const mergedNames = useMemo(() => {
+        const map = new Map(participantNames);
+        for (const [id, info] of resolvedPeers) {
+            if (info.name && !map.has(id)) map.set(id, info.name);
+        }
+        return map;
+    }, [participantNames, resolvedPeers]);
+
+    const mergedAvatars = useMemo(() => {
+        const map = new Map(participantAvatars);
+        for (const [id, info] of resolvedPeers) {
+            if (!map.has(id)) map.set(id, info.avatar);
+        }
+        return map;
+    }, [participantAvatars, resolvedPeers]);
+
+    const otherUserName = useMemo(() => {
+        if (otherUserId != null && mergedNames.has(otherUserId)) {
+            return mergedNames.get(otherUserId)!;
+        }
+        return 'Пользователь';
+    }, [otherUserId, mergedNames]);
+
+    const otherUserAvatar = useMemo(() => {
+        if (otherUserId != null && mergedAvatars.has(otherUserId)) {
+            return mergedAvatars.get(otherUserId) ?? null;
+        }
+        return null;
+    }, [otherUserId, mergedAvatars]);
 
     // Диплинк: открыть диалог с конкретным пользователем
     useEffect(() => {
@@ -425,8 +457,8 @@ export default function MessagesScreen() {
                     loading={threadsLoading || initialLoading}
                     error={threadsError}
                     currentUserId={userId}
-                    participantNames={participantNames}
-                    participantAvatars={participantAvatars}
+                    participantNames={mergedNames}
+                    participantAvatars={mergedAvatars}
                     onSelectThread={handleSelectThread}
                     onRefresh={refreshThreads}
                     onNewConversation={handleNewConversation}

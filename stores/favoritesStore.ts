@@ -112,11 +112,18 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
             try {
                 const { markTravelAsFavorite } = await getFavoritesApi();
                 await markTravelAsFavorite(item.id);
-                await get().refreshFromServer(userId);
             } catch (error) {
                 set((s) => ({ favorites: s.favorites.filter((f) => !(f.id === item.id && f.type === item.type)) }));
                 inFlightKeys.delete(inflightKey);
                 throw error;
+            }
+
+            // Best-effort sync: the add already succeeded server-side, so a failing
+            // refresh must not roll back or surface an error to the user.
+            try {
+                await get().refreshFromServer(userId);
+            } catch {
+                // ignore — optimistic state already reflects the addition
             }
 
             inFlightKeys.delete(inflightKey);
@@ -174,11 +181,19 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
                     const { unmarkTravelAsFavorite } = await getFavoritesApi();
                     await unmarkTravelAsFavorite(id);
                 }
-                await get().refreshFromServer(userId);
             } catch (error) {
                 set({ favorites: before });
                 inFlightKeys.delete(inflightKey);
                 throw error;
+            }
+
+            // Best-effort sync: the removal already succeeded server-side, so a
+            // failing refresh must NOT roll back or surface an error to the user
+            // (was the cause of «не могу убрать из избранного, пишет ошибку»).
+            try {
+                await get().refreshFromServer(userId);
+            } catch {
+                // ignore — optimistic state already reflects the removal
             }
 
             inFlightKeys.delete(inflightKey);

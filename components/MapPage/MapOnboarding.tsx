@@ -103,7 +103,8 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   },
   {
     title: 'Настройте фильтры',
-    description: 'Используйте фильтры по категориям и радиусу, чтобы найти подходящие места.',
+    description:
+      'Радиус задаётся отдельной кнопкой прямо на карте, а категории — по кнопке фильтров. Так вы быстро отберёте подходящие места.',
     icon: 'filter',
     targetTestID: 'map-panel-tab-filters',
     placement: 'bottom',
@@ -111,7 +112,7 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     title: 'Список мест',
     description:
-      'Переключитесь на вкладку «Список», чтобы увидеть все найденные места с расстояниями.',
+      'Откройте вкладку «Места», чтобы увидеть все найденные места с расстояниями.',
     icon: 'list',
     targetTestID: 'map-panel-tab-travels',
     placement: 'bottom',
@@ -130,7 +131,7 @@ const MOBILE_WEB_ONBOARDING_STEPS: OnboardingStep[] = [
   {
     title: 'С чего начать',
     description:
-      'Нажмите «Найти места рядом», чтобы сразу получить подборку ближайших мест. Уточнить радиус и категории можно в чипах сверху на карте или по кнопке фильтров.',
+      'Нажмите «Найти места рядом», чтобы сразу получить подборку ближайших мест. Радиус задаётся отдельной кнопкой сверху на карте, а категории — по кнопке фильтров.',
     icon: 'search',
     targetTestID: 'map-mobile-find-nearby',
     placement: 'bottom',

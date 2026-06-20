@@ -350,6 +350,41 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     marginTop: DESIGN_TOKENS.spacing.md,
   },
 
+  // ─── Native compact sticky bar ───
+  // Pinned above the scroll list so search + category filter never scroll away.
+  // Tight vertical paddings keep it ≤~20% of a phone viewport.
+  compactBar: {
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    paddingTop: DESIGN_TOKENS.spacing.xs,
+    paddingBottom: DESIGN_TOKENS.spacing.xs,
+    gap: DESIGN_TOKENS.spacing.xs,
+    backgroundColor: colors.background,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderLight,
+  },
+  compactBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
+  compactFilterToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
+    flex: 1,
+    minHeight: 38,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  compactFilterToggleActive: {
+    borderColor: colors.primaryAlpha30,
+    backgroundColor: colors.primarySoft,
+  },
+
   // ─── Mobile filter bar ───
   mobileFilterBar: {
     flexDirection: 'row',
