@@ -1,0 +1,130 @@
+import { memo, useMemo } from 'react';
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
+import type { UserRank } from '@/api/achievements';
+
+interface Props {
+  rank: UserRank;
+  /** Компактный вариант (карточка автора): без подписи XP. */
+  compact?: boolean;
+  testID?: string;
+  style?: StyleProp<ViewStyle>;
+}
+
+function RankBar({ rank, compact = false, testID, style }: Props) {
+  const colors = useThemedColors();
+
+  const { ratio, remaining, isMax } = useMemo(() => {
+    const max = rank.nextLevelMinPoints == null;
+    if (max) return { ratio: 1, remaining: 0, isMax: true };
+    const span = Math.max(1, rank.nextLevelMinPoints! - rank.currentLevelMinPoints);
+    const done = rank.totalPoints - rank.currentLevelMinPoints;
+    return {
+      ratio: Math.max(0, Math.min(1, done / span)),
+      remaining: Math.max(0, rank.nextLevelMinPoints! - rank.totalPoints),
+      isMax: false,
+    };
+  }, [rank]);
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: { gap: 6 },
+        row: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.sm },
+        levelChip: {
+          width: compact ? 30 : 38,
+          height: compact ? 30 : 38,
+          borderRadius: 999,
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+        },
+        levelGradient: { ...StyleSheet.absoluteFillObject },
+        levelText: {
+          color: '#FFFFFF',
+          fontWeight: '800',
+          fontSize: compact ? 13 : 16,
+          textShadowColor: 'rgba(0,0,0,0.25)',
+          textShadowRadius: 2,
+        },
+        titleWrap: { flex: 1, minWidth: 0 },
+        title: {
+          fontSize: compact
+            ? DESIGN_TOKENS.typography.sizes.sm
+            : DESIGN_TOKENS.typography.sizes.md,
+          fontWeight: '700',
+          color: colors.text,
+        },
+        points: {
+          fontSize: DESIGN_TOKENS.typography.sizes.xs,
+          color: colors.textMuted,
+        },
+        track: {
+          height: compact ? 5 : 7,
+          borderRadius: 999,
+          backgroundColor: colors.backgroundTertiary,
+          overflow: 'hidden',
+        },
+        fill: { height: '100%', borderRadius: 999 },
+        caption: { fontSize: DESIGN_TOKENS.typography.sizes.xs, color: colors.textMuted },
+      }),
+    [colors, compact],
+  );
+
+  return (
+    <View
+      style={[styles.container, style]}
+      testID={testID}
+      accessibilityRole="summary"
+      accessibilityLabel={
+        isMax
+          ? `Уровень ${rank.level}, ${rank.title}. Максимальный уровень`
+          : `Уровень ${rank.level}, ${rank.title}. ${rank.totalPoints} очков, до уровня ${rank.nextLevelTitle ?? ''} осталось ${remaining}`
+      }
+    >
+      <View style={styles.row}>
+        <View style={styles.levelChip}>
+          <LinearGradient
+            colors={[colors.brand, colors.primary]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.levelGradient}
+          />
+          <Text style={styles.levelText}>{rank.level}</Text>
+        </View>
+        <View style={styles.titleWrap}>
+          <Text style={styles.title} numberOfLines={1}>
+            {rank.title}
+          </Text>
+          {!compact ? (
+            <Text style={styles.points}>
+              {rank.totalPoints} XP · значков: {rank.badgesCount}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+
+      <View style={styles.track}>
+        <LinearGradient
+          colors={[colors.brand, colors.primary]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={[styles.fill, { width: `${ratio * 100}%` }]}
+        />
+      </View>
+
+      {!compact ? (
+        <Text style={styles.caption}>
+          {isMax
+            ? 'Максимальный уровень достигнут 🏆'
+            : `До «${rank.nextLevelTitle}»: ${remaining} XP`}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+export default memo(RankBar);

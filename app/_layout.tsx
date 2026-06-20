@@ -195,9 +195,12 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
       () => {
         const p = effectivePathname || "";
         if (p === "/login") return false;
-        // On travel create/edit wizard we render our own bottom actions footer.
-        // The global mobile dock would overlap it.
-        // if (p.startsWith('/travel')) return false;
+        // On the travel create/edit wizard (/travel/new and /travel/<id>) we render our
+        // own bottom actions footer; the global mobile dock would overlap the form fields
+        // (the last field — description — ends up behind the dock, so taps hit the tabs and
+        // abandon the form). Match only the upsert route shape — NOT /travels/<id> (read
+        // detail) or /travels (list), which keep the dock. Mirrors isTravelUpsert in (tabs)/_layout.
+        if (p === '/travel/new' || /^\/travel\/[^/]+$/.test(p)) return false;
         return true;
       },
       [effectivePathname]

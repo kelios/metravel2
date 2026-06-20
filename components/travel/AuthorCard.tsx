@@ -15,6 +15,9 @@ import { normalizeAvatarUrl } from '@/utils/mediaUrl'
 import { routes } from '@/utils/routes'
 import SubscribeButton from '@/components/ui/SubscribeButton'
 import { getTravelLabel } from '@/utils/pluralize'
+import { useUserAchievements } from '@/hooks/useAchievementsApi'
+import RankBar from '@/components/achievements/RankBar'
+import BadgeMedal from '@/components/achievements/BadgeMedal'
 
 const STRICT_PLACEHOLDER = /^[.\s·•]+$|^Автор|^Пользователь|^User/i
 const LOOSE_PLACEHOLDER = /^[.\s·•]{4,}$|^Автор|^Пользователь|^User|^Anonymous/i
@@ -89,6 +92,33 @@ function getAvatarSize(isMobile: boolean, isTablet: boolean): number {
   if (isMobile) return 64
   if (isTablet) return 72
   return Platform.OS === 'web' ? 96 : 80
+}
+
+interface AuthorAchievementsProps {
+  userId: number | string
+  styles: ReturnType<typeof createStyles>
+}
+
+function AuthorAchievements({ userId, styles }: AuthorAchievementsProps) {
+  const { data } = useUserAchievements(userId)
+
+  if (!data) return null
+  if (data.earned.length === 0 && data.rank.totalPoints === 0) return null
+
+  const topBadges = data.earned.slice(0, 3)
+
+  return (
+    <View style={styles.achievementsBlock}>
+      <RankBar rank={data.rank} compact />
+      {topBadges.length > 0 && (
+        <View style={styles.badgesRow}>
+          {topBadges.map((ub) => (
+            <BadgeMedal key={ub.badge.id} badge={ub.badge} size={36} earned />
+          ))}
+        </View>
+      )}
+    </View>
+  )
 }
 
 interface AuthorCardProps {
@@ -233,6 +263,8 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
                 </Text>
               </View>
             )}
+
+            {userId != null && <AuthorAchievements userId={userId} styles={styles} />}
 
             {showActions && (
               <View style={styles.authorActionsRow}>
@@ -421,6 +453,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       color: colors.textSecondary,
       fontWeight: '600',
+    },
+    achievementsBlock: {
+      marginTop: DESIGN_TOKENS.spacing.xs,
+      gap: DESIGN_TOKENS.spacing.sm,
+    },
+    badgesRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.sm,
     },
     authorActionsRow: {
       flexDirection: 'row',

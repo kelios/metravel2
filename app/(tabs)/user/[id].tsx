@@ -23,6 +23,7 @@ import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { fetchTravels } from '@/api/travelListQueries';
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
+import UserAchievementsSection from '@/components/achievements/UserAchievementsSection';
 import { useResponsive } from '@/hooks/useResponsive';
 import type { Travel } from '@/types/types';
 
@@ -292,6 +293,10 @@ export default function PublicUserProfileScreen() {
           </View>
         </View>
 
+        {userId ? (
+          <UserAchievementsSection userId={userId} style={styles.achievementsSection} />
+        ) : null}
+
         <View style={styles.travelsSection}>
           <View style={styles.travelsHeader}>
             <Text style={styles.travelsTitle}>Путешествия автора</Text>
@@ -503,6 +508,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     color: colors.primary,
     fontSize: 14,
     fontWeight: '700',
+  },
+  achievementsSection: {
+    marginTop: 16,
   },
   travelsSection: {
     marginTop: 20,

@@ -51,4 +51,8 @@ export const queryKeys = {
   stravaActivities: (params: Record<string, unknown>) => ['strava', 'activities', params] as const,
   stravaActivity: (activityId: string | number | null | undefined) =>
     ['strava', 'activity', activityId] as const,
+  achievementsBadges: () => ['achievements', 'badges'] as const,
+  achievementsMe: () => ['achievements', 'me'] as const,
+  achievementsUser: (userId: string | number | null | undefined) =>
+    ['achievements', 'user', userId] as const,
 } as const;

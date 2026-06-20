@@ -27,6 +27,9 @@ import { useProfileGrid } from '@/components/screens/profile/useProfileGrid';
 import { ProfileHeaderSection } from '@/components/screens/profile/ProfileHeaderSection';
 import { ProfileTravelGrid } from '@/components/screens/profile/ProfileTravelGrid';
 import { useThemedColors } from '@/hooks/useTheme';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import AchievementsSection from '@/components/achievements/AchievementsSection';
+import BadgeUnlockToast from '@/components/achievements/BadgeUnlockToast';
 import { useResponsive } from '@/hooks/useResponsive';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { confirmAction } from '@/utils/confirmAction';
@@ -49,6 +52,11 @@ import {
   withVisibleEngagementStats,
   type UserStats,
 } from '@/components/screens/profile/profileScreen.helpers';
+
+const profileScreenAchievementsWrap = {
+  marginTop: DESIGN_TOKENS.spacing.xs,
+  marginBottom: DESIGN_TOKENS.spacing.md,
+} as const;
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -506,6 +514,18 @@ export default function ProfileScreen() {
     ]
   );
 
+  const ListHeader = useMemo(
+    () => (
+      <>
+        {Header}
+        <View style={profileScreenAchievementsWrap}>
+          <AchievementsSection />
+        </View>
+      </>
+    ),
+    [Header],
+  );
+
   const renderItem = useCallback(({ item, index }: { item: Travel; index: number }) => (
     <RenderTravelItem
       item={item}
@@ -577,7 +597,7 @@ export default function ProfileScreen() {
           onLayout={handleWebLayout}
           onContentSizeChange={handleWebContentSizeChange}
         >
-          {Header}
+          {ListHeader}
           {isTravelsTabLoading ? ListSkeleton : (
             currentData.length === 0 ? (
               <View style={styles.emptyWrap}>
@@ -612,7 +632,7 @@ export default function ProfileScreen() {
           data={isTravelsTabLoading ? [] : currentData}
           // @ts-expect-error estimatedItemSize required by FlashList but types mismatch
           estimatedItemSize={280}
-          ListHeaderComponent={Header}
+          ListHeaderComponent={ListHeader}
           contentContainerStyle={[styles.listContent, { paddingBottom: contentPaddingBottom }]}
           keyExtractor={keyExtractor}
           numColumns={Math.max(1, (isCardsSingleColumn ? 1 : gridColumns) || 1)}
@@ -637,6 +657,7 @@ export default function ProfileScreen() {
           onEndReachedThreshold={0.5}
         />
       )}
+      <BadgeUnlockToast />
     </SafeAreaView>
   );
 }
