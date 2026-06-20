@@ -39,6 +39,7 @@ const makeRank = (overrides: Partial<UserRank> = {}): UserRank => ({
   currentLevelMinPoints: 400,
   nextLevelMinPoints: 900,
   nextLevelTitle: 'Писатель',
+  isMaxLevel: false,
   ...overrides,
 })
 
@@ -84,13 +85,28 @@ describe('RankBar', () => {
     expect(getByText('До «Писатель»: 450 XP')).toBeTruthy()
   })
 
-  it('renders maximum level caption when nextLevelMinPoints is null', () => {
+  it('renders maximum level caption when isMaxLevel is true', () => {
     const { getByText } = render(
       <RankBar
-        rank={makeRank({ nextLevelMinPoints: null, nextLevelTitle: null })}
+        rank={makeRank({ nextLevelMinPoints: null, nextLevelTitle: null, isMaxLevel: true })}
       />,
     )
     expect(getByText('Максимальный уровень достигнут 🏆')).toBeTruthy()
+  })
+
+  it('does NOT render XP bar or caption in unknown mode (null thresholds, isMaxLevel false)', () => {
+    // Public profile endpoint: no rank_levels → nextLevelMinPoints null, isMaxLevel false
+    // RankBar skips the track+caption block entirely in 'unknown' mode.
+    const { queryByText, getAllByTestId } = render(
+      <RankBar
+        rank={makeRank({ nextLevelMinPoints: null, nextLevelTitle: null, isMaxLevel: false })}
+      />,
+    )
+    expect(queryByText(/До «/)).toBeNull()
+    expect(queryByText(/Максимальный уровень/)).toBeNull()
+    // In unknown mode only the level-chip gradient renders (1 LinearGradient),
+    // not the progress-bar gradient (which would be a second one).
+    expect(getAllByTestId('linear-gradient')).toHaveLength(1)
   })
 
   it('does NOT render progress caption in compact mode', () => {
@@ -123,10 +139,10 @@ describe('RankBar', () => {
     expect(el).toBeTruthy()
   })
 
-  it('accessibilityLabel says "Максимальный уровень" when nextLevelMinPoints is null', () => {
+  it('accessibilityLabel says "Максимальный уровень" when isMaxLevel is true', () => {
     const { getByLabelText } = render(
       <RankBar
-        rank={makeRank({ nextLevelMinPoints: null, nextLevelTitle: null })}
+        rank={makeRank({ nextLevelMinPoints: null, nextLevelTitle: null, isMaxLevel: true })}
       />,
     )
     expect(getByLabelText(/Максимальный уровень/)).toBeTruthy()

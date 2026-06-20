@@ -9,6 +9,8 @@ import {
   MOCK_BADGES,
   MOCK_MY_ACHIEVEMENTS,
   MOCK_PUBLIC_ACHIEVEMENTS,
+  MOCK_PEER_CATALOG,
+  MOCK_TRAVEL_PEER_RECEIVED,
 } from '@/api/achievementsMock';
 
 // ── Доменные типы (camelCase) ──────────────────────────────────────────────
@@ -70,6 +72,33 @@ export interface MyAchievements {
 export interface PublicAchievements {
   rank: UserRank;
   earned: UserBadge[];
+  peerReceived: PeerBadgeReceived[];
+}
+
+// ── Peer-awarded badges (награды от сообщества, §10) ─────────────────────────
+
+export type PeerBadgeTarget = 'user' | 'travel';
+
+export interface PeerBadge extends Badge {
+  target: PeerBadgeTarget;
+}
+
+export interface PeerBadgeReceived {
+  badge: PeerBadge;
+  count: number;
+  /** Выдал ли текущий зритель этот значок. */
+  grantedByMe: boolean;
+}
+
+export interface GrantResult {
+  granted: boolean;
+  count: number;
+}
+
+export interface GrantInput {
+  badgeSlug: string;
+  recipientId?: string | number;
+  travelId?: string | number;
 }
 
 // ── Сырые DTO бэкенда (snake_case DRF) ──────────────────────────────────────
@@ -132,6 +161,26 @@ interface MyAchievementsDto {
 interface PublicAchievementsDto {
   rank: RankSummaryDto;
   earned_badges: UserBadgeDto[];
+  peer_received?: PeerBadgeReceivedDto[];
+}
+
+interface PeerBadgeDto extends BadgeDto {
+  target?: string | null;
+}
+
+interface PeerBadgeReceivedDto {
+  badge: PeerBadgeDto;
+  count?: number | null;
+  granted_by_me?: boolean | null;
+}
+
+interface TravelPeerBadgesDto {
+  peer_received?: PeerBadgeReceivedDto[];
+}
+
+interface GrantResponseDto {
+  granted?: boolean | null;
+  count?: number | null;
 }
 
 // ── Мапперы DTO → домен ─────────────────────────────────────────────────────
@@ -215,9 +264,24 @@ const mapMy = (dto: MyAchievementsDto): MyAchievements => ({
   recentlyEarned: (dto.recently_earned ?? []).map(mapUserBadge),
 });
 
+const normalizePeerTarget = (raw: string | null | undefined): PeerBadgeTarget =>
+  raw === 'travel' ? 'travel' : 'user';
+
+const mapPeerBadge = (dto: PeerBadgeDto): PeerBadge => ({
+  ...mapBadge(dto),
+  target: normalizePeerTarget(dto.target),
+});
+
+const mapPeerReceived = (dto: PeerBadgeReceivedDto): PeerBadgeReceived => ({
+  badge: mapPeerBadge(dto.badge),
+  count: dto.count ?? 0,
+  grantedByMe: Boolean(dto.granted_by_me),
+});
+
 const mapPublic = (dto: PublicAchievementsDto): PublicAchievements => ({
   rank: mapRank(dto.rank),
   earned: (dto.earned_badges ?? []).map(mapUserBadge),
+  peerReceived: (dto.peer_received ?? []).map(mapPeerReceived),
 });
 
 // ── Мок-фолбэк (до готовности BE-A4) ────────────────────────────────────────
@@ -276,6 +340,67 @@ export async function fetchUserAchievements(
     if (shouldFallbackToMock(error)) {
       devWarn('[achievements] user → mock fallback');
       return MOCK_PUBLIC_ACHIEVEMENTS;
+    }
+    throw error;
+  }
+}
+
+// ── Peer-awarded badges (§10) ───────────────────────────────────────────────
+
+/** Каталог grantable peer-значков (для пикера выдачи). */
+export async function fetchPeerBadgeCatalog(): Promise<PeerBadge[]> {
+  if (USE_MOCK) return MOCK_PEER_CATALOG;
+  try {
+    const dto = await apiClient.get<PeerBadgeDto[]>('/achievements/peer-badges/');
+    return (dto ?? []).map(mapPeerBadge);
+  } catch (error) {
+    if (shouldFallbackToMock(error)) {
+      devWarn('[achievements] peer catalog → mock fallback');
+      return MOCK_PEER_CATALOG;
+    }
+    throw error;
+  }
+}
+
+/** Peer-значки, полученные конкретным travel (для travel-detail). */
+export async function fetchTravelPeerBadges(
+  travelId: string | number,
+): Promise<PeerBadgeReceived[]> {
+  if (USE_MOCK) return MOCK_TRAVEL_PEER_RECEIVED;
+  try {
+    const dto = await apiClient.get<TravelPeerBadgesDto>(
+      `/achievements/travel/${travelId}/`,
+      undefined,
+      { skipAuth: true },
+    );
+    return (dto?.peer_received ?? []).map(mapPeerReceived);
+  } catch (error) {
+    if (shouldFallbackToMock(error)) {
+      devWarn('[achievements] travel peer → mock fallback');
+      return MOCK_TRAVEL_PEER_RECEIVED;
+    }
+    throw error;
+  }
+}
+
+/** Toggle-выдача peer-значка (дал/забрал). Возвращает новое состояние + счётчик. */
+export async function grantPeerBadge(input: GrantInput): Promise<GrantResult> {
+  const body = {
+    badge_slug: input.badgeSlug,
+    ...(input.recipientId != null ? { recipient_id: input.recipientId } : {}),
+    ...(input.travelId != null ? { travel_id: input.travelId } : {}),
+  };
+  try {
+    const dto = await apiClient.post<GrantResponseDto>(
+      '/achievements/peer-badges/grant/',
+      body,
+    );
+    return { granted: Boolean(dto?.granted), count: dto?.count ?? 0 };
+  } catch (error) {
+    // Без бэка (mock/DEV-404) — симулируем «выдал», чтобы UI-toggle работал в превью.
+    if (shouldFallbackToMock(error)) {
+      devWarn('[achievements] grant → mock simulate');
+      return { granted: true, count: 1 };
     }
     throw error;
   }

@@ -7,6 +7,9 @@ import type {
   Badge,
   BadgeProgress,
   MyAchievements,
+  PeerBadge,
+  PeerBadgeReceived,
+  PeerBadgeTarget,
   PublicAchievements,
   UserBadge,
   UserRank,
@@ -59,6 +62,7 @@ export const MOCK_RANK: UserRank = {
   currentLevelMinPoints: 400,
   nextLevelMinPoints: 900,
   nextLevelTitle: 'Писатель',
+  isMaxLevel: false,
 };
 
 const MOCK_EARNED: UserBadge[] = [
@@ -91,7 +95,61 @@ export const MOCK_MY_ACHIEVEMENTS: MyAchievements = {
   recentlyEarned: [MOCK_EARNED[5]],
 };
 
+// ── Peer-awarded badges (§10) ───────────────────────────────────────────────
+
+const peerBadge = (
+  id: number,
+  slug: string,
+  name: string,
+  description: string,
+  target: PeerBadgeTarget,
+  tier: PeerBadge['tier'],
+): PeerBadge => ({
+  id,
+  slug,
+  name,
+  description,
+  categorySlug: 'community',
+  categoryName: 'От сообщества',
+  tier,
+  imageUrl: null,
+  points: 0,
+  isSecret: false,
+  order: id,
+  target,
+});
+
+export const MOCK_PEER_CATALOG: PeerBadge[] = [
+  peerBadge(101, 'favorite-author', 'Любимый автор', 'Один из ваших любимых авторов', 'user', 'gold'),
+  peerBadge(102, 'inspired-me', 'Вдохновил меня', 'Этот автор вдохновил на путешествие', 'user', 'silver'),
+  peerBadge(103, 'best-storyteller', 'Лучший рассказчик', 'Истории, которые хочется читать', 'user', 'platinum'),
+  peerBadge(104, 'discovery', 'Открытие', 'Приятное открытие среди авторов', 'user', 'bronze'),
+  peerBadge(111, 'best-article', 'Лучшая статья', 'Лучшая статья, что вы читали', 'travel', 'gold'),
+  peerBadge(112, 'best-photos', 'Лучшие фото', 'Потрясающие фотографии', 'travel', 'platinum'),
+  peerBadge(113, 'want-to-repeat', 'Хочу повторить', 'Маршрут, который хочется пройти', 'travel', 'silver'),
+  peerBadge(114, 'most-useful', 'Самый полезный', 'Очень полезный материал', 'travel', 'bronze'),
+];
+
+const received = (
+  badge: PeerBadge,
+  count: number,
+  grantedByMe: boolean,
+): PeerBadgeReceived => ({ badge, count, grantedByMe });
+
+export const MOCK_PEER_RECEIVED: PeerBadgeReceived[] = [
+  received(MOCK_PEER_CATALOG[0], 42, false),
+  received(MOCK_PEER_CATALOG[1], 17, true),
+  received(MOCK_PEER_CATALOG[2], 8, false),
+];
+
+export const MOCK_TRAVEL_PEER_RECEIVED: PeerBadgeReceived[] = [
+  received(MOCK_PEER_CATALOG[4], 23, false),
+  received(MOCK_PEER_CATALOG[5], 31, true),
+  received(MOCK_PEER_CATALOG[7], 12, false),
+];
+
 export const MOCK_PUBLIC_ACHIEVEMENTS: PublicAchievements = {
   rank: MOCK_RANK,
   earned: MOCK_EARNED,
+  peerReceived: MOCK_PEER_RECEIVED,
 };

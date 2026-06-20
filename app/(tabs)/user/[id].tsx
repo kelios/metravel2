@@ -24,6 +24,8 @@ import { fetchTravels } from '@/api/travelListQueries';
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import UserAchievementsSection from '@/components/achievements/UserAchievementsSection';
+import PeerBadgeGiveButton from '@/components/achievements/PeerBadgeGiveButton';
+import { useUserAchievements } from '@/hooks/useAchievementsApi';
 import { useResponsive } from '@/hooks/useResponsive';
 import type { Travel } from '@/types/types';
 
@@ -106,6 +108,9 @@ export default function PublicUserProfileScreen() {
   const subscribersCount = subscribersQuery.data?.length ?? null;
 
   const { isMobile } = useResponsive();
+
+  const userAchievementsQuery = useUserAchievements(userId);
+  const peerReceived = userAchievementsQuery.data?.peerReceived ?? [];
 
   const authorTravelsQuery = useQuery<{ data: Travel[]; total: number }>({
     queryKey: queryKeys.userTravels(userId),
@@ -269,6 +274,9 @@ export default function PublicUserProfileScreen() {
                 <Feather name="mail" size={16} color={colors.primary} />
                 <Text style={styles.secondaryButtonText}>Написать</Text>
               </Pressable>
+            )}
+            {!isOwnProfile && (
+              <PeerBadgeGiveButton target="user" recipientId={userId} received={peerReceived} />
             )}
             <Pressable
               style={[styles.secondaryButton, globalFocusStyles.focusable]}

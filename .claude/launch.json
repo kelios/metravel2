@@ -4,105 +4,177 @@
     {
       "name": "Expo Web Node",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["node_modules/expo/bin/cli", "start", "--web", "--port", "8081"],
+      "runtimeArgs": [
+        "node_modules/expo/bin/cli",
+        "start",
+        "--web",
+        "--port",
+        "8081"
+      ],
       "port": 8081,
       "autoPort": false
     },
     {
       "name": "Expo Web",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["expo", "start", "--web"],
+      "runtimeArgs": [
+        "expo",
+        "start",
+        "--web"
+      ],
       "port": 8081,
       "autoPort": false
     },
     {
       "name": "Expo Web 8082",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["expo", "start", "--web", "--port", "8082"],
+      "runtimeArgs": [
+        "expo",
+        "start",
+        "--web",
+        "--port",
+        "8082"
+      ],
       "port": 8082,
       "autoPort": false
     },
     {
       "name": "Expo Native 8084 NoLazy",
       "runtimeExecutable": "cmd",
-      "runtimeArgs": ["/c", "set EXPO_NO_METRO_LAZY=1&& npx expo start --port 8084"],
+      "runtimeArgs": [
+        "/c",
+        "set EXPO_NO_METRO_LAZY=1&& npx expo start --port 8084"
+      ],
       "port": 8084,
       "autoPort": false
     },
     {
       "name": "Expo Web Clear 8082",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["expo", "start", "--web", "--clear", "--port", "8082"],
+      "runtimeArgs": [
+        "expo",
+        "start",
+        "--web",
+        "--clear",
+        "--port",
+        "8082"
+      ],
       "port": 8082,
       "autoPort": false
     },
     {
       "name": "Expo Start (All Platforms)",
       "runtimeExecutable": "yarn",
-      "runtimeArgs": ["start"],
+      "runtimeArgs": [
+        "start"
+      ],
       "port": 8081,
       "autoPort": false
     },
     {
       "name": "E2E Web Server",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["scripts/e2e-webserver.js"],
+      "runtimeArgs": [
+        "scripts/e2e-webserver.js"
+      ],
       "port": 8085
     },
     {
       "name": "Workboard Static",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["scripts/workboard-server.js", "4599"],
+      "runtimeArgs": [
+        "scripts/workboard-server.js",
+        "4599"
+      ],
       "port": 4599,
       "autoPort": false
     },
     {
       "name": "Dist Static",
       "runtimeExecutable": "node",
-      "runtimeArgs": [".claude/dist-server.js", "4601"],
+      "runtimeArgs": [
+        ".claude/dist-server.js",
+        "4601"
+      ],
       "port": 4601,
       "autoPort": false
     },
     {
       "name": "Prod Static",
       "runtimeExecutable": "node",
-      "runtimeArgs": [".claude/prod-server.js", "8081"],
+      "runtimeArgs": [
+        ".claude/prod-server.js",
+        "8081"
+      ],
       "port": 8081,
       "autoPort": false
     },
     {
       "name": "Raw Dist 8090",
       "runtimeExecutable": "node",
-      "runtimeArgs": [".claude/prod-server.js", "8090", "dist"],
+      "runtimeArgs": [
+        ".claude/prod-server.js",
+        "8090",
+        "dist"
+      ],
       "port": 8090,
       "autoPort": false
     },
     {
       "name": "Dist Local API 8091",
       "runtimeExecutable": "node",
-      "runtimeArgs": [".claude/prod-server.js", "8091", "dist", "http://192.168.50.36"],
+      "runtimeArgs": [
+        ".claude/prod-server.js",
+        "8091",
+        "dist",
+        "http://192.168.50.36"
+      ],
       "port": 8091,
       "autoPort": false
     },
     {
       "name": "Dist Prod 8093",
       "runtimeExecutable": "node",
-      "runtimeArgs": [".claude/prod-server.js", "8093", "dist", "https://metravel.by"],
+      "runtimeArgs": [
+        ".claude/prod-server.js",
+        "8093",
+        "dist",
+        "https://metravel.by"
+      ],
       "port": 8093,
       "autoPort": false
     },
     {
       "name": "Prod Static 4602",
       "runtimeExecutable": "node",
-      "runtimeArgs": [".claude/prod-server.js", "4602", "dist/prod", "https://metravel.by"],
+      "runtimeArgs": [
+        ".claude/prod-server.js",
+        "4602",
+        "dist/prod",
+        "https://metravel.by"
+      ],
       "port": 4602,
       "autoPort": false
     },
     {
       "name": "PDF Preview Static",
       "runtimeExecutable": "node",
-      "runtimeArgs": [".claude/prod-server.js", "4610", ".tmp-pdf-preview"],
+      "runtimeArgs": [
+        ".claude/prod-server.js",
+        "4610",
+        ".tmp-pdf-preview"
+      ],
       "port": 4610,
+      "autoPort": false
+    },
+    {
+      "name": "Expo Web Mock 8083",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "EXPO_PUBLIC_ACHIEVEMENTS_MOCK=true npx expo start --web --port 8083"
+      ],
+      "port": 8083,
       "autoPort": false
     }
   ]

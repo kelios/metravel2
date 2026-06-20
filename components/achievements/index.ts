@@ -5,3 +5,6 @@ export { default as AchievementsSection } from '@/components/achievements/Achiev
 export { default as UserAchievementsSection } from '@/components/achievements/UserAchievementsSection';
 export { default as AchievementsGalleryModal } from '@/components/achievements/AchievementsGalleryModal';
 export { default as BadgeUnlockToast } from '@/components/achievements/BadgeUnlockToast';
+export { default as PeerBadgeReceivedRow } from '@/components/achievements/PeerBadgeReceivedRow';
+export { default as PeerBadgeGiveButton } from '@/components/achievements/PeerBadgeGiveButton';
+export { default as PeerBadgePickerSheet } from '@/components/achievements/PeerBadgePickerSheet';

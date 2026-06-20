@@ -791,6 +791,68 @@ export default function PlacesScreen() {
             color={colors.textMuted}
           />
         </Pressable>
+
+        <Menu
+          visible={countryMenuVisible}
+          onDismiss={() => setCountryMenuVisible(false)}
+          contentStyle={styles.countryMenuContent}
+          anchor={
+            <Pressable
+              onPress={() => setCountryMenuVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Выбрать страну"
+              accessibilityState={{ expanded: countryMenuVisible, disabled: placesQuery.isLoading }}
+              disabled={placesQuery.isLoading}
+              style={({ pressed }) => [
+                styles.compactCountrySelect,
+                !!selectedCountry && styles.compactCountrySelectActive,
+                pressed && !placesQuery.isLoading && PRESSED_OPACITY,
+                placesQuery.isLoading && styles.countrySelectDisabled,
+              ]}
+            >
+              <Feather name="globe" size={16} color={selectedCountry ? colors.primary : colors.textMuted} />
+              <Text
+                style={[
+                  styles.compactCountrySelectValue,
+                  !!selectedCountry && styles.compactCountrySelectValueActive,
+                ]}
+                numberOfLines={1}
+              >
+                {selectedCountry ?? 'Все страны'}
+              </Text>
+              <Feather name="chevron-down" size={16} color={colors.textMuted} />
+            </Pressable>
+          }
+        >
+          <Menu.Item
+            title={showLoadedCounts ? `Все страны (${placesForCountryCounts.length})` : 'Все страны'}
+            onPress={() => handleSelectCountry(null)}
+            leadingIcon={({ size }) => (
+              <Feather
+                name={selectedCountry ? 'circle' : 'check-circle'}
+                size={size}
+                color={selectedCountry ? colors.textMuted : colors.primary}
+              />
+            )}
+            titleStyle={selectedCountry ? styles.countryMenuItemText : styles.countryMenuItemTextActive}
+          />
+          {countryGroups.map((group) => (
+            <Menu.Item
+              key={group.country}
+              title={`${group.country} (${group.count})`}
+              onPress={() => handleSelectCountry(group.country)}
+              leadingIcon={({ size }) => (
+                <Feather
+                  name={selectedCountry === group.country ? 'check-circle' : 'circle'}
+                  size={size}
+                  color={selectedCountry === group.country ? colors.primary : colors.textMuted}
+                />
+              )}
+              titleStyle={selectedCountry === group.country ? styles.countryMenuItemTextActive : styles.countryMenuItemText}
+            />
+          ))}
+        </Menu>
+
         {hasActiveFilters ? (
           <Pressable
             onPress={resetAll}

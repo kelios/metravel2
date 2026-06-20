@@ -181,7 +181,7 @@ export default function RouletteScreen() {
       compassLoopRef.current = Animated.loop(
         Animated.timing(compassSpin, {
           toValue: 1,
-          duration: 1200,
+          duration: 900,
           easing: Easing.linear,
           useNativeDriver: false,
         }),
@@ -378,7 +378,13 @@ export default function RouletteScreen() {
                                     {
                                       translateY: anim.interpolate({
                                         inputRange: [0, 1],
-                                        outputRange: [20, 0],
+                                        outputRange: [28, 0],
+                                      }),
+                                    },
+                                    {
+                                      scale: anim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.94, 1],
                                       }),
                                     },
                                   ],
@@ -433,23 +439,50 @@ export default function RouletteScreen() {
                         resultsBottomInset > 0 && { paddingBottom: resultsBottomInset },
                       ]}
                       {...({ estimatedItemSize: 420 } as any)}
-                      renderItem={({ item, index }) => (
-                        <View style={styles.cardWrapper}>
-                          <RenderTravelItem
-                            item={item}
-                            index={index}
-                            isMobile={isMobile}
-                            isSuperuser={false}
-                            isMetravel={false}
-                            onDeletePress={undefined}
-                            isFirst={index === 0}
-                            selectable={false}
-                            isSelected={false}
-                            onToggle={undefined}
-                            viewportWidth={width}
-                          />
-                        </View>
-                      )}
+                      renderItem={({ item, index }) => {
+                        // Тот же поочерёдный «drop-in», что и на web-desktop, теперь и на
+                        // mobile/native: карточки результата мягко выпадают сверху со
+                        // stagger'ом (cardAnims перезапускается на каждый новый спин).
+                        const anim = cardAnims[index] ?? cardAnims[cardAnims.length - 1];
+                        return (
+                          <Animated.View
+                            style={[
+                              styles.cardWrapper,
+                              {
+                                opacity: anim,
+                                transform: [
+                                  {
+                                    translateY: anim.interpolate({
+                                      inputRange: [0, 1],
+                                      outputRange: [28, 0],
+                                    }),
+                                  },
+                                  {
+                                    scale: anim.interpolate({
+                                      inputRange: [0, 1],
+                                      outputRange: [0.94, 1],
+                                    }),
+                                  },
+                                ],
+                              },
+                            ]}
+                          >
+                            <RenderTravelItem
+                              item={item}
+                              index={index}
+                              isMobile={isMobile}
+                              isSuperuser={false}
+                              isMetravel={false}
+                              onDeletePress={undefined}
+                              isFirst={index === 0}
+                              selectable={false}
+                              isSelected={false}
+                              onToggle={undefined}
+                              viewportWidth={width}
+                            />
+                          </Animated.View>
+                        );
+                      }}
                     />
                   </>
                 )}

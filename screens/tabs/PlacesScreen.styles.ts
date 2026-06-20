@@ -3,7 +3,9 @@ import { Platform, StyleSheet } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { type ThemedColors } from '@/hooks/useTheme'
 
-export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean) => StyleSheet.create({
+export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean) => {
+  const nativeCompact = Platform.OS !== 'web' && isCompact
+  return StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -347,7 +349,7 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     flexDirection: isCompact ? 'column' : 'row',
     alignItems: 'flex-start',
     gap: 0,
-    marginTop: DESIGN_TOKENS.spacing.md,
+    marginTop: nativeCompact ? 0 : DESIGN_TOKENS.spacing.md,
   },
 
   // ─── Native compact sticky bar ───
@@ -383,6 +385,36 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
   compactFilterToggleActive: {
     borderColor: colors.primaryAlpha30,
     backgroundColor: colors.primarySoft,
+  },
+  // Compact country chip — second anchor for the same country Menu, sized to sit
+  // beside the Категории toggle in the native sticky bar without overflowing.
+  compactCountrySelect: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
+    flex: 1,
+    minHeight: 38,
+    maxWidth: '52%',
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  compactCountrySelectActive: {
+    borderColor: colors.primaryAlpha30,
+    backgroundColor: colors.primarySoft,
+  },
+  compactCountrySelectValue: {
+    flex: 1,
+    minWidth: 0,
+    color: colors.text,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '600',
+  },
+  compactCountrySelectValueActive: {
+    color: colors.primary,
+    fontWeight: '700',
   },
 
   // ─── Mobile filter bar ───
@@ -494,9 +526,10 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     flex: 1,
     minWidth: 0,
     width: isCompact ? '100%' : undefined,
-    gap: DESIGN_TOKENS.spacing.lg,
+    gap: nativeCompact ? DESIGN_TOKENS.spacing.md : DESIGN_TOKENS.spacing.lg,
     paddingHorizontal: isCompact ? DESIGN_TOKENS.spacing.lg : DESIGN_TOKENS.spacing.xl,
-    paddingVertical: DESIGN_TOKENS.spacing.xl,
+    paddingTop: nativeCompact ? DESIGN_TOKENS.spacing.sm : DESIGN_TOKENS.spacing.xl,
+    paddingBottom: DESIGN_TOKENS.spacing.xl,
   },
   resultsHeader: {
     flexDirection: 'row',
@@ -511,7 +544,9 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
   },
   resultsTitle: {
     color: colors.text,
-    ...DESIGN_TOKENS.typography.scale.h1,
+    ...(nativeCompact
+      ? DESIGN_TOKENS.typography.scale.h3
+      : DESIGN_TOKENS.typography.scale.h1),
   },
   resultsMeta: {
     color: colors.textMuted,
@@ -802,6 +837,7 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     alignItems: 'center',
     gap: DESIGN_TOKENS.spacing.sm,
   },
-})
+  })
+}
 
 export type PlacesStyles = ReturnType<typeof createStyles>

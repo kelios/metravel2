@@ -55,4 +55,7 @@ export const queryKeys = {
   achievementsMe: () => ['achievements', 'me'] as const,
   achievementsUser: (userId: string | number | null | undefined) =>
     ['achievements', 'user', userId] as const,
+  achievementsPeerCatalog: () => ['achievements', 'peer-catalog'] as const,
+  achievementsTravelPeer: (travelId: string | number | null | undefined) =>
+    ['achievements', 'travel-peer', travelId] as const,
 } as const;

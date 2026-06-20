@@ -17,15 +17,19 @@ interface Props {
 function RankBar({ rank, compact = false, testID, style }: Props) {
   const colors = useThemedColors();
 
-  const { ratio, remaining, isMax } = useMemo(() => {
-    const max = rank.nextLevelMinPoints == null;
-    if (max) return { ratio: 1, remaining: 0, isMax: true };
-    const span = Math.max(1, rank.nextLevelMinPoints! - rank.currentLevelMinPoints);
+  // 'max' — достигнут максимум; 'progress' — есть следующий уровень; 'unknown' —
+  // пороги не пришли (публичный эндпоинт без rank_levels), полосу не рисуем.
+  const { mode, ratio, remaining } = useMemo(() => {
+    if (rank.isMaxLevel) return { mode: 'max' as const, ratio: 1, remaining: 0 };
+    if (rank.nextLevelMinPoints == null) {
+      return { mode: 'unknown' as const, ratio: 0, remaining: 0 };
+    }
+    const span = Math.max(1, rank.nextLevelMinPoints - rank.currentLevelMinPoints);
     const done = rank.totalPoints - rank.currentLevelMinPoints;
     return {
+      mode: 'progress' as const,
       ratio: Math.max(0, Math.min(1, done / span)),
-      remaining: Math.max(0, rank.nextLevelMinPoints! - rank.totalPoints),
-      isMax: false,
+      remaining: Math.max(0, rank.nextLevelMinPoints - rank.totalPoints),
     };
   }, [rank]);
 
@@ -80,9 +84,11 @@ function RankBar({ rank, compact = false, testID, style }: Props) {
       testID={testID}
       accessibilityRole="summary"
       accessibilityLabel={
-        isMax
+        mode === 'max'
           ? `Уровень ${rank.level}, ${rank.title}. Максимальный уровень`
-          : `Уровень ${rank.level}, ${rank.title}. ${rank.totalPoints} очков, до уровня ${rank.nextLevelTitle ?? ''} осталось ${remaining}`
+          : mode === 'progress'
+            ? `Уровень ${rank.level}, ${rank.title}. ${rank.totalPoints} очков, до уровня ${rank.nextLevelTitle ?? ''} осталось ${remaining}`
+            : `Уровень ${rank.level}, ${rank.title}. ${rank.totalPoints} очков`
       }
     >
       <View style={styles.row}>
@@ -107,18 +113,20 @@ function RankBar({ rank, compact = false, testID, style }: Props) {
         </View>
       </View>
 
-      <View style={styles.track}>
-        <LinearGradient
-          colors={[colors.brand, colors.primary]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={[styles.fill, { width: `${ratio * 100}%` }]}
-        />
-      </View>
+      {mode !== 'unknown' ? (
+        <View style={styles.track}>
+          <LinearGradient
+            colors={[colors.brand, colors.primary]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[styles.fill, { width: `${ratio * 100}%` }]}
+          />
+        </View>
+      ) : null}
 
-      {!compact ? (
+      {!compact && mode !== 'unknown' ? (
         <Text style={styles.caption}>
-          {isMax
+          {mode === 'max'
             ? 'Максимальный уровень достигнут 🏆'
             : `До «${rank.nextLevelTitle}»: ${remaining} XP`}
         </Text>
