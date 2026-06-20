@@ -236,20 +236,74 @@ const PlaceListCard: React.FC<Props> = ({
 
   const hasCoord = !!coord;
   const isCompactWebCard = compact && IS_WEB;
-  const visibleMapActions = isCompactWebCard ? mapActions.slice(0, 1) : mapActions;
-  const visibleInlineActions = isCompactWebCard ? inlineActions.slice(0, 1) : inlineActions;
-  const overflowActions = isCompactWebCard ? [...mapActions.slice(1), ...inlineActions.slice(1)] : [];
+  // Unified compact card: primary actions (♥ favorite + ＋ save) live in the
+  // top-right overlay so every list card reads identically. Every secondary
+  // action (Telegram / map apps / «Открыть») collapses into a single «Ещё»
+  // overflow menu, so the action row can never balloon into a long horizontal
+  // strip on some cards and a short one on others.
+  const overlayAddInline = isCompactWebCard && addButtonPlacement === 'row';
+  const shareOverflowAction: ActionChip | null =
+    isCompactWebCard && hasCoord && onShare
+      ? {
+          key: 'share',
+          label: 'Telegram',
+          icon: 'send',
+          onPress: onShare,
+          accessibilityLabel: 'Поделиться в Telegram',
+          title: 'Поделиться в Telegram',
+        }
+      : null;
+  const visibleMapActions = isCompactWebCard ? [] : mapActions;
+  const visibleInlineActions = isCompactWebCard ? [] : inlineActions;
+  const overflowActions = isCompactWebCard
+    ? [
+        ...(shareOverflowAction ? [shareOverflowAction] : []),
+        ...mapActions,
+        ...inlineActions,
+      ]
+    : [];
+  const showShareChip = !isCompactWebCard && hasCoord && !!onShare;
+  const showRowAddButton =
+    showAddButton && addButtonPlacement === 'row' && !!onAddPoint && !overlayAddInline;
   const hasActionRow = showActionRow && (
     (hasCoord && !!onCopyCoord) ||
-    (hasCoord && !!onShare) ||
+    showShareChip ||
     visibleMapActions.length > 0 ||
     visibleInlineActions.length > 0 ||
     overflowActions.length > 0 ||
-    (showAddButton && addButtonPlacement === 'row' && !!onAddPoint)
+    showRowAddButton
   );
   const openOverflowMenu = useCallback(() => setOverflowVisible(true), []);
   const closeOverflowMenu = useCallback(() => setOverflowVisible(false), []);
-  const relatedTravelActions = relatedTravelUrl ? (
+  // Top-right overlay holds the two primary affordances (♥ favorite + ＋ save)
+  // on EVERY card, so the list reads as one pattern regardless of whether a
+  // card has a related travel or its own photo. Related-travel cards delegate
+  // to the shared favorite/status stack; plain cards get the fallback ♥ plus
+  // the ＋ "save point" button lifted out of the action row.
+  const overlayAddButton =
+    overlayAddInline && onAddPoint ? (
+      <CardActionPressable
+        accessibilityRole="button"
+        accessibilityLabel={addLabel}
+        accessibilityState={{ disabled: addDisabled || isAdding, busy: isAdding }}
+        disabled={addDisabled || isAdding}
+        onPress={() => void onAddPoint()}
+        title={addLabel}
+        style={({ pressed }) => [
+          styles.fallbackFavButton,
+          pressed && !addDisabled && !isAdding && styles.iconBtnPressed,
+          (addDisabled || isAdding) && styles.iconBtnDisabled,
+        ]}
+      >
+        {isAdding ? (
+          <ActivityIndicator size="small" color={colors.textOnDark} />
+        ) : (
+          <Feather name="plus" size={18} color={colors.textOnDark} />
+        )}
+      </CardActionPressable>
+    ) : null;
+
+  const favoriteAffordance = relatedTravelUrl ? (
     <RelatedTravelActionStack
       relatedTravelUrl={relatedTravelUrl}
       fallbackTitle={title}
@@ -276,6 +330,14 @@ const PlaceListCard: React.FC<Props> = ({
       />
     </CardActionPressable>
   ) : null
+
+  const relatedTravelActions =
+    favoriteAffordance || overlayAddButton ? (
+      <View style={styles.fallbackActionStack}>
+        {favoriteAffordance}
+        {overlayAddButton}
+      </View>
+    ) : null
 
   return (
     <UnifiedTravelCard
@@ -341,7 +403,7 @@ const PlaceListCard: React.FC<Props> = ({
                 />
               )}
 
-              {hasCoord && onShare && (
+              {showShareChip && onShare && (
                 <LabeledActionChip
                   accessibilityLabel="Поделиться в Telegram"
                   icon="send"
@@ -411,7 +473,7 @@ const PlaceListCard: React.FC<Props> = ({
                 </Menu>
               )}
 
-              {showAddButton && addButtonPlacement === 'row' && onAddPoint && (
+              {showRowAddButton && onAddPoint && (
                 <LabeledActionChip
                   accessibilityLabel={addLabel}
                   disabled={addDisabled || isAdding}
@@ -604,6 +666,11 @@ const createStyles = (
     iconBtnPressed: {
       opacity: 0.65,
       ...Platform.select({ web: { transform: 'scale(0.97)' as any } }),
+    },
+    fallbackActionStack: {
+      flexDirection: 'column',
+      alignItems: 'flex-end',
+      gap: 6,
     },
     fallbackFavButton: {
       alignSelf: 'flex-start',
