@@ -8,6 +8,10 @@ import ThemedPaperProvider from '@/components/ui/ThemedPaperProvider'
 interface AppProvidersProps {
   queryClient: any
   children: React.ReactNode
+  deferAuthProvider?: boolean
+  authDeferMode?: 'idle' | 'interaction'
+  deferFavoritesProvider?: boolean
+  favoritesDeferMode?: 'idle' | 'interaction'
 }
 
 export default function AppProviders({ queryClient, children }: AppProvidersProps) {

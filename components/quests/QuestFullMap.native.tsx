@@ -323,7 +323,6 @@ function QuestFullMap({
                     startInLoadingState
                     onLoadEnd={() => setIsLoading(false)}
                     scrollEnabled
-                    pinchZoomEnabled
                 />
                 <View style={styles.zoomControls} pointerEvents="box-none">
                     <TouchableOpacity

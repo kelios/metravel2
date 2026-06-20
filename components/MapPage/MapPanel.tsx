@@ -101,7 +101,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
 
     const travelProp = useMemo(() => ({ data: travelsData }), [travelsData]);
     const nativeTravelProp = useMemo(
-        () => ({ travelAddress: { data: travelsData } }),
+        () => ({ data: travelsData }),
         [travelsData],
     );
 
@@ -154,6 +154,9 @@ const MapPanel: React.FC<MapPanelProps> = ({
                     routePoints={routePoints}
                     fullRouteCoords={fullRouteCoords}
                     mode={mode}
+                    transportMode={transportMode}
+                    setRouteDistance={setRouteDistance}
+                    setFullRouteCoords={setFullRouteCoords}
                     onMapClick={onMapClick}
                     onMarkerSelect={onMarkerSelect}
                     onMapMove={onMapMove}

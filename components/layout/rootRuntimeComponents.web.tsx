@@ -13,9 +13,9 @@ const safeLazy = <T extends React.ComponentType<any>>(
     }),
   )
 
-export const SyncIndicatorComponent = null
-export const ToastComponent = null
-export const NativeFooterComponent = null
+export const SyncIndicatorComponent: React.ComponentType<any> | null = null
+export const ToastComponent: React.ComponentType<any> | null = null
+export const NativeFooterComponent: React.ComponentType<any> | null = null
 
 export const ReactQueryDevtoolsComponent: any = __DEV__
   ? safeLazy(
@@ -27,7 +27,7 @@ export const ReactQueryDevtoolsComponent: any = __DEV__
     )
   : null
 
-export const RootWebDeferredChromeComponent = safeLazy(
+export const RootWebDeferredChromeComponent: React.ComponentType<any> | null = safeLazy(
   () => import('@/components/layout/RootWebDeferredChrome'),
   'RootWebDeferredChrome',
 )

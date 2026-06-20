@@ -8,6 +8,7 @@ import type { Point, TransportMode, MapMode, Coordinates } from '@/components/ma
 export interface MapProps {
   travel?: { data?: Point[] };
   coordinates: Coordinates;
+  userLocation?: Coordinates | null;
   routePoints: [number, number][];
   fullRouteCoords?: [number, number][];
   setRoutePoints?: (points: [number, number][]) => void;
