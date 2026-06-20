@@ -59,7 +59,10 @@ function MyApplicationsList() {
           </Text>
           {canCancel(a) ? (
             <Pressable
-              onPress={() => cancel.mutate(a.id)}
+              onPress={(e) => {
+                e?.stopPropagation?.();
+                cancel.mutate(a.id);
+              }}
               hitSlop={8}
               accessibilityRole="button"
               testID={`my-application-${a.id}-cancel`}

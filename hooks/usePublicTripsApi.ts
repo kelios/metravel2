@@ -136,6 +136,17 @@ export function useCancelApplication() {
     onError: (_err, _id, prev) => {
       if (prev) qc.setQueryData(queryKeys.tripMyApplications(), prev);
     },
+    onSuccess: (_res, applicationId) => {
+      // Сбросить «На рассмотрении» на карточке/детали соответствующей поездки.
+      const apps = qc.getQueryData<TripApplication[]>(queryKeys.tripMyApplications());
+      const tripId = apps?.find((a) => a.id === applicationId)?.tripId;
+      if (tripId != null) {
+        qc.setQueryData<PublicTrip>(queryKeys.publicTrip(tripId), (old) =>
+          old ? { ...old, myApplicationStatus: 'cancelled' } : old,
+        );
+      }
+      void qc.invalidateQueries({ queryKey: queryKeys.publicTripsAll() });
+    },
   });
 }
 
@@ -170,6 +181,13 @@ export function useDecideApplication() {
     },
     onSuccess: (_result, input) => {
       trackApplicationDecision(input.decision, input.tripId, input.applicationId);
+    },
+    onSettled: (_result, _err, input) => {
+      // Одобрение/отклонение может изменить занятые места/статус поездки и
+      // статус заявки участника — обновляем связанные кэши.
+      void qc.invalidateQueries({ queryKey: queryKeys.publicTrip(input.tripId) });
+      void qc.invalidateQueries({ queryKey: queryKeys.publicTripsAll() });
+      void qc.invalidateQueries({ queryKey: queryKeys.tripMyApplications() });
     },
   });
 }

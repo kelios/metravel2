@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Platform } from 'react-native'
 
+import { postConsentRecord } from '@/api/consent'
+
 // Хранилище фактов принятия «действенных» согласий (квест/поездка/контакты).
 // Отдельно от cookie-consent (utils/consent.ts), т.к. применимо и на native.
 // Формат: { [type]: { version, date } }. Версионирование позволяет повторно
@@ -79,9 +81,10 @@ export function hasActionConsent(
 }
 
 /**
- * Зафиксировать согласие локально. Бэкенд-трекинг (BE-consent-tracking, задача
- * #435) ещё не реализован — когда появится endpoint, сюда добавится non-blocking
- * POST факта согласия (type/version/timestamp/user).
+ * Зафиксировать согласие локально, затем non-blocking отправить факт на бэкенд
+ * (BE-consent-tracking #435, POST /user/consents/). Локальное хранилище —
+ * источник правды для UX; серверная запись нужна для аудита/кросс-девайс и
+ * никогда не ломает сценарий (см. api/consent.ts — все ошибки проглатываются).
  */
 export async function recordActionConsent(type: ConsentType, version = '1'): Promise<void> {
   const store = await readActionConsentsAsync()
@@ -96,4 +99,6 @@ export async function recordActionConsent(type: ConsentType, version = '1'): Pro
   } catch {
     // ignore — отсутствие хранилища не должно ломать сценарий
   }
+  // fire-and-forget: серверный трекинг не блокирует и не валит локальный флоу.
+  void postConsentRecord(type, version)
 }

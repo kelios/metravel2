@@ -8,6 +8,11 @@ jest.mock('expo-router', () => ({
   Link: ({ children }: { children: React.ReactNode }) => children,
 }))
 
+const mockPostConsentRecord = jest.fn().mockResolvedValue(undefined)
+jest.mock('@/api/consent', () => ({
+  postConsentRecord: (...args: unknown[]) => mockPostConsentRecord(...args),
+}))
+
 import ConsentCheckbox from '@/components/legal/ConsentCheckbox'
 import DataFreshnessNotice from '@/components/legal/DataFreshnessNotice'
 import QuestConsentGate from '@/components/quests/QuestConsentGate'
@@ -22,6 +27,7 @@ describe('actionConsent storage (web)', () => {
   beforeEach(() => {
     ;(Platform as { OS: string }).OS = 'web'
     window.localStorage.clear()
+    mockPostConsentRecord.mockClear()
   })
 
   it('returns false before consent is recorded', () => {
@@ -42,6 +48,15 @@ describe('actionConsent storage (web)', () => {
     const store = readActionConsentsSync()
 
     expect(hasActionConsent(store, CONSENT_TYPES.QUEST_START, '2')).toBe(false)
+  })
+
+  it('fires non-blocking BE tracking (#435) after local save', async () => {
+    await recordActionConsent(CONSENT_TYPES.TRIP_APPLY, '1')
+
+    // Local save is the source of truth and must succeed regardless of BE.
+    expect(hasActionConsent(readActionConsentsSync(), CONSENT_TYPES.TRIP_APPLY)).toBe(true)
+    // BE record attempted with the same type/version.
+    expect(mockPostConsentRecord).toHaveBeenCalledWith(CONSENT_TYPES.TRIP_APPLY, '1')
   })
 })
 

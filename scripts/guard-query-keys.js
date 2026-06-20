@@ -24,6 +24,11 @@ const IGNORED_DIRS = new Set([
   '.claude',
   'node_modules',
   'dist',
+  'dist-stub',
+  'dist-dev-diag',
+  'dist-web-analyze',
+  'dist-web-analyze-sm',
+  'web-build',
   'coverage',
   'test-results',
   'playwright-report',
@@ -48,7 +53,7 @@ const parseArgs = (argv) => ({
 
 const shouldIgnoreByDir = (relativePath) => {
   const parts = normalizePath(relativePath).split('/')
-  return parts.some((part) => IGNORED_DIRS.has(part))
+  return parts.some((part) => IGNORED_DIRS.has(part) || part.startsWith('dist-'))
 }
 
 const shouldScanFile = (relativePath) => {

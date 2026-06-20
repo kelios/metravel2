@@ -61,21 +61,30 @@ function ApplicationRow({
       <Text style={styles.message}>{application.message}</Text>
 
       {application.socialLinks.length > 0 ? (
-        <View style={styles.linksRow}>
-          {application.socialLinks.map((url) => (
-            <Pressable
-              key={url}
-              onPress={() => openExternalUrl(url)}
-              accessibilityRole="link"
-              style={styles.linkChip}
-            >
-              <Feather name="link" size={11} color={colors.primary} />
-              <Text style={styles.linkChipText} numberOfLines={1}>
-                {url.replace(/^https?:\/\//, '')}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        <>
+          <View style={styles.linksRow}>
+            {application.socialLinks.map((url) => (
+              <Pressable
+                key={url}
+                onPress={() => openExternalUrl(url)}
+                accessibilityRole="link"
+                style={styles.linkChip}
+              >
+                <Feather name="link" size={11} color={colors.primary} />
+                <Text style={styles.linkChipText} numberOfLines={1}>
+                  {url.replace(/^https?:\/\//, '')}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <View style={styles.unverifiedNote} testID="trip-socials-unverified">
+            <Feather name="alert-triangle" size={11} color={colors.textMuted} />
+            <Text style={styles.unverifiedNoteText}>
+              MeTravel не проверяет подлинность аккаунтов. Открывайте ссылки с
+              осторожностью.
+            </Text>
+          </View>
+        </>
       ) : null}
 
       {isDecidable(application) ? (
@@ -215,6 +224,8 @@ const createStyles = (colors: ThemedColors) =>
       borderColor: colors.border,
     },
     linkChipText: { fontSize: 12, color: colors.primary, flexShrink: 1 },
+    unverifiedNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
+    unverifiedNoteText: { flex: 1, fontSize: 11, lineHeight: 15, color: colors.textMuted },
     actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2 },
     askHint: {
       fontSize: 13,

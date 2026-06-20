@@ -7,6 +7,9 @@ gcp-service-account*.json
 /.prod-build-tmp/
 /dist-web-analyze/
 /dist-web-analyze-sm/
+/dist-dev-diag/
+/dist-prod-diag/
+/dist-*-diag/
 /web-build/
 
 # @generated expo-cli sync-2b81b286409207a5da26e14c78851eb30d8ccbdb

@@ -2,7 +2,7 @@
 // Деталь публичной поездки: обложка, описание, действие «Хочу поехать» (#412),
 // панель организатора (#413) и раскрытие места встречи/чата только участнику с
 // одобренной заявкой (FE-сторона BE-post-approval-reveal #410).
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
@@ -14,6 +14,8 @@ import TripApplyForm from '@/components/trips/TripApplyForm';
 import OrganizerApplicationsPanel from '@/components/trips/OrganizerApplicationsPanel';
 import { formatSeats, formatTripDates } from '@/components/trips/tripFormatting';
 import { usePublicTrip } from '@/hooks/usePublicTripsApi';
+import { useActionConsent } from '@/hooks/useActionConsent';
+import { CONSENT_TYPES } from '@/utils/actionConsent';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { trackTripViewed } from '@/utils/tripAnalytics';
@@ -39,6 +41,8 @@ function PublicTripDetail({ tripId }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const [justSubmitted, setJustSubmitted] = useState(false);
+  const contactConsent = useActionConsent(CONSENT_TYPES.CONTACT_EXCHANGE);
   const { data: trip, isLoading, isError } = usePublicTrip(tripId);
 
   useEffect(() => {
@@ -62,7 +66,12 @@ function PublicTripDetail({ tripId }: Props) {
   }
 
   const approved = trip.myApplicationStatus === 'approved';
-  const revealed = (approved || trip.isOwner) && !!trip.meetingPoint;
+  const revealed = approved || trip.isOwner;
+  const hasRevealContent = revealed && (!!trip.meetingPoint || !!trip.contactNote);
+  // Перед показом контактов/места встречи другого человека участник один раз
+  // подтверждает ответственность («Понятно»). Организатору (свои данные) — не нужно.
+  const needsContactAck =
+    hasRevealContent && approved && !trip.isOwner && contactConsent.hydrated && !contactConsent.granted;
   const alreadyApplied = trip.myApplicationStatus != null && trip.myApplicationStatus !== 'cancelled';
   const canApply = !trip.isOwner && trip.status === 'open' && !alreadyApplied;
 
@@ -105,19 +114,39 @@ function PublicTripDetail({ tripId }: Props) {
 
       <Text style={styles.description}>{trip.description}</Text>
 
-      {revealed ? (
-        <View style={styles.revealBox} testID="trip-reveal">
-          <Text style={styles.revealTitle}>
-            <Feather name="unlock" size={14} color={colors.success} /> Детали для участников
-          </Text>
-          {trip.meetingPoint ? (
-            <Text style={styles.revealText}>Место встречи: {trip.meetingPoint}</Text>
-          ) : null}
-          {trip.contactNote ? (
-            <Text style={styles.revealText}>{trip.contactNote}</Text>
-          ) : null}
-        </View>
-      ) : !trip.isOwner ? (
+      {hasRevealContent ? (
+        needsContactAck ? (
+          <View style={styles.ackBox} testID="trip-contact-ack">
+            <Text style={styles.revealTitle}>
+              <Feather name="alert-triangle" size={14} color={colors.warning} /> Контакты участника
+            </Text>
+            <Text style={styles.revealText}>
+              Дальше — место встречи и контакты другого человека. Используйте их
+              только для этой поездки и не передавайте третьим лицам. MeTravel не
+              отвечает за договорённости участников.
+            </Text>
+            <Button
+              label="Понятно"
+              onPress={() => {
+                void contactConsent.grant();
+              }}
+              testID="trip-contact-ack-confirm"
+            />
+          </View>
+        ) : (
+          <View style={styles.revealBox} testID="trip-reveal">
+            <Text style={styles.revealTitle}>
+              <Feather name="unlock" size={14} color={colors.success} /> Детали для участников
+            </Text>
+            {trip.meetingPoint ? (
+              <Text style={styles.revealText}>Место встречи: {trip.meetingPoint}</Text>
+            ) : null}
+            {trip.contactNote ? (
+              <Text style={styles.revealText}>{trip.contactNote}</Text>
+            ) : null}
+          </View>
+        )
+      ) : !revealed ? (
         <View style={styles.lockedBox}>
           <Feather name="lock" size={14} color={colors.textMuted} />
           <Text style={styles.lockedText}>
@@ -129,18 +158,29 @@ function PublicTripDetail({ tripId }: Props) {
       {/* Организатор: управление заявками (#413) */}
       {trip.isOwner ? <OrganizerApplicationsPanel tripId={trip.id} /> : null}
 
+      {/* Подтверждение только что отправленной заявки (#412) */}
+      {justSubmitted ? (
+        <View style={styles.revealBox} testID="trip-apply-confirmation">
+          <Text style={styles.revealTitle}>Заявка отправлена</Text>
+          <Text style={styles.revealText}>
+            Организатор получит уведомление и решит по вашей заявке. Статус видно
+            в разделе «Мои поездки».
+          </Text>
+        </View>
+      ) : null}
+
       {/* Участник: статус своей заявки или форма подачи (#412/#414) */}
-      {!trip.isOwner && alreadyApplied ? (
+      {!trip.isOwner && alreadyApplied && !justSubmitted ? (
         <View style={styles.statusBox}>
           <Text style={styles.statusLabel}>Ваша заявка</Text>
           <TripStatusBadge kind="application" status={trip.myApplicationStatus!} />
         </View>
       ) : null}
 
-      {canApply ? (
+      {canApply && !justSubmitted ? (
         isAuthenticated ? (
           <View style={styles.applyBox}>
-            <TripApplyForm trip={trip} />
+            <TripApplyForm trip={trip} onSubmitted={() => setJustSubmitted(true)} />
           </View>
         ) : (
           <View style={styles.applyBox}>
@@ -188,6 +228,14 @@ const createStyles = (colors: ThemedColors) =>
       padding: 14,
       borderRadius: 14,
       backgroundColor: colors.successLight,
+    },
+    ackBox: {
+      gap: 10,
+      padding: 14,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.warning,
+      backgroundColor: colors.warningLight,
     },
     revealTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
     revealText: { fontSize: 14, lineHeight: 20, color: colors.textSecondary },

@@ -81,4 +81,15 @@ export const queryKeys = {
   tripApplications: (tripId: string | number | null | undefined) =>
     ['trip-applications', 'trip', tripId] as const,
   tripNotifications: () => ['trip-notifications'] as const,
+  // Планирование поездок (Sprint 13 / блок D)
+  plannedTripsMine: () => ['planned-trips', 'me'] as const,
+  plannedTripsAll: () => ['planned-trips'] as const,
+  plannedTrip: (tripId: string | number | null | undefined) =>
+    ['planned-trip', tripId] as const,
+  communityTrips: (filters: Record<string, unknown>) =>
+    ['community-trips', filters] as const,
+  communityTripsAll: () => ['community-trips'] as const,
+  routeTemplates: () => ['route-templates'] as const,
+  tripSuggestions: (tripId: string | number | null | undefined) =>
+    ['trip-suggestions', tripId] as const,
 } as const;

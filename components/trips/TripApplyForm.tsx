@@ -10,6 +10,8 @@ import ConsentCheckbox from '@/components/legal/ConsentCheckbox';
 import SafetyNotice from '@/components/ui/SafetyNotice';
 import type { PublicTrip } from '@/api/publicTrips';
 import { useSubmitApplication } from '@/hooks/usePublicTripsApi';
+import { useActionConsent } from '@/hooks/useActionConsent';
+import { CONSENT_TYPES } from '@/utils/actionConsent';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 interface Props {
@@ -31,6 +33,7 @@ function TripApplyForm({ trip, onSubmitted }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const submit = useSubmitApplication();
+  const tripApplyConsent = useActionConsent(CONSENT_TYPES.TRIP_APPLY);
 
   const [message, setMessage] = useState('');
   const [links, setLinks] = useState('');
@@ -57,24 +60,16 @@ function TripApplyForm({ trip, onSubmitted }: Props) {
         socialLinks: parseLinks(links),
       },
       {
-        onSuccess: () => onSubmitted?.(),
+        onSuccess: () => {
+          // Заявка принята → фиксируем факт согласия (локально + BE #435).
+          void tripApplyConsent.grant();
+          onSubmitted?.();
+        },
         onError: () =>
           setError('Не удалось отправить заявку. Попробуйте ещё раз позже.'),
       },
     );
   };
-
-  if (submit.isSuccess) {
-    return (
-      <View style={styles.successBox} testID="trip-apply-success">
-        <Text style={styles.successTitle}>Заявка отправлена</Text>
-        <Text style={styles.successText}>
-          Организатор получит уведомление и решит по вашей заявке. Статус
-          появится в разделе «Мои заявки».
-        </Text>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.wrap} testID="trip-apply-form">
@@ -185,14 +180,6 @@ const createStyles = (colors: ThemedColors) =>
     link: { color: colors.primary, fontWeight: '600' },
     disclaimer: { marginTop: 4 },
     error: { color: colors.danger, fontSize: 13, fontWeight: '600' },
-    successBox: {
-      gap: 6,
-      padding: 16,
-      borderRadius: 14,
-      backgroundColor: colors.successLight,
-    },
-    successTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
-    successText: { fontSize: 14, lineHeight: 20, color: colors.textSecondary },
   });
 
 export default React.memo(TripApplyForm);

@@ -17,6 +17,14 @@ export const TRIP_EVENTS = {
   // Featured/boosted (#463)
   featuredImpression: 'featured_trip_impression',
   featuredClick: 'featured_trip_click',
+  // Воронка планирования поездки (Sprint 13, FE-trip-analytics #459)
+  created: 'trip_created',
+  routePointAdded: 'route_point_added',
+  routeExported: 'route_exported',
+  inviteSent: 'trip_invite_sent',
+  rsvp: 'trip_rsvp',
+  // Монетизация (FE-trip-monetization #460)
+  affiliateClick: 'trip_affiliate_click',
 } as const;
 
 export function trackTripCatalogViewed(count: number): void {
@@ -53,4 +61,43 @@ export function trackFeaturedImpression(tripId: number): void {
 
 export function trackFeaturedClick(tripId: number): void {
   void sendAnalyticsEvent(TRIP_EVENTS.featuredClick, { trip_id: tripId });
+}
+
+// ── Воронка планирования поездки (FE-trip-analytics #459) ───────────────────
+// place→route→export→invite + RSVP. Покрывает KPI Sprint D.
+
+export function trackTripCreated(tripId: number, transport: string): void {
+  void sendAnalyticsEvent(TRIP_EVENTS.created, { trip_id: tripId, transport });
+}
+
+export function trackRoutePointAdded(tripId: number, pointType: string): void {
+  void sendAnalyticsEvent(TRIP_EVENTS.routePointAdded, {
+    trip_id: tripId,
+    point_type: pointType,
+  });
+}
+
+export function trackRouteExported(
+  tripId: number,
+  format: string,
+): void {
+  void sendAnalyticsEvent(TRIP_EVENTS.routeExported, { trip_id: tripId, format });
+}
+
+export function trackTripInviteSent(tripId: number, count: number): void {
+  void sendAnalyticsEvent(TRIP_EVENTS.inviteSent, { trip_id: tripId, count });
+}
+
+export function trackTripRsvp(tripId: number, rsvp: string): void {
+  void sendAnalyticsEvent(TRIP_EVENTS.rsvp, { trip_id: tripId, rsvp });
+}
+
+export function trackTripAffiliateClick(
+  tripId: number,
+  offerKey: string,
+): void {
+  void sendAnalyticsEvent(TRIP_EVENTS.affiliateClick, {
+    trip_id: tripId,
+    offer: offerKey,
+  });
 }
