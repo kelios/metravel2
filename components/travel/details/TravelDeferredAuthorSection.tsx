@@ -5,15 +5,16 @@ import AuthorCard, { hasResolvableAuthor } from '@/components/travel/AuthorCard'
 import ShareButtons from '@/components/travel/ShareButtons'
 import type { Travel } from '@/types/types'
 
+import TravelPeerBadgesSection from './TravelPeerBadgesSection'
 import { useTravelDetailsStyles } from './TravelDetailsStyles'
 
 const PLACEHOLDER_MT_12 = { marginTop: 12 } as const
 
-const DesktopAuthorSection: React.FC<{ travel: Travel }> = memo(function DesktopAuthorSection(_props) {
+const DesktopAuthorSection: React.FC<{ travel: Travel }> = memo(function DesktopAuthorSection({ travel }) {
   // На десктопе автор уже показан в сайдбаре (CompactSideBarTravel),
-  // а ShareButtons — в TravelDetailsFooterSection.
-  // Не дублируем ни то, ни другое.
-  return null
+  // а ShareButtons — в TravelDetailsFooterSection. Не дублируем ни то, ни другое.
+  // Peer-награды (§10) — отдельная фича, показываем и на десктопе.
+  return <TravelPeerBadgesSection travel={travel} />
 })
 
 const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(function MobileAuthorShareSection({ travel }) {
@@ -44,6 +45,8 @@ const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(function Mob
       >
         <ShareButtons travel={travel} />
       </View>
+
+      <TravelPeerBadgesSection travel={travel} />
     </>
   )
 })
