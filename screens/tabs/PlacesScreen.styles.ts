@@ -575,7 +575,10 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
   cardMediaWrap: {
     position: 'relative',
     width: '100%',
-    height: isCompact ? 156 : isWide ? 170 : 160,
+    // Place photos only exist as 400×400 square CDN thumbnails. A square slot lets
+    // contain fill the frame edge-to-edge (no grey letterbox bars) while keeping
+    // the photo dominant — switching to cover is forbidden for «место» cards.
+    aspectRatio: 1,
     backgroundColor: colors.backgroundSecondary,
     overflow: 'hidden',
   },
@@ -712,7 +715,8 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     borderColor: colors.borderLight,
   },
   skeletonImage: {
-    height: isCompact ? 156 : isWide ? 170 : 160,
+    width: '100%',
+    aspectRatio: 1,
     backgroundColor: colors.backgroundSecondary,
   },
   skeletonBody: {

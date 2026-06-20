@@ -47,7 +47,7 @@ export const PlaceCard = React.memo(function PlaceCard({
             alt={place.title}
             fit="contain"
             width="100%"
-            height={styles.cardMediaWrap.height as number}
+            height={400}
             borderRadius={0}
             blurBackground
             allowCriticalWebBlur={Platform.OS === 'web'}
