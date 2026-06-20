@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -11,9 +11,12 @@ import { Feather } from '@expo/vector-icons';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import type { MyAchievements } from '@/api/achievements';
+import type { Badge, MyAchievements } from '@/api/achievements';
 import RankBar from '@/components/achievements/RankBar';
 import BadgeGrid, { type BadgeGridItem } from '@/components/achievements/BadgeGrid';
+import BadgeDetailSheet, {
+  type BadgeDetail,
+} from '@/components/achievements/BadgeDetailSheet';
 
 interface Props {
   visible: boolean;
@@ -51,6 +54,27 @@ function groupByCategory(data: MyAchievements): CategoryGroup[] {
 function AchievementsGalleryModal({ visible, onClose, data }: Props) {
   const colors = useThemedColors();
   const groups = useMemo(() => groupByCategory(data), [data]);
+  const [detail, setDetail] = useState<BadgeDetail | null>(null);
+
+  const detailByBadgeId = useMemo(() => {
+    const map = new Map<number, BadgeDetail>();
+    data.earned.forEach((ub) =>
+      map.set(ub.badge.id, { badge: ub.badge, earned: true }),
+    );
+    data.locked.forEach((p) =>
+      map.set(p.badge.id, {
+        badge: p.badge,
+        earned: false,
+        progress: { current: p.current, threshold: p.threshold },
+      }),
+    );
+    return map;
+  }, [data]);
+
+  const openDetail = (badge: Badge) => {
+    const found = detailByBadgeId.get(badge.id);
+    if (found) setDetail(found);
+  };
 
   const styles = useMemo(
     () =>
@@ -132,11 +156,21 @@ function AchievementsGalleryModal({ visible, onClose, data }: Props) {
             {groups.map((group) => (
               <View key={group.slug} style={styles.group}>
                 <Text style={styles.groupTitle}>{group.name}</Text>
-                <BadgeGrid items={group.items} size={68} />
+                <BadgeGrid
+                  items={group.items}
+                  size={68}
+                  onBadgePress={openDetail}
+                />
               </View>
             ))}
             <View style={styles.footerSpace} />
           </ScrollView>
+
+          <BadgeDetailSheet
+            visible={detail !== null}
+            onClose={() => setDetail(null)}
+            detail={detail}
+          />
         </Pressable>
       </Pressable>
     </Modal>

@@ -13,10 +13,12 @@ import { Feather } from '@expo/vector-icons';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import { useMyAchievements } from '@/hooks/useAchievementsApi';
+import { useMyAchievements, useUserAchievements } from '@/hooks/useAchievementsApi';
+import { useAuthStore } from '@/stores/authStore';
 import RankBar from '@/components/achievements/RankBar';
 import BadgeMedal from '@/components/achievements/BadgeMedal';
 import AchievementsGalleryModal from '@/components/achievements/AchievementsGalleryModal';
+import PeerBadgeReceivedRow from '@/components/achievements/PeerBadgeReceivedRow';
 
 interface Props {
   testID?: string;
@@ -26,6 +28,10 @@ interface Props {
 function AchievementsSection({ testID, style }: Props) {
   const colors = useThemedColors();
   const { data, isLoading, isError } = useMyAchievements();
+  const ownUserId = useAuthStore((s) => s.userId);
+  // peer-награды отдаёт user-эндпоинт (не /me/) — тянем по своему id (кэшируется).
+  const { data: publicData } = useUserAchievements(ownUserId);
+  const peerReceived = publicData?.peerReceived ?? [];
   const [galleryOpen, setGalleryOpen] = useState(false);
 
   const styles = getStyles(colors);
@@ -81,6 +87,10 @@ function AchievementsSection({ testID, style }: Props) {
             </Text>
           )}
 
+          {peerReceived.length > 0 ? (
+            <PeerBadgeReceivedRow items={peerReceived} size={56} style={styles.peerRow} />
+          ) : null}
+
           <AchievementsGalleryModal
             visible={galleryOpen}
             onClose={() => setGalleryOpen(false)}
@@ -120,6 +130,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     rank: { marginBottom: DESIGN_TOKENS.spacing.xs },
     medalsRow: { gap: DESIGN_TOKENS.spacing.md, paddingVertical: 4, paddingRight: 8 },
+    peerRow: { marginTop: DESIGN_TOKENS.spacing.xs },
     loading: { paddingVertical: DESIGN_TOKENS.spacing.lg, alignItems: 'center' },
     empty: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
