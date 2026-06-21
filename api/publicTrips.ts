@@ -156,6 +156,7 @@ interface PublicTripDto {
   catalog_status?: string | null;
   going_participants_count?: number | string | null;
   available_seats?: number | string | null;
+  featured?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -265,8 +266,8 @@ const mapTrip = (dto: PublicTripDto): PublicTrip => {
     seatsTaken,
     status: mapTripStatus(dto),
     description: dto.description ?? '',
-    // #463: поля featured ещё нет в PublicTripCatalog-сериализаторе BE → дефолт false.
-    featured: false,
+    // #463: featured приходит из PublicTripCatalog-сериализатора BE (commit 3d7f4f2).
+    featured: dto.featured ?? false,
     // Каталог не возвращает статус заявки/владение — определяется на детальном экране.
     myApplicationStatus: null,
     isOwner: false,
