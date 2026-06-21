@@ -17,7 +17,7 @@ export const getIsHeaderMobile = (width: number, effectiveWebWidth: number) => {
   return width < METRICS.breakpoints.largeTablet
 }
 
-const ACTIVE_PATH_PREFIXES = ['/search', '/travelsby', '/export', '/map', '/quests', '/roulette']
+const ACTIVE_PATH_PREFIXES = ['/search', '/travelsby', '/export', '/map', '/places', '/trips', '/quests', '/roulette']
 
 export const getHeaderActivePath = (pathname: string) => {
   if (pathname === '/' || pathname === '/index') return '/'
@@ -33,6 +33,8 @@ const TOP_LEVEL_PATHS_NO_CONTEXT_BAR = new Set<string>([
   '/index',
   '/search',
   '/travelsby',
+  '/places',
+  '/trips',
   '/roulette',
   '/quests',
   '/favorites',

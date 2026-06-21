@@ -59,6 +59,7 @@ export const BOTTOM_DOCK_MORE_MENU_SECTIONS: BottomDockMoreMenuSection[] = [
     items: [
       { key: 'search', label: 'Беларусь', accessibilityLabel: 'Беларусь', route: '/travelsby', iconName: 'flag' },
       { key: 'places', label: 'Места', accessibilityLabel: 'Места', route: '/places', iconName: 'map-pin' },
+      { key: 'trips', label: 'Попутчики', accessibilityLabel: 'Попутчики', route: '/trips', iconName: 'users' },
       { key: 'articles', label: 'Статьи', accessibilityLabel: 'Статьи', route: '/articles', iconName: 'file-text' },
       { key: 'roulette', label: 'Случайный маршрут', accessibilityLabel: 'Случайный маршрут', route: '/roulette', iconName: 'shuffle' },
       { key: 'history', label: 'История просмотров', accessibilityLabel: 'История просмотров', route: '/history', iconName: 'clock' },
@@ -92,6 +93,7 @@ export function normalizeBottomDockActivePath(pathname: string): string {
   if (normalized.startsWith('/export')) return '/export'
   if (normalized.startsWith('/map')) return '/map'
   if (normalized.startsWith('/places')) return '/places'
+  if (normalized.startsWith('/trips')) return '/trips'
   if (normalized.startsWith('/profile')) return '/profile'
   if (normalized.startsWith('/quests')) return '/quests'
   if (normalized.startsWith('/roulette')) return '/search'

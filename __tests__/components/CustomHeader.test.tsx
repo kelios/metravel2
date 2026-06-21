@@ -112,6 +112,7 @@ describe('CustomHeader', () => {
             expect(utils.getByLabelText('Идеи поездок')).toBeTruthy();
             expect(utils.getByLabelText('Беларусь')).toBeTruthy();
             expect(utils.getByLabelText('Карта')).toBeTruthy();
+            expect(utils.getByLabelText('Попутчики')).toBeTruthy();
             expect(utils.getByLabelText('Квесты')).toBeTruthy();
         });
 
@@ -133,6 +134,15 @@ describe('CustomHeader', () => {
             expect(mockPush).toHaveBeenCalledWith('/map');
         });
 
+        it('navigates to public trips from desktop navigation', () => {
+            (usePathname as jest.Mock).mockReturnValue('/');
+            const utils = renderHeader();
+
+            fireEvent.press(utils.getByLabelText('Попутчики'));
+
+            expect(mockPush).toHaveBeenCalledWith('/trips');
+        });
+
         it('does not highlight ideas navigation item on travel details routes', () => {
             (usePathname as jest.Mock).mockReturnValue('/travels/some-travel');
             const utils = renderHeader();
@@ -147,6 +157,14 @@ describe('CustomHeader', () => {
             
             const questsItem = utils.getByLabelText('Квесты');
             expect(questsItem.props.accessibilityState?.selected).toBe(true);
+        });
+
+        it('correctly identifies active path for public trip routes', () => {
+            (usePathname as jest.Mock).mockReturnValue('/trips/42');
+            const utils = renderHeader();
+
+            const tripsItem = utils.getByLabelText('Попутчики');
+            expect(tripsItem.props.accessibilityState?.selected).toBe(true);
         });
 
         it('does not render mobile burger button on desktop', () => {
@@ -255,6 +273,7 @@ describe('CustomHeader', () => {
             expect(utils.getByText('Аккаунт')).toBeTruthy();
             expect(utils.getByText('Документы')).toBeTruthy();
 
+            expect(utils.getByLabelText('Попутчики')).toBeTruthy();
             expect(utils.getByText('Политика конфиденциальности')).toBeTruthy();
             expect(utils.getByText('Настройки cookies')).toBeTruthy();
 
