@@ -1,11 +1,11 @@
 import React, { useCallback, useMemo, useState } from 'react'
-import { Platform, View } from 'react-native'
+import { View } from 'react-native'
+import { router } from 'expo-router'
 
 import { useAuth } from '@/context/AuthContext'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useAvatarUri } from '@/hooks/useAvatarUri'
 import { buildLoginHref } from '@/utils/authNavigation'
-import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import AccountMenu from './AccountMenu'
 import CustomHeaderDesktopAccountShell from './CustomHeaderDesktopAccountShell'
 import { createAnchorStyles, createAvatarStyles, createCtaLoginStyles } from './headerStyles'
@@ -39,13 +39,7 @@ export default function CustomHeaderDesktopAccountSection({
 
   const handleLoginPress = useCallback(() => {
     const href = buildLoginHref({ intent: 'menu' })
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      void openExternalUrlInNewTab(href, {
-        allowRelative: true,
-        baseUrl: window.location.origin,
-        windowFeatures: 'noopener',
-      })
-    }
+    router.push(href as any)
   }, [])
 
   if (menuRequested) {

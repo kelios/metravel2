@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { router } from 'expo-router'
 
@@ -24,8 +24,6 @@ import { routes } from '@/utils/routes'
 import { useThemedColors } from '@/hooks/useTheme'
 import { buildLoginHref } from '@/utils/authNavigation'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
-
-const IS_WEB = Platform.OS === 'web'
 
 const TASK_BOARD_URL = 'https://metravel.by/board'
 
@@ -201,15 +199,7 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
   const navigate = useCallback(
     (path: string) => {
       closeMenu()
-      if (IS_WEB && typeof window !== 'undefined') {
-        void openExternalUrlInNewTab(path, {
-          allowRelative: true,
-          baseUrl: window.location.origin,
-          windowFeatures: 'noopener',
-        })
-      } else {
-        router.push(path as any)
-      }
+      router.push(path as any)
     },
     [closeMenu],
   )
