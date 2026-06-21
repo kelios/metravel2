@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react'
 import { View } from 'react-native'
-import { router } from 'expo-router'
+import { useRouter } from 'expo-router'
 
 import { useAuth } from '@/context/AuthContext'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -18,6 +18,7 @@ export default function CustomHeaderDesktopAccountSection({
   styles,
 }: CustomHeaderDesktopAccountSectionProps) {
   const colors = useThemedColors()
+  const router = useRouter()
   const { isAuthenticated, username, userAvatar, profileRefreshToken } = useAuth()
   const { avatarUri, setAvatarLoadError } = useAvatarUri({ userAvatar, profileRefreshToken })
   const [menuRequested, setMenuRequested] = useState(false)
@@ -40,7 +41,7 @@ export default function CustomHeaderDesktopAccountSection({
   const handleLoginPress = useCallback(() => {
     const href = buildLoginHref({ intent: 'menu' })
     router.push(href as any)
-  }, [])
+  }, [router])
 
   if (menuRequested) {
     return (

@@ -181,6 +181,15 @@ describe('CustomHeader', () => {
             expect(utils.getByTestId('header-login-cta')).toBeTruthy();
         });
 
+        it('opens guest login CTA in the current tab', () => {
+            (usePathname as jest.Mock).mockReturnValue('/');
+            const utils = renderHeader();
+
+            fireEvent.press(utils.getByTestId('header-login-cta'));
+
+            expect(mockPush).toHaveBeenCalledWith('/login?redirect=%2F&intent=menu');
+        });
+
         it('keeps header context bar hidden on web travel routes without interaction', async () => {
             jest.useFakeTimers();
             const restoreWindow = global.window;

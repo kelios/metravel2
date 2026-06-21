@@ -372,6 +372,31 @@ describe('AccountMenu', () => {
     });
   });
 
+  it('keeps account menu internal navigation in the current web tab', async () => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      username: 'testuser',
+      logout: mockLogout,
+      userId: '1',
+      setIsAuthenticated: jest.fn(),
+      setUsername: jest.fn(),
+      setIsSuperuser: jest.fn(),
+      setUserId: jest.fn(),
+      isSuperuser: false,
+      login: jest.fn(),
+      sendPassword: jest.fn(),
+      setNewPassword: jest.fn(),
+    } as any);
+
+    const { getByText } = renderWithClient(<AccountMenu />);
+    fireEvent.press(getByText('Мои путешествия'));
+
+    await waitFor(() => {
+      expect(router.push).toHaveBeenCalledWith('/metravel');
+    });
+  });
+
   it('navigates to new travel screen when pressing "Добавить путешествие"', async () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
