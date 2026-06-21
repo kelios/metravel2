@@ -8,6 +8,7 @@ import { useQuestCompletionMeta } from '@/hooks/useQuestCompletionMeta'
 import { pluralizeRu } from '@/utils/pluralize'
 import QuestPioneerBlock from './QuestPioneerBlock'
 import QuestReviewSection from './QuestReviewSection'
+import QuestFinaleRating from './QuestFinaleRating'
 
 import {
   BelkrajWidgetLazy,
@@ -366,6 +367,8 @@ export function QuestFinalePanel({
               questNumericId={questNumericId}
             />
           ) : null}
+
+          <QuestFinaleRating questNumericId={questNumericId} />
 
           {questId ? (
             <QuestReviewSection questId={questId} questNumericId={questNumericId} />

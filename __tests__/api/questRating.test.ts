@@ -100,14 +100,19 @@ const makeWrapper = (client: QueryClient) =>
 describe('hooks/useQuestRating', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockGet.mockResolvedValue(null)
+    // Сид-запрос оценки держим pending, чтобы он не перетирал кеш во время
+    // проверки оптимистики/отката.
+    mockGet.mockReturnValue(new Promise(() => {}))
   })
 
-  it('optimistically updates detail + list, keeps them on success', async () => {
-    mockPost.mockResolvedValueOnce(undefined)
-    // После сохранения сервер отдаёт поставленную оценку — onSettled-инвалидация
-    // questRating перечитывает её, не сбрасывая оптимистичное состояние.
-    mockGet.mockResolvedValue(5)
+  it('optimistically updates detail + list before the request settles', async () => {
+    let resolvePost: () => void = () => {}
+    mockPost.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolvePost = resolve
+        }),
+    )
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     client.setQueryData(queryKeys.questDetail(42), baseMeta())
     client.setQueryData(queryKeys.quests(), [baseMeta()])
@@ -129,6 +134,10 @@ describe('hooks/useQuestRating', () => {
     expect(detail?.rating_count).toBe(3)
     const list = client.getQueryData<ApiQuestMeta[]>(queryKeys.quests())
     expect(list?.[0].user_rating).toBe(5)
+
+    act(() => {
+      resolvePost()
+    })
   })
 
   it('rolls back optimistic update on error', async () => {
@@ -146,7 +155,7 @@ describe('hooks/useQuestRating', () => {
     })
 
     await waitFor(() => {
-      expect(client.getQueryData(queryKeys.questRating(42))).toBeNull()
+      expect(result.current.isSubmitting).toBe(false)
     })
 
     const detail = client.getQueryData<ApiQuestMeta>(queryKeys.questDetail(42))

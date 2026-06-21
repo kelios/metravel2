@@ -67,6 +67,10 @@ export type QuestWizardProps = {
     relatedTravelsSlot?: React.ReactNode;
     /** Readonly-рейтинг квеста под заголовком в шапке */
     ratingSlot?: React.ReactNode;
+    /** Бейдж «Пройден» + «Пройдено N раз» под заголовком в шапке */
+    completionSlot?: React.ReactNode;
+    /** Блок первопроходца под заголовком в шапке */
+    pioneerSlot?: React.ReactNode;
     /** Native: id города/квеста для deep-link локального напоминания о незавершённом квесте */
     questId?: string;
     cityId?: string;
