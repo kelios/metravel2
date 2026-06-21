@@ -311,43 +311,43 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           {Platform.OS === 'web' && (
             <Pressable
               onPress={onPrintDownload}
-              style={styles.actionLabelButton}
+              style={[styles.actionLabelButton, isMobile && styles.actionIconButton]}
               accessibilityRole="button"
               accessibilityLabel="Печать квеста"
             >
               <Feather name="download" size={15} color={colors.textMuted} />
-              <Text style={styles.actionLabelText}>Печать</Text>
+              {!isMobile && <Text style={styles.actionLabelText}>Печать</Text>}
             </Pressable>
           )}
           <Pressable
             onPress={onOfflineMapDownload}
-            style={styles.actionLabelButton}
+            style={[styles.actionLabelButton, isMobile && styles.actionIconButton]}
             disabled={offlineMapPointsCount === 0}
             accessibilityRole="button"
             accessibilityLabel={`Скачать GPX с ${offlineMapPointsCount} точками квеста`}
           >
             <Feather name="download" size={15} color={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted} />
-            <Text style={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}>Скачать GPX</Text>
+            {!isMobile && <Text style={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}>Скачать GPX</Text>}
           </Pressable>
           <Pressable
             onPress={onOfflineMapOpenInApp}
-            style={styles.actionLabelButton}
+            style={[styles.actionLabelButton, isMobile && styles.actionIconButton]}
             disabled={offlineMapPointsCount === 0}
             accessibilityRole="button"
             accessibilityLabel="Открыть точки квеста в приложении карт"
           >
             <Feather name="external-link" size={15} color={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted} />
-            <Text style={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}>Открыть в приложении</Text>
+            {!isMobile && <Text style={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}>Открыть в приложении</Text>}
           </Pressable>
           <Pressable
             onPress={onReset}
-            style={styles.resetButton}
+            style={[styles.resetButton, isMobile && styles.actionIconButton]}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Сбросить прогресс"
           >
             <Feather name="rotate-ccw" size={13} color={colors.textMuted} />
-            <Text style={styles.resetText}>Сбросить</Text>
+            {!isMobile && <Text style={styles.resetText}>Сбросить</Text>}
           </Pressable>
         </View>
       </View>

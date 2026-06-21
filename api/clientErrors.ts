@@ -34,15 +34,20 @@ export const hasLoggableRequestError = (error: unknown): boolean => {
 
 export const isOfflineLikeError = (error: unknown): boolean => {
     const errorMessage = error instanceof Error ? error.message : String(error);
+
+    // Отменённый/прерванный запрос — это НЕ offline (иначе показываем юзеру
+    // «нет интернета», хотя сеть есть и запрос просто отменён при анмаунте).
+    if (/\b(aborted|cancell?ed)\b/i.test(errorMessage)) return false;
+
     const isOffline =
         Platform.OS === 'web' &&
         typeof navigator !== 'undefined' &&
         navigator.onLine === false;
+    // Узкие сигнатуры реального отсутствия сети (Chrome / RN). НЕ матчим по
+    // широким 'fetch'/'timeout': серверный таймаут или 5xx ≠ offline.
     const isFetchFailure =
         errorMessage.includes('Failed to fetch') ||
         errorMessage.includes('Network request failed') ||
-        errorMessage.includes('fetch') ||
-        errorMessage.includes('timeout') ||
         errorMessage.includes('network failed');
 
     return isOffline || isFetchFailure;

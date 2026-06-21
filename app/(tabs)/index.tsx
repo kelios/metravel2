@@ -57,19 +57,30 @@ function HomeScreen() {
 
   // After hydration, check the real browser URL. We still prefer
   // window.location over the router pathname (which can briefly report '/'
-  // while navigating to /travels/*), but `pathname` MUST stay in the dep array:
-  // it makes this memo re-evaluate on every route change. Without it the memo
-  // is computed once and, if it happens to run while the URL is not yet '/'
-  // (e.g. during the /login → '/' transition right after login), it locks to
-  // `false` and the home tab renders nothing forever (white screen after login).
-  const isHomePath = useMemo(() => {
-    if (!IS_WEB) return true
-    if (!hydrated) return false
-    const loc =
-      typeof window !== 'undefined'
-        ? String(window.location?.pathname ?? '').trim()
-        : normalizePath(pathname)
-    return loc === '' || loc === '/' || loc === '/index'
+  // while navigating to /travels/*). But the value MUST be derived in an effect,
+  // not a render-time memo: right after `router.push('/')` (e.g. tapping the
+  // header logo from a sub-route) the router `pathname` is already '/' while
+  // window.location hasn't settled yet. A memo would read the stale URL, lock to
+  // `false`, and — since `pathname` never changes again — render nothing forever
+  // (white screen / stale content after tapping the logo or logging in).
+  // Re-reading on a rAF after the URL settles fixes that.
+  const [isHomePath, setIsHomePath] = useState(!IS_WEB)
+  useEffect(() => {
+    if (!IS_WEB) return
+    if (!hydrated) {
+      setIsHomePath(false)
+      return
+    }
+    const compute = () => {
+      const loc =
+        typeof window !== 'undefined'
+          ? String(window.location?.pathname ?? '').trim()
+          : normalizePath(pathname)
+      setIsHomePath(loc === '' || loc === '/' || loc === '/index')
+    }
+    compute()
+    const raf = requestAnimationFrame(compute)
+    return () => cancelAnimationFrame(raf)
   }, [hydrated, pathname])
 
   const canonical = useMemo(() => buildCanonicalUrl(normalizePath(pathname)), [pathname])

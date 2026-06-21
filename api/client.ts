@@ -391,9 +391,13 @@ class ApiClient {
             return await this.parseSuccessResponse<T>(response);
         } catch (error) {
             const errorName = error instanceof Error ? error.name : '';
+            const errorMessage = error instanceof Error ? error.message : String(error);
             const isAbortError =
                 errorName === 'AbortError' ||
-                (typeof options.signal !== 'undefined' && options.signal?.aborted === true);
+                (typeof options.signal !== 'undefined' && options.signal?.aborted === true) ||
+                // Отменённый/прерванный fetch (в т.ч. expo "Fetch request has been
+                // canceled") — это не ошибка, не логируем и не маппим в offline.
+                /\b(aborted|cancell?ed)\b/i.test(errorMessage);
             if (isAbortError) {
                 this.releaseRateLimitSlot(rateLimitSlot);
                 throw error;
@@ -515,9 +519,13 @@ class ApiClient {
             return await handle(resp);
         } catch (error) {
             const errorName = error instanceof Error ? error.name : '';
+            const errorMessage = error instanceof Error ? error.message : String(error);
             const isAbortError =
                 errorName === 'AbortError' ||
-                (typeof options.signal !== 'undefined' && options.signal?.aborted === true);
+                (typeof options.signal !== 'undefined' && options.signal?.aborted === true) ||
+                // Отменённый/прерванный fetch (в т.ч. expo "Fetch request has been
+                // canceled") — это не ошибка, не логируем и не маппим в offline.
+                /\b(aborted|cancell?ed)\b/i.test(errorMessage);
             if (isAbortError) {
                 // Отменённая загрузка не должна тратить лимит эндпоинта — возвращаем слот (как в request()).
                 this.releaseRateLimitSlot(rateLimitSlot);

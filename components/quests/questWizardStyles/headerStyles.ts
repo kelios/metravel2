@@ -80,6 +80,13 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
             } as any,
         }),
     },
+    actionIconButton: {
+        width: 38,
+        minHeight: 38,
+        height: 38,
+        paddingHorizontal: 0,
+        justifyContent: 'center',
+    },
     actionLabelText: { color: colors.textMuted, fontWeight: '600', fontSize: 13 },
     resetText: { color: colors.textMuted, fontWeight: '600', fontSize: 12 },
     exportHint: {

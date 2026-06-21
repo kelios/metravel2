@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { devError } from '@/utils/logger'
+import { devError, devWarn } from '@/utils/logger'
 import { safeJsonParseString } from '@/utils/safeJsonParse'
 import { buildTravelMonthFallbackDate } from '@/utils/travelCalendarDate'
 
@@ -299,7 +299,9 @@ export const useTravelStatusStore = create<TravelStatusState>((set, get) => ({
       set({ entries: serverEntries, _userId: userId })
       await persistEntries(serverEntries, userId)
     } catch (error) {
-      devError('Ошибка загрузки статусов путешествий:', error)
+      // Best-effort серверная синхронизация: локальные статусы уже загружены
+      // выше, поэтому сбой фетча не фатален — предупреждение, не ошибка.
+      devWarn('Не удалось синхронизировать статусы путешествий с сервером:', error)
     }
   },
 }))

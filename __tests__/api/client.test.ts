@@ -91,6 +91,17 @@ describe('src/api/client.ts apiClient', () => {
     expect(devError).not.toHaveBeenCalled();
   });
 
+  it('пробрасывает отменённый fetch ("canceled") без devError и без offline-маппинга', async () => {
+    mockedGetSecureItem.mockResolvedValueOnce('token');
+    const canceledError = new Error('fetch failed: Fetch request has been canceled');
+    mockedFetchWithTimeout.mockRejectedValueOnce(canceledError);
+
+    // Отменённый запрос пробрасывается как есть — НЕ превращается в ApiError offline.
+    await expect(apiClient.get('/canceled')).rejects.toBe(canceledError);
+
+    expect(devError).not.toHaveBeenCalled();
+  });
+
   it('не логирует пустой reject value', async () => {
     mockedGetSecureItem.mockResolvedValueOnce('token');
     mockedFetchWithTimeout.mockRejectedValueOnce(undefined);
