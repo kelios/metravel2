@@ -442,7 +442,7 @@ export async function chooseCharacterPath(
   try {
     const dto = await apiClient.post<CharacterStateDto>(
       '/achievements/character/me/path/',
-      { path_slug: input.pathSlug },
+      { progression_line_slug: input.pathSlug },
     );
     return mapCharacter(dto);
   } catch (error) {

@@ -29,7 +29,7 @@ const DETAIL_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
   compass: 'compass',
   map: 'map',
   medals: 'award',
-  cloak: 'feather',
+  cape: 'feather',
 };
 
 const detailIcon = (slug: string): keyof typeof Feather.glyphMap =>

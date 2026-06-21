@@ -65,45 +65,83 @@ const placeFirstBadgeDto = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 })
 
+// Реальный BE-shape: уровень — вложенный объект, метрика — `score`,
+// тип активности — `activity_type`/`activity_label`, следующий уровень — `next_level`.
 const progressionLineDto = (overrides: Record<string, unknown> = {}) => ({
   slug: 'dog',
-  name: 'Собачья тропа',
-  activity_kind: 'explorer',
-  activity_name: 'Исследователь',
-  level: 3,
-  level_title: 'Следопыт',
-  current: 47,
-  current_level_min: 30,
-  next_level_min: 70,
-  next_level_title: 'Проводник',
-  emoji: '🐕',
+  name: 'Собачья',
+  description: 'Социальная ветка',
+  visual_key: 'dog',
+  activity_type: 'participant',
+  activity_label: 'Участник',
+  score: 47,
+  progress_percent: 44,
+  points_to_next: 28,
+  level: { level: 2, title: 'Следопыт стаи', min_score: 25, visual_key: 'dog-level-2' },
+  next_level: {
+    level: 3,
+    title: 'Надёжный спутник',
+    min_score: 75,
+    visual_key: 'dog-level-3',
+  },
+  levels: [
+    { level: 1, title: 'Щенок', min_score: 0, visual_key: 'dog-level-1' },
+    { level: 2, title: 'Следопыт стаи', min_score: 25, visual_key: 'dog-level-2' },
+    { level: 3, title: 'Надёжный спутник', min_score: 75, visual_key: 'dog-level-3' },
+  ],
   ...overrides,
 })
 
-const characterDetailDto = (overrides: Record<string, unknown> = {}) => ({
-  slug: 'collar',
-  name: 'Ошейник проводника',
+// Реальный BE-shape: visual_details[] с key/label/unlocked/equipped/min_level.
+const visualDetailDto = (overrides: Record<string, unknown> = {}) => ({
+  key: 'collar',
+  label: 'Ошейник',
+  visual_key: 'fox-collar',
+  min_level: 1,
   unlocked: true,
+  equipped: true,
   ...overrides,
 })
 
-const characterPathOptionDto = (overrides: Record<string, unknown> = {}) => ({
-  slug: 'scout',
-  name: 'Разведчик',
-  description: 'Бонус за дальние вылазки',
-  emoji: '🧭',
+// Реальный BE-shape: available_paths[] — линейки с can_select/selected.
+const availablePathDto = (overrides: Record<string, unknown> = {}) => ({
+  slug: 'fox',
+  name: 'Лисья',
+  activity_type: 'reader',
+  score: 1523,
+  level: { level: 5, title: 'Мудрая лиса', min_score: 300, visual_key: 'fox-level-5' },
+  selected: false,
+  can_select: true,
+  locked_reason: '',
   ...overrides,
 })
 
+const pathLineDto = (overrides: Record<string, unknown> = {}) => ({
+  slug: 'fox',
+  name: 'Лисья',
+  description: 'Ветка читателя',
+  visual_key: 'fox',
+  activity_type: 'reader',
+  activity_label: 'Читатель',
+  score: 1523,
+  progress_percent: 100,
+  points_to_next: null,
+  level: { level: 5, title: 'Мудрая лиса', min_score: 300, visual_key: 'fox-level-5' },
+  next_level: null,
+  levels: [],
+  ...overrides,
+})
+
+// Реальный BE-shape character/me/: user_id + active/selected/available_paths.
 const characterStateDto = (overrides: Record<string, unknown> = {}) => ({
-  id: 1,
-  name: 'Странник',
-  level: 4,
-  path_slug: 'scout',
-  path_name: 'Разведчик',
-  details: [characterDetailDto()],
-  pending_choice: false,
-  path_options: [characterPathOptionDto()],
+  user_id: 104,
+  selected_path: null,
+  active_path: pathLineDto(),
+  suggested_path: pathLineDto(),
+  switch_unlocked: true,
+  available_paths: [availablePathDto({ slug: 'dog', name: 'Собачья' })],
+  visual_details: [visualDetailDto()],
+  updated_at: '2026-06-21T10:00:00Z',
   ...overrides,
 })
 
@@ -307,117 +345,114 @@ describe('fetchMyGamificationProgress', () => {
     ;(global as any).__DEV__ = false
   })
 
-  it('maps a full ProgressionLineDto to ProgressionLine domain object', async () => {
-    mockGet.mockResolvedValueOnce({ lines: [progressionLineDto()] })
+  it('maps a full ProgressionLineDto (BE array shape) to ProgressionLine', async () => {
+    mockGet.mockResolvedValueOnce([progressionLineDto()])
 
     const progress = await fetchMyGamificationProgress()
 
     expect(progress.lines).toHaveLength(1)
     const l = progress.lines[0]
     expect(l.slug).toBe('dog')
-    expect(l.name).toBe('Собачья тропа')
-    expect(l.activityKind).toBe('explorer')
-    expect(l.activityName).toBe('Исследователь')
-    expect(l.level).toBe(3)
-    expect(l.levelTitle).toBe('Следопыт')
+    expect(l.name).toBe('Собачья')
+    expect(l.activityKind).toBe('participant')
+    expect(l.activityName).toBe('Участник')
+    expect(l.level).toBe(2)
+    expect(l.levelTitle).toBe('Следопыт стаи')
     expect(l.current).toBe(47)
-    expect(l.currentLevelMin).toBe(30)
-    expect(l.nextLevelMin).toBe(70)
-    expect(l.nextLevelTitle).toBe('Проводник')
+    expect(l.currentLevelMin).toBe(25)
+    expect(l.nextLevelMin).toBe(75)
+    expect(l.nextLevelTitle).toBe('Надёжный спутник')
     expect(l.isMaxLevel).toBe(false)
     expect(l.emoji).toBe('🐕')
     // No snake_case leaking
-    expect((l as any).activity_kind).toBeUndefined()
-    expect((l as any).next_level_min).toBeUndefined()
+    expect((l as any).activity_type).toBeUndefined()
+    expect((l as any).next_level).toBeUndefined()
   })
 
-  it('normalizes unknown activity_kind to "explorer"', async () => {
-    mockGet.mockResolvedValueOnce({
-      lines: [progressionLineDto({ activity_kind: 'unknown_type' })],
-    })
+  it('normalizes unknown activity_type to "explorer"', async () => {
+    mockGet.mockResolvedValueOnce([progressionLineDto({ activity_type: 'unknown_type' })])
     const { lines } = await fetchMyGamificationProgress()
     expect(lines[0].activityKind).toBe('explorer')
   })
 
-  it('normalizes null activity_kind to "explorer"', async () => {
-    mockGet.mockResolvedValueOnce({
-      lines: [progressionLineDto({ activity_kind: null })],
-    })
+  it('normalizes null activity_type to "explorer"', async () => {
+    mockGet.mockResolvedValueOnce([progressionLineDto({ activity_type: null })])
     const { lines } = await fetchMyGamificationProgress()
     expect(lines[0].activityKind).toBe('explorer')
   })
 
-  it('accepts all valid activity_kind values', async () => {
+  it('accepts all valid activity_type values', async () => {
     const kinds = ['explorer', 'reader', 'author', 'participant'] as const
-    for (const activity_kind of kinds) {
-      mockGet.mockResolvedValueOnce({ lines: [progressionLineDto({ activity_kind })] })
+    for (const activity_type of kinds) {
+      mockGet.mockResolvedValueOnce([progressionLineDto({ activity_type })])
       const { lines } = await fetchMyGamificationProgress()
-      expect(lines[0].activityKind).toBe(activity_kind)
+      expect(lines[0].activityKind).toBe(activity_type)
     }
   })
 
   it('normalizes unknown slug to "dog"', async () => {
-    mockGet.mockResolvedValueOnce({
-      lines: [progressionLineDto({ slug: 'cat' })],
-    })
+    mockGet.mockResolvedValueOnce([progressionLineDto({ slug: 'cat' })])
     const { lines } = await fetchMyGamificationProgress()
     expect(lines[0].slug).toBe('dog')
   })
 
-  it('accepts all valid slug values', async () => {
-    const slugs = ['dog', 'boar', 'fox', 'bird'] as const
-    for (const slug of slugs) {
-      mockGet.mockResolvedValueOnce({ lines: [progressionLineDto({ slug })] })
+  it('accepts all valid slug values and derives the matching emoji', async () => {
+    const cases = [
+      ['dog', '🐕'],
+      ['boar', '🐗'],
+      ['fox', '🦊'],
+      ['bird', '🦅'],
+    ] as const
+    for (const [slug, emoji] of cases) {
+      mockGet.mockResolvedValueOnce([progressionLineDto({ slug })])
       const { lines } = await fetchMyGamificationProgress()
       expect(lines[0].slug).toBe(slug)
+      expect(lines[0].emoji).toBe(emoji)
     }
   })
 
-  it('sets isMaxLevel true when next_level_min is null', async () => {
-    mockGet.mockResolvedValueOnce({
-      lines: [progressionLineDto({ next_level_min: null, next_level_title: null })],
-    })
+  it('sets isMaxLevel true when next_level is null', async () => {
+    mockGet.mockResolvedValueOnce([progressionLineDto({ next_level: null })])
     const { lines } = await fetchMyGamificationProgress()
     expect(lines[0].isMaxLevel).toBe(true)
     expect(lines[0].nextLevelMin).toBeNull()
     expect(lines[0].nextLevelTitle).toBeNull()
   })
 
-  it('defaults level to 1 when absent', async () => {
-    mockGet.mockResolvedValueOnce({
-      lines: [progressionLineDto({ level: null })],
-    })
+  it('defaults level to 1 when level.level absent', async () => {
+    mockGet.mockResolvedValueOnce([
+      progressionLineDto({ level: { level: undefined, title: 'x', min_score: 0 } }),
+    ])
     const { lines } = await fetchMyGamificationProgress()
     expect(lines[0].level).toBe(1)
   })
 
-  it('defaults emoji to "🐾" when absent', async () => {
-    mockGet.mockResolvedValueOnce({
-      lines: [progressionLineDto({ emoji: null })],
-    })
-    const { lines } = await fetchMyGamificationProgress()
-    expect(lines[0].emoji).toBe('🐾')
-  })
-
-  it('defaults current/currentLevelMin to 0 when absent', async () => {
-    mockGet.mockResolvedValueOnce({
-      lines: [progressionLineDto({ current: null, current_level_min: null })],
-    })
+  it('defaults current/currentLevelMin to 0 when score/min_score absent', async () => {
+    mockGet.mockResolvedValueOnce([
+      progressionLineDto({ score: null, level: { level: 1, title: 'x', min_score: null } }),
+    ])
     const { lines } = await fetchMyGamificationProgress()
     expect(lines[0].current).toBe(0)
     expect(lines[0].currentLevelMin).toBe(0)
   })
 
-  it('returns empty lines when lines is absent', async () => {
-    mockGet.mockResolvedValueOnce({})
+  it('returns empty lines for an empty array (safe fallback)', async () => {
+    mockGet.mockResolvedValueOnce([])
     const progress = await fetchMyGamificationProgress()
     expect(progress.lines).toEqual([])
   })
 
-  it('returns empty lines when lines is empty array', async () => {
-    mockGet.mockResolvedValueOnce({ lines: [] })
+  it('returns empty lines for null/undefined payload (safe fallback)', async () => {
+    mockGet.mockResolvedValueOnce(null as any)
     const progress = await fetchMyGamificationProgress()
     expect(progress.lines).toEqual([])
+  })
+
+  it('still accepts legacy {lines:[]} wrapper shape (defensive)', async () => {
+    mockGet.mockResolvedValueOnce({ lines: [progressionLineDto()] } as any)
+    const progress = await fetchMyGamificationProgress()
+    expect(progress.lines).toHaveLength(1)
+    expect(progress.lines[0].slug).toBe('dog')
   })
 
   it('calls correct endpoint', async () => {
@@ -460,15 +495,15 @@ describe('fetchUserGamificationProgress', () => {
     ;(global as any).__DEV__ = false
   })
 
-  it('maps DTO same as my-endpoint', async () => {
-    mockGet.mockResolvedValueOnce({ lines: [progressionLineDto()] })
+  it('maps DTO same as my-endpoint (BE array shape)', async () => {
+    mockGet.mockResolvedValueOnce([progressionLineDto()])
     const progress = await fetchUserGamificationProgress(55)
     expect(progress.lines).toHaveLength(1)
-    expect(progress.lines[0].activityKind).toBe('explorer')
+    expect(progress.lines[0].activityKind).toBe('participant')
   })
 
   it('passes userId in the request URL with skipAuth', async () => {
-    mockGet.mockResolvedValueOnce({ lines: [] })
+    mockGet.mockResolvedValueOnce([])
     await fetchUserGamificationProgress(55)
     expect(mockGet).toHaveBeenCalledWith(
       '/achievements/user/55/progression-lines/',
@@ -478,7 +513,7 @@ describe('fetchUserGamificationProgress', () => {
   })
 
   it('accepts string userId', async () => {
-    mockGet.mockResolvedValueOnce({ lines: [] })
+    mockGet.mockResolvedValueOnce([])
     await fetchUserGamificationProgress('bob')
     expect(mockGet).toHaveBeenCalledWith(
       '/achievements/user/bob/progression-lines/',
@@ -508,126 +543,138 @@ describe('fetchMyCharacter', () => {
     ;(global as any).__DEV__ = false
   })
 
-  it('maps CharacterStateDto to CharacterState domain object', async () => {
+  it('maps real BE character/me/ shape to CharacterState domain object', async () => {
     mockGet.mockResolvedValueOnce(characterStateDto())
 
     const char = await fetchMyCharacter()
 
-    expect(char.id).toBe(1)
-    expect(char.name).toBe('Странник')
-    expect(char.level).toBe(4)
-    expect(char.pathSlug).toBe('scout')
-    expect(char.pathName).toBe('Разведчик')
-    expect(char.pendingChoice).toBe(false)
+    // id ← user_id, name/level ← active_path
+    expect(char.id).toBe(104)
+    expect(char.name).toBe('Лисья')
+    expect(char.level).toBe(5)
+    // selected_path null → no chosen path yet, but switch_unlocked → pending choice
+    expect(char.pathSlug).toBeNull()
+    expect(char.pathName).toBeNull()
+    expect(char.pendingChoice).toBe(true)
+    // details ← visual_details[]
     expect(char.details).toHaveLength(1)
     expect(char.details[0].slug).toBe('collar')
-    expect(char.details[0].name).toBe('Ошейник проводника')
+    expect(char.details[0].name).toBe('Ошейник')
     expect(char.details[0].unlocked).toBe(true)
+    // pathOptions ← available_paths[]
     expect(char.pathOptions).toHaveLength(1)
-    expect(char.pathOptions[0].slug).toBe('scout')
-    expect(char.pathOptions[0].name).toBe('Разведчик')
-    expect(char.pathOptions[0].description).toBe('Бонус за дальние вылазки')
-    expect(char.pathOptions[0].emoji).toBe('🧭')
+    expect(char.pathOptions[0].slug).toBe('dog')
+    expect(char.pathOptions[0].name).toBe('Собачья')
+    expect(char.pathOptions[0].emoji).toBe('🐕')
     // No snake_case leaking
-    expect((char as any).path_slug).toBeUndefined()
-    expect((char as any).pending_choice).toBeUndefined()
+    expect((char as any).user_id).toBeUndefined()
+    expect((char as any).selected_path).toBeUndefined()
+    expect((char as any).available_paths).toBeUndefined()
   })
 
-  it('valid path_slug "scout" stays "scout"', async () => {
-    mockGet.mockResolvedValueOnce(characterStateDto({ path_slug: 'scout' }))
+  it('reflects a chosen path via selected_path (line slug)', async () => {
+    mockGet.mockResolvedValueOnce(
+      characterStateDto({
+        selected_path: pathLineDto({ slug: 'fox', name: 'Лисья' }),
+      }),
+    )
     const char = await fetchMyCharacter()
-    expect(char.pathSlug).toBe('scout')
+    expect(char.pathSlug).toBe('fox')
+    expect(char.pathName).toBe('Лисья')
+    // already chosen → not pending despite switch_unlocked
+    expect(char.pendingChoice).toBe(false)
   })
 
-  it('valid path_slug "cartographer" stays "cartographer"', async () => {
-    mockGet.mockResolvedValueOnce(characterStateDto({ path_slug: 'cartographer' }))
-    const char = await fetchMyCharacter()
-    expect(char.pathSlug).toBe('cartographer')
+  it('accepts each valid line slug as selected_path', async () => {
+    const slugs = ['dog', 'boar', 'fox', 'bird'] as const
+    for (const slug of slugs) {
+      mockGet.mockResolvedValueOnce(
+        characterStateDto({ selected_path: pathLineDto({ slug }) }),
+      )
+      const char = await fetchMyCharacter()
+      expect(char.pathSlug).toBe(slug)
+    }
   })
 
-  it('valid path_slug "photohunter" stays "photohunter"', async () => {
-    mockGet.mockResolvedValueOnce(characterStateDto({ path_slug: 'photohunter' }))
-    const char = await fetchMyCharacter()
-    expect(char.pathSlug).toBe('photohunter')
-  })
-
-  it('normalizes invalid path_slug to null', async () => {
-    mockGet.mockResolvedValueOnce(characterStateDto({ path_slug: 'unknown_path' }))
+  it('normalizes invalid selected_path slug to null', async () => {
+    mockGet.mockResolvedValueOnce(
+      characterStateDto({ selected_path: pathLineDto({ slug: 'unknown_path' }) }),
+    )
     const char = await fetchMyCharacter()
     expect(char.pathSlug).toBeNull()
   })
 
-  it('normalizes null path_slug to null (not yet chosen)', async () => {
-    mockGet.mockResolvedValueOnce(characterStateDto({ path_slug: null }))
-    const char = await fetchMyCharacter()
-    expect(char.pathSlug).toBeNull()
-  })
-
-  it('coerces pending_choice null to false', async () => {
-    mockGet.mockResolvedValueOnce(characterStateDto({ pending_choice: null }))
+  it('pendingChoice false when switch is locked', async () => {
+    mockGet.mockResolvedValueOnce(characterStateDto({ switch_unlocked: false }))
     const char = await fetchMyCharacter()
     expect(char.pendingChoice).toBe(false)
   })
 
-  it('coerces pending_choice 1 (truthy) to true', async () => {
-    mockGet.mockResolvedValueOnce(characterStateDto({ pending_choice: 1 }))
+  it('coerces switch_unlocked null to false → not pending', async () => {
+    mockGet.mockResolvedValueOnce(characterStateDto({ switch_unlocked: null }))
     const char = await fetchMyCharacter()
-    expect(char.pendingChoice).toBe(true)
+    expect(char.pendingChoice).toBe(false)
   })
 
-  it('defaults level to 1 when absent', async () => {
-    mockGet.mockResolvedValueOnce(characterStateDto({ level: null }))
+  it('defaults level to 1 when active_path missing', async () => {
+    mockGet.mockResolvedValueOnce(
+      characterStateDto({ active_path: null, selected_path: null }),
+    )
     const char = await fetchMyCharacter()
     expect(char.level).toBe(1)
+    expect(char.name).toBe('Персонаж')
   })
 
-  it('returns empty details when details absent', async () => {
-    mockGet.mockResolvedValueOnce(characterStateDto({ details: undefined }))
+  it('falls back to selected_path for name/level when active_path absent', async () => {
+    mockGet.mockResolvedValueOnce(
+      characterStateDto({
+        active_path: null,
+        selected_path: pathLineDto({ slug: 'boar', name: 'Кабанья' }),
+      }),
+    )
+    const char = await fetchMyCharacter()
+    expect(char.name).toBe('Кабанья')
+    expect(char.level).toBe(5)
+    expect(char.pathSlug).toBe('boar')
+  })
+
+  it('returns empty details when visual_details absent', async () => {
+    mockGet.mockResolvedValueOnce(characterStateDto({ visual_details: undefined }))
     const char = await fetchMyCharacter()
     expect(char.details).toEqual([])
   })
 
-  it('returns empty pathOptions when path_options absent', async () => {
-    mockGet.mockResolvedValueOnce(characterStateDto({ path_options: undefined }))
+  it('returns empty pathOptions when available_paths absent', async () => {
+    mockGet.mockResolvedValueOnce(characterStateDto({ available_paths: undefined }))
     const char = await fetchMyCharacter()
     expect(char.pathOptions).toEqual([])
   })
 
-  it('normalizes invalid path option slug to "cartographer"', async () => {
+  it('excludes non-selectable available_paths (can_select=false)', async () => {
     mockGet.mockResolvedValueOnce(
       characterStateDto({
-        path_options: [characterPathOptionDto({ slug: 'totally_invalid' })],
+        available_paths: [
+          availablePathDto({ slug: 'dog', can_select: true }),
+          availablePathDto({ slug: 'boar', can_select: false }),
+        ],
       }),
     )
     const char = await fetchMyCharacter()
-    expect(char.pathOptions[0].slug).toBe('cartographer')
+    expect(char.pathOptions).toHaveLength(1)
+    expect(char.pathOptions[0].slug).toBe('dog')
   })
 
-  it('defaults path option emoji to "🧭" when absent', async () => {
+  it('derives path option emoji from line slug', async () => {
     mockGet.mockResolvedValueOnce(
-      characterStateDto({
-        path_options: [characterPathOptionDto({ emoji: null })],
-      }),
+      characterStateDto({ available_paths: [availablePathDto({ slug: 'bird' })] }),
     )
     const char = await fetchMyCharacter()
-    expect(char.pathOptions[0].emoji).toBe('🧭')
+    expect(char.pathOptions[0].emoji).toBe('🦅')
   })
 
-  it('defaults path option description to "" when absent', async () => {
+  it('coerces visual_detail.unlocked null to false', async () => {
     mockGet.mockResolvedValueOnce(
-      characterStateDto({
-        path_options: [characterPathOptionDto({ description: null })],
-      }),
-    )
-    const char = await fetchMyCharacter()
-    expect(char.pathOptions[0].description).toBe('')
-  })
-
-  it('coerces detail.unlocked null to false', async () => {
-    mockGet.mockResolvedValueOnce(
-      characterStateDto({
-        details: [characterDetailDto({ unlocked: null })],
-      }),
+      characterStateDto({ visual_details: [visualDetailDto({ unlocked: null })] }),
     )
     const char = await fetchMyCharacter()
     expect(char.details[0].unlocked).toBe(false)
@@ -674,10 +721,12 @@ describe('fetchUserCharacter', () => {
   })
 
   it('maps DTO same as my-endpoint', async () => {
-    mockGet.mockResolvedValueOnce(characterStateDto())
+    mockGet.mockResolvedValueOnce(
+      characterStateDto({ selected_path: pathLineDto({ slug: 'fox', name: 'Лисья' }) }),
+    )
     const char = await fetchUserCharacter(77)
-    expect(char.id).toBe(1)
-    expect(char.pathSlug).toBe('scout')
+    expect(char.id).toBe(104)
+    expect(char.pathSlug).toBe('fox')
     expect(char.pendingChoice).toBe(false)
   })
 
@@ -722,27 +771,28 @@ describe('chooseCharacterPath', () => {
     ;(global as any).__DEV__ = false
   })
 
-  it('POSTs to correct endpoint with path_slug body', async () => {
-    mockPost.mockResolvedValueOnce(characterStateDto({ path_slug: 'cartographer' }))
-    await chooseCharacterPath({ pathSlug: 'cartographer' })
+  it('POSTs to correct endpoint with progression_line_slug body', async () => {
+    mockPost.mockResolvedValueOnce(
+      characterStateDto({ selected_path: pathLineDto({ slug: 'fox', name: 'Лисья' }) }),
+    )
+    await chooseCharacterPath({ pathSlug: 'fox' })
     expect(mockPost).toHaveBeenCalledWith(
       '/achievements/character/me/path/',
-      { path_slug: 'cartographer' },
+      { progression_line_slug: 'fox' },
     )
   })
 
   it('returns mapped CharacterState from POST response', async () => {
     mockPost.mockResolvedValueOnce(
       characterStateDto({
-        path_slug: 'cartographer',
-        path_name: 'Картограф',
-        pending_choice: false,
-        path_options: [],
+        selected_path: pathLineDto({ slug: 'fox', name: 'Лисья' }),
+        switch_unlocked: false,
+        available_paths: [],
       }),
     )
-    const result = await chooseCharacterPath({ pathSlug: 'cartographer' })
-    expect(result.pathSlug).toBe('cartographer')
-    expect(result.pathName).toBe('Картограф')
+    const result = await chooseCharacterPath({ pathSlug: 'fox' })
+    expect(result.pathSlug).toBe('fox')
+    expect(result.pathName).toBe('Лисья')
     expect(result.pendingChoice).toBe(false)
     expect(result.pathOptions).toEqual([])
   })
@@ -750,9 +800,9 @@ describe('chooseCharacterPath', () => {
   it('returns mock fallback on ApiError(404) in __DEV__ — simulates path chosen', async () => {
     ;(global as any).__DEV__ = true
     mockPost.mockRejectedValueOnce(new (ApiError as any)(404))
-    // MOCK_CHARACTER_STATE.pathOptions[0] is 'cartographer'
-    const result = await chooseCharacterPath({ pathSlug: 'cartographer' })
-    expect(result.pathSlug).toBe('cartographer')
+    // MOCK_CHARACTER_STATE.pathOptions[0] is 'dog'
+    const result = await chooseCharacterPath({ pathSlug: 'dog' })
+    expect(result.pathSlug).toBe('dog')
     expect(result.pendingChoice).toBe(false)
     expect(result.pathOptions).toEqual([])
   })
@@ -760,25 +810,25 @@ describe('chooseCharacterPath', () => {
   it('mock fallback: finds the matching option by pathSlug', async () => {
     ;(global as any).__DEV__ = true
     mockPost.mockRejectedValueOnce(new (ApiError as any)(404))
-    const result = await chooseCharacterPath({ pathSlug: 'scout' })
-    expect(result.pathSlug).toBe('scout')
-    expect(result.pathName).toBe('Разведчик')
+    const result = await chooseCharacterPath({ pathSlug: 'fox' })
+    expect(result.pathSlug).toBe('fox')
+    expect(result.pathName).toBe('Лисья')
   })
 
   it('re-throws ApiError(500) when NOT in __DEV__', async () => {
     mockPost.mockRejectedValueOnce(new (ApiError as any)(500))
-    await expect(chooseCharacterPath({ pathSlug: 'scout' })).rejects.toBeInstanceOf(ApiError)
+    await expect(chooseCharacterPath({ pathSlug: 'fox' })).rejects.toBeInstanceOf(ApiError)
   })
 
   it('re-throws ApiError(500) even in __DEV__ (not in whitelist)', async () => {
     ;(global as any).__DEV__ = true
     mockPost.mockRejectedValueOnce(new (ApiError as any)(500))
-    await expect(chooseCharacterPath({ pathSlug: 'scout' })).rejects.toBeInstanceOf(ApiError)
+    await expect(chooseCharacterPath({ pathSlug: 'fox' })).rejects.toBeInstanceOf(ApiError)
   })
 
   it('re-throws non-ApiError network error regardless of __DEV__', async () => {
     ;(global as any).__DEV__ = true
     mockPost.mockRejectedValueOnce(new Error('Network error'))
-    await expect(chooseCharacterPath({ pathSlug: 'photohunter' })).rejects.toThrow('Network error')
+    await expect(chooseCharacterPath({ pathSlug: 'bird' })).rejects.toThrow('Network error')
   })
 })
