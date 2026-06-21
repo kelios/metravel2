@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -61,6 +61,10 @@ const AVATAR_SIZE = 84;
 const COVER_HEIGHT = 90;
 const AVATAR_BORDER = 3;
 
+// Дефолтный бандл-арт обложки (горы+озеро+хайкер). Metro отдаёт jpg и на web,
+// и на native — статичный require даёт ImageSourcePropType (number).
+const DEFAULT_COVER_SOURCE = require('@/assets/images/profile-cover-default.jpg');
+
 const getInitials = (name: string) =>
   name
     .split(' ')
@@ -82,6 +86,7 @@ export function ProfileHeader({
   avatarUploading = false,
 }: ProfileHeaderProps) {
   const colors = useThemedColors();
+  const [defaultCoverFailed, setDefaultCoverFailed] = useState(false);
 
   const coverPhoto = useMemo(
     () =>
@@ -128,19 +133,22 @@ export function ProfileHeader({
           position: 'relative',
           overflow: 'hidden',
         },
+        // Деликатный угловой scrim под frost-чипом overflow-меню. Картинка-обложка
+        // светлая сверху, поэтому иконкам нужен лёгкий тёмный градиент только в
+        // верхнем правом углу — кадр при этом не затемняется.
         coverScrim: {
           position: 'absolute',
           top: 0,
           right: 0,
-          width: 120,
-          height: 56,
+          width: 132,
+          height: 60,
           ...Platform.select({
             web: {
-              backgroundImage: `linear-gradient(to bottom left, rgba(0,0,0,0.28), transparent)`,
+              backgroundImage: `linear-gradient(to bottom left, rgba(0,0,0,0.36), transparent 70%)`,
             } as any,
             default: {
               backgroundColor: colors.overlay,
-              opacity: 0.18,
+              opacity: 0.24,
             },
           }),
         },
@@ -289,7 +297,8 @@ export function ProfileHeader({
 
   return (
     <View style={styles.container}>
-      {/* Photo cover banner (Telegram/VK-style) with topo-texture fallback */}
+      {/* Photo cover banner (Telegram/VK-style):
+          1) uploaded cover_photo → 2) bundled default art → 3) topo-texture fallback */}
       <View style={styles.cover}>
         {coverPhoto ? (
           <ImageCardMedia
@@ -299,6 +308,16 @@ export function ProfileHeader({
             width="100%"
             borderRadius={0}
             fit="cover"
+          />
+        ) : !defaultCoverFailed ? (
+          <ImageCardMedia
+            source={DEFAULT_COVER_SOURCE}
+            alt="Обложка профиля"
+            height={COVER_HEIGHT}
+            width="100%"
+            borderRadius={0}
+            fit="cover"
+            onError={() => setDefaultCoverFailed(true)}
           />
         ) : (
           <CoverTopoTexture height={COVER_HEIGHT} />

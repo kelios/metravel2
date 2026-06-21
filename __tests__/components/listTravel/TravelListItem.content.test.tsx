@@ -151,31 +151,13 @@ describe('TravelListItem content & metadata', () => {
     expect(getByLabelText('Планируют: 3')).toBeTruthy();
   });
 
-  it('renders author rank badge only when rank data exists', () => {
-    const { getByTestId, getByText, rerender, queryByTestId } = renderItem({
+  it('does not render author rank badge on the travel card', () => {
+    const { queryByTestId, queryByText } = renderItem({
       authorRank: { level: 5, title: 'Эксперт' },
     } as any);
 
-    expect(getByTestId('author-rank-meta')).toBeTruthy();
-    expect(getByText('5')).toBeTruthy();
-    expect(getByText('Эксперт')).toBeTruthy();
-
-    const queryClient = createTestClient();
-    rerender(
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <FavoritesProvider>
-            <TravelListItem
-              travel={baseTravel}
-              currentUserId={null}
-              isSuperuser={false}
-              isMobile={false}
-            />
-          </FavoritesProvider>
-        </AuthProvider>
-      </QueryClientProvider>,
-    );
     expect(queryByTestId('author-rank-meta')).toBeNull();
+    expect(queryByText('Эксперт')).toBeNull();
   });
 
   it('renders countries list with up to 2 countries joined inline', () => {
@@ -198,18 +180,17 @@ describe('TravelListItem content & metadata', () => {
     expect(getByText('John Doe')).toBeTruthy();
   });
 
-  it('shows Popular/New badge icons based on views and created_at', () => {
+  it('does not render decorative Popular/New badges', () => {
     const now = new Date();
     const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
-    
-    const { getByText } = renderItem({
-      countUnicIpView: '1001', // > 1000 for popular badge
+
+    const { queryByText } = renderItem({
+      countUnicIpView: '1001',
       created_at: twoDaysAgo.toISOString(),
     } as any);
-    
-    // Badges are now icon-only (trending-up for popular, star for new)
-    expect(getByText('trending-up')).toBeTruthy();
-    expect(getByText('star')).toBeTruthy();
+
+    expect(queryByText('trending-up')).toBeNull();
+    expect(queryByText('star')).toBeNull();
   });
 
   // Регрессионные тесты для условного отображения контента
@@ -227,27 +208,6 @@ describe('TravelListItem content & metadata', () => {
     it('renders content area when views exist', () => {
       const { getByTestId } = renderItem({ countUnicIpView: '10' } as any);
       expect(getByTestId('views-meta')).toBeTruthy();
-    });
-
-    it('renders content area when popular badge exists', () => {
-      const { getByText } = renderItem({ 
-        countUnicIpView: '1001', // > 1000 for popular badge
-        countryName: '', // Убираем страну
-        userName: '', // Убираем автора
-        userIds: '', // Убираем ID автора
-        created_at: new Date().toISOString() // Устанавливаем текущую дату для популярности
-      } as any);
-      // Badge is now icon-only
-      expect(getByText('trending-up')).toBeTruthy();
-    });
-
-    it('renders content area when new badge exists', () => {
-      const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
-      const { getByText } = renderItem({ 
-        created_at: twoDaysAgo.toISOString() 
-      } as any);
-      // Badge is now icon-only
-      expect(getByText('star')).toBeTruthy();
     });
 
     it('does not render content area when no information exists', () => {

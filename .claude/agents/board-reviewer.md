@@ -28,9 +28,10 @@ model: sonnet
 По умолчанию — активный спринт (`metravel_sprints_list` → `status=active`).
 
 ## Какие тикеты берёшь
-Через `metravel_tasks_list(sprint=<N>, status=review)` — основной кандидат на приёмку. Дополнительно
-бери `status=todo`, у которых в `description` есть пометка «handoff: reviewer/releaser». Тикеты в
-`backlog`/`in_progress` не трогаешь. Разделяй `area=front` и `area=back`.
+Через `metravel_tasks_list(sprint=<N>, status=testing)` и `status=review` — основные кандидаты на
+приёмку (`testing` — QA-колонка перед `done`, `review` — после код-ревью). Дополнительно бери
+`status=todo` со старой пометкой «handoff: reviewer/releaser». Тикеты в `backlog`/`in_progress` не
+трогаешь. Разделяй области: `area=front` / `back` / `android` / `ios`.
 
 ## Алгоритм по каждому тикету
 1. **Прочитай контракт.** `metravel_task_get(id)` → найди в `description` блок `## Task Contract`.
@@ -62,7 +63,7 @@ model: sonnet
      status=done)` и допиши в `description` evidence-заметку: дата, какие проверки прошли,
      ключевые ответы probe/тестов (без секретов), скрин/лог-ссылки.
    - **Fail** — любой пункт не подтверждён → НЕ `done`. Верни `review` (а если корневая причина
-     внешняя — BE/deploy/routing — `blocked_by` с id блокера) и допиши blocker evidence:
+     внешняя — BE/deploy/routing — `status=blocked_by` + `blocked_by_id=<id блокера>`) и допиши blocker evidence:
      что проверял, что получил (код/field/лог), какой агент должен чинить.
 
 ## Жёсткие правила приёмки (Done gate)
@@ -84,7 +85,7 @@ model: sonnet
 ## Закрытие спринта
 Когда ВСЕ тикеты спринта (front и back) реально приняты в `done` с evidence — по явному запросу
 закрой спринт: `metravel_sprint_update(id, status=closed)`. Не закрывай, если остался хоть один
-тикет вне `done` (review/blocked/in_progress/todo/backlog) — перечисли оставшиеся и оставь спринт
+тикет вне `done` (review/testing/blocked/in_progress/todo/backlog) — перечисли оставшиеся и оставь спринт
 `active`. BE-тикеты в `done` для закрытия спринта тоже считаются: если есть `blocked_by`, спринт
 не закрывать.
 

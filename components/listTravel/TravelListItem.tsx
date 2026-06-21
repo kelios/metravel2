@@ -24,7 +24,6 @@ import TravelListItemEngagementMetrics from './TravelListItemEngagementMetrics'
 import TravelListItemSelectableOverlay from './TravelListItemSelectableOverlay'
 import { createTravelListItemStyles } from './travelListItemStyles'
 import {
-  hasPetCompanion,
   isLikelyWatermarked,
   normalizeOwnerIds,
   resolveTravelAuthorDisplayName,
@@ -34,11 +33,8 @@ import { useTravelListItemNavigation } from './useTravelListItemNavigation'
 
 const PLACEHOLDER_BLURHASH = 'LEHL6nWB2yk8pyo0adR*.7kCMdnj'
 const EMPTY_STYLE = {} as const
-const NEW_BADGE_MAX_DAYS = 7
-const POPULAR_VIEWS_THRESHOLD = 1000
 const TOUCH_GHOST_CLICK_GUARD_MS = 500
 const VIEW_ICON_SIZE = Platform.OS === 'web' ? 11 : 10
-const BADGE_ICON_SIZE = Platform.OS === 'web' ? 10 : 9
 const FAVORITE_ICON_SIZE = Platform.OS === 'web' ? 18 : 16
 const IS_WEB = Platform.OS === 'web' || typeof document !== 'undefined'
 const ANDROID_RIPPLE =
@@ -66,19 +62,6 @@ function extractOwnerIds(travel: any): string[] {
       travel?.user?.id ??
       '',
   )
-}
-
-function computePopularityFlags(travel: any, views: number) {
-  const createdAt = travel?.created_at ?? travel?.updated_at
-  let isNew = false
-  if (createdAt) {
-    const createdDate = new Date(createdAt)
-    if (!isNaN(createdDate.getTime())) {
-      const days = (Date.now() - createdDate.getTime()) / 86_400_000
-      isNew = days >= 0 && days <= NEW_BADGE_MAX_DAYS
-    }
-  }
-  return { isPopular: views > POPULAR_VIEWS_THRESHOLD, isNew }
 }
 
 type Props = {
@@ -206,21 +189,8 @@ function TravelListItem({
     [countryName],
   )
 
-  const petFriendly = useMemo(
-    () => hasPetCompanion(travel.companions),
-    [travel.companions],
-  )
-
   const engagementStats = travel.engagementStats
   const hasEngagementStats = hasAnyTravelEngagementStats(engagementStats)
-  const authorRank = useMemo(() => {
-    const rank = travel.authorRank ?? (travel as any).author_rank
-    if (!rank || typeof rank !== 'object') return null
-    const level = Number((rank as any).level)
-    const rankTitle = typeof (rank as any).title === 'string' ? (rank as any).title.trim() : ''
-    if (!Number.isFinite(level) || level <= 0 || !rankTitle) return null
-    return { level: Math.trunc(level), title: rankTitle }
-  }, [travel])
 
   const effectiveWidth =
     typeof cardWidth === 'number'
@@ -234,11 +204,6 @@ function TravelListItem({
   const responsiveValues = useMemo(
     () => getResponsiveCardValues(effectiveWidth),
     [effectiveWidth],
-  )
-
-  const popularityFlags = useMemo(
-    () => computePopularityFlags(travel, views),
-    [travel, views],
   )
 
   const lastSelectableTouchAtRef = useRef(0)
@@ -331,11 +296,7 @@ function TravelListItem({
     views > 0 ||
     hasRating ||
     travelYear != null ||
-    hasEngagementStats ||
-    authorRank != null ||
-    popularityFlags.isPopular ||
-    popularityFlags.isNew ||
-    petFriendly
+    hasEngagementStats
 
   const selectableWebHandlers = useMemo(() => {
     if (!IS_WEB || !selectable) return EMPTY_STYLE as any
@@ -596,43 +557,10 @@ function TravelListItem({
             iconColor={colors.textMuted}
           />
         )}
-        {authorRank ? (
-          <View
-            style={styles.authorRankBadge}
-            testID="author-rank-meta"
-            accessibilityLabel={`Ранг автора: уровень ${authorRank.level}, ${authorRank.title}`}
-            {...(IS_WEB ? ({ title: `Уровень ${authorRank.level}: ${authorRank.title}` } as any) : null)}
-          >
-            <Feather name="award" size={BADGE_ICON_SIZE} color={colors.primary} />
-            <Text style={styles.authorRankLevelText}>{authorRank.level}</Text>
-            <Text style={styles.authorRankTitleText} numberOfLines={1}>
-              {authorRank.title}
-            </Text>
-          </View>
-        ) : null}
         {hasRating && (
           <View style={styles.metaRating} testID="rating-meta">
             <Text style={styles.metaRatingStar}>★</Text>
             <Text style={styles.metaRatingValue}>{travel.rating!.toFixed(1)}</Text>
-          </View>
-        )}
-        {popularityFlags.isPopular && (
-          <View style={[styles.statusBadge, styles.statusBadgePopular]}>
-            <Feather name="trending-up" size={BADGE_ICON_SIZE} color={colors.warningDark} />
-          </View>
-        )}
-        {popularityFlags.isNew && (
-          <View style={[styles.statusBadge, styles.statusBadgeNew]}>
-            <Feather name="star" size={BADGE_ICON_SIZE} color={colors.success} />
-          </View>
-        )}
-        {petFriendly && (
-          <View
-            style={[styles.statusBadge, styles.statusBadgePetFriendly]}
-            accessibilityLabel="Путешествие с питомцем"
-            {...(IS_WEB ? ({ title: 'Путешествие с питомцем' } as any) : null)}
-          >
-            <Text style={styles.petFriendlyEmoji}>🐾</Text>
           </View>
         )}
       </View>

@@ -20,7 +20,7 @@ description: >-
 активный спринт.
 
 ## Чем приёмка отличается от `ticket-flow`
-`ticket-flow` ведёт ОДИН тикет через весь пайплайн (discovery → implement → test → review →
+`ticket-flow` ведёт ОДИН тикет через весь пайплайн (discovery → implement → review → test →
 release). `sprint-review` — это батч-гейт на конце: пробегает ВСЕ кандидаты на закрытие в спринте
 и решает, что реально можно отдать в `done`. Реализацию и багфиксы он делегирует, не делает сам.
 
@@ -29,8 +29,9 @@ release). `sprint-review` — это батч-гейт на конце: проб
 1. **Подключение к борду.** `ticket-board`: показать доску, найти активный спринт
    (`metravel_sprints_list` → `status=active`) или взять спринт из `$ARGUMENTS`. Борд недоступен —
    стоп, сослаться на `docs/TASK_BOARD_MCP.md`. Не приниматься вслепую.
-2. **Собрать очередь приёмки.** `metravel_tasks_list(sprint=<N>, status=review)` +
-   `status=todo` с пометкой «handoff: reviewer/releaser». Раздели `area=front` и `area=back`.
+2. **Собрать очередь приёмки.** `metravel_tasks_list(sprint=<N>, status=testing)` +
+   `status=review` (QA-колонка `testing` и пост-ревью `review`) + `status=todo` со старой пометкой
+   «handoff: reviewer/releaser». Раздели области `front`/`back`/`android`/`ios`.
    Тикеты в `backlog`/`in_progress` в приёмку не идут.
 3. **Приёмка каждого тикета — агент `board-reviewer`.** Для каждого кандидата:
    - сверить наличие и полноту `## Task Contract` (нет/пусто → вернуть в `review`,
@@ -47,7 +48,7 @@ release). `sprint-review` — это батч-гейт на конце: проб
 4. **Двинуть статусы (с evidence).**
    - **pass** → `status=done` + evidence-заметка в `description` (дата, прошедшие проверки,
      ответы probe/тестов без секретов, скрин/лог).
-   - **fail** → остаётся `review`, либо `blocked_by=<id>` если корень — BE/deploy/routing;
+   - **fail** → остаётся `review`/`testing`, либо `status=blocked_by` + `blocked_by_id=<id>` если корень — BE/deploy/routing;
      дописать blocker evidence и назвать агента-исполнителя для фикса. Порождённый
      BE/deploy-блокер заводит `ticket-board` (`area=back`), не приёмщик.
 5. **Багфиксы — делегировать, не чинить в приёмке.** Отбитые тикеты передаются профильным

@@ -2,7 +2,7 @@
 name: ticket-flow
 description: >-
   Прогон фронтенд-тикета через общий MCP task board MeTravel: взять задачу с борда
-  (или завести), провести через discovery → implement → test → review → release силами
+  (или завести), провести через discovery → implement → review → test → release силами
   профильных FE-агентов, двигая статус на борде на каждом шаге. Зеркалит ролевой пайплайн
   бэка (.codex/team). Триггеры: «возьми тикет в работу», «прогони задачу N по пайплайну»,
   «обработай очередь front todo».
@@ -49,11 +49,11 @@ description: >-
 3. **In progress.** `ticket-board`: `status=in_progress`, `assignee=<агент-исполнитель>`.
    Делегируй реализацию профильному FE-агенту из таблицы. Соблюдай контракты CLAUDE.md
    (ImageCardMedia, UnifiedTravelCard, externalLinks, React Query/Zustand, TS strict).
-4. **Test.** Делегируй `test-author`: unit/e2e на новое поведение. Видимые/web-изменения —
-   ОБЯЗАТЕЛЬНО браузерная проверка (Playwright/preview), как требует CLAUDE.md. На борде —
-   `status=todo` с пометкой «handoff: tester» или сразу `review`, если тесты зелёные.
-5. **Review.** `/code-review` или `review-auditor` по diff. Подтверждённые находки —
+4. **Review.** `/code-review` или `review-auditor` по diff. Подтверждённые находки —
    чинит исполнитель, цикл повторяется. На борде — `status=review`, evidence = вердикт ревью.
+5. **Test / QA.** Делегируй `test-author`: unit/e2e на новое поведение. Видимые/web-изменения —
+   ОБЯЗАТЕЛЬНО браузерная проверка (Playwright/preview), как требует CLAUDE.md. На борде —
+   `status=testing` (QA-колонка перед приёмкой); приёмку закрывает `board-reviewer`/`/sprint-review`.
 6. **Release.** Только по явному запросу и target env: `/preflight` → `frontend-deployer`
    (деплой строго через `scripts/fix-prod.sh`). На борде — `status=done` с changed files +
    validation evidence + (если деплой) прод-health. Без деплоя — `done` после зелёного

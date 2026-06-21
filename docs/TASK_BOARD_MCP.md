@@ -72,11 +72,40 @@ curl -s -H "Authorization: Token $METRAVEL_TASK_BOARD_API_TOKEN" https://metrave
   спринтов через MCP. Инструменты: `metravel_task_board`, `metravel_tasks_list/_get/_create/_update/_delete`,
   `metravel_sprints_*`, `metravel_task_board_options`.
 - **Skill `/ticket-flow`** (команда `/ticket`) — прогон фронт-тикета по пайплайну
-  discovery → implement → test → review → release силами профильных FE-агентов, со сдвигом
+  discovery → implement → review → test → release силами профильных FE-агентов, со сдвигом
   статуса на борде на каждом шаге. Зеркалит ролевой пайплайн бэка (`.codex/team`).
 
-Модель: `Task{title, description, status: backlog→todo→in_progress→review→done, area: front|back,
-reporter, assignee, blocked_by, sprint}`. Заголовок с префиксом источника `[FE-…]`/`[BE-…]`.
+Модель: `Task{title, description, status: backlog→todo→in_progress→review→testing→done (+ blocked_by,
+wont_do), area: front|back|android|ios, urgency: highest|high|medium|low|lowest, reporter, assignee,
+sprint, position, needs_human, blocked_by_id, depends_on_ids[], related_to_ids[]}`. Заголовок с
+префиксом источника `[FE-…]`/`[BE-…]`/`[AND-…]`/`[IOS-…]`.
+
+### Схема создания/обновления тикета (актуально на 2026-06-21)
+
+Бэкенд расширил MCP. При `metravel_task_create` / `metravel_task_update` доступны поля:
+
+| Поле | Тип | Назначение |
+|---|---|---|
+| `title` | string | обязателен при create |
+| `description` | string | тело + `Task Contract` + журнал evidence |
+| `status` | enum | `backlog`, `todo`, `blocked_by`, `in_progress`, `review`, `testing`, `done`, `wont_do` |
+| `area` | enum | `front`, `back`, `android`, `ios` |
+| `urgency` | enum | `highest`, `high`, `medium`, `low`, `lowest` |
+| `sprint_id` | int\|null | привязка к спринту (обязательна, см. правило ниже) |
+| `reporter` / `assignee` | string | кто завёл / кто исполняет |
+| `needs_human` | bool | задача требует ручного шага человека (не закрываема агентом) |
+| `blocked_by_id` | int\|null | id тикета-блокера (статус `blocked_by`) |
+| `depends_on_ids` | int[] | жёсткие зависимости (этот тикет не стартует, пока не закрыты) |
+| `related_to_ids` | int[] | мягкие связи (контекст, без блокировки) |
+| `position` | int | позиция в колонке |
+
+Допустимые enum’ы всегда сверяй вызовом `metravel_task_board_options` — он источник правды по
+`task_statuses` / `task_areas` / `task_urgencies` / `sprint_statuses`.
+
+**Статус `testing`** — отдельная колонка QA/приёмки между `review` (код-ревью) и `done`. Раньше
+передача тестеру/релизеру эмулировалась возвратом в `todo` с пометкой «handoff: …» — теперь для
+этого используется `testing`. Приёмочная очередь (`board-reviewer` / `/sprint-review`) = `review` +
+`testing`.
 
 ### Правило: у каждой FE/BE задачи есть контракт (обязательно)
 

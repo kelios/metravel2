@@ -344,39 +344,6 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       color: colors.textSecondary,
     },
 
-    authorRankBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 3,
-      maxWidth: Platform.OS === 'web' ? 132 : 118,
-      paddingHorizontal: 6,
-      paddingVertical: Platform.OS === 'web' ? 2 : 1,
-      borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: colors.primarySoft,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.primaryAlpha30,
-      flexShrink: 1,
-      minWidth: 0,
-    },
-
-    authorRankLevelText: {
-      fontSize: Platform.OS === 'web' ? 11 : 10,
-      lineHeight: Platform.OS === 'web' ? 14 : 13,
-      color: colors.primary,
-      fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
-      fontVariant: ['tabular-nums'] as any,
-      flexShrink: 0,
-    },
-
-    authorRankTitleText: {
-      fontSize: Platform.OS === 'web' ? 11 : 10,
-      lineHeight: Platform.OS === 'web' ? 14 : 13,
-      color: colors.textSecondary,
-      fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-      flexShrink: 1,
-      minWidth: 0,
-    },
-
     metaBox: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -441,44 +408,6 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       color: colors.textSecondary,
       fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
       lineHeight: META_TEXT_LINE_HEIGHT,
-    },
-
-    // Компактные статус-бейджи (иконки)
-    statusBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flexShrink: 0,
-    },
-
-    statusBadgePopular: {
-    },
-
-    statusBadgeNew: {
-    },
-
-    statusBadgePetFriendly: {
-      paddingHorizontal: 4,
-    },
-
-    petFriendlyEmoji: {
-      fontSize: Platform.OS === 'web' ? 12 : 11,
-      lineHeight: Platform.OS === 'web' ? 14 : 13,
-    },
-
-    statusBadgeText: {
-      fontSize: Platform.OS === 'web' ? 10.5 : 10,
-      fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-      letterSpacing: 0.3,
-      textTransform: 'uppercase' as any,
-      color: colors.textMuted,
-    },
-
-    statusBadgeTextPopular: {
-      color: Platform.OS === 'web' ? 'rgb(180, 83, 9)' : colors.textSecondary,
-    },
-
-    statusBadgeTextNew: {
-      color: Platform.OS === 'web' ? 'rgb(22, 163, 74)' : colors.textSecondary,
     },
 
     metaYear: {

@@ -30,12 +30,19 @@ interface Props {
 const VB = 100;
 const C = VB / 2;
 
-// Затемнение бумаги и осветление линии под тёмную тему, чтобы гравюра читалась.
+// Тёплая тёмная сепия — целевой тон диска в dark-режиме (тёмный пергамент,
+// НЕ нейтрально-серый). Бумага притемняется в её сторону, сохраняя характер.
+const DARK_PAPER_BASE = '#2A2117';
+// Тёплый светлый тон линии под тёмную тему (состаренные чернила на пергаменте).
+const DARK_LINE_BASE = '#F0E2C8';
+
+// Под тёмную тему диск тонируется в тёплую сепию, а не в нейтральный чёрный,
+// чтобы идентичность «состаренной бумаги» сохранялась. Линия — светлая тёплая.
 function paperFor(paper: string, isDark: boolean): string {
-  return isDark ? mix(paper, '#1A1A1A', 0.62) : paper;
+  return isDark ? mix(paper, DARK_PAPER_BASE, 0.78) : paper;
 }
 function lineFor(line: string, isDark: boolean): string {
-  return isDark ? mix(line, '#FFFFFF', 0.58) : line;
+  return isDark ? mix(line, DARK_LINE_BASE, 0.72) : line;
 }
 
 // Простое смешивание hex-цветов (RN-svg принимает строки, поэтому считаем сами).
@@ -81,12 +88,17 @@ function Motif({ motif, stroke }: { motif: MotifKey; stroke: string }) {
         />
       );
     case 'footprint':
+      // Силуэт стопы: вытянутая пятка снизу + округлая подушечка сверху,
+      // над ней — ряд из 4 пальцев. Узнаётся как след на 64px.
       return (
         <G {...common}>
-          <Path d="M44 64 C40 56 40 46 46 40 C52 34 58 38 58 46 C58 54 54 60 50 66 Z" />
-          <Circle cx={59} cy={40} r={2.4} />
-          <Circle cx={63} cy={45} r={2} />
-          <Circle cx={64} cy={51} r={1.8} />
+          {/* подушечка стопы + свод + пятка (цельный контур) */}
+          <Path d="M42 44 C40 50 40 58 43 64 C45 69 53 69 55 64 C58 58 58 50 56 44 C55 41 52 39 49 39 C46 39 43 41 42 44 Z" />
+          {/* ряд пальцев над подушечкой */}
+          <Circle cx={42} cy={36} r={2.6} fill={stroke} stroke="none" />
+          <Circle cx={47} cy={33} r={2.8} fill={stroke} stroke="none" />
+          <Circle cx={52} cy={33} r={2.8} fill={stroke} stroke="none" />
+          <Circle cx={57} cy={36} r={2.6} fill={stroke} stroke="none" />
         </G>
       );
     case 'profile':
@@ -304,33 +316,62 @@ function TierFrameLayer({
     );
   }
 
-  // rays — лучи + звёзды по краю (legendary).
+  // rays — лучи + звёзды по краю (legendary, явный топ-тир: толстые длинные
+  // лучи двух длин, двойное свечение-кольцо, крупные яркие звёзды + highlight-блик).
   const rays = [];
   const stars = [];
   const count = 12;
   for (let i = 0; i < count; i++) {
     const a = (i / count) * Math.PI * 2 - Math.PI / 2;
+    const long = i % 2 === 0;
+    const outer = long ? ringR + 8.5 : ringR + 5;
     const x1 = C + Math.cos(a) * (ringR + 1.5);
     const y1 = C + Math.sin(a) * (ringR + 1.5);
-    const x2 = C + Math.cos(a) * (ringR + 5.5);
-    const y2 = C + Math.sin(a) * (ringR + 5.5);
-    rays.push(<Line key={`r${i}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke={ring} strokeWidth={1.8} />);
+    const x2 = C + Math.cos(a) * outer;
+    const y2 = C + Math.sin(a) * outer;
+    rays.push(
+      <Line
+        key={`r${i}`}
+        x1={x1}
+        y1={y1}
+        x2={x2}
+        y2={y2}
+        stroke={ring}
+        strokeWidth={long ? 3 : 2.2}
+        strokeLinecap="round"
+      />,
+    );
     if (i % 3 === 0) {
       const sx = C + Math.cos(a) * (ringR - 1);
       const sy = C + Math.sin(a) * (ringR - 1);
-      stars.push(
-        <Polygon
-          key={`s${i}`}
-          points={`${sx},${sy - 2.6} ${sx + 0.9},${sy - 0.8} ${sx + 2.6},${sy - 0.8} ${sx + 1.2},${sy + 0.6} ${sx + 1.8},${sy + 2.4} ${sx},${sy + 1.3} ${sx - 1.8},${sy + 2.4} ${sx - 1.2},${sy + 0.6} ${sx - 2.6},${sy - 0.8} ${sx - 0.9},${sy - 0.8}`}
-          fill={highlight}
-        />,
-      );
+      const r = 4.2;
+      const inner = r * 0.42;
+      const pts: string[] = [];
+      for (let k = 0; k < 10; k++) {
+        const rr = k % 2 === 0 ? r : inner;
+        const aa = (k / 10) * Math.PI * 2 - Math.PI / 2;
+        pts.push(`${(sx + Math.cos(aa) * rr).toFixed(2)},${(sy + Math.sin(aa) * rr).toFixed(2)}`);
+      }
+      stars.push(<Polygon key={`s${i}`} points={pts.join(' ')} fill={highlight} />);
+      // яркий центральный блик звезды
+      stars.push(<Circle key={`sc${i}`} cx={sx} cy={sy} r={1.1} fill="#FFFFFF" opacity={0.9} />);
     }
   }
   return (
     <G>
+      {/* внешнее свечение-кольцо */}
+      <Circle cx={C} cy={C} r={ringR + 2.5} stroke={highlight} strokeWidth={1.4} fill="none" opacity={0.6} />
       {base}
-      <Circle cx={C} cy={C} r={ringR - 4} stroke={highlight} strokeWidth={1.2} fill="none" />
+      <Circle cx={C} cy={C} r={ringR - 4} stroke={highlight} strokeWidth={1.6} fill="none" />
+      {/* верхний highlight-блик на кольце */}
+      <Path
+        d={`M${C - 26} ${C - 38} A ${ringR} ${ringR} 0 0 1 ${C + 26} ${C - 38}`}
+        stroke="#FFFFFF"
+        strokeWidth={1.4}
+        strokeLinecap="round"
+        fill="none"
+        opacity={0.55}
+      />
       {rays}
       {stars}
     </G>

@@ -31,11 +31,20 @@ model: sonnet
    `curl -s -H "Authorization: Token $METRAVEL_TASK_BOARD_API_TOKEN" https://metravel.by/api/tasks/board/`
    (токен берётся из окружения / `.secrets/metravel-task-board.env`; НЕ печатай токен в вывод).
 
-## Модель данных (повторяет бэк)
+## Модель данных (повторяет бэк, схема обновлена 2026-06-21)
 
-- **Task**: `title`, `description`, `status` (`backlog → todo → in_progress → review → done`),
-  `area` (`front` | `back`), `reporter`, `assignee`, `blocked_by`, `sprint`, `position`.
+- **Task**: `title`, `description`, `status` (`backlog → todo → in_progress → review → testing →
+  done`; плюс `blocked_by` и `wont_do`), `area` (`front` | `back` | `android` | `ios`), `urgency`
+  (`highest` | `high` | `medium` | `low` | `lowest`), `reporter`, `assignee`, `sprint_id`,
+  `position`, `needs_human` (bool), `blocked_by_id`, `depends_on_ids[]` (жёсткие зависимости),
+  `related_to_ids[]` (мягкие связи).
 - **Sprint**: `title`, `goal`, `status` (`planned` | `active` | `closed`), `starts_at`, `ends_at`.
+- **Enum’ы не зубри — сверяй `metravel_task_board_options`** (`task_statuses` / `task_areas` /
+  `task_urgencies` / `sprint_statuses`). Это источник правды; при расхождении доверяй ему, а не доке.
+- **`testing`** — QA/приёмка между `review` (код-ревью) и `done`; раньше handoff эмулировался
+  возвратом в `todo`. Связи: `blocked_by_id` — кто блокирует (со статусом `blocked_by`);
+  `depends_on_ids` — пока не закрыты, тикет не стартует; `related_to_ids` — контекст без блокировки.
+  `needs_human=true` — есть ручной шаг человека, агент такую задачу не закрывает сам.
 - **Конвенция заголовка:** префикс источника — `[BE-NNN] …`, `[FE-NNN] …` или
   `[TASK-YYYYMMDD-NNN] …`. Перед созданием дедуплицируй: `metravel_tasks_list(query="<источник>")`.
 - **Доказательства** дописывай в `description` (changed files, validation, ответы probe,
@@ -57,16 +66,18 @@ model: sonnet
 ## Жизненный цикл (handoff, как на бэке)
 
 `backlog` (импорт/новое) → refinement/manager → `todo` (готово к работе) →
-`in_progress` (исполнитель взял) → `todo` (передача тестеру) → `review` (ревью) →
-`todo` (релизеру) → `done`. Заблокированные — через `blocked_by`. Двигаешь задачу,
-обновляя `status` + `assignee` и дописывая evidence.
+`in_progress` (исполнитель взял) → `review` (код-ревью) → `testing` (QA/приёмка) → `done`.
+Заблокированные — статус `blocked_by` + `blocked_by_id=<id блокера>`; отменённые — `wont_do`.
+Двигаешь задачу, обновляя `status` + `assignee` и дописывая evidence.
 
 ## Сценарии
 
 - **Показать борд:** `metravel_task_board` → краткая сводка по колонкам (front/back раздельно).
-- **Завести тикет:** дедуп → `metravel_task_create` с `area`, `reporter`, нужным спринтом,
-  заголовком-префиксом и заполненным `description` (Goal/Context/AC + обязательный
-  `Task Contract` из `docs/TASK_BOARD_MCP.md`). Верни id.
+- **Завести тикет:** дедуп → `metravel_task_create` с `area` (front/back/android/ios), `urgency`,
+  `reporter`, нужным `sprint_id`, заголовком-префиксом и заполненным `description` (Goal/Context/AC
+  + обязательный `Task Contract` из `docs/TASK_BOARD_MCP.md`). Если задача зависит от другой —
+  проставь `depends_on_ids`/`blocked_by_id`; смежные по контексту — `related_to_ids`; требует
+  ручного шага человека — `needs_human=true`. Верни id.
 - **Обновить статус:** `metravel_task_update(id, status=…, assignee=…)` + дописать evidence.
   В `done` двигай только если evidence закрывает `Done gate`; для FE/BE зависимостей проверь
   runtime endpoint/field/event на целевом окружении, а не только статус соседней задачи.
