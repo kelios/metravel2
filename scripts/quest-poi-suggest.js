@@ -203,6 +203,10 @@ async function main() {
       dist_to_route_m: Math.round(distToRoute),
       address: [tags['addr:street'], tags['addr:housenumber']].filter(Boolean).join(' ') || null,
       cuisine: tags.cuisine || null,
+      opening_hours: tags.opening_hours || null,
+      website: tags.website || tags['contact:website'] || tags.url || null,
+      phone: tags.phone || tags['contact:phone'] || null,
+      wikipedia: tags.wikipedia || null,
     });
   }
 
@@ -233,6 +237,12 @@ async function main() {
           + (c.address ? `  (${c.address})` : '')
           + (c.cuisine ? `  cuisine:${c.cuisine}` : ''),
       );
+      if (c.opening_hours || c.website) {
+        console.log(
+          `      ${c.opening_hours ? '🕒 ' + c.opening_hours : '🕒 часы не указаны в OSM — проверить'}`
+            + (c.website ? `   ${c.website}` : ''),
+        );
+      }
     }
     console.log('');
   }

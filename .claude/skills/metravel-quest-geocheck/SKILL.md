@@ -47,9 +47,23 @@ description: >-
 
 `scripts/quest-geocheck.js` (read-only). Для каждого шага печатает:
 `stored` (текущие координаты + maps_url) · `here` (reverse: что в точке;
-`⚠ infra` = инфраструктура) · `search` + кандидаты с расстоянием и `class/type` ·
-`verdict` (OK / WARN / FAIL / SKIP) + причина · `suggest` (готовые исправленные
-`lat, lng` + maps_url, когда вердикт не OK).
+`⚠ infra` = инфраструктура) · `address` (геокод заявленного `location` + улица/дом
+из reverse, `⚠ street mismatch`) · `search` + кандидаты с расстоянием и
+`class/type` · `verdict` (OK / WARN / FAIL / SKIP) + причина · `suggest` (готовые
+исправленные `lat, lng` + maps_url, когда вердикт не OK).
+
+**Адресное измерение** (то, что просили: «адрес ul. Szeroka 40, а точка на
+парковке»): скрипт геокодит `location` и сравнивает с точкой + сверяет улицу/дом
+из reverse. FAIL по адресу — ТОЛЬКО при номере дома (улица без дома геокодится в
+произвольную точку, ложняк). Ещё ловушка: если в точке reverse показывает не-infra
+POI (костёл/музей), адресное расхождение часто ложное — у крупного здания № дома
+стоит в стороне. Решай по совокупности reverse + forward + address.
+
+`scripts/quest-poi-suggest.js --quest-id=<id>` — подсказка ОПЦИОНАЛЬНЫХ точек
+рядом с маршрутом (Overpass/OSM): музеи (`★` notable — напр. Czartoryski с «Дамой
+с горностаем»), кошерные/еврейские рестораны, кофейни, аттракции.
+`--kinds=museum,kosher,cafe,gallery,attraction`, `--radius=<m>`, `--json`.
+Read-only — редактор сам решает, что добавить как опц. точку (`type any`).
 
 ```bash
 # Новый квест: по локальному файлу данных, до заливки
@@ -90,9 +104,13 @@ NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/quest-geocheck.js
    - новый квест → впиши `lat/lng/mapsUrl` в `scripts/<city>-quest-data.js`,
      перепрогони geocheck по файлу → 0 реальных проблем → дальше миграция
      (скилл `metravel-quest`);
-   - квест на проде → `scripts/apply-quest-patches.js` (`PATCH /api/quest-steps/<id>/`,
-     токен из `~/.metravel_token`) силами `quest-editor`/владельца, либо тикет
-     на борде, если нужна полевая проверка координат.
+   - квест на проде → `scripts/apply-quest-patches.js` (`PATCH /api/quest-steps/<id>/`).
+     Токен из `~/.metravel_token`; если он невалиден (HTTP 401) — взять свежий
+     логином e2e: `METRAVEL_TOKEN=$(node scripts/get-quest-token.js)
+     node scripts/apply-quest-patches.js .quest-audit/patches-geo-<id>.json`
+     (сначала `--dry-run`). Токен/пароль не логировать. Применяют
+     `quest-editor`/владелец, либо тикет на борде при необходимости полевой
+     проверки координат.
 6. **Контроль** после правок: повторный прогон geocheck — целевые точки больше
    не WARN-infra/FAIL по реальной причине.
 

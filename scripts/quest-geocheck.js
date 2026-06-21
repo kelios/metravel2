@@ -224,6 +224,51 @@ function loadLocalBundles(sourceFile, questId) {
   }));
 }
 
+// --- Address verification helpers ---------------------------------------
+// The `location` field is a human-readable address shown in the UI
+// (e.g. "ul. Szeroka 40"). We geocode it and compare to the stored point,
+// and we compare the reverse-geocoded street/house at the point to the
+// stated address — catching "address says X but the marker is on a parking lot".
+
+const STREET_RE = /(\bul\.?\b|\bulica\b|\bpl\.?\b|\bplac\b|\bal\.?\b|\baleja\b|\bпросп|\bулица\b|\bпер\.?\b|\bвул\.?\b|\bвулиц|\bstreet\b|\bstr\.?\b|\brue\b|\bvia\b)/i;
+
+function looksLikeAddress(location) {
+  const s = normalizeWhitespace(location);
+  if (!s) return false;
+  // a street keyword, or a bare "<word> <number>" that reads like an address
+  return STREET_RE.test(s) || /[\p{L}].*\b\d{1,4}[a-z]?\b/u.test(s);
+}
+
+function parseHouseNumber(location) {
+  const m = normalizeWhitespace(location).match(/\b(\d{1,4})[a-z]?\b/);
+  return m ? m[1] : null;
+}
+
+// Street name from the stated address: drop the street keyword and house number.
+function parseStreetName(location) {
+  return normalizeWhitespace(
+    String(location || '')
+      .replace(STREET_RE, ' ')
+      .replace(/\b\d{1,4}[a-z]?\b/g, ' ')
+      .replace(/[(),]/g, ' '),
+  ).toLowerCase();
+}
+
+function normStreet(value) {
+  return normalizeWhitespace(value).toLowerCase().replace(/[.,]/g, '');
+}
+
+// Nominatim fails on a leading street-type prefix ("ul. Szeroka 40" -> nothing,
+// but "Szeroka 40" -> the building). Strip it before geocoding the address.
+function stripStreetPrefix(value) {
+  return normalizeWhitespace(
+    String(value || '').replace(
+      /^\s*(ul\.?|ulica|pl\.?|plac|al\.?|aleja|aleje|вул\.?|вулиця|ул\.?|улица|str\.?|street|rue|via)\s+/i,
+      '',
+    ),
+  );
+}
+
 async function geocheckQuest(bundle, options) {
   const cityName = bundle.city?.name || bundle.city_name || '';
   const steps = parseSteps(bundle);
@@ -286,41 +331,112 @@ async function geocheckQuest(bundle, options) {
     const bestPoi = byDistance.find((c) => !c.infra) || null;
     const hereInfra = here && !here.error ? isInfra(here) : false;
 
-    // Verdict:
-    //  FAIL — nearest matching object is far (point likely wrong), or no usable match.
+    // Address check: geocode the stated `location` address, compare to point,
+    // and compare the reverse-geocoded street/house at the point to the address.
+    let address = null;
+    const stated = normalizeWhitespace(step.location);
+    if (looksLikeAddress(stated)) {
+      let expected = null;
+      try {
+        // Build the address query with the LATIN locality + country from the
+        // reverse result (the data's city is often Cyrillic, e.g. "Краков",
+        // which fails to geocode against a Polish street like "ul. Szeroka 40").
+        const hereA = here && !here.error ? here.address || {} : {};
+        const locality = hereA.city || hereA.town || hereA.village || hereA.municipality || cityName;
+        const country = hereA.country || '';
+        const placeText = stripStreetPrefix(cleanPlaceText(stated));
+        const parts = [placeText];
+        if (locality && !placeText.toLowerCase().includes(String(locality).toLowerCase())) parts.push(locality);
+        if (country) parts.push(country);
+        const res = await searchNominatim(normalizeWhitespace(parts.filter(Boolean).join(', ')), 1);
+        const top = Array.isArray(res) ? res[0] : null;
+        if (top) {
+          expected = {
+            lat: Number(top.lat),
+            lng: Number(top.lon),
+            kind: kindOf(top),
+            name: top.display_name,
+            distance: haversineMeters(lat, lng, Number(top.lat), Number(top.lon)),
+          };
+        }
+      } catch (error) {
+        expected = { error: error.message || String(error) };
+      }
+      await new Promise((resolve) => setTimeout(resolve, options.delayMs));
+
+      const statedStreet = parseStreetName(stated);
+      const hereAddr = here && !here.error ? here.address || {} : {};
+      const hereStreet = normStreet(hereAddr.road || hereAddr.pedestrian || hereAddr.footway || '');
+      const ns = normStreet(statedStreet);
+      address = {
+        stated,
+        street: statedStreet || null,
+        house: parseHouseNumber(stated),
+        expected,
+        here_road: hereAddr.road || null,
+        here_house: hereAddr.house_number || null,
+        street_match: ns && hereStreet ? hereStreet.includes(ns) || ns.includes(hereStreet) : null,
+      };
+    }
+    const addrExpected = address && address.expected && !address.expected.error ? address.expected : null;
+    // Only a house-numbered address pins a specific building reliably. A
+    // street-only address ("ul. Józefa") geocodes to an arbitrary point along
+    // the street, so it must NOT drive a FAIL or a high-confidence suggestion.
+    const addrPrecise = !!(addrExpected && address && address.house);
+    const addrFar = !!(addrPrecise && addrExpected.distance > options.thresholdMeters);
+
+    // Verdict (priority): stated-address mismatch > title match far > on-infra.
+    //  FAIL — point is far from the place it should be (by address or by name).
     //  WARN — point sits on infrastructure (parking/stop/road) per reverse geocode.
-    //  OK   — a real-POI candidate is within threshold and point isn't on infra.
+    //  OK   — resolves within threshold and isn't on infrastructure.
+    const titleFar = !!(nearest && nearest.distance > options.thresholdMeters);
     let verdict = 'OK';
     let reason = '';
-    if (!query) {
+    if (!query && !address) {
       verdict = 'SKIP';
       reason = 'no searchable title/location';
-    } else if (candidates.length === 0) {
-      verdict = 'WARN';
-      reason = `no Nominatim result for "${query}" — verify manually`;
-    } else if (nearest && nearest.distance > options.thresholdMeters) {
+    } else if (addrFar) {
+      verdict = 'FAIL';
+      reason = `stated address "${stated}" geocodes ~${Math.round(addrExpected.distance)}m from the point`
+        + (hereInfra ? ` — point is on ${kindOf(here)}` : '');
+    } else if (titleFar) {
       verdict = 'FAIL';
       reason = `nearest match "${query}" is ${Math.round(nearest.distance)}m away (> ${options.thresholdMeters}m)`;
     } else if (hereInfra) {
       verdict = 'WARN';
-      reason = `point sits on ${kindOf(here)} (infrastructure, not the object)`;
+      reason = `point sits on ${kindOf(here)} (infrastructure, not the object)`
+        + (address && address.house && address.street_match === false ? `; stated "${stated}"` : '');
+    } else if (query && candidates.length === 0 && !addrExpected) {
+      verdict = 'WARN';
+      reason = `no Nominatim result for "${query}" — verify manually`;
     } else {
-      reason = `match within ${Math.round((nearest && nearest.distance) || 0)}m`;
+      reason = `match within ${Math.round((nearest && nearest.distance) || (addrExpected && addrExpected.distance) || 0)}m`;
     }
 
-    // Suggestion: prefer the nearest real-POI candidate when the verdict is not OK.
+    // Suggestion when not OK: prefer the geocoded address (most precise, has a
+    // house number), else the nearest real-POI candidate.
     let suggestion = null;
-    const pick = bestPoi || nearest;
-    if (verdict !== 'OK' && verdict !== 'SKIP' && pick && pick.distance >= 8) {
-      suggestion = {
-        lat: Number(pick.lat.toFixed(6)),
-        lng: Number(pick.lng.toFixed(6)),
-        maps_url: mapsUrl(Number(pick.lat.toFixed(6)), Number(pick.lng.toFixed(6))),
-        kind: pick.kind,
-        name: pick.name,
-        distance_from_stored_m: Math.round(pick.distance),
-        confidence: pick.infra ? 'low' : 'medium',
-      };
+    if (verdict !== 'OK' && verdict !== 'SKIP') {
+      const poi = bestPoi || nearest;
+      const chosen =
+        addrPrecise && addrExpected.distance >= 8
+          ? { ...addrExpected, confidence: 'high' }
+          : poi && poi.distance >= 8
+            ? { ...poi, confidence: poi.infra ? 'low' : 'medium' }
+            : null;
+      if (chosen) {
+        const slat = Number(chosen.lat.toFixed(6));
+        const slng = Number(chosen.lng.toFixed(6));
+        suggestion = {
+          lat: slat,
+          lng: slng,
+          maps_url: mapsUrl(slat, slng),
+          kind: chosen.kind,
+          name: chosen.name,
+          distance_from_stored_m: Math.round(chosen.distance),
+          confidence: chosen.confidence,
+        };
+      }
     }
 
     stepReports.push({
@@ -331,6 +447,16 @@ async function geocheckQuest(bundle, options) {
       here: here && !here.error
         ? { kind: kindOf(here), name: here.display_name, infra: hereInfra }
         : { error: (here && (here.error || here.searchError)) || 'reverse failed' },
+      address: address
+        ? {
+            stated: address.stated,
+            expected_distance_m: addrExpected ? Math.round(addrExpected.distance) : null,
+            expected_name: addrExpected ? addrExpected.name : null,
+            here_road: address.here_road,
+            here_house: address.here_house,
+            street_match: address.street_match,
+          }
+        : null,
       candidates: byDistance.slice(0, options.limit).map((c) => ({
         distance_m: Math.round(c.distance),
         kind: c.kind,
@@ -360,6 +486,13 @@ function printHuman(report) {
       console.log(`        here:    (reverse geocode failed: ${s.here.error})`);
     } else {
       console.log(`        here:    ${s.here.kind}${s.here.infra ? ' ⚠ infra' : ''} — ${s.here.name}`);
+    }
+    if (s.address) {
+      const a = s.address;
+      const mismatch = a.street_match === false ? ' ⚠ street mismatch' : '';
+      console.log(
+        `        address: "${a.stated}" -> geocodes ${a.expected_distance_m != null ? a.expected_distance_m + 'm away' : '(not found)'}; point on ${a.here_road || '?'}${a.here_house ? ' ' + a.here_house : ''}${mismatch}`,
+      );
     }
     if (s.query) console.log(`        search:  "${s.query}"`);
     s.candidates.forEach((c, i) => {

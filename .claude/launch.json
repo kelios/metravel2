@@ -188,6 +188,16 @@
       ],
       "port": 8094,
       "autoPort": false
+    },
+    {
+      "name": "Expo Web Dev API 8086",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "EXPO_PUBLIC_API_URL=http://192.168.50.36 EXPO_PUBLIC_IS_LOCAL_API=true npx expo start --web --port 8086"
+      ],
+      "port": 8086,
+      "autoPort": false
     }
   ]
 }
