@@ -35,7 +35,7 @@ function UserRareAwardsSection({ userId, testID, style }: Props) {
       </View>
       <View style={styles.list}>
         {data.map((award) => (
-          <RareAwardCard key={award.id} award={award} />
+          <RareAwardCard key={award.id} award={award} shareable={false} />
         ))}
       </View>
     </View>

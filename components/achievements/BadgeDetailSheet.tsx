@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react'
+import { memo, useMemo, useState } from 'react'
 import {
   Modal,
   Pressable,
@@ -13,6 +13,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { Badge } from '@/api/achievements'
 import BadgeMedal from '@/components/achievements/BadgeMedal'
+import ShareBadgeSheet from '@/components/achievements/ShareBadgeSheet'
 import { TIER_VISUALS, tierLabel } from '@/components/achievements/badgeVisuals'
 
 export interface BadgeDetail {
@@ -25,10 +26,13 @@ interface Props {
   visible: boolean
   onClose: () => void
   detail: BadgeDetail | null
+  /** Ник владельца для подписи на share-карточке (если известен). */
+  ownerName?: string
 }
 
-function BadgeDetailSheet({ visible, onClose, detail }: Props) {
+function BadgeDetailSheet({ visible, onClose, detail, ownerName }: Props) {
   const colors = useThemedColors()
+  const [shareOpen, setShareOpen] = useState(false)
 
   const styles = useMemo(
     () =>
@@ -134,6 +138,21 @@ function BadgeDetailSheet({ visible, onClose, detail }: Props) {
           fontWeight: '700',
           color: colors.success,
         },
+        shareBtn: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          marginTop: DESIGN_TOKENS.spacing.lg,
+          paddingVertical: 12,
+          borderRadius: DESIGN_TOKENS.radii.md,
+          backgroundColor: colors.primary,
+        },
+        shareBtnText: {
+          fontSize: DESIGN_TOKENS.typography.sizes.sm,
+          fontWeight: '800',
+          color: colors.textOnPrimary ?? '#fff',
+        },
       }),
     [colors],
   )
@@ -153,6 +172,7 @@ function BadgeDetailSheet({ visible, onClose, detail }: Props) {
     : 0
 
   return (
+    <>
     <Modal
       visible={visible}
       animationType="slide"
@@ -230,9 +250,39 @@ function BadgeDetailSheet({ visible, onClose, detail }: Props) {
               <Text style={styles.earnedText}>Значок получен</Text>
             </View>
           ) : null}
+
+          {earned && ownerName ? (
+            <Pressable
+              style={styles.shareBtn}
+              onPress={() => setShareOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Поделиться достижением"
+            >
+              <Feather name="share-2" size={16} color={colors.textOnPrimary ?? '#fff'} />
+              <Text style={styles.shareBtnText}>Поделиться</Text>
+            </Pressable>
+          ) : null}
         </Pressable>
       </Pressable>
     </Modal>
+
+      <ShareBadgeSheet
+        visible={shareOpen}
+        onClose={() => setShareOpen(false)}
+        context="detail"
+        subject={
+          earned
+            ? {
+                achievementId: badge.id,
+                slug: badge.slug,
+                badge,
+                ownerName,
+                reason: badge.description,
+              }
+            : null
+        }
+      />
+    </>
   )
 }
 

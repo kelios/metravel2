@@ -22,6 +22,8 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   data: MyAchievements;
+  /** Ник владельца для share-карточки достижения. */
+  ownerName?: string;
 }
 
 interface CategoryGroup {
@@ -51,7 +53,7 @@ function groupByCategory(data: MyAchievements): CategoryGroup[] {
   return order.map((slug) => map.get(slug)!);
 }
 
-function AchievementsGalleryModal({ visible, onClose, data }: Props) {
+function AchievementsGalleryModal({ visible, onClose, data, ownerName }: Props) {
   const colors = useThemedColors();
   const groups = useMemo(() => groupByCategory(data), [data]);
   const [detail, setDetail] = useState<BadgeDetail | null>(null);
@@ -170,6 +172,7 @@ function AchievementsGalleryModal({ visible, onClose, data }: Props) {
             visible={detail !== null}
             onClose={() => setDetail(null)}
             detail={detail}
+            ownerName={ownerName}
           />
         </Pressable>
       </Pressable>

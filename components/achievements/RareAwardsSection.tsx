@@ -12,6 +12,7 @@ import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useMyRareAwards } from '@/hooks/useAchievementsApi';
+import { useAuthStore } from '@/stores/authStore';
 import RareAwardCard from '@/components/achievements/RareAwardCard';
 
 interface Props {
@@ -22,6 +23,7 @@ interface Props {
 function RareAwardsSection({ testID, style }: Props) {
   const colors = useThemedColors();
   const { data, isLoading, isError } = useMyRareAwards();
+  const ownerName = useAuthStore((s) => s.username);
   const styles = getStyles(colors);
 
   // Тихо скрываем при ошибке — секция необязательная.
@@ -41,7 +43,7 @@ function RareAwardsSection({ testID, style }: Props) {
       ) : data.length > 0 ? (
         <View style={styles.list}>
           {data.map((award) => (
-            <RareAwardCard key={award.id} award={award} />
+            <RareAwardCard key={award.id} award={award} ownerName={ownerName} />
           ))}
         </View>
       ) : (

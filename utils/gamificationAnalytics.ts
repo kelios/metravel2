@@ -54,3 +54,49 @@ export const trackCharacterBlockViewed = (params: {
     pending_choice: params.pendingChoice,
   });
 };
+
+// ── Шаринг достижений (Sprint 12, #458) ──────────────────────────────────────
+// Атрибуция вирусной петли. Payload без PII: только id/slug/канал достижения.
+
+/** Открыт лист «Поделиться» на медали/награде. */
+export const trackBadgeShareOpened = (params: {
+  achievementId: number;
+  slug: string;
+  isRare: boolean;
+  context: 'profile' | 'detail' | 'card';
+}): void => {
+  void sendAnalyticsEvent('badge_share_opened', {
+    achievement_id: params.achievementId,
+    achievement_slug: params.slug,
+    is_rare: params.isRare,
+    context: params.context,
+  });
+};
+
+/** Пользователь поделился медалью в конкретном канале. */
+export const trackBadgeShared = (params: {
+  achievementId: number;
+  slug: string;
+  channel: string;
+  template: 'default' | 'rare';
+}): void => {
+  void sendAnalyticsEvent('badge_shared', {
+    achievement_id: params.achievementId,
+    achievement_slug: params.slug,
+    channel: params.channel,
+    template: params.template,
+  });
+};
+
+/** Клик по расшаренной карточке (открытие публичной ссылки достижения). */
+export const trackShareCardClick = (params: {
+  achievementId: number;
+  slug: string;
+  channel: string;
+}): void => {
+  void sendAnalyticsEvent('share_card_click', {
+    achievement_id: params.achievementId,
+    achievement_slug: params.slug,
+    channel: params.channel,
+  });
+};

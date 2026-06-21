@@ -7,6 +7,8 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 import type { PlannedTrip, TripParticipant } from '@/api/plannedTrips';
 import { RSVP_LABEL, rsvpColor } from '@/components/trips/planning/tripPlanFormatting';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { useAuthStore } from '@/stores/authStore';
+import UserSafetyMenu from '@/components/profile/UserSafetyMenu';
 
 interface Props {
   trip: PlannedTrip;
@@ -24,11 +26,16 @@ function TripParticipantsList({ trip }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
+  const rawUserId = useAuthStore((s) => s.userId);
+  const me = rawUserId != null ? Number(rawUserId) : null;
+
   const participants = trip.participants;
   const goingCount = participants.filter((p) => p.rsvp === 'going').length;
 
   const renderRow = (p: TripParticipant) => {
     const badgeColor = rsvpColor(p.rsvp, colors);
+    // Себя (и мок-self id=0) не показываем с меню жалобы/блокировки.
+    const isSelf = me == null ? p.id === 0 : p.id === me;
     return (
       <View key={p.id} style={styles.row}>
         {p.avatarUrl ? (
@@ -49,6 +56,9 @@ function TripParticipantsList({ trip }: Props) {
         <View style={[styles.badge, { backgroundColor: badgeColor }]}>
           <Text style={styles.badgeText}>{RSVP_LABEL[p.rsvp]}</Text>
         </View>
+        {!isSelf ? (
+          <UserSafetyMenu targetUserId={p.id} targetName={p.name} />
+        ) : null}
       </View>
     );
   };

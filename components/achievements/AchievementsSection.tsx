@@ -29,6 +29,7 @@ function AchievementsSection({ testID, style }: Props) {
   const colors = useThemedColors();
   const { data, isLoading, isError } = useMyAchievements();
   const ownUserId = useAuthStore((s) => s.userId);
+  const ownerName = useAuthStore((s) => s.username);
   // peer-награды отдаёт user-эндпоинт (не /me/) — тянем по своему id (кэшируется).
   const { data: publicData } = useUserAchievements(ownUserId);
   const peerReceived = publicData?.peerReceived ?? [];
@@ -95,6 +96,7 @@ function AchievementsSection({ testID, style }: Props) {
             visible={galleryOpen}
             onClose={() => setGalleryOpen(false)}
             data={data}
+            ownerName={ownerName}
           />
         </>
       )}

@@ -9,6 +9,8 @@ export { default as PeerBadgeReceivedRow } from '@/components/achievements/PeerB
 export { default as PeerBadgeGiveButton } from '@/components/achievements/PeerBadgeGiveButton';
 export { default as PeerBadgePickerSheet } from '@/components/achievements/PeerBadgePickerSheet';
 export { default as RareAwardCard } from '@/components/achievements/RareAwardCard';
+export { default as ShareBadgeSheet, type ShareBadgeSubject } from '@/components/achievements/ShareBadgeSheet';
+export { default as ShareCardPreview, type ShareCardSubject } from '@/components/achievements/ShareCardPreview';
 export { default as RareAwardsSection } from '@/components/achievements/RareAwardsSection';
 export { default as UserRareAwardsSection } from '@/components/achievements/UserRareAwardsSection';
 export { default as AdminGrantRareAward } from '@/components/achievements/AdminGrantRareAward';
