@@ -1,38 +1,48 @@
-import { memo, useMemo } from 'react';
-import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { memo, useMemo } from 'react'
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native'
 
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useThemedColors } from '@/hooks/useTheme';
-import type { ProgressionLine } from '@/api/gamification';
+import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { useThemedColors } from '@/hooks/useTheme'
+import { TIER_VISUALS } from '@/components/achievements/badgeVisuals'
+import {
+  MaxLevelLaurel,
+  ProgressionAnimalMedallion,
+} from '@/components/achievements/GamificationIcons'
+import type { ProgressionLine, ProgressionLineSlug } from '@/api/gamification'
 
 interface Props {
-  line: ProgressionLine;
-  testID?: string;
-  style?: StyleProp<ViewStyle>;
+  line: ProgressionLine
+  testID?: string
+  style?: StyleProp<ViewStyle>
+}
+
+// Спокойный тон заливки бара по тропе — из палитры тиров (бумага/гравюра,
+// не неон): каждая ветка получает свой землистый/благородный цвет.
+const LINE_FILL_TIER: Record<ProgressionLineSlug, keyof typeof TIER_VISUALS> = {
+  dog: 'bronze',
+  boar: 'gold',
+  fox: 'bronze',
+  bird: 'platinum',
 }
 
 /** Одна линейка прогрессии: маскот ветки, тип активности, уровень и % до следующего. */
 function ProgressionLineBar({ line, testID, style }: Props) {
-  const colors = useThemedColors();
+  const colors = useThemedColors()
 
   const { ratio, remaining } = useMemo(() => {
     if (line.isMaxLevel || line.nextLevelMin == null) {
-      return { ratio: 1, remaining: 0 };
+      return { ratio: 1, remaining: 0 }
     }
-    const span = Math.max(1, line.nextLevelMin - line.currentLevelMin);
-    const done = line.current - line.currentLevelMin;
+    const span = Math.max(1, line.nextLevelMin - line.currentLevelMin)
+    const done = line.current - line.currentLevelMin
     return {
       ratio: Math.max(0, Math.min(1, done / span)),
       remaining: Math.max(0, line.nextLevelMin - line.current),
-    };
-  }, [line]);
+    }
+  }, [line])
 
-  const styles = useMemo(() => getStyles(colors), [colors]);
-
-  const caption = line.isMaxLevel
-    ? 'Максимальный уровень 🏆'
-    : `До «${line.nextLevelTitle}»: ещё ${remaining}`;
+  const fillColor = TIER_VISUALS[LINE_FILL_TIER[line.slug]].ring
+  const styles = useMemo(() => getStyles(colors), [colors])
 
   return (
     <View
@@ -44,7 +54,7 @@ function ProgressionLineBar({ line, testID, style }: Props) {
       }`}
     >
       <View style={styles.row}>
-        <Text style={styles.emoji}>{line.emoji}</Text>
+        <ProgressionAnimalMedallion slug={line.slug} size={40} />
         <View style={styles.titleWrap}>
           <Text style={styles.activity} numberOfLines={1}>
             {line.activityName}
@@ -57,24 +67,29 @@ function ProgressionLineBar({ line, testID, style }: Props) {
       </View>
 
       <View style={styles.track}>
-        <LinearGradient
-          colors={[colors.brand, colors.primary]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={[styles.fill, { width: `${ratio * 100}%` }]}
+        <View
+          style={[styles.fill, { width: `${ratio * 100}%`, backgroundColor: fillColor }]}
         />
       </View>
 
-      <Text style={styles.caption}>{caption}</Text>
+      {line.isMaxLevel ? (
+        <View style={styles.captionRow}>
+          <MaxLevelLaurel size={16} color={colors.textMuted} />
+          <Text style={styles.caption}>Максимальный уровень</Text>
+        </View>
+      ) : (
+        <Text style={styles.caption}>
+          До «{line.nextLevelTitle}»: ещё {remaining}
+        </Text>
+      )}
     </View>
-  );
+  )
 }
 
 const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
     container: { gap: 6 },
     row: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.sm },
-    emoji: { fontSize: 22 },
     titleWrap: { flex: 1, minWidth: 0 },
     activity: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
@@ -97,7 +112,8 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       overflow: 'hidden',
     },
     fill: { height: '100%', borderRadius: 999 },
+    captionRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     caption: { fontSize: DESIGN_TOKENS.typography.sizes.xs, color: colors.textMuted },
-  });
+  })
 
-export default memo(ProgressionLineBar);
+export default memo(ProgressionLineBar)

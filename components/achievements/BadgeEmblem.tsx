@@ -19,6 +19,10 @@ import {
   type MotifKey,
   type TierFrame,
 } from '@/components/achievements/badgeVisuals';
+import {
+  lineFor,
+  paperFor,
+} from '@/components/achievements/engravingPaper';
 
 interface Props {
   badge: Badge;
@@ -29,43 +33,6 @@ interface Props {
 // Внутренние координаты SVG — нормированный квадрат 100×100.
 const VB = 100;
 const C = VB / 2;
-
-// Тёплая тёмная сепия — целевой тон диска в dark-режиме (тёмный пергамент,
-// НЕ нейтрально-серый). Бумага притемняется в её сторону, сохраняя характер.
-const DARK_PAPER_BASE = '#2A2117';
-// Тёплый светлый тон линии под тёмную тему (состаренные чернила на пергаменте).
-const DARK_LINE_BASE = '#F0E2C8';
-
-// Под тёмную тему диск тонируется в тёплую сепию, а не в нейтральный чёрный,
-// чтобы идентичность «состаренной бумаги» сохранялась. Линия — светлая тёплая.
-function paperFor(paper: string, isDark: boolean): string {
-  return isDark ? mix(paper, DARK_PAPER_BASE, 0.78) : paper;
-}
-function lineFor(line: string, isDark: boolean): string {
-  return isDark ? mix(line, DARK_LINE_BASE, 0.72) : line;
-}
-
-// Простое смешивание hex-цветов (RN-svg принимает строки, поэтому считаем сами).
-function mix(a: string, b: string, t: number): string {
-  const ca = hexToRgb(a);
-  const cb = hexToRgb(b);
-  const r = Math.round(ca.r + (cb.r - ca.r) * t);
-  const g = Math.round(ca.g + (cb.g - ca.g) * t);
-  const bl = Math.round(ca.b + (cb.b - ca.b) * t);
-  return `#${toHex(r)}${toHex(g)}${toHex(bl)}`;
-}
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
-  const h = hex.replace('#', '');
-  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
-  return {
-    r: parseInt(full.slice(0, 2), 16),
-    g: parseInt(full.slice(2, 4), 16),
-    b: parseInt(full.slice(4, 6), 16),
-  };
-}
-function toHex(n: number): string {
-  return Math.max(0, Math.min(255, n)).toString(16).padStart(2, '0');
-}
 
 // ── Мотивы: тонкая гравюрная линия, без заливок-плашек ───────────────────────
 // Каждый рисуется в зоне ~26..74 по обеим осям (центр диска).

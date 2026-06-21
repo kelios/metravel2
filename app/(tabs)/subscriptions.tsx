@@ -45,7 +45,7 @@ export default function SubscriptionsScreen() {
     subscriptions, subscribers, authors,
     subscriptionsLoading, subscribersLoading,
     getFullName, handleUnsubscribe,
-  } = useSubscriptionsData();
+  } = useSubscriptionsData({ includeAuthorTravels: true });
 
   const handleMessage = useCallback((userId: number) => { pushRoute(`/messages?userId=${encodeURIComponent(userId)}`); }, [pushRoute]);
   const handleOpenTravel = useCallback((url: string) => { pushRoute(url); }, [pushRoute]);

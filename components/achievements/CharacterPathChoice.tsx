@@ -12,6 +12,7 @@ import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useChooseCharacterPath } from '@/hooks/useGamification';
+import { ProgressionAnimalMedallion } from '@/components/achievements/GamificationIcons';
 import type { CharacterPathOption } from '@/api/gamification';
 
 interface Props {
@@ -50,7 +51,7 @@ function CharacterPathChoice({ options, testID, style }: Props) {
               accessibilityRole="button"
               accessibilityLabel={`Выбрать путь: ${opt.name}. ${opt.description}`}
             >
-              <Text style={styles.optionEmoji}>{opt.emoji}</Text>
+              <ProgressionAnimalMedallion slug={opt.slug} size={40} />
               <View style={styles.optionBody}>
                 <Text style={styles.optionName}>{opt.name}</Text>
                 <Text style={styles.optionDesc}>{opt.description}</Text>
@@ -94,7 +95,6 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       borderColor: colors.borderLight,
     },
     optionPending: { opacity: 0.6 },
-    optionEmoji: { fontSize: 26 },
     optionBody: { flex: 1, minWidth: 0, gap: 2 },
     optionName: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,

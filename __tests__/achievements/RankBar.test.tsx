@@ -91,7 +91,7 @@ describe('RankBar', () => {
         rank={makeRank({ nextLevelMinPoints: null, nextLevelTitle: null, isMaxLevel: true })}
       />,
     )
-    expect(getByText('Максимальный уровень достигнут 🏆')).toBeTruthy()
+    expect(getByText('Максимальный уровень достигнут')).toBeTruthy()
   })
 
   it('does NOT render XP bar or caption in unknown mode (null thresholds, isMaxLevel false)', () => {

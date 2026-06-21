@@ -14,6 +14,11 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useMyCharacter, useUserCharacter } from '@/hooks/useGamification';
 import { trackCharacterBlockViewed } from '@/utils/gamificationAnalytics';
 import CharacterPathChoice from '@/components/achievements/CharacterPathChoice';
+import {
+  CharacterHeadIcon,
+  InventoryLineIcon,
+  type InventoryIconKey,
+} from '@/components/achievements/GamificationIcons';
 import type { CharacterDetail } from '@/api/gamification';
 
 interface Props {
@@ -23,17 +28,19 @@ interface Props {
   style?: StyleProp<ViewStyle>;
 }
 
-const DETAIL_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
-  collar: 'circle',
-  backpack: 'briefcase',
-  compass: 'compass',
-  map: 'map',
-  medals: 'award',
-  cape: 'feather',
-};
+const INVENTORY_KEYS: readonly InventoryIconKey[] = [
+  'collar',
+  'backpack',
+  'compass',
+  'map',
+  'medals',
+  'cape',
+];
 
-const detailIcon = (slug: string): keyof typeof Feather.glyphMap =>
-  DETAIL_ICONS[slug] ?? 'star';
+const detailIcon = (slug: string): InventoryIconKey =>
+  INVENTORY_KEYS.includes(slug as InventoryIconKey)
+    ? (slug as InventoryIconKey)
+    : 'medals';
 
 /** Блок персонажа в профиле: уровень + визуальные детали + выбор пути. FE-character-profile. */
 function CharacterProfileCard({ userId, testID, style }: Props) {
@@ -59,9 +66,7 @@ function CharacterProfileCard({ userId, testID, style }: Props) {
   return (
     <View style={[styles.card, style]} testID={testID}>
       <View style={styles.headerRow}>
-        <View style={styles.avatar}>
-          <Feather name="user" size={22} color={colors.textOnPrimary} />
-        </View>
+        <CharacterHeadIcon slug={data?.pathSlug ?? null} size={44} />
         <View style={styles.headerBody}>
           <Text style={styles.name}>{data?.name ?? 'Персонаж'}</Text>
           <Text style={styles.meta}>
@@ -83,11 +88,15 @@ function CharacterProfileCard({ userId, testID, style }: Props) {
                 key={d.slug}
                 style={[styles.detail, !d.unlocked && styles.detailLocked]}
               >
-                <Feather
-                  name={d.unlocked ? detailIcon(d.slug) : 'lock'}
-                  size={14}
-                  color={d.unlocked ? colors.primary : colors.textMuted}
-                />
+                {d.unlocked ? (
+                  <InventoryLineIcon
+                    icon={detailIcon(d.slug)}
+                    size={16}
+                    color={colors.primary}
+                  />
+                ) : (
+                  <Feather name="lock" size={14} color={colors.textMuted} />
+                )}
                 <Text
                   style={[styles.detailLabel, !d.unlocked && styles.detailLabelLocked]}
                   numberOfLines={1}
@@ -118,14 +127,6 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       gap: DESIGN_TOKENS.spacing.md,
     },
     headerRow: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.sm },
-    avatar: {
-      width: 44,
-      height: 44,
-      borderRadius: 999,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.primary,
-    },
     headerBody: { flex: 1, minWidth: 0 },
     name: {
       fontSize: DESIGN_TOKENS.typography.sizes.md,

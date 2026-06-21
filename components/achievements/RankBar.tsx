@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { MaxLevelLaurel } from '@/components/achievements/GamificationIcons';
 import type { UserRank } from '@/api/achievements';
 
 interface Props {
@@ -74,6 +75,7 @@ function RankBar({ rank, compact = false, testID, style }: Props) {
         },
         fill: { height: '100%', borderRadius: 999 },
         caption: { fontSize: DESIGN_TOKENS.typography.sizes.xs, color: colors.textMuted },
+        captionRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
       }),
     [colors, compact],
   );
@@ -125,11 +127,16 @@ function RankBar({ rank, compact = false, testID, style }: Props) {
       ) : null}
 
       {!compact && mode !== 'unknown' ? (
-        <Text style={styles.caption}>
-          {mode === 'max'
-            ? 'Максимальный уровень достигнут 🏆'
-            : `До «${rank.nextLevelTitle}»: ${remaining} XP`}
-        </Text>
+        mode === 'max' ? (
+          <View style={styles.captionRow}>
+            <MaxLevelLaurel size={16} color={colors.textMuted} />
+            <Text style={styles.caption}>Максимальный уровень достигнут</Text>
+          </View>
+        ) : (
+          <Text style={styles.caption}>
+            До «{rank.nextLevelTitle}»: {remaining} XP
+          </Text>
+        )
       ) : null}
     </View>
   );

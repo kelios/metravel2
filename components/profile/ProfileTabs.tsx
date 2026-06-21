@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus';
 
 export type ProfileTabKey = 'overview' | 'stats' | 'travels' | 'favorites' | 'history';
@@ -25,74 +26,61 @@ const TAB_ICONS: Record<ProfileTabKey, React.ComponentProps<typeof Feather>['nam
 
 export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: ProfileTabsProps) {
   const colors = useThemedColors();
+  const { isPhone, isLargePhone } = useResponsive();
+  const isMobile = isPhone || isLargePhone;
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
         wrapper: {
           backgroundColor: colors.background,
-          paddingHorizontal: DESIGN_TOKENS.spacing.md,
           paddingTop: DESIGN_TOKENS.spacing.xs,
-          paddingBottom: DESIGN_TOKENS.spacing.md,
+          paddingBottom: DESIGN_TOKENS.spacing.sm,
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomColor: colors.borderLight,
         },
         tabRow: {
           flexDirection: 'row',
-          padding: 4,
-          gap: 4,
-          borderRadius: DESIGN_TOKENS.radii.pill,
-          backgroundColor: colors.backgroundSecondary,
-          borderWidth: 1,
-          borderColor: colors.borderLight,
+          alignItems: 'center',
+          gap: DESIGN_TOKENS.spacing.xs,
+          paddingHorizontal: DESIGN_TOKENS.spacing.md,
         },
         tab: {
-          flex: 1,
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 3,
-          paddingVertical: 8,
-          paddingHorizontal: 4,
-          borderRadius: DESIGN_TOKENS.radii.pill,
-          backgroundColor: 'transparent',
-          minHeight: DESIGN_TOKENS.touchTarget.minHeight,
-          ...Platform.select({
-            web: { cursor: 'pointer' } as any,
-            default: {},
-          }),
-        },
-        tabTopRow: {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
           gap: 5,
-        },
-        activeTab: {
-          backgroundColor: colors.surface,
+          paddingVertical: 7,
+          paddingHorizontal: 12,
+          borderRadius: DESIGN_TOKENS.radii.pill,
+          borderWidth: 1,
+          borderColor: 'transparent',
+          backgroundColor: 'transparent',
           ...Platform.select({
-            ios: {
-              shadowColor: '#000',
-              shadowOpacity: 0.08,
-              shadowRadius: 6,
-              shadowOffset: { width: 0, height: 2 },
-            },
-            android: { elevation: 2 },
+            web: { cursor: 'pointer' } as object,
             default: {},
           }),
         },
+        desktopTabFlex: {
+          flex: 1,
+        },
+        activeTab: {
+          backgroundColor: colors.primarySoft,
+          borderColor: colors.primary,
+        },
         tabText: {
-          fontSize: DESIGN_TOKENS.typography.sizes.xs,
-          fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+          fontSize: DESIGN_TOKENS.typography.sizes.sm,
+          fontWeight: DESIGN_TOKENS.typography.weights.semibold as '600',
           color: colors.textMuted,
-          textAlign: 'center',
-          alignSelf: 'stretch',
         },
         activeTabText: {
-          color: colors.text,
+          color: colors.primary,
+          fontWeight: DESIGN_TOKENS.typography.weights.bold as '700',
         },
         countBadge: {
-          minWidth: 22,
-          height: 18,
-          paddingHorizontal: 6,
+          minWidth: 18,
+          paddingHorizontal: 5,
+          paddingVertical: 1,
           borderRadius: DESIGN_TOKENS.radii.pill,
           backgroundColor: colors.borderLight,
           alignItems: 'center',
@@ -103,7 +91,7 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
         },
         countText: {
           fontSize: 11,
-          fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
+          fontWeight: DESIGN_TOKENS.typography.weights.bold as '700',
           color: colors.textMuted,
           lineHeight: 14,
         },
@@ -128,48 +116,57 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
         .filter((tab): tab is (typeof allTabs)[number] => tab != null)
     : allTabs;
 
+  const renderTab = (tab: (typeof allTabs)[number]) => {
+    const isActive = activeTab === tab.key;
+    const count = typeof counts?.[tab.key] === 'number' ? (counts[tab.key] as number) : 0;
+
+    return (
+      <Pressable
+        key={tab.key}
+        style={[
+          styles.tab,
+          !isMobile && styles.desktopTabFlex,
+          isActive && styles.activeTab,
+          globalFocusStyles.focusable,
+        ]}
+        onPress={() => onChangeTab(tab.key)}
+        accessibilityRole="tab"
+        accessibilityState={{ selected: isActive }}
+        accessibilityLabel={count > 0 ? `${tab.a11yLabel}: ${count}` : tab.a11yLabel}
+        accessibilityHint={tab.hint}
+      >
+        <Feather
+          name={TAB_ICONS[tab.key]}
+          size={15}
+          color={isActive ? colors.primary : colors.textMuted}
+        />
+        <Text style={[styles.tabText, isActive && styles.activeTabText]} numberOfLines={1}>
+          {tab.label}
+        </Text>
+        {count > 0 ? (
+          <View style={[styles.countBadge, isActive && styles.activeCountBadge]}>
+            <Text style={[styles.countText, isActive && styles.activeCountText]}>
+              {count > 999 ? '999+' : count}
+            </Text>
+          </View>
+        ) : null}
+      </Pressable>
+    );
+  };
+
   return (
     <View style={styles.wrapper} accessibilityRole="tablist">
-      <View style={styles.tabRow}>
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.key;
-          const count = typeof counts?.[tab.key] === 'number' ? (counts[tab.key] as number) : 0;
-
-          return (
-            <Pressable
-              key={tab.key}
-              style={[
-                styles.tab,
-                isActive && styles.activeTab,
-                globalFocusStyles.focusable,
-              ]}
-              onPress={() => onChangeTab(tab.key)}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: isActive }}
-              accessibilityLabel={count > 0 ? `${tab.a11yLabel}: ${count}` : tab.a11yLabel}
-              accessibilityHint={tab.hint}
-            >
-              <View style={styles.tabTopRow}>
-                <Feather
-                  name={TAB_ICONS[tab.key]}
-                  size={15}
-                  color={isActive ? colors.primary : colors.textMuted}
-                />
-                {count > 0 ? (
-                  <View style={[styles.countBadge, isActive && styles.activeCountBadge]}>
-                    <Text style={[styles.countText, isActive && styles.activeCountText]}>
-                      {count > 999 ? '999+' : count}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-              <Text style={[styles.tabText, isActive && styles.activeTabText]} numberOfLines={1}>
-                {tab.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {isMobile ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabRow}
+        >
+          {tabs.map(renderTab)}
+        </ScrollView>
+      ) : (
+        <View style={styles.tabRow}>{tabs.map(renderTab)}</View>
+      )}
     </View>
   );
 }

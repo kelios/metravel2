@@ -23,7 +23,18 @@ export type AuthorWithTravels = {
 
 const SUBSCRIPTION_TRAVELS_PREVIEW_LIMIT = 10;
 
-export function useSubscriptionsData() {
+interface UseSubscriptionsDataOptions {
+  /**
+   * Подгружать превью путешествий по каждому автору подписки (N запросов).
+   * Нужно только экрану подписок, который рендерит карточки авторов. Шапке профиля
+   * и пикеру приглашений нужны лишь счётчики/списки — для них держим false,
+   * чтобы не плодить N+1 фетчей при заходе в профиль (тикет #473 — дешёвый BE-счётчик).
+   */
+  includeAuthorTravels?: boolean;
+}
+
+export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) {
+  const { includeAuthorTravels = false } = options;
   const { isAuthenticated, authReady } = useAuth();
   const queryClient = useQueryClient();
 
@@ -60,6 +71,7 @@ export function useSubscriptionsData() {
   >({});
 
   useEffect(() => {
+    if (!includeAuthorTravels) return;
     if (!subscriptions.length) return;
 
     subscriptions.forEach((profile) => {
@@ -98,7 +110,7 @@ export function useSubscriptionsData() {
           }));
         });
     });
-  }, [subscriptions]);
+  }, [subscriptions, includeAuthorTravels]);
 
   const authors: AuthorWithTravels[] = useMemo(
     () =>
