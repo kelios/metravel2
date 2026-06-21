@@ -30,6 +30,13 @@ jest.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (s: { isAuthenticated: boolean }) => unknown) =>
     selector({ isAuthenticated: true }),
 }))
+// TripTelegramGroupCard (внутри PublicTripDetail) использует React Query —
+// мокаем хуки группы, чтобы не требовать QueryClientProvider в тесте.
+jest.mock('@/hooks/useTripTelegramGroupApi', () => ({
+  useTripTelegramGroup: () => ({ data: null, isLoading: false, isError: false }),
+  useCreateTripTelegramGroup: () => ({ mutate: jest.fn(), isPending: false }),
+  useFetchTripInviteLink: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue(undefined), isPending: false }),
+}))
 
 import PublicTripDetail from '@/components/trips/PublicTripDetail'
 import OrganizerApplicationsPanel from '@/components/trips/OrganizerApplicationsPanel'

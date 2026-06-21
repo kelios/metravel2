@@ -7,14 +7,14 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import BadgeEmblem from '@/components/achievements/BadgeEmblem';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import type { Badge } from '@/api/achievements';
-import { TIER_VISUALS, badgeIcon, tierLabel } from '@/components/achievements/badgeVisuals';
+import { TIER_VISUALS, tierLabel } from '@/components/achievements/badgeVisuals';
 
 interface Props {
   badge: Badge;
@@ -43,7 +43,6 @@ function BadgeMedal({
 }: Props) {
   const colors = useThemedColors();
   const tier = TIER_VISUALS[badge.tier];
-  const iconName = badgeIcon(badge.categorySlug, badge.slug);
   const ratio =
     progress && progress.threshold > 0
       ? Math.max(0, Math.min(1, progress.current / progress.threshold))
@@ -67,32 +66,27 @@ function BadgeMedal({
         medal: {
           width: size,
           height: size,
+          alignItems: 'center',
+          justifyContent: 'center',
+          // Мягкая тень под эмблемой (бумажный диск).
+          shadowColor: tier.shade,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.22,
+          shadowRadius: 5,
+          elevation: 3,
+        },
+        // Круглая обводка тира поверх загруженной картинки (ветка imageUrl).
+        imageMedal: {
           borderRadius: size / 2,
           borderWidth: Math.max(2, Math.round(size * 0.045)),
           borderColor: tier.ring,
-          alignItems: 'center',
-          justifyContent: 'center',
           overflow: 'hidden',
           backgroundColor: colors.surface,
-          // Премиум-глубина: мягкая тень под медалью.
-          shadowColor: tier.shade,
-          shadowOffset: { width: 0, height: 3 },
-          shadowOpacity: 0.35,
-          shadowRadius: 6,
-          elevation: 4,
-        },
-        gradient: { ...StyleSheet.absoluteFillObject },
-        gloss: {
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '45%',
-          backgroundColor: 'rgba(255,255,255,0.22)',
         },
         locked: { opacity: 0.5 },
         lockedScrim: {
           ...StyleSheet.absoluteFillObject,
+          borderRadius: size / 2,
           backgroundColor: colors.overlayLight,
         },
         lockBadge: {
@@ -139,6 +133,7 @@ function BadgeMedal({
     [colors, earned, ratio, size, tier.ring, tier.shade],
   );
 
+  const hasImage = !!badge.imageUrl;
   const medalInner = badge.imageUrl ? (
     <ImageCardMedia
       src={badge.imageUrl}
@@ -150,21 +145,7 @@ function BadgeMedal({
       priority="normal"
     />
   ) : (
-    <>
-      <LinearGradient
-        colors={[tier.highlight, tier.ring, tier.shade]}
-        start={{ x: 0.2, y: 0 }}
-        end={{ x: 0.8, y: 1 }}
-        style={styles.gradient}
-      />
-      <View style={styles.gloss} pointerEvents="none" />
-      <Feather
-        name={iconName}
-        size={Math.round(size * 0.42)}
-        color="#FFFFFF"
-        style={{ textShadowColor: 'rgba(0,0,0,0.25)', textShadowRadius: 2 }}
-      />
-    </>
+    <BadgeEmblem badge={badge} size={size} />
   );
 
   const Wrapper: typeof Pressable | typeof View = onPress ? Pressable : View;
@@ -178,7 +159,7 @@ function BadgeMedal({
       style={styles.wrap}
     >
       <View style={styles.medalBox}>
-        <View style={[styles.medal, !earned && styles.locked, style]}>
+        <View style={[styles.medal, hasImage && styles.imageMedal, !earned && styles.locked, style]}>
           {medalInner}
           {!earned ? <View style={styles.lockedScrim} pointerEvents="none" /> : null}
         </View>

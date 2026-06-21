@@ -66,15 +66,18 @@ export const createProfileScreenStyles = ({
       gap: 0,
       overflow: 'hidden',
     },
-    skeletonAvatarRow: {
-      alignItems: 'center',
-      marginTop: -66,
+    skeletonIdentityRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 12,
+      paddingHorizontal: 16,
+      marginTop: -45,
       paddingBottom: 12,
     },
-    skeletonCenterText: {
-      alignItems: 'center',
+    skeletonIdentityText: {
+      flex: 1,
       gap: 8,
-      paddingBottom: 12,
+      paddingTop: 48,
     },
     skeletonStatsRow: {
       paddingHorizontal: 16,

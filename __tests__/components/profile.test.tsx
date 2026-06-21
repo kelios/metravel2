@@ -121,6 +121,16 @@ jest.mock('expo-image-picker', () => ({
     MediaTypeOptions: { Images: 'Images' },
 }));
 
+// Профиль тянет подписки и непрочитанные сообщения через React Query — мокаем,
+// чтобы не требовать сетевых queryFn в тесте.
+jest.mock('@/hooks/useSubscriptionsData', () => ({
+  useSubscriptionsData: () => ({ subscriptions: [], subscribers: [], isLoading: false }),
+}));
+
+jest.mock('@/hooks/useMessages', () => ({
+  useUnreadCount: () => ({ count: 0 }),
+}));
+
 jest.mock('@shopify/flash-list', () => {
   const React = require('react');
   const { FlatList } = require('react-native');
@@ -195,20 +205,13 @@ describe('ProfileScreen', () => {
     expect(await findByText('Test User')).toBeTruthy();
     expect(await findByText('user@example.com')).toBeTruthy();
 
-    // Quick actions
+    // Вкладка "Обзор" (по умолчанию): быстрые действия + пилюли + кнопка edit
     expect(await findByText('Чаты')).toBeTruthy();
-    expect(await findByText('Подписки')).toBeTruthy();
-
-    // Header actions
-    expect(await findByText('Редактировать')).toBeTruthy();
+    expect(await findByText('Подписки')).toBeTruthy(); // пилюля-счётчик
+    expect(await findByLabelText('Меню профиля')).toBeTruthy();
     expect(await findByText('Календарь')).toBeTruthy();
-    expect(await findByText('Личный календарь')).toBeTruthy();
-    expect(await findByText('Мои статусы поездок')).toBeTruthy();
-    expect((await findAllByText('Были')).length).toBeGreaterThan(0);
-    expect(await findByText('Планируют')).toBeTruthy();
-    expect(queryByText('По каждому путешествию')).toBeNull();
-    expect(queryByText(/Когда backend начнёт отдавать/i)).toBeNull();
 
+    // Счётчики во вкладках
     await waitFor(() => {
       expect(getByLabelText('Мои маршруты: 3')).toBeTruthy();
       expect(getByLabelText('Сохранённое: 2')).toBeTruthy();
@@ -217,6 +220,15 @@ describe('ProfileScreen', () => {
     expect(getAllByLabelText('Мои маршруты: 3')).toHaveLength(1);
     expect(getAllByLabelText('Сохранённое: 2')).toHaveLength(1);
     expect(getAllByLabelText('Недавно смотрел: 5')).toHaveLength(1);
+
+    // Статистика автора и личный календарь живут во вкладке "Статистика"
+    fireEvent.press(getByLabelText('Статистика профиля'));
+    expect(await findByText('Личный календарь')).toBeTruthy();
+    expect(await findByText('Мои статусы поездок')).toBeTruthy();
+    expect((await findAllByText('Были')).length).toBeGreaterThan(0);
+    expect(await findByText('Планируют')).toBeTruthy();
+    expect(queryByText('По каждому путешествию')).toBeNull();
+    expect(queryByText(/Когда backend начнёт отдавать/i)).toBeNull();
 
     expect(await findByLabelText('Сохранили: 8')).toBeTruthy();
     expect((await findAllByLabelText('Были: 3')).length).toBeGreaterThan(0);
@@ -267,16 +279,17 @@ describe('ProfileScreen', () => {
 
     const { getByLabelText, findAllByLabelText, findByLabelText, queryByLabelText } = renderProfile();
 
-    // Метрики статистики автора живут во вкладке "Обзор" (активна по умолчанию).
+    // Метрики статистики автора живут во вкладке "Статистика".
     // Клик по метрике — drill-down: переключает на "Маршруты" с фильтром.
+    fireEvent.press(await findByLabelText('Статистика профиля'));
     fireEvent.press((await findAllByLabelText('Были: 3'))[0]);
 
     expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
     expect(queryByLabelText(/My Travel 2/)).toBeNull();
     expect(queryByLabelText(/My Travel 3/)).toBeNull();
 
-    // Смена метрики — возврат на "Обзор" и выбор другой метрики.
-    fireEvent.press(getByLabelText('Обзор профиля'));
+    // Смена метрики — возврат на "Статистика" и выбор другой метрики.
+    fireEvent.press(getByLabelText('Статистика профиля'));
     fireEvent.press((await findAllByLabelText('Планируют: 7'))[0]);
 
     expect(await findByLabelText(/My Travel 1/)).toBeTruthy();

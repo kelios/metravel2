@@ -13,16 +13,33 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { UserProfileDto } from '@/api/user';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { ProfileMenu } from './ProfileMenu';
+import VerifiedBadge from './VerifiedBadge';
+import { CoverTopoTexture } from './CoverTopoTexture';
+import {
+  ProfileHeaderQuickActions,
+  type ProfileHeaderActionKey,
+} from './ProfileHeaderQuickActions';
+import { ProfileStatSegment, type ProfileStatSegmentItem } from './ProfileStatSegment';
+
+interface ProfileHeaderRank {
+  level: number;
+  title: string;
+}
 
 interface ProfileHeaderProps {
   user: { name: string; email: string; avatar?: string | null };
   profile?: UserProfileDto | null;
+  rank?: ProfileHeaderRank | null;
+  unreadMessagesCount?: number;
+  statItems: ProfileStatSegmentItem[];
   onEdit: () => void;
   onLogout: () => void;
   onAvatarUpload: () => void;
+  onQuickAction: (key: ProfileHeaderActionKey) => void;
   avatarUploading?: boolean;
 }
 
@@ -40,9 +57,9 @@ const SOCIAL_ICONS: Record<string, React.ComponentProps<typeof Feather>['name']>
   vk: 'link',
 };
 
-const AVATAR_SIZE = 124;
-const COVER_HEIGHT = 148;
-const AVATAR_BORDER = 4;
+const AVATAR_SIZE = 84;
+const COVER_HEIGHT = 90;
+const AVATAR_BORDER = 3;
 
 const getInitials = (name: string) =>
   name
@@ -55,12 +72,30 @@ const getInitials = (name: string) =>
 export function ProfileHeader({
   user,
   profile,
+  rank,
+  unreadMessagesCount = 0,
+  statItems,
   onEdit,
   onLogout,
   onAvatarUpload,
+  onQuickAction,
   avatarUploading = false,
 }: ProfileHeaderProps) {
   const colors = useThemedColors();
+
+  const coverPhoto = useMemo(
+    () =>
+      profile?.cover_photo
+        ? optimizeImageUrl(profile.cover_photo, {
+            width: 1024,
+            height: COVER_HEIGHT * 2,
+            quality: 70,
+            format: 'auto',
+            fit: 'cover',
+          }) ?? profile.cover_photo
+        : null,
+    [profile?.cover_photo]
+  );
 
   const socialLinks = useMemo(
     () =>
@@ -75,59 +110,58 @@ export function ProfileHeader({
     [profile]
   );
 
+  const rankLabel = useMemo(
+    () => (rank ? `Ур. ${rank.level} · ${rank.title}` : null),
+    [rank]
+  );
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
         container: {
           backgroundColor: colors.background,
-          paddingBottom: DESIGN_TOKENS.spacing.md,
+          paddingBottom: DESIGN_TOKENS.spacing.sm,
         },
         cover: {
           height: COVER_HEIGHT,
-          backgroundColor: colors.primaryLight,
+          backgroundColor: colors.surface,
           position: 'relative',
           overflow: 'hidden',
-          ...Platform.select({
-            web: {
-              backgroundImage: `linear-gradient(135deg, ${colors.brand} 0%, ${colors.primary} 55%, ${colors.accent} 100%)`,
-            } as any,
-            default: {},
-          }),
         },
-        coverGradient: {
+        coverScrim: {
           position: 'absolute',
-          bottom: 0,
-          left: 0,
+          top: 0,
           right: 0,
-          height: 80,
+          width: 120,
+          height: 56,
           ...Platform.select({
             web: {
-              backgroundImage: `linear-gradient(to bottom, transparent, ${colors.background})`,
+              backgroundImage: `linear-gradient(to bottom left, rgba(0,0,0,0.28), transparent)`,
             } as any,
             default: {
-              backgroundColor: colors.background,
+              backgroundColor: colors.overlay,
               opacity: 0.18,
             },
           }),
         },
-        coverGlow: {
-          position: 'absolute',
-          top: -40,
-          right: -40,
-          width: 180,
-          height: 180,
-          borderRadius: 90,
-          backgroundColor: colors.accentSoft,
-          opacity: 0.45,
-        },
-        menuWrap: {
+        topActions: {
           position: 'absolute',
           top: DESIGN_TOKENS.spacing.xs,
           right: DESIGN_TOKENS.spacing.xs,
-        },
-        // Avatar overlapping cover
-        avatarSection: {
+          flexDirection: 'row',
           alignItems: 'center',
+          gap: DESIGN_TOKENS.spacing.xxs,
+        },
+        menuChip: {
+          backgroundColor: colors.surfaceMuted,
+          borderRadius: DESIGN_TOKENS.radii.pill,
+        },
+        // Horizontal identity row: avatar left, info right.
+        identityRow: {
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          gap: DESIGN_TOKENS.spacing.sm,
+          paddingHorizontal: DESIGN_TOKENS.spacing.md,
           marginTop: -(AVATAR_SIZE / 2 + AVATAR_BORDER),
         },
         avatarRing: {
@@ -141,8 +175,8 @@ export function ProfileHeader({
             ios: {
               shadowColor: '#000',
               shadowOpacity: 0.12,
-              shadowRadius: 16,
-              shadowOffset: { width: 0, height: 6 },
+              shadowRadius: 12,
+              shadowOffset: { width: 0, height: 4 },
             },
             android: { elevation: 6 },
             default: {},
@@ -167,7 +201,7 @@ export function ProfileHeader({
           borderRadius: AVATAR_SIZE / 2,
         },
         avatarPlaceholder: {
-          fontSize: 38,
+          fontSize: 28,
           fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
           color: colors.primary,
           letterSpacing: 0,
@@ -177,75 +211,52 @@ export function ProfileHeader({
           bottom: 0,
           left: 0,
           right: 0,
-          height: AVATAR_SIZE * 0.32,
+          height: AVATAR_SIZE * 0.3,
           backgroundColor: colors.overlay,
           alignItems: 'center',
           justifyContent: 'center',
         },
-        // User info section
-        userInfo: {
-          alignItems: 'center',
-          paddingTop: DESIGN_TOKENS.spacing.sm,
-          paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-          gap: 4,
+        // Info column (name + status + email)
+        infoColumn: {
+          flex: 1,
+          minWidth: 0,
+          paddingTop: AVATAR_SIZE / 2 + AVATAR_BORDER,
+          gap: 3,
         },
         userName: {
-          ...DESIGN_TOKENS.typography.scale.h1,
+          ...DESIGN_TOKENS.typography.scale.h2,
           color: colors.text,
-          textAlign: 'center',
-          letterSpacing: -0.4,
+        },
+        statusRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: DESIGN_TOKENS.spacing.xxs,
+        },
+        rankChip: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 4,
+          paddingHorizontal: 8,
+          paddingVertical: 3,
+          borderRadius: DESIGN_TOKENS.radii.pill,
+          backgroundColor: colors.accentSoft,
+        },
+        rankChipText: {
+          fontSize: DESIGN_TOKENS.typography.sizes.xs,
+          fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
+          color: colors.text,
         },
         userEmail: {
           fontSize: DESIGN_TOKENS.typography.sizes.sm,
           color: colors.textMuted,
-          textAlign: 'center',
-        },
-
-        // Actions row
-        actionsRow: {
-          flexDirection: 'row',
-          justifyContent: 'center',
-          alignItems: 'center',
-          marginTop: DESIGN_TOKENS.spacing.md,
-          gap: DESIGN_TOKENS.spacing.xs,
-          paddingHorizontal: DESIGN_TOKENS.spacing.md,
-        },
-        editButton: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 6,
-          paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-          paddingVertical: 10,
-          borderRadius: DESIGN_TOKENS.radii.pill,
-          backgroundColor: colors.primary,
-          minHeight: DESIGN_TOKENS.touchTarget.minHeight,
-          ...Platform.select({
-            web: { cursor: 'pointer' } as any,
-            default: {},
-          }),
-          ...Platform.select({
-            ios: {
-              shadowColor: colors.primary,
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
-              shadowOffset: { width: 0, height: 3 },
-            },
-            android: { elevation: 3 },
-            default: {},
-          }),
-        },
-        editButtonText: {
-          fontSize: DESIGN_TOKENS.typography.sizes.sm,
-          fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-          color: colors.textOnPrimary,
         },
         // Social links
         socialsRow: {
           flexDirection: 'row',
           flexWrap: 'wrap',
-          justifyContent: 'center',
           gap: DESIGN_TOKENS.spacing.xs,
-          marginTop: DESIGN_TOKENS.spacing.md,
+          marginTop: DESIGN_TOKENS.spacing.sm,
           paddingHorizontal: DESIGN_TOKENS.spacing.md,
         },
         socialChip: {
@@ -269,23 +280,39 @@ export function ProfileHeader({
           fontSize: DESIGN_TOKENS.typography.sizes.xs,
           fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
         },
+        segmentSpacer: {
+          height: DESIGN_TOKENS.spacing.md,
+        },
       }),
     [colors]
   );
 
   return (
     <View style={styles.container}>
-      {/* Cover band with diagonal brand gradient and soft glow */}
+      {/* Photo cover banner (Telegram/VK-style) with topo-texture fallback */}
       <View style={styles.cover}>
-        <View style={styles.coverGlow} pointerEvents="none" />
-        <View style={styles.coverGradient} pointerEvents="none" />
-        <View style={styles.menuWrap}>
-          <ProfileMenu onLogout={onLogout} onSettings={onEdit} />
+        {coverPhoto ? (
+          <ImageCardMedia
+            src={coverPhoto}
+            alt="Обложка профиля"
+            height={COVER_HEIGHT}
+            width="100%"
+            borderRadius={0}
+            fit="cover"
+          />
+        ) : (
+          <CoverTopoTexture height={COVER_HEIGHT} />
+        )}
+        <View style={styles.coverScrim} pointerEvents="none" />
+        <View style={styles.topActions}>
+          <View style={styles.menuChip}>
+            <ProfileMenu onLogout={onLogout} onSettings={onEdit} />
+          </View>
         </View>
       </View>
 
-      {/* Avatar overlapping cover */}
-      <View style={styles.avatarSection}>
+      {/* Identity: avatar left, info right */}
+      <View style={styles.identityRow}>
         <Pressable
           onPress={onAvatarUpload}
           disabled={avatarUploading}
@@ -296,7 +323,7 @@ export function ProfileHeader({
           <View style={styles.avatarRing}>
             <View style={styles.avatar}>
               {user.avatar ? (
-                <Image source={{ uri: optimizeImageUrl(user.avatar, { width: 248, height: 248, quality: 72, format: 'auto', fit: 'cover' }) ?? user.avatar }} style={styles.avatarImage} />
+                <Image source={{ uri: optimizeImageUrl(user.avatar, { width: 168, height: 168, quality: 72, format: 'auto', fit: 'cover' }) ?? user.avatar }} style={styles.avatarImage} />
               ) : (
                 <Text style={styles.avatarPlaceholder}>{getInitials(user.name || '?')}</Text>
               )}
@@ -304,42 +331,37 @@ export function ProfileHeader({
                 {avatarUploading ? (
                   <ActivityIndicator size="small" color={colors.textInverse} />
                 ) : (
-                  <Feather name="camera" size={14} color={colors.textInverse} />
+                  <Feather name="camera" size={13} color={colors.textInverse} />
                 )}
               </View>
             </View>
           </View>
         </Pressable>
-      </View>
 
-      {/* Name + Email */}
-      <View style={styles.userInfo}>
-        <Text style={styles.userName} numberOfLines={2}>
-          {user.name || 'Пользователь'}
-        </Text>
-        {!!user.email && (
-          <Text style={styles.userEmail} numberOfLines={1}>
-            {user.email}
+        <View style={styles.infoColumn}>
+          <Text style={styles.userName} numberOfLines={2}>
+            {user.name || 'Пользователь'}
           </Text>
-        )}
-      </View>
-
-      {/* Edit action */}
-      <View style={styles.actionsRow}>
-        <Pressable
-          onPress={onEdit}
-          style={({ pressed }) => [
-            styles.editButton,
-            globalFocusStyles.focusable,
-            { opacity: pressed ? 0.85 : 1 },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel="Редактировать профиль"
-          accessibilityHint="Перейти к настройкам профиля"
-        >
-          <Feather name="edit-2" size={14} color={colors.textOnPrimary} />
-          <Text style={styles.editButtonText}>Редактировать</Text>
-        </Pressable>
+          <View style={styles.statusRow}>
+            <VerifiedBadge
+              isVerified={profile?.is_verified}
+              organizerStatus={profile?.organizer_status ?? null}
+            />
+            {rankLabel ? (
+              <View style={styles.rankChip}>
+                <Feather name="award" size={12} color={colors.primary} />
+                <Text style={styles.rankChipText} numberOfLines={1}>
+                  {rankLabel}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+          {!!user.email && (
+            <Text style={styles.userEmail} numberOfLines={1}>
+              {user.email}
+            </Text>
+          )}
+        </View>
       </View>
 
       {/* Social Links */}
@@ -371,6 +393,12 @@ export function ProfileHeader({
         </View>
       )}
 
+      <View style={styles.segmentSpacer} />
+      <ProfileStatSegment items={statItems} />
+      <ProfileHeaderQuickActions
+        onPress={onQuickAction}
+        unreadMessagesCount={unreadMessagesCount}
+      />
     </View>
   );
 }

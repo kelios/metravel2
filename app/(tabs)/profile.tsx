@@ -26,11 +26,14 @@ import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useProfileGrid } from '@/components/screens/profile/useProfileGrid';
 import { ProfileHeaderSection } from '@/components/screens/profile/ProfileHeaderSection';
 import { ProfileOverviewTab } from '@/components/screens/profile/ProfileOverviewTab';
+import { ProfileStatsTab } from '@/components/screens/profile/ProfileStatsTab';
 import { ProfileTravelGrid } from '@/components/screens/profile/ProfileTravelGrid';
-import { type ProfileStatPill } from '@/components/profile/ProfileStatPills';
-import { type ProfileQuickActionKey } from '@/components/profile/ProfileQuickActions';
+import { type ProfileStatSegmentItem } from '@/components/profile/ProfileStatSegment';
+import { type ProfileHeaderActionKey } from '@/components/profile/ProfileHeaderQuickActions';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useMyAchievements } from '@/hooks/useAchievementsApi';
+import { useUnreadCount } from '@/hooks/useMessages';
+import { useSubscriptionsData } from '@/hooks/useSubscriptionsData';
 import BadgeUnlockToast from '@/components/achievements/BadgeUnlockToast';
 import PlaceFirstBadgeToast from '@/components/achievements/PlaceFirstBadgeToast';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -106,6 +109,14 @@ export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('overview');
   const { data: myAchievements } = useMyAchievements();
   const badgesCount = myAchievements?.rank?.badgesCount ?? 0;
+  const rank = useMemo(
+    () => (myAchievements?.rank ? { level: myAchievements.rank.level, title: myAchievements.rank.title } : null),
+    [myAchievements?.rank],
+  );
+  const { count: unreadMessagesCount } = useUnreadCount(isAuthenticated);
+  const { subscriptions, subscribers } = useSubscriptionsData();
+  const subscriptionsCount = subscriptions.length;
+  const subscribersCount = subscribers.length;
   const [activeTravelMetric, setActiveTravelMetric] = useState<ProfileTravelEngagementMetricKey | null>(null);
   const lastEndReachedAtRef = useRef(0);
 
@@ -390,12 +401,11 @@ export default function ProfileScreen() {
     [fullName, userInfo.name],
   );
 
-  const handleQuickAction = useCallback((key: string) => {
+  const handleHeaderAction = useCallback((key: ProfileHeaderActionKey) => {
     if (key === 'messages') router.push('/messages');
-    else if (key === 'subscriptions') router.push('/subscriptions');
     else if (key === 'userpoints') router.push('/userpoints');
     else if (key === 'calendar') router.push('/calendar' as any);
-    else router.push('/settings');
+    else if (key === 'newTravel') router.push('/travel/new' as any);
   }, [router]);
 
   const handleEdit = useCallback(() => router.push('/settings'), [router]);
@@ -457,31 +467,36 @@ export default function ProfileScreen() {
 
   const handleOpenCalendar = useCallback(() => router.push('/calendar' as any), [router]);
 
-  const statPills = useMemo<ProfileStatPill[]>(() => [
+  const statItems = useMemo<ProfileStatSegmentItem[]>(() => [
     {
       key: 'travels',
       label: 'Маршруты',
       value: stats.travelsCount,
-      icon: 'map',
       onPress: () => handleProfileTabChange('travels'),
       accessibilityHint: 'Показать ваши опубликованные маршруты',
     },
     {
+      key: 'subscribers',
+      label: 'Подписчики',
+      value: subscribersCount,
+      onPress: () => router.push('/subscriptions'),
+      accessibilityHint: 'Перейти к подписчикам',
+    },
+    {
       key: 'subscriptions',
       label: 'Подписки',
-      icon: 'users',
+      value: subscriptionsCount,
       onPress: () => router.push('/subscriptions'),
-      accessibilityHint: 'Перейти к подпискам и подписчикам',
+      accessibilityHint: 'Перейти к подпискам',
     },
     {
       key: 'achievements',
-      label: 'Достижения',
+      label: 'Значки',
       value: badgesCount,
-      icon: 'award',
       onPress: () => handleProfileTabChange('overview'),
       accessibilityHint: 'Открыть обзор с достижениями',
     },
-  ], [stats.travelsCount, badgesCount, handleProfileTabChange, router]);
+  ], [stats.travelsCount, subscribersCount, subscriptionsCount, badgesCount, handleProfileTabChange, router]);
 
   const Header = useMemo(
     () => (
@@ -490,11 +505,14 @@ export default function ProfileScreen() {
         profileLoading={profileLoading}
         userProp={userProp}
         profile={profile}
+        rank={rank}
+        unreadMessagesCount={unreadMessagesCount}
         handleEdit={handleEdit}
         handleLogout={handleLogout}
         pickAndUpload={pickAndUpload}
         avatarUploading={avatarUploading}
-        statPills={statPills}
+        statItems={statItems}
+        handleHeaderAction={handleHeaderAction}
         activeTab={activeTab}
         handleProfileTabChange={handleProfileTabChange}
         tabCounts={tabCounts}
@@ -507,11 +525,14 @@ export default function ProfileScreen() {
       profileLoading,
       userProp,
       profile,
+      rank,
+      unreadMessagesCount,
       handleEdit,
       handleLogout,
       pickAndUpload,
       avatarUploading,
-      statPills,
+      statItems,
+      handleHeaderAction,
       tabCounts,
       activeTab,
       showClearButton,
@@ -526,6 +547,19 @@ export default function ProfileScreen() {
         userProp={userProp}
         profile={profile}
         travelsCount={stats.travelsCount}
+      />
+    ),
+    [
+      userProp,
+      profile,
+      stats.travelsCount,
+    ]
+  );
+
+  const statsContent = useMemo(
+    () => (
+      <ProfileStatsTab
+        travelsCount={stats.travelsCount}
         loadedTravelsCount={profileTravels.length}
         travelsLoading={travelsLoading}
         authoredTravelEngagementSummary={authoredTravelEngagementSummary}
@@ -535,12 +569,9 @@ export default function ProfileScreen() {
         personalTravelStatusSummary={personalTravelStatusSummary}
         formatTripsCount={formatTripsCount}
         onOpenCalendar={handleOpenCalendar}
-        handleQuickAction={handleQuickAction as (key: ProfileQuickActionKey) => void}
       />
     ),
     [
-      userProp,
-      profile,
       stats.travelsCount,
       profileTravels.length,
       travelsLoading,
@@ -551,20 +582,22 @@ export default function ProfileScreen() {
       personalTravelStatusSummary,
       formatTripsCount,
       handleOpenCalendar,
-      handleQuickAction,
     ]
   );
 
   const isOverview = activeTab === 'overview';
+  const isStats = activeTab === 'stats';
+  const isSectionTab = isOverview || isStats;
 
   const ListHeader = useMemo(
     () => (
       <>
         {Header}
         {isOverview ? overviewContent : null}
+        {isStats ? statsContent : null}
       </>
     ),
-    [Header, isOverview, overviewContent],
+    [Header, isOverview, isStats, overviewContent, statsContent],
   );
 
   const renderItem = useCallback(({ item, index }: { item: Travel; index: number }) => (
@@ -639,7 +672,7 @@ export default function ProfileScreen() {
           onContentSizeChange={handleWebContentSizeChange}
         >
           {ListHeader}
-          {isOverview ? null : isTravelsTabLoading ? ListSkeleton : (
+          {isSectionTab ? null : isTravelsTabLoading ? ListSkeleton : (
             currentData.length === 0 ? (
               <View style={styles.emptyWrap}>
                 <EmptyState {...emptyStateProps} />
@@ -681,7 +714,7 @@ export default function ProfileScreen() {
           refreshing={refreshing}
           onRefresh={onRefresh}
           ListEmptyComponent={
-            isOverview ? null : isTravelsTabLoading ? ListSkeleton : (
+            isSectionTab ? null : isTravelsTabLoading ? ListSkeleton : (
               <View style={styles.emptyWrap}>
                 <EmptyState {...emptyStateProps} />
               </View>

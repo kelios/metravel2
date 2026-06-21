@@ -5,15 +5,9 @@ import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
 import type { Badge } from '@/api/achievements'
 
-// expo-linear-gradient
-jest.mock('expo-linear-gradient', () => {
-  const React = require('react')
-  const { View } = require('react-native')
-  return {
-    LinearGradient: ({ children, ...props }: any) =>
-      React.createElement(View, { testID: 'linear-gradient', ...props }, children),
-  }
-})
+// react-native-svg — стаб (BadgeEmblem рисует векторную эмблему).
+// Используем именованный testID 'svg' из корневого __mocks__/react-native-svg.js
+// (jest подхватывает manual mock для node_modules автоматически).
 
 // DESIGN_TOKENS — стаб нужных полей
 jest.mock('@/constants/designSystem', () => ({
@@ -199,11 +193,15 @@ describe('BadgeMedal — imageUrl', () => {
     expect(getByTestId('image-card-media')).toBeTruthy()
   })
 
-  it('renders procedural gradient (LinearGradient) when imageUrl is null', () => {
-    const { getByTestId } = render(
+  it('renders vector emblem (BadgeEmblem svg) when imageUrl is null', () => {
+    const { getAllByTestId } = render(
       <BadgeMedal badge={makeBadge({ imageUrl: null })} earned />,
     )
-    expect(getByTestId('linear-gradient')).toBeTruthy()
+    // Эмблема помечена accessibilityElementsHidden (a11y-метка на корне медали),
+    // поэтому ищем root svg с includeHiddenElements.
+    expect(
+      getAllByTestId('svg', { includeHiddenElements: true }).length,
+    ).toBeGreaterThan(0)
   })
 })
 

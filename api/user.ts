@@ -23,6 +23,9 @@ export type UserProfileDto = {
     email_notify_comments: boolean;
     email_notify_messages: boolean;
     avatar: string | null;
+    // Фото-обложка профиля (баннер). BE-тикет: поле + загрузка ещё не реализованы —
+    // пока поле не приходит, шапка показывает фолбэк-текстуру (graceful degradation).
+    cover_photo?: string | null;
     user: number;
     // Серверный premium-флаг для PDF-paywall: (опубликовано ≥ N путешествий) ИЛИ ручной флаг (BE #293).
     // Читаем только это поле; premium_manually_enabled бэк отдаёт публично, на него не завязываемся.

@@ -3,7 +3,12 @@
 
 import {
   badgeIcon,
+  badgeMotif,
+  categoryPalette,
+  tierFrame,
   tierLabel,
+  CATEGORY_PALETTES,
+  TIER_FRAME,
   TIER_VISUALS,
 } from '@/components/achievements/badgeVisuals'
 import type { BadgeTier } from '@/api/achievements'
@@ -191,5 +196,109 @@ describe('badgeIcon', () => {
   it('is case-insensitive for slug keywords', () => {
     expect(badgeIcon('theme', 'HIKER-Bronze')).toBe('compass')
     expect(badgeIcon('theme', 'Cycl-trip')).toBe('navigation')
+  })
+})
+
+// ── tierFrame (тир кодируется сложностью рамки, не «блеском») ───────────────────
+
+describe('tierFrame / TIER_FRAME', () => {
+  const ALL_TIERS: BadgeTier[] = ['none', 'bronze', 'silver', 'gold', 'platinum', 'legendary']
+
+  it('covers every BadgeTier', () => {
+    for (const tier of ALL_TIERS) {
+      expect(TIER_FRAME[tier]).toBeDefined()
+    }
+  })
+
+  it('encodes tier progression: bronze plain → legendary rays', () => {
+    expect(tierFrame('bronze')).toBe('plain')
+    expect(tierFrame('silver')).toBe('double')
+    expect(tierFrame('gold')).toBe('laurel')
+    expect(tierFrame('platinum')).toBe('ornate')
+    expect(tierFrame('legendary')).toBe('rays')
+  })
+
+  it('"none" falls back to the simplest frame', () => {
+    expect(tierFrame('none')).toBe('plain')
+  })
+})
+
+// ── categoryPalette (бумага + линия) ───────────────────────────────────────────
+
+describe('categoryPalette', () => {
+  it('returns paper + line hex for known category', () => {
+    const p = categoryPalette('geo')
+    expect(p.paper).toMatch(/^#[0-9A-Fa-f]{6}$/)
+    expect(p.line).toMatch(/^#[0-9A-Fa-f]{6}$/)
+  })
+
+  it('falls back to "other" palette for unknown category', () => {
+    expect(categoryPalette('does-not-exist')).toBe(CATEGORY_PALETTES.other)
+  })
+})
+
+// ── badgeMotif (мотив эмблемы) ─────────────────────────────────────────────────
+
+describe('badgeMotif', () => {
+  // Slug-хинты приоритетнее категории
+  it('hiker → mountain', () => {
+    expect(badgeMotif('theme', 'hiker-bronze')).toBe('mountain')
+  })
+  it('cyclist → bicycle', () => {
+    expect(badgeMotif('theme', 'cyclist-bronze')).toBe('bicycle')
+  })
+  it('roadtripper / car → car', () => {
+    expect(badgeMotif('theme', 'roadtripper-gold')).toBe('car')
+    expect(badgeMotif('theme', 'auto-trip')).toBe('car')
+  })
+  it('water-traveler → wave', () => {
+    expect(badgeMotif('theme', 'water-traveler')).toBe('wave')
+  })
+  it('city-explorer → city', () => {
+    expect(badgeMotif('theme', 'city-explorer')).toBe('city')
+  })
+  it('quest slug → flag', () => {
+    expect(badgeMotif('quests', 'quest-novice')).toBe('flag')
+  })
+  it('route/map slug → route (when no earlier hint matches)', () => {
+    expect(badgeMotif('geo', 'route-master')).toBe('route')
+  })
+  it('countries/world → globe', () => {
+    expect(badgeMotif('geo', 'world-citizen')).toBe('globe')
+    expect(badgeMotif('geo', 'two-countries')).toBe('globe')
+  })
+  it('author/writer → quill', () => {
+    expect(badgeMotif('writer', 'author-silver')).toBe('quill')
+  })
+  it('book slug → book', () => {
+    expect(badgeMotif('writer', 'open-book')).toBe('book')
+  })
+  it('profile slug → profile', () => {
+    expect(badgeMotif('onboarding', 'profile-ready')).toBe('profile')
+  })
+  it('welcome/start → star', () => {
+    expect(badgeMotif('onboarding', 'welcome')).toBe('star')
+  })
+  it('first-steps → footprint', () => {
+    expect(badgeMotif('onboarding', 'first-steps')).toBe('footprint')
+  })
+  it('social heart keywords → heart', () => {
+    expect(badgeMotif('social', 'crowd-favorite')).toBe('heart')
+    expect(badgeMotif('social', 'idol')).toBe('heart')
+  })
+  it('monthly slug → calendar', () => {
+    expect(badgeMotif('monthly', 'active-month')).toBe('calendar')
+  })
+
+  // Category fallback
+  it('falls back to category motif when no slug hint matches', () => {
+    expect(badgeMotif('theme', 'mystery-theme')).toBe('mountain')
+    expect(badgeMotif('quests', 'mystery')).toBe('flag')
+    expect(badgeMotif('community', 'mystery')).toBe('heart')
+    expect(badgeMotif('unknown', 'mystery')).toBe('laurel')
+  })
+
+  it('is case-insensitive', () => {
+    expect(badgeMotif('theme', 'HIKER')).toBe('mountain')
   })
 })

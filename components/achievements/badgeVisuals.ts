@@ -1,6 +1,8 @@
-// Визуальные токены значков: цвета тиров (премиум-медали) и иконки по теме.
-// Используются BadgeMedal как для процедурной отрисовки (пока нет картинки DES-A1),
-// так и для tier-кольца поверх загруженной картинки.
+// Визуальные токены значков. Арт-направление — векторные гравюрные эмблемы
+// (см. BadgeEmblem.tsx): состаренная бумага + тонкая линия + лента-баннер + рамка тира.
+// `ring`/`highlight`/`shade` тиров переиспользуются как цвета рамки/ленты эмблемы;
+// `badgeIcon` оставлен для legacy-потребителей (a11y/иконки), мотив рисует `badgeMotif`.
+// Цвета тиров держим едиными с docs/ACHIEVEMENTS_BADGE_PROMPTS.md.
 
 import type { Feather } from '@expo/vector-icons';
 import type { BadgeTier } from '@/api/achievements';
@@ -8,11 +10,11 @@ import type { BadgeTier } from '@/api/achievements';
 type FeatherName = keyof typeof Feather.glyphMap;
 
 export interface TierVisual {
-  /** Основной металлик-цвет (кольцо/обводка). */
+  /** Основной цвет тира (рамка/лента/обводка эмблемы). */
   ring: string;
-  /** Светлый блик для градиента медали. */
+  /** Светлый оттенок тира (двойное кольцо/лучи). */
   highlight: string;
-  /** Тёмный край для глубины. */
+  /** Тёмный оттенок тира (тень/контур ленты). */
   shade: string;
   /** Подпись тира на русском. */
   label: string;
@@ -26,6 +28,118 @@ export const TIER_VISUALS: Record<BadgeTier, TierVisual> = {
   platinum: { ring: '#5BD0E0', highlight: '#B8F1F8', shade: '#2E97A6', label: 'Платина' },
   legendary: { ring: '#B06BE6', highlight: '#E0B8F5', shade: '#7A3FB0', label: 'Легенда' },
 };
+
+// ── Гравюрная эмблема: рамка по тиру ─────────────────────────────────────────
+// Тир кодируется СЛОЖНОСТЬЮ рамки, а не «блеском»:
+//   plain   — одиночное тонкое кольцо (bronze)
+//   double  — двойное кольцо (silver)
+//   laurel  — лавровые ветви по бокам + двойное кольцо (gold)
+//   ornate  — орнамент-зубцы по кольцу (platinum)
+//   rays    — лучи + звёзды по краю (legendary)
+
+export type TierFrame = 'plain' | 'double' | 'laurel' | 'ornate' | 'rays';
+
+export const TIER_FRAME: Record<BadgeTier, TierFrame> = {
+  none: 'plain',
+  bronze: 'plain',
+  silver: 'double',
+  gold: 'laurel',
+  platinum: 'ornate',
+  legendary: 'rays',
+};
+
+export function tierFrame(tier: BadgeTier): TierFrame {
+  return TIER_FRAME[tier];
+}
+
+// ── Палитра «состаренной бумаги» по категории ────────────────────────────────
+// paper — заливка диска, line — цвет тонкой гравюрной линии (мотив + обводка).
+// Подобрано так, чтобы читаться и на светлой, и на тёмной теме (см. BadgeEmblem,
+// который притемняет paper и осветляет line под dark-режим).
+
+export interface CategoryPalette {
+  /** Тёплый/холодный тон бумаги диска (light-режим). */
+  paper: string;
+  /** Цвет гравюрной линии (light-режим). */
+  line: string;
+}
+
+export const CATEGORY_PALETTES: Record<string, CategoryPalette> = {
+  onboarding: { paper: '#F7EFE0', line: '#7A5C2E' }, // тёплая бумага
+  writer: { paper: '#F3ECE2', line: '#5E4B36' }, // пергамент
+  theme: { paper: '#EAF1E9', line: '#37563F' }, // мятная карта
+  quests: { paper: '#F1E9DC', line: '#6B4A2A' }, // карта-схема
+  social: { paper: '#F7E9EC', line: '#8A3A4B' }, // тёплый розовый
+  geo: { paper: '#E7EEF4', line: '#2F4A63' }, // холодная синяя
+  monthly: { paper: '#EFEAF4', line: '#4E3F66' }, // сиреневая
+  community: { paper: '#F4ECE0', line: '#6B5230' }, // peer-награды
+  other: { paper: '#F1ECE3', line: '#5A4D3B' },
+};
+
+export function categoryPalette(categorySlug: string): CategoryPalette {
+  return CATEGORY_PALETTES[categorySlug] ?? CATEGORY_PALETTES.other;
+}
+
+// ── Мотивы эмблемы (motif keyed by category + slug) ──────────────────────────
+// Каждый ключ рисуется тонкой линией в BadgeEmblem. Резолвинг: сначала точечные
+// хинты по slug (как у иконок), затем дефолт по категории.
+
+export type MotifKey =
+  | 'star'
+  | 'footprint'
+  | 'profile'
+  | 'quill'
+  | 'book'
+  | 'mountain'
+  | 'bicycle'
+  | 'car'
+  | 'wave'
+  | 'city'
+  | 'flag'
+  | 'route'
+  | 'heart'
+  | 'globe'
+  | 'calendar'
+  | 'laurel';
+
+const CATEGORY_MOTIFS: Record<string, MotifKey> = {
+  onboarding: 'star',
+  writer: 'quill',
+  theme: 'mountain',
+  quests: 'flag',
+  social: 'heart',
+  geo: 'globe',
+  monthly: 'calendar',
+  community: 'heart',
+  other: 'laurel',
+};
+
+// Порядок важен: первое совпадение выигрывает.
+const SLUG_MOTIF_HINTS: Array<[RegExp, MotifKey]> = [
+  [/profile|профиль/i, 'profile'],
+  [/welcome|добро|старт|start/i, 'star'],
+  [/first-step|первы.?-?шаг|footprint|след/i, 'footprint'],
+  [/author|автор|writer|пиш|story|рассказ/i, 'quill'],
+  [/book|книг/i, 'book'],
+  [/hik|поход|trek|трек|гор/i, 'mountain'],
+  [/cycl|bike|вело/i, 'bicycle'],
+  [/auto|car|авто|roadtrip|road-?trip|машин/i, 'car'],
+  [/water|вод|анкор|anchor|волн|sea|море/i, 'wave'],
+  [/city|urban|город/i, 'city'],
+  [/quest|квест/i, 'flag'],
+  [/route|маршрут|map|карт/i, 'route'],
+  [/like|лайк|favorite|сердц|публик|crowd|idol|fan/i, 'heart'],
+  [/countr|стран|world|мир|globe|глобус/i, 'globe'],
+  [/month|месяц|calendar|календар/i, 'calendar'],
+];
+
+/** Мотив эмблемы значка (по slug-хинту, затем по категории). */
+export function badgeMotif(categorySlug: string, slug: string): MotifKey {
+  for (const [re, motif] of SLUG_MOTIF_HINTS) {
+    if (re.test(slug)) return motif;
+  }
+  return CATEGORY_MOTIFS[categorySlug] ?? CATEGORY_MOTIFS.other;
+}
 
 const CATEGORY_ICONS: Record<string, FeatherName> = {
   onboarding: 'star',

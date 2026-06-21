@@ -1,7 +1,8 @@
 import { View } from 'react-native';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfileTabs, type ProfileTabKey } from '@/components/profile/ProfileTabs';
-import { ProfileStatPills, type ProfileStatPill } from '@/components/profile/ProfileStatPills';
+import type { ProfileStatSegmentItem } from '@/components/profile/ProfileStatSegment';
+import type { ProfileHeaderActionKey } from '@/components/profile/ProfileHeaderQuickActions';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import Button from '@/components/ui/Button';
 import type { createProfileScreenStyles } from './profileScreen.styles';
@@ -13,11 +14,14 @@ interface ProfileHeaderSectionProps {
   profileLoading: boolean;
   userProp: { name: string; email: string; avatar?: string | null };
   profile: Parameters<typeof ProfileHeader>[0]['profile'];
+  rank?: { level: number; title: string } | null;
+  unreadMessagesCount: number;
   handleEdit: () => void;
   handleLogout: () => void;
   pickAndUpload: () => void;
   avatarUploading: boolean;
-  statPills: ProfileStatPill[];
+  statItems: ProfileStatSegmentItem[];
+  handleHeaderAction: (key: ProfileHeaderActionKey) => void;
   activeTab: ProfileTabKey;
   handleProfileTabChange: (tab: ProfileTabKey) => void;
   tabCounts: Partial<Record<ProfileTabKey, number>>;
@@ -30,11 +34,14 @@ export function ProfileHeaderSection({
   profileLoading,
   userProp,
   profile,
+  rank,
+  unreadMessagesCount,
   handleEdit,
   handleLogout,
   pickAndUpload,
   avatarUploading,
-  statPills,
+  statItems,
+  handleHeaderAction,
   activeTab,
   handleProfileTabChange,
   tabCounts,
@@ -45,20 +52,24 @@ export function ProfileHeaderSection({
     <View style={[styles.headerComponent, styles.fullRow]}>
       {profileLoading ? (
         <View style={styles.skeletonWrap}>
-          {/* Cover skeleton — matches gradient hero (148px) */}
-          <SkeletonLoader width="100%" height={148} borderRadius={0} />
-          {/* Avatar skeleton overlapping cover (124 + 4*2 ring) */}
-          <View style={styles.skeletonAvatarRow}>
-            <SkeletonLoader width={132} height={132} borderRadius={66} />
+          {/* Cover skeleton — matches compact gradient hero (90px) */}
+          <SkeletonLoader width="100%" height={90} borderRadius={0} />
+          {/* Identity row: avatar left (84 + 3*2 ring), name+status right */}
+          <View style={styles.skeletonIdentityRow}>
+            <SkeletonLoader width={90} height={90} borderRadius={45} />
+            <View style={styles.skeletonIdentityText}>
+              <SkeletonLoader width={180} height={22} borderRadius={4} />
+              <SkeletonLoader width={140} height={16} borderRadius={4} />
+              <SkeletonLoader width={200} height={14} borderRadius={4} />
+            </View>
           </View>
-          {/* Name + email centered */}
-          <View style={styles.skeletonCenterText}>
-            <SkeletonLoader width={200} height={26} borderRadius={4} />
-            <SkeletonLoader width={220} height={14} borderRadius={4} />
-          </View>
-          {/* Stat pills row */}
+          {/* Stat segment row */}
           <View style={styles.skeletonStatsRow}>
-            <SkeletonLoader width="100%" height={64} borderRadius={16} />
+            <SkeletonLoader width="100%" height={50} borderRadius={16} />
+          </View>
+          {/* Quick actions row */}
+          <View style={styles.skeletonStatsRow}>
+            <SkeletonLoader width="100%" height={56} borderRadius={12} />
           </View>
           {/* Tabs */}
           <View style={styles.skeletonStatsRow}>
@@ -70,12 +81,15 @@ export function ProfileHeaderSection({
           <ProfileHeader
             user={userProp}
             profile={profile}
+            rank={rank}
+            unreadMessagesCount={unreadMessagesCount}
+            statItems={statItems}
             onEdit={handleEdit}
             onLogout={handleLogout}
+            onQuickAction={handleHeaderAction}
             onAvatarUpload={pickAndUpload}
             avatarUploading={avatarUploading}
           />
-          <ProfileStatPills pills={statPills} />
           <ProfileTabs
             activeTab={activeTab}
             onChangeTab={handleProfileTabChange}

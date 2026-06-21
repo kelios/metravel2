@@ -39,7 +39,7 @@ export function ProfileStatPills({ pills }: ProfileStatPillsProps) {
           justifyContent: 'center',
           gap: 3,
           paddingVertical: 10,
-          paddingHorizontal: 6,
+          paddingHorizontal: 3,
           borderRadius: DESIGN_TOKENS.radii.lg,
           backgroundColor: colors.surface,
           borderWidth: 1,
@@ -57,7 +57,8 @@ export function ProfileStatPills({ pills }: ProfileStatPillsProps) {
           lineHeight: 22,
         },
         label: {
-          fontSize: DESIGN_TOKENS.typography.sizes.xs,
+          fontSize: 11,
+          lineHeight: 14,
           fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
           color: colors.textMuted,
         },

@@ -9,6 +9,10 @@
  */
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { useSettingsProfileForm } from '@/hooks/useSettingsProfileForm'
+import { createQueryWrapper } from '../helpers/testQueryClient'
+
+// Хук использует React Query (useMyTelegramLink) — нужен QueryClientProvider.
+const withQueryClient = () => ({ wrapper: createQueryWrapper().Wrapper })
 
 // Мокаем только сетевые зависимости; normalizeAvatar чистая — не мокаем
 jest.mock('@/api/user', () => ({
@@ -67,7 +71,7 @@ describe('useSettingsProfileForm — regression F-2', () => {
   // ─── Тест 1: гидрация из непустого профиля ───────────────────────────────
   it('гидрирует поля из profile при первом рендере (главный regression)', async () => {
     const args = makeArgs()
-    const { result } = renderHook(() => useSettingsProfileForm(args))
+    const { result } = renderHook(() => useSettingsProfileForm(args), withQueryClient())
 
     await waitFor(() => {
       expect(result.current.firstName).toBe('Юлия')
@@ -86,7 +90,7 @@ describe('useSettingsProfileForm — regression F-2', () => {
     const args = makeArgs(null)
     const { result, rerender } = renderHook(
       (props: ReturnType<typeof makeArgs>) => useSettingsProfileForm(props),
-      { initialProps: args },
+      { initialProps: args, ...withQueryClient() },
     )
 
     // На старте поля пустые
@@ -113,7 +117,7 @@ describe('useSettingsProfileForm — regression F-2', () => {
     const args = makeArgs()
     const { result, rerender } = renderHook(
       (props: ReturnType<typeof makeArgs>) => useSettingsProfileForm(props),
-      { initialProps: args },
+      { initialProps: args, ...withQueryClient() },
     )
 
     // Дожидаемся первичной гидрации
@@ -150,7 +154,7 @@ describe('useSettingsProfileForm — regression F-2', () => {
       email_notify_comments: true,
       email_notify_messages: false,
     })
-    const { result } = renderHook(() => useSettingsProfileForm(args))
+    const { result } = renderHook(() => useSettingsProfileForm(args), withQueryClient())
 
     await waitFor(() => {
       expect(result.current.emailNotifyComments).toBe(true)
@@ -163,7 +167,7 @@ describe('useSettingsProfileForm — regression F-2', () => {
       email_notify_comments: false,
       email_notify_messages: true,
     })
-    const { result: result2 } = renderHook(() => useSettingsProfileForm(args2))
+    const { result: result2 } = renderHook(() => useSettingsProfileForm(args2), withQueryClient())
 
     await waitFor(() => {
       expect(result2.current.emailNotifyComments).toBe(false)
