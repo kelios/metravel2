@@ -471,7 +471,7 @@ describe('fetchUserGamificationProgress', () => {
     mockGet.mockResolvedValueOnce({ lines: [] })
     await fetchUserGamificationProgress(55)
     expect(mockGet).toHaveBeenCalledWith(
-      '/achievements/progression/user/55/',
+      '/achievements/user/55/progression-lines/',
       undefined,
       expect.objectContaining({ skipAuth: true }),
     )
@@ -481,7 +481,7 @@ describe('fetchUserGamificationProgress', () => {
     mockGet.mockResolvedValueOnce({ lines: [] })
     await fetchUserGamificationProgress('bob')
     expect(mockGet).toHaveBeenCalledWith(
-      '/achievements/progression/user/bob/',
+      '/achievements/user/bob/progression-lines/',
       undefined,
       expect.anything(),
     )
@@ -685,7 +685,7 @@ describe('fetchUserCharacter', () => {
     mockGet.mockResolvedValueOnce(characterStateDto())
     await fetchUserCharacter(77)
     expect(mockGet).toHaveBeenCalledWith(
-      '/achievements/character/user/77/',
+      '/achievements/user/77/character/',
       undefined,
       expect.objectContaining({ skipAuth: true }),
     )
@@ -695,7 +695,7 @@ describe('fetchUserCharacter', () => {
     mockGet.mockResolvedValueOnce(characterStateDto())
     await fetchUserCharacter('charlie')
     expect(mockGet).toHaveBeenCalledWith(
-      '/achievements/character/user/charlie/',
+      '/achievements/user/charlie/character/',
       undefined,
       expect.anything(),
     )
@@ -726,7 +726,7 @@ describe('chooseCharacterPath', () => {
     mockPost.mockResolvedValueOnce(characterStateDto({ path_slug: 'cartographer' }))
     await chooseCharacterPath({ pathSlug: 'cartographer' })
     expect(mockPost).toHaveBeenCalledWith(
-      '/achievements/character/choose-path/',
+      '/achievements/character/me/path/',
       { path_slug: 'cartographer' },
     )
   })

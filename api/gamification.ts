@@ -298,7 +298,10 @@ export async function fetchMyPlaceFirstBadges(): Promise<PlaceFirstBadge[]> {
   }
 }
 
-/** Бейджи первооткрывателя места конкретного автора (публично). */
+/** Бейджи первооткрывателя места конкретного автора (публично).
+ *  NB: у BE пока НЕТ per-user эндпоинта place-badges (есть только
+ *  `/achievements/place-badges/me/`). До появления BE-эндпоинта вызов отдаёт 404 →
+ *  graceful mock-fallback. Нужна BE-задача на `/achievements/user/{id}/place-badges/`. */
 export async function fetchUserPlaceFirstBadges(
   userId: string | number,
 ): Promise<PlaceFirstBadge[]> {
@@ -343,7 +346,7 @@ export async function fetchUserGamificationProgress(
   if (USE_MOCK) return MOCK_GAMIFICATION_PROGRESS;
   try {
     const dto = await apiClient.get<GamificationProgressDto>(
-      `/achievements/progression/user/${userId}/`,
+      `/achievements/user/${userId}/progression-lines/`,
       undefined,
       { skipAuth: true },
     );
@@ -379,7 +382,7 @@ export async function fetchUserCharacter(
   if (USE_MOCK) return MOCK_CHARACTER_STATE;
   try {
     const dto = await apiClient.get<CharacterStateDto>(
-      `/achievements/character/user/${userId}/`,
+      `/achievements/user/${userId}/character/`,
       undefined,
       { skipAuth: true },
     );
@@ -399,7 +402,7 @@ export async function chooseCharacterPath(
 ): Promise<CharacterState> {
   try {
     const dto = await apiClient.post<CharacterStateDto>(
-      '/achievements/character/choose-path/',
+      '/achievements/character/me/path/',
       { path_slug: input.pathSlug },
     );
     return mapCharacter(dto);
