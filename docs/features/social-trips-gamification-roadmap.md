@@ -955,14 +955,14 @@ MVP:
 - `hooks/` - focused hooks для профиля, поездок, заявок и чатов;
 - `utils/externalLinks.ts` - все внешние переходы в соцсети и мессенджеры только через project-approved external-link chokepoint;
 - `constants/designSystem.ts` - дизайн-токены для новых UI-состояний;
-- `tasks/` - backend задачи по шаблону `tasks/000-template.md`.
+- MCP task board - frontend/backend задачи через `ticket-board` по правилам `docs/TASK_BOARD_MCP.md`.
 
 ## Validation notes
 
 Перед разработкой отдельных фич:
 
 - для UI изменений подключить `$metravel-ui-guardrails`;
-- для backend задач оформить отдельные файлы в `tasks/`;
+- для backend задач создать board tasks через `ticket-board` с Task Contract и `area=back`;
 - для external links выполнить `npm run guard:external-links` или `npm run governance:verify`;
 - для visible web UI пройти browser preview, screenshot и console check;
 - для security/privacy решений сделать отдельный architecture review.
@@ -974,4 +974,5 @@ MVP:
 - `docs/features/user.md`
 - `docs/features/places.md`
 - `docs/features/travel.md`
+- `docs/TASK_BOARD_MCP.md`
 - `tasks/000-template.md`

@@ -90,7 +90,7 @@ yarn lint
 - Redoc: [`http://192.168.50.36/api/schema/redoc/`](http://192.168.50.36/api/schema/redoc/)
 - OpenAPI schema: `${EXPO_PUBLIC_API_URL}/api/schema/`
 - Auth: `Authorization: Token <token>`
-- Backend task files: create new backend tasks in `tasks/` using `tasks/000-template.md`.
+- Task tracking: create new FE/BE/backend tasks on the shared MCP task board through `ticket-board`; see `docs/TASK_BOARD_MCP.md`. Local `tasks/` files are only transitional fallback/templates, not the default workflow.
 
 ### Auth
 - `POST /api/user/login/` → `{ token, name, email, id, is_superuser }`

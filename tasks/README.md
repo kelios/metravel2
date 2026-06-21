@@ -5,11 +5,13 @@
 > Новые задачи заводятся на борде агентом `ticket-board`; прогон по пайплайну — skill
 > `/ticket-flow`. Каталог `tasks/` теперь хранит только **переходный открытый бэклог**
 > (импортируется на борд, затем файлы удаляются) и канонический **шаблон описания**.
+> Не создавай новые локальные `tasks/*.md` в обычном workflow. Если board/MCP недоступен,
+> локальный файл допустим только как временный draft для последующего import/sync на борд
+> и удаления черновика.
 
-Каждый локальный тикет — markdown-файл по шаблону `tasks/000-template.md`. Этот же формат
-(Goal / Context / Acceptance Criteria / Gherkin / Task Contract) идёт в поле `description` задачи на борде.
-**Не выдумывай свою структуру** — копируй шаблон. Черновик оформляет агент `task-author`
-(команда `/task-new`), затем `ticket-board` заводит его на борд.
+Для board-задачи используй формат `tasks/000-template.md`
+(Goal / Context / Acceptance Criteria / Gherkin / Task Contract) в поле `description`.
+**Не выдумывай свою структуру** — копируй шаблон и заводи задачу через `ticket-board`.
 
 ---
 
@@ -64,7 +66,7 @@ Updated: 2026-06-08
 | Роль | Кто исполняет |
 |---|---|
 | Manager / Board operator | агент `ticket-board` (MCP-борд: create/list/update/sync) |
-| Orchestrator / Refinement | основной агент + `task-author` (оформление) |
+| Orchestrator / Refinement | основной агент + `$metravel-task-contract` (оформление Task Contract) |
 | Developer (FE) | `travel-expert`, `map-expert`, `metravel-seo-expert`, `refactor-surgeon`, `dev-loop` |
 | Developer (BE) | отдельный репо `../metravel-backend` → только трекинг на борде (`area=back`), кодом тут не делается |
 | Content / SEO | `travel-writer`, `metravel-seo-expert`, `index-doctor` |

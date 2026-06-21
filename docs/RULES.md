@@ -64,11 +64,11 @@ npm run test:run
   - such files must not be committed to git;
   - use ignored locations like `tmp/`, `artifacts/`, `test-results/`, `playwright-report/` or keep them outside the repository;
   - if a temporary debug file already appeared in the root or in git, remove it in the same task instead of leaving it behind.
-- Backend task tracking (mandatory):
-  - all backend work items must be documented as task files in `tasks/`;
-  - create new backend tasks from `tasks/000-template.md`;
-  - keep the template structure intact unless the user explicitly asks for a different task format;
-  - do not create ad-hoc backend task notes outside `tasks/`.
+- Task board tracking (mandatory):
+  - frontend, backend, and cross-functional work items must be created on the shared MCP task board through `ticket-board`; see `docs/TASK_BOARD_MCP.md`;
+  - every `area=front` or `area=back` board task must include the required Task Contract, sprint, dependencies, blockers, validation, and Done gate;
+  - do not create new local `tasks/*.md` task files as the normal workflow; local task files are only a temporary fallback/migration draft when the board is unavailable, and must be imported/synced to the board before handoff;
+  - do not create ad-hoc backend task notes outside the board workflow.
 - For performance checks (Lighthouse), run against a production web export:
 
 ```bash

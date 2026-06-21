@@ -44,7 +44,7 @@
 | --- | --- | --- |
 | Feature, bugfix, refactor | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, профильный feature-doc при наличии | переиспользование существующих компонентов, hooks, utils; минимальный diff |
 | Hooks / logic extraction | `AGENTS.md`, `docs/RULES.md`, `docs/DEVELOPMENT.md`, профильный feature-doc, ближайшие существующие hooks | выносить focused hook без лишней абстракции, сохранять client/server state boundaries, не добавлять новые `any` |
-| Backend task planning | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `tasks/README.md`, `tasks/000-template.md` | новые задачи оформляй отдельными файлами в `tasks/` строго по шаблону `000-template.md` и правилам `tasks/README.md`; используй агент `task-author` / команду `/task-new` |
+| Backend task planning | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `docs/TASK_BOARD_MCP.md`, `$metravel-task-contract` | новые FE/BE/backend задачи создавай на общем MCP task board через `ticket-board` (`metravel_task_create`); заполняй `area=front/back`, sprint, Task Contract, dependencies/blockers и validation/Done gate; локальные `tasks/*.md` используй только как временный fallback при недоступном борде с последующим sync/import |
 | Task board FE/BE contract | `docs/TASK_BOARD_MCP.md`, `$metravel-task-contract`, профильный feature-doc при наличии | каждая FE/BE задача на борде должна иметь `Task Contract`: scope, user-visible result, data/API contract, dependencies, fallback/mock policy, validation и Done gate; без runtime evidence не двигать в `done` |
 | Приёмка спринта / закрытие тикетов | `docs/TASK_BOARD_MCP.md`, агент `board-reviewer`, skill `/sprint-review` | проход по `review`-тикетам активного спринта: проверить Done gate реальными тестами + браузер/API-пробами против target env, зелёные → `done` с evidence, проваленные вернуть в `review`/`blocked_by`; статус соседней задачи и mock-fallback не доказательство |
 | Видимый UI, media, icons, tokens | всё из feature-контекста + `$metravel-ui-guardrails` | проверка в браузере на web, screenshot, отсутствие новых console errors |
@@ -195,7 +195,7 @@ deploys with `tar+ssh`, performs an atomic server swap, verifies health, and rol
 - Tests: `__tests__/` for Jest, `e2e/` for Playwright.
 - Governance scripts: `scripts/`, command details in `docs/TESTING.md`.
 - Feature maps: `docs/features/`.
-- Task format: `tasks/README.md` (правила) + `tasks/000-template.md` (шаблон); новые задачи создавай в `tasks/` по ним — агент `task-author`, команда `/task-new`.
+- Task board: `docs/TASK_BOARD_MCP.md`; новые FE/BE/backend задачи создавай на общем MCP task board через `ticket-board`. `tasks/README.md` и `tasks/000-template.md` остаются только fallback/migration форматом, не основным workflow.
 
 ## Кодировка документации
 
