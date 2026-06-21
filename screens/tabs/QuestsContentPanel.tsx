@@ -100,10 +100,10 @@ export default function QuestsContentPanel({
                             style={styles.mobileFilterBtn}
                             onPress={onToggleViewMode}
                             accessibilityRole="button"
-                            accessibilityLabel={viewMode === 'map' ? 'Показать списком' : 'Показать на карте'}
+                            accessibilityLabel="Показать на карте"
                         >
-                            <Feather name={viewMode === 'map' ? 'list' : 'map'} size={16} color={colors.text} />
-                            <Text style={styles.mobileFilterBtnText}>{viewMode === 'map' ? 'Список' : 'Карта'}</Text>
+                            <Feather name="map" size={16} color={colors.text} />
+                            <Text style={styles.mobileFilterBtnText}>Карта</Text>
                         </Pressable>
                         <Pressable
                             style={styles.mobileFilterBtn}

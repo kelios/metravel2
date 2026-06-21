@@ -467,10 +467,10 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         },
         contentBodyMap: {
             ...(isMobileW
-                ? {
+                ? ({
                     paddingHorizontal: 0,
                     paddingBottom: Platform.OS === 'web' ? 'env(safe-area-inset-bottom, 0px)' : 0,
-                }
+                } as any)
                 : null),
         },
         mapSection: {
@@ -537,11 +537,11 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         },
         mapContainer: {
             width: '100%',
-            height: isMobileW
+            height: (isMobileW
                 ? (Platform.OS === 'web'
                     ? 'calc(100dvh - 148px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))'
                     : Math.max(420, (screenHeight || 700) - 172))
-                : Math.min(620, screenHeight ? screenHeight * 0.6 : 620),
+                : Math.min(620, screenHeight ? screenHeight * 0.6 : 620)) as any,
             minHeight: isMobileW ? 420 : undefined,
             borderRadius: isMobileW ? 0 : radii.lg,
             overflow: 'hidden',
@@ -552,11 +552,11 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         },
         mapLoading: {
             width: '100%',
-            height: isMobileW
+            height: (isMobileW
                 ? (Platform.OS === 'web'
                     ? 'calc(100dvh - 148px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))'
                     : Math.max(420, (screenHeight || 700) - 172))
-                : Math.min(620, screenHeight ? screenHeight * 0.6 : 620),
+                : Math.min(620, screenHeight ? screenHeight * 0.6 : 620)) as any,
             borderRadius: isMobileW ? 0 : radii.lg,
             borderWidth: 1,
             borderColor: colors.borderLight,
