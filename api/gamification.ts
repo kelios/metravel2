@@ -70,7 +70,9 @@ export interface GamificationProgress {
 
 // ── Персонажи + выбор пути (RPG-ветвление) ──────────────────────────────────
 
-export type CharacterPathSlug = 'cartographer' | 'scout' | 'photohunter';
+// BE-модель: «путь» персонажа — это одна из четырёх линеек прогрессии
+// (Собачья/Кабанья/Лисья/Птичья). Слаг пути == слаг линейки.
+export type CharacterPathSlug = ProgressionLineSlug;
 
 /** Косметическая деталь персонажа (ошейник/рюкзак/компас/карта/медали/плащ). */
 export interface CharacterDetail {
@@ -121,46 +123,63 @@ interface PlaceFirstBadgeDto {
   is_fresh?: boolean | null;
 }
 
+/** Один уровень внутри линейки прогрессии. */
+interface ProgressionLevelDto {
+  level: number;
+  title?: string | null;
+  min_score?: number | null;
+  visual_key?: string | null;
+}
+
+/** Линейка прогрессии в ответе BE (`progression/me/` — массив таких объектов). */
 interface ProgressionLineDto {
   slug: string;
   name: string;
-  activity_kind: string;
-  activity_name: string;
-  level?: number | null;
-  level_title?: string | null;
-  current?: number | null;
-  current_level_min?: number | null;
-  next_level_min?: number | null;
-  next_level_title?: string | null;
-  emoji?: string | null;
+  description?: string | null;
+  visual_key?: string | null;
+  activity_type: string;
+  activity_label: string;
+  score?: number | null;
+  progress_percent?: number | null;
+  points_to_next?: number | null;
+  level: ProgressionLevelDto;
+  next_level?: ProgressionLevelDto | null;
+  levels?: ProgressionLevelDto[];
 }
 
-interface GamificationProgressDto {
-  lines?: ProgressionLineDto[];
-}
-
-interface CharacterDetailDto {
-  slug: string;
-  name: string;
+/** Визуальная деталь персонажа в `character/me/` (`visual_details[]`). */
+interface CharacterVisualDetailDto {
+  key: string;
+  label: string;
+  visual_key?: string | null;
+  min_level?: number | null;
   unlocked?: boolean | null;
+  equipped?: boolean | null;
 }
 
-interface CharacterPathOptionDto {
+/** Доступный для выбора путь в `character/me/` (`available_paths[]`). */
+interface AvailablePathDto {
   slug: string;
   name: string;
   description?: string | null;
-  emoji?: string | null;
+  activity_type?: string | null;
+  score?: number | null;
+  level?: ProgressionLevelDto | null;
+  selected?: boolean | null;
+  can_select?: boolean | null;
+  locked_reason?: string | null;
 }
 
+/** Состояние персонажа из `character/me/` (current-user endpoint). */
 interface CharacterStateDto {
-  id: number;
-  name: string;
-  level?: number | null;
-  path_slug?: string | null;
-  path_name?: string | null;
-  details?: CharacterDetailDto[];
-  pending_choice?: boolean | null;
-  path_options?: CharacterPathOptionDto[];
+  user_id: number;
+  selected_path?: ProgressionLineDto | null;
+  active_path?: ProgressionLineDto | null;
+  suggested_path?: ProgressionLineDto | null;
+  switch_unlocked?: boolean | null;
+  available_paths?: AvailablePathDto[];
+  visual_details?: CharacterVisualDetailDto[];
+  updated_at?: string | null;
 }
 
 // ── Мапперы DTO → домен ─────────────────────────────────────────────────────
@@ -194,16 +213,20 @@ const normalizeLineSlug = (raw: string): ProgressionLineSlug =>
     ? (raw as ProgressionLineSlug)
     : 'dog';
 
-const PATH_SLUGS: readonly CharacterPathSlug[] = [
-  'cartographer',
-  'scout',
-  'photohunter',
-];
-
 const normalizePathSlug = (
   raw: string | null | undefined,
 ): CharacterPathSlug | null =>
-  PATH_SLUGS.includes(raw as CharacterPathSlug) ? (raw as CharacterPathSlug) : null;
+  LINE_SLUGS.includes(raw as CharacterPathSlug) ? (raw as CharacterPathSlug) : null;
+
+/** Эмодзи-маскот ветки по слагу (BE не отдаёт emoji — выводим на FE). */
+const LINE_EMOJI: Record<ProgressionLineSlug, string> = {
+  dog: '🐕',
+  boar: '🐗',
+  fox: '🦊',
+  bird: '🦅',
+};
+
+const lineEmoji = (slug: ProgressionLineSlug): string => LINE_EMOJI[slug];
 
 const mapPlaceFirstBadge = (dto: PlaceFirstBadgeDto): PlaceFirstBadge => ({
   id: dto.id,
@@ -221,53 +244,69 @@ const mapPlaceFirstBadge = (dto: PlaceFirstBadgeDto): PlaceFirstBadge => ({
 });
 
 const mapProgressionLine = (dto: ProgressionLineDto): ProgressionLine => {
-  const current = dto.current ?? 0;
-  const nextLevelMin = dto.next_level_min ?? null;
+  const slug = normalizeLineSlug(dto.slug);
+  const current = dto.score ?? 0;
+  const nextLevelMin = dto.next_level?.min_score ?? null;
   return {
-    slug: normalizeLineSlug(dto.slug),
+    slug,
     name: dto.name,
-    activityKind: normalizeActivityKind(dto.activity_kind),
-    activityName: dto.activity_name,
-    level: dto.level ?? 1,
-    levelTitle: dto.level_title ?? '',
+    activityKind: normalizeActivityKind(dto.activity_type),
+    activityName: dto.activity_label,
+    level: dto.level?.level ?? 1,
+    levelTitle: dto.level?.title ?? '',
     current,
-    currentLevelMin: dto.current_level_min ?? 0,
+    currentLevelMin: dto.level?.min_score ?? 0,
     nextLevelMin,
-    nextLevelTitle: dto.next_level_title ?? null,
-    isMaxLevel: nextLevelMin == null,
-    emoji: dto.emoji ?? '🐾',
+    nextLevelTitle: dto.next_level?.title ?? null,
+    isMaxLevel: dto.next_level == null,
+    emoji: lineEmoji(slug),
   };
 };
 
-const mapProgress = (dto: GamificationProgressDto): GamificationProgress => ({
-  lines: (dto.lines ?? []).map(mapProgressionLine),
-});
+// BE `progression/me/` отдаёт массив линеек (не `{lines:[]}`); поддерживаем оба.
+const mapProgress = (
+  dto: ProgressionLineDto[] | { lines?: ProgressionLineDto[] } | null | undefined,
+): GamificationProgress => {
+  const rawLines = Array.isArray(dto) ? dto : (dto?.lines ?? []);
+  return { lines: rawLines.map(mapProgressionLine) };
+};
 
-const mapCharacterDetail = (dto: CharacterDetailDto): CharacterDetail => ({
-  slug: dto.slug,
-  name: dto.name,
+const mapVisualDetail = (dto: CharacterVisualDetailDto): CharacterDetail => ({
+  slug: dto.key,
+  name: dto.label,
   unlocked: Boolean(dto.unlocked),
 });
 
-const mapPathOption = (dto: CharacterPathOptionDto): CharacterPathOption => ({
-  slug: PATH_SLUGS.includes(dto.slug as CharacterPathSlug)
-    ? (dto.slug as CharacterPathSlug)
-    : 'cartographer',
-  name: dto.name,
-  description: dto.description ?? '',
-  emoji: dto.emoji ?? '🧭',
-});
+// Вариант пути == доступная для выбора линейка прогрессии (available_paths[]).
+const mapAvailablePath = (dto: AvailablePathDto): CharacterPathOption => {
+  const slug = normalizeLineSlug(dto.slug) as CharacterPathSlug;
+  return {
+    slug,
+    name: dto.name,
+    description: dto.description ?? dto.level?.title ?? '',
+    emoji: lineEmoji(slug),
+  };
+};
 
-const mapCharacter = (dto: CharacterStateDto): CharacterState => ({
-  id: dto.id,
-  name: dto.name,
-  level: dto.level ?? 1,
-  pathSlug: normalizePathSlug(dto.path_slug),
-  pathName: dto.path_name ?? null,
-  details: (dto.details ?? []).map(mapCharacterDetail),
-  pendingChoice: Boolean(dto.pending_choice),
-  pathOptions: (dto.path_options ?? []).map(mapPathOption),
-});
+const mapCharacter = (dto: CharacterStateDto): CharacterState => {
+  const active = dto.active_path ?? dto.selected_path ?? null;
+  const selected = dto.selected_path ?? null;
+  // Выбор доступен, когда BE разблокировал смену и путь ещё не закреплён.
+  const pendingChoice = Boolean(dto.switch_unlocked) && selected == null;
+  const options = (dto.available_paths ?? []).filter(
+    (p) => p.can_select !== false,
+  );
+  return {
+    id: dto.user_id,
+    name: active?.name ?? 'Персонаж',
+    level: active?.level?.level ?? 1,
+    pathSlug: normalizePathSlug(selected?.slug),
+    pathName: selected?.name ?? null,
+    details: (dto.visual_details ?? []).map(mapVisualDetail),
+    pendingChoice,
+    pathOptions: options.map(mapAvailablePath),
+  };
+};
 
 // ── Мок-фолбэк (общий флаг с базовыми достижениями) ─────────────────────────
 
@@ -326,7 +365,7 @@ export async function fetchUserPlaceFirstBadges(
 export async function fetchMyGamificationProgress(): Promise<GamificationProgress> {
   if (USE_MOCK) return MOCK_GAMIFICATION_PROGRESS;
   try {
-    const dto = await apiClient.get<GamificationProgressDto>(
+    const dto = await apiClient.get<ProgressionLineDto[]>(
       '/achievements/progression/me/',
     );
     return mapProgress(dto);
@@ -345,7 +384,7 @@ export async function fetchUserGamificationProgress(
 ): Promise<GamificationProgress> {
   if (USE_MOCK) return MOCK_GAMIFICATION_PROGRESS;
   try {
-    const dto = await apiClient.get<GamificationProgressDto>(
+    const dto = await apiClient.get<ProgressionLineDto[]>(
       `/achievements/user/${userId}/progression-lines/`,
       undefined,
       { skipAuth: true },
