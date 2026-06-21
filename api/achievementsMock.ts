@@ -54,7 +54,13 @@ export const MOCK_BADGES: Badge[] = [
   badge(11, 'world-citizen', 'Гражданин мира', '15 посещённых стран', 'geo', 'География', 'legendary', 200),
 ];
 
-const earned = (b: Badge, earnedAt: string): UserBadge => ({ badge: b, earnedAt });
+// UserBadge.id умышленно НЕ равен badge.id (смещение +100): моки повторяют BE-контракт,
+// где earned_badges[].id (PK разблокировки) ≠ earned_badges[].badge.id (каталог).
+const earned = (b: Badge, earnedAt: string): UserBadge => ({
+  id: b.id + 100,
+  badge: b,
+  earnedAt,
+});
 
 export const MOCK_RANK: UserRank = {
   level: 4,

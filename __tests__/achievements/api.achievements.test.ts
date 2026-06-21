@@ -71,6 +71,8 @@ const rankDto = (overrides: Record<string, unknown> = {}) => ({
 })
 
 const userBadgeDto = (overrides: Record<string, unknown> = {}) => ({
+  // id (PK разблокировки) умышленно ≠ badge.id — это и есть achievement_id для share-card.
+  id: 101,
   badge: badgeDto(),
   earned_at: '2025-10-01T12:00:00Z',
   period: null,
@@ -225,6 +227,9 @@ describe('fetchMyAchievements', () => {
     expect(my.earned).toHaveLength(1)
     expect(my.earned[0].badge.name).toBe('Test Badge')
     expect(my.earned[0].earnedAt).toBe('2025-10-01T12:00:00Z')
+    // UserBadge.id (PK разблокировки) проходит маппинг и НЕ совпадает с badge.id.
+    expect(my.earned[0].id).toBe(101)
+    expect(my.earned[0].id).not.toBe(my.earned[0].badge.id)
 
     // locked (from progress)
     expect(my.locked).toHaveLength(1)

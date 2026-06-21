@@ -61,7 +61,7 @@ function AchievementsGalleryModal({ visible, onClose, data, ownerName }: Props) 
   const detailByBadgeId = useMemo(() => {
     const map = new Map<number, BadgeDetail>();
     data.earned.forEach((ub) =>
-      map.set(ub.badge.id, { badge: ub.badge, earned: true }),
+      map.set(ub.badge.id, { badge: ub.badge, earned: true, userBadgeId: ub.id }),
     );
     data.locked.forEach((p) =>
       map.set(p.badge.id, {

@@ -41,6 +41,9 @@ export interface Badge {
 }
 
 export interface UserBadge {
+  /** PK самой записи о разблокировке (UserBadge), НЕ каталожный badge.id.
+   * Нужен для share-card: POST /achievements/share-cards/ ждёт achievement_id = этот id. */
+  id: number;
   badge: Badge;
   earnedAt: string;
 }
@@ -128,6 +131,7 @@ interface BadgeDto {
 }
 
 interface UserBadgeDto {
+  id: number;
   badge: BadgeDto;
   earned_at: string;
 }
@@ -215,6 +219,7 @@ const mapBadge = (dto: BadgeDto): Badge => ({
 });
 
 const mapUserBadge = (dto: UserBadgeDto): UserBadge => ({
+  id: dto.id,
   badge: mapBadge(dto.badge),
   earnedAt: dto.earned_at,
 });

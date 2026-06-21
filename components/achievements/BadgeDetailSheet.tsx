@@ -19,6 +19,9 @@ import { TIER_VISUALS, tierLabel } from '@/components/achievements/badgeVisuals'
 export interface BadgeDetail {
   badge: Badge
   earned: boolean
+  /** PK записи о разблокировке (UserBadge.id). Нужен для share-card — BE ждёт именно его,
+   * а не каталожный badge.id. Заполняется только для earned-значков. */
+  userBadgeId?: number
   progress?: { current: number; threshold: number } | null
 }
 
@@ -159,7 +162,10 @@ function BadgeDetailSheet({ visible, onClose, detail, ownerName }: Props) {
 
   if (!detail) return null
 
-  const { badge, earned, progress } = detail
+  const { badge, earned, userBadgeId, progress } = detail
+  // Share-card требует UserBadge.id заработанной записи (BE 403 на каталожный badge.id).
+  // Без него кнопку «Поделиться» не показываем — деградируем, а не шлём неверный id.
+  const canShare = earned && Boolean(ownerName) && userBadgeId != null
   const tier = TIER_VISUALS[badge.tier]
   const tl = tierLabel(badge.tier)
 
@@ -251,7 +257,7 @@ function BadgeDetailSheet({ visible, onClose, detail, ownerName }: Props) {
             </View>
           ) : null}
 
-          {earned && ownerName ? (
+          {canShare ? (
             <Pressable
               style={styles.shareBtn}
               onPress={() => setShareOpen(true)}
@@ -271,9 +277,9 @@ function BadgeDetailSheet({ visible, onClose, detail, ownerName }: Props) {
         onClose={() => setShareOpen(false)}
         context="detail"
         subject={
-          earned
+          canShare && userBadgeId != null
             ? {
-                achievementId: badge.id,
+                achievementId: userBadgeId,
                 slug: badge.slug,
                 badge,
                 ownerName,
