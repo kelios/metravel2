@@ -13,13 +13,19 @@ interface QuestConsentGateProps {
   coverUrl?: string
   onAccept: () => void
   testID?: string
+  /** Блок первопроходца под заголовком */
+  pioneerSlot?: React.ReactNode
+  /** Readonly-рейтинг под заголовком */
+  ratingSlot?: React.ReactNode
+  /** Бейдж «Пройден» + «Пройдено N раз» под заголовком */
+  completionSlot?: React.ReactNode
 }
 
 /**
  * Экран обязательного согласия перед первым стартом квеста.
  * Кнопка «Начать квест» заблокирована, пока чекбокс не отмечен.
  */
-export default function QuestConsentGate({ title, coverUrl, onAccept, testID }: QuestConsentGateProps) {
+export default function QuestConsentGate({ title, coverUrl, onAccept, testID, pioneerSlot, ratingSlot, completionSlot }: QuestConsentGateProps) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const [checked, setChecked] = useState(false)
@@ -43,6 +49,9 @@ export default function QuestConsentGate({ title, coverUrl, onAccept, testID }: 
       ) : null}
 
       <Text style={styles.title}>{title}</Text>
+      {pioneerSlot}
+      {ratingSlot}
+      {completionSlot}
 
       <View style={styles.card}>
         <Text style={styles.lead}>Перед началом квеста подтвердите согласие с условиями.</Text>

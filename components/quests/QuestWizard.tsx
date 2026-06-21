@@ -87,7 +87,7 @@ const useQuestWizardTheme = (isMobile: boolean, screenW: number) => {
     return { colors, styles };
 };
 // ===================== ОСНОВНОЙ КОМПОНЕНТ =====================
-export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, ratingSlot, questId, cityId, questNumericId }: QuestWizardProps) {
+export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, ratingSlot, completionSlot, pioneerSlot, questId, cityId, questNumericId }: QuestWizardProps) {
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
 
     const wizardModel = useQuestWizardResponsiveModel();
@@ -419,6 +419,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 onOfflineMapOpenInApp={handleOfflineMapOpenInApp}
                                 offlineMapPointsCount={offlineMapPointsCount}
                                 ratingSlot={ratingSlot}
+                                completionSlot={completionSlot}
+                                pioneerSlot={pioneerSlot}
                             />
 
                             <ScrollView
@@ -458,6 +460,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 onOfflineMapOpenInApp={handleOfflineMapOpenInApp}
                                 offlineMapPointsCount={offlineMapPointsCount}
                                 ratingSlot={ratingSlot}
+                                completionSlot={completionSlot}
+                                pioneerSlot={pioneerSlot}
                             />
 
                             {/* Контент */}

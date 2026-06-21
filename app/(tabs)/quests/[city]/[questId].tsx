@@ -562,6 +562,9 @@ export default function QuestByIdScreen() {
           title={bundle.title}
           coverUrl={bundle.coverUrl}
           onAccept={questConsent.grant}
+          pioneerSlot={pioneerSlot}
+          ratingSlot={ratingSlot}
+          completionSlot={completionSlot}
         />
       </View>
     );
@@ -597,6 +600,8 @@ export default function QuestByIdScreen() {
             onFinaleVideoRetry={refetch}
             relatedTravelsSlot={relatedTravelsSlot}
             ratingSlot={ratingSlot}
+            completionSlot={completionSlot}
+            pioneerSlot={pioneerSlot}
             questId={questId}
             cityId={cityId}
             questNumericId={bundle.id}
@@ -616,6 +621,9 @@ export default function QuestByIdScreen() {
           initialProgress={initialProgress}
           onFinaleVideoRetry={refetch}
           relatedTravelsSlot={relatedTravelsSlot}
+          ratingSlot={ratingSlot}
+          completionSlot={completionSlot}
+          pioneerSlot={pioneerSlot}
           questId={questId}
           cityId={cityId}
           questNumericId={bundle.id}

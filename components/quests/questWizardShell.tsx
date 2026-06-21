@@ -303,7 +303,9 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           {!isMobile && (
             <Text style={styles.title} numberOfLines={1}>{title}</Text>
           )}
+          {!isMobile && pioneerSlot ? pioneerSlot : null}
           {!isMobile && ratingSlot ? ratingSlot : null}
+          {!isMobile && completionSlot ? completionSlot : null}
         </View>
         <View style={styles.headerActionRow}>
           {Platform.OS === 'web' && (
