@@ -143,6 +143,7 @@ export interface CreateTripInput {
   visibility: TripVisibility;
   seatsTotal: number;
   startPoint: RoutePoint | null;
+  createTelegramGroup?: boolean;
 }
 
 export interface UpdateRouteInput {
@@ -725,6 +726,7 @@ export async function createTrip(input: CreateTripInput): Promise<PlannedTrip> {
     start_point_name: input.startPoint?.name ?? '',
     start_lat: coords ? coords[1] : null,
     start_lng: coords ? coords[0] : null,
+    create_telegram_group: input.createTelegramGroup ?? false,
   };
   if (USE_MOCK) {
     const trip = buildMockTrip(input);

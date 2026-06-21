@@ -6,6 +6,14 @@ import {
 } from '@/api/user';
 import { ApiError } from '@/api/client';
 import { showToast } from '@/utils/toast';
+import { openExternalUrl } from '@/utils/externalLinks';
+import type { PreferredMessenger } from '@/api/telegramLink';
+import {
+  useConfirmTelegramAuth,
+  useMyTelegramLink,
+  useStartTelegramAuth,
+  useUpdateTelegramLink,
+} from '@/hooks/useTelegramLinkApi';
 import type { useUserProfile } from '@/hooks/useUserProfile';
 
 type UserProfile = ReturnType<typeof useUserProfile>['profile'];
@@ -174,6 +182,105 @@ export function useSettingsProfileForm({
     [saveEmailNotifications],
   );
 
+  // ── Telegram-привязка (FE-421) ────────────────────────────────────────────
+  const { data: telegramLink, isLoading: telegramLoading } = useMyTelegramLink();
+  const updateTelegram = useUpdateTelegramLink();
+  const startTelegram = useStartTelegramAuth();
+  const confirmTelegram = useConfirmTelegramAuth();
+
+  const [telegramUsername, setTelegramUsername] = useState('');
+  // Токен из последнего deeplink (?start=<token>) для шага подтверждения.
+  const [pendingAuthToken, setPendingAuthToken] = useState<string | null>(null);
+  const telegramHydratedRef = useRef(false);
+
+  useEffect(() => {
+    if (!telegramLink) return;
+    // Не затираем несохранённый ввод пользователя после первичной гидрации.
+    if (telegramHydratedRef.current) return;
+    setTelegramUsername(telegramLink.telegramUsername ?? '');
+    telegramHydratedRef.current = true;
+  }, [telegramLink]);
+
+  const telegramVerified = telegramLink?.telegramVerified ?? false;
+  const preferredMessenger: PreferredMessenger | null = telegramLink?.preferredMessenger ?? null;
+
+  const telegramUsernameDirty = useMemo(() => {
+    const norm = (v: unknown) => String(v ?? '').trim().replace(/^@/, '');
+    return norm(telegramUsername) !== norm(telegramLink?.telegramUsername);
+  }, [telegramUsername, telegramLink?.telegramUsername]);
+
+  const telegramBusy =
+    telegramLoading ||
+    updateTelegram.isPending ||
+    startTelegram.isPending ||
+    confirmTelegram.isPending;
+
+  const saveTelegramUsername = useCallback(() => {
+    updateTelegram.mutate(
+      { telegramUsername },
+      {
+        onSuccess: () =>
+          showToast({ type: 'success', text1: 'Telegram сохранён', visibilityTime: 2000 }),
+        onError: (error) => {
+          const message = error instanceof ApiError ? error.message : 'Не удалось сохранить Telegram';
+          showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
+        },
+      },
+    );
+  }, [telegramUsername, updateTelegram]);
+
+  const startTelegramAuth = useCallback(() => {
+    startTelegram.mutate(undefined, {
+      onSuccess: async ({ deeplink }) => {
+        // Достаём токен из ?start=<token> для последующего confirm.
+        let token: string | null = null;
+        try {
+          const startParam = new URL(deeplink).searchParams.get('start');
+          token = startParam && startParam.length > 0 ? startParam : null;
+        } catch {
+          token = null;
+        }
+        setPendingAuthToken(token);
+        await openExternalUrl(deeplink);
+      },
+      onError: (error) => {
+        const message = error instanceof ApiError ? error.message : 'Не удалось открыть Telegram';
+        showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
+      },
+    });
+  }, [startTelegram]);
+
+  const confirmTelegramAuth = useCallback(() => {
+    if (!pendingAuthToken) return;
+    confirmTelegram.mutate(pendingAuthToken, {
+      onSuccess: () => {
+        setPendingAuthToken(null);
+        showToast({ type: 'success', text1: 'Telegram подтверждён', visibilityTime: 2000 });
+      },
+      onError: (error) => {
+        const message = error instanceof ApiError ? error.message : 'Не удалось подтвердить Telegram';
+        showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
+      },
+    });
+  }, [confirmTelegram, pendingAuthToken]);
+
+  const changePreferredMessenger = useCallback(
+    (next: PreferredMessenger) => {
+      if (next === preferredMessenger) return;
+      updateTelegram.mutate(
+        { preferredMessenger: next },
+        {
+          onError: (error) => {
+            const message =
+              error instanceof ApiError ? error.message : 'Не удалось сохранить мессенджер';
+            showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
+          },
+        },
+      );
+    },
+    [preferredMessenger, updateTelegram],
+  );
+
   return {
     firstName,
     setFirstName,
@@ -195,5 +302,17 @@ export function useSettingsProfileForm({
     saveProfile,
     handleEmailNotifyCommentsChange,
     handleEmailNotifyMessagesChange,
+    // Telegram-привязка (FE-421)
+    telegramUsername,
+    setTelegramUsername,
+    telegramVerified,
+    preferredMessenger,
+    telegramUsernameDirty,
+    telegramBusy,
+    telegramAwaitingConfirm: pendingAuthToken != null,
+    saveTelegramUsername,
+    startTelegramAuth,
+    confirmTelegramAuth,
+    changePreferredMessenger,
   };
 }

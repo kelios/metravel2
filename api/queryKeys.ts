@@ -105,4 +105,15 @@ export const queryKeys = {
     tripId: string | number | null | undefined,
     userId: string | number | null | undefined,
   ) => ['participant-rating', tripId, userId] as const,
+  // Коммуникация участников (Sprint 15 / блок 6)
+  myTelegramLink: () => ['telegram-link', 'me'] as const,
+  tripChat: (tripId: string | number | null | undefined) => ['trip-chat', tripId] as const,
+  tripChatAll: () => ['trip-chat'] as const,
+  tripChatMessages: (threadId: string | number | null | undefined) =>
+    ['trip-chat-messages', threadId] as const,
+  tripTelegramGroup: (tripId: string | number | null | undefined) =>
+    ['trip-telegram-group', tripId] as const,
+  contactRequests: (direction: string, status?: string) =>
+    ['contact-requests', direction, status ?? 'all'] as const,
+  contactRequestsAll: () => ['contact-requests'] as const,
 } as const;

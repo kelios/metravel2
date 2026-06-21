@@ -92,6 +92,17 @@ export default function SettingsScreen() {
         saveProfile: handleSaveProfile,
         handleEmailNotifyCommentsChange,
         handleEmailNotifyMessagesChange,
+        telegramUsername,
+        setTelegramUsername,
+        telegramVerified,
+        preferredMessenger,
+        telegramUsernameDirty,
+        telegramBusy,
+        telegramAwaitingConfirm,
+        saveTelegramUsername,
+        startTelegramAuth,
+        confirmTelegramAuth,
+        changePreferredMessenger,
     } = useSettingsProfileForm({
         userId,
         username,
@@ -120,6 +131,15 @@ export default function SettingsScreen() {
                 description: 'Следовать настройкам устройства',
                 icon: 'smartphone' as const,
             },
+        ],
+        []
+    );
+
+    const messengerOptions = useMemo(
+        () => [
+            { value: 'telegram' as const, label: 'Telegram' },
+            { value: 'whatsapp' as const, label: 'WhatsApp' },
+            { value: 'other' as const, label: 'Другой' },
         ],
         []
     );
@@ -393,6 +413,97 @@ export default function SettingsScreen() {
                             fullWidth
                             size="md"
                         />
+
+                        <View style={styles.divider} />
+
+                        <Text style={styles.subsectionTitle}>Telegram</Text>
+                        <View style={styles.field}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                <Text style={styles.fieldLabel}>Username в Telegram</Text>
+                                {telegramVerified ? (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                        <Feather name="check-circle" size={14} color={colors.success} />
+                                        <Text style={[styles.settingMeta, { color: colors.success }]}>верифицирован</Text>
+                                    </View>
+                                ) : (
+                                    <Text style={styles.settingMeta}>не подтверждён</Text>
+                                )}
+                            </View>
+                            <TextInput
+                                value={telegramUsername}
+                                onChangeText={setTelegramUsername}
+                                style={styles.input}
+                                placeholder="@username"
+                                placeholderTextColor={colors.textMuted}
+                                autoCapitalize="none"
+                                editable={!telegramBusy}
+                            />
+                        </View>
+
+                        <Button
+                            label="Сохранить Telegram"
+                            onPress={saveTelegramUsername}
+                            disabled={telegramBusy || !telegramUsernameDirty}
+                            variant="secondary"
+                            fullWidth
+                            size="sm"
+                        />
+
+                        {!telegramVerified ? (
+                            <View style={{ gap: 8, marginTop: 8 }}>
+                                <Button
+                                    label="Авторизовать через Telegram"
+                                    onPress={startTelegramAuth}
+                                    disabled={telegramBusy}
+                                    fullWidth
+                                    size="sm"
+                                />
+                                {telegramAwaitingConfirm ? (
+                                    <Button
+                                        label="Я подтвердил в Telegram"
+                                        onPress={confirmTelegramAuth}
+                                        disabled={telegramBusy}
+                                        variant="secondary"
+                                        fullWidth
+                                        size="sm"
+                                    />
+                                ) : null}
+                            </View>
+                        ) : null}
+
+                        <Text style={[styles.subsectionTitle, { marginTop: 16 }]}>Предпочитаемый мессенджер</Text>
+                        <View
+                            style={styles.themeOptions}
+                            accessibilityRole="radiogroup"
+                            accessibilityLabel="Предпочитаемый мессенджер"
+                        >
+                            {messengerOptions.map((option) => {
+                                const isSelected = preferredMessenger === option.value;
+                                return (
+                                    <Pressable
+                                        key={option.value}
+                                        onPress={() => changePreferredMessenger(option.value)}
+                                        disabled={telegramBusy}
+                                        style={({ pressed }) => [
+                                            styles.themeOption,
+                                            isSelected && styles.themeOptionActive,
+                                            pressed && styles.themeOptionPressed,
+                                        ]}
+                                        accessibilityRole="radio"
+                                        accessibilityState={{ selected: isSelected }}
+                                        accessibilityLabel={option.label}
+                                        {...Platform.select({ web: { cursor: 'pointer' } })}
+                                    >
+                                        <View style={styles.themeOptionText}>
+                                            <Text style={styles.themeOptionTitle}>{option.label}</Text>
+                                        </View>
+                                        {isSelected ? (
+                                            <Feather name="check" size={16} color={colors.primary} />
+                                        ) : null}
+                                    </Pressable>
+                                );
+                            })}
+                        </View>
 
                         <View style={styles.divider} />
 

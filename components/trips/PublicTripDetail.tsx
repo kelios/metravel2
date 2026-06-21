@@ -12,6 +12,7 @@ import Button from '@/components/ui/Button';
 import TripStatusBadge from '@/components/trips/TripStatusBadge';
 import TripApplyForm from '@/components/trips/TripApplyForm';
 import OrganizerApplicationsPanel from '@/components/trips/OrganizerApplicationsPanel';
+import TripTelegramGroupCard from '@/components/trips/communication/TripTelegramGroupCard';
 import { formatSeats, formatTripDates } from '@/components/trips/tripFormatting';
 import { usePublicTrip } from '@/hooks/usePublicTripsApi';
 import { useActionConsent } from '@/hooks/useActionConsent';
@@ -144,6 +145,7 @@ function PublicTripDetail({ tripId }: Props) {
             {trip.contactNote ? (
               <Text style={styles.revealText}>{trip.contactNote}</Text>
             ) : null}
+            <TripTelegramGroupCard tripId={trip.id} isOwner={false} />
           </View>
         )
       ) : !revealed ? (

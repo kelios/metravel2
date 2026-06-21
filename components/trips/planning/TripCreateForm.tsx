@@ -48,6 +48,7 @@ interface FormValues {
   startPointName: string;
   startLat: string;
   startLng: string;
+  createTelegramGroup: boolean;
 }
 
 const schema = yup.object({
@@ -84,6 +85,7 @@ const schema = yup.object({
       return Number.isInteger(n) && n >= 1 && n <= 50;
     }),
   startPointName: yup.string().trim(),
+  createTelegramGroup: yup.boolean().default(false),
   startLat: yup
     .string()
     .trim()
@@ -136,6 +138,7 @@ function TripCreateForm({ onCreated }: Props) {
     startPointName: '',
     startLat: '',
     startLng: '',
+    createTelegramGroup: false,
   });
   const [errors, setErrors] = useState<Partial<Record<keyof FormValues, string>>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -164,6 +167,7 @@ function TripCreateForm({ onCreated }: Props) {
         visibility: valid.visibility as TripVisibility,
         seatsTotal: Number(valid.seatsTotal),
         startPoint: buildStartPoint(values),
+        createTelegramGroup: values.createTelegramGroup,
       };
       create.mutate(input, {
         onSuccess: (trip) => onCreated?.(trip),
@@ -339,6 +343,15 @@ function TripCreateForm({ onCreated }: Props) {
           ) : null}
         </View>
       </View>
+
+      <ConsentCheckbox
+        checked={values.createTelegramGroup}
+        onToggle={(next) => setField('createTelegramGroup', next)}
+        testID="trip-create-telegram-group"
+        accessibilityLabel="Создать Telegram-группу для участников"
+      >
+        Создать Telegram-группу для участников
+      </ConsentCheckbox>
 
       <ConsentCheckbox
         checked={consentChecked}

@@ -23,6 +23,7 @@ import { fetchTravels } from '@/api/travelListQueries';
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import ProtectedContacts from '@/components/profile/ProtectedContacts';
+import ContactRequestsInbox from '@/components/profile/ContactRequestsInbox';
 import UserAchievementsSection from '@/components/achievements/UserAchievementsSection';
 import UserRareAwardsSection from '@/components/achievements/UserRareAwardsSection';
 import AdminGrantRareAward from '@/components/achievements/AdminGrantRareAward';
@@ -329,6 +330,12 @@ export default function PublicUserProfileScreen() {
             </Pressable>
           </View>
         </View>
+
+        {isOwnProfile ? (
+          <View style={styles.achievementsSection}>
+            <ContactRequestsInbox key={`contact-inbox-${userId}`} />
+          </View>
+        ) : null}
 
         {userId ? (
           <UserAchievementsSection userId={userId} style={styles.achievementsSection} />

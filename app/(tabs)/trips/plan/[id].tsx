@@ -16,6 +16,8 @@ import TripSuggestionsPanel from '@/components/trips/planning/TripSuggestionsPan
 import TripReportForm from '@/components/trips/planning/TripReportForm';
 import TripRatingPanel from '@/components/trips/planning/TripRatingPanel';
 import TripAffiliateBlock from '@/components/trips/planning/TripAffiliateBlock';
+import TripTelegramGroupCard from '@/components/trips/communication/TripTelegramGroupCard';
+import TripChatPanel from '@/components/trips/chat/TripChatPanel';
 import {
   PLAN_STATUS_LABEL,
   formatTripDateTime,
@@ -72,6 +74,11 @@ export default function PlannedTripScreen() {
 
             <View style={styles.section}>
               <TripInvitePanel trip={trip} />
+            </View>
+
+            <View style={styles.section}>
+              <TripTelegramGroupCard tripId={trip.id} isOwner={trip.isOwner} />
+              <TripChatPanel tripId={trip.id} />
             </View>
 
             <View style={styles.section}>

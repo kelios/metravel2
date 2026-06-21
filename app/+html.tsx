@@ -37,6 +37,7 @@ const ROULETTE_DESCRIPTION = 'Откройте случайный маршрут
 const ARTICLE_FALLBACK_TITLE = 'Статья | Metravel';
 const ARTICLE_FALLBACK_DESCRIPTION = 'Страница статьи в Metravel. Открывайте материалы о путешествиях, маршрутах и полезных находках.';
 const TRAVEL_HERO_PRELOAD_SCRIPT_SRC = '/travel-hero-preload-v2.js';
+const TRAVELPAYOUTS_DRIVE_SCRIPT_SRC = 'https://emrldtp.cc/NDIzMjc4.js?t=423278';
 
 if (!METRIKA_ID && typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
   console.error('[Analytics] EXPO_PUBLIC_METRIKA_ID is not set. Analytics will be disabled.');
@@ -328,7 +329,9 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <link rel="preconnect" href="https://cdn.metravel.by" crossOrigin="anonymous" />
       <link rel="dns-prefetch" href="https://mc.yandex.ru" />
       <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+      <link rel="dns-prefetch" href="https://emrldtp.cc" />
 
+      {isProduction && <script async src={TRAVELPAYOUTS_DRIVE_SCRIPT_SRC} />}
 
       {/* Leaflet CSS early-load for map page — self-hosted, no CDN roundtrip.
           Applies stylesheet immediately (not just preload) so it is ready before JS hydration.
