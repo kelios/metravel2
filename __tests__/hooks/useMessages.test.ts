@@ -1,4 +1,5 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { createQueryWrapper } from '../helpers/testQueryClient';
 
 // Mock the API module
 const mockFetchMessageThreads = jest.fn();
@@ -446,7 +447,9 @@ describe('useUnreadCount (stubbed — backend not deployed)', () => {
   it('returns 0 when enabled (stub)', async () => {
     mockFetchUnreadCount.mockResolvedValueOnce({ count: 0 });
 
-    const { result } = renderHook(() => useUnreadCount(true, false));
+    const { result } = renderHook(() => useUnreadCount(true, false), {
+      wrapper: createQueryWrapper().Wrapper,
+    });
 
     await waitFor(() => expect(mockFetchUnreadCount).toHaveBeenCalled());
 
@@ -454,7 +457,9 @@ describe('useUnreadCount (stubbed — backend not deployed)', () => {
   });
 
   it('does not load when disabled', async () => {
-    const { result } = renderHook(() => useUnreadCount(false, false));
+    const { result } = renderHook(() => useUnreadCount(false, false), {
+      wrapper: createQueryWrapper().Wrapper,
+    });
 
     await act(async () => {});
 
