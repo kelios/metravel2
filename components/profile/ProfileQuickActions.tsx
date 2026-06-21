@@ -4,12 +4,17 @@ import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { useResponsive } from '@/hooks/useResponsive';
 
 export type ProfileQuickActionKey = 'messages' | 'subscriptions' | 'settings' | 'userpoints' | 'calendar';
 
 export interface ProfileQuickActionsProps {
   onPress: (key: ProfileQuickActionKey) => void;
   unreadMessagesCount?: number;
+  /** 'scroll' — горизонтальный ряд (по умолчанию); 'grid' — адаптивная сетка. */
+  layout?: 'scroll' | 'grid';
+  /** Ключи, которые не показывать (например, 'subscriptions' вынесены в шапку). */
+  excludeKeys?: ProfileQuickActionKey[];
 }
 
 const ITEMS: Array<{
@@ -50,14 +55,31 @@ const ITEMS: Array<{
   },
 ];
 
-export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: ProfileQuickActionsProps) {
+export function ProfileQuickActions({
+  onPress,
+  unreadMessagesCount = 0,
+  layout = 'scroll',
+  excludeKeys,
+}: ProfileQuickActionsProps) {
   const colors = useThemedColors();
+  const { isDesktop } = useResponsive();
+
+  const visibleItems = useMemo(
+    () => (excludeKeys?.length ? ITEMS.filter((item) => !excludeKeys.includes(item.key)) : ITEMS),
+    [excludeKeys]
+  );
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
         wrapper: {
           paddingBottom: DESIGN_TOKENS.spacing.sm,
+        },
+        grid: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          paddingHorizontal: DESIGN_TOKENS.spacing.md,
+          gap: DESIGN_TOKENS.spacing.xs,
         },
         scrollContent: {
           paddingHorizontal: DESIGN_TOKENS.spacing.md,
@@ -133,6 +155,49 @@ export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: Profil
     [colors]
   );
 
+  const renderChip = (item: (typeof ITEMS)[number], extraStyle?: object) => {
+    const showBadge = item.key === 'messages' && unreadMessagesCount > 0;
+
+    return (
+      <Pressable
+        key={item.key}
+        onPress={() => onPress(item.key)}
+        accessibilityRole="menuitem"
+        accessibilityLabel={
+          showBadge ? `${item.title}, ${unreadMessagesCount} непрочитанных` : item.title
+        }
+        accessibilityHint={item.accessibilityHint}
+        style={({ pressed }) => [
+          styles.actionChip,
+          extraStyle,
+          globalFocusStyles.focusable,
+          pressed && styles.actionChipPressed,
+        ]}
+      >
+        <View style={styles.iconPill}>
+          <Feather name={item.icon} size={15} color={colors.primary} />
+        </View>
+        <Text style={styles.chipLabel}>{item.title}</Text>
+        {showBadge && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>
+              {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
+            </Text>
+          </View>
+        )}
+      </Pressable>
+    );
+  };
+
+  if (layout === 'grid') {
+    const itemWidth = isDesktop ? '23.5%' : '48%';
+    return (
+      <View style={styles.grid} accessibilityRole="menu">
+        {visibleItems.map((item) => renderChip(item, { width: itemWidth }))}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.wrapper}>
       <ScrollView
@@ -141,40 +206,7 @@ export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: Profil
         contentContainerStyle={styles.scrollContent}
         accessibilityRole="menu"
       >
-        {ITEMS.map((item) => {
-          const showBadge = item.key === 'messages' && unreadMessagesCount > 0;
-
-          return (
-            <Pressable
-              key={item.key}
-              onPress={() => onPress(item.key)}
-              accessibilityRole="menuitem"
-              accessibilityLabel={
-                showBadge
-                  ? `${item.title}, ${unreadMessagesCount} непрочитанных`
-                  : item.title
-              }
-              accessibilityHint={item.accessibilityHint}
-              style={({ pressed }) => [
-                styles.actionChip,
-                globalFocusStyles.focusable,
-                pressed && styles.actionChipPressed,
-              ]}
-            >
-              <View style={styles.iconPill}>
-                <Feather name={item.icon} size={15} color={colors.primary} />
-              </View>
-              <Text style={styles.chipLabel}>{item.title}</Text>
-              {showBadge && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>
-                    {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
-                  </Text>
-                </View>
-              )}
-            </Pressable>
-          );
-        })}
+        {visibleItems.map((item) => renderChip(item))}
       </ScrollView>
     </View>
   );

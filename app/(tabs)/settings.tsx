@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, Pressable, Platform, ScrollView, TextInput, ActivityIndicator, Image } from 'react-native';
+import { View, Text, Pressable, Platform, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,13 +8,10 @@ import { useAuth } from '@/context/AuthContext';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { useFavorites } from '@/context/FavoritesContext';
 import EmptyState from '@/components/ui/EmptyState';
-import Button from '@/components/ui/Button';
-import { Toggle } from '@/components/ui/Toggle';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { confirmAction } from '@/utils/confirmAction';
 import { deleteCurrentUserAccount } from '@/api/user';
 import { ApiError } from '@/api/client';
-import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { useSettingsProfileForm } from '@/hooks/useSettingsProfileForm';
 import { Theme, useTheme, useThemedColors } from '@/hooks/useTheme';
 import { showToast } from '@/utils/toast';
@@ -30,6 +27,12 @@ import { createSettingsStyles } from '@/components/screens/settings/settings.sty
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler';
 import StravaSettingsSection from '@/components/settings/StravaSettingsSection';
 import DataOwnershipSection from '@/components/settings/DataOwnershipSection';
+import ProfileSection from '@/components/settings/ProfileSection';
+import ThemeSection from '@/components/settings/ThemeSection';
+import BiometricSection from '@/components/settings/BiometricSection';
+import AccountSection from '@/components/settings/AccountSection';
+import DataManagementSection from '@/components/settings/DataManagementSection';
+import NavCardSection from '@/components/settings/NavCardSection';
 
 // Keep the Strava implementation for a future backend rollout, but hide the settings UI for now.
 const STRAVA_SETTINGS_ENABLED = false;
@@ -301,365 +304,72 @@ export default function SettingsScreen() {
                     <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Профиль</Text>
 
-                    <View style={styles.card}>
-                        <View style={styles.profileHeaderRow}>
-                            <View style={styles.profileAvatar}>
-                                {profile?.avatar && !settingsAvatarError ? (
-                                    <Image source={{ uri: optimizeImageUrl(profile.avatar, { width: 72, height: 72, quality: 70, format: 'auto', fit: 'cover' }) ?? profile.avatar }} style={styles.profileAvatarImage} onError={() => setSettingsAvatarError(true)} />
-                                ) : (
-                                    <Feather name="user" size={18} color={colors.primary} />
-                                )}
-                            </View>
-                            <View style={styles.cardText}>
-                                <Text style={styles.cardTitle}>{derivedDisplayName}</Text>
-                                <Text style={styles.cardMeta}>Редактирование профиля</Text>
-                            </View>
-                            <View style={styles.profileActions}>
-                                <Pressable
-                                    style={[styles.refreshButton, globalFocusStyles.focusable]}
-                                    onPress={loadProfile}
-                                    accessibilityRole="button"
-                                    accessibilityLabel="Обновить профиль"
-                                    disabled={profileLoading}
-                                    {...Platform.select({ web: { cursor: 'pointer' } })}
-                                >
-                                    {profileLoading ? (
-                                        <ActivityIndicator size="small" color={colors.primary} />
-                                    ) : (
-                                        <Feather name="refresh-cw" size={16} color={colors.primary} />
-                                    )}
-                                </Pressable>
-                            </View>
-                        </View>
-
-                        <View style={styles.formGrid}>
-                            <View style={[styles.field, styles.fieldHalf]}>
-                                <Text style={styles.fieldLabel}>Имя</Text>
-                                <TextInput
-                                    value={firstName}
-                                    onChangeText={setFirstName}
-                                    style={styles.input}
-                                    placeholder="Введите имя"
-                                    placeholderTextColor={colors.textMuted}
-                                />
-                            </View>
-                            <View style={[styles.field, styles.fieldHalf]}>
-                                <Text style={styles.fieldLabel}>Фамилия</Text>
-                                <TextInput
-                                    value={lastName}
-                                    onChangeText={setLastName}
-                                    style={styles.input}
-                                    placeholder={username || 'Введите фамилию'}
-                                    placeholderTextColor={colors.textMuted}
-                                />
-                            </View>
-                        </View>
-
-                        <View style={styles.divider} />
-
-                        <Text style={styles.subsectionTitle}>Социальные сети</Text>
-                        <View style={styles.formGrid}>
-                            <View style={[styles.field, styles.fieldHalf]}>
-                                <Text style={styles.fieldLabel}>YouTube</Text>
-                                <TextInput
-                                    value={youtube}
-                                    onChangeText={setYoutube}
-                                    style={styles.input}
-                                    placeholder="Ссылка"
-                                    placeholderTextColor={colors.textMuted}
-                                    autoCapitalize="none"
-                                />
-                            </View>
-                            <View style={[styles.field, styles.fieldHalf]}>
-                                <Text style={styles.fieldLabel}>Instagram</Text>
-                                <TextInput
-                                    value={instagram}
-                                    onChangeText={setInstagram}
-                                    style={styles.input}
-                                    placeholder="Ссылка"
-                                    placeholderTextColor={colors.textMuted}
-                                    autoCapitalize="none"
-                                />
-                            </View>
-                            <View style={[styles.field, styles.fieldHalf]}>
-                                <Text style={styles.fieldLabel}>Twitter</Text>
-                                <TextInput
-                                    value={twitter}
-                                    onChangeText={setTwitter}
-                                    style={styles.input}
-                                    placeholder="Ссылка"
-                                    placeholderTextColor={colors.textMuted}
-                                    autoCapitalize="none"
-                                />
-                            </View>
-                            <View style={[styles.field, styles.fieldHalf]}>
-                                <Text style={styles.fieldLabel}>VK</Text>
-                                <TextInput
-                                    value={vk}
-                                    onChangeText={setVk}
-                                    style={styles.input}
-                                    placeholder="Ссылка"
-                                    placeholderTextColor={colors.textMuted}
-                                    autoCapitalize="none"
-                                />
-                            </View>
-                        </View>
-
-                        <Button
-                            label={profileSaving ? 'Сохранение…' : 'Сохранить'}
-                            onPress={handleSaveProfile}
-                            disabled={profileSaving || profileLoading || !hasUnsavedChanges}
-                            loading={profileSaving}
-                            fullWidth
-                            size="md"
-                        />
-
-                        <View style={styles.divider} />
-
-                        <Text style={styles.subsectionTitle}>Telegram</Text>
-                        <View style={styles.field}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                <Text style={styles.fieldLabel}>Username в Telegram</Text>
-                                {telegramVerified ? (
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                        <Feather name="check-circle" size={14} color={colors.success} />
-                                        <Text style={[styles.settingMeta, { color: colors.success }]}>верифицирован</Text>
-                                    </View>
-                                ) : (
-                                    <Text style={styles.settingMeta}>не подтверждён</Text>
-                                )}
-                            </View>
-                            <TextInput
-                                value={telegramUsername}
-                                onChangeText={setTelegramUsername}
-                                style={styles.input}
-                                placeholder="@username"
-                                placeholderTextColor={colors.textMuted}
-                                autoCapitalize="none"
-                                editable={!telegramBusy}
-                            />
-                        </View>
-
-                        <Button
-                            label="Сохранить Telegram"
-                            onPress={saveTelegramUsername}
-                            disabled={telegramBusy || !telegramUsernameDirty}
-                            variant="secondary"
-                            fullWidth
-                            size="sm"
-                        />
-
-                        {!telegramVerified ? (
-                            <View style={{ gap: 8, marginTop: 8 }}>
-                                <Button
-                                    label="Авторизовать через Telegram"
-                                    onPress={startTelegramAuth}
-                                    disabled={telegramBusy}
-                                    fullWidth
-                                    size="sm"
-                                />
-                                {telegramAwaitingConfirm ? (
-                                    <Button
-                                        label="Я подтвердил в Telegram"
-                                        onPress={confirmTelegramAuth}
-                                        disabled={telegramBusy}
-                                        variant="secondary"
-                                        fullWidth
-                                        size="sm"
-                                    />
-                                ) : null}
-                            </View>
-                        ) : null}
-
-                        <Text style={[styles.subsectionTitle, { marginTop: 16 }]}>Предпочитаемый мессенджер</Text>
-                        <View
-                            style={styles.themeOptions}
-                            accessibilityRole="radiogroup"
-                            accessibilityLabel="Предпочитаемый мессенджер"
-                        >
-                            {messengerOptions.map((option) => {
-                                const isSelected = preferredMessenger === option.value;
-                                return (
-                                    <Pressable
-                                        key={option.value}
-                                        onPress={() => changePreferredMessenger(option.value)}
-                                        disabled={telegramBusy}
-                                        style={({ pressed }) => [
-                                            styles.themeOption,
-                                            isSelected && styles.themeOptionActive,
-                                            pressed && styles.themeOptionPressed,
-                                        ]}
-                                        accessibilityRole="radio"
-                                        accessibilityState={{ selected: isSelected }}
-                                        accessibilityLabel={option.label}
-                                        {...Platform.select({ web: { cursor: 'pointer' } })}
-                                    >
-                                        <View style={styles.themeOptionText}>
-                                            <Text style={styles.themeOptionTitle}>{option.label}</Text>
-                                        </View>
-                                        {isSelected ? (
-                                            <Feather name="check" size={16} color={colors.primary} />
-                                        ) : null}
-                                    </Pressable>
-                                );
-                            })}
-                        </View>
-
-                        <View style={styles.divider} />
-
-                        <Text style={styles.subsectionTitle}>Email-уведомления</Text>
-                        <View style={styles.settingsList}>
-                            <View style={styles.settingRow}>
-                                <View style={styles.settingTextBlock}>
-                                    <Text style={styles.settingTitle}>Отзывы</Text>
-                                    <Text style={styles.settingMeta}>Письма о новых комментариях к вашим путешествиям</Text>
-                                </View>
-                                <Toggle
-                                    value={emailNotifyComments}
-                                    onValueChange={handleEmailNotifyCommentsChange}
-                                    disabled={profileLoading || profileSaving}
-                                />
-                            </View>
-                            <View style={styles.settingRow}>
-                                <View style={styles.settingTextBlock}>
-                                    <Text style={styles.settingTitle}>Сообщения</Text>
-                                    <Text style={styles.settingMeta}>Письма о новых личных сообщениях</Text>
-                                </View>
-                                <Toggle
-                                    value={emailNotifyMessages}
-                                    onValueChange={handleEmailNotifyMessagesChange}
-                                    disabled={profileLoading || profileSaving}
-                                />
-                            </View>
-                        </View>
-
-                        <View style={styles.divider} />
-
-                        <Text style={styles.subsectionTitle}>Аватар</Text>
-                        <View style={styles.avatarRow}>
-                            <View style={styles.avatarField}>
-                                <Text style={styles.fieldLabel}>Аватар</Text>
-                                <View style={styles.avatarPickerRow}>
-                                    <View style={styles.avatarPreview}>
-                                        {avatarPreviewUrl ? (
-                                            <Image source={{ uri: avatarPreviewUrl }} style={styles.avatarPreviewImage} />
-                                        ) : (
-                                            <Feather name="image" size={18} color={colors.textMuted} />
-                                        )}
-                                    </View>
-                                    <View style={styles.avatarPickerButtons}>
-                                        <Button
-                                            label="Выбрать"
-                                            onPress={pickAvatar}
-                                            disabled={profileLoading || avatarSaving}
-                                            fullWidth={!isWeb}
-                                            variant="secondary"
-                                            size="sm"
-                                            style={isWeb ? styles.avatarButtonWeb : undefined}
-                                        />
-                                        <Button
-                                            label={avatarSaving ? 'Загрузка…' : 'Загрузить'}
-                                            onPress={() => uploadAvatar()}
-                                            disabled={profileLoading || avatarSaving || !avatarFile}
-                                            loading={avatarSaving}
-                                            fullWidth={!isWeb}
-                                            size="sm"
-                                            style={isWeb ? styles.avatarButtonWeb : undefined}
-                                        />
-                                    </View>
-                                </View>
-
-                                {Platform.OS === 'web' ? (
-                                    <View style={{ height: 0, width: 0, overflow: 'hidden' } as any}>
-                                        {
-                                            (React.createElement('input', {
-                                                ref: webFileInputRef,
-                                                type: 'file',
-                                                accept: 'image/*',
-                                                onChange: handleWebFileSelected,
-                                            }) as any)
-                                        }
-                                    </View>
-                                ) : null}
-                            </View>
-                        </View>
-                    </View>
+                    <ProfileSection
+                        styles={styles}
+                        colors={colors}
+                        isWeb={isWeb}
+                        username={username}
+                        profile={profile}
+                        profileLoading={profileLoading}
+                        loadProfile={loadProfile}
+                        settingsAvatarError={settingsAvatarError}
+                        setSettingsAvatarError={setSettingsAvatarError}
+                        derivedDisplayName={derivedDisplayName}
+                        firstName={firstName}
+                        setFirstName={setFirstName}
+                        lastName={lastName}
+                        setLastName={setLastName}
+                        youtube={youtube}
+                        setYoutube={setYoutube}
+                        instagram={instagram}
+                        setInstagram={setInstagram}
+                        twitter={twitter}
+                        setTwitter={setTwitter}
+                        vk={vk}
+                        setVk={setVk}
+                        profileSaving={profileSaving}
+                        hasUnsavedChanges={hasUnsavedChanges}
+                        handleSaveProfile={handleSaveProfile}
+                        telegramUsername={telegramUsername}
+                        setTelegramUsername={setTelegramUsername}
+                        telegramVerified={telegramVerified}
+                        telegramBusy={telegramBusy}
+                        telegramUsernameDirty={telegramUsernameDirty}
+                        telegramAwaitingConfirm={telegramAwaitingConfirm}
+                        saveTelegramUsername={saveTelegramUsername}
+                        startTelegramAuth={startTelegramAuth}
+                        confirmTelegramAuth={confirmTelegramAuth}
+                        preferredMessenger={preferredMessenger}
+                        changePreferredMessenger={changePreferredMessenger}
+                        messengerOptions={messengerOptions}
+                        emailNotifyComments={emailNotifyComments}
+                        emailNotifyMessages={emailNotifyMessages}
+                        handleEmailNotifyCommentsChange={handleEmailNotifyCommentsChange}
+                        handleEmailNotifyMessagesChange={handleEmailNotifyMessagesChange}
+                        avatarPreviewUrl={avatarPreviewUrl}
+                        avatarFile={avatarFile}
+                        avatarSaving={avatarSaving}
+                        pickAvatar={pickAvatar}
+                        uploadAvatar={uploadAvatar}
+                        handleWebFileSelected={handleWebFileSelected}
+                        webFileInputRef={webFileInputRef}
+                    />
 
                     <Text style={styles.sectionTitle}>Тема</Text>
 
-                    <View style={styles.card}>
-                        <View style={styles.cardRow}>
-                            <View style={styles.cardIcon}>
-                                <Feather name="sun" size={18} color={colors.primary} />
-                            </View>
-                            <View style={styles.cardText}>
-                                <Text style={styles.cardTitle}>Тема оформления</Text>
-                                <Text style={styles.cardMeta}>По умолчанию светлая</Text>
-                            </View>
-                        </View>
-
-                        <View
-                            style={styles.themeOptions}
-                            accessibilityRole="radiogroup"
-                            accessibilityLabel="Выбор темы оформления"
-                        >
-                            {themeOptions.map((option) => {
-                                const isSelected = theme === option.value;
-                                return (
-                                    <Pressable
-                                        key={option.value}
-                                        onPress={() => setTheme(option.value)}
-                                        style={({ pressed }) => [
-                                            styles.themeOption,
-                                            isSelected && styles.themeOptionActive,
-                                            pressed && styles.themeOptionPressed,
-                                        ]}
-                                        accessibilityRole="radio"
-                                        accessibilityState={{ selected: isSelected }}
-                                        accessibilityLabel={option.label}
-                                        {...Platform.select({ web: { cursor: 'pointer' } })}
-                                    >
-                                        <View style={[styles.themeOptionIcon, isSelected && styles.themeOptionIconActive]}>
-                                            <Feather name={option.icon} size={16} color={colors.primary} />
-                                        </View>
-                                        <View style={styles.themeOptionText}>
-                                            <Text style={styles.themeOptionTitle}>{option.label}</Text>
-                                            <Text style={styles.themeOptionDescription}>{option.description}</Text>
-                                        </View>
-                                        {isSelected ? (
-                                            <Feather name="check" size={16} color={colors.primary} />
-                                        ) : null}
-                                    </Pressable>
-                                );
-                            })}
-                        </View>
-                    </View>
+                    <ThemeSection
+                        styles={styles}
+                        colors={colors}
+                        theme={theme}
+                        setTheme={setTheme}
+                        themeOptions={themeOptions}
+                    />
 
                     {/* AND-17: Biometric authentication toggle (native only) */}
                     {showBiometricToggle ? (
                         <>
                             <Text style={styles.sectionTitle}>Безопасность</Text>
-                            <View style={styles.card}>
-                                <View style={styles.settingRow}>
-                                    <View style={styles.settingTextBlock}>
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                            <Feather name="lock" size={16} color={colors.primary} />
-                                            <Text style={styles.settingTitle}>Вход по биометрии</Text>
-                                        </View>
-                                        <Text style={styles.settingMeta}>
-                                            Используйте отпечаток пальца или Face ID для быстрого входа
-                                        </Text>
-                                    </View>
-                                    <Toggle
-                                        value={biometric.isEnabled}
-                                        onValueChange={async (val) => {
-                                            if (val) await biometric.enable();
-                                            else await biometric.disable();
-                                        }}
-                                        disabled={biometric.isChecking}
-                                    />
-                                </View>
-                            </View>
+                            <BiometricSection styles={styles} colors={colors} biometric={biometric} />
                         </>
                     ) : null}
 
@@ -667,150 +377,60 @@ export default function SettingsScreen() {
 
                     <Text style={styles.sectionTitle}>Сообщения</Text>
 
-                    <Pressable
-                        style={[styles.card, globalFocusStyles.focusable]}
-                        onPress={() => router.push('/messages' as any)}
-                        accessibilityRole="button"
+                    <NavCardSection
+                        styles={styles}
+                        colors={colors}
+                        icon="mail"
+                        title="Личные сообщения"
+                        meta="Переписка с авторами путешествий"
                         accessibilityLabel="Перейти к сообщениям"
-                        {...Platform.select({ web: { cursor: 'pointer' } })}
-                    >
-                        <View style={styles.cardRow}>
-                            <View style={styles.cardIcon}>
-                                <Feather name="mail" size={18} color={colors.primary} />
-                            </View>
-                            <View style={styles.cardText}>
-                                <Text style={styles.cardTitle}>Личные сообщения</Text>
-                                <Text style={styles.cardMeta}>Переписка с авторами путешествий</Text>
-                            </View>
-                            <Feather name="chevron-right" size={18} color={colors.textMuted} />
-                        </View>
-                    </Pressable>
+                        onPress={() => router.push('/messages' as any)}
+                    />
 
                     <Text style={styles.sectionTitle}>Приватность и данные</Text>
 
-                    <Pressable
-                        style={[styles.card, globalFocusStyles.focusable]}
-                        onPress={() => router.push('/privacy-settings' as any)}
-                        accessibilityRole="button"
+                    <NavCardSection
+                        styles={styles}
+                        colors={colors}
+                        icon="eye"
+                        title="Настройки приватности"
+                        meta="Кто видит ваши путешествия, маршруты и контакты"
                         accessibilityLabel="Настройки приватности"
-                        {...Platform.select({ web: { cursor: 'pointer' } })}
-                    >
-                        <View style={styles.cardRow}>
-                            <View style={styles.cardIcon}>
-                                <Feather name="eye" size={18} color={colors.primary} />
-                            </View>
-                            <View style={styles.cardText}>
-                                <Text style={styles.cardTitle}>Настройки приватности</Text>
-                                <Text style={styles.cardMeta}>Кто видит ваши путешествия, маршруты и контакты</Text>
-                            </View>
-                            <Feather name="chevron-right" size={18} color={colors.textMuted} />
-                        </View>
-                    </Pressable>
+                        onPress={() => router.push('/privacy-settings' as any)}
+                    />
 
                     <DataOwnershipSection />
 
-                    <Pressable
-                        style={[styles.card, globalFocusStyles.focusable]}
-                        onPress={() => router.push('/security-journal' as any)}
-                        accessibilityRole="button"
+                    <NavCardSection
+                        styles={styles}
+                        colors={colors}
+                        icon="shield"
+                        title="Журнал безопасности"
+                        meta="История входов и действий с аккаунтом"
                         accessibilityLabel="Журнал безопасности"
-                        {...Platform.select({ web: { cursor: 'pointer' } })}
-                    >
-                        <View style={styles.cardRow}>
-                            <View style={styles.cardIcon}>
-                                <Feather name="shield" size={18} color={colors.primary} />
-                            </View>
-                            <View style={styles.cardText}>
-                                <Text style={styles.cardTitle}>Журнал безопасности</Text>
-                                <Text style={styles.cardMeta}>История входов и действий с аккаунтом</Text>
-                            </View>
-                            <Feather name="chevron-right" size={18} color={colors.textMuted} />
-                        </View>
-                    </Pressable>
+                        onPress={() => router.push('/security-journal' as any)}
+                    />
 
                     <Text style={styles.sectionTitle}>Аккаунт</Text>
 
-                    <View style={styles.card}>
-                        <View style={styles.cardRow}>
-                            <View style={styles.cardIcon}>
-                                <Feather name="user" size={18} color={colors.primary} />
-                            </View>
-                            <View style={styles.cardText}>
-                                <Text style={styles.cardTitle}>{username || 'Пользователь'}</Text>
-                                <Text style={styles.cardMeta}>Вы вошли в аккаунт</Text>
-                            </View>
-                        </View>
-
-                        <Pressable
-                            style={[styles.dangerButton, globalFocusStyles.focusable]}
-                            onPress={handleLogout}
-                            accessibilityRole="button"
-                            accessibilityLabel="Выйти из аккаунта"
-                            {...Platform.select({ web: { cursor: 'pointer' } })}
-                        >
-                            <Feather name="log-out" size={18} color={colors.danger} />
-                            <Text style={styles.dangerButtonText}>Выйти</Text>
-                        </Pressable>
-
-                        <Pressable
-                            style={[styles.dangerButton, styles.deleteAccountButton, globalFocusStyles.focusable]}
-                            onPress={handleDeleteAccount}
-                            accessibilityRole="button"
-                            accessibilityLabel="Удалить аккаунт"
-                            {...Platform.select({ web: { cursor: 'pointer' } })}
-                        >
-                            <Feather name="user-x" size={18} color={colors.textOnPrimary} />
-                            <Text style={styles.deleteAccountButtonText}>Удалить аккаунт</Text>
-                        </Pressable>
-                    </View>
+                    <AccountSection
+                        styles={styles}
+                        colors={colors}
+                        username={username}
+                        handleLogout={handleLogout}
+                        handleDeleteAccount={handleDeleteAccount}
+                    />
 
                     <Text style={styles.sectionTitle}>Данные</Text>
 
-                    <View style={styles.card}>
-                        <View style={styles.cardRow}>
-                            <View style={styles.cardIcon}>
-                                <Feather name="heart" size={18} color={colors.primary} />
-                            </View>
-                            <View style={styles.cardText}>
-                                <Text style={styles.cardTitle}>Избранное</Text>
-                                <Text style={styles.cardMeta}>{Array.isArray(favorites) ? favorites.length : 0} шт.</Text>
-                            </View>
-                        </View>
-
-                        <Pressable
-                            style={[styles.dangerButton, globalFocusStyles.focusable]}
-                            onPress={handleClearFavorites}
-                            accessibilityRole="button"
-                            accessibilityLabel="Очистить избранное"
-                            {...Platform.select({ web: { cursor: 'pointer' } })}
-                        >
-                            <Feather name="trash-2" size={18} color={colors.danger} />
-                            <Text style={styles.dangerButtonText}>Очистить избранное</Text>
-                        </Pressable>
-                    </View>
-
-                    <View style={styles.card}>
-                        <View style={styles.cardRow}>
-                            <View style={styles.cardIcon}>
-                                <Feather name="clock" size={18} color={colors.primary} />
-                            </View>
-                            <View style={styles.cardText}>
-                                <Text style={styles.cardTitle}>История просмотров</Text>
-                                <Text style={styles.cardMeta}>{Array.isArray(viewHistory) ? viewHistory.length : 0} шт.</Text>
-                            </View>
-                        </View>
-
-                        <Pressable
-                            style={[styles.dangerButton, globalFocusStyles.focusable]}
-                            onPress={handleClearHistory}
-                            accessibilityRole="button"
-                            accessibilityLabel="Очистить историю просмотров"
-                            {...Platform.select({ web: { cursor: 'pointer' } })}
-                        >
-                            <Feather name="trash-2" size={18} color={colors.danger} />
-                            <Text style={styles.dangerButtonText}>Очистить историю</Text>
-                        </Pressable>
-                    </View>
+                    <DataManagementSection
+                        styles={styles}
+                        colors={colors}
+                        favorites={favorites}
+                        viewHistory={viewHistory}
+                        handleClearFavorites={handleClearFavorites}
+                        handleClearHistory={handleClearHistory}
+                    />
                     </View>
                 </View>
             </ScrollView>

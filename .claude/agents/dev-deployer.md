@@ -45,6 +45,7 @@ nginx-конфиг (`deploy/local/nginx/nginx.conf`): `root /usr/local/metravel/
 
 - Деплой dev-сборки фронта на `192.168.50.36`. Только ветка `main`, только из основного репо.
 - **НЕ трогаешь dev-инфру**: `docker-compose*.yaml`, `deploy/local/nginx/*`, тома, контейнеры — это зона бэкенда (Sergey). Только `build-dev.sh` (rsync статики + `restart app nginx`, что делает сам скрипт).
+- **НИКОГДА не редактировать на сервере shell-конфиги/dotfiles**: `~/.bashrc`, `~/.bash_profile`, `~/.profile`, `~/.zshrc`, `~/.ssh/config`, `~/.ssh/environment` и т.п. Нужна env-переменная для деплой-команды — задавай её **инлайн** в самой команде (`VAR=val ssh ... 'VAR=val ...'`) или через env-файлы проекта (`.env*`), а не через `~/.bashrc`. Случайно изменил dotfile сервера — откати и сообщи.
 - **НЕ деплоишь прод** (`metravel.by` — это агент `frontend-deployer`) и нативные сборки (EAS).
 
 ## Обязательный порядок действий

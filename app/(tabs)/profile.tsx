@@ -25,13 +25,13 @@ import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useProfileGrid } from '@/components/screens/profile/useProfileGrid';
 import { ProfileHeaderSection } from '@/components/screens/profile/ProfileHeaderSection';
+import { ProfileOverviewTab } from '@/components/screens/profile/ProfileOverviewTab';
 import { ProfileTravelGrid } from '@/components/screens/profile/ProfileTravelGrid';
+import { type ProfileStatPill } from '@/components/profile/ProfileStatPills';
+import { type ProfileQuickActionKey } from '@/components/profile/ProfileQuickActions';
 import { useThemedColors } from '@/hooks/useTheme';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import AchievementsSection from '@/components/achievements/AchievementsSection';
-import RareAwardsSection from '@/components/achievements/RareAwardsSection';
+import { useMyAchievements } from '@/hooks/useAchievementsApi';
 import BadgeUnlockToast from '@/components/achievements/BadgeUnlockToast';
-import GamificationProfileBlock from '@/components/achievements/GamificationProfileBlock';
 import PlaceFirstBadgeToast from '@/components/achievements/PlaceFirstBadgeToast';
 import { useResponsive } from '@/hooks/useResponsive';
 import { buildLoginHref } from '@/utils/authNavigation';
@@ -55,12 +55,6 @@ import {
   withVisibleEngagementStats,
   type UserStats,
 } from '@/components/screens/profile/profileScreen.helpers';
-
-const profileScreenAchievementsWrap = {
-  marginTop: DESIGN_TOKENS.spacing.xs,
-  marginBottom: DESIGN_TOKENS.spacing.md,
-  gap: DESIGN_TOKENS.spacing.md,
-} as const;
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -109,7 +103,9 @@ export default function ProfileScreen() {
     favoritesCount: 0,
     viewsCount: 0,
   });
-  const [activeTab, setActiveTab] = useState<ProfileTabKey>('travels');
+  const [activeTab, setActiveTab] = useState<ProfileTabKey>('overview');
+  const { data: myAchievements } = useMyAchievements();
+  const badgesCount = myAchievements?.rank?.badgesCount ?? 0;
   const [activeTravelMetric, setActiveTravelMetric] = useState<ProfileTravelEngagementMetricKey | null>(null);
   const lastEndReachedAtRef = useRef(0);
 
@@ -461,6 +457,32 @@ export default function ProfileScreen() {
 
   const handleOpenCalendar = useCallback(() => router.push('/calendar' as any), [router]);
 
+  const statPills = useMemo<ProfileStatPill[]>(() => [
+    {
+      key: 'travels',
+      label: 'Маршруты',
+      value: stats.travelsCount,
+      icon: 'map',
+      onPress: () => handleProfileTabChange('travels'),
+      accessibilityHint: 'Показать ваши опубликованные маршруты',
+    },
+    {
+      key: 'subscriptions',
+      label: 'Подписки',
+      icon: 'users',
+      onPress: () => router.push('/subscriptions'),
+      accessibilityHint: 'Перейти к подпискам и подписчикам',
+    },
+    {
+      key: 'achievements',
+      label: 'Достижения',
+      value: badgesCount,
+      icon: 'award',
+      onPress: () => handleProfileTabChange('overview'),
+      accessibilityHint: 'Открыть обзор с достижениями',
+    },
+  ], [stats.travelsCount, badgesCount, handleProfileTabChange, router]);
+
   const Header = useMemo(
     () => (
       <ProfileHeaderSection
@@ -472,17 +494,7 @@ export default function ProfileScreen() {
         handleLogout={handleLogout}
         pickAndUpload={pickAndUpload}
         avatarUploading={avatarUploading}
-        authoredTravelEngagementSummary={authoredTravelEngagementSummary}
-        travelsCount={stats.travelsCount}
-        loadedTravelsCount={profileTravels.length}
-        travelsLoading={travelsLoading}
-        activeTravelMetric={activeTravelMetric}
-        handleTravelMetricPress={handleTravelMetricPress}
-        authoredTravelEngagementScope={authoredTravelEngagementScope}
-        personalTravelStatusSummary={personalTravelStatusSummary}
-        formatTripsCount={formatTripsCount}
-        onOpenCalendar={handleOpenCalendar}
-        handleQuickAction={handleQuickAction}
+        statPills={statPills}
         activeTab={activeTab}
         handleProfileTabChange={handleProfileTabChange}
         tabCounts={tabCounts}
@@ -499,37 +511,60 @@ export default function ProfileScreen() {
       handleLogout,
       pickAndUpload,
       avatarUploading,
-      handleQuickAction,
-      authoredTravelEngagementSummary,
-      stats,
+      statPills,
       tabCounts,
       activeTab,
-      activeTravelMetric,
       showClearButton,
       handleClearActiveTab,
       handleProfileTabChange,
-      handleTravelMetricPress,
-      handleOpenCalendar,
-      travelsLoading,
-      profileTravels.length,
-      authoredTravelEngagementScope,
-      personalTravelStatusSummary,
-      formatTripsCount,
     ]
   );
+
+  const overviewContent = useMemo(
+    () => (
+      <ProfileOverviewTab
+        userProp={userProp}
+        profile={profile}
+        travelsCount={stats.travelsCount}
+        loadedTravelsCount={profileTravels.length}
+        travelsLoading={travelsLoading}
+        authoredTravelEngagementSummary={authoredTravelEngagementSummary}
+        authoredTravelEngagementScope={authoredTravelEngagementScope}
+        activeTravelMetric={activeTravelMetric}
+        handleTravelMetricPress={handleTravelMetricPress}
+        personalTravelStatusSummary={personalTravelStatusSummary}
+        formatTripsCount={formatTripsCount}
+        onOpenCalendar={handleOpenCalendar}
+        handleQuickAction={handleQuickAction as (key: ProfileQuickActionKey) => void}
+      />
+    ),
+    [
+      userProp,
+      profile,
+      stats.travelsCount,
+      profileTravels.length,
+      travelsLoading,
+      authoredTravelEngagementSummary,
+      authoredTravelEngagementScope,
+      activeTravelMetric,
+      handleTravelMetricPress,
+      personalTravelStatusSummary,
+      formatTripsCount,
+      handleOpenCalendar,
+      handleQuickAction,
+    ]
+  );
+
+  const isOverview = activeTab === 'overview';
 
   const ListHeader = useMemo(
     () => (
       <>
         {Header}
-        <View style={profileScreenAchievementsWrap}>
-          <AchievementsSection />
-          <RareAwardsSection />
-          <GamificationProfileBlock />
-        </View>
+        {isOverview ? overviewContent : null}
       </>
     ),
-    [Header],
+    [Header, isOverview, overviewContent],
   );
 
   const renderItem = useCallback(({ item, index }: { item: Travel; index: number }) => (
@@ -604,7 +639,7 @@ export default function ProfileScreen() {
           onContentSizeChange={handleWebContentSizeChange}
         >
           {ListHeader}
-          {isTravelsTabLoading ? ListSkeleton : (
+          {isOverview ? null : isTravelsTabLoading ? ListSkeleton : (
             currentData.length === 0 ? (
               <View style={styles.emptyWrap}>
                 <EmptyState {...emptyStateProps} />
@@ -646,7 +681,7 @@ export default function ProfileScreen() {
           refreshing={refreshing}
           onRefresh={onRefresh}
           ListEmptyComponent={
-            isTravelsTabLoading ? ListSkeleton : (
+            isOverview ? null : isTravelsTabLoading ? ListSkeleton : (
               <View style={styles.emptyWrap}>
                 <EmptyState {...emptyStateProps} />
               </View>

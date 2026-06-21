@@ -248,15 +248,14 @@ describe('ProfileScreen', () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(1, 1);
 
-    const { getByLabelText, getAllByLabelText, findByLabelText } = renderProfile();
+    const { getByLabelText, findByLabelText } = renderProfile();
 
-    // По умолчанию активна вкладка "Маршруты" и показываются путешествия пользователя
+    // По умолчанию активна вкладка "Обзор"; переключаемся на "Маршруты"
+    fireEvent.press(await findByLabelText('Мои маршруты: 3'));
     expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
 
     fireEvent.press(getByLabelText('Сохранённое: 1'));
     expect(await findByLabelText(/Fav 1/)).toBeTruthy();
-    expect(getAllByLabelText('Были: 3').length).toBeGreaterThan(0);
-    expect(getAllByLabelText('Планируют: 7').length).toBeGreaterThan(0);
 
     fireEvent.press(getByLabelText('Недавно смотрел: 1'));
     expect(await findByLabelText(/History 1/)).toBeTruthy();
@@ -266,17 +265,19 @@ describe('ProfileScreen', () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(0, 0);
 
-    const { getAllByLabelText, findByLabelText, queryByLabelText } = renderProfile();
+    const { getByLabelText, findAllByLabelText, findByLabelText, queryByLabelText } = renderProfile();
 
-    expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
-
-    fireEvent.press(getAllByLabelText('Были: 3')[0]);
+    // Метрики статистики автора живут во вкладке "Обзор" (активна по умолчанию).
+    // Клик по метрике — drill-down: переключает на "Маршруты" с фильтром.
+    fireEvent.press((await findAllByLabelText('Были: 3'))[0]);
 
     expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
     expect(queryByLabelText(/My Travel 2/)).toBeNull();
     expect(queryByLabelText(/My Travel 3/)).toBeNull();
 
-    fireEvent.press(getAllByLabelText('Планируют: 7')[0]);
+    // Смена метрики — возврат на "Обзор" и выбор другой метрики.
+    fireEvent.press(getByLabelText('Обзор профиля'));
+    fireEvent.press((await findAllByLabelText('Планируют: 7'))[0]);
 
     expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
     expect(await findByLabelText(/My Travel 2/)).toBeTruthy();

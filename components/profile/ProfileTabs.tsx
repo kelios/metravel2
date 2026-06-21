@@ -5,25 +5,24 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 
-export type ProfileTabKey = 'travels' | 'favorites' | 'history';
+export type ProfileTabKey = 'overview' | 'travels' | 'favorites' | 'history';
 
 interface ProfileTabsProps {
   activeTab: ProfileTabKey;
   onChangeTab: (key: ProfileTabKey) => void;
-  counts?: {
-    travels?: number;
-    favorites?: number;
-    history?: number;
-  };
+  counts?: Partial<Record<ProfileTabKey, number>>;
+  /** Какие табы показывать и в каком порядке. По умолчанию — все четыре. */
+  tabKeys?: ProfileTabKey[];
 }
 
 const TAB_ICONS: Record<ProfileTabKey, React.ComponentProps<typeof Feather>['name']> = {
+  overview: 'grid',
   travels: 'map',
   favorites: 'heart',
   history: 'clock',
 };
 
-export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps) {
+export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: ProfileTabsProps) {
   const colors = useThemedColors();
 
   const styles = useMemo(
@@ -51,7 +50,7 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
           justifyContent: 'center',
           gap: 3,
           paddingVertical: 8,
-          paddingHorizontal: 6,
+          paddingHorizontal: 4,
           borderRadius: DESIGN_TOKENS.radii.pill,
           backgroundColor: 'transparent',
           minHeight: DESIGN_TOKENS.touchTarget.minHeight,
@@ -80,7 +79,7 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
           }),
         },
         tabText: {
-          fontSize: DESIGN_TOKENS.typography.sizes.sm,
+          fontSize: DESIGN_TOKENS.typography.sizes.xs,
           fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
           color: colors.textMuted,
           textAlign: 'center',
@@ -114,11 +113,18 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
     [colors]
   );
 
-  const tabs: Array<{ key: ProfileTabKey; label: string; a11yLabel: string; hint: string }> = [
+  const allTabs: Array<{ key: ProfileTabKey; label: string; a11yLabel: string; hint: string }> = [
+    { key: 'overview', label: 'Обзор', a11yLabel: 'Обзор профиля', hint: 'Сводка: достижения, статистика и личные статусы' },
     { key: 'travels', label: 'Маршруты', a11yLabel: 'Мои маршруты', hint: 'Показать ваши опубликованные путешествия' },
     { key: 'favorites', label: 'Избранное', a11yLabel: 'Сохранённое', hint: 'Показать сохранённые путешествия' },
     { key: 'history', label: 'История', a11yLabel: 'Недавно смотрел', hint: 'Показать историю просмотров' },
   ];
+
+  const tabs = tabKeys
+    ? tabKeys
+        .map((key) => allTabs.find((tab) => tab.key === key))
+        .filter((tab): tab is (typeof allTabs)[number] => tab != null)
+    : allTabs;
 
   return (
     <View style={styles.wrapper} accessibilityRole="tablist">
@@ -138,7 +144,7 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
               onPress={() => onChangeTab(tab.key)}
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}
-              accessibilityLabel={`${tab.a11yLabel}: ${count}`}
+              accessibilityLabel={count > 0 ? `${tab.a11yLabel}: ${count}` : tab.a11yLabel}
               accessibilityHint={tab.hint}
             >
               <View style={styles.tabTopRow}>
