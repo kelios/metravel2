@@ -21,9 +21,19 @@ describe('QuestsContentPanel', () => {
         mobileFilterBtn: {},
         mobileFilterBtnText: {},
         contentBody: {},
+        contentBodyMap: {},
+        nearbyCtaBlock: {},
+        showNearbyBtn: {},
+        showNearbyBtnDisabled: {},
+        showNearbyBtnText: {},
+        geoMessageText: {},
         mapSection: {},
+        geoBanner: {},
+        geoBannerText: {},
         mapLoading: {},
         mapContainer: {},
+        mapSearchAreaBtn: {},
+        mapSearchAreaBtnText: {},
         skeletonGrid: {},
         skeletonCard: {},
         questsGrid: {},
@@ -31,6 +41,7 @@ describe('QuestsContentPanel', () => {
 
     const colors = {
         text: '#111',
+        textOnPrimary: '#fff',
         primary: '#222',
         warning: '#d97706',
         warningSoft: '#fef3c7',
@@ -68,12 +79,19 @@ describe('QuestsContentPanel', () => {
                 ]}
                 mapCenter={{ latitude: 53.9, longitude: 27.56 }}
                 userLoc={null}
+                isMapAreaActive={false}
+                geoMessage={null}
+                geoRequesting={false}
+                showMapAreaSearch={false}
                 radiiLg={24}
                 LazyQuestMap={LazyQuestMap}
                 isMobile={false}
+                onShowNearby={() => {}}
                 onOpenFilterDrawer={() => {}}
                 onToggleViewMode={() => {}}
                 onMapUserLocationChange={() => {}}
+                onMapMove={() => {}}
+                onSearchMapArea={() => {}}
             />
         );
 
@@ -109,17 +127,123 @@ describe('QuestsContentPanel', () => {
                 mapPoints={[]}
                 mapCenter={{ latitude: 52.23, longitude: 21.01 }}
                 userLoc={null}
+                isMapAreaActive={false}
+                geoMessage={null}
+                geoRequesting={false}
+                showMapAreaSearch={false}
                 radiiLg={24}
                 LazyQuestMap={LazyQuestMap}
                 isMobile
+                onShowNearby={() => {}}
                 onOpenFilterDrawer={onOpenFilterDrawer}
                 onToggleViewMode={() => {}}
                 onMapUserLocationChange={() => {}}
+                onMapMove={() => {}}
+                onSearchMapArea={() => {}}
             />
         );
 
         fireEvent.press(getByLabelText('Выбрать город'));
 
         expect(onOpenFilterDrawer).toHaveBeenCalledTimes(1);
+    });
+
+    it('exposes the mobile nearby CTA and geolocation message in list mode', () => {
+        mockIsMobile = true;
+        (Platform as { OS: string }).OS = 'web';
+        const LazyQuestMap = jest.fn(() => null);
+        const onShowNearby = jest.fn();
+
+        const { getByTestId, getByText } = render(
+            <QuestsContentPanel
+                styles={styles}
+                colors={colors}
+                dataLoaded
+                viewMode="list"
+                selectedCityId="__nearby__"
+                selectedCityName="Рядом"
+                nearbyId="__nearby__"
+                nearbyRadiusKm={15}
+                questsAll={[]}
+                questCardWidth={320}
+                mapPoints={[]}
+                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
+                userLoc={null}
+                isMapAreaActive={false}
+                geoMessage="Разрешите доступ к геолокации."
+                geoRequesting={false}
+                showMapAreaSearch={false}
+                radiiLg={24}
+                LazyQuestMap={LazyQuestMap}
+                isMobile
+                onShowNearby={onShowNearby}
+                onOpenFilterDrawer={() => {}}
+                onToggleViewMode={() => {}}
+                onMapUserLocationChange={() => {}}
+                onMapMove={() => {}}
+                onSearchMapArea={() => {}}
+            />
+        );
+
+        fireEvent.press(getByTestId('quests-show-nearby'));
+
+        expect(onShowNearby).toHaveBeenCalledTimes(1);
+        expect(getByText('Разрешите доступ к геолокации.')).toBeTruthy();
+    });
+
+    it('shows the search-this-area action on the quest map and forwards map moves', () => {
+        (Platform as { OS: string }).OS = 'web';
+        const LazyQuestMap = jest.fn(() => null);
+        const onMapMove = jest.fn();
+        const onSearchMapArea = jest.fn();
+
+        const { getByTestId } = render(
+            <QuestsContentPanel
+                styles={styles}
+                colors={colors}
+                dataLoaded
+                viewMode="map"
+                selectedCityId="warsaw"
+                selectedCityName="Warsaw"
+                nearbyId="__nearby__"
+                nearbyRadiusKm={15}
+                questsAll={[]}
+                questCardWidth={320}
+                mapPoints={[
+                    {
+                        id: 'warsaw-quest',
+                        coord: '52.23,21.01',
+                        address: 'Warsaw',
+                        travelImageThumbUrl: '',
+                        categoryName: 'Квест',
+                    },
+                ]}
+                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
+                userLoc={null}
+                isMapAreaActive={false}
+                geoMessage={null}
+                geoRequesting={false}
+                showMapAreaSearch
+                radiiLg={24}
+                LazyQuestMap={LazyQuestMap}
+                isMobile={false}
+                onShowNearby={() => {}}
+                onOpenFilterDrawer={() => {}}
+                onToggleViewMode={() => {}}
+                onMapUserLocationChange={() => {}}
+                onMapMove={onMapMove}
+                onSearchMapArea={onSearchMapArea}
+            />
+        );
+
+        fireEvent.press(getByTestId('quests-map-search-area'));
+
+        expect(onSearchMapArea).toHaveBeenCalledTimes(1);
+        expect(LazyQuestMap).toHaveBeenCalledWith(
+            expect.objectContaining({
+                onMapMove,
+            }),
+            undefined,
+        );
     });
 });

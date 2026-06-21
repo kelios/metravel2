@@ -462,6 +462,9 @@ export default function QuestsScreen() {
     const titleText = useMemo(() => {
         if (!selectedCityId) return 'Квесты | MeTravel';
         if (selectedCityId === NEARBY_ID) {
+            if (activeMapAreaCenter) {
+                return `Квесты: область на карте — ${questsAll.length} ${questsAll.length === 1 ? 'квест' : 'квестов'} | MeTravel`;
+            }
             if (!userLoc) {
                 return 'Квесты: все города | MeTravel';
             }
@@ -473,10 +476,13 @@ export default function QuestsScreen() {
         return selectedCityName
             ? `Квесты: ${selectedCityName} | MeTravel`
             : 'Все квесты | MeTravel';
-    }, [selectedCityId, selectedCityName, nearbyCount, nearbyRadiusKm, userLoc]);
+    }, [selectedCityId, selectedCityName, nearbyCount, nearbyRadiusKm, userLoc, activeMapAreaCenter, questsAll.length]);
 
     const descText = useMemo(() => {
         if (selectedCityId === NEARBY_ID) {
+            if (activeMapAreaCenter) {
+                return 'Офлайн-квесты в выбранной области карты. Перемещайте карту и уточняйте поиск по текущему району.';
+            }
             if (!userLoc) {
                 return 'Каталог офлайн-квестов во всех доступных городах. Разрешите геолокацию, чтобы увидеть приключения рядом с вами.';
             }
@@ -484,7 +490,7 @@ export default function QuestsScreen() {
         }
         if (selectedCityName) return `Офлайн-квесты в городе ${selectedCityName}. Прогулки по точкам, задания и маршруты.`;
         return 'Исследуйте города и парки с офлайн-квестами — приключения на карте рядом с вами.';
-    }, [selectedCityId, selectedCityName, userLoc]);
+    }, [selectedCityId, selectedCityName, userLoc, activeMapAreaCenter]);
     const questsStructuredData = createQuestCatalogStructuredData({
         canonical: buildCanonicalUrl('/quests'),
         title: titleText,
@@ -594,6 +600,7 @@ export default function QuestsScreen() {
                 mapPoints={mapPoints}
                 mapCenter={mapCenter}
                 userLoc={userLoc}
+                isMapAreaActive={Boolean(activeMapAreaCenter)}
                 geoMessage={geoMessage}
                 geoRequesting={geoRequesting}
                 showMapAreaSearch={Boolean(pendingMapAreaCenter)}

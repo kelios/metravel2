@@ -57,19 +57,29 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             ...Platform.select({
                 web: {
                     overflowY: 'auto',
-                    maxHeight: isMobileW ? 'auto' : '100vh',
+                    maxHeight: isMobileW ? '100%' : '100vh',
                     position: isMobileW ? 'relative' : 'sticky',
                     top: 0,
                     boxShadow: ((colors.boxShadows as any)?.card ?? DESIGN_TOKENS.shadows.card) as any,
                     scrollbarWidth: 'thin',
                     scrollbarColor: `${colors.borderLight} transparent`,
                     transition: 'width 0.3s ease',
+                    WebkitOverflowScrolling: 'touch',
+                    overscrollBehavior: 'contain',
                 } as any,
             }),
         },
         sidebarScroll: {
             flex: 1,
             minHeight: 0,
+            ...Platform.select({
+                web: {
+                    overflowY: 'auto',
+                    WebkitOverflowScrolling: 'touch',
+                    overscrollBehavior: 'contain',
+                    touchAction: 'pan-y',
+                } as any,
+            }),
         },
         sidebarHeader: {
             padding: headerPadding,
@@ -417,6 +427,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                           top: 0,
                           zIndex: 10,
                           backgroundColor: colors.surface,
+                          paddingTop: `calc(${spacing.lg}px + env(safe-area-inset-top, 0px))`,
                       } as any)
                     : ({
                           position: 'sticky',
@@ -454,8 +465,56 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                 ? (Platform.OS === 'web' ? 64 + spacing.xl : spacing.xl)
                 : spacing.lg,
         },
+        contentBodyMap: {
+            ...(isMobileW
+                ? {
+                    paddingHorizontal: 0,
+                    paddingBottom: Platform.OS === 'web' ? 'env(safe-area-inset-bottom, 0px)' : 0,
+                }
+                : null),
+        },
         mapSection: {
             width: '100%',
+        },
+        nearbyCtaBlock: {
+            gap: spacing.xs,
+            marginBottom: spacing.md,
+            ...(isMobileW
+                ? {
+                    paddingHorizontal: spacing.md,
+                }
+                : null),
+        },
+        showNearbyBtn: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: spacing.xs,
+            minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.sm,
+            borderRadius: CONTROL_RADIUS,
+            backgroundColor: colors.brand,
+            ...Platform.select({
+                web: {
+                    cursor: 'pointer',
+                    boxShadow: ((colors.boxShadows as any)?.light ?? DESIGN_TOKENS.shadows.light) as any,
+                } as any,
+            }),
+        },
+        showNearbyBtnDisabled: {
+            opacity: 0.7,
+        },
+        showNearbyBtnText: {
+            color: colors.textOnPrimary,
+            fontSize: typography.sizes.sm,
+            fontWeight: '700',
+        },
+        geoMessageText: {
+            color: colors.warningDark,
+            fontSize: typography.sizes.sm,
+            fontWeight: '600',
+            lineHeight: 19,
         },
         geoBanner: {
             flexDirection: 'row',
@@ -478,22 +537,58 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         },
         mapContainer: {
             width: '100%',
-            height: Math.min(isMobileW ? 420 : 620, screenHeight ? screenHeight * 0.6 : 620),
-            borderRadius: radii.lg,
+            height: isMobileW
+                ? (Platform.OS === 'web'
+                    ? 'calc(100dvh - 148px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))'
+                    : Math.max(420, (screenHeight || 700) - 172))
+                : Math.min(620, screenHeight ? screenHeight * 0.6 : 620),
+            minHeight: isMobileW ? 420 : undefined,
+            borderRadius: isMobileW ? 0 : radii.lg,
             overflow: 'hidden',
-            borderWidth: 1,
+            borderWidth: isMobileW ? 0 : 1,
             borderColor: colors.borderLight,
             backgroundColor: colors.backgroundSecondary,
+            position: 'relative',
         },
         mapLoading: {
             width: '100%',
-            height: Math.min(isMobileW ? 420 : 620, screenHeight ? screenHeight * 0.6 : 620),
-            borderRadius: radii.lg,
+            height: isMobileW
+                ? (Platform.OS === 'web'
+                    ? 'calc(100dvh - 148px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))'
+                    : Math.max(420, (screenHeight || 700) - 172))
+                : Math.min(620, screenHeight ? screenHeight * 0.6 : 620),
+            borderRadius: isMobileW ? 0 : radii.lg,
             borderWidth: 1,
             borderColor: colors.borderLight,
             backgroundColor: colors.surface,
             alignItems: 'center',
             justifyContent: 'center',
+        },
+        mapSearchAreaBtn: {
+            position: 'absolute',
+            top: Platform.OS === 'web' ? `calc(${spacing.sm}px + env(safe-area-inset-top, 0px))` : spacing.sm,
+            alignSelf: 'center',
+            zIndex: 20,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: spacing.xs,
+            minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.sm,
+            borderRadius: radii.full,
+            backgroundColor: colors.brand,
+            ...Platform.select({
+                web: {
+                    cursor: 'pointer',
+                    boxShadow: ((colors.boxShadows as any)?.modal ?? DESIGN_TOKENS.shadows.modal) as any,
+                } as any,
+            }),
+        },
+        mapSearchAreaBtnText: {
+            color: colors.textOnPrimary,
+            fontSize: typography.sizes.sm,
+            fontWeight: '800',
         },
 
         /* ---- Quests Grid (Modern responsive grid) ---- */
@@ -566,6 +661,8 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                     animationKeyframes: 'fadeIn',
                     animationDuration: '0.2s',
                     animationTimingFunction: 'ease',
+                    touchAction: 'none',
+                    overscrollBehavior: 'none',
                 } as any,
                 // Native: position the backdrop explicitly — web-only styles above
                 // left the overlay zero-sized on iOS/Android, so the drawer never
@@ -587,6 +684,10 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                     bottom: 0,
                     width: 340,
                     maxWidth: '88vw',
+                    height: '100dvh',
+                    maxHeight: '100dvh',
+                    paddingTop: 'env(safe-area-inset-top, 0px)',
+                    paddingBottom: 'env(safe-area-inset-bottom, 0px)',
                     zIndex: 1000,
                     borderTopRightRadius: PANEL_RADIUS,
                     borderBottomRightRadius: PANEL_RADIUS,
@@ -613,7 +714,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
 
         /* ---- Quest Card Styles (Modern, Atmospheric) ---- */
         questCard: {
-            borderRadius: radii.xl,
+            borderRadius: isMobileW ? radii.lg : radii.xl,
             overflow: 'hidden',
             backgroundColor: colors.surface,
             position: 'relative',
@@ -636,7 +737,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         },
         questCardImage: {
             width: '100%',
-            height: isMobileW ? 220 : 260,
+            height: isMobileW ? 238 : 260,
             position: 'relative',
             overflow: 'hidden',
         },
@@ -683,8 +784,8 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             left: 0,
             right: 0,
             bottom: 0,
-            padding: spacing.xl,
-            paddingBottom: spacing.xl + spacing.xs,
+            padding: isMobileW ? spacing.md : spacing.xl,
+            paddingBottom: isMobileW ? spacing.md : spacing.xl + spacing.xs,
         },
         questCardCategory: {
             color: 'rgba(255, 200, 140, 0.9)',
@@ -705,7 +806,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             fontWeight: '700',
             letterSpacing: -0.3,
             lineHeight: isMobileW ? 24 : 28,
-            marginBottom: spacing.md,
+            marginBottom: isMobileW ? spacing.xs : spacing.md,
             ...Platform.select({
                 web: {
                     textShadow: '0 2px 8px rgba(0,0,0,0.4)',
@@ -732,6 +833,74 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                     WebkitBackdropFilter: 'blur(8px)',
                 } as any,
             }),
+        },
+        questCardDetails: {
+            paddingHorizontal: isMobileW ? spacing.md : 0,
+            paddingVertical: isMobileW ? spacing.md : 0,
+            gap: spacing.sm,
+            backgroundColor: colors.surface,
+        },
+        questCardDetailsMeta: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: spacing.xs,
+        },
+        questCardDetailsItem: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 5,
+            backgroundColor: colors.backgroundSecondary,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            paddingHorizontal: spacing.sm,
+            paddingVertical: spacing.xs,
+            borderRadius: radii.full,
+        },
+        questCardDetailsText: {
+            color: colors.textMuted,
+            fontSize: typography.sizes.xs,
+            fontWeight: '700',
+        },
+        questCardPioneerBadge: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            alignSelf: 'flex-start',
+            gap: spacing.xs,
+            backgroundColor: colors.brandSoft,
+            borderWidth: 1,
+            borderColor: colors.brandAlpha30,
+            paddingHorizontal: spacing.sm,
+            paddingVertical: spacing.xs,
+            borderRadius: radii.full,
+        },
+        questCardPioneerBadgeText: {
+            color: colors.brandDark,
+            fontSize: typography.sizes.xs,
+            fontWeight: '800',
+        },
+        questCardReviewsButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            alignSelf: 'flex-start',
+            gap: spacing.xs,
+            minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+            paddingHorizontal: spacing.sm,
+            paddingVertical: spacing.xs,
+            borderRadius: CONTROL_RADIUS,
+            backgroundColor: colors.backgroundSecondary,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            ...Platform.select({
+                web: {
+                    cursor: 'pointer',
+                } as any,
+            }),
+        },
+        questCardReviewsButtonText: {
+            color: colors.text,
+            fontSize: typography.sizes.sm,
+            fontWeight: '700',
         },
         questCardMetaText: {
             color: 'rgba(255,255,255,0.95)',

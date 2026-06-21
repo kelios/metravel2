@@ -48,7 +48,7 @@ function QuestReviewSection({ questNumericId, testID = 'quest-review-section' }:
 
   if (showSuccess) {
     return (
-      <View style={styles.container} testID={testID}>
+      <View style={styles.container} testID={testID} nativeID="quest-review-section">
         <Text style={styles.title}>Отзыв о квесте</Text>
         <View style={styles.successBox}>
           <Text style={styles.successText}>Спасибо за отзыв!</Text>
@@ -58,7 +58,7 @@ function QuestReviewSection({ questNumericId, testID = 'quest-review-section' }:
   }
 
   return (
-    <View style={styles.container} testID={testID}>
+    <View style={styles.container} testID={testID} nativeID="quest-review-section">
       <Text style={styles.title}>Оставьте отзыв о квесте</Text>
 
       <View style={styles.starsRow}>

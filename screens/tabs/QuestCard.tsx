@@ -52,6 +52,10 @@ export default function QuestCard({
             ? `${Math.round(quest._distanceKm * 1000)} м`
             : `${quest._distanceKm.toFixed(1)} км`
         : null;
+    const isPioneerQuest = (quest.completionsCount ?? 0) <= 0;
+    const reviewsText = quest.ratingCount > 0
+        ? `${quest.ratingCount} ${pluralizeRu(quest.ratingCount, 'отзыв', 'отзыва', 'отзывов')}`
+        : null;
 
     const imageUrl = typeof quest.cover === 'string' ? quest.cover : null;
     const cacheKey = imageUrl ? String(imageUrl).trim() : '';
@@ -66,7 +70,13 @@ export default function QuestCard({
         router.push(`/quests/${cityId}/${quest.id}`);
     }, [cityId, quest.id]);
 
-    const cardHeight = isPhone ? 220 : Math.round((cardWidth / 380) * 260);
+    const handleReviewsPress = useCallback((event?: any) => {
+        event?.stopPropagation?.();
+        router.push(`/quests/${cityId}/${quest.id}#quest-review-section` as any);
+    }, [cityId, quest.id]);
+
+    const cardHeight = isPhone ? 238 : Math.round((cardWidth / 380) * 260);
+    const showOverlayMeta = !isPhone;
 
     return (
         <View
@@ -77,7 +87,10 @@ export default function QuestCard({
             ]}
             {...Platform.select({
                 web: {
-                    onClick: handlePress,
+                    onClick: (event: any) => {
+                        if (event?.target?.closest?.('[data-card-action="true"]')) return;
+                        handlePress();
+                    },
                     onMouseEnter: () => setIsHovered(true),
                     onMouseLeave: () => setIsHovered(false),
                     role: 'link',
@@ -112,7 +125,9 @@ export default function QuestCard({
                     <ImageCardMedia
                         src={imageUrl}
                         alt={quest.title}
-                        fit="cover"
+                        width={cardWidth}
+                        height={cardHeight}
+                        fit="contain"
                         blurBackground
                         allowCriticalWebBlur
                         style={StyleSheet.absoluteFill}
@@ -122,9 +137,7 @@ export default function QuestCard({
                         showImmediately={imageLoaded}
                     />
                 ) : (
-                    <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.backgroundTertiary, alignItems: 'center', justifyContent: 'center' }]}>
-                        <Feather name="compass" size={40} color={colors.brandAlpha30} />
-                    </View>
+                    <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.backgroundTertiary }]} />
                 )}
 
                 <View style={styles.questCardVignette} />
@@ -142,6 +155,13 @@ export default function QuestCard({
                     <View style={[styles.questCardCompletedBadge, distanceText ? { top: 44 } : null]}>
                         <Feather name="check-circle" size={12} color={colors.textOnDark} />
                         <Text style={styles.questCardCompletedText}>Пройден</Text>
+                    </View>
+                )}
+
+                {!isPhone && isPioneerQuest && !quest.isCompletedByMe && (
+                    <View style={[styles.questCardCompletedBadge, distanceText ? { top: 44 } : null]}>
+                        <Feather name="flag" size={12} color={colors.textOnDark} />
+                        <Text style={styles.questCardCompletedText}>Ещё никто не проходил</Text>
                     </View>
                 )}
 
@@ -167,40 +187,42 @@ export default function QuestCard({
                     <Text style={styles.questCardTitle} numberOfLines={2}>
                         {quest.title}
                     </Text>
-                    <View style={styles.questCardMeta}>
-                        <View style={styles.questCardMetaItem}>
-                            <Feather name="map-pin" size={13} color="rgba(255,255,255,0.9)" />
-                            <Text style={styles.questCardMetaText}>{pointsText}</Text>
-                        </View>
-                        <View style={styles.questCardMetaItem}>
-                            <Feather name="clock" size={13} color="rgba(255,255,255,0.9)" />
-                            <Text style={styles.questCardMetaText}>{durationText}</Text>
-                        </View>
-                        {quest.ratingCount > 0 && (
-                            <View
-                                style={styles.questCardMetaItem}
-                                testID={`quest-card-rating-${quest.id}`}
-                            >
-                                <Feather name="star" size={13} color="rgba(255,255,255,0.95)" />
-                                <Text style={styles.questCardMetaText}>
-                                    {(quest.ratingAvg ?? 0).toFixed(1)} ({quest.ratingCount})
-                                </Text>
+                    {showOverlayMeta && (
+                        <View style={styles.questCardMeta}>
+                            <View style={styles.questCardMetaItem}>
+                                <Feather name="map-pin" size={13} color="rgba(255,255,255,0.9)" />
+                                <Text style={styles.questCardMetaText}>{pointsText}</Text>
                             </View>
-                        )}
-                        {quest.completionsCount > 0 && (
-                            <View
-                                style={styles.questCardMetaItem}
-                                testID={`quest-card-completions-${quest.id}`}
-                            >
-                                <Feather name="check-circle" size={13} color="rgba(255,255,255,0.9)" />
-                                <Text style={styles.questCardMetaText}>
-                                    Пройдено {quest.completionsCount} {pluralizeRu(quest.completionsCount, 'раз', 'раза', 'раз')}
-                                </Text>
-                            </View>
-                        )}
-                    </View>
+                                <View style={styles.questCardMetaItem}>
+                                    <Feather name="clock" size={13} color="rgba(255,255,255,0.9)" />
+                                    <Text style={styles.questCardMetaText}>{durationText}</Text>
+                                </View>
+                                {quest.ratingCount > 0 && (
+                                    <View
+                                        style={styles.questCardMetaItem}
+                                        testID={`quest-card-rating-${quest.id}`}
+                                    >
+                                        <Feather name="star" size={13} color="rgba(255,255,255,0.95)" />
+                                        <Text style={styles.questCardMetaText}>
+                                            {(quest.ratingAvg ?? 0).toFixed(1)} ({quest.ratingCount})
+                                        </Text>
+                                    </View>
+                                )}
+                                {quest.completionsCount > 0 && (
+                                    <View
+                                        style={styles.questCardMetaItem}
+                                        testID={`quest-card-completions-${quest.id}`}
+                                    >
+                                        <Feather name="check-circle" size={13} color="rgba(255,255,255,0.9)" />
+                                        <Text style={styles.questCardMetaText}>
+                                            Пройдено {quest.completionsCount} {pluralizeRu(quest.completionsCount, 'раз', 'раза', 'раз')}
+                                        </Text>
+                                    </View>
+                                )}
+                        </View>
+                    )}
 
-                    {quest.firstCompleter && (
+                    {showOverlayMeta && quest.firstCompleter && (
                         <View style={styles.questCardPioneerRow}>
                             <UserAvatar uri={quest.firstCompleter.avatar} size="sm" />
                             <Text style={styles.questCardPioneerText} numberOfLines={1}>
@@ -210,6 +232,76 @@ export default function QuestCard({
                     )}
                 </View>
             </View>
+
+            {isPhone && (
+                <View style={styles.questCardDetails}>
+                    <View style={styles.questCardDetailsMeta}>
+                        <View style={styles.questCardDetailsItem}>
+                            <Feather name="map-pin" size={13} color={colors.textMuted} />
+                            <Text style={styles.questCardDetailsText}>{pointsText}</Text>
+                        </View>
+                        <View style={styles.questCardDetailsItem}>
+                            <Feather name="clock" size={13} color={colors.textMuted} />
+                            <Text style={styles.questCardDetailsText}>{durationText}</Text>
+                        </View>
+                        {quest.ratingCount > 0 && (
+                            <View
+                                style={styles.questCardDetailsItem}
+                                testID={`quest-card-rating-${quest.id}`}
+                            >
+                                <Feather name="star" size={13} color={colors.textMuted} />
+                                <Text style={styles.questCardDetailsText}>
+                                    {(quest.ratingAvg ?? 0).toFixed(1)}
+                                </Text>
+                            </View>
+                        )}
+                        {quest.completionsCount > 0 && (
+                            <View
+                                style={styles.questCardDetailsItem}
+                                testID={`quest-card-completions-${quest.id}`}
+                            >
+                                <Feather name="check-circle" size={13} color={colors.textMuted} />
+                                <Text style={styles.questCardDetailsText}>
+                                    {quest.completionsCount} {pluralizeRu(quest.completionsCount, 'прохождение', 'прохождения', 'прохождений')}
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+
+                    {isPioneerQuest && (
+                        <View style={styles.questCardPioneerBadge} testID={`quest-card-pioneer-${quest.id}`}>
+                            <Feather name="flag" size={13} color={colors.brandDark} />
+                            <Text style={styles.questCardPioneerBadgeText}>Вы будете первооткрывателем</Text>
+                        </View>
+                    )}
+
+                    {reviewsText && (
+                        <Pressable
+                            onPress={handleReviewsPress}
+                            style={styles.questCardReviewsButton}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Посмотреть отзывы: ${reviewsText}`}
+                            testID={`quest-card-reviews-${quest.id}`}
+                            {...Platform.select({
+                                web: {
+                                    role: 'button',
+                                    tabIndex: 0,
+                                    'data-card-action': 'true',
+                                    onClick: (event: any) => {
+                                        event?.stopPropagation?.();
+                                    },
+                                } as any,
+                                default: {},
+                            })}
+                        >
+                            <Feather name="message-circle" size={14} color={colors.text} />
+                            <Text style={styles.questCardReviewsButtonText}>
+                                Посмотреть {reviewsText}
+                            </Text>
+                        </Pressable>
+                    )}
+                </View>
+            )}
         </View>
     );
 }

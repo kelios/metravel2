@@ -40,6 +40,7 @@ type QuestsContentPanelProps = {
     mapPoints: MapPoint[];
     mapCenter: { latitude: number; longitude: number };
     userLoc: { lat: number; lng: number } | null;
+    isMapAreaActive: boolean;
     geoMessage: string | null;
     geoRequesting: boolean;
     showMapAreaSearch: boolean;
@@ -68,6 +69,7 @@ export default function QuestsContentPanel({
     mapPoints,
     mapCenter,
     userLoc,
+    isMapAreaActive,
     geoMessage,
     geoRequesting,
     showMapAreaSearch,
@@ -87,12 +89,12 @@ export default function QuestsContentPanel({
                 <View style={styles.contentTitleBlock}>
                     <Text style={styles.contentTitle} numberOfLines={2}>
                         {selectedCityId === nearbyId
-                            ? (userLoc ? 'Квесты поблизости' : 'Все квесты')
+                            ? (isMapAreaActive ? 'Квесты в этой области' : userLoc ? 'Квесты поблизости' : 'Все квесты')
                             : selectedCityName || 'Все квесты'}
                     </Text>
                     {dataLoaded && <Text style={styles.contentCount}>{pluralizeQuest(questsAll.length)}</Text>}
                 </View>
-                {isMobile && (
+                {isMobile && viewMode !== 'map' && (
                     <View style={{ flexDirection: 'row', gap: 8, flexShrink: 0 }}>
                         <Pressable
                             style={styles.mobileFilterBtn}
@@ -142,7 +144,7 @@ export default function QuestsContentPanel({
 
                 {viewMode === 'map' ? (
                     <View style={styles.mapSection}>
-                        {dataLoaded && selectedCityId === nearbyId && !userLoc && (
+                        {dataLoaded && selectedCityId === nearbyId && !userLoc && !isMapAreaActive && (
                             <View style={styles.geoBanner} testID="quests-geo-banner">
                                 <Feather name="map-pin" size={13} color={colors.warning} />
                                 <Text style={styles.geoBannerText}>
@@ -197,7 +199,7 @@ export default function QuestsContentPanel({
                                         coordinates={mapCenter}
                                         mode="radius"
                                         radius={selectedCityId === nearbyId
-                                            ? (userLoc ? String(Math.max(nearbyRadiusKm, 5)) : '50')
+                                            ? (userLoc || isMapAreaActive ? String(Math.max(nearbyRadiusKm, 5)) : '50')
                                             : '30'}
                                         routePoints={[]}
                                         transportMode="foot"
@@ -230,7 +232,7 @@ export default function QuestsContentPanel({
                                     coordinates={mapCenter}
                                     mode="radius"
                                     radius={selectedCityId === nearbyId
-                                        ? (userLoc ? String(Math.max(nearbyRadiusKm, 5)) : '50')
+                                        ? (userLoc || isMapAreaActive ? String(Math.max(nearbyRadiusKm, 5)) : '50')
                                         : '30'}
                                     routePoints={[]}
                                     transportMode="foot"
