@@ -3,10 +3,14 @@
 // дата/время старта, транспорт, видимость, число мест и стартовая точка маршрута.
 import React, { useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Link } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import * as yup from 'yup';
 
 import Button from '@/components/ui/Button';
+import ConsentCheckbox from '@/components/legal/ConsentCheckbox';
+import { useActionConsent } from '@/hooks/useActionConsent';
+import { CONSENT_TYPES } from '@/utils/actionConsent';
 import type {
   CreateTripInput,
   PlannedTrip,
@@ -119,6 +123,7 @@ function TripCreateForm({ onCreated }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const create = useCreateTrip();
+  const consent = useActionConsent(CONSENT_TYPES.TRIP_ORGANIZER);
 
   const [values, setValues] = useState<FormValues>({
     title: '',
@@ -134,6 +139,7 @@ function TripCreateForm({ onCreated }: Props) {
   });
   const [errors, setErrors] = useState<Partial<Record<keyof FormValues, string>>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [consentChecked, setConsentChecked] = useState(false);
 
   const setField = <K extends keyof FormValues>(key: K, value: FormValues[K]) => {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -142,6 +148,11 @@ function TripCreateForm({ onCreated }: Props) {
   const handleSubmit = async () => {
     setSubmitError(null);
     setErrors({});
+    if (!consentChecked) {
+      setSubmitError('Подтвердите согласие организатора, чтобы создать поездку.');
+      return;
+    }
+    void consent.grant();
     try {
       const valid = await schema.validate(values, { abortEarly: false });
       const input: CreateTripInput = {
@@ -329,6 +340,24 @@ function TripCreateForm({ onCreated }: Props) {
         </View>
       </View>
 
+      <ConsentCheckbox
+        checked={consentChecked}
+        onToggle={setConsentChecked}
+        testID="trip-create-consent"
+        accessibilityLabel="Согласие организатора с правилами и отказом от ответственности"
+      >
+        Я организатор поездки: беру на себя ответственность за встречу и маршрут,
+        понимаю, что MeTravel не несёт ответственности за поездку, и принимаю{' '}
+        <Link href={'/community-rules' as never} style={styles.link}>
+          правила сообщества
+        </Link>{' '}
+        и{' '}
+        <Link href={'/disclaimer' as never} style={styles.link}>
+          отказ от ответственности
+        </Link>
+        .
+      </ConsentCheckbox>
+
       {submitError ? (
         <Text style={styles.error} testID="trip-create-error">
           {submitError}
@@ -339,7 +368,7 @@ function TripCreateForm({ onCreated }: Props) {
         label="Запланировать поездку"
         onPress={handleSubmit}
         loading={create.isPending}
-        disabled={create.isPending}
+        disabled={create.isPending || !consentChecked}
         fullWidth
         testID="trip-create-submit"
       />
@@ -398,6 +427,7 @@ const createStyles = (colors: ThemedColors) =>
     chipTextActive: { color: colors.primary, fontWeight: '600' },
     hint: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
     error: { color: colors.danger, fontSize: 13, fontWeight: '600' },
+    link: { color: colors.primary, fontWeight: '600' },
   });
 
 export default React.memo(TripCreateForm);

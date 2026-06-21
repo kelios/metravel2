@@ -12,6 +12,7 @@
 import { apiClient, ApiError } from '@/api/client';
 import { devWarn } from '@/utils/logger';
 import { haversineKm } from '@/utils/geo';
+import { useAuthStore } from '@/stores/authStore';
 import {
   MOCK_PLANNED_TRIPS,
   MOCK_ROUTE_TEMPLATES,
@@ -215,149 +216,328 @@ export function estimateRouteSummary(
   return { distanceKm, durationMin, elevationGainM, stopsCount };
 }
 
-// ── DTO (snake_case с бэка) ─────────────────────────────────────────────────
+// ── DTO (snake_case с бэка, сверено с дев-сервером) ─────────────────────────
 
-interface PersonDto {
+/** Обёртка DRF-пагинации (часть списков пагинированы, часть — bare arrays). */
+interface Paginated<T> {
+  total?: number;
+  next_page_url?: string | null;
+  data?: T[];
+  results?: T[];
+}
+
+/** Вложенный owner/user в PlannedTripSerializer. */
+interface BeUser {
   id: number;
-  name: string;
+  username?: string | null;
   avatar?: string | null;
 }
 
-interface RoutePointDto {
-  id: string;
-  type: RoutePointType;
-  name: string;
-  description?: string | null;
-  coordinates?: [number, number] | null;
+/** Профиль автора в trip-route-suggestions / public-trips (*_profile). */
+interface ProfileObject {
+  id?: number;
+  name?: string | null;
+  avatar?: string | null;
+}
+type ProfileField = ProfileObject | string | null;
+
+interface BeRoutePoint {
+  id: number;
   place_id?: number | null;
+  order?: number;
+  lat?: number | null;
+  lng?: number | null;
+  title?: string | null;
 }
 
-interface RouteSummaryDto {
-  distance_km: number;
-  duration_min: number;
-  elevation_gain_m: number;
-  stops_count: number;
+interface BeParticipant {
+  id: number;
+  user: BeUser;
+  status: 'pending' | 'accepted' | 'declined';
 }
 
-interface ParticipantDto extends PersonDto {
-  rsvp: TripRsvp;
-  role: 'organizer' | 'participant';
+/** PlannedTripSerializer (GET /trips/planned/me|{id}, POST /trips/planned/, PUT .../route/). */
+interface PlannedTripDto {
+  id: number;
+  title: string;
+  description?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  status: 'draft' | 'planned' | 'ongoing' | 'completed';
+  owner: BeUser;
+  participants?: BeParticipant[];
+  route?: { points?: BeRoutePoint[] } | null;
+  is_public?: boolean;
+  max_participants?: number | null;
 }
 
+/** TripReportSerializer (POST /trips/{id}/complete/). */
 interface TripReportDto {
-  summary?: string;
-  photo_urls?: string[];
-  gpx_url?: string | null;
-  visited_place_ids?: number[];
-  published?: boolean;
+  id: number;
+  trip?: number;
+  summary?: string | null;
+  visited_places?: Array<{ id: number; name?: string | null; slug?: string | null }>;
+  published_route?: { type?: string; id?: number; url?: string } | null;
   published_at?: string | null;
 }
 
-interface PlannedTripDto {
-  id: number;
-  slug?: string;
-  title: string;
-  description?: string;
-  start_date: string;
-  start_time?: string | null;
-  transport: TripTransport;
-  visibility: TripVisibility;
-  seats_total: number;
-  start_point?: RoutePointDto | null;
-  status: TripPlanStatus;
-  organizer: PersonDto;
-  route?: RoutePointDto[];
-  route_summary?: RouteSummaryDto | null;
-  participants?: ParticipantDto[];
-  cover_url?: string | null;
-  region?: string;
-  published_to_community?: boolean;
-  report?: TripReportDto | null;
-  is_owner?: boolean;
-  my_rsvp?: TripRsvp | null;
-  created_at: string;
-}
-
+/** Coedit-предложение точки (GET/POST/PATCH /trip-route-suggestions/). */
 interface TripSuggestionDto {
   id: number;
-  trip_id: number;
-  author: PersonDto;
-  point: RoutePointDto;
+  trip: number;
+  author?: number | null;
+  author_profile?: ProfileField;
+  point_type?: RoutePointType | string | null;
+  travel?: number | null;
+  travel_title?: string | null;
+  title?: string | null;
+  description?: string | null;
+  lat?: number | null;
+  lng?: number | null;
   status: SuggestionStatus;
-  created_at: string;
+  created_at?: string | null;
 }
 
-// ── Мапперы ─────────────────────────────────────────────────────────────────
+/** PublicTripCatalogSerializer (GET /public-trips/?content_type=community_route). */
+interface CommunityTripDto {
+  id: number;
+  owner: number;
+  owner_profile?: ProfileField;
+  title: string;
+  description?: string | null;
+  start_at?: string | null;
+  transport_mode?: string | null;
+  content_type?: string | null;
+  is_public?: boolean;
+  seats_count?: number | null;
+  start_point_name?: string | null;
+  start_lat?: number | null;
+  start_lng?: number | null;
+  status?: 'planned' | 'active' | 'completed' | null;
+  featured?: boolean;
+  catalog_status?: string | null;
+  going_participants_count?: number | string | null;
+  available_seats?: number | string | null;
+}
 
-const mapPerson = (dto: PersonDto): TripPerson => ({
-  id: dto.id,
-  name: dto.name,
-  avatarUrl: dto.avatar ?? null,
+/** RouteTemplateSerializer (GET /trips/route-templates/, bare array, без points). */
+interface RouteTemplateDto {
+  id: number | string;
+  title: string;
+  description?: string | null;
+  points_count?: number;
+  duration_days?: number;
+  tags?: string[];
+  preview_image_url?: string | null;
+}
+
+// ── Хелперы ─────────────────────────────────────────────────────────────────
+
+/** Часть списков пагинированы ({data|results}), часть — bare arrays. */
+const unwrap = <T>(res: Paginated<T> | T[] | null | undefined): T[] =>
+  Array.isArray(res) ? res : (res?.data ?? res?.results ?? []);
+
+/** Текущий пользователь из authStore (string|null → number|null). */
+const currentUserId = (): number | null => {
+  const raw = useAuthStore.getState().userId;
+  if (raw == null) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+};
+
+const isProfileObject = (p: ProfileField | undefined): p is ProfileObject =>
+  typeof p === 'object' && p !== null;
+
+const profileName = (
+  p: ProfileField | undefined,
+  fallbackId?: number | null,
+): string => {
+  if (isProfileObject(p) && p.name?.trim()) return p.name.trim();
+  if (typeof p === 'string' && p.trim()) return p.trim();
+  return fallbackId != null ? `#${fallbackId}` : 'Участник';
+};
+
+const profileAvatar = (p: ProfileField | undefined): string | null =>
+  isProfileObject(p) ? (p.avatar ?? null) : null;
+
+const profileId = (p: ProfileField | undefined, fallback: number): number =>
+  isProfileObject(p) && typeof p.id === 'number' ? p.id : fallback;
+
+const mapProfile = (
+  p: ProfileField | undefined,
+  fallbackId: number,
+): TripPerson => ({
+  id: profileId(p, fallbackId),
+  name: profileName(p, fallbackId),
+  avatarUrl: profileAvatar(p),
 });
 
-const mapPoint = (dto: RoutePointDto): RoutePoint => ({
-  id: dto.id,
-  type: dto.type,
-  name: dto.name,
-  description: dto.description ?? null,
-  coordinates: dto.coordinates ?? null,
-  placeId: dto.place_id ?? null,
+const mapUser = (u: BeUser): TripPerson => ({
+  id: u.id,
+  name: u.username ?? `#${u.id}`,
+  avatarUrl: u.avatar ?? null,
 });
 
-const mapSummary = (dto: RouteSummaryDto): RouteSummary => ({
-  distanceKm: dto.distance_km,
-  durationMin: dto.duration_min,
-  elevationGainM: dto.elevation_gain_m,
-  stopsCount: dto.stops_count,
+// ── Маппинг enum'ов BE ↔ домен ──────────────────────────────────────────────
+
+const TRANSPORT_FROM_BE: Record<string, TripTransport> = {
+  car: 'car',
+  motorcycle: 'car',
+  bicycle: 'bike',
+  walk: 'foot',
+  public_transport: 'public',
+  other: 'mixed',
+};
+const transportFromBe = (t?: string | null): TripTransport =>
+  (t && TRANSPORT_FROM_BE[t]) || 'car';
+
+const TRANSPORT_TO_BE: Record<TripTransport, string> = {
+  car: 'car',
+  bike: 'bicycle',
+  foot: 'walk',
+  public: 'public_transport',
+  mixed: 'other',
+};
+const transportToBe = (t: TripTransport): string => TRANSPORT_TO_BE[t] ?? 'car';
+
+const pointTypeFromBe = (t?: string | null): RoutePointType =>
+  t === 'travel' ? 'place' : ((t as RoutePointType) ?? 'custom');
+
+const pointTypeToBe = (t: RoutePointType): string =>
+  t === 'place' ? 'travel' : t;
+
+/** PlannedTripSerializer.status → доменный TripPlanStatus. */
+const planStatusFromFacade = (
+  s: PlannedTripDto['status'],
+): TripPlanStatus => {
+  if (s === 'ongoing') return 'active';
+  if (s === 'completed') return 'completed';
+  return 'planning'; // draft | planned
+};
+
+/** Базовый Trip.status (public-trips) → доменный TripPlanStatus. */
+const baseStatusFromBe = (
+  s?: 'planned' | 'active' | 'completed' | null,
+): TripPlanStatus => {
+  if (s === 'active') return 'active';
+  if (s === 'completed') return 'completed';
+  return 'planning';
+};
+
+const RSVP_FROM_BE: Record<string, TripRsvp> = {
+  pending: 'invited',
+  accepted: 'going',
+  declined: 'declined',
+  invited: 'invited',
+};
+const participantRsvpFromBe = (s?: string | null): TripRsvp =>
+  (s && RSVP_FROM_BE[s]) || 'invited';
+
+const toNum = (v: number | string | null | undefined): number => {
+  const n = typeof v === 'string' ? Number(v) : v;
+  return Number.isFinite(n as number) ? (n as number) : 0;
+};
+
+// ── Мапперы DTO → домен ─────────────────────────────────────────────────────
+
+const mapPlannedPoint = (p: BeRoutePoint): RoutePoint => ({
+  id: String(p.id),
+  type: p.place_id != null ? 'place' : 'custom',
+  name: p.title ?? '',
+  description: null,
+  coordinates:
+    p.lat != null && p.lng != null ? [p.lng, p.lat] : null,
+  placeId: p.place_id ?? null,
 });
 
-const mapParticipant = (dto: ParticipantDto): TripParticipant => ({
-  ...mapPerson(dto),
-  rsvp: dto.rsvp,
-  role: dto.role,
-});
-
-const mapReport = (dto: TripReportDto): TripReport => ({
-  summary: dto.summary ?? '',
-  photoUrls: dto.photo_urls ?? [],
-  gpxUrl: dto.gpx_url ?? null,
-  visitedPlaceIds: dto.visited_place_ids ?? [],
-  published: dto.published ?? false,
-  publishedAt: dto.published_at ?? null,
-});
-
-const mapTrip = (dto: PlannedTripDto): PlannedTrip => ({
-  id: dto.id,
-  slug: dto.slug ?? String(dto.id),
-  title: dto.title,
-  description: dto.description ?? '',
-  startDate: dto.start_date,
-  startTime: dto.start_time ?? null,
-  transport: dto.transport,
-  visibility: dto.visibility,
-  seatsTotal: dto.seats_total,
-  startPoint: dto.start_point ? mapPoint(dto.start_point) : null,
-  status: dto.status,
-  organizer: mapPerson(dto.organizer),
-  route: (dto.route ?? []).map(mapPoint),
-  routeSummary: dto.route_summary ? mapSummary(dto.route_summary) : null,
-  participants: (dto.participants ?? []).map(mapParticipant),
-  coverUrl: dto.cover_url ?? null,
-  region: dto.region ?? '',
-  publishedToCommunity: dto.published_to_community ?? false,
-  report: dto.report ? mapReport(dto.report) : null,
-  isOwner: dto.is_owner ?? false,
-  myRsvp: dto.my_rsvp ?? null,
-  createdAt: dto.created_at,
-});
+const mapTrip = (dto: PlannedTripDto): PlannedTrip => {
+  const me = currentUserId();
+  const points = dto.route?.points ?? [];
+  const route = points.map(mapPlannedPoint);
+  const participants: TripParticipant[] = (dto.participants ?? []).map((p) => ({
+    ...mapUser(p.user),
+    rsvp: participantRsvpFromBe(p.status),
+    role: p.user.id === dto.owner.id ? 'organizer' : 'participant',
+  }));
+  const mine = (dto.participants ?? []).find((p) => p.user.id === me);
+  return {
+    id: dto.id,
+    slug: String(dto.id),
+    title: dto.title,
+    description: dto.description ?? '',
+    startDate: dto.start_date ?? '',
+    startTime: null,
+    transport: 'car',
+    visibility: dto.is_public ? 'public' : 'private',
+    seatsTotal: dto.max_participants ?? 0,
+    startPoint: null,
+    status: planStatusFromFacade(dto.status),
+    organizer: mapUser(dto.owner),
+    route,
+    routeSummary: route.length ? estimateRouteSummary(route, 'car') : null,
+    participants,
+    coverUrl: null,
+    region: '',
+    publishedToCommunity: false,
+    report: null,
+    isOwner: dto.owner.id === me,
+    myRsvp: mine ? participantRsvpFromBe(mine.status) : null,
+    createdAt: dto.start_date ?? '',
+  };
+};
 
 const mapSuggestion = (dto: TripSuggestionDto): TripSuggestion => ({
   id: dto.id,
-  tripId: dto.trip_id,
-  author: mapPerson(dto.author),
-  point: mapPoint(dto.point),
+  tripId: dto.trip,
+  author: mapProfile(dto.author_profile, dto.author ?? 0),
+  point: {
+    id: String(dto.id),
+    type: pointTypeFromBe(dto.point_type),
+    name: dto.title ?? '',
+    description: dto.description || null,
+    coordinates:
+      dto.lat != null && dto.lng != null ? [dto.lng, dto.lat] : null,
+    placeId: dto.travel ?? null,
+  },
   status: dto.status,
-  createdAt: dto.created_at,
+  createdAt: dto.created_at ?? '',
+});
+
+/** PublicTripCatalog (community_route) → PlannedTrip (best-effort). */
+const mapCommunityTrip = (dto: CommunityTripDto): PlannedTrip => {
+  const me = currentUserId();
+  return {
+    id: dto.id,
+    slug: String(dto.id),
+    title: dto.title,
+    description: dto.description ?? '',
+    startDate: dto.start_at ?? '',
+    startTime: null,
+    transport: transportFromBe(dto.transport_mode),
+    visibility: dto.is_public ? 'public' : 'private',
+    seatsTotal: toNum(dto.seats_count),
+    startPoint: null,
+    status: baseStatusFromBe(dto.status),
+    organizer: mapProfile(dto.owner_profile, dto.owner),
+    route: [],
+    routeSummary: null,
+    participants: [],
+    coverUrl: null,
+    region: dto.start_point_name ?? '',
+    publishedToCommunity: true,
+    report: null,
+    isOwner: dto.owner === me,
+    myRsvp: null,
+    createdAt: dto.start_at ?? '',
+  };
+};
+
+const mapTemplate = (dto: RouteTemplateDto): RouteTemplate => ({
+  id: String(dto.id),
+  title: dto.title,
+  description: dto.description ?? '',
+  transport: 'car',
+  points: [],
 });
 
 // ── Мок-фолбэк ───────────────────────────────────────────────────────────────
@@ -397,12 +577,12 @@ const matchesCommunity = (
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
 
-/** Поездки, где текущий пользователь организатор или участник. */
+/** Поездки, где текущий пользователь организатор или участник (bare array). */
 export async function fetchMyPlannedTrips(): Promise<PlannedTrip[]> {
   if (USE_MOCK) return mockStore.map(cloneTrip);
   try {
-    const dto = await apiClient.get<PlannedTripDto[]>('/trips/planned/me/');
-    return (dto ?? []).map(mapTrip);
+    const res = await apiClient.get<PlannedTripDto[]>('/trips/planned/me/');
+    return unwrap(res).map(mapTrip);
   } catch (error) {
     if (shouldFallbackToMock(error)) {
       devWarn('[planned-trips] my trips → mock fallback');
@@ -435,7 +615,7 @@ export async function fetchPlannedTrip(
   }
 }
 
-/** Каталог опубликованных маршрутов сообщества (FE-community-routes). */
+/** Каталог опубликованных маршрутов сообщества (public-trips community_route). */
 export async function fetchCommunityTrips(
   filters?: CommunityTripsFilters,
 ): Promise<PlannedTrip[]> {
@@ -443,20 +623,16 @@ export async function fetchCommunityTrips(
     return mockStore.filter((t) => matchesCommunity(t, filters)).map(cloneTrip);
   }
   try {
-    const params = new URLSearchParams();
-    if (filters?.transport) params.set('transport', filters.transport);
+    const params = new URLSearchParams({ content_type: 'community_route' });
+    if (filters?.transport)
+      params.set('transport_mode', transportToBe(filters.transport));
     if (filters?.region) params.set('region', filters.region);
-    if (filters?.minDistanceKm != null)
-      params.set('min_distance_km', String(filters.minDistanceKm));
-    if (filters?.maxDistanceKm != null)
-      params.set('max_distance_km', String(filters.maxDistanceKm));
-    const qs = params.toString();
-    const dto = await apiClient.get<PlannedTripDto[]>(
-      `/trips/community/${qs ? `?${qs}` : ''}`,
+    const res = await apiClient.get<Paginated<CommunityTripDto>>(
+      `/public-trips/?${params.toString()}`,
       undefined,
       { skipAuth: true },
     );
-    return (dto ?? []).map(mapTrip);
+    return unwrap(res).map(mapCommunityTrip);
   } catch (error) {
     if (shouldFallbackToMock(error)) {
       devWarn('[planned-trips] community → mock fallback');
@@ -469,10 +645,12 @@ export async function fetchCommunityTrips(
 export async function fetchRouteTemplates(): Promise<RouteTemplate[]> {
   if (USE_MOCK) return MOCK_ROUTE_TEMPLATES;
   try {
-    const dto = await apiClient.get<RouteTemplate[]>('/trips/route-templates/', undefined, {
-      skipAuth: true,
-    });
-    return dto ?? MOCK_ROUTE_TEMPLATES;
+    const res = await apiClient.get<RouteTemplateDto[]>(
+      '/trips/route-templates/',
+      undefined,
+      { skipAuth: true },
+    );
+    return unwrap(res).map(mapTemplate);
   } catch (error) {
     if (shouldFallbackToMock(error)) {
       devWarn('[planned-trips] templates → mock fallback');
@@ -489,10 +667,10 @@ export async function fetchTripSuggestions(
     return mockSuggestions.filter((s) => String(s.tripId) === String(tripId));
   }
   try {
-    const dto = await apiClient.get<TripSuggestionDto[]>(
-      `/trips/planned/${tripId}/suggestions/`,
+    const res = await apiClient.get<Paginated<TripSuggestionDto>>(
+      `/trip-route-suggestions/?trip=${tripId}`,
     );
-    return (dto ?? []).map(mapSuggestion);
+    return unwrap(res).map(mapSuggestion);
   } catch (error) {
     if (shouldFallbackToMock(error)) {
       devWarn('[planned-trips] suggestions → mock fallback');
@@ -534,25 +712,19 @@ const buildMockTrip = (input: CreateTripInput): PlannedTrip => {
   };
 };
 
-const toPointDto = (p: RoutePoint): RoutePointDto => ({
-  id: p.id,
-  type: p.type,
-  name: p.name,
-  description: p.description,
-  coordinates: p.coordinates,
-  place_id: p.placeId,
-});
-
 export async function createTrip(input: CreateTripInput): Promise<PlannedTrip> {
+  const coords = input.startPoint?.coordinates ?? null;
   const body = {
     title: input.title,
     description: input.description,
-    start_date: input.startDate,
-    start_time: input.startTime,
-    transport: input.transport,
-    visibility: input.visibility,
-    seats_total: input.seatsTotal,
-    start_point: input.startPoint ? toPointDto(input.startPoint) : null,
+    start_date: `${input.startDate}T${input.startTime || '09:00'}:00`,
+    status: 'planned',
+    is_public: input.visibility === 'public',
+    max_participants: input.seatsTotal,
+    transport_mode: transportToBe(input.transport),
+    start_point_name: input.startPoint?.name ?? '',
+    start_lat: coords ? coords[1] : null,
+    start_lng: coords ? coords[0] : null,
   };
   if (USE_MOCK) {
     const trip = buildMockTrip(input);
@@ -582,9 +754,18 @@ export async function updateTripRoute(input: UpdateRouteInput): Promise<PlannedT
     return cloneTrip(trip);
   }
   try {
+    const points = input.route.map((p, i) => ({
+      place_id: p.placeId,
+      point_type: pointTypeToBe(p.type),
+      order: i,
+      title: p.name,
+      description: p.description ?? '',
+      lat: p.coordinates ? p.coordinates[1] : null,
+      lng: p.coordinates ? p.coordinates[0] : null,
+    }));
     const dto = await apiClient.put<PlannedTripDto>(
       `/trips/planned/${input.tripId}/route/`,
-      { route: input.route.map(toPointDto) },
+      { points },
     );
     return mapTrip(dto);
   } catch (error) {
@@ -619,11 +800,9 @@ export async function setRsvp(input: RsvpInput): Promise<PlannedTrip> {
     return cloneTrip(trip);
   }
   try {
-    const dto = await apiClient.post<PlannedTripDto>(
-      `/trips/planned/${input.tripId}/rsvp/`,
-      { rsvp: input.rsvp },
-    );
-    return mapTrip(dto);
+    const status = input.rsvp === 'declined' ? 'declined' : 'accepted';
+    await apiClient.post(`/trips/planned/${input.tripId}/rsvp/`, { status });
+    return fetchPlannedTrip(input.tripId);
   } catch (error) {
     if (shouldFallbackToMock(error)) {
       devWarn('[planned-trips] rsvp → mock fallback');
@@ -640,9 +819,11 @@ export async function setRsvp(input: RsvpInput): Promise<PlannedTrip> {
 export async function inviteParticipants(input: InviteInput): Promise<{ invited: number }> {
   if (USE_MOCK) return { invited: input.userIds.length };
   try {
-    await apiClient.post(`/trips/planned/${input.tripId}/invite/`, {
-      user_ids: input.userIds,
-    });
+    const res = await apiClient.post<{ invited?: number }>(
+      `/trips/planned/${input.tripId}/invite/`,
+      { user_ids: input.userIds },
+    );
+    return { invited: res?.invited ?? input.userIds.length };
   } catch (error) {
     if (!shouldFallbackToMock(error)) throw error;
     devWarn('[planned-trips] invite → mock fallback');
@@ -666,9 +847,18 @@ export async function suggestPoint(input: SuggestPointInput): Promise<TripSugges
   };
   if (USE_MOCK) return mockResult();
   try {
+    const coords = input.point.coordinates ?? null;
     const dto = await apiClient.post<TripSuggestionDto>(
-      `/trips/planned/${input.tripId}/suggestions/`,
-      { point: { ...input.point, place_id: input.point.placeId } },
+      '/trip-route-suggestions/',
+      {
+        trip: input.tripId,
+        point_type: pointTypeToBe(input.point.type),
+        travel: input.point.placeId,
+        title: input.point.name,
+        description: input.point.description ?? '',
+        lat: coords ? coords[1] : null,
+        lng: coords ? coords[0] : null,
+      },
     );
     return mapSuggestion(dto);
   } catch (error) {
@@ -691,10 +881,10 @@ export async function decideSuggestion(
     return { id: input.suggestionId, status };
   }
   try {
-    await apiClient.post(
-      `/trips/planned/${input.tripId}/suggestions/${input.suggestionId}/${input.decision}/`,
-      {},
-    );
+    await apiClient.patch(`/trip-route-suggestions/${input.suggestionId}/`, {
+      status,
+      rejection_reason: '',
+    });
   } catch (error) {
     if (!shouldFallbackToMock(error)) throw error;
     devWarn('[planned-trips] decide-suggestion → mock fallback');
@@ -705,13 +895,6 @@ export async function decideSuggestion(
 }
 
 export async function submitTripReport(input: SubmitReportInput): Promise<PlannedTrip> {
-  const body = {
-    summary: input.summary,
-    photo_urls: input.photoUrls,
-    gpx_url: input.gpxUrl,
-    visited_place_ids: input.visitedPlaceIds,
-    publish_to_community: input.publishToCommunity,
-  };
   const applyMock = (): PlannedTrip => {
     const trip = findMock(input.tripId);
     if (!trip) throw new ApiError(404, 'Trip not found');
@@ -729,11 +912,29 @@ export async function submitTripReport(input: SubmitReportInput): Promise<Planne
   };
   if (USE_MOCK) return applyMock();
   try {
-    const dto = await apiClient.post<PlannedTripDto>(
-      `/trips/planned/${input.tripId}/report/`,
-      body,
+    const report = await apiClient.post<TripReportDto>(
+      `/trips/${input.tripId}/complete/`,
+      {
+        summary: input.summary,
+        visited_place_ids: input.visitedPlaceIds,
+        publish_to_catalog: input.publishToCommunity,
+      },
     );
-    return mapTrip(dto);
+    const trip = await fetchPlannedTrip(input.tripId);
+    const published = !!report.published_route;
+    return {
+      ...trip,
+      status: 'completed',
+      publishedToCommunity: published,
+      report: {
+        summary: report.summary ?? input.summary,
+        photoUrls: [],
+        gpxUrl: report.published_route?.url ?? null,
+        visitedPlaceIds: (report.visited_places ?? []).map((v) => v.id),
+        published,
+        publishedAt: report.published_at ?? null,
+      },
+    };
   } catch (error) {
     if (shouldFallbackToMock(error)) {
       devWarn('[planned-trips] report → mock fallback');

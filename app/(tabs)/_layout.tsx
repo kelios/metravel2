@@ -230,6 +230,10 @@ export default function TabLayout() {
                 <Tabs.Screen name="trips/index" options={HIDDEN} />
                 <Tabs.Screen name="trips/my" options={HIDDEN} />
                 <Tabs.Screen name="trips/[tripId]" options={HIDDEN} />
+                <Tabs.Screen name="trips/community" options={HIDDEN} />
+                <Tabs.Screen name="trips/plan/index" options={HIDDEN} />
+                <Tabs.Screen name="trips/plan/create" options={HIDDEN} />
+                <Tabs.Screen name="trips/plan/[id]" options={HIDDEN} />
                 <Tabs.Screen name="user/[id]" options={HIDDEN} />
 
                 {/* полностью скрытые из линкинга */}

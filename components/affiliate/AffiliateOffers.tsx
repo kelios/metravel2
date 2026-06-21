@@ -12,9 +12,9 @@ import {
 } from './affiliateConfig'
 import { useAffiliateImpression } from './useAffiliateImpression'
 
-type Props = AffiliateOfferContext
+type Props = AffiliateOfferContext & { onOfferClick?: (programKey: string) => void }
 
-function AffiliateOffers({ city, country, countryCode, travelId }: Props) {
+function AffiliateOffers({ city, country, countryCode, travelId, onOfferClick }: Props) {
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
 
@@ -40,12 +40,13 @@ function AffiliateOffers({ city, country, countryCode, travelId }: Props) {
         travelId: travelId != null ? String(travelId) : undefined,
         city: city || undefined,
       })
+      onOfferClick?.(offer.key)
       void openExternalUrlInNewTab(offer.url, {
         allowedProtocols: ['https:'],
         windowFeatures: 'noopener',
       })
     },
-    [travelId, city],
+    [travelId, city, onOfferClick],
   )
 
   if (offers.length === 0) return null

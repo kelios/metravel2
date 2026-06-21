@@ -1,6 +1,8 @@
 import React, { Suspense, useMemo } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 
+import Button from '@/components/ui/Button';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 const MyApplicationsList = React.lazy(
@@ -13,11 +15,19 @@ const TripNotificationsList = React.lazy(
 export default function MyTripsScreen() {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const router = useRouter();
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.inner}>
         <Text style={styles.h1}>Мои поездки</Text>
+
+        <Button
+          label="Запланировать поездку"
+          onPress={() => router.push('/trips/plan')}
+          fullWidth
+          testID="my-trips-plan-cta"
+        />
 
         <Text style={styles.section}>Уведомления</Text>
         <Suspense fallback={<ActivityIndicator />}>
