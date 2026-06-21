@@ -44,9 +44,13 @@ export default function QuestsScreen() {
     // геолокацию и фильтрацию по радиусу. По умолчанию «Рядом» = все квесты.
     const [nearbyExplicit, setNearbyExplicit] = useState(false);
     const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
+    const [geoRequesting, setGeoRequesting] = useState(false);
+    const [geoMessage, setGeoMessage] = useState<string | null>(null);
     const [nearbyRadiusKm, setNearbyRadiusKm] = useState<number>(DEFAULT_NEARBY_RADIUS_KM);
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+    const [pendingMapAreaCenter, setPendingMapAreaCenter] = useState<{ latitude: number; longitude: number } | null>(null);
+    const [activeMapAreaCenter, setActiveMapAreaCenter] = useState<{ latitude: number; longitude: number } | null>(null);
     const [collapsedCountryCodes, setCollapsedCountryCodes] = useState<Record<string, boolean>>({});
 
     // API data
@@ -99,6 +103,9 @@ export default function QuestsScreen() {
     const handleSelectCity = useCallback(async (id: string) => {
         setSelectedCityId(id);
         setNearbyExplicit(id === NEARBY_ID);
+        setGeoMessage(null);
+        setPendingMapAreaCenter(null);
+        setActiveMapAreaCenter(null);
         if (isMobile) setFilterDrawerOpen(false);
         try {
             await AsyncStorage.setItem(STORAGE_SELECTED_CITY, id);
@@ -107,6 +114,40 @@ export default function QuestsScreen() {
             devError('Error saving selected city:', error);
         }
     }, [isMobile]);
+
+    const requestNearbyQuests = useCallback(async () => {
+        if (geoRequesting) return;
+        setGeoRequesting(true);
+        setGeoMessage(null);
+        setSelectedCityId(NEARBY_ID);
+        setNearbyExplicit(true);
+        setPendingMapAreaCenter(null);
+        setActiveMapAreaCenter(null);
+        if (isMobile) setFilterDrawerOpen(false);
+
+        try {
+            await AsyncStorage.setItem(STORAGE_SELECTED_CITY, NEARBY_ID);
+        } catch {
+            // Selection persistence is useful but not required for the current click.
+        }
+
+        try {
+            const Location = await loadExpoLocation();
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                setGeoMessage('Разрешите доступ к геолокации, чтобы показать квесты рядом с вами.');
+                return;
+            }
+            const pos = await Location.getCurrentPositionAsync({
+                accuracy: Location.LocationAccuracy.Balanced,
+            });
+            setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        } catch {
+            setGeoMessage('Не удалось определить местоположение. Проверьте разрешения браузера и попробуйте ещё раз.');
+        } finally {
+            setGeoRequesting(false);
+        }
+    }, [geoRequesting, isMobile]);
 
     const handleSetViewMode = useCallback((mode: 'list' | 'map') => {
         setViewMode(mode);
@@ -153,15 +194,52 @@ export default function QuestsScreen() {
             try {
                 const Location = await loadExpoLocation();
                 const { status } = await Location.requestForegroundPermissionsAsync();
-                if (status !== 'granted' || cancelled) return;
+                if (status !== 'granted' || cancelled) {
+                    if (!cancelled && selectedCityId === NEARBY_ID && nearbyExplicit) {
+                        setGeoMessage('Геолокация запрещена. Показываем весь каталог, пока доступ не разрешён.');
+                    }
+                    return;
+                }
                 const pos = await Location.getCurrentPositionAsync({
                     accuracy: Location.LocationAccuracy.Balanced,
                 });
-                if (!cancelled) setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-            } catch (error) { console.warn('Error requesting nearby location', error); }
+                if (!cancelled) {
+                    setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                    setGeoMessage(null);
+                }
+            } catch (error) {
+                if (!cancelled && selectedCityId === NEARBY_ID && nearbyExplicit) {
+                    setGeoMessage('Не удалось определить местоположение. Проверьте разрешения браузера и попробуйте ещё раз.');
+                }
+                console.warn('Error requesting nearby location', error);
+            }
         })();
         return () => { cancelled = true; };
     }, [selectedCityId, viewMode, nearbyExplicit]);
+
+    useEffect(() => {
+        if (Platform.OS !== 'web' || !filterDrawerOpen) return undefined;
+        const html = document.documentElement;
+        const body = document.body;
+        const previousHtmlOverflow = html.style.overflow;
+        const previousBodyOverflow = body.style.overflow;
+        const previousBodyTouchAction = body.style.touchAction;
+
+        html.style.overflow = 'hidden';
+        body.style.overflow = 'hidden';
+        body.style.touchAction = 'none';
+
+        return () => {
+            html.style.overflow = previousHtmlOverflow;
+            body.style.overflow = previousBodyOverflow;
+            body.style.touchAction = previousBodyTouchAction;
+        };
+    }, [filterDrawerOpen]);
+
+    useEffect(() => {
+        setPendingMapAreaCenter(null);
+        setActiveMapAreaCenter(null);
+    }, [nearbyRadiusKm]);
 
     // ── Derived data ──
     const citiesWithNearby: (City | NearbyCity)[] = useMemo(
@@ -253,6 +331,13 @@ export default function QuestsScreen() {
     const questsAll: (QuestMeta & { _distanceKm?: number })[] = useMemo(() => {
         if (!selectedCityId || !dataLoaded) return [];
         if (selectedCityId === NEARBY_ID) {
+            if (activeMapAreaCenter) {
+                const radiusKm = Math.max(nearbyRadiusKm, 5);
+                return ALL_QUESTS
+                    .map((q) => ({ ...q, _distanceKm: haversineKm(activeMapAreaCenter.latitude, activeMapAreaCenter.longitude, q.lat, q.lng) }))
+                    .filter((q) => (q._distanceKm ?? Infinity) <= radiusKm)
+                    .sort((a, b) => a._distanceKm! - b._distanceKm!);
+            }
             // Радиусную фильтрацию применяем только при явном выборе «Рядом»;
             // мягкий дефолт «Рядом» показывает весь каталог.
             if (!userLoc || !nearbyExplicit) {
@@ -264,7 +349,7 @@ export default function QuestsScreen() {
                 .sort((a, b) => a._distanceKm! - b._distanceKm!);
         }
         return (CITY_QUESTS[selectedCityId] || []).map((q) => ({ ...q }));
-    }, [selectedCityId, userLoc, nearbyRadiusKm, ALL_QUESTS, CITY_QUESTS, dataLoaded, nearbyExplicit]);
+    }, [selectedCityId, userLoc, nearbyRadiusKm, ALL_QUESTS, CITY_QUESTS, dataLoaded, nearbyExplicit, activeMapAreaCenter]);
 
     const catalogModel = useQuestCatalogResponsiveModel(questsAll.length);
     const questCardWidth = catalogModel.cardWidth;
@@ -272,7 +357,7 @@ export default function QuestsScreen() {
     const mapPoints = useMemo<MapPoint[]>(() => {
         if (!dataLoaded || !selectedCityId) return [];
         const source = selectedCityId === NEARBY_ID
-            ? (userLoc ? questsAll : ALL_QUESTS)
+            ? (userLoc || activeMapAreaCenter ? questsAll : ALL_QUESTS)
             : questsAll;
 
         return source
@@ -307,9 +392,13 @@ export default function QuestsScreen() {
                     },
                 };
             });
-    }, [dataLoaded, selectedCityId, userLoc, questsAll, ALL_QUESTS]);
+    }, [dataLoaded, selectedCityId, userLoc, activeMapAreaCenter, questsAll, ALL_QUESTS]);
 
     const mapCenter = useMemo(() => {
+        if (activeMapAreaCenter && Number.isFinite(activeMapAreaCenter.latitude) && Number.isFinite(activeMapAreaCenter.longitude)) {
+            return activeMapAreaCenter;
+        }
+
         if (userLoc && Number.isFinite(userLoc.lat) && Number.isFinite(userLoc.lng)) {
             return { latitude: userLoc.lat, longitude: userLoc.lng };
         }
@@ -339,7 +428,7 @@ export default function QuestsScreen() {
         }
 
         return { latitude: 53.9, longitude: 27.56 };
-    }, [CITIES, mapPoints, selectedCityId, userLoc]);
+    }, [CITIES, mapPoints, selectedCityId, userLoc, activeMapAreaCenter]);
 
     const handleMapUserLocationChange = useCallback((loc: { latitude: number; longitude: number } | null) => {
         if (!loc) return;
@@ -351,6 +440,20 @@ export default function QuestsScreen() {
             return { lat: loc.latitude, lng: loc.longitude };
         });
     }, []);
+
+    const handleMapMove = useCallback((center: { latitude: number; longitude: number }) => {
+        if (!center || !Number.isFinite(center.latitude) || !Number.isFinite(center.longitude)) return;
+        setPendingMapAreaCenter(center);
+    }, []);
+
+    const handleSearchMapArea = useCallback(() => {
+        if (!pendingMapAreaCenter) return;
+        setActiveMapAreaCenter(pendingMapAreaCenter);
+        setSelectedCityId(NEARBY_ID);
+        setNearbyExplicit(false);
+        setGeoMessage(null);
+        setPendingMapAreaCenter(null);
+    }, [pendingMapAreaCenter]);
 
     // ── SEO ──
     const selectedCityName =
@@ -491,12 +594,18 @@ export default function QuestsScreen() {
                 mapPoints={mapPoints}
                 mapCenter={mapCenter}
                 userLoc={userLoc}
+                geoMessage={geoMessage}
+                geoRequesting={geoRequesting}
+                showMapAreaSearch={Boolean(pendingMapAreaCenter)}
                 radiiLg={radii.lg}
                 LazyQuestMap={LazyQuestMap}
                 isMobile={isMobile}
+                onShowNearby={requestNearbyQuests}
                 onOpenFilterDrawer={() => setFilterDrawerOpen(true)}
                 onToggleViewMode={() => handleSetViewMode(viewMode === 'map' ? 'list' : 'map')}
                 onMapUserLocationChange={handleMapUserLocationChange}
+                onMapMove={handleMapMove}
+                onSearchMapArea={handleSearchMapArea}
             />
         </View>
     );

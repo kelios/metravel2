@@ -40,12 +40,18 @@ type QuestsContentPanelProps = {
     mapPoints: MapPoint[];
     mapCenter: { latitude: number; longitude: number };
     userLoc: { lat: number; lng: number } | null;
+    geoMessage: string | null;
+    geoRequesting: boolean;
+    showMapAreaSearch: boolean;
     radiiLg: number;
     LazyQuestMap: any;
     isMobile: boolean;
+    onShowNearby: () => void;
     onOpenFilterDrawer: () => void;
     onToggleViewMode: () => void;
     onMapUserLocationChange: (loc: { latitude: number; longitude: number } | null) => void;
+    onMapMove: (center: { latitude: number; longitude: number }) => void;
+    onSearchMapArea: () => void;
 };
 
 export default function QuestsContentPanel({
@@ -62,12 +68,18 @@ export default function QuestsContentPanel({
     mapPoints,
     mapCenter,
     userLoc,
+    geoMessage,
+    geoRequesting,
+    showMapAreaSearch,
     radiiLg,
     LazyQuestMap,
     isMobile,
+    onShowNearby,
     onOpenFilterDrawer,
     onToggleViewMode,
     onMapUserLocationChange,
+    onMapMove,
+    onSearchMapArea,
 }: QuestsContentPanelProps) {
     const inner = (
         <>
@@ -104,7 +116,30 @@ export default function QuestsContentPanel({
                 )}
             </View>
 
-            <View style={styles.contentBody}>
+            <View style={[styles.contentBody, viewMode === 'map' && isMobile && styles.contentBodyMap]}>
+                {isMobile && (
+                    <View style={styles.nearbyCtaBlock}>
+                        <Pressable
+                            style={[styles.showNearbyBtn, geoRequesting && styles.showNearbyBtnDisabled]}
+                            onPress={onShowNearby}
+                            disabled={geoRequesting}
+                            accessibilityRole="button"
+                            accessibilityLabel="Показать квесты рядом со мной"
+                            testID="quests-show-nearby"
+                        >
+                            <Feather name="navigation" size={16} color={colors.textOnPrimary} />
+                            <Text style={styles.showNearbyBtnText}>
+                                {geoRequesting ? 'Ищем рядом…' : 'Показать рядом со мной'}
+                            </Text>
+                        </Pressable>
+                        {geoMessage ? (
+                            <Text style={styles.geoMessageText} testID="quests-geo-message">
+                                {geoMessage}
+                            </Text>
+                        ) : null}
+                    </View>
+                )}
+
                 {viewMode === 'map' ? (
                     <View style={styles.mapSection}>
                         {dataLoaded && selectedCityId === nearbyId && !userLoc && (
@@ -144,6 +179,18 @@ export default function QuestsContentPanel({
 
                         {dataLoaded && Platform.OS === 'web' && mapPoints.length > 0 && (
                             <View style={styles.mapContainer}>
+                                {showMapAreaSearch && (
+                                    <Pressable
+                                        style={styles.mapSearchAreaBtn}
+                                        onPress={onSearchMapArea}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Искать в этой области"
+                                        testID="quests-map-search-area"
+                                    >
+                                        <Feather name="search" size={15} color={colors.textOnPrimary} />
+                                        <Text style={styles.mapSearchAreaBtnText}>Искать в этой области</Text>
+                                    </Pressable>
+                                )}
                                 <Suspense fallback={<View style={styles.mapLoading}><ActivityIndicator color={colors.primary} /></View>}>
                                     <LazyQuestMap
                                         travel={{ data: mapPoints as any }}
@@ -158,6 +205,7 @@ export default function QuestsContentPanel({
                                         setRouteDistance={() => {}}
                                         setFullRouteCoords={() => {}}
                                         onUserLocationChange={onMapUserLocationChange}
+                                        onMapMove={onMapMove}
                                     />
                                 </Suspense>
                             </View>
@@ -165,6 +213,18 @@ export default function QuestsContentPanel({
 
                         {dataLoaded && Platform.OS !== 'web' && mapPoints.length > 0 && (
                             <View style={styles.mapContainer}>
+                                {showMapAreaSearch && (
+                                    <Pressable
+                                        style={styles.mapSearchAreaBtn}
+                                        onPress={onSearchMapArea}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Искать в этой области"
+                                        testID="quests-map-search-area"
+                                    >
+                                        <Feather name="search" size={15} color={colors.textOnPrimary} />
+                                        <Text style={styles.mapSearchAreaBtnText}>Искать в этой области</Text>
+                                    </Pressable>
+                                )}
                                 <Map
                                     travel={{ data: mapPoints as any }}
                                     coordinates={mapCenter}
@@ -178,6 +238,7 @@ export default function QuestsContentPanel({
                                     setRouteDistance={() => {}}
                                     setFullRouteCoords={() => {}}
                                     onUserLocationChange={onMapUserLocationChange}
+                                    onMapMove={onMapMove}
                                 />
                             </View>
                         )}
