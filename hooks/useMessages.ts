@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
     fetchMessageThreads,
     fetchMessages,
@@ -14,6 +15,7 @@ import {
     type MessagingUser,
     type PaginatedMessages,
 } from '@/api/messages';
+import { queryKeys } from '@/api/queryKeys';
 import { devError } from '@/utils/logger';
 
 const THREADS_POLL_INTERVAL = 30_000;
@@ -364,36 +366,24 @@ export function useMarkThreadRead() {
 
 // ---- useUnreadCount ----
 
+const UNREAD_COUNT_STALE_TIME = 30_000;
+
 export function useUnreadCount(enabled: boolean = true, pollEnabled: boolean = true) {
-    const [count, setCount] = useState(0);
-    const mountedRef = useRef(true);
-    const consecutiveFailuresRef = useRef(0);
-
-    useEffect(() => {
-        mountedRef.current = true;
-        return () => { mountedRef.current = false; };
-    }, []);
-
-    const load = useCallback(async () => {
-        if (consecutiveFailuresRef.current >= MAX_CONSECUTIVE_FAILURES) return;
-        try {
+    const query = useQuery({
+        queryKey: queryKeys.messagesUnreadCount(),
+        queryFn: async () => {
             const data = await fetchUnreadCount();
-            if (mountedRef.current) {
-                consecutiveFailuresRef.current = 0;
-                setCount(data?.count ?? 0);
-            }
-        } catch {
-            consecutiveFailuresRef.current += 1;
-        }
-    }, []);
+            return data?.count ?? 0;
+        },
+        enabled,
+        staleTime: UNREAD_COUNT_STALE_TIME,
+        refetchInterval: enabled && pollEnabled ? THREADS_POLL_INTERVAL : false,
+        refetchOnWindowFocus: false,
+    });
 
-    useEffect(() => { if (enabled) load(); }, [enabled, load]);
+    const refresh = useCallback(() => {
+        void query.refetch();
+    }, [query]);
 
-    useEffect(() => {
-        if (!enabled || !pollEnabled) return;
-        const id = setInterval(load, THREADS_POLL_INTERVAL);
-        return () => clearInterval(id);
-    }, [enabled, pollEnabled, load]);
-
-    return { count, refresh: load };
+    return { count: query.data ?? 0, refresh };
 }

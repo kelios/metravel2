@@ -116,4 +116,5 @@ export const queryKeys = {
   contactRequests: (direction: string, status?: string) =>
     ['contact-requests', direction, status ?? 'all'] as const,
   contactRequestsAll: () => ['contact-requests'] as const,
+  messagesUnreadCount: () => ['messages', 'unread-count'] as const,
 } as const;

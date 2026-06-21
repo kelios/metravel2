@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import {
     fetchUserProfile,
@@ -6,23 +7,21 @@ import {
     type UserProfileDto,
 } from '@/api/user';
 import { ApiError } from '@/api/client';
+import { queryKeys } from '@/api/queryKeys';
 import { setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
 import { showToast } from '@/utils/toast';
 
 /**
  * Shared hook for loading and managing user profile state.
  * Used by both profile.tsx and settings.tsx to avoid duplicated logic.
+ *
+ * Backed by React Query on queryKeys.userProfile(userId) so it shares one cache
+ * entry (and request-dedupes) with authStore.checkAuthentication's boot fetch and
+ * other consumers (useUserProfileCached, breadcrumbs).
  */
 export function useUserProfile() {
     const { isAuthenticated, userId, setUserAvatar } = useAuth();
-
-    const [profile, setProfile] = useState<UserProfileDto | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const mountedRef = useRef(true);
-    useEffect(() => {
-        mountedRef.current = true;
-        return () => { mountedRef.current = false; };
-    }, []);
+    const queryClient = useQueryClient();
 
     const syncAvatar = useCallback(
         (avatarRaw: unknown) => {
@@ -37,20 +36,39 @@ export function useUserProfile() {
         [setUserAvatar],
     );
 
-    const loadProfile = useCallback(async () => {
-        if (!userId) return;
-        setIsLoading(true);
-        try {
-            const data = await fetchUserProfile(userId);
-            // Уход с экрана/логаут во время fetch — не трогаем state размонтированного хука.
-            if (!mountedRef.current) return;
-            setProfile(data);
-            syncAvatar(data.avatar);
-        } catch (error) {
-            if (!mountedRef.current) return;
+    const query = useQuery<UserProfileDto | null>({
+        queryKey: queryKeys.userProfile(userId),
+        queryFn: async () => {
+            try {
+                return await fetchUserProfile(userId!);
+            } catch (error) {
+                if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+                    return null;
+                }
+                throw error;
+            }
+        },
+        enabled: isAuthenticated && !!userId,
+        staleTime: 5 * 60 * 1000,
+        retry: (failureCount, error) => {
+            if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+                return false;
+            }
+            return failureCount < 2;
+        },
+    });
+
+    const profile = query.data ?? null;
+
+    // Surface fetch failures as a toast (parity with the previous imperative hook),
+    // but only for genuine errors — 401/403 resolve to null, not an error.
+    const lastErrorRef = useRef<unknown>(null);
+    useEffect(() => {
+        if (query.error && query.error !== lastErrorRef.current) {
+            lastErrorRef.current = query.error;
             const message =
-                error instanceof ApiError
-                    ? error.message
+                query.error instanceof ApiError
+                    ? query.error.message
                     : 'Не удалось загрузить профиль';
             showToast({
                 type: 'error',
@@ -58,16 +76,25 @@ export function useUserProfile() {
                 text2: message,
                 visibilityTime: 4000,
             });
-        } finally {
-            if (mountedRef.current) setIsLoading(false);
         }
-    }, [syncAvatar, userId]);
+        if (!query.error) lastErrorRef.current = null;
+    }, [query.error]);
 
+    // Keep the auth-store avatar + persisted storage in sync with the fetched profile.
     useEffect(() => {
-        if (isAuthenticated && userId) {
-            loadProfile();
-        }
-    }, [isAuthenticated, userId, loadProfile]);
+        if (profile) syncAvatar(profile.avatar);
+    }, [profile, syncAvatar]);
+
+    const setProfile = useCallback(
+        (next: UserProfileDto | null) => {
+            queryClient.setQueryData(queryKeys.userProfile(userId), next);
+        },
+        [queryClient, userId],
+    );
+
+    const loadProfile = useCallback(async () => {
+        await query.refetch();
+    }, [query]);
 
     const fullName = useMemo(() => {
         if (!profile) return '';
@@ -77,7 +104,7 @@ export function useUserProfile() {
     return {
         profile,
         setProfile,
-        isLoading,
+        isLoading: query.isLoading,
         loadProfile,
         syncAvatar,
         fullName,

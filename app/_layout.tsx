@@ -23,6 +23,7 @@ const isWeb = Platform.OS === "web";
 const RootContainerView: React.ComponentType<any> = View;
 import { DESIGN_TOKENS } from "@/constants/designSystem";
 import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";
+import { setActiveQueryClient } from "@/api/activeQueryClient";
 import { patchWebShadowStyles } from "@/utils/patchWebShadowStyles";
 import { installChunkErrorReloadHandler } from "@/utils/chunkReload";
 import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
@@ -221,16 +222,22 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
     // Reading isTravelPerformanceRoute dynamically would not change behavior unless
     // the util were refactored to re-evaluate prefetch per navigation (a getter/ref
     // contract change), which is out of scope for this bootstrap fix.
-    const [queryClient] = useState(() => createOptimizedQueryClient(
-      {
-        mutations: {
-          retry: false,
+    const [queryClient] = useState(() => {
+      const client = createOptimizedQueryClient(
+        {
+          mutations: {
+            retry: false,
+          },
         },
-      },
-      {
-        enableStaticPrefetch: !isTravelPerformanceRoute,
-      }
-    ));
+        {
+          enableStaticPrefetch: !isTravelPerformanceRoute,
+        }
+      );
+      // Expose the mounted client to non-hook code (authStore boot) so the
+      // profile fetch there shares this cache and dedupes with useUserProfile.
+      setActiveQueryClient(client);
+      return client;
+    });
 
     /** === динамическая высота ДОКА футера (только иконки) === */
     const [, setDockHeightState] = useState(0);

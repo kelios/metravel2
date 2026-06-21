@@ -295,6 +295,12 @@ const mapPublic = (dto: PublicAchievementsDto): PublicAchievements => ({
 
 const USE_MOCK = process.env.EXPO_PUBLIC_ACHIEVEMENTS_MOCK === 'true';
 
+// /achievements/me/ пересчитывает ранг + прогресс по всем значкам на каждый
+// запрос (без кэша на бэке) — на тяжёлых аккаунтах не укладывается в дефолтные
+// 10с. Даём запас, чтобы секция значков догружалась, а не абортилась в спиннер.
+// Митигейшн под бэкенд-перф (см. тикет на кэш /achievements/me/).
+const MY_ACHIEVEMENTS_TIMEOUT = 25000;
+
 /** Бэкенд ещё не задеплоен → 404/501/0. В DEV или под флагом отдаём мок. */
 const shouldFallbackToMock = (error: unknown): boolean => {
   if (USE_MOCK) return true;
@@ -321,7 +327,10 @@ export async function fetchBadgeCatalog(): Promise<Badge[]> {
 export async function fetchMyAchievements(): Promise<MyAchievements> {
   if (USE_MOCK) return MOCK_MY_ACHIEVEMENTS;
   try {
-    const dto = await apiClient.get<MyAchievementsDto>('/achievements/me/');
+    const dto = await apiClient.get<MyAchievementsDto>(
+      '/achievements/me/',
+      MY_ACHIEVEMENTS_TIMEOUT,
+    );
     return mapMy(dto);
   } catch (error) {
     if (shouldFallbackToMock(error)) {

@@ -13,12 +13,14 @@ export interface ProfileStatSegmentItem {
 }
 
 interface ProfileStatSegmentProps {
-  items: ProfileStatSegmentItem[];
+  items?: ProfileStatSegmentItem[];
 }
 
 const formatValue = (value: number) => (value > 999 ? '999+' : String(value));
 
-export function ProfileStatSegment({ items }: ProfileStatSegmentProps) {
+// items дефолтится в [] — пропуск/рассинхрон пропа не должен ронять весь профиль
+// белым экраном (как было при дрейфе statPills→statItems в проде).
+export function ProfileStatSegment({ items = [] }: ProfileStatSegmentProps) {
   const colors = useThemedColors();
 
   const styles = useMemo(

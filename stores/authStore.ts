@@ -6,10 +6,42 @@
 import { create } from 'zustand';
 import { setSecureItem, getSecureItem, removeSecureItems } from '@/utils/secureStorage';
 import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
+import { getActiveQueryClient } from '@/api/activeQueryClient';
+import { queryKeys } from '@/api/queryKeys';
 import type { UserProfileDto } from '@/api/user';
 
 const getAuthApi = async () => import('@/api/auth');
 const getUserApi = async () => import('@/api/user');
+
+// Fetch the current user's profile through the mounted QueryClient so the request
+// dedupes with useUserProfile (shared queryKey) and serves the cache when fresh.
+// Falls back to a direct fetch if no client is mounted yet (early native boot).
+const fetchUserProfileSafe = async (userId: string): Promise<UserProfileDto | null> => {
+    const [{ fetchUserProfile }, { ApiError }] = await Promise.all([
+        getUserApi(),
+        import('@/api/client'),
+    ]);
+    try {
+        return await fetchUserProfile(userId);
+    } catch (e) {
+        if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
+            return null;
+        }
+        throw e;
+    }
+};
+
+const fetchUserProfileViaCache = async (userId: string): Promise<UserProfileDto | null> => {
+    const client = getActiveQueryClient();
+    if (!client) {
+        return fetchUserProfileSafe(userId);
+    }
+    return client.fetchQuery({
+        queryKey: queryKeys.userProfile(userId),
+        queryFn: () => fetchUserProfileSafe(userId),
+        staleTime: 5 * 60 * 1000,
+    });
+};
 
 const normalizeAvatar = (raw: unknown): string | null => {
     const str = String(raw ?? '').trim();
@@ -135,10 +167,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 isPremium: false,
             });
 
-            // Always fetch profile in background to ensure avatar + premium flag are up-to-date
+            // Always fetch profile in background to ensure avatar + premium flag are up-to-date.
+            // Route through the mounted QueryClient + shared queryKey so this request
+            // dedupes with useUserProfile (the profile screen) instead of firing twice.
             if (storageData.userId) {
-                getUserApi()
-                    .then(({ fetchUserProfile }) => fetchUserProfile(storageData.userId!))
+                fetchUserProfileViaCache(storageData.userId)
                     .then((profile) => {
                         if (epochAtStart !== authEpoch) return;
                         set({ isPremium: profile?.is_premium ?? false });
