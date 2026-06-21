@@ -11,6 +11,8 @@ import {
   MOCK_PUBLIC_ACHIEVEMENTS,
   MOCK_PEER_CATALOG,
   MOCK_TRAVEL_PEER_RECEIVED,
+  MOCK_RARE_AWARDS,
+  MOCK_RARE_AWARD_CATALOG,
 } from '@/api/achievementsMock';
 
 // ── Доменные типы (camelCase) ──────────────────────────────────────────────
@@ -401,6 +403,268 @@ export async function grantPeerBadge(input: GrantInput): Promise<GrantResult> {
     if (shouldFallbackToMock(error)) {
       devWarn('[achievements] grant → mock simulate');
       return { granted: true, count: 1 };
+    }
+    throw error;
+  }
+}
+
+// ── Редкие награды (Sprint 11 / блок B, §«Гейм-3») ───────────────────────────
+// Ручные награды, которые вручает только админ/модератор; ценнее авто-достижений.
+// Контракт зеркалит тикеты борда #376/#377/#379/#380. Пока BE-rare-awards-model
+// не задеплоен — fetch отдаёт моки тем же мок-фолбэком, что и остальные ачивки.
+
+/** Кто вручил награду (лёгкий профиль для подписи на карточке). */
+export interface RareAwardGranter {
+  id: number;
+  name: string;
+}
+
+/** Полученная редкая награда (для зоны «Редкие награды» в профиле). */
+export interface RareAward {
+  id: number;
+  slug: string;
+  /** Категория: ambassador / story-creator / first-wave / community-heart / legendary. */
+  category: string;
+  title: string;
+  /** Уровень редкости (метка). Маппим в tier для премиум-визуала медали. */
+  level: string;
+  reason: string;
+  grantedAt: string;
+  grantedByProfile: RareAwardGranter | null;
+  /** Лимит владельцев категории (null = без лимита). */
+  ownerLimit: number | null;
+  isRare: true;
+  shareTemplate: string;
+}
+
+/** Элемент каталога для админ-пикера выдачи. */
+export interface RareAwardCatalogItem {
+  slug: string;
+  category: string;
+  title: string;
+  level: string;
+  description: string;
+  ownerLimit: number | null;
+  ownersCount: number;
+}
+
+/** Ответ на POST-выдачу (для оптимистичного обновления + аудита). */
+export interface RareAwardGrant {
+  id: number;
+  userId: number;
+  awardSlug: string;
+  category: string;
+  title: string;
+  level: string;
+  reason: string;
+  grantedAt: string;
+  grantedBy: number | null;
+  journalEventId: number | null;
+}
+
+export interface GrantRareAwardInput {
+  userId: string | number;
+  awardSlug: string;
+  reason: string;
+}
+
+interface RareAwardGranterDto {
+  id?: number | null;
+  name?: string | null;
+  display_name?: string | null;
+}
+
+interface RareAwardDto {
+  id: number;
+  slug: string;
+  category?: string | null;
+  title?: string | null;
+  level?: string | null;
+  reason?: string | null;
+  granted_at?: string | null;
+  granted_by_profile?: RareAwardGranterDto | null;
+  owner_limit?: number | null;
+  is_rare?: boolean | null;
+  share_template?: string | null;
+}
+
+interface RareAwardCatalogItemDto {
+  slug: string;
+  category?: string | null;
+  title?: string | null;
+  level?: string | null;
+  description?: string | null;
+  owner_limit?: number | null;
+  owners_count?: number | null;
+}
+
+interface RareAwardGrantDto {
+  id: number;
+  user_id?: number | null;
+  award_slug?: string | null;
+  category?: string | null;
+  title?: string | null;
+  level?: string | null;
+  reason?: string | null;
+  granted_at?: string | null;
+  granted_by?: number | null;
+  journal_event_id?: number | null;
+}
+
+const mapRareGranter = (
+  dto: RareAwardGranterDto | null | undefined,
+): RareAwardGranter | null => {
+  if (!dto || dto.id == null) return null;
+  return { id: dto.id, name: dto.name ?? dto.display_name ?? '' };
+};
+
+const mapRareAward = (dto: RareAwardDto): RareAward => ({
+  id: dto.id,
+  slug: dto.slug,
+  category: dto.category ?? 'other',
+  title: dto.title ?? '',
+  level: dto.level ?? 'legendary',
+  reason: dto.reason ?? '',
+  grantedAt: dto.granted_at ?? '',
+  grantedByProfile: mapRareGranter(dto.granted_by_profile),
+  ownerLimit: dto.owner_limit ?? null,
+  isRare: true,
+  shareTemplate: dto.share_template ?? 'rare',
+});
+
+const mapRareCatalogItem = (dto: RareAwardCatalogItemDto): RareAwardCatalogItem => ({
+  slug: dto.slug,
+  category: dto.category ?? 'other',
+  title: dto.title ?? '',
+  level: dto.level ?? 'legendary',
+  description: dto.description ?? '',
+  ownerLimit: dto.owner_limit ?? null,
+  ownersCount: dto.owners_count ?? 0,
+});
+
+const mapRareGrant = (dto: RareAwardGrantDto): RareAwardGrant => ({
+  id: dto.id,
+  userId: dto.user_id ?? 0,
+  awardSlug: dto.award_slug ?? '',
+  category: dto.category ?? 'other',
+  title: dto.title ?? '',
+  level: dto.level ?? 'legendary',
+  reason: dto.reason ?? '',
+  grantedAt: dto.granted_at ?? '',
+  grantedBy: dto.granted_by ?? null,
+  journalEventId: dto.journal_event_id ?? null,
+});
+
+// Уровень редкости → BadgeTier для процедурной медали (BadgeMedal). Редкие награды
+// премиальны по умолчанию, поэтому неизвестный уровень рисуем как legendary.
+const RARE_LEVEL_TIERS: Record<string, BadgeTier> = {
+  bronze: 'bronze',
+  silver: 'silver',
+  gold: 'gold',
+  platinum: 'platinum',
+  legendary: 'legendary',
+};
+
+/** Строит Badge-форму редкой награды для рендера в BadgeMedal. */
+export const rareAwardToBadge = (award: RareAward): Badge => ({
+  id: award.id,
+  slug: award.slug,
+  name: award.title,
+  description: award.reason,
+  categorySlug: award.category,
+  categoryName: 'Редкие награды',
+  tier: RARE_LEVEL_TIERS[award.level] ?? 'legendary',
+  imageUrl: null,
+  points: 0,
+  isSecret: false,
+  order: award.id,
+});
+
+/** Редкие награды текущего пользователя. */
+export async function fetchMyRareAwards(): Promise<RareAward[]> {
+  if (USE_MOCK) return MOCK_RARE_AWARDS;
+  try {
+    const dto = await apiClient.get<RareAwardDto[]>('/achievements/rare-awards/me/');
+    return (dto ?? []).map(mapRareAward);
+  } catch (error) {
+    if (shouldFallbackToMock(error)) {
+      devWarn('[achievements] rare-awards me → mock fallback');
+      return MOCK_RARE_AWARDS;
+    }
+    throw error;
+  }
+}
+
+/** Публичные редкие награды автора. */
+export async function fetchUserRareAwards(
+  userId: string | number,
+): Promise<RareAward[]> {
+  if (USE_MOCK) return MOCK_RARE_AWARDS;
+  try {
+    const dto = await apiClient.get<RareAwardDto[]>(
+      `/achievements/user/${userId}/rare-awards/`,
+      undefined,
+      { skipAuth: true },
+    );
+    return (dto ?? []).map(mapRareAward);
+  } catch (error) {
+    if (shouldFallbackToMock(error)) {
+      devWarn('[achievements] rare-awards user → mock fallback');
+      return MOCK_RARE_AWARDS;
+    }
+    throw error;
+  }
+}
+
+/** Каталог редких наград для админ-пикера выдачи (staff-only эндпоинт). */
+export async function fetchRareAwardCatalog(): Promise<RareAwardCatalogItem[]> {
+  if (USE_MOCK) return MOCK_RARE_AWARD_CATALOG;
+  try {
+    const dto = await apiClient.get<RareAwardCatalogItemDto[]>(
+      '/achievements/rare-awards/catalog/',
+    );
+    return (dto ?? []).map(mapRareCatalogItem);
+  } catch (error) {
+    if (shouldFallbackToMock(error)) {
+      devWarn('[achievements] rare-awards catalog → mock fallback');
+      return MOCK_RARE_AWARD_CATALOG;
+    }
+    throw error;
+  }
+}
+
+/** Выдача редкой награды админом/модератором. 400/403/404/409 пробрасываем в UI. */
+export async function grantRareAward(
+  input: GrantRareAwardInput,
+): Promise<RareAwardGrant> {
+  const body = {
+    user_id: input.userId,
+    award_slug: input.awardSlug,
+    reason: input.reason,
+  };
+  try {
+    const dto = await apiClient.post<RareAwardGrantDto>(
+      '/achievements/rare-awards/grants/',
+      body,
+    );
+    return mapRareGrant(dto);
+  } catch (error) {
+    // Без бэка (mock/DEV-404) — симулируем выдачу, чтобы превью работало.
+    // Ролевые/валидационные ошибки (400/403/404/409) пробрасываем как есть.
+    if (shouldFallbackToMock(error)) {
+      devWarn('[achievements] rare grant → mock simulate');
+      return {
+        id: Date.now(),
+        userId: Number(input.userId) || 0,
+        awardSlug: input.awardSlug,
+        category: 'other',
+        title: input.awardSlug,
+        level: 'legendary',
+        reason: input.reason,
+        grantedAt: new Date().toISOString(),
+        grantedBy: null,
+        journalEventId: null,
+      };
     }
     throw error;
   }

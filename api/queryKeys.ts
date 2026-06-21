@@ -63,6 +63,10 @@ export const queryKeys = {
   achievementsPeerCatalog: () => ['achievements', 'peer-catalog'] as const,
   achievementsTravelPeer: (travelId: string | number | null | undefined) =>
     ['achievements', 'travel-peer', travelId] as const,
+  achievementsRareMe: () => ['achievements', 'rare', 'me'] as const,
+  achievementsRareUser: (userId: string | number | null | undefined) =>
+    ['achievements', 'rare', 'user', userId] as const,
+  achievementsRareCatalog: () => ['achievements', 'rare', 'catalog'] as const,
   gamificationPlaceBadgesMe: () => ['gamification', 'place-badges', 'me'] as const,
   gamificationPlaceBadgesUser: (userId: string | number | null | undefined) =>
     ['gamification', 'place-badges', 'user', userId] as const,
@@ -93,4 +97,12 @@ export const queryKeys = {
   routeTemplates: () => ['route-templates'] as const,
   tripSuggestions: (tripId: string | number | null | undefined) =>
     ['trip-suggestions', tripId] as const,
+  // Trust & Safety (Sprint 16)
+  userReportReasons: () => ['user-report-reasons'] as const,
+  myBlockedUsers: () => ['user-blocked', 'me'] as const,
+  myVerifications: () => ['user-verifications', 'me'] as const,
+  participantRating: (
+    tripId: string | number | null | undefined,
+    userId: string | number | null | undefined,
+  ) => ['participant-rating', tripId, userId] as const,
 } as const;

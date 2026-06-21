@@ -14,6 +14,7 @@ import TripInvitePanel from '@/components/trips/planning/TripInvitePanel';
 import TripSuggestPointForm from '@/components/trips/planning/TripSuggestPointForm';
 import TripSuggestionsPanel from '@/components/trips/planning/TripSuggestionsPanel';
 import TripReportForm from '@/components/trips/planning/TripReportForm';
+import TripRatingPanel from '@/components/trips/planning/TripRatingPanel';
 import TripAffiliateBlock from '@/components/trips/planning/TripAffiliateBlock';
 import {
   PLAN_STATUS_LABEL,
@@ -81,6 +82,12 @@ export default function PlannedTripScreen() {
             <View style={styles.section}>
               <TripReportForm trip={trip} />
             </View>
+
+            {trip.status === 'completed' ? (
+              <View style={styles.section}>
+                <TripRatingPanel trip={trip} />
+              </View>
+            ) : null}
 
             <View style={styles.section}>
               <TripAffiliateBlock trip={trip} />

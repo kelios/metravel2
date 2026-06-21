@@ -51,12 +51,21 @@ export function usePublicTrips(filters?: PublicTripsFilters) {
 
 /** Одна публичная поездка (деталь). */
 export function usePublicTrip(tripId: string | number | null | undefined) {
+  // BE-деталь не отдаёт is_owner (детальный GET идёт анонимно, skipAuth), поэтому
+  // владение вычисляем на клиенте: организатор == текущий пользователь. Без этого
+  // OrganizerApplicationsPanel (гейт trip.isOwner) не рендерится против реального
+  // BE. mock-фикстуры сохраняют свой isOwner через OR.
+  const userId = useAuthStore((s) => s.userId);
   return useQuery<PublicTrip>({
     queryKey: queryKeys.publicTrip(tripId),
     queryFn: () => fetchPublicTrip(tripId as string | number),
     enabled: tripId != null && tripId !== '',
     staleTime: STALE_TIME,
     retry,
+    select: (trip) => ({
+      ...trip,
+      isOwner: trip.isOwner || (userId != null && String(trip.organizer.id) === String(userId)),
+    }),
   });
 }
 

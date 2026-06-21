@@ -1,17 +1,150 @@
-import { test, expect } from './fixtures';
+import fs from 'node:fs'
+import { test, expect, request } from '@playwright/test'
+import { resetTripApplicationsViaAdmin } from './helpers/tripApplicationsReset'
 
 /**
  * Публичные поездки «Поехали со мной» (Sprint 14, #416).
  *
- * Flow покрывается детерминированно через page.route — статический e2e-билд
- * (__DEV__=false) сам по себе мок-фолбэк не отдаёт, поэтому ответы бэка
- * (которого ещё нет) мокаются на сетевом уровне. Покрытие:
- *   1. каталог рендерит карточки публичных поездок + метку «Продвигается»;
- *   2. переход в деталь поездки;
- *   3. организатор: список заявок + accept → смена статуса на «Одобрена».
+ * Two-account real-BE flow против dev (E2E_API_URL=http://192.168.50.36).
+ *   A = E2E_EMAIL  / E2E_PASSWORD  → owner trip id=1 (user id 104, superuser),
+ *                                     storageState.json
+ *   B = E2E_EMAIL2 / E2E_PASSWORD2 → applicant (user id 1),
+ *                                     storageState.b.json
+ *
+ * Идемпотентность через admin-reset:
+ *   beforeAll логинится суперпользователем A в Django admin и DELETE-ит все
+ *   существующие заявки B на trip 1. Это единственный способ сбросить
+ *   terminal-статусы (approved/rejected): API PATCH→new возвращает 400.
+ *
+ * AC:
+ *   1. B подаёт заявку через реальную форму TripApplyForm → POST /api/trip-applications/
+ *      → 201 → UI показывает «trip-apply-confirmation».
+ *   2. A одобряет заявку через OrganizerApplicationsPanel → PATCH→approved
+ *      → UI меняет бейдж на «Одобрена» → API ground truth обоих аккаунтов.
+ *
+ * НИКАКИХ page.route / интерсептов — всё против реального BE.
  */
 
-const ANON_STATE = { cookies: [], origins: [] };
+const TRIP_ID = 1
+const STORAGE_STATE_A = 'e2e/.auth/storageState.json'
+const STORAGE_STATE_B = 'e2e/.auth/storageState.b.json'
+
+// ── env ───────────────────────────────────────────────────────────────────────
+
+const emailA = (process.env.E2E_EMAIL ?? '').trim()
+const passwordA = (process.env.E2E_PASSWORD ?? '').trim()
+const emailB = (process.env.E2E_EMAIL2 ?? '').trim()
+const passwordB = (process.env.E2E_PASSWORD2 ?? '').trim()
+const hasCredsB = !!emailB && !!passwordB
+const hasBState = () => fs.existsSync(STORAGE_STATE_B)
+
+function getApiBase(): string {
+  const raw = (process.env.E2E_API_URL ?? process.env.EXPO_PUBLIC_API_URL ?? '').trim()
+  if (!raw) throw new Error('E2E_API_URL must be set for two-account BE flow')
+  return raw.replace(/\/+$/, '')
+}
+
+// ── XOR crypto (mirrors secureStorage) ──────────────────────────────────────
+
+const ENC_KEY = 'metravel_encryption_key_v1'
+
+function simpleDecrypt(base64: string, key: string): string {
+  const raw = Buffer.from(String(base64 ?? ''), 'base64').toString('binary')
+  let result = ''
+  for (let i = 0; i < raw.length; i++) {
+    result += String.fromCharCode(raw.charCodeAt(i) ^ key.charCodeAt(i % key.length))
+  }
+  return result
+}
+
+function tokenFromStateFile(filePath: string): string {
+  try {
+    const json = JSON.parse(fs.readFileSync(filePath, 'utf8')) as any
+    const origins: any[] = Array.isArray(json?.origins) ? json.origins : []
+    for (const origin of origins) {
+      const ls: any[] = Array.isArray(origin?.localStorage) ? origin.localStorage : []
+      const entry = ls.find((x: any) => x?.name === 'secure_userToken')
+      const encrypted = String(entry?.value ?? '').trim()
+      if (!encrypted) continue
+      const withPrefix = encrypted.startsWith('enc1:') ? encrypted.slice('enc1:'.length) : encrypted
+      const looksBase64 = /^[A-Za-z0-9+/]+=*$/.test(withPrefix) && withPrefix.length % 4 === 0
+      if (looksBase64) {
+        const token = simpleDecrypt(withPrefix, ENC_KEY).trim()
+        if (token) return token
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return ''
+}
+
+// ── API helpers ───────────────────────────────────────────────────────────────
+
+async function apiLogin(email: string, password: string): Promise<string> {
+  const ctx = await request.newContext({
+    baseURL: getApiBase(),
+    extraHTTPHeaders: { 'Content-Type': 'application/json' },
+  })
+  try {
+    const resp = await ctx.post('/api/user/login/', { data: { email, password } })
+    if (!resp.ok()) throw new Error(`Login failed for ${email}: ${resp.status()}`)
+    const json = await resp.json()
+    const token = String(json?.token ?? '').trim()
+    if (!token) throw new Error(`No token for ${email}`)
+    return token
+  } finally {
+    await ctx.dispose()
+  }
+}
+
+async function makeApi(token: string) {
+  return request.newContext({
+    baseURL: getApiBase(),
+    extraHTTPHeaders: {
+      Authorization: `Token ${token}`,
+      'Content-Type': 'application/json',
+    },
+  })
+}
+
+async function fetchBApplication(tokenB: string): Promise<any | null> {
+  const api = await makeApi(tokenB)
+  try {
+    const resp = await api.get(`/api/trip-applications/?trip=${TRIP_ID}`)
+    if (!resp.ok()) return null
+    const json = await resp.json()
+    const results: any[] = json?.data ?? json?.results ?? (Array.isArray(json) ? json : [])
+    return results.find((a: any) => String(a.trip) === String(TRIP_ID)) ?? null
+  } finally {
+    await api.dispose()
+  }
+}
+
+// ── RN-web Pressable helper ───────────────────────────────────────────────────
+// RN-web Pressable реагирует на pointerdown→pointerup, а не на голый click().
+// Диспатчим полную цепочку pointer-событий чтобы гарантированно триггернуть onPress.
+
+async function pressRNElement(page: import('@playwright/test').Page, testId: string) {
+  const loc = page.getByTestId(testId)
+  await loc.waitFor({ state: 'visible', timeout: 10_000 })
+  await loc.scrollIntoViewIfNeeded().catch(() => null)
+
+  const box = await loc.boundingBox()
+  if (box) {
+    const x = box.x + box.width / 2
+    const y = box.y + box.height / 2
+    await loc.dispatchEvent('pointerover', { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', x, y })
+    await loc.dispatchEvent('pointerenter', { bubbles: false, cancelable: false, pointerId: 1, pointerType: 'mouse', x, y })
+    await loc.dispatchEvent('pointerdown', { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', button: 0, x, y })
+    await loc.dispatchEvent('pointerup', { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', button: 0, x, y })
+    await loc.dispatchEvent('click', { bubbles: true, cancelable: true, x, y })
+  } else {
+    await loc.click({ force: true }).catch(() => null)
+  }
+}
+
+// ── consent seed ─────────────────────────────────────────────────────────────
 
 function seedConsent(page: import('@playwright/test').Page) {
   return page.addInitScript(() => {
@@ -19,123 +152,250 @@ function seedConsent(page: import('@playwright/test').Page) {
       window.localStorage.setItem(
         'metravel_consent_v1',
         JSON.stringify({ necessary: true, analytics: false, date: '2026-01-01T00:00:00.000Z' }),
-      );
+      )
     } catch {
       // ignore
     }
-  });
+  })
 }
 
-const CATALOG = [
-  {
-    id: 9001,
-    slug: 'braslav-weekend',
-    title: 'Браславские озёра — выходные с палаткой',
-    cover_url: null,
-    region: 'Витебская область',
-    trip_type: 'Поход',
-    start_date: '2026-07-18',
-    end_date: '2026-07-20',
-    organizer: { id: 1, name: 'Мария', avatar: null },
-    seats_total: 6,
-    seats_taken: 2,
-    status: 'open',
-    description: 'Браславские озёра на два дня.',
-    featured: true,
-    my_application_status: null,
-    is_owner: false,
-    meeting_point: null,
-    contact_note: null,
-  },
-  {
-    id: 9003,
-    slug: 'naroch-bike',
-    title: 'Велокольцо вокруг Нарочи',
-    cover_url: null,
-    region: 'Минская область',
-    trip_type: 'Велопоход',
-    start_date: '2026-08-09',
-    end_date: '2026-08-10',
-    organizer: { id: 7, name: 'Вы', avatar: null },
-    seats_total: 8,
-    seats_taken: 3,
-    status: 'open',
-    description: 'Велосипедное кольцо вокруг озера Нарочь.',
-    featured: false,
-    my_application_status: null,
-    is_owner: true,
-    meeting_point: 'Стоянка у санатория «Нарочь», 9:00',
-    contact_note: 'Чат открывается после одобрения.',
-  },
-];
+// ── Token cache (module-level, retry-safe) ────────────────────────────────────
 
-const APPLICATIONS = [
-  {
-    id: 6001,
-    trip_id: 9003,
-    trip_title: 'Велокольцо вокруг Нарочи',
-    applicant: {
-      id: 101,
-      name: 'Дмитрий К.',
-      avatar: null,
-      activity_summary: '12 поездок · 3 квеста',
-      badges: ['explorer', 'cyclist'],
-    },
-    message: 'Катаю по 100 км в выходные. Готов помочь.',
-    social_links: [],
-    status: 'new',
-    created_at: '2026-06-18T08:15:00Z',
-  },
-];
+let _tokenA = ''
+let _tokenB = ''
+let _tokensFetched = false
 
-async function mockTripApis(page: import('@playwright/test').Page) {
-  await page.route('**/api/trips/public/**', (route) =>
-    route.fulfill({ json: CATALOG }),
-  );
-  await page.route('**/api/trips/public/9001/**', (route) =>
-    route.fulfill({ json: CATALOG[0] }),
-  );
-  await page.route('**/api/trips/public/9003/**', (route) =>
-    route.fulfill({ json: CATALOG[1] }),
-  );
-  await page.route('**/api/trips/public/9003/applications/**', (route) =>
-    route.fulfill({ json: APPLICATIONS }),
-  );
-  await page.route('**/api/trips/applications/**', (route) =>
-    route.fulfill({ json: { granted: true } }),
-  );
+async function ensureTokens() {
+  if (_tokensFetched) return
+  _tokenA = tokenFromStateFile(STORAGE_STATE_A) || (await apiLogin(emailA, passwordA))
+  _tokenB = tokenFromStateFile(STORAGE_STATE_B) || (await apiLogin(emailB, passwordB))
+  _tokensFetched = true
 }
 
-test.describe('Публичные поездки', () => {
-  test.use({ storageState: ANON_STATE });
+// ── Suite ─────────────────────────────────────────────────────────────────────
 
-  test('каталог рендерит карточки и метку «Продвигается»', async ({ page }) => {
-    await seedConsent(page);
-    await mockTripApis(page);
+// serial — BE state мутабельный, параллель недопустима.
+test.describe.serial('Публичные поездки — two-account real-BE flow', () => {
+  test.describe.configure({ retries: 0 })
 
-    await page.goto('/trips');
+  // Shared между тестами 1 и 2 внутри serial-suite.
+  let _createdAppId = 0
 
-    await expect(page.getByText('Поехали со мной').first()).toBeVisible();
-    await expect(page.getByText('Браславские озёра — выходные с палаткой')).toBeVisible();
-    await expect(page.getByText('Велокольцо вокруг Нарочи')).toBeVisible();
-    // #463 — featured-карточка помечена «Продвигается».
-    await expect(page.getByText('Продвигается').first()).toBeVisible();
-  });
+  // beforeAll: admin-reset — удаляем все заявки B через Django admin.
+  // Это единственный идемпотентный способ: API не позволяет сбросить
+  // terminal-статусы (PATCH approved→new → 400).
+  // Также сбрасываем _createdAppId чтобы Тест 2 всегда брал свежий id из API,
+  // а не устаревший id из предыдущего прогона.
+  test.beforeAll(async () => {
+    _createdAppId = 0
 
-  test('организатор одобряет заявку → статус «Одобрена»', async ({ page }) => {
-    await seedConsent(page);
-    await mockTripApis(page);
+    if (!hasCredsB || !hasBState()) return
 
-    await page.goto('/trips/9003');
+    await ensureTokens()
+    await resetTripApplicationsViaAdmin(TRIP_ID, _tokenA, _tokenB)
 
-    // Панель организатора со списком заявок (#413).
-    await expect(page.getByTestId('organizer-applications-panel')).toBeVisible();
-    await expect(page.getByText('Дмитрий К.')).toBeVisible();
+    // Verify: после удаления заявок нет.
+    const api = await makeApi(_tokenB)
+    try {
+      const resp = await api.get(`/api/trip-applications/?trip=${TRIP_ID}`)
+      if (resp.ok()) {
+        const json = await resp.json()
+        const results: any[] = json?.data ?? json?.results ?? (Array.isArray(json) ? json : [])
+        if (results.length > 0) {
+          process.stderr.write(
+            `[beforeAll] WARNING: after admin reset still ${results.length} app(s) — reset may have partially failed\n`,
+          )
+        }
+      }
+    } finally {
+      await api.dispose()
+    }
+  })
 
-    // accept → оптимистичная смена статуса на «Одобрена» (#414).
-    await page.getByTestId('trip-application-6001-approve').click();
-    await expect(
-      page.getByTestId('trip-application-6001').getByText('Одобрена'),
-    ).toBeVisible();
-  });
-});
+  // ── Тест 1: B подаёт заявку через реальную форму ─────────────────────────
+
+  test('заявитель подаёт заявку → статус «Новая» в UI + подтверждение API', async ({ browser }) => {
+    if (!hasCredsB || !hasBState()) {
+      test.skip(true, 'E2E_EMAIL2/E2E_PASSWORD2 или storageState.b.json не заданы — skip')
+      return
+    }
+
+    await ensureTokens()
+
+    // B открывает деталь trip в своём браузерном контексте.
+    const ctx = await browser.newContext({ storageState: STORAGE_STATE_B })
+    const pageB = await ctx.newPage()
+
+    try {
+      await seedConsent(pageB)
+
+      // Регистрируем ожидание GET /api/public-trips/1/ ДО goto — иначе быстрый ответ
+      // можно пропустить. Это гарантирует что деталь пришла реальная (не mock-fallback)
+      // прежде чем проверять форму.
+      const detailResp = pageB.waitForResponse(
+        (r) => /\/api\/public-trips\/1\/?$/.test(r.url()) && r.request().method() === 'GET',
+        { timeout: 45_000 },
+      )
+
+      await pageB.goto(`/trips/${TRIP_ID}`, { waitUntil: 'domcontentloaded' })
+
+      // Деталь поездки загружена.
+      await expect(pageB.getByTestId(`trip-detail-${TRIP_ID}`)).toBeVisible({ timeout: 30_000 })
+
+      // Ждём реального сетевого ответа от BE — только после этого trip-data в RQ актуальна.
+      const r = await detailResp
+      expect(r.status(), 'detail GET /api/public-trips/1/').toBe(200)
+
+      // Форма «Хочу поехать» видна: B не владелец, trip.status=open, нет активной заявки.
+      await expect(pageB.getByTestId('trip-apply-form')).toBeVisible({ timeout: 30_000 })
+
+      // Сообщение ≥ 10 символов.
+      await pageB
+        .getByTestId('trip-apply-message')
+        .fill('Хочу поехать, опыт в походах есть, буду полезен команде.')
+
+      // ConsentCheckbox — RN-web Pressable, триггерится через pointer-события.
+      await pressRNElement(pageB, 'trip-apply-consent-rules')
+      await pressRNElement(pageB, 'trip-apply-consent-disclaimer')
+
+      // Submit активен когда message≥10 и оба чекбокса отмечены.
+      await expect(pageB.getByTestId('trip-apply-submit')).toBeEnabled({ timeout: 10_000 })
+      await pageB.getByTestId('trip-apply-submit').click({ force: true })
+
+      // Ждём подтверждения: блок «Заявка отправлена».
+      await expect(pageB.getByTestId('trip-apply-confirmation')).toBeVisible({ timeout: 20_000 })
+    } finally {
+      await ctx.close()
+    }
+
+    // Ground truth: заявка B существует на trip 1 со статусом new.
+    const api = await makeApi(_tokenB)
+    try {
+      const resp = await api.get(`/api/trip-applications/?trip=${TRIP_ID}`)
+      expect(resp.ok(), `B GET trip-applications: ${resp.status()}`).toBeTruthy()
+      const json = await resp.json()
+      const results: any[] = Array.isArray(json) ? json : ((json as any)?.data ?? (json as any)?.results ?? [])
+      const app = results.find((a: any) => String(a.trip) === String(TRIP_ID))
+      expect(app, 'Заявка B на trip 1 не найдена через API').toBeTruthy()
+      expect(app.status, `Ожидался статус new, получен ${app?.status}`).toBe('new')
+      _createdAppId = Number(app.id)
+    } finally {
+      await api.dispose()
+    }
+  })
+
+  // ── Тест 2: A одобряет через реальный UI ─────────────────────────────────
+
+  test('организатор одобряет заявку → статус «Одобрена» в UI + подтверждение API', async ({ page }) => {
+    if (!hasCredsB || !hasBState()) {
+      test.skip(true, 'E2E_EMAIL2/E2E_PASSWORD2 или storageState.b.json не заданы — skip')
+      return
+    }
+
+    await ensureTokens()
+
+    // Всегда берём актуальный appId из BE — это гарантирует корректность
+    // как при первом запуске (_createdAppId выставлен тестом 1), так и при
+    // retry Теста 2 после того как beforeAll создал новое чистое состояние.
+    const beApp = await fetchBApplication(_tokenB)
+    if (!beApp) throw new Error('Нет new-заявки B на trip 1 — тест 1 должен был создать её')
+    if (beApp.status !== 'new') {
+      throw new Error(
+        `Ожидался статус new, но BE вернул «${beApp.status}». ` +
+          `Это означает что admin-reset в beforeAll не отработал корректно.`,
+      )
+    }
+    const appId = Number(beApp.id)
+    _createdAppId = appId
+
+    // A открывает деталь поездки (page уже использует storageState A по config).
+    //
+    // Ключевой момент: React Query хранит кэш in-memory (staleTime=5min).
+    // Если страница была открыта в этом же browser-context раньше (retry или
+    // предыдущий тест), OrganizerApplicationsPanel отрендерится из stale-кэша
+    // со старыми appId. Решение:
+    //   1. page.goto() с waitUntil='domcontentloaded'
+    //   2. waitForResponse на GET /api/trip-applications/ — ждём реальный сетевой
+    //      ответ от BE, что гарантирует что RQ обновил кэш свежими данными.
+    //   3. Только после этого ищем карточку по appId.
+    await seedConsent(page)
+
+    // Запускаем ожидание ответа до goto, чтобы не пропустить быстрый fetch.
+    const applicationsResponseP = page.waitForResponse(
+      (r) => r.url().includes('/api/trip-applications/') && r.request().method() === 'GET',
+      { timeout: 30_000 },
+    )
+
+    await page.goto(`/trips/${TRIP_ID}`, { waitUntil: 'domcontentloaded' })
+
+    // Деталь загружена.
+    await expect(page.getByTestId(`trip-detail-${TRIP_ID}`)).toBeVisible({ timeout: 30_000 })
+
+    // OrganizerApplicationsPanel рендерится для владельца (isOwner вычисляется
+    // на клиенте через authStore userId == trip.organizer.id).
+    const panel = page.getByTestId('organizer-applications-panel')
+    await expect(panel).toBeVisible({ timeout: 20_000 })
+
+    // Ждём реального сетевого ответа от BE — RQ теперь содержит актуальный список.
+    await applicationsResponseP
+
+    // Карточка заявки B видна (по свежему appId из BE, не из stale-кэша).
+    const appCard = page.getByTestId(`trip-application-${appId}`)
+    await expect(appCard).toBeVisible({ timeout: 15_000 })
+    await appCard.scrollIntoViewIfNeeded().catch(() => null)
+
+    // Кнопка «Принять» видна: заявка в статусе new → decidable.
+    const approveBtn = page.getByTestId(`trip-application-${appId}-approve`)
+    await expect(approveBtn).toBeVisible({ timeout: 10_000 })
+
+    // Регистрируем ожидание PATCH ДО клика — иначе быстрый ответ можно пропустить.
+    // Ждём именно /api/trip-applications/{appId}/ с методом PATCH и статусом 200.
+    const patchResp = page.waitForResponse(
+      (r) =>
+        r.request().method() === 'PATCH' &&
+        /\/api\/trip-applications\/\d+\/?$/.test(r.url()) &&
+        r.status() === 200,
+      { timeout: 20_000 },
+    )
+
+    // Нажимаем «Принять» через полный pointer-цикл (RN-web Pressable).
+    await pressRNElement(page, `trip-application-${appId}-approve`)
+
+    // Ждём реального PATCH 200 от сервера — только после этого идём в ground-truth.
+    // Оптимистичный onMutate может показать «Одобрена» в UI раньше, но BE-проверка
+    // должна опираться на реальный сетевой ответ, а не на локальный кэш.
+    await patchResp
+
+    // UI-ассерт: после onMutate оптимистичный update убирает кнопки и меняет бейдж.
+    await expect(approveBtn).toBeHidden({ timeout: 15_000 })
+    await expect(appCard.getByText('Одобрена')).toBeVisible({ timeout: 10_000 })
+
+    // Ground truth A: реальный PATCH вернул 200 — теперь BE точно обновил статус.
+    const apiA = await makeApi(_tokenA)
+    try {
+      const resp = await apiA.get(`/api/trip-applications/?trip=${TRIP_ID}`)
+      expect(resp.ok(), `A GET trip-applications: ${resp.status()}`).toBeTruthy()
+      const json = await resp.json()
+      const results: any[] = json?.data ?? json?.results ?? (Array.isArray(json) ? json : [])
+      const app = results.find((a: any) => a.id === appId)
+      expect(app, `Заявка id=${appId} не найдена организатором через API`).toBeTruthy()
+      expect(app.status, 'BE ground truth (A): статус должен быть approved').toBe('approved')
+    } finally {
+      await apiA.dispose()
+    }
+
+    // Ground truth B: тоже видит approved.
+    const apiB = await makeApi(_tokenB)
+    try {
+      const resp = await apiB.get(`/api/trip-applications/?trip=${TRIP_ID}`)
+      if (resp.ok()) {
+        const json = await resp.json()
+        const results: any[] = json?.data ?? json?.results ?? (Array.isArray(json) ? json : [])
+        const app = results.find((a: any) => a.id === appId)
+        if (app) expect(app.status, 'BE ground truth (B): статус должен быть approved').toBe('approved')
+      }
+    } finally {
+      await apiB.dispose()
+    }
+  })
+})

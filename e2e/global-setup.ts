@@ -4,6 +4,7 @@ import { chromium, request, type FullConfig } from '@playwright/test';
 import { getTravelsListPath } from './helpers/routes';
 
 const STORAGE_STATE_PATH = 'e2e/.auth/storageState.json';
+const STORAGE_STATE_B_PATH = 'e2e/.auth/storageState.b.json';
 
 function simpleEncrypt(text: string, key: string): string {
   let result = '';
@@ -140,52 +141,36 @@ function installFakeAuth(context: any) {
   });
 }
 
-export default async function globalSetup(config: FullConfig) {
-  const baseURL = config.projects[0]?.use?.baseURL as string | undefined;
-  const email = ensureEnv('E2E_EMAIL');
-  const password = ensureEnv('E2E_PASSWORD');
-
-  const apiBaseRaw = ensureEnv('E2E_API_URL') || ensureEnv('EXPO_PUBLIC_API_URL');
-  const apiBase = apiBaseRaw ? apiBaseRaw.replace(/\/+$/, '') : null;
-
-  fs.mkdirSync(path.dirname(STORAGE_STATE_PATH), { recursive: true });
+/**
+ * Логинит один аккаунт через API (или UI-fallback) и пишет storageState.
+ * Возвращает true если запись удалась с реальным токеном, false — анонимно.
+ */
+async function writeStorageStateForAccount(opts: {
+  apiBase: string | null;
+  email: string;
+  password: string;
+  baseURL: string;
+  outputPath: string;
+}): Promise<void> {
+  const { apiBase, email, password, baseURL, outputPath } = opts;
 
   const browser = await chromium.launch();
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  if (!baseURL) {
-    await context.storageState({ path: STORAGE_STATE_PATH });
+  const done = async () => {
+    await context.storageState({ path: outputPath });
     await browser.close();
-    return;
-  }
+  };
 
-  // `webServer` can be started in parallel with `globalSetup`. Avoid flaky connection refused errors.
-  try {
-    await waitForBaseURL(baseURL, 600_000);
-  } catch {
-    await context.storageState({ path: STORAGE_STATE_PATH });
-    await browser.close();
-    return;
-  }
-
-  // Always visit the app once so we have a deterministic storage state file.
   try {
     await page.goto(`${baseURL}${getTravelsListPath()}`, { waitUntil: 'domcontentloaded', timeout: 120_000 });
   } catch {
-    await context.storageState({ path: STORAGE_STATE_PATH });
-    await browser.close();
+    await done();
     return;
   }
 
-  // If creds are not provided, keep anonymous state.
-  if (!email || !password) {
-    installFakeAuth(context);
-    await context.storageState({ path: STORAGE_STATE_PATH });
-    await browser.close();
-    return;
-  }
-
+  // Try API login first.
   if (apiBase) {
     try {
       const api = await request.newContext({
@@ -208,9 +193,6 @@ export default async function globalSetup(config: FullConfig) {
               // ignore
             }
           }, encrypted);
-
-          // AuthContext hydrates auxiliary fields from AsyncStorage, which on web maps to localStorage.
-          // These keys are stored without the secure_ prefix.
           await context.addInitScript(
             (payload: { userId: string; userName: string; isSuperuser: string }) => {
               try {
@@ -224,9 +206,8 @@ export default async function globalSetup(config: FullConfig) {
             { userId, userName, isSuperuser }
           );
           await api.dispose();
-          await page.goto(`${baseURL}${getTravelsListPath()}`, { waitUntil: 'domcontentloaded', timeout: 120_000 });
-          await context.storageState({ path: STORAGE_STATE_PATH });
-          await browser.close();
+          await page.goto(`${baseURL}${getTravelsListPath()}`, { waitUntil: 'domcontentloaded', timeout: 120_000 }).catch(() => null);
+          await done();
           return;
         }
       }
@@ -236,43 +217,108 @@ export default async function globalSetup(config: FullConfig) {
     }
   }
 
-  await page.goto(`${baseURL}/login`, { waitUntil: 'networkidle', timeout: 120_000 });
+  // UI login fallback.
+  await page.goto(`${baseURL}/login`, { waitUntil: 'networkidle', timeout: 120_000 }).catch(() => null);
   try {
-    await page.waitForURL((url) => url.pathname.includes('/login'), { timeout: 30_000 });
+    await page.waitForURL((url: any) => url.pathname.includes('/login'), { timeout: 30_000 });
   } catch {
-    // keep going; could be redirected but still have login form on a different path
+    // keep going
   }
 
   const didFill = await fillLoginForm(page, email, password);
-  if (!didFill) {
+  if (didFill) {
+    await page.getByText('Войти', { exact: true }).click({ timeout: 30_000 }).catch(() => null);
+    try {
+      await Promise.race([
+        page.waitForURL((url: any) => !url.pathname.includes('/login'), { timeout: 60_000 }).catch(() => null),
+        page
+          .waitForFunction(() => {
+            try {
+              const v = window.localStorage?.getItem('secure_userToken');
+              return typeof v === 'string' && v.length > 0;
+            } catch {
+              return false;
+            }
+          }, { timeout: 60_000 })
+          .catch(() => null),
+      ]);
+    } catch {
+      // keep going
+    }
+  }
+
+  await done();
+}
+
+export default async function globalSetup(config: FullConfig) {
+  const baseURL = config.projects[0]?.use?.baseURL as string | undefined;
+  const email = ensureEnv('E2E_EMAIL');
+  const password = ensureEnv('E2E_PASSWORD');
+
+  const apiBaseRaw = ensureEnv('E2E_API_URL') || ensureEnv('EXPO_PUBLIC_API_URL');
+  const apiBase = apiBaseRaw ? apiBaseRaw.replace(/\/+$/, '') : null;
+
+  fs.mkdirSync(path.dirname(STORAGE_STATE_PATH), { recursive: true });
+
+  if (!baseURL) {
+    // No baseURL — write empty state and bail.
+    const browser = await chromium.launch();
+    const context = await browser.newContext();
     await context.storageState({ path: STORAGE_STATE_PATH });
     await browser.close();
     return;
   }
 
-  await page.getByText('Войти', { exact: true }).click({ timeout: 30_000 }).catch(() => null);
-
-  // After successful login app should redirect away from /login.
-  // IMPORTANT: логин/редирект может быть нестабильным (сеть/креды/сервер). Global setup
-  // не должен валить e2e полностью — в худшем случае продолжим с анонимным storageState.
+  // `webServer` can be started in parallel with `globalSetup`. Avoid flaky connection refused errors.
   try {
-    await Promise.race([
-      page.waitForURL((url: any) => !url.pathname.includes('/login'), { timeout: 60_000 }).catch(() => null),
-      page
-        .waitForFunction(() => {
-          try {
-            const v = window.localStorage?.getItem('secure_userToken');
-            return typeof v === 'string' && v.length > 0;
-          } catch {
-            return false;
-          }
-        }, { timeout: 60_000 })
-        .catch(() => null),
-    ]);
+    await waitForBaseURL(baseURL, 600_000);
   } catch {
-    // keep going; we'll just persist whatever state we have
+    const browser = await chromium.launch();
+    const context = await browser.newContext();
+    await context.storageState({ path: STORAGE_STATE_PATH });
+    await browser.close();
+    return;
   }
 
-  await context.storageState({ path: STORAGE_STATE_PATH });
-  await browser.close();
+  // Account A (primary E2E account, owner).
+  if (!email || !password) {
+    // No creds → write fake-auth state.
+    const browser = await chromium.launch();
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    try {
+      await page.goto(`${baseURL}${getTravelsListPath()}`, { waitUntil: 'domcontentloaded', timeout: 120_000 });
+    } catch {
+      // ignore
+    }
+    installFakeAuth(context);
+    await context.storageState({ path: STORAGE_STATE_PATH });
+    await browser.close();
+  } else {
+    await writeStorageStateForAccount({
+      apiBase,
+      email,
+      password,
+      baseURL,
+      outputPath: STORAGE_STATE_PATH,
+    });
+  }
+
+  // Account B (E2E_EMAIL2) for two-account flows (public-trips applicant etc.).
+  // Gracefully skip if creds not set; specs that need B check for the file at runtime.
+  const emailB = ensureEnv('E2E_EMAIL2');
+  const passwordB = ensureEnv('E2E_PASSWORD2');
+  if (emailB && passwordB && apiBase) {
+    try {
+      await writeStorageStateForAccount({
+        apiBase,
+        email: emailB,
+        password: passwordB,
+        baseURL,
+        outputPath: STORAGE_STATE_B_PATH,
+      });
+    } catch {
+      // Non-fatal: B-state missing → two-account specs will skip themselves.
+    }
+  }
 }

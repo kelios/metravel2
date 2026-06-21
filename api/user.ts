@@ -32,6 +32,20 @@ export type UserProfileDto = {
     // FE-гейт неактивен и контакты показываются как раньше (graceful degradation).
     contacts_hidden?: boolean;
     contact_access?: 'granted' | 'pending' | 'none';
+    // Sprint 16 / Trust & Safety. Все поля опциональны и читаются graceful: пока BE не
+    // выставит их в публичном профиле, соответствующий UI просто не показывается.
+    // FE-432 (BE-verification #429): верифицирован ≥1 канал → бейдж «Проверенный участник».
+    is_verified?: boolean;
+    // Список подтверждённых каналов для иконок (напр. ['email','telegram']).
+    verified_channels?: string[];
+    // Статус «Организатор с опытом» (критерий считает BE) — FE рендерит метку при 'experienced'.
+    organizer_status?: 'experienced' | null;
+    // FE-430 (BE-report-user #426): текущий зритель уже пожаловался на этого юзера.
+    reported_by_me?: boolean;
+    // FE-430 (BE-block-user #427): текущий зритель заблокировал этого юзера.
+    is_blocked_by_me?: boolean;
+    // FE-431 (BE-post-trip-rating #428): агрегатный рейтинг как участника/организатора.
+    participant_rating?: { average: number; count: number } | null;
 };
 
 export type UpdateUserProfilePayload = Partial<

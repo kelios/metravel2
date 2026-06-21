@@ -29,6 +29,7 @@ import { ProfileTravelGrid } from '@/components/screens/profile/ProfileTravelGri
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import AchievementsSection from '@/components/achievements/AchievementsSection';
+import RareAwardsSection from '@/components/achievements/RareAwardsSection';
 import BadgeUnlockToast from '@/components/achievements/BadgeUnlockToast';
 import GamificationProfileBlock from '@/components/achievements/GamificationProfileBlock';
 import PlaceFirstBadgeToast from '@/components/achievements/PlaceFirstBadgeToast';
@@ -523,6 +524,7 @@ export default function ProfileScreen() {
         {Header}
         <View style={profileScreenAchievementsWrap}>
           <AchievementsSection />
+          <RareAwardsSection />
           <GamificationProfileBlock />
         </View>
       </>

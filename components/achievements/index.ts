@@ -8,6 +8,10 @@ export { default as BadgeUnlockToast } from '@/components/achievements/BadgeUnlo
 export { default as PeerBadgeReceivedRow } from '@/components/achievements/PeerBadgeReceivedRow';
 export { default as PeerBadgeGiveButton } from '@/components/achievements/PeerBadgeGiveButton';
 export { default as PeerBadgePickerSheet } from '@/components/achievements/PeerBadgePickerSheet';
+export { default as RareAwardCard } from '@/components/achievements/RareAwardCard';
+export { default as RareAwardsSection } from '@/components/achievements/RareAwardsSection';
+export { default as UserRareAwardsSection } from '@/components/achievements/UserRareAwardsSection';
+export { default as AdminGrantRareAward } from '@/components/achievements/AdminGrantRareAward';
 export { default as ProgressionLineBar } from '@/components/achievements/ProgressionLineBar';
 export { default as ActivityProgressionSection } from '@/components/achievements/ActivityProgressionSection';
 export { default as PlaceFirstBadgeCard } from '@/components/achievements/PlaceFirstBadgeCard';

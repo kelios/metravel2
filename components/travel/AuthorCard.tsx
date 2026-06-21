@@ -18,6 +18,7 @@ import { getTravelLabel } from '@/utils/pluralize'
 import { useUserAchievements } from '@/hooks/useAchievementsApi'
 import RankBar from '@/components/achievements/RankBar'
 import BadgeMedal from '@/components/achievements/BadgeMedal'
+import VerifiedBadge from '@/components/profile/VerifiedBadge'
 
 const STRICT_PLACEHOLDER = /^[.\s·•]+$|^Автор|^Пользователь|^User/i
 const LOOSE_PLACEHOLDER = /^[.\s·•]{4,}$|^Автор|^Пользователь|^User|^Anonymous/i
@@ -216,17 +217,23 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
 
           <View style={styles.infoSection}>
             {!!userName && (
-              <Pressable
-                onPress={handleOpenAuthorProfile}
-                disabled={!userId}
-                accessibilityRole={userId ? 'button' : undefined}
-                accessibilityLabel={userId ? `Открыть профиль автора ${userName}` : undefined}
-                style={({ pressed }) => (pressed && userId ? styles.pressedDim : null)}
-              >
-                <Text style={[styles.authorName, isMobile && styles.authorNameMobile]}>
-                  {userName}
-                </Text>
-              </Pressable>
+              <View style={styles.nameRow}>
+                <Pressable
+                  onPress={handleOpenAuthorProfile}
+                  disabled={!userId}
+                  accessibilityRole={userId ? 'button' : undefined}
+                  accessibilityLabel={userId ? `Открыть профиль автора ${userName}` : undefined}
+                  style={({ pressed }) => (pressed && userId ? styles.pressedDim : null)}
+                >
+                  <Text style={[styles.authorName, isMobile && styles.authorNameMobile]}>
+                    {userName}
+                  </Text>
+                </Pressable>
+                <VerifiedBadge
+                  isVerified={authorProfile?.is_verified}
+                  organizerStatus={authorProfile?.organizer_status}
+                />
+              </View>
             )}
 
             {!!authorCountryName && (
@@ -403,6 +410,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     infoSection: { flex: 1, gap: DESIGN_TOKENS.spacing.sm },
     pressedDim: { opacity: 0.85 },
+    nameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: 6,
+    },
     authorName: {
       fontSize: Platform.OS === 'web' ? 20 : 17,
       fontWeight: '700',

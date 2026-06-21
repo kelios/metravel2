@@ -24,8 +24,13 @@ import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import ProtectedContacts from '@/components/profile/ProtectedContacts';
 import UserAchievementsSection from '@/components/achievements/UserAchievementsSection';
+import UserRareAwardsSection from '@/components/achievements/UserRareAwardsSection';
+import AdminGrantRareAward from '@/components/achievements/AdminGrantRareAward';
 import GamificationProfileBlock from '@/components/achievements/GamificationProfileBlock';
 import SafetyNotice from '@/components/ui/SafetyNotice';
+import UserSafetyMenu from '@/components/profile/UserSafetyMenu';
+import VerifiedBadge from '@/components/profile/VerifiedBadge';
+import StarRating from '@/components/ui/StarRating';
 import PeerBadgeGiveButton from '@/components/achievements/PeerBadgeGiveButton';
 import { useUserAchievements } from '@/hooks/useAchievementsApi';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -215,7 +220,13 @@ export default function PublicUserProfileScreen() {
               )}
             </View>
             <View style={styles.headerTextBlock}>
-              <Text style={styles.userName}>{fullName || 'Пользователь'}</Text>
+              <View style={styles.nameRow}>
+                <Text style={styles.userName}>{fullName || 'Пользователь'}</Text>
+                <VerifiedBadge
+                  isVerified={profile.is_verified}
+                  organizerStatus={profile.organizer_status}
+                />
+              </View>
               {isOwnProfile && (subscribersCount !== null || subscriptionsCount !== null) ? (
                 <Pressable
                   style={styles.countsRow}
@@ -243,7 +254,28 @@ export default function PublicUserProfileScreen() {
               ) : (
                 <Text style={styles.userSub}>Автор путешествий</Text>
               )}
+              {profile.participant_rating && profile.participant_rating.count > 0 ? (
+                <View style={styles.ratingRow}>
+                  <StarRating
+                    rating={profile.participant_rating.average}
+                    ratingCount={profile.participant_rating.count}
+                    size="small"
+                    showValue
+                    showCount
+                    testID="participant-rating-aggregate"
+                  />
+                  <Text style={styles.ratingLabel}>как попутчик</Text>
+                </View>
+              ) : null}
             </View>
+            {!isOwnProfile && userId ? (
+              <UserSafetyMenu
+                targetUserId={userId}
+                targetName={fullName || undefined}
+                reportedByMe={profile.reported_by_me}
+                isBlockedByMe={profile.is_blocked_by_me}
+              />
+            ) : null}
           </View>
 
           <ProtectedContacts
@@ -300,6 +332,18 @@ export default function PublicUserProfileScreen() {
 
         {userId ? (
           <UserAchievementsSection userId={userId} style={styles.achievementsSection} />
+        ) : null}
+
+        {userId ? (
+          <UserRareAwardsSection userId={userId} style={styles.achievementsSection} />
+        ) : null}
+
+        {userId ? (
+          <AdminGrantRareAward
+            recipientId={userId}
+            recipientName={fullName || undefined}
+            style={styles.achievementsSection}
+          />
         ) : null}
 
         {userId ? (
@@ -440,11 +484,17 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   headerTextBlock: {
     flex: 1,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+    marginBottom: 4,
+  },
   userName: {
     fontSize: 20,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: 4,
   },
   userSub: {
     fontSize: 13,
@@ -466,6 +516,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   countSeparator: {
     fontSize: 13,
+    color: colors.textMuted,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+  },
+  ratingLabel: {
+    fontSize: 12,
     color: colors.textMuted,
   },
   safetyNotice: {

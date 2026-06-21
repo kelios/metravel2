@@ -8,16 +8,24 @@ import {
   fetchBadgeCatalog,
   fetchMyAchievements,
   fetchPeerBadgeCatalog,
+  fetchRareAwardCatalog,
+  fetchMyRareAwards,
   fetchTravelPeerBadges,
   fetchUserAchievements,
+  fetchUserRareAwards,
   grantPeerBadge,
+  grantRareAward,
   type Badge,
   type GrantInput,
+  type GrantRareAwardInput,
   type GrantResult,
   type MyAchievements,
   type PeerBadge,
   type PeerBadgeReceived,
   type PublicAchievements,
+  type RareAward,
+  type RareAwardCatalogItem,
+  type RareAwardGrant,
 } from '@/api/achievements';
 import { ApiError } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
@@ -84,6 +92,54 @@ export function useTravelPeerBadges(travelId: string | number | null | undefined
     enabled: travelId != null && travelId !== '',
     staleTime: STALE_TIME,
     retry,
+  });
+}
+
+// ── Редкие награды (Sprint 11 / блок B) ──────────────────────────────────────
+
+/** Редкие награды текущего пользователя (своя зона профиля). */
+export function useMyRareAwards() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  return useQuery<RareAward[]>({
+    queryKey: queryKeys.achievementsRareMe(),
+    queryFn: fetchMyRareAwards,
+    enabled: isAuthenticated,
+    staleTime: STALE_TIME,
+    retry,
+  });
+}
+
+/** Публичные редкие награды автора. */
+export function useUserRareAwards(userId: string | number | null | undefined) {
+  return useQuery<RareAward[]>({
+    queryKey: queryKeys.achievementsRareUser(userId),
+    queryFn: () => fetchUserRareAwards(userId as string | number),
+    enabled: userId != null && userId !== '',
+    staleTime: STALE_TIME,
+    retry,
+  });
+}
+
+/** Каталог редких наград для админ-пикера выдачи (staff-only). */
+export function useRareAwardCatalog(enabled = true) {
+  return useQuery<RareAwardCatalogItem[]>({
+    queryKey: queryKeys.achievementsRareCatalog(),
+    queryFn: fetchRareAwardCatalog,
+    enabled,
+    staleTime: STALE_TIME,
+    retry,
+  });
+}
+
+/** Мутация выдачи редкой награды админом. Инвалидирует зону наград получателя. */
+export function useGrantRareAward() {
+  const qc = useQueryClient();
+  return useMutation<RareAwardGrant, unknown, GrantRareAwardInput>({
+    mutationFn: grantRareAward,
+    onSuccess: (_result, input) => {
+      qc.invalidateQueries({ queryKey: queryKeys.achievementsRareUser(input.userId) });
+      qc.invalidateQueries({ queryKey: queryKeys.achievementsRareMe() });
+    },
   });
 }
 

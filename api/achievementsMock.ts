@@ -11,6 +11,8 @@ import type {
   PeerBadgeReceived,
   PeerBadgeTarget,
   PublicAchievements,
+  RareAward,
+  RareAwardCatalogItem,
   UserBadge,
   UserRank,
 } from '@/api/achievements';
@@ -153,3 +155,82 @@ export const MOCK_PUBLIC_ACHIEVEMENTS: PublicAchievements = {
   earned: MOCK_EARNED,
   peerReceived: MOCK_PEER_RECEIVED,
 };
+
+// ── Редкие награды (Sprint 11 / блок B) ──────────────────────────────────────
+
+const rareAward = (
+  id: number,
+  slug: string,
+  category: string,
+  title: string,
+  level: RareAward['level'],
+  reason: string,
+  grantedAt: string,
+  granter: RareAward['grantedByProfile'],
+  ownerLimit: number | null,
+): RareAward => ({
+  id,
+  slug,
+  category,
+  title,
+  level,
+  reason,
+  grantedAt,
+  grantedByProfile: granter,
+  ownerLimit,
+  isRare: true,
+  shareTemplate: 'rare',
+});
+
+const TEAM: RareAward['grantedByProfile'] = { id: 1, name: 'Команда MeTravel' };
+
+export const MOCK_RARE_AWARDS: RareAward[] = [
+  rareAward(
+    901,
+    'first-wave',
+    'first-wave',
+    'Первая волна',
+    'legendary',
+    'Один из первых авторов сообщества MeTravel',
+    '2025-08-01T09:00:00Z',
+    TEAM,
+    100,
+  ),
+  rareAward(
+    902,
+    'ambassador',
+    'ambassador',
+    'Амбассадор',
+    'platinum',
+    'Привёл новых путешественников и продвигает проект',
+    '2026-02-14T12:00:00Z',
+    TEAM,
+    50,
+  ),
+];
+
+const rareCatalogItem = (
+  slug: string,
+  category: string,
+  title: string,
+  level: RareAwardCatalogItem['level'],
+  description: string,
+  ownerLimit: number | null,
+  ownersCount: number,
+): RareAwardCatalogItem => ({
+  slug,
+  category,
+  title,
+  level,
+  description,
+  ownerLimit,
+  ownersCount,
+});
+
+export const MOCK_RARE_AWARD_CATALOG: RareAwardCatalogItem[] = [
+  rareCatalogItem('first-wave', 'first-wave', 'Первая волна', 'legendary', 'Один из первых авторов сообщества', 100, 37),
+  rareCatalogItem('ambassador', 'ambassador', 'Амбассадор', 'platinum', 'Продвигает проект и приводит людей', 50, 12),
+  rareCatalogItem('story-creator', 'story-creator', 'Создатель историй', 'gold', 'Автор выдающихся видео/историй о местах', 100, 8),
+  rareCatalogItem('community-heart', 'community-heart', 'Сердце сообщества', 'gold', 'Помогает другим и держит атмосферу', 100, 5),
+  rareCatalogItem('legendary', 'legendary', 'Легендарная награда', 'legendary', 'Исключительный вклад в проект', 10, 2),
+];
