@@ -28,6 +28,7 @@ description: >-
 | content / SEO | `travel-writer`, `metravel-seo-expert`, `index-doctor` |
 | tester | `test-author` (Jest unit + Playwright e2e) |
 | reviewer | `/code-review` или агент `review-auditor` |
+| acceptance (приёмка спринта) | агент `board-reviewer` / skill `/sprint-review` — Done gate → `done` |
 | releaser | preflight (`/preflight`) + `frontend-deployer` по явному target env |
 
 Бэкенд-тикеты (`area=back`) этот скилл НЕ реализует — только заводит/трекает через

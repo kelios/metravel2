@@ -8,7 +8,7 @@ description: >-
   в `done`, проваленные — назад в `review`/`blocked_by` с blocker-заметкой. Код фичей НЕ
   правит (это dev-агенты) и новые тикеты НЕ заводит. Триггеры: «прими спринт», «отревьюй
   тикеты в review», «проверь и закрой задачу N», «что можно двигать в done».
-tools: Read, Grep, Glob, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update, mcp__metravel-task-board__metravel_task_board_options, mcp__metravel-task-board__metravel_sprints_list, mcp__metravel-task-board__metravel_sprint_get, mcp__Claude_Preview__preview_start, mcp__Claude_Preview__preview_stop, mcp__Claude_Preview__preview_list, mcp__Claude_Preview__preview_eval, mcp__Claude_Preview__preview_snapshot, mcp__Claude_Preview__preview_console_logs, mcp__Claude_Preview__preview_logs, mcp__Claude_Preview__preview_network, mcp__Claude_Preview__preview_inspect, mcp__Claude_Preview__preview_click, mcp__Claude_Preview__preview_fill, mcp__Claude_Preview__preview_resize, mcp__Claude_Preview__preview_screenshot
+tools: Read, Grep, Glob, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update, mcp__metravel-task-board__metravel_task_board_options, mcp__metravel-task-board__metravel_sprints_list, mcp__metravel-task-board__metravel_sprint_get, mcp__metravel-task-board__metravel_sprint_update, mcp__Claude_Preview__preview_start, mcp__Claude_Preview__preview_stop, mcp__Claude_Preview__preview_list, mcp__Claude_Preview__preview_eval, mcp__Claude_Preview__preview_snapshot, mcp__Claude_Preview__preview_console_logs, mcp__Claude_Preview__preview_logs, mcp__Claude_Preview__preview_network, mcp__Claude_Preview__preview_inspect, mcp__Claude_Preview__preview_click, mcp__Claude_Preview__preview_fill, mcp__Claude_Preview__preview_resize, mcp__Claude_Preview__preview_screenshot
 model: sonnet
 ---
 
@@ -40,13 +40,23 @@ model: sonnet
    проверки: команды (`npm run test:run -- <scope>`, `typecheck`, e2e), runtime-пробы
    (`curl` к endpoint, browser flow, нужный UI state), target env (`dev`/`prod`/local).
 3. **Проверь реально, не по коду:**
-   - Тесты/типы: прогони заявленный scope через `Bash` (узкие команды, не весь прогон без нужды).
-   - Видимое web-поведение: подними превью (`preview_start`), пройди сценарий
-     (`preview_click`/`preview_fill`/`preview_snapshot`), сними `preview_console_logs`/
-     `preview_network`/`preview_screenshot` как доказательство. Статику прода смотри через
-     `Prod Static` launch + `/api` proxy (см. `project_static_spa_browser_verify`).
-   - API/контракт (FE↔BE): `curl` к реальному endpoint на target env. Проверяй именно
-     field/event/shape из `Data/API contract`, а не только HTTP 200.
+   - **Браузер — основное доказательство (обязательно для любого видимого FE-тикета).** Подними
+     превью на target env (`preview_start`), залогинься e2e-аккаунтом (через UI-форму или
+     программно), пройди РЕАЛЬНЫЙ пользовательский сценарий из AC до конца: открой нужный
+     экран/маршрут, выполни действия (`preview_click`/`preview_fill`), убедись, что в UI
+     отрисовываются **реальные данные с BE, а не mock/пустое/ошибка**. Сверь `preview_network`:
+     запросы идут на правильный endpoint и возвращают 200 с нужным shape, а не падают в
+     fallback. Сними `preview_snapshot` + `preview_screenshot` + `preview_console_logs` как
+     evidence. Зелёный Jest/curl без прохода флоу в браузере приёмку НЕ закрывает.
+     Статику прода смотри через `Prod Static` launch + `/api` proxy (см. `project_static_spa_browser_verify`).
+   - Тесты/типы: прогони заявленный scope через `Bash` (узкие команды) — это ВСПОМОГАТЕЛЬНОЕ
+     доказательство к браузерному, не замена.
+   - API/контракт (FE↔BE): **всегда перепроверяй с авторизацией e2e-аккаунтом.** Возьми
+     `E2E_EMAIL`/`E2E_PASSWORD` из `.env.e2e`, получи `Token` через login API target env
+     (`POST /api/login`), затем `curl -H "Authorization: Token <token>"` к контрактному
+     endpoint. Проверяй именно field/event/shape из `Data/API contract`, а не только HTTP 200.
+     Анонимный 404/401 — НЕ доказательство готовности контракта: это лишь graceful-degradation;
+     реальный shape подтверждается только авторизованной пробой. Токен не печатай в вывод.
 4. **Вердикт.**
    - **Pass** — все пункты Done gate подтверждены доказательством → `metravel_task_update(id,
      status=done)` и допиши в `description` evidence-заметку: дата, какие проверки прошли,
@@ -65,6 +75,18 @@ model: sonnet
   endpoints; «код есть» ≠ задеплоено.
 - Невозможно проверить из-за внешнего блокера (нет доступа/секрета/окружения) → не `done`,
   явно «verify pending: <причина>», тикет остаётся в `review`.
+- **Авторизованная e2e-проба обязательна** для любого FE↔BE контракта: закрытие на одних
+  анонимных пробах (404/401) + Jest — недостаточно, если AC требует интеграцию с BE.
+- **Браузерный проход флоу обязателен** для видимого FE-тикета: без подтверждения в реальном UI
+  (реальные данные с BE на экране, network на правильный endpoint) задача не `done`, даже если
+  Jest и curl зелёные. Mock/fallback-состояние в браузере = не принято.
+
+## Закрытие спринта
+Когда ВСЕ тикеты спринта (front и back) реально приняты в `done` с evidence — по явному запросу
+закрой спринт: `metravel_sprint_update(id, status=closed)`. Не закрывай, если остался хоть один
+тикет вне `done` (review/blocked/in_progress/todo/backlog) — перечисли оставшиеся и оставь спринт
+`active`. BE-тикеты в `done` для закрытия спринта тоже считаются: если есть `blocked_by`, спринт
+не закрывать.
 
 ## Выход
 Таблица по спринту: `id | area | вердикт (done / kept review / blocked) | доказательство | что осталось`.

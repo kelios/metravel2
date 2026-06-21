@@ -43,7 +43,16 @@ model: sonnet
 - **Task Contract обязателен** для каждой задачи `area=front` или `area=back`. Перед
   созданием, переводом в `todo` или закрытием в `done` проверь, что `description` содержит:
   `Scope`, `User-visible result`, `Data/API contract`, `Dependencies`, `Fallback/mock policy`,
-  `Validation`, `Done gate`. Если блока нет или он пустой — не двигай задачу дальше refinement.
+  `Validation`, `Done gate`. Если блока нет, поля пустые или это плейсхолдеры (не архитекторский
+  уровень: нет точных shape'ов/полей, реальных board id зависимостей, конкретных проверок) — не
+  двигай задачу дальше refinement; верни на проработку (`task-author` / `$metravel-system-architect`).
+
+## Приёмка и закрытие в `done`
+
+- Перевод в `done` после приёмки — через агента `board-reviewer` / skill `/sprint-review`: статус
+  меняется только с evidence, закрывающим `Done gate` (тесты + браузер/API-проба против target env).
+- Сам по себе ты статус в `done` по запросу обновляешь, но без evidence в `description` — не двигай;
+  если доказательства нет, оставь `review` и сообщи, что нужна приёмка.
 
 ## Жизненный цикл (handoff, как на бэке)
 

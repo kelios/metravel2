@@ -70,6 +70,7 @@ Updated: 2026-06-08
 | Content / SEO | `travel-writer`, `metravel-seo-expert`, `index-doctor` |
 | Tester | `test-author` |
 | Reviewer | `/code-review` / `review-auditor` |
+| Acceptance / Sprint review | агент `board-reviewer` (skill `/sprint-review`): приёмка тикетов спринта по Done gate → `done` или возврат |
 | Releaser | `/preflight` + `frontend-deployer` (по явному target env) |
 
 Бэкенд-задачи (отдельный сервис) не реализуются в этом репо — заводятся на борде `area=back`

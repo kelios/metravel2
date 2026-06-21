@@ -35,10 +35,14 @@ release). `sprint-review` — это батч-гейт на конце: проб
 3. **Приёмка каждого тикета — агент `board-reviewer`.** Для каждого кандидата:
    - сверить наличие и полноту `## Task Contract` (нет/пусто → вернуть в `review`,
      «contract incomplete», это refinement-долг);
-   - выполнить `Done gate` + `Validation` + AC реальными проверками: узкие тест-прогоны
-     (`npm run test:run -- <scope>`, `typecheck`, e2e), браузер-флоу через preview
-     (`preview_start`/`click`/`fill`/`snapshot`/`console`/`network`/`screenshot`),
-     `curl`-пробы контрактного endpoint/field/event на target env (`dev`/`prod`/local);
+   - выполнить `Done gate` + `Validation` + AC реальными проверками. **Браузер — основное
+     доказательство:** пройти реальный пользовательский флоу из AC на target env через preview
+     (`preview_start`/`click`/`fill`/`snapshot`/`console`/`network`/`screenshot`), убедиться, что
+     в UI реальные данные с BE (не mock/пусто/ошибка) и network идёт на правильный endpoint.
+     Узкие тест-прогоны (`npm run test:run -- <scope>`, `typecheck`, e2e) — вспомогательно,
+     **авторизованные `curl`-пробы** контрактного endpoint/field/event на target env
+     (логин e2e-аккаунтом из `.env.e2e` → `Token` → запрос с `Authorization`); анонимный
+     404/401 — не доказательство контракта;
    - вынести вердикт **pass/fail** с доказательством.
 4. **Двинуть статусы (с evidence).**
    - **pass** → `status=done` + evidence-заметка в `description` (дата, прошедшие проверки,
@@ -50,6 +54,10 @@ release). `sprint-review` — это батч-гейт на конце: проб
    FE-агентам / `ticket-flow`; после фикса они снова приходят в `review` на следующий проход.
 6. **Сводка спринта.** Таблица `id | area | вердикт | evidence | осталось`, ссылка на `/board`,
    список разблокированной/заблокированной работы.
+7. **Закрытие спринта.** Если ВСЕ тикеты спринта (front+back) приняты в `done` и нет
+   `blocked_by` — по явному запросу `board-reviewer` закрывает спринт
+   (`metravel_sprint_update(status=closed)`). Остался хоть один не-`done` — спринт оставить
+   `active` и перечислить, что мешает закрытию.
 
 ## Правила
 

@@ -32,6 +32,7 @@ Done gate:
 ## Rules
 
 - Do not create a FE/BE task without the contract block.
+- Architect-level detail is mandatory: concrete request/response shapes (fields + types), real board ids for dependencies, concrete validation commands/URLs. Placeholder or empty fields mean the task is not ready — send it back to `$metravel-system-architect` or ask one clarifying question.
 - Do not move a task to `todo` for implementation until the contract has concrete, testable acceptance.
 - Do not move a task to `done` unless the `Done gate` evidence exists.
 - For BE tasks that unblock FE, require deploy-target API evidence for the exact endpoints/fields/events.
