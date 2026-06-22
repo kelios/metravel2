@@ -77,7 +77,7 @@ export const BOTTOM_DOCK_MORE_MENU_SECTIONS: BottomDockMoreMenuSection[] = [
       { key: 'disclaimer', label: 'Отказ от ответственности', accessibilityLabel: 'Отказ от ответственности', route: '/disclaimer', iconName: 'alert-triangle', muted: true },
       { key: 'community-rules', label: 'Правила сообщества', accessibilityLabel: 'Правила сообщества', route: '/community-rules', iconName: 'users', muted: true },
       { key: 'trip-rules', label: 'Правила участия в поездках', accessibilityLabel: 'Правила участия в поездках', route: '/trip-rules', iconName: 'map', muted: true },
-      { key: 'about', label: 'Связаться с нами', accessibilityLabel: 'Связаться с нами', route: '/about', iconName: 'mail', muted: true },
+      { key: 'about', label: 'Связаться с нами', accessibilityLabel: 'Связаться с нами', route: '/contact', iconName: 'mail', muted: true },
     ],
   },
 ]

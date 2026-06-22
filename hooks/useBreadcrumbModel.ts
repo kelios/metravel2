@@ -77,6 +77,10 @@ const pageTranslations: Record<string, string> = {
   cookies: 'Файлы cookie',
   privacy: 'Конфиденциальность',
   register: 'Регистрация',
+  terms: 'Пользовательское соглашение',
+  disclaimer: 'Отказ от ответственности',
+  'community-rules': 'Правила сообщества',
+  'trip-rules': 'Правила участия в поездках',
 };
 
 function normalizePathname(pathname: string | null | undefined) {
