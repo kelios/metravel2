@@ -22,18 +22,12 @@ interface Props {
 
 function RareAwardsSection({ testID, style }: Props) {
   const colors = useThemedColors();
-  const { data, isError, isFetching } = useMyRareAwards();
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { data, isLoading, isError } = useMyRareAwards();
   const ownerName = useAuthStore((s) => s.username);
   const styles = getStyles(colors);
 
   // Тихо скрываем при ошибке — секция необязательная.
   if (isError) return null;
-  // Запрос включён только при auth — гостю (или до завершённого запроса без
-  // данных) не крутим вечный спиннер по `!data`, а скрываем секцию.
-  if (!isAuthenticated && !data) return null;
-  const isLoading = isFetching && !data;
-  if (!data && !isLoading) return null;
 
   return (
     <View style={[styles.card, style]} testID={testID}>

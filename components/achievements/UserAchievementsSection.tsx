@@ -23,18 +23,13 @@ interface Props {
 
 function UserAchievementsSection({ userId, testID, style }: Props) {
   const colors = useThemedColors();
-  const { data, isError, isFetching } = useUserAchievements(userId);
+  const { data, isLoading, isError } = useUserAchievements(userId);
 
   const styles = getStyles(colors);
 
   if (isError) return null;
 
-  // Спиннер только пока реально идёт запрос. Запрос disabled при пустом userId
-  // (профиль ещё грузится) или завершившийся без данных не должен вешать вечный
-  // спиннер по `!data` — в этом случае секцию скрываем.
-  const isLoading = isFetching && !data;
-  if (!data) {
-    if (!isLoading) return null;
+  if (isLoading || !data) {
     return (
       <View style={[styles.card, style]} testID={testID}>
         <ActivityIndicator color={colors.primary} />

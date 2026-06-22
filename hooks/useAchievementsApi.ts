@@ -44,20 +44,12 @@ const isAbortError = (error: unknown): boolean =>
 const retry = (failureCount: number, error: unknown): boolean =>
   !isAuthError(error) && !isAbortError(error) && failureCount < 2;
 
-// Глобальный networkMode='offlineFirst' (utils/reactQueryConfig) ставит запрос на
-// паузу (fetchStatus='paused', isPending=true) вместо ошибки, если online-manager
-// считает клиента офлайн — тогда секция «Достижения» висит в loading навсегда.
-// Достижения некритичны и эндпоинт всегда доступен онлайн: гоняем их в режиме
-// 'online', чтобы запрос либо завершился, либо упал в error, но не залипал.
-const NETWORK_MODE = 'online' as const;
-
 /** Справочник всех значков (галерея, в т.ч. ещё не полученных). */
 export function useBadgeCatalog() {
   return useQuery<Badge[]>({
     queryKey: queryKeys.achievementsBadges(),
     queryFn: fetchBadgeCatalog,
     staleTime: STALE_TIME,
-    networkMode: NETWORK_MODE,
     retry,
   });
 }
@@ -70,7 +62,6 @@ export function useMyAchievements() {
     queryFn: fetchMyAchievements,
     enabled: isAuthenticated,
     staleTime: STALE_TIME,
-    networkMode: NETWORK_MODE,
     retry,
   });
 }
@@ -82,7 +73,6 @@ export function useUserAchievements(userId: string | number | null | undefined) 
     queryFn: () => fetchUserAchievements(userId as string | number),
     enabled: userId != null && userId !== '',
     staleTime: STALE_TIME,
-    networkMode: NETWORK_MODE,
     retry,
   });
 }
@@ -95,7 +85,6 @@ export function usePeerBadgeCatalog() {
     queryKey: queryKeys.achievementsPeerCatalog(),
     queryFn: fetchPeerBadgeCatalog,
     staleTime: STALE_TIME,
-    networkMode: NETWORK_MODE,
     retry,
   });
 }
@@ -107,7 +96,6 @@ export function useTravelPeerBadges(travelId: string | number | null | undefined
     queryFn: () => fetchTravelPeerBadges(travelId as string | number),
     enabled: travelId != null && travelId !== '',
     staleTime: STALE_TIME,
-    networkMode: NETWORK_MODE,
     retry,
   });
 }
@@ -122,7 +110,6 @@ export function useMyRareAwards() {
     queryFn: fetchMyRareAwards,
     enabled: isAuthenticated,
     staleTime: STALE_TIME,
-    networkMode: NETWORK_MODE,
     retry,
   });
 }
@@ -134,7 +121,6 @@ export function useUserRareAwards(userId: string | number | null | undefined) {
     queryFn: () => fetchUserRareAwards(userId as string | number),
     enabled: userId != null && userId !== '',
     staleTime: STALE_TIME,
-    networkMode: NETWORK_MODE,
     retry,
   });
 }
@@ -146,7 +132,6 @@ export function useRareAwardCatalog(enabled = true) {
     queryFn: fetchRareAwardCatalog,
     enabled,
     staleTime: STALE_TIME,
-    networkMode: NETWORK_MODE,
     retry,
   });
 }
