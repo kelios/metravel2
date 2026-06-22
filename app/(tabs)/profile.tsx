@@ -40,6 +40,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { confirmAction } from '@/utils/confirmAction';
 import { webTouchScrollStyle } from '@/utils';
+import { rIC } from '@/utils/rIC';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { useIsFocused } from 'expo-router';
@@ -119,6 +120,7 @@ export default function ProfileScreen() {
   const subscribersCount = subscribers.length;
   const [activeTravelMetric, setActiveTravelMetric] = useState<ProfileTravelEngagementMetricKey | null>(null);
   const lastEndReachedAtRef = useRef(0);
+  const travelsRequestedRef = useRef(false);
 
   const handleTotalChange = useCallback((total: number) => {
     setStats((prev) => ({ ...prev, travelsCount: total }));
@@ -137,6 +139,12 @@ export default function ProfileScreen() {
   } = useMyTravels({ userId, perPage: PROFILE_TRAVELS_PER_PAGE, onTotalChange: handleTotalChange });
   const personalTravelStatusEntries = useTravelStatusStore((state) => state.entries)
   const loadPersonalTravelStatuses = useTravelStatusStore((state) => state.loadLocal)
+
+  const ensureTravelsLoaded = useCallback(() => {
+    if (travelsRequestedRef.current) return;
+    travelsRequestedRef.current = true;
+    void loadTravels();
+  }, [loadTravels]);
 
   const loadMoreTravels = useCallback(async () => {
     if (activeTab !== 'travels') return;
@@ -197,6 +205,7 @@ export default function ProfileScreen() {
   const onRefresh = useCallback(async () => {
     hapticImpact('light');
     setRefreshing(true);
+    travelsRequestedRef.current = true;
     try {
       await Promise.all([loadTravels(), loadUserInfo()]);
     } finally {
@@ -216,8 +225,23 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     loadUserInfo();
-    loadTravels();
-  }, [loadUserInfo, loadTravels]);
+  }, [loadUserInfo]);
+
+  // Список путешествий не нужен для первого рендера (шапка + вкладка «Обзор»
+  // строятся из профиля/кэша). Дёргаем его отложенно — после первого кадра —
+  // чтобы счётчик «Маршруты» в шапке заполнился без блокировки экрана.
+  useEffect(() => {
+    const cancel = rIC(ensureTravelsLoaded, 400);
+    return cancel;
+  }, [ensureTravelsLoaded]);
+
+  // Если пользователь открыл вкладку, которой реально нужен список/метрики,
+  // загружаем немедленно (не ждём idle).
+  useEffect(() => {
+    if (activeTab === 'travels' || activeTab === 'stats' || activeTravelMetric) {
+      ensureTravelsLoaded();
+    }
+  }, [activeTab, activeTravelMetric, ensureTravelsLoaded]);
 
   useEffect(() => {
     if (!isAuthenticated) return
