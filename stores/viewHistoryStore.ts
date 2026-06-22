@@ -65,7 +65,7 @@ interface ViewHistoryState {
     clearHistory: (auth: { isAuthenticated: boolean; userId: string | null }) => Promise<void>;
     loadLocal: (userId: string | null) => Promise<void>;
     loadServerCached: (userId: string | null) => Promise<void>;
-    refreshFromServer: (userId: string | null) => Promise<void>;
+    refreshFromServer: (userId: string | null) => Promise<boolean>;
     ensureServerData: (userId: string | null) => Promise<void>;
     resetFetchState: (userId: string | null) => void;
 }
@@ -151,7 +151,7 @@ export const useViewHistoryStore = create<ViewHistoryState>((set, get) => ({
     },
 
     refreshFromServer: async (userId) => {
-        if (!userId) return;
+        if (!userId) return false;
         try {
             const { fetchUserHistory } = await getUserApi();
             const historyDto = await fetchUserHistory(userId);
@@ -182,8 +182,10 @@ export const useViewHistoryStore = create<ViewHistoryState>((set, get) => ({
                 return { viewHistory: userHistory };
             });
             await AsyncStorage.setItem(`${SERVER_HISTORY_CACHE_KEY}_${userId}`, JSON.stringify(adopted));
+            return true;
         } catch (error) {
             devError('Ошибка обновления истории с сервера:', error);
+            return false;
         }
     },
 
@@ -191,8 +193,11 @@ export const useViewHistoryStore = create<ViewHistoryState>((set, get) => ({
         if (!userId) return;
         const state = get();
         if (state._fetched && state._userId === userId) return;
-        set({ _fetched: true, _userId: userId });
-        await get().refreshFromServer(userId);
+        // Mark as fetched only after a successful refresh, otherwise a failed
+        // network call (common on native cold start) would permanently block
+        // retries and leave the history shelf empty despite real data.
+        const ok = await get().refreshFromServer(userId);
+        if (ok) set({ _fetched: true, _userId: userId });
     },
 
     resetFetchState: (userId) => {

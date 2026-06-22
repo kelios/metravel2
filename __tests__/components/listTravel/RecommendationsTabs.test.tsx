@@ -194,11 +194,30 @@ describe('RecommendationsTabs', () => {
 
     render(<RecommendationsTabs forceVisible={true} />);
 
-    fireEvent.press(screen.getByLabelText('Избранное'));
+    // Mobile renders shelves directly (no chip-tabs): the favorites shelf must
+    // appear up front whenever the user actually has favorites.
+    expect(await screen.findByTestId('recommendations-favorites-shelf')).toBeTruthy();
     expect(await screen.findByText('Fav 1')).toBeTruthy();
 
     const props = mockTabTravelCard.mock.calls.at(-1)?.[0];
     expect(props?.layout).toBe('grid');
+  });
+
+  it('does not render favorites/history shelves on mobile when collections are empty', async () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: true });
+    mockUseResponsive.mockReturnValue({ isMobile: true });
+    mockUseFavorites.mockReturnValue({
+      favorites: [] as any[],
+      viewHistory: [] as any[],
+      clearFavorites: jest.fn(),
+      clearHistory: jest.fn(),
+    });
+
+    render(<RecommendationsTabs forceVisible={true} />);
+
+    expect(await screen.findByText('WeeklyHighlights')).toBeTruthy();
+    expect(screen.queryByTestId('recommendations-favorites-shelf')).toBeNull();
+    expect(screen.queryByTestId('recommendations-history-shelf')).toBeNull();
   });
 
   it('collapses and expands and calls onVisibilityChange', async () => {

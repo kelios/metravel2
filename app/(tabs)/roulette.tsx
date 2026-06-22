@@ -334,7 +334,7 @@ export default function RouletteScreen() {
               <View style={styles.hintBox}>
                 <Text style={styles.hintTitle}>Готов к случайному путешествию?</Text>
                 <Text style={styles.hintText}>
-                  Настрой фильтры слева и нажми «Подобрать маршруты», чтобы получить три идеи поездок.
+                  Настрой фильтры и нажми «Подобрать маршруты», чтобы получить три идеи поездок.
                 </Text>
               </View>
             )}
