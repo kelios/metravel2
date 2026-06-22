@@ -2,15 +2,18 @@
 // Хуки для работы с квестами через бэкенд API.
 // Чистые адаптеры и типы вынесены в utils/questAdapters.ts.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ApiQuestProgress } from '@/api/quests';
+import { useQuery } from '@tanstack/react-query';
+import type { ApiQuestProgress, QuestReview } from '@/api/quests';
 import {
     fetchQuestsList,
     fetchQuestByQuestId,
     fetchQuestCities,
     fetchOrCreateProgress,
+    fetchQuestReviews,
     updateProgress as apiUpdateProgress,
     deleteProgress as apiDeleteProgress,
 } from '@/api/quests';
+import { queryKeys } from '@/api/queryKeys';
 import {
     adaptMeta,
     adaptBundle,
@@ -178,6 +181,16 @@ export function useQuestBundle(questId: string | undefined) {
     }, [questId, reloadToken]);
 
     return { bundle, loading, error, refetch };
+}
+
+/** Хук для загрузки публичных отзывов о квесте (читалка чужих отзывов) */
+export function useQuestReviews(questId: string | undefined, enabled = true) {
+    return useQuery<QuestReview[]>({
+        queryKey: queryKeys.questReviews(questId),
+        queryFn: () => fetchQuestReviews(questId!),
+        enabled: enabled && !!questId,
+        staleTime: 60 * 1000,
+    });
 }
 
 const PROGRESS_SYNC_DEBOUNCE_MS = 2000;

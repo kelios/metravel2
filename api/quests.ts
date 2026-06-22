@@ -188,6 +188,121 @@ export type ApiQuestProgressCreate = {
     completed?: boolean;
 };
 
+/** Публичный отзыв о квесте (для читалки чужих отзывов) */
+export type ApiQuestReview = {
+    id: number;
+    rating: number;
+    liked: string;
+    disliked: string;
+    author_name: string | null;
+    author_avatar: string | null;
+    created_at: string | null;
+};
+
+/** Отзыв для UI (фронтенд формат) */
+export type QuestReview = {
+    id: number;
+    rating: number;
+    liked: string;
+    disliked: string;
+    authorName: string | null;
+    authorAvatar: string | null;
+    createdAt: string | null;
+};
+
+function adaptQuestReview(raw: ApiQuestReview): QuestReview {
+    return {
+        id: raw.id,
+        rating: Number(raw.rating) || 0,
+        liked: raw.liked ?? '',
+        disliked: raw.disliked ?? '',
+        authorName: raw.author_name ?? null,
+        authorAvatar: raw.author_avatar ? normalizeMediaUrl(raw.author_avatar) : null,
+        createdAt: raw.created_at ?? null,
+    };
+}
+
+/**
+ * MOCK-FALLBACK (BE-тикет: список публичных отзывов квеста, эндпоинта пока нет).
+ *
+ * КОНТРАКТ ОЖИДАЕМОГО ЭНДПОИНТА (для BE-тикета — снять мок после реализации):
+ *   GET /api/quests/quest{questId}/reviews/
+ *     где questId — строковый quest_id (напр. "minsk-cmok").
+ *   Публичный (без авторизации), пагинация как у остальных списков
+ *   (массив | {data|results, next}).
+ *   Элемент ответа (ApiQuestReview):
+ *     {
+ *       id: number,
+ *       rating: number,             // 1..5
+ *       liked: string,              // «что понравилось»
+ *       disliked: string,          // «что улучшить»
+ *       author_name: string|null,  // имя автора (или null если аноним)
+ *       author_avatar: string|null,// URL аватара (или null)
+ *       created_at: string|null    // ISO-дата
+ *     }
+ *
+ * Детерминированный мок строится по questId, чтобы один и тот же квест всегда
+ * показывал один и тот же набор отзывов в DEV/без бэка.
+ */
+const QUEST_REVIEWS_MOCK: ReadonlyArray<Omit<ApiQuestReview, 'id'>> = [
+    {
+        rating: 5,
+        liked: 'Очень атмосферный маршрут, прошли всей семьёй за пару часов. Загадки в меру сложные, дети были в восторге.',
+        disliked: '',
+        author_name: 'Анна К.',
+        author_avatar: null,
+        created_at: '2025-09-14T12:30:00Z',
+    },
+    {
+        rating: 4,
+        liked: 'Открыли для себя несколько мест в городе, мимо которых ходили годами. Здорово, что задания привязаны к деталям зданий.',
+        disliked: 'Одна точка была закрыта на ремонт — пришлось додумывать ответ. В остальном супер.',
+        author_name: 'Дмитрий',
+        author_avatar: null,
+        created_at: '2025-08-02T18:05:00Z',
+    },
+    {
+        rating: 5,
+        liked: 'Идеально для свидания! Финальная история тронула. Спасибо авторам за работу.',
+        disliked: '',
+        author_name: 'Марина',
+        author_avatar: null,
+        created_at: '2025-07-21T10:15:00Z',
+    },
+    {
+        rating: 3,
+        liked: 'Хорошая идея и приятный сюжет.',
+        disliked: 'Несколько подсказок показались слишком очевидными, хотелось бы посложнее.',
+        author_name: 'Сергей П.',
+        author_avatar: null,
+        created_at: '2025-06-30T09:40:00Z',
+    },
+];
+
+function buildQuestReviewsMock(questId: string): QuestReview[] {
+    let seed = 0;
+    for (let i = 0; i < questId.length; i++) seed = (seed * 31 + questId.charCodeAt(i)) >>> 0;
+    const count = 3 + (seed % 2); // 3 или 4 отзыва
+    return QUEST_REVIEWS_MOCK.slice(0, count).map((review, index) =>
+        adaptQuestReview({ ...review, id: 10_000 + (seed % 1000) + index }),
+    );
+}
+
+/**
+ * Получить список публичных отзывов о квесте (для читалки).
+ * Пытается реальный эндпоинт; при 404/ошибке отдаёт детерминированный мок.
+ */
+export async function fetchQuestReviews(questId: string): Promise<QuestReview[]> {
+    try {
+        const list = await fetchAllPages<ApiQuestReview>(`/quests/quest${questId}/reviews/`);
+        return list.map(adaptQuestReview);
+    } catch (err: unknown) {
+        const status = err instanceof ApiError ? err.status : undefined;
+        if (status && status !== 404) throw err;
+        return buildQuestReviewsMock(questId);
+    }
+}
+
 // ===================== API ФУНКЦИИ =====================
 
 type PaginatedEnvelope<T> = {

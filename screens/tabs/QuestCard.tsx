@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import UserAvatar from '@/components/layout/UserAvatar';
+import QuestReviewsModal from '@/components/quests/QuestReviewsModal';
 import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -42,6 +43,7 @@ export default function QuestCard({
     const colors = useThemedColors();
     const { isPhone } = useResponsive();
     const [isHovered, setIsHovered] = useState(false);
+    const [reviewsOpen, setReviewsOpen] = useState(false);
 
     const durationText = quest.durationMin ? `${Math.round((quest.durationMin ?? 60) / 5) * 5} мин` : '1–2 ч';
     const pointsText = pluralizePoints(quest.points ?? 0);
@@ -53,7 +55,8 @@ export default function QuestCard({
             : `${quest._distanceKm.toFixed(1)} км`
         : null;
     const isPioneerQuest = (quest.completionsCount ?? 0) <= 0;
-    const reviewsText = quest.ratingCount > 0
+    const hasReviews = quest.ratingCount > 0;
+    const reviewsLabel = hasReviews
         ? `${quest.ratingCount} ${pluralizeRu(quest.ratingCount, 'отзыв', 'отзыва', 'отзывов')}`
         : null;
 
@@ -72,8 +75,12 @@ export default function QuestCard({
 
     const handleReviewsPress = useCallback((event?: any) => {
         event?.stopPropagation?.();
-        router.push(`/quests/${cityId}/${quest.id}#quest-review-section` as any);
-    }, [cityId, quest.id]);
+        setReviewsOpen(true);
+    }, []);
+
+    const handleReviewsClose = useCallback(() => {
+        setReviewsOpen(false);
+    }, []);
 
     const cardHeight = isPhone ? 238 : Math.round((cardWidth / 380) * 260);
     const showOverlayMeta = !isPhone;
@@ -274,33 +281,41 @@ export default function QuestCard({
                             <Text style={styles.questCardPioneerBadgeText}>Вы будете первооткрывателем</Text>
                         </View>
                     )}
-
-                    {reviewsText && (
-                        <Pressable
-                            onPress={handleReviewsPress}
-                            style={styles.questCardReviewsButton}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Посмотреть отзывы: ${reviewsText}`}
-                            testID={`quest-card-reviews-${quest.id}`}
-                            {...Platform.select({
-                                web: {
-                                    role: 'button',
-                                    tabIndex: 0,
-                                    'data-card-action': 'true',
-                                    onClick: (event: any) => {
-                                        event?.stopPropagation?.();
-                                    },
-                                } as any,
-                                default: {},
-                            })}
-                        >
-                            <Feather name="message-circle" size={14} color={colors.text} />
-                            <Text style={styles.questCardReviewsButtonText}>
-                                Посмотреть {reviewsText}
-                            </Text>
-                        </Pressable>
-                    )}
                 </View>
+            )}
+
+            {hasReviews && (
+                <Pressable
+                    onPress={handleReviewsPress}
+                    style={[styles.questCardReviewsChip, { top: cardHeight - 36 }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Посмотреть отзывы: ${reviewsLabel}`}
+                    testID={`quest-card-reviews-${quest.id}`}
+                    hitSlop={6}
+                    {...Platform.select({
+                        web: {
+                            role: 'button',
+                            tabIndex: 0,
+                            'data-card-action': 'true',
+                            onClick: (event: any) => {
+                                event?.stopPropagation?.();
+                                handleReviewsPress(event);
+                            },
+                        } as any,
+                        default: {},
+                    })}
+                >
+                    <Feather name="message-circle" size={13} color={colors.textOnDark} />
+                    <Text style={styles.questCardReviewsChipText}>{quest.ratingCount}</Text>
+                </Pressable>
+            )}
+
+            {reviewsOpen && (
+                <QuestReviewsModal
+                    questId={String(quest.id)}
+                    visible={reviewsOpen}
+                    onClose={handleReviewsClose}
+                />
             )}
         </View>
     );

@@ -1,6 +1,7 @@
 # Правила native-совместимости (web-first проект → Android/iOS)
 
-Кодекс, рождённый первым запуском native-приложения (2026-06-11). Каждый пункт —
+Кодекс, рождённый первым запуском native-приложения (2026-06-11), пополняется по мере
+новых native-багов (правила 8-10 — из device-QA 2026-06-22). Каждый пункт —
 реальный баг, стоивший EAS-сборки или часа отладки. Нарушения ловит
 `__tests__/config/native-compat-governance.test.ts` (механические правила) и
 skill `android-native-audit` (семантические).
@@ -84,6 +85,49 @@ skill `android-native-audit` (семантические).
   expo-doctor 20/20, typecheck, полный Jest, оба `expo export`.
 - Снять причину краша: `adb logcat -d | grep -E "FATAL|ReactNativeJS"` — дословный
   стек вместо догадок. Лог EAS-сборки: brotli (`content-encoding: br`), не gzip.
+- **Device-verify обязателен, если устройство подключено.** Native-фикс НЕ
+  сдавать как «verify pending», когда adb видит девайс — прогнать сценарий на нём.
+- **Грабля стейл-бандла:** Fast Refresh часто НЕ подхватывает НОВЫЕ файлы/импорты —
+  на устройстве остаётся старый код, и баг «не исправлен». После правки делать
+  **явный Reload**: `adb shell input keyevent 82` (dev-меню Expo) → «Reload»,
+  подождать ~12с пересборки, и убедиться, что НОВЫЙ UI реально появился (а не
+  старый), прежде чем тестировать.
+
+## 8. Legacy-методы expo-модулей, которые THROW в рантайме (а не deprecation-warn)
+
+- `expo-file-system` (SDK 56) выкинул из ГЛАВНОГО экспорта legacy-методы
+  (`writeAsStringAsync`, `readAsStringAsync`, `cacheDirectory`, `documentDirectory`,
+  `makeDirectoryAsync`, `deleteAsync`, `getInfoAsync`…): они помечены
+  `@deprecated … will throw in runtime` и в теле делают `throw` — typecheck и web
+  проходят, а native падает в `catch` (история: офлайн-точки квеста, KML-экспорт,
+  GPX-скачивание маршрута — всё ловилось одним и тем же throw).
+- **Правило:** импортировать ТОЛЬКО из `'expo-file-system/legacy'` (тот же API,
+  рабочая нативная реализация, 0 throw) — либо перейти на новый `File`/`Paths` API
+  (осторожно: его типы в .d.ts неполные, `File` шадоуит DOM `File` на web).
+  Bare-импорт `from 'expo-file-system'` запрещён (governance-тест, правило 8).
+- Общий принцип: при миграции SDK любой `@deprecated`-метод expo-модуля,
+  у которого в теле `throw` — это не «потом починим», а native-краш СЕЙЧАС.
+
+## 9. Web-семантика навигации/URL не работает на native
+
+- `router.push('/x/y#anchor')` — хеш-якорь это web-only scroll-to-id. На native
+  хеш игнорируется → попадаешь на КОРЕНЬ роута (история: «Посмотреть отзывы»
+  открывала старт квеста вместо отзывов). То же про `<Link href="…#…">`.
+- **Правило:** не навигировать к секции через `#id`. Передавать `params` и
+  обрабатывать в самом экране (скролл/таб/состояние) или открывать модалку.
+  Хеш в `router.push/replace/navigate` запрещён (governance-тест, правило 9).
+
+## 10. Native-карта требует ДОСТИЖИМЫЙ origin тайлов
+
+- WebView-Leaflet берёт tile-URL из `EXPO_PUBLIC_API_URL`
+  (`config/mapWebLayers.ts` → `getOsmNativeTileUrl()` →
+  `{origin}/proxy/tiles/osm/{z}/{x}/{y}.png`). В dev `EXPO_PUBLIC_API_URL` — LAN
+  (`http://192.168.50.36`), у которого tile-прокси НЕТ → все тайлы 404 → серая
+  карта. Прод `https://metravel.by/proxy/tiles/...` = 200 (в проде карта рабочая).
+- **Правило:** для native-тайлов LAN/loopback-origin фолбэчить на прод-домен
+  (`https://metravel.by`), т.к. tile-прокси живёт только на проде; гарантировать
+  `https`. Серая карта в dev на устройстве ≠ прод-баг — сперва проверить tile-URL
+  (`adb logcat | grep proxy/tiles` / прямой GET тайла).
 
 ## Где закреплено
 

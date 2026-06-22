@@ -13,7 +13,7 @@ import {
     View,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { DESIGN_COLORS } from '@/constants/designSystem';
@@ -212,7 +212,7 @@ function QuestFullMap({
     const shareAsGPX = async () => {
         try {
             const gpxFile = buildQuestOfflineMapGpx({ title, steps: points });
-            const cacheDir = (FileSystem as any).cacheDirectory ?? (FileSystem.Paths.cache as any).uri;
+            const cacheDir = FileSystem.cacheDirectory ?? '';
             const fileUri = `${cacheDir}${gpxFile.filename}`;
             await FileSystem.writeAsStringAsync(fileUri, gpxFile.content);
             if (await Sharing.isAvailableAsync()) {
@@ -228,7 +228,7 @@ function QuestFullMap({
 
     const shareAsGeoJSON = async () => {
         try {
-            const cacheDir = (FileSystem as any).cacheDirectory ?? (FileSystem.Paths.cache as any).uri;
+            const cacheDir = FileSystem.cacheDirectory ?? '';
             const fileUri = `${cacheDir}${title.replace(/\s+/g, '_')}.geojson`;
             await FileSystem.writeAsStringAsync(fileUri, buildGeoJSON(points));
             if (await Sharing.isAvailableAsync()) {

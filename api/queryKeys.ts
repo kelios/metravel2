@@ -47,6 +47,7 @@ export const queryKeys = {
   quests: () => ['quests'] as const,
   questDetail: (questId: number | undefined) => ['quest', questId] as const,
   questRating: (questId: number | undefined) => ['quest', questId, 'rating'] as const,
+  questReviews: (questId: string | undefined) => ['quest', questId, 'reviews'] as const,
   travelsForQuest: (searchTerm: string) => ['travels-for-quest', searchTerm] as const,
   articleRating: (articleId: number | undefined, isAuthenticated: boolean) =>
     ['articleRating', articleId, isAuthenticated] as const,

@@ -54,7 +54,7 @@ React 19 + React Native 0.84 + Expo 55 (Expo Router, file-based) · web: RN Web 
 
 ## Android / native
 Выпуск Android-приложения через EAS (облако, Windows-friendly; package `by.metravel.app`). Агенты: `android-expert` (нативный FE-код — Platform-ветвление, карта/expo-модули/push/secure-store, разбор крашей), `android-builder` (EAS-сборка `android:build:*` + submit в Google Play; `app.json`/`eas.json`/`scripts/` не правит без явного запроса). Скиллы: `android-release` (пошаговый регламент выпуска), `android-native-audit` (web-API без Platform-guard и web-only импорты в native-бандле).
-**Кодекс native-совместимости — `docs/NATIVE_COMPAT_RULES.md`** (7 правил из реальных крашей: babel-трансформы по платформе, blessed-версии expo-модулей, `Promise.resolve(import())`, web-роли a11y под гейтом, postinstall-патчи как первый подозреваемый, отладка dev-client+adb вместо новых сборок). Автостраж: `__tests__/config/native-compat-governance.test.ts`.
+**Кодекс native-совместимости — `docs/NATIVE_COMPAT_RULES.md`** (10 правил из реальных крашей: babel-трансформы по платформе, blessed-версии expo-модулей, `Promise.resolve(import())`, web-роли a11y под гейтом, postinstall-патчи как первый подозреваемый, отладка dev-client+adb вместо новых сборок + device-verify с явным Reload, `expo-file-system` только через `/legacy` (главный экспорт throw-ит), без хеш-якорей `#id` в `router.push` на native, native-карта = прод-origin тайлов). Автостраж: `__tests__/config/native-compat-governance.test.ts`.
 
 ## Стиль ответов
 Короткий план (2–5 пунктов) → изменения кода; без пересказа условия и trailing summary; ссылки `path/to/file.tsx:line`. Экономить контекст: поиск и массовое чтение файлов делегировать субагентам (Explore), не читать большие файлы целиком без необходимости.

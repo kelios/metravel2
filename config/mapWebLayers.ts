@@ -623,15 +623,51 @@ export const getOsmTileUrl = (): string => {
   return OSM_PROXY_TILE_PATH;
 };
 
+/** Публичный origin с tile-прокси — фолбэк, когда EXPO_PUBLIC_API_URL недоступен для тайлов. */
+const OSM_PROXY_PUBLIC_ORIGIN = 'https://metravel.by';
+
+/**
+ * Хост, у которого заведомо НЕТ tile-прокси и/или к которому Android WebView
+ * не пустит mixed-content: loopback, приватные LAN-подсети (RFC1918) или
+ * cleartext `http://`. Для таких origin native обязан фолбэкнуться на прод.
+ */
+const isUnreachableTileOrigin = (parsed: URL): boolean => {
+  if (parsed.protocol !== 'https:') return true; // cleartext → mixed-content на Android
+  const host = parsed.hostname.toLowerCase();
+  if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host === '::1') {
+    return true;
+  }
+  // RFC1918 приватные подсети: 10.*, 192.168.*, 172.16–31.*
+  if (/^10\./.test(host)) return true;
+  if (/^192\.168\./.test(host)) return true;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return true;
+  return false;
+};
+
 /**
  * Абсолютный tile-URL базового OSM-слоя для native (Leaflet-в-WebView, #202).
  * На native нет same-origin: WebView грузит inline-HTML, поэтому относительный
- * путь `/proxy/tiles/...` некуда резолвить — нужен абсолютный https-URL на
- * публичный origin. Берём origin из EXPO_PUBLIC_API_URL (как на web в dev),
- * с фолбэком на прод-домен, чтобы native никогда не отдал относительный путь.
+ * путь `/proxy/tiles/...` некуда резолвить — нужен абсолютный https-URL.
+ *
+ * В dev `EXPO_PUBLIC_API_URL` указывает на LAN-бэкенд (напр. `http://192.168.x.x`),
+ * у которого НЕТ `/proxy/tiles` → тайлы 404 → серая карта. Поэтому для
+ * loopback/LAN/cleartext-origin фолбэкаем на публичный прод-домен, у которого
+ * прокси заведомо есть. Прод-origin (`https://metravel.by`) проходит без изменений.
+ * Касается ТОЛЬКО native — web-ветка (`getOsmTileUrl`) не затрагивается.
  */
 export const getOsmNativeTileUrl = (): string => {
-  const origin = getOsmProxyOrigin() || 'https://metravel.by';
+  let origin = OSM_PROXY_PUBLIC_ORIGIN;
+  try {
+    const raw = String(process.env.EXPO_PUBLIC_API_URL || '').trim();
+    if (raw) {
+      const parsed = new URL(raw.replace(/\/api\/?$/i, ''));
+      if (!isUnreachableTileOrigin(parsed) && parsed.origin) {
+        origin = parsed.origin;
+      }
+    }
+  } catch {
+    origin = OSM_PROXY_PUBLIC_ORIGIN;
+  }
   return `${origin}${OSM_PROXY_TILE_PATH}`;
 };
 

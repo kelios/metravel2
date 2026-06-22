@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState, useEffect, useRef, Suspense, laz
 import { View, ScrollView, Text, NativeSyntheticEvent, LayoutChangeEvent, Modal, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TravelFormData } from '@/types/types';

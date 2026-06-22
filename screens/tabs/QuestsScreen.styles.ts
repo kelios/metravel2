@@ -879,27 +879,28 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             fontSize: typography.sizes.xs,
             fontWeight: '800',
         },
-        questCardReviewsButton: {
+        questCardReviewsChip: {
+            position: 'absolute',
+            right: spacing.sm,
+            zIndex: 30,
             flexDirection: 'row',
             alignItems: 'center',
-            alignSelf: 'flex-start',
-            gap: spacing.xs,
-            minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+            gap: 4,
+            minHeight: 28,
             paddingHorizontal: spacing.sm,
-            paddingVertical: spacing.xs,
-            borderRadius: CONTROL_RADIUS,
-            backgroundColor: colors.backgroundSecondary,
-            borderWidth: 1,
-            borderColor: colors.borderLight,
+            paddingVertical: 4,
+            borderRadius: radii.full,
+            backgroundColor: 'rgba(0,0,0,0.55)',
             ...Platform.select({
                 web: {
                     cursor: 'pointer',
+                    backdropFilter: 'blur(6px)',
                 } as any,
             }),
         },
-        questCardReviewsButtonText: {
-            color: colors.text,
-            fontSize: typography.sizes.sm,
+        questCardReviewsChipText: {
+            color: colors.textOnDark,
+            fontSize: typography.sizes.xs,
             fontWeight: '700',
         },
         questCardMetaText: {

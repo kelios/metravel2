@@ -7,6 +7,66 @@ import {
   WEATHER_TEMP_LABELS_LAYER_ID,
 } from '../../config/mapWebLayers';
 
+describe('getOsmNativeTileUrl (dev LAN fallback, #grey-tiles)', () => {
+  const ORIGINAL_API_URL = process.env.EXPO_PUBLIC_API_URL;
+
+  afterEach(() => {
+    process.env.EXPO_PUBLIC_API_URL = ORIGINAL_API_URL;
+    jest.resetModules();
+  });
+
+  const loadTileUrl = (apiUrl: string | undefined): string => {
+    if (apiUrl === undefined) delete process.env.EXPO_PUBLIC_API_URL;
+    else process.env.EXPO_PUBLIC_API_URL = apiUrl;
+    let url = '';
+    jest.isolateModules(() => {
+      const mod = require('../../config/mapWebLayers');
+      url = mod.getOsmNativeTileUrl();
+    });
+    return url;
+  };
+
+  it('фолбэк на прод-домен для LAN 192.168.* (нет tile-прокси → серая карта)', () => {
+    expect(loadTileUrl('http://192.168.50.36')).toBe(
+      'https://metravel.by/proxy/tiles/osm/{z}/{x}/{y}.png',
+    );
+  });
+
+  it('фолбэк на прод для loopback / 10.* / 172.16-31.* / cleartext-https-LAN', () => {
+    expect(loadTileUrl('http://localhost:8081')).toContain('https://metravel.by/proxy/tiles');
+    expect(loadTileUrl('http://127.0.0.1')).toContain('https://metravel.by/proxy/tiles');
+    expect(loadTileUrl('http://10.0.0.5')).toContain('https://metravel.by/proxy/tiles');
+    expect(loadTileUrl('http://172.16.0.1')).toContain('https://metravel.by/proxy/tiles');
+    expect(loadTileUrl('http://172.31.255.1')).toContain('https://metravel.by/proxy/tiles');
+    // приватный хост, но даже по https — прокси там нет
+    expect(loadTileUrl('https://192.168.1.10')).toContain('https://metravel.by/proxy/tiles');
+  });
+
+  it('публичный 172.* (не приватный диапазон) НЕ считается LAN', () => {
+    expect(loadTileUrl('https://172.15.0.1')).toBe(
+      'https://172.15.0.1/proxy/tiles/osm/{z}/{x}/{y}.png',
+    );
+    expect(loadTileUrl('https://172.32.0.1')).toBe(
+      'https://172.32.0.1/proxy/tiles/osm/{z}/{x}/{y}.png',
+    );
+  });
+
+  it('прод-origin metravel.by проходит без изменений', () => {
+    expect(loadTileUrl('https://metravel.by')).toBe(
+      'https://metravel.by/proxy/tiles/osm/{z}/{x}/{y}.png',
+    );
+    expect(loadTileUrl('https://metravel.by/api')).toBe(
+      'https://metravel.by/proxy/tiles/osm/{z}/{x}/{y}.png',
+    );
+  });
+
+  it('итоговый native tile-URL всегда https (mixed-content guard)', () => {
+    for (const api of ['http://192.168.50.36', 'http://localhost', undefined, '']) {
+      expect(loadTileUrl(api).startsWith('https://')).toBe(true);
+    }
+  });
+});
+
 describe('WEB_MAP_OVERLAY_LAYERS (waymarked trails)', () => {
   it('includes Waymarked Trails overlays for hiking and cycling', () => {
     const hiking = WEB_MAP_OVERLAY_LAYERS.find((l: WebMapLayerDefinition) => l.id === 'waymarked-hiking');

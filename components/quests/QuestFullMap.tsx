@@ -10,7 +10,7 @@ import {
     Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { DESIGN_COLORS } from '@/constants/designSystem';
@@ -253,7 +253,7 @@ function QuestFullMap({
             }
 
             const gpxFile = buildQuestOfflineMapGpx({ title, steps: points });
-            const cacheDir = (FileSystem as any).cacheDirectory ?? (FileSystem.Paths.cache as any).uri;
+            const cacheDir = FileSystem.cacheDirectory ?? '';
             const fileUri = `${cacheDir}${gpxFile.filename}`;
 
             await FileSystem.writeAsStringAsync(fileUri, gpxFile.content);
@@ -277,7 +277,7 @@ function QuestFullMap({
             }
 
             const geoJsonContent = buildGeoJSON(points);
-            const cacheDir = (FileSystem as any).cacheDirectory ?? (FileSystem.Paths.cache as any).uri;
+            const cacheDir = FileSystem.cacheDirectory ?? '';
             const fileUri = `${cacheDir}${title.replace(/\s+/g, '_')}.geojson`;
 
             await FileSystem.writeAsStringAsync(fileUri, geoJsonContent);

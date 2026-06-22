@@ -71,4 +71,33 @@ describe('Native compatibility governance (docs/NATIVE_COMPAT_RULES.md)', () => 
     }
     expect(offenders).toEqual([]);
   });
+
+  it('правило 8: expo-file-system импортируется только через /legacy (главный экспорт бросает legacy-методы в рантайме на SDK 56)', () => {
+    // `import ... from 'expo-file-system'` / `require('expo-file-system')` без
+    // суффикса /legacy: на native `writeAsStringAsync`/`cacheDirectory`/... теперь
+    // THROW в рантайме (node_modules/expo-file-system/.../legacyWarnings.ts).
+    // Безопасно — только entry 'expo-file-system/legacy' (тот же API, без throw).
+    // Если когда-нибудь перейдём на новый File/Paths API — добавить его в whitelist.
+    const bareFs = /(?:from\s*|require\(\s*)['"]expo-file-system['"]/;
+    const offenders: string[] = [];
+    for (const file of sourceFiles) {
+      const text = fs.readFileSync(file, 'utf8');
+      if (bareFs.test(text)) offenders.push(path.relative(ROOT, file));
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('правило 9: нет навигации с web-хеш-якорем (#id) — на native router игнорит хеш и открывает корень роута', () => {
+    // router.push/replace/navigate с литералом, содержащим '#' (напр.
+    // '/quests/x/y#quest-review-section') — это web-only scroll-to-id. На native
+    // хеша нет → попадаешь на старт экрана. Использовать params + обработку
+    // в самом экране (или модалку), а не якорь.
+    const hashNav = /router\.(push|replace|navigate)\(\s*[`'"][^`'"]*#/;
+    const offenders: string[] = [];
+    for (const file of sourceFiles) {
+      const text = fs.readFileSync(file, 'utf8');
+      if (hashNav.test(text)) offenders.push(path.relative(ROOT, file));
+    }
+    expect(offenders).toEqual([]);
+  });
 });
