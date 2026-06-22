@@ -147,6 +147,24 @@ describe('useBreadcrumbModel', () => {
     expect(result.current.currentTitle).toBe('Подписки');
   });
 
+  it.each([
+    ['/community-rules', 'Правила сообщества'],
+    ['/trip-rules', 'Правила участия в поездках'],
+    ['/terms', 'Пользовательское соглашение'],
+    ['/disclaimer', 'Отказ от ответственности'],
+  ])('localizes the header title for legal route %s', async (pathname, expectedTitle) => {
+    usePathname.mockReturnValue(pathname);
+    useLocalSearchParams.mockReturnValue({});
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current).toBeTruthy();
+    });
+
+    expect(result.current.currentTitle).toBe(expectedTitle);
+  });
+
   it('exports default hook alias for module interop stability', () => {
     const mod = require('@/hooks/useBreadcrumbModel');
     expect(mod.default).toBe(mod.useBreadcrumbModel);
