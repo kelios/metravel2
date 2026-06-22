@@ -432,9 +432,10 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       {...(isActiveWebRoute ? ({ 'data-active': 'true' } as any) : null)}
     >
       <View style={styles.mapContainer} {...({ pointerEvents: 'box-none' } as any)}>
-        {/* maps.me-style верхний overlay: поиск + фильтры + чипы. Всегда виден,
-            пока шторка не открыта на full (чтобы не накладываться на контент). */}
-        {sheetState !== 'full' && (
+        {/* maps.me-style верхний overlay: поиск + фильтры + чипы. Виден, пока
+            шторка не открыта на full И не открыта карточка места (#497 — иначе
+            иконки фильтров/слоёв/списка наезжают на hero-фото карточки места). */}
+        {sheetState !== 'full' && !hasSelectedPlace && (
           <MapMobileTopOverlay
             colors={colors}
             topInset={insets.top}

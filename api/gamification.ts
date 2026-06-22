@@ -52,6 +52,8 @@ export interface ProgressionLine {
   activityKind: ActivityKind;
   /** Название типа активности, напр. «Исследователь». */
   activityName: string;
+  /** Что засчитывается в трек (от BE); null — берём FE-фолбэк по activityKind. */
+  description: string | null;
   level: number;
   levelTitle: string;
   /** Текущее значение метрики активности. */
@@ -252,6 +254,7 @@ const mapProgressionLine = (dto: ProgressionLineDto): ProgressionLine => {
     name: dto.name,
     activityKind: normalizeActivityKind(dto.activity_type),
     activityName: dto.activity_label,
+    description: dto.description ?? null,
     level: dto.level?.level ?? 1,
     levelTitle: dto.level?.title ?? '',
     current,

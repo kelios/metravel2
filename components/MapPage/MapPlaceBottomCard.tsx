@@ -3,6 +3,7 @@ import {
   PanResponder,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -49,7 +50,7 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
   const themeContextValue = useTheme()
   const insets = useSafeAreaInsets()
   const queryClient = useQueryClient()
-  const { width: viewportWidth } = useWindowDimensions()
+  const { width: viewportWidth, height: viewportHeight } = useWindowDimensions()
   // On mobile web the card uses a BOUNDED bottom sheet (maps.me-style): the map
   // stays visible above it, the photo is a fixed hero, and the caption/actions
   // scroll beneath it so every element stays reachable and the photo never jerks
@@ -94,11 +95,6 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
   const handleClose = useRef(() => {
-    // Temporary QA log (#497) — confirms the close handler fires on the device.
-    // Remove after device verification.
-    console.info('[QA-CLOSE]', 'MapPlaceBottomCard.handleClose', {
-      alreadyClosed: closedRef.current,
-    })
     if (closedRef.current) return
     closedRef.current = true
     onCloseRef.current()
@@ -153,6 +149,17 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
   if (!point) return null
 
   const paddingBottom = (bottomInset || 0) + (insets?.bottom ?? 0) + 12
+
+  // #497 — native: cap the card so its top NEVER crosses the top safe area when
+  // «Ещё» expands. The card grows upward from bottom:0; without a cap its header
+  // (+ ✕) reaches y=0 behind the status bar where taps are swallowed on Android.
+  // We bound the card height to the space below safeTop (with a small margin) and
+  // scroll the body inside that box — the sticky header + ✕ stay in-bounds and
+  // tappable in BOTH compact and expanded states. Web keeps its own bounded sheet.
+  const safeTop = insets?.top ?? 0
+  const nativeCardMaxHeight = !IS_WEB
+    ? Math.max(0, viewportHeight - safeTop - paddingBottom - 12)
+    : undefined
 
   // On web, close via a NATIVE DOM handler instead of relying solely on RN-Web's
   // `onPress`. RN-Web synthesises `onPress` through its responder system over
@@ -251,7 +258,9 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
       testID="map-place-bottom-card"
       pointerEvents="box-none"
     >
-      <View style={styles.card}>
+      <View
+        style={[styles.card, !IS_WEB ? { maxHeight: nativeCardMaxHeight } : null]}
+      >
         <View
           style={[styles.handleZone, !IS_WEB && styles.handleZoneNative]}
           {...(webSwipeHandlers ?? {})}
@@ -261,9 +270,24 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
           {!IS_WEB ? nativeHeaderClose : null}
         </View>
 
-        <View style={styles.body}>
-          <PopupComponent point={point} closePopup={handleClose} />
-        </View>
+        {IS_WEB ? (
+          <View style={styles.body}>
+            <PopupComponent point={point} closePopup={handleClose} />
+          </View>
+        ) : (
+          // #497 — native: scroll the body inside the capped card so expanding
+          // «Ещё» scrolls under the sticky header instead of growing the card off
+          // the top of the screen. The ✕ lives in the header above this scroll.
+          <ScrollView
+            style={styles.bodyScroll}
+            contentContainerStyle={styles.body}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <PopupComponent point={point} closePopup={handleClose} />
+          </ScrollView>
+        )}
 
         {IS_WEB ? closeButton : null}
       </View>
@@ -415,6 +439,12 @@ const getStyles = (colors: ThemedColors) =>
             zIndex: 10,
           } as any)
         : null),
+    },
+    // #497 — native scroll region for the body inside the height-capped card. It
+    // flexShrinks so the sticky header keeps its height and only the body scrolls
+    // when «Ещё» expands past the cap; the card never grows off the top of screen.
+    bodyScroll: {
+      flexShrink: 1,
     },
     body: {
       // Photo runs edge-to-edge: the popup card's own contentContainer/footerContainer

@@ -8,7 +8,11 @@ import {
   MaxLevelLaurel,
   ProgressionAnimalMedallion,
 } from '@/components/achievements/GamificationIcons'
-import type { ProgressionLine, ProgressionLineSlug } from '@/api/gamification'
+import type {
+  ActivityKind,
+  ProgressionLine,
+  ProgressionLineSlug,
+} from '@/api/gamification'
 
 interface Props {
   line: ProgressionLine
@@ -23,6 +27,15 @@ const LINE_FILL_TIER: Record<ProgressionLineSlug, keyof typeof TIER_VISUALS> = {
   boar: 'gold',
   fox: 'bronze',
   bird: 'platinum',
+}
+
+// Что засчитывается в трек — FE-фолбэк, если BE не прислал description.
+// Снимает главную путаницу: пользователь видит, какое действие растит линейку.
+const ACTIVITY_DESC: Record<ActivityKind, string> = {
+  participant: 'Совместные поездки, к которым вы присоединились',
+  author: 'Опубликованные путешествия и статьи',
+  reader: 'Прочитанные истории путешествий',
+  explorer: 'Открытые места и точки на карте',
 }
 
 /** Одна линейка прогрессии: маскот ветки, тип активности, уровень и % до следующего. */
@@ -44,26 +57,38 @@ function ProgressionLineBar({ line, testID, style }: Props) {
   const fillColor = TIER_VISUALS[LINE_FILL_TIER[line.slug]].ring
   const styles = useMemo(() => getStyles(colors), [colors])
 
+  const description = line.description ?? ACTIVITY_DESC[line.activityKind]
+
   return (
     <View
       style={[styles.container, style]}
       testID={testID}
       accessibilityRole="summary"
-      accessibilityLabel={`${line.activityName}, ${line.name}. Уровень ${line.level}, ${line.levelTitle}. ${
-        line.isMaxLevel ? 'Максимальный уровень' : `до следующего уровня осталось ${remaining}`
+      accessibilityLabel={`${line.activityName}. ${description}. Уровень ${line.level}, ${line.levelTitle}. ${
+        line.isMaxLevel
+          ? 'Максимальный уровень'
+          : `до уровня ${line.nextLevelTitle} осталось ${remaining}`
       }`}
     >
       <View style={styles.row}>
         <ProgressionAnimalMedallion slug={line.slug} size={40} />
         <View style={styles.titleWrap}>
-          <Text style={styles.activity} numberOfLines={1}>
-            {line.activityName}
-          </Text>
-          <Text style={styles.lineName} numberOfLines={1}>
-            {line.name} · ур. {line.level} «{line.levelTitle}»
+          <View style={styles.titleLine}>
+            <Text style={styles.activity} numberOfLines={1}>
+              {line.activityName}
+            </Text>
+            <View style={styles.levelChip}>
+              <Text style={styles.levelChipText}>Ур. {line.level}</Text>
+            </View>
+          </View>
+          <Text style={styles.desc} numberOfLines={2}>
+            {description}
           </Text>
         </View>
-        <Text style={styles.value}>{line.current}</Text>
+        <View style={styles.valueWrap}>
+          <Text style={styles.value}>{line.current}</Text>
+          <Text style={styles.valueLabel}>очк.</Text>
+        </View>
       </View>
 
       <View style={styles.track}>
@@ -75,11 +100,13 @@ function ProgressionLineBar({ line, testID, style }: Props) {
       {line.isMaxLevel ? (
         <View style={styles.captionRow}>
           <MaxLevelLaurel size={16} color={colors.textMuted} />
-          <Text style={styles.caption}>Максимальный уровень</Text>
+          <Text style={styles.caption} numberOfLines={1}>
+            «{line.levelTitle}» — максимальный уровень
+          </Text>
         </View>
       ) : (
-        <Text style={styles.caption}>
-          До «{line.nextLevelTitle}»: ещё {remaining}
+        <Text style={styles.caption} numberOfLines={1}>
+          «{line.levelTitle}» · ещё {remaining} до «{line.nextLevelTitle}»
         </Text>
       )}
     </View>
@@ -90,20 +117,41 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
     container: { gap: 6 },
     row: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.sm },
-    titleWrap: { flex: 1, minWidth: 0 },
+    titleWrap: { flex: 1, minWidth: 0, gap: 2 },
+    titleLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     activity: {
+      flexShrink: 1,
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       fontWeight: '700',
       color: colors.text,
     },
-    lineName: {
+    levelChip: {
+      paddingHorizontal: 7,
+      paddingVertical: 1,
+      borderRadius: 999,
+      backgroundColor: colors.backgroundTertiary,
+    },
+    levelChipText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      fontWeight: '700',
+      color: colors.textSecondary,
+    },
+    desc: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       color: colors.textMuted,
+      lineHeight: 16,
     },
+    valueWrap: { alignItems: 'flex-end', minWidth: 40 },
     value: {
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      fontSize: DESIGN_TOKENS.typography.sizes.md,
       fontWeight: '800',
       color: colors.primary,
+    },
+    valueLabel: {
+      fontSize: 10,
+      fontWeight: '600',
+      color: colors.textMuted,
+      marginTop: -2,
     },
     track: {
       height: 7,

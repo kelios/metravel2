@@ -11,7 +11,9 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import Feather from '@expo/vector-icons/Feather';
 
+import Button from '@/components/ui/Button';
 import PublicTripCard from '@/components/trips/PublicTripCard';
 import PublicTripFilters from '@/components/trips/PublicTripFilters';
 import SafetyNotice from '@/components/ui/SafetyNotice';
@@ -68,8 +70,16 @@ function PublicTripsCatalog() {
         <Text style={styles.h1}>Поехали со мной</Text>
         <Text style={styles.subtitle}>
           Публичные поездки от других путешественников. Нашли компанию по душе —
-          подайте заявку «Хочу поехать».
+          подайте заявку «Хочу поехать». Или организуйте свою и найдите попутчиков.
         </Text>
+
+        <Button
+          label="Организовать свою поездку"
+          onPress={() => router.push('/trips/plan/create')}
+          icon={<Feather name="plus" size={16} color={colors.textOnPrimary} />}
+          style={styles.organizeBtn}
+          testID="public-trips-organize"
+        />
 
         <SafetyNotice
           text="MeTravel не организует поездки — это площадка для поиска попутчиков. Будьте внимательны при договорённостях и обмене контактами."
@@ -111,6 +121,7 @@ const createStyles = (colors: ThemedColors) =>
     inner: { width: '100%', maxWidth: MAX_WIDTH, gap: 12 },
     h1: { fontSize: 26, fontWeight: '800', color: colors.text },
     subtitle: { fontSize: 15, lineHeight: 21, color: colors.textSecondary },
+    organizeBtn: { alignSelf: 'flex-start', marginVertical: 2 },
     notice: { marginVertical: 2 },
     center: { paddingVertical: 40, alignItems: 'center' },
     empty: { fontSize: 14, color: colors.textMuted, lineHeight: 20, paddingVertical: 16 },

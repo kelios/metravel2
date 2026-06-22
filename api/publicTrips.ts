@@ -344,6 +344,20 @@ const matchesFilters = (trip: PublicTrip, filters?: PublicTripsFilters): boolean
   return true;
 };
 
+// Поездки, созданные через форму планирования (plannedTrips) в мок-режиме, живут в
+// отдельном сторе и не видны каталогу. Мост: createTrip регистрирует публичную
+// поездку здесь, и мок-каталог отдаёт её первой — организатор сразу видит публикацию.
+const createdPublicTrips: PublicTrip[] = [];
+
+export function registerCreatedPublicTrip(trip: PublicTrip): void {
+  const idx = createdPublicTrips.findIndex((t) => t.id === trip.id);
+  if (idx >= 0) createdPublicTrips.splice(idx, 1);
+  createdPublicTrips.unshift(trip);
+}
+
+const mockCatalog = (filters?: PublicTripsFilters): PublicTrip[] =>
+  [...createdPublicTrips, ...MOCK_PUBLIC_TRIPS].filter((t) => matchesFilters(t, filters));
+
 // BE-каталог поддерживает только page/perPage; доменные фильтры применяем на клиенте.
 const PAGE_QUERY = '?perPage=100';
 
@@ -352,7 +366,7 @@ const PAGE_QUERY = '?perPage=100';
 export async function fetchPublicTrips(
   filters?: PublicTripsFilters,
 ): Promise<PublicTrip[]> {
-  if (USE_MOCK) return MOCK_PUBLIC_TRIPS.filter((t) => matchesFilters(t, filters));
+  if (USE_MOCK) return mockCatalog(filters);
   try {
     const res = await apiClient.get<Paginated<PublicTripDto>>(
       `/public-trips/${PAGE_QUERY}`,
@@ -363,15 +377,18 @@ export async function fetchPublicTrips(
   } catch (error) {
     if (shouldFallbackToMock(error)) {
       devWarn('[public-trips] catalog → mock fallback');
-      return MOCK_PUBLIC_TRIPS.filter((t) => matchesFilters(t, filters));
+      return mockCatalog(filters);
     }
     throw error;
   }
 }
 
 export async function fetchPublicTrip(tripId: number | string): Promise<PublicTrip> {
+  const findMockTrip = (): PublicTrip | undefined =>
+    createdPublicTrips.find((t) => String(t.id) === String(tripId)) ??
+    MOCK_PUBLIC_TRIPS.find((t) => String(t.id) === String(tripId));
   if (USE_MOCK) {
-    const trip = MOCK_PUBLIC_TRIPS.find((t) => String(t.id) === String(tripId));
+    const trip = findMockTrip();
     if (!trip) throw new ApiError(404, 'Trip not found');
     return trip;
   }
@@ -384,7 +401,7 @@ export async function fetchPublicTrip(tripId: number | string): Promise<PublicTr
     return mapTrip(dto);
   } catch (error) {
     if (shouldFallbackToMock(error)) {
-      const trip = MOCK_PUBLIC_TRIPS.find((t) => String(t.id) === String(tripId));
+      const trip = findMockTrip();
       if (trip) {
         devWarn('[public-trips] detail → mock fallback');
         return trip;

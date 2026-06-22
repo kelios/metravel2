@@ -72,10 +72,11 @@ function ActivityProgressionSection({
 
   return (
     <View style={[bare ? styles.bare : styles.card, style]} testID={testID}>
-      <Text style={styles.heading}>Линейки прогрессии</Text>
+      <Text style={styles.heading}>Тропы развития</Text>
       <Text style={styles.subheading}>
-        Четыре типа активности — четыре тропы. Чем больше вклад, тем выше
-        уровень.
+        Четыре направления активности на MeTravel — за участие в поездках,
+        публикации, чтение и открытие новых мест. Каждое действие растит свою
+        тропу и поднимает уровень.
       </Text>
 
       <SectionState isFetching={isFetching} hasData={hasData}>

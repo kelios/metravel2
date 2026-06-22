@@ -259,21 +259,33 @@ const FullscreenImageViewer: React.FC<{
 
   const nativeContent = (
     <View style={[fullscreenStyles.container, { width, height }]}>
-      <ImageCardMedia
-        src={hiResUrl}
-        alt=""
-        fit="cover"
-        blurOnly
-        blurBackground
-        blurRadius={30}
-        priority="high"
-        loading="eager"
-        transition={0}
-        width={width}
-        height={height}
+      {/* #497 — full-screen backdrop closes the viewer on tap. Previously the only
+          dismiss affordance was the ✕ Pressable, which was a no-op on Android
+          (only the hardware back button worked). A backdrop Pressable behind the
+          image gives a reliable, large dismiss target; the image sits above it
+          (pointerEvents none so a tap on the photo still falls through to close). */}
+      <Pressable
         style={StyleSheet.absoluteFillObject}
-      />
-      <View style={fullscreenStyles.centeredWrap}>
+        onPress={onClose}
+        accessibilityRole="button"
+        accessibilityLabel="Закрыть фото"
+      >
+        <ImageCardMedia
+          src={hiResUrl}
+          alt=""
+          fit="cover"
+          blurOnly
+          blurBackground
+          blurRadius={30}
+          priority="high"
+          loading="eager"
+          transition={0}
+          width={width}
+          height={height}
+          style={StyleSheet.absoluteFillObject}
+        />
+      </Pressable>
+      <View style={fullscreenStyles.centeredWrap} pointerEvents="none">
         {display ? (
           <View style={{ maxWidth: maxW, maxHeight: maxH, width: display.w, height: display.h }}>
             <ImageCardMedia
@@ -293,6 +305,7 @@ const FullscreenImageViewer: React.FC<{
       </View>
       <Pressable
         onPress={onClose}
+        hitSlop={12}
         style={fullscreenStyles.closeBtn}
         accessibilityRole="button"
         accessibilityLabel="Закрыть фото"
