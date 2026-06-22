@@ -107,7 +107,7 @@ export default function ProfileScreen() {
     favoritesCount: 0,
     viewsCount: 0,
   });
-  const [activeTab, setActiveTab] = useState<ProfileTabKey>('overview');
+  const [activeTab, setActiveTab] = useState<ProfileTabKey>('travels');
   const { data: myAchievements } = useMyAchievements();
   const badgesCount = myAchievements?.rank?.badgesCount ?? 0;
   const rank = useMemo(
@@ -142,9 +142,14 @@ export default function ProfileScreen() {
 
   const ensureTravelsLoaded = useCallback(() => {
     if (travelsRequestedRef.current) return;
+    // Wait for auth to resolve before committing the one-shot: a call with an
+    // unresolved userId no-ops loadTravels into the empty state and would burn
+    // the guard, leaving the list permanently empty when 'travels' is the
+    // default tab (effect fires on mount, before userId is hydrated).
+    if (!userId) return;
     travelsRequestedRef.current = true;
     void loadTravels();
-  }, [loadTravels]);
+  }, [loadTravels, userId]);
 
   const loadMoreTravels = useCallback(async () => {
     if (activeTab !== 'travels') return;

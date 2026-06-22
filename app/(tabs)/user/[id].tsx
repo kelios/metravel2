@@ -55,7 +55,7 @@ export default function PublicUserProfileScreen() {
     setAvatarError(false);
   }, [userId, profile?.avatar]);
 
-  const [activeTab, setActiveTab] = useState<ProfileTabKey>('overview');
+  const [activeTab, setActiveTab] = useState<ProfileTabKey>('travels');
 
   const socials = useMemo(
     () =>

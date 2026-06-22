@@ -169,7 +169,7 @@ export function PublicProfileHeader({
         activeTab={activeTab}
         onChangeTab={onChangeTab}
         counts={tabCounts}
-        tabKeys={['overview', 'travels']}
+        tabKeys={['travels', 'overview']}
       />
     </View>
   );

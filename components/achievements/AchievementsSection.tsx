@@ -75,7 +75,7 @@ function AchievementsSection({ testID, style }: Props) {
                 <BadgeMedal
                   key={ub.badge.id}
                   badge={ub.badge}
-                  size={64}
+                  size={56}
                   earned
                   showLabel
                   onPress={() => setGalleryOpen(true)}
@@ -109,10 +109,10 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
     card: {
       backgroundColor: colors.surface,
       borderRadius: DESIGN_TOKENS.radii.lg,
-      padding: DESIGN_TOKENS.spacing.md,
+      padding: DESIGN_TOKENS.spacing.sm,
       borderWidth: 1,
       borderColor: colors.borderLight,
-      gap: DESIGN_TOKENS.spacing.md,
+      gap: DESIGN_TOKENS.spacing.xs,
     },
     headerRow: {
       flexDirection: 'row',
@@ -130,9 +130,9 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       fontWeight: '700',
       color: colors.primary,
     },
-    rank: { marginBottom: DESIGN_TOKENS.spacing.xs },
-    medalsRow: { gap: DESIGN_TOKENS.spacing.md, paddingVertical: 4, paddingRight: 8 },
-    peerRow: { marginTop: DESIGN_TOKENS.spacing.xs },
+    rank: { marginBottom: DESIGN_TOKENS.spacing.xxs },
+    medalsRow: { gap: DESIGN_TOKENS.spacing.sm, paddingVertical: 2, paddingRight: 8 },
+    peerRow: { marginTop: DESIGN_TOKENS.spacing.xxs },
     loading: { paddingVertical: DESIGN_TOKENS.spacing.lg, alignItems: 'center' },
     empty: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
