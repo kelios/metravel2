@@ -59,35 +59,41 @@ rsync -avzhe "ssh" --delete ./assets/icons/ "$SERVER:$REMOTE_DIR/icons/"
 rsync -avzhe "ssh" --delete ./assets/images/ "$SERVER:$REMOTE_DIR/images/"
 
 echo "Applying release atomically on server..."
+# static/ is owned by uid 1984 (the container user); the host login (sx3) is in
+# "other" and cannot write into it, so a host-side `mv` into static/ fails with
+# Permission denied. The swap therefore runs INSIDE the app container
+# (metravel_app_1, uid 1984), which owns static/ and mounts the whole repo at
+# /app, so it also sees the freshly-uploaded dist/ icons/ images/.
+#   - shipped via base64 over stdin to sidestep ssh+docker quoting pitfalls
+#   - the app image has no rsync, so the _expo overlay uses `cp -an` (no-clobber)
+#   - the new bundle is copied (cp -a), not moved: dist/ belongs to the host user
+#     and its entries can't be unlinked from inside the container
+# $ENV expands locally before encoding.
+SWAP_SCRIPT="set -eu
+cd /app
+test -d dist/$ENV
+rm -rf static/dist.new
+cp -a dist/$ENV static/dist.new
+find static/dist.new/_expo/static/js/web -type f -name '*.js' >/dev/null
+if [ -d static/dist/_expo/static ]; then
+  mkdir -p static/dist.new/_expo/static
+  cp -an static/dist/_expo/static/. static/dist.new/_expo/static/ 2>/dev/null || true
+fi
+rm -rf static/dist.old 2>/dev/null || true
+mv static/dist static/dist.old 2>/dev/null || true
+mv static/dist.new static/dist
+# Tolerant: a dir left by an out-of-band deploy may be owned by another uid the
+# container cannot unlink. The bundle is already live by here, so never abort.
+rm -rf static/dist.old 2>/dev/null || true
+mkdir -p static/dist/assets/icons static/dist/assets/images
+cp -R icons/. static/dist/assets/icons/
+cp -R images/. static/dist/assets/images/"
+SWAP_B64="$(printf '%s' "$SWAP_SCRIPT" | base64 | tr -d '\n')"
 ssh "$SERVER" "set -euo pipefail
   cd '$REMOTE_DIR'
-
   test -d dist/$ENV
-  mkdir -p static
-  rm -rf static/dist.new
-  mv dist/$ENV static/dist.new
-
-  find static/dist.new/_expo/static/js/web -type f -name '*.js' >/dev/null
-
-  mv static/dist static/dist.old 2>/dev/null || true
-  if [ -d static/dist.old/_expo/static ]; then
-    mkdir -p static/dist.new/_expo/static
-    rsync -a --ignore-existing static/dist.old/_expo/static/ static/dist.new/_expo/static/
-  fi
-
-  mv static/dist.new static/dist
-  rm -rf static/dist.old
-
-  mkdir -p static/dist/assets/icons static/dist/assets/images
-  cp -R icons/. static/dist/assets/icons/
-  cp -R images/. static/dist/assets/images/
-
-  if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
-    docker compose restart nginx
-  else
-    docker-compose restart nginx
-  fi
-
+  printf '%s' '$SWAP_B64' | base64 -d | docker exec -i metravel_app_1 sh -s
+  docker restart metravel_nginx_1
   rm -rf dist icons images
 "
 
