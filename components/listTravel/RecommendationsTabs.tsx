@@ -208,6 +208,73 @@ const SavedCollectionHeader = ({
   </View>
 );
 
+/* ---------------- Mobile shelf (Task A) ---------------- */
+
+const ShelfHeader = ({
+  clearLabel,
+  colors,
+  count,
+  onClear,
+  onSeeAll,
+  seeAllLabel,
+  styles,
+  title,
+}: {
+  clearLabel: string;
+  colors: ReturnType<typeof useThemedColors>;
+  count: number;
+  onClear?: () => void;
+  onSeeAll: () => void;
+  seeAllLabel: string;
+  styles: TabStyles;
+  title: string;
+}) => (
+  <View style={styles.shelfHeaderRow}>
+    <View style={styles.shelfTitleWrap}>
+      <Text style={styles.shelfTitle} numberOfLines={1}>
+        {title}
+      </Text>
+      <Text style={styles.shelfCount}>· {count}</Text>
+    </View>
+
+    <View style={styles.shelfActions}>
+      {onClear && count > 0 && (
+        <Pressable
+          style={styles.shelfClearButton}
+          onPress={onClear}
+          accessibilityRole="button"
+          accessibilityLabel={clearLabel}
+        >
+          <Feather name="trash-2" size={16} color={colors.danger} />
+        </Pressable>
+      )}
+      <Pressable
+        style={styles.shelfSeeAll}
+        onPress={onSeeAll}
+        accessibilityRole="button"
+        accessibilityLabel={seeAllLabel}
+      >
+        <Text style={styles.shelfSeeAllText}>Все</Text>
+        <Feather name="chevron-right" size={16} color={colors.primary} />
+      </Pressable>
+    </View>
+  </View>
+);
+
+const CardShelf = ({
+  children,
+  testID,
+  styles,
+}: {
+  children: React.ReactNode;
+  testID?: string;
+  styles: TabStyles;
+}) => (
+  <View style={styles.shelf} testID={testID}>
+    {children}
+  </View>
+);
+
 /* ---------------- Main Component ---------------- */
 
 const RecommendationsTabs = memo(
@@ -233,9 +300,16 @@ const RecommendationsTabs = memo(
       if (!isTabsVisible) return;
       if (!isAuthenticated) return;
       if (typeof ensureServerData !== 'function') return;
+      // Mobile shelves render favorites + history side by side (no active tab),
+      // so fetch both collections up front. Desktop loads per active tab.
+      if (isMobile) {
+        ensureServerData('favorites');
+        ensureServerData('history');
+        return;
+      }
       const dataKey = getRecommendationsEnsureServerDataKey(activeTab);
       if (dataKey) ensureServerData(dataKey);
-    }, [activeTab, ensureServerData, isAuthenticated, isTabsVisible]);
+    }, [activeTab, ensureServerData, isAuthenticated, isMobile, isTabsVisible]);
 
     const handleClearFavorites = useCallback(async () => {
       try {
@@ -405,6 +479,95 @@ const RecommendationsTabs = memo(
       setCollapsed(newCollapsed);
       onVisibilityChange?.(!newCollapsed);
     };
+
+    const renderMobileRail = (
+      items: CollectionItem[],
+      kind: 'favorites' | 'history',
+      testID: string,
+    ) => (
+      <ScrollView
+        testID={testID}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        bounces={false}
+        style={styles.shelfRail}
+        contentContainerStyle={styles.shelfRailContent}
+        {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
+      >
+        {items.map((item) => (
+          <View key={getRecommendationsCollectionKey(item, kind)} style={styles.shelfCardWrap}>
+            <TabTravelCard
+              item={mapRecommendationsCardItem(item)}
+              onPress={() => router.push(item.url as any)}
+              layout="grid"
+              {...(kind === 'history'
+                ? {
+                    badge: {
+                      icon: 'clock' as const,
+                      backgroundColor: colors.overlay,
+                      iconColor: colors.textOnDark,
+                    },
+                  }
+                : {})}
+            />
+          </View>
+        ))}
+      </ScrollView>
+    );
+
+    // Task A: mobile uses vertically stacked horizontal "shelves" instead of the
+    // collapsible chip-tabs panel. Each shelf is auto-height (no fixed-height +
+    // overflow:hidden clipping). Empty sections are not rendered.
+    if (isMobile) {
+      const showFavorites = isAuthenticated && favorites.length > 0;
+      const showHistory = isAuthenticated && viewHistory.length > 0;
+
+      return (
+        <View style={[styles.container, styles.containerMobileWebExpanded]}>
+          <View style={[styles.content, styles.contentMobileWebExpanded, styles.shelvesContainer]}>
+            <Suspense fallback={null}>
+              <WeeklyHighlights showHeader enabled={isTabsVisible} />
+            </Suspense>
+
+            <Suspense fallback={null}>
+              <PersonalizedRecommendations showHeader onlyRecommendations />
+            </Suspense>
+
+            {showHistory && (
+              <CardShelf testID="recommendations-history-shelf" styles={styles}>
+                <ShelfHeader
+                  clearLabel="Очистить историю просмотров"
+                  colors={colors}
+                  count={viewHistory.length}
+                  onClear={typeof clearHistory === 'function' ? handleClearHistory : undefined}
+                  onSeeAll={() => router.push('/history' as any)}
+                  seeAllLabel="Смотреть всю историю просмотров"
+                  styles={styles}
+                  title="Недавно смотрели"
+                />
+                {renderMobileRail(viewHistory, 'history', 'recommendations-history-rail')}
+              </CardShelf>
+            )}
+
+            {showFavorites && (
+              <CardShelf testID="recommendations-favorites-shelf" styles={styles}>
+                <ShelfHeader
+                  clearLabel="Очистить избранное"
+                  colors={colors}
+                  count={favorites.length}
+                  onClear={typeof clearFavorites === 'function' ? handleClearFavorites : undefined}
+                  onSeeAll={() => router.push('/favorites' as any)}
+                  seeAllLabel="Смотреть все избранное"
+                  styles={styles}
+                  title="Избранное"
+                />
+                {renderMobileRail(favorites, 'favorites', 'recommendations-favorites-rail')}
+              </CardShelf>
+            )}
+          </View>
+        </View>
+      );
+    }
 
     // ✅ CLS fix: never unmount / collapse height to 0.
     // We keep a stable container height so the list below does not shift.

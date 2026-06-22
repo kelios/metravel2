@@ -189,4 +189,94 @@ export const createRecommendationsTabsStyles = (
     borderColor: colors.border, backgroundColor: colors.surface,
   },
   favoritesClearButtonText: { fontSize: 13, fontWeight: '600', color: colors.danger },
+
+  // ---- Mobile shelves (Task A) ----
+  shelvesContainer: {
+    gap: 20,
+  },
+  shelf: {
+    width: '100%',
+  },
+  shelfHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    paddingHorizontal: 4,
+    marginBottom: 10,
+  },
+  shelfTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    flexShrink: 1,
+    minWidth: 0,
+    gap: 6,
+  },
+  shelfTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  shelfCount: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textMuted,
+    flexShrink: 0,
+  },
+  shelfActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
+  },
+  shelfSeeAll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: colors.primarySoft,
+  },
+  shelfSeeAllText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primaryText,
+  },
+  shelfClearButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  shelfRail: {
+    ...(Platform.select({
+      web: {
+        overflowX: 'auto',
+        overflowY: 'hidden',
+        overscrollBehaviorX: 'contain',
+        WebkitOverflowScrolling: 'touch',
+        touchAction: 'pan-x',
+      } as any,
+      default: {},
+    }) as any),
+  },
+  shelfRailContent: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 12,
+    paddingHorizontal: 4,
+    paddingBottom: 4,
+    ...(Platform.select({ web: { width: 'max-content' } as any, default: {} }) as any),
+  },
+  shelfCardWrap: {
+    width: 220,
+    flexShrink: 0,
+  },
 });

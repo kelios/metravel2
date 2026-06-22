@@ -413,6 +413,12 @@ function TravelListItem({
     </View>
   ) : null
 
+  // On narrow 2-col cards (mobile) the top meta row only has room for the country.
+  // Author and inline views are dropped here — both are surfaced lower in
+  // metaBadgesRow / the engagement metrics row, so they'd just duplicate and
+  // squeeze the country down to garbage like ".:.." / "Авст.…".
+  const compactMeta = isMobile
+
   const topRowItems: React.ReactNode[] = []
   if (countries.length > 0) {
     topRowItems.push(
@@ -424,7 +430,7 @@ function TravelListItem({
       />,
     )
   }
-  if (hasAuthorMeta) {
+  if (!compactMeta && hasAuthorMeta) {
     if (countries.length > 0) {
       topRowItems.push(<View key="author-dot" style={styles.metaDot} />)
     }
@@ -473,7 +479,7 @@ function TravelListItem({
       ),
     )
   }
-  if (views > 0) {
+  if (!compactMeta && views > 0) {
     if (countries.length > 0 || hasAuthorMeta) {
       topRowItems.push(<View key="views-dot" style={styles.metaDot} />)
     }

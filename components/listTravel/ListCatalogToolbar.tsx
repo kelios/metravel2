@@ -3,6 +3,7 @@ import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import Feather from '@expo/vector-icons/Feather'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { getTravelLabel } from '@/utils/pluralize'
 import type { ListDensity } from '@/stores/listViewStore'
@@ -43,6 +44,7 @@ function ListCatalogToolbar({
 }: ListCatalogToolbarProps) {
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
+  const { isMobile } = useResponsive()
 
   const activeSort = (sortValue || '').trim() || DEFAULT_SORT_ID
   const countVisible = showResultsCount && typeof resultsCount === 'number'
@@ -69,10 +71,12 @@ function ListCatalogToolbar({
           accessibilityRole={Platform.OS === 'web' ? undefined : ('toolbar' as any)}
           accessibilityLabel="Сортировка списка"
         >
-          <View style={styles.sortLabelWrap}>
-            <Feather name="bar-chart-2" size={13} color={colors.textMuted} />
-            <Text style={styles.sortLabel}>Сортировка</Text>
-          </View>
+          {!isMobile ? (
+            <View style={styles.sortLabelWrap}>
+              <Feather name="bar-chart-2" size={13} color={colors.textMuted} />
+              <Text style={styles.sortLabel}>Сортировка</Text>
+            </View>
+          ) : null}
           {sortOptions.map((option) => {
             const isActive = option.id === activeSort
             return (
@@ -158,7 +162,9 @@ const getStyles = (colors: ThemedColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.xs,
-      paddingRight: spacing.xs,
+      // Trailing room so the last chip ("Популярные") never clips at the
+      // ScrollView edge when chips overflow into horizontal scroll.
+      paddingRight: spacing.sm,
     },
     sortLabelWrap: {
       flexDirection: 'row',
@@ -179,6 +185,7 @@ const getStyles = (colors: ThemedColors) =>
       marginRight: spacing.xs,
     },
     chip: {
+      flexShrink: 0,
       paddingHorizontal: spacing.sm,
       paddingVertical: 6,
       borderRadius: radii.pill,

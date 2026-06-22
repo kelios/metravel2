@@ -447,6 +447,10 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       color: colors.textSecondary,
       fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
       lineHeight: META_TEXT_LINE_HEIGHT,
+      flexShrink: 1,
+      // Guarantee the country fits ~8-10 chars before truncating, so it never
+      // collapses to ".:.." on narrow 2-col cards.
+      minWidth: 64,
     },
 
     // Чекбоксы выбора
