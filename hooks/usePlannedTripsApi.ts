@@ -109,7 +109,7 @@ export function useCreateTrip() {
       trackTripCreated(trip.id, trip.transport);
       qc.setQueryData<PlannedTrip>(queryKeys.plannedTrip(trip.id), trip);
       void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsMine() });
-      // Публичная поездка попадает в каталог «Поехали со мной» — обновляем его.
+      // Публичная поездка попадает в каталог «Поехали со мной» (BE отдаёт её сразу).
       if (trip.visibility === 'public') {
         void qc.invalidateQueries({ queryKey: queryKeys.publicTripsAll() });
       }

@@ -19,7 +19,6 @@ import {
   MOCK_TRIP_SUGGESTIONS,
   cloneTrip,
 } from '@/api/plannedTripsMock';
-import { registerCreatedPublicTrip, type PublicTrip } from '@/api/publicTrips';
 
 // ── Доменные типы (camelCase) ──────────────────────────────────────────────
 
@@ -714,32 +713,6 @@ const buildMockTrip = (input: CreateTripInput): PlannedTrip => {
   };
 };
 
-/** Публичную мок-поездку показываем в каталоге «Поехали со мной» сразу после создания. */
-const bridgeToCatalog = (trip: PlannedTrip): void => {
-  if (trip.visibility !== 'public') return;
-  const catalogTrip: PublicTrip = {
-    id: trip.id,
-    slug: trip.slug,
-    title: trip.title,
-    coverUrl: trip.coverUrl,
-    region: trip.startPoint?.name ?? trip.region,
-    tripType: trip.transport,
-    startDate: trip.startDate,
-    endDate: null,
-    organizer: trip.organizer,
-    seatsTotal: trip.seatsTotal,
-    seatsTaken: 0,
-    status: 'open',
-    description: trip.description,
-    featured: false,
-    myApplicationStatus: null,
-    isOwner: true,
-    meetingPoint: null,
-    contactNote: null,
-  };
-  registerCreatedPublicTrip(catalogTrip);
-};
-
 export async function createTrip(input: CreateTripInput): Promise<PlannedTrip> {
   const coords = input.startPoint?.coordinates ?? null;
   const body = {
@@ -758,7 +731,6 @@ export async function createTrip(input: CreateTripInput): Promise<PlannedTrip> {
   if (USE_MOCK) {
     const trip = buildMockTrip(input);
     mockStore.unshift(trip);
-    bridgeToCatalog(trip);
     return cloneTrip(trip);
   }
   try {
@@ -769,7 +741,6 @@ export async function createTrip(input: CreateTripInput): Promise<PlannedTrip> {
       devWarn('[planned-trips] create → mock fallback');
       const trip = buildMockTrip(input);
       mockStore.unshift(trip);
-      bridgeToCatalog(trip);
       return cloneTrip(trip);
     }
     throw error;

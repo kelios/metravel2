@@ -151,7 +151,8 @@ interface PublicTripDto {
   start_point_name?: string | null;
   start_lat?: number | null;
   start_lng?: number | null;
-  meeting_point_hidden?: string | null;
+  /** true = координаты скрыты (не одобрен/аноним); false = раскрыты участнику (#410). */
+  meeting_point_hidden?: boolean | null;
   status?: 'planned' | 'active' | 'completed';
   catalog_status?: string | null;
   going_participants_count?: number | string | null;
@@ -247,6 +248,20 @@ const mapTrip = (dto: PublicTripDto): PublicTrip => {
   const seatsTaken = dto.going_participants_count != null
     ? toNum(dto.going_participants_count)
     : Math.max(0, seatsTotal - toNum(dto.available_seats));
+  // Post-approval reveal (#410): точные координаты места встречи BE отдаёт ТОЛЬКО
+  // одобренному участнику/организатору (запрос с токеном); анониму start_lat/lng=null
+  // и meeting_point_hidden=true. Раскрытые координаты — это и есть «место встречи».
+  const revealed =
+    dto.meeting_point_hidden === false ||
+    (dto.start_lat != null && dto.start_lng != null);
+  const meetingName = dto.start_point_name?.trim() ?? '';
+  const meetingCoords =
+    dto.start_lat != null && dto.start_lng != null
+      ? `${dto.start_lat}, ${dto.start_lng}`
+      : '';
+  const meetingPoint = revealed
+    ? [meetingName, meetingCoords].filter(Boolean).join(' · ') || null
+    : null;
   return {
     id: dto.id,
     slug: String(dto.id),
@@ -271,7 +286,7 @@ const mapTrip = (dto: PublicTripDto): PublicTrip => {
     // Каталог не возвращает статус заявки/владение — определяется на детальном экране.
     myApplicationStatus: null,
     isOwner: false,
-    meetingPoint: null,
+    meetingPoint,
     contactNote: null,
   };
 };
@@ -344,20 +359,6 @@ const matchesFilters = (trip: PublicTrip, filters?: PublicTripsFilters): boolean
   return true;
 };
 
-// Поездки, созданные через форму планирования (plannedTrips) в мок-режиме, живут в
-// отдельном сторе и не видны каталогу. Мост: createTrip регистрирует публичную
-// поездку здесь, и мок-каталог отдаёт её первой — организатор сразу видит публикацию.
-const createdPublicTrips: PublicTrip[] = [];
-
-export function registerCreatedPublicTrip(trip: PublicTrip): void {
-  const idx = createdPublicTrips.findIndex((t) => t.id === trip.id);
-  if (idx >= 0) createdPublicTrips.splice(idx, 1);
-  createdPublicTrips.unshift(trip);
-}
-
-const mockCatalog = (filters?: PublicTripsFilters): PublicTrip[] =>
-  [...createdPublicTrips, ...MOCK_PUBLIC_TRIPS].filter((t) => matchesFilters(t, filters));
-
 // BE-каталог поддерживает только page/perPage; доменные фильтры применяем на клиенте.
 const PAGE_QUERY = '?perPage=100';
 
@@ -366,7 +367,7 @@ const PAGE_QUERY = '?perPage=100';
 export async function fetchPublicTrips(
   filters?: PublicTripsFilters,
 ): Promise<PublicTrip[]> {
-  if (USE_MOCK) return mockCatalog(filters);
+  if (USE_MOCK) return MOCK_PUBLIC_TRIPS.filter((t) => matchesFilters(t, filters));
   try {
     const res = await apiClient.get<Paginated<PublicTripDto>>(
       `/public-trips/${PAGE_QUERY}`,
@@ -377,31 +378,27 @@ export async function fetchPublicTrips(
   } catch (error) {
     if (shouldFallbackToMock(error)) {
       devWarn('[public-trips] catalog → mock fallback');
-      return mockCatalog(filters);
+      return MOCK_PUBLIC_TRIPS.filter((t) => matchesFilters(t, filters));
     }
     throw error;
   }
 }
 
 export async function fetchPublicTrip(tripId: number | string): Promise<PublicTrip> {
-  const findMockTrip = (): PublicTrip | undefined =>
-    createdPublicTrips.find((t) => String(t.id) === String(tripId)) ??
-    MOCK_PUBLIC_TRIPS.find((t) => String(t.id) === String(tripId));
   if (USE_MOCK) {
-    const trip = findMockTrip();
+    const trip = MOCK_PUBLIC_TRIPS.find((t) => String(t.id) === String(tripId));
     if (!trip) throw new ApiError(404, 'Trip not found');
     return trip;
   }
   try {
-    const dto = await apiClient.get<PublicTripDto>(
-      `/public-trips/${tripId}/`,
-      undefined,
-      { skipAuth: true },
-    );
+    // БЕЗ skipAuth: токен нужен, чтобы BE раскрыл место встречи одобренному участнику
+    // (#410). Аноним → токена нет → authHeaders не добавит Authorization, деталь
+    // вернётся со скрытыми координатами. is_owner всё равно считаем на клиенте.
+    const dto = await apiClient.get<PublicTripDto>(`/public-trips/${tripId}/`);
     return mapTrip(dto);
   } catch (error) {
     if (shouldFallbackToMock(error)) {
-      const trip = findMockTrip();
+      const trip = MOCK_PUBLIC_TRIPS.find((t) => String(t.id) === String(tripId));
       if (trip) {
         devWarn('[public-trips] detail → mock fallback');
         return trip;

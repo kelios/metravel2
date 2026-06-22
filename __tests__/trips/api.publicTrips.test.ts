@@ -27,6 +27,7 @@ import { apiClient, ApiError } from '@/api/client'
 import {
   cancelApplication,
   decideApplication,
+  fetchPublicTrip,
   fetchPublicTrips,
   submitApplication,
 } from '@/api/publicTrips'
@@ -131,6 +132,41 @@ describe('fetchPublicTrips — mapper', () => {
   it('re-throws non-fallback errors', async () => {
     mockGet.mockRejectedValueOnce(new ApiError(500, 'server error'))
     await expect(fetchPublicTrips()).rejects.toThrow()
+  })
+})
+
+describe('fetchPublicTrip — post-approval reveal (#410)', () => {
+  it('одобренному раскрывает место встречи (координаты пришли)', async () => {
+    mockGet.mockResolvedValueOnce(
+      tripDto({
+        meeting_point_hidden: false,
+        start_point_name: 'Минск, вокзал',
+        start_lat: 53.89,
+        start_lng: 27.55,
+      }),
+    )
+    const trip = await fetchPublicTrip(6)
+    expect(trip.meetingPoint).toBe('Минск, вокзал · 53.89, 27.55')
+  })
+
+  it('детальный GET идёт С токеном (skipAuth не передаётся)', async () => {
+    mockGet.mockResolvedValueOnce(tripDto())
+    await fetchPublicTrip(6)
+    const opts = mockGet.mock.calls[0]?.[2] as { skipAuth?: boolean } | undefined
+    expect(opts?.skipAuth).toBeFalsy()
+  })
+
+  it('анониму место встречи скрыто (координат нет, hidden=true)', async () => {
+    mockGet.mockResolvedValueOnce(
+      tripDto({
+        meeting_point_hidden: true,
+        start_point_name: 'Минск, вокзал',
+        start_lat: null,
+        start_lng: null,
+      }),
+    )
+    const trip = await fetchPublicTrip(6)
+    expect(trip.meetingPoint).toBeNull()
   })
 })
 
