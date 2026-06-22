@@ -27,8 +27,7 @@ interface Props {
 
 function AchievementsSection({ testID, style }: Props) {
   const colors = useThemedColors();
-  const { data, isError, isFetching } = useMyAchievements();
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { data, isLoading, isError } = useMyAchievements();
   const ownUserId = useAuthStore((s) => s.userId);
   const ownerName = useAuthStore((s) => s.username);
   // peer-награды отдаёт user-эндпоинт (не /me/) — тянем по своему id (кэшируется).
@@ -40,15 +39,6 @@ function AchievementsSection({ testID, style }: Props) {
 
   // Тихо скрываем при ошибке/отсутствии — секция необязательная.
   if (isError) return null;
-  // Запрос /me/ включён только при auth (enabled: isAuthenticated). До входа он
-  // в состоянии pending+disabled (data=undefined, isError=false, не fetching) —
-  // спиннер по `!data` висел бы вечно. Гостю секцию просто не показываем.
-  if (!isAuthenticated && !data) return null;
-
-  // Спиннер — только пока реально идёт запрос. Завершённый-без-данных запрос
-  // (disabled/paused) не застревает в loading: секцию скрываем, а не крутим вечно.
-  const isLoading = isFetching && !data;
-  if (!data && !isLoading) return null;
 
   return (
     <View style={[styles.card, style]} testID={testID}>
@@ -68,7 +58,7 @@ function AchievementsSection({ testID, style }: Props) {
       </View>
 
       {isLoading || !data ? (
-        <View style={styles.loading} testID="achievements-loading">
+        <View style={styles.loading}>
           <ActivityIndicator color={colors.primary} />
         </View>
       ) : (
