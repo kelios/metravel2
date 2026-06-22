@@ -32,6 +32,7 @@ interface FiltersPanelBodyProps {
     searchQuery?: string
   }
   travelsData: { categoryName?: string; name?: string; address?: string }[]
+  filteredTravelsData?: { categoryName?: string; name?: string; address?: string }[]
   overlayOptions?: { id: string; title: string }[]
   enabledOverlays?: Record<string, boolean>
   onOverlayToggle?: (id: string, enabled: boolean) => void
@@ -73,6 +74,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
   filters,
   filterValue,
   travelsData,
+  filteredTravelsData = [],
   isMobile,
   totalPoints,
   isBusy,
@@ -174,6 +176,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
             filters={filters}
             filterValue={filterValue}
             travelsData={travelsData}
+            filteredTravelsData={filteredTravelsData}
             onFilterChange={onFilterChange}
           />
         ) : (

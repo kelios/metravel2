@@ -1,5 +1,12 @@
 import React, { useEffect, useMemo, useRef } from 'react'
-import { Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
+import {
+  PanResponder,
+  Platform,
+  Pressable,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -87,10 +94,43 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
   const handleClose = useRef(() => {
+    // Temporary QA log (#497) — confirms the close handler fires on the device.
+    // Remove after device verification.
+    console.info('[QA-CLOSE]', 'MapPlaceBottomCard.handleClose', {
+      alreadyClosed: closedRef.current,
+    })
     if (closedRef.current) return
     closedRef.current = true
     onCloseRef.current()
   }).current
+
+  // #497 — the card is reused (React.memo) when the user taps another marker
+  // without closing the current one: `selectedPlace` changes but the component
+  // stays mounted, so `closedRef` (set true by a previous close) would make the
+  // ✕ a permanent no-op. Reset it whenever a new point is shown.
+  const pointKey = point ? String(point.coord ?? point.id ?? '') : null
+  useEffect(() => {
+    closedRef.current = false
+  }, [pointKey])
+
+  // #497 — native swipe-down-to-close on the grabber/header. The web grabber uses
+  // pointer events (webSwipeHandlers); native needs a PanResponder because RN-Web
+  // pointer props don't exist on real RN. Captures a downward drag past the
+  // threshold and closes the card (parity with maps.me / web swipe).
+  const nativeSwipeResponder = useMemo(() => {
+    if (IS_WEB) return null
+    return PanResponder.create({
+      onMoveShouldSetPanResponder: (_evt, gesture) =>
+        gesture.dy > 6 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
+      onPanResponderRelease: (_evt, gesture) => {
+        if (gesture.dy > SWIPE_CLOSE_THRESHOLD_PX) handleClose()
+      },
+      onPanResponderTerminate: (_evt, gesture) => {
+        if (gesture.dy > SWIPE_CLOSE_THRESHOLD_PX) handleClose()
+      },
+    })
+  }, [handleClose])
+  const nativeSwipeHandlers = nativeSwipeResponder?.panHandlers ?? null
 
   // Web swipe-down-to-close on the grabber/header.
   const dragStartYRef = useRef<number | null>(null)
@@ -158,6 +198,25 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
     </Pressable>
   )
 
+  // #497 — native: the absolute close button painted over the edge-to-edge hero
+  // photo did not receive taps on Android (it overlapped the «Открыть фото»
+  // Pressable that fills the photo, and an absolute child near the parent's top
+  // edge is unreliable for touch on RN-Android). Render a real in-bounds close
+  // button inside the header row next to the grabber instead — guaranteed
+  // touchable, reads clearly as «закрыть карточку», and never fights the photo.
+  const nativeHeaderClose = (
+    <Pressable
+      testID="map-place-bottom-card-close"
+      onPress={handleClose}
+      accessibilityRole="button"
+      accessibilityLabel="Закрыть карточку места"
+      hitSlop={12}
+      style={({ pressed }) => [styles.headerCloseButton, pressed && { opacity: 0.6 }]}
+    >
+      <Feather name="x" size={20} color={colors.text} />
+    </Pressable>
+  )
+
   // Mobile web: a BOUNDED bottom sheet (maps.me-style) anchored to the bottom so the
   // map stays visible above it. The sheet hosts the split layout (fixed hero photo +
   // scrollable caption/actions) so every element stays reachable and the photo never
@@ -193,15 +252,20 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
       pointerEvents="box-none"
     >
       <View style={styles.card}>
-        <View style={styles.handleZone} {...(webSwipeHandlers ?? {})}>
+        <View
+          style={[styles.handleZone, !IS_WEB && styles.handleZoneNative]}
+          {...(webSwipeHandlers ?? {})}
+          {...(nativeSwipeHandlers ?? {})}
+        >
           <View style={styles.grabber} />
+          {!IS_WEB ? nativeHeaderClose : null}
         </View>
 
         <View style={styles.body}>
           <PopupComponent point={point} closePopup={handleClose} />
         </View>
 
-        {closeButton}
+        {IS_WEB ? closeButton : null}
       </View>
     </View>
   )
@@ -284,6 +348,26 @@ const getStyles = (colors: ThemedColors) =>
       alignItems: 'center',
       justifyContent: 'center',
       ...(IS_WEB ? ({ cursor: 'grab', touchAction: 'none' } as any) : null),
+    },
+    // Native: the header row holds the centered grabber AND a real in-bounds ✕
+    // pinned to the right (the absolute-over-photo button did not receive taps on
+    // Android). Extra height/padding gives the ✕ a comfortable tap target.
+    handleZoneNative: {
+      minHeight: 44,
+      paddingTop: 10,
+      paddingBottom: 6,
+      paddingHorizontal: 8,
+    },
+    headerCloseButton: {
+      position: 'absolute',
+      right: 8,
+      top: 4,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surfaceMuted,
     },
     grabber: {
       width: 40,

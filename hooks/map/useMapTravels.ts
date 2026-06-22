@@ -6,7 +6,6 @@ import type { TravelCoords } from '@/types/types';
 import { logError } from '@/utils/logger';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 import { queryKeys } from '@/api/queryKeys';
-import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import type { Coordinates } from './useMapCoordinates';
 import type { FiltersData } from './useMapFilters';
 import type { MapFilterValues } from '@/utils/mapFiltersStorage';
@@ -473,20 +472,17 @@ export function useMapTravels({
     return allTravelsData.length;
   }, [queryParams.mode, enabledRadius, enabledRoute, radiusQuery.data?.pages, allTravelsData]);
 
-  // Поиск по тексту фильтруется на клиенте. Дебаунсим запрос, чтобы тяжёлый
-  // фильтр (+ пересоздание маркеров вниз по дереву) не гонялся на каждый символ;
-  // сам инпут остаётся controlled/отзывчивым (его значение в filterValues).
-  const debouncedSearchQuery = useDebouncedValue(filterValues.searchQuery, 280);
-
-  // Фильтруем только по категориям на клиенте (радиус уже применен на бэкенде)
+  // Поиск по тексту фильтруется на клиенте. Дебаунс не нужен здесь: весь
+  // filterValues уже дебаунсится в useMapDataController (300ms) до передачи в
+  // этот хук — внутренний useDebouncedValue давал бы двойную задержку.
   const filteredTravelsData = useMemo(() => {
     const byCategories = filterTravelsByCategories(
       allTravelsData,
       filterValues.categoryTravelAddress
     );
 
-    return filterTravelsBySearchQuery(byCategories, debouncedSearchQuery);
-  }, [allTravelsData, filterValues.categoryTravelAddress, debouncedSearchQuery]);
+    return filterTravelsBySearchQuery(byCategories, filterValues.searchQuery);
+  }, [allTravelsData, filterValues.categoryTravelAddress, filterValues.searchQuery]);
 
   return useMemo(() => ({
     allTravelsData,

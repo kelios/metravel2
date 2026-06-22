@@ -135,6 +135,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         filters={filters}
         filterValue={filterValue}
         travelsData={travelsData}
+        filteredTravelsData={filteredTravelsData}
         overlayOptions={overlayOptions}
         enabledOverlays={enabledOverlays}
         onOverlayToggle={onOverlayToggle}
