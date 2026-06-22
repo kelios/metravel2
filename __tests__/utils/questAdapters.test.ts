@@ -170,6 +170,21 @@ describe('questAdapters', () => {
       expect(result.answer('Дракон')).toBe(true);
     });
 
+    it('does not throw when answer_pattern.value is a number (regression: quest with 0 steps)', () => {
+      const apiStep = {
+        id: 9,
+        step_id: 'graf',
+        title: 'Граф Паскевич',
+        lat: 52.42,
+        lng: 31.01,
+        answer_pattern: { type: 'exact', value: 2 },
+      };
+      const result = adaptStep(apiStep as any);
+      expect(typeof result.answer).toBe('function');
+      expect(result.answer('2')).toBe(true);
+      expect(result.answer('3')).toBe(false);
+    });
+
     it('parses lat/lng from numbers', () => {
       const step = adaptStep({
         id: 2,

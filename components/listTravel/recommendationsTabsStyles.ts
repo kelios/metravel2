@@ -21,8 +21,11 @@ export const createRecommendationsTabsStyles = (
   },
   containerFixedHeight: { height: TAB_TOTAL_HEIGHT },
   containerMobileWebExpanded: Platform.select({
+    // Bug #492: on native the mobile shelves live in this block; without lifting the
+    // base fixed height + overflow:hidden they are clipped (mounted but invisible).
+    // Mobile web already expands here and works — mirror it on native.
     web: { height: 'auto', overflow: 'visible' } as any,
-    default: {},
+    default: { height: 'auto', overflow: 'visible' } as any,
   }),
   header: {
     flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.borderLight,
@@ -67,8 +70,11 @@ export const createRecommendationsTabsStyles = (
   collapseButton: { paddingLeft: 12, paddingRight: 4, paddingVertical: 12, marginLeft: 4 },
   content: { height: TAB_CONTENT_HEIGHT, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: colors.surface },
   contentMobileWebExpanded: Platform.select({
+    // Bug #492: lift the base fixed `content` height on native too, otherwise the
+    // PersonalizedRecommendations + favorites/history shelves below WeeklyHighlights
+    // are clipped by the 320px content box (they mount with h:305 but never paint).
     web: { height: 'auto', overflow: 'visible' } as any,
-    default: {},
+    default: { height: 'auto', overflow: 'visible' } as any,
   }),
   collapsedHeader: {
     height: TAB_HEADER_HEIGHT, justifyContent: 'center', paddingHorizontal: 12,

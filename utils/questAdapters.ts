@@ -170,7 +170,16 @@ export function fixMediaUrl(url: string | null | undefined): string | undefined 
 export function adaptStep(apiStep: ApiQuestStep): QuestStep {
     // answer_pattern (новый формат) или answer_type/answer_value (старый)
     const answerType = apiStep.answer_pattern?.type ?? apiStep.answer_type ?? 'any';
-    const answerValue = apiStep.answer_pattern?.value ?? apiStep.answer_value ?? '';
+    const rawAnswerValue = apiStep.answer_pattern?.value ?? apiStep.answer_value ?? '';
+    // Бэкенд может прислать value числом/объектом (напр. exact -> 2). buildAnswerChecker
+    // ждёт строку (.toLowerCase / JSON.parse), иначе бросает и роняет ВЕСЬ список шагов.
+    const answerValue = typeof rawAnswerValue === 'string'
+        ? rawAnswerValue
+        : rawAnswerValue == null
+            ? ''
+            : typeof rawAnswerValue === 'object'
+                ? JSON.stringify(rawAnswerValue)
+                : String(rawAnswerValue);
 
     return {
         id: String(apiStep.step_id ?? apiStep.id),
@@ -235,7 +244,18 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
             ? JSON.parse(apiBundle.steps)
             : apiBundle.steps;
         rawSteps = Array.isArray(parsedSteps) ? parsedSteps : [];
-        steps = rawSteps.filter((s) => !isIntroStep(s)).map(adaptStep);
+        // Адаптируем пошагово: сбой одного шага не должен ронять весь маршрут (квест без точек).
+        steps = rawSteps
+            .filter((s) => !isIntroStep(s))
+            .map((s) => {
+                try {
+                    return adaptStep(s);
+                } catch (e) {
+                    console.error('Error adapting quest step:', s?.step_id ?? s?.id, e);
+                    return null;
+                }
+            })
+            .filter((s): s is QuestStep => s !== null);
     } catch (e) {
         console.error('Error parsing quest steps:', e);
     }
