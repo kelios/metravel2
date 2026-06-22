@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
 import { buildGpx, downloadTextFileWeb } from '@/utils/routeExport';
@@ -57,10 +57,7 @@ export async function exportQuestOfflineMap(options: QuestOfflineMapExportOption
     return true;
   }
 
-  const cacheDir =
-    (FileSystem as { cacheDirectory?: string }).cacheDirectory ??
-    String((FileSystem as any).Paths?.cache?.uri ?? '');
-
+  const cacheDir = FileSystem.cacheDirectory;
   if (!cacheDir || !(await Sharing.isAvailableAsync())) return false;
 
   const fileUri = `${cacheDir}${file.filename}`;

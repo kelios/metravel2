@@ -33,11 +33,11 @@ model: sonnet
 
 ## Модель данных (повторяет бэк, схема обновлена 2026-06-21)
 
-- **Task**: `title`, `description`, `status` (`backlog → todo → in_progress → review → testing →
-  done`; плюс `blocked_by` и `wont_do`), `area` (`front` | `back` | `android` | `ios`), `urgency`
-  (`highest` | `high` | `medium` | `low` | `lowest`), `reporter`, `assignee`, `sprint_id`,
-  `position`, `needs_human` (bool), `blocked_by_id`, `depends_on_ids[]` (жёсткие зависимости),
-  `related_to_ids[]` (мягкие связи).
+- **Task**: `title`, `description`, `kind` (`task` | `feature` | `bug`, дефолт `task`), `status`
+  (`backlog → todo → in_progress → review → testing → done`; плюс `blocked_by` и `wont_do`), `area`
+  (`front` | `back` | `android` | `ios`), `urgency` (`highest` | `high` | `medium` | `low` | `lowest`),
+  `reporter`, `assignee`, `sprint_id`, `position`, `needs_human` (bool), `blocked_by_id`,
+  `depends_on_ids[]` (жёсткие зависимости), `related_to_ids[]` (мягкие связи).
 - **Sprint**: `title`, `goal`, `status` (`planned` | `active` | `closed`), `starts_at`, `ends_at`.
 - **Enum’ы не зубри — сверяй `metravel_task_board_options`** (`task_statuses` / `task_areas` /
   `task_urgencies` / `sprint_statuses`). Это источник правды; при расхождении доверяй ему, а не доке.
@@ -55,6 +55,37 @@ model: sonnet
   `Validation`, `Done gate`. Если блока нет, поля пустые или это плейсхолдеры (не архитекторский
   уровень: нет точных shape'ов/полей, реальных board id зависимостей, конкретных проверок) — не
   двигай задачу дальше refinement; верни на проработку (`task-author` / `$metravel-system-architect`).
+
+## Категория задачи (`kind`) — обязательна при заведении
+
+Каждая задача обязана иметь корректный `kind`. Классифицируй ПЕРЕД созданием по заголовку/сути:
+
+- **`bug`** — дефект существующего поведения: сломано / работает неправильно / падает / краш /
+  тормозит как регрессия / визуальный глюк / 5xx / XSS / усечение текста / рассинхрон / утечка.
+  Маркеры: «fix», «не работает», «падает», «ошибка/500/502», «краш», «spinner», «leak»,
+  «серый/белый экран», «обрезает/усекает», «regression», «неверно», «теряется».
+- **`feature`** — новая пользовательская возможность / экран / редизайн / новая интеграция /
+  новый эндпоинт под фичу. Маркеры: «добавь», «новый», «сделай <функцию>», «редизайн»,
+  «реализуй», «вкладка/секция», «каталог», «поддержка X».
+- **`task`** — chore / инфра / рефактор / перф-ПРЕДЛОЖЕНИЕ / SEO / доки / контент (статьи,
+  квесты) / миграция / тулинг / тесты. Дефолт при неоднозначности.
+
+Разрешение спорных: перф-предложение/оптимизация = `task`, перф-ЖАЛОБА на конкретную поломку =
+`bug`; «эндпоинт медленный, нет кэша» = `bug`; авторинг контента = `task`.
+
+**⚠️ MCP `metravel_task_create`/`metravel_task_update` НЕ умеют писать `kind`** (поля нет в их
+схеме). DRF-модель его поддерживает (`choices: task | feature | bug`, `read_only:false`). Поэтому:
+сначала создай задачу через MCP, затем выставь `kind` прямым PATCH в DRF API (токен из
+`.secrets/metravel-task-board.env`, не печатать):
+
+```bash
+. .secrets/metravel-task-board.env
+curl -s -X PATCH "$METRAVEL_TASK_BOARD_BASE_URL/api/tasks/<ID>/" \
+  -H "Authorization: Token $METRAVEL_TASK_BOARD_API_TOKEN" \
+  -H "Content-Type: application/json" -d '{"kind":"bug"}' >/dev/null
+```
+
+Проверить распределение по борду: `GET /api/tasks/?limit=1000` → группировка по `kind`.
 
 ## Приёмка и закрытие в `done`
 
@@ -75,9 +106,10 @@ model: sonnet
 - **Показать борд:** `metravel_task_board` → краткая сводка по колонкам (front/back раздельно).
 - **Завести тикет:** дедуп → `metravel_task_create` с `area` (front/back/android/ios), `urgency`,
   `reporter`, нужным `sprint_id`, заголовком-префиксом и заполненным `description` (Goal/Context/AC
-  + обязательный `Task Contract` из `docs/TASK_BOARD_MCP.md`). Если задача зависит от другой —
-  проставь `depends_on_ids`/`blocked_by_id`; смежные по контексту — `related_to_ids`; требует
-  ручного шага человека — `needs_human=true`. Верни id.
+  + обязательный `Task Contract` из `docs/TASK_BOARD_MCP.md`). **Сразу после создания выставь
+  `kind`** (`bug`/`feature`/`task`) прямым PATCH — см. «Категория задачи (`kind`)» (MCP его не
+  пишет). Если задача зависит от другой — проставь `depends_on_ids`/`blocked_by_id`; смежные по
+  контексту — `related_to_ids`; требует ручного шага человека — `needs_human=true`. Верни id.
 - **Обновить статус:** `metravel_task_update(id, status=…, assignee=…)` + дописать evidence.
   В `done` двигай только если evidence закрывает `Done gate`; для FE/BE зависимостей проверь
   runtime endpoint/field/event на целевом окружении, а не только статус соседней задачи.

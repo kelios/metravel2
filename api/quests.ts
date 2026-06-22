@@ -71,12 +71,11 @@ export type ApiQuestMeta = {
 };
 
 /**
- * DEV-only мок прохождений (#363): пока бэк не отдаёт реальные
- * is_completed_by_me/completions_count на проде, в DEV подсовываем
- * детерминированные значения по id квеста, чтобы увидеть визуал бейджа.
- * В прод-сборке (__DEV__===false) выключен.
+ * DEV-only мок прохождений (#363): бэк теперь отдаёт реальные
+ * is_completed_by_me/completions_count — мок выключен, чтобы в DEV-сборке
+ * на устройстве не показывались фейковые «Пройден»/«N прохождения».
  */
-const QUEST_COMPLETION_MOCK = true;
+const QUEST_COMPLETION_MOCK = false;
 
 function withQuestCompletionMock(meta: ApiQuestMeta): ApiQuestMeta {
     if (!__DEV__ || !QUEST_COMPLETION_MOCK) return meta;

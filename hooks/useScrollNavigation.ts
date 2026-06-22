@@ -317,23 +317,29 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
         return;
       }
 
-      const anchor = anchors[key];
-      const scrollTarget = scrollRef.current as
-        | (ScrollView & { getNativeScrollRef?: () => unknown })
-        | null;
-      // New Architecture (Fabric): measureLayout требует ref на нативный
-      // компонент, а не числовой node handle (findNodeHandle бросает
-      // "ref.measureLayout must be called with a ref to a native component").
-      // ScrollView.getNativeScrollRef() возвращает нативный ref контейнера —
-      // это и есть корректный относительный узел для measureLayout.
-      const relativeRef: unknown =
-        (typeof scrollTarget?.getNativeScrollRef === 'function'
-          ? scrollTarget.getNativeScrollRef()
-          : null) ?? scrollTarget;
-      const anchorNode = anchor?.current as
-        | (View & { measureLayout?: (...args: unknown[]) => void })
-        | null;
-      if (anchorNode && relativeRef && typeof anchorNode.measureLayout === 'function') {
+      const tryScrollNative = (k: string): boolean => {
+        const anchor = anchors[k];
+        const scrollTarget = scrollRef.current as
+          | (ScrollView & { getNativeScrollRef?: () => unknown })
+          | null;
+        if (!scrollTarget) return false;
+        // New Architecture (Fabric): measureLayout требует ref на нативный
+        // компонент, а не числовой node handle (findNodeHandle бросает
+        // "ref.measureLayout must be called with a ref to a native component").
+        // ScrollView.getNativeScrollRef() возвращает нативный ref контейнера —
+        // это и есть корректный относительный узел для measureLayout.
+        const relativeRef: unknown =
+          (typeof scrollTarget.getNativeScrollRef === 'function'
+            ? scrollTarget.getNativeScrollRef()
+            : null) ?? scrollTarget;
+        const anchorNode = anchor?.current as
+          | (View & { measureLayout?: (...args: unknown[]) => void })
+          | null;
+        if (!anchorNode || !relativeRef || typeof anchorNode.measureLayout !== 'function') {
+          // Секция ещё не смонтирована (ленивый map/points/excursions) —
+          // её ref пока null. Сообщаем вызывающему, чтобы он повторил попытку.
+          return false;
+        }
         try {
           anchorNode.measureLayout(
             relativeRef as never,
@@ -341,13 +347,35 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
               scrollRef.current?.scrollTo({ y, animated: true });
             },
             () => {
-              // Fallback: если measureLayout не сработал, логируем предупреждение
-              console.warn(`Could not measure layout for section: ${key}`);
+              // measureLayout не смог измерить (узел только что размонтирован) —
+              // ретрай вызывающего попробует снова.
             }
           );
-        } catch (err) {
-          console.warn(`measureLayout failed for section: ${key}`, err);
+          return true;
+        } catch {
+          return false;
         }
+      };
+
+      // На native (как и на web) ленивые секции монтируются с задержкой, поэтому
+      // первый measureLayout часто промахивается (anchor.current ещё null) и
+      // одноразовый scrollTo молча ничего не делает. Ретраим, пока секция не
+      // смонтируется и не измерится — иначе тап по липкой навигации к «Точкам»/
+      // «Карте маршрута» не приводит к скроллу.
+      clearPending(key);
+      if (tryScrollNative(key)) return;
+
+      const MAX_ATTEMPTS = 20;
+      const INTERVAL_MS = 120;
+      pendingRetriesRef.current[key] = [];
+
+      for (let i = 1; i <= MAX_ATTEMPTS; i += 1) {
+        const t = setTimeout(() => {
+          if (tryScrollNative(key) || i === MAX_ATTEMPTS) {
+            clearPending(key);
+          }
+        }, i * INTERVAL_MS);
+        pendingRetriesRef.current[key]!.push(t);
       }
     },
     [anchors]

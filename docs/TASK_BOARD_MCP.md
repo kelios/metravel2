@@ -75,10 +75,10 @@ curl -s -H "Authorization: Token $METRAVEL_TASK_BOARD_API_TOKEN" https://metrave
   discovery → implement → review → test → release силами профильных FE-агентов, со сдвигом
   статуса на борде на каждом шаге. Зеркалит ролевой пайплайн бэка (`.codex/team`).
 
-Модель: `Task{title, description, status: backlog→todo→in_progress→review→testing→done (+ blocked_by,
-wont_do), area: front|back|android|ios, urgency: highest|high|medium|low|lowest, reporter, assignee,
-sprint, position, needs_human, blocked_by_id, depends_on_ids[], related_to_ids[]}`. Заголовок с
-префиксом источника `[FE-…]`/`[BE-…]`/`[AND-…]`/`[IOS-…]`.
+Модель: `Task{title, description, kind: task|feature|bug, status: backlog→todo→in_progress→review→
+testing→done (+ blocked_by, wont_do), area: front|back|android|ios, urgency: highest|high|medium|low|
+lowest, reporter, assignee, sprint, position, needs_human, blocked_by_id, depends_on_ids[],
+related_to_ids[]}`. Заголовок с префиксом источника `[FE-…]`/`[BE-…]`/`[AND-…]`/`[IOS-…]`.
 
 ### Схема создания/обновления тикета (актуально на 2026-06-21)
 
@@ -101,6 +101,30 @@ sprint, position, needs_human, blocked_by_id, depends_on_ids[], related_to_ids[]
 
 Допустимые enum’ы всегда сверяй вызовом `metravel_task_board_options` — он источник правды по
 `task_statuses` / `task_areas` / `task_urgencies` / `sprint_statuses`.
+
+### Поле `kind` (категория: bug / feature / task) — пишется ТОЛЬКО прямым PATCH
+
+DRF-модель имеет поле `kind` с `choices: task | feature | bug` (дефолт `task`, `read_only:false`), и
+оно отдаётся в листингах (`kind` / `kind_display`). **Но MCP-инструменты `metravel_task_create` /
+`metravel_task_update` его НЕ принимают** (нет в их схеме). Чтобы выставить категорию: создай
+задачу через MCP, затем сразу PATCH в DRF API.
+
+```bash
+. .secrets/metravel-task-board.env
+curl -s -X PATCH "$METRAVEL_TASK_BOARD_BASE_URL/api/tasks/<ID>/" \
+  -H "Authorization: Token $METRAVEL_TASK_BOARD_API_TOKEN" \
+  -H "Content-Type: application/json" -d '{"kind":"bug"}' >/dev/null
+```
+
+**Рубрика классификации (обязательна при заведении):**
+- `bug` — дефект существующего поведения: поломка / неправильно / краш / падает / 5xx / XSS /
+  визуальный глюк / усечение / рассинхрон / регрессия. Перф-ЖАЛОБА на конкретную поломку
+  («эндпоинт медленный, нет кэша», «502») = `bug`.
+- `feature` — новая возможность / экран / редизайн / новая интеграция / новый эндпоинт под фичу.
+- `task` — chore / инфра / рефактор / перф-ПРЕДЛОЖЕНИЕ / SEO / контент (статьи, квесты) /
+  миграция / тулинг / тесты. Дефолт при неоднозначности.
+
+Проверка распределения: `GET /api/tasks/?limit=1000` → группировка по `kind`.
 
 **Статус `testing`** — отдельная колонка QA/приёмки между `review` (код-ревью) и `done`. Раньше
 передача тестеру/релизеру эмулировалась возвратом в `todo` с пометкой «handoff: …» — теперь для
