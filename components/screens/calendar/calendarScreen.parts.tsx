@@ -153,6 +153,7 @@ export const CalendarTravelCard = memo(function CalendarTravelCard({
   styles,
   onOpen,
   onEditDate,
+  onRemove,
 }: {
   entry: CalendarEntry
   colors: ReturnType<typeof useThemedColors>
@@ -160,6 +161,7 @@ export const CalendarTravelCard = memo(function CalendarTravelCard({
   styles: CalendarStyles
   onOpen: (url: string) => void
   onEditDate: (entry: CalendarEntry, event: GestureResponderEvent) => void
+  onRemove: (entry: CalendarEntry, event: GestureResponderEvent) => void
 }) {
   const calendarDate = getCalendarDate(entry)
   const hasCalendarDate = Boolean(calendarDate)
@@ -218,6 +220,16 @@ export const CalendarTravelCard = memo(function CalendarTravelCard({
           recyclingKey: String(entry.id),
         }}
       />
+
+      <Pressable
+        style={[styles.removeBadge, globalFocusStyles.focusable]}
+        onPress={(event) => onRemove(entry, event)}
+        accessibilityRole="button"
+        accessibilityLabel={`Убрать «${cleanTravelTitle(entry.title, entry.country)}» из календаря`}
+        {...(Platform.OS === 'web' ? ({ 'data-card-action': 'true' } as any) : null)}
+      >
+        <Feather name="trash-2" size={15} color={colors.danger} />
+      </Pressable>
 
       <Pressable
         style={[
@@ -336,16 +348,6 @@ export function DateEditorModal({
           {!!editor?.error && <Text style={styles.dateError}>{editor.error}</Text>}
 
           <View style={styles.dateActions}>
-            {canRemoveStatus && (
-              <Pressable
-                style={[styles.dateDangerButton, globalFocusStyles.focusable]}
-                onPress={onRemove}
-                accessibilityRole="button"
-                accessibilityLabel="Удалить из календаря"
-              >
-                <Text style={styles.dateDangerText}>Удалить</Text>
-              </Pressable>
-            )}
             {canClearDate && (
               <Pressable
                 style={[styles.dateSecondaryButton, globalFocusStyles.focusable]}
@@ -373,6 +375,18 @@ export function DateEditorModal({
               <Text style={styles.datePrimaryText}>{needsDateInput ? 'Сохранить' : 'Сохранить статус'}</Text>
             </Pressable>
           </View>
+
+          {canRemoveStatus && (
+            <Pressable
+              style={[styles.dateDangerButton, globalFocusStyles.focusable]}
+              onPress={onRemove}
+              accessibilityRole="button"
+              accessibilityLabel="Удалить из календаря"
+            >
+              <Feather name="trash-2" size={15} color={colors.danger} />
+              <Text style={styles.dateDangerText}>Удалить из календаря</Text>
+            </Pressable>
+          )}
         </Pressable>
       </Pressable>
     </Modal>

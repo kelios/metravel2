@@ -290,7 +290,9 @@ function buildQuestReviewsMock(questId: string): QuestReview[] {
 
 /**
  * Получить список публичных отзывов о квесте (для читалки).
- * Пытается реальный эндпоинт; при 404/ошибке отдаёт детерминированный мок.
+ * Пытается реальный эндпоинт; при 404 (эндпоинта пока нет) — в DEV отдаёт
+ * детерминированный мок для отладки UI, на проде честно возвращает пусто
+ * (показывать пользователям выдуманные отзывы как настоящие нельзя).
  */
 export async function fetchQuestReviews(questId: string): Promise<QuestReview[]> {
     try {
@@ -299,7 +301,7 @@ export async function fetchQuestReviews(questId: string): Promise<QuestReview[]>
     } catch (err: unknown) {
         const status = err instanceof ApiError ? err.status : undefined;
         if (status && status !== 404) throw err;
-        return buildQuestReviewsMock(questId);
+        return __DEV__ ? buildQuestReviewsMock(questId) : [];
     }
 }
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   View,
   Text,
+  Alert,
   Platform,
   ScrollView,
   useWindowDimensions,
@@ -48,6 +49,23 @@ import {
   DateEditorModal,
   SelectedDateFilter,
 } from '@/components/screens/calendar/calendarScreen.parts'
+
+function confirmRemoveFromCalendar(title: string, onConfirm: () => void) {
+  const cleanTitle = title?.trim() || 'этот маршрут'
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined' && !window.confirm(`Убрать «${cleanTitle}» из календаря?`)) return
+    onConfirm()
+    return
+  }
+  Alert.alert(
+    'Убрать из календаря',
+    `«${cleanTitle}» исчезнет из календаря. Сам маршрут останется доступен.`,
+    [
+      { text: 'Отмена', style: 'cancel' },
+      { text: 'Убрать', style: 'destructive', onPress: onConfirm },
+    ]
+  )
+}
 
 export default function CalendarScreen() {
   const router = useRouter()
@@ -234,11 +252,26 @@ export default function CalendarScreen() {
     handleCloseDateEditor()
   }, [dateEditor, handleCloseDateEditor, saveItemStatus])
 
-  const handleRemoveFromCalendar = useCallback(async () => {
+  const handleRemoveFromCalendar = useCallback(() => {
     if (!dateEditor) return
-    await removeStatus(dateEditor.item.id, userId)
-    handleCloseDateEditor()
+    const item = dateEditor.item
+    confirmRemoveFromCalendar(item.title, () => {
+      void removeStatus(item.id, userId)
+      handleCloseDateEditor()
+    })
   }, [dateEditor, handleCloseDateEditor, removeStatus, userId])
+
+  const handleRemoveEntry = useCallback((item: CalendarEntry, event?: GestureResponderEvent) => {
+    if (Platform.OS === 'web') {
+      event?.preventDefault?.()
+      event?.stopPropagation?.()
+      const nativeEvent = event?.nativeEvent as { stopPropagation?: () => void } | undefined
+      nativeEvent?.stopPropagation?.()
+    }
+    confirmRemoveFromCalendar(item.title, () => {
+      void removeStatus(item.id, userId)
+    })
+  }, [removeStatus, userId])
 
   // Android: при открытом редакторе даты Back сначала закрывает его; иначе
   // возвращает на предыдущий экран (Профиль), а не сбрасывает Tab-навигатор.
@@ -342,6 +375,7 @@ export default function CalendarScreen() {
                     styles={styles}
                     onOpen={handleOpenTravel}
                     onEditDate={handleOpenDateEditor}
+                    onRemove={handleRemoveEntry}
                   />
                 ))}
               </View>
