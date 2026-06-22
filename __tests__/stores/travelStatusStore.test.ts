@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 jest.mock('@/utils/logger', () => ({
   devError: jest.fn(),
+  devWarn: jest.fn(),
 }))
 
 jest.mock('@/utils/safeJsonParse', () => ({
@@ -418,6 +419,24 @@ describe('travelStatusStore', () => {
         'metravel_travel_status_77',
         expect.stringContaining('Alps hike')
       )
+    })
+
+    it('не падает и сохраняет локальные статусы, если серверная синхронизация упала (offline)', async () => {
+      const stored = [
+        { id: 5, type: 'travel', title: 'Локальный поход', url: '/travels/5', status: 'visited', addedAt: 1 },
+      ]
+      ;(AsyncStorage.getItem as jest.Mock).mockResolvedValue(JSON.stringify(stored))
+      fetchUserTravelStatuses.mockRejectedValueOnce(
+        new Error('Нет подключения к интернету. Проверьте ваше соединение и попробуйте снова.')
+      )
+
+      await expect(
+        act(() => useTravelStatusStore.getState().loadLocal('77'))
+      ).resolves.not.toThrow()
+
+      expect(useTravelStatusStore.getState().entries).toEqual([
+        expect.objectContaining({ id: 5, title: 'Локальный поход', status: 'visited' }),
+      ])
     })
   })
 
