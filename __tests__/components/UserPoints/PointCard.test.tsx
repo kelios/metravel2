@@ -61,6 +61,22 @@ describe('PointCard', () => {
     expect(screen.getByText('50.450100, 30.523400')).toBeTruthy();
   });
 
+  it('should show a clean title when name is a raw reverse-geocode address', () => {
+    const geocoded = {
+      ...mockPoint,
+      name: '3, Рыночная площадь, Old Town, Краков, Малопольское воеводство, Польша',
+      address: '3, Рыночная площадь, Old Town, Краков, Малопольское воеводство, Польша',
+      description: null,
+    };
+    render(<PointCard point={geocoded} />);
+    // Заголовок — первый осмысленный сегмент (с ведущим номером дома).
+    expect(screen.getByText('3, Рыночная площадь')).toBeTruthy();
+    // Полный адрес остаётся вторичной строкой.
+    expect(
+      screen.getByText('3, Рыночная площадь, Old Town, Краков, Малопольское воеводство, Польша')
+    ).toBeTruthy();
+  });
+
   it('should not render status label', () => {
     render(<PointCard point={mockPoint} />);
     expect(screen.queryByText('Посещено')).toBeNull();

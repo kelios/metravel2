@@ -32,12 +32,14 @@ const renderMoodChip = (
   colors: HomeHeroMoodRailProps['colors'],
   styles: any,
   onQuickFilterPress: HomeHeroMoodRailProps['onQuickFilterPress'],
+  flexible = false,
 ) => (
   <Pressable
     key={card.title}
     onPress={() => onQuickFilterPress(card.title, card.filters, card.route)}
     style={({ pressed, hovered, focused }: any) => [
       styles.moodChip,
+      flexible && styles.moodChipWrapItem,
       (pressed || hovered) && styles.moodChipHover,
       Platform.OS === 'web' && focused && {
         outlineWidth: 2,
@@ -94,7 +96,7 @@ function HomeHeroMoodRail({
       {isMobile ? (
         <View style={styles.moodChipsWrap}>
           {moodCards.map((card) =>
-            renderMoodChip(card, colors, styles, onQuickFilterPress),
+            renderMoodChip(card, colors, styles, onQuickFilterPress, true),
           )}
         </View>
       ) : (

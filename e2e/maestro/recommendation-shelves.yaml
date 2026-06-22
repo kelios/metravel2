@@ -1,0 +1,20 @@
+# Полки рекомендаций на Маршрутах: блок «идеи» → полки Избранное/Недавно смотрели.
+# Требует аккаунт с избранным+историей (sergey@lyte.com: 4 fav / 20 hist).
+# Регресс, который ловит: полки favorites/history схлопывались в 0 на native
+# (width:'100%' в горизонтальном ScrollView) — фикс: числовая ширина карточки 220.
+appId: by.metravel.app
+---
+- runFlow: launch.yaml
+- tapOn: "Маршруты"
+# Блок «идеи» по умолчанию РАСКРЫТ; тапаем тогл, только если он свёрнут (optional).
+- tapOn:
+    text: "Показать идеи путешествий"
+    optional: true
+- assertVisible: "Подборка месяца"
+# Полки favorites/history ниже сгиба и грузятся асинхронно — скроллим до появления.
+- scrollUntilVisible:
+    element:
+      text: "Избранное"
+    direction: DOWN
+    timeout: 25000
+- assertVisible: "Недавно смотрели"

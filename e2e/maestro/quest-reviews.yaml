@@ -1,0 +1,15 @@
+# Читалка отзывов квеста: чип «💬 N» на карточке списка → модалка со списком отзывов.
+# Регрессия, которую ловит: кнопка отзывов вела на старт квеста (web-хеш на native).
+appId: by.metravel.app
+---
+- runFlow: launch.yaml
+- tapOn: "Квесты"
+- assertVisible: "Все квесты"
+# Компактный чип отзывов (accessibilityLabel "Посмотреть отзывы: N отзыв")
+- tapOn:
+    text: "Посмотреть отзывы.*"
+- assertVisible: "Отзывы о квесте"
+# Закрыть модалку крестиком (testID quest-reviews-close), затем убедиться, что закрылась
+- tapOn:
+    id: "quest-reviews-close"
+- assertNotVisible: "Отзывы о квесте"

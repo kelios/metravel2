@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
   FavoritesContext,
   type FavoriteItem,
-  type FavoritesContextType,
+  type FavoritesActionsContextType,
   type ViewHistoryItem,
 } from '@/context/FavoritesContext';
 import { useFavoritesStore } from '@/stores/favoritesStore';
@@ -14,10 +14,6 @@ import { useRecommendationsStore } from '@/stores/recommendationsStore';
 export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, userId } = useAuth();
   const auth = useMemo(() => ({ isAuthenticated, userId }), [isAuthenticated, userId]);
-
-  const favorites = useFavoritesStore((s) => s.favorites);
-  const viewHistory = useViewHistoryStore((s) => s.viewHistory);
-  const recommended = useRecommendationsStore((s) => s.recommended);
 
   useEffect(() => {
     const doLoad = () => {
@@ -52,11 +48,6 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     doLoad();
     return undefined;
   }, [isAuthenticated, userId]);
-
-  const isFavorite = useCallback(
-    (id: number | string, type: FavoriteItem['type']) => useFavoritesStore.getState().isFavorite(id, type),
-    []
-  );
 
   const addFavorite = useCallback(
     (item: Omit<FavoriteItem, 'addedAt'>) => useFavoritesStore.getState().addFavorite(item, auth),
@@ -102,12 +93,8 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     [isAuthenticated, userId]
   );
 
-  const value = useMemo<FavoritesContextType>(
+  const value = useMemo<FavoritesActionsContextType>(
     () => ({
-      favorites,
-      viewHistory,
-      recommended,
-      isFavorite,
       addFavorite,
       removeFavorite,
       addToHistory,
@@ -117,10 +104,6 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
       ensureServerData,
     }),
     [
-      favorites,
-      viewHistory,
-      recommended,
-      isFavorite,
       addFavorite,
       removeFavorite,
       addToHistory,

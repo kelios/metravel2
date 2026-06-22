@@ -100,7 +100,11 @@ export const MOCK_MY_ACHIEVEMENTS: MyAchievements = {
   rank: MOCK_RANK,
   earned: MOCK_EARNED,
   locked: MOCK_LOCKED,
-  recentlyEarned: [MOCK_EARNED[5]],
+  recentlyEarned: [
+    MOCK_EARNED[5], // badge id=10, earnedAt 2026-01-22 (~5 months ago)
+    MOCK_EARNED[4], // badge id=8, earnedAt 2025-11-18 (~7 months ago)
+    MOCK_EARNED[3], // badge id=6, earnedAt 2025-10-03 (~8 months ago)
+  ],
 };
 
 // ── Peer-awarded badges (§10) ───────────────────────────────────────────────

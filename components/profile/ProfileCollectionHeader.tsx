@@ -16,6 +16,13 @@ type Props = {
   clearAccessibilityLabel?: string;
   clearButtonText?: string;
   backAccessibilityLabel?: string;
+  /**
+   * Компактная шапка для экранов с тяжёлым контентом под ней (календарь):
+   * на телефоне держит заголовок и кнопку «В профиль» в одной строке,
+   * скрывает подзаголовок и поджимает вертикальные паддинги — чтобы под
+   * фиксированной шапкой сразу был виден контент (правило «шапка ≤20%»).
+   */
+  dense?: boolean;
 };
 
 export default function ProfileCollectionHeader({
@@ -27,27 +34,29 @@ export default function ProfileCollectionHeader({
   clearAccessibilityLabel = 'Очистить',
   clearButtonText = 'Очистить',
   backAccessibilityLabel = 'Перейти в профиль',
+  dense = false,
 }: Props) {
   const colors = useThemedColors();
   const { isPhone } = useResponsive();
+  const stackOnPhone = isPhone && !dense;
   const styles = useMemo(
     () =>
       StyleSheet.create({
         header: {
           paddingHorizontal: 16,
-          paddingTop: 8,
-          paddingBottom: 6,
+          paddingTop: dense ? 6 : 8,
+          paddingBottom: dense ? 4 : 6,
         },
         headerRow: {
-          flexDirection: isPhone ? 'column' : 'row',
-          alignItems: isPhone ? 'stretch' : 'flex-end',
+          flexDirection: stackOnPhone ? 'column' : 'row',
+          alignItems: stackOnPhone ? 'stretch' : 'flex-end',
           justifyContent: 'space-between',
           gap: 8,
         },
         headerTitleBlock: {
           flexGrow: 1,
-          flexShrink: isPhone ? 0 : 1,
-          flexBasis: isPhone ? 'auto' : 0,
+          flexShrink: stackOnPhone ? 0 : 1,
+          flexBasis: stackOnPhone ? 'auto' : 0,
         },
         headerActions: {
           flexDirection: 'row',
@@ -101,7 +110,7 @@ export default function ProfileCollectionHeader({
           color: colors.primary,
         },
       }),
-    [colors, isPhone]
+    [colors, dense, stackOnPhone]
   );
 
   return (
@@ -109,7 +118,7 @@ export default function ProfileCollectionHeader({
       <View style={styles.headerRow}>
         <View style={styles.headerTitleBlock}>
           <Text style={styles.title}>{title}</Text>
-          <Text style={styles.subtitle}>{subtitle}</Text>
+          {!dense && <Text style={styles.subtitle}>{subtitle}</Text>}
         </View>
 
         <View style={styles.headerActions}>

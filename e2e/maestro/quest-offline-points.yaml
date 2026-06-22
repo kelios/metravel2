@@ -1,0 +1,21 @@
+# Офлайн-точки квеста (native-only регресс): кнопки топ-бара готовят .gpx и открывают share.
+# Регрессия, которую ловит: legacy expo-file-system throw на SDK 56 (фикс — /legacy).
+appId: by.metravel.app
+---
+- runFlow: launch.yaml
+- tapOn: "Квесты"
+- assertVisible: "Все квесты"
+- tapOn:
+    text: "Начать приключение.*"
+    index: 0
+# Топ-бар деталки: «Скачать GPX с N точками квеста» (accessibilityLabel из questWizardShell.tsx)
+- tapOn:
+    text: "Скачать GPX.*"
+# Должен открыться системный share с .gpx (а НЕ тост «Не удалось подготовить точки…»)
+- assertVisible:
+    text: ".*\\.gpx.*"
+- back
+# Вторая кнопка: «Открыть точки квеста в приложении карт» → тост успеха + share
+- tapOn: "Открыть точки квеста в приложении карт"
+- assertVisible:
+    text: "(Файл с точками квеста готов|.*\\.gpx.*)"

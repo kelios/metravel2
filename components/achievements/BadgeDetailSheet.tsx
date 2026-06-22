@@ -15,6 +15,7 @@ import type { Badge } from '@/api/achievements'
 import BadgeMedal from '@/components/achievements/BadgeMedal'
 import ShareBadgeSheet from '@/components/achievements/ShareBadgeSheet'
 import { TIER_VISUALS, tierLabel } from '@/components/achievements/badgeVisuals'
+import { formatRelativeTime } from '@/utils/relativeTime'
 
 export interface BadgeDetail {
   badge: Badge
@@ -22,6 +23,8 @@ export interface BadgeDetail {
   /** PK записи о разблокировке (UserBadge.id). Нужен для share-card — BE ждёт именно его,
    * а не каталожный badge.id. Заполняется только для earned-значков. */
   userBadgeId?: number
+  /** ISO-дата получения значка (UserBadge.earnedAt). Только для earned. */
+  earnedAt?: string
   progress?: { current: number; threshold: number } | null
 }
 
@@ -162,7 +165,11 @@ function BadgeDetailSheet({ visible, onClose, detail, ownerName }: Props) {
 
   if (!detail) return null
 
-  const { badge, earned, userBadgeId, progress } = detail
+  const { badge, earned, userBadgeId, earnedAt, progress } = detail
+  const earnedAtMs = earnedAt ? Date.parse(earnedAt) : NaN
+  const earnedAtLabel = Number.isFinite(earnedAtMs)
+    ? formatRelativeTime(earnedAtMs)
+    : ''
   // Share-card требует UserBadge.id заработанной записи (BE 403 на каталожный badge.id).
   // Без него кнопку «Поделиться» не показываем — деградируем, а не шлём неверный id.
   const canShare = earned && Boolean(ownerName) && userBadgeId != null
@@ -190,7 +197,11 @@ function BadgeDetailSheet({ visible, onClose, detail, ownerName }: Props) {
         onPress={onClose}
         accessibilityLabel="Закрыть"
       >
-        <Pressable style={styles.sheet} onPress={() => {}}>
+        <Pressable
+          style={styles.sheet}
+          onPress={() => {}}
+          testID="badge-detail-sheet"
+        >
           <View style={styles.header}>
             <Pressable
               style={styles.closeBtn}
@@ -253,7 +264,11 @@ function BadgeDetailSheet({ visible, onClose, detail, ownerName }: Props) {
           {earned ? (
             <View style={styles.earnedRow}>
               <Feather name="check-circle" size={16} color={colors.success} />
-              <Text style={styles.earnedText}>Значок получен</Text>
+              <Text style={styles.earnedText}>
+                {earnedAtLabel
+                  ? `Получен ${earnedAtLabel}`
+                  : 'Значок получен'}
+              </Text>
             </View>
           ) : null}
 

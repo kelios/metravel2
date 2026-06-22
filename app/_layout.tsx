@@ -28,6 +28,7 @@ import { patchWebShadowStyles } from "@/utils/patchWebShadowStyles";
 import { installChunkErrorReloadHandler } from "@/utils/chunkReload";
 import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
 import { shouldRunRuntimeConfigDiagnostics } from '@/utils/runtimeConfigDiagnostics';
+import { installQaDebug } from '@/utils/qaDebug';
 import { useAriaHiddenFocusGuard } from "@/hooks/useAriaHiddenFocusGuard";
 import { setToastDockInset } from "@/utils/toast";
 
@@ -191,6 +192,12 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
       }
       return pathname || '';
     }, [pathname]);
+
+    // Dev-only QA: дамп runtime-состояния в logcat ([QA-STATE]) на смене роута +
+    // globalThis.__QA__(). No-op в проде. Помогает device-QA читать состояние без правок кода.
+    useEffect(() => {
+      installQaDebug(effectivePathname);
+    }, [effectivePathname]);
 
     const showFooter = useMemo(
       () => {

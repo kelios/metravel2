@@ -287,7 +287,7 @@ export default function CalendarScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       {seoBlock}
-      <ProfileCollectionHeader title="Мой календарь" onBackPress={handleBackToProfile} />
+      <ProfileCollectionHeader title="Мой календарь" onBackPress={handleBackToProfile} dense />
 
       <CalendarTabs
         activeTab={activeTab}

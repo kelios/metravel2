@@ -1,0 +1,127 @@
+import { memo, useMemo, useState } from 'react'
+import {
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native'
+import { Feather } from '@expo/vector-icons'
+
+import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { useThemedColors } from '@/hooks/useTheme'
+import { useMyAchievements } from '@/hooks/useAchievementsApi'
+import AwardsTabBar, {
+  type AwardsTab,
+} from '@/components/achievements/AwardsTabBar'
+import AchievementsSection from '@/components/achievements/AchievementsSection'
+import RecentAwardsTab from '@/components/achievements/RecentAwardsTab'
+import ActivityProgressionSection from '@/components/achievements/ActivityProgressionSection'
+import CharacterProfileCard from '@/components/achievements/CharacterProfileCard'
+import RareAwardsSection from '@/components/achievements/RareAwardsSection'
+
+interface Props {
+  testID?: string
+  style?: StyleProp<ViewStyle>
+}
+
+type TabKey = 'recent' | 'all' | 'path' | 'rare'
+
+const TABS: AwardsTab[] = [
+  { key: 'recent', label: 'Последние' },
+  { key: 'all', label: 'Все награды' },
+  { key: 'path', label: 'Ваш путь' },
+  { key: 'rare', label: 'Особые' },
+]
+
+/**
+ * Единая карточка «Награды» с под-вкладками (этап 1 редизайна).
+ * Объединяет достижения, прогрессию/персонажа и особые награды под одной шапкой.
+ */
+function AwardsHub({ testID, style }: Props) {
+  const colors = useThemedColors()
+  const styles = useMemo(() => getStyles(colors), [colors])
+  const [activeKey, setActiveKey] = useState<TabKey>('all')
+  const { data } = useMyAchievements()
+  const rank = data?.rank
+
+  return (
+    <View style={[styles.card, style]} testID={testID ?? 'awards-hub'}>
+      <View style={styles.header}>
+        <Feather name="award" size={18} color={colors.primary} />
+        <Text style={styles.title} numberOfLines={1}>
+          Награды
+        </Text>
+        {rank ? (
+          <View style={styles.rankChip}>
+            <Text style={styles.rankChipText} numberOfLines={1}>
+              {rank.level} · {rank.title}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+
+      <AwardsTabBar
+        tabs={TABS}
+        activeKey={activeKey}
+        onChange={(k) => setActiveKey(k as TabKey)}
+        testID="awards-tabbar"
+      />
+
+      <View style={styles.content} testID="awards-panel">
+        {activeKey === 'recent' ? <RecentAwardsTab /> : null}
+
+        {activeKey === 'all' ? <AchievementsSection bare /> : null}
+
+        {activeKey === 'path' ? (
+          <View style={styles.pathStack}>
+            <CharacterProfileCard bare />
+            <ActivityProgressionSection bare />
+          </View>
+        ) : null}
+
+        {activeKey === 'rare' ? <RareAwardsSection bare /> : null}
+      </View>
+    </View>
+  )
+}
+
+const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
+  StyleSheet.create({
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      padding: DESIGN_TOKENS.spacing.md,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      gap: DESIGN_TOKENS.spacing.sm,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    title: {
+      fontSize: DESIGN_TOKENS.typography.sizes.md,
+      fontWeight: '800',
+      color: colors.text,
+      flexShrink: 1,
+    },
+    rankChip: {
+      marginLeft: 'auto',
+      maxWidth: '50%',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 999,
+      backgroundColor: colors.backgroundTertiary,
+    },
+    rankChipText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    content: { marginTop: DESIGN_TOKENS.spacing.xxs },
+    pathStack: { gap: DESIGN_TOKENS.spacing.md },
+  })
+
+export default memo(AwardsHub)

@@ -1,6 +1,5 @@
-import { memo, useState } from 'react';
+import { memo, useState } from 'react'
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -8,60 +7,48 @@ import {
   View,
   type StyleProp,
   type ViewStyle,
-} from 'react-native';
-import { Feather } from '@expo/vector-icons';
+} from 'react-native'
+import { Feather } from '@expo/vector-icons'
 
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useThemedColors } from '@/hooks/useTheme';
-import { useMyAchievements, useUserAchievements } from '@/hooks/useAchievementsApi';
-import { useAuthStore } from '@/stores/authStore';
-import RankBar from '@/components/achievements/RankBar';
-import BadgeMedal from '@/components/achievements/BadgeMedal';
-import AchievementsGalleryModal from '@/components/achievements/AchievementsGalleryModal';
-import PeerBadgeReceivedRow from '@/components/achievements/PeerBadgeReceivedRow';
+import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { useThemedColors } from '@/hooks/useTheme'
+import {
+  useMyAchievements,
+  useUserAchievements,
+} from '@/hooks/useAchievementsApi'
+import { useAuthStore } from '@/stores/authStore'
+import RankBar from '@/components/achievements/RankBar'
+import BadgeMedal from '@/components/achievements/BadgeMedal'
+import AchievementsGalleryModal from '@/components/achievements/AchievementsGalleryModal'
+import PeerBadgeReceivedRow from '@/components/achievements/PeerBadgeReceivedRow'
+import SectionState from '@/components/achievements/SectionState'
 
 interface Props {
-  testID?: string;
-  style?: StyleProp<ViewStyle>;
+  /** bare — без внешней карточки и заголовка (контент для хаба наград). */
+  bare?: boolean
+  testID?: string
+  style?: StyleProp<ViewStyle>
 }
 
-function AchievementsSection({ testID, style }: Props) {
-  const colors = useThemedColors();
-  const { data, isLoading, isError } = useMyAchievements();
-  const ownUserId = useAuthStore((s) => s.userId);
-  const ownerName = useAuthStore((s) => s.username);
+function AchievementsSection({ bare = false, testID, style }: Props) {
+  const colors = useThemedColors()
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const { data, isFetching, isError } = useMyAchievements()
+  const ownUserId = useAuthStore((s) => s.userId)
+  const ownerName = useAuthStore((s) => s.username)
   // peer-награды отдаёт user-эндпоинт (не /me/) — тянем по своему id (кэшируется).
-  const { data: publicData } = useUserAchievements(ownUserId);
-  const peerReceived = publicData?.peerReceived ?? [];
-  const [galleryOpen, setGalleryOpen] = useState(false);
+  const { data: publicData } = useUserAchievements(ownUserId)
+  const peerReceived = publicData?.peerReceived ?? []
+  const [galleryOpen, setGalleryOpen] = useState(false)
 
-  const styles = getStyles(colors);
+  const styles = getStyles(colors)
 
-  // Тихо скрываем при ошибке/отсутствии — секция необязательная.
-  if (isError) return null;
+  // Тихо скрываем при ошибке/неавторизованном — секция необязательная.
+  if (isError || !isAuthenticated) return null
 
-  return (
-    <View style={[styles.card, style]} testID={testID}>
-      <View style={styles.headerRow}>
-        <Text style={styles.heading}>Достижения</Text>
-        {data ? (
-          <Pressable
-            onPress={() => setGalleryOpen(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Открыть все достижения"
-            style={styles.allBtn}
-          >
-            <Text style={styles.allBtnText}>Все</Text>
-            <Feather name="chevron-right" size={16} color={colors.primary} />
-          </Pressable>
-        ) : null}
-      </View>
-
-      {isLoading || !data ? (
-        <View style={styles.loading}>
-          <ActivityIndicator color={colors.primary} />
-        </View>
-      ) : (
+  const body = (
+    <SectionState isFetching={isFetching} hasData={data != null}>
+      {data ? (
         <>
           <RankBar rank={data.rank} style={styles.rank} />
 
@@ -84,12 +71,17 @@ function AchievementsSection({ testID, style }: Props) {
             </ScrollView>
           ) : (
             <Text style={styles.empty}>
-              Пока нет значков. Публикуйте путешествия и проходите квесты — они появятся здесь.
+              Пока нет значков. Публикуйте путешествия и проходите квесты — они
+              появятся здесь.
             </Text>
           )}
 
           {peerReceived.length > 0 ? (
-            <PeerBadgeReceivedRow items={peerReceived} size={56} style={styles.peerRow} />
+            <PeerBadgeReceivedRow
+              items={peerReceived}
+              size={56}
+              style={styles.peerRow}
+            />
           ) : null}
 
           <AchievementsGalleryModal
@@ -99,9 +91,37 @@ function AchievementsSection({ testID, style }: Props) {
             ownerName={ownerName}
           />
         </>
-      )}
+      ) : null}
+    </SectionState>
+  )
+
+  if (bare) {
+    return (
+      <View style={[styles.bare, style]} testID={testID}>
+        {body}
+      </View>
+    )
+  }
+
+  return (
+    <View style={[styles.card, style]} testID={testID}>
+      <View style={styles.headerRow}>
+        <Text style={styles.heading}>Достижения</Text>
+        {data ? (
+          <Pressable
+            onPress={() => setGalleryOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Открыть все достижения"
+            style={styles.allBtn}
+          >
+            <Text style={styles.allBtnText}>Все</Text>
+            <Feather name="chevron-right" size={16} color={colors.primary} />
+          </Pressable>
+        ) : null}
+      </View>
+      {body}
     </View>
-  );
+  )
 }
 
 const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
@@ -114,6 +134,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       borderColor: colors.borderLight,
       gap: DESIGN_TOKENS.spacing.xs,
     },
+    bare: { gap: DESIGN_TOKENS.spacing.xs },
     headerRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -131,14 +152,17 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       color: colors.primary,
     },
     rank: { marginBottom: DESIGN_TOKENS.spacing.xxs },
-    medalsRow: { gap: DESIGN_TOKENS.spacing.sm, paddingVertical: 2, paddingRight: 8 },
+    medalsRow: {
+      gap: DESIGN_TOKENS.spacing.sm,
+      paddingVertical: 2,
+      paddingRight: 8,
+    },
     peerRow: { marginTop: DESIGN_TOKENS.spacing.xxs },
-    loading: { paddingVertical: DESIGN_TOKENS.spacing.lg, alignItems: 'center' },
     empty: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       color: colors.textMuted,
       lineHeight: 20,
     },
-  });
+  })
 
-export default memo(AchievementsSection);
+export default memo(AchievementsSection)

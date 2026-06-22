@@ -219,9 +219,16 @@ export const createCtaStyles = (ctx: HeroStyleContext) => {
       gap: 12,
       width: '100%',
     },
+    moodChipWrapItem: {
+      flexGrow: 1,
+      flexShrink: 1,
+      flexBasis: '44%',
+      minWidth: 140,
+    },
     moodChip: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
+      justifyContent: 'center' as const,
       gap: 10,
       paddingHorizontal: 20,
       paddingVertical: 13,

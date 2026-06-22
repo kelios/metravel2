@@ -1,46 +1,40 @@
-import { memo } from 'react';
+import { memo } from 'react'
 import {
-  ActivityIndicator,
   StyleSheet,
   Text,
   View,
   type StyleProp,
   type ViewStyle,
-} from 'react-native';
-import { Feather } from '@expo/vector-icons';
+} from 'react-native'
+import { Feather } from '@expo/vector-icons'
 
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useThemedColors } from '@/hooks/useTheme';
-import { useMyRareAwards } from '@/hooks/useAchievementsApi';
-import { useAuthStore } from '@/stores/authStore';
-import RareAwardCard from '@/components/achievements/RareAwardCard';
+import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { useThemedColors } from '@/hooks/useTheme'
+import { useMyRareAwards } from '@/hooks/useAchievementsApi'
+import { useAuthStore } from '@/stores/authStore'
+import RareAwardCard from '@/components/achievements/RareAwardCard'
+import SectionState from '@/components/achievements/SectionState'
 
 interface Props {
-  testID?: string;
-  style?: StyleProp<ViewStyle>;
+  /** bare — без внешней карточки и заголовка (контент для хаба наград). */
+  bare?: boolean
+  testID?: string
+  style?: StyleProp<ViewStyle>
 }
 
-function RareAwardsSection({ testID, style }: Props) {
-  const colors = useThemedColors();
-  const { data, isLoading, isError } = useMyRareAwards();
-  const ownerName = useAuthStore((s) => s.username);
-  const styles = getStyles(colors);
+function RareAwardsSection({ bare = false, testID, style }: Props) {
+  const colors = useThemedColors()
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const { data, isFetching, isError } = useMyRareAwards()
+  const ownerName = useAuthStore((s) => s.username)
+  const styles = getStyles(colors)
 
-  // Тихо скрываем при ошибке — секция необязательная.
-  if (isError) return null;
+  // Тихо скрываем при ошибке/неавторизованном — секция необязательная.
+  if (isError || !isAuthenticated) return null
 
-  return (
-    <View style={[styles.card, style]} testID={testID}>
-      <View style={styles.headerRow}>
-        <Feather name="star" size={16} color={colors.primary} />
-        <Text style={styles.heading}>Редкие награды</Text>
-      </View>
-
-      {isLoading || !data ? (
-        <View style={styles.loading}>
-          <ActivityIndicator color={colors.primary} />
-        </View>
-      ) : data.length > 0 ? (
+  const body = (
+    <SectionState isFetching={isFetching} hasData={data != null}>
+      {data && data.length > 0 ? (
         <View style={styles.list}>
           {data.map((award) => (
             <RareAwardCard key={award.id} award={award} ownerName={ownerName} />
@@ -51,8 +45,26 @@ function RareAwardsSection({ testID, style }: Props) {
           Редкие награды вручает команда MeTravel за особый вклад в сообщество.
         </Text>
       )}
+    </SectionState>
+  )
+
+  if (bare) {
+    return (
+      <View style={[styles.bare, style]} testID={testID}>
+        {body}
+      </View>
+    )
+  }
+
+  return (
+    <View style={[styles.card, style]} testID={testID}>
+      <View style={styles.headerRow}>
+        <Feather name="star" size={16} color={colors.primary} />
+        <Text style={styles.heading}>Редкие награды</Text>
+      </View>
+      {body}
     </View>
-  );
+  )
 }
 
 const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
@@ -65,6 +77,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       borderColor: colors.borderLight,
       gap: DESIGN_TOKENS.spacing.md,
     },
+    bare: { gap: DESIGN_TOKENS.spacing.md },
     headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     heading: {
       fontSize: DESIGN_TOKENS.typography.sizes.md,
@@ -72,12 +85,11 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       color: colors.text,
     },
     list: { gap: DESIGN_TOKENS.spacing.sm },
-    loading: { paddingVertical: DESIGN_TOKENS.spacing.lg, alignItems: 'center' },
     empty: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       color: colors.textMuted,
       lineHeight: 20,
     },
-  });
+  })
 
-export default memo(RareAwardsSection);
+export default memo(RareAwardsSection)

@@ -31,6 +31,7 @@ type Props = {
   testID?: string;
   style?: StyleProp<ViewStyle>;
   layout?: 'horizontal' | 'grid';
+  width?: number;
   contentMinHeight?: number;
   imageHeight?: number;
   mediaFit?: 'contain' | 'cover';
@@ -44,6 +45,7 @@ function TabTravelCard({
   testID,
   style,
   layout = 'horizontal',
+  width,
   contentMinHeight,
   imageHeight,
   mediaFit = 'contain',
@@ -104,7 +106,15 @@ function TabTravelCard({
       mediaFit={mediaFit}
       heroTitleOverlay={false}
       contentSlot={contentSlot}
-      width={layout === 'grid' ? undefined : (isMobile ? MOBILE_CARD_WIDTH : (tabCardTemplate.container as any)?.width)}
+      width={
+        typeof width === 'number'
+          ? width
+          : layout === 'grid'
+            ? undefined
+            : isMobile
+              ? MOBILE_CARD_WIDTH
+              : (tabCardTemplate.container as any)?.width
+      }
       imageHeight={typeof imageHeight === 'number' ? imageHeight : Platform.OS === 'web' ? 168 : 150}
       testID={resolvedTestID}
       style={[layout === 'grid' ? styles.containerGrid : styles.container, style]}

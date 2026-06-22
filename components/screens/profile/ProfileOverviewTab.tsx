@@ -2,9 +2,9 @@ import { useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ProfileCompleteness } from '@/components/profile/ProfileCompleteness';
-import AchievementsSection from '@/components/achievements/AchievementsSection';
-import RareAwardsSection from '@/components/achievements/RareAwardsSection';
-import GamificationProfileBlock from '@/components/achievements/GamificationProfileBlock';
+import AwardsHub from '@/components/achievements/AwardsHub';
+import GamificationOnboarding from '@/components/achievements/GamificationOnboarding';
+import PlaceFirstBadgesSection from '@/components/achievements/PlaceFirstBadgesSection';
 
 interface ProfileOverviewTabProps {
   userProp: { name: string; email: string; avatar?: string | null };
@@ -30,10 +30,10 @@ export function ProfileOverviewTab({
 
   return (
     <View style={styles.wrap}>
-      <AchievementsSection />
+      <GamificationOnboarding />
+      <AwardsHub />
+      <PlaceFirstBadgesSection />
       <ProfileCompleteness user={userProp} profile={profile} travelsCount={travelsCount} />
-      <GamificationProfileBlock />
-      <RareAwardsSection />
     </View>
   );
 }

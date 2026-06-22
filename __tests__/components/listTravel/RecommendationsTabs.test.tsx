@@ -174,7 +174,7 @@ describe('RecommendationsTabs', () => {
     });
   });
 
-  it('renders favorites cards in grid mode on mobile', async () => {
+  it('renders both favorites and history shelves on mobile with definite-width cards', async () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: true });
     mockUseResponsive.mockReturnValue({ isMobile: true });
     mockUseFavorites.mockReturnValue({
@@ -187,20 +187,41 @@ describe('RecommendationsTabs', () => {
           imageUrl: 'https://example.com/1.jpg',
         },
       ],
-      viewHistory: [],
+      viewHistory: [
+        {
+          id: 2,
+          type: 'travel',
+          title: 'Hist 1',
+          url: '/travels/2',
+          imageUrl: 'https://example.com/2.jpg',
+          viewedAt: 1700000000000,
+        },
+      ],
       clearFavorites: jest.fn(),
       clearHistory: jest.fn(),
     });
 
     render(<RecommendationsTabs forceVisible={true} />);
 
-    // Mobile renders shelves directly (no chip-tabs): the favorites shelf must
-    // appear up front whenever the user actually has favorites.
+    // Mobile renders shelves directly (no chip-tabs): both shelves must appear up
+    // front whenever the user actually has favorites + history.
     expect(await screen.findByTestId('recommendations-favorites-shelf')).toBeTruthy();
+    expect(await screen.findByTestId('recommendations-history-shelf')).toBeTruthy();
     expect(await screen.findByText('Fav 1')).toBeTruthy();
+    expect(await screen.findByText('Hist 1')).toBeTruthy();
+    expect(screen.getByTestId('recommendations-favorites-rail')).toBeTruthy();
+    expect(screen.getByTestId('recommendations-history-rail')).toBeTruthy();
 
-    const props = mockTabTravelCard.mock.calls.at(-1)?.[0];
-    expect(props?.layout).toBe('grid');
+    // Native regression: shelf rail is a horizontal ScrollView whose height comes
+    // from card intrinsic size. Cards must carry a definite numeric width (not the
+    // grid `width:'100%'` that collapses to 0 inside a horizontal ScrollView).
+    const railCalls = mockTabTravelCard.mock.calls.map((c) => c[0]);
+    expect(railCalls.length).toBeGreaterThanOrEqual(2);
+    for (const props of railCalls) {
+      expect(props?.layout).toBe('horizontal');
+      expect(typeof props?.width).toBe('number');
+      expect(props?.width).toBeGreaterThan(0);
+    }
   });
 
   it('does not render favorites/history shelves on mobile when collections are empty', async () => {

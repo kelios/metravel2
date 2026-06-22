@@ -16,6 +16,26 @@ import {
   NAVIGATION_ACTION_LABELS,
 } from '@/components/navigation/navigationActionMeta';
 
+// Точки, импортированные через обратный геокодинг, иногда приходят с name,
+// равным полному адресу Nominatim ("3, Рыночная площадь, Old Town, Краков, ...").
+// Для заголовка карточки берём первый осмысленный сегмент такого адреса,
+// а полную строку показываем вторичной строкой.
+const looksLikeFullAddress = (value: string): boolean => {
+  const parts = value.split(',').map((p) => p.trim()).filter(Boolean);
+  return parts.length >= 3;
+};
+
+const firstMeaningfulSegment = (value: string): string => {
+  const parts = value.split(',').map((p) => p.trim()).filter(Boolean);
+  if (parts.length === 0) return value.trim();
+  // Ведущий номер дома ("3, Рыночная площадь") сам по себе не заголовок —
+  // склеиваем его со следующим сегментом.
+  if (/^\d+[A-Za-zА-Яа-я]?$/.test(parts[0]) && parts[1]) {
+    return `${parts[0]}, ${parts[1]}`;
+  }
+  return parts[0];
+};
+
 interface PointCardProps {
   point: ImportedPoint;
   onPress?: (point: ImportedPoint) => void;
@@ -99,16 +119,22 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     }
     return legacy;
   }, [countryLabel, point]);
-  const showAddress = React.useMemo(() => {
-    const addr = String(point.address ?? '').trim();
-    if (!addr) return false;
+  const displayName = React.useMemo(() => {
     const name = String(point.name ?? '').trim();
-    if (!name) return true;
-    const addrLower = addr.toLowerCase();
-    const nameLower = name.toLowerCase();
-    if (addrLower.startsWith(nameLower) || nameLower.startsWith(addrLower)) return false;
-    return true;
-  }, [point.address, point.name]);
+    if (!name) return '';
+    if (looksLikeFullAddress(name)) return firstMeaningfulSegment(name);
+    return name;
+  }, [point.name]);
+  const displaySubtitle = React.useMemo(() => {
+    const name = String(point.name ?? '').trim();
+    const addr = String(point.address ?? '').trim();
+    // Если имя оказалось сырым адресом — полную строку показываем вторичной.
+    const fullFromName = name && looksLikeFullAddress(name) && name !== displayName ? name : '';
+    const source = fullFromName || addr;
+    if (!source) return '';
+    if (source.toLowerCase() === displayName.toLowerCase()) return '';
+    return source;
+  }, [point.name, point.address, displayName]);
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   const photoUrl = React.useMemo(() => {
@@ -427,7 +453,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
       <View style={[styles.headerRow, isNarrowLayout ? styles.headerRowNarrow : null]}>
         <View style={[styles.headerMain, isNarrowLayout ? styles.headerMainNarrow : null]}>
           <Text style={styles.name} numberOfLines={2}>
-            {point.name}
+            {displayName}
           </Text>
         </View>
 
@@ -462,9 +488,9 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         ) : null}
       </View>
 
-      {showAddress ? (
+      {displaySubtitle ? (
         <Text style={styles.address} numberOfLines={1}>
-          {point.address}
+          {displaySubtitle}
         </Text>
       ) : !isSitePoint && countryLabel ? (
         <Text style={styles.address} numberOfLines={1}>

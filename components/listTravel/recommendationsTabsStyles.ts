@@ -279,4 +279,10 @@ export const createRecommendationsTabsStyles = (
     width: 220,
     flexShrink: 0,
   },
+  // layout="horizontal" cards inject marginRight for non-shelf rails; the shelf
+  // rail spaces items with `gap`, so neutralise the trailing margin here.
+  shelfCard: {
+    width: 220,
+    marginRight: 0,
+  },
 });

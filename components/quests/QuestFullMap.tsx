@@ -10,6 +10,7 @@ import {
     Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Feather from '@expo/vector-icons/Feather';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -417,8 +418,10 @@ function QuestFullMap({
                     <TouchableOpacity
                     style={styles.mobileMenuButton}
                     onPress={() => setExportMenuVisible(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Скачать маршрут (PNG, GPX, GeoJSON)"
                 >
-                    <Text style={styles.mobileMenuText}>⋮</Text>
+                    <Feather name="download" size={18} color={colors.textOnPrimary} />
                 </TouchableOpacity>
             </View>
 
@@ -589,11 +592,8 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
         padding: 8,
         borderRadius: 8,
         backgroundColor: colors.primary,
-    },
-    mobileMenuText: {
-        color: colors.textOnPrimary,
-        fontWeight: 'bold',
-        fontSize: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     mapBox: {
         flex: 1,

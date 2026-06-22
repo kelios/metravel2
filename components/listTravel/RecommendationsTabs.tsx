@@ -73,6 +73,7 @@ interface RecommendationsTabsProps {
 const ARROW_ICON_STYLE = { marginLeft: 6 } as const;
 const PREVIEW_CARD_WIDTH = 208;
 const PREVIEW_CARD_GAP = 16;
+const SHELF_CARD_WIDTH = 220;
 
 type TabStyles = ReturnType<typeof createRecommendationsTabsStyles>;
 
@@ -499,7 +500,9 @@ const RecommendationsTabs = memo(
             <TabTravelCard
               item={mapRecommendationsCardItem(item)}
               onPress={() => router.push(item.url as any)}
-              layout="grid"
+              layout="horizontal"
+              width={SHELF_CARD_WIDTH}
+              style={styles.shelfCard}
               {...(kind === 'history'
                 ? {
                     badge: {
