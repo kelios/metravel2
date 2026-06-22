@@ -2,6 +2,7 @@
 // API для работы с рейтингом путешествий
 
 import { apiClient, ApiError } from '@/api/client';
+import { isAbortError } from '@/api/travelQueryShared';
 import { devError } from '@/utils/logger';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -22,9 +23,6 @@ export type RateTravelParams = {
     travelId: number;
     rating: number; // 1-5
 };
-
-const isAbortError = (error: unknown): boolean =>
-    !!error && typeof error === 'object' && (error as { name?: unknown }).name === 'AbortError';
 
 /**
  * Отправляет оценку путешествия

@@ -155,7 +155,7 @@ export default function RouletteScreen() {
     filterGroups,
     filtersSummary,
     activeFiltersCount,
-    travels,
+    totalCount,
     isEmpty,
     result,
     spinning,
@@ -250,7 +250,7 @@ export default function RouletteScreen() {
               handleFilterChange={handleFilterChange}
               handleClearAll={handleClearAll}
               filtersLoading={filtersLoading}
-              resultsCount={travels.length}
+              resultsCount={totalCount}
               onYearChange={onYearChange}
             />
           </View>
@@ -330,7 +330,7 @@ export default function RouletteScreen() {
               </View>
             )}
 
-            {!showLoading && !isEmpty && result.length === 0 && travels.length > 0 && (
+            {!showLoading && !isEmpty && result.length === 0 && totalCount > 0 && (
               <View style={styles.hintBox}>
                 <Text style={styles.hintTitle}>Готов к случайному путешествию?</Text>
                 <Text style={styles.hintText}>
@@ -501,7 +501,7 @@ export default function RouletteScreen() {
               handleFilterChange={handleFilterChange}
               handleClearAll={handleClearAll}
               filtersLoading={filtersLoading}
-              resultsCount={travels.length}
+              resultsCount={totalCount}
               onYearChange={onYearChange}
               onClose={closeFilters}
               onApply={closeFilters}

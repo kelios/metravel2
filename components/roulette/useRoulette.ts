@@ -140,6 +140,8 @@ export function useRoulette() {
     [facetsData?.facets],
   );
 
+  const totalCount = facetsData?.total ?? 0;
+
   const filterGroups = useMemo<FilterGroup[]>(
     () =>
       buildTravelFilterGroups({
@@ -268,6 +270,7 @@ export function useRoulette() {
     filtersSummary,
     activeFiltersCount,
     travels,
+    totalCount,
     isEmpty,
     isLoading,
     isFetching,

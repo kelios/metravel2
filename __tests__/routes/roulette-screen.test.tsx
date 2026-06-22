@@ -35,7 +35,7 @@ jest.mock('@tanstack/react-query', () => {
   const actual = jest.requireActual('@tanstack/react-query')
   return {
     ...actual,
-    useQuery: jest.fn(() => ({ data: {}, isLoading: false })),
+    useQuery: jest.fn(() => ({ data: { total: 3, facets: {} }, isLoading: false })),
   }
 })
 
