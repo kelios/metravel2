@@ -26,7 +26,6 @@ import {
 } from './Map/MapWebCanvas'
 
 import { useLeafletLoader } from '@/hooks/useLeafletLoader'
-import { useMapMarkers } from '@/hooks/useMapMarkers'
 import { useMapPopupAutoPan } from './Map/useMapPopupAutoPan'
 import { useMapUserLocation } from './Map/useMapUserLocation'
 import { useMapWebLayoutEffects } from './Map/useMapWebLayoutEffects'
@@ -212,7 +211,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return radiusKm * 1000
   }, [mode, radius])
 
-  const { centerOnUserLocation, userLocation, userLocationLatLng } = useMapUserLocation({
+  const { centerOnUserLocation, userLocationLatLng } = useMapUserLocation({
     coordinates,
     mapRef,
     onUserLocationChange,
@@ -268,23 +267,13 @@ const MapPageComponent: React.FC<Props> = (props) => {
     }
   }, [filteredTravelData, markerByCoordRefStable])
 
-  const hintCenterForMarkers = useMemo(() => {
-    if (
-      mode === 'radius' &&
-      userLocation &&
-      isValidCoordinate(userLocation.latitude, userLocation.longitude)
-    ) {
-      return { lat: userLocation.latitude, lng: userLocation.longitude }
-    }
-    return coordinatesLatLng
-  }, [coordinatesLatLng, mode, userLocation])
-
-  const { markers, markerOpacity: travelMarkerOpacity } = useMapMarkers({
-    travelData: filteredTravelData,
-    mapZoom,
-    mode,
-    hintCenter: hintCenterForMarkers,
-  })
+  // Markers are rendered by the imperative MarkerClusterGroup (Leaflet
+  // markercluster), which does its own zoom-based clustering. Building markers
+  // directly from filteredTravelData avoids the dead useMapMarkers/useClustering
+  // path (an O(n) JS clustering pass) re-running on every zoom — that result was
+  // never consumed here (only TravelMap.web.tsx uses it).
+  const markers = filteredTravelData
+  const travelMarkerOpacity = mode === 'route' ? 0.7 : 1
 
   const handleMarkerZoom = useCallback(
     (point: Point, coords: { lat: number; lng: number }, clickedMarker?: any) => {
@@ -386,6 +375,17 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   const handleZoomIn = useCallback(() => safeInvoke(() => mapRef.current?.zoomIn?.()), [])
   const handleZoomOut = useCallback(() => safeInvoke(() => mapRef.current?.zoomOut?.()), [])
+
+  // Stable identity so React.memo(MarkerClusterGroup) can actually skip re-renders
+  // on zoom/pan — an inline closure here would change every render and force the
+  // cluster layer to re-evaluate (and previously rebuild) its markers.
+  const handleMarkerInstance = useCallback((coord: string, marker: any | null) => {
+    if (marker) {
+      markerByCoordRef.current.set(coord, marker)
+    } else {
+      markerByCoordRef.current.delete(coord)
+    }
+  }, [])
 
   useEffect(() => {
     if (!errors?.routing) return
@@ -683,7 +683,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
         popupAutoPanPadding={popupAutoPanPadding}
         handleMarkerZoom={handleMarkerZoom}
         suppressLeafletPopupOnSelect={suppressLeafletPopupOnSelect}
-        markerByCoordRef={markerByCoordRef}
+        onMarkerInstance={handleMarkerInstance}
         travelMarkerOpacity={travelMarkerOpacity}
       />
 

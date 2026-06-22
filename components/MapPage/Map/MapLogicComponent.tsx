@@ -109,6 +109,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   const hasCalledOnMapReadyRef = useRef(false);
   const lastUserLocationKeyRef = useRef<string | null>(null);
   const lastRadiusKeyRef = useRef<string | null>(null);
+  const lastSyncedZoomRef = useRef<number | null>(null);
 
   const getInitialRadiusZoom = useCallback((radiusMeters?: number | null) => {
     const r = Number(radiusMeters);
@@ -127,24 +128,26 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     (isTestEnv && circleCenter && Number.isFinite(radiusInMeters) && Number(radiusInMeters) > 0);
 
   // Helper: ensure mapZoom state matches real leaflet zoom even after programmatic moves.
+  // Only push state when the zoom actually changed — a plain pan (moveend) keeps the
+  // same zoom, and re-setting identical state would re-render the whole map tree.
   const syncZoomFromMap = useCallback(() => {
     try {
       if (!map) return;
       const z = map.getZoom?.();
-      if (Number.isFinite(z)) setMapZoom(z);
+      if (!Number.isFinite(z)) return;
+      if (z === lastSyncedZoomRef.current) return;
+      lastSyncedZoomRef.current = z;
+      setMapZoom(z);
     } catch {
       // noop
     }
   }, [map, setMapZoom]);
 
-  // Handle map events
+  // Handle map events. Only zoomend syncs zoom state — moveend (pan) keeps the same
+  // zoom, so calling setMapZoom there only churned the React tree on every pan.
   useMapEvents({
     click: mapClickHandler,
     zoomend: () => {
-      syncZoomFromMap();
-    },
-    moveend: () => {
-      // fitBounds can sometimes update zoom while zoomend isn't our first reliable signal
       syncZoomFromMap();
     },
     zoomstart: () => {

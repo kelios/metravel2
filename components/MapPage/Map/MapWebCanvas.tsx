@@ -160,7 +160,7 @@ type MapWebLeafletCanvasProps = {
     marker?: any,
   ) => void
   suppressLeafletPopupOnSelect?: boolean
-  markerByCoordRef: React.MutableRefObject<Map<string, any>>
+  onMarkerInstance: (coord: string, marker: any | null) => void
   travelMarkerOpacity: number
 }
 
@@ -214,7 +214,7 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
   popupAutoPanPadding,
   handleMarkerZoom,
   suppressLeafletPopupOnSelect = false,
-  markerByCoordRef,
+  onMarkerInstance,
   travelMarkerOpacity,
 }) => {
   const { MapContainer, Marker, Popup, Tooltip, Circle, TileLayer, useMap, useMapEvents } = rl
@@ -408,13 +408,7 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
           popupProps={popupAutoPanPadding}
           suppressLeafletPopupOnSelect={suppressLeafletPopupOnSelect}
           onMarkerClick={handleMarkerZoom}
-          onMarkerInstance={(coord, marker) => {
-            if (marker) {
-              markerByCoordRef.current.set(coord, marker)
-            } else {
-              markerByCoordRef.current.delete(coord)
-            }
-          }}
+          onMarkerInstance={onMarkerInstance}
           hintCenter={hintCenterLatLng}
         />
       ) : null}

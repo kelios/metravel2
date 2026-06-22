@@ -420,6 +420,8 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                   <React.Fragment key={section.key}>
                     {section.items
                       .filter((item) => item.route !== '/privacy' && item.route !== '/cookies')
+                      // #495: PDF book export is web-only (usePdfExportRuntime blocks native) — hide entry on native.
+                      .filter((item) => item.route !== '/export')
                       .map((item) => renderMoreMenuItem(item, () => setShowMore(false)))}
                     {sectionIndex < BOTTOM_DOCK_MORE_MENU_SECTIONS.length - 1 ? <View style={styles.moreDivider} /> : null}
                   </React.Fragment>
@@ -458,6 +460,8 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                     {section.items
                       .filter((item) => Platform.OS === 'web' || item.route !== '/privacy')
                       .filter((item) => Platform.OS === 'web' || item.route !== '/cookies')
+                      // #495: PDF book export is web-only — hide its entry on native.
+                      .filter((item) => Platform.OS === 'web' || item.route !== '/export')
                       .map((item) =>
                         renderMoreMenuItem(item, () => {
                           nativeSheetRef.current?.close();

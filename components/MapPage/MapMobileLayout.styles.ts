@@ -88,10 +88,11 @@ export const getMapMobileLayoutStyles = (
       backgroundColor: colors.surface,
       ...(Platform.OS === 'web'
         ? ({
-            backgroundColor: colors.surfaceAlpha40,
+            // Это мобильный лейаут — live backdrop-filter поверх скролла карты
+            // убивает GPU. Статичный «фрост» (colors.surfaceMuted), как в
+            // Map/MapControls.tsx и PlacePopupCard/styles.ts (см. CLAUDE.md).
+            backgroundColor: colors.surfaceMuted,
             boxShadow: '0 3px 10px rgba(15,23,42,0.05)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
             position: 'relative',
             zIndex: 20,
           } as any)

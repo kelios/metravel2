@@ -151,12 +151,17 @@ export default function CustomHeaderMobileMenu({
           iconSlotStyle: { position: 'relative' },
           trailingNode: <UnreadBadge count={unreadCount} />,
         },
-        {
-          key: 'export',
-          label: 'Экспорт в PDF',
-          icon: 'file-text',
-          onPress: () => onUserAction('/export'),
-        },
+        // #495: PDF book export is web-only (usePdfExportRuntime blocks native) — hide its entry on native.
+        ...(Platform.OS === 'web'
+          ? [
+              {
+                key: 'export',
+                label: 'Экспорт в PDF',
+                icon: 'file-text',
+                onPress: () => onUserAction('/export'),
+              },
+            ]
+          : []),
         {
           key: 'logout',
           label: 'Выход',
