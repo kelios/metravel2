@@ -11,6 +11,7 @@
 See `INDEX.md` for full docs map.
 
 - `CODEX.md` - Codex workflow, AI task triage, validation matrix, and project skills map
+- `ARCHITECTURE.md` — архитектура проекта, карта frontend-функциональности и обзор backend API-интеграции
 - `RULES.md` — development and UI rules (incl. external-link policy)
 - `DEVELOPMENT.md` — local setup and dev workflow
 - `TESTING.md` — Jest + Playwright + CI quality gate
