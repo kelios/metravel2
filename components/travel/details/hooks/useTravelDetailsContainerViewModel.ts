@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react'
-import { Animated } from 'react-native'
+import { Animated, DeviceEventEmitter, Platform } from 'react-native'
 
 import { buildTravelSectionLinks } from '@/components/travel/sectionLinks'
 import {
@@ -74,6 +74,14 @@ export function useTravelDetailsContainerViewModel({
   const scrollToWithMenuClose = useCallback(
     (key: string) => {
       setActiveSection(key)
+      // Lazy sections (map/points/excursions) may not be mounted when the sticky
+      // sub-nav is tapped. On native a one-shot scrollTo silently no-ops because
+      // the anchor ref is still null. Emitting `open-section` forces the section
+      // to mount and triggers the mount-aware scroll retry (web already retries
+      // via DOM lookup, so it's left untouched).
+      if (Platform.OS !== 'web') {
+        DeviceEventEmitter.emit('open-section', key)
+      }
       scrollTo(key)
       if (isMobile) closeMenu()
     },
