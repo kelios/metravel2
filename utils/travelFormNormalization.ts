@@ -40,6 +40,16 @@ function normalizeCoord(value: any): string {
     return String(value ?? '');
 }
 
+// Допуск сопоставления координат (~1.1 м): сервер может вернуть lat/lng с иной
+// точностью/округлением, чем локальный float из EXIF, поэтому строгое равенство
+// llKey недостаточно для маркеров без id (новая точка «из фото»).
+const COORD_MATCH_TOLERANCE = 1e-5;
+
+function toFiniteNumber(value: unknown): number | null {
+    const num = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(num) ? num : null;
+}
+
 /**
  * Объединяет серверные маркеры с текущими, сохраняя локальные изображения
  */
@@ -70,10 +80,34 @@ export function mergeMarkersPreserveImages(
         currentByLl.set(makeLlKey(m), m);
     });
 
+    // Подбор по координатам с допуском — для новых точек (id==null), когда сервер
+    // вернул чуть иначе округлённые lat/lng и строгий llKey не совпал.
+    const findCurrentByApproxCoords = (m: any): any => {
+        const lat = toFiniteNumber(m?.lat);
+        const lng = toFiniteNumber(m?.lng);
+        if (lat == null || lng == null) return null;
+        let best: any = null;
+        let bestDist = Infinity;
+        currentMarkers.forEach(c => {
+            const cLat = toFiniteNumber(c?.lat);
+            const cLng = toFiniteNumber(c?.lng);
+            if (cLat == null || cLng == null) return;
+            const dist = Math.abs(cLat - lat) + Math.abs(cLng - lng);
+            if (dist <= COORD_MATCH_TOLERANCE && dist < bestDist) {
+                best = c;
+                bestDist = dist;
+            }
+        });
+        return best;
+    };
+
     return serverMarkers.map(m => {
         const idKey = makeIdKey(m);
         const llKey = makeLlKey(m);
-        const current = (idKey ? currentById.get(idKey) : null) ?? currentByLl.get(llKey);
+        const current =
+            (idKey ? currentById.get(idKey) : null) ??
+            currentByLl.get(llKey) ??
+            findCurrentByApproxCoords(m);
         if (!current) return m;
 
         const currentImage = current?.image;

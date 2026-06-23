@@ -86,6 +86,16 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
         fileInputRef.current?.click();
     }, [onAddMarkerFromPhoto]);
 
+    const handleDropZoneKeyDown = useCallback(
+        (e: React.KeyboardEvent<HTMLDivElement>) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleAddFromPhotoClick();
+            }
+        },
+        [handleAddFromPhotoClick],
+    );
+
     const handlePhotoSelected = useCallback(
         async (e: React.ChangeEvent<HTMLInputElement>) => {
             if (!onAddMarkerFromPhoto) return;
@@ -212,7 +222,9 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                         <div
                             role="button"
                             tabIndex={0}
+                            aria-label="Добавить точки из фото: перетащите фото сюда или нажмите, чтобы выбрать"
                             onClick={handleAddFromPhotoClick}
+                            onKeyDown={handleDropZoneKeyDown}
                             style={{
                                 ...(styles.dropZone as React.CSSProperties),
                                 ...(isDragOver ? (styles.dropZoneActive as React.CSSProperties) : {}),
@@ -231,6 +243,28 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                 </>
             ) : (
                 <div style={styles.list}>
+                    {onAddMarkerFromPhoto ? (
+                        <div
+                            role="button"
+                            tabIndex={0}
+                            aria-label="Добавить точки из фото: перетащите фото сюда или нажмите, чтобы выбрать"
+                            onClick={handleAddFromPhotoClick}
+                            onKeyDown={handleDropZoneKeyDown}
+                            style={{
+                                ...(styles.dropZone as React.CSSProperties),
+                                ...(styles.dropZoneCompact as React.CSSProperties),
+                                ...(isDragOver ? (styles.dropZoneActive as React.CSSProperties) : {}),
+                            }}
+                        >
+                            <div style={styles.dropZoneCompactIcon as React.CSSProperties}>
+                                <Feather name="image" size={16} color={colors.primaryDark} />
+                            </div>
+                            <div style={styles.dropZoneCompactText as React.CSSProperties}>
+                                <div style={styles.dropZoneTitle}>Перетащите фото сюда</div>
+                                <div style={styles.dropZoneHint}>или нажмите, чтобы выбрать — координаты из EXIF</div>
+                            </div>
+                        </div>
+                    ) : null}
                     {filteredMarkers.map(({ marker, index }) => {
                         const isEditing = editingIndex === index;
 
@@ -320,23 +354,6 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                             </div>
                         );
                     })}
-                    {onAddMarkerFromPhoto ? (
-                        <div
-                            role="button"
-                            tabIndex={0}
-                            onClick={handleAddFromPhotoClick}
-                            style={{
-                                ...(styles.dropZone as React.CSSProperties),
-                                ...(styles.dropZoneCompact as React.CSSProperties),
-                                ...(isDragOver ? (styles.dropZoneActive as React.CSSProperties) : {}),
-                            }}
-                        >
-                            <div style={styles.dropZoneTitle}>Перетащите фото сюда</div>
-                            <div style={styles.dropZoneHint}>
-                                или нажмите, чтобы выбрать. Точки добавятся по геолокации EXIF
-                            </div>
-                        </div>
-                    ) : null}
                 </div>
             )}
 

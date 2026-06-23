@@ -101,6 +101,57 @@ describe('travelFormNormalization', () => {
       const result = mergeMarkersPreserveImages(server, current);
       expect(result[0].image).toBe('server.jpg');
     });
+
+    it('preserves local blob preview when matched by id after save', () => {
+      // After save the server assigns an id and stores a fallback cover image;
+      // the local blob preview must survive until the real point photo uploads.
+      const server = [{ id: 5, lat: 53.123456, lng: 27.654321, image: 'https://cdn.com/og-default.png' }];
+      const current = [{ id: 5, lat: 53.123456, lng: 27.654321, image: 'blob:http://localhost/point-preview' }];
+      const result = mergeMarkersPreserveImages(server, current);
+      expect(result[0].image).toBe('blob:http://localhost/point-preview');
+    });
+
+    it('preserves local blob preview for new (id==null) marker matched by exact coords', () => {
+      const server = [{ id: 9, lat: 53.123456, lng: 27.654321, image: 'https://cdn.com/og-default.png' }];
+      const current = [{ id: null, lat: 53.123456, lng: 27.654321, image: 'blob:http://localhost/abc' }];
+      const result = mergeMarkersPreserveImages(server, current);
+      expect(result[0].image).toBe('blob:http://localhost/abc');
+    });
+
+    it('preserves local blob preview when server rounds coords (tolerant match, id==null)', () => {
+      // Local EXIF float vs server-rounded coords: strict ll-key would miss, but the
+      // tolerant coordinate match must still carry over the blob preview.
+      const server = [{ id: 12, lat: 53.1234561, lng: 27.6543209, image: 'https://cdn.com/og-default.png' }];
+      const current = [{ id: null, lat: 53.12345678, lng: 27.65432123, image: 'blob:http://localhost/from-photo' }];
+      const result = mergeMarkersPreserveImages(server, current);
+      expect(result[0].image).toBe('blob:http://localhost/from-photo');
+    });
+
+    it('does not cross-match distant markers when coords differ beyond tolerance', () => {
+      const server = [{ id: 1, lat: 53.5, lng: 27.5, image: 'https://cdn.com/og-default.png' }];
+      const current = [{ id: null, lat: 50.0, lng: 30.0, image: 'blob:http://localhost/other' }];
+      const result = mergeMarkersPreserveImages(server, current);
+      expect(result[0].image).toBe('https://cdn.com/og-default.png');
+    });
+
+    it('round-trips: blob omitted from save payload but kept in local display list', () => {
+      // 1) Payload to server must NOT contain the blob (fallback used instead).
+      const localMarkers = [
+        { id: null, lat: 53.123456, lng: 27.654321, image: 'blob:http://localhost/from-photo', categories: [] },
+      ];
+      const payload = normalizeMarkersForSave(localMarkers, 'https://cdn.com/fallback.jpg');
+      expect(payload[0].image).toBe('https://cdn.com/fallback.jpg');
+      expect(payload[0].image).not.toMatch(/^blob:/);
+
+      // 2) Server echoes the saved marker (with id + fallback image); local display
+      // list must keep the blob preview after merge.
+      const serverMarkers = [
+        { id: 42, lat: 53.123456, lng: 27.654321, image: 'https://cdn.com/fallback.jpg' },
+      ];
+      const merged = mergeMarkersPreserveImages(serverMarkers, localMarkers);
+      expect(merged[0].id).toBe(42);
+      expect(merged[0].image).toBe('blob:http://localhost/from-photo');
+    });
   });
 
   describe('ensureRequiredDraftFields', () => {
