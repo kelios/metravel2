@@ -25,8 +25,16 @@ const parseCoordString = (coord: string): ParsedCoord | null => {
 export const buildGoogleMapsUrl = (coord: string) => {
   const parsed = parseCoordString(coord);
   if (!parsed) return '';
-  // HTTPS Universal URL — Google Maps app-link'ает его на Android/iOS и ставит
-  // маркер; на web открывается веб-карта. Один формат для обеих платформ.
+  // На Android HTTPS-Universal-URL `/maps/search/?api=1&query=` НЕ ставит маркер —
+  // открывает домашний экран Google Maps без пина и без координат (device-verify
+  // 2026-06-23, Pixel 10 Pro). А `geo:`-intent через `Linking.openURL` нельзя
+  // привязать к пакету Google → коллизия с Organic (тоже хэндлит `geo:`).
+  // `/maps/place/lat,lon` — HTTPS-маркер-URL: Google Maps на Android открывается
+  // напрямую, ставит пин на точку и показывает карточку с ТОЧНЫМИ координатами.
+  // На web оставляем прежний `/maps/search/?api=1&query=` (прод, не ломаем).
+  if (IS_NATIVE) {
+    return `https://www.google.com/maps/place/${parsed.lat},${parsed.lon}`;
+  }
   return `https://www.google.com/maps/search/?api=1&query=${parsed.lat},${parsed.lon}`;
 };
 
@@ -46,8 +54,11 @@ export const buildWazeUrl = (coord: string) => {
   const parsed = parseCoordString(coord);
   if (!parsed) return '';
   if (IS_NATIVE) {
-    // Документированная deep-link Waze: показать точку и предложить маршрут.
-    return `waze://?ll=${parsed.lat},${parsed.lon}&navigate=yes`;
+    // Без `navigate=yes`: показать ПИН на точке с карточкой места (а не сразу
+    // гнать навигацию). Device-verify 2026-06-23 (Pixel 10 Pro): `waze://?ll=`
+    // показывает маркер + карточку «Отправить / Маршруты», `navigate=yes` визуально
+    // ничего не добавлял. Приоритет — чтобы пользователь увидел точку.
+    return `waze://?ll=${parsed.lat},${parsed.lon}`;
   }
   return `https://waze.com/ul?ll=${parsed.lat},${parsed.lon}&navigate=yes`;
 };
@@ -64,7 +75,8 @@ export const buildYandexNaviUrl = (coord: string) => {
 };
 // Если на устройстве нет Яндекс.Навигатора (схему `yandexnavi:` регистрирует
 // только он, без него tap no-op'ит, result code=-91), открывалка `openExternalUrl`
-// сама перестраивает ссылку в `yandexmaps://...rtext=...` — см. utils/externalLinks.ts.
+// сама перестраивает ссылку в Яндекс.Карты с ПИНом на точке
+// (`yandexmaps://...?pt=lon,lat&l=map`) — см. utils/externalLinks.ts.
 
 export const buildTelegramShareUrl = (coord: string) => {
   const mapUrl = buildGoogleMapsUrl(coord);

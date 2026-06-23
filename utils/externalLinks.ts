@@ -29,12 +29,18 @@ const NATIVE_MAP_PROTOCOLS = ['geo:', 'waze:', 'yandexnavi:', 'yandexmaps:', 'co
 // result code=-91). На Android 11+ `canOpenURL` ненадёжен без декларации
 // `<queries>` (возвращает false даже для установленного приложения), поэтому
 // вместо проверки делаем attempt-then-fallback: пробуем открыть Навигатор, а при
-// отказе перестраиваем ссылку в `yandexmaps://...rtext=...` (Яндекс.Карты тоже
-// строят маршрут). На web сюда не попадаем: web-билдер отдаёт HTTPS-URL.
+// отказе перестраиваем ссылку в Яндекс.Карты. Раньше fallback строил МАРШРУТ
+// (`rtext=~lat,lon&rtt=auto`) — без GPS-фикса/геолокации Карты открывались в
+// режиме «построить маршрут от Моё местоположение», без маркера и координат
+// (device-verify 2026-06-23, Pixel 10 Pro). Теперь fallback ставит ПИН на точку
+// (`pt=ДОЛГОТА,ШИРОТА&l=map`, порядок lon,lat — обязателен для Яндекса), показывая
+// маркер + карточку «Точка на карте / Координаты …» без запроса геолокации.
+// На web сюда не попадаем: web-билдер отдаёт HTTPS-URL.
 const yandexMapsFallbackFromNaviUrl = (naviUrl: string): string | null => {
   const match = naviUrl.match(/lat_to=([^&]+)&lon_to=([^&]+)/);
   if (!match) return null;
-  return `yandexmaps://maps.yandex.ru/?rtext=~${match[1]},${match[2]}&rtt=auto`;
+  const [, lat, lon] = match;
+  return `yandexmaps://maps.yandex.ru/?pt=${lon},${lat}&z=16&l=map`;
 };
 
 const openWithYandexFallback = async (
