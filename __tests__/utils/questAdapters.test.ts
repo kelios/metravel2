@@ -185,6 +185,45 @@ describe('questAdapters', () => {
       expect(result.answer('3')).toBe(false);
     });
 
+    it('treats textual answer patterns as text even when backend sends input_type=number', () => {
+      const step = adaptStep({
+        id: 10,
+        step_id: 'point-1',
+        title: 'Родник Барковщина',
+        location: 'Родник',
+        story: 'История',
+        task: 'Попробуй и опиши: какой он, родник Барковщина?',
+        lat: 55.191,
+        lng: 28.614,
+        maps_url: 'https://maps.google.com',
+        answer_pattern: { type: 'any_text', value: '{"min_length":5}' },
+        input_type: 'number',
+      } as any);
+
+      expect(step.inputType).toBe('text');
+      expect(step.answer('холодная вода')).toBe(true);
+    });
+
+    it('keeps numeric keyboard for numeric answer patterns', () => {
+      const step = adaptStep({
+        id: 11,
+        step_id: 'count',
+        title: 'Сколько ключей',
+        location: 'Родник',
+        story: 'История',
+        task: 'Введи число.',
+        lat: 55.191,
+        lng: 28.614,
+        maps_url: 'https://maps.google.com',
+        answer_pattern: { type: 'range', value: '{"min":2,"max":5}' },
+        input_type: 'text',
+      } as any);
+
+      expect(step.inputType).toBe('number');
+      expect(step.answer('3')).toBe(true);
+      expect(step.answer('холодная вода')).toBe(false);
+    });
+
     it('parses lat/lng from numbers', () => {
       const step = adaptStep({
         id: 2,

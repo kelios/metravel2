@@ -160,6 +160,31 @@ export function buildAnswerChecker(answerType: string, answerValue: string): (in
     }
 }
 
+function resolveStepInputType(
+    answerType: string,
+    answerValue: string,
+    apiInputType?: ApiQuestStep['input_type']
+): QuestStep['inputType'] {
+    switch (answerType) {
+        case 'any_text':
+        case 'exact_any':
+            return 'text';
+        case 'range':
+        case 'any_number':
+        case 'approx':
+            return 'number';
+        case 'exact': {
+            if (apiInputType === 'number') {
+                const normalized = answerValue.replace(',', '.').trim();
+                return normalized !== '' && Number.isFinite(Number(normalized)) ? 'number' : 'text';
+            }
+            return apiInputType;
+        }
+        default:
+            return apiInputType;
+    }
+}
+
 /** Исправляет URL медиа, если бэкенд приклеил свой хост перед S3/CDN URL */
 export function fixMediaUrl(url: string | null | undefined): string | undefined {
     const normalized = normalizeMediaUrl(url);
@@ -193,7 +218,7 @@ export function adaptStep(apiStep: ApiQuestStep): QuestStep {
         lng: coordNum(apiStep.lng),
         mapsUrl: apiStep.maps_url,
         image: fixMediaUrl(apiStep.image_url),
-        inputType: apiStep.input_type,
+        inputType: resolveStepInputType(answerType, answerValue, apiStep.input_type),
     };
 }
 
