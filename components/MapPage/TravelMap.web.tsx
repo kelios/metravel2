@@ -173,6 +173,10 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       themeContextValue,
       userLocation: null,
       compactLayout: compact,
+      // Desktop: split-layout закрепляет фото хедером и скроллит низ под ним, бокс держится
+      // в CSS-cap (как на /map). На мобиле compact===true → popupSplit=false (там
+      // fullscreenOnMobile overlay), поведение не меняется.
+      popupSplit: !compact,
       fullscreenOnMobile: true,
       invalidateUserPoints: () => {
         void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() })
@@ -185,6 +189,14 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     const map = mapRef.current
     const mapEl: HTMLElement | null = map?.getContainer?.()
     if (!popupEl || !mapEl || typeof window === 'undefined') return
+
+    // Cap the popup to the embedded map's OWN height (не 100dvh окна): на странице
+    // путешествия карта — невысокая секция, иначе карточка вырастает выше карты и её
+    // верх (ФОТО) обрезается краем контейнера.
+    const mapBoxHeight = mapEl.getBoundingClientRect().height
+    if (mapBoxHeight > 0) {
+      popupEl.style.setProperty('--metravel-popup-max-h', `${Math.max(240, Math.round(mapBoxHeight - 32))}px`)
+    }
 
     const run = () => {
       try {

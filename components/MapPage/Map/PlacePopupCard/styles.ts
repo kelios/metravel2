@@ -111,7 +111,7 @@ export const getStyles = (
         ? ({
             flexShrink: 1,
             minHeight: 0,
-            maxHeight: `calc(min(660px, 100dvh - 160px) - ${heroHeight > 0 ? heroHeight : 248}px)`,
+            maxHeight: `calc(min(660px, 100dvh - 160px, var(--metravel-popup-max-h, 100dvh)) - ${heroHeight > 0 ? heroHeight : 248}px)`,
             overflowY: 'auto',
             WebkitOverflowScrolling: 'touch',
             overscrollBehavior: 'contain',

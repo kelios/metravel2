@@ -62,6 +62,13 @@ export function useMapPopupAutoPan({
     const mapEl: HTMLElement | null = map?.getContainer ? map.getContainer() : null
     if (!popupEl || !mapEl || typeof window === 'undefined') return
 
+    // Cap the popup to the map container's own height (consistent with TravelMap.web;
+    // на /map карта обычно полноэкранная, переменная ≈ окно — безвредно).
+    const mapBoxHeight = mapEl.getBoundingClientRect().height
+    if (mapBoxHeight > 0) {
+      popupEl.style.setProperty('--metravel-popup-max-h', `${Math.max(240, Math.round(mapBoxHeight - 32))}px`)
+    }
+
     // `horizontalOnly` is set for ResizeObserver-driven re-pans: the popup growing
     // taller (e.g. expanding the «Ещё» nav grid) must NOT re-pan the map vertically
     // — that visibly jerks the photo. The popup has an internal max-height + scroll
