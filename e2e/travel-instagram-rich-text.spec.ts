@@ -2,7 +2,7 @@ import { test, expect } from './fixtures'
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation'
 
 test.describe('Travel rich-text Instagram embeds', () => {
-  test('renders valid Instagram post links as embeds without iframe policy violations @smoke', async ({ page }) => {
+  test('renders valid Instagram post links as stable facades without iframe policy violations @smoke', async ({ page }) => {
     const consoleMessages: string[] = []
 
     page.on('console', (msg) => {
@@ -63,9 +63,10 @@ test.describe('Travel rich-text Instagram embeds', () => {
     const richText = page.locator('.travel-rich-text').first()
     await expect(richText).toBeVisible({ timeout: 60_000 })
 
-    const instagramEmbeds = page.locator('iframe[src*="instagram.com"], blockquote.instagram-media')
-    await expect(instagramEmbeds.first()).toBeVisible({ timeout: 30_000 })
-    expect(await instagramEmbeds.count()).toBeGreaterThan(0)
+    const instagramFacades = page.locator('.travel-rich-text .ig-lite[data-ig-embed*="instagram.com"]')
+    await expect(instagramFacades.first()).toBeVisible({ timeout: 30_000 })
+    expect(await instagramFacades.count()).toBeGreaterThan(0)
+    await expect(page.locator('iframe[src*="instagram.com"], blockquote.instagram-media')).toHaveCount(0)
 
     const hasUnloadViolation = consoleMessages.some((message) =>
       /Permissions policy violation: unload is not allowed/i.test(message),

@@ -333,6 +333,12 @@
 - Для dev-client запущен Metro `npx expo start --dev-client --host lan`, выполнен `adb reverse tcp:8081 tcp:8081`; перед deep-link запуском проверь реальные scheme через `adb shell dumpsys package by.metravel.app`, а если direct intent не грузит bundle — используй поле Dev Launcher `exp://127.0.0.1:8081`; после правок сделан явный reload приложения.
 - Артефакты складываются только в ignored-папки (`.codex-temp/`, `.codex-debug/`, `test-results/`, `playwright-report/`) и не содержат токены/пароли.
 
+Ревью покрытия от 2026-06-23:
+
+- Уже покрыто: readiness/launch, runtime health, базовая навигация, поиск, детали маршрута, share/export, карта, permissions, auth, квестовые native-регрессии и recommendation shelves.
+- Добавленные пробелы: standalone-сборка без Metro, app/deep links, lifecycle и cold restart, offline/recovery, soft keyboard, native media upload, push/deep-link routing, external intents и rich embedded content.
+- Для Android release/dev-client QA P1-минимум: `AND-USB-01..06`, `AND-USB-08`, `AND-USB-10`, `AND-USB-13..18`; P2-кейсы `AND-USB-07`, `AND-USB-09`, `AND-USB-19..20` проходить перед store submission или когда менялись соответствующие поверхности.
+
 | ID | Заголовок | Предусловие | Шаги | Ожидаемый результат |
 |----|-----------|-------------|------|---------------------|
 | AND-USB-01 | Device readiness | Телефон подключен по USB | `adb devices -l`; снять `ro.product.model`, `ro.build.version.release`, `ro.build.version.sdk` | Устройство авторизовано; модель/API записаны в QA Pass |
@@ -347,6 +353,14 @@
 | AND-USB-10 | Auth entrypoints | Нужен e2e-аккаунт | Войти через безопасный e2e-механизм/уже подготовленный аккаунт; не печатать пароль/токен | Авторизованные экраны открываются; состояние сохраняется после app reload |
 | AND-USB-11 | Quests native regressions | Установлен build с квестами | Пройти `e2e/maestro/quest-reviews.yaml`, `quest-intro-map-points.yaml` и `quest-offline-points.yaml` либо вручную повторить их шаги | Отзывы открывают модалку отзывов; intro-карта квеста показывает точки маршрута; GPX/share готовится без `expo-file-system` runtime throw |
 | AND-USB-12 | Recommendation shelves | Авторизованный аккаунт с избранным/историей | Пройти `e2e/maestro/recommendation-shelves.yaml` либо вручную открыть полки идей на Маршрутах | «Избранное» и «Недавно смотрели» рендерятся; если нет — баг остается подтвержденным |
+| AND-USB-13 | Standalone install without Metro | Установлен preview/prod build, Metro остановлен | Очистить logcat, force-stop приложения, запустить с иконки или `adb shell monkey -p by.metravel.app 1` | Приложение стартует без Dev Launcher/Metro, показывает home/«Маршруты», в logcat нет fatal/runtime crash |
+| AND-USB-14 | App links and deep links | Из `app.json`/manifest известны scheme `metravel` и app-link host `metravel.by`; есть валидный маршрут | При убитом и тёплом приложении открыть `https://metravel.by/travels/<id>` и `metravel://travels/<id>`, затем невалидный путь; отдельно проверить ссылку/уведомление с `#anchor`, если такой payload доступен | Валидный путь открывает нужный экран после готовности навигации; невалидный путь даёт fallback/404; hash не уводит native на корень |
+| AND-USB-15 | Lifecycle + cold restart persistence | Авторизованный e2e-аккаунт, есть избранное/история или тестовый статус | Открыть профиль/избранное/историю, свернуть и вернуть приложение, затем force-stop → launch; повторить после явного reload dev-client | Авторизация и локальное состояние сохраняются; нет logout-flash, пустых полок из-за потерянной ширины, stale-bundle UI или runtime warning |
+| AND-USB-16 | Offline and recovery | Открыты search/details/quest; переключение сети безопасно | Отключить сеть через устройство/adb, открыть уже загруженный маршрут или квест, выполнить retry/scroll, затем вернуть сеть | Показывается понятный offline/error state или cached content; нет бесконечного skeleton/blank screen; после возврата сети данные восстанавливаются |
+| AND-USB-17 | Soft keyboard and forms | Открыты login/search/comment/wizard input-поля | Фокусировать поля у нижней части экрана, вводить текст, отправить/закрыть; нажать системную Back один и два раза | `softwareKeyboardLayoutMode=resize` не перекрывает CTA/ошибки; первый Back закрывает клавиатуру/overlay, второй Back навигирует ожидаемо |
+| AND-USB-18 | Native media picker/upload | Авторизованный e2e-аккаунт, non-prod backend, тестовое фото | Проверить avatar upload и, если доступен безопасный черновик, travel cover/gallery/route-point photo: allow и deny ветки media/camera permission | Picker/camera открываются, preview сохраняет геометрию, upload/compress завершается или даёт понятный fallback; permission deny не крашит форму |
+| AND-USB-19 | Push notification permission + routing | Build с `expo-notifications`; доступен тестовый push/local quest reminder payload | Проверить allow/deny prompt, foreground notification, tap по уведомлению при тёплом и убитом приложении; payload содержит `url` или `screen` | Android channel создан, отсутствие token/push capability не крашит app, tap ведёт на нужный экран после mount навигации |
+| AND-USB-20 | External intents + embedded content | Есть маршрут/статья с внешними ссылками, YouTube/Instagram/rich-text или external maps | Открыть Telegram/WhatsApp/email/share, external maps, YouTube/Instagram/fallback-ссылки; вернуться системной Back | Открывается системный chooser/app/browser или безопасный fallback; возврат в приложение сохраняет экран; нет direct `Linking.openURL` crash |
 
 #### Трассируемость Android device coverage
 
@@ -364,6 +378,14 @@
 | AND-USB-10 | P1 | manual with `.env.e2e`/prepared account, no secret output | manual |
 | AND-USB-11 | P1 | Maestro `quest-reviews.yaml`, `quest-intro-map-points.yaml`, `quest-offline-points.yaml` | repeatable device e2e |
 | AND-USB-12 | P1 | Maestro `recommendation-shelves.yaml` | known regression detector |
+| AND-USB-13 | P1 | manual adb/standalone launch; candidate for Maestro launch flow | manual |
+| AND-USB-14 | P1 | manual adb intent/app links; unit `services/notifications.extractDeepLinkFromNotification` | manual |
+| AND-USB-15 | P1 | manual adb lifecycle; unit `secureStorage`, `viewHistoryStore`, `travelStatusStore` | manual |
+| AND-USB-16 | P1 | manual network toggle; unit `useOfflineTravelCache`, `QuestWizard.offline` | manual |
+| AND-USB-17 | P1 | manual keyboard pass; candidate for Maestro auth/search flow | manual |
+| AND-USB-18 | P1 | manual non-prod media pass; unit `useAvatarUpload`, `imageCompressor` | manual |
+| AND-USB-19 | P2 | manual notification payload; unit `services/notifications`, `usePushNotifications.native` | manual |
+| AND-USB-20 | P2 | manual OS intents; unit `externalLinks`, `internalLinks`, `travelRouteDownload` | manual |
 
 ### Чек-лист платформ
 
@@ -371,8 +393,8 @@
 |-----------|-------|----------------------|
 | **Web Desktop** | Браузер ≥1440px | 2–3 колонки списка, sidebar фильтров, Leaflet-карта, hover/focus, Web Share API, экспорт PDF/GPX/KML |
 | **Web Mobile** | Браузер ≤600px | 1 колонка, фильтры в fullscreen modal, bottom sheet на карте, fullscreen popup места |
-| **iOS** | Симулятор/устройство | React Native Maps, нативный share/picker, haptic feedback, KeyboardAvoidingView |
-| **Android** | Эмулятор/устройство | React Native Maps, нативный share/picker, кнопка «назад» системы |
+| **iOS** | Симулятор/устройство | WebView + Leaflet native map, нативный share/picker, haptic feedback, KeyboardAvoidingView |
+| **Android** | Эмулятор/устройство | WebView + Leaflet native map, нативный share/picker, кнопка «назад» системы |
 
 ### Прогон от 2026-06-02 (ручной guest + авторизованный e2e-регресс)
 
@@ -599,7 +621,7 @@
 |---------|--------|-----|
 | Список | 1 колонка, фильтры в modal-overlay | 2–3 колонки, sidebar ~320px sticky |
 | Слайдер/галерея | RN Animated, свайп | Web-компонент, стрелки |
-| Карта | React Native Maps (native), bottom sheet | Leaflet, боковая панель + resize |
+| Карта | WebView + Leaflet (native), bottom sheet | Leaflet, боковая панель + resize |
 | Поделиться | Native Share API, picker | Web Share API + кнопки соцсетей |
 | Загрузка фото | Системный picker | File input + drag-and-drop |
 | Попап места | Fullscreen overlay (<560px) | Карточка 352px, autoPan |

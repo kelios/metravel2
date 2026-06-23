@@ -153,12 +153,14 @@ export function buildInstagramFacadeHtml(rawUrl: string): string | null {
 
   const embedSrc = buildInstagramEmbedSrc(target.canonicalUrl)
 
+  // Keep this as a first-party facade. Instagram embed URLs can return a cross-origin
+  // HTML "5xx Server Error" inside iframes, and browsers do not expose that status.
   return [
     `<div class="ig-lite" data-ig-embed="${encodeHtml(embedSrc)}">`,
     '<div class="ig-lite__inner">',
     '<div class="ig-lite__eyebrow">Instagram</div>',
     `<a class="ig-lite__title" href="${encodeHtml(target.canonicalUrl)}" target="_blank" rel="noopener noreferrer nofollow">${target.title}</a>`,
-    '<div class="ig-lite__hint">Пост загрузится при прокрутке</div>',
+    `<div class="ig-lite__hint">${target.subtitle}</div>`,
     '</div>',
     '</div>',
   ].join('')
