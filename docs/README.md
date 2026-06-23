@@ -15,6 +15,7 @@ See `INDEX.md` for full docs map.
 - `RULES.md` — development and UI rules (incl. external-link policy)
 - `DEVELOPMENT.md` — local setup and dev workflow
 - `TESTING.md` — Jest + Playwright + CI quality gate
+- `MANUAL_TEST_CASES.md` — ручные web/mobile/Android тест-кейсы, включая Android USB/dev-client smoke
 - `RELEASE.md` — release/deploy checklist
 - `PRODUCTION_CHECKLIST.md` — production release checklist
 - `EXTERNAL_LINK_GOVERNANCE_PR_SUMMARY.md` — external-links governance PR summary/template

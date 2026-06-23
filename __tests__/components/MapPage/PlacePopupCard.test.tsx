@@ -460,4 +460,33 @@ describe('PlacePopupCard', () => {
       tree.root.findAll((node: any) => node.props?.children === 'Страница').length,
     ).toBeGreaterThan(0);
   });
+
+  it('uses a compact page label in the mobile bottom-card action row', () => {
+    require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }));
+
+    let tree: any;
+
+    renderer.act(() => {
+      tree = renderer.create(
+        <PlacePopupCard
+          colors={mockColors as any}
+          title="Test point"
+          articleHref="/article/test-post"
+          coord="53.9, 27.56"
+          imageUrl="https://example.com/photo.jpg"
+          onOpenArticle={jest.fn()}
+          onAddPoint={jest.fn()}
+          bottomSheetSplit
+          compactLayout
+        />
+      );
+    });
+
+    expect(
+      tree.root.findAll((node: any) => node.props?.children === 'Страница').length,
+    ).toBeGreaterThan(0);
+    expect(
+      tree.root.findAll((node: any) => node.props?.children === 'Открыть страницу').length,
+    ).toBe(0);
+  });
 });

@@ -14,6 +14,7 @@ Read first:
 - `docs/CODEX.md`
 - `docs/NATIVE_COMPAT_RULES.md`
 - `docs/DEVELOPMENT.md`
+- `docs/MANUAL_TEST_CASES.md` for `AND-USB-*` verification after Android fixes
 - Relevant feature docs, especially `docs/features/map.md` for map work.
 
 ## Scope
@@ -43,6 +44,7 @@ Read first:
 ## Cable Dev-Client Smoke
 
 Use this flow for Android testing over USB. The project is worked on from both Windows and macOS, so keep commands portable and provide both variants when documenting a workflow.
+For QA coverage, pair this launch flow with `docs/MANUAL_TEST_CASES.md` `AND-USB-*` cases and `e2e/maestro/` flows when available.
 
 1. Find `adb`.
    - Windows PowerShell: `where.exe adb`; fallback common local path: `D:\metravel\tools\platform-tools\adb.exe`.
@@ -70,13 +72,18 @@ Use this flow for Android testing over USB. The project is worked on from both W
    adb reverse tcp:8084 tcp:8084
    adb reverse --list
    ```
-5. Launch the installed development build with the project scheme:
+5. Resolve the installed development build scheme before deep-link launch:
+   ```bash
+   adb shell dumpsys package by.metravel.app | grep -E 'Scheme:|expo-development-client|MainActivity'
+   ```
+   Do not assume the source `app.json` scheme matches the installed build; older or local dev builds may expose `myapp` or `exp+metravel`.
+6. Launch with the resolved scheme, or fall back to the Dev Launcher UI:
    ```bash
    adb shell am force-stop by.metravel.app
-   adb shell am start -W -a android.intent.action.VIEW -d "metravel://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081" by.metravel.app
-   # scheme — `metravel` (app.json) с 2026-06-13; для dev-build, собранного до этой даты, используй `myapp://expo-development-client/...`
+   adb shell am start -W -a android.intent.action.VIEW -d "<scheme>://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081" by.metravel.app
    ```
-6. Capture health evidence without leaking secrets:
+   If the direct intent does not resolve or Metro returns `unexpected end of stream`, open `by.metravel.app/.MainActivity`, enter `127.0.0.1:8081` in the Dev Launcher `exp://` field, tap Connect, and record the blocker if it still fails.
+7. Capture health evidence without leaking secrets:
    ```bash
    adb logcat -c
    adb logcat -d -v time | grep -E "FATAL EXCEPTION|ReactNativeJS|AndroidRuntime|JSApplicationIllegalArgumentException|DevLauncher"
@@ -105,5 +112,5 @@ Report:
 - Files changed
 - Platform split or guard strategy
 - Validation run
-- Device/emulator verification status
+- Device/emulator verification status and `AND-USB-*` cases covered
 - Remaining blockers or risks

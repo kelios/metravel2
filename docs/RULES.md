@@ -247,6 +247,9 @@ npx serve dist/prod -l 3000 -s
 - no bright accent colors
 - Placeholder must preserve the same geometry (size/radii) as the real media to avoid layout jumps.
 - Images must preserve original aspect ratio (use `contain`) and any unused area should be filled by a blurred version of the same image.
+- Published travel/article media (covers, rich-text description images, gallery images, and map-point photos) must be real photos, user-approved licensed photos, or photorealistic generated images saved as local raster files before upload.
+  - Do not use flat SVG, Playwright screenshot, vector, icon-like, schematic, cartoon, generic illustration, or "photo-like" placeholder generation for these surfaces.
+  - If a suitable photorealistic image cannot be generated or sourced, leave the media unchanged and report the blocker instead of uploading a stylized substitute.
 - For web content images that intentionally use `contain + blurBackground` in cards, popups, inline rich-text media, map previews, and similar surfaces, enable the shared-source blur mode (`allowCriticalWebBlur` in `ImageCardMedia`, or `mediaProps.allowCriticalWebBlur` in `UnifiedTravelCard`).
   - The visible image and the blur backdrop must use the same effective image source whenever possible.
   - Sibling sections that use the same card/media pattern must not render different backdrop strength or timing.

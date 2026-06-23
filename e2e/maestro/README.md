@@ -1,9 +1,9 @@
 # Maestro — device E2E flows (Android/iOS)
 
-Воспроизводимые UI-сценарии на реальном устройстве/эмуляторе. Дополняют ручной adb-проход
-(`artifacts/android-qa/qa.sh` + skill `android-qa-sweep`): qa.sh — для исследования и
-разовых проверок, Maestro — для повторяемых регресс-сценариев (`tapOn: text`, `assertVisible`,
-авто-ретраи, скрины), куда надёжнее сырого uiautomator.
+Воспроизводимые UI-сценарии на реальном устройстве/эмуляторе. Дополняют ручной Android
+USB/dev-client проход из `docs/MANUAL_TEST_CASES.md` (`AND-USB-*`) и skill
+`$metravel-mobile-tester`: ручной `adb` — для исследования и разовых проверок, Maestro — для
+повторяемых регресс-сценариев (`tapOn: text`, `assertVisible`, авто-ретраи, скрины).
 
 ## Установка (УЖЕ ВЫПОЛНЕНО на этой машине — 2026-06-22)
 - Maestro **2.6.1** → `~/.maestro/bin` (установщик добавил себя в `~/.zshrc`/`~/.bash_profile`).
@@ -30,6 +30,8 @@ sudo ln -sfn "$(brew --prefix openjdk@17)/libexec/openjdk.jdk" /Library/Java/Jav
 - **dev-client:** Metro запущен (`npm start`); `launch.yaml` сам подключит bundle (тап по dev-серверу `…8081`). **standalone preview/release-сборка надёжнее** — там `launchApp` сразу открывает приложение (на dev-client `launchApp` показывает лаунчер Expo).
 - Залогинен тест-аккаунтом sergey@lyte.com; `apiUrl=https://metravel.by`.
 - Тексты ассертов — русские (UI на русском). Лейблы кнопок — из `accessibilityLabel`.
+- Если Java недоступна для Maestro, не помечай device QA как зелёный: зафиксируй blocker и
+  вручную пройди соответствующие `AND-USB-*` кейсы через `adb`/устройство.
 
 ## Запуск
 Java нужно дать maestro через окружение (если не сделали системный симлинк):

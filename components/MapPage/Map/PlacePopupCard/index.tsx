@@ -224,6 +224,10 @@ const PlacePopupCard: React.FC<Props> = ({
     !!primaryAction &&
     !onBuildRoute &&
     !(!!articleHref && !!onOpenArticle);
+  const primaryIconActionLabel =
+    isBottomCardLayout && primaryAction?.icon === 'arrow-right'
+      ? 'Страница'
+      : primaryAction?.label;
 
   const topInfoSlot = useMemo(() => (
     <View style={styles.infoSection}>
@@ -333,7 +337,7 @@ const PlacePopupCard: React.FC<Props> = ({
                     <Feather name={primaryAction.icon} size={19} color={colors.textOnPrimary ?? colors.textOnDark} />
                   </View>
                   <View style={styles.iconActionLabelRow}>
-                    <Text style={styles.iconActionLabel} numberOfLines={1}>{primaryAction.label}</Text>
+                    <Text style={styles.iconActionLabel} numberOfLines={1}>{primaryIconActionLabel}</Text>
                   </View>
                 </CardActionPressable>
               )}
@@ -479,6 +483,7 @@ const PlacePopupCard: React.FC<Props> = ({
     onCopyCoord,
     onOpenArticle,
     primaryAction,
+    primaryIconActionLabel,
     primaryActionOverride,
     renderFallbackPrimaryAction,
     saveActionVisual,

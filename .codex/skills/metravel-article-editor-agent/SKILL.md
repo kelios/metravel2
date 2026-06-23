@@ -1,6 +1,6 @@
 ---
 name: metravel-article-editor-agent
-description: Edit, create, publish, unpublish, and verify metravel articles through the production or local article API, including generated article images, HTML cleanup, backups, secret-token hygiene, and browser/API verification. Use when Codex is asked to edit article content, add images to articles, improve article SEO/body HTML, or operate /api/articles.
+description: Edit, create, publish, unpublish, and verify metravel articles through the production or local article API, including photorealistic generated article/travel images, HTML cleanup, backups, secret-token hygiene, and browser/API verification. Use when Codex is asked to edit article content, add images to articles, improve article SEO/body HTML, or operate /api/articles.
 ---
 
 # Metravel Article Editor Agent
@@ -60,12 +60,12 @@ Do not use internet images for article assets unless the user explicitly authori
 Preferred image paths:
 
 - Reuse generated local assets already available for the project when they match the article.
-- For new generated raster assets, prefer the `imagegen` skill if `OPENAI_API_KEY` is available.
-- If API image generation is unavailable and the request allows stylized/generated assets, reuse the local SVG-to-PNG pattern used for quests:
-  - `scripts/gen-warsaw-cover.js`
-  - `.codex-temp/travel-646/generate-assets.js` as an example only; copy the approach into a task-local ignored script, do not depend on stale temp files.
+- For new generated raster assets, use the `imagegen` skill built-in image tool by default; copy the generated file from `$CODEX_HOME/generated_images/...` into the task-local workspace before upload.
+- Published article/travel media must look like real travel photography or a user-approved licensed/local photo. Do not generate flat SVG, Playwright screenshot, vector, icon-like, schematic, cartoon, generic illustration, or "photo-like" placeholder assets for covers, description images, gallery images, or map points.
+- If photorealistic image generation is unavailable or the generated result is visibly artificial, stop before upload and report the blocker instead of substituting a stylized/local SVG fallback.
 - Keep generated files in ignored folders until uploaded: `.codex-temp/articles/<article-id>/generated/`.
 - Generate without embedded text unless text is explicitly required; article UI should render text.
+- Upload only from local files on disk via the correct media collection (`travelMainImage`, `description`, `travelImageAddress`, or `gallery`); do not reference generated images directly from `$CODEX_HOME` or chat output.
 - After upload or insertion, verify the image URL loads and the article body renders without broken media.
 
 ## Validation

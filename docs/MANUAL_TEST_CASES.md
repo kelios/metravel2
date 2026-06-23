@@ -321,6 +321,48 @@
 
 После написания/ревью всех сценариев выше — выполнить прогон в двух средах. Один и тот же ID проверяется на обеих платформах; различия из колонки «Платформенные отличия» учитывать.
 
+### Android USB / dev-client smoke
+
+Используй этот набор, когда Android-устройство подключено по USB и нужно подтвердить native-поведение, а не только mobile web. Перед прогоном укажи: модель устройства, Android/API, build/dev-client, backend/API URL, аккаунт (`гость` или e2e-аккаунт без вывода секрета).
+
+Предусловия:
+
+- `adb devices -l` показывает ровно нужное устройство со статусом `device`; `unauthorized` = blocked до подтверждения RSA на телефоне.
+- Для dev-client запущен Metro `npx expo start --dev-client --host lan`, выполнен `adb reverse tcp:8081 tcp:8081`; перед deep-link запуском проверь реальные scheme через `adb shell dumpsys package by.metravel.app`, а если direct intent не грузит bundle — используй поле Dev Launcher `exp://127.0.0.1:8081`; после правок сделан явный reload приложения.
+- Артефакты складываются только в ignored-папки (`.codex-temp/`, `.codex-debug/`, `test-results/`, `playwright-report/`) и не содержат токены/пароли.
+
+| ID | Заголовок | Предусловие | Шаги | Ожидаемый результат |
+|----|-----------|-------------|------|---------------------|
+| AND-USB-01 | Device readiness | Телефон подключен по USB | `adb devices -l`; снять `ro.product.model`, `ro.build.version.release`, `ro.build.version.sdk` | Устройство авторизовано; модель/API записаны в QA Pass |
+| AND-USB-02 | Dev-client launch | Metro/dev-client доступен | `adb reverse --remove-all`; `adb reverse tcp:8081 tcp:8081`; запустить `by.metravel.app` через manifest scheme (`myapp`, `exp+metravel` и т.п.) или вручную через Dev Launcher Connect `exp://127.0.0.1:8081` | Приложение открывается без красного экрана; первый экран показывает «Маршруты»/home UI |
+| AND-USB-03 | Startup runtime health | Приложение запущено | Очистить logcat перед запуском, после запуска снять `FATAL EXCEPTION`, `AndroidRuntime`, `ReactNativeJS`, `JSApplicationIllegalArgumentException` | Нет fatal/runtime crash; любые предупреждения классифицированы |
+| AND-USB-04 | Native navigation + system back | Home открыт | Перейти по нижним табам: Маршруты → Беларусь/Поиск → Карта → Места → Профиль/Ещё; нажать системную Back | Табы открываются, Back возвращает назад или закрывает overlay без выхода в неконсистентное состояние |
+| AND-USB-05 | Search/list on Android | Сеть доступна | Открыть список маршрутов, выполнить текстовый поиск, очистить поиск, открыть карточку | Список фильтруется, очистка восстанавливает данные, карточка ведет в корректные детали |
+| AND-USB-06 | Travel details + media | Есть маршрут с фото | Открыть детали, пролистать hero/галерею, перейти к описанию/координатам/комментариям | Нет layout crash; media сохраняет геометрию; секции доступны скроллом |
+| AND-USB-07 | Native share/export surfaces | Детали маршрута открыты | Открыть share/PDF/GPX-KML действия, не выполняя destructive actions | Открывается системный share/picker или корректный fallback; нет direct crash |
+| AND-USB-08 | Native map smoke | Вкладка карты открыта | Проверить тайлы, панорамирование/зум, bottom sheet, карточку места, внешние карты | Карта не серая из-за недостижимого dev tile-origin; bottom sheet и popup работают |
+| AND-USB-09 | Permissions | Сценарий использует разрешения | Проверить геолокацию/медиа permission prompt: allow и deny ветки, если доступны без destructive effects | Allow дает ожидаемый результат; deny показывает понятный fallback без краша |
+| AND-USB-10 | Auth entrypoints | Нужен e2e-аккаунт | Войти через безопасный e2e-механизм/уже подготовленный аккаунт; не печатать пароль/токен | Авторизованные экраны открываются; состояние сохраняется после app reload |
+| AND-USB-11 | Quests native regressions | Установлен build с квестами | Пройти `e2e/maestro/quest-reviews.yaml` и `quest-offline-points.yaml` либо вручную повторить их шаги | Отзывы открывают модалку отзывов; GPX/share готовится без `expo-file-system` runtime throw |
+| AND-USB-12 | Recommendation shelves | Авторизованный аккаунт с избранным/историей | Пройти `e2e/maestro/recommendation-shelves.yaml` либо вручную открыть полки идей на Маршрутах | «Избранное» и «Недавно смотрели» рендерятся; если нет — баг остается подтвержденным |
+
+#### Трассируемость Android device coverage
+
+| Кейс | Приоритет | Автоматизация | Статус |
+|------|-----------|---------------|--------|
+| AND-USB-01 | P1 | manual adb | manual |
+| AND-USB-02 | P1 | manual adb/dev-client | manual |
+| AND-USB-03 | P1 | manual adb logcat | manual |
+| AND-USB-04 | P1 | manual; candidate for Maestro | manual |
+| AND-USB-05 | P1 | manual; candidate for Maestro | manual |
+| AND-USB-06 | P1 | manual; candidate for Maestro | manual |
+| AND-USB-07 | P2 | manual; Maestro where OS UI is stable | manual |
+| AND-USB-08 | P1 | manual; native map evidence | manual |
+| AND-USB-09 | P2 | manual permission matrix | manual |
+| AND-USB-10 | P1 | manual with `.env.e2e`/prepared account, no secret output | manual |
+| AND-USB-11 | P1 | Maestro `quest-reviews.yaml`, `quest-offline-points.yaml` | repeatable device e2e |
+| AND-USB-12 | P1 | Maestro `recommendation-shelves.yaml` | known regression detector |
+
 ### Чек-лист платформ
 
 | Платформа | Среда | Особенности проверки |

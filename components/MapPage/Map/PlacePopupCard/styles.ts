@@ -59,7 +59,7 @@ export const getStyles = (
       overflow: 'hidden',
       // Photo is the dominant element (~62% of the sheet) and never scrolls.
       ...(Platform.OS === 'web'
-        ? ({ flex: '0 0 62%', maxHeight: '62%', minHeight: '46%' } as any)
+        ? ({ flexGrow: 0, flexShrink: 0, flexBasis: '62%', maxHeight: '62%', minHeight: '46%' } as any)
         : null),
     },
     // Desktop Leaflet popup split: unlike the mobile sheet, the popup has NO fixed
@@ -75,7 +75,9 @@ export const getStyles = (
             flexDirection: 'column',
             // Fill the (CSS-capped) `.leaflet-popup-content` flex column so the inner
             // body can claim the leftover height and scroll under the fixed hero.
-            flex: '1 1 auto',
+            flexGrow: 1,
+            flexShrink: 1,
+            flexBasis: 'auto',
             maxHeight: '100%',
           } as any)
         : null),
@@ -92,7 +94,9 @@ export const getStyles = (
       width: '100%',
       ...(Platform.OS === 'web'
         ? ({
-            flex: '1 1 auto',
+            flexGrow: 1,
+            flexShrink: 1,
+            flexBasis: 'auto',
             minHeight: 0,
             overflowY: 'auto',
             WebkitOverflowScrolling: 'touch',
@@ -155,7 +159,7 @@ export const getStyles = (
     },
     relatedTravelScrim: {
       // Scoped to the ♥/＋ button corner only (not the whole hero): a small, soft
-      // gradient just for icon contrast so the dominant photo stays unobscured.
+      // scrim just for icon contrast so the dominant photo stays unobscured.
       position: 'absolute',
       top: 0,
       left: 0,
@@ -164,12 +168,6 @@ export const getStyles = (
       zIndex: 5,
       borderBottomRightRadius: 24,
       backgroundColor: 'rgba(15,23,42,0.18)',
-      ...(Platform.OS === 'web'
-        ? ({
-            background:
-              'linear-gradient(135deg, rgba(15,23,42,0.32) 0%, rgba(15,23,42,0.12) 55%, rgba(15,23,42,0) 100%)',
-          } as any)
-        : null),
     },
     topSectionSplit: {
       flexDirection: 'row',
@@ -370,12 +368,13 @@ export const getStyles = (
       flexDirection: 'row',
       alignItems: 'flex-start',
       justifyContent: 'space-between',
-      gap: 4,
-      paddingHorizontal: 2,
+      gap: bottomCardLayout ? 8 : 4,
+      paddingHorizontal: bottomCardLayout ? 0 : 2,
     },
     iconActionBtn: {
       flex: 1,
       flexBasis: 0,
+      minWidth: 0,
       alignItems: 'center',
       gap: 6,
       paddingVertical: 2,
@@ -409,7 +408,11 @@ export const getStyles = (
     iconActionLabelRow: {
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'center',
       gap: 2,
+      width: '100%',
+      minWidth: 0,
+      paddingHorizontal: bottomCardLayout ? 2 : 0,
     },
     iconActionLabel: {
       fontSize: compactLayout ? 11 : 12,
@@ -417,6 +420,8 @@ export const getStyles = (
       fontWeight: '600',
       color: colors.text,
       textAlign: 'center',
+      maxWidth: '100%',
+      flexShrink: 1,
     },
     navGrid: {
       flexDirection: 'row',
@@ -430,6 +435,7 @@ export const getStyles = (
     },
     navGridItem: {
       width: '25%',
+      minWidth: 0,
       alignItems: 'center',
       gap: 6,
       paddingVertical: 2,

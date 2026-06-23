@@ -10,6 +10,7 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 - `docs/README.md` — project docs quick start + API reference
 - `docs/DEVELOPMENT.md` — local setup and day-to-day workflow
 - `docs/TESTING.md` — Jest + Playwright (E2E) + CI quality gate
+- `docs/MANUAL_TEST_CASES.md` — manual QA matrix and Android USB/dev-client smoke cases
 - `docs/RELEASE.md` — release/deploy flow
 - `docs/PRODUCTION_CHECKLIST.md` — production checklist
 - `docs/AGENT_WORKBOARD.md` — active agent board for current multi-agent work

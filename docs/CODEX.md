@@ -28,8 +28,8 @@
 - `$metravel-codex-orchestrator`: используй как верхний self-check для сложных или многошаговых задач: triage, минимальный набор skills, role prompts, validation plan, handoff и final self-check по правилам проекта.
 - `$metravel-agent-workflow`: используй для координации ролей business analyst, system architect, designer, programmer, QA, reviewer и DevOps.
 - `$metravel-project-analyst`: используй для read-only анализа структуры проекта, активных фич, зависимостей, validation surface, risk hotspots и выбора следующих агентов перед крупной задачей.
-- `$metravel-android-developer`: используй для Android/native разработки и отладки Expo/React Native: platform files, native crashes, Expo modules, permissions, SecureStore, push, native map, web-first код в Android bundle.
-- `$metravel-mobile-tester`: используй для read-only QA мобильных сценариев на mobile web и Android/native: responsive layout, touch targets, navigation, native smoke, screenshots/logs/evidence и retest.
+- `$metravel-android-developer`: используй для Android/native разработки и отладки Expo/React Native: platform files, native crashes, Expo modules, permissions, SecureStore, push, native map, web-first код в Android bundle; после фиксов сверяй Android device coverage с `docs/MANUAL_TEST_CASES.md` `AND-USB-*`.
+- `$metravel-mobile-tester`: используй для read-only QA мобильных сценариев на mobile web и Android/native: responsive layout, touch targets, navigation, USB device/dev-client smoke, Maestro flows, screenshots/logs/evidence и retest.
 - `$metravel-business-analyst`: используй для превращения продуктовой идеи в feature brief, user stories, acceptance criteria, non-goals, metrics и risks.
 - `$metravel-system-architect`: используй для technical design, review diff, risk mapping, validation plan и безопасного разбиения работ.
 - `$metravel-qa-agent`: используй для read-only тестирования, browser/e2e exploration, bug reports и re-test фиксов.
@@ -49,13 +49,13 @@
 | Приёмка спринта / закрытие тикетов | `docs/TASK_BOARD_MCP.md`, агент `board-reviewer`, skill `/sprint-review` | проход по `review`-тикетам активного спринта: проверить Done gate реальными тестами + браузер/API-пробами против target env, зелёные → `done` с evidence, проваленные вернуть в `review`/`blocked_by`; статус соседней задачи и mock-fallback не доказательство |
 | Видимый UI, media, icons, tokens | всё из feature-контекста + `$metravel-ui-guardrails` | проверка в браузере на web, screenshot, отсутствие новых console errors |
 | External links | `docs/RULES.md`, `docs/TESTING.md`, `utils/externalLinks.ts` | никаких direct `window.open(...)` и `Linking.openURL(...)` вне chokepoint |
-| Article editing / generated article images | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `docs/DEVELOPMENT.md`, `$metravel-article-editor-agent` | токен только из `.secrets`/env без вывода значения; backup перед write; не использовать интернет-картинки; generated images через `imagegen` или локальный SVG/Playwright pattern; verify через API и страницу |
+| Article editing / generated article images | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `docs/DEVELOPMENT.md`, `$metravel-article-editor-agent` | токен только из `.secrets`/env без вывода значения; backup перед write; не использовать интернет-картинки; generated images только как фотореалистичные raster-файлы через `imagegen`/licensed-local source; никаких SVG/Playwright/схематичных placeholder-картинок; verify через API и страницу |
 | Test running | `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, профильный feature-doc при наличии | выбрать самый узкий надёжный test command, не оставлять `.skip`, после фикса rerun обязателен |
 | Repo-wide quality fix | `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, `docs/DEVELOPMENT.md`, `docs/RELEASE.md` | запустить lint + Jest + Playwright, исправить реальные падения, повторить проверки и явно отметить только несвязанные блокеры |
 | Test writing | `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, профильный feature-doc, ближайшие существующие тесты | писать тест на ближайшем подходящем уровне, фиксировать реальный контракт, избегать flaky assertions |
 | Browser / E2E | `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, `.env.e2e` при необходимости, профильный feature-doc | Playwright/browser flow, secret hygiene, screenshot/trace evidence, console/runtime checks |
-| Android/native development | `AGENTS.md`, `docs/RULES.md`, `docs/NATIVE_COMPAT_RULES.md`, `docs/DEVELOPMENT.md`, профильный feature-doc | web-first правило: не ломать production web; platform files вместо больших условий; native governance; device verify pending без эмулятора/устройства |
-| Mobile QA | `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, `docs/NATIVE_COMPAT_RULES.md`, профильный feature-doc | read-only mobile web/native checks, touch/layout/runtime evidence, no secrets, баги роутить к профильному owner |
+| Android/native development | `AGENTS.md`, `docs/RULES.md`, `docs/NATIVE_COMPAT_RULES.md`, `docs/DEVELOPMENT.md`, `docs/MANUAL_TEST_CASES.md`, профильный feature-doc | web-first правило: не ломать production web; platform files вместо больших условий; native governance; device verify pending без эмулятора/устройства |
+| Mobile QA | `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, `docs/NATIVE_COMPAT_RULES.md`, `docs/MANUAL_TEST_CASES.md`, профильный feature-doc | read-only mobile web/native checks, `AND-USB-*` для подключенного Android, Maestro где доступен, touch/layout/runtime evidence, no secrets, баги роутить к профильному owner |
 | Performance analysis | `docs/RULES.md`, `docs/TESTING.md`, `docs/RELEASE.md`, профильный perf-doc (`docs/TRAVEL_PERFORMANCE_REFACTOR.md` при travel scope) | только production build или real URL, baseline comparison, Lighthouse/bundle budgets |
 | Code review | `AGENTS.md`, `docs/RULES.md`, `docs/CODEX.md`, профильный feature-doc, diff validation logs | lead with findings, проверять project-rule compliance, known failures, missing tests и residual risks |
 | SEO / route pages | `docs/DEVELOPMENT.md` SEO-раздел | `buildCanonicalUrl`, `buildOgImageUrl`, `LazyInstantSEO` |
@@ -188,7 +188,7 @@ deploys with `tar+ssh`, performs an atomic server swap, verifies health, and rol
 - Routes/pages: `app/`, `screens/`.
 - Reusable UI: `components/ui`, затем feature-компоненты в `components/`.
 - Business logic: `hooks/`, `services/`, `api/`, `utils/`.
-- Android/native rules: `docs/NATIVE_COMPAT_RULES.md`, `app.json`, `eas.json`, platform files `*.android.tsx`, `*.native.tsx`, `*.ios.tsx`, `*.web.tsx`.
+- Android/native rules and device cases: `docs/NATIVE_COMPAT_RULES.md`, `docs/MANUAL_TEST_CASES.md`, `e2e/maestro/`, `app.json`, `eas.json`, platform files `*.android.tsx`, `*.native.tsx`, `*.ios.tsx`, `*.web.tsx`.
 - Places catalog: `docs/features/places.md`, `screens/tabs/PlacesScreen.tsx`, `api/places.ts`, `utils/placesCatalog.ts`, `components/places/`.
 - Design tokens: `constants/designSystem.ts`, web CSS variables in `app/global.css`.
 - External navigation chokepoint: `utils/externalLinks.ts`.
