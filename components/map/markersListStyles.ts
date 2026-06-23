@@ -5,8 +5,40 @@ import type { useThemedColors } from '@/hooks/useTheme';
 
 export const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => ({
     container: {
+        position: 'relative' as const,
         backgroundColor: 'transparent',
         padding: '0',
+        borderRadius: '14px',
+        transition: 'box-shadow 0.15s ease',
+    },
+    containerDragActive: {
+        boxShadow: `0 0 0 2px ${colors.borderAccent}`,
+    },
+    dropOverlay: {
+        position: 'absolute' as const,
+        inset: 0,
+        zIndex: 5,
+        borderRadius: '14px',
+        border: `2px dashed ${colors.borderAccent}`,
+        backgroundColor: colors.primarySoft,
+        display: 'flex',
+        flexDirection: 'column' as const,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
+        textAlign: 'center' as const,
+        pointerEvents: 'none' as const,
+    },
+    dropOverlayText: {
+        fontSize: '13px',
+        fontWeight: 700,
+        color: colors.primaryDark,
+    },
+    dropHint: {
+        marginTop: '8px',
+        fontSize: '12px',
+        color: colors.textMuted,
+        textAlign: 'center' as const,
     },
     headerRow: {
         display: 'flex',

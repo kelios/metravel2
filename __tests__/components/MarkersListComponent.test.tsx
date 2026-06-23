@@ -166,6 +166,87 @@ describe('MarkersListComponent - Edit modal categories', () => {
         });
     });
 
+    const makeDragEvent = (type: string, files: File[]) => {
+        const event = new Event(type, { bubbles: true, cancelable: true }) as any;
+        event.dataTransfer = { files, types: ['Files'], dropEffect: 'none' };
+        return event as DragEvent;
+    };
+
+    it('shows the drop overlay while dragging files over the panel', () => {
+        const { container } = render(
+            <MarkersListComponent
+                markers={[]}
+                categoryTravelAddress={[{ id: 1, name: 'Кафе' }]}
+                handleMarkerChange={jest.fn()}
+                handleImageUpload={jest.fn()}
+                handleMarkerRemove={jest.fn()}
+                editingIndex={null}
+                setEditingIndex={jest.fn()}
+                onAddMarkerFromPhoto={jest.fn()}
+            />,
+        );
+
+        const panel = container.firstElementChild as HTMLElement;
+        expect(screen.queryByText(/Отпустите фото/i)).toBeNull();
+
+        fireEvent(panel, makeDragEvent('dragenter', []));
+        expect(screen.getByText(/Отпустите фото/i)).toBeTruthy();
+
+        fireEvent(panel, makeDragEvent('dragleave', []));
+        expect(screen.queryByText(/Отпустите фото/i)).toBeNull();
+    });
+
+    it('calls onAddMarkerFromPhoto for each dropped image file', async () => {
+        const onAddMarkerFromPhoto = jest.fn().mockResolvedValue(undefined);
+        const { container } = render(
+            <MarkersListComponent
+                markers={[]}
+                categoryTravelAddress={[{ id: 1, name: 'Кафе' }]}
+                handleMarkerChange={jest.fn()}
+                handleImageUpload={jest.fn()}
+                handleMarkerRemove={jest.fn()}
+                editingIndex={null}
+                setEditingIndex={jest.fn()}
+                onAddMarkerFromPhoto={onAddMarkerFromPhoto}
+            />,
+        );
+
+        const panel = container.firstElementChild as HTMLElement;
+        const img1 = new File([new Uint8Array([1])], 'a.jpg', { type: 'image/jpeg' });
+        const img2 = new File([new Uint8Array([2])], 'b.heic', { type: '' });
+        const notImage = new File([new Uint8Array([3])], 'notes.txt', { type: 'text/plain' });
+
+        fireEvent(panel, makeDragEvent('drop', [img1, img2, notImage]));
+
+        await waitFor(() => {
+            expect(onAddMarkerFromPhoto).toHaveBeenCalledTimes(2);
+        });
+        // identity check by reference: jsdom File objects serialize identically, so
+        // toHaveBeenCalledWith can't distinguish them — inspect the actual call args.
+        const passedFiles = onAddMarkerFromPhoto.mock.calls.map((call) => call[0]);
+        expect(passedFiles).toContain(img1);
+        expect(passedFiles).toContain(img2);
+        expect(passedFiles).not.toContain(notImage);
+    });
+
+    it('does not wire drag-and-drop when onAddMarkerFromPhoto is absent', () => {
+        const { container } = render(
+            <MarkersListComponent
+                markers={[]}
+                categoryTravelAddress={[{ id: 1, name: 'Кафе' }]}
+                handleMarkerChange={jest.fn()}
+                handleImageUpload={jest.fn()}
+                handleMarkerRemove={jest.fn()}
+                editingIndex={null}
+                setEditingIndex={jest.fn()}
+            />,
+        );
+
+        const panel = container.firstElementChild as HTMLElement;
+        fireEvent(panel, makeDragEvent('dragenter', []));
+        expect(screen.queryByText(/Отпустите фото/i)).toBeNull();
+    });
+
     it('allows selecting HEIC and HEIF files for EXIF import on web', () => {
         const { container } = render(
             <MarkersListComponent

@@ -40,6 +40,8 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
     const colors = useThemedColors();
     const styles = useStyles(colors);
     const [search, setSearch] = useState('');
+    const [isDragOver, setIsDragOver] = useState(false);
+    const dragDepthRef = useRef(0);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const onRemove = useCallback((index: number) => handleMarkerRemove(index), [handleMarkerRemove]);
     const onEdit = useCallback((index: number) => {
@@ -96,8 +98,73 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
         [onAddMarkerFromPhoto]
     );
 
+    const isImageFile = useCallback((file: File) => {
+        if (file.type.startsWith('image/')) return true;
+        // HEIC/HEIF often come with an empty MIME type
+        return /\.(heic|heif|jpe?g|png|webp)$/i.test(file.name);
+    }, []);
+
+    const handleDragOver = useCallback(
+        (e: React.DragEvent<HTMLDivElement>) => {
+            if (!onAddMarkerFromPhoto) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        },
+        [onAddMarkerFromPhoto]
+    );
+
+    const handleDragEnter = useCallback(
+        (e: React.DragEvent<HTMLDivElement>) => {
+            if (!onAddMarkerFromPhoto) return;
+            e.preventDefault();
+            dragDepthRef.current += 1;
+            setIsDragOver(true);
+        },
+        [onAddMarkerFromPhoto]
+    );
+
+    const handleDragLeave = useCallback(
+        (e: React.DragEvent<HTMLDivElement>) => {
+            if (!onAddMarkerFromPhoto) return;
+            e.preventDefault();
+            dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+            if (dragDepthRef.current === 0) setIsDragOver(false);
+        },
+        [onAddMarkerFromPhoto]
+    );
+
+    const handleDrop = useCallback(
+        async (e: React.DragEvent<HTMLDivElement>) => {
+            if (!onAddMarkerFromPhoto) return;
+            e.preventDefault();
+            dragDepthRef.current = 0;
+            setIsDragOver(false);
+            const files = Array.from(e.dataTransfer.files || []).filter(isImageFile);
+            // process sequentially so reverse-geocode and country derivation stay consistent
+            for (const file of files) {
+                await onAddMarkerFromPhoto(file);
+            }
+        },
+        [onAddMarkerFromPhoto, isImageFile]
+    );
+
     return (
-        <div style={styles.container}>
+        <div
+            style={{
+                ...(styles.container as React.CSSProperties),
+                ...(isDragOver ? (styles.containerDragActive as React.CSSProperties) : {}),
+            }}
+            onDragOver={onAddMarkerFromPhoto ? handleDragOver : undefined}
+            onDragEnter={onAddMarkerFromPhoto ? handleDragEnter : undefined}
+            onDragLeave={onAddMarkerFromPhoto ? handleDragLeave : undefined}
+            onDrop={onAddMarkerFromPhoto ? handleDrop : undefined}
+        >
+            {isDragOver && onAddMarkerFromPhoto ? (
+                <div style={styles.dropOverlay as React.CSSProperties}>
+                    <Feather name="image" size={22} color={colors.primaryDark} />
+                    <span style={styles.dropOverlayText}>Отпустите фото — добавим точки по геолокации</span>
+                </div>
+            ) : null}
             <div style={styles.headerRow}>
                 <div style={styles.headerTitle}>Точки</div>
                 <div style={styles.headerRight}>
@@ -138,7 +205,8 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
             )}
             {markers.length === 0 ? (
                 <p style={styles.emptyText}>
-                    Пока нет ни одной точки маршрута. Нажмите на карту, чтобы добавить первую.
+                    Пока нет ни одной точки маршрута. Нажмите на карту, чтобы добавить первую
+                    {onAddMarkerFromPhoto ? ', или перетащите сюда фото — точки добавятся по геолокации EXIF' : ''}.
                 </p>
             ) : (
                 <div style={styles.list}>
