@@ -504,6 +504,7 @@ function StickySearchBar({
   });
   const inputRef = useRef<TextInput>(null);
   const [isFocused, setIsFocused] = useState(false);
+  const suppressNextHistoryPressRef = useRef(false);
 
   const history = useSearchHistoryStore((s) => s.history);
   const loadHistory = useSearchHistoryStore((s) => s.load);
@@ -529,6 +530,31 @@ function StickySearchBar({
     },
     [addQuery, onSearchChange],
   );
+
+  const runHistoryActionOnPress = useCallback((action: () => void) => {
+    if (Platform.OS === 'web' && suppressNextHistoryPressRef.current) return;
+    action();
+  }, []);
+
+  const runHistoryActionOnMouseDown = useCallback((event: unknown, action: () => void) => {
+    if (Platform.OS !== 'web') return;
+
+    const webEvent = event as { preventDefault?: () => void };
+    webEvent.preventDefault?.();
+    suppressNextHistoryPressRef.current = true;
+    action();
+
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => {
+        suppressNextHistoryPressRef.current = false;
+      });
+      return;
+    }
+
+    setTimeout(() => {
+      suppressNextHistoryPressRef.current = false;
+    }, 0);
+  }, []);
 
   const showHistory = isFocused && search.trim().length === 0 && history.length > 0;
 
@@ -824,10 +850,15 @@ function StickySearchBar({
             <Text style={styles.historyHeaderText}>Недавние запросы</Text>
             <Pressable
               testID="search-history-clear-all"
-              onPressIn={() => void clearHistory()}
+              onPress={() => runHistoryActionOnPress(() => void clearHistory())}
               accessibilityRole="button"
               accessibilityLabel="Очистить историю поиска"
-              {...Platform.select({ web: { title: 'Очистить историю' } as any })}
+              {...Platform.select({
+                web: {
+                  title: 'Очистить историю',
+                  onMouseDown: (event: unknown) => runHistoryActionOnMouseDown(event, () => void clearHistory()),
+                } as any,
+              })}
               style={styles.historyClearAll}
             >
               <Feather name="trash-2" size={13} color={colors.textSecondary} />
@@ -838,10 +869,15 @@ function StickySearchBar({
             <View key={query} style={styles.historyRow}>
               <Pressable
                 testID={`search-history-item-${query}`}
-                onPressIn={() => applyHistoryQuery(query)}
+                onPress={() => runHistoryActionOnPress(() => applyHistoryQuery(query))}
                 accessibilityRole="button"
                 accessibilityLabel={`Найти: ${query}`}
-                {...Platform.select({ web: { title: query } as any })}
+                {...Platform.select({
+                  web: {
+                    title: query,
+                    onMouseDown: (event: unknown) => runHistoryActionOnMouseDown(event, () => applyHistoryQuery(query)),
+                  } as any,
+                })}
                 style={styles.historyRowMain}
               >
                 <Feather name="clock" size={14} color={colors.textMuted} />
@@ -851,10 +887,15 @@ function StickySearchBar({
               </Pressable>
               <Pressable
                 testID={`search-history-remove-${query}`}
-                onPressIn={() => void removeQuery(query)}
+                onPress={() => runHistoryActionOnPress(() => void removeQuery(query))}
                 accessibilityRole="button"
                 accessibilityLabel={`Удалить из истории: ${query}`}
-                {...Platform.select({ web: { title: 'Удалить' } as any })}
+                {...Platform.select({
+                  web: {
+                    title: 'Удалить',
+                    onMouseDown: (event: unknown) => runHistoryActionOnMouseDown(event, () => void removeQuery(query)),
+                  } as any,
+                })}
                 style={styles.historyRemove}
               >
                 <Feather name="x" size={14} color={colors.textMuted} />

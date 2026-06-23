@@ -1,8 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 import { ThemeProvider } from '@/hooks/useTheme';
 import StickySearchBar from '@/components/mainPage/StickySearchBar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useSearchHistoryStore } from '@/stores/searchHistoryStore';
 
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () =>
@@ -48,9 +50,14 @@ describe('StickySearchBar Component', () => {
   const mockOnFiltersPress = jest.fn();
   const mockOnToggleRecommendations = jest.fn();
   const mockOnClearAll = jest.fn();
+  const originalPlatformOS = Platform.OS;
+  const originalPlatformSelect = Platform.select;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    Object.defineProperty(Platform, 'OS', { value: originalPlatformOS, configurable: true });
+    Platform.select = originalPlatformSelect;
+    useSearchHistoryStore.setState({ history: [], _loaded: true });
     (global as any).__mockResponsive = {
       width: 1024,
       height: 768,
@@ -69,6 +76,11 @@ describe('StickySearchBar Component', () => {
       isAtMost: () => false,
       isBetween: () => false,
     };
+  });
+
+  afterEach(() => {
+    Object.defineProperty(Platform, 'OS', { value: originalPlatformOS, configurable: true });
+    Platform.select = originalPlatformSelect;
   });
 
   it('renders search input and desktop actions', () => {
@@ -311,5 +323,34 @@ describe('StickySearchBar Component', () => {
 
     expect(screen.getByTestId('quick-filter-weekend').props.accessibilityState?.selected).toBe(true);
     expect(mockOnQuickFilterPress).toHaveBeenCalledWith('popular');
+  });
+
+  it('applies a recent query on web mouse down before the input blur hides history', async () => {
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });
+    Platform.select = (obj: Record<string, unknown>) => obj.web ?? obj.default;
+    useSearchHistoryStore.setState({ history: ['гомель', 'краков'], _loaded: true });
+
+    renderWithProviders(
+      <StickySearchBar
+        search=""
+        onSearchChange={mockOnSearchChange}
+        hasActiveFilters={false}
+        resultsCount={10}
+        activeFiltersCount={0}
+      />
+    );
+
+    fireEvent(screen.getByPlaceholderText('Найти путешествия...'), 'focus');
+
+    expect(screen.getByTestId('search-history-panel')).toBeTruthy();
+
+    const historyItem = screen.getByTestId('search-history-item-гомель');
+    const preventDefault = jest.fn();
+    historyItem.props.onMouseDown({ preventDefault });
+
+    await waitFor(() => {
+      expect(preventDefault).toHaveBeenCalled();
+      expect(mockOnSearchChange).toHaveBeenCalledWith('гомель');
+    });
   });
 });
