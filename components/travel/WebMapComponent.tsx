@@ -426,18 +426,15 @@ const WebMapComponent = ({
                 derivedCountryId: markerResult.derivedCountryId,
             });
         } catch {
-            if (previewUrl) {
-                removePendingImageFile(previewUrl);
-                try {
-                    URL.revokeObjectURL(previewUrl);
-                } catch {
-                    // noop
-                }
-            }
+            // Сейв маршрута мог упасть (напр. модерационная валидация categories у только что
+            // добавленной точки). Точка уже в локальном стейте — НЕ ревокаем preview-blob и НЕ
+            // удаляем pending-файл: иначе objectURL становится мёртвым (naturalWidth:0) и миниатюра
+            // серая. Blob безопасно ревокать только после успешной загрузки (useMarkerImageUpload)
+            // или при явном удалении точки. Пользователь добавит категории — следующий сейв пройдёт.
             void showToastMessage({
                 type: 'error',
-                text1: 'Не удалось сохранить точку',
-                text2: 'Координаты определены, но сохранение точки не завершилось. Попробуйте ещё раз.',
+                text1: 'Точка добавлена, но не сохранена',
+                text2: 'Заполните обязательные поля точки (например, категории) и сохраните ещё раз.',
             });
             return;
         }

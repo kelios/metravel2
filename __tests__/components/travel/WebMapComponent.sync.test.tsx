@@ -7,7 +7,18 @@ jest.mock('@/utils/pendingImageFiles', () => ({
   getPendingImageFile: jest.fn(),
 }));
 
-import { getPendingImageFile } from '@/utils/pendingImageFiles';
+import { getPendingImageFile, removePendingImageFile } from '@/utils/pendingImageFiles';
+
+jest.mock('@/utils/exifGps', () => ({
+  extractGpsFromImageFile: jest.fn(async () => ({ lat: 10, lng: 20 })),
+}));
+
+jest.mock('@/utils/webImageUpload', () => ({
+  prepareWebImageFileForUpload: jest.fn(async (file: any) => file),
+}));
+
+import { extractGpsFromImageFile } from '@/utils/exifGps';
+import { fireEvent } from '@testing-library/react';
 
 jest.mock('@/components/ui/ImageCardMedia', () => {
   const React = require('react');
@@ -247,5 +258,49 @@ describe('WebMapComponent marker sync', () => {
     });
 
     expect(onCountrySelect).toHaveBeenCalledWith('268');
+  });
+
+  it('keeps preview blob and pending file when route autosave fails after adding point from photo (regression)', async () => {
+    const previewBlob = 'blob:https://example.com/photo-preview';
+    const createObjectURL = jest.fn(() => previewBlob);
+    const revokeObjectURL = jest.fn();
+    (global as any).URL.createObjectURL = createObjectURL;
+    (global as any).URL.revokeObjectURL = revokeObjectURL;
+    (extractGpsFromImageFile as jest.Mock).mockResolvedValue({ lat: 10, lng: 20 });
+
+    // Сейв маршрута падает: у новой точки нет categories (модерационная валидация).
+    const onPhotoMarkerReady = jest.fn(async () => {
+      throw new Error('Заполните обязательные поля для модерации: categories');
+    });
+
+    const { container } = render(
+      <WebMapComponent
+        {...baseProps}
+        markers={[] as any}
+        onPhotoMarkerReady={onPhotoMarkerReady}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText('Загрузка карты…')).toBeNull();
+    });
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(fileInput).not.toBeNull();
+
+    const fakeFile = new File(['photo'], 'photo.jpg', { type: 'image/jpeg' });
+
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [fakeFile] } });
+    });
+
+    await waitFor(() => {
+      expect(onPhotoMarkerReady).toHaveBeenCalled();
+    });
+
+    // Preview-blob жив: НЕ ревокнут и pending-файл НЕ удалён в error-ветке —
+    // иначе миниатюра серая (мёртвый objectURL).
+    expect(revokeObjectURL).not.toHaveBeenCalledWith(previewBlob);
+    expect(removePendingImageFile).not.toHaveBeenCalledWith(previewBlob);
   });
 });
