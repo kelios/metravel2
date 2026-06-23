@@ -141,7 +141,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
 
   const cleanAndSave = useCallback(async (
     data: TravelFormData,
-    options?: { autosave?: boolean },
+    options?: { autosave?: boolean; intent?: 'autosave' | 'save' | 'publish' },
     externalSignal?: AbortSignal,
   ) => {
     // ✅ FIX: Отменяем предыдущий запрос для предотвращения race condition
@@ -511,8 +511,14 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
             )
           : formDataRef.current as TravelFormData;
         formDataRef.current = toSave as TravelFormData;
+        // Явная публикация/отправка на модерацию (пользователь нажал кнопку в шаге
+        // публикации, поэтому dataOverride выставляет publish/moderation) проходит
+        // серверную модерационную валидацию. Любое другое ручное/фоновое сохранение
+        // (в т.ч. инкрементальный сейв точки уже опубликованной поездки, тикет #505)
+        // лишь персистит текущее состояние без блокирующей проверки полноты.
+        const intent: 'save' | 'publish' = wantsToLeaveSoon ? 'publish' : 'save';
         // Если пришли извне готовые данные — сохраняем напрямую, минуя отложенный стейт.
-        const savedData = await cleanAndSave(toSave);
+        const savedData = await cleanAndSave(toSave, { intent });
         const normalizedSavedData = normalizeDraftPlaceholders(savedData);
         applySavedData(normalizedSavedData, toSave as TravelFormData);
         autosaveCancelPendingRef.current?.();

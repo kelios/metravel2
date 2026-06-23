@@ -75,10 +75,12 @@ const makeUniqueSlug = (value?: string): string => {
   return base ? `${base}-${suffix}` : `travel-${suffix}`;
 };
 
+export type SaveFormDataIntent = 'autosave' | 'save' | 'publish';
+
 export const saveFormData = async (
   data: TravelFormData,
   signal?: AbortSignal,
-  options?: { autosave?: boolean }
+  options?: { autosave?: boolean; intent?: SaveFormDataIntent }
 ): Promise<TravelFormData> => {
   try {
     const token = await getSecureItem('userToken');
@@ -86,8 +88,10 @@ export const saveFormData = async (
       throw new Error('Пользователь не авторизован');
     }
 
+    const intent: SaveFormDataIntent =
+      options?.intent ?? (options?.autosave === true ? 'autosave' : 'save');
     const isDraft = !data?.publish && !data?.moderation;
-    const isAutosaveDraft = options?.autosave === true && isDraft;
+    const isAutosaveDraft = intent === 'autosave' && isDraft;
 
     // ✅ FIX: Валидация критичных полей перед отправкой
     const trimmedName = typeof data.name === 'string' ? data.name.trim() : '';
@@ -112,7 +116,13 @@ export const saveFormData = async (
       }
     });
 
-    if (!isDraft) {
+    // Модерационная валидация обязательных полей выполняется только при ЯВНОЙ
+    // публикации/отправке на модерацию (intent === 'publish'). Фоновые сейвы
+    // (autosave, инкрементальное сохранение точки маршрута) лишь персистят
+    // текущее состояние уже опубликованной/сохранённой поездки и не должны
+    // блокироваться требованием полноты (тикет #505). Статус publish/moderation
+    // при этом не меняется — сохраняем как есть.
+    if (intent === 'publish') {
       const moderationValidation = validateReadyForModeration(data);
       if (!moderationValidation.isValid) {
         throw new Error(

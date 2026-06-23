@@ -165,11 +165,21 @@ function TravelWizardStepRoute({
       addPointSaveTimeoutRef.current = setTimeout(() => {
         addPointSaveTimeoutRef.current = null
         if (!isMountedRef.current) return
-        void saveRoute(updatedMarkers, countryIds).catch(() => {
-          // Сейв новой точки мог упасть (например, модерационная валидация
-          // обязательных полей у только что добавленной точки). Точка уже в стейте —
-          // не ревокаем pending-фото и не показываем тост: пользователь дозаполнит
-          // поля и следующее сохранение пройдёт. Тосты ошибок остаются за явным save.
+        void saveRoute(updatedMarkers, countryIds).catch((error: unknown) => {
+          // Точка остаётся в стейте в любом случае — пользователь её видит и может
+          // дозаполнить. Но провал фонового сейва (сеть/сервер) не должен быть
+          // «немым» (тикет #505): handleManualSave уже показывает один тост ошибки
+          // (toastShown), отмену запроса игнорируем. Здесь — только страховка от
+          // повторного тоста; не ревокаем pending-фото.
+          if (!isMountedRef.current) return
+          const message = error instanceof Error ? error.message : ''
+          if (message === 'Request aborted') return
+          if (hasToastBeenShown(error)) return
+          void showToastMessage({
+            type: 'error',
+            text1: 'Точка не сохранилась',
+            text2: 'Проверьте соединение — изменение сохранится при следующем действии.',
+          })
         })
       }, 800)
     },

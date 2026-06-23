@@ -194,7 +194,7 @@ describe('api/misc', () => {
     await expect(saveFormData(payload)).rejects.toThrow('Название обязательно для заполнения')
   })
 
-  it('saveFormData rejects publish payload when description is empty', async () => {
+  it('saveFormData rejects publish-intent payload when description is empty', async () => {
     mockGetSecureItem.mockResolvedValue('token')
 
     const payload = {
@@ -208,11 +208,11 @@ describe('api/misc', () => {
       moderation: false,
     } as any
 
-    await expect(saveFormData(payload)).rejects.toThrow('description')
+    await expect(saveFormData(payload, undefined, { intent: 'publish' })).rejects.toThrow('description')
     expect(mockApiClientRequest).not.toHaveBeenCalled()
   })
 
-  it('saveFormData rejects publish payload when categories are empty', async () => {
+  it('saveFormData rejects publish-intent payload when categories are empty', async () => {
     mockGetSecureItem.mockResolvedValue('token')
 
     const payload = {
@@ -226,8 +226,51 @@ describe('api/misc', () => {
       moderation: false,
     } as any
 
-    await expect(saveFormData(payload)).rejects.toThrow('categories')
+    await expect(saveFormData(payload, undefined, { intent: 'publish' })).rejects.toThrow('categories')
     expect(mockApiClientRequest).not.toHaveBeenCalled()
+  })
+
+  it('saveFormData (background save intent) does NOT moderation-validate a published travel with empty categories', async () => {
+    // Тикет #505: фоновый/инкрементальный сейв уже опубликованной поездки
+    // (publish=true) не должен блокироваться требованием полноты категорий —
+    // он лишь персистит текущее состояние и должен дойти до сетевого вызова.
+    mockGetSecureItem.mockResolvedValue('token')
+    mockApiClientRequest.mockResolvedValue({ ...baseForm, id: 225 })
+
+    const payload = {
+      ...baseForm,
+      id: 225,
+      name: 'Already published trip',
+      description: 'A'.repeat(60),
+      coordsMeTravel: [{ lat: 50, lng: 30, country: 1, address: 'Test', categories: [], image: '', id: 1 }],
+      countries: ['1'],
+      categories: [],
+      publish: true,
+      moderation: true,
+    } as any
+
+    await expect(saveFormData(payload, undefined, { intent: 'save' })).resolves.toBeDefined()
+    expect(mockApiClientRequest).toHaveBeenCalled()
+  })
+
+  it('saveFormData (autosave intent) does NOT moderation-validate a published travel with empty categories', async () => {
+    mockGetSecureItem.mockResolvedValue('token')
+    mockApiClientRequest.mockResolvedValue({ ...baseForm, id: 225 })
+
+    const payload = {
+      ...baseForm,
+      id: 225,
+      name: 'Already published trip',
+      description: 'A'.repeat(60),
+      coordsMeTravel: [{ lat: 50, lng: 30, country: 1, address: 'Test', categories: [], image: '', id: 1 }],
+      countries: ['1'],
+      categories: [],
+      publish: true,
+      moderation: true,
+    } as any
+
+    await expect(saveFormData(payload, undefined, { autosave: true })).resolves.toBeDefined()
+    expect(mockApiClientRequest).toHaveBeenCalled()
   })
 
   it('uploadImage validates file and requires token', async () => {
