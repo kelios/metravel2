@@ -62,6 +62,9 @@ export const buildYandexNaviUrl = (coord: string) => {
   }
   return `https://yandex.ru/navi/?whatshere[point]=${parsed.lon},${parsed.lat}&whatshere[zoom]=16`;
 };
+// Если на устройстве нет Яндекс.Навигатора (схему `yandexnavi:` регистрирует
+// только он, без него tap no-op'ит, result code=-91), открывалка `openExternalUrl`
+// сама перестраивает ссылку в `yandexmaps://...rtext=...` — см. utils/externalLinks.ts.
 
 export const buildTelegramShareUrl = (coord: string) => {
   const mapUrl = buildGoogleMapsUrl(coord);

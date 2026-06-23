@@ -24,6 +24,43 @@ type OpenWebWindowOptions = {
 // схемы бессмысленны и остаются заблокированными — там разрешён только http/https.
 const NATIVE_MAP_PROTOCOLS = ['geo:', 'waze:', 'yandexnavi:', 'yandexmaps:', 'comgooglemaps:', 'om:'];
 
+// На устройствах с Яндекс.Картами, но без Навигатора, схему `yandexnavi:` никто
+// не регистрирует → `Linking.openURL` отклоняется (ActivityNotFoundException,
+// result code=-91). На Android 11+ `canOpenURL` ненадёжен без декларации
+// `<queries>` (возвращает false даже для установленного приложения), поэтому
+// вместо проверки делаем attempt-then-fallback: пробуем открыть Навигатор, а при
+// отказе перестраиваем ссылку в `yandexmaps://...rtext=...` (Яндекс.Карты тоже
+// строят маршрут). На web сюда не попадаем: web-билдер отдаёт HTTPS-URL.
+const yandexMapsFallbackFromNaviUrl = (naviUrl: string): string | null => {
+  const match = naviUrl.match(/lat_to=([^&]+)&lon_to=([^&]+)/);
+  if (!match) return null;
+  return `yandexmaps://maps.yandex.ru/?rtext=~${match[1]},${match[2]}&rtt=auto`;
+};
+
+const openWithYandexFallback = async (
+  normalized: string,
+  onError?: (error: unknown) => void,
+): Promise<boolean> => {
+  const isNativeYandexNavi = Platform.OS !== 'web' && normalized.startsWith('yandexnavi:');
+  try {
+    await Linking.openURL(normalized);
+    return true;
+  } catch (error) {
+    const fallback = isNativeYandexNavi ? yandexMapsFallbackFromNaviUrl(normalized) : null;
+    if (!fallback) {
+      onError?.(error);
+      return false;
+    }
+    try {
+      await Linking.openURL(fallback);
+      return true;
+    } catch (fallbackError) {
+      onError?.(fallbackError);
+      return false;
+    }
+  }
+};
+
 const resolveNormalizedUrl = (rawUrl: string, options: OpenExternalUrlOptions): string => {
   const allowedProtocols =
     options.allowedProtocols ??
@@ -46,13 +83,7 @@ export function normalizeExternalUrl(rawUrl: string): string {
 export async function openExternalUrl(rawUrl: string, options: OpenExternalUrlOptions = {}): Promise<boolean> {
   const normalized = resolveNormalizedUrl(rawUrl, options);
   if (!normalized) return false;
-  try {
-    await Linking.openURL(normalized);
-    return true;
-  } catch (error) {
-    options.onError?.(error);
-    return false;
-  }
+  return openWithYandexFallback(normalized, options.onError);
 }
 
 export async function openExternalUrlInNewTab(
@@ -73,13 +104,7 @@ export async function openExternalUrlInNewTab(
     return Boolean(openedWindow);
   }
 
-  try {
-    await Linking.openURL(normalized);
-    return true;
-  } catch (error) {
-    options.onError?.(error);
-    return false;
-  }
+  return openWithYandexFallback(normalized, options.onError);
 }
 
 export function openWebWindow(rawUrl: string, options: OpenWebWindowOptions = {}): Window | null {
