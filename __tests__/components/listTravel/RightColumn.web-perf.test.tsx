@@ -12,6 +12,12 @@ jest.mock('expo-router', () => ({
   }),
 }))
 
+jest.mock('@/context/AuthContext', () => ({
+  useAuth: () => ({
+    isAuthenticated: false,
+  }),
+}))
+
 jest.mock('@/components/mainPage/StickySearchBar', () => {
   const React = require('react')
   const { Text } = require('react-native')

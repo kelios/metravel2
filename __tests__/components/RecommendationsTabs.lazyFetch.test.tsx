@@ -26,6 +26,13 @@ jest.mock('@/context/AuthContext', () => ({
   }),
 }))
 
+jest.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () => ({
+    isMobile: false,
+    width: 1024,
+  }),
+}))
+
 jest.mock('@/components/travel/PersonalizedRecommendations', () => {
   const React = require('react')
   const { View } = require('react-native')

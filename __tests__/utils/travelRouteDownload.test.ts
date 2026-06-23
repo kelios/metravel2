@@ -8,7 +8,7 @@ jest.mock('@/api/travelRoutes', () => ({
 jest.mock('@/utils/downloadUrlOnWeb', () => ({
   downloadBlobOnWeb: jest.fn(),
 }))
-jest.mock('expo-file-system', () => ({
+jest.mock('expo-file-system/legacy', () => ({
   cacheDirectory: 'file:///cache/',
   writeAsStringAsync: jest.fn(),
 }))
@@ -19,7 +19,7 @@ jest.mock('expo-sharing', () => ({
 
 const { downloadTravelRouteFileBlob } = require('@/api/travelRoutes')
 const { downloadBlobOnWeb } = require('@/utils/downloadUrlOnWeb')
-const FileSystem = require('expo-file-system')
+const FileSystem = require('expo-file-system/legacy')
 const Sharing = require('expo-sharing')
 
 describe('downloadTravelRouteFile (Android-bug 96 regression)', () => {

@@ -107,9 +107,9 @@ describe('HomeInspirationSections', () => {
       expect(lastPath).not.toContain('categories=');
     });
 
-    it('"Все маршруты" button navigates to /search without filters', () => {
+    it('"Открыть каталог" button navigates to /search without filters', () => {
       const { getByLabelText } = render(<HomeInspirationSections />);
-      fireEvent.press(getByLabelText('Все маршруты'));
+      fireEvent.press(getByLabelText('Открыть каталог'));
       expect(mockPush).toHaveBeenCalledWith('/search');
     });
   });

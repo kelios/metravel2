@@ -1,5 +1,6 @@
 import React from 'react'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native'
+import { Alert } from 'react-native'
 
 import CalendarScreen from '@/app/(tabs)/calendar'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
@@ -103,7 +104,18 @@ const makeEntry = (extra?: Partial<TravelStatusEntry>): TravelStatusEntry => ({
 describe('CalendarScreen status editor', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
+      const confirmButton = buttons?.find((button) => button.style === 'destructive') ?? buttons?.[1]
+      confirmButton?.onPress?.()
+    })
+    if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
+      jest.spyOn(window, 'confirm').mockReturnValue(true)
+    }
     mockEntries = [makeEntry()]
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
   })
 
   it('allows changing calendar status from planned to visited', async () => {

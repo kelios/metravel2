@@ -1,8 +1,10 @@
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { Platform } from 'react-native';
 
 import QuestCard from '@/screens/tabs/QuestCard';
+import { createTestQueryClient } from '@/__tests__/helpers/testQueryClient';
 import type { QuestMeta } from '@/utils/questAdapters';
 
 const mockPush = jest.fn();
@@ -35,11 +37,23 @@ jest.mock('@/hooks/useResponsive', () => ({
 jest.mock('@/hooks/useTheme', () => ({
     useThemedColors: () => ({
         backgroundTertiary: 'backgroundTertiary',
+        backgroundSecondary: 'backgroundSecondary',
+        borderLight: 'borderLight',
         brandAlpha30: 'brandAlpha30',
         brandDark: 'brandDark',
+        primary: 'primary',
+        surface: 'surface',
         text: 'text',
         textMuted: 'textMuted',
         textOnDark: 'textOnDark',
+    }),
+}));
+jest.mock('@/hooks/useQuestsApi', () => ({
+    useQuestReviews: () => ({
+        data: [],
+        isLoading: false,
+        isError: false,
+        refetch: jest.fn(),
     }),
 }));
 
@@ -66,6 +80,13 @@ const makeQuest = (overrides: Partial<QuestMeta> = {}): QuestMeta => ({
     ...overrides,
 });
 
+const renderWithQueryClient = (ui: React.ReactElement) =>
+    render(
+        <QueryClientProvider client={createTestQueryClient()}>
+            {ui}
+        </QueryClientProvider>,
+    );
+
 describe('QuestCard', () => {
     beforeEach(() => {
         mockIsPhone = true;
@@ -75,7 +96,7 @@ describe('QuestCard', () => {
     });
 
     it('renders mobile quest media with stable contain geometry and pioneer badge', () => {
-        const { getByTestId } = render(
+        const { getByTestId } = renderWithQueryClient(
             <QuestCard
                 styles={styles}
                 cardWidth={340}
@@ -99,8 +120,8 @@ describe('QuestCard', () => {
         expect(getByTestId('quest-card-pioneer-krakow-dragon')).toBeTruthy();
     });
 
-    it('opens the quest review section from the mobile reviews CTA', () => {
-        const { getByTestId } = render(
+    it('opens the quest reviews modal from the mobile reviews CTA', () => {
+        const { getByTestId } = renderWithQueryClient(
             <QuestCard
                 styles={styles}
                 cardWidth={340}
@@ -111,6 +132,7 @@ describe('QuestCard', () => {
 
         fireEvent.press(getByTestId('quest-card-reviews-krakow-dragon'));
 
-        expect(mockPush).toHaveBeenCalledWith('/quests/krakow/krakow-dragon#quest-review-section');
+        expect(getByTestId('quest-reviews-modal')).toBeTruthy();
+        expect(mockPush).not.toHaveBeenCalled();
     });
 });
