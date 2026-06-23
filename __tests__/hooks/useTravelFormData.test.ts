@@ -258,6 +258,56 @@ describe('useTravelFormData', () => {
     expect(sentPayload.moderation).toBe(false);
   });
 
+  it('incremental save of a published travel uses save intent, not publish (#505)', async () => {
+    (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload, id: 225 }));
+
+    const { result } = renderHook(
+      () =>
+        useTravelFormData({
+          travelId: '225',
+          isNew: false,
+          userId: '42',
+          isSuperAdmin: false,
+          isAuthenticated: true,
+          authReady: true,
+        }),
+      { concurrentRoot: false }
+    );
+
+    await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
+
+    act(() => {
+      result.current.setFormData({
+        ...(result.current.formData as any),
+        id: 225,
+        name: 'Published travel',
+        description: 'Long enough description to keep the published travel intact during edits.',
+        countries: [1],
+        // Published travel with no categories: a publish-intent save would throw,
+        // but an incremental point save must persist regardless.
+        categories: [],
+        coordsMeTravel: [{ lat: 52.4, lng: 31.0, categories: [], image: null }],
+        publish: true,
+        moderation: false,
+      });
+    });
+
+    // Add a point without category/photo via the route step's save path (no intent override).
+    await act(async () => {
+      await result.current.handleManualSave({
+        ...(result.current.formData as any),
+        coordsMeTravel: [
+          { lat: 52.4, lng: 31.0, categories: [], image: null },
+          { lat: 53.9, lng: 27.56, categories: [], image: null },
+        ],
+      } as any);
+    });
+
+    expect(saveFormData).toHaveBeenCalledTimes(1);
+    const sentOptions = (saveFormData as jest.Mock).mock.calls[0][2];
+    expect(sentOptions?.intent).toBe('save');
+  });
+
   it('does not re-fetch from server when the created id is reflected in the URL (F-09)', async () => {
     (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload, id: 999 }));
 

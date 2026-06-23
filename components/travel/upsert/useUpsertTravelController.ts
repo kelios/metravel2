@@ -95,8 +95,8 @@ export function useUpsertTravelController(): UpsertTravelController {
   const { setFormData, handleManualSave, getFormData } = form;
 
   const saveAndClearDraft = useCallback<ManualSave>(
-    async (dataOverride) => {
-      const result = await handleManualSave(dataOverride);
+    async (dataOverride, options) => {
+      const result = await handleManualSave(dataOverride, options);
       await clearDraft();
       return result;
     },

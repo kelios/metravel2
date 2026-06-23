@@ -53,7 +53,10 @@ interface TravelWizardStepPublishProps {
     // ✅ FIX: Унифицированная сигнатура setFormData для совместимости с другими шагами
     setFormData: React.Dispatch<React.SetStateAction<TravelFormData>> | ((data: TravelFormData) => void);
     isSuperAdmin: boolean;
-    onManualSave: (data?: TravelFormData) => Promise<TravelFormData | void>;
+    onManualSave: (
+        data?: TravelFormData,
+        options?: { intent?: 'save' | 'publish' },
+    ) => Promise<TravelFormData | void>;
     onGoBack: () => void;
     onFinish: () => void;
     onNavigateToIssue?: (issue: ModerationIssue) => void;
@@ -331,7 +334,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
 
         // Сохраняем статус на бэкенд (отсюда триггерятся уведомления)
         try {
-            const saved = await onManualSave(nextForm);
+            const saved = await onManualSave(nextForm, { intent: 'publish' });
             const resolvedId = (saved as any)?.id ?? (nextForm as any)?.id ?? null;
             if (!resolvedId) {
                 // Сохранение не дало id — откатываем оптимистичный publish=true,
@@ -389,7 +392,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         setFormData(nextForm);
 
         try {
-            const saved = await onManualSave(nextForm);
+            const saved = await onManualSave(nextForm, { intent: 'publish' });
             const resolvedId = (saved as any)?.id ?? (nextForm as any)?.id ?? null;
             if (!resolvedId) {
                 // Откатываем оптимистичный moderation/publish=true при неуспешном сохранении.

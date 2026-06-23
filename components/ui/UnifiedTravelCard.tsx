@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, useCallback, useEffect } from 'react';
+import { memo, useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
@@ -192,15 +192,31 @@ function UnifiedTravelCard({
     );
   }, [imageUrl, imageHeight, isFeatured, isWeb, mediaFit, mediaProps?.optimizeWeb, width]);
   const [imageFailed, setImageFailed] = useState(false);
+  // A transient hiccup from the on-the-fly resize proxy (502/timeout under load)
+  // would otherwise blank the cover permanently, because imageFailed only clears
+  // when the URL changes. Retry once with a cache-busting param before giving up.
+  const [retryNonce, setRetryNonce] = useState(0);
+  const retriedRef = useRef(false);
   // Reset the failed flag when the image source changes so that recycled list
   // cells (FlashList/FlatList) render a new valid URL instead of staying broken.
   useEffect(() => {
     setImageFailed(false);
+    setRetryNonce(0);
+    retriedRef.current = false;
   }, [optimizedImageUrl]);
+  const displayImageUrl = useMemo(() => {
+    if (!optimizedImageUrl || retryNonce === 0) return optimizedImageUrl;
+    return `${optimizedImageUrl}${optimizedImageUrl.includes('?') ? '&' : '?'}retry=${retryNonce}`;
+  }, [optimizedImageUrl, retryNonce]);
   const handleImageLoad = useCallback(() => {
     setImageFailed(false);
   }, []);
   const handleImageError = useCallback(() => {
+    if (!retriedRef.current) {
+      retriedRef.current = true;
+      setRetryNonce(Date.now());
+      return;
+    }
     setImageFailed(true);
   }, []);
 
@@ -516,7 +532,7 @@ function UnifiedTravelCard({
       {optimizedImageUrl && !imageFailed ? (
         <>
           <ImageCardMedia
-            src={optimizedImageUrl}
+            src={displayImageUrl}
             alt={title}
             width={typeof width === 'number' ? width : undefined}
             height={typeof imageHeight === 'number' ? imageHeight : undefined}

@@ -481,7 +481,10 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       !formState.data.publish,
   });
 
-  const handleManualSave = useCallback(async (dataOverride?: TravelFormData) => {
+  const handleManualSave = useCallback(async (
+    dataOverride?: TravelFormData,
+    options?: { intent?: 'save' | 'publish' },
+  ) => {
     if (manualSavePromiseRef.current) {
       return manualSavePromiseRef.current;
     }
@@ -490,10 +493,16 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
     setIsManualSaveInFlight(true);
     const promise = (async () => {
       try {
-        // Если пользователь меняет статус на "отправить на модерацию" / "опубликовать",
-        // то после успешного сохранения он уходит со страницы, и тосты автосейва больше не нужны.
-        const wantsToLeaveSoon = Boolean(dataOverride?.publish) || Boolean(dataOverride?.moderation);
-        if (wantsToLeaveSoon) {
+        // Publish-намерение определяется ЯВНЫМ флагом от шага публикации
+        // (handleSendToModeration/handleApproveModeration), а НЕ по значению
+        // dataOverride.publish: у уже опубликованной поездки (travel/225)
+        // инкрементальный сейв точки несёт publish=true, но это не публикация —
+        // его нельзя гонять через модерационную валидацию и нельзя глушить тосты
+        // (тикет #505). По умолчанию любое ручное/фоновое сохранение = intent 'save'.
+        const isPublishIntent = options?.intent === 'publish';
+        if (isPublishIntent) {
+          // После успешной публикации/модерации пользователь уходит со страницы —
+          // тосты автосейва больше не нужны.
           suppressAutosaveErrorToastRef.current = true;
         }
 
@@ -512,11 +521,11 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
           : formDataRef.current as TravelFormData;
         formDataRef.current = toSave as TravelFormData;
         // Явная публикация/отправка на модерацию (пользователь нажал кнопку в шаге
-        // публикации, поэтому dataOverride выставляет publish/moderation) проходит
-        // серверную модерационную валидацию. Любое другое ручное/фоновое сохранение
-        // (в т.ч. инкрементальный сейв точки уже опубликованной поездки, тикет #505)
-        // лишь персистит текущее состояние без блокирующей проверки полноты.
-        const intent: 'save' | 'publish' = wantsToLeaveSoon ? 'publish' : 'save';
+        // публикации → options.intent === 'publish') проходит серверную модерационную
+        // валидацию. Любое другое ручное/фоновое сохранение (в т.ч. инкрементальный
+        // сейв точки уже опубликованной поездки, тикет #505) лишь персистит текущее
+        // состояние без блокирующей проверки полноты.
+        const intent: 'save' | 'publish' = isPublishIntent ? 'publish' : 'save';
         // Если пришли извне готовые данные — сохраняем напрямую, минуя отложенный стейт.
         const savedData = await cleanAndSave(toSave, { intent });
         const normalizedSavedData = normalizeDraftPlaceholders(savedData);
