@@ -204,10 +204,31 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                 </div>
             )}
             {markers.length === 0 ? (
-                <p style={styles.emptyText}>
-                    Пока нет ни одной точки маршрута. Нажмите на карту, чтобы добавить первую
-                    {onAddMarkerFromPhoto ? ', или перетащите сюда фото — точки добавятся по геолокации EXIF' : ''}.
-                </p>
+                <>
+                    <p style={styles.emptyText}>
+                        Пока нет ни одной точки. Нажмите на карту, чтобы добавить первую.
+                    </p>
+                    {onAddMarkerFromPhoto ? (
+                        <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={handleAddFromPhotoClick}
+                            style={{
+                                ...(styles.dropZone as React.CSSProperties),
+                                ...(isDragOver ? (styles.dropZoneActive as React.CSSProperties) : {}),
+                                marginTop: '12px',
+                            }}
+                        >
+                            <div style={styles.dropZoneIcon as React.CSSProperties}>
+                                <Feather name="image" size={20} color={colors.primaryDark} />
+                            </div>
+                            <div style={styles.dropZoneTitle}>Перетащите фото сюда</div>
+                            <div style={styles.dropZoneHint}>
+                                или нажмите, чтобы выбрать. Точки добавятся по геолокации EXIF
+                            </div>
+                        </div>
+                    ) : null}
+                </>
             ) : (
                 <div style={styles.list}>
                     {filteredMarkers.map(({ marker, index }) => {
@@ -299,6 +320,23 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                             </div>
                         );
                     })}
+                    {onAddMarkerFromPhoto ? (
+                        <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={handleAddFromPhotoClick}
+                            style={{
+                                ...(styles.dropZone as React.CSSProperties),
+                                ...(styles.dropZoneCompact as React.CSSProperties),
+                                ...(isDragOver ? (styles.dropZoneActive as React.CSSProperties) : {}),
+                            }}
+                        >
+                            <div style={styles.dropZoneTitle}>Перетащите фото сюда</div>
+                            <div style={styles.dropZoneHint}>
+                                или нажмите, чтобы выбрать. Точки добавятся по геолокации EXIF
+                            </div>
+                        </div>
+                    ) : null}
                 </div>
             )}
 

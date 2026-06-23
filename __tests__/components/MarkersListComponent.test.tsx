@@ -229,6 +229,45 @@ describe('MarkersListComponent - Edit modal categories', () => {
         expect(passedFiles).not.toContain(notImage);
     });
 
+    it('renders an explicit drop zone that opens the file picker on click (empty state)', () => {
+        const { container } = render(
+            <MarkersListComponent
+                markers={[]}
+                categoryTravelAddress={[{ id: 1, name: 'Кафе' }]}
+                handleMarkerChange={jest.fn()}
+                handleImageUpload={jest.fn()}
+                handleMarkerRemove={jest.fn()}
+                editingIndex={null}
+                setEditingIndex={jest.fn()}
+                onAddMarkerFromPhoto={jest.fn()}
+            />,
+        );
+
+        const dropZone = screen.getByText('Перетащите фото сюда');
+        expect(dropZone).toBeTruthy();
+
+        const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+        const clickSpy = jest.spyOn(fileInput, 'click').mockImplementation(() => {});
+        fireEvent.click(dropZone);
+        expect(clickSpy).toHaveBeenCalled();
+    });
+
+    it('does not render the drop zone when onAddMarkerFromPhoto is absent (empty state)', () => {
+        render(
+            <MarkersListComponent
+                markers={[]}
+                categoryTravelAddress={[{ id: 1, name: 'Кафе' }]}
+                handleMarkerChange={jest.fn()}
+                handleImageUpload={jest.fn()}
+                handleMarkerRemove={jest.fn()}
+                editingIndex={null}
+                setEditingIndex={jest.fn()}
+            />,
+        );
+
+        expect(screen.queryByText('Перетащите фото сюда')).toBeNull();
+    });
+
     it('does not wire drag-and-drop when onAddMarkerFromPhoto is absent', () => {
         const { container } = render(
             <MarkersListComponent
