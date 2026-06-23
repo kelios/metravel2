@@ -390,6 +390,7 @@ function sanitizeRichTextInternal(
         const src = normalizeRichImageSrc(candidate, options)
         const result: Record<string, string> = {}
         if (src) result.src = src
+        if (attribs.class) result.class = attribs.class
         if (attribs.alt) result.alt = attribs.alt
         if (attribs.title) result.title = attribs.title
         if (attribs.width) result.width = attribs.width

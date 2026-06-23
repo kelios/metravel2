@@ -1,13 +1,12 @@
 import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import Feather from '@expo/vector-icons/Feather';
 
 import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useThemedColors } from '@/hooks/useTheme';
 import { handleHeaderNavPress } from './customHeaderNavModel';
-import BelarusOutlineIcon from './BelarusOutlineIcon';
+import NavigationIcon from './NavigationIcon';
 
 type CustomHeaderNavSectionProps = {
   activePath: string;
@@ -46,18 +45,11 @@ export default function CustomHeaderNavSection({
             accessibilityState={{ selected: isActive }}
           >
             <View style={styles.iconSlot18}>
-              {item.icon === 'belarus-outline' ? (
-                <BelarusOutlineIcon
-                  size={18}
-                  color={isActive ? colors.brandText : colors.textMuted}
-                />
-              ) : (
-                <Feather
-                  name={item.icon as any}
-                  size={18}
-                  color={isActive ? colors.brandText : colors.textMuted}
-                />
-              )}
+              <NavigationIcon
+                name={item.icon}
+                size={18}
+                color={isActive ? colors.brandText : colors.textMuted}
+              />
             </View>
             <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
               {item.label}

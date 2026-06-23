@@ -1,8 +1,10 @@
 export const TEST_API_BASE_URL = 'https://example.test/api';
+const DEFAULT_PROD_API_URL = 'https://metravel.by';
 
 type ResolveApiBaseUrlOptions = {
   platformOS: string;
   envApiUrl?: string | null;
+  prodApiUrl?: string | null;
   nodeEnv?: string | null;
   isE2E?: boolean;
   isLocalApi?: boolean;
@@ -46,6 +48,7 @@ export const isLikelySelfProxyApiUrl = (value?: string | null): boolean => {
 export const resolveApiBaseUrl = ({
   platformOS,
   envApiUrl,
+  prodApiUrl,
   nodeEnv,
   isE2E,
   isLocalApi,
@@ -58,6 +61,7 @@ export const resolveApiBaseUrl = ({
 
   const webOriginApi = platformOS === 'web' ? buildWebOriginApi(windowOrigin) : '';
   const normalizedEnvApiUrl = normalizeString(envApiUrl);
+  const normalizedProdApiUrl = normalizeString(prodApiUrl) || DEFAULT_PROD_API_URL;
 
   if (platformOS === 'web') {
     if (isLocalWebHostname(windowHostname) && webOriginApi) {
@@ -71,6 +75,10 @@ export const resolveApiBaseUrl = ({
     if ((isE2E || isLocalApi) && webOriginApi) {
       return webOriginApi;
     }
+  }
+
+  if (platformOS !== 'web' && !isLocalApi && isLikelySelfProxyApiUrl(normalizedEnvApiUrl) && normalizedProdApiUrl) {
+    return normalizeApiBaseUrl(normalizedProdApiUrl);
   }
 
   return normalizedEnvApiUrl ? normalizeApiBaseUrl(normalizedEnvApiUrl) : '';

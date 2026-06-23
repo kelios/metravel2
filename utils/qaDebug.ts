@@ -6,6 +6,7 @@
 import { useAuthStore } from '@/stores/authStore'
 import { useFavoritesStore } from '@/stores/favoritesStore'
 import { useViewHistoryStore } from '@/stores/viewHistoryStore'
+import { API_BASE_URL } from '@/api/apiConfig'
 
 let currentRoute = ''
 
@@ -22,7 +23,7 @@ export function dumpQaState(route: string, reason: 'route' | 'manual' = 'route')
         userId: auth.userId,
         favorites: useFavoritesStore.getState().favorites.length,
         history: useViewHistoryStore.getState().viewHistory.length,
-        apiUrl: process.env.EXPO_PUBLIC_API_URL ?? null,
+        apiUrl: API_BASE_URL,
       }),
     )
   } catch {

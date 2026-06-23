@@ -166,12 +166,16 @@ export function buildInstagramFacadeHtml(rawUrl: string): string | null {
   ].join('')
 }
 
-function replaceStandaloneInstagramBlocks(html: string): string {
+function replaceStandaloneInstagramBlocks(
+  html: string,
+  build: (src: string) => string | null = buildInstagramCardHtml,
+): string {
   return html.replace(
     /<(p|div)([^>]*)>\s*(?:<a\b[^>]*href=(['"])(https?:\/\/(?:www\.)?instagram\.com\/[^'"<>\s]+)\3[^>]*>[\s\S]*?<\/a>|(https?:\/\/(?:www\.)?instagram\.com\/[^\s<]+))\s*<\/\1>/gi,
     (full, _tag = '', _attrs = '', _quote = '', href = '', rawUrl = '') => {
-      const card = buildInstagramCardHtml(String(href || rawUrl || ''))
-      return card ?? full
+      const attrs = String(_attrs || '')
+      if (/\b(?:ig-lite|rich-social-card)\b/i.test(attrs)) return full
+      return build(String(href || rawUrl || '')) ?? full
     },
   )
 }
@@ -188,15 +192,17 @@ function replaceInstagramIframes(
   })
 }
 
-function replaceInstagramBlockquotes(html: string): string {
+function replaceInstagramBlockquotes(
+  html: string,
+  build: (src: string) => string | null = buildInstagramCardHtml,
+): string {
   return html.replace(
     /<blockquote\b([^>]*)class=(['"])[^'"]*instagram-media[^'"]*\2([^>]*)>[\s\S]*?<\/blockquote>/gi,
     (full, before = '', _quote = '', after = '') => {
       const attrs = `${String(before || '')} ${String(after || '')}`
       const permalink =
         attrs.match(/\b(?:data-instgrm-permalink|cite)=(['"])(.*?)\1/i)?.[2] ?? ''
-      const card = buildInstagramCardHtml(permalink)
-      return card ?? full
+      return build(permalink) ?? full
     },
   )
 }
@@ -214,8 +220,9 @@ export function replaceInstagramEmbedsWithCards(
     initial,
     strategy === 'facade' ? buildInstagramFacadeHtml : buildInstagramCardHtml,
   )
-  next = replaceInstagramBlockquotes(next)
-  next = replaceStandaloneInstagramBlocks(next)
+  const build = strategy === 'facade' ? buildInstagramFacadeHtml : buildInstagramCardHtml
+  next = replaceInstagramBlockquotes(next, build)
+  next = replaceStandaloneInstagramBlocks(next, build)
 
   const trimmed = decodeEntities(next.trim())
   if (!/<[a-z][\s\S]*>/i.test(trimmed) && INSTAGRAM_URL_RE.test(trimmed)) {

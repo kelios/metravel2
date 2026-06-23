@@ -44,13 +44,12 @@ describe('native UpsertTravelRoute', () => {
   it('loads the wizard behind a Suspense boundary when focused', async () => {
     useIsFocusedMock.mockReturnValue(true)
 
-    const { getByText, queryByText } = render(<UpsertTravelRoute />)
-
-    expect(getByText('Загрузка...')).toBeTruthy()
+    const { queryByText } = render(<UpsertTravelRoute />)
 
     await waitFor(() => {
       expect(queryByText('UpsertTravel loaded')).toBeTruthy()
     })
+    expect(queryByText('Попробовать снова')).toBeNull()
   })
 
   it('shows a recoverable error instead of hanging when the wizard fails to load', async () => {

@@ -363,11 +363,15 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     lineHeight: 20,
     letterSpacing: -0.3,
   },
+  overlayTitleWithActions: {
+    paddingRight: 96,
+  },
   overlayCoordRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: DESIGN_TOKENS.spacing.xs,
     alignSelf: 'flex-start',
+    maxWidth: '100%',
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     paddingVertical: 5,
     borderRadius: 999,
@@ -376,6 +380,7 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     borderColor: colors.borderLight,
   },
   overlayCoordText: {
+    flexShrink: 1,
     color: colors.textOnDark,
     fontWeight: '500',
     fontFamily: Platform.select({
@@ -394,6 +399,7 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    minHeight: 36,
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     paddingVertical: 6,
     borderRadius: 999,
@@ -416,6 +422,7 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     fontSize: DESIGN_TOKENS.typography.sizes.xs,
     fontWeight: '600',
     letterSpacing: -0.2,
+    flexShrink: 1,
   },
   mapChipIcon: {
     flexShrink: 0,
@@ -440,7 +447,8 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     fontWeight: '500',
   },
   addButtonContainer: {
-    marginTop: DESIGN_TOKENS.spacing.md,
+    marginTop: DESIGN_TOKENS.spacing.xs,
+    alignSelf: 'flex-start',
   },
   addButtonContainerWide: {
     width: '100%',
@@ -448,6 +456,7 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
   addButton: {
     backgroundColor: colors.primary,
     borderRadius: DESIGN_TOKENS.radii.lg,
+    minHeight: 40,
     paddingVertical: DESIGN_TOKENS.spacing.sm,
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
     flexDirection: 'row',
@@ -479,6 +488,7 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     fontWeight: '600',
     letterSpacing: -0.2,
     color: colors.textOnPrimary,
+    flexShrink: 1,
   },
   viewModeBar: {
     flexDirection: 'row',

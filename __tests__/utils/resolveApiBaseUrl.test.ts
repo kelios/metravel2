@@ -39,6 +39,38 @@ describe('resolveApiBaseUrl', () => {
     ).toBe('https://metravel.by/api');
   });
 
+  it('falls back to prod api on native when env leaked Expo self-proxy url', () => {
+    expect(
+      resolveApiBaseUrl({
+        platformOS: 'android',
+        envApiUrl: 'http://127.0.0.1:8085',
+        prodApiUrl: 'https://metravel.by',
+        isLocalApi: false,
+      })
+    ).toBe('https://metravel.by/api');
+  });
+
+  it('uses the canonical prod fallback on native self-proxy url when prod env is not public', () => {
+    expect(
+      resolveApiBaseUrl({
+        platformOS: 'android',
+        envApiUrl: 'http://127.0.0.1:8085',
+        isLocalApi: false,
+      })
+    ).toBe('https://metravel.by/api');
+  });
+
+  it('keeps explicit local native api url when local api mode is enabled', () => {
+    expect(
+      resolveApiBaseUrl({
+        platformOS: 'android',
+        envApiUrl: 'http://127.0.0.1:8085',
+        prodApiUrl: 'https://metravel.by',
+        isLocalApi: true,
+      })
+    ).toBe('http://127.0.0.1:8085/api');
+  });
+
   it('uses web origin for e2e and local api flows', () => {
     expect(
       resolveApiBaseUrl({

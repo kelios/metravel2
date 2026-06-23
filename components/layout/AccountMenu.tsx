@@ -13,7 +13,7 @@ import {
   createCtaLoginStyles,
   createMenuStyles,
 } from './headerStyles'
-import BelarusOutlineIcon from './BelarusOutlineIcon'
+import NavigationIcon from './NavigationIcon'
 
 import { useAuth } from '@/context/AuthContext'
 import { useFavorites } from '@/context/FavoritesContext'
@@ -24,6 +24,7 @@ import { routes } from '@/utils/routes'
 import { useThemedColors } from '@/hooks/useTheme'
 import { buildLoginHref } from '@/utils/authNavigation'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
+import type { NavigationIconName } from '@/constants/navigationIcons'
 
 const IS_WEB = Platform.OS === 'web'
 
@@ -37,7 +38,7 @@ type MenuLinkItem = {
   key: string
   title: string
   path?: string
-  icon: string
+  icon: NavigationIconName
   onPress?: () => void
   strong?: boolean
   iconColor?: string
@@ -143,15 +144,13 @@ function MenuLink({
       title={item.title}
       leadingIcon={({ size }) =>
         item.leadingNode ??
-        (item.icon === 'belarus-outline' ? (
-          <BelarusOutlineIcon size={size} color={item.iconColor ?? defaultIconColor} />
-        ) : (
-          <Feather
-            name={item.icon as any}
+        (
+          <NavigationIcon
+            name={item.icon}
             size={size}
             color={item.iconColor ?? defaultIconColor}
           />
-        ))
+        )
       }
       style={styles.menuItem}
       titleStyle={item.strong ? styles.menuItemTitleStrong : styles.menuItemTitle}

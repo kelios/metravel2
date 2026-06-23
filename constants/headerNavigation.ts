@@ -1,9 +1,11 @@
+import type { NavigationIconName } from './navigationIcons';
+
 export type HeaderNavItemPriority = 'primary' | 'secondary';
 
 export interface HeaderNavItem {
   path: string;
   label: string;
-  icon: string;
+  icon: NavigationIconName;
   priority: HeaderNavItemPriority;
   external?: boolean;
 }
@@ -15,7 +17,7 @@ export const HEADER_NAV_ITEMS: HeaderNavItem[] = [
   { path: '/places', label: 'Места', icon: 'map-pin', priority: 'primary' },
   { path: '/trips', label: 'Попутчики', icon: 'users', priority: 'primary' },
   { path: '/roulette', label: 'Случайный маршрут', icon: 'shuffle', priority: 'primary' },
-  { path: '/quests', label: 'Квесты', icon: 'target', priority: 'primary' },
+  { path: '/quests', label: 'Квесты', icon: 'quest-route', priority: 'primary' },
   { path: 'https://metravel.by/travels/akkaunty-v-instagram-o-puteshestviyah-po-belarusi', label: 'Instagram', icon: 'instagram', priority: 'secondary', external: true },
 ];
 

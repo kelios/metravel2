@@ -1,17 +1,19 @@
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 type BelarusOutlineIconProps = {
   color: string;
   size?: number;
   strokeWidth?: number;
+  style?: StyleProp<ViewStyle>;
 };
 
 export default function BelarusOutlineIcon({
   color,
   size = 20,
   strokeWidth = 2,
+  style,
 }: BelarusOutlineIconProps) {
   const accessibilityProps =
     Platform.OS === 'web'
@@ -27,6 +29,7 @@ export default function BelarusOutlineIcon({
       height={size}
       viewBox="0 0 24 24"
       fill="none"
+      style={style as any}
       {...accessibilityProps}
     >
       <Path

@@ -48,6 +48,7 @@ Default bug loop:
 - Do not let Android Developer change mobile release/build configs without explicit user approval.
 - Do not let implementation start from vague requirements; require acceptance criteria or a bug report first.
 - Do not deploy production from vague wording; require an explicit `prod` deploy request and a clean environment gate.
+- Before assigning deploy, build, server rebuild/restart, full/preflight tests, Playwright/e2e, or Lighthouse work, check the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; if the same target is already running, do not start a second agent command.
 - Keep unrelated user changes separate; never revert files outside the task.
 - Preserve project rules for external links, design tokens, e2e secrets, server paths, and scope-based validation.
 - For visible web UI changes, require browser verification, screenshot, and console check before final handoff.

@@ -337,7 +337,7 @@
 
 - Уже покрыто: readiness/launch, runtime health, базовая навигация, поиск, детали маршрута, share/export, карта, permissions, auth, квестовые native-регрессии и recommendation shelves.
 - Добавленные пробелы: standalone-сборка без Metro, app/deep links, lifecycle и cold restart, offline/recovery, soft keyboard, native media upload, push/deep-link routing, external intents и rich embedded content.
-- Для Android release/dev-client QA P1-минимум: `AND-USB-01..06`, `AND-USB-08`, `AND-USB-10`, `AND-USB-13..18`; P2-кейсы `AND-USB-07`, `AND-USB-09`, `AND-USB-19..20` проходить перед store submission или когда менялись соответствующие поверхности.
+- Для Android release/dev-client QA P1-минимум: `AND-USB-01..06`, `AND-USB-08`, `AND-USB-10`, `AND-USB-13..18`, `AND-USB-21`; P2-кейсы `AND-USB-07`, `AND-USB-09`, `AND-USB-19..20` проходить перед store submission или когда менялись соответствующие поверхности.
 
 | ID | Заголовок | Предусловие | Шаги | Ожидаемый результат |
 |----|-----------|-------------|------|---------------------|
@@ -361,6 +361,7 @@
 | AND-USB-18 | Native media picker/upload | Авторизованный e2e-аккаунт, non-prod backend, тестовое фото | Проверить avatar upload и, если доступен безопасный черновик, travel cover/gallery/route-point photo: allow и deny ветки media/camera permission | Picker/camera открываются, preview сохраняет геометрию, upload/compress завершается или даёт понятный fallback; permission deny не крашит форму |
 | AND-USB-19 | Push notification permission + routing | Build с `expo-notifications`; доступен тестовый push/local quest reminder payload | Проверить allow/deny prompt, foreground notification, tap по уведомлению при тёплом и убитом приложении; payload содержит `url` или `screen` | Android channel создан, отсутствие token/push capability не крашит app, tap ведёт на нужный экран после mount навигации |
 | AND-USB-20 | External intents + embedded content | Есть маршрут/статья с внешними ссылками, YouTube/Instagram/rich-text или external maps | Открыть Telegram/WhatsApp/email/share, external maps, YouTube/Instagram/fallback-ссылки; вернуться системной Back | Открывается системный chooser/app/browser или безопасный fallback; возврат в приложение сохраняет экран; нет direct `Linking.openURL` crash |
+| AND-USB-21 | Roulette favorite auth action | Авторизованный аккаунт, dev-client подключен к рабочему API | Открыть `/roulette`, нажать «Подобрать»/«Ещё», на первой карточке результата нажать heart, дождаться смены состояния, затем нажать heart повторно | Add: label меняется на «Удалить из избранного», нет toast «Не удалось обновить избранное», `PATCH /api/travels/{id}/mark-as-favorite/` использует реальный id; Remove: label возвращается на «Добавить в избранное», `PATCH /unmark-as-favorite/` успешен; в logcat нет `ReactNativeJS` runtime error |
 
 #### Трассируемость Android device coverage
 
@@ -386,6 +387,7 @@
 | AND-USB-18 | P1 | manual non-prod media pass; unit `useAvatarUpload`, `imageCompressor` | manual |
 | AND-USB-19 | P2 | manual notification payload; unit `services/notifications`, `usePushNotifications.native` | manual |
 | AND-USB-20 | P2 | manual OS intents; unit `externalLinks`, `internalLinks`, `travelRouteDownload` | manual |
+| AND-USB-21 | P1 | manual adb/dev-client; unit `OptimizedFavoriteButton`, `favoritesStore` | manual + unit |
 
 ### Чек-лист платформ
 

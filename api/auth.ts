@@ -18,6 +18,7 @@ const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true'
 const rawApiUrl = resolveApiBaseUrl({
     platformOS: Platform.OS,
     envApiUrl: process.env.EXPO_PUBLIC_API_URL,
+    prodApiUrl: process.env.PROD_API_URL,
     nodeEnv: process.env.NODE_ENV,
     isE2E,
     windowOrigin: Platform.OS === 'web' && typeof window !== 'undefined' ? window.location?.origin : null,
@@ -271,13 +272,13 @@ export const setNewPasswordApi = async (password_reset_token: string, password: 
     }
 };
 
-export const registration = async (values: FormValues): Promise<string | { ok: boolean; message: string }> => {
+export const registration = async (values: FormValues): Promise<{ ok: boolean; message: string }> => {
     try {
         if (values.password) {
             const passwordValidation = validatePassword(values.password);
             if (!passwordValidation.valid) {
                 Alert.alert('Ошибка валидации', passwordValidation.error || 'Пароль не соответствует требованиям');
-                throw new Error(passwordValidation.error || 'Пароль не соответствует требованиям');
+                return { ok: false, message: passwordValidation.error || 'Пароль не соответствует требованиям' };
             }
         }
 
@@ -303,12 +304,13 @@ export const registration = async (values: FormValues): Promise<string | { ok: b
 
         const jsonResponse = await safeJsonParse<{
             token?: string;
+            refresh?: string;
             name?: string;
             error?: string;
         }>(response, {});
 
         if (!response.ok) {
-            throw new Error(jsonResponse.error || 'Ошибка регистрации');
+            return { ok: false, message: jsonResponse.error || 'Ошибка регистрации' };
         }
 
         if (jsonResponse.token) {
@@ -321,12 +323,11 @@ export const registration = async (values: FormValues): Promise<string | { ok: b
         }
 
         const successMessage = 'Пользователь успешно зарегистрирован. Проверьте почту для активации.';
-        return successMessage;
+        return { ok: true, message: successMessage };
     } catch (error: unknown) {
         devError('Registration error:', error);
-        // Тесты ожидают строку с текстом ошибки
         const msg = error instanceof Error ? error.message : 'Произошла неизвестная ошибка.';
-        return msg;
+        return { ok: false, message: msg };
     }
 };
 

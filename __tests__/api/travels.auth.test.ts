@@ -135,9 +135,9 @@ describe('src/api/auth.ts auth/password API', () => {
     it('валидация пароля вызывается и при невалидном пароле возвращает сообщение об ошибке', async () => {
       mockedValidatePassword.mockReturnValueOnce({ valid: false, error: 'bad' } as any);
 
-      const msg = await registration({ email: 'e', password: 'p' } as any);
+      const result = await registration({ email: 'e', password: 'p' } as any);
 
-      expect(msg).toBe('bad');
+      expect(result).toEqual({ ok: false, message: 'bad' });
     });
 
     it('успешная регистрация сохраняет токен и имя', async () => {
@@ -145,9 +145,12 @@ describe('src/api/auth.ts auth/password API', () => {
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({ token: 't', name: 'User' } as any);
 
-      const msg = await registration({ email: 'e', password: 'p' } as any);
+      const result = await registration({ email: 'e', password: 'p' } as any);
 
-      expect(msg).toContain('Пользователь успешно зарегистрирован');
+      expect(result).toEqual({
+        ok: true,
+        message: 'Пользователь успешно зарегистрирован. Проверьте почту для активации.',
+      });
       expect(setSecureItem).toHaveBeenCalledWith('userToken', 't');
     });
   });

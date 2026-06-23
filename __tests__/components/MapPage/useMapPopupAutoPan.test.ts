@@ -13,6 +13,7 @@ describe('useMapPopupAutoPan', () => {
     disconnect: jest.Mock
     trigger: (contentRect?: { width: number; height: number }) => void
   }> = []
+  const popupStyle = () => ({ setProperty: jest.fn() })
 
   beforeEach(() => {
     jest.useFakeTimers()
@@ -101,6 +102,7 @@ describe('useMapPopupAutoPan', () => {
     } as HTMLElement
 
     const popupEl = {
+      style: popupStyle(),
       getBoundingClientRect: () => ({
         left: 96,
         top: 90,
@@ -164,6 +166,7 @@ describe('useMapPopupAutoPan', () => {
     } as HTMLElement
 
     const popupEl = {
+      style: popupStyle(),
       getBoundingClientRect: () => ({
         left: 940,
         top: 180,
@@ -266,6 +269,7 @@ describe('useMapPopupAutoPan', () => {
 
     // Popup overflows the safe right edge: safeRight = 1280 - 24 = 1256, popup.right = 1300.
     const popupEl = {
+      style: popupStyle(),
       getBoundingClientRect: () => ({
         left: 940,
         top: 180,
@@ -331,6 +335,7 @@ describe('useMapPopupAutoPan', () => {
     } as HTMLElement
 
     const popupEl = {
+      style: popupStyle(),
       getBoundingClientRect: () => ({
         left: 860,
         top: 180,

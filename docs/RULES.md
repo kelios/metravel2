@@ -52,6 +52,13 @@ npm run test:run
 - Always verify the changed scope before finishing the task.
   - For small, isolated changes, this can be a targeted lint/test check instead of the full suite.
   - For larger changes, use the full `npm run lint` and `npm run test:run` pass.
+- Long-running operation coordination is mandatory:
+  - deploys, release/build commands, production web builds, server rebuilds/restarts, full/preflight checks, Playwright/e2e, Lighthouse, and any command that writes shared build/test artifacts are exclusive by operation type and target;
+  - before starting one, check active processes and known locks for the same target, for example `ps`/`pgrep -af` matches for `build-prod.sh`, `deploy-frontend.sh`, `npm run`, `playwright`, `lighthouse`, `expo export`, `docker compose`, `nginx`, `systemctl`, plus lock files such as `dist/.prod-build.lock` or `.codex-temp/ops/*.lock`;
+  - if another agent or terminal already runs the same target operation, do not start a duplicate. Wait for it, reuse its result when visible, or report a blocker with PID, command, target, and the next safe action;
+  - do not kill, restart, or replace another agent's process unless the user explicitly asked for it or a documented safe wrapper owns that cleanup;
+  - if a lock is stale, confirm the process is gone or the lock exceeded its documented stale window before removing it;
+  - broad gates (`npm run release:check`, `npm run check:preflight`, full `npm run test:run`, Playwright/e2e) are exclusive per workspace. Narrow unit tests may run only when they do not share the same server/build/output and no broad gate is already active.
 - Store temporary debugging artifacts only in ignored local folders such as `.codex-temp/` or `.codex-debug/`.
   - Do not put ad-hoc screenshots, traces, logs, JSON reports, or throwaway QA output in tracked project folders.
   - Keep only artifacts that are still useful for the current task, and delete stale or unnecessary debug output before handoff.

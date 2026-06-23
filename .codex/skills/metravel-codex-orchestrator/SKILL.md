@@ -27,6 +27,7 @@ Docs to read:
 Branch/status:
 Risk zones:
 Validation plan:
+Operation gate:
 Needs browser/mobile/native check:
 External links affected:
 Can proceed without clarification:
@@ -78,6 +79,7 @@ Do not leak desired conclusions into QA/reviewer prompts; pass raw scope, diff, 
 - For visible web UI, require browser preview, screenshot, and console check.
 - For Android/native, do not claim device readiness without emulator/device evidence.
 - For production deploy or submit, require explicit target environment and clean gates.
+- Before assigning or running deploy, build, server rebuild/restart, full/preflight tests, Playwright/e2e, or Lighthouse work, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; do not launch duplicates for the same target.
 
 ## Final Self-Check
 

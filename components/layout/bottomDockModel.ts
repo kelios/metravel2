@@ -1,26 +1,7 @@
 import type { Href } from 'expo-router'
+import type { NavigationIconName } from '@/constants/navigationIcons'
 
-type BottomDockFeatherIconName =
-  | 'alert-triangle'
-  | 'book-open'
-  | 'clock'
-  | 'compass'
-  | 'disc'
-  | 'file-text'
-  | 'flag'
-  | 'mail'
-  | 'map'
-  | 'map-pin'
-  | 'more-horizontal'
-  | 'plus-circle'
-  | 'settings'
-  | 'shield'
-  | 'shuffle'
-  | 'target'
-  | 'user'
-  | 'users'
-
-export type BottomDockIconName = BottomDockFeatherIconName | 'belarus-outline'
+export type BottomDockIconName = NavigationIconName
 
 export type BottomDockItemDef = {
   accessibilityLabel: string
@@ -33,7 +14,7 @@ export type BottomDockItemDef = {
 
 export type BottomDockMoreMenuItem = {
   accessibilityLabel: string
-  iconName: BottomDockFeatherIconName
+  iconName: BottomDockIconName
   key: string
   label: string
   muted?: boolean
@@ -48,7 +29,7 @@ export type BottomDockMoreMenuSection = {
 export const BOTTOM_DOCK_ITEM_DEFS: BottomDockItemDef[] = [
   { key: 'home', label: 'Маршруты', accessibilityLabel: 'Маршруты', route: '/search', iconName: 'compass' },
   { key: 'map', label: 'Карта', accessibilityLabel: 'Карта', route: '/map', iconName: 'map' },
-  { key: 'quests', label: 'Квесты', accessibilityLabel: 'Квесты', route: '/quests', iconName: 'target' },
+  { key: 'quests', label: 'Квесты', accessibilityLabel: 'Квесты', route: '/quests', iconName: 'quest-route' },
   { key: 'favorites', label: 'Профиль', accessibilityLabel: 'Профиль', route: '/profile', iconName: 'user' },
   { key: 'more', label: 'Ещё', accessibilityLabel: 'Ещё', route: '/more', iconName: 'more-horizontal', isMore: true },
 ]
@@ -57,7 +38,7 @@ export const BOTTOM_DOCK_MORE_MENU_SECTIONS: BottomDockMoreMenuSection[] = [
   {
     key: 'primary',
     items: [
-      { key: 'search', label: 'Беларусь', accessibilityLabel: 'Беларусь', route: '/travelsby', iconName: 'flag' },
+      { key: 'search', label: 'Беларусь', accessibilityLabel: 'Беларусь', route: '/travelsby', iconName: 'belarus-outline' },
       { key: 'places', label: 'Места', accessibilityLabel: 'Места', route: '/places', iconName: 'map-pin' },
       { key: 'trips', label: 'Попутчики', accessibilityLabel: 'Попутчики', route: '/trips', iconName: 'users' },
       { key: 'articles', label: 'Статьи', accessibilityLabel: 'Статьи', route: '/articles', iconName: 'file-text' },

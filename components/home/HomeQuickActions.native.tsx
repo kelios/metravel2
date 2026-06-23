@@ -5,23 +5,24 @@
 import { memo, useMemo } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
-import { Feather } from '@expo/vector-icons'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import type { NavigationIconName } from '@/constants/navigationIcons'
 import { useThemedColors } from '@/hooks/useTheme'
 import { hapticImpact } from '@/utils/haptics'
+import NavigationIcon from '@/components/layout/NavigationIcon'
 
 type QuickAction = {
   key: string
   label: string
-  icon: keyof typeof Feather.glyphMap
+  icon: NavigationIconName
   route: string
 }
 
 const ACTIONS: QuickAction[] = [
   { key: 'map', label: 'Карта', icon: 'map', route: '/map' },
   { key: 'places', label: 'Места', icon: 'map-pin', route: '/places' },
-  { key: 'quests', label: 'Квесты', icon: 'compass', route: '/quests' },
+  { key: 'quests', label: 'Квесты', icon: 'quest-route', route: '/quests' },
   { key: 'roulette', label: 'Случайный маршрут', icon: 'shuffle', route: '/roulette' },
 ]
 
@@ -47,7 +48,7 @@ function HomeQuickActions() {
           accessibilityRole="button"
           accessibilityLabel={action.label}
         >
-          <Feather name={action.icon} size={16} color={colors.primary} />
+          <NavigationIcon name={action.icon} size={16} color={colors.primary} />
           <Text style={styles.chipText} numberOfLines={1}>
             {action.label}
           </Text>

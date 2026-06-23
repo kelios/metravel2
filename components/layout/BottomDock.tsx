@@ -6,6 +6,7 @@ import {
   Pressable,
   Platform,
   Modal,
+  ScrollView,
   LayoutChangeEvent,
   useWindowDimensions,
 } from "react-native";
@@ -20,7 +21,7 @@ import { useAndroidBackHandler } from "@/hooks/useAndroidBackHandler";
 import { useBottomSheetStore } from "@/stores/bottomSheetStore";
 import { useMapPanelStore } from "@/stores/mapPanelStore";
 import { hapticSelection } from "@/utils/haptics";
-import BelarusOutlineIcon from './BelarusOutlineIcon';
+import NavigationIcon from './NavigationIcon';
 import {
   BOTTOM_DOCK_ITEM_DEFS,
   BOTTOM_DOCK_MORE_MENU_SECTIONS,
@@ -245,12 +246,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
           label: def.label,
           accessibilityLabel: def.accessibilityLabel,
           route: def.route,
-          icon:
-            def.iconName === 'belarus-outline' ? (
-              <BelarusOutlineIcon size={22} color={iconColor} />
-            ) : (
-              <Feather name={def.iconName} size={22} color={iconColor} />
-            ),
+          icon: <NavigationIcon name={def.iconName} size={22} color={iconColor} />,
           isMore: def.isMore,
         };
       }),
@@ -274,7 +270,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
         accessibilityRole="link"
         accessibilityLabel={item.accessibilityLabel}
       >
-        <Feather
+        <NavigationIcon
           name={item.iconName}
           size={18}
           color={item.muted ? colors.textMuted : colors.primary}
@@ -374,14 +370,19 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                 <Feather name="x" size={20} color={colors.textMuted} />
               </Pressable>
             </View>
-            <View testID="footer-more-list" style={styles.moreList}>
+            <ScrollView
+              testID="footer-more-list"
+              style={styles.moreList}
+              contentContainerStyle={styles.moreListContent}
+              keyboardShouldPersistTaps="handled"
+            >
               {BOTTOM_DOCK_MORE_MENU_SECTIONS.map((section, sectionIndex) => (
                 <React.Fragment key={section.key}>
                   {section.items.map((item) => renderMoreMenuItem(item, () => setShowMore(false)))}
                   {sectionIndex < BOTTOM_DOCK_MORE_MENU_SECTIONS.length - 1 ? <View style={styles.moreDivider} /> : null}
                 </React.Fragment>
               ))}
-            </View>
+            </ScrollView>
           </View>
         </>
       )}
@@ -415,7 +416,11 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                   <Feather name="x" size={20} color={colors.textMuted} />
                 </Pressable>
               </View>
-              <View style={styles.moreList}>
+              <ScrollView
+                style={styles.moreList}
+                contentContainerStyle={styles.moreListContent}
+                keyboardShouldPersistTaps="handled"
+              >
                 {BOTTOM_DOCK_MORE_MENU_SECTIONS.map((section, sectionIndex) => (
                   <React.Fragment key={section.key}>
                     {section.items
@@ -426,7 +431,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                     {sectionIndex < BOTTOM_DOCK_MORE_MENU_SECTIONS.length - 1 ? <View style={styles.moreDivider} /> : null}
                   </React.Fragment>
                 ))}
-              </View>
+              </ScrollView>
             </View>
           </View>
         </Modal>
@@ -454,7 +459,11 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                   <Text style={styles.sheetTitle}>Ещё</Text>
                 </View>
               </View>
-              <View style={styles.moreList}>
+              <ScrollView
+                style={styles.moreList}
+                contentContainerStyle={styles.moreListContent}
+                keyboardShouldPersistTaps="handled"
+              >
                 {BOTTOM_DOCK_MORE_MENU_SECTIONS.map((section, sectionIndex) => (
                   <React.Fragment key={section.key}>
                     {section.items
@@ -470,7 +479,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                     {sectionIndex < BOTTOM_DOCK_MORE_MENU_SECTIONS.length - 1 ? <View style={styles.moreDivider} /> : null}
                   </React.Fragment>
                 ))}
-              </View>
+              </ScrollView>
             </GorhomBottomSheetView>
           )}
         </GorhomBottomSheet>
@@ -616,6 +625,8 @@ const createStyles = (
     borderTopRightRadius: PANEL_RADIUS,
     padding: 16,
     zIndex: 11000,
+    maxHeight: 'calc(100vh - 88px)',
+    overflow: 'hidden',
     boxShadow: DESIGN_TOKENS.shadows.modal,
     transition: 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)',
     transform: 'translateY(0)',
@@ -637,6 +648,7 @@ const createStyles = (
     borderTopRightRadius: PANEL_RADIUS,
     padding: 16,
     paddingBottom: safeBottomPadding + 16,
+    maxHeight: '82%',
   },
   sheetHandle: {
     width: 40,
@@ -678,7 +690,11 @@ const createStyles = (
     backgroundColor: colors.backgroundSecondary,
   },
   moreList: {
+    flexGrow: 0,
+  } as any,
+  moreListContent: {
     gap: 4,
+    paddingBottom: 4,
   } as any,
   moreItem: {
     paddingVertical: 12,

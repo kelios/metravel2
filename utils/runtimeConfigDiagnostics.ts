@@ -1,10 +1,14 @@
 import { getRuntimeConfigDiagnosticsCore } from '@/utils/runtimeConfigContract';
 import type { RuntimeConfigDiagnostic, RoutingApiEnv } from '@/utils/runtimeConfigContract';
+import { Platform } from 'react-native';
 
 export const getRuntimeConfigDiagnostics = (
-  env: RoutingApiEnv = (process as any)?.env ?? {}
+  env: RoutingApiEnv = (process as any)?.env ?? {},
+  options: { platformOS?: string } = {}
 ): RuntimeConfigDiagnostic[] => {
-  return getRuntimeConfigDiagnosticsCore(env);
+  return getRuntimeConfigDiagnosticsCore(env, {
+    platformOS: options.platformOS ?? Platform.OS,
+  });
 };
 
 type RuntimeConfigDiagnosticsGate = {

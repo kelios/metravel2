@@ -5,12 +5,11 @@ import { devError } from '@/utils/logger';
 import { safeJsonParseString } from '@/utils/safeJsonParse';
 import { cleanupInvalidFavorites, isValidFavoriteId } from '@/utils/favoritesCleanup';
 import { showToast } from '@/utils/toast';
+import { markTravelAsFavorite, unmarkTravelAsFavorite } from '@/api/travelsFavorites';
+import { clearUserFavorites, fetchUserFavoriteTravels } from '@/api/user';
 
 const FAVORITES_KEY = 'metravel_favorites';
 const SERVER_FAVORITES_CACHE_KEY = 'metravel_favorites_server';
-
-const getFavoritesApi = async () => import('@/api/travelsFavorites');
-const getUserApi = async () => import('@/api/user');
 
 const inFlightKeys = new Set<string>();
 
@@ -110,7 +109,6 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
             set((s) => ({ favorites: [...s.favorites, optimistic] }));
 
             try {
-                const { markTravelAsFavorite } = await getFavoritesApi();
                 await markTravelAsFavorite(item.id);
             } catch (error) {
                 set((s) => ({ favorites: s.favorites.filter((f) => !(f.id === item.id && f.type === item.type)) }));
@@ -178,7 +176,6 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
 
             try {
                 if (type === 'travel') {
-                    const { unmarkTravelAsFavorite } = await getFavoritesApi();
                     await unmarkTravelAsFavorite(id);
                 }
             } catch (error) {
@@ -223,7 +220,6 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
 
     clearFavorites: async ({ isAuthenticated, userId }) => {
         if (isAuthenticated && userId) {
-            const { clearUserFavorites } = await getUserApi();
             await clearUserFavorites(userId);
             set({ favorites: [] });
             await AsyncStorage.setItem(`${SERVER_FAVORITES_CACHE_KEY}_${userId}`, JSON.stringify([]));
@@ -267,7 +263,6 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
     refreshFromServer: async (userId) => {
         if (!userId) return false;
         try {
-            const { fetchUserFavoriteTravels } = await getUserApi();
             const favDto = await fetchUserFavoriteTravels(userId);
             const favArr = Array.isArray(favDto) ? favDto : [];
             const userFavorites: FavoriteItem[] = favArr.map((t) => ({

@@ -3,10 +3,11 @@ import { Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native
 import Feather from '@expo/vector-icons/Feather'
 import type { ThemedColors } from '@/hooks/useTheme'
 import { DOCUMENT_NAV_ITEMS, PRIMARY_HEADER_NAV_ITEMS, SECONDARY_HEADER_NAV_ITEMS, type HeaderNavItem } from '@/constants/headerNavigation'
+import type { NavigationIconName } from '@/constants/navigationIcons'
 import { buildLoginHref } from '@/utils/authNavigation'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
 import UnreadBadge from './UnreadBadge'
-import BelarusOutlineIcon from './BelarusOutlineIcon'
+import NavigationIcon from './NavigationIcon'
 
 type Props = {
   visible: boolean
@@ -29,7 +30,7 @@ type Props = {
 type MenuActionItem = {
   key: string
   label: string
-  icon: string
+  icon: NavigationIconName
   onPress: () => void
   accessibilityLabel?: string
   active?: boolean
@@ -57,18 +58,11 @@ const renderMenuItem = (
     accessibilityState={item.active ? { selected: true } : undefined}
   >
     <View style={[styles.iconSlot20, item.iconSlotStyle]}>
-      {item.icon === 'belarus-outline' ? (
-        <BelarusOutlineIcon
-          size={20}
-          color={item.iconColor ?? (item.active ? colors.primary : colors.textMuted)}
-        />
-      ) : (
-        <Feather
-          name={item.icon as any}
-          size={20}
-          color={item.iconColor ?? (item.active ? colors.primary : colors.textMuted)}
-        />
-      )}
+      <NavigationIcon
+        name={item.icon}
+        size={20}
+        color={item.iconColor ?? (item.active ? colors.primary : colors.textMuted)}
+      />
       {item.trailingNode}
     </View>
     <Text style={[styles.modalNavLabel, item.active && styles.modalNavLabelActive, item.labelStyle]}>
@@ -97,6 +91,13 @@ export default function CustomHeaderMobileMenu({
   // A11Y-05: focus trap для web — при открытии меню фокус остаётся внутри панели
   const panelRef = useRef<any>(null);
   useFocusTrap(panelRef as any, { enabled: visible && Platform.OS === 'web' });
+
+  const exportMenuItem: MenuActionItem = {
+    key: 'export',
+    label: 'Экспорт в PDF',
+    icon: 'file-text',
+    onPress: () => onUserAction('/export'),
+  }
 
   const accountItems: MenuActionItem[] = !isAuthenticated
     ? [
@@ -152,16 +153,7 @@ export default function CustomHeaderMobileMenu({
           trailingNode: <UnreadBadge count={unreadCount} />,
         },
         // #495: PDF book export is web-only (usePdfExportRuntime blocks native) — hide its entry on native.
-        ...(Platform.OS === 'web'
-          ? [
-              {
-                key: 'export',
-                label: 'Экспорт в PDF',
-                icon: 'file-text',
-                onPress: () => onUserAction('/export'),
-              },
-            ]
-          : []),
+        ...(Platform.OS === 'web' ? [exportMenuItem] : []),
         {
           key: 'logout',
           label: 'Выход',

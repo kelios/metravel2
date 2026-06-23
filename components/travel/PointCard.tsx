@@ -185,6 +185,10 @@ const PointCard = React.memo(function PointCard({
 
   const openMapFromLink = useCallback(() => onOpenMap(point.coord), [onOpenMap, point.coord]);
   const showActions = isMobile || hovered || isTouchWeb;
+  const hasAddPointAction = Boolean(onAddPoint);
+  const imageHeight = hasAddPointAction && isMobile
+    ? Math.max(responsive.imageMinHeight, 320)
+    : responsive.imageMinHeight;
 
   const handleImageError = useCallback(() => {
     setImageError(true);
@@ -207,10 +211,11 @@ const PointCard = React.memo(function PointCard({
         accessibilityLabel={`Открыть место: ${point.address}`}
       >
         <View
+          testID="travel-point-card-image-wrap"
           style={[
             styles.imageWrap,
             {
-              height: responsive.imageMinHeight,
+              height: imageHeight,
             },
           ]}
         >
@@ -228,7 +233,7 @@ const PointCard = React.memo(function PointCard({
               style={StyleSheet.absoluteFill}
             />
           ) : (
-            <View style={[styles.noImage, { minHeight: responsive.imageMinHeight }]} />
+            <View style={[styles.noImage, { minHeight: imageHeight }]} />
           )}
 
           {showActions && (
@@ -257,9 +262,13 @@ const PointCard = React.memo(function PointCard({
             </View>
           )}
 
-          <View style={styles.overlayBottom}>
+          <View style={styles.overlayBottom} testID="travel-point-card-overlay">
             <Text
-              style={[styles.overlayTitle, { fontSize: responsive.titleSize }]}
+              style={[
+                styles.overlayTitle,
+                showActions && styles.overlayTitleWithActions,
+                { fontSize: responsive.titleSize },
+              ]}
               numberOfLines={2}
             >
               {point.address}
@@ -328,17 +337,18 @@ const PointCard = React.memo(function PointCard({
                 </View>
               </View>
             )}
+
+            {onAddPoint && (
+              <AddToPointsButton
+                onPress={onAddPoint}
+                loading={Boolean(addButtonLoading)}
+                disabled={Boolean(addButtonDisabled)}
+                colors={colors}
+                styles={styles}
+                isWide={isMobile}
+              />
+            )}
           </View>
-          {onAddPoint && (
-            <AddToPointsButton
-              onPress={onAddPoint}
-              loading={Boolean(addButtonLoading)}
-              disabled={Boolean(addButtonDisabled)}
-              colors={colors}
-              styles={styles}
-              isWide={false}
-            />
-          )}
         </View>
       </Pressable>
     </View>

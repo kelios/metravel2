@@ -4,7 +4,9 @@ import Feather from '@expo/vector-icons/Feather'
 import { useRouter } from 'expo-router'
 
 import { ResponsiveContainer } from '@/components/layout'
+import NavigationIcon from '@/components/layout/NavigationIcon'
 import Button from '@/components/ui/Button'
+import type { NavigationIconName } from '@/constants/navigationIcons'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import { sendAnalyticsEvent } from '@/utils/analytics'
@@ -51,7 +53,7 @@ type FilterChip = {
 type FilterGroup = {
   title: string
   description: string
-  icon: string
+  icon: NavigationIconName
   chips: FilterChip[]
 }
 
@@ -88,7 +90,7 @@ const FILTER_GROUPS: FilterGroup[] = [
   {
     title: 'Город и квесты',
     description: 'Прогулки, легенды и короткие городские маршруты',
-    icon: 'flag',
+    icon: 'quest-route',
     chips: [
       { label: 'Город', filters: { categories: [19, 20] }, route: '/search' },
       { label: 'Квесты', route: '/quests' },
@@ -128,7 +130,7 @@ function FilterGroupCard({
     >
       <View style={styles.filterGroupCardHeader}>
         <View style={styles.filterGroupIconWrap}>
-          <Feather name={group.icon as any} size={18} color={styles.filterGroupIconColor.color} />
+          <NavigationIcon name={group.icon} size={18} color={styles.filterGroupIconColor.color} />
         </View>
         <View style={styles.filterGroupTitleBlock}>
           <Text style={styles.filterGroupTitleText}>{group.title}</Text>

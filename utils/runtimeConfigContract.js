@@ -30,6 +30,9 @@ const isLikelySelfProxyApiUrl = (parsed) => {
   )
 }
 
+const isLocalApiEnabled = (env = process.env) =>
+  String(env.EXPO_PUBLIC_IS_LOCAL_API || env.IS_LOCAL_API || '').trim().toLowerCase() === 'true'
+
 const resolveRoutingApiKeyWithSourceCore = (env = process.env) => {
   for (const key of ROUTING_API_KEY_CANDIDATES) {
     const value = String(env[key] || '').trim()
@@ -84,9 +87,10 @@ const getRoutingConfigDiagnosticsCore = (env = process.env) => {
   return diagnostics
 }
 
-const getRuntimeConfigDiagnosticsCore = (env = process.env) => {
+const getRuntimeConfigDiagnosticsCore = (env = process.env, options = {}) => {
   const diagnostics = []
   const apiUrlRaw = String(env.EXPO_PUBLIC_API_URL || '').trim()
+  const platformOS = String(options.platformOS || 'web').trim().toLowerCase()
 
   if (!apiUrlRaw) {
     diagnostics.push({
@@ -103,7 +107,7 @@ const getRuntimeConfigDiagnosticsCore = (env = process.env) => {
           severity: 'error',
           message: `EXPO_PUBLIC_API_URL must use http/https. Current protocol: ${parsed.protocol}`,
         })
-      } else if (isLikelySelfProxyApiUrl(parsed)) {
+      } else if (isLikelySelfProxyApiUrl(parsed) && (platformOS === 'web' || isLocalApiEnabled(env))) {
         diagnostics.push({
           code: 'API_URL_SELF_PROXY',
           severity: 'error',

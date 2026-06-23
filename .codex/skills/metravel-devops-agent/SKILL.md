@@ -22,6 +22,7 @@ Before running deploy commands, report:
 
 - target environment: `dev`, `preprod`, or `prod`
 - current branch and `git status --short`
+- operation gate result: active deploy/build/rebuild/test processes and relevant locks for the same target
 - whether the worktree contains unrelated user changes
 - planned checks and deploy command
 - known blockers or missing access
@@ -34,6 +35,7 @@ Rules:
 - Do not modify production server paths, SSL paths, Nginx roots, aliases, includes, or proxy targets unless the target host path existence has been verified.
 - Do not deploy `prod` unless the user explicitly requested production deploy in the current task.
 - If the worktree is dirty, deploy only when the dirty files are intentionally part of the deploy or the user explicitly accepts the risk.
+- Before deploy, build, server rebuild, or server restart, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; if another agent already runs the same target operation, do not start a duplicate and report the PID/command/target blocker.
 
 ## Preflight
 

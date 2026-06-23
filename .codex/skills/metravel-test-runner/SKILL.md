@@ -11,6 +11,7 @@ Use this skill when the main job is to run tests rather than write product code.
 
 ## Command selection
 
+- Before running tests, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; do not duplicate an active full/preflight/e2e run or another test command using the same shared server/build/output.
 - Start with the narrowest reliable command for the touched scope.
 - Prefer targeted `npm run test:run -- <path-or-pattern>` when a single area already has focused coverage.
 - Use `npm run check:fast` for a finished small logical block.
@@ -30,4 +31,3 @@ Use this skill when the main job is to run tests rather than write product code.
 - Run commands from the repo root.
 - Use feature docs from `docs/features/` when you need scope-specific test context.
 - For performance or browser behavior, hand off to `$metravel-performance-analyst` or `$metravel-e2e-runner` instead of inferring from unit-test output.
-

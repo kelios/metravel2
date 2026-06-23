@@ -11,7 +11,7 @@ type ParsedCoord = {
 // путь на Android — стандартный `geo:`-intent и документированные deep-link
 // схемы навигаторов. На web схемы приложений не работают, поэтому там сохраняем
 // прежние HTTPS-URL, которые открываются в новой вкладке (web — прод, не ломаем).
-const IS_NATIVE = Platform.OS !== 'web';
+const isNativePlatform = () => Platform.OS !== 'web';
 
 const parseCoordString = (coord: string): ParsedCoord | null => {
   const cleaned = String(coord || '').replace(/;/g, ',').replace(/\s+/g, '');
@@ -32,7 +32,7 @@ export const buildGoogleMapsUrl = (coord: string) => {
   // `/maps/place/lat,lon` — HTTPS-маркер-URL: Google Maps на Android открывается
   // напрямую, ставит пин на точку и показывает карточку с ТОЧНЫМИ координатами.
   // На web оставляем прежний `/maps/search/?api=1&query=` (прод, не ломаем).
-  if (IS_NATIVE) {
+  if (isNativePlatform()) {
     return `https://www.google.com/maps/place/${parsed.lat},${parsed.lon}`;
   }
   return `https://www.google.com/maps/search/?api=1&query=${parsed.lat},${parsed.lon}`;
@@ -44,7 +44,7 @@ export const buildOrganicMapsUrl = (coord: string) => {
   // На Android `geo:`-intent открывает Organic Maps (или другое установленное
   // карт-приложение) с маркером на точке. `omaps.app`/`om://` без ge0-хеша
   // открывают приложение без позиционирования.
-  if (IS_NATIVE) {
+  if (isNativePlatform()) {
     return `geo:${parsed.lat},${parsed.lon}?q=${parsed.lat},${parsed.lon}`;
   }
   return `https://omaps.app/${parsed.lat},${parsed.lon}`;
@@ -53,7 +53,7 @@ export const buildOrganicMapsUrl = (coord: string) => {
 export const buildWazeUrl = (coord: string) => {
   const parsed = parseCoordString(coord);
   if (!parsed) return '';
-  if (IS_NATIVE) {
+  if (isNativePlatform()) {
     // Без `navigate=yes`: показать ПИН на точке с карточкой места (а не сразу
     // гнать навигацию). Device-verify 2026-06-23 (Pixel 10 Pro): `waze://?ll=`
     // показывает маркер + карточку «Отправить / Маршруты», `navigate=yes` визуально
@@ -66,7 +66,7 @@ export const buildWazeUrl = (coord: string) => {
 export const buildYandexNaviUrl = (coord: string) => {
   const parsed = parseCoordString(coord);
   if (!parsed) return '';
-  if (IS_NATIVE) {
+  if (isNativePlatform()) {
     // Схема Яндекс.Навигатора: строит маршрут к точке от текущего положения.
     // Веб-URL `yandex.ru/navi/?whatshere[...]` приложением не парсится.
     return `yandexnavi://build_route_on_map?lat_to=${parsed.lat}&lon_to=${parsed.lon}`;

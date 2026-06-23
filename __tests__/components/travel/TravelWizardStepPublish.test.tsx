@@ -144,7 +144,8 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       expect.objectContaining({
         publish: true,
         moderation: false,
-      })
+      }),
+      { intent: 'publish' },
     );
   }, 15000);
 
@@ -189,7 +190,8 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       expect.objectContaining({
         publish: true,
         moderation: true,
-      })
+      }),
+      { intent: 'publish' },
     );
 
     expect(onFinish).not.toHaveBeenCalled();

@@ -34,4 +34,7 @@ export const ROUTING_API_KEY_CANDIDATES: RoutingApiKeyCandidate[];
 
 export function resolveRoutingApiKeyWithSourceCore(env?: RoutingApiEnv): RoutingApiKeyResolution;
 export function getRoutingConfigDiagnosticsCore(env?: RoutingApiEnv): RoutingConfigDiagnostic[];
-export function getRuntimeConfigDiagnosticsCore(env?: RoutingApiEnv): RuntimeConfigDiagnostic[];
+export function getRuntimeConfigDiagnosticsCore(
+  env?: RoutingApiEnv,
+  options?: { platformOS?: string }
+): RuntimeConfigDiagnostic[];

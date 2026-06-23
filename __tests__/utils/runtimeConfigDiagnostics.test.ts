@@ -32,10 +32,13 @@ describe('getRuntimeConfigDiagnostics', () => {
   });
 
   it('reports Metro self-proxy API URL', () => {
-    const diagnostics = getRuntimeConfigDiagnostics({
-      EXPO_PUBLIC_API_URL: 'http://127.0.0.1:8085',
-      EXPO_PUBLIC_ORS_API_KEY: 'ok',
-    });
+    const diagnostics = getRuntimeConfigDiagnostics(
+      {
+        EXPO_PUBLIC_API_URL: 'http://127.0.0.1:8085',
+        EXPO_PUBLIC_ORS_API_KEY: 'ok',
+      },
+      { platformOS: 'web' }
+    );
     expect(diagnostics).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -44,6 +47,18 @@ describe('getRuntimeConfigDiagnostics', () => {
         }),
       ])
     );
+  });
+
+  it('does not report native self-proxy when local api mode is disabled and resolver falls back to prod', () => {
+    const diagnostics = getRuntimeConfigDiagnostics(
+      {
+        EXPO_PUBLIC_API_URL: 'http://127.0.0.1:8085',
+        EXPO_PUBLIC_IS_LOCAL_API: 'false',
+        EXPO_PUBLIC_ORS_API_KEY: 'ok',
+      },
+      { platformOS: 'android' }
+    );
+    expect(diagnostics.some((d) => d.code === 'API_URL_SELF_PROXY')).toBe(false);
   });
 
   it('reports unsafe non-local HTTP API URL', () => {
