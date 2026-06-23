@@ -288,6 +288,52 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
             });
         });
 
+        it('должен сразу сохранить путешествие при добавлении точки из поиска (тикет #505)', async () => {
+            const mockOnManualSave = jest.fn().mockResolvedValue(undefined);
+
+            const mockResults = [{
+                place_id: '1',
+                display_name: 'Париж, Франция',
+                lat: '48.8566',
+                lon: '2.3522',
+                address: {
+                    city: 'Париж',
+                    country: 'Франция',
+                    country_code: 'fr',
+                },
+            }];
+
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+                ok: true,
+                json: async () => mockResults,
+            });
+
+            const { getByPlaceholderText, getByText } = render(
+                <TravelWizardStepRoute
+                    {...defaultProps}
+                    onManualSave={mockOnManualSave}
+                />
+            );
+
+            fireEvent.changeText(getByPlaceholderText(/Поиск места/), 'Париж');
+
+            await waitFor(() => {
+                expect(getByText('Париж, Франция')).toBeTruthy();
+            });
+
+            fireEvent.press(getByText('Париж, Франция'));
+
+            await waitFor(() => {
+                expect(mockOnManualSave).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        coordsMeTravel: expect.arrayContaining([
+                            expect.objectContaining({ lat: 48.8566, lng: 2.3522 }),
+                        ]),
+                    })
+                );
+            }, { timeout: 2000 });
+        });
+
         it('должен автоматически выбрать страну при добавлении точки', async () => {
             const mockOnCountrySelect = jest.fn();
 

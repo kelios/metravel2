@@ -219,6 +219,7 @@ describe('WebMapComponent marker sync', () => {
   it('adds marker on map click and propagates it via onMarkersChange (regression: point must be saved)', async () => {
     const onMarkersChange = jest.fn();
     const onCountrySelect = jest.fn();
+    const onMarkerAdded = jest.fn();
 
     render(
       <WebMapComponent
@@ -226,6 +227,7 @@ describe('WebMapComponent marker sync', () => {
         markers={[] as any}
         onMarkersChange={onMarkersChange}
         onCountrySelect={onCountrySelect}
+        onMarkerAdded={onMarkerAdded}
       />,
     );
 
@@ -258,6 +260,53 @@ describe('WebMapComponent marker sync', () => {
     });
 
     expect(onCountrySelect).toHaveBeenCalledWith('268');
+
+    // Точка без категории/фото должна сразу триггерить сохранение (тикет #505),
+    // не дожидаясь 5-сек автосейва.
+    await waitFor(() => {
+      expect(onMarkerAdded).toHaveBeenCalledTimes(1);
+    });
+    const addedPayload = onMarkerAdded.mock.calls[0][0];
+    expect(addedPayload.markers.length).toBe(1);
+    expect(addedPayload.markers[0]).toEqual(
+      expect.objectContaining({ lat: 10, lng: 20, id: null }),
+    );
+    expect(addedPayload.derivedCountryId).toBe(268);
+  });
+
+  it('does not fire onMarkerAdded for the photo path (no duplicate save; onPhotoMarkerReady owns it)', async () => {
+    (global as any).URL.createObjectURL = jest.fn(() => 'blob:https://example.com/photo');
+    (global as any).URL.revokeObjectURL = jest.fn();
+    (extractGpsFromImageFile as jest.Mock).mockResolvedValue({ lat: 10, lng: 20 });
+
+    const onMarkerAdded = jest.fn();
+    const onPhotoMarkerReady = jest.fn(async () => {});
+
+    const { container } = render(
+      <WebMapComponent
+        {...baseProps}
+        markers={[] as any}
+        onMarkerAdded={onMarkerAdded}
+        onPhotoMarkerReady={onPhotoMarkerReady}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText('Загрузка карты…')).toBeNull();
+    });
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const fakeFile = new File(['photo'], 'photo.jpg', { type: 'image/jpeg' });
+
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [fakeFile] } });
+    });
+
+    await waitFor(() => {
+      expect(onPhotoMarkerReady).toHaveBeenCalled();
+    });
+
+    expect(onMarkerAdded).not.toHaveBeenCalled();
   });
 
   it('keeps preview blob and pending file when route autosave fails after adding point from photo (regression)', async () => {

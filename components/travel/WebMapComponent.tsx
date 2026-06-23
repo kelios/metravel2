@@ -67,6 +67,7 @@ type WebMapComponentProps = {
     onCountryDeselect: (countryId: any) => void;
     onPhotoMarkerReady?: (payload: { markers: any[]; derivedCountryId: number | null }) => Promise<void> | void;
     onMarkerEditSave?: (markers: any[]) => Promise<void> | void;
+    onMarkerAdded?: (payload: { markers: any[]; derivedCountryId: number | null }) => Promise<void> | void;
 };
 
 const WebMapComponent = ({
@@ -78,6 +79,7 @@ const WebMapComponent = ({
     onCountryDeselect,
     onPhotoMarkerReady,
     onMarkerEditSave,
+    onMarkerAdded,
 }: WebMapComponentProps) => {
     // ✅ УЛУЧШЕНИЕ: поддержка тем через useThemedColors
     const colors = useThemedColors();
@@ -336,7 +338,10 @@ const WebMapComponent = ({
 
     const markerIcon = useMemo(() => createMarkerIcon(L, DESIGN_TOKENS.colors.mapPin), [L]);
 
-    const addMarker = async (latlng: any, options?: { image?: string | null }) => {
+    const addMarker = async (
+        latlng: any,
+        options?: { image?: string | null; notifyAdded?: boolean },
+    ) => {
         if (!isValidCoordinates(latlng)) return null;
 
         const geocodeData = await reverseGeocode(latlng);
@@ -386,6 +391,20 @@ const WebMapComponent = ({
         const nextMarkers = [...baseMarkers, newMarker];
         debouncedMarkersChange(nextMarkers);
         setActiveIndex(Math.max(0, nextMarkers.length - 1));
+
+        // Клик по карте добавляет точку без категории/фото и не открывает явный save —
+        // триггерим немедленное сохранение, чтобы перезагрузка страницы не теряла точку
+        // (тикет #505). Для точки из фото save идёт отдельно через onPhotoMarkerReady,
+        // поэтому там notifyAdded=false (не дублируем сохранение).
+        if (options?.notifyAdded !== false) {
+            try {
+                await onMarkerAdded?.({ markers: nextMarkers, derivedCountryId });
+            } catch {
+                // Save может упасть на модерационной валидации обязательных полей точки.
+                // Точка уже в стейте — пользователь дозаполнит и сохранит снова.
+            }
+        }
+
         return { nextMarkers, derivedCountryId };
     };
 
@@ -418,7 +437,10 @@ const WebMapComponent = ({
             return;
         }
 
-        const markerResult = await addMarker({ lat: coords.lat, lng: coords.lng }, { image: previewUrl });
+        const markerResult = await addMarker(
+            { lat: coords.lat, lng: coords.lng },
+            { image: previewUrl, notifyAdded: false },
+        );
         if (!markerResult) return;
 
         try {

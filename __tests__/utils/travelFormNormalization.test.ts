@@ -152,6 +152,31 @@ describe('travelFormNormalization', () => {
       expect(merged[0].id).toBe(42);
       expect(merged[0].image).toBe('blob:http://localhost/from-photo');
     });
+
+    it('keeps a freshly added local marker missing from a stale server response', () => {
+      // Stale autosave response (snapshot before point C was added) returns only A, B.
+      const server = [
+        { id: 1, lat: 53.1, lng: 27.1, image: 'https://cdn.com/a.jpg' },
+        { id: 2, lat: 53.2, lng: 27.2, image: 'https://cdn.com/b.jpg' },
+      ];
+      // Local state already has a newly added no-category/no-photo point C (id==null).
+      const current = [
+        { id: 1, lat: 53.1, lng: 27.1, image: 'https://cdn.com/a.jpg' },
+        { id: 2, lat: 53.2, lng: 27.2, image: 'https://cdn.com/b.jpg' },
+        { id: null, lat: 53.95, lng: 27.6, image: null, categories: [] },
+      ];
+      const merged = mergeMarkersPreserveImages(server, current);
+      expect(merged).toHaveLength(3);
+      expect(merged.some(m => m.lat === 53.95 && m.lng === 27.6)).toBe(true);
+    });
+
+    it('does not duplicate a new marker that the server response already echoed', () => {
+      const current = [{ id: null, lat: 53.95, lng: 27.6, image: null, categories: [] }];
+      const server = [{ id: 99, lat: 53.95, lng: 27.6, image: null }];
+      const merged = mergeMarkersPreserveImages(server, current);
+      expect(merged).toHaveLength(1);
+      expect(merged[0].id).toBe(99);
+    });
   });
 
   describe('ensureRequiredDraftFields', () => {

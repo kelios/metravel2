@@ -82,4 +82,5 @@ export interface RouteMapCardProps {
   onCountryDeselect: (countryId: string) => void;
   onPhotoMarkerReady: (payload: { markers: MarkerData[]; derivedCountryId: number | null }) => void;
   onMarkerEditSave: (markers: MarkerData[]) => void;
+  onMarkerAdded: (payload: { markers: MarkerData[]; derivedCountryId: number | null }) => void;
 }

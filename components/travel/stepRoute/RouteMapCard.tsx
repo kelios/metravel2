@@ -21,6 +21,7 @@ export const RouteMapCard = React.memo(function RouteMapCard({
   onCountryDeselect,
   onPhotoMarkerReady,
   onMarkerEditSave,
+  onMarkerAdded,
 }: RouteMapCardProps) {
   return (
     <View style={styles.card}>
@@ -43,6 +44,7 @@ export const RouteMapCard = React.memo(function RouteMapCard({
               onCountryDeselect={onCountryDeselect}
               onPhotoMarkerReady={onPhotoMarkerReady}
               onMarkerEditSave={onMarkerEditSave}
+              onMarkerAdded={onMarkerAdded}
             />
           </Suspense>
         ) : (

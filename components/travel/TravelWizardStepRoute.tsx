@@ -82,6 +82,7 @@ function TravelWizardStepRoute({
   const markersRef = useLatestRef(markers)
   const isMountedRef = useRef(true)
   const quickDraftTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const addPointSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     isMountedRef.current = true
@@ -90,6 +91,10 @@ function TravelWizardStepRoute({
       if (quickDraftTimeoutRef.current != null) {
         clearTimeout(quickDraftTimeoutRef.current)
         quickDraftTimeoutRef.current = null
+      }
+      if (addPointSaveTimeoutRef.current != null) {
+        clearTimeout(addPointSaveTimeoutRef.current)
+        addPointSaveTimeoutRef.current = null
       }
     }
   }, [])
@@ -145,6 +150,32 @@ function TravelWizardStepRoute({
     })
   }, [formData, onManualSave, selectedCountryIds])
 
+  // Добавление точки (поиск/клик по карте/ручной ввод) должно сохраняться сразу,
+  // а не ждать 5-сек автосейв: при перезагрузке страницы в это окно свежая точка
+  // без категории/фото иначе теряется (тикет #505). Лёгкий debounce схлопывает
+  // серию быстрых добавлений в один запрос; сам save идёт тем же путём, что и
+  // явное сохранение точки с категорией/фото (saveRoute → onManualSave).
+  const scheduleAddPointSave = useCallback(
+    (updatedMarkers: MarkerData[], countryIds = selectedCountryIds) => {
+      if (!onManualSave) return
+
+      if (addPointSaveTimeoutRef.current != null) {
+        clearTimeout(addPointSaveTimeoutRef.current)
+      }
+      addPointSaveTimeoutRef.current = setTimeout(() => {
+        addPointSaveTimeoutRef.current = null
+        if (!isMountedRef.current) return
+        void saveRoute(updatedMarkers, countryIds).catch(() => {
+          // Сейв новой точки мог упасть (например, модерационная валидация
+          // обязательных полей у только что добавленной точки). Точка уже в стейте —
+          // не ревокаем pending-фото и не показываем тост: пользователь дозаполнит
+          // поля и следующее сохранение пройдёт. Тосты ошибок остаются за явным save.
+        })
+      }, 800)
+    },
+    [onManualSave, saveRoute, selectedCountryIds],
+  )
+
   const handleQuickDraft = useCallback(async () => {
     if (!onManualSave) return
 
@@ -192,6 +223,16 @@ function TravelWizardStepRoute({
     await saveRoute(updatedMarkers)
   }, [saveRoute, updateMarkers])
 
+  const handleMarkerAdded = useCallback((
+    payload: { markers: MarkerData[]; derivedCountryId: number | null },
+  ) => {
+    const nextCountries = payload.derivedCountryId != null
+      ? Array.from(new Set([...selectedCountryIds, String(payload.derivedCountryId)]))
+      : selectedCountryIds
+
+    scheduleAddPointSave(payload.markers, nextCountries)
+  }, [scheduleAddPointSave, selectedCountryIds])
+
   const handleLocationSelect = useCallback((result: any) => {
     const lat = Number(result?.lat)
     const lng = Number(result?.lon)
@@ -216,13 +257,17 @@ function TravelWizardStepRoute({
 
     updateMarkers(updatedMarkers)
 
+    let nextCountryIds = selectedCountryIds
     if (derivedCountryId !== null) {
       const countryId = String(derivedCountryId)
       if (!selectedCountryIds.includes(countryId)) {
         onCountrySelect(countryId)
+        nextCountryIds = [...selectedCountryIds, countryId]
       }
     }
-  }, [countries, markersRef, onCountrySelect, selectedCountryIds, updateMarkers])
+
+    scheduleAddPointSave(updatedMarkers, nextCountryIds)
+  }, [countries, markersRef, onCountrySelect, scheduleAddPointSave, selectedCountryIds, updateMarkers])
 
   const handleAddManualPoint = useCallback(async () => {
     const parsedFromPair = parseCoordsPair(manualPointState.coords)
@@ -271,13 +316,16 @@ function TravelWizardStepRoute({
       },
     ]
 
+    let nextCountryIds = selectedCountryIds
     if (derivedCountryId && !selectedCountryIds.includes(derivedCountryId)) {
       onCountrySelect(derivedCountryId)
+      nextCountryIds = [...selectedCountryIds, derivedCountryId]
     }
 
     updateMarkers(updatedMarkers)
     resetManualPoint({ preservePendingPhoto: Boolean(manualPointState.photoPreviewUrl) })
     setManualPointVisible(false)
+    scheduleAddPointSave(updatedMarkers, nextCountryIds)
   }, [
     countries,
     manualPointState.coords,
@@ -287,6 +335,7 @@ function TravelWizardStepRoute({
     markersRef,
     onCountrySelect,
     resetManualPoint,
+    scheduleAddPointSave,
     selectedCountryIds,
     setManualPointVisible,
     updateMarkers,
@@ -466,6 +515,7 @@ function TravelWizardStepRoute({
               onCountryDeselect={onCountryDeselect}
               onPhotoMarkerReady={handlePhotoMarkerReady}
               onMarkerEditSave={handleMarkerEditSave}
+              onMarkerAdded={handleMarkerAdded}
             />
           </View>
         </ScrollView>

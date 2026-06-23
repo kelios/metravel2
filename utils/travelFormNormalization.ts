@@ -101,7 +101,8 @@ export function mergeMarkersPreserveImages(
         return best;
     };
 
-    return serverMarkers.map(m => {
+    const matchedCurrent = new Set<any>();
+    const merged = serverMarkers.map(m => {
         const idKey = makeIdKey(m);
         const llKey = makeLlKey(m);
         const current =
@@ -109,6 +110,7 @@ export function mergeMarkersPreserveImages(
             currentByLl.get(llKey) ??
             findCurrentByApproxCoords(m);
         if (!current) return m;
+        matchedCurrent.add(current);
 
         const currentImage = current?.image;
         if (typeof currentImage === 'string' && isLocalPreviewUrl(currentImage)) {
@@ -124,6 +126,13 @@ export function mergeMarkersPreserveImages(
 
         return m;
     });
+
+    // Локальные маркеры, которых нет в ответе сервера (например, новая точка без
+    // категории/фото, добавленная уже после старта запроса автосейва), не должны
+    // теряться: иначе устаревший ответ затирает свежедобавленные точки. Дописываем
+    // несопоставленные current-маркеры в хвост.
+    const unmatchedCurrent = currentMarkers.filter(c => !matchedCurrent.has(c));
+    return unmatchedCurrent.length > 0 ? [...merged, ...unmatchedCurrent] : merged;
 }
 
 /**
