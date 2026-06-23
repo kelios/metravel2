@@ -505,6 +505,10 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           attribution={OSM_PROXY_ATTRIBUTION}
           maxZoom={OSM_PROXY_MAX_ZOOM}
           crossOrigin="anonymous"
+          keepBuffer={4}
+          updateWhenZooming={false}
+          updateWhenIdle={false}
+          fadeAnimation
         />
 
         {compact && rl.useMap && <CtrlWheelZoom useMap={rl.useMap} />}

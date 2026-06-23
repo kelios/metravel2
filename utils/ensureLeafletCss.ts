@@ -112,6 +112,10 @@ function ensureTilePreconnect(): void {
 function getLeafletOverridesCSS(): string {
   return [
     '.leaflet-container{background-color:var(--color-backgroundTertiary)!important;background-image:none!important}',
+    // Светлая тема: пока тайл догружается при зуме, в зазоре виден мягкий «земляной»
+    // тон карты, а не серо-белая «шахматка» контейнера. В тёмной теме оставляем
+    // backgroundTertiary — он совпадает с инвертированными (тёмными) тайлами ниже.
+    'html:not([data-theme="dark"]) .leaflet-container{background-color:#e8ebe4!important}',
     'html[data-theme="dark"] .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.88) saturate(0.85)}',
     '.leaflet-container .leaflet-tile-pane img,.leaflet-container img.leaflet-tile,.leaflet-container .leaflet-tile{max-width:none!important;max-height:none!important;object-fit:none!important;image-rendering:auto!important}',
     '.leaflet-container img.leaflet-marker-icon,.leaflet-container img.leaflet-marker-shadow{max-width:none!important;max-height:none!important;object-fit:none!important}',

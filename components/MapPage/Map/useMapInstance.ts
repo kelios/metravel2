@@ -37,6 +37,14 @@ interface UseMapInstanceProps {
 export const getThemedBaseLayerOptions = () => ({
   attribution: getThemedBaseAttribution(),
   maxZoom: getThemedBaseMaxZoom(),
+  // Сглаживаем зум: держим больше окружающих тайлов в памяти, не перезапрашиваем
+  // во время зум-анимации (грузим по её завершении) и плавно проявляем загруженные
+  // тайлы. Без этого Leaflet рисует «шахматку» из серых пустых ячеек при зуме.
+  keepBuffer: 4,
+  updateWhenZooming: false,
+  updateWhenIdle: false,
+  fadeAnimation: true,
+  crossOrigin: 'anonymous' as const,
 });
 
 const createThemedBaseLayer = (L: any) => {
