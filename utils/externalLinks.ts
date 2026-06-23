@@ -19,13 +19,22 @@ type OpenWebWindowOptions = {
   onError?: (error: unknown) => void;
 };
 
-const resolveNormalizedUrl = (rawUrl: string, options: OpenExternalUrlOptions): string =>
-  getSafeExternalUrl(rawUrl, {
+// Картографические deep-link схемы, которые на native открывают установленное
+// приложение карт/навигатора с маркером/маршрутом (см. mapLinks.ts). На web эти
+// схемы бессмысленны и остаются заблокированными — там разрешён только http/https.
+const NATIVE_MAP_PROTOCOLS = ['geo:', 'waze:', 'yandexnavi:', 'yandexmaps:', 'comgooglemaps:', 'om:'];
+
+const resolveNormalizedUrl = (rawUrl: string, options: OpenExternalUrlOptions): string => {
+  const allowedProtocols =
+    options.allowedProtocols ??
+    (Platform.OS !== 'web' ? ['http:', 'https:', ...NATIVE_MAP_PROTOCOLS] : undefined);
+  return getSafeExternalUrl(rawUrl, {
     allowRelative: options.allowRelative ?? false,
     allowProtocolRelative: options.allowProtocolRelative ?? false,
     baseUrl: options.baseUrl ?? '',
-    allowedProtocols: options.allowedProtocols,
+    allowedProtocols,
   });
+};
 
 export function normalizeExternalUrl(rawUrl: string): string {
   return resolveNormalizedUrl(rawUrl, {
