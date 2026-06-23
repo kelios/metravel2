@@ -19,6 +19,12 @@ interface MapControlsProps {
 const MOBILE_WEB_TOP_GAP = 16
 const MOBILE_WEB_SIDE_GAP = 16
 const CONTROL_GROUP_GAP = 10
+// Desktop/web only: the left panel renders a collapse toggle at its right edge
+// (top 16, 40px tall, sticking ~48px into the map area). Pushing the floating
+// map controls below that band keeps the locate/zoom cluster from colliding with
+// the «<» collapse button at the panel/map seam. Mobile never reaches this
+// component (hideFloatingControls=isMobile), so the larger offset is safe.
+const DESKTOP_TOP_GAP = 72
 
 const getButtonStyle = (colors: ThemedColors, isMobile: boolean): React.CSSProperties => ({
   width: '44px',
@@ -110,9 +116,11 @@ const MapControls: React.FC<MapControlsProps> = ({
   const controlsStyle = useMemo(
     () => ({
       position: 'absolute' as const,
+      // alignLeft means the cluster sits next to the left panel's collapse toggle,
+      // so on web it drops below that toggle band; right-aligned/native keep 16.
       top:
         Platform.OS === 'web'
-          ? (`calc(${MOBILE_WEB_TOP_GAP}px + env(safe-area-inset-top, 0px))` as const)
+          ? (`calc(${shouldAlignLeft ? DESKTOP_TOP_GAP : MOBILE_WEB_TOP_GAP}px + env(safe-area-inset-top, 0px))` as const)
           : MOBILE_WEB_TOP_GAP,
       ...(Platform.OS === 'web'
         ? shouldAlignLeft

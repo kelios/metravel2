@@ -373,7 +373,10 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
     ...Platform.select({ web: {
       boxShadow: 'none',
       backgroundImage: 'none',
-    } }),
+      // Keep the «Быстрый подбор» badge clear of the sticky header when this
+      // section is reached via anchor/programmatic scroll.
+      scrollMarginTop: isMobile ? 110 : 96,
+    } as any }),
   },
 
   // ── Decorative background accent blobs ───────────────────────────────────
@@ -415,21 +418,22 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
 
   quickFiltersArticlesButton: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderRadius: DESIGN_TOKENS.radii.pill, borderWidth: 0,
-    backgroundColor: colors.primary,
+    borderRadius: DESIGN_TOKENS.radii.pill, borderWidth: 1,
+    borderColor: colors.primaryAlpha30,
+    backgroundColor: colors.surface,
     paddingHorizontal: isMobile ? 18 : 20, paddingVertical: isMobile ? 11 : 12,
     flexShrink: 0, alignSelf: isMobile ? 'flex-start' : 'auto',
     ...Platform.select({ web: {
-      transition: 'transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease',
+      transition: 'transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, border-color 0.2s ease',
       whiteSpace: 'nowrap',
-      boxShadow: `0 2px 8px ${colors.primary}24`,
     } as any }),
   },
   quickFiltersArticlesButtonHover: {
-    backgroundColor: colors.primary,
-    ...Platform.select({ web: { transform: 'translateY(-1px)', boxShadow: `0 6px 16px ${colors.primary}2E` } }),
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
+    ...Platform.select({ web: { transform: 'translateY(-1px)' } }),
   },
-  quickFiltersArticlesText: { color: colors.textOnPrimary, fontSize: 15, lineHeight: 20, fontWeight: '700', letterSpacing: 0.2 },
+  quickFiltersArticlesText: { color: colors.primaryText, fontSize: 15, lineHeight: 20, fontWeight: '700', letterSpacing: 0.2 },
 
   // ── Filter cards grid ─────────────────────────────────────────────────────
   quickFiltersGrid: {
@@ -475,12 +479,12 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
 
   filterGroupCardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   filterGroupIconWrap: {
-    width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
+    width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.primaryAlpha30,
     backgroundColor: colors.primarySoft,
   },
-  filterGroupIconColor: { color: colors.primary },
+  filterGroupIconColor: { color: colors.primaryText },
   filterGroupTitleBlock: { flex: 1, minWidth: 0, gap: 3 },
   filterGroupTitleText: { color: colors.text, fontSize: isMobile ? 16 : 17, lineHeight: isMobile ? 21 : 22, fontWeight: '700', letterSpacing: 0, flexShrink: 1 },
   filterGroupDescriptionText: { color: colors.textMuted, fontSize: isMobile ? 13 : 14, lineHeight: isMobile ? 18 : 19 },
@@ -489,7 +493,7 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
   chipsWrapMobile: { width: '100%' },
 
   chip: {
-    borderRadius: DESIGN_TOKENS.radii.pill, borderWidth: 1, borderColor: colors.borderLight,
+    borderRadius: DESIGN_TOKENS.radii.pill, borderWidth: 1, borderColor: colors.border,
     backgroundColor: colors.surface,
     paddingHorizontal: isMobile ? 13 : 14, paddingVertical: isMobile ? 10 : 8,
     ...Platform.select({ web: {

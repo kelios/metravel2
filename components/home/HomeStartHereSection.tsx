@@ -14,7 +14,6 @@ type StartTile = {
   title: string
   subtitle: string
   route: string
-  accent: string
 }
 
 const TILES: readonly StartTile[] = [
@@ -22,17 +21,15 @@ const TILES: readonly StartTile[] = [
     key: 'catalog',
     icon: 'compass',
     title: 'Найти маршрут',
-    subtitle: 'Каталог поездок с фильтрами по формату, сезону и длительности',
+    subtitle: 'Каталог с фильтрами по формату и сезону',
     route: '/search',
-    accent: '#2F6B4E',
   },
   {
     key: 'map',
     icon: 'map-pin',
     title: 'Смотреть на карте',
-    subtitle: 'Что посмотреть рядом — маршруты до 60 км от вас',
-    route: '/map?radius=60',
-    accent: '#1F5C8A',
+    subtitle: 'Вся карта мест и маршрутов рядом',
+    route: '/map',
   },
   {
     key: 'roulette',
@@ -40,7 +37,6 @@ const TILES: readonly StartTile[] = [
     title: 'Случайная идея',
     subtitle: 'Не знаете, куда поехать? Откроем маршрут наугад',
     route: '/roulette',
-    accent: '#A86A1F',
   },
 ] as const
 
@@ -48,11 +44,48 @@ function StartTileCard({
   tile,
   onPress,
   styles,
+  isMobile,
+  accentColor,
 }: {
   tile: StartTile
   onPress: (tile: StartTile) => void
   styles: ReturnType<typeof createStyles>
+  isMobile: boolean
+  accentColor: string
 }) {
+  if (isMobile) {
+    return (
+      <Pressable
+        onPress={() => onPress(tile)}
+        accessibilityRole="link"
+        accessibilityLabel={`${tile.title}. ${tile.subtitle}`}
+        style={({ pressed, hovered }: any) => [
+          styles.tile,
+          (pressed || hovered) && styles.tileHover,
+        ]}
+      >
+        <View style={styles.iconWrap}>
+          <Feather
+            name={tile.icon as any}
+            size={20}
+            color={accentColor}
+            {...({ 'aria-hidden': true, focusable: false } as any)}
+          />
+        </View>
+        <View style={styles.tileTextCol}>
+          <Text style={styles.tileTitle}>{tile.title}</Text>
+          <Text style={styles.tileSubtitle}>{tile.subtitle}</Text>
+        </View>
+        <Feather
+          name="chevron-right"
+          size={22}
+          color={accentColor}
+          {...({ 'aria-hidden': true, focusable: false } as any)}
+        />
+      </Pressable>
+    )
+  }
+
   return (
     <Pressable
       onPress={() => onPress(tile)}
@@ -63,22 +96,22 @@ function StartTileCard({
         (pressed || hovered) && styles.tileHover,
       ]}
     >
-      <View style={[styles.iconWrap, { backgroundColor: `${tile.accent}1A` }]}>
+      <View style={styles.iconWrap}>
         <Feather
           name={tile.icon as any}
           size={22}
-          color={tile.accent}
+          color={accentColor}
           {...({ 'aria-hidden': true, focusable: false } as any)}
         />
       </View>
       <Text style={styles.tileTitle}>{tile.title}</Text>
       <Text style={styles.tileSubtitle}>{tile.subtitle}</Text>
       <View style={styles.tileArrow}>
-        <Text style={[styles.tileArrowText, { color: tile.accent }]}>Открыть</Text>
+        <Text style={[styles.tileArrowText, { color: accentColor }]}>Открыть</Text>
         <Feather
           name="arrow-right"
           size={15}
-          color={tile.accent}
+          color={accentColor}
           {...({ 'aria-hidden': true, focusable: false } as any)}
         />
       </View>
@@ -112,7 +145,14 @@ function HomeStartHereSection() {
       </View>
       <View style={styles.grid}>
         {TILES.map((tile) => (
-          <StartTileCard key={tile.key} tile={tile} onPress={handlePress} styles={styles} />
+          <StartTileCard
+            key={tile.key}
+            tile={tile}
+            onPress={handlePress}
+            styles={styles}
+            isMobile={isMobile}
+            accentColor={colors.primaryText}
+          />
         ))}
       </View>
     </ResponsiveContainer>
@@ -146,12 +186,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: bool
       borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.border,
-      padding: isMobile ? 20 : 28,
-      gap: 12,
+      padding: isMobile ? 16 : 28,
+      gap: isMobile ? 14 : 12,
+      ...(isMobile
+        ? { flexDirection: 'row' as const, alignItems: 'center' as const }
+        : null),
       ...Platform.select({
         web: { transition: 'transform 0.18s ease, box-shadow 0.18s ease' } as any,
       }),
     },
+    tileTextCol: { flex: 1, gap: 4 },
     tileHover: Platform.select({
       web: {
         transform: 'translateY(-3px)',
@@ -161,13 +205,17 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: bool
       default: {},
     }) as any,
     iconWrap: {
-      width: 52,
-      height: 52,
-      borderRadius: 14,
+      width: isMobile ? 44 : 52,
+      height: isMobile ? 44 : 52,
+      borderRadius: isMobile ? 12 : 14,
       alignItems: 'center',
       justifyContent: 'center',
+      flexShrink: 0,
+      backgroundColor: colors.primarySoft,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
     },
-    tileTitle: { fontSize: isMobile ? 18 : 20, fontWeight: '700', color: colors.text },
+    tileTitle: { fontSize: isMobile ? 16 : 20, fontWeight: '700', color: colors.text },
     tileSubtitle: {
       fontSize: 14,
       lineHeight: 20,

@@ -128,7 +128,7 @@ function FilterGroupCard({
     >
       <View style={styles.filterGroupCardHeader}>
         <View style={styles.filterGroupIconWrap}>
-          <Feather name={group.icon as any} size={16} color={styles.filterGroupIconColor.color} />
+          <Feather name={group.icon as any} size={18} color={styles.filterGroupIconColor.color} />
         </View>
         <View style={styles.filterGroupTitleBlock}>
           <Text style={styles.filterGroupTitleText}>{group.title}</Text>
@@ -230,12 +230,12 @@ function HomeInspirationSections() {
                 </Text>
               </View>
               <Button
-                label="Все маршруты"
+                label="Открыть каталог"
                 onPress={handleOpenArticles}
                 loading={openingAllRoutes}
-                icon={<Feather name="arrow-right" size={16} color={colors.textOnPrimary} />}
+                icon={<Feather name="arrow-right" size={16} color={colors.primaryText} />}
                 iconPosition="right"
-                variant="primary"
+                variant="secondary"
                 style={styles.quickFiltersArticlesButton}
                 labelStyle={styles.quickFiltersArticlesText}
                 hoverStyle={styles.quickFiltersArticlesButtonHover}

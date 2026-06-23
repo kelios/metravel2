@@ -175,7 +175,7 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
             testID="map-help-button"
             style={({ pressed }) => [
               styles.resetButton,
-              { paddingHorizontal: 8, minWidth: 32 },
+              styles.resetButtonCompact,
               pressed && PRESSED_OPACITY_07,
             ]}
             onPress={restartMapOnboarding}
