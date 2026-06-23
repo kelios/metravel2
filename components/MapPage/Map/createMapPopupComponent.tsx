@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import { router } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
 import PlacePopupCard from './PlacePopupCard';
+import { isInternalArticleHref } from './PlacePopupCard/domEvents';
 import type { Point } from './types';
 import { buildGoogleMapsUrl, buildOrganicMapsUrl, buildTelegramShareUrl, buildWazeUrl, buildYandexNaviUrl } from './mapLinks';
 import { showToast } from '@/utils/toast';
@@ -74,11 +77,32 @@ export const createMapPopupComponent = ({
     const handleOpenArticle = useCallback(() => {
       const url = String(point.articleUrl || point.urlTravel || '').trim();
       if (!url) return;
+      const baseUrl = getSiteBaseUrl();
+
+      // #501 — на native внутренние travel/article-маршруты открываем нативным
+      // экраном (router.push), а не внешним Chrome. Внешние URL и web —
+      // прежнее поведение (openExternalUrlInNewTab).
+      if (Platform.OS !== 'web') {
+        const baseHost = baseUrl.replace(/^https?:\/\//i, '').split('/')[0];
+        let path: string | null = null;
+        const abs = url.match(/^https?:\/\/([^/]+)(\/.*)?$/i);
+        if (abs) {
+          if (abs[1] === baseHost) path = abs[2] || '/';
+        } else if (url.startsWith('/')) {
+          path = url;
+        }
+        if (path && isInternalArticleHref(path.split('?')[0])) {
+          handlePress();
+          router.push(path as any);
+          return;
+        }
+      }
+
       void openExternalUrlInNewTab(url, {
         allowRelative: true,
-        baseUrl: getSiteBaseUrl(),
+        baseUrl,
       });
-    }, [point.articleUrl, point.urlTravel]);
+    }, [point.articleUrl, point.urlTravel, handlePress]);
 
     const articleHref = useMemo(() => {
       const rawUrl = String(point.articleUrl || point.urlTravel || '').trim();
@@ -88,12 +112,13 @@ export const createMapPopupComponent = ({
 
     const handleCopyCoord = useCallback(async () => {
       if (!coord) return;
+      // expo-clipboard работает кросс-платформенно (web + native). На native
+      // navigator.clipboard отсутствовал → копирование было silent no-op (#502).
       try {
-        if ((navigator as any)?.clipboard?.writeText) {
-          await (navigator as any).clipboard.writeText(coord);
-        }
+        await Clipboard.setStringAsync(coord);
+        void showToast({ type: 'success', text1: 'Координаты скопированы', position: 'bottom' });
       } catch {
-        // noop
+        void showToast({ type: 'error', text1: 'Не удалось скопировать координаты', position: 'bottom' });
       }
     }, [coord]);
 
