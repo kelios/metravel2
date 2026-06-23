@@ -695,7 +695,9 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     padding: 16,
   },
   previewContent: {
-    paddingBottom: 32,
+    // Отбиваем высоту фиксированного нижнего дока (BottomDock) на мобильном,
+    // иначе CTA «Войдите, чтобы пройти квест» уезжает под док и не нажимается.
+    paddingBottom: 160,
   },
   previewCover: {
     width: '100%',
