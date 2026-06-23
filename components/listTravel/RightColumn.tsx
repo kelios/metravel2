@@ -239,7 +239,9 @@ const RightColumn: React.FC<RightColumnProps> = (
     // subscribe this list container to mobile address-bar height changes and
     // re-render the whole FlashList on every scroll frame (scroll jank).
     const isWebMobile = isWeb && isMobile
-    const showRecommendations = isRecommendationsVisible
+    const hasTextSearch = search.trim().length > 0
+    const showRecommendations =
+      isRecommendationsVisible && !(Platform.OS !== 'web' && isMobile && hasTextSearch)
 
     useEffect(() => {
       if (!showRecommendations || !pendingRecommendationsScrollRef.current) return

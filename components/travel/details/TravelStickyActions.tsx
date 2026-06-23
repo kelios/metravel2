@@ -158,7 +158,7 @@ function TravelStickyActions({
   // Native: lift the bar above the bottom tab dock (dock height + safe-area inset),
   // mirroring ConsentBanner. Web keeps its CSS-var driven padding from styles.container.
   const nativeBottomPadding = useMemo(
-    () => (insets?.bottom || 0) + (LAYOUT?.tabBarHeight ?? 56) + 8,
+    () => (insets?.bottom || 0) + (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl,
     [insets?.bottom],
   );
 

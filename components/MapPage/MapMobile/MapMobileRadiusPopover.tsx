@@ -38,8 +38,8 @@ const MapMobileRadiusPopoverInner: React.FC<MapMobileRadiusPopoverProps> = ({
   colors,
   top,
   right,
-  minWidth = 150,
-  maxWidth = 200,
+  minWidth = 176,
+  maxWidth = 240,
   options,
   currentValue,
   onSelect,
@@ -115,6 +115,7 @@ const MapMobileRadiusPopoverInner: React.FC<MapMobileRadiusPopoverProps> = ({
 const styles = StyleSheet.create({
   row: {
     minHeight: 44,
+    minWidth: 144,
     justifyContent: 'center',
     paddingVertical: 8,
     paddingHorizontal: 12,

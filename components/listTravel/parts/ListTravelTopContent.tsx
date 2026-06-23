@@ -1,10 +1,7 @@
-import { lazy, Suspense } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import type { Travel } from '@/types/types'
-import type ListTravelExportControls from '../ListTravelExportControls'
+import ListTravelExportControls from '../ListTravelExportControls'
 import type { createListTravelBaseStyles } from '../ListTravelBase.styles'
-
-const ListTravelExportControlsLazy = lazy(() => import('../ListTravelExportControls'))
 
 type ListTravelBaseStyles = ReturnType<typeof createListTravelBaseStyles>
 
@@ -61,24 +58,22 @@ export default function ListTravelTopContent({
   setLastSettings,
 }: ListTravelTopContentProps) {
   const exportControls = isExport ? (
-    <Suspense fallback={null}>
-      <ListTravelExportControlsLazy
-        isMobile={isMobile}
-        travels={travels}
-        selected={selected}
-        ownerName={ownerName}
-        toggleSelectAll={toggleSelectAll}
-        clearSelection={clearSelection}
-        moveSelected={moveSelected}
-        moveSelectedTo={moveSelectedTo}
-        hasSelection={hasSelection}
-        selectionCount={selectionCount}
-        baseSettings={baseSettings}
-        lastSettings={lastSettings}
-        settingsSummary={settingsSummary}
-        setLastSettings={setLastSettings}
-      />
-    </Suspense>
+    <ListTravelExportControls
+      isMobile={isMobile}
+      travels={travels}
+      selected={selected}
+      ownerName={ownerName}
+      toggleSelectAll={toggleSelectAll}
+      clearSelection={clearSelection}
+      moveSelected={moveSelected}
+      moveSelectedTo={moveSelectedTo}
+      hasSelection={hasSelection}
+      selectionCount={selectionCount}
+      baseSettings={baseSettings}
+      lastSettings={lastSettings}
+      settingsSummary={settingsSummary}
+      setLastSettings={setLastSettings}
+    />
   ) : null
 
   const fallbackNotice = showFallbackNotice ? (

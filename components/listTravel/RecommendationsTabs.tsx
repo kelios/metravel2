@@ -1,7 +1,6 @@
 import React, {
   useState,
   useMemo,
-  lazy,
   Suspense,
   useCallback,
   useRef,
@@ -28,6 +27,10 @@ import { createTabCardTemplate } from './recommendationsCardTemplate';
 import TabTravelCard from './TabTravelCard';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
+import {
+  PersonalizedRecommendations,
+  WeeklyHighlights,
+} from './recommendationsDeferred';
 import { createRecommendationsTabsStyles } from './recommendationsTabsStyles';
 import {
   getRecommendationsCardLayout,
@@ -38,32 +41,6 @@ import {
   type CollectionItem,
   type TabType,
 } from './recommendationsTabsModel';
-
-/* ---------------- Lazy Components ---------------- */
-
-type WeeklyHighlightsComponent = React.ComponentType<{
-  showHeader?: boolean;
-  enabled?: boolean;
-  forceVisible?: boolean;
-  onVisibilityChange?: (visible: boolean) => void;
-}>;
-
-type PersonalizedRecommendationsComponent = React.ComponentType<{
-  showHeader?: boolean;
-  onlyRecommendations?: boolean;
-  forceVisible?: boolean;
-  onVisibilityChange?: (visible: boolean) => void;
-}>;
-
-const PersonalizedRecommendations = lazy(async () => {
-  const m: any = await import('@/components/travel/PersonalizedRecommendations');
-  return { default: (m?.default ?? m?.PersonalizedRecommendations) as PersonalizedRecommendationsComponent };
-});
-
-const WeeklyHighlights = lazy(async () => {
-  const m: any = await import('@/components/travel/WeeklyHighlights');
-  return { default: (m?.default ?? m?.WeeklyHighlights) as WeeklyHighlightsComponent };
-});
 
 interface RecommendationsTabsProps {
   forceVisible?: boolean;
@@ -263,15 +240,21 @@ const ShelfHeader = ({
 );
 
 const CardShelf = ({
+  accessibilityLabel,
   children,
   testID,
   styles,
 }: {
+  accessibilityLabel?: string;
   children: React.ReactNode;
   testID?: string;
   styles: TabStyles;
 }) => (
-  <View style={styles.shelf} testID={testID}>
+  <View
+    style={styles.shelf}
+    testID={testID}
+    accessibilityLabel={accessibilityLabel}
+  >
     {children}
   </View>
 );
@@ -537,7 +520,11 @@ const RecommendationsTabs = memo(
             </Suspense>
 
             {showHistory && (
-              <CardShelf testID="recommendations-history-shelf" styles={styles}>
+              <CardShelf
+                accessibilityLabel="Недавно смотрели"
+                testID="recommendations-history-shelf"
+                styles={styles}
+              >
                 <ShelfHeader
                   clearLabel="Очистить историю просмотров"
                   colors={colors}

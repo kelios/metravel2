@@ -84,6 +84,7 @@ const MapMobilePopoverInner: React.FC<MapMobilePopoverProps> = ({
             right,
             maxWidth,
             minWidth,
+            width: minWidth,
             backgroundColor: colors.surface,
             borderColor: colors.borderLight,
           },

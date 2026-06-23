@@ -1,5 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { LAYOUT } from '@/constants/layout';
 import type { useThemedColors } from '@/hooks/useTheme';
 
 const CARD_RADIUS = DESIGN_TOKENS.radii.lg;
@@ -14,7 +15,10 @@ export const createSettingsStyles = (colors: ReturnType<typeof useThemedColors>)
       backgroundColor: colors.mutedBackground,
     },
     scrollContent: {
-      paddingBottom: 24,
+      paddingBottom: Platform.select({
+        web: 24,
+        default: (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xxxl,
+      }),
     },
     pageContainer: {
       width: '100%',

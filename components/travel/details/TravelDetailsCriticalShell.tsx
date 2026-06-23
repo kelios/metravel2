@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { LAYOUT } from '@/constants/layout';
 import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe';
 import type { Travel } from '@/types/types';
 import type { TravelSectionLink } from '@/components/travel/sectionLinks';
@@ -165,7 +166,7 @@ export default function TravelDetailsCriticalShell({
         ? {
             paddingBottom: Math.max(
               DESIGN_TOKENS.spacing.xxl,
-              (insets.bottom || 0) + 112,
+              (insets.bottom || 0) + (LAYOUT?.tabBarHeight ?? 56) + 132,
             ),
           }
         : null,

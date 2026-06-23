@@ -131,7 +131,9 @@ export function MapCanvas({
         <View style={styles.geoBanner} testID="map-geo-banner">
           <Feather name="map-pin" size={13} color={themedColors.warning} />
           <Text style={styles.geoBannerText}>
-            Геолокация недоступна — разрешите доступ в настройках браузера
+            {Platform.OS === 'web'
+              ? 'Геолокация недоступна — разрешите доступ в настройках браузера'
+              : 'Геолокация недоступна — разрешите доступ в настройках устройства'}
           </Text>
           <Pressable
             onPress={dismissGeoBanner}

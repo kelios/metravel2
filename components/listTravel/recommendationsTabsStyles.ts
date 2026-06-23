@@ -210,6 +210,7 @@ export const createRecommendationsTabsStyles = (
     gap: 8,
     paddingHorizontal: 4,
     marginBottom: 10,
+    minHeight: 40,
   },
   shelfTitleWrap: {
     flexDirection: 'row',
@@ -262,6 +263,7 @@ export const createRecommendationsTabsStyles = (
     backgroundColor: colors.surface,
   },
   shelfRail: {
+    marginTop: 2,
     ...(Platform.select({
       web: {
         overflowX: 'auto',

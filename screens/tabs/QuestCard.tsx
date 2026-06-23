@@ -56,9 +56,10 @@ export default function QuestCard({
         : null;
     const isPioneerQuest = (quest.completionsCount ?? 0) <= 0;
     const hasReviews = quest.ratingCount > 0;
-    const reviewsLabel = hasReviews
+    const showReviewsAction = Platform.OS !== 'web' || hasReviews;
+    const reviewsLabel = quest.ratingCount > 0
         ? `${quest.ratingCount} ${pluralizeRu(quest.ratingCount, 'отзыв', 'отзыва', 'отзывов')}`
-        : null;
+        : '0 отзывов';
 
     const imageUrl = typeof quest.cover === 'string' ? quest.cover : null;
     const cacheKey = imageUrl ? String(imageUrl).trim() : '';
@@ -284,12 +285,17 @@ export default function QuestCard({
                 </View>
             )}
 
-            {hasReviews && (
+            {showReviewsAction && (
                 <Pressable
                     onPress={handleReviewsPress}
-                    style={[styles.questCardReviewsChip, { top: cardHeight - 36 }]}
+                    style={[
+                        styles.questCardReviewsChip,
+                        Platform.OS !== 'web' && styles.questCardReviewsChipNative,
+                        { top: cardHeight - 36 },
+                    ]}
                     accessibilityRole="button"
                     accessibilityLabel={`Посмотреть отзывы: ${reviewsLabel}`}
+                    accessibilityHint="Открывает отзывы к квесту"
                     testID={`quest-card-reviews-${quest.id}`}
                     hitSlop={6}
                     {...Platform.select({
@@ -306,7 +312,9 @@ export default function QuestCard({
                     })}
                 >
                     <Feather name="message-circle" size={13} color={colors.textOnDark} />
-                    <Text style={styles.questCardReviewsChipText}>{quest.ratingCount}</Text>
+                    <Text style={styles.questCardReviewsChipText}>
+                        {Platform.OS === 'web' ? quest.ratingCount : `Посмотреть отзывы (${quest.ratingCount})`}
+                    </Text>
                 </Pressable>
             )}
 

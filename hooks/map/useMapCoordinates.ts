@@ -26,6 +26,10 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   });
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer)) as Promise<T>;
 }
+
+function isLocationTimeoutError(error: unknown): boolean {
+  return error instanceof LocationTimeoutError || (error as { name?: string } | null)?.name === 'LocationTimeoutError';
+}
 function isValidCoordinate(lat: number, lng: number): boolean {
   return (
     Number.isFinite(lat) &&
@@ -186,7 +190,14 @@ export function useMapCoordinates() {
     } catch (err) {
       if (signal?.aborted) return;
 
-      logError(err, { scope: 'map', step: 'getLocation' });
+      if (isLocationTimeoutError(err)) {
+        logMessage('[map] Location request timed out, using default coordinates', 'warning', {
+          scope: 'map',
+          step: 'getLocation',
+        });
+      } else {
+        logError(err, { scope: 'map', step: 'getLocation' });
+      }
       setError('Не удалось определить местоположение');
       setCoordinates(DEFAULT_COORDINATES);
     } finally {

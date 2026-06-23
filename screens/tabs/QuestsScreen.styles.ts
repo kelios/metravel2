@@ -898,6 +898,11 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                 } as any,
             }),
         },
+        questCardReviewsChipNative: {
+            minHeight: 44,
+            minWidth: 168,
+            justifyContent: 'center',
+        },
         questCardReviewsChipText: {
             color: colors.textOnDark,
             fontSize: typography.sizes.xs,

@@ -67,7 +67,10 @@ function ListCatalogToolbar({
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.sortRow}
-          style={styles.sortScroll}
+          style={[
+            styles.sortScroll,
+            isMobile && countVisible ? styles.sortScrollMobileFullWidth : null,
+          ]}
           accessibilityRole={Platform.OS === 'web' ? undefined : ('toolbar' as any)}
           accessibilityLabel="Сортировка списка"
         >
@@ -153,10 +156,18 @@ const getStyles = (colors: ThemedColors) =>
       alignItems: 'center',
       gap: spacing.xs,
       paddingTop: spacing.xs,
+      flexWrap: 'wrap',
     },
     sortScroll: {
       flex: 1,
-      minWidth: 0,
+      minWidth: Platform.select({ web: 0, default: 120 }),
+      maxWidth: '100%',
+    },
+    sortScrollMobileFullWidth: {
+      flexBasis: '100%',
+      width: '100%',
+      flexGrow: 0,
+      flexShrink: 0,
     },
     sortRow: {
       flexDirection: 'row',
@@ -186,6 +197,10 @@ const getStyles = (colors: ThemedColors) =>
     },
     chip: {
       flexShrink: 0,
+      minHeight: 36,
+      minWidth: Platform.select({ web: undefined, default: 72 }),
+      alignItems: 'center',
+      justifyContent: 'center',
       paddingHorizontal: spacing.sm,
       paddingVertical: 6,
       borderRadius: radii.pill,
@@ -200,6 +215,7 @@ const getStyles = (colors: ThemedColors) =>
     },
     chipText: {
       fontSize: 12,
+      lineHeight: 16,
       fontWeight: '600',
       color: colors.textSecondary,
     },
