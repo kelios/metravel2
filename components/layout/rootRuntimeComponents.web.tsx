@@ -1,5 +1,7 @@
 import React from 'react'
 
+import ToastHost from '@/components/ui/ToastHost'
+
 const EmptyFallback = () => null
 
 const safeLazy = <T extends React.ComponentType<any>>(
@@ -14,7 +16,7 @@ const safeLazy = <T extends React.ComponentType<any>>(
   )
 
 export const SyncIndicatorComponent: React.ComponentType<any> | null = null
-export const ToastComponent: React.ComponentType<any> | null = null
+export const ToastComponent: React.ComponentType<any> | null = ToastHost
 export const NativeFooterComponent: React.ComponentType<any> | null = null
 
 export const ReactQueryDevtoolsComponent: any = __DEV__

@@ -468,8 +468,10 @@ function ThemedContent({
                                 <NativeFooterComponent />
                               )}
                         </RootContainerView>
-            {/* ✅ FIX: Toast рендерится только на клиенте для избежания SSR warning */}
-            {!isWeb && isMounted && ToastComponent && (
+            {/* ✅ FIX: Toast рендерится только на клиенте для избежания SSR warning.
+                Монтируем на обеих платформах: на native — react-native-toast-message,
+                на web — слушатель события metravel:toast (ToastHost.web). */}
+            {isMounted && ToastComponent && (
               <ToastComponent />
             )}
     </AppProviders>

@@ -50,7 +50,7 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
   const themeContextValue = useTheme()
   const insets = useSafeAreaInsets()
   const queryClient = useQueryClient()
-  const { width: viewportWidth, height: viewportHeight } = useWindowDimensions()
+  const { width: viewportWidth } = useWindowDimensions()
   // On mobile web the card uses a BOUNDED bottom sheet (maps.me-style): the map
   // stays visible above it, the photo is a fixed hero, and the caption/actions
   // scroll beneath it so every element stays reachable and the photo never jerks
@@ -150,16 +150,13 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
 
   const paddingBottom = (bottomInset || 0) + (insets?.bottom ?? 0) + 12
 
-  // #497 — native: cap the card so its top NEVER crosses the top safe area when
-  // «Ещё» expands. The card grows upward from bottom:0; without a cap its header
-  // (+ ✕) reaches y=0 behind the status bar where taps are swallowed on Android.
-  // We bound the card height to the space below safeTop (with a small margin) and
-  // scroll the body inside that box — the sticky header + ✕ stay in-bounds and
-  // tappable in BOTH compact and expanded states. Web keeps its own bounded sheet.
+  // #497 — native: the card now fills the screen (fullscreen place card). The
+  // `root` container is pulled in below the top safe area (paddingTop=safeTop) and
+  // above the dock (paddingBottom), and the `card` is flex:1 — so its sticky header
+  // (+ ✕) starts BELOW safeTop and never crosses into the status bar where taps are
+  // swallowed on Android. The body ScrollView scrolls inside the flexed card, so
+  // expanding «Ещё» scrolls under the header instead of pushing it off-screen.
   const safeTop = insets?.top ?? 0
-  const nativeCardMaxHeight = !IS_WEB
-    ? Math.max(0, viewportHeight - safeTop - paddingBottom - 12)
-    : undefined
 
   // On web, close via a NATIVE DOM handler instead of relying solely on RN-Web's
   // `onPress`. RN-Web synthesises `onPress` through its responder system over
@@ -197,6 +194,8 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
       style={({ pressed }) => [
         styles.closeButton,
         isFullscreenWeb && styles.closeButtonFullscreen,
+        // Fullscreen web: keep ✕ below the status bar / notch (insets not in getStyles).
+        isFullscreenWeb && IS_WEB ? ({ top: (insets?.top ?? 0) + 12 } as any) : null,
         pressed && { opacity: 0.7 },
       ]}
       {...(webCloseHandlers ?? {})}
@@ -238,7 +237,10 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
         <View
           style={[
             styles.sheetCard,
-            { paddingBottom: (bottomInset || 0) + (insets?.bottom ?? 0) },
+            {
+              paddingTop: insets?.top ?? 0,
+              paddingBottom: (bottomInset || 0) + (insets?.bottom ?? 0),
+            },
           ]}
           {...({ pointerEvents: 'auto' } as any)}
         >
@@ -254,13 +256,17 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
 
   return (
     <View
-      style={[styles.root, { paddingBottom }]}
+      style={[
+        styles.root,
+        { paddingBottom },
+        // Native fullscreen: pull the card below the top safe area so its header /
+        // ✕ start under the status bar (#497 — never crosses into the notch).
+        !IS_WEB ? { paddingTop: safeTop } : null,
+      ]}
       testID="map-place-bottom-card"
       pointerEvents="box-none"
     >
-      <View
-        style={[styles.card, !IS_WEB ? { maxHeight: nativeCardMaxHeight } : null]}
-      >
+      <View style={styles.card}>
         <View
           style={[styles.handleZone, !IS_WEB && styles.handleZoneNative]}
           {...(webSwipeHandlers ?? {})}
@@ -304,8 +310,10 @@ const getStyles = (colors: ThemedColors) =>
       left: 0,
       right: 0,
       bottom: 0,
-      paddingHorizontal: 8,
-      ...(IS_WEB ? ({ zIndex: 1200 } as any) : null),
+      paddingHorizontal: IS_WEB ? 8 : 0,
+      // Native: stretch the container edge-to-edge top→bottom so the card can fill
+      // the whole screen (fullscreen place card). Web keeps the bounded sheetRoot.
+      ...(IS_WEB ? ({ zIndex: 1200 } as any) : { top: 0 }),
     },
     // Mobile web BOUNDED bottom sheet (maps.me-style): anchored to the visible
     // viewport bottom so the map shows above it. Web-only (guarded by isFullscreenWeb).
@@ -330,40 +338,43 @@ const getStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surface,
       position: 'relative',
       overflow: 'hidden',
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-      // Bounded height: the photo is dominant but the map stays visible above the
-      // sheet. The split layout inside flexes to fill this box (hero + scroll body).
+      // Fullscreen on mobile web: the card covers the whole viewport (no map peek),
+      // so square top corners read as a true full-screen surface, not a sheet.
+      borderTopLeftRadius: 0,
+      borderTopRightRadius: 0,
+      // (Top safe-area paddingTop is applied inline — `insets` isn't in getStyles scope.)
+      // Fullscreen height: the split layout inside flexes to fill the viewport
+      // (hero photo grows + scrollable caption/actions below it).
       ...(IS_WEB
         ? ({
             display: 'flex',
             flexDirection: 'column',
-            height: 'min(82dvh, 720px)',
-            maxHeight: '82dvh',
+            height: '100dvh',
+            maxHeight: '100dvh',
             boxShadow: '0 -8px 28px rgba(15,23,42,0.22)',
           } as any)
         : null),
     },
     card: {
       width: '100%',
-      alignSelf: 'center',
-      maxWidth: 560,
       backgroundColor: colors.surface,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-      borderBottomLeftRadius: 16,
-      borderBottomRightRadius: 16,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
       overflow: 'hidden',
       ...(IS_WEB
-        ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any)
+        ? {
+            alignSelf: 'center',
+            maxWidth: 560,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            borderBottomLeftRadius: 16,
+            borderBottomRightRadius: 16,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            ...({ boxShadow: DESIGN_TOKENS.shadows.card } as any),
+          }
         : {
-            shadowColor: DESIGN_TOKENS.colors.text,
-            shadowOffset: { width: 0, height: -2 },
-            shadowOpacity: 0.12,
-            shadowRadius: 12,
-            elevation: 16,
+            // Native fullscreen: fill the whole screen (no maxWidth / corner radii /
+            // border). flex:1 lets the body ScrollView stretch from safeTop to bottom.
+            flex: 1,
           }),
     },
     handleZone: {
@@ -423,8 +434,8 @@ const getStyles = (colors: ThemedColors) =>
           }),
     },
     closeButtonFullscreen: {
-      // Larger tap target on the bounded bottom sheet; overlays the hero's top-right
-      // corner. The sheet no longer touches the top safe area, so a plain inset is fine.
+      // Larger tap target on the fullscreen card; overlays the hero's top-right
+      // corner. `top` is set inline (insets.top + 12) so ✕ clears the notch.
       width: 44,
       height: 44,
       borderRadius: 22,
@@ -435,16 +446,15 @@ const getStyles = (colors: ThemedColors) =>
       backgroundColor: 'rgba(0,0,0,0.6)',
       ...(IS_WEB
         ? ({
-            top: 12,
             zIndex: 10,
           } as any)
         : null),
     },
-    // #497 — native scroll region for the body inside the height-capped card. It
-    // flexShrinks so the sticky header keeps its height and only the body scrolls
-    // when «Ещё» expands past the cap; the card never grows off the top of screen.
+    // #497 — native scroll region for the body inside the fullscreen card. flex:1
+    // fills the space below the sticky header; only the body scrolls when «Ещё»
+    // expands, so the header keeps its height and never leaves the screen top.
     bodyScroll: {
-      flexShrink: 1,
+      flex: 1,
     },
     body: {
       // Photo runs edge-to-edge: the popup card's own contentContainer/footerContainer

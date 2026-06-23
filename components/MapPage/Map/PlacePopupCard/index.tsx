@@ -203,8 +203,11 @@ const PlacePopupCard: React.FC<Props> = ({
 
   useEffect(() => {
     setFullscreenVisible(false);
-    setNavExpanded(false);
-  }, [imageUrl]);
+    // In the mobile/native bottom card the «Ещё» navigation list opens expanded by
+    // default (the card is fullscreen there, so there is room) — the user shouldn't
+    // have to tap to reveal the maps/share actions. Desktop popup stays collapsed.
+    setNavExpanded(isBottomCardLayout);
+  }, [imageUrl, isBottomCardLayout]);
 
   const toggleNav = useCallback(() => {
     setNavExpanded((prev) => !prev);

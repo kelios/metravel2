@@ -80,44 +80,36 @@ test.describe('@smoke Manual QA automation: auth entrypoints', () => {
     await expect(page).toHaveURL(/\/registration/);
   });
 
-  test('account menu navigation works for guest users', async ({ page, context }) => {
+  test('account menu navigation works for guest users', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await gotoWithRetry(page, '/', { waitUntil: 'domcontentloaded', timeout: 60_000, attempts: 4 });
 
     const { loginItem } = await openGuestAccountMenu(page);
 
-    // Кликаем на "Войти" и ждем открытия новой вкладки
     await expect(loginItem).toBeVisible();
-    
-    const [newPage] = await Promise.all([
-      context.waitForEvent('page'),
+
+    await Promise.all([
+      page.waitForURL(/\/login/, { timeout: 10_000 }),
       loginItem.click(),
     ]);
 
-    // Проверяем что новая вкладка открылась на странице логина
-    await newPage.waitForLoadState('domcontentloaded');
-    await expect(newPage).toHaveURL(/\/login/, { timeout: 10_000 });
-    await newPage.close();
+    await expect(page).toHaveURL(/\/login/, { timeout: 10_000 });
   });
 
-  test('account menu registration works for guest users', async ({ page, context }) => {
+  test('account menu registration works for guest users', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await gotoWithRetry(page, '/', { waitUntil: 'domcontentloaded', timeout: 60_000, attempts: 4 });
 
     await openGuestAccountMenu(page);
 
-    // Кликаем на "Зарегистрироваться" и ждем открытия новой вкладки
     const registerButton = page.getByRole('menuitem', { name: 'Зарегистрироваться' });
     await expect(registerButton).toBeVisible();
-    
-    const [newPage] = await Promise.all([
-      context.waitForEvent('page'),
+
+    await Promise.all([
+      page.waitForURL(/\/registration/, { timeout: 10_000 }),
       registerButton.click(),
     ]);
 
-    // Проверяем что новая вкладка открылась на странице регистрации
-    await newPage.waitForLoadState('domcontentloaded');
-    await expect(newPage).toHaveURL(/\/registration/, { timeout: 10_000 });
-    await newPage.close();
+    await expect(page).toHaveURL(/\/registration/, { timeout: 10_000 });
   });
 });

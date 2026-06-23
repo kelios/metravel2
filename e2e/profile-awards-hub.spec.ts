@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { test, expect } from './fixtures'
-import { mockFakeAuthApis } from './helpers/auth'
+import { ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth'
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation'
 import {
   MOCK_MY_ACHIEVEMENTS,
@@ -14,8 +14,8 @@ import {
 
 // ── Mock payloads ─────────────────────────────────────────────────────────────
 
-// Matches the userId in e2e/.auth/storageState.json (real encrypted token user).
-const USER_ID = '104'
+// Matches ensureAuthedStorageFallback's seeded userId.
+const USER_ID = '1'
 
 /**
  * Intercepts all achievements/gamification API endpoints and returns mock JSON
@@ -294,6 +294,10 @@ const SCREENSHOTS_DIR = path.join(__dirname, '..', 'e2e', '__screenshots__', 'pr
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 async function setupPage(page: import('@playwright/test').Page) {
+  // Keep the spec deterministic even when e2e/.auth/storageState.json is stale
+  // or contains no token. API calls below are mocked, so a fake local token is
+  // enough to exercise the authenticated profile UI.
+  await ensureAuthedStorageFallback(page)
   // mockFakeAuthApis prevents /api/user/*/profile/ from returning 401 (which would
   // trigger auth invalidation and sign the user out).
   await mockFakeAuthApis(page)

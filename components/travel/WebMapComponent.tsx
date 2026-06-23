@@ -396,9 +396,10 @@ const WebMapComponent = ({
         const coords = await extractGpsFromImageFile(file);
         if (!coords) {
             void showToastMessage({
-                type: 'error',
-                text1: 'Нет геолокации в фото',
-                text2: 'В этом файле не найден GPS в EXIF. Попробуйте другое фото или добавьте точку вручную.',
+                type: 'info',
+                text1: 'У фото нет координат',
+                text2: 'В этом снимке нет GPS в EXIF, поэтому точка не создана. Поставьте точку кликом по карте, затем нажмите «Редактировать» и прикрепите это фото к ней.',
+                visibilityTime: 7000,
             });
             return;
         }

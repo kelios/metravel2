@@ -55,7 +55,7 @@ test.describe('@smoke Manual QA automation: footer navigation', () => {
     const targets = [
       { label: 'Политика конфиденциальности', path: /\/privacy/ },
       { label: 'Настройки cookies', path: /\/cookies/ },
-      { label: 'Связаться с нами', path: /\/about/ },
+      { label: 'Связаться с нами', path: /\/contact/ },
     ];
 
     for (const target of targets) {

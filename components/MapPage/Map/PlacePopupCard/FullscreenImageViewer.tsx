@@ -13,6 +13,7 @@ import type { ThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe';
 
 const getWebCreatePortal = (): ((node: React.ReactNode, container: Element) => any) | null => {
   if (Platform.OS !== 'web') return null;
@@ -37,7 +38,8 @@ export const fullscreenStyles = StyleSheet.create({
   },
   closeBtn: {
     position: 'absolute',
-    top: Platform.select({ ios: 54, default: 16 }),
+    // `top` is applied inline (insets.top + 12) so the ✕ clears the Android
+    // status bar / iOS notch — see usage below.
     right: 16,
     width: 44,
     height: 44,
@@ -64,7 +66,13 @@ const FullscreenImageViewer: React.FC<{
   colors: ThemedColors;
 }> = ({ imageUrl, alt, visible, onClose, colors }) => {
   const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const openedAtRef = useRef(0);
+
+  // Native: the viewer is a status-bar-translucent Modal, so the ✕ must sit
+  // below the system status bar / notch or it lands under the battery/clock and
+  // becomes untappable on Android (#497). insets.top is 0 on web (no notch).
+  const closeBtnTop = (insets?.top ?? 0) + 12;
 
   const maxW = Math.round(width * 0.92);
   const maxH = Math.round(height * 0.92);
@@ -229,7 +237,8 @@ const FullscreenImageViewer: React.FC<{
           title="Закрыть фото"
           style={{
             position: 'absolute',
-            top: 16,
+            // Keep the ✕ below the device notch / status bar on mobile web.
+            top: 'max(16px, env(safe-area-inset-top, 16px))',
             right: 16,
             width: 44,
             height: 44,
@@ -242,6 +251,7 @@ const FullscreenImageViewer: React.FC<{
             alignItems: 'center',
             justifyContent: 'center',
             color: '#fff',
+            zIndex: 10,
           }}
         >
           <Feather name="x" size={24} color="#fff" />
@@ -305,8 +315,8 @@ const FullscreenImageViewer: React.FC<{
       </View>
       <Pressable
         onPress={onClose}
-        hitSlop={12}
-        style={fullscreenStyles.closeBtn}
+        hitSlop={16}
+        style={[fullscreenStyles.closeBtn, { top: closeBtnTop }]}
         accessibilityRole="button"
         accessibilityLabel="Закрыть фото"
       >
