@@ -81,6 +81,9 @@ const pageTranslations: Record<string, string> = {
   disclaimer: 'Отказ от ответственности',
   'community-rules': 'Правила сообщества',
   'trip-rules': 'Правила участия в поездках',
+  trips: 'Поездки',
+  plan: 'Планирование',
+  create: 'Новая поездка',
 };
 
 function normalizePathname(pathname: string | null | undefined) {
