@@ -1,0 +1,12 @@
+# Intro-карта квеста (native-only регресс): карта деталки должна показать точки маршрута до старта.
+# Регрессия, которую ловит: Leaflet/WebView показывает тайлы, но не рисует маркеры квеста.
+appId: by.metravel.app
+---
+- runFlow: launch.yaml
+- tapOn: "Квесты"
+- assertVisible: "Все квесты"
+- tapOn:
+    text: "Начать приключение.*"
+    index: 0
+- assertVisible: "Карта квеста"
+- assertVisible: "9 точек на карте"

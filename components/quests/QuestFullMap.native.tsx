@@ -12,7 +12,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { WebView } from 'react-native-webview';
+import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import Feather from '@expo/vector-icons/Feather';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -24,6 +24,20 @@ import { getOsmNativeTileUrl, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers';
 type StepPoint = { lat: number; lng: number; title?: string };
 
 type GroupedPoint = { lat: number; lng: number; indexes: number[]; titles: string[] };
+
+type MarkerStatus = {
+    expectedMarkers: number;
+    markerNodes: number;
+    visibleMarkers: number;
+};
+
+function formatPointCount(count: number) {
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    if (mod10 === 1 && mod100 !== 11) return `${count} точка`;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} точки`;
+    return `${count} точек`;
+}
 
 function buildGeoJSON(pts: StepPoint[]) {
     return JSON.stringify(
@@ -65,6 +79,7 @@ function QuestFullMap({
 }) {
     const [isLoading, setIsLoading] = useState(true);
     const [exportMenuVisible, setExportMenuVisible] = useState(false);
+    const [markerStatus, setMarkerStatus] = useState<MarkerStatus | null>(null);
     const webViewRef = useRef<WebView>(null);
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
@@ -109,7 +124,15 @@ function QuestFullMap({
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { width: 100%; height: 100%; }
         #map { width: 100%; height: 100%; }
-        .qmark { background: transparent; border: none; }
+        .leaflet-overlay-pane { z-index: 450 !important; }
+        .leaflet-marker-pane { z-index: 650 !important; }
+        .qmark {
+          background: transparent !important;
+          border: none !important;
+          display: block !important;
+          visibility: visible !important;
+        }
+        .qmark > div { transform: translateZ(0); }
       </style>
     </head>
     <body>
@@ -152,10 +175,46 @@ function QuestFullMap({
         }
 
         var markers = grouped.map(function (gp) {
-          var marker = L.marker([gp.lat, gp.lng], { icon: iconFor(gp.indexes.join(','), false) }).addTo(map);
+          var marker = L.marker([gp.lat, gp.lng], {
+            icon: iconFor(gp.indexes.join(','), false),
+            zIndexOffset: 1000
+          }).addTo(map);
           marker.bindPopup('<b>' + gp.indexes.join(', ') + '.</b><br/>' + gp.titles.join(', '));
           return marker;
         });
+
+        function visibleMarkerCount() {
+          var nodes = document.querySelectorAll('.leaflet-marker-icon.qmark, .qmark.leaflet-marker-icon');
+          var visible = 0;
+          nodes.forEach(function (node) {
+            var rect = node.getBoundingClientRect();
+            var computed = window.getComputedStyle(node);
+            if (
+              rect.width > 0 &&
+              rect.height > 0 &&
+              computed.display !== 'none' &&
+              computed.visibility !== 'hidden' &&
+              computed.opacity !== '0'
+            ) {
+              visible += 1;
+            }
+          });
+          return visible;
+        }
+
+        function postMapStatus(stage) {
+          try {
+            if (!window.ReactNativeWebView) return;
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'quest-map-status',
+              stage: stage,
+              points: routePoints.length,
+              expectedMarkers: grouped.length,
+              markerNodes: document.querySelectorAll('.qmark').length,
+              visibleMarkers: visibleMarkerCount()
+            }));
+          } catch (e) {}
+        }
 
         window.__qmZoomIn = function () { try { map.zoomIn(); } catch (e) {} };
         window.__qmZoomOut = function () { try { map.zoomOut(); } catch (e) {} };
@@ -182,6 +241,7 @@ function QuestFullMap({
             if (!size || size.x === 0 || size.y === 0) return false;
             var bounds = L.latLngBounds(routePoints).pad(0.15);
             map.fitBounds(bounds, { animate: false });
+            window.setTimeout(function () { postMapStatus('fit'); }, 50);
             return true;
           } catch (e) { return false; }
         }
@@ -193,6 +253,8 @@ function QuestFullMap({
             if (fitToRoute() || fitTries > 20) clearInterval(fitTimer);
           }, 150);
         }
+        window.setTimeout(function () { postMapStatus('ready'); }, 250);
+        window.setTimeout(function () { postMapStatus('settled'); }, 1000);
       </script>
     </body>
     </html>
@@ -204,6 +266,32 @@ function QuestFullMap({
             `window.setActiveStep && window.setActiveStep(${activeStepIndex ?? 'null'}); true;`
         );
     }, [activeStepIndex, isLoading]);
+
+    useEffect(() => {
+        setIsLoading(true);
+        setMarkerStatus(null);
+    }, [htmlContent]);
+
+    const handleMapMessage = (event: WebViewMessageEvent) => {
+        try {
+            const data = JSON.parse(event.nativeEvent.data) as Partial<MarkerStatus> & {
+                type?: string;
+            };
+            if (data.type !== 'quest-map-status') return;
+            setMarkerStatus({
+                expectedMarkers: Number(data.expectedMarkers) || groupedPoints.length,
+                markerNodes: Number(data.markerNodes) || 0,
+                visibleMarkers: Number(data.visibleMarkers) || 0,
+            });
+        } catch {
+            // Ignore non-JSON WebView messages.
+        }
+    };
+
+    const markersConfirmed =
+        Boolean(markerStatus) &&
+        markerStatus!.expectedMarkers > 0 &&
+        markerStatus!.visibleMarkers >= markerStatus!.expectedMarkers;
 
     const handleZoom = (direction: 'in' | 'out') => {
         const fn = direction === 'in' ? '__qmZoomIn' : '__qmZoomOut';
@@ -267,6 +355,31 @@ function QuestFullMap({
                 </TouchableOpacity>
             </View>
 
+            <View
+                style={styles.pointStatus}
+                testID="quest-map-points-status"
+                accessibilityLabel={
+                    markersConfirmed
+                        ? `${formatPointCount(points.length)} на карте`
+                        : markerStatus && markerStatus.expectedMarkers > 0
+                          ? 'Точки карты не отрисовались'
+                          : `${formatPointCount(points.length)} загружаются на карту`
+                }
+            >
+                <Feather
+                    name={markersConfirmed ? 'map-pin' : 'loader'}
+                    size={14}
+                    color={markersConfirmed ? colors.primary : colors.textMuted}
+                />
+                <Text style={styles.pointStatusText} numberOfLines={1}>
+                    {markersConfirmed
+                        ? `${formatPointCount(points.length)} на карте`
+                        : markerStatus && markerStatus.expectedMarkers > 0
+                          ? 'Точки карты не отрисовались'
+                          : `${formatPointCount(points.length)} загружаются на карту`}
+                </Text>
+            </View>
+
             <Modal
                 visible={exportMenuVisible}
                 transparent
@@ -317,12 +430,14 @@ function QuestFullMap({
                 )}
                 <WebView
                     ref={webViewRef}
+                    testID="quest-map-webview"
                     source={{ html: htmlContent }}
                     style={styles.map}
                     javaScriptEnabled
                     domStorageEnabled
                     startInLoadingState
                     onLoadEnd={() => setIsLoading(false)}
+                    onMessage={handleMapMessage}
                     scrollEnabled
                 />
                 <View style={styles.zoomControls} pointerEvents="box-none">
@@ -393,6 +508,23 @@ const createStyles = (colors: ThemedColors) =>
         },
         map: {
             flex: 1,
+        },
+        pointStatus: {
+            minHeight: 36,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+            backgroundColor: colors.surface,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+        },
+        pointStatusText: {
+            flex: 1,
+            fontSize: 13,
+            fontWeight: '600',
+            color: colors.text,
         },
         zoomControls: {
             position: 'absolute',

@@ -279,6 +279,7 @@
 | QST-13 | Заголовок страницы (SEO) | — | Открыть `/quests` и детали | Корректный `title`/H1 на списке и деталях |
 | QST-14 | Пустое/ошибка | Нет квестов/ошибка API | Открыть список | Нейтральный empty/error state, recovery CTA, без краша |
 | QST-15 | Mobile-список | Viewport 390×844 | Открыть `/quests` | Нет горизонтального overflow, карточки читаемы, тач-таргеты ≥44px |
+| QST-16 | Детали квеста: intro-карта | Авторизованный пользователь; есть квест с координатами | Открыть `/quests/krakow/krakow-dragon` до нажатия «Начать квест»; прокрутить до «Карта квеста» | Native/web карта показывает реальные точки маршрута из `steps`; для Krakow Dragon видно «9 точек на карте», а не только тайлы |
 
 #### Трассируемость покрытия (TD-026)
 
@@ -301,6 +302,7 @@
 | QST-13 | P3 | unit `quest-screen-title` | ✅ unit verified |
 | QST-14 | P2 | manual | manual |
 | QST-15 | P2 | manual (T-027: console=0, overflowX=false) | manual |
+| QST-16 | P1 | unit `QuestFullMap.native`; Maestro `quest-intro-map-points.yaml` | repeatable device e2e |
 
 ## Раздел 10. Прочее (footer / служебные)
 
@@ -343,7 +345,7 @@
 | AND-USB-08 | Native map smoke | Вкладка карты открыта | Проверить тайлы, панорамирование/зум, bottom sheet, карточку места, внешние карты | Карта не серая из-за недостижимого dev tile-origin; bottom sheet и popup работают |
 | AND-USB-09 | Permissions | Сценарий использует разрешения | Проверить геолокацию/медиа permission prompt: allow и deny ветки, если доступны без destructive effects | Allow дает ожидаемый результат; deny показывает понятный fallback без краша |
 | AND-USB-10 | Auth entrypoints | Нужен e2e-аккаунт | Войти через безопасный e2e-механизм/уже подготовленный аккаунт; не печатать пароль/токен | Авторизованные экраны открываются; состояние сохраняется после app reload |
-| AND-USB-11 | Quests native regressions | Установлен build с квестами | Пройти `e2e/maestro/quest-reviews.yaml` и `quest-offline-points.yaml` либо вручную повторить их шаги | Отзывы открывают модалку отзывов; GPX/share готовится без `expo-file-system` runtime throw |
+| AND-USB-11 | Quests native regressions | Установлен build с квестами | Пройти `e2e/maestro/quest-reviews.yaml`, `quest-intro-map-points.yaml` и `quest-offline-points.yaml` либо вручную повторить их шаги | Отзывы открывают модалку отзывов; intro-карта квеста показывает точки маршрута; GPX/share готовится без `expo-file-system` runtime throw |
 | AND-USB-12 | Recommendation shelves | Авторизованный аккаунт с избранным/историей | Пройти `e2e/maestro/recommendation-shelves.yaml` либо вручную открыть полки идей на Маршрутах | «Избранное» и «Недавно смотрели» рендерятся; если нет — баг остается подтвержденным |
 
 #### Трассируемость Android device coverage
@@ -360,7 +362,7 @@
 | AND-USB-08 | P1 | manual; native map evidence | manual |
 | AND-USB-09 | P2 | manual permission matrix | manual |
 | AND-USB-10 | P1 | manual with `.env.e2e`/prepared account, no secret output | manual |
-| AND-USB-11 | P1 | Maestro `quest-reviews.yaml`, `quest-offline-points.yaml` | repeatable device e2e |
+| AND-USB-11 | P1 | Maestro `quest-reviews.yaml`, `quest-intro-map-points.yaml`, `quest-offline-points.yaml` | repeatable device e2e |
 | AND-USB-12 | P1 | Maestro `recommendation-shelves.yaml` | known regression detector |
 
 ### Чек-лист платформ

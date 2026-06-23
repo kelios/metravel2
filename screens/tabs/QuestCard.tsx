@@ -263,6 +263,26 @@ export default function QuestCard({
                                 </Text>
                             </View>
                         )}
+                        {showReviewsAction && (
+                            <Pressable
+                                onPress={handleReviewsPress}
+                                style={[
+                                    styles.questCardDetailsItem,
+                                    styles.questCardReviewsInline,
+                                    Platform.OS !== 'web' && styles.questCardReviewsChipNative,
+                                ]}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Посмотреть отзывы: ${reviewsLabel}`}
+                                accessibilityHint="Открывает отзывы к квесту"
+                                testID={`quest-card-reviews-${quest.id}`}
+                                hitSlop={6}
+                            >
+                                <Feather name="message-circle" size={13} color={colors.textMuted} />
+                                <Text style={styles.questCardDetailsText}>
+                                    Посмотреть отзывы ({quest.ratingCount})
+                                </Text>
+                            </Pressable>
+                        )}
                         {quest.completionsCount > 0 && (
                             <View
                                 style={styles.questCardDetailsItem}
@@ -285,7 +305,7 @@ export default function QuestCard({
                 </View>
             )}
 
-            {showReviewsAction && (
+            {showReviewsAction && !isPhone && (
                 <Pressable
                     onPress={handleReviewsPress}
                     style={[

@@ -8,6 +8,8 @@ appId: by.metravel.app
 - tapOn:
     text: "Начать приключение.*"
     index: 0
+- assertVisible: "Карта квеста"
+- assertVisible: "9 точек на карте"
 # Топ-бар деталки: «Скачать GPX с N точками квеста» (accessibilityLabel из questWizardShell.tsx)
 - tapOn:
     text: "Скачать GPX.*"

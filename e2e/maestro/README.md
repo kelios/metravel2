@@ -40,6 +40,7 @@ export JAVA_HOME="$(brew --prefix openjdk@17)/libexec/openjdk.jdk/Contents/Home"
 export PATH="$HOME/.maestro/bin:$JAVA_HOME/bin:$PATH"
 
 maestro test e2e/maestro/quest-reviews.yaml          # ✅ проверено зелёным 2026-06-22
+maestro test e2e/maestro/quest-intro-map-points.yaml
 maestro test e2e/maestro/quest-offline-points.yaml
 maestro test e2e/maestro/recommendation-shelves.yaml
 maestro test e2e/maestro/            # все сразу
@@ -49,6 +50,7 @@ maestro test e2e/maestro/            # все сразу
 | Flow | Что проверяет | Статус |
 |---|---|---|
 | `quest-reviews.yaml` | Чип «💬 N» → модалка отзывов (не старт квеста) | ✅ зелёный на 2026-06-22 |
+| `quest-intro-map-points.yaml` | Деталка квеста → intro-карта показывает точки маршрута до старта | 🆕 покрывает регресс пустой карты |
 | `quest-offline-points.yaml` | Скачать GPX / открыть в приложении → share с .gpx (не тост ошибки) | ✅ зелёный на 2026-06-22 |
 | `recommendation-shelves.yaml` | Полки Избранное/Недавно смотрели на Маршрутах | ⚠️ ПАДАЕТ — открытый баг рендера полок (data есть, рендера нет) |
 

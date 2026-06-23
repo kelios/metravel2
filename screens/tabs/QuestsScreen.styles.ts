@@ -903,6 +903,9 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             minWidth: 168,
             justifyContent: 'center',
         },
+        questCardReviewsInline: {
+            zIndex: 30,
+        },
         questCardReviewsChipText: {
             color: colors.textOnDark,
             fontSize: typography.sizes.xs,
