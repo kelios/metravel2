@@ -1,6 +1,6 @@
 import React, { Suspense, useCallback, useEffect, useMemo } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Link, useLocalSearchParams } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useIsFocused } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 
@@ -320,6 +320,7 @@ const QuestPreview = ({
   colors: Colors;
   styles: ReturnType<typeof createStyles>;
 }) => {
+  const router = useRouter();
   const cityName = bundle.city?.name;
   const introStory = bundle.intro?.story?.trim();
   const locations = bundle.steps.map((step) => step.location).filter(Boolean);
@@ -377,12 +378,10 @@ const QuestPreview = ({
           <Text style={styles.previewCtaText}>
             Прохождение квеста доступно после входа — так мы сохраним ваш прогресс и результаты.
           </Text>
-          <Link href="/login" asChild>
-            <Pressable style={styles.primaryButton}>
-              <Icon name="log-in" color={colors.textOnPrimary} size={16} />
-              <Text style={styles.primaryButtonText}>Войдите, чтобы пройти квест</Text>
-            </Pressable>
-          </Link>
+          <Pressable style={styles.primaryButton} onPress={() => router.push('/login')}>
+            <Icon name="log-in" color={colors.textOnPrimary} size={16} />
+            <Text style={styles.primaryButtonText}>Войдите, чтобы пройти квест</Text>
+          </Pressable>
         </View>
       </View>
 
