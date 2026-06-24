@@ -79,6 +79,12 @@ export default function ToastHost() {
     zIndex: 99999,
     maxWidth: 420,
     width: 'calc(100% - 32px)',
+    // Глобальное правило `#root, #root > div, #root > div > div { min-height: 100vh }`
+    // матчит контейнер тоста (он — `#root > div > div`) и растягивал его на весь экран:
+    // карточка (static-блок) садилась вверху контейнера → за экран/под шапку, тост был не
+    // виден. Явно снимаем min-height, чтобы контейнер был по высоте карточки.
+    minHeight: 0,
+    height: 'fit-content',
     pointerEvents: 'auto',
     transition: `transform ${SLIDE_DURATION_MS}ms cubic-bezier(0.4,0,0.2,1), opacity ${SLIDE_DURATION_MS}ms ease`,
     transform: visible
