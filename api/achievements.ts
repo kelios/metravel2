@@ -326,13 +326,13 @@ const shouldFallbackToMock = (error: unknown): boolean => {
 
 /**
  * Peer-награды (§10) — фича на mock-fallback до деплоя BE-эндпоинтов
- * /achievements/peer-badges/*. Без отдельного гейта в проде каталог пустой и
- * пикер «Наградить» открывается без вариантов (#577). Пока эндпоинт не
- * задеплоен — отдаём мок-каталог И в проде на «нет эндпоинта» (404/501/0),
- * не только в DEV. Реальные ошибки сети (5xx/таймаут) по-прежнему всплывают.
+ * /achievements/peer-badges/*. Fallback срабатывает только в __DEV__ или под
+ * флагом EXPO_PUBLIC_ACHIEVEMENTS_MOCK, чтобы не маскировать ошибки в проде.
+ * Когда BE задеплоит эндпоинты — убрать флаг и проверить реальный ответ.
  */
 const shouldFallbackPeerToMock = (error: unknown): boolean => {
   if (USE_MOCK) return true;
+  if (!__DEV__) return false;
   return error instanceof ApiError && [0, 404, 501].includes(error.status);
 };
 
@@ -398,11 +398,12 @@ export async function fetchPeerBadgeCatalog(): Promise<PeerBadge[]> {
     const dto = await apiClient.get<PeerBadgeDto[]>('/achievements/peer-badges/');
     const mapped = (dto ?? []).map(mapPeerBadge);
     // BE задеплоил эндпоинт, но каталог пуст (200 + []) → пикер «Наградить»
-    // открывался без вариантов (#577). Пока бэк не засидил реальные значки —
-    // отдаём мок-каталог, чтобы выдача наград работала. Снять, когда BE вернёт
-    // непустой список (см. контракт #555/§10).
-    if (mapped.length === 0) {
-      devWarn('[achievements] peer catalog empty → mock fallback');
+    // открывался без вариантов (#577). В DEV отдаём мок-каталог чтобы выдача
+    // наград работала при разработке. В проде возвращаем пустой массив как есть,
+    // чтобы не маскировать реальное состояние бэка. Снять, когда BE засидит
+    // реальные значки (см. контракт #555/§10).
+    if (mapped.length === 0 && __DEV__) {
+      devWarn('[achievements] peer catalog empty → mock fallback (dev only)');
       return MOCK_PEER_CATALOG;
     }
     return mapped;

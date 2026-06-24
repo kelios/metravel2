@@ -248,6 +248,7 @@ export const summarizeFilterValues = (
   title: string,
   values: Array<string | number> | undefined,
   options?: Array<{ id?: string | number; country_id?: string | number; name?: string; title_ru?: string }>,
+  optionsOverride: { includeTitle?: boolean } = {},
 ) => {
   if (!values?.length) return null
 
@@ -256,8 +257,9 @@ export const summarizeFilterValues = (
 
   const shownLabels = labels.slice(0, 2).join(', ')
   const extraCount = labels.length - 2
+  const suffix = `${shownLabels}${extraCount > 0 ? ` +${extraCount}` : ''}`
 
-  return `${title}: ${shownLabels}${extraCount > 0 ? ` +${extraCount}` : ''}`
+  return optionsOverride.includeTitle === false ? suffix : `${title}: ${suffix}`
 }
 
 export const buildActiveConditionChips = ({
@@ -279,8 +281,9 @@ export const buildActiveConditionChips = ({
     title: string,
     values: Array<string | number> | undefined,
     optionList?: Array<{ id?: string | number; country_id?: string | number; name?: string; title_ru?: string }>,
+    optionsOverride?: { includeTitle?: boolean },
   ) => {
-    const label = summarizeFilterValues(title, values, optionList)
+    const label = summarizeFilterValues(title, values, optionList, optionsOverride)
     if (!label) return
     chips.push({
       key: String(key),
@@ -315,7 +318,9 @@ export const buildActiveConditionChips = ({
 
   addArrayChip('countries', 'Страны', filter.countries, options?.countries)
   addArrayChip('categories', 'Категории', filter.categories, options?.categories)
-  addArrayChip('categoryTravelAddress', 'Что посмотреть', filter.categoryTravelAddress, options?.categoryTravelAddress)
+  addArrayChip('categoryTravelAddress', 'Что посмотреть', filter.categoryTravelAddress, options?.categoryTravelAddress, {
+    includeTitle: false,
+  })
   addArrayChip('transports', 'Транспорт', filter.transports, options?.transports)
   addArrayChip('companions', 'Спутники', filter.companions, options?.companions)
   addArrayChip('complexity', 'Сложность', filter.complexity, options?.complexity)

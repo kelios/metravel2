@@ -13,6 +13,18 @@ jest.mock('@/utils/gamificationAnalytics', () => ({
   trackPathChosen: jest.fn(),
 }))
 
+// useMyGamificationProgress and useMyCharacter wait for the consolidated
+// /achievements/me/ response (#588) before deciding whether to fire separate
+// requests. Mock useMyAchievements to immediately resolve with no embedded
+// progression/character so the hooks fall back to their own fetches.
+jest.mock('@/hooks/useAchievementsApi', () => ({
+  useMyAchievements: () => ({
+    data: { progressionDto: null, characterDto: null },
+    isSuccess: true,
+    isFetching: false,
+  }),
+}))
+
 const isAuthenticatedRef = { value: true }
 jest.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (s: { isAuthenticated: boolean }) => unknown) =>

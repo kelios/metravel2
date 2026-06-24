@@ -36,11 +36,7 @@ describe('travel PointCard native layout', () => {
         isMobile
         onAddPoint={noop}
         onCopy={noop}
-        onOpenAppleMap={noop}
-        onOpenGoogleMap={noop}
         onOpenMap={noop}
-        onOpenOsmMap={noop}
-        onOpenYandexMap={noop}
         onShare={noop}
         responsive={{
           coordSize: 12,
@@ -55,8 +51,9 @@ describe('travel PointCard native layout', () => {
     const imageWrapStyle = StyleSheet.flatten(screen.getByTestId('travel-point-card-image-wrap').props.style);
 
     expect(overlay.findByProps({ accessibilityLabel: 'Мои точки' })).toBeTruthy();
-    expect(overlay.findByProps({ accessibilityLabel: 'Google' })).toBeTruthy();
-    expect(overlay.findByProps({ accessibilityLabel: 'OSM' })).toBeTruthy();
+    // PointNavigationMenu renders a collapsed toggle by default; individual map app
+    // buttons are only visible after user expands the menu. Assert the toggle is present.
+    expect(overlay.findByProps({ accessibilityLabel: 'Открыть в навигаторе' })).toBeTruthy();
     expect(screen.getByText(/Глубокое озеро/)).toBeTruthy();
     expect(imageWrapStyle.height).toBe(320);
   });

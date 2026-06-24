@@ -18,7 +18,7 @@ describe('ListTravelBase helpers', () => {
     expect(chips).toEqual([])
   })
 
-  it('uses real option names for active filter chips when options are loaded', () => {
+  it('uses real option names without raw group titles for active filter chips when options are loaded', () => {
     const chips = buildActiveConditionChips({
       debSearch: '',
       filter: { categoryTravelAddress: [12] } as any,
@@ -29,6 +29,6 @@ describe('ListTravelBase helpers', () => {
       setSearch: jest.fn(),
     })
 
-    expect(chips.map((chip) => chip.label)).toEqual(['Что посмотреть: Водопады'])
+    expect(chips.map((chip) => chip.label)).toEqual(['Водопады'])
   })
 })

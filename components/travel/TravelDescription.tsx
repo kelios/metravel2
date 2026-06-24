@@ -83,14 +83,21 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
         if (Platform.OS === "web") {
             const w = typeof window !== "undefined" ? (window as any) : null;
             let idleId: number | null = null;
-            // Два кадра: даём шеллу+hero отрисоваться и снять SSG-скелет (гидратация
-            // прероллит только скелет — мгновенный монтаж дал бы mismatch). Лёгкое
-            // описание после кадров раскрываем сразу; тяжёлое — в idle (защита потока),
-            // форсаж — на случай занятого потока.
+            // Лёгкое описание раскрываем сразу после hydration effect: рендер был
+            // одинаковым на первом клиентском проходе, поэтому mismatch'а нет, а
+            // пользователь не ждёт idle/rAF-ворота (#557). Тяжёлое HTML оставляем
+            // за idle-gate, чтобы не блокировать hero/шапку.
+            if (!isHeavyHtml) {
+                reveal();
+                return () => {
+                    cancelled = true;
+                };
+            }
+
             const rafOuter = w?.requestAnimationFrame
                 ? w.requestAnimationFrame(() => {
                       w.requestAnimationFrame(() => {
-                          if (isHeavyHtml && w.requestIdleCallback) {
+                          if (w.requestIdleCallback) {
                               idleId = w.requestIdleCallback(reveal, { timeout: 600 });
                           } else {
                               reveal();
@@ -98,7 +105,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
                       });
                   })
                 : null;
-            const timeoutId = setTimeout(reveal, isHeavyHtml ? 800 : 200);
+            const timeoutId = setTimeout(reveal, 800);
 
             return () => {
                 cancelled = true;
@@ -209,6 +216,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
             <StableContent html={htmlContent} contentWidth={contentWidth} fullWidth={noBox} />
           ) : (
             <View
+              testID="travel-description-fallback"
               style={
                 Platform.OS === "web"
                   ? [styles.webLazyContentFallback, { minHeight: estimatedHeight }]

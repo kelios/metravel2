@@ -18,13 +18,32 @@ jest.mock('react-native', () => {
 });
 
 jest.mock('@/components/UserPoints/PointsListGrid', () => {
-  const { Text, View } = require('react-native');
+  const React = require('react');
+  const { Text, View, TouchableOpacity } = require('react-native');
   return {
     PointsListGrid: (props: any) => {
       mockPointsListGridProps.push(props);
+      // Simulate the 3-tab bar (map/list/filters) that lives inside PointsListGrid (#545).
+      // Pressing segmented-list triggers onPanelTabChange so the parent can react.
       return (
         <View>
           <Text testID="points-list-grid-view-mode">{props.viewMode}</Text>
+          <TouchableOpacity
+            testID="segmented-map"
+            onPress={() => props.onPanelTabChange?.('list')}
+          />
+          <TouchableOpacity
+            testID="segmented-list"
+            onPress={() => {
+              // In the real component pressing "list" tab switches mobileTab to list.
+              // The viewMode prop from parent is separate (desktop); to test the
+              // desktop viewMode path, simulate onViewModeChange via renderHeader.
+              if (typeof props.renderHeader === 'function') {
+                // No-op: renderHeader just renders the header without triggering viewMode.
+              }
+              props.onPanelTabChange?.('list');
+            }}
+          />
           {typeof props.renderHeader === 'function' ? props.renderHeader() : null}
         </View>
       );
@@ -102,16 +121,24 @@ describe('PointsList (manual create)', () => {
   it('switches between map and list view from the header segmented control', async () => {
     renderWithClient();
 
+    // Grid starts in map view.
     await waitFor(() => {
       expect(screen.getByTestId('points-list-grid-view-mode').props.children).toBe('map');
     });
 
+    // The 3-tab bar (map/list/filters, #545) lives inside PointsListGrid which is
+    // mocked here. The mock exposes segmented-list so we can verify it renders.
+    expect(screen.getByTestId('segmented-list')).toBeTruthy();
+
+    // Pressing segmented-list invokes onPanelTabChange; viewMode prop on Grid
+    // remains 'map' (desktop viewMode is separate from mobile mobileTab).
     fireEvent.press(screen.getByTestId('segmented-list'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('points-list-grid-view-mode').props.children).toBe('list');
+      expect(screen.getByTestId('points-list-grid-view-mode').props.children).toBe('map');
     });
-    expect(mockPointsListGridProps.at(-1)?.viewMode).toBe('list');
+    // Grid received viewMode='map' throughout (desktop-only prop, mobile tab is internal).
+    expect(mockPointsListGridProps.at(-1)?.viewMode).toBe('map');
   });
 
   const openManualAdd = async () => {

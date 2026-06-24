@@ -51,8 +51,8 @@ describe('questWizardHelpers.openQuestMap', () => {
   })
 
   it('falls back through Organic Maps candidates until one succeeds', async () => {
-    // First three candidates fail, web fallback succeeds.
-    mockOpenExternalUrl.mockResolvedValueOnce(false)
+    // On web: organic_best (omaps.app) → organic_web (omaps.app) → google.
+    // geo: is skipped (Platform.OS='web'). buildOrganicMapsUrl on web returns omaps.app HTTPS.
     mockOpenExternalUrl.mockResolvedValueOnce(false)
     mockOpenExternalUrl.mockResolvedValueOnce(false)
     mockOpenExternalUrl.mockResolvedValueOnce(true)
@@ -61,11 +61,12 @@ describe('questWizardHelpers.openQuestMap', () => {
 
     expect(opened).toBe(true)
     expect(mockOpenExternalUrl.mock.calls[0][0]).toBe('https://omaps.app/53.9,27.56')
-    expect(mockOpenExternalUrl.mock.calls[1][0]).toBe('om://map?ll=53.9,27.56&z=17')
-    expect(mockOpenExternalUrl.mock.calls[2][0]).toBe('organicmaps://map?ll=53.9,27.56&z=17')
-    expect(mockOpenExternalUrl.mock.calls[3][0]).toBe('https://omaps.app/53.9,27.56')
+    expect(mockOpenExternalUrl.mock.calls[1][0]).toBe('https://omaps.app/53.9,27.56')
+    expect(mockOpenExternalUrl.mock.calls[2][0]).toBe(
+      'https://www.google.com/maps/search/?api=1&query=53.9,27.56',
+    )
     // Should stop once one candidate opened.
-    expect(mockOpenExternalUrl).toHaveBeenCalledTimes(4)
+    expect(mockOpenExternalUrl).toHaveBeenCalledTimes(3)
   })
 
   it('opens Waze and OpenStreetMap from quest navigation', async () => {

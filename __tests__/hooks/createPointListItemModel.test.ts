@@ -15,6 +15,7 @@ describe('createPointListItemModel', () => {
       baseUrl: 'https://example.com/travel',
       buildAppleMapsUrl: (coord: string) => `apple:${coord}`,
       buildMapUrl: (coord: string) => `google:${coord}`,
+      buildOrganicMapsUrl: (coord: string) => `organic:${coord}`,
       buildOsmUrl: (coord: string) => `osm:${coord}`,
       buildYandexMapsUrl: (coord: string) => `yandex:${coord}`,
       getCategoryLabel: () => 'Озёра',
@@ -39,7 +40,7 @@ describe('createPointListItemModel', () => {
     expect(model.addDisabled).toBe(false);
     expect(model.categoryLabel).toBe('Озёра');
     expect(model.imageUrl).toBe('https://example.com/image.jpg');
-    expect(model.mapActions).toHaveLength(4);
+    expect(model.mapActions).toHaveLength(5);
     expect(model.inlineActions).toHaveLength(1);
 
     model.onCardPress?.();
@@ -70,6 +71,7 @@ describe('createPointListItemModel', () => {
       baseUrl: undefined,
       buildAppleMapsUrl: (coord: string) => `apple:${coord}`,
       buildMapUrl: (coord: string) => `google:${coord}`,
+      buildOrganicMapsUrl: (coord: string) => `organic:${coord}`,
       buildOsmUrl: (coord: string) => `osm:${coord}`,
       buildYandexMapsUrl: (coord: string) => `yandex:${coord}`,
       getCategoryLabel: () => '',

@@ -148,6 +148,62 @@ describe('useTravelDetails', () => {
     });
   });
 
+  it('skips preload polling in queryFn once initialData has consumed the preload', async () => {
+    (Platform.OS as any) = 'web';
+    (global as any).window = {
+      __metravelTravelPreload: {
+        data: {
+          id: 498,
+          slug: 'awesome-trip',
+          name: 'Trip',
+          description: '<p>Full text</p>',
+          gallery: [],
+          travelAddress: [{ id: 1, name: 'Point' }],
+          coordsMeTravel: [],
+        },
+        slug: 'awesome-trip',
+        isId: false,
+      },
+      __metravelTravelPreloadScriptLoaded: true,
+      __metravelTravelPreloadTargetPath: '/travels/awesome-trip',
+      __metravelTravelPreloadPending: true,
+      __metravelTravelPreloadPromise: new Promise<void>(() => {
+        // never resolves; queryFn must not wait for it after initialData
+      }),
+    };
+
+    useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
+    (fetchTravelBySlug as jest.Mock).mockResolvedValue({ slug: 'awesome-trip', from: 'network' });
+
+    (useQuery as jest.Mock).mockImplementation(({ queryFn, initialData }: any) => {
+      capturedQueryFn = queryFn;
+      return {
+        data: initialData,
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: jest.fn(),
+      };
+    });
+
+    renderHook(() => useTravelDetails());
+
+    await waitFor(() => {
+      expect((global as any).window.__metravelTravelPreload).toBeUndefined();
+    });
+
+    const result = await Promise.race([
+      capturedQueryFn!().then((data) => ({ status: 'resolved', data })),
+      new Promise((resolve) => setTimeout(() => resolve({ status: 'timeout' }), 50)),
+    ]);
+
+    expect(result).toEqual({
+      status: 'resolved',
+      data: { slug: 'awesome-trip', from: 'network' },
+    });
+    expect(fetchTravelBySlug).toHaveBeenCalledWith('awesome-trip', { signal: undefined });
+  });
+
   it('ignores sparse preloaded travel payloads and falls back to fetchTravelBySlug', async () => {
     (Platform.OS as any) = 'web';
     (global as any).window = {

@@ -37,6 +37,10 @@ type TravelPreloadWindow = Window & typeof globalThis & {
   __metravelTravelPreloadTargetPath?: string;
 };
 
+const PRELOAD_WAIT_TIMEOUT_MS = 500;
+const PRELOAD_BOOTSTRAP_READY_TIMEOUT_MS = 350;
+const PRELOAD_POLL_INTERVAL_MS = 25;
+
 // The inline preload bootstrap (app/+html.tsx) runs once, only for the initial
 // document URL, and records the path it targeted in __metravelTravelPreloadTargetPath.
 // SPA navigations never re-run it, so this global keeps pointing at the first
@@ -220,16 +224,16 @@ async function waitForTravelPreload(
   }
 
   if (!scriptLoaded) {
-    const scriptDeadline = Date.now() + 1000;
+    const scriptDeadline = Date.now() + PRELOAD_WAIT_TIMEOUT_MS;
     while (Date.now() < scriptDeadline) {
       scriptLoaded = Boolean(win.__metravelTravelPreloadScriptLoaded);
       if (scriptLoaded || win.__metravelTravelPreloadPending || win.__metravelTravelPreloadPromise) break;
-      await new Promise((resolve) => setTimeout(resolve, 25));
+      await new Promise((resolve) => setTimeout(resolve, PRELOAD_POLL_INTERVAL_MS));
     }
   }
 
   if (scriptLoaded) {
-    const bootstrapDeadline = Date.now() + 350;
+    const bootstrapDeadline = Date.now() + PRELOAD_BOOTSTRAP_READY_TIMEOUT_MS;
     while (Date.now() < bootstrapDeadline) {
       const retry = consumeForQuery();
       if (retry) return retry;
@@ -237,11 +241,10 @@ async function waitForTravelPreload(
       const pendingBootstrap = Boolean(win.__metravelTravelPreloadPending);
       const bootstrapPromise = win.__metravelTravelPreloadPromise;
       if (pendingBootstrap || (bootstrapPromise && typeof bootstrapPromise.then === 'function')) {
-        const promiseTimeoutMs = 1000;
         try {
           await Promise.race([
             bootstrapPromise,
-            new Promise((resolve) => setTimeout(resolve, promiseTimeoutMs)),
+            new Promise((resolve) => setTimeout(resolve, PRELOAD_WAIT_TIMEOUT_MS)),
           ]);
         } catch {
           // noop
@@ -249,7 +252,7 @@ async function waitForTravelPreload(
         return consumeForQuery();
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 25));
+      await new Promise((resolve) => setTimeout(resolve, PRELOAD_POLL_INTERVAL_MS));
     }
   }
 
@@ -257,14 +260,13 @@ async function waitForTravelPreload(
   const promise = win.__metravelTravelPreloadPromise;
   if (!pending && !promise) return undefined;
 
-  const timeoutMs = 1000;
   const start = Date.now();
 
   if (promise && typeof promise.then === 'function') {
     try {
       await Promise.race([
         promise,
-        new Promise((resolve) => setTimeout(resolve, timeoutMs)),
+        new Promise((resolve) => setTimeout(resolve, PRELOAD_WAIT_TIMEOUT_MS)),
       ]);
     } catch {
       // noop
@@ -272,7 +274,7 @@ async function waitForTravelPreload(
     return consumeForQuery();
   }
 
-  while (Date.now() - start < timeoutMs) {
+  while (Date.now() - start < PRELOAD_WAIT_TIMEOUT_MS) {
     await new Promise((resolve) => setTimeout(resolve, 50));
     const retry = consumeForQuery();
     if (retry) return retry;

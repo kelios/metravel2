@@ -5,12 +5,13 @@ import { useAuth } from '@/context/AuthContext';
 jest.mock('@/context/AuthContext');
 const mockPush = jest.fn();
 const mockBack = jest.fn();
+const mockReplace = jest.fn();
 let mockParams: Record<string, string | undefined> = {};
 jest.mock('expo-router', () => ({
   router: {
     push: jest.fn(),
   },
-  useRouter: jest.fn(() => ({ push: mockPush, back: mockBack, canGoBack: jest.fn(() => true) })),
+  useRouter: jest.fn(() => ({ push: mockPush, back: mockBack, replace: mockReplace, canGoBack: jest.fn(() => true) })),
   usePathname: jest.fn(() => '/userpoints'),
   useLocalSearchParams: () => mockParams,
 }));
@@ -206,6 +207,6 @@ describe('UserPointsScreen', () => {
 
     fireEvent.press(await screen.findByLabelText('Назад в профиль'));
 
-    expect(mockPush).toHaveBeenCalledWith('/profile');
+    expect(mockReplace).toHaveBeenCalledWith('/profile');
   });
 });
