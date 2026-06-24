@@ -100,3 +100,25 @@ const DEFAULT_SORTING_IDS = [
 
 export const getDefaultSortingOptions = () =>
   buildSortingOptions(DEFAULT_SORTING_IDS.map((id) => ({ id })));
+
+const CATALOG_HEADER_REQUIRED_SORTING_IDS = new Set([
+  'newest',
+  'oldest',
+  'popular_desc',
+]);
+
+export const getCatalogHeaderSortingOptions = (
+  sortings: Array<{ id?: unknown; name?: unknown }> = [],
+) => {
+  const fromApi = buildSortingOptions(sortings);
+  if (!fromApi.length) return getDefaultSortingOptions();
+
+  const byId = new Map(fromApi.map((sorting) => [sorting.id, sorting]));
+  getDefaultSortingOptions().forEach((sorting) => {
+    if (CATALOG_HEADER_REQUIRED_SORTING_IDS.has(sorting.id) && !byId.has(sorting.id)) {
+      byId.set(sorting.id, sorting);
+    }
+  });
+
+  return buildSortingOptions(Array.from(byId.values()));
+};

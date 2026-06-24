@@ -29,6 +29,11 @@ interface ListCatalogToolbarProps {
 const spacing = DESIGN_TOKENS.spacing
 const radii = DESIGN_TOKENS.radii
 const DEFAULT_SORT_ID = 'newest'
+const NATIVE_SORT_LABELS: Record<string, string> = {
+  newest: 'Новые',
+  oldest: 'Старые',
+  popular_desc: 'Популярные',
+}
 
 function ListCatalogToolbar({
   sortOptions,
@@ -46,85 +51,108 @@ function ListCatalogToolbar({
 
   const activeSort = (sortValue || '').trim() || DEFAULT_SORT_ID
   const countVisible = showResultsCount && typeof resultsCount === 'number'
+  const isNative = Platform.OS !== 'web'
 
   if (!sortOptions.length && !showDensityToggle && !countVisible) return null
+
+  const countNode = countVisible ? (
+    <Text style={styles.countText} numberOfLines={1} testID="toolbar-results-count">
+      {resultsCount} {getTravelLabel(resultsCount as number)}
+    </Text>
+  ) : null
+
+  const sortNode = sortOptions.length > 0 ? (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.sortRow}
+      style={[styles.sortScroll, isNative && styles.sortScrollNative]}
+      accessibilityRole={Platform.OS === 'web' ? undefined : ('toolbar' as any)}
+      accessibilityLabel="Сортировка списка"
+    >
+      {sortOptions.map((option) => {
+        const isActive = option.id === activeSort
+        const chipLabel = isNative ? NATIVE_SORT_LABELS[option.id] ?? option.name : option.name
+        return (
+          <Pressable
+            key={option.id}
+            testID={`sort-chip-${option.id}`}
+            onPress={() => onSortChange(option.id)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isActive }}
+            accessibilityLabel={`Сортировать: ${option.name}`}
+            style={[styles.chip, isActive && styles.chipActive]}
+            {...Platform.select({ web: { title: option.name } as any })}
+          >
+            <Text
+              style={[styles.chipText, isActive && styles.chipTextActive]}
+              numberOfLines={1}
+            >
+              {chipLabel}
+            </Text>
+          </Pressable>
+        )
+      })}
+    </ScrollView>
+  ) : (
+    <View style={[styles.sortScroll, isNative && styles.sortScrollNative]} />
+  )
+
+  const densityNode = showDensityToggle ? (
+    <View
+      style={styles.densityGroup}
+      accessibilityRole={Platform.OS === 'web' ? undefined : ('radiogroup' as any)}
+      accessibilityLabel="Плотность списка"
+    >
+      {DENSITY_BUTTONS.map((button) => {
+        const isActive = density === button.value
+        return (
+          <Pressable
+            key={button.value}
+            testID={`density-${button.value}`}
+            onPress={() => onDensityChange(button.value)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isActive }}
+            accessibilityLabel={button.label}
+            style={[styles.densityButton, isActive && styles.densityButtonActive]}
+            {...Platform.select({ web: { title: button.label } as any })}
+          >
+            <Feather
+              name={button.icon}
+              size={15}
+              color={isActive ? colors.primary : colors.textMuted}
+            />
+          </Pressable>
+        )
+      })}
+    </View>
+  ) : null
+
+  if (isNative) {
+    return (
+      <View
+        style={[styles.container, styles.nativeContainer, { paddingHorizontal: contentPadding }]}
+        accessibilityRole="toolbar"
+      >
+        {(countNode || densityNode) ? (
+          <View style={styles.nativeTopRow}>
+            {countNode}
+            {densityNode}
+          </View>
+        ) : null}
+        {sortNode}
+      </View>
+    )
+  }
 
   return (
     <View
       style={[styles.container, { paddingHorizontal: contentPadding }]}
       accessibilityRole={Platform.OS === 'web' ? undefined : 'toolbar'}
     >
-      {countVisible ? (
-        <Text style={styles.countText} numberOfLines={1} testID="toolbar-results-count">
-          {resultsCount} {getTravelLabel(resultsCount as number)}
-        </Text>
-      ) : null}
-
-      {sortOptions.length > 0 ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.sortRow}
-          style={styles.sortScroll}
-          accessibilityRole={Platform.OS === 'web' ? undefined : ('toolbar' as any)}
-          accessibilityLabel="Сортировка списка"
-        >
-          {sortOptions.map((option) => {
-            const isActive = option.id === activeSort
-            return (
-              <Pressable
-                key={option.id}
-                testID={`sort-chip-${option.id}`}
-                onPress={() => onSortChange(option.id)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: isActive }}
-                accessibilityLabel={`Сортировать: ${option.name}`}
-                style={[styles.chip, isActive && styles.chipActive]}
-                {...Platform.select({ web: { title: option.name } as any })}
-              >
-                <Text
-                  style={[styles.chipText, isActive && styles.chipTextActive]}
-                  numberOfLines={1}
-                >
-                  {option.name}
-                </Text>
-              </Pressable>
-            )
-          })}
-        </ScrollView>
-      ) : (
-        <View style={styles.sortScroll} />
-      )}
-
-      {showDensityToggle ? (
-        <View
-          style={styles.densityGroup}
-          accessibilityRole={Platform.OS === 'web' ? undefined : ('radiogroup' as any)}
-          accessibilityLabel="Плотность списка"
-        >
-          {DENSITY_BUTTONS.map((button) => {
-            const isActive = density === button.value
-            return (
-              <Pressable
-                key={button.value}
-                testID={`density-${button.value}`}
-                onPress={() => onDensityChange(button.value)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: isActive }}
-                accessibilityLabel={button.label}
-                style={[styles.densityButton, isActive && styles.densityButtonActive]}
-                {...Platform.select({ web: { title: button.label } as any })}
-              >
-                <Feather
-                  name={button.icon}
-                  size={15}
-                  color={isActive ? colors.primary : colors.textMuted}
-                />
-              </Pressable>
-            )
-          })}
-        </View>
-      ) : null}
+      {countNode}
+      {sortNode}
+      {densityNode}
     </View>
   )
 }
@@ -147,10 +175,26 @@ const getStyles = (colors: ThemedColors) =>
       paddingTop: spacing.xxs,
       flexWrap: 'nowrap',
     },
+    nativeContainer: {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      gap: spacing.xs,
+    },
+    nativeTopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: spacing.sm,
+    },
     sortScroll: {
       flex: 1,
       minWidth: Platform.select({ web: 0, default: 120 }),
       maxWidth: '100%',
+    },
+    sortScrollNative: {
+      flex: 0,
+      width: '100%',
+      minWidth: '100%',
     },
     sortRow: {
       flexDirection: 'row',

@@ -39,7 +39,7 @@ import type { ActiveConditionChip } from './ListTravelBase.helpers'
 import { useRecommendationsVisibility } from './hooks/useRecommendationsVisibility'
 import { createListTravelBaseStyles } from './ListTravelBase.styles'
 import { useListViewStore } from '@/stores/listViewStore'
-import { buildSortingOptions, getDefaultSortingOptions } from './utils/sortings'
+import { getCatalogHeaderSortingOptions } from './utils/sortings'
 import {
   applyListDensity,
   buildCardsGridDynamicStyle,
@@ -476,10 +476,7 @@ function ListTravelBase() {
     /* SORT: header control reuses the backend-provided sortings list and the
        existing filter.sort query path (no extra request). */
     const sortOptions = useMemo(
-      () => {
-        const fromApi = buildSortingOptions(options?.sortings ?? []);
-        return fromApi.length ? fromApi : getDefaultSortingOptions();
-      },
+      () => getCatalogHeaderSortingOptions(options?.sortings ?? []),
       [options?.sortings]
     );
     const sortValue = typeof filter.sort === 'string' ? filter.sort : '';
