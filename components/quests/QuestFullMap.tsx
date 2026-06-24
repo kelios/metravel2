@@ -1,5 +1,6 @@
 // components/quests/QuestFullMap.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
     View,
     StyleSheet,
@@ -122,6 +123,16 @@ async function ensureDomToImage(): Promise<any> {
     return w.domtoimage;
 }
 
+// На web RN-Web ScrollView-предок может иметь transform → position:fixed
+// привязывается к нему, а не к вьюпорту, и кнопка закрытия уезжает за экран.
+// Портал в document.body выносит оверлей из трансформированного контекста.
+function renderFullscreenOverlay(node: React.ReactNode): React.ReactNode {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+        return createPortal(node, document.body);
+    }
+    return node;
+}
+
 function QuestFullMap({
                                          steps,
                                          height = 520,
@@ -160,6 +171,15 @@ function QuestFullMap({
             document.head.appendChild(style);
         }
     }, []);
+
+    useEffect(() => {
+        if (Platform.OS !== 'web' || !fullscreenVisible) return;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setFullscreenVisible(false);
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [fullscreenVisible]);
 
     useEffect(() => {
         if (Platform.OS !== 'web') return;
@@ -443,29 +463,31 @@ function QuestFullMap({
                 </View>
             </View>
 
-            {fullscreenVisible ? (
-                <View style={[styles.fullscreenOverlay, { paddingTop: insets.top }]} pointerEvents="auto">
-                    <View style={styles.fullscreenHeader}>
-                        <Text style={styles.fullscreenTitle} numberOfLines={1}>{title}</Text>
-                        <TouchableOpacity
-                            style={styles.fullscreenClose}
-                            onPress={() => setFullscreenVisible(false)}
-                            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                            accessibilityRole="button"
-                            accessibilityLabel="Закрыть полноэкранную карту квеста"
-                        >
-                            <Feather name="x" size={20} color={colors.text} />
-                        </TouchableOpacity>
-                    </View>
-                    <QuestFullMap
-                        steps={steps}
-                        height={fullscreenMapHeight}
-                        title={title}
-                        activeStepIndex={activeStepIndex}
-                        allowFullscreen={false}
-                    />
-                </View>
-            ) : null}
+            {fullscreenVisible
+                ? renderFullscreenOverlay(
+                      <View style={[styles.fullscreenOverlay, { paddingTop: insets.top }]} pointerEvents="auto">
+                          <View style={styles.fullscreenHeader}>
+                              <Text style={styles.fullscreenTitle} numberOfLines={1}>{title}</Text>
+                              <TouchableOpacity
+                                  style={styles.fullscreenClose}
+                                  onPress={() => setFullscreenVisible(false)}
+                                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                                  accessibilityRole="button"
+                                  accessibilityLabel="Закрыть полноэкранную карту квеста"
+                              >
+                                  <Feather name="x" size={20} color={colors.text} />
+                              </TouchableOpacity>
+                          </View>
+                          <QuestFullMap
+                              steps={steps}
+                              height={fullscreenMapHeight}
+                              title={title}
+                              activeStepIndex={activeStepIndex}
+                              allowFullscreen={false}
+                          />
+                      </View>
+                  )
+                : null}
 
             {/* Mobile export menu modal */}
             <Modal
