@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { PersonalStatusSummary } from '@/components/profile/PersonalStatusSummary';
+import ProfileSectionHeader from '@/components/profile/ProfileSectionHeader';
 import {
   ProfileTravelEngagementSummary,
   type ProfileTravelEngagementMetricKey,
@@ -45,6 +46,10 @@ export function ProfileStatsTab({
 
   return (
     <View style={styles.wrap}>
+      <ProfileSectionHeader
+        title="Статистика маршрутов"
+        subtitle="Как сообщество взаимодействует с вашими маршрутами"
+      />
       <ProfileTravelEngagementSummary
         summary={authoredTravelEngagementSummary}
         travelsCount={travelsCount}
@@ -54,6 +59,10 @@ export function ProfileStatsTab({
         activeMetric={activeTravelMetric}
         onMetricPress={handleTravelMetricPress}
         summaryScope={authoredTravelEngagementScope}
+      />
+      <ProfileSectionHeader
+        title="Мои поездки"
+        subtitle="Личные отметки: где были, что хотите и что планируете"
       />
       <PersonalStatusSummary
         visited={personalTravelStatusSummary.visited}

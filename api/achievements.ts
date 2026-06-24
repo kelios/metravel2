@@ -5,6 +5,10 @@
 
 import { apiClient, ApiError } from '@/api/client';
 import { devWarn } from '@/utils/logger';
+import type {
+  CharacterStateDto,
+  ProgressionLineDto,
+} from '@/api/gamification';
 import {
   MOCK_BADGES,
   MOCK_MY_ACHIEVEMENTS,
@@ -72,6 +76,10 @@ export interface MyAchievements {
   earned: UserBadge[];
   locked: BadgeProgress[];
   recentlyEarned: UserBadge[];
+  /** Сырые DTO персонажа/прогрессии из консолидированного эндпоинта (#588):
+   * используются только для засева кэшей gamification, не для рендера. */
+  characterDto?: CharacterStateDto | null;
+  progressionDto?: ProgressionLineDto[] | null;
 }
 
 export interface PublicAchievements {
@@ -162,6 +170,12 @@ interface MyAchievementsDto {
   earned_badges: UserBadgeDto[];
   progress: BadgeProgressDto[];
   recently_earned?: UserBadgeDto[];
+  // Консолидированный эндпоинт уже отдаёт персонажа и линейки прогрессии —
+  // тем же payload'ом, что и /achievements/character/me/ и /progression/me/.
+  // Пробрасываем сырые DTO, чтобы засеять их кэши и не делать повторных запросов
+  // (#588: «Ваш путь» дублировал два медленных вызова).
+  character?: CharacterStateDto | null;
+  progression_lines?: ProgressionLineDto[] | null;
 }
 
 interface PublicAchievementsDto {
@@ -269,6 +283,8 @@ const mapMy = (dto: MyAchievementsDto): MyAchievements => ({
   earned: (dto.earned_badges ?? []).map(mapUserBadge),
   locked: (dto.progress ?? []).map(mapProgress),
   recentlyEarned: (dto.recently_earned ?? []).map(mapUserBadge),
+  characterDto: dto.character ?? null,
+  progressionDto: dto.progression_lines ?? null,
 });
 
 const normalizePeerTarget = (raw: string | null | undefined): PeerBadgeTarget =>

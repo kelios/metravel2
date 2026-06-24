@@ -2,6 +2,7 @@
 // React Query хуки геймификации-2 (Sprint 10). Серверный стейт — только через
 // React Query. Мутация выбора пути инвалидирует состояние персонажа и шлёт аналитику.
 
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
@@ -12,6 +13,8 @@ import {
   fetchUserCharacter,
   fetchUserGamificationProgress,
   fetchUserPlaceFirstBadges,
+  mapCharacter,
+  mapProgress,
   type CharacterState,
   type ChoosePathInput,
   type GamificationProgress,
@@ -21,6 +24,7 @@ import { ApiError } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
 import { useAuthStore } from '@/stores/authStore';
 import { trackPathChosen } from '@/utils/gamificationAnalytics';
+import { useMyAchievements } from '@/hooks/useAchievementsApi';
 
 const STALE_TIME = 5 * 60 * 1000;
 
@@ -60,12 +64,25 @@ export function useUserPlaceFirstBadges(userId: string | number | null | undefin
 
 export function useMyGamificationProgress() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const qc = useQueryClient();
   return useQuery<GamificationProgress>({
     queryKey: queryKeys.gamificationProgressMe(),
     queryFn: fetchMyGamificationProgress,
     enabled: isAuthenticated,
     staleTime: STALE_TIME,
     retry,
+    // #588: консолидированный /achievements/me/ уже содержит линейки прогрессии.
+    // Если он в кэше — стартуем с этих данных и не делаем повторный медленный
+    // запрос /progression/me/.
+    initialData: () => {
+      const ach = qc.getQueryData<{ progressionDto?: unknown }>(
+        queryKeys.achievementsMe(),
+      ) as { progressionDto?: Parameters<typeof mapProgress>[0] } | undefined;
+      if (ach?.progressionDto == null) return undefined;
+      return mapProgress(ach.progressionDto);
+    },
+    initialDataUpdatedAt: () =>
+      qc.getQueryState(queryKeys.achievementsMe())?.dataUpdatedAt ?? 0,
   });
 }
 
@@ -85,12 +102,24 @@ export function useUserGamificationProgress(
 
 export function useMyCharacter() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const qc = useQueryClient();
   return useQuery<CharacterState>({
     queryKey: queryKeys.gamificationCharacterMe(),
     queryFn: fetchMyCharacter,
     enabled: isAuthenticated,
     staleTime: STALE_TIME,
     retry,
+    // #588: консолидированный /achievements/me/ уже содержит состояние персонажа.
+    // Стартуем из его кэша вместо повторного запроса /character/me/.
+    initialData: () => {
+      const ach = qc.getQueryData(queryKeys.achievementsMe()) as
+        | { characterDto?: Parameters<typeof mapCharacter>[0] | null }
+        | undefined;
+      if (ach?.characterDto == null) return undefined;
+      return mapCharacter(ach.characterDto);
+    },
+    initialDataUpdatedAt: () =>
+      qc.getQueryState(queryKeys.achievementsMe())?.dataUpdatedAt ?? 0,
   });
 }
 
@@ -114,4 +143,48 @@ export function useChooseCharacterPath() {
       trackPathChosen({ pathSlug: input.pathSlug, characterLevel: next.level });
     },
   });
+}
+
+// ── Засев кэшей из консолидированного /achievements/me/ (#588) ────────────────
+
+/**
+ * Консолидированный `/achievements/me/` уже возвращает состояние персонажа и
+ * линейки прогрессии. Этот хук засевает их в кэши gamification, как только
+ * achievements-запрос резолвится, чтобы вкладка «Ваш путь» рендерилась сразу,
+ * без двух отдельных медленных запросов `/character/me/` и `/progression/me/`.
+ *
+ * Вызывать на вкладке «Обзор», где `useMyAchievements` всё равно активен.
+ */
+export function useSeedGamificationFromAchievements(enabled = true): void {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const qc = useQueryClient();
+  const { data } = useMyAchievements({ enabled: enabled && isAuthenticated });
+
+  const updatedAt = qc.getQueryState(queryKeys.achievementsMe())?.dataUpdatedAt;
+
+  useEffect(() => {
+    if (!data) return;
+
+    if (data.characterDto != null) {
+      const state = qc.getQueryState(queryKeys.gamificationCharacterMe());
+      if (state?.data == null) {
+        qc.setQueryData(
+          queryKeys.gamificationCharacterMe(),
+          mapCharacter(data.characterDto),
+          { updatedAt },
+        );
+      }
+    }
+
+    if (data.progressionDto != null) {
+      const state = qc.getQueryState(queryKeys.gamificationProgressMe());
+      if (state?.data == null) {
+        qc.setQueryData(
+          queryKeys.gamificationProgressMe(),
+          mapProgress(data.progressionDto),
+          { updatedAt },
+        );
+      }
+    }
+  }, [data, qc, updatedAt]);
 }

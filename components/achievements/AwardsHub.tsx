@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import {
   StyleSheet,
   Text,
@@ -19,12 +19,15 @@ import ActivityProgressionSection from '@/components/achievements/ActivityProgre
 import CharacterProfileCard from '@/components/achievements/CharacterProfileCard'
 import RareAwardsSection from '@/components/achievements/RareAwardsSection'
 
+type TabKey = 'recent' | 'all' | 'path' | 'rare'
+
 interface Props {
   testID?: string
   style?: StyleProp<ViewStyle>
+  /** Внешний запрос открыть конкретную под-вкладку (напр. из карточки ранга #587).
+   * Меняй значение токена, чтобы повторно открыть ту же вкладку. */
+  requestedTab?: { key: TabKey; token: number } | null
 }
-
-type TabKey = 'recent' | 'all' | 'path' | 'rare'
 
 const TABS: AwardsTab[] = [
   { key: 'path', label: 'Ваш путь' },
@@ -37,10 +40,17 @@ const TABS: AwardsTab[] = [
  * Единая карточка «Награды» с под-вкладками (этап 1 редизайна).
  * Объединяет достижения, прогрессию/персонажа и особые награды под одной шапкой.
  */
-function AwardsHub({ testID, style }: Props) {
+function AwardsHub({ testID, style, requestedTab }: Props) {
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
   const [activeKey, setActiveKey] = useState<TabKey>('path')
+
+  const requestedToken = requestedTab?.token
+  useEffect(() => {
+    if (requestedTab) setActiveKey(requestedTab.key)
+    // token меняется при каждом запросе — позволяет повторно открыть ту же вкладку.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedToken])
 
   return (
     <View style={[styles.card, style]} testID={testID ?? 'awards-hub'}>

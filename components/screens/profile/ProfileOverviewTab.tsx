@@ -1,10 +1,14 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ProfileCompleteness } from '@/components/profile/ProfileCompleteness';
+import RankProgressCard from '@/components/profile/RankProgressCard';
+import ProfileSectionHeader from '@/components/profile/ProfileSectionHeader';
 import AwardsHub from '@/components/achievements/AwardsHub';
 import GamificationOnboarding from '@/components/achievements/GamificationOnboarding';
 import PlaceFirstBadgesSection from '@/components/achievements/PlaceFirstBadgesSection';
+import { useMyAchievements } from '@/hooks/useAchievementsApi';
+import { useSeedGamificationFromAchievements } from '@/hooks/useGamification';
 
 interface ProfileOverviewTabProps {
   userProp: { name: string; email: string; avatar?: string | null };
@@ -17,6 +21,13 @@ export function ProfileOverviewTab({
   profile,
   travelsCount,
 }: ProfileOverviewTabProps) {
+  // Засеваем кэши персонажа/прогрессии из консолидированного /achievements/me/,
+  // чтобы вкладка «Ваш путь» рендерилась сразу, без двух медленных запросов (#588).
+  useSeedGamificationFromAchievements(true);
+  const { data: achievements } = useMyAchievements();
+  const [awardsTab, setAwardsTab] = useState<{ key: 'all'; token: number } | null>(null);
+  const tokenRef = useRef(0);
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -28,11 +39,25 @@ export function ProfileOverviewTab({
     []
   );
 
+  const openAwardsDetails = () => {
+    tokenRef.current += 1;
+    setAwardsTab({ key: 'all', token: tokenRef.current });
+  };
+
   return (
     <View style={styles.wrap}>
       <GamificationOnboarding />
-      <AwardsHub />
+      <RankProgressCard rank={achievements?.rank} onPress={openAwardsDetails} />
+      <ProfileSectionHeader
+        title="Награды и прогресс"
+        subtitle="Ваш путь, значки и достижения"
+      />
+      <AwardsHub requestedTab={awardsTab} />
       <PlaceFirstBadgesSection />
+      <ProfileSectionHeader
+        title="Профиль"
+        subtitle="Заполните профиль, чтобы открыть больше возможностей"
+      />
       <ProfileCompleteness user={userProp} profile={profile} travelsCount={travelsCount} />
     </View>
   );

@@ -134,7 +134,7 @@ interface ProgressionLevelDto {
 }
 
 /** Линейка прогрессии в ответе BE (`progression/me/` — массив таких объектов). */
-interface ProgressionLineDto {
+export interface ProgressionLineDto {
   slug: string;
   name: string;
   description?: string | null;
@@ -173,7 +173,7 @@ interface AvailablePathDto {
 }
 
 /** Состояние персонажа из `character/me/` (current-user endpoint). */
-interface CharacterStateDto {
+export interface CharacterStateDto {
   user_id: number;
   selected_path?: ProgressionLineDto | null;
   active_path?: ProgressionLineDto | null;
@@ -267,7 +267,7 @@ const mapProgressionLine = (dto: ProgressionLineDto): ProgressionLine => {
 };
 
 // BE `progression/me/` отдаёт массив линеек (не `{lines:[]}`); поддерживаем оба.
-const mapProgress = (
+export const mapProgress = (
   dto: ProgressionLineDto[] | { lines?: ProgressionLineDto[] } | null | undefined,
 ): GamificationProgress => {
   const rawLines = Array.isArray(dto) ? dto : (dto?.lines ?? []);
@@ -291,7 +291,7 @@ const mapAvailablePath = (dto: AvailablePathDto): CharacterPathOption => {
   };
 };
 
-const mapCharacter = (dto: CharacterStateDto): CharacterState => {
+export const mapCharacter = (dto: CharacterStateDto): CharacterState => {
   const active = dto.active_path ?? dto.selected_path ?? null;
   const selected = dto.selected_path ?? null;
   // Выбор доступен, когда BE разблокировал смену и путь ещё не закреплён.
