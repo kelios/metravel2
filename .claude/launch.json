@@ -210,6 +210,18 @@
       ],
       "port": 8095,
       "autoPort": false
+    },
+    {
+      "name": "Verify Dist Prod 4603",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        ".claude/prod-server.js",
+        "4603",
+        "dist",
+        "https://metravel.by"
+      ],
+      "port": 4603,
+      "autoPort": false
     }
   ]
 }
