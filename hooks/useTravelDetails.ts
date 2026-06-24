@@ -169,7 +169,12 @@ export function consumePreloadedTravel(
   }
 }
 
-async function waitForTravelPreload(slug: string, isId: boolean, idNum: number): Promise<Travel | undefined> {
+async function waitForTravelPreload(
+  slug: string,
+  isId: boolean,
+  idNum: number,
+  options: { skipPolling?: boolean } = {},
+): Promise<Travel | undefined> {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return undefined;
   const win = window as TravelPreloadWindow;
   const consumeForQuery = () => consumePreloadedTravel(slug, isId, idNum, {
@@ -178,6 +183,12 @@ async function waitForTravelPreload(slug: string, isId: boolean, idNum: number):
 
   const immediate = consumeForQuery();
   if (immediate) return immediate;
+
+  // The hook read a sufficient preload synchronously at setup time (initialData).
+  // Either React Query already committed it, or the render-time effect consumed it.
+  // Re-entering the polling/Promise.race wait here cannot recover anything new for
+  // this slug — it would only add dead time before falling back to fetch. Skip it.
+  if (options.skipPolling) return undefined;
 
   // On a client-side SPA navigation the preload bootstrap (app/+html.tsx) never
   // re-runs — it only ever targets the initial document URL, and the global
@@ -226,7 +237,7 @@ async function waitForTravelPreload(slug: string, isId: boolean, idNum: number):
       const pendingBootstrap = Boolean(win.__metravelTravelPreloadPending);
       const bootstrapPromise = win.__metravelTravelPreloadPromise;
       if (pendingBootstrap || (bootstrapPromise && typeof bootstrapPromise.then === 'function')) {
-        const promiseTimeoutMs = 2500;
+        const promiseTimeoutMs = 1000;
         try {
           await Promise.race([
             bootstrapPromise,
@@ -246,7 +257,7 @@ async function waitForTravelPreload(slug: string, isId: boolean, idNum: number):
   const promise = win.__metravelTravelPreloadPromise;
   if (!pending && !promise) return undefined;
 
-  const timeoutMs = 2500;
+  const timeoutMs = 1000;
   const start = Date.now();
 
   if (promise && typeof promise.then === 'function') {
@@ -314,7 +325,12 @@ export function useTravelDetails(): UseTravelDetailsReturn {
       const signal = context?.signal;
       // Try to reuse preload from +html.tsx and wait shortly for its in-flight request.
       // This avoids duplicate travel-details fetches on first paint (critical for LCP).
-      const preloaded = await waitForTravelPreload(normalizedSlug, isId, idNum);
+      // When a sufficient preload was already available synchronously (initialData),
+      // skip the polling wait entirely: if this queryFn still runs, the preload is
+      // either committed or consumed, so waiting again is pure dead time.
+      const preloaded = await waitForTravelPreload(normalizedSlug, isId, idNum, {
+        skipPolling: Boolean(initialPreloadedTravel),
+      });
       if (preloaded) return preloaded;
 
       return isId

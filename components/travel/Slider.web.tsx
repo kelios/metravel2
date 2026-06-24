@@ -67,6 +67,14 @@ function useEnsureSliderWebStyles() {
   }, [])
 }
 
+// Slides within current ± RENDER_WINDOW get the heavy treatment (blur prep,
+// neighbour preload, eager decode). Slides outside stay mounted (lazy <img>) so
+// fast swipes never expose a blank gap, but they skip blur/eager work on the
+// critical first hero layout. 2 covers the visible slide + both immediate
+// neighbours, so it is always a superset of the existing blur (±1) and preload
+// windows — no visible-image or blur behaviour change, only far-slide work shed.
+const RENDER_WINDOW = 2
+
 const POINTER_EVENTS_NONE = { pointerEvents: 'none' as const }
 const MOBILE_ARROW_VISIBLE_STYLE = {
   opacity: 1,
@@ -479,13 +487,25 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             >
               {images.map((item, index) => {
                 const distanceToCurrent = Math.abs(index - currentIndex)
+                // Cheap predicate computed for the whole array, but the heavy
+                // per-slide work (blur prep, neighbour preload, eager decode) is
+                // confined to a small window around the current slide. Slides
+                // outside the window stay MOUNTED with a lazy <img> (unmounting
+                // them reintroduces the blank-gap-on-fast-swipe regression the
+                // slider tests guard) yet never run the blur transform / eager
+                // fetch on the critical first hero layout for large galleries.
+                const inHeavyWindow = distanceToCurrent <= RENDER_WINDOW
                 const allowNeighbourPreload =
-                  layoutMeasured && (firstImageLoaded || currentIndex > 0 || isMobileDevice)
+                  inHeavyWindow &&
+                  layoutMeasured &&
+                  (firstImageLoaded || currentIndex > 0 || isMobileDevice)
                 const preloadPriority =
+                  inHeavyWindow &&
                   prefetchEnabled &&
                   (distanceToCurrent === 0 ||
                     (distanceToCurrent <= effectivePreloadCount && allowNeighbourPreload))
                 const prepareBlur =
+                  inHeavyWindow &&
                   layoutMeasured &&
                   blurBackground &&
                   (isMobileDevice ? distanceToCurrent === 0 : distanceToCurrent <= 1)
