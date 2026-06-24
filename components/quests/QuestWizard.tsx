@@ -21,6 +21,7 @@ import {
     QuestExcursionsInline,
     QuestExcursionsSidebar,
     QuestFinalePanel,
+    QuestNativeAffiliateSection,
 } from './questWizardSections';
 import { QuestStepCard } from './questWizardStepCard';
 import { useQuestWizardProgress } from './useQuestWizardProgress';
@@ -324,6 +325,15 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                         styles={styles}
                         city={city}
                         title={title}
+                    />
+                )}
+
+                {Platform.OS !== 'web' && (!showFinaleOnly) && currentStep && city && (
+                    <QuestNativeAffiliateSection
+                        colors={colors}
+                        styles={styles}
+                        city={city}
+                        questId={questId}
                     />
                 )}
 

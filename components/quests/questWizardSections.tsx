@@ -2,6 +2,8 @@ import React, { Suspense } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
+import AffiliateOffers from '@/components/affiliate/AffiliateOffers'
+import { getAffiliateOffers } from '@/components/affiliate/affiliateConfig'
 import { BadgeUnlockToast } from '@/components/achievements'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useQuestCompletionMeta } from '@/hooks/useQuestCompletionMeta'
@@ -222,6 +224,36 @@ export function QuestCompactExcursions({
           className="belkraj-slot"
         />
       </Suspense>
+    </View>
+  )
+}
+
+export function QuestNativeAffiliateSection({
+  styles,
+  city,
+  questId,
+}: SharedProps & {
+  city: CityLike
+  questId?: string
+}) {
+  const context = {
+    city: city.name,
+    countryCode: city.countryCode,
+    travelId: questId ? `quest-${questId}` : undefined,
+  }
+
+  if (getAffiliateOffers(context).length === 0) return null
+
+  return (
+    <View style={styles.excursionsSection} testID="quest-affiliate-section">
+      <View style={styles.excursionsDivider} />
+      <View style={styles.excursionsCard}>
+        <View style={styles.excursionsHeader}>
+          <Text style={styles.excursionsTitle}>Экскурсии рядом</Text>
+          <Text style={styles.excursionsSubtitle}>Откройте больше с местными гидами</Text>
+        </View>
+        <AffiliateOffers {...context} />
+      </View>
     </View>
   )
 }
