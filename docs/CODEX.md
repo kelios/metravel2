@@ -20,6 +20,7 @@
 - `$metravel-test-writer`: используй, когда нужно написать или обновить unit/integration/governance тесты, зафиксировать контракт бага/фичи и сохранить стабильные assertions без `.skip`.
 - `$metravel-e2e-runner`: используй для Playwright/e2e, browser smoke, trace/screenshot evidence, re-run flaky flows и проверки сценариев через `.env.e2e` без вывода секретов.
 - `$metravel-performance-analyst`: используй для Lighthouse, bundle/perf budget analysis, baseline comparison и performance validation только по production build или реальному URL.
+- `$metravel-growth-analyst`: используй для анализа GA4/GSC/Yandex/affiliate-цифр, SEO/organic роста, пользовательского поведения, drop-off, регистрации, auth и создания маршрутов/статей.
 - `$metravel-code-reviewer`: используй для focused review diff'а, поиска рисков, rule violations, validation gaps и остаточных проблем перед handoff или approve.
 - `$metravel-devops-agent`: используй для подготовки, запуска и проверки deploy на `dev`, `preprod` или `prod`, включая preflight, secret hygiene, server-path safety и post-deploy validation.
 - `$metravel-docs-maintainer`: используй при изменении `docs/`, `AGENTS.md`, `.codex/skills` или правил работы Codex.
@@ -57,6 +58,7 @@
 | Android/native development | `AGENTS.md`, `docs/RULES.md`, `docs/NATIVE_COMPAT_RULES.md`, `docs/DEVELOPMENT.md`, `docs/MANUAL_TEST_CASES.md`, профильный feature-doc | web-first правило: не ломать production web; platform files вместо больших условий; native governance; device verify pending без эмулятора/устройства |
 | Mobile QA | `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, `docs/NATIVE_COMPAT_RULES.md`, `docs/MANUAL_TEST_CASES.md`, профильный feature-doc | read-only mobile web/native checks, `AND-USB-*` для подключенного Android, Maestro где доступен, touch/layout/runtime evidence, no secrets, баги роутить к профильному owner |
 | Performance analysis | `docs/RULES.md`, `docs/TESTING.md`, `docs/RELEASE.md`, профильный perf-doc (`docs/TRAVEL_PERFORMANCE_REFACTOR.md` при travel scope) | только production build или real URL, baseline comparison, Lighthouse/bundle budgets |
+| Growth / funnel analysis | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `docs/CODEX.md`, `docs/GROWTH_PLAN.md`, `$metravel-growth-analyst` | свежие GA4/GSC stats, абсолютные даты, no secrets, факты отдельно от гипотез, instrumentation gaps и handoff к feature/test/ui skills |
 | Code review | `AGENTS.md`, `docs/RULES.md`, `docs/CODEX.md`, профильный feature-doc, diff validation logs | lead with findings, проверять project-rule compliance, known failures, missing tests и residual risks |
 | SEO / route pages | `docs/DEVELOPMENT.md` SEO-раздел | `buildCanonicalUrl`, `buildOgImageUrl`, `LazyInstantSEO` |
 | Release / deploy / performance | `docs/RELEASE.md`, `docs/PRODUCTION_CHECKLIST.md`, `$metravel-release-checks`, `$metravel-devops-agent` | operation gate перед build/deploy/rebuild/test gate, production build/export, explicit deploy target, secret hygiene, реальные URL для post-deploy проверок |
@@ -87,19 +89,20 @@ Validation: <expected checks/evidence>.
 
 1. `$metravel-codex-orchestrator` при сложном scope выбирает route: skills, prompts, constraints, validation.
 2. `$metravel-project-analyst` при широком или неясном scope формирует `Project Analysis`: структура, активные фичи, validation map, risk hotspots, recommended agents.
-3. `$metravel-business-analyst` формирует `Feature Brief`: problem, audience, user stories, acceptance criteria, non-goals, metrics, risks, open questions.
-4. `$metravel-system-architect` формирует `Technical Design`: reuse points, affected modules, API/data/UI/external-link impact, implementation steps, validation plan.
-5. `$metravel-ui-guardrails` формирует UI contract для видимых web/mobile состояний, если задача затрагивает интерфейс.
-6. `$metravel-android-developer` подключай для Android/native поведения, native crashes, Expo modules, platform files и device-specific fixes.
-7. `$metravel-hook-builder` подключай дополнительно, если основной объём работы — вынос локальной логики в hooks или cleanup hook boundaries.
-8. `$metravel-feature-builder` реализует минимальный diff по утвержденному design/brief.
-9. `$metravel-article-editor-agent` выполняет article API/content операции, если задача про статьи, HTML тела, generated images или publish/unpublish.
-10. `$metravel-task-contract` проверяет обязательный контракт FE/BE задачи перед стартом, review и `done`, особенно когда FE зависит от BE endpoints/fields/events.
-11. `$metravel-code-reviewer` делает focused review pass, если нужен отдельный reviewer без расширенного architecture-design шага.
-12. `$metravel-mobile-tester` проверяет mobile web или Android/native сценарии и создает `Mobile QA Pass` или `Bug Report`.
-13. `$metravel-qa-agent` тестирует общий сценарий read-only и создает `Bug Report` или `QA Pass`.
-14. `$metravel-system-architect` в review mode проверяет findings, diff, проверки, known risks и соответствие правилам, когда нужен архитектурный review.
-15. `$metravel-devops-agent` готовит и выполняет deploy/build/release только при явном запросе на deploy/release, с environment gate, preflight и post-deploy validation.
+3. `$metravel-growth-analyst` анализирует GA4/GSC/Yandex/manual stats, SEO/organic рост, registration/auth/content funnels и instrumentation gaps, когда задача начинается со статистики или поведения пользователей.
+4. `$metravel-business-analyst` формирует `Feature Brief`: problem, audience, user stories, acceptance criteria, non-goals, metrics, risks, open questions.
+5. `$metravel-system-architect` формирует `Technical Design`: reuse points, affected modules, API/data/UI/external-link impact, implementation steps, validation plan.
+6. `$metravel-ui-guardrails` формирует UI contract для видимых web/mobile состояний, если задача затрагивает интерфейс.
+7. `$metravel-android-developer` подключай для Android/native поведения, native crashes, Expo modules, platform files и device-specific fixes.
+8. `$metravel-hook-builder` подключай дополнительно, если основной объём работы — вынос локальной логики в hooks или cleanup hook boundaries.
+9. `$metravel-feature-builder` реализует минимальный diff по утвержденному design/brief.
+10. `$metravel-article-editor-agent` выполняет article API/content операции, если задача про статьи, HTML тела, generated images или publish/unpublish.
+11. `$metravel-task-contract` проверяет обязательный контракт FE/BE задачи перед стартом, review и `done`, особенно когда FE зависит от BE endpoints/fields/events.
+12. `$metravel-code-reviewer` делает focused review pass, если нужен отдельный reviewer без расширенного architecture-design шага.
+13. `$metravel-mobile-tester` проверяет mobile web или Android/native сценарии и создает `Mobile QA Pass` или `Bug Report`.
+14. `$metravel-qa-agent` тестирует общий сценарий read-only и создает `Bug Report` или `QA Pass`.
+15. `$metravel-system-architect` в review mode проверяет findings, diff, проверки, known risks и соответствие правилам, когда нужен архитектурный review.
+16. `$metravel-devops-agent` готовит и выполняет deploy/build/release только при явном запросе на deploy/release, с environment gate, preflight и post-deploy validation.
 
 Стандартный bug loop:
 

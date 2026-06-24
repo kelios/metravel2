@@ -31,6 +31,7 @@ See `INDEX.md` for full docs map.
 - `$metravel-test-runner` / `$metravel-test-writer` — запуск и написание Jest/integration/governance тестов.
 - `$metravel-e2e-runner` — Playwright и browser smoke.
 - `$metravel-performance-analyst` — Lighthouse, bundle/perf budgets, baseline comparison.
+- `$metravel-growth-analyst` — GA4/GSC/Yandex stats, SEO/organic рост, поведение пользователей и воронки регистрации/контента.
 - `$metravel-codex-orchestrator` — верхний self-check Codex: triage, skills, role prompts, validation, handoff.
 - `$metravel-article-editor-agent` — редактирование статей, HTML/SEO тела, generated images и publish/unpublish через article API с секретами из `.secrets`.
 - `$metravel-project-analyst` — read-only карта проекта, risk hotspots, validation map и handoff к профильным агентам.
