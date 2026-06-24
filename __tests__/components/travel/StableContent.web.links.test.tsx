@@ -167,6 +167,35 @@ describe('StableContent (web) link styles', () => {
     });
   });
 
+  it('caps concurrently mounted instagram embeds (windowing) so embed-heavy pages stay light', async () => {
+    // Articles that are lists of Instagram posts can have dozens of embeds. Mounting all of
+    // them as live cross-origin iframes hangs the page on slow networks. The effect keeps at
+    // most CAP (5) embeds live and recycles the rest back to lightweight facades.
+    const posts = [
+      'CScU4bJI2Ud', 'CRTm_GpnjVR', 'CDTQ_swnx_-', 'CC_PGNTsCq4',
+      'CNiIv2zl6oA', 'CVRxzQvIAv9', 'CZjbUNKrHl2', 'Bx_fqWBi9TW',
+    ];
+    const html = posts
+      .map((id) => `<p><a href="https://www.instagram.com/p/${id}/">https://www.instagram.com/p/${id}/</a></p>`)
+      .join('');
+
+    const { container } = render(
+      <StableContent html={html} contentWidth={700} />
+    );
+
+    await waitFor(() => {
+      const wrappers = container.querySelectorAll('.travel-rich-text .instagram-wrapper');
+      const facades = container.querySelectorAll('.travel-rich-text .ig-lite');
+      // at least one mounted (hydration works) but never more than CAP live at once
+      expect(wrappers.length).toBeGreaterThanOrEqual(1);
+      expect(wrappers.length).toBeLessThanOrEqual(5);
+      // the overflow posts stayed/returned to lightweight facades (recycling happened)
+      expect(facades.length).toBeGreaterThanOrEqual(1);
+      // every post is accounted for as either a live embed or a facade
+      expect(wrappers.length + facades.length).toBe(posts.length);
+    });
+  });
+
   it('renders instagram stories as visible fallback cards instead of blank embeds', async () => {
     const html = '<p>https://www.instagram.com/stories/metravelby/1234567890123456789/</p>';
 

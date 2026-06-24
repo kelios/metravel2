@@ -244,12 +244,63 @@ export function useStableContentWebEffects({
       }
     }
 
+    // Окно (windowing): держим «живыми» не больше CAP эмбедов одновременно. Статья из 39
+    // Instagram-постов = 39 кросс-ориджин iframe'ов, если смонтировать все — в медленной
+    // сети/регионе страница висит минуту. Поэтому самый дальний от вьюпорта эмбед при
+    // выходе за окно сворачиваем обратно в лёгкий facade (он перемонтируется при возврате).
+    const CAP = 5
+    const mounted: HTMLElement[] = []
+    // wrapper → исходный facade-узел (переиспользуем, не пересоздаём из HTML).
+    const facadeOf = new Map<HTMLElement, HTMLElement>()
+
+    const distanceFromViewport = (el: HTMLElement, viewportH: number) => {
+      const rect = el.getBoundingClientRect()
+      const center = rect.top + rect.height / 2
+      if (center < 0) return -center
+      if (center > viewportH) return center - viewportH
+      return 0
+    }
+
+    const recycle = (wrapper: HTMLElement) => {
+      const idx = mounted.indexOf(wrapper)
+      if (idx >= 0) mounted.splice(idx, 1)
+      const facade = facadeOf.get(wrapper)
+      facadeOf.delete(wrapper)
+      if (!facade) {
+        wrapper.remove()
+        return
+      }
+      delete facade.dataset.igMounted
+      wrapper.replaceWith(facade)
+      io?.observe(facade)
+    }
+
+    // После каждого монтирования: если живых > CAP — сворачиваем самые дальние от
+    // вьюпорта (их перемонтирование при обратном скролле дешевле постоянной нагрузки).
+    const enforceCap = () => {
+      if (mounted.length <= CAP) return
+      const viewportH = window.innerHeight || document.documentElement.clientHeight || 800
+      while (mounted.length > CAP) {
+        let worst: HTMLElement | null = null
+        let worstD = -1
+        for (const w of mounted) {
+          const d = distanceFromViewport(w, viewportH)
+          if (d > worstD) {
+            worstD = d
+            worst = w
+          }
+        }
+        if (!worst) break
+        recycle(worst)
+      }
+    }
+
     const mountEmbed = (facade: HTMLElement) => {
       if (facade.dataset.igMounted === '1') return
-      facade.dataset.igMounted = '1'
-      io?.unobserve(facade)
       const src = facade.getAttribute('data-ig-embed')
       if (!src || !isAllowedEmbedSrc(src)) return
+      facade.dataset.igMounted = '1'
+      io?.unobserve(facade)
 
       const wrapper = document.createElement('div')
       wrapper.className = 'instagram-wrapper'
@@ -267,8 +318,12 @@ export function useStableContentWebEffects({
 
       wrapper.appendChild(iframe)
       // replaceWith, а не вложение в facade: wrapper повторяет габариты facade
-      // (430px, рамка, те же margin), поэтому своп не сдвигает layout.
+      // (430px, рамка, те же margin), поэтому своп не сдвигает layout. Facade-узел
+      // сохраняем — при recycle вернём его на место (с тем же data-ig-embed).
+      facadeOf.set(wrapper, facade)
       facade.replaceWith(wrapper)
+      mounted.push(wrapper)
+      enforceCap()
     }
 
     const collectFacades = () =>
@@ -311,6 +366,18 @@ export function useStableContentWebEffects({
       })
     }
 
+    // scan() с forced layout не гонять на каждую мутацию (наши же mount/recycle их
+    // порождают) — коалесцируем в один прогон на кадр.
+    let scanScheduled = false
+    const scheduleScan = () => {
+      if (scanScheduled) return
+      scanScheduled = true
+      window.requestAnimationFrame(() => {
+        scanScheduled = false
+        scan()
+      })
+    }
+
     // Observer только на rich-text контейнер: подписка на document.body гоняла бы
     // scan() (с forced layout) на каждую мутацию DOM во всём приложении.
     let mutationObserver: MutationObserver | null = null
@@ -318,7 +385,7 @@ export function useStableContentWebEffects({
       if (mutationObserver) return
       const richTextContainer = document.querySelector(`.${WEB_RICH_TEXT_CLASS}`)
       if (!richTextContainer) return
-      mutationObserver = new MutationObserver(() => scan())
+      mutationObserver = new MutationObserver(() => scheduleScan())
       mutationObserver.observe(richTextContainer, { childList: true, subtree: true })
     }
 
@@ -338,6 +405,8 @@ export function useStableContentWebEffects({
       io?.disconnect()
       mutationObserver?.disconnect()
       clearTimeout(initialTimeoutId)
+      mounted.length = 0
+      facadeOf.clear()
     }
   }, [prepared])
 }
