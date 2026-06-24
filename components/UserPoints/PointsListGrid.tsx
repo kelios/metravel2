@@ -289,7 +289,7 @@ export const PointsListGrid: React.FC<{
 
         {showingRecommendations ? (
           <View style={localStyles.recommendationsHeader}>
-            <RNText style={localStyles.recommendationsTitle}>Куда поехать сегодня</RNText>
+            <RNText style={localStyles.recommendationsTitle}>3 случайные точки из ваших</RNText>
             <View style={localStyles.recommendationsActions}>
               <IconButton
                 icon={<Feather name="refresh-cw" size={16} color={themedColors.text} />}

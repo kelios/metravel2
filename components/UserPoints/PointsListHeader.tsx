@@ -106,12 +106,14 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
   const themed = useThemedColors();
   const local = React.useMemo(() => createLocalStyles(themed), [themed]);
   const canRecommend = total >= 3;
-  const recommendationLabel = showingRecommendations ? 'Обновить подборку' : 'Выбрать 3 точки за меня';
+  const recommendationLabel = showingRecommendations
+    ? 'Выбрать другие случайные'
+    : 'Выбрать 3 случайные точки';
   const recommendationDescription = !canRecommend
-    ? 'Сохраните хотя бы 3 точки, и панель сама предложит готовую мини-подборку.'
+    ? 'Сохраните хотя бы 3 точки, и кнопка случайно выберет 3 из них.'
     : showingRecommendations
-      ? 'Сейчас уже показана случайная подборка. Можно обновить её одним нажатием.'
-      : 'Когда не знаете, куда поехать, панель сама выберет 3 случайные точки из ваших сохранений.';
+      ? 'Показаны 3 случайные точки из ваших сохранений. Нажмите, чтобы выбрать другие.'
+      : 'Не решили, куда поехать? Случайно выберем 3 точки из ваших сохранений и построим к ним маршрут.';
   const viewModeOptions = React.useMemo(
     () => [
       { key: 'map', label: 'Карта' },
@@ -146,8 +148,8 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
 
         <View style={local.recommendationCard}>
           <View style={local.recommendationTextBlock}>
-            <Text style={local.recommendationEyebrow}>Не знаете, куда поехать?</Text>
-            <Text style={local.recommendationTitle}>Доверьте выбор MeTravel</Text>
+            <Text style={local.recommendationEyebrow}>Случайный выбор</Text>
+            <Text style={local.recommendationTitle}>Куда поехать? Решим за вас</Text>
             <Text style={local.recommendationDescription}>{recommendationDescription}</Text>
           </View>
 
@@ -155,7 +157,7 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
             label={recommendationLabel}
             onPress={onOpenRecommendations}
             accessibilityLabel={recommendationLabel}
-            icon={<Feather name="compass" size={16} color={colors.textOnPrimary} />}
+            icon={<Feather name="shuffle" size={16} color={colors.textOnPrimary} />}
             size="sm"
             fullWidth
             disabled={!canRecommend}
@@ -166,7 +168,7 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
           />
 
           {canRecommend ? (
-            <Text style={local.recommendationHint}>Подборка откроется в списке справа с готовыми маршрутами.</Text>
+            <Text style={local.recommendationHint}>Случайные точки откроются в списке справа с готовыми маршрутами.</Text>
           ) : null}
         </View>
 
