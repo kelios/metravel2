@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 
@@ -62,7 +62,7 @@ describe('TravelWizardHeader', () => {
     expect(getByText('Ошибки: 2')).toBeTruthy();
   });
 
-  it('keeps the mobile more menu trigger at a 44px touch target', () => {
+  it('keeps the mobile save button at a 44px touch target', () => {
     mockResponsiveState = {
       isPhone: true,
       isLargePhone: false,
@@ -79,16 +79,38 @@ describe('TravelWizardHeader', () => {
       />
     );
 
-    const moreButton = getByTestId('travel-wizard-more');
+    const saveButton = getByTestId('travel-wizard-save');
     const styleValue =
-      typeof moreButton.props.style === 'function'
-        ? moreButton.props.style({ pressed: false, hovered: false, focused: false })
-        : moreButton.props.style;
+      typeof saveButton.props.style === 'function'
+        ? saveButton.props.style({ pressed: false, hovered: false, focused: false })
+        : saveButton.props.style;
     const flattened = StyleSheet.flatten(styleValue);
 
     expect(flattened.width).toBeGreaterThanOrEqual(44);
     expect(flattened.height).toBeGreaterThanOrEqual(44);
     expect(flattened.minWidth).toBeGreaterThanOrEqual(44);
     expect(flattened.minHeight).toBeGreaterThanOrEqual(44);
+  });
+
+  it('exposes a visible Save button in the toolbar (no menu needed) that calls onSave', () => {
+    const onSave = jest.fn();
+    const { getByTestId, getByText, queryByTestId } = render(
+      <TravelWizardHeader
+        title="Маршрут"
+        subtitle="Шаг 2 из 6"
+        progressPercent={34}
+        currentStep={2}
+        totalSteps={6}
+        onSave={onSave}
+      />
+    );
+
+    // visible toolbar button with the label, not hidden behind the kebab menu
+    expect(getByText('Сохранить')).toBeTruthy();
+    // with only onSave there is no overflow menu to open
+    expect(queryByTestId('travel-wizard-more')).toBeNull();
+
+    fireEvent.press(getByTestId('travel-wizard-save'));
+    expect(onSave).toHaveBeenCalledTimes(1);
   });
 });

@@ -139,11 +139,10 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
         if (onQuickDraft) {
             items.push({ key: 'quick-draft', icon: 'archive', label: quickDraftLabel, onPress: onQuickDraft, testID: 'travel-wizard-quick-draft' });
         }
-        if (onSave) {
-            items.push({ key: 'save', icon: 'save', label: saveLabel, onPress: onSave });
-        }
+        // «Сохранить» вынесено отдельной видимой кнопкой в ряд действий (SaveButton),
+        // чтобы сохранять без открытия меню «…».
         return items;
-    }, [onPreview, onOpenPublic, warningCount, onWarningsPress, hasTip, isTipOpen, onQuickDraft, quickDraftLabel, onSave, saveLabel]);
+    }, [onPreview, onOpenPublic, warningCount, onWarningsPress, hasTip, isTipOpen, onQuickDraft, quickDraftLabel]);
 
     const handleMenuItemPress = useCallback((item: MenuItem) => {
         setIsMenuOpen(false);
@@ -214,6 +213,43 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
         </Pressable>
     ) : null;
 
+    const SaveButton = onSave ? (
+        isMobile ? (
+            <Pressable
+                onPress={onSave}
+                style={({ pressed }) => [
+                    styles.iconButton,
+                    styles.iconButtonMobile,
+                    globalFocusStyles.focusable,
+                    Platform.OS === 'web' && { cursor: 'pointer' },
+                    pressed && { opacity: 0.8 },
+                ]}
+                testID="travel-wizard-save"
+                accessibilityRole="button"
+                accessibilityLabel={saveLabel}
+            >
+                <Feather name="save" size={18} color={colors.textMuted} />
+            </Pressable>
+        ) : (
+            <Pressable
+                onPress={onSave}
+                style={({ pressed }) => [
+                    styles.actionButton,
+                    styles.actionButtonSecondary,
+                    globalFocusStyles.focusable,
+                    Platform.OS === 'web' && { cursor: 'pointer' },
+                    pressed && { opacity: 0.9 },
+                ]}
+                testID="travel-wizard-save"
+                accessibilityRole="button"
+                accessibilityLabel={saveLabel}
+            >
+                <Feather name="save" size={16} color={colors.text} />
+                <Text style={styles.actionButtonText} numberOfLines={1}>{saveLabel}</Text>
+            </Pressable>
+        )
+    ) : null;
+
     const MoreMenuPanel = isMenuOpen && menuItems.length > 0 ? (
         <View style={styles.menuPanel} accessibilityRole="menu">
             {menuItems.map((item) => (
@@ -256,6 +292,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                 </View>
 
                 <View style={[styles.titleActionsRow, isMobile && styles.titleActionsRowMobile]}>
+                    {SaveButton}
                     {MoreMenuTrigger}
                 </View>
             </View>
