@@ -19,6 +19,7 @@ interface ProfileStatsTabProps {
   personalTravelStatusSummary: { visited: number; wishlist: number; planned: number };
   formatTripsCount: (count: number) => string;
   onOpenCalendar: (status?: 'visited' | 'wishlist' | 'planned') => void;
+  onBackToOverview: () => void;
 }
 
 export function ProfileStatsTab({
@@ -32,6 +33,7 @@ export function ProfileStatsTab({
   personalTravelStatusSummary,
   formatTripsCount,
   onOpenCalendar,
+  onBackToOverview,
 }: ProfileStatsTabProps) {
   const styles = useMemo(
     () =>
@@ -49,6 +51,8 @@ export function ProfileStatsTab({
       <ProfileSectionHeader
         title="Статистика маршрутов"
         subtitle="Как сообщество взаимодействует с вашими маршрутами"
+        onBack={onBackToOverview}
+        backLabel="Обзор"
       />
       <ProfileTravelEngagementSummary
         summary={authoredTravelEngagementSummary}

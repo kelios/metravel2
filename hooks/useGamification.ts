@@ -65,25 +65,36 @@ export function useUserPlaceFirstBadges(userId: string | number | null | undefin
 export function useMyGamificationProgress() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const qc = useQueryClient();
-  return useQuery<GamificationProgress>({
+  // Подписываемся на консолидированный /achievements/me/ (дедуп — тот же кэш),
+  // чтобы переоценивать `enabled`, когда он зарезолвится (#588).
+  const { data: ach, isSuccess: achSuccess, isFetching: achFetching } =
+    useMyAchievements({ enabled: isAuthenticated });
+
+  // Пока achievements ещё грузится — НЕ дёргаем /progression/me/: дождёмся
+  // консолидированного payload'а и засеемся из него. Отдельный запрос делаем
+  // только если achievements зарезолвился, но прогрессии в нём не оказалось.
+  const consolidatedHasProgression = ach?.progressionDto != null;
+  const needsSeparateFetch = achSuccess && !consolidatedHasProgression;
+
+  const query = useQuery<GamificationProgress>({
     queryKey: queryKeys.gamificationProgressMe(),
     queryFn: fetchMyGamificationProgress,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && needsSeparateFetch,
     staleTime: STALE_TIME,
     retry,
-    // #588: консолидированный /achievements/me/ уже содержит линейки прогрессии.
-    // Если он в кэше — стартуем с этих данных и не делаем повторный медленный
-    // запрос /progression/me/.
     initialData: () => {
-      const ach = qc.getQueryData<{ progressionDto?: unknown }>(
+      const cached = qc.getQueryData<{ progressionDto?: unknown }>(
         queryKeys.achievementsMe(),
       ) as { progressionDto?: Parameters<typeof mapProgress>[0] } | undefined;
-      if (ach?.progressionDto == null) return undefined;
-      return mapProgress(ach.progressionDto);
+      if (cached?.progressionDto == null) return undefined;
+      return mapProgress(cached.progressionDto);
     },
     initialDataUpdatedAt: () =>
       qc.getQueryState(queryKeys.achievementsMe())?.dataUpdatedAt ?? 0,
   });
+
+  const isFetching = query.isFetching || (!query.data && achFetching);
+  return { ...query, isFetching };
 }
 
 export function useUserGamificationProgress(
@@ -103,24 +114,36 @@ export function useUserGamificationProgress(
 export function useMyCharacter() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const qc = useQueryClient();
-  return useQuery<CharacterState>({
+  const { data: ach, isSuccess: achSuccess, isFetching: achFetching } =
+    useMyAchievements({ enabled: isAuthenticated });
+
+  const consolidatedHasCharacter = ach?.characterDto != null;
+  const needsSeparateFetch = achSuccess && !consolidatedHasCharacter;
+
+  const query = useQuery<CharacterState>({
     queryKey: queryKeys.gamificationCharacterMe(),
     queryFn: fetchMyCharacter,
-    enabled: isAuthenticated,
+    // #588: консолидированный /achievements/me/ уже содержит персонажа — отдельный
+    // /character/me/ дёргаем только если его там не оказалось.
+    enabled: isAuthenticated && needsSeparateFetch,
     staleTime: STALE_TIME,
     retry,
-    // #588: консолидированный /achievements/me/ уже содержит состояние персонажа.
-    // Стартуем из его кэша вместо повторного запроса /character/me/.
     initialData: () => {
-      const ach = qc.getQueryData(queryKeys.achievementsMe()) as
+      const cached = qc.getQueryData(queryKeys.achievementsMe()) as
         | { characterDto?: Parameters<typeof mapCharacter>[0] | null }
         | undefined;
-      if (ach?.characterDto == null) return undefined;
-      return mapCharacter(ach.characterDto);
+      if (cached?.characterDto == null) return undefined;
+      return mapCharacter(cached.characterDto);
     },
     initialDataUpdatedAt: () =>
       qc.getQueryState(queryKeys.achievementsMe())?.dataUpdatedAt ?? 0,
   });
+
+  // Пока консолидированный запрос грузится, показываем его loading-состояние,
+  // чтобы вкладка «Ваш путь» не мигала пустотой.
+  const isFetching =
+    query.isFetching || (!query.data && achFetching);
+  return { ...query, isFetching };
 }
 
 export function useUserCharacter(userId: string | number | null | undefined) {

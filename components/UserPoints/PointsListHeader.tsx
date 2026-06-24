@@ -130,7 +130,7 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
             <Text style={local.summaryEyebrow}>Ваши точки</Text>
             <Text style={local.summaryTitle}>Управляйте сохранёнными местами</Text>
             <Text style={local.summarySubtitle}>
-              Быстро переключайте фильтры, настройки карты и подборки прямо из панели.
+              Фильтруйте точки, настраивайте карту или нажмите «Случайный выбор», чтобы решить, куда поехать.
             </Text>
           </View>
 
@@ -148,8 +148,11 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
 
         <View style={local.recommendationCard}>
           <View style={local.recommendationTextBlock}>
-            <Text style={local.recommendationEyebrow}>Случайный выбор</Text>
-            <Text style={local.recommendationTitle}>Куда поехать? Решим за вас</Text>
+            <View style={local.recommendationEyebrowRow}>
+              <Feather name="shuffle" size={13} color={themed.primaryDark} />
+              <Text style={local.recommendationEyebrow}>Случайный выбор из ваших точек</Text>
+            </View>
+            <Text style={local.recommendationTitle}>Куда поехать? Выберем за вас</Text>
             <Text style={local.recommendationDescription}>{recommendationDescription}</Text>
           </View>
 
@@ -357,6 +360,11 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
       : null),
   },
   recommendationTextBlock: {
+    gap: 6,
+  },
+  recommendationEyebrowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
   },
   recommendationEyebrow: {

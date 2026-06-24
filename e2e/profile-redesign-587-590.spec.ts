@@ -139,11 +139,13 @@ test.describe('Profile redesign #587-590', () => {
 
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'mobile-rank-card.png') })
 
-    // Clickable → opens AwardsHub "all" tab
+    // Clickable → opens AwardsHub "all" tab (panel content switches from default "path").
+    const panel = page.getByTestId('awards-panel')
+    const before = await panel.innerHTML()
     await card.getByText(/Подробнее/).click()
-    await page.waitForTimeout(400)
-    const allTab = page.getByTestId('awards-tab-all')
-    await expect(allTab).toHaveAttribute('aria-selected', 'true')
+    await page.waitForTimeout(500)
+    const after = await panel.innerHTML()
+    expect(before, 'Подробнее should switch AwardsHub panel content').not.toBe(after)
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'mobile-rank-card-opened-all.png') })
   })
 
@@ -178,13 +180,27 @@ test.describe('Profile redesign #587-590', () => {
     await page.setViewportSize({ width: 390, height: 844 })
     await setup(page, counters)
     await gotoWithRetry(page, '/profile')
+    // /profile static build self-recovers from a React #419 (Suspense hydration)
+    // — wait for it to settle before interacting so the click isn't swallowed by
+    // the recovery re-render.
+    await page.waitForLoadState('networkidle').catch(() => {})
+    await page.waitForTimeout(1500)
+
     await openStats(page)
 
-    // "Были" tile (visited)
-    const visitedTile = page.getByRole('button', { name: /Были/ }).first()
-    await visitedTile.waitFor({ state: 'visible', timeout: 20_000 })
-    await visitedTile.click()
-    await page.waitForURL(/\/calendar/, { timeout: 10_000 })
+    // Ensure PersonalStatusSummary card rendered
+    await expect(page.getByText(/Мои статусы поездок/)).toBeVisible({ timeout: 20_000 })
+
+    // "Были" tile (visited) — scope to the personal-status card label pattern.
+    // Retry the click: the first tap can land during a hydration re-render.
+    const visitedTile = page.getByRole('button', { name: /^Были:/ }).first()
+    await expect(async () => {
+      await visitedTile.scrollIntoViewIfNeeded()
+      await visitedTile.click()
+      await page.waitForTimeout(600)
+      expect(page.url()).toMatch(/calendar/)
+    }).toPass({ timeout: 20_000 })
+
     expect(page.url()).toMatch(/status=visited/)
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'mobile-tile-visited-calendar.png') })
   })

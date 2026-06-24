@@ -33,9 +33,9 @@ test('#586 «Мои точки»: случайный выбор подписан
 
   await page.screenshot({ path: 'e2e/__screenshots__/qa-586-random-section.png', fullPage: true })
 
-  const randomTitle = page.getByText('Куда поехать? Решим за вас', { exact: false }).first()
+  const randomTitle = page.getByText('Куда поехать?', { exact: false }).first()
   const randomBtn = page.getByText('случайные точки', { exact: false }).first()
-  const eyebrow = page.getByText('Случайный выбор', { exact: false }).first()
+  const eyebrow = page.getByText('Случайный выбор из ваших точек', { exact: false }).first()
 
   const titleVisible = await randomTitle.isVisible().catch(() => false)
   const btnVisible = await randomBtn.isVisible().catch(() => false)

@@ -495,11 +495,9 @@ export default function ProfileScreen() {
   const showClearButton = (activeTab === 'favorites' || activeTab === 'history') && currentData.length > 0;
 
   const handleOpenCalendar = useCallback((status?: 'visited' | 'wishlist' | 'planned') => {
-    if (status) {
-      router.push({ pathname: '/calendar', params: { status } } as any)
-      return
-    }
-    router.push('/calendar' as any)
+    // Строковая форма href надёжно навигирует к скрытому tab-роуту; object-form с
+    // params не срабатывал из вкладки профиля (#589 — плитки «Были/Хочу/Планирую»).
+    router.push((status ? `/calendar?status=${status}` : '/calendar') as any)
   }, [router]);
 
   const statItems = useMemo<ProfileStatSegmentItem[]>(() => [
@@ -605,6 +603,7 @@ export default function ProfileScreen() {
         personalTravelStatusSummary={personalTravelStatusSummary}
         formatTripsCount={formatTripsCount}
         onOpenCalendar={handleOpenCalendar}
+        onBackToOverview={() => handleProfileTabChange('overview')}
       />
     ),
     [
@@ -618,6 +617,7 @@ export default function ProfileScreen() {
       personalTravelStatusSummary,
       formatTripsCount,
       handleOpenCalendar,
+      handleProfileTabChange,
     ]
   );
 
