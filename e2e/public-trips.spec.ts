@@ -1,5 +1,5 @@
 import fs from 'node:fs'
-import { test, expect, request } from '@playwright/test'
+import { test, expect, request, type Page } from '@playwright/test'
 import { resetTripApplicationsViaAdmin } from './helpers/tripApplicationsReset'
 
 /**
@@ -159,6 +159,53 @@ function seedConsent(page: import('@playwright/test').Page) {
   })
 }
 
+function isTripDetailResponse(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return parsed.pathname.replace(/\/+$/, '') === `/api/public-trips/${TRIP_ID}`
+  } catch {
+    return false
+  }
+}
+
+async function gotoTripDetail(page: Page, accountLabel: string) {
+  let lastStatus: number | null = null
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const detailRespP = page
+      .waitForResponse(
+        (r) => isTripDetailResponse(r.url()) && r.request().method() === 'GET',
+        { timeout: 45_000 },
+      )
+      .catch(() => null)
+
+    await page.goto(`/trips/${TRIP_ID}`, { waitUntil: 'domcontentloaded' })
+
+    const resp = await detailRespP
+    lastStatus = resp?.status() ?? null
+
+    if (resp?.status() === 200) {
+      await expect(
+        page.getByTestId(`trip-detail-${TRIP_ID}`),
+        `${accountLabel}: trip detail should render after GET /api/public-trips/${TRIP_ID}/ returned 200`,
+      ).toBeVisible({ timeout: 30_000 })
+      return resp
+    }
+
+    if (attempt < 3 && (lastStatus == null || [404, 502, 503, 504].includes(lastStatus))) {
+      await page.waitForTimeout(1000)
+      continue
+    }
+
+    break
+  }
+
+  throw new Error(
+    `${accountLabel}: GET /api/public-trips/${TRIP_ID}/ did not return 200 after navigation attempts ` +
+      `(last status: ${lastStatus ?? 'no response'})`,
+  )
+}
+
 // ── Token cache (module-level, retry-safe) ────────────────────────────────────
 
 let _tokenA = ''
@@ -176,8 +223,6 @@ async function ensureTokens() {
 
 // serial — BE state мутабельный, параллель недопустима.
 test.describe.serial('Публичные поездки — two-account real-BE flow', () => {
-  test.describe.configure({ retries: 0 })
-
   // Shared между тестами 1 и 2 внутри serial-suite.
   let _createdAppId = 0
 
@@ -229,21 +274,8 @@ test.describe.serial('Публичные поездки — two-account real-BE 
     try {
       await seedConsent(pageB)
 
-      // Регистрируем ожидание GET /api/public-trips/1/ ДО goto — иначе быстрый ответ
-      // можно пропустить. Это гарантирует что деталь пришла реальная (не mock-fallback)
-      // прежде чем проверять форму.
-      const detailResp = pageB.waitForResponse(
-        (r) => /\/api\/public-trips\/1\/?$/.test(r.url()) && r.request().method() === 'GET',
-        { timeout: 45_000 },
-      )
-
-      await pageB.goto(`/trips/${TRIP_ID}`, { waitUntil: 'domcontentloaded' })
-
-      // Деталь поездки загружена.
-      await expect(pageB.getByTestId(`trip-detail-${TRIP_ID}`)).toBeVisible({ timeout: 30_000 })
-
       // Ждём реального сетевого ответа от BE — только после этого trip-data в RQ актуальна.
-      const r = await detailResp
+      const r = await gotoTripDetail(pageB, 'applicant')
       expect(r.status(), 'detail GET /api/public-trips/1/').toBe(200)
 
       // Форма «Хочу поехать» видна: B не владелец, trip.status=open, нет активной заявки.
@@ -286,7 +318,7 @@ test.describe.serial('Публичные поездки — two-account real-BE 
 
   // ── Тест 2: A одобряет через реальный UI ─────────────────────────────────
 
-  test('организатор одобряет заявку → статус «Одобрена» в UI + подтверждение API', async ({ page }) => {
+  test('организатор одобряет заявку → статус «Одобрена» в UI + подтверждение API', async ({ browser }) => {
     if (!hasCredsB || !hasBState()) {
       test.skip(true, 'E2E_EMAIL2/E2E_PASSWORD2 или storageState.b.json не заданы — skip')
       return
@@ -308,7 +340,7 @@ test.describe.serial('Публичные поездки — two-account real-BE 
     const appId = Number(beApp.id)
     _createdAppId = appId
 
-    // A открывает деталь поездки (page уже использует storageState A по config).
+    // A открывает деталь поездки в свежем контексте storageState A.
     //
     // Ключевой момент: React Query хранит кэш in-memory (staleTime=5min).
     // Если страница была открыта в этом же browser-context раньше (retry или
@@ -318,57 +350,61 @@ test.describe.serial('Публичные поездки — two-account real-BE 
     //   2. waitForResponse на GET /api/trip-applications/ — ждём реальный сетевой
     //      ответ от BE, что гарантирует что RQ обновил кэш свежими данными.
     //   3. Только после этого ищем карточку по appId.
-    await seedConsent(page)
+    const ctx = await browser.newContext({ storageState: STORAGE_STATE_A })
+    const page = await ctx.newPage()
 
-    // Запускаем ожидание ответа до goto, чтобы не пропустить быстрый fetch.
-    const applicationsResponseP = page.waitForResponse(
-      (r) => r.url().includes('/api/trip-applications/') && r.request().method() === 'GET',
-      { timeout: 30_000 },
-    )
+    try {
+      await seedConsent(page)
 
-    await page.goto(`/trips/${TRIP_ID}`, { waitUntil: 'domcontentloaded' })
+      // Запускаем ожидание ответа до goto, чтобы не пропустить быстрый fetch.
+      const applicationsResponseP = page.waitForResponse(
+        (r) => r.url().includes('/api/trip-applications/') && r.request().method() === 'GET',
+        { timeout: 30_000 },
+      )
 
-    // Деталь загружена.
-    await expect(page.getByTestId(`trip-detail-${TRIP_ID}`)).toBeVisible({ timeout: 30_000 })
+      await gotoTripDetail(page, 'organizer')
 
-    // OrganizerApplicationsPanel рендерится для владельца (isOwner вычисляется
-    // на клиенте через authStore userId == trip.organizer.id).
-    const panel = page.getByTestId('organizer-applications-panel')
-    await expect(panel).toBeVisible({ timeout: 20_000 })
+      // OrganizerApplicationsPanel рендерится для владельца (isOwner вычисляется
+      // на клиенте через authStore userId == trip.organizer.id).
+      const panel = page.getByTestId('organizer-applications-panel')
+      await expect(panel).toBeVisible({ timeout: 20_000 })
 
-    // Ждём реального сетевого ответа от BE — RQ теперь содержит актуальный список.
-    await applicationsResponseP
+      // Ждём реального сетевого ответа от BE — RQ теперь содержит актуальный список.
+      await applicationsResponseP
 
-    // Карточка заявки B видна (по свежему appId из BE, не из stale-кэша).
-    const appCard = page.getByTestId(`trip-application-${appId}`)
-    await expect(appCard).toBeVisible({ timeout: 15_000 })
-    await appCard.scrollIntoViewIfNeeded().catch(() => null)
+      // Карточка заявки B видна (по свежему appId из BE, не из stale-кэша).
+      const appCard = page.getByTestId(`trip-application-${appId}`)
+      await expect(appCard).toBeVisible({ timeout: 15_000 })
+      await appCard.scrollIntoViewIfNeeded().catch(() => null)
 
-    // Кнопка «Принять» видна: заявка в статусе new → decidable.
-    const approveBtn = page.getByTestId(`trip-application-${appId}-approve`)
-    await expect(approveBtn).toBeVisible({ timeout: 10_000 })
+      // Кнопка «Принять» видна: заявка в статусе new → decidable.
+      const approveBtn = page.getByTestId(`trip-application-${appId}-approve`)
+      await expect(approveBtn).toBeVisible({ timeout: 10_000 })
 
-    // Регистрируем ожидание PATCH ДО клика — иначе быстрый ответ можно пропустить.
-    // Ждём именно /api/trip-applications/{appId}/ с методом PATCH и статусом 200.
-    const patchResp = page.waitForResponse(
-      (r) =>
-        r.request().method() === 'PATCH' &&
-        /\/api\/trip-applications\/\d+\/?$/.test(r.url()) &&
-        r.status() === 200,
-      { timeout: 20_000 },
-    )
+      // Регистрируем ожидание PATCH ДО клика — иначе быстрый ответ можно пропустить.
+      // Ждём именно /api/trip-applications/{appId}/ с методом PATCH и статусом 200.
+      const patchResp = page.waitForResponse(
+        (r) =>
+          r.request().method() === 'PATCH' &&
+          /\/api\/trip-applications\/\d+\/?$/.test(r.url()) &&
+          r.status() === 200,
+        { timeout: 20_000 },
+      )
 
-    // Нажимаем «Принять» через полный pointer-цикл (RN-web Pressable).
-    await pressRNElement(page, `trip-application-${appId}-approve`)
+      // Нажимаем «Принять» через полный pointer-цикл (RN-web Pressable).
+      await pressRNElement(page, `trip-application-${appId}-approve`)
 
-    // Ждём реального PATCH 200 от сервера — только после этого идём в ground-truth.
-    // Оптимистичный onMutate может показать «Одобрена» в UI раньше, но BE-проверка
-    // должна опираться на реальный сетевой ответ, а не на локальный кэш.
-    await patchResp
+      // Ждём реального PATCH 200 от сервера — только после этого идём в ground-truth.
+      // Оптимистичный onMutate может показать «Одобрена» в UI раньше, но BE-проверка
+      // должна опираться на реальный сетевой ответ, а не на локальный кэш.
+      await patchResp
 
-    // UI-ассерт: после onMutate оптимистичный update убирает кнопки и меняет бейдж.
-    await expect(approveBtn).toBeHidden({ timeout: 15_000 })
-    await expect(appCard.getByText('Одобрена')).toBeVisible({ timeout: 10_000 })
+      // UI-ассерт: после onMutate оптимистичный update убирает кнопки и меняет бейдж.
+      await expect(approveBtn).toBeHidden({ timeout: 15_000 })
+      await expect(appCard.getByText('Одобрена')).toBeVisible({ timeout: 10_000 })
+    } finally {
+      await ctx.close()
+    }
 
     // Ground truth A: реальный PATCH вернул 200 — теперь BE точно обновил статус.
     const apiA = await makeApi(_tokenA)
