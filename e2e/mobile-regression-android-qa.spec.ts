@@ -35,6 +35,10 @@ async function setMobileViewport(page: any) {
   await preacceptCookies(page);
 }
 
+function isTravelDetailsPath(pathname: string) {
+  return /^\/travels\/[^/]+/.test(pathname);
+}
+
 // ─── BUG-CLASS-1: Active tab-bar state ──────────────────────────────────────
 
 test.describe('@mobile BUG-CLASS-1: active tab-bar state', () => {
@@ -145,15 +149,12 @@ test.describe('@mobile BUG-CLASS-2: header ≤20% viewport height', () => {
   test('travel wizard header does not exceed 20% of viewport on mobile', async ({ page }) => {
     await setMobileViewport(page);
 
-    // Wizard header is visible without login on unauthenticated access
-    // (it renders the shell before auth-gating the wizard itself).
-    // We only measure the header height when visible.
     await gotoWithRetry(page, '/travel/new');
 
-    const wizardHeader = page
-      .locator('[data-testid="travel-wizard-progress"]')
-      .first();
-    const visible = await wizardHeader
+    // Measure the actual top context header. The wizard progress bar is part of
+    // the form body, below the page title/subtitle, so it is not header chrome.
+    const contextHeader = page.getByTestId('header-context-bar').first();
+    const visible = await contextHeader
       .waitFor({ state: 'visible', timeout: 30_000 })
       .then(() => true)
       .catch(() => false);
@@ -161,19 +162,18 @@ test.describe('@mobile BUG-CLASS-2: header ≤20% viewport height', () => {
     if (!visible) {
       test.info().annotations.push({
         type: 'note',
-        description: 'travel-wizard-progress not visible (auth-gate); measuring wizard-back fallback',
+        description: 'header-context-bar not visible on travel wizard route; skipping compact-header check',
       });
-      // Still validate the back button didn't push content off-screen
       return;
     }
 
-    const progressBox = await wizardHeader.boundingBox();
-    if (progressBox) {
+    const headerBox = await contextHeader.boundingBox();
+    if (headerBox) {
       const viewportHeight = MOBILE_VIEWPORT.height;
       const maxHeaderPx = viewportHeight * MAX_HEADER_RATIO;
       expect(
-        progressBox.y + progressBox.height,
-        `Wizard progress bar bottom must be within top ${MAX_HEADER_RATIO * 100}% of viewport`
+        headerBox.y + headerBox.height,
+        `Wizard context header bottom must be within top ${MAX_HEADER_RATIO * 100}% of viewport`
       ).toBeLessThanOrEqual(maxHeaderPx);
     }
   });
@@ -186,7 +186,8 @@ test.describe('@mobile BUG-CLASS-3: back navigation returns to source', () => {
     await setMobileViewport(page);
 
     // Navigate to list, then to details via link click
-    await gotoWithRetry(page, getTravelsListPath());
+    const expectedReturnPath = getTravelsListPath();
+    await gotoWithRetry(page, expectedReturnPath);
 
     // Find a card link and navigate
     const cardLink = page
@@ -205,18 +206,20 @@ test.describe('@mobile BUG-CLASS-3: back navigation returns to source', () => {
       const opened = await openFallbackTravelDetails(page);
       if (!opened) return;
     } else {
-      await Promise.all([
-        page.waitForURL((url) => url.pathname.includes('/travels/'), { timeout: 30_000 }),
-        cardLink.click(),
-      ]);
+      await cardLink.click();
+      await expect
+        .poll(() => new URL(page.url()).pathname, { timeout: 30_000 })
+        .toMatch(/^\/travels\//);
     }
 
     // We're now on /travels/<slug>
-    expect(page.url()).toContain('/travels/');
+    expect(isTravelDetailsPath(new URL(page.url()).pathname)).toBe(true);
 
-    // Click the back button if available, otherwise use browser history
+    // Click the details context-bar back button if available, otherwise use browser history.
+    // A broad aria-label search can match unrelated in-page controls and make this flaky.
     const backBtn = page
-      .locator('[data-testid="travel-wizard-back"], [aria-label*="Назад"], [aria-label*="Back"]')
+      .getByTestId('header-context-bar')
+      .getByRole('button', { name: /^Назад$/ })
       .first();
     const backVisible = await backBtn
       .waitFor({ state: 'visible', timeout: 5_000 })
@@ -224,18 +227,22 @@ test.describe('@mobile BUG-CLASS-3: back navigation returns to source', () => {
       .catch(() => false);
 
     if (backVisible) {
-      await Promise.all([
-        page.waitForURL((url) => !url.pathname.includes('/travels/'), { timeout: 15_000 }),
-        backBtn.click(),
-      ]);
+      await backBtn.click();
     } else {
       await page.goBack();
-      await page.waitForURL((url) => !url.pathname.includes('/travels/'), { timeout: 15_000 });
     }
+
+    await expect
+      .poll(() => new URL(page.url()).pathname, { timeout: 15_000 })
+      .not.toMatch(/^\/travels\//);
 
     // After going back from a travel detail reached from /search,
     // we must land on something other than / (i.e. back to the list source)
     const finalUrl = new URL(page.url());
+    expect(
+      finalUrl.pathname,
+      'Back from travel details must return to the previous list'
+    ).toBe(expectedReturnPath);
     expect(
       finalUrl.pathname,
       'Back from travel details must not land on / (should be the previous list)'
