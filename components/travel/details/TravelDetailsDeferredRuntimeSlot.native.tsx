@@ -1,11 +1,10 @@
 import React from 'react'
 
 import TravelDetailsPostLcpRuntime from '@/components/travel/details/TravelDetailsPostLcpRuntime'
+import { useTravelDetailsDeferredScroll } from '@/components/travel/details/TravelDetailsDeferredScrollContext'
 
 type TravelDetailsDeferredRuntimeSlotProps = {
-  activeSection: string | null
   anchors: any
-  contentHeight: number
   criticalChromeReady: boolean
   deferredChromeReady: boolean
   forceOpenKey: string | null
@@ -15,16 +14,12 @@ type TravelDetailsDeferredRuntimeSlotProps = {
   scrollToComments: () => void
   scrollToMapSection: () => void
   scrollViewRef: React.RefObject<any>
-  scrollY: any
   sectionLinks: any[]
   travel: any
-  viewportHeight: number
 }
 
 export default function TravelDetailsDeferredRuntimeSlot({
-  activeSection,
   anchors,
-  contentHeight,
   criticalChromeReady,
   deferredChromeReady,
   forceOpenKey,
@@ -34,11 +29,12 @@ export default function TravelDetailsDeferredRuntimeSlot({
   scrollToComments,
   scrollToMapSection,
   scrollViewRef,
-  scrollY,
   sectionLinks,
   travel,
-  viewportHeight,
 }: TravelDetailsDeferredRuntimeSlotProps) {
+  const { activeSection, contentHeight, viewportHeight, scrollY } =
+    useTravelDetailsDeferredScroll()
+
   if (!deferredChromeReady) return null
 
   return (

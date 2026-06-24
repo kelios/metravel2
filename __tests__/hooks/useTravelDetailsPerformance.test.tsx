@@ -156,7 +156,7 @@ describe('useTravelDetailsPerformance', () => {
     expect(result.current.lcpLoaded).toBe(false)
   })
 
-  it('reveals hero enhancers and post-LCP runtime automatically after the idle window', async () => {
+  it('reveals hero enhancers and post-LCP runtime together on a single idle window after LCP', async () => {
     const { result } = renderHook(() =>
       useTravelDetailsPerformance({
         travel: heroTravel,
@@ -176,19 +176,14 @@ describe('useTravelDetailsPerformance', () => {
     expect(result.current.heroEnhancersReady).toBe(false)
     expect(result.current.postLcpRuntimeReady).toBe(false)
 
+    // #558: a single idle callback after LCP flips both gates in the same commit
+    // instead of a 250→500 fixed-timer ladder, so chrome no longer steps in.
     await act(async () => {
       jest.advanceTimersByTime(250)
       await Promise.resolve()
     })
 
     expect(result.current.heroEnhancersReady).toBe(true)
-    expect(result.current.postLcpRuntimeReady).toBe(false)
-
-    await act(async () => {
-      jest.advanceTimersByTime(250)
-      await Promise.resolve()
-    })
-
     expect(result.current.postLcpRuntimeReady).toBe(true)
   })
 
@@ -257,7 +252,7 @@ describe('useTravelDetailsPerformance', () => {
     expect(result.current.postLcpRuntimeReady).toBe(true)
   })
 
-  it('reveals hero enhancers before post-LCP runtime in the idle-first sequence', async () => {
+  it('keeps post-LCP chrome out of the critical path until LCP, then reveals it in one step', async () => {
     const { result } = renderHook(() =>
       useTravelDetailsPerformance({
         travel: heroTravel,
@@ -265,6 +260,10 @@ describe('useTravelDetailsPerformance', () => {
         isLoading: false,
       })
     )
+
+    // Before LCP nothing post-LCP is revealed (chrome must not enter the critical path).
+    expect(result.current.heroEnhancersReady).toBe(false)
+    expect(result.current.postLcpRuntimeReady).toBe(false)
 
     await act(async () => {
       result.current.setLcpLoaded(true)
@@ -280,13 +279,6 @@ describe('useTravelDetailsPerformance', () => {
     })
 
     expect(result.current.heroEnhancersReady).toBe(true)
-    expect(result.current.postLcpRuntimeReady).toBe(false)
-
-    await act(async () => {
-      jest.advanceTimersByTime(250)
-      await Promise.resolve()
-    })
-
     expect(result.current.postLcpRuntimeReady).toBe(true)
   })
 })

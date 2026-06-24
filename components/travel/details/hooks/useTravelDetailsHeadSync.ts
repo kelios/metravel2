@@ -88,26 +88,30 @@ export function useTravelDetailsHeadSync({
       isApplying = false
     }
 
-    const t1 = setTimeout(applyAll, 50)
-    const t2 = setTimeout(applyAll, 300)
-    const t3 = setTimeout(applyAll, 800)
     applyAll()
+    const raf = requestAnimationFrame(applyAll)
+    const backstop = setTimeout(applyAll, 400)
 
     const titleEl = ensureSingleTitleTag(readyTitle)
     let titleObs: MutationObserver | null = null
+    let pendingTitleSync = 0
     if (titleEl) {
       titleObs = new MutationObserver(() => {
-        if (document.title !== readyTitle) {
-          ensureSingleTitleTag(readyTitle)
-        }
+        if (pendingTitleSync || document.title === readyTitle) return
+        pendingTitleSync = requestAnimationFrame(() => {
+          pendingTitleSync = 0
+          if (document.title !== readyTitle) ensureSingleTitleTag(readyTitle)
+        })
       })
       titleObs.observe(titleEl, { childList: true, characterData: true, subtree: true })
     }
+    const stopObserving = setTimeout(() => titleObs?.disconnect(), 5000)
 
     return () => {
-      clearTimeout(t1)
-      clearTimeout(t2)
-      clearTimeout(t3)
+      cancelAnimationFrame(raf)
+      clearTimeout(backstop)
+      clearTimeout(stopObserving)
+      if (pendingTitleSync) cancelAnimationFrame(pendingTitleSync)
       titleObs?.disconnect()
     }
   }, [canonicalUrl, isFocused, readyDesc, readyImage, readyTitle, syncNavigationTitle])

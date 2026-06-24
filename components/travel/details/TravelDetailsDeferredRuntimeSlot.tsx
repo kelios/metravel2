@@ -1,5 +1,6 @@
 import React, { Suspense } from 'react'
 import { lazyWithRetry } from '@/utils/chunkReload'
+import { useTravelDetailsDeferredScroll } from '@/components/travel/details/TravelDetailsDeferredScrollContext'
 
 const TravelDetailsPostLcpRuntimeLazy = lazyWithRetry(
   () => import('@/components/travel/details/TravelDetailsPostLcpRuntime'),
@@ -7,9 +8,7 @@ const TravelDetailsPostLcpRuntimeLazy = lazyWithRetry(
 )
 
 type TravelDetailsDeferredRuntimeSlotProps = {
-  activeSection: string | null
   anchors: any
-  contentHeight: number
   criticalChromeReady: boolean
   deferredChromeReady: boolean
   forceOpenKey: string | null
@@ -19,16 +18,12 @@ type TravelDetailsDeferredRuntimeSlotProps = {
   scrollToComments: () => void
   scrollToMapSection: () => void
   scrollViewRef: React.RefObject<any>
-  scrollY: any
   sectionLinks: any[]
   travel: any
-  viewportHeight: number
 }
 
 export default function TravelDetailsDeferredRuntimeSlot({
-  activeSection,
   anchors,
-  contentHeight,
   criticalChromeReady,
   deferredChromeReady,
   forceOpenKey,
@@ -38,11 +33,14 @@ export default function TravelDetailsDeferredRuntimeSlot({
   scrollToComments,
   scrollToMapSection,
   scrollViewRef,
-  scrollY,
   sectionLinks,
   travel,
-  viewportHeight,
 }: TravelDetailsDeferredRuntimeSlotProps) {
+  // #565: scroll-derived state arrives via context so the root deferred element stays
+  // stable across scroll; this slot is the boundary where scroll churn re-enters the tree.
+  const { activeSection, contentHeight, viewportHeight, scrollY } =
+    useTravelDetailsDeferredScroll()
+
   if (!deferredChromeReady) return null
 
   return (

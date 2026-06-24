@@ -125,14 +125,15 @@ describe('TravelDeferredSections map loading config', () => {
     })
 
     expect(mockUseProgressiveLoad).toHaveBeenCalled()
-    // Map section uses progressive loading with fallback delay for automatic loading
+    // #562: the heavy map section loads by viewport visibility (IntersectionObserver);
+    // the fallback delay is only a long safe backstop so it is not force-mounted off-screen.
     expect(mockUseProgressiveLoad).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
         priority: 'low',
         rootMargin: '200px',
         threshold: 0.1,
-        fallbackDelay: 800,
+        fallbackDelay: 8000,
       }),
     )
   })

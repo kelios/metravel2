@@ -15,6 +15,10 @@ import { isTravelDetailsFirstScreenReady } from '@/components/travel/details/tra
 import TravelDetailsAccessibilityChrome from '@/components/travel/details/TravelDetailsAccessibilityChrome'
 import TravelDetailsCriticalShell from '@/components/travel/details/TravelDetailsCriticalShell'
 import TravelDetailsDeferredRuntimeSlot from '@/components/travel/details/TravelDetailsDeferredRuntimeSlot'
+import {
+  TravelDetailsDeferredScrollProvider,
+  type TravelDetailsDeferredScrollState,
+} from '@/components/travel/details/TravelDetailsDeferredScrollContext'
 import { LoadError, MissingParamError } from '@/components/travel/details/TravelDetailsErrorStates'
 import TravelDetailsLoadingFallback from '@/components/travel/details/TravelDetailsLoadingFallback'
 import TravelDetailsSeoBlock from '@/components/travel/details/TravelDetailsSeoBlock'
@@ -225,7 +229,11 @@ export default function TravelDetailsContainer() {
     router.replace('/')
   }, [router])
 
-  const deferredRuntime = useMemo(() => {
+  // #565: the heavy deferred slot element depends ONLY on stable data/flags so its
+  // identity survives scroll. Scroll-derived state (activeSection/contentHeight/
+  // viewportHeight/scrollY) flows separately through context below, so a scroll-spy
+  // update no longer rebuilds this subtree or reconciles the post-LCP runtime.
+  const deferredRuntimeSlot = useMemo(() => {
     if (!travel) return null
 
     return (
@@ -236,11 +244,7 @@ export default function TravelDetailsContainer() {
         anchors={anchors}
         sectionLinks={sectionLinks}
         onNavigate={scrollToWithMenuClose}
-        activeSection={activeSection}
         forceOpenKey={forceOpenKey}
-        scrollY={scrollY}
-        contentHeight={contentHeight}
-        viewportHeight={viewportHeight}
         scrollViewRef={scrollRef as React.RefObject<any>}
         criticalChromeReady={criticalChromeReady}
         deferredChromeReady={deferredChromeReady}
@@ -249,9 +253,7 @@ export default function TravelDetailsContainer() {
       />
     )
   }, [
-    activeSection,
     anchors,
-    contentHeight,
     criticalChromeReady,
     deferredChromeReady,
     forceOpenKey,
@@ -261,11 +263,24 @@ export default function TravelDetailsContainer() {
     scrollToComments,
     scrollToMapSection,
     scrollToWithMenuClose,
-    scrollY,
     sectionLinks,
     travel,
-    viewportHeight,
   ])
+
+  const deferredScrollState = useMemo<TravelDetailsDeferredScrollState>(
+    () => ({ activeSection, contentHeight, viewportHeight, scrollY }),
+    [activeSection, contentHeight, scrollY, viewportHeight],
+  )
+
+  const deferredRuntime = useMemo(() => {
+    if (!deferredRuntimeSlot) return null
+
+    return (
+      <TravelDetailsDeferredScrollProvider value={deferredScrollState}>
+        {deferredRuntimeSlot}
+      </TravelDetailsDeferredScrollProvider>
+    )
+  }, [deferredRuntimeSlot, deferredScrollState])
 
   const mainAriaLabel = `Детали путешествия: ${travel?.name || 'путешествие'}`
 

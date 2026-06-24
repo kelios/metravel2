@@ -204,19 +204,18 @@ export function useTravelDetailsPerformance({
     setHeroEnhancersReady(false)
     setPostLcpRuntimeReady(false)
 
-    let cleanupHeroIdle: (() => void) | null = null
-    let cleanupRuntimeIdle: (() => void) | null = null
-
-    cleanupHeroIdle = runWhenBrowserIdle(() => {
+    // #558: reveal all post-LCP chrome (hero enhancers + post-LCP runtime) on a single
+    // real idle callback after LCP instead of a 250→500 ladder of fixed timers. The two
+    // staged fallbacks serialised chrome appearance into a visible 0.75–1.5s reflow
+    // cascade; flipping both gates in one commit removes the stepping while still keeping
+    // the chrome strictly after LCP (this only runs once `lcpLoaded` is true).
+    const cleanupIdle = runWhenBrowserIdle(() => {
       setHeroEnhancersReady(true)
-    }, 250)
-    cleanupRuntimeIdle = runWhenBrowserIdle(() => {
       setPostLcpRuntimeReady(true)
-    }, 500)
+    }, 250)
 
     return () => {
-      cleanupHeroIdle?.()
-      cleanupRuntimeIdle?.()
+      cleanupIdle()
     }
   }, [hasHeroMedia, isLoading, lcpLoaded, travelId])
 

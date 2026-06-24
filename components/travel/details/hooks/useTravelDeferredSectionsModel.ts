@@ -51,6 +51,15 @@ function runWhenBrowserIdle(callback: () => void, fallbackMs = 250): () => void 
   }
 }
 
+// #562: visibility (IntersectionObserver) is the primary trigger for every deferred
+// section. Author/rating sit just below the fold and are almost always reached quickly,
+// so they keep a short fallback that smooths over a missed observer. The heavy sections
+// (map/sidebar/comments/footer) must NOT be force-mounted by a short fixed timer while
+// they are still off-viewport — that spent CPU/network (comments, related travels) for
+// content the user may never scroll to. Their fallback is a long safe backstop only;
+// in practice the observer mounts them as they approach the viewport well before it.
+const HEAVY_SECTION_FALLBACK_BACKSTOP_MS = 8000
+
 const TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS = {
   author: {
     fallbackDelay: 500,
@@ -60,21 +69,21 @@ const TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS = {
     traceKey: 'deferred:author:visible',
   },
   comments: {
-    fallbackDelay: 950,
+    fallbackDelay: HEAVY_SECTION_FALLBACK_BACKSTOP_MS,
     priority: 'low' as const,
     rootMargin: '200px',
     threshold: 0.1,
     traceKey: 'deferred:comments:visible',
   },
   footer: {
-    fallbackDelay: 1000,
+    fallbackDelay: HEAVY_SECTION_FALLBACK_BACKSTOP_MS,
     priority: 'low' as const,
     rootMargin: '200px',
     threshold: 0.1,
     traceKey: 'deferred:footer:visible',
   },
   map: {
-    fallbackDelay: 800,
+    fallbackDelay: HEAVY_SECTION_FALLBACK_BACKSTOP_MS,
     priority: 'low' as const,
     rootMargin: '200px',
     threshold: 0.1,
@@ -88,7 +97,7 @@ const TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS = {
     traceKey: 'deferred:rating:visible',
   },
   sidebar: {
-    fallbackDelay: 900,
+    fallbackDelay: HEAVY_SECTION_FALLBACK_BACKSTOP_MS,
     priority: 'low' as const,
     rootMargin: '200px',
     threshold: 0.1,
