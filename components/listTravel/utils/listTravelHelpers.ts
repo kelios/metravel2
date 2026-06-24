@@ -21,8 +21,16 @@ export function normalizeApiResponse(data: any): { items: Travel[]; total: numbe
     let items: Travel[] = [];
     let total = 0;
 
+    // DRF default: { count, next, previous, results: [...] }
+    if (Array.isArray((data as any).results)) {
+      items = (data as any).results;
+      total =
+        typeof (data as any).count === 'number'
+          ? (data as any).count
+          : (typeof (data as any).total === 'number' ? (data as any).total : items.length);
+    }
     // Если data.items - массив (некоторые эндпоинты/обертки)
-    if (Array.isArray((data as any).items)) {
+    else if (Array.isArray((data as any).items)) {
       items = (data as any).items;
       total =
         typeof (data as any).total === 'number'
@@ -52,8 +60,9 @@ export function normalizeApiResponse(data: any): { items: Travel[]; total: numbe
 export function deduplicateTravels(travels: Travel[]): Travel[] {
   const seenIds = new Set<string | number>();
   return travels.filter((travel) => {
-    const id = travel?.id ?? travel?.slug ?? (travel as any)?._id;
-    if (!id || seenIds.has(id)) {
+    // Use nullish coalescing so numeric 0 is a valid id (not treated as absent)
+    const id = travel?.id != null ? travel.id : (travel?.slug ?? (travel as any)?._id);
+    if (id == null || seenIds.has(id)) {
       return false;
     }
     seenIds.add(id);
