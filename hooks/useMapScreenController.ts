@@ -271,7 +271,19 @@ export function useMapScreenController() {
 
   const focusPlaceRef = useRef(focusPlace);
   focusPlaceRef.current = focusPlace;
+  // #539 — tapping a list/panel place card must focus the marker AND show the
+  // place card on mobile. `focusPlace` only centers + tries to open the Leaflet
+  // popup, but on mobile that popup is suppressed (we surface a bottom card via
+  // `selectedPlace`). Without also setting `selectedPlace` here the mobile tap
+  // appeared to do nothing (the map shifted but nothing opened). So on mobile we
+  // reuse the SAME single model as a marker tap: surface the tapped item as the
+  // selected place (→ MapPlaceBottomCard) in addition to centering the map.
+  const isMobileRef = useRef(isMobile);
+  isMobileRef.current = isMobile;
   const focusPlaceStable = useCallback((item: TravelCoords) => {
+    if (isMobileRef.current && item?.coord) {
+      setSelectedPlace(item as unknown as MapPoint);
+    }
     return focusPlaceRef.current?.(item);
   }, []);
 

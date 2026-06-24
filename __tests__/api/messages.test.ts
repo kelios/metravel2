@@ -140,6 +140,35 @@ describe('Messages API', () => {
             const result = await fetchAvailableUsers();
             expect(result).toEqual([]);
         });
+
+        // Regression: #544 — search found nobody because the backend wrapped the
+        // list in an envelope and the FE read the array directly (-> []).
+        it('should unwrap { results: [...] } envelope', async () => {
+            const users: MessagingUser[] = [
+                { id: 1, name: 'Иван Петров', email: 'ivan@mail.ru', avatar: null, user: 10 },
+            ];
+            mockedFetch.mockResolvedValueOnce(mockResponse({ results: users }));
+
+            const result = await fetchAvailableUsers();
+            expect(result).toEqual(users);
+        });
+
+        it('should unwrap { data: [...] } envelope', async () => {
+            const users: MessagingUser[] = [
+                { id: 2, name: 'Мария', email: 'maria@test.by', avatar: null, user: 20 },
+            ];
+            mockedFetch.mockResolvedValueOnce(mockResponse({ data: users }));
+
+            const result = await fetchAvailableUsers();
+            expect(result).toEqual(users);
+        });
+
+        it('should return [] for an unexpected non-array payload', async () => {
+            mockedFetch.mockResolvedValueOnce(mockResponse({ foo: 'bar' }));
+
+            const result = await fetchAvailableUsers();
+            expect(result).toEqual([]);
+        });
     });
 
     describe('fetchThreadByUser', () => {

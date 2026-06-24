@@ -21,14 +21,14 @@ export default function UserPointsScreen() {
   const styles = createStyles(colors);
   const handleBack = () => {
     if (cameFromProfile) {
-      navigation.push('/profile' as any);
+      navigation.replace('/profile' as any);
       return;
     }
     if (typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
       navigation.back();
       return;
     }
-    navigation.push('/profile' as any);
+    navigation.replace('/profile' as any);
   };
 
   if (!authReady) {

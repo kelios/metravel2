@@ -164,9 +164,27 @@ export const fetchMessageThreads = async (): Promise<MessageThread[]> => {
     }
 };
 
+// Backend may return either a bare array or a paginated/wrapped envelope
+// ({ results: [...] } / { data: [...] }), like /messages/ does. Normalize both.
+type RawAvailableUsers =
+    | MessagingUser[]
+    | { results?: MessagingUser[]; data?: MessagingUser[] }
+    | null
+    | undefined;
+
+const normalizeAvailableUsers = (raw: RawAvailableUsers): MessagingUser[] => {
+    if (Array.isArray(raw)) return raw;
+    if (raw && typeof raw === 'object') {
+        if (Array.isArray(raw.results)) return raw.results;
+        if (Array.isArray(raw.data)) return raw.data;
+    }
+    return [];
+};
+
 export const fetchAvailableUsers = async (): Promise<MessagingUser[]> => {
     try {
-        return await messagingFetch<MessagingUser[]>('/message-threads/available-users/');
+        const raw = await messagingFetch<RawAvailableUsers>('/message-threads/available-users/');
+        return normalizeAvailableUsers(raw);
     } catch (e: unknown) {
         const status = getMessagingErrorStatus(e);
         if (status === 401 || status === 404) return [];

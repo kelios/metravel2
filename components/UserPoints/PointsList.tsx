@@ -286,6 +286,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     onRemoveFilterChip: handleRemoveFilterChip,
     viewMode,
     onViewModeChange: setViewMode,
+    hideViewToggle: !isWideScreenWeb,
     showFilters,
     onToggleFilters: () => setShowFilters((prev) => !prev),
     showMapSettings,

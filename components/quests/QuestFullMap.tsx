@@ -444,32 +444,27 @@ function QuestFullMap({
             </View>
 
             {fullscreenVisible ? (
-                <Modal
-                    visible
-                    animationType="fade"
-                    onRequestClose={() => setFullscreenVisible(false)}
-                >
-                    <View style={styles.fullscreenModal}>
-                        <View style={styles.fullscreenHeader}>
-                            <Text style={styles.fullscreenTitle} numberOfLines={1}>{title}</Text>
-                            <TouchableOpacity
-                                style={styles.fullscreenClose}
-                                onPress={() => setFullscreenVisible(false)}
-                                accessibilityRole="button"
-                                accessibilityLabel="Закрыть полноэкранную карту квеста"
-                            >
-                                <Feather name="x" size={20} color={colors.text} />
-                            </TouchableOpacity>
-                        </View>
-                        <QuestFullMap
-                            steps={steps}
-                            height={fullscreenMapHeight}
-                            title={title}
-                            activeStepIndex={activeStepIndex}
-                            allowFullscreen={false}
-                        />
+                <View style={[styles.fullscreenOverlay, { paddingTop: insets.top }]} pointerEvents="auto">
+                    <View style={styles.fullscreenHeader}>
+                        <Text style={styles.fullscreenTitle} numberOfLines={1}>{title}</Text>
+                        <TouchableOpacity
+                            style={styles.fullscreenClose}
+                            onPress={() => setFullscreenVisible(false)}
+                            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Закрыть полноэкранную карту квеста"
+                        >
+                            <Feather name="x" size={20} color={colors.text} />
+                        </TouchableOpacity>
                     </View>
-                </Modal>
+                    <QuestFullMap
+                        steps={steps}
+                        height={fullscreenMapHeight}
+                        title={title}
+                        activeStepIndex={activeStepIndex}
+                        allowFullscreen={false}
+                    />
+                </View>
             ) : null}
 
             {/* Mobile export menu modal */}
@@ -647,10 +642,16 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    fullscreenModal: {
-        flex: 1,
+    fullscreenOverlay: {
+        ...(Platform.OS === 'web'
+            ? ({ position: 'fixed' } as any)
+            : { position: 'absolute' }),
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 1000,
         backgroundColor: colors.background,
-        paddingTop: 8,
     },
     fullscreenHeader: {
         minHeight: 56,

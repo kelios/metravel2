@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Platform, Share, Alert, ActionSheetIOS, useWindowDimensions } from 'react-native';
+import { View, Text, Platform, Share, ActionSheetIOS, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
 import type { ImportedPoint } from '@/types/userPoints';
@@ -8,6 +8,7 @@ import { createStyles } from './PointCard.styles';
 import IconButton from '@/components/ui/IconButton';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
+import OpenInMapsSheet, { type OpenInMapsAction } from '@/components/navigation/OpenInMapsSheet';
 import { showToast } from '@/utils/toast';
 import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { buildGoogleMapsUrl, buildOrganicMapsUrl, buildWazeUrl, buildYandexNaviUrl } from '@/components/MapPage/Map/mapLinks';
@@ -70,6 +71,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
   const colors = useThemedColors();
   const { width: viewportWidth } = useWindowDimensions();
   const isNarrowLayout = viewportWidth <= 430;
+  const [showOpenInMapsSheet, setShowOpenInMapsSheet] = React.useState(false);
   const isSitePoint = React.useMemo(() => {
     const tags = (point as any)?.tags;
     return Boolean(String(tags?.travelUrl ?? '').trim() || String(tags?.articleUrl ?? '').trim());
@@ -300,14 +302,46 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
       return;
     }
 
-    Alert.alert('Открыть в картах', undefined, [
-      { text: 'Google Maps', onPress: () => void openExternalLink(mapUrls.google) },
-      { text: 'Organic Maps', onPress: () => void openExternalLink(mapUrls.organic) },
-      { text: 'Waze', onPress: () => void openExternalLink(mapUrls.waze) },
-      { text: 'Яндекс.Навигатор', onPress: () => void openExternalLink(mapUrls.yandexNavi) },
-      { text: 'OpenStreetMap', onPress: () => void openExternalLink(mapUrls.osm) },
-      { text: 'Отмена', style: 'cancel' },
-    ]);
+    // Android: системный Alert надёжно держит только 3 кнопки — 6 пунктов
+    // обрезались (кривая вёрстка, пропадала «Отмена», #547). Открываем
+    // управляемый bottom-sheet с явной кнопкой закрытия и safe-area.
+    setShowOpenInMapsSheet(true);
+  }, [mapUrls, openExternalLink]);
+
+  const openInMapsActions = React.useMemo<OpenInMapsAction[]>(() => {
+    if (!mapUrls) return [];
+    return [
+      {
+        key: 'google',
+        label: 'Google Maps',
+        accessibilityLabel: 'Открыть в Google Maps',
+        onPress: () => void openExternalLink(mapUrls.google),
+      },
+      {
+        key: 'organic',
+        label: 'Organic Maps',
+        accessibilityLabel: 'Открыть в Organic Maps',
+        onPress: () => void openExternalLink(mapUrls.organic),
+      },
+      {
+        key: 'waze',
+        label: 'Waze',
+        accessibilityLabel: 'Проложить маршрут в Waze',
+        onPress: () => void openExternalLink(mapUrls.waze),
+      },
+      {
+        key: 'yandex',
+        label: 'Яндекс.Навигатор',
+        accessibilityLabel: 'Проложить маршрут в Яндекс Навигаторе',
+        onPress: () => void openExternalLink(mapUrls.yandexNavi),
+      },
+      {
+        key: 'osm',
+        label: 'OpenStreetMap',
+        accessibilityLabel: 'Открыть в OpenStreetMap',
+        onPress: () => void openExternalLink(mapUrls.osm),
+      },
+    ];
   }, [mapUrls, openExternalLink]);
 
   const shareToTelegram = React.useCallback(async () => {
@@ -585,6 +619,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
   );
 
   return (
+    <>
     <UnifiedTravelCard
       testID={point?.id != null ? `userpoints-point-card-${String(point.id)}` : undefined}
       title={point.name}
@@ -609,5 +644,13 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
       }}
       webHoverScale={false}
     />
+    {Platform.OS === 'android' ? (
+      <OpenInMapsSheet
+        visible={showOpenInMapsSheet}
+        actions={openInMapsActions}
+        onClose={() => setShowOpenInMapsSheet(false)}
+      />
+    ) : null}
+    </>
   );
 });

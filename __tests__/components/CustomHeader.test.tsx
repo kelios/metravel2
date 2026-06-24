@@ -287,7 +287,7 @@ describe('CustomHeader', () => {
             expect(utils.getByText('Настройки cookies')).toBeTruthy();
 
             // secondary nav items (e.g. Instagram article link) render under Навигация
-            expect(utils.getByLabelText('Instagram-гиды по Беларуси')).toBeTruthy();
+            expect(utils.getByLabelText('Travel-блогеры Беларуси')).toBeTruthy();
         });
 
         it('does not crash when mobile navigation and document configs are unavailable', () => {

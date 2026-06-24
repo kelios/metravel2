@@ -408,6 +408,21 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     [hasUnsavedChanges, canSave, onSave, clearPersistedStep]
   );
 
+  // Leaves the wizard screen entirely (e.g. back to search/list).
+  // Used by the visible back/close control on step 1 and by Android hardware back.
+  // Robust against a missing nav history (wizard opened via deep link from search).
+  const handleExit = useCallback(() => {
+    const leave = () => {
+      isLeavingRef.current = true;
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/metravel');
+      }
+    };
+    void confirmLeaveWizard(leave, leave);
+  }, [confirmLeaveWizard, router]);
+
   // ✅ REFACTORED: Use safe beforeunload hook to prevent Permissions Policy violations
   useBeforeUnload(
     (e) => {
@@ -441,17 +456,20 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     if (Platform.OS === 'web') return;
 
     const onHardwareBack = () => {
-      if (!hasUnsavedChanges) return false;
-      void confirmLeaveWizard(
-        () => router.back(),
-        () => router.back()
-      );
+      // Step > 1: go to previous wizard step. Step 1: leave the screen.
+      // Always consume the press so we never fall through to a no-op default
+      // back (wizard can be opened via deep link from search with no history).
+      if (currentStep > 1) {
+        handleBack();
+        return true;
+      }
+      handleExit();
       return true;
     };
 
     const sub = BackHandler.addEventListener('hardwareBackPress', onHardwareBack);
     return () => sub.remove();
-  }, [hasUnsavedChanges, confirmLeaveWizard, router]);
+  }, [currentStep, handleBack, handleExit]);
 
   const handleFinishWizard = useCallback(async () => {
     const saved = await onSave();
@@ -471,6 +489,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     handleStepSelect,
     handleNext,
     handleBack,
+    handleExit,
     handleNavigateToIssue,
     handleAnchorHandled,
     handleFinishWizard,
@@ -485,6 +504,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     handleStepSelect,
     handleNext,
     handleBack,
+    handleExit,
     handleNavigateToIssue,
     handleAnchorHandled,
     handleFinishWizard,

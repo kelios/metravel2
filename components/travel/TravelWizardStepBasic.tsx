@@ -48,6 +48,7 @@ interface TravelWizardStepBasicProps {
   redirectDelayMs?: number;
   onPreview?: () => void;
   onOpenPublic?: () => void;
+  onExit?: () => void;
 }
 
 const EMPTY_ERRORS: string[] = [];
@@ -104,6 +105,7 @@ function TravelWizardStepBasic({
   redirectDelayMs = 250,
   onPreview,
   onOpenPublic,
+  onExit,
 }: TravelWizardStepBasicProps) {
   const colors = useThemedColors();
   const router = useRouter();
@@ -192,6 +194,8 @@ function TravelWizardStepBasic({
         keyboardVerticalOffset={0}
       >
         <TravelWizardHeader
+          canGoBack={!!onExit}
+          onBack={onExit}
           title={stepMeta?.title ?? DEFAULT_TITLE}
           subtitle={stepMeta?.subtitle ?? DEFAULT_SUBTITLE}
           progressPercent={progressPercent}

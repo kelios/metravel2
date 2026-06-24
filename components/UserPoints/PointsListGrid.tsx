@@ -6,7 +6,6 @@ import { FlashList } from '@shopify/flash-list'
 import { UserPointsMap } from '@/components/UserPoints/UserPointsMap'
 import { PointsListWebLazyScroll } from '@/components/UserPoints/PointsListWebLazyScroll'
 import { useThemedColors } from '@/hooks/useTheme'
-import { useMapPanelStore } from '@/stores/mapPanelStore'
 import FiltersPanelMapSettings from '@/components/MapPage/FiltersPanelMapSettings'
 import SegmentedControl from '@/components/MapPage/SegmentedControl'
 import IconButton from '@/components/ui/IconButton'
@@ -135,8 +134,11 @@ export const PointsListGrid: React.FC<{
 	  const [internalPanelTab, setInternalPanelTab] = React.useState<'filters' | 'list'>('list')
   const panelTab = controlledPanelTab ?? internalPanelTab
   const setPanelTab = onPanelTabChange ?? setInternalPanelTab
-  const [showMobilePanel, setShowMobilePanel] = React.useState(() => !isWideScreen)
-  const toggleNonce = useMapPanelStore((s) => s.toggleNonce)
+  // Узкий экран (мобильный web + native): единый верхний таб-бар с тремя
+  // вкладками — Карта / Список / Фильтры. Раньше карта была недостижима:
+  // showMobilePanel переключался только глобальным mapPanelStore-тоглом,
+  // которого в потоке «Мои точки» нет (#545).
+  const [mobileTab, setMobileTab] = React.useState<'map' | 'list' | 'filters'>('map')
   const [mapUiApi, setMapUiApi] = React.useState<MapUiApi | null>(null)
   const didInitialFitRef = React.useRef(false)
   const [searchMarker, setSearchMarker] = React.useState<null | { lat: number; lng: number; label?: string }>(null)
@@ -147,6 +149,14 @@ export const PointsListGrid: React.FC<{
     () => [
       { key: 'filters', label: 'Фильтры карты' },
       { key: 'list', label: `Список (${filteredPoints.length})` },
+    ],
+    [filteredPoints.length]
+  )
+  const mobileTabOptions = React.useMemo(
+    () => [
+      { key: 'map', label: 'Карта', icon: 'map' },
+      { key: 'list', label: `Список (${filteredPoints.length})`, icon: 'list' },
+      { key: 'filters', label: 'Фильтры', icon: 'filter-list' },
     ],
     [filteredPoints.length]
   )
@@ -403,29 +413,38 @@ export const PointsListGrid: React.FC<{
   React.useEffect(() => {
     if (showingRecommendations && !prevShowingRecommendationsRef.current) {
       setPanelTab('list');
+      if (!isWideScreen) setMobileTab('list');
     }
     prevShowingRecommendationsRef.current = showingRecommendations;
-  }, [setPanelTab, showingRecommendations]);
+  }, [isWideScreen, setPanelTab, showingRecommendations]);
   
-  // Listen to map panel toggle for mobile
+  // Тап по точке (в списке или на карте) делает её активной — на узком экране
+  // показываем её на карте, переключив верхнюю вкладку на «Карта».
+  const prevActivePointIdRef = React.useRef(activePointId)
   React.useEffect(() => {
-    if (toggleNonce > 0 && !isWideScreen) {
-      setShowMobilePanel((prev) => !prev);
+    if (isWideScreen) return
+    if (activePointId != null && activePointId !== prevActivePointIdRef.current) {
+      setMobileTab('map')
     }
-  }, [toggleNonce, isWideScreen]);
+    prevActivePointIdRef.current = activePointId
+  }, [activePointId, isWideScreen])
+
+  // На широком экране карта всегда видна (map-режим); на узком — только когда
+  // активна вкладка «Карта».
+  const isMapVisible = isWideScreen ? viewMode === 'map' : mobileTab === 'map'
 
   // Reset the initial-fit latch when leaving map mode or when there are no points,
   // so the auto-fit runs again next time the map shows a non-empty set.
   React.useEffect(() => {
-    if (viewMode !== 'map' || !Array.isArray(filteredPoints) || filteredPoints.length === 0) {
+    if (!isMapVisible || !Array.isArray(filteredPoints) || filteredPoints.length === 0) {
       didInitialFitRef.current = false;
     }
-  }, [viewMode, filteredPoints]);
+  }, [isMapVisible, filteredPoints]);
 
   // Initial viewport fit: after first load, auto-fit to currently visible points once.
   React.useEffect(() => {
     if (didInitialFitRef.current) return;
-    if (viewMode !== 'map') return;
+    if (!isMapVisible) return;
     if (isLoading) return;
     if (showingRecommendations) return;
     if (activePointId != null) return;
@@ -442,7 +461,7 @@ export const PointsListGrid: React.FC<{
     }, 0);
 
     return () => clearTimeout(t);
-  }, [activePointId, filteredPoints, isLoading, mapUiApi, showingRecommendations, viewMode]);
+  }, [activePointId, filteredPoints, isLoading, isMapVisible, mapUiApi, showingRecommendations]);
 
   React.useEffect(() => {
     const q = String(searchQuery || '').trim();
@@ -527,7 +546,10 @@ export const PointsListGrid: React.FC<{
     }
   }, [filteredPoints, mapUiApi, searchQuery])
 
-  if (viewMode === 'list') {
+  // На узком экране режим показа полностью определяется верхним 3-таб-баром
+  // (Карта / Список / Фильтры) ниже, поэтому standalone list-режим (с тяжёлой
+  // summary-шапкой) применяем только на десктопе/широком web.
+  if (viewMode === 'list' && isWideScreen) {
     const columns = typeof numColumns === 'number' && Number.isFinite(numColumns) ? numColumns : 1
     if (isWeb) {
       return (
@@ -625,25 +647,25 @@ export const PointsListGrid: React.FC<{
     )
   }
 
-  // Map mode for mobile/narrow screens
+  // Mobile/narrow screens: single 3-tab bar — Map / List / Filters.
   return (
     <View style={styles.mapContainer}>
-      {showMobilePanel ? (
-        <View style={localStyles.mobilePanelContainer}>
-          <View style={localStyles.panelTabs}>
-            <SegmentedControl
-              options={panelOptions}
-              value={panelTab}
-              onChange={(key) => setPanelTab(key as 'filters' | 'list')}
-              accessibilityLabel="Панель"
-              compact
-            />
-          </View>
+      <View style={localStyles.mobileTabsBar}>
+        <SegmentedControl
+          options={mobileTabOptions}
+          value={mobileTab}
+          onChange={(key) => setMobileTab(key as 'map' | 'list' | 'filters')}
+          accessibilityLabel="Карта, список или фильтры точек"
+          compact
+        />
+      </View>
 
-          {panelTab === 'filters' ? renderFiltersPanel(true) : renderListPanel()}
-        </View>
-      ) : (
+      {mobileTab === 'map' ? (
         renderMapCanvas()
+      ) : mobileTab === 'filters' ? (
+        <View style={localStyles.mobilePanelContainer}>{renderFiltersPanel(true)}</View>
+      ) : (
+        <View style={localStyles.mobilePanelContainer}>{renderListPanel()}</View>
       )}
     </View>
   )
@@ -671,6 +693,13 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
   mobilePanelContainer: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  mobileTabsBar: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+    backgroundColor: colors.surface,
   },
   panelTabs: {
     paddingHorizontal: 20,

@@ -14,10 +14,12 @@ import {
     View,
 } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { buildQuestOfflineMapGpx } from './questOfflineMapExport';
 import { getOsmNativeTileUrl, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers';
@@ -86,9 +88,18 @@ function QuestFullMap({
     const [markerStatus, setMarkerStatus] = useState<MarkerStatus | null>(null);
     const webViewRef = useRef<WebView>(null);
     const { height: viewportHeight } = useWindowDimensions();
+    const insets = useSafeAreaInsets();
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
     const fullscreenMapHeight = Math.max(360, Math.round(viewportHeight - 72));
+
+    useAndroidBackHandler(() => {
+        if (fullscreenVisible) {
+            setFullscreenVisible(false);
+            return true;
+        }
+        return false;
+    });
 
     const points = useMemo(
         () => steps.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng)),
@@ -376,15 +387,18 @@ function QuestFullMap({
             {fullscreenVisible ? (
                 <Modal
                     visible
+                    transparent={false}
                     animationType="slide"
+                    statusBarTranslucent
                     onRequestClose={() => setFullscreenVisible(false)}
                 >
-                    <View style={styles.fullscreenModal}>
+                    <View style={[styles.fullscreenModal, { paddingTop: insets.top }]}>
                         <View style={styles.fullscreenHeader}>
                             <Text style={styles.fullscreenTitle} numberOfLines={1}>{title}</Text>
                             <TouchableOpacity
                                 style={styles.fullscreenClose}
                                 onPress={() => setFullscreenVisible(false)}
+                                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                                 accessibilityRole="button"
                                 accessibilityLabel="Закрыть полноэкранную карту квеста"
                             >
@@ -557,7 +571,6 @@ const createStyles = (colors: ThemedColors) =>
         fullscreenModal: {
             flex: 1,
             backgroundColor: colors.background,
-            paddingTop: 8,
         },
         fullscreenHeader: {
             minHeight: 56,

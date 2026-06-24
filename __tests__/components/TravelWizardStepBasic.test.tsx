@@ -43,6 +43,11 @@ jest.mock('@/components/travel/TravelWizardHeader', () => (props: any) => {
             <Text>{props.title}</Text>
             <Text>{props.subtitle} • {props.progressPercent}% готово</Text>
             {props.autosaveBadge ? <Text>{props.autosaveBadge}</Text> : null}
+            {props.canGoBack ? (
+                <Pressable onPress={props.onBack} testID="travel-wizard-back">
+                    <Text>Назад</Text>
+                </Pressable>
+            ) : null}
             <Pressable onPress={props.onPrimary}>
                 <Text>{props.primaryLabel ?? 'Далее'}</Text>
             </Pressable>
@@ -410,6 +415,30 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
             fireEvent.press(nextButton);
 
             expect(defaultProps.onGoNext).toHaveBeenCalled();
+        });
+    });
+
+    // Regression: #528 — editor opened from search must offer a way back.
+    describe('✅ Кнопка "Назад"/выход (#528)', () => {
+        it('показывает кнопку "Назад" на шаге 1, когда передан onExit', () => {
+            const { getByTestId } = render(
+                <TravelWizardStepBasic {...defaultProps} onExit={jest.fn()} />
+            );
+            expect(getByTestId('travel-wizard-back')).toBeTruthy();
+        });
+
+        it('вызывает onExit при нажатии на "Назад"', () => {
+            const onExit = jest.fn();
+            const { getByTestId } = render(
+                <TravelWizardStepBasic {...defaultProps} onExit={onExit} />
+            );
+            fireEvent.press(getByTestId('travel-wizard-back'));
+            expect(onExit).toHaveBeenCalledTimes(1);
+        });
+
+        it('не показывает кнопку "Назад", если onExit не передан', () => {
+            const { queryByTestId } = render(<TravelWizardStepBasic {...defaultProps} />);
+            expect(queryByTestId('travel-wizard-back')).toBeNull();
         });
     });
 
