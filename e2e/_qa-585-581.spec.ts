@@ -1,10 +1,13 @@
 import { test, expect } from '@playwright/test'
 
-const BASE = process.env.QA_BASE || 'http://localhost:8081'
+const qaUrl = (baseURL: string | undefined, path: string) => {
+  const base = process.env.QA_BASE || baseURL || process.env.BASE_URL
+  return base ? new URL(path, base).toString() : path
+}
 
 test.use({ viewport: { width: 390, height: 844 } })
 
-test('#585 quest fullscreen map popup opens route in all navigators', async ({ page }) => {
+test('#585 quest fullscreen map popup opens route in all navigators', async ({ page, baseURL }) => {
   const opened: string[] = []
   await page.exposeFunction('__captureOpen', (url: string) => {
     opened.push(url)
@@ -19,7 +22,7 @@ test('#585 quest fullscreen map popup opens route in all navigators', async ({ p
   })
   page.on('pageerror', (e) => console.log('PAGEERROR', e.message))
 
-  await page.goto(`${BASE}/quests/1/krakow-dragon`, { waitUntil: 'domcontentloaded' })
+  await page.goto(qaUrl(baseURL, '/quests/1/krakow-dragon'), { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(4000)
 
   // Dismiss cookie consent if present

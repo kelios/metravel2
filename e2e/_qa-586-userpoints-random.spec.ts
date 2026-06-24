@@ -1,13 +1,16 @@
 import { test, expect } from '@playwright/test'
 
-const BASE = process.env.QA_BASE || 'http://localhost:8081'
+const qaUrl = (baseURL: string | undefined, path: string) => {
+  const base = process.env.QA_BASE || baseURL || process.env.BASE_URL
+  return base ? new URL(path, base).toString() : path
+}
 
 test.use({ viewport: { width: 390, height: 844 } })
 
-test('#586 «Мои точки»: случайный выбор подписан понятно', async ({ page }) => {
+test('#586 «Мои точки»: случайный выбор подписан понятно', async ({ page, baseURL }) => {
   page.on('pageerror', (e) => console.log('PAGEERROR', e.message))
 
-  await page.goto(`${BASE}/userpoints`, { waitUntil: 'domcontentloaded' })
+  await page.goto(qaUrl(baseURL, '/userpoints'), { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(4000)
 
   const consent = page.getByText('Принять всё', { exact: true }).first()
