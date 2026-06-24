@@ -44,7 +44,7 @@ test.describe('profile redesign verify #587 #588 #589 #590', () => {
     await page.waitForTimeout(800)
 
     // Tile «Были» -> /calendar?status=visited
-    const tile = page.getByRole('button', { name: /Были/i }).first()
+    const tile = page.getByTestId('personal-status-tile-visited')
     await tile.scrollIntoViewIfNeeded()
     await page.screenshot({ path: 'e2e/__screenshots__/verify-589-stats-tab.png', fullPage: true })
     await tile.click()

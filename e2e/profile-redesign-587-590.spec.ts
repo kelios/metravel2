@@ -191,9 +191,10 @@ test.describe('Profile redesign #587-590', () => {
     // Ensure PersonalStatusSummary card rendered
     await expect(page.getByText(/Мои статусы поездок/)).toBeVisible({ timeout: 20_000 })
 
-    // "Были" tile (visited) — scope to the personal-status card label pattern.
+    // "Были" tile (visited) inside the personal-status card. Engagement
+    // metrics above use the same visible label and should not be clicked here.
     // Retry the click: the first tap can land during a hydration re-render.
-    const visitedTile = page.getByRole('button', { name: /^Были:/ }).first()
+    const visitedTile = page.getByTestId('personal-status-tile-visited')
     await expect(async () => {
       await visitedTile.scrollIntoViewIfNeeded()
       await visitedTile.click()

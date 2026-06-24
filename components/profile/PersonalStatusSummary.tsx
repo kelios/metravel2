@@ -144,7 +144,7 @@ export function PersonalStatusSummary({
   )
 
   return (
-    <View style={styles.card}>
+    <View style={styles.card} testID="personal-status-summary">
       <View style={styles.header}>
         <View style={styles.badgeRow}>
           <Feather name="user" size={11} color={colors.textMuted} />
@@ -161,6 +161,7 @@ export function PersonalStatusSummary({
           <Pressable
             key={m.key}
             onPress={() => onOpenCalendar(m.key)}
+            testID={`personal-status-tile-${m.key}`}
             style={({ pressed }) => [
               styles.tile,
               styles.tileInteractive,
