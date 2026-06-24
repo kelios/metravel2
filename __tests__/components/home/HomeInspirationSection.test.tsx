@@ -16,17 +16,6 @@ jest.mock('@/components/listTravel/RenderTravelItem', () => {
   };
 });
 
-jest.mock('@/components/home/AdventureChaptersSection', () => {
-  const { View, Text } = require('react-native');
-  return function MockAdventureChaptersSection() {
-    return (
-      <View>
-        <Text>{'Главы путешествий, которые выбирают чаще всего'}</Text>
-      </View>
-    );
-  };
-});
-
 jest.mock('@/api/map');
 jest.mock('@/utils/analytics', () => ({ sendAnalyticsEvent: jest.fn() }));
 
@@ -44,12 +33,6 @@ describe('HomeInspirationSections', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
-  });
-
-  it('renders inspiration sections (chapters)', () => {
-    const { getByText } = render(<HomeInspirationSections />);
-
-    expect(getByText('Главы путешествий, которые выбирают чаще всего')).toBeTruthy();
   });
 
   it('renders quick filter section', () => {

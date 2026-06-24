@@ -10,7 +10,6 @@ import type { NavigationIconName } from '@/constants/navigationIcons'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import { sendAnalyticsEvent } from '@/utils/analytics'
-import AdventureChaptersSection from './AdventureChaptersSection'
 import { createSectionsStyles } from './homeInspirationStyles'
 
 const IS_WEB = Platform.OS === 'web'
@@ -259,8 +258,6 @@ function HomeInspirationSections() {
               ))}
             </View>
           </View>
-
-          <AdventureChaptersSection />
         </View>
       </ResponsiveContainer>
     </View>

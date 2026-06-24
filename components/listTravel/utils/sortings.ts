@@ -1,6 +1,6 @@
 const SORTING_NAME_MAP: Record<string, string> = {
-  newest: 'Новые',
-  oldest: 'Старые',
+  newest: 'Сначала новые',
+  oldest: 'Сначала старые',
   popular_desc: 'Популярные ↓',
   popular_asc: 'Популярные ↑',
   updated_desc: 'Обновлены ↓',

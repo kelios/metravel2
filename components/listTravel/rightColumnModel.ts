@@ -24,7 +24,7 @@ export function buildTravelRows(travels: Travel[], gridColumns: number, isMobile
 
 export function getRightColumnHeaderMinHeight(isMobile: boolean) {
   if (Platform.OS === 'web') {
-    return isMobile ? 56 : 76
+    return isMobile ? 50 : 76
   }
 
   return 52

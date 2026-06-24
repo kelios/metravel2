@@ -167,9 +167,14 @@ function ListTravelBase() {
     const [showFilters, setShowFilters] = useState(false);
     const flatListRef = useRef<any>(null);
 
+    // Deep links from the home page (e.g. ?categoryTravelAddress=84) arrive with active
+    // filters but the option labels are needed to render readable active-filter chips. On
+    // overlay layouts the options query is otherwise deferred until the filter sheet opens,
+    // which would leave chips unresolved — so fetch eagerly whenever a deep link is active.
+    const hasInitialFilter = !!initialFilter;
     const shouldFetchFilterOptions = useMemo(() => {
-      return !usesOverlaySidebar || showFilters;
-    }, [usesOverlaySidebar, showFilters]);
+      return !usesOverlaySidebar || showFilters || hasInitialFilter;
+    }, [usesOverlaySidebar, showFilters, hasInitialFilter]);
 
     /* Filters options - оптимизированный запрос с кэшированием */
     const { data: rawOptions, isLoading: filterOptionsLoading } = useQuery({

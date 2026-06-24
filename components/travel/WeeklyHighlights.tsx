@@ -169,10 +169,9 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                             <Feather name="star" size={20} color={colors.primary} />
                         </View>
                         <View style={styles.titleContainer}>
-                            <Text style={[styles.title, { color: colors.text }]}>Подборка месяца</Text>
-                            <View style={[styles.badgeContainer, { backgroundColor: colors.primarySoft }]}>
-                                <Text style={[styles.badgeText, { color: colors.primary }]}>Выбор месяца</Text>
-                            </View>
+                            <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
+                                Подборка месяца
+                            </Text>
                         </View>
                         <Pressable
                             onPress={handleOpenAll}
@@ -333,11 +332,14 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     title: {
+        flexShrink: 1,
+        minWidth: 0,
         fontSize: 15, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше размер
         fontWeight: '600', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше жирность
         letterSpacing: -0.1,
     },
     seeAllButton: {
+        flexShrink: 0,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
@@ -352,16 +354,6 @@ const styles = StyleSheet.create({
     seeAllText: {
         fontSize: 12,
         fontWeight: '700',
-    },
-    badgeContainer: {
-        borderRadius: 8,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-    },
-    badgeText: {
-        fontSize: 11,
-        fontWeight: '600',
-        letterSpacing: 0.1,
     },
     subtitle: {
         fontSize: 13,

@@ -18,6 +18,19 @@ import * as Sharing from 'expo-sharing';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { buildQuestOfflineMapGpx } from './questOfflineMapExport';
+import { openQuestMap, type QuestMapApp } from './questWizardHelpers';
+import {
+    getNavigationActionVisual,
+    NAVIGATION_ACTION_LABELS,
+} from '@/components/navigation/navigationActionMeta';
+
+const QUEST_NAV_PROVIDERS: Array<{ app: QuestMapApp; kind: 'google' | 'organic' | 'waze' | 'yandex' | 'osm' }> = [
+    { app: 'google', kind: 'google' },
+    { app: 'organic', kind: 'organic' },
+    { app: 'waze', kind: 'waze' },
+    { app: 'yandex', kind: 'yandex' },
+    { app: 'osm', kind: 'osm' },
+];
 
 type StepPoint = { lat: number; lng: number; title?: string };
 
@@ -581,7 +594,7 @@ function QuestFullMap({
                                 )}
                             >
                                 <Popup>
-                                    <View style={{ minWidth: 180 }}>
+                                    <View style={{ minWidth: 200 }}>
                                         <Text style={styles.popupTitle}>
                                             {gp.indexes.join(', ')}.
                                         </Text>
@@ -591,6 +604,33 @@ function QuestFullMap({
                                         <Text style={[styles.popupCoords, { marginTop: 6 }]}>
                                             {gp.titles.join(', ')}
                                         </Text>
+                                        <Text style={styles.popupNavLabel}>Довести меня</Text>
+                                        <View style={styles.popupNavGrid}>
+                                            {QUEST_NAV_PROVIDERS.map(provider => {
+                                                const visual = getNavigationActionVisual(provider.kind, colors);
+                                                return (
+                                                    <TouchableOpacity
+                                                        key={provider.app}
+                                                        style={styles.popupNavChip}
+                                                        onPress={() => {
+                                                            void openQuestMap(
+                                                                { lat: gp.lat, lng: gp.lng, title: gp.titles[0] },
+                                                                provider.app,
+                                                            );
+                                                        }}
+                                                        accessibilityRole="button"
+                                                        accessibilityLabel={`Открыть точку в ${NAVIGATION_ACTION_LABELS[provider.kind]}`}
+                                                    >
+                                                        <View style={[styles.popupNavIcon, { backgroundColor: visual.tintBg }]}>
+                                                            <Feather name={visual.icon} size={13} color={visual.iconColor} />
+                                                        </View>
+                                                        <Text style={styles.popupNavChipText} numberOfLines={1}>
+                                                            {NAVIGATION_ACTION_LABELS[provider.kind]}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                );
+                                            })}
+                                        </View>
                                     </View>
                                 </Popup>
                             </Marker>
@@ -762,6 +802,46 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     popupCoords: {
         fontSize: 12,
         color: colors.textMuted,
+    },
+    popupNavLabel: {
+        marginTop: 10,
+        marginBottom: 6,
+        fontSize: 12,
+        fontWeight: '700',
+        color: colors.text,
+    },
+    popupNavGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+    },
+    popupNavChip: {
+        flexGrow: 1,
+        flexBasis: '30%',
+        minWidth: 86,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingVertical: 6,
+        paddingHorizontal: 8,
+        borderRadius: 999,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: colors.borderLight,
+        backgroundColor: colors.surface,
+        ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+    },
+    popupNavIcon: {
+        width: 22,
+        height: 22,
+        borderRadius: 999,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    popupNavChipText: {
+        flexShrink: 1,
+        fontSize: 12,
+        fontWeight: '700',
+        color: colors.text,
     },
     touchHints: {
         padding: 12,

@@ -25,4 +25,12 @@ describe('listTravel sortings', () => {
       expect.arrayContaining(['created_desc', 'created_asc']),
     )
   })
+
+  it('labels newest/oldest with direction-explicit names so they read distinctly', () => {
+    const byId = Object.fromEntries(
+      buildSortingOptions([{ id: 'newest' }, { id: 'oldest' }]).map((o) => [o.id, o.name]),
+    )
+    expect(byId.newest).toBe('Сначала новые')
+    expect(byId.oldest).toBe('Сначала старые')
+  })
 })

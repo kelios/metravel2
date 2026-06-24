@@ -1,11 +1,13 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react-native'
+import { render, screen, fireEvent } from '@testing-library/react-native'
 import { useQuery } from '@tanstack/react-query'
 import { HomeInspirationSection } from '@/components/home/HomeInspirationSection'
 
+const mockPush = jest.fn()
+
 jest.mock('@tanstack/react-query')
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => ({ push: mockPush }),
 }))
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => ({
@@ -81,5 +83,19 @@ describe('HomeInspirationSection mobile weekend showcase', () => {
     expect(screen.getByText('Маршрут 2')).toBeTruthy()
     expect(screen.getByText('Маршрут 3')).toBeTruthy()
     expect(screen.getByText('Маршрут 4')).toBeTruthy()
+  })
+
+  it('shows a working "Все маршруты" CTA that navigates to the catalog', () => {
+    render(
+      <HomeInspirationSection
+        title="Идеи для ближайших выходных"
+        subtitle="Реальные маршруты без долгого планирования"
+        queryKey="home-travels-of-month"
+        fetchFn={jest.fn()}
+      />,
+    )
+
+    fireEvent.press(screen.getByText('Все маршруты'))
+    expect(mockPush).toHaveBeenCalledWith('/search')
   })
 })

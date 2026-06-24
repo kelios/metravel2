@@ -571,6 +571,22 @@ const Map: React.FC<TravelProps> = ({
               // точку travelAddress.
               marker.on('click', function() {
                 try {
+                  // #591 — центрируем карту на ВЫБРАННОЙ точке (а не оставляем вид на
+                  // «где я» / общем bounds). Точку поднимаем над нижней карточкой:
+                  // целевой центр сдвигаем вверх на ~25% высоты карты, чтобы маркер
+                  // не прятался за MapPlaceBottomCard. Зум подтягиваем минимум до 14.
+                  var targetZoom = Math.max(map.getZoom ? map.getZoom() : 13, 14);
+                  var projected = map.project([lat, lng], targetZoom);
+                  var size = map.getSize ? map.getSize() : { y: 0 };
+                  projected.y += size.y * 0.25;
+                  var shifted = map.unproject(projected, targetZoom);
+                  if (map.flyTo) {
+                    map.flyTo(shifted, targetZoom, { animate: true, duration: 0.35 });
+                  } else {
+                    map.setView(shifted, targetZoom);
+                  }
+                } catch (err) {}
+                try {
                   if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
                     window.ReactNativeWebView.postMessage(JSON.stringify({
                       type: 'SELECT_PLACE', index: pointIndex

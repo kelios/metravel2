@@ -14,7 +14,22 @@ export const TravelWeatherBlock: React.FC<{
   travel: Travel
   weatherVisible: boolean
 }> = ({ colors, setWeatherVisible, styles, travel, weatherVisible }) => {
-  if (!travel.travelAddress || (travel.travelAddress as any[]).length <= 0 || isWebAutomation) return null
+  const weatherPoints = React.useMemo(
+    () =>
+      (travel.travelAddress ?? [])
+        .map((item) => {
+          if (typeof item === 'string') return { coord: item.trim() }
+          const p = item as any
+          const coord =
+            (typeof p?.coord === 'string' && p.coord) ||
+            (typeof p?.coords === 'string' && p.coords) ||
+            (p?.lat != null && p?.lng != null ? `${p.lat},${p.lng}` : '')
+          return { coord: String(coord).trim(), address: p?.address ?? p?.name }
+        })
+        .filter((p) => p.coord.length > 0),
+    [travel.travelAddress],
+  )
+  if (weatherPoints.length <= 0 || isWebAutomation) return null
 
   return (
     <View
@@ -58,7 +73,7 @@ export const TravelWeatherBlock: React.FC<{
         </Pressable>
       ) : (
         <View style={{ marginTop: DESIGN_TOKENS.spacing.sm }}>
-          <WeatherWidget points={travel.travelAddress as any} countryName={travel.countryName} />
+          <WeatherWidget points={weatherPoints} countryName={travel.countryName} />
         </View>
       )}
     </View>

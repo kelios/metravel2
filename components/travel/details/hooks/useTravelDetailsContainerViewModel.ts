@@ -74,12 +74,17 @@ export function useTravelDetailsContainerViewModel({
   const scrollToWithMenuClose = useCallback(
     (key: string) => {
       setActiveSection(key)
-      // Lazy sections (map/points/excursions) may not be mounted when the sticky
-      // sub-nav is tapped. On native a one-shot scrollTo silently no-ops because
-      // the anchor ref is still null. Emitting `open-section` forces the section
-      // to mount and triggers the mount-aware scroll retry (web already retries
-      // via DOM lookup, so it's left untouched).
-      if (Platform.OS !== 'web') {
+      // Lazy sections (map/points/excursions/near/popular/comments) may not be
+      // mounted yet when the sticky sub-nav is tapped. A one-shot scrollTo then
+      // silently no-ops — on native the anchor ref is still null, on web the
+      // `[data-section-key]` element does not exist for the retry DOM lookup to
+      // find. Emitting `open-section` forces the section to mount (forceOpenKey)
+      // so the mount-aware scroll retry can land on it.
+      if (Platform.OS === 'web') {
+        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+          window.dispatchEvent(new CustomEvent('open-section', { detail: { key } }))
+        }
+      } else {
         DeviceEventEmitter.emit('open-section', key)
       }
       scrollTo(key)

@@ -216,8 +216,8 @@ export const describeTravelDeleteError = (
 }
 
 export const SORT_LABEL_FALLBACKS: Record<string, string> = {
-  newest: 'Новые',
-  oldest: 'Старые',
+  newest: 'Сначала новые',
+  oldest: 'Сначала старые',
   popular_desc: 'Популярные ↓',
   popular_asc: 'Популярные ↑',
   rating_desc: 'Рейтинг ↓',

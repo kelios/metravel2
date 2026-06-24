@@ -38,14 +38,21 @@ export const buildGoogleMapsUrl = (coord: string) => {
   return `https://www.google.com/maps/search/?api=1&query=${parsed.lat},${parsed.lon}`;
 };
 
-export const buildOrganicMapsUrl = (coord: string) => {
+export const buildOrganicMapsUrl = (coord: string, name?: string) => {
   const parsed = parseCoordString(coord);
   if (!parsed) return '';
-  // На Android `geo:`-intent открывает Organic Maps (или другое установленное
-  // карт-приложение) с маркером на точке. `omaps.app`/`om://` без ge0-хеша
-  // открывают приложение без позиционирования.
+  // #580 — на Android раньше отдавали `geo:`-intent, но `geo:` хэндлят сразу
+  // несколько приложений (Google Maps, Яндекс…), поэтому система открывала НЕ
+  // Organic Maps, а дефолтное карт-приложение / веб. Документированная схема
+  // Organic Maps `om://map?v=1&ll=LAT,LON&n=NAME` адресует приложение напрямую и
+  // ставит маркер на точке. Если Organic Maps не установлен, `openExternalUrl`
+  // ловит ActivityNotFoundException и перестраивает ссылку в `geo:` (см.
+  // utils/externalLinks.ts → organicMapsFallbackFromOmUrl). На web схемы
+  // приложений бессмысленны — отдаём прежний HTTPS-URL (omaps.app).
   if (isNativePlatform()) {
-    return `geo:${parsed.lat},${parsed.lon}?q=${parsed.lat},${parsed.lon}`;
+    const base = `om://map?v=1&ll=${parsed.lat},${parsed.lon}`;
+    const label = String(name ?? '').trim();
+    return label ? `${base}&n=${encodeURIComponent(label)}` : base;
   }
   return `https://omaps.app/${parsed.lat},${parsed.lon}`;
 };

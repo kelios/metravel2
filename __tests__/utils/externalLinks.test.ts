@@ -88,6 +88,29 @@ describe('externalLinks', () => {
     }
   });
 
+  it('#580 native: falls back from om:// to geo: when Organic Maps is not installed', async () => {
+    const originalPlatform = Platform.OS;
+    try {
+      (Platform.OS as any) = 'android';
+      const openSpy = jest
+        .spyOn(Linking, 'openURL')
+        .mockRejectedValueOnce(new Error('ActivityNotFoundException'))
+        .mockResolvedValueOnce();
+
+      await expect(
+        openExternalUrl('om://map?v=1&ll=53.9006,27.559', {
+          allowedProtocols: ['om:', 'geo:'],
+        }),
+      ).resolves.toBe(true);
+
+      expect(openSpy).toHaveBeenNthCalledWith(1, 'om://map?v=1&ll=53.9006,27.559');
+      expect(openSpy).toHaveBeenNthCalledWith(2, 'geo:53.9006,27.559?q=53.9006,27.559');
+      openSpy.mockRestore();
+    } finally {
+      (Platform.OS as any) = originalPlatform;
+    }
+  });
+
   it('opens generic web window and nulls opener', () => {
     const originalOpen = window.open;
     const winRef: any = { opener: {} };

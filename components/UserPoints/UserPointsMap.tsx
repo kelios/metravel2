@@ -16,7 +16,7 @@ import { useUserPointsDriveInfo } from './useUserPointsDriveInfo';
 import { useUserPointsMapWebController } from './useUserPointsMapWebController';
 import { useUserPointsMapWebRuntime } from './useUserPointsMapWebRuntime';
 import { useUserPointsMarkerIcons } from './useUserPointsMarkerIcons';
-import { getUserPointsCenter, normalizeUserPoints } from './userPointsMapData';
+import { buildUserPointsTravelData, getUserPointsCenter, normalizeUserPoints } from './userPointsMapData';
 
 interface UserPointsMapProps {
   /**
@@ -164,6 +164,7 @@ export const UserPointsMap: React.FC<UserPointsMapProps> = ({
       center={center}
       searchMarker={searchMarker}
       activePointId={activePointId}
+      onPointPress={onPointPress}
       onMapPress={onMapPress}
       pendingMarker={pendingMarker}
       pendingMarkerColor={pendingMarkerColor}
@@ -414,32 +415,31 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
   );
 };
 
+// На native переиспользуем рабочий WebView+Leaflet стек экрана /map
+// (components/MapPage/Map → Map.ios, который Map.android ре-экспортирует).
+// Прежняя реализация требовала react-native-maps, которого НЕТ в бандле —
+// require падал в try/catch и компонент монтировал пустой <View> (#545
+// regression: на устройстве канвас карты пустой, без WebView-узла).
 const UserPointsMapNative: React.FC<UserPointsMapProps> = ({
   points,
   center,
   searchMarker: _searchMarker,
   activePointId,
+  onPointPress,
   onMapPress,
-  pendingMarker,
-  pendingMarkerColor,
   routeLines,
   height,
 }) => {
   const colors = useThemedColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
-  const mapRef = React.useRef<any>(null);
-
-  const nativeMaps = React.useMemo(() => {
+  // Резолвим WebView+Leaflet карту экрана /map только на native, чтобы web-бандл
+  // userpoints не тянул Map.web (у web уже свой UserPointsMapWeb выше).
+  const MapPageNativeMap = React.useMemo<React.ComponentType<any> | null>(() => {
     if (Platform.OS === 'web') return null;
     try {
-      const req = (0, eval)('require') as any;
-      const m = req('react-native-maps');
-      return {
-        MapView: m?.default ?? m,
-        Marker: m?.Marker,
-        Polyline: m?.Polyline,
-      } as any;
+      const mod = require('@/components/MapPage/Map');
+      return (mod?.default ?? mod) as React.ComponentType<any>;
     } catch {
       return null;
     }
@@ -447,91 +447,60 @@ const UserPointsMapNative: React.FC<UserPointsMapProps> = ({
 
   const safePoints = React.useMemo(() => normalizeUserPoints(points), [points]);
 
-  const defaultCenter = React.useMemo(() => getUserPointsCenter(center, safePoints), [center, safePoints]);
+  const travelData = React.useMemo(() => buildUserPointsTravelData(safePoints), [safePoints]);
 
-  const initialRegion = React.useMemo(
-    () => ({
-      latitude: defaultCenter.lat,
-      longitude: defaultCenter.lng,
-      latitudeDelta: 0.25,
-      longitudeDelta: 0.25,
-    }),
-    [defaultCenter.lat, defaultCenter.lng]
-  );
+  const mapCenter = React.useMemo(() => {
+    const c = getUserPointsCenter(center, safePoints);
+    return { latitude: c.lat, longitude: c.lng };
+  }, [center, safePoints]);
 
-  React.useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
+  const activeCoordinates = React.useMemo(() => {
     const activeId = Number(activePointId);
-    if (Number.isFinite(activeId)) {
-      const target = safePoints.find((p: any) => Number(p?.id) === activeId);
-      if (!target) return;
-      try {
-        map.animateToRegion(
-          {
-            latitude: target.latitude,
-            longitude: target.longitude,
-            latitudeDelta: 0.08,
-            longitudeDelta: 0.08,
-          },
-          350
-        );
-      } catch {
-        // noop
-      }
-    }
+    if (!Number.isFinite(activeId)) return null;
+    const target = safePoints.find((p: any) => Number(p?.id) === activeId);
+    if (!target) return null;
+    return { latitude: target.latitude, longitude: target.longitude };
   }, [activePointId, safePoints]);
 
-  if (!nativeMaps?.MapView) {
+  const routePoints = React.useMemo<[number, number][]>(() => {
+    const first = (routeLines ?? []).find((r) => Array.isArray(r?.line) && r.line.length >= 2);
+    if (!first) return [];
+    return first.line.map(([lat, lng]) => [lng, lat] as [number, number]);
+  }, [routeLines]);
+
+  const handleMarkerSelect = React.useCallback(
+    (point: { id?: number | string }) => {
+      const id = Number(point?.id);
+      if (!Number.isFinite(id)) return;
+      const original = safePoints.find((p: any) => Number(p?.id) === id);
+      if (original) onPointPress?.(original);
+    },
+    [onPointPress, safePoints]
+  );
+
+  const handleMapClick = React.useCallback(
+    (lng: number, lat: number) => {
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      onMapPress?.({ lat, lng });
+    },
+    [onMapPress]
+  );
+
+  if (!MapPageNativeMap) {
     return <View style={[styles.container, height ? { height } : null]} />;
   }
 
-  const MapView = nativeMaps.MapView;
-  const Marker = nativeMaps.Marker;
-  const Polyline = nativeMaps.Polyline;
-
   return (
     <View style={[styles.container, height ? { height } : null]}>
-      <MapView
-        ref={mapRef}
-        style={{ flex: 1 }}
-        initialRegion={initialRegion}
-        onPress={(e: any) => {
-          const c = e?.nativeEvent?.coordinate;
-          const lat = c?.latitude;
-          const lng = c?.longitude;
-          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-          onMapPress?.({ lat, lng });
-        }}
-      >
-        {pendingMarker ? (
-          <Marker
-            coordinate={{ latitude: pendingMarker.lat, longitude: pendingMarker.lng }}
-            pinColor={String(pendingMarkerColor ?? '') || undefined}
-          />
-        ) : null}
-
-        {safePoints.map((p) => (
-          <Marker
-            key={String((p as any)?.id)}
-            coordinate={{ latitude: p.latitude, longitude: p.longitude }}
-          />
-        ))}
-
-        {(routeLines ?? []).map((r) => {
-          if (!Polyline) return null;
-          if (!Array.isArray(r?.line) || r.line.length < 2) return null;
-          return (
-            <Polyline
-              key={`route-${r.id}`}
-              coordinates={r.line.map(([lat, lng]) => ({ latitude: lat, longitude: lng }))}
-              strokeColor={colors.primary}
-              strokeWidth={4}
-            />
-          );
-        })}
-      </MapView>
+      <MapPageNativeMap
+        travel={{ data: travelData }}
+        coordinates={activeCoordinates ?? mapCenter}
+        routePoints={routePoints}
+        fullRouteCoords={routePoints}
+        mode={routePoints.length >= 2 ? 'route' : 'radius'}
+        onMapClick={handleMapClick}
+        onMarkerSelect={handleMarkerSelect}
+      />
     </View>
   );
 };

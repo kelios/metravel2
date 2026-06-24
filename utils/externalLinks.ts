@@ -43,16 +43,38 @@ const yandexMapsFallbackFromNaviUrl = (naviUrl: string): string | null => {
   return `yandexmaps://maps.yandex.ru/?pt=${lon},${lat}&z=16&l=map`;
 };
 
+// #580 — Organic Maps adresуется схемой `om://map?v=1&ll=LAT,LON&n=NAME`. Если
+// приложение не установлено, `om:` никто не регистрирует → `Linking.openURL`
+// отклоняется (ActivityNotFoundException). На Android 11+ `canOpenURL` ненадёжен
+// (вернёт false и для установленного приложения), поэтому делаем attempt-then-
+// fallback: пробуем `om:`, при отказе перестраиваем в `geo:`-intent (его хэндлит
+// любое установленное карт-приложение, ставя маркер на точку).
+const geoFallbackFromOmUrl = (omUrl: string): string | null => {
+  const match = omUrl.match(/[?&]ll=([^&]+)/);
+  if (!match) return null;
+  const [latStr, lonStr] = decodeURIComponent(match[1]).split(',');
+  const lat = Number(latStr);
+  const lon = Number(lonStr);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  return `geo:${lat},${lon}?q=${lat},${lon}`;
+};
+
+const resolveNativeMapFallback = (normalized: string): string | null => {
+  if (Platform.OS === 'web') return null;
+  if (normalized.startsWith('yandexnavi:')) return yandexMapsFallbackFromNaviUrl(normalized);
+  if (normalized.startsWith('om:')) return geoFallbackFromOmUrl(normalized);
+  return null;
+};
+
 const openWithYandexFallback = async (
   normalized: string,
   onError?: (error: unknown) => void,
 ): Promise<boolean> => {
-  const isNativeYandexNavi = Platform.OS !== 'web' && normalized.startsWith('yandexnavi:');
   try {
     await Linking.openURL(normalized);
     return true;
   } catch (error) {
-    const fallback = isNativeYandexNavi ? yandexMapsFallbackFromNaviUrl(normalized) : null;
+    const fallback = resolveNativeMapFallback(normalized);
     if (!fallback) {
       onError?.(error);
       return false;

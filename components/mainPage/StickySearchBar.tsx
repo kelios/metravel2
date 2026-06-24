@@ -77,7 +77,7 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
   },
   containerMobileWeb: {
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.xxs,
     minHeight: 0,
   },
   inner: {

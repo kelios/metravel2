@@ -22,7 +22,16 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { buildQuestOfflineMapGpx } from './questOfflineMapExport';
+import { openQuestMap, type QuestMapApp } from './questWizardHelpers';
 import { getOsmNativeTileUrl, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers';
+
+const QUEST_NAV_PROVIDERS: Array<{ app: QuestMapApp; label: string }> = [
+    { app: 'google', label: 'Google' },
+    { app: 'organic', label: 'Organic' },
+    { app: 'waze', label: 'Waze' },
+    { app: 'yandex', label: 'Яндекс' },
+    { app: 'osm', label: 'OSM' },
+];
 
 type StepPoint = { lat: number; lng: number; title?: string };
 
@@ -163,6 +172,7 @@ function QuestFullMap({
 
         var routePoints = ${safeJson(points.map(p => [p.lat, p.lng]))};
         var grouped = ${safeJson(groupedPoints)};
+        var navProviders = ${safeJson(QUEST_NAV_PROVIDERS)};
         var theme = ${safeJson({
             primary: colors.primary,
             primaryDark: colors.primaryDark,
@@ -191,13 +201,40 @@ function QuestFullMap({
           return L.divIcon({ className: 'qmark', html: html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
         }
 
+        function navButtonsHtml(gp) {
+          var buttons = navProviders.map(function (provider) {
+            return '<button type="button" class="qnav-btn" data-app="' + provider.app +
+              '" data-lat="' + gp.lat + '" data-lng="' + gp.lng + '" ' +
+              'style="cursor:pointer;border:1px solid ' + theme.routeLine + ';background:#fff;color:' + theme.text +
+              ';border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700;line-height:1">' +
+              provider.label + '</button>';
+          }).join('');
+          return '<div style="margin-top:8px;font-size:12px;font-weight:700;color:' + theme.text +
+            '">Довести меня</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;max-width:220px">' +
+            buttons + '</div>';
+        }
+
         var markers = grouped.map(function (gp) {
           var marker = L.marker([gp.lat, gp.lng], {
             icon: iconFor(gp.indexes.join(','), false),
             zIndexOffset: 1000
           }).addTo(map);
-          marker.bindPopup('<b>' + gp.indexes.join(', ') + '.</b><br/>' + gp.titles.join(', '));
+          marker.bindPopup(
+            '<b>' + gp.indexes.join(', ') + '.</b><br/>' + gp.titles.join(', ') + navButtonsHtml(gp)
+          );
           return marker;
+        });
+
+        document.addEventListener('click', function (e) {
+          var btn = e.target && e.target.closest ? e.target.closest('.qnav-btn') : null;
+          if (!btn) return;
+          if (!window.ReactNativeWebView) return;
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'quest-map-nav',
+            app: btn.getAttribute('data-app'),
+            lat: parseFloat(btn.getAttribute('data-lat')),
+            lng: parseFloat(btn.getAttribute('data-lng'))
+          }));
         });
 
         function visibleMarkerCount() {
@@ -293,7 +330,20 @@ function QuestFullMap({
         try {
             const data = JSON.parse(event.nativeEvent.data) as Partial<MarkerStatus> & {
                 type?: string;
+                app?: QuestMapApp;
+                lat?: number;
+                lng?: number;
             };
+            if (data.type === 'quest-map-nav') {
+                if (
+                    data.app &&
+                    Number.isFinite(data.lat) &&
+                    Number.isFinite(data.lng)
+                ) {
+                    void openQuestMap({ lat: data.lat!, lng: data.lng! }, data.app);
+                }
+                return;
+            }
             if (data.type !== 'quest-map-status') return;
             setMarkerStatus({
                 expectedMarkers: Number(data.expectedMarkers) || groupedPoints.length,

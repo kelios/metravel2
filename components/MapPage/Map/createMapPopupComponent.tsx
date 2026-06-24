@@ -131,10 +131,10 @@ export const createMapPopupComponent = ({
 
     const handleOpenOrganicMaps = useCallback(() => {
       if (!coord) return;
-      const url = buildOrganicMapsUrl(coord);
+      const url = buildOrganicMapsUrl(coord, point.address);
       if (!url) return;
       void openExternalUrlInNewTab(url);
-    }, [coord]);
+    }, [coord, point.address]);
 
     const handleShareTelegram = useCallback(() => {
       if (!coord) return;

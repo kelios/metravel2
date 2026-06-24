@@ -332,7 +332,7 @@ export function HomeInspirationSection({
           />
         )}
 
-        {!isWeekendShowcase && travelsList.length > 0 && (
+        {travelsList.length > 0 && (
           <View style={[styles.headerActions, { marginTop: isMobile ? 14 : 20 }]}>
             {renderViewMoreButton()}
           </View>

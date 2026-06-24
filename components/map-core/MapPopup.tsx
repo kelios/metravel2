@@ -5,7 +5,6 @@ import PlacePopupCard from '@/components/MapPage/Map/PlacePopupCard';
 import { buildGoogleMapsUrl, buildOrganicMapsUrl, buildTelegramShareUrl, buildWazeUrl, buildYandexNaviUrl } from '@/components/MapPage/Map/mapLinks';
 import { useAuth } from '@/context/AuthContext';
 import { showToast } from '@/utils/toast';
-import { userPointsApi } from '@/api/userPoints';
 import { useQueryClient } from '@tanstack/react-query';
 import { PointStatus } from '@/types/userPoints';
 import { DESIGN_COLORS } from '@/constants/designSystem';
@@ -15,6 +14,7 @@ import type { LegacyMapPoint } from './types';
 import { useThemedColors } from '@/hooks/useTheme';
 import { osrmRoute } from '@/api/external/osrm';
 import { queryKeys } from '@/api/queryKeys';
+import { useSavedPointToggle } from '@/hooks/map/useSavedPointToggle';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -98,6 +98,14 @@ const MapPopup: React.FC<MapPopupConfig> = ({
   const queryClient = useQueryClient();
 
   const normalizedCoord = useMemo(() => parseCoord(coord), [coord]);
+
+  // #334/#583 — shared saved-state (matches the point by coordinate against the
+  // user's «Мои точки» cache) so the Save button shows «Сохранено» / a filled
+  // check and a second tap removes the point — same toggle as createMapPopupComponent.
+  const { isSaved, removeSaved, createPoint: createSavedPoint } = useSavedPointToggle({
+    coord: normalizedCoord,
+    enabled: isAuthenticated,
+  });
 
   // ---------------------------------------------------------------------------
   // Category label
@@ -221,10 +229,10 @@ const MapPopup: React.FC<MapPopupConfig> = ({
 
   const handleOpenOrganicMaps = useCallback(() => {
     if (!coord) return;
-    const url = buildOrganicMapsUrl(coord);
+    const url = buildOrganicMapsUrl(coord, point.address);
     if (!url) return;
     void openExternalUrlInNewTab(url);
-  }, [coord]);
+  }, [coord, point.address]);
 
   const handleOpenWaze = useCallback(() => {
     if (!coord) return;
@@ -256,6 +264,21 @@ const MapPopup: React.FC<MapPopupConfig> = ({
     if (isAdding) return;
     if (!normalizedCoord) {
       void showToast({ type: 'info', text1: 'Не удалось распознать координаты', position: 'bottom' });
+      return;
+    }
+
+    // #334 — toggle: если точка уже сохранена, второй тап её убирает (un-save).
+    if (isSaved) {
+      setIsAdding(true);
+      try {
+        await removeSaved();
+        void showToast({ type: 'success', text1: 'Точка убрана из моих точек', position: 'bottom' });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() });
+      } catch {
+        void showToast({ type: 'error', text1: 'Не удалось убрать точку', position: 'bottom' });
+      } finally {
+        setIsAdding(false);
+      }
       return;
     }
 
@@ -297,10 +320,10 @@ const MapPopup: React.FC<MapPopupConfig> = ({
 
     setIsAdding(true);
     try {
-      await userPointsApi.createPoint(payload);
+      await createSavedPoint(payload);
       void showToast({ type: 'success', text1: 'Точка добавлена в «Мои точки»', position: 'bottom' });
       void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() });
-      handleClose();
+      // Не закрываем попап: пользователь видит, что кнопка стала «Сохранено» (#583).
     } catch {
       void showToast({ type: 'error', text1: 'Не удалось сохранить точку', position: 'bottom' });
     } finally {
@@ -309,12 +332,14 @@ const MapPopup: React.FC<MapPopupConfig> = ({
   }, [
     authReady,
     categoryLabel,
-    handleClose,
+    createSavedPoint,
     isAdding,
     isAuthenticated,
+    isSaved,
     normalizedCoord,
     point,
     queryClient,
+    removeSaved,
     resolvedIds,
   ]);
 
@@ -348,6 +373,19 @@ const MapPopup: React.FC<MapPopupConfig> = ({
       onOpenYandexNavi={handleOpenYandexNavi}
       onAddPoint={handleAddPoint}
       addDisabled={!authReady || !isAuthenticated || !normalizedCoord || isAdding}
+      isSaved={isSaved}
+      addLabel={isSaved ? 'Сохранено' : 'Сохранить'}
+      addTooltip={
+        !authReady
+          ? 'Загрузка…'
+          : !isAuthenticated
+            ? 'Войдите, чтобы сохранить точку'
+            : !normalizedCoord
+              ? 'Координаты точки недоступны'
+              : isSaved
+                ? 'Убрать из моих точек'
+                : 'Сохранить в мои точки'
+      }
       isAdding={isAdding}
       fullscreenOnMobile
       onClose={handleClose}

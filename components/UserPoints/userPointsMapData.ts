@@ -15,7 +15,9 @@ export function buildUserPointsTravelData(points: ImportedPoint[]) {
   return (points ?? []).map((p: any) => ({
     id: Number(p?.id),
     coord: `${Number(p?.latitude)},${Number(p?.longitude)}`,
-    address: String(p?.address ?? ''),
+    address: String(p?.name ?? p?.address ?? ''),
+    travelImageThumbUrl: String(p?.photo ?? ''),
+    categoryName: String(p?.category ?? ''),
   }))
 }
 

@@ -308,6 +308,18 @@ const shouldFallbackToMock = (error: unknown): boolean => {
   return error instanceof ApiError && [0, 404, 501].includes(error.status);
 };
 
+/**
+ * Peer-награды (§10) — фича на mock-fallback до деплоя BE-эндпоинтов
+ * /achievements/peer-badges/*. Без отдельного гейта в проде каталог пустой и
+ * пикер «Наградить» открывается без вариантов (#577). Пока эндпоинт не
+ * задеплоен — отдаём мок-каталог И в проде на «нет эндпоинта» (404/501/0),
+ * не только в DEV. Реальные ошибки сети (5xx/таймаут) по-прежнему всплывают.
+ */
+const shouldFallbackPeerToMock = (error: unknown): boolean => {
+  if (USE_MOCK) return true;
+  return error instanceof ApiError && [0, 404, 501].includes(error.status);
+};
+
 // ── Публичные fetch-функции ─────────────────────────────────────────────────
 
 export async function fetchBadgeCatalog(): Promise<Badge[]> {
@@ -368,9 +380,18 @@ export async function fetchPeerBadgeCatalog(): Promise<PeerBadge[]> {
   if (USE_MOCK) return MOCK_PEER_CATALOG;
   try {
     const dto = await apiClient.get<PeerBadgeDto[]>('/achievements/peer-badges/');
-    return (dto ?? []).map(mapPeerBadge);
+    const mapped = (dto ?? []).map(mapPeerBadge);
+    // BE задеплоил эндпоинт, но каталог пуст (200 + []) → пикер «Наградить»
+    // открывался без вариантов (#577). Пока бэк не засидил реальные значки —
+    // отдаём мок-каталог, чтобы выдача наград работала. Снять, когда BE вернёт
+    // непустой список (см. контракт #555/§10).
+    if (mapped.length === 0) {
+      devWarn('[achievements] peer catalog empty → mock fallback');
+      return MOCK_PEER_CATALOG;
+    }
+    return mapped;
   } catch (error) {
-    if (shouldFallbackToMock(error)) {
+    if (shouldFallbackPeerToMock(error)) {
       devWarn('[achievements] peer catalog → mock fallback');
       return MOCK_PEER_CATALOG;
     }
@@ -391,7 +412,7 @@ export async function fetchTravelPeerBadges(
     );
     return (dto?.peer_received ?? []).map(mapPeerReceived);
   } catch (error) {
-    if (shouldFallbackToMock(error)) {
+    if (shouldFallbackPeerToMock(error)) {
       devWarn('[achievements] travel peer → mock fallback');
       return MOCK_TRAVEL_PEER_RECEIVED;
     }
@@ -413,8 +434,14 @@ export async function grantPeerBadge(input: GrantInput): Promise<GrantResult> {
     );
     return { granted: Boolean(dto?.granted), count: dto?.count ?? 0 };
   } catch (error) {
-    // Без бэка (mock/DEV-404) — симулируем «выдал», чтобы UI-toggle работал в превью.
-    if (shouldFallbackToMock(error)) {
+    // Каталог сейчас мок (BE вернул пустой список, #577) — slug мок-значка
+    // неизвестен бэку, grant вернёт 400/404. Плюс случай «эндпоинта нет»
+    // (501/0). Во всех этих случаях симулируем «выдал», чтобы UI-toggle работал;
+    // реальные сетевые/5xx-сбои по-прежнему всплывают.
+    const isMockableGrant =
+      shouldFallbackPeerToMock(error) ||
+      (error instanceof ApiError && error.status === 400);
+    if (isMockableGrant) {
       devWarn('[achievements] grant → mock simulate');
       return { granted: true, count: 1 };
     }

@@ -9,6 +9,25 @@ import { isWebAutomation } from '@/utils/isWebAutomation'
 
 const WeatherWidget = React.lazy(() => import('@/components/home/WeatherWidget'))
 
+// WeatherWidget ждёт { coord: 'lat,lng', address }. API детали отдаёт точки как
+// { coord, address } (так же читает PointList), но типы/некоторые источники дают
+// { coords, name } или { lat, lng }. Поддерживаем все три, иначе виджет получает
+// пустой coord и рендерит null (#579).
+export const toWeatherPoints = (
+  travelAddress: Travel['travelAddress'],
+): { coord: string; address?: string }[] =>
+  (travelAddress ?? [])
+    .map((item) => {
+      if (typeof item === 'string') return { coord: item.trim() }
+      const p = item as any
+      const coord =
+        (typeof p?.coord === 'string' && p.coord) ||
+        (typeof p?.coords === 'string' && p.coords) ||
+        (p?.lat != null && p?.lng != null ? `${p.lat},${p.lng}` : '')
+      return { coord: String(coord).trim(), address: p?.address ?? p?.name }
+    })
+    .filter((p) => p.coord.length > 0)
+
 const WEATHER_PLACEHOLDER_STYLE = {
   minHeight: 120,
   alignItems: 'center' as const,
@@ -53,7 +72,8 @@ export const TravelWeatherBlock: React.FC<{
   weatherVisible: boolean
 }> = ({ colors, setWeatherVisible, styles, travel, weatherVisible }) => {
   const [retryKey, setRetryKey] = React.useState(0)
-  if (!travel.travelAddress || (travel.travelAddress as any[]).length <= 0 || isWebAutomation) return null
+  const weatherPoints = React.useMemo(() => toWeatherPoints(travel.travelAddress), [travel.travelAddress])
+  if (weatherPoints.length <= 0 || isWebAutomation) return null
 
   return (
     <View
@@ -108,7 +128,7 @@ export const TravelWeatherBlock: React.FC<{
                 </View>
               }
             >
-              <WeatherWidget points={travel.travelAddress as any} countryName={travel.countryName} />
+              <WeatherWidget points={weatherPoints} countryName={travel.countryName} />
             </Suspense>
           </ErrorBoundary>
         </View>

@@ -85,13 +85,17 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const handleBackPress = () => {
-    if (model.backToPath) {
-      router.push(model.backToPath as any);
+    // #573: prefer real navigation history so «Назад» returns to the screen the
+    // user came from (search/feed/related lists), not the breadcrumb default
+    // (which falls back to Home for any non-top-level origin). Use backToPath only
+    // when there is no in-app history to pop (deep link / fresh tab open).
+    if (typeof router.canGoBack === 'function' && router.canGoBack()) {
+      router.back();
       return;
     }
 
-    if (typeof router.canGoBack === 'function' && router.canGoBack()) {
-      router.back();
+    if (model.backToPath) {
+      router.replace(model.backToPath as any);
       return;
     }
 
