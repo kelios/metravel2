@@ -3,7 +3,6 @@ import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import Feather from '@expo/vector-icons/Feather'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { getTravelLabel } from '@/utils/pluralize'
 import type { ListDensity } from '@/stores/listViewStore'
@@ -44,7 +43,6 @@ function ListCatalogToolbar({
 }: ListCatalogToolbarProps) {
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
-  const { isMobile } = useResponsive()
 
   const activeSort = (sortValue || '').trim() || DEFAULT_SORT_ID
   const countVisible = showResultsCount && typeof resultsCount === 'number'
@@ -67,19 +65,10 @@ function ListCatalogToolbar({
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.sortRow}
-          style={[
-            styles.sortScroll,
-            isMobile && countVisible ? styles.sortScrollMobileFullWidth : null,
-          ]}
+          style={styles.sortScroll}
           accessibilityRole={Platform.OS === 'web' ? undefined : ('toolbar' as any)}
           accessibilityLabel="Сортировка списка"
         >
-          {!isMobile ? (
-            <View style={styles.sortLabelWrap}>
-              <Feather name="bar-chart-2" size={13} color={colors.textMuted} />
-              <Text style={styles.sortLabel}>Сортировка</Text>
-            </View>
-          ) : null}
           {sortOptions.map((option) => {
             const isActive = option.id === activeSort
             return (
@@ -156,18 +145,12 @@ const getStyles = (colors: ThemedColors) =>
       alignItems: 'center',
       gap: spacing.xs,
       paddingTop: spacing.xs,
-      flexWrap: 'wrap',
+      flexWrap: 'nowrap',
     },
     sortScroll: {
       flex: 1,
       minWidth: Platform.select({ web: 0, default: 120 }),
       maxWidth: '100%',
-    },
-    sortScrollMobileFullWidth: {
-      flexBasis: '100%',
-      width: '100%',
-      flexGrow: 0,
-      flexShrink: 0,
     },
     sortRow: {
       flexDirection: 'row',
@@ -177,22 +160,12 @@ const getStyles = (colors: ThemedColors) =>
       // ScrollView edge when chips overflow into horizontal scroll.
       paddingRight: spacing.sm,
     },
-    sortLabelWrap: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      marginRight: 2,
-    },
-    sortLabel: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: colors.textMuted,
-    },
     countText: {
       fontSize: 13,
       fontWeight: '700',
       color: colors.textSecondary,
-      flexShrink: 0,
+      flexShrink: 1,
+      minWidth: 0,
       marginRight: spacing.xs,
     },
     chip: {

@@ -5,6 +5,7 @@ import ArticleListItem from '@/components/article/ArticleListItem'
 const mockPush = jest.fn()
 jest.mock('expo-router', () => ({
   __esModule: true,
+  usePathname: () => '/articles',
   router: {
     push: (...args: any[]) => mockPush(...args),
   },
@@ -58,7 +59,7 @@ describe('ArticleListItem', () => {
   it('navigates to article page when pressed', () => {
     const { getByText } = render(<ArticleListItem article={mockArticle} />)
     fireEvent.press(getByText('Test Article'))
-    expect(mockPush).toHaveBeenCalledWith('/article/1')
+    expect(mockPush).toHaveBeenCalledWith('/article/1?from=%2Farticles')
   })
 
   it('renders article type when available', () => {
@@ -72,4 +73,3 @@ describe('ArticleListItem', () => {
     expect(queryByText('News')).toBeNull()
   })
 })
-

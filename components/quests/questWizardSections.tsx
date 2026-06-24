@@ -9,6 +9,7 @@ import { pluralizeRu } from '@/utils/pluralize'
 import QuestPioneerBlock from './QuestPioneerBlock'
 import QuestReviewSection from './QuestReviewSection'
 import QuestFinaleRating from './QuestFinaleRating'
+import type { QuestMapApp } from './questWizardHelpers'
 
 import {
   BelkrajWidgetLazy,
@@ -16,8 +17,6 @@ import {
   QuestFullMapLazy,
   QuestWebVideo,
 } from './questWizardMedia'
-
-type MapApp = 'google' | 'apple' | 'yandex' | 'organic' | 'mapsme'
 
 type PointLike = {
   id?: string
@@ -54,8 +53,6 @@ export function QuestDesktopMapPanel({
   useWideInlineLayout,
   desktopNavExpanded,
   setDesktopNavExpanded,
-  desktopHasOrganic,
-  desktopHasMapsme,
   showMap,
   toggleMap,
   openCurrentStepInMap,
@@ -68,11 +65,9 @@ export function QuestDesktopMapPanel({
   useWideInlineLayout: boolean
   desktopNavExpanded: boolean
   setDesktopNavExpanded: React.Dispatch<React.SetStateAction<boolean>>
-  desktopHasOrganic: boolean
-  desktopHasMapsme: boolean
   showMap: boolean
   toggleMap: () => void
-  openCurrentStepInMap: (app: MapApp) => void
+  openCurrentStepInMap: (app: QuestMapApp) => void
   copyCurrentStepCoords: () => void
   activeStepIndex?: number
 }) {
@@ -129,9 +124,11 @@ export function QuestDesktopMapPanel({
             <View style={styles.navDropdown}>
               <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('google'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>Google Maps</Text></Pressable>
               {Platform.OS === 'ios' && (<Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('apple'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>Apple Maps</Text></Pressable>)}
-              <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('yandex'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>Yandex Maps</Text></Pressable>
-              {desktopHasOrganic && (<Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('organic'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>Organic Maps</Text></Pressable>)}
-              {desktopHasMapsme && (<Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('mapsme'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>MAPS.ME</Text></Pressable>)}
+              <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('organic'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>Organic Maps</Text></Pressable>
+              <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('waze'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>Waze</Text></Pressable>
+              <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('yandex'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>Яндекс.Навигатор</Text></Pressable>
+              <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('mapsme'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>MAPS.ME</Text></Pressable>
+              <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('osm'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>OpenStreetMap</Text></Pressable>
             </View>
           )}
         </View>

@@ -86,6 +86,10 @@ export interface MessagingUser {
     // Бэк (ProfileSlimSerializer) отдаёт уже собранное имя:
     // first_name + last_name, а если профиль пустой — имя с регистрации (User.name).
     name?: string | null;
+    email?: string | null;
+    username?: string | null;
+    nickname?: string | null;
+    nick?: string | null;
     avatar: string | null;
     // legacy/defensive: старый контракт мог присылать раздельные поля
     first_name?: string | null;
@@ -107,6 +111,22 @@ export function getMessagingUserDisplayName(u: MessagingUser): string {
 
 export function getMessagingUserId(u: MessagingUser): number {
     return u.user ?? u.id;
+}
+
+export function getMessagingUserSearchText(u: MessagingUser): string {
+    return [
+        getMessagingUserDisplayName(u),
+        u.name,
+        u.first_name,
+        u.last_name,
+        u.email,
+        u.username,
+        u.nickname,
+        u.nick,
+    ]
+        .map((value) => String(value ?? '').trim().toLowerCase())
+        .filter(Boolean)
+        .join(' ');
 }
 
 export interface PaginatedMessages {

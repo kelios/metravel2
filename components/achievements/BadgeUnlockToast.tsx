@@ -13,9 +13,13 @@ const shownBadgeIds = new Set<number>();
 
 const VISIBLE_MS = 4500;
 
-function BadgeUnlockToast() {
+interface Props {
+  enabled?: boolean;
+}
+
+function BadgeUnlockToast({ enabled = true }: Props) {
   const colors = useThemedColors();
-  const { data } = useMyAchievements();
+  const { data } = useMyAchievements({ enabled });
   const [current, setCurrent] = useState<UserBadge | null>(null);
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(-16)).current;

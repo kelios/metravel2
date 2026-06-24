@@ -108,7 +108,7 @@ export default function ProfileScreen() {
     viewsCount: 0,
   });
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('travels');
-  const { data: myAchievements } = useMyAchievements();
+  const { data: myAchievements } = useMyAchievements({ enabled: activeTab === 'overview' });
   const badgesCount = myAchievements?.rank?.badgesCount ?? 0;
   const rank = useMemo(
     () => (myAchievements?.rank ? { level: myAchievements.rank.level, title: myAchievements.rank.title } : null),
@@ -432,7 +432,7 @@ export default function ProfileScreen() {
 
   const handleHeaderAction = useCallback((key: ProfileHeaderActionKey) => {
     if (key === 'messages') router.push('/messages');
-    else if (key === 'userpoints') router.push('/userpoints');
+    else if (key === 'userpoints') router.push({ pathname: '/userpoints', params: { from: 'profile' } } as any);
     else if (key === 'calendar') router.push('/calendar' as any);
     else if (key === 'newTravel') router.push('/travel/new' as any);
   }, [router]);
@@ -494,7 +494,13 @@ export default function ProfileScreen() {
 
   const showClearButton = (activeTab === 'favorites' || activeTab === 'history') && currentData.length > 0;
 
-  const handleOpenCalendar = useCallback(() => router.push('/calendar' as any), [router]);
+  const handleOpenCalendar = useCallback((status?: 'visited' | 'wishlist' | 'planned') => {
+    if (status) {
+      router.push({ pathname: '/calendar', params: { status } } as any)
+      return
+    }
+    router.push('/calendar' as any)
+  }, [router]);
 
   const statItems = useMemo<ProfileStatSegmentItem[]>(() => [
     {
@@ -542,6 +548,7 @@ export default function ProfileScreen() {
         avatarUploading={avatarUploading}
         statItems={statItems}
         handleHeaderAction={handleHeaderAction}
+        onRankPress={() => handleProfileTabChange('overview')}
         activeTab={activeTab}
         handleProfileTabChange={handleProfileTabChange}
         tabCounts={tabCounts}
@@ -760,8 +767,8 @@ export default function ProfileScreen() {
           onEndReachedThreshold={0.5}
         />
       )}
-      <BadgeUnlockToast />
-      <PlaceFirstBadgeToast />
+      <BadgeUnlockToast enabled={activeTab === 'overview'} />
+      <PlaceFirstBadgeToast enabled={activeTab === 'overview'} />
     </SafeAreaView>
   );
 }

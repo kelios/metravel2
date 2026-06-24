@@ -55,12 +55,12 @@ export function useBadgeCatalog() {
 }
 
 /** Достижения текущего пользователя: значки + ранг + прогресс к незакрытым. */
-export function useMyAchievements() {
+export function useMyAchievements(options: { enabled?: boolean } = {}) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery<MyAchievements>({
     queryKey: queryKeys.achievementsMe(),
     queryFn: fetchMyAchievements,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && (options.enabled ?? true),
     staleTime: STALE_TIME,
     retry,
   });

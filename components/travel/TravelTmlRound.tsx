@@ -7,6 +7,7 @@ import {
     View,
 } from "react-native";
 import { router } from "expo-router";
+import Feather from "@expo/vector-icons/Feather";
 import type { Travel } from "@/types/types";
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { buildVersionedImageUrl, getOptimalImageSize, optimizeImageUrl } from "@/utils/imageOptimization";
@@ -15,11 +16,28 @@ import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛ�
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import { useThemedColors } from '@/hooks/useTheme';
 import { shareTravel } from '@/utils/shareTravel';
+import { resolveTravelAuthorDisplayName, resolveTravelAuthorName } from '@/components/listTravel/travelListItemHelpers';
+import { formatViewCount } from '@/components/travel/utils/travelHelpers';
 
 type Props = { travel: Travel };
 
 const CARD_HEIGHT = 250;
 const CARD_IMAGE_HEIGHT = 170;
+
+const resolveTravelYear = (travel: Travel): string => {
+    const value = String((travel as any)?.year ?? '').trim();
+    return /^\d{4}$/.test(value) ? value : '';
+};
+
+const resolveTravelViews = (travel: Travel): number => {
+    const raw =
+        (travel as any)?.countUnicIpView ??
+        (travel as any)?.views ??
+        (travel as any)?.viewsCount ??
+        (travel as any)?.countViews;
+    const value = Number(raw);
+    return Number.isFinite(value) && value > 0 ? value : 0;
+};
 
 const TravelTmlRound: React.FC<Props> = ({ travel }) => {
     const colors = useThemedColors();
@@ -88,6 +106,13 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
     }, [baseImageUrl, imageHeight, travel]);
 
     const canOpen = Boolean(slug || travel?.id);
+    const authorDisplayName = useMemo(() => {
+      const authorName = resolveTravelAuthorName(travel, (travel as any)?.userName);
+      return resolveTravelAuthorDisplayName(authorName);
+    }, [travel]);
+    const travelYear = useMemo(() => resolveTravelYear(travel), [travel]);
+    const views = useMemo(() => resolveTravelViews(travel), [travel]);
+    const viewsLabel = views > 0 ? formatViewCount(views) : '';
 
     const onPress = useCallback(() => {
         if (!canOpen) return;
@@ -115,18 +140,65 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
         </View>
     );
 
-    // Create content slot to show only country information
     const contentSlot = useMemo(() => {
-        if (!countryName || countryName === "Страна не указана") return null;
-        
+        const showCountry = !!countryName && countryName !== "Страна не указана";
+        const hasMeta = !!authorDisplayName || !!travelYear || !!viewsLabel;
+        if (!showCountry && !hasMeta) return null;
+
         return (
-            <View style={styles.locationRow}>
-                <Text style={styles.locationText} numberOfLines={1}>
-                    {countryName}
-                </Text>
+            <View style={styles.contentSlot}>
+                {showCountry ? (
+                    <View style={styles.locationRow}>
+                        <Feather name="map-pin" size={12} color={colors.textMuted} />
+                        <Text style={styles.locationText} numberOfLines={1}>
+                            {countryName}
+                        </Text>
+                    </View>
+                ) : null}
+                {hasMeta ? (
+                    <View style={styles.metaRow}>
+                        {authorDisplayName ? (
+                            <View style={[styles.metaItem, styles.metaItemAuthor]}>
+                                <Feather name="user" size={12} color={colors.textMuted} />
+                                <Text style={styles.metaText} numberOfLines={1}>
+                                    {authorDisplayName}
+                                </Text>
+                            </View>
+                        ) : null}
+                        {travelYear ? (
+                            <View style={styles.metaItem}>
+                                <Feather name="calendar" size={12} color={colors.textMuted} />
+                                <Text style={styles.metaText} numberOfLines={1}>
+                                    {travelYear}
+                                </Text>
+                            </View>
+                        ) : null}
+                        {viewsLabel ? (
+                            <View style={styles.metaItem}>
+                                <Feather name="eye" size={12} color={colors.textMuted} />
+                                <Text style={styles.metaText} numberOfLines={1}>
+                                    {viewsLabel}
+                                </Text>
+                            </View>
+                        ) : null}
+                    </View>
+                ) : null}
             </View>
         );
-    }, [countryName, styles.locationRow, styles.locationText]);
+    }, [
+        authorDisplayName,
+        colors.textMuted,
+        countryName,
+        styles.contentSlot,
+        styles.locationRow,
+        styles.locationText,
+        styles.metaItem,
+        styles.metaItemAuthor,
+        styles.metaRow,
+        styles.metaText,
+        travelYear,
+        viewsLabel,
+    ]);
 
     return (
         <View style={styles.container}>
@@ -280,11 +352,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         alignItems: 'center',
         minHeight: 18,
         paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+        gap: 4,
     },
 
     compactContent: {
         paddingVertical: 8,
-        gap: 0,
+        gap: 4,
     },
 
     locationText: {
@@ -295,7 +368,38 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
 
     contentSlot: {
-        gap: DESIGN_TOKENS.spacing.xs,
+        gap: 4,
+    },
+
+    metaRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flexWrap: 'nowrap',
+        gap: 8,
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+        minHeight: 18,
+        overflow: 'hidden',
+    },
+
+    metaItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 3,
+        flexShrink: 0,
+        minWidth: 0,
+    },
+
+    metaItemAuthor: {
+        flexShrink: 1,
+        flexGrow: 1,
+        maxWidth: '56%',
+    },
+
+    metaText: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: colors.textMuted,
+        minWidth: 0,
     },
 
     contentTitle: {

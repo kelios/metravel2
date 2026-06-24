@@ -22,13 +22,20 @@ type Props = {
 function WeatherWidget({ points, countryName, onSettled }: Props) {
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
     const styles = useMemo(() => createStyles(colors), [colors]);
-    const { forecast, locationLabel } = useWeatherWidgetModel({
+    const { forecast, locationLabel, status } = useWeatherWidgetModel({
         points,
         countryName,
         onSettled,
     });
 
-    if (Platform.OS !== 'web' || !forecast.length || !locationLabel) return null;
+    if (!points?.length || !locationLabel) return null;
+
+    const hasForecast = forecast.length > 0;
+    const fallbackIcon = status === 'error' ? 'alert-circle' : 'cloud';
+    const fallbackText =
+      status === 'error'
+        ? 'Не удалось загрузить прогноз. Проверьте координаты точки или подключение.'
+        : 'Загружаем прогноз...';
 
     return (
       <View 
@@ -44,33 +51,46 @@ function WeatherWidget({ points, countryName, onSettled }: Props) {
               </Text>
           </View>
 
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.forecastContainer}
-            {...(Platform.OS === 'web' ? { 'data-weather-forecast': true } : {})}
-          >
-              {forecast.map((day, index) => (
-                <View key={day.date} style={[
-                    styles.forecastItem,
-                    index === forecast.length - 1 && styles.lastItem
-                ]}>
-                    <View style={styles.dateIconContainer}>
-                        <Text style={[styles.date, { color: colors.textMuted }]}>{formatDateShort(day.date)}</Text>
-                        <View style={styles.iconContainer} accessibilityRole="image" aria-label={day.condition}>
-                          <Feather name={day.icon} size={20} color={colors.textMuted} />
-                        </View>
-                    </View>
-                    <View style={styles.tempContainer}>
-                        <Text style={[styles.tempMax, { color: colors.text }]}>{Math.round(day.temperatureMax)}°</Text>
-                        <Text style={[styles.tempMin, { color: colors.textMuted }]}>/{Math.round(day.temperatureMin)}°</Text>
-                    </View>
-                    <Text style={[styles.desc, { color: colors.textMuted }]}>
-                        {day.condition}
-                    </Text>
-                </View>
-              ))}
-          </ScrollView>
+          {hasForecast ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.forecastContainer}
+              {...(Platform.OS === 'web' ? { 'data-weather-forecast': true } : {})}
+            >
+                {forecast.map((day, index) => (
+                  <View key={day.date} style={[
+                      styles.forecastItem,
+                      index === forecast.length - 1 && styles.lastItem
+                  ]}>
+                      <View style={styles.dateIconContainer}>
+                          <Text style={[styles.date, { color: colors.textMuted }]}>{formatDateShort(day.date)}</Text>
+                          <View
+                            style={styles.iconContainer}
+                            accessibilityRole="image"
+                            {...(Platform.OS === 'web' ? { 'aria-label': day.condition } : { accessibilityLabel: day.condition })}
+                          >
+                            <Feather name={day.icon} size={20} color={colors.textMuted} />
+                          </View>
+                      </View>
+                      <View style={styles.tempContainer}>
+                          <Text style={[styles.tempMax, { color: colors.text }]}>{Math.round(day.temperatureMax)}°</Text>
+                          <Text style={[styles.tempMin, { color: colors.textMuted }]}>/{Math.round(day.temperatureMin)}°</Text>
+                      </View>
+                      <Text style={[styles.desc, { color: colors.textMuted }]}>
+                          {day.condition}
+                      </Text>
+                  </View>
+                ))}
+            </ScrollView>
+          ) : (
+            <View style={styles.messageRow} accessibilityRole="text">
+              <Feather name={fallbackIcon} size={18} color={colors.textMuted} />
+              <Text style={[styles.messageText, { color: colors.textMuted }]}>
+                {fallbackText}
+              </Text>
+            </View>
+          )}
       </View>
     );
 }
@@ -164,6 +184,19 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         textAlign: 'center',
         maxWidth: '100%',
         flexWrap: 'wrap',
+    },
+    messageRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        minHeight: 44,
+        paddingVertical: 4,
+    },
+    messageText: {
+        flex: 1,
+        fontSize: 13,
+        lineHeight: 18,
+        fontWeight: '500',
     },
 });
 

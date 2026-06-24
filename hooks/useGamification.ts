@@ -35,12 +35,12 @@ const hasId = (userId: string | number | null | undefined): boolean =>
 
 // ── Бейджи первооткрывателя места ───────────────────────────────────────────
 
-export function useMyPlaceFirstBadges() {
+export function useMyPlaceFirstBadges(options: { enabled?: boolean } = {}) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery<PlaceFirstBadge[]>({
     queryKey: queryKeys.gamificationPlaceBadgesMe(),
     queryFn: fetchMyPlaceFirstBadges,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && (options.enabled ?? true),
     staleTime: STALE_TIME,
     retry,
   });

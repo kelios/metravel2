@@ -14,9 +14,13 @@ const shownIds = new Set<number>();
 const VISIBLE_MS = 4500;
 
 /** Unlock-тост при получении бейджа первооткрывателя места. FE-place-first-badge. */
-function PlaceFirstBadgeToast() {
+interface Props {
+  enabled?: boolean;
+}
+
+function PlaceFirstBadgeToast({ enabled = true }: Props) {
   const colors = useThemedColors();
-  const { data } = useMyPlaceFirstBadges();
+  const { data } = useMyPlaceFirstBadges({ enabled });
   const [current, setCurrent] = useState<PlaceFirstBadge | null>(null);
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(-16)).current;

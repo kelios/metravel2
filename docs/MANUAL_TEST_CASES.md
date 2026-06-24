@@ -337,7 +337,7 @@
 
 - Уже покрыто: readiness/launch, runtime health, базовая навигация, поиск, детали маршрута, share/export, карта, permissions, auth, квестовые native-регрессии и recommendation shelves.
 - Добавленные пробелы: standalone-сборка без Metro, app/deep links, lifecycle и cold restart, offline/recovery, soft keyboard, native media upload, push/deep-link routing, external intents и rich embedded content.
-- Для Android release/dev-client QA P1-минимум: `AND-USB-01..06`, `AND-USB-08`, `AND-USB-10`, `AND-USB-13..18`, `AND-USB-21`; P2-кейсы `AND-USB-07`, `AND-USB-09`, `AND-USB-19..20` проходить перед store submission или когда менялись соответствующие поверхности.
+- Для Android release/dev-client QA P1-минимум: `AND-USB-01..06`, `AND-USB-08`, `AND-USB-10`, `AND-USB-13..18`, `AND-USB-21..31`; P2-кейсы `AND-USB-07`, `AND-USB-09`, `AND-USB-19..20` проходить перед store submission или когда менялись соответствующие поверхности.
 
 | ID | Заголовок | Предусловие | Шаги | Ожидаемый результат |
 |----|-----------|-------------|------|---------------------|
@@ -362,6 +362,16 @@
 | AND-USB-19 | Push notification permission + routing | Build с `expo-notifications`; доступен тестовый push/local quest reminder payload | Проверить allow/deny prompt, foreground notification, tap по уведомлению при тёплом и убитом приложении; payload содержит `url` или `screen` | Android channel создан, отсутствие token/push capability не крашит app, tap ведёт на нужный экран после mount навигации |
 | AND-USB-20 | External intents + embedded content | Есть маршрут/статья с внешними ссылками, YouTube/Instagram/rich-text или external maps | Открыть Telegram/WhatsApp/email/share, external maps, YouTube/Instagram/fallback-ссылки; вернуться системной Back | Открывается системный chooser/app/browser или безопасный fallback; возврат в приложение сохраняет экран; нет direct `Linking.openURL` crash |
 | AND-USB-21 | Roulette favorite auth action | Авторизованный аккаунт, dev-client подключен к рабочему API | Открыть `/roulette`, нажать «Подобрать»/«Ещё», на первой карточке результата нажать heart, дождаться смены состояния, затем нажать heart повторно | Add: label меняется на «Удалить из избранного», нет toast «Не удалось обновить избранное», `PATCH /api/travels/{id}/mark-as-favorite/` использует реальный id; Remove: label возвращается на «Добавить в избранное», `PATCH /unmark-as-favorite/` успешен; в logcat нет `ReactNativeJS` runtime error |
+| AND-USB-22 | Home/footer regression pack | Home открыт, guest и auth по возможности | Проверить нижний dock на `/`: активный пункт не подсвечен как `/search`; открыть «Квесты»; проверить иконку; открыть блоки рекомендаций/«Для вас» | На главной нет ложного активного «Маршруты»; у квестов визуально отличимая иконка; дублирующие/нерабочие блоки не создают ложных CTA |
+| AND-USB-23 | Search header, filters and sorting | Открыт `/search`; есть быстрый фильтр с главной, например «у воды» | Перейти из home quick-filter; открыть фильтры, раскрыть «Месяц»; выбрать месяц; проверить активные chips, сортировку и header | Header занимает компактную верхнюю часть экрана; счётчик и переключатели вида в одной строке; нет наложения в фильтре месяца; активные chips показывают реальные названия или скрыты до загрузки справочника; нет дублей «Старые/Добавлены» |
+| AND-USB-24 | Article/edit back navigation | Открыты статьи из home/search/map; авторизован автор статьи/маршрута | Открыть статью, нажать видимую кнопку Back и системный Back; из search перейти к редактированию и вернуться | Возврат идёт на экран-источник, а не на главную; на экранах редактирования есть понятный путь назад |
+| AND-USB-25 | Travel detail sticky navigation and sections | Открыт маршрут с описанием, точками, погодой и наградами | Прокрутить до sticky-чипов, нажать «Описание», «Точки», «Карта»; нажать «Показать погоду»; открыть «Наградить статью» | Чипы скроллят к нужным секциям; погода показывает прогноз/loading/error, а не пустой блок; sheet наград показывает варианты или явный empty state; авторский блок без дублей и компактный |
+| AND-USB-26 | Unified point popup actions | Открыты popup точки на карте, в деталях маршрута, в координатах и рядом | Нажать маркер/точку; проверить координаты, copy, save, Google/Organic/Waze/Яндекс, Telegram; повторить для уже сохранённой точки | Popup использует единый шаблон; copy рядом с координатами; save показывает сохранённое состояние; внешние навигаторы открывают app/chooser или понятный fallback; Organic Maps проверен на реальном устройстве |
+| AND-USB-27 | Places/map panel and quest map UX | Открыта карта, таб «Места», квест с картой | Нажать карточку места в нижней панели; открыть навигацию с карточки; проверить нижний отступ; открыть карту квеста и fullscreen | Карта фокусируется на выбранной точке; карточка даёт тот же набор навигационных действий; нет большого белого пустого блока снизу; карта квеста открывается fullscreen и содержит ссылки навигаторов |
+| AND-USB-28 | Messages search | Авторизован, есть пользователи/диалоги | Профиль → Чаты/Сообщения → Новый диалог/поиск; искать по имени, email и нику | Поиск находит пользователя по имени, email или username/nickname; пустое состояние объясняет, что ничего не найдено |
+| AND-USB-29 | My points map and actions | Авторизован, есть сохранённые точки | Профиль → Мои точки; проверить три вкладки; открыть карту с точками; нажать «Параметры»/случайный выбор; «Открыть в картах»; системный Back | Есть карта со всеми точками; смысл «Параметры»/случайного выбора понятен; sheet открытия в картах не ломает верстку и закрывается; Back возвращает в профиль/предыдущий экран |
+| AND-USB-30 | Profile overview/statistics IA | Авторизован с данными статусов | Открыть профиль; нажать ранг/прогресс «Новичок → Путешественник»; нажать статистику «Хочу/Планирую/Был»; переключать вкладки | Ранг объясняет следующий шаг или ведёт в достижения; статистика фильтрует/открывает соответствующие списки; профиль не выглядит разрозненно, вкладки и хлебные крошки помогают ориентироваться |
+| AND-USB-31 | Header/menu naming and ads slots | Home/search/profile открыты | Открыть меню/header; проверить пункт Instagram; найти рекламные/экскурсионные блоки, если включены для окружения | Пункт Instagram назван по фактическому назначению; рекламные блоки экскурсий либо отображаются в нужном окружении, либо явно выключены/скрыты без пустых мест |
 
 #### Трассируемость Android device coverage
 
@@ -388,6 +398,16 @@
 | AND-USB-19 | P2 | manual notification payload; unit `services/notifications`, `usePushNotifications.native` | manual |
 | AND-USB-20 | P2 | manual OS intents; unit `externalLinks`, `internalLinks`, `travelRouteDownload` | manual |
 | AND-USB-21 | P1 | manual adb/dev-client; unit `OptimizedFavoriteButton`, `favoritesStore` | manual + unit |
+| AND-USB-22 | P1 | unit `bottomDockModel`; manual Android dock/icon/recommendations | manual + unit |
+| AND-USB-23 | P1 | unit `ListTravelBase.helpers`, `listTravel/sortings`; manual Android filters/header | manual + unit |
+| AND-USB-24 | P1 | unit `ArticleListItem`; manual Android system Back/edit flow | manual + unit |
+| AND-USB-25 | P1 | unit `WeatherWidget`, `PeerBadgePickerSheet`; manual Android travel details | manual + unit |
+| AND-USB-26 | P1 | manual Android external intents; unit `externalLinks`/popup helpers candidate | manual |
+| AND-USB-27 | P1 | manual Android map/places/quest fullscreen | manual |
+| AND-USB-28 | P1 | manual Android messages search; needs API/user fixture coverage | manual |
+| AND-USB-29 | P1 | manual Android user points map/actions | manual |
+| AND-USB-30 | P1 | manual Android profile IA/statistics | manual |
+| AND-USB-31 | P2 | manual Android header/menu/ad slots | manual |
 
 ### Чек-лист платформ
 
@@ -605,7 +625,7 @@
 
 **Инфраструктурно подтверждено:**
 - ✅ API отдаёт реальные данные (200) после переключения `EXPO_PUBLIC_API_URL` на рабочий бэкенд `http://192.168.50.36` (в `.env` был мёртвый порт `127.0.0.1:8112` → 502). Деталь по slug/id отдаётся с завершающим слешем (`/api/travels/by-slug/{slug}/`).
-- ✅ Шапка (desktop): Идеи поездок · Беларусь · Карта · Места · Случайный маршрут · Квесты · Instagram · Войти · Гость.
+- ✅ Шапка (desktop): Идеи поездок · Беларусь · Карта · Места · Случайный маршрут · Квесты · Instagram-гиды по Беларуси · Войти · Гость.
 - ✅ Нижняя таб-навигация (mobile): Маршруты · Беларусь · Карта · Места · Профиль · Ещё.
 - ✅ Consent-баннер (Отклонить/Принять) и футер «© MeTravel 2020–2026» рендерятся.
 

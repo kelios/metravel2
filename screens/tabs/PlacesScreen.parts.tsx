@@ -11,6 +11,7 @@ import {
 import Feather from '@expo/vector-icons/Feather'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
+import PointNavigationMenu from '@/components/navigation/PointNavigationMenu'
 import RelatedTravelActionStack from '@/components/travel/RelatedTravelActionStack'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { type ThemedColors } from '@/hooks/useTheme'
@@ -150,6 +151,7 @@ export const PlaceCard = React.memo(function PlaceCard({
             </Pressable>
           ) : null}
         </View>
+        <PointNavigationMenu coord={place.coord} testIDPrefix={`place-navigation-${place.id}`} />
       </View>
     </View>
   )

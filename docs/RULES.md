@@ -46,6 +46,10 @@ npm run test:run
   - prefer the e2e auth mechanism — the Playwright auth setup or a programmatic login (login API → `Authorization: Token <token>` injected into the store/headers) — over hand-typing credentials into UI fields, and reuse the e2e session where possible;
   - this is scoped to local/preview QA against the dev server only; never use it for destructive or irreversible actions;
   - never print, echo, log, screenshot, or commit the credential values — keep them only in `.env.e2e`.
+- Task-board token recovery (mandatory):
+  - if `/api/tasks/`, `/api/tasks/board/`, `/api/sprints/`, or the MCP `ticket-board` tools return `HTTP 401`, first refresh the staff DRF token with a programmatic login using the credentials from `.env.e2e` and the procedure in `docs/TASK_BOARD_MCP.md`;
+  - write the refreshed token only to `.secrets/metravel-task-board.env`, never to chat, screenshots, committed files, or shell logs, then retry the board endpoints;
+  - a local fallback draft is allowed only after token refresh fails or the refreshed token is not authorized, and it must still be synced to the board before handoff when access is restored.
 - Dev media caveat:
   - in local dev, article/travel images may fail to load because content can come from production data while media files remain tied to production storage/CDN access;
   - do not treat this alone as a frontend bug and do not change app code only to “fix” dev-only missing production media;
@@ -76,6 +80,7 @@ npm run test:run
 - Task board tracking (mandatory):
   - frontend, backend, and cross-functional work items must be created on the shared MCP task board through `ticket-board`; see `docs/TASK_BOARD_MCP.md`;
   - every `area=front` or `area=back` board task must include the required Task Contract, sprint, dependencies, blockers, validation, and Done gate;
+  - every new board task, including Android/native QA bugs, must be assigned to the current active sprint unless `docs/TASK_BOARD_MCP.md` defines a more specific active sprint rule for that area;
   - do not create new local `tasks/*.md` task files as the normal workflow; local task files are only a temporary fallback/migration draft when the board is unavailable, and must be imported/synced to the board before handoff;
   - do not create ad-hoc backend task notes outside the board workflow.
 - For performance checks (Lighthouse), run against a production web export:

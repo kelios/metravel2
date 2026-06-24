@@ -1,11 +1,15 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   StyleSheet,
   Platform,
+  Pressable,
   ScrollView,
+  Text,
+  View,
 } from 'react-native'
-import { Stack, useLocalSearchParams } from 'expo-router'
+import Feather from '@expo/vector-icons/Feather'
+import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Article } from '@/types/types'
 import IframeRenderer, { iframeModel } from '@native-html/iframe-plugin'
@@ -16,15 +20,18 @@ import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/a
 import { SafeHtml } from '@/components/article/SafeHtml'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
+import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler'
 import { handleRichTextLinkPress } from '@/utils/internalLinks'
 
 export default function ArticleDetails() {
   const { width } = useResponsive()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
+  const router = useRouter()
 
   const params = useLocalSearchParams()
   const routeParam = Array.isArray(params.id) ? String(params.id[0] ?? '') : String(params.id ?? '')
+  const returnHref = useMemo(() => normalizeArticleReturnHref(params.from), [params.from])
   const numericId = useMemo(() => extractArticleIdFromParam(routeParam), [routeParam])
   const normalizedSlug = useMemo(() => {
     const base = String(routeParam || '').trim().split('#')[0].split('?')[0]
@@ -39,6 +46,26 @@ export default function ArticleDetails() {
   const [article, setArticle] = useState<Article | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const handleBack = useCallback(() => {
+    if (returnHref) {
+      router.replace(returnHref)
+      return
+    }
+    if (router.canGoBack()) {
+      router.back()
+      return
+    }
+    router.replace('/articles')
+  }, [returnHref, router])
+
+  const handleAndroidBack = useCallback(() => {
+    if (!returnHref) return false
+    router.replace(returnHref)
+    return true
+  }, [returnHref, router])
+
+  useAndroidBackHandler(handleAndroidBack)
 
   useEffect(() => {
     let cancelled = false
@@ -92,7 +119,8 @@ export default function ArticleDetails() {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-        <Stack.Screen options={{ headerTitle: 'Статья' }} />
+        <Stack.Screen options={{ headerTitle: 'Статья', headerBackVisible: false }} />
+        <ArticleBackButton colors={colors} onPress={handleBack} styles={styles} />
         <ActivityIndicator style={styles.loader} color={colors.primary} />
       </SafeAreaView>
     )
@@ -101,7 +129,8 @@ export default function ArticleDetails() {
   if (!article || errorMessage) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-        <Stack.Screen options={{ headerTitle: 'Статья не найдена' }} />
+        <Stack.Screen options={{ headerTitle: 'Статья не найдена', headerBackVisible: false }} />
+        <ArticleBackButton colors={colors} onPress={handleBack} styles={styles} />
         <ScrollView style={styles.container} contentContainerStyle={styles.centerContent}>
           <Title style={styles.errorTitle}>Статья не найдена</Title>
           <SafeHtml html={errorMessage || 'Проверьте ссылку на статью.'} />
@@ -112,8 +141,9 @@ export default function ArticleDetails() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+      <Stack.Screen options={{ headerTitle: article.name, headerBackVisible: false }} />
+      <ArticleBackButton colors={colors} onPress={handleBack} styles={styles} />
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-        <Stack.Screen options={{ headerTitle: article.name }} />
         {article.description && (
           <Card style={styles.card}>
             <Card.Content>
@@ -164,6 +194,47 @@ export default function ArticleDetails() {
   )
 }
 
+function normalizeArticleReturnHref(value: unknown): Href | null {
+  const raw = Array.isArray(value) ? String(value[0] ?? '') : String(value ?? '')
+  if (!raw.trim()) return null
+
+  let decoded = raw.trim()
+  try {
+    decoded = decodeURIComponent(decoded)
+  } catch {
+    // Keep the raw value; the checks below still protect external URLs.
+  }
+
+  if (!decoded.startsWith('/') || decoded.startsWith('//')) return null
+  const withoutHash = decoded.split('#')[0] || '/'
+  if (withoutHash.startsWith('/article/')) return null
+  return withoutHash as Href
+}
+
+function ArticleBackButton({
+  colors,
+  onPress,
+  styles,
+}: {
+  colors: ReturnType<typeof useThemedColors>
+  onPress: () => void
+  styles: ReturnType<typeof createStyles>
+}) {
+  return (
+    <View style={styles.topBar}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel="Вернуться назад"
+        style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
+      >
+        <Feather name="arrow-left" size={18} color={colors.text} />
+        <Text style={styles.backButtonText}>Назад</Text>
+      </Pressable>
+    </View>
+  )
+}
+
 const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
     safeArea: {
@@ -172,6 +243,32 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     loader: {
       flex: 1,
+    },
+    topBar: {
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      paddingBottom: 4,
+      backgroundColor: colors.background,
+    },
+    backButton: {
+      minHeight: 40,
+      alignSelf: 'flex-start',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      borderRadius: 20,
+      paddingHorizontal: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    backButtonPressed: {
+      opacity: 0.82,
+    },
+    backButtonText: {
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: '700',
     },
     container: {
       flex: 1,

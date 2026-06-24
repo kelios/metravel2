@@ -17,7 +17,7 @@ import { globalFocusStyles } from '@/styles/globalFocus'
 import { hapticNotification } from '@/utils/haptics'
 
 import QuestPointNavigator from './QuestPointNavigator'
-import { copyQuestCoords, detectQuestMapApps, openQuestMap } from './questWizardHelpers'
+import { copyQuestCoords, openQuestMap, type QuestMapApp } from './questWizardHelpers'
 
 const SHOULD_USE_NATIVE_DRIVER = false
 
@@ -119,8 +119,6 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
   const [value, setValue] = useState('')
   const [error, setError] = useState('')
   const [imageModalVisible, setImageModalVisible] = useState(false)
-  const [hasOrganic, setHasOrganic] = useState(false)
-  const [hasMapsme, setHasMapsme] = useState(false)
   const [navExpanded, setNavExpanded] = useState(false)
   const shakeAnim = useRef(new Animated.Value(0)).current
 
@@ -145,24 +143,8 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
     setError('')
   }, [step.id])
 
-  useEffect(() => {
-    if (!showLocationControls) return undefined
-
-    let cancelled = false
-    ;(async () => {
-      const detected = await detectQuestMapApps()
-      if (!cancelled) {
-        setHasOrganic(detected.hasOrganic)
-        setHasMapsme(detected.hasMapsme)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [showLocationControls, step.id])
-
   const openInMap = useCallback(
-    (app: 'google' | 'apple' | 'yandex' | 'organic' | 'mapsme') => openQuestMap(step, app),
+    (app: QuestMapApp) => openQuestMap(step, app),
     [step],
   )
   const openDefaultMap = useCallback(() => {
@@ -180,7 +162,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
   const openImageModal = useCallback(() => {
     setImageModalVisible(true)
   }, [])
-  const openNavigationOption = useCallback((app: 'google' | 'apple' | 'yandex' | 'organic' | 'mapsme') => {
+  const openNavigationOption = useCallback((app: QuestMapApp) => {
     void openInMap(app)
     setNavExpanded(false)
   }, [openInMap])
@@ -374,9 +356,11 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
                       <View style={styles.navDropdown}>
                         <Pressable style={styles.navOption} onPress={() => openNavigationOption('google')}><Text style={styles.navOptionText}>Google Maps</Text></Pressable>
                         {Platform.OS === 'ios' && (<Pressable style={styles.navOption} onPress={() => openNavigationOption('apple')}><Text style={styles.navOptionText}>Apple Maps</Text></Pressable>)}
-                        <Pressable style={styles.navOption} onPress={() => openNavigationOption('yandex')}><Text style={styles.navOptionText}>Yandex Maps</Text></Pressable>
-                        {hasOrganic && (<Pressable style={styles.navOption} onPress={() => openNavigationOption('organic')}><Text style={styles.navOptionText}>Organic Maps</Text></Pressable>)}
-                        {hasMapsme && (<Pressable style={styles.navOption} onPress={() => openNavigationOption('mapsme')}><Text style={styles.navOptionText}>MAPS.ME</Text></Pressable>)}
+                        <Pressable style={styles.navOption} onPress={() => openNavigationOption('organic')}><Text style={styles.navOptionText}>Organic Maps</Text></Pressable>
+                        <Pressable style={styles.navOption} onPress={() => openNavigationOption('waze')}><Text style={styles.navOptionText}>Waze</Text></Pressable>
+                        <Pressable style={styles.navOption} onPress={() => openNavigationOption('yandex')}><Text style={styles.navOptionText}>Яндекс.Навигатор</Text></Pressable>
+                        <Pressable style={styles.navOption} onPress={() => openNavigationOption('mapsme')}><Text style={styles.navOptionText}>MAPS.ME</Text></Pressable>
+                        <Pressable style={styles.navOption} onPress={() => openNavigationOption('osm')}><Text style={styles.navOptionText}>OpenStreetMap</Text></Pressable>
                       </View>
                     )}
                   </>

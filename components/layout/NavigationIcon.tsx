@@ -72,28 +72,28 @@ function QuestRouteIcon({
       {...accessibilityProps}
     >
       <Path
-        d="M4.5 6.7 8.8 5l5.6 2 5.1-2v12.3l-5.1 2-5.6-2-4.3 1.7V6.7Z"
+        d="M12 11.2a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <Path
-        d="M8.8 5v12.3M14.4 7v12.3"
+        d="M6.7 20.2c.5-3.4 2.3-5.1 5.3-5.1s4.8 1.7 5.3 5.1"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <Path
-        d="M7.3 8.6c1.9 1.3 1.2 4.1 3.6 4.6 1.7.3 2.5-1.2 4.2-.8"
+        d="M5.2 13.4 9 12l3.7 1.4 4.1-1.6v5.8l-4.1 1.6L9 17.8l-3.8 1.4v-5.8Z"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <Path
-        d="M15.5 8.5h2.5l-.7 1 .7 1h-2.5V8.5Z"
+        d="M18.6 4.4c0-1.1.8-1.9 2-1.9s2 .7 2 1.8c0 1.5-1.6 1.7-1.6 2.8M21 9.2h.01"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"

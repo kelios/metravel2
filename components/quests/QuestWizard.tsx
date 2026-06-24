@@ -29,7 +29,6 @@ import { useQuestGeofence } from './useQuestGeofence';
 import {
     confirmQuestAsync,
     copyQuestCoords,
-    detectQuestMapApps,
     notifyQuest,
     openQuestMap,
     type QuestMapApp,
@@ -143,33 +142,12 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 
     const [showFinaleOnly, setShowFinaleOnly] = useState(false);
     const [desktopNavExpanded, setDesktopNavExpanded] = useState(false);
-    const [desktopHasOrganic, setDesktopHasOrganic] = useState(false);
-    const [desktopHasMapsme, setDesktopHasMapsme] = useState(false);
 
     const currentStep = allSteps[currentIndex];
 
     useEffect(() => {
         setDesktopNavExpanded(false);
     }, [currentStep?.id]);
-
-    useEffect(() => {
-        if (!useWideInlineLayout || !currentStep || currentStep.id === 'intro') {
-            setDesktopHasOrganic(false);
-            setDesktopHasMapsme(false);
-            return;
-        }
-        let cancelled = false;
-        (async () => {
-            const detected = await detectQuestMapApps();
-            if (!cancelled) {
-                setDesktopHasOrganic(detected.hasOrganic);
-                setDesktopHasMapsme(detected.hasMapsme);
-            }
-        })();
-        return () => {
-            cancelled = true;
-        };
-    }, [currentStep, useWideInlineLayout]);
 
     const openCurrentStepInMap = useCallback((app: QuestMapApp) => {
         if (!currentStep) return;
@@ -329,8 +307,6 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 useWideInlineLayout={useWideInlineLayout}
                                 desktopNavExpanded={desktopNavExpanded}
                                 setDesktopNavExpanded={setDesktopNavExpanded}
-                                desktopHasOrganic={desktopHasOrganic}
-                                desktopHasMapsme={desktopHasMapsme}
                                 showMap={showMap}
                                 toggleMap={toggleMap}
                                 openCurrentStepInMap={openCurrentStepInMap}

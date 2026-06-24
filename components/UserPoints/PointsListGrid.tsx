@@ -145,7 +145,7 @@ export const PointsListGrid: React.FC<{
   const lastGeocodedQueryRef = React.useRef<string>('')
   const panelOptions = React.useMemo(
     () => [
-      { key: 'filters', label: 'Параметры' },
+      { key: 'filters', label: 'Фильтры карты' },
       { key: 'list', label: `Список (${filteredPoints.length})` },
     ],
     [filteredPoints.length]

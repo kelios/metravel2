@@ -24,6 +24,7 @@ React 19 + React Native 0.84 + Expo 55 (Expo Router, file-based) · web: RN Web 
 - Серверный стейт — React Query, клиентский — Zustand; импорты через алиас `@/`
 - TS strict; новый `any` запрещён в `api/`, `hooks/`, `stores/`; RN Web-совместимость для всех компонентов, используемых на web
 - НЕ добавлять: комментарии/docstrings к нетронутому коду, error handling невозможных сценариев, абстракции для одноразовых операций, backwards-compat костыли
+- **Сохранение travel = save ≠ moderate (load-bearing, см. `docs/TRAVEL_SAVE_MODERATION_CONTRACT.md`):** автосейв/content-save НИКОГДА не блокируется валидацией полноты и не теряет данные при любом статусе. Валидация полноты (categories у точек, обязательные поля) — РОВНО ОДИН РАЗ, при явной отправке ещё‑не‑промодерированной статьи на модерацию (`enforce_moderation_validation=true` И текущий `moderation=false`). Уже промодерированную (`moderation=true`) статью правим как черновик — без валидации, доверяем автору. Любой агент, трогающий редактирование/создание travel, сверяется с этим контрактом (тикет #555)
 
 ## Не трогать без явного запроса
 `eas.json`, `app.json`, `.github/workflows/`, `nginx/`, `plugins/`, `scripts/`, `public/robots.txt`, `public/sitemap.xml`, `entry.js`

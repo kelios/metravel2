@@ -552,11 +552,19 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                   ]}
                 >
                   {selectedCount > 0 && (
-                    <View style={styles.selectedSummaryRow}>
-                      <Text style={styles.selectedSummaryLabel}>Выбрано:</Text>
-                      <Text style={styles.selectedSummaryText} numberOfLines={2}>
-                        {selectedNames.length > 0 ? selectedNames.join(', ') : selectedArray.join(', ')}
-                      </Text>
+                    <View
+                      style={styles.selectedSummaryRow}
+                      accessibilityLabel={`Выбрано: ${
+                        selectedNames.length > 0 ? selectedNames.join(', ') : selectedArray.join(', ')
+                      }`}
+                    >
+                      {(selectedNames.length > 0 ? selectedNames : selectedArray.map(String)).map((name) => (
+                        <View key={`${group.key}-${name}`} style={styles.selectedSummaryChip}>
+                          <Text style={styles.selectedSummaryText} numberOfLines={1}>
+                            {name}
+                          </Text>
+                        </View>
+                      ))}
                     </View>
                   )}
                   {orderedOptions.map(option => {

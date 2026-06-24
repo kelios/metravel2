@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 
 import Button from '@/components/ui/Button';
 
@@ -39,22 +40,32 @@ export const PointsListActionsModal: React.FC<Props> = ({
         />
 
         <View style={styles.actionsModal}>
-          <Text style={styles.actionsTitle}>Действия</Text>
+          <View style={styles.actionsHeader}>
+            <Text style={styles.actionsTitle}>Управление точками</Text>
+            <Pressable
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Закрыть меню действий"
+              style={styles.actionsCloseButton}
+            >
+              <Feather name="x" size={20} color={styles.actionsTitle.color} />
+            </Pressable>
+          </View>
 
           {exportError ? <Text style={styles.manualErrorText}>{exportError}</Text> : null}
 
           <Button
-            label="Импорт"
+            label="Импортировать точки"
             onPress={onImport}
-            accessibilityLabel="Импорт"
+            accessibilityLabel="Импортировать точки"
             fullWidth
             style={styles.actionsButton}
           />
 
           <Button
-            label={isExporting ? 'Экспорт…' : 'Экспорт'}
+            label={isExporting ? 'Экспорт…' : 'Экспортировать KML'}
             onPress={onExport}
-            accessibilityLabel="Экспорт"
+            accessibilityLabel="Экспортировать KML"
             fullWidth
             loading={isExporting}
             style={styles.actionsButton}

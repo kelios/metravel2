@@ -9,7 +9,7 @@ import {
   type GestureResponderEvent,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import { useAuth } from '@/context/AuthContext'
@@ -67,8 +67,14 @@ function confirmRemoveFromCalendar(title: string, onConfirm: () => void) {
   )
 }
 
+function parseStatusParam(value: unknown): TravelStatus | null {
+  if (value === 'visited' || value === 'planned' || value === 'wishlist') return value
+  return null
+}
+
 export default function CalendarScreen() {
   const router = useRouter()
+  const params = useLocalSearchParams<{ status?: string }>()
   const colors = useThemedColors()
   const { width } = useWindowDimensions()
   const { isAuthenticated, authReady, userId } = useAuth()
@@ -77,7 +83,7 @@ export default function CalendarScreen() {
   const setStatus = useTravelStatusStore((state) => state.setStatus)
   const removeStatus = useTravelStatusStore((state) => state.removeStatus)
 
-  const [activeTab, setActiveTab] = useState<TravelStatus>('planned')
+  const [activeTab, setActiveTab] = useState<TravelStatus>(() => parseStatusParam(params.status) ?? 'planned')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [hasLoadedLocalStatus, setHasLoadedLocalStatus] = useState(false)
   const [dateEditor, setDateEditor] = useState<DateEditorState>(null)
@@ -94,6 +100,13 @@ export default function CalendarScreen() {
       robots="noindex, nofollow"
     />
   ), [canonical])
+
+  useEffect(() => {
+    const nextStatus = parseStatusParam(params.status)
+    if (!nextStatus) return
+    setActiveTab((current) => (current === nextStatus ? current : nextStatus))
+    setSelectedDate(null)
+  }, [params.status])
 
   useEffect(() => {
     if (!authReady) return

@@ -4,9 +4,9 @@ import NewConversationPicker from '@/components/messages/NewConversationPicker';
 import type { MessagingUser } from '@/api/messages';
 
 const mockUsers: MessagingUser[] = [
-    { id: 1, first_name: 'Иван', last_name: 'Петров', avatar: 'https://example.com/avatar1.jpg', user: 10 },
-    { id: 2, first_name: 'Мария', last_name: 'Сидорова', avatar: null, user: 20 },
-    { id: 3, first_name: 'Алексей', last_name: null, avatar: null, user: 30 },
+    { id: 1, first_name: 'Иван', last_name: 'Петров', avatar: 'https://example.com/avatar1.jpg', user: 10, email: 'ivan@example.com', username: 'ivan-travel' },
+    { id: 2, first_name: 'Мария', last_name: 'Сидорова', avatar: null, user: 20, email: 'maria@example.com', nickname: 'masha' },
+    { id: 3, first_name: 'Алексей', last_name: null, avatar: null, user: 30, nick: 'alex-map' },
 ];
 
 const defaultProps = {
@@ -59,6 +59,26 @@ describe('NewConversationPicker', () => {
         fireEvent.changeText(searchInput, 'Мария');
         expect(queryByText('Мария Сидорова')).toBeTruthy();
         expect(queryByText('Иван Петров')).toBeNull();
+    });
+
+    it('filters users by email, username and nickname', () => {
+        const { getByLabelText, queryByText } = render(
+            <NewConversationPicker {...defaultProps} />
+        );
+
+        const searchInput = getByLabelText('Поиск пользователя');
+
+        fireEvent.changeText(searchInput, 'ivan@example.com');
+        expect(queryByText('Иван Петров')).toBeTruthy();
+        expect(queryByText('Мария Сидорова')).toBeNull();
+
+        fireEvent.changeText(searchInput, 'masha');
+        expect(queryByText('Мария Сидорова')).toBeTruthy();
+        expect(queryByText('Иван Петров')).toBeNull();
+
+        fireEvent.changeText(searchInput, 'alex-map');
+        expect(queryByText('Алексей')).toBeTruthy();
+        expect(queryByText('Мария Сидорова')).toBeNull();
     });
 
     it('shows empty state when no users match search', () => {

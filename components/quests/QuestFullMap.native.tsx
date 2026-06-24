@@ -10,6 +10,7 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
+    useWindowDimensions,
     View,
 } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
@@ -71,18 +72,23 @@ function QuestFullMap({
     height = 520,
     title = 'Карта квеста',
     activeStepIndex,
+    allowFullscreen = true,
 }: {
     steps: StepPoint[];
     height?: number;
     title?: string;
     activeStepIndex?: number;
+    allowFullscreen?: boolean;
 }) {
     const [isLoading, setIsLoading] = useState(true);
     const [exportMenuVisible, setExportMenuVisible] = useState(false);
+    const [fullscreenVisible, setFullscreenVisible] = useState(false);
     const [markerStatus, setMarkerStatus] = useState<MarkerStatus | null>(null);
     const webViewRef = useRef<WebView>(null);
+    const { height: viewportHeight } = useWindowDimensions();
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
+    const fullscreenMapHeight = Math.max(360, Math.round(viewportHeight - 72));
 
     const points = useMemo(
         () => steps.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng)),
@@ -345,15 +351,56 @@ function QuestFullMap({
                 <Text style={styles.toolbarTitle} numberOfLines={1}>
                     {title}
                 </Text>
-                <TouchableOpacity
-                    style={styles.mobileMenuButton}
-                    onPress={() => setExportMenuVisible(true)}
-                    accessibilityRole="button"
-                    accessibilityLabel="Скачать маршрут (PNG, GPX, GeoJSON)"
-                >
-                    <Feather name="download" size={18} color={colors.textOnPrimary} />
-                </TouchableOpacity>
+                <View style={styles.toolbarActions}>
+                    {allowFullscreen && (
+                        <TouchableOpacity
+                            style={styles.mobileMenuButton}
+                            onPress={() => setFullscreenVisible(true)}
+                            accessibilityRole="button"
+                            accessibilityLabel="Открыть карту квеста на весь экран"
+                        >
+                            <Feather name="maximize-2" size={18} color={colors.textOnPrimary} />
+                        </TouchableOpacity>
+                    )}
+                    <TouchableOpacity
+                        style={styles.mobileMenuButton}
+                        onPress={() => setExportMenuVisible(true)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Скачать маршрут (PNG, GPX, GeoJSON)"
+                    >
+                        <Feather name="download" size={18} color={colors.textOnPrimary} />
+                    </TouchableOpacity>
+                </View>
             </View>
+
+            {fullscreenVisible ? (
+                <Modal
+                    visible
+                    animationType="slide"
+                    onRequestClose={() => setFullscreenVisible(false)}
+                >
+                    <View style={styles.fullscreenModal}>
+                        <View style={styles.fullscreenHeader}>
+                            <Text style={styles.fullscreenTitle} numberOfLines={1}>{title}</Text>
+                            <TouchableOpacity
+                                style={styles.fullscreenClose}
+                                onPress={() => setFullscreenVisible(false)}
+                                accessibilityRole="button"
+                                accessibilityLabel="Закрыть полноэкранную карту квеста"
+                            >
+                                <Feather name="x" size={20} color={colors.text} />
+                            </TouchableOpacity>
+                        </View>
+                        <QuestFullMap
+                            steps={steps}
+                            height={fullscreenMapHeight}
+                            title={title}
+                            activeStepIndex={activeStepIndex}
+                            allowFullscreen={false}
+                        />
+                    </View>
+                </Modal>
+            ) : null}
 
             <View
                 style={styles.pointStatus}
@@ -495,12 +542,46 @@ const createStyles = (colors: ThemedColors) =>
             flex: 1,
             marginRight: 8,
         },
+        toolbarActions: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+        },
         mobileMenuButton: {
             padding: 8,
             borderRadius: 8,
             backgroundColor: colors.primary,
             alignItems: 'center',
             justifyContent: 'center',
+        },
+        fullscreenModal: {
+            flex: 1,
+            backgroundColor: colors.background,
+            paddingTop: 8,
+        },
+        fullscreenHeader: {
+            minHeight: 56,
+            paddingHorizontal: 12,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+            backgroundColor: colors.surface,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+        },
+        fullscreenTitle: {
+            flex: 1,
+            color: colors.text,
+            fontSize: 16,
+            fontWeight: '800',
+        },
+        fullscreenClose: {
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: colors.backgroundSecondary,
         },
         mapBox: {
             flex: 1,

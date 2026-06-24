@@ -15,6 +15,7 @@ type Params = {
   activeFilterChips: Array<{ key: string; label: string }>;
   onRemoveFilterChip: (key: string) => void;
   viewMode: 'list' | 'map';
+  onViewModeChange: (mode: 'list' | 'map') => void;
   showFilters: boolean;
   onToggleFilters: () => void;
   showMapSettings: boolean;
@@ -44,6 +45,7 @@ export const usePointsHeaderRenderer = ({
   activeFilterChips,
   onRemoveFilterChip,
   viewMode,
+  onViewModeChange,
   showFilters,
   onToggleFilters,
   showMapSettings,
@@ -74,7 +76,7 @@ export const usePointsHeaderRenderer = ({
         activeFilterChips={activeFilterChips}
         onRemoveFilterChip={onRemoveFilterChip}
         viewMode={viewMode}
-        onViewModeChange={() => {}}
+        onViewModeChange={onViewModeChange}
         showFilters={showFilters}
         onToggleFilters={onToggleFilters}
         showMapSettings={showMapSettings}
@@ -112,6 +114,7 @@ export const usePointsHeaderRenderer = ({
     onSearch,
     onToggleFilters,
     onToggleMapSettings,
+    onViewModeChange,
     searchQuery,
     showFilters,
     showingRecommendations,

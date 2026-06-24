@@ -1,6 +1,7 @@
 import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import * as ReactNative from 'react-native';
 
 import NearTravelList from '@/components/travel/NearTravelList';
 import type { Travel } from '@/types/types';
@@ -52,6 +53,7 @@ describe('NearTravelList', () => {
   afterEach(() => {
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
+    jest.restoreAllMocks();
     queryClient.clear();
   });
 
@@ -121,6 +123,41 @@ describe('NearTravelList', () => {
 
     await act(async () => {
       await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockTravelMap).toHaveBeenCalled();
+    const lastCall = mockTravelMap.mock.calls[mockTravelMap.mock.calls.length - 1]?.[0];
+    expect(lastCall?.showRouteLine).toBe(false);
+  });
+
+  it('keeps list/map switcher available in embedded mobile details section', async () => {
+    jest.spyOn(ReactNative, 'useWindowDimensions').mockReturnValue({
+      width: 390,
+      height: 844,
+      scale: 1,
+      fontScale: 1,
+    });
+    fetchTravelsNear.mockResolvedValueOnce([
+      {
+        id: 201,
+        name: 'Nearby mobile',
+        points: [{ coord: '53.9,27.56', address: 'Минск' }],
+      },
+    ]);
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <NearTravelList travel={{ id: 1 }} embedded />
+      </QueryClientProvider>
+    );
+
+    await flush();
+
+    expect(screen.getByText('Список')).toBeTruthy();
+    fireEvent.press(screen.getByText('Карта'));
+
+    await act(async () => {
       await Promise.resolve();
     });
 

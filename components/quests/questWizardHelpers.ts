@@ -2,10 +2,17 @@ import { Alert, Image, Linking, Platform } from 'react-native'
 
 import { openExternalUrl } from '@/utils/externalLinks'
 import { showToastMessage } from '@/utils/toast'
+import {
+  buildGoogleMapsUrl,
+  buildOpenStreetMapUrl,
+  buildOrganicMapsUrl,
+  buildWazeUrl,
+  buildYandexNaviUrl,
+} from '@/components/MapPage/Map/mapLinks'
 
 import { getQuestClipboard } from './questWizardMedia'
 
-export type QuestMapApp = 'google' | 'apple' | 'yandex' | 'organic' | 'mapsme'
+export type QuestMapApp = 'google' | 'apple' | 'yandex' | 'organic' | 'mapsme' | 'waze' | 'osm'
 
 type QuestMapPoint = {
   lat: number
@@ -13,7 +20,17 @@ type QuestMapPoint = {
   title?: string
 }
 
-const QUEST_MAP_PROTOCOLS = ['http:', 'https:', 'geo:', 'om:', 'organicmaps:', 'mapsme:'] as const
+const QUEST_MAP_PROTOCOLS = [
+  'http:',
+  'https:',
+  'geo:',
+  'om:',
+  'organicmaps:',
+  'mapsme:',
+  'waze:',
+  'yandexnavi:',
+  'yandexmaps:',
+] as const
 
 export const notifyQuest = (message: string) => {
   void showToastMessage({ text1: message, type: 'info', visibilityTime: 2500 })
@@ -83,23 +100,29 @@ const openQuestMapCandidates = async (candidates: Array<string | undefined>) => 
 export const openQuestMap = async (point: QuestMapPoint, app: QuestMapApp) => {
   const { lat, lng } = point
   const name = encodeURIComponent(point.title || 'Point')
+  const coord = `${lat},${lng}`
   const urls = {
-    google: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+    google: buildGoogleMapsUrl(coord),
     apple: `http://maps.apple.com/?ll=${lat},${lng}`,
-    yandex: `https://yandex.ru/maps/?pt=${lng},${lat}&z=15`,
+    yandex: buildYandexNaviUrl(coord),
     organic_1: `om://map?ll=${lat},${lng}&z=17`,
     organic_2: `organicmaps://map?ll=${lat},${lng}&z=17`,
-    organic_web: `https://omaps.app/?lat=${lat}&lon=${lng}&zoom=17`,
+    organic_best: buildOrganicMapsUrl(coord),
+    organic_web: `https://omaps.app/${lat},${lng}`,
     mapsme: `mapsme://map?ll=${lat},${lng}&zoom=17&n=${name}`,
     geo: Platform.OS === 'android' ? `geo:${lat},${lng}?q=${lat},${lng}(${name})` : undefined,
+    waze: buildWazeUrl(coord),
+    osm: buildOpenStreetMapUrl(coord),
   } as const
 
   if (app === 'organic') {
-    return openQuestMapCandidates([urls.organic_1, urls.organic_2, urls.organic_web, urls.geo, urls.google])
+    return openQuestMapCandidates([urls.organic_best, urls.organic_1, urls.organic_2, urls.organic_web, urls.geo, urls.google])
   }
   if (app === 'mapsme') {
     return openQuestMapCandidates([urls.mapsme, urls.geo, urls.google])
   }
+  if (app === 'waze') return openQuestMapCandidates([urls.waze, urls.google])
+  if (app === 'osm') return openQuestMapCandidates([urls.osm])
   return openQuestMapCandidates([urls[app]])
 }
 

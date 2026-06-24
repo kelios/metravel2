@@ -1,22 +1,11 @@
-import React, { Suspense } from 'react'
-import { ActivityIndicator, Platform, Text, View } from 'react-native'
+import React from 'react'
+import { Platform, Text, View } from 'react-native'
 
 import type { Travel } from '@/types/types'
 
 import { getAffiliateOffers, isAffiliateEnabled } from '@/components/affiliate/affiliateConfig'
+import AffiliateOffers from '@/components/affiliate/AffiliateOffers'
 import { getCountryCodeByCoords } from '@/utils/geoCountry'
-import { useTravelDetailsStyles } from '../TravelDetailsStyles'
-
-const LazyAffiliateOffers = React.lazy(() => import('@/components/affiliate/AffiliateOffers'))
-
-const Fallback = () => {
-  const styles = useTravelDetailsStyles()
-  return (
-    <View style={styles.fallback}>
-      <ActivityIndicator size="small" accessibilityLabel="Загрузка предложений" />
-    </View>
-  )
-}
 
 /** ISO country code: explicit `countryCode`, else derived from the first point's coords. */
 const resolveCountryCode = (travel: Travel): string | undefined => {
@@ -41,9 +30,9 @@ export const AffiliateSection: React.FC<{
   travel: Travel
   styles: any
 }> = ({ travel, styles }) => {
-  // Web-only, contextual to the route's location, and off entirely until the
-  // owner configures a Travelpayouts marker — so nothing ships until ready (FE-2).
-  if (Platform.OS !== 'web' || !isAffiliateEnabled()) return null
+  // Contextual to the route's location, and off entirely until the owner
+  // configures a Travelpayouts marker — so nothing ships until ready (FE-2).
+  if (!isAffiliateEnabled()) return null
 
   const city = travel.cityName?.trim()
   const country = travel.countryName?.trim()
@@ -55,32 +44,46 @@ export const AffiliateSection: React.FC<{
   // Don't render an orphan header when there are no offers to show.
   if (getAffiliateOffers({ city, country, countryCode, travelId: travel.id }).length === 0) return null
 
-  return (
-    <Suspense fallback={<Fallback />}>
-      <View
-        style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
-        collapsable={false}
-        accessibilityLabel="Полезное в поездку"
-        accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
-        data-section-key="affiliate"
-      >
-        <Text
-          style={styles.sectionHeaderText}
-          accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
-          aria-level={2 as any}
-        >Полезное в поездку</Text>
-        <Text style={styles.sectionSubtitle}>Экскурсии и жильё рядом с маршрутом</Text>
+  const webRegionProps = Platform.OS === 'web'
+    ? {
+        accessibilityRole: 'region' as any,
+        dataSet: { sectionKey: 'affiliate' },
+      }
+    : null
 
-        <View style={{ marginTop: 12 }}>
-          <LazyAffiliateOffers
-            city={city}
-            country={country}
-            countryCode={countryCode}
-            travelId={travel.id}
-          />
-        </View>
+  const webHeadingProps = Platform.OS === 'web'
+    ? {
+        accessibilityRole: 'heading' as any,
+        'aria-level': 2 as any,
+      }
+    : null
+
+  return (
+    <View
+      style={[
+        styles.sectionContainer,
+        styles.contentStable,
+        Platform.OS === 'web' ? styles.webDeferredSection : null,
+      ]}
+      collapsable={false}
+      accessibilityLabel="Полезное в поездку"
+      {...(webRegionProps ?? {})}
+    >
+      <Text
+        style={styles.sectionHeaderText}
+        {...(webHeadingProps ?? {})}
+      >Полезное в поездку</Text>
+      <Text style={styles.sectionSubtitle}>Экскурсии и жильё рядом с маршрутом</Text>
+
+      <View style={{ marginTop: 12 }}>
+        <AffiliateOffers
+          city={city}
+          country={country}
+          countryCode={countryCode}
+          travelId={travel.id}
+        />
       </View>
-    </Suspense>
+    </View>
   )
 }
 

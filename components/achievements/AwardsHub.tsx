@@ -10,7 +10,6 @@ import { Feather } from '@expo/vector-icons'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
-import { useMyAchievements } from '@/hooks/useAchievementsApi'
 import AwardsTabBar, {
   type AwardsTab,
 } from '@/components/achievements/AwardsTabBar'
@@ -28,9 +27,9 @@ interface Props {
 type TabKey = 'recent' | 'all' | 'path' | 'rare'
 
 const TABS: AwardsTab[] = [
-  { key: 'recent', label: 'Последние' },
-  { key: 'all', label: 'Все награды' },
   { key: 'path', label: 'Ваш путь' },
+  { key: 'all', label: 'Все награды' },
+  { key: 'recent', label: 'Последние' },
   { key: 'rare', label: 'Особые' },
 ]
 
@@ -41,9 +40,7 @@ const TABS: AwardsTab[] = [
 function AwardsHub({ testID, style }: Props) {
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
-  const [activeKey, setActiveKey] = useState<TabKey>('all')
-  const { data } = useMyAchievements()
-  const rank = data?.rank
+  const [activeKey, setActiveKey] = useState<TabKey>('path')
 
   return (
     <View style={[styles.card, style]} testID={testID ?? 'awards-hub'}>
@@ -52,13 +49,6 @@ function AwardsHub({ testID, style }: Props) {
         <Text style={styles.title} numberOfLines={1}>
           Награды
         </Text>
-        {rank ? (
-          <View style={styles.rankChip}>
-            <Text style={styles.rankChipText} numberOfLines={1}>
-              {rank.level} · {rank.title}
-            </Text>
-          </View>
-        ) : null}
       </View>
 
       <AwardsTabBar
@@ -76,7 +66,10 @@ function AwardsHub({ testID, style }: Props) {
         {activeKey === 'path' ? (
           <View style={styles.pathStack}>
             <CharacterProfileCard bare />
-            <ActivityProgressionSection bare />
+            <ActivityProgressionSection
+              bare
+              onOpenAwards={() => setActiveKey('all')}
+            />
           </View>
         ) : null}
 
@@ -106,19 +99,6 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       fontWeight: '800',
       color: colors.text,
       flexShrink: 1,
-    },
-    rankChip: {
-      marginLeft: 'auto',
-      maxWidth: '50%',
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: 999,
-      backgroundColor: colors.backgroundTertiary,
-    },
-    rankChipText: {
-      fontSize: DESIGN_TOKENS.typography.sizes.xs,
-      fontWeight: '700',
-      color: colors.text,
     },
     content: { marginTop: DESIGN_TOKENS.spacing.xxs },
     pathStack: { gap: DESIGN_TOKENS.spacing.md },

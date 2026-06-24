@@ -17,7 +17,7 @@ interface ProfileStatsTabProps {
   handleTravelMetricPress: (metric: ProfileTravelEngagementMetricKey) => void;
   personalTravelStatusSummary: { visited: number; wishlist: number; planned: number };
   formatTripsCount: (count: number) => string;
-  onOpenCalendar: () => void;
+  onOpenCalendar: (status?: 'visited' | 'wishlist' | 'planned') => void;
 }
 
 export function ProfileStatsTab({

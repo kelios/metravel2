@@ -645,16 +645,14 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
           </>
         ) : (
           <>
-            {!embedded && (
-              <SegmentedControl
-                options={segmentOptions}
-                value={viewMode}
-                onChange={(key) => setViewMode(key as Segment)}
-                accessibilityLabel="Переключатель вида"
-                compact
-                tone="subtle"
-              />
-            )}
+            <SegmentedControl
+              options={segmentOptions}
+              value={viewMode}
+              onChange={(key) => setViewMode(key as Segment)}
+              accessibilityLabel="Переключатель вида"
+              compact
+              tone="subtle"
+            />
 
             {viewMode === 'list' ? (
               embedded ? (

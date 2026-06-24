@@ -327,7 +327,7 @@ describe('ModernFilters Component', () => {
 
     const optionTexts = screen.getAllByText(/Акведук|Амфитеатр|Озеро/);
     expect(optionTexts[0].props.children).toBe('Озеро');
-    expect(screen.getByText('Выбрано:')).toBeTruthy();
+    expect(screen.queryByText('Выбрано:')).toBeNull();
     expect(screen.getAllByText('Озеро').length).toBeGreaterThan(1);
   });
 });

@@ -45,7 +45,7 @@
 | --- | --- | --- |
 | Feature, bugfix, refactor | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, профильный feature-doc при наличии | переиспользование существующих компонентов, hooks, utils; минимальный diff |
 | Hooks / logic extraction | `AGENTS.md`, `docs/RULES.md`, `docs/DEVELOPMENT.md`, профильный feature-doc, ближайшие существующие hooks | выносить focused hook без лишней абстракции, сохранять client/server state boundaries, не добавлять новые `any` |
-| Backend task planning | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `docs/TASK_BOARD_MCP.md`, `$metravel-task-contract` | новые FE/BE/backend задачи создавай на общем MCP task board через `ticket-board` (`metravel_task_create`); заполняй `area=front/back`, sprint, Task Contract, dependencies/blockers и validation/Done gate; локальные `tasks/*.md` используй только как временный fallback при недоступном борде с последующим sync/import |
+| Backend task planning | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `docs/TASK_BOARD_MCP.md`, `$metravel-task-contract` | новые FE/BE/backend задачи создавай на общем MCP task board через `ticket-board` (`metravel_task_create`); заполняй `area=front/back`, active sprint, Task Contract, dependencies/blockers и validation/Done gate; при `HTTP 401` сначала обнови staff token через `.env.e2e` по `docs/TASK_BOARD_MCP.md`; локальные `tasks/*.md` используй только как временный fallback после неуспешного token refresh с последующим sync/import |
 | Task board FE/BE contract | `docs/TASK_BOARD_MCP.md`, `$metravel-task-contract`, профильный feature-doc при наличии | каждая FE/BE задача на борде должна иметь `Task Contract`: scope, user-visible result, data/API contract, dependencies, fallback/mock policy, validation и Done gate; без runtime evidence не двигать в `done` |
 | Приёмка спринта / закрытие тикетов | `docs/TASK_BOARD_MCP.md`, агент `board-reviewer`, skill `/sprint-review` | проход по `review`-тикетам активного спринта: проверить Done gate реальными тестами + браузер/API-пробами против target env, зелёные → `done` с evidence, проваленные вернуть в `review`/`blocked_by`; статус соседней задачи и mock-fallback не доказательство |
 | Видимый UI, media, icons, tokens | всё из feature-контекста + `$metravel-ui-guardrails` | проверка в браузере на web, screenshot, отсутствие новых console errors |
@@ -118,6 +118,7 @@ Validation: <expected checks/evidence>.
 - Codex Orchestrator не подменяет профильные роли; он выбирает маршрут, проверяет правила и держит handoff компактным.
 - Перед передачей роли на deploy, release/build, server rebuild/restart, full/preflight tests, Playwright/e2e или Lighthouse orchestrator должен проверить operation gate из `AGENTS.md`/`docs/RULES.md`; если такая операция уже идет для того же target, новый агент не запускает дубль и фиксирует blocker/ожидание.
 - Любая FE/BE задача на общем борде без `Task Contract` считается неготовой к старту и к `done`; ticket-board/оркестратор должны сначала дописать контракт или вернуть задачу в refinement.
+- Любая новая задача должна попасть в текущий active sprint; если board API вернул `401`, ticket-board/оркестратор обязан обновить staff token через `.env.e2e` по `docs/TASK_BOARD_MCP.md` до создания локального fallback.
 - Project Analyst только анализирует и не меняет файлы, если пользователь отдельно не попросил перейти к docs/code changes.
 - Mobile Tester по умолчанию не меняет код; он дает evidence и баг-репорты для `$metravel-android-developer`, `$metravel-feature-builder` или `$metravel-ui-guardrails`.
 - Android Developer не меняет release/build configs (`app.json`, `eas.json`, `plugins/**`, `scripts/**`) без явного запроса и не заявляет Android-ready без device/emulator evidence.
@@ -201,7 +202,7 @@ deploys with `tar+ssh`, performs an atomic server swap, verifies health, and rol
 - Tests: `__tests__/` for Jest, `e2e/` for Playwright.
 - Governance scripts: `scripts/`, command details in `docs/TESTING.md`.
 - Feature maps: `docs/features/`.
-- Task board: `docs/TASK_BOARD_MCP.md`; новые FE/BE/backend задачи создавай на общем MCP task board через `ticket-board`. `tasks/README.md` и `tasks/000-template.md` остаются только fallback/migration форматом, не основным workflow.
+- Task board: `docs/TASK_BOARD_MCP.md`; новые FE/BE/backend и Android QA задачи создавай на общем MCP task board через `ticket-board` в текущем active sprint. При `401` обновляй staff token через `.env.e2e`; `tasks/README.md` и `tasks/000-template.md` остаются только fallback/migration форматом, не основным workflow.
 
 ## Кодировка документации
 

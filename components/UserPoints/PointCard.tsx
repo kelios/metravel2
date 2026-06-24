@@ -286,13 +286,15 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ['Google Maps', 'Яндекс.Карты', 'OpenStreetMap', 'Отмена'],
-          cancelButtonIndex: 3,
+          options: ['Google Maps', 'Organic Maps', 'Waze', 'Яндекс.Навигатор', 'OpenStreetMap', 'Отмена'],
+          cancelButtonIndex: 5,
         },
         (buttonIndex) => {
           if (buttonIndex === 0) void openExternalLink(mapUrls.google);
-          if (buttonIndex === 1) void openExternalLink(mapUrls.yandexMaps);
-          if (buttonIndex === 2) void openExternalLink(mapUrls.osm);
+          if (buttonIndex === 1) void openExternalLink(mapUrls.organic);
+          if (buttonIndex === 2) void openExternalLink(mapUrls.waze);
+          if (buttonIndex === 3) void openExternalLink(mapUrls.yandexNavi);
+          if (buttonIndex === 4) void openExternalLink(mapUrls.osm);
         }
       );
       return;
@@ -300,7 +302,9 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
 
     Alert.alert('Открыть в картах', undefined, [
       { text: 'Google Maps', onPress: () => void openExternalLink(mapUrls.google) },
-      { text: 'Яндекс.Карты', onPress: () => void openExternalLink(mapUrls.yandexMaps) },
+      { text: 'Organic Maps', onPress: () => void openExternalLink(mapUrls.organic) },
+      { text: 'Waze', onPress: () => void openExternalLink(mapUrls.waze) },
+      { text: 'Яндекс.Навигатор', onPress: () => void openExternalLink(mapUrls.yandexNavi) },
       { text: 'OpenStreetMap', onPress: () => void openExternalLink(mapUrls.osm) },
       { text: 'Отмена', style: 'cancel' },
     ]);

@@ -13,6 +13,7 @@ interface Props {
   travelId?: string | number;
   received: PeerBadgeReceived[];
   label?: string;
+  pickerTitle?: string;
   testID?: string;
   style?: StyleProp<ViewStyle>;
 }
@@ -23,6 +24,7 @@ function PeerBadgeGiveButton({
   travelId,
   received,
   label,
+  pickerTitle,
   testID,
   style,
 }: Props) {
@@ -56,6 +58,7 @@ function PeerBadgeGiveButton({
         recipientId={recipientId}
         travelId={travelId}
         received={received}
+        title={pickerTitle}
       />
     </>
   );

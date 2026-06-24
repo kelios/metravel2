@@ -15,6 +15,7 @@ export function createPointListItemModel({
   addingPointId,
   baseUrl,
   buildAppleMapsUrl,
+  buildOrganicMapsUrl,
   buildMapUrl,
   buildOsmUrl,
   buildWazeUrl,
@@ -34,6 +35,7 @@ export function createPointListItemModel({
   addingPointId: string | null;
   baseUrl?: string;
   buildAppleMapsUrl: (coordStr: string) => string;
+  buildOrganicMapsUrl: (coordStr: string) => string;
   buildMapUrl: (coordStr: string) => string;
   buildOsmUrl: (coordStr: string) => string;
   buildWazeUrl?: (coordStr: string) => string;
@@ -85,6 +87,13 @@ export function createPointListItemModel({
           icon: 'map',
           onPress: () => void openExternal(buildAppleMapsUrl(item.coord)),
           title: 'Открыть в Apple Maps',
+        },
+        {
+          key: 'organic',
+          label: 'Organic',
+          icon: 'navigation',
+          onPress: () => void openExternal(buildOrganicMapsUrl(item.coord)),
+          title: 'Открыть в Organic Maps',
         },
         {
           key: 'yandex',

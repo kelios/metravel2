@@ -66,6 +66,14 @@ jest.mock('@/utils/webImageUpload', () => ({
     prepareWebImageFileForUpload: jest.fn(async (file: File) => file),
 }));
 
+const mockShowToast = jest.fn();
+jest.mock('@/utils/toast', () => ({
+    __esModule: true,
+    showToast: (...args: any[]) => mockShowToast(...args),
+    showToastMessage: (...args: any[]) => mockShowToast(...args),
+    setToastDockInset: () => {},
+}));
+
 // Mock WebMapComponent
 jest.mock('@/components/travel/WebMapComponent', () => ({
     __esModule: true,
@@ -538,6 +546,89 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
             fireEvent.press(nextButton);
 
             expect(defaultProps.onNext).toHaveBeenCalled();
+        });
+    });
+
+    describe('✅ Опубликованный маршрут: точка без категории не падает на сервере', () => {
+        const publishedFormData = {
+            ...defaultProps.formData,
+            publish: true,
+            moderation: true,
+        };
+
+        it('НЕ шлёт upsert при добавлении точки без категории и подсказывает выбрать категорию', async () => {
+            const mockOnManualSave = jest.fn().mockResolvedValue(undefined);
+
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+                ok: true,
+                json: async () => [{
+                    place_id: '1',
+                    display_name: 'Париж, Франция',
+                    lat: '48.8566',
+                    lon: '2.3522',
+                    address: { city: 'Париж', country: 'Франция', country_code: 'fr' },
+                }],
+            });
+
+            const { getByPlaceholderText, getByText } = render(
+                <TravelWizardStepRoute
+                    {...defaultProps}
+                    formData={publishedFormData}
+                    onManualSave={mockOnManualSave}
+                />
+            );
+
+            fireEvent.changeText(getByPlaceholderText(/Поиск места/), 'Париж');
+            await waitFor(() => expect(getByText('Париж, Франция')).toBeTruthy());
+            fireEvent.press(getByText('Париж, Франция'));
+
+            await waitFor(() => {
+                expect(mockShowToast).toHaveBeenCalledWith(
+                    expect.objectContaining({ type: 'info', text1: 'Выберите категорию точки' })
+                );
+            });
+            // Серверный upsert не уходит — бэк отклонил бы точку без категории (400).
+            expect(mockOnManualSave).not.toHaveBeenCalled();
+        });
+
+        it('у черновика (publish=false) точка без категории сохраняется как прежде — гейт только для опубликованных', async () => {
+            const mockOnManualSave = jest.fn().mockResolvedValue(undefined);
+
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+                ok: true,
+                json: async () => [{
+                    place_id: '1',
+                    display_name: 'Париж, Франция',
+                    lat: '48.8566',
+                    lon: '2.3522',
+                    address: { city: 'Париж', country: 'Франция', country_code: 'fr' },
+                }],
+            });
+
+            const { getByPlaceholderText, getByText } = render(
+                <TravelWizardStepRoute
+                    {...defaultProps}
+                    formData={{ ...defaultProps.formData, publish: false, moderation: false }}
+                    onManualSave={mockOnManualSave}
+                />
+            );
+
+            fireEvent.changeText(getByPlaceholderText(/Поиск места/), 'Париж');
+            await waitFor(() => expect(getByText('Париж, Франция')).toBeTruthy());
+            fireEvent.press(getByText('Париж, Франция'));
+
+            await waitFor(() => {
+                expect(mockOnManualSave).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        coordsMeTravel: expect.arrayContaining([
+                            expect.objectContaining({ lat: 48.8566, lng: 2.3522 }),
+                        ]),
+                    })
+                );
+            }, { timeout: 2000 });
+            expect(mockShowToast).not.toHaveBeenCalledWith(
+                expect.objectContaining({ text1: 'Выберите категорию точки' })
+            );
         });
     });
 });

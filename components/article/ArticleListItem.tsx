@@ -6,7 +6,7 @@ import { Card, Title, Paragraph, Text } from '@/ui/paper';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { widthPercentageToDP as wp } from 'react-native-responsive-screen';
 import RenderHTML from 'react-native-render-html';
-import { router, type Href } from 'expo-router';
+import { router, usePathname, type Href } from 'expo-router';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
@@ -21,6 +21,7 @@ const IMAGE_HEIGHT = width < 600 ? 340 : 500;
 const ArticleListItem: React.FC<ArticleListItemProps> = ({ article }) => {
   const { id, name, description, article_image_thumb_url, article_type } = article;
   const colors = useThemedColors();
+  const pathname = usePathname();
   const articleRoute = useMemo<string>(() => {
     const rawUrl = typeof article.url === 'string' ? article.url.trim() : '';
     if (rawUrl.startsWith('/article/')) {
@@ -31,6 +32,13 @@ const ArticleListItem: React.FC<ArticleListItemProps> = ({ article }) => {
     }
     return `/article/${id}`;
   }, [article.url, article.slug, id]);
+  const articleRouteWithOrigin = useMemo<string>(() => {
+    const fromPath = typeof pathname === 'string' && pathname.startsWith('/') && pathname !== articleRoute
+      ? pathname
+      : '/articles';
+    const separator = articleRoute.includes('?') ? '&' : '?';
+    return `${articleRoute}${separator}from=${encodeURIComponent(fromPath)}`;
+  }, [articleRoute, pathname]);
 
   // ✅ МИГРАЦИЯ: Мемоизация стилей для производительности
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -58,7 +66,7 @@ const ArticleListItem: React.FC<ArticleListItemProps> = ({ article }) => {
   return (
       <View style={styles.container}>
         <Pressable
-          onPress={() => router.push(articleRoute as Href)}
+          onPress={() => router.push(articleRouteWithOrigin as Href)}
           {...({
             onClick: handleWebOpenInNewTab,
             onAuxClick: handleWebOpenInNewTab,

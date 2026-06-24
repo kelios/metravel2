@@ -30,7 +30,6 @@ const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(function Mob
           style={[styles.sectionContainer, styles.contentStable, styles.authorCardContainer]}
         >
           <Text style={styles.sectionHeaderText}>Автор</Text>
-          <Text style={styles.sectionSubtitle}>Профиль, соцсети и другие путешествия автора</Text>
           <View style={PLACEHOLDER_MT_12}>
             <AuthorCard travel={travel} />
           </View>

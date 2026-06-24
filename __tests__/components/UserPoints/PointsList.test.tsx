@@ -3,6 +3,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 jest.setTimeout(15000);
 
+const mockPointsListGridProps: any[] = [];
+
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native');
   return {
@@ -16,10 +18,16 @@ jest.mock('react-native', () => {
 });
 
 jest.mock('@/components/UserPoints/PointsListGrid', () => {
-  const { View } = require('react-native');
+  const { Text, View } = require('react-native');
   return {
-    PointsListGrid: ({ renderHeader }: any) => {
-      return <View>{typeof renderHeader === 'function' ? renderHeader() : null}</View>;
+    PointsListGrid: (props: any) => {
+      mockPointsListGridProps.push(props);
+      return (
+        <View>
+          <Text testID="points-list-grid-view-mode">{props.viewMode}</Text>
+          {typeof props.renderHeader === 'function' ? props.renderHeader() : null}
+        </View>
+      );
     },
   };
 });
@@ -73,6 +81,7 @@ describe('PointsList (manual create)', () => {
     // Ensure this suite runs with real timers so @testing-library's async utils work.
     jest.useRealTimers();
     jest.clearAllMocks();
+    mockPointsListGridProps.length = 0;
     mockGetPoints.mockResolvedValue([]);
     mockCreatePoint.mockResolvedValue({
       id: 1,
@@ -88,6 +97,21 @@ describe('PointsList (manual create)', () => {
       updated_at: new Date(0).toISOString(),
     });
     mockFetchFilters.mockResolvedValue({ categoryTravelAddress: [{ id: '39', name: 'Food' }, { id: '69', name: 'Hike' }] });
+  });
+
+  it('switches between map and list view from the header segmented control', async () => {
+    renderWithClient();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('points-list-grid-view-mode').props.children).toBe('map');
+    });
+
+    fireEvent.press(screen.getByTestId('segmented-list'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('points-list-grid-view-mode').props.children).toBe('list');
+    });
+    expect(mockPointsListGridProps.at(-1)?.viewMode).toBe('list');
   });
 
   const openManualAdd = async () => {
@@ -169,6 +193,8 @@ describe('PointsList (manual create)', () => {
     });
 
     fireEvent.press(screen.getByLabelText('Управление точками'));
+    expect(screen.getByText('Управление точками')).toBeTruthy();
+    expect(screen.getByLabelText('Закрыть меню действий')).toBeTruthy();
     fireEvent.press(screen.getByText('Удалить все точки'));
     await screen.findByText('Удалить все точки?');
 

@@ -147,18 +147,20 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
 
     const hasFavorites = !onlyRecommendations && favorites && favorites.length > 0;
     const hasHistory = !onlyRecommendations && viewHistory && viewHistory.length > 0;
-    const renderSectionTitle = useCallback((title: string, href: string, label = 'Смотреть все') => (
+    const renderSectionTitle = useCallback((title: string, href?: string | null, label = 'Смотреть все') => (
         <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{title}</Text>
-            <Pressable
-                onPress={() => router.push(href as any)}
-                style={styles.sectionLink}
-                accessibilityRole="button"
-                accessibilityLabel={label}
-            >
-                <Text style={styles.sectionLinkText}>{label}</Text>
-                <Feather name="arrow-right" size={14} color={colors.primary} />
-            </Pressable>
+            {href ? (
+                <Pressable
+                    onPress={() => router.push(href as any)}
+                    style={styles.sectionLink}
+                    accessibilityRole="button"
+                    accessibilityLabel={label}
+                >
+                    <Text style={styles.sectionLinkText}>{label}</Text>
+                    <Feather name="arrow-right" size={14} color={colors.primary} />
+                </Pressable>
+            ) : null}
         </View>
     ), [colors.primary, router, styles.sectionHeader, styles.sectionLink, styles.sectionLinkText, styles.sectionTitle]);
 
@@ -200,9 +202,6 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                             </View>
                             <View style={styles.titleContainer}>
                                 <Text style={styles.title}>Рекомендации для вас</Text>
-                                <View style={styles.badgeContainer}>
-                                    <Text style={styles.badgeText}>Для вас</Text>
-                                </View>
                             </View>
                             {/* ✅ ИСПРАВЛЕНИЕ: Убрана кнопка сворачивания, так как она уже есть в RecommendationsTabs */}
                         </View>
@@ -247,9 +246,6 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                             </View>
                             <View style={styles.titleContainer}>
                                 <Text style={styles.title}>Рекомендации для вас</Text>
-                                <View style={styles.badgeContainer}>
-                                    <Text style={styles.badgeText}>Для вас</Text>
-                                </View>
                             </View>
                             {/* ✅ ИСПРАВЛЕНИЕ: Убрана кнопка сворачивания, так как она уже есть в RecommendationsTabs */}
                         </View>
@@ -282,9 +278,6 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                         </View>
                         <View style={styles.titleContainer}>
                             <Text style={styles.title}>Рекомендации для вас</Text>
-                            <View style={styles.badgeContainer}>
-                                <Text style={styles.badgeText}>Для вас</Text>
-                            </View>
                         </View>
                         {/* ✅ ИСПРАВЛЕНИЕ: Убрана кнопка сворачивания, так как она уже есть в RecommendationsTabs */}
                     </View>
@@ -372,7 +365,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
 
             {recommendations.length > 0 && (
                 <View style={styles.section} testID="personalized-recommendations-list-section">
-                    {renderSectionTitle('Рекомендации', '/search', 'Все маршруты')}
+                    {renderSectionTitle('Рекомендации', null)}
                     {isMobileWeb ? (
                         <View style={styles.mobileWebStack} testID="personalized-recommendations-stack">
                             {recommendations.slice(0, 2).map(item => (
@@ -461,18 +454,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontWeight: '600',
         color: colors.text,
         letterSpacing: -0.1,
-    },
-    badgeContainer: {
-        backgroundColor: colors.primarySoft,
-        borderRadius: 8,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-    },
-    badgeText: {
-        fontSize: 11,
-        fontWeight: '600',
-        color: colors.primaryText,
-        letterSpacing: 0.1,
     },
     subtitle: {
         fontSize: 13,

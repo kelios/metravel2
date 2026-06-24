@@ -48,13 +48,7 @@ type PointListCardRendererProps = {
   itemModel: ItemModel
   numColumns: number
   onCopy: (coordStr: string) => void | Promise<void>
-  onOpenAppleMap: () => void
-  onOpenGoogleMap: () => void
   onOpenMap: (coordStr: string) => void | Promise<void>
-  onOpenOsmMap: () => void
-  onOpenWaze?: () => void
-  onOpenYandexMap: () => void
-  onOpenYandexNavi?: () => void
   onPointCardPress?: (point: PointLike) => void
   onShare: (coordStr: string) => void | Promise<void>
   responsive: {
@@ -80,13 +74,7 @@ const PointListCardRenderer = React.memo(function PointListCardRenderer({
   itemModel,
   numColumns,
   onCopy,
-  onOpenAppleMap,
-  onOpenGoogleMap,
   onOpenMap,
-  onOpenOsmMap,
-  onOpenWaze: _onOpenWaze,
-  onOpenYandexMap,
-  onOpenYandexNavi: _onOpenYandexNavi,
   onPointCardPress,
   onShare,
   responsive,
@@ -149,10 +137,6 @@ const PointListCardRenderer = React.memo(function PointListCardRenderer({
           onCopy={onCopy}
           onShare={onShare}
           onOpenMap={onOpenMap}
-          onOpenGoogleMap={onOpenGoogleMap}
-          onOpenAppleMap={onOpenAppleMap}
-          onOpenYandexMap={onOpenYandexMap}
-          onOpenOsmMap={onOpenOsmMap}
           colors={colors}
           styles={styles}
           onCardPress={onPointCardPress ? itemModel.onCardPress : undefined}

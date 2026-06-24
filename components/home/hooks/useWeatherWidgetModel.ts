@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
@@ -17,6 +16,8 @@ export type DailyForecast = {
     icon: React.ComponentProps<typeof Feather>['name'];
 };
 
+export type WeatherWidgetStatus = 'idle' | 'loading' | 'success' | 'error';
+
 export function useWeatherWidgetModel({
     points,
     countryName,
@@ -27,6 +28,7 @@ export function useWeatherWidgetModel({
     onSettled?: () => void;
 }) {
     const [forecast, setForecast] = useState<DailyForecast[]>([]);
+    const [status, setStatus] = useState<WeatherWidgetStatus>('idle');
     const settledRef = useRef(false);
 
     const primaryCoord = useMemo(() => String(points?.[0]?.coord ?? '').trim(), [points]);
@@ -34,12 +36,14 @@ export function useWeatherWidgetModel({
     const normalizedCountryName = useMemo(() => String(countryName ?? '').trim(), [countryName]);
 
     const locationLabel = useMemo(() => {
-        if (!primaryAddress && !normalizedCountryName) return '';
+        if (!primaryAddress && !normalizedCountryName) {
+            return primaryCoord ? 'точке маршрута' : '';
+        }
         const addressParts = primaryAddress.split(',').map((part) => part.trim());
         const locationParts = addressParts.slice(0, 3).filter(Boolean);
         if (normalizedCountryName) locationParts.push(normalizedCountryName);
         return locationParts.join(', ');
-    }, [normalizedCountryName, primaryAddress]);
+    }, [normalizedCountryName, primaryAddress, primaryCoord]);
 
     const settle = useCallback(() => {
         if (settledRef.current) return;
@@ -50,10 +54,12 @@ export function useWeatherWidgetModel({
     useEffect(() => {
         settledRef.current = false;
         setForecast([]);
+        setStatus(primaryCoord ? 'loading' : 'idle');
     }, [locationLabel, primaryCoord]);
 
     useEffect(() => {
-        if (Platform.OS !== 'web' || !primaryCoord) {
+        if (!primaryCoord) {
+            setStatus('error');
             settle();
             return;
         }
@@ -64,6 +70,7 @@ export function useWeatherWidgetModel({
         const lat = parseFloat(latStr);
         const lon = parseFloat(lonStr);
         if (isNaN(lat) || isNaN(lon)) {
+            setStatus('error');
             settle();
             return;
         }
@@ -74,7 +81,10 @@ export function useWeatherWidgetModel({
           try {
             const res = await fetchWithTimeout(url, undefined as any, 8000);
             if (!res.ok) {
-              if (!isCancelled) settle();
+              if (!isCancelled) {
+                setStatus('error');
+                settle();
+              }
               return;
             }
 
@@ -93,10 +103,14 @@ export function useWeatherWidgetModel({
 
             if (!isCancelled) {
               setForecast(forecastData);
+              setStatus(forecastData.length > 0 ? 'success' : 'error');
               settle();
             }
           } catch {
-            if (!isCancelled) settle();
+            if (!isCancelled) {
+              setStatus('error');
+              settle();
+            }
           }
         })();
 
@@ -108,6 +122,7 @@ export function useWeatherWidgetModel({
     return {
         forecast,
         locationLabel,
+        status,
     };
 }
 

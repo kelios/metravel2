@@ -6,6 +6,7 @@ import type { FavoriteItem, ViewHistoryItem } from '@/context/FavoritesContext'
 // Mock contexts
 const mockFavorites: FavoriteItem[] = []
 const mockViewHistory: ViewHistoryItem[] = []
+const mockRecommended: FavoriteItem[] = []
 const mockGetRecommendations = jest.fn<FavoriteItem[], []>(() => [])
 let mockIsAuthenticated = false
 const mockPush = jest.fn()
@@ -14,6 +15,7 @@ jest.mock('@/context/FavoritesContext', () => ({
   useFavorites: () => ({
     favorites: mockFavorites,
     viewHistory: mockViewHistory,
+    recommended: mockRecommended,
     getRecommendations: mockGetRecommendations,
   }),
 }))
@@ -50,15 +52,17 @@ describe('PersonalizedRecommendations', () => {
     jest.clearAllMocks()
     mockFavorites.length = 0
     mockViewHistory.length = 0
+    mockRecommended.length = 0
     mockGetRecommendations.mockReturnValue([])
     mockIsAuthenticated = false
     mockPush.mockClear()
   })
 
   it('renders login prompt when not authenticated', async () => {
-    const { findByText } = render(<PersonalizedRecommendations />)
+    const { findByText, queryByText } = render(<PersonalizedRecommendations />)
     
     expect(await findByText('Рекомендации для вас')).toBeTruthy()
+    expect(queryByText('Для вас')).toBeNull()
     expect(
       await findByText(/Войдите, чтобы получать персональные рекомендации/)
     ).toBeTruthy()
@@ -73,6 +77,25 @@ describe('PersonalizedRecommendations', () => {
     expect(
       await findByText(/Начните просматривать путешествия/)
     ).toBeTruthy()
+  })
+
+  it('does not duplicate the header with a "Для вас" badge or a no-op "Все маршруты" link', async () => {
+    mockIsAuthenticated = true
+    mockRecommended.push({
+      id: '3',
+      type: 'travel' as const,
+      title: 'Recommended Travel',
+      url: '/travels/3',
+      addedAt: Date.now(),
+    })
+
+    const { findByTestId, queryByText } = render(
+      <PersonalizedRecommendations onlyRecommendations />
+    )
+
+    expect(await findByTestId('personalized-recommendations-list-section')).toBeTruthy()
+    expect(queryByText('Для вас')).toBeNull()
+    expect(queryByText('Все маршруты')).toBeNull()
   })
 
   it('renders favorites section when authenticated with favorites', async () => {

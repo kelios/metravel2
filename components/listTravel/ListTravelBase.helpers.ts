@@ -241,7 +241,7 @@ export const getOptionName = (
     return optionId != null && String(optionId) === normalizedValue
   })
 
-  return match?.title_ru || match?.name || String(value)
+  return match?.title_ru || match?.name || ''
 }
 
 export const summarizeFilterValues = (

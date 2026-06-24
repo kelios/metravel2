@@ -50,7 +50,8 @@ Read first:
 - Use `.env.e2e` auth values if already configured, but never echo them.
 - Do not treat missing production-hosted media in local dev as a frontend bug by itself.
 - Distinguish mobile web from Android/native; a web viewport pass is not Android device verification.
-- Confirmed bugs should become a compact `Bug Report` for `$metravel-android-developer`, `$metravel-feature-builder`, or `$metravel-ui-guardrails`.
+- Confirmed Android/native bugs must be routed to `$metravel-android-developer` and created or updated on the shared board in the current active sprint before handoff; if the board returns `401`, follow `docs/TASK_BOARD_MCP.md` token refresh via `.env.e2e` without printing secrets.
+- Other confirmed bugs should become a compact `Bug Report` for `$metravel-feature-builder` or `$metravel-ui-guardrails`.
 
 ## Output Contract
 

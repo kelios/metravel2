@@ -321,3 +321,17 @@ describe('PeerBadgePickerSheet — loading', () => {
     expect(UNSAFE_getByType(ActivityIndicator)).toBeTruthy()
   })
 })
+
+describe('PeerBadgePickerSheet — empty catalog', () => {
+  it('shows a clear empty state instead of a blank sheet', () => {
+    jest.clearAllMocks()
+    setupHooks([], false)
+
+    const { getByText } = render(
+      <PeerBadgePickerSheet {...defaultProps} visible target="travel" title="Наградить статью" />,
+    )
+
+    expect(getByText('Наградить статью')).toBeTruthy()
+    expect(getByText('Нет доступных наград')).toBeTruthy()
+  })
+})

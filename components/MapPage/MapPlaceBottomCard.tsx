@@ -148,7 +148,7 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
 
   if (!point) return null
 
-  const paddingBottom = (bottomInset || 0) + (insets?.bottom ?? 0) + 12
+  const bottomContentInset = (bottomInset || 0) + (insets?.bottom ?? 0) + 12
 
   // #497 — native: the card now fills the screen (fullscreen place card). The
   // `root` container is pulled in below the top safe area (paddingTop=safeTop) and
@@ -258,7 +258,7 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
     <View
       style={[
         styles.root,
-        { paddingBottom },
+        IS_WEB ? { paddingBottom: bottomContentInset } : null,
         // Native fullscreen: pull the card below the top safe area so its header /
         // ✕ start under the status bar (#497 — never crosses into the notch).
         !IS_WEB ? { paddingTop: safeTop } : null,
@@ -286,7 +286,10 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
           // the top of the screen. The ✕ lives in the header above this scroll.
           <ScrollView
             style={styles.bodyScroll}
-            contentContainerStyle={styles.body}
+            contentContainerStyle={[
+              styles.body,
+              { paddingBottom: bottomContentInset },
+            ]}
             showsVerticalScrollIndicator={false}
             bounces={false}
             keyboardShouldPersistTaps="handled"

@@ -3,6 +3,7 @@ import { Platform } from 'react-native'
 import { createQueryWrapper } from '../helpers/testQueryClient'
 import PlacesScreen from '@/screens/tabs/PlacesScreen'
 import { fetchPlacesCatalog } from '@/api/places'
+import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 
 const mockPush = jest.fn()
 const mockSetParams = jest.fn()
@@ -29,6 +30,10 @@ jest.mock('@/components/seo/LazyInstantSEO', () => ({
 jest.mock('@/components/common/ContributionBanner', () => ({
   __esModule: true,
   default: () => null,
+}))
+
+jest.mock('@/utils/externalLinks', () => ({
+  openExternalUrlInNewTab: jest.fn(() => Promise.resolve(true)),
 }))
 
 jest.mock('@/ui/paper', () => {
@@ -121,5 +126,34 @@ describe('PlacesScreen category search', () => {
     fireEvent.changeText(await findByTestId('places-category-search-input'), 'аэродром')
 
     expect(await findByTestId('places-category-search-empty')).toBeTruthy()
+  })
+
+  it('opens selected place on map and exposes navigator actions on the card', async () => {
+    const { findByLabelText, findByTestId } = render(<PlacesScreen />, {
+      wrapper: createQueryWrapper().Wrapper,
+    })
+
+    fireEvent.press(await findByLabelText('Открыть Парковка у озера на карте'))
+
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/map',
+      params: {
+        lat: '53.9',
+        lng: '27.56',
+        radius: '5',
+        categories: 'Парковка',
+        placeId: 'place-1',
+        placeTitle: 'Парковка у озера',
+        placeAddress: 'Минск, Беларусь',
+        placeCategory: 'Парковка',
+        placeTravelUrl: '/travels/parking',
+        placeImageUrl: '',
+      },
+    })
+
+    fireEvent.press(await findByTestId('place-navigation-place-1-toggle'))
+    fireEvent.press(await findByLabelText('Открыть точку в Organic Maps'))
+
+    expect(openExternalUrlInNewTab).toHaveBeenCalledWith('https://omaps.app/53.9,27.56')
   })
 })

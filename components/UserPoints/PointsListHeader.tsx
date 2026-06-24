@@ -6,6 +6,7 @@ import { PointFilters } from '@/components/UserPoints/PointFilters'
 import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
 import IconButton from '@/components/ui/IconButton'
+import SegmentedControl from '@/components/MapPage/SegmentedControl'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { PointFilters as PointFiltersType } from '@/types/userPoints'
@@ -81,10 +82,10 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
   activeFilterChips,
   onRemoveFilterChip,
   viewMode: _viewMode,
-  onViewModeChange: _onViewModeChange,
+  onViewModeChange,
   panelTab: _panelTab,
   onPanelTabChange: _onPanelTabChange,
-  hideViewToggle: _hideViewToggle,
+  hideViewToggle,
   showFilters,
   onToggleFilters,
   showMapSettings,
@@ -111,6 +112,13 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
     : showingRecommendations
       ? 'Сейчас уже показана случайная подборка. Можно обновить её одним нажатием.'
       : 'Когда не знаете, куда поехать, панель сама выберет 3 случайные точки из ваших сохранений.';
+  const viewModeOptions = React.useMemo(
+    () => [
+      { key: 'map', label: 'Карта' },
+      { key: 'list', label: 'Список' },
+    ],
+    [],
+  );
 
   return (
     <View style={styles.header}>
@@ -163,6 +171,18 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
         </View>
 
         <View style={local.actionsGrid}>
+          {!hideViewToggle ? (
+            <View style={local.viewModeControl}>
+              <SegmentedControl
+                options={viewModeOptions}
+                value={_viewMode}
+                onChange={(key) => onViewModeChange(key as ViewMode)}
+                accessibilityLabel="Режим отображения точек"
+                compact
+              />
+            </View>
+          ) : null}
+
           <IconButton
             icon={<Feather name="settings" size={18} color={colors.text} />}
             label="Управление точками"
@@ -315,6 +335,11 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: DESIGN_TOKENS.spacing.sm,
+  },
+  viewModeControl: {
+    minWidth: 176,
+    flexGrow: 1,
+    flexShrink: 1,
   },
   recommendationCard: {
     padding: DESIGN_TOKENS.spacing.md,

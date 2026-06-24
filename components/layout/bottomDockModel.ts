@@ -66,7 +66,7 @@ export const BOTTOM_DOCK_MORE_MENU_SECTIONS: BottomDockMoreMenuSection[] = [
 export function normalizeBottomDockActivePath(pathname: string): string {
   const normalized = pathname.replace(/^\/\(tabs\)/, '') || '/'
 
-  if (normalized === '/' || normalized === '/index') return '/search'
+  if (normalized === '/' || normalized === '/index') return ''
   if (normalized.startsWith('/travels/')) return ''
   if (normalized.startsWith('/travel/')) return ''
   if (normalized.startsWith('/search')) return '/search'

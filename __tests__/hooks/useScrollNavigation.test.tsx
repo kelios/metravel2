@@ -73,15 +73,52 @@ describe('useScrollNavigation', () => {
     expect(typeof relativeArg).not.toBe('number');
   });
 
+  it('retries native scroll when a lazy section mounts after the first tap', () => {
+    jest.useFakeTimers();
+    const { result } = renderHook(() => useScrollNavigation());
+
+    const nativeScrollRef = { __nativeScrollRef: true };
+    const scrollTo = jest.fn();
+    ;(result.current as any).scrollRef.current = {
+      scrollTo,
+      getNativeScrollRef: () => nativeScrollRef,
+    };
+    ;(result.current as any).anchors['map'] = { current: null };
+
+    act(() => {
+      result.current.scrollTo('map');
+    });
+
+    expect(scrollTo).not.toHaveBeenCalled();
+
+    const measureLayout = jest.fn((_relativeTo, onSuccess) => onSuccess(0, 240));
+    ;(result.current as any).anchors['map'] = { current: { measureLayout } };
+
+    act(() => {
+      jest.advanceTimersByTime(120);
+    });
+
+    expect(measureLayout).toHaveBeenCalledWith(
+      nativeScrollRef,
+      expect.any(Function),
+      expect.any(Function),
+    );
+    expect(scrollTo).toHaveBeenCalledWith({ y: 240, animated: true });
+    jest.useRealTimers();
+  });
+
   it('does nothing when anchor or scrollRef is missing', () => {
+    jest.useFakeTimers();
     const { result } = renderHook(() => useScrollNavigation());
 
     // Не устанавливаем scrollRef и anchor явно
     act(() => {
       result.current.scrollTo('non-existing');
+      jest.runOnlyPendingTimers();
     });
 
     // Отсутствие ошибок уже достаточно; поведение "ничего не делать"
     expect(true).toBe(true);
+    jest.useRealTimers();
   });
 });

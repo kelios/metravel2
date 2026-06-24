@@ -42,16 +42,17 @@ describe('questWizardHelpers.openQuestMap', () => {
     expect(mockOpenExternalUrl.mock.calls[0][0]).toBe('http://maps.apple.com/?ll=53.9,27.56')
   })
 
-  it('opens a Yandex Maps URL with swapped lng,lat order', async () => {
+  it('opens a Yandex Navigator URL with the point coordinates', async () => {
     await openQuestMap(point, 'yandex')
 
     expect(mockOpenExternalUrl.mock.calls[0][0]).toBe(
-      'https://yandex.ru/maps/?pt=27.56,53.9&z=15',
+      'https://yandex.ru/navi/?whatshere[point]=27.56,53.9&whatshere[zoom]=16',
     )
   })
 
   it('falls back through Organic Maps candidates until one succeeds', async () => {
-    // First two scheme URLs fail, web fallback succeeds.
+    // First three candidates fail, web fallback succeeds.
+    mockOpenExternalUrl.mockResolvedValueOnce(false)
     mockOpenExternalUrl.mockResolvedValueOnce(false)
     mockOpenExternalUrl.mockResolvedValueOnce(false)
     mockOpenExternalUrl.mockResolvedValueOnce(true)
@@ -59,11 +60,22 @@ describe('questWizardHelpers.openQuestMap', () => {
     const opened = await openQuestMap(point, 'organic')
 
     expect(opened).toBe(true)
-    expect(mockOpenExternalUrl.mock.calls[0][0]).toBe('om://map?ll=53.9,27.56&z=17')
-    expect(mockOpenExternalUrl.mock.calls[1][0]).toBe('organicmaps://map?ll=53.9,27.56&z=17')
-    expect(mockOpenExternalUrl.mock.calls[2][0]).toBe('https://omaps.app/?lat=53.9&lon=27.56&zoom=17')
+    expect(mockOpenExternalUrl.mock.calls[0][0]).toBe('https://omaps.app/53.9,27.56')
+    expect(mockOpenExternalUrl.mock.calls[1][0]).toBe('om://map?ll=53.9,27.56&z=17')
+    expect(mockOpenExternalUrl.mock.calls[2][0]).toBe('organicmaps://map?ll=53.9,27.56&z=17')
+    expect(mockOpenExternalUrl.mock.calls[3][0]).toBe('https://omaps.app/53.9,27.56')
     // Should stop once one candidate opened.
-    expect(mockOpenExternalUrl).toHaveBeenCalledTimes(3)
+    expect(mockOpenExternalUrl).toHaveBeenCalledTimes(4)
+  })
+
+  it('opens Waze and OpenStreetMap from quest navigation', async () => {
+    await openQuestMap(point, 'waze')
+    await openQuestMap(point, 'osm')
+
+    expect(mockOpenExternalUrl.mock.calls[0][0]).toBe('https://waze.com/ul?ll=53.9,27.56&navigate=yes')
+    expect(mockOpenExternalUrl.mock.calls[1][0]).toBe(
+      'https://www.openstreetmap.org/?mlat=53.9&mlon=27.56#map=16/53.9/27.56',
+    )
   })
 
   it('notifies the user when no map candidate could be opened', async () => {

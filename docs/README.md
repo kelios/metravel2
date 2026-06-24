@@ -93,7 +93,7 @@ yarn lint
 - Redoc: [`http://192.168.50.36/api/schema/redoc/`](http://192.168.50.36/api/schema/redoc/)
 - OpenAPI schema: `${EXPO_PUBLIC_API_URL}/api/schema/`
 - Auth: `Authorization: Token <token>`
-- Task tracking: create new FE/BE/backend tasks on the shared MCP task board through `ticket-board`; see `docs/TASK_BOARD_MCP.md`. Local `tasks/` files are only transitional fallback/templates, not the default workflow.
+- Task tracking: create new FE/BE/backend and Android QA tasks on the shared MCP task board through `ticket-board` in the current active sprint; see `docs/TASK_BOARD_MCP.md`. If the board returns `401`, refresh the staff token through `.env.e2e` before using any local fallback. Local `tasks/` files are only transitional fallback/templates, not the default workflow.
 
 ### Auth
 - `POST /api/user/login/` → `{ token, name, email, id, is_superuser }`

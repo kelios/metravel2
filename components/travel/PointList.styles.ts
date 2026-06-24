@@ -395,6 +395,10 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     gap: DESIGN_TOKENS.spacing.xs,
     marginTop: DESIGN_TOKENS.spacing.xxs,
   },
+  overlayNavigationMenu: {
+    alignSelf: 'stretch',
+    marginTop: DESIGN_TOKENS.spacing.xxs,
+  },
   mapChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -630,6 +634,10 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     alignItems: 'center',
     gap: 4,
     marginTop: 2,
+  },
+  listRowNavigationMenu: {
+    flexBasis: '100%',
+    marginTop: DESIGN_TOKENS.spacing.xxs,
   },
   listRowIconBtn: {
     alignItems: 'center',

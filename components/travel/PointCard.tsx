@@ -11,6 +11,7 @@ import {
 
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import PointNavigationMenu from '@/components/navigation/PointNavigationMenu';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import type { PointListResponsiveModel } from '@/components/travel/hooks/usePointListResponsiveModel';
 
@@ -32,11 +33,7 @@ type PointCardProps = {
   onAddPoint?: () => void;
   onCardPress?: () => void;
   onCopy: (coordStr: string) => void | Promise<void>;
-  onOpenAppleMap: () => void;
-  onOpenGoogleMap: () => void;
   onOpenMap: (coordStr: string) => void | Promise<void>;
-  onOpenOsmMap: () => void;
-  onOpenYandexMap: () => void;
   onShare: (coordStr: string) => void | Promise<void>;
   point: PointLike;
   responsive: PointListResponsiveModel;
@@ -75,43 +72,6 @@ const PointActionIcon = React.memo(function PointActionIcon({
       title={title ?? accessibilityLabel}
     >
       {icon}
-    </CardActionPressable>
-  );
-});
-
-const PointActionChip = React.memo(function PointActionChip({
-  chipStyle,
-  icon,
-  iconStyle,
-  label,
-  onPress,
-  textStyle,
-  title,
-}: {
-  chipStyle: any;
-  icon?: React.ComponentProps<typeof Feather>['name'];
-  iconStyle?: any;
-  label: string;
-  onPress: () => void;
-  textStyle: any;
-  title?: string;
-}) {
-  return (
-    <CardActionPressable
-      style={chipStyle}
-      onPress={onPress}
-      accessibilityLabel={label}
-      title={title ?? label}
-    >
-      {icon ? (
-        <Feather
-          name={icon}
-          size={13}
-          color={textStyle?.color ?? undefined}
-          style={iconStyle}
-        />
-      ) : null}
-      <Text style={textStyle}>{label}</Text>
     </CardActionPressable>
   );
 });
@@ -161,11 +121,7 @@ const PointCard = React.memo(function PointCard({
   onAddPoint,
   onCardPress,
   onCopy,
-  onOpenAppleMap,
-  onOpenGoogleMap,
   onOpenMap,
-  onOpenOsmMap,
-  onOpenYandexMap,
   onShare,
   point,
   responsive,
@@ -289,42 +245,11 @@ const PointCard = React.memo(function PointCard({
               </Text>
             </CardActionPressable>
 
-            <View style={styles.overlayMapChipsRow}>
-              <PointActionChip
-                label="Google"
-                icon="map-pin"
-                iconStyle={styles.mapChipIcon}
-                title="Открыть в Google Maps"
-                onPress={onOpenGoogleMap}
-                chipStyle={styles.mapChip}
-                textStyle={styles.mapChipText}
-              />
-              <PointActionChip
-                label="Apple"
-                icon="map"
-                iconStyle={styles.mapChipIcon}
-                title="Открыть в Apple Maps"
-                onPress={onOpenAppleMap}
-                chipStyle={styles.mapChip}
-                textStyle={styles.mapChipText}
-              />
-              <PointActionChip
-                label="Яндекс"
-                icon="navigation-2"
-                iconStyle={styles.mapChipIcon}
-                title="Открыть в Яндекс Картах"
-                onPress={onOpenYandexMap}
-                chipStyle={styles.mapChip}
-                textStyle={styles.mapChipText}
-              />
-              <PointActionChip
-                label="OSM"
-                icon="map"
-                iconStyle={styles.mapChipIcon}
-                title="Открыть в OpenStreetMap"
-                onPress={onOpenOsmMap}
-                chipStyle={styles.mapChip}
-                textStyle={styles.mapChipText}
+            <View style={styles.overlayNavigationMenu}>
+              <PointNavigationMenu
+                coord={point.coord}
+                label="Открыть в навигаторе"
+                testIDPrefix={`travel-point-card-navigation-${point.coord.replace(/[^a-zA-Z0-9_-]+/g, '-')}`}
               />
             </View>
 

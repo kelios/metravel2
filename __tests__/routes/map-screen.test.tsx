@@ -6,6 +6,8 @@ import { useMapPanelStore } from '@/stores/mapPanelStore'
 import { useRouteStore } from '@/stores/routeStore'
 
 let mockResponsiveState = { isPhone: true, isLargePhone: false, isMobile: true, width: 390 }
+let mockSearchParams: Record<string, string> = {}
+const mockMapMobileLayout = jest.fn()
 
 const originalPlatformOS = Platform.OS
 
@@ -41,9 +43,25 @@ jest.mock('@/hooks/useDebouncedValue', () => ({
 // Мокаем expo-router/usePathname, чтобы не тянуть реальный роутер
 jest.mock('expo-router', () => ({
   usePathname: () => '/map',
-  useLocalSearchParams: () => ({}),
+  useLocalSearchParams: () => mockSearchParams,
   useIsFocused: () => true,
 }))
+
+jest.mock('@/components/MapPage/MapMobileLayout', () => {
+  const React = require('react')
+  const { View, Text } = require('react-native')
+  return {
+    __esModule: true,
+    MapMobileLayout: (props: any) => {
+      mockMapMobileLayout(props)
+      return React.createElement(
+        View,
+        { testID: 'map-mobile-layout' },
+        React.createElement(Text, { testID: 'map-mobile-selected-place' }, props.selectedPlace?.address ?? ''),
+      )
+    },
+  }
+})
 
 // Мокаем InstantSEO как no-op компонент
 jest.mock('@/components/seo/InstantSEO', () => {
@@ -208,6 +226,8 @@ const renderWithClient = () => {
 describe('MapScreen (map tab)', () => {
   beforeEach(() => {
     ;(Platform as any).OS = 'web'
+    mockSearchParams = {}
+    mockMapMobileLayout.mockClear()
     mockResponsiveState = { isPhone: false, isLargePhone: false, isMobile: false, width: 1024 }
     // Reset useWindowDimensions to desktop viewport (used by useMapResponsive)
     const RN = require('react-native');
@@ -403,6 +423,38 @@ describe('MapScreen (map tab)', () => {
     // On mobile web, the separate floating list pill (MapShowListButton) should NOT render
     // (it is only for desktop). Mobile uses the integrated bottom sheet list.
     expect(queryByLabelText('Показать 2 места списком')).toBeNull();
+  });
+
+  it('surfaces a selected place from URL params for mobile map deep links', async () => {
+    mockResponsiveState = { isPhone: true, isLargePhone: false, isMobile: true, width: 390 };
+    mockSearchParams = {
+      lat: '53.9',
+      lng: '27.56',
+      radius: '5',
+      categories: 'Парковка',
+      placeId: 'place-1',
+      placeTitle: 'Парковка у озера',
+      placeAddress: 'Минск, Беларусь',
+      placeCategory: 'Парковка',
+      placeTravelUrl: '/travels/parking',
+    };
+    const RN = require('react-native');
+    (RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 390, height: 844 });
+
+    renderWithClient();
+
+    await waitFor(() => {
+      expect(mockMapMobileLayout).toHaveBeenCalled();
+    });
+
+    const lastProps = mockMapMobileLayout.mock.calls.at(-1)?.[0];
+    expect(lastProps?.selectedPlace).toEqual(expect.objectContaining({
+      id: 'place-1',
+      coord: '53.9,27.56',
+      address: 'Минск, Беларусь',
+      categoryName: 'Парковка',
+      urlTravel: '/travels/parking',
+    }));
   });
 
   it('shows error display when map data loading fails', async () => {

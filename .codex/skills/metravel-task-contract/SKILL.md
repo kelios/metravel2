@@ -10,8 +10,9 @@ Use this skill whenever a task is created or reviewed on the shared task board.
 Board-first rule:
 
 - Create all new FE/BE/backend tasks on the shared MCP task board through `ticket-board`; do not create local `tasks/*.md` files as the normal workflow.
-- Every board task must include `area`, sprint, owner/status when known, dependencies, blockers, Task Contract, validation, and Done gate.
-- If the task-board MCP is unavailable, prepare a ready-to-paste board task with the same contract fields and mark any local `tasks/*.md` draft as temporary fallback only. Sync/import it to the board before handoff and remove the local draft when possible.
+- Every board task must include `area`, active sprint, owner/status when known, dependencies, blockers, Task Contract, validation, and Done gate.
+- If the task-board MCP or API returns `HTTP 401`, refresh the staff token through `.env.e2e` using `docs/TASK_BOARD_MCP.md`, update `.secrets/metravel-task-board.env` without printing secrets, and retry before creating any local fallback.
+- If the task-board MCP is unavailable after token refresh, prepare a ready-to-paste board task with the same contract fields and mark any local `tasks/*.md` draft as temporary fallback only. Sync/import it to the board before handoff and remove the local draft when possible.
 
 Read first:
 

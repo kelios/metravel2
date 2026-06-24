@@ -95,6 +95,12 @@ const buildAppleMapsUrl = (coordStr: string) => {
   return `https://maps.apple.com/?q=${encodeURIComponent(`${lat},${lon}`)}`;
 };
 
+const buildOrganicMapsUrl = (coordStr: string) => {
+  const p = parseCoord(coordStr);
+  if (!p) return '';
+  return `https://omaps.app/${p.lat},${p.lon}`;
+};
+
 const buildYandexMapsUrl = (coordStr: string) => {
   const p = parseCoord(coordStr);
   if (!p) return '';
@@ -214,6 +220,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
         addingPointId,
         baseUrl,
         buildAppleMapsUrl,
+        buildOrganicMapsUrl,
         buildMapUrl,
         buildOsmUrl,
         buildWazeUrl,
@@ -241,12 +248,6 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
           numColumns={numColumns}
           onCopy={onCopy}
           onOpenMap={onOpenMap}
-          onOpenGoogleMap={() => void openExternal(buildMapUrl(item.coord))}
-          onOpenAppleMap={() => void openExternal(buildAppleMapsUrl(item.coord))}
-          onOpenYandexMap={() => void openExternal(buildYandexMapsUrl(item.coord))}
-          onOpenOsmMap={() => void openExternal(buildOsmUrl(item.coord))}
-          onOpenWaze={() => void openExternal(buildWazeUrl(item.coord))}
-          onOpenYandexNavi={() => void openExternal(buildYandexNaviUrl(item.coord))}
           onPointCardPress={onPointCardPress}
           onShare={onShare}
           responsive={responsive}
@@ -318,11 +319,6 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
       {showList && (
         <PointListExpandedContent
           addingPointId={addingPointId}
-          buildMapUrl={buildMapUrl}
-          buildOsmUrl={buildOsmUrl}
-          buildWazeUrl={buildWazeUrl}
-          buildYandexMapsUrl={buildYandexMapsUrl}
-          buildYandexNaviUrl={buildYandexNaviUrl}
           colors={colors}
           getCategoryLabel={normalizeCategoryNameToString}
           getImageUrl={getOptimizedImageUrl}
@@ -334,7 +330,6 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
           onOpenMap={onOpenMap}
           onPointCardPress={onPointCardPress}
           onShare={onShare}
-          openExternal={openExternal}
           renderItem={renderItem}
           safePoints={safePoints}
           shouldRenderNativeList={shouldRenderNativeList}

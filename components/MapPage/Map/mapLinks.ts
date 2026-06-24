@@ -78,6 +78,12 @@ export const buildYandexNaviUrl = (coord: string) => {
 // сама перестраивает ссылку в Яндекс.Карты с ПИНом на точке
 // (`yandexmaps://...?pt=lon,lat&l=map`) — см. utils/externalLinks.ts.
 
+export const buildOpenStreetMapUrl = (coord: string) => {
+  const parsed = parseCoordString(coord);
+  if (!parsed) return '';
+  return `https://www.openstreetmap.org/?mlat=${encodeURIComponent(String(parsed.lat))}&mlon=${encodeURIComponent(String(parsed.lon))}#map=16/${encodeURIComponent(String(parsed.lat))}/${encodeURIComponent(String(parsed.lon))}`;
+};
+
 export const buildTelegramShareUrl = (coord: string) => {
   const mapUrl = buildGoogleMapsUrl(coord);
   if (!mapUrl) return '';

@@ -161,11 +161,19 @@ export const saveFormData = async (
       payload.slug = existing || makeUniqueSlug(payload.name || 'travel');
     }
 
+    // Контракт FE↔BE: бэк должен запускать модерационную валидацию полноты
+    // (categories у каждой точки и т.п.) ТОЛЬКО при явной публикации/отправке на
+    // модерацию, а не на каждом content-save опубликованного маршрута — иначе
+    // инкрементальный автосейв точки падает с 400. Флаг сообщает бэку «это submit
+    // на модерацию», а не «сохрани контент». Поле инертно, пока бэк его не читает
+    // (DRF игнорирует неизвестные ключи) — см. тикет на пер-точечную валидацию.
+    const body = { ...payload, enforce_moderation_validation: intent === 'publish' };
+
     return await apiClient.request<TravelFormData>(
       '/travels/upsert/',
       {
         method: 'PUT',
-        body: JSON.stringify(payload),
+        body: JSON.stringify(body),
         signal,
       },
       LONG_TIMEOUT

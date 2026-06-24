@@ -40,4 +40,10 @@ describe('bottomDockModel', () => {
     expect(normalizeBottomDockActivePath('/trips/42')).toBe('/trips')
     expect(normalizeBottomDockActivePath('/trips/plan')).toBe('/trips')
   })
+
+  it('does not mark the routes tab active on the landing screen', () => {
+    expect(normalizeBottomDockActivePath('/')).toBe('')
+    expect(normalizeBottomDockActivePath('/index')).toBe('')
+    expect(normalizeBottomDockActivePath('/(tabs)')).toBe('')
+  })
 })

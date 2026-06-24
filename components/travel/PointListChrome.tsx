@@ -226,12 +226,6 @@ type WebPointListRowProps = {
   isAdding: boolean;
   getCategoryLabel: (raw: PointLike['categoryName'] | null | undefined) => string;
   getImageUrl: (url?: string, updatedAt?: string) => string | undefined;
-  buildMapUrl: (coordStr: string) => string;
-  buildOsmUrl: (coordStr: string) => string;
-  buildWazeUrl?: (coordStr: string) => string;
-  buildYandexMapsUrl: (coordStr: string) => string;
-  buildYandexNaviUrl?: (coordStr: string) => string;
-  openExternal: (url: string) => void | Promise<void>;
   onCopy: (coordStr: string) => void | Promise<void>;
   onShare: (coordStr: string) => void | Promise<void>;
   onOpenMap: (coordStr: string) => void | Promise<void>;
@@ -247,12 +241,6 @@ const WebPointListRow = React.memo(function WebPointListRow({
   isAdding,
   getCategoryLabel,
   getImageUrl,
-  buildMapUrl,
-  buildOsmUrl,
-  buildWazeUrl,
-  buildYandexMapsUrl,
-  buildYandexNaviUrl,
-  openExternal,
   onCopy,
   onShare,
   onOpenMap,
@@ -273,13 +261,6 @@ const WebPointListRow = React.memo(function WebPointListRow({
       onCopy={onCopy}
       onShare={onShare}
       onOpenMap={onOpenMap}
-      onOpenGoogleMap={() => void openExternal(buildMapUrl(item.coord))}
-      onOpenYandexMap={() => void openExternal(buildYandexMapsUrl(item.coord))}
-      onOpenOsmMap={() => void openExternal(buildOsmUrl(item.coord))}
-      onOpenWaze={buildWazeUrl ? () => void openExternal(buildWazeUrl(item.coord)) : undefined}
-      onOpenYandexNavi={
-        buildYandexNaviUrl ? () => void openExternal(buildYandexNaviUrl(item.coord)) : undefined
-      }
       onAddPoint={() => {
         void handleAddPoint(item);
       }}
@@ -304,11 +285,6 @@ const RenderItemSlot = React.memo(function RenderItemSlot({
 
 export const PointListExpandedContent = React.memo(function PointListExpandedContent({
   addingPointId,
-  buildMapUrl,
-  buildOsmUrl,
-  buildWazeUrl,
-  buildYandexMapsUrl,
-  buildYandexNaviUrl,
   colors,
   getCategoryLabel,
   getImageUrl,
@@ -320,7 +296,6 @@ export const PointListExpandedContent = React.memo(function PointListExpandedCon
   onOpenMap,
   onPointCardPress,
   onShare,
-  openExternal,
   renderItem,
   safePoints,
   shouldRenderNativeList,
@@ -329,11 +304,6 @@ export const PointListExpandedContent = React.memo(function PointListExpandedCon
   styles,
 }: {
   addingPointId: string | null;
-  buildMapUrl: (coordStr: string) => string;
-  buildOsmUrl: (coordStr: string) => string;
-  buildWazeUrl?: (coordStr: string) => string;
-  buildYandexMapsUrl: (coordStr: string) => string;
-  buildYandexNaviUrl?: (coordStr: string) => string;
   colors: {
     primary: string;
     textMuted: string;
@@ -348,7 +318,6 @@ export const PointListExpandedContent = React.memo(function PointListExpandedCon
   onOpenMap: (coordStr: string) => void | Promise<void>;
   onPointCardPress?: (point: PointLike) => void;
   onShare: (coordStr: string) => void | Promise<void>;
-  openExternal: (url: string) => void | Promise<void>;
   renderItem: ({ item }: { item: PointLike }) => React.ReactElement;
   safePoints: PointLike[];
   shouldRenderNativeList: boolean;
@@ -389,12 +358,6 @@ export const PointListExpandedContent = React.memo(function PointListExpandedCon
             isAdding={addingPointId === item.id}
             getCategoryLabel={getCategoryLabel}
             getImageUrl={getImageUrl}
-            buildMapUrl={buildMapUrl}
-            buildOsmUrl={buildOsmUrl}
-            buildWazeUrl={buildWazeUrl}
-            buildYandexMapsUrl={buildYandexMapsUrl}
-            buildYandexNaviUrl={buildYandexNaviUrl}
-            openExternal={openExternal}
             onCopy={onCopy}
             onShare={onShare}
             onOpenMap={onOpenMap}

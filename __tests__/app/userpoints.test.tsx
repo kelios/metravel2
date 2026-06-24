@@ -3,13 +3,31 @@ import UserPointsScreen from '@/app/(tabs)/userpoints';
 import { useAuth } from '@/context/AuthContext';
 
 jest.mock('@/context/AuthContext');
+const mockPush = jest.fn();
+const mockBack = jest.fn();
+let mockParams: Record<string, string | undefined> = {};
 jest.mock('expo-router', () => ({
   router: {
     push: jest.fn(),
   },
-  useRouter: jest.fn(() => ({ push: jest.fn(), back: jest.fn(), canGoBack: jest.fn(() => true) })),
+  useRouter: jest.fn(() => ({ push: mockPush, back: mockBack, canGoBack: jest.fn(() => true) })),
   usePathname: jest.fn(() => '/userpoints'),
+  useLocalSearchParams: () => mockParams,
 }));
+
+jest.mock('@/components/profile/ProfileCollectionHeader', () => {
+  return function MockProfileCollectionHeader({ title, onBackPress }: any) {
+    const { Pressable, Text, View } = require('react-native');
+    return (
+      <View>
+        <Pressable onPress={onBackPress} accessibilityLabel="Назад в профиль">
+          <Text>Назад</Text>
+        </Pressable>
+        <Text>{title}</Text>
+      </View>
+    );
+  };
+});
 
 jest.mock('@/components/UserPoints/PointsList', () => ({
   PointsList: ({ onImportPress }: any) => {
@@ -42,6 +60,7 @@ const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 describe('UserPointsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockParams = {};
   });
 
   it('should not show auth required message while auth is not ready', async () => {
@@ -159,5 +178,34 @@ describe('UserPointsScreen', () => {
     expect(await screen.findByLabelText('Добавить')).toBeTruthy();
     expect(screen.getByTestId('icon-add')).toBeTruthy();
     expect(screen.queryByText('Добавить')).toBeNull();
+  });
+
+  it('returns to profile when opened from profile quick actions', async () => {
+    mockParams = { from: 'profile' };
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      username: 'testuser',
+      userId: '1',
+      isSuperuser: false,
+      userAvatar: null,
+      authReady: true,
+      profileRefreshToken: 0,
+      setIsAuthenticated: jest.fn(),
+      setUsername: jest.fn(),
+      setIsSuperuser: jest.fn(),
+      setUserId: jest.fn(),
+      setUserAvatar: jest.fn(),
+      triggerProfileRefresh: jest.fn(),
+      login: jest.fn(),
+      logout: jest.fn(),
+      sendPassword: jest.fn(),
+      setNewPassword: jest.fn()
+    });
+
+    render(<UserPointsScreen />);
+
+    fireEvent.press(await screen.findByLabelText('Назад в профиль'));
+
+    expect(mockPush).toHaveBeenCalledWith('/profile');
   });
 });

@@ -22,6 +22,7 @@ interface ProfileHeaderSectionProps {
   avatarUploading: boolean;
   statItems: ProfileStatSegmentItem[];
   handleHeaderAction: (key: ProfileHeaderActionKey) => void;
+  onRankPress?: () => void;
   activeTab: ProfileTabKey;
   handleProfileTabChange: (tab: ProfileTabKey) => void;
   tabCounts: Partial<Record<ProfileTabKey, number>>;
@@ -42,6 +43,7 @@ export function ProfileHeaderSection({
   avatarUploading,
   statItems,
   handleHeaderAction,
+  onRankPress,
   activeTab,
   handleProfileTabChange,
   tabCounts,
@@ -87,6 +89,7 @@ export function ProfileHeaderSection({
             onEdit={handleEdit}
             onLogout={handleLogout}
             onQuickAction={handleHeaderAction}
+            onRankPress={onRankPress}
             onAvatarUpload={pickAndUpload}
             avatarUploading={avatarUploading}
           />

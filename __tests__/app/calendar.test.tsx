@@ -11,10 +11,12 @@ const mockSetStatus = jest.fn(() => Promise.resolve())
 const mockRemoveStatus = jest.fn(() => Promise.resolve())
 
 let mockEntries: TravelStatusEntry[] = []
+let mockParams: Record<string, string | undefined> = {}
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush, back: jest.fn(), canGoBack: jest.fn(() => true) }),
   usePathname: jest.fn(() => '/calendar'),
+  useLocalSearchParams: () => mockParams,
 }))
 
 jest.mock('@/context/AuthContext', () => ({
@@ -112,6 +114,7 @@ describe('CalendarScreen status editor', () => {
       jest.spyOn(window, 'confirm').mockReturnValue(true)
     }
     mockEntries = [makeEntry()]
+    mockParams = {}
   })
 
   afterEach(() => {
@@ -163,5 +166,17 @@ describe('CalendarScreen status editor', () => {
 
     expect(screen.getByText('Нет запланированных поездок')).toBeTruthy()
     expect(screen.queryByText('Test Travel')).toBeNull()
+  })
+
+  it('opens the tab requested by profile status links', async () => {
+    mockParams = { status: 'visited' }
+    mockEntries = [makeEntry({ status: 'visited', visitedDate: '2026-06-20', plannedDate: undefined })]
+
+    render(<CalendarScreen />)
+
+    await waitFor(() => expect(mockLoadLocal).toHaveBeenCalledWith('42'))
+
+    expect(screen.getByText('Test Travel')).toBeTruthy()
+    expect(screen.queryByText('Нет запланированных поездок')).toBeNull()
   })
 })

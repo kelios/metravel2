@@ -278,6 +278,12 @@ export default function PlacesScreen() {
         lng: String(place.lngNumber),
         radius: MAP_FOCUS_RADIUS_KM,
         categories: place.category,
+        placeId: place.id,
+        placeTitle: place.title,
+        placeAddress: place.address || place.country || place.title,
+        placeCategory: place.category,
+        placeTravelUrl: place.urlTravel || '',
+        placeImageUrl: place.travelImageThumbUrl || place.imageUrl || '',
       },
     })
   }, [router])

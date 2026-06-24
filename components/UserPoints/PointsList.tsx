@@ -58,7 +58,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [showMapSettings, setShowMapSettings] = useState(false);
-  const viewMode: ViewMode = 'map'; // Fixed to map view only
+  const [viewMode, setViewMode] = useState<ViewMode>('map');
   const [panelTab, setPanelTab] = useState<'filters' | 'list'>('list');
   const [showActions, setShowActions] = useState(false);
   const { activePointId, setActivePointId, handleShowPointOnMap } = usePointsActivePoint();
@@ -257,6 +257,12 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     visibleFilteredPoints: visibleFilteredPoints as Record<string, unknown>[],
   });
 
+  const handleOpenPointOnMap = useCallback((point: any) => {
+    setViewMode('map');
+    setPanelTab('list');
+    handleShowPointOnMap(point);
+  }, [handleShowPointOnMap]);
+
   const { handleRemoveFilterChip } = usePointsFilterChipActions({
     availableCategoryOptions,
     filters,
@@ -279,6 +285,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     activeFilterChips,
     onRemoveFilterChip: handleRemoveFilterChip,
     viewMode,
+    onViewModeChange: setViewMode,
     showFilters,
     onToggleFilters: () => setShowFilters((prev) => !prev),
     showMapSettings,
@@ -304,7 +311,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       <PointsListItem
         point={item}
         layout={listColumns > 1 ? 'grid' : 'list'}
-        onPress={selectionMode ? undefined : handleShowPointOnMap}
+        onPress={selectionMode ? undefined : handleOpenPointOnMap}
         onEdit={selectionMode ? undefined : openEditPoint}
         onDelete={selectionMode ? undefined : requestDeletePoint}
         selectionMode={selectionMode}
@@ -319,7 +326,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       activeDriveInfo, 
       activePointId, 
       listColumns, 
-      handleShowPointOnMap, 
+      handleOpenPointOnMap,
       openEditPoint, 
       requestDeletePoint, 
       selectedIdSet, 

@@ -368,7 +368,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       borderColor: colors.borderLight,
       ...(Platform.OS === 'web' ? ({ boxShadow: '0 1px 4px rgba(0,0,0,0.04)' } as any) : null),
     },
-    containerMobile: { padding: 16 },
+    containerMobile: { padding: 12 },
     content: {
       flexDirection: 'row',
       alignItems: 'flex-start',
@@ -377,7 +377,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     contentMobile: {
       flexDirection: 'column',
       alignItems: 'flex-start',
-      gap: 14,
+      gap: 10,
       width: '100%',
     },
     mainRow: {
@@ -386,7 +386,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       flex: 1,
       minWidth: 0,
       width: '100%',
-      gap: 18,
+      gap: Platform.OS === 'web' ? 18 : 12,
     },
     avatarSection: { alignItems: 'center', justifyContent: 'center' },
     avatar: {
@@ -397,7 +397,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       borderColor: colors.borderLight,
       ...(Platform.OS === 'web' ? ({ boxShadow: '0 2px 8px rgba(0,0,0,0.08)' } as any) : null),
     },
-    avatarMobile: { width: 52, height: 52, borderRadius: 26, borderWidth: 2.5 },
+    avatarMobile: { width: 48, height: 48, borderRadius: 24, borderWidth: 2 },
     avatarPlaceholder: {
       width: Platform.OS === 'web' ? 72 : 56,
       height: Platform.OS === 'web' ? 72 : 56,
@@ -544,8 +544,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     divider: {
       width: '100%',
       height: 1,
-      marginTop: DESIGN_TOKENS.spacing.md,
-      marginBottom: DESIGN_TOKENS.spacing.sm,
+      marginTop: DESIGN_TOKENS.spacing.sm,
+      marginBottom: DESIGN_TOKENS.spacing.xs,
       opacity: 0.6,
       backgroundColor: colors.borderLight,
     },
@@ -553,7 +553,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: DESIGN_TOKENS.spacing.md,
+      gap: DESIGN_TOKENS.spacing.sm,
     },
     ctaBottomButtonContent: {
       flexDirection: 'row',

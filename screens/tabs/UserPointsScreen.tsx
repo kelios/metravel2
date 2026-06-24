@@ -4,17 +4,32 @@ import { View, StyleSheet, Modal, ActivityIndicator } from 'react-native';
 import { PointsList } from '@/components/UserPoints/PointsList';
 import { ImportWizard } from '@/components/UserPoints/ImportWizard';
 import { useAuth } from '@/context/AuthContext';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams, useRouter } from 'expo-router';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
 import EmptyState from '@/components/ui/EmptyState';
+import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader';
 
 export default function UserPointsScreen() {
   const [showImportWizard, setShowImportWizard] = useState(false);
   const { isAuthenticated, authReady } = useAuth();
   const colors = useThemedColors();
+  const navigation = useRouter();
+  const params = useLocalSearchParams<{ from?: string }>();
+  const cameFromProfile = params.from === 'profile';
 
   const styles = createStyles(colors);
+  const handleBack = () => {
+    if (cameFromProfile) {
+      navigation.push('/profile' as any);
+      return;
+    }
+    if (typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
+      navigation.back();
+      return;
+    }
+    navigation.push('/profile' as any);
+  };
 
   if (!authReady) {
     return (
@@ -44,6 +59,7 @@ export default function UserPointsScreen() {
 
   return (
     <View style={styles.container} testID="userpoints-screen">
+      <ProfileCollectionHeader title="Мои точки" onBackPress={handleBack} dense />
       <PointsList onImportPress={() => setShowImportWizard(true)} />
 
       <Modal

@@ -74,6 +74,14 @@ function PeerBadgePickerSheet({
             <View style={styles.loading}>
               <ActivityIndicator color={colors.primary} />
             </View>
+          ) : options.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Feather name="award" size={26} color={colors.textMuted} />
+              <Text style={styles.emptyTitle}>Нет доступных наград</Text>
+              <Text style={styles.emptyText}>
+                Для этого типа контента пока нет вариантов награды.
+              </Text>
+            </View>
           ) : (
             <ScrollView showsVerticalScrollIndicator={false}>
               {options.map((badge) => {
@@ -152,6 +160,24 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       backgroundColor: colors.backgroundSecondary,
     },
     loading: { paddingVertical: DESIGN_TOKENS.spacing.xl, alignItems: 'center' },
+    emptyState: {
+      alignItems: 'center',
+      paddingVertical: DESIGN_TOKENS.spacing.xl,
+      paddingHorizontal: DESIGN_TOKENS.spacing.md,
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    emptyTitle: {
+      fontSize: DESIGN_TOKENS.typography.sizes.md,
+      fontWeight: '800',
+      color: colors.text,
+      textAlign: 'center',
+    },
+    emptyText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      color: colors.textMuted,
+      textAlign: 'center',
+      lineHeight: 20,
+    },
     optionRow: {
       flexDirection: 'row',
       alignItems: 'center',

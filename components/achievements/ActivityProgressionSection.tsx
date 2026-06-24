@@ -1,11 +1,13 @@
 import { memo, useEffect, useMemo, useRef } from 'react'
 import {
+  Pressable,
   StyleSheet,
   Text,
   View,
   type StyleProp,
   type ViewStyle,
 } from 'react-native'
+import { Feather } from '@expo/vector-icons'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -23,6 +25,7 @@ interface Props {
   userId?: string | number | null
   /** bare — без внешней карточки (мини-заголовок остаётся; контент для хаба наград). */
   bare?: boolean
+  onOpenAwards?: () => void
   testID?: string
   style?: StyleProp<ViewStyle>
 }
@@ -34,6 +37,7 @@ interface Props {
 function ActivityProgressionSection({
   userId,
   bare = false,
+  onOpenAwards,
   testID,
   style,
 }: Props) {
@@ -72,12 +76,29 @@ function ActivityProgressionSection({
 
   return (
     <View style={[bare ? styles.bare : styles.card, style]} testID={testID}>
-      <Text style={styles.heading}>Тропы развития</Text>
-      <Text style={styles.subheading}>
-        Четыре направления активности на MeTravel — за участие в поездках,
-        публикации, чтение и открытие новых мест. Каждое действие растит свою
-        тропу и поднимает уровень.
-      </Text>
+      <View style={styles.headerRow}>
+        <View style={styles.headerText}>
+          <Text style={styles.heading}>Тропы развития</Text>
+          <Text style={styles.subheading} numberOfLines={2}>
+            Уровень растёт за маршруты, чтение, поездки и открытые места.
+          </Text>
+        </View>
+        {onOpenAwards ? (
+          <Pressable
+            onPress={onOpenAwards}
+            accessibilityRole="button"
+            accessibilityLabel="Открыть все награды"
+            style={({ pressed }) => [
+              styles.awardsButton,
+              pressed && { opacity: 0.78 },
+            ]}
+          >
+            <Feather name="award" size={14} color={colors.primary} />
+            <Text style={styles.awardsButtonText}>Награды</Text>
+            <Feather name="chevron-right" size={14} color={colors.primary} />
+          </Pressable>
+        ) : null}
+      </View>
 
       <SectionState isFetching={isFetching} hasData={hasData}>
         {data ? (
@@ -103,6 +124,13 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       gap: DESIGN_TOKENS.spacing.sm,
     },
     bare: { gap: DESIGN_TOKENS.spacing.sm },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: DESIGN_TOKENS.spacing.sm,
+    },
+    headerText: { flex: 1, minWidth: 0, gap: 2 },
     heading: {
       fontSize: DESIGN_TOKENS.typography.sizes.md,
       fontWeight: '800',
@@ -112,7 +140,20 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       color: colors.textMuted,
       lineHeight: 18,
-      marginBottom: DESIGN_TOKENS.spacing.xs,
+    },
+    awardsButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 6,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.backgroundTertiary,
+    },
+    awardsButtonText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      fontWeight: '700',
+      color: colors.primary,
     },
     lines: { gap: DESIGN_TOKENS.spacing.md },
   })

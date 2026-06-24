@@ -20,6 +20,8 @@ const SORTING_NAME_MAP: Record<string, string> = {
 const HIDDEN_SORTINGS = new Set([
   'budget_desc',
   'budget_asc',
+  'created_asc',
+  'created_desc',
   'updated_asc',
   'updated_desc',
   'days_desc',
@@ -90,8 +92,6 @@ const DEFAULT_SORTING_IDS = [
   'oldest',
   'popular_desc',
   'popular_asc',
-  'created_desc',
-  'created_asc',
   'name_asc',
   'name_desc',
   'year_desc',

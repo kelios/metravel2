@@ -9,6 +9,7 @@ import {
     fetchUnreadCount,
     getMessagingUserDisplayName,
     getMessagingUserId,
+    getMessagingUserSearchText,
     type MessageThread,
     type MessagingUser,
     type PaginatedMessages,
@@ -332,6 +333,26 @@ describe('Messages API', () => {
         it('should fall back to id when user is null', () => {
             const user: MessagingUser = { id: 5, first_name: null, last_name: null, avatar: null, user: null };
             expect(getMessagingUserId(user)).toBe(5);
+        });
+    });
+
+    describe('getMessagingUserSearchText', () => {
+        it('builds search text from name, email, username and nickname aliases', () => {
+            const user: MessagingUser = {
+                id: 1,
+                user: 10,
+                name: 'Иван Петров',
+                email: 'ivan@example.com',
+                username: 'ivan-travel',
+                nickname: 'Vanya',
+                avatar: null,
+            };
+
+            const searchText = getMessagingUserSearchText(user);
+            expect(searchText).toContain('иван петров');
+            expect(searchText).toContain('ivan@example.com');
+            expect(searchText).toContain('ivan-travel');
+            expect(searchText).toContain('vanya');
         });
     });
 });

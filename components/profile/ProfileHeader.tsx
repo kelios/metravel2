@@ -40,6 +40,7 @@ interface ProfileHeaderProps {
   onLogout: () => void;
   onAvatarUpload: () => void;
   onQuickAction: (key: ProfileHeaderActionKey) => void;
+  onRankPress?: () => void;
   avatarUploading?: boolean;
 }
 
@@ -83,6 +84,7 @@ export function ProfileHeader({
   onLogout,
   onAvatarUpload,
   onQuickAction,
+  onRankPress,
   avatarUploading = false,
 }: ProfileHeaderProps) {
   const colors = useThemedColors();
@@ -249,6 +251,10 @@ export function ProfileHeader({
           paddingVertical: 3,
           borderRadius: DESIGN_TOKENS.radii.pill,
           backgroundColor: colors.accentSoft,
+          ...Platform.select({
+            web: { cursor: 'pointer' } as any,
+            default: {},
+          }),
         },
         rankChipText: {
           fontSize: DESIGN_TOKENS.typography.sizes.xs,
@@ -367,12 +373,23 @@ export function ProfileHeader({
               organizerStatus={profile?.organizer_status ?? null}
             />
             {rankLabel ? (
-              <View style={styles.rankChip}>
+              <Pressable
+                onPress={onRankPress}
+                disabled={!onRankPress}
+                accessibilityRole={onRankPress ? 'button' : undefined}
+                accessibilityLabel={onRankPress ? `Открыть прогресс профиля: ${rankLabel}` : rankLabel}
+                accessibilityHint={onRankPress ? 'Показывает ваш путь, уровни и награды' : undefined}
+                style={({ pressed }) => [
+                  styles.rankChip,
+                  pressed && { opacity: 0.78 },
+                  globalFocusStyles.focusable,
+                ]}
+              >
                 <Feather name="award" size={12} color={colors.primary} />
                 <Text style={styles.rankChipText} numberOfLines={1}>
                   {rankLabel}
                 </Text>
-              </View>
+              </Pressable>
             ) : null}
           </View>
           {!!user.email && (

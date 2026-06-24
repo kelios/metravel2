@@ -18,16 +18,18 @@ describe('WeatherWidget', () => {
     jest.clearAllMocks()
   })
 
-  it('returns null on non-web platform or invalid coords', () => {
+  it('renders native fallback instead of blank content while loading', () => {
     ;(Platform as any).OS = 'ios'
-    const { queryByText, rerender } = render(
-      <WeatherWidget points={[{ coord: 'bad' }]} countryName="BY" />
+    const { getByText } = render(
+      <WeatherWidget points={[{ coord: '53.9, 27.56', address: 'Минск' }]} countryName="BY" />
     )
-    expect(queryByText(/Погода/)).toBeNull()
+    expect(getByText(/Погода в Минск, BY/)).toBeTruthy()
+    expect(getByText(/Загружаем прогноз/)).toBeTruthy()
+  })
 
-    ;(Platform as any).OS = 'web'
-    rerender(<WeatherWidget points={[{ coord: 'bad', address: 'Минск' }]} />)
-    expect(queryByText(/Погода/)).toBeNull()
+  it('renders an error fallback for invalid coords', async () => {
+    const { getByText } = render(<WeatherWidget points={[{ coord: 'bad', address: 'Минск' }]} />)
+    await waitFor(() => expect(getByText(/Не удалось загрузить прогноз/)).toBeTruthy())
   })
 
   it('renders forecast for valid coordinates', async () => {

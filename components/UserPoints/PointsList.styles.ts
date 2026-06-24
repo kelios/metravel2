@@ -230,7 +230,21 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
     fontSize: DESIGN_TOKENS.typography.sizes.lg,
     fontWeight: '800' as any,
     color: colors.text,
+    flex: 1,
+  },
+  actionsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.sm,
     marginBottom: DESIGN_TOKENS.spacing.md,
+  },
+  actionsCloseButton: {
+    width: DESIGN_TOKENS.touchTarget.minHeight,
+    height: DESIGN_TOKENS.touchTarget.minHeight,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.backgroundSecondary,
   },
   actionsButton: {
     marginBottom: DESIGN_TOKENS.spacing.sm,

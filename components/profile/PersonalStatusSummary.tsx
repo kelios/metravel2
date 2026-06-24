@@ -10,7 +10,7 @@ interface PersonalStatusSummaryProps {
   wishlist: number
   planned: number
   formatTripsCount: (count: number) => string
-  onOpenCalendar: () => void
+  onOpenCalendar: (status?: 'visited' | 'wishlist' | 'planned') => void
 }
 
 type Metric = {
@@ -102,6 +102,9 @@ export function PersonalStatusSummary({
           borderColor: colors.borderLight,
           gap: 6,
         },
+        tileInteractive: {
+          ...Platform.select({ web: { cursor: 'pointer' } as any, default: {} }),
+        },
         tileHeader: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -155,19 +158,31 @@ export function PersonalStatusSummary({
 
       <View style={styles.grid}>
         {metrics.map((m) => (
-          <View key={m.key} style={styles.tile}>
+          <Pressable
+            key={m.key}
+            onPress={() => onOpenCalendar(m.key)}
+            style={({ pressed }) => [
+              styles.tile,
+              styles.tileInteractive,
+              globalFocusStyles.focusable,
+              { opacity: pressed ? 0.88 : 1 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`${m.label}: ${formatTripsCount(m.value)}`}
+            accessibilityHint="Открыть календарь с этим статусом"
+          >
             <View style={styles.tileHeader}>
               <Feather name={m.icon} size={14} color={toneColor(m.tone)} />
               <Text style={styles.tileLabel}>{m.label}</Text>
             </View>
             <Text style={styles.tileValue}>{formatTripsCount(m.value)}</Text>
-          </View>
+          </Pressable>
         ))}
       </View>
 
       <View style={styles.ctaRow}>
         <Pressable
-          onPress={onOpenCalendar}
+          onPress={() => onOpenCalendar()}
           style={({ pressed }) => [styles.cta, globalFocusStyles.focusable, { opacity: pressed ? 0.85 : 1 }]}
           accessibilityRole="button"
           accessibilityLabel="Открыть календарь"

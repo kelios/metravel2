@@ -56,6 +56,7 @@ const TravelPeerBadgesSection: React.FC<{ travel: Travel }> = memo(
             travelId={travelId}
             received={received}
             label="Наградить статью"
+            pickerTitle="Наградить статью"
             style={received.length > 0 ? ROW_SPACING : undefined}
           />
         )}

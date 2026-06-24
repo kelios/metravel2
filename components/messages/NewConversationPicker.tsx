@@ -14,7 +14,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import type { MessagingUser } from '@/api/messages';
-import { getMessagingUserDisplayName, getMessagingUserId } from '@/api/messages';
+import { getMessagingUserDisplayName, getMessagingUserId, getMessagingUserSearchText } from '@/api/messages';
 
 interface NewConversationPickerProps {
     users: MessagingUser[];
@@ -37,8 +37,8 @@ function NewConversationPicker({
         if (!search.trim()) return users;
         const q = search.trim().toLowerCase();
         return users.filter((u) => {
-            const name = getMessagingUserDisplayName(u).toLowerCase();
-            return name.includes(q);
+            const searchText = getMessagingUserSearchText(u);
+            return searchText.includes(q);
         });
     }, [users, search]);
 
@@ -97,7 +97,7 @@ function NewConversationPicker({
                     ]}
                     value={search}
                     onChangeText={setSearch}
-                    placeholder="Поиск по имени..."
+                    placeholder="Поиск по имени, email или нику..."
                     placeholderTextColor={colors.textMuted}
                     accessibilityLabel="Поиск пользователя"
                 />

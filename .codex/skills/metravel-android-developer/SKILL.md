@@ -36,8 +36,8 @@ Read first:
 
 ## Bug Intake
 
-- Every real Android bug found during device QA must be created or updated on the shared task board in the active `Android Release` sprint before implementation continues.
-- Prefer the `ticket-board` MCP tools when available. If MCP is unavailable but `.secrets/metravel-task-board.env` exists, use the task board API without printing the token.
+- Every real Android bug found during device QA must be created or updated on the shared task board in the current active Android/Release sprint before implementation continues.
+- Prefer the `ticket-board` MCP tools when available. If MCP/API returns `HTTP 401`, refresh the staff token through `.env.e2e` using `docs/TASK_BOARD_MCP.md`, update `.secrets/metravel-task-board.env` without printing secrets, and retry. If MCP remains unavailable but `.secrets/metravel-task-board.env` exists, use the task board API without printing the token.
 - Use `area=front`, `status=todo`, `reporter=Codex Android QA`, and `assignee=metravel-android-developer` for newly confirmed Android frontend bugs unless the existing board conventions say otherwise.
 - Include device model, Android/API version, exact route, reproduction steps, `adb logcat`/Metro evidence, acceptance criteria, likely files, validation, and blockers.
 
