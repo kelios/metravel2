@@ -1,5 +1,5 @@
 // app/travelsby/index.tsx
-import React, { Suspense, createElement, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, createElement, useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, StyleSheet, View, Text } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import FloatingActionButton from '@/components/ui/FloatingActionButton';
 import ListTravel from '@/components/listTravel/ListTravelRoute';
+import { trackContentCreateCtaClicked } from '@/utils/growthFunnelAnalytics';
 
 export default function TravelsByScreen() {
     const pathname = usePathname();
@@ -23,6 +24,17 @@ export default function TravelsByScreen() {
         if (Platform.OS !== 'web') return;
         setCanRenderList(true);
     }, []);
+
+    const handleCreateTravelPress = useCallback(() => {
+        trackContentCreateCtaClicked({
+            contentType: 'route',
+            source: 'travelsby_fab',
+            authState: 'authenticated',
+            intent: 'create-travel',
+            action: 'create',
+        });
+        router.push('/travel/new' as any);
+    }, [router]);
 
     const title = 'Маршруты по Беларуси, идеи поездок и маршрутов | Metravel';
     const description =
@@ -74,7 +86,7 @@ export default function TravelsByScreen() {
                     <FloatingActionButton
                         icon="plus"
                         label="Создать маршрут"
-                        onPress={() => router.push('/travel/new' as any)}
+                        onPress={handleCreateTravelPress}
                         testID="fab-create-travel"
                     />
                 )}

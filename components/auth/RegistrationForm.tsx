@@ -14,7 +14,7 @@ import {
 import Feather from '@expo/vector-icons/Feather';
 import Button from '@/components/ui/Button';
 import { useYupForm } from '@/hooks/useYupForm';
-import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
+import { useIsFocused, useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { registration } from '@/api/auth';
@@ -25,6 +25,12 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation'; // ✅ ИСПРАВЛЕНИЕ: Импорт улучшенного компонента
 import { sendAnalyticsEvent } from '@/utils/analytics';
+import {
+    trackRegistrationFailed,
+    trackRegistrationSubmitted,
+    trackRegistrationSucceeded,
+    trackRegistrationViewed,
+} from '@/utils/growthFunnelAnalytics';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
@@ -48,6 +54,7 @@ export default function RegisterForm() {
         };
     }, []);
     const { redirect, intent } = useLocalSearchParams<{ redirect?: string; intent?: string }>();
+    const isFocused = useIsFocused();
     const router = useRouter();
     const { loginWithGoogle } = useAuth();
     const colors = useThemedColors();
@@ -66,17 +73,30 @@ export default function RegisterForm() {
         return '/';
     };
 
+    useEffect(() => {
+        if (!isFocused) return;
+        trackRegistrationViewed({ source: 'registration', intent, redirect });
+    }, [intent, isFocused, redirect]);
+
     const onSubmit = async (
         values: FormValues,
         { setSubmitting, resetForm }: { setSubmitting: (v: boolean) => void; resetForm: () => void },
     ) => {
         setMsg({ text: '', error: false });
+        trackRegistrationSubmitted({ source: 'registration', intent, redirect, method: 'email' });
         try {
             const res = await registration(values);
             const ok = typeof res === 'object' && 'ok' in res ? res.ok : false;
             const message = typeof res === 'object' && 'message' in res ? res.message : String(res ?? '');
 
             if (!ok) {
+                trackRegistrationFailed({
+                    source: 'registration',
+                    intent,
+                    redirect,
+                    method: 'email',
+                    reason: 'api',
+                });
                 setMsg({ text: message || 'Не удалось зарегистрироваться.', error: true });
                 return;
             }
@@ -87,6 +107,7 @@ export default function RegisterForm() {
             // Не разблокируем кнопку на успехе (finally вызовет setSubmitting(false)):
             // submitted держит её disabled до фактического router.replace.
             setSubmitted(true);
+            trackRegistrationSucceeded({ source: 'registration', intent, redirect, method: 'email' });
             if (intent) {
                 sendAnalyticsEvent('AuthSuccess', { source: 'home', intent });
             }
@@ -96,6 +117,13 @@ export default function RegisterForm() {
                 router.replace(resolvePostAuthPath() as any);
             }, 1000);
         } catch (e: any) {
+            trackRegistrationFailed({
+                source: 'registration',
+                intent,
+                redirect,
+                method: 'email',
+                reason: 'exception',
+            });
             setMsg({ text: e?.message || 'Не удалось зарегистрироваться.', error: true });
         } finally {
             setSubmitting(false);
@@ -108,8 +136,10 @@ export default function RegisterForm() {
         let navigating = false;
         try {
             setMsg({ text: '', error: false });
+            trackRegistrationSubmitted({ source: 'registration', intent, redirect, method: 'google' });
             const ok = await loginWithGoogle(credential);
             if (ok) {
+                trackRegistrationSucceeded({ source: 'registration', intent, redirect, method: 'google' });
                 if (intent) {
                     sendAnalyticsEvent('AuthSuccess', { source: 'google', intent });
                 }
@@ -117,9 +147,23 @@ export default function RegisterForm() {
                 setSubmitted(true);
                 router.replace(resolvePostAuthPath() as any);
             } else {
+                trackRegistrationFailed({
+                    source: 'registration',
+                    intent,
+                    redirect,
+                    method: 'google',
+                    reason: 'api',
+                });
                 setMsg({ text: 'Не удалось войти через Google.', error: true });
             }
         } catch (e: any) {
+            trackRegistrationFailed({
+                source: 'registration',
+                intent,
+                redirect,
+                method: 'google',
+                reason: 'exception',
+            });
             setMsg({ text: e?.message || 'Ошибка при входе через Google.', error: true });
         } finally {
             // На успехе оставляем заблокированным до размонтирования (идёт навигация).
@@ -128,6 +172,13 @@ export default function RegisterForm() {
     };
 
     const handleGoogleError = (error: string) => {
+        trackRegistrationFailed({
+            source: 'registration',
+            intent,
+            redirect,
+            method: 'google',
+            reason: 'provider',
+        });
         setMsg({ text: error, error: true });
     };
 

@@ -1,4 +1,4 @@
-import { memo, Suspense, useEffect, useMemo, useState } from 'react'
+import { memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { StyleSheet, View, Platform } from 'react-native'
 import { usePathname, useRouter } from 'expo-router'
 import { useIsFocused } from 'expo-router'
@@ -13,6 +13,7 @@ import { useAuth } from '@/context/AuthContext'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
 import SearchPageSkeleton from '@/components/listTravel/SearchPageSkeleton'
 import ListTravel from '@/components/listTravel/ListTravelRoute'
+import { trackContentCreateCtaClicked } from '@/utils/growthFunnelAnalytics'
 
 /** SEO metadata */
 const PAGE_HEADING = 'Поиск маршрутов и идей путешествий по Беларуси'
@@ -31,6 +32,17 @@ function SearchScreen() {
     if (Platform.OS !== 'web') return
     setCanRenderList(true)
   }, [])
+
+  const handleCreateTravelPress = useCallback(() => {
+    trackContentCreateCtaClicked({
+      contentType: 'route',
+      source: 'search_fab',
+      authState: 'authenticated',
+      intent: 'create-travel',
+      action: 'create',
+    })
+    router.push('/travel/new' as any)
+  }, [router])
 
   const styles = useMemo(
     () =>
@@ -102,7 +114,7 @@ function SearchScreen() {
           <FloatingActionButton
             icon="plus"
             label="Создать маршрут"
-            onPress={() => router.push('/travel/new' as any)}
+            onPress={handleCreateTravelPress}
             testID="fab-create-travel"
           />
         )}

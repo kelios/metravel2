@@ -18,6 +18,12 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useDebounce } from '@/hooks/useDebounce';
 import { sanitizeArticleEditorHtml } from '@/utils/articleEditorSanitize';
 import {
+    trackArticleEditorAutosaveFailed,
+    trackArticleEditorAutosaveSucceeded,
+    trackArticleEditorPreviewClicked,
+    trackArticleEditorViewed,
+} from '@/utils/growthFunnelAnalytics';
+import {
     ARTICLE_EDITOR_CHANGE_DEBOUNCE_MS,
     ARTICLE_EDITOR_DEFAULT_AUTOSAVE_DELAY,
     normalizeArticleEditorHtmlForOutput,
@@ -163,6 +169,14 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
     const anchorInputRef = useRef<any>(null);
     const linkInputRef = useRef<any>(null);
+
+    useEffect(() => {
+        trackArticleEditorViewed({
+            source: 'article_editor_web',
+            travelId: idTravel,
+            variant,
+        });
+    }, [idTravel, variant]);
 
     const blurActiveElement = useCallback(() => {
         blurActiveEditorElement({ isWeb, windowObject: win });
@@ -319,10 +333,36 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         };
     }, []);
 
+    const handleTrackedAutosave = useCallback(
+        async (nextHtml: string) => {
+            if (!onAutosave) return;
+            try {
+                await Promise.resolve(onAutosave(nextHtml));
+                trackArticleEditorAutosaveSucceeded({
+                    source: 'article_editor_web',
+                    travelId: idTravel,
+                    variant,
+                    contentLength: nextHtml.length,
+                });
+            } catch (error) {
+                trackArticleEditorAutosaveFailed({
+                    source: 'article_editor_web',
+                    travelId: idTravel,
+                    variant,
+                    contentLength: nextHtml.length,
+                });
+                throw error;
+            }
+        },
+        [idTravel, onAutosave, variant],
+    );
+
+    const trackedAutosave = onAutosave ? handleTrackedAutosave : undefined;
+
     useEffect(() => {
         return runAutosaveEffect({
             html,
-            onAutosave,
+            onAutosave: trackedAutosave,
             autosaveDelay,
             refs: {
                 autosaveIsMountedRef,
@@ -333,7 +373,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 autosaveInFlightHtmlRef,
             },
         });
-    }, [html, onAutosave, autosaveDelay]);
+    }, [html, trackedAutosave, autosaveDelay]);
 
     const fireChange = useCallback(
         (val: string, selection?: { index: number; length: number } | null, markUserEdited: boolean = true) => {
@@ -432,8 +472,13 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }, [fireChange]);
 
     const openPreview = useCallback(async () => {
+        trackArticleEditorPreviewClicked({
+            source: 'article_editor_web',
+            travelId: idTravel,
+            variant,
+        });
         await openArticleEditorPreview({ isWeb, windowObject: win, idTravel });
-    }, [idTravel]);
+    }, [idTravel, variant]);
 
     const uploadAndInsert = useCallback(async (file: File) => {
         await uploadImageAndInsert({

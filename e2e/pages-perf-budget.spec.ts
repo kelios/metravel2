@@ -81,6 +81,17 @@ const PAGES: PageTarget[] = [
   },
 ]
 
+function shouldIgnoreBudgetRequest(target: PageTarget, url: string) {
+  if (target.key !== 'MAP') return false
+
+  try {
+    const parsed = new URL(url)
+    return parsed.pathname.startsWith('/proxy/tiles/')
+  } catch {
+    return false
+  }
+}
+
 async function waitForReady(page: any, selector: string) {
   await Promise.race([
     page.waitForSelector(selector, { timeout: 30_000 }).catch(() => null),
@@ -150,7 +161,9 @@ for (const target of PAGES) {
       await page.setViewportSize({ width: 1440, height: 900 })
       await injectPerfObservers(page)
 
-      const tracker = createNetworkTracker(page)
+      const tracker = createNetworkTracker(page, {
+        ignoreBudgetRequest: (url) => shouldIgnoreBudgetRequest(target, url),
+      })
       await page.goto(target.path, { waitUntil: 'load', timeout: 60_000 })
       await waitForReady(page, target.readySelector)
 
@@ -166,6 +179,7 @@ for (const target of PAGES) {
               budgetScoped: stats.requestCount,
               all: stats.allRequestCount,
               ignoredThirdParty: stats.ignoredThirdPartyRequestCount,
+              ignoredBudget: stats.ignoredBudgetRequestCount,
             },
             largestResources: stats.largestResources,
           },

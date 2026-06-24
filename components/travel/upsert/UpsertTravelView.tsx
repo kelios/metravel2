@@ -18,6 +18,11 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useTravelPreview } from '@/hooks/useTravelPreview';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
+import {
+  trackContentCreateAuthGateViewed,
+  trackContentCreateCtaClicked,
+  trackRouteCreateStarted,
+} from '@/utils/growthFunnelAnalytics';
 
 type Colors = UpsertTravelController['colors'];
 type Styles = ReturnType<typeof createStyles>;
@@ -295,21 +300,51 @@ const AccessDeniedState = ({ colors, styles, router }: WizardStateProps) => {
 };
 
 const AuthRequiredState = ({ colors, styles, router }: WizardStateProps) => {
+  useEffect(() => {
+    trackContentCreateAuthGateViewed({
+      contentType: 'route',
+      source: 'travel_new_auth_gate',
+      intent: 'create-travel',
+    });
+  }, []);
+
+  const handleLogin = useCallback(() => {
+    trackContentCreateCtaClicked({
+      contentType: 'route',
+      source: 'travel_new_auth_gate',
+      authState: 'guest',
+      intent: 'create-travel',
+      action: 'login',
+    });
+    router.push(buildLoginHref({ redirect: '/travel/new', intent: 'create-travel' }) as any);
+  }, [router]);
+
+  const handleRegister = useCallback(() => {
+    trackContentCreateCtaClicked({
+      contentType: 'route',
+      source: 'travel_new_auth_gate',
+      authState: 'guest',
+      intent: 'create-travel',
+      action: 'register',
+    });
+    router.push('/registration?redirect=%2Ftravel%2Fnew&intent=create-travel' as any);
+  }, [router]);
+
   const actions = useMemo<EmptyStateAction[]>(
     () => [
       {
         label: 'Войти',
         accessibilityLabel: 'Войти и вернуться к созданию путешествия',
-        onPress: () => router.push(buildLoginHref({ redirect: '/travel/new', intent: 'create-travel' }) as any),
+        onPress: handleLogin,
       },
       {
         label: 'Зарегистрироваться',
         accessibilityLabel: 'Зарегистрироваться и вернуться к созданию путешествия',
-        onPress: () => router.push('/registration?redirect=%2Ftravel%2Fnew&intent=create-travel' as any),
+        onPress: handleRegister,
         variant: 'secondary',
       },
     ],
-    [router],
+    [handleLogin, handleRegister],
   );
 
   return (
@@ -365,11 +400,31 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
   const responsive = useResponsiveFlags();
   const isOffline = useOfflineStatus();
   const { colors, wizard } = controller;
+  const hasTrackedRouteCreateStartedRef = useRef(false);
 
   const styles = useMemo(
     () => createStyles(colors, responsive),
     [colors, responsive],
   );
+
+  useEffect(() => {
+    if (hasTrackedRouteCreateStartedRef.current) return;
+    if (controller.isInitialLoading) return;
+    if (!controller.isNew || !controller.isAuthenticated) return;
+
+    hasTrackedRouteCreateStartedRef.current = true;
+    trackRouteCreateStarted({
+      source: 'travel_new',
+      travelId: controller.formData?.id,
+      step: wizard.currentStep,
+    });
+  }, [
+    controller.formData?.id,
+    controller.isAuthenticated,
+    controller.isInitialLoading,
+    controller.isNew,
+    wizard.currentStep,
+  ]);
 
   const handleOpenPublic = useCallback(() => {
     const id = controller.formData?.id;

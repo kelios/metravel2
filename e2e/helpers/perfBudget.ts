@@ -166,9 +166,14 @@ export type NetworkStats = {
   requestCount: number
   allRequestCount: number
   ignoredThirdPartyRequestCount: number
+  ignoredBudgetRequestCount: number
   jsRequests: number
   imgRequests: number
   largestResources: Array<{ url: string; sizeKB: number; type: string }>
+}
+
+export type NetworkTrackerOptions = {
+  ignoreBudgetRequest?: (url: string) => boolean
 }
 
 const REQUEST_BUDGET_HOSTS = new Set(
@@ -205,11 +210,12 @@ function shouldCountForRequestBudget(url: string): boolean {
   return false
 }
 
-export function createNetworkTracker(page: any): { getStats: () => NetworkStats } {
+export function createNetworkTracker(page: any, options: NetworkTrackerOptions = {}): { getStats: () => NetworkStats } {
   const resources: Array<{ url: string; size: number; type: string }> = []
   let allRequestCount = 0
   let requestCount = 0
   let ignoredThirdPartyRequestCount = 0
+  let ignoredBudgetRequestCount = 0
 
   page.on('response', (response: any) => {
     allRequestCount++
@@ -217,7 +223,9 @@ export function createNetworkTracker(page: any): { getStats: () => NetworkStats 
       const req = response.request()
       const type = req.resourceType()
       const url = req.url()
-      if (shouldCountForRequestBudget(url)) {
+      if (options.ignoreBudgetRequest?.(url)) {
+        ignoredBudgetRequestCount++
+      } else if (shouldCountForRequestBudget(url)) {
         requestCount++
       } else {
         ignoredThirdPartyRequestCount++
@@ -283,6 +291,7 @@ export function createNetworkTracker(page: any): { getStats: () => NetworkStats 
         requestCount,
         allRequestCount,
         ignoredThirdPartyRequestCount,
+        ignoredBudgetRequestCount,
         jsRequests,
         imgRequests,
         largestResources,

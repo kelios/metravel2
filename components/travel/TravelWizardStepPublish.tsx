@@ -18,6 +18,14 @@ import { hapticNotification } from '@/utils/haptics';
 import { TravelFormData } from '@/types/types';
 import { getModerationIssues, type ModerationIssue } from '@/utils/formValidation';
 import { trackWizardEvent } from '@/utils/analytics';
+import {
+    trackRouteCreateDraftFailed,
+    trackRouteCreateDraftSaved,
+    trackRouteCreatePublishAttempted,
+    trackRouteCreatePublishBlocked,
+    trackRouteCreatePublishFailed,
+    trackRouteCreatePublishSucceeded,
+} from '@/utils/growthFunnelAnalytics';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { showToastMessage } from '@/utils/toast';
@@ -259,6 +267,13 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             const galleryArr = galleryItems;
             const hasCover = !!nextForm.travel_image_thumb_small_url;
             const hasPhotos = hasCover || galleryArr.length > 0;
+            const fieldsCompletedCount = [
+                hasName,
+                hasDescription,
+                hasCountries,
+                hasRoute,
+                hasPhotos,
+            ].filter(Boolean).length;
 
             await trackWizardEvent('wizard_draft_saved', {
                 travel_id: resolvedId,
@@ -272,12 +287,28 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 },
             });
 
+            trackRouteCreateDraftSaved({
+                travelId: resolvedId,
+                step: currentStep,
+                fieldsCompletedCount,
+                hasName,
+                hasDescription,
+                hasCountries,
+                hasRoute,
+                hasPhotos,
+            });
+
             hapticNotification('success');
 
             // После сохранения на последнем шаге логично вывести пользователя из мастера
             // в раздел "Мои путешествия", где он увидит черновик.
             router.replace('/metravel');
         } catch (error) {
+            trackRouteCreateDraftFailed({
+                travelId: formData.id,
+                step: currentStep,
+                errorType: 'save_failed',
+            });
             setFormData(previousForm);
             hapticNotification('error');
             if (!hasToastBeenShown(error)) {
@@ -312,8 +343,20 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             is_edit: !isNew,
             travel_id: formData.id ?? null,
         });
+        trackRouteCreatePublishAttempted({
+            travelId: formData.id,
+            step: currentStep,
+            isNew,
+            missingFieldsCount: criticalMissing.length,
+        });
 
         if (criticalMissing.length > 0) {
+            trackRouteCreatePublishBlocked({
+                travelId: formData.id,
+                step: currentStep,
+                missingFieldsCount: criticalMissing.length,
+                firstMissingField: criticalMissing[0]?.key,
+            });
             setMissingForModeration(criticalMissing);
             hapticNotification('warning');
             pulsePrimaryError('Нельзя отправить: исправьте ошибки');
@@ -339,6 +382,11 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             if (!resolvedId) {
                 // Сохранение не дало id — откатываем оптимистичный publish=true,
                 // иначе UI покажет «на модерации», хотя ничего не отправлено.
+                trackRouteCreatePublishFailed({
+                    travelId: formData.id,
+                    step: currentStep,
+                    errorType: 'missing_saved_id',
+                });
                 setFormData(previousForm);
                 void showToastMessage({
                     type: 'error',
@@ -354,6 +402,12 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 filled_checklist_count: checklist.filter(item => item.ok).length,
                 total_checklist_count: checklist.length,
             });
+            trackRouteCreatePublishSucceeded({
+                travelId: resolvedId,
+                step: currentStep,
+                checklistCompletedCount: checklist.filter(item => item.ok).length,
+                checklistTotalCount: checklist.length,
+            });
 
             void showToastMessage({
                 type: 'success',
@@ -367,6 +421,11 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             // Используем replace, чтобы мастер точно размонтировался и не продолжал автосохранение.
             router.replace('/metravel');
         } catch (error) {
+            trackRouteCreatePublishFailed({
+                travelId: formData.id,
+                step: currentStep,
+                errorType: 'save_failed',
+            });
             setFormData(previousForm);
             hapticNotification('error');
             if (!hasToastBeenShown(error)) {

@@ -11,6 +11,11 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { normalizeAnchorId, safeJsonString } from '@/utils/htmlUtils';
 import { useDebounce } from '@/hooks/useDebounce';
+import {
+  trackArticleEditorAutosaveFailed,
+  trackArticleEditorAutosaveSucceeded,
+  trackArticleEditorViewed,
+} from '@/utils/growthFunnelAnalytics';
 import UiIconButton from '@/components/ui/IconButton';
 import Button from '@/components/ui/Button';
 import {
@@ -59,6 +64,36 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   const initialSanitizedContent = useMemo(() => sanitizeForEditor(content), [content, sanitizeForEditor]);
   const safePlaceholder = useMemo(() => safeJsonString(placeholder), [placeholder]);
   const safeInitialContent = useMemo(() => safeJsonString(initialSanitizedContent), [initialSanitizedContent]);
+
+  useEffect(() => {
+    trackArticleEditorViewed({
+      source: 'article_editor_native',
+      travelId: idTravel,
+      variant,
+    });
+  }, [idTravel, variant]);
+
+  const handleTrackedAutosave = useCallback((nextHtml: string) => {
+    if (!onAutosave) return;
+
+    void Promise.resolve(onAutosave(nextHtml))
+      .then(() => {
+        trackArticleEditorAutosaveSucceeded({
+          source: 'article_editor_native',
+          travelId: idTravel,
+          variant,
+          contentLength: nextHtml.length,
+        });
+      })
+      .catch(() => {
+        trackArticleEditorAutosaveFailed({
+          source: 'article_editor_native',
+          travelId: idTravel,
+          variant,
+          contentLength: nextHtml.length,
+        });
+      });
+  }, [idTravel, onAutosave, variant]);
 
   // Quill HTML template with dynamic theme colors
   const quillHTML = useMemo(() => buildArticleEditorNativeHtml({
@@ -118,7 +153,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
             clearTimeout(autosaveTimer.current);
           }
           autosaveTimer.current = setTimeout(() => {
-            onAutosave(newHtml);
+            handleTrackedAutosave(newHtml);
           }, autosaveDelay);
         }
       }
@@ -129,7 +164,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
     } catch (error) {
       console.error('Error parsing WebView message:', error);
     }
-  }, [autosaveDelay, debouncedOnChange, onAutosave]);
+  }, [autosaveDelay, debouncedOnChange, handleTrackedAutosave, onAutosave]);
 
   // Обновление контента при изменении prop (только внешние изменения)
   useLayoutEffect(() => {

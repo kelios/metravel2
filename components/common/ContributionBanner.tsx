@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { ResponsiveContainer } from '@/components/layout'
 import Button from '@/components/ui/Button'
 import { buildLoginHref } from '@/utils/authNavigation'
+import { trackContentCreateCtaClicked } from '@/utils/growthFunnelAnalytics'
 
 export type ContributionBannerVariant =
   | 'home'
@@ -94,8 +95,17 @@ function ContributionBanner({ variant = 'default', density = 'regular' }: Contri
   )
 
   const copy = COPY[variant]
+  const authState = isAuthenticated ? 'authenticated' : 'guest'
+  const source = `contribution_banner_${variant}`
 
   const handleAddPlace = () => {
+    trackContentCreateCtaClicked({
+      contentType: 'route',
+      source,
+      authState,
+      intent: 'add-place',
+      action: isAuthenticated ? 'create' : 'login',
+    })
     if (isAuthenticated) {
       router.push(ADD_PLACE_PATH as any)
     } else {
@@ -104,6 +114,13 @@ function ContributionBanner({ variant = 'default', density = 'regular' }: Contri
   }
 
   const handleRegister = () => {
+    trackContentCreateCtaClicked({
+      contentType: 'route',
+      source,
+      authState,
+      intent: 'add-place',
+      action: 'register',
+    })
     router.push(
       (`/registration?redirect=${encodeURIComponent(ADD_PLACE_PATH)}&intent=add-place`) as any,
     )
