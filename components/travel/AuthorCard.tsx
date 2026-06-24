@@ -179,9 +179,9 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
 
   if (!userName && !authorCountryName && !userId) return null
 
-  const showActions = !!userId && !isOwnTravel
-  const showInlineCta = !isMobile && !!userId
-  const showBottomCta = isMobile && !!userId
+  const hasUser = !!userId
+  const canSubscribe = hasUser && !isOwnTravel
+  const showActionsRow = hasUser
 
   return (
     <View style={[styles.container, isMobile && styles.containerMobile]}>
@@ -272,67 +272,20 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
             )}
 
             {userId != null && <AuthorAchievements userId={userId} styles={styles} />}
-
-            {showActions && (
-              <View style={styles.authorActionsRow}>
-                <SubscribeButton targetUserId={userId!} size="sm" />
-                <Pressable
-                  onPress={handleWriteToAuthor}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Написать автору${userName ? ` ${userName}` : ''}`}
-                  style={({ pressed }) => [
-                    styles.messageButton,
-                    pressed && styles.messageButtonPressed,
-                  ]}
-                >
-                  <Feather name="mail" size={14} color={colors.primary} />
-                  <Text style={styles.messageButtonText}>Написать</Text>
-                </Pressable>
-              </View>
-            )}
           </View>
         </View>
-
-        {showInlineCta && (
-          <View style={styles.ctaInlineRow}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.viewButtonInline,
-                pressed && styles.viewButtonPressed,
-              ]}
-              onPress={handleViewAuthorTravels}
-              accessibilityRole="button"
-              accessibilityLabel="Все путешествия автора"
-            >
-              <Text style={styles.viewButtonInlineText} numberOfLines={1}>
-                Все путешествия автора
-              </Text>
-            </Pressable>
-          </View>
-        )}
       </View>
 
-      {showBottomCta && <View style={styles.divider} />}
-
-      {showBottomCta && (
-        <View style={styles.ctaBottomRow}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.viewButtonBottom,
-              styles.viewButtonBottomPrimary,
-              pressed && styles.viewButtonPressed,
-            ]}
-            onPress={handleViewAuthorTravels}
-            accessibilityRole="button"
-            accessibilityLabel="Все путешествия автора"
-          >
-            <View style={styles.ctaBottomButtonContent}>
-              <Feather name="map" size={14} color={colors.primary} />
-              <Text style={[styles.viewButtonBottomText, styles.viewButtonBottomTextPrimary]}>
-                Все путешествия
-              </Text>
-            </View>
-          </Pressable>
+      {showActionsRow && (
+        <View style={styles.authorActionsRow}>
+          {canSubscribe && (
+            <SubscribeButton
+              targetUserId={userId!}
+              size="sm"
+              iconOnly={isMobile}
+              style={isMobile ? styles.subscribeIconButton : styles.subscribeButton}
+            />
+          )}
 
           {!isOwnTravel && (
             <Pressable
@@ -340,17 +293,32 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
               accessibilityRole="button"
               accessibilityLabel={`Написать автору${userName ? ` ${userName}` : ''}`}
               style={({ pressed }) => [
-                styles.viewButtonBottom,
-                styles.viewButtonBottomSecondary,
-                pressed && styles.viewButtonPressed,
+                styles.actionButton,
+                styles.actionButtonAccent,
+                pressed && styles.actionButtonPressed,
               ]}
             >
-              <View style={styles.ctaBottomButtonContent}>
-                <Feather name="mail" size={14} color={colors.textSecondary} />
-                <Text style={styles.viewButtonBottomText}>Написать</Text>
-              </View>
+              <Feather name="mail" size={15} color={colors.primary} />
+              {!isMobile && <Text style={styles.actionButtonAccentText}>Написать</Text>}
             </Pressable>
           )}
+
+          <Pressable
+            onPress={handleViewAuthorTravels}
+            accessibilityRole="button"
+            accessibilityLabel="Все путешествия автора"
+            style={({ pressed }) => [
+              styles.actionButton,
+              pressed && styles.actionButtonPressed,
+            ]}
+          >
+            <Feather name="map" size={15} color={colors.textSecondary} />
+            {!isMobile && (
+              <Text style={styles.actionButtonText} numberOfLines={1}>
+                Все путешествия
+              </Text>
+            )}
+          </Pressable>
         </View>
       )}
     </View>
@@ -478,113 +446,57 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     authorActionsRow: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
       alignItems: 'center',
-      gap: DESIGN_TOKENS.spacing.xs,
+      gap: DESIGN_TOKENS.spacing.sm,
+      marginTop: DESIGN_TOKENS.spacing.sm,
     },
-    messageButton: {
-      flexDirection: 'row',
+    subscribeButton: { flexShrink: 1 },
+    subscribeIconButton: {
+      width: 40,
+      height: 40,
       alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 14,
-      paddingVertical: 7,
+      justifyContent: 'center',
       borderRadius: 999,
       borderWidth: 1,
       borderColor: colors.borderLight,
-      backgroundColor: colors.primarySoft,
-      alignSelf: 'flex-start',
+      backgroundColor: colors.surface,
+    },
+    actionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      minWidth: 0,
+      flexShrink: 1,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.surface,
       ...Platform.select({
         web: {
           cursor: 'pointer' as any,
           transition: 'all 0.15s ease' as any,
-          ':hover': { backgroundColor: colors.primarySoft, borderColor: colors.primary } as any,
+          ':hover': { backgroundColor: colors.backgroundSecondary, borderColor: colors.border } as any,
         },
       }),
     },
-    messageButtonPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
-    messageButtonText: {
+    actionButtonAccent: {
+      backgroundColor: colors.primarySoft,
+    },
+    actionButtonPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
+    actionButtonText: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       fontWeight: '600',
+      letterSpacing: -0.2,
+      color: colors.textSecondary,
+    },
+    actionButtonAccentText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      fontWeight: '700',
       color: colors.primary,
     },
-    ctaInlineRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: DESIGN_TOKENS.spacing.sm,
-      marginLeft: 'auto',
-      flexShrink: 0,
-    },
-    viewButtonInline: {
-      marginLeft: 'auto',
-      flexShrink: 0,
-      paddingVertical: Platform.OS === 'web' ? 12 : 10,
-      paddingHorizontal: Platform.OS === 'web' ? 16 : 14,
-      borderRadius: 999,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      ...Platform.select({
-        web: {
-          cursor: 'pointer' as any,
-          transition: 'background-color 0.2s ease, border-color 0.2s ease' as any,
-          ':hover': {
-            backgroundColor: colors.backgroundSecondary,
-            borderColor: colors.border,
-          } as any,
-        },
-      }),
-    },
-    viewButtonInlineText: {
-      fontSize: 14,
-      fontWeight: '600',
-      letterSpacing: -0.2,
-      color: colors.textSecondary,
-    },
-    viewButtonPressed: { backgroundColor: colors.backgroundSecondary, transform: [{ scale: 0.98 }] },
-    divider: {
-      width: '100%',
-      height: 1,
-      marginTop: DESIGN_TOKENS.spacing.sm,
-      marginBottom: DESIGN_TOKENS.spacing.xs,
-      opacity: 0.6,
-      backgroundColor: colors.borderLight,
-    },
-    ctaBottomRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: DESIGN_TOKENS.spacing.sm,
-    },
-    ctaBottomButtonContent: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: DESIGN_TOKENS.spacing.xs,
-    },
-    viewButtonBottom: {
-      flex: 1,
-      minWidth: 0,
-      paddingVertical: DESIGN_TOKENS.spacing.sm,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: DESIGN_TOKENS.radii.md,
-      ...Platform.select({
-        web: {
-          cursor: 'pointer' as any,
-          transition: 'background-color 0.15s ease' as any,
-          ':hover': { backgroundColor: colors.backgroundSecondary } as any,
-        },
-      }),
-    },
-    viewButtonBottomPrimary: { backgroundColor: colors.primarySoft },
-    viewButtonBottomSecondary: { backgroundColor: colors.surface, borderColor: colors.surface },
-    viewButtonBottomText: {
-      fontSize: DESIGN_TOKENS.typography.sizes.md,
-      fontWeight: '600',
-      letterSpacing: -0.2,
-      color: colors.textSecondary,
-    },
-    viewButtonBottomTextPrimary: { color: colors.primary, fontWeight: '700' },
   })
 
 export default React.memo(AuthorCard)

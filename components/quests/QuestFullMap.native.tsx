@@ -204,7 +204,8 @@ function QuestFullMap({
         function navButtonsHtml(gp) {
           var buttons = navProviders.map(function (provider) {
             return '<button type="button" class="qnav-btn" data-app="' + provider.app +
-              '" data-lat="' + gp.lat + '" data-lng="' + gp.lng + '" ' +
+              '" data-lat="' + gp.lat + '" data-lng="' + gp.lng +
+              '" data-title="' + encodeURIComponent(gp.titles[0] || '') + '" ' +
               'style="cursor:pointer;border:1px solid ' + theme.routeLine + ';background:#fff;color:' + theme.text +
               ';border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700;line-height:1">' +
               provider.label + '</button>';
@@ -233,7 +234,8 @@ function QuestFullMap({
             type: 'quest-map-nav',
             app: btn.getAttribute('data-app'),
             lat: parseFloat(btn.getAttribute('data-lat')),
-            lng: parseFloat(btn.getAttribute('data-lng'))
+            lng: parseFloat(btn.getAttribute('data-lng')),
+            title: decodeURIComponent(btn.getAttribute('data-title') || '')
           }));
         });
 
@@ -333,6 +335,7 @@ function QuestFullMap({
                 app?: QuestMapApp;
                 lat?: number;
                 lng?: number;
+                title?: string;
             };
             if (data.type === 'quest-map-nav') {
                 if (
@@ -340,7 +343,7 @@ function QuestFullMap({
                     Number.isFinite(data.lat) &&
                     Number.isFinite(data.lng)
                 ) {
-                    void openQuestMap({ lat: data.lat!, lng: data.lng! }, data.app);
+                    void openQuestMap({ lat: data.lat!, lng: data.lng!, title: data.title }, data.app);
                 }
                 return;
             }

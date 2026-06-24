@@ -105,9 +105,7 @@ export const openQuestMap = async (point: QuestMapPoint, app: QuestMapApp) => {
     google: buildGoogleMapsUrl(coord),
     apple: `http://maps.apple.com/?ll=${lat},${lng}`,
     yandex: buildYandexNaviUrl(coord),
-    organic_1: `om://map?ll=${lat},${lng}&z=17`,
-    organic_2: `organicmaps://map?ll=${lat},${lng}&z=17`,
-    organic_best: buildOrganicMapsUrl(coord),
+    organic_best: buildOrganicMapsUrl(coord, point.title),
     organic_web: `https://omaps.app/${lat},${lng}`,
     mapsme: `mapsme://map?ll=${lat},${lng}&zoom=17&n=${name}`,
     geo: Platform.OS === 'android' ? `geo:${lat},${lng}?q=${lat},${lng}(${name})` : undefined,
@@ -116,7 +114,7 @@ export const openQuestMap = async (point: QuestMapPoint, app: QuestMapApp) => {
   } as const
 
   if (app === 'organic') {
-    return openQuestMapCandidates([urls.organic_best, urls.organic_1, urls.organic_2, urls.organic_web, urls.geo, urls.google])
+    return openQuestMapCandidates([urls.organic_best, urls.organic_web, urls.geo, urls.google])
   }
   if (app === 'mapsme') {
     return openQuestMapCandidates([urls.mapsme, urls.geo, urls.google])
