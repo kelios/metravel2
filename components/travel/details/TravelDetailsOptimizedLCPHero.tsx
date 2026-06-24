@@ -6,6 +6,7 @@ import { createSafeImageUrl } from '@/utils/travelMedia';
 import {
   buildResponsiveImageProps,
   buildVersionedImageUrl,
+  optimizeImageUrl,
 } from '@/utils/imageOptimization';
 import { markUriLoaded } from '@/components/travel/sliderParts/imageLoadCache';
 import {
@@ -146,6 +147,21 @@ function OptimizedLCPHeroInner({
   }, [baseSrc]);
 
   const srcWithRetry = overrideSrc || responsive.src || baseSrc;
+  // Blur-«фрост» позади contain-картинки лежит под filter:blur(18px)+background-size:cover
+  // (см. .travel-lcp-hero-backdrop-segment), поэтому full-res источник там не виден —
+  // браузеру незачем растеризовать большое изображение второй раз в LCP-окне. Просим у
+  // CDN крошечную ширину (тот же base, поэтому api-prefix fallback тоже учтён). Если CDN
+  // не вернул вариант — падаем обратно на srcWithRetry, blur не теряем.
+  const backdropSrc = useMemo(
+    () =>
+      optimizeImageUrl(srcWithRetry, {
+        width: 64,
+        quality: 40,
+        format: 'auto',
+        fit: 'cover',
+      }) || srcWithRetry,
+    [srcWithRetry],
+  );
   const fixedHeight = height ? `${Math.round(height)}px` : '100%';
   const backdropBox = useMemo(() => {
     if (Platform.OS !== 'web') return null;
@@ -273,7 +289,7 @@ function OptimizedLCPHeroInner({
                     width: segment.width,
                     height: segment.height,
                     zIndex: 0,
-                    backgroundImage: `url("${srcWithRetry.replace(/"/g, '\\"')}")`,
+                    backgroundImage: `url("${backdropSrc.replace(/"/g, '\\"')}")`,
                     opacity: 1,
                   }}
                 />

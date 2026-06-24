@@ -22,7 +22,7 @@ export function useTravelDetailsHeroCompositionModel({
   renderSlider,
   setHeroContainerWidth,
   sliderUpgradeAllowed,
-  webHeroLoaded: _webHeroLoaded,
+  webHeroLoaded,
 }: UseTravelDetailsHeroCompositionModelArgs) {
   const [fullscreenVisible, setFullscreenVisible] = useState(false)
   const [fullscreenIndex, setFullscreenIndex] = useState(0)
@@ -30,11 +30,17 @@ export function useTravelDetailsHeroCompositionModel({
   const shouldShowOptimizedHero = Platform.OS === 'web' && !!firstImg
   const shouldRenderWebOptimizedHero = Platform.OS === 'web' && shouldShowOptimizedHero
   const hasInteractiveWebGallery = Platform.OS === 'web' && heroSliderImages.length > 1
+  // Не монтируем слайдер под LCP-оверлеем, пока LCP-картинка не задекодилась
+  // (`webHeroLoaded`). Иначе на первом экране два дерева одной картинки: <img data-lcp>
+  // и первый слайд слайдера декодят/рисуют один кадр дважды. После декода LCP слайдер
+  // монтируется с тем же (уже кэшированным) первым кадром → его onLoad снимает оверлей
+  // без вспышки.
   const shouldRenderWebSlider =
     shouldRenderWebOptimizedHero &&
     hasInteractiveWebGallery &&
     renderSlider &&
-    sliderUpgradeAllowed
+    sliderUpgradeAllowed &&
+    webHeroLoaded
   const sliderPreloadCount = Platform.OS === 'web' ? (isMobile ? 2 : 3) : isMobile ? 1 : 2
 
   const handleImagePress = useCallback((index: number) => {

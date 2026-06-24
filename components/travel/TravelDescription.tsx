@@ -54,6 +54,22 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
         return txt.length === 0;
     }, [htmlContent]);
 
+    // «Вес» описания: лёгкое (короткий текст без эмбедов/множества фото) можно
+    // монтировать сразу после кадров гидратации — idle-gate для него лишняя задержка.
+    // estimatedHeight — резерв высоты плейсхолдера, чтобы swap placeholder→контент
+    // не давал крупного CLS (#561).
+    const { isHeavyHtml, estimatedHeight } = useMemo(() => {
+        const raw = String(htmlContent || '');
+        const text = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        const imgCount = (raw.match(/<img/gi) || []).length;
+        const embedCount = (raw.match(/instagram\.com|<iframe/gi) || []).length;
+        const heavy = raw.length > 6000 || embedCount > 0 || imgCount > 4;
+        const charsPerLine = Math.max(28, Math.round(contentWidth / 8));
+        const lines = Math.max(1, Math.ceil(text.length / charsPerLine));
+        const reserve = Math.min(Math.max(lines * 26 + imgCount * 240 + embedCount * 420, 120), 4000);
+        return { isHeavyHtml: heavy, estimatedHeight: reserve };
+    }, [htmlContent, contentWidth]);
+
     // Монтаж тяжёлого HTML откладываем на обеих платформах, чтобы не блокировать
     // первый интерактив (web: гидратация шелла/hero; native: взаимодействия).
     const [canParseHtml, setCanParseHtml] = useState(false);
@@ -67,12 +83,14 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
         if (Platform.OS === "web") {
             const w = typeof window !== "undefined" ? (window as any) : null;
             let idleId: number | null = null;
-            // Два кадра: даём шеллу+hero отрисоваться и снять SSG-скелет, затем
-            // в idle монтируем описание. Форсаж 800ms — на случай занятого потока.
+            // Два кадра: даём шеллу+hero отрисоваться и снять SSG-скелет (гидратация
+            // прероллит только скелет — мгновенный монтаж дал бы mismatch). Лёгкое
+            // описание после кадров раскрываем сразу; тяжёлое — в idle (защита потока),
+            // форсаж — на случай занятого потока.
             const rafOuter = w?.requestAnimationFrame
                 ? w.requestAnimationFrame(() => {
                       w.requestAnimationFrame(() => {
-                          if (w.requestIdleCallback) {
+                          if (isHeavyHtml && w.requestIdleCallback) {
                               idleId = w.requestIdleCallback(reveal, { timeout: 600 });
                           } else {
                               reveal();
@@ -80,7 +98,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
                       });
                   })
                 : null;
-            const timeoutId = setTimeout(reveal, 800);
+            const timeoutId = setTimeout(reveal, isHeavyHtml ? 800 : 200);
 
             return () => {
                 cancelled = true;
@@ -99,7 +117,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
             task.cancel();
             clearTimeout(timeoutId);
         };
-    }, [htmlContent]);
+    }, [htmlContent, isHeavyHtml]);
 
     const styles = useMemo(() => StyleSheet.create({
         // ✅ РЕДИЗАЙН: Улучшенный контейнер с современными стилями
@@ -190,7 +208,13 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
           ) : canParseHtml ? (
             <StableContent html={htmlContent} contentWidth={contentWidth} fullWidth={noBox} />
           ) : (
-            <View style={Platform.OS === "web" ? styles.webLazyContentFallback : undefined}>
+            <View
+              style={
+                Platform.OS === "web"
+                  ? [styles.webLazyContentFallback, { minHeight: estimatedHeight }]
+                  : undefined
+              }
+            >
               <Text style={styles.placeholder}>Загружаем описание…</Text>
             </View>
           )}
