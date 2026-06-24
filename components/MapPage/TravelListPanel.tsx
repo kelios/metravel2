@@ -286,7 +286,7 @@ const TravelListPanel: React.FC<Props> = ({
       renderItem={renderItem}
       style={styles.nativeList}
       contentContainerStyle={listContentStyle}
-      {...(useBottomSheetScrollable ? null : ({ estimatedItemSize: isMobile ? 100 : 120 } as any))}
+      {...(useBottomSheetScrollable ? null : ({ estimatedItemSize: isMobile ? 280 : 300 } as any))}
       onEndReachedThreshold={compactPreview ? undefined : 0.5}
       onEndReached={compactPreview ? undefined : onLoadMore && hasMore ? onLoadMore : undefined}
       ListHeaderComponent={listHeader}

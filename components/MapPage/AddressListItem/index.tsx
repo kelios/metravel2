@@ -1,7 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useMemo } from 'react'
 
-import { METRICS } from '@/constants/layout'
-import { useThemedColors } from '@/hooks/useTheme'
 import { getDistanceInfo } from '@/utils/distanceCalculator'
 import {
   useAddressListItemActions,
@@ -16,19 +14,20 @@ import {
 
 import { buildPlaceTitleParts } from '@/components/MapPage/Map/placeTitle'
 
-import AddressListItemNative from './AddressListItemNative'
-import AddressListItemWeb from './AddressListItemWeb'
+import AddressListItemCard from './AddressListItemCard'
 import { isWebPlatform, type Props } from './constants'
-import { getStyles } from './styles'
-import { addVersion, getCardHeight, getWebCardWidth, parseCoord } from './utils'
+import {
+  addVersion,
+  getNativeCardImageHeight,
+  getWebCardWidth,
+  parseCoord,
+} from './utils'
 
 export type { Props }
 
 const AddressListItem: React.FC<Props> = ({
   travel,
-  isMobile: isMobileProp,
   onPress,
-  onHidePress,
   userLocation,
   transportMode = 'car',
   isFavorite = false,
@@ -45,18 +44,7 @@ const AddressListItem: React.FC<Props> = ({
     [travel, address],
   )
 
-  const [imgLoaded, setImgLoaded] = useState(false)
-  const [hovered, setHovered] = useState(false)
-  const colors = useThemedColors()
-  const styles = useMemo(() => getStyles(colors), [colors])
-
   const width = screenWidth
-  const isPhone = width >= METRICS.breakpoints.phone && width < METRICS.breakpoints.largePhone
-  const isLargePhone =
-    width >= METRICS.breakpoints.largePhone && width < METRICS.breakpoints.tablet
-  const isMobile = isMobileProp ?? (isPhone || isLargePhone)
-  const isSmallScreen = isPhone
-  const isTablet = width > 480 && width <= METRICS.breakpoints.largeTablet
 
   const {
     categories,
@@ -64,26 +52,24 @@ const AddressListItem: React.FC<Props> = ({
     pointAdded,
     isAuthenticated,
     authReady,
-    copyCoords,
     openTelegram,
-    openMap,
     openArticle,
     handleAddPoint,
   } = useAddressListItemActions(travel)
 
+  // #584 — both platforms now render the same photo-dominant PlaceListCard.
+  // Web keeps the capped/centered card width; native stretches full width (no
+  // explicit width → fills the sheet minus the PLACE_CARD_STYLE margin) with a
+  // taller hero so the photo stays the dominant block.
   const webCardWidth = useMemo(() => getWebCardWidth(width), [width])
-  const webCardImageHeight = useMemo(
-    () => Math.round(Math.max(128, Math.min(188, webCardWidth * 0.48))),
-    [webCardWidth],
+  const cardWidth = isWebPlatform() ? webCardWidth : undefined
+  const cardImageHeight = useMemo(
+    () =>
+      isWebPlatform()
+        ? Math.round(Math.max(128, Math.min(188, webCardWidth * 0.48)))
+        : getNativeCardImageHeight(width),
+    [webCardWidth, width],
   )
-
-  const showOverlays = isMobile || hovered
-  const showActionIcons = !isMobile && showOverlays
-  const iconSize = isSmallScreen ? 20 : 22
-  const iconButtonSize = isSmallScreen ? 40 : 48
-  const titleFontSize = isSmallScreen ? 16 : isTablet ? 17 : 18
-  const coordFontSize = isSmallScreen ? 12 : 13
-  const height = getCardHeight(width)
 
   const handleMainPress = useCallback(() => {
     if (onPress) onPress()
@@ -97,12 +83,6 @@ const AddressListItem: React.FC<Props> = ({
     if (!travelImageThumbUrl) return null
     return addVersion(travelImageThumbUrl, travelUpdatedAt)
   }, [travelImageThumbUrl, travelUpdatedAt])
-
-  useEffect(() => {
-    setImgLoaded(!imgUri)
-  }, [imgUri])
-
-  useEffect(() => () => setHovered(false), [])
 
   const distanceInfo = useMemo(() => {
     const parsed = parseCoord(coord)
@@ -148,74 +128,33 @@ const AddressListItem: React.FC<Props> = ({
     ]
   }, [coord])
 
-  if (isWebPlatform()) {
-    return (
-      <AddressListItemWeb
-        travel={travel}
-        address={address}
-        title={placeTitle.title}
-        subtitle={placeTitle.subtitle}
-        coord={coord}
-        imgUri={imgUri}
-        categories={categories}
-        urlTravel={urlTravel}
-        articleUrl={articleUrl}
-        isFavorite={isFavorite}
-        onToggleFavorite={onToggleFavorite}
-        onPress={onPress}
-        transportMode={transportMode}
-        distanceInfo={distanceInfo}
-        webMapActions={webMapActions}
-        handleMainPress={handleMainPress}
-        openArticle={openArticle}
-        openTelegram={openTelegram}
-        handleAddPoint={handleAddPoint}
-        authReady={authReady}
-        isAuthenticated={isAuthenticated}
-        isAddingPoint={isAddingPoint}
-        pointAdded={pointAdded}
-        webCardImageHeight={webCardImageHeight}
-        webCardWidth={webCardWidth}
-      />
-    )
-  }
-
   return (
-    <AddressListItemNative
+    <AddressListItemCard
+      travel={travel}
       address={address}
       title={placeTitle.title}
       subtitle={placeTitle.subtitle}
       coord={coord}
       imgUri={imgUri}
       categories={categories}
-      colors={colors}
-      styles={styles}
-      isMobile={isMobile}
+      urlTravel={urlTravel}
+      articleUrl={articleUrl}
       isFavorite={isFavorite}
       onToggleFavorite={onToggleFavorite}
-      onHidePress={onHidePress}
-      imgLoaded={imgLoaded}
-      setImgLoaded={setImgLoaded}
-      hovered={hovered}
-      setHovered={setHovered}
-      height={height}
-      iconSize={iconSize}
-      iconButtonSize={iconButtonSize}
-      titleFontSize={titleFontSize}
-      coordFontSize={coordFontSize}
-      showOverlays={showOverlays}
-      showActionIcons={showActionIcons}
+      onPress={onPress}
+      transportMode={transportMode}
       distanceInfo={distanceInfo}
+      webMapActions={webMapActions}
       handleMainPress={handleMainPress}
       openArticle={openArticle}
-      openMap={openMap}
       openTelegram={openTelegram}
-      copyCoords={copyCoords}
       handleAddPoint={handleAddPoint}
       authReady={authReady}
       isAuthenticated={isAuthenticated}
       isAddingPoint={isAddingPoint}
       pointAdded={pointAdded}
+      cardImageHeight={cardImageHeight}
+      cardWidth={cardWidth}
     />
   )
 }

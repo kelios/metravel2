@@ -26,5 +26,5 @@ export type Props = {
    * Viewport width supplied by the list. Lifted out of a per-row
    * useWindowDimensions so a resize doesn't re-subscribe every visible card.
    */
-  screenWidth: number
+  screenWidth?: number
 }

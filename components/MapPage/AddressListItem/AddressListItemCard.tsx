@@ -42,11 +42,21 @@ type Props = {
   isAuthenticated: boolean
   isAddingPoint: boolean
   pointAdded: boolean
-  webCardImageHeight: number
-  webCardWidth: number
+  cardImageHeight: number
+  cardWidth?: number
 }
 
-const AddressListItemWeb: React.FC<Props> = ({
+/**
+ * #584 — single, photo-dominant template for the nearby-places list, identical
+ * on web AND native (Android/iOS). Built on PlaceListCard → UnifiedTravelCard,
+ * the same card used on the travel pages: photo is the hero (contain+blur),
+ * caption/chips live BELOW the photo (not as a full-screen scrim over the
+ * image), and ♥/＋ sit in the top-right corner. This replaced the old native
+ * AddressListItemNative card, whose full overlay scrim + stacked text covered
+ * the photo and whose no-image variant rendered a smaller "white strip" card
+ * inconsistent with the photo cards (the «first card looks different» bug).
+ */
+const AddressListItemCard: React.FC<Props> = ({
   travel,
   address,
   title,
@@ -70,8 +80,8 @@ const AddressListItemWeb: React.FC<Props> = ({
   isAuthenticated,
   isAddingPoint,
   pointAdded,
-  webCardImageHeight,
-  webCardWidth,
+  cardImageHeight,
+  cardWidth,
 }) => {
   const categoryLabel = categories.join(', ')
   const distanceBadges = distanceInfo
@@ -116,8 +126,8 @@ const AddressListItemWeb: React.FC<Props> = ({
       onAddPoint={handleAddPoint}
       addDisabled={!authReady || !isAuthenticated || isAddingPoint}
       isAdding={isAddingPoint}
-      imageHeight={webCardImageHeight}
-      width={webCardWidth}
+      imageHeight={cardImageHeight}
+      width={cardWidth}
       addLabel={pointAdded ? 'Добавлено' : 'Сохранить'}
       addButtonPlacement="row"
       compact
@@ -129,4 +139,4 @@ const AddressListItemWeb: React.FC<Props> = ({
   )
 }
 
-export default AddressListItemWeb
+export default AddressListItemCard
