@@ -22,21 +22,18 @@ See `INDEX.md` for full docs map.
 
 ## Agent skills quick map
 
-Полная карта skills и критерии выбора живут в `CODEX.md`. Для самых частых инженерных задач:
+Полная карта skills, экономичный route и критерии повышения до multi-agent workflow живут в `CODEX.md`. Для быстрого запуска начинай с одного профильного skill:
 
-- `$metravel-feature-builder` — фичи, багфиксы, рефакторинг.
-- `$metravel-hook-builder` — focused hooks, вынос локальной логики, cleanup hook-границ.
-- `$metravel-code-reviewer` — review diff'а, validation gaps, rule compliance, residual risk.
-- `$metravel-quality-fixer` — полный прогон lint, Jest и Playwright с исправлением реальных падений и повторной валидацией.
-- `$metravel-test-runner` / `$metravel-test-writer` — запуск и написание Jest/integration/governance тестов.
-- `$metravel-e2e-runner` — Playwright и browser smoke.
-- `$metravel-performance-analyst` — Lighthouse, bundle/perf budgets, baseline comparison.
-- `$metravel-growth-analyst` — GA4/GSC/Yandex stats, SEO/organic рост, поведение пользователей и воронки регистрации/контента.
-- `$metravel-codex-orchestrator` — верхний self-check Codex: triage, skills, role prompts, validation, handoff.
-- `$metravel-article-editor-agent` — редактирование статей, HTML/SEO тела, generated images и publish/unpublish через article API с секретами из `.secrets`.
-- `$metravel-project-analyst` — read-only карта проекта, risk hotspots, validation map и handoff к профильным агентам.
-- `$metravel-android-developer` — Android/native совместимость, platform files, Expo modules, native crashes.
-- `$metravel-mobile-tester` — read-only mobile web и Android/native QA, screenshots/logs/evidence, retest.
+- Документация, правила, skills: `$metravel-docs-maintainer`.
+- Обычная разработка: `$metravel-feature-builder`; добавляй `$metravel-ui-guardrails`, `$metravel-hook-builder` или `$metravel-test-writer` только если затронуты UI, hooks или тесты.
+- Анализ: `$metravel-project-analyst`, `$metravel-business-analyst`, `$metravel-growth-analyst` или `$metravel-performance-analyst` по домену.
+- Проверки и автоматизация: `$metravel-test-runner` для узких команд, `$metravel-release-checks` для выбора gate, `$metravel-quality-fixer` для полного fix-and-rerun цикла.
+- Browser/e2e и QA: `$metravel-e2e-runner`, `$metravel-qa-agent`, `$metravel-mobile-tester`.
+- Android/native: `$metravel-android-developer`; mobile evidence — `$metravel-mobile-tester`.
+- Статьи и article media: `$metravel-article-editor-agent`.
+- Board tasks: `$metravel-task-contract` для обязательного Task Contract.
+- Review/release: `$metravel-code-reviewer`, `$metravel-system-architect`, `$metravel-devops-agent`.
+- Сложные цепочки: `$metravel-codex-orchestrator` для triage; `$metravel-agent-workflow` только когда нужны отдельные роли discovery/design/implementation/QA/review/deploy.
 
 ## Quick start
 

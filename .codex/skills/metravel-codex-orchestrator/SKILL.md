@@ -38,6 +38,7 @@ If the branch is not `main`, stop before editing and ask how to proceed.
 ## Skill Selection Rules
 
 - Always choose the smallest useful skill set.
+- Keep docs-only changes, simple automation, narrow checks, and isolated bugfixes in one specialist skill unless the scope is unclear or high-risk enough to need orchestration.
 - Use `$metravel-project-analyst` for broad or unclear repository analysis.
 - Use `$metravel-business-analyst` before implementation when the request is a product idea or requirements are vague.
 - Use `$metravel-system-architect` when design, module boundaries, risk mapping, or high-risk review is needed.

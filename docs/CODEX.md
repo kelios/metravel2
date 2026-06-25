@@ -37,6 +37,22 @@
 
 Подключай только те skills, которые реально нужны задаче. Если skill требует дополнительные docs, читай только релевантные файлы.
 
+## Экономичный запуск skills и агентов
+
+Начинай с одного профильного skill. Повышай уровень до `$metravel-codex-orchestrator` или `$metravel-agent-workflow` только когда это снижает риск: неясный scope, несколько ролей, production/release, mobile/native, e2e, внешние зависимости или обязательная независимая проверка.
+
+| Класс задачи | Стартовый маршрут | Когда повышать уровень |
+| --- | --- | --- |
+| Документация, правила, skills | `$metravel-docs-maintainer` | Добавь `$metravel-codex-orchestrator`, если меняется workflow нескольких ролей, правила проверок или skill-selection policy. |
+| Простая автоматизация и проверки | `$metravel-test-runner` для узких тестов; `$metravel-release-checks` для выбора gate; `$metravel-task-contract` для задач на борде | `$metravel-quality-fixer` только для полного quality-gate/fix цикла; `$metravel-devops-agent` только для явного build/deploy/release target. |
+| Read-only анализ проекта | `$metravel-project-analyst` | `$metravel-agent-workflow` нужен только если анализ сразу передается в BA/architect/implementation/QA/review цепочку. |
+| Product/growth/performance анализ | `$metravel-business-analyst`, `$metravel-growth-analyst` или `$metravel-performance-analyst` по домену | Добавь architect/reviewer только когда из анализа сразу рождается high-risk implementation plan. |
+| Обычная разработка, bugfix, refactor | `$metravel-feature-builder`; добавь `$metravel-ui-guardrails`, `$metravel-hook-builder` или `$metravel-test-writer` только по затронутой области | `$metravel-codex-orchestrator` для широкого/неясного scope; `$metravel-agent-workflow` для раздельных BA/architect/QA/reviewer стадий. |
+| Статьи и article media | `$metravel-article-editor-agent` | Добавь orchestrator для bulk/high-risk правок, publish/unpublish серий или связанных SEO/API/UI проверок. |
+| Mobile/Android | `$metravel-mobile-tester` для read-only QA; `$metravel-android-developer` для фиксов | `$metravel-agent-workflow` для цикла reproduce -> fix -> retest -> review или когда затронуты web + native одновременно. |
+
+Не запускай "всех агентов" для обычной задачи. BA, Project Analyst, Growth Analyst, QA, Mobile Tester и reviewer по умолчанию read-only и должны возвращать компактный артефакт, а не менять код. Для docs-only изменений достаточно структурно перечитать Markdown/YAML; для простой автоматизации запускай самый узкий надежный command и сначала проверь operation gate, если команда относится к долгим эксклюзивным операциям.
+
 ## Быстрый triage задачи
 
 Перед чтением большого контекста определи тип задачи и риск:
@@ -72,6 +88,8 @@
 ## Multi-agent workflow
 
 Используй `$metravel-agent-workflow`, когда задача требует систему ролей, баг-цикл или разделение discovery/design/implementation/validation/review.
+
+Не используй `$metravel-agent-workflow` для docs-only, одиночного bugfix/refactor, простой проверки, одного board-contract действия или read-only анализа без дальнейшей реализации. В этих случаях дешевле и безопаснее один профильный skill плюс scope-based validation.
 
 Используй `$metravel-codex-orchestrator` перед `$metravel-agent-workflow`, если задача неясная, широкая, затрагивает несколько областей или нужно выбрать правильные skills/промты/проверки. Orchestrator не пишет код сам по роли; он выбирает минимальный маршрут, фиксирует constraints и затем передает работу профильным skills.
 

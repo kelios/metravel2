@@ -8,6 +8,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   type LayoutChangeEvent,
+  type ViewStyle,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -479,6 +480,18 @@ export default function ProfileScreen() {
     () => createProfileScreenStyles({ colors, contentPadding, gapSize, isDesktopWeb, maxContentWidth }),
     [colors, contentPadding, gapSize, isDesktopWeb, maxContentWidth],
   );
+  const profileLoginActionStyle = useMemo(
+    () => ({
+      backgroundColor: colors.brand,
+      ...(Platform.OS === 'web'
+        ? {
+            backgroundImage: 'none',
+            boxShadow: `0 4px 16px ${colors.brandAlpha40}`,
+          }
+        : null),
+    }) as ViewStyle,
+    [colors.brand, colors.brandAlpha40],
+  );
 
   const tabCounts = useMemo(() => ({
     travels: stats.travelsCount,
@@ -679,6 +692,7 @@ export default function ProfileScreen() {
           action={{
             label: 'Войти',
             onPress: () => router.push(buildLoginHref({ redirect: '/profile', intent: 'profile' }) as any),
+            style: profileLoginActionStyle,
           }}
         />
       </SafeAreaView>

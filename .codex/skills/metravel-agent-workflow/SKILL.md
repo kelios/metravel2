@@ -7,6 +7,8 @@ description: Orchestrate a role-based metravel AI workflow across project analys
 
 Use this skill to coordinate multiple role prompts or subagents for metravel work. Keep the workflow controlled: each role has a narrow output contract, code changes happen only in the implementation stage, and deploys happen only through the DevOps stage after explicit environment gating.
 
+Do not use this skill for docs-only changes, simple automated checks, one isolated bugfix/refactor, one board-contract update, or read-only analysis that does not need handoff to implementation/QA/review. Use the single matching specialist skill instead.
+
 Read first:
 
 - `AGENTS.md`

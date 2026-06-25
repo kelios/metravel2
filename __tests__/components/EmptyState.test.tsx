@@ -88,6 +88,29 @@ describe('EmptyState', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
+  it('should pass custom action style to the primary button', () => {
+    const customActionStyle = { backgroundColor: 'token-primary', backgroundImage: 'none' };
+    const { UNSAFE_getAllByType } = render(
+      <EmptyState
+        icon="inbox"
+        title="No items"
+        description="There are no items to display"
+        action={{
+          label: 'Add Item',
+          onPress: jest.fn(),
+          style: customActionStyle as any,
+        }}
+      />
+    );
+
+    const { Pressable, StyleSheet } = require('react-native');
+    const pressables = UNSAFE_getAllByType(Pressable);
+    const actionButton = pressables[pressables.length - 1];
+    const buttonStyle = actionButton.props.style({ pressed: false, hovered: false });
+
+    expect(StyleSheet.flatten(buttonStyle)).toMatchObject(customActionStyle);
+  });
+
   it('should not render action button when not provided', () => {
     const { toJSON } = render(
       <EmptyState

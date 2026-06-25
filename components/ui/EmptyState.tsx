@@ -1,6 +1,6 @@
 // Компонент для пустых состояний
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, type StyleProp, type ViewStyle } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -15,6 +15,7 @@ interface EmptyStateProps {
   action?: {
     label: string;
     onPress: () => void;
+    style?: StyleProp<ViewStyle>;
   };
   secondaryAction?: {
     label: string;
@@ -107,7 +108,7 @@ function EmptyState({
             onPress={action.onPress}
             variant="primary"
             size="md"
-            style={styles.actionButton}
+            style={[styles.actionButton, action.style]}
             accessibilityLabel={action.label}
           />
         )}
