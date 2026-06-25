@@ -286,6 +286,23 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
         } as any)
       : {},
   }) as any,
+  // ── Horizontal rail (carousel) layout ────────────────────────────────────
+  // Used by the "Популярное"/"Новые" feeds so they don't repeat the editorial
+  // grid rhythm of the weekend showcase right above them.
+  railScroll: {
+    width: '100%',
+    ...Platform.select({ web: { scrollSnapType: 'x mandatory', overscrollBehaviorX: 'contain' } as any }),
+  },
+  railContent: {
+    flexDirection: 'row',
+    gap: isMobile ? 12 : 16,
+    paddingVertical: 4,
+    paddingRight: isMobile ? 16 : 6,
+  },
+  railCard: {
+    minHeight: isMobile ? 250 : 300,
+    ...Platform.select({ web: { scrollSnapAlign: 'start' } as any }),
+  },
   viewMoreButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     paddingHorizontal: isMobile ? 20 : 28, paddingVertical: isMobile ? 13 : 16,
