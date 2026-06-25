@@ -12,6 +12,10 @@ import type { Travel } from '@/types/types';
 import { Platform } from 'react-native';
 import { queryKeys } from '@/queryKeys';
 import { isWebAutomation } from '@/utils/isWebAutomation';
+import {
+  getPublicStalePayloadMeta,
+  type PublicStalePayloadMeta,
+} from '@/utils/publicStaleCache';
 
 export interface UseTravelDetailsReturn {
   travel: Travel | undefined;
@@ -22,6 +26,7 @@ export interface UseTravelDetailsReturn {
   slug: string;
   isId: boolean;
   isMissingParam: boolean;
+  staleContentMeta: PublicStalePayloadMeta | null;
 }
 
 type TravelPreloadWindow = Window & typeof globalThis & {
@@ -374,6 +379,7 @@ export function useTravelDetails(): UseTravelDetailsReturn {
   const stableRefetch = useCallback(() => {
     refetch();
   }, [refetch]);
+  const staleContentMeta = useMemo(() => getPublicStalePayloadMeta(travel), [travel]);
 
   return useMemo(() => ({
     travel,
@@ -384,6 +390,7 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     slug: normalizedSlug,
     isId,
     isMissingParam,
+    staleContentMeta,
   }), [
     travel,
     isLoading,
@@ -393,5 +400,6 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     normalizedSlug,
     isId,
     isMissingParam,
+    staleContentMeta,
   ]);
 }

@@ -23,6 +23,7 @@ import { CONSENT_TYPES } from '@/utils/actionConsent';
 import { createQuestDetailStructuredData } from '@/utils/discoverySeo';
 import { stringifyJsonLd } from '@/utils/jsonLd';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
+import { recordGuestQuestPreview } from '@/utils/guestTrialState';
 
 import type { QuestWizardProps } from '@/components/quests/QuestWizard';
 import type { FrontendQuestBundle } from '@/utils/questAdapters';
@@ -37,7 +38,7 @@ const QuestWizardComponent = Platform.OS === 'web' ? QuestWizard : QuestWizardDi
 const FeatherIcon = Platform.OS === 'web' ? FeatherIconLazy : Feather;
 
 type Colors = ReturnType<typeof useThemedColors>;
-type IconName = 'alert-circle' | 'arrow-left' | 'log-in' | 'refresh-cw';
+type IconName = 'alert-circle' | 'arrow-left' | 'log-in' | 'map-pin' | 'refresh-cw';
 type QuestSeoModel = {
   title: string;
   description: string;
@@ -296,6 +297,7 @@ const pluralPoints = (count: number): string => {
 const QuestPreview = ({
   bundle,
   canonical,
+  cityId,
   seo,
   seoImage,
   structuredDataTags,
@@ -309,6 +311,7 @@ const QuestPreview = ({
 }: {
   bundle: FrontendQuestBundle;
   canonical: string;
+  cityId: string;
   seo: QuestSeoModel;
   seoImage: string;
   structuredDataTags: React.ReactNode;
@@ -324,6 +327,16 @@ const QuestPreview = ({
   const cityName = bundle.city?.name;
   const introStory = bundle.intro?.story?.trim();
   const locations = bundle.steps.map((step) => step.location).filter(Boolean);
+  const firstStep = bundle.steps[0];
+
+  useEffect(() => {
+    if (!firstStep) return;
+    void recordGuestQuestPreview({
+      questId: bundle.storageKey || bundle.title,
+      cityId: cityId || undefined,
+      stepId: firstStep.id,
+    });
+  }, [bundle.storageKey, bundle.title, cityId, firstStep]);
 
   return (
     <ScrollView style={styles.page} contentContainerStyle={styles.previewContent}>
@@ -362,6 +375,24 @@ const QuestPreview = ({
         </View>
 
         {introStory ? <Text style={styles.previewStory}>{introStory}</Text> : null}
+
+        {firstStep ? (
+          <View style={styles.previewStepCard} testID="guest-quest-first-step-preview">
+            <Text style={styles.previewLocationsTitle}>Первый шаг для знакомства</Text>
+            <Text style={styles.previewStepTitle}>{firstStep.title}</Text>
+            {firstStep.location ? (
+              <View style={styles.previewStepLocationRow}>
+                <Icon name="map-pin" color={colors.primary} size={14} />
+                <Text style={styles.previewStepLocation}>{firstStep.location}</Text>
+              </View>
+            ) : null}
+            {firstStep.story ? <Text style={styles.previewStory}>{firstStep.story}</Text> : null}
+            {firstStep.task ? <Text style={styles.previewStepTask}>{firstStep.task}</Text> : null}
+            <Text style={styles.previewStepNote}>
+              Ответы, прогресс, финал и XP откроются после входа.
+            </Text>
+          </View>
+        ) : null}
 
         {locations.length ? (
           <View style={styles.previewLocations}>
@@ -528,6 +559,7 @@ export default function QuestByIdScreen() {
       <QuestPreview
         bundle={bundle}
         canonical={canonical}
+        cityId={cityId}
         seo={seo}
         seoImage={seoImage}
         structuredDataTags={structuredDataTags}
@@ -754,6 +786,40 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   previewLocationItem: {
     color: colors.textMuted,
     lineHeight: 22,
+  },
+  previewStepCard: {
+    gap: 8,
+    marginTop: 4,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  previewStepTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  previewStepLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  previewStepLocation: {
+    flex: 1,
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
+  previewStepTask: {
+    color: colors.text,
+    fontWeight: '700',
+    lineHeight: 22,
+  },
+  previewStepNote: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 19,
   },
   previewCta: {
     gap: 10,

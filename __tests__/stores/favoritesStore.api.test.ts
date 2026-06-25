@@ -1,8 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 import { markTravelAsFavorite, unmarkTravelAsFavorite } from '@/api/travelsFavorites';
 import { fetchUserFavoriteTravels } from '@/api/user';
 import { useFavoritesStore } from '@/stores/favoritesStore';
+import { GUEST_FAVORITES_KEY } from '@/utils/guestTrialState';
 
 jest.mock('@/api/travelsFavorites', () => ({
     markTravelAsFavorite: jest.fn(async () => ({})),
@@ -15,9 +17,12 @@ jest.mock('@/api/user', () => ({
 }));
 
 describe('favoritesStore server favorite API', () => {
+    const originalPlatform = Platform.OS;
+
     beforeEach(() => {
         jest.clearAllMocks();
         (AsyncStorage as any).__reset?.();
+        (Platform as any).OS = originalPlatform;
         useFavoritesStore.setState({
             favorites: [],
             _inFlight: new Set(),
@@ -76,6 +81,55 @@ describe('favoritesStore server favorite API', () => {
 
         expect(unmarkTravelAsFavorite).toHaveBeenCalledWith(514);
         expect(fetchUserFavoriteTravels).toHaveBeenCalledWith('104');
+        expect(useFavoritesStore.getState().isFavorite(514, 'travel')).toBe(false);
+    });
+
+    it('stores Android guest favorites locally without protected server calls', async () => {
+        (Platform as any).OS = 'android';
+
+        await useFavoritesStore.getState().addFavorite(
+            {
+                id: 514,
+                type: 'travel',
+                title: 'Random travel',
+                url: '/travels/random-travel',
+                imageUrl: 'https://metravel.by/media/random.jpg',
+                country: 'Польша',
+            },
+            { isAuthenticated: false, userId: null },
+        );
+
+        expect(markTravelAsFavorite).not.toHaveBeenCalled();
+        expect(fetchUserFavoriteTravels).not.toHaveBeenCalled();
+        expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+            GUEST_FAVORITES_KEY,
+            expect.stringContaining('Random travel'),
+        );
+        expect(useFavoritesStore.getState().isFavorite(514, 'travel')).toBe(true);
+    });
+
+    it('removes Android guest favorites locally without protected server calls', async () => {
+        (Platform as any).OS = 'android';
+        useFavoritesStore.setState({
+            favorites: [
+                {
+                    id: 514,
+                    type: 'travel',
+                    title: 'Random travel',
+                    url: '/travels/random-travel',
+                    addedAt: Date.now(),
+                },
+            ],
+        });
+
+        await useFavoritesStore.getState().removeFavorite(514, 'travel', {
+            isAuthenticated: false,
+            userId: null,
+        });
+
+        expect(unmarkTravelAsFavorite).not.toHaveBeenCalled();
+        expect(fetchUserFavoriteTravels).not.toHaveBeenCalled();
+        expect(AsyncStorage.setItem).toHaveBeenCalledWith(GUEST_FAVORITES_KEY, '[]');
         expect(useFavoritesStore.getState().isFavorite(514, 'travel')).toBe(false);
     });
 });

@@ -1,5 +1,5 @@
 // ✅ МИГРАЦИЯ: Добавлена поддержка useThemedColors для динамических тем
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Pressable, Dimensions, StyleSheet } from 'react-native';
 import { Article } from '@/types/types';
 import { Card, Title, Paragraph, Text } from '@/ui/paper';
@@ -13,17 +13,49 @@ import { stripToDescription } from '@/components/travel/utils/travelHelpers';
 
 type ArticleListItemProps = {
   article: Article;
+  returnHref?: string | null;
 };
 
 const { width } = Dimensions.get('window');
 const ARTICLE_IMAGE_HEIGHT = width < 600 ? 220 : 260;
 const ARTICLE_PLACEHOLDER_HEIGHT = width < 600 ? 112 : 140;
 
-const ArticleListItem: React.FC<ArticleListItemProps> = ({ article }) => {
+const normalizeArticleImageUrl = (value: unknown): string | null => {
+  if (typeof value !== 'string') return null;
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const lower = trimmed.toLowerCase();
+  if (lower === 'null' || lower === 'undefined') return null;
+
+  if (/^(https?:|data:|blob:|file:|content:)/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (trimmed.startsWith('//')) {
+    return `https:${trimmed}`;
+  }
+
+  if (trimmed.startsWith('/')) {
+    return `https://metravel.by${trimmed}`;
+  }
+
+  return `https://metravel.by/${trimmed.replace(/^\/+/, '')}`;
+};
+
+const ArticleListItem: React.FC<ArticleListItemProps> = ({ article, returnHref }) => {
   const { id, name, description, article_image_thumb_url, article_type } = article;
-  const hasImage = typeof article_image_thumb_url === 'string' && article_image_thumb_url.trim().length > 0;
+  const articleImageThumbSmallUrl = (article as any).article_image_thumb_small_url;
   const colors = useThemedColors();
   const pathname = usePathname();
+  const resolvedImageUrl = useMemo(
+    () =>
+      normalizeArticleImageUrl(article_image_thumb_url) ??
+      normalizeArticleImageUrl(articleImageThumbSmallUrl),
+    [articleImageThumbSmallUrl, article_image_thumb_url],
+  );
+  const [imageFailed, setImageFailed] = useState(false);
   const excerpt = useMemo(() => stripToDescription(description || ''), [description]);
   const articleRoute = useMemo<string>(() => {
     const rawUrl = typeof article.url === 'string' ? article.url.trim() : '';
@@ -36,16 +68,25 @@ const ArticleListItem: React.FC<ArticleListItemProps> = ({ article }) => {
     return `/article/${id}`;
   }, [article.url, article.slug, id]);
   const articleRouteWithOrigin = useMemo<string>(() => {
-    const fromPath = typeof pathname === 'string' && pathname.startsWith('/') && pathname !== articleRoute
+    const preferredReturnHref = typeof returnHref === 'string' && returnHref.trim().startsWith('/')
+      ? returnHref.trim()
+      : null;
+    const fromPath = preferredReturnHref ?? (typeof pathname === 'string' && pathname.startsWith('/') && pathname !== articleRoute
       ? pathname
-      : '/articles';
+      : '/articles');
     const separator = articleRoute.includes('?') ? '&' : '?';
     return `${articleRoute}${separator}from=${encodeURIComponent(fromPath)}`;
-  }, [articleRoute, pathname]);
+  }, [articleRoute, pathname, returnHref]);
 
   // ✅ МИГРАЦИЯ: Мемоизация стилей для производительности
   const styles = useMemo(() => createStyles(colors), [colors]);
   const webOpenHint = 'Открыть в новой вкладке: Ctrl/Cmd + клик';
+  const mediaSrc = imageFailed ? null : resolvedImageUrl;
+  const mediaHeight = mediaSrc ? ARTICLE_IMAGE_HEIGHT : ARTICLE_PLACEHOLDER_HEIGHT;
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [resolvedImageUrl]);
 
   const handleWebOpenInNewTab = useCallback((e: any) => {
     const hasModifier =
@@ -79,12 +120,13 @@ const ArticleListItem: React.FC<ArticleListItemProps> = ({ article }) => {
           <Card style={styles.card}>
             <View style={styles.imageWrapper}>
               <ImageCardMedia
-                  src={hasImage ? article_image_thumb_url : null}
+                  src={mediaSrc}
                   alt={name}
-                  height={hasImage ? ARTICLE_IMAGE_HEIGHT : ARTICLE_PLACEHOLDER_HEIGHT}
+                  height={mediaHeight}
                   fit="cover"
                   borderRadius={0}
                   testID="article-list-media"
+                  onError={() => setImageFailed(true)}
               />
             </View>
             <Card.Content>

@@ -31,7 +31,7 @@ function AffiliateOffers({ city, country, countryCode, travelId, onOfferClick }:
     })
   }, [offers, travelId, city])
 
-  const impressionRef = useAffiliateImpression(trackImpression)
+  const impression = useAffiliateImpression(trackImpression)
 
   const handlePress = useCallback(
     (offer: AffiliateOffer) => {
@@ -52,7 +52,12 @@ function AffiliateOffers({ city, country, countryCode, travelId, onOfferClick }:
   if (offers.length === 0) return null
 
   return (
-    <View ref={impressionRef as any} style={styles.grid}>
+    <View
+      ref={impression.ref as any}
+      onLayout={impression.onLayout}
+      style={styles.grid}
+      testID="affiliate-offers"
+    >
       {offers.map((offer) => (
         <View key={offer.key} style={styles.card}>
           <View style={styles.cardBody}>

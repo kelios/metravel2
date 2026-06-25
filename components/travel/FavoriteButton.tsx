@@ -100,7 +100,8 @@ function FavoriteButton({
             if (e.preventDefault) e.preventDefault();
         }
 
-        if (!isAuthenticated) {
+        const isAndroidGuest = Platform.OS === 'android' && !isAuthenticated;
+        if (!isAuthenticated && !isAndroidGuest) {
             requireAuth();
             return;
         }
@@ -131,15 +132,16 @@ function FavoriteButton({
                 });
                 await showToast({
                     type: 'success',
-                    text1: 'Добавлено в избранное',
+                    text1: isAndroidGuest ? 'Сохранено на этом устройстве' : 'Добавлено в избранное',
+                    text2: isAndroidGuest ? 'Войдите, чтобы синхронизировать избранное.' : undefined,
                     position: 'bottom',
-                    visibilityTime: 2000,
+                    visibilityTime: isAndroidGuest ? 3500 : 2000,
                 });
             } else {
                 await removeFavorite(id, type);
                 await showToast({
                     type: 'info',
-                    text1: 'Удалено из избранного',
+                    text1: isAndroidGuest ? 'Удалено с этого устройства' : 'Удалено из избранного',
                     position: 'bottom',
                     visibilityTime: 2000,
                 });

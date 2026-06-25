@@ -25,6 +25,8 @@ import { safeJsonParse } from '@/utils/safeJsonParse';
 import { devError } from '@/utils/logger';
 import { getSecureItem } from '@/utils/secureStorage';
 import { apiClient } from '@/api/client';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { savePublicStalePayload } from '@/utils/publicStaleCache';
 
 jest.mock('react-native', () => ({
   Alert: {
@@ -64,6 +66,7 @@ jest.mock('@/utils/secureStorage', () => ({
 describe('src/api/travelsApi.ts', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    AsyncStorage.clear();
     mockedGetSecureItem.mockResolvedValue(null);
   });
 
@@ -796,6 +799,16 @@ describe('src/api/travelsApi.ts', () => {
       expect(mockedApiClientGet).toHaveBeenCalledTimes(2);
     });
 
+    it('fetchTravel не восстанавливает stale cache после ошибки авторизованного detail-запроса', async () => {
+      await savePublicStalePayload('/travels/42/', { id: 42, name: 'Cached travel' } as any);
+
+      const { fetchTravel } = loadTravelsApi();
+      mockedGetSecureItem.mockResolvedValueOnce('secret-token');
+      mockedApiClientGet.mockRejectedValueOnce(Object.assign(new Error('bad gateway'), { status: 503 }));
+
+      await expect(fetchTravel(42)).rejects.toThrow('bad gateway');
+    });
+
     it('fetchTravelBySlug бросает ошибку при ошибке', async () => {
       const { fetchTravelBySlug } = loadTravelsApi();
       mockedApiClientGet.mockRejectedValueOnce(new Error('network'));
@@ -814,6 +827,20 @@ describe('src/api/travelsApi.ts', () => {
       await fetchTravelBySlug('my-trip');
       expect(mockedApiClientGet).toHaveBeenCalledTimes(1);
       expect(mockedApiClientGet.mock.calls[0][0]).toBe('/travels/by-slug/my-trip/');
+    });
+
+    it('fetchTravelBySlug не возвращает stale cache после ошибки авторизованного by-slug запроса', async () => {
+      await savePublicStalePayload('/travels/by-slug/my-trip/', { id: 77, slug: 'my-trip', name: 'Cached slug' } as any);
+
+      const { fetchTravelBySlug } = loadTravelsApi();
+      mockedGetSecureItem.mockResolvedValueOnce('slug-token');
+      mockedApiClientGet
+        .mockRejectedValueOnce(Object.assign(new Error('bad gateway'), { status: 503 }))
+        .mockRejectedValue(Object.assign(new Error('not found'), { status: 404 }));
+      mockedFetchWithTimeout.mockResolvedValue({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValue({ data: [], total: 0 } as any);
+
+      await expect(fetchTravelBySlug('my-trip')).rejects.toThrow();
     });
 
     it('fetchTravelBySlug использует путь /api/travels/by-slug/{slug}/', async () => {

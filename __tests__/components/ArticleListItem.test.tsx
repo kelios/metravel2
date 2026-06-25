@@ -71,6 +71,14 @@ describe('ArticleListItem', () => {
     expect(mockPush).toHaveBeenCalledWith('/article/1?from=%2Farticles')
   })
 
+  it('passes list return href with source to article detail navigation', () => {
+    const { getByText } = render(
+      <ArticleListItem article={mockArticle} returnHref="/articles?from=%2Fmap" />,
+    )
+    fireEvent.press(getByText('Test Article'))
+    expect(mockPush).toHaveBeenCalledWith('/article/1?from=%2Farticles%3Ffrom%3D%252Fmap')
+  })
+
   it('renders article type when available', () => {
     const { getByText } = render(<ArticleListItem article={mockArticle} />)
     expect(getByText('News')).toBeTruthy()
@@ -87,10 +95,58 @@ describe('ArticleListItem', () => {
     const imageHeight = withImage.getByTestId('article-list-media').props.height
 
     const withoutImage = render(
-      <ArticleListItem article={{ ...mockArticle, article_image_thumb_url: '' }} />,
+      <ArticleListItem
+        article={{
+          ...mockArticle,
+          article_image_thumb_url: '',
+          article_image_thumb_small_url: undefined,
+        }}
+      />,
     )
     const placeholder = withoutImage.getByTestId('article-list-media')
 
+    expect(placeholder.props.src).toBeNull()
+    expect(placeholder.props.height).toBeLessThan(imageHeight)
+  })
+
+  it('keeps the first production article compact when cover fields are absent', () => {
+    const productionArticleWithoutCover = {
+      id: 1,
+      name: 'Розыгрыш трех термосов.',
+      description: '<p>Сегодня у нас в Минске выпал первый снег.</p>',
+      article_type: { name: 'Розыгрыш' },
+    } as any
+
+    const { getByTestId } = render(<ArticleListItem article={productionArticleWithoutCover} />)
+    const placeholder = getByTestId('article-list-media')
+
+    expect(placeholder.props.src).toBeNull()
+    expect(placeholder.props.height).toBeLessThanOrEqual(140)
+  })
+
+  it('normalizes fallback article thumbnail URLs before passing them to media', () => {
+    const { getByTestId } = render(
+      <ArticleListItem
+        article={{
+          ...mockArticle,
+          article_image_thumb_url: undefined,
+          article_image_thumb_small_url: '/uploads/article-cover.jpg',
+        }}
+      />,
+    )
+
+    const media = getByTestId('article-list-media')
+    expect(media.props.src).toBe('https://metravel.by/uploads/article-cover.jpg')
+  })
+
+  it('switches broken article media to compact neutral placeholder after load error', () => {
+    const { getByTestId } = render(<ArticleListItem article={mockArticle} />)
+    const media = getByTestId('article-list-media')
+    const imageHeight = media.props.height
+
+    fireEvent(media, 'onError')
+
+    const placeholder = getByTestId('article-list-media')
     expect(placeholder.props.src).toBeNull()
     expect(placeholder.props.height).toBeLessThan(imageHeight)
   })

@@ -1,5 +1,6 @@
 import {
   TEST_API_BASE_URL,
+  isLoopbackApiUrl,
   isLikelySelfProxyApiUrl,
   normalizeApiBaseUrl,
   resolveApiBaseUrl,
@@ -50,6 +51,17 @@ describe('resolveApiBaseUrl', () => {
     ).toBe('https://metravel.by/api');
   });
 
+  it('falls back to prod api on native when env leaked any loopback dev proxy url', () => {
+    expect(
+      resolveApiBaseUrl({
+        platformOS: 'android',
+        envApiUrl: 'http://127.0.0.1:8086',
+        prodApiUrl: 'https://metravel.by',
+        isLocalApi: false,
+      })
+    ).toBe('https://metravel.by/api');
+  });
+
   it('uses the canonical prod fallback on native self-proxy url when prod env is not public', () => {
     expect(
       resolveApiBaseUrl({
@@ -69,6 +81,15 @@ describe('resolveApiBaseUrl', () => {
         isLocalApi: true,
       })
     ).toBe('http://127.0.0.1:8085/api');
+
+    expect(
+      resolveApiBaseUrl({
+        platformOS: 'android',
+        envApiUrl: 'http://127.0.0.1:8086',
+        prodApiUrl: 'https://metravel.by',
+        isLocalApi: true,
+      })
+    ).toBe('http://127.0.0.1:8086/api');
   });
 
   it('uses web origin for e2e and local api flows', () => {
@@ -113,5 +134,11 @@ describe('resolveApiBaseUrl helpers', () => {
     expect(isLikelySelfProxyApiUrl('http://127.0.0.1:8085')).toBe(true);
     expect(isLikelySelfProxyApiUrl('http://localhost:19006/api')).toBe(true);
     expect(isLikelySelfProxyApiUrl('https://metravel.by')).toBe(false);
+  });
+
+  it('detects loopback api urls separately from known self-proxy ports', () => {
+    expect(isLoopbackApiUrl('http://127.0.0.1:8086')).toBe(true);
+    expect(isLoopbackApiUrl('http://localhost:8000/api')).toBe(true);
+    expect(isLoopbackApiUrl('https://metravel.by/api')).toBe(false);
   });
 });

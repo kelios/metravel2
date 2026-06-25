@@ -61,7 +61,8 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
             }
         }
 
-        if (!isAuthenticated) {
+        const isAndroidGuest = Platform.OS === 'android' && !isAuthenticated;
+        if (!isAuthenticated && !isAndroidGuest) {
             requireAuth();
             return;
         }
@@ -83,8 +84,23 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
                     country,
                     city,
                 });
+                if (isAndroidGuest) {
+                    showToast({
+                        type: 'success',
+                        text1: 'Сохранено на этом устройстве',
+                        text2: 'Войдите, чтобы синхронизировать избранное.',
+                        visibilityTime: 3500,
+                    });
+                }
             } else {
                 await removeFavorite(id, type);
+                if (isAndroidGuest) {
+                    showToast({
+                        type: 'info',
+                        text1: 'Удалено с этого устройства',
+                        visibilityTime: 2000,
+                    });
+                }
             }
         } catch {
             setOptimisticFav(serverIsFav);

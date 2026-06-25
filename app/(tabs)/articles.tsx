@@ -5,7 +5,7 @@ import {Articles} from '@/types/types'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import {fetchArticles} from '@/api/articles'
 import PaginationComponent from '@/components/ui/PaginationComponent'
-import {useLocalSearchParams} from 'expo-router'
+import {useLocalSearchParams, useRouter, type Href} from 'expo-router'
 import ErrorDisplay from '@/components/ui/ErrorDisplay'
 import EmptyState from '@/components/ui/EmptyState'
 import ContributionBanner from '@/components/common/ContributionBanner'
@@ -19,10 +19,13 @@ import { webTouchScrollStyle } from '@/utils'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler'
+import { buildArticlesHrefFromSource, normalizeArticleListSourceHref } from '@/utils/articleNavigation'
 
 export default function TabOneScreen() {
   const initialPage = 0
   const isFocused = useIsFocused()
+  const router = useRouter()
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
 
@@ -33,6 +36,17 @@ export default function TabOneScreen() {
   // 👇 безопасно получаем user_id
   const params = useLocalSearchParams()
   const user_id = typeof params.user_id === 'string' ? params.user_id : undefined
+  const sourceHref = useMemo(() => normalizeArticleListSourceHref(params.from), [params.from])
+  const articleListReturnHref = useMemo(() => buildArticlesHrefFromSource(sourceHref), [sourceHref])
+
+  useAndroidBackHandler(undefined, {
+    resolveBack: sourceHref
+      ? () => {
+          router.dismissTo(sourceHref as Href)
+          return true
+        }
+      : undefined,
+  })
 
   useEffect(() => {
     setCurrentPage(0)
@@ -159,14 +173,20 @@ export default function TabOneScreen() {
                 }
               >
                 {articles?.data?.map((item: any, index: number) => (
-                  <ArticleListItem key={item?.id ? String(item.id) : String(index)} article={item} />
+                  <ArticleListItem
+                    key={item?.id ? String(item.id) : String(index)}
+                    article={item}
+                    returnHref={articleListReturnHref}
+                  />
                 ))}
                 <ContributionBanner variant="articles" />
               </ScrollView>
             ) : (
               <FlashList
                 data={articles?.data}
-                renderItem={({ item }: any) => <ArticleListItem article={item} />}
+                renderItem={({ item }: any) => (
+                  <ArticleListItem article={item} returnHref={articleListReturnHref} />
+                )}
                 keyExtractor={(item: any, index: number) => (item?.id ? String(item.id) : String(index))}
                 {...({ estimatedItemSize: 120 } as any)}
                 ListFooterComponent={<ContributionBanner variant="articles" />}

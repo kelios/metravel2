@@ -7,14 +7,17 @@ import { act } from 'react-test-renderer'
 import { render } from '@testing-library/react-native'
 
 const mockUseIsFocused = jest.fn(() => true)
+const mockRouterPush = jest.fn()
+const mockUseAuth = jest.fn(() => ({ isAuthenticated: true }))
 const mockUseQuestBundle = jest.fn(() => ({
   bundle: {
-    title: 'Quest title',
+    id: 77,
+    title: 'Тайна Свислочского Цмока: Легенда оживает',
     storageKey: 'minsk-cmok',
     steps: [],
     finale: null,
     intro: null,
-    city: '4',
+    city: { name: 'Минск', countryCode: 'BY', lat: 53.9, lng: 27.56 },
   },
   loading: false,
   error: null,
@@ -31,6 +34,7 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ city: '4', questId: 'minsk-cmok' }),
   Link: ({ children }: { children: React.ReactNode }) => children,
   useIsFocused: () => mockUseIsFocused(),
+  useRouter: () => ({ push: mockRouterPush }),
 }))
 
 jest.mock('@/components/seo/LazyInstantSEO', () => ({
@@ -51,31 +55,8 @@ jest.mock('@/hooks/useTheme', () => ({
 }))
 
 jest.mock('@/hooks/useQuestsApi', () => ({
-  useQuestBundle: (...args: any[]) => {
-    mockUseQuestBundle(...args)
-    return ({
-    bundle: {
-      title: 'Тайна Свислочского Цмока: Легенда оживает',
-      storageKey: 'minsk-cmok',
-      steps: [],
-      finale: null,
-      intro: null,
-      city: '4',
-    },
-    loading: false,
-    error: null,
-    refetch: jest.fn(),
-    })
-  },
-  useQuestProgressSync: (...args: any[]) => {
-    mockUseQuestProgressSync(...args)
-    return ({
-    progress: null,
-    progressLoading: false,
-    saveProgress: jest.fn(),
-    resetProgress: jest.fn(),
-    })
-  },
+  useQuestBundle: (...args: any[]) => mockUseQuestBundle(...args),
+  useQuestProgressSync: (...args: any[]) => mockUseQuestProgressSync(...args),
 }))
 
 jest.mock('@/hooks/useQuestRatingMeta', () => ({
@@ -91,11 +72,22 @@ jest.mock('@/hooks/useQuestPioneerMeta', () => ({
 }))
 
 jest.mock('@/context/AuthContext', () => ({
-  useAuth: () => ({ isAuthenticated: true }),
+  useAuth: () => mockUseAuth(),
+}))
+
+const mockRecordGuestQuestPreview = jest.fn(async () => undefined)
+
+jest.mock('@/utils/guestTrialState', () => ({
+  recordGuestQuestPreview: (...args: any[]) => mockRecordGuestQuestPreview(...args),
 }))
 
 jest.mock('@/components/quests/QuestWizard', () => ({
   QuestWizard: () => null,
+}))
+
+jest.mock('@/components/quests/TravelsForQuestSection', () => ({
+  __esModule: true,
+  default: () => null,
 }))
 
 describe('Quest screen title sync', () => {
@@ -108,8 +100,31 @@ describe('Quest screen title sync', () => {
   beforeEach(() => {
     jest.useFakeTimers()
     mockUseIsFocused.mockReturnValue(true)
+    mockRouterPush.mockClear()
+    mockUseAuth.mockReturnValue({ isAuthenticated: true })
     mockUseQuestBundle.mockClear()
+    mockUseQuestBundle.mockReturnValue({
+      bundle: {
+        id: 77,
+        title: 'Тайна Свислочского Цмока: Легенда оживает',
+        storageKey: 'minsk-cmok',
+        steps: [],
+        finale: null,
+        intro: null,
+        city: { name: 'Минск', countryCode: 'BY', lat: 53.9, lng: 27.56 },
+      },
+      loading: false,
+      error: null,
+      refetch: jest.fn(),
+    })
     mockUseQuestProgressSync.mockClear()
+    mockUseQuestProgressSync.mockReturnValue({
+      progress: null,
+      progressLoading: false,
+      saveProgress: jest.fn(),
+      resetProgress: jest.fn(),
+    })
+    mockRecordGuestQuestPreview.mockClear()
     document.title = 'Energylandia - польский Диснейленд.'
     document.head.innerHTML = [
       '<meta name="description" content="old desc">',
@@ -157,5 +172,50 @@ describe('Quest screen title sync', () => {
 
     expect(mockUseQuestBundle).toHaveBeenCalledWith(undefined)
     expect(mockUseQuestProgressSync).toHaveBeenCalledWith(undefined, false)
+  })
+
+  it('shows the first quest step preview to logged-out users without loading progress', async () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: false })
+    mockUseQuestBundle.mockReturnValue({
+      bundle: {
+        id: 77,
+        title: 'Тайна Свислочского Цмока: Легенда оживает',
+        storageKey: 'minsk-cmok',
+        steps: [
+          {
+            id: 'step-1',
+            title: 'Площадь у реки',
+            location: 'Набережная Свислочи',
+            story: 'Цмок оставил первый след у воды.',
+            task: 'Найдите знак на ограде.',
+            lat: 53.9,
+            lng: 27.56,
+            answer: jest.fn(),
+          },
+        ],
+        finale: null,
+        intro: { story: 'Начало легенды', lat: 53.9, lng: 27.56 },
+        city: { name: 'Минск', countryCode: 'BY', lat: 53.9, lng: 27.56 },
+      },
+      loading: false,
+      error: null,
+      refetch: jest.fn(),
+    })
+    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+
+    const { getByTestId, getByText } = render(<QuestScreen />)
+
+    expect(getByTestId('guest-quest-first-step-preview')).toBeTruthy()
+    expect(getByText('Площадь у реки')).toBeTruthy()
+    expect(getByText('Найдите знак на ограде.')).toBeTruthy()
+    expect(mockUseQuestProgressSync).toHaveBeenCalledWith('minsk-cmok', false)
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(mockRecordGuestQuestPreview).toHaveBeenCalledWith({
+      questId: 'minsk-cmok',
+      cityId: '4',
+      stepId: 'step-1',
+    })
   })
 })

@@ -4,6 +4,13 @@ import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { devError, devWarn } from '@/utils/logger';
 import { safeJsonParse } from '@/utils/safeJsonParse';
 import { getSecureItem } from '@/utils/secureStorage';
+import {
+    getPublicStalePayloadMeta,
+    isRecoverablePublicStaleError,
+    markPublicStalePayload,
+    readPublicStalePayload,
+    savePublicStalePayload,
+} from '@/utils/publicStaleCache';
 import { normalizeTravelItem } from './travelsNormalize';
 import {
     LONG_TIMEOUT,
@@ -17,6 +24,8 @@ import {
 const travelCache = new Map<number, Travel>();
 const travelSlugCache = new Map<string, Travel>();
 const travelInFlight = new Map<string, Promise<Travel>>();
+
+type PublicTravelRequestOptions = { signal?: AbortSignal; skipAuth?: boolean };
 
 type TravelPreloadWindow = Window & typeof globalThis & {
     __metravelTravelPreload?: {
@@ -120,6 +129,18 @@ const getErrorStatus = (error: unknown): number | null => {
 const shouldUseSlugFallback = (status: number | null): boolean =>
     status === 404 || (status !== null && status >= 500 && status < 600);
 const SLUG_FALLBACK_TIMEOUT_MS = 4_000;
+
+const readStaleTravelDetail = async (endpoint: string): Promise<Travel | null> => {
+    const stale = await readPublicStalePayload<Travel>(endpoint);
+    if (!stale) return null;
+    const meta = getPublicStalePayloadMeta(stale);
+    const normalized = normalizeTravelItem(stale);
+    return meta ? markPublicStalePayload(normalized, meta) : normalized;
+};
+
+const saveStaleTravelDetail = async (endpoint: string, travel: Travel): Promise<void> => {
+    await savePublicStalePayload(endpoint, travel, { method: 'GET' });
+};
 
 const slugTokenize = (value: string): string[] =>
     String(value || '')
@@ -409,25 +430,33 @@ export const fetchTravel = async (
         const preloaded = await waitForDirectApiWindowPreload(id, true);
         if (preloaded) {
             travelCache.set(id, preloaded);
+            await saveStaleTravelDetail(`/travels/${id}/`, preloaded);
             return preloaded;
         }
 
         return runSharedGuestTravelRequest(cacheKey, async () => {
+            const endpoint = `/travels/${id}/`;
             try {
-                const travel = await apiClient.get<Travel>(`/travels/${id}/`, LONG_TIMEOUT);
+                const travel = await apiClient.get<Travel>(endpoint, LONG_TIMEOUT);
                 const normalized = normalizeTravelItem(travel);
                 travelCache.set(id, normalized);
+                await saveStaleTravelDetail(endpoint, normalized);
                 return normalized;
             } catch (e: unknown) {
                 if (isAbortError(e)) throw e;
+                if (isRecoverablePublicStaleError(e)) {
+                    const stale = await readStaleTravelDetail(endpoint);
+                    if (stale) return stale;
+                }
                 devError('Error fetching Travel:', e);
                 throw e;
             }
         });
     }
 
+    const endpoint = `/travels/${id}/`;
     try {
-        const travel = await apiClient.get<Travel>(`/travels/${id}/`, LONG_TIMEOUT, { signal: options?.signal });
+        const travel = await apiClient.get<Travel>(endpoint, LONG_TIMEOUT, { signal: options?.signal });
         const normalized = normalizeTravelItem(travel);
         return normalized;
     } catch (e: unknown) {
@@ -435,11 +464,17 @@ export const fetchTravel = async (
         // Public travel detail: recover from a stale/expired token by retrying without
         // auth instead of failing the whole page. The token is left untouched.
         if (getErrorStatus(e) === 401) {
-            const travel = await apiClient.get<Travel>(`/travels/${id}/`, LONG_TIMEOUT, {
+            const travel = await apiClient.get<Travel>(endpoint, LONG_TIMEOUT, {
                 signal: options?.signal,
                 skipAuth: true,
             });
-            return normalizeTravelItem(travel);
+            const normalized = normalizeTravelItem(travel);
+            await saveStaleTravelDetail(endpoint, normalized);
+            return normalized;
+        }
+        if (!isAuthenticated && isRecoverablePublicStaleError(e)) {
+            const stale = await readStaleTravelDetail(endpoint);
+            if (stale) return stale;
         }
         devError('Error fetching Travel:', e);
         throw e;
@@ -459,12 +494,16 @@ export const fetchTravelBySlug = async (
         return travelSlugCache.get(slugCacheKey) as Travel;
     }
 
-    const fetchBySlug = async (requestOptions?: { signal?: AbortSignal }) => {
+    const fetchBySlug = async (requestOptions?: PublicTravelRequestOptions) => {
         const safeSlug = encodeURIComponent(slugCacheKey);
         const endpoint = `/travels/by-slug/${safeSlug}/`;
         try {
             const travel = await apiClient.get<Travel>(endpoint, LONG_TIMEOUT, requestOptions);
-            return normalizeTravelItem(travel);
+            const normalized = normalizeTravelItem(travel);
+            if (!isAuthenticated || requestOptions?.skipAuth) {
+                await saveStaleTravelDetail(endpoint, normalized);
+            }
+            return normalized;
         } catch (e: unknown) {
             // Travel detail is public. A 401 means the stored token is stale/expired
             // (or invalid for the current API backend). Retry once without auth so the
@@ -474,18 +513,29 @@ export const fetchTravelBySlug = async (
                     ...requestOptions,
                     skipAuth: true,
                 });
-                return normalizeTravelItem(travel);
+                const normalized = normalizeTravelItem(travel);
+                await saveStaleTravelDetail(endpoint, normalized);
+                return normalized;
+            }
+            if (
+                !isAbortError(e) &&
+                (!isAuthenticated || requestOptions?.skipAuth) &&
+                isRecoverablePublicStaleError(e)
+            ) {
+                const stale = await readStaleTravelDetail(endpoint);
+                if (stale) return stale;
             }
             throw e;
         }
     };
 
-    const fetchByDirectSlugVariant = async (requestOptions?: { signal?: AbortSignal }) => {
+    const fetchByDirectSlugVariant = async (requestOptions?: PublicTravelRequestOptions) => {
         const candidates = buildSlugDirectFallbackSlugs(slugCacheKey);
         for (const candidate of candidates) {
             try {
+                const endpoint = `/travels/by-slug/${encodeURIComponent(candidate)}/`;
                 const travel = await apiClient.get<Travel>(
-                    `/travels/by-slug/${encodeURIComponent(candidate)}/`,
+                    endpoint,
                     LONG_TIMEOUT,
                     {
                         ...requestOptions,
@@ -494,6 +544,7 @@ export const fetchTravelBySlug = async (
                 );
                 const normalized = normalizeTravelItem(travel);
                 if (hasMinimumTravelIdentity(normalized)) {
+                    await saveStaleTravelDetail(endpoint, normalized);
                     return normalized;
                 }
             } catch (error: unknown) {
@@ -503,7 +554,7 @@ export const fetchTravelBySlug = async (
         return null;
     };
 
-    const fetchTravelByResolvedSlug = async (requestOptions?: { signal?: AbortSignal }) => {
+    const fetchTravelByResolvedSlug = async (requestOptions?: PublicTravelRequestOptions) => {
         const resolvedId = await resolveTravelSlugId(slugCacheKey, requestOptions);
         if (!resolvedId) return null;
 
@@ -521,7 +572,7 @@ export const fetchTravelBySlug = async (
         return normalized;
     };
 
-    const fetchBySlugWithFallback = async (requestOptions?: { signal?: AbortSignal }) => {
+    const fetchBySlugWithFallback = async (requestOptions?: PublicTravelRequestOptions) => {
         let bySlugError: unknown = null;
         try {
             const travel = await fetchBySlug(requestOptions);
@@ -598,6 +649,7 @@ export const fetchTravelBySlug = async (
             if (typeof preloaded.id === 'number' && Number.isFinite(preloaded.id) && preloaded.id > 0) {
                 travelCache.set(preloaded.id, preloaded);
             }
+            await saveStaleTravelDetail(`/travels/by-slug/${encodeURIComponent(slugCacheKey)}/`, preloaded);
             return preloaded;
         }
 

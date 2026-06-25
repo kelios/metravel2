@@ -113,4 +113,45 @@ describe('OptimizedFavoriteButton', () => {
       text1: 'Не удалось обновить избранное',
     }))
   })
+
+  it('adds an Android guest travel result locally instead of opening login', async () => {
+    const addFavorite = jest.fn(async () => undefined)
+
+    ;(Platform as any).OS = 'android'
+    setDocumentForTest(undefined)
+    mockUseAuth.mockReturnValue({ isAuthenticated: false })
+    mockUseFavorites.mockReturnValue({
+      isFavorite: jest.fn(() => false),
+      addFavorite,
+      removeFavorite: jest.fn(),
+    })
+
+    render(
+      <OptimizedFavoriteButton
+        id={514}
+        type="travel"
+        title="Random travel"
+        url="/travels/random-travel"
+      />
+    )
+
+    fireEvent.press(screen.getByTestId('favorite-button'))
+
+    await waitFor(() => {
+      expect(addFavorite).toHaveBeenCalledWith({
+        id: 514,
+        type: 'travel',
+        title: 'Random travel',
+        url: '/travels/random-travel',
+        imageUrl: undefined,
+        country: undefined,
+        city: undefined,
+      })
+    })
+    expect(mockRequireAuth).not.toHaveBeenCalled()
+    expect(showToast).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'success',
+      text1: 'Сохранено на этом устройстве',
+    }))
+  })
 })

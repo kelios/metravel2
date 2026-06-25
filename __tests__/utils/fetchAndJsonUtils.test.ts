@@ -91,6 +91,19 @@ describe('fetchWithTimeout', () => {
     await expect(promise).rejects.toMatchObject({ name: 'AbortError', reason: 'external' })
   })
 
+  it('does not start fetch when external signal is already aborted', async () => {
+    const externalController = new AbortController()
+    externalController.abort()
+    const fetchMock = jest.fn()
+    global.fetch = fetchMock as any
+
+    await expect(
+      fetchWithTimeout('https://example.com/already-aborted', { signal: externalController.signal }, 1000)
+    ).rejects.toMatchObject({ name: 'AbortError' })
+
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('maps ERR_STREAM_PREMATURE_CLOSE to user-friendly network error', async () => {
     const fetchMock = jest.fn().mockRejectedValue({
       code: 'ERR_STREAM_PREMATURE_CLOSE',
@@ -123,6 +136,35 @@ describe('fetchWithTimeout', () => {
 
     expect(result).toBe(secondResponse)
     expect(fetchMock).toHaveBeenCalledTimes(2)
+    ;(global as any).window = originalWindow
+  })
+
+  it('does not retry local proxy 502 after external signal was aborted', async () => {
+    const originalWindow = global.window
+    ;(global as any).window = {
+      location: {
+        origin: 'http://localhost:8081',
+        hostname: 'localhost',
+      },
+    }
+
+    const externalController = new AbortController()
+    const firstResponse = { status: 502 } as Response
+    const fetchMock = jest.fn().mockImplementationOnce(() => {
+      externalController.abort()
+      return Promise.resolve(firstResponse)
+    })
+    global.fetch = fetchMock as any
+
+    await expect(
+      fetchWithTimeout(
+        'http://localhost:8081/api/countries/',
+        { signal: externalController.signal },
+        1000
+      )
+    ).rejects.toMatchObject({ name: 'AbortError' })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
     ;(global as any).window = originalWindow
   })
 })

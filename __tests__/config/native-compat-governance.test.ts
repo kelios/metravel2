@@ -100,4 +100,16 @@ describe('Native compatibility governance (docs/NATIVE_COMPAT_RULES.md)', () => 
     }
     expect(offenders).toEqual([]);
   });
+
+  it('AND-USB-14: Android manifest exposes documented metravel:// scheme and https app links', () => {
+    const appConfig = JSON.parse(fs.readFileSync(path.join(ROOT, 'app.json'), 'utf8'));
+    const manifestPath = path.join(ROOT, 'android', 'app', 'src', 'main', 'AndroidManifest.xml');
+    const manifest = fs.readFileSync(manifestPath, 'utf8');
+
+    expect(appConfig.expo?.scheme).toBe('metravel');
+    expect(appConfig.expo?.android?.package).toBe('by.metravel.app');
+    expect(manifest).toContain('android:scheme="metravel"');
+    expect(manifest).toContain('android:scheme="https" android:host="metravel.by"');
+    expect(manifest).not.toContain('android:scheme="myapp"');
+  });
 });

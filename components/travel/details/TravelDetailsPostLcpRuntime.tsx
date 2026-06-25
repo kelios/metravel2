@@ -16,6 +16,8 @@ type TravelDetailsPostLcpRuntimeProps = {
   isMobile: boolean;
   anchors: AnchorsMap;
   forceOpenKey: string | null;
+  scrollY?: any;
+  viewportHeight?: number;
   scrollToMapSection: () => void;
 };
 
@@ -26,6 +28,8 @@ function TravelDetailsPostLcpRuntime({
   isMobile,
   anchors,
   forceOpenKey,
+  scrollY,
+  viewportHeight,
   scrollToMapSection,
 }: TravelDetailsPostLcpRuntimeProps) {
   const [DeferredSectionsComponent, setDeferredSectionsComponent] =
@@ -55,6 +59,8 @@ function TravelDetailsPostLcpRuntime({
           isMobile={isMobile}
           forceOpenKey={forceOpenKey}
           anchors={anchors}
+          scrollY={scrollY}
+          viewportHeight={viewportHeight}
           scrollToMapSection={scrollToMapSection}
         />
       ) : (
@@ -67,8 +73,10 @@ function TravelDetailsPostLcpRuntime({
       anchors,
       forceOpenKey,
       isMobile,
+      scrollY,
       scrollToMapSection,
       travel,
+      viewportHeight,
     ],
   );
 

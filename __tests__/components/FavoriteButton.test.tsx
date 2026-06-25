@@ -1,4 +1,5 @@
 import { render, fireEvent, waitFor } from '@testing-library/react-native'
+import { Platform } from 'react-native'
 import FavoriteButton from '@/components/travel/FavoriteButton'
 
 // Mock FavoritesContext
@@ -28,8 +29,11 @@ jest.mock('@/context/AuthContext', () => ({
 }))
 
 describe('FavoriteButton', () => {
+  const originalPlatform = Platform.OS
+
   beforeEach(() => {
     jest.clearAllMocks()
+    ;(Platform as any).OS = originalPlatform
     mockUseAuth.mockReturnValue({ isAuthenticated: true })
   })
 
@@ -139,6 +143,36 @@ describe('FavoriteButton', () => {
 
     expect(mockAddFavorite).not.toHaveBeenCalled()
     expect(mockRemoveFavorite).not.toHaveBeenCalled()
+  })
+
+  it('saves locally on Android guest without redirecting to login', async () => {
+    ;(Platform as any).OS = 'android'
+    mockUseAuth.mockReturnValue({ isAuthenticated: false, authReady: true })
+    mockIsFavorite.mockReturnValue(false)
+
+    const { getByLabelText } = render(
+      <FavoriteButton
+        id="1"
+        type="travel"
+        title="Test Travel"
+        url="/travels/1"
+      />
+    )
+
+    fireEvent.press(getByLabelText(/Добавить "Test Travel" в избранное/))
+
+    await waitFor(() => {
+      expect(mockAddFavorite).toHaveBeenCalledWith({
+        id: '1',
+        type: 'travel',
+        title: 'Test Travel',
+        url: '/travels/1',
+        imageUrl: undefined,
+        country: undefined,
+        city: undefined,
+      })
+    })
+    expect(mockRouterPush).not.toHaveBeenCalled()
   })
 
   it('applies custom size and color', () => {

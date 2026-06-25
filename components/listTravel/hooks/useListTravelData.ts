@@ -11,6 +11,10 @@ import {
 } from '../utils/listTravelConstants';
 import { normalizeApiResponse, deduplicateTravels } from '../utils/listTravelHelpers';
 import { safeJsonParseString } from '@/utils/safeJsonParse';
+import {
+  getPublicStalePayloadMeta,
+  type PublicStalePayloadMeta,
+} from '@/utils/publicStaleCache';
 
 export interface UseListTravelDataProps {
   queryParams: Record<string, any>;
@@ -29,6 +33,7 @@ export interface UseListTravelDataReturn {
   isInitialLoading: boolean;
   isNextPageLoading: boolean;
   isEmpty: boolean;
+  staleContentMeta: PublicStalePayloadMeta | null;
   refetch: () => Promise<any>;
   handleEndReached: () => void;
   handleRefresh: () => void;
@@ -151,6 +156,14 @@ function useBaseTravelData(
   }, [normalizedPages]);
 
   const total = normalizedPages.length > 0 ? normalizedPages[0].total : 0;
+  const staleContentMeta = useMemo(() => {
+    if (!data?.pages?.length) return null;
+    for (const page of data.pages) {
+      const meta = getPublicStalePayloadMeta(page);
+      if (meta) return meta;
+    }
+    return null;
+  }, [data?.pages]);
   const hasAnyItems = combinedTravels.length > 0;
   const hasMore = Boolean(hasNextPage);
 
@@ -189,6 +202,7 @@ function useBaseTravelData(
     isInitialLoading,
     isNextPageLoading,
     isEmpty,
+    staleContentMeta,
     refetch,
     handleEndReached,
     handleRefresh,

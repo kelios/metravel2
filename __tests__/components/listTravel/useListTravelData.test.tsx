@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { useListTravelData, useRandomTravelData } from '@/components/listTravel/hooks/useListTravelData';
 import { fetchTravels, fetchRandomTravels } from '@/api/travelListQueries';
+import { markPublicStalePayload } from '@/utils/publicStaleCache';
 
 jest.mock('@/api/travelListQueries', () => ({
   fetchTravels: jest.fn(),
@@ -102,6 +103,32 @@ describe('useListTravelData with infinite query', () => {
     await waitFor(() => expect(ref.current?.isInitialLoading).toBe(false));
     expect(ref.current?.data).toHaveLength(12);
     expect(fetchTravels).toHaveBeenCalledTimes(1);
+
+    unmount();
+    queryClient.clear();
+  });
+
+  it('exposes stale metadata from a cached public page payload', async () => {
+    const stalePage = markPublicStalePayload(
+      {
+        total: 1,
+        data: createTravels('stale', 1),
+      },
+      {
+        savedAt: '2026-06-25T10:00:00.000Z',
+        sourceEndpoint: '/travels/?page=0',
+      },
+    );
+    (fetchTravels as jest.Mock).mockResolvedValueOnce(stalePage);
+
+    const { ref, queryClient, unmount } = renderWithClient({ queryParams: {} });
+
+    await waitFor(() => expect(ref.current?.isInitialLoading).toBe(false));
+    expect(ref.current?.data).toHaveLength(1);
+    expect(ref.current?.staleContentMeta).toEqual({
+      savedAt: '2026-06-25T10:00:00.000Z',
+      sourceEndpoint: '/travels/?page=0',
+    });
 
     unmount();
     queryClient.clear();

@@ -41,16 +41,16 @@ export const TravelDeferredSections: React.FC<{
   isMobile: boolean
   forceOpenKey: string | null
   anchors: AnchorsMap
-  scrollY: Animated.Value
-  viewportHeight: number
+  scrollY?: Animated.Value
+  viewportHeight?: number
   scrollToMapSection: () => void
 }> = memo(({
   travel,
   isMobile,
   forceOpenKey,
   anchors,
-  scrollY,
-  viewportHeight,
+  scrollY = new Animated.Value(0),
+  viewportHeight = 0,
   scrollToMapSection,
 }) => {
   const {

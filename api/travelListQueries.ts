@@ -4,6 +4,11 @@ import { safeJsonParse } from '@/utils/safeJsonParse';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { retry, isRetryableError } from '@/utils/retry';
 import { getSecureItem } from '@/utils/secureStorage';
+import {
+    isRecoverablePublicStaleError,
+    readPublicStalePayload,
+    savePublicStalePayload,
+} from '@/utils/publicStaleCache';
 import { normalizeTravelItem } from './travelsNormalize';
 import {
     LONG_TIMEOUT,
@@ -154,6 +159,7 @@ export const fetchTravels = async (
     urlParams: Record<string, unknown>,
     options?: { signal?: AbortSignal }
 ) => {
+    let publicStaleEndpoint = '';
     try {
         const whereObject: Record<string, unknown> = {};
         const sortQuery = extractSortQueryParams(urlParams || {});
@@ -202,6 +208,7 @@ export const fetchTravels = async (
 
         const params = buildWhereQueryParams({ page, perPage: itemsPerPage, query: search, where: whereObject, sortQuery });
         const urlTravel = `${GET_TRAVELS}?${params}`;
+        publicStaleEndpoint = !isUserScoped ? urlTravel : '';
 
         const authToken = allowDrafts ? await getSecureItem(TOKEN_KEY) : null;
         const canIncludeDrafts = allowDrafts && !!authToken;
@@ -256,12 +263,25 @@ export const fetchTravels = async (
         }
 
         const normalized = items.map(normalizeTravelItem);
-        return {
+        const freshPayload = {
             data: canIncludeDrafts ? normalized : filterPublished(normalized),
             total: coerceTotal(total, 0),
         };
+
+        if (publicStaleEndpoint && !canIncludeDrafts) {
+            await savePublicStalePayload(publicStaleEndpoint, freshPayload, baseInit);
+        }
+
+        return freshPayload;
     } catch (e) {
         if (isAbortError(e)) throw e;
+        if (publicStaleEndpoint && isRecoverablePublicStaleError(e)) {
+            const stalePayload = await readPublicStalePayload<{
+                data: Travel[];
+                total: number;
+            }>(publicStaleEndpoint);
+            if (stalePayload) return stalePayload;
+        }
         devError('Error fetching Travels:', e);
         throw e;
     }

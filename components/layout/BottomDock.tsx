@@ -21,6 +21,7 @@ import { useAndroidBackHandler } from "@/hooks/useAndroidBackHandler";
 import { useBottomSheetStore } from "@/stores/bottomSheetStore";
 import { useMapPanelStore } from "@/stores/mapPanelStore";
 import { hapticSelection } from "@/utils/haptics";
+import { buildArticlesHrefFromSource } from "@/utils/articleNavigation";
 import NavigationIcon from './NavigationIcon';
 import {
   BOTTOM_DOCK_ITEM_DEFS,
@@ -259,7 +260,10 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
         key={item.key}
         onPress={() => {
           closeMenu();
-          router.push(item.route as any);
+          const route = Platform.OS !== 'web' && item.route === '/articles'
+            ? buildArticlesHrefFromSource(pathname)
+            : item.route;
+          router.push(route as any);
         }}
         style={({ hovered, pressed }) => [
           styles.moreItem,
@@ -281,7 +285,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
         </Text>
       </Pressable>
     ),
-    [colors.primary, colors.textMuted, router, styles.moreItem, styles.moreItemIcon, styles.moreItemText, styles.moreItemTextMuted]
+    [colors.primary, colors.textMuted, pathname, router, styles.moreItem, styles.moreItemIcon, styles.moreItemText, styles.moreItemTextMuted]
   );
 
   if (!isMobile) return null;

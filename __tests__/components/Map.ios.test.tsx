@@ -98,7 +98,25 @@ describe('Map.ios Component', () => {
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     
-    expect(getWebViewHtml(rendered)).toContain("L.map('map', { zoomControl: false })");
+    expect(getWebViewHtml(rendered)).toContain("L.map('map', {");
+    expect(getWebViewHtml(rendered)).toContain('zoomControl: false');
+  });
+
+  it('keeps native WebView tiles fresh after Android layout and pan changes', () => {
+    const rendered = render(
+      <Map travel={mockTravel} coordinates={mockCoordinates} />
+    );
+
+    const html = getWebViewHtml(rendered);
+    expect(html).toContain('updateWhenIdle: false');
+    expect(html).toContain('updateWhenZooming: false');
+    expect(html).toContain('keepBuffer: 1');
+    expect(html).toContain('preferCanvas: true');
+    expect(html).toContain('fadeAnimation: false');
+    expect(html).toContain("window.__metravelScheduleInvalidate('init')");
+    expect(html).toContain("window.__metravelScheduleInvalidate('moveend')");
+    expect(html).toContain("window.__metravelScheduleInvalidate('renderPoints')");
+    expect(html).toContain("window.addEventListener('resize'");
   });
 
   it('should use inline div icons for Android WebView markers', () => {
@@ -109,6 +127,7 @@ describe('Map.ios Component', () => {
     const html = getWebViewHtml(rendered);
     expect(html).toContain('L.divIcon');
     expect(html).toContain('metravel-marker-pin');
+    expect(html).not.toContain('filter: drop-shadow');
     expect(html).not.toContain('data:image/svg+xml');
   });
 

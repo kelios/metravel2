@@ -45,6 +45,19 @@ export const isLikelySelfProxyApiUrl = (value?: string | null): boolean => {
   }
 };
 
+export const isLoopbackApiUrl = (value?: string | null): boolean => {
+  const trimmed = normalizeString(value);
+  if (!trimmed) return false;
+
+  try {
+    const parsed = new URL(trimmed);
+    const host = normalizeString(parsed.hostname).toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  } catch {
+    return false;
+  }
+};
+
 export const resolveApiBaseUrl = ({
   platformOS,
   envApiUrl,
@@ -77,7 +90,7 @@ export const resolveApiBaseUrl = ({
     }
   }
 
-  if (platformOS !== 'web' && !isLocalApi && isLikelySelfProxyApiUrl(normalizedEnvApiUrl) && normalizedProdApiUrl) {
+  if (platformOS !== 'web' && !isLocalApi && isLoopbackApiUrl(normalizedEnvApiUrl) && normalizedProdApiUrl) {
     return normalizeApiBaseUrl(normalizedProdApiUrl);
   }
 

@@ -15,6 +15,7 @@ import ListTravelLayout from './parts/ListTravelLayout'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useAuth } from '@/context/AuthContext'
 import EmptyState from '@/components/ui/EmptyState'
+import StaleContentBanner from '@/components/ui/StaleContentBanner'
 import { buildLoginHref } from '@/utils/authNavigation'
 import { fetchAllFiltersOptimized } from '@/api/miscOptimized'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
@@ -274,6 +275,7 @@ function ListTravelBase() {
         isInitialLoading,
         isNextPageLoading,
         isEmpty,
+        staleContentMeta,
         refetch,
         handleEndReached,
     } = useListTravelData({
@@ -639,6 +641,7 @@ function ListTravelBase() {
     const displayedRefetch = activeFallbackMatch?.query.refetch ?? refetch;
     const displayedHandleEndReached = activeFallbackMatch?.query.handleEndReached ?? handleEndReached;
     const displayedShowNextPageLoading = activeFallbackMatch?.query.isNextPageLoading ?? isNextPageLoading;
+    const displayedStaleContentMeta = activeFallbackMatch?.query.staleContentMeta ?? staleContentMeta;
     const hasDisplayedItems = displayedTravels.length > 0;
     const displayedShowEmptyState = !activeFallbackMatch && !isFallbackLoading && showEmptyState;
     const displayedShowInitialLoading = isInitialLoading || isFallbackLoading;
@@ -664,34 +667,40 @@ function ListTravelBase() {
     }, [displayedHandleEndReached, hasDisplayedItems]);
 
     const topContent = useMemo(() => {
-      if (!isExport && !activeFallbackMatch?.step) return null;
+      if (!displayedStaleContentMeta && !isExport && !activeFallbackMatch?.step) return null;
       return (
-        <ListTravelTopContent
-          isExport={isExport}
-          showFallbackNotice={!!activeFallbackMatch?.step}
-          onClearAll={handleClearAll}
-          styles={styles}
-          isMobile={isMobileDevice}
-          travels={displayedTravels}
-          selected={exportState.selected}
-          ownerName={userId}
-          toggleSelectAll={toggleSelectAll}
-          clearSelection={clearSelection}
-          moveSelected={moveSelected}
-          moveSelectedTo={moveSelectedTo}
-          hasSelection={hasSelection}
-          selectionCount={selectionCount}
-          baseSettings={baseSettings}
-          lastSettings={lastSettings}
-          settingsSummary={settingsSummary}
-          setLastSettings={setLastSettings}
-        />
+        <>
+          <StaleContentBanner meta={displayedStaleContentMeta} />
+          {(isExport || activeFallbackMatch?.step) ? (
+            <ListTravelTopContent
+              isExport={isExport}
+              showFallbackNotice={!!activeFallbackMatch?.step}
+              onClearAll={handleClearAll}
+              styles={styles}
+              isMobile={isMobileDevice}
+              travels={displayedTravels}
+              selected={exportState.selected}
+              ownerName={userId}
+              toggleSelectAll={toggleSelectAll}
+              clearSelection={clearSelection}
+              moveSelected={moveSelected}
+              moveSelectedTo={moveSelectedTo}
+              hasSelection={hasSelection}
+              selectionCount={selectionCount}
+              baseSettings={baseSettings}
+              lastSettings={lastSettings}
+              settingsSummary={settingsSummary}
+              setLastSettings={setLastSettings}
+            />
+          ) : null}
+        </>
       );
     // Intentional granular deps (styles.* sub-keys) to avoid recompute on styles object-identity change
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
       baseSettings,
       clearSelection,
+      displayedStaleContentMeta,
       displayedTravels,
       exportState.selected,
       activeFallbackMatch?.step,

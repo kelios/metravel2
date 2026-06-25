@@ -7,8 +7,8 @@ import { cleanupInvalidFavorites, isValidFavoriteId } from '@/utils/favoritesCle
 import { showToast } from '@/utils/toast';
 import { markTravelAsFavorite, unmarkTravelAsFavorite } from '@/api/travelsFavorites';
 import { clearUserFavorites, fetchUserFavoriteTravels } from '@/api/user';
+import { getGuestFavoritesStorageKey } from '@/utils/guestTrialState';
 
-const FAVORITES_KEY = 'metravel_favorites';
 const SERVER_FAVORITES_CACHE_KEY = 'metravel_favorites_server';
 
 const inFlightKeys = new Set<string>();
@@ -89,7 +89,8 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
     },
 
     addFavorite: async (item, { isAuthenticated, userId }) => {
-        if (!isAuthenticated) {
+        const isAndroidGuest = Platform.OS === 'android' && !isAuthenticated && !userId;
+        if (!isAuthenticated && !isAndroidGuest) {
             throw new Error('AUTH_REQUIRED');
         }
 
@@ -142,7 +143,7 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
         const newFavorites = [...get().favorites, newFavorite];
 
         try {
-            const key = userId ? `${FAVORITES_KEY}_${userId}` : FAVORITES_KEY;
+            const key = getGuestFavoritesStorageKey(userId);
             await AsyncStorage.setItem(key, JSON.stringify(newFavorites));
             set({ favorites: newFavorites });
 
@@ -161,7 +162,8 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
     },
 
     removeFavorite: async (id, type = 'travel', { isAuthenticated, userId }) => {
-        if (!isAuthenticated) {
+        const isAndroidGuest = Platform.OS === 'android' && !isAuthenticated && !userId;
+        if (!isAuthenticated && !isAndroidGuest) {
             throw new Error('AUTH_REQUIRED');
         }
 
@@ -202,7 +204,7 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
         }
 
         try {
-            const key = userId ? `${FAVORITES_KEY}_${userId}` : FAVORITES_KEY;
+            const key = getGuestFavoritesStorageKey(userId);
             const newFavorites = get().favorites.filter((f) => !(f.id === id && f.type === type));
             await AsyncStorage.setItem(key, JSON.stringify(newFavorites));
             set((s) => ({ favorites: s.favorites.filter((f) => !(f.id === id && f.type === type)) }));
@@ -225,14 +227,14 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
             await AsyncStorage.setItem(`${SERVER_FAVORITES_CACHE_KEY}_${userId}`, JSON.stringify([]));
             return;
         }
-        const key = userId ? `${FAVORITES_KEY}_${userId}` : FAVORITES_KEY;
+        const key = getGuestFavoritesStorageKey(userId);
         await AsyncStorage.setItem(key, JSON.stringify([]));
         set({ favorites: [] });
     },
 
     loadLocal: async (userId) => {
         try {
-            const key = userId ? `${FAVORITES_KEY}_${userId}` : FAVORITES_KEY;
+            const key = getGuestFavoritesStorageKey(userId);
             const data = await AsyncStorage.getItem(key);
             if (data) {
                 const parsed = safeJsonParseString(data, []);

@@ -9,6 +9,7 @@ import { useViewHistoryStore } from '@/stores/viewHistoryStore'
 import { API_BASE_URL } from '@/api/apiConfig'
 
 let currentRoute = ''
+let authReadyUnsubscribe: (() => void) | null = null
 
 export function dumpQaState(route: string, reason: 'route' | 'manual' = 'route'): void {
   if (!__DEV__) return
@@ -19,6 +20,7 @@ export function dumpQaState(route: string, reason: 'route' | 'manual' = 'route')
       JSON.stringify({
         reason,
         route,
+        authReady: auth.authReady,
         isAuthenticated: auth.isAuthenticated,
         userId: auth.userId,
         favorites: useFavoritesStore.getState().favorites.length,
@@ -37,5 +39,16 @@ export function installQaDebug(route: string): void {
   currentRoute = route
   const g = globalThis as { __QA__?: () => void }
   if (!g.__QA__) g.__QA__ = () => dumpQaState(currentRoute, 'manual')
+  if (!useAuthStore.getState().authReady) {
+    if (!authReadyUnsubscribe) {
+      authReadyUnsubscribe = useAuthStore.subscribe((state, previousState) => {
+        if (!state.authReady || previousState.authReady) return
+        authReadyUnsubscribe?.()
+        authReadyUnsubscribe = null
+        dumpQaState(currentRoute)
+      })
+    }
+    return
+  }
   dumpQaState(route)
 }

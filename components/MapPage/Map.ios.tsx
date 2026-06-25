@@ -198,7 +198,7 @@ const Map: React.FC<TravelProps> = ({
     [themeColors.surface]
   );
   const markerColor = DESIGN_COLORS.mapPin;
-  const markerShadowColor = themeColors.shadows.medium.shadowColor || themeColors.text;
+  const markerShadowColor = withAlpha(themeColors.text, 0.24);
   const selectedRouteLatLngs = useMemo(
     () => routePoints
       .map(normalizeRoutePoint)
@@ -356,7 +356,6 @@ const Map: React.FC<TravelProps> = ({
           height: 48px;
           position: relative;
           transform: translateY(-2px);
-          filter: drop-shadow(0 6px 8px ${markerShadowColor});
         }
         .metravel-marker-pin::before {
           content: "";
@@ -367,7 +366,7 @@ const Map: React.FC<TravelProps> = ({
           height: 24px;
           border-radius: 999px;
           background: ${markerColor};
-          box-shadow: inset 0 0 0 5px ${themeColors.textOnDark};
+          box-shadow: inset 0 0 0 5px ${themeColors.textOnDark}, 0 2px 4px ${markerShadowColor};
         }
         .metravel-marker-pin::after {
           content: "";
@@ -387,7 +386,13 @@ const Map: React.FC<TravelProps> = ({
         // zoomControl: false — встроенные кнопки +/− Leaflet (верхний левый угол)
         // перекрывали номерной/стартовый маркер маршрута. Зум доступен через
         // плавающие нативные контролы (__metravelMapZoomIn/Out).
-        const map = L.map('map', { zoomControl: false }).setView([${DEFAULT_LAT}, ${DEFAULT_LNG}], 10);
+        const map = L.map('map', {
+          zoomControl: false,
+          preferCanvas: true,
+          fadeAnimation: false,
+          zoomAnimation: false,
+          markerZoomAnimation: false
+        }).setView([${DEFAULT_LAT}, ${DEFAULT_LNG}], 10);
         map.__userCenter = [${DEFAULT_LAT}, ${DEFAULT_LNG}];
         // Текущий режим карты ('radius' | 'route'); обновляется при каждом рендере точек.
         // В route-режиме тап по карте отправляется в RN для добавления точки маршрута (#111).
@@ -428,9 +433,13 @@ const Map: React.FC<TravelProps> = ({
         }
         map.on('moveend', function() {
           try {
+            window.__metravelScheduleInvalidate('moveend');
             if (__metravelMoveTimer) clearTimeout(__metravelMoveTimer);
             __metravelMoveTimer = setTimeout(__metravelEmitMapMove, 300);
           } catch (e) {}
+        });
+        map.on('zoomend', function() {
+          try { window.__metravelScheduleInvalidate('zoomend'); } catch (e) {}
         });
 
         window.__metravelMapZoomIn = function() {
@@ -454,8 +463,35 @@ const Map: React.FC<TravelProps> = ({
         // поэтому URL абсолютный. Тёмными остаются только панели/контролы/маркеры.
         L.tileLayer(${JSON.stringify(getThemedNativeBaseTileUrl())}, {
           attribution: ${JSON.stringify(getThemedBaseAttribution())},
-          maxZoom: ${getThemedBaseMaxZoom()}
+          maxZoom: ${getThemedBaseMaxZoom()},
+          updateWhenIdle: false,
+          updateWhenZooming: false,
+          keepBuffer: 1
         }).addTo(map);
+
+        function __metravelInvalidateMapSize(stage) {
+          try {
+            map.invalidateSize({ animate: false, pan: false });
+          } catch (e) {
+            try { map.invalidateSize(); } catch (err) {}
+          }
+        }
+
+        window.__metravelScheduleInvalidate = function(stage) {
+          try {
+            __metravelInvalidateMapSize(stage);
+            [80, 240, 600].forEach(function(delay) {
+              setTimeout(function() { __metravelInvalidateMapSize(stage); }, delay);
+            });
+          } catch (e) {}
+        };
+
+        window.__metravelScheduleInvalidate('init');
+        window.addEventListener('resize', function() { window.__metravelScheduleInvalidate('resize'); });
+        window.addEventListener('orientationchange', function() { window.__metravelScheduleInvalidate('orientationchange'); });
+        document.addEventListener('visibilitychange', function() {
+          if (!document.hidden) window.__metravelScheduleInvalidate('visibilitychange');
+        });
 
         const markersLayer = L.layerGroup().addTo(map);
         const routeLayer = L.layerGroup().addTo(map);
@@ -664,6 +700,7 @@ const Map: React.FC<TravelProps> = ({
             } else if (map.__userCenter) {
               map.setView(map.__userCenter, map.getZoom ? map.getZoom() : 10);
             }
+            window.__metravelScheduleInvalidate('renderPoints');
           } catch (e) {}
         };
 

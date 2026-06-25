@@ -2,16 +2,21 @@ import { useCallback, useEffect, useRef } from 'react'
 import { Platform } from 'react-native'
 
 /**
- * FE-3: fire an impression callback once when the affiliate block first scrolls
- * into view (≥50% visible). Web-only; on native or without IntersectionObserver
- * support it stays inert. Returns a ref callback to attach to the block's
- * outer View (react-native-web forwards it to the underlying DOM node).
+ * FE-3: fire an impression callback once when the affiliate block is observed.
+ * Web uses IntersectionObserver (≥50% visible); native uses first layout as a
+ * lightweight visibility proxy because there is no DOM observer.
  */
 export function useAffiliateImpression(onImpression: () => void) {
   const firedRef = useRef(false)
   const disconnectRef = useRef<(() => void) | undefined>(undefined)
   const callbackRef = useRef(onImpression)
   callbackRef.current = onImpression
+
+  const fireOnce = useCallback(() => {
+    if (firedRef.current) return
+    firedRef.current = true
+    callbackRef.current()
+  }, [])
 
   const setRef = useCallback((node: unknown) => {
     disconnectRef.current?.()
@@ -25,8 +30,7 @@ export function useAffiliateImpression(onImpression: () => void) {
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting && !firedRef.current) {
-            firedRef.current = true
-            callbackRef.current()
+            fireOnce()
             observer.disconnect()
           }
         }
@@ -35,9 +39,14 @@ export function useAffiliateImpression(onImpression: () => void) {
     )
     observer.observe(element)
     disconnectRef.current = () => observer.disconnect()
-  }, [])
+  }, [fireOnce])
+
+  const onLayout = useCallback(() => {
+    if (Platform.OS === 'web') return
+    fireOnce()
+  }, [fireOnce])
 
   useEffect(() => () => disconnectRef.current?.(), [])
 
-  return setRef
+  return { ref: setRef, onLayout }
 }

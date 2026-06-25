@@ -23,6 +23,7 @@ import {
 import { LoadError, MissingParamError } from '@/components/travel/details/TravelDetailsErrorStates'
 import TravelDetailsLoadingFallback from '@/components/travel/details/TravelDetailsLoadingFallback'
 import TravelDetailsSeoBlock from '@/components/travel/details/TravelDetailsSeoBlock'
+import StaleContentBanner from '@/components/ui/StaleContentBanner'
 import { useTravelDetailsContainerViewModel } from '@/components/travel/details/hooks/useTravelDetailsContainerViewModel'
 import { useTravelDetailsHeadSync } from '@/components/travel/details/hooks/useTravelDetailsHeadSync'
 import type { Travel } from '@/types/types'
@@ -123,7 +124,7 @@ export default function TravelDetailsContainer() {
 
   const details = useTravelDetails({ isMobile, screenWidth, startTransition })
   const { data, layout, menu, navigation: travelNavigation, performance, scroll } = details
-  const { error, isError, isLoading, isMissingParam, refetch, slug, travel } = data
+  const { error, isError, isLoading, isMissingParam, refetch, slug, staleContentMeta, travel } = data
   const { contentHorizontalPadding, sideMenuPlatformStyles } = layout
   const { activeSection, anchors, forceOpenKey, scrollRef, scrollTo, setActiveSection } =
     travelNavigation
@@ -243,7 +244,9 @@ export default function TravelDetailsContainer() {
         anchors={anchors}
         forceOpenKey={forceOpenKey}
         deferredChromeReady={deferredChromeReady}
+        scrollY={scrollY}
         scrollToMapSection={scrollToMapSection}
+        viewportHeight={viewportHeight}
       />
     )
   }, [
@@ -251,8 +254,10 @@ export default function TravelDetailsContainer() {
     deferredChromeReady,
     forceOpenKey,
     isMobile,
+    scrollY,
     scrollToMapSection,
     travel,
+    viewportHeight,
   ])
 
   const deferredScrollState = useMemo<TravelDetailsDeferredScrollState>(
@@ -294,6 +299,10 @@ export default function TravelDetailsContainer() {
   ])
 
   const mainAriaLabel = `Детали путешествия: ${travel?.name || 'путешествие'}`
+  const topNotice = useMemo(
+    () => <StaleContentBanner meta={staleContentMeta} testID="travel-details-stale-content-banner" />,
+    [staleContentMeta],
+  )
 
   if (isMissingParam) {
     return <MissingParamError styles={styles} seoBlock={seoElement} onGoHome={goHome} />
@@ -348,6 +357,7 @@ export default function TravelDetailsContainer() {
         animatedX={animatedX}
         sideMenuPlatformStyles={sideMenuPlatformStyles}
         mainAriaLabel={mainAriaLabel}
+        topNotice={topNotice}
         deferredContent={deferredRuntime}
       />
     </>

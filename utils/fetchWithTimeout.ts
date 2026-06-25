@@ -13,6 +13,14 @@ export async function fetchWithTimeout(
     options: RequestInit = {},
     timeout: number = 10000
 ): Promise<Response> {
+    const createAbortError = (): Error => {
+        if (typeof DOMException !== 'undefined') {
+            return new DOMException('Aborted', 'AbortError') as unknown as Error;
+        }
+        const err = new Error('Aborted');
+        err.name = 'AbortError';
+        return err;
+    };
     const shouldRetryLocalApiProxy502 = (candidateUrl: string, init: RequestInit): boolean => {
         if (typeof window === 'undefined') return false;
         if (window.location?.hostname !== 'localhost' && window.location?.hostname !== '127.0.0.1') {
@@ -29,6 +37,10 @@ export async function fetchWithTimeout(
         }
     };
     const externalSignal = options.signal;
+    if (externalSignal?.aborted) {
+        throw createAbortError();
+    }
+
     const controller = new AbortController();
     let didTimeout = false;
     const timeoutId = setTimeout(() => {
@@ -48,6 +60,9 @@ export async function fetchWithTimeout(
     }
 
     const runFetch = async (): Promise<Response> => {
+        if (externalSignal?.aborted || controller.signal.aborted) {
+            throw createAbortError();
+        }
         return await fetch(url, {
             ...options,
             signal: controller.signal,

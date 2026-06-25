@@ -74,6 +74,7 @@ type TravelDetailsCriticalShellProps = {
   sideMenuPlatformStyles: any;
   deferredContent: React.ReactNode;
   mainAriaLabel: string;
+  topNotice?: React.ReactNode;
 };
 
 export default function TravelDetailsCriticalShell({
@@ -104,6 +105,7 @@ export default function TravelDetailsCriticalShell({
   sideMenuPlatformStyles,
   deferredContent,
   mainAriaLabel,
+  topNotice,
 }: TravelDetailsCriticalShellProps) {
   const insets = useSafeAreaInsetsSafe();
 
@@ -211,6 +213,7 @@ export default function TravelDetailsCriticalShell({
     useNativeStickyNav && travel
       ? [
           <View key="hero" style={contentWrapperStyle} collapsable={false}>
+            {topNotice}
             <TravelDetailsHeroBlock
               travel={travel}
               anchors={anchors}
@@ -282,6 +285,7 @@ export default function TravelDetailsCriticalShell({
                   style={contentWrapperStyle}
                   collapsable={false}
                 >
+                  {topNotice}
                   {Platform.OS === 'web' && travel ? (
                     <h1 style={WEB_SR_ONLY_HEADING_STYLE as any}>{travel.name}</h1>
                   ) : null}

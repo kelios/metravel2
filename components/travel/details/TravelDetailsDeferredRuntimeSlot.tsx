@@ -11,8 +11,10 @@ type TravelDetailsDeferredRuntimeSlotProps = {
   deferredChromeReady: boolean
   forceOpenKey: string | null
   isMobile: boolean
+  scrollY?: any
   scrollToMapSection: () => void
   travel: any
+  viewportHeight?: number
 }
 
 export default function TravelDetailsDeferredRuntimeSlot({
@@ -20,8 +22,10 @@ export default function TravelDetailsDeferredRuntimeSlot({
   deferredChromeReady,
   forceOpenKey,
   isMobile,
+  scrollY,
   scrollToMapSection,
   travel,
+  viewportHeight,
 }: TravelDetailsDeferredRuntimeSlotProps) {
   if (!deferredChromeReady) return null
 
@@ -32,7 +36,9 @@ export default function TravelDetailsDeferredRuntimeSlot({
         isMobile={isMobile}
         anchors={anchors}
         forceOpenKey={forceOpenKey}
+        scrollY={scrollY}
         scrollToMapSection={scrollToMapSection}
+        viewportHeight={viewportHeight}
       />
     </Suspense>
   )

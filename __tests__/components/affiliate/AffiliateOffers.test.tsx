@@ -1,4 +1,5 @@
 import { render, fireEvent } from '@testing-library/react-native'
+import { Platform } from 'react-native'
 
 import AffiliateOffers from '@/components/affiliate/AffiliateOffers'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
@@ -19,9 +20,11 @@ const ENV_KEYS = [
 
 describe('AffiliateOffers', () => {
   const original: Record<string, string | undefined> = {}
+  const originalPlatform = Platform.OS
 
   beforeEach(() => {
     jest.clearAllMocks()
+    ;(Platform as any).OS = originalPlatform
     ENV_KEYS.forEach((k) => {
       original[k] = process.env[k]
     })
@@ -33,6 +36,7 @@ describe('AffiliateOffers', () => {
   })
 
   afterEach(() => {
+    ;(Platform as any).OS = originalPlatform
     ENV_KEYS.forEach((k) => {
       if (original[k] === undefined) delete process.env[k]
       else process.env[k] = original[k]
@@ -67,5 +71,31 @@ describe('AffiliateOffers', () => {
     expect(calledUrl).toContain('marker=999999.travel384')
     // hotels (Ostrovok) deep-links to the country page resolved from the ISO code
     expect(calledUrl).toContain(encodeURIComponent('https://ostrovok.ru/hotel/belarus/'))
+  })
+
+  it('tracks one impression from native layout without opening partner links', () => {
+    ;(Platform as any).OS = 'android'
+
+    const { getByTestId } = render(
+      <AffiliateOffers city="Минск" country="Беларусь" countryCode="BY" travelId={384} />,
+    )
+
+    fireEvent(getByTestId('affiliate-offers'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 120, width: 320, height: 180 } },
+    })
+    fireEvent(getByTestId('affiliate-offers'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 120, width: 320, height: 180 } },
+    })
+
+    expect(queueAnalyticsEvent).toHaveBeenCalledTimes(1)
+    expect(queueAnalyticsEvent).toHaveBeenCalledWith(
+      'Affiliate_Impression',
+      expect.objectContaining({
+        travelId: '384',
+        city: 'Минск',
+        offers: 'tours,hotels',
+      }),
+    )
+    expect(openExternalUrlInNewTab).not.toHaveBeenCalled()
   })
 })

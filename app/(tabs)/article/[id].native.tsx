@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
-import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router'
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Article } from '@/types/types'
 import IframeRenderer, { iframeModel } from '@native-html/iframe-plugin'
@@ -22,6 +22,7 @@ import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler'
 import { handleRichTextLinkPress } from '@/utils/internalLinks'
+import { normalizeArticleReturnHref } from '@/utils/articleNavigation'
 
 export default function ArticleDetails() {
   const { width } = useResponsive()
@@ -49,6 +50,10 @@ export default function ArticleDetails() {
 
   const handleBack = useCallback(() => {
     if (returnHref) {
+      if (router.canGoBack()) {
+        router.back()
+        return
+      }
       router.replace(returnHref)
       return
     }
@@ -61,6 +66,10 @@ export default function ArticleDetails() {
 
   const handleAndroidBack = useCallback(() => {
     if (!returnHref) return false
+    if (router.canGoBack()) {
+      router.back()
+      return true
+    }
     router.replace(returnHref)
     return true
   }, [returnHref, router])
@@ -192,23 +201,6 @@ export default function ArticleDetails() {
       </ScrollView>
     </SafeAreaView>
   )
-}
-
-function normalizeArticleReturnHref(value: unknown): Href | null {
-  const raw = Array.isArray(value) ? String(value[0] ?? '') : String(value ?? '')
-  if (!raw.trim()) return null
-
-  let decoded = raw.trim()
-  try {
-    decoded = decodeURIComponent(decoded)
-  } catch {
-    // Keep the raw value; the checks below still protect external URLs.
-  }
-
-  if (!decoded.startsWith('/') || decoded.startsWith('//')) return null
-  const withoutHash = decoded.split('#')[0] || '/'
-  if (withoutHash.startsWith('/article/')) return null
-  return withoutHash as Href
 }
 
 function ArticleBackButton({

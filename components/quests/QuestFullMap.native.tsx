@@ -33,6 +33,8 @@ const QUEST_NAV_PROVIDERS: Array<{ app: QuestMapApp; label: string }> = [
     { app: 'osm', label: 'OSM' },
 ];
 
+const MIN_INLINE_MAP_HEIGHT = 420;
+
 type StepPoint = { lat: number; lng: number; title?: string };
 
 type GroupedPoint = { lat: number; lng: number; indexes: number[]; titles: string[] };
@@ -41,6 +43,7 @@ type MarkerStatus = {
     expectedMarkers: number;
     markerNodes: number;
     visibleMarkers: number;
+    settled: boolean;
 };
 
 function formatPointCount(count: number) {
@@ -100,6 +103,7 @@ function QuestFullMap({
     const insets = useSafeAreaInsets();
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
+    const resolvedHeight = Math.max(MIN_INLINE_MAP_HEIGHT, Math.round(height));
     const fullscreenMapHeight = Math.max(360, Math.round(viewportHeight - 72));
 
     useAndroidBackHandler(() => {
@@ -164,10 +168,19 @@ function QuestFullMap({
     <body>
       <div id="map"></div>
       <script>
-        var map = L.map('map', { zoomControl: false });
+        var map = L.map('map', {
+          zoomControl: false,
+          preferCanvas: true,
+          fadeAnimation: false,
+          zoomAnimation: false,
+          markerZoomAnimation: false
+        });
         L.tileLayer('${getOsmNativeTileUrl()}', {
           attribution: '© OpenStreetMap',
-          maxZoom: ${OSM_PROXY_MAX_ZOOM}
+          maxZoom: ${OSM_PROXY_MAX_ZOOM},
+          updateWhenIdle: false,
+          updateWhenZooming: false,
+          keepBuffer: 1
         }).addTo(map);
 
         var routePoints = ${safeJson(points.map(p => [p.lat, p.lng]))};
@@ -239,6 +252,23 @@ function QuestFullMap({
           }));
         });
 
+        function refreshMapLayout(stage) {
+          try {
+            map.invalidateSize({ animate: false, pan: false });
+          } catch (e) {
+            try { map.invalidateSize(); } catch (err) {}
+          }
+        }
+
+        function scheduleMapRefresh(stage) {
+          try {
+            refreshMapLayout(stage);
+            [80, 240, 600].forEach(function(delay) {
+              setTimeout(function() { refreshMapLayout(stage); }, delay);
+            });
+          } catch (e) {}
+        }
+
         function visibleMarkerCount() {
           var nodes = document.querySelectorAll('.leaflet-marker-icon.qmark, .qmark.leaflet-marker-icon');
           var visible = 0;
@@ -258,17 +288,29 @@ function QuestFullMap({
           return visible;
         }
 
+        var statusRetryCount = 0;
         function postMapStatus(stage) {
           try {
             if (!window.ReactNativeWebView) return;
+            refreshMapLayout(stage);
+            var visibleMarkers = visibleMarkerCount();
+            var expectedMarkers = grouped.length;
+            var settled = stage === 'settled' || stage === 'final' || visibleMarkers >= expectedMarkers || statusRetryCount >= 3;
             window.ReactNativeWebView.postMessage(JSON.stringify({
               type: 'quest-map-status',
               stage: stage,
               points: routePoints.length,
-              expectedMarkers: grouped.length,
+              expectedMarkers: expectedMarkers,
               markerNodes: document.querySelectorAll('.qmark').length,
-              visibleMarkers: visibleMarkerCount()
+              visibleMarkers: visibleMarkers,
+              settled: settled
             }));
+
+            if (!settled && visibleMarkers < expectedMarkers) {
+              statusRetryCount += 1;
+              scheduleMapRefresh('status-retry');
+              setTimeout(function () { postMapStatus('retry'); }, 260);
+            }
           } catch (e) {}
         }
 
@@ -285,6 +327,14 @@ function QuestFullMap({
           }
         };
 
+        scheduleMapRefresh('init');
+        window.addEventListener('resize', function() { scheduleMapRefresh('resize'); });
+        window.addEventListener('orientationchange', function() { scheduleMapRefresh('orientationchange'); });
+        document.addEventListener('visibilitychange', function() {
+          if (!document.hidden) scheduleMapRefresh('visibilitychange');
+        });
+        map.on('moveend zoomend', function() { scheduleMapRefresh('map-change'); });
+
         // Подгонка границ. На Android WebView контейнер карты в момент выполнения
         // скрипта нередко имеет нулевую высоту (карта ниже сгиба / внутри Suspense),
         // поэтому одиночный fitBounds оставляет карту на zoom 0 (вид всего мира).
@@ -297,6 +347,7 @@ function QuestFullMap({
             if (!size || size.x === 0 || size.y === 0) return false;
             var bounds = L.latLngBounds(routePoints).pad(0.15);
             map.fitBounds(bounds, { animate: false });
+            scheduleMapRefresh('fit');
             window.setTimeout(function () { postMapStatus('fit'); }, 50);
             return true;
           } catch (e) { return false; }
@@ -311,6 +362,7 @@ function QuestFullMap({
         }
         window.setTimeout(function () { postMapStatus('ready'); }, 250);
         window.setTimeout(function () { postMapStatus('settled'); }, 1000);
+        window.setTimeout(function () { postMapStatus('final'); }, 1600);
       </script>
     </body>
     </html>
@@ -352,6 +404,7 @@ function QuestFullMap({
                 expectedMarkers: Number(data.expectedMarkers) || groupedPoints.length,
                 markerNodes: Number(data.markerNodes) || 0,
                 visibleMarkers: Number(data.visibleMarkers) || 0,
+                settled: Boolean(data.settled),
             });
         } catch {
             // Ignore non-JSON WebView messages.
@@ -362,6 +415,10 @@ function QuestFullMap({
         Boolean(markerStatus) &&
         markerStatus!.expectedMarkers > 0 &&
         markerStatus!.visibleMarkers >= markerStatus!.expectedMarkers;
+    const markersMissing =
+        Boolean(markerStatus?.settled) &&
+        markerStatus!.expectedMarkers > 0 &&
+        markerStatus!.visibleMarkers < markerStatus!.expectedMarkers;
 
     const handleZoom = (direction: 'in' | 'out') => {
         const fn = direction === 'in' ? '__qmZoomIn' : '__qmZoomOut';
@@ -403,14 +460,14 @@ function QuestFullMap({
 
     if (points.length === 0) {
         return (
-            <View style={[styles.wrap, { height }]}>
+            <View style={[styles.wrap, { height: resolvedHeight }]}>
                 <Text style={styles.loadingText}>Нет точек маршрута для карты</Text>
             </View>
         );
     }
 
     return (
-        <View style={[styles.wrap, { height }]}>
+        <View style={[styles.wrap, { height: resolvedHeight }]}>
             <View style={styles.toolbar}>
                 <Text style={styles.toolbarTitle} numberOfLines={1}>
                     {title}
@@ -475,7 +532,7 @@ function QuestFullMap({
                 accessibilityLabel={
                     markersConfirmed
                         ? `${formatPointCount(points.length)} на карте`
-                        : markerStatus && markerStatus.expectedMarkers > 0
+                        : markersMissing
                           ? 'Точки карты не отрисовались'
                           : `${formatPointCount(points.length)} загружаются на карту`
                 }
@@ -488,7 +545,7 @@ function QuestFullMap({
                 <Text style={styles.pointStatusText} numberOfLines={1}>
                     {markersConfirmed
                         ? `${formatPointCount(points.length)} на карте`
-                        : markerStatus && markerStatus.expectedMarkers > 0
+                        : markersMissing
                           ? 'Точки карты не отрисовались'
                           : `${formatPointCount(points.length)} загружаются на карту`}
                 </Text>
