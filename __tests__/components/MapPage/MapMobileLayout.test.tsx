@@ -164,6 +164,32 @@ describe('MapMobileLayout', () => {
     expect(screen.queryByText('9 мест')).toBeNull()
   })
 
+  it('hides search-this-area when the map sheet is open', async () => {
+    const screen = render(
+      <MapMobileLayout
+        mapComponent={<View testID="mock-map" />}
+        travelsData={[{ id: 1 }]}
+        totalCount={9}
+        coordinates={{ latitude: 53.9, longitude: 27.56 }}
+        transportMode="car"
+        buildRouteTo={jest.fn()}
+        onCenterOnUser={jest.fn()}
+        canSearchThisArea
+        onSearchThisArea={jest.fn()}
+        onOpenFilters={jest.fn()}
+        filtersPanelProps={null}
+      />,
+    )
+
+    expect(screen.getByTestId('map-search-this-area')).toBeTruthy()
+
+    await act(async () => {
+      mockMapBottomSheet.mock.calls.at(-1)?.[0]?.onStateChange('half')
+    })
+
+    expect(screen.queryByTestId('map-search-this-area')).toBeNull()
+  })
+
   it('keeps the places list static but makes filters sheet content scrollable', async () => {
     render(
       <MapMobileLayout

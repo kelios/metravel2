@@ -326,10 +326,13 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   }, [clearSelectedPlace])
 
   // F-49 — "Искать в этой области" видна только когда есть значимый сдвиг карты,
-  // шторка не раскрыта на full и не открыта карточка места (чтобы не наслаивать
-  // плавающие контролы на контент).
+  // шторка закрыта и не открыта карточка места. В открытой шторке кнопка
+  // оказывается поверх карточек списка на Android.
   const showSearchAreaButton =
-    !!canSearchThisArea && !!onSearchThisArea && sheetState !== 'full' && !hasSelectedPlace
+    !!canSearchThisArea &&
+    !!onSearchThisArea &&
+    sheetState === 'collapsed' &&
+    !hasSelectedPlace
 
   const bottomSheetInset = IS_WEB
     ? WEB_MOBILE_BOTTOM_DOCK_INSET +
