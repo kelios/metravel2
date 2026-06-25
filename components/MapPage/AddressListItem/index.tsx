@@ -97,7 +97,7 @@ const AddressListItem: React.FC<Props> = ({
   }, [coord, userLocation, transportMode])
 
   const webMapActions = useMemo(() => {
-    if (!coord) return []
+    if (!coord || !isWebPlatform()) return []
     return [
       {
         key: 'google',
@@ -148,7 +148,6 @@ const AddressListItem: React.FC<Props> = ({
 
   const inlineActions = useMemo(
     () => [
-      ...(routeAction ? [routeAction] : []),
       ...(articleUrl || urlTravel
         ? [
             {
@@ -162,7 +161,7 @@ const AddressListItem: React.FC<Props> = ({
           ]
         : []),
     ],
-    [articleUrl, openArticle, routeAction, urlTravel],
+    [articleUrl, openArticle, urlTravel],
   )
 
   return (

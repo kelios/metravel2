@@ -15,6 +15,7 @@ import { getMapMobileLayoutStyles } from './MapMobileLayout.styles'
 import { MapMobileSheetBody } from './MapMobile/MapMobileSheetBody'
 import { MapMobileTopOverlay } from './MapMobile/MapMobileTopOverlay'
 import MapPlaceBottomCard from './MapPlaceBottomCard'
+import { getPlacesLabel, PLACE_COUNT_BADGE_CAP } from './TravelListPanel/helpers'
 
 type SheetState = 'collapsed' | 'quarter' | 'half' | 'seventy' | 'full'
 // Что показываем в шторке, когда она открыта (по запросу пользователя).
@@ -149,7 +150,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const openList = useCallback(() => {
     clearSelectedPlace?.()
     setSheetContent('list')
-    bottomSheetRef.current?.snapToHalf()
+    bottomSheetRef.current?.snapToSeventy()
   }, [clearSelectedPlace])
 
   // Иконки верхнего overlay (радиус/слои/фильтры) открывают шит фильтров на ~70%
@@ -293,6 +294,17 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     if (!n) return ''
     return n > 999 ? '999+' : String(n)
   }, [displayCount])
+  const currentRadiusKm = filtersContextProps?.filterValue?.radius ?? null
+  const listHeaderSummaryText = useMemo(() => {
+    const placesCountLabel =
+      displayCount > PLACE_COUNT_BADGE_CAP
+        ? `${PLACE_COUNT_BADGE_CAP}+`
+        : String(displayCount)
+    const hasRadiusContext =
+      currentRadiusKm != null && String(currentRadiusKm).trim() !== ''
+
+    return `${placesCountLabel} ${getPlacesLabel(displayCount)}${hasRadiusContext ? ` · ${currentRadiusKm} км` : ''}`
+  }, [currentRadiusKm, displayCount])
 
   // Радиус-поповер и слои-поповер переиспользуют ту же модель, что и шит:
   // onFilterChange('radius', id) и контролируемое состояние оверлеев из контекста.
@@ -357,11 +369,36 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   // uiTab для тела шторки: list → список; filters/route → провайдер фильтров.
   const bodyUiTab = sheetContent === 'list' ? 'list' : 'search'
   const showSheetHeader = sheetContent !== 'list'
+  const showListHeaderSummary = sheetContent === 'list' && travelsData.length > 0
 
   const sheetContentNode = (
     <View style={styles.sheetRoot}>
       <View style={styles.sheetSheetHeader}>
-        {showSheetHeader ? (
+        {showListHeaderSummary ? (
+          <View style={styles.sheetListHeaderContent}>
+            <RNText style={styles.sheetListTitle} numberOfLines={1}>
+              Места рядом
+            </RNText>
+            <View style={styles.sheetListCountChip}>
+              <RNText style={styles.sheetListCountChipText} numberOfLines={1}>
+                {listHeaderSummaryText}
+              </RNText>
+            </View>
+            <Pressable
+              testID="travel-list-open-filters"
+              onPress={openFiltersSheet}
+              accessibilityRole="button"
+              accessibilityLabel="Открыть фильтры"
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.sheetListFiltersButton,
+                pressed && styles.sheetListFiltersButtonPressed,
+              ]}
+            >
+              <Feather name="sliders" size={18} color={colors.primary} />
+            </Pressable>
+          </View>
+        ) : showSheetHeader ? (
           <RNText style={styles.sheetSheetTitle} numberOfLines={1}>
             {sheetContent === 'route' ? 'Маршрут' : 'Фильтры и поиск'}
           </RNText>

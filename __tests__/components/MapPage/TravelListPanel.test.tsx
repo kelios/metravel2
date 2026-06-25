@@ -218,6 +218,25 @@ describe('TravelListPanel (right list on map page)', () => {
     expect(onOpenFilters).toHaveBeenCalledTimes(1);
   });
 
+  it('can hide the mobile summary when the parent sheet renders it in the header', () => {
+    const { getByText, queryByTestId } = render(
+      <TravelListPanel
+        travelsData={travelsData}
+        buildRouteTo={jest.fn()}
+        isMobile={true}
+        isLoading={false}
+        totalCount={9}
+        currentRadiusKm={5}
+        onOpenFilters={jest.fn()}
+        showMobileSummary={false}
+      />
+    );
+
+    expect(getByText('Place 1')).toBeTruthy();
+    expect(queryByTestId('travel-list-mobile-summary')).toBeNull();
+    expect(queryByTestId('travel-list-open-filters')).toBeNull();
+  });
+
   it('builds explicit mobile results context with radius and user location', () => {
     expect(
       buildTravelListSummaryHint({

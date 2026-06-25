@@ -56,6 +56,7 @@ type Props = {
   onToggleFavorite?: (id: string | number) => void
   favorites?: Set<string | number>
   useBottomSheetScrollable?: boolean
+  showMobileSummary?: boolean
 }
 
 const TravelListPanel: React.FC<Props> = ({
@@ -81,6 +82,7 @@ const TravelListPanel: React.FC<Props> = ({
   onExpandRadius,
   compactPreview = false,
   currentRadiusKm,
+  showMobileSummary = true,
 }) => {
   const themeColors = useThemedColors()
   const styles = useMemo(() => getStyles(themeColors), [themeColors])
@@ -166,6 +168,7 @@ const TravelListPanel: React.FC<Props> = ({
   const listHeader = useMemo(() => {
     if (!isMobile || !travelsData.length) return null
     if (compactPreview) return null
+    if (!showMobileSummary) return null
 
     const displayCount = totalCount ?? travelsData.length
     const placesCountLabel =
@@ -214,7 +217,7 @@ const TravelListPanel: React.FC<Props> = ({
         </Text>
       </View>
     )
-  }, [compactPreview, currentRadiusKm, headerWidthStyle, isMobile, onOpenFilters, styles, themeColors, totalCount, travelsData.length])
+  }, [compactPreview, currentRadiusKm, headerWidthStyle, isMobile, onOpenFilters, showMobileSummary, styles, themeColors, totalCount, travelsData.length])
 
   const refreshControl = useMemo(
     () =>

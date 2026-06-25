@@ -121,11 +121,15 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
           ) : null}
         </View>
 
-        {showHeaderContextBar && (
-          <Suspense fallback={<View style={contextBarFallbackStyle} aria-hidden />}>
-            <HeaderContextBarLazy />
-          </Suspense>
-        )}
+        {showHeaderContextBar ? (
+          isHydrated ? (
+            <Suspense fallback={<View style={contextBarFallbackStyle} aria-hidden />}>
+              <HeaderContextBarLazy />
+            </Suspense>
+          ) : (
+            <View style={contextBarFallbackStyle} aria-hidden />
+          )
+        ) : null}
       </View>
     </View>
   )

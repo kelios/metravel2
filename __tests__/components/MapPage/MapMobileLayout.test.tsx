@@ -15,6 +15,12 @@ const mockTravelListPanel = jest.fn((props: any) => {
 })
 
 const mockMapBottomSheet = jest.fn()
+const mockSnapToCollapsed = jest.fn()
+const mockSnapToQuarter = jest.fn()
+const mockSnapToHalf = jest.fn()
+const mockSnapToSeventy = jest.fn()
+const mockSnapToFull = jest.fn()
+const mockClose = jest.fn()
 
 jest.mock('expo-router', () => ({
   usePathname: () => '/map',
@@ -35,7 +41,15 @@ jest.mock('@/components/MapPage/MapBottomSheet', () => {
 
   return {
     __esModule: true,
-    default: React.forwardRef(({ children, ...props }: any, _ref) => {
+    default: React.forwardRef(({ children, ...props }: any, ref) => {
+      React.useImperativeHandle(ref, () => ({
+        snapToCollapsed: mockSnapToCollapsed,
+        snapToQuarter: mockSnapToQuarter,
+        snapToHalf: mockSnapToHalf,
+        snapToSeventy: mockSnapToSeventy,
+        snapToFull: mockSnapToFull,
+        close: mockClose,
+      }))
       mockMapBottomSheet(props)
       return React.createElement(View, { testID: 'mock-map-bottom-sheet' }, children)
     }),
@@ -64,6 +78,12 @@ describe('MapMobileLayout', () => {
   beforeEach(() => {
     mockTravelListPanel.mockClear()
     mockMapBottomSheet.mockClear()
+    mockSnapToCollapsed.mockClear()
+    mockSnapToQuarter.mockClear()
+    mockSnapToHalf.mockClear()
+    mockSnapToSeventy.mockClear()
+    mockSnapToFull.mockClear()
+    mockClose.mockClear()
     useMapPanelStore.setState({
       commandNonce: 0,
       command: { kind: 'open', tab: 'filters' },
@@ -145,7 +165,7 @@ describe('MapMobileLayout', () => {
     expect(mockMapBottomSheet.mock.calls[0]?.[0]?.bottomInset).toBeGreaterThan(56)
   })
 
-  it('does not duplicate the places count as a list sheet header', () => {
+  it('renders the places summary in the sheet header and hides the body summary', () => {
     const screen = render(
       <MapMobileLayout
         mapComponent={<View testID="mock-map" />}
@@ -161,7 +181,39 @@ describe('MapMobileLayout', () => {
     )
 
     expect(screen.getByText('Travel list')).toBeTruthy()
-    expect(screen.queryByText('9 мест')).toBeNull()
+    expect(screen.getByText('Места рядом')).toBeTruthy()
+    expect(screen.getByText('9 мест')).toBeTruthy()
+    expect(mockTravelListPanel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        showMobileSummary: false,
+      }),
+    )
+  })
+
+  it('opens the places list at the seventy percent snap point', async () => {
+    render(
+      <MapMobileLayout
+        mapComponent={<View testID="mock-map" />}
+        travelsData={[{ id: 1 }]}
+        totalCount={9}
+        coordinates={{ latitude: 53.9, longitude: 27.56 }}
+        transportMode="car"
+        buildRouteTo={jest.fn()}
+        onCenterOnUser={jest.fn()}
+        onOpenFilters={jest.fn()}
+        filtersPanelProps={null}
+      />,
+    )
+
+    await act(async () => {
+      useMapPanelStore.setState((s) => ({
+        commandNonce: s.commandNonce + 1,
+        command: { kind: 'open', tab: 'list' },
+      }))
+    })
+
+    expect(mockSnapToSeventy).toHaveBeenCalledTimes(1)
+    expect(mockSnapToHalf).not.toHaveBeenCalled()
   })
 
   it('hides search-this-area when the map sheet is open', async () => {
