@@ -165,7 +165,7 @@ export function useMapScreenController() {
   // On mobile-web the Leaflet popup over the marker is suppressed and the
   // selected point is surfaced as a bottom card rendered by MapMobileLayout.
   const [selectedPlace, setSelectedPlace] = useState<MapPoint | null>(() => urlSelectedPlace);
-  const handleMarkerSelect = useCallback((point: MapPoint | null) => {
+  const handlePlaceSelect = useCallback((point: MapPoint | null) => {
     setSelectedPlace(point ?? null);
   }, []);
   const clearSelectedPlace = useCallback(() => {
@@ -257,6 +257,7 @@ export function useMapScreenController() {
     setRoutingError,
     handleMapClick,
     buildRouteTo,
+    addRoutePointFromTravel,
     focusPlace,
   } = routeController;
 
@@ -271,6 +272,22 @@ export function useMapScreenController() {
 
   const focusPlaceRef = useRef(focusPlace);
   focusPlaceRef.current = focusPlace;
+  const addRoutePointFromTravelRef = useRef(addRoutePointFromTravel);
+  addRoutePointFromTravelRef.current = addRoutePointFromTravel;
+  const handleMarkerSelect = useCallback(
+    (point: MapPoint | null) => {
+      if (!point) {
+        handlePlaceSelect(null);
+        return;
+      }
+      if (useRouteStore.getState().mode === 'route') {
+        addRoutePointFromTravelRef.current?.(point as unknown as TravelCoords);
+        return;
+      }
+      handlePlaceSelect(point);
+    },
+    [handlePlaceSelect],
+  );
   // #539 — tapping a list/panel place card must focus the marker AND show the
   // place card on mobile. `focusPlace` only centers + tries to open the Leaflet
   // popup, but on mobile that popup is suppressed (we surface a bottom card via
@@ -282,6 +299,10 @@ export function useMapScreenController() {
   isMobileRef.current = isMobile;
   const focusPlaceStable = useCallback((item: TravelCoords) => {
     if (isMobileRef.current && item?.coord) {
+      if (useRouteStore.getState().mode === 'route') {
+        addRoutePointFromTravelRef.current?.(item);
+        return;
+      }
       setSelectedPlace(item as unknown as MapPoint);
     }
     return focusPlaceRef.current?.(item);

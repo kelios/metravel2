@@ -175,6 +175,11 @@ interface UseRouteControllerResult {
   buildRouteTo: (item: TravelCoords) => void;
 
   /**
+   * Add a travel item as the next route point without opening place popups.
+   */
+  addRoutePointFromTravel: (item: TravelCoords) => void;
+
+  /**
    * Focus the map on a travel item (center + open popup) without switching mode
    */
   focusPlace: (item: TravelCoords) => void;
@@ -277,6 +282,52 @@ export function useRouteController(
     };
   }, []);
 
+  const addOrReplaceRoutePoint = useCallback(
+    (coords: LatLng, address: string) => {
+      setMode('route');
+
+      // Read the latest store points (avoid stale closures).
+      const currentPoints = useRouteStore.getState().points;
+
+      // Native-like UX: keep only start + end points.
+      // 1st click -> start, 2nd click -> end, 3rd click -> replace end.
+      if (currentPoints.length === 0) {
+        addPoint(coords, address);
+        showRoutePointAddedToast(1, true);
+        return;
+      }
+
+      if (currentPoints.length === 1) {
+        addPoint(coords, address);
+        showRoutePointAddedToast(2, false);
+        return;
+      }
+
+      const endPoint = currentPoints[currentPoints.length - 1];
+      const startPoint = currentPoints[0];
+
+      // If we somehow have more than 2 points, reset to start + new end.
+      if (currentPoints.length > 2) {
+        const startCoords = startPoint?.coordinates;
+        const startAddr = startPoint?.address;
+        routeStore.clearRoute();
+        if (startCoords && startAddr) {
+          addPoint(startCoords, startAddr);
+        }
+        addPoint(coords, address);
+        return;
+      }
+
+      if (endPoint) {
+        updatePoint(endPoint.id, { coordinates: coords, address });
+        return;
+      }
+
+      addPoint(coords, address);
+    },
+    [addPoint, routeStore, setMode, updatePoint]
+  );
+
   const handleMapClick = useCallback(
     (lng: number, lat: number) => {
       if (
@@ -308,47 +359,34 @@ export function useRouteController(
         const coords = { lat, lng };
         const address = CoordinateConverter.formatCoordinates(coords);
 
-        // Read the latest store points (avoid stale closures).
-        const currentPoints = useRouteStore.getState().points;
-
-        // Native-like UX: keep only start + end points.
-        // 1st click -> start, 2nd click -> end, 3rd click -> replace end.
-        if (currentPoints.length === 0) {
-          addPoint(coords, address);
-          showRoutePointAddedToast(1, true); // Первая точка
-          return;
-        }
-
-        if (currentPoints.length === 1) {
-          addPoint(coords, address);
-          showRoutePointAddedToast(2, false); // Вторая точка
-          return;
-        }
-
-        const endPoint = currentPoints[currentPoints.length - 1];
-        const startPoint = currentPoints[0];
-
-        // If we somehow have more than 2 points, reset to start + new end.
-        if (currentPoints.length > 2) {
-          const startCoords = startPoint?.coordinates;
-          const startAddr = startPoint?.address;
-          routeStore.clearRoute();
-          if (startCoords && startAddr) {
-            addPoint(startCoords, startAddr);
-          }
-          addPoint(coords, address);
-          return;
-        }
-
-        if (endPoint) {
-          updatePoint(endPoint.id, { coordinates: coords, address });
-          return;
-        }
-
-        addPoint(coords, address);
+        addOrReplaceRoutePoint(coords, address);
       }
     },
-    [mode, addPoint, routeStore, updatePoint]
+    [mode, addOrReplaceRoutePoint]
+  );
+
+  const addRoutePointFromTravel = useCallback(
+    (item: TravelCoords) => {
+      const target = resolveFocusTarget(item);
+      if (!target?.targetCoords) return;
+      const { coordStr, targetCoords } = target;
+      const labels = item as TravelCoords & { name?: string; title?: string };
+      const address = String(
+        item.address ||
+          labels.name ||
+          labels.title ||
+          CoordinateConverter.formatCoordinates(targetCoords),
+      );
+
+      addOrReplaceRoutePoint(targetCoords, address);
+
+      try {
+        mapUiApi?.focusOnCoord?.(coordStr, { zoom: CLUSTER_DISABLE_ZOOM });
+      } catch {
+        // noop
+      }
+    },
+    [addOrReplaceRoutePoint, mapUiApi]
   );
 
   // Build route to travel item
@@ -503,6 +541,7 @@ export function useRouteController(
     setRoutingError: setError,
     handleMapClick,
     buildRouteTo,
+    addRoutePointFromTravel,
     focusPlace,
   }), [
     mode,
@@ -534,6 +573,7 @@ export function useRouteController(
     setError,
     handleMapClick,
     buildRouteTo,
+    addRoutePointFromTravel,
     focusPlace,
   ]);
 }

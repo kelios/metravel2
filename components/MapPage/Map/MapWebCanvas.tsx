@@ -347,6 +347,7 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
             start: customIcons?.start,
             end: customIcons?.end,
           }}
+          showTooltips={!suppressLeafletPopupOnSelect}
         />
       ) : null}
 

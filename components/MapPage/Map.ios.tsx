@@ -4,8 +4,7 @@ import { WebView } from 'react-native-webview';
 import { useRouter } from 'expo-router';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
-import { DESIGN_COLORS } from '@/constants/designSystem';
-import { MODERN_MATTE_PALETTE } from '@/constants/modernMattePalette';
+import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { resolveInternalTravelRoute } from '@/utils/relatedTravel';
 import {
@@ -149,7 +148,7 @@ const PARAGRAPH_SEPARATOR = new RegExp(String.fromCharCode(0x2029), 'g');
 const serializeForInjection = (value: unknown): string =>
   JSON.stringify(value).replace(LINE_SEPARATOR, '\\u2028').replace(PARAGRAPH_SEPARATOR, '\\u2029');
 
-const USER_LOCATION_COLOR = MODERN_MATTE_PALETTE.accent;
+const USER_LOCATION_COLOR = DESIGN_TOKENS.colors.accent;
 
 const Map: React.FC<TravelProps> = ({
   travel,
@@ -200,7 +199,13 @@ const Map: React.FC<TravelProps> = ({
   );
   const markerColor = DESIGN_COLORS.mapPin;
   const markerShadowColor = themeColors.shadows.medium.shadowColor || themeColors.text;
-  const routeLatLngs = useMemo(
+  const selectedRouteLatLngs = useMemo(
+    () => routePoints
+      .map(normalizeRoutePoint)
+      .filter((point): point is [number, number] => Boolean(point)),
+    [routePoints],
+  );
+  const routeLineLatLngs = useMemo(
     () => (fullRouteCoords.length >= 2 ? fullRouteCoords : routePoints)
       .map(normalizeRoutePoint)
       .filter((point): point is [number, number] => Boolean(point)),
@@ -247,11 +252,12 @@ const Map: React.FC<TravelProps> = ({
   const mapPayload = useMemo(
     () => ({
       points: travelAddress,
-      routePoints: routeLatLngs,
+      routePoints: selectedRouteLatLngs,
+      routeLine: routeLineLatLngs,
       mode,
       center: { lat: centerLat, lng: centerLng },
     }),
-    [travelAddress, routeLatLngs, mode, centerLat, centerLng],
+    [travelAddress, selectedRouteLatLngs, routeLineLatLngs, mode, centerLat, centerLng],
   );
 
   const pushPayload = useCallback(() => {
@@ -525,6 +531,7 @@ const Map: React.FC<TravelProps> = ({
             const data = payload || {};
             const points = Array.isArray(data.points) ? data.points : [];
             const routePoints = Array.isArray(data.routePoints) ? data.routePoints : [];
+            const routeLine = Array.isArray(data.routeLine) ? data.routeLine : routePoints;
             const routeMode = data.mode || 'radius';
             window.__metravelMapMode = routeMode;
             if (data.center && isFinite(data.center.lat) && isFinite(data.center.lng)) {
@@ -570,6 +577,23 @@ const Map: React.FC<TravelProps> = ({
               // Шлём индекс точки в текущем массиве points; RN маппит его на ту же
               // точку travelAddress.
               marker.on('click', function() {
+                if (routeMode === 'route') {
+                  try {
+                    if (map.flyTo) {
+                      map.flyTo([lat, lng], Math.max(map.getZoom ? map.getZoom() : 13, 14), { animate: true, duration: 0.25 });
+                    } else {
+                      map.setView([lat, lng], Math.max(map.getZoom ? map.getZoom() : 13, 14));
+                    }
+                  } catch (err) {}
+                  try {
+                    if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+                      window.ReactNativeWebView.postMessage(JSON.stringify({
+                        type: 'MAP_CLICK', lat: lat, lng: lng
+                      }));
+                    }
+                  } catch (err) {}
+                  return;
+                }
                 try {
                   // #591 — центрируем карту на ВЫБРАННОЙ точке (а не оставляем вид на
                   // «где я» / общем bounds). Точку поднимаем над нижней карточкой:
@@ -598,35 +622,43 @@ const Map: React.FC<TravelProps> = ({
               bounds.extend([lat, lng]);
             });
 
-            if (routeMode === 'route' && routePoints.length >= 2) {
-              const routeLine = L.polyline(routePoints, {
-                color: ROUTE_COLOR,
-                weight: 5,
-                opacity: 0.9,
-                lineCap: 'round',
-                lineJoin: 'round'
-              }).addTo(routeLayer);
-              const start = routePoints[0];
-              const end = routePoints[routePoints.length - 1];
-              L.circleMarker(start, {
-                radius: 8,
-                color: ROUTE_SURFACE,
-                weight: 3,
-                fillColor: ROUTE_START,
-                fillOpacity: 1
-              }).addTo(routeLayer);
-              L.circleMarker(end, {
-                radius: 8,
-                color: ROUTE_SURFACE,
-                weight: 3,
-                fillColor: ROUTE_COLOR,
-                fillOpacity: 1
-              }).addTo(routeLayer);
-              bounds.extend(start);
-              bounds.extend(end);
-              try {
-                map.fitBounds(routeLine.getBounds(), { padding: [70, 70] });
-              } catch (e) {}
+            if (routeMode === 'route' && routePoints.length >= 1) {
+              const routeBounds = L.latLngBounds();
+              if (routeLine.length >= 2) {
+                const routePolyline = L.polyline(routeLine, {
+                  color: ROUTE_COLOR,
+                  weight: 5,
+                  opacity: 0.9,
+                  lineCap: 'round',
+                  lineJoin: 'round'
+                }).addTo(routeLayer);
+                routeLine.forEach(function(point) {
+                  if (Array.isArray(point) && isFinite(point[0]) && isFinite(point[1])) {
+                    routeBounds.extend(point);
+                  }
+                });
+                try {
+                  map.fitBounds(routePolyline.getBounds(), { padding: [70, 70] });
+                } catch (e) {}
+              }
+              routePoints.forEach(function(point, index) {
+                if (!Array.isArray(point) || !isFinite(point[0]) || !isFinite(point[1])) return;
+                const isStart = index === 0;
+                const isEnd = routePoints.length > 1 && index === routePoints.length - 1;
+                L.circleMarker(point, {
+                  radius: isStart || isEnd ? 8 : 6,
+                  color: ROUTE_SURFACE,
+                  weight: 3,
+                  fillColor: isStart ? ROUTE_START : ROUTE_COLOR,
+                  fillOpacity: 1
+                }).addTo(routeLayer);
+                routeBounds.extend(point);
+              });
+              if (routeLine.length < 2 && routeBounds.isValid()) {
+                try {
+                  map.setView(routeBounds.getCenter(), Math.max(map.getZoom ? map.getZoom() : 13, 14));
+                } catch (e) {}
+              }
             } else if (bounds.isValid()) {
               map.fitBounds(bounds, { padding: [50, 50] });
             } else if (map.__userCenter) {

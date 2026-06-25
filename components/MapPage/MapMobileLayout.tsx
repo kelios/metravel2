@@ -247,18 +247,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     openRouteSheet,
   ])
 
-  // Вход в режим маршрута: когда из карточки места добавлена точка (filtersMode
-  // переключился на 'route'), показываем построитель маршрута в шторке.
-  const prevFiltersModeRef = useRef<FiltersMode | undefined>(filtersMode)
-  useEffect(() => {
-    const prev = prevFiltersModeRef.current
-    prevFiltersModeRef.current = filtersMode
-    if (filtersMode === 'route' && prev !== 'route') {
-      setSheetContent('route')
-      bottomSheetRef.current?.snapToHalf()
-    }
-  }, [filtersMode])
-
   useEffect(() => {
     if (!IS_WEB || typeof document === 'undefined') return
     const body = document.body

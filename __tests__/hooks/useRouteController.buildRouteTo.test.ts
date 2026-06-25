@@ -9,6 +9,7 @@ const mockClearRoute = jest.fn()
 const mockAddPoint = jest.fn()
 
 let mockBottomSheetState: 'collapsed' | 'quarter' | 'half' | 'full' = 'half'
+let mockStorePoints: any[] = []
 
 jest.mock('@/stores/bottomSheetStore', () => ({
   useBottomSheetStore: {
@@ -65,7 +66,7 @@ jest.mock('@/hooks/useRouteStoreAdapter', () => ({
 jest.mock('@/stores/routeStore', () => ({
   useRouteStore: {
     getState: () => ({
-      points: [],
+      points: mockStorePoints,
     }),
   },
 }))
@@ -91,6 +92,7 @@ describe('useRouteController.buildRouteTo', () => {
     mockSetMode.mockClear()
     mockClearRoute.mockClear()
     mockAddPoint.mockClear()
+    mockStorePoints = []
   })
 
   afterEach(() => {
@@ -178,5 +180,35 @@ describe('useRouteController.buildRouteTo', () => {
 
     expect(mockRequestCollapse).not.toHaveBeenCalled()
     expect(mockOpenPopupForCoord).toHaveBeenCalled()
+  })
+
+  it('adds a tapped place as a route point without opening a popup', () => {
+    const { result } = renderHook(() =>
+      useRouteController({
+        mapUiApi: {
+          focusOnCoord: mockFocusOnCoord,
+          openPopupForCoord: mockOpenPopupForCoord,
+        } as any,
+      })
+    )
+
+    act(() => {
+      result.current.addRoutePointFromTravel({
+        coord: '50.0619474, 19.9368564',
+        address: 'Krakow place',
+      } as any)
+      jest.runOnlyPendingTimers()
+    })
+
+    expect(mockSetMode).toHaveBeenCalledWith('route')
+    expect(mockAddPoint).toHaveBeenCalledWith(
+      { lat: 50.0619474, lng: 19.9368564 },
+      'Krakow place',
+    )
+    expect(mockFocusOnCoord).toHaveBeenCalledWith(
+      '50.061947,19.936856',
+      expect.objectContaining({ zoom: expect.any(Number) }),
+    )
+    expect(mockOpenPopupForCoord).not.toHaveBeenCalled()
   })
 })

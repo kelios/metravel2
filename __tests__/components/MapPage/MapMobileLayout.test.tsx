@@ -296,10 +296,13 @@ describe('MapMobileLayout', () => {
       expect(screen.getByTestId('map-mobile-transport-button')).toBeTruthy()
       expect(screen.getByTestId('map-mobile-route-clear-button')).toBeTruthy()
       expect(screen.getByTestId('map-mobile-route-hint')).toBeTruthy()
+      expect(screen.getByText('0/2')).toBeTruthy()
+      expect(mockSnapToHalf).not.toHaveBeenCalled()
     })
 
     it('shows transport selector + clear + hint when already in route mode', () => {
       useRouteStore.getState().setMode('route')
+      useRouteStore.getState().addPoint({ lat: 53.9, lng: 27.56 }, 'Старт')
       const { filtersPanelProps } = buildFiltersProps({ mode: 'route' })
       const screen = render(
         <MapMobileLayout
@@ -317,6 +320,7 @@ describe('MapMobileLayout', () => {
       expect(screen.getByTestId('map-mobile-transport-button')).toBeTruthy()
       expect(screen.getByTestId('map-mobile-route-clear-button')).toBeTruthy()
       expect(screen.getByTestId('map-mobile-route-hint')).toBeTruthy()
+      expect(screen.getByText('1/2')).toBeTruthy()
       // Radius button hidden in route mode to keep the row short.
       expect(screen.queryByTestId('map-mobile-radius-button')).toBeNull()
     })

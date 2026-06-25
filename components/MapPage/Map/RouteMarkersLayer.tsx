@@ -26,6 +26,11 @@ interface RouteMarkersLayerProps {
     start?: any;
     end?: any;
   };
+
+  /**
+   * Desktop can show hover labels; mobile route mode should stay popup-free.
+   */
+  showTooltips?: boolean;
 }
 
 /**
@@ -44,6 +49,7 @@ export const RouteMarkersLayer: React.FC<RouteMarkersLayerProps> = React.memo(({
   Tooltip,
   routePoints,
   icons,
+  showTooltips = true,
 }) => {
   if (!routePoints || routePoints.length < 1) {
     return null;
@@ -66,14 +72,16 @@ export const RouteMarkersLayer: React.FC<RouteMarkersLayerProps> = React.memo(({
             },
           }}
         >
-          <Tooltip
-            className="metravel-route-marker-tooltip"
-            direction="top"
-            offset={[0, -10]}
-            permanent={false}
-          >
-            Старт
-          </Tooltip>
+          {showTooltips && (
+            <Tooltip
+              className="metravel-route-marker-tooltip"
+              direction="top"
+              offset={[0, -10]}
+              permanent={false}
+            >
+              Старт
+            </Tooltip>
+          )}
         </Marker>
       )}
 
@@ -93,14 +101,16 @@ export const RouteMarkersLayer: React.FC<RouteMarkersLayerProps> = React.memo(({
                },
              }}
            >
-             <Tooltip
-               className="metravel-route-marker-tooltip"
-               direction="top"
-               offset={[0, -10]}
-               permanent={false}
-             >
-               Точка {index + 2}
-             </Tooltip>
+             {showTooltips && (
+               <Tooltip
+                 className="metravel-route-marker-tooltip"
+                 direction="top"
+                 offset={[0, -10]}
+                 permanent={false}
+               >
+                 Точка {index + 2}
+               </Tooltip>
+             )}
            </Marker>
          );
        })}
@@ -123,14 +133,16 @@ export const RouteMarkersLayer: React.FC<RouteMarkersLayerProps> = React.memo(({
             },
           }}
         >
-          <Tooltip
-            className="metravel-route-marker-tooltip"
-            direction="top"
-            offset={[0, -10]}
-            permanent={false}
-          >
-            Финиш
-          </Tooltip>
+          {showTooltips && (
+            <Tooltip
+              className="metravel-route-marker-tooltip"
+              direction="top"
+              offset={[0, -10]}
+              permanent={false}
+            >
+              Финиш
+            </Tooltip>
+          )}
         </Marker>
       )}
     </>

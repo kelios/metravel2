@@ -102,6 +102,10 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
 }) => {
   const styles = getMapMobileTopOverlayStyles(colors)
   const isRouteMode = mode === 'route'
+  const routeProgressLabel = isRouteMode ? `${Math.min(routePointCount, 2)}/2` : ''
+  const routeAccessibilityLabel = isRouteMode
+    ? `Построить маршрут: выбрано ${Math.min(routePointCount, 2)} из 2 точек`
+    : 'Построить маршрут'
 
   // Inline hint shown when entering route mode; auto-hides after a couple of
   // taps (2 points dropped) or a short timeout so it never blocks the map.
@@ -201,7 +205,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
           onPress={onEnterRouteMode}
           accessibilityRole="button"
           accessibilityState={{ selected: isRouteMode }}
-          accessibilityLabel="Построить маршрут"
+          accessibilityLabel={routeAccessibilityLabel}
           hitSlop={6}
           style={({ pressed }) => [
             styles.iconButton,
@@ -210,6 +214,13 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
           ]}
         >
           <Feather name="navigation" size={20} color={isRouteMode ? colors.primary : colors.text} />
+          {!!routeProgressLabel && (
+            <View style={styles.routeProgressBadge} pointerEvents="none">
+              <RNText style={styles.badgeText} numberOfLines={1}>
+                {routeProgressLabel}
+              </RNText>
+            </View>
+          )}
         </Pressable>
 
         {isRouteMode && (
