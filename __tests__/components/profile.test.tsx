@@ -2,7 +2,8 @@ import type { ComponentProps, ComponentType, ReactElement } from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
-import { mockReplace, mockUseRouter, resetExpoRouterMocks } from '../helpers/expoRouterMock';
+import type { MyAchievements, UserRank } from '@/api/achievements';
+import { mockPush, mockReplace, mockUseRouter, resetExpoRouterMocks } from '../helpers/expoRouterMock';
 import { createQueryWrapper } from '../helpers/testQueryClient';
 import { mockFetchMyTravels, mockUnwrapMyTravelsPayload, resetTravelsApiMocks } from '../helpers/mockTravelsApi';
 import {
@@ -15,6 +16,16 @@ import {
 jest.mock('@/context/AuthContext');
 
 jest.setTimeout(15000);
+
+let mockMyAchievementsData: MyAchievements | null = null;
+
+jest.mock('@/hooks/useAchievementsApi', () => ({
+  useMyAchievements: jest.fn(() => ({
+    data: mockMyAchievementsData,
+    isFetching: false,
+    isSuccess: Boolean(mockMyAchievementsData),
+  })),
+}));
 
 jest.mock('expo-router', () => ({
   useRouter: mockUseRouter,
@@ -160,6 +171,25 @@ const ProfileScreen = require('@/app/(tabs)/profile').default;
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 const mockUseFavorites = useFavorites as jest.MockedFunction<typeof useFavorites>;
 
+const makeRank = (overrides: Partial<UserRank> = {}): UserRank => ({
+  level: 1,
+  title: 'Новичок',
+  totalPoints: 0,
+  badgesCount: 0,
+  currentLevelMinPoints: 0,
+  nextLevelMinPoints: 100,
+  nextLevelTitle: 'Путешественник',
+  isMaxLevel: false,
+  ...overrides,
+});
+
+const makeAchievements = (rankOverrides: Partial<UserRank> = {}): MyAchievements => ({
+  rank: makeRank(rankOverrides),
+  earned: [],
+  locked: [],
+  recentlyEarned: [],
+});
+
 const setupAuth = (overrides?: Partial<ReturnType<typeof useAuth>>) => {
   mockUseAuth.mockReturnValue(createAuthValue(overrides));
 };
@@ -179,6 +209,7 @@ describe('ProfileScreen', () => {
     resetExpoRouterMocks();
     resetTravelsApiMocks();
     mockFetchMyTravels.mockResolvedValue(require('../fixtures/travelFixtures').MY_TRAVELS_FIXTURE);
+    mockMyAchievementsData = null;
     mockTravelStatusEntries = [];
   });
 
@@ -295,5 +326,36 @@ describe('ProfileScreen', () => {
     expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
     expect(await findByLabelText(/My Travel 2/)).toBeTruthy();
     expect(queryByLabelText(/My Travel 3/)).toBeNull();
+  });
+
+  it('shows first-step CTAs for a zero-progress profile and navigates from them', async () => {
+    setupAuth({ isAuthenticated: true });
+    setupFavorites(0, 0);
+    mockFetchMyTravels.mockResolvedValue({ total: 0, count: 0, data: [], results: [] });
+    mockMyAchievementsData = makeAchievements();
+
+    const { findByLabelText, findByText } = renderProfile();
+
+    fireEvent.press(await findByLabelText('Обзор профиля'));
+    expect(await findByText('С чего начать')).toBeTruthy();
+
+    fireEvent.press(await findByLabelText('Создать первый маршрут'));
+    expect(mockPush).toHaveBeenCalledWith('/travel/new');
+
+    fireEvent.press(await findByLabelText('Начать первый квест'));
+    expect(mockPush).toHaveBeenCalledWith('/quests');
+  });
+
+  it('hides first-step CTAs when achievements already have progress', async () => {
+    setupAuth({ isAuthenticated: true });
+    setupFavorites(0, 0);
+    mockFetchMyTravels.mockResolvedValue({ total: 0, count: 0, data: [], results: [] });
+    mockMyAchievementsData = makeAchievements({ totalPoints: 25, badgesCount: 1 });
+
+    const { queryByText } = renderProfile();
+
+    await waitFor(() => {
+      expect(queryByText('С чего начать')).toBeNull();
+    });
   });
 });

@@ -403,8 +403,8 @@ export default function ProfileScreen() {
           title: 'Ваши маршруты появятся здесь',
           description: 'Добавьте первое путешествие — поделитесь маршрутом, фотографиями и впечатлениями с сообществом.',
           variant: 'inspire' as const,
-          action: { label: '+ Добавить путешествие', onPress: () => router.push('/travel/new' as any) },
-          secondaryAction: { label: 'Посмотреть чужие маршруты', onPress: () => router.push('/travelsby' as any) },
+          action: { label: 'Создать маршрут', onPress: () => router.push('/travel/new' as any) },
+          secondaryAction: { label: 'Начать квест', onPress: () => router.push('/quests' as any) },
         };
       case 'favorites':
         return {
@@ -513,6 +513,14 @@ export default function ProfileScreen() {
     router.push((status ? `/calendar?status=${status}` : '/calendar') as any)
   }, [router]);
 
+  const handleCreateFirstRoute = useCallback(() => {
+    router.push('/travel/new' as any)
+  }, [router])
+
+  const handleStartFirstQuest = useCallback(() => {
+    router.push('/quests' as any)
+  }, [router])
+
   const statItems = useMemo<ProfileStatSegmentItem[]>(() => [
     {
       key: 'travels',
@@ -594,12 +602,16 @@ export default function ProfileScreen() {
         userProp={userProp}
         profile={profile}
         travelsCount={stats.travelsCount}
+        onCreateRoute={handleCreateFirstRoute}
+        onStartQuest={handleStartFirstQuest}
       />
     ),
     [
       userProp,
       profile,
       stats.travelsCount,
+      handleCreateFirstRoute,
+      handleStartFirstQuest,
     ]
   );
 

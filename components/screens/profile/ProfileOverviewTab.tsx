@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ProfileCompleteness } from '@/components/profile/ProfileCompleteness';
 import RankProgressCard from '@/components/profile/RankProgressCard';
+import ProfileFirstStepsCard from '@/components/profile/ProfileFirstStepsCard';
 import ProfileSectionHeader from '@/components/profile/ProfileSectionHeader';
 import AwardsHub from '@/components/achievements/AwardsHub';
 import GamificationOnboarding from '@/components/achievements/GamificationOnboarding';
@@ -14,12 +15,16 @@ interface ProfileOverviewTabProps {
   userProp: { name: string; email: string; avatar?: string | null };
   profile: Parameters<typeof ProfileCompleteness>[0]['profile'];
   travelsCount: number;
+  onCreateRoute: () => void;
+  onStartQuest: () => void;
 }
 
 export function ProfileOverviewTab({
   userProp,
   profile,
   travelsCount,
+  onCreateRoute,
+  onStartQuest,
 }: ProfileOverviewTabProps) {
   // Засеваем кэши персонажа/прогрессии из консолидированного /achievements/me/,
   // чтобы вкладка «Ваш путь» рендерилась сразу, без двух медленных запросов (#588).
@@ -48,6 +53,12 @@ export function ProfileOverviewTab({
     <View style={styles.wrap}>
       <GamificationOnboarding />
       <RankProgressCard rank={achievements?.rank} onPress={openAwardsDetails} />
+      <ProfileFirstStepsCard
+        travelsCount={travelsCount}
+        rank={achievements?.rank}
+        onCreateRoute={onCreateRoute}
+        onStartQuest={onStartQuest}
+      />
       <ProfileSectionHeader
         title="Награды и прогресс"
         subtitle="Ваш путь, значки и достижения"

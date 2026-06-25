@@ -91,13 +91,21 @@ const styles = StyleSheet.create({
     borderRadius: 16, // M3 rounded square FAB
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 6,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.27,
-    shadowRadius: 4.65,
+    ...Platform.select({
+      default: {
+        elevation: 6,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.27,
+        shadowRadius: 4.65,
+      },
+    }),
   },
   fabPressed: {
-    elevation: 2,
+    ...Platform.select({
+      default: {
+        elevation: 2,
+      },
+    }),
     opacity: 0.92,
   },
 });

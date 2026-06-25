@@ -5,11 +5,11 @@ import { Article } from '@/types/types';
 import { Card, Title, Paragraph, Text } from '@/ui/paper';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { widthPercentageToDP as wp } from 'react-native-responsive-screen';
-import RenderHTML from 'react-native-render-html';
 import { router, usePathname, type Href } from 'expo-router';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
+import { stripToDescription } from '@/components/travel/utils/travelHelpers';
 
 type ArticleListItemProps = {
   article: Article;
@@ -24,6 +24,7 @@ const ArticleListItem: React.FC<ArticleListItemProps> = ({ article }) => {
   const hasImage = typeof article_image_thumb_url === 'string' && article_image_thumb_url.trim().length > 0;
   const colors = useThemedColors();
   const pathname = usePathname();
+  const excerpt = useMemo(() => stripToDescription(description || ''), [description]);
   const articleRoute = useMemo<string>(() => {
     const rawUrl = typeof article.url === 'string' ? article.url.trim() : '';
     if (rawUrl.startsWith('/article/')) {
@@ -88,11 +89,11 @@ const ArticleListItem: React.FC<ArticleListItemProps> = ({ article }) => {
             </View>
             <Card.Content>
               <Title numberOfLines={2}>{name}</Title>
-              <RenderHTML
-                  source={{ html: description || '' }}
-                  contentWidth={width - wp(6)}
-                  baseStyle={styles.htmlText}
-              />
+              {!!excerpt && (
+                <Paragraph style={styles.htmlText} numberOfLines={4}>
+                  {excerpt}
+                </Paragraph>
+              )}
               {article_type?.name && (
                   <Paragraph>
                     <Text style={styles.textOrange}>{article_type.name}</Text>

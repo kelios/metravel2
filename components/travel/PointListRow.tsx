@@ -196,10 +196,9 @@ const PointListRow = React.memo(function PointListRow({
       {Platform.OS === 'web' ? (
         <View
           style={[styles.listRowPressable, globalFocusStyles.focusable]}
-          accessibilityRole="button"
           accessibilityLabel={`Открыть место: ${point.address}`}
           {...({
-            role: 'button',
+            'aria-label': `Открыть место: ${point.address}`,
             tabIndex: 0,
             onClick: handleWebRowClick,
             onKeyDown: handleWebRowKeyDown,

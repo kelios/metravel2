@@ -141,7 +141,9 @@ describe('PointList (web coordinates list uses popup template)', () => {
 
     const row = getByLabelText('Открыть место: A');
     expect(row.type).toBe('View');
-    expect(row.props.role).toBe('button');
+    expect(row.props.role).toBeUndefined();
+    expect(row.props.accessibilityRole).toBeUndefined();
+    expect(row.props['aria-label']).toBe('Открыть место: A');
     expect(row.props.tabIndex).toBe(0);
 
     const currentTarget = { nodeType: 1 };
