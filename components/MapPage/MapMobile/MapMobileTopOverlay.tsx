@@ -34,8 +34,7 @@ const BUTTON_STEP = BUTTON_SIZE + TOOLBAR_GAP
 const RADIUS_POPOVER_RIGHT = TOOLBAR_EDGE_OFFSET + BUTTON_STEP * 2
 const LAYERS_POPOVER_RIGHT = TOOLBAR_EDGE_OFFSET + BUTTON_STEP
 const TRANSPORT_POPOVER_RIGHT = TOOLBAR_EDGE_OFFSET + BUTTON_STEP
-const LAYERS_POPOVER_MIN_WIDTH = 200
-const LAYERS_POPOVER_MAX_WIDTH = 272
+const LAYERS_POPOVER_MIN_WIDTH = 272
 const TRANSPORT_POPOVER_WIDTH = 204
 /** How long the «tap to build» hint stays visible after entering route mode. */
 const ROUTE_HINT_TIMEOUT_MS = 6000
@@ -140,13 +139,15 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   const resolvedTopPadding = Math.max(topInset, 8) + 8
   // Поповеры открываются прямо под своим рядом иконок.
   const basePopoverTop = resolvedTopPadding + BUTTON_SIZE + 8
-  const routeControlsTop = resolvedTopPadding + BUTTON_SIZE + 8
-  const routePopoverTop = routeControlsTop + BUTTON_SIZE + 8
+  const routePopoverTop = basePopoverTop
+  const layersPopoverRight = isRouteMode
+    ? TOOLBAR_EDGE_OFFSET + BUTTON_STEP * 4
+    : LAYERS_POPOVER_RIGHT
   const layersPopoverWidth = Math.min(
-    LAYERS_POPOVER_MAX_WIDTH,
+    360,
     Math.max(
       LAYERS_POPOVER_MIN_WIDTH,
-      viewportWidth - LAYERS_POPOVER_RIGHT - TOOLBAR_EDGE_OFFSET,
+      viewportWidth - layersPopoverRight - TOOLBAR_EDGE_OFFSET,
     ),
   )
 
@@ -238,66 +239,66 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
               </View>
             )}
           </Pressable>
-        </View>
 
-        <View
-          style={styles.routeToolbar}
-          pointerEvents="auto"
-          testID="map-mobile-route-toolbar"
-        >
-          <Pressable
-            testID="map-mobile-route-button"
-            onPress={onEnterRouteMode}
-            accessibilityRole="button"
-            accessibilityState={{ selected: isRouteMode }}
-            accessibilityLabel={routeAccessibilityLabel}
-            hitSlop={6}
-            style={({ pressed }) => [
-              styles.iconButton,
-              isRouteMode && styles.iconButtonActive,
-              pressed && styles.iconButtonPressed,
-            ]}
+          <View
+            style={styles.routeToolbar}
+            pointerEvents="auto"
+            testID="map-mobile-route-toolbar"
           >
-            <Feather name="navigation" size={20} color={isRouteMode ? colors.primary : colors.text} />
-            {!!routeProgressLabel && (
-              <View style={styles.routeProgressBadge} pointerEvents="none">
-                <RNText style={styles.badgeText} numberOfLines={1}>
-                  {routeProgressLabel}
-                </RNText>
-              </View>
-            )}
-          </Pressable>
-
-          {isRouteMode && (
             <Pressable
-              testID="map-mobile-transport-button"
-              onPress={onToggleTransport}
+              testID="map-mobile-route-button"
+              onPress={onEnterRouteMode}
               accessibilityRole="button"
-              accessibilityState={{ expanded: activePopover === 'transport' }}
-              accessibilityLabel={`Тип передвижения: ${TRANSPORT_LABEL[transportMode]}`}
+              accessibilityState={{ selected: isRouteMode }}
+              accessibilityLabel={routeAccessibilityLabel}
               hitSlop={6}
               style={({ pressed }) => [
                 styles.iconButton,
-                activePopover === 'transport' && styles.iconButtonActive,
+                isRouteMode && styles.iconButtonActive,
                 pressed && styles.iconButtonPressed,
               ]}
             >
-              <MapIcon name={TRANSPORT_ICON[transportMode]} size={20} color={colors.text} />
+              <Feather name="navigation" size={20} color={isRouteMode ? colors.primary : colors.text} />
+              {!!routeProgressLabel && (
+                <View style={styles.routeProgressBadge} pointerEvents="none">
+                  <RNText style={styles.badgeText} numberOfLines={1}>
+                    {routeProgressLabel}
+                  </RNText>
+                </View>
+              )}
             </Pressable>
-          )}
 
-          {isRouteMode && (
-            <Pressable
-              testID="map-mobile-route-clear-button"
-              onPress={onClearRoute}
-              accessibilityRole="button"
-              accessibilityLabel="Очистить маршрут"
-              hitSlop={6}
-              style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
-            >
-              <Feather name="x" size={20} color={colors.text} />
-            </Pressable>
-          )}
+            {isRouteMode && (
+              <Pressable
+                testID="map-mobile-transport-button"
+                onPress={onToggleTransport}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: activePopover === 'transport' }}
+                accessibilityLabel={`Тип передвижения: ${TRANSPORT_LABEL[transportMode]}`}
+                hitSlop={6}
+                style={({ pressed }) => [
+                  styles.iconButton,
+                  activePopover === 'transport' && styles.iconButtonActive,
+                  pressed && styles.iconButtonPressed,
+                ]}
+              >
+                <MapIcon name={TRANSPORT_ICON[transportMode]} size={20} color={colors.text} />
+              </Pressable>
+            )}
+
+            {isRouteMode && (
+              <Pressable
+                testID="map-mobile-route-clear-button"
+                onPress={onClearRoute}
+                accessibilityRole="button"
+                accessibilityLabel="Очистить маршрут"
+                hitSlop={6}
+                style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
+              >
+                <Feather name="x" size={20} color={colors.text} />
+              </Pressable>
+            )}
+          </View>
         </View>
       </View>
 
@@ -317,7 +318,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
         <MapMobileLayersPopover
           colors={colors}
           top={basePopoverTop}
-          right={LAYERS_POPOVER_RIGHT}
+          right={layersPopoverRight}
           minWidth={layersPopoverWidth}
           maxWidth={layersPopoverWidth}
           mapUiApi={mapUiApi}

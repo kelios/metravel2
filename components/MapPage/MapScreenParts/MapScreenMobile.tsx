@@ -1,4 +1,4 @@
-import { Suspense } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 
 import { MapOfflineIndicator } from '@/components/MapPage/MapOfflineIndicator'
 import { MapMobileLayout, MapOnboarding } from '@/screens/tabs/mapDeferred'
@@ -69,6 +69,26 @@ export function MapScreenMobile({
   clearSelectedPlace,
   selectedPlaceUserLocation,
 }: MapScreenMobileProps) {
+  const [consentBannerVisible, setConsentBannerVisible] = useState(false)
+
+  useEffect(() => {
+    if (!isWeb || typeof document === 'undefined') return
+    const body = document.body
+    if (!body) return
+    const update = () => {
+      setConsentBannerVisible(
+        body.getAttribute('data-consent-banner-open') === 'true',
+      )
+    }
+    update()
+    const observer = new MutationObserver(update)
+    observer.observe(body, {
+      attributes: true,
+      attributeFilter: ['data-consent-banner-open'],
+    })
+    return () => observer.disconnect()
+  }, [isWeb])
+
   return (
     <>
       <Suspense fallback={MAP_PANEL_PLACEHOLDER}>
@@ -107,7 +127,10 @@ export function MapScreenMobile({
           (кнопка «?») не имеет зарегистрированного _restartCb и ничего не показывает. */}
       {shouldLoadOnboarding && (
         <Suspense fallback={null}>
-          <MapOnboarding mobileWebCoachmark={isWeb && isMobile} />
+          <MapOnboarding
+            mobileWebCoachmark={isWeb && isMobile}
+            suspendAutoOpen={isWeb && isMobile && consentBannerVisible}
+          />
         </Suspense>
       )}
     </>

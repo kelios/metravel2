@@ -373,7 +373,7 @@ describe('MapMobileLayout', () => {
         screen.getByTestId('map-mobile-layers-popover-card').props.style,
       )
       expect(layersCardStyle.right).toBe(64)
-      expect(layersCardStyle.width).toBe(272)
+      expect(layersCardStyle.width).toBe(360)
 
       fireEvent.press(screen.getByTestId('map-mobile-layers-popover-backdrop'))
       fireEvent.press(screen.getByTestId('map-mobile-route-button'))

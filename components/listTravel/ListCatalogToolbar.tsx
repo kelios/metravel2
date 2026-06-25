@@ -1,5 +1,5 @@
 import { memo, useMemo } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -48,10 +48,12 @@ function ListCatalogToolbar({
 }: ListCatalogToolbarProps) {
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
+  const { width: viewportWidth } = useWindowDimensions()
 
   const activeSort = (sortValue || '').trim() || DEFAULT_SORT_ID
   const countVisible = showResultsCount && typeof resultsCount === 'number'
   const isNative = Platform.OS !== 'web'
+  const isCompactWeb = Platform.OS === 'web' && viewportWidth > 0 && viewportWidth < 600
 
   if (!sortOptions.length && !showDensityToggle && !countVisible) return null
 
@@ -66,7 +68,11 @@ function ListCatalogToolbar({
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.sortRow}
-      style={[styles.sortScroll, isNative && styles.sortScrollNative]}
+      style={[
+        styles.sortScroll,
+        isNative && styles.sortScrollNative,
+        isCompactWeb && styles.sortScrollCompactWeb,
+      ]}
       accessibilityRole={Platform.OS === 'web' ? undefined : ('toolbar' as any)}
       accessibilityLabel="Сортировка списка"
     >
@@ -95,7 +101,13 @@ function ListCatalogToolbar({
       })}
     </ScrollView>
   ) : (
-    <View style={[styles.sortScroll, isNative && styles.sortScrollNative]} />
+    <View
+      style={[
+        styles.sortScroll,
+        isNative && styles.sortScrollNative,
+        isCompactWeb && styles.sortScrollCompactWeb,
+      ]}
+    />
   )
 
   const densityNode = showDensityToggle ? (
@@ -128,14 +140,14 @@ function ListCatalogToolbar({
     </View>
   ) : null
 
-  if (isNative) {
+  if (isNative || isCompactWeb) {
     return (
       <View
-        style={[styles.container, styles.nativeContainer, { paddingHorizontal: contentPadding }]}
+        style={[styles.container, styles.compactContainer, { paddingHorizontal: contentPadding }]}
         accessibilityRole="toolbar"
       >
         {(countNode || densityNode) ? (
-          <View style={styles.nativeTopRow}>
+          <View style={styles.compactTopRow}>
             {countNode}
             {densityNode}
           </View>
@@ -175,12 +187,12 @@ const getStyles = (colors: ThemedColors) =>
       paddingTop: spacing.xxs,
       flexWrap: 'nowrap',
     },
-    nativeContainer: {
+    compactContainer: {
       flexDirection: 'column',
       alignItems: 'stretch',
       gap: spacing.xs,
     },
-    nativeTopRow: {
+    compactTopRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -192,6 +204,11 @@ const getStyles = (colors: ThemedColors) =>
       maxWidth: '100%',
     },
     sortScrollNative: {
+      flex: 0,
+      width: '100%',
+      minWidth: '100%',
+    },
+    sortScrollCompactWeb: {
       flex: 0,
       width: '100%',
       minWidth: '100%',

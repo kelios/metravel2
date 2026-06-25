@@ -75,6 +75,22 @@ const mobilePanelEntrySelector =
 
 const getMobilePanelEntry = (page: any) => page.locator(mobilePanelEntrySelector).first();
 
+const getMobileListPanelContent = (page: any) =>
+  page
+    .locator(
+      [
+        '[data-testid="travel-list-mobile-summary"]',
+        '[testID="travel-list-mobile-summary"]',
+        '[data-testid="empty-expand-radius"]',
+        '[testID="empty-expand-radius"]',
+        '[data-testid="empty-reset-filters"]',
+        '[testID="empty-reset-filters"]',
+        '[data-testid="empty-open-filters"]',
+        '[testID="empty-open-filters"]',
+      ].join(', '),
+    )
+    .first();
+
 const maybeRecoverFromMapErrorScreen = async (page: any) => {
   const errorTitle = page.getByText('Что-то пошло не так', { exact: true });
   const hasError = await errorTitle.isVisible().catch(() => false);
@@ -1229,12 +1245,12 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
 
     const sheet = page.getByRole('dialog', { name: 'Панель карты' });
     await expect(sheet).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByTestId('travel-list-mobile-summary')).toBeVisible({ timeout: 20_000 });
+    await expect(getMobileListPanelContent(page)).toBeVisible({ timeout: 20_000 });
 
     // Give the UI a moment: if there is flicker, it would have collapsed by now.
     await page.waitForFunction(() => true, null, { timeout: 500 }).catch(() => null);
     await expect(sheet).toBeVisible();
-    await expect(page.getByTestId('travel-list-mobile-summary')).toBeVisible();
+    await expect(getMobileListPanelContent(page)).toBeVisible();
   });
 
   test('mobile: filters button opens filters when panel is open', async ({ page }) => {

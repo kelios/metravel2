@@ -1,6 +1,8 @@
 import { Platform, View, Text, Linking } from 'react-native';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 
+import PointListRow from '@/components/travel/PointListRow';
+
 const mockUnifiedCard = jest.fn((props: any) => (
   <View testID="unified-card-mock">
     <Text testID="card-title">{props.title}</Text>
@@ -57,6 +59,28 @@ const basePoint = {
   description: 'desc',
 };
 
+const rowStyles = {
+  listRow: {},
+  listRowPressable: {},
+  listRowThumb: {},
+  listRowThumbPlaceholder: {},
+  listRowInfo: {},
+  listRowHeader: {},
+  listRowBullet: {},
+  listRowBulletText: {},
+  listRowTitle: {},
+  listRowCoordChip: {},
+  listRowCoordText: {},
+  listRowCategory: {},
+  listRowActions: {},
+  listRowIconBtn: {},
+  listRowNavigationMenu: {},
+  listRowAddBtn: {},
+  listRowAddBtnText: {},
+  addButtonPressed: {},
+  addButtonDisabled: {},
+};
+
 describe('PointList (web coordinates list uses popup template)', () => {
   it('shows collapsed preview rows and reveals view mode controls after expand', () => {
     const prevOs = Platform.OS;
@@ -91,6 +115,56 @@ describe('PointList (web coordinates list uses popup template)', () => {
     fireEvent.press(getByLabelText('Список'));
     expect(getByText('Быстрый список точек')).toBeTruthy();
     expect(getByText('A')).toBeTruthy();
+
+    (Platform as any).OS = prevOs;
+  });
+
+  it('uses non-button web row semantics while preserving row activation', () => {
+    const prevOs = Platform.OS;
+    (Platform as any).OS = 'web';
+
+    const onOpenMap = jest.fn();
+    const onCardPress = jest.fn();
+
+    const { getByLabelText } = render(
+      <PointListRow
+        point={{ id: '1', address: 'A', coord: '50.0,20.0' }}
+        index={0}
+        colors={{ primary: '#f97316', textMuted: '#64748b' }}
+        onCopy={jest.fn()}
+        onShare={jest.fn()}
+        onOpenMap={onOpenMap}
+        onCardPress={onCardPress}
+        styles={rowStyles}
+      />,
+    );
+
+    const row = getByLabelText('Открыть место: A');
+    expect(row.type).toBe('View');
+    expect(row.props.role).toBe('button');
+    expect(row.props.tabIndex).toBe(0);
+
+    const currentTarget = { nodeType: 1 };
+    fireEvent(row, 'click', {
+      currentTarget,
+      target: { closest: () => null },
+    });
+    expect(onCardPress).toHaveBeenCalledTimes(1);
+
+    fireEvent(row, 'keyDown', {
+      key: 'Enter',
+      preventDefault: jest.fn(),
+      currentTarget,
+      target: { closest: () => null },
+    });
+    expect(onCardPress).toHaveBeenCalledTimes(2);
+
+    fireEvent(row, 'click', {
+      currentTarget,
+      target: { closest: () => ({ nodeType: 1 }) },
+    });
+    expect(onCardPress).toHaveBeenCalledTimes(2);
+    expect(onOpenMap).not.toHaveBeenCalled();
 
     (Platform as any).OS = prevOs;
   });

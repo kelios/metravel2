@@ -16,10 +16,12 @@ type ArticleListItemProps = {
 };
 
 const { width } = Dimensions.get('window');
-const IMAGE_HEIGHT = width < 600 ? 340 : 500;
+const ARTICLE_IMAGE_HEIGHT = width < 600 ? 220 : 260;
+const ARTICLE_PLACEHOLDER_HEIGHT = width < 600 ? 112 : 140;
 
 const ArticleListItem: React.FC<ArticleListItemProps> = ({ article }) => {
   const { id, name, description, article_image_thumb_url, article_type } = article;
+  const hasImage = typeof article_image_thumb_url === 'string' && article_image_thumb_url.trim().length > 0;
   const colors = useThemedColors();
   const pathname = usePathname();
   const articleRoute = useMemo<string>(() => {
@@ -76,11 +78,12 @@ const ArticleListItem: React.FC<ArticleListItemProps> = ({ article }) => {
           <Card style={styles.card}>
             <View style={styles.imageWrapper}>
               <ImageCardMedia
-                  src={article_image_thumb_url || null}
+                  src={hasImage ? article_image_thumb_url : null}
                   alt={name}
-                  height={IMAGE_HEIGHT}
+                  height={hasImage ? ARTICLE_IMAGE_HEIGHT : ARTICLE_PLACEHOLDER_HEIGHT}
                   fit="cover"
                   borderRadius={0}
+                  testID="article-list-media"
               />
             </View>
             <Card.Content>

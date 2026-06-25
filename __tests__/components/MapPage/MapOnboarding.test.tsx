@@ -79,6 +79,8 @@ describe('MapOnboarding', () => {
     jest.useFakeTimers();
     setViewportWidth(1280);
     localStorage.clear();
+    document.body.removeAttribute('data-consent-banner-open');
+    document.documentElement.removeAttribute('data-consent-banner-open');
   });
 
   afterEach(() => {
@@ -118,6 +120,39 @@ describe('MapOnboarding', () => {
     expect(getByText('С чего начать')).toBeTruthy();
     expect(getByText(/Нажмите «Найти места рядом»/)).toBeTruthy();
     expect(getByTestId('onboarding-next')).toBeTruthy();
+  });
+
+  it('defers mobile web coachmark while the consent banner is open', async () => {
+    setViewportWidth(390);
+
+    const { getByText, queryByTestId, rerender } = render(
+      <MapOnboarding mobileWebCoachmark suspendAutoOpen />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(1200);
+    });
+
+    expect(queryByTestId('onboarding-next')).toBeNull();
+
+    await act(async () => {
+      rerender(<MapOnboarding mobileWebCoachmark suspendAutoOpen={false} />);
+      await Promise.resolve();
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(1200);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(getByText('С чего начать')).toBeTruthy();
   });
 
   it('still opens when restarted manually', async () => {

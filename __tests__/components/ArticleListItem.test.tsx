@@ -11,6 +11,15 @@ jest.mock('expo-router', () => ({
   },
 }))
 
+jest.mock('@/components/ui/ImageCardMedia', () => {
+  const React = require('react')
+  const { View } = require('react-native')
+  return {
+    __esModule: true,
+    default: (props: any) => <View testID={props.testID || 'image-card-media'} {...props} />,
+  }
+})
+
 // Mock react-native-render-html
 jest.mock('react-native-render-html', () => {
   require('react')
@@ -71,5 +80,18 @@ describe('ArticleListItem', () => {
     const articleWithoutType = { ...mockArticle, article_type: null }
     const { queryByText } = render(<ArticleListItem article={articleWithoutType} />)
     expect(queryByText('News')).toBeNull()
+  })
+
+  it('uses compact neutral media geometry when an article image is missing', () => {
+    const withImage = render(<ArticleListItem article={mockArticle} />)
+    const imageHeight = withImage.getByTestId('article-list-media').props.height
+
+    const withoutImage = render(
+      <ArticleListItem article={{ ...mockArticle, article_image_thumb_url: '' }} />,
+    )
+    const placeholder = withoutImage.getByTestId('article-list-media')
+
+    expect(placeholder.props.src).toBeNull()
+    expect(placeholder.props.height).toBeLessThan(imageHeight)
   })
 })

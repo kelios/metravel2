@@ -70,6 +70,14 @@ function isMobileWebViewport() {
   return Math.min(getViewportWidth(), documentWidth || Number.MAX_SAFE_INTEGER) <= MOBILE_WEB_ONBOARDING_MAX_WIDTH
 }
 
+function isConsentBannerOpen() {
+  if (!IS_WEB || typeof document === 'undefined') return false
+  return (
+    document.body?.getAttribute('data-consent-banner-open') === 'true' ||
+    document.documentElement?.getAttribute('data-consent-banner-open') === 'true'
+  )
+}
+
 function saveOnboardingCompleted() {
   try {
     if (IS_WEB) {
@@ -195,11 +203,13 @@ function tooltipPosition(
 interface MapOnboardingProps {
   onComplete?: () => void
   mobileWebCoachmark?: boolean
+  suspendAutoOpen?: boolean
 }
 
 export const MapOnboarding: React.FC<MapOnboardingProps> = ({
   onComplete,
   mobileWebCoachmark: mobileWebCoachmarkProp,
+  suspendAutoOpen = false,
 }) => {
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
@@ -212,9 +222,11 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
   )
   const [currentStep, setCurrentStep] = useState(0)
   const [visible, setVisible] = useState(false)
+  const [consentBannerOpen, setConsentBannerOpen] = useState(isConsentBannerOpen)
   const [targetRect, setTargetRect] = useState<Rect | null>(null)
   const rafRef = useRef(0)
   const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const shouldSuspendAutoOpen = Boolean(suspendAutoOpen || (mobileWebCoachmark && consentBannerOpen))
 
   // Register restart callback
   useEffect(() => {
@@ -227,6 +239,29 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
     }
   }, [])
 
+  useEffect(() => {
+    if (!IS_WEB || !mobileWebCoachmark || typeof document === 'undefined') return
+    const body = document.body
+    if (!body) return
+    const update = () => setConsentBannerOpen(isConsentBannerOpen())
+    update()
+    const observer = new MutationObserver(update)
+    observer.observe(body, {
+      attributes: true,
+      attributeFilter: ['data-consent-banner-open'],
+    })
+    return () => observer.disconnect()
+  }, [mobileWebCoachmark])
+
+  useEffect(() => {
+    if (!mobileWebCoachmark || !shouldSuspendAutoOpen) return
+    if (openTimerRef.current) {
+      clearTimeout(openTimerRef.current)
+      openTimerRef.current = null
+    }
+    setVisible(false)
+  }, [mobileWebCoachmark, shouldSuspendAutoOpen])
+
   // Auto-show on first visit for native and mobile web; desktop web stays manual.
   useEffect(() => {
     let cancelled = false
@@ -234,8 +269,9 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
       const completed = await loadOnboardingCompleted()
       if (cancelled || completed) return
       if (IS_WEB && !mobileWebCoachmark) return
+      if (shouldSuspendAutoOpen) return
       openTimerRef.current = setTimeout(() => {
-        if (!cancelled) setVisible(true)
+        if (!cancelled && !(mobileWebCoachmark && isConsentBannerOpen())) setVisible(true)
       }, ONBOARDING_DELAY_MS)
     })()
     return () => {
@@ -245,7 +281,7 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
         openTimerRef.current = null
       }
     }
-  }, [mobileWebCoachmark])
+  }, [mobileWebCoachmark, shouldSuspendAutoOpen])
 
   // Re-measure target when step changes
   useEffect(() => {

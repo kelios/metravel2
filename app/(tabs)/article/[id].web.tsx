@@ -189,7 +189,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     contentContainer: {
       flexGrow: 1,
-      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 24,
     },
     centerContent: {
       flexGrow: 1,
@@ -202,11 +204,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       textAlign: 'center',
     },
     card: {
-      margin: 20,
+      width: '100%',
       elevation: 5,
       backgroundColor: colors.surface,
       borderRadius: 10,
-      maxWidth: 800,
+      maxWidth: 960,
       borderWidth: 1,
       borderColor: colors.border,
     },
