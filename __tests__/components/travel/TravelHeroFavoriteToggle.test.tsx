@@ -112,6 +112,48 @@ describe('TravelHeroFavoriteToggle', () => {
     expect(mockRemoveFavorite).not.toHaveBeenCalled()
   })
 
+  it('saves Android guest favorite locally instead of requiring auth', async () => {
+    Platform.OS = 'android' as any
+    useAuth.mockReturnValue({ isAuthenticated: false })
+    mockIsFavorite.mockReturnValue(false)
+    mockAddFavorite.mockResolvedValue(undefined)
+
+    const { getByLabelText } = render(
+      <TravelHeroFavoriteToggle
+        travel={{
+          id: 384,
+          slug: 'zakshuvek-biriuzovyi-karer',
+          name: 'Закшувек',
+          travel_image_thumb_url: 'https://cdn.example.com/zakshuvek.jpg',
+          countryName: 'Польша',
+        } as any}
+        isMobile
+      />
+    )
+
+    fireEvent.press(getByLabelText('В избранное'))
+
+    await waitFor(() => {
+      expect(mockAddFavorite).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 384,
+          type: 'travel',
+          title: 'Закшувек',
+          url: '/travels/zakshuvek-biriuzovyi-karer',
+        })
+      )
+    })
+
+    expect(mockRequireAuth).not.toHaveBeenCalled()
+    expect(showToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'success',
+        text1: 'Сохранено на этом устройстве',
+        text2: 'Войдите, чтобы синхронизировать избранное.',
+      })
+    )
+  })
+
   it('adds favorite and shows success toast', async () => {
     mockIsFavorite.mockReturnValue(false)
     mockAddFavorite.mockResolvedValue(undefined)

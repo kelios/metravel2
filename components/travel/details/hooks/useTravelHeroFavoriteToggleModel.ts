@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { Platform } from 'react-native'
 
 import { useAuth } from '@/context/AuthContext'
 import { useFavorites } from '@/context/FavoritesContext'
@@ -28,7 +29,9 @@ export function useTravelHeroFavoriteToggleModel({
       : 'Добавить в избранное'
 
   const handleFavoriteToggle = useCallback(async () => {
-    if (!isAuthenticated) {
+    const isAndroidGuest = Platform.OS === 'android' && !isAuthenticated
+
+    if (!isAuthenticated && !isAndroidGuest) {
       requireAuth()
       return
     }
@@ -40,8 +43,8 @@ export function useTravelHeroFavoriteToggleModel({
       if (isFavorite) {
         await removeFavorite(travel.id, 'travel')
         showToast({
-          type: 'success',
-          text1: 'Удалено из избранного',
+          type: isAndroidGuest ? 'info' : 'success',
+          text1: isAndroidGuest ? 'Удалено с этого устройства' : 'Удалено из избранного',
           visibilityTime: 2000,
         })
         return
@@ -59,8 +62,9 @@ export function useTravelHeroFavoriteToggleModel({
       })
       showToast({
         type: 'success',
-        text1: 'Добавлено в избранное',
-        visibilityTime: 2000,
+        text1: isAndroidGuest ? 'Сохранено на этом устройстве' : 'Добавлено в избранное',
+        text2: isAndroidGuest ? 'Войдите, чтобы синхронизировать избранное.' : undefined,
+        visibilityTime: isAndroidGuest ? 3500 : 2000,
       })
     } catch {
       showToast({
