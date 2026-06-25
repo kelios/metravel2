@@ -1,9 +1,4 @@
-// components/quests/QuestFinaleRating.tsx
-// Интерактивная оценка квеста на финале (#362). Авторизован и ещё не оценивал →
-// звёзды «Оцените квест»; уже оценил → compact-звёзды + «Изменить».
-// Оптимистика через useQuestRatingMutation.
-
-import React, { memo, useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
 import StarRating from '@/components/ui/StarRating'

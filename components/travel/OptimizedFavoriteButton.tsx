@@ -1,5 +1,4 @@
-// Оптимизированный FavoriteButton для списков
-import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Platform, Pressable, View, useWindowDimensions } from 'react-native';
 import { METRICS } from '@/constants/layout';
 import Feather from '@expo/vector-icons/Feather';

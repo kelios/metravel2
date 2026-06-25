@@ -1,4 +1,3 @@
-import React from 'react'
 import { render, fireEvent, waitFor } from '@testing-library/react-native'
 import PersonalizedRecommendations from '@/components/travel/PersonalizedRecommendations'
 import type { FavoriteItem, ViewHistoryItem } from '@/context/FavoritesContext'

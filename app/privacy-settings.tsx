@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { View, Text, Pressable, Platform, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter, useIsFocused } from 'expo-router';

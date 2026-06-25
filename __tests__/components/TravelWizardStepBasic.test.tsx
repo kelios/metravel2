@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import TravelWizardStepBasic from '@/components/travel/TravelWizardStepBasic';
 import Toast from 'react-native-toast-message';

@@ -1,8 +1,4 @@
-// components/SkipLinks.tsx
-// ✅ УЛУЧШЕНИЕ: Skip links для улучшения доступности навигации с клавиатуры
-// ✅ МИГРАЦИЯ: Полная миграция на DESIGN_TOKENS и useThemedColors
-
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';

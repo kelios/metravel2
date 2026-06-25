@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { usePathname, useIsFocused } from 'expo-router'
 

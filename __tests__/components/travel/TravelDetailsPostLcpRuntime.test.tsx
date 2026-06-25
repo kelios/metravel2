@@ -2,6 +2,8 @@ import React from 'react'
 import { render, screen } from '@testing-library/react-native'
 
 import TravelDetailsPostLcpRuntime from '@/components/travel/details/TravelDetailsPostLcpRuntime'
+import TravelDetailsScrollRuntime from '@/components/travel/details/TravelDetailsScrollRuntime'
+import { TravelDetailsDeferredScrollProvider } from '@/components/travel/details/TravelDetailsDeferredScrollContext'
 
 jest.mock('@/components/travel/details/TravelDetailsDeferred', () => {
   const React = require('react')
@@ -49,52 +51,14 @@ jest.mock('@/components/travel/details/TravelStickyActions', () => ({
 }))
 
 describe('TravelDetailsPostLcpRuntime', () => {
-  it('shows deferred runtime controls when chrome is ready and mobile layout is active', async () => {
+  it('mounts deferred sections without scroll-derived runtime chrome', async () => {
     render(
       <TravelDetailsPostLcpRuntime
         travel={{ id: 1, name: 'Demo', slug: 'demo', gallery: [] } as any}
         isMobile={true}
-        screenWidth={390}
         anchors={{} as any}
-        sectionLinks={[{ key: 'map', label: 'Карта', icon: 'map' } as any]}
-        onNavigate={jest.fn()}
-        activeSection="map"
         forceOpenKey={null}
-        scrollY={{} as any}
-        contentHeight={1200}
-        viewportHeight={800}
-        scrollViewRef={{ current: null }}
-        criticalChromeReady={true}
         scrollToMapSection={jest.fn()}
-        scrollToComments={jest.fn()}
-      />
-    )
-
-    expect(await screen.findByTestId('travel-deferred-sections')).toBeTruthy()
-    expect(screen.getByTestId('reading-progress-bar')).toBeTruthy()
-    expect(screen.getByTestId('travel-sections-sheet-wrapper')).toBeTruthy()
-    expect(screen.getByTestId('scroll-to-top-button')).toBeTruthy()
-    expect(await screen.findByTestId('travel-sticky-actions')).toBeTruthy()
-  })
-
-  it('hides progress and sheet when chrome is not ready or there is no overflow', async () => {
-    render(
-      <TravelDetailsPostLcpRuntime
-        travel={{ id: 1, name: 'Demo', slug: 'demo', gallery: [] } as any}
-        isMobile={false}
-        screenWidth={1600}
-        anchors={{} as any}
-        sectionLinks={[]}
-        onNavigate={jest.fn()}
-        activeSection={null}
-        forceOpenKey={null}
-        scrollY={{} as any}
-        contentHeight={600}
-        viewportHeight={800}
-        scrollViewRef={{ current: null }}
-        criticalChromeReady={false}
-        scrollToMapSection={jest.fn()}
-        scrollToComments={jest.fn()}
       />
     )
 
@@ -103,5 +67,34 @@ describe('TravelDetailsPostLcpRuntime', () => {
     expect(screen.queryByTestId('travel-sections-sheet-wrapper')).toBeNull()
     expect(screen.queryByTestId('scroll-to-top-button')).toBeNull()
     expect(screen.queryByTestId('travel-sticky-actions')).toBeNull()
+  })
+
+  it('renders scroll-derived runtime controls from the scroll provider', async () => {
+    render(
+      <TravelDetailsDeferredScrollProvider
+        value={{
+          activeSection: 'map',
+          contentHeight: 1200,
+          scrollY: {} as any,
+          viewportHeight: 800,
+        }}
+      >
+        <TravelDetailsScrollRuntime
+          travel={{ id: 1, name: 'Demo', slug: 'demo', gallery: [] } as any}
+          isMobile={true}
+          screenWidth={390}
+          sectionLinks={[{ key: 'map', label: 'Карта', icon: 'map' } as any]}
+          onNavigate={jest.fn()}
+          scrollViewRef={{ current: null }}
+          criticalChromeReady={true}
+          scrollToComments={jest.fn()}
+        />
+      </TravelDetailsDeferredScrollProvider>
+    )
+
+    expect(screen.getByTestId('reading-progress-bar')).toBeTruthy()
+    expect(screen.getByTestId('travel-sections-sheet-wrapper')).toBeTruthy()
+    expect(screen.getByTestId('scroll-to-top-button')).toBeTruthy()
+    expect(await screen.findByTestId('travel-sticky-actions')).toBeTruthy()
   })
 })

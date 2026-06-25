@@ -1,5 +1,3 @@
-// __tests__/components/FormFieldWithValidation.test.tsx
-import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { TextInput } from 'react-native';
 import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation';

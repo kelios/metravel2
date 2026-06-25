@@ -1,4 +1,3 @@
-import React from 'react'
 import { Animated, Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 

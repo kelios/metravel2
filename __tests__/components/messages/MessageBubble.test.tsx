@@ -1,4 +1,3 @@
-import React from 'react';
 import { render } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import MessageBubble from '@/components/messages/MessageBubble';

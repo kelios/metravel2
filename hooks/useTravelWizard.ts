@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Platform, Alert, BackHandler } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter, useNavigation } from 'expo-router';
+import { useRouter, useNavigation, useLocalSearchParams } from 'expo-router';
 import { trackWizardEvent } from '@/utils/analytics';
 import type { ValidationError, ModerationIssue } from '@/utils/formValidation';
 import { validateStep } from '@/utils/travelWizardValidation';
@@ -9,6 +9,7 @@ import type { TravelFormData } from '@/types/types';
 import { showToastMessage } from '@/utils/toast';
 import { getErrorMessage } from '@/utils/errorHelpers';
 import { useBeforeUnload } from '@/utils/beforeunloadGuard';
+import { normalizeInternalReturnPath } from '@/utils/navigationReturnPath';
 
 type WizardSaveResult = {
   publish?: boolean;
@@ -163,6 +164,14 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
   } = options;
   const router = useRouter();
   const navigation = useNavigation();
+  const searchParams = useLocalSearchParams<{
+    returnTo?: string | string[];
+    from?: string | string[];
+  }>();
+  const exitReturnTo = useMemo(
+    () => normalizeInternalReturnPath(searchParams.returnTo ?? searchParams.from),
+    [searchParams.returnTo, searchParams.from],
+  );
 
   const isTestEnv = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
   const enableStepPersistenceInTests =
@@ -414,14 +423,16 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
   const handleExit = useCallback(() => {
     const leave = () => {
       isLeavingRef.current = true;
-      if (router.canGoBack()) {
+      if (exitReturnTo) {
+        router.replace(exitReturnTo as Parameters<typeof router.replace>[0]);
+      } else if (router.canGoBack()) {
         router.back();
       } else {
         router.replace('/metravel');
       }
     };
     void confirmLeaveWizard(leave, leave);
-  }, [confirmLeaveWizard, router]);
+  }, [confirmLeaveWizard, exitReturnTo, router]);
 
   // ✅ REFACTORED: Use safe beforeunload hook to prevent Permissions Policy violations
   useBeforeUnload(

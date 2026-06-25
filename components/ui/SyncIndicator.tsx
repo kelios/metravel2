@@ -1,8 +1,4 @@
-// components/ui/SyncIndicator.tsx
-// AND-10: Индикатор синхронизации данных при восстановлении сети.
-// Показывается на 3 секунды при переходе offline → online.
-
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Text, StyleSheet, Platform, ActivityIndicator, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { DESIGN_TOKENS } from '@/constants/designSystem';

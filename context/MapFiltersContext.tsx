@@ -1,9 +1,4 @@
-/**
- * Filters Context - centralized state management for FiltersPanel
- * @module context/MapFiltersContext
- */
-
-import React, { createContext, useContext, useMemo, ReactNode } from 'react';
+import { createContext, useContext, useMemo, ReactNode } from 'react';
 import type { RoutePoint } from '@/types/route';
 import type { LatLng } from '@/types/coordinates';
 import type { MapUiApi } from '@/types/mapUi';

@@ -2,11 +2,14 @@ import { render, fireEvent, screen } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 import TravelListItem from '@/components/listTravel/TravelListItem';
 
+let mockPathname = '';
+
 // Mock dependencies
 jest.mock('expo-router', () => ({
   router: {
     push: jest.fn(),
   },
+  usePathname: () => mockPathname,
 }));
 
 jest.mock('@tanstack/react-query', () => ({
@@ -81,6 +84,7 @@ describe('TravelListItem - Action Buttons', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockPathname = '';
     mockTravelStatusButtonCompact.mockClear()
     // Mock web platform
     Platform.OS = 'web';
@@ -114,6 +118,17 @@ describe('TravelListItem - Action Buttons', () => {
     // Should navigate to edit page, not travel detail
     expect(router.push).toHaveBeenCalledWith('/travel/1');
     expect(router.push).not.toHaveBeenCalledWith('/travels/1');
+  });
+
+  it('preserves search as returnTo when edit is opened from search results', () => {
+    mockPathname = '/search';
+    const { router } = require('expo-router');
+
+    render(<TravelListItem {...mockProps} />);
+
+    fireEvent.press(screen.getByLabelText('Редактировать'));
+
+    expect(router.push).toHaveBeenCalledWith('/travel/1?returnTo=%2Fsearch');
   });
 
   it('should prevent navigation when delete button is clicked', () => {

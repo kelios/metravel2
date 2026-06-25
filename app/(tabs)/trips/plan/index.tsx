@@ -1,7 +1,4 @@
-// app/(tabs)/trips/plan/index.tsx
-// Список запланированных поездок текущего пользователя (Sprint 13 / блок D):
-// CTA создать поездку, онбординг-empty-state и ссылка на каталог сообщества.
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';

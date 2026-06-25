@@ -1,12 +1,4 @@
-// components/quests/QuestPointNavigator.native.tsx
-// Compass arrow + live distance + arrival indicator toward the current quest step.
-// Native-only: uses expo-location watchPosition/watchHeading. Web has a no-op twin.
-//
-// Performance: all sensor-driven state lives inside this widget. Distance is rounded
-// before it hits state (so the text only re-renders on meaningful change), and the
-// arrow rotation is pushed straight onto an Animated.Value (no React re-render per tick).
-
-import React, { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Linking, Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 

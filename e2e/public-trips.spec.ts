@@ -38,6 +38,18 @@ const passwordB = (process.env.E2E_PASSWORD2 ?? '').trim()
 const hasCredsB = !!emailB && !!passwordB
 const hasBState = () => fs.existsSync(STORAGE_STATE_B)
 
+function requireSecondAccountState() {
+  const missing: string[] = []
+  if (!hasCredsB) missing.push('E2E_EMAIL2/E2E_PASSWORD2')
+  if (!hasBState()) missing.push(STORAGE_STATE_B)
+  if (missing.length > 0) {
+    throw new Error(
+      `public-trips two-account flow requires ${missing.join(' and ')}. ` +
+        'Configure the second e2e account before running this spec.',
+    )
+  }
+}
+
 function getApiBase(): string {
   const raw = (process.env.E2E_API_URL ?? process.env.EXPO_PUBLIC_API_URL ?? '').trim()
   if (!raw) throw new Error('E2E_API_URL must be set for two-account BE flow')
@@ -234,7 +246,7 @@ test.describe.serial('Публичные поездки — two-account real-BE 
   test.beforeAll(async () => {
     _createdAppId = 0
 
-    if (!hasCredsB || !hasBState()) return
+    requireSecondAccountState()
 
     await ensureTokens()
     await resetTripApplicationsViaAdmin(TRIP_ID, _tokenA, _tokenB)
@@ -260,10 +272,7 @@ test.describe.serial('Публичные поездки — two-account real-BE 
   // ── Тест 1: B подаёт заявку через реальную форму ─────────────────────────
 
   test('заявитель подаёт заявку → статус «Новая» в UI + подтверждение API', async ({ browser }) => {
-    if (!hasCredsB || !hasBState()) {
-      test.skip(true, 'E2E_EMAIL2/E2E_PASSWORD2 или storageState.b.json не заданы — skip')
-      return
-    }
+    requireSecondAccountState()
 
     await ensureTokens()
 
@@ -319,10 +328,7 @@ test.describe.serial('Публичные поездки — two-account real-BE 
   // ── Тест 2: A одобряет через реальный UI ─────────────────────────────────
 
   test('организатор одобряет заявку → статус «Одобрена» в UI + подтверждение API', async ({ browser }) => {
-    if (!hasCredsB || !hasBState()) {
-      test.skip(true, 'E2E_EMAIL2/E2E_PASSWORD2 или storageState.b.json не заданы — skip')
-      return
-    }
+    requireSecondAccountState()
 
     await ensureTokens()
 

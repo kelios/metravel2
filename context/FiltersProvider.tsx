@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useMemo, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, ReactNode } from 'react';
 import type { Filters, FiltersContextType } from '@/types/types';
 
 const FiltersContext = createContext<FiltersContextType | undefined>(undefined);

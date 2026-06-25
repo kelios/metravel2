@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from 'react'
+import { memo, useMemo } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native'
 
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'

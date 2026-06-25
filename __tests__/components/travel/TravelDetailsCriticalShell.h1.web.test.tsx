@@ -1,8 +1,3 @@
-/**
- * @jest-environment jsdom
- */
-
-import React from 'react'
 import { render } from '@testing-library/react'
 
 // The shell renders a deep tree (hero, maps, sidebar). For the single-H1

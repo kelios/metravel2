@@ -1,9 +1,4 @@
-// components/travel/FullscreenGallery.tsx
-// AND-28: Fullscreen image gallery for native (Android/iOS).
-// Hides status bar and navigation bar for immersive viewing.
-// On web — not rendered (web has its own lightbox pattern).
-
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
   FlatList,

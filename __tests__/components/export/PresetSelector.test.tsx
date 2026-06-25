@@ -115,8 +115,6 @@ describe('PresetSelector', () => {
       );
     });
 
-    // Removed flaky test - style checking depends on implementation details
-
     it('should show checkmark on selected preset', () => {
       const { getAllByText } = render(
         <PresetSelector {...defaultProps} selectedPresetId="photo-album" />
@@ -124,7 +122,19 @@ describe('PresetSelector', () => {
 
       // Selected badge is rendered as a pill with text "Выбрано"
       const selectedBadges = getAllByText('Выбрано');
-      expect(selectedBadges.length).toBeGreaterThan(0);
+      expect(selectedBadges).toHaveLength(1);
+    });
+
+    it('should move the selected badge when selectedPresetId changes', () => {
+      const { getAllByText, rerender } = render(
+        <PresetSelector {...defaultProps} selectedPresetId="photo-album" />
+      );
+
+      expect(getAllByText('Выбрано')).toHaveLength(1);
+
+      rerender(<PresetSelector {...defaultProps} selectedPresetId="travel-guide" />);
+
+      expect(getAllByText('Выбрано')).toHaveLength(1);
     });
   });
 
@@ -144,8 +154,16 @@ describe('PresetSelector', () => {
       expect(getByText('По умолчанию')).toBeTruthy();
     });
 
-    // Removed test with invalid jest.mock usage inside test
-    // Custom presets should be tested separately with proper mocking setup
+    it('keeps feature badges aligned with preset settings', () => {
+      const { getByText, getAllByText, queryByText } = render(<PresetSelector {...defaultProps} />);
+
+      fireEvent.press(getByText('Минимализм'));
+
+      expect(getByText('Минималист')).toBeTruthy();
+      expect(getByText('Современный минимализм')).toBeTruthy();
+      expect(getAllByText('Галерея')).toHaveLength(1);
+      expect(queryByText('Чек-листы')).toBeFalsy();
+    });
   });
 
   describe('accessibility', () => {
@@ -156,7 +174,11 @@ describe('PresetSelector', () => {
       expect(getByText('Выберите готовый пресет или настройте вручную')).toBeTruthy();
     });
 
-    // Removed flaky accessibility test - depends on implementation details
+    it('keeps the preset action label visible for every rendered preset', () => {
+      const { getAllByText } = render(<PresetSelector {...defaultProps} />);
+
+      expect(getAllByText('Выбрать')).toHaveLength(BOOK_PRESETS.length);
+    });
   });
 
   describe('edge cases', () => {

@@ -1,8 +1,3 @@
-/**
- * @jest-environment jsdom
- */
-
-import React from 'react'
 import { fireEvent, render } from '@testing-library/react'
 
 describe('TravelDetailsContainer performance (web)', () => {
@@ -48,11 +43,11 @@ describe('TravelDetailsContainer performance (web)', () => {
     expect(lcpImg?.style.objectFit).toBe('contain')
   })
 
-  it('renders only segmented blur surround immediately so the LCP shell keeps the same-source backdrop without a full-frame blur candidate', () => {
+  it('renders segmented blur surround immediately with a tiny backdrop URL instead of the full LCP source', () => {
     const { container } = render(
       <__testables.OptimizedLCPHero
         img={{
-          url: 'https://cdn.example.com/img.jpg',
+          url: 'https://metravel.by/gallery/540/gallery/79641dcc63dc476bb89dd66a9faa8527.JPG',
           width: 1200,
           height: 800,
           updated_at: '2025-01-01',
@@ -70,13 +65,17 @@ describe('TravelDetailsContainer performance (web)', () => {
     const heroBackdropBase = container.querySelector('[data-hero-backdrop-base="true"]') as HTMLDivElement | null
     const heroBackdropSegments = container.querySelectorAll('[data-hero-backdrop-segment="true"]')
     const heroBackdropLayer = container.querySelector('[data-hero-backdrop-layer="true"]') as HTMLDivElement | null
+    const backdropUrl = heroBackdropLayer?.style.backgroundImage || ''
 
     expect(heroBackdrop).toBeTruthy()
     expect(lcpImg).toBeTruthy()
     expect(heroBackdropBase).toBeNull()
     expect(heroBackdrop?.tagName).toBe('DIV')
     expect(heroBackdropSegments.length).toBeGreaterThan(1)
-    expect(heroBackdropLayer?.style.backgroundImage).toContain(lcpImg?.getAttribute('src') || '')
+    expect(lcpImg?.getAttribute('src')).toContain('w=1280')
+    expect(backdropUrl).toContain('w=64')
+    expect(backdropUrl).toContain('q=40')
+    expect(backdropUrl).not.toContain(lcpImg?.getAttribute('src') || '')
     expect(heroBackdropLayer?.style.opacity).toBe('1')
     expect(heroBackdropLayer?.style.animation).toBe('')
 

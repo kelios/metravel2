@@ -1,8 +1,4 @@
-// components/auth/GoogleSignInButton.native.tsx
-// AND-03: Native Google Sign-In using expo-auth-session.
-// Platform split: this file is used only on Android/iOS native builds.
-
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, ActivityIndicator, Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';

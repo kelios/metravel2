@@ -1,8 +1,3 @@
-// __tests__/achievements/ProgressionLineBar.test.tsx
-// Регрессионные тесты для components/achievements/ProgressionLineBar.tsx
-// Тикет #499 — покрытие переверстанной секции «Тропы развития».
-
-import React from 'react'
 import { render } from '@testing-library/react-native'
 import type { ProgressionLine } from '@/api/gamification'
 

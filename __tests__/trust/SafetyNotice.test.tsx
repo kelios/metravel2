@@ -1,7 +1,3 @@
-// __tests__/trust/SafetyNotice.test.tsx
-// Trust & Safety (Sprint 16, FE-433/FE-434): показ/скрытие плашки об ответственности.
-
-import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
 
 jest.mock('@react-native-async-storage/async-storage', () => ({

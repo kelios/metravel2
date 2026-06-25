@@ -67,12 +67,10 @@ function useEnsureSliderWebStyles() {
   }, [])
 }
 
-// Slides within current ± RENDER_WINDOW get the heavy treatment (blur prep,
-// neighbour preload, eager decode). Slides outside stay mounted (lazy <img>) so
-// fast swipes never expose a blank gap, but they skip blur/eager work on the
-// critical first hero layout. 2 covers the visible slide + both immediate
-// neighbours, so it is always a superset of the existing blur (±1) and preload
-// windows — no visible-image or blur behaviour change, only far-slide work shed.
+// Only slides within current ± RENDER_WINDOW are mounted in the DOM. The track
+// keeps full gallery width and each mounted slide is absolutely positioned at
+// its real index, so scroll/drag math stays unchanged while far slides do not
+// add RN Web nodes, blur prep, or image elements to the critical hero tree.
 const RENDER_WINDOW = 2
 
 const POINTER_EVENTS_NONE = { pointerEvents: 'none' as const }
@@ -367,6 +365,14 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       : layoutMeasured
         ? renderedSlideWidth * imagesLen
         : `${imagesLen * 100}%`
+  const renderedSlideIndexes = useMemo(() => {
+    if (imagesLen <= RENDER_WINDOW * 2 + 1) {
+      return images.map((_, index) => index)
+    }
+    const start = Math.max(0, currentIndex - RENDER_WINDOW)
+    const end = Math.min(imagesLen - 1, currentIndex + RENDER_WINDOW)
+    return Array.from({ length: end - start + 1 }, (_, offset) => start + offset)
+  }, [currentIndex, images, imagesLen])
 
   useSliderPointerDrag({
     viewportRef,
@@ -482,30 +488,28 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
               ref={trackRef}
               style={[
                 styles.carouselTrack,
-                { width: trackWidth, height: containerHeight },
+                { width: trackWidth, height: containerHeight, position: 'relative' },
               ]}
             >
-              {images.map((item, index) => {
+              {renderedSlideIndexes.map((index) => {
+                const item = images[index]
+                if (!item) return null
                 const distanceToCurrent = Math.abs(index - currentIndex)
-                // Cheap predicate computed for the whole array, but the heavy
-                // per-slide work (blur prep, neighbour preload, eager decode) is
-                // confined to a small window around the current slide. Slides
-                // outside the window stay MOUNTED with a lazy <img> (unmounting
-                // them reintroduces the blank-gap-on-fast-swipe regression the
-                // slider tests guard) yet never run the blur transform / eager
-                // fetch on the critical first hero layout for large galleries.
-                const inHeavyWindow = distanceToCurrent <= RENDER_WINDOW
+                const slidePositionStyle = layoutMeasured
+                  ? { position: 'absolute' as const, left: renderedSlideWidth * index, top: 0 }
+                  : {
+                      position: 'absolute' as const,
+                      left: `${(100 / imagesLen) * index}%`,
+                      top: 0,
+                    }
                 const allowNeighbourPreload =
-                  inHeavyWindow &&
                   layoutMeasured &&
                   (firstImageLoaded || currentIndex > 0 || isMobileDevice)
                 const preloadPriority =
-                  inHeavyWindow &&
                   prefetchEnabled &&
                   (distanceToCurrent === 0 ||
                     (distanceToCurrent <= effectivePreloadCount && allowNeighbourPreload))
                 const prepareBlur =
-                  inHeavyWindow &&
                   layoutMeasured &&
                   blurBackground &&
                   (isMobileDevice ? distanceToCurrent === 0 : distanceToCurrent <= 1)
@@ -518,7 +522,12 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                     {...({ dataSet: { testid: `slider-slide-${index}` } } as any)}
                     style={[
                       styles.slide,
-                      { width: slideWidthStyle, height: containerHeight, zIndex: 1 },
+                      {
+                        width: slideWidthStyle,
+                        height: containerHeight,
+                        zIndex: 1,
+                        ...slidePositionStyle,
+                      },
                     ]}
                   >
                     <Slide

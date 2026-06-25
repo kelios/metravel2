@@ -1,7 +1,3 @@
-// __tests__/components/PrivacySettingsMatrix.test.tsx
-// FE-privacy-settings-ui (Sprint 18): visibility matrix (content type × audience).
-
-import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
 
 jest.mock('@/constants/designSystem', () => ({

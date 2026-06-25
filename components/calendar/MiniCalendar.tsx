@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useThemedColors } from '@/hooks/useTheme'

@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { Platform, TouchableOpacity } from 'react-native';
 import Animated, {
   useSharedValue,

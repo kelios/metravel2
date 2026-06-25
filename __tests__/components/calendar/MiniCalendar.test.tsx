@@ -1,4 +1,3 @@
-import React from 'react'
 import { render, fireEvent, waitFor } from '@testing-library/react-native'
 import MiniCalendar from '@/components/calendar/MiniCalendar'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'

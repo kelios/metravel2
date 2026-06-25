@@ -33,7 +33,7 @@ describe('ThemePreview', () => {
       expect(getByText('Выберите тему оформления')).toBeTruthy();
     });
 
-    it('should render all 8 themes', () => {
+    it('should render the full theme catalog', () => {
       const { getByText } = render(<ThemePreview {...defaultProps} />);
 
       expect(getByText('Минимал')).toBeTruthy();
@@ -44,6 +44,17 @@ describe('ThemePreview', () => {
       expect(getByText('Модерн')).toBeTruthy();
       expect(getByText('Романтика')).toBeTruthy();
       expect(getByText('Приключение')).toBeTruthy();
+      expect(getByText('Ч/Б Газета')).toBeTruthy();
+      expect(getByText('Сепия')).toBeTruthy();
+      expect(getByText('Газета')).toBeTruthy();
+      expect(getByText('Океан')).toBeTruthy();
+      expect(getByText('Лес')).toBeTruthy();
+      expect(getByText('Закат')).toBeTruthy();
+      expect(getByText('Скандинавия')).toBeTruthy();
+      expect(getByText('Ретро')).toBeTruthy();
+      expect(getByText('Тропики')).toBeTruthy();
+      expect(getByText('Люкс-журнал')).toBeTruthy();
+      expect(getByText('Акварель')).toBeTruthy();
     });
 
     it('should show theme descriptions', () => {
@@ -70,8 +81,6 @@ describe('ThemePreview', () => {
 
       expect(mockOnThemeSelect).toHaveBeenCalledWith('dark');
     });
-
-    // Removed flaky test - style checking depends on implementation details
 
     it('should allow selecting different themes', () => {
       const { getByText } = render(<ThemePreview {...defaultProps} />);
@@ -107,12 +116,26 @@ describe('ThemePreview', () => {
       );
 
       // Font info should not be visible in compact mode
-      const fontInfo = queryByText(/Inter • Inter/);
+      const fontInfo = queryByText(/Inter \/ Inter/);
       expect(fontInfo).toBeFalsy();
     });
   });
 
-  // Removed flaky theme information tests - depend on implementation details
+  describe('theme information', () => {
+    it('shows font pairs in regular mode', () => {
+      const { getAllByText, getByText } = render(<ThemePreview {...defaultProps} />);
+
+      expect(getAllByText('Inter / Inter').length).toBeGreaterThan(0);
+      expect(getByText('Montserrat / Open Sans')).toBeTruthy();
+    });
+
+    it('hides descriptions and font pairs in compact mode', () => {
+      const { queryByText } = render(<ThemePreview {...defaultProps} compact={true} />);
+
+      expect(queryByText('Чистый и простой дизайн')).toBeFalsy();
+      expect(queryByText('Inter / Inter')).toBeFalsy();
+    });
+  });
 
   describe('accessibility', () => {
     it('should have accessible labels', () => {
@@ -120,8 +143,6 @@ describe('ThemePreview', () => {
 
       expect(getByText('Выберите тему оформления')).toBeTruthy();
     });
-
-    // Removed flaky accessibility test
   });
 
   describe('edge cases', () => {

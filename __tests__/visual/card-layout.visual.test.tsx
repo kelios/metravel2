@@ -12,8 +12,16 @@ jest.mock('@/context/AuthContext', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useAuth: () => ({
     isAuthenticated: true,
+    authReady: true,
     userId: 'test-user',
   }),
+}));
+
+jest.mock('expo-router', () => ({
+  router: { push: jest.fn(), replace: jest.fn() },
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
+  usePathname: () => '',
+  useLocalSearchParams: () => ({}),
 }));
 
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';

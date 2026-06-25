@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { mockPush, mockUseRouter, mockUsePathname, resetExpoRouterMocks } from '../helpers/expoRouterMock';
 import { createQueryWrapper } from '../helpers/testQueryClient';

@@ -1,8 +1,4 @@
-// components/travel/TravelRatingSection.tsx
-// ✅ Секция рейтинга на странице путешествия с возможностью оценки
-// 🎨 УЛУЧШЕНО: Анимация изменения рейтинга, улучшенная визуальная иерархия, success feedback
-
-import React, { memo, useMemo, useEffect, useRef, useState } from 'react';
+import { memo, useMemo, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Platform, Pressable } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';

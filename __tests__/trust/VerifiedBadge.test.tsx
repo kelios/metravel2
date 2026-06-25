@@ -1,8 +1,3 @@
-// __tests__/trust/VerifiedBadge.test.tsx
-// Trust & Safety (Sprint 16, FE-432/FE-434): бейдж «Проверенный участник» и метка
-// «Организатор с опытом».
-
-import React from 'react'
 import { render } from '@testing-library/react-native'
 
 import VerifiedBadge from '@/components/profile/VerifiedBadge'

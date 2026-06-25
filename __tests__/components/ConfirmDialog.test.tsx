@@ -1,4 +1,3 @@
-import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'

@@ -1,9 +1,4 @@
-// components/trips/planning/TripRatingPanel.tsx
-// Trust & Safety (Sprint 16, FE-431): взаимная оценка участников после завершения
-// поездки. Показывается только когда trip.status === 'completed' и текущий
-// пользователь — участник/организатор. Для каждого соучастника — звёзды (StarRating)
-// и опциональный отзыв; оценка идёт в POST /trips/{id}/participants/{userId}/rate/.
-import React, { memo, useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 

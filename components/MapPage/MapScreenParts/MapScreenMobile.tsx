@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react'
+import { Suspense } from 'react';
 
 import { MapOfflineIndicator } from '@/components/MapPage/MapOfflineIndicator'
 import { MapMobileLayout, MapOnboarding } from '@/screens/tabs/mapDeferred'

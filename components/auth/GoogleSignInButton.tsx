@@ -1,9 +1,4 @@
-// components/auth/GoogleSignInButton.tsx
-// AND-03: Platform-agnostic barrel.
-// Metro resolves GoogleSignInButton.web.tsx / GoogleSignInButton.native.tsx automatically.
-// This file exists as fallback for test environments and tooling that don't resolve platform extensions.
-
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';

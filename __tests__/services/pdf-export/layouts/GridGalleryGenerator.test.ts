@@ -118,7 +118,14 @@ describe('GridGalleryGenerator', () => {
       expect(html).toContain('Bali, Indonesia');
     });
 
-    // Removed flaky test - caption behavior depends on implementation details
+    it('should not render caption blocks when captions are disabled', () => {
+      mockSettings.showCaptions = false;
+      const html = generator.generateHTML(mockPhotos, mockSettings);
+
+      expect(html).not.toContain('class="photo-caption"');
+      expect(html).not.toContain('Bali, Indonesia');
+      expect(html).not.toContain('Canon EOS R5');
+    });
 
     it('should position captions at top', () => {
       mockSettings.captionPosition = 'top';

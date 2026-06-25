@@ -1,7 +1,4 @@
-// components/article/ArticleRatingSection.tsx
-// ✅ Секция рейтинга на странице статьи с возможностью оценки
-
-import React, { memo, useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 import StarRating from '@/components/ui/StarRating';

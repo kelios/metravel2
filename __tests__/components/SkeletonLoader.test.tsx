@@ -1,4 +1,3 @@
-import React from 'react';
 import { render } from '@testing-library/react-native';
 import { SkeletonLoader, TravelCardSkeleton, TravelListSkeleton } from '@/components/ui/SkeletonLoader';
 import { StyleSheet } from 'react-native';

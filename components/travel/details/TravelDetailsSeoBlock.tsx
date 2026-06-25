@@ -1,4 +1,3 @@
-import React from 'react'
 import Head from 'expo-router/head'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'

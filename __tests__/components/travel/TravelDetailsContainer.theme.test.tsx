@@ -1,14 +1,3 @@
-/**
- * 🧪 Тесты темной темы для Travel Details
- *
- * Проверяет:
- * - Переключение между светлой и темной темой
- * - WCAG AA контрастность в обеих темах
- * - Правильное использование палитр
- * - Визуальные изменения при переключении
- */
-
-import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { ThemeProvider, useThemedColors } from '@/hooks/useTheme';

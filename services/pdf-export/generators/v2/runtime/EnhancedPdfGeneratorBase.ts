@@ -19,7 +19,6 @@ import {
   buildRouteSvg as sharedBuildRouteSvg,
   buildTravelMeta as sharedBuildTravelMeta,
   calculateRouteDistanceFromPreview as sharedCalculateRouteDistanceFromPreview,
-  normalizeLocations as sharedNormalizeLocations,
   sortTravels as sharedSortTravels,
 } from './bookData';
 import type { NormalizedLocation, TravelSectionMeta } from './types';
@@ -525,10 +524,6 @@ export class EnhancedPdfGeneratorBase {
       getGalleryPhotosPerPage: (layout, totalPhotos, currentSettings) =>
         this.getGalleryPhotosPerPage(layout, totalPhotos, currentSettings),
     });
-  }
-
-  private normalizeLocations(travel: TravelForBook): NormalizedLocation[] {
-    return sharedNormalizeLocations(travel);
   }
 
   private async generateLocationQRCodes(locations: NormalizedLocation[]): Promise<string[]> {

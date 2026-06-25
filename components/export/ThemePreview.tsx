@@ -1,7 +1,4 @@
-// components/export/ThemePreview.tsx
-// Компонент для предпросмотра тем PDF с миниатюрами
-
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform, Modal } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';

@@ -1,4 +1,3 @@
-import React from 'react'
 
 import ContributionBanner from '@/components/common/ContributionBanner'
 

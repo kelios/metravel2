@@ -1,7 +1,3 @@
-// __tests__/components/ProtectedContacts.test.tsx
-// FE-contact-protection-ui (Sprint 18): gating of contacts/socials until approval.
-
-import React from 'react'
 import { render, fireEvent, waitFor } from '@testing-library/react-native'
 
 jest.mock('@/constants/designSystem', () => ({

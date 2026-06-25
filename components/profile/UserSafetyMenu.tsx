@@ -1,8 +1,4 @@
-// components/profile/UserSafetyMenu.tsx
-// Trust & Safety (Sprint 16, FE-430): доступные пользователю действия «Пожаловаться»
-// и «Заблокировать»/«Разблокировать» на чужом профиле (и в контексте поездки).
-// Кнопка-меню открывает шит; жалоба — выбор причины + опциональный комментарий.
-import React, { memo, useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,

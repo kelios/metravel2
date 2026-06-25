@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { View, TextInput, Button } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 

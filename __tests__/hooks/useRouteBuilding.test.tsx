@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { render, waitFor } from '@testing-library/react-native';
 
 import { useRouteBuilding } from '@/components/MapPage/Map/useRouteBuilding';

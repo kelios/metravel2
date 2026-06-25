@@ -1,8 +1,4 @@
-// components/ErrorDisplay.tsx
-// ✅ УЛУЧШЕНИЕ: Компонент для отображения понятных ошибок пользователю
-// ✅ МИГРАЦИЯ: Полная поддержка динамических цветов через useThemedColors
-
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';

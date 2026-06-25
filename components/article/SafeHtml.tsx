@@ -1,7 +1,7 @@
 // components/SafeHtml.tsx
 // ✅ БЕЗОПАСНОСТЬ: Компонент для безопасного рендеринга HTML контента
 
-import React, { useEffect, useInsertionEffect, useMemo, useRef } from 'react';
+import { useEffect, useInsertionEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { normalizeArticleEditorHtmlForInput } from '@/components/article/articleEditorConfig';
 import { useThemedColors } from '@/hooks/useTheme';

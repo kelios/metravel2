@@ -1,4 +1,3 @@
-import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react-native'
 import { useQuery } from '@tanstack/react-query'
 import { HomeInspirationSection } from '@/components/home/HomeInspirationSection'

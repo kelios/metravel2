@@ -1,4 +1,3 @@
-import React from 'react'
 import { Platform, type StyleProp, type ViewStyle } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import Svg, { Path } from 'react-native-svg'

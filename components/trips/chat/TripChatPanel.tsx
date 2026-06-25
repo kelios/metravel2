@@ -1,10 +1,4 @@
-// components/trips/chat/TripChatPanel.tsx
-// Self-contained чат участников поездки (Sprint 15 / блок 6, #422).
-// Принимает ТОЛЬКО tripId и сам резолвит thread/messages через хуки.
-// Архив-режим (status='archived' ИЛИ can_post=false): только чтение + баннер.
-// Pure RN Web совместимый.
-
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,

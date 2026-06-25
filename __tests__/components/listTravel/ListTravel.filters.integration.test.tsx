@@ -1,8 +1,3 @@
-/**
- * Интеграционные тесты для работы всех фильтров на главной странице
- */
-
-import React from 'react';
 import { render } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ListTravel from '@/components/listTravel/ListTravelBase';

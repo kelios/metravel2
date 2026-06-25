@@ -1,4 +1,4 @@
-import React, { memo } from 'react'
+import { memo } from 'react';
 import { ActivityIndicator, View } from 'react-native'
 
 import RecommendationsTabsBase from './RecommendationsTabs'

@@ -1,8 +1,3 @@
-// __tests__/achievements/AdminGrantRareAward.test.tsx
-// Role-gating tests for components/achievements/AdminGrantRareAward.tsx (#380/#381).
-// Контракт: контрол виден только staff/admin (isSuperuser), иначе ничего не рендерит.
-
-import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
 
 let mockIsSuperuser = false

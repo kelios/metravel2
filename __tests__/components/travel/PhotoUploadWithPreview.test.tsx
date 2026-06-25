@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, waitFor, act } from '@testing-library/react-native';
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import { uploadImage } from '@/api/misc';

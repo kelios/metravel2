@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react'
+import { useCallback, useMemo } from 'react';
 import { View, Text, Image, StyleSheet, ActivityIndicator, Platform } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 

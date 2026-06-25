@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { Platform, Share } from 'react-native';
 import ShareButtons from '@/components/travel/ShareButtons';

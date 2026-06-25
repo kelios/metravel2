@@ -1,4 +1,3 @@
-import React from 'react';
 import { render } from '@testing-library/react-native';
 import AddressListItem from '@/components/MapPage/AddressListItem';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

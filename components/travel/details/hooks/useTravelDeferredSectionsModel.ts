@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { InteractionManager, Platform } from 'react-native'
 
-import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
 import { useTdTrace } from '@/hooks/useTdTrace'
 
 type IdleCapableWindow = Window & {
@@ -51,16 +50,45 @@ function runWhenBrowserIdle(callback: () => void, fallbackMs = 250): () => void 
   }
 }
 
-// #562: visibility (IntersectionObserver) is the primary trigger for every deferred
-// section. Author/rating sit just below the fold and are almost always reached quickly,
-// so they keep a short fallback that smooths over a missed observer. The heavy sections
-// (map/sidebar/comments/footer) must NOT be force-mounted by a short fixed timer while
-// they are still off-viewport — that spent CPU/network (comments, related travels) for
-// content the user may never scroll to. Their fallback is a long safe backstop only;
-// in practice the observer mounts them as they approach the viewport well before it.
-const HEAVY_SECTION_FALLBACK_BACKSTOP_MS = 8000
+const TRAVEL_DEFERRED_SECTION_KEYS = [
+  'map',
+  'sidebar',
+  'comments',
+  'footer',
+  'author',
+  'rating',
+] as const
 
-const TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS = {
+type TravelDeferredSectionKey = (typeof TRAVEL_DEFERRED_SECTION_KEYS)[number]
+type TravelDeferredLoadState = Record<TravelDeferredSectionKey, boolean>
+type TravelDeferredElementState = Record<TravelDeferredSectionKey, Element | null>
+
+const createLoadState = (value: boolean): TravelDeferredLoadState => ({
+  author: value,
+  comments: value,
+  footer: value,
+  map: value,
+  rating: value,
+  sidebar: value,
+})
+
+const createElementState = (): TravelDeferredElementState => ({
+  author: null,
+  comments: null,
+  footer: null,
+  map: null,
+  rating: null,
+  sidebar: null,
+})
+
+const readElement = (node: unknown): Element | null => {
+  if (node && typeof node === 'object' && 'nodeType' in (node as Record<string, unknown>)) {
+    return node as Element
+  }
+  return null
+}
+
+export const TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS = {
   author: {
     fallbackDelay: 500,
     priority: 'high' as const,
@@ -69,21 +97,21 @@ const TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS = {
     traceKey: 'deferred:author:visible',
   },
   comments: {
-    fallbackDelay: HEAVY_SECTION_FALLBACK_BACKSTOP_MS,
+    fallbackDelay: null,
     priority: 'low' as const,
     rootMargin: '200px',
     threshold: 0.1,
     traceKey: 'deferred:comments:visible',
   },
   footer: {
-    fallbackDelay: HEAVY_SECTION_FALLBACK_BACKSTOP_MS,
+    fallbackDelay: null,
     priority: 'low' as const,
     rootMargin: '200px',
     threshold: 0.1,
     traceKey: 'deferred:footer:visible',
   },
   map: {
-    fallbackDelay: HEAVY_SECTION_FALLBACK_BACKSTOP_MS,
+    fallbackDelay: null,
     priority: 'low' as const,
     rootMargin: '200px',
     threshold: 0.1,
@@ -97,7 +125,7 @@ const TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS = {
     traceKey: 'deferred:rating:visible',
   },
   sidebar: {
-    fallbackDelay: HEAVY_SECTION_FALLBACK_BACKSTOP_MS,
+    fallbackDelay: null,
     priority: 'low' as const,
     rootMargin: '200px',
     threshold: 0.1,
@@ -107,23 +135,6 @@ const TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS = {
 
 type UseTravelDeferredSectionsModelArgs = {
   travelId?: number
-}
-
-function useDeferredProgressiveSection(
-  config: (typeof TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS)[keyof typeof TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS],
-  enabled: boolean,
-) {
-  const tdTrace = useTdTrace()
-  const section = useProgressiveLoad({
-    ...config,
-    enabled,
-  })
-
-  useEffect(() => {
-    if (section.shouldLoad) tdTrace(config.traceKey)
-  }, [config.traceKey, section.shouldLoad, tdTrace])
-
-  return section
 }
 
 export function useTravelDeferredSectionsModel({
@@ -141,31 +152,35 @@ export function useTravelDeferredSectionsModel({
     if (Platform.OS === 'web') setCanRenderHeavy(false)
   }
   const tdTrace = useTdTrace()
+  const [loadedSections, setLoadedSections] = useState<TravelDeferredLoadState>(() =>
+    createLoadState(Platform.OS !== 'web'),
+  )
+  const [sectionElements, setSectionElements] = useState<TravelDeferredElementState>(() =>
+    createElementState(),
+  )
+  const tracedSectionsRef = useRef<Set<TravelDeferredSectionKey>>(new Set())
 
-  const { shouldLoad: shouldLoadMap, setElementRef: setMapRef } = useDeferredProgressiveSection(
-    TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.map,
-    canRenderHeavy,
-  )
-  const { shouldLoad: shouldLoadSidebar, setElementRef: setSidebarRef } = useDeferredProgressiveSection(
-    TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.sidebar,
-    canRenderHeavy,
-  )
-  const { shouldLoad: shouldLoadComments, setElementRef: setCommentsRef } = useDeferredProgressiveSection(
-    TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.comments,
-    canRenderHeavy,
-  )
-  const { shouldLoad: shouldLoadFooter, setElementRef: setFooterRef } = useDeferredProgressiveSection(
-    TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.footer,
-    canRenderHeavy,
-  )
-  const { shouldLoad: shouldLoadAuthorSection, setElementRef: setAuthorSectionRef } = useDeferredProgressiveSection(
-    TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.author,
-    canRenderHeavy,
-  )
-  const { shouldLoad: shouldLoadRating, setElementRef: setRatingRef } = useDeferredProgressiveSection(
-    TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.rating,
-    canRenderHeavy,
-  )
+  const markSectionLoaded = useCallback((sectionKey: TravelDeferredSectionKey) => {
+    setLoadedSections((current) => {
+      if (current[sectionKey]) return current
+      return { ...current, [sectionKey]: true }
+    })
+  }, [])
+
+  const setSectionRef = useCallback((sectionKey: TravelDeferredSectionKey, node: unknown) => {
+    const nextElement = readElement(node)
+    setSectionElements((current) => {
+      if (current[sectionKey] === nextElement) return current
+      return { ...current, [sectionKey]: nextElement }
+    })
+  }, [])
+
+  const setMapRef = useCallback((node: unknown) => setSectionRef('map', node), [setSectionRef])
+  const setSidebarRef = useCallback((node: unknown) => setSectionRef('sidebar', node), [setSectionRef])
+  const setCommentsRef = useCallback((node: unknown) => setSectionRef('comments', node), [setSectionRef])
+  const setFooterRef = useCallback((node: unknown) => setSectionRef('footer', node), [setSectionRef])
+  const setAuthorSectionRef = useCallback((node: unknown) => setSectionRef('author', node), [setSectionRef])
+  const setRatingRef = useCallback((node: unknown) => setSectionRef('rating', node), [setSectionRef])
 
   useEffect(() => {
     tdTrace('deferred:mount', { travelId })
@@ -179,6 +194,17 @@ export function useTravelDeferredSectionsModel({
   }, [])
 
   useEffect(() => {
+    if (Platform.OS !== 'web') {
+      setLoadedSections(createLoadState(canRenderHeavy))
+      return
+    }
+    if (!canRenderHeavy) {
+      tracedSectionsRef.current.clear()
+      setLoadedSections(createLoadState(false))
+    }
+  }, [canRenderHeavy, travelId])
+
+  useEffect(() => {
     if (Platform.OS !== 'web') return
     if (canRenderHeavy) return
     const cleanup = runWhenBrowserIdle(() => setCanRenderHeavy(true), 250)
@@ -189,6 +215,90 @@ export function useTravelDeferredSectionsModel({
     if (canRenderHeavy) tdTrace('deferred:heavy:enabled')
   }, [canRenderHeavy, tdTrace])
 
+  const shouldFallbackAuthor = !loadedSections.author
+  const shouldFallbackRating = !loadedSections.rating
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    if (!canRenderHeavy) return
+
+    const timers: Array<ReturnType<typeof setTimeout>> = []
+    if (shouldFallbackAuthor) {
+      timers.push(
+        setTimeout(
+          () => markSectionLoaded('author'),
+          TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.author.fallbackDelay,
+        ),
+      )
+    }
+    if (shouldFallbackRating) {
+      timers.push(
+        setTimeout(
+          () => markSectionLoaded('rating'),
+          TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.rating.fallbackDelay,
+        ),
+      )
+    }
+
+    return () => {
+      timers.forEach(clearTimeout)
+    }
+  }, [
+    canRenderHeavy,
+    markSectionLoaded,
+    shouldFallbackAuthor,
+    shouldFallbackRating,
+  ])
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    if (!canRenderHeavy) return
+    if (typeof window === 'undefined' || typeof window.IntersectionObserver !== 'function') return
+
+    const entries = TRAVEL_DEFERRED_SECTION_KEYS
+      .map((sectionKey) => ({
+        element: sectionElements[sectionKey],
+        sectionKey,
+      }))
+      .filter((entry): entry is { element: Element; sectionKey: TravelDeferredSectionKey } => !!entry.element)
+
+    if (!entries.length) return
+
+    const sectionByElement = new Map<Element, TravelDeferredSectionKey>()
+    const observer = new window.IntersectionObserver(
+      (observerEntries) => {
+        for (const entry of observerEntries) {
+          if (!entry.isIntersecting && entry.intersectionRatio <= 0) continue
+          const sectionKey = sectionByElement.get(entry.target)
+          if (!sectionKey) continue
+          markSectionLoaded(sectionKey)
+          observer.unobserve(entry.target)
+        }
+      },
+      {
+        root: null,
+        rootMargin: '200px',
+        threshold: 0.1,
+      },
+    )
+
+    for (const { element, sectionKey } of entries) {
+      sectionByElement.set(element, sectionKey)
+      observer.observe(element)
+    }
+
+    return () => observer.disconnect()
+  }, [canRenderHeavy, markSectionLoaded, sectionElements])
+
+  useEffect(() => {
+    for (const sectionKey of TRAVEL_DEFERRED_SECTION_KEYS) {
+      if (!loadedSections[sectionKey]) continue
+      if (tracedSectionsRef.current.has(sectionKey)) continue
+      tracedSectionsRef.current.add(sectionKey)
+      tdTrace(TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS[sectionKey].traceKey)
+    }
+  }, [loadedSections, tdTrace])
+
   return {
     canRenderHeavy,
     setAuthorSectionRef,
@@ -197,11 +307,11 @@ export function useTravelDeferredSectionsModel({
     setMapRef,
     setRatingRef,
     setSidebarRef,
-    shouldLoadAuthorSection,
-    shouldLoadComments,
-    shouldLoadFooter,
-    shouldLoadMap,
-    shouldLoadRating,
-    shouldLoadSidebar,
+    shouldLoadAuthorSection: loadedSections.author,
+    shouldLoadComments: loadedSections.comments,
+    shouldLoadFooter: loadedSections.footer,
+    shouldLoadMap: loadedSections.map,
+    shouldLoadRating: loadedSections.rating,
+    shouldLoadSidebar: loadedSections.sidebar,
   }
 }

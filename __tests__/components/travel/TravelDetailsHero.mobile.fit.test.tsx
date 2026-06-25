@@ -1,8 +1,4 @@
-/**
- * @jest-environment jsdom
- */
-
-import React, { Suspense } from 'react'
+import { Suspense } from 'react';
 import renderer, { act } from 'react-test-renderer'
 
 import { Platform, StyleSheet, useWindowDimensions } from 'react-native'

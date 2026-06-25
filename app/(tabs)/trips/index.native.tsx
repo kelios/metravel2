@@ -1,4 +1,3 @@
-import React from 'react'
 
 import PublicTripsCatalog from '@/components/trips/PublicTripsCatalog'
 

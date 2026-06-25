@@ -1,4 +1,3 @@
-import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';

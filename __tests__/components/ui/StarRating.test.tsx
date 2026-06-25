@@ -1,5 +1,3 @@
-// __tests__/components/ui/StarRating.test.tsx
-import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import StarRating from '@/components/ui/StarRating';
 

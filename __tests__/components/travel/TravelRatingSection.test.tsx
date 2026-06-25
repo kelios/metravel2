@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import TravelRatingSection from '@/components/travel/TravelRatingSection';
 import { QueryClientProvider } from '@tanstack/react-query';

@@ -124,6 +124,11 @@ jest.mock('@/components/travel/details/TravelDetailsDeferred', () => ({
   TravelDeferredSections: () => null,
 }))
 
+jest.mock('@/components/travel/details/TravelDetailsScrollRuntime', () => ({
+  __esModule: true,
+  default: () => null,
+}))
+
 jest.mock('@/components/travel/details/TravelDetailsHero', () => ({
   __esModule: true,
   TravelHeroSection: (props: any) => mockTravelHeroSection(props),

@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react'
+import { Suspense } from 'react';
 import { View, ActivityIndicator } from 'react-native'
 import QuestsScreenImpl from '@/screens/tabs/QuestsScreenRoute'
 

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { Platform } from 'react-native'
-import { router } from 'expo-router'
+import { router, usePathname } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
 
 import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries'
 import { queryKeys } from '@/queryKeys'
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation'
+import { appendReturnToParam, normalizeInternalReturnPath } from '@/utils/navigationReturnPath'
 
 const ENABLE_TRAVEL_DETAILS_PREFETCH = false
 const ENABLE_HOVER_PREFETCH = false
@@ -28,24 +29,25 @@ export function useTravelListItemNavigation({
   onToggle,
 }: Props) {
   const queryClient = useQueryClient()
+  const pathname = usePathname()
   const anchorRef = useRef<any>(null)
   const hasPrefetchedRef = useRef(false)
   const hasHoverPrefetchedRef = useRef(false)
 
   const returnToPath = useMemo(() => {
     if (isMetravel) return '/metravel'
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return ''
-
-    const normalizedPathname = window.location.pathname || ''
+    const normalizedPathname =
+      normalizeInternalReturnPath(pathname) ??
+      (Platform.OS === 'web' && typeof window !== 'undefined'
+        ? normalizeInternalReturnPath(window.location.pathname)
+        : null)
     const navItem = HEADER_NAV_ITEMS.find((item) => !item.external && item.path === normalizedPathname)
     return navItem?.path || ''
-  }, [isMetravel])
+  }, [isMetravel, pathname])
 
   const navigationUrl = useMemo(() => {
     if (!travelUrl) return ''
-    if (!returnToPath) return travelUrl
-    const separator = travelUrl.includes('?') ? '&' : '?'
-    return `${travelUrl}${separator}returnTo=${encodeURIComponent(returnToPath)}`
+    return appendReturnToParam(travelUrl, returnToPath)
   }, [returnToPath, travelUrl])
 
   const prefetchTravelDetails = useCallback(() => {
@@ -154,6 +156,7 @@ export function useTravelListItemNavigation({
   return {
     anchorRef,
     navigationUrl,
+    returnToPath,
     handlePress,
     handlePointerEnter,
     isNavigable: Boolean(navigationUrl),

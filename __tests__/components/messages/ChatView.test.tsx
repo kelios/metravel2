@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import ChatView from '@/components/messages/ChatView';
 import type { Message } from '@/api/messages';

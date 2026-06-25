@@ -178,7 +178,12 @@ describe('MasonryGalleryGenerator', () => {
       expect(html).toContain('position: absolute');
     });
 
-    // Removed flaky test - caption behavior depends on implementation details
+    it('should not render caption blocks when captions are disabled', () => {
+      mockSettings.showCaptions = false;
+      const html = generator.generateHTML(mockPhotos, mockSettings);
+
+      expect(html).not.toContain('class="photo-caption"');
+    });
 
     it('should support top position', () => {
       mockSettings.captionPosition = 'top';

@@ -1,4 +1,3 @@
-import React from 'react'
 import { render } from '@testing-library/react'
 import { Platform } from 'react-native'
 import { useAriaHiddenFocusGuard } from '@/hooks/useAriaHiddenFocusGuard'

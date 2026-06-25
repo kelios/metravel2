@@ -8,7 +8,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import { Text } from '@/ui/paper'
@@ -29,6 +29,7 @@ import { useUserProfileCached } from '@/hooks/useUserProfileCached'
 import { downloadTravelRouteFile } from '@/utils/travelRouteDownload'
 import { useTravelRouteFiles } from '@/hooks/useTravelRouteFiles'
 import { useAuthStore } from '@/stores/authStore'
+import { appendReturnToParam, normalizeInternalReturnPath } from '@/utils/navigationReturnPath'
 
 import {
   SIDEBAR_WEATHER_RESERVE_HEIGHT,
@@ -74,6 +75,10 @@ function CompactSideBarTravel({
     width >= METRICS.breakpoints.tablet && width < METRICS.breakpoints.largeTablet
 
   const router = useRouter()
+  const searchParams = useLocalSearchParams<{
+    returnTo?: string | string[]
+    from?: string | string[]
+  }>()
   const { isDark } = useTheme()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -130,6 +135,10 @@ function CompactSideBarTravel({
   const isOwn =
     !!authorUserId && !!storedUserId && String(storedUserId) === String(authorUserId)
   const canEdit = isSuperuser || isOwn
+  const returnToPath = useMemo(
+    () => normalizeInternalReturnPath(searchParams.returnTo ?? searchParams.from),
+    [searchParams.returnTo, searchParams.from],
+  )
 
   const userName = (travel as any).userName || ''
   const whenLine = [(travel as any).monthName || '', (travel as any).year ?? '']
@@ -203,8 +212,8 @@ function CompactSideBarTravel({
   }, [authorUserId, goInternal])
 
   const handleEdit = useCallback(() => {
-    if (canEdit) goInternal(`/travel/${travel.id}/`)
-  }, [canEdit, goInternal, travel.id])
+    if (canEdit) goInternal(appendReturnToParam(`/travel/${travel.id}/`, returnToPath))
+  }, [canEdit, goInternal, returnToPath, travel.id])
 
   const [isRouteDownloading, setIsRouteDownloading] = useState(false)
   const handleDownloadRoute = useCallback(async () => {

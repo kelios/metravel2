@@ -1,4 +1,3 @@
-import React from 'react'
 import { router, useLocalSearchParams } from 'expo-router'
 
 import UserPointsScreenImpl from '@/screens/tabs/UserPointsScreen'

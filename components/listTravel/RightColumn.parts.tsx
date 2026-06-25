@@ -1,4 +1,4 @@
-import React, { memo, lazy } from 'react'
+import { memo, lazy } from 'react'
 import { ActivityIndicator, Text, View } from 'react-native'
 
 import { SkeletonLoader, TravelCardSkeleton } from '@/components/ui/SkeletonLoader'

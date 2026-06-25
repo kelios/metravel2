@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useMemo, useState } from 'react'
+import { Suspense, useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import Animated from 'react-native-reanimated'
 import Feather from '@expo/vector-icons/Feather'

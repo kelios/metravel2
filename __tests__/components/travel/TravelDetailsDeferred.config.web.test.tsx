@@ -1,140 +1,19 @@
-/**
- * @jest-environment jsdom
- */
+import { TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS } from '@/components/travel/details/hooks/useTravelDeferredSectionsModel'
 
-import React, { Suspense } from 'react'
-import renderer, { act } from 'react-test-renderer'
-import { Animated, Platform } from 'react-native'
-
-const mockUseProgressiveLoad = jest.fn(() => ({
-  shouldLoad: false,
-  setElementRef: jest.fn(),
-}))
-
-jest.mock('@/hooks/useProgressiveLoading', () => ({
-  useProgressiveLoad: (...args: any[]) => mockUseProgressiveLoad.apply(null, args),
-}))
-
-jest.mock('@/components/travel/AuthorCard', () => ({
-  __esModule: true,
-  default: () => null,
-}))
-
-jest.mock('@/components/travel/ShareButtons', () => ({
-  __esModule: true,
-  default: () => null,
-}))
-
-jest.mock('@/components/travel/CommentsSection', () => ({
-  __esModule: true,
-  CommentsSection: () => null,
-}))
-
-jest.mock('@/components/travel/TravelRatingSection', () => ({
-  __esModule: true,
-  default: () => null,
-}))
-
-jest.mock('@/components/travel/TravelDescription', () => ({
-  __esModule: true,
-  default: () => null,
-}))
-
-jest.mock('@/components/travel/TravelDetailSkeletons', () => ({
-  AuthorSectionSkeleton: () => null,
-  CommentsSkeleton: () => null,
-  FooterSectionSkeleton: () => null,
-  MapSectionSkeleton: () => null,
-  RatingSectionSkeleton: () => null,
-  SidebarSectionSkeleton: () => null,
-}))
-
-jest.mock('@/components/travel/details/sections/TravelDetailsMapSection', () => ({
-  __esModule: true,
-  TravelDetailsMapSection: () => null,
-}))
-
-jest.mock('@/components/travel/details/sections/TravelDetailsSidebarSection', () => ({
-  __esModule: true,
-  TravelDetailsSidebarSection: () => null,
-}))
-
-jest.mock('@/components/travel/details/sections/TravelDetailsFooterSection', () => ({
-  __esModule: true,
-  TravelDetailsFooterSection: () => null,
-}))
-
-jest.mock('@/hooks/useTdTrace', () => ({
-  useTdTrace: () => jest.fn(),
-}))
-
-describe('TravelDeferredSections map loading config', () => {
-  beforeEach(() => {
-    Platform.OS = 'web'
-    Platform.select = (obj: any) => obj.web || obj.default
-    mockUseProgressiveLoad.mockClear()
-  })
-
-  it('uses progressive loading with fallback delay for automatic content loading', async () => {
-    const { TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred')
-
-    const travel: any = {
-      id: 2,
-      name: 'Deferred map config travel',
-      description: '<p>Test description</p>',
-      gallery: [],
-      youtube_link: null,
-      recommendation: '',
-      plus: '',
-      minus: '',
-      rating: 0,
-      rating_count: 0,
-      user_rating: null,
-    }
-
-    const anchors: any = {
-      description: { current: null },
-      video: { current: null },
-      comments: { current: null },
-      map: { current: null },
-      gallery: { current: null },
-      recommendation: { current: null },
-      plus: { current: null },
-      minus: { current: null },
-      points: { current: null },
-      near: { current: null },
-      popular: { current: null },
-      excursions: { current: null },
-    }
-
-    await act(async () => {
-      renderer.create(
-        <Suspense fallback={null}>
-          <TravelDeferredSections
-            travel={travel}
-            isMobile={false}
-            forceOpenKey={null}
-            anchors={anchors}
-            scrollY={new Animated.Value(0)}
-            viewportHeight={900}
-            scrollToMapSection={() => {}}
-          />
-        </Suspense>,
-      )
-      await Promise.resolve()
-    })
-
-    expect(mockUseProgressiveLoad).toHaveBeenCalled()
-    // #562: the heavy map section loads by viewport visibility (IntersectionObserver);
-    // the fallback delay is only a long safe backstop so it is not force-mounted off-screen.
-    expect(mockUseProgressiveLoad).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
+describe('Travel deferred section load config', () => {
+  it('does not force heavy offscreen sections by fallback timer on web', () => {
+    for (const sectionKey of ['map', 'sidebar', 'comments', 'footer'] as const) {
+      expect(TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS[sectionKey]).toMatchObject({
+        fallbackDelay: null,
         priority: 'low',
         rootMargin: '200px',
         threshold: 0.1,
-        fallbackDelay: 8000,
-      }),
-    )
+      })
+    }
+  })
+
+  it('keeps short fallbacks only for lightweight near-fold sections', () => {
+    expect(TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.author.fallbackDelay).toBe(500)
+    expect(TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.rating.fallbackDelay).toBe(600)
   })
 })

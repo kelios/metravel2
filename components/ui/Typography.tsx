@@ -1,14 +1,4 @@
-/**
- * TYPO-03: Унифицированные типографические компоненты
- * RESP-04: Fluid typography — размеры адаптируются плавно между мобайлом и desktop
- *
- * Использование:
- *   <Heading level={1}>Заголовок страницы</Heading>
- *   <Body>Обычный текст параграфа</Body>
- *   <Caption>Вспомогательная подпись</Caption>
- *   <Label>Метка поля формы</Label>
- */
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Platform, Text, type TextProps, type TextStyle } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';

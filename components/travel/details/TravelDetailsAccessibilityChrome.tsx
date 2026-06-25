@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react'
+import { Suspense } from 'react';
 import { Platform } from 'react-native'
 
 import { withLazy } from '@/components/travel/details/TravelDetailsLazy'

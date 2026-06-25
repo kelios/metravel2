@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import Head from 'expo-router/head';
 import { usePathname } from 'expo-router';
 import useBreadcrumbModelDefault, {

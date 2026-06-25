@@ -1,5 +1,3 @@
-// Chip.test.tsx - Тесты для компонента Chip
-import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import Chip from '@/components/ui/Chip';
 

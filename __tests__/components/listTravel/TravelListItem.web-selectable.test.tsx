@@ -1,4 +1,3 @@
-import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Platform } from 'react-native';
@@ -14,6 +13,7 @@ jest.mock('expo-router', () => ({
   router: {
     push: jest.fn(),
   },
+  usePathname: () => '',
 }));
 
 const baseTravel: Travel = {

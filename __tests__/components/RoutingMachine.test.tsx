@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, waitFor } from '@testing-library/react-native';
 import RoutingMachine from '../../components/MapPage/RoutingMachine';
 import { clearResolvedRouteKeys } from '../../components/MapPage/useRouting';

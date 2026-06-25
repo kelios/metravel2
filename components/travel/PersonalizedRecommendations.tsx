@@ -1,5 +1,4 @@
-// ✅ МИГРАЦИЯ: Добавлена поддержка useThemedColors для динамических тем
-import React, { useMemo, memo, useCallback, useState, useEffect } from 'react';
+import { useMemo, memo, useCallback, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Platform, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useFavorites } from '@/context/FavoritesContext';

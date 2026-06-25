@@ -5,7 +5,6 @@ import {
   stopWebPointerEvent,
 } from '@/components/ui/CardActionPressable'
 import { fireEvent, render } from '@testing-library/react-native'
-import React from 'react'
 import { Text } from 'react-native'
 import { Platform } from 'react-native'
 

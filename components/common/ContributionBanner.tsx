@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from 'react'
+import { memo, useMemo } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'

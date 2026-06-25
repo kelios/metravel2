@@ -152,7 +152,7 @@ describe('Slider (web) blur background', () => {
     expect(tree.root.findByProps({ testID: 'slider-image-2' })).toBeTruthy()
   })
 
-  it('keeps all slides mounted on web to avoid blank gaps during fast swipes', async () => {
+  it('mounts only the active slide window on web', async () => {
     let tree: renderer.ReactTestRenderer
     await act(async () => {
       tree = renderer.create(
@@ -168,9 +168,22 @@ describe('Slider (web) blur background', () => {
     })
     await measureSliderLayout(tree!)
 
-    expect(tree.root.findByProps({ testID: 'slider-image-0' })).toBeTruthy()
-    expect(tree.root.findByProps({ testID: 'slider-image-3' })).toBeTruthy()
-    expect(tree.root.findByProps({ testID: 'slider-image-5' })).toBeTruthy()
+    const nextButton = tree.root.findByProps({ accessibilityLabel: 'Next slide' })
+
+    await act(async () => {
+      nextButton.props.onPress()
+    })
+    await act(async () => {
+      nextButton.props.onPress()
+    })
+    await act(async () => {
+      nextButton.props.onPress()
+    })
+
+    for (let index = 1; index <= 5; index += 1) {
+      expect(tree.root.findByProps({ testID: `slider-image-${index}` })).toBeTruthy()
+    }
+    expect(tree.root.findAllByProps({ testID: 'slider-image-0' })).toHaveLength(0)
   })
 
   it('keeps initial unmeasured slides inside the track instead of stretching each slide to full track width', async () => {

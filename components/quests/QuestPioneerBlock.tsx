@@ -1,10 +1,4 @@
-// components/quests/QuestPioneerBlock.tsx
-// Hero-блок первопроходца на финале квеста (#364). Рендерится только когда
-// текущий авторизованный пользователь — первый, кто прошёл этот квест.
-// Триггерит unlock-тост достижения через существующий механизм: инвалидирует
-// achievementsMe, чтобы BadgeUnlockToast подхватил recentlyEarned значок.
-
-import React, { memo, useEffect, useMemo, useRef } from 'react'
+import { memo, useEffect, useMemo, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { useQueryClient } from '@tanstack/react-query'

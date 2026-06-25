@@ -16,6 +16,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import { formatViewCount } from '@/components/travel/utils/travelHelpers'
 import { hasAnyTravelEngagementStats } from '@/utils/travelEngagementStats'
+import { appendReturnToParam } from '@/utils/navigationReturnPath'
 
 import { getResponsiveCardValues } from './enhancedTravelCardStyles'
 import { TRAVEL_CARD_IMAGE_HEIGHT } from './utils/listTravelConstants'
@@ -158,6 +159,7 @@ function TravelListItem({
   const {
     anchorRef,
     navigationUrl,
+    returnToPath,
     handlePress,
     handlePointerEnter,
     isNavigable,
@@ -242,9 +244,9 @@ function TravelListItem({
   const handleEdit = useCallback(
     (e?: any) => {
       stopEvent(e)
-      router.push(`/travel/${id}`)
+      router.push(appendReturnToParam(`/travel/${id}`, returnToPath) as any)
     },
-    [id],
+    [id, returnToPath],
   )
 
   const handleDelete = useCallback(

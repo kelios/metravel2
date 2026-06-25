@@ -1,7 +1,4 @@
-// components/quests/QuestReviewSection.tsx
-// Отзыв о пройденном квесте: оценка 1–5 + «что понравилось» / «что улучшить».
-
-import React, { memo, useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 
 import StarRating from '@/components/ui/StarRating'

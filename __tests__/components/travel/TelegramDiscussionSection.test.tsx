@@ -1,4 +1,3 @@
-import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 import TelegramDiscussionSection from '@/components/travel/TelegramDiscussionSection';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';

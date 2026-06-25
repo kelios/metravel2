@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import { memo } from 'react';
 import { View, Text } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { createTravelListItemStyles } from './travelListItemStyles';

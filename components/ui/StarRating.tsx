@@ -1,8 +1,4 @@
-// components/ui/StarRating.tsx
-// ✅ Компонент рейтинга звёздами с возможностью интерактивной оценки
-// 🎨 УЛУЧШЕНО: Добавлена анимация, лучший визуальный feedback, улучшенная доступность
-
-import React, { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform, Animated } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -58,7 +54,6 @@ function StarRating({
 }: Props) {
     const colors = useThemedColors();
     const [hoverRating, setHoverRating] = useState<number | null>(null);
-    const [pressedStar, setPressedStar] = useState<number | null>(null);
 
     // 🎨 Анимация для пульсации при взаимодействии
     const [scaleAnims] = useState(() => [0, 1, 2, 3, 4].map(() => new Animated.Value(1)));
@@ -85,7 +80,6 @@ function StarRating({
         if (!interactive || disabled || !onRate) return;
 
         // 🎨 Анимация нажатия
-        setPressedStar(starIndex);
         const anim = scaleAnims[starIndex - 1];
         Animated.sequence([
             Animated.timing(anim, {
@@ -98,7 +92,7 @@ function StarRating({
                 duration: 150,
                 useNativeDriver: shouldUseNativeDriver,
             }),
-        ]).start(() => setPressedStar(null));
+        ]).start();
 
         onRate(starIndex);
     }, [interactive, disabled, onRate, scaleAnims, shouldUseNativeDriver]);
@@ -143,8 +137,6 @@ function StarRating({
         const isUserRated = hasUserRating && normalizedUserRating === starValue;
         const isActive = filled || halfFilled;
         const isHovered = Platform.OS === 'web' && hoverRating === starValue;
-        const _isPulsing = pressedStar === starValue;
-
         const StarWrapper = interactive ? Pressable : View;
         const wrapperProps = interactive
             ? {

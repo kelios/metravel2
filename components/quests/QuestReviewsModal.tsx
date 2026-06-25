@@ -1,8 +1,4 @@
-// components/quests/QuestReviewsModal.tsx
-// Читалка чужих отзывов о квесте. Работает на web и native (RN Modal),
-// данные — useQuestReviews (React Query, с mock-fallback пока нет BE-эндпоинта).
-
-import React, { memo, useMemo } from 'react'
+import { memo, useMemo } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 

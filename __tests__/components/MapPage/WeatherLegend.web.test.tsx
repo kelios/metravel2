@@ -1,10 +1,3 @@
-/**
- * Unit-тесты для WeatherLegend.web.tsx — выбор шкалы по enabledOverlays.
- *
- * Компонент чисто презентационный: принимает enabledOverlays и рендерит
- * нужную шкалу (или null). Тестируем по accessibilityLabel и тексту заголовка.
- */
-import React from 'react'
 import { render } from '@testing-library/react-native'
 
 jest.mock('@/hooks/useTheme', () => ({

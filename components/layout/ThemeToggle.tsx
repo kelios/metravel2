@@ -1,9 +1,4 @@
-/**
- * ThemeToggle Component
- * Компонент для переключения между светлой, темной и автоматической темой
- */
-
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useTheme, useThemedColors } from '@/hooks/useTheme';

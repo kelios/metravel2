@@ -1,9 +1,4 @@
-// components/profile/VerifiedBadge.tsx
-// Trust & Safety (Sprint 16, FE-432): бейдж «Проверенный участник» и метка
-// «Организатор с опытом». Данные приходят публично на UserProfileDto
-// (is_verified / organizer_status, BE-verification #429). Пока BE не выставит флаги —
-// компонент ничего не рендерит (graceful degradation).
-import React, { memo, useMemo } from 'react'
+import { memo, useMemo } from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 

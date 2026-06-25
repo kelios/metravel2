@@ -64,11 +64,7 @@ export function useTravelDetailsHeadSync({
       if (el.getAttribute('href') !== href) el.setAttribute('href', href)
     }
 
-    let isApplying = false
-
     const applyAll = () => {
-      if (isApplying) return
-      isApplying = true
       enforceHtmlLang()
       ensureSingleTitleTag(readyTitle)
       patchMeta('meta[property="og:title"]', 'content', readyTitle)
@@ -85,34 +81,9 @@ export function useTravelDetailsHeadSync({
       if (canonicalUrl) {
         patchCanonical(canonicalUrl)
       }
-      isApplying = false
     }
 
     applyAll()
-    const raf = requestAnimationFrame(applyAll)
-    const backstop = setTimeout(applyAll, 400)
-
-    const titleEl = ensureSingleTitleTag(readyTitle)
-    let titleObs: MutationObserver | null = null
-    let pendingTitleSync = 0
-    if (titleEl) {
-      titleObs = new MutationObserver(() => {
-        if (pendingTitleSync || document.title === readyTitle) return
-        pendingTitleSync = requestAnimationFrame(() => {
-          pendingTitleSync = 0
-          if (document.title !== readyTitle) ensureSingleTitleTag(readyTitle)
-        })
-      })
-      titleObs.observe(titleEl, { childList: true, characterData: true, subtree: true })
-    }
-    const stopObserving = setTimeout(() => titleObs?.disconnect(), 5000)
-
-    return () => {
-      cancelAnimationFrame(raf)
-      clearTimeout(backstop)
-      clearTimeout(stopObserving)
-      if (pendingTitleSync) cancelAnimationFrame(pendingTitleSync)
-      titleObs?.disconnect()
-    }
+    return undefined
   }, [canonicalUrl, isFocused, readyDesc, readyImage, readyTitle, syncNavigationTitle])
 }

@@ -1,7 +1,4 @@
-// app/(tabs)/trips/plan/create.tsx
-// Экран создания запланированной поездки (Sprint 13 / блок D): форма со всеми
-// полями и согласием организатора; после создания — переход на страницу поездки.
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 

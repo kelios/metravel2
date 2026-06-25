@@ -1,7 +1,4 @@
-// components/ui/UploadProgressBar.tsx
-// AND-15: Animated upload progress bar for image uploads.
-
-import React, { memo, useEffect } from 'react';
+import { memo, useEffect } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';

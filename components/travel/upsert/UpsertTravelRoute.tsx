@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useIsFocused } from 'expo-router';
 
 import TravelFormErrorBoundary from '@/components/travel/TravelFormErrorBoundary';

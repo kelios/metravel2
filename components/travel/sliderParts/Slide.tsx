@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, TouchableOpacity, View } from 'react-native';
 import ImageCardMedia, { isIOSSafariUserAgent } from '@/components/ui/ImageCardMedia';
 import { optimizeImageUrl } from '@/utils/imageOptimization';

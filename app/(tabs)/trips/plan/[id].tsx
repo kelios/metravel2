@@ -1,8 +1,4 @@
-// app/(tabs)/trips/plan/[id].tsx
-// Страница запланированной поездки (Sprint 13 / блок D): шапка, конструктор/просмотр
-// маршрута со сводкой, экспорт, участники и RSVP, приглашения, совместное
-// редактирование (предложение точки + модерация), пост-отчёт и партнёрские офферы.
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import ReservedSpace from '@/components/ui/ReservedSpace';

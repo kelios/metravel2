@@ -1,4 +1,3 @@
-import React from 'react';
 import renderer from 'react-test-renderer';
 import SelectComponent from '@/components/forms/SelectComponent';
 import { Platform } from 'react-native';

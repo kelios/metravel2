@@ -1,4 +1,3 @@
-import React from 'react';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';

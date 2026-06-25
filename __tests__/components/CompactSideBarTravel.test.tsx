@@ -10,6 +10,7 @@ const mockAuthState = {
 
 jest.mock('expo-router', () => ({
   useRouter: jest.fn(),
+  useLocalSearchParams: jest.fn(() => ({})),
 }));
 
 jest.mock('@/stores/authStore', () => ({

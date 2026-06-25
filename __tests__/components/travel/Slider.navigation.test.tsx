@@ -272,7 +272,7 @@ describe('Slider navigation - Web', () => {
 
 
   describe('Web rendering stability', () => {
-    it('keeps all slides mounted on web to avoid blank gaps during fast swipes', async () => {
+    it('keeps only current-neighbour slides mounted on web', async () => {
       const images = createImages(10)
       let tree: renderer.ReactTestRenderer
 
@@ -292,7 +292,7 @@ describe('Slider navigation - Web', () => {
       expect(tree!.root.findByProps({ testID: 'slider-image-0' })).toBeTruthy()
       expect(tree!.root.findByProps({ testID: 'slider-image-1' })).toBeTruthy()
       expect(tree!.root.findByProps({ testID: 'slider-image-2' })).toBeTruthy()
-      expect(tree!.root.findByProps({ testID: 'slider-image-5' })).toBeTruthy()
+      expect(tree!.root.findAllByProps({ testID: 'slider-image-5' })).toHaveLength(0)
     })
 
     it('keeps previous slides rendered when navigating forward', async () => {
@@ -604,7 +604,7 @@ describe('Slider display correctness', () => {
     expect(nextStyle.opacity).toBe(1)
   })
 
-  it('renders correct number of slide containers', async () => {
+  it('renders only the current slide window containers', async () => {
     const images = createImages(7)
     let tree: renderer.ReactTestRenderer
 
@@ -621,9 +621,11 @@ describe('Slider display correctness', () => {
       )
     })
 
-    // All 7 slide containers should exist (even if not all images are rendered due to virtualization)
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i <= 2; i++) {
       expect(tree!.root.findByProps({ testID: `slider-slide-${i}` })).toBeTruthy()
+    }
+    for (let i = 3; i < 7; i++) {
+      expect(tree!.root.findAllByProps({ testID: `slider-slide-${i}` })).toHaveLength(0)
     }
   })
 

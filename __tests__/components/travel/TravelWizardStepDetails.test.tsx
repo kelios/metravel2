@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react'
+import { Suspense } from 'react';
 import { Text } from 'react-native'
 import { render, fireEvent, waitFor } from '@testing-library/react-native'
 

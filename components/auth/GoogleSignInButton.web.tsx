@@ -1,8 +1,4 @@
-// components/auth/GoogleSignInButton.web.tsx
-// AND-03: Web-only Google Sign-In using Google Identity Services (GSI) SDK.
-// Platform split: this file is used only on web builds.
-
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useTheme, useThemedColors } from '@/hooks/useTheme';

@@ -18,6 +18,15 @@ function readEnv() {
   return { email, password, apiBase, canSeed };
 }
 
+function requireSeedEnv(canSeed: boolean) {
+  if (!canSeed) {
+    throw new Error(
+      'F-09 draft recovery spec requires E2E_EMAIL, E2E_PASSWORD, E2E_API_URL, ' +
+        'and EXPO_PUBLIC_API_URL matching E2E_API_URL when EXPO_PUBLIC_API_URL is set.',
+    );
+  }
+}
+
 async function seedAuth(page: any, token: string, userId: string) {
   await page.addInitScript(
     (payload: { token: string; userId: string }) => {
@@ -57,20 +66,11 @@ async function lsKeys(page: any): Promise<string[]> {
 test.describe('F-09 wizard draft recovery — false prompt after autosave id-sync', () => {
   test('reload of /travel/new?id=<id> shows server data, no recovery dialog, no orphan draft', async ({ page }) => {
     const { email, password, canSeed } = readEnv();
-    if (!canSeed) {
-      test.info().annotations.push({ type: 'note', description: 'E2E creds/API not configured; skipping' });
-      test.skip(true, 'E2E creds/API base not configured');
-      return;
-    }
+    requireSeedEnv(canSeed);
 
     const apiCtx = await apiLogin(email, password).catch((e: unknown) => {
-      test.info().annotations.push({ type: 'note', description: `apiLogin failed: ${String((e as any)?.message || e)}` });
-      return null;
+      throw new Error(`apiLogin failed: ${String((e as any)?.message || e)}`);
     });
-    if (!apiCtx) {
-      test.skip(true, 'apiLogin failed');
-      return;
-    }
 
     const token = String(apiCtx.token || '');
     const userId = String(apiCtx.userId || '1');
@@ -134,12 +134,9 @@ test.describe('F-09 wizard draft recovery — false prompt after autosave id-syn
       });
 
       if (!urlId) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'UI autosave did not assign ?id within timeout; cannot browser-verify F-09 via UI on this build/env',
-        });
-        test.skip(true, 'autosave id-sync did not occur in UI');
-        return;
+        throw new Error(
+          'UI autosave did not assign ?id within timeout; cannot browser-verify F-09 id-sync on this build/env',
+        );
       }
       createdId = urlId;
 
@@ -193,15 +190,10 @@ test.describe('F-09 wizard draft recovery — false prompt after autosave id-syn
 
   test('legitimate recovery: an unsaved local draft under _<id> DOES surface the dialog on reload', async ({ page }) => {
     const { email, password, canSeed } = readEnv();
-    if (!canSeed) {
-      test.skip(true, 'E2E creds/API base not configured');
-      return;
-    }
-    const apiCtx = await apiLogin(email, password).catch(() => null);
-    if (!apiCtx) {
-      test.skip(true, 'apiLogin failed');
-      return;
-    }
+    requireSeedEnv(canSeed);
+    const apiCtx = await apiLogin(email, password).catch((e: unknown) => {
+      throw new Error(`apiLogin failed: ${String((e as any)?.message || e)}`);
+    });
 
     const token = String(apiCtx.token || '');
     const userId = String(apiCtx.userId || '1');
@@ -222,8 +214,7 @@ test.describe('F-09 wizard draft recovery — false prompt after autosave id-syn
     }).catch(() => null);
 
     if (!created?.id) {
-      test.skip(true, 'could not seed travel via API');
-      return;
+      throw new Error('could not seed travel via API');
     }
     const travelId = String(created.id);
     const draftKey = `${DRAFT_PREFIX}_${travelId}`;

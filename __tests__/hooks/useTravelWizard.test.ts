@@ -4,17 +4,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useTravelWizard } from '@/hooks/useTravelWizard';
 
+const mockRouter = {
+  push: jest.fn(),
+  replace: jest.fn(),
+  back: jest.fn(),
+  canGoBack: jest.fn(() => false),
+};
+let mockLocalSearchParams: Record<string, string | string[] | undefined> = {};
+
 jest.mock('expo-router', () => {
   return {
     __esModule: true,
-    useRouter: () => ({
-      push: jest.fn(),
-      replace: jest.fn(),
-      back: jest.fn(),
-    }),
+    useRouter: () => mockRouter,
     useNavigation: () => ({
       addListener: jest.fn(() => jest.fn()),
     }),
+    useLocalSearchParams: () => mockLocalSearchParams,
   };
 });
 
@@ -50,6 +55,8 @@ describe('useTravelWizard step persistence', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockLocalSearchParams = {};
+    mockRouter.canGoBack.mockReturnValue(false);
     originalPlatformOs = Platform.OS;
     originalEnvFlag = process.env.JEST_ENABLE_WIZARD_PERSISTENCE;
     process.env.JEST_ENABLE_WIZARD_PERSISTENCE = '1';
@@ -219,6 +226,8 @@ describe('useTravelWizard beforeunload guard (web)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockLocalSearchParams = {};
+    mockRouter.canGoBack.mockReturnValue(false);
     originalPlatformOs = Platform.OS;
     setPlatformOs('web');
   });
@@ -261,5 +270,73 @@ describe('useTravelWizard beforeunload guard (web)', () => {
       expect.any(Function),
       false
     );
+  });
+});
+
+describe('useTravelWizard origin-aware exit', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockLocalSearchParams = {};
+    mockRouter.canGoBack.mockReturnValue(false);
+  });
+
+  it('replaces to returnTo when leaving the first wizard step', () => {
+    mockLocalSearchParams = { returnTo: '/search' };
+
+    const { result } = renderHook(() =>
+      useTravelWizard({
+        totalSteps: 6,
+        hasUnsavedChanges: false,
+        canSave: true,
+        onSave: jest.fn(async () => ({ publish: false, moderation: false })),
+      }),
+    );
+
+    act(() => {
+      result.current.handleExit();
+    });
+
+    expect(mockRouter.replace).toHaveBeenCalledWith('/search');
+    expect(mockRouter.back).not.toHaveBeenCalled();
+  });
+
+  it('uses legacy from param as the return target', () => {
+    mockLocalSearchParams = { from: ['/map'] };
+
+    const { result } = renderHook(() =>
+      useTravelWizard({
+        totalSteps: 6,
+        hasUnsavedChanges: false,
+        canSave: true,
+        onSave: jest.fn(async () => ({ publish: false, moderation: false })),
+      }),
+    );
+
+    act(() => {
+      result.current.handleExit();
+    });
+
+    expect(mockRouter.replace).toHaveBeenCalledWith('/map');
+  });
+
+  it('falls back to router history when origin is invalid', () => {
+    mockLocalSearchParams = { returnTo: 'https://example.com/search' };
+    mockRouter.canGoBack.mockReturnValue(true);
+
+    const { result } = renderHook(() =>
+      useTravelWizard({
+        totalSteps: 6,
+        hasUnsavedChanges: false,
+        canSave: true,
+        onSave: jest.fn(async () => ({ publish: false, moderation: false })),
+      }),
+    );
+
+    act(() => {
+      result.current.handleExit();
+    });
+
+    expect(mockRouter.back).toHaveBeenCalled();
+    expect(mockRouter.replace).not.toHaveBeenCalled();
   });
 });

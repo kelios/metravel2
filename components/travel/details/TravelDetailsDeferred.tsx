@@ -1,5 +1,5 @@
 import React, { Suspense, memo, useCallback } from 'react'
-import { Animated, Platform, View } from 'react-native'
+import { Platform, View } from 'react-native'
 import type { Travel } from '@/types/types'
 import {
   AuthorSectionSkeleton,
@@ -59,16 +59,12 @@ export const TravelDeferredSections: React.FC<{
   isMobile: boolean
   forceOpenKey: string | null
   anchors: AnchorsMap
-  scrollY: Animated.Value
-  viewportHeight: number
   scrollToMapSection: () => void
 }> = memo(({
   travel,
   isMobile,
   forceOpenKey,
   anchors,
-  scrollY,
-  viewportHeight,
   scrollToMapSection,
 }) => {
   const {
@@ -165,8 +161,6 @@ export const TravelDeferredSections: React.FC<{
             <TravelDetailsSidebarSectionLazy
               travel={travel}
               anchors={anchors}
-              scrollY={scrollY}
-              viewportHeight={viewportHeight}
               canRenderHeavy={canRenderHeavy}
               forceOpenKey={forceOpenKey}
             />

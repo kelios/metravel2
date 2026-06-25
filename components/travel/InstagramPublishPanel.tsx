@@ -1,4 +1,3 @@
-import React from 'react'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import Feather from '@expo/vector-icons/Feather'
 import {

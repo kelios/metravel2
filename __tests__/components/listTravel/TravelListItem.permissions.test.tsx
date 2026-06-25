@@ -12,6 +12,13 @@ jest.mock('@/components/travel/FavoriteButton', () => ({
   default: () => null,
 }));
 
+jest.mock('expo-router', () => ({
+  router: { push: jest.fn(), replace: jest.fn() },
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
+  usePathname: () => '',
+  useLocalSearchParams: () => ({}),
+}));
+
 const baseTravel: Travel = {
   id: 1,
   name: 'Test travel',
