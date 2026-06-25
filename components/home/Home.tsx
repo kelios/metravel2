@@ -18,16 +18,15 @@ import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
 import {
   HomeBottomCtaSection,
   HomeFAQSection,
-  HomeHowItWorks,
   HomeInspirationSections,
+  HomeNewRoutesSection,
+  HomePopularRoutesSection,
   HomeQuestsPromoSection,
-  HomeStartHereSection,
   HomeWeekendRoutesSection,
 } from './homeDeferredSections'
 
 const IS_WEB = Platform.OS === 'web'
 
-const HOW_IT_WORKS_PLACEHOLDER_STYLE = { minHeight: 420 } as const
 const FAQ_PLACEHOLDER_STYLE = { minHeight: 360 } as const
 
 const WEB_SCROLL_STYLE = IS_WEB
@@ -123,53 +122,6 @@ const skeletonShellStyle = (padH: number, padV: number) =>
     alignSelf: 'center' as const,
     width: '100%' as const,
   })
-
-const HowItWorksFallback = memo(function HowItWorksFallback({
-  colors,
-  isMobile,
-  padH,
-  padV,
-}: FallbackProps) {
-  return (
-    <View style={skeletonShellStyle(padH, padV)}>
-      <SkeletonLoader
-        width={isMobile ? 180 : 260}
-        height={isMobile ? 28 : 36}
-        borderRadius={8}
-        style={{ alignSelf: 'center' }}
-      />
-      <View
-        style={{
-          flexDirection: isMobile ? 'column' : 'row',
-          gap: isMobile ? 16 : 24,
-          marginTop: isMobile ? 24 : 40,
-        }}
-      >
-        {[0, 1, 2].map((i) => (
-          <View
-            key={i}
-            style={{
-              flex: isMobile ? undefined : 1,
-              backgroundColor: colors.surface,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: colors.border,
-              padding: isMobile ? 20 : 28,
-              gap: 16,
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-              <SkeletonLoader width={56} height={56} borderRadius={8} />
-              <SkeletonLoader width={36} height={36} borderRadius={18} />
-            </View>
-            <SkeletonLoader width="70%" height={20} borderRadius={6} />
-            <SkeletonLoader width="90%" height={14} borderRadius={4} />
-          </View>
-        ))}
-      </View>
-    </View>
-  )
-})
 
 const FaqFallback = memo(function FaqFallback({
   colors,
@@ -305,30 +257,24 @@ function Home() {
         </View>
       )}
 
-      <DeferredSection marginTop={gap.hero} fallback={<SectionSkeleton />}>
-        <HomeStartHereSection />
+      <DeferredSection marginTop={gap.hero} container={{}} fallback={<SectionSkeleton />}>
+        <HomeWeekendRoutesSection />
       </DeferredSection>
 
       <DeferredSection marginTop={gap.weekends} container={{}} fallback={<SectionSkeleton />}>
-        <HomeWeekendRoutesSection />
+        <HomePopularRoutesSection />
       </DeferredSection>
 
       <DeferredSection marginTop={gap.sections} fallback={null}>
         <HomeQuestsPromoSection />
       </DeferredSection>
 
-      <DeferredSection marginTop={gap.sections} fallback={<SectionSkeleton />}>
-        <HomeInspirationSections />
+      <DeferredSection marginTop={gap.weekends} container={{}} fallback={<SectionSkeleton />}>
+        <HomeNewRoutesSection />
       </DeferredSection>
 
-      <DeferredSection
-        marginTop={gap.howItWorks}
-        minHeight={HOW_IT_WORKS_PLACEHOLDER_STYLE.minHeight}
-        fallback={
-          <HowItWorksFallback colors={colors} isMobile={isMobile} padH={padH} padV={padV} />
-        }
-      >
-        <HomeHowItWorks />
+      <DeferredSection marginTop={gap.sections} fallback={<SectionSkeleton />}>
+        <HomeInspirationSections />
       </DeferredSection>
 
       <DeferredSection

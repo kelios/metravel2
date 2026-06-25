@@ -1,6 +1,4 @@
 
-import ContributionBanner from '@/components/common/ContributionBanner'
-
 import HomeFinalCTA from './HomeFinalCTA'
 
 type HomeBottomCtaSectionProps = {
@@ -8,11 +6,6 @@ type HomeBottomCtaSectionProps = {
 }
 
 export default function HomeBottomCtaSection({ travelsCount }: HomeBottomCtaSectionProps) {
-  return (
-    <>
-      <ContributionBanner variant="home" />
-      <HomeFinalCTA travelsCount={travelsCount} />
-    </>
-  )
+  return <HomeFinalCTA travelsCount={travelsCount} />
 }
 

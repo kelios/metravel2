@@ -1,8 +1,9 @@
-import { act, render, waitFor } from '@testing-library/react-native'
+import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react-native'
 import { View } from 'react-native'
 
 import { MapMobileLayout } from '@/components/MapPage/MapMobileLayout'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
+import { useRouteStore } from '@/stores/routeStore'
 
 const mockTravelListPanel = jest.fn((props: any) => {
   const React = require('react')
@@ -240,6 +241,130 @@ describe('MapMobileLayout', () => {
     })
 
     expect(screen.queryByTestId('map-search-this-area')).toBeNull()
+  })
+
+  describe('route building toolbar (#597)', () => {
+    const buildFiltersProps = (overrides: any = {}) => {
+      const setMode = jest.fn()
+      const props = {
+        mode: 'radius',
+        transportMode: 'car',
+        setMode,
+        filterValue: { radius: '50' },
+        onFilterChange: jest.fn(),
+        ...overrides,
+      }
+      return { filtersPanelProps: { props }, setMode }
+    }
+
+    beforeEach(() => {
+      // The toolbar reads/writes route state straight from the store, so reset
+      // it to radius before each scenario. Unmount any leaked tree first so a
+      // pending store-driven re-render from a prior test can't crash render().
+      cleanup()
+      useRouteStore.getState().clearRouteAndSetMode('radius')
+      useRouteStore.getState().setTransportMode('car')
+    })
+
+    afterEach(() => {
+      cleanup()
+      useRouteStore.getState().clearRouteAndSetMode('radius')
+    })
+
+    it('enters route mode and reveals contextual transport/clear icons + hint', () => {
+      const { filtersPanelProps } = buildFiltersProps()
+      const screen = render(
+        <MapMobileLayout
+          mapComponent={<View testID="mock-map" />}
+          travelsData={[]}
+          coordinates={{ latitude: 53.9, longitude: 27.56 }}
+          transportMode="car"
+          buildRouteTo={jest.fn()}
+          onCenterOnUser={jest.fn()}
+          onOpenFilters={jest.fn()}
+          filtersPanelProps={filtersPanelProps}
+        />,
+      )
+
+      // Radius mode: no contextual route icons yet.
+      expect(screen.queryByTestId('map-mobile-transport-button')).toBeNull()
+      expect(screen.queryByTestId('map-mobile-route-clear-button')).toBeNull()
+
+      fireEvent.press(screen.getByTestId('map-mobile-route-button'))
+      // Store flipped to 'route' → contextual icons + hint now render.
+      expect(useRouteStore.getState().mode).toBe('route')
+      expect(screen.getByTestId('map-mobile-transport-button')).toBeTruthy()
+      expect(screen.getByTestId('map-mobile-route-clear-button')).toBeTruthy()
+      expect(screen.getByTestId('map-mobile-route-hint')).toBeTruthy()
+    })
+
+    it('shows transport selector + clear + hint when already in route mode', () => {
+      useRouteStore.getState().setMode('route')
+      const { filtersPanelProps } = buildFiltersProps({ mode: 'route' })
+      const screen = render(
+        <MapMobileLayout
+          mapComponent={<View testID="mock-map" />}
+          travelsData={[]}
+          coordinates={{ latitude: 53.9, longitude: 27.56 }}
+          transportMode="car"
+          buildRouteTo={jest.fn()}
+          onCenterOnUser={jest.fn()}
+          onOpenFilters={jest.fn()}
+          filtersPanelProps={filtersPanelProps}
+        />,
+      )
+
+      expect(screen.getByTestId('map-mobile-transport-button')).toBeTruthy()
+      expect(screen.getByTestId('map-mobile-route-clear-button')).toBeTruthy()
+      expect(screen.getByTestId('map-mobile-route-hint')).toBeTruthy()
+      // Radius button hidden in route mode to keep the row short.
+      expect(screen.queryByTestId('map-mobile-radius-button')).toBeNull()
+    })
+
+    it('opens the transport popover and applies a profile via the store', () => {
+      useRouteStore.getState().setMode('route')
+      const { filtersPanelProps } = buildFiltersProps({ mode: 'route' })
+      const screen = render(
+        <MapMobileLayout
+          mapComponent={<View testID="mock-map" />}
+          travelsData={[]}
+          coordinates={{ latitude: 53.9, longitude: 27.56 }}
+          transportMode="car"
+          buildRouteTo={jest.fn()}
+          onCenterOnUser={jest.fn()}
+          onOpenFilters={jest.fn()}
+          filtersPanelProps={filtersPanelProps}
+        />,
+      )
+
+      fireEvent.press(screen.getByTestId('map-mobile-transport-button'))
+      fireEvent.press(screen.getByTestId('map-mobile-transport-option-bike'))
+      expect(useRouteStore.getState().transportMode).toBe('bike')
+    })
+
+    it('clears the route and returns to radius mode (contextual icons hidden)', () => {
+      useRouteStore.getState().setMode('route')
+      const { filtersPanelProps } = buildFiltersProps({ mode: 'route' })
+      const screen = render(
+        <MapMobileLayout
+          mapComponent={<View testID="mock-map" />}
+          travelsData={[]}
+          coordinates={{ latitude: 53.9, longitude: 27.56 }}
+          transportMode="car"
+          buildRouteTo={jest.fn()}
+          onCenterOnUser={jest.fn()}
+          onOpenFilters={jest.fn()}
+          filtersPanelProps={filtersPanelProps}
+        />,
+      )
+
+      fireEvent.press(screen.getByTestId('map-mobile-route-clear-button'))
+      expect(useRouteStore.getState().mode).toBe('radius')
+      // Back in radius: contextual icons gone, radius button restored.
+      expect(screen.queryByTestId('map-mobile-transport-button')).toBeNull()
+      expect(screen.queryByTestId('map-mobile-route-clear-button')).toBeNull()
+      expect(screen.getByTestId('map-mobile-radius-button')).toBeTruthy()
+    })
   })
 
   it('keeps the places list static but makes filters sheet content scrollable', async () => {

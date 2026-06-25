@@ -1,10 +1,9 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useRouter } from 'expo-router'
 
 import { ResponsiveContainer } from '@/components/layout'
-import NavigationIcon from '@/components/layout/NavigationIcon'
 import Button from '@/components/ui/Button'
 import type { NavigationIconName } from '@/constants/navigationIcons'
 import { useResponsive } from '@/hooks/useResponsive'
@@ -12,7 +11,6 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { sendAnalyticsEvent } from '@/utils/analytics'
 import { createSectionsStyles } from './homeInspirationStyles'
 
-const IS_WEB = Platform.OS === 'web'
 const NAV_FEEDBACK_MS = 700
 // Extend the touch area of the quick-filter chips so the effective hit target
 // clears 44px on phones without inflating the visual chip height.
@@ -100,70 +98,52 @@ const FILTER_GROUPS: FilterGroup[] = [
 
 type Styles = ReturnType<typeof createSectionsStyles>
 
-function FilterGroupCard({
-  group,
+// Flatten the curated groups into a single compact quick-filter strip: the home
+// page already surfaces real content feeds, so the filter block is reduced to one
+// row of shortcuts instead of four heavy cards.
+const QUICK_FILTER_CHIPS: FilterChip[] = FILTER_GROUPS.flatMap((group) => group.chips)
+
+function QuickFilterChips({
   selectedChip,
   pendingChip,
   onChipPress,
   styles,
   isMobile,
 }: {
-  group: FilterGroup
   selectedChip: string | null
   pendingChip: string | null
   onChipPress: (label: string, filters?: QuickFilterParams, route?: string) => void
   styles: Styles
   isMobile: boolean
 }) {
-  const [hovered, setHovered] = useState(false)
-
   return (
-    <View
-      style={[styles.filterGroupCard, hovered && styles.filterGroupCardHover]}
-      {...(IS_WEB
-        ? ({
-            onMouseEnter: () => setHovered(true),
-            onMouseLeave: () => setHovered(false),
-          } as any)
-        : {})}
-    >
-      <View style={styles.filterGroupCardHeader}>
-        <View style={styles.filterGroupIconWrap}>
-          <NavigationIcon name={group.icon} size={18} color={styles.filterGroupIconColor.color} />
-        </View>
-        <View style={styles.filterGroupTitleBlock}>
-          <Text style={styles.filterGroupTitleText}>{group.title}</Text>
-          <Text style={styles.filterGroupDescriptionText}>{group.description}</Text>
-        </View>
-      </View>
-      <View style={[styles.chipsWrap, isMobile && styles.chipsWrapMobile]}>
-        {group.chips.map((chip) => {
-          const isSelected = selectedChip === chip.label
-          const isPending = pendingChip === chip.label
-          return (
-            <Pressable
-              key={chip.label}
-              onPress={() => onChipPress(chip.label, chip.filters, chip.route)}
-              hitSlop={CHIP_HIT_SLOP}
-              disabled={isPending}
-              style={({ pressed, hovered: chipHovered }) => [
-                styles.chip,
-                isMobile && styles.chipMobile,
-                !isSelected && !isPending && (pressed || chipHovered) && styles.chipHover,
-                isSelected && styles.chipSelected,
-                isPending && styles.chipSelected,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={`Подбор ${chip.label}`}
-              accessibilityState={{ selected: isSelected, busy: isPending, disabled: isPending }}
-            >
-              <Text style={[styles.chipText, (isSelected || isPending) && styles.chipTextSelected]}>
-                {isPending ? 'Открываем...' : chip.label}
-              </Text>
-            </Pressable>
-          )
-        })}
-      </View>
+    <View style={[styles.chipsWrap, isMobile && styles.chipsWrapMobile]}>
+      {QUICK_FILTER_CHIPS.map((chip) => {
+        const isSelected = selectedChip === chip.label
+        const isPending = pendingChip === chip.label
+        return (
+          <Pressable
+            key={chip.label}
+            onPress={() => onChipPress(chip.label, chip.filters, chip.route)}
+            hitSlop={CHIP_HIT_SLOP}
+            disabled={isPending}
+            style={({ pressed, hovered: chipHovered }) => [
+              styles.chip,
+              isMobile && styles.chipMobile,
+              !isSelected && !isPending && (pressed || chipHovered) && styles.chipHover,
+              isSelected && styles.chipSelected,
+              isPending && styles.chipSelected,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`Подбор ${chip.label}`}
+            accessibilityState={{ selected: isSelected, busy: isPending, disabled: isPending }}
+          >
+            <Text style={[styles.chipText, (isSelected || isPending) && styles.chipTextSelected]}>
+              {isPending ? 'Открываем...' : chip.label}
+            </Text>
+          </Pressable>
+        )
+      })}
     </View>
   )
 }
@@ -227,7 +207,7 @@ function HomeInspirationSections() {
                   Найдите маршрут под свой день
                 </Text>
                 <Text style={styles.quickFiltersSubtitle}>
-                  Выберите готовый сценарий — Metravel откроет подходящие поездки, квесты или карту рядом.
+                  Выберите сценарий — откроем поездки, квесты или карту рядом.
                 </Text>
               </View>
               <Button
@@ -244,19 +224,13 @@ function HomeInspirationSections() {
               />
             </View>
 
-            <View style={styles.quickFiltersGrid}>
-              {FILTER_GROUPS.map((group) => (
-                <FilterGroupCard
-                  key={group.title}
-                  group={group}
-                  selectedChip={selectedChip}
-                  pendingChip={pendingChip}
-                  onChipPress={handleFilterPress}
-                  styles={styles}
-                  isMobile={isMobile}
-                />
-              ))}
-            </View>
+            <QuickFilterChips
+              selectedChip={selectedChip}
+              pendingChip={pendingChip}
+              onChipPress={handleFilterPress}
+              styles={styles}
+              isMobile={isMobile}
+            />
           </View>
         </View>
       </ResponsiveContainer>

@@ -8,6 +8,7 @@ import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaI
 import { LAYOUT } from '@/constants/layout'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
+import { useRouteStore } from '@/stores/routeStore'
 import { useMapMobileDerivations } from '@/hooks/map/useMapMobileDerivations'
 import { FiltersSkeleton } from '@/components/ui/SkeletonLoader'
 import MapBottomSheet, { type MapBottomSheetRef } from './MapBottomSheet'
@@ -16,6 +17,7 @@ import { MapMobileSheetBody } from './MapMobile/MapMobileSheetBody'
 import { MapMobileTopOverlay } from './MapMobile/MapMobileTopOverlay'
 import MapPlaceBottomCard from './MapPlaceBottomCard'
 import { getPlacesLabel, PLACE_COUNT_BADGE_CAP } from './TravelListPanel/helpers'
+import type { TransportMode } from './transportModes'
 
 type SheetState = 'collapsed' | 'quarter' | 'half' | 'seventy' | 'full'
 // Что показываем в шторке, когда она открыта (по запросу пользователя).
@@ -98,8 +100,10 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   // Контент шторки = list (по умолчанию) | filters (поиск/радиус/категории) | route.
   const [sheetContent, setSheetContent] = useState<SheetContentKind>('list')
-  // Какой компактный поповер верхнего тулбара открыт (радиус/слои) — или ни один.
-  const [activePopover, setActivePopover] = useState<'radius' | 'layers' | null>(null)
+  // Какой компактный поповер верхнего тулбара открыт (радиус/слои/транспорт) — или ни один.
+  const [activePopover, setActivePopover] = useState<
+    'radius' | 'layers' | 'transport' | null
+  >(null)
   const sheetStateRef = useRef<SheetState>('collapsed')
   const [sheetState, setSheetState] = useState<SheetState>('collapsed')
 
@@ -121,7 +125,13 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   const filtersContextProps =
     filtersPanelProps?.props ?? filtersPanelProps?.contextValue
-  const filtersMode: FiltersMode | undefined = filtersContextProps?.mode
+  // #597 — toolbar mode/transport read straight from the store so the floating
+  // controls react to clearRouteAndSetMode/setMode without waiting on the
+  // memoized filters slice to re-flow down through props.
+  const storeMode = useRouteStore((s) => s.mode)
+  const storeTransportMode = useRouteStore((s) => s.transportMode)
+  const filtersMode: FiltersMode | undefined =
+    (filtersContextProps?.mode as FiltersMode | undefined) ?? storeMode
   const setFiltersMode: ((m: FiltersMode) => void) | undefined =
     filtersContextProps?.setMode
 
@@ -323,6 +333,45 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const onResetOverlays = filtersContextProps?.onResetOverlays as (() => void) | undefined
   const mapUiApi = filtersContextProps?.mapUiApi ?? null
 
+  // Route building (#597) — actions read straight from routeStore (same store the
+  // desktop filters sheet drives): setMode/setTransportMode flip mode/profile,
+  // clearRouteAndSetMode atomically clears points + returns to radius.
+  const routeMode = storeMode
+  const routeTransportMode = storeTransportMode as TransportMode
+  const storeSetMode = useRouteStore((s) => s.setMode)
+  const storeSetTransportMode = useRouteStore((s) => s.setTransportMode)
+  const clearRouteAndSetMode = useRouteStore((s) => s.clearRouteAndSetMode)
+  const routePointCount = useRouteStore((s) => s.points.length)
+
+  const enterRouteMode = useCallback(() => {
+    clearSelectedPlace?.()
+    setActivePopover(null)
+    storeSetMode('route')
+    setFiltersMode?.('route')
+  }, [clearSelectedPlace, storeSetMode, setFiltersMode])
+
+  const toggleTransportPopover = useCallback(() => {
+    setActivePopover((prev) => (prev === 'transport' ? null : 'transport'))
+  }, [])
+
+  const handleTransportSelect = useCallback(
+    (m: TransportMode) => {
+      storeSetTransportMode(m)
+    },
+    [storeSetTransportMode],
+  )
+
+  const handleClearRoute = useCallback(() => {
+    setActivePopover(null)
+    clearRouteAndSetMode('radius')
+    setFiltersMode?.('radius')
+    // Close the route sheet too: while its body (RouteBuilder/route provider)
+    // stays mounted it re-asserts mode='route', so leaving it open would flip the
+    // toolbar straight back into route mode after the clear.
+    setSheetContent('list')
+    bottomSheetRef.current?.snapToCollapsed()
+  }, [clearRouteAndSetMode, setFiltersMode])
+
   // #207 — when a marker is selected, collapse the on-demand sheet so the bottom
   // card is not covered. Opening any sheet (list/filters/route) clears the card.
   const hasSelectedPlace = !!selectedPlace
@@ -375,7 +424,10 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     <View style={styles.sheetRoot}>
       <View style={styles.sheetSheetHeader}>
         {showListHeaderSummary ? (
-          <View style={styles.sheetListHeaderContent}>
+          <View
+            style={styles.sheetListHeaderContent}
+            testID="travel-list-mobile-summary"
+          >
             <RNText style={styles.sheetListTitle} numberOfLines={1}>
               Места рядом
             </RNText>
@@ -496,6 +548,13 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             enabledOverlays={quickEnabledOverlays}
             onOverlayToggle={onOverlayToggle}
             onResetOverlays={onResetOverlays}
+            mode={routeMode}
+            transportMode={routeTransportMode}
+            onEnterRouteMode={enterRouteMode}
+            onToggleTransport={toggleTransportPopover}
+            onTransportSelect={handleTransportSelect}
+            onClearRoute={handleClearRoute}
+            routePointCount={routePointCount}
           />
         )}
 

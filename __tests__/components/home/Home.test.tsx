@@ -81,9 +81,9 @@ describe('Home Component', () => {
       expect(getByTestId('home-hero')).toBeTruthy();
     });
 
-    it('should render HomeHowItWorks component', () => {
-      const { getByTestId } = renderHome();
-      expect(getByTestId('home-how-it-works')).toBeTruthy();
+    it('should not render the How It Works block on home (moved out of main flow)', () => {
+      const { queryByTestId } = renderHome();
+      expect(queryByTestId('home-how-it-works')).toBeNull();
     });
 
     it('should render HomeFAQSection', () => {

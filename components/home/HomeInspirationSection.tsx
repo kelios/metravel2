@@ -39,6 +39,10 @@ const EMPTY_STATE_TEXT: Record<string, { title: string; subtitle: string }> = {
     title: 'Ещё мало данных по популярности',
     subtitle: 'Откройте каталог и выберите маршрут по фильтрам.',
   },
+  'home-new-travels': {
+    title: 'Свежие маршруты в пути',
+    subtitle: 'Загляните в каталог — там уже есть готовые идеи.',
+  },
   'home-random-travels': {
     title: 'Случайная идея пока не загрузилась',
     subtitle: 'Попробуйте каталог или вернитесь к подборке чуть позже.',
@@ -49,6 +53,7 @@ const SECTION_BADGES: Record<string, string> = {
   'home-travels-of-month': 'Подборка выходного дня',
   'home-random-travels': 'Случайный выбор',
   'home-popular-travels': 'Популярное',
+  'home-new-travels': 'Новинки',
 }
 
 function extractItems(data: any): any[] {

@@ -12,26 +12,12 @@ import { RouteValidator } from '@/utils/routeValidator'
 import type { ThemedColors } from '@/hooks/useTheme'
 import type { LatLng } from '@/types/coordinates'
 import type { RoutePoint } from '@/types/route'
-
-type TransportMode = 'car' | 'bike' | 'foot'
-
-const TRANSPORT_SPEED_KMH: Record<TransportMode, number> = {
-  car: 60,
-  bike: 20,
-  foot: 5,
-}
-
-const TRANSPORT_MODES = [
-  { key: 'car' as const, icon: 'directions-car', label: 'Авто', iconSource: 'material' as const },
-  { key: 'foot' as const, icon: 'directions-walk', label: 'Пешком', iconSource: 'material' as const },
-  { key: 'bike' as const, icon: 'directions-bike', label: 'Велосипед', iconSource: 'material' as const },
-]
-
-const TRANSPORT_LABEL: Record<TransportMode, string> = {
-  car: 'Авто',
-  foot: 'Пешком',
-  bike: 'Велосипед',
-}
+import {
+  TRANSPORT_LABEL,
+  TRANSPORT_MODES,
+  TRANSPORT_SPEED_KMH,
+  type TransportMode,
+} from './transportModes'
 
 function toRad(deg: number) {
   return (deg * Math.PI) / 180
@@ -168,7 +154,7 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
           {isMobile && <Text style={styles.lightStepBadge}>{selectedTransportLabel}</Text>}
         </View>
         <SegmentedControl
-          options={TRANSPORT_MODES}
+          options={[...TRANSPORT_MODES]}
           value={transportMode}
           onChange={(key) => setTransportMode(key as TransportMode)}
           accessibilityLabel="Транспорт"

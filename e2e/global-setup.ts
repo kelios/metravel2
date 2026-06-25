@@ -19,6 +19,20 @@ function ensureEnv(name: string): string | null {
   return v && v.trim().length > 0 ? v.trim() : null;
 }
 
+function storageStateHasToken(filePath: string): boolean {
+  try {
+    if (!fs.existsSync(filePath)) return false;
+    const json = JSON.parse(fs.readFileSync(filePath, 'utf8')) as any;
+    const origins: any[] = Array.isArray(json?.origins) ? json.origins : [];
+    return origins.some((origin) => {
+      const ls: any[] = Array.isArray(origin?.localStorage) ? origin.localStorage : [];
+      return ls.some((entry) => entry?.name === 'secure_userToken' && String(entry?.value ?? '').trim().length > 0);
+    });
+  } catch {
+    return false;
+  }
+}
+
 async function waitForBaseURL(baseURL: string, timeoutMs: number) {
   const startedAt = Date.now();
   let lastErr: any = null;
@@ -177,7 +191,12 @@ async function writeStorageStateForAccount(opts: {
         baseURL: apiBase,
         extraHTTPHeaders: { 'Content-Type': 'application/json' },
       });
-      const resp = await api.post('/api/user/login/', { data: { email, password } });
+      let resp: any = null;
+      for (let attempt = 1; attempt <= 3; attempt += 1) {
+        resp = await api.post('/api/user/login/', { data: { email, password } });
+        if (resp.ok() || resp.status() !== 429 || attempt === 3) break;
+        await new Promise((resolve) => setTimeout(resolve, 30_000 * attempt));
+      }
       if (resp.ok()) {
         const json = (await resp.json().catch(() => null)) as any;
         const token = String(json?.token ?? '').trim();
@@ -281,7 +300,10 @@ export default async function globalSetup(config: FullConfig) {
   }
 
   // Account A (primary E2E account, owner).
-  if (!email || !password) {
+  if (storageStateHasToken(STORAGE_STATE_PATH)) {
+    // Reuse the token issued by a previous shard. Avoid hammering /api/user/login/
+    // across the 16-shard local e2e runner and tripping backend rate limits.
+  } else if (!email || !password) {
     // No creds → write fake-auth state.
     const browser = await chromium.launch();
     const context = await browser.newContext();
@@ -308,7 +330,9 @@ export default async function globalSetup(config: FullConfig) {
   // Gracefully skip if creds not set; specs that need B check for the file at runtime.
   const emailB = ensureEnv('E2E_EMAIL2');
   const passwordB = ensureEnv('E2E_PASSWORD2');
-  if (emailB && passwordB && apiBase) {
+  if (storageStateHasToken(STORAGE_STATE_B_PATH)) {
+    // Reuse existing applicant state across shards.
+  } else if (emailB && passwordB && apiBase) {
     try {
       await writeStorageStateForAccount({
         apiBase,

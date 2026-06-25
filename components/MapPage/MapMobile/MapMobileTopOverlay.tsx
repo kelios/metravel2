@@ -11,26 +11,31 @@
  *
  * No persistent panel — this overlay floats above a full-screen map.
  */
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Platform, Pressable, Text as RNText, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import type { ThemedColors } from '@/hooks/useTheme'
 import type { MapUiApi } from '@/types/mapUi'
+import MapIcon from '../MapIcon'
+import { TRANSPORT_ICON, TRANSPORT_LABEL, type TransportMode } from '../transportModes'
 import { getMapMobileTopOverlayStyles } from './MapMobileTopOverlay.styles'
 import { MapMobileRadiusPopover } from './MapMobileRadiusPopover'
 import { MapMobileLayersPopover } from './MapMobileLayersPopover'
+import { MapMobileTransportPopover } from './MapMobileTransportPopover'
 
-type ActivePopover = 'radius' | 'layers' | null
+type ActivePopover = 'radius' | 'layers' | 'transport' | null
 
 const BUTTON_SIZE = 44
+/** How long the «tap to build» hint stays visible after entering route mode. */
+const ROUTE_HINT_TIMEOUT_MS = 6000
 
 interface MapMobileTopOverlayProps {
   colors: ThemedColors
   topInset: number
   /** Short radius value shown as a badge on the radius button (e.g. "50"). */
   radiusBadge: string
-  /** Which inline popover is currently open (radius/layers) — or null. */
+  /** Which inline popover is currently open (radius/layers/transport) — or null. */
   activePopover: ActivePopover
   onToggleRadius: () => void
   onToggleLayers: () => void
@@ -42,6 +47,19 @@ interface MapMobileTopOverlayProps {
   onOpenList: () => void
   /** Count of nearby places shown as a badge on the list button (e.g. "12"). */
   listBadge: string
+  // Route building (mode toggle + transport profile + clear) — same store
+  // actions as the desktop filters sheet (routeStore via routingSlice).
+  /** Current map mode; 'route' reveals the contextual transport/clear icons. */
+  mode?: 'radius' | 'route'
+  transportMode?: TransportMode
+  /** Enter route mode (tap the map to drop start/end points). */
+  onEnterRouteMode?: () => void
+  onToggleTransport?: () => void
+  onTransportSelect?: (mode: TransportMode) => void
+  /** Clear the route and return to radius mode. */
+  onClearRoute?: () => void
+  /** Number of route points dropped so far — hint hides once 2 are set. */
+  routePointCount?: number
   // Radius popover data (same source as FiltersPanelRadiusSection).
   radiusOptions: ReadonlyArray<{ id: string; name: string }>
   radiusValue: string
@@ -74,8 +92,32 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   enabledOverlays,
   onOverlayToggle,
   onResetOverlays,
+  mode = 'radius',
+  transportMode = 'car',
+  onEnterRouteMode,
+  onToggleTransport,
+  onTransportSelect,
+  onClearRoute,
+  routePointCount = 0,
 }) => {
   const styles = getMapMobileTopOverlayStyles(colors)
+  const isRouteMode = mode === 'route'
+
+  // Inline hint shown when entering route mode; auto-hides after a couple of
+  // taps (2 points dropped) or a short timeout so it never blocks the map.
+  const [hintVisible, setHintVisible] = useState(false)
+  useEffect(() => {
+    if (!isRouteMode) {
+      setHintVisible(false)
+      return
+    }
+    setHintVisible(true)
+    const timer = setTimeout(() => setHintVisible(false), ROUTE_HINT_TIMEOUT_MS)
+    return () => clearTimeout(timer)
+  }, [isRouteMode])
+  useEffect(() => {
+    if (routePointCount >= 2) setHintVisible(false)
+  }, [routePointCount])
 
   // R-1 — глобальной шапки на табе карты больше нет, поэтому overlay сам отвечает
   // за отступ под статус-бар/нотч. Берём safe-area top, но держим небольшой пол,
@@ -113,28 +155,30 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
           <Feather name="sliders" size={20} color={colors.text} />
         </Pressable>
 
-        <Pressable
-          testID="map-mobile-radius-button"
-          onPress={onToggleRadius}
-          accessibilityRole="button"
-          accessibilityState={{ expanded: activePopover === 'radius' }}
-          accessibilityLabel={`Радиус${radiusBadge ? ` ${radiusBadge}` : ''}`}
-          hitSlop={6}
-          style={({ pressed }) => [
-            styles.iconButton,
-            activePopover === 'radius' && styles.iconButtonActive,
-            pressed && styles.iconButtonPressed,
-          ]}
-        >
-          <Feather name="target" size={20} color={colors.text} />
-          {!!radiusBadge && (
-            <View style={styles.badge} pointerEvents="none">
-              <RNText style={styles.badgeText} numberOfLines={1}>
-                {radiusBadge}
-              </RNText>
-            </View>
-          )}
-        </Pressable>
+        {!isRouteMode && (
+          <Pressable
+            testID="map-mobile-radius-button"
+            onPress={onToggleRadius}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: activePopover === 'radius' }}
+            accessibilityLabel={`Радиус${radiusBadge ? ` ${radiusBadge}` : ''}`}
+            hitSlop={6}
+            style={({ pressed }) => [
+              styles.iconButton,
+              activePopover === 'radius' && styles.iconButtonActive,
+              pressed && styles.iconButtonPressed,
+            ]}
+          >
+            <Feather name="target" size={20} color={colors.text} />
+            {!!radiusBadge && (
+              <View style={styles.badge} pointerEvents="none">
+                <RNText style={styles.badgeText} numberOfLines={1}>
+                  {radiusBadge}
+                </RNText>
+              </View>
+            )}
+          </Pressable>
+        )}
 
         <Pressable
           testID="map-mobile-layers-button"
@@ -151,6 +195,53 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
         >
           <Feather name="layers" size={20} color={colors.text} />
         </Pressable>
+
+        <Pressable
+          testID="map-mobile-route-button"
+          onPress={onEnterRouteMode}
+          accessibilityRole="button"
+          accessibilityState={{ selected: isRouteMode }}
+          accessibilityLabel="Построить маршрут"
+          hitSlop={6}
+          style={({ pressed }) => [
+            styles.iconButton,
+            isRouteMode && styles.iconButtonActive,
+            pressed && styles.iconButtonPressed,
+          ]}
+        >
+          <Feather name="navigation" size={20} color={isRouteMode ? colors.primary : colors.text} />
+        </Pressable>
+
+        {isRouteMode && (
+          <Pressable
+            testID="map-mobile-transport-button"
+            onPress={onToggleTransport}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: activePopover === 'transport' }}
+            accessibilityLabel={`Тип передвижения: ${TRANSPORT_LABEL[transportMode]}`}
+            hitSlop={6}
+            style={({ pressed }) => [
+              styles.iconButton,
+              activePopover === 'transport' && styles.iconButtonActive,
+              pressed && styles.iconButtonPressed,
+            ]}
+          >
+            <MapIcon name={TRANSPORT_ICON[transportMode]} size={20} color={colors.text} />
+          </Pressable>
+        )}
+
+        {isRouteMode && (
+          <Pressable
+            testID="map-mobile-route-clear-button"
+            onPress={onClearRoute}
+            accessibilityRole="button"
+            accessibilityLabel="Очистить маршрут"
+            hitSlop={6}
+            style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
+          >
+            <Feather name="x" size={20} color={colors.text} />
+          </Pressable>
+        )}
 
         <Pressable
           testID="map-mobile-open-list"
@@ -193,6 +284,25 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
           onResetOverlays={onResetOverlays}
           onRequestClose={onClosePopover}
         />
+      )}
+
+      {isRouteMode && activePopover === 'transport' && onTransportSelect && (
+        <MapMobileTransportPopover
+          colors={colors}
+          top={popoverTop}
+          currentValue={transportMode}
+          onSelect={onTransportSelect}
+          onRequestClose={onClosePopover}
+        />
+      )}
+
+      {isRouteMode && hintVisible && (
+        <View style={styles.routeHint} pointerEvents="none" testID="map-mobile-route-hint">
+          <Feather name="map-pin" size={13} color={colors.primary} />
+          <RNText style={styles.routeHintText} numberOfLines={2}>
+            Коснитесь карты: 1-я точка — старт, 2-я — финиш
+          </RNText>
+        </View>
       )}
     </View>
   )

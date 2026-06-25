@@ -75,4 +75,26 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       fontWeight: '700' as const,
       color: colors.textOnPrimary,
     },
+    routeHint: {
+      position: 'absolute' as const,
+      top: BUTTON_SIZE + 60,
+      left: 12,
+      right: 12,
+      flexDirection: 'row',
+      alignItems: 'center' as const,
+      gap: 8,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 12,
+      // Статичный «фрост»-фон (правило проекта: без живого blur на мобиле).
+      backgroundColor: colors.surfaceMuted,
+      ...(Platform.OS === 'web' ? shadowWeb : shadowNative),
+    },
+    routeHintText: {
+      flex: 1,
+      fontSize: 12,
+      lineHeight: 16,
+      fontWeight: '600' as const,
+      color: colors.text,
+    },
   })

@@ -99,8 +99,13 @@ async function apiLogin(email: string, password: string): Promise<string> {
     extraHTTPHeaders: { 'Content-Type': 'application/json' },
   })
   try {
-    const resp = await ctx.post('/api/user/login/', { data: { email, password } })
-    if (!resp.ok()) throw new Error(`Login failed for ${email}: ${resp.status()}`)
+    let resp: any = null
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      resp = await ctx.post('/api/user/login/', { data: { email, password } })
+      if (resp.ok() || resp.status() !== 429 || attempt === 3) break
+      await new Promise((resolve) => setTimeout(resolve, 30_000 * attempt))
+    }
+    if (!resp.ok()) throw new Error(`Login failed: ${resp.status()}`)
     const json = await resp.json()
     const token = String(json?.token ?? '').trim()
     if (!token) throw new Error(`No token for ${email}`)
