@@ -348,6 +348,19 @@ describe('travelFormNormalization', () => {
       const result = normalizeMarkersForSave(markers, 'https://cdn.com/fallback.jpg');
       expect(result[0].image).toBe('https://cdn.com/fallback.jpg');
     });
+
+    it('caps long point address to 100 chars (prod varchar(100) guard)', () => {
+      const longAddress = 'Музей центральной части города '.repeat(10).trim();
+      expect(longAddress.length).toBeGreaterThan(100);
+      const result = normalizeMarkersForSave([{ id: 7, lat: 50, lng: 30, address: longAddress }]);
+      expect((result[0].address as string).length).toBe(100);
+      expect(result[0].address).toBe(longAddress.slice(0, 100));
+    });
+
+    it('keeps short address untouched and trims whitespace', () => {
+      const result = normalizeMarkersForSave([{ id: 7, lat: 50, lng: 30, address: '  Гомель  ' }]);
+      expect(result[0].address).toBe('Гомель');
+    });
   });
 
   describe('normalizeGalleryForSave', () => {

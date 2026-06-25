@@ -5,6 +5,10 @@
 import type { TravelFormData } from '@/types/types';
 
 export const DRAFT_PLACEHOLDER_PREFIX = '__draft_placeholder__';
+
+// Live prod `travel_address.address` column is varchar(100); cap point addresses
+// to fit it (see normalizeMarkersForSave). Load-bearing under a backend bug.
+const MAX_POINT_ADDRESS_LENGTH = 100;
 const DRAFT_NAME_PREFIX = `${DRAFT_PLACEHOLDER_PREFIX}name__`;
 
 export function getDraftNamePlaceholder(): string {
@@ -319,7 +323,7 @@ export function normalizeMarkersForSave(markers: any[], fallbackImageUrl?: strin
             : '';
 
     return markers.map((m: any) => {
-        const { image, id, ...rest } = m ?? {};
+        const { image, id, address, ...rest } = m ?? {};
         const imageValue = typeof image === 'string' ? image.trim() : '';
         const categories = Array.isArray(m?.categories)
             ? m.categories.map((c: any) => Number(c)).filter((n: number) => Number.isFinite(n))
@@ -327,6 +331,13 @@ export function normalizeMarkersForSave(markers: any[], fallbackImageUrl?: strin
 
         const normalized: Record<string, unknown> = {
             ...rest,
+            // Load-bearing guard under a backend bug: prod `travel_address.address`
+            // column is still varchar(100) (model declares 255, migration not applied
+            // on prod), so a long reverse-geocoder display_name overflows the column
+            // and the upsert crashes with 500 (DataError), losing the whole save.
+            // Cap the address to fit the live column. Remove/raise to 255 only once the
+            // backend column widening is deployed and verified (board ticket).
+            address: typeof address === 'string' ? address.trim().slice(0, MAX_POINT_ADDRESS_LENGTH) : address,
             categories,
         };
 
