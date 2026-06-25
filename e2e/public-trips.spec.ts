@@ -125,6 +125,19 @@ async function makeApi(token: string) {
   })
 }
 
+async function tokenCanReadTripApplications(token: string): Promise<boolean> {
+  if (!token) return false
+  const api = await makeApi(token)
+  try {
+    const resp = await api.get(`/api/trip-applications/?trip=${TRIP_ID}`)
+    return resp.status() !== 401 && resp.status() !== 403
+  } catch {
+    return true
+  } finally {
+    await api.dispose()
+  }
+}
+
 async function fetchBApplication(tokenB: string): Promise<any | null> {
   const api = await makeApi(tokenB)
   try {
@@ -231,8 +244,16 @@ let _tokensFetched = false
 
 async function ensureTokens() {
   if (_tokensFetched) return
-  _tokenA = tokenFromStateFile(STORAGE_STATE_A) || (await apiLogin(emailA, passwordA))
-  _tokenB = tokenFromStateFile(STORAGE_STATE_B) || (await apiLogin(emailB, passwordB))
+  const stateTokenA = tokenFromStateFile(STORAGE_STATE_A)
+  const stateTokenB = tokenFromStateFile(STORAGE_STATE_B)
+  _tokenA =
+    stateTokenA && (await tokenCanReadTripApplications(stateTokenA))
+      ? stateTokenA
+      : await apiLogin(emailA, passwordA)
+  _tokenB =
+    stateTokenB && (await tokenCanReadTripApplications(stateTokenB))
+      ? stateTokenB
+      : await apiLogin(emailB, passwordB)
   _tokensFetched = true
 }
 

@@ -114,7 +114,12 @@ export async function apiLogin(email: string, password: string): Promise<E2EApiC
     extraHTTPHeaders: { 'Content-Type': 'application/json' },
   });
 
-  const resp = await api.post('/api/user/login/', { data: { email, password } });
+  let resp: any = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    resp = await api.post('/api/user/login/', { data: { email, password } });
+    if (resp.ok() || resp.status() !== 429 || attempt === 3) break;
+    await new Promise((resolve) => setTimeout(resolve, 30_000 * attempt));
+  }
   expect(resp.ok(), `API login failed: ${resp.status()} ${resp.statusText()}`).toBeTruthy();
 
   const json = (await resp.json().catch(() => null)) as LoginResponse | null;
@@ -237,9 +242,32 @@ export async function apiRequestContext(ctx: E2EApiContext) {
   });
 }
 
+async function refreshContextFromEnv(ctx: E2EApiContext): Promise<boolean> {
+  const email = String(process.env.E2E_EMAIL || '').trim();
+  const password = String(process.env.E2E_PASSWORD || '').trim();
+  if (!email || !password) return false;
+
+  const refreshed = await loginMemoized(email, password).catch(() => null);
+  if (!refreshed?.token) return false;
+
+  ctx.apiBase = refreshed.apiBase;
+  ctx.token = refreshed.token;
+  ctx.userId = refreshed.userId;
+  return true;
+}
+
 export async function createOrUpdateTravel(ctx: E2EApiContext, payload: any): Promise<any> {
-  const api = await apiRequestContext(ctx);
-  const resp = await api.put('/api/travels/upsert/', { data: payload });
+  let api = await apiRequestContext(ctx);
+  let resp = await api.put('/api/travels/upsert/', { data: payload });
+  if (resp.status() === 401) {
+    await api.dispose();
+    if (await refreshContextFromEnv(ctx)) {
+      api = await apiRequestContext(ctx);
+      resp = await api.put('/api/travels/upsert/', { data: payload });
+    } else {
+      expect(resp.ok(), `Upsert failed: ${resp.status()} ${resp.statusText()}`).toBeTruthy();
+    }
+  }
   expect(resp.ok(), `Upsert failed: ${resp.status()} ${resp.statusText()}`).toBeTruthy();
   const json = await resp.json().catch(() => null);
   await api.dispose();

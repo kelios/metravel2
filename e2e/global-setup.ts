@@ -14,22 +14,68 @@ function simpleEncrypt(text: string, key: string): string {
   return `enc1:${Buffer.from(result, 'binary').toString('base64')}`;
 }
 
+function simpleDecrypt(base64: string, key: string): string {
+  const raw = Buffer.from(String(base64 || ''), 'base64').toString('binary');
+  let result = '';
+  for (let i = 0; i < raw.length; i++) {
+    result += String.fromCharCode(raw.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+  }
+  return result;
+}
+
 function ensureEnv(name: string): string | null {
   const v = process.env[name];
   return v && v.trim().length > 0 ? v.trim() : null;
 }
 
-function storageStateHasToken(filePath: string): boolean {
+function readStorageStateValue(filePath: string, key: string): string {
   try {
-    if (!fs.existsSync(filePath)) return false;
+    if (!fs.existsSync(filePath)) return '';
     const json = JSON.parse(fs.readFileSync(filePath, 'utf8')) as any;
     const origins: any[] = Array.isArray(json?.origins) ? json.origins : [];
-    return origins.some((origin) => {
+    for (const origin of origins) {
       const ls: any[] = Array.isArray(origin?.localStorage) ? origin.localStorage : [];
-      return ls.some((entry) => entry?.name === 'secure_userToken' && String(entry?.value ?? '').trim().length > 0);
-    });
+      const entry = ls.find((item) => item?.name === key);
+      const value = String(entry?.value ?? '').trim();
+      if (value) return value;
+    }
   } catch {
-    return false;
+    // ignore
+  }
+  return '';
+}
+
+function tokenFromStorageState(filePath: string): string {
+  const encrypted = readStorageStateValue(filePath, 'secure_userToken');
+  if (!encrypted) return '';
+  const withPrefix = encrypted.startsWith('enc1:') ? encrypted.slice('enc1:'.length) : encrypted;
+  const looksBase64 = /^[A-Za-z0-9+/]+=*$/.test(withPrefix) && withPrefix.length % 4 === 0;
+  if (!looksBase64) return encrypted;
+  return simpleDecrypt(withPrefix, 'metravel_encryption_key_v1').trim();
+}
+
+function userIdFromStorageState(filePath: string): string {
+  return readStorageStateValue(filePath, 'userId');
+}
+
+async function storageStateHasValidToken(filePath: string, apiBase: string | null): Promise<boolean> {
+  const token = tokenFromStorageState(filePath);
+  if (!token) return false;
+  if (!apiBase) return true;
+
+  const userId = userIdFromStorageState(filePath);
+  const api = await request.newContext({
+    baseURL: apiBase,
+    extraHTTPHeaders: { Authorization: `Token ${token}` },
+  });
+  try {
+    const probePath = userId ? `/api/user/${userId}/profile/` : '/api/user/profile/';
+    const resp = await api.get(probePath);
+    return resp.status() !== 401 && resp.status() !== 403;
+  } catch {
+    return true;
+  } finally {
+    await api.dispose();
   }
 }
 
@@ -300,7 +346,7 @@ export default async function globalSetup(config: FullConfig) {
   }
 
   // Account A (primary E2E account, owner).
-  if (storageStateHasToken(STORAGE_STATE_PATH)) {
+  if (await storageStateHasValidToken(STORAGE_STATE_PATH, apiBase)) {
     // Reuse the token issued by a previous shard. Avoid hammering /api/user/login/
     // across the 16-shard local e2e runner and tripping backend rate limits.
   } else if (!email || !password) {
@@ -330,7 +376,7 @@ export default async function globalSetup(config: FullConfig) {
   // Gracefully skip if creds not set; specs that need B check for the file at runtime.
   const emailB = ensureEnv('E2E_EMAIL2');
   const passwordB = ensureEnv('E2E_PASSWORD2');
-  if (storageStateHasToken(STORAGE_STATE_B_PATH)) {
+  if (await storageStateHasValidToken(STORAGE_STATE_B_PATH, apiBase)) {
     // Reuse existing applicant state across shards.
   } else if (emailB && passwordB && apiBase) {
     try {
