@@ -1,4 +1,5 @@
 import { fireEvent, render } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import AddressListItem from '@/components/MapPage/AddressListItem';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -94,5 +95,31 @@ describe('AddressListItem (native list card)', () => {
 
     fireEvent.press(routeActions[0]);
     expect(onBuildRoute).toHaveBeenCalledTimes(1);
+  });
+
+  it('pins native mobile card width to the sheet width minus card margins', () => {
+    const travel: any = {
+      id: 1,
+      address: 'Test place',
+      coord: '50.0619474, 19.9368564',
+      travelImageThumbUrl: 'https://example.com/image.jpg',
+      categoryName: 'Category',
+      updated_at: '2024-01-01T00:00:00Z',
+    };
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    const { getByTestId } = render(
+      <QueryClientProvider client={queryClient}>
+        <AddressListItem travel={travel} isMobile={true} screenWidth={390} />
+      </QueryClientProvider>
+    );
+
+    const cardStyle = StyleSheet.flatten(getByTestId('map-travel-card').props.style);
+    expect(cardStyle.width).toBe(374);
   });
 });

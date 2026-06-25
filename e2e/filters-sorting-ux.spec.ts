@@ -574,7 +574,7 @@ test.describe('@smoke Filters and Sorting UX', () => {
     }
     
     // Group-level clear control should appear when at least one option is selected
-    const groupClearButton = getGroupClearButton(page);
+    const groupClearButton = await getVisibleGroupClearButton(page, 5_000);
     await expect(groupClearButton).toBeVisible({ timeout: 5000 });
   });
 

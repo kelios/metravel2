@@ -18,6 +18,7 @@ import AddressListItemCard from './AddressListItemCard'
 import { isWebPlatform, type Props } from './constants'
 import {
   addVersion,
+  getNativeCardWidth,
   getNativeCardImageHeight,
   getWebCardWidth,
   parseCoord,
@@ -60,11 +61,12 @@ const AddressListItem: React.FC<Props> = ({
   } = useAddressListItemActions(travel)
 
   // #584 — both platforms now render the same photo-dominant PlaceListCard.
-  // Web keeps the capped/centered card width; native stretches full width (no
-  // explicit width → fills the sheet minus the PLACE_CARD_STYLE margin) with a
-  // taller hero so the photo stays the dominant block.
+  // Web keeps the capped/centered card width; native uses an explicit sheet
+  // width minus the PLACE_CARD_STYLE margins so recycled rows cannot shrink to
+  // an image's intrinsic width.
   const webCardWidth = useMemo(() => getWebCardWidth(width), [width])
-  const cardWidth = isWebPlatform() ? webCardWidth : undefined
+  const nativeCardWidth = useMemo(() => getNativeCardWidth(width), [width])
+  const cardWidth = isWebPlatform() ? webCardWidth : nativeCardWidth
   const cardImageHeight = useMemo(
     () =>
       isWebPlatform()
