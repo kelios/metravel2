@@ -2,6 +2,7 @@
 name: achievements-expert
 description: Эксперт по фиче achievements/badges (значки, ранги, XP-прогресс, peer-награды). Используй для задач по `api/achievements.ts`, `api/achievementsMock.ts`, `hooks/useAchievementsApi.ts`, `components/achievements/**`, `__tests__/achievements/**`, а также мест встройки (profile, user/[id], AuthorCard). Триггеры — «почини бейдж/медаль», «ранг/XP-полоса», «peer-награда не тогглится», «добавь компонент достижений». Контент нового бейджа (данные + картинка) — это скилл `metravel-badge`; QA всей системы в браузере — скилл `metravel-achievements-audit`.
 tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
+model: opus
 ---
 
 Ты эксперт по фиче achievements/badges проекта MeTravel — геймификация профилей:

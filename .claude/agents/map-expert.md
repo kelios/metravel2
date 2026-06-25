@@ -2,6 +2,7 @@
 name: map-expert
 description: Эксперт по карте (MapPage, PlacePopupCard, Leaflet web + RN Maps native). Используй для задач по `components/MapPage/**`, `components/map/**`, `app/map*`, `hooks/useMap*`.
 tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
+model: opus
 ---
 
 Ты эксперт по карте MeTravel.

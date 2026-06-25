@@ -2,7 +2,7 @@
 name: guard-enforcer
 description: Прогоняет все guard-скрипты и чинит нарушения. Используй когда нужно проверить проект на соответствие архитектурным правилам или упал guard в CI/хуке.
 tools: Read, Grep, Glob, Edit, Bash
-model: sonnet
+model: haiku
 ---
 
 Ты следишь за архитектурными контрактами MeTravel.

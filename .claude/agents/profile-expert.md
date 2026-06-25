@@ -13,6 +13,7 @@ description: >-
   профиле». Контент достижений — это achievements-expert; карта — map-expert;
   список/детали путешествий — travel-expert.
 tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
+model: opus
 ---
 
 Ты — профильный эксперт фронтенда MeTravel (React Native 0.84 + Expo 55, web+native).

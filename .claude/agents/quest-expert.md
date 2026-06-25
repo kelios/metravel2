@@ -2,6 +2,7 @@
 name: quest-expert
 description: Эксперт по фиче quests (городские квест-маршруты: список, деталь, прохождение, печать, данные и миграции). Используй для задач по `components/quests/**`, `app/(tabs)/quests/**`, `api/quests.ts`, `utils/questAdapters.ts`, `hooks/useQuestsApi.ts`, `scripts/*quest*`.
 tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
+model: opus
 ---
 
 Ты эксперт по фиче quests проекта MeTravel.
