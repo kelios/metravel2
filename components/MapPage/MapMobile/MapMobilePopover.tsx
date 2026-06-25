@@ -11,8 +11,8 @@
  *  - Renders a full-screen transparent backdrop (Pressable) that closes the
  *    popover on a tap outside the card.
  *  - The card itself is absolutely positioned just below the toolbar icons
- *    (caller passes the resolved `top`) and pinned to the right edge (FAB-style),
- *    matching the icon toolbar.
+ *    (caller passes the resolved `top`) and aligned by a caller-provided right
+ *    edge offset so compact cards can sit under their own toolbar icon.
  */
 import React from 'react'
 import { Platform, Pressable, StyleSheet, View } from 'react-native'
@@ -77,6 +77,7 @@ const MapMobilePopoverInner: React.FC<MapMobilePopoverProps> = ({
       />
 
       <View
+        testID={testID ? `${testID}-card` : undefined}
         style={[
           styles.card,
           {

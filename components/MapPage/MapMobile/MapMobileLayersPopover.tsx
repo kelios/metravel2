@@ -34,6 +34,8 @@ interface MapMobileLayersPopoverProps {
   top: number
   /** Card right-edge offset. Desktop floating icon anchors the card to itself. */
   right?: number
+  /** Card min width. Mobile toolbar passes a wider value so labels do not collapse. */
+  minWidth?: number
   /** Card max width. Desktop uses a slightly wider card than mobile. */
   maxWidth?: number
   mapUiApi?: MapUiApi | null
@@ -48,6 +50,7 @@ const MapMobileLayersPopoverInner: React.FC<MapMobileLayersPopoverProps> = ({
   colors,
   top,
   right,
+  minWidth,
   maxWidth,
   mapUiApi,
   overlayOptions,
@@ -67,6 +70,7 @@ const MapMobileLayersPopoverInner: React.FC<MapMobileLayersPopoverProps> = ({
       colors={colors}
       top={top}
       right={right}
+      minWidth={minWidth}
       maxWidth={maxWidth}
       onRequestClose={onRequestClose}
       testID="map-mobile-layers-popover"

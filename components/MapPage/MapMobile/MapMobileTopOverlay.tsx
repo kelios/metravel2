@@ -13,7 +13,7 @@
  * No persistent panel — this overlay floats above a full-screen map.
  */
 import React, { useEffect, useState } from 'react'
-import { Platform, Pressable, Text as RNText, View } from 'react-native'
+import { Platform, Pressable, Text as RNText, useWindowDimensions, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import type { ThemedColors } from '@/hooks/useTheme'
@@ -28,6 +28,15 @@ import { MapMobileTransportPopover } from './MapMobileTransportPopover'
 type ActivePopover = 'radius' | 'layers' | 'transport' | null
 
 const BUTTON_SIZE = 44
+const TOOLBAR_EDGE_OFFSET = 12
+const TOOLBAR_GAP = 8
+const BUTTON_STEP = BUTTON_SIZE + TOOLBAR_GAP
+const RADIUS_POPOVER_RIGHT = TOOLBAR_EDGE_OFFSET + BUTTON_STEP * 2
+const LAYERS_POPOVER_RIGHT = TOOLBAR_EDGE_OFFSET + BUTTON_STEP
+const TRANSPORT_POPOVER_RIGHT = TOOLBAR_EDGE_OFFSET + BUTTON_STEP
+const LAYERS_POPOVER_MIN_WIDTH = 200
+const LAYERS_POPOVER_MAX_WIDTH = 272
+const TRANSPORT_POPOVER_WIDTH = 204
 /** How long the «tap to build» hint stays visible after entering route mode. */
 const ROUTE_HINT_TIMEOUT_MS = 6000
 
@@ -102,6 +111,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   routePointCount = 0,
 }) => {
   const styles = getMapMobileTopOverlayStyles(colors)
+  const { width: viewportWidth } = useWindowDimensions()
   const isRouteMode = mode === 'route'
   const routeProgressLabel = isRouteMode ? `${Math.min(routePointCount, 2)}/2` : ''
   const routeAccessibilityLabel = isRouteMode
@@ -132,6 +142,13 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   const basePopoverTop = resolvedTopPadding + BUTTON_SIZE + 8
   const routeControlsTop = resolvedTopPadding + BUTTON_SIZE + 8
   const routePopoverTop = routeControlsTop + BUTTON_SIZE + 8
+  const layersPopoverWidth = Math.min(
+    LAYERS_POPOVER_MAX_WIDTH,
+    Math.max(
+      LAYERS_POPOVER_MIN_WIDTH,
+      viewportWidth - LAYERS_POPOVER_RIGHT - TOOLBAR_EDGE_OFFSET,
+    ),
+  )
 
   return (
     <View
@@ -288,6 +305,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
         <MapMobileRadiusPopover
           colors={colors}
           top={basePopoverTop}
+          right={RADIUS_POPOVER_RIGHT}
           options={radiusOptions}
           currentValue={radiusValue}
           onSelect={onRadiusSelect}
@@ -299,6 +317,9 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
         <MapMobileLayersPopover
           colors={colors}
           top={basePopoverTop}
+          right={LAYERS_POPOVER_RIGHT}
+          minWidth={layersPopoverWidth}
+          maxWidth={layersPopoverWidth}
           mapUiApi={mapUiApi}
           overlayOptions={overlayOptions}
           enabledOverlays={enabledOverlays}
@@ -312,6 +333,9 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
         <MapMobileTransportPopover
           colors={colors}
           top={routePopoverTop}
+          right={TRANSPORT_POPOVER_RIGHT}
+          minWidth={TRANSPORT_POPOVER_WIDTH}
+          maxWidth={TRANSPORT_POPOVER_WIDTH}
           currentValue={transportMode}
           onSelect={onTransportSelect}
           onRequestClose={onClosePopover}

@@ -71,6 +71,7 @@ const MapMobileTransportPopoverInner: React.FC<MapMobileTransportPopoverProps> =
                 name={option.icon}
                 size={18}
                 color={selected ? colors.primary : colors.text}
+                style={styles.rowIcon}
               />
               <Text
                 style={[
@@ -102,8 +103,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   rowText: {
+    flex: 1,
+    minWidth: 0,
     fontSize: 15,
     lineHeight: 18,
+  },
+  rowIcon: {
+    width: 24,
+    flexShrink: 0,
+    textAlign: 'center',
   },
   rowTextSelected: {
     fontWeight: '700',

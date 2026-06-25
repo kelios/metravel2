@@ -1,5 +1,5 @@
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react-native'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 
 import { MapMobileLayout } from '@/components/MapPage/MapMobileLayout'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
@@ -346,6 +346,43 @@ describe('MapMobileLayout', () => {
       fireEvent.press(screen.getByTestId('map-mobile-transport-button'))
       fireEvent.press(screen.getByTestId('map-mobile-transport-option-bike'))
       expect(useRouteStore.getState().transportMode).toBe('bike')
+    })
+
+    it('anchors compact popovers under their toolbar icons', () => {
+      const { filtersPanelProps } = buildFiltersProps()
+      const screen = render(
+        <MapMobileLayout
+          mapComponent={<View testID="mock-map" />}
+          travelsData={[]}
+          coordinates={{ latitude: 53.9, longitude: 27.56 }}
+          transportMode="car"
+          buildRouteTo={jest.fn()}
+          onCenterOnUser={jest.fn()}
+          onOpenFilters={jest.fn()}
+          filtersPanelProps={filtersPanelProps}
+        />,
+      )
+
+      fireEvent.press(screen.getByTestId('map-mobile-radius-button'))
+      expect(
+        StyleSheet.flatten(screen.getByTestId('map-mobile-radius-popover-card').props.style).right,
+      ).toBe(116)
+
+      fireEvent.press(screen.getByTestId('map-mobile-layers-button'))
+      const layersCardStyle = StyleSheet.flatten(
+        screen.getByTestId('map-mobile-layers-popover-card').props.style,
+      )
+      expect(layersCardStyle.right).toBe(64)
+      expect(layersCardStyle.width).toBe(272)
+
+      fireEvent.press(screen.getByTestId('map-mobile-layers-popover-backdrop'))
+      fireEvent.press(screen.getByTestId('map-mobile-route-button'))
+      fireEvent.press(screen.getByTestId('map-mobile-transport-button'))
+      const transportCardStyle = StyleSheet.flatten(
+        screen.getByTestId('map-mobile-transport-popover-card').props.style,
+      )
+      expect(transportCardStyle.right).toBe(64)
+      expect(transportCardStyle.width).toBe(204)
     })
 
     it('clears the route and returns to radius mode (contextual icons hidden)', () => {
