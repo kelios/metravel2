@@ -19,6 +19,9 @@ export const getIsHeaderMobile = (width: number, effectiveWebWidth: number) => {
 
 const ACTIVE_PATH_PREFIXES = ['/search', '/travelsby', '/export', '/map', '/places', '/trips', '/quests', '/roulette']
 
+export const isQuestDetailHeaderPath = (pathname: string) =>
+  /^\/quests\/[^/]+\/[^/]+\/?$/.test(pathname || '')
+
 export const getHeaderActivePath = (pathname: string) => {
   if (pathname === '/' || pathname === '/index') return '/'
   if (pathname.startsWith('/travels/') || pathname.startsWith('/travel/')) return ''

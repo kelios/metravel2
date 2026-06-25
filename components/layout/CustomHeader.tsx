@@ -1,5 +1,5 @@
 import React, { Suspense, useCallback, useMemo, useRef } from 'react'
-import { View } from 'react-native'
+import { Platform, View } from 'react-native'
 import { usePathname } from 'expo-router'
 
 import { useResponsive } from '@/hooks/useResponsive'
@@ -14,6 +14,7 @@ import {
 import {
   getHeaderActivePath,
   getIsHeaderMobile,
+  isQuestDetailHeaderPath,
   shouldShowHeaderContextBar,
 } from './customHeaderModel'
 import { resolveHeaderContextBarAction } from './headerContextBarModel'
@@ -41,7 +42,9 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
   const { width, isHydrated } = useResponsive()
   const isMobile = getIsHeaderMobile(width, width)
   const activePath = getHeaderActivePath(pathname)
-  const showHeaderContextBar = shouldShowHeaderContextBar(pathname, isMobile)
+  const showHeaderContextBar =
+    shouldShowHeaderContextBar(pathname, isMobile) &&
+    !(Platform.OS === 'web' && !isHydrated && isQuestDetailHeaderPath(pathname))
 
   const breadcrumbModel = useBreadcrumbModel()
 

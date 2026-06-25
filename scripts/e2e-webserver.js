@@ -18,6 +18,8 @@ const distJsDir = path.join(rootDir, 'dist', '_expo', 'static', 'js', 'web');
 const distMetaPath = path.join(rootDir, 'dist', '.e2e-build-meta.json');
 const envPath = path.join(rootDir, '.env');
 const e2ePublicFlagLine = 'EXPO_PUBLIC_E2E=true';
+const BENIGN_EXPO_EXPORT_SHUTDOWN_WARNING =
+  'Something prevented Expo from exiting, forcefully exiting now.';
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -203,6 +205,37 @@ function sanitizedEnv(baseEnv) {
   return nextEnv;
 }
 
+function pipeBuildOutput(stream, target) {
+  let pending = '';
+
+  stream.on('data', (chunk) => {
+    pending += String(chunk);
+    const parts = pending.split(/(\r?\n)/);
+    pending = '';
+
+    for (let index = 0; index < parts.length; index += 2) {
+      const text = parts[index] || '';
+      const newline = parts[index + 1] || '';
+      if (!newline && index === parts.length - 1) {
+        pending = text;
+        break;
+      }
+
+      const line = `${text}${newline}`;
+      if (line.includes(BENIGN_EXPO_EXPORT_SHUTDOWN_WARNING)) continue;
+      target.write(line);
+    }
+  });
+
+  stream.on('end', () => {
+    if (!pending) return;
+    if (!pending.includes(BENIGN_EXPO_EXPORT_SHUTDOWN_WARNING)) {
+      target.write(pending);
+    }
+    pending = '';
+  });
+}
+
 function getGitBuildStamp(cwd) {
   const result = {
     head: null,
@@ -354,9 +387,11 @@ async function main() {
         : ['run', 'build:web', '--', '--no-bytecode'];
     const build = spawn(buildCommand, buildArgs, {
       cwd: rootDir,
-      stdio: 'inherit',
+      stdio: ['ignore', 'pipe', 'pipe'],
       env: sanitizedEnv(process.env),
     });
+    pipeBuildOutput(build.stdout, process.stdout);
+    pipeBuildOutput(build.stderr, process.stderr);
 
     try {
       await waitForFile(distIndex, buildTimeoutMs);

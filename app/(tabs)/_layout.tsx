@@ -3,7 +3,7 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import { Platform, View, Animated } from 'react-native';
 import { Tabs, usePathname } from 'expo-router';
 import CustomHeader from '@/components/layout/CustomHeader';
-import { shouldShowHeaderContextBar } from '@/components/layout/customHeaderModel';
+import { isQuestDetailHeaderPath, shouldShowHeaderContextBar } from '@/components/layout/customHeaderModel';
 
 // Defensive lazy imports: fallback to empty component if module resolution fails
 const EmptyFallback = () => null;
@@ -79,6 +79,7 @@ const getHeaderVariant = (pathname: string): HeaderVariant => {
 // HTML (всегда desktop) не совпадёт с первым клиентским рендером → hydration mismatch (#418).
 // Реальный вариант/высоту подтягивает useEffect после маунта.
 const getStaticHeaderVariant = (pathname: string): HeaderVariant => {
+    if (Platform.OS === 'web' && isQuestDetailHeaderPath(pathname)) return 'desktop-nobar';
     const hasBar = shouldShowHeaderContextBar(pathname || '/', false);
     return hasBar ? 'desktop-bar' : 'desktop-nobar';
 };

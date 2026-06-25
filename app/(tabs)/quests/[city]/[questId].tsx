@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useIsFocused } from 'expo-router';
@@ -391,20 +391,6 @@ const QuestPreview = ({
 };
 
 export default function QuestByIdScreen() {
-  const [mounted, setMounted] = useState(Platform.OS !== 'web');
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return undefined;
-    const timer = setTimeout(() => setMounted(true), 0);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (!mounted) return null;
-
-  return <QuestByIdScreenContent />;
-}
-
-function QuestByIdScreenContent() {
   const params = useLocalSearchParams<{ city?: string | string[]; questId?: string | string[] }>();
   const cityId = getRouteParam(params.city);
   const questId = getRouteParam(params.questId);
