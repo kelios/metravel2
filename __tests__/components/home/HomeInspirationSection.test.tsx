@@ -41,12 +41,11 @@ describe('HomeInspirationSections', () => {
   });
 
   describe('Quick filter chips — FILTER_GROUPS', () => {
-    it('renders all quick filter group titles', () => {
-      const { getByText } = render(<HomeInspirationSections />);
-      expect(getByText('На выходные')).toBeTruthy();
-      expect(getByText('Рядом на карте')).toBeTruthy();
-      expect(getByText('Природа')).toBeTruthy();
-      expect(getByText('Город и квесты')).toBeTruthy();
+    it('renders quick filter section controls', () => {
+      const { getByText, getByLabelText } = render(<HomeInspirationSections />);
+      expect(getByText('Быстрый подбор')).toBeTruthy();
+      expect(getByText('Найдите маршрут под свой день')).toBeTruthy();
+      expect(getByLabelText('Открыть каталог')).toBeTruthy();
     });
 
     it('renders chip labels for each group', () => {
