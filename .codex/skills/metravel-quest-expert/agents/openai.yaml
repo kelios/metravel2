@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel Quest Expert"
+  short_description: "Own quest feature code, wizard, adapters, maps, printing, and migrations."
+  default_prompt: "Use $metravel-quest-expert for metravel quest feature code. Preserve ApiQuest contracts, questAdapters answer behavior, web/native layout, ImageCardMedia and external-link rules. Route quest content editing to $metravel-quest-editor and coordinate validation to $metravel-quest-geo-verifier."

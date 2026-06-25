@@ -62,13 +62,17 @@ export const fetchPlacesCatalog = async (signal?: AbortSignal): Promise<CatalogP
           return allPlaces
         }
 
+        // Remaining pages are independent — fetch them in parallel instead of a
+        // serial waterfall so the full catalog is ready in one round-trip worth
+        // of latency rather than N.
         const maxPages = Math.ceil(total / PLACES_CATALOG_PER_PAGE)
-        for (let page = 1; page < maxPages; page += 1) {
-          const payload = await fetchPlacesCatalogPage(page, controller.signal)
-          const pagePlaces = toTravelCoordsArray(payload)
-          if (pagePlaces.length <= 0) break
-          allPlaces.push(...pagePlaces)
-          if (allPlaces.length >= total || pagePlaces.length < PLACES_CATALOG_PER_PAGE) break
+        const restPages = await Promise.all(
+          Array.from({ length: maxPages - 1 }, (_, i) =>
+            fetchPlacesCatalogPage(i + 1, controller.signal),
+          ),
+        )
+        for (const payload of restPages) {
+          allPlaces.push(...toTravelCoordsArray(payload))
         }
 
         return allPlaces

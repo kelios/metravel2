@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel Quest Geo Verifier"
+  short_description: "Verify quest coordinates against real objects and suggest patches."
+  default_prompt: "Use $metravel-quest-geo-verifier to read-only verify metravel quest coordinates with local data or production API plus OSM/Nominatim evidence. Prefer scripts/quest-geocheck.js when available, do not write production content, and return coordinate findings and suggested patches."

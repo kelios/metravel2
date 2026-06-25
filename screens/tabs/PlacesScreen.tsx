@@ -146,6 +146,10 @@ export default function PlacesScreen() {
   )
   const hasMorePlaces = visibleCount < filteredPlaces.length
   const showLoadedCounts = !placesQuery.isLoading && !placesQuery.isError
+  // First grid row(s) are above the fold — decode those eagerly with high
+  // priority so the first screen shows sharp photos instead of blur on load.
+  const gridColumns = isWide ? 3 : isCompact ? 1 : 2
+  const firstScreenCount = gridColumns * 2
 
   const activeCategoryTitle = getActiveCategoryTitle(selectedCategories)
   const pageDescription = selectedCategories.length > 0
@@ -325,7 +329,7 @@ export default function PlacesScreen() {
   const useVirtualList = nativeCompact && resultsStatus === 'list'
 
   const renderVirtualCard = useCallback(
-    ({ item }: { item: CatalogPlace }) => (
+    ({ item, index }: { item: CatalogPlace; index: number }) => (
       <View style={styles.virtualCardItem}>
         <PlaceCard
           place={item}
@@ -334,6 +338,7 @@ export default function PlacesScreen() {
           onOpenMap={openOnMap}
           onOpenTravel={openTravel}
           containerStyle={styles.virtualCard}
+          priority={index < 2}
         />
       </View>
     ),
@@ -403,7 +408,7 @@ export default function PlacesScreen() {
   } else {
     resultsContent = (
       <View style={styles.cardsGrid}>
-        {visiblePlaces.map((place) => (
+        {visiblePlaces.map((place, index) => (
           <PlaceCard
             key={place.id}
             place={place}
@@ -411,6 +416,7 @@ export default function PlacesScreen() {
             colors={colors}
             onOpenMap={openOnMap}
             onOpenTravel={openTravel}
+            priority={index < firstScreenCount}
           />
         ))}
         {loadMoreBlock}

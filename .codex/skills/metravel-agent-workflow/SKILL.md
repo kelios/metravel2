@@ -25,18 +25,20 @@ Default feature flow:
 3. Business Analyst: produce a concise feature brief and acceptance criteria.
 4. System Architect: map the brief to existing code, constraints, risk, and validation.
 5. Domain Router: use `$metravel-domain-router` for travel/map/profile/achievements/quests/PDF/new-page owner maps.
-6. Designer: use `$metravel-ui-guardrails` for visible UI states and web/mobile behavior.
-7. Android Developer: use `$metravel-android-developer` for Android/native implementation, crashes, platform files, or Expo native modules.
-8. Refactor Surgeon: use `$metravel-refactor-surgeon` for behavior-preserving large component splits.
-9. Programmer: use `$metravel-feature-builder` to implement the smallest sufficient diff.
-10. Backend Diagnostician: use `$metravel-backend-diagnostician` for read-only API/backend blockers and board follow-up.
-11. Browser Reviewer: use `$metravel-browser-reviewer` for visible web diff review, fixes, and re-verification.
-12. Mobile Tester: use `$metravel-mobile-tester` for mobile web or Android/native QA evidence and retest.
-13. QA Agent: use `$metravel-qa-agent` to test broader flows and create structured bug reports.
-14. Sprint Reviewer: use `$metravel-sprint-reviewer` to accept task-board tickets only with Done-gate evidence.
-15. Production Smoke: use `$metravel-production-smoke` for read-only production health checks.
-16. Reviewer: use `$metravel-system-architect` in review mode to check the diff, tests, and rule compliance.
-17. DevOps Agent: use `$metravel-devops-agent` only when the user explicitly asks to deploy, build, release, or verify a deployment.
+6. Domain Expert: use `$metravel-travel-expert`, `$metravel-map-expert`, `$metravel-profile-expert`, `$metravel-achievements-expert`, or `$metravel-quest-expert` for domain-specific constraints; use `$metravel-quest-editor` for quest content and `$metravel-quest-geo-verifier` for quest coordinates.
+7. Designer: use `$metravel-ui-guardrails` for visible UI states and web/mobile behavior.
+8. Android Developer: use `$metravel-android-developer` for Android/native implementation, crashes, platform files, or Expo native modules.
+9. Refactor Surgeon: use `$metravel-refactor-surgeon` for behavior-preserving large component splits.
+10. Programmer: use `$metravel-feature-builder` to implement the smallest sufficient diff.
+11. Backend Diagnostician: use `$metravel-backend-diagnostician` for read-only API/backend blockers and board follow-up.
+12. Ticket Board: use `$metravel-ticket-board` for MCP board task/sprint list/create/update/sync; use `$metravel-task-contract` for FE/BE contracts.
+13. Browser Reviewer: use `$metravel-browser-reviewer` for visible web diff review, fixes, and re-verification.
+14. Mobile Tester: use `$metravel-mobile-tester` for mobile web or Android/native QA evidence and retest.
+15. QA Agent: use `$metravel-qa-agent` to test broader flows and create structured bug reports.
+16. Sprint Reviewer: use `$metravel-sprint-reviewer` to accept task-board tickets only with Done-gate evidence.
+17. Production Smoke: use `$metravel-production-smoke` for read-only production health checks.
+18. Reviewer: use `$metravel-system-architect` in review mode to check the diff, tests, and rule compliance.
+19. DevOps Agent: use `$metravel-devops-agent` only when the user explicitly asks to deploy, build, release, or verify a deployment.
 
 Default bug loop:
 
@@ -75,11 +77,15 @@ Each role should return one compact artifact:
 - Project Analyst: `Project Analysis`
 - System Architect: `Technical Design`
 - Domain Router: `Domain Route`
+- Domain Expert: `<Domain> Expert Handoff`
+- Quest Editor: `Quest Content Handoff`
+- Quest Geo Verifier: `Quest Geo Report`
 - Designer: `UI Contract`
 - Android Developer: `Android Implementation Summary`
 - Refactor Surgeon: `Refactor Summary`
 - Programmer: `Implementation Summary`
 - Backend Diagnostician: `Backend Diagnosis`
+- Ticket Board: `Board Update`
 - Browser Reviewer: `Browser Review Verdict`
 - Mobile Tester: `Mobile QA Pass` or `Bug Report`
 - QA Agent: `Bug Report` or `QA Pass`

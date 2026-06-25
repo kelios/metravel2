@@ -129,8 +129,16 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const { L, RL: rl, loading: leafletLoading, error: leafletError, ready: leafletReady } =
     useLeafletLoader({
       enabled: IS_WEB,
-      useIdleCallback: false,
-      fallbackDelay: 0,
+      // Defer the ~70KB Leaflet runtime off the critical interactivity path:
+      // schedule it via requestIdleCallback (with a 1.2s safety timeout) and fall
+      // back to a short 300ms delay on browsers without rIC. The map frame +
+      // skeleton (MapWebBackground / MapLoadingOverlay) render immediately, and
+      // MapScreen already idle-prefetches loadLeafletRuntime, so the dynamic
+      // import is typically warm by the time loading is enabled — tiles/points
+      // still appear quickly without blocking first paint.
+      useIdleCallback: true,
+      idleTimeout: 1200,
+      fallbackDelay: 300,
     })
 
   const [showInitialLoader, setShowInitialLoader] = useState(!IS_WEB)

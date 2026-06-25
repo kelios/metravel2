@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel Achievements Expert"
+  short_description: "Own achievements, badges, ranks, XP, peer badges, and mocks."
+  default_prompt: "Use $metravel-achievements-expert for metravel achievements/badges/ranks/XP/peer badge work. Treat api/achievements.ts as the FE contract, keep mocks explicit, preserve optimistic rollback, use ImageCardMedia for badge images, avoid new any in api/hooks, and verify profile/user/AuthorCard integrations when visible."

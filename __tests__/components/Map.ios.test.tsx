@@ -179,10 +179,12 @@ describe('Map.ios Component', () => {
     const injectedScript = getInjectedPayloadScript(rendered);
     expect(injectedScript).toContain('"mode":"route"');
     expect(injectedScript).toContain('"routePoints":[[53.9,27.5667],[50.0619474,19.9368564]]');
+    expect(injectedScript).toContain('"routeLine":[[53.9,27.5667],[50.0619474,19.9368564]]');
     const html = getWebViewHtml(rendered);
-    expect(html).toContain('L.polyline(routePoints');
-    expect(html).toContain('L.circleMarker(start');
-    expect(html).toContain('map.fitBounds(routeLine.getBounds()');
+    expect(html).toContain('const routeLine = Array.isArray(data.routeLine) ? data.routeLine : routePoints');
+    expect(html).toContain('L.polyline(routeLine');
+    expect(html).toContain('L.circleMarker(point');
+    expect(html).toContain('map.fitBounds(routePolyline.getBounds()');
   });
 
   it('should include all travel points in the map payload', () => {

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel Quest Editor"
+  short_description: "Edit and audit existing quest content: tasks, hints, answers, and copy."
+  default_prompt: "Use $metravel-quest-editor for existing metravel quest content. Do not edit quest UI code or create new quests. Keep tokens hidden, take rollback snapshots before writes, verify via API/page, and route coordinate questions to $metravel-quest-geo-verifier."

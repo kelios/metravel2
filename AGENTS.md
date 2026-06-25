@@ -23,6 +23,13 @@
 
 - `$metravel-feature-builder` - фичи, рефакторинг, баги, API, hooks, services, SEO и обычная разработка.
 - `$metravel-domain-router` - карта доменных feature areas (travel/map/profile/achievements/quests/PDF/new pages), файлов, owner-boundaries и нужных проверок перед разработкой.
+- `$metravel-travel-expert` - доменный субагент travel: списки/детали/мастер, route points, save/moderation, export/PDF.
+- `$metravel-map-expert` - доменный субагент карты и places: MapPage, Leaflet web, native map/WebView, ORS и попапы.
+- `$metravel-profile-expert` - доменный субагент профиля: личный/публичный профиль, settings, подписки, счётчики, profile IA.
+- `$metravel-achievements-expert` - доменный субагент achievements/badges: ранги, XP, peer-награды, моки и profile embeds.
+- `$metravel-quest-expert` - доменный субагент quest-кода: список/деталь/прохождение, адаптеры, answer checker, печать.
+- `$metravel-quest-editor` - субагент редактирования контента существующих квестов: тексты, задания, подсказки, answer patterns.
+- `$metravel-quest-geo-verifier` - read-only субагент гео-сверки точек квестов через OSM/Nominatim и локальные geocheck scripts.
 - `$metravel-hook-builder` - проектирование, вынос и рефакторинг focused React hooks в `hooks/` и рядом с фичами без нарушения public contracts.
 - `$metravel-ui-guardrails` - видимый UI, layout, media, placeholders, icons, design tokens, external links.
 - `$metravel-browser-reviewer` - browser review/fix loop для видимых web-изменений: diff + preview/browser + screenshot + console/network + reverify.
@@ -40,6 +47,7 @@
 - `$metravel-production-smoke` - read-only smoke production `metravel.by` после deploy или при подозрении на 502/white screen/static/API/sitemap регрессию.
 - `$metravel-docs-maintainer` - обновление `docs/`, `AGENTS.md`, `.codex/skills` и правил для Codex.
 - `$metravel-task-contract` - обязательный контракт FE/BE задач на борде: scope, user-visible result, Data/API contract, dependencies, fallback/mock policy, validation и Done gate перед стартом/review/done.
+- `$metravel-ticket-board` - оператор общего MCP task board: list/create/update/sync задач и спринтов без правки feature-кода.
 - `$metravel-sprint-reviewer` - приёмка тикетов активного спринта на MCP task board по Task Contract/Done gate с реальными тестами/browser/API evidence.
 - `$metravel-backend-diagnostician` - read-only диагностика backend/API проблем, 5xx/contract mismatch, backend status sync и создание/обновление back-задач с evidence.
 - `$metravel-article-editor-agent` - редактирование статей через API, HTML/SEO тела статьи, generated images, publish/unpublish и проверка результата без вывода токенов.

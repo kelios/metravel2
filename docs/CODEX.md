@@ -13,6 +13,13 @@
 
 - `$metravel-feature-builder`: используй для фич, багфиксов, рефакторинга, API-логики, hooks, services и SEO.
 - `$metravel-domain-router`: используй перед реализацией доменных фич travel/map/profile/achievements/quests/PDF/new pages/design-system, чтобы выбрать файлы, owner-boundaries и проверки.
+- `$metravel-travel-expert`: используй для travel list/details/wizard, route points, save/moderation и export/PDF, когда задача явно в travel-домене.
+- `$metravel-map-expert`: используй для MapPage, places, Leaflet web, native map/WebView, ORS, маркеров и попапов.
+- `$metravel-profile-expert`: используй для личного/публичного профиля, settings, подписок, счётчиков, profile IA и profile embeds.
+- `$metravel-achievements-expert`: используй для achievements/badges, рангов, XP, peer-наград, achievement mocks и profile/AuthorCard embeds.
+- `$metravel-quest-expert`: используй для quest feature code: список/деталь/прохождение, адаптеры, answer checker, карты и печать.
+- `$metravel-quest-editor`: используй для редактирования существующего quest content: тексты шагов, задания, подсказки и answer patterns.
+- `$metravel-quest-geo-verifier`: используй для read-only сверки координат quest points с реальными объектами через OSM/Nominatim/geocheck.
 - `$metravel-hook-builder`: используй, когда основная задача — вынести, спроектировать или упростить focused React hooks в `hooks/` или рядом с фичей, сохранив контракты и не добавляя новые `any`.
 - `$metravel-ui-guardrails`: добавляй при любых видимых UI-изменениях, работе с media, icons, placeholders, tokens или external links.
 - `$metravel-browser-reviewer`: используй для review/fix цикла видимых web-изменений в реальном браузере: diff, snapshot, screenshot, console/network, исправления и reverify.
@@ -30,6 +37,7 @@
 - `$metravel-production-smoke`: используй для read-only production health check `metravel.by` после deploy, при 502/white screen/static/API/sitemap подозрениях или регулярном smoke.
 - `$metravel-docs-maintainer`: используй при изменении `docs/`, `AGENTS.md`, `.codex/skills` или правил работы Codex.
 - `$metravel-task-contract`: используй при создании или ревью FE/BE задач на борде, чтобы заполнить обязательный `Task Contract` и проверить, можно ли двигать задачу в `todo`/`done`.
+- `$metravel-ticket-board`: используй как оператора общего MCP task board для list/create/update/sync задач и спринтов; он не пишет feature code.
 - `$metravel-sprint-reviewer`: используй для приёмки тикетов активного спринта на MCP task board: проверить Task Contract/Done gate реальными тестами/browser/API evidence и двигать только подтвержденное в `done`.
 - `$metravel-backend-diagnostician`: используй для read-only диагностики backend/API/5xx/contract mismatch, сверки backend status с бордом и оформления back-задач без правки backend-кода.
 - `$metravel-article-editor-agent`: используй для редактирования, создания, публикации и проверки статей через `/api/articles`, правки HTML/SEO тела статьи, добавления generated images и безопасной работы с токеном из `.secrets`.
@@ -51,10 +59,10 @@
 | Класс задачи | Стартовый маршрут | Когда повышать уровень |
 | --- | --- | --- |
 | Документация, правила, skills | `$metravel-docs-maintainer` | Добавь `$metravel-codex-orchestrator`, если меняется workflow нескольких ролей, правила проверок или skill-selection policy. |
-| Простая автоматизация и проверки | `$metravel-test-runner` для узких тестов; `$metravel-release-checks` для выбора gate; `$metravel-task-contract` для задач на борде | `$metravel-quality-fixer` только для полного quality-gate/fix цикла; `$metravel-devops-agent` только для явного build/deploy/release target. |
+| Простая автоматизация и проверки | `$metravel-test-runner` для узких тестов; `$metravel-release-checks` для выбора gate; `$metravel-ticket-board` + `$metravel-task-contract` для задач на борде | `$metravel-quality-fixer` только для полного quality-gate/fix цикла; `$metravel-devops-agent` только для явного build/deploy/release target. |
 | Read-only анализ проекта | `$metravel-project-analyst` | `$metravel-agent-workflow` нужен только если анализ сразу передается в BA/architect/implementation/QA/review цепочку. |
 | Product/growth/performance анализ | `$metravel-business-analyst`, `$metravel-growth-analyst` или `$metravel-performance-analyst` по домену | Добавь architect/reviewer только когда из анализа сразу рождается high-risk implementation plan. |
-| Обычная разработка, bugfix, refactor | `$metravel-domain-router` для доменного scope, затем `$metravel-feature-builder`; добавь `$metravel-ui-guardrails`, `$metravel-hook-builder`, `$metravel-refactor-surgeon` или `$metravel-test-writer` только по затронутой области | `$metravel-codex-orchestrator` для широкого/неясного scope; `$metravel-agent-workflow` для раздельных BA/architect/QA/reviewer стадий. |
+| Обычная разработка, bugfix, refactor | `$metravel-domain-router` для доменного scope, затем профильный доменный субагент (`$metravel-travel-expert`, `$metravel-map-expert`, `$metravel-profile-expert`, `$metravel-achievements-expert`, `$metravel-quest-expert`) и `$metravel-feature-builder`; добавь `$metravel-ui-guardrails`, `$metravel-hook-builder`, `$metravel-refactor-surgeon` или `$metravel-test-writer` только по затронутой области | `$metravel-codex-orchestrator` для широкого/неясного scope; `$metravel-agent-workflow` для раздельных BA/architect/QA/reviewer стадий. |
 | Статьи и article media | `$metravel-article-editor-agent` | Добавь orchestrator для bulk/high-risk правок, publish/unpublish серий или связанных SEO/API/UI проверок. |
 | Mobile/Android | `$metravel-mobile-tester` для read-only QA; `$metravel-android-developer` для фиксов | `$metravel-agent-workflow` для цикла reproduce -> fix -> retest -> review или когда затронуты web + native одновременно. |
 | SEO/index operations | `$metravel-seo-index-operator` | Добавь `$metravel-growth-analyst` для месячной стратегии; `$metravel-article-editor-agent` или `$metravel-feature-builder` только когда из аудита следует content/code change. |
@@ -69,11 +77,11 @@
 | Тип задачи | Минимальный контекст | Обязательные акценты |
 | --- | --- | --- |
 | Feature, bugfix, refactor | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, профильный feature-doc при наличии | переиспользование существующих компонентов, hooks, utils; минимальный diff |
-| Domain-specific feature work | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `$metravel-domain-router`, профильный feature-doc при наличии | выбрать domain owner map для travel/map/profile/achievements/quests/PDF/new pages; затем подключить feature/ui/test/refactor skills по фактическому scope |
+| Domain-specific feature work | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `$metravel-domain-router`, профильный feature-doc при наличии | выбрать domain owner map для travel/map/profile/achievements/quests/PDF/new pages; затем подключить доменного субагента (`$metravel-travel-expert`, `$metravel-map-expert`, `$metravel-profile-expert`, `$metravel-achievements-expert`, `$metravel-quest-expert`) и feature/ui/test/refactor skills по фактическому scope |
 | Hooks / logic extraction | `AGENTS.md`, `docs/RULES.md`, `docs/DEVELOPMENT.md`, профильный feature-doc, ближайшие существующие hooks | выносить focused hook без лишней абстракции, сохранять client/server state boundaries, не добавлять новые `any` |
 | Component split / file complexity | `AGENTS.md`, `docs/RULES.md`, `docs/CODEX.md`, `$metravel-refactor-surgeon`, ближайшие tests | behavior-preserving extraction, explicit props, no business-logic rewrite, targeted checks + browser evidence for visible UI |
-| Backend task planning | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `docs/TASK_BOARD_MCP.md`, `$metravel-task-contract` | новые FE/BE/backend задачи создавай на общем MCP task board через `ticket-board` (`metravel_task_create`); заполняй `area=front/back`, active sprint, Task Contract, dependencies/blockers и validation/Done gate; при `HTTP 401` сначала обнови staff token через `.env.e2e` по `docs/TASK_BOARD_MCP.md`; локальные `tasks/*.md` используй только как временный fallback после неуспешного token refresh с последующим sync/import |
-| Task board FE/BE contract | `docs/TASK_BOARD_MCP.md`, `$metravel-task-contract`, профильный feature-doc при наличии | каждая FE/BE задача на борде должна иметь `Task Contract`: scope, user-visible result, data/API contract, dependencies, fallback/mock policy, validation и Done gate; без runtime evidence не двигать в `done` |
+| Backend task planning | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `docs/TASK_BOARD_MCP.md`, `$metravel-ticket-board`, `$metravel-task-contract` | новые FE/BE/backend задачи создавай на общем MCP task board через `$metravel-ticket-board` (`metravel_task_create`); заполняй `area=front/back`, active sprint, Task Contract, dependencies/blockers и validation/Done gate; при `HTTP 401` сначала обнови staff token через `.env.e2e` по `docs/TASK_BOARD_MCP.md`; локальные `tasks/*.md` используй только как временный fallback после неуспешного token refresh с последующим sync/import |
+| Task board FE/BE contract | `docs/TASK_BOARD_MCP.md`, `$metravel-ticket-board`, `$metravel-task-contract`, профильный feature-doc при наличии | каждая FE/BE задача на борде должна иметь `Task Contract`: scope, user-visible result, data/API contract, dependencies, fallback/mock policy, validation и Done gate; без runtime evidence не двигать в `done` |
 | Приёмка спринта / закрытие тикетов | `AGENTS.md`, `docs/RULES.md`, `docs/TASK_BOARD_MCP.md`, `$metravel-sprint-reviewer`, `$metravel-task-contract` | только board acceptance; проход по `review`/`testing` тикетам активного спринта; без Task Contract и runtime evidence не двигать в `done`; проваленные вернуть в `review`/`blocked_by` с evidence |
 | Видимый UI, media, icons, tokens | всё из feature-контекста + `$metravel-ui-guardrails` | проверка в браузере на web, screenshot, отсутствие новых console errors |
 | Browser review / visible regression fix | всё из UI-контекста + `$metravel-browser-reviewer` | diff review + browser snapshot/screenshot/console/network; исправить real issues и reverify |
@@ -127,22 +135,23 @@ Validation: <expected checks/evidence>.
 5. `$metravel-system-architect` формирует `Technical Design`: reuse points, affected modules, API/data/UI/external-link impact, implementation steps, validation plan.
 6. `$metravel-ui-guardrails` формирует UI contract для видимых web/mobile состояний, если задача затрагивает интерфейс.
 7. `$metravel-domain-router` выбирает feature-owner map для travel/map/profile/achievements/quests/PDF/new pages, если scope доменный.
-8. `$metravel-android-developer` подключай для Android/native поведения, native crashes, Expo modules, platform files и device-specific fixes.
-9. `$metravel-hook-builder` подключай дополнительно, если основной объём работы — вынос локальной логики в hooks или cleanup hook boundaries.
-10. `$metravel-refactor-surgeon` подключай для behavior-preserving split больших компонентов и file-complexity violations.
-11. `$metravel-feature-builder` реализует минимальный diff по утвержденному design/brief.
-12. `$metravel-article-editor-agent` выполняет article API/content операции, если задача про статьи, HTML тела, generated images или publish/unpublish.
-13. `$metravel-seo-index-operator` выполняет SEO/index operations и формирует owner/code/content split.
-14. `$metravel-backend-diagnostician` диагностирует backend/API blockers read-only и готовит back-задачи/evidence.
-15. `$metravel-task-contract` проверяет обязательный контракт FE/BE задачи перед стартом, review и `done`, особенно когда FE зависит от BE endpoints/fields/events.
-16. `$metravel-code-reviewer` делает focused review pass, если нужен отдельный reviewer без расширенного architecture-design шага.
-17. `$metravel-browser-reviewer` делает browser review/fix pass для видимых web-изменений.
-18. `$metravel-mobile-tester` проверяет mobile web или Android/native сценарии и создает `Mobile QA Pass` или `Bug Report`.
-19. `$metravel-qa-agent` тестирует общий сценарий read-only и создает `Bug Report` или `QA Pass`.
-20. `$metravel-sprint-reviewer` принимает тикеты активного спринта по Done gate и двигает только evidence-backed задачи в `done`.
-21. `$metravel-production-smoke` выполняет read-only smoke `metravel.by` после deploy или при аварийной проверке.
-22. `$metravel-system-architect` в review mode проверяет findings, diff, проверки, known risks и соответствие правилам, когда нужен архитектурный review.
-23. `$metravel-devops-agent` готовит и выполняет deploy/build/release только при явном запросе на deploy/release, с environment gate, preflight и post-deploy validation.
+8. Доменный субагент уточняет ограничения и проверки: `$metravel-travel-expert`, `$metravel-map-expert`, `$metravel-profile-expert`, `$metravel-achievements-expert` или `$metravel-quest-expert`; для quest content используй `$metravel-quest-editor`, для координат — `$metravel-quest-geo-verifier`.
+9. `$metravel-android-developer` подключай для Android/native поведения, native crashes, Expo modules, platform files и device-specific fixes.
+10. `$metravel-hook-builder` подключай дополнительно, если основной объём работы — вынос локальной логики в hooks или cleanup hook boundaries.
+11. `$metravel-refactor-surgeon` подключай для behavior-preserving split больших компонентов и file-complexity violations.
+12. `$metravel-feature-builder` реализует минимальный diff по утвержденному design/brief.
+13. `$metravel-article-editor-agent` выполняет article API/content операции, если задача про статьи, HTML тела, generated images или publish/unpublish.
+14. `$metravel-seo-index-operator` выполняет SEO/index operations и формирует owner/code/content split.
+15. `$metravel-backend-diagnostician` диагностирует backend/API blockers read-only и готовит back-задачи/evidence.
+16. `$metravel-ticket-board` создаёт/обновляет задачи и спринты на MCP task board; `$metravel-task-contract` проверяет обязательный контракт FE/BE задачи перед стартом, review и `done`, особенно когда FE зависит от BE endpoints/fields/events.
+17. `$metravel-code-reviewer` делает focused review pass, если нужен отдельный reviewer без расширенного architecture-design шага.
+18. `$metravel-browser-reviewer` делает browser review/fix pass для видимых web-изменений.
+19. `$metravel-mobile-tester` проверяет mobile web или Android/native сценарии и создает `Mobile QA Pass` или `Bug Report`.
+20. `$metravel-qa-agent` тестирует общий сценарий read-only и создает `Bug Report` или `QA Pass`.
+21. `$metravel-sprint-reviewer` принимает тикеты активного спринта по Done gate и двигает только evidence-backed задачи в `done`.
+22. `$metravel-production-smoke` выполняет read-only smoke `metravel.by` после deploy или при аварийной проверке.
+23. `$metravel-system-architect` в review mode проверяет findings, diff, проверки, known risks и соответствие правилам, когда нужен архитектурный review.
+24. `$metravel-devops-agent` готовит и выполняет deploy/build/release только при явном запросе на deploy/release, с environment gate, preflight и post-deploy validation.
 
 Стандартный bug loop:
 

@@ -243,7 +243,12 @@ function ListTravelBase() {
     } = useQuery({
       queryKey: queryKeys.travelFacets(debSearch, queryParams),
       queryFn: ({ signal }) => fetchTravelFacets(debSearch, queryParams, { signal }),
-      enabled: shouldFetchFilterOptions && !!options,
+      // Facets feed only the filter-sheet counters and consume debSearch+queryParams,
+      // not filterOptions — so don't gate them on `!!options` (that serialized
+      // facets behind the filterOptions request). They still wait for the same
+      // shouldFetchFilterOptions condition (the sheet being relevant), and the
+      // query key updates if options later remap textual categories → refetch.
+      enabled: shouldFetchFilterOptions,
       staleTime: 30 * 1000,
     });
 

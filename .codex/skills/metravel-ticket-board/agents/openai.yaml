@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel Ticket Board"
+  short_description: "Operate the shared task board: create, update, sync, and audit tasks."
+  default_prompt: "Use $metravel-ticket-board for metravel MCP task-board operations. Follow docs/TASK_BOARD_MCP.md and $metravel-task-contract, assign active sprint, split human/agent work, keep tokens hidden, refresh board token through .env.e2e on 401, and do not write feature code."

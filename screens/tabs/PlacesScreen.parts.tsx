@@ -28,6 +28,7 @@ export const PlaceCard = React.memo(function PlaceCard({
   onOpenMap,
   onOpenTravel,
   containerStyle,
+  priority = false,
 }: {
   place: CatalogPlace
   styles: PlacesStyles
@@ -35,6 +36,9 @@ export const PlaceCard = React.memo(function PlaceCard({
   onOpenMap: (place: CatalogPlace) => void
   onOpenTravel: (place: CatalogPlace) => void
   containerStyle?: StyleProp<ViewStyle>
+  // Above-the-fold cards (first viewport row(s)) decode eagerly with high
+  // priority so the first screen shows sharp photos instead of blur on load.
+  priority?: boolean
 }) {
   const imageUrl = place.travelImageLandscapeUrl || place.imageUrl || place.travelImageThumbUrl || null
   const relatedTravelUrl = normalizeRelatedTravelRoute(place.urlTravel)
@@ -53,8 +57,9 @@ export const PlaceCard = React.memo(function PlaceCard({
             blurBackground
             allowCriticalWebBlur={Platform.OS === 'web'}
             blurRadius={18}
-            loading="lazy"
-            priority="low"
+            loading={priority ? 'eager' : 'lazy'}
+            priority={priority ? 'high' : 'low'}
+            prefetch={priority && Platform.OS === 'web'}
             style={styles.cardMedia}
           />
         ) : (
