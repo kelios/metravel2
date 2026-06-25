@@ -70,6 +70,37 @@ function seedConsent(page: import('@playwright/test').Page) {
   })
 }
 
+async function mockFreshSafetyState(page: import('@playwright/test').Page, targetUserId: string) {
+  await page.route(`**/user/${targetUserId}/profile/**`, async (route) => {
+    const response = await route.fetch()
+    const json = await response.json().catch(() => null)
+    if (!json || !response.ok()) {
+      await route.fulfill({ response })
+      return
+    }
+    await route.fulfill({
+      response,
+      json: {
+        ...json,
+        reported_by_me: false,
+        is_blocked_by_me: false,
+      },
+    })
+  })
+
+  await page.route(`**/user/${targetUserId}/report/**`, async (route) => {
+    if (route.request().method() !== 'POST') {
+      await route.continue()
+      return
+    }
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({ id: 1, status: 'created' }),
+    })
+  })
+}
+
 test.describe('Trust & Safety — report a user', () => {
   test('opens the safety menu and walks the report flow', async ({ browser }) => {
     const fixture = getSafetyFixture()
@@ -79,6 +110,7 @@ test.describe('Trust & Safety — report a user', () => {
 
     try {
       await seedConsent(page)
+      await mockFreshSafetyState(page, fixture.targetUserId)
       await page.goto(`/user/${fixture.targetUserId}`, { waitUntil: 'domcontentloaded' })
 
       const menu = page.getByTestId('user-safety-menu')

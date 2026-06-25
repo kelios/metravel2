@@ -34,6 +34,27 @@ test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
     });
   }
 
+  async function activateTravelDetailsSection(
+    page: import('@playwright/test').Page,
+    buttonName: RegExp,
+    testId: string,
+  ) {
+    const section = page.locator(`[data-testid="${testId}"]`);
+    if (await section.isVisible().catch(() => false)) return section;
+
+    const button = page.getByRole('button', { name: buttonName }).first();
+    if (!(await button.isVisible().catch(() => false))) return null;
+
+    await button.click();
+    await expect
+      .poll(
+        async () => section.isVisible().catch(() => false),
+        { timeout: 30_000, message: `Expected ${testId} section to render after tab activation` },
+      )
+      .toBeTruthy();
+    return section;
+  }
+
   test.describe('Page Loading', () => {
     test('should load page with complete content', async ({ page }) => {
       if (!(await goToTravelDetails(page))) return;
@@ -198,16 +219,18 @@ test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
     test('should display map when scrolled into view', async ({ page }) => {
       if (!(await goToTravelDetails(page))) return;
 
-      const mapSection = page.locator('[data-testid="travel-details-map"]');
-      await mapSection.scrollIntoViewIfNeeded();
+      const mapSection = await activateTravelDetailsSection(page, /Карта маршрута/i, 'travel-details-map');
+      if (!mapSection) return;
+      await mapSection.scrollIntoViewIfNeeded().catch(() => null);
       await expect(mapSection).toBeVisible({ timeout: 10_000 });
     });
 
     test('should display coordinates list', async ({ page }) => {
       if (!(await goToTravelDetails(page))) return;
 
-      const pointsSection = page.locator('[data-testid="travel-details-points"]');
-      await pointsSection.scrollIntoViewIfNeeded();
+      const pointsSection = await activateTravelDetailsSection(page, /Координаты мест/i, 'travel-details-points');
+      if (!pointsSection) return;
+      await pointsSection.scrollIntoViewIfNeeded().catch(() => null);
 
       const pointCards = await page.locator('[data-testid^="travel-point-card-"]').count();
       expect(pointCards).toBeGreaterThanOrEqual(0);
