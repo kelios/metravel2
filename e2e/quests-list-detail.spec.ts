@@ -12,7 +12,7 @@ const QUEST_DETAIL_URL_RE = /\/quests\/[^/]+\/[^/?#]+/
 // Treat any of these as "the screen finished its first render" so we never
 // flake on data availability.
 const QUEST_FALLBACK_RE =
-  /ошибка|Internal Server Error|Failed to load quests|не удалось загрузить|квесты не найдены|нет квестов|Нет квестов/i
+  /ошибка|Internal Server Error|Failed to load quests|не удалось загрузить|квесты не найдены|нет квестов|Нет квестов|0 квестов|Выберите город/i
 
 const waitForQuestCatalogReady = async (page: Page) =>
   Promise.any([

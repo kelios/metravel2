@@ -60,6 +60,21 @@ function getApiBase(): string {
 
 const ENC_KEY = 'metravel_encryption_key_v1'
 
+type LoginSession = {
+  token: string
+  userId: string
+  userName: string
+  isSuperuser: string
+}
+
+function simpleEncrypt(text: string, key: string): string {
+  let result = ''
+  for (let i = 0; i < text.length; i++) {
+    result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length))
+  }
+  return `enc1:${Buffer.from(result, 'binary').toString('base64')}`
+}
+
 function simpleDecrypt(base64: string, key: string): string {
   const raw = Buffer.from(String(base64 ?? ''), 'base64').toString('binary')
   let result = ''
@@ -91,9 +106,36 @@ function tokenFromStateFile(filePath: string): string {
   return ''
 }
 
+function storageValueFromStateFile(filePath: string, name: string): string {
+  try {
+    const json = JSON.parse(fs.readFileSync(filePath, 'utf8')) as any
+    const origins: any[] = Array.isArray(json?.origins) ? json.origins : []
+    for (const origin of origins) {
+      const ls: any[] = Array.isArray(origin?.localStorage) ? origin.localStorage : []
+      const entry = ls.find((x: any) => x?.name === name)
+      const value = String(entry?.value ?? '').trim()
+      if (value) return value
+    }
+  } catch {
+    // ignore
+  }
+  return ''
+}
+
+function sessionFromStateFile(filePath: string): LoginSession | null {
+  const token = tokenFromStateFile(filePath)
+  if (!token) return null
+  return {
+    token,
+    userId: storageValueFromStateFile(filePath, 'userId'),
+    userName: storageValueFromStateFile(filePath, 'userName'),
+    isSuperuser: storageValueFromStateFile(filePath, 'isSuperuser') || 'false',
+  }
+}
+
 // ── API helpers ───────────────────────────────────────────────────────────────
 
-async function apiLogin(email: string, password: string): Promise<string> {
+async function apiLogin(email: string, password: string): Promise<LoginSession> {
   const ctx = await request.newContext({
     baseURL: getApiBase(),
     extraHTTPHeaders: { 'Content-Type': 'application/json' },
@@ -109,7 +151,12 @@ async function apiLogin(email: string, password: string): Promise<string> {
     const json = await resp.json()
     const token = String(json?.token ?? '').trim()
     if (!token) throw new Error(`No token for ${email}`)
-    return token
+    return {
+      token,
+      userId: json?.id != null ? String(json.id) : '',
+      userName: String(json?.name ?? json?.email ?? email).trim(),
+      isSuperuser: json?.is_superuser ? 'true' : 'false',
+    }
   } finally {
     await ctx.dispose()
   }
@@ -189,6 +236,20 @@ function seedConsent(page: import('@playwright/test').Page) {
   })
 }
 
+function seedAuth(page: import('@playwright/test').Page, session: LoginSession) {
+  const encryptedToken = simpleEncrypt(session.token, ENC_KEY)
+  return page.addInitScript((payload: LoginSession & { encryptedToken: string }) => {
+    try {
+      window.localStorage.setItem('secure_userToken', payload.encryptedToken)
+      if (payload.userId) window.localStorage.setItem('userId', payload.userId)
+      if (payload.userName) window.localStorage.setItem('userName', payload.userName)
+      window.localStorage.setItem('isSuperuser', payload.isSuperuser || 'false')
+    } catch {
+      // ignore
+    }
+  }, { ...session, encryptedToken })
+}
+
 function isTripDetailResponse(url: string): boolean {
   try {
     const parsed = new URL(url)
@@ -240,20 +301,24 @@ async function gotoTripDetail(page: Page, accountLabel: string) {
 
 let _tokenA = ''
 let _tokenB = ''
+let _sessionA: LoginSession | null = null
+let _sessionB: LoginSession | null = null
 let _tokensFetched = false
 
 async function ensureTokens() {
   if (_tokensFetched) return
-  const stateTokenA = tokenFromStateFile(STORAGE_STATE_A)
-  const stateTokenB = tokenFromStateFile(STORAGE_STATE_B)
-  _tokenA =
-    stateTokenA && (await tokenCanReadTripApplications(stateTokenA))
-      ? stateTokenA
+  const stateSessionA = sessionFromStateFile(STORAGE_STATE_A)
+  const stateSessionB = sessionFromStateFile(STORAGE_STATE_B)
+  _sessionA =
+    stateSessionA?.token && stateSessionA.userId && (await tokenCanReadTripApplications(stateSessionA.token))
+      ? stateSessionA
       : await apiLogin(emailA, passwordA)
-  _tokenB =
-    stateTokenB && (await tokenCanReadTripApplications(stateTokenB))
-      ? stateTokenB
+  _sessionB =
+    stateSessionB?.token && stateSessionB.userId && (await tokenCanReadTripApplications(stateSessionB.token))
+      ? stateSessionB
       : await apiLogin(emailB, passwordB)
+  _tokenA = _sessionA.token
+  _tokenB = _sessionB.token
   _tokensFetched = true
 }
 
@@ -307,6 +372,8 @@ test.describe.serial('Публичные поездки — two-account real-BE 
     const pageB = await ctx.newPage()
 
     try {
+      if (!_sessionB) throw new Error('B login session was not initialized')
+      await seedAuth(pageB, _sessionB)
       await seedConsent(pageB)
 
       // Ждём реального сетевого ответа от BE — только после этого trip-data в RQ актуальна.
@@ -386,6 +453,8 @@ test.describe.serial('Публичные поездки — two-account real-BE 
     const page = await ctx.newPage()
 
     try {
+      if (!_sessionA) throw new Error('A login session was not initialized')
+      await seedAuth(page, _sessionA)
       await seedConsent(page)
 
       // Запускаем ожидание ответа до goto, чтобы не пропустить быстрый fetch.
