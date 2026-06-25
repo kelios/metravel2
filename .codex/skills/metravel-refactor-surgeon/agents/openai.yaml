@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel Refactor Surgeon"
+  short_description: "Split large components safely."
+  default_prompt: "Use $metravel-refactor-surgeon to split a large metravel component without behavior changes and validate the result."

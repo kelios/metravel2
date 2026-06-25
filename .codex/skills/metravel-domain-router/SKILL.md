@@ -1,0 +1,44 @@
+---
+name: metravel-domain-router
+description: Route metravel feature work to the right domain context before implementation. Use when Codex works on travel, map, profile, achievements/badges, quests, travel PDF/export, new pages, design-system drift, or other feature-area changes that need file maps, owner boundaries, and domain-specific validation before using the general feature builder.
+---
+
+# Metravel Domain Router
+
+Use this skill as a lightweight feature-owner map before `$metravel-feature-builder`, `$metravel-ui-guardrails`, `$metravel-test-writer`, or `$metravel-code-reviewer`.
+
+Read first:
+
+- `AGENTS.md`
+- `docs/CODEX.md`
+- `docs/RULES.md`
+- `docs/README.md`
+- A matching `docs/features/*.md` file when it exists.
+
+## Domain Map
+
+| Domain | Typical files | Route and rules |
+| --- | --- | --- |
+| Travel list/details/wizard/export | `components/travel/**`, `components/listTravel/**`, `app/travel/**`, `app/(tabs)/travel*`, `hooks/useTravel*`, `api/travel/**`, `stores/*travel*` | Use `$metravel-feature-builder`; preserve `UnifiedTravelCard`, `ImageCardMedia`, React Query for server state, Zustand for client state, and travel media rules. |
+| Map and places | `components/MapPage/**`, `components/map/**`, `app/map*`, `hooks/useMap*`, `screens/tabs/PlacesScreen.tsx`, `api/places.ts` | Use `$metravel-ui-guardrails` for visible map/popups; keep web Leaflet and native map imports separated by platform files. |
+| Profile and settings | `app/(tabs)/profile.tsx`, `app/(tabs)/user/[id].tsx`, `app/(tabs)/settings.tsx`, `components/profile/**`, `components/settings/**` | Preserve profile information architecture, tabs, counters, settings flows, auth boundaries, and integrated feature sections. |
+| Achievements and badges | `api/achievements.ts`, `api/achievementsMock.ts`, `hooks/useAchievementsApi.ts`, `components/achievements/**`, `__tests__/achievements/**` | Treat `api/achievements.ts` as BE contract. Keep mock fallback explicit, React Query keys stable, peer-badge optimistic updates rollback-safe, and badge media via `ImageCardMedia`. |
+| Quests | `components/quests/**`, `app/(tabs)/quests/**`, `api/quests.ts`, `utils/questAdapters.ts`, `hooks/useQuestsApi.ts`, `scripts/*quest*` | Separate quest code fixes from quest content editing/geochecking. For coordinates/content, prefer read-only validation and route production writes through article/content rules. |
+| SEO/index/content | `components/seo/**`, `utils/seo/**`, article/travel rich text, `docs/GROWTH_PLAN.md` | Use `$metravel-seo-index-operator` for GSC/indexing routines and `$metravel-article-editor-agent` for article API content edits. |
+| PDF/export | travel export/PDF components, print preview, book settings/templates | Preserve print behavior and browser verification. If the task is only visual export UI, use `$metravel-ui-guardrails`; if it is data/logic, use `$metravel-feature-builder`. |
+| New page or redesign | `app/**`, screen components, `components/ui`, design tokens | Reuse existing primitives, `useResponsive`, `useThemedColors`, `DESIGN_TOKENS`, SEO helpers, and browser verification. |
+
+## Workflow
+
+1. Identify the domain from the changed files, route, or user wording.
+2. Load only the matching feature docs and nearby tests/components.
+3. If a board ticket is involved, read its Task Contract before editing.
+4. Choose the smallest specialist set:
+   - code: `$metravel-feature-builder`
+   - visible UI: `$metravel-ui-guardrails`
+   - tests: `$metravel-test-writer` / `$metravel-test-runner`
+   - large split: `$metravel-refactor-surgeon`
+   - browser verification/fix pass: `$metravel-browser-reviewer`
+5. Validate with the narrowest checks that cover the domain and add browser/device evidence when required.
+
+Do not create a separate mini-architecture for a domain. Reuse existing components, hooks, query keys, stores, and API adapters unless a real duplication or boundary problem is in scope.

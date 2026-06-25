@@ -22,8 +22,11 @@
 Перед работой выбери минимальный набор project skills:
 
 - `$metravel-feature-builder` - фичи, рефакторинг, баги, API, hooks, services, SEO и обычная разработка.
+- `$metravel-domain-router` - карта доменных feature areas (travel/map/profile/achievements/quests/PDF/new pages), файлов, owner-boundaries и нужных проверок перед разработкой.
 - `$metravel-hook-builder` - проектирование, вынос и рефакторинг focused React hooks в `hooks/` и рядом с фичами без нарушения public contracts.
 - `$metravel-ui-guardrails` - видимый UI, layout, media, placeholders, icons, design tokens, external links.
+- `$metravel-browser-reviewer` - browser review/fix loop для видимых web-изменений: diff + preview/browser + screenshot + console/network + reverify.
+- `$metravel-refactor-surgeon` - распил god-components и file-complexity нарушений без изменения поведения.
 - `$metravel-release-checks` - выбор и запуск проверок, preflight, release/deploy, production web checks.
 - `$metravel-quality-fixer` - полный прогон lint + Jest + Playwright с исправлением найденных проблем и обязательным rerun проверок.
 - `$metravel-test-runner` - точечный запуск Jest/unit/integration/governance проверок, выбор минимального набора команд и разбор падений.
@@ -31,10 +34,14 @@
 - `$metravel-e2e-runner` - запуск и отладка Playwright/e2e сценариев, browser smoke, работа с `.env.e2e`, trace и screenshot evidence.
 - `$metravel-performance-analyst` - Lighthouse, bundle/perf budget analysis, сравнение baseline и проверка performance только по production build или real URL.
 - `$metravel-growth-analyst` - анализ GA4/GSC/Yandex/affiliate-цифр, SEO/organic роста, поведения пользователей, воронок регистрации и добавления маршрутов/статей.
+- `$metravel-seo-index-operator` - ежедневная SEO/index рутина, GSC/index diagnostics, IndexNow backup, список URL для ручной индексации и SEO task routing.
 - `$metravel-code-reviewer` - focused code review diff'а, поиск рисков, rule violations, validation gaps и остаточных проблем перед handoff.
 - `$metravel-devops-agent` - подготовка, запуск и проверка deploy на dev/preprod/prod с preflight, secret hygiene и post-deploy validation.
+- `$metravel-production-smoke` - read-only smoke production `metravel.by` после deploy или при подозрении на 502/white screen/static/API/sitemap регрессию.
 - `$metravel-docs-maintainer` - обновление `docs/`, `AGENTS.md`, `.codex/skills` и правил для Codex.
 - `$metravel-task-contract` - обязательный контракт FE/BE задач на борде: scope, user-visible result, Data/API contract, dependencies, fallback/mock policy, validation и Done gate перед стартом/review/done.
+- `$metravel-sprint-reviewer` - приёмка тикетов активного спринта на MCP task board по Task Contract/Done gate с реальными тестами/browser/API evidence.
+- `$metravel-backend-diagnostician` - read-only диагностика backend/API проблем, 5xx/contract mismatch, backend status sync и создание/обновление back-задач с evidence.
 - `$metravel-article-editor-agent` - редактирование статей через API, HTML/SEO тела статьи, generated images, publish/unpublish и проверка результата без вывода токенов.
 - `$metravel-codex-orchestrator` - верхний workflow для Codex: triage, выбор skills/агентов, промты ролей, план проверок и финальный self-check.
 - `$metravel-agent-workflow` - координация ролей business analyst, system architect, designer, programmer, QA, reviewer и DevOps.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel Browser Reviewer"
+  short_description: "Review, fix, and verify web UI."
+  default_prompt: "Use $metravel-browser-reviewer to review the metravel diff in a real browser, fix visible regressions, and report screenshot/console evidence."

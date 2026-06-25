@@ -11,6 +11,7 @@ Read `docs/RULES.md`, `docs/README.md`, and the task triage section in `docs/COD
 - Read `docs/TESTING.md` when choosing targeted validation.
 - Read `docs/features/travel.md`, `docs/features/map.md`, or `docs/features/places.md` for feature-specific work.
 - Read `docs/RELEASE.md` only when the task touches release or deployment flow.
+- Use `$metravel-domain-router` first when the change is in travel, map, profile, achievements, quests, PDF/export, new pages, or design-system drift.
 
 Implement the smallest change that solves the task.
 

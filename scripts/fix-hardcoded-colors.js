@@ -1,7 +1,17 @@
 #!/usr/bin/env node
 
 /**
- * Скрипт для автоматической замены hardcoded цветов на DESIGN_TOKENS
+ * Скрипт для аудита и точечной замены hardcoded UI-цветов на DESIGN_TOKENS.
+ *
+ * Аудит намеренно узкий: считаются только реальные UI style props
+ * `backgroundColor`, `color`, `borderColor` со значениями `#fff`, `#000`,
+ * `#ff9f5a` и их длинными/uppercase вариантами.
+ *
+ * Не считаются нарушениями:
+ * - `transparent` — валидный RN/CSS литерал;
+ * - `shadowColor: '#000'` — валидная RN-конвенция для теней;
+ * - token-definition files, tests/e2e, PDF print themes, map snapshot/canvas
+ *   renderers and generated/build folders.
  * 
  * Использование:
  * node scripts/fix-hardcoded-colors.js [--dry-run] [--file=path/to/file.tsx]
@@ -15,42 +25,70 @@
 const fs = require('fs');
 const path = require('path');
 
-// Карта замен hardcoded цветов на DESIGN_TOKENS
-const COLOR_REPLACEMENTS = {
+const PROJECT_ROOT = path.join(__dirname, '..');
+
+const EXCLUDED_DIRS = new Set([
+  'node_modules',
+  'dist',
+  'build',
+  '.git',
+  '.next',
+  '.expo',
+  'coverage',
+  'test-results',
+  'playwright-report',
+  '__tests__',
+  'e2e',
+]);
+
+const EXCLUDED_RELATIVE_PATHS = new Set([
+  'constants/designSystem.ts',
+  'constants/modernMattePalette.ts',
+  'constants/theme.ts',
+]);
+
+const EXCLUDED_RELATIVE_PREFIXES = [
+  'services/pdf-export/',
+  'utils/mapSnapshot/',
+];
+
+// Карта замен hardcoded цветов на DESIGN_TOKENS для UI style props.
+const COLOR_VALUE_REPLACEMENTS = {
   // Белый
-  "'#fff'": "DESIGN_TOKENS.colors.surface",
-  '"#fff"': "DESIGN_TOKENS.colors.surface",
-  "'#ffffff'": "DESIGN_TOKENS.colors.surface",
-  '"#ffffff"': "DESIGN_TOKENS.colors.surface",
-  "'#FFF'": "DESIGN_TOKENS.colors.surface",
-  '"#FFF"': "DESIGN_TOKENS.colors.surface",
-  "'#FFFFFF'": "DESIGN_TOKENS.colors.surface",
-  '"#FFFFFF"': "DESIGN_TOKENS.colors.surface",
+  '#fff': "DESIGN_TOKENS.colors.surface",
+  '#ffffff': "DESIGN_TOKENS.colors.surface",
   
   // Черный
-  "'#000'": "DESIGN_TOKENS.colors.text",
-  '"#000"': "DESIGN_TOKENS.colors.text",
-  "'#000000'": "DESIGN_TOKENS.colors.text",
-  '"#000000"': "DESIGN_TOKENS.colors.text",
+  '#000': "DESIGN_TOKENS.colors.text",
+  '#000000': "DESIGN_TOKENS.colors.text",
   
   // Старый оранжевый primary
-  "'#ff9f5a'": "DESIGN_TOKENS.colors.primary",
-  '"#ff9f5a"': "DESIGN_TOKENS.colors.primary",
-  "'#FF9F5A'": "DESIGN_TOKENS.colors.primary",
-  '"#FF9F5A"': "DESIGN_TOKENS.colors.primary",
-  
-  // Прозрачность
-  "'transparent'": "DESIGN_TOKENS.colors.transparent",
-  '"transparent"': "DESIGN_TOKENS.colors.transparent",
+  '#ff9f5a': "DESIGN_TOKENS.colors.primary",
 };
 
-// Паттерны для поиска в shadowColor
-const SHADOW_COLOR_PATTERN = /shadowColor:\s*['"]#000['"]/g;
-const SHADOW_COLOR_REPLACEMENT = "shadowColor: DESIGN_TOKENS.colors.text";
+const AUDITED_STYLE_PROPS = ['backgroundColor', 'borderColor', 'color'];
+const COLOR_VALUE_PATTERN = Object.keys(COLOR_VALUE_REPLACEMENTS)
+  .map(value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  .join('|');
+const STYLE_COLOR_PATTERN = new RegExp(
+  `(^|[\\s,{;])(${AUDITED_STYLE_PROPS.join('|')})\\s*:\\s*(['"])(${COLOR_VALUE_PATTERN})\\3`,
+  'gim',
+);
 
-// Паттерны для backgroundColor
-const BG_COLOR_PATTERN = /backgroundColor:\s*['"]#fff['"]/gi;
-const BG_COLOR_REPLACEMENT = "backgroundColor: DESIGN_TOKENS.colors.surface";
+function toRelativeProjectPath(filePath) {
+  return path.relative(PROJECT_ROOT, path.resolve(filePath)).split(path.sep).join('/');
+}
+
+function isExcludedPath(filePath) {
+  const relativePath = toRelativeProjectPath(filePath);
+  return (
+    EXCLUDED_RELATIVE_PATHS.has(relativePath) ||
+    EXCLUDED_RELATIVE_PREFIXES.some(prefix => (
+      relativePath === prefix.replace(/\/$/, '') ||
+      relativePath.startsWith(prefix)
+    ))
+  );
+}
 
 // Проверка, нужно ли добавить импорт DESIGN_TOKENS
 function needsDesignTokensImport(content) {
@@ -90,35 +128,22 @@ function replaceColors(content) {
   let modified = content;
   let changeCount = 0;
   
-  // Заменяем простые цвета
-  for (const [oldColor, newColor] of Object.entries(COLOR_REPLACEMENTS)) {
-    const regex = new RegExp(oldColor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-    const matches = modified.match(regex);
-    if (matches) {
-      changeCount += matches.length;
-      modified = modified.replace(regex, newColor);
-    }
-  }
-  
-  // Заменяем shadowColor
-  const shadowMatches = modified.match(SHADOW_COLOR_PATTERN);
-  if (shadowMatches) {
-    changeCount += shadowMatches.length;
-    modified = modified.replace(SHADOW_COLOR_PATTERN, SHADOW_COLOR_REPLACEMENT);
-  }
-  
-  // Заменяем backgroundColor
-  const bgMatches = modified.match(BG_COLOR_PATTERN);
-  if (bgMatches) {
-    changeCount += bgMatches.length;
-    modified = modified.replace(BG_COLOR_PATTERN, BG_COLOR_REPLACEMENT);
-  }
+  modified = modified.replace(STYLE_COLOR_PATTERN, (match, prefix, prop, quote, value) => {
+    const replacement = COLOR_VALUE_REPLACEMENTS[value.toLowerCase()];
+    if (!replacement) return match;
+    changeCount++;
+    return `${prefix}${prop}: ${replacement}`;
+  });
   
   return { modified, changeCount };
 }
 
 // Обработать файл
 function processFile(filePath, dryRun = false) {
+  if (isExcludedPath(filePath)) {
+    return { changed: false, changeCount: 0, skipped: true };
+  }
+
   const content = fs.readFileSync(filePath, 'utf8');
   const { modified, changeCount } = replaceColors(content);
   
@@ -152,11 +177,10 @@ function findFiles(dir, extensions = ['.tsx', '.ts']) {
       const stat = fs.statSync(fullPath);
       
       if (stat.isDirectory()) {
-        // Пропускаем node_modules, dist, build
-        if (!['node_modules', 'dist', 'build', '.git', 'coverage'].includes(item)) {
+        if (!EXCLUDED_DIRS.has(item) && !isExcludedPath(fullPath)) {
           walk(fullPath);
         }
-      } else if (stat.isFile()) {
+      } else if (stat.isFile() && !isExcludedPath(fullPath)) {
         const ext = path.extname(item);
         if (extensions.includes(ext)) {
           files.push(fullPath);
@@ -188,8 +212,7 @@ function main() {
     filesToProcess = findFiles(dirPath);
   } else {
     // Обработать все файлы в проекте
-    const projectRoot = path.join(__dirname, '..');
-    filesToProcess = findFiles(projectRoot);
+    filesToProcess = findFiles(PROJECT_ROOT);
   }
   
   console.log(`🔍 Найдено файлов: ${filesToProcess.length}`);
@@ -221,4 +244,18 @@ function main() {
   }
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  AUDITED_STYLE_PROPS,
+  COLOR_VALUE_REPLACEMENTS,
+  EXCLUDED_DIRS,
+  EXCLUDED_RELATIVE_PATHS,
+  EXCLUDED_RELATIVE_PREFIXES,
+  findFiles,
+  isExcludedPath,
+  processFile,
+  replaceColors,
+};

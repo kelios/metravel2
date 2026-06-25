@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel Backend Diagnostician"
+  short_description: "Diagnose backend/API blockers safely."
+  default_prompt: "Use $metravel-backend-diagnostician to analyze a metravel API/backend issue read-only and prepare evidence-backed board follow-up."

@@ -24,13 +24,19 @@ Default feature flow:
 2. Project Analyst: use `$metravel-project-analyst` for broad or unclear scope to map structure, validation, risks, and next agents.
 3. Business Analyst: produce a concise feature brief and acceptance criteria.
 4. System Architect: map the brief to existing code, constraints, risk, and validation.
-5. Designer: use `$metravel-ui-guardrails` for visible UI states and web/mobile behavior.
-6. Android Developer: use `$metravel-android-developer` for Android/native implementation, crashes, platform files, or Expo native modules.
-7. Programmer: use `$metravel-feature-builder` to implement the smallest sufficient diff.
-8. Mobile Tester: use `$metravel-mobile-tester` for mobile web or Android/native QA evidence and retest.
-9. QA Agent: use `$metravel-qa-agent` to test broader flows and create structured bug reports.
-10. Reviewer: use `$metravel-system-architect` in review mode to check the diff, tests, and rule compliance.
-11. DevOps Agent: use `$metravel-devops-agent` only when the user explicitly asks to deploy, build, release, or verify a deployment.
+5. Domain Router: use `$metravel-domain-router` for travel/map/profile/achievements/quests/PDF/new-page owner maps.
+6. Designer: use `$metravel-ui-guardrails` for visible UI states and web/mobile behavior.
+7. Android Developer: use `$metravel-android-developer` for Android/native implementation, crashes, platform files, or Expo native modules.
+8. Refactor Surgeon: use `$metravel-refactor-surgeon` for behavior-preserving large component splits.
+9. Programmer: use `$metravel-feature-builder` to implement the smallest sufficient diff.
+10. Backend Diagnostician: use `$metravel-backend-diagnostician` for read-only API/backend blockers and board follow-up.
+11. Browser Reviewer: use `$metravel-browser-reviewer` for visible web diff review, fixes, and re-verification.
+12. Mobile Tester: use `$metravel-mobile-tester` for mobile web or Android/native QA evidence and retest.
+13. QA Agent: use `$metravel-qa-agent` to test broader flows and create structured bug reports.
+14. Sprint Reviewer: use `$metravel-sprint-reviewer` to accept task-board tickets only with Done-gate evidence.
+15. Production Smoke: use `$metravel-production-smoke` for read-only production health checks.
+16. Reviewer: use `$metravel-system-architect` in review mode to check the diff, tests, and rule compliance.
+17. DevOps Agent: use `$metravel-devops-agent` only when the user explicitly asks to deploy, build, release, or verify a deployment.
 
 Default bug loop:
 
@@ -46,8 +52,12 @@ Default bug loop:
 - Do not let exploratory QA or analyst roles edit code.
 - Use Codex Orchestrator only to choose and sequence work; route implementation to the relevant specialist skill.
 - Use Project Analyst only for read-only discovery unless the user explicitly asks to update docs or code after the analysis.
+- Use Backend Diagnostician only for read-only backend/API diagnosis and board evidence; do not let it edit backend or frontend code.
 - Keep Mobile Tester read-only unless the user explicitly asks to update tests.
 - Do not let Android Developer change mobile release/build configs without explicit user approval.
+- Do not let Refactor Surgeon change business logic or visual design; it only extracts structure.
+- Do not let Sprint Reviewer move tickets to `done` without runtime evidence for the Task Contract Done gate.
+- Do not let Production Smoke deploy, rollback, or mutate production; it only probes read-only health.
 - Do not let implementation start from vague requirements; require acceptance criteria or a bug report first.
 - Do not deploy production from vague wording; require an explicit `prod` deploy request and a clean environment gate.
 - Before assigning deploy, build, server rebuild/restart, full/preflight tests, Playwright/e2e, or Lighthouse work, check the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; if the same target is already running, do not start a second agent command.
@@ -64,11 +74,17 @@ Each role should return one compact artifact:
 - Codex Orchestrator: `Codex Route`
 - Project Analyst: `Project Analysis`
 - System Architect: `Technical Design`
+- Domain Router: `Domain Route`
 - Designer: `UI Contract`
 - Android Developer: `Android Implementation Summary`
+- Refactor Surgeon: `Refactor Summary`
 - Programmer: `Implementation Summary`
+- Backend Diagnostician: `Backend Diagnosis`
+- Browser Reviewer: `Browser Review Verdict`
 - Mobile Tester: `Mobile QA Pass` or `Bug Report`
 - QA Agent: `Bug Report` or `QA Pass`
+- Sprint Reviewer: `Sprint Review`
+- Production Smoke: `Production Smoke`
 - Reviewer: `Review Findings`
 - DevOps Agent: `Deploy Report`
 

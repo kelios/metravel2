@@ -42,16 +42,23 @@ If the branch is not `main`, stop before editing and ask how to proceed.
 - Use `$metravel-project-analyst` for broad or unclear repository analysis.
 - Use `$metravel-business-analyst` before implementation when the request is a product idea or requirements are vague.
 - Use `$metravel-system-architect` when design, module boundaries, risk mapping, or high-risk review is needed.
+- Use `$metravel-domain-router` before implementing domain-heavy travel, map, profile, achievements, quests, PDF/export, new-page, or design-system work.
 - Use `$metravel-feature-builder` for feature, bugfix, refactor, API, service, hook, SEO, or ordinary code changes.
 - Use `$metravel-hook-builder` when the main work is hook extraction or hook-boundary cleanup.
+- Use `$metravel-refactor-surgeon` for behavior-preserving extraction of large components or file-complexity guard failures.
 - Use `$metravel-ui-guardrails` for visible UI, layout, icons, images, placeholders, tokens, or external-link interaction.
+- Use `$metravel-browser-reviewer` for visible web diff review, browser evidence, console/network checks, and fix/reverify loops.
 - Use `$metravel-android-developer` for Android/native implementation, crashes, Expo modules, permissions, SecureStore, push, or platform files.
 - Use `$metravel-mobile-tester` for read-only mobile web or Android/native QA evidence and retest.
 - Use `$metravel-test-runner` to choose and run targeted checks; `$metravel-test-writer` to add stable tests.
 - Use `$metravel-e2e-runner` for Playwright/browser flows and `.env.e2e` auth.
 - Use `$metravel-performance-analyst` only with production build or real URL performance evidence.
+- Use `$metravel-seo-index-operator` for GSC/indexing routines, URL Inspection/index status, IndexNow backup, and SEO owner/action lists.
 - Use `$metravel-release-checks` and `$metravel-devops-agent` for release/deploy/build operations and explicit environment gates.
+- Use `$metravel-production-smoke` for read-only production health checks and route failures to the right owner.
 - Use `$metravel-docs-maintainer` for docs, AGENTS, CODEX, or skill changes.
+- Use `$metravel-backend-diagnostician` for read-only backend/API diagnosis and backend board follow-up.
+- Use `$metravel-sprint-reviewer` for task-board acceptance and Done-gate verification.
 - Use `$metravel-code-reviewer` before handoff when review findings, residual risk, or rule compliance matter.
 - Use `$metravel-quality-fixer` when the task is explicitly to run/fix the full quality gate.
 

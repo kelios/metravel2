@@ -14,7 +14,6 @@ Read first:
 - `docs/RELEASE.md`
 - `docs/PRODUCTION_CHECKLIST.md` when production or credentials are involved
 - `docs/TESTING.md` when choosing checks
-- `.claude/agents/frontend-deployer.md` when validating the current frontend deploy mechanism
 
 ## Environment Gate
 
