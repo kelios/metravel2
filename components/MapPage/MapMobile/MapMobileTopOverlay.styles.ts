@@ -38,6 +38,15 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       // Локация вынесена в левый край root, поэтому ряд не перегружает 320px.
       gap: 8,
     },
+    toolbarStack: {
+      alignItems: 'flex-end' as const,
+      gap: 8,
+    },
+    routeToolbar: {
+      flexDirection: 'row',
+      alignItems: 'center' as const,
+      gap: 8,
+    },
     iconButton: {
       width: BUTTON_SIZE,
       height: BUTTON_SIZE,

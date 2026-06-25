@@ -1,9 +1,10 @@
 /**
  * MapMobileTopOverlay — compact icon toolbar floating on top of the map.
  *
- * Renders a left location button plus a right-side row of round icon buttons:
+ * Renders a left location button plus right-side rows of round icon buttons:
  *  - left: ⌖ Локация (crosshair) — tap → recenters the map on the user.
- *  - right: ≡ Фильтры, ◎ Радиус, ⧉ Слои, ≣ Список.
+ *  - right/top: ≡ Фильтры, ◎ Радиус, ⧉ Слои, ≣ Список.
+ *  - right/bottom: route-building controls grouped together.
  *
  * The radius/layers popovers are mobile-only inline actions, so those quick
  * controls no longer need to open the 70% sheet. The sheet now hosts only
@@ -127,8 +128,10 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   // за отступ под статус-бар/нотч. Берём safe-area top, но держим небольшой пол,
   // чтобы кнопки не прилипали к самому краю там, где safe-area == 0.
   const resolvedTopPadding = Math.max(topInset, 8) + 8
-  // Поповеры открываются прямо под рядом иконок: верх иконок + высота кнопки + зазор.
-  const popoverTop = resolvedTopPadding + BUTTON_SIZE + 8
+  // Поповеры открываются прямо под своим рядом иконок.
+  const basePopoverTop = resolvedTopPadding + BUTTON_SIZE + 8
+  const routeControlsTop = resolvedTopPadding + BUTTON_SIZE + 8
+  const routePopoverTop = routeControlsTop + BUTTON_SIZE + 8
 
   return (
     <View
@@ -147,136 +150,144 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
         <Feather name="crosshair" size={20} color={colors.primary} />
       </Pressable>
 
-      <View style={styles.toolbar} pointerEvents="auto">
-        <Pressable
-          testID="map-mobile-filters-button"
-          onPress={onOpenFilters}
-          accessibilityRole="button"
-          accessibilityLabel="Открыть фильтры"
-          hitSlop={6}
-          style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
-        >
-          <Feather name="sliders" size={20} color={colors.text} />
-        </Pressable>
-
-        {!isRouteMode && (
+      <View style={styles.toolbarStack} pointerEvents="box-none">
+        <View style={styles.toolbar} pointerEvents="auto">
           <Pressable
-            testID="map-mobile-radius-button"
-            onPress={onToggleRadius}
+            testID="map-mobile-filters-button"
+            onPress={onOpenFilters}
             accessibilityRole="button"
-            accessibilityState={{ expanded: activePopover === 'radius' }}
-            accessibilityLabel={`Радиус${radiusBadge ? ` ${radiusBadge}` : ''}`}
+            accessibilityLabel="Открыть фильтры"
+            hitSlop={6}
+            style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
+          >
+            <Feather name="sliders" size={20} color={colors.text} />
+          </Pressable>
+
+          {!isRouteMode && (
+            <Pressable
+              testID="map-mobile-radius-button"
+              onPress={onToggleRadius}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: activePopover === 'radius' }}
+              accessibilityLabel={`Радиус${radiusBadge ? ` ${radiusBadge}` : ''}`}
+              hitSlop={6}
+              style={({ pressed }) => [
+                styles.iconButton,
+                activePopover === 'radius' && styles.iconButtonActive,
+                pressed && styles.iconButtonPressed,
+              ]}
+            >
+              <Feather name="target" size={20} color={colors.text} />
+              {!!radiusBadge && (
+                <View style={styles.badge} pointerEvents="none">
+                  <RNText style={styles.badgeText} numberOfLines={1}>
+                    {radiusBadge}
+                  </RNText>
+                </View>
+              )}
+            </Pressable>
+          )}
+
+          <Pressable
+            testID="map-mobile-layers-button"
+            onPress={onToggleLayers}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: activePopover === 'layers' }}
+            accessibilityLabel="Слои и настройки карты"
             hitSlop={6}
             style={({ pressed }) => [
               styles.iconButton,
-              activePopover === 'radius' && styles.iconButtonActive,
+              activePopover === 'layers' && styles.iconButtonActive,
               pressed && styles.iconButtonPressed,
             ]}
           >
-            <Feather name="target" size={20} color={colors.text} />
-            {!!radiusBadge && (
+            <Feather name="layers" size={20} color={colors.text} />
+          </Pressable>
+
+          <Pressable
+            testID="map-mobile-open-list"
+            onPress={onOpenList}
+            accessibilityRole="button"
+            accessibilityLabel={`Показать список рядом${listBadge ? ` — ${listBadge}` : ''}`}
+            hitSlop={6}
+            style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
+          >
+            <Feather name="list" size={20} color={colors.text} />
+            {!!listBadge && (
               <View style={styles.badge} pointerEvents="none">
                 <RNText style={styles.badgeText} numberOfLines={1}>
-                  {radiusBadge}
+                  {listBadge}
                 </RNText>
               </View>
             )}
           </Pressable>
-        )}
+        </View>
 
-        <Pressable
-          testID="map-mobile-layers-button"
-          onPress={onToggleLayers}
-          accessibilityRole="button"
-          accessibilityState={{ expanded: activePopover === 'layers' }}
-          accessibilityLabel="Слои и настройки карты"
-          hitSlop={6}
-          style={({ pressed }) => [
-            styles.iconButton,
-            activePopover === 'layers' && styles.iconButtonActive,
-            pressed && styles.iconButtonPressed,
-          ]}
+        <View
+          style={styles.routeToolbar}
+          pointerEvents="auto"
+          testID="map-mobile-route-toolbar"
         >
-          <Feather name="layers" size={20} color={colors.text} />
-        </Pressable>
-
-        <Pressable
-          testID="map-mobile-route-button"
-          onPress={onEnterRouteMode}
-          accessibilityRole="button"
-          accessibilityState={{ selected: isRouteMode }}
-          accessibilityLabel={routeAccessibilityLabel}
-          hitSlop={6}
-          style={({ pressed }) => [
-            styles.iconButton,
-            isRouteMode && styles.iconButtonActive,
-            pressed && styles.iconButtonPressed,
-          ]}
-        >
-          <Feather name="navigation" size={20} color={isRouteMode ? colors.primary : colors.text} />
-          {!!routeProgressLabel && (
-            <View style={styles.routeProgressBadge} pointerEvents="none">
-              <RNText style={styles.badgeText} numberOfLines={1}>
-                {routeProgressLabel}
-              </RNText>
-            </View>
-          )}
-        </Pressable>
-
-        {isRouteMode && (
           <Pressable
-            testID="map-mobile-transport-button"
-            onPress={onToggleTransport}
+            testID="map-mobile-route-button"
+            onPress={onEnterRouteMode}
             accessibilityRole="button"
-            accessibilityState={{ expanded: activePopover === 'transport' }}
-            accessibilityLabel={`Тип передвижения: ${TRANSPORT_LABEL[transportMode]}`}
+            accessibilityState={{ selected: isRouteMode }}
+            accessibilityLabel={routeAccessibilityLabel}
             hitSlop={6}
             style={({ pressed }) => [
               styles.iconButton,
-              activePopover === 'transport' && styles.iconButtonActive,
+              isRouteMode && styles.iconButtonActive,
               pressed && styles.iconButtonPressed,
             ]}
           >
-            <MapIcon name={TRANSPORT_ICON[transportMode]} size={20} color={colors.text} />
+            <Feather name="navigation" size={20} color={isRouteMode ? colors.primary : colors.text} />
+            {!!routeProgressLabel && (
+              <View style={styles.routeProgressBadge} pointerEvents="none">
+                <RNText style={styles.badgeText} numberOfLines={1}>
+                  {routeProgressLabel}
+                </RNText>
+              </View>
+            )}
           </Pressable>
-        )}
 
-        {isRouteMode && (
-          <Pressable
-            testID="map-mobile-route-clear-button"
-            onPress={onClearRoute}
-            accessibilityRole="button"
-            accessibilityLabel="Очистить маршрут"
-            hitSlop={6}
-            style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
-          >
-            <Feather name="x" size={20} color={colors.text} />
-          </Pressable>
-        )}
-
-        <Pressable
-          testID="map-mobile-open-list"
-          onPress={onOpenList}
-          accessibilityRole="button"
-          accessibilityLabel={`Показать список рядом${listBadge ? ` — ${listBadge}` : ''}`}
-          hitSlop={6}
-          style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
-        >
-          <Feather name="list" size={20} color={colors.text} />
-          {!!listBadge && (
-            <View style={styles.badge} pointerEvents="none">
-              <RNText style={styles.badgeText} numberOfLines={1}>
-                {listBadge}
-              </RNText>
-            </View>
+          {isRouteMode && (
+            <Pressable
+              testID="map-mobile-transport-button"
+              onPress={onToggleTransport}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: activePopover === 'transport' }}
+              accessibilityLabel={`Тип передвижения: ${TRANSPORT_LABEL[transportMode]}`}
+              hitSlop={6}
+              style={({ pressed }) => [
+                styles.iconButton,
+                activePopover === 'transport' && styles.iconButtonActive,
+                pressed && styles.iconButtonPressed,
+              ]}
+            >
+              <MapIcon name={TRANSPORT_ICON[transportMode]} size={20} color={colors.text} />
+            </Pressable>
           )}
-        </Pressable>
+
+          {isRouteMode && (
+            <Pressable
+              testID="map-mobile-route-clear-button"
+              onPress={onClearRoute}
+              accessibilityRole="button"
+              accessibilityLabel="Очистить маршрут"
+              hitSlop={6}
+              style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
+            >
+              <Feather name="x" size={20} color={colors.text} />
+            </Pressable>
+          )}
+        </View>
       </View>
 
       {activePopover === 'radius' && (
         <MapMobileRadiusPopover
           colors={colors}
-          top={popoverTop}
+          top={basePopoverTop}
           options={radiusOptions}
           currentValue={radiusValue}
           onSelect={onRadiusSelect}
@@ -287,7 +298,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
       {activePopover === 'layers' && (
         <MapMobileLayersPopover
           colors={colors}
-          top={popoverTop}
+          top={basePopoverTop}
           mapUiApi={mapUiApi}
           overlayOptions={overlayOptions}
           enabledOverlays={enabledOverlays}
@@ -300,15 +311,19 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
       {isRouteMode && activePopover === 'transport' && onTransportSelect && (
         <MapMobileTransportPopover
           colors={colors}
-          top={popoverTop}
+          top={routePopoverTop}
           currentValue={transportMode}
           onSelect={onTransportSelect}
           onRequestClose={onClosePopover}
         />
       )}
 
-      {isRouteMode && hintVisible && (
-        <View style={styles.routeHint} pointerEvents="none" testID="map-mobile-route-hint">
+      {isRouteMode && hintVisible && !activePopover && (
+        <View
+          style={[styles.routeHint, { top: routePopoverTop }]}
+          pointerEvents="none"
+          testID="map-mobile-route-hint"
+        >
           <Feather name="map-pin" size={13} color={colors.primary} />
           <RNText style={styles.routeHintText} numberOfLines={2}>
             Коснитесь карты: 1-я точка — старт, 2-я — финиш

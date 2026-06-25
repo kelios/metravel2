@@ -287,12 +287,14 @@ describe('MapMobileLayout', () => {
       )
 
       // Radius mode: no contextual route icons yet.
+      expect(screen.getByTestId('map-mobile-route-toolbar')).toBeTruthy()
       expect(screen.queryByTestId('map-mobile-transport-button')).toBeNull()
       expect(screen.queryByTestId('map-mobile-route-clear-button')).toBeNull()
 
       fireEvent.press(screen.getByTestId('map-mobile-route-button'))
       // Store flipped to 'route' → contextual icons + hint now render.
       expect(useRouteStore.getState().mode).toBe('route')
+      expect(screen.getByTestId('map-mobile-route-toolbar')).toBeTruthy()
       expect(screen.getByTestId('map-mobile-transport-button')).toBeTruthy()
       expect(screen.getByTestId('map-mobile-route-clear-button')).toBeTruthy()
       expect(screen.getByTestId('map-mobile-route-hint')).toBeTruthy()
