@@ -13,6 +13,15 @@ type WebMapAction = {
   title: string
 }
 
+type ListCardAction = {
+  key: string
+  label: string
+  icon: 'navigation' | 'book-open'
+  onPress: () => void
+  accessibilityLabel: string
+  title: string
+}
+
 type DistanceInfo = {
   distanceText: string
   travelTimeText: string
@@ -34,6 +43,8 @@ type Props = {
   transportMode: 'car' | 'bike' | 'foot'
   distanceInfo: DistanceInfo
   webMapActions: WebMapAction[]
+  quickActions: ListCardAction[]
+  inlineActions: ListCardAction[]
   handleMainPress: () => void
   openArticle: () => void
   openTelegram: () => void
@@ -72,6 +83,8 @@ const AddressListItemCard: React.FC<Props> = ({
   transportMode,
   distanceInfo,
   webMapActions,
+  quickActions,
+  inlineActions,
   handleMainPress,
   openArticle,
   openTelegram,
@@ -111,18 +124,8 @@ const AddressListItemCard: React.FC<Props> = ({
       onCopyCoord={undefined}
       onShare={coord ? openTelegram : undefined}
       mapActions={webMapActions}
-      inlineActions={
-        articleUrl || urlTravel
-          ? [{
-              key: 'article',
-              label: 'Открыть',
-              icon: 'book-open',
-              onPress: openArticle,
-              accessibilityLabel: 'Открыть страницу',
-              title: 'Открыть страницу',
-            }]
-          : []
-      }
+      quickActions={quickActions}
+      inlineActions={inlineActions}
       onAddPoint={handleAddPoint}
       addDisabled={!authReady || !isAuthenticated || isAddingPoint}
       isAdding={isAddingPoint}

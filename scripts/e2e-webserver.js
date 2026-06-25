@@ -219,7 +219,28 @@ function getGitBuildStamp(cwd) {
 
   try {
     const status = String(execSync('git status --porcelain', { cwd, stdio: ['ignore', 'pipe', 'ignore'] }) || '');
-    const hash = crypto.createHash('sha1').update(status).digest('hex');
+    const stagedDiff = String(
+      execSync('git diff --cached --no-ext-diff --binary', {
+        cwd,
+        maxBuffer: 50 * 1024 * 1024,
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }) || ''
+    );
+    const worktreeDiff = String(
+      execSync('git diff --no-ext-diff --binary', {
+        cwd,
+        maxBuffer: 50 * 1024 * 1024,
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }) || ''
+    );
+    const hash = crypto
+      .createHash('sha1')
+      .update(status)
+      .update('\n--staged--\n')
+      .update(stagedDiff)
+      .update('\n--worktree--\n')
+      .update(worktreeDiff)
+      .digest('hex');
     result.statusHash = hash;
   } catch {
     // ignore (no git)

@@ -3,19 +3,91 @@ import { test, expect } from '@playwright/test'
 /**
  * Trip planning — planner happy-path (Sprint 13, FE-trip-tests #406).
  *
- * The planned-trips feature runs on a mock-fallback
- * (EXPO_PUBLIC_TRIPS_MOCK=true) until BE-trip-* endpoints are deployed.
  * Auth setup mirrors public-trips.spec.ts: storageState.json for account A.
  *
- * Guard: if the auth storage state file doesn't exist or the env creds are
- * absent we skip rather than fail — this avoids breaking the suite in CI
- * where the e2e auth setup hasn't run yet.
+ * The create flow mocks only POST /trips/planned/ locally so this spec does not
+ * depend on a deployed planner backend and does not enable the global trip mock
+ * flag that would affect public-trips real-BE coverage.
  */
 
 import fs from 'node:fs'
 
 const STORAGE_STATE_A = 'e2e/.auth/storageState.json'
-const hasBState = () => fs.existsSync(STORAGE_STATE_A)
+const hasAState = () => fs.existsSync(STORAGE_STATE_A)
+
+function requireAuthState() {
+  if (!hasAState()) {
+    throw new Error(`${STORAGE_STATE_A} is required; run the Playwright global setup first`)
+  }
+}
+
+function readUserIdFromState(filePath: string): number {
+  try {
+    const json = JSON.parse(fs.readFileSync(filePath, 'utf8')) as any
+    const origins: any[] = Array.isArray(json?.origins) ? json.origins : []
+    for (const origin of origins) {
+      const ls: any[] = Array.isArray(origin?.localStorage) ? origin.localStorage : []
+      const entry = ls.find((x: any) => x?.name === 'userId')
+      const id = Number(entry?.value)
+      if (Number.isFinite(id) && id > 0) return id
+    }
+  } catch {
+    // fall through to the stable fallback below
+  }
+  return 1
+}
+
+async function mockCreateTrip(page: import('@playwright/test').Page) {
+  const ownerId = readUserIdFromState(STORAGE_STATE_A)
+
+  await page.route('**/api/trips/planned/', async (route) => {
+    const request = route.request()
+    if (request.method() !== 'POST') {
+      await route.fallback()
+      return
+    }
+
+    let body: Record<string, unknown> = {}
+    try {
+      const parsed = request.postDataJSON()
+      if (parsed && typeof parsed === 'object') {
+        body = parsed as Record<string, unknown>
+      }
+    } catch {
+      body = {}
+    }
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 99001,
+        title: String(body.title ?? 'E2E тест-поездка'),
+        description: String(body.description ?? ''),
+        start_date: String(body.start_date ?? '2026-09-01T09:00:00'),
+        end_date: null,
+        status: 'planned',
+        owner: {
+          id: ownerId,
+          username: 'E2E User',
+          avatar: null,
+        },
+        participants: [
+          {
+            user: {
+              id: ownerId,
+              username: 'E2E User',
+              avatar: null,
+            },
+            status: 'accepted',
+          },
+        ],
+        route: { points: [] },
+        is_public: body.is_public === true,
+        max_participants: Number(body.max_participants ?? 4),
+      }),
+    })
+  })
+}
 
 // ── consent seed (mirrors public-trips.spec.ts pattern) ──────────────────────
 
@@ -36,37 +108,22 @@ function seedConsent(page: import('@playwright/test').Page) {
 
 test.describe('Trip planner — happy path', () => {
   test('navigates to /trips/plan and renders the planner page', async ({ page }) => {
-    if (!hasBState()) {
-      test.fixme(true, 'Auth storageState.json absent — run e2e auth setup first')
-      return
-    }
+    requireAuthState()
 
     await seedConsent(page)
     await page.goto('/trips/plan', { waitUntil: 'domcontentloaded' })
 
-    // The planner page must render without a hard error.
-    // We check for the create-form OR a sign-in gate (if auth expired).
-    const form = page.getByTestId('trip-create-form')
-    const anyContent = page.locator('body')
-    await expect(anyContent).toBeVisible({ timeout: 15_000 })
-
-    // If the form is present we can do deeper assertions.
-    const formVisible = await form.isVisible().catch(() => false)
-    if (formVisible) {
-      // Submit button should be disabled before consent.
-      const submitBtn = page.getByTestId('trip-create-submit')
-      await expect(submitBtn).toBeVisible({ timeout: 10_000 })
-      await expect(submitBtn).toBeDisabled()
-    }
+    await expect(page.locator('body')).toBeVisible({ timeout: 15_000 })
+    await expect(
+      page
+        .getByTestId('plan-login')
+        .or(page.getByTestId('plan-create-cta'))
+        .or(page.getByTestId('trips-empty-state')),
+    ).toBeVisible({ timeout: 15_000 })
   })
 
   test('creates a trip via the form and navigates to the plan page', async ({ browser }) => {
-    // fixme: requires authenticated context + EXPO_PUBLIC_TRIPS_MOCK=true on the
-    // running dev server.  Guard with fixme so the suite stays green in CI.
-    test.fixme(
-      !hasBState(),
-      'Auth storageState.json absent — run e2e auth setup first',
-    )
+    requireAuthState()
 
     const ctx = await browser.newContext({
       storageState: STORAGE_STATE_A,
@@ -75,17 +132,11 @@ test.describe('Trip planner — happy path', () => {
 
     try {
       await seedConsent(page)
-      await page.goto('/trips/plan', { waitUntil: 'domcontentloaded' })
+      await mockCreateTrip(page)
+      await page.goto('/trips/plan/create', { waitUntil: 'domcontentloaded' })
 
-      // Wait for the create-form to appear (mock-mode renders it immediately).
       const form = page.getByTestId('trip-create-form')
-      const formVisible = await form.isVisible({ timeout: 15_000 }).catch(() => false)
-
-      if (!formVisible) {
-        // The server may not have mock mode enabled — skip gracefully.
-        test.fixme(true, '/trips/plan did not render trip-create-form — EXPO_PUBLIC_TRIPS_MOCK may be off')
-        return
-      }
+      await expect(form).toBeVisible({ timeout: 15_000 })
 
       // Fill required fields.
       await page.getByTestId('trip-create-title').fill('E2E тест-поездка')
@@ -103,7 +154,7 @@ test.describe('Trip planner — happy path', () => {
 
       // After submit the app should navigate away from the create form.
       // Either to a detail plan page or back to the trips list.
-      await expect(page).not.toHaveURL(/\/trips\/plan$/, { timeout: 15_000 })
+      await expect(page).toHaveURL(/\/trips\/plan\/99001$/, { timeout: 15_000 })
     } finally {
       await ctx.close()
     }

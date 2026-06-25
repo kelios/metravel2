@@ -840,15 +840,23 @@ jest.mock('@shopify/flash-list', () => {
   const React = require('react')
   const RN = require('react-native')
 
-  const FlashList = ({ data = [], renderItem, keyExtractor }: any) => {
+  const renderListSlot = (slot: any) => {
+    if (!slot) return null
+    if (React.isValidElement(slot)) return slot
+    return React.createElement(slot)
+  }
+
+  const FlashList = ({ data = [], renderItem, keyExtractor, ListHeaderComponent, ListFooterComponent }: any) => {
     return React.createElement(
       RN.View,
       null,
+      renderListSlot(ListHeaderComponent),
       (data || []).map((item: any, index: number) => {
         const key = keyExtractor ? keyExtractor(item, index) : String(item?.id ?? index)
         const element = renderItem ? renderItem({ item, index }) : null
         return React.createElement(RN.View, { key }, element)
-      })
+      }),
+      renderListSlot(ListFooterComponent)
     )
   }
 

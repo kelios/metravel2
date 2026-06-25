@@ -37,6 +37,7 @@ type Props = {
   onShare?: () => void;
   mapActions?: ActionChip[];
   inlineActions?: InlineAction[];
+  quickActions?: ActionChip[];
   onAddPoint?: () => void;
   addDisabled?: boolean;
   isAdding?: boolean;
@@ -205,6 +206,7 @@ const PlaceListCard: React.FC<Props> = ({
   onShare,
   mapActions = [],
   inlineActions = [],
+  quickActions = [],
   onAddPoint,
   addDisabled = false,
   isAdding = false,
@@ -331,9 +333,31 @@ const PlaceListCard: React.FC<Props> = ({
     </CardActionPressable>
   ) : null
 
+  const quickActionButtons = quickActions.map((action) => (
+    <CardActionPressable
+      key={action.key}
+      accessibilityRole="button"
+      accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
+      onPress={action.onPress}
+      title={action.title ?? action.label}
+      style={({ pressed }) => [
+        styles.fallbackFavButton,
+        styles.quickActionButton,
+        pressed && styles.iconBtnPressed,
+      ]}
+    >
+      <Feather
+        name={action.icon}
+        size={18}
+        color={colors.textOnPrimary ?? colors.textOnDark}
+      />
+    </CardActionPressable>
+  ))
+
   const relatedTravelActions =
-    favoriteAffordance || overlayAddButton ? (
+    quickActionButtons.length > 0 || favoriteAffordance || overlayAddButton ? (
       <View style={styles.fallbackActionStack}>
+        {quickActionButtons}
         {favoriteAffordance}
         {overlayAddButton}
       </View>
@@ -680,6 +704,10 @@ const createStyles = (
       borderWidth: 1,
       borderColor: 'rgba(255, 255, 255, 0.3)',
       ...Platform.select({ web: { cursor: 'pointer' as any } }),
+    },
+    quickActionButton: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
     },
     iconBtnDisabled: {
       opacity: 0.45,

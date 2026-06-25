@@ -236,8 +236,32 @@ async function getVisibleFilterCheckbox(page: any): Promise<any | null> {
   return option;
 }
 
-function getGroupClearButton(page: any) {
-  return page.getByRole('button', { name: /Очистить \d+ выбранных/i }).first();
+function getGroupClearButtons(page: any) {
+  return page.getByRole('button', { name: /Очистить \d+ выбранных/i });
+}
+
+async function getVisibleGroupClearButton(page: any, timeout = FILTER_TIMEOUT_MS): Promise<any> {
+  const buttons = getGroupClearButtons(page);
+  let visibleIndex = -1;
+
+  await expect
+    .poll(
+      async () => {
+        const count = await buttons.count().catch(() => 0);
+        for (let i = 0; i < count; i += 1) {
+          if (await buttons.nth(i).isVisible().catch(() => false)) {
+            visibleIndex = i;
+            return true;
+          }
+        }
+        visibleIndex = -1;
+        return false;
+      },
+      { timeout },
+    )
+    .toBe(true);
+
+  return buttons.nth(visibleIndex);
 }
 
 function getCheckboxByLabel(page: any, label: string) {
@@ -298,7 +322,9 @@ async function selectFilterWithVisibleGroupClear(page: any): Promise<string | nu
       .toBe(true)
       .then(() => true)
       .catch(() => false);
-    const hasGroupClear = await getGroupClearButton(page).isVisible().catch(() => false);
+    const hasGroupClear = await getVisibleGroupClearButton(page, 5_000)
+      .then(() => true)
+      .catch(() => false);
 
     if (selected && hasGroupClear) {
       return label;
@@ -456,7 +482,7 @@ test.describe('@smoke Filters and Sorting UX', () => {
     }
 
     // Clear button should appear — use longer timeout to allow for list re-render
-    const clearButton = getGroupClearButton(page);
+    const clearButton = await getVisibleGroupClearButton(page);
     await expect(clearButton).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
   });
 
@@ -468,7 +494,7 @@ test.describe('@smoke Filters and Sorting UX', () => {
     }
 
     // Click group clear button
-    const groupClearButton = getGroupClearButton(page);
+    const groupClearButton = await getVisibleGroupClearButton(page, 10_000);
     await expect(groupClearButton).toBeVisible({ timeout: 10000 });
     await groupClearButton.click({ force: true });
     await page.waitForTimeout(DEBOUNCE_MS);

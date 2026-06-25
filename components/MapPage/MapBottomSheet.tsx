@@ -164,6 +164,11 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         bottomInset={bottomInset}
         onChange={handleSheetChanges}
         backdropComponent={renderBackdrop}
+        // Keep scroll gestures inside BottomSheetFlatList/ScrollView from
+        // resizing the map sheet. Height changes should happen via the handle
+        // or explicit snapTo* commands, not while the user scrolls list cards.
+        enableContentPanningGesture={false}
+        enableOverDrag={false}
         // Keyboard-avoidance for BottomSheetTextInput (place-name search): on
         // focus the sheet pans up so the input + results sit above the keyboard
         // instead of being hidden behind it (blind typing on Android). `extend`

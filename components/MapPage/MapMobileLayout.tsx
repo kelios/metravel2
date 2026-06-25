@@ -6,7 +6,6 @@ import Feather from '@expo/vector-icons/Feather'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe'
 import { LAYOUT } from '@/constants/layout'
-import { formatPlaces } from '@/utils/pluralize'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import { useMapMobileDerivations } from '@/hooks/map/useMapMobileDerivations'
@@ -354,17 +353,18 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   // uiTab для тела шторки: list → список; filters/route → провайдер фильтров.
   const bodyUiTab = sheetContent === 'list' ? 'list' : 'search'
+  const showSheetHeader = sheetContent !== 'list'
 
   const sheetContentNode = (
     <View style={styles.sheetRoot}>
       <View style={styles.sheetSheetHeader}>
-        <RNText style={styles.sheetSheetTitle} numberOfLines={1}>
-          {sheetContent === 'list'
-            ? formatPlaces(displayCount)
-            : sheetContent === 'route'
-              ? 'Маршрут'
-              : 'Фильтры и поиск'}
-        </RNText>
+        {showSheetHeader ? (
+          <RNText style={styles.sheetSheetTitle} numberOfLines={1}>
+            {sheetContent === 'route' ? 'Маршрут' : 'Фильтры и поиск'}
+          </RNText>
+        ) : (
+          <View style={styles.sheetHeaderSpacer} />
+        )}
         <Pressable
           testID="map-mobile-sheet-close"
           onPress={handleCloseSheet}

@@ -34,6 +34,7 @@ type Props = {
   quest: QuestMeta
   /** Надзаголовок над названием квеста */
   eyebrow?: string
+  imageLoading?: 'lazy' | 'eager'
   style?: any
 }
 
@@ -41,7 +42,12 @@ type Props = {
  * Карточка-CTA «Пройдите квест по этому городу» — перелинковка travel/главная → квест.
  * Ведёт на /quests/{cityId}/{quest_id}.
  */
-export function QuestForCityCard({ quest, eyebrow = 'Городской квест-маршрут', style }: Props) {
+export function QuestForCityCard({
+  quest,
+  eyebrow = 'Городской квест-маршрут',
+  imageLoading = 'eager',
+  style,
+}: Props) {
   const router = useRouter()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -81,7 +87,7 @@ export function QuestForCityCard({ quest, eyebrow = 'Городской квес
           blurBackground
           allowCriticalWebBlur
           blurRadius={16}
-          loading="eager"
+          loading={imageLoading}
           alt={`Обложка квеста ${quest.title}`}
           style={styles.image}
         />

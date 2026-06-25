@@ -47,6 +47,21 @@ describe('MapBottomSheet', () => {
     expect(mockBottomSheet.mock.calls[0]?.[0]?.enableDynamicSizing).toBe(false)
   })
 
+  it('keeps content scrolling from changing the sheet height', () => {
+    render(
+      <MapBottomSheet>
+        <View testID="sheet-content" />
+      </MapBottomSheet>,
+    )
+
+    expect(mockBottomSheet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        enableContentPanningGesture: false,
+        enableOverDrag: false,
+      }),
+    )
+  })
+
   it('can render static content without wrapping virtualized lists in a scroll view', () => {
     const { getByTestId } = render(
       <MapBottomSheet scrollableContent={false}>

@@ -487,4 +487,8 @@ export const getMapMobileLayoutStyles = (
       fontWeight: '800' as const,
       color: colors.text,
     },
+    sheetHeaderSpacer: {
+      flex: 1,
+      minWidth: 0,
+    },
   })

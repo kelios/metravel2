@@ -11,7 +11,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { sendAnalyticsEvent } from '@/utils/analytics'
 
 const IS_WEB = Platform.OS === 'web'
-const MAX_QUESTS = 6
+const MAX_QUESTS = 2
 
 function HomeQuestsPromoSection() {
   const router = useRouter()
@@ -51,7 +51,7 @@ function HomeQuestsPromoSection() {
         <View style={styles.grid}>
           {visibleQuests.map((quest) => (
             <View key={quest.id} style={[styles.cardSlot, isMobile && styles.cardSlotMobile]}>
-              <QuestForCityCard quest={quest} />
+              <QuestForCityCard quest={quest} imageLoading="lazy" />
             </View>
           ))}
         </View>

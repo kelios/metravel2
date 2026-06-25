@@ -48,4 +48,27 @@ describe('QuestForCityCard', () => {
     expect(props.blurBackground).toBe(true)
     expect(props.loading).toBe('eager')
   })
+
+  it('allows callers to defer non-critical quest covers', () => {
+    render(
+      <QuestForCityCard
+        imageLoading="lazy"
+        quest={{
+          id: 'krakow-dragon',
+          title: 'Тайна Краковского дракона',
+          points: 7,
+          cityId: '1',
+          cityName: 'Краков',
+          lat: 50.06,
+          lng: 19.94,
+          durationMin: 120,
+          difficulty: 'easy',
+          cover: 'https://metravelprod.s3.amazonaws.com/quests/1/main/cover.png?sig=1',
+        }}
+      />,
+    )
+
+    const props = mockImageCardMedia.mock.calls[0]?.[0]
+    expect(props.loading).toBe('lazy')
+  })
 })

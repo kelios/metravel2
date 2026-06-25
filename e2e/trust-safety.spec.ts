@@ -8,18 +8,54 @@ import { test, expect } from '@playwright/test'
  * mock in DEV; on a production preview the POST may 404 — we therefore assert the
  * UI flow (menu → reason picker → submit) rather than a network result.
  *
- * Guard: skip (fixme) rather than fail when the e2e auth storageState is absent,
- * mirroring planned-trips.spec.ts / public-trips.spec.ts.
+ * Uses a non-self profile derived from the available e2e storage states. If the
+ * auth fixture is missing, fail explicitly instead of recording a skipped test.
  */
 
 import fs from 'node:fs'
 
 const STORAGE_STATE_A = 'e2e/.auth/storageState.json'
-const hasAuth = () => fs.existsSync(STORAGE_STATE_A)
+const STORAGE_STATE_B = 'e2e/.auth/storageState.b.json'
+const hasAuth = (filePath: string) => fs.existsSync(filePath)
 
-// Account B's user id (applicant in the two-account e2e fixture) — a non-self
-// profile for account A, so the safety menu is rendered.
-const OTHER_USER_ID = process.env.E2E_OTHER_USER_ID ?? '1'
+function readUserIdFromState(filePath: string): string | null {
+  try {
+    const json = JSON.parse(fs.readFileSync(filePath, 'utf8')) as any
+    const origins: any[] = Array.isArray(json?.origins) ? json.origins : []
+    for (const origin of origins) {
+      const ls: any[] = Array.isArray(origin?.localStorage) ? origin.localStorage : []
+      const entry = ls.find((x: any) => x?.name === 'userId')
+      const value = String(entry?.value ?? '').trim()
+      if (value) return value
+    }
+  } catch {
+    // fall through to null
+  }
+  return null
+}
+
+function getSafetyFixture(): { storageState: string; targetUserId: string } {
+  if (!hasAuth(STORAGE_STATE_A)) {
+    throw new Error(`${STORAGE_STATE_A} is required; run the Playwright global setup first`)
+  }
+
+  const userA = readUserIdFromState(STORAGE_STATE_A)
+  const envTarget = String(process.env.E2E_OTHER_USER_ID ?? '').trim()
+  if (envTarget && envTarget !== userA) {
+    return { storageState: STORAGE_STATE_A, targetUserId: envTarget }
+  }
+
+  const userB = hasAuth(STORAGE_STATE_B) ? readUserIdFromState(STORAGE_STATE_B) : null
+  if (userB && userA && userB !== userA) {
+    return { storageState: STORAGE_STATE_A, targetUserId: userB }
+  }
+
+  if (userA && userA !== '1') {
+    return { storageState: STORAGE_STATE_A, targetUserId: '1' }
+  }
+
+  throw new Error('Trust & Safety e2e requires a non-self target user id')
+}
 
 function seedConsent(page: import('@playwright/test').Page) {
   return page.addInitScript(() => {
@@ -36,21 +72,17 @@ function seedConsent(page: import('@playwright/test').Page) {
 
 test.describe('Trust & Safety — report a user', () => {
   test('opens the safety menu and walks the report flow', async ({ browser }) => {
-    test.fixme(!hasAuth(), 'Auth storageState.json absent — run e2e auth setup first')
+    const fixture = getSafetyFixture()
 
-    const ctx = await browser.newContext({ storageState: STORAGE_STATE_A })
+    const ctx = await browser.newContext({ storageState: fixture.storageState })
     const page = await ctx.newPage()
 
     try {
       await seedConsent(page)
-      await page.goto(`/user/${OTHER_USER_ID}`, { waitUntil: 'domcontentloaded' })
+      await page.goto(`/user/${fixture.targetUserId}`, { waitUntil: 'domcontentloaded' })
 
       const menu = page.getByTestId('user-safety-menu')
-      const menuVisible = await menu.isVisible({ timeout: 15_000 }).catch(() => false)
-      if (!menuVisible) {
-        test.fixme(true, 'Safety menu not rendered (own profile / profile unavailable)')
-        return
-      }
+      await expect(menu).toBeVisible({ timeout: 15_000 })
 
       // Open menu → choose "Пожаловаться".
       await menu.click()

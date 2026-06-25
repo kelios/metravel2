@@ -194,6 +194,30 @@ describe('TravelListPanel (right list on map page)', () => {
     expect(queryByTestId('travel-list-back-to-map')).toBeNull();
   });
 
+  it('renders mobile filters as a compact icon beside the count and radius chip', () => {
+    const onOpenFilters = jest.fn();
+
+    const { getByTestId, getByText, queryByText } = render(
+      <TravelListPanel
+        travelsData={travelsData}
+        buildRouteTo={jest.fn()}
+        isMobile={true}
+        isLoading={false}
+        totalCount={9}
+        currentRadiusKm={5}
+        onOpenFilters={onOpenFilters}
+      />
+    );
+
+    expect(getByTestId('travel-list-mobile-summary')).toBeTruthy();
+    expect(getByText('Места рядом')).toBeTruthy();
+    expect(getByText('9 мест · 5 км')).toBeTruthy();
+    expect(queryByText('Фильтры')).toBeNull();
+
+    fireEvent.press(getByTestId('travel-list-open-filters'));
+    expect(onOpenFilters).toHaveBeenCalledTimes(1);
+  });
+
   it('builds explicit mobile results context with radius and user location', () => {
     expect(
       buildTravelListSummaryHint({

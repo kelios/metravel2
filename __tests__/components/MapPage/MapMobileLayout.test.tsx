@@ -145,6 +145,25 @@ describe('MapMobileLayout', () => {
     expect(mockMapBottomSheet.mock.calls[0]?.[0]?.bottomInset).toBeGreaterThan(56)
   })
 
+  it('does not duplicate the places count as a list sheet header', () => {
+    const screen = render(
+      <MapMobileLayout
+        mapComponent={<View testID="mock-map" />}
+        travelsData={[{ id: 1 }]}
+        totalCount={9}
+        coordinates={{ latitude: 53.9, longitude: 27.56 }}
+        transportMode="car"
+        buildRouteTo={jest.fn()}
+        onCenterOnUser={jest.fn()}
+        onOpenFilters={jest.fn()}
+        filtersPanelProps={null}
+      />,
+    )
+
+    expect(screen.getByText('Travel list')).toBeTruthy()
+    expect(screen.queryByText('9 мест')).toBeNull()
+  })
+
   it('keeps the places list static but makes filters sheet content scrollable', async () => {
     render(
       <MapMobileLayout

@@ -12,9 +12,8 @@ import {
  *  - cookie consent buttons (ConsentBanner local `minHeight: 44`)
  *  - travel-detail favorite + "Добавить в план" controls
  *
- * The two intentionally-deferred web targets (visible circular buttons that need a
- * transparent wrapper to grow only the hit box) are documented as `test.fixme` so the
- * suite stays green while flagging the remaining work — see docs/DESIGN_HANDOFF_2026-06-02.md.
+ * Deferred web targets are tracked in docs/DESIGN_HANDOFF_2026-06-02.md instead of
+ * being encoded as skipped tests in this suite.
  */
 
 const MIN_TARGET = 44

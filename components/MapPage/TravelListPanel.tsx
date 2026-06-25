@@ -182,38 +182,36 @@ const TravelListPanel: React.FC<Props> = ({
         style={[styles.listHeaderCard, headerWidthStyle]}
         testID="travel-list-mobile-summary"
       >
-        <View pointerEvents="none" style={styles.listHeaderTitleRow}>
-          <Text style={styles.listHeaderTitle}>Места рядом</Text>
-          <View style={styles.listHeaderCountChip}>
+        <View style={styles.listHeaderTitleRow}>
+          <Text pointerEvents="none" style={styles.listHeaderTitle}>
+            Места рядом
+          </Text>
+          <View pointerEvents="none" style={styles.listHeaderCountChip}>
             <Text style={styles.listHeaderCountChipText}>
               {placesCountLabel} {placesWord}
               {hasRadiusContext ? ` · ${currentRadiusKm} км` : ''}
             </Text>
           </View>
-        </View>
-
-        <Text pointerEvents="none" style={styles.listHeaderHint}>
-          Нажмите на карточку, чтобы сфокусировать карту.
-        </Text>
-
-        {onOpenFilters && (
-          <View style={styles.listHeaderActions}>
+          {onOpenFilters && (
             <Pressable
               testID="travel-list-open-filters"
               onPress={onOpenFilters}
               accessibilityRole="button"
               accessibilityLabel="Открыть фильтры"
-              hitSlop={6}
+              hitSlop={8}
               style={({ pressed }) => [
-                styles.filtersButton,
-                pressed && styles.filtersButtonPressed,
+                styles.filtersIconButton,
+                pressed && styles.filtersIconButtonPressed,
               ]}
             >
-              <Feather name="sliders" size={15} color={themeColors.primary} />
-              <Text style={styles.filtersButtonText}>Фильтры</Text>
+              <Feather name="sliders" size={18} color={themeColors.primary} />
             </Pressable>
-          </View>
-        )}
+          )}
+        </View>
+
+        <Text pointerEvents="none" style={styles.listHeaderHint}>
+          Нажмите на карточку, чтобы сфокусировать карту.
+        </Text>
       </View>
     )
   }, [compactPreview, currentRadiusKm, headerWidthStyle, isMobile, onOpenFilters, styles, themeColors, totalCount, travelsData.length])

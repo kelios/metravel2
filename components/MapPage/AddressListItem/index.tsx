@@ -28,10 +28,12 @@ export type { Props }
 const AddressListItem: React.FC<Props> = ({
   travel,
   onPress,
+  isMobile = false,
   userLocation,
   transportMode = 'car',
   isFavorite = false,
   onToggleFavorite,
+  onBuildRoute,
   screenWidth,
 }) => {
   const { address, coord, travelImageThumbUrl, articleUrl, urlTravel } = travel
@@ -128,6 +130,41 @@ const AddressListItem: React.FC<Props> = ({
     ]
   }, [coord])
 
+  const isNativeMobile = !isWebPlatform() && isMobile
+  const routeAction = useMemo(
+    () =>
+      isNativeMobile && onBuildRoute
+        ? {
+            key: 'route',
+            label: 'Маршрут',
+            icon: 'navigation' as const,
+            onPress: onBuildRoute,
+            accessibilityLabel: 'Построить маршрут сюда',
+            title: 'Построить маршрут сюда',
+          }
+        : null,
+    [isNativeMobile, onBuildRoute],
+  )
+
+  const inlineActions = useMemo(
+    () => [
+      ...(routeAction ? [routeAction] : []),
+      ...(articleUrl || urlTravel
+        ? [
+            {
+              key: 'article',
+              label: 'Открыть',
+              icon: 'book-open' as const,
+              onPress: openArticle,
+              accessibilityLabel: 'Открыть страницу',
+              title: 'Открыть страницу',
+            },
+          ]
+        : []),
+    ],
+    [articleUrl, openArticle, routeAction, urlTravel],
+  )
+
   return (
     <AddressListItemCard
       travel={travel}
@@ -141,10 +178,12 @@ const AddressListItem: React.FC<Props> = ({
       articleUrl={articleUrl}
       isFavorite={isFavorite}
       onToggleFavorite={onToggleFavorite}
+      quickActions={routeAction ? [routeAction] : []}
       onPress={onPress}
       transportMode={transportMode}
       distanceInfo={distanceInfo}
       webMapActions={webMapActions}
+      inlineActions={inlineActions}
       handleMainPress={handleMainPress}
       openArticle={openArticle}
       openTelegram={openTelegram}

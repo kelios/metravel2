@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import AddressListItem from '@/components/MapPage/AddressListItem';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -60,5 +60,35 @@ describe('AddressListItem (native list card)', () => {
 
     // Coordinate value must not be shown on mobile
     expect(queryByText(travel.coord)).toBeNull();
+  });
+
+  it('renders a visible route action on mobile', () => {
+    const travel: any = {
+      id: 1,
+      address: 'Test place',
+      coord: '50.0619474, 19.9368564',
+      travelImageThumbUrl: 'https://example.com/image.jpg',
+      categoryName: 'Category',
+      updated_at: '2024-01-01T00:00:00Z',
+    };
+    const onBuildRoute = jest.fn();
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    const { getAllByLabelText } = render(
+      <QueryClientProvider client={queryClient}>
+        <AddressListItem travel={travel} isMobile={true} onBuildRoute={onBuildRoute} />
+      </QueryClientProvider>
+    );
+
+    const routeActions = getAllByLabelText('Построить маршрут сюда');
+    expect(routeActions.length).toBeGreaterThan(0);
+
+    fireEvent.press(routeActions[0]);
+    expect(onBuildRoute).toHaveBeenCalledTimes(1);
   });
 });

@@ -101,6 +101,7 @@ export function useTravelItemRenderer({
               onHidePress={onHidePress}
               userLocation={userLocation}
               transportMode={transportMode}
+              onBuildRoute={() => buildRouteTo(item)}
               screenWidth={screenWidth}
             />
           </SwipeableListItem>
