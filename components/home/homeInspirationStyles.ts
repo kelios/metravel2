@@ -369,14 +369,14 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
 
 export const createSectionsStyles = (colors: Colors, isMobile: boolean) => StyleSheet.create({
   band: {
-    paddingVertical: isMobile ? 28 : 56, backgroundColor: colors.background, width: '100%', alignSelf: 'stretch',
+    paddingVertical: isMobile ? 20 : 36, backgroundColor: colors.background, width: '100%', alignSelf: 'stretch',
     ...Platform.select({ web: {
       backgroundImage: 'none',
     } }),
   },
-  bandMobile: { paddingVertical: 24 },
-  container: { gap: 44, width: '100%', alignSelf: 'stretch' },
-  containerMobile: { gap: 24 },
+  bandMobile: { paddingVertical: 18 },
+  container: { gap: 24, width: '100%', alignSelf: 'stretch' },
+  containerMobile: { gap: 18 },
 
   // ── Outer section card ────────────────────────────────────────────────────
   quickFiltersSection: {

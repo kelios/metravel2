@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Platform, StyleSheet, Text, View } from 'react-native'
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import Feather from '@expo/vector-icons/Feather'
@@ -25,6 +25,7 @@ interface HomeSectionProps {
   fetchFn: (options?: { signal?: AbortSignal }) => Promise<any>
   hideAuthor?: boolean
   fixedCount?: number
+  layout?: 'editorial' | 'rail'
 }
 
 const IS_WEB = Platform.OS === 'web'
@@ -133,11 +134,13 @@ export function HomeInspirationSection({
   fetchFn,
   hideAuthor = false,
   fixedCount,
+  layout = 'editorial',
 }: HomeSectionProps) {
   const router = useRouter()
   const colors = useThemedColors()
   const { isPhone, isLargePhone, width: viewportWidth } = useResponsive()
   const isMobile = isPhone || isLargePhone
+  const isRail = layout === 'rail'
   const [openingCatalog, setOpeningCatalog] = useState(false)
   const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -159,9 +162,10 @@ export function HomeInspirationSection({
   const travelsList = useMemo(() => {
     const arr = extractItems(travelData)
     if (fixedCount != null) return arr.slice(0, fixedCount)
+    if (isRail) return arr.slice(0, isMobile ? 8 : 10)
     if (isWeekendShowcase) return isMobile ? arr : arr.slice(0, 4)
     return arr.slice(0, isMobile ? 4 : 6)
-  }, [travelData, isMobile, isWeekendShowcase, fixedCount])
+  }, [travelData, isMobile, isWeekendShowcase, isRail, fixedCount])
 
   useEffect(() => {
     return () => {
@@ -185,7 +189,8 @@ export function HomeInspirationSection({
   const sectionBadge = SECTION_BADGES[queryKey]
 
   const styles = useMemo(() => createSectionStyles(colors, isMobile), [colors, isMobile])
-  const isDesktopEditorial = IS_WEB && !isMobile
+  const isDesktopEditorial = IS_WEB && !isMobile && !isRail
+  const railCardWidth = isMobile ? Math.min(Math.round(viewportWidth * 0.78), 320) : 300
   const shouldUseThreeColumnRow =
     IS_WEB && !isMobile && queryKey === 'home-random-travels' && travelsList.length === 3
 
@@ -290,6 +295,16 @@ export function HomeInspirationSection({
             queryKey={queryKey}
             emptyState={emptyState}
             renderButton={renderViewMoreButton}
+          />
+        ) : isRail ? (
+          <Rail
+            styles={styles}
+            items={travelsList}
+            queryKey={queryKey}
+            isMobile={isMobile}
+            hideAuthor={hideAuthor}
+            viewportWidth={viewportWidth}
+            cardWidth={railCardWidth}
           />
         ) : isMobile ? (
           <MobileBento
@@ -489,6 +504,39 @@ function MobileBento({
         </React.Fragment>
       ))}
     </View>
+  )
+}
+
+function Rail({
+  styles,
+  items,
+  queryKey,
+  isMobile,
+  hideAuthor,
+  viewportWidth,
+  cardWidth,
+}: GridListProps & { cardWidth: number }) {
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.railScroll}
+      contentContainerStyle={styles.railContent}
+    >
+      {items.map((item: any, index: number) => (
+        <View key={getItemKey(item, queryKey, index)} style={[styles.railCard, { width: cardWidth }]}>
+          <RenderTravelItem
+            item={item}
+            index={index}
+            isMobile={isMobile}
+            imageHeight={isMobile ? 200 : 210}
+            hideAuthor={hideAuthor}
+            viewportWidth={viewportWidth}
+            visualVariant="home-featured"
+          />
+        </View>
+      ))}
+    </ScrollView>
   )
 }
 
