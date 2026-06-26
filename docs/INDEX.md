@@ -15,6 +15,7 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 - `docs/PRODUCTION_CHECKLIST.md` — production checklist
 - `docs/AGENT_WORKBOARD.md` — active agent board for current multi-agent work
 - `docs/AGENT_WORKBOARD_AUTOMATION.md` — safe local automation plan and runner contract for the agent board
+- `docs/Mobile Application Notes.md` — working notes for mobile application observations and follow-up items
 - `docs/TRAVEL_PERFORMANCE_REFACTOR.md` — рабочая спецификация performance refactor для travel details web
 - `docs/POLISH_CAMINO_PDF_UI_AUDIT.md` — постраничный UI-аудит PDF и пошаговый план редизайна
 
