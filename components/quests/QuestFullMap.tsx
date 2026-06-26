@@ -604,7 +604,7 @@ function QuestFullMap({
                                         <Text style={[styles.popupCoords, { marginTop: 6 }]}>
                                             {gp.titles.join(', ')}
                                         </Text>
-                                        <Text style={styles.popupNavLabel}>Довести меня</Text>
+                                        <Text style={styles.popupNavLabel}>Открыть точку в картах</Text>
                                         <View style={styles.popupNavGrid}>
                                             {QUEST_NAV_PROVIDERS.map(provider => {
                                                 const visual = getNavigationActionVisual(provider.kind, colors);

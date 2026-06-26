@@ -54,7 +54,9 @@ export const buildOrganicMapsUrl = (coord: string, name?: string) => {
     const label = String(name ?? '').trim();
     return label ? `${base}&n=${encodeURIComponent(label)}` : base;
   }
-  return `https://omaps.app/${parsed.lat},${parsed.lon}`;
+  const base = `https://omaps.app/map?v=1&ll=${parsed.lat},${parsed.lon}`;
+  const label = String(name ?? '').trim();
+  return label ? `${base}&n=${encodeURIComponent(label)}` : base;
 };
 
 export const buildWazeUrl = (coord: string) => {

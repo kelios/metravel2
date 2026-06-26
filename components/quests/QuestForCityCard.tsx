@@ -86,8 +86,9 @@ export function QuestForCityCard({
           fit="contain"
           blurBackground
           allowCriticalWebBlur
+          revealOnLoadOnly
           blurRadius={16}
-          loading={imageLoading}
+          loading={imageLoading === 'lazy' ? 'lazy' : 'eager'}
           optimizeWeb={false}
           alt={`Обложка квеста ${quest.title}`}
           style={styles.image}

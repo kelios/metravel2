@@ -41,6 +41,7 @@ export const getStyles = (
       width: '100%',
       minWidth: 0,
       alignSelf: 'stretch',
+      ...(bottomCardLayout && Platform.OS !== 'web' ? { flexGrow: 1 } : null),
     },
     // Mobile bottom-sheet split (web only): the card fills the parent sheet as a
     // flex column — a FIXED hero on top and a scrollable caption/actions region
@@ -132,6 +133,7 @@ export const getStyles = (
       borderRadius: compactLayout ? compactSp.radius + 4 : sp.radius + 4,
       position: 'relative',
       overflow: 'hidden',
+      ...(bottomCardLayout && Platform.OS !== 'web' ? { flexGrow: 1 } : null),
       ...(Platform.OS === 'web'
         ? ({
             boxShadow: '0 22px 52px rgba(15,23,42,0.22), 0 8px 18px rgba(15,23,42,0.12)',
@@ -260,7 +262,7 @@ export const getStyles = (
       // Bottom card: tighten the gap between the (now dominant) photo and the title
       // so the content block reads as a compact caption under the hero.
       paddingTop: splitLayout ? topPadding + 2 : bottomCardLayout ? 8 : 14,
-      paddingBottom: 0,
+      paddingBottom: bottomCardLayout && Platform.OS !== 'web' ? 2 : 0,
     },
     contentContainerSplit: {
       flex: 1,
@@ -275,6 +277,7 @@ export const getStyles = (
       paddingHorizontal: horizontalPadding,
       paddingTop: splitLayout ? 10 : bottomCardLayout ? 8 : 14,
       paddingBottom: bottomCardLayout ? Math.max(8, bottomPadding - 2) : bottomPadding,
+      ...(bottomCardLayout && Platform.OS !== 'web' ? { flexGrow: 1, justifyContent: 'flex-start' } : null),
     },
     footerStack: {
       gap: bottomCardLayout ? 8 : splitLayout ? 10 : compactLayout ? compactSp.sectionGap : sp.sectionGap,
@@ -401,7 +404,7 @@ export const getStyles = (
       flexBasis: 0,
       minWidth: 0,
       alignItems: 'center',
-      gap: bottomCardLayout ? 0 : 6,
+      gap: 6,
       paddingVertical: 2,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },

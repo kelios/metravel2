@@ -51,8 +51,8 @@ describe('questWizardHelpers.openQuestMap', () => {
   })
 
   it('falls back through Organic Maps candidates until one succeeds', async () => {
-    // On web: organic_best (omaps.app) → organic_web (omaps.app) → google.
-    // geo: is skipped (Platform.OS='web'). buildOrganicMapsUrl on web returns omaps.app HTTPS.
+    // On web: Organic Maps candidates must keep marker coordinates in query params.
+    // geo: is skipped (Platform.OS='web').
     mockOpenExternalUrl.mockResolvedValueOnce(false)
     mockOpenExternalUrl.mockResolvedValueOnce(false)
     mockOpenExternalUrl.mockResolvedValueOnce(true)
@@ -60,8 +60,12 @@ describe('questWizardHelpers.openQuestMap', () => {
     const opened = await openQuestMap(point, 'organic')
 
     expect(opened).toBe(true)
-    expect(mockOpenExternalUrl.mock.calls[0][0]).toBe('https://omaps.app/53.9,27.56')
-    expect(mockOpenExternalUrl.mock.calls[1][0]).toBe('https://omaps.app/53.9,27.56')
+    expect(mockOpenExternalUrl.mock.calls[0][0]).toBe(
+      'https://omaps.app/map?v=1&ll=53.9,27.56&n=%D0%9F%D0%BB%D0%BE%D1%89%D0%B0%D0%B4%D1%8C%20%D0%9F%D0%BE%D0%B1%D0%B5%D0%B4%D1%8B',
+    )
+    expect(mockOpenExternalUrl.mock.calls[1][0]).toBe(
+      'https://omaps.app/map?v=1&ll=53.9,27.56&n=%D0%9F%D0%BB%D0%BE%D1%89%D0%B0%D0%B4%D1%8C%20%D0%9F%D0%BE%D0%B1%D0%B5%D0%B4%D1%8B',
+    )
     expect(mockOpenExternalUrl.mock.calls[2][0]).toBe(
       'https://www.google.com/maps/search/?api=1&query=53.9,27.56',
     )

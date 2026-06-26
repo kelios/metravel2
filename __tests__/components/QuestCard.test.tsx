@@ -115,6 +115,9 @@ describe('QuestCard', () => {
                 fit: 'contain',
                 blurBackground: true,
                 allowCriticalWebBlur: true,
+                revealOnLoadOnly: true,
+                loading: 'eager',
+                priority: 'low',
                 optimizeWeb: false,
             }),
         );

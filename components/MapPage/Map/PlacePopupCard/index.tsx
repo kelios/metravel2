@@ -370,11 +370,9 @@ const PlacePopupCard: React.FC<Props> = ({
                   <View style={[styles.iconActionBubble, styles.iconActionBubblePrimary]}>
                     <Feather name={primaryAction.icon} size={19} color={colors.textOnPrimary ?? colors.textOnDark} />
                   </View>
-                  {!isBottomCardLayout ? (
-                    <View style={styles.iconActionLabelRow}>
-                      <Text style={styles.iconActionLabel} numberOfLines={1}>{primaryIconActionLabel}</Text>
-                    </View>
-                  ) : null}
+                  <View style={styles.iconActionLabelRow}>
+                    <Text style={styles.iconActionLabel} numberOfLines={1}>{primaryIconActionLabel}</Text>
+                  </View>
                 </CardActionPressable>
               )}
 
@@ -390,11 +388,9 @@ const PlacePopupCard: React.FC<Props> = ({
                   <View style={[styles.iconActionBubble, styles.iconActionBubblePrimary]}>
                     <Feather name="corner-up-right" size={20} color={colors.textOnPrimary ?? colors.textOnDark} />
                   </View>
-                  {!isBottomCardLayout ? (
-                    <View style={styles.iconActionLabelRow}>
-                      <Text style={styles.iconActionLabel} numberOfLines={1}>Маршрут</Text>
-                    </View>
-                  ) : null}
+                  <View style={styles.iconActionLabelRow}>
+                    <Text style={styles.iconActionLabel} numberOfLines={1}>Маршрут</Text>
+                  </View>
                 </CardActionPressable>
               )}
 
@@ -409,11 +405,9 @@ const PlacePopupCard: React.FC<Props> = ({
                   <View style={styles.iconActionBubble}>
                     <Feather name="book-open" size={19} color={colors.primary} />
                   </View>
-                  {!isBottomCardLayout ? (
-                    <View style={styles.iconActionLabelRow}>
-                      <Text style={styles.iconActionLabel} numberOfLines={1}>Страница</Text>
-                    </View>
-                  ) : null}
+                  <View style={styles.iconActionLabelRow}>
+                    <Text style={styles.iconActionLabel} numberOfLines={1}>Страница</Text>
+                  </View>
                 </CardActionPressable>
               )}
 
@@ -451,11 +445,9 @@ const PlacePopupCard: React.FC<Props> = ({
                       />
                     )}
                   </View>
-                  {!isBottomCardLayout ? (
-                    <View style={styles.iconActionLabelRow}>
-                      <Text style={styles.iconActionLabel} numberOfLines={1}>{compactLabel}</Text>
-                    </View>
-                  ) : null}
+                  <View style={styles.iconActionLabelRow}>
+                    <Text style={styles.iconActionLabel} numberOfLines={1}>{compactLabel}</Text>
+                  </View>
                 </CardActionPressable>
               )}
 

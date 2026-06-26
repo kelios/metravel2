@@ -150,12 +150,9 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
 
   const bottomContentInset = (bottomInset || 0) + (insets?.bottom ?? 0) + 12
 
-  // #497 — native: the card now fills the screen (fullscreen place card). The
-  // `root` container is pulled in below the top safe area (paddingTop=safeTop) and
-  // above the dock (paddingBottom), and the `card` is flex:1 — so its sticky header
-  // (+ ✕) starts BELOW safeTop and never crosses into the status bar where taps are
-  // swallowed on Android. The body ScrollView scrolls inside the flexed card, so
-  // expanding «Ещё» scrolls under the header instead of pushing it off-screen.
+  // #497/#travel-point-card — native: the card fills the screen and the chrome
+  // floats over the hero photo. Keeping the grabber/close button out of the normal
+  // layout removes the wasted white header while still clearing the status bar.
   const safeTop = insets?.top ?? 0
 
   // On web, close via a NATIVE DOM handler instead of relying solely on RN-Web's
@@ -204,12 +201,9 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
     </Pressable>
   )
 
-  // #497 — native: the absolute close button painted over the edge-to-edge hero
-  // photo did not receive taps on Android (it overlapped the «Открыть фото»
-  // Pressable that fills the photo, and an absolute child near the parent's top
-  // edge is unreliable for touch on RN-Android). Render a real in-bounds close
-  // button inside the header row next to the grabber instead — guaranteed
-  // touchable, reads clearly as «закрыть карточку», and never fights the photo.
+  // Native close lives in the floating header overlay, outside the hero image
+  // Pressable subtree, so Android gives it a reliable touch target without
+  // reserving a separate white header row.
   const nativeHeaderClose = (
     <Pressable
       testID="map-place-bottom-card-close"
@@ -259,35 +253,26 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
       style={[
         styles.root,
         IS_WEB ? { paddingBottom: bottomContentInset } : null,
-        // Native fullscreen: pull the card below the top safe area so its header /
-        // ✕ start under the status bar (#497 — never crosses into the notch).
-        !IS_WEB ? { paddingTop: safeTop } : null,
       ]}
       testID="map-place-bottom-card"
       pointerEvents="box-none"
     >
       <View style={styles.card}>
-        <View
-          style={[styles.handleZone, !IS_WEB && styles.handleZoneNative]}
-          {...(webSwipeHandlers ?? {})}
-          {...(nativeSwipeHandlers ?? {})}
-        >
-          <View style={styles.grabber} />
-          {!IS_WEB ? nativeHeaderClose : null}
-        </View>
-
         {IS_WEB ? (
-          <View style={styles.body}>
-            <PopupComponent point={point} closePopup={handleClose} />
-          </View>
+          <>
+            <View style={styles.handleZone} {...(webSwipeHandlers ?? {})}>
+              <View style={styles.grabber} />
+            </View>
+            <View style={styles.body}>
+              <PopupComponent point={point} closePopup={handleClose} />
+            </View>
+          </>
         ) : (
-          // #497 — native: scroll the body inside the capped card so expanding
-          // «Ещё» scrolls under the sticky header instead of growing the card off
-          // the top of the screen. The ✕ lives in the header above this scroll.
           <ScrollView
             style={styles.bodyScroll}
             contentContainerStyle={[
               styles.body,
+              styles.bodyNative,
               { paddingBottom: bottomContentInset },
             ]}
             showsVerticalScrollIndicator={false}
@@ -298,7 +283,16 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
           </ScrollView>
         )}
 
-        {IS_WEB ? closeButton : null}
+        {IS_WEB ? closeButton : (
+          <View
+            pointerEvents="box-none"
+            style={[styles.floatingHeader, { top: safeTop + 8 }]}
+            {...(nativeSwipeHandlers ?? {})}
+          >
+            <View style={styles.floatingGrabber} />
+            {nativeHeaderClose}
+          </View>
+        )}
       </View>
     </View>
   )
@@ -362,6 +356,7 @@ const getStyles = (colors: ThemedColors) =>
       width: '100%',
       backgroundColor: colors.surface,
       overflow: 'hidden',
+      position: 'relative',
       ...(IS_WEB
         ? {
             alignSelf: 'center',
@@ -396,16 +391,41 @@ const getStyles = (colors: ThemedColors) =>
       paddingBottom: 6,
       paddingHorizontal: 8,
     },
+    floatingHeader: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 20,
+      elevation: 20,
+    },
+    floatingGrabber: {
+      width: 46,
+      height: 5,
+      borderRadius: 3,
+      backgroundColor: 'rgba(255,255,255,0.82)',
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: 'rgba(15,23,42,0.22)',
+    },
     headerCloseButton: {
       position: 'absolute',
-      right: 8,
+      right: 12,
       top: 4,
       width: 36,
       height: 36,
       borderRadius: 18,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: colors.surfaceMuted,
+      backgroundColor: 'rgba(255,255,255,0.86)',
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: 'rgba(15,23,42,0.16)',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.14,
+      shadowRadius: 8,
+      elevation: 21,
     },
     grabber: {
       width: 40,
@@ -464,5 +484,8 @@ const getStyles = (colors: ThemedColors) =>
       // carry the horizontal padding for the caption/actions below the hero.
       paddingHorizontal: 0,
       paddingBottom: 4,
+    },
+    bodyNative: {
+      flexGrow: 1,
     },
   })

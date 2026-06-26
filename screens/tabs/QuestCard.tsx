@@ -139,8 +139,9 @@ export default function QuestCard({
                         blurBackground
                         allowCriticalWebBlur
                         style={StyleSheet.absoluteFill}
-                        loading="lazy"
-                        priority="normal"
+                        loading="eager"
+                        priority="low"
+                        revealOnLoadOnly
                         optimizeWeb={false}
                         onLoad={handleImageLoad}
                         showImmediately={imageLoaded}

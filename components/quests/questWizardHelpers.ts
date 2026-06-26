@@ -106,7 +106,7 @@ export const openQuestMap = async (point: QuestMapPoint, app: QuestMapApp) => {
     apple: `http://maps.apple.com/?ll=${lat},${lng}`,
     yandex: buildYandexNaviUrl(coord),
     organic_best: buildOrganicMapsUrl(coord, point.title),
-    organic_web: `https://omaps.app/${lat},${lng}`,
+    organic_web: `https://omaps.app/map?v=1&ll=${lat},${lng}&n=${name}`,
     mapsme: `mapsme://map?ll=${lat},${lng}&zoom=17&n=${name}`,
     geo: Platform.OS === 'android' ? `geo:${lat},${lng}?q=${lat},${lng}(${name})` : undefined,
     waze: buildWazeUrl(coord),

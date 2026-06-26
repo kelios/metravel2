@@ -1,5 +1,5 @@
 import { createRef } from 'react'
-import { render } from '@testing-library/react-native'
+import { act, render } from '@testing-library/react-native'
 
 import type { Travel } from '@/types/types'
 import { TravelDetailsMapSection } from '@/components/travel/details/sections/TravelDetailsMapSection'
@@ -26,7 +26,7 @@ jest.mock('@/components/travel/details/TravelDetailsStyles', () => ({
 }))
 
 jest.mock('@/hooks/useTheme', () => ({
-  useThemedColors: () => ({ primary: '#000' }),
+  useThemedColors: () => ({ background: '#fff', primary: '#000' }),
 }))
 
 jest.mock('@/components/travel/details/hooks/useTravelDetailsMapSectionModel', () => ({
@@ -84,6 +84,19 @@ jest.mock('@/components/travel/details/sections/TravelPointsBlock', () => ({
   default: (props: any) => mockTravelPointsBlock(props),
 }))
 
+jest.mock('@/components/MapPage/MapPlaceBottomCard', () => {
+  const React = require('react')
+  const { Text, View } = require('react-native')
+  return {
+    __esModule: true,
+    default: ({ point }: any) => (
+      <View testID="shared-map-place-bottom-card">
+        <Text>{point?.address}</Text>
+      </View>
+    ),
+  }
+})
+
 describe('TravelDetailsMapSection', () => {
   beforeEach(() => {
     mockExcursionsSection.mockClear()
@@ -91,6 +104,7 @@ describe('TravelDetailsMapSection', () => {
     mockTravelWeatherBlock.mockClear()
     mockTravelPointsBlock.mockClear()
     mockSetMapSectionRef.mockClear()
+    mockHandlePointCardPress.mockClear()
   })
 
   it('composes map section blocks with props from map and content models', () => {
@@ -164,9 +178,58 @@ describe('TravelDetailsMapSection', () => {
     expect(mockTravelPointsBlock).toHaveBeenCalledWith(
       expect.objectContaining({
         anchors,
-        handlePointCardPress: mockHandlePointCardPress,
+        handlePointCardPress: expect.any(Function),
         travel,
       })
     )
+  })
+
+  it('opens the shared map place card directly from native travel point cards', () => {
+    const anchors = {
+      gallery: createRef(),
+      video: createRef(),
+      description: createRef(),
+      recommendation: createRef(),
+      plus: createRef(),
+      minus: createRef(),
+      map: createRef(),
+      points: createRef(),
+      near: createRef(),
+      popular: createRef(),
+      excursions: createRef(),
+      comments: createRef(),
+    }
+
+    const travel = {
+      id: 11,
+      slug: 'map-travel',
+      name: 'Map travel',
+      travelAddress: [{ id: 1, address: 'Point A', coord: '53.9,27.56' }],
+    } as Travel
+
+    const screen = render(
+      <TravelDetailsMapSection
+        travel={travel}
+        anchors={anchors}
+        canRenderHeavy
+        scrollToMapSection={jest.fn()}
+        forceOpenKey="points"
+      />
+    )
+
+    const props = mockTravelPointsBlock.mock.calls[0][0]
+    act(() => {
+      props.handlePointCardPress({
+        id: 1,
+        address: 'Point A',
+        coord: '53.9,27.56',
+        categoryName: 'Музей',
+        travelImageThumbUrl: 'https://example.com/point.jpg',
+      })
+    })
+
+    expect(mockHandlePointCardPress).not.toHaveBeenCalled()
+    expect(screen.getByTestId('shared-map-place-bottom-card')).toBeTruthy()
+    expect(screen.getByText('Point A')).toBeTruthy()
   })
 })

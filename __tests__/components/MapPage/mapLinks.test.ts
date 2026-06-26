@@ -29,9 +29,16 @@ describe('mapLinks', () => {
       expect(buildOrganicMapsUrl('53.9006,27.559').startsWith('geo:')).toBe(false);
     });
 
-    it('web: keeps the HTTPS omaps.app URL', () => {
+    it('web: keeps the HTTPS omaps.app URL with marker coordinates', () => {
       (Platform.OS as any) = 'web';
-      expect(buildOrganicMapsUrl('53.9006,27.559')).toBe('https://omaps.app/53.9006,27.559');
+      expect(buildOrganicMapsUrl('53.9006,27.559')).toBe('https://omaps.app/map?v=1&ll=53.9006,27.559');
+    });
+
+    it('web: appends an encoded marker name when provided', () => {
+      (Platform.OS as any) = 'web';
+      expect(buildOrganicMapsUrl('53.9006,27.559', 'Площадь Победы')).toBe(
+        'https://omaps.app/map?v=1&ll=53.9006,27.559&n=%D0%9F%D0%BB%D0%BE%D1%89%D0%B0%D0%B4%D1%8C%20%D0%9F%D0%BE%D0%B1%D0%B5%D0%B4%D1%8B',
+      );
     });
 
     it('returns empty string for invalid coords', () => {

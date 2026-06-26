@@ -461,7 +461,7 @@ describe('PlacePopupCard', () => {
     ).toBeGreaterThan(0);
   });
 
-  it('keeps the mobile bottom-card actions icon-only and preserves article accessibility', () => {
+  it('keeps mobile bottom-card actions labeled and preserves article accessibility', () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }));
 
     let tree: any;
@@ -485,7 +485,7 @@ describe('PlacePopupCard', () => {
     expect(tree.root.findByProps({ accessibilityLabel: 'Открыть статью' })).toBeTruthy();
     expect(
       tree.root.findAll((node: any) => node.props?.children === 'Страница').length,
-    ).toBe(0);
+    ).toBeGreaterThan(0);
     expect(
       tree.root.findAll((node: any) => node.props?.children === 'Открыть страницу').length,
     ).toBe(0);
