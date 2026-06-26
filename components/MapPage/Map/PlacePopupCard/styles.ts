@@ -304,28 +304,28 @@ export const getStyles = (
       ...(bottomCardLayout ? ({ maxWidth: '100%' } as const) : null),
     },
     titleText: {
-      fontSize: splitLayout ? fs.title + 1 : fs.title,
+      fontSize: bottomCardLayout ? fs.title - 1 : splitLayout ? fs.title + 1 : fs.title,
       fontWeight: '800',
       color: colors.text,
-      lineHeight: (splitLayout ? fs.title + 1 : fs.title) * 1.24,
+      lineHeight: (bottomCardLayout ? fs.title - 1 : splitLayout ? fs.title + 1 : fs.title) * 1.24,
       letterSpacing: 0,
       ...(Platform.OS === 'web'
         ? ({
             display: '-webkit-box',
-            WebkitLineClamp: splitLayout ? 2 : bp === 'narrow' ? 3 : 2,
+            WebkitLineClamp: bottomCardLayout ? 1 : splitLayout ? 2 : bp === 'narrow' ? 3 : 2,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
           } as any)
         : null),
     },
     subtitleText: {
-      fontSize: compactLayout ? fs.small - 1 : splitLayout ? fs.small + 1 : fs.small,
+      fontSize: bottomCardLayout ? fs.small - 1 : compactLayout ? fs.small - 1 : splitLayout ? fs.small + 1 : fs.small,
       color: colors.textMuted,
-      lineHeight: (compactLayout ? fs.small - 1 : splitLayout ? fs.small + 1 : fs.small) * 1.35,
+      lineHeight: (bottomCardLayout ? fs.small - 1 : compactLayout ? fs.small - 1 : splitLayout ? fs.small + 1 : fs.small) * 1.35,
       ...(Platform.OS === 'web'
         ? ({
             display: '-webkit-box',
-            WebkitLineClamp: splitLayout ? 2 : 2,
+            WebkitLineClamp: bottomCardLayout ? 1 : splitLayout ? 2 : 2,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
           } as any)

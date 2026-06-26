@@ -491,20 +491,24 @@ describe('PlacePopupCard', () => {
     ).toBe(0);
   });
 
-  it('keeps the mobile bottom-card photo at 70 percent and secondary navigation collapsed', () => {
+  it('keeps the mobile bottom-card photo at 70 percent and exposes map/share actions', () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }));
 
     let tree: any;
+    const longTitle = 'Очень длинный адрес точки, который раньше занимал несколько строк и перекрывал действия';
+    const longSubtitle = 'Podzamcze, Old Town, Stare Miasto, Краков, Малопольское воеводство, Польша';
 
     renderer.act(() => {
       tree = renderer.create(
         <PlacePopupCard
           colors={mockColors as any}
-          title="Test point"
+          title={longTitle}
+          subtitle={longSubtitle}
           coord="53.9, 27.56"
           imageUrl="https://example.com/photo.jpg"
           onOpenGoogleMaps={jest.fn()}
           onOpenOrganicMaps={jest.fn()}
+          onShareTelegram={jest.fn()}
           onCopyCoord={jest.fn()}
           bottomSheetSplit
           compactLayout
@@ -519,13 +523,12 @@ describe('PlacePopupCard', () => {
 
     expect(hero).toBeTruthy();
     expect(tree.root.findByProps({ accessibilityLabel: 'Скопировать координаты' })).toBeTruthy();
-    expect(tree.root.findAll((node: any) => node.props?.children === 'Organic').length).toBe(0);
-
-    const moreAction = tree.root.findByProps({ accessibilityLabel: 'Показать способы навигации' });
-    renderer.act(() => {
-      moreAction.props.onPress();
-    });
-
+    expect(tree.root.findByProps({ accessibilityLabel: 'Открыть точку в Google Maps' })).toBeTruthy();
+    expect(tree.root.findByProps({ accessibilityLabel: 'Organic Maps' })).toBeTruthy();
+    expect(tree.root.findByProps({ accessibilityLabel: 'Поделиться в Telegram' })).toBeTruthy();
     expect(tree.root.findAll((node: any) => node.props?.children === 'Organic').length).toBeGreaterThan(0);
+    expect(
+      tree.root.findAll((node: any) => node.props?.children === longTitle && node.props?.numberOfLines === 1).length,
+    ).toBeGreaterThan(0);
   });
 });

@@ -19,4 +19,16 @@ describe('critical head fallback', () => {
     expect(source).toContain("const ARTICLE_FALLBACK_DESCRIPTION = 'Страница статьи в Metravel. Открывайте материалы о путешествиях, маршрутах и полезных находках.'")
     expect(source).toContain("p.indexOf('/article/')===0")
   })
+
+  it('replaces generic travel title/description fallbacks and noindexes service routes early', () => {
+    const filePath = path.resolve(process.cwd(), 'app/+html.tsx')
+    const source = fs.readFileSync(filePath, 'utf8')
+
+    expect(source).toContain("t==='Путешествие | Metravel'")
+    expect(source).toContain("d==='Загружаем описание путешествия…'")
+    expect(source).toContain("normalized==='/travel/new'")
+    expect(source).toContain("normalized==='/travels/create'")
+    expect(source).toContain("isAssetLikePath(path)")
+    expect(source).toContain("upsertMeta('meta[name=\"robots\"]',{name:'robots'},routeMeta.robots||'noindex, nofollow')")
+  })
 })

@@ -15,4 +15,18 @@ describe('getTravelDetailsSeoViewModel', () => {
 
     expect(seo.readyTitle).toBe('Трек в Хохоловской долине | Metravel');
   });
+
+  it('uses slug/id based title and description fallbacks while travel data is incomplete', () => {
+    const seo = getTravelDetailsSeoViewModel(
+      {
+        id: 628,
+        slug: 'vitebsk-chto-mozhno-posmotret',
+        gallery: [],
+      },
+      'vitebsk-chto-mozhno-posmotret',
+    );
+
+    expect(seo.readyTitle).toBe('Vitebsk chto mozhno posmotret | Metravel');
+    expect(seo.readyDesc).toContain('Маршрут Vitebsk chto mozhno posmotret на Metravel');
+  });
 });

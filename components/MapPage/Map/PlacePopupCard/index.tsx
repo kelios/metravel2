@@ -201,13 +201,6 @@ const PlacePopupCard: React.FC<Props> = ({
     setFullscreenVisible(false);
   }, []);
 
-  useEffect(() => {
-    setFullscreenVisible(false);
-    // Keep secondary navigation collapsed by default. On the mobile place card the
-    // photo must remain dominant, so extra map/share actions stay behind «Ещё».
-    setNavExpanded(false);
-  }, [imageUrl]);
-
   const toggleNav = useCallback(() => {
     setNavExpanded((prev) => !prev);
   }, []);
@@ -218,6 +211,14 @@ const PlacePopupCard: React.FC<Props> = ({
     () => secondaryActions.filter((action) => action.key !== 'article'),
     [secondaryActions],
   );
+
+  useEffect(() => {
+    setFullscreenVisible(false);
+    // Native bottom-card users need map targets and Telegram immediately reachable;
+    // desktop/Leaflet popup keeps the secondary navigation collapsed.
+    setNavExpanded(isBottomCardLayout && navActions.length > 0);
+  }, [imageUrl, isBottomCardLayout, navActions.length]);
+
   const renderFallbackPrimaryAction =
     !primaryActionOverride &&
     !!primaryAction &&
@@ -230,12 +231,12 @@ const PlacePopupCard: React.FC<Props> = ({
 
   const topInfoSlot = useMemo(() => (
     <View style={styles.infoSection}>
-      <Text style={styles.titleText} numberOfLines={useCompactLayout ? 2 : bp === 'narrow' ? 2 : 2}>
+      <Text style={styles.titleText} numberOfLines={isBottomCardLayout ? 1 : useCompactLayout ? 2 : bp === 'narrow' ? 2 : 2}>
         {title}
       </Text>
 
       {!!displaySubtitle && (
-        <Text style={styles.subtitleText} numberOfLines={useCompactLayout ? 2 : 1}>
+        <Text style={styles.subtitleText} numberOfLines={isBottomCardLayout ? 1 : useCompactLayout ? 2 : 1}>
           {displaySubtitle}
         </Text>
       )}

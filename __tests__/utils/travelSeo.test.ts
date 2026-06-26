@@ -1,4 +1,6 @@
 import {
+  buildTravelSeoFallbackDescription,
+  buildTravelSeoFallbackTitle,
   buildTravelSeoTitle,
   createTravelArticleJsonLd,
   createTravelBreadcrumbJsonLd,
@@ -17,6 +19,16 @@ describe('travelSeo', () => {
     expect(buildTravelSeoTitle('')).toBe('Metravel');
     expect(getTravelSeoDescription('<p>Hello <strong>world</strong></p>')).toBe('Hello world');
     expect(getTravelSeoDescription('')).toBe('Найди место для путешествия и поделись своим опытом.');
+  });
+
+  it('builds unique slug/id fallbacks for incomplete travel SEO data', () => {
+    expect(buildTravelSeoFallbackTitle('park-grudek-v-iavozhno-polskie-maldivy')).toBe(
+      'Park grudek iavozhno polskie maldivy | Metravel',
+    );
+    expect(buildTravelSeoFallbackTitle(628)).toBe('Путешествие 628 | Metravel');
+    expect(buildTravelSeoFallbackDescription('vitebsk-chto-mozhno-posmotret')).toContain(
+      'Маршрут Vitebsk chto mozhno posmotret на Metravel',
+    );
   });
 
   it('creates article json-ld for travel pages', () => {

@@ -1,6 +1,8 @@
 import { Platform } from 'react-native'
 import { DEFAULT_OG_IMAGE_PATH, buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo'
 import {
+  buildTravelSeoFallbackDescription,
+  buildTravelSeoFallbackTitle,
   buildTravelSeoTitle,
   createTravelStructuredData,
   getTravelSeoDescription,
@@ -17,10 +19,14 @@ export function getTravelDetailsSeoViewModel(travel: any, slug: string) {
       : typeof travel?.title === 'string' && travel.title.trim()
         ? travel.title
         : null
+  const fallbackKey = travel?.slug || travel?.id || slug
   const title = displayTitle
     ? buildTravelSeoTitle(displayTitle)
-    : 'Путешествие | Metravel'
-  const desc = getTravelSeoDescription(travel?.description)
+    : buildTravelSeoFallbackTitle(fallbackKey)
+  const desc =
+    typeof travel?.description === 'string' && travel.description.trim()
+      ? getTravelSeoDescription(travel.description)
+      : buildTravelSeoFallbackDescription(displayTitle || fallbackKey)
   const canonical =
     typeof travel?.slug === 'string' && travel.slug
       ? buildCanonicalUrl(`/travels/${travel.slug}`)

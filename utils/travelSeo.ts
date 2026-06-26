@@ -6,6 +6,7 @@ const SEO_TITLE_MAX_LENGTH = 60;
 const SEO_TITLE_SUFFIX = ' | Metravel';
 const SITE_URL = 'https://metravel.by';
 const ORGANIZATION_ID = `${SITE_URL}/#organization`;
+const TRAVEL_SLUG_STOP_WORDS = new Set(['i', 'k', 'ko', 'na', 'o', 'ot', 'po', 's', 'so', 'v', 'vo', 'za']);
 
 /**
  * Возвращает относительный путь к странице путешествия: `/travels/{slug|id}`.
@@ -85,6 +86,51 @@ export function buildTravelSeoTitle(base?: string | null): string {
   }
 
   return `${clippedBase}${SEO_TITLE_SUFFIX}`;
+}
+
+export function humanizeTravelRouteKey(value?: string | number | null): string | null {
+  const raw = String(value ?? '').trim();
+  if (!raw) return null;
+
+  const decoded = (() => {
+    try {
+      return decodeURIComponent(raw);
+    } catch {
+      return raw;
+    }
+  })();
+
+  const normalized = decoded
+    .replace(/^\/+|\/+$/g, '')
+    .split('/')
+    .filter(Boolean)
+    .pop()
+    ?.replace(/\.(html?|php)$/i, '')
+    .replace(/[-_+]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!normalized) return null;
+  if (/^\d+$/.test(normalized)) return `Путешествие ${normalized}`;
+
+  const words = normalized
+    .split(' ')
+    .filter((word) => word && !TRAVEL_SLUG_STOP_WORDS.has(word.toLowerCase()));
+  const text = (words.length ? words : normalized.split(' ')).join(' ').trim();
+  if (!text) return null;
+
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+export function buildTravelSeoFallbackTitle(routeKey?: string | number | null): string {
+  return buildTravelSeoTitle(humanizeTravelRouteKey(routeKey) ?? 'Путешествие');
+}
+
+export function buildTravelSeoFallbackDescription(routeKey?: string | number | null): string {
+  const title = humanizeTravelRouteKey(routeKey);
+  if (!title) return TRAVEL_FALLBACK_DESCRIPTION;
+
+  return `Маршрут ${title} на Metravel: описание поездки, фото, карта и советы путешественников.`;
 }
 
 export function getTravelSeoDescription(html?: string | null, maxLen = 160): string {

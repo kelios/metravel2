@@ -216,7 +216,7 @@ export function usePopupActions({
     if (hasCoord && onShareTelegram) {
       items.push({
         key: 'telegram',
-        accessibilityLabel: 'Поделиться',
+        accessibilityLabel: 'Поделиться в Telegram',
         label: NAVIGATION_ACTION_LABELS.telegram,
         ...getNavigationActionVisual('telegram', colors),
         onPress: onShareTelegram,
