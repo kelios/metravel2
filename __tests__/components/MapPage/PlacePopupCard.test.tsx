@@ -491,6 +491,29 @@ describe('PlacePopupCard', () => {
     ).toBe(0);
   });
 
+  it('does not render an article primary action without a valid article href', () => {
+    require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }));
+
+    let tree: any;
+    renderer.act(() => {
+      tree = renderer.create(
+        <PlacePopupCard
+          colors={mockColors as any}
+          title="Travel point"
+          coord="53.9, 27.56"
+          imageUrl="https://example.com/photo.jpg"
+          onOpenArticle={jest.fn()}
+          onOpenGoogleMaps={jest.fn()}
+          bottomSheetSplit
+          compactLayout
+        />
+      );
+    });
+
+    expect(tree.root.findAllByProps({ accessibilityLabel: 'Открыть статью о точке' })).toHaveLength(0);
+    expect(tree.root.findAllByProps({ accessibilityLabel: 'Открыть статью' })).toHaveLength(0);
+  });
+
   it('keeps the mobile bottom-card photo at 70 percent and exposes map/share actions', () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }));
 

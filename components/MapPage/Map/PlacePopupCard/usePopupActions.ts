@@ -53,7 +53,6 @@ export function usePopupActions({
   primaryActionOverride,
 }: UsePopupActionsArgs) {
   const hasCoord = !!coord;
-  const hasArticle = typeof onOpenArticle === 'function';
 
   const normalizedArticleHref = useMemo(() => {
     const rawHref = String(articleHref ?? '').trim();
@@ -73,6 +72,7 @@ export function usePopupActions({
 
     return null;
   }, [articleHref]);
+  const hasArticle = !!normalizedArticleHref && typeof onOpenArticle === 'function';
 
   const hasDrivingInfo =
     typeof drivingDistanceMeters === 'number' &&
