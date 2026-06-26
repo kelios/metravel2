@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import CardActionPressable from '@/components/ui/CardActionPressable';
@@ -194,6 +194,69 @@ const CardMeta = React.memo(function CardMeta({
   );
 });
 
+const OverflowActionSheet = React.memo(function OverflowActionSheet({
+  actions,
+  close,
+  colors,
+  styles,
+  title,
+  visible,
+}: {
+  actions: ActionChip[];
+  close: () => void;
+  colors: ReturnType<typeof useThemedColors>;
+  styles: Record<string, any>;
+  title: string;
+  visible: boolean;
+}) {
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={close}
+    >
+      <View style={styles.actionSheetRoot}>
+        <Pressable
+          accessibilityLabel="Закрыть меню действий"
+          accessibilityRole="button"
+          onPress={close}
+          style={styles.actionSheetBackdrop}
+        />
+        <View style={styles.actionSheetPanel}>
+          <View style={styles.actionSheetHandle} />
+          <Text style={styles.actionSheetTitle}>{title}</Text>
+          <View style={styles.actionSheetList}>
+            {actions.map((action) => (
+              <CardActionPressable
+                key={action.key}
+                accessibilityRole="button"
+                accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
+                onPress={() => {
+                  close();
+                  action.onPress();
+                }}
+                title={action.title ?? action.label}
+                style={({ pressed }) => [
+                  styles.actionSheetItem,
+                  pressed && styles.actionSheetItemPressed,
+                ]}
+              >
+                <View style={styles.actionSheetIconBubble}>
+                  <Feather name={action.icon} size={18} color={colors.textMuted} />
+                </View>
+                <Text style={styles.actionSheetItemText} numberOfLines={2}>
+                  {action.title ?? action.label}
+                </Text>
+              </CardActionPressable>
+            ))}
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+});
+
 const PlaceListCard: React.FC<Props> = ({
   title,
   imageUrl,
@@ -237,15 +300,15 @@ const PlaceListCard: React.FC<Props> = ({
   const [overflowVisible, setOverflowVisible] = useState(false);
 
   const hasCoord = !!coord;
-  const isCompactWebCard = compact && IS_WEB;
+  const isCompactActionCard = compact;
   // Unified compact card: primary actions (♥ favorite + ＋ save) live in the
   // top-right overlay so every list card reads identically. Every secondary
   // action (Telegram / map apps / «Открыть») collapses into a single «Ещё»
   // overflow menu, so the action row can never balloon into a long horizontal
   // strip on some cards and a short one on others.
-  const overlayAddInline = isCompactWebCard && addButtonPlacement === 'row';
+  const overlayAddInline = isCompactActionCard && addButtonPlacement === 'row';
   const shareOverflowAction: ActionChip | null =
-    isCompactWebCard && hasCoord && onShare
+    isCompactActionCard && hasCoord && onShare
       ? {
           key: 'share',
           label: 'Telegram',
@@ -255,16 +318,16 @@ const PlaceListCard: React.FC<Props> = ({
           title: 'Поделиться в Telegram',
         }
       : null;
-  const visibleMapActions = isCompactWebCard ? [] : mapActions;
-  const visibleInlineActions = isCompactWebCard ? [] : inlineActions;
-  const overflowActions = isCompactWebCard
+  const visibleMapActions = isCompactActionCard ? [] : mapActions;
+  const visibleInlineActions = isCompactActionCard ? [] : inlineActions;
+  const overflowActions = isCompactActionCard
     ? [
         ...(shareOverflowAction ? [shareOverflowAction] : []),
         ...mapActions,
         ...inlineActions,
       ]
     : [];
-  const showShareChip = !isCompactWebCard && hasCoord && !!onShare;
+  const showShareChip = !isCompactActionCard && hasCoord && !!onShare;
   const showRowAddButton =
     showAddButton && addButtonPlacement === 'row' && !!onAddPoint && !overlayAddInline;
   const hasActionRow = showActionRow && (
@@ -480,11 +543,8 @@ const PlaceListCard: React.FC<Props> = ({
               ))}
 
               {overflowActions.length > 0 && (
-                <Menu
-                  visible={overflowVisible}
-                  onDismiss={closeOverflowMenu}
-                  contentStyle={styles.overflowMenuContent}
-                  anchor={
+                isCompactActionCard ? (
+                  <>
                     <LabeledActionChip
                       accessibilityLabel={overflowActionTitle}
                       accessibilityState={{ expanded: overflowVisible }}
@@ -495,24 +555,50 @@ const PlaceListCard: React.FC<Props> = ({
                       styles={styles}
                       title={overflowActionTitle}
                     />
-                  }
-                >
-                  {overflowActions.map((action) => (
-                    <Menu.Item
-                      key={action.key}
-                      onPress={() => {
-                        closeOverflowMenu();
-                        action.onPress();
-                      }}
-                      title={action.title ?? action.label}
-                      style={styles.overflowMenuItem}
-                      titleStyle={styles.overflowMenuItemTitle}
-                      leadingIcon={({ size }) => (
-                        <Feather name={action.icon} size={size} color={colors.textMuted} />
-                      )}
+                    <OverflowActionSheet
+                      actions={overflowActions}
+                      close={closeOverflowMenu}
+                      colors={colors}
+                      styles={styles}
+                      title={overflowActionTitle}
+                      visible={overflowVisible}
                     />
-                  ))}
-                </Menu>
+                  </>
+                ) : (
+                  <Menu
+                    visible={overflowVisible}
+                    onDismiss={closeOverflowMenu}
+                    contentStyle={styles.overflowMenuContent}
+                    anchor={
+                      <LabeledActionChip
+                        accessibilityLabel={overflowActionTitle}
+                        accessibilityState={{ expanded: overflowVisible }}
+                        icon={mapActions.length > 0 ? 'navigation' : 'more-horizontal'}
+                        iconColor={colors.textMuted}
+                        label={overflowActionLabel}
+                        onPress={openOverflowMenu}
+                        styles={styles}
+                        title={overflowActionTitle}
+                      />
+                    }
+                  >
+                    {overflowActions.map((action) => (
+                      <Menu.Item
+                        key={action.key}
+                        onPress={() => {
+                          closeOverflowMenu();
+                          action.onPress();
+                        }}
+                        title={action.title ?? action.label}
+                        style={styles.overflowMenuItem}
+                        titleStyle={styles.overflowMenuItemTitle}
+                        leadingIcon={({ size }) => (
+                          <Feather name={action.icon} size={size} color={colors.textMuted} />
+                        )}
+                      />
+                    ))}
+                  </Menu>
+                )
               )}
 
               {showRowAddButton && onAddPoint && (
@@ -820,6 +906,78 @@ const createStyles = (
     overflowMenuItemTitle: {
       fontSize: compact ? 13 : 14,
       fontWeight: '600',
+      color: colors.text,
+    },
+    actionSheetRoot: {
+      flex: 1,
+      justifyContent: 'flex-end',
+    },
+    actionSheetBackdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(15, 23, 42, 0.28)',
+    },
+    actionSheetPanel: {
+      marginBottom: IS_WEB ? 58 : 0,
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      paddingBottom: 16,
+      borderTopLeftRadius: 18,
+      borderTopRightRadius: 18,
+      backgroundColor: colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+      maxHeight: '72%',
+      ...Platform.select({
+        web: { boxShadow: '0 -12px 34px rgba(15,23,42,0.16)' as any },
+      }),
+    },
+    actionSheetHandle: {
+      alignSelf: 'center',
+      width: 42,
+      height: 4,
+      borderRadius: 999,
+      backgroundColor: colors.borderLight,
+      marginBottom: 10,
+    },
+    actionSheetTitle: {
+      fontSize: 15,
+      lineHeight: 20,
+      fontWeight: '800',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    actionSheetList: {
+      gap: 4,
+    },
+    actionSheetItem: {
+      minHeight: 48,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingVertical: 7,
+      paddingHorizontal: 8,
+      borderRadius: 12,
+      ...webTransition('background-color 0.16s ease, transform 0.16s ease'),
+    },
+    actionSheetItemPressed: {
+      backgroundColor: colors.backgroundSecondary,
+      ...Platform.select({ web: { transform: 'scale(0.99)' as any } }),
+    },
+    actionSheetIconBubble: {
+      width: 36,
+      height: 36,
+      borderRadius: 999,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+    },
+    actionSheetItemText: {
+      flex: 1,
+      fontSize: 14,
+      lineHeight: 18,
+      fontWeight: '700',
       color: colors.text,
     },
   })

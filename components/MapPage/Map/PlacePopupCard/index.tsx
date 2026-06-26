@@ -692,7 +692,7 @@ const PlacePopupCard: React.FC<Props> = ({
   // Mobile bottom-sheet split (web): FIXED hero header + scrollable caption/actions.
   // The photo stays pinned while the text scrolls beneath it, so expanding «Ещё»
   // never jerks the photo. The hero keeps contain+blur (ImageCardMedia) intact.
-  if (bottomSheetSplit && Platform.OS === 'web') {
+  if (bottomSheetSplit && Platform.OS === 'web' && imageUrl) {
     return (
       <>
         <View

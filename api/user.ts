@@ -99,6 +99,52 @@ export type UserTravelStatusesQuery = {
     perPage?: number;
 };
 
+export type UserCountryProgressRegion =
+    | 'europe'
+    | 'asia'
+    | 'africa'
+    | 'north_america'
+    | 'south_america'
+    | 'oceania'
+    | 'other';
+
+export type UserCountryProgressVisitDto = {
+    travel_id?: number | string | null;
+    travel_title?: string | null;
+    travel_url?: string | null;
+    start_date?: string | null;
+    end_date?: string | null;
+    visited_date?: string | null;
+    year?: number | string | null;
+    month?: number | string | null;
+    month_name?: string | null;
+    date_precision?: 'exact' | 'month' | 'year' | 'unknown' | string | null;
+    source?: string | null;
+};
+
+export type UserCountryProgressCountryDto = {
+    country_id: number;
+    country_code: string | null;
+    region: UserCountryProgressRegion;
+    title_ru: string | null;
+    title_en: string | null;
+    visited: boolean;
+    visited_travels_count: number;
+    first_visited_date: string | null;
+    known_visit_dates_count?: number;
+    unknown_visit_dates_count?: number;
+    visit_months?: string[];
+    visit_years?: Array<number | string>;
+    visits?: UserCountryProgressVisitDto[];
+};
+
+export type UserCountryProgressDto = {
+    total_count: number;
+    visited_count: number;
+    remaining_count: number;
+    countries: UserCountryProgressCountryDto[];
+};
+
 /**
  * Normalizes an avatar string from the API.
  * Returns `null` for empty, "null", or "undefined" values.
@@ -120,6 +166,12 @@ const normalizeProfile = (profile: UserProfileDto): UserProfileDto => ({
 export const fetchUserProfile = async (userId: string | number): Promise<UserProfileDto> => {
     const res = await apiClient.get<UserProfileDto>(`/user/${userId}/profile/`, LONG_TIMEOUT);
     return normalizeProfile(res);
+};
+
+export const fetchUserCountryProgress = async (
+    userId: string | number
+): Promise<UserCountryProgressDto> => {
+    return apiClient.get<UserCountryProgressDto>(`/user/${userId}/country-progress/`, LONG_TIMEOUT);
 };
 
 export const updateUserProfile = async (

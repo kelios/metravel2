@@ -16,14 +16,14 @@ export function usePointListDisplayModel({
   isMobile: boolean;
   points: PointPreviewItem[];
 }) {
-  const [showList, setShowList] = useState(false);
+  const [showList, setShowList] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
 
   const pointsCount = points.length;
   const countLabel = pointsCount > 0 ? ` (${pointsCount})` : '';
   const toggleLabel = showList
-    ? `Скрыть координаты мест${countLabel}`
-    : `Показать координаты мест${countLabel}`;
+    ? `Скрыть карточки точек${countLabel}`
+    : `Показать карточки точек${countLabel}`;
 
   const previewPoints = useMemo(() => points.slice(0, 3), [points]);
   const hiddenPreviewCount = Math.max(points.length - previewPoints.length, 0);

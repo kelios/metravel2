@@ -664,6 +664,7 @@ export default function ProfileScreen() {
   const countriesContent = useMemo(
     () => (
       <ProfileCountriesTab
+        userId={userId}
         travels={profileTravels}
         personalTravelStatusEntries={personalTravelStatusEntries}
         travelsSyncing={travelsLoading || travelsLoadingMore || travelsHasMore}
@@ -675,6 +676,7 @@ export default function ProfileScreen() {
     [
       profileTravels,
       personalTravelStatusEntries,
+      userId,
       travelsLoading,
       travelsLoadingMore,
       travelsHasMore,

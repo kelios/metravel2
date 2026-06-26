@@ -30,7 +30,14 @@ export type ProfileCountryRow = {
   code?: string
   region: ProfileCountryRegionKey
   visited: boolean
-  source: 'catalog' | 'visited'
+  source: 'backend' | 'catalog' | 'visited'
+  visitedTravelsCount?: number
+  firstVisitedDate?: string | null
+  knownVisitDatesCount?: number
+  unknownVisitDatesCount?: number
+  visitMonths?: string[]
+  visitYears?: string[]
+  visits?: ProfileCountryVisit[]
 }
 
 export type ProfileCountryRegionGroup = {
@@ -49,6 +56,41 @@ export type ProfileCountryStats = {
   remainingCount: number
   totalCount: number
 }
+
+export type ProfileCountryVisit = {
+  id: string
+  travelId?: string | number
+  title?: string
+  url?: string
+  startDate?: string | null
+  endDate?: string | null
+  visitedDate?: string | null
+  year?: string
+  month?: string
+  monthName?: string
+  datePrecision?: string
+  source?: string
+}
+
+export type ProfileCountryApplicationRow = {
+  id: string
+  name: string
+  code?: string
+  visitCount: number
+  firstKnownDateLabel: string | null
+  knownVisitDatesCount: number
+  unknownVisitDatesCount: number
+  visitLines: string[]
+  hasDetailedVisits: boolean
+  summaryText: string
+}
+
+export type ProfileCountryProgressPayload = {
+  total_count?: number | null
+  visited_count?: number | null
+  remaining_count?: number | null
+  countries?: Array<Record<string, unknown>> | null
+} | null | undefined
 
 const NAME_FIELDS = [
   'title_ru',
@@ -74,6 +116,10 @@ const CODE_FIELDS = [
 
 const ID_FIELDS = ['country_id', 'countryId', 'id', 'pk', 'value'] as const
 const REGION_FIELDS = ['region', 'continent', 'zone', 'world_region'] as const
+const FIRST_VISITED_DATE_FIELDS = ['first_visited_date', 'firstVisitedDate'] as const
+const VISITED_TRAVELS_COUNT_FIELDS = ['visited_travels_count', 'visitedTravelsCount', 'visits_count', 'visit_count'] as const
+const KNOWN_VISIT_DATES_COUNT_FIELDS = ['known_visit_dates_count', 'knownVisitDatesCount'] as const
+const UNKNOWN_VISIT_DATES_COUNT_FIELDS = ['unknown_visit_dates_count', 'unknownVisitDatesCount'] as const
 
 export const PROFILE_COUNTRY_REGION_META: Array<{ key: ProfileCountryRegionKey; label: string }> = [
   { key: 'europe', label: 'Европа' },
@@ -468,6 +514,76 @@ const compareCountryRows = (a: ProfileCountryRow, b: ProfileCountryRow) => {
   return a.name.localeCompare(b.name, 'ru')
 }
 
+const readProgressCount = (value: unknown) =>
+  typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null
+
+const readNonNegativeInteger = (record: Record<string, unknown>, fields: readonly string[]) => {
+  for (const field of fields) {
+    const value = record[field]
+    const numberValue =
+      typeof value === 'number'
+        ? value
+        : typeof value === 'string' && value.trim()
+          ? Number(value)
+          : NaN
+    if (Number.isInteger(numberValue) && numberValue >= 0) return numberValue
+  }
+  return undefined
+}
+
+const readStringArray = (value: unknown): string[] | undefined => {
+  if (!Array.isArray(value)) return undefined
+  const values = value
+    .map((item) => String(item ?? '').trim())
+    .filter(Boolean)
+  return values.length > 0 ? Array.from(new Set(values)) : undefined
+}
+
+const normalizeVisit = (value: unknown, index: number): ProfileCountryVisit | null => {
+  if (!isRecord(value)) return null
+  const travelId = value.travel_id ?? value.travelId ?? value.id
+  const title = readString(value, ['travel_title', 'travelTitle', 'title', 'name'])
+  const url = readString(value, ['travel_url', 'travelUrl', 'url'])
+  const startDate = readString(value, ['start_date', 'startDate'])
+  const endDate = readString(value, ['end_date', 'endDate'])
+  const visitedDate = readString(value, ['visited_date', 'visitedDate'])
+  const year = readString(value, ['year'])
+  const month = readString(value, ['month'])
+  const monthName = readString(value, ['month_name', 'monthName'])
+  const datePrecision = readString(value, ['date_precision', 'datePrecision'])
+  const source = readString(value, ['source'])
+  const id = travelId != null && String(travelId).trim()
+    ? `travel-${String(travelId).trim()}`
+    : url || title || `visit-${index}`
+
+  if (!title && !url && !startDate && !endDate && !visitedDate && !year && !month && !monthName) {
+    return null
+  }
+
+  return {
+    id,
+    travelId: typeof travelId === 'string' || typeof travelId === 'number' ? travelId : undefined,
+    title: title || undefined,
+    url: url || undefined,
+    startDate: startDate || null,
+    endDate: endDate || null,
+    visitedDate: visitedDate || null,
+    year: year || undefined,
+    month: month || undefined,
+    monthName: monthName || undefined,
+    datePrecision: datePrecision || undefined,
+    source: source || undefined,
+  }
+}
+
+const normalizeVisits = (value: unknown): ProfileCountryVisit[] | undefined => {
+  if (!Array.isArray(value)) return undefined
+  const visits = value
+    .map((visit, index) => normalizeVisit(visit, index))
+    .filter((visit): visit is ProfileCountryVisit => Boolean(visit))
+  return visits.length > 0 ? visits : undefined
+}
+
 export const groupProfileCountriesByRegion = (rows: ProfileCountryRow[]): ProfileCountryRegionGroup[] => {
   const groups = new Map<ProfileCountryRegionKey, ProfileCountryRow[]>()
 
@@ -579,3 +695,205 @@ export function buildProfileCountryStats({
     totalCount,
   }
 }
+
+export function buildProfileCountryStatsFromProgress(
+  progress: ProfileCountryProgressPayload,
+): ProfileCountryStats {
+  const progressRecord: Record<string, unknown> = isRecord(progress) ? progress : {}
+  const countries = Array.isArray(progressRecord.countries) ? progressRecord.countries : []
+
+  const rows = countries
+    .map((country, index): ProfileCountryRow | null => {
+      if (!isRecord(country)) return null
+
+      const name = readString(country, NAME_FIELDS)
+      const code = resolveCountryCode(country, name)
+      const rawId = readString(country, ID_FIELDS)
+      const id = rawId || code || `country-progress-${index}`
+      const fallbackName = code || id
+
+      return {
+        id,
+        name: name || fallbackName,
+        code: code || undefined,
+        region: getCountryRegion(country, code || undefined),
+        visited: country.visited === true,
+        source: 'backend',
+        visitedTravelsCount: readNonNegativeInteger(country, VISITED_TRAVELS_COUNT_FIELDS),
+        firstVisitedDate: readString(country, FIRST_VISITED_DATE_FIELDS) || null,
+        knownVisitDatesCount: readNonNegativeInteger(country, KNOWN_VISIT_DATES_COUNT_FIELDS),
+        unknownVisitDatesCount: readNonNegativeInteger(country, UNKNOWN_VISIT_DATES_COUNT_FIELDS),
+        visitMonths: readStringArray(country.visit_months ?? country.visitMonths),
+        visitYears: readStringArray(country.visit_years ?? country.visitYears),
+        visits: normalizeVisits(country.visits),
+      }
+    })
+    .filter((row): row is ProfileCountryRow => Boolean(row))
+    .sort(compareCountryRows)
+
+  const derivedTotalCount = rows.length
+  const derivedVisitedCount = rows.filter((row) => row.visited).length
+  const totalCount = readProgressCount(progressRecord.total_count) ?? derivedTotalCount
+  const visitedCount = readProgressCount(progressRecord.visited_count) ?? derivedVisitedCount
+  const remainingCount =
+    readProgressCount(progressRecord.remaining_count) ??
+    Math.max(0, totalCount - visitedCount)
+
+  return {
+    rows,
+    regionGroups: groupProfileCountriesByRegion(rows),
+    visitedCount,
+    remainingCount,
+    totalCount,
+  }
+}
+
+const MONTH_LABELS = [
+  'январь',
+  'февраль',
+  'март',
+  'апрель',
+  'май',
+  'июнь',
+  'июль',
+  'август',
+  'сентябрь',
+  'октябрь',
+  'ноябрь',
+  'декабрь',
+]
+
+const MONTH_DATE_LABELS = [
+  'января',
+  'февраля',
+  'марта',
+  'апреля',
+  'мая',
+  'июня',
+  'июля',
+  'августа',
+  'сентября',
+  'октября',
+  'ноября',
+  'декабря',
+]
+
+const MONTH_NAME_TO_NUMBER = new Map<string, number>(
+  [
+    ['январь', 1], ['января', 1], ['january', 1],
+    ['февраль', 2], ['февраля', 2], ['february', 2],
+    ['март', 3], ['марта', 3], ['march', 3],
+    ['апрель', 4], ['апреля', 4], ['april', 4],
+    ['май', 5], ['мая', 5], ['may', 5],
+    ['июнь', 6], ['июня', 6], ['june', 6],
+    ['июль', 7], ['июля', 7], ['july', 7],
+    ['август', 8], ['августа', 8], ['august', 8],
+    ['сентябрь', 9], ['сентября', 9], ['september', 9],
+    ['октябрь', 10], ['октября', 10], ['october', 10],
+    ['ноябрь', 11], ['ноября', 11], ['november', 11],
+    ['декабрь', 12], ['декабря', 12], ['december', 12],
+  ].map(([label, month]) => [normalizeCountryName(label), month as number]),
+)
+
+const formatMonthYear = (year: string, month: number) => {
+  const label = MONTH_LABELS[month - 1]
+  return label ? `${label} ${year}` : year
+}
+
+const formatApplicationDate = (value: unknown): string | null => {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+
+  const exactMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(trimmed)
+  if (exactMatch) {
+    const year = exactMatch[1]
+    const month = Number(exactMatch[2])
+    const day = Number(exactMatch[3])
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${day} ${MONTH_DATE_LABELS[month - 1]} ${year}`
+    }
+  }
+
+  const monthMatch = /^(\d{4})-(\d{2})$/.exec(trimmed)
+  if (monthMatch) {
+    const month = Number(monthMatch[2])
+    if (month >= 1 && month <= 12) return formatMonthYear(monthMatch[1], month)
+  }
+
+  if (/^\d{4}$/.test(trimmed)) return trimmed
+  return trimmed
+}
+
+const formatVisitFallbackPeriod = (visit: ProfileCountryVisit): string | null => {
+  if (!visit.year) return null
+  const monthNumber = visit.month
+    ? Number(visit.month)
+    : visit.monthName
+      ? MONTH_NAME_TO_NUMBER.get(normalizeCountryName(visit.monthName))
+      : undefined
+  if (monthNumber && monthNumber >= 1 && monthNumber <= 12) {
+    return formatMonthYear(visit.year, monthNumber)
+  }
+  return visit.monthName ? `${visit.monthName} ${visit.year}` : visit.year
+}
+
+const formatVisitLine = (visit: ProfileCountryVisit): string | null => {
+  const start = formatApplicationDate(visit.startDate)
+  const end = formatApplicationDate(visit.endDate)
+  const visited = formatApplicationDate(visit.visitedDate)
+  const fallback = formatVisitFallbackPeriod(visit)
+  const period =
+    start && end && start !== end
+      ? `${start} - ${end}`
+      : start || visited || fallback
+
+  if (!period) return null
+  return visit.title ? `${period}: ${visit.title}` : period
+}
+
+const formatVisitCount = (count: number) => {
+  const mod10 = count % 10
+  const mod100 = count % 100
+  if (mod10 === 1 && mod100 !== 11) return `${count} раз`
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} раза`
+  return `${count} раз`
+}
+
+export const buildCountryApplicationRows = (
+  rows: ProfileCountryRow[],
+): ProfileCountryApplicationRow[] =>
+  rows
+    .filter((row) => row.visited)
+    .map((row) => {
+      const visits = row.visits ?? []
+      const visitLines = visits
+        .map(formatVisitLine)
+        .filter((line): line is string => Boolean(line))
+      const visitCount = row.visitedTravelsCount ?? Math.max(visits.length, 1)
+      const firstKnownDateLabel =
+        formatApplicationDate(row.firstVisitedDate) ??
+        (visitLines.length > 0 ? visitLines[0].split(':')[0].trim() : null)
+      const knownVisitDatesCount =
+        row.knownVisitDatesCount ?? Math.max(visitLines.length, firstKnownDateLabel ? 1 : 0)
+      const unknownVisitDatesCount = row.unknownVisitDatesCount ?? Math.max(0, visitCount - knownVisitDatesCount)
+      const summaryParts = [
+        `${row.name}${row.code ? ` (${row.code})` : ''}`,
+        formatVisitCount(visitCount),
+        firstKnownDateLabel ? `первая известная дата: ${firstKnownDateLabel}` : 'даты не указаны',
+      ]
+
+      return {
+        id: row.id,
+        name: row.name,
+        code: row.code,
+        visitCount,
+        firstKnownDateLabel,
+        knownVisitDatesCount,
+        unknownVisitDatesCount,
+        visitLines,
+        hasDetailedVisits: visits.length > 0,
+        summaryText: summaryParts.join('; '),
+      }
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, 'ru'))

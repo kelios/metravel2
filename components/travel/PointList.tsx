@@ -250,6 +250,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
           onOpenMap={onOpenMap}
           onPointCardPress={onPointCardPress}
           onShare={onShare}
+          relatedTravelUrl={baseUrl}
           responsive={responsive}
           styles={styles}
         />

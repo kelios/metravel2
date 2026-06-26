@@ -49,6 +49,7 @@ type QuestCompactSidebarProps = NavigationSharedProps & {
   ratingSlot?: React.ReactNode
   completionSlot?: React.ReactNode
   pioneerSlot?: React.ReactNode
+  showExcursions?: boolean
 }
 
 type QuestHeaderPanelProps = NavigationSharedProps & {
@@ -155,6 +156,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
     ratingSlot,
     completionSlot,
     pioneerSlot,
+    showExcursions = true,
   } = props
 
   return (
@@ -252,7 +254,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
           onPress={onShowFinale}
         />
 
-        {city && Platform.OS === 'web' && (
+        {showExcursions && city && Platform.OS === 'web' && (
           <QuestCompactExcursions
             colors={colors}
             styles={styles}

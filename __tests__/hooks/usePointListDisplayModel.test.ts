@@ -14,7 +14,7 @@ describe('usePointListDisplayModel', () => {
     (Platform as any).OS = originalPlatformOS;
   });
 
-  it('derives preview and toggle state for collapsed web list', () => {
+  it('opens web route points as cards by default', () => {
     (Platform as any).OS = 'web';
 
     const { result } = renderHook(() =>
@@ -29,16 +29,17 @@ describe('usePointListDisplayModel', () => {
       })
     );
 
-    expect(result.current.showList).toBe(false);
-    expect(result.current.toggleLabel).toBe('Показать координаты мест (4)');
+    expect(result.current.showList).toBe(true);
+    expect(result.current.toggleLabel).toBe('Скрыть карточки точек (4)');
     expect(result.current.previewPoints).toEqual([
       { id: '1', address: 'A', coord: '1,1' },
       { id: '2', address: 'B', coord: '2,2' },
       { id: '3', address: 'C', coord: '3,3' },
     ]);
     expect(result.current.hiddenPreviewCount).toBe(1);
-    expect(result.current.shouldShowPreview).toBe(true);
-    expect(result.current.shouldShowViewModeBar).toBe(false);
+    expect(result.current.shouldShowPreview).toBe(false);
+    expect(result.current.shouldShowViewModeBar).toBe(true);
+    expect(result.current.shouldRenderWebCardsMode).toBe(true);
     expect(result.current.shouldShowToggleTextCompact).toBe(false);
   });
 
@@ -52,11 +53,7 @@ describe('usePointListDisplayModel', () => {
       })
     );
 
-    act(() => {
-      result.current.setShowList(true);
-    });
-
-    expect(result.current.toggleLabel).toBe('Скрыть координаты мест (1)');
+    expect(result.current.toggleLabel).toBe('Скрыть карточки точек (1)');
     expect(result.current.shouldShowPreview).toBe(false);
     expect(result.current.shouldShowViewModeBar).toBe(true);
     expect(result.current.shouldRenderWebCardsMode).toBe(true);
@@ -79,10 +76,6 @@ describe('usePointListDisplayModel', () => {
         points: [{ id: '1', address: 'A', coord: '1,1' }],
       })
     );
-
-    act(() => {
-      result.current.setShowList(true);
-    });
 
     expect(result.current.shouldShowToggleTextCompact).toBe(true);
     expect(result.current.shouldRenderNativeList).toBe(true);

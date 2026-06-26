@@ -318,8 +318,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                     </View>
                 )}
 
-                {/* Экскурсии рядом — на узких экранах под контентом */}
-                {!useWideExcursionsSidebar && !compactDesktopLayout && (!showFinaleOnly) && currentStep && city && Platform.OS === 'web' && (
+                {/* Экскурсии рядом — в основном потоке, когда нет отдельной правой колонки */}
+                {!useWideExcursionsSidebar && (!showFinaleOnly) && currentStep && city && Platform.OS === 'web' && (
                     <QuestExcursionsInline
                         colors={colors}
                         styles={styles}
@@ -407,6 +407,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 ratingSlot={ratingSlot}
                                 completionSlot={completionSlot}
                                 pioneerSlot={pioneerSlot}
+                                showExcursions={false}
                             />
 
                             <ScrollView

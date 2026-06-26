@@ -26,6 +26,11 @@ jest.mock('@/context/AuthContext', () => ({
 
 const mockInvalidate = jest.fn();
 jest.mock('@tanstack/react-query', () => ({
+  useQuery: jest.fn(() => ({
+    data: null,
+    isLoading: false,
+    error: null,
+  })),
   useQueryClient: () => ({
     invalidateQueries: mockInvalidate,
   }),
@@ -82,7 +87,7 @@ const rowStyles = {
 };
 
 describe('PointList (web coordinates list uses popup template)', () => {
-  it('shows collapsed preview rows and reveals view mode controls after expand', () => {
+  it('shows point cards by default and keeps preview available after collapse', () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'web';
 
@@ -97,16 +102,7 @@ describe('PointList (web coordinates list uses popup template)', () => {
       <PointList points={points as any} baseUrl="https://example.com/travel-page" />
     );
 
-    expect(getByText('Точки маршрута')).toBeTruthy();
     expect(getByText('4 точки')).toBeTruthy();
-    expect(getByText('A')).toBeTruthy();
-    expect(getByText('B')).toBeTruthy();
-    expect(getByText('C')).toBeTruthy();
-    expect(getByText('+ ещё 1')).toBeTruthy();
-    expect(getByText('Открыть список: 4 точки')).toBeTruthy();
-
-    fireEvent.press(getByLabelText('Открыть список точек, всего 4 точки'));
-
     expect(getByText('Карточки точек')).toBeTruthy();
     expect(getByLabelText('Карточки')).toBeTruthy();
     expect(getByLabelText('Список')).toBeTruthy();
@@ -115,6 +111,10 @@ describe('PointList (web coordinates list uses popup template)', () => {
     fireEvent.press(getByLabelText('Список'));
     expect(getByText('Быстрый список точек')).toBeTruthy();
     expect(getByText('A')).toBeTruthy();
+
+    fireEvent.press(getByLabelText(/Скрыть карточки точек/));
+    expect(getByText('+ ещё 1')).toBeTruthy();
+    expect(getByText('Открыть список: 4 точки')).toBeTruthy();
 
     (Platform as any).OS = prevOs;
   });
@@ -194,9 +194,6 @@ describe('PointList (web coordinates list uses popup template)', () => {
       <PointList points={[basePoint as any]} baseUrl={baseUrl} />
     );
 
-    const toggleButton = getByLabelText(/Показать координаты мест/);
-    fireEvent.press(toggleButton);
-
     expect(getByLabelText('Скопировать координаты')).toBeTruthy();
     expect(getByLabelText('Поделиться в Telegram')).toBeTruthy();
     expect(getByLabelText('Открыть в Google Maps')).toBeTruthy();
@@ -266,8 +263,6 @@ describe('PointList (web coordinates list uses popup template)', () => {
     const { getByLabelText, getAllByLabelText } = render(
       <PointList points={[basePoint as any]} baseUrl="https://example.com/travel-page" travelName="T" />
     );
-
-    fireEvent.press(getByLabelText(/Показать координаты мест/));
 
     const addButtons = getAllByLabelText('Мои точки');
     fireEvent.press(addButtons[0]);

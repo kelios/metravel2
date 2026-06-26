@@ -50,6 +50,7 @@ type PointListCardRendererProps = {
   onOpenMap: (coordStr: string) => void | Promise<void>
   onPointCardPress?: (point: PointLike) => void
   onShare: (coordStr: string) => void | Promise<void>
+  relatedTravelUrl?: string
   responsive: {
     coordSize: number
     imageMinHeight: number
@@ -73,6 +74,7 @@ const PointListCardRenderer = React.memo(function PointListCardRenderer({
   numColumns,
   onCopy,
   onShare,
+  relatedTravelUrl,
   styles,
 }: PointListCardRendererProps) {
   const isMobileWeb = Platform.OS === 'web' && isMobile
@@ -121,6 +123,7 @@ const PointListCardRenderer = React.memo(function PointListCardRenderer({
         compact={isMobileWeb || (Platform.OS !== 'web' && isMobile)}
         titleLayout="content"
         titleNumberOfLines={2}
+        relatedTravelUrl={relatedTravelUrl}
         testID={`travel-point-card-${item.id}`}
       />
     </View>

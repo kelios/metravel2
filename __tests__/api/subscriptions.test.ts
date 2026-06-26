@@ -1,5 +1,6 @@
 import {
     deleteUserTravelStatus,
+    fetchUserCountryProgress,
     fetchUserTravelStatuses,
     subscribeToUser,
     unsubscribeFromUser,
@@ -87,6 +88,32 @@ describe('api/user subscriptions', () => {
     });
 
     describe('travel statuses', () => {
+        it('fetches country progress from backend endpoint', async () => {
+            const payload = {
+                total_count: 234,
+                visited_count: 2,
+                remaining_count: 232,
+                countries: [
+                    {
+                        country_id: 160,
+                        country_code: 'PL',
+                        region: 'europe',
+                        title_ru: 'Польша',
+                        title_en: 'Poland',
+                        visited: true,
+                        visited_travels_count: 1,
+                        first_visited_date: '2024-05-12',
+                    },
+                ],
+            };
+            mockedGet.mockResolvedValueOnce(payload);
+
+            const result = await fetchUserCountryProgress('42');
+
+            expect(mockedGet).toHaveBeenCalledWith('/user/42/country-progress/', expect.any(Number));
+            expect(result).toEqual(payload);
+        });
+
         it('fetches travel statuses with schema query params', async () => {
             const statuses = [
                 { travel_id: 123, status: 'planned', planned_date: '2026-07-15', visited_date: null },

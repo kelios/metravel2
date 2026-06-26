@@ -353,7 +353,7 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
             });
         });
 
-        it('должен перенаправить в /metravel после сохранения', async () => {
+        it('должен открыть сохраненный черновик после сохранения', async () => {
             const mockSave = jest.fn().mockResolvedValue({
                 ...defaultProps.formData,
                 id: '123',
@@ -376,7 +376,7 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
             });
 
             await waitFor(() => {
-                expect(mockRouter.push).toHaveBeenCalledWith('/metravel');
+                expect(mockRouter.push).toHaveBeenCalledWith('/travel/123');
             });
         });
 

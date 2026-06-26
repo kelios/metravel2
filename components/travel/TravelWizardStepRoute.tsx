@@ -21,6 +21,7 @@ import { hasToastBeenShown } from '@/utils/errorHelpers'
 import { buildAddressFromGeocode, matchCountryId } from '@/utils/geocodeHelpers'
 import { registerPendingImageFile } from '@/utils/pendingImageFiles'
 import { showToastMessage } from '@/utils/toast'
+import { buildQuickDraftRoute } from '@/utils/travelQuickDraftNavigation'
 import { validateStep } from '@/utils/travelWizardValidation'
 import { prepareWebImageFileForUpload } from '@/utils/webImageUpload'
 
@@ -234,7 +235,7 @@ function TravelWizardStepRoute({
     if (!onManualSave) return
 
     try {
-      await onManualSave()
+      const savedTravel = await onManualSave()
       void showToastMessage({
         type: 'success',
         text1: 'Черновик сохранен',
@@ -247,7 +248,7 @@ function TravelWizardStepRoute({
       quickDraftTimeoutRef.current = setTimeout(() => {
         quickDraftTimeoutRef.current = null
         if (!isMountedRef.current) return
-        router.push('/metravel')
+        router.push(buildQuickDraftRoute(savedTravel))
       }, 250)
     } catch (error) {
       if (!hasToastBeenShown(error)) {

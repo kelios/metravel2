@@ -43,6 +43,8 @@ export const queryKeys = {
     (suffix === undefined
       ? (['user-profile', id] as const)
       : (['user-profile', id, suffix] as const)),
+  userCountryProgress: (userId: string | number | null | undefined) =>
+    ['user-country-progress', userId] as const,
   questBundle: (slug: string | null | undefined) => ['quest-bundle', slug] as const,
   quests: () => ['quests'] as const,
   questDetail: (questId: number | undefined) => ['quest', questId] as const,

@@ -33,6 +33,8 @@ jest.mock('expo-router', () => ({
   useIsFocused: jest.fn().mockReturnValue(true),
 }));
 
+const mockFetchUserCountryProgress = jest.fn();
+
 jest.mock('@/api/user', () => ({
   fetchUserProfile: jest.fn().mockResolvedValue({
     id: '123',
@@ -42,6 +44,7 @@ jest.mock('@/api/user', () => ({
   }),
   uploadUserProfileAvatarFile: jest.fn(),
   fetchUserTravelStatuses: jest.fn().mockResolvedValue([]),
+  fetchUserCountryProgress: mockFetchUserCountryProgress,
   normalizeAvatar: (raw: unknown) => {
     const str = String(raw ?? '').trim();
     if (!str) return null;
@@ -220,6 +223,63 @@ describe('ProfileScreen', () => {
       { country_id: '3', title_ru: 'Беларусь', title_en: 'Belarus', country_code: 'BY' },
       { country_id: '4', title_ru: 'Германия', title_en: 'Germany', country_code: 'DE' },
     ]);
+    mockFetchUserCountryProgress.mockResolvedValue({
+      total_count: 4,
+      visited_count: 3,
+      remaining_count: 1,
+      countries: [
+        {
+          country_id: 1,
+          country_code: 'PL',
+          region: 'europe',
+          title_ru: 'Польша',
+          title_en: 'Poland',
+          visited: true,
+          visited_travels_count: 2,
+          first_visited_date: '2024-05-12',
+          known_visit_dates_count: 1,
+          unknown_visit_dates_count: 1,
+          visits: [
+            {
+              travel_id: 101,
+              travel_title: 'Варшава',
+              start_date: '2024-05-12',
+              end_date: '2024-05-14',
+            },
+          ],
+        },
+        {
+          country_id: 2,
+          country_code: 'LT',
+          region: 'europe',
+          title_ru: 'Литва',
+          title_en: 'Lithuania',
+          visited: true,
+          visited_travels_count: 1,
+          first_visited_date: '2024-05-12',
+        },
+        {
+          country_id: 3,
+          country_code: 'BY',
+          region: 'europe',
+          title_ru: 'Беларусь',
+          title_en: 'Belarus',
+          visited: true,
+          visited_travels_count: 1,
+          first_visited_date: '2024-05-12',
+        },
+        {
+          country_id: 4,
+          country_code: 'DE',
+          region: 'europe',
+          title_ru: 'Германия',
+          title_en: 'Germany',
+          visited: false,
+          visited_travels_count: 0,
+          first_visited_date: null,
+        },
+      ],
+    });
     mockMyAchievementsData = null;
     mockTravelStatusEntries = [];
   });
@@ -344,6 +404,12 @@ describe('ProfileScreen', () => {
     fireEvent.press(await findByLabelText('Страны профиля'));
 
     expect(await findByText('Карта стран')).toBeTruthy();
+    expect(await findByText('Сводка для анкеты')).toBeTruthy();
+    expect(await findByText('Польша (PL); 2 раза; первая известная дата: 12 мая 2024')).toBeTruthy();
+    expect(await findByText('12 мая 2024 - 14 мая 2024: Варшава')).toBeTruthy();
+    await waitFor(() => {
+      expect(getAllByText('Без точной даты: 1').length).toBeGreaterThan(0);
+    });
     expect(await findByText('Карта по зонам')).toBeTruthy();
     expect(getAllByText('Европа').length).toBeGreaterThan(0);
     expect(await findByText('Посетили 3 страны. Осталось 1 страна.')).toBeTruthy();
@@ -351,6 +417,8 @@ describe('ProfileScreen', () => {
     expect(await findByLabelText('Литва: посещена')).toBeTruthy();
     expect(await findByLabelText('Беларусь: посещена')).toBeTruthy();
     expect(await findByLabelText('Германия: не посещена')).toBeTruthy();
+    expect(mockFetchUserCountryProgress).toHaveBeenCalledWith('123');
+    expect(mockFetchAllCountries).not.toHaveBeenCalled();
   });
 
   it('filters profile list by clicked author engagement metric', async () => {

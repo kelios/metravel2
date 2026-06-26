@@ -17,6 +17,7 @@ import { getContextualTips } from '@/utils/contextualTips';
 import { hasToastBeenShown } from '@/utils/errorHelpers';
 import { showToastMessage } from '@/utils/toast';
 import { validateStep } from '@/utils/travelWizardValidation';
+import { buildQuickDraftRoute } from '@/utils/travelQuickDraftNavigation';
 
 interface StepMeta {
   title?: string;
@@ -165,7 +166,7 @@ function TravelWizardStepBasic({
     }
 
     try {
-      await onManualSave();
+      const savedTravel = await onManualSave();
       void showToastMessage({
         type: 'success',
         text1: 'Черновик сохранен',
@@ -173,7 +174,7 @@ function TravelWizardStepBasic({
       });
 
       setTimeout(() => {
-        router.push('/metravel');
+        router.push(buildQuickDraftRoute(savedTravel));
       }, redirectDelayMs);
     } catch (error) {
       if (!hasToastBeenShown(error)) {

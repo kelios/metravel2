@@ -1,22 +1,30 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
+import { useQuery } from '@tanstack/react-query'
 
+import { queryKeys } from '@/api/queryKeys'
 import { fetchAllCountries } from '@/api/misc'
+import { fetchUserCountryProgress } from '@/api/user'
 import ProfileSectionHeader from '@/components/profile/ProfileSectionHeader'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
+import { queryConfigs } from '@/utils/reactQueryConfig'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
 import type { Travel } from '@/types/types'
 import {
+  buildCountryApplicationRows,
   buildProfileCountryStats,
+  buildProfileCountryStatsFromProgress,
+  type ProfileCountryApplicationRow,
   type ProfileCountryRegionGroup,
   type ProfileCountryRow,
 } from './profileCountries'
 
 interface ProfileCountriesTabProps {
+  userId: string | number | null | undefined
   travels: Travel[]
   personalTravelStatusEntries: TravelStatusEntry[]
   travelsSyncing: boolean
@@ -33,6 +41,14 @@ const formatCountryCount = (count: number) => {
   return `${count} стран`
 }
 
+const formatVisitCount = (count: number) => {
+  const mod10 = count % 10
+  const mod100 = count % 100
+  if (mod10 === 1 && mod100 !== 11) return `${count} раз`
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} раза`
+  return `${count} раз`
+}
+
 const getCountryFlagLabel = (country: Pick<ProfileCountryRow, 'code' | 'name'>) => {
   if (country.code) return country.code.slice(0, 2).toUpperCase()
   const letters = country.name
@@ -46,6 +62,7 @@ const getCountryFlagLabel = (country: Pick<ProfileCountryRow, 'code' | 'name'>) 
 }
 
 export function ProfileCountriesTab({
+  userId,
   travels,
   personalTravelStatusEntries,
   travelsSyncing,
@@ -58,10 +75,24 @@ export function ProfileCountriesTab({
   const isCompact = isMobile || width < 640
   const styles = useMemo(() => createStyles(colors, isCompact), [colors, isCompact])
   const [countries, setCountries] = useState<unknown[]>([])
-  const [countriesLoading, setCountriesLoading] = useState(true)
+  const [countriesLoading, setCountriesLoading] = useState(false)
   const [countriesError, setCountriesError] = useState(false)
+  const countryProgressQuery = useQuery({
+    queryKey: queryKeys.userCountryProgress(userId),
+    queryFn: () => fetchUserCountryProgress(userId as string | number),
+    enabled: Boolean(userId),
+    ...queryConfigs.dynamic,
+  })
+  const shouldLoadFallbackCatalog = !userId || countryProgressQuery.isError
 
   useEffect(() => {
+    if (!shouldLoadFallbackCatalog) {
+      setCountries([])
+      setCountriesLoading(false)
+      setCountriesError(false)
+      return
+    }
+
     const controller = new AbortController()
     let mounted = true
 
@@ -87,9 +118,17 @@ export function ProfileCountriesTab({
       mounted = false
       controller.abort()
     }
-  }, [])
+  }, [shouldLoadFallbackCatalog])
 
-  const stats = useMemo(
+  const backendStats = useMemo(
+    () =>
+      countryProgressQuery.data
+        ? buildProfileCountryStatsFromProgress(countryProgressQuery.data)
+        : null,
+    [countryProgressQuery.data],
+  )
+
+  const fallbackStats = useMemo(
     () =>
       buildProfileCountryStats({
         countries,
@@ -98,16 +137,22 @@ export function ProfileCountriesTab({
       }),
     [countries, personalTravelStatusEntries, travels],
   )
+  const stats = backendStats ?? fallbackStats
+  const applicationRows = useMemo(() => buildCountryApplicationRows(stats.rows), [stats.rows])
 
   const progressPercent = stats.totalCount > 0
     ? Math.min(100, Math.round((stats.visitedCount / stats.totalCount) * 100))
     : 0
 
-  const isInitialLoading = countriesLoading && stats.rows.length === 0
-  const showCatalogError = countriesError && stats.rows.length === 0
-  const showPartialCatalogWarning = countriesError && stats.rows.length > 0
+  const isInitialLoading =
+    (countryProgressQuery.isLoading && !backendStats && stats.rows.length === 0) ||
+    (shouldLoadFallbackCatalog && countriesLoading && stats.rows.length === 0)
+  const showCatalogError =
+    (countryProgressQuery.isError || countriesError) && stats.rows.length === 0
+  const showPartialCatalogWarning =
+    !backendStats && (countryProgressQuery.isError || countriesError) && stats.rows.length > 0
   const showTravelsSyncing =
-    travelsSyncing && totalTravelsCount > 0 && loadedTravelsCount < totalTravelsCount
+    !backendStats && travelsSyncing && totalTravelsCount > 0 && loadedTravelsCount < totalTravelsCount
 
   return (
     <View style={styles.wrap}>
@@ -141,9 +186,9 @@ export function ProfileCountriesTab({
           <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
         </View>
 
-        {showTravelsSyncing || countriesLoading || showPartialCatalogWarning ? (
+        {showTravelsSyncing || (shouldLoadFallbackCatalog && countriesLoading) || showPartialCatalogWarning ? (
           <View style={styles.noticeRow}>
-            {countriesLoading || showTravelsSyncing ? (
+            {(shouldLoadFallbackCatalog && countriesLoading) || showTravelsSyncing ? (
               <ActivityIndicator size="small" color={colors.primary} />
             ) : (
               <Feather name="alert-circle" size={14} color={colors.warning} />
@@ -151,9 +196,9 @@ export function ProfileCountriesTab({
             <Text style={styles.noticeText}>
               {showTravelsSyncing
                 ? `Догружаем маршруты: ${loadedTravelsCount} из ${totalTravelsCount}`
-                : countriesLoading
-                  ? 'Загружаем каталог стран'
-                  : 'Каталог стран недоступен, показываем страны из ваших маршрутов'}
+                : shouldLoadFallbackCatalog && countriesLoading
+                  ? 'Загружаем резервный каталог стран'
+                  : 'API прогресса стран недоступен, показываем резервный расчёт'}
             </Text>
           </View>
         ) : null}
@@ -173,6 +218,7 @@ export function ProfileCountriesTab({
         </View>
       ) : (
         <>
+          <ApplicationTravelHistorySummary rows={applicationRows} />
           <WorldProgressMap groups={stats.regionGroups} />
           <View style={styles.regionList}>
             {stats.regionGroups.map((group) => (
@@ -226,6 +272,88 @@ export function ProfileCountriesTab({
           numberOfLines={1}
         >
           {getCountryFlagLabel(country)}
+        </Text>
+      </View>
+    )
+  }
+
+  function ApplicationTravelHistorySummary({ rows }: { rows: ProfileCountryApplicationRow[] }) {
+    return (
+      <View style={styles.applicationCard}>
+        <View style={styles.applicationHeader}>
+          <View style={styles.applicationTitleRow}>
+            <Feather name="clipboard" size={16} color={colors.primary} />
+            <Text style={styles.applicationTitle}>Сводка для анкеты</Text>
+          </View>
+          <Text style={styles.applicationSubtitle}>
+            Черновик по загруженным маршрутам: страны, количество посещений и даты, которые уже есть в данных.
+          </Text>
+        </View>
+
+        {rows.length === 0 ? (
+          <View style={styles.applicationEmpty}>
+            <Feather name="info" size={16} color={colors.textMuted} />
+            <Text style={styles.applicationMutedText}>
+              Посещённых стран пока нет. Когда появятся маршруты или отметки «Был здесь», здесь соберётся список для анкет.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.applicationList}>
+            {rows.map((row) => (
+              <View key={row.id} style={styles.applicationRow}>
+                <View style={styles.applicationRowHeader}>
+                  <View style={styles.applicationCountryTitleWrap}>
+                    <Text style={styles.applicationCountryTitle} numberOfLines={2}>
+                      {row.name}
+                    </Text>
+                    {row.code ? (
+                      <Text style={styles.applicationCountryCode}>{row.code}</Text>
+                    ) : null}
+                  </View>
+                  <View style={styles.applicationCountBadge}>
+                    <Text style={styles.applicationCountText}>{formatVisitCount(row.visitCount)}</Text>
+                  </View>
+                </View>
+
+                <Text selectable style={styles.applicationCopyLine}>
+                  {row.summaryText}
+                </Text>
+
+                {row.visitLines.length > 0 ? (
+                  <View style={styles.applicationVisitList}>
+                    {row.visitLines.map((line, index) => (
+                      <Text
+                        key={`${row.id}-visit-${index}`}
+                        selectable
+                        style={styles.applicationVisitLine}
+                      >
+                        {line}
+                      </Text>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={styles.applicationMutedText}>
+                    {row.firstKnownDateLabel
+                      ? 'Подробные даты поездок сервер пока не передаёт, показываем первую известную дату.'
+                      : 'Даты посещения пока не указаны в загруженных маршрутах.'}
+                  </Text>
+                )}
+
+                {row.unknownVisitDatesCount > 0 ? (
+                  <View style={styles.applicationWarningRow}>
+                    <Feather name="alert-circle" size={14} color={colors.warning} />
+                    <Text style={styles.applicationWarningText}>
+                      Без точной даты: {row.unknownVisitDatesCount}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            ))}
+          </View>
+        )}
+
+        <Text style={styles.applicationDisclaimer}>
+          Перед подачей сверяйте сводку с паспортом и билетами: это помощник по вашим данным, а не юридическая проверка.
         </Text>
       </View>
     )
@@ -452,6 +580,130 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
       lineHeight: 20,
       color: colors.textMuted,
     },
+    applicationCard: {
+      marginHorizontal: DESIGN_TOKENS.spacing.md,
+      padding: DESIGN_TOKENS.spacing.md,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      gap: DESIGN_TOKENS.spacing.md,
+    },
+    applicationHeader: {
+      gap: 4,
+    },
+    applicationTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    applicationTitle: {
+      fontSize: DESIGN_TOKENS.typography.sizes.md,
+      fontWeight: DESIGN_TOKENS.typography.weights.bold as never,
+      color: colors.text,
+    },
+    applicationSubtitle: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      lineHeight: 18,
+      color: colors.textMuted,
+    },
+    applicationEmpty: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: DESIGN_TOKENS.spacing.xs,
+      padding: DESIGN_TOKENS.spacing.sm,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+    },
+    applicationList: {
+      gap: DESIGN_TOKENS.spacing.sm,
+    },
+    applicationRow: {
+      paddingTop: DESIGN_TOKENS.spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    applicationRowHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: DESIGN_TOKENS.spacing.sm,
+    },
+    applicationCountryTitleWrap: {
+      flex: 1,
+      minWidth: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    applicationCountryTitle: {
+      flexShrink: 1,
+      minWidth: 0,
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      lineHeight: 19,
+      fontWeight: DESIGN_TOKENS.typography.weights.bold as never,
+      color: colors.text,
+    },
+    applicationCountryCode: {
+      fontSize: 10,
+      lineHeight: 12,
+      color: colors.textMuted,
+      fontWeight: DESIGN_TOKENS.typography.weights.bold as never,
+      letterSpacing: 0,
+    },
+    applicationCountBadge: {
+      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+      paddingVertical: 5,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.primarySoft,
+      borderWidth: 1,
+      borderColor: colors.primary,
+    },
+    applicationCountText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      lineHeight: 16,
+      fontWeight: DESIGN_TOKENS.typography.weights.bold as never,
+      color: colors.primary,
+    },
+    applicationCopyLine: {
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      lineHeight: 20,
+      color: colors.text,
+    },
+    applicationVisitList: {
+      gap: 4,
+    },
+    applicationVisitLine: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      lineHeight: 18,
+      color: colors.textMuted,
+    },
+    applicationMutedText: {
+      flex: 1,
+      minWidth: 0,
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      lineHeight: 18,
+      color: colors.textMuted,
+    },
+    applicationWarningRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    applicationWarningText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      lineHeight: 18,
+      color: colors.textMuted,
+      fontWeight: DESIGN_TOKENS.typography.weights.medium as never,
+    },
+    applicationDisclaimer: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      lineHeight: 18,
+      color: colors.textMuted,
+    },
     mapCard: {
       marginHorizontal: DESIGN_TOKENS.spacing.md,
       padding: DESIGN_TOKENS.spacing.md,
@@ -618,7 +870,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
     flagBadgeCompact: {
       width: 34,
       height: 22,
-      borderRadius: DESIGN_TOKENS.radii.xs,
+      borderRadius: DESIGN_TOKENS.radii.sm,
     },
     flagBadgeVisited: {
       backgroundColor: colors.surface,

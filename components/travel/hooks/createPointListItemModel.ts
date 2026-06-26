@@ -76,35 +76,35 @@ export function createPointListItemModel({
     ? [
         {
           key: 'google',
-          label: 'Google',
+          label: 'Google Maps',
           icon: 'map-pin',
           onPress: () => void openExternal(buildMapUrl(item.coord)),
           title: 'Открыть в Google Maps',
         },
         {
           key: 'apple',
-          label: 'Apple',
+          label: 'Apple Maps',
           icon: 'map',
           onPress: () => void openExternal(buildAppleMapsUrl(item.coord)),
           title: 'Открыть в Apple Maps',
         },
         {
           key: 'organic',
-          label: 'Organic',
+          label: 'Organic Maps',
           icon: 'navigation',
           onPress: () => void openExternal(buildOrganicMapsUrl(item.coord)),
           title: 'Открыть в Organic Maps',
         },
         {
           key: 'yandex',
-          label: 'Яндекс',
+          label: 'Яндекс Карты',
           icon: 'navigation-2',
           onPress: () => void openExternal(buildYandexMapsUrl(item.coord)),
           title: 'Открыть в Яндекс Картах',
         },
         {
           key: 'osm',
-          label: 'OSM',
+          label: 'OpenStreetMap',
           icon: 'map',
           onPress: () => void openExternal(buildOsmUrl(item.coord)),
           title: 'Открыть в OpenStreetMap',
@@ -124,7 +124,7 @@ export function createPointListItemModel({
           ? [
               {
                 key: 'yandex-navi',
-                label: 'Навигатор',
+                label: 'Яндекс Навигатор',
                 icon: 'navigation-2' as keyof typeof Feather.glyphMap,
                 onPress: () => void openExternal(buildYandexNaviUrl(item.coord)),
                 title: 'Проложить маршрут в Яндекс Навигаторе',
