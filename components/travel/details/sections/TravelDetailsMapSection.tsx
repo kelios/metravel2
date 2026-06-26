@@ -6,6 +6,8 @@ import type { Travel } from '@/types/types'
 import DataFreshnessNotice from '@/components/legal/DataFreshnessNotice'
 import MapPlaceBottomCard from '@/components/MapPage/MapPlaceBottomCard'
 import type { Point } from '@/components/MapPage/Map/types'
+import { LAYOUT } from '@/constants/layout'
+import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
@@ -43,7 +45,10 @@ export const TravelDetailsMapSection: React.FC<{
 }> = ({ travel, anchors, canRenderHeavy, scrollToMapSection, forceOpenKey = null }) => {
   const styles = useTravelDetailsStyles()
   const { width } = useWindowDimensions()
+  const insets = useSafeAreaInsets()
   const [selectedPointCard, setSelectedPointCard] = useState<Point | null>(null)
+  const nativeCardTopInset = (insets?.top ?? 0) + LAYOUT.headerHeight + 56
+  const nativeCardBottomInset = LAYOUT.tabBarHeight + 16
 
   const {
     downloadingRouteId,
@@ -161,11 +166,13 @@ export const TravelDetailsMapSection: React.FC<{
           animationType="slide"
           onRequestClose={() => setSelectedPointCard(null)}
         >
-          <View style={{ flex: 1, backgroundColor: colors.background }}>
+          <View style={{ flex: 1, backgroundColor: 'transparent' }}>
             <MapPlaceBottomCard
               point={selectedPointCard}
               userLocation={null}
               onClose={() => setSelectedPointCard(null)}
+              topInset={nativeCardTopInset}
+              bottomInset={nativeCardBottomInset}
             />
           </View>
         </Modal>

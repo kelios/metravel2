@@ -42,7 +42,7 @@ export default function FavoritesScreen() {
     }, []);
 
     const handleBackToProfile = useCallback(() => {
-        router.push('/profile' as any);
+        router.back();
     }, [router]);
 
     const styles = useMemo(() => StyleSheet.create({

@@ -225,7 +225,7 @@ export default function SettingsScreen() {
     }, [clearFavorites]);
 
     const handleBackToProfile = useCallback(() => {
-        router.push('/profile' as any);
+        router.back();
     }, [router]);
 
     if (!authReady) {
@@ -292,11 +292,11 @@ export default function SettingsScreen() {
                                 style={[styles.backToProfileButton, globalFocusStyles.focusable]}
                                 onPress={handleBackToProfile}
                                 accessibilityRole="button"
-                                accessibilityLabel="Перейти в профиль"
+                                accessibilityLabel="Назад"
                                 {...Platform.select({ web: { cursor: 'pointer' } })}
                             >
-                                <Feather name="user" size={16} color={colors.primary} />
-                                <Text style={styles.backToProfileButtonText}>В профиль</Text>
+                                <Feather name="arrow-left" size={16} color={colors.primary} />
+                                <Text style={styles.backToProfileButtonText}>Назад</Text>
                             </Pressable>
                         </View>
                     </View>

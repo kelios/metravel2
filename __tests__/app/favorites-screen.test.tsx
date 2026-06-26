@@ -6,6 +6,7 @@ import FavoritesScreen from '@/app/(tabs)/favorites';
 const mockUseAuth = jest.fn();
 const mockUseFavorites = jest.fn();
 const mockPush = jest.fn();
+const mockBack = jest.fn();
 
 jest.mock('@/context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
@@ -16,7 +17,7 @@ jest.mock('@/context/FavoritesContext', () => ({
 }));
 
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: mockPush }),
+  useRouter: () => ({ push: mockPush, back: mockBack }),
 }));
 
 jest.mock('@/hooks/useResponsive', () => ({
@@ -52,6 +53,7 @@ describe('FavoritesScreen', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     mockPush.mockClear();
+    mockBack.mockClear();
 
     mockUseAuth.mockReturnValue({ isAuthenticated: true, authReady: true });
     mockUseFavorites.mockReturnValue({
@@ -85,7 +87,7 @@ describe('FavoritesScreen', () => {
     expect(utils.getByText('Сохраняй маршруты, чтобы вернуться к ним позже')).toBeTruthy();
   });
 
-  it('navigates to /profile when "В профиль" is pressed', async () => {
+  it('goes back when "Назад" is pressed', async () => {
     mockUseFavorites.mockReturnValue({
       favorites: [
         { id: 1, type: 'travel', title: 'T1', url: '/travels/1', imageUrl: null, city: null, countryName: 'Belarus' },
@@ -100,9 +102,8 @@ describe('FavoritesScreen', () => {
       jest.advanceTimersByTime(350);
     });
 
-    fireEvent.press(utils.getByText('В профиль'));
+    fireEvent.press(utils.getByText('Назад'));
 
-    expect(mockPush).toHaveBeenCalledWith('/profile');
+    expect(mockBack).toHaveBeenCalledTimes(1);
   });
 });
-

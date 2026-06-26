@@ -303,6 +303,14 @@ const PointCard = React.memo(function PointCard({
               </View>
             )}
 
+            <View style={styles.cardInfoNavigationMenu}>
+              <PointNavigationMenu
+                coord={point.coord}
+                label="Карта"
+                testIDPrefix={`travel-point-card-navigation-${point.coord.replace(/[^a-zA-Z0-9_-]+/g, '-')}`}
+              />
+            </View>
+
             <View style={styles.cardInfoCoordRow}>
               <Feather name="map-pin" size={15} color={cardMutedColor} />
               <Text
@@ -322,14 +330,6 @@ const PointCard = React.memo(function PointCard({
               >
                 <Feather name="copy" size={17} color={cardTextColor} />
               </CardActionPressable>
-            </View>
-
-            <View style={styles.cardInfoNavigationMenu}>
-              <PointNavigationMenu
-                coord={point.coord}
-                label="Карта"
-                testIDPrefix={`travel-point-card-navigation-${point.coord.replace(/[^a-zA-Z0-9_-]+/g, '-')}`}
-              />
             </View>
 
             <View style={styles.cardInfoActionsRow}>

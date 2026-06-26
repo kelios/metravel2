@@ -21,12 +21,22 @@ jest.mock('@/hooks/useTheme', () => ({
 }));
 
 describe('StableContent (web) link styles', () => {
+  const originalUserAgent = window.navigator.userAgent;
+
   const setPlatformOs = (os: string) => {
     Object.defineProperty(Platform, 'OS', { value: os, configurable: true });
   };
 
+  const setUserAgent = (value: string) => {
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value,
+      configurable: true,
+    });
+  };
+
   beforeEach(() => {
     setPlatformOs('web');
+    setUserAgent(originalUserAgent);
     const existing = typeof document !== 'undefined'
       ? document.getElementById('travel-rich-text-styles')
       : null;
@@ -164,6 +174,29 @@ describe('StableContent (web) link styles', () => {
       expect(iframe?.getAttribute('src')).toBe(
         'https://www.instagram.com/p/CScU4bJI2Ud/embed/?omitscript=true&hidecaption=1'
       );
+    });
+  });
+
+  it('keeps instagram posts as openable facade links on iOS Safari', async () => {
+    setUserAgent(
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1'
+    );
+
+    const html =
+      '<p><a href="https://www.instagram.com/p/CScU4bJI2Ud/">https://www.instagram.com/p/CScU4bJI2Ud/</a></p>';
+
+    const { container } = render(
+      <StableContent html={html} contentWidth={700} />
+    );
+
+    await waitFor(() => {
+      const facade = container.querySelector('.travel-rich-text .ig-lite') as HTMLDivElement | null;
+      const link = container.querySelector('.travel-rich-text .ig-lite__title') as HTMLAnchorElement | null;
+
+      expect(facade).toBeTruthy();
+      expect(container.querySelector('.travel-rich-text iframe[src*="instagram.com"]')).toBeNull();
+      expect(link?.getAttribute('href')).toBe('https://www.instagram.com/p/CScU4bJI2Ud/');
+      expect(link?.getAttribute('target')).toBe('_blank');
     });
   });
 

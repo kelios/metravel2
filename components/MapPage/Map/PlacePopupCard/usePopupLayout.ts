@@ -24,6 +24,7 @@ type UsePopupLayoutArgs = {
   width: number;
   imageUrl?: string | null;
   addLabel: string;
+  imageHeight?: number;
   compactLayout: boolean;
   fullscreenOnMobile: boolean;
 };
@@ -33,6 +34,7 @@ export function usePopupLayout({
   width,
   imageUrl,
   addLabel,
+  imageHeight,
   compactLayout,
   fullscreenOnMobile,
 }: UsePopupLayoutArgs) {
@@ -67,13 +69,21 @@ export function usePopupLayout({
       : useCompactLayout
         ? COMPACT_POPUP_MAX_WIDTH_BY_BREAKPOINT[bp]
         : POPUP_MAX_WIDTH_BY_BREAKPOINT[bp];
-  const imageHeightCap = useFullscreenMobileOverlay
+  const nativeBottomCardImageHeight =
+    Platform.OS !== 'web' &&
+    isBottomCardLayout &&
+    typeof imageHeight === 'number' &&
+    Number.isFinite(imageHeight) &&
+    imageHeight > 0
+      ? Math.round(imageHeight)
+      : null;
+  const imageHeightCap = nativeBottomCardImageHeight ?? (useFullscreenMobileOverlay
     ? 220
     : isBottomCardLayout
       ? BOTTOM_CARD_IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp]
       : useCompactLayout
         ? COMPACT_IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp]
-        : IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp];
+        : IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp]);
   // For the bottom card the parent (<=560px sheet) controls the real width via
   // `width: 100%`; don't clamp to the static `width` prop (default 352) which would
   // re-introduce the narrow content. The image height cap still applies below.
@@ -91,6 +101,8 @@ export function usePopupLayout({
     : maxPopupWidth;
   const heroHeight = useSplitLayout
     ? Math.max(100, Math.min(118, Math.round(heroWidth / SPLIT_LAYOUT_IMAGE_ASPECT)))
+    : nativeBottomCardImageHeight != null
+      ? nativeBottomCardImageHeight
     : Math.max(
         1,
         Math.min(

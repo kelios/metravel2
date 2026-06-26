@@ -35,6 +35,8 @@ interface CreatePopupComponentArgs {
   bottomSheetSplit?: boolean;
   /** Web desktop popup split: fixed natural-height hero photo + scrollable body. */
   popupSplit?: boolean;
+  /** Native bottom-card hero height, computed from visible app content height. */
+  bottomCardImageHeight?: number;
   invalidateUserPoints?: () => void;
   colors: ThemedColors;
   themeContextValue: ThemeContextType;
@@ -47,6 +49,7 @@ export const createMapPopupComponent = ({
   fullscreenOnMobile = false,
   bottomSheetSplit = false,
   popupSplit = false,
+  bottomCardImageHeight,
   invalidateUserPoints,
   colors,
   themeContextValue,
@@ -435,6 +438,7 @@ export const createMapPopupComponent = ({
           isAdding={isAdding}
           compactLayout={compactLayout}
           fullscreenOnMobile={fullscreenOnMobile}
+          imageHeight={bottomCardImageHeight}
           bottomSheetSplit={bottomSheetSplit}
           popupSplit={popupSplit}
           onClose={handlePress}

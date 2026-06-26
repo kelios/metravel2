@@ -2,15 +2,27 @@ import React from 'react'
 import { Platform, StyleSheet } from 'react-native'
 
 const renderer = require('react-test-renderer')
+const originalUseWindowDimensions = require('react-native').useWindowDimensions
+require('react-native').useWindowDimensions = jest.fn(() => ({
+  width: 390,
+  height: 844,
+  scale: 1,
+  fontScale: 1,
+}))
+
+const mockCreatePopupArgs: any[] = []
 
 jest.mock('@/components/MapPage/Map/createMapPopupComponent', () => ({
   __esModule: true,
-  createMapPopupComponent: () =>
+  createMapPopupComponent: (args: any) => {
+    mockCreatePopupArgs.push(args)
+    return (
     function MockPopup() {
       const React = require('react')
       const { Text } = require('react-native')
       return React.createElement(Text, { testID: 'mock-popup-content' }, 'content')
-    },
+    })
+  },
 }))
 
 jest.mock('@tanstack/react-query', () => ({
@@ -42,9 +54,14 @@ const point = { id: '1', lat: 53.9, lng: 27.56, title: 'Test point' } as any
 describe('MapPlaceBottomCard native layout', () => {
   afterAll(() => {
     ;(Platform as any).OS = originalPlatform
+    require('react-native').useWindowDimensions = originalUseWindowDimensions
   })
 
-  it('keeps the fullscreen card flush to the bottom and moves dock space into content padding', () => {
+  beforeEach(() => {
+    mockCreatePopupArgs.length = 0
+  })
+
+  it('keeps the fullscreen card between app chrome and makes the hero 70% of the visible card', () => {
     let tree: any
     renderer.act(() => {
       tree = renderer.create(
@@ -53,6 +70,7 @@ describe('MapPlaceBottomCard native layout', () => {
           userLocation={null}
           onClose={jest.fn()}
           bottomInset={72}
+          topInset={116}
         />,
       )
     })
@@ -60,10 +78,12 @@ describe('MapPlaceBottomCard native layout', () => {
     const root = tree.root.findByProps({ testID: 'map-place-bottom-card' })
     const rootStyle = StyleSheet.flatten(root.props.style)
     expect(rootStyle.paddingBottom).toBeUndefined()
-    expect(rootStyle.paddingTop).toBe(24)
+    expect(rootStyle.top).toBe(116)
+    expect(rootStyle.bottom).toBe(80)
+    expect(mockCreatePopupArgs[0]?.bottomCardImageHeight).toBe(454)
 
     const scroll = tree.root.findByType(require('react-native').ScrollView)
     const contentStyle = StyleSheet.flatten(scroll.props.contentContainerStyle)
-    expect(contentStyle.paddingBottom).toBe(92)
+    expect(contentStyle.paddingBottom).toBe(12)
   })
 })

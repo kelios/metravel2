@@ -137,6 +137,7 @@ const PlacePopupCard: React.FC<Props> = ({
     width,
     imageUrl,
     addLabel,
+    imageHeight: _imageHeight,
     compactLayout,
     fullscreenOnMobile,
   });

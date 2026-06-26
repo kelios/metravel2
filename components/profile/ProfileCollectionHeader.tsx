@@ -18,7 +18,7 @@ type Props = {
   backAccessibilityLabel?: string;
   /**
    * Компактная шапка для экранов с тяжёлым контентом под ней (календарь):
-   * на телефоне держит заголовок и кнопку «В профиль» в одной строке,
+   * на телефоне держит заголовок и кнопку «Назад» в одной строке,
    * скрывает подзаголовок и поджимает вертикальные паддинги — чтобы под
    * фиксированной шапкой сразу был виден контент (правило «шапка ≤20%»).
    */
@@ -33,7 +33,7 @@ export default function ProfileCollectionHeader({
   onClearPress,
   clearAccessibilityLabel = 'Очистить',
   clearButtonText = 'Очистить',
-  backAccessibilityLabel = 'Перейти в профиль',
+  backAccessibilityLabel = 'Назад',
   dense = false,
 }: Props) {
   const colors = useThemedColors();
@@ -129,8 +129,8 @@ export default function ProfileCollectionHeader({
             accessibilityLabel={backAccessibilityLabel}
             {...Platform.select({ web: { cursor: 'pointer' } })}
           >
-            <Feather name="user" size={16} color={colors.primary} />
-            <Text style={styles.backToProfileButtonText}>В профиль</Text>
+            <Feather name="arrow-left" size={16} color={colors.primary} />
+            <Text style={styles.backToProfileButtonText}>Назад</Text>
           </Pressable>
 
           {showClearButton && typeof onClearPress === 'function' && (

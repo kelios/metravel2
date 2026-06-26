@@ -30,6 +30,8 @@ type MapPlaceBottomCardProps = {
   onClose: () => void
   /** Bottom inset so the card clears the global dock / tab bar. */
   bottomInset?: number
+  /** Top inset so fullscreen cards do not cover the app header. */
+  topInset?: number
 }
 
 /**
@@ -45,12 +47,13 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
   userLocation,
   onClose,
   bottomInset = 0,
+  topInset = 0,
 }) => {
   const colors = useThemedColors()
   const themeContextValue = useTheme()
   const insets = useSafeAreaInsets()
   const queryClient = useQueryClient()
-  const { width: viewportWidth } = useWindowDimensions()
+  const { width: viewportWidth, height: viewportHeight } = useWindowDimensions()
   // On mobile web the card uses a BOUNDED bottom sheet (maps.me-style): the map
   // stays visible above it, the photo is a fixed hero, and the caption/actions
   // scroll beneath it so every element stays reachable and the photo never jerks
@@ -67,6 +70,18 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
       : null
   }, [userLocation])
 
+  const safeTop = insets?.top ?? 0
+  const bottomChromeInset = (bottomInset || 0) + (insets?.bottom ?? 0)
+  const rootTopInset = IS_WEB ? 0 : Math.max(0, topInset)
+  const rootBottomInset = IS_WEB ? 0 : Math.max(0, bottomChromeInset)
+  const nativeAvailableHeight = Math.max(
+    320,
+    viewportHeight - rootTopInset - rootBottomInset,
+  )
+  const nativeHeroHeight = IS_WEB
+    ? undefined
+    : Math.max(220, Math.round(nativeAvailableHeight * 0.7))
+
   const PopupComponent = useMemo(
     () =>
       createMapPopupComponent({
@@ -79,12 +94,13 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
         // Mobile web sheet: fixed hero photo + scrollable caption/actions so the
         // photo never jerks when «Ещё» expands (the text scrolls under it).
         bottomSheetSplit: isFullscreenWeb,
+        bottomCardImageHeight: nativeHeroHeight,
         userLocationRef,
         invalidateUserPoints: () => {
           void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() })
         },
       }),
-    [colors, themeContextValue, queryClient, isFullscreenWeb],
+    [colors, themeContextValue, queryClient, isFullscreenWeb, nativeHeroHeight],
   )
 
   // On the mobile sheet the close button wires BOTH RN-Web `onPress` and a native
@@ -148,12 +164,11 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
 
   if (!point) return null
 
-  const bottomContentInset = (bottomInset || 0) + (insets?.bottom ?? 0) + 12
+  const bottomContentInset = IS_WEB ? bottomChromeInset + 12 : 12
 
-  // #497/#travel-point-card — native: the card fills the screen and the chrome
-  // floats over the hero photo. Keeping the grabber/close button out of the normal
-  // layout removes the wasted white header while still clearing the status bar.
-  const safeTop = insets?.top ?? 0
+  // #497/#travel-point-card — native: the card fills the AVAILABLE app content
+  // area, not the whole device window, so app header/footer can remain visible.
+  // The chrome floats over the hero photo and clears the visible safe/header top.
 
   // On web, close via a NATIVE DOM handler instead of relying solely on RN-Web's
   // `onPress`. RN-Web synthesises `onPress` through its responder system over
@@ -253,6 +268,12 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
       style={[
         styles.root,
         IS_WEB ? { paddingBottom: bottomContentInset } : null,
+        !IS_WEB
+          ? {
+              top: rootTopInset,
+              bottom: rootBottomInset,
+            }
+          : null,
       ]}
       testID="map-place-bottom-card"
       pointerEvents="box-none"

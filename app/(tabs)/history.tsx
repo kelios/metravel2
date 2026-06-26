@@ -67,7 +67,7 @@ export default function HistoryScreen() {
     }, [isAuthenticated, refreshing, userId]);
 
     const handleBackToProfile = useCallback(() => {
-        router.push('/profile' as any);
+        router.back();
     }, [router]);
 
     const styles = useMemo(() => StyleSheet.create({

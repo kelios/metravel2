@@ -232,6 +232,13 @@ export function useStableContentWebEffects({
     if (Platform.OS !== 'web') return
     if (typeof window === 'undefined' || typeof document === 'undefined') return
 
+    const userAgent = String(window.navigator?.userAgent || '')
+    const isiOSWebKit =
+      /\b(iPhone|iPad|iPod)\b/i.test(userAgent) && /\bAppleWebKit\b/i.test(userAgent)
+    // iOS Safari/WKWebView often traps Instagram iframe taps; keep the first-party
+    // facade link there so posts open normally and the article text stays responsive.
+    if (isiOSWebKit) return
+
     const isAllowedEmbedSrc = (src: string) => {
       try {
         const url = new URL(src)

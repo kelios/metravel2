@@ -50,7 +50,7 @@ export default function SubscriptionsScreen() {
   const handleMessage = useCallback((userId: number) => { pushRoute(`/messages?userId=${encodeURIComponent(userId)}`); }, [pushRoute]);
   const handleOpenTravel = useCallback((url: string) => { pushRoute(url); }, [pushRoute]);
   const handleOpenProfile = useCallback((userId: number) => { pushRoute(`/user/${userId}`); }, [pushRoute]);
-  const handleBackToProfile = useCallback(() => { pushRoute('/profile'); }, [pushRoute]);
+  const handleBackToProfile = useCallback(() => { router.back(); }, [router]);
 
   const filteredAuthors = useMemo(() => {
     if (!search.trim()) return authors;
@@ -77,11 +77,11 @@ export default function SubscriptionsScreen() {
           style={[styles.backToProfileButton, globalFocusStyles.focusable]}
           onPress={handleBackToProfile}
           accessibilityRole="button"
-          accessibilityLabel="Перейти в профиль"
+          accessibilityLabel="Назад"
           {...Platform.select({ web: { cursor: 'pointer' } })}
         >
-          <Feather name="user" size={16} color={colors.primary} />
-          <Text style={styles.backToProfileButtonText}>В профиль</Text>
+          <Feather name="arrow-left" size={16} color={colors.primary} />
+          <Text style={styles.backToProfileButtonText}>Назад</Text>
         </Pressable>
       </View>
     </View>

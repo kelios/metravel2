@@ -21,7 +21,7 @@ jest.mock('@/components/profile/ProfileCollectionHeader', () => {
     const { Pressable, Text, View } = require('react-native');
     return (
       <View>
-        <Pressable onPress={onBackPress} accessibilityLabel="Назад в профиль">
+        <Pressable onPress={onBackPress} accessibilityLabel="Назад">
           <Text>Назад</Text>
         </Pressable>
         <Text>{title}</Text>
@@ -205,7 +205,7 @@ describe('UserPointsScreen', () => {
 
     render(<UserPointsScreen />);
 
-    fireEvent.press(await screen.findByLabelText('Назад в профиль'));
+    fireEvent.press(await screen.findByLabelText('Назад'));
 
     expect(mockReplace).toHaveBeenCalledWith('/profile');
   });

@@ -10,7 +10,7 @@ describe('ProfileCollectionHeader', () => {
     );
 
     expect(getByText('Избранное')).toBeTruthy();
-    fireEvent.press(getByLabelText('Перейти в профиль'));
+    fireEvent.press(getByLabelText('Назад'));
     expect(onBackPress).toHaveBeenCalledTimes(1);
   });
 

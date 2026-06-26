@@ -166,7 +166,7 @@ export default function CalendarScreen() {
   const activeAccentSoftColor = activeTab === 'planned' ? colors.warningLight : colors.primaryLight
 
   const handleBackToProfile = useCallback(() => {
-    router.push('/profile' as any)
+    router.back()
   }, [router])
 
   const handleChangeTab = useCallback((tab: TravelStatus) => {

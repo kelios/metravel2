@@ -9,7 +9,7 @@ export default function UserPointsScreen() {
 
   // #548: между tab-роутами router.back() уводит на предыдущую вкладку (Главную),
   // а не на Профиль. Когда экран открыт из профиля — аппаратный Back ведёт туда же,
-  // куда и UI-кнопка «В профиль».
+  // куда и UI-кнопка «Назад».
   useAndroidBackHandler(undefined, {
     resolveBack: () => {
       if (!cameFromProfile) return false
