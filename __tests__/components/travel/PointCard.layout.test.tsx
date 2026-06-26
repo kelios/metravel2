@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 
 import PointCard from '@/components/travel/PointCard';
@@ -55,7 +55,14 @@ describe('travel PointCard native layout', () => {
     expect(imageMedia.props.fit).toBe('cover');
     expect(imageMedia.props.blurBackground).toBe(false);
     expect(infoPanel.findByProps({ accessibilityLabel: 'Скопировать координаты' })).toBeTruthy();
-    expect(infoPanel.findByProps({ accessibilityLabel: 'Открыть в навигаторе' })).toBeTruthy();
+    const navigationToggle = infoPanel.findByProps({ accessibilityLabel: 'Карта' });
+    expect(navigationToggle).toBeTruthy();
+    fireEvent.press(navigationToggle);
+    expect(infoPanel.findByProps({ accessibilityLabel: 'Открыть точку в Google Maps' })).toBeTruthy();
+    expect(infoPanel.findByProps({ accessibilityLabel: 'Открыть точку в Organic Maps' })).toBeTruthy();
+    expect(infoPanel.findByProps({ accessibilityLabel: 'Открыть точку в Waze' })).toBeTruthy();
+    expect(infoPanel.findByProps({ accessibilityLabel: 'Открыть точку в Яндекс Навигаторе' })).toBeTruthy();
+    expect(infoPanel.findByProps({ accessibilityLabel: 'Открыть точку в OpenStreetMap' })).toBeTruthy();
     expect(infoPanel.findByProps({ accessibilityLabel: 'Поделиться' })).toBeTruthy();
     expect(infoPanel.findByProps({ accessibilityLabel: 'Мои точки' })).toBeTruthy();
     expect(screen.getByText(/Глубокое озеро/)).toBeTruthy();

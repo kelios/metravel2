@@ -513,6 +513,9 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.borderLight,
   },
+  cardInfoNavigationMenu: {
+    width: '100%',
+  },
   cardInfoActionsRow: {
     flexDirection: 'row',
     alignItems: 'stretch',
@@ -532,10 +535,6 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.borderLight,
   },
-  cardInfoActionPrimary: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
   cardInfoActionPrimarySoft: {
     backgroundColor: colors.primarySoft,
     borderColor: colors.primaryAlpha30,
@@ -546,9 +545,6 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     fontWeight: '800',
     letterSpacing: 0,
     flexShrink: 1,
-  },
-  cardInfoActionTextPrimary: {
-    color: colors.textOnPrimary,
   },
   addButtonContainer: {
     marginTop: DESIGN_TOKENS.spacing.xs,

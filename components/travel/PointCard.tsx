@@ -324,27 +324,15 @@ const PointCard = React.memo(function PointCard({
               </CardActionPressable>
             </View>
 
-            <View style={styles.cardInfoActionsRow}>
-              <CardActionPressable
-                accessibilityLabel="Открыть в навигаторе"
-                title="Открыть в навигаторе"
-                onPress={openMapFromLink}
-                style={({ pressed }) => [
-                  styles.cardInfoActionButton,
-                  styles.cardInfoActionPrimary,
-                  pressed && styles.actionBtnPressed,
-                ]}
-              >
-                <Feather name="navigation" size={18} color={colors.textOnPrimary} />
-                <Text
-                  style={[styles.cardInfoActionText, styles.cardInfoActionTextPrimary]}
-                  numberOfLines={1}
-                  allowFontScaling={false}
-                >
-                  Карта
-                </Text>
-              </CardActionPressable>
+            <View style={styles.cardInfoNavigationMenu}>
+              <PointNavigationMenu
+                coord={point.coord}
+                label="Карта"
+                testIDPrefix={`travel-point-card-navigation-${point.coord.replace(/[^a-zA-Z0-9_-]+/g, '-')}`}
+              />
+            </View>
 
+            <View style={styles.cardInfoActionsRow}>
               <CardActionPressable
                 accessibilityLabel="Поделиться"
                 title="Поделиться в Telegram"
