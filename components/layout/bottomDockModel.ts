@@ -27,9 +27,9 @@ export type BottomDockMoreMenuSection = {
 }
 
 export const BOTTOM_DOCK_ITEM_DEFS: BottomDockItemDef[] = [
-  { key: 'home', label: 'Маршруты', accessibilityLabel: 'Маршруты', route: '/search', iconName: 'compass' },
-  { key: 'map', label: 'Карта', accessibilityLabel: 'Карта', route: '/map', iconName: 'map' },
-  { key: 'quests', label: 'Квесты', accessibilityLabel: 'Квесты', route: '/quests', iconName: 'quest-route' },
+  { key: 'home', label: 'Маршруты', accessibilityLabel: 'Маршруты', route: '/search', iconName: 'route-walk' },
+  { key: 'map', label: 'Карта', accessibilityLabel: 'Карта', route: '/map', iconName: 'map-fold' },
+  { key: 'quests', label: 'Квесты', accessibilityLabel: 'Квесты', route: '/quests', iconName: 'quest-map-person' },
   { key: 'favorites', label: 'Профиль', accessibilityLabel: 'Профиль', route: '/profile', iconName: 'user' },
   { key: 'more', label: 'Ещё', accessibilityLabel: 'Ещё', route: '/more', iconName: 'more-horizontal', isMore: true },
 ]

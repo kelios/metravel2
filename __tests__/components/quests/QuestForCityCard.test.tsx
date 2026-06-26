@@ -46,6 +46,8 @@ describe('QuestForCityCard', () => {
     expect(props.height).toBe(132)
     expect(props.fit).toBe('contain')
     expect(props.blurBackground).toBe(true)
+    expect(props.allowCriticalWebBlur).toBe(true)
+    expect(props.optimizeWeb).toBe(false)
     expect(props.loading).toBe('eager')
   })
 

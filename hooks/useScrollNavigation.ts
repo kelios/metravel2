@@ -72,6 +72,8 @@ const SECTION_KEYS = [
   'comments',
 ] as const;
 
+const NATIVE_STICKY_SECTION_OFFSET = 156;
+
 export function useScrollNavigation(): UseScrollNavigationReturn {
   const scrollRef = useRef<ScrollView | null>(null);
   const pendingRetriesRef = useRef<Record<string, Array<ReturnType<typeof setTimeout>>>>({});
@@ -317,7 +319,7 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
         return;
       }
 
-      const tryScrollNative = (k: string): boolean => {
+      const tryScrollNative = (k: string, onMeasured: () => boolean): boolean => {
         const anchor = anchors[k];
         const scrollTarget = scrollRef.current as
           | (ScrollView & { getNativeScrollRef?: () => unknown })
@@ -344,7 +346,11 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
           anchorNode.measureLayout(
             relativeRef as never,
             (_x: number, y: number) => {
-              scrollRef.current?.scrollTo({ y, animated: true });
+              if (!onMeasured()) return;
+              scrollRef.current?.scrollTo({
+                y: Math.max(0, Math.round(y - NATIVE_STICKY_SECTION_OFFSET)),
+                animated: true,
+              });
             },
             () => {
               // measureLayout не смог измерить (узел только что размонтирован) —
@@ -362,16 +368,26 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
       // одноразовый scrollTo молча ничего не делает. Ретраим, пока секция не
       // смонтируется и не измерится — иначе тап по липкой навигации к «Точкам»/
       // «Карте маршрута» не приводит к скроллу.
-      clearPending(key);
-      if (tryScrollNative(key)) return;
-
       const MAX_ATTEMPTS = 20;
       const INTERVAL_MS = 120;
+      let didMeasure = false;
+      const markMeasured = () => {
+        if (didMeasure) return false;
+        didMeasure = true;
+        clearPending(key);
+        return true;
+      };
+
+      clearPending(key);
       pendingRetriesRef.current[key] = [];
+      tryScrollNative(key, markMeasured);
+      if (didMeasure) return;
 
       for (let i = 1; i <= MAX_ATTEMPTS; i += 1) {
         const t = setTimeout(() => {
-          if (tryScrollNative(key) || i === MAX_ATTEMPTS) {
+          if (didMeasure) return;
+          tryScrollNative(key, markMeasured);
+          if (didMeasure || i === MAX_ATTEMPTS) {
             clearPending(key);
           }
         }, i * INTERVAL_MS);

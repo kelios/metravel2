@@ -1,7 +1,7 @@
 import type { RouteExportResult } from './types';
 
 export const downloadTextFileWeb = (file: RouteExportResult) => {
-  if (typeof document === 'undefined' || typeof window === 'undefined') return;
+  if (typeof document === 'undefined' || typeof window === 'undefined') return false;
 
   const blob = new Blob([file.content], { type: file.mimeType });
   const url = URL.createObjectURL(blob);
@@ -18,5 +18,5 @@ export const downloadTextFileWeb = (file: RouteExportResult) => {
     // Release object URL a bit later to avoid Safari issues
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
+  return true;
 };
-

@@ -68,7 +68,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
     autoPlayInterval = 6000,
     onIndexChanged,
     imageProps,
-    preloadCount = 1,
+    preloadCount: preloadCountProp = 1,
     blurBackground = true,
     onFirstImageLoad,
     mobileHeightPercent,
@@ -78,6 +78,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
   } = props;
 
   const sliderInstanceId = useId();
+  const nativePreloadCount = isWeb ? preloadCountProp : Math.max(preloadCountProp, 2);
 
   // Use the unified logic hook
   const logic = useSliderLogic({
@@ -85,7 +86,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
     aspectRatio,
     autoPlay,
     autoPlayInterval,
-    preloadCount,
+    preloadCount: nativePreloadCount,
     mobileHeightPercent,
     onIndexChanged,
     buildUri: (img, w, h, isFirst) => {
@@ -666,14 +667,14 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
             onFirstImageLoad={onFirstImageLoad}
             onImagePress={onImagePress}
             firstImagePreloaded={firstImagePreloaded}
-            preloadPriority={Math.abs(realIndex - activeIdx) <= Math.max(1, preloadCount)}
+            preloadPriority={Math.abs(realIndex - activeIdx) <= Math.max(1, nativePreloadCount)}
             prepareBlur={Math.abs(realIndex - activeIdx) <= 1}
             contentAspectRatio={contentAspectRatio ?? aspectRatio}
           />
         </View>
       );
     },
-    [toRealIndex, uriMap, containerW, effectiveContainerH, images.length, styles, blurBackground, indexRef, imageProps, fit, onFirstImageLoad, onImagePress, firstImagePreloaded, preloadCount, contentAspectRatio, aspectRatio]
+    [toRealIndex, uriMap, containerW, effectiveContainerH, images.length, styles, blurBackground, indexRef, imageProps, fit, onFirstImageLoad, onImagePress, firstImagePreloaded, nativePreloadCount, contentAspectRatio, aspectRatio]
   );
 
   if (!images.length) return null;
@@ -758,6 +759,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
     return (
       <View style={[styles.clip, isMobile && styles.clipMobile]}>
         <Animated.FlatList
+          testID="slider-native-list"
           ref={listRef}
           data={loopData}
           keyExtractor={keyExtractor}
@@ -766,11 +768,15 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
           showsHorizontalScrollIndicator={false}
           onScroll={onScroll}
           scrollEventThrottle={16}
+          nestedScrollEnabled
+          directionalLockEnabled
+          alwaysBounceHorizontal={false}
+          alwaysBounceVertical={false}
           renderItem={renderItemNative}
           extraData={currentIndex}
-          initialNumToRender={isTestEnv ? loopData.length : 2}
-          windowSize={isTestEnv ? loopData.length : isMobile ? 3 : 5}
-          maxToRenderPerBatch={isTestEnv ? loopData.length : 3}
+          initialNumToRender={isTestEnv ? loopData.length : Math.min(loopData.length, isMobile ? 5 : 7)}
+          windowSize={isTestEnv ? loopData.length : isMobile ? 5 : 7}
+          maxToRenderPerBatch={isTestEnv ? loopData.length : isMobile ? 5 : 7}
           disableVirtualization={isTestEnv}
           maintainVisibleContentPosition={Platform.OS === 'ios' ? undefined : { minIndexForVisible: 0 }}
           disableIntervalMomentum
@@ -778,7 +784,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
           bounces={false}
           decelerationRate={Platform.OS === 'ios' ? 'fast' : 0.98}
           removeClippedSubviews={true}
-          updateCellsBatchingPeriod={isTestEnv ? 0 : 50}
+          updateCellsBatchingPeriod={isTestEnv ? 0 : 16}
           initialScrollIndex={isTestEnv ? undefined : toRawIndex(indexRef.current || 0)}
           onScrollToIndexFailed={onScrollToIndexFailed}
           onScrollBeginDrag={() => {

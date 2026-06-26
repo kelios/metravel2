@@ -361,6 +361,50 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(String(mainImage.props.srcSet)).toContain('960w')
   })
 
+  it('keeps one effective source for shared-blur quest covers when web optimization is disabled', () => {
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+      configurable: true,
+    })
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      value: 5,
+      configurable: true,
+    })
+
+    const src = 'https://metravelprod.s3.amazonaws.com/quests/1/main/cover.png?sig=1'
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src={src}
+          width={340}
+          height={238}
+          blurBackground
+          fit="contain"
+          loading="lazy"
+          priority="normal"
+          allowCriticalWebBlur
+          optimizeWeb={false}
+        />
+      )
+    })
+
+    const mainImage = tree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
+      if (node?.props?.['aria-hidden'] === true) return false
+      return String(node?.props?.style?.objectFit || '') === 'contain'
+    })[0]
+    const blurLayer = tree!.root.findAll((node: any) => {
+      return node?.props?.['data-blur-backdrop'] === 'true'
+    })[0]
+
+    expect(mainImage).toBeTruthy()
+    expect(mainImage.props.src).toBe(src)
+    expect(mainImage.props.srcSet).toBeUndefined()
+    expect(String(blurLayer.props.style?.backgroundImage || '')).toContain(src)
+  })
+
   it('keeps the exact pre-optimized shared-blur source on non-Safari browsers by default', () => {
     let tree: any
     renderer.act(() => {

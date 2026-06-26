@@ -40,7 +40,7 @@ ${trkptsXml}
 <gpx version="1.1" creator="metravel" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
   <metadata>
     <name>${escapeXml(name)}</name>
-${descXml}    <time>${escapeXml(time)}</time>
+${descXml}${input.sourceUrl ? `    <link href="${escapeXml(input.sourceUrl)}"><text>${escapeXml(input.sourceName || 'Metravel')}</text></link>\n` : ''}    <time>${escapeXml(time)}</time>
   </metadata>
 ${wptXml ? wptXml + '\n' : ''}${trackXml ? trackXml + '\n' : ''}
 </gpx>

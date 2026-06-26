@@ -1,6 +1,8 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { useScrollNavigation } from '@/hooks/useScrollNavigation';
 
+const NATIVE_STICKY_SECTION_OFFSET = 156;
+
 jest.mock('react-native', () => {
   const actual = jest.requireActual('react-native');
   return {
@@ -46,7 +48,7 @@ describe('useScrollNavigation', () => {
       result.current.scrollTo('map');
     });
 
-    expect(fakeScrollRef.current.scrollTo).toHaveBeenCalledWith({ y: 120, animated: true });
+    expect(fakeScrollRef.current.scrollTo).toHaveBeenCalledWith({ y: 0, animated: true });
   });
 
   it('measureLayout uses native scroll ref, not a node-handle number (Android-bug 95)', () => {
@@ -103,8 +105,100 @@ describe('useScrollNavigation', () => {
       expect.any(Function),
       expect.any(Function),
     );
-    expect(scrollTo).toHaveBeenCalledWith({ y: 240, animated: true });
+    expect(scrollTo).toHaveBeenCalledWith({ y: 84, animated: true });
     jest.useRealTimers();
+  });
+
+  it('keeps retrying when native measureLayout fails before a section can be measured', () => {
+    jest.useFakeTimers();
+    const { result } = renderHook(() => useScrollNavigation());
+
+    const nativeScrollRef = { __nativeScrollRef: true };
+    const scrollTo = jest.fn();
+    ;(result.current as any).scrollRef.current = {
+      scrollTo,
+      getNativeScrollRef: () => nativeScrollRef,
+    };
+
+    const measureLayout = jest
+      .fn()
+      .mockImplementationOnce((_relativeTo, _onSuccess, onFail) => onFail())
+      .mockImplementationOnce((_relativeTo, onSuccess) => onSuccess(0, 360));
+    ;(result.current as any).anchors['description'] = { current: { measureLayout } };
+
+    act(() => {
+      result.current.scrollTo('description');
+    });
+
+    expect(measureLayout).toHaveBeenCalledTimes(1);
+    expect(scrollTo).not.toHaveBeenCalled();
+
+    act(() => {
+      jest.advanceTimersByTime(120);
+    });
+
+    expect(measureLayout).toHaveBeenCalledTimes(2);
+    expect(scrollTo).toHaveBeenCalledWith({ y: 204, animated: true });
+    jest.useRealTimers();
+  });
+
+  it.each(['description', 'map', 'points'] as const)(
+    'recovers sticky quick jump navigation to %s after a transient native measure failure',
+    (sectionKey) => {
+      jest.useFakeTimers();
+      const { result } = renderHook(() => useScrollNavigation());
+
+      const nativeScrollRef = { __nativeScrollRef: true };
+      const scrollTo = jest.fn();
+      ;(result.current as any).scrollRef.current = {
+        scrollTo,
+        getNativeScrollRef: () => nativeScrollRef,
+      };
+
+      const targetY = sectionKey === 'description' ? 180 : sectionKey === 'map' ? 720 : 960;
+      const measureLayout = jest
+        .fn()
+        .mockImplementationOnce((_relativeTo, _onSuccess, onFail) => onFail())
+        .mockImplementationOnce((_relativeTo, onSuccess) => onSuccess(0, targetY));
+      ;(result.current as any).anchors[sectionKey] = { current: { measureLayout } };
+
+      act(() => {
+        result.current.scrollTo(sectionKey);
+      });
+
+      expect(scrollTo).not.toHaveBeenCalled();
+
+      act(() => {
+        jest.advanceTimersByTime(120);
+      });
+
+      expect(scrollTo).toHaveBeenCalledWith({
+        y: Math.max(0, targetY - NATIVE_STICKY_SECTION_OFFSET),
+        animated: true,
+      });
+      jest.useRealTimers();
+    },
+  );
+
+  it('keeps native quick-jump targets below the sticky section navigation', () => {
+    const { result } = renderHook(() => useScrollNavigation());
+
+    const scrollTo = jest.fn();
+    ;(result.current as any).scrollRef.current = {
+      scrollTo,
+      getNativeScrollRef: () => ({ __nativeScrollRef: true }),
+    };
+    ;(result.current as any).anchors.points = {
+      current: {
+        measureLayout: jest.fn((_relativeTo, onSuccess) => onSuccess(0, 960)),
+      },
+    };
+
+    act(() => {
+      result.current.scrollTo('points');
+    });
+
+    expect(scrollTo).toHaveBeenCalledWith({ y: 804, animated: true });
   });
 
   it('does nothing when anchor or scrollRef is missing', () => {

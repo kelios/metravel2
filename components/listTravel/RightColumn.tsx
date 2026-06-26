@@ -70,6 +70,7 @@ interface RightColumnProps {
   } | null
   travels: Travel[]
   gridColumns: number
+  isMobileViewport?: boolean
   isMobile: boolean
   showNextPageLoading: boolean
   refetch: () => void
@@ -113,6 +114,7 @@ const RightColumn: React.FC<RightColumnProps> = (
      getEmptyStateMessage,
      travels,
      gridColumns,
+     isMobileViewport: isMobileViewportProp,
      isMobile,
      showNextPageLoading,
      refetch,
@@ -238,10 +240,11 @@ const RightColumn: React.FC<RightColumnProps> = (
     // `windowWidth <= 420` case, so we avoid useWindowDimensions() — it would
     // subscribe this list container to mobile address-bar height changes and
     // re-render the whole FlashList on every scroll frame (scroll jank).
-    const isWebMobile = isWeb && isMobile
+    const isMobileViewport = isMobileViewportProp ?? isMobile
+    const isWebMobile = isWeb && isMobileViewport
     const hasTextSearch = search.trim().length > 0
     const showRecommendations =
-      isRecommendationsVisible && !(Platform.OS !== 'web' && isMobile && hasTextSearch)
+      isRecommendationsVisible && !(Platform.OS !== 'web' && isMobileViewport && hasTextSearch)
 
     useEffect(() => {
       if (!showRecommendations || !pendingRecommendationsScrollRef.current) return
@@ -269,6 +272,7 @@ const RightColumn: React.FC<RightColumnProps> = (
       contentPadding,
       gridColumns,
       isMobile,
+      isMobileViewport,
       isExport,
       isWebMobile,
       cardsContainerStyle,
@@ -501,7 +505,7 @@ const RightColumn: React.FC<RightColumnProps> = (
         <View
           style={[
             searchHeaderStyle,
-            ({ minHeight: getRightColumnHeaderMinHeight(isMobile) } as any),
+            ({ minHeight: getRightColumnHeaderMinHeight(isMobileViewport) } as any),
           ]}
         >
           <StickySearchBar
@@ -529,7 +533,7 @@ const RightColumn: React.FC<RightColumnProps> = (
             showDensityToggle={showDensityToggle && !!onDensityChange}
             contentPadding={contentPadding}
             resultsCount={isError ? undefined : total}
-            showResultsCount={isMobile && !isSearchPending}
+            showResultsCount={isMobileViewport && !isSearchPending}
           />
         ) : null}
 

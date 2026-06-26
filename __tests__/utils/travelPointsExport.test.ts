@@ -40,9 +40,23 @@ describe('travelPointsExport', () => {
     } as any);
 
     expect(input.name).toBe('Weekend route points');
-    expect(input.description).toBe('Travel points from Weekend route');
+    expect(input.description).toBe('Точки маршрута из Metravel: Weekend route');
+    expect(input.sourceName).toBe('Weekend route');
     expect(input.waypoints).toHaveLength(1);
     expect(input.track).toBeUndefined();
+  });
+
+  it('includes the source article URL when present', () => {
+    const input = buildTravelPointsExportInput({
+      id: 1,
+      slug: 'route',
+      name: 'Weekend route',
+      url: 'https://metravel.by/travels/weekend-route',
+      travelAddress: [{ address: 'Start', coord: '53,27' }],
+    } as any);
+
+    expect(input.description).toContain('Источник: https://metravel.by/travels/weekend-route');
+    expect(input.sourceUrl).toBe('https://metravel.by/travels/weekend-route');
   });
 
   it('builds a Google Maps directions URL from all exportable waypoints', () => {

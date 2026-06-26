@@ -23,6 +23,7 @@ type UseRightColumnStylesArgs = {
   contentPadding: number
   gridColumns: number
   isMobile: boolean
+  isMobileViewport?: boolean
   isExport: boolean
   isWebMobile: boolean
   cardsContainerStyle?: ViewStyle | ViewStyle[]
@@ -35,6 +36,7 @@ export function useRightColumnStyles({
   contentPadding,
   gridColumns,
   isMobile,
+  isMobileViewport = isMobile,
   isExport,
   isWebMobile,
   cardsContainerStyle,
@@ -84,10 +86,10 @@ export function useRightColumnStyles({
     paddingTop: 8,
     // Reserve whichever bottom overlay is taller: the bottom dock or the consent banner
     // (set by ConsentBanner via --mt-consent-h). max() avoids cards hiding under the banner.
-    paddingBottom: isMobile
+    paddingBottom: isMobileViewport
       ? (`calc(max(var(--mt-dock-h, 0px), var(--mt-consent-h, 0px)) + 8px)` as any)
       : (`calc(max(var(--mt-consent-h, 0px), 28px) + 8px)` as any),
-  }), [isMobile, contentPadding])
+  }), [isMobileViewport, contentPadding])
 
   const nativeContentContainerStyle = useMemo(() => ({
     paddingHorizontal: contentPadding,
@@ -121,7 +123,7 @@ export function useRightColumnStyles({
       },
       chip: {
         minHeight: 34,
-        maxWidth: isMobile ? '100%' : 280,
+        maxWidth: isMobileViewport ? '100%' : 280,
         flexDirection: 'row' as const,
         alignItems: 'center' as const,
         gap: DESIGN_TOKENS.spacing.xs,
@@ -145,7 +147,7 @@ export function useRightColumnStyles({
         fontWeight: '600' as const,
       },
     }),
-    [colors.border, colors.surface, colors.text, isMobile],
+    [colors.border, colors.surface, colors.text, isMobileViewport],
   )
 
   // Инварианты строки зависят только от сетки/размеров, а не от конкретной

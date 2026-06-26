@@ -258,9 +258,18 @@ describe('Slider', () => {
   it('shows dots on mobile when showDots is enabled', async () => {
     ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 360, height: 800 })
 
+    const images = [
+      portraitImage,
+      landscapeImage,
+      portraitImage2,
+      { ...landscapeImage, id: 'landscape-2', url: 'https://example.com/landscape-2.jpg' },
+      { ...portraitImage, id: 'portrait-3', url: 'https://example.com/portrait3.jpg' },
+      { ...landscapeImage, id: 'landscape-3', url: 'https://example.com/landscape-3.jpg' },
+    ]
+
     const { getByTestId } = render(
       <Slider
-        images={[portraitImage, landscapeImage, portraitImage2]}
+        images={images}
         showArrows={false}
         showDots
         autoPlay={false}
@@ -308,6 +317,40 @@ describe('Slider', () => {
 
     // Мобильная версия должна корректно рендериться
     expect(getByTestId('slider-image-0')).toBeTruthy()
+  })
+
+  it('uses native FlatList settings tuned for horizontal swiping inside a vertical page', async () => {
+    ;(Platform as any).OS = 'android'
+    ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 360, height: 800 })
+
+    const images = [
+      portraitImage,
+      landscapeImage,
+      portraitImage2,
+      { ...landscapeImage, id: 'landscape-2', url: 'https://example.com/landscape-2.jpg' },
+      { ...portraitImage, id: 'portrait-3', url: 'https://example.com/portrait3.jpg' },
+      { ...landscapeImage, id: 'landscape-3', url: 'https://example.com/landscape-3.jpg' },
+    ]
+
+    const { getByTestId } = render(
+      <Slider
+        images={images}
+        showArrows={false}
+        showDots
+        autoPlay={false}
+        preloadCount={1}
+        blurBackground={false}
+      />
+    )
+
+    const list = getByTestId('slider-native-list')
+    expect(list.props.nestedScrollEnabled).toBe(true)
+    expect(list.props.directionalLockEnabled).toBe(true)
+    expect(list.props.disableIntervalMomentum).toBe(true)
+    expect(list.props.initialNumToRender).toBeGreaterThanOrEqual(5)
+    expect(list.props.windowSize).toBeGreaterThanOrEqual(5)
+    expect(list.props.maxToRenderPerBatch).toBeGreaterThanOrEqual(5)
+    expect(list.props.updateCellsBatchingPeriod).toBeLessThanOrEqual(16)
   })
 
   it('calls onFirstImageLoad callback when first image loads', async () => {

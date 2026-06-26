@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react'
+import React, { Suspense, useCallback, useMemo, useState } from 'react'
 import Feather from '@expo/vector-icons/Feather'
 import { Platform, Text, View } from 'react-native'
 
@@ -8,7 +8,7 @@ import Button from '@/components/ui/Button'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { Travel } from '@/types/types'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
-import { buildGpx, buildKml, downloadTextFileWeb } from '@/utils/routeExport'
+import { buildGpx, buildKml, saveRouteExportFile } from '@/utils/routeExport'
 import { showToast } from '@/utils/toast'
 import {
   buildGoogleMapsDirectionsUrl,
@@ -37,32 +37,45 @@ export const TravelPointsBlock: React.FC<{
   travel: Travel
 }> = ({ anchors, handlePointCardPress, styles, travel }) => {
   const colors = useThemedColors()
+  const [exportingFormat, setExportingFormat] = useState<'gpx' | 'kml' | null>(null)
 
-  if (!travel.travelAddress || (travel.travelAddress as any[]).length <= 0) return null
+  const exportableWaypoints = useMemo(
+    () => getExportableTravelPointWaypoints(travel.travelAddress),
+    [travel.travelAddress],
+  )
+  const hasTravelAddressPoints = Array.isArray(travel.travelAddress) && travel.travelAddress.length > 0
+  const canExportPoints = exportableWaypoints.length > 0
 
-  const exportableWaypoints = getExportableTravelPointWaypoints(travel.travelAddress)
-  const canExportPoints = Platform.OS === 'web' && exportableWaypoints.length > 0
-
-  const handleExportPoints = (format: 'gpx' | 'kml') => {
+  const handleExportPoints = useCallback(async (format: 'gpx' | 'kml') => {
+    if (exportingFormat) return
+    setExportingFormat(format)
     try {
       const input = buildTravelPointsExportInput(travel)
       const result = format === 'gpx' ? buildGpx(input) : buildKml(input)
-      downloadTextFileWeb(result)
+      const saved = await saveRouteExportFile(
+        result,
+        format === 'kml' ? 'Сохранить точки для офлайн-карт' : 'Сохранить точки маршрута',
+      )
+      if (!saved) throw new Error('save-unavailable')
       showToast({
         type: 'success',
-        text1: `Файл ${format.toUpperCase()} сохранён`,
+        text1: Platform.OS === 'web'
+          ? `Файл ${format.toUpperCase()} сохранён`
+          : `Файл ${format.toUpperCase()} готов для карты`,
         visibilityTime: 2000,
       })
     } catch {
       showToast({
         type: 'error',
-        text1: 'Не удалось сохранить файл',
+        text1: 'Не удалось передать точки',
         visibilityTime: 3000,
       })
+    } finally {
+      setExportingFormat(null)
     }
-  }
+  }, [exportingFormat, travel])
 
-  const handleOpenGoogleMaps = () => {
+  const handleOpenGoogleMaps = useCallback(() => {
     const url = buildGoogleMapsDirectionsUrl(exportableWaypoints)
     if (!url) {
       showToast({
@@ -73,7 +86,9 @@ export const TravelPointsBlock: React.FC<{
       return
     }
     void openExternalUrlInNewTab(url)
-  }
+  }, [exportableWaypoints])
+
+  if (!hasTravelAddressPoints) return null
 
   return (
     <View
@@ -113,6 +128,8 @@ export const TravelPointsBlock: React.FC<{
                 accessibilityLabel="Скачать все точки в GPX"
                 testID="travel-points-export-gpx"
                 onPress={() => handleExportPoints('gpx')}
+                loading={exportingFormat === 'gpx'}
+                disabled={Boolean(exportingFormat)}
                 style={styles.pointsExportButton}
                 labelStyle={styles.pointsExportButtonText}
               />
@@ -124,6 +141,8 @@ export const TravelPointsBlock: React.FC<{
                 accessibilityLabel="Скачать все точки в KML для Organic Maps и MAPS.ME"
                 testID="travel-points-export-kml"
                 onPress={() => handleExportPoints('kml')}
+                loading={exportingFormat === 'kml'}
+                disabled={Boolean(exportingFormat)}
                 style={styles.pointsExportButton}
                 labelStyle={styles.pointsExportButtonText}
               />

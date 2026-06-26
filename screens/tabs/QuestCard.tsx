@@ -141,6 +141,7 @@ export default function QuestCard({
                         style={StyleSheet.absoluteFill}
                         loading="lazy"
                         priority="normal"
+                        optimizeWeb={false}
                         onLoad={handleImageLoad}
                         showImmediately={imageLoaded}
                     />

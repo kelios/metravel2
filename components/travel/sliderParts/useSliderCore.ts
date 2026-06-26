@@ -220,6 +220,12 @@ export function useSliderCore(options: UseSliderCoreOptions): UseSliderCoreResul
     [preloadCount, isWeb, prefetchEnabled, images.length, getUri]
   );
 
+  useEffect(() => {
+    if (!images.length) return;
+    if (!hasMeasuredWidth && !isWeb) return;
+    warmNeighbors(indexRef.current);
+  }, [hasMeasuredWidth, images.length, isWeb, warmNeighbors]);
+
   const setActiveIndex = useCallback(
     (idx: number) => {
       const clampedIdx = clamp(idx, 0, Math.max(0, images.length - 1));

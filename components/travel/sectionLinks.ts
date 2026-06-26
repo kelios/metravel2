@@ -1,3 +1,5 @@
+import { Platform } from "react-native"
+
 import type { Travel } from "@/types/types"
 
 export type TravelSectionLink = {
@@ -5,6 +7,10 @@ export type TravelSectionLink = {
   icon: string
   label: string
   meta?: string
+}
+
+type BuildTravelSectionLinksOptions = {
+  platform?: typeof Platform.OS
 }
 
 const pushIf = (
@@ -19,8 +25,10 @@ const pushIf = (
 
 export const buildTravelSectionLinks = (
   travel?: Travel | null,
+  options: BuildTravelSectionLinksOptions = {},
 ): TravelSectionLink[] => {
   if (!travel) return []
+  const platform = options.platform ?? Platform.OS
 
   const hasGallery = Array.isArray(travel.gallery) && travel.gallery.length > 0
   const hasVideo = typeof travel.youtube_link === "string" && travel.youtube_link.length > 0
@@ -43,7 +51,7 @@ export const buildTravelSectionLinks = (
   pushIf(hasRecommendation, links, { key: "recommendation", icon: "thumbs-up", label: "Рекомендации" })
   pushIf(hasPlus, links, { key: "plus", icon: "plus", label: "Плюсы" })
   pushIf(hasMinus, links, { key: "minus", icon: "minus", label: "Минусы" })
-  pushIf(hasTravelAddress, links, { key: "excursions", icon: "compass", label: "Экскурсии" })
+  pushIf(platform === "web" && hasTravelAddress, links, { key: "excursions", icon: "compass", label: "Экскурсии" })
 
   links.push({ key: "map", icon: "map", label: "Карта маршрута" })
   pushIf(hasTravelAddress, links, { key: "points", icon: "list", label: "Координаты мест" })

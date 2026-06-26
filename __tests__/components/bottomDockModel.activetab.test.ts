@@ -131,6 +131,14 @@ describe('BOTTOM_DOCK_ITEM_DEFS — BUG-CLASS-1 icon distinctness', () => {
     expect(uniqueIcons.size).toBe(primaryItems.length)
   })
 
+  it('uses descriptive custom icons for routes, map and quests tabs', () => {
+    const iconByKey = new Map(BOTTOM_DOCK_ITEM_DEFS.map((item) => [item.key, item.iconName]))
+
+    expect(iconByKey.get('home')).toBe('route-walk')
+    expect(iconByKey.get('map')).toBe('map-fold')
+    expect(iconByKey.get('quests')).toBe('quest-map-person')
+  })
+
   it('all primary dock items have unique keys', () => {
     const keys = BOTTOM_DOCK_ITEM_DEFS.map((item) => item.key)
     const uniqueKeys = new Set(keys)

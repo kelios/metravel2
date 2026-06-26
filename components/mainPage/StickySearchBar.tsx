@@ -248,10 +248,6 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     color: colors.textSecondary,
     fontWeight: '700',
   },
-  mobileSummaryMuted: {
-    color: colors.textMuted,
-    fontWeight: '600',
-  },
   pendingStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -577,10 +573,9 @@ function StickySearchBar({
     search,
   });
   // The results count is surfaced in the catalog toolbar's sort row on mobile (#336), so the
-  // sticky search bar only keeps the transient pending state + active-filters indicator here to
-  // hold the pinned header height within budget.
-  const showMobileSummary =
-    isMobile && (showPendingState || (activeFiltersCount != null && activeFiltersCount > 0));
+  // sticky search bar only keeps the transient pending state here to hold the pinned header
+  // height within budget.
+  const showMobileSummary = isMobile && showPendingState;
 
   // Keyboard shortcut для фокуса (Ctrl+K / Cmd+K)
   useEffect(() => {
@@ -831,11 +826,6 @@ function StickySearchBar({
         <View style={styles.mobileSummaryRow}>
           {showPendingState ? (
             <Text style={styles.mobileSummaryText}>Ищем...</Text>
-          ) : null}
-          {activeFiltersCount != null && activeFiltersCount > 0 ? (
-            <Text style={[styles.mobileSummaryText, styles.mobileSummaryMuted]}>
-              {activeFiltersCount} {activeFiltersCount === 1 ? 'условие' : activeFiltersCount < 5 ? 'условия' : 'условий'}
-            </Text>
           ) : null}
         </View>
       ) : null}

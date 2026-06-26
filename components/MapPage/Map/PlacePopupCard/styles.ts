@@ -57,9 +57,9 @@ export const getStyles = (
       position: 'relative',
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
       overflow: 'hidden',
-      // Photo is the dominant element (~62% of the sheet) and never scrolls.
+      // Photo is the dominant element (~70% of the sheet) and never scrolls.
       ...(Platform.OS === 'web'
-        ? ({ flexGrow: 0, flexShrink: 0, flexBasis: '62%', maxHeight: '62%', minHeight: '46%' } as any)
+        ? ({ flexGrow: 0, flexShrink: 0, flexBasis: '70%', maxHeight: '70%', minHeight: '58%' } as any)
         : null),
     },
     // Desktop Leaflet popup split: unlike the mobile sheet, the popup has NO fixed
@@ -157,6 +157,19 @@ export const getStyles = (
       left: compactLayout ? 10 : 12,
       zIndex: 6,
     },
+    relatedTravelActionsInline: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: bottomCardLayout ? 6 : 8,
+    },
+    relatedTravelActionSlot: {
+      flexGrow: 0,
+      flexShrink: 0,
+      minWidth: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     relatedTravelScrim: {
       // Scoped to the ♥/＋ button corner only (not the whole hero): a small, soft
       // scrim just for icon contrast so the dominant photo stays unobscured.
@@ -186,7 +199,7 @@ export const getStyles = (
       // behind hover state — touch users never hover).
       ...(Platform.OS === 'web' ? ({ cursor: 'zoom-in' } as any) : null),
     },
-    // Bottom-sheet split (web): the hero fills its fixed 62% header instead of using
+    // Bottom-sheet split (web): the hero fills its fixed 70% header instead of using
     // the card's own fixed photo height, so it stays pinned and gap-free while the
     // caption/actions scroll beneath it. ImageCardMedia keeps contain+blur.
     imageContainerFill: {
@@ -348,6 +361,18 @@ export const getStyles = (
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight ?? colors.border,
     },
+    coordCopyButton: {
+      width: bottomCardLayout ? 28 : 30,
+      height: bottomCardLayout ? 28 : 30,
+      borderRadius: DESIGN_TOKENS.radii.full,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+      backgroundColor: colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight ?? colors.border,
+      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+    },
     coordText: {
       // Coordinates are secondary metadata in the bottom card — keep them small and
       // muted so they don't compete with the address line above.
@@ -366,9 +391,9 @@ export const getStyles = (
     },
     iconActionRow: {
       flexDirection: 'row',
-      alignItems: 'flex-start',
+      alignItems: bottomCardLayout ? 'center' : 'flex-start',
       justifyContent: 'space-between',
-      gap: bottomCardLayout ? 8 : 4,
+      gap: bottomCardLayout ? 6 : 4,
       paddingHorizontal: bottomCardLayout ? 0 : 2,
     },
     iconActionBtn: {
@@ -376,13 +401,13 @@ export const getStyles = (
       flexBasis: 0,
       minWidth: 0,
       alignItems: 'center',
-      gap: 6,
+      gap: bottomCardLayout ? 0 : 6,
       paddingVertical: 2,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     iconActionBubble: {
-      width: compactLayout ? 44 : 46,
-      height: compactLayout ? 44 : 46,
+      width: bottomCardLayout ? 38 : compactLayout ? 44 : 46,
+      height: bottomCardLayout ? 38 : compactLayout ? 44 : 46,
       borderRadius: DESIGN_TOKENS.radii.full,
       alignItems: 'center',
       justifyContent: 'center',

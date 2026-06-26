@@ -7,6 +7,9 @@ import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 
 import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
 
+const TOUCH_TAP_MAX_MOVE = 12
+const DUPLICATE_PRESS_GUARD_MS = 250
+
 const ACTION_LABELS: Record<string, string> = {
   map: 'Карта маршрута',
   description: 'Описание',
@@ -50,6 +53,8 @@ export function TravelHeroQuickJumps({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        keyboardShouldPersistTaps="always"
+        nestedScrollEnabled
         contentContainerStyle={styles.quickJumpScrollContent}
         style={styles.quickJumpScroll}
         {...(Platform.OS === 'web' ? { role: 'navigation' as const } : null)}
@@ -76,11 +81,53 @@ const QuickJumpChip = React.memo(function QuickJumpChip({
   const styles = useTravelDetailsHeroStyles()
   const colors = useThemedColors()
   const label = ACTION_LABELS[link.key] ?? link.label
-  const handlePress = useCallback(() => onQuickJump(link.key), [link.key, onQuickJump])
+  const touchStartRef = React.useRef<{ x: number; y: number } | null>(null)
+  const lastTriggerAtRef = React.useRef(0)
+
+  const triggerQuickJump = useCallback(() => {
+    const now = Date.now()
+    if (now - lastTriggerAtRef.current < DUPLICATE_PRESS_GUARD_MS) return
+    lastTriggerAtRef.current = now
+    onQuickJump(link.key)
+  }, [link.key, onQuickJump])
+
+  const readTouchPoint = useCallback((event: any) => {
+    const nativeEvent = event?.nativeEvent
+    const x = Number(nativeEvent?.pageX ?? nativeEvent?.locationX)
+    const y = Number(nativeEvent?.pageY ?? nativeEvent?.locationY)
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null
+    return { x, y }
+  }, [])
+
+  const handlePress = useCallback(() => {
+    triggerQuickJump()
+  }, [triggerQuickJump])
+
+  const handleTouchStart = useCallback((event: any) => {
+    touchStartRef.current = readTouchPoint(event)
+  }, [readTouchPoint])
+
+  const handleTouchEnd = useCallback((event: any) => {
+    const start = touchStartRef.current
+    touchStartRef.current = null
+    if (!start) return
+
+    const end = readTouchPoint(event)
+    if (!end) return
+
+    const dx = Math.abs(end.x - start.x)
+    const dy = Math.abs(end.y - start.y)
+    if (dx > TOUCH_TAP_MAX_MOVE || dy > TOUCH_TAP_MAX_MOVE) return
+
+    triggerQuickJump()
+  }, [readTouchPoint, triggerQuickJump])
 
   return (
     <Pressable
       onPress={handlePress}
+      onTouchStart={Platform.OS === 'web' ? undefined : handleTouchStart}
+      onTouchEnd={Platform.OS === 'web' ? undefined : handleTouchEnd}
+      testID={`travel-quick-jump-${link.key}`}
       style={({ pressed }) => [
         styles.quickJumpChip,
         isPrimary && styles.quickJumpChipPrimary,

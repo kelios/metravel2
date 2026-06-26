@@ -221,6 +221,7 @@ describe('StickySearchBar Component', () => {
     );
 
     expect(screen.getByTestId('filters-badge')).toBeTruthy();
+    expect(screen.queryByText('2 условия')).toBeNull();
   });
 
   it('calls onClearAll when clear button is pressed', () => {

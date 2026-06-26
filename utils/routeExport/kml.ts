@@ -19,6 +19,7 @@ export const buildKml = (input: RouteExportInput): RouteExportResult => {
       const wDesc = w.description ? `        <description>${escapeXml(w.description)}</description>\n` : '';
       return `      <Placemark>
         <name>${escapeXml(wName)}</name>
+        <styleUrl>#metravelPoint</styleUrl>
 ${wDesc}        <Point>
           <coordinates>${lng},${lat},0</coordinates>
         </Point>
@@ -47,13 +48,25 @@ ${wDesc}        <Point>
     <description>${desc}</description>
     <ExtendedData>
       <Data name="time"><value>${escapeXml(time)}</value></Data>
-    </ExtendedData>
+${input.sourceName ? `      <Data name="source"><value>${escapeXml(input.sourceName)}</value></Data>\n` : ''}${input.sourceUrl ? `      <Data name="source_url"><value>${escapeXml(input.sourceUrl)}</value></Data>\n` : ''}    </ExtendedData>
 
     <Style id="routeLine">
       <LineStyle>
         <color>ff2b7cff</color>
         <width>4</width>
       </LineStyle>
+    </Style>
+    <Style id="metravelPoint">
+      <IconStyle>
+        <color>ff2b7cff</color>
+        <scale>1.1</scale>
+        <Icon>
+          <href>http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png</href>
+        </Icon>
+      </IconStyle>
+      <LabelStyle>
+        <color>ff2b7cff</color>
+      </LabelStyle>
     </Style>
 
 ${wpPlacemarks ? wpPlacemarks + '\n\n' : ''}${linePlacemark ? linePlacemark + '\n' : ''}

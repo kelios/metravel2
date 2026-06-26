@@ -115,6 +115,7 @@ describe('QuestCard', () => {
                 fit: 'contain',
                 blurBackground: true,
                 allowCriticalWebBlur: true,
+                optimizeWeb: false,
             }),
         );
         expect(getByTestId('quest-card-pioneer-krakow-dragon')).toBeTruthy();

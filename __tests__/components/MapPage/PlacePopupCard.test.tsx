@@ -461,7 +461,7 @@ describe('PlacePopupCard', () => {
     ).toBeGreaterThan(0);
   });
 
-  it('uses a compact page label in the mobile bottom-card action row', () => {
+  it('keeps the mobile bottom-card actions icon-only and preserves article accessibility', () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }));
 
     let tree: any;
@@ -482,11 +482,50 @@ describe('PlacePopupCard', () => {
       );
     });
 
+    expect(tree.root.findByProps({ accessibilityLabel: 'Открыть статью' })).toBeTruthy();
     expect(
       tree.root.findAll((node: any) => node.props?.children === 'Страница').length,
-    ).toBeGreaterThan(0);
+    ).toBe(0);
     expect(
       tree.root.findAll((node: any) => node.props?.children === 'Открыть страницу').length,
     ).toBe(0);
+  });
+
+  it('keeps the mobile bottom-card photo at 70 percent and secondary navigation collapsed', () => {
+    require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }));
+
+    let tree: any;
+
+    renderer.act(() => {
+      tree = renderer.create(
+        <PlacePopupCard
+          colors={mockColors as any}
+          title="Test point"
+          coord="53.9, 27.56"
+          imageUrl="https://example.com/photo.jpg"
+          onOpenGoogleMaps={jest.fn()}
+          onOpenOrganicMaps={jest.fn()}
+          onCopyCoord={jest.fn()}
+          bottomSheetSplit
+          compactLayout
+        />
+      );
+    });
+
+    const hero = tree.root.findAll((node: any) => {
+      const style = StyleSheet.flatten(node.props?.style);
+      return style?.flexBasis === '70%' && style?.maxHeight === '70%';
+    })[0];
+
+    expect(hero).toBeTruthy();
+    expect(tree.root.findByProps({ accessibilityLabel: 'Скопировать координаты' })).toBeTruthy();
+    expect(tree.root.findAll((node: any) => node.props?.children === 'Organic').length).toBe(0);
+
+    const moreAction = tree.root.findByProps({ accessibilityLabel: 'Показать способы навигации' });
+    renderer.act(() => {
+      moreAction.props.onPress();
+    });
+
+    expect(tree.root.findAll((node: any) => node.props?.children === 'Organic').length).toBeGreaterThan(0);
   });
 });

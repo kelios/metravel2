@@ -44,6 +44,7 @@ type RightColumnComparableProps = {
   isError: boolean
   isExport?: boolean
   isMobile: boolean
+  isMobileViewport?: boolean
   isRecommendationsVisible: boolean
   isSearchPending?: boolean
   onEndReached?: unknown
@@ -75,6 +76,7 @@ export function areRightColumnPropsEqual(
     prev.renderItem === next.renderItem &&
     prev.gridColumns === next.gridColumns &&
     prev.isMobile === next.isMobile &&
+    prev.isMobileViewport === next.isMobileViewport &&
     prev.contentPadding === next.contentPadding &&
     prev.cardSpacing === next.cardSpacing &&
     prev.showInitialLoading === next.showInitialLoading &&

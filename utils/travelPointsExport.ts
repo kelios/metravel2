@@ -73,10 +73,17 @@ export const getExportableTravelPointWaypoints = (points: unknown): RouteWaypoin
 
 export const buildTravelPointsExportInput = (travel: Travel): RouteExportInput => {
   const travelName = normalizeText((travel as any)?.name ?? (travel as any)?.title) || 'Metravel points';
+  const sourceUrl = normalizeText((travel as any)?.url);
+  const sourceLines = [
+    `Точки маршрута из Metravel: ${travelName}`,
+    sourceUrl ? `Источник: ${sourceUrl}` : '',
+  ].filter(Boolean);
 
   return {
     name: `${travelName} points`,
-    description: `Travel points from ${travelName}`,
+    description: sourceLines.join('\n'),
+    sourceName: travelName,
+    sourceUrl: sourceUrl || undefined,
     waypoints: getExportableTravelPointWaypoints((travel as any)?.travelAddress),
   };
 };

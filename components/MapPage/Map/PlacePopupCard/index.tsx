@@ -203,11 +203,10 @@ const PlacePopupCard: React.FC<Props> = ({
 
   useEffect(() => {
     setFullscreenVisible(false);
-    // In the mobile/native bottom card the «Ещё» navigation list opens expanded by
-    // default (the card is fullscreen there, so there is room) — the user shouldn't
-    // have to tap to reveal the maps/share actions. Desktop popup stays collapsed.
-    setNavExpanded(isBottomCardLayout);
-  }, [imageUrl, isBottomCardLayout]);
+    // Keep secondary navigation collapsed by default. On the mobile place card the
+    // photo must remain dominant, so extra map/share actions stay behind «Ещё».
+    setNavExpanded(false);
+  }, [imageUrl]);
 
   const toggleNav = useCallback(() => {
     setNavExpanded((prev) => !prev);
@@ -287,20 +286,46 @@ const PlacePopupCard: React.FC<Props> = ({
     useCompactLayout,
   ]);
 
+  const relatedTravelActionStack = useMemo(() => {
+    if (!relatedTravelUrl) return null;
+    return (
+      <RelatedTravelActionStack
+        relatedTravelUrl={relatedTravelUrl}
+        fallbackTitle={title}
+        fallbackImageUrl={imageUrl}
+        fallbackCountry={relatedTravelCountry}
+        fallbackCity={relatedTravelCity}
+        style={isBottomCardLayout ? styles.relatedTravelActionsInline : undefined}
+      />
+    );
+  }, [
+    imageUrl,
+    isBottomCardLayout,
+    relatedTravelCity,
+    relatedTravelCountry,
+    relatedTravelUrl,
+    styles.relatedTravelActionsInline,
+    title,
+  ]);
+
   const footerSlot = useMemo(() => (
     <View style={styles.footerStack}>
       {hasCoord && (
-        <CardActionPressable
-          accessibilityLabel="Скопировать координаты"
-          onPress={onCopyCoord ? () => void onCopyCoord() : undefined}
-          title={POPUP_TOOLTIPS.copyCoords}
-          enableWebClickFallback
-          style={styles.coordRow}
-        >
+        <View style={styles.coordRow}>
           <Feather name="map-pin" size={13} color={colors.textMuted} style={{ flexShrink: 0 } as any} />
           <Text style={styles.coordText} numberOfLines={1} selectable>{displayCoord}</Text>
-          {onCopyCoord && <Feather name="copy" size={13} color={colors.textMuted} style={{ flexShrink: 0 } as any} />}
-        </CardActionPressable>
+          {onCopyCoord ? (
+            <CardActionPressable
+              accessibilityLabel="Скопировать координаты"
+              onPress={() => void onCopyCoord()}
+              title={POPUP_TOOLTIPS.copyCoords}
+              enableWebClickFallback
+              style={({ pressed }) => [styles.coordCopyButton, pressed && styles.iconActionBtnPressed]}
+            >
+              <Feather name="copy" size={13} color={colors.textMuted} />
+            </CardActionPressable>
+          ) : null}
+        </View>
       )}
 
       <View style={styles.actionsStack}>
@@ -324,6 +349,12 @@ const PlacePopupCard: React.FC<Props> = ({
         ) : (
           <>
             <View style={styles.iconActionRow}>
+              {isBottomCardLayout && relatedTravelActionStack ? (
+                <View style={styles.relatedTravelActionSlot}>
+                  {relatedTravelActionStack}
+                </View>
+              ) : null}
+
               {renderFallbackPrimaryAction && primaryAction && (
                 <CardActionPressable
                   accessibilityLabel={primaryAction.accessibilityLabel}
@@ -336,9 +367,11 @@ const PlacePopupCard: React.FC<Props> = ({
                   <View style={[styles.iconActionBubble, styles.iconActionBubblePrimary]}>
                     <Feather name={primaryAction.icon} size={19} color={colors.textOnPrimary ?? colors.textOnDark} />
                   </View>
-                  <View style={styles.iconActionLabelRow}>
-                    <Text style={styles.iconActionLabel} numberOfLines={1}>{primaryIconActionLabel}</Text>
-                  </View>
+                  {!isBottomCardLayout ? (
+                    <View style={styles.iconActionLabelRow}>
+                      <Text style={styles.iconActionLabel} numberOfLines={1}>{primaryIconActionLabel}</Text>
+                    </View>
+                  ) : null}
                 </CardActionPressable>
               )}
 
@@ -354,9 +387,11 @@ const PlacePopupCard: React.FC<Props> = ({
                   <View style={[styles.iconActionBubble, styles.iconActionBubblePrimary]}>
                     <Feather name="corner-up-right" size={20} color={colors.textOnPrimary ?? colors.textOnDark} />
                   </View>
-                  <View style={styles.iconActionLabelRow}>
-                    <Text style={styles.iconActionLabel} numberOfLines={1}>Маршрут</Text>
-                  </View>
+                  {!isBottomCardLayout ? (
+                    <View style={styles.iconActionLabelRow}>
+                      <Text style={styles.iconActionLabel} numberOfLines={1}>Маршрут</Text>
+                    </View>
+                  ) : null}
                 </CardActionPressable>
               )}
 
@@ -371,9 +406,11 @@ const PlacePopupCard: React.FC<Props> = ({
                   <View style={styles.iconActionBubble}>
                     <Feather name="book-open" size={19} color={colors.primary} />
                   </View>
-                  <View style={styles.iconActionLabelRow}>
-                    <Text style={styles.iconActionLabel} numberOfLines={1}>Страница</Text>
-                  </View>
+                  {!isBottomCardLayout ? (
+                    <View style={styles.iconActionLabelRow}>
+                      <Text style={styles.iconActionLabel} numberOfLines={1}>Страница</Text>
+                    </View>
+                  ) : null}
                 </CardActionPressable>
               )}
 
@@ -411,9 +448,11 @@ const PlacePopupCard: React.FC<Props> = ({
                       />
                     )}
                   </View>
-                  <View style={styles.iconActionLabelRow}>
-                    <Text style={styles.iconActionLabel} numberOfLines={1}>{compactLabel}</Text>
-                  </View>
+                  {!isBottomCardLayout ? (
+                    <View style={styles.iconActionLabelRow}>
+                      <Text style={styles.iconActionLabel} numberOfLines={1}>{compactLabel}</Text>
+                    </View>
+                  ) : null}
                 </CardActionPressable>
               )}
 
@@ -428,11 +467,21 @@ const PlacePopupCard: React.FC<Props> = ({
                 >
                   <View style={[styles.iconActionBubble, navExpanded && styles.iconActionBubbleActive]}>
                     <Feather name="navigation" size={19} color={colors.text} />
+                    {isBottomCardLayout ? (
+                      <Feather
+                        name={navExpanded ? 'chevron-up' : 'chevron-down'}
+                        size={11}
+                        color={colors.textMuted}
+                        style={{ position: 'absolute', right: 6, bottom: 5 } as any}
+                      />
+                    ) : null}
                   </View>
-                  <View style={styles.iconActionLabelRow}>
-                    <Text style={styles.iconActionLabel} numberOfLines={1}>Ещё</Text>
-                    <Feather name={navExpanded ? 'chevron-up' : 'chevron-down'} size={13} color={colors.textMuted} />
-                  </View>
+                  {!isBottomCardLayout ? (
+                    <View style={styles.iconActionLabelRow}>
+                      <Text style={styles.iconActionLabel} numberOfLines={1}>Ещё</Text>
+                      <Feather name={navExpanded ? 'chevron-up' : 'chevron-down'} size={13} color={colors.textMuted} />
+                    </View>
+                  ) : null}
                 </CardActionPressable>
               )}
             </View>
@@ -476,6 +525,7 @@ const PlacePopupCard: React.FC<Props> = ({
     displayCoord,
     hasCoord,
     isAdding,
+    isBottomCardLayout,
     isSaved,
     navExpanded,
     onAddPoint,
@@ -485,6 +535,7 @@ const PlacePopupCard: React.FC<Props> = ({
     primaryAction,
     primaryIconActionLabel,
     primaryActionOverride,
+    relatedTravelActionStack,
     renderFallbackPrimaryAction,
     saveActionVisual,
     styles,
@@ -495,7 +546,7 @@ const PlacePopupCard: React.FC<Props> = ({
 
   const relatedTravelOverlays = relatedTravelUrl ? (
     <>
-      {isBottomCardLayout ? (
+      {isBottomCardLayout ? null : (
         // Soft scrim so the semi-transparent ♥/＋ buttons stay readable over busy
         // photos in the mobile bottom card (scoped — desktop popup unchanged).
         <View
@@ -503,16 +554,12 @@ const PlacePopupCard: React.FC<Props> = ({
           style={styles.relatedTravelScrim}
           {...(Platform.OS === 'web' ? ({ 'aria-hidden': 'true' } as any) : null)}
         />
+      )}
+      {!isBottomCardLayout && relatedTravelActionStack ? (
+        <View style={styles.relatedTravelActions} pointerEvents="box-none">
+          {relatedTravelActionStack}
+        </View>
       ) : null}
-      <View style={styles.relatedTravelActions} pointerEvents="box-none">
-        <RelatedTravelActionStack
-          relatedTravelUrl={relatedTravelUrl}
-          fallbackTitle={title}
-          fallbackImageUrl={imageUrl}
-          fallbackCountry={relatedTravelCountry}
-          fallbackCity={relatedTravelCity}
-        />
-      </View>
     </>
   ) : null;
 

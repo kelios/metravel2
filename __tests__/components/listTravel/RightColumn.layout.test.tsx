@@ -185,6 +185,38 @@ describe('RightColumn layout invariants', () => {
     expect(screen.queryByTestId('travel-row-3')).toBeNull();
   });
 
+  it('keeps the mobile results count visible when compact density uses a two-column card grid', () => {
+    renderWithProviders(
+      <RightColumn
+        search=""
+        setSearch={jest.fn()}
+        isRecommendationsVisible={false}
+        handleRecommendationsVisibilityChange={jest.fn()}
+        activeFiltersCount={0}
+        total={travels.length}
+        contentPadding={16}
+        showInitialLoading={false}
+        isError={false}
+        showEmptyState={false}
+        getEmptyStateMessage={null}
+        travels={travels as any}
+        gridColumns={2}
+        isMobile={false}
+        isMobileViewport={true}
+        showNextPageLoading={false}
+        refetch={jest.fn()}
+        renderItem={renderItem as any}
+        density="compact"
+        onDensityChange={jest.fn()}
+        showDensityToggle={true}
+      />
+    );
+
+    expect(screen.getByTestId('toolbar-results-count')).toBeTruthy();
+    expect(screen.getByTestId('travel-row-0-item-0')).toBeTruthy();
+    expect(screen.getByTestId('travel-row-0-item-1')).toBeTruthy();
+  });
+
   it('scrolls to recommendations after toggling them on', async () => {
     const listRef = {
       current: {

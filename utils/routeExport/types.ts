@@ -9,6 +9,8 @@ export interface RouteWaypoint {
 export interface RouteExportInput {
   name?: string;
   description?: string;
+  sourceName?: string;
+  sourceUrl?: string;
   /** Route track coordinates in legacy Metravel format: [lng, lat] */
   track?: LngLat[];
   /** Optional waypoints (start/end or standalone points) */

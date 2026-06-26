@@ -785,6 +785,7 @@ function ListTravelBase() {
         getEmptyStateMessage,
         travels: displayedTravels,
         gridColumns,
+        isMobileViewport: viewportState.isCardsSingleColumn,
         isMobile: isCardsSingleColumn,
         showNextPageLoading: displayedShowNextPageLoading,
         refetch: displayedRefetch,
