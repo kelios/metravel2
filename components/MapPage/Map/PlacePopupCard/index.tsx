@@ -233,7 +233,7 @@ const PlacePopupCard: React.FC<Props> = ({
 
   const topInfoSlot = useMemo(() => (
     <View style={styles.infoSection}>
-      <Text style={styles.titleText} numberOfLines={isBottomCardLayout ? 1 : useCompactLayout ? 2 : bp === 'narrow' ? 2 : 2}>
+      <Text style={styles.titleText} numberOfLines={isBottomCardLayout ? 2 : useCompactLayout ? 2 : bp === 'narrow' ? 2 : 2}>
         {title}
       </Text>
 

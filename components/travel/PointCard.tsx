@@ -140,11 +140,15 @@ const PointCard = React.memo(function PointCard({
   );
 
   const openMapFromLink = useCallback(() => onOpenMap(point.coord), [onOpenMap, point.coord]);
-  const showActions = isMobile || hovered || isTouchWeb;
+  const useSeparatedNativeLayout = Platform.OS !== 'web' && isMobile;
+  const showActions = !useSeparatedNativeLayout && (isMobile || hovered || isTouchWeb);
   const hasAddPointAction = Boolean(onAddPoint);
   const imageHeight = hasAddPointAction && isMobile
     ? Math.max(responsive.imageMinHeight, 320)
     : responsive.imageMinHeight;
+  const cardTextColor = (colors as any).text ?? colors.textOnDark;
+  const cardMutedColor = (colors as any).textMuted ?? colors.textOnDark;
+  const primaryColor = (colors as any).primary ?? colors.textOnPrimary;
 
   const handleImageError = useCallback(() => {
     setImageError(true);
@@ -179,8 +183,8 @@ const PointCard = React.memo(function PointCard({
             <ImageCardMedia
               src={imageUrl}
               alt={point.address}
-              fit="contain"
-              blurBackground
+              fit={useSeparatedNativeLayout ? 'cover' : 'contain'}
+              blurBackground={!useSeparatedNativeLayout}
               allowCriticalWebBlur
               blurRadius={16}
               priority="low"
@@ -218,6 +222,7 @@ const PointCard = React.memo(function PointCard({
             </View>
           )}
 
+          {!useSeparatedNativeLayout && (
           <View style={styles.overlayBottom} testID="travel-point-card-overlay">
             <Text
               style={[
@@ -274,7 +279,113 @@ const PointCard = React.memo(function PointCard({
               />
             )}
           </View>
+          )}
         </View>
+
+        {useSeparatedNativeLayout && (
+          <View style={styles.cardInfoPanel} testID="travel-point-card-info-panel">
+            <Text
+              style={[
+                styles.cardInfoTitle,
+                { fontSize: responsive.titleSize + 2 },
+              ]}
+              numberOfLines={2}
+            >
+              {point.address}
+            </Text>
+
+            {!!categoryLabel && (
+              <View style={styles.cardInfoCategoryChip}>
+                <Feather name="tag" size={13} color={cardMutedColor} />
+                <Text style={styles.cardInfoCategoryText} numberOfLines={1}>
+                  {categoryLabel}
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.cardInfoCoordRow}>
+              <Feather name="map-pin" size={15} color={cardMutedColor} />
+              <Text
+                style={[styles.cardInfoCoordText, { fontSize: responsive.coordSize + 1 }]}
+                numberOfLines={1}
+              >
+                {point.coord}
+              </Text>
+              <CardActionPressable
+                accessibilityLabel="Скопировать координаты"
+                title="Скопировать координаты"
+                onPress={() => onCopy(point.coord)}
+                style={({ pressed }) => [
+                  styles.cardInfoIconButton,
+                  pressed && styles.actionBtnPressed,
+                ]}
+              >
+                <Feather name="copy" size={17} color={cardTextColor} />
+              </CardActionPressable>
+            </View>
+
+            <View style={styles.cardInfoActionsRow}>
+              <CardActionPressable
+                accessibilityLabel="Открыть в навигаторе"
+                title="Открыть в навигаторе"
+                onPress={openMapFromLink}
+                style={({ pressed }) => [
+                  styles.cardInfoActionButton,
+                  styles.cardInfoActionPrimary,
+                  pressed && styles.actionBtnPressed,
+                ]}
+              >
+                <Feather name="navigation" size={18} color={colors.textOnPrimary} />
+                <Text
+                  style={[styles.cardInfoActionText, styles.cardInfoActionTextPrimary]}
+                  numberOfLines={1}
+                  allowFontScaling={false}
+                >
+                  Карта
+                </Text>
+              </CardActionPressable>
+
+              <CardActionPressable
+                accessibilityLabel="Поделиться"
+                title="Поделиться в Telegram"
+                onPress={() => onShare(point.coord)}
+                style={({ pressed }) => [
+                  styles.cardInfoActionButton,
+                  pressed && styles.actionBtnPressed,
+                ]}
+              >
+                <Feather name="send" size={18} color={primaryColor} />
+                <Text style={styles.cardInfoActionText} numberOfLines={1} allowFontScaling={false}>
+                  TG
+                </Text>
+              </CardActionPressable>
+
+              {onAddPoint && (
+                <CardActionPressable
+                  accessibilityLabel="Мои точки"
+                  title="Мои точки"
+                  onPress={onAddPoint}
+                  disabled={Boolean(addButtonDisabled) || Boolean(addButtonLoading)}
+                  style={({ pressed }) => [
+                    styles.cardInfoActionButton,
+                    styles.cardInfoActionPrimarySoft,
+                    pressed && !addButtonDisabled && !addButtonLoading && styles.actionBtnPressed,
+                    (addButtonDisabled || addButtonLoading) && styles.addButtonDisabled,
+                  ]}
+                >
+                  {addButtonLoading ? (
+                    <ActivityIndicator size="small" color={primaryColor} />
+                  ) : (
+                    <Feather name="plus-circle" size={18} color={primaryColor} />
+                  )}
+                  <Text style={styles.cardInfoActionText} numberOfLines={1} allowFontScaling={false}>
+                    Мои
+                  </Text>
+                </CardActionPressable>
+              )}
+            </View>
+          </View>
+        )}
       </Pressable>
     </View>
   );

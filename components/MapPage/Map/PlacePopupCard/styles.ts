@@ -281,6 +281,7 @@ export const getStyles = (
     },
     footerStack: {
       gap: bottomCardLayout ? 8 : splitLayout ? 10 : compactLayout ? compactSp.sectionGap : sp.sectionGap,
+      ...(bottomCardLayout && Platform.OS !== 'web' ? { flexGrow: 1, justifyContent: 'space-between' } : null),
     },
     infoSection: {
       gap: bottomCardLayout ? 5 : compactLayout ? 6 : splitLayout ? 6 : bp === 'narrow' ? 8 : 10,
@@ -315,7 +316,7 @@ export const getStyles = (
       ...(Platform.OS === 'web'
         ? ({
             display: '-webkit-box',
-            WebkitLineClamp: bottomCardLayout ? 1 : splitLayout ? 2 : bp === 'narrow' ? 3 : 2,
+            WebkitLineClamp: bottomCardLayout ? 2 : splitLayout ? 2 : bp === 'narrow' ? 3 : 2,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
           } as any)
@@ -391,6 +392,7 @@ export const getStyles = (
     },
     actionsStack: {
       gap: bottomCardLayout ? 8 : splitLayout ? 8 : 10,
+      ...(bottomCardLayout && Platform.OS !== 'web' ? { paddingTop: 6, gap: 18 } : null),
     },
     iconActionRow: {
       flexDirection: 'row',
@@ -404,13 +406,13 @@ export const getStyles = (
       flexBasis: 0,
       minWidth: 0,
       alignItems: 'center',
-      gap: 6,
-      paddingVertical: 2,
+      gap: bottomCardLayout && Platform.OS !== 'web' ? 10 : 6,
+      paddingVertical: bottomCardLayout && Platform.OS !== 'web' ? 8 : 2,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     iconActionBubble: {
-      width: bottomCardLayout ? 38 : compactLayout ? 44 : 46,
-      height: bottomCardLayout ? 38 : compactLayout ? 44 : 46,
+      width: bottomCardLayout ? (Platform.OS !== 'web' ? 50 : 38) : compactLayout ? 44 : 46,
+      height: bottomCardLayout ? (Platform.OS !== 'web' ? 50 : 38) : compactLayout ? 44 : 46,
       borderRadius: DESIGN_TOKENS.radii.full,
       alignItems: 'center',
       justifyContent: 'center',
@@ -443,8 +445,8 @@ export const getStyles = (
       paddingHorizontal: bottomCardLayout ? 2 : 0,
     },
     iconActionLabel: {
-      fontSize: compactLayout ? 11 : 12,
-      lineHeight: (compactLayout ? 11 : 12) * 1.2,
+      fontSize: bottomCardLayout && Platform.OS !== 'web' ? 13 : compactLayout ? 11 : 12,
+      lineHeight: (bottomCardLayout && Platform.OS !== 'web' ? 13 : compactLayout ? 11 : 12) * 1.2,
       fontWeight: '600',
       color: colors.text,
       textAlign: 'center',
@@ -455,9 +457,9 @@ export const getStyles = (
       flexDirection: 'row',
       flexWrap: 'wrap',
       justifyContent: 'flex-start',
-      rowGap: 8,
+      rowGap: bottomCardLayout && Platform.OS !== 'web' ? 14 : 8,
       marginTop: 2,
-      paddingTop: 8,
+      paddingTop: bottomCardLayout && Platform.OS !== 'web' ? 14 : 8,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.borderLight ?? colors.border,
     },
@@ -465,8 +467,8 @@ export const getStyles = (
       width: '25%',
       minWidth: 0,
       alignItems: 'center',
-      gap: 6,
-      paddingVertical: 2,
+      gap: bottomCardLayout && Platform.OS !== 'web' ? 10 : 6,
+      paddingVertical: bottomCardLayout && Platform.OS !== 'web' ? 8 : 2,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     actionSummaryText: {

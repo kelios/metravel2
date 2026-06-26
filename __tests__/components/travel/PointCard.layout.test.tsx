@@ -19,7 +19,7 @@ describe('travel PointCard native layout', () => {
   const styles = createPointListStyles(colors);
   const noop = jest.fn();
 
-  it('keeps the add-to-my-points action inside the overlay flow with map chips', () => {
+  it('keeps native point card details below the image with compact actions', () => {
     render(
       <PointCard
         point={{
@@ -47,13 +47,17 @@ describe('travel PointCard native layout', () => {
       />
     );
 
-    const overlay = screen.getByTestId('travel-point-card-overlay');
+    const infoPanel = screen.getByTestId('travel-point-card-info-panel');
+    const imageMedia = screen.getByTestId('mock-image-card-media');
     const imageWrapStyle = StyleSheet.flatten(screen.getByTestId('travel-point-card-image-wrap').props.style);
 
-    expect(overlay.findByProps({ accessibilityLabel: 'Мои точки' })).toBeTruthy();
-    // PointNavigationMenu renders a collapsed toggle by default; individual map app
-    // buttons are only visible after user expands the menu. Assert the toggle is present.
-    expect(overlay.findByProps({ accessibilityLabel: 'Открыть в навигаторе' })).toBeTruthy();
+    expect(screen.queryByTestId('travel-point-card-overlay')).toBeNull();
+    expect(imageMedia.props.fit).toBe('cover');
+    expect(imageMedia.props.blurBackground).toBe(false);
+    expect(infoPanel.findByProps({ accessibilityLabel: 'Скопировать координаты' })).toBeTruthy();
+    expect(infoPanel.findByProps({ accessibilityLabel: 'Открыть в навигаторе' })).toBeTruthy();
+    expect(infoPanel.findByProps({ accessibilityLabel: 'Поделиться' })).toBeTruthy();
+    expect(infoPanel.findByProps({ accessibilityLabel: 'Мои точки' })).toBeTruthy();
     expect(screen.getByText(/Глубокое озеро/)).toBeTruthy();
     expect(imageWrapStyle.height).toBe(320);
   });

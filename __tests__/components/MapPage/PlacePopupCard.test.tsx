@@ -553,7 +553,7 @@ describe('PlacePopupCard', () => {
     expect(tree.root.findAllByProps({ accessibilityLabel: 'Показать способы навигации' })).toHaveLength(0);
     expect(tree.root.findAll((node: any) => node.props?.children === 'Organic').length).toBeGreaterThan(0);
     expect(
-      tree.root.findAll((node: any) => node.props?.children === longTitle && node.props?.numberOfLines === 1).length,
+      tree.root.findAll((node: any) => node.props?.children === longTitle && node.props?.numberOfLines === 2).length,
     ).toBeGreaterThan(0);
   });
 });
