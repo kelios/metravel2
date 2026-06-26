@@ -29,9 +29,12 @@ type UsePopupActionsArgs = {
   drivingDurationSeconds?: number | null;
   onOpenArticle?: () => void;
   onOpenGoogleMaps?: () => void;
+  onOpenAppleMaps?: () => void;
   onOpenOrganicMaps?: () => void;
   onOpenWaze?: () => void;
+  onOpenYandexMaps?: () => void;
   onOpenYandexNavi?: () => void;
+  onOpenOpenStreetMap?: () => void;
   onShareTelegram?: () => void;
   onBuildRoute?: () => void;
   primaryActionOverride?: PrimaryActionOverride;
@@ -45,9 +48,12 @@ export function usePopupActions({
   drivingDurationSeconds,
   onOpenArticle,
   onOpenGoogleMaps,
+  onOpenAppleMaps,
   onOpenOrganicMaps,
   onOpenWaze,
+  onOpenYandexMaps,
   onOpenYandexNavi,
+  onOpenOpenStreetMap,
   onShareTelegram,
   onBuildRoute,
   primaryActionOverride,
@@ -148,7 +154,7 @@ export function usePopupActions({
       title: string;
     }> = [];
 
-    if (hasCoord && onOpenGoogleMaps && primaryAction?.onPress !== onOpenGoogleMaps) {
+    if (hasCoord && onOpenGoogleMaps) {
       items.push({
         key: 'google',
         accessibilityLabel: 'Google Maps',
@@ -156,6 +162,17 @@ export function usePopupActions({
         ...getNavigationActionVisual('google', colors),
         onPress: onOpenGoogleMaps,
         title: POPUP_TOOLTIPS.openGoogleMaps,
+      });
+    }
+
+    if (hasCoord && onOpenAppleMaps) {
+      items.push({
+        key: 'apple',
+        accessibilityLabel: 'Apple Maps',
+        label: NAVIGATION_ACTION_LABELS.apple,
+        ...getNavigationActionVisual('apple', colors),
+        onPress: onOpenAppleMaps,
+        title: POPUP_TOOLTIPS.openAppleMaps,
       });
     }
 
@@ -202,6 +219,17 @@ export function usePopupActions({
       });
     }
 
+    if (hasCoord && onOpenYandexMaps) {
+      items.push({
+        key: 'yandex-maps',
+        accessibilityLabel: 'Яндекс Карты',
+        label: NAVIGATION_ACTION_LABELS['yandex-maps'],
+        ...getNavigationActionVisual('yandex-maps', colors),
+        onPress: onOpenYandexMaps,
+        title: POPUP_TOOLTIPS.openYandexMaps,
+      });
+    }
+
     if (hasCoord && onOpenYandexNavi) {
       items.push({
         key: 'yandex',
@@ -210,6 +238,17 @@ export function usePopupActions({
         ...getNavigationActionVisual('yandex', colors),
         onPress: onOpenYandexNavi,
         title: POPUP_TOOLTIPS.openYandexNavi,
+      });
+    }
+
+    if (hasCoord && onOpenOpenStreetMap) {
+      items.push({
+        key: 'osm',
+        accessibilityLabel: 'OpenStreetMap',
+        label: NAVIGATION_ACTION_LABELS.osm,
+        ...getNavigationActionVisual('osm', colors),
+        onPress: onOpenOpenStreetMap,
+        title: POPUP_TOOLTIPS.openOpenStreetMap,
       });
     }
 
@@ -233,8 +272,11 @@ export function usePopupActions({
     onOpenGoogleMaps,
     onOpenOrganicMaps,
     onOpenArticle,
+    onOpenAppleMaps,
     onOpenWaze,
+    onOpenYandexMaps,
     onOpenYandexNavi,
+    onOpenOpenStreetMap,
     onShareTelegram,
     primaryAction,
   ]);

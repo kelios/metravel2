@@ -165,6 +165,12 @@ export const getStyles = (
       justifyContent: 'center',
       gap: bottomCardLayout ? 6 : 8,
     },
+    relatedTravelInlineSection: {
+      width: '100%',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingBottom: bottomCardLayout ? 2 : 0,
+    },
     relatedTravelActionSlot: {
       flexGrow: 0,
       flexShrink: 0,
@@ -458,10 +464,20 @@ export const getStyles = (
       flexWrap: 'wrap',
       justifyContent: 'flex-start',
       rowGap: bottomCardLayout && Platform.OS !== 'web' ? 14 : 8,
-      marginTop: 2,
+      marginTop: 0,
+      paddingTop: bottomCardLayout && Platform.OS !== 'web' ? 10 : 6,
+    },
+    navSection: {
+      gap: bottomCardLayout && Platform.OS !== 'web' ? 10 : 6,
       paddingTop: bottomCardLayout && Platform.OS !== 'web' ? 14 : 8,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.borderLight ?? colors.border,
+    },
+    navSectionTitle: {
+      fontSize: bottomCardLayout && Platform.OS !== 'web' ? 13 : compactLayout ? fs.small - 1 : fs.small,
+      lineHeight: (bottomCardLayout && Platform.OS !== 'web' ? 13 : compactLayout ? fs.small - 1 : fs.small) * 1.25,
+      fontWeight: '700',
+      color: colors.textMuted,
     },
     navGridItem: {
       width: '25%',

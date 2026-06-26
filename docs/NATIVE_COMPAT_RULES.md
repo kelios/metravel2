@@ -10,6 +10,10 @@ skill `android-native-audit` (семантические).
 
 - Web — работающий продукт с трафиком; native догоняет. **Запрещено** чинить
   native ценой изменения поведения web.
+- Mobile UX parity is mandatory: mobile web, Android and iOS should present the
+  same layout and interaction model. Use platform files for technical
+  incompatibilities, not for alternate visual hierarchy, action order, or tap
+  semantics.
 - Если платформы несовместимы — **не перекраивать общий компонент условиями**,
   а разводить по файлам: `Component.web.tsx` + `Component.native.tsx`
   (или `.android.tsx`/`.ios.tsx`) — Metro сам выберет нужный. Примеры в репо:

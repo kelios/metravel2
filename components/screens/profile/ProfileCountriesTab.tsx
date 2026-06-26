@@ -1,0 +1,669 @@
+import { useEffect, useMemo, useState } from 'react'
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native'
+import Feather from '@expo/vector-icons/Feather'
+
+import { fetchAllCountries } from '@/api/misc'
+import ProfileSectionHeader from '@/components/profile/ProfileSectionHeader'
+import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { useResponsive } from '@/hooks/useResponsive'
+import { useThemedColors } from '@/hooks/useTheme'
+import type { TravelStatusEntry } from '@/stores/travelStatusStore'
+import type { Travel } from '@/types/types'
+import {
+  buildProfileCountryStats,
+  type ProfileCountryRegionGroup,
+  type ProfileCountryRow,
+} from './profileCountries'
+
+interface ProfileCountriesTabProps {
+  travels: Travel[]
+  personalTravelStatusEntries: TravelStatusEntry[]
+  travelsSyncing: boolean
+  loadedTravelsCount: number
+  totalTravelsCount: number
+  onBackToOverview: () => void
+}
+
+const formatCountryCount = (count: number) => {
+  const mod10 = count % 10
+  const mod100 = count % 100
+  if (mod10 === 1 && mod100 !== 11) return `${count} страна`
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} страны`
+  return `${count} стран`
+}
+
+const getCountryFlagLabel = (country: Pick<ProfileCountryRow, 'code' | 'name'>) => {
+  if (country.code) return country.code.slice(0, 2).toUpperCase()
+  const letters = country.name
+    .trim()
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+  return letters || '??'
+}
+
+export function ProfileCountriesTab({
+  travels,
+  personalTravelStatusEntries,
+  travelsSyncing,
+  loadedTravelsCount,
+  totalTravelsCount,
+  onBackToOverview,
+}: ProfileCountriesTabProps) {
+  const colors = useThemedColors()
+  const { isMobile, width } = useResponsive()
+  const isCompact = isMobile || width < 640
+  const styles = useMemo(() => createStyles(colors, isCompact), [colors, isCompact])
+  const [countries, setCountries] = useState<unknown[]>([])
+  const [countriesLoading, setCountriesLoading] = useState(true)
+  const [countriesError, setCountriesError] = useState(false)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    let mounted = true
+
+    setCountriesLoading(true)
+    setCountriesError(false)
+
+    fetchAllCountries({ signal: controller.signal, throwOnError: true })
+      .then((nextCountries) => {
+        if (!mounted) return
+        setCountries(nextCountries)
+      })
+      .catch((error) => {
+        if (!mounted) return
+        if (error instanceof Error && error.name === 'AbortError') return
+        setCountriesError(true)
+        setCountries([])
+      })
+      .finally(() => {
+        if (mounted) setCountriesLoading(false)
+      })
+
+    return () => {
+      mounted = false
+      controller.abort()
+    }
+  }, [])
+
+  const stats = useMemo(
+    () =>
+      buildProfileCountryStats({
+        countries,
+        travels,
+        personalTravelStatusEntries,
+      }),
+    [countries, personalTravelStatusEntries, travels],
+  )
+
+  const progressPercent = stats.totalCount > 0
+    ? Math.min(100, Math.round((stats.visitedCount / stats.totalCount) * 100))
+    : 0
+
+  const isInitialLoading = countriesLoading && stats.rows.length === 0
+  const showCatalogError = countriesError && stats.rows.length === 0
+  const showPartialCatalogWarning = countriesError && stats.rows.length > 0
+  const showTravelsSyncing =
+    travelsSyncing && totalTravelsCount > 0 && loadedTravelsCount < totalTravelsCount
+
+  return (
+    <View style={styles.wrap}>
+      <ProfileSectionHeader
+        title="Страны"
+        subtitle="Ваш личный прогресс по странам из маршрутов и отметок «Был здесь»"
+        onBack={onBackToOverview}
+        backLabel="Обзор"
+      />
+
+      <View style={styles.summaryCard}>
+        <View style={styles.summaryHeader}>
+          <View style={styles.summaryIcon}>
+            <Feather name="flag" size={18} color={colors.primary} />
+          </View>
+          <View style={styles.summaryCopy}>
+            <Text style={styles.summaryTitle}>Карта стран</Text>
+            <Text style={styles.summaryText}>
+              Посетили {formatCountryCount(stats.visitedCount)}. Осталось {formatCountryCount(stats.remainingCount)}.
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.metricsRow}>
+          <CountryMetric label="Посетили" value={stats.visitedCount} tone="success" />
+          <CountryMetric label="Осталось" value={stats.remainingCount} tone="muted" />
+          <CountryMetric label="Всего" value={stats.totalCount} tone="primary" />
+        </View>
+
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+        </View>
+
+        {showTravelsSyncing || countriesLoading || showPartialCatalogWarning ? (
+          <View style={styles.noticeRow}>
+            {countriesLoading || showTravelsSyncing ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Feather name="alert-circle" size={14} color={colors.warning} />
+            )}
+            <Text style={styles.noticeText}>
+              {showTravelsSyncing
+                ? `Догружаем маршруты: ${loadedTravelsCount} из ${totalTravelsCount}`
+                : countriesLoading
+                  ? 'Загружаем каталог стран'
+                  : 'Каталог стран недоступен, показываем страны из ваших маршрутов'}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+
+      {isInitialLoading ? (
+        <View style={styles.skeletonGrid}>
+          <SkeletonLoader width="100%" height={54} borderRadius={DESIGN_TOKENS.radii.md} />
+          <SkeletonLoader width="100%" height={54} borderRadius={DESIGN_TOKENS.radii.md} />
+          <SkeletonLoader width="100%" height={54} borderRadius={DESIGN_TOKENS.radii.md} />
+        </View>
+      ) : showCatalogError ? (
+        <View style={styles.emptyCard}>
+          <Feather name="alert-circle" size={18} color={colors.warning} />
+          <Text style={styles.emptyTitle}>Не удалось загрузить страны</Text>
+          <Text style={styles.emptyText}>Откройте вкладку позже: профиль сохранит прогресс, когда каталог снова будет доступен.</Text>
+        </View>
+      ) : (
+        <>
+          <WorldProgressMap groups={stats.regionGroups} />
+          <View style={styles.regionList}>
+            {stats.regionGroups.map((group) => (
+              <RegionSection key={group.key} group={group} />
+            ))}
+          </View>
+        </>
+      )}
+    </View>
+  )
+
+  function CountryMetric({
+    label,
+    value,
+    tone,
+  }: {
+    label: string
+    value: number
+    tone: 'success' | 'primary' | 'muted'
+  }) {
+    const toneColor =
+      tone === 'success'
+        ? colors.success
+        : tone === 'primary'
+          ? colors.primary
+          : colors.textMuted
+
+    return (
+      <View style={styles.metric}>
+        <Text style={[styles.metricValue, { color: toneColor }]}>{value}</Text>
+        <Text style={styles.metricLabel}>{label}</Text>
+      </View>
+    )
+  }
+
+  function CountryFlagBadge({ country, compact = false }: { country: ProfileCountryRow; compact?: boolean }) {
+    return (
+      <View
+        style={[
+          styles.flagBadge,
+          compact ? styles.flagBadgeCompact : null,
+          country.visited ? styles.flagBadgeVisited : styles.flagBadgeMuted,
+        ]}
+      >
+        <Text
+          style={[
+            styles.flagBadgeText,
+            compact ? styles.flagBadgeTextCompact : null,
+            country.visited ? styles.flagBadgeTextVisited : styles.flagBadgeTextMuted,
+          ]}
+          numberOfLines={1}
+        >
+          {getCountryFlagLabel(country)}
+        </Text>
+      </View>
+    )
+  }
+
+  function WorldProgressMap({ groups }: { groups: ProfileCountryRegionGroup[] }) {
+    return (
+      <View style={styles.mapCard}>
+        <View style={styles.mapHeader}>
+          <View style={styles.mapTitleRow}>
+            <Feather name="map" size={16} color={colors.primary} />
+            <Text style={styles.mapTitle}>Карта по зонам</Text>
+          </View>
+          <Text style={styles.mapSubtitle}>
+            Зелёные флажки уже закрыты, серые зоны ещё ждут маршрута.
+          </Text>
+        </View>
+        <View style={styles.mapGrid}>
+          {groups.map((group) => {
+            const percent = group.totalCount > 0
+              ? Math.min(100, Math.round((group.visitedCount / group.totalCount) * 100))
+              : 0
+            const previewCountries = [
+              ...group.rows.filter((country) => country.visited),
+              ...group.rows.filter((country) => !country.visited),
+            ].slice(0, isCompact ? 4 : 6)
+
+            return (
+              <View
+                key={group.key}
+                style={[styles.mapRegion, group.visitedCount > 0 ? styles.mapRegionVisited : null]}
+              >
+                <View style={styles.mapRegionHeader}>
+                  <Text style={styles.mapRegionTitle} numberOfLines={1}>{group.label}</Text>
+                  <Text style={styles.mapRegionCount}>{group.visitedCount}/{group.totalCount}</Text>
+                </View>
+                <View style={styles.mapProgressTrack}>
+                  <View style={[styles.mapProgressFill, { width: `${percent}%` }]} />
+                </View>
+                <View style={styles.mapFlagsRow}>
+                  {previewCountries.map((country) => (
+                    <CountryFlagBadge
+                      key={`${group.key}-flag-${country.id}`}
+                      country={country}
+                      compact
+                    />
+                  ))}
+                </View>
+              </View>
+            )
+          })}
+        </View>
+      </View>
+    )
+  }
+
+  function RegionSection({ group }: { group: ProfileCountryRegionGroup }) {
+    return (
+      <View style={styles.regionSection}>
+        <View style={styles.regionHeader}>
+          <View style={styles.regionTitleWrap}>
+            <Text style={styles.regionTitle}>{group.label}</Text>
+            <Text style={styles.regionSubtitle}>
+              Посетили {group.visitedCount} / всего {group.totalCount}
+            </Text>
+          </View>
+          <View style={styles.regionBadge}>
+            <Text style={styles.regionBadgeText}>{group.remainingCount} осталось</Text>
+          </View>
+        </View>
+        <View style={styles.countryGrid}>
+          {group.rows.map((country) => (
+            <CountryTile key={country.id} country={country} />
+          ))}
+        </View>
+      </View>
+    )
+  }
+
+  function CountryTile({ country }: { country: ProfileCountryRow }) {
+    return (
+      <View
+        style={[styles.countryTile, country.visited ? styles.countryTileVisited : styles.countryTileMuted]}
+        accessibilityRole="text"
+        accessibilityLabel={`${country.name}: ${country.visited ? 'посещена' : 'не посещена'}`}
+      >
+        <CountryFlagBadge country={country} />
+        <View style={styles.countryCopy}>
+          <Text
+            style={[styles.countryName, country.visited ? null : styles.countryNameMuted]}
+            numberOfLines={2}
+          >
+            {country.name}
+          </Text>
+          {country.code ? (
+            <Text style={[styles.countryCode, country.visited ? null : styles.countryNameMuted]}>
+              Код страны: {country.code}
+            </Text>
+          ) : null}
+        </View>
+        <Feather
+          name={country.visited ? 'check-circle' : 'circle'}
+          size={16}
+          color={country.visited ? colors.success : colors.textSubtle}
+        />
+      </View>
+    )
+  }
+}
+
+const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boolean) =>
+  StyleSheet.create({
+    wrap: {
+      gap: DESIGN_TOKENS.spacing.md,
+      paddingBottom: DESIGN_TOKENS.spacing.md,
+    },
+    summaryCard: {
+      marginHorizontal: DESIGN_TOKENS.spacing.md,
+      padding: DESIGN_TOKENS.spacing.md,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      gap: DESIGN_TOKENS.spacing.md,
+    },
+    summaryHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.sm,
+    },
+    summaryIcon: {
+      width: 42,
+      height: 42,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.primarySoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    summaryCopy: {
+      flex: 1,
+      minWidth: 0,
+      gap: 2,
+    },
+    summaryTitle: {
+      fontSize: DESIGN_TOKENS.typography.sizes.md,
+      fontWeight: DESIGN_TOKENS.typography.weights.bold as never,
+      color: colors.text,
+    },
+    summaryText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      lineHeight: 20,
+      color: colors.textMuted,
+    },
+    metricsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    metric: {
+      flexGrow: 1,
+      flexBasis: isCompact ? 92 : 140,
+      paddingVertical: 10,
+      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      gap: 2,
+    },
+    metricValue: {
+      fontSize: 22,
+      lineHeight: 26,
+      fontWeight: DESIGN_TOKENS.typography.weights.bold as never,
+    },
+    metricLabel: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      color: colors.textMuted,
+      fontWeight: DESIGN_TOKENS.typography.weights.medium as never,
+    },
+    progressTrack: {
+      height: 8,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      overflow: 'hidden',
+      backgroundColor: colors.backgroundSecondary,
+    },
+    progressFill: {
+      height: '100%',
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.success,
+    },
+    noticeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    noticeText: {
+      flex: 1,
+      minWidth: 0,
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      lineHeight: 18,
+      color: colors.textMuted,
+    },
+    skeletonGrid: {
+      marginHorizontal: DESIGN_TOKENS.spacing.md,
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    emptyCard: {
+      marginHorizontal: DESIGN_TOKENS.spacing.md,
+      padding: DESIGN_TOKENS.spacing.md,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      gap: DESIGN_TOKENS.spacing.xs,
+      alignItems: 'flex-start',
+    },
+    emptyTitle: {
+      fontSize: DESIGN_TOKENS.typography.sizes.md,
+      fontWeight: DESIGN_TOKENS.typography.weights.bold as never,
+      color: colors.text,
+    },
+    emptyText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      lineHeight: 20,
+      color: colors.textMuted,
+    },
+    mapCard: {
+      marginHorizontal: DESIGN_TOKENS.spacing.md,
+      padding: DESIGN_TOKENS.spacing.md,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      gap: DESIGN_TOKENS.spacing.md,
+    },
+    mapHeader: {
+      gap: 4,
+    },
+    mapTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    mapTitle: {
+      fontSize: DESIGN_TOKENS.typography.sizes.md,
+      fontWeight: DESIGN_TOKENS.typography.weights.bold as never,
+      color: colors.text,
+    },
+    mapSubtitle: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      lineHeight: 18,
+      color: colors.textMuted,
+    },
+    mapGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    mapRegion: {
+      flexGrow: 1,
+      flexBasis: isCompact ? '100%' : 250,
+      minHeight: 106,
+      padding: DESIGN_TOKENS.spacing.sm,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    mapRegionVisited: {
+      borderColor: colors.success,
+      backgroundColor: colors.successSoft,
+    },
+    mapRegionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    mapRegionTitle: {
+      flex: 1,
+      minWidth: 0,
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      fontWeight: DESIGN_TOKENS.typography.weights.bold as never,
+      color: colors.text,
+    },
+    mapRegionCount: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      fontWeight: DESIGN_TOKENS.typography.weights.bold as never,
+      color: colors.textMuted,
+    },
+    mapProgressTrack: {
+      height: 6,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.surface,
+      overflow: 'hidden',
+    },
+    mapProgressFill: {
+      height: '100%',
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.success,
+    },
+    mapFlagsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 5,
+    },
+    regionList: {
+      gap: DESIGN_TOKENS.spacing.md,
+    },
+    regionSection: {
+      gap: DESIGN_TOKENS.spacing.sm,
+    },
+    regionHeader: {
+      marginHorizontal: DESIGN_TOKENS.spacing.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: DESIGN_TOKENS.spacing.sm,
+    },
+    regionTitleWrap: {
+      flex: 1,
+      minWidth: 0,
+      gap: 2,
+    },
+    regionTitle: {
+      fontSize: DESIGN_TOKENS.typography.sizes.md,
+      fontWeight: DESIGN_TOKENS.typography.weights.bold as never,
+      color: colors.text,
+    },
+    regionSubtitle: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      color: colors.textMuted,
+      lineHeight: 17,
+    },
+    regionBadge: {
+      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+      paddingVertical: 6,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+    },
+    regionBadgeText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      fontWeight: DESIGN_TOKENS.typography.weights.semibold as never,
+      color: colors.textMuted,
+    },
+    countryGrid: {
+      marginHorizontal: DESIGN_TOKENS.spacing.md,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: DESIGN_TOKENS.spacing.xs,
+      ...Platform.select({
+        web: {
+          alignItems: 'stretch',
+        } as object,
+        default: {},
+      }),
+    },
+    countryTile: {
+      flexGrow: 1,
+      flexBasis: isCompact ? '100%' : 190,
+      minHeight: 54,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+      paddingVertical: 10,
+      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      borderWidth: 1,
+    },
+    countryTileVisited: {
+      backgroundColor: colors.successSoft,
+      borderColor: colors.success,
+    },
+    countryTileMuted: {
+      backgroundColor: colors.backgroundSecondary,
+      borderColor: colors.borderLight,
+      opacity: 0.62,
+    },
+    flagBadge: {
+      width: 42,
+      height: 28,
+      borderRadius: DESIGN_TOKENS.radii.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+    },
+    flagBadgeCompact: {
+      width: 34,
+      height: 22,
+      borderRadius: DESIGN_TOKENS.radii.xs,
+    },
+    flagBadgeVisited: {
+      backgroundColor: colors.surface,
+      borderColor: colors.success,
+    },
+    flagBadgeMuted: {
+      backgroundColor: colors.surface,
+      borderColor: colors.borderLight,
+    },
+    flagBadgeText: {
+      fontSize: 11,
+      lineHeight: 14,
+      fontWeight: DESIGN_TOKENS.typography.weights.bold as never,
+      color: colors.text,
+      letterSpacing: 0,
+    },
+    flagBadgeTextCompact: {
+      fontSize: 10,
+      lineHeight: 12,
+    },
+    flagBadgeTextVisited: {
+      color: colors.success,
+    },
+    flagBadgeTextMuted: {
+      color: colors.textMuted,
+    },
+    countryCopy: {
+      flex: 1,
+      minWidth: 0,
+      gap: 2,
+    },
+    countryName: {
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      lineHeight: 18,
+      color: colors.text,
+      fontWeight: DESIGN_TOKENS.typography.weights.semibold as never,
+    },
+    countryNameMuted: {
+      color: colors.textMuted,
+    },
+    countryCode: {
+      fontSize: 10,
+      lineHeight: 12,
+      color: colors.textMuted,
+      fontWeight: DESIGN_TOKENS.typography.weights.bold as never,
+      letterSpacing: 0,
+    },
+  })

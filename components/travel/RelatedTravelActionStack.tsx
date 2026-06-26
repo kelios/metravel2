@@ -14,6 +14,7 @@ type Props = {
   fallbackImageUrl?: string | null
   fallbackCountry?: string | null
   fallbackCity?: string | null
+  variant?: 'overlay' | 'inline'
   style?: StyleProp<ViewStyle>
 }
 
@@ -38,6 +39,7 @@ export default function RelatedTravelActionStack({
   fallbackImageUrl,
   fallbackCountry,
   fallbackCity,
+  variant = 'overlay',
   style,
 }: Props) {
   const travelRef = useMemo(() => resolveRelatedTravelRef(relatedTravelUrl), [relatedTravelUrl])
@@ -102,7 +104,8 @@ export default function RelatedTravelActionStack({
         travelCity={travelCity}
         travelYear={relatedTravel?.year}
         travelMonthName={relatedTravel?.monthName}
-        compact
+        compact={variant !== 'inline'}
+        idleLabel={variant === 'inline' ? 'Был / Хочу / Планирую' : undefined}
       />
     </View>
   )

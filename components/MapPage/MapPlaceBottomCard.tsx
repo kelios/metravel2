@@ -71,6 +71,7 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
   }, [userLocation])
 
   const safeTop = insets?.top ?? 0
+  const topChromeInset = Math.max(0, topInset || 0)
   const bottomChromeInset = (bottomInset || 0) + (insets?.bottom ?? 0)
   const rootTopInset = IS_WEB ? 0 : Math.max(0, topInset)
   const rootBottomInset = IS_WEB ? 0 : Math.max(0, bottomChromeInset)
@@ -247,8 +248,12 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
           style={[
             styles.sheetCard,
             {
+              height: `calc(100dvh - ${topChromeInset + bottomChromeInset}px)`,
+              maxHeight: `calc(100dvh - ${topChromeInset + bottomChromeInset}px)`,
+              marginTop: topChromeInset,
+              marginBottom: bottomChromeInset,
               paddingTop: insets?.top ?? 0,
-              paddingBottom: (bottomInset || 0) + (insets?.bottom ?? 0),
+              paddingBottom: insets?.bottom ?? 0,
             },
           ]}
           {...({ pointerEvents: 'auto' } as any)}
@@ -367,8 +372,6 @@ const getStyles = (colors: ThemedColors) =>
         ? ({
             display: 'flex',
             flexDirection: 'column',
-            height: '100dvh',
-            maxHeight: '100dvh',
             boxShadow: '0 -8px 28px rgba(15,23,42,0.22)',
           } as any)
         : null),

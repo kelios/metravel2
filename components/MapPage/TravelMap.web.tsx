@@ -22,6 +22,7 @@ import {
   ignoreTravelMapRuntimeError,
 } from './Map/travelMapGeometry'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { LAYOUT } from '@/constants/layout'
 import { normalizePoint } from '@/components/map-core/types'
 import { queryKeys } from '@/api/queryKeys'
 import { getOsmTileUrl, OSM_PROXY_ATTRIBUTION, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers'
@@ -89,6 +90,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   const mapRef = useRef<any>(null)
   const containerRef = useRef<any>(null)
   const markerByCoordRef = useRef<Map<string, any>>(new Map())
+  const highlightedMarkerRef = useRef<any>(null)
   const mountedRef = useRef(true)
   const [mapReady, setMapReady] = useState(false)
   const overlayControllersRef = useRef<Map<string, any>>(new Map())
@@ -123,6 +125,23 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       // Освобождаем ссылки на снятые Leaflet-слои/оверлеи, чтобы не держать их после unmount.
       markerByCoord.clear()
       overlayControllers.clear()
+    }
+  }, [])
+
+  const clearHighlightedMarker = useCallback(() => {
+    const marker = highlightedMarkerRef.current
+    if (!marker) return
+    highlightedMarkerRef.current = null
+    try {
+      marker.setZIndexOffset?.(0)
+      const el = marker.getElement?.() || marker._icon
+      if (el) {
+        el.classList?.remove?.('metravel-travel-highlighted-marker')
+        el.style.filter = ''
+        el.style.transition = ''
+      }
+    } catch {
+      ignoreTravelMapRuntimeError()
     }
   }, [])
 
@@ -178,6 +197,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       // fullscreenOnMobile overlay), поведение не меняется.
       popupSplit: !compact,
       fullscreenOnMobile: true,
+      fullscreenTopInset: LAYOUT.headerHeight,
+      fullscreenBottomInset: LAYOUT.tabBarHeight,
       invalidateUserPoints: () => {
         void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() })
       },
@@ -293,33 +314,32 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   const hasRenderableMapData = safeTravelData.length > 0 || normalizedRouteLines.length > 0
 
   useEffect(() => {
-    if (!highlightedPoint || !mapRef.current) return
-    let timer: ReturnType<typeof setTimeout> | null = null
+    if (!mapRef.current) return
+    if (!highlightedPoint) {
+      clearHighlightedMarker()
+      return
+    }
     try {
       const marker = markerByCoordRef.current.get(highlightedPoint.coord)
-      if (marker && typeof marker.openPopup === 'function') {
+      if (marker) {
         const map = mapRef.current
         if (typeof map.setView === 'function') {
           map.setView(marker.getLatLng(), 14, { animate: true })
         }
-        timer = setTimeout(() => {
-          // Точка могла смениться/компонент размонтироваться за время задержки —
-          // не открываем попап на устаревшем/снятом маркере.
-          if (!mountedRef.current || !mapRef.current) return
-          try {
-            marker.openPopup()
-          } catch {
-            ignoreTravelMapRuntimeError()
-          }
-        }, 300)
+        if (highlightedMarkerRef.current !== marker) clearHighlightedMarker()
+        highlightedMarkerRef.current = marker
+        marker.setZIndexOffset?.(1000)
+        const el = marker.getElement?.() || marker._icon
+        if (el) {
+          el.classList?.add?.('metravel-travel-highlighted-marker')
+          el.style.transition = 'filter 160ms ease, opacity 160ms ease'
+          el.style.filter = 'drop-shadow(0 12px 18px rgba(15,23,42,0.32)) saturate(1.18) brightness(1.08)'
+        }
       }
     } catch (err) {
       console.warn('[TravelMap] Failed to highlight point:', err)
     }
-    return () => {
-      if (timer) clearTimeout(timer)
-    }
-  }, [highlightedPoint])
+  }, [clearHighlightedMarker, highlightedPoint])
 
   useEffect(() => {
     if (!IS_WEB || !mapRef.current || resizeTrigger === undefined) return

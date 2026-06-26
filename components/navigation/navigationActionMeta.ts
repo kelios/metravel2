@@ -9,7 +9,8 @@ export type NavigationActionKind =
   | 'save'
   | 'telegram'
   | 'waze'
-  | 'yandex';
+  | 'yandex'
+  | 'yandex-maps';
 
 export type NavigationActionVisual = {
   icon: keyof typeof Feather.glyphMap;
@@ -25,7 +26,8 @@ export const NAVIGATION_ACTION_LABELS: Record<NavigationActionKind, string> = {
   save: 'Сохранить',
   telegram: 'Telegram',
   waze: 'Waze',
-  yandex: 'Яндекс',
+  yandex: 'Яндекс Нави',
+  'yandex-maps': 'Яндекс Карты',
 };
 
 export function resolveNavigationActionKind(
@@ -37,6 +39,7 @@ export function resolveNavigationActionKind(
   if (value.includes('google')) return 'google';
   if (value.includes('organic')) return 'organic';
   if (value.includes('waze')) return 'waze';
+  if (value.includes('yandex-maps') || value.includes('яндекс карты')) return 'yandex-maps';
   if (value.includes('yandex') || value.includes('яндекс')) return 'yandex';
   if (value.includes('telegram')) return 'telegram';
   if (value.includes('apple')) return 'apple';
@@ -59,6 +62,8 @@ export function getNavigationActionVisual(
       return { icon: 'navigation', iconColor: colors.infoDark, tintBg: colors.infoSoft };
     case 'yandex':
       return { icon: 'navigation-2', iconColor: colors.danger, tintBg: colors.dangerSoft };
+    case 'yandex-maps':
+      return { icon: 'map', iconColor: colors.danger, tintBg: colors.dangerSoft };
     case 'telegram':
       return { icon: 'send', iconColor: colors.primary, tintBg: colors.primarySoft };
     case 'apple':

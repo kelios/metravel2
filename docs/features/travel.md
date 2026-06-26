@@ -46,6 +46,21 @@
 | `sections/ExcursionsSection.tsx` | Экскурсии |
 | `sections/LazyYouTubeSection.tsx` | YouTube embed |
 
+#### Route points mobile contract
+
+- Карточки точек маршрута в деталях путешествия должны использовать общий
+  point/place template с map popup и `/places`, с optional article/travel actions.
+- На mobile web, Android и iOS карточка точки должна выглядеть и работать
+  одинаково: фото около 70% fullscreen/expanded surface, затем название/мета,
+  координаты с copy, статья/страница, раскрываемая навигация и "мои точки".
+- Раскрываемая навигация для координат должна включать Google Maps, Apple Maps,
+  Organic Maps/offline, Waze, Яндекс Карты, Яндекс Навигатор и OpenStreetMap.
+- Связанный статус путешествия должен быть видимым текстовым действием:
+  "Был здесь", "Хочу поехать", "Планирую" или "Был / Хочу / Планирую".
+- Клик по карточке или изображению точки не открывает popup автоматически:
+  он раскрывает/фокусит секцию карты и подсвечивает/поднимает соответствующий
+  маркер. Fullscreen popup открывается только явным кликом по маркеру на карте.
+
 ### Wizard (`components/travel/`)
 
 | Файл | LOC | Шаг |

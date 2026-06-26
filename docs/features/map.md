@@ -52,6 +52,30 @@
 
 Выбор платформы: `components/MapPage/Map/useMapInstance.ts`, условные web-эффекты в `useMapWebLayoutEffects.ts`.
 
+## Mobile parity contract
+
+- Mobile web, Android and iOS map/place UX must look and behave the same for the
+  same scenario. Platform-specific files may swap Leaflet, WebView or native map
+  engines, but the card structure, action order, hero proportions and tap
+  semantics must stay aligned.
+- A marker popup/card on mobile opens fullscreen inside the available app content
+  area: app header/footer remain visible, the hero image occupies about 70% of
+  the card, then title/meta, coordinates with copy, article/page action,
+  expandable navigation choices and existing save/add/share/route actions.
+- The expandable navigation choices must show the full map-app set when
+  coordinates exist: Google Maps, Apple Maps, Organic Maps/offline, Waze,
+  Яндекс Карты, Яндекс Навигатор, and OpenStreetMap. Telegram/share is optional
+  extra, not a substitute for those choices.
+- Related travel state must be explicit in the same surface: users need to see a
+  clear "Был / Хочу / Планирую" action that opens the "Был здесь",
+  "Хочу поехать", and "Планирую" choices.
+- `/places`, `/map`, and travel details route-point map cards should reuse the
+  same point/place template with optional fields instead of separate visual
+  patterns.
+- On travel details, a tap on a route-point card focuses/highlights the marker on
+  the map only. It must not auto-open the popup; only a direct marker tap opens
+  the fullscreen point card.
+
 ## Данные
 
 ### React Query (`api/map.ts`, 541 LOC)

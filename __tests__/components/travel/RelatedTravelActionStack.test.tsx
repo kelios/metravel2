@@ -136,6 +136,27 @@ describe('RelatedTravelActionStack', () => {
     )
   })
 
+  it('renders inline status as an explicit travel-state action', async () => {
+    renderWithQuery(
+      <RelatedTravelActionStack
+        relatedTravelUrl="/travel/42"
+        fallbackTitle="Связанное путешествие"
+        variant="inline"
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockStatusButton).toHaveBeenCalled()
+    })
+
+    expect(mockStatusButton.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({
+        compact: false,
+        idleLabel: 'Был / Хочу / Планирую',
+      }),
+    )
+  })
+
   it('does not render actions for non-metravel or non-travel urls', () => {
     const view = renderWithQuery(
       <RelatedTravelActionStack

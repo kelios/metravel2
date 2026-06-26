@@ -38,6 +38,12 @@ export const buildGoogleMapsUrl = (coord: string) => {
   return `https://www.google.com/maps/search/?api=1&query=${parsed.lat},${parsed.lon}`;
 };
 
+export const buildAppleMapsUrl = (coord: string) => {
+  const parsed = parseCoordString(coord);
+  if (!parsed) return '';
+  return `https://maps.apple.com/?q=${encodeURIComponent(`${parsed.lat},${parsed.lon}`)}`;
+};
+
 export const buildOrganicMapsUrl = (coord: string, name?: string) => {
   const parsed = parseCoordString(coord);
   if (!parsed) return '';
@@ -70,6 +76,15 @@ export const buildWazeUrl = (coord: string) => {
     return `waze://?ll=${parsed.lat},${parsed.lon}`;
   }
   return `https://waze.com/ul?ll=${parsed.lat},${parsed.lon}&navigate=yes`;
+};
+
+export const buildYandexMapsUrl = (coord: string) => {
+  const parsed = parseCoordString(coord);
+  if (!parsed) return '';
+  if (isNativePlatform()) {
+    return `yandexmaps://maps.yandex.ru/?pt=${parsed.lon},${parsed.lat}&z=16&l=map`;
+  }
+  return `https://yandex.ru/maps/?pt=${encodeURIComponent(`${parsed.lon},${parsed.lat}`)}&z=16&l=map`;
 };
 
 export const buildYandexNaviUrl = (coord: string) => {

@@ -230,6 +230,11 @@ npx serve dist/prod -l 3000 -s
 - Before creating new UI components or styles, check `components/ui` and existing feature components and reuse them.
 - Add new components only when no existing component can be reasonably extended or composed.
 - When adding buttons, icons, or small UI primitives, prefer existing `components/ui` primitives (`Button`, `IconButton`, `Chip`) over custom one-offs.
+- Mobile layout parity is mandatory: mobile web, Android, and iOS must use the same visual and interaction contract for the same user-facing flow. Platform files may adapt technical map engines, safe areas, or native APIs, but must not introduce different UX, block order, primary actions, hero proportions, or tap behavior.
+- Map/place/travel-point surfaces must reuse one point/place template whenever possible. The mobile popup/card contract is fullscreen inside the app content area with app header/footer still visible; the hero image takes about 70% of the card; below it are title/meta, coordinates with copy, article/page action when available, expandable navigation system choices, and existing save/add/share/route actions.
+- The point/place navigation set must explicitly include Google Maps, Apple Maps, Organic Maps/offline, Waze, Яндекс Карты, Яндекс Навигатор, and OpenStreetMap where coordinates are available. Telegram/share is extra and must not replace map/navigation choices.
+- Related travel state actions must be visible as text, not only as an unlabeled icon: "Был здесь", "Хочу поехать", "Планирую" or a compact "Был / Хочу / Планирую" affordance that opens those choices.
+- On travel details, tapping a point card or its image focuses the map and highlights/raises the corresponding marker. It must not open the fullscreen popup automatically; the popup/card opens from an explicit marker tap/click on the map.
 
 ### External link policy
 

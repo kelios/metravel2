@@ -16,6 +16,19 @@ Build UI by extending existing primitives first:
 - Reuse `components/ui` and existing feature components before inventing new one-off building blocks.
 - Prefer the existing `Button`, `IconButton`, and `Chip` primitives for small controls.
 - Keep layout stable across loading, success, and error states.
+- Keep mobile web, Android, and iOS visually and behaviorally aligned for the
+  same mobile flow. Do not introduce platform-specific alternate UX unless the
+  platform API makes it technically unavoidable.
+- For map/place/travel-point UI, prefer the shared fullscreen point/place
+  template: visible app header/footer, hero image around 70%, title/meta,
+  coordinates with copy, article/page action, expandable navigation choices, and
+  existing save/add/share/route actions.
+- The shared point/place template must expose Google Maps, Apple Maps, Organic
+  Maps/offline, Waze, Яндекс Карты, Яндекс Навигатор, and OpenStreetMap when
+  coordinates exist. Telegram/share is extra and must not replace navigation.
+- Related travel status controls must be legible text ("Был здесь",
+  "Хочу поехать", "Планирую" or "Был / Хочу / Планирую"), not only a compact
+  icon without visible meaning.
 - Fix all real UI problems found while working in the touched flow: overlap, broken mobile/desktop layout, invalid icons, non-neutral placeholders, console errors, broken interactions, and direct external-link violations.
 - If a UI problem cannot be fixed safely in the current scope, document the blocker and exact scenario instead of leaving it implicit.
 

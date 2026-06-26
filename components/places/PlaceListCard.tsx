@@ -277,6 +277,7 @@ const PlaceListCard: React.FC<Props> = ({
   );
   const openOverflowMenu = useCallback(() => setOverflowVisible(true), []);
   const closeOverflowMenu = useCallback(() => setOverflowVisible(false), []);
+  const showInlineRelatedTravelActions = !!relatedTravelUrl && showTitleInContent;
   // Top-right overlay holds the two primary affordances (♥ favorite + ＋ save)
   // on EVERY card, so the list reads as one pattern regardless of whether a
   // card has a related travel or its own photo. Related-travel cards delegate
@@ -305,7 +306,7 @@ const PlaceListCard: React.FC<Props> = ({
       </CardActionPressable>
     ) : null;
 
-  const favoriteAffordance = relatedTravelUrl ? (
+  const favoriteAffordance = relatedTravelUrl && !showInlineRelatedTravelActions ? (
     <RelatedTravelActionStack
       relatedTravelUrl={relatedTravelUrl}
       fallbackTitle={title}
@@ -412,6 +413,20 @@ const PlaceListCard: React.FC<Props> = ({
             compact={compact}
             styles={styles}
           />
+
+          {showInlineRelatedTravelActions && relatedTravelUrl ? (
+            <View style={styles.inlineRelatedTravelActions}>
+              <RelatedTravelActionStack
+                relatedTravelUrl={relatedTravelUrl}
+                fallbackTitle={title}
+                fallbackImageUrl={imageUrl}
+                fallbackCountry={relatedTravelCountry}
+                fallbackCity={relatedTravelCity}
+                variant="inline"
+                style={styles.inlineRelatedTravelActionStack}
+              />
+            </View>
+          ) : null}
 
           {hasActionRow && (
             <View style={styles.actionsRow}>
@@ -704,6 +719,17 @@ const createStyles = (
       borderWidth: 1,
       borderColor: 'rgba(255, 255, 255, 0.3)',
       ...Platform.select({ web: { cursor: 'pointer' as any } }),
+    },
+    inlineRelatedTravelActions: {
+      alignItems: 'flex-start',
+      justifyContent: 'center',
+    },
+    inlineRelatedTravelActionStack: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      flexWrap: 'wrap',
+      gap: 8,
     },
     quickActionButton: {
       backgroundColor: colors.primary,

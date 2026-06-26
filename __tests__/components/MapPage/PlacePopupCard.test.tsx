@@ -320,7 +320,12 @@ describe('PlacePopupCard', () => {
           title="Test point"
           coord="53.9, 27.56"
           onOpenGoogleMaps={jest.fn()}
+          onOpenAppleMaps={jest.fn()}
           onOpenOrganicMaps={jest.fn()}
+          onOpenWaze={jest.fn()}
+          onOpenYandexMaps={jest.fn()}
+          onOpenYandexNavi={jest.fn()}
+          onOpenOpenStreetMap={jest.fn()}
           onAddPoint={jest.fn()}
         />
       );
@@ -330,6 +335,7 @@ describe('PlacePopupCard', () => {
       tree.root.findAll((node: any) => node.props?.children === label);
 
     expect(findLabel('Google Maps').length).toBeGreaterThan(0);
+    expect(findLabel('Google').length).toBe(0);
     expect(findLabel('Organic').length).toBe(0);
 
     const googleAction = tree.root.findByProps({ accessibilityLabel: 'Открыть точку в Google Maps' });
@@ -341,6 +347,11 @@ describe('PlacePopupCard', () => {
     });
 
     expect(findLabel('Organic').length).toBeGreaterThan(0);
+    expect(findLabel('Apple').length).toBeGreaterThan(0);
+    expect(findLabel('Waze').length).toBeGreaterThan(0);
+    expect(findLabel('Яндекс Карты').length).toBeGreaterThan(0);
+    expect(findLabel('Яндекс Нави').length).toBeGreaterThan(0);
+    expect(findLabel('OSM').length).toBeGreaterThan(0);
   });
 
   it('runs the Google navigation handler when the popup action is pressed', () => {
@@ -530,7 +541,12 @@ describe('PlacePopupCard', () => {
           coord="53.9, 27.56"
           imageUrl="https://example.com/photo.jpg"
           onOpenGoogleMaps={jest.fn()}
+          onOpenAppleMaps={jest.fn()}
           onOpenOrganicMaps={jest.fn()}
+          onOpenWaze={jest.fn()}
+          onOpenYandexMaps={jest.fn()}
+          onOpenYandexNavi={jest.fn()}
+          onOpenOpenStreetMap={jest.fn()}
           onShareTelegram={jest.fn()}
           onCopyCoord={jest.fn()}
           bottomSheetSplit
@@ -547,11 +563,19 @@ describe('PlacePopupCard', () => {
     expect(hero).toBeTruthy();
     expect(tree.root.findByProps({ accessibilityLabel: 'Скопировать координаты' })).toBeTruthy();
     expect(tree.root.findByProps({ accessibilityLabel: 'Открыть точку в Google Maps' })).toBeTruthy();
+    expect(tree.root.findByProps({ accessibilityLabel: 'Apple Maps' })).toBeTruthy();
     expect(tree.root.findByProps({ accessibilityLabel: 'Organic Maps' })).toBeTruthy();
+    expect(tree.root.findByProps({ accessibilityLabel: 'Waze' })).toBeTruthy();
+    expect(tree.root.findByProps({ accessibilityLabel: 'Яндекс Карты' })).toBeTruthy();
+    expect(tree.root.findByProps({ accessibilityLabel: 'Яндекс Навигатор' })).toBeTruthy();
+    expect(tree.root.findByProps({ accessibilityLabel: 'OpenStreetMap' })).toBeTruthy();
     expect(tree.root.findByProps({ accessibilityLabel: 'Поделиться в Telegram' })).toBeTruthy();
-    expect(tree.root.findAllByProps({ accessibilityLabel: 'Скрыть способы навигации' })).toHaveLength(0);
+    expect(tree.root.findByProps({ accessibilityLabel: 'Скрыть способы навигации' })).toBeTruthy();
     expect(tree.root.findAllByProps({ accessibilityLabel: 'Показать способы навигации' })).toHaveLength(0);
+    expect(tree.root.findAll((node: any) => node.props?.children === 'Открыть в навигаторе').length).toBeGreaterThan(0);
+    expect(tree.root.findAll((node: any) => node.props?.children === 'Apple').length).toBeGreaterThan(0);
     expect(tree.root.findAll((node: any) => node.props?.children === 'Organic').length).toBeGreaterThan(0);
+    expect(tree.root.findAll((node: any) => node.props?.children === 'Яндекс Карты').length).toBeGreaterThan(0);
     expect(
       tree.root.findAll((node: any) => node.props?.children === longTitle && node.props?.numberOfLines === 2).length,
     ).toBeGreaterThan(0);

@@ -28,6 +28,7 @@ import { useProfileGrid } from '@/components/screens/profile/useProfileGrid';
 import { ProfileHeaderSection } from '@/components/screens/profile/ProfileHeaderSection';
 import { ProfileOverviewTab } from '@/components/screens/profile/ProfileOverviewTab';
 import { ProfileStatsTab } from '@/components/screens/profile/ProfileStatsTab';
+import { ProfileCountriesTab } from '@/components/screens/profile/ProfileCountriesTab';
 import { ProfileTravelGrid } from '@/components/screens/profile/ProfileTravelGrid';
 import { type ProfileStatSegmentItem } from '@/components/profile/ProfileStatSegment';
 import { type ProfileHeaderActionKey } from '@/components/profile/ProfileHeaderQuickActions';
@@ -244,7 +245,7 @@ export default function ProfileScreen() {
   // Если пользователь открыл вкладку, которой реально нужен список/метрики,
   // загружаем немедленно (не ждём idle).
   useEffect(() => {
-    if (activeTab === 'travels' || activeTab === 'stats' || activeTravelMetric) {
+    if (activeTab === 'travels' || activeTab === 'stats' || activeTab === 'countries' || activeTravelMetric) {
       ensureTravelsLoaded();
     }
   }, [activeTab, activeTravelMetric, ensureTravelsLoaded]);
@@ -297,6 +298,20 @@ export default function ProfileScreen() {
     myTravels.map(withVisibleEngagementStats),
     [myTravels]
   )
+
+  useEffect(() => {
+    if (activeTab !== 'countries') return;
+    if (travelsLoading || travelsLoadingMore || !travelsHasMore) return;
+    if (profileTravels.length === 0) return;
+    void loadMoreTravelsHook();
+  }, [
+    activeTab,
+    loadMoreTravelsHook,
+    profileTravels.length,
+    travelsHasMore,
+    travelsLoading,
+    travelsLoadingMore,
+  ]);
 
   const authoredMetricTravels = useMemo<Travel[]>(() => {
     if (!activeTravelMetric) return [];
@@ -646,9 +661,32 @@ export default function ProfileScreen() {
     ]
   );
 
+  const countriesContent = useMemo(
+    () => (
+      <ProfileCountriesTab
+        travels={profileTravels}
+        personalTravelStatusEntries={personalTravelStatusEntries}
+        travelsSyncing={travelsLoading || travelsLoadingMore || travelsHasMore}
+        loadedTravelsCount={profileTravels.length}
+        totalTravelsCount={stats.travelsCount}
+        onBackToOverview={() => handleProfileTabChange('overview')}
+      />
+    ),
+    [
+      profileTravels,
+      personalTravelStatusEntries,
+      travelsLoading,
+      travelsLoadingMore,
+      travelsHasMore,
+      stats.travelsCount,
+      handleProfileTabChange,
+    ]
+  );
+
   const isOverview = activeTab === 'overview';
   const isStats = activeTab === 'stats';
-  const isSectionTab = isOverview || isStats;
+  const isCountries = activeTab === 'countries';
+  const isSectionTab = isOverview || isStats || isCountries;
 
   const ListHeader = useMemo(
     () => (
@@ -656,9 +694,10 @@ export default function ProfileScreen() {
         {Header}
         {isOverview ? overviewContent : null}
         {isStats ? statsContent : null}
+        {isCountries ? countriesContent : null}
       </>
     ),
-    [Header, isOverview, isStats, overviewContent, statsContent],
+    [Header, countriesContent, isCountries, isOverview, isStats, overviewContent, statsContent],
   );
 
   const renderItem = useCallback(({ item, index }: { item: Travel; index: number }) => (

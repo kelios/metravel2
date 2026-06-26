@@ -6,7 +6,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus';
 
-export type ProfileTabKey = 'overview' | 'stats' | 'travels' | 'favorites' | 'history';
+export type ProfileTabKey = 'overview' | 'stats' | 'countries' | 'travels' | 'favorites' | 'history';
 
 interface ProfileTabsProps {
   activeTab: ProfileTabKey;
@@ -19,6 +19,7 @@ interface ProfileTabsProps {
 const TAB_ICONS: Record<ProfileTabKey, React.ComponentProps<typeof Feather>['name']> = {
   overview: 'grid',
   stats: 'bar-chart-2',
+  countries: 'flag',
   travels: 'map',
   favorites: 'heart',
   history: 'clock',
@@ -106,6 +107,7 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
     { key: 'travels', label: 'Маршруты', a11yLabel: 'Мои маршруты', hint: 'Показать ваши опубликованные путешествия' },
     { key: 'overview', label: 'Обзор', a11yLabel: 'Обзор профиля', hint: 'Сводка: достижения и быстрые действия' },
     { key: 'stats', label: 'Статистика', a11yLabel: 'Статистика профиля', hint: 'Вовлечённость маршрутов и личные статусы' },
+    { key: 'countries', label: 'Страны', a11yLabel: 'Страны профиля', hint: 'Показать страны, где вы уже были, и оставшиеся страны' },
     { key: 'favorites', label: 'Избранное', a11yLabel: 'Сохранённое', hint: 'Показать сохранённые путешествия' },
     { key: 'history', label: 'История', a11yLabel: 'Недавно смотрел', hint: 'Показать историю просмотров' },
   ];

@@ -5,7 +5,16 @@ import * as Clipboard from 'expo-clipboard';
 import PlacePopupCard from './PlacePopupCard';
 import { isInternalArticleHref } from './PlacePopupCard/domEvents';
 import type { Point } from './types';
-import { buildGoogleMapsUrl, buildOrganicMapsUrl, buildTelegramShareUrl, buildWazeUrl, buildYandexNaviUrl } from './mapLinks';
+import {
+  buildAppleMapsUrl,
+  buildGoogleMapsUrl,
+  buildOpenStreetMapUrl,
+  buildOrganicMapsUrl,
+  buildTelegramShareUrl,
+  buildWazeUrl,
+  buildYandexMapsUrl,
+  buildYandexNaviUrl,
+} from './mapLinks';
 import { showToast } from '@/utils/toast';
 import { PointStatus } from '@/types/userPoints';
 import { useSavedPointToggle } from '@/hooks/map/useSavedPointToggle';
@@ -37,6 +46,8 @@ interface CreatePopupComponentArgs {
   popupSplit?: boolean;
   /** Native bottom-card hero height, computed from visible app content height. */
   bottomCardImageHeight?: number;
+  fullscreenTopInset?: number;
+  fullscreenBottomInset?: number;
   invalidateUserPoints?: () => void;
   colors: ThemedColors;
   themeContextValue: ThemeContextType;
@@ -50,6 +61,8 @@ export const createMapPopupComponent = ({
   bottomSheetSplit = false,
   popupSplit = false,
   bottomCardImageHeight,
+  fullscreenTopInset = 0,
+  fullscreenBottomInset = 0,
   invalidateUserPoints,
   colors,
   themeContextValue,
@@ -132,6 +145,13 @@ export const createMapPopupComponent = ({
       void openExternalUrlInNewTab(url);
     }, [coord]);
 
+    const handleOpenAppleMaps = useCallback(() => {
+      if (!coord) return;
+      const url = buildAppleMapsUrl(coord);
+      if (!url) return;
+      void openExternalUrlInNewTab(url);
+    }, [coord]);
+
     const handleOpenOrganicMaps = useCallback(() => {
       if (!coord) return;
       const url = buildOrganicMapsUrl(coord, point.address);
@@ -156,6 +176,20 @@ export const createMapPopupComponent = ({
     const handleOpenYandexNavi = useCallback(() => {
       if (!coord) return;
       const url = buildYandexNaviUrl(coord);
+      if (!url) return;
+      void openExternalUrlInNewTab(url);
+    }, [coord]);
+
+    const handleOpenYandexMaps = useCallback(() => {
+      if (!coord) return;
+      const url = buildYandexMapsUrl(coord);
+      if (!url) return;
+      void openExternalUrlInNewTab(url);
+    }, [coord]);
+
+    const handleOpenOpenStreetMap = useCallback(() => {
+      if (!coord) return;
+      const url = buildOpenStreetMapUrl(coord);
       if (!url) return;
       void openExternalUrlInNewTab(url);
     }, [coord]);
@@ -405,9 +439,12 @@ export const createMapPopupComponent = ({
           onCopyCoord={isQuest ? undefined : handleCopyCoord}
           onShareTelegram={isQuest ? undefined : handleShareTelegram}
           onOpenGoogleMaps={isQuest ? undefined : handleOpenGoogleMaps}
+          onOpenAppleMaps={isQuest ? undefined : handleOpenAppleMaps}
           onOpenOrganicMaps={isQuest ? undefined : handleOpenOrganicMaps}
           onOpenWaze={isQuest ? undefined : handleOpenWaze}
+          onOpenYandexMaps={isQuest ? undefined : handleOpenYandexMaps}
           onOpenYandexNavi={isQuest ? undefined : handleOpenYandexNavi}
+          onOpenOpenStreetMap={isQuest ? undefined : handleOpenOpenStreetMap}
           onAddPoint={isQuest ? undefined : handleAddPoint}
           onBuildRoute={isQuest || !canBuildRoute ? undefined : handleBuildRoute}
           primaryActionOverride={
@@ -441,6 +478,8 @@ export const createMapPopupComponent = ({
           imageHeight={bottomCardImageHeight}
           bottomSheetSplit={bottomSheetSplit}
           popupSplit={popupSplit}
+          fullscreenTopInset={fullscreenTopInset}
+          fullscreenBottomInset={fullscreenBottomInset}
           onClose={handlePress}
         />
       </ThemeContext.Provider>

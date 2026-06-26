@@ -21,8 +21,27 @@ Read first:
 
 - Mobile web responsive flows: home, search/list, map, travel details, places, profile/auth, editor flows when in scope.
 - Android/native smoke: app launch, tabs/navigation, map, travel details, search, login/token persistence, favorites, image/media flows, permissions, push prompt, external links.
+- iOS/native parity when an iOS simulator/device is available: compare the same
+  mobile flow against mobile web and Android rather than accepting a separate
+  iOS-only layout.
 - Interaction quality: no covered CTAs, no horizontal scroll, stable sheets/modals, reachable close buttons, touch targets near 44px, no broken placeholders, no emoji icons in production UI.
 - Runtime health: console errors on web, Metro/runtime errors on native, and relevant `adb logcat` crash lines when available.
+
+## Parity Contract
+
+- Compare mobile web, Android, and iOS against the same intended mobile UX.
+  Differences in safe area or native map engine are acceptable; different visual
+  hierarchy, action order, card proportions, or tap behavior are bugs.
+- For map/place/travel-point checks, verify the shared point/place card:
+  fullscreen within visible app chrome, hero image about 70%, title/meta,
+  coordinates + copy, article/page action, expandable navigation choices, and
+  existing save/add actions.
+- Verify the navigation list is complete: Google Maps, Apple Maps, Organic
+  Maps/offline, Waze, Яндекс Карты, Яндекс Навигатор, and OpenStreetMap.
+- Verify related travel statuses are visible as text ("Был здесь",
+  "Хочу поехать", "Планирую" or "Был / Хочу / Планирую"), not only as an icon.
+- On travel details, tapping a point card should focus/highlight the map marker
+  without opening the popup; tapping the marker should open the fullscreen card.
 
 ## Evidence
 

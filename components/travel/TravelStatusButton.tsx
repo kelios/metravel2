@@ -43,6 +43,7 @@ type Props = {
   travelMonthName?: string
   /** Компактный режим: только иконка, стиль как у OptimizedFavoriteButton */
   compact?: boolean
+  idleLabel?: string
   style?: StyleProp<ViewStyle>
 }
 
@@ -77,6 +78,7 @@ export default function TravelStatusButton({
   travelMonth,
   travelMonthName,
   compact = false,
+  idleLabel,
   style,
 }: Props) {
   const colors = useThemedColors()
@@ -575,7 +577,7 @@ export default function TravelStatusButton({
         style={[styles.btn, globalFocusStyles.focusable, style]}
         onPress={handleMainPress}
         accessibilityRole="button"
-        accessibilityLabel={currentOption ? currentOption.label : 'Добавить в план'}
+        accessibilityLabel={currentOption ? currentOption.label : (idleLabel ?? 'Добавить в план')}
         accessibilityHint="Управление статусом путешествия"
       >
         <Feather
@@ -584,7 +586,7 @@ export default function TravelStatusButton({
           color={current ? colors.primary : colors.textMuted}
         />
         <Text style={styles.btnText}>
-          {currentOption?.label ?? 'Добавить в план'}
+          {currentOption?.label ?? idleLabel ?? 'Добавить в план'}
         </Text>
         {current && current.status === 'planned' && current.plannedDate && (
           <Text style={[styles.btnText, { fontWeight: '400', fontSize: 13, color: colors.textSecondary }]}>

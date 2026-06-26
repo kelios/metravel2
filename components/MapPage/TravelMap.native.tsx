@@ -3,6 +3,8 @@ import { ActivityIndicator, Modal, StyleSheet, View } from 'react-native'
 import { WebView } from 'react-native-webview'
 
 import { useThemedColors } from '@/hooks/useTheme'
+import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe'
+import { LAYOUT } from '@/constants/layout'
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem'
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl'
 import { openExternalUrl } from '@/utils/externalLinks'
@@ -65,6 +67,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   routeLines: routeLinesProp,
 }) => {
   const colors = useThemedColors()
+  const insets = useSafeAreaInsets()
   const [isLoading, setIsLoading] = useState(true)
   const [selectedPoint, setSelectedPoint] = useState<NativePoint | null>(null)
 
@@ -116,12 +119,6 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   }, [normalizedRouteLines, highlightedPoint, safeTravelData])
 
   const hasRenderableMapData = safeTravelData.length > 0 || normalizedRouteLines.length > 0
-
-  useEffect(() => {
-    if (!highlightedPoint?.coord) return
-    const match = safeTravelData.find((point) => point.coord === highlightedPoint.coord)
-    if (match) setSelectedPoint(match)
-  }, [highlightedPoint?.coord, highlightedPoint?.key, safeTravelData])
 
   useEffect(() => {
     if (!selectedPoint) return
@@ -242,7 +239,10 @@ export const TravelMap: React.FC<TravelMapProps> = ({
             } catch {}
           });
 
-          if (highlightCoord && point.coord === highlightCoord) highlightedMarker = marker;
+          if (highlightCoord && point.coord === highlightCoord) {
+            highlightedMarker = marker;
+            marker.setZIndexOffset(1000);
+          }
           bounds.extend([lat, lng]);
         });
 
@@ -338,6 +338,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
             point={selectedPoint as any}
             userLocation={null}
             onClose={() => setSelectedPoint(null)}
+            topInset={(insets?.top ?? 0) + LAYOUT.headerHeight}
+            bottomInset={LAYOUT.tabBarHeight}
           />
         </View>
       </Modal>

@@ -184,7 +184,7 @@ describe('TravelDetailsMapSection', () => {
     )
   })
 
-  it('opens the shared map place card directly from native travel point cards', () => {
+  it('focuses the map marker from travel point cards without opening the shared card', () => {
     const anchors = {
       gallery: createRef(),
       video: createRef(),
@@ -207,7 +207,7 @@ describe('TravelDetailsMapSection', () => {
       travelAddress: [{ id: 1, address: 'Point A', coord: '53.9,27.56' }],
     } as Travel
 
-    const screen = render(
+    const { queryByTestId } = render(
       <TravelDetailsMapSection
         travel={travel}
         anchors={anchors}
@@ -228,8 +228,12 @@ describe('TravelDetailsMapSection', () => {
       })
     })
 
-    expect(mockHandlePointCardPress).not.toHaveBeenCalled()
-    expect(screen.getByTestId('shared-map-place-bottom-card')).toBeTruthy()
-    expect(screen.getByText('Point A')).toBeTruthy()
+    expect(mockHandlePointCardPress).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 1,
+        coord: '53.9,27.56',
+      }),
+    )
+    expect(queryByTestId('shared-map-place-bottom-card')).toBeNull()
   })
 })

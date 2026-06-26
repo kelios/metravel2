@@ -52,6 +52,7 @@ jest.mock('@/api/user', () => ({
 }));
 
 const mockLoadTravelStatuses = jest.fn(() => Promise.resolve());
+const mockFetchAllCountries = jest.fn();
 let mockTravelStatusEntries: Array<{
   id: number;
   type: 'travel';
@@ -75,6 +76,10 @@ jest.mock('@/stores/travelStatusStore', () => ({
     };
     return typeof selector === 'function' ? selector(state) : state;
   }),
+}));
+
+jest.mock('@/api/misc', () => ({
+  fetchAllCountries: mockFetchAllCountries,
 }));
 
 jest.mock('@/hooks/useUserProfile', () => ({
@@ -209,6 +214,12 @@ describe('ProfileScreen', () => {
     resetExpoRouterMocks();
     resetTravelsApiMocks();
     mockFetchMyTravels.mockResolvedValue(require('../fixtures/travelFixtures').MY_TRAVELS_FIXTURE);
+    mockFetchAllCountries.mockResolvedValue([
+      { country_id: '1', title_ru: 'Польша', title_en: 'Poland', country_code: 'PL' },
+      { country_id: '2', title_ru: 'Литва', title_en: 'Lithuania', country_code: 'LT' },
+      { country_id: '3', title_ru: 'Беларусь', title_en: 'Belarus', country_code: 'BY' },
+      { country_id: '4', title_ru: 'Германия', title_en: 'Germany', country_code: 'DE' },
+    ]);
     mockMyAchievementsData = null;
     mockTravelStatusEntries = [];
   });
@@ -302,6 +313,44 @@ describe('ProfileScreen', () => {
 
     fireEvent.press(getByLabelText('Недавно смотрел: 1'));
     expect(await findByLabelText(/History 1/)).toBeTruthy();
+  });
+
+  it('shows countries progress with visited and remaining countries', async () => {
+    setupAuth({ isAuthenticated: true });
+    setupFavorites(0, 0);
+    mockTravelStatusEntries = [
+      {
+        id: 501,
+        type: 'travel',
+        title: 'Минск',
+        url: '/travels/minsk',
+        country: 'Беларусь',
+        status: 'visited',
+        addedAt: 1,
+      },
+      {
+        id: 502,
+        type: 'travel',
+        title: 'Берлин',
+        url: '/travels/berlin',
+        country: 'Германия',
+        status: 'wishlist',
+        addedAt: 2,
+      },
+    ];
+
+    const { findByLabelText, findByText, getAllByText } = renderProfile();
+
+    fireEvent.press(await findByLabelText('Страны профиля'));
+
+    expect(await findByText('Карта стран')).toBeTruthy();
+    expect(await findByText('Карта по зонам')).toBeTruthy();
+    expect(getAllByText('Европа').length).toBeGreaterThan(0);
+    expect(await findByText('Посетили 3 страны. Осталось 1 страна.')).toBeTruthy();
+    expect(await findByLabelText('Польша: посещена')).toBeTruthy();
+    expect(await findByLabelText('Литва: посещена')).toBeTruthy();
+    expect(await findByLabelText('Беларусь: посещена')).toBeTruthy();
+    expect(await findByLabelText('Германия: не посещена')).toBeTruthy();
   });
 
   it('filters profile list by clicked author engagement metric', async () => {

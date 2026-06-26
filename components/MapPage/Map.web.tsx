@@ -6,6 +6,7 @@ import { CoordinateConverter } from '@/utils/coordinateConverter'
 import { useTheme, useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { isValidCoordinate } from '@/utils/coordinateValidator'
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig'
+import { LAYOUT } from '@/constants/layout'
 import { createMapPopupComponent } from './Map/createMapPopupComponent'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
@@ -612,6 +613,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
       // the caption/actions/«Ещё» grid beneath it (the popup box stays CSS-capped, so
       // expanding «Ещё» never grows it off-screen / re-pans the map).
       popupSplit: !useCompactPopupLayout,
+      fullscreenTopInset: LAYOUT.headerHeight,
+      fullscreenBottomInset: LAYOUT.tabBarHeight,
       userLocationRef: userLocationLatLngRef,
       invalidateUserPoints: () => {
         void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() })

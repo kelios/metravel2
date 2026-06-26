@@ -1,34 +1,40 @@
 import React from 'react'
 import {
   ActivityIndicator,
-  Platform,
-  Pressable,
   type StyleProp,
   Text,
   View,
   type ViewStyle,
+  useWindowDimensions,
 } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
-import ImageCardMedia from '@/components/ui/ImageCardMedia'
-import PointNavigationMenu from '@/components/navigation/PointNavigationMenu'
-import RelatedTravelActionStack from '@/components/travel/RelatedTravelActionStack'
+import {
+  buildAppleMapsUrl,
+  buildGoogleMapsUrl,
+  buildOpenStreetMapUrl,
+  buildOrganicMapsUrl,
+  buildWazeUrl,
+  buildYandexMapsUrl,
+  buildYandexNaviUrl,
+} from '@/components/MapPage/Map/mapLinks'
+import PlaceListCard from '@/components/places/PlaceListCard'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { type ThemedColors } from '@/hooks/useTheme'
+import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { type CatalogPlace } from '@/utils/placesCatalog'
 import { normalizeRelatedTravelRoute } from '@/utils/relatedTravel'
 
-import { PRESSED_OPACITY } from './PlacesScreen.helpers'
 import { type PlacesStyles } from './PlacesScreen.styles'
 
 export const PlaceCard = React.memo(function PlaceCard({
   place,
   styles,
-  colors,
+  colors: _colors,
   onOpenMap,
   onOpenTravel,
   containerStyle,
-  priority = false,
+  priority: _priority = false,
 }: {
   place: CatalogPlace
   styles: PlacesStyles
@@ -40,125 +46,117 @@ export const PlaceCard = React.memo(function PlaceCard({
   // priority so the first screen shows sharp photos instead of blur on load.
   priority?: boolean
 }) {
+  const { width: viewportWidth } = useWindowDimensions()
+  const compactCardWidth =
+    viewportWidth < 760
+      ? Math.max(0, viewportWidth - DESIGN_TOKENS.spacing.lg * 2)
+      : undefined
   const imageUrl = place.travelImageLandscapeUrl || place.imageUrl || place.travelImageThumbUrl || null
   const relatedTravelUrl = normalizeRelatedTravelRoute(place.urlTravel)
+  const addressBadge = place.address && place.address !== place.country ? place.address : null
+  const mapActions = React.useMemo(() => {
+    const coord = String(place.coord ?? '').trim()
+    if (!coord) return []
+    const openUrl = (url: string) => {
+      if (!url) return
+      void openExternalUrlInNewTab(url)
+    }
+    return [
+      {
+        key: 'google',
+        label: 'Google',
+        icon: 'map-pin' as const,
+        onPress: () => openUrl(buildGoogleMapsUrl(coord)),
+        accessibilityLabel: 'Открыть точку в Google Maps',
+        title: 'Google Maps',
+      },
+      {
+        key: 'apple',
+        label: 'Apple',
+        icon: 'map' as const,
+        onPress: () => openUrl(buildAppleMapsUrl(coord)),
+        accessibilityLabel: 'Открыть точку в Apple Maps',
+        title: 'Apple Maps',
+      },
+      {
+        key: 'organic',
+        label: 'Organic',
+        icon: 'compass' as const,
+        onPress: () => openUrl(buildOrganicMapsUrl(coord, place.title)),
+        accessibilityLabel: 'Открыть точку в Organic Maps',
+        title: 'Organic Maps',
+      },
+      {
+        key: 'waze',
+        label: 'Waze',
+        icon: 'navigation' as const,
+        onPress: () => openUrl(buildWazeUrl(coord)),
+        accessibilityLabel: 'Открыть точку в Waze',
+        title: 'Waze',
+      },
+      {
+        key: 'yandex-maps',
+        label: 'Яндекс Карты',
+        icon: 'map' as const,
+        onPress: () => openUrl(buildYandexMapsUrl(coord)),
+        accessibilityLabel: 'Открыть точку в Яндекс Картах',
+        title: 'Яндекс Карты',
+      },
+      {
+        key: 'yandex',
+        label: 'Яндекс Нави',
+        icon: 'navigation-2' as const,
+        onPress: () => openUrl(buildYandexNaviUrl(coord)),
+        accessibilityLabel: 'Открыть точку в Яндекс Навигаторе',
+        title: 'Яндекс Навигатор',
+      },
+      {
+        key: 'osm',
+        label: 'OSM',
+        icon: 'map' as const,
+        onPress: () => openUrl(buildOpenStreetMapUrl(coord)),
+        accessibilityLabel: 'Открыть точку в OpenStreetMap',
+        title: 'OpenStreetMap',
+      },
+    ]
+  }, [place.coord, place.title])
 
   return (
-    <View style={[styles.card, styles.cardInner, containerStyle]}>
-      <View style={styles.cardMediaWrap}>
-        {imageUrl ? (
-          <ImageCardMedia
-            src={imageUrl}
-            alt={place.title}
-            fit="contain"
-            width="100%"
-            height={400}
-            borderRadius={0}
-            blurBackground
-            allowCriticalWebBlur={Platform.OS === 'web'}
-            blurRadius={18}
-            loading={priority ? 'eager' : 'lazy'}
-            priority={priority ? 'high' : 'low'}
-            prefetch={priority && Platform.OS === 'web'}
-            style={styles.cardMedia}
-          />
-        ) : (
-          <View style={styles.cardMediaFallback} />
-        )}
-        <View style={styles.cardMediaScrim} />
-        {/* Press target is a sibling overlay (not a wrapper) so the favorite /
-            status buttons in cardTravelActions are never nested inside a button. */}
-        {/* Tappable for sighted users, but hidden from the a11y tree: the explicit
-            «На карте» button below is the single announced map action (was 3 dupes). */}
-        <Pressable
-          onPress={() => onOpenMap(place)}
-          accessible={false}
-          importantForAccessibility="no-hide-descendants"
-          focusable={false}
-          style={({ pressed }) => [styles.cardMediaPressLayer, pressed && styles.cardPressed]}
-        />
-        {relatedTravelUrl ? (
-          <View style={styles.cardTravelActions} pointerEvents="box-none">
-            <RelatedTravelActionStack
-              relatedTravelUrl={relatedTravelUrl}
-              fallbackTitle={place.title}
-              fallbackImageUrl={imageUrl}
-              fallbackCountry={place.country}
-            />
-          </View>
-        ) : null}
-        <View style={styles.categoryBadge}>
-          <Feather name="tag" size={10} color={colors.textOnDark} />
-          <Text style={styles.categoryBadgeText} numberOfLines={1}>
-            {place.category}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.cardBody}>
-        {/* Title opens the map for sighted users; announced as a heading, not a
-            third duplicate «на карте» button. */}
-        <Pressable
-          onPress={() => onOpenMap(place)}
-          accessible={false}
-          style={({ pressed }) => [styles.cardTitlePressable, pressed && PRESSED_OPACITY]}
-        >
-          <Text
-            style={styles.cardTitle}
-            numberOfLines={2}
-            accessibilityRole="header"
-          >
-            {place.title}
-          </Text>
-        </Pressable>
-
-        <View style={styles.cardMeta}>
-          <Feather name="map-pin" size={12} color={colors.textMuted} />
-          <Text style={styles.cardAddress} numberOfLines={1}>
-            {place.address || place.country}
-          </Text>
-          {place.address && place.country ? (
-            <Text style={styles.cardCountryTag} numberOfLines={1}>
-              {place.country}
-            </Text>
-          ) : null}
-        </View>
-
-        <View style={styles.cardActions}>
-          <Pressable
-            onPress={() => onOpenMap(place)}
-            accessibilityRole="button"
-            accessibilityLabel={`Открыть ${place.title} на карте`}
-            style={({ pressed }) => [
-              styles.cardActionBtn,
-              styles.cardActionBtnSecondary,
-              pressed && PRESSED_OPACITY,
-            ]}
-          >
-            <Feather name="map" size={14} color={colors.text} />
-            <Text style={styles.cardActionBtnText}>На карте</Text>
-          </Pressable>
-          {place.urlTravel ? (
-            <Pressable
-              onPress={() => onOpenTravel(place)}
-              accessibilityRole="button"
-              accessibilityLabel={`Прочитать путешествие для ${place.title}`}
-              style={({ pressed }) => [
-                styles.cardActionBtn,
-                styles.cardActionBtnPrimary,
-                pressed && PRESSED_OPACITY,
-              ]}
-            >
-              <Feather name="book-open" size={14} color={colors.textOnPrimary} />
-              <Text style={[styles.cardActionBtnText, styles.cardActionBtnTextPrimary]}>
-                Прочитать
-              </Text>
-            </Pressable>
-          ) : null}
-        </View>
-        <PointNavigationMenu coord={place.coord} testIDPrefix={`place-navigation-${place.id}`} />
-      </View>
-    </View>
+    <PlaceListCard
+      title={place.title}
+      imageUrl={imageUrl}
+      categoryLabel={place.category}
+      coord={place.coord}
+      badges={[
+        ...(addressBadge ? [addressBadge] : []),
+        ...(place.country ? [place.country] : []),
+      ]}
+      relatedTravelUrl={relatedTravelUrl}
+      relatedTravelCountry={place.country}
+      onCardPress={() => onOpenMap(place)}
+      onMediaPress={() => onOpenMap(place)}
+      mapActions={mapActions}
+      inlineActions={
+        place.urlTravel
+          ? [
+              {
+                key: 'article',
+                label: 'Статья',
+                icon: 'book-open',
+                onPress: () => onOpenTravel(place),
+                title: 'Открыть статью',
+              },
+            ]
+          : []
+      }
+      imageHeight={400}
+      width={compactCardWidth}
+      titleLayout="content"
+      titleNumberOfLines={2}
+      showAddButton={false}
+      style={[styles.card, containerStyle]}
+      testID={`places-card-${place.id}`}
+    />
   )
 })
 

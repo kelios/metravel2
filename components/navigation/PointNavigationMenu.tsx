@@ -3,10 +3,12 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import {
+  buildAppleMapsUrl,
   buildGoogleMapsUrl,
   buildOpenStreetMapUrl,
   buildOrganicMapsUrl,
   buildWazeUrl,
+  buildYandexMapsUrl,
   buildYandexNaviUrl,
 } from '@/components/MapPage/Map/mapLinks'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -51,6 +53,12 @@ export default function PointNavigationMenu({
         accessibilityLabel: 'Открыть точку в Google Maps',
       },
       {
+        key: 'apple',
+        label: NAVIGATION_ACTION_LABELS.apple,
+        url: buildAppleMapsUrl(value),
+        accessibilityLabel: 'Открыть точку в Apple Maps',
+      },
+      {
         key: 'organic',
         label: NAVIGATION_ACTION_LABELS.organic,
         url: buildOrganicMapsUrl(value),
@@ -61,6 +69,12 @@ export default function PointNavigationMenu({
         label: NAVIGATION_ACTION_LABELS.waze,
         url: buildWazeUrl(value),
         accessibilityLabel: 'Открыть точку в Waze',
+      },
+      {
+        key: 'yandex-maps',
+        label: NAVIGATION_ACTION_LABELS['yandex-maps'],
+        url: buildYandexMapsUrl(value),
+        accessibilityLabel: 'Открыть точку в Яндекс Картах',
       },
       {
         key: 'yandex',

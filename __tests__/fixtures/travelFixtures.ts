@@ -2,6 +2,8 @@ const MY_TRAVELS_FIXTURE_DATA = [
   {
     id: 101,
     title: 'My Travel 1',
+    countryName: 'Польша',
+    countryCode: 'PL',
     engagement_stats: {
       favorites_count: 7,
       wishlist_count: 1,
@@ -12,6 +14,8 @@ const MY_TRAVELS_FIXTURE_DATA = [
   {
     id: 102,
     title: 'My Travel 2',
+    countryName: 'Литва',
+    countryCode: 'LT',
     engagementStats: {
       favoritesCount: 1,
       wishlistCount: 0,
@@ -22,6 +26,7 @@ const MY_TRAVELS_FIXTURE_DATA = [
   {
     id: 103,
     title: 'My Travel 3',
+    countryName: '',
     engagement_stats: {
       favorites_count: 0,
       wishlist_count: 0,

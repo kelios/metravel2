@@ -25,7 +25,20 @@ const FullscreenPopupOverlay: React.FC<{
   topInfoSlot: React.ReactNode;
   footerSlot: React.ReactNode;
   onOpenFullscreenImage?: (event?: any) => void;
-}> = ({ visible, onClose, colors, imageUrl, imageAlt, topInfoSlot, footerSlot, onOpenFullscreenImage }) => {
+  topInset?: number;
+  bottomInset?: number;
+}> = ({
+  visible,
+  onClose,
+  colors,
+  imageUrl,
+  imageAlt,
+  topInfoSlot,
+  footerSlot,
+  onOpenFullscreenImage,
+  topInset = 0,
+  bottomInset = 0,
+}) => {
   const [localHidden, setLocalHidden] = useState(false);
 
   // Keep the overlay visible on first open, then hide it instantly on close
@@ -65,7 +78,10 @@ const FullscreenPopupOverlay: React.FC<{
     <div
       style={{
         position: 'fixed',
-        inset: 0,
+        top: topInset,
+        right: 0,
+        bottom: bottomInset,
+        left: 0,
         zIndex: 99990,
         backgroundColor: colors.surface,
         display: 'flex',
@@ -78,13 +94,13 @@ const FullscreenPopupOverlay: React.FC<{
       onTouchStart={stopOverlayEvent}
       onTouchEnd={stopOverlayEvent}
     >
-      {/* Hero image — 50% of screen */}
+      {/* Hero image — dominant 70% of the fullscreen card. */}
       <div
         style={{
           position: 'relative',
-          flex: '0 0 50%',
-          maxHeight: '50vh',
-          minHeight: '40vh',
+          flex: '0 0 70%',
+          maxHeight: '70%',
+          minHeight: '58%',
           backgroundColor: String(colors.backgroundSecondary ?? DESIGN_TOKENS.colors.backgroundSecondary),
           overflow: 'hidden',
         }}
@@ -202,7 +218,7 @@ const FullscreenPopupOverlay: React.FC<{
         )}
       </div>
 
-      {/* Content — remaining 50% with scroll */}
+      {/* Content — remaining area with scroll */}
       <div
         style={{
           flex: 1,

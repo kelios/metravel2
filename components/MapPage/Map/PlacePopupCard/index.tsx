@@ -30,9 +30,12 @@ type Props = {
   onCopyCoord?: () => void;
   onShareTelegram?: () => void;
   onOpenGoogleMaps?: () => void;
+  onOpenAppleMaps?: () => void;
   onOpenOrganicMaps?: () => void;
   onOpenWaze?: () => void;
+  onOpenYandexMaps?: () => void;
   onOpenYandexNavi?: () => void;
+  onOpenOpenStreetMap?: () => void;
   onAddPoint?: () => void;
   onBuildRoute?: () => void;
   addDisabled?: boolean;
@@ -56,6 +59,8 @@ type Props = {
    * `MapPlaceBottomCard`; desktop Leaflet popup / native keep the stacked layout.
    */
   bottomSheetSplit?: boolean;
+  fullscreenTopInset?: number;
+  fullscreenBottomInset?: number;
   /**
    * Desktop Leaflet popup split (web): same FIXED hero photo header + scrollable
    * caption/actions as `bottomSheetSplit`, but the popup has NO fixed outer height
@@ -98,9 +103,12 @@ const PlacePopupCard: React.FC<Props> = ({
   onCopyCoord,
   onShareTelegram,
   onOpenGoogleMaps,
+  onOpenAppleMaps,
   onOpenOrganicMaps,
   onOpenWaze,
+  onOpenYandexMaps,
   onOpenYandexNavi,
+  onOpenOpenStreetMap,
   onAddPoint,
   onBuildRoute,
   addDisabled = false,
@@ -114,6 +122,8 @@ const PlacePopupCard: React.FC<Props> = ({
   fullscreenOnMobile = false,
   bottomSheetSplit = false,
   popupSplit = false,
+  fullscreenTopInset = 0,
+  fullscreenBottomInset = 0,
   onClose,
   colors,
   primaryActionOverride,
@@ -157,9 +167,12 @@ const PlacePopupCard: React.FC<Props> = ({
     drivingDurationSeconds,
     onOpenArticle,
     onOpenGoogleMaps,
+    onOpenAppleMaps,
     onOpenOrganicMaps,
     onOpenWaze,
+    onOpenYandexMaps,
     onOpenYandexNavi,
+    onOpenOpenStreetMap,
     onShareTelegram,
     onBuildRoute,
     primaryActionOverride,
@@ -212,7 +225,7 @@ const PlacePopupCard: React.FC<Props> = ({
     () => secondaryActions.filter((action) => action.key !== 'article'),
     [secondaryActions],
   );
-  const showNavToggle = !isBottomCardLayout && navActions.length > 0;
+  const showNavToggle = navActions.length > 0;
   const showNavGrid = navActions.length > 0 && (isBottomCardLayout || navExpanded);
 
   useEffect(() => {
@@ -300,6 +313,7 @@ const PlacePopupCard: React.FC<Props> = ({
         fallbackCountry={relatedTravelCountry}
         fallbackCity={relatedTravelCity}
         style={isBottomCardLayout ? styles.relatedTravelActionsInline : undefined}
+        variant={isBottomCardLayout ? 'inline' : 'overlay'}
       />
     );
   }, [
@@ -352,13 +366,13 @@ const PlacePopupCard: React.FC<Props> = ({
           </CardActionPressable>
         ) : (
           <>
-            <View style={styles.iconActionRow}>
-              {isBottomCardLayout && relatedTravelActionStack ? (
-                <View style={styles.relatedTravelActionSlot}>
-                  {relatedTravelActionStack}
-                </View>
-              ) : null}
+            {isBottomCardLayout && relatedTravelActionStack ? (
+              <View style={styles.relatedTravelInlineSection}>
+                {relatedTravelActionStack}
+              </View>
+            ) : null}
 
+            <View style={styles.iconActionRow}>
               {renderFallbackPrimaryAction && primaryAction && (
                 <CardActionPressable
                   accessibilityLabel={primaryAction.accessibilityLabel}
@@ -472,35 +486,36 @@ const PlacePopupCard: React.FC<Props> = ({
                       />
                     ) : null}
                   </View>
-                  {!isBottomCardLayout ? (
-                    <View style={styles.iconActionLabelRow}>
-                      <Text style={styles.iconActionLabel} numberOfLines={1}>Ещё</Text>
-                      <Feather name={navExpanded ? 'chevron-up' : 'chevron-down'} size={13} color={colors.textMuted} />
-                    </View>
-                  ) : null}
+                  <View style={styles.iconActionLabelRow}>
+                    <Text style={styles.iconActionLabel} numberOfLines={1}>Навигация</Text>
+                    <Feather name={navExpanded ? 'chevron-up' : 'chevron-down'} size={13} color={colors.textMuted} />
+                  </View>
                 </CardActionPressable>
               )}
             </View>
 
             {showNavGrid && (
-              <View style={styles.navGrid}>
-                {navActions.map((action) => (
-                  <CardActionPressable
-                    key={action.key}
-                    accessibilityLabel={action.accessibilityLabel}
-                    onPress={action.onPress}
-                    title={action.title}
-                    enableWebClickFallback
-                    style={({ pressed }) => [styles.navGridItem, pressed && styles.iconActionBtnPressed]}
-                  >
-                    <View style={[styles.iconActionBubble, { backgroundColor: action.tintBg, borderColor: action.tintBg }]}>
-                      <Feather name={action.icon} size={19} color={action.iconColor} />
-                    </View>
-                    <Text style={styles.iconActionLabel} numberOfLines={1}>
-                      {action.label}
-                    </Text>
-                  </CardActionPressable>
-                ))}
+              <View style={styles.navSection}>
+                <Text style={styles.navSectionTitle}>Открыть в навигаторе</Text>
+                <View style={styles.navGrid}>
+                  {navActions.map((action) => (
+                    <CardActionPressable
+                      key={action.key}
+                      accessibilityLabel={action.accessibilityLabel}
+                      onPress={action.onPress}
+                      title={action.title}
+                      enableWebClickFallback
+                      style={({ pressed }) => [styles.navGridItem, pressed && styles.iconActionBtnPressed]}
+                    >
+                      <View style={[styles.iconActionBubble, { backgroundColor: action.tintBg, borderColor: action.tintBg }]}>
+                        <Feather name={action.icon} size={19} color={action.iconColor} />
+                      </View>
+                      <Text style={styles.iconActionLabel} numberOfLines={isBottomCardLayout ? 2 : 1}>
+                        {action.label}
+                      </Text>
+                    </CardActionPressable>
+                  ))}
+                </View>
               </View>
             )}
           </>
@@ -815,6 +830,8 @@ const PlacePopupCard: React.FC<Props> = ({
             topInfoSlot={topInfoSlot}
             footerSlot={footerSlot}
             onOpenFullscreenImage={imageUrl ? handleOpenFullscreen : undefined}
+            topInset={fullscreenTopInset}
+            bottomInset={fullscreenBottomInset}
           />
         </>
       ) : (

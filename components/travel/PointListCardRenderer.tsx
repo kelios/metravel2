@@ -3,7 +3,6 @@ import Feather from '@expo/vector-icons/Feather'
 import { Platform, View } from 'react-native'
 
 import PlaceListCard from '@/components/places/PlaceListCard'
-import PointCard from '@/components/travel/PointCard'
 
 type PointLike = {
   id: string
@@ -67,20 +66,25 @@ const MOBILE_WEB_PLACE_CARD_STYLE = {
 } as const
 
 const PointListCardRenderer = React.memo(function PointListCardRenderer({
-  colors,
   isMobile,
   isWebGrid = false,
   item,
   itemModel,
   numColumns,
   onCopy,
-  onOpenMap,
-  onPointCardPress,
   onShare,
-  responsive,
   styles,
 }: PointListCardRendererProps) {
   const isMobileWeb = Platform.OS === 'web' && isMobile
+
+  const cardStyle = isWebGrid
+    ? undefined
+    : isMobileWeb
+      ? MOBILE_WEB_PLACE_CARD_STYLE
+      : Platform.OS === 'web'
+        ? POINT_CARD_MARGIN_STYLE
+        : undefined
+  const cardImageHeight = isWebGrid ? 220 : isMobileWeb ? 164 : isMobile ? 320 : 180
 
   return (
     <View
@@ -95,56 +99,30 @@ const PointListCardRenderer = React.memo(function PointListCardRenderer({
             : styles.col1,
       ]}
     >
-      {Platform.OS === 'web' ? (
-        <PlaceListCard
-          title={item.address}
-          imageUrl={itemModel.imageUrl}
-          categoryLabel={itemModel.categoryLabel}
-          coord={item.coord}
-          onCardPress={itemModel.onCardPress}
-          onMediaPress={itemModel.onMediaPress}
-          onCopyCoord={itemModel.onCopyCoord}
-          onShare={itemModel.onShareCoord}
-          mapActions={itemModel.mapActions}
-          inlineActions={itemModel.inlineActions}
-          onAddPoint={itemModel.handleAddPointClick}
-          addLabel={isMobileWeb ? 'В мои точки' : 'Мои точки'}
-          addDisabled={itemModel.addDisabled}
-          isAdding={itemModel.isAdding}
-          imageHeight={isWebGrid ? 220 : isMobileWeb ? 164 : 180}
-          width={isWebGrid ? undefined : isMobileWeb ? undefined : 300}
-          style={
-            isWebGrid
-              ? undefined
-              : isMobileWeb
-                ? MOBILE_WEB_PLACE_CARD_STYLE
-                : POINT_CARD_MARGIN_STYLE
-          }
-          webTouchAction={isMobileWeb ? 'pan-x pan-y' : undefined}
-          compact={isMobileWeb}
-          testID={`travel-point-card-${item.id}`}
-        />
-      ) : (
-        <PointCard
-          point={{
-            address: item.address,
-            coord: item.coord,
-          }}
-          categoryLabel={itemModel.categoryLabel}
-          imageUrl={itemModel.imageUrl}
-          isMobile={isMobile}
-          responsive={responsive}
-          onCopy={onCopy}
-          onShare={onShare}
-          onOpenMap={onOpenMap}
-          colors={colors}
-          styles={styles}
-          onCardPress={onPointCardPress ? itemModel.onCardPress : undefined}
-          onAddPoint={itemModel.handleAddPointClick}
-          addButtonLoading={itemModel.isAdding}
-          addButtonDisabled={itemModel.addDisabled}
-        />
-      )}
+      <PlaceListCard
+        title={item.address}
+        imageUrl={itemModel.imageUrl}
+        categoryLabel={itemModel.categoryLabel}
+        coord={item.coord}
+        onCardPress={itemModel.onCardPress}
+        onMediaPress={itemModel.onMediaPress}
+        onCopyCoord={itemModel.onCopyCoord ?? (() => onCopy(item.coord))}
+        onShare={itemModel.onShareCoord ?? (() => onShare(item.coord))}
+        mapActions={itemModel.mapActions}
+        inlineActions={itemModel.inlineActions}
+        onAddPoint={itemModel.handleAddPointClick}
+        addLabel={isMobileWeb || (Platform.OS !== 'web' && isMobile) ? 'В мои точки' : 'Мои точки'}
+        addDisabled={itemModel.addDisabled}
+        isAdding={itemModel.isAdding}
+        imageHeight={cardImageHeight}
+        width={isWebGrid ? undefined : isMobileWeb ? undefined : Platform.OS === 'web' ? 300 : undefined}
+        style={cardStyle}
+        webTouchAction={isMobileWeb ? 'pan-x pan-y' : undefined}
+        compact={isMobileWeb || (Platform.OS !== 'web' && isMobile)}
+        titleLayout="content"
+        titleNumberOfLines={2}
+        testID={`travel-point-card-${item.id}`}
+      />
     </View>
   )
 })

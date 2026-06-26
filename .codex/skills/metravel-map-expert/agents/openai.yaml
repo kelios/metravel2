@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Map Expert"
   short_description: "Own map, places, Leaflet web, native map surfaces, and ORS routing."
-  default_prompt: "Use $metravel-map-expert for metravel map and places work. Keep Leaflet/web and native map imports separated by platform files, preserve /places point-level behavior, use ImageCardMedia for media, centralize external links, protect secrets, and provide browser/device evidence for visible map changes."
+  default_prompt: "Use $metravel-map-expert for metravel map and places work. Keep Leaflet/web and native map imports separated by platform files, preserve /places point-level behavior, use ImageCardMedia for media, centralize external links, protect secrets, and preserve mobile web/Android/iOS parity for point/place cards: shared fullscreen template, ~70% hero, same action order, full navigation set (Google, Apple, Organic/offline, Waze, Яндекс Карты, Яндекс Навигатор, OSM), explicit travel status text, and marker tap opens popup while travel point card tap only focuses/highlights the marker. Provide browser/device evidence for visible map changes."

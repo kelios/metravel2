@@ -28,6 +28,17 @@ Read first:
 
 - Preserve `UnifiedTravelCard` for travel cards and `ImageCardMedia` for feature images.
 - Preserve save != moderate: autosave/content save must not be blocked by moderation completeness validation.
+- For route points, preserve the shared point/place template used by map popups
+  and `/places`; mobile web, Android, and iOS must keep the same visual layout,
+  action order, and tap behavior.
+- Route-point navigation must include Google Maps, Apple Maps, Organic
+  Maps/offline, Waze, Яндекс Карты, Яндекс Навигатор, and OpenStreetMap when
+  coordinates exist.
+- Related travel statuses must be explicit as text ("Был здесь",
+  "Хочу поехать", "Планирую" or "Был / Хочу / Планирую"), not hidden behind a
+  lone icon.
+- A travel point card tap focuses/highlights the corresponding map marker only.
+  It must not open the fullscreen popup automatically; marker tap opens it.
 - Keep travel media photorealistic and real-source compliant; do not replace published travel media with SVG, screenshots, cartoons, or placeholders.
 - Keep server state in React Query and client state in Zustand.
 - Keep external links behind `utils/externalLinks.ts`.

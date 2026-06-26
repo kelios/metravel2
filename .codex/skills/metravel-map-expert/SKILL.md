@@ -28,6 +28,19 @@ Read first:
 - Keep Leaflet/react-leaflet isolated to web files and native map/WebView code isolated to native platform files.
 - Use `ImageCardMedia` for map popup/place/travel images.
 - Keep `/places` point-level: render places/coordinates first, travel links second.
+- Preserve mobile parity across mobile web, Android, and iOS: same point/place
+  card layout, action order, hero proportions, and marker/card tap semantics.
+- Map marker popups/cards on mobile must use the shared fullscreen point/place
+  template inside visible app chrome: header/footer remain visible, hero image is
+  about 70%, then title/meta, coordinates + copy, article/page action, expandable
+  navigation choices, and existing save/add actions.
+- Navigation choices must include Google Maps, Apple Maps, Organic Maps/offline,
+  Waze, Яндекс Карты, Яндекс Навигатор, and OpenStreetMap when coordinates are
+  available. Telegram/share is extra, not a replacement for navigation.
+- Related travel status must be visible as text ("Был здесь", "Хочу поехать",
+  "Планирую" or compact "Был / Хочу / Планирую"), not only an unlabeled icon.
+- On travel details, point-card taps focus/highlight the map marker only; do not
+  auto-open the popup unless the marker itself is tapped.
 - Keep external links centralized in `utils/externalLinks.ts`.
 - Do not print `EXPO_PUBLIC_ORS_API_KEY` or other secrets.
 - If a board ticket id is part of the task, update only that ticket: `in_progress` at start, `review` with evidence at handoff; do not move it to `done`.

@@ -27,6 +27,11 @@ Read first:
 ## Rules
 
 - Do not fix native by changing shared web behavior. If structure, behavior, or dependencies diverge, split platform files and move shared logic into hooks/utils.
+- Keep Android mobile UX visually and behaviorally aligned with mobile web and
+  iOS. Platform files may solve native API differences, but must preserve the
+  same layout, action order, hero proportions, and tap semantics.
+- For map/place/travel-point surfaces, match the shared fullscreen point/place
+  template and the marker-vs-card tap contract documented in `docs/features/map.md`.
 - A one-line property difference may use a local `Platform.OS` gate; larger differences need platform-specific files.
 - Guard web APIs (`window`, `document`, `localStorage`, `navigator`, DOM observers/events) inside effects/functions or move them to `.web` files.
 - Chain dynamic imports only through `Promise.resolve(import(...))` when using `.then`, `.catch`, `.finally`, stored promises, or returned promises.
