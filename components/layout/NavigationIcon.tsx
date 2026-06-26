@@ -66,7 +66,7 @@ export default function NavigationIcon({
 
   if (name === 'quest-map-person') {
     return (
-      <QuestMapPersonIcon
+      <QuestSearchIcon
         color={color}
         size={size}
         strokeWidth={strokeWidth}
@@ -179,14 +179,7 @@ function MapFoldIcon({
         strokeLinejoin="round"
       />
       <Path
-        d="M12 9.5a2.1 2.1 0 0 0-2.1 2.1c0 1.8 2.1 4.1 2.1 4.1s2.1-2.3 2.1-4.1A2.1 2.1 0 0 0 12 9.5Z"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M12 11.6h.01"
+        d="M6.9 12.9c1.7-.9 3.3-.9 5 0 1.7.9 3.3.9 5 0"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
@@ -196,7 +189,7 @@ function MapFoldIcon({
   )
 }
 
-function QuestMapPersonIcon({
+function QuestSearchIcon({
   color,
   size,
   strokeWidth,
@@ -214,21 +207,28 @@ function QuestMapPersonIcon({
       {...getIconAccessibilityProps()}
     >
       <Path
-        d="M6.4 19.5V4.5"
+        d="M10.3 15.2a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <Path
-        d="M6.4 5.2h9.1l-1.4 3 1.4 3H6.4"
+        d="m14 14 5 5"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <Path
-        d="m10.8 6.9.8 1.5 1.7.2-1.2 1.1.3 1.7-1.6-.8-1.5.8.3-1.7-1.2-1.1 1.7-.2.7-1.5Z"
+        d="M8.1 10.7c1.2-1.5 2.8-1.5 4.4 0"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M8.1 8.3h.01M12.5 12.9h.01"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"

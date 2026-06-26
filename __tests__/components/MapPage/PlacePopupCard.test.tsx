@@ -526,6 +526,8 @@ describe('PlacePopupCard', () => {
     expect(tree.root.findByProps({ accessibilityLabel: 'Открыть точку в Google Maps' })).toBeTruthy();
     expect(tree.root.findByProps({ accessibilityLabel: 'Organic Maps' })).toBeTruthy();
     expect(tree.root.findByProps({ accessibilityLabel: 'Поделиться в Telegram' })).toBeTruthy();
+    expect(tree.root.findAllByProps({ accessibilityLabel: 'Скрыть способы навигации' })).toHaveLength(0);
+    expect(tree.root.findAllByProps({ accessibilityLabel: 'Показать способы навигации' })).toHaveLength(0);
     expect(tree.root.findAll((node: any) => node.props?.children === 'Organic').length).toBeGreaterThan(0);
     expect(
       tree.root.findAll((node: any) => node.props?.children === longTitle && node.props?.numberOfLines === 1).length,

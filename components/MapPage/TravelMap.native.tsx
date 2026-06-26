@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react'
-import { ActivityIndicator, StyleSheet, View } from 'react-native'
+import React, { useEffect, useMemo, useState } from 'react'
+import { ActivityIndicator, Modal, StyleSheet, View } from 'react-native'
 import { WebView } from 'react-native-webview'
 
 import { useThemedColors } from '@/hooks/useTheme'
@@ -8,6 +8,7 @@ import { getSafeExternalUrl } from '@/utils/safeExternalUrl'
 import { openExternalUrl } from '@/utils/externalLinks'
 import { getSiteBaseUrl } from '@/utils/seo'
 import { normalizePoint } from '@/components/map-core/types'
+import MapPlaceBottomCard from '@/components/MapPage/MapPlaceBottomCard'
 import {
   DEFAULT_CENTER,
   extractTravelPoints,
@@ -29,6 +30,7 @@ interface TravelMapProps {
   showRouteLine?: boolean
   routeLineCoords?: [number, number][]
   routeLines?: Array<{ coords: [number, number][]; color?: string }>
+  showPointPageAction?: boolean
 }
 
 type NativePoint = {
@@ -57,12 +59,14 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   compact = false,
   initialZoom = 11,
   height,
+  showPointPageAction = false,
   showRouteLine = false,
   routeLineCoords: routeLineCoordsProp,
   routeLines: routeLinesProp,
 }) => {
   const colors = useThemedColors()
   const [isLoading, setIsLoading] = useState(true)
+  const [selectedPoint, setSelectedPoint] = useState<NativePoint | null>(null)
 
   const safeTravelData = useMemo<NativePoint[]>(() => {
     if (!Array.isArray(travelData)) return []
@@ -74,10 +78,10 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         address: p.address || '',
         travelImageThumbUrl: p.travelImageThumbUrl,
         categoryName: typeof p.categoryName === 'string' ? p.categoryName : undefined,
-        articleUrl: p.articleUrl,
-        urlTravel: p.urlTravel,
+        articleUrl: showPointPageAction ? p.articleUrl : undefined,
+        urlTravel: showPointPageAction ? p.urlTravel : undefined,
       }))
-  }, [travelData])
+  }, [showPointPageAction, travelData])
 
   const normalizedRouteLines = useMemo(() => {
     if (!showRouteLine) return [] as Array<{ coords: [number, number][]; color?: string }>
@@ -112,6 +116,18 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   }, [normalizedRouteLines, highlightedPoint, safeTravelData])
 
   const hasRenderableMapData = safeTravelData.length > 0 || normalizedRouteLines.length > 0
+
+  useEffect(() => {
+    if (!highlightedPoint?.coord) return
+    const match = safeTravelData.find((point) => point.coord === highlightedPoint.coord)
+    if (match) setSelectedPoint(match)
+  }, [highlightedPoint?.coord, highlightedPoint?.key, safeTravelData])
+
+  useEffect(() => {
+    if (!selectedPoint) return
+    const stillExists = safeTravelData.some((point) => point.coord === selectedPoint.coord)
+    if (!stillExists) setSelectedPoint(null)
+  }, [safeTravelData, selectedPoint])
 
   const mapHeight = height || (compact ? 400 : 600)
   const mapBorderRadius = compact ? 12 : 16
@@ -150,12 +166,6 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         #map { width: 100%; height: 100%; }
         .leaflet-popup-content-wrapper { background-color: ${colors.surface}; border-radius: 8px; padding: 0; }
         .leaflet-popup-content { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto; }
-        .popup-image { width: 200px; height: 150px; object-fit: cover; border-radius: 8px 8px 0 0; display: block; }
-        .popup-image-link { display: block; text-decoration: none; }
-        .popup-text { padding: 12px; font-size: 13px; line-height: 1.5; }
-        .popup-label { font-weight: 600; color: ${colors.text}; margin-top: 8px; margin-bottom: 4px; }
-        .popup-label:first-of-type { margin-top: 0; }
-        .popup-value { color: ${colors.textMuted}; font-size: 12px; margin-bottom: 4px; }
       </style>
     </head>
     <body>
@@ -180,6 +190,25 @@ export const TravelMap: React.FC<TravelMapProps> = ({
             }
           } catch {}
         }
+        function sendPointSelect(coord) {
+          try {
+            if (!coord) return;
+            if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'POINT_SELECT', coord: coord }));
+            }
+          } catch {}
+        }
+        function sendClearSelectedPoint() {
+          try {
+            if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'CLEAR_SELECTED_POINT' }));
+            }
+          } catch {}
+        }
+
+        map.on('click', function() {
+          sendClearSelectedPoint();
+        });
 
         routes.forEach(function(route) {
           if (!route || !Array.isArray(route.coords) || route.coords.length < 2) return;
@@ -204,39 +233,12 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           const lng = parts[1];
           if (!isFinite(lat) || !isFinite(lng)) return;
 
-          let popupContent = '';
-          if (point.travelImageThumbUrl) {
-            const link = (point.articleUrl || point.urlTravel || '');
-            popupContent += '<a href="#" class="popup-image-link" data-open-url="' + String(link).replace(/"/g, '&quot;') + '">' +
-              '<img src="' + point.travelImageThumbUrl + '" class="popup-image" alt="' + (point.address || 'Image') + '" />' +
-            '</a>';
-          }
-          popupContent += '<div class="popup-text">';
-          popupContent += '<div class="popup-label">Адрес:</div>';
-          popupContent += '<div class="popup-value">' + (point.address || 'Не указан') + '</div>';
-          popupContent += '<div class="popup-label">Координаты:</div>';
-          popupContent += '<div class="popup-value">' + point.coord + '</div>';
-          if (point.categoryName) {
-            popupContent += '<div class="popup-label">Категория:</div>';
-            popupContent += '<div class="popup-value">' + point.categoryName + '</div>';
-          }
-          popupContent += '</div>';
-
           const marker = L.marker([lat, lng], { icon: markerIcon }).addTo(map);
-          marker.bindPopup(popupContent, { maxWidth: 240 });
-          marker.on('popupopen', function(e) {
+          marker.on('click', function(e) {
             try {
-              const popupEl = e && e.popup ? e.popup.getElement() : null;
-              if (!popupEl) return;
-              const linkEl = popupEl.querySelector('.popup-image-link');
-              if (!linkEl) return;
-              linkEl.addEventListener('click', function(ev) {
-                try {
-                  ev.preventDefault();
-                  const url = (linkEl.getAttribute('data-open-url') || '').trim();
-                  if (url) sendOpenUrl(url);
-                } catch {}
-              }, { once: true });
+              if (e && e.originalEvent) L.DomEvent.stopPropagation(e.originalEvent);
+              map.setView([lat, lng], Math.max(map.getZoom(), 14), { animate: true });
+              sendPointSelect(point.coord);
             } catch {}
           });
 
@@ -252,7 +254,6 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           setTimeout(function() {
             try {
               map.setView(highlightedMarker.getLatLng(), 14, { animate: true });
-              highlightedMarker.openPopup();
             } catch {}
           }, 300);
         }
@@ -303,11 +304,22 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           if (!raw) return
           try {
             const parsed = JSON.parse(raw)
-            if (parsed?.type !== 'OPEN_URL') return
-            const baseUrl = getSiteBaseUrl()
-            const safeUrl = getSafeExternalUrl(parsed?.url, { allowRelative: true, baseUrl })
-            if (!safeUrl) return
-            await openExternalUrl(safeUrl, { allowRelative: true, baseUrl })
+            if (parsed?.type === 'POINT_SELECT') {
+              const coord = String(parsed?.coord ?? '').trim()
+              const point = safeTravelData.find((item) => item.coord === coord)
+              if (point) setSelectedPoint(point)
+              return
+            }
+            if (parsed?.type === 'CLEAR_SELECTED_POINT') {
+              setSelectedPoint(null)
+              return
+            }
+            if (parsed?.type === 'OPEN_URL') {
+              const baseUrl = getSiteBaseUrl()
+              const safeUrl = getSafeExternalUrl(parsed?.url, { allowRelative: true, baseUrl })
+              if (!safeUrl) return
+              await openExternalUrl(safeUrl, { allowRelative: true, baseUrl })
+            }
           } catch {
             // noop
           }
@@ -315,6 +327,20 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         scrollEnabled
         pinchZoomEnabled
       />
+      <Modal
+        visible={Boolean(selectedPoint)}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSelectedPoint(null)}
+      >
+        <View style={styles.modalRoot}>
+          <MapPlaceBottomCard
+            point={selectedPoint as any}
+            userLocation={null}
+            onClose={() => setSelectedPoint(null)}
+          />
+        </View>
+      </Modal>
     </View>
   )
 }
@@ -333,6 +359,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
+  },
+  modalRoot: {
+    flex: 1,
+    backgroundColor: DESIGN_TOKENS.colors.background,
   },
 })
 

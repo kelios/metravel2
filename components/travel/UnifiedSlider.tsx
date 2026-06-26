@@ -728,7 +728,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
                     onFirstImageLoad={onFirstImageLoad}
                     onImagePress={onImagePress}
                     firstImagePreloaded={firstImagePreloaded}
-                    preloadPriority={Math.abs(index - currentIndex) <= Math.max(1, preloadCount)}
+                    preloadPriority={Math.abs(index - currentIndex) <= Math.max(1, nativePreloadCount)}
                     prepareBlur={Math.abs(index - currentIndex) <= 1}
                     contentAspectRatio={contentAspectRatio ?? aspectRatio}
                   />

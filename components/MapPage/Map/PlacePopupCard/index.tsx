@@ -211,6 +211,8 @@ const PlacePopupCard: React.FC<Props> = ({
     () => secondaryActions.filter((action) => action.key !== 'article'),
     [secondaryActions],
   );
+  const showNavToggle = !isBottomCardLayout && navActions.length > 0;
+  const showNavGrid = navActions.length > 0 && (isBottomCardLayout || navExpanded);
 
   useEffect(() => {
     setFullscreenVisible(false);
@@ -457,7 +459,7 @@ const PlacePopupCard: React.FC<Props> = ({
                 </CardActionPressable>
               )}
 
-              {navActions.length > 0 && (
+              {showNavToggle && (
                 <CardActionPressable
                   accessibilityLabel={navExpanded ? 'Скрыть способы навигации' : 'Показать способы навигации'}
                   accessibilityState={{ expanded: navExpanded }}
@@ -487,7 +489,7 @@ const PlacePopupCard: React.FC<Props> = ({
               )}
             </View>
 
-            {navExpanded && navActions.length > 0 && (
+            {showNavGrid && (
               <View style={styles.navGrid}>
                 {navActions.map((action) => (
                   <CardActionPressable
@@ -539,6 +541,8 @@ const PlacePopupCard: React.FC<Props> = ({
     relatedTravelActionStack,
     renderFallbackPrimaryAction,
     saveActionVisual,
+    showNavGrid,
+    showNavToggle,
     styles,
     toggleNav,
     colors.textOnDark,
