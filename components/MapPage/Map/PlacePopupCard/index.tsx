@@ -114,7 +114,7 @@ const PlacePopupCard: React.FC<Props> = ({
   addDisabled = false,
   isAdding = false,
   isSaved = false,
-  addLabel = 'Сохранить',
+  addLabel = 'Мои точки',
   addTooltip,
   width = 352,
   imageHeight: _imageHeight = 56,
@@ -367,47 +367,52 @@ const PlacePopupCard: React.FC<Props> = ({
         ) : (
           <>
             {isBottomCardLayout && relatedTravelActionStack ? (
-              <View style={styles.relatedTravelInlineSection}>
-                {relatedTravelActionStack}
+              <View style={styles.actionGroup}>
+                <Text style={styles.actionGroupLabel}>Статус поездки</Text>
+                <View style={styles.relatedTravelInlineSection}>
+                  {relatedTravelActionStack}
+                </View>
               </View>
             ) : null}
 
-            <View style={styles.iconActionRow}>
-              {renderFallbackPrimaryAction && primaryAction && (
-                <CardActionPressable
-                  accessibilityLabel={primaryAction.accessibilityLabel}
-                  onPress={primaryAction.onPress}
-                  title={primaryAction.tooltip}
-                  testID="popup-primary-action"
-                  enableWebClickFallback
-                  style={({ pressed }) => [styles.iconActionBtn, pressed && styles.iconActionBtnPressed]}
-                >
-                  <View style={[styles.iconActionBubble, styles.iconActionBubblePrimary]}>
-                    <Feather name={primaryAction.icon} size={19} color={colors.textOnPrimary ?? colors.textOnDark} />
-                  </View>
-                  <View style={styles.iconActionLabelRow}>
-                    <Text style={styles.iconActionLabel} numberOfLines={1}>{primaryIconActionLabel}</Text>
-                  </View>
-                </CardActionPressable>
-              )}
+            <View style={styles.actionGroup}>
+              <Text style={styles.actionGroupLabel}>Действия с точкой</Text>
+              <View style={styles.iconActionRow}>
+                {renderFallbackPrimaryAction && primaryAction && (
+                  <CardActionPressable
+                    accessibilityLabel={primaryAction.accessibilityLabel}
+                    onPress={primaryAction.onPress}
+                    title={primaryAction.tooltip}
+                    testID="popup-primary-action"
+                    enableWebClickFallback
+                    style={({ pressed }) => [styles.iconActionBtn, pressed && styles.iconActionBtnPressed]}
+                  >
+                    <View style={[styles.iconActionBubble, styles.iconActionBubblePrimary]}>
+                      <Feather name={primaryAction.icon} size={19} color={colors.textOnPrimary ?? colors.textOnDark} />
+                    </View>
+                    <View style={styles.iconActionLabelRow}>
+                      <Text style={styles.iconActionLabel} numberOfLines={1}>{primaryIconActionLabel}</Text>
+                    </View>
+                  </CardActionPressable>
+                )}
 
-              {onBuildRoute && (
-                <CardActionPressable
-                  accessibilityLabel="Построить маршрут сюда"
-                  onPress={onBuildRoute}
-                  title={POPUP_TOOLTIPS.buildRoute}
-                  testID="popup-primary-action"
-                  enableWebClickFallback
-                  style={({ pressed }) => [styles.iconActionBtn, pressed && styles.iconActionBtnPressed]}
-                >
-                  <View style={[styles.iconActionBubble, styles.iconActionBubblePrimary]}>
-                    <Feather name="corner-up-right" size={20} color={colors.textOnPrimary ?? colors.textOnDark} />
-                  </View>
-                  <View style={styles.iconActionLabelRow}>
-                    <Text style={styles.iconActionLabel} numberOfLines={1}>Маршрут</Text>
-                  </View>
-                </CardActionPressable>
-              )}
+                {onBuildRoute && (
+                  <CardActionPressable
+                    accessibilityLabel="Построить маршрут сюда"
+                    onPress={onBuildRoute}
+                    title={POPUP_TOOLTIPS.buildRoute}
+                    testID="popup-primary-action"
+                    enableWebClickFallback
+                    style={({ pressed }) => [styles.iconActionBtn, pressed && styles.iconActionBtnPressed]}
+                  >
+                    <View style={[styles.iconActionBubble, styles.iconActionBubblePrimary]}>
+                      <Feather name="corner-up-right" size={20} color={colors.textOnPrimary ?? colors.textOnDark} />
+                    </View>
+                    <View style={styles.iconActionLabelRow}>
+                      <Text style={styles.iconActionLabel} numberOfLines={1}>Маршрут</Text>
+                    </View>
+                  </CardActionPressable>
+                )}
 
               {!!articleHref && !!onOpenArticle && (
                 <CardActionPressable
@@ -492,6 +497,7 @@ const PlacePopupCard: React.FC<Props> = ({
                   </View>
                 </CardActionPressable>
               )}
+            </View>
             </View>
 
             {showNavGrid && (

@@ -171,6 +171,15 @@ export const getStyles = (
       justifyContent: 'center',
       paddingBottom: bottomCardLayout ? 2 : 0,
     },
+    actionGroup: {
+      gap: bottomCardLayout && Platform.OS !== 'web' ? 10 : 6,
+    },
+    actionGroupLabel: {
+      fontSize: bottomCardLayout && Platform.OS !== 'web' ? 13 : compactLayout ? fs.small - 1 : fs.small,
+      lineHeight: (bottomCardLayout && Platform.OS !== 'web' ? 13 : compactLayout ? fs.small - 1 : fs.small) * 1.25,
+      fontWeight: '700',
+      color: colors.textMuted,
+    },
     relatedTravelActionSlot: {
       flexGrow: 0,
       flexShrink: 0,

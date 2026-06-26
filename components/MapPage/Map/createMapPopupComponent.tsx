@@ -460,7 +460,7 @@ export const createMapPopupComponent = ({
           }
           addDisabled={!authReady || !normalizedCoord || isAdding}
           isSaved={isQuest ? false : isSaved}
-          addLabel={!isQuest && isSaved ? 'Сохранено' : 'Сохранить'}
+          addLabel={!isQuest && isSaved ? 'В точках' : 'Мои точки'}
           addTooltip={
             !authReady
               ? 'Загрузка…'

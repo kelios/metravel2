@@ -1,4 +1,4 @@
-import { buildProfileCountryStats } from '@/components/screens/profile/profileCountries'
+import { buildProfileCountryStats, normalizeCountryCatalog } from '@/components/screens/profile/profileCountries'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
 import type { Travel } from '@/types/types'
 
@@ -81,5 +81,17 @@ describe('profileCountries', () => {
         source: 'visited',
       }),
     )
+  })
+
+  it('derives ISO codes and regions from localized country names when backend omits country_code', () => {
+    const catalog = normalizeCountryCatalog([
+      { country_id: 1, title_ru: 'Беларусь' },
+      { country_id: 2, title_ru: 'Япония' },
+      { country_id: 3, title_ru: 'Папуа - Новая Гвинея' },
+    ])
+
+    expect(catalog[0]).toMatchObject({ code: 'BY', region: 'europe' })
+    expect(catalog[1]).toMatchObject({ code: 'JP', region: 'asia' })
+    expect(catalog[2]).toMatchObject({ code: 'PG', region: 'oceania' })
   })
 })

@@ -278,6 +278,8 @@ const PlaceListCard: React.FC<Props> = ({
   const openOverflowMenu = useCallback(() => setOverflowVisible(true), []);
   const closeOverflowMenu = useCallback(() => setOverflowVisible(false), []);
   const showInlineRelatedTravelActions = !!relatedTravelUrl && showTitleInContent;
+  const overflowActionLabel = mapActions.length > 0 ? 'Навигация' : 'Ещё';
+  const overflowActionTitle = mapActions.length > 0 ? 'Навигация и действия' : 'Ещё действия';
   // Top-right overlay holds the two primary affordances (♥ favorite + ＋ save)
   // on EVERY card, so the list reads as one pattern regardless of whether a
   // card has a related travel or its own photo. Related-travel cards delegate
@@ -416,6 +418,7 @@ const PlaceListCard: React.FC<Props> = ({
 
           {showInlineRelatedTravelActions && relatedTravelUrl ? (
             <View style={styles.inlineRelatedTravelActions}>
+              <Text style={styles.inlineSectionLabel}>Статус поездки</Text>
               <RelatedTravelActionStack
                 relatedTravelUrl={relatedTravelUrl}
                 fallbackTitle={title}
@@ -483,14 +486,14 @@ const PlaceListCard: React.FC<Props> = ({
                   contentStyle={styles.overflowMenuContent}
                   anchor={
                     <LabeledActionChip
-                      accessibilityLabel="Ещё действия"
+                      accessibilityLabel={overflowActionTitle}
                       accessibilityState={{ expanded: overflowVisible }}
-                      icon="more-horizontal"
+                      icon={mapActions.length > 0 ? 'navigation' : 'more-horizontal'}
                       iconColor={colors.textMuted}
-                      label="Ещё"
+                      label={overflowActionLabel}
                       onPress={openOverflowMenu}
                       styles={styles}
-                      title="Ещё действия"
+                      title={overflowActionTitle}
                     />
                   }
                 >
@@ -723,6 +726,14 @@ const createStyles = (
     inlineRelatedTravelActions: {
       alignItems: 'flex-start',
       justifyContent: 'center',
+      gap: compact ? 5 : 6,
+    },
+    inlineSectionLabel: {
+      fontSize: compact ? 10.5 : 11.5,
+      lineHeight: compact ? 13 : 15,
+      fontWeight: '700',
+      color: colors.textMuted,
+      letterSpacing: 0.2,
     },
     inlineRelatedTravelActionStack: {
       flexDirection: 'row',

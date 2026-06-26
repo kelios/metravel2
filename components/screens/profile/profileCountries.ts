@@ -136,6 +136,118 @@ const REGION_CODE_SETS: Record<Exclude<ProfileCountryRegionKey, 'other'>, Set<st
   ]),
 }
 
+const ISO_COUNTRY_CODES = [
+  'AD', 'AE', 'AF', 'AG', 'AI', 'AL', 'AM', 'AO', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AW', 'AX', 'AZ',
+  'BA', 'BB', 'BD', 'BE', 'BF', 'BG', 'BH', 'BI', 'BJ', 'BL', 'BM', 'BN', 'BO', 'BQ', 'BR', 'BS',
+  'BT', 'BV', 'BW', 'BY', 'BZ', 'CA', 'CC', 'CD', 'CF', 'CG', 'CH', 'CI', 'CK', 'CL', 'CM', 'CN',
+  'CO', 'CR', 'CU', 'CV', 'CW', 'CX', 'CY', 'CZ', 'DE', 'DJ', 'DK', 'DM', 'DO', 'DZ', 'EC', 'EE',
+  'EG', 'EH', 'ER', 'ES', 'ET', 'FI', 'FJ', 'FK', 'FM', 'FO', 'FR', 'GA', 'GB', 'GD', 'GE', 'GF',
+  'GG', 'GH', 'GI', 'GL', 'GM', 'GN', 'GP', 'GQ', 'GR', 'GS', 'GT', 'GU', 'GW', 'GY', 'HK', 'HM',
+  'HN', 'HR', 'HT', 'HU', 'ID', 'IE', 'IL', 'IM', 'IN', 'IO', 'IQ', 'IR', 'IS', 'IT', 'JE', 'JM',
+  'JO', 'JP', 'KE', 'KG', 'KH', 'KI', 'KM', 'KN', 'KP', 'KR', 'KW', 'KY', 'KZ', 'LA', 'LB', 'LC',
+  'LI', 'LK', 'LR', 'LS', 'LT', 'LU', 'LV', 'LY', 'MA', 'MC', 'MD', 'ME', 'MF', 'MG', 'MH', 'MK',
+  'ML', 'MM', 'MN', 'MO', 'MP', 'MQ', 'MR', 'MS', 'MT', 'MU', 'MV', 'MW', 'MX', 'MY', 'MZ', 'NA',
+  'NC', 'NE', 'NF', 'NG', 'NI', 'NL', 'NO', 'NP', 'NR', 'NU', 'NZ', 'OM', 'PA', 'PE', 'PF', 'PG',
+  'PH', 'PK', 'PL', 'PM', 'PN', 'PR', 'PS', 'PT', 'PW', 'PY', 'QA', 'RE', 'RO', 'RS', 'RU', 'RW',
+  'SA', 'SB', 'SC', 'SD', 'SE', 'SG', 'SH', 'SI', 'SJ', 'SK', 'SL', 'SM', 'SN', 'SO', 'SR', 'SS',
+  'ST', 'SV', 'SX', 'SY', 'SZ', 'TC', 'TD', 'TF', 'TG', 'TH', 'TJ', 'TK', 'TL', 'TM', 'TN', 'TO',
+  'TR', 'TT', 'TV', 'TW', 'TZ', 'UA', 'UG', 'UM', 'US', 'UY', 'UZ', 'VA', 'VC', 'VE', 'VG', 'VI',
+  'VN', 'VU', 'WF', 'WS', 'YE', 'YT', 'ZA', 'ZM', 'ZW', 'XK',
+] as const
+
+const COUNTRY_CODE_NAME_ALIASES: Record<string, string> = {
+  'США': 'US',
+  'Россия': 'RU',
+  'Южная Корея': 'KR',
+  'Северная Корея': 'KP',
+  'Вьетнам': 'VN',
+  'Лаос': 'LA',
+  'Молдова': 'MD',
+  'Иран': 'IR',
+  'Сирия': 'SY',
+  'Танзания': 'TZ',
+  'Великобритания': 'GB',
+  'Боливия': 'BO',
+  'Венесуэла': 'VE',
+  'Бруней-Даруссалам': 'BN',
+  'Кабо-Верде': 'CV',
+  'Кот д`Ивуар': 'CI',
+  'Конго, демократическая республика': 'CD',
+  'Конго': 'CG',
+  'Микронезия, Федеративные Штаты': 'FM',
+  'Палестинская автономия': 'PS',
+  'Палестина': 'PS',
+  'Тайвань': 'TW',
+  'Турция': 'TR',
+  'Свазиленд': 'SZ',
+  'Эсватини': 'SZ',
+  'Восточный Тимор': 'TL',
+  'Бонайре, Синт-Эстатиус и Саба': 'BQ',
+  'Сент-Мартен': 'MF',
+  'Синт-Мартен': 'SX',
+  'Святая Елена': 'SH',
+  'Южная Георгия и Южные Сандвичевы острова': 'GS',
+  'Территория Французские Южные и Антарктические Земли': 'TF',
+  'Питкерн': 'PN',
+  'Питкэрн': 'PN',
+  'Уоллис и Футуна': 'WF',
+  'Кокосовые острова': 'CC',
+  'Остров Рождества': 'CX',
+  'Остров Норфолк': 'NF',
+  'Острова Кука': 'CK',
+  'Фарерские острова': 'FO',
+  'Фолклендские острова': 'FK',
+  'Мартиника': 'MQ',
+  'Гваделупа': 'GP',
+  'Реюньон': 'RE',
+  'Майотта': 'YT',
+  'Гвиана': 'GF',
+  'Западная Сахара': 'EH',
+  'Северные Марианские острова': 'MP',
+  'Американское Самоа': 'AS',
+  'Виргинские острова, Британские': 'VG',
+  'Виргинские острова, США': 'VI',
+  'Острова Теркс и Кайкос': 'TC',
+  'Туркс и Кайкос': 'TC',
+  'Сен-Бартелеми': 'BL',
+  'Сент-Пьер и Микелон': 'PM',
+  'Святой Мартин, французская часть': 'MF',
+  'Кюрасао': 'CW',
+  'Аруба': 'AW',
+  'Ангилья': 'AI',
+  'Бермуды': 'BM',
+  'Острова Кайман': 'KY',
+  'Каймановы острова': 'KY',
+  'Пуэрто-Рико': 'PR',
+  'Гибралтар': 'GI',
+  'Гернси': 'GG',
+  'Джерси': 'JE',
+  'Остров Мэн': 'IM',
+  'Шпицберген и Ян Майен': 'SJ',
+  'Аландские острова': 'AX',
+  'Ватикан': 'VA',
+  'Гонконг': 'HK',
+  'Макао': 'MO',
+  'Кыргызстан': 'KG',
+  'Македония': 'MK',
+  'Маршалловы Острова': 'MH',
+  'Мьянма': 'MM',
+  'Объединенные Арабские Эмираты': 'AE',
+  'Папуа - Новая Гвинея': 'PG',
+  'Папуа Новая Гвинея': 'PG',
+  'Сейшелы': 'SC',
+  'Сент-Винсент': 'VC',
+  'Сирийская Арабская Республика': 'SY',
+  'Соломоновы Острова': 'SB',
+}
+
+type IntlDisplayNamesConstructor = new (
+  locales: string | string[],
+  options: { type: 'region' }
+) => { of: (code: string) => string | undefined }
+
+let localizedCountryCodeIndex: Map<string, string> | null = null
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
@@ -172,6 +284,43 @@ const normalizeCountryCode = (value: unknown): string => {
   if (typeof value !== 'string' && typeof value !== 'number') return ''
   const code = String(value).trim().toUpperCase()
   return /^[A-Z]{2,3}$/.test(code) ? code : ''
+}
+
+const getLocalizedCountryCodeIndex = () => {
+  if (localizedCountryCodeIndex) return localizedCountryCodeIndex
+
+  const index = new Map<string, string>()
+  Object.entries(COUNTRY_CODE_NAME_ALIASES).forEach(([name, code]) => {
+    index.set(normalizeCountryName(name), code)
+  })
+
+  const DisplayNames = (Intl as unknown as { DisplayNames?: IntlDisplayNamesConstructor }).DisplayNames
+  if (DisplayNames) {
+    ;['ru', 'en'].forEach((locale) => {
+      const regionNames = new DisplayNames(locale, { type: 'region' })
+      ISO_COUNTRY_CODES.forEach((code) => {
+        const label = regionNames.of(code)
+        if (label) index.set(normalizeCountryName(label), code)
+      })
+    })
+  }
+
+  localizedCountryCodeIndex = index
+  return index
+}
+
+const resolveCountryCode = (record: Record<string, unknown>, name: string) => {
+  const rawCode = normalizeCountryCode(readString(record, CODE_FIELDS))
+  if (rawCode) return rawCode
+
+  const index = getLocalizedCountryCodeIndex()
+  const possibleNames = collectNameAliases(record, name)
+  for (const possibleName of possibleNames) {
+    const code = index.get(normalizeCountryName(possibleName))
+    if (code) return code
+  }
+
+  return ''
 }
 
 const collectNameAliases = (record: Record<string, unknown>, fallbackName: string) => {
@@ -220,7 +369,7 @@ export const normalizeCountryCatalog = (rawCountries: unknown[]): CatalogCountry
       if (!name) return null
 
       const rawId = readString(country, ID_FIELDS)
-      const code = normalizeCountryCode(readString(country, CODE_FIELDS))
+      const code = resolveCountryCode(country, name)
       const id = rawId || code || `country-${index}`
 
       return {
@@ -258,7 +407,9 @@ const descriptorFromCountryValue = (value: unknown): CountryDescriptor | null =>
 
   const id = readString(value, ID_FIELDS)
   const name = readString(value, NAME_FIELDS)
-  const code = normalizeCountryCode(readString(value, CODE_FIELDS))
+  const code = name
+    ? resolveCountryCode(value, name)
+    : normalizeCountryCode(readString(value, CODE_FIELDS))
 
   if (!id && !name && !code) return null
   return {

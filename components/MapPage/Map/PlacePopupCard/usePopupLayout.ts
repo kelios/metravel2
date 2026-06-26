@@ -49,9 +49,9 @@ export function usePopupLayout({
   const { width: viewportWidth } = useWindowDimensions();
   const bp = getBreakpoint(viewportWidth);
   const isNarrow = bp === 'narrow';
-  // На узком экране лейбл сохранения держим коротким, но всё равно отражаем
-  // переданное состояние («Сохранено» при isSaved, #334) — оно тоже короткое.
-  const compactLabel = isNarrow ? (addLabel === 'Сохранено' ? 'Сохранено' : 'Сохранить') : addLabel;
+  // На узком экране лейбл сохранения держим коротким, но не подменяем смысл:
+  // это сохранение именно в «Мои точки», а не общий save рядом со статусами.
+  const compactLabel = isNarrow && addLabel === 'В точках' ? 'В точках' : addLabel;
   const viewportGutter = bp === 'narrow' ? 24 : bp === 'compact' ? 32 : 48;
   const useFullscreenMobileOverlay = Platform.OS === 'web' && fullscreenOnMobile && viewportWidth <= 560;
   // Mobile bottom-card surface (MapPlaceBottomCard): compact content WITHOUT the

@@ -393,7 +393,7 @@ describe('PlacePopupCard', () => {
       );
     });
 
-    const saveAction = tree.root.findByProps({ accessibilityLabel: 'Сохранить' });
+    const saveAction = tree.root.findByProps({ accessibilityLabel: 'Мои точки' });
 
     renderer.act(() => {
       saveAction.props.onPress();
@@ -418,7 +418,7 @@ describe('PlacePopupCard', () => {
       );
     });
 
-    const saveAction = tree.root.findByProps({ accessibilityLabel: 'Сохранить' });
+    const saveAction = tree.root.findByProps({ accessibilityLabel: 'Мои точки' });
 
     expect(saveAction.props.disabled).toBe(true);
   });

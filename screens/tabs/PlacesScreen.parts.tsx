@@ -47,8 +47,9 @@ export const PlaceCard = React.memo(function PlaceCard({
   priority?: boolean
 }) {
   const { width: viewportWidth } = useWindowDimensions()
+  const isMobileCard = viewportWidth < 760
   const compactCardWidth =
-    viewportWidth < 760
+    isMobileCard
       ? Math.max(0, viewportWidth - DESIGN_TOKENS.spacing.lg * 2)
       : undefined
   const imageUrl = place.travelImageLandscapeUrl || place.imageUrl || place.travelImageThumbUrl || null
@@ -149,8 +150,9 @@ export const PlaceCard = React.memo(function PlaceCard({
             ]
           : []
       }
-      imageHeight={400}
+      imageHeight={isMobileCard ? 260 : 400}
       width={compactCardWidth}
+      compact={isMobileCard}
       titleLayout="content"
       titleNumberOfLines={2}
       showAddButton={false}
