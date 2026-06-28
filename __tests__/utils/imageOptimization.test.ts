@@ -224,4 +224,61 @@ describe('utils/imageOptimization', () => {
       expect(parsed.searchParams.get('v')).toBe('42')
     })
   })
+
+  // Квантование вариантов: дробный DPR и попиксельные ширины из window.devicePixelRatio /
+  // onLayout раньше плодили уникальный файл-конверсию на каждую комбинацию (тикет #628 —
+  // своп-штормы на проде 1 vCPU / 1.8 ГБ). Теперь w/h к лесенке, dpr к 1/2/3, q к шагу 10.
+  describe('optimizeImageUrl variant quantization', () => {
+    const onMediaPath = (opts: Parameters<typeof optimizeImageUrl>[1]) => {
+      const previousApiUrl = process.env.EXPO_PUBLIC_API_URL
+      process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by/api'
+      try {
+        return new URL(
+          optimizeImageUrl('https://metravel.by/gallery/3801/conversions/abc-detail_hd.jpg', opts)!
+        )
+      } finally {
+        process.env.EXPO_PUBLIC_API_URL = previousApiUrl
+      }
+    }
+
+    it('snaps fractional device DPR to integer 1/2/3', () => {
+      expect(onMediaPath({ width: 480, dpr: 2.75 }).searchParams.get('dpr')).toBe('3')
+      expect(onMediaPath({ width: 480, dpr: 2.8125 }).searchParams.get('dpr')).toBe('3')
+      expect(onMediaPath({ width: 480, dpr: 1.25 }).searchParams.get('dpr')).toBe('1')
+      expect(onMediaPath({ width: 480, dpr: 2 }).searchParams.get('dpr')).toBe('2')
+    })
+
+    it('snaps per-pixel widths up to the dimension ladder', () => {
+      // 371/379/393 — реальные onLayout-замеры → один rung 480
+      expect(onMediaPath({ width: 371 }).searchParams.get('w')).toBe('480')
+      expect(onMediaPath({ width: 379 }).searchParams.get('w')).toBe('480')
+      expect(onMediaPath({ width: 393 }).searchParams.get('w')).toBe('480')
+      expect(onMediaPath({ width: 56 }).searchParams.get('w')).toBe('96')
+      expect(onMediaPath({ width: 720 }).searchParams.get('w')).toBe('800')
+      expect(onMediaPath({ width: 1280 }).searchParams.get('w')).toBe('1280')
+    })
+
+    it('collapses near-identical quality values to a step of 10', () => {
+      expect(onMediaPath({ width: 480, quality: 72 }).searchParams.get('q')).toBe('70')
+      expect(onMediaPath({ width: 480, quality: 78 }).searchParams.get('q')).toBe('80')
+      expect(onMediaPath({ width: 480, quality: 82 }).searchParams.get('q')).toBe('80')
+    })
+
+    it('collapses many real per-pixel variants of one file to a single cacheable one', () => {
+      const inputs = [
+        { width: 371, dpr: 2.75, quality: 78 },
+        { width: 379, dpr: 2.8125, quality: 78 },
+        { width: 393, dpr: 2.75, quality: 82 },
+        { width: 388, dpr: 2.8, quality: 80 },
+      ]
+      const variants = new Set(
+        inputs.map((o) => {
+          const u = onMediaPath(o)
+          return `${u.searchParams.get('w')}|${u.searchParams.get('dpr')}|${u.searchParams.get('q')}`
+        })
+      )
+      expect(variants.size).toBe(1)
+      expect([...variants][0]).toBe('480|3|80')
+    })
+  })
 })

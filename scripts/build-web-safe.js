@@ -85,6 +85,13 @@ function fileExists(filePath) {
 }
 
 function main() {
+  // Share the cross-session build mutex with build-web-prod.js. When this
+  // wrapper is spawned BY the prod build (which already holds the lock),
+  // MT_BUILD_LOCK_OWNED=1 is inherited and acquireBuildLock() is a no-op.
+  const { acquireBuildLock, registerBuildLockCleanup } = require('./build-lock');
+  registerBuildLockCleanup();
+  acquireBuildLock();
+
   const passthroughArgs = getPassthroughArgs();
   const expoExportArgs = getExpoExportArgs(process.argv.slice(2), outputDir);
 

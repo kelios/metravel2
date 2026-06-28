@@ -36,51 +36,9 @@ function parseEnvFile(filePath) {
   return vars
 }
 
-const lockPath = path.join(repoRoot, 'dist', '.prod-build.lock')
-const STALE_LOCK_MS = 90 * 60 * 1000
-let lockOwned = false
-
-function acquireBuildLock() {
-  fs.mkdirSync(path.dirname(lockPath), { recursive: true })
-  if (fs.existsSync(lockPath)) {
-    let info = {}
-    try {
-      info = JSON.parse(fs.readFileSync(lockPath, 'utf8'))
-    } catch {
-      info = {}
-    }
-    const age = Date.now() - (Number(info.startedAt) || 0)
-    if (age < STALE_LOCK_MS) {
-      console.error(
-        `ERROR: another prod web build is already running (pid ${info.pid || '?'}, ` +
-          `started ${Math.round(age / 1000)}s ago). Refusing to start a concurrent build.\n` +
-          `If you are sure no build is running, delete ${lockPath} and retry.`
-      )
-      process.exit(1)
-    }
-    console.warn(`WARN: removing stale build lock (age ${Math.round(age / 60000)}min): ${lockPath}`)
-  }
-  fs.writeFileSync(lockPath, JSON.stringify({ pid: process.pid, startedAt: Date.now() }))
-  lockOwned = true
-}
-
-function releaseBuildLock() {
-  if (!lockOwned) return
-  lockOwned = false
-  try {
-    fs.rmSync(lockPath, { force: true })
-  } catch {
-    // best-effort cleanup
-  }
-}
-
-process.on('exit', releaseBuildLock)
-for (const sig of ['SIGINT', 'SIGTERM']) {
-  process.on(sig, () => {
-    releaseBuildLock()
-    process.exit(130)
-  })
-}
+// Cross-session build mutex shared with build-web-safe.js (see scripts/build-lock.js).
+const { acquireBuildLock, registerBuildLockCleanup } = require('./build-lock')
+registerBuildLockCleanup()
 
 function runStep(command, args, extraEnv = {}) {
   const result = spawnSync(command, args, {
@@ -148,6 +106,10 @@ runStep('node', ['scripts/generate-seo-pages.js', '--dist', stagingPath])
 runStep('node', ['scripts/verify-static-travel-seo.js', '--dist', stagingPath])
 runStep('node', ['scripts/copy-public-files.js', stagingPath])
 runStep('node', ['scripts/add-cache-bust-meta.js', stagingPath])
+
+// Fail-closed config gate: never swap a build that lost the prod config
+// (missing Metrika / leaked LAN-dev API). Aborts before the artifact goes live.
+runStep('node', ['scripts/verify-prod-config.js', '--dist', stagingPath])
 
 // All steps succeeded — atomically replace the previous build.
 swapIntoPlace(stagingPath, distProdPath)

@@ -36,6 +36,33 @@ const isTestEnv = () =>
   typeof process !== 'undefined' &&
   (process.env as Record<string, unknown>)?.NODE_ENV === 'test';
 
+// Квантование запрашиваемого варианта в фиксированный набор, чтобы бэкенд-прокси
+// отдавал небольшое кэш-дружелюбное число конверсий, а не уникальный файл на
+// каждую попиксельную ширину / дробный DPR. Каждая уникальная комбинация
+// (w,h,q,dpr,f,fit) = отдельная СИНХРОННАЯ конвертация на проде (1 vCPU / 1.8 ГБ):
+// схлопывание почти одинаковых вариантов поднимает попадание кэша и режет
+// CPU/память/диск на конвертациях (см. тикет #628 — своп-штормы от переподписки).
+const DIMENSION_LADDER = [16, 24, 32, 48, 96, 160, 240, 320, 480, 640, 800, 1024, 1280, 1600, 2048];
+
+const snapDimensionUp = (value: number): number => {
+  const v = Math.round(value);
+  if (!Number.isFinite(v) || v <= 0) return v;
+  for (const rung of DIMENSION_LADDER) {
+    if (v <= rung) return rung;
+  }
+  return DIMENSION_LADDER[DIMENSION_LADDER.length - 1];
+};
+
+// Дробный DPR (2.75, 2.8125, 1.25) из window.devicePixelRatio множит варианты —
+// привязываем к целому 1/2/3.
+const snapDpr = (value: number): number => Math.min(3, Math.max(1, Math.round(value)));
+
+// Quality к шагу 10 (72/78/82 → 70/80/80) — меньше вариантов при незаметной разнице.
+const snapQuality = (value: number): number => {
+  const q = Math.min(100, Math.max(1, Math.round(value)));
+  return Math.min(100, Math.max(10, Math.round(q / 10) * 10));
+};
+
 export function clearImageOptimizationCache(): void {
   optimizedUrlCache.clear();
 }
@@ -79,12 +106,12 @@ export function optimizeImageUrl(
       });
 
       const proxyParams = new URLSearchParams();
-      if (options.width) proxyParams.set('w', String(Math.round(options.width)));
-      if (options.height) proxyParams.set('h', String(Math.round(options.height)));
-      if (options.quality != null) proxyParams.set('q', String(Math.min(100, Math.max(1, options.quality))));
+      if (options.width) proxyParams.set('w', String(snapDimensionUp(options.width)));
+      if (options.height) proxyParams.set('h', String(snapDimensionUp(options.height)));
+      if (options.quality != null) proxyParams.set('q', String(snapQuality(options.quality)));
       if (options.format && options.format !== 'auto') proxyParams.set('f', options.format);
       if (options.fit) proxyParams.set('fit', options.fit);
-      if (options.dpr != null) proxyParams.set('dpr', String(Math.min(3, Math.max(1, options.dpr))));
+      if (options.dpr != null) proxyParams.set('dpr', String(snapDpr(options.dpr)));
       if (options.blur && options.blur > 0) proxyParams.set('blur', String(Math.round(options.blur)));
 
       const paramStr = proxyParams.toString();
@@ -122,16 +149,16 @@ export function optimizeImageUrl(
 
     const format = options.format || 'auto';
     const rawQuality = options.quality != null ? options.quality : (Platform.OS === 'web' ? 80 : 75);
-    const quality = Math.min(100, Math.max(1, rawQuality));
+    const quality = snapQuality(rawQuality);
     const fit = options.fit || 'cover';
 
     const proxyParams = new URLSearchParams();
-    if (options.width) proxyParams.set('w', String(Math.round(options.width)));
-    if (options.height) proxyParams.set('h', String(Math.round(options.height)));
+    if (options.width) proxyParams.set('w', String(snapDimensionUp(options.width)));
+    if (options.height) proxyParams.set('h', String(snapDimensionUp(options.height)));
     proxyParams.set('q', String(quality));
     if (format !== 'auto') proxyParams.set('f', format);
     proxyParams.set('fit', fit);
-    if (options.dpr != null) proxyParams.set('dpr', String(Math.min(3, Math.max(1, options.dpr))));
+    if (options.dpr != null) proxyParams.set('dpr', String(snapDpr(options.dpr)));
     if (options.blur && options.blur > 0) proxyParams.set('blur', String(Math.round(options.blur)));
 
     const imagePath = parsedUrl.pathname + parsedUrl.search;

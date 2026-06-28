@@ -30,6 +30,37 @@ if [ "$ENV" != "prod" ] && [ "$ENV" != "preprod" ] && [ "$ENV" != "dev" ]; then
   exit 1
 fi
 
+# Cross-machine deploy lock: prevent two deploys (from ANY machine or agent
+# session) applying releases to the same server concurrently. `mkdir` is atomic
+# on the server, so it is a race-free mutex. A lock older than DEPLOY_LOCK_TTL
+# is treated as stale (a crashed deploy) and reclaimed.
+DEPLOY_LOCK="${DEPLOY_LOCK:-$REMOTE_DIR/.deploy.lock}"
+DEPLOY_LOCK_TTL="${DEPLOY_LOCK_TTL:-1800}"
+deploy_lock_acquired=0
+
+release_deploy_lock() {
+  [ "$deploy_lock_acquired" = "1" ] || return 0
+  ssh "$SERVER" "rm -rf '$DEPLOY_LOCK'" 2>/dev/null || true
+  deploy_lock_acquired=0
+}
+trap release_deploy_lock EXIT
+
+LOCK_SCRIPT="set -eu
+lock='$DEPLOY_LOCK'
+ttl=$DEPLOY_LOCK_TTL
+if mkdir \"\$lock\" 2>/dev/null; then date +%s > \"\$lock/ts\"; echo ACQUIRED; exit 0; fi
+ts=\$(cat \"\$lock/ts\" 2>/dev/null || echo 0)
+age=\$(( \$(date +%s) - ts ))
+if [ \"\$age\" -gt \"\$ttl\" ]; then rm -rf \"\$lock\"; mkdir \"\$lock\"; date +%s > \"\$lock/ts\"; echo ACQUIRED_STALE; exit 0; fi
+echo BUSY:\$age"
+LOCK_B64="$(printf '%s' "$LOCK_SCRIPT" | base64 | tr -d '\n')"
+echo "Acquiring deploy lock on $SERVER..."
+lock_res="$(ssh "$SERVER" "printf '%s' '$LOCK_B64' | base64 -d | sh -s")"
+case "$lock_res" in
+  ACQUIRED*) deploy_lock_acquired=1; echo "Deploy lock acquired ($lock_res)";;
+  *) echo "ERROR: another deploy is already in progress on $SERVER ($lock_res). Aborting to avoid a racing/wrong-config release."; exit 1;;
+esac
+
 if [ "$FORCE_REBUILD" = "1" ]; then
   echo "Force rebuild enabled: removing dist/$ENV"
   rm -rf "dist/$ENV"
@@ -47,6 +78,15 @@ fi
 
 chunk_count="$(find "dist/$ENV/_expo/static/js/web/" -maxdepth 1 -type f | wc -l | tr -d ' ')"
 echo "Local build ready: $chunk_count web chunks"
+
+# Fail-closed config gate BEFORE upload: refuse to ship an artifact with the
+# wrong config (analytics disabled / missing Metrika / leaked LAN-dev API).
+# Catches the "stale dist shipped without rebuild" path too, since this runs
+# whether or not we rebuilt above.
+if [ "$ENV" = "prod" ]; then
+  echo "Verifying prod artifact config (fail-closed)..."
+  node scripts/verify-prod-config.js --dist "dist/$ENV"
+fi
 
 echo "Uploading build payload to server..."
 # Never ship build-orchestration dotdirs: build-web-prod.js stages into
@@ -98,7 +138,7 @@ ssh "$SERVER" "set -euo pipefail
 "
 
 echo "Validating deployed entry chunk..."
-entry_chunk="$(grep -oE 'entry-[a-f0-9]+\\.js' "dist/$ENV/index.html" | head -1)"
+entry_chunk="$(grep -oE 'entry-[a-f0-9]+\.js' "dist/$ENV/index.html" | head -1)"
 if [ -z "$entry_chunk" ]; then
   echo "ERROR: cannot detect entry chunk in dist/$ENV/index.html"
   exit 1
@@ -111,6 +151,24 @@ if [ "$entry_status" != "200" ]; then
 fi
 
 echo "OK: entry chunk available: $entry_chunk"
+
+# Post-swap live tripwire: confirm the SERVED prod HTML actually carries the
+# right config. Pre-upload verify already gates the artifact; this catches a
+# bad swap / stale cache serving wrong config. Runs before the early-exit
+# header-check paths so it always executes.
+if [ "$ENV" = "prod" ]; then
+  echo "Verifying live prod config (analytics + no LAN leak)..."
+  live_html="$("${HC_CURL[@]}" -sS "$SITE_URL/")"
+  if printf '%s' "$live_html" | grep -q 'Analytics disabled'; then
+    echo "ERROR: live prod has analytics DISABLED after deploy (wrong config shipped)"
+    exit 1
+  fi
+  if printf '%s' "$live_html" | grep -qE '192\.168\.'; then
+    echo "ERROR: live prod HTML contains a LAN IP (192.168.*) — dev config shipped"
+    exit 1
+  fi
+  echo "OK: live prod config verified"
+fi
 
 echo "Validating runtime chunk linkage..."
 tmp_html="$(mktemp)"

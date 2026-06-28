@@ -59,7 +59,8 @@ describe('Image Optimization', () => {
       const result = optimizeImageUrl(baseUrl, {
         height: 600,
       });
-      expect(result).toContain('h=600');
+      // h квантуется вверх к лесенке вариантов (600 -> 640), см. imageProxy DIMENSION_LADDER
+      expect(result).toContain('h=640');
     });
 
     it('should add format parameter', () => {
@@ -151,7 +152,8 @@ describe('Image Optimization', () => {
       const srcSet = generateSrcSet(baseUrl, [320, 640], {
         quality: 75,
       });
-      expect(srcSet).toContain('q=75');
+      // q квантуется к шагу 10 (75 -> 80), см. imageProxy snapQuality
+      expect(srcSet).toContain('q=80');
     });
 
     it('should return empty string for missing URL', () => {
@@ -183,14 +185,16 @@ describe('Image Optimization', () => {
   describe('generateLQIP', () => {
     it('should generate low-quality placeholder', () => {
       const lqip = generateLQIP(baseUrl)!;
-      expect(lqip).toContain('w=15');
+      // w квантуется вверх к ближайшему rung лесенки (15 -> 16)
+      expect(lqip).toContain('w=16');
       expect(lqip).toContain('q=50');
       expect(lqip).toContain('blur=5');
     });
 
     it('should use custom width', () => {
       const lqip = generateLQIP(baseUrl, 20)!;
-      expect(lqip).toContain('w=20');
+      // 20 -> 24 (ближайший rung)
+      expect(lqip).toContain('w=24');
     });
   });
 
