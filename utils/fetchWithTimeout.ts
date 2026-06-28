@@ -8,6 +8,16 @@
  * @param timeout - Таймаут в миллисекундах (по умолчанию 10000)
  * @returns Promise<Response>
  */
+// Ошибка нашего таймаута. Имя 'TimeoutError' позволяет retry-предикатам отличать
+// её от внешней отмены ('AbortError', напр. анмаунт/cancel запроса React Query) и
+// не ретраить — повтор зависшего бэка лишь утроит мёртвое ожидание под спиннером.
+// Текст сохранён для обратной совместимости (глобальный retry матчит по сообщению).
+function createTimeoutError(timeout: number): Error {
+    const err = new Error(`Превышено время ожидания (${timeout}ms). Попробуйте позже.`);
+    err.name = 'TimeoutError';
+    return err;
+}
+
 export async function fetchWithTimeout(
     url: string,
     options: RequestInit = {},
@@ -86,7 +96,7 @@ export async function fetchWithTimeout(
         // unless it was caused by our timeout abort.
         if (isPrematureCloseError) {
             if (didTimeout) {
-                throw new Error(`Превышено время ожидания (${timeout}ms). Попробуйте позже.`);
+                throw createTimeoutError(timeout);
             }
             throw new Error(
                 `Сетевое соединение было прервано при запросе ${url}. Попробуйте позже.`
@@ -109,7 +119,7 @@ export async function fetchWithTimeout(
             if (externalSignal?.aborted) {
                 throw error;
             }
-            throw new Error(`Превышено время ожидания (${timeout}ms). Попробуйте позже.`);
+            throw createTimeoutError(timeout);
         }
         throw error;
     } finally {

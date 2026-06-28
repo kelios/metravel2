@@ -32,6 +32,14 @@ export const hasLoggableRequestError = (error: unknown): boolean => {
     return true;
 };
 
+// Таймаут нашего fetchWithTimeout. Помечен name='TimeoutError', но матчим и по
+// сообщению — на случай путей, где имя теряется (сериализация/обёртки/SSR).
+export const isTimeoutError = (error: unknown): boolean => {
+    if (error instanceof Error && error.name === 'TimeoutError') return true;
+    const message = (error instanceof Error ? error.message : String(error)).toLowerCase();
+    return message.includes('превышено время ожидания') || message.includes('timeout');
+};
+
 export const isOfflineLikeError = (error: unknown): boolean => {
     const errorMessage = error instanceof Error ? error.message : String(error);
 

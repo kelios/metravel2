@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { normalizeTravelItem } from '@/api/travelsNormalize';
 import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
+import { isTimeoutError } from '@/api/client';
 import type { Travel } from '@/types/types';
 import { Platform } from 'react-native';
 import { queryKeys } from '@/queryKeys';
@@ -359,6 +360,9 @@ export function useTravelDetails(): UseTravelDetailsReturn {
               (err as { response?: { status?: unknown } } | null)?.response?.status,
           );
           if (status === 404) return false;
+          // Таймаут уже отъел 10с; повтор зависшего бэка лишь утраивает
+          // полноэкранный скелет. Connection-блипы (Failed to fetch) — ретраим.
+          if (isTimeoutError(err)) return false;
           const message = err instanceof Error ? err.message : String(err ?? '');
           if (/\b404\b|not found|не найден|не существует|удалено/i.test(message)) return false;
           return true;

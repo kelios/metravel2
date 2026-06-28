@@ -27,7 +27,7 @@ import {
   type RareAwardCatalogItem,
   type RareAwardGrant,
 } from '@/api/achievements';
-import { ApiError } from '@/api/client';
+import { ApiError, isTimeoutError } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -36,13 +36,14 @@ const STALE_TIME = 5 * 60 * 1000;
 const isAuthError = (error: unknown): boolean =>
   error instanceof ApiError && (error.status === 401 || error.status === 403);
 
-// Таймаут клиента отдаёт сырой AbortError (api/client.ts). Ретраить его смысла
-// нет — медленный эндпоинт лишь утроит мёртвое ожидание под спиннером.
 const isAbortError = (error: unknown): boolean =>
   error instanceof Error && error.name === 'AbortError';
 
+// Не ретраим отмену И таймаут: эти секции (автор/достижения/peer-badges) deferred,
+// а повтор зависшего бэка лишь утраивает мёртвое ожидание под спиннером (~33с вместо
+// ~10с). Таймаут fetchWithTimeout — это name='TimeoutError', не 'AbortError'.
 const retry = (failureCount: number, error: unknown): boolean =>
-  !isAuthError(error) && !isAbortError(error) && failureCount < 2;
+  !isAuthError(error) && !isAbortError(error) && !isTimeoutError(error) && failureCount < 2;
 
 /** Справочник всех значков (галерея, в т.ч. ещё не полученных). */
 export function useBadgeCatalog() {

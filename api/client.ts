@@ -28,7 +28,7 @@ import {
     parseDownloadFilename,
 } from '@/api/clientTypes';
 
-export { ApiError } from '@/api/clientErrors';
+export { ApiError, isTimeoutError } from '@/api/clientErrors';
 
 /**
  * Единый API клиент
