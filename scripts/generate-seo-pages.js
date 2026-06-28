@@ -1191,18 +1191,21 @@ const STATIC_PAGES = [
     title: 'О проекте MeTravel — сообщество путешественников | Metravel',
     description:
       'MeTravel объединяет путешественников: публикуйте маршруты, сохраняйте полезные места, читайте истории и собирайте собственную книгу поездок.',
+    breadcrumb: 'О проекте',
   },
   {
     route: '/contact',
     title: 'Контакты и обратная связь | Metravel',
     description:
       'Свяжитесь с командой Metravel: вопросы, предложения, идеи партнерства и обратная связь по маршрутам, статьям и сервису.',
+    breadcrumb: 'Контакты',
   },
   {
     route: '/search',
     title: 'Поиск маршрутов и идей путешествий по Беларуси | Metravel',
     description:
       'Ищите путешествия по странам, городам, категориям и датам, применяйте фильтры и быстро находите маршруты, вдохновение и советы для следующей поездки.',
+    breadcrumb: 'Поиск маршрутов',
   },
   {
     route: '/map',
@@ -1210,6 +1213,7 @@ const STATIC_PAGES = [
     description:
       'Изучайте интерактивную карту путешествий: находите маршруты, достопримечательности и точки интереса, включайте фильтры и стройте путь под свои планы.',
     image: `${SITE_URL}/og-map.png`,
+    breadcrumb: 'Карта маршрутов',
   },
   {
     route: '/articles',
@@ -1221,6 +1225,7 @@ const STATIC_PAGES = [
     route: '/roulette',
     title: 'Случайный маршрут и идеи поездок | Metravel',
     description: 'Не знаешь куда поехать? Крути рулетку и получи случайное направление для путешествия!',
+    breadcrumb: 'Рулетка маршрутов',
   },
   {
     route: '/favorites',
@@ -1232,6 +1237,7 @@ const STATIC_PAGES = [
     route: '/privacy',
     title: 'Политика конфиденциальности и данных | Metravel',
     description: 'Политика конфиденциальности и обработки персональных данных MeTravel.',
+    breadcrumb: 'Политика конфиденциальности',
   },
   {
     route: '/cookies',
@@ -1278,12 +1284,14 @@ const STATIC_PAGES = [
     title: 'Маршруты по Беларуси и идеи путешествий | Metravel',
     description:
       'Открывайте Беларусь через маршруты, идеи поездок и заметки путешественников: достопримечательности, природа и готовые планы на выходные.',
+    breadcrumb: 'Путешествия',
   },
   {
     route: '/quests',
     title: 'Городские квесты и маршруты с заданиями | Metravel',
     description:
       'Проходите городские квесты Metravel: маршруты с заданиями, точками на карте и идеями для прогулок и поездок.',
+    breadcrumb: 'Квесты',
   },
   {
     route: '/history',
@@ -1385,6 +1393,19 @@ async function main() {
 
     // P3.5: Inject SSG skeleton shell for key pages (improves FCP/LCP)
     html = injectSkeletonShell(html, page.route);
+
+    // SSG BreadcrumbList for indexable overview/landing pages so Googlebot
+    // detects crumbs without executing the runtime <BreadcrumbsJsonLd/>.
+    if (page.breadcrumb && canonicalRoute !== '/') {
+      html = injectBreadcrumbJsonLd(html, {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Главная', item: `${SITE_URL}/` },
+          { '@type': 'ListItem', position: 2, name: page.breadcrumb, item: canonical },
+        ],
+      });
+    }
 
     if (page.route === '/') {
       // Overwrite root index.html with correct home meta
