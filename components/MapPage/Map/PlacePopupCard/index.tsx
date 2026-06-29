@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import type { ThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import CardActionPressable from '@/components/ui/CardActionPressable';
+import ActionListSheet, { type ActionListSheetItem } from '@/components/ui/ActionListSheet';
 import RelatedTravelActionStack from '@/components/travel/RelatedTravelActionStack'
 import { POPUP_TOOLTIPS } from './constants';
 import FullscreenImageViewer from './FullscreenImageViewer';
@@ -38,6 +39,14 @@ type Props = {
   onOpenOpenStreetMap?: () => void;
   onAddPoint?: () => void;
   onBuildRoute?: () => void;
+  /**
+   * #FIX-3 — surface «Поделиться» as a small icon in the title row (next to the
+   * share/utility area) instead of inside the navigation sheet. Telegram is a share
+   * action, not a map-app, so it no longer belongs in «Навигация и действия». Used
+   * by the native bottom card; also drives the native nav ActionListSheet + the
+   * coherence relayout (hero-corner ♥, full-width status, «Сохранить» chip).
+   */
+  shareInActionRow?: boolean;
   addDisabled?: boolean;
   isAdding?: boolean;
   /**
@@ -111,6 +120,7 @@ const PlacePopupCard: React.FC<Props> = ({
   onOpenOpenStreetMap,
   onAddPoint,
   onBuildRoute,
+  shareInActionRow = false,
   addDisabled = false,
   isAdding = false,
   isSaved = false,
@@ -131,6 +141,10 @@ const PlacePopupCard: React.FC<Props> = ({
   const setCardRootNode = usePopupDomGuard();
   const [fullscreenVisible, setFullscreenVisible] = useState(false);
   const [navExpanded, setNavExpanded] = useState(false);
+  // Native bottom-card routes navigation into a separate bottom-sheet modal
+  // (ActionListSheet) instead of an always-expanded inline grid, so the card
+  // content (status / point actions) stays visible without scrolling.
+  const [navSheetVisible, setNavSheetVisible] = useState(false);
 
   const {
     revealPopupImageOnLoadOnly,
@@ -215,25 +229,62 @@ const PlacePopupCard: React.FC<Props> = ({
     setFullscreenVisible(false);
   }, []);
 
-  const toggleNav = useCallback(() => {
-    setNavExpanded((prev) => !prev);
-  }, []);
+  // Native bottom-card opens navigation in a separate ActionListSheet modal so the
+  // remaining card content (status / point actions) stays visible without scrolling.
+  // Web (desktop Leaflet popup + mobile web sheet) keeps the inline expandable grid.
+  const useNativeBottomCard = isBottomCardLayout && Platform.OS !== 'web';
+  const useNavSheet = useNativeBottomCard;
 
-  // The «Ещё» panel is navigation/share only — the article opens via its own round
-  // icon in the action row, so keep it out of the collapsible list.
+  const toggleNav = useCallback(() => {
+    if (useNavSheet) {
+      setNavSheetVisible(true);
+      return;
+    }
+    setNavExpanded((prev) => !prev);
+  }, [useNavSheet]);
+
+  const closeNavSheet = useCallback(() => setNavSheetVisible(false), []);
+
+  // The «Ещё» panel is navigation-only. The article opens via its own round icon in
+  // the action row; «Поделиться в Telegram» is a share action (not a map-app), so when
+  // `shareInActionRow` it is surfaced as a small icon in the TITLE row and excluded
+  // here — it must not appear inside the «Навигация и действия» sheet (#FIX-3).
   const navActions = useMemo(
-    () => secondaryActions.filter((action) => action.key !== 'article'),
-    [secondaryActions],
+    () =>
+      secondaryActions.filter(
+        (action) =>
+          action.key !== 'article' && !(shareInActionRow && action.key === 'telegram'),
+      ),
+    [secondaryActions, shareInActionRow],
   );
   const showNavToggle = navActions.length > 0;
-  const showNavGrid = navActions.length > 0 && (isBottomCardLayout || navExpanded);
+  // Inline nav grid: web mobile-web sheet shows it always-expanded (isBottomCardLayout),
+  // desktop popup expands on toggle. Native routes nav into the sheet → never inline.
+  const showNavGrid =
+    navActions.length > 0 && !useNavSheet && (isBottomCardLayout || navExpanded);
+
+  const navSheetActions = useMemo<ActionListSheetItem[]>(
+    () =>
+      navActions.map((action) => ({
+        key: action.key,
+        label: action.label,
+        icon: action.icon,
+        onPress: action.onPress,
+        accessibilityLabel: action.accessibilityLabel,
+        title: action.title,
+        iconColor: action.iconColor,
+        iconBubbleColor: action.tintBg,
+      })),
+    [navActions],
+  );
 
   useEffect(() => {
     setFullscreenVisible(false);
-    // Native bottom-card users need map targets and Telegram immediately reachable;
-    // desktop/Leaflet popup keeps the secondary navigation collapsed.
-    setNavExpanded(isBottomCardLayout && navActions.length > 0);
-  }, [imageUrl, isBottomCardLayout, navActions.length]);
+    setNavSheetVisible(false);
+    // Web mobile-web bottom card keeps the inline secondary navigation expanded;
+    // native uses the sheet, desktop popup keeps it collapsed.
+    setNavExpanded(isBottomCardLayout && !useNavSheet && navActions.length > 0);
+  }, [imageUrl, isBottomCardLayout, navActions.length, useNavSheet]);
 
   const renderFallbackPrimaryAction =
     !primaryActionOverride &&
@@ -245,11 +296,38 @@ const PlacePopupCard: React.FC<Props> = ({
       ? 'Страница'
       : primaryAction?.label;
 
+  // #FIX-3 — «Мои точки» is an ambiguous noun (reads as "view", but the chip ADDS the
+  // point). On the native bottom card show the verb «Сохранить» / «Сохранено» (the
+  // bookmark/✓ icon already conveys save vs saved). Keeps the #334 add/un-save toggle.
+  // Web (desktop popup + mobile-web) keeps the existing `compactLabel`.
+  const saveChipLabel = useNativeBottomCard ? (isSaved ? 'Сохранено' : 'Сохранить') : compactLabel;
+
+  // #FIX-3 — «Поделиться» is a share action surfaced as a small right-aligned icon in
+  // the title row on the native bottom card (NOT in the action row, which must stay at
+  // 4 items so «Маршрут» never overflows, and NOT in the nav sheet).
+  const showTitleShare = shareInActionRow && !!onShareTelegram;
+
   const topInfoSlot = useMemo(() => (
     <View style={styles.infoSection}>
-      <Text style={styles.titleText} numberOfLines={isBottomCardLayout ? 2 : useCompactLayout ? 2 : bp === 'narrow' ? 2 : 2}>
-        {title}
-      </Text>
+      <View style={styles.titleRow}>
+        <Text
+          style={[styles.titleText, showTitleShare && styles.titleTextWithShare]}
+          numberOfLines={isBottomCardLayout ? 2 : useCompactLayout ? 2 : bp === 'narrow' ? 2 : 2}
+        >
+          {title}
+        </Text>
+        {showTitleShare && onShareTelegram ? (
+          <CardActionPressable
+            accessibilityLabel="Поделиться в Telegram"
+            onPress={onShareTelegram}
+            title={POPUP_TOOLTIPS.shareTelegram}
+            enableWebClickFallback
+            style={({ pressed }) => [styles.titleShareBtn, pressed && styles.iconActionBtnPressed]}
+          >
+            <Feather name="send" size={18} color={colors.primary} />
+          </CardActionPressable>
+        ) : null}
+      </View>
 
       {!!displaySubtitle && (
         <Text style={styles.subtitleText} numberOfLines={isBottomCardLayout ? 1 : useCompactLayout ? 2 : 1}>
@@ -293,16 +371,24 @@ const PlacePopupCard: React.FC<Props> = ({
     displaySubtitle,
     bp,
     categoryLabel,
+    colors.primary,
     colors.textMuted,
     drivingText,
     hasDrivingInfo,
     isBottomCardLayout,
     isDrivingLoading,
+    onShareTelegram,
+    showTitleShare,
     styles,
     title,
     useCompactLayout,
   ]);
 
+  // #FIX-coherence — on the NATIVE bottom card the «Статус поездки» row drops the ♥
+  // favorite (it moves to the hero corner, below) so the row is a single, balanced,
+  // full-width «Был / Хочу / Планирую» control instead of a heart orphaned far-left
+  // next to a right-shoved pill. ♥ and «Сохранить» stay DIFFERENT features. Web
+  // (desktop popup overlay + mobile-web inline) keeps both buttons unchanged.
   const relatedTravelActionStack = useMemo(() => {
     if (!relatedTravelUrl) return null;
     return (
@@ -312,8 +398,16 @@ const PlacePopupCard: React.FC<Props> = ({
         fallbackImageUrl={imageUrl}
         fallbackCountry={relatedTravelCountry}
         fallbackCity={relatedTravelCity}
-        style={isBottomCardLayout ? styles.relatedTravelActionsInline : undefined}
+        style={
+          useNativeBottomCard
+            ? styles.relatedTravelStatusStretch
+            : isBottomCardLayout
+              ? styles.relatedTravelActionsInline
+              : undefined
+        }
         variant={isBottomCardLayout ? 'inline' : 'overlay'}
+        hideFavorite={useNativeBottomCard}
+        statusButtonStyle={useNativeBottomCard ? styles.relatedTravelStatusButtonFull : undefined}
       />
     );
   }, [
@@ -323,7 +417,39 @@ const PlacePopupCard: React.FC<Props> = ({
     relatedTravelCountry,
     relatedTravelUrl,
     styles.relatedTravelActionsInline,
+    styles.relatedTravelStatusStretch,
+    styles.relatedTravelStatusButtonFull,
     title,
+    useNativeBottomCard,
+  ]);
+
+  // ♥ favorite relocated onto the hero photo, top-LEFT corner (native bottom card
+  // only) — a small separate toggle, away from the ✕ (top-right) and ⤢ expand
+  // (bottom-right). Uses the SAME RelatedTravelActionStack code path (favoriteOnly),
+  // so the related-travel id/title/url resolution and favorite behavior are intact.
+  const heroFavoriteOverlay = useMemo(() => {
+    if (!useNativeBottomCard || !relatedTravelUrl) return null;
+    return (
+      <View style={styles.heroFavoriteOverlay} pointerEvents="box-none">
+        <RelatedTravelActionStack
+          relatedTravelUrl={relatedTravelUrl}
+          fallbackTitle={title}
+          fallbackImageUrl={imageUrl}
+          fallbackCountry={relatedTravelCountry}
+          fallbackCity={relatedTravelCity}
+          variant="overlay"
+          favoriteOnly
+        />
+      </View>
+    );
+  }, [
+    imageUrl,
+    relatedTravelCity,
+    relatedTravelCountry,
+    relatedTravelUrl,
+    styles.heroFavoriteOverlay,
+    title,
+    useNativeBottomCard,
   ]);
 
   const footerSlot = useMemo(() => (
@@ -367,14 +493,18 @@ const PlacePopupCard: React.FC<Props> = ({
         ) : (
           <>
             {isBottomCardLayout && relatedTravelActionStack ? (
-              <View style={styles.actionGroup}>
-                <Text style={styles.actionGroupLabel}>Статус поездки</Text>
-                <View style={styles.relatedTravelInlineSection}>
-                  {relatedTravelActionStack}
+              <>
+                {useNavSheet ? <View style={styles.blockDivider} /> : null}
+                <View style={styles.actionGroup}>
+                  <Text style={styles.actionGroupLabel}>Статус поездки</Text>
+                  <View style={styles.relatedTravelInlineSection}>
+                    {relatedTravelActionStack}
+                  </View>
                 </View>
-              </View>
+              </>
             ) : null}
 
+            {useNavSheet ? <View style={styles.blockDivider} /> : null}
             <View style={styles.actionGroup}>
               <Text style={styles.actionGroupLabel}>Действия с точкой</Text>
               <View style={styles.iconActionRow}>
@@ -466,15 +596,21 @@ const PlacePopupCard: React.FC<Props> = ({
                     )}
                   </View>
                   <View style={styles.iconActionLabelRow}>
-                    <Text style={styles.iconActionLabel} numberOfLines={1}>{compactLabel}</Text>
+                    <Text style={styles.iconActionLabel} numberOfLines={1}>{saveChipLabel}</Text>
                   </View>
                 </CardActionPressable>
               )}
 
               {showNavToggle && (
                 <CardActionPressable
-                  accessibilityLabel={navExpanded ? 'Скрыть способы навигации' : 'Показать способы навигации'}
-                  accessibilityState={{ expanded: navExpanded }}
+                  accessibilityLabel={
+                    useNavSheet
+                      ? 'Открыть способы навигации'
+                      : navExpanded
+                        ? 'Скрыть способы навигации'
+                        : 'Показать способы навигации'
+                  }
+                  accessibilityState={useNavSheet ? { expanded: navSheetVisible } : { expanded: navExpanded }}
                   onPress={toggleNav}
                   title={POPUP_TOOLTIPS.moreNavigation}
                   enableWebClickFallback
@@ -484,7 +620,7 @@ const PlacePopupCard: React.FC<Props> = ({
                     <Feather name="navigation" size={19} color={colors.text} />
                     {isBottomCardLayout ? (
                       <Feather
-                        name={navExpanded ? 'chevron-up' : 'chevron-down'}
+                        name={useNavSheet ? 'more-horizontal' : navExpanded ? 'chevron-up' : 'chevron-down'}
                         size={11}
                         color={colors.textMuted}
                         style={{ position: 'absolute', right: 6, bottom: 5 } as any}
@@ -493,7 +629,13 @@ const PlacePopupCard: React.FC<Props> = ({
                   </View>
                   <View style={styles.iconActionLabelRow}>
                     <Text style={styles.iconActionLabel} numberOfLines={1}>Навигация</Text>
-                    <Feather name={navExpanded ? 'chevron-up' : 'chevron-down'} size={13} color={colors.textMuted} />
+                    {/* #FIX-3 — on the native bottom card the indicator is already in the
+                        bubble (more-horizontal); a second chevron in the label row stole
+                        width and clipped «Навигация» → «Навигац…». Keep the trailing
+                        chevron only for the web popup. */}
+                    {isBottomCardLayout ? null : (
+                      <Feather name={navExpanded ? 'chevron-up' : 'chevron-down'} size={13} color={colors.textMuted} />
+                    )}
                   </View>
                 </CardActionPressable>
               )}
@@ -545,10 +687,13 @@ const PlacePopupCard: React.FC<Props> = ({
     isBottomCardLayout,
     isSaved,
     navExpanded,
+    navSheetVisible,
+    useNavSheet,
     onAddPoint,
     onBuildRoute,
     onCopyCoord,
     onOpenArticle,
+    saveChipLabel,
     primaryAction,
     primaryIconActionLabel,
     primaryActionOverride,
@@ -809,6 +954,7 @@ const PlacePopupCard: React.FC<Props> = ({
         {relatedTravelOverlays}
         <View style={[styles.topSection, useSplitLayout && styles.topSectionSplit]}>
           {heroImage}
+          {heroFavoriteOverlay}
 
           <View style={[styles.contentContainer, useSplitLayout && styles.contentContainerSplit]}>
             {topInfoSlot}
@@ -853,6 +999,15 @@ const PlacePopupCard: React.FC<Props> = ({
           colors={colors}
         />
       )}
+
+      {useNavSheet && navSheetActions.length > 0 ? (
+        <ActionListSheet
+          visible={navSheetVisible}
+          onClose={closeNavSheet}
+          title="Навигация и действия"
+          actions={navSheetActions}
+        />
+      ) : null}
     </>
   );
 };

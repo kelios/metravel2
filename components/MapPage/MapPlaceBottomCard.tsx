@@ -20,6 +20,9 @@ import type { Point } from './Map/types'
 
 const IS_WEB = Platform.OS === 'web'
 const SWIPE_CLOSE_THRESHOLD_PX = 64
+// Native bottom sheet: vertical budget the caption/actions block needs below the
+// hero, so the hero can take the rest without forcing a scroll on tall content.
+const NATIVE_CONTENT_RESERVE = 460
 
 type MapPlaceBottomCardProps = {
   /** Selected single marker; when null the card is not rendered. */
@@ -30,17 +33,19 @@ type MapPlaceBottomCardProps = {
   onClose: () => void
   /** Bottom inset so the card clears the global dock / tab bar. */
   bottomInset?: number
-  /** Top inset so fullscreen cards do not cover the app header. */
+  /** Top inset so the sheet's max-height leaves the app header visible. */
   topInset?: number
 }
 
 /**
- * #207 — maps.me-style bottom card for a tapped single marker on the mobile map.
+ * #207 — maps.me-style bottom-anchored sheet for a tapped single marker on the
+ * mobile map. The map stays visible above it; the sheet is content-sized (caps at
+ * `nativeSheetMaxHeight`) and slides up from the bottom over a soft backdrop.
  *
  * Reuses the SAME content as the Leaflet popup: `createMapPopupComponent` returns
  * a component that renders `PlacePopupCard` (photo via ImageCardMedia contain+blur,
- * title, category · distance · drive time, address, actions: «Маршрут» + ♥ + Share)
- * WITHOUT the Leaflet popup wrapper, so it drops straight into a bottom card.
+ * title, category · distance · drive time, address, actions) WITHOUT the Leaflet
+ * popup wrapper, so it drops straight into the sheet.
  */
 const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
   point,
@@ -57,7 +62,7 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
   // On mobile web the card uses a BOUNDED bottom sheet (maps.me-style): the map
   // stays visible above it, the photo is a fixed hero, and the caption/actions
   // scroll beneath it so every element stays reachable and the photo never jerks
-  // when «Ещё» expands. Desktop popup / native keep the compact bottom-sheet.
+  // when «Ещё» expands. Native uses a bottom-anchored content-sized sheet.
   const isFullscreenWeb = IS_WEB && viewportWidth <= 560
   const styles = useMemo(() => getStyles(colors), [colors])
 
@@ -70,18 +75,21 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
       : null
   }, [userLocation])
 
-  const safeTop = insets?.top ?? 0
   const topChromeInset = Math.max(0, topInset || 0)
   const bottomChromeInset = (bottomInset || 0) + (insets?.bottom ?? 0)
-  const rootTopInset = IS_WEB ? 0 : Math.max(0, topInset)
-  const rootBottomInset = IS_WEB ? 0 : Math.max(0, bottomChromeInset)
-  const nativeAvailableHeight = Math.max(
-    320,
-    viewportHeight - rootTopInset - rootBottomInset,
+
+  // Native bottom sheet sizing. The sheet sits above the bottom chrome and caps its
+  // height so the app header / map stay visible above it (content-sized otherwise).
+  const nativeSheetTopInset = insets?.top ?? 0
+  const nativeSheetMaxHeight = Math.round(
+    Math.max(360, viewportHeight - bottomChromeInset - nativeSheetTopInset - 12),
   )
   const nativeHeroHeight = IS_WEB
     ? undefined
-    : Math.max(220, Math.round(nativeAvailableHeight * 0.7))
+    : Math.max(
+        180,
+        Math.min(Math.round(viewportHeight * 0.4), nativeSheetMaxHeight - NATIVE_CONTENT_RESERVE),
+      )
 
   const PopupComponent = useMemo(
     () =>
@@ -96,6 +104,9 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
         // photo never jerks when «Ещё» expands (the text scrolls under it).
         bottomSheetSplit: isFullscreenWeb,
         bottomCardImageHeight: nativeHeroHeight,
+        // #FIX-3 — Telegram is a share action, not a map-app: surface it as the
+        // title-row share icon and drop it from the «Навигация и действия» sheet.
+        shareInActionRow: true,
         userLocationRef,
         invalidateUserPoints: () => {
           void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() })
@@ -167,21 +178,12 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
 
   const bottomContentInset = IS_WEB ? bottomChromeInset + 12 : 12
 
-  // #497/#travel-point-card — native: the card fills the AVAILABLE app content
-  // area, not the whole device window, so app header/footer can remain visible.
-  // The chrome floats over the hero photo and clears the visible safe/header top.
-
   // On web, close via a NATIVE DOM handler instead of relying solely on RN-Web's
   // `onPress`. RN-Web synthesises `onPress` through its responder system over
   // pointer events; on the mobile bottom sheet the grabber hosts a swipe
   // responder and the hero popup is a separate responder subtree underneath, and
   // the responder hand-off can swallow the button's `pointerup` so `onPress`
   // never fires — the card stays mounted and freezes the lower ~82% of the map.
-  // `onPointerDown` stops propagation so the sheet's swipe responder can't claim
-  // the gesture; `onPointerUp` closes deterministically on touch + mouse. We do
-  // NOT also wire `onClick` (it would double-fire after pointerup). `onPress`
-  // stays for native. RN-Web passes these unknown props straight to the host
-  // <div>, so this runs before/independently of the responder race.
   const webCloseHandlers = IS_WEB
     ? ({
         onPointerDown: (e: any) => {
@@ -214,22 +216,6 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
       {...(webCloseHandlers ?? {})}
     >
       <Feather name="x" size={18} color="#fff" />
-    </Pressable>
-  )
-
-  // Native close lives in the floating header overlay, outside the hero image
-  // Pressable subtree, so Android gives it a reliable touch target without
-  // reserving a separate white header row.
-  const nativeHeaderClose = (
-    <Pressable
-      testID="map-place-bottom-card-close"
-      onPress={handleClose}
-      accessibilityRole="button"
-      accessibilityLabel="Закрыть карточку места"
-      hitSlop={12}
-      style={({ pressed }) => [styles.headerCloseButton, pressed && { opacity: 0.6 }]}
-    >
-      <Feather name="x" size={20} color={colors.text} />
     </Pressable>
   )
 
@@ -268,57 +254,63 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
     )
   }
 
-  return (
-    <View
-      style={[
-        styles.root,
-        IS_WEB ? { paddingBottom: bottomContentInset } : null,
-        !IS_WEB
-          ? {
-              top: rootTopInset,
-              bottom: rootBottomInset,
-            }
-          : null,
-      ]}
-      testID="map-place-bottom-card"
-      pointerEvents="box-none"
-    >
-      <View style={styles.card}>
-        {IS_WEB ? (
-          <>
-            <View style={styles.handleZone} {...(webSwipeHandlers ?? {})}>
-              <View style={styles.grabber} />
-            </View>
-            <View style={styles.body}>
-              <PopupComponent point={point} closePopup={handleClose} />
-            </View>
-          </>
-        ) : (
-          <ScrollView
-            style={styles.bodyScroll}
-            contentContainerStyle={[
-              styles.body,
-              styles.bodyNative,
-              { paddingBottom: bottomContentInset },
-            ]}
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            <PopupComponent point={point} closePopup={handleClose} />
-          </ScrollView>
-        )}
-
-        {IS_WEB ? closeButton : (
-          <View
-            pointerEvents="box-none"
-            style={[styles.floatingHeader, { top: safeTop + 8 }]}
-            {...(nativeSwipeHandlers ?? {})}
-          >
-            <View style={styles.floatingGrabber} />
-            {nativeHeaderClose}
+  if (IS_WEB) {
+    // Mobile-web wide (>560): the legacy bounded card anchored to the bottom dock.
+    return (
+      <View
+        style={[styles.root, { paddingBottom: bottomContentInset }]}
+        testID="map-place-bottom-card"
+        pointerEvents="box-none"
+      >
+        <View style={styles.card}>
+          <View style={styles.handleZone} {...(webSwipeHandlers ?? {})}>
+            <View style={styles.grabber} />
           </View>
-        )}
+          <View style={styles.body}>
+            <PopupComponent point={point} closePopup={handleClose} />
+          </View>
+          {closeButton}
+        </View>
+      </View>
+    )
+  }
+
+  // Native: a bottom-anchored, content-sized sheet over a soft backdrop. Tapping the
+  // backdrop closes the card; the panel caps at `nativeSheetMaxHeight` so the app
+  // header / map stay visible above it. A grabber + ✕ header row hosts swipe-down-to
+  // close; the body is a content-driven ScrollView fallback for tall content.
+  return (
+    <View style={styles.nativeRoot} testID="map-place-bottom-card" pointerEvents="box-none">
+      <Pressable
+        testID="map-place-bottom-card-backdrop"
+        accessibilityLabel="Закрыть карточку места"
+        accessibilityRole="button"
+        onPress={handleClose}
+        style={styles.nativeBackdrop}
+      />
+      <View style={[styles.nativePanel, { maxHeight: nativeSheetMaxHeight, marginBottom: bottomChromeInset }]}>
+        <View style={styles.nativeHandleRow} {...(nativeSwipeHandlers ?? {})}>
+          <View style={styles.grabber} />
+          <Pressable
+            testID="map-place-bottom-card-close"
+            onPress={handleClose}
+            accessibilityRole="button"
+            accessibilityLabel="Закрыть карточку места"
+            hitSlop={12}
+            style={({ pressed }) => [styles.nativeHeaderCloseButton, pressed && { opacity: 0.6 }]}
+          >
+            <Feather name="x" size={20} color={colors.text} />
+          </Pressable>
+        </View>
+        <ScrollView
+          style={styles.nativeScroll}
+          contentContainerStyle={[styles.body, { paddingBottom: bottomContentInset }]}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <PopupComponent point={point} closePopup={handleClose} />
+        </ScrollView>
       </View>
     </View>
   )
@@ -328,15 +320,58 @@ export default React.memo(MapPlaceBottomCard)
 
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
+    // Web (wide >560): bounded card anchored to the bottom dock.
     root: {
       position: 'absolute',
       left: 0,
       right: 0,
       bottom: 0,
-      paddingHorizontal: IS_WEB ? 8 : 0,
-      // Native: stretch the container edge-to-edge top→bottom so the card can fill
-      // the whole screen (fullscreen place card). Web keeps the bounded sheetRoot.
-      ...(IS_WEB ? ({ zIndex: 1200 } as any) : { top: 0 }),
+      paddingHorizontal: 8,
+      ...(IS_WEB ? ({ zIndex: 1200 } as any) : null),
+    },
+    // Native bottom-anchored sheet over a soft backdrop.
+    nativeRoot: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: 'flex-end',
+    },
+    nativeBackdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(15, 23, 42, 0.18)',
+    },
+    nativePanel: {
+      width: '100%',
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      overflow: 'hidden',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: -4 },
+      shadowOpacity: 0.18,
+      shadowRadius: 18,
+      elevation: 18,
+    },
+    nativeHandleRow: {
+      minHeight: 40,
+      paddingTop: 8,
+      paddingBottom: 4,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    nativeHeaderCloseButton: {
+      position: 'absolute',
+      right: 12,
+      top: 2,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.backgroundSecondary ?? colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+    },
+    nativeScroll: {
+      flexGrow: 0,
     },
     // Mobile web BOUNDED bottom sheet (maps.me-style): anchored to the visible
     // viewport bottom so the map shows above it. Web-only (guarded by isFullscreenWeb).
@@ -346,8 +381,6 @@ const getStyles = (colors: ThemedColors) =>
             position: 'fixed',
             left: 0,
             right: 0,
-            // Anchor to the VISIBLE (`dvh`) viewport bottom so iOS Safari's dynamic
-            // toolbar doesn't push the card under the fold.
             bottom: 0,
             zIndex: 5000,
             display: 'flex',
@@ -361,13 +394,8 @@ const getStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surface,
       position: 'relative',
       overflow: 'hidden',
-      // Fullscreen on mobile web: the card covers the whole viewport (no map peek),
-      // so square top corners read as a true full-screen surface, not a sheet.
       borderTopLeftRadius: 0,
       borderTopRightRadius: 0,
-      // (Top safe-area paddingTop is applied inline — `insets` isn't in getStyles scope.)
-      // Fullscreen height: the split layout inside flexes to fill the viewport
-      // (hero photo grows + scrollable caption/actions below it).
       ...(IS_WEB
         ? ({
             display: 'flex',
@@ -393,11 +421,7 @@ const getStyles = (colors: ThemedColors) =>
             borderColor: colors.borderLight,
             ...({ boxShadow: DESIGN_TOKENS.shadows.card } as any),
           }
-        : {
-            // Native fullscreen: fill the whole screen (no maxWidth / corner radii /
-            // border). flex:1 lets the body ScrollView stretch from safeTop to bottom.
-            flex: 1,
-          }),
+        : null),
     },
     handleZone: {
       paddingTop: 8,
@@ -405,51 +429,6 @@ const getStyles = (colors: ThemedColors) =>
       alignItems: 'center',
       justifyContent: 'center',
       ...(IS_WEB ? ({ cursor: 'grab', touchAction: 'none' } as any) : null),
-    },
-    // Native: the header row holds the centered grabber AND a real in-bounds ✕
-    // pinned to the right (the absolute-over-photo button did not receive taps on
-    // Android). Extra height/padding gives the ✕ a comfortable tap target.
-    handleZoneNative: {
-      minHeight: 44,
-      paddingTop: 10,
-      paddingBottom: 6,
-      paddingHorizontal: 8,
-    },
-    floatingHeader: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      height: 44,
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 20,
-      elevation: 20,
-    },
-    floatingGrabber: {
-      width: 46,
-      height: 5,
-      borderRadius: 3,
-      backgroundColor: 'rgba(255,255,255,0.82)',
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: 'rgba(15,23,42,0.22)',
-    },
-    headerCloseButton: {
-      position: 'absolute',
-      right: 12,
-      top: 4,
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: 'rgba(255,255,255,0.86)',
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: 'rgba(15,23,42,0.16)',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.14,
-      shadowRadius: 8,
-      elevation: 21,
     },
     grabber: {
       width: 40,
@@ -466,7 +445,6 @@ const getStyles = (colors: ThemedColors) =>
       borderRadius: 16,
       alignItems: 'center',
       justifyContent: 'center',
-      // Dark pill + bright ring + shadow keeps ✕ legible on any photo (light or dark).
       backgroundColor: 'rgba(0,0,0,0.6)',
       borderWidth: 1.5,
       borderColor: 'rgba(255,255,255,0.85)',
@@ -481,35 +459,17 @@ const getStyles = (colors: ThemedColors) =>
           }),
     },
     closeButtonFullscreen: {
-      // Larger tap target on the fullscreen card; overlays the hero's top-right
-      // corner. `top` is set inline (insets.top + 12) so ✕ clears the notch.
       width: 44,
       height: 44,
       borderRadius: 22,
       right: 12,
-      // Mobile web: a live backdrop-filter blur here forces a GPU recomposite of
-      // the map region when the sheet unmounts (jank on close, CLAUDE.md arch #2).
-      // Use a static opaque frost instead — ✕ stays legible on any photo.
       backgroundColor: 'rgba(0,0,0,0.6)',
-      ...(IS_WEB
-        ? ({
-            zIndex: 10,
-          } as any)
-        : null),
-    },
-    // #497 — native scroll region for the body inside the fullscreen card. flex:1
-    // fills the space below the sticky header; only the body scrolls when «Ещё»
-    // expands, so the header keeps its height and never leaves the screen top.
-    bodyScroll: {
-      flex: 1,
+      ...(IS_WEB ? ({ zIndex: 10 } as any) : null),
     },
     body: {
       // Photo runs edge-to-edge: the popup card's own contentContainer/footerContainer
       // carry the horizontal padding for the caption/actions below the hero.
       paddingHorizontal: 0,
       paddingBottom: 4,
-    },
-    bodyNative: {
-      flexGrow: 1,
     },
   })

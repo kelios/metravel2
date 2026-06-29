@@ -130,7 +130,12 @@ export const getStyles = (
     popupCard: {
       width: '100%',
       backgroundColor: colors.surface,
-      borderRadius: compactLayout ? compactSp.radius + 4 : sp.radius + 4,
+      // Native bottom card: the surrounding sheet panel owns the rounded top corners +
+      // shadow, so the inner popup card is flat (no radius / no shadow) to avoid a
+      // double-card look. Web (desktop Leaflet popup) keeps its own rounded shadowed box.
+      borderRadius: bottomCardLayout && Platform.OS !== 'web'
+        ? 0
+        : compactLayout ? compactSp.radius + 4 : sp.radius + 4,
       position: 'relative',
       overflow: 'hidden',
       ...(bottomCardLayout && Platform.OS !== 'web' ? { flexGrow: 1 } : null),
@@ -138,13 +143,15 @@ export const getStyles = (
         ? ({
             boxShadow: '0 22px 52px rgba(15,23,42,0.22), 0 8px 18px rgba(15,23,42,0.12)',
           } as any)
-        : {
-            shadowColor: DESIGN_TOKENS.colors.text,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.06,
-            shadowRadius: 16,
-            elevation: 4,
-          }),
+        : bottomCardLayout
+          ? null
+          : {
+              shadowColor: DESIGN_TOKENS.colors.text,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.06,
+              shadowRadius: 16,
+              elevation: 4,
+            }),
     },
     topSection: {
       width: '100%',
@@ -165,6 +172,25 @@ export const getStyles = (
       justifyContent: 'center',
       gap: bottomCardLayout ? 6 : 8,
     },
+    // Native bottom card: the «Статус поездки» row holds ONLY the status control now
+    // (heart moved to the hero corner), so stretch it edge-to-edge for a balanced,
+    // centered full-width pill instead of a centered island.
+    relatedTravelStatusStretch: {
+      width: '100%',
+      alignSelf: 'stretch',
+    },
+    relatedTravelStatusButtonFull: {
+      flex: 1,
+      justifyContent: 'center',
+    },
+    // ♥ favorite relocated onto the hero photo, top-LEFT (native bottom card only),
+    // away from ✕ (top-right) and ⤢ expand (bottom-right). Small circular bubble.
+    heroFavoriteOverlay: {
+      position: 'absolute',
+      top: 10,
+      left: 10,
+      zIndex: 7,
+    },
     relatedTravelInlineSection: {
       width: '100%',
       alignItems: 'center',
@@ -173,6 +199,14 @@ export const getStyles = (
     },
     actionGroup: {
       gap: bottomCardLayout && Platform.OS !== 'web' ? 10 : 6,
+    },
+    // Native bottom-card: thin hairline divider between logical blocks (place info /
+    // «Статус поездки» / «Действия с точкой») so the content sheet reads as grouped
+    // rows like the shared action sheet. Web popup keeps its borderless stacked look.
+    blockDivider: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.borderLight ?? colors.border,
+      marginVertical: 2,
     },
     actionGroupLabel: {
       fontSize: bottomCardLayout && Platform.OS !== 'web' ? 13 : compactLayout ? fs.small - 1 : fs.small,
@@ -321,6 +355,29 @@ export const getStyles = (
       // Bottom card: badge hugs its content and stays inside the full-width sheet.
       // (The trailing-glyph clip itself is fixed at the call site — see index.tsx.)
       ...(bottomCardLayout ? ({ maxWidth: '100%' } as const) : null),
+    },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 6,
+    },
+    titleTextWithShare: {
+      // Title shares its row with the right-aligned «Поделиться» icon; flex so the
+      // text wraps/truncates instead of pushing the icon off-screen.
+      flex: 1,
+      minWidth: 0,
+    },
+    titleShareBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: DESIGN_TOKENS.radii.full,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.backgroundSecondary ?? colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight ?? colors.border,
+      flexShrink: 0,
+      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     titleText: {
       fontSize: bottomCardLayout ? fs.title - 1 : splitLayout ? fs.title + 1 : fs.title,

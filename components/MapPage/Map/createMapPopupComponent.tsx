@@ -46,6 +46,12 @@ interface CreatePopupComponentArgs {
   popupSplit?: boolean;
   /** Native bottom-card hero height, computed from visible app content height. */
   bottomCardImageHeight?: number;
+  /**
+   * #FIX-3 — surface «Поделиться в Telegram» as the title-row share icon instead of
+   * inside the navigation sheet. Set by the native bottom card so Telegram (a share,
+   * not a map-app) leaves the «Навигация и действия» list.
+   */
+  shareInActionRow?: boolean;
   fullscreenTopInset?: number;
   fullscreenBottomInset?: number;
   invalidateUserPoints?: () => void;
@@ -61,6 +67,7 @@ export const createMapPopupComponent = ({
   bottomSheetSplit = false,
   popupSplit = false,
   bottomCardImageHeight,
+  shareInActionRow = false,
   fullscreenTopInset = 0,
   fullscreenBottomInset = 0,
   invalidateUserPoints,
@@ -281,7 +288,28 @@ export const createMapPopupComponent = ({
     const canBuildRoute = normalizedCoord != null && typeof userLat === 'number' && typeof userLng === 'number';
 
     const handleBuildRoute = useCallback(() => {
-      if (!normalizedCoord || typeof userLat !== 'number' || typeof userLng !== 'number') return;
+      if (
+        !normalizedCoord ||
+        typeof userLat !== 'number' ||
+        typeof userLng !== 'number' ||
+        !Number.isFinite(userLat) ||
+        !Number.isFinite(userLng)
+      ) {
+        return;
+      }
+
+      // If the user is essentially standing on the destination, RouteValidator rejects
+      // the 2nd point (< MIN_DISTANCE) and the store would be left in mode='route' with a
+      // single point — route-capture active but no line drawn, trapping marker taps with
+      // no escape. Bail with a hint instead of entering that half-built state.
+      const originToDest = CoordinateConverter.distance(
+        { lat: userLat, lng: userLng },
+        { lat: normalizedCoord.lat, lng: normalizedCoord.lng },
+      );
+      if (!Number.isFinite(originToDest) || originToDest < 100) {
+        void showToast({ type: 'info', text1: 'Вы уже на месте', position: 'bottom' });
+        return;
+      }
 
       const routeStore = useRouteStore.getState();
       const destinationLabel = String(point.address ?? popupTitle.title ?? '').trim() ||
@@ -447,6 +475,7 @@ export const createMapPopupComponent = ({
           onOpenOpenStreetMap={isQuest ? undefined : handleOpenOpenStreetMap}
           onAddPoint={isQuest ? undefined : handleAddPoint}
           onBuildRoute={isQuest || !canBuildRoute ? undefined : handleBuildRoute}
+          shareInActionRow={isQuest ? false : shareInActionRow}
           primaryActionOverride={
             isQuest
               ? {

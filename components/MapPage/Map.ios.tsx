@@ -613,7 +613,11 @@ const Map: React.FC<TravelProps> = ({
               // Шлём индекс точки в текущем массиве points; RN маппит его на ту же
               // точку travelAddress.
               marker.on('click', function() {
-                if (routeMode === 'route') {
+                // #FIX-2 — capture the tap into the route ONLY while it is still being
+                // built (fewer than 2 points). A fully-built route (e.g. from a popup's
+                // «Маршрут» button) releases marker taps so they open the place card
+                // again; the route line stays drawn (gated on routeMode==='route').
+                if (routeMode === 'route' && routePoints.length < 2) {
                   try {
                     if (map.flyTo) {
                       map.flyTo([lat, lng], Math.max(map.getZoom ? map.getZoom() : 13, 14), { animate: true, duration: 0.25 });

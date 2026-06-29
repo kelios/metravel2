@@ -31,6 +31,10 @@ import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { applySmartImageLayout } from '@/utils/richTextImageLayout';
 import { showToastMessage } from '@/utils/toast';
 import { getErrorMessage, getErrorName } from '@/utils/errorHelpers';
+import {
+  confirmRichTextLossIfNeeded,
+  type RichTextSnapshot,
+} from '@/utils/travelTextLossGuard';
 
 type ToastAwareError = Error & { toastShown?: boolean };
 const DEFAULT_MARKER_SERIALIZER_FALLBACK_IMAGE = '/og-default.png';
@@ -95,6 +99,10 @@ interface UseTravelFormPersistenceParams {
   manualSavePromiseRef: MutableRefObject<Promise<TravelFormData | void> | null>;
   suppressAutosaveErrorToastRef: MutableRefObject<boolean>;
   pendingBaselineRef: MutableRefObject<TravelFormData | null>;
+  // Серверный baseline rich-text полей: значения, с которыми статья сейчас лежит на сервере
+  // (выставляется при загрузке и после каждого успешного сохранения). Источник для guard'а
+  // «анти-потеря текста» при ручном сохранении существующей статьи.
+  serverTextBaselineRef: MutableRefObject<RichTextSnapshot | null>;
   didInvalidateAfterCreateRef: MutableRefObject<boolean>;
   updateBaselineRef: MutableRefObject<((data: TravelFormData) => void) | null>;
   rehydrateMarkerIdsFromServer: (
@@ -124,6 +132,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
     manualSavePromiseRef,
     suppressAutosaveErrorToastRef,
     pendingBaselineRef,
+    serverTextBaselineRef,
     didInvalidateAfterCreateRef,
     updateBaselineRef,
     rehydrateMarkerIdsFromServer,
@@ -138,6 +147,15 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
   // Стабильная ссылка на autosave.cancelPending, чтобы handleManualSave не
   // пересоздавался на каждый тик статуса автосейва.
   const autosaveCancelPendingRef = useRef<(() => void) | null>(null);
+
+  const captureTextBaseline = useCallback((data: TravelFormData) => {
+    serverTextBaselineRef.current = {
+      description: data.description ?? '',
+      plus: data.plus ?? '',
+      minus: data.minus ?? '',
+      recommendation: data.recommendation ?? '',
+    };
+  }, [serverTextBaselineRef]);
 
   const cleanAndSave = useCallback(async (
     data: TravelFormData,
@@ -339,6 +357,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       if (shouldSkipFormReset) {
         formDataRef.current = currentDataSnapshot;
         updateBaselineRef.current?.(currentDataSnapshot);
+        captureTextBaseline(currentDataSnapshot);
       } else {
         pendingBaselineRef.current = finalData;
         try {
@@ -346,6 +365,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
           formDataRef.current = finalData as TravelFormData;
           setMarkers(effectiveMarkers);
           updateBaselineRef.current?.(finalData);
+          captureTextBaseline(finalData as TravelFormData);
         } finally {
           pendingBaselineRef.current = null;
         }
@@ -398,6 +418,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       pendingBaselineRef,
       setMarkers,
       updateBaselineRef,
+      captureTextBaseline,
     ]
   );
 
@@ -519,6 +540,26 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
               dataOverride,
             )
           : formDataRef.current as TravelFormData;
+
+        // Guard «анти-потеря текста»: у существующей статьи (есть id) сверяем rich-text
+        // поля с серверным baseline. Если текст резко разрушается (затирается на пустоту/
+        // заглушку — инцидент travel/225), спрашиваем подтверждение. Это защита данных,
+        // НЕ completeness-валидация: автосейв не трогаем, статус/модерацию не меняем.
+        // Отмена → чистый no-op: ничего не отправляем, форму не трогаем.
+        const hasServerId = normalizeTravelId(toSave?.id) ?? stableTravelId;
+        if (hasServerId != null && serverTextBaselineRef.current) {
+          const proceed = await confirmRichTextLossIfNeeded(serverTextBaselineRef.current, {
+            description: toSave?.description ?? '',
+            plus: toSave?.plus ?? '',
+            minus: toSave?.minus ?? '',
+            recommendation: toSave?.recommendation ?? '',
+          });
+          if (!proceed) {
+            suppressAutosaveErrorToastRef.current = false;
+            return;
+          }
+        }
+
         formDataRef.current = toSave as TravelFormData;
         // Явная публикация/отправка на модерацию (пользователь нажал кнопку в шаге
         // публикации → options.intent === 'publish') проходит серверную модерационную
@@ -575,6 +616,8 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
     saveAbortControllerRef,
     setIsManualSaveInFlight,
     suppressAutosaveErrorToastRef,
+    serverTextBaselineRef,
+    stableTravelId,
   ]);
 
   // ✅ FIX: Выносим updateBaseline в ref чтобы избежать stale closure

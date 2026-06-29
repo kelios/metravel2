@@ -16,6 +16,7 @@ import { normalizeDraftPlaceholders } from '@/utils/travelFormNormalization';
 import { showToastMessage } from '@/utils/toast';
 import { useMarkerImageUpload } from '@/hooks/useMarkerImageUpload';
 import { useTravelFormPersistence } from '@/hooks/useTravelFormPersistence';
+import { type RichTextSnapshot } from '@/utils/travelTextLossGuard';
 
 interface UseTravelFormDataOptions {
   travelId: string | null;
@@ -42,6 +43,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
   const formDataRef = useRef<TravelFormData>(initialFormData);
   const saveAbortControllerRef = useRef<AbortController | null>(null);
+  const serverTextBaselineRef = useRef<RichTextSnapshot | null>(null);
 
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [travelDataOld, setTravelDataOld] = useState<Travel | null>(null);
@@ -132,6 +134,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     manualSavePromiseRef,
     suppressAutosaveErrorToastRef,
     pendingBaselineRef,
+    serverTextBaselineRef,
     didInvalidateAfterCreateRef,
     updateBaselineRef,
     rehydrateMarkerIdsFromServer,
@@ -184,6 +187,14 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         setTravelDataOld(travelData);
         formState.reset(finalData);
         setMarkers(markersFromData);
+
+        // Серверный baseline rich-text полей для guard'а «анти-потеря текста».
+        serverTextBaselineRef.current = {
+          description: finalData.description ?? '',
+          plus: finalData.plus ?? '',
+          minus: finalData.minus ?? '',
+          recommendation: finalData.recommendation ?? '',
+        };
 
         // ✅ FIX: Используем ref для updateBaseline чтобы избежать stale closure и race condition
         updateBaselineRef.current?.(finalData);

@@ -175,44 +175,69 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                     <span style={styles.dropOverlayText}>Отпустите фото — добавим точки по геолокации</span>
                 </div>
             ) : null}
-            <div style={styles.headerRow}>
-                <div style={styles.headerTitle}>Точки</div>
-                <div style={styles.headerRight}>
-                    {onAddMarkerFromPhoto ? (
-                        <>
-                            <button
-                                type="button"
-                                onClick={handleAddFromPhotoClick}
-                                style={styles.addFromPhotoButton as React.CSSProperties}
-                                title="Добавить точку из геолокации фото (EXIF)"
-                            >
-                                <Feather name="camera" size={14} color={colors.textMuted} />
-                                <span>Из фото</span>
-                            </button>
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept={EXIF_IMAGE_INPUT_ACCEPT}
-                                onChange={handlePhotoSelected}
-                                style={styles.fileInputHidden as React.CSSProperties}
-                            />
-                        </>
-                    ) : null}
-                    <div style={styles.headerBadge}>{markers.length}</div>
+            <div style={styles.stickyHeader as React.CSSProperties}>
+                <div style={styles.headerRow}>
+                    <div style={styles.headerTitle}>Точки</div>
+                    <div style={styles.headerRight}>
+                        {onAddMarkerFromPhoto ? (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={handleAddFromPhotoClick}
+                                    style={styles.addFromPhotoButton as React.CSSProperties}
+                                    title="Добавить точку из геолокации фото (EXIF)"
+                                >
+                                    <Feather name="camera" size={14} color={colors.textMuted} />
+                                    <span>Из фото</span>
+                                </button>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept={EXIF_IMAGE_INPUT_ACCEPT}
+                                    onChange={handlePhotoSelected}
+                                    style={styles.fileInputHidden as React.CSSProperties}
+                                />
+                            </>
+                        ) : null}
+                        <div style={styles.headerBadge}>{markers.length}</div>
+                    </div>
                 </div>
+                {markers.length > 0 && (
+                    <div style={styles.searchRow}>
+                        <Feather name="search" size={14} color={colors.textMuted} />
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            placeholder="Поиск по адресу"
+                            style={styles.searchInput}
+                        />
+                    </div>
+                )}
+                {markers.length > 0 && onAddMarkerFromPhoto ? (
+                    <div
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Добавить точки из фото: перетащите фото сюда или нажмите, чтобы выбрать"
+                        onClick={handleAddFromPhotoClick}
+                        onKeyDown={handleDropZoneKeyDown}
+                        style={{
+                            ...(styles.dropZone as React.CSSProperties),
+                            ...(styles.dropZoneCompact as React.CSSProperties),
+                            ...(isDragOver ? (styles.dropZoneActive as React.CSSProperties) : {}),
+                            marginBottom: 0,
+                        }}
+                    >
+                        <div style={styles.dropZoneCompactIcon as React.CSSProperties}>
+                            <Feather name="image" size={16} color={colors.primaryDark} />
+                        </div>
+                        <div style={styles.dropZoneCompactText as React.CSSProperties}>
+                            <div style={styles.dropZoneTitle}>Перетащите фото сюда</div>
+                            <div style={styles.dropZoneHint}>или нажмите, чтобы выбрать — координаты из EXIF</div>
+                        </div>
+                    </div>
+                ) : null}
             </div>
-            {markers.length > 0 && (
-                <div style={styles.searchRow}>
-                    <Feather name="search" size={14} color={colors.textMuted} />
-                    <input
-                        type="text"
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        placeholder="Поиск по адресу"
-                        style={styles.searchInput}
-                    />
-                </div>
-            )}
             {markers.length === 0 ? (
                 <>
                     <p style={styles.emptyText}>
@@ -243,28 +268,6 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                 </>
             ) : (
                 <div style={styles.list}>
-                    {onAddMarkerFromPhoto ? (
-                        <div
-                            role="button"
-                            tabIndex={0}
-                            aria-label="Добавить точки из фото: перетащите фото сюда или нажмите, чтобы выбрать"
-                            onClick={handleAddFromPhotoClick}
-                            onKeyDown={handleDropZoneKeyDown}
-                            style={{
-                                ...(styles.dropZone as React.CSSProperties),
-                                ...(styles.dropZoneCompact as React.CSSProperties),
-                                ...(isDragOver ? (styles.dropZoneActive as React.CSSProperties) : {}),
-                            }}
-                        >
-                            <div style={styles.dropZoneCompactIcon as React.CSSProperties}>
-                                <Feather name="image" size={16} color={colors.primaryDark} />
-                            </div>
-                            <div style={styles.dropZoneCompactText as React.CSSProperties}>
-                                <div style={styles.dropZoneTitle}>Перетащите фото сюда</div>
-                                <div style={styles.dropZoneHint}>или нажмите, чтобы выбрать — координаты из EXIF</div>
-                            </div>
-                        </div>
-                    ) : null}
                     {filteredMarkers.map(({ marker, index }) => {
                         const isEditing = editingIndex === index;
 

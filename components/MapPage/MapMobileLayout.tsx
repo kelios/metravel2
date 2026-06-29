@@ -577,7 +577,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             point={selectedPlace}
             userLocation={selectedPlaceUserLocation ?? coordinates}
             onClose={handleClearSelectedPlace}
-            topInset={(insets?.top ?? 0) + LAYOUT.headerHeight}
+            topInset={insets?.top ?? 0}
             bottomInset={bottomSheetInset}
           />
         )}

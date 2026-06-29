@@ -103,6 +103,13 @@ export const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo
         gap: '2px',
         minWidth: 0,
     },
+    stickyHeader: {
+        position: 'sticky' as const,
+        top: 0,
+        zIndex: 3,
+        backgroundColor: colors.backgroundSecondary,
+        paddingBottom: '8px',
+    },
     headerRow: {
         display: 'flex',
         alignItems: 'center',

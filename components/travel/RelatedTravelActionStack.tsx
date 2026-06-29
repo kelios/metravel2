@@ -16,6 +16,23 @@ type Props = {
   fallbackCity?: string | null
   variant?: 'overlay' | 'inline'
   style?: StyleProp<ViewStyle>
+  /**
+   * Render only the ♥ favorite toggle (no «Был/Хочу/Планирую» status button).
+   * Used by the native map bottom card to relocate the heart onto the hero photo
+   * corner while the status control stays full-width in its own row.
+   */
+  favoriteOnly?: boolean
+  /**
+   * Render only the «Был/Хочу/Планирую» status button (no ♥ favorite). Mirror of
+   * `favoriteOnly`: the status row on the native bottom card shows a single
+   * full-width status control; the heart is rendered separately as a corner overlay.
+   */
+  hideFavorite?: boolean
+  /**
+   * Style forwarded to the «Был/Хочу/Планирую» status button (e.g. `flex:1` to
+   * stretch it full-width when it is the only control in its row).
+   */
+  statusButtonStyle?: StyleProp<ViewStyle>
 }
 
 const stopWebCardEvent = (event?: {
@@ -41,6 +58,9 @@ export default function RelatedTravelActionStack({
   fallbackCity,
   variant = 'overlay',
   style,
+  favoriteOnly = false,
+  hideFavorite = false,
+  statusButtonStyle,
 }: Props) {
   const travelRef = useMemo(() => resolveRelatedTravelRef(relatedTravelUrl), [relatedTravelUrl])
 
@@ -85,28 +105,33 @@ export default function RelatedTravelActionStack({
           } as any)
         : null)}
     >
-      <OptimizedFavoriteButton
-        id={resolvedTravelId}
-        type="travel"
-        title={travelTitle}
-        imageUrl={travelImageUrl}
-        url={travelUrl}
-        country={travelCountry}
-        city={travelCity}
-        size={18}
-      />
-      <TravelStatusButton
-        travelId={resolvedTravelId}
-        travelTitle={travelTitle}
-        travelUrl={travelUrl}
-        travelImageUrl={travelImageUrl}
-        travelCountry={travelCountry}
-        travelCity={travelCity}
-        travelYear={relatedTravel?.year}
-        travelMonthName={relatedTravel?.monthName}
-        compact={variant !== 'inline'}
-        idleLabel={variant === 'inline' ? 'Был / Хочу / Планирую' : undefined}
-      />
+      {hideFavorite ? null : (
+        <OptimizedFavoriteButton
+          id={resolvedTravelId}
+          type="travel"
+          title={travelTitle}
+          imageUrl={travelImageUrl}
+          url={travelUrl}
+          country={travelCountry}
+          city={travelCity}
+          size={18}
+        />
+      )}
+      {favoriteOnly ? null : (
+        <TravelStatusButton
+          travelId={resolvedTravelId}
+          travelTitle={travelTitle}
+          travelUrl={travelUrl}
+          travelImageUrl={travelImageUrl}
+          travelCountry={travelCountry}
+          travelCity={travelCity}
+          travelYear={relatedTravel?.year}
+          travelMonthName={relatedTravel?.monthName}
+          compact={variant !== 'inline'}
+          idleLabel={variant === 'inline' ? 'Был / Хочу / Планирую' : undefined}
+          style={statusButtonStyle}
+        />
+      )}
     </View>
   )
 }

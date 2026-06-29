@@ -280,7 +280,13 @@ export function useMapScreenController() {
         handlePlaceSelect(null);
         return;
       }
-      if (useRouteStore.getState().mode === 'route') {
+      // Capture the tap into the route ONLY while the route is still being built
+      // (fewer than 2 points). Once a 2-point route exists — e.g. one built from a
+      // popup's «Маршрут» button — tapping another marker must OPEN its popup, not
+      // keep extending the route. The route line/card stay visible because they are
+      // gated on mode==='route', which we leave intact. (#FIX-2)
+      const routeState = useRouteStore.getState();
+      if (routeState.mode === 'route' && routeState.points.length < 2) {
         addRoutePointFromTravelRef.current?.(point as unknown as TravelCoords);
         return;
       }
@@ -299,7 +305,10 @@ export function useMapScreenController() {
   isMobileRef.current = isMobile;
   const focusPlaceStable = useCallback((item: TravelCoords) => {
     if (isMobileRef.current && item?.coord) {
-      if (useRouteStore.getState().mode === 'route') {
+      // Mirror handleMarkerSelect (#FIX-2): only feed the route while it is still
+      // incomplete; a fully-built 2-point route releases the tap so the place card opens.
+      const routeState = useRouteStore.getState();
+      if (routeState.mode === 'route' && routeState.points.length < 2) {
         addRoutePointFromTravelRef.current?.(item);
         return;
       }

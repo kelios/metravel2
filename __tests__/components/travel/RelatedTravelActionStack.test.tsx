@@ -83,6 +83,41 @@ describe('RelatedTravelActionStack', () => {
     )
   })
 
+  it('renders only the favorite when favoriteOnly is set (hero corner heart)', async () => {
+    renderWithQuery(
+      <RelatedTravelActionStack
+        relatedTravelUrl="/travel/42"
+        fallbackTitle="Связанное путешествие"
+        favoriteOnly
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockFavoriteButton).toHaveBeenCalled()
+    })
+    expect(mockStatusButton).not.toHaveBeenCalled()
+  })
+
+  it('renders only the status button (style forwarded) when hideFavorite is set', async () => {
+    renderWithQuery(
+      <RelatedTravelActionStack
+        relatedTravelUrl="/travel/42"
+        fallbackTitle="Связанное путешествие"
+        variant="inline"
+        hideFavorite
+        statusButtonStyle={{ flex: 1 }}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockStatusButton).toHaveBeenCalled()
+    })
+    expect(mockFavoriteButton).not.toHaveBeenCalled()
+    expect(mockStatusButton.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({ style: { flex: 1 } }),
+    )
+  })
+
   it('does not fetch detail when slug route carries an ?id query', async () => {
     renderWithQuery(
       <RelatedTravelActionStack
