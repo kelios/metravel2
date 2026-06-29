@@ -291,7 +291,11 @@ const PlaceListCard: React.FC<Props> = ({
   const showShareChip = !isCompactActionCard && hasCoord && !!onShare;
   const showRowAddButton =
     showAddButton && addButtonPlacement === 'row' && !!onAddPoint && !overlayAddInline;
+  // Popup parity: quick actions (e.g. «Маршрут») render as labeled tiles at the
+  // start of the action row instead of in the hero corner.
+  const showRowQuickActions = popupAligned && quickActions.length > 0;
   const hasActionRow = showActionRow && (
+    showRowQuickActions ||
     (hasCoord && !!onCopyCoord) ||
     showShareChip ||
     showSaveTile ||
@@ -317,7 +321,7 @@ const PlaceListCard: React.FC<Props> = ({
   // to the shared favorite/status stack; plain cards get the fallback ♥ plus
   // the ＋ "save point" button lifted out of the action row.
   const overlayAddButton =
-    overlayAddInline && onAddPoint ? (
+    overlayAddInline && !showSaveTile && onAddPoint ? (
       <CardActionPressable
         accessibilityRole="button"
         accessibilityLabel={addLabel}
@@ -367,7 +371,13 @@ const PlaceListCard: React.FC<Props> = ({
     </CardActionPressable>
   ) : null
 
-  const quickActionButtons = quickActions.map((action) => (
+  // Popup parity: in popup-aligned mode the hero corner stack holds ONLY the two
+  // primary affordances (♥ favorite + trip-status), exactly like the map popup
+  // and the travel-points card. Any quick action (e.g. «Построить маршрут сюда»)
+  // moves OUT of the corner into the action row as a labeled tile (see
+  // `rowQuickActions` below) so the photo keeps just 2 corner icons.
+  const cornerQuickActions = popupAligned ? [] : quickActions;
+  const quickActionButtons = cornerQuickActions.map((action) => (
     <CardActionPressable
       key={action.key}
       accessibilityRole="button"

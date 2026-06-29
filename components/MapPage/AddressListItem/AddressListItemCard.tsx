@@ -134,6 +134,7 @@ const AddressListItemCard: React.FC<Props> = ({
       addLabel={pointAdded ? 'Добавлено' : 'Сохранить'}
       addButtonPlacement="row"
       compact
+      popupAligned
       titleLayout="content"
       titleNumberOfLines={2}
       style={PLACE_CARD_STYLE}

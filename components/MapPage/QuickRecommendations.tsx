@@ -134,6 +134,7 @@ export const QuickRecommendations: React.FC<Props> = React.memo(
           badges={badges}
           onCardPress={() => onPlaceSelect(place)}
           imageHeight={IS_WEB ? 156 : 148}
+          popupAligned
           titleLayout="content"
           titleNumberOfLines={3}
           style={styles.card}
