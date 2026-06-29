@@ -102,8 +102,9 @@ describe('MapPlaceBottomCard native layout', () => {
     expect(panelStyle.maxHeight).toBe(728)
     expect(panelStyle.marginBottom).toBe(80)
 
-    // Hero height = max(180, min(round(844*0.4)=338, 728-460=268)) = 268
-    expect(mockCreatePopupArgs[0]?.bottomCardImageHeight).toBe(268)
+    // Hero height = max(180, min(round(844*0.46)=388, 728-380=348)) = 348
+    // (taller now that the «Статус поездки» row is gone → lower content reserve).
+    expect(mockCreatePopupArgs[0]?.bottomCardImageHeight).toBe(348)
     expect(mockCreatePopupArgs[0]?.shareInActionRow).toBe(true)
 
     // One content-driven ScrollView fallback for tall content.

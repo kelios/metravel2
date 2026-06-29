@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react'
-import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import React, { useMemo, useRef } from 'react'
+import { Modal, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import CardActionPressable from '@/components/ui/CardActionPressable'
@@ -49,6 +49,24 @@ const ActionListSheet: React.FC<Props> = ({
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors, bottomOffset), [colors, bottomOffset])
 
+  // Swipe-down-to-close on the header (grabber + title row). Native uses a
+  // PanResponder; the visible ✕ covers web + a11y. onClose is read from a ref so
+  // the responder identity stays stable across renders.
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+  const swipeHandlers = useMemo(() => {
+    if (IS_WEB) return null
+    return PanResponder.create({
+      onMoveShouldSetPanResponder: (_evt, g) => g.dy > 6 && Math.abs(g.dy) > Math.abs(g.dx),
+      onPanResponderRelease: (_evt, g) => {
+        if (g.dy > 56) onCloseRef.current()
+      },
+      onPanResponderTerminate: (_evt, g) => {
+        if (g.dy > 56) onCloseRef.current()
+      },
+    }).panHandlers
+  }, [])
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.root}>
@@ -59,8 +77,22 @@ const ActionListSheet: React.FC<Props> = ({
           style={styles.backdrop}
         />
         <View style={styles.panel}>
-          <View style={styles.handle} />
-          <Text style={styles.title}>{title}</Text>
+          <View style={styles.header} {...(swipeHandlers ?? {})}>
+            <View style={styles.handle} />
+            <View style={styles.headerRow}>
+              <Text style={styles.title}>{title}</Text>
+              <CardActionPressable
+                accessibilityRole="button"
+                accessibilityLabel="Закрыть"
+                title="Закрыть"
+                onPress={onClose}
+                enableWebClickFallback
+                style={({ pressed }) => [styles.closeBtn, pressed && styles.itemPressed]}
+              >
+                <Feather name="x" size={20} color={colors.text} />
+              </CardActionPressable>
+            </View>
+          </View>
           <View style={styles.list}>
             {actions.map((action) => (
               <CardActionPressable
@@ -131,6 +163,9 @@ const createStyles = (colors: ThemedColors, bottomOffset?: number) =>
         web: { boxShadow: '0 -12px 34px rgba(15,23,42,0.16)' as any },
       }),
     },
+    header: {
+      paddingBottom: 4,
+    },
     handle: {
       alignSelf: 'center',
       width: 42,
@@ -139,12 +174,28 @@ const createStyles = (colors: ThemedColors, bottomOffset?: number) =>
       backgroundColor: colors.borderLight,
       marginBottom: 10,
     },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 8,
+    },
     title: {
+      flex: 1,
       fontSize: 15,
       lineHeight: 20,
       fontWeight: '800',
       color: colors.text,
-      marginBottom: 8,
+    },
+    closeBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: 999,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
     },
     list: {
       gap: 4,

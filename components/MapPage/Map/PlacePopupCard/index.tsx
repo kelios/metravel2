@@ -384,11 +384,10 @@ const PlacePopupCard: React.FC<Props> = ({
     useCompactLayout,
   ]);
 
-  // #FIX-coherence — on the NATIVE bottom card the «Статус поездки» row drops the ♥
-  // favorite (it moves to the hero corner, below) so the row is a single, balanced,
-  // full-width «Был / Хочу / Планирую» control instead of a heart orphaned far-left
-  // next to a right-shoved pill. ♥ and «Сохранить» stay DIFFERENT features. Web
-  // (desktop popup overlay + mobile-web inline) keeps both buttons unchanged.
+  // Web (desktop popup overlay + mobile-web inline «Статус поездки» row) keeps the
+  // ♥ favorite + «Был/Хочу/Планирую» status control. On the native bottom card this
+  // inline stack is NOT rendered — both ♥ and the (compact) status icon live in the
+  // hero corner instead (see `heroActionOverlay`).
   const relatedTravelActionStack = useMemo(() => {
     if (!relatedTravelUrl) return null;
     return (
@@ -398,16 +397,8 @@ const PlacePopupCard: React.FC<Props> = ({
         fallbackImageUrl={imageUrl}
         fallbackCountry={relatedTravelCountry}
         fallbackCity={relatedTravelCity}
-        style={
-          useNativeBottomCard
-            ? styles.relatedTravelStatusStretch
-            : isBottomCardLayout
-              ? styles.relatedTravelActionsInline
-              : undefined
-        }
+        style={isBottomCardLayout ? styles.relatedTravelActionsInline : undefined}
         variant={isBottomCardLayout ? 'inline' : 'overlay'}
-        hideFavorite={useNativeBottomCard}
-        statusButtonStyle={useNativeBottomCard ? styles.relatedTravelStatusButtonFull : undefined}
       />
     );
   }, [
@@ -417,17 +408,15 @@ const PlacePopupCard: React.FC<Props> = ({
     relatedTravelCountry,
     relatedTravelUrl,
     styles.relatedTravelActionsInline,
-    styles.relatedTravelStatusStretch,
-    styles.relatedTravelStatusButtonFull,
     title,
-    useNativeBottomCard,
   ]);
 
-  // ♥ favorite relocated onto the hero photo, top-LEFT corner (native bottom card
-  // only) — a small separate toggle, away from the ✕ (top-right) and ⤢ expand
-  // (bottom-right). Uses the SAME RelatedTravelActionStack code path (favoriteOnly),
-  // so the related-travel id/title/url resolution and favorite behavior are intact.
-  const heroFavoriteOverlay = useMemo(() => {
+  // Native bottom card only: ♥ favorite AND the compact trip-status icon both live in
+  // the hero photo top-LEFT corner (a vertical stack — `RelatedTravelActionStack`'s
+  // default `overlay` variant renders both as compact icon circles, column gap 6),
+  // away from the ✕ (top-right) and ⤢ expand (bottom-right). This frees the whole
+  // «Статус поездки» row (no more full-width «Был/Хочу/Планирую» text pill).
+  const heroActionOverlay = useMemo(() => {
     if (!useNativeBottomCard || !relatedTravelUrl) return null;
     return (
       <View style={styles.heroFavoriteOverlay} pointerEvents="box-none">
@@ -438,7 +427,6 @@ const PlacePopupCard: React.FC<Props> = ({
           fallbackCountry={relatedTravelCountry}
           fallbackCity={relatedTravelCity}
           variant="overlay"
-          favoriteOnly
         />
       </View>
     );
@@ -492,16 +480,17 @@ const PlacePopupCard: React.FC<Props> = ({
           </CardActionPressable>
         ) : (
           <>
-            {isBottomCardLayout && relatedTravelActionStack ? (
-              <>
-                {useNavSheet ? <View style={styles.blockDivider} /> : null}
-                <View style={styles.actionGroup}>
-                  <Text style={styles.actionGroupLabel}>Статус поездки</Text>
-                  <View style={styles.relatedTravelInlineSection}>
-                    {relatedTravelActionStack}
-                  </View>
+            {/* Native bottom card: ♥ + compact status icon live in the hero corner
+                (heroActionOverlay), so the dedicated «Статус поездки» row is dropped
+                entirely — reclaiming a full row of height. Web (mobile-web inline)
+                keeps the inline status stack here. */}
+            {isBottomCardLayout && !useNativeBottomCard && relatedTravelActionStack ? (
+              <View style={styles.actionGroup}>
+                <Text style={styles.actionGroupLabel}>Статус поездки</Text>
+                <View style={styles.relatedTravelInlineSection}>
+                  {relatedTravelActionStack}
                 </View>
-              </>
+              </View>
             ) : null}
 
             {useNavSheet ? <View style={styles.blockDivider} /> : null}
@@ -704,6 +693,7 @@ const PlacePopupCard: React.FC<Props> = ({
     showNavToggle,
     styles,
     toggleNav,
+    useNativeBottomCard,
     colors.textOnDark,
     colors.textOnPrimary,
   ]);
@@ -954,7 +944,7 @@ const PlacePopupCard: React.FC<Props> = ({
         {relatedTravelOverlays}
         <View style={[styles.topSection, useSplitLayout && styles.topSectionSplit]}>
           {heroImage}
-          {heroFavoriteOverlay}
+          {heroActionOverlay}
 
           <View style={[styles.contentContainer, useSplitLayout && styles.contentContainerSplit]}>
             {topInfoSlot}

@@ -20,6 +20,14 @@ interface SimpleMultiSelectProps {
   search?: boolean;
   style?: StyleProp<ViewStyle>;
   disabled?: boolean;
+  /** Разрешить создание нового элемента из строки поиска (под фиче-флагом у вызывающего). */
+  allowCreate?: boolean;
+  /**
+   * Создаёт элемент по введённому имени и возвращает его value (id) для авто-выбора,
+   * либо null при отмене. Добавление элемента в `data` — ответственность вызывающего.
+   */
+  onCreateItem?: (name: string) => Promise<MultiSelectValue | null>;
+  createLabel?: string;
 }
 
 export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
@@ -33,11 +41,16 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
   search = true,
   style,
   disabled = false,
+  allowCreate = false,
+  onCreateItem,
+  createLabel = 'Добавить',
 }) => {
   const colors = useThemedColors(); // ✅ УЛУЧШЕНИЕ: Поддержка темной темы
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const normalizeValue = useCallback((v: MultiSelectValue): string => {
     if (v === null || v === undefined) return '';
@@ -71,10 +84,36 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
   const filteredData = useMemo(() => {
     if (!searchQuery.trim()) return data;
     const query = searchQuery.toLowerCase();
-    return data.filter(item => 
+    return data.filter(item =>
       getItemLabel(item).toLowerCase().includes(query)
     );
   }, [data, searchQuery, getItemLabel]);
+
+  const trimmedQuery = searchQuery.trim();
+  const hasExactMatch = useMemo(
+    () => data.some(item => getItemLabel(item).toLowerCase() === trimmedQuery.toLowerCase()),
+    [data, trimmedQuery, getItemLabel],
+  );
+  const canShowCreate = allowCreate && !!onCreateItem && trimmedQuery.length >= 2 && !hasExactMatch;
+
+  const handleCreate = async () => {
+    if (!onCreateItem || !trimmedQuery || isCreating) return;
+    setIsCreating(true);
+    setCreateError(null);
+    try {
+      const newValue = await onCreateItem(trimmedQuery);
+      if (newValue !== null && newValue !== undefined && newValue !== '') {
+        if (!value.some(v => isSelectedValue(v, newValue))) {
+          onChange([...value, newValue]);
+        }
+        setSearchQuery('');
+      }
+    } catch (e) {
+      setCreateError(e instanceof Error ? e.message : 'Не удалось добавить категорию');
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const handleToggleItem = (item: MultiSelectItem) => {
     const itemValue = getItemValue(item);
@@ -105,6 +144,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
   const handleClose = () => {
     setIsOpen(false);
     setSearchQuery('');
+    setCreateError(null);
   };
 
   // ✅ Убираем useCallback для рендер-функций, которые используют colors
@@ -231,6 +271,28 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
                   </Pressable>
                 )}
               </View>
+            )}
+
+            {canShowCreate && (
+              <Pressable
+                style={styles.createRow}
+                onPress={handleCreate}
+                disabled={isCreating}
+                accessibilityRole="button"
+                accessibilityLabel={`${createLabel} «${trimmedQuery}»`}
+              >
+                <Feather
+                  name={isCreating ? 'loader' : 'plus-circle'}
+                  size={18}
+                  color={colors.primary}
+                />
+                <Text style={styles.createText} numberOfLines={1}>
+                  {isCreating ? 'Добавление…' : `${createLabel} «${trimmedQuery}»`}
+                </Text>
+              </Pressable>
+            )}
+            {createError && (
+              <Text style={styles.createError}>{createError}</Text>
             )}
 
             <FlashList
@@ -379,6 +441,29 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
         outlineWidth: 0,
       },
     }),
+  },
+  createRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.sm,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    paddingVertical: DESIGN_TOKENS.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.primarySoft,
+    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+  },
+  createText: {
+    flex: 1,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    fontWeight: '600',
+    color: colors.primaryText,
+  },
+  createError: {
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: colors.danger,
   },
   list: {
     flex: 1,

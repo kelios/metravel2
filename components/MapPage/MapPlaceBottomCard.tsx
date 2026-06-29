@@ -22,7 +22,9 @@ const IS_WEB = Platform.OS === 'web'
 const SWIPE_CLOSE_THRESHOLD_PX = 64
 // Native bottom sheet: vertical budget the caption/actions block needs below the
 // hero, so the hero can take the rest without forcing a scroll on tall content.
-const NATIVE_CONTENT_RESERVE = 460
+// Dropped from 460 → 380 after the «Статус поездки» row was removed (♥ + status are
+// now compact icons in the hero corner), reclaiming a full row for the photo.
+const NATIVE_CONTENT_RESERVE = 380
 
 type MapPlaceBottomCardProps = {
   /** Selected single marker; when null the card is not rendered. */
@@ -77,6 +79,12 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
 
   const topChromeInset = Math.max(0, topInset || 0)
   const bottomChromeInset = (bottomInset || 0) + (insets?.bottom ?? 0)
+  // `bottomInset` carries a +16 breathing-room baked into NATIVE_MOBILE_BOTTOM_DOCK_INSET
+  // (= tabBarHeight + 16). The dock itself only occupies tabBarHeight + safe-area, so
+  // applying the full inset as the panel's marginBottom leaves a 16px gap above the dock.
+  // Drop that breathing-room so the sheet sits flush on top of the dock (no gap).
+  const DOCK_BREATHING_GAP = 16
+  const nativePanelMargin = Math.max(0, bottomChromeInset - DOCK_BREATHING_GAP)
 
   // Native bottom sheet sizing. The sheet sits above the bottom chrome and caps its
   // height so the app header / map stay visible above it (content-sized otherwise).
@@ -88,7 +96,7 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
     ? undefined
     : Math.max(
         180,
-        Math.min(Math.round(viewportHeight * 0.4), nativeSheetMaxHeight - NATIVE_CONTENT_RESERVE),
+        Math.min(Math.round(viewportHeight * 0.46), nativeSheetMaxHeight - NATIVE_CONTENT_RESERVE),
       )
 
   const PopupComponent = useMemo(

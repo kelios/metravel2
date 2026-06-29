@@ -172,19 +172,8 @@ export const getStyles = (
       justifyContent: 'center',
       gap: bottomCardLayout ? 6 : 8,
     },
-    // Native bottom card: the «Статус поездки» row holds ONLY the status control now
-    // (heart moved to the hero corner), so stretch it edge-to-edge for a balanced,
-    // centered full-width pill instead of a centered island.
-    relatedTravelStatusStretch: {
-      width: '100%',
-      alignSelf: 'stretch',
-    },
-    relatedTravelStatusButtonFull: {
-      flex: 1,
-      justifyContent: 'center',
-    },
-    // ♥ favorite relocated onto the hero photo, top-LEFT (native bottom card only),
-    // away from ✕ (top-right) and ⤢ expand (bottom-right). Small circular bubble.
+    // ♥ favorite + compact trip-status icon stacked on the hero photo, top-LEFT
+    // (native bottom card only), away from ✕ (top-right) and ⤢ expand (bottom-right).
     heroFavoriteOverlay: {
       position: 'absolute',
       top: 10,

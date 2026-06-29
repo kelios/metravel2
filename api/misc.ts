@@ -396,6 +396,48 @@ export const deleteImage = async (imageId: string) => {
   }
 };
 
+export interface CreatedPointCategory {
+  id: number;
+  name: string;
+}
+
+/**
+ * Создание пользовательской категории точки маршрута (TravelCategoryAddress).
+ *
+ * Используется только под фиче-флагом EXPO_PUBLIC_POINT_CATEGORY_CREATE
+ * (см. config/featureFlags.ts) — бэкенд-эндпоинт заведён тикетом #633 и пока
+ * может отсутствовать. Контракт: POST { name } -> { id, name }. Числовой id
+ * обязателен — точка сохраняется через categories.set([id]) на апсерте travel.
+ */
+export const createPointCategory = async (
+  rawName: string,
+  signal?: AbortSignal,
+): Promise<CreatedPointCategory> => {
+  const token = await getSecureItem('userToken');
+  if (!token) {
+    throw new Error('Пользователь не авторизован');
+  }
+
+  const sanitized = sanitizeInput(String(rawName ?? ''));
+  const name = (typeof sanitized === 'string' ? sanitized : String(rawName ?? '')).trim().slice(0, 255);
+  if (name.length < 2) {
+    throw new Error('Название категории слишком короткое');
+  }
+
+  const result = await apiClient.request<{ id?: number | string; name?: string }>(
+    '/categoryTravelAddress/',
+    { method: 'POST', body: JSON.stringify({ name }), signal },
+    DEFAULT_TIMEOUT,
+  );
+
+  const id = Number(result?.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new Error('Сервер вернул некорректную категорию');
+  }
+
+  return { id, name: typeof result?.name === 'string' && result.name.trim() ? result.name : name };
+};
+
 export const fetchFilters = async (options?: { signal?: AbortSignal; throwOnError?: boolean }): Promise<Filters> => {
   try {
     const res = await fetchWithTimeout(GET_FILTERS, { signal: options?.signal }, DEFAULT_TIMEOUT);

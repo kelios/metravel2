@@ -115,16 +115,6 @@ describe('profileCountries', () => {
           visited: true,
           visited_travels_count: 2,
           first_visited_date: '2024-05-12',
-          known_visit_dates_count: 1,
-          unknown_visit_dates_count: 1,
-          visits: [
-            {
-              travel_id: 10,
-              travel_title: 'Минск на выходные',
-              visited_date: '2024-05-12',
-              date_precision: 'exact',
-            },
-          ],
         },
         {
           country_id: 2,
@@ -154,8 +144,6 @@ describe('profileCountries', () => {
       source: 'backend',
       visitedTravelsCount: 2,
       firstVisitedDate: '2024-05-12',
-      knownVisitDatesCount: 1,
-      unknownVisitDatesCount: 1,
     })
     expect(stats.regionGroups.map((group) => group.key)).toEqual([
       'europe',
@@ -179,16 +167,6 @@ describe('profileCountries', () => {
           visited: true,
           visited_travels_count: 2,
           first_visited_date: '2024-05-12',
-          known_visit_dates_count: 1,
-          unknown_visit_dates_count: 1,
-          visits: [
-            {
-              travel_id: 101,
-              travel_title: 'Варшава',
-              start_date: '2024-05-12',
-              end_date: '2024-05-14',
-            },
-          ],
         },
         {
           country_id: 2,
@@ -209,9 +187,6 @@ describe('profileCountries', () => {
         code: 'PL',
         visitCount: 2,
         firstKnownDateLabel: '12 мая 2024',
-        knownVisitDatesCount: 1,
-        unknownVisitDatesCount: 1,
-        visitLines: ['12 мая 2024 - 14 мая 2024: Варшава'],
         summaryText: 'Польша (PL); 2 раза; первая известная дата: 12 мая 2024',
       }),
     ])

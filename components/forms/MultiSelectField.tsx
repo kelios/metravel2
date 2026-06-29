@@ -7,12 +7,17 @@ import { useThemedColors } from '@/hooks/useTheme';
 
 type MultiSelectValue = string | number;
 
+type MultiSelectValueLocal = string | number;
+
 type SimpleMultiSelectPassthroughProps = {
     placeholder?: string;
     searchPlaceholder?: string;
     search?: boolean;
     style?: StyleProp<ViewStyle>;
     disabled?: boolean;
+    allowCreate?: boolean;
+    onCreateItem?: (name: string) => Promise<MultiSelectValueLocal | null>;
+    createLabel?: string;
 };
 
 type MultiSelectFieldProps<Item extends Record<string, unknown>> = {
@@ -44,6 +49,9 @@ const MultiSelectField = forwardRef<unknown, MultiSelectFieldProps<Record<string
             search,
             style,
             disabled,
+            allowCreate,
+            onCreateItem,
+            createLabel,
             testID,
             accessibilityLabel,
         },
@@ -103,6 +111,9 @@ const MultiSelectField = forwardRef<unknown, MultiSelectFieldProps<Record<string
                     search={search}
                     style={style}
                     disabled={disabled}
+                    allowCreate={allowCreate}
+                    onCreateItem={onCreateItem}
+                    createLabel={createLabel}
                 />
             </View>
         );

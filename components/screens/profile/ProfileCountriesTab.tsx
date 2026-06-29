@@ -319,34 +319,11 @@ export function ProfileCountriesTab({
                   {row.summaryText}
                 </Text>
 
-                {row.visitLines.length > 0 ? (
-                  <View style={styles.applicationVisitList}>
-                    {row.visitLines.map((line, index) => (
-                      <Text
-                        key={`${row.id}-visit-${index}`}
-                        selectable
-                        style={styles.applicationVisitLine}
-                      >
-                        {line}
-                      </Text>
-                    ))}
-                  </View>
-                ) : (
-                  <Text style={styles.applicationMutedText}>
-                    {row.firstKnownDateLabel
-                      ? 'Подробные даты поездок сервер пока не передаёт, показываем первую известную дату.'
-                      : 'Даты посещения пока не указаны в загруженных маршрутах.'}
-                  </Text>
-                )}
-
-                {row.unknownVisitDatesCount > 0 ? (
-                  <View style={styles.applicationWarningRow}>
-                    <Feather name="alert-circle" size={14} color={colors.warning} />
-                    <Text style={styles.applicationWarningText}>
-                      Без точной даты: {row.unknownVisitDatesCount}
-                    </Text>
-                  </View>
-                ) : null}
+                <Text style={styles.applicationMutedText}>
+                  {row.firstKnownDateLabel
+                    ? 'Показываем первую известную дату поездки.'
+                    : 'Даты посещения пока не указаны в загруженных маршрутах.'}
+                </Text>
               </View>
             ))}
           </View>
@@ -673,31 +650,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
       lineHeight: 20,
       color: colors.text,
     },
-    applicationVisitList: {
-      gap: 4,
-    },
-    applicationVisitLine: {
-      fontSize: DESIGN_TOKENS.typography.sizes.xs,
-      lineHeight: 18,
-      color: colors.textMuted,
-    },
     applicationMutedText: {
       flex: 1,
       minWidth: 0,
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       lineHeight: 18,
       color: colors.textMuted,
-    },
-    applicationWarningRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: DESIGN_TOKENS.spacing.xs,
-    },
-    applicationWarningText: {
-      fontSize: DESIGN_TOKENS.typography.sizes.xs,
-      lineHeight: 18,
-      color: colors.textMuted,
-      fontWeight: DESIGN_TOKENS.typography.weights.medium as never,
     },
     applicationDisclaimer: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,

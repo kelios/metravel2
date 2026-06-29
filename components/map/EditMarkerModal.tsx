@@ -6,6 +6,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { MarkerData } from '@/types/types';
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import MultiSelectField from '@/components/forms/MultiSelectField';
+import { isPointCategoryCreateEnabled } from '@/config/featureFlags';
+import { createPointCategory } from '@/api/misc';
 import type { useThemedColors } from '@/hooks/useTheme';
 
 const MultiSelectFieldAny: any = MultiSelectField;
@@ -48,12 +50,29 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
     const [address, setAddress] = useState<string>(marker.address || '');
     const [categories, setCategories] = useState<any[]>(normalizeCategories(marker.categories));
     const [localImage, setLocalImage] = useState<string>(marker.image || '');
+    const [extraCategories, setExtraCategories] = useState<{ id: string; name: string }[]>([]);
 
     useEffect(() => {
         setAddress(marker.address || '');
         setCategories(normalizeCategories(marker.categories));
         setLocalImage(marker.image || '');
+        setExtraCategories([]);
     }, [marker, index, normalizeCategories]);
+
+    const categoryItems = useMemo(() => {
+        const seen = new Set(normalizedCategoryItems.map((c) => String(c.id)));
+        return [...normalizedCategoryItems, ...extraCategories.filter((c) => !seen.has(c.id))];
+    }, [normalizedCategoryItems, extraCategories]);
+
+    const allowCreateCategory = isPointCategoryCreateEnabled();
+    const handleCreateCategory = useCallback(async (name: string): Promise<string> => {
+        const created = await createPointCategory(name);
+        const idStr = String(created.id);
+        setExtraCategories((prev) =>
+            prev.some((c) => c.id === idStr) ? prev : [...prev, { id: idStr, name: created.name }],
+        );
+        return idStr;
+    }, []);
 
     const handleLocalImageUpload = useCallback((imageUrl: string) => {
         setLocalImage(imageUrl);
@@ -139,13 +158,16 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                         <label style={styles.fieldLabel}>Категории точки</label>
                         <MultiSelectFieldAny
                             label=""
-                            items={normalizedCategoryItems}
+                            items={categoryItems}
                             value={categories}
                             onChange={(selected: any) => {
                                 const next = normalizeCategories(selected as any[]);
                                 setCategories(next);
                                 handleMarkerChange(index, 'categories', next);
                             }}
+                            allowCreate={allowCreateCategory}
+                            onCreateItem={handleCreateCategory}
+                            createLabel="Добавить категорию"
                             labelField="name"
                             valueField="id"
                             placeholder="Выберите..."

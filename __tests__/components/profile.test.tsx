@@ -237,16 +237,6 @@ describe('ProfileScreen', () => {
           visited: true,
           visited_travels_count: 2,
           first_visited_date: '2024-05-12',
-          known_visit_dates_count: 1,
-          unknown_visit_dates_count: 1,
-          visits: [
-            {
-              travel_id: 101,
-              travel_title: 'Варшава',
-              start_date: '2024-05-12',
-              end_date: '2024-05-14',
-            },
-          ],
         },
         {
           country_id: 2,
@@ -406,10 +396,7 @@ describe('ProfileScreen', () => {
     expect(await findByText('Карта стран')).toBeTruthy();
     expect(await findByText('Сводка для анкеты')).toBeTruthy();
     expect(await findByText('Польша (PL); 2 раза; первая известная дата: 12 мая 2024')).toBeTruthy();
-    expect(await findByText('12 мая 2024 - 14 мая 2024: Варшава')).toBeTruthy();
-    await waitFor(() => {
-      expect(getAllByText('Без точной даты: 1').length).toBeGreaterThan(0);
-    });
+    expect(getAllByText('Показываем первую известную дату поездки.').length).toBeGreaterThan(0);
     expect(await findByText('Карта по зонам')).toBeTruthy();
     expect(getAllByText('Европа').length).toBeGreaterThan(0);
     expect(await findByText('Посетили 3 страны. Осталось 1 страна.')).toBeTruthy();
