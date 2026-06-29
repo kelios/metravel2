@@ -34,6 +34,7 @@ const GET_FILTERS = `${URLAPI}/getFiltersTravel/`;
 const GET_FILTERS_COUNTRY = `${URLAPI}/countriesforsearch/`;
 const GET_ALL_COUNTRY = `${URLAPI}/countries/`;
 const SEND_FEEDBACK = `${URLAPI}/feedback/`;
+const SUBSCRIBE_EMAIL = `${URLAPI}/subscribe/`;
 const SEND_AI_QUESTION = `${URLAPI}/chat`;
 
 const EMPTY_FILTERS: Filters = {
@@ -551,6 +552,73 @@ export const sendFeedback = async (
       console.error('Ошибка при отправке обратной связи:', e);
     }
     throw new Error(getErrorMessage(e, 'Не удалось отправить сообщение'));
+  }
+};
+
+export type SubscribeSource = 'home' | 'article' | 'footer' | string;
+
+export interface SubscribeResult {
+  ok: boolean;
+  status: 'created' | 'exists';
+}
+
+// Public email lead subscription (growth forms on home/articles). Backend BE-3:
+// POST /api/subscribe/ -> 201 {ok,status:"created"} | 200 {ok,status:"exists"}
+// | 400 {email:[...]} | 429 (scoped throttle). No auth required.
+export const subscribeEmail = async (
+  email: string,
+  source: SubscribeSource,
+  pageUrl?: string
+): Promise<SubscribeResult> => {
+  const sanitizedEmail = sanitizeInput(email.trim());
+
+  if (!sanitizedEmail) {
+    throw new Error('Введите email');
+  }
+
+  try {
+    const res = await fetchWithTimeout(
+      SUBSCRIBE_EMAIL,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: sanitizedEmail,
+          source,
+          ...(pageUrl ? { page_url: pageUrl } : {}),
+        }),
+      },
+      DEFAULT_TIMEOUT
+    );
+
+    const json = await safeJsonParse<{
+      ok?: boolean;
+      status?: string;
+      email?: string[];
+      source?: string[];
+      detail?: string;
+    }>(res, {});
+
+    if (!res.ok) {
+      const firstError =
+        (Array.isArray(json?.email) ? json.email[0] : undefined) ||
+        (Array.isArray(json?.source) ? json.source[0] : undefined) ||
+        json?.detail ||
+        (res.status === 429
+          ? 'Слишком много попыток. Попробуйте позже.'
+          : 'Не удалось оформить подписку.');
+      throw new Error(firstError);
+    }
+
+    return {
+      ok: Boolean(json?.ok ?? true),
+      status: json?.status === 'exists' ? 'exists' : 'created',
+    };
+  } catch (e: unknown) {
+    if (__DEV__) {
+      console.error('Ошибка при оформлении подписки:', e);
+    }
+    throw new Error(getErrorMessage(e, 'Не удалось оформить подписку'));
   }
 };
 

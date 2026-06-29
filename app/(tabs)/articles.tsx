@@ -9,6 +9,7 @@ import {useLocalSearchParams, useRouter, type Href} from 'expo-router'
 import ErrorDisplay from '@/components/ui/ErrorDisplay'
 import EmptyState from '@/components/ui/EmptyState'
 import ContributionBanner from '@/components/common/ContributionBanner'
+import EmailSubscriptionForm from '@/components/common/EmailSubscriptionForm'
 import { useThemedColors } from '@/hooks/useTheme'
 import { FlashList } from '@shopify/flash-list'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
@@ -179,6 +180,7 @@ export default function TabOneScreen() {
                     returnHref={articleListReturnHref}
                   />
                 ))}
+                <EmailSubscriptionForm source="article" />
                 <ContributionBanner variant="articles" />
               </ScrollView>
             ) : (
@@ -189,7 +191,12 @@ export default function TabOneScreen() {
                 )}
                 keyExtractor={(item: any, index: number) => (item?.id ? String(item.id) : String(index))}
                 {...({ estimatedItemSize: 120 } as any)}
-                ListFooterComponent={<ContributionBanner variant="articles" />}
+                ListFooterComponent={
+                  <>
+                    <EmailSubscriptionForm source="article" />
+                    <ContributionBanner variant="articles" />
+                  </>
+                }
                 refreshing={isFetching}
                 onRefresh={() => refetch()}
                 drawDistance={600}

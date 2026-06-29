@@ -7,6 +7,7 @@ import {
   fetchAllCountries,
   sendFeedback,
   sendAIMessage,
+  subscribeEmail,
 } from '@/api/misc'
 import type { TravelFormData } from '@/types/types'
 
@@ -401,6 +402,51 @@ describe('api/misc', () => {
     mockSafeJsonParse.mockResolvedValue({ email: ['bad email'], detail: 'fallback' })
 
     await expect(sendFeedback('A', 'b@c.com', 'Hi')).rejects.toThrow('bad email')
+  })
+
+  it('subscribeEmail requires an email and returns created on success', async () => {
+    await expect(subscribeEmail('  ', 'home')).rejects.toThrow('Введите email')
+
+    mockSanitizeInput.mockImplementation((v: string) => v.trim())
+    mockFetchWithTimeout.mockResolvedValue({ ok: true, status: 201 })
+    mockSafeJsonParse.mockResolvedValue({ ok: true, status: 'created' })
+
+    await expect(subscribeEmail('a@b.com', 'home', 'https://metravel.by/')).resolves.toEqual({
+      ok: true,
+      status: 'created',
+    })
+
+    const [url, init] = mockFetchWithTimeout.mock.calls[0]
+    expect(String(url)).toMatch(/\/subscribe\/$/)
+    expect(init.method).toBe('POST')
+    expect(JSON.parse(init.body)).toEqual({
+      email: 'a@b.com',
+      source: 'home',
+      page_url: 'https://metravel.by/',
+    })
+  })
+
+  it('subscribeEmail maps a duplicate (200 exists) response', async () => {
+    mockSanitizeInput.mockImplementation((v: string) => v.trim())
+    mockFetchWithTimeout.mockResolvedValue({ ok: true, status: 200 })
+    mockSafeJsonParse.mockResolvedValue({ ok: true, status: 'exists' })
+
+    await expect(subscribeEmail('a@b.com', 'article')).resolves.toEqual({
+      ok: true,
+      status: 'exists',
+    })
+  })
+
+  it('subscribeEmail surfaces field validation (400) and throttle (429)', async () => {
+    mockSanitizeInput.mockImplementation((v: string) => v.trim())
+
+    mockFetchWithTimeout.mockResolvedValue({ ok: false, status: 400 })
+    mockSafeJsonParse.mockResolvedValue({ email: ['Enter a valid email address.'] })
+    await expect(subscribeEmail('nope', 'home')).rejects.toThrow('Enter a valid email address.')
+
+    mockFetchWithTimeout.mockResolvedValue({ ok: false, status: 429 })
+    mockSafeJsonParse.mockResolvedValue({})
+    await expect(subscribeEmail('a@b.com', 'home')).rejects.toThrow('Слишком много попыток. Попробуйте позже.')
   })
 
   it('sendAIMessage validates input and handles success', async () => {

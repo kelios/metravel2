@@ -15,6 +15,7 @@ import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries'
 import { queryKeys } from '@/api/queryKeys'
 import { useHomeViewport } from './useHomeViewport'
 import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
+import EmailSubscriptionForm from '@/components/common/EmailSubscriptionForm'
 import {
   HomeBottomCtaSection,
   HomeFAQSection,
@@ -282,6 +283,10 @@ function Home() {
         fallback={<FaqFallback colors={colors} isMobile={isMobile} padH={padH} padV={padV} />}
       >
         <HomeFAQSection />
+      </DeferredSection>
+
+      <DeferredSection marginTop={gap.sections} fallback={null}>
+        <EmailSubscriptionForm source="home" />
       </DeferredSection>
 
       <DeferredSection marginTop={gap.finalCta} fallback={<SectionSkeleton />}>
