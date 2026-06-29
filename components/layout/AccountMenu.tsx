@@ -248,12 +248,12 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
           <MessageMenuIcon count={unreadCount} colors={colors} defaultColor={colors.textMuted} />
         ),
       },
-      { key: 'subscriptions', title: 'Подписки', icon: 'users', path: '/subscriptions' },
+      { key: 'subscriptions', title: 'Подписки', icon: 'user-check', path: '/subscriptions' },
       // #495: PDF book export is web-only (usePdfExportRuntime blocks native) — hide its entry on native.
       ...(IS_WEB
         ? [{ key: 'export', title: 'Экспорт в PDF', icon: 'file-text', path: '/export' } as MenuLinkItem]
         : []),
-      { key: 'public-profile', title: 'Публичный профиль', icon: 'users', onPress: handleOpenPublicProfile },
+      { key: 'public-profile', title: 'Публичный профиль', icon: 'globe', onPress: handleOpenPublicProfile },
       ...(isSuperuser
         ? [
             {
