@@ -498,6 +498,20 @@ const PlaceListCard: React.FC<Props> = ({
 
           {hasActionRow && (
             <View style={styles.actionsRow}>
+              {showRowQuickActions &&
+                quickActions.map((action) => (
+                  <LabeledActionChip
+                    key={action.key}
+                    accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
+                    icon={action.icon}
+                    iconColor={colors.textMuted}
+                    label={action.label}
+                    onPress={action.onPress}
+                    styles={styles}
+                    title={action.title ?? action.label}
+                  />
+                ))}
+
               {hasCoord && onCopyCoord && (
                 <LabeledActionChip
                   accessibilityLabel="Скопировать координаты"
