@@ -141,48 +141,13 @@ function TravelWizardStepRoute({
     setMarkers(updatedMarkers)
   }, [setMarkers])
 
-  // Опубликованный / отправленный на модерацию маршрут бэкенд ревалидирует целиком
-  // при каждом upsert: точка с пустыми categories → 400
-  // (`_validate_coordinate_categories_for_publication`, travels/serializers.py). Для
-  // черновика (publish=false && moderation=false) такой проверки нет — там точка без
-  // категории сохраняется свободно (тикет #505).
-  const isPublishedRoute = useMemo(
-    () => Boolean(formData?.publish) || Boolean(formData?.moderation),
-    [formData?.publish, formData?.moderation],
-  )
-
-  // Возвращает true, если сохранение отложено: у опубликованного маршрута осталась
-  // точка без категории — бэк отклонит ВЕСЬ upsert (валидирует все точки разом, тикет
-  // FE→BE по серверной пер-точечной валидации), поэтому не шлём запрос (точки остаются
-  // в стейте) и подсказываем КОНКРЕТНО, какие точки без категории — иначе пользователь
-  // не понимает, почему 400 не уходит даже после добавления категории одной точке.
-  const deferSaveIfUncategorized = useCallback(
-    (list: MarkerData[]): boolean => {
-      if (!isPublishedRoute) return false
-      const uncategorized = list.filter(
-        (marker) => !Array.isArray(marker?.categories) || marker.categories.length === 0,
-      )
-      if (uncategorized.length === 0) return false
-
-      const names = uncategorized.slice(0, 3).map((marker) => {
-        const label =
-          typeof marker?.address === 'string' ? marker.address.split('·')[0].trim() : ''
-        return label || 'точка без названия'
-      })
-      const more = uncategorized.length > 3 ? ` и ещё ${uncategorized.length - 3}` : ''
-
-      void showToastMessage({
-        type: 'info',
-        text1:
-          uncategorized.length === 1 ? 'Выберите категорию точки' : 'Выберите категории точек',
-        text2:
-          `Опубликованный маршрут сохранится, только когда у каждой точки выбрана категория. ` +
-          `Без категории: ${names.join(', ')}${more}.`,
-      })
-      return true
-    },
-    [isPublishedRoute],
-  )
+  // Контракт save ≠ moderate (docs/TRAVEL_SAVE_MODERATION_CONTRACT.md): content-save
+  // НИКОГДА не блокируется валидацией полноты. Бэк проверяет categories у точек РОВНО
+  // один раз — при явной отправке на модерацию (enforce_moderation_validation=true,
+  // intent='publish', api/misc.ts). На обычном add-point/edit-сейве enforce=false, и
+  // бэк принимает точку без категории (проверено). Поэтому добавленную точку шлём на
+  // сохранение СРАЗУ, даже без категории — иначе она не получит server-id и в окне
+  // точки нельзя приложить фото (нужен id для /upload collection=travelImageAddress).
 
   const saveRoute = useCallback(async (updatedMarkers: MarkerData[], countryIds = selectedCountryIds) => {
     if (!onManualSave) return
@@ -202,7 +167,6 @@ function TravelWizardStepRoute({
   const scheduleAddPointSave = useCallback(
     (updatedMarkers: MarkerData[], countryIds = selectedCountryIds) => {
       if (!onManualSave) return
-      if (deferSaveIfUncategorized(updatedMarkers)) return
 
       if (addPointSaveTimeoutRef.current != null) {
         clearTimeout(addPointSaveTimeoutRef.current)
@@ -228,7 +192,7 @@ function TravelWizardStepRoute({
         })
       }, 800)
     },
-    [deferSaveIfUncategorized, onManualSave, saveRoute, selectedCountryIds],
+    [onManualSave, saveRoute, selectedCountryIds],
   )
 
   const handleQuickDraft = useCallback(async () => {
@@ -270,15 +234,13 @@ function TravelWizardStepRoute({
       ? Array.from(new Set([...toStringIds(selectedCountryIds), String(payload.derivedCountryId)]))
       : toStringIds(selectedCountryIds)
 
-    if (deferSaveIfUncategorized(payload.markers)) return
     await saveRoute(payload.markers, nextCountries)
-  }, [deferSaveIfUncategorized, saveRoute, selectedCountryIds, updateMarkers])
+  }, [saveRoute, selectedCountryIds, updateMarkers])
 
   const handleMarkerEditSave = useCallback(async (updatedMarkers: MarkerData[]) => {
     updateMarkers(updatedMarkers)
-    if (deferSaveIfUncategorized(updatedMarkers)) return
     await saveRoute(updatedMarkers)
-  }, [deferSaveIfUncategorized, saveRoute, updateMarkers])
+  }, [saveRoute, updateMarkers])
 
   const handleMarkerAdded = useCallback((
     payload: { markers: MarkerData[]; derivedCountryId: number | null },

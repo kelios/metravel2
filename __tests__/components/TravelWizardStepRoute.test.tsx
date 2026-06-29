@@ -549,14 +549,17 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
         });
     });
 
-    describe('✅ Опубликованный маршрут: точка без категории не падает на сервере', () => {
+    describe('✅ Опубликованный маршрут: точка без категории сохраняется сразу (save ≠ moderate)', () => {
         const publishedFormData = {
             ...defaultProps.formData,
             publish: true,
             moderation: true,
         };
 
-        it('НЕ шлёт upsert при добавлении точки без категории и подсказывает выбрать категорию', async () => {
+        it('ШЛЁТ upsert при добавлении точки без категории и НЕ блокирует тостом', async () => {
+            // Контракт save ≠ moderate: content-save не блокируется валидацией полноты.
+            // Бэк принимает точку без категории на обычном сейве (enforce=false), а сейв
+            // нужен сразу, чтобы точка получила server-id → в окне точки можно добавить фото.
             const mockOnManualSave = jest.fn().mockResolvedValue(undefined);
 
             (global.fetch as jest.Mock).mockResolvedValueOnce({
@@ -583,15 +586,20 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
             fireEvent.press(getByText('Париж, Франция'));
 
             await waitFor(() => {
-                expect(mockShowToast).toHaveBeenCalledWith(
-                    expect.objectContaining({ type: 'info', text1: 'Выберите категорию точки' })
+                expect(mockOnManualSave).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        coordsMeTravel: expect.arrayContaining([
+                            expect.objectContaining({ lat: 48.8566, lng: 2.3522 }),
+                        ]),
+                    })
                 );
-            });
-            // Серверный upsert не уходит — бэк отклонил бы точку без категории (400).
-            expect(mockOnManualSave).not.toHaveBeenCalled();
+            }, { timeout: 2000 });
+            expect(mockShowToast).not.toHaveBeenCalledWith(
+                expect.objectContaining({ text1: 'Выберите категорию точки' })
+            );
         });
 
-        it('у черновика (publish=false) точка без категории сохраняется как прежде — гейт только для опубликованных', async () => {
+        it('у черновика (publish=false) точка без категории тоже сохраняется сразу', async () => {
             const mockOnManualSave = jest.fn().mockResolvedValue(undefined);
 
             (global.fetch as jest.Mock).mockResolvedValueOnce({
