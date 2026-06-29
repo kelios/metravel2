@@ -33,11 +33,6 @@ export type ProfileCountryRow = {
   source: 'backend' | 'catalog' | 'visited'
   visitedTravelsCount?: number
   firstVisitedDate?: string | null
-  knownVisitDatesCount?: number
-  unknownVisitDatesCount?: number
-  visitMonths?: string[]
-  visitYears?: string[]
-  visits?: ProfileCountryVisit[]
 }
 
 export type ProfileCountryRegionGroup = {
@@ -57,31 +52,12 @@ export type ProfileCountryStats = {
   totalCount: number
 }
 
-export type ProfileCountryVisit = {
-  id: string
-  travelId?: string | number
-  title?: string
-  url?: string
-  startDate?: string | null
-  endDate?: string | null
-  visitedDate?: string | null
-  year?: string
-  month?: string
-  monthName?: string
-  datePrecision?: string
-  source?: string
-}
-
 export type ProfileCountryApplicationRow = {
   id: string
   name: string
   code?: string
   visitCount: number
   firstKnownDateLabel: string | null
-  knownVisitDatesCount: number
-  unknownVisitDatesCount: number
-  visitLines: string[]
-  hasDetailedVisits: boolean
   summaryText: string
 }
 
@@ -118,8 +94,6 @@ const ID_FIELDS = ['country_id', 'countryId', 'id', 'pk', 'value'] as const
 const REGION_FIELDS = ['region', 'continent', 'zone', 'world_region'] as const
 const FIRST_VISITED_DATE_FIELDS = ['first_visited_date', 'firstVisitedDate'] as const
 const VISITED_TRAVELS_COUNT_FIELDS = ['visited_travels_count', 'visitedTravelsCount', 'visits_count', 'visit_count'] as const
-const KNOWN_VISIT_DATES_COUNT_FIELDS = ['known_visit_dates_count', 'knownVisitDatesCount'] as const
-const UNKNOWN_VISIT_DATES_COUNT_FIELDS = ['unknown_visit_dates_count', 'unknownVisitDatesCount'] as const
 
 export const PROFILE_COUNTRY_REGION_META: Array<{ key: ProfileCountryRegionKey; label: string }> = [
   { key: 'europe', label: 'Европа' },
@@ -531,59 +505,6 @@ const readNonNegativeInteger = (record: Record<string, unknown>, fields: readonl
   return undefined
 }
 
-const readStringArray = (value: unknown): string[] | undefined => {
-  if (!Array.isArray(value)) return undefined
-  const values = value
-    .map((item) => String(item ?? '').trim())
-    .filter(Boolean)
-  return values.length > 0 ? Array.from(new Set(values)) : undefined
-}
-
-const normalizeVisit = (value: unknown, index: number): ProfileCountryVisit | null => {
-  if (!isRecord(value)) return null
-  const travelId = value.travel_id ?? value.travelId ?? value.id
-  const title = readString(value, ['travel_title', 'travelTitle', 'title', 'name'])
-  const url = readString(value, ['travel_url', 'travelUrl', 'url'])
-  const startDate = readString(value, ['start_date', 'startDate'])
-  const endDate = readString(value, ['end_date', 'endDate'])
-  const visitedDate = readString(value, ['visited_date', 'visitedDate'])
-  const year = readString(value, ['year'])
-  const month = readString(value, ['month'])
-  const monthName = readString(value, ['month_name', 'monthName'])
-  const datePrecision = readString(value, ['date_precision', 'datePrecision'])
-  const source = readString(value, ['source'])
-  const id = travelId != null && String(travelId).trim()
-    ? `travel-${String(travelId).trim()}`
-    : url || title || `visit-${index}`
-
-  if (!title && !url && !startDate && !endDate && !visitedDate && !year && !month && !monthName) {
-    return null
-  }
-
-  return {
-    id,
-    travelId: typeof travelId === 'string' || typeof travelId === 'number' ? travelId : undefined,
-    title: title || undefined,
-    url: url || undefined,
-    startDate: startDate || null,
-    endDate: endDate || null,
-    visitedDate: visitedDate || null,
-    year: year || undefined,
-    month: month || undefined,
-    monthName: monthName || undefined,
-    datePrecision: datePrecision || undefined,
-    source: source || undefined,
-  }
-}
-
-const normalizeVisits = (value: unknown): ProfileCountryVisit[] | undefined => {
-  if (!Array.isArray(value)) return undefined
-  const visits = value
-    .map((visit, index) => normalizeVisit(visit, index))
-    .filter((visit): visit is ProfileCountryVisit => Boolean(visit))
-  return visits.length > 0 ? visits : undefined
-}
-
 export const groupProfileCountriesByRegion = (rows: ProfileCountryRow[]): ProfileCountryRegionGroup[] => {
   const groups = new Map<ProfileCountryRegionKey, ProfileCountryRow[]>()
 
@@ -721,11 +642,6 @@ export function buildProfileCountryStatsFromProgress(
         source: 'backend',
         visitedTravelsCount: readNonNegativeInteger(country, VISITED_TRAVELS_COUNT_FIELDS),
         firstVisitedDate: readString(country, FIRST_VISITED_DATE_FIELDS) || null,
-        knownVisitDatesCount: readNonNegativeInteger(country, KNOWN_VISIT_DATES_COUNT_FIELDS),
-        unknownVisitDatesCount: readNonNegativeInteger(country, UNKNOWN_VISIT_DATES_COUNT_FIELDS),
-        visitMonths: readStringArray(country.visit_months ?? country.visitMonths),
-        visitYears: readStringArray(country.visit_years ?? country.visitYears),
-        visits: normalizeVisits(country.visits),
       }
     })
     .filter((row): row is ProfileCountryRow => Boolean(row))
@@ -778,23 +694,6 @@ const MONTH_DATE_LABELS = [
   'декабря',
 ]
 
-const MONTH_NAME_TO_NUMBER = new Map<string, number>(
-  [
-    ['январь', 1], ['января', 1], ['january', 1],
-    ['февраль', 2], ['февраля', 2], ['february', 2],
-    ['март', 3], ['марта', 3], ['march', 3],
-    ['апрель', 4], ['апреля', 4], ['april', 4],
-    ['май', 5], ['мая', 5], ['may', 5],
-    ['июнь', 6], ['июня', 6], ['june', 6],
-    ['июль', 7], ['июля', 7], ['july', 7],
-    ['август', 8], ['августа', 8], ['august', 8],
-    ['сентябрь', 9], ['сентября', 9], ['september', 9],
-    ['октябрь', 10], ['октября', 10], ['october', 10],
-    ['ноябрь', 11], ['ноября', 11], ['november', 11],
-    ['декабрь', 12], ['декабря', 12], ['december', 12],
-  ].map(([label, month]) => [normalizeCountryName(label), month as number]),
-)
-
 const formatMonthYear = (year: string, month: number) => {
   const label = MONTH_LABELS[month - 1]
   return label ? `${label} ${year}` : year
@@ -825,33 +724,6 @@ const formatApplicationDate = (value: unknown): string | null => {
   return trimmed
 }
 
-const formatVisitFallbackPeriod = (visit: ProfileCountryVisit): string | null => {
-  if (!visit.year) return null
-  const monthNumber = visit.month
-    ? Number(visit.month)
-    : visit.monthName
-      ? MONTH_NAME_TO_NUMBER.get(normalizeCountryName(visit.monthName))
-      : undefined
-  if (monthNumber && monthNumber >= 1 && monthNumber <= 12) {
-    return formatMonthYear(visit.year, monthNumber)
-  }
-  return visit.monthName ? `${visit.monthName} ${visit.year}` : visit.year
-}
-
-const formatVisitLine = (visit: ProfileCountryVisit): string | null => {
-  const start = formatApplicationDate(visit.startDate)
-  const end = formatApplicationDate(visit.endDate)
-  const visited = formatApplicationDate(visit.visitedDate)
-  const fallback = formatVisitFallbackPeriod(visit)
-  const period =
-    start && end && start !== end
-      ? `${start} - ${end}`
-      : start || visited || fallback
-
-  if (!period) return null
-  return visit.title ? `${period}: ${visit.title}` : period
-}
-
 const formatVisitCount = (count: number) => {
   const mod10 = count % 10
   const mod100 = count % 100
@@ -866,17 +738,8 @@ export const buildCountryApplicationRows = (
   rows
     .filter((row) => row.visited)
     .map((row) => {
-      const visits = row.visits ?? []
-      const visitLines = visits
-        .map(formatVisitLine)
-        .filter((line): line is string => Boolean(line))
-      const visitCount = row.visitedTravelsCount ?? Math.max(visits.length, 1)
-      const firstKnownDateLabel =
-        formatApplicationDate(row.firstVisitedDate) ??
-        (visitLines.length > 0 ? visitLines[0].split(':')[0].trim() : null)
-      const knownVisitDatesCount =
-        row.knownVisitDatesCount ?? Math.max(visitLines.length, firstKnownDateLabel ? 1 : 0)
-      const unknownVisitDatesCount = row.unknownVisitDatesCount ?? Math.max(0, visitCount - knownVisitDatesCount)
+      const visitCount = Math.max(row.visitedTravelsCount ?? 1, 1)
+      const firstKnownDateLabel = formatApplicationDate(row.firstVisitedDate)
       const summaryParts = [
         `${row.name}${row.code ? ` (${row.code})` : ''}`,
         formatVisitCount(visitCount),
@@ -889,10 +752,6 @@ export const buildCountryApplicationRows = (
         code: row.code,
         visitCount,
         firstKnownDateLabel,
-        knownVisitDatesCount,
-        unknownVisitDatesCount,
-        visitLines,
-        hasDetailedVisits: visits.length > 0,
         summaryText: summaryParts.join('; '),
       }
     })
