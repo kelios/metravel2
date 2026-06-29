@@ -33,8 +33,10 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
       true,
     )
 
+    // q quantized to the nearest 10 (82 → 80) by imageProxy DIMENSION/quality ladder;
+    // hero stays dpr-/format-free per the image-architecture rule.
     expect(src).toContain('w=1280')
-    expect(src).toContain('q=82')
+    expect(src).toContain('q=80')
     expect(src).toContain('fit=contain')
     expect(src).not.toContain('dpr=')
     expect(src).not.toContain('f=')
@@ -52,8 +54,9 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
       true,
     )
 
-    expect(src).toContain('w=720')
-    expect(src).toContain('q=72')
+    // 720 snaps up to the 800 ladder rung; q 72 → 70. Hero stays dpr-/format-free.
+    expect(src).toContain('w=800')
+    expect(src).toContain('q=70')
     expect(src).toContain('fit=contain')
     expect(src).not.toContain('dpr=')
     expect(src).not.toContain('f=')
@@ -71,8 +74,9 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
       false,
     )
 
-    expect(src).toContain('w=1180')
-    expect(src).toContain('q=78')
+    // 1180 snaps up to the 1280 ladder rung; q 78 → 80.
+    expect(src).toContain('w=1280')
+    expect(src).toContain('q=80')
   })
 
   it('requests DPR-aware mobile slide variants on retina devices', () => {
@@ -89,8 +93,9 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
       false,
     )
 
-    expect(src).toContain('w=390')
-    expect(src).toContain('q=78')
+    // 390 snaps up to the 480 ladder rung; q 78 → 80; integer dpr preserved.
+    expect(src).toContain('w=480')
+    expect(src).toContain('q=80')
     expect(src).toContain('dpr=3')
     expect(src).toContain('fit=contain')
   })
