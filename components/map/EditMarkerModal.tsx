@@ -74,14 +74,17 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
     };
 
     const handleSave = async () => {
+        const trimmedAddress = address.trim().slice(0, 100);
         if (handleMarkerSave) {
             await handleMarkerSave(index, {
-                address,
+                address: trimmedAddress,
                 categories,
                 image: localImage,
             });
         } else {
-            persistEdits();
+            handleMarkerChange(index, 'address', trimmedAddress);
+            handleMarkerChange(index, 'categories', categories);
+            handleMarkerChange(index, 'image', localImage);
         }
         onClose();
     };
@@ -122,12 +125,13 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                         <input
                             type="text"
                             value={address}
-                            onChange={(e) => setAddress(e.target.value)}
+                            onChange={(e) => setAddress(e.target.value.slice(0, 100))}
+                            maxLength={100}
                             style={styles.input}
                             placeholder="Например: Парковка у озера Sucha"
                         />
-                        <div style={styles.fieldHint}>
-                            Можно оставить адрес из карты или сократить до понятного названия места.
+                        <div style={{...styles.fieldHint, fontSize: '0.85em', color: colors.textMuted}}>
+                            Можно оставить адрес из карты или сократить до понятного названия места. ({address.length}/100)
                         </div>
                     </div>
 
