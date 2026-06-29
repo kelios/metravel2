@@ -584,6 +584,12 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     minWidth: isCompact ? undefined : isWide ? 280 : 260,
     maxWidth: isCompact ? '100%' : isWide ? '33.333%' : '50%',
   },
+  // The card fills its grid-item wrapper (`card`); the wrapper owns the column
+  // sizing so the card itself must not re-declare a basis/max-width.
+  cardFill: {
+    width: '100%',
+    height: '100%',
+  },
   cardInner: {
     backgroundColor: colors.surface,
     borderWidth: StyleSheet.hairlineWidth,

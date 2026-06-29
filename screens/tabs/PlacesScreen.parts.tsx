@@ -122,43 +122,50 @@ export const PlaceCard = React.memo(function PlaceCard({
     ]
   }, [place.coord, place.title])
 
+  // The grid sizing (flexBasis/min/maxWidth) MUST live on this outer wrapper —
+  // it is the direct flex child of `cardsGrid`. UnifiedTravelCard always renders
+  // its own `CardWrapper` View around the styled container, so passing the grid
+  // style down to the card would land it one level too deep and collapse every
+  // card to a full-width single column. The card fills this wrapper instead.
   return (
-    <PlaceListCard
-      title={place.title}
-      imageUrl={imageUrl}
-      categoryLabel={place.category}
-      coord={place.coord}
-      badges={[
-        ...(addressBadge ? [addressBadge] : []),
-        ...(place.country ? [place.country] : []),
-      ]}
-      relatedTravelUrl={relatedTravelUrl}
-      relatedTravelCountry={place.country}
-      onCardPress={() => onOpenMap(place)}
-      onMediaPress={() => onOpenMap(place)}
-      mapActions={mapActions}
-      inlineActions={
-        place.urlTravel
-          ? [
-              {
-                key: 'article',
-                label: 'Статья',
-                icon: 'book-open',
-                onPress: () => onOpenTravel(place),
-                title: 'Открыть статью',
-              },
-            ]
-          : []
-      }
-      imageHeight={isMobileCard ? 260 : 400}
-      width={compactCardWidth}
-      compact={isMobileCard}
-      titleLayout="content"
-      titleNumberOfLines={2}
-      showAddButton={false}
-      style={[styles.card, containerStyle]}
-      testID={`places-card-${place.id}`}
-    />
+    <View style={[styles.card, containerStyle]}>
+      <PlaceListCard
+        title={place.title}
+        imageUrl={imageUrl}
+        categoryLabel={place.category}
+        coord={place.coord}
+        badges={[
+          ...(addressBadge ? [addressBadge] : []),
+          ...(place.country ? [place.country] : []),
+        ]}
+        relatedTravelUrl={relatedTravelUrl}
+        relatedTravelCountry={place.country}
+        onCardPress={() => onOpenMap(place)}
+        onMediaPress={() => onOpenMap(place)}
+        mapActions={mapActions}
+        inlineActions={
+          place.urlTravel
+            ? [
+                {
+                  key: 'article',
+                  label: 'Статья',
+                  icon: 'book-open',
+                  onPress: () => onOpenTravel(place),
+                  title: 'Открыть статью',
+                },
+              ]
+            : []
+        }
+        imageHeight={isMobileCard ? 260 : 400}
+        width={compactCardWidth}
+        compact={isMobileCard}
+        titleLayout="content"
+        titleNumberOfLines={2}
+        showAddButton={false}
+        style={styles.cardFill}
+        testID={`places-card-${place.id}`}
+      />
+    </View>
   )
 })
 
